@@ -1,0 +1,21 @@
+[Desktop Entry]
+Name=Public Transport
+Name[x-test]=xxpublicTransportxx
+Name[de]=Öffentlicher Nahverkehr
+Comment=Plasma Public Transport shows soon departing trams and/or buses for stops in germany.
+Comment[de]=Plasma Öffentlicher Nahverkehr zeigt demnächst abfahrende Straßenbahnen und/oder Busse für Haltestellen in Deutschland.
+Icon=public-transport-stop
+Type=Service
+
+X-KDE-ServiceTypes=Plasma/Applet
+X-KDE-Library=plasma_applet_publictransport
+X-KDE-PluginInfo-Author=Friedrich Pülz
+X-KDE-PluginInfo-Email=fpuelz@gmx.de
+X-KDE-PluginInfo-Name=publictransport
+X-KDE-PluginInfo-Version=0.2.2
+X-KDE-PluginInfo-Website=http://plasma.kde.org/
+X-KDE-PluginInfo-Category=Online Services
+X-KDE-PluginInfo-Depends=
+X-KDE-PluginInfo-License=LGPL
+X-KDE-PluginInfo-EnabledByDefault=true
+
