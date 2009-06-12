@@ -2,21 +2,21 @@
 #include <QRegExp>
 #include <QDebug>
 
-QList< DepartureInfo > TimetableAccessorEfa::parseDocument(const QString& document)
+QList< DepartureInfo > TimetableAccessorEfa::parseDocument( const QString &document )
 {
     QList< DepartureInfo > journeys;
 
-    qDebug() << "Parsing...";
+    qDebug() << "TimetableAccessorEfa::parseDocument" << "Parsing...";
     QRegExp rx(regExpSearch(), Qt::CaseInsensitive);
     rx.setMinimal(true);
     int pos = 0;
     while ((pos = rx.indexIn(document, pos)) != -1) {
         if (!rx.isValid()) {
-            qDebug() << "Parse error";
+            qDebug() << "TimetableAccessorEfa::parseDocument" << "Parse error";
             continue; // parse error
         }
-        journeys.append( getInfo(rx) );
 
+        journeys.append( getInfo(rx) );
         pos  += rx.matchedLength();
     }
 

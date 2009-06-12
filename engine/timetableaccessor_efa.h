@@ -6,10 +6,10 @@
 class TimetableAccessorEfa : public TimetableAccessor
 {
     public:
-	virtual ServiceProvider serviceProvider() { return None; };
+	virtual ServiceProvider serviceProvider() { return NoServiceProvider; };
 
     protected:
-	QList<DepartureInfo> parseDocument(const QString& document); // parses the contents of the document at the url
+	QList<DepartureInfo> parseDocument( const QString &document ); // parses the contents of the document at the url
 	
 	virtual QString rawUrl(); // gets the "raw" url
 	virtual QString regExpSearch(); // the regexp string to use

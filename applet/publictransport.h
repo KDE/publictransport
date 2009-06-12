@@ -58,17 +58,17 @@ class PublicTransport : public Plasma::PopupApplet
 	struct DepartureInfo
 	{
 	    int lineNumber;
-	    QString target, lineString, duration;
+	    QString direction, lineString, duration;
 	    QTime departure;
 
-	    DepartureInfo(int lineNumber, QString lineString, QString target, QTime departure)
+	    DepartureInfo( QString line, QString direction, QTime departure )
 	    {
-		this->lineNumber = lineNumber;
-		this->lineString = lineString;
-		this->target = target;
+		this->lineNumber = line.toInt(); // TODO: extract number from the line string
+		
+		this->lineString = line;
+		this->direction = direction;
 		this->departure = departure;
 
-		// TODO: KIO::convertSeconds?
 		int totalSeconds = QTime::currentTime().secsTo(departure);
 		int seconds = totalSeconds % 60;
 		totalSeconds -= seconds;
@@ -100,8 +100,6 @@ class PublicTransport : public Plasma::PopupApplet
 	};
 
     private:
-	// Loads a timetable from the internet using a TimetableAccessor
-	void loadTimetable();
 	bool checkConfig();
 	void generateInfoText();
 	// Generates tooltip data and registers this applet at plasma's TooltipManager
@@ -131,18 +129,15 @@ class PublicTransport : public Plasma::PopupApplet
 	bool	m_showNightlines; // Wheather or not night lines should be shown
 	int m_filterMinLine; // The minimal line number to be shown
 	int m_filterMaxLine; // The maximal line number to be shown
-	FilterType m_filterTypeTarget; // The type of the filter (ShowAll, ShowMatching, HideMatching)
-	QStringList m_filterTargetList; // A list of targets that should be filtered
+	FilterType m_filterTypeDirection; // The type of the filter (ShowAll, ShowMatching, HideMatching)
+	QStringList m_filterDirectionList; // A list of directions that should be filtered
 
     signals:
 	void settingsChanged();
 	
     public slots:
-	// A requested list of journeys was received and parsed
-// 	void journeyListReceived( QList< DepartureInfo > journeys );
 	void configAccepted();
 	void reload();
-// 	void refresh();
 	void geometryChanged();
 	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 	

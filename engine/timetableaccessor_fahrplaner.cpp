@@ -29,14 +29,11 @@ DepartureInfo TimetableAccessorFahrplaner::getInfo ( QRegExp rx )
 {
     QString sType = rx.cap( 1 );
     QString sLine = rx.cap( 2 );
-    QString sTarget = rx.cap( 3 );
+    QString sDirection = rx.cap( 3 );
     QString sDepHour = rx.cap( 4 );
     QString sDepMinute = rx.cap( 5 );
-
-    DepartureInfo departureInfo(sType == "Str" ? DepartureInfo::Tram : DepartureInfo::Bus, sLine.toInt(), sLine.at(0) == 'N', sTarget, QTime(sDepHour.toInt(), sDepMinute.toInt()));
-    departureInfo.setLineString(sLine);
-
-    return departureInfo;
+    
+    return DepartureInfo(sLine, sType == "Str" ? Tram : Bus, sDirection, QTime(sDepHour.toInt(), sDepMinute.toInt()), sLine.at(0) == 'N');
 }
 
 QString TimetableAccessorFahrplaner::regExpSearch()

@@ -67,7 +67,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor ( ServiceProvider serv
 
 KIO::TransferJob *TimetableAccessor::requestJourneys ( QString city, QString stop )
 {
-    qDebug() << "URL =" << getUrl(city, stop);
+    qDebug() << "TimetableAccessor::requestJourneys" << "URL =" << getUrl(city, stop);
     
     // Creating a kioslave
     KIO::TransferJob *job = KIO::get( getUrl(city, stop), KIO::NoReload, KIO::HideProgressInfo );
@@ -82,21 +82,14 @@ KIO::TransferJob *TimetableAccessor::requestJourneys ( QString city, QString sto
 
 QList< DepartureInfo > TimetableAccessor::getJourneys ( QString city, QString stop )
 {
-    qDebug() << "URL =" << getUrl(city, stop);
-// return QList< DepartureInfo >(); // FIXME: synchronousRun causes Crash in plasma (but not in plasmoidviewer...)
+    qDebug() << "TimetableAccessor::getJourneys" << "URL =" << getUrl(city, stop);
     
     KIO::TransferJob *job = KIO::get( getUrl(city, stop), KIO::NoReload, KIO::HideProgressInfo );
     QByteArray data;
 
-//     try
-//     {
-	if (KIO::NetAccess::synchronousRun(job, 0, &data))
-	    return parseDocument( QString(data) );
-//     }
-//     catch( e )
-//     {
-// 	qDebug() << "Error while trying to call KIO::NetAccess::synchronousRun";
-//     }
+    // this crashes plasma (doesn't crash in plasmoidviewer)
+    if (KIO::NetAccess::synchronousRun(job, 0, &data))
+	return parseDocument( QString(data) );
 
     return QList< DepartureInfo >();
 }
@@ -113,7 +106,6 @@ void TimetableAccessor::finished(KJob* job)
     
 //     qDebug() << "\nFinished downloading:\n" << m_document << "\n";
 // , ServiceProvider serviceProvider, QString city, QString stop
-
     emit journeyListReceived( parseDocument(m_document), serviceProvider(), jobInfo.at(0), jobInfo.at(1) );
 }
 
@@ -126,7 +118,7 @@ KUrl TimetableAccessor::getUrl ( QString city, QString stop )
 	return rawUrl().arg(stop);
 }
 
-QList< DepartureInfo > TimetableAccessor::parseDocument(const QString&)
+QList< DepartureInfo > TimetableAccessor::parseDocument( const QString& )
 {
     return QList<DepartureInfo>();
 }

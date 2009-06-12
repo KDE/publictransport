@@ -25,13 +25,14 @@
 class TimetableAccessorRmv : public TimetableAccessor
 {
     public:
-// 	TimetableAccessorRmv();
-//         ~TimetableAccessorRmv();
-
 	virtual ServiceProvider serviceProvider() { return RMV; };
+
+	virtual QString country() const { return "Germany"; };
+// 	virtual QStringList cities() const { return QStringList() << "?"; };
 	
     protected:
-	QList<DepartureInfo> parseDocument(const QString& document); // parses the contents of the document at the url
+	// parses the contents of the document at the url
+	QList<DepartureInfo> parseDocument( const QString &document );
 	virtual QString rawUrl(); // gets the "raw" url
 };
 

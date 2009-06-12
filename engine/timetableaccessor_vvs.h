@@ -27,6 +27,9 @@ class TimetableAccessorVvs : public TimetableAccessorEfa
     public:
 	virtual ServiceProvider serviceProvider() { return VVS; };
 	
+	virtual QString country() const { return "Germany"; };
+	virtual QStringList cities() const { return QStringList() << "Stuttgart"; };
+	
     protected:
 	virtual QString rawUrl(); // gets the "raw" url
 	virtual QString regExpSearch(); // the regexp string to use

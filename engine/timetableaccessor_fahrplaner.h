@@ -26,6 +26,10 @@ class TimetableAccessorFahrplaner : public TimetableAccessorEfa
 {
     public:
 	virtual ServiceProvider serviceProvider() { return Fahrplaner; };
+
+	virtual QString country() const { return "Germany"; };
+	// TODO: add all fahrplaner.de-cities (Niedersachsen/Bremen)
+	virtual QStringList cities() const { return QStringList() << "Bremen" << "Bremerhaven" << "Hannover" << "Braunschweig" << "Emden"; };
 	
     protected:
 	virtual QString rawUrl(); // gets the "raw" url

@@ -27,11 +27,11 @@ class TimetableAccessorImhd : public TimetableAccessorEfa
     public:
 	virtual ServiceProvider serviceProvider() { return IMHD; };
 
-	virtual QString country() { return "Slovakia"; };
-	virtual QStringList cities() { return QStringList() << "Bratislava"; };
+	virtual QString country() const { return "Slovakia"; };
+	virtual QStringList cities() const { return QStringList() << "Bratislava"; };
 	
     protected:
-	virtual bool putCityIntoUrl() { return false; };
+	virtual bool putCityIntoUrl() const { return false; };
 	virtual QString rawUrl(); // gets the "raw" url
 	virtual QString regExpSearch(); // the regexp string to use
 	virtual DepartureInfo getInfo(QRegExp rx);

@@ -32,14 +32,11 @@ DepartureInfo TimetableAccessorImhd::getInfo ( QRegExp rx )
   // "(?:<tr><td class="tab0"><center><b>)(N?[0-9]+)(?:</b></center></td><td><center>)(Night Line - Bus)(?:</center></td><td><b><a href="index.php?w=3023ef2f302523ea&l=480&x=838861199396&lang=en&lang=en">)(.*)(?:</a></b></td><td><center><a href="javascript:Mapa(30576);"><img src="../_/cepo/mapa.gif" style="border:0" alt="Show on map"></a></center></td></tr>)"
 //     QString sType = rx.cap( 1 );
     QString sLine = rx.cap( 3 );
-    QString sTarget = rx.cap( 4 );
+    QString sDirection = rx.cap( 4 );
     QString sDepHour = rx.cap( 1 );
     QString sDepMinute = rx.cap( 2 );
 
-    DepartureInfo departureInfo(DepartureInfo::Unknown, sLine.toInt(), sLine.at(0) == 'N', sTarget, QTime(sDepHour.toInt(), sDepMinute.toInt()));
-    departureInfo.setLineString(sLine);
-
-    return departureInfo;
+    return DepartureInfo( sLine, Unknown, sDirection, QTime(sDepHour.toInt(), sDepMinute.toInt()), sLine.at(0) == 'N' );
 }
 
 QString TimetableAccessorImhd::regExpSearch()

@@ -34,16 +34,16 @@ class PublicTransportEngine : public Plasma::DataEngine
 
     public:
         // every engine needs a constructor with these arguments
-        PublicTransportEngine(QObject* parent, const QVariantList& args);
-
+        PublicTransportEngine( QObject* parent, const QVariantList& args );
+	
     protected:
         // this virtual function is called when a new source is requested
-        bool sourceRequestEvent(const QString& name);
+        bool sourceRequestEvent( const QString& name );
 
         // this virtual function is called when an automatic update
         // is triggered for an existing source (ie: when a valid update
         // interval is set when requesting a source)
-        bool updateSourceEvent(const QString& name);
+        bool updateSourceEvent( const QString& name );
 
     private:
 	QMap<ServiceProvider, TimetableAccessor *> m_accessors;

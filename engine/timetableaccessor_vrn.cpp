@@ -2,7 +2,7 @@
 #include <QRegExp>
 #include <QDebug>
 /*
-QList< DepartureInfo > TimetableAccessorVrn::parseDocument(const QString& document)
+QList< DepartureInfo > TimetableAccessorVrn::parseDocument( const QString &document )
 {
     QList< DepartureInfo > journeys;*/
    // QString sFind = "(<td class=\".*\" style=\".*\">([0-9]{2})\\:([0-9]{2})</td>.*<td class=\".*\" style=\".*\" align=\".*\"><img src=\"images/response/(.*)\\..*\" alt=\".*\"></td>.*<td class=\".*\" nowrap>(.*)</td>.*<td class=\".*\">(.*)</td>)";
@@ -54,25 +54,22 @@ DepartureInfo TimetableAccessorVrn::getInfo ( QRegExp rx )
 {
     QString sType = rx.cap( 4 );
     QString sLine = rx.cap( 5 );
-    QString sTarget = rx.cap( 6 );
+    QString sDirection = rx.cap( 6 );
     QString sDepHour = rx.cap( 2 );
     QString sDepMinute = rx.cap( 3 );
     QRegExp rxNumber("[0-9]+");
     rxNumber.indexIn(sLine);
     int iLine = rxNumber.cap().toInt();
-    qDebug() << sType << ", " << sLine << ", " << sTarget << ", " << sDepHour;
+    qDebug() << sType << ", " << sLine << ", " << sDirection << ", " << sDepHour;
 
-    DepartureInfo::LineType lineType = DepartureInfo::Unknown;
+    LineType lineType = Unknown;
     if ( sType == "U-Bahn" )
-	lineType = DepartureInfo::Subway;
+	lineType = Subway;
     else if ( sType == "dm_train" )
-	lineType = DepartureInfo::Tram;
+	lineType = Tram;
     else if ( sType == "dm_bus" )
-	lineType = DepartureInfo::Bus;
-    DepartureInfo departureInfo(lineType, iLine, false, sTarget, QTime(sDepHour.toInt(), sDepMinute.toInt()));
-    departureInfo.setLineString(sLine);
-
-    return departureInfo;
+	lineType = Bus;
+    return DepartureInfo( sLine, lineType, sDirection, QTime(sDepHour.toInt(), sDepMinute.toInt()) );
 }
 
 QString TimetableAccessorVrn::regExpSearch()

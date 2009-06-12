@@ -21,7 +21,7 @@
 #include <QRegExp>
 #include <QtXml>
 
-QList< DepartureInfo > TimetableAccessorRmv::parseDocument(const QString& document)
+QList< DepartureInfo > TimetableAccessorRmv::parseDocument( const QString &document )
 {
     QList< DepartureInfo > journeys;
 
@@ -31,7 +31,7 @@ QList< DepartureInfo > TimetableAccessorRmv::parseDocument(const QString& docume
     QDomNodeList journeyNodes = docElement.elementsByTagName("Journey");
     for ( int i = 0; i < journeyNodes.count(); ++i )
     {
-	QString sTime, sDelay, sTarget, sLine;
+	QString sTime, sDelay, sDirection, sLine;
 	QDomNode node = journeyNodes.at(i);
 
 	sLine = node.firstChildElement("Product").attributeNode("name").nodeValue();
@@ -57,7 +57,7 @@ QList< DepartureInfo > TimetableAccessorRmv::parseDocument(const QString& docume
 	    if ( attribute.attributeNode("type").nodeValue() == "DIRECTION" )
 	    {
 		QDomElement direction = attribute.firstChildElement("AttributeVariant").firstChildElement("Text");
-		sTarget = direction.text();
+		sDirection = direction.text();
 // 		qDebug() << "TARGET = " << sTarget;
 		break;
 	    }
@@ -65,8 +65,7 @@ QList< DepartureInfo > TimetableAccessorRmv::parseDocument(const QString& docume
 	    journeyAttribute = journeyAttribute.nextSiblingElement("JourneyAttribute");
 	}
 
-	DepartureInfo departureInfo(DepartureInfo::Tram, iLine, false, sTarget, QTime::fromString(sTime, "hh:mm"));
-	departureInfo.setLineString(sLine);
+	DepartureInfo departureInfo( sLine, Tram, sDirection, QTime::fromString(sTime, "hh:mm") );
 	journeys.append( departureInfo );
     }
     

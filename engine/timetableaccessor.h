@@ -22,54 +22,76 @@
 
 #include <KUrl>
 #include <QMap>
-#include "departureinfo.h"
+#include <QTime>
 #include "kio/scheduler.h"
 #include "kio/jobclasses.h"
+#include <QDebug>
+#include "departureinfo.h"
 
-enum ServiceProvider
-{
-    None = -1,
-    Fahrplaner = 0, // Niedersachsen/Bremen
-    RMV = 1, // Rhein-Main
-    VVS = 2, // Stuttgart
-    VRN = 3, // Rhein-Neckar
-    BVG = 4, // Berlin
-    IMHD = 100 // Bratislava
-};
-
+// Gets timetable information for public transport from different service providers.
+// To implement support for a new service provider create a new class based on
+// TimetableAccessor and overwrite
+//	- serviceProvider()  (you also need to add an enum value to ServiceProvider)
+// 	- country(), cities()
+// 	- rawUrl(), parseDocument()
 class TimetableAccessor : public QObject
 {
     Q_OBJECT
+    
     public:
 	TimetableAccessor();
         ~TimetableAccessor();
 
-	virtual ServiceProvider serviceProvider() { return None; };
-	// Gets the timetable accessor that is associated with the given service provider and can parse it's replies
+	// Gets a timetable accessor that is able to parse results from the given service provider
 	static TimetableAccessor *getSpecificAccessor(ServiceProvider serviceProvider);
 
-	virtual QString country() { return ""; };
-	virtual QStringList cities() { return QStringList(); };
+	// The service provider the accessor is designed for
+	virtual ServiceProvider serviceProvider() { return NoServiceProvider; };
+
+	// The country for which the accessor returns results
+	virtual QString country() const { return ""; };
+
+	// A list of cities for which the accessor returns results
+	virtual QStringList cities() const { return QStringList(); };
+
+	// Requests a list of departures
+	// When the departure list is received journeyListReceived() is emitted
 	KIO::TransferJob *requestJourneys( QString city, QString stop );
+
+	// deprecated ;)
 	QList< DepartureInfo > getJourneys( QString city, QString stop );
 
     protected:
+	// Stores the downloaded parts of a reply
 	QString m_document;
 
-	virtual QList<DepartureInfo> parseDocument(const QString& document); // parses the contents of a document that was requested using requestJourneys()
-	virtual QString rawUrl(); // gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
-	virtual bool putCityIntoUrl() { return true; };
-	KUrl getUrl(QString city, QString stop); // constructs an url by combining the "raw" url with the needed information
+	// Parses the contents of a document that was requested using requestJourneys()
+	virtual QList<DepartureInfo> parseDocument( const QString &document );
+	
+	// Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2") 
+	// or only for the stop ("%1") if putCityIntoUrl() == false
+	virtual QString rawUrl();
+
+	// Constructs an url by combining the "raw" url with the needed information
+	KUrl getUrl( QString city, QString stop );
+
+	// Wheather or not the city should be put into the "raw" url
+	virtual bool putCityIntoUrl() const { return true; };
 
     private:
+	// Stores information about currently running download jobs
 	QMap<KJob*, QStringList> m_jobInfos;
 
     signals:
-	void journeyListReceived(QList< DepartureInfo > journeys, ServiceProvider serviceProvider, QString city, QString stop);
+	// Emitted when a new journey list has been received and parsed
+	void journeyListReceived( QList< DepartureInfo > journeys, ServiceProvider serviceProvider, QString city, QString stop );
 
     public slots:
-	void dataReceived(KIO::Job *job, const QByteArray &data);
-	void finished(KJob* job);
+	// Some data has been received
+	void dataReceived( KIO::Job *job, const QByteArray &data );
+
+	// All data of a journey list has been received
+	void finished( KJob* job );
 };
 
 #endif // TIMETABLEACCESSOR_HEADER

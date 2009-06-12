@@ -22,7 +22,7 @@
 #include <QDebug>
 
 /*
-QList< DepartureInfo > TimetableAccessorVvs::parseDocument(const QString& document)
+QList< DepartureInfo > TimetableAccessorVvs::parseDocument( const QString &document )
 {
     QList< DepartureInfo > journeys;
     */
@@ -77,7 +77,7 @@ DepartureInfo TimetableAccessorVvs::getInfo ( QRegExp rx )
 {
     QString sType = rx.cap( 3 );
     QString sLine = rx.cap( 4 );
-    QString sTarget = rx.cap( 5 );
+    QString sDirection = rx.cap( 5 );
     QString sDepHour = rx.cap( 1 );
     QString sDepMinute = rx.cap( 2 );
     QRegExp rxNumber("[0-9]+");
@@ -85,17 +85,15 @@ DepartureInfo TimetableAccessorVvs::getInfo ( QRegExp rx )
     int iLine = rxNumber.cap().toInt();
     // qDebug() << sType << ", " << sLine << ", " << sTarget << ", " << sDepHour;
 
-    DepartureInfo::LineType lineType = DepartureInfo::Unknown;
+    LineType lineType = Unknown;
     if ( sType == "U-Bahn" )
-	lineType = DepartureInfo::Subway;
+	lineType = Subway;
     else if ( sType == "S-Bahn" )
-	lineType = DepartureInfo::Tram;
+	lineType = Tram;
     else if ( sType == "Bus" )
-	lineType = DepartureInfo::Bus;
-    DepartureInfo departureInfo(lineType, iLine, sLine.isEmpty() ? false : sLine.at(0) == 'N', sTarget, QTime(sDepHour.toInt(), sDepMinute.toInt()));
-    departureInfo.setLineString(sLine);
-
-    return departureInfo;
+	lineType = Bus;
+    
+    return DepartureInfo(sLine, lineType, sDirection, QTime(sDepHour.toInt(), sDepMinute.toInt()), sLine.isEmpty() ? false : sLine.at(0) == 'N');
 }
 
 QString TimetableAccessorVvs::regExpSearch()

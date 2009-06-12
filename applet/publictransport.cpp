@@ -82,8 +82,8 @@ void PublicTransport::init()
     m_showNightlines = cg.readEntry("showNightlines", true);
     m_filterMinLine = cg.readEntry("filterMinLine", 1);
     m_filterMaxLine = cg.readEntry("filterMaxLine", 999);
-    m_filterTypeTarget = static_cast<FilterType>(cg.readEntry("filterTypeTarget", static_cast<int>(ShowAll)));
-    m_filterTargetList = cg.readEntry("filterTargetList", QStringList());
+    m_filterTypeDirection = static_cast<FilterType>(cg.readEntry("filterTypeDirection", static_cast<int>(ShowAll)));
+    m_filterDirectionList = cg.readEntry("filterDirectionList", QStringList());
     emit settingsChanged();
 
     reconnectSource();
@@ -100,17 +100,14 @@ void PublicTransport::reconnectSource()
 }
 
 void PublicTransport::dataUpdated ( const QString& sourceName, const Plasma::DataEngine::Data& data )
-{    
-    qDebug() << "dataUpdated()";
+{
     this->setBusy(true);
 
     m_departureInfos.clear();
     for (int i = 0; i < data.keys().count(); ++i)
     {
-	qDebug() << "dataUpdated" << i;
 	QMap<QString, QVariant> dataMap = data.value( QString("%1").arg(i) ).toMap();
-// 	qDebug() << "dataUpdated" << dataMap;
-	DepartureInfo departureInfo(dataMap["lineNumber"].toInt(), dataMap["line"].toString(), dataMap["target"].toString(), dataMap["departure"].toTime());
+	DepartureInfo departureInfo( dataMap["line"].toString(), dataMap["direction"].toString(), dataMap["departure"].toTime() );
 
 	m_departureInfos.append( departureInfo );
     }
@@ -143,7 +140,7 @@ void PublicTransport::createTooltip()
     else
     {
 	DepartureInfo nextDeparture = m_departureInfos.first();
-	data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes", "Next departure from '%1': line %2 (%3) %4",m_stop, nextDeparture.lineString , nextDeparture.target , nextDeparture.duration ) );
+	data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes", "Next departure from '%1': line %2 (%3) %4", m_stop, nextDeparture.lineString, nextDeparture.direction , nextDeparture.duration ) );
     }
     data.setImage( KIcon("public-transport-stop").pixmap(IconSize(KIconLoader::Desktop)) );
     Plasma::ToolTipManager::self()->setContent(this, data);
@@ -275,9 +272,8 @@ void PublicTransport::createConfigurationInterface ( KConfigDialog* parent )
 	    m_ui.serviceProvider->addItem( sServiceProvider, mapServiceProviders[sServiceProvider].toInt() );
     }
 
-    // Get index of the service provider
+    // Get (combobox-) index of the currently selected service provider
     const int curServiceProviderIndex = m_ui.serviceProvider->findData( m_serviceProvider );
-    qDebug() << "Service provider index found: " << curServiceProviderIndex;
     m_ui.serviceProvider->setCurrentIndex( curServiceProviderIndex );
 
     m_uiFilter.showTrams->setChecked(m_showTrams);
@@ -285,8 +281,8 @@ void PublicTransport::createConfigurationInterface ( KConfigDialog* parent )
     m_uiFilter.showNightLines->setChecked(m_showNightlines);
     m_uiFilter.filterMinLine->setValue(m_filterMinLine);
     m_uiFilter.filterMaxLine->setValue(m_filterMaxLine);
-    m_uiFilter.filterTypeTarget->setCurrentIndex(m_filterTypeTarget);
-    m_uiFilter.filterTargetList->setItems(m_filterTargetList);
+    m_uiFilter.filterTypeTarget->setCurrentIndex(m_filterTypeDirection);
+    m_uiFilter.filterTargetList->setItems(m_filterDirectionList);
 }
 
 void PublicTransport::configAccepted()
@@ -377,18 +373,18 @@ void PublicTransport::configAccepted()
         changed = true;
     }
 
-    if (m_filterTypeTarget  != (m_uiFilter.filterTypeTarget->currentIndex())) {
-        m_filterTypeTarget = static_cast<FilterType>(m_uiFilter.filterTypeTarget->currentIndex());
+    if (m_filterTypeDirection  != (m_uiFilter.filterTypeTarget->currentIndex())) {
+        m_filterTypeDirection = static_cast<FilterType>(m_uiFilter.filterTypeTarget->currentIndex());
         KConfigGroup cg = config();
-        cg.writeEntry("filterTypeTarget", static_cast<int>(m_filterTypeTarget));
+        cg.writeEntry("filterTypeDirection", static_cast<int>(m_filterTypeDirection));
         changed = true;
     }
     
-    if (m_filterTargetList  != m_uiFilter.filterTargetList->items()) {
-        m_filterTargetList = m_uiFilter.filterTargetList->items();
-	m_filterTargetList.removeDuplicates();
+    if (m_filterDirectionList  != m_uiFilter.filterTargetList->items()) {
+        m_filterDirectionList = m_uiFilter.filterTargetList->items();
+	m_filterDirectionList.removeDuplicates();
         KConfigGroup cg = config();
-        cg.writeEntry("filterTargetList", m_filterTargetList);
+        cg.writeEntry("filterDirectionList", m_filterDirectionList);
         changed = true;
     }
     
@@ -402,7 +398,7 @@ void PublicTransport::configAccepted()
 void PublicTransport::generateInfoText()
 {
     m_infoText = QString("<html><body><center><big><b>%1</b> <font size='-1'>(%2)</font></big></center><table style='margin-top: 8px;' cellpadding='3' cellspacing='0' width='100%'>").arg(m_stop).arg(m_city);
-    m_infoText += "<tr style='background-color:rgba(100,225,100, 100); border:1px solid black;'><th align='right'><b>" + i18nc("A tramline or busline", "Line") + "</b></th> <th align='left'><b>" + i18nc("Target of a tramline or busline", "Target") + "</b></th>";
+    m_infoText += "<tr style='background-color:rgba(100,225,100, 100); border:1px solid black;'><th align='right'><b>" + i18nc("A tramline or busline", "Line") + "</b></th> <th align='left'><b>" + i18nc("Direction of a tramline or busline", "Direction") + "</b></th>";
     if (m_showDepartureTime || m_showRemainingMinutes)
 	m_infoText += "<th align='left'><b>" + i18nc("Time of departure of a tram or bus", "Departure") + "</b></th>";
     m_infoText += "</tr>";
@@ -419,8 +415,8 @@ void PublicTransport::generateInfoText()
 // 		(departureInfo.lineType() == DepartureInfo::Bus && !m_showBuses) ||
 // 		(departureInfo.isNightLine() && !m_showNightlines) ||
 // 		departureInfo.line() < m_filterMinLine || departureInfo.line() > m_filterMaxLine ||
-// 		(m_filterTypeTarget == ShowMatching && !m_filterTargetList.contains(departureInfo.target())) ||
-// 		(m_filterTypeTarget == HideMatching && m_filterTargetList.contains(departureInfo.target())) )
+// 		(m_filterTypeDirection == ShowMatching && !m_filterDirectionList.contains(departureInfo.direction())) ||
+// 		(m_filterTypeDirection == HideMatching && m_filterDirectionList.contains(departureInfo.direction())) )
 // 		continue;
 
 	    QString time, sDeparture = departureInfo.departure.toString("hh:mm");
@@ -435,7 +431,7 @@ void PublicTransport::generateInfoText()
 
 	    const QString sRowStyle = oddRow ? " style='background-color:rgba(255,255,255, 50);'"
 							    : " style='background-color:rgba(100,225,100, 50);'";
-	    m_infoText += QString("<tr%1><td align='right' style='color:#444400;'><b>%2</b></td><td style='color:#005500;'>%3</td>%4</tr>").arg(sRowStyle).arg( departureInfo.lineString ).arg( departureInfo.target ).arg( time );
+	    m_infoText += QString("<tr%1><td align='right' style='color:#444400;'><b>%2</b></td><td style='color:#005500;'>%3</td>%4</tr>").arg(sRowStyle).arg( departureInfo.lineString ).arg( departureInfo.direction ).arg( time );
 
 	    oddRow = !oddRow;
 	}

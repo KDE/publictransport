@@ -20,8 +20,6 @@
 #include "publictransportdataengine.h"
 #include <Plasma/DataContainer>
 
-#include "departureinfo.h"
-
 PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList& args)
     : Plasma::DataEngine(parent, args)
 {
@@ -38,7 +36,7 @@ PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList
 bool PublicTransportEngine::sourceRequestEvent(const QString &name)
 {
     // Create the requested source so that the connection can be established
-    setData( name, 0 );
+    setData( name, "updated", QTime::currentTime() );
     return updateSourceEvent(name);
 }
 
@@ -53,13 +51,13 @@ bool PublicTransportEngine::updateSourceEvent(const QString &name)
 	germany.insert( "Rhein-Neckar (vrn.de)", VRN );
 	germany.insert( "Berlin (bvg.de)", BVG );
 	setData( name, I18N_NOOP("germany"), germany );
-	    
+	
 	QMap< QString, QVariant > slovakia;
 	slovakia.insert( "Bratislava (imhd.sk)", IMHD );
 	setData( name, I18N_NOOP("slovakia"), slovakia );
     }
     
-    qDebug() << "publicTransport DataEngine: updateSourceEvent" << name;
+    qDebug() << "PublicTransportEngine::updateSourceEvent" << "updateSourceEvent" << name;
     
     // Departures 0:Bremen:Pappelstraße
     if ( name.startsWith(I18N_NOOP("Departures")) )
@@ -67,7 +65,7 @@ bool PublicTransportEngine::updateSourceEvent(const QString &name)
 	QStringList input = name.right( name.length() - 10).split(":", QString::SkipEmptyParts);
 	if (input.length() < 3)
 	{
-	    qDebug() << QString("publicTransport DataEngine: Wrong input: '%1'").arg(name);
+	    qDebug() << "PublicTransportEngine::updateSourceEvent" << QString("Wrong input: '%1'").arg(name);
 	    return false; // wrong input
 	}
 
@@ -79,7 +77,7 @@ bool PublicTransportEngine::updateSourceEvent(const QString &name)
 	TimetableAccessor *accessor = m_accessors.value( serviceProvider, TimetableAccessor::getSpecificAccessor(serviceProvider) );
 	if ( accessor == NULL )
 	{
-	    qDebug() << QString("publicTransport DataEngine: Accessor couldn't be created for %1").arg(serviceProvider);
+	    qDebug() << "PublicTransportEngine::updateSourceEvent" << QString("Accessor couldn't be created for %1").arg(serviceProvider);
 	    return false; // accessor couldn't be created
 	}
 
@@ -94,22 +92,27 @@ bool PublicTransportEngine::updateSourceEvent(const QString &name)
 
 void PublicTransportEngine::journeyListReceived ( QList< DepartureInfo > journeys, ServiceProvider serviceProvider, QString city, QString stop )
 {
-    qDebug() << "publicTransport DataEngine:" << journeys.count() << "journeys received";
+    qDebug() << "PublicTransportEngine::journeyListReceived" << journeys.count() << "journeys received";
+    
+    QString sourceName = QString("Departures %1:%2:%3").arg( static_cast<int>(serviceProvider) ).arg( city ).arg( stop );
     int i = 0;
-    foreach (const DepartureInfo &departureInfo, journeys)
+    foreach ( const DepartureInfo &departureInfo, journeys )
     {
-	QString sourceName = QString("Departures %1:%2:%3").arg( static_cast<int>(serviceProvider) ).arg( city ).arg( stop );
 	QMap<QString, QVariant> data;
-	data.insert("line", departureInfo.lineString());
-	data.insert("lineNumber", departureInfo.line());
-	data.insert("target", departureInfo.target());
-	data.insert("duration", departureInfo.getDurationString());
+	data.insert("line", departureInfo.line());
+	data.insert("direction", departureInfo.direction());
 	data.insert("departure", departureInfo.departure());
-// 	QString data = departureInfo.lineString() + ", " + departureInfo.target() + ", " + departureInfo.getDurationString();
-// 	qDebug() << data;
+	
 	setData( sourceName, QString("%1").arg(i++), data );
-	qDebug() << "setData" << sourceName << data;
+// 	qDebug() << "setData" << sourceName << data;
     }
+
+    int m_lastJourneyCount = 15; // TODO: member variable
+    for ( ; i < m_lastJourneyCount; ++i )
+	removeData( sourceName, QString("%1").arg(i++) );
+    m_lastJourneyCount = journeys.count();
+    
+    setData( sourceName, "updated", QTime::currentTime() );
 }
 
 // This does the magic that allows Plasma to load
