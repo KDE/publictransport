@@ -24,7 +24,7 @@ DepartureInfo::DepartureInfo ()
 {
 }
 
-DepartureInfo::DepartureInfo ( DepartureInfo::LineType lineType, int line, bool nightLine, QString target, QTime departure )
+DepartureInfo::DepartureInfo ( DepartureInfo::LineType lineType, int line, bool nightLine, const QString& target, const QTime &departure )
 {
     m_lineType = lineType;
     m_line = line;
@@ -33,7 +33,7 @@ DepartureInfo::DepartureInfo ( DepartureInfo::LineType lineType, int line, bool 
     m_departure = departure;
 }
 
-QString DepartureInfo::getDurationString()
+QString DepartureInfo::getDurationString() const
 {
     int totalSeconds = QTime::currentTime().secsTo(m_departure);
     int seconds = totalSeconds % 60;
@@ -49,12 +49,12 @@ QString DepartureInfo::getDurationString()
 
     if (hours != 0)
     {
-	str += QString(i18n("in <b>%1</b> hours")).arg(hours);
+	str += i18n("in <b>%1</b> hours",hours);
 	if (minutes != 0)
 	    str += i18n(" and ");
     }
     if (minutes != 0)
-	str += QString(i18n("in <b>%1</b> minutes")).arg(minutes);
+	str += i18n("in <b>%1</b> minutes",minutes);
     if (hours == 0 && minutes == 0)
 	str = i18n("now");
 

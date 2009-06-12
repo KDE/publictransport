@@ -96,7 +96,7 @@ void PublicTransportEngine::journeyListReceived ( QList< DepartureInfo > journey
 {
     qDebug() << "publicTransport DataEngine:" << journeys.count() << "journeys received";
     int i = 0;
-    foreach (DepartureInfo departureInfo, journeys)
+    foreach (const DepartureInfo &departureInfo, journeys)
     {
 	QString sourceName = QString("Departures %1:%2:%3").arg( static_cast<int>(serviceProvider) ).arg( city ).arg( stop );
 	QMap<QString, QVariant> data;

@@ -34,17 +34,17 @@ class DepartureInfo
 	};
 
 	DepartureInfo();
-	DepartureInfo(LineType lineType, int line, bool nightLine, QString target, QTime departure);
+	DepartureInfo(LineType lineType, int line, bool nightLine, const QString &target, const QTime &departure);
 	
-	QString getDurationString();
+	QString getDurationString()const;
 	
-	LineType lineType() { return m_lineType; };
-	int line() { return m_line; };
-	QString lineString() { return m_sLine; };
-	void setLineString(QString sLine) { m_sLine = sLine; };
-	bool isNightLine() { return m_nightLine; };
-	QString target() { return m_target; };
-	QTime departure() { return m_departure; };
+	LineType lineType() const { return m_lineType; };
+	int line() const { return m_line; };
+	QString lineString() const { return m_sLine; };
+	void setLineString(const QString& sLine) { m_sLine = sLine; };
+	bool isNightLine() const { return m_nightLine; };
+	QString target() const { return m_target; };
+	QTime departure() const { return m_departure; };
 
     private:
 	LineType m_lineType;
