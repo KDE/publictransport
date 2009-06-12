@@ -143,7 +143,7 @@ void PublicTransport::createTooltip()
     else
     {
 	DepartureInfo nextDeparture = m_departureInfos.first();
-	data.setSubText( QString(i18nc("%4 is the translated duration text, e.g. in 3 minutes", "Next departure from '%1': line %2 (%3) %4")).arg(m_stop).arg( nextDeparture.lineString ).arg( nextDeparture.target ).arg( nextDeparture.duration ) );
+	data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes", "Next departure from '%1': line %2 (%3) %4",m_stop, nextDeparture.lineString , nextDeparture.target , nextDeparture.duration ) );
     }
     data.setImage( KIcon("public-transport-stop").pixmap(IconSize(KIconLoader::Desktop)) );
     Plasma::ToolTipManager::self()->setContent(this, data);
@@ -276,7 +276,7 @@ void PublicTransport::createConfigurationInterface ( KConfigDialog* parent )
     }
 
     // Get index of the service provider
-    int curServiceProviderIndex = m_ui.serviceProvider->findData( m_serviceProvider );
+    const int curServiceProviderIndex = m_ui.serviceProvider->findData( m_serviceProvider );
     qDebug() << "Service provider index found: " << curServiceProviderIndex;
     m_ui.serviceProvider->setCurrentIndex( curServiceProviderIndex );
 
@@ -334,7 +334,7 @@ void PublicTransport::configAccepted()
         changed = true;
     }
 
-    int serviceProviderIndex = m_ui.serviceProvider->itemData( m_ui.serviceProvider->currentIndex() ).toInt();
+    const int serviceProviderIndex = m_ui.serviceProvider->itemData( m_ui.serviceProvider->currentIndex() ).toInt();
     if (m_serviceProvider != serviceProviderIndex) {
         m_serviceProvider = serviceProviderIndex;
         KConfigGroup cg = config();
@@ -408,7 +408,7 @@ void PublicTransport::generateInfoText()
     m_infoText += "</tr>";
     
     if (m_departureInfos.isEmpty())
-	m_infoText += "Error parsing departure information";
+	m_infoText += i18n("Error parsing departure information");
     else
     {
 	bool oddRow = true;
@@ -433,7 +433,7 @@ void PublicTransport::generateInfoText()
 	    else
 		time = "";
 
-	    QString sRowStyle = oddRow ? " style='background-color:rgba(255,255,255, 50);'"
+	    const QString sRowStyle = oddRow ? " style='background-color:rgba(255,255,255, 50);'"
 							    : " style='background-color:rgba(100,225,100, 50);'";
 	    m_infoText += QString("<tr%1><td align='right' style='color:#444400;'><b>%2</b></td><td style='color:#005500;'>%3</td>%4</tr>").arg(sRowStyle).arg( departureInfo.lineString ).arg( departureInfo.target ).arg( time );
 
