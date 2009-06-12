@@ -2,7 +2,7 @@
 #include <QRegExp>
 #include <QDebug>
 /*
-QList< DepartureInfo > TimetableAccessorVrn::parseDocument(QString document)
+QList< DepartureInfo > TimetableAccessorVrn::parseDocument(const QString& document)
 {
     QList< DepartureInfo > journeys;*/
    // QString sFind = "(<td class=\".*\" style=\".*\">([0-9]{2})\\:([0-9]{2})</td>.*<td class=\".*\" style=\".*\" align=\".*\"><img src=\"images/response/(.*)\\..*\" alt=\".*\"></td>.*<td class=\".*\" nowrap>(.*)</td>.*<td class=\".*\">(.*)</td>)";

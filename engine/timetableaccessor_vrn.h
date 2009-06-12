@@ -9,7 +9,7 @@ class TimetableAccessorVrn : public TimetableAccessor
 	virtual ServiceProvider serviceProvider() { return VRN; };
 
     protected:
-// 	QList<DepartureInfo> parseDocument(QString document); // parses the contents of the document at the url
+// 	QList<DepartureInfo> parseDocument(const QString& document); // parses the contents of the document at the url
 	virtual QString rawUrl(); // gets the "raw" url
 	virtual QString regExpSearch(); // the regexp string to use
 	virtual DepartureInfo getInfo(QRegExp rx);

@@ -2,7 +2,7 @@
 #include <QRegExp>
 #include <QDebug>
 
-QList< DepartureInfo > TimetableAccessorEfa::parseDocument(QString document)
+QList< DepartureInfo > TimetableAccessorEfa::parseDocument(const QString& document)
 {
     QList< DepartureInfo > journeys;
 

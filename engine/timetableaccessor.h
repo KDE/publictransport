@@ -56,7 +56,7 @@ class TimetableAccessor : public QObject
     protected:
 	QString m_document;
 
-	virtual QList<DepartureInfo> parseDocument(QString document); // parses the contents of a document that was requested using requestJourneys()
+	virtual QList<DepartureInfo> parseDocument(const QString& document); // parses the contents of a document that was requested using requestJourneys()
 	virtual QString rawUrl(); // gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
 	virtual bool putCityIntoUrl() { return true; };
 	KUrl getUrl(QString city, QString stop); // constructs an url by combining the "raw" url with the needed information

@@ -31,7 +31,7 @@ class TimetableAccessorRmv : public TimetableAccessor
 	virtual ServiceProvider serviceProvider() { return RMV; };
 	
     protected:
-	QList<DepartureInfo> parseDocument(QString document); // parses the contents of the document at the url
+	QList<DepartureInfo> parseDocument(const QString& document); // parses the contents of the document at the url
 	virtual QString rawUrl(); // gets the "raw" url
 };
 

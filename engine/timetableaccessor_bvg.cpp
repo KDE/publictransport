@@ -21,7 +21,7 @@
 #include <QRegExp>
 #include <QDebug>
 /*
-QList< DepartureInfo > TimetableAccessorBvg::parseDocument(QString document)
+QList< DepartureInfo > TimetableAccessorBvg::parseDocument(const QString& document)
 {
     QList< DepartureInfo > journeys;*/
 

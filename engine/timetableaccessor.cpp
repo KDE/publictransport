@@ -126,7 +126,7 @@ KUrl TimetableAccessor::getUrl ( QString city, QString stop )
 	return rawUrl().arg(stop);
 }
 
-QList< DepartureInfo > TimetableAccessor::parseDocument(QString)
+QList< DepartureInfo > TimetableAccessor::parseDocument(const QString&)
 {
     return QList<DepartureInfo>();
 }

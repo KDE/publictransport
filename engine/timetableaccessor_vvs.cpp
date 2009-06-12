@@ -22,7 +22,7 @@
 #include <QDebug>
 
 /*
-QList< DepartureInfo > TimetableAccessorVvs::parseDocument(QString document)
+QList< DepartureInfo > TimetableAccessorVvs::parseDocument(const QString& document)
 {
     QList< DepartureInfo > journeys;
     */
