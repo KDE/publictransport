@@ -1,9 +1,6 @@
 [Desktop Entry]
 Name=Public Transport
-Name[x-test]=xxpublicTransportxx
-Name[de]=Öffentlicher Nahverkehr
 Comment=Plasma Public Transport shows soon departing trams and/or buses for stops in germany.
-Comment[de]=Plasma Öffentlicher Nahverkehr zeigt demnächst abfahrende Straßenbahnen und/oder Busse für Haltestellen in Deutschland.
 Icon=public-transport-stop
 Type=Service
 

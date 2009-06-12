@@ -1,9 +1,6 @@
 [Desktop Entry]
 Name=Public transport engine
-Name[x-test]=xxPublic transport enginexx
 Comment=Plasma data engine for public transport in germany
-Comment[de]=Plasma data engine für öffentlichen Nahverkehr in Deutschland
-Comment[x-test]=xxPlasma public transport enginexx
 Icon=public-transport-stop
 Type=Service
 
