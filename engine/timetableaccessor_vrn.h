@@ -1,15 +1,15 @@
 #ifndef TIMETABLEACCESSOR_VRN_HEADER
 #define TIMETABLEACCESSOR_VRN_HEADER
 
-#include "timetableaccessor.h"
+#include "timetableaccessor_efa.h"
 
-class TimetableAccessorVrn : public TimetableAccessor
+class TimetableAccessorVrn : public TimetableAccessorEfa
 {
     public:
 	virtual ServiceProvider serviceProvider() { return VRN; };
 	
 	virtual QString country() const { return "Germany"; };
-// 	virtual QStringList cities() const { return QStringList() << "?"; };
+ 	virtual QStringList cities() const { return QStringList() << "Karlsruhe"; }; // TODO: fill with cities
 
     protected:
 // 	QList<DepartureInfo> parseDocument(QString document); // parses the contents of the document at the url

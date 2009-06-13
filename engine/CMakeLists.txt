@@ -12,8 +12,8 @@ include_directories(
    )
 
 # We add our source code here
-set(publictransport_engine_SRCS publictransportdataengine.cpp departureinfo.cpp
-    timetableaccessor.cpp timetableaccessor_efa.cpp timetableaccessor_fahrplaner.cpp timetableaccessor_rmv.cpp timetableaccessor_vvs.cpp timetableaccessor_vrn.cpp timetableaccessor_bvg.cpp timetableaccessor_imhd.cpp)
+set(publictransport_engine_SRCS publictransportdataengine.cpp
+    timetableaccessor.cpp timetableaccessor_efa.cpp timetableaccessor_fahrplaner.cpp timetableaccessor_rmv.cpp timetableaccessor_vvs.cpp timetableaccessor_vrn.cpp timetableaccessor_bvg.cpp timetableaccessor_dvb.cpp timetableaccessor_nasa.cpp timetableaccessor_imhd.cpp)
 
 # Now make sure all files get to the right place
 kde4_add_plugin(plasma_engine_publictransport ${publictransport_engine_SRCS})
