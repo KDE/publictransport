@@ -1,6 +1,10 @@
 [Desktop Entry]
 Name=Public Transport
+Name[sv]=Kollektivtrafik
+Name[uk]=Громадський транспорт
 Comment=Plasma Public Transport shows soon departing trams and/or buses for stops in germany.
+Comment[sv]=Plasma kollektivtrafik visar spårvagnar och/eller bussar som snart går för hållplatser i Tyskland.
+Comment[uk]=Плазмоїд громадського транспорту показує найближчий час відбуття трамваїв та автобусів з зупинок у Німеччині.
 Icon=public-transport-stop
 Type=Service
 

@@ -1,6 +1,10 @@
 [Desktop Entry]
 Name=Public transport engine
+Name[sv]=Kollektivtrafikgränssnitt
+Name[uk]=Рушій громадського транспорту
 Comment=Plasma data engine for public transport in germany
+Comment[sv]=Plasma datagränssnitt för kollektivtrafik i Tyskland
+Comment[uk]=Рушій даних Плазим для громадського транспорту у Німеччині
 Icon=public-transport-stop
 Type=Service
 
