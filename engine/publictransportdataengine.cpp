@@ -50,6 +50,8 @@ bool PublicTransportEngine::updateSourceEvent(const QString &name)
 	germany.insert( "Stuttgart & surroundings (vvs.de)", VVS );
 	germany.insert( "Rhein-Neckar (vrn.de)", VRN );
 	germany.insert( "Berlin (bvg.de)", BVG );
+	germany.insert( "Dresden (dvb.de)", DVB );
+	germany.insert( "Sachsen-Anhalt (nasa.de)", NASA );
 	setData( name, I18N_NOOP("germany"), germany );
 	
 	QMap< QString, QVariant > slovakia;
@@ -72,6 +74,10 @@ bool PublicTransportEngine::updateSourceEvent(const QString &name)
 	ServiceProvider serviceProvider = static_cast<ServiceProvider>( input.at(0).trimmed().toInt() );
 	QString city = input.at(1).trimmed();
 	QString stop = input.at(2).trimmed();
+
+	// Corrections for some cities that need different syntax and can be accessed with the same accessor
+	if ( city == "Leipzig" )
+	    city = "Leipzig,";
 
 	// Try to get the specific accessor from m_accessors (if it's not in there it is created)
 	TimetableAccessor *accessor = m_accessors.value( serviceProvider, TimetableAccessor::getSpecificAccessor(serviceProvider) );
@@ -104,7 +110,7 @@ void PublicTransportEngine::journeyListReceived ( QList< DepartureInfo > journey
 	data.insert("departure", departureInfo.departure());
 	
 	setData( sourceName, QString("%1").arg(i++), data );
-// 	qDebug() << "setData" << sourceName << data;
+// 	qDebug() << "PublicTransportEngine::journeyListReceived" << "setData" << sourceName << data;
     }
 
     int m_lastJourneyCount = 15; // TODO: member variable

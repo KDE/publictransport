@@ -28,6 +28,35 @@
 #include <QDebug>
 #include "departureinfo.h"
 
+// List of implemented service providers with IDs.
+// If you implemented support for a new one, add a value here.
+enum ServiceProvider
+{
+    NoServiceProvider = -1,
+
+    // Germany (0 .. 50?)
+    Fahrplaner = 0, // Niedersachsen/Bremen
+    RMV = 1, // Rhein-Main
+    VVS = 2, // Stuttgart
+    VRN = 3, // Rhein-Neckar
+    BVG = 4, // Berlin
+    DVB = 5, // Dresden
+    NASA = 6, // Sachsen-Anhalt
+
+    // Slovakia (1000 .. ?)
+    IMHD = 1000 // Bratislava
+};
+
+enum TimetableInformation
+{
+    Nothing = 0,
+    DepartureHour = 1,
+    DepartureMinute = 2,
+    TypeOfVehicle = 3,
+    TransportLine = 4,
+    Direction = 5
+};
+
 // Gets timetable information for public transport from different service providers.
 // To implement support for a new service provider create a new class based on
 // TimetableAccessor and overwrite
@@ -43,7 +72,7 @@ class TimetableAccessor : public QObject
         ~TimetableAccessor();
 
 	// Gets a timetable accessor that is able to parse results from the given service provider
-	static TimetableAccessor *getSpecificAccessor(ServiceProvider serviceProvider);
+	static TimetableAccessor *getSpecificAccessor( ServiceProvider serviceProvider );
 
 	// The service provider the accessor is designed for
 	virtual ServiceProvider serviceProvider() { return NoServiceProvider; };

@@ -18,3 +18,24 @@
  */
 
 #include "departureinfo.h"
+
+
+LineType DepartureInfo::getLineTypeFromString ( const QString& sLineType )
+{
+    if ( sLineType == "U-Bahn" )
+	return Subway;
+
+    else if ( sLineType == "Tram" ||
+	sLineType == "S-Bahn" ||
+	sLineType == "Straßenbahn" ||
+	sLineType == "Str" ||
+	sLineType == "dm_train" )
+	return Tram;
+
+    else if ( sLineType == "Bus" ||
+	sLineType == "dm_bus" )
+	return Bus;
+    
+    else
+	return Unknown;
+}

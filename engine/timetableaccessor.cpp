@@ -18,12 +18,8 @@
  */
 
 #include "timetableaccessor.h"
-#include "timetableaccessor_fahrplaner.h"
+#include "timetableaccessor_html.h"
 #include "timetableaccessor_rmv.h"
-#include "timetableaccessor_vvs.h"
-#include "timetableaccessor_bvg.h"
-#include "timetableaccessor_vrn.h"
-#include "timetableaccessor_imhd.h"
 
 #include <KIO/NetAccess>
 #include <KDebug>
@@ -42,26 +38,11 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor ( ServiceProvider serv
 {
     switch (serviceProvider)
     {
-	case Fahrplaner:
-	    return new TimetableAccessorFahrplaner();
-
 	case RMV:
  	    return new TimetableAccessorRmv();
 
-	case VVS:
- 	    return new TimetableAccessorVvs();
-
-	case BVG:
- 	    return new TimetableAccessorBvg();
-
-	case VRN:
- 	    return new TimetableAccessorVrn();
-
-	case IMHD:
-	    return new TimetableAccessorImhd();
-
 	default:
-	    return 0;
+ 	    return new TimetableAccessorHtml( serviceProvider );
     }
 }
 
@@ -104,8 +85,6 @@ void TimetableAccessor::finished(KJob* job)
     QStringList jobInfo = m_jobInfos.value(job);
     m_jobInfos.remove(job);
     
-//     qDebug() << "\nFinished downloading:\n" << m_document << "\n";
-// , ServiceProvider serviceProvider, QString city, QString stop
     emit journeyListReceived( parseDocument(m_document), serviceProvider(), jobInfo.at(0), jobInfo.at(1) );
 }
 

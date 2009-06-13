@@ -41,23 +41,6 @@ enum LineService
 };
 Q_DECLARE_FLAGS( LineServices, LineService );
 
-// List of implemented service providers with IDs.
-// If you implemented support for a new one, add a value here.
-enum ServiceProvider
-{
-    NoServiceProvider = -1,
-
-    // Germany (0 .. 50?)
-    Fahrplaner = 0, // Niedersachsen/Bremen
-    RMV = 1, // Rhein-Main
-    VVS = 2, // Stuttgart
-    VRN = 3, // Rhein-Neckar
-    BVG = 4, // Berlin
-
-    // Slovakia (1000 .. ?)
-    IMHD = 1000 // Bratislava
-};
-
 class DepartureInfo
 {
     public:
@@ -89,6 +72,8 @@ class DepartureInfo
 	LineType lineType() const { return m_lineType; };
 	bool isNightLine() const { return m_lineServices.testFlag( NightLine ); };
 	bool isExpressLine() const { return m_lineServices.testFlag( ExpressLine ); };
+
+	static LineType getLineTypeFromString( const QString &sLineType );
 
     private:
 	QString m_direction, m_line;
