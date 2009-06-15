@@ -1,8 +1,10 @@
 [Desktop Entry]
 Name=Public Transport
+Name[km]=ការ​បញ្ជូន​សាធារណៈ
 Name[sv]=Kollektivtrafik
 Name[uk]=Громадський транспорт
 Comment=Plasma Public Transport shows soon departing trams and/or buses for stops in germany.
+Comment[km]=ការ​បញ្ជូន​សាធារណៈ​របស់​ប្លាស្មា​បង្ហាញ​ trams ចាប់ផ្ដើម និង/ឬ​ខ្សែបញ្ជូន​សម្រាប់​បញ្ឈប់​ជា​ភាសា​អាល្លឺម៉ង់ ។
 Comment[sv]=Plasma kollektivtrafik visar spårvagnar och/eller bussar som snart går för hållplatser i Tyskland.
 Comment[uk]=Плазмоїд громадського транспорту показує найближчий час відбуття трамваїв та автобусів з зупинок у Німеччині.
 Icon=public-transport-stop
