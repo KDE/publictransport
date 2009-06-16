@@ -52,7 +52,12 @@ bool PublicTransportEngine::updateSourceEvent(const QString &name)
 	germany.insert( "Berlin (bvg.de)", BVG );
 	germany.insert( "Dresden (dvb.de)", DVB );
 	germany.insert( "Sachsen-Anhalt (nasa.de)", NASA );
+	germany.insert( "Deutschlandweit (db.de)", DB );
 	setData( name, I18N_NOOP("germany"), germany );
+
+	QMap< QString, QVariant > swiss;
+	swiss.insert( "Schweiz (sbb.ch)", SBB );
+	setData( name, I18N_NOOP("swiss"), swiss );
 	
 	QMap< QString, QVariant > slovakia;
 	slovakia.insert( "Bratislava (imhd.sk)", IMHD );
@@ -75,7 +80,7 @@ bool PublicTransportEngine::updateSourceEvent(const QString &name)
 	QString city = input.at(1).trimmed();
 	QString stop = input.at(2).trimmed();
 
-	// Corrections for some cities that need different syntax and can be accessed with the same accessor
+	// Corrections for some cities that need different syntax
 	if ( city == "Leipzig" )
 	    city = "Leipzig,";
 
@@ -104,10 +109,16 @@ void PublicTransportEngine::journeyListReceived ( QList< DepartureInfo > journey
     int i = 0;
     foreach ( const DepartureInfo &departureInfo, journeys )
     {
+	if ( !departureInfo.isValid() )
+	    continue;
+	
 	QMap<QString, QVariant> data;
 	data.insert("line", departureInfo.line());
 	data.insert("direction", departureInfo.direction());
 	data.insert("departure", departureInfo.departure());
+	data.insert("lineType", static_cast<int>(departureInfo.lineType()));
+	data.insert("nightline", departureInfo.isNightLine());
+	data.insert("expressline", departureInfo.isExpressLine());
 	
 	setData( sourceName, QString("%1").arg(i++), data );
 // 	qDebug() << "PublicTransportEngine::journeyListReceived" << "setData" << sourceName << data;

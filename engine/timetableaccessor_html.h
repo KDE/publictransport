@@ -16,20 +16,19 @@ class TimetableAccessorHtml : public TimetableAccessor
 	virtual bool putCityIntoUrl() const { return m_info.putCityIntoUrl; };
 
     protected:
-	QList<DepartureInfo> parseDocument( const QString &document ); // parses the contents of the document at the url
-	
-	virtual QString rawUrl(); // gets the "raw" url
-	virtual QString regExpSearch(); // the regexp string to use
-	virtual QList< TimetableInformation > regExpInfos(); // The meanings of matches of the regexp
+	// Parses the contents of the document at the url
+	QList<DepartureInfo> parseDocument();
+
+	// Gets the "raw" url
+	virtual QString rawUrl();
+	// The regexp string to use
+	virtual QString regExpSearch();
+	// The meanings of matches of the regexp
+	virtual QList< TimetableInformation > regExpInfos();
 	virtual DepartureInfo getInfo(QRegExp rx);
 
     private:
 	TimetableAccessorInfo m_info;
-// 	ServiceProvider m_serviceProvider;
-// 	QString m_rawUrl, m_regExpSearch, m_country;
-// 	QStringList m_cities;
-// 	QList< TimetableInformation > m_regExpInfos;
-// 	bool m_putCityIntoUrl;
 };
 
 #endif // TIMETABLEACCESSOR_HTML_HEADER

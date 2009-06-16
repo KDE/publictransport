@@ -24,6 +24,7 @@
 #include <Plasma/PopupApplet>
 #include <Plasma/Svg>
 #include <Plasma/Label>
+// #include <QTreeWidget>
 #include <QtNetwork>
 #include "ui_publicTransportConfig.h"
 #include "ui_publicTransportFilterConfig.h"
@@ -48,6 +49,26 @@ class PublicTransport : public Plasma::PopupApplet
 	virtual void constraintsEvent ( Plasma::Constraints constraints );
         void init();
 
+	// The type of the vehicle used for a public transport line.
+	// The numbers here must match the ones in the data engine!
+	enum LineType
+	{
+	    Unknown = 0,
+	    Tram = 1,
+	    Bus = 2,
+	    Subway = 3
+	};
+
+	// The type of services for a public transport line.
+	enum LineService
+	{
+	    NoLineService = 0,
+
+	    NightLine = 1,
+	    ExpressLine = 2
+	};
+	Q_DECLARE_FLAGS( LineServices, LineService );
+	
 	enum FilterType
 	{
 	    ShowAll = 0,
@@ -60,43 +81,50 @@ class PublicTransport : public Plasma::PopupApplet
 	    int lineNumber;
 	    QString direction, lineString, duration;
 	    QTime departure;
+	    LineType lineType;
+	    LineServices lineServices;
 
-	    DepartureInfo( QString line, QString direction, QTime departure )
+	    DepartureInfo( QString line, QString direction, QTime departure, LineType lineType )
 	    {
-		this->lineNumber = line.toInt(); // TODO: extract number from the line string
-		
+		init( line, direction, departure, lineType, NoLineService );
+	    }
+	    
+	    DepartureInfo( QString line, QString direction, QTime departure, LineType lineType, bool nightLine, bool expressLine )
+	    {
+		LineServices lineServices = NoLineService;
+		if ( nightLine )
+		    lineServices |= NightLine;
+		if ( expressLine )
+		    lineServices |= ExpressLine;
+		init( line, direction, departure, lineType, lineServices );
+	    }
+	    
+	    DepartureInfo( QString line, QString direction, QTime departure, LineType lineType, LineServices lineServices )
+	    {
+		init( line, direction, departure, lineType, lineServices );
+	    }
+
+	    void init( QString line, QString direction, QTime departure, LineType lineType, LineServices lineServices )
+	    {
+		QRegExp rx("[0-9]*");
+		rx.lastIndexIn( line );
+		if ( rx.isValid() )
+		    this->lineNumber = rx.cap().toInt();
+		else
+		    this->lineNumber = -1;
+
 		this->lineString = line;
 		this->direction = direction;
 		this->departure = departure;
-
-		int totalSeconds = QTime::currentTime().secsTo(departure);
-		int seconds = totalSeconds % 60;
-		totalSeconds -= seconds;
-		if (seconds > 0)
-		    totalSeconds += 60;
-		if (totalSeconds < 0)
-		{
-		    duration = i18n("depart is in the past");
-		    return;
-		}
-
-		int minutes = (totalSeconds / 60) % 60;
-		int hours = totalSeconds / 3600;
-		QString str;
-
-		if (hours != 0)
-		{
-		    str += QString(i18n("in <b>%1</b> hours")).arg(hours);
-		    if (minutes != 0)
-			str += i18n(" and ");
-		}
-		if (minutes != 0)
-		    str += QString(i18n("in <b>%1</b> minutes")).arg(minutes);
-		if (hours == 0 && minutes == 0)
-		    str = i18n("now");
-
-		duration = str;
+		this->duration = getDurationString( QTime::currentTime().secsTo(departure) );
+		this->lineType = lineType;
+		this->lineServices = lineServices;
 	    }
+	    
+	    QString getDurationString( int seconds ) const;
+	    
+	    bool isNightLine() const { return lineServices.testFlag( NightLine ); };
+	    bool isExpressLine() const { return lineServices.testFlag( ExpressLine ); };
 	};
 
     private:
@@ -112,8 +140,10 @@ class PublicTransport : public Plasma::PopupApplet
         Plasma::Svg m_svg;
         KIcon m_icon;
 	QGraphicsWidget *m_graphicsWidget;
-	QList<DepartureInfo> m_departureInfos; // List of current departures
+// 	QTreeWidget *m_treeWidget;
 	Plasma::Label *m_label; // The main label of the plasmoid that shows HTML content (the timetable)
+	
+	QList<DepartureInfo> m_departureInfos; // List of current departures
 	QString m_infoText; // HTML code containing the timetable
 	QString m_currentSource;
 

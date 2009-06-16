@@ -2,6 +2,7 @@
 #include <QRegExp>
 #include <QDebug>
 #include "timetableaccessor_html_infos.h"
+#include <qtextcodec.h>
 
 TimetableAccessorHtml::TimetableAccessorHtml()
 {
@@ -40,13 +41,31 @@ TimetableAccessorHtml::TimetableAccessorHtml ( ServiceProvider serviceProvider )
 	case VVS:
 	    m_info = TimetableAccessorInfo_Vvs();
 	    break;
+
+	case DB:
+	    m_info = TimetableAccessorInfo_Db();
+	    break;
+
+	case SBB:
+	    m_info = TimetableAccessorInfo_Sbb();
+	    break;
+
+	default:
+	    qDebug() << "Not an HTML accessor?" << serviceProvider;
     }
 }
 
-QList< DepartureInfo > TimetableAccessorHtml::parseDocument( const QString &document )
+QList< DepartureInfo > TimetableAccessorHtml::parseDocument()
 {
     QList< DepartureInfo > journeys;
+    QString document = QString(m_document);
 
+    // Get charset of the received document and convert it to a unicode QString
+    QRegExp rxCharset("(?:<head>\\s*<meta http-equiv=\"Content-Type\" content=\"text/html; charset=)(.*)(?:\">)", Qt::CaseInsensitive);
+    rxCharset.setMinimal( true );
+    if ( rxCharset.indexIn(document) != -1 && rxCharset.isValid() )
+	document = QTextCodec::codecForName(rxCharset.cap(1).toAscii())->toUnicode(m_document);
+    
     qDebug() << "TimetableAccessorHtml::parseDocument" << "Parsing...";
     QRegExp rx(regExpSearch(), Qt::CaseInsensitive);
     rx.setMinimal(true);
@@ -72,7 +91,14 @@ QList< DepartureInfo > TimetableAccessorHtml::parseDocument( const QString &docu
 	    if ( infos.contains(TransportLine) )
 		sLine = rx.cap( infos.indexOf( TransportLine ) + 1 ).trimmed();
 	    if ( infos.contains(Direction) )
-		sDirection = rx.cap( infos.indexOf( Direction ) + 1 );
+		sDirection = rx.cap( infos.indexOf( Direction ) + 1 ).trimmed();
+// 	    qDebug() << sDepHour << ":" << sDepMinute;
+
+	    if ( serviceProvider() == DB )
+	    {
+		sDirection = KUrl::decode_string(sDirection);
+		sDirection = sDirection.remove( QRegExp(QString(",?\\s?%1$").arg(m_curCity)) );
+	    }
 	    
 	    journeys.append( DepartureInfo( sLine, DepartureInfo::getLineTypeFromString(sType), sDirection, QTime(sDepHour.toInt(), sDepMinute.toInt()), sLine.isEmpty() ? false : sLine.at(0) == 'N' ) );
 	}

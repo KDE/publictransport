@@ -21,10 +21,11 @@
 #include <QRegExp>
 #include <QtXml>
 
-QList< DepartureInfo > TimetableAccessorRmv::parseDocument( const QString &document )
+QList< DepartureInfo > TimetableAccessorRmv::parseDocument()
 {
     QList< DepartureInfo > journeys;
 
+    QString document = QString(m_document);
     QDomDocument domDoc;
     domDoc.setContent(document);
     QDomElement docElement = domDoc.documentElement();

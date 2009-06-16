@@ -116,6 +116,35 @@ struct TimetableAccessorInfo_Imhd : TimetableAccessorInfo
     }
 };
 
+struct TimetableAccessorInfo_Db : TimetableAccessorInfo
+{
+    TimetableAccessorInfo_Db()
+    {
+	serviceProvider = DB;
+	rawUrl = "http://reiseauskunft.bahn.de/bin/bhftafel.exe/dn?ld=212.203&rt=1&input=%2, %1&boardType=dep&time=actual&showResultPopup=popup&disableEquivs=no&maxJourneys=20&start=yes&GUIREQProduct_5&GUIREQProduct_7&GUIREQProduct_8";
+	regExpSearch = "(?:<tr>\\s*<td class=\".*\">)([0-9]{2})(?::)([0-9]{2})(?:</td>\\s*<td class=\".*\"><a href=\".*\"><img src=\".*\" class=\".*\" alt=\".*\" /></a></td><td class=\".*\">\\s*<a href=\".*\">\\s*)(\\w*)(?:\\s*)(\\S*[0-9]+)(?:\\s*</a>\\s*</td>\\s*<td class=\".*\">\\s*<span class=\".*\">\\s*<a onclick=\".*\" href=\".*\">\\s*)(.*)(?:\\s*</a>\\s*</span>\\s*<br />.*</td>\\s*</tr>)";
+	regExpInfos = QList< TimetableInformation >() << DepartureHour << DepartureMinute << TypeOfVehicle << TransportLine << Direction;
+	country = "Germany";
+	cities = QStringList() << "";
+	putCityIntoUrl = true;
+    }
+};
+
+struct TimetableAccessorInfo_Sbb : TimetableAccessorInfo
+{
+    TimetableAccessorInfo_Sbb()
+    {
+	serviceProvider = SBB;
+	rawUrl = "http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?&input=%1&boardType=dep&time=actual&showResultPopup=popup&disableEquivs=no&maxJourneys=20&start=yes";
+	regExpSearch = "(?:<tr class=\".*\">\\s*<td class=\".*\" valign=\".*\" align=\".*\">\\s*<span class=\".*\">)([0-9]{2})(?::)([0-9]{2})(?:</span>\\s*</td>\\s*<td class=\".*\" align=\".*\" valign=\".*\">\\s*<a href=\".*\">\\s*<img src=\".*\" .* alt=\".*\">\\s*</a>\\s*</td>\\s*<td class=\".*\" align=\".*\" valign=\".*\" nowrap>\\s*<span class=\".*\">\\s*<a href=\".*\">\\s*)(.*)(?:\\s*</a>\\s*</span>\\s*</td>\\s*<td class=\".*\">\\s*<span class=\".*\">\\s*<a href=\".*\">)(.*)(?:</a></span>\\s*<br>.*<span class=\".*\">\\s*</span>\\s*</td>\\s*</tr>)";
+	regExpInfos = QList< TimetableInformation >() << DepartureHour << DepartureMinute << TransportLine << Direction;
+	country = "Swiss";
+	cities = QStringList() << "";
+	putCityIntoUrl = false;
+    }
+};
+
+
 /*** To add a new Accessor create a struct like this: ***
 struct TimetableAccessorInfo_ : TimetableAccessorInfo
 {

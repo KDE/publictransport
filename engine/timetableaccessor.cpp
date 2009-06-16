@@ -70,22 +70,26 @@ QList< DepartureInfo > TimetableAccessor::getJourneys ( QString city, QString st
 
     // this crashes plasma (doesn't crash in plasmoidviewer)
     if (KIO::NetAccess::synchronousRun(job, 0, &data))
-	return parseDocument( QString(data) );
+    {
+	m_document = data;
+	return parseDocument();
+    }
 
     return QList< DepartureInfo >();
 }
 
 void TimetableAccessor::dataReceived ( KIO::Job*, const QByteArray& data )
 {
-    m_document += QString(data);
+    m_document += data;
 }
 
 void TimetableAccessor::finished(KJob* job)
 {
     QStringList jobInfo = m_jobInfos.value(job);
     m_jobInfos.remove(job);
-    
-    emit journeyListReceived( parseDocument(m_document), serviceProvider(), jobInfo.at(0), jobInfo.at(1) );
+
+    m_curCity = jobInfo.at(0);
+    emit journeyListReceived( parseDocument(), serviceProvider(), jobInfo.at(0), jobInfo.at(1) );
 }
 
 KUrl TimetableAccessor::getUrl ( QString city, QString stop )
@@ -97,7 +101,7 @@ KUrl TimetableAccessor::getUrl ( QString city, QString stop )
 	return rawUrl().arg(stop);
 }
 
-QList< DepartureInfo > TimetableAccessor::parseDocument( const QString& )
+QList< DepartureInfo > TimetableAccessor::parseDocument()
 {
     return QList<DepartureInfo>();
 }

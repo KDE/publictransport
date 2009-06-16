@@ -27,9 +27,11 @@
 
 #include <plasma/svg.h>
 #include <plasma/theme.h>
+// #include <Plasma/PaintUtils>
 
 #include <Plasma/ToolTipManager>
 #include <Plasma/ToolTipContent>
+#include <kcolorscheme.h>
 
 
 PublicTransport::PublicTransport(QObject *parent, const QVariantList &args)
@@ -53,15 +55,16 @@ PublicTransport::~PublicTransport()
         // Do some cleanup here
     } else {
 	delete m_label; // I *think* this gets deleted when I delete m_graphicsWidget...
+// 	delete m_treeWidget; // I *think* this gets deleted when I delete m_graphicsWidget...
 	delete m_graphicsWidget; // ...which I *think* also gets deleted automatically by plasma?
     }
 }
 
 void PublicTransport::init()
 {
-    if (m_icon.isNull()) {
-        setFailedToLaunch(true, i18n("No world to say hello"));
-    }
+//     if (m_icon.isNull()) {
+//         setFailedToLaunch(true, i18n("No world to say hello"));
+//     }
 
     createTooltip();
     setPopupIcon("public-transport-stop");
@@ -89,6 +92,34 @@ void PublicTransport::init()
     reconnectSource();
 }
 
+QString PublicTransport::DepartureInfo::getDurationString ( int totalSeconds ) const
+{
+    int seconds = totalSeconds % 60;
+    totalSeconds -= seconds;
+    if (seconds > 0)
+	totalSeconds += 60;
+    if (totalSeconds < 0)
+	return i18n("depart is in the past");
+
+    int minutes = (totalSeconds / 60) % 60;
+    int hours = totalSeconds / 3600;
+    QString str;
+
+    if (hours != 0)
+    {
+	if (minutes != 0)
+	    str = i18n("in <b>%1</b> hours and <b>%2</b> minutes", hours, minutes);
+	else
+	    str = i18n("in <b>%1</b> hours", hours);
+    }
+    else if (minutes != 0)
+	str = i18n("in <b>%1</b> minutes", minutes);
+    else
+	str = i18n("now");
+
+    return str;
+}
+
 void PublicTransport::reconnectSource()
 {
     if ( !m_currentSource.isEmpty() )
@@ -101,14 +132,15 @@ void PublicTransport::reconnectSource()
 
 void PublicTransport::dataUpdated ( const QString& sourceName, const Plasma::DataEngine::Data& data )
 {
+//     qDebug() << "PublicTransport::dataUpdated" << sourceName << data;
     this->setBusy(true);
 
     m_departureInfos.clear();
     for (int i = 0; i < data.keys().count(); ++i)
     {
 	QMap<QString, QVariant> dataMap = data.value( QString("%1").arg(i) ).toMap();
-	DepartureInfo departureInfo( dataMap["line"].toString(), dataMap["direction"].toString(), dataMap["departure"].toTime() );
-
+	DepartureInfo departureInfo( dataMap["line"].toString(), dataMap["direction"].toString(), dataMap["departure"].toTime(), static_cast<LineType>(dataMap["lineType"].toInt()), dataMap["nightline"].toBool(), dataMap["expressline"].toBool() );
+	
 	m_departureInfos.append( departureInfo );
     }
 
@@ -126,7 +158,7 @@ void PublicTransport::geometryChanged()
 
 void PublicTransport::popupEvent ( bool show )
 {
-    m_label->setMaximumSize(999, 999);
+    m_label->setMaximumSize(9999, 9999);
     
     Plasma::PopupApplet::popupEvent ( show );
 }
@@ -183,14 +215,25 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
         m_graphicsWidget->setPreferredSize(300, 200);
 	m_label = new Plasma::Label();
 	m_label->setAlignment(Qt::AlignTop);
-	
+// 	m_treeWidget = new QTreeWidget();
+// 	m_treeWidget->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
+// 	m_treeWidget->setColumnCount(3);
+// 	m_treeWidget->setHeaderLabels( QStringList() 
+// 	    << i18nc("A tramline or busline", "Line")
+// 	    << i18nc("Direction of a tramline or busline", "Direction")
+// 	    << i18nc("Time of departure of a tram or bus", "Departure") );
+// 	m_treeWidget->headerItem()->setTextAlignment( 0, Qt::AlignRight );
+
 	QGraphicsLinearLayout *layout = new QGraphicsLinearLayout(Qt::Vertical);
 	layout->addItem(m_label);
 	layout->setAlignment(m_label, Qt::AlignTop);
+// 	layout->addItem(m_treeWidget);
+// 	layout->setAlignment(m_treeWidget, Qt::AlignTop);
 	m_graphicsWidget->setLayout(layout);
 	
 	registerAsDragHandle(m_graphicsWidget);
 	registerAsDragHandle(m_label);
+// 	registerAsDragHandle(m_treeWidget);
     }
 
     return m_graphicsWidget;
@@ -397,42 +440,64 @@ void PublicTransport::configAccepted()
 
 void PublicTransport::generateInfoText()
 {
+    QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+    QColor bgColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::BackgroundColor );
+    QColor altBgColor = bgColor.darker();
+    int green = altBgColor.green() * 1.8;
+    altBgColor.setGreen( green > 255 ? 255 : green ); // tint green
+
     m_infoText = QString("<html><body><center><big><b>%1</b> <font size='-1'>(%2)</font></big></center><table style='margin-top: 8px;' cellpadding='3' cellspacing='0' width='100%'>").arg(m_stop).arg(m_city);
-    m_infoText += "<tr style='background-color:rgba(100,225,100, 100); border:1px solid black;'><th align='right'><b>" + i18nc("A tramline or busline", "Line") + "</b></th> <th align='left'><b>" + i18nc("Direction of a tramline or busline", "Direction") + "</b></th>";
+    m_infoText += QString("<tr style='background-color:rgba(%1,%2,%3, 100); border:1px solid black;'><th align='right'><b>").arg( altBgColor.red() ).arg( altBgColor.green() ).arg( altBgColor.blue() ) + i18nc("A tramline or busline", "Line") + "</b></th> <th align='left'><b>" + i18nc("Direction of a tramline or busline", "Direction") + "</b></th>";
     if (m_showDepartureTime || m_showRemainingMinutes)
 	m_infoText += "<th align='left'><b>" + i18nc("Time of departure of a tram or bus", "Departure") + "</b></th>";
     m_infoText += "</tr>";
-    
+//     if ( m_treeWidget == NULL)
+// 	graphicsWidget();
+
+//     if ( m_showDepartureTime || m_showRemainingMinutes )
+// 	m_treeWidget->showColumn(2);
+//     else
+// 	m_treeWidget->hideColumn(2);
+
+//     m_treeWidget->clear();
     if (m_departureInfos.isEmpty())
+// 	m_treeWidget->addTopLevelItem( new QTreeWidgetItem(QStringList() << i18n("Error parsing departure information")) );
 	m_infoText += i18n("Error parsing departure information");
     else
     {
 	bool oddRow = true;
 	foreach( DepartureInfo departureInfo, m_departureInfos )
 	{
-	    // TODO: reimplement..
-// 	    if( (departureInfo.lineType() == DepartureInfo::Tram && !m_showTrams) ||
-// 		(departureInfo.lineType() == DepartureInfo::Bus && !m_showBuses) ||
-// 		(departureInfo.isNightLine() && !m_showNightlines) ||
-// 		departureInfo.line() < m_filterMinLine || departureInfo.line() > m_filterMaxLine ||
-// 		(m_filterTypeDirection == ShowMatching && !m_filterDirectionList.contains(departureInfo.direction())) ||
-// 		(m_filterTypeDirection == HideMatching && m_filterDirectionList.contains(departureInfo.direction())) )
-// 		continue;
+	    // Apply filters
+	    if( (departureInfo.lineType == Tram && !m_showTrams) ||
+		(departureInfo.lineType == Bus && !m_showBuses) ||
+		(departureInfo.isNightLine() && !m_showNightlines) ||
+		departureInfo.lineNumber < m_filterMinLine || departureInfo.lineNumber > m_filterMaxLine ||
+		(m_filterTypeDirection == ShowMatching && !m_filterDirectionList.contains(departureInfo.direction)) ||
+		(m_filterTypeDirection == HideMatching && m_filterDirectionList.contains(departureInfo.direction)) )
+		continue;
 
 	    QString time, sDeparture = departureInfo.departure.toString("hh:mm");
 	    if (m_showDepartureTime && m_showRemainingMinutes)
-		time = QString("<td>%1 (%2)</td>").arg( sDeparture ).arg( departureInfo.duration );
+// 		time = QString("%1 (%2)").arg( sDeparture ).arg( departureInfo.duration );
+		time = QString("<td><span>%1 (%2)</span></td>").arg( sDeparture ).arg( departureInfo.duration );
 	    else if (m_showDepartureTime)
-		time = QString("<td>%1</td>").arg( sDeparture );
+// 		time = sDeparture;
+		time = QString("<td><span>%1</span></td>").arg( sDeparture );
 	    else if (m_showRemainingMinutes)
-		time = QString("<td>%1</td>").arg( departureInfo.duration );
+// 		time = departureInfo.duration;
+		time = QString("<td><span>%1</span></td>").arg( departureInfo.duration );
 	    else
 		time = "";
 
-	    const QString sRowStyle = oddRow ? " style='background-color:rgba(255,255,255, 50);'"
-							    : " style='background-color:rgba(100,225,100, 50);'";
-	    m_infoText += QString("<tr%1><td align='right' style='color:#444400;'><b>%2</b></td><td style='color:#005500;'>%3</td>%4</tr>").arg(sRowStyle).arg( departureInfo.lineString ).arg( departureInfo.direction ).arg( time );
-
+	    const QString sRowStyle = oddRow
+		? QString("rgba(%1,%2,%3, 50);").arg( bgColor.red() ).arg( bgColor.green() ).arg( bgColor.blue() )
+		: QString("rgba(%1,%2,%3, 50);").arg( altBgColor.red() ).arg( altBgColor.green() ).arg( altBgColor.blue() );
+	    QString sTextColor = QString("rgb(%1,%2,%3)").arg( textColor.red() ).arg( textColor.green() ).arg( textColor.blue() );
+	    
+	    m_infoText += QString("<tr style='background-color:%1'><td align='right' style='color:%5;'><b>%2</b></td><td style='color:%5;'><span>%3</span></td>%4</tr>").arg( sRowStyle ).arg( departureInfo.lineString ).arg( departureInfo.direction ).arg( time ).arg( sTextColor );
+// 	    m_treeWidget->addTopLevelItem( new QTreeWidgetItem(QStringList() << departureInfo.lineString << departureInfo.direction << time) );
+	    
 	    oddRow = !oddRow;
 	}
     }

@@ -42,6 +42,9 @@ enum ServiceProvider
     BVG = 4, // Berlin
     DVB = 5, // Dresden
     NASA = 6, // Sachsen-Anhalt
+    DB = 7, // (ganz Deutschland?)
+
+    SBB = 10, // (ganze Schweiz?)
 
     // Slovakia (1000 .. ?)
     IMHD = 1000 // Bratislava
@@ -92,10 +95,11 @@ class TimetableAccessor : public QObject
 
     protected:
 	// Stores the downloaded parts of a reply
-	QString m_document;
+	QByteArray m_document;
+	QString m_curCity;
 
 	// Parses the contents of a document that was requested using requestJourneys()
-	virtual QList<DepartureInfo> parseDocument( const QString &document );
+	virtual QList<DepartureInfo> parseDocument();
 	
 	// Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2") 
 	// or only for the stop ("%1") if putCityIntoUrl() == false
