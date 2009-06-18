@@ -48,7 +48,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor ( ServiceProvider serv
 
 KIO::TransferJob *TimetableAccessor::requestJourneys ( QString city, QString stop )
 {
-    qDebug() << "TimetableAccessor::requestJourneys" << "URL =" << getUrl(city, stop);
+    qDebug() << "TimetableAccessor::requestJourneys" << "URL =" << getUrl(city, stop).pathOrUrl();
     
     // Creating a kioslave
     KIO::TransferJob *job = KIO::get( getUrl(city, stop), KIO::NoReload, KIO::HideProgressInfo );
@@ -63,7 +63,7 @@ KIO::TransferJob *TimetableAccessor::requestJourneys ( QString city, QString sto
 
 QList< DepartureInfo > TimetableAccessor::getJourneys ( QString city, QString stop )
 {
-    qDebug() << "TimetableAccessor::getJourneys" << "URL =" << getUrl(city, stop);
+    qDebug() << "TimetableAccessor::getJourneys" << "URL =" << getUrl(city, stop).pathOrUrl();
     
     KIO::TransferJob *job = KIO::get( getUrl(city, stop), KIO::NoReload, KIO::HideProgressInfo );
     QByteArray data;
@@ -72,7 +72,9 @@ QList< DepartureInfo > TimetableAccessor::getJourneys ( QString city, QString st
     if (KIO::NetAccess::synchronousRun(job, 0, &data))
     {
 	m_document = data;
-	return parseDocument();
+	QList< DepartureInfo > journeys;
+	parseDocument( &journeys );
+	return journeys;
     }
 
     return QList< DepartureInfo >();
@@ -89,21 +91,33 @@ void TimetableAccessor::finished(KJob* job)
     m_jobInfos.remove(job);
 
     m_curCity = jobInfo.at(0);
-    emit journeyListReceived( parseDocument(), serviceProvider(), jobInfo.at(0), jobInfo.at(1) );
+    QList< DepartureInfo > *journeys;
+    QMap< QString, QString > *stops;
+    if ( (journeys = new QList< DepartureInfo >()) != NULL && parseDocument(journeys) )
+	emit journeyListReceived( this, *journeys, serviceProvider(), jobInfo.at(0), jobInfo.at(1) );
+    else if ( (stops = new QMap<QString, QString>()) != NULL && parseDocumentPossibleStops(stops) )
+	emit stopListReceived( this, *stops, serviceProvider(), jobInfo.at(0), jobInfo.at(1) );
+    else
+	emit errorParsing( this, serviceProvider(), jobInfo.at(0), jobInfo.at(1) );
 }
 
 KUrl TimetableAccessor::getUrl ( QString city, QString stop )
 {
     // Construct the url from the "raw" url by inserting the city and the stop
-    if ( putCityIntoUrl() )
+    if ( useSeperateCityValue() )
 	return rawUrl().arg(city).arg(stop);
     else
 	return rawUrl().arg(stop);
 }
 
-QList< DepartureInfo > TimetableAccessor::parseDocument()
+bool TimetableAccessor::parseDocument( QList<DepartureInfo> *journeys )
 {
-    return QList<DepartureInfo>();
+    return false;
+}
+
+bool TimetableAccessor::parseDocumentPossibleStops ( QMap<QString,QString> *stops )
+{
+    return false;
 }
 
 QString TimetableAccessor::rawUrl()

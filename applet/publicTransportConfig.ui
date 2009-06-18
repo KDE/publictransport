@@ -35,7 +35,7 @@
      </property>
     </widget>
    </item>
-   <item row="10" column="0" colspan="3">
+   <item row="10" column="0" colspan="4">
     <spacer name="verticalSpacer_2">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -64,14 +64,14 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="2">
+   <item row="2" column="2" colspan="2">
     <widget class="KComboBox" name="serviceProvider"/>
    </item>
-   <item row="3" column="2">
+   <item row="3" column="2" colspan="2">
     <widget class="KLineEdit" name="city"/>
    </item>
    <item row="3" column="1">
-    <widget class="QLabel" name="label_7">
+    <widget class="QLabel" name="lblCity">
      <property name="text">
       <string>City:</string>
      </property>
@@ -103,7 +103,7 @@
      </property>
     </widget>
    </item>
-   <item row="6" column="2">
+   <item row="6" column="2" colspan="2">
     <widget class="QCheckBox" name="updateAutomatically">
      <property name="text">
       <string/>
@@ -113,7 +113,7 @@
      </property>
     </widget>
    </item>
-   <item row="7" column="2">
+   <item row="7" column="2" colspan="2">
     <layout class="QHBoxLayout" name="layoutUpdateTimeout">
      <item>
       <widget class="KIntSpinBox" name="updateTimeout">
@@ -147,7 +147,7 @@
      </property>
     </widget>
    </item>
-   <item row="13" column="2">
+   <item row="13" column="2" colspan="2">
     <widget class="QCheckBox" name="showRemainingMinutes">
      <property name="text">
       <string/>
@@ -157,7 +157,7 @@
      </property>
     </widget>
    </item>
-   <item row="14" column="2">
+   <item row="14" column="2" colspan="2">
     <widget class="QCheckBox" name="showDepartureTime">
      <property name="text">
       <string/>
@@ -200,9 +200,21 @@
      </property>
     </widget>
    </item>
+   <item row="5" column="3">
+    <widget class="KLed" name="kledStopValidated">
+     <property name="state">
+      <enum>KLed::Off</enum>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>KLed</class>
+   <extends>QWidget</extends>
+   <header>kled.h</header>
+  </customwidget>
   <customwidget>
    <class>KIntSpinBox</class>
    <extends>QSpinBox</extends>

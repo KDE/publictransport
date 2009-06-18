@@ -21,9 +21,9 @@
 #include <QRegExp>
 #include <QtXml>
 
-QList< DepartureInfo > TimetableAccessorRmv::parseDocument()
+bool TimetableAccessorRmv::parseDocument( QList<DepartureInfo> *journeys )
 {
-    QList< DepartureInfo > journeys;
+    journeys = new QList< DepartureInfo >();
 
     QString document = QString(m_document);
     QDomDocument domDoc;
@@ -44,8 +44,6 @@ QList< DepartureInfo > TimetableAccessorRmv::parseDocument()
 	QDomElement stop = node.firstChildElement("MainStop");
 	stop= stop.firstChildElement("BasicStop");
 	stop= stop.firstChildElement("Dep");
-// 	qDebug() << (stop.isNull() ? "NULL!!!" : "OK");
-// 	qDebug() << stop.text();
 	
 	sTime = stop.firstChildElement("Time").text();
 	sDelay = stop.firstChildElement("Delay").text();
@@ -67,10 +65,10 @@ QList< DepartureInfo > TimetableAccessorRmv::parseDocument()
 	}
 
 	DepartureInfo departureInfo( sLine, Tram, sDirection, QTime::fromString(sTime, "hh:mm") );
-	journeys.append( departureInfo );
+	journeys->append( departureInfo );
     }
     
-    return journeys;
+    return true;
 }
 
 QString TimetableAccessorRmv::rawUrl()

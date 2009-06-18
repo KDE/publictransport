@@ -18,24 +18,31 @@
  */
 
 #include "departureinfo.h"
-
+#include <QDebug>
 
 LineType DepartureInfo::getLineTypeFromString ( const QString& sLineType )
 {
-    if ( sLineType == "U-Bahn" )
+//     qDebug() << "DepartureInfo::getLineTypeFromString" << sLineType;
+
+    QString sLineTypeLower = sLineType.toLower();
+    if ( sLineTypeLower == "u-bahn" ||
+	sLineTypeLower == "ubahn" )
 	return Subway;
 
-    else if ( sLineType == "Tram" ||
-	sLineType == "S-Bahn" ||
-	sLineType == "Straßenbahn" ||
-	sLineType == "Str" ||
-	sLineType == "dm_train" )
+    else if ( sLineTypeLower == "s-bahn" ||
+	sLineTypeLower == "sbahn" )
+	return SBahn;
+
+    else if ( sLineTypeLower == "tram" ||
+	sLineTypeLower == "straßenbahn" ||
+	sLineTypeLower == "str" ||
+	sLineTypeLower == "dm_train" )
 	return Tram;
 
-    else if ( sLineType == "Bus" ||
-	sLineType == "dm_bus" )
+    else if ( sLineTypeLower == "bus" ||
+	sLineTypeLower == "dm_bus" )
 	return Bus;
-    
+
     else
 	return Unknown;
 }

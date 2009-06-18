@@ -32,7 +32,7 @@ class TimetableAccessorRmv : public TimetableAccessor
 	
     protected:
 	// parses the contents of the document at the url
-	QList<DepartureInfo> parseDocument();
+	virtual bool parseDocument( QList<DepartureInfo> *journeys );
 	virtual QString rawUrl(); // gets the "raw" url
 };
 

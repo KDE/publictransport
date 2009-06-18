@@ -29,6 +29,8 @@
 #include "ui_publicTransportConfig.h"
 #include "ui_publicTransportFilterConfig.h"
 #include <kconfigdialog.h>
+#include <Plasma/TreeView>
+#include <QStandardItemModel>
 
 class QSizeF;
 class DepartureInfo;
@@ -56,7 +58,8 @@ class PublicTransport : public Plasma::PopupApplet
 	    Unknown = 0,
 	    Tram = 1,
 	    Bus = 2,
-	    Subway = 3
+	    Subway = 3,
+	    SBahn = 4
 	};
 
 	// The type of services for a public transport line.
@@ -106,12 +109,12 @@ class PublicTransport : public Plasma::PopupApplet
 
 	    void init( QString line, QString direction, QTime departure, LineType lineType, LineServices lineServices )
 	    {
-		QRegExp rx("[0-9]*");
-		rx.lastIndexIn( line );
+		QRegExp rx("[0-9]*$");
+		rx.indexIn( line );
 		if ( rx.isValid() )
 		    this->lineNumber = rx.cap().toInt();
 		else
-		    this->lineNumber = -1;
+		    this->lineNumber = 0;
 
 		this->lineString = line;
 		this->direction = direction;
@@ -128,31 +131,64 @@ class PublicTransport : public Plasma::PopupApplet
 	};
 
     private:
+	// Returns true, if all settings are ok, otherwise it returns false
 	bool checkConfig();
-	void generateInfoText();
+	
+	// Fills the model with departure data
+	void fillModel();
+	
 	// Generates tooltip data and registers this applet at plasma's TooltipManager
 	void createTooltip();
+
+	// Disconnects a currently connected data source and connects again using the current configuration
 	void reconnectSource();
+
+	// Disconnects the data source that is used to test a configuration
+	void disconnectTestSource();
+
+	// Gets a list of actions for the context menu
+        virtual QList<QAction*> contextualActions();
+
+	static KIcon iconFromLineType( LineType lineType )
+	{
+	    switch ( lineType )
+	    {
+		case Tram:
+		    return KIcon("vehicle_type_tram");
+		case Bus:
+		    return KIcon("vehicle_type_bus");
+		case SBahn:
+		    return KIcon("vehicle_type_sbahn");
+		case Subway:
+		    return KIcon("vehicle_type_subway");
+		
+		case Unknown:
+		    return KIcon("status_unknown");
+	    }
+	}
 	
-        Ui::publicTransportConfig m_ui;
-        Ui::publicTransportFilterConfig m_uiFilter;
+        Ui::publicTransportConfig m_ui; // The "general" settings page
+        Ui::publicTransportFilterConfig m_uiFilter; // The "filter" settings page
 
         Plasma::Svg m_svg;
         KIcon m_icon;
 	QGraphicsWidget *m_graphicsWidget;
-// 	QTreeWidget *m_treeWidget;
-	Plasma::Label *m_label; // The main label of the plasmoid that shows HTML content (the timetable)
+	Plasma::Label *m_label; // A label used to display a title
+	Plasma::TreeView *m_treeView; // A treeview displaying the departure board
+	QStandardItemModel *m_model; // The model for the tree view containing the departure board
 	
 	QList<DepartureInfo> m_departureInfos; // List of current departures
 	QString m_infoText; // HTML code containing the timetable
-	QString m_currentSource;
+	QString m_currentSource; // Current source name at the publictransport data engine
+	QString m_currentTestSource; // Current source name for testing configurations
 
 	int m_updateTimeout; // A timeout to reload the timetable information from the internet
 	bool m_showRemainingMinutes; // Wheather or not remaining minutes until departure should be shown
 	bool m_showDepartureTime; // Wheather or not departure times should be shown
 	QString m_city; // The currently selected city
 	QString m_stop; // The currently selected stop
-	int m_serviceProvider;
+	int m_serviceProvider; // The id of the current service provider
+	bool m_useSeperateCityValue; // Wheather or not the current service provider uses a seperate city value
 	
 	bool	m_showTrams; // Wheather or not departures of trams should be shown
 	bool	m_showBuses; // Wheather or not departures of buses should be shown
@@ -167,10 +203,13 @@ class PublicTransport : public Plasma::PopupApplet
 	
     public slots:
 	void configAccepted();
-	void reload();
+	void configChanged();
 	void geometryChanged();
 	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
-	
+	void serviceProviderChanged( int index );
+	void stopNameChanged( QString stopName );
+	void actionUpdateTriggered( bool );
+
     protected:
         void createConfigurationInterface(KConfigDialog *parent);
 	virtual void popupEvent ( bool show );

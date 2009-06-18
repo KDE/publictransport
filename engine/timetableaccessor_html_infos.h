@@ -1,3 +1,22 @@
+/*
+ *   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 #ifndef TIMETABLEACCESSOR_HTML_INFOS_HEADER
 #define TIMETABLEACCESSOR_HTML_INFOS_HEADER
 
@@ -6,14 +25,16 @@
 struct TimetableAccessorInfo
 {
     ServiceProvider serviceProvider;
-    QString rawUrl, regExpSearch, country;
-    QList< TimetableInformation > regExpInfos;
+    QString rawUrl, regExpSearch, regExpSearchPossibleStopsRange, regExpSearchPossibleStops, country;
+    QList< TimetableInformation > regExpInfos, regExpInfosPossibleStops;
     QStringList cities;
-    bool putCityIntoUrl;
+    bool useSeperateCityValue;
 
     TimetableAccessorInfo()
     {
 	serviceProvider = NoServiceProvider;
+	regExpSearchPossibleStopsRange = regExpSearchPossibleStops = "";
+	regExpInfosPossibleStops = QList< TimetableInformation >();
     }
 };
 
@@ -27,7 +48,7 @@ struct TimetableAccessorInfo_Bvg : TimetableAccessorInfo
 	regExpInfos = QList< TimetableInformation >() << DepartureHour << DepartureMinute << TypeOfVehicle << TransportLine << Direction;
 	country = "Germany";
 	cities = QStringList() << "Berlin";
-	putCityIntoUrl = true;
+	useSeperateCityValue = true;
     }
 };
 
@@ -41,7 +62,7 @@ struct TimetableAccessorInfo_Dvb : TimetableAccessorInfo
 	regExpInfos = QList< TimetableInformation >() << DepartureHour << DepartureMinute << TypeOfVehicle << TransportLine << Direction;
 	country = "Germany";
 	cities = QStringList() << "Dresden";
-	putCityIntoUrl = false;
+	useSeperateCityValue = false;
     }
 };
 
@@ -55,7 +76,7 @@ struct TimetableAccessorInfo_Vrn : TimetableAccessorInfo
 	regExpInfos = QList< TimetableInformation >() << Nothing << DepartureHour << DepartureMinute << TypeOfVehicle << TransportLine << Direction;
 	country = "Germany";
 	cities = QStringList() << "Karlsruhe"; // TODO: fill with cities
-	putCityIntoUrl = true;
+	useSeperateCityValue = true;
     }
 };
 
@@ -69,7 +90,7 @@ struct TimetableAccessorInfo_Vvs : TimetableAccessorInfo
 	regExpInfos = QList< TimetableInformation >() << DepartureHour << DepartureMinute << TypeOfVehicle << TransportLine << Direction;
 	country = "Germany";
 	cities = QStringList() << "Stuttgart"; // TODO: fill with cities
-	putCityIntoUrl = true;
+	useSeperateCityValue = true;
     }
 };
 
@@ -84,7 +105,7 @@ struct TimetableAccessorInfo_Fahrplaner : TimetableAccessorInfo
 	country = "Germany";
 	// TODO: add all fahrplaner.de-cities (Niedersachsen/Bremen)
 	cities = QStringList() << "Bremen" << "Bremerhaven" << "Hannover" << "Braunschweig" << "Emden";
-	putCityIntoUrl = true;
+	useSeperateCityValue = true;
     }
 };
 
@@ -98,7 +119,7 @@ struct TimetableAccessorInfo_Nasa : TimetableAccessorInfo
 	regExpInfos = QList< TimetableInformation >() << DepartureHour << DepartureMinute << TypeOfVehicle << TransportLine << Direction;
 	country = "Germany";
 	cities = QStringList() << "Leipzig" << "Halle" << "Magdeburg" << "Dessau" << "Wernigerode" << "Halberstadt" << "Sangerhausen" << "Merseburg" << "Weissenfels" << "Zeitz" << "Altenburg" << "Delitzsch" << "Wolfen" << "Aschersleben" << "Köthen (Anhalt)" << "Wittenberg" << "Schönebeck (Elbe)" << "Stendal";
-	putCityIntoUrl = true;
+	useSeperateCityValue = true;
     }
 };
 
@@ -110,9 +131,15 @@ struct TimetableAccessorInfo_Imhd : TimetableAccessorInfo
 	rawUrl = "http://www.imhd.zoznam.sk/ba/index.php?w=212b36213433213aef2f302523ea&lang=en&hladaj=%1";
 	regExpSearch = "(?:<tr><td><b>)([0-9]{2})(?:\\.)([0-9]{2})(?:</b></td><td><center><b><em>)(N?[0-9]+)(?:</em></b></center></td><td>)(.*)(?:</td></tr>)";
 	regExpInfos = QList< TimetableInformation >() << DepartureHour << DepartureMinute << TransportLine << Direction;
+
+	// Parses all available stops:
+	regExpSearchPossibleStopsRange = "(?:<form .* name=\"zastavka\">\\s*<select [^>]*>\\s*<option value=\"[^\"]*\">[^<]*</option>)(.*)(?:</select>)";
+	regExpSearchPossibleStops = "(?:<option value=\"[^\"]*\">)([^<]*)(?:</option>)";
+	regExpInfosPossibleStops << StopName;
+	
 	country = "Germany";
 	cities = QStringList() << "Bratislava";
-	putCityIntoUrl = false;
+	useSeperateCityValue = false;
     }
 };
 
@@ -121,12 +148,17 @@ struct TimetableAccessorInfo_Db : TimetableAccessorInfo
     TimetableAccessorInfo_Db()
     {
 	serviceProvider = DB;
-	rawUrl = "http://reiseauskunft.bahn.de/bin/bhftafel.exe/dn?ld=212.203&rt=1&input=%2, %1&boardType=dep&time=actual&showResultPopup=popup&disableEquivs=no&maxJourneys=20&start=yes&GUIREQProduct_5&GUIREQProduct_7&GUIREQProduct_8";
-	regExpSearch = "(?:<tr>\\s*<td class=\".*\">)([0-9]{2})(?::)([0-9]{2})(?:</td>\\s*<td class=\".*\"><a href=\".*\"><img src=\".*\" class=\".*\" alt=\".*\" /></a></td><td class=\".*\">\\s*<a href=\".*\">\\s*)(\\w*)(?:\\s*)(\\S*[0-9]+)(?:\\s*</a>\\s*</td>\\s*<td class=\".*\">\\s*<span class=\".*\">\\s*<a onclick=\".*\" href=\".*\">\\s*)(.*)(?:\\s*</a>\\s*</span>\\s*<br />.*</td>\\s*</tr>)";
-	regExpInfos = QList< TimetableInformation >() << DepartureHour << DepartureMinute << TypeOfVehicle << TransportLine << Direction;
+	rawUrl = "http://reiseauskunft.bahn.de/bin/bhftafel.exe/dn?ld=212.203&rt=1&input=%1&boardType=dep&time=actual&showResultPopup=popup&disableEquivs=no&maxJourneys=20&start=yes&GUIREQProduct_4&GUIREQProduct_5&GUIREQProduct_7&GUIREQProduct_8";
+	regExpSearch = "(?:<tr>\\s*<td class=\"[^\"]*\">)([0-9]{2})(?::)([0-9]{2})(?:</td>\\s*<td class=\"[^\"]*\"><a href=\"[^\"]*\"><img src=\"[^\"]*/img/)(.*)(?:_.{3,7}.\\w{3,4}\" class=\"[^\"]*\" alt=\"[^\"]*\" /></a></td><td class=\"[^\"]*\">\\s*<a href=\"[^\"]*\">)(.*[0-9]+)(?:\\s*</a>\\s*</td>\\s*<td class=\"[^\"]*\">\\s*<span class=\"[^\"]*\">\\s*<a onclick=\"[^\"]*\" href=\"[^\"]*\">\\s*)([^,]*)(?:,.*)?(?:\\s*</a>\\s*</span>\\s*<br />.*</td>\\s*</tr>)";
+	regExpInfos << DepartureHour << DepartureMinute << TypeOfVehicle << TransportLine << Direction;
+// (?:S\b\s*)?(.*[0-9]+)
+	regExpSearchPossibleStopsRange = "(?:<select class=\"error\" id=\"rplc0\" name=\"input\">\\s*)(.*)(?:</select>)";
+	regExpSearchPossibleStops = "(?:<option value=\".+#)([0-9]+)(?:\">)(.*)(?:</option>)";
+	regExpInfosPossibleStops << StopID << StopName;
+
 	country = "Germany";
 	cities = QStringList() << "";
-	putCityIntoUrl = true;
+	useSeperateCityValue = false;
     }
 };
 
@@ -136,11 +168,16 @@ struct TimetableAccessorInfo_Sbb : TimetableAccessorInfo
     {
 	serviceProvider = SBB;
 	rawUrl = "http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?&input=%1&boardType=dep&time=actual&showResultPopup=popup&disableEquivs=no&maxJourneys=20&start=yes";
-	regExpSearch = "(?:<tr class=\".*\">\\s*<td class=\".*\" valign=\".*\" align=\".*\">\\s*<span class=\".*\">)([0-9]{2})(?::)([0-9]{2})(?:</span>\\s*</td>\\s*<td class=\".*\" align=\".*\" valign=\".*\">\\s*<a href=\".*\">\\s*<img src=\".*\" .* alt=\".*\">\\s*</a>\\s*</td>\\s*<td class=\".*\" align=\".*\" valign=\".*\" nowrap>\\s*<span class=\".*\">\\s*<a href=\".*\">\\s*)(.*)(?:\\s*</a>\\s*</span>\\s*</td>\\s*<td class=\".*\">\\s*<span class=\".*\">\\s*<a href=\".*\">)(.*)(?:</a></span>\\s*<br>.*<span class=\".*\">\\s*</span>\\s*</td>\\s*</tr>)";
-	regExpInfos = QList< TimetableInformation >() << DepartureHour << DepartureMinute << TransportLine << Direction;
+	regExpSearch = "(?:<tr class=\"[^\"]*\">\\s*<td class=\"[^\"]*\" valign=\"[^\"]*\" align=\"[^\"]*\">\\s*<span class=\"[^\"]*\">)([0-9]{2})(?::)([0-9]{2})(?:</span>\\s*</td>\\s*<td class=\"[^\"]*\" align=\"[^\"]*\" valign=\"[^\"]*\">\\s*<a href=\"[^\"]*\">\\s*<img src=\"[^\"]*/products/)(.*)(?:_[^\"]{2,5}.\\w{3,4}\" .* alt=\"[^\"]*\">\\s*</a>\\s*</td>\\s*<td class=\"[^\"]*\" align=\"[^\"]*\" valign=\"[^\"]*\" nowrap>\\s*<span class=\"[^\"]*\">\\s*<a href=\"[^\"]*\">\\s*)(.*)(?:\\s*</a>\\s*</span>\\s*</td>\\s*<td class=\"[^\"]*\">\\s*<span class=\"[^\"]*\">\\s*<a href=\"[^\"]*\">)(.*)(?:</a></span>\\s*<br>.*<span class=\"[^\"]*\">\\s*</span>\\s*</td>\\s*</tr>)";
+	regExpInfos = QList< TimetableInformation >() << DepartureHour << DepartureMinute << TypeOfVehicle << TransportLine << Direction;
+
+	regExpSearchPossibleStopsRange = "(?:<td class=\"[^\"]*\" nowrap>\\s*<select name=\"input\">\\s*)(.*)(?:</select>\\s*</td>)";
+	regExpSearchPossibleStops = "(?:<option value=\".+#)([0-9]+)(?:\">)(.*)(?:</option>)";
+	regExpInfosPossibleStops << StopID << StopName;
+
 	country = "Swiss";
 	cities = QStringList() << "";
-	putCityIntoUrl = false;
+	useSeperateCityValue = false;
     }
 };
 

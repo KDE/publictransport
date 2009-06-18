@@ -49,7 +49,9 @@ class PublicTransportEngine : public Plasma::DataEngine
 	QMap<ServiceProvider, TimetableAccessor *> m_accessors;
 	
     public slots:
-	void journeyListReceived( QList<DepartureInfo> journeys, ServiceProvider serviceProvider, QString city, QString stop );
+	void journeyListReceived( TimetableAccessor *accessor, QList<DepartureInfo> journeys, ServiceProvider serviceProvider, QString city, QString stop );
+	void stopListReceived( TimetableAccessor *accessor, QMap<QString, QString> stops, ServiceProvider serviceProvider, QString city, QString stop );
+	void errorParsing( TimetableAccessor *accessor, ServiceProvider serviceProvider, QString city, QString stop );
 };
 
 #endif

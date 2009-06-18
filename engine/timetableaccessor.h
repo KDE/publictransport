@@ -42,9 +42,9 @@ enum ServiceProvider
     BVG = 4, // Berlin
     DVB = 5, // Dresden
     NASA = 6, // Sachsen-Anhalt
-    DB = 7, // (ganz Deutschland?)
+    DB = 7, // (whole germany?)
 
-    SBB = 10, // (ganze Schweiz?)
+    SBB = 10, // (whole switzerland?)
 
     // Slovakia (1000 .. ?)
     IMHD = 1000 // Bratislava
@@ -57,7 +57,10 @@ enum TimetableInformation
     DepartureMinute = 2,
     TypeOfVehicle = 3,
     TransportLine = 4,
-    Direction = 5
+    Direction = 5,
+    
+    StopName = 10,
+    StopID = 11
 };
 
 // Gets timetable information for public transport from different service providers.
@@ -93,13 +96,19 @@ class TimetableAccessor : public QObject
 	// deprecated ;)
 	QList< DepartureInfo > getJourneys( QString city, QString stop );
 
+	// Wheather or not the city should be put into the "raw" url
+	virtual bool useSeperateCityValue() const { return true; };
+
     protected:
 	// Stores the downloaded parts of a reply
 	QByteArray m_document;
 	QString m_curCity;
 
 	// Parses the contents of a document that was requested using requestJourneys()
-	virtual QList<DepartureInfo> parseDocument();
+	virtual bool parseDocument( QList<DepartureInfo> *journeys );
+
+	// Parses the contents of a document for a list of stop names
+	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops );
 	
 	// Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2") 
 	// or only for the stop ("%1") if putCityIntoUrl() == false
@@ -108,16 +117,17 @@ class TimetableAccessor : public QObject
 	// Constructs an url by combining the "raw" url with the needed information
 	KUrl getUrl( QString city, QString stop );
 
-	// Wheather or not the city should be put into the "raw" url
-	virtual bool putCityIntoUrl() const { return true; };
-
     private:
 	// Stores information about currently running download jobs
 	QMap<KJob*, QStringList> m_jobInfos;
 
     signals:
 	// Emitted when a new journey list has been received and parsed
-	void journeyListReceived( QList< DepartureInfo > journeys, ServiceProvider serviceProvider, QString city, QString stop );
+	void journeyListReceived( TimetableAccessor *accessor, QList< DepartureInfo > journeys, ServiceProvider serviceProvider, QString city, QString stop );
+	// Emitted when a list of stop names has been received and parsed
+	void stopListReceived( TimetableAccessor *accessor, QMap< QString, QString > stops, ServiceProvider serviceProvider, QString city, QString stop );
+	// Emitted when an error occured while parsing
+	void errorParsing( TimetableAccessor *accessor, ServiceProvider serviceProvider, QString city, QString stop );
 
     public slots:
 	// Some data has been received
