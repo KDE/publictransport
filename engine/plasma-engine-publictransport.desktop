@@ -2,6 +2,7 @@
 Name=Public transport engine
 Name[de]=Öffentlicher Nahverkehr
 Name[et]=Ühiskondliku transpordi mootor
+Name[fr]=Moteur de transport publique
 Name[km]=ម៉ាស៊ីន​បញ្ជូន​សាធារណៈ
 Name[pt]=Motor de transportes públicos
 Name[pt_BR]=Motor de transportes públicos
@@ -11,6 +12,7 @@ Name[x-test]=xxPublic transport enginexx
 Comment=Plasma data engine for public transport in germany
 Comment[de]=Plasma Data-Engine für öffentlichen Nahverkehr
 Comment[et]=Plasma Saksamaa ühiskondliku transpordi andmete mootor
+Comment[fr]=Moteur de données pour le transport publique en Allemagne
 Comment[km]=ម៉ាស៊ីន​ទិន្នន័យ​ប្លាស្មា​សម្រាប់​ការ​បញ្ជូន​សារធារណៈ​ជា​ភាសា​អាល្លឺម៉ង់
 Comment[pt]=Motor de dados do Plasma para os transportes públicos na Alemanha
 Comment[pt_BR]=Motor de dados do Plasma para os transportes públicos na Alemanha
