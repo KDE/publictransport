@@ -21,12 +21,15 @@
 #define PUBLICTRANSPORTDATAENGINE_HEADER
 
 class QSizeF;
+
+// Plasma includes
 #include <Plasma/DataEngine>
 
+// Own includes
 #include "timetableaccessor.h"
 
 /**
- * This engine provides departure times for public transport in germany.
+ * This engine provides departure times for public transport.
  */
 class PublicTransportEngine : public Plasma::DataEngine
 {
@@ -35,7 +38,14 @@ class PublicTransportEngine : public Plasma::DataEngine
     public:
         // every engine needs a constructor with these arguments
         PublicTransportEngine( QObject* parent, const QVariantList& args );
-	
+
+	static const int UPDATE_TIMEOUT = 120; // Timeout to request new data
+
+	static const int DEFAULT_MAXIMUM_DEPARTURES = 20;
+	static const int ADDITIONAL_MAXIMUM_DEPARTURES = UPDATE_TIMEOUT / 20; // will be added to a given maximum departures value (otherwise the data couldn't provide enough departures until the update-timeout)
+
+	static const int DEFAULT_TIME_OFFSET = 0;
+
     protected:
         // this virtual function is called when a new source is requested
         bool sourceRequestEvent( const QString& name );
@@ -45,13 +55,21 @@ class PublicTransportEngine : public Plasma::DataEngine
         // interval is set when requesting a source)
         bool updateSourceEvent( const QString& name );
 
+	// Returns wheather or not the given source is up to date
+	bool isSourceUpToDate( const QString& name );
+
     private:
+	QMap<QString, QVariant> serviceProviderInfo( const TimetableAccessor *&accessor );
+
 	QMap<ServiceProvider, TimetableAccessor *> m_accessors;
-	
+
+	// m_dataSources[ dataSource ][ key ] => QVariant-data
+	QMap<QString, QVariant> m_dataSources;
+
     public slots:
-	void journeyListReceived( TimetableAccessor *accessor, QList<DepartureInfo> journeys, ServiceProvider serviceProvider, QString city, QString stop );
-	void stopListReceived( TimetableAccessor *accessor, QMap<QString, QString> stops, ServiceProvider serviceProvider, QString city, QString stop );
-	void errorParsing( TimetableAccessor *accessor, ServiceProvider serviceProvider, QString city, QString stop );
+	void journeyListReceived( TimetableAccessor *accessor, QList<DepartureInfo> journeys, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType );
+	void stopListReceived( TimetableAccessor *accessor, QMap<QString, QString> stops, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType );
+	void errorParsing( TimetableAccessor *accessor, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType );
 };
 
 #endif

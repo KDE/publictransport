@@ -28,163 +28,143 @@ PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList
 
     // This prevents applets from setting an unnecessarily high
     // update interval and using too much CPU.
-    // In the case of a clock that only has second precision,
-    // a third of a second should be more than enough.
-    setMinimumPollingInterval(333);
+    // 30 seconds should be enough, departure times have minute precision
+    setMinimumPollingInterval( 30000 );
+
+    // Add service provider source, so when using dataEngine("publictransport").sources() in an applet it at least returns this
+    setData( "ServiceProviders", DataEngine::Data() );
 }
 
-bool PublicTransportEngine::sourceRequestEvent(const QString &name)
-{
-    // Create the requested source so that the connection can be established
-//     setData( name, "updated", QTime::currentTime() );
-    qDebug() << "PublicTransportEngine::sourceRequestEvent" << name;
-    setData( name, DataEngine::Data() ); // Create source
-    qDebug() << "PublicTransportEngine::sourceRequestEvent" << "Source created";
+QMap< QString, QVariant > PublicTransportEngine::serviceProviderInfo ( const TimetableAccessor *&accessor ) {
+    Q_ASSERT( accessor != NULL );
+
+    QMap<QString, QVariant> dataServiceProvider;
+    dataServiceProvider.insert( "id", static_cast<int>(accessor->serviceProvider()) );
+    dataServiceProvider.insert( "name", accessor->timetableAccessorInfo().name() );
+    dataServiceProvider.insert( "shortUrl", accessor->timetableAccessorInfo().shortUrl() );
+    dataServiceProvider.insert( "country", accessor->country() );
+    dataServiceProvider.insert( "cities", accessor->cities() );
+    dataServiceProvider.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
+    dataServiceProvider.insert( "features", accessor->features() );
+    dataServiceProvider.insert( "url", accessor->timetableAccessorInfo().url() );
+    dataServiceProvider.insert( "author", accessor->timetableAccessorInfo().author() );
+    dataServiceProvider.insert( "email", accessor->timetableAccessorInfo().email() );
+    dataServiceProvider.insert( "description", accessor->timetableAccessorInfo().description() );
+    dataServiceProvider.insert( "version", accessor->timetableAccessorInfo().version() );
+    return dataServiceProvider;
+}
+
+bool PublicTransportEngine::sourceRequestEvent( const QString &name ) {
+//     qDebug() << "PublicTransportEngine::sourceRequestEvent" << name;
+
+    setData( name, DataEngine::Data() ); // Create source, TODO: check if [name] is valid
     return updateSourceEvent(name);
 }
 
-bool PublicTransportEngine::updateSourceEvent(const QString &name)
-{
-    qDebug() << "PublicTransportEngine::updateSourceEvent" << name;
-    
+bool PublicTransportEngine::updateSourceEvent( const QString &name ) {
+//     qDebug() << "PublicTransportEngine::updateSourceEvent" << name;
+
     if ( name == I18N_NOOP("ServiceProviders") )
     {
-	QMap<QString, QVariant> data;
-	TimetableAccessor *accessor;
-	
-	QMap< QString, QVariant > germany;
-	accessor = TimetableAccessor::getSpecificAccessor(Fahrplaner);
-	data.insert( "id", Fahrplaner );
-	data.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
-	data.insert( "cities", accessor->cities() );
-	germany.insert( "Niedersachsen, Bremen (fahrplaner.de)", data );
+	QMap<QString, QVariant> dataSource;
+	if ( m_dataSources.keys().contains(name) ) {
+// 	    qDebug() << "PublicTransportEngine::updateSourceEvent" << "Data source" << name << "is up to date";
+	    dataSource = m_dataSources[name].toMap();
+	} else {
+	    for ( std::vector<ServiceProvider>::const_iterator it=availableServiceProviders.begin(); it < availableServiceProviders.end(); ++it ) {
+		const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( *it );
+		dataSource.insert( accessor->timetableAccessorInfo().name(), serviceProviderInfo(accessor) );
+	    }
 
-	data.clear();
-	accessor = TimetableAccessor::getSpecificAccessor(RMV);
-	data.insert( "id", RMV );
-	data.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
-	data.insert( "cities", accessor->cities() );
-	germany.insert( "Rhein-Main (rmv.de)",  data );
-	
-	data.clear();
-	accessor = TimetableAccessor::getSpecificAccessor(VVS);
-	data.insert( "id", VVS );
-	data.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
-	data.insert( "cities", accessor->cities() );
-	germany.insert( "Stuttgart & surroundings (vvs.de)",  data );
-
-	data.clear();
-	accessor = TimetableAccessor::getSpecificAccessor(VRN);
-	data.insert( "id", VRN );
-	data.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
-	data.insert( "cities", accessor->cities() );
-	germany.insert( "Rhein-Neckar (vrn.de)",  data );
-
-	data.clear();
-	accessor = TimetableAccessor::getSpecificAccessor(BVG);
-	data.insert( "id", BVG );
-	data.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
-	data.insert( "cities", accessor->cities() );
-	germany.insert( "Berlin (bvg.de)",  data );
-
-	data.clear();
-	accessor = TimetableAccessor::getSpecificAccessor(DVB);
-	data.insert( "id", DVB );
-	data.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
-	data.insert( "cities", accessor->cities() );
-	germany.insert( "Dresden (dvb.de)",  data );
-
-	data.clear();
-	accessor = TimetableAccessor::getSpecificAccessor(NASA);
-	data.insert( "id", NASA );
-	data.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
-	data.insert( "cities", accessor->cities() );
-	germany.insert( "Sachsen-Anhalt (nasa.de)",  data );
-
-	data.clear();
-	accessor = TimetableAccessor::getSpecificAccessor(DB);
-	data.insert( "id", DB );
-	data.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
-	data.insert( "cities", accessor->cities() );
-	germany.insert( "Deutschlandweit (db.de)",  data );
-	setData( name, I18N_NOOP("germany"), germany );
-
-	QMap< QString, QVariant > swiss;
-	data.clear();
-	accessor = TimetableAccessor::getSpecificAccessor(SBB);
-	data.insert( "id", SBB );
-	data.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
-	data.insert( "cities", accessor->cities() );
-	swiss.insert( "Schweiz (sbb.ch)",  data );
-	setData( name, I18N_NOOP("swiss"), swiss );
-
-	QMap< QString, QVariant > slovakia;
-	data.clear();
-	accessor = TimetableAccessor::getSpecificAccessor(IMHD);
-	data.insert( "id", IMHD );
-	data.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
-	data.insert( "cities", accessor->cities() );
-	slovakia.insert( "Bratislava (imhd.sk)",  data );
-	setData( name, I18N_NOOP("slovakia"), slovakia );
-    }
-
-    // Departures 0:Bremen:Pappelstraße
-    if ( name.startsWith(I18N_NOOP("Departures")) )
-    {
-	QStringList input = name.right( name.length() - 10).split(":", QString::SkipEmptyParts);
-	if ( input.length() < 2 )
-	{
-	    qDebug() << "PublicTransportEngine::updateSourceEvent" << QString("Wrong input: '%1'").arg(name);
-	    return false; // wrong input
+	    m_dataSources.insert( name, dataSource );
 	}
 
-	ServiceProvider serviceProvider = static_cast<ServiceProvider>( input.at(0).trimmed().toInt() );
-	QString city, stop;
-	if ( input.length() == 3 )
-	{
-	    city = input.at(1).trimmed();
-	    stop = input.at(2).trimmed();
-
-	    // Corrections for some cities that need different syntax
-	    if ( city == "Leipzig" )
-		city = "Leipzig,";
+	foreach ( QString key, dataSource.keys() )
+	    setData( name, key, dataSource[key] );
+    } else if ( name.startsWith(I18N_NOOP("Departures")) ||  name.startsWith(I18N_NOOP("Arrivals")) )
+    { // Departures 0:Bremen:Pappelstraße
+	if ( m_dataSources.keys().contains(name) && isSourceUpToDate(name) )
+	{ // Data is stored in the map and up to date
+	    qDebug() << "PublicTransportEngine::updateSourceEvent" << "Data source" << name << "is up to date";
+	    QMap<QString, QVariant> dataSource = m_dataSources[name].toMap();
+	    foreach ( QString key, dataSource.keys() )
+		setData( name, key, dataSource[key] );
 	}
 	else
-	    stop = input.at(1).trimmed();
+	{ // Request new data
+	    QStringList input;
+	    if ( name.startsWith(I18N_NOOP("Departures")) )
+		input = name.mid( QString("Departures").length() ).trimmed().split(":", QString::SkipEmptyParts);
+	    else if ( name.startsWith(I18N_NOOP("Arrivals")) )
+		input = name.mid( QString("Arrivals").length() ).trimmed().split(":", QString::SkipEmptyParts);
+	    if ( input.length() < 2 || input.at(0).toInt() == 0 ) {
+		qDebug() << "PublicTransportEngine::updateSourceEvent" << QString("Wrong input: '%1'").arg(name);
+		return false; // wrong input
+	    }
 
-	// Try to get the specific accessor from m_accessors (if it's not in there it is created)
-	TimetableAccessor *accessor = m_accessors.value( serviceProvider, TimetableAccessor::getSpecificAccessor( serviceProvider ) );
-	if ( accessor == NULL )
-	{
-	    qDebug() << "PublicTransportEngine::updateSourceEvent" << QString("Accessor %1 couldn't be created").arg(serviceProvider);
-	    return false; // accessor couldn't be created
-	}
-	if ( accessor->useSeperateCityValue() && city.isEmpty() )
-	{
-	    qDebug() << "PublicTransportEngine::updateSourceEvent" << QString("Accessor %1 needs a seperate city value").arg(serviceProvider);
-	    return false; // accessor needs a seperate city value
-	}
+	    ServiceProvider serviceProvider = static_cast<ServiceProvider>( input.at(0).trimmed().toInt() );
+	    QString city, stop, dataType;
+	    int maxDeps = DEFAULT_MAXIMUM_DEPARTURES;
+	    int timeOffset = DEFAULT_TIME_OFFSET;
+	    if ( name.startsWith(I18N_NOOP("Departures")) )
+		dataType = "departures";
+	    else
+		dataType = "arrivals";
 
-	connect( accessor, SIGNAL(journeyListReceived(TimetableAccessor*,QList<DepartureInfo>,ServiceProvider,QString,QString)), this, SLOT(journeyListReceived(TimetableAccessor*,QList<DepartureInfo>,ServiceProvider,QString,QString)) );
-	connect( accessor, SIGNAL(stopListReceived(TimetableAccessor*,QMap<QString,QString>,ServiceProvider,QString,QString)), this, SLOT(stopListReceived(TimetableAccessor*,QMap<QString,QString>,ServiceProvider,QString,QString)) );
-	connect( accessor, SIGNAL(errorParsing(TimetableAccessor*,ServiceProvider,QString,QString)), this, SLOT(errorParsing(TimetableAccessor*,ServiceProvider,QString,QString)) );
-	
-	KIO::TransferJob *job = accessor->requestJourneys( city, stop );
+	    for ( int i = 0; i < input.length(); ++i ) {
+		QString s = input.at(i).toLower();
+		if ( s.startsWith("city") )
+		    city = input.at(i).mid( QString("city").length() ).trimmed();
+		else if ( s.startsWith("stop") )
+		    stop = input.at(i).mid( QString("stop").length() ).trimmed();
+		else if ( s.startsWith("maxdeps") ) {
+		    s = input.at(i).mid( QString("maxdeps").length() ).trimmed();
+		    maxDeps = s.toInt() == 0 ? 20 : s.toInt();
+		} else if ( s.startsWith("timeoffset") ) {
+		    s = input.at(i).mid( QString("timeoffset").length() ).trimmed();
+		    timeOffset = s.toInt();
+		}
+	    }
+	    maxDeps += ADDITIONAL_MAXIMUM_DEPARTURES;
+
+	    // Try to get the specific accessor from m_accessors (if it's not in there it is created)
+	    TimetableAccessor *accessor = m_accessors.value( serviceProvider, TimetableAccessor::getSpecificAccessor( serviceProvider ) );
+	    if ( accessor == NULL ) {
+		qDebug() << "PublicTransportEngine::updateSourceEvent" << QString("Accessor %1 couldn't be created").arg(serviceProvider);
+		return false; // accessor couldn't be created
+	    } else if ( accessor->useSeperateCityValue() && city.isEmpty() ) {
+		qDebug() << "PublicTransportEngine::updateSourceEvent" << QString("Accessor %1 needs a seperate city value").arg(serviceProvider);
+		return false; // accessor needs a seperate city value
+	    }
+
+	    connect( accessor, SIGNAL(journeyListReceived(TimetableAccessor*,QList<DepartureInfo>,ServiceProvider,const QString&,const QString&,const QString&,const QString&)), this, SLOT(journeyListReceived(TimetableAccessor*,QList<DepartureInfo>,ServiceProvider,const QString&,const QString&,const QString&,const QString&)) );
+	    connect( accessor, SIGNAL(stopListReceived(TimetableAccessor*,QMap<QString,QString>,ServiceProvider,const QString&,const QString&,const QString&,const QString&)), this, SLOT(stopListReceived(TimetableAccessor*,QMap<QString,QString>,ServiceProvider,const QString&,const QString&,const QString&,const QString&)) );
+	    connect( accessor, SIGNAL(errorParsing(TimetableAccessor*,ServiceProvider,const QString&,const QString&,const QString&,const QString&)), this, SLOT(errorParsing(TimetableAccessor*,ServiceProvider,const QString&,const QString&,const QString&,const QString&)) );
+
+	    qDebug() << " ACCESS datatype =" << dataType;
+	    accessor->requestJourneys( name, city, stop, maxDeps, timeOffset, dataType );
+	}
     }
 
     return true;
 }
 
-void PublicTransportEngine::journeyListReceived ( TimetableAccessor *accessor, QList< DepartureInfo > journeys, ServiceProvider serviceProvider, QString city, QString stop )
-{
+void PublicTransportEngine::journeyListReceived( TimetableAccessor *accessor, QList< DepartureInfo > journeys, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType ) {
+    Q_UNUSED(accessor);
+    Q_UNUSED(serviceProvider);
+    Q_UNUSED(city);
+    Q_UNUSED(stop);
+    Q_UNUSED(dataType);
     qDebug() << "PublicTransportEngine::journeyListReceived" << journeys.count() << "journeys received";
 
-    QString sourceName;
-    if ( accessor->useSeperateCityValue() )
-	sourceName = QString("Departures %1:%2:%3").arg( static_cast<int>(serviceProvider) ).arg( city ).arg( stop );
-    else
-	sourceName = QString("Departures %1:%2").arg( static_cast<int>(serviceProvider) ).arg( stop );
+//     QString sourceName;
+//     if ( accessor->useSeperateCityValue() )
+// 	sourceName = QString("Departures %1:%2:%3").arg( static_cast<int>(serviceProvider) ).arg( city ).arg( stop );
+//     else
+// 	sourceName = QString("Departures %1:%2").arg( static_cast<int>(serviceProvider) ).arg( stop );
     int i = 0;
+    m_dataSources.remove( sourceName );
+    QMap<QString, QVariant> dataSource;
     foreach ( const DepartureInfo &departureInfo, journeys )
     {
 	if ( !departureInfo.isValid() )
@@ -192,13 +172,19 @@ void PublicTransportEngine::journeyListReceived ( TimetableAccessor *accessor, Q
 
 	QMap<QString, QVariant> data;
 	data.insert("line", departureInfo.line());
-	data.insert("direction", departureInfo.direction());
+	data.insert("target", departureInfo.target());
 	data.insert("departure", departureInfo.departure());
-	data.insert("lineType", static_cast<int>(departureInfo.lineType()));
+	data.insert("lineType", static_cast<int>(departureInfo.vehicleType()));
 	data.insert("nightline", departureInfo.isNightLine());
 	data.insert("expressline", departureInfo.isExpressLine());
+	data.insert("platform", departureInfo.platform());
+	data.insert("delay", departureInfo.delay());
+	data.insert("delayReason", departureInfo.delayReason());
+	data.insert("journeyNews", departureInfo.journeyNews());
 
-	setData( sourceName, QString("%1").arg(i++), data );
+	QString sKey = QString("%1").arg(i++);
+	setData( sourceName, sKey, data );
+	dataSource.insert( sKey, data );
 // 	qDebug() << "PublicTransportEngine::journeyListReceived" << "setData" << sourceName << data;
     }
 
@@ -215,28 +201,36 @@ void PublicTransportEngine::journeyListReceived ( TimetableAccessor *accessor, Q
 
     setData( sourceName, "receivedPossibleStopList", false );
     setData( sourceName, "error", false );
-    setData( sourceName, "updated", QTime::currentTime() );
-    
-//     Plasma::Service *service;
-//     scheduleSourcesUpdated();
-//     serviceForSource("fsfd")->;
+    setData( sourceName, "updated", QDateTime::currentDateTime() );
+
+    // Store received data in the data source map
+    dataSource.insert( "receivedPossibleStopList", false );
+    dataSource.insert( "error", false );
+    dataSource.insert( "updated", QDateTime::currentDateTime() );
+    m_dataSources.insert( sourceName, dataSource );
 }
 
-void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor, QMap<QString, QString> stops, ServiceProvider serviceProvider, QString city, QString stop )
-{
+void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor, QMap<QString, QString> stops, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType ) {
+    Q_UNUSED(accessor);
+    Q_UNUSED(serviceProvider);
+    Q_UNUSED(city);
+//     Q_UNUSED(stop);
+    Q_UNUSED(dataType);
     qDebug() << "PublicTransportEngine::stopListReceived" << stops.count() << "stops received";
-    QString sourceName;
-    if ( accessor->useSeperateCityValue() )
-	sourceName = QString("Departures %1:%2:%3").arg( static_cast<int>(serviceProvider) ).arg( city ).arg( stop );
-    else
-	sourceName = QString("Departures %1:%2").arg( static_cast<int>(serviceProvider) ).arg( stop );
+    QString /*sourceName, */sStop = stops.value( stop, stop );
+    if ( sStop.isEmpty() )
+	sStop = stop;
+//     if ( accessor->useSeperateCityValue() )
+// 	sourceName = QString("Departures %1:city%2:stop%3").arg( static_cast<int>(serviceProvider) ).arg( city ).arg( sStop );
+//     else
+// 	sourceName = QString("Departures %1:stop%2").arg( static_cast<int>(serviceProvider) ).arg( sStop );
 
     int i = 0;
     foreach ( const QString &stopName, stops.keys() )
     {
 	QMap<QString, QVariant> data;
 	data.insert("stopName", stopName);
-	data.insert("stopID", data[stopName]);
+	data.insert("stopID", stops.value(stopName, "") );
 
 	setData( sourceName, QString("stopName %1").arg(i++), data );
 // 	qDebug() << "PublicTransportEngine::journeyListReceived" << "setData" << sourceName << data;
@@ -250,19 +244,31 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor, QMap<
 
     setData( sourceName, "receivedPossibleStopList", true );
     setData( sourceName, "error", false );
-    setData( sourceName, "updated", QTime::currentTime() );
+    setData( sourceName, "updated", QDateTime::currentDateTime() );
 }
 
-void PublicTransportEngine::errorParsing( TimetableAccessor *accessor, ServiceProvider serviceProvider, QString city, QString stop )
-{
+void PublicTransportEngine::errorParsing( TimetableAccessor *accessor, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType ) {
+    Q_UNUSED(accessor);
+    Q_UNUSED(serviceProvider);
+    Q_UNUSED(city);
+    Q_UNUSED(stop);
+    Q_UNUSED(dataType);
     qDebug() << "PublicTransportEngine::errorParsing";
-    QString sourceName;
-    if ( accessor->useSeperateCityValue() )
-	sourceName = QString("Departures %1:%2:%3").arg( static_cast<int>(serviceProvider) ).arg( city ).arg( stop );
-    else
-	sourceName = QString("Departures %1:%2").arg( static_cast<int>(serviceProvider) ).arg( stop );
+//     QString sourceName;
+//     if ( accessor->useSeperateCityValue() )
+// 	sourceName = QString("Departures %1:%2:%3").arg( static_cast<int>(serviceProvider) ).arg( city ).arg( stop );
+//     else
+// 	sourceName = QString("Departures %1:%2").arg( static_cast<int>(serviceProvider) ).arg( stop );
     setData( sourceName, "error", true );
-    setData( sourceName, "updated", QTime::currentTime() );
+    setData( sourceName, "updated", QDateTime::currentDateTime() );
+}
+
+bool PublicTransportEngine::isSourceUpToDate ( const QString& name ) {
+    if ( !m_dataSources.keys().contains(name) )
+	return false;
+    // Data source stays up to date for UPDATE_TIMEOUT seconds
+    QMap<QString, QVariant> dataSource = m_dataSources[name].toMap();
+    return dataSource["updated"].toDateTime().secsTo( QDateTime::currentDateTime() ) < UPDATE_TIMEOUT;
 }
 
 // This does the magic that allows Plasma to load

@@ -13,14 +13,13 @@ include_directories(
 
 # We add our source code here
 set(publictransport_engine_SRCS publictransportdataengine.cpp departureinfo.cpp
-    timetableaccessor.cpp timetableaccessor_html.cpp timetableaccessor_rmv.cpp )
-# timetableaccessor_fahrplaner.cpp timetableaccessor_vvs.cpp timetableaccessor_vrn.cpp timetableaccessor_bvg.cpp timetableaccessor_dvb.cpp timetableaccessor_nasa.cpp timetableaccessor_imhd.cpp
+    timetableaccessor.cpp timetableaccessor_html.cpp timetableaccessor_htmlinfo.cpp timetableaccessor_xml.cpp )
 
 # Now make sure all files get to the right place
 kde4_add_plugin(plasma_engine_publictransport ${publictransport_engine_SRCS})
 target_link_libraries(plasma_engine_publictransport
-                      ${KDE4_KDECORE_LIBS} ${KDE4_KPARTS_LIBS} 
-                      ${KDE4_PLASMA_LIBS})
+#                       ${KDE4_KDECORE_LIBS}
+                      ${KDE4_PLASMA_LIBS} QtXml kio)
 
 install(TARGETS plasma_engine_publictransport
         DESTINATION ${PLUGIN_INSTALL_DIR})

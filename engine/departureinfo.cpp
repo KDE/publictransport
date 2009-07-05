@@ -20,28 +20,89 @@
 #include "departureinfo.h"
 #include <QDebug>
 
-LineType DepartureInfo::getLineTypeFromString ( const QString& sLineType )
-{
+
+DepartureInfo::DepartureInfo() {
+    m_line = -1;
+    m_delay = -1;
+    m_platform = "";
+    m_delayReason = "";
+}
+
+DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QDateTime& departure, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& sJourneyNews ) {
+    init( line, typeOfVehicle, target, departure, nightLine, expressLine, platform, delay, delayReason, sJourneyNews );
+}
+
+DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QTime &requestTime, const QTime& departureTime, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& sJourneyNews ) {
+    QDate departureDate;
+    if ( departureTime < requestTime.addSecs(-5 * 60) )
+	departureDate = QDate::currentDate().addDays(1);
+    else
+	departureDate = QDate::currentDate();
+
+    init( line, typeOfVehicle, target, QDateTime(departureDate, departureTime), nightLine, expressLine, platform, delay, delayReason, sJourneyNews );
+}
+
+void DepartureInfo::init ( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QDateTime& departure, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& sJourneyNews ) {
+    m_line = line;
+    m_vehicleType = typeOfVehicle;
+    m_target = target;
+    m_departure = departure;
+    m_lineServices = nightLine ? NightLine : NoLineService;
+    if ( expressLine )
+	m_lineServices |= ExpressLine;
+    m_platform = platform;
+    m_delay = delay;
+    m_delayReason = delayReason;
+    m_journeyNews = sJourneyNews;
+}
+
+VehicleType DepartureInfo::getVehicleTypeFromString( const QString& sLineType ) {
 //     qDebug() << "DepartureInfo::getLineTypeFromString" << sLineType;
 
-    QString sLineTypeLower = sLineType.toLower();
+    QString sLineTypeLower = sLineType.trimmed().toLower();
     if ( sLineTypeLower == "u-bahn" ||
-	sLineTypeLower == "ubahn" )
+	sLineTypeLower == "ubahn" ||
+	sLineTypeLower == "u" )
 	return Subway;
 
     else if ( sLineTypeLower == "s-bahn" ||
-	sLineTypeLower == "sbahn" )
-	return SBahn;
+	sLineTypeLower == "sbahn" ||
+	sLineTypeLower == "s" )
+	return TrainInterurban;
 
     else if ( sLineTypeLower == "tram" ||
 	sLineTypeLower == "straßenbahn" ||
 	sLineTypeLower == "str" ||
-	sLineTypeLower == "dm_train" )
+	sLineTypeLower == "dm_train" ||
+	sLineTypeLower == "streetcar (tram)" ) // for imhd.sk
 	return Tram;
 
     else if ( sLineTypeLower == "bus" ||
-	sLineTypeLower == "dm_bus" )
+	sLineTypeLower == "dm_bus" ||
+	sLineTypeLower == "bsv" || // for nasa.de
+	sLineTypeLower == "express bus" || // for imhd.sk
+	sLineTypeLower == "night line - bus" ) // for imhd.sk
 	return Bus;
+
+    else if ( sLineTypeLower == "rb" ||
+	sLineTypeLower == "dpn" || // for rozklad-pkp.pl (TODO: Check if this is the right train type)
+	sLineTypeLower == "t84" || // for rozklad-pkp.pl (TODO: Check if this is the right train type)
+	sLineTypeLower == "r84" ) // for rozklad-pkp.pl (TODO: Check if this is the right train type)
+	return TrainRegional;
+
+    else if ( sLineTypeLower == "re" )
+	return TrainRegionalExpress;
+
+    else if ( sLineTypeLower == "ir" )
+	return TrainInterregio;
+
+    else if ( sLineTypeLower == "ec_ic" ||
+	sLineTypeLower == "ec" ||
+	sLineTypeLower == "ic" )
+	return TrainIntercityEurocity;
+
+    else if ( sLineTypeLower == "ice" )
+	return TrainIntercityExpress;
 
     else
 	return Unknown;

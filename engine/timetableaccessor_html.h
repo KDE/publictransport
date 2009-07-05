@@ -21,42 +21,33 @@
 #define TIMETABLEACCESSOR_HTML_HEADER
 
 #include "timetableaccessor.h"
-#include "timetableaccessor_html_infos.h"
 
 class TimetableAccessorHtml : public TimetableAccessor
 {
     public:
-	TimetableAccessorHtml();
+	TimetableAccessorHtml( TimetableAccessorInfo info = TimetableAccessorInfo() );
 	TimetableAccessorHtml( ServiceProvider serviceProvider );
-	
-	virtual ServiceProvider serviceProvider() { return m_info.serviceProvider; };
-	virtual QString country() const { return m_info.country; };
-	virtual QStringList cities() const { return m_info.cities; };
-	virtual bool useSeperateCityValue() const { return m_info.useSeperateCityValue; };
 
-	static QString decodeHtml( QString sHtml );
+	bool parseDocumentPossibleStops( const QByteArray document, QMap<QString,QString> *stops );
+
+	static QString decodeHtmlEntities( QString sHtml );
+	static QString decodeHtml( QByteArray document );
 
     protected:
-	// Parses the contents of the document at the url
+	// Parses the contents of a received document for a list of departures and puts the results into journeys
 	virtual bool parseDocument( QList<DepartureInfo> *journeys );
-	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops );
-
-	// Gets the "raw" url
-	virtual QString rawUrl();
-	// The regexp string to use
-	virtual QString regExpSearch();
-	// The regexp string to use to find the range where possible stops are listed
-	virtual QString regExpSearchPossibleStopsRange();
-	// The regexp string to use to find the stops from the list of possible stops
-	virtual QString regExpSearchPossibleStops();
-	// The meanings of matches of the regexp
-	virtual QList< TimetableInformation > regExpInfos();
-	// The meanings of matches of the regexp for possible stops
-	virtual QList< TimetableInformation > regExpInfosPossibleStops();
-	virtual DepartureInfo getInfo(QRegExp rx);
+	// Exceuted before parseDocument if there is a regexp to use before starting parseDocument. It collects data matched by the regexp to be used in parseDocument
+	virtual bool parseDocumentPre( QString document );
+	// Parses the contents of a received document for a list of possible stop names and puts the results into stops (stop name => stop id)
+	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops ) const;
+	// Parses a journey news string
+	virtual bool parseJourneyNews( const QString sJourneyNews, QString *sDelay, QString *sDelayReason, QString *sJourneyNewsOther ) const;
 
     private:
-	TimetableAccessorInfo m_info;
+	void postProcessMatchedData( TimetableInformation info, QString matchedData, QMap< TimetableInformation, QString > *data );
+
+	// Data collected by parseDocumentPre
+	QMap< QString, QString > *m_preData;
 };
 
 #endif // TIMETABLEACCESSOR_HTML_HEADER

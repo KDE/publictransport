@@ -6,82 +6,114 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>408</width>
-    <height>363</height>
+    <width>500</width>
+    <height>472</height>
    </rect>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="1">
-    <widget class="QLabel" name="label_13">
-     <property name="text">
-      <string>Show trams:</string>
+   <item row="11" column="0" colspan="3">
+    <widget class="KComboBox" name="filterTypeTarget">
+     <item>
+      <property name="text">
+       <string>Show all directions</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Show matching directions</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Hide matching directions</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="10" column="0">
+    <widget class="QLabel" name="label_16">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
      </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     <property name="text">
+      <string>Shown directions</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="2">
-    <widget class="QCheckBox" name="showTrams">
-     <property name="text">
+   <item row="9" column="0" colspan="3">
+    <spacer name="verticalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>64</width>
+       <height>10</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="12" column="0" colspan="3">
+    <widget class="KEditListBox" name="filterTargetList">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>10</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="title">
       <string/>
+     </property>
+     <property name="flat">
+      <bool>true</bool>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+     <property name="buttons">
+      <set>KEditListBox::Add|KEditListBox::Remove</set>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="3">
+    <widget class="KActionSelector" name="filterLineType">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>10</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="focusPolicy">
+      <enum>Qt::NoFocus</enum>
+     </property>
+     <property name="availableInsertionPolicy">
+      <enum>KActionSelector::Sorted</enum>
+     </property>
+     <property name="showUpDownButtons">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QCheckBox" name="showNightLines">
+     <property name="text">
+      <string>Show night lines</string>
      </property>
      <property name="checked">
       <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QLabel" name="label_14">
-     <property name="text">
-      <string>Show buses:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
     </widget>
    </item>
    <item row="1" column="2">
-    <widget class="QCheckBox" name="showBuses">
-     <property name="text">
-      <string/>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
-    <widget class="QLabel" name="label_15">
-     <property name="text">
-      <string>Show night lines:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="2">
-    <widget class="QCheckBox" name="showNightLines">
-     <property name="text">
-      <string/>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="1">
-    <widget class="QLabel" name="label_11">
-     <property name="text">
-      <string>Min. line:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="2">
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <property name="bottomMargin">
       <number>0</number>
@@ -108,6 +140,21 @@
      </item>
      <item>
       <widget class="KIntSpinBox" name="filterMaxLine">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="wrapping">
+        <bool>false</bool>
+       </property>
+       <property name="readOnly">
+        <bool>false</bool>
+       </property>
+       <property name="buttonSymbols">
+        <enum>QAbstractSpinBox::UpDownArrows</enum>
+       </property>
        <property name="prefix">
         <string/>
        </property>
@@ -115,98 +162,22 @@
         <number>1</number>
        </property>
        <property name="maximum">
-        <number>999</number>
+        <number>9999999</number>
        </property>
        <property name="value">
-        <number>999</number>
+        <number>9999999</number>
        </property>
       </widget>
      </item>
     </layout>
    </item>
-   <item row="8" column="0" colspan="3">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>0</width>
-       <height>5</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="6" column="0" colspan="3">
-    <widget class="KComboBox" name="filterTypeTarget">
-     <item>
-      <property name="text">
-       <string>Show all targets</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Show matching targets</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Hide matching targets</string>
-      </property>
-     </item>
-    </widget>
-   </item>
-   <item row="5" column="0">
-    <widget class="QLabel" name="label_16">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
+   <item row="1" column="1">
+    <widget class="QLabel" name="label_11">
      <property name="text">
-      <string>Shown targets</string>
+      <string>Min. line:</string>
      </property>
-    </widget>
-   </item>
-   <item row="4" column="0" colspan="3">
-    <spacer name="verticalSpacer_2">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Fixed</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>64</width>
-       <height>10</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="7" column="0" colspan="3">
-    <widget class="KEditListBox" name="filterTargetList">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="layoutDirection">
-      <enum>Qt::LeftToRight</enum>
-     </property>
-     <property name="title">
-      <string/>
-     </property>
-     <property name="flat">
-      <bool>true</bool>
-     </property>
-     <property name="checkable">
-      <bool>false</bool>
-     </property>
-     <property name="buttons">
-      <set>KEditListBox::Add|KEditListBox::Remove</set>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
     </widget>
    </item>
@@ -228,13 +199,17 @@
    <extends>QComboBox</extends>
    <header>kcombobox.h</header>
   </customwidget>
+  <customwidget>
+   <class>KActionSelector</class>
+   <extends>QWidget</extends>
+   <header>kactionselector.h</header>
+  </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>showTrams</tabstop>
-  <tabstop>showBuses</tabstop>
   <tabstop>showNightLines</tabstop>
   <tabstop>filterMinLine</tabstop>
   <tabstop>filterMaxLine</tabstop>
+  <tabstop>filterLineType</tabstop>
   <tabstop>filterTypeTarget</tabstop>
  </tabstops>
  <resources/>

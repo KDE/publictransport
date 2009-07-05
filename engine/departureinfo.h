@@ -20,66 +20,45 @@
 #ifndef DEPARTUREINFO_HEADER
 #define DEPARTUREINFO_HEADER
 
+// Qt includes
 #include <QTime>
+#include <QDebug>
 
-// The type of the vehicle used for a public transport line.
-enum LineType
-{
-    Unknown = 0,
-    Tram = 1,
-    Bus = 2,
-    Subway = 3,
-    SBahn = 4
-};
+// Own includes
+#include "enums.h"
 
-// The type of services for a public transport line.
-enum LineService
-{
-    NoLineService = 0,
-
-    NightLine = 1,
-    ExpressLine = 2
-};
 Q_DECLARE_FLAGS( LineServices, LineService );
-
 class DepartureInfo
 {
     public:
-	DepartureInfo() { m_line = -1; };
+	DepartureInfo();
 
-	DepartureInfo( const QString &line, LineType lineType, QString direction, const QTime &departure )
-	{
-	    m_line = line;
-	    m_lineType = lineType;
-	    m_direction = direction;
-	    m_departure = departure;
-	    m_lineServices = NoLineService;
-	}
+	DepartureInfo( const QString &line, const VehicleType &typeOfVehicle, const QString &target, const QDateTime &departure, bool nightLine = false, bool expressLine = false, const QString &platform = "", int delay = -1, const QString &delayReason = "", const QString &sJourneyNews = "" );
 
-	DepartureInfo( const QString &line, LineType lineType, QString direction, const QTime &departure, bool nightLine )
-	{
-	    m_line = line;
-	    m_lineType = lineType;
-	    m_direction = direction;
-	    m_departure = departure;
-	    m_lineServices = nightLine ? NightLine : NoLineService;
-	}
+	DepartureInfo( const QString &line, const VehicleType &typeOfVehicle, const QString &target, const QTime &requestTime, const QTime &departureTime, bool nightLine = false, bool expressLine = false, const QString &platform = "", int delay = -1, const QString &delayReason = "", const QString &sJourneyNews = "" );
 
-	bool isValid() const { return m_line >= 0; }
+	void init( const QString &line, const VehicleType &typeOfVehicle, const QString &target, const QDateTime &departure, bool nightLine = false, bool expressLine = false, const QString &platform = "", int delay = -1, const QString &delayReason = "", const QString &sJourneyNews = "" );
 
-	QString direction() const { return m_direction; };
+	bool isValid() const { return !m_line.isEmpty(); };
+
+	QString target() const { return m_target; };
 	QString line() const { return m_line; };
-	QTime departure() const { return m_departure; };
-	LineType lineType() const { return m_lineType; };
+	QDateTime departure() const { return m_departure; };
+	VehicleType vehicleType() const { return m_vehicleType; };
 	bool isNightLine() const { return m_lineServices.testFlag( NightLine ); };
 	bool isExpressLine() const { return m_lineServices.testFlag( ExpressLine ); };
+	QString platform() const { return m_platform; };
+	int delay() const { return m_delay; };
+	QString delayReason() const { return m_delayReason; };
+	QString journeyNews() const { return m_journeyNews; };
 
-	static LineType getLineTypeFromString( const QString &sLineType );
+	static VehicleType getVehicleTypeFromString( const QString &sLineType );
 
     private:
-	QString m_direction, m_line;
-	QTime m_departure;
-	LineType m_lineType;
+	QString m_target, m_line, m_platform, m_delayReason, m_journeyNews;
+	int m_delay;
+	QDateTime m_departure;
+	VehicleType m_vehicleType;
 	LineServices m_lineServices;
 };
 

@@ -17,23 +17,34 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef TIMETABLEACCESSOR_RMV_HEADER
-#define TIMETABLEACCESSOR_RMV_HEADER
+#ifndef TIMETABLEACCESSOR_XML_HEADER
+#define TIMETABLEACCESSOR_XML_HEADER
 
 #include "timetableaccessor.h"
+#include "timetableaccessor_html.h"
 
-class TimetableAccessorRmv : public TimetableAccessor
+class TimetableAccessorXml : public TimetableAccessor
 {
     public:
-	virtual ServiceProvider serviceProvider() { return RMV; };
+	TimetableAccessorXml();
+	TimetableAccessorXml( ServiceProvider serviceProvider );
+	
+	virtual bool useDifferentUrlForPossibleStops() const { return true; };
 
-	virtual QString country() const { return "Germany"; };
-// 	virtual QStringList cities() const { return QStringList() << "?"; };
+	virtual QString country() const { return m_info.country; };
+	virtual QStringList cities() const { return m_info.cities; };
+	virtual QStringList features() const;
 	
     protected:
 	// parses the contents of the document at the url
 	virtual bool parseDocument( QList<DepartureInfo> *journeys );
-	virtual QString rawUrl(); // gets the "raw" url
+	// Parses the contents of a document for a list of stop names
+	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops ) const;
+	virtual QString rawUrl() const; // gets the "raw" url
+	virtual QString differentRawUrl() const;
+	virtual QByteArray charsetForUrlEncoding() const;
+
+	TimetableAccessorHtml *m_accessorHTML;
 };
 
-#endif // TIMETABLEACCESSOR_RMV_HEADER
+#endif // TIMETABLEACCESSOR_XML_HEADER

@@ -27,52 +27,21 @@
 #include "kio/jobclasses.h"
 #include <QDebug>
 #include "departureinfo.h"
-
-// List of implemented service providers with IDs.
-// If you implemented support for a new one, add a value here.
-enum ServiceProvider
-{
-    NoServiceProvider = -1,
-
-    // Germany (0 .. 50?)
-    Fahrplaner = 0, // Niedersachsen/Bremen
-    RMV = 1, // Rhein-Main
-    VVS = 2, // Stuttgart
-    VRN = 3, // Rhein-Neckar
-    BVG = 4, // Berlin
-    DVB = 5, // Dresden
-    NASA = 6, // Sachsen-Anhalt
-    DB = 7, // (whole germany?)
-
-    SBB = 10, // (whole switzerland?)
-
-    // Slovakia (1000 .. ?)
-    IMHD = 1000 // Bratislava
-};
-
-enum TimetableInformation
-{
-    Nothing = 0,
-    DepartureHour = 1,
-    DepartureMinute = 2,
-    TypeOfVehicle = 3,
-    TransportLine = 4,
-    Direction = 5,
-    
-    StopName = 10,
-    StopID = 11
-};
+#include "enums.h"
+#include "timetableaccessor_htmlinfo.h"
 
 // Gets timetable information for public transport from different service providers.
-// To implement support for a new service provider create a new class based on
-// TimetableAccessor and overwrite
+// The easiest way to implement support for a new service provider is to derive a new class
+// from TimetableAccessorInfo and use it with TimetableAccessorHtml.
+// To implement support for a new class service providers create a new class based on
+// TimetableAccessor or it's derivates and overwrite
 //	- serviceProvider()  (you also need to add an enum value to ServiceProvider)
 // 	- country(), cities()
 // 	- rawUrl(), parseDocument()
 class TimetableAccessor : public QObject
 {
     Q_OBJECT
-    
+
     public:
 	TimetableAccessor();
         ~TimetableAccessor();
@@ -81,53 +50,63 @@ class TimetableAccessor : public QObject
 	static TimetableAccessor *getSpecificAccessor( ServiceProvider serviceProvider );
 
 	// The service provider the accessor is designed for
-	virtual ServiceProvider serviceProvider() { return NoServiceProvider; };
+	virtual ServiceProvider serviceProvider() const { return m_info.serviceProvider; };
+
+	virtual QStringList features() const;
 
 	// The country for which the accessor returns results
-	virtual QString country() const { return ""; };
+	virtual QString country() const { return m_info.country; };
 
 	// A list of cities for which the accessor returns results
-	virtual QStringList cities() const { return QStringList(); };
-
+	virtual QStringList cities() const { return m_info.cities; };
 	// Requests a list of departures
 	// When the departure list is received journeyListReceived() is emitted
-	KIO::TransferJob *requestJourneys( QString city, QString stop );
+	KIO::TransferJob *requestJourneys( const QString &sourceName, const QString &city, const QString &stop, int maxDeps, int timeOffset, const QString &dataType = "departures", bool useDifferentUrl = false );
 
-	// deprecated ;)
-	QList< DepartureInfo > getJourneys( QString city, QString stop );
+	TimetableAccessorInfo timetableAccessorInfo() const;
 
 	// Wheather or not the city should be put into the "raw" url
-	virtual bool useSeperateCityValue() const { return true; };
+	virtual bool useSeperateCityValue() const { return m_info.useSeperateCityValue; };
+	virtual bool useDifferentUrlForPossibleStops() const { return false; };
+
+	static QString toPercentEncoding( QString str, QByteArray charset );
 
     protected:
-	// Stores the downloaded parts of a reply
-	QByteArray m_document;
-	QString m_curCity;
-
 	// Parses the contents of a document that was requested using requestJourneys()
 	virtual bool parseDocument( QList<DepartureInfo> *journeys );
 
 	// Parses the contents of a document for a list of stop names
-	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops );
-	
-	// Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2") 
+	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops ) const;
+
+	// Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
 	// or only for the stop ("%1") if putCityIntoUrl() == false
-	virtual QString rawUrl();
+	virtual QString rawUrl() const;
+	virtual QString differentRawUrl() const;
+	virtual QByteArray charsetForUrlEncoding() const;
 
 	// Constructs an url by combining the "raw" url with the needed information
-	KUrl getUrl( QString city, QString stop );
+	KUrl getUrl( const QString &city, const QString &stop, int maxDeps, int timeOffset, const QString &dataType = "departures", bool useDifferentUrl = false ) const;
+
+	// Stores the downloaded parts of a reply
+	QByteArray m_document;
+	QString m_curCity;
+
+	// Stores service provider specific information that is used to parse the html pages
+	TimetableAccessorInfo m_info;
 
     private:
+	static QString gethex ( ushort decimal );
+
 	// Stores information about currently running download jobs
-	QMap<KJob*, QStringList> m_jobInfos;
+	QMap<KJob*, QVariantList> m_jobInfos;
 
     signals:
 	// Emitted when a new journey list has been received and parsed
-	void journeyListReceived( TimetableAccessor *accessor, QList< DepartureInfo > journeys, ServiceProvider serviceProvider, QString city, QString stop );
+	void journeyListReceived( TimetableAccessor *accessor, QList< DepartureInfo > journeys, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType );
 	// Emitted when a list of stop names has been received and parsed
-	void stopListReceived( TimetableAccessor *accessor, QMap< QString, QString > stops, ServiceProvider serviceProvider, QString city, QString stop );
+	void stopListReceived( TimetableAccessor *accessor, QMap< QString, QString > stops, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType );
 	// Emitted when an error occured while parsing
-	void errorParsing( TimetableAccessor *accessor, ServiceProvider serviceProvider, QString city, QString stop );
+	void errorParsing( TimetableAccessor *accessor, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType );
 
     public slots:
 	// Some data has been received
