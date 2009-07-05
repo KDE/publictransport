@@ -10,15 +10,6 @@ Name[sv]=Kollektivtrafikgränssnitt
 Name[uk]=Рушій громадського транспорту
 Name[x-test]=xxPublic transport enginexx
 Comment=Plasma data engine for public transport
-Comment[de]=Plasma Data-Engine für öffentlichen Nahverkehr
-Comment[et]=Plasma Saksamaa ühiskondliku transpordi andmete mootor
-Comment[fr]=Moteur de données pour le transport publique en Allemagne
-Comment[km]=ម៉ាស៊ីន​ទិន្នន័យ​ប្លាស្មា​សម្រាប់​ការ​បញ្ជូន​សារធារណៈ​ជា​ភាសា​អាល្លឺម៉ង់
-Comment[pt]=Motor de dados do Plasma para os transportes públicos na Alemanha
-Comment[pt_BR]=Motor de dados do Plasma para os transportes públicos na Alemanha
-Comment[sv]=Plasma datagränssnitt för kollektivtrafik i Tyskland
-Comment[uk]=Рушій даних Плазим для громадського транспорту у Німеччині
-Comment[x-test]=xxPlasma data engine for public transportxx
 Icon=public-transport-stop
 Type=Service
 
