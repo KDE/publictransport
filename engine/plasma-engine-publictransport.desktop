@@ -14,6 +14,7 @@ Comment[pt]=Motor de dados do Plasma para os transportes públicos
 Comment[pt_BR]=Motor de dados do Plasma para os transportes públicos
 Comment[sv]=Plasma datagränssnitt för kollektivtrafik
 Comment[uk]=Рушій даних Плазим для громадського транспорту
+Comment[x-test]=xxPlasma data engine for public transportxx
 Icon=public-transport-stop
 Type=Service
 
