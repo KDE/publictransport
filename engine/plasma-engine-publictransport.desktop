@@ -10,6 +10,7 @@ Name[sv]=Kollektivtrafikgränssnitt
 Name[uk]=Рушій громадського транспорту
 Name[x-test]=xxPublic transport enginexx
 Comment=Plasma data engine for public transport
+Comment[fr]=Moteur de données pour Transport publique
 Comment[pt]=Motor de dados do Plasma para os transportes públicos
 Comment[pt_BR]=Motor de dados do Plasma para os transportes públicos
 Comment[sv]=Plasma datagränssnitt för kollektivtrafik
