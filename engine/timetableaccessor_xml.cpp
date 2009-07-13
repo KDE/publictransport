@@ -56,8 +56,9 @@ QStringList TimetableAccessorXml::features() const
 	<< i18nc("Support for getting the id of a stop of public transport. This string is used in a feature list, should be short.", "Stop ID");
 }
 
-bool TimetableAccessorXml::parseDocument( QList<DepartureInfo> *journeys )
-{
+bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys, ParseDocumentMode parseDocumentMode ) {
+    Q_UNUSED( parseDocumentMode );
+
     if ( m_document.isEmpty() )
     {
 	qDebug() << "TimetableAccessorXml::parseDocument" << "XML document is empty";
@@ -121,9 +122,9 @@ bool TimetableAccessorXml::parseDocument( QList<DepartureInfo> *journeys )
 
 // 	qDebug() << "TIME =" << sTime << ", LINE =" << sLine << ", DIRECTION =" << sDirection << ", DELAY =" << sDelay;
 	if ( sDelay.isEmpty() )
-	    journeys->append( DepartureInfo( sLine, DepartureInfo::getVehicleTypeFromString(sVehicleType), sDirection, QTime::currentTime(), QTime::fromString(sTime, "hh:mm"), false, false, sPlatform, -1, "", sJourneyNews ) );
+	    journeys->append( new DepartureInfo( sLine, DepartureInfo::getVehicleTypeFromString(sVehicleType), sDirection, QTime::currentTime(), QTime::fromString(sTime, "hh:mm"), false, false, sPlatform, -1, "", sJourneyNews ) );
 	else
-	    journeys->append( DepartureInfo( sLine, DepartureInfo::getVehicleTypeFromString(sVehicleType), sDirection, QTime::currentTime(), QTime::fromString(sTime, "hh:mm"), false, false, sPlatform, sDelay.toInt(), "", sJourneyNews ) );
+	    journeys->append( new DepartureInfo( sLine, DepartureInfo::getVehicleTypeFromString(sVehicleType), sDirection, QTime::currentTime(), QTime::fromString(sTime, "hh:mm"), false, false, sPlatform, sDelay.toInt(), "", sJourneyNews ) );
     }
 
     return count > 0;
@@ -153,12 +154,6 @@ QString TimetableAccessorXml::rawUrl() const
 
 QString TimetableAccessorXml::differentRawUrl() const
 { // TODO: needed?
-    return m_info.rawUrl;
+    return m_info.departureRawUrl();
 }
-
-QByteArray TimetableAccessorXml::charsetForUrlEncoding() const
-{
-    return m_info.charsetForUrlEncoding();
-}
-
 

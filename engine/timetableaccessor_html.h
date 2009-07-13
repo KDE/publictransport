@@ -17,37 +17,94 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+/** @file
+* @brief This file contains the base class for all HTML based accessors used by the public transport data engine.
+* @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #ifndef TIMETABLEACCESSOR_HTML_HEADER
 #define TIMETABLEACCESSOR_HTML_HEADER
 
 #include "timetableaccessor.h"
 
+
+/** @class TimetableAccessorHtml
+* @brief The base class for all HTML accessors.
+*/
 class TimetableAccessorHtml : public TimetableAccessor
 {
+    // Because the XML accessor uses TimetableAccessorHtml::parseDocumentPossibleStops().
+    friend class TimetableAccessorXml;
+
     public:
+	/** Creates a new TimetableAccessorHtml object with the given information.
+	* @param info Information about how to download and parse the documents of a
+	* service provider.
+	* @note Can be used if you have a custom TimetableAccessorInfo object.
+	* TimetableAccessorXml uses this to create an HTML accessor for parsing of stop
+	* lists. */
 	TimetableAccessorHtml( TimetableAccessorInfo info = TimetableAccessorInfo() );
+
+	/** Creates a new TimetableAccessorHtml object for the given service provider.
+	* @param serviceProvider The service provider for that the accessor should be
+	* able to download and parse documents.
+	* @note This constructor is called from TimetableAccessor::getSpecificAccessor(),
+	* what you will normally want to use, as it returns all types of available accessors.
+	* @see TimetableAccessor::getSpecificAccessor() */
 	TimetableAccessorHtml( ServiceProvider serviceProvider );
 
-	bool parseDocumentPossibleStops( const QByteArray document, QMap<QString,QString> *stops );
+	/** Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
+	static QString decodeHtmlEntities( QString html );
 
-	static QString decodeHtmlEntities( QString sHtml );
+	/** Decodes the given HTML document. First it tries QTextCodec::codecForHtml().
+        * If that doesn't work, it parses the document for the charset in a meta-tag. */
 	static QString decodeHtml( QByteArray document );
 
     protected:
-	// Parses the contents of a received document for a list of departures and puts the results into journeys
-	virtual bool parseDocument( QList<DepartureInfo> *journeys );
-	// Exceuted before parseDocument if there is a regexp to use before starting parseDocument. It collects data matched by the regexp to be used in parseDocument
+	/** Parses the contents of a received document for a list of departures / arrivals
+	* and puts the results into @p journeys.
+	* @param journeys A pointer to a list of departure/arrival or journey informations.
+	* The results of parsing the document is stored in @p journeys.
+	* @param parseDocumentMode The mode of parsing, e.g. parse for departures/arrivals or journeys.
+	* @return true, if there were no errors and the data in @p journeys is valid.
+	* @return false, if there were an error parsing the document. */
+	virtual bool parseDocument( QList<PublicTransportInfo*> *journeys, ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
+
+	/** Exceuted before parseDocument() if there is a regexp to use before starting
+	* parseDocument. It collects data matched by the regexp to be used in parseDocument.
+	* @param document A string containing the whole document from the service provider.
+	* @return true, if there were no errors.
+	* @return false, if there were an error parsing the document. */
 	virtual bool parseDocumentPre( QString document );
-	// Parses the contents of a received document for a list of possible stop names and puts the results into stops (stop name => stop id)
+
+	/** Parses the contents of the given document for a list of possible stop names
+	* and puts the results into @p stops.
+	* @param document A document to be parsed.
+	* @param stops A pointer to a map, where the keys are stop names and the values
+	* are stop IDs. The results of parsing the document is stored in @p stops.
+	* @return true, if there were no errors.
+	* @return false, if there were an error parsing the document.
+	* @note Can be used if you have an html document containing a stop list.
+	* TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
+	* document for stops.
+	* @see parseDocumentPossibleStops(QMap<QString,QString>*) const */
+	virtual bool parseDocumentPossibleStops( const QByteArray document, QMap<QString,QString> *stops );
+
+	/** Parses the contents of a received document for a list of possible stop names
+	* and puts the results into @p stops.
+	* @param stops A pointer to a map, where the keys are stop names and the values
+	* are stop IDs. The results of parsing the document is stored in @p stops.
+	* @return true, if there were no errors.
+	* @return false, if there were an error parsing the document.
+	* @see parseDocumentPossibleStops(const QByteArray, QMap<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops ) const;
-	// Parses a journey news string
+
+	/** Parses a journey news string. */
 	virtual bool parseJourneyNews( const QString sJourneyNews, QString *sDelay, QString *sDelayReason, QString *sJourneyNewsOther ) const;
 
     private:
-	void postProcessMatchedData( TimetableInformation info, QString matchedData, QMap< TimetableInformation, QString > *data );
+	void postProcessMatchedData( TimetableInformation info, QString matchedData, QMap< TimetableInformation, QVariant > *data );
 
-	// Data collected by parseDocumentPre
-	QMap< QString, QString > *m_preData;
+	QMap< QString, QString > *m_preData; // Data collected by parseDocumentPre
 };
 
 #endif // TIMETABLEACCESSOR_HTML_HEADER

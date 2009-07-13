@@ -53,6 +53,8 @@ void DataSourceTester::dataUpdated ( const QString& sourceName, const Plasma::Da
 {
     Q_UNUSED( sourceName );
 //     qDebug() << "DataSourceTester::dataUpdated" << sourceName;
+    if ( data.isEmpty() )
+	return;
     disconnectTestSource();
 
     // Check for errors from the data engine
@@ -64,7 +66,7 @@ void DataSourceTester::dataUpdated ( const QString& sourceName, const Plasma::Da
 	// Check if we got a possible stop list or a journey list
 	if ( data.value("receivedPossibleStopList").toBool() ) {
 	    processTestSourcePossibleStopList( data );
-	    emit testResult( Error, i18n("The stop name is ambigous.") );
+// 	    emit testResult( Error, i18n("The stop name is ambigous.") );
 // 	    setStopNameValid( false, i18n("The stop name is ambigous.") );
 	} else {
 	    // List of journeys received
@@ -86,8 +88,7 @@ void DataSourceTester::processTestSourcePossibleStopList ( const Plasma::DataEng
 	if ( !stopData.isValid() )
 	    break; // Stop on first invalid key. Thats a key with a too high number, maybe the data engine should provide a counter for how many stop names it provides currently
 
-	    QMap<QString, QVariant> dataMap = stopData.toMap();
-
+	QMap<QString, QVariant> dataMap = stopData.toMap();
 	QString sStopName = dataMap["stopName"].toString();
 	QString sStopID = dataMap["stopID"].toString();
 	possibleStops << sStopName;

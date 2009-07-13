@@ -17,34 +17,76 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+/** @file
+* @brief This file contains the base class for all XML based accessors used by the public transport data engine.
+* @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #ifndef TIMETABLEACCESSOR_XML_HEADER
 #define TIMETABLEACCESSOR_XML_HEADER
 
 #include "timetableaccessor.h"
 #include "timetableaccessor_html.h"
 
+
+/** @class TimetableAccessorXml
+* @brief This is the base class for all XML based accessors.
+*/
 class TimetableAccessorXml : public TimetableAccessor
 {
+    // Because the XML accessor uses TimetableAccessorHtml::parseDocumentPossibleStops().
+    friend class TimetableAccessorHtml;
+
     public:
+	/** Creates a new TimetableAccessorXml object. */
 	TimetableAccessorXml();
+
+	/** Creates a new TimetableAccessorXml object for the given service provider.
+	* @param serviceProvider The service provider for that the accessor should be
+	* able to download and parse documents.
+	* @note This constructor is called from TimetableAccessor::getSpecificAccessor(),
+	* what you will normally want to use, as it returns all types of available accessors.
+	* @see TimetableAccessor::getSpecificAccessor() */
 	TimetableAccessorXml( ServiceProvider serviceProvider );
-	
+
+	/** Wheather or not to use the url returned by differentRawUrl() instead of the
+	* one returned by rawUrl().
+	* TimetableAccessorXml always returns true, as it uses an html source to
+	* download stop lists.
+	* @see differentRawUrl() */
 	virtual bool useDifferentUrlForPossibleStops() const { return true; };
 
-	virtual QString country() const { return m_info.country; };
-	virtual QStringList cities() const { return m_info.cities; };
+	/** Gets a list of features that this accessor supports. */
 	virtual QStringList features() const;
-	
-    protected:
-	// parses the contents of the document at the url
-	virtual bool parseDocument( QList<DepartureInfo> *journeys );
-	// Parses the contents of a document for a list of stop names
-	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops ) const;
-	virtual QString rawUrl() const; // gets the "raw" url
-	virtual QString differentRawUrl() const;
-	virtual QByteArray charsetForUrlEncoding() const;
 
-	TimetableAccessorHtml *m_accessorHTML;
+    protected:
+	/** Parses the contents of a document that was requested using requestJourneys()
+	* and puts the results into @p journeys..
+	* @param journeys A pointer to a list of departure/arrival or journey informations.
+	* The results of parsing the document is stored in @p journeys.
+	* @param parseDocumentMode The mode of parsing, e.g. parse for
+	* departures/arrivals or journeys.
+	* @return true, if there were no errors and the data in @p journeys is valid.
+	* @return false, if there were an error parsing the document. */
+	virtual bool parseDocument( QList<PublicTransportInfo*> *journeys, ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
+
+	/** Parses the contents of a received document for a list of possible stop names
+	* and puts the results into @p stops.
+	* @param stops A pointer to a map, where the keys are stop names and the values
+	* are stop IDs. The results of parsing the document is stored in @p stops.
+	* @return true, if there were no errors.
+	* @return false, if there were an error parsing the document. */
+	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops ) const;
+
+	/** Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
+	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
+	virtual QString rawUrl() const; // gets the "raw" url
+
+	/** Gets a second "raw" url with placeholders for the city ("%1") and the stop ("%2")
+	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
+	virtual QString differentRawUrl() const;
+
+    private:
+	TimetableAccessorHtml *m_accessorHTML; // The HTML accessor used to parse possible stop lists
 };
 
 #endif // TIMETABLEACCESSOR_XML_HEADER

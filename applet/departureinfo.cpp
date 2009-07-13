@@ -1,11 +1,53 @@
 
 #include <QDebug>
+#include <QVariant>
 #include "departureinfo.h"
 #include <qmath.h>
 
+JourneyInfo::JourneyInfo ( const QVariantList& vehicleTypesVariant, const QDateTime& departure, const QDateTime& arrival, const QString& pricing, const QString& startStopName, const QString& targetStopName, int duration, int changes, const QString &journeyNews ) {
+    QList<VehicleType> vehicleTypes;
+    foreach( QVariant vehicleType, vehicleTypesVariant )
+	vehicleTypes.append( static_cast<VehicleType>(vehicleType.toInt()) );
+    init( vehicleTypes, departure, arrival, pricing, startStopName, targetStopName, duration, changes, journeyNews );
+}
+
+void JourneyInfo::init ( const QList< VehicleType >& vehicleTypes, const QDateTime& departure, const QDateTime& arrival, const QString& pricing, const QString& startStopName, const QString& targetStopName, int duration, int changes, const QString &journeyNews ) {
+    this->vehicleTypes = vehicleTypes;
+    this->departure = departure;
+    this->arrival = arrival;
+    this->pricing = pricing;
+    this->startStopName = startStopName;
+    this->targetStopName = targetStopName;
+    this->duration = duration;
+    this->changes = changes;
+    this->journeyNews = journeyNews;
+}
+
+QList< QVariant > JourneyInfo::vehicleTypesVariant() const {
+    QList<QVariant> vehicleTypesVariant;
+    foreach( VehicleType vehicleType, vehicleTypes )
+	vehicleTypesVariant.append( static_cast<int>(vehicleType) );
+    return vehicleTypesVariant;
+}
+
+QString JourneyInfo::durationToDepartureString( bool toArrival ) const {
+    int totalSeconds = QDateTime::currentDateTime().secsTo( toArrival ? arrival : departure );
+//     if ( -totalSeconds / 3600 >= 23 )
+// 	totalSeconds += 24 * 3600;
+
+    int seconds = totalSeconds % 60;
+    totalSeconds -= seconds;
+    if (seconds > 0)
+	totalSeconds += 60;
+    if (totalSeconds < 0)
+	return i18n("depart is in the past");
+
+    return Global::durationString(totalSeconds).replace(' ', "&nbsp;");
+}
+
 
 QString DepartureInfo::durationString () const {
-    int totalSeconds = QDateTime::currentDateTime().secsTo( departure );
+    int totalSeconds = QDateTime::currentDateTime().secsTo( predictedDeparture() );
     if ( -totalSeconds / 3600 >= 23 )
 	totalSeconds += 24 * 3600;
     int seconds = totalSeconds % 60;
@@ -69,6 +111,10 @@ void DepartureInfo::init ( const QString &line, const QString &target, const QDa
     this->delay = delay;
     this->delayReason = delayReason;
     this->journeyNews = journeyNews;
+}
+
+bool operator< ( const JourneyInfo& ji1, const JourneyInfo& ji2 ) {
+    return ji1.departure < ji2.departure;
 }
 
 bool operator < ( const DepartureInfo &di1, const DepartureInfo &di2 ) {

@@ -52,10 +52,10 @@ class HtmlDelegate : public QItemDelegate
 	void setAlignText( bool alignText ) { m_alignText = alignText; };
 
     protected:
-	virtual void paint ( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const;
+	virtual void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const;
 
-	virtual void drawDecoration ( QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QPixmap& pixmap ) const;
-	virtual void drawDisplay ( QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text, bool bigContrastShadow = false ) const;
+	virtual void drawDecoration( QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QPixmap& pixmap ) const;
+	virtual void drawDisplayWithShadow( QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text, bool bigContrastShadow = false ) const;
 
 
     private:

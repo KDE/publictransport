@@ -20,29 +20,45 @@
 #include "departureinfo.h"
 #include <QDebug>
 
+JourneyInfo::JourneyInfo ( const QList< VehicleType >& vehicleTypes, const QString& startStopName, const QString& targetStopName, const QDateTime& departure, const QDateTime& arrival, int duration, int changes, const QString& pricing, const QString &journeyNews ) : PublicTransportInfo () {
+    init( vehicleTypes, startStopName, targetStopName, departure, arrival, duration, changes, pricing, journeyNews );
+}
 
-DepartureInfo::DepartureInfo() {
+void JourneyInfo::init( const QList< VehicleType >& vehicleTypes, const QString& startStopName, const QString& targetStopName, const QDateTime& departure, const QDateTime& arrival, int duration, int changes, const QString& pricing, const QString &journeyNews ) {
+    m_vehicleTypes = vehicleTypes;
+    m_startStopName = startStopName;
+    m_targetStopName = targetStopName;
+    m_departure = departure;
+    m_arrival = arrival;
+    m_duration = duration;
+    m_changes = changes;
+    m_pricing = pricing;
+    m_journeyNews = journeyNews;
+}
+
+
+DepartureInfo::DepartureInfo() : PublicTransportInfo() {
     m_line = -1;
     m_delay = -1;
     m_platform = "";
     m_delayReason = "";
 }
 
-DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QDateTime& departure, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& sJourneyNews ) {
-    init( line, typeOfVehicle, target, departure, nightLine, expressLine, platform, delay, delayReason, sJourneyNews );
+DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QDateTime& departure, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& journeyNews ) : PublicTransportInfo() {
+    init( line, typeOfVehicle, target, departure, nightLine, expressLine, platform, delay, delayReason, journeyNews );
 }
 
-DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QTime &requestTime, const QTime& departureTime, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& sJourneyNews ) {
+DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QTime &requestTime, const QTime& departureTime, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& journeyNews ) : PublicTransportInfo() {
     QDate departureDate;
     if ( departureTime < requestTime.addSecs(-5 * 60) )
 	departureDate = QDate::currentDate().addDays(1);
     else
 	departureDate = QDate::currentDate();
 
-    init( line, typeOfVehicle, target, QDateTime(departureDate, departureTime), nightLine, expressLine, platform, delay, delayReason, sJourneyNews );
+    init( line, typeOfVehicle, target, QDateTime(departureDate, departureTime), nightLine, expressLine, platform, delay, delayReason, journeyNews );
 }
 
-void DepartureInfo::init ( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QDateTime& departure, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& sJourneyNews ) {
+void DepartureInfo::init ( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QDateTime& departure, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& journeyNews ) {
     m_line = line;
     m_vehicleType = typeOfVehicle;
     m_target = target;
@@ -53,26 +69,31 @@ void DepartureInfo::init ( const QString& line, const VehicleType& typeOfVehicle
     m_platform = platform;
     m_delay = delay;
     m_delayReason = delayReason;
-    m_journeyNews = sJourneyNews;
+    m_journeyNews = journeyNews;
 }
 
-VehicleType DepartureInfo::getVehicleTypeFromString( const QString& sLineType ) {
+VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineType ) {
 //     qDebug() << "DepartureInfo::getLineTypeFromString" << sLineType;
 
     QString sLineTypeLower = sLineType.trimmed().toLower();
+
+    // See http://en.wikipedia.org/wiki/Train_categories_in_Europe
     if ( sLineTypeLower == "u-bahn" ||
 	sLineTypeLower == "ubahn" ||
-	sLineTypeLower == "u" )
+	sLineTypeLower == "u" ||
+	sLineTypeLower == "rt" ) // regio tram
 	return Subway;
 
     else if ( sLineTypeLower == "s-bahn" ||
 	sLineTypeLower == "sbahn" ||
-	sLineTypeLower == "s" )
+	sLineTypeLower == "s" ||
+	sLineTypeLower == "rsb" ) // "regio-s-bahn", austria
 	return TrainInterurban;
 
     else if ( sLineTypeLower == "tram" ||
 	sLineTypeLower == "straßenbahn" ||
 	sLineTypeLower == "str" ||
+	sLineTypeLower == "stb" || // "stadtbahn", germany
 	sLineTypeLower == "dm_train" ||
 	sLineTypeLower == "streetcar (tram)" ) // for imhd.sk
 	return Tram;
@@ -85,23 +106,41 @@ VehicleType DepartureInfo::getVehicleTypeFromString( const QString& sLineType ) 
 	return Bus;
 
     else if ( sLineTypeLower == "rb" ||
+	sLineTypeLower == "mer" || // "metronom", geramny
+	sLineTypeLower == "r" || // austria, switzerland
+	sLineTypeLower == "os" || // czech, "Osobní vlak", basic local (stopping) trains, Regionalbahn
 	sLineTypeLower == "dpn" || // for rozklad-pkp.pl (TODO: Check if this is the right train type)
 	sLineTypeLower == "t84" || // for rozklad-pkp.pl (TODO: Check if this is the right train type)
 	sLineTypeLower == "r84" ) // for rozklad-pkp.pl (TODO: Check if this is the right train type)
 	return TrainRegional;
 
-    else if ( sLineTypeLower == "re" )
+    else if ( sLineTypeLower == "re" ||
+	sLineTypeLower == "sp" || // czech, "Spěšný vlak", semi-fast trains (Eilzug)
+	sLineTypeLower == "rex" || // austria, local train stopping at few stations; semi fast
+	sLineTypeLower == "ez" || // austria ("erlebniszug"), local train stopping at few stations; semi fast
+	sLineTypeLower == "zr" ) // slovakia, "Zrýchlený vlak", train serving almost all stations en route
 	return TrainRegionalExpress;
 
-    else if ( sLineTypeLower == "ir" )
+    else if ( sLineTypeLower == "ir" ||
+	sLineTypeLower == "ire" ||  // almost a local train (Nahverkehrszug) stopping at few stations; semi-fast
+	sLineTypeLower == "er" ||  // border-crossing local train stopping at few stations; semi-fast
+	sLineTypeLower == "ex" )// czech, express trains with no supplementary fare, similar to the German Interregio or also Regional-Express
 	return TrainInterregio;
 
     else if ( sLineTypeLower == "ec_ic" ||
 	sLineTypeLower == "ec" ||
-	sLineTypeLower == "ic" )
+	sLineTypeLower == "ic" ||
+	sLineTypeLower == "oec" || // austria
+	sLineTypeLower == "oic" || // austria
+	sLineTypeLower == "icn" ) // national long-distance train with tilting technology
 	return TrainIntercityEurocity;
 
-    else if ( sLineTypeLower == "ice" )
+    else if ( sLineTypeLower == "ice" || // germany
+	sLineTypeLower == "tgv" ||  // france
+	sLineTypeLower == "tha" ||  // thalys
+	sLineTypeLower == "hst" || // great britain
+	sLineTypeLower == "es" || // eurostar italia, High-speed, tilting trains for long-distance services
+	sLineTypeLower == "" ) // spain, High speed trains, speeds up to 300 km/h
 	return TrainIntercityExpress;
 
     else

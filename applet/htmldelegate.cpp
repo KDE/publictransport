@@ -27,7 +27,7 @@
 #include <QAbstractTextDocumentLayout>
 #include <Plasma/PaintUtils>
 #include <QPainter>
-#include "enums.h"
+#include "global.h"
 #include <Plasma/Svg>
 #include <plasma/framesvg.h>
 
@@ -99,8 +99,6 @@ void HtmlDelegate::plainTextToHTMLCharCount( const QString &sHtml, int pos, int 
 }*/
 
 void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const {
-//     painter->setOpacity( 50 );
-//     painter->setOpacity( 100 );
     QRect rect = option.rect;
 
     drawBackground( painter, option, index );
@@ -178,9 +176,9 @@ void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option
 // 	painter->setPen( Qt::darkGray );
 // 	painter->drawLine(displayRect.bottomLeft() + QPoint(2, -5), displayRect.bottomRight() + QPoint(-displayRect.width() * 0.3f, -5));
 
-	drawDisplay( painter, option, displayRect, text, true );
+	drawDisplayWithShadow( painter, option, displayRect, text, true );
     } else
-	drawDisplay( painter, option, displayRect, text );
+	drawDisplayWithShadow( painter, option, displayRect, text );
 
 //     painter->save();
 //     painter->setRenderHint(QPainter::Antialiasing, true);
@@ -218,7 +216,7 @@ void HtmlDelegate::drawDecoration ( QPainter* painter, const QStyleOptionViewIte
     painter->drawPixmap( rcBuffer.topLeft(), bufferPixmap );
 }
 
-void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text, bool bigContrastShadow ) const {
+void HtmlDelegate::drawDisplayWithShadow( QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text, bool bigContrastShadow ) const {
     painter->setRenderHint(QPainter::Antialiasing);
 
     int margin = 3;
@@ -345,13 +343,12 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
 QSize HtmlDelegate::sizeHint ( const QStyleOptionViewItem& option, const QModelIndex& index ) const {
     QSize size = QItemDelegate::sizeHint ( option, index );
 
-    if ( index.data( LinesPerRowRole ).isValid() )
-    {
+    if ( index.data( LinesPerRowRole ).isValid() ) {
 	int lines = qMax( index.data( LinesPerRowRole ).toInt(), 1 );
-	size.setHeight( option.fontMetrics.lineSpacing() * lines + option.fontMetrics.leading() );
+	size.setHeight( option.fontMetrics.lineSpacing() * lines + 4 );
     }
     else
-	size.setHeight( option.fontMetrics.lineSpacing() + option.fontMetrics.leading() );
+	size.setHeight( option.fontMetrics.lineSpacing() + 4 );
 
     return size;
 }

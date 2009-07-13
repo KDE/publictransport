@@ -20,21 +20,55 @@
 #ifndef DEPARTUREINFO_HEADER
 #define DEPARTUREINFO_HEADER
 
+// Qt includes
 #include <QString>
 #include <QTime>
 #include <QRegExp>
+#include <QVariant>
+
+// KDE includes
 #include <KLocalizedString>
 
-#include "enums.h"
+// Own includes
+#include "global.h"
+
 
 Q_DECLARE_FLAGS( LineServices, LineService );
+
+class JourneyInfo {
+    public:
+	QDateTime departure, arrival;
+	QString pricing, startStopName, targetStopName, journeyNews;
+	QList<VehicleType> vehicleTypes;
+	int duration, changes;
+
+	JourneyInfo() {
+	    duration = -1;
+	};
+
+	JourneyInfo( const QVariantList &vehicleTypesVariant, const QDateTime &departure, const QDateTime &arrival, const QString &pricing, const QString &startStopName, const QString &targetStopName, int duration, int changes, const QString &journeyNews = QString() );
+
+	JourneyInfo( const QList<VehicleType> &vehicleTypes, const QDateTime &departure, const QDateTime &arrival, const QString &pricing, const QString &startStopName, const QString &targetStopName, int duration, int changes, const QString &journeyNews = QString() ) {
+	    init( vehicleTypes, departure, arrival, pricing, startStopName, targetStopName, duration, changes, journeyNews );
+	};
+
+	bool isValid() const { return duration >= 0; };
+
+	QList<QVariant> vehicleTypesVariant() const;
+	QString durationToDepartureString( bool toArrival = false ) const;
+
+    private:
+	void init( const QList<VehicleType> &vehicleTypes, const QDateTime &departure, const QDateTime &arrival, const QString &pricing, const QString &startStopName, const QString &targetStopName, int duration, int changes, const QString &journeyNews = QString() );
+};
+
+bool operator < ( const JourneyInfo &ji1, const JourneyInfo &ji2 );
 
 class DepartureInfo {
     public:
 	int lineNumber;
 	QString target, lineString, platform, delayReason, journeyNews;
-	int delay; // in minutes
 	QDateTime departure;
+	int delay; // in minutes
 	VehicleType vehicleType;
 	LineServices lineServices;
 
