@@ -11,6 +11,7 @@ Name[sv]=Kollektivtrafik
 Name[uk]=Громадський транспорт
 Name[x-test]=xxPublic Transportxx
 Comment=Plasma Public Transport shows a departure / arrival board for public transport. It can also show journeys.
+Comment[sv]=Plasma kollektivtrafik visar avgångs- och ankomsttavla för kollektivtrafik. Resor kan också visas.
 Icon=public-transport-stop
 Type=Service
 X-KDE-ServiceTypes=Plasma/Applet
