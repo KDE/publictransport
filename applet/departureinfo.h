@@ -33,7 +33,7 @@
 #include "global.h"
 
 
-Q_DECLARE_FLAGS( LineServices, LineService );
+Q_DECLARE_FLAGS( LineServices, LineService )
 
 class JourneyInfo {
     public:
