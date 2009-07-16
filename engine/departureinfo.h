@@ -33,7 +33,7 @@
 #include <QVariant>
 
 /** LineService-Flags. @see LineService */
-Q_DECLARE_FLAGS( LineServices, LineService );
+Q_DECLARE_FLAGS( LineServices, LineService )
 
 
 /** @class PublicTransportInfo
