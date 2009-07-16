@@ -186,7 +186,7 @@ class TimetableAccessorInfo_Imhd : public TimetableAccessorInfo {
 	TimetableAccessorInfo_Imhd() : TimetableAccessorInfo(i18n("Bratislava (imhd.sk)"), "imhd.sk", QString::fromUtf8("Friedrich Pülz"), "fpuelz@gmx.de", "1.0", IMHD, HTML)
 	{
 	    setUrl("http://www.imhd.zoznam.sk/ba/");
-	    setDescription("Provides departure information for Bratislava in Slovakia.");
+	    setDescription(i18n("Provides departure information for Bratislava in Slovakia."));
 
 // 	    \"http://www.imhd.zoznam.sk/ba/index.php?w=212b36213433213aef2f302523ea〈=en&hladaj=%1\";
 	    setDepartureRawUrl( "http://www.imhd.zoznam.sk/%1/index.php?w=212b36213433213aef2f302523ea&lang=en&hladaj=%2" );
