@@ -14,6 +14,7 @@ Comment=Plasma Public Transport shows a departure / arrival board for public tra
 Comment[pt]=Os Transportes Públicos do Plasma mostram os horários de partidas / chegadas dos transportes públicos. Também poderá mostrar as carreiras.
 Comment[pt_BR]=Os Transportes Públicos do Plasma mostram os horários de partidas / chegadas dos transportes públicos. Também poderá mostrar as carreiras.
 Comment[sv]=Plasma kollektivtrafik visar avgångs- och ankomsttavla för kollektivtrafik. Resor kan också visas.
+Comment[uk]=Плазмоїд громадського транспорту показує таблицю відправлення/прибуття для громадського транспорту. Він також може показувати маршрути.
 Comment[x-test]=xxPlasma Public Transport shows a departure / arrival board for public transport. It can also show journeys.xx
 Icon=public-transport-stop
 Type=Service
