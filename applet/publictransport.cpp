@@ -124,7 +124,7 @@ PublicTransport::~PublicTransport() {
 void PublicTransport::init() {
     m_settings.readSettings();
 
-    createModel();
+    createModels();
     graphicsWidget();
     createTooltip();
     createPopupIcon();
@@ -141,10 +141,15 @@ void PublicTransport::init() {
 
     connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
+    connect( Plasma::Theme::defaultTheme(), SIGNAL(themeChanged()), this, SLOT(themeChanged()) );
     emit settingsChanged();
 
     setupActions();
     reconnectSource();
+}
+
+void PublicTransport::themeChanged() {
+    useCurrentPlasmaTheme();
 }
 
 void PublicTransport::setupActions() {
@@ -222,11 +227,15 @@ QString PublicTransport::stop() const {
     return m_settings.stopID().isEmpty() ? m_settings.stop() : m_settings.stopID();
 }
 
-void PublicTransport::reconnectJourneySource ( const QString& targetStopName ) {
+void PublicTransport::disconnectJourneySource() {
     if ( !m_currentJourneySource.isEmpty() ) {
-	kDebug() << "Disconnect data source" << m_currentJourneySource;
+	kDebug() << "Disconnect journey data source" << m_currentJourneySource;
 	dataEngine("publictransport")->disconnectSource(m_currentJourneySource, this);
     }
+}
+
+void PublicTransport::reconnectJourneySource ( const QString& targetStopName ) {
+    disconnectJourneySource();
 
     QString _targetStopName = targetStopName;
     if ( _targetStopName.isEmpty() ) {
@@ -235,10 +244,18 @@ void PublicTransport::reconnectJourneySource ( const QString& targetStopName ) {
 	_targetStopName = m_lastSecondStopName;
     }
 
-    if ( m_settings.useSeperateCityValue() )
-	m_currentJourneySource = QString("%7 %1:city%2:originStop%3:targetStop%4:maxDeps%5:timeOffset%6").arg( static_cast<int>(m_settings.serviceProvider()) ).arg( m_settings.city() ).arg( stop() ).arg( _targetStopName ).arg( m_settings.maximalNumberOfDepartures() ).arg( m_settings.timeOffsetOfFirstDeparture() ).arg( m_settings.journeyListType() == JourneysFromHomeStopList ? "JourneysFrom" : "JourneysTo" );
+    m_currentJourneySource = QString("%5 %1|originStop=%2|targetStop=%3|maxDeps=%4").arg( m_settings.serviceProvider() ).arg( stop() ).arg( _targetStopName ).arg( m_settings.maximalNumberOfDepartures() ).arg( m_settings.journeyListType() == JourneysFromHomeStopList ? "Journeys" : "Journeys" );
+    if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime )
+	m_currentJourneySource += QString("|timeOffset=%1").arg( m_settings.timeOffsetOfFirstDeparture() );
     else
-	m_currentJourneySource = QString("%6 %1:originStop%2:targetStop%3:maxDeps%4:timeOffset%5").arg( static_cast<int>(m_settings.serviceProvider()) ).arg( stop() ).arg( _targetStopName ).arg( m_settings.maximalNumberOfDepartures() ).arg( m_settings.timeOffsetOfFirstDeparture() ).arg( m_settings.journeyListType() == JourneysFromHomeStopList ? "JourneysFrom" : "JourneysTo" );
+	m_currentJourneySource += QString("|time=%1").arg( m_settings.timeOfFirstDepartureCustom().toString("hh:mm") );
+    if ( m_settings.useSeperateCityValue() )
+	m_currentJourneySource += QString("|city=%1").arg( m_settings.city() );
+    /*
+    if ( m_settings.useSeperateCityValue() )
+	m_currentJourneySource = QString("%7 %1|city=%2|originStop=%3|targetStop=%4|maxDeps=%5|timeOffset=%6").arg( m_settings.serviceProvider() ).arg( m_settings.city() ).arg( stop() ).arg( _targetStopName ).arg( m_settings.maximalNumberOfDepartures() ).arg( m_settings.timeOffsetOfFirstDeparture() ).arg( m_settings.journeyListType() == JourneysFromHomeStopList ? "JourneysFrom" : "JourneysTo" );
+    else
+	m_currentJourneySource = QString("%6 %1|originStop=%2|targetStop=%3|maxDeps=%4|timeOffset=%5").arg( m_settings.serviceProvider() ).arg( stop() ).arg( _targetStopName ).arg( m_settings.maximalNumberOfDepartures() ).arg( m_settings.timeOffsetOfFirstDeparture() ).arg( m_settings.journeyListType() == JourneysFromHomeStopList ? "JourneysFrom" : "JourneysTo" );*/
 
     qDebug() << "Connect journey data source" << m_currentJourneySource << "Timeout" << m_settings.updateTimeout();
     m_lastSecondStopName = _targetStopName;
@@ -256,12 +273,14 @@ void PublicTransport::reconnectSource() {
 	dataEngine("publictransport")->disconnectSource(m_currentSource, this);
     }
 
-    if ( m_settings.useSeperateCityValue() )
-	m_currentSource = QString("%6 %1:city%2:stop%3:maxDeps%4:timeOffset%5").arg( static_cast<int>(m_settings.serviceProvider()) ).arg( m_settings.city() ).arg( stop() ).arg( m_settings.maximalNumberOfDepartures() ).arg( m_settings.timeOffsetOfFirstDeparture() ).arg( m_settings.departureArrivalListType() == ArrivalList ? "Arrivals" : "Departures" );
+    m_currentSource = QString("%4 %1|stop=%2|maxDeps=%3").arg( m_settings.serviceProvider() ).arg( stop() ).arg( m_settings.maximalNumberOfDepartures() ).arg( m_settings.departureArrivalListType() == ArrivalList ? "Arrivals" : "Departures" );
+    if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime )
+	m_currentSource += QString("|timeOffset=%1").arg( m_settings.timeOffsetOfFirstDeparture() );
     else
-	m_currentSource = QString("%5 %1:stop%2:maxDeps%3:timeOffset%4").arg( static_cast<int>(m_settings.serviceProvider()) ).arg( stop() ).arg( m_settings.maximalNumberOfDepartures() ).arg( m_settings.timeOffsetOfFirstDeparture() ).arg( m_settings.departureArrivalListType() == ArrivalList ? "Arrivals" : "Departures" );
+	m_currentSource += QString("|time=%1").arg( m_settings.timeOfFirstDepartureCustom().toString("hh:mm") );
+    if ( m_settings.useSeperateCityValue() )
+	m_currentSource += QString("|city=%1").arg( m_settings.city() );
 
-//     setBusy( true ); TODO: setbusy in addstate
     addState( WaitingForDepartureData );
 
     qDebug() << "Connect data source" << m_currentSource << "Timeout" << m_settings.updateTimeout();
@@ -275,7 +294,7 @@ void PublicTransport::processJourneyList ( const Plasma::DataEngine::Data& data 
     // Remove old journey list
     m_journeyInfos.clear();
 
-//     qDebug() << "PublicTransport::processJourneyList" << data;
+    qDebug() << "PublicTransport::processJourneyList" << data;
     int count = data["count"].toInt();
     for( int i = 0; i < count; ++i )
     {
@@ -286,12 +305,14 @@ void PublicTransport::processJourneyList ( const Plasma::DataEngine::Data& data 
 	    break;
 	}
 
-	QMap<QString, QVariant> dataMap = journeyData.toMap();
-	JourneyInfo journeyInfo( dataMap["vehicleTypes"].toList(), dataMap["departure"].toDateTime(), dataMap["arrival"].toDateTime(), dataMap["pricing"].toString(), dataMap["startStopName"].toString(), dataMap["targetStopName"].toString(), dataMap["duration"].toInt(), dataMap["changes"].toInt(), dataMap["journeyNews"].toString() );
+	QHash<QString, QVariant> dataMap = journeyData.toHash();
+	JourneyInfo journeyInfo( dataMap["operator"].toString(), dataMap["vehicleTypes"].toList(), dataMap["departure"].toDateTime(), dataMap["arrival"].toDateTime(), dataMap["pricing"].toString(), dataMap["startStopName"].toString(), dataMap["targetStopName"].toString(), dataMap["duration"].toInt(), dataMap["changes"].toInt(), dataMap["journeyNews"].toString() );
 
 	// Only add journeys that are in the future
 	// TODO: adjust for journeys TO the home stop (this works for journeys FROM the home stop)
-	int secsToDepartureTime = QDateTime::currentDateTime().secsTo( journeyInfo.departure.addSecs(-m_settings.timeOffsetOfFirstDeparture() * 60) );
+	int secsToDepartureTime = QDateTime::currentDateTime().secsTo( journeyInfo.departure );
+	if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime )
+	    secsToDepartureTime -= m_settings.timeOffsetOfFirstDeparture() * 60;
 	if ( -secsToDepartureTime / 3600 >= 23 )
 	    secsToDepartureTime += 24 * 3600;
 	if ( secsToDepartureTime > -60 )
@@ -316,16 +337,18 @@ void PublicTransport::processDepartureList ( const Plasma::DataEngine::Data& dat
 	QVariant departureData = data.value( QString("%1").arg(i) );
 	if ( !departureData.isValid() || m_departureInfos.count() >= m_settings.maximalNumberOfDepartures() ) {
 	    if ( !(m_departureInfos.count() >= m_settings.maximalNumberOfDepartures()) )
-		qDebug() << "PublicTransport::processDepartureList" << i << "Departure data is invalid" << data;
+		qDebug() << "PublicTransport::processDepartureList" << "Departure data for departure" << i << "is invalid" << data;
 	    break;
 	}
 
-	QMap<QString, QVariant> dataMap = departureData.toMap();
-	DepartureInfo departureInfo( dataMap["line"].toString(), dataMap["target"].toString(), dataMap["departure"].toDateTime(), static_cast<VehicleType>(dataMap["lineType"].toInt()), dataMap["nightline"].toBool(), dataMap["expressline"].toBool(), dataMap["platform"].toString(), dataMap["delay"].toInt(), dataMap["delayReason"].toString(), dataMap["journeyNews"].toString() );
+	QHash<QString, QVariant> dataMap = departureData.toHash();
+	DepartureInfo departureInfo( dataMap["operator"].toString(), dataMap["line"].toString(), dataMap["target"].toString(), dataMap["departure"].toDateTime(), static_cast<VehicleType>(dataMap["vehicleType"].toInt()), dataMap["nightline"].toBool(), dataMap["expressline"].toBool(), dataMap["platform"].toString(), dataMap["delay"].toInt(), dataMap["delayReason"].toString(), dataMap["journeyNews"].toString() );
 
 	// Only add departures / arrivals that are in the future
 	QDateTime predictedDeparture = departureInfo.predictedDeparture();
-	int secsToDepartureTime = QDateTime::currentDateTime().secsTo( predictedDeparture.addSecs(-m_settings.timeOffsetOfFirstDeparture() * 60) );
+	int secsToDepartureTime = QDateTime::currentDateTime().secsTo( predictedDeparture );
+	if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime )
+	    secsToDepartureTime -= m_settings.timeOffsetOfFirstDeparture() * 60;
 	if ( -secsToDepartureTime / 3600 >= 23 )
 	    secsToDepartureTime += 24 * 3600;
 	if ( secsToDepartureTime > -60 )
@@ -382,19 +405,17 @@ void PublicTransport::processData ( const Plasma::DataEngine::Data& data ) {
     } else if ( data.value("receivedPossibleStopList").toBool() ) { // Check if we got a possible stop list or a journey list
 	if ( journeyData ) {
 	    addState( ReceivedErroneousJourneyData );
-	    QMap< QString, QVariant > stopToStopID;
+	    QHash< QString, QVariant > stopToStopID;
 	    QStringList possibleStops;
 
 	    int count = data["count"].toInt();
 	    for( int i = 0; i < count; ++i ) {
-		QVariant stopData = data.value( QString("stopName %1").arg(i) );
-		if ( !stopData.isValid() ) {
-		    qDebug() << "PublicTransport::processData" << "not valid" << stopData;
-		    break; // Stop on first invalid key. Thats a key with a too high number, maybe the data engine should provide a counter for how many stop names it provides currently
+		if ( !data.contains( QString("stopName %1").arg(i) ) ) {
+		    qDebug() << "PublicTransport::processData" << "doesn't contain 'stopName" << i << "'! count =" << count << "data =" << data;
+		    break;
 		}
 
-		QMap<QString, QVariant> dataMap = stopData.toMap();
-
+		QHash<QString, QVariant> dataMap = data.value( QString("stopName %1").arg(i) ).toHash();
 		QString sStopName = dataMap["stopName"].toString();
 		QString sStopID = dataMap["stopID"].toString();
 		possibleStops << sStopName;
@@ -442,7 +463,7 @@ void PublicTransport::dataUpdated ( const QString& sourceName, const Plasma::Dat
     Q_UNUSED( sourceName );
 
 //     qDebug() << "PublicTransport::dataUpdated" << sourceName; // << data;
-    if ( data.isEmpty() )
+    if ( data.isEmpty() || (sourceName != m_currentSource && sourceName != m_currentJourneySource) )
 	return;
 
 //     this->setBusy(true);
@@ -599,7 +620,15 @@ void PublicTransport::createTooltip() {
     if (m_departureInfos.isEmpty())
 	data.setSubText( i18n("View departure times for public transport") );
     else if ( (nextDeparture = getFirstNotFilteredDeparture()).isValid() ) {
-	data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes", "Next departure from '%1': line %2 (%3) %4", m_settings.stop(), nextDeparture.lineString, nextDeparture.target , nextDeparture.durationString() ) );
+	if ( m_settings.departureArrivalListType() ==  DepartureList ) {
+	    data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
+		    "Next departure from '%1': line %2 (%3) %4", m_settings.stop(),
+		    nextDeparture.lineString, nextDeparture.target , nextDeparture.durationString() ) );
+	} else {
+	    data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
+		    "Next arrival at '%1': line %2 (%3) %4", m_settings.stop(),
+		    nextDeparture.lineString, nextDeparture.target , nextDeparture.durationString() ) );
+	}
     }
     data.setImage( KIcon("public-transport-stop").pixmap(IconSize(KIconLoader::Desktop)) );
     Plasma::ToolTipManager::self()->setContent(this, data);
@@ -663,7 +692,7 @@ void PublicTransport::serviceProviderSettingsChanged() {
     }
 }
 
-void PublicTransport::createModel() {
+void PublicTransport::createModels() {
     m_model = new QStandardItemModel( 0, 3 );
     m_model->setSortRole( SortRole );
 // m_model->sort( 2, Qt::AscendingOrder );
@@ -814,6 +843,43 @@ void PublicTransport::possibleStopDoubleClicked ( const QModelIndex& modelIndex 
     journeySearchInputFinished();
 }
 
+void PublicTransport::useCurrentPlasmaTheme() {
+    QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
+    int newPixelSize = qCeil((float)font.pixelSize() * 1.4f);
+    if ( newPixelSize > 1 )
+	font.setPixelSize( newPixelSize );
+    m_label->setFont( font );
+
+    // Get theme colors
+    QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+    QColor baseColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::BackgroundColor );
+    // 	QColor altBaseColor = baseColor.darker();
+    // 	int green = altBaseColor.green() * 1.8;
+    // 	altBaseColor.setGreen( green > 255 ? 255 : green ); // tint green
+    QColor buttonColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::BackgroundColor );
+    baseColor.setAlpha(50);
+    // 	altBaseColor.setAlpha(50);
+    buttonColor.setAlpha(130);
+    m_colorSubItemLabels = textColor;
+    m_colorSubItemLabels.setAlpha( 170 );
+
+    // Create palette with the used theme colors
+    QPalette p = palette();
+    p.setColor( QPalette::Background, baseColor );
+    p.setColor( QPalette::Base, baseColor );
+    // 	p.setColor( QPalette::AlternateBase, altBaseColor );
+    p.setColor( QPalette::Button, buttonColor );
+    p.setColor( QPalette::Foreground, textColor );
+    p.setColor( QPalette::Text, textColor );
+
+    QTreeView *treeView = m_treeView->nativeWidget();
+    treeView->setPalette(p);
+    treeView->header()->setPalette( p );
+
+    // To set new text color of the header items
+    setDepartureArrivalListType( m_settings.departureArrivalListType() );
+}
+
 QGraphicsWidget* PublicTransport::graphicsWidget() {
     if ( !m_graphicsWidget ) {
 	m_graphicsWidget = new QGraphicsWidget(this);
@@ -836,9 +902,6 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 
 	m_label = new Plasma::Label();
 	m_label->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
-	QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
-	font.setPixelSize( qCeil((float)font.pixelSize() * 1.4f) );
-	m_label->setFont( font );
 	m_label->setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Fixed, QSizePolicy::Label );
 	QLabel *label = m_label->nativeWidget();
 	label->setTextInteractionFlags( Qt::LinksAccessibleByMouse );
@@ -906,36 +969,13 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	connect( treeView, SIGNAL(doubleClicked(QModelIndex)),
 		 this, SLOT(doubleClickedDepartureItem(QModelIndex)) );
 
-	// Get colors
-	QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
-	QColor baseColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::BackgroundColor );
-// 	QColor altBaseColor = baseColor.darker();
-// 	int green = altBaseColor.green() * 1.8;
-// 	altBaseColor.setGreen( green > 255 ? 255 : green ); // tint green
-	QColor buttonColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::BackgroundColor );
-	baseColor.setAlpha(50);
-// 	altBaseColor.setAlpha(50);
-	buttonColor.setAlpha(150);
-	m_colorSubItemLabels = textColor;
-	m_colorSubItemLabels.setAlpha( 170 );
-
-	// Set colors
-	QPalette p = palette();
-	p.setColor( QPalette::Base, baseColor );
-// 	p.setColor( QPalette::AlternateBase, altBaseColor );
-	p.setColor( QPalette::Button, buttonColor );
-	p.setColor( QPalette::Foreground, textColor );
-	p.setColor( QPalette::Text, textColor );
-	treeView->setPalette(p);
-
 	if ( !m_model )
-	    createModel();
+	    createModels();
 	m_treeView->setModel( m_model );
 // 	treeView->header()->setFirstColumnSpanned()
 	treeView->header()->setStretchLastSection( false );
 	treeView->header()->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
 	treeView->header()->resizeSection( 0, 60 );
-	treeView->header()->setPalette( p );
 	connect ( treeView->header(), SIGNAL(sectionResized(int,int,int)),
 		  this, SLOT(treeViewSectionResized(int,int,int)) );
 
@@ -954,6 +994,8 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	registerAsDragHandle(m_label);
 	registerAsDragHandle(m_labelInfo);
 // 	registerAsDragHandle(m_treeView);
+
+	useCurrentPlasmaTheme();
     }
 
     return m_graphicsWidget;
@@ -1147,6 +1189,7 @@ void PublicTransport::addState( AppletState state ) {
 	    m_treeView->nativeWidget()->setIconSize( QSize(16, 16) );
 	    geometryChanged();
 	    setBusy( testState(WaitingForDepartureData) );
+	    disconnectJourneySource();
 
 	    unsetStates( QList<AppletState>() << ShowingJourneyList << ShowingJourneySearch );
 	    break;
@@ -1344,9 +1387,8 @@ QAction* PublicTransport::updatedAction ( const QString& actionName ) {
 	VehicleType vehicleType = static_cast<VehicleType>( itemDeparture->data( VehicleTypeRole ).toInt() );
 	if ( vehicleType == Unknown ) {
 	    a->setIcon( KIcon("view-filter") );
-	    a->setText( i18n("&Filter out by vehicle type") );
+	    a->setText( i18n("H&ide unknown vehicle types") );
 	} else {
-	    QString sVehicleType = Global::vehicleTypeToString( vehicleType );
 	    a->setIcon( Global::makeOverlayIcon(KIcon("view-filter"), Global::iconFromVehicleType(vehicleType)) );
 	    a->setText( i18n("H&ide %1", Global::vehicleTypeToString(vehicleType, true)) );
 	}
@@ -1701,8 +1743,14 @@ void PublicTransport::showAlarmMessage( const QPersistentModelIndex &modelIndex 
 }
 
 bool PublicTransport::filterOut ( const DepartureInfo &departureInfo ) const {
-    return (departureInfo.vehicleType != Unknown && !m_settings.isTypeOfVehicleShown
-(departureInfo.vehicleType)) ||
+//     qDebug() << "filterOut?" << (( !m_settings.isTypeOfVehicleShown(departureInfo.vehicleType)) ||
+//     (departureInfo.isNightLine() && !m_settings.showNightlines()) ||
+//     (departureInfo.isLineNumberValid() && !departureInfo.isLineNumberInRange( m_settings.filterMinLine(), m_settings.filterMaxLine() )) ||
+//     (m_settings.filterTypeTarget() == ShowMatching && !m_settings.filterTargetList().contains(departureInfo.target)) ||
+//     (m_settings.filterTypeTarget() == HideMatching && m_settings.filterTargetList().contains(departureInfo.target)) ||
+//     QDateTime::currentDateTime().secsTo( departureInfo.predictedDeparture() ) < -60) << departureInfo.lineString << departureInfo.departure.toString("hh:mm");
+
+    return ( !m_settings.isTypeOfVehicleShown(departureInfo.vehicleType)) ||
 	(departureInfo.isNightLine() && !m_settings.showNightlines()) ||
 	(departureInfo.isLineNumberValid() && !departureInfo.isLineNumberInRange( m_settings.filterMinLine(), m_settings.filterMaxLine() )) ||
 	(m_settings.filterTypeTarget() == ShowMatching && !m_settings.filterTargetList().contains(departureInfo.target)) ||
@@ -1710,18 +1758,18 @@ bool PublicTransport::filterOut ( const DepartureInfo &departureInfo ) const {
 	QDateTime::currentDateTime().secsTo( departureInfo.predictedDeparture() ) < -60;
 }
 
-QMap<QString, QVariant> PublicTransport::serviceProviderData() const {
+QHash<QString, QVariant> PublicTransport::serviceProviderData() const {
     QString sServiceProvider;
     Plasma::DataEngine::Data data = dataEngine("publictransport")->query("ServiceProviders");
     foreach ( QString serviceProviderName, data.keys() )
     {
-	QMap< QString, QVariant > serviceProviderData = data.value(serviceProviderName).toMap();
-	if ( serviceProviderData["id"].toInt() == m_settings.serviceProvider() )
+	QHash< QString, QVariant > serviceProviderData = data.value(serviceProviderName).toHash();
+	if ( serviceProviderData["id"].toString() == m_settings.serviceProvider() )
 	    return serviceProviderData;
     }
 
     kDebug() << "Name not found for" << m_settings.serviceProvider();
-    return QMap<QString,QVariant>();
+    return QHash<QString,QVariant>();
 }
 
 QString PublicTransport::titleText() const {
@@ -1734,10 +1782,7 @@ QString PublicTransport::titleText() const {
 
 QString PublicTransport::infoText() const {
     QString sServiceProvider = serviceProviderData()["shortUrl"].toString();
-    if ( m_settings.useSeperateCityValue() )
-	return QString("<small>last update: %1<br>data by: <a href='http://www.%2'>%23</a></small>").arg( m_lastSourceUpdate.toString("hh:mm") ).arg( sServiceProvider ).arg( m_settings.city() );
-    else
-	return QString("<small>last update: %1<br>data by: <a href='http://www.%2'>%2</a></small>").arg( m_lastSourceUpdate.toString("hh:mm") ).arg( sServiceProvider );
+    return QString("<small>last update: %1<br>data by: <a href='http://www.%2'>%2</a></small>").arg( m_lastSourceUpdate.toString("hh:mm") ).arg( sServiceProvider );
 }
 
 QString PublicTransport::departureText( const JourneyInfo& journeyInfo ) const {
@@ -1850,6 +1895,12 @@ int PublicTransport::findDeparture ( const DepartureInfo& departureInfo ) const 
 	    continue;
 	}
 
+	QString operatorName = m_model->item( row, 0 )->data( OperatorRole ).toString();
+	if ( operatorName != departureInfo.operatorName ) {
+// 	    qDebug() << "Operator Test failed" << operatorName << departureInfo.operatorName;
+	    continue;
+	}
+
 // 	qDebug() << "Found" << row << departureInfo.lineString << departureInfo.target << departureInfo.departure.toString("hh:mm");;
 	return row;
     }
@@ -1879,6 +1930,11 @@ int PublicTransport::findJourney( const JourneyInfo& journeyInfo ) const {
 	// TODO, item( row, JOURNEYS_COLUMN_CHANGES )
 	int changes = m_modelJourneys->item( row, 3 )->data( SortRole ).toInt();
 	if ( changes != journeyInfo.changes ) {
+	    continue;
+	}
+
+	QString operatorName = m_modelJourneys->item( row, 0 )->data( OperatorRole ).toString();
+	if ( operatorName != journeyInfo.operatorName ) {
 	    continue;
 	}
 
@@ -1955,6 +2011,7 @@ void PublicTransport::setValuesOfJourneyItem ( QStandardItem* journeyItem, Journ
 // 	    journeyItem->setText( slist.join(", ") );
 	    journeyItem->setIcon( Global::iconFromVehicleTypeList(journeyInfo.vehicleTypes) );
 	    journeyItem->setData( journeyItem->text(), SortRole );
+	    journeyItem->setData( journeyInfo.operatorName, OperatorRole );
 	    journeyItem->setData( m_settings.linesPerRow(), HtmlDelegate::LinesPerRowRole );
 	    if ( !update )
 		journeyItem->setData( QStringList() << "raised" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole );
@@ -2058,19 +2115,30 @@ void PublicTransport::setValuesOfJourneyItem ( QStandardItem* journeyItem, Journ
 	    journeyItem->setData( journeyInfo.pricing, SortRole );
 	    break;
 
+	case OperatorItem:
+	    s = QString("<b>%1</b> %2").arg( i18nc("The company that is responsible for this departure/arrival/journey", "Operator:") ).arg( journeyInfo.operatorName );
+	    journeyItem->setData( s, HtmlDelegate::FormattedTextRole );
+	    journeyItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
+	    if ( !update ) {
+		journeyItem->setData( 4, SortRole );
+		setTextColorOfHtmlItem( journeyItem, m_colorSubItemLabels );
+	    }
+	    break;
+
 	default:
 	    break;
     }
 }
 
 void PublicTransport::setValuesOfDepartureItem ( QStandardItem* departureItem, DepartureInfo departureInfo, ItemInformation departureInformation, bool update ) {
-    QString s;
+    QString s, s2;
     QStringList sList;
     switch ( departureInformation ) {
 	case LineNameItem:
 	    departureItem->setText( departureInfo.lineString );
 	    departureItem->setData( QString("<span style='font-weight:bold;'>%1</span>").arg(departureInfo.lineString), HtmlDelegate::FormattedTextRole );
 	    departureItem->setData( departureInfo.lineString, SortRole );
+	    departureItem->setData( departureInfo.operatorName, OperatorRole );
 	    departureItem->setData( m_settings.linesPerRow(), HtmlDelegate::LinesPerRowRole );
 // 	    departureItem->setData( QVariant::fromValue<DepartureInfo>(departureInfo), DepartureInfoRole );
 	    if ( departureInfo.vehicleType != Unknown )
@@ -2123,13 +2191,26 @@ void PublicTransport::setValuesOfDepartureItem ( QStandardItem* departureItem, D
 	    departureItem->setData( s, HtmlDelegate::FormattedTextRole );
 	    departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
 	    if ( !update ) {
-		departureItem->setData( 1, SortRole );
+		departureItem->setData( 1, SortRole ); // TODO 1 => enum
+		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
+	    }
+	    break;
+
+	case OperatorItem:
+	    s = QString("<b>%1</b> %2").arg( i18nc("The company that is responsible for this departure/arrival/journey", "Operator:") ).arg( departureInfo.operatorName );
+	    departureItem->setData( s, HtmlDelegate::FormattedTextRole );
+	    departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
+	    if ( !update ) {
+		departureItem->setData( 4, SortRole );
 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
 	    }
 	    break;
 
 	case JourneyNewsItem:
-	    s = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public transport, like 'platform changed'", "News:") ).arg( departureInfo.journeyNews );
+	    s2 = departureInfo.journeyNews;
+	    if ( s2.startsWith("http://") ) // TODO: Make the link clickable...
+		s2 = QString("<a href='%1'>%2</a>").arg(s2).arg(i18n("Link to journey news"));
+	    s = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public transport, like 'platform changed'", "News:") ).arg( s2 );
 	    departureItem->setData( s, HtmlDelegate::FormattedTextRole );
 	    departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
 	    if ( !update ) {
@@ -2214,6 +2295,12 @@ void PublicTransport::appendJourney ( const JourneyInfo& journeyInfo ) {
 	items[0]->insertRow( iRow++, itemDuration );
     }
 
+    if ( !journeyInfo.operatorName.isEmpty() ) {
+	QStandardItem *itemOperatorName = new QStandardItem();
+	setValuesOfJourneyItem( itemOperatorName, journeyInfo, OperatorItem );
+	items[0]->insertRow( iRow++, itemOperatorName );
+    }
+
     for ( int row = 0; row < items[0]->rowCount(); ++row )
 	m_treeView->nativeWidget()->setFirstColumnSpanned(row, items[0]->index(), true);
 }
@@ -2262,6 +2349,12 @@ void PublicTransport::appendDeparture ( const DepartureInfo& departureInfo ) {
 	items[0]->insertRow( iRow++, itemJourneyNews );
     }
 
+    if ( !departureInfo.operatorName.isEmpty() ) {
+	QStandardItem *itemOperatorName = new QStandardItem();
+	setValuesOfDepartureItem( itemOperatorName, departureInfo, OperatorItem );
+	items[0]->insertRow( iRow++, itemOperatorName );
+    }
+
     QStandardItem *itemDelay = new QStandardItem();;
     setValuesOfDepartureItem( itemDelay, departureInfo, DelayItem ); // TODO: set sort data = 0
     items[0]->insertRow( iRow++, itemDelay );
@@ -2305,7 +2398,7 @@ void PublicTransport::updateJourney ( int row, const JourneyInfo& journeyInfo ) 
     // Update pricing 2
     QStandardItem *itemPricing = NULL;
     for ( int i = 0; i < itemFirst->rowCount(); ++i ) {
-	if ( itemFirst->child( i )->data( SortRole ).toInt() == 1 ) { // TODO == 1   =>   "== enum"
+	if ( itemFirst->child( i )->data( SortRole ).toInt() == 2 ) { // TODO == 2   =>   "== enum"
 	    itemPricing = itemFirst->child( i, 1 );
 	    break;
 	}
@@ -2325,7 +2418,7 @@ void PublicTransport::updateJourney ( int row, const JourneyInfo& journeyInfo ) 
     // Update duration 3
     QStandardItem *itemDuration = NULL;
     for ( int i = 0; i < itemFirst->rowCount(); ++i ) {
-	if ( itemFirst->child( i )->data( SortRole ).toInt() == 1 ) { // TODO == 1   =>   "== enum"
+	if ( itemFirst->child( i )->data( SortRole ).toInt() == 3 ) { // TODO == 3   =>   "== enum"
 	    itemDuration = itemFirst->child( i, 1 );
 	    break;
 	}
@@ -2339,6 +2432,26 @@ void PublicTransport::updateJourney ( int row, const JourneyInfo& journeyInfo ) 
 	    setValuesOfJourneyItem( itemDuration, journeyInfo, DurationItem, true );
     } else if ( itemDuration != NULL ) {
 	itemFirst->removeRow( itemDuration->row() );
+	--iRow;
+    }
+
+    // Update operator name
+    QStandardItem *itemOperatorName = NULL;
+    for ( int i = 0; i < itemFirst->rowCount(); ++i ) {
+	if ( itemFirst->child( i )->data( Qt::UserRole ).toInt() == 4 ) { // TODO == 4   =>   "== enum"
+	    itemOperatorName = itemFirst->child( i );
+	    break;
+	}
+    }
+    if ( !journeyInfo.operatorName.isEmpty() ) {
+	if ( itemOperatorName == NULL ) { // Create new operator item
+	    itemOperatorName = new QStandardItem();
+	    setValuesOfJourneyItem( itemOperatorName, journeyInfo, OperatorItem );
+	    itemFirst->insertRow( iRow++, itemOperatorName );
+	} else // Update old journey news item
+	    setValuesOfJourneyItem( itemOperatorName, journeyInfo, OperatorItem, true );
+    } else if ( itemOperatorName != NULL ) {
+	itemFirst->removeRow( itemOperatorName->row() );
 	--iRow;
     }
 
@@ -2378,7 +2491,7 @@ void PublicTransport::updateDeparture ( int row, const DepartureInfo& departureI
     // Update journey news
     QStandardItem *itemJourneyNews = NULL;
     for ( int i = 0; i < itemLineString->rowCount(); ++i ) {
-	if ( itemLineString->child( i )->data( Qt::UserRole ).toInt() == 2 ) { // TODO == 1   =>   "== enum"
+	if ( itemLineString->child( i )->data( Qt::UserRole ).toInt() == 2 ) { // TODO == 2   =>   "== enum"
 	    itemJourneyNews = itemLineString->child( i );
 	    break;
 	}
@@ -2392,6 +2505,26 @@ void PublicTransport::updateDeparture ( int row, const DepartureInfo& departureI
 	    setValuesOfDepartureItem( itemJourneyNews, departureInfo, JourneyNewsItem, true );
     } else if ( itemJourneyNews != NULL ) {
 	itemLineString->removeRow( itemJourneyNews->row() );
+	--iRow;
+    }
+
+    // Update operator name
+    QStandardItem *itemOperatorName = NULL;
+    for ( int i = 0; i < itemLineString->rowCount(); ++i ) {
+	if ( itemLineString->child( i )->data( Qt::UserRole ).toInt() == 4 ) { // TODO == 4   =>   "== enum"
+	    itemOperatorName = itemLineString->child( i );
+	    break;
+	}
+    }
+    if ( !departureInfo.operatorName.isEmpty() ) {
+	if ( itemOperatorName == NULL ) { // Create new operator item
+	    itemOperatorName = new QStandardItem();
+	    setValuesOfDepartureItem( itemOperatorName, departureInfo, OperatorItem );
+	    itemLineString->insertRow( iRow++, itemOperatorName );
+	} else // Update old journey news item
+	    setValuesOfDepartureItem( itemOperatorName, departureInfo, OperatorItem, true );
+    } else if ( itemOperatorName != NULL ) {
+	itemLineString->removeRow( itemOperatorName->row() );
 	--iRow;
     }
 
@@ -2424,7 +2557,7 @@ void PublicTransport::updateDeparture ( int row, const DepartureInfo& departureI
 }
 
 void PublicTransport::removeOldDepartures() {
-    qDebug() << "PublicTransport::removeOldDepartures" << m_departureInfos.count() << "departures";
+//     qDebug() << "PublicTransport::removeOldDepartures" << m_departureInfos.count() << "departures";
 
     QList< QModelIndex > notFoundRows;
     for ( int row = m_model->rowCount() - 1; row >= 0; --row )
@@ -2433,8 +2566,10 @@ void PublicTransport::removeOldDepartures() {
     {
 	int row = findDeparture( departureInfo );
 	if ( row != -1 ) {
-	    if ( !filterOut( departureInfo ) && !notFoundRows.removeOne( m_model->index(row, 0) ) )
-		qDebug() << "PublicTransport::removeOldDepartures" << "Couldn't remove index";
+	    if ( filterOut(departureInfo) )
+		qDebug() << "PublicTransport::removeOldDepartures" << "Item will be removed at row" << row << "because filterOut returns true for that item";
+	    else if ( !notFoundRows.removeOne(m_model->index(row, 0)) )
+		qDebug() << "PublicTransport::removeOldDepartures" << "Couldn't find item not to be removed at row" << row;
 	}
     }
 
@@ -2484,7 +2619,7 @@ void PublicTransport::removeOldJourneys() {
 
 	m_modelJourneys->removeRow( notFoundRow.row() );
     }
-    qDebug() << "PublicTransport::removeOldJourneys" << "END";
+//     qDebug() << "PublicTransport::removeOldJourneys" << "END";
 }
 
 void PublicTransport::updateModelJourneys() {

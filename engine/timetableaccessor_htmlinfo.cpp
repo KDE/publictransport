@@ -12,16 +12,17 @@ TimetableRegExpSearch::TimetableRegExpSearch ( QString regExpSearch, QList< Time
 }
 
 
-TimetableAccessorInfo::TimetableAccessorInfo ( const QString& name, const QString& shortUrl, const QString &author, const QString &email, const QString &version, const ServiceProvider& serviceProvider, const AccessorType& accessorType )
+TimetableAccessorInfo::TimetableAccessorInfo ( const QString& name, const QString& shortUrl, const QString &author, const QString &email, const QString &version, const QString& serviceProviderID, const AccessorType& accessorType )
     : m_searchDeparturesPre ( 0 ) {
     m_name = name;
     m_shortUrl = shortUrl;
     m_author = author;
     m_email = email;
     m_version = version;
-    m_serviceProvider = serviceProvider;
+    m_serviceProviderID = serviceProviderID;
     m_accessorType = accessorType;
     m_onlyUseCitiesInList = false;
+    m_defaultVehicleType = Unknown;
 }
 
 void TimetableAccessorInfo::setRegExpDepartures( const QString &regExpSearch, const QList< TimetableInformation > &regExpInfos, const QString &regExpSearchPre, TimetableInformation regExpInfoKeyPre, TimetableInformation regExpInfoValuePre ) {
@@ -46,7 +47,11 @@ void TimetableAccessorInfo::addRegExpJouneyNews ( const QString &regExpSearch, c
 }
 
 void TimetableAccessorInfo::addCityNameToValueReplacement ( const QString& city, const QString& value ) {
-    m_mapCityNameToValue.insert( city, value );
+    m_hashCityNameToValue.insert( city, value );
+}
+
+void TimetableAccessorInfo::setCityNameToValueReplacementHash ( const QHash<QString, QString>& hash ) {
+    m_hashCityNameToValue = hash;
 }
 
 bool TimetableAccessorInfo::supportsStopAutocompletion() const {
@@ -70,6 +75,14 @@ bool TimetableAccessorInfo::supportsByJourneyNewsParsing( const TimetableInforma
     return false;
 }
 
+QString TimetableAccessorInfo::fileName() const {
+    return m_fileName;
+}
+
+void TimetableAccessorInfo::setFileName ( const QString& fileName ) {
+    m_fileName = fileName;
+}
+
 QString TimetableAccessorInfo::name() const {
     return m_name;
 }
@@ -90,12 +103,12 @@ AccessorType TimetableAccessorInfo::accessorType() const {
     return m_accessorType;
 }
 
-QString TimetableAccessorInfo::rawUrlXml() const {
-    return m_rawUrlXml;
+QString TimetableAccessorInfo::stopSuggestionsRawUrl() const {
+    return m_stopSuggestionsRawUrl;
 }
 
-void TimetableAccessorInfo::setRawUrlXml ( const QString& rawUrlXml ) {
-    m_rawUrlXml = rawUrlXml;
+void TimetableAccessorInfo::setStopSuggestionsRawUrl ( const QString& rawUrlXml ) {
+    m_stopSuggestionsRawUrl = rawUrlXml;
 }
 
 QString TimetableAccessorInfo::author() const {
@@ -138,13 +151,17 @@ QStringList TimetableAccessorInfo::features() const {
 	list << i18nc("Support for getting the reason of a delay. This string is used in a feature list, should be short.", "Delay reason");
     if ( supportsTimetableAccessorInfo(Platform) )
 	list << i18nc("Support for getting the information from which platform a public transport vehicle departs / at which it arrives. This string is used in a feature list, should be short.", "Platform");
-    if ( supportsTimetableAccessorInfo(JourneyNews) || supportsTimetableAccessorInfo(JourneyNewsOther) )
+    if ( supportsTimetableAccessorInfo(JourneyNews) || supportsTimetableAccessorInfo(JourneyNewsOther) || supportsTimetableAccessorInfo(JourneyNewsLink) )
 	list << i18nc("Support for getting the news about a journey with public transport, such as a platform change. This string is used in a feature list, should be short.", "Journey news");
     if ( supportsTimetableAccessorInfo(TypeOfVehicle) )
 	list << i18nc("Support for getting information about the type of vehicle of a journey with public transport. This string is used in a feature list, should be short.", "Type of vehicle");
+    if ( supportsTimetableAccessorInfo(Status) )
+	list << i18nc("Support for getting information about the status of a journey with public transport or an aeroplane. This string is used in a feature list, should be short.", "Status");
+    if ( supportsTimetableAccessorInfo(Operator) )
+	list << i18nc("Support for getting the operator of a journey with public transport or an aeroplane. This string is used in a feature list, should be short.", "Operator");
     if ( supportsTimetableAccessorInfo(StopID) )
 	list << i18nc("Support for getting the id of a stop of public transport. This string is used in a feature list, should be short.", "Stop ID");
-    if ( m_departureRawUrl.contains( "%5" ) )
+    if ( m_departureRawUrl.contains( "{dataType}" ) )
 	list << i18nc("Support for getting arrivals for a stop of public transport. This string is used in a feature list, should be short.", "Arrivals");
     if ( !m_searchJourneys.regExp().isEmpty() )
 	list << i18nc("Support for getting journeys from one stop to another. This string is used in a feature list, should be short.", "Journey search");
@@ -168,6 +185,14 @@ QString TimetableAccessorInfo::shortUrl() const {
     return m_shortUrl;
 }
 
+void TimetableAccessorInfo::setDefaultVehicleType ( VehicleType vehicleType ) {
+    m_defaultVehicleType = vehicleType;
+}
+
+VehicleType TimetableAccessorInfo::defaultVehicleType() const {
+    return m_defaultVehicleType;
+}
+
 void TimetableAccessorInfo::setDepartureRawUrl ( const QString& departureRawUrl ) {
     m_departureRawUrl = departureRawUrl;
 }
@@ -180,8 +205,8 @@ QString TimetableAccessorInfo::journeyRawUrl() const {
     return m_journeyRawUrl;
 }
 
-ServiceProvider TimetableAccessorInfo::serviceProvider() const {
-    return m_serviceProvider;
+QString TimetableAccessorInfo::serviceProvider() const {
+    return m_serviceProviderID;
 }
 
 QString TimetableAccessorInfo::departureRawUrl() const {
@@ -233,8 +258,8 @@ bool TimetableAccessorInfo::onlyUseCitiesInList() const {
 }
 
 QString TimetableAccessorInfo::mapCityNameToValue( const QString &city ) const {
-    if ( m_mapCityNameToValue.contains( city ) )
-	return m_mapCityNameToValue[city];
+    if ( m_hashCityNameToValue.contains( city.toLower() ) )
+	return m_hashCityNameToValue[city.toLower()];
     else
 	return city;
 }

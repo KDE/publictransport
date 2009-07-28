@@ -48,7 +48,10 @@ class PublicTransportInfo {
 
 	/** Constructs a new PublicTransportInfo object.
 	* @param departure The date and time of the departure / arrival of the vehicle. */
-	PublicTransportInfo( const QDateTime &departure ) { m_departure = departure; };
+	PublicTransportInfo( const QDateTime &departure, const QString &operatorName = QString() ) {
+	    m_departure = departure;
+	    m_operator = operatorName;
+	};
 
 	virtual ~PublicTransportInfo() {};
 
@@ -60,6 +63,9 @@ class PublicTransportInfo {
 	/** Gets the date and time of the departure or arrival. */
 	QDateTime departure() const { return m_departure; };
 
+	/** Get the company that is responsible for this departure / arrival. */
+	QString operatorName() const { return m_operator; };
+
 	/** Parses the given string for a vehicle type.
 	* @param sLineType The string to be parsed (e.g. "STR", "ICE", "RB", ...).
 	* @return The type of vehicle that was parsed or VehicleType::Unknown if
@@ -67,6 +73,7 @@ class PublicTransportInfo {
 	static VehicleType getVehicleTypeFromString( const QString &sLineType );
 
     protected:
+	QString m_operator; /**< Stores the name of the company that is responsibe for this departure / arrival / journey. */
 	QDateTime m_departure; /**< Stores a departure time. Can be used by derived classes. */
 };
 
@@ -86,8 +93,9 @@ class JourneyInfo : public PublicTransportInfo {
 	* @param duration The duration in minutes of the journey.
         * @param changes How many changes between different vehicles are needed.
 	* @param pricing Information about the pricing of the journey.
-	* @param journeyNews News for the journey, such as "platform changed". */
-	JourneyInfo( const QList<VehicleType> &vehicleTypes, const QString &startStopName, const QString &targetStopName, const QDateTime &departure, const QDateTime &arrival, int duration, int changes = 0, const QString &pricing = QString(), const QString &journeyNews = QString() );
+	* @param journeyNews News for the journey, such as "platform changed".
+	* @param operatorName The company that is responsible for this departure / arrival. */
+	JourneyInfo( const QList<VehicleType> &vehicleTypes, const QString &startStopName, const QString &targetStopName, const QDateTime &departure, const QDateTime &arrival, int duration, int changes = 0, const QString &pricing = QString(), const QString &journeyNews = QString(), const QString &operatorName = QString() );
 
 	/** Wheather or not the journey is valid.
 	* @return true if the journey is valid.
@@ -159,8 +167,9 @@ class DepartureInfo : public PublicTransportInfo {
 	* @param platform The platform from/at which the vehicle departs/arrives.
 	* @param delay The delay in minutes of the vehicle. -1 means that no delay information is available.
 	* @param delayReason The reason of a delay.
-	* @param journeyNews News for the departure / arrival, such as "platform changed". */
-	DepartureInfo( const QString &line, const VehicleType &typeOfVehicle, const QString &target, const QDateTime &departure, bool nightLine = false, bool expressLine = false, const QString &platform = QString(), int delay = -1, const QString &delayReason = QString(), const QString &journeyNews = QString() );
+	* @param journeyNews News for the departure / arrival, such as "platform changed".
+	* @param operatorName The company that is responsible for this departure / arrival. */
+	DepartureInfo( const QString &line, const VehicleType &typeOfVehicle, const QString &target, const QDateTime &departure, bool nightLine = false, bool expressLine = false, const QString &platform = QString(), int delay = -1, const QString &delayReason = QString(), const QString &journeyNews = QString(), const QString &operatorName = QString() );
 
 	/** Constructs a new DepartureInfo object.
 	* @param line The name of the public transport line (e.g. "6", "3S", "S 4", "RB 24122").
@@ -173,8 +182,9 @@ class DepartureInfo : public PublicTransportInfo {
 	* @param platform The platform from/at which the vehicle departs/arrives.
 	* @param delay The delay in minutes of the vehicle. -1 means that no delay information is available.
 	* @param delayReason The reason of a delay.
-	* @param journeyNews News for the departure / arrival, such as "platform changed". */
-	DepartureInfo( const QString &line, const VehicleType &typeOfVehicle, const QString &target, const QTime &requestTime, const QTime &departureTime, bool nightLine = false, bool expressLine = false, const QString &platform = QString(), int delay = -1, const QString &delayReason = QString(), const QString &journeyNews = QString() );
+	* @param journeyNews News for the departure / arrival, such as "platform changed".
+	* @param operatorName The company that is responsible for this departure / arrival. */
+	DepartureInfo( const QString &line, const VehicleType &typeOfVehicle, const QString &target, const QTime &requestTime, const QTime &departureTime, bool nightLine = false, bool expressLine = false, const QString &platform = QString(), int delay = -1, const QString &delayReason = QString(), const QString &journeyNews = QString(), const QString &operatorName = QString() );
 
 	/** Wheather or not the departure / arrival is valid.
 	* @return true if the departure / arrival is valid.
@@ -219,5 +229,6 @@ class DepartureInfo : public PublicTransportInfo {
 	VehicleType m_vehicleType;
 	LineServices m_lineServices;
 };
+
 
 #endif // DEPARTUREINFO_HEADER

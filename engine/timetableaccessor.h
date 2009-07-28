@@ -25,7 +25,7 @@
 #define TIMETABLEACCESSOR_HEADER
 
 #include <KUrl>
-#include <QMap>
+#include <QHash>
 #include <QTime>
 #include "kio/scheduler.h"
 #include "kio/jobclasses.h"
@@ -48,6 +48,8 @@ class TimetableAccessor : public QObject
 {
     Q_OBJECT
 
+    friend class TimetableAccessorInfo; // Because TimetableAccessor needs to set values in TimetableAccessorInfo when reading xml files
+
     public:
 	/** Constructs a new TimetableAccessor object. You should use getSpecificAccessor()
 	* to get an accessor that can download and parse documents from the given service
@@ -56,10 +58,19 @@ class TimetableAccessor : public QObject
         ~TimetableAccessor();
 
 	/** Gets a timetable accessor that is able to parse results from the given service provider. */
-	static TimetableAccessor *getSpecificAccessor( ServiceProvider serviceProvider );
+	static TimetableAccessor *getSpecificAccessor( const QString &serviceProvider );
+
+	/** Gets the AccessorType enumerable for the given string. */
+	static AccessorType accessorTypeFromString( const QString &sAccessorType );
+
+	/** Gets the TimetableInformation enumerable for the given string. */
+	static TimetableInformation timetableInformationFromString( const QString &sTimetableInformation );
+
+	/** Gets the VehicleType enumerable for the given string. */
+	static VehicleType vehicleTypeFromString( QString sVehicleType );
 
 	/** Gets the service provider the accessor is designed for. */
-	virtual ServiceProvider serviceProvider() const { return m_info.serviceProvider(); };
+	virtual QString serviceProvider() const { return m_info.serviceProvider(); };
 
 	/** Gets a list of features that this accessor supports. */
 	virtual QStringList features() const;
@@ -72,11 +83,11 @@ class TimetableAccessor : public QObject
 
 	/** Requests a list of departures / arrivals. When the departure / arrival list
 	* is completely received departureListReceived() is emitted. */
-	KIO::TransferJob *requestDepartures( const QString &sourceName, const QString &city, const QString &stop, int maxDeps, int timeOffset, const QString &dataType = "departures", bool useDifferentUrl = false );
+	KIO::TransferJob *requestDepartures( const QString &sourceName, const QString &city, const QString &stop, int maxDeps, const QDateTime &dateTime, const QString &dataType = "departures", bool useDifferentUrl = false );
 
 	/** Requests a list of journeys. When the journey list is completely received
 	* journeyListReceived() is emitted. */
-	KIO::TransferJob *requestJourneys( const QString &sourceName, const QString &city, const QString &startStopName, const QString &targetStopName, int maxDeps, int timeOffset, const QString &dataType = "journeysFrom", bool useDifferentUrl = false );
+	KIO::TransferJob *requestJourneys( const QString &sourceName, const QString &city, const QString &startStopName, const QString &targetStopName, int maxDeps, const QDateTime &dateTime, const QString &dataType = "journeys", bool useDifferentUrl = false );
 
 	/** Gets the information object used by this accessor. */
 	TimetableAccessorInfo timetableAccessorInfo() const;
@@ -92,7 +103,7 @@ class TimetableAccessor : public QObject
 	/** Wheather or not to use the url returned by differentRawUrl() instead of the
 	* one returned by rawUrl().
 	* @see differentRawUrl() */
-	virtual bool useDifferentUrlForPossibleStops() const { return false; };
+	/*virtual*/ bool hasSpecialUrlForStopSuggestions() const { return !m_info.stopSuggestionsRawUrl().isEmpty(); };
 
 	/** Encodes the url in @p str using the charset in @p charset. Then it is
 	* percent encoded.
@@ -118,15 +129,15 @@ class TimetableAccessor : public QObject
 	* @return true, if there were no errors.
 	* @return false, if there were an error parsing the document.
 	* @see parseDocument() */
-	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops ) const;
+	virtual bool parseDocumentPossibleStops( QHash<QString,QString> *stops ) const;
 
 	/** Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
 	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
-	virtual QString rawUrl() const;
+	virtual QString departuresRawUrl() const;
 
 	/** Gets a second "raw" url with placeholders for the city ("%1") and the stop ("%2")
 	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
-	virtual QString differentRawUrl() const;
+	virtual QString stopSuggestionsRawUrl() const;
 
 	/** Gets the charset used to encode urls before percent-encoding them. Normally
 	* this charset is UTF-8. But that doesn't work for sites that require parameters
@@ -136,11 +147,11 @@ class TimetableAccessor : public QObject
 
 	/** Constructs an url to the departure / arrival list by combining the "raw"
 	* url with the needed information. */
-	KUrl getUrl( const QString &city, const QString &stop, int maxDeps, int timeOffset, const QString &dataType = "departures", bool useDifferentUrl = false ) const;
+	KUrl getUrl( const QString &city, const QString &stop, int maxDeps, const QDateTime &dateTime, const QString &dataType = "departures", bool useDifferentUrl = false ) const;
 
 	/** Constructs an url to the journey list by combining the "raw" url with the
 	* needed information. */
-	KUrl getJourneyUrl( const QString &city, const QString &startStopName, const QString &targetStopName, int maxDeps, int timeOffset, const QString &dataType = "departures", bool useDifferentUrl = false ) const;
+	KUrl getJourneyUrl( const QString &city, const QString &startStopName, const QString &targetStopName, int maxDeps, const QDateTime &dateTime, const QString &dataType = "departures", bool useDifferentUrl = false ) const;
 
 
 	QByteArray m_document; /**< Stores the downloaded parts of a reply. */
@@ -161,7 +172,7 @@ class TimetableAccessor : public QObject
 	* @param dataType "departures" or "arrivals".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */
-	void departureListReceived( TimetableAccessor *accessor, QList<DepartureInfo*> journeys, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
+	void departureListReceived( TimetableAccessor *accessor, QList<DepartureInfo*> journeys, const QString &serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
 
 	/** Emitted when a new journey list has been received and parsed.
 	* @param accessor The accessor that was used to download and parse the journeys.
@@ -172,14 +183,14 @@ class TimetableAccessor : public QObject
 	* @param city The city the stop is in. May be empty if the service provider
 	* doesn't need a seperate city value.
 	* @param stop The stop name for which the departures / arrivals have been received.
-	* @param dataType "journeysTo" or "journeysFrom".
+	* @param dataType "journeys".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */
-	void journeyListReceived( TimetableAccessor *accessor, QList<JourneyInfo*> journeys, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
+	void journeyListReceived( TimetableAccessor *accessor, QList<JourneyInfo*> journeys, const QString &serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
 
 	/** Emitted when a list of stop names has been received and parsed.
 	* @param accessor The accessor that was used to download and parse the stops.
-	* @param stops A QMap containing the received stop names as keys and the stop
+	* @param stops A QHash containing the received stop names as keys and the stop
 	* IDs as values (stop IDs may be empty).
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source for which the stops have been
@@ -190,7 +201,7 @@ class TimetableAccessor : public QObject
 	* @param dataType "stopList".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */
-	void stopListReceived( TimetableAccessor *accessor, QMap<QString, QString> stops, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
+	void stopListReceived( TimetableAccessor *accessor, QHash<QString, QString> stops, const QString &serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
 
 	/** Emitted when an error occured while parsing.
 	* @param accessor The accessor that was used to download and parse information
@@ -203,7 +214,7 @@ class TimetableAccessor : public QObject
 	* @param dataType "nothing".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */
-	void errorParsing( TimetableAccessor *accessor, ServiceProvider serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
+	void errorParsing( TimetableAccessor *accessor, const QString &serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
 
     public slots:
 	/** Some data has been received. */
@@ -216,7 +227,7 @@ class TimetableAccessor : public QObject
 	static QString gethex( ushort decimal );
 
 	// Stores information about currently running download jobs
-	QMap<KJob*, QVariantList> m_jobInfos;
+	QHash<KJob*, QVariantList> m_jobInfos;
 };
 
 #endif // TIMETABLEACCESSOR_HEADER

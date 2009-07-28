@@ -15,7 +15,7 @@ include_directories(
 # We add our source code here
 set(publictransport_SRCS publictransport.cpp global.cpp settings.cpp datasourcetester.cpp alarmtimer.cpp htmldelegate.cpp departureinfo.cpp)
 
-kde4_add_ui_files(publictransport_SRCS publicTransportConfig.ui publicTransportAppearanceConfig.ui publicTransportFilterConfig.ui accessorInfo.ui)
+kde4_add_ui_files(publictransport_SRCS publicTransportConfig.ui publicTransportConfigAdvanced.ui publicTransportAppearanceConfig.ui publicTransportFilterConfig.ui accessorInfo.ui)
 
 # Now make sure all files get to the right place
 kde4_add_plugin(plasma_applet_publictransport ${publictransport_SRCS})
@@ -31,3 +31,5 @@ install(FILES plasma-applet-publictransport.desktop
 
 # install(FILES public-transport-stop.svgz
 #         DESTINATION ${KDE4_ICON_INSTALL_DIR})
+
+add_subdirectory(kbflags)

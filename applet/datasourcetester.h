@@ -68,7 +68,7 @@ class DataSourceTester : public QObject {
 
 	QString m_testSource; // Source name for testing configurations
 	Plasma::Applet *m_applet;
-	QMap< QString, QVariant > m_mapStopToStopID; // A map with stop names as keys and the corresponding stop IDs as values
+	QHash< QString, QVariant > m_mapStopToStopID; // A map with stop names as keys and the corresponding stop IDs as values
 };
 
 #endif // DATASOURCETESTER_HEADER

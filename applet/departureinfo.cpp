@@ -4,14 +4,15 @@
 #include "departureinfo.h"
 #include <qmath.h>
 
-JourneyInfo::JourneyInfo ( const QVariantList& vehicleTypesVariant, const QDateTime& departure, const QDateTime& arrival, const QString& pricing, const QString& startStopName, const QString& targetStopName, int duration, int changes, const QString &journeyNews ) {
+JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList& vehicleTypesVariant, const QDateTime& departure, const QDateTime& arrival, const QString& pricing, const QString& startStopName, const QString& targetStopName, int duration, int changes, const QString &journeyNews ) {
     QList<VehicleType> vehicleTypes;
     foreach( QVariant vehicleType, vehicleTypesVariant )
 	vehicleTypes.append( static_cast<VehicleType>(vehicleType.toInt()) );
-    init( vehicleTypes, departure, arrival, pricing, startStopName, targetStopName, duration, changes, journeyNews );
+    init( operatorName, vehicleTypes, departure, arrival, pricing, startStopName, targetStopName, duration, changes, journeyNews );
 }
 
-void JourneyInfo::init ( const QList< VehicleType >& vehicleTypes, const QDateTime& departure, const QDateTime& arrival, const QString& pricing, const QString& startStopName, const QString& targetStopName, int duration, int changes, const QString &journeyNews ) {
+void JourneyInfo::init( const QString &operatorName, const QList< VehicleType >& vehicleTypes, const QDateTime& departure, const QDateTime& arrival, const QString& pricing, const QString& startStopName, const QString& targetStopName, int duration, int changes, const QString &journeyNews ) {
+    this->operatorName = operatorName;
     this->vehicleTypes = vehicleTypes;
     this->departure = departure;
     this->arrival = arrival;
@@ -68,8 +69,8 @@ QString DepartureInfo::durationString () const {
 
     if ( delayType() == Delayed ) {
 	if (hours > 0) {
-	    if (minutes > 0) // "( 1:03 hours )"
-		str = i18nc("h:mm + delay in minutes", "%1:%2h + %3 minutes", hours, QString("%1").arg(minutes, 2, 10, QLatin1Char('0')), remainingDelay);
+	    if (minutes > 0)
+		str = i18nc("h:mm + delay in minutes", "%1:%2 + %3 minutes", hours, QString("%1").arg(minutes, 2, 10, QLatin1Char('0')), remainingDelay);
 	    else
 		str = i18ncp("Hour(s) + delay in minutes", "%1 hour + %2 minutes", "in %1 hours + %2 minutes", hours, remainingDelay);
 	} else if (minutes > 0)
@@ -94,7 +95,7 @@ QString DepartureInfo::durationString () const {
     return str.replace(' ', "&nbsp;");;
 }
 
-void DepartureInfo::init ( const QString &line, const QString &target, const QDateTime &departure, VehicleType lineType, LineServices lineServices, const QString &platform, int delay, const QString &delayReason, const QString &journeyNews ) {
+void DepartureInfo::init ( const QString &operatorName, const QString &line, const QString &target, const QDateTime &departure, VehicleType lineType, LineServices lineServices, const QString &platform, int delay, const QString &delayReason, const QString &journeyNews ) {
     QRegExp rx ( "[0-9]*$" );
     rx.indexIn ( line );
     if ( rx.isValid() )
@@ -102,6 +103,7 @@ void DepartureInfo::init ( const QString &line, const QString &target, const QDa
     else
         this->lineNumber = 0;
 
+    this->operatorName = operatorName;
     this->lineString = line;
     this->target = target;
     this->departure = departure;

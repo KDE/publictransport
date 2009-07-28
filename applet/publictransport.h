@@ -88,6 +88,10 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 
 	/** Returns the widget with the contents of the applet. */
 	virtual QGraphicsWidget* graphicsWidget();
+
+	/** Sets values of the current plasma theme. */
+	void useCurrentPlasmaTheme();
+
 	/** The constraints have changed. */
 	virtual void constraintsEvent ( Plasma::Constraints constraints );
 
@@ -110,7 +114,7 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	* data engine. */
 	void updateModelJourneys();
 	/** Creates the used models. */
-	void createModel();
+	void createModels();
 
 	/** Generates tooltip data and registers this applet at plasma's TooltipManager. */
 	void createTooltip();
@@ -128,6 +132,7 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	/** Disconnects a currently connected data source and connects again using
 	* the current configuration. */
 	void reconnectSource();
+	void disconnectJourneySource();
 	void reconnectJourneySource( const QString &targetStopName = QString() );
 
 	/** Processes data received from the data engine. */
@@ -171,7 +176,7 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	QString delayText( const DepartureInfo& departureInfo ) const;
 
 	/** Gets the data of the current service provider. */
-	QMap<QString, QVariant> serviceProviderData() const;
+	QHash<QString, QVariant> serviceProviderData() const;
 
 	/** Gets the current stop id if available. Otherwise it returns the current
 	* stop name. */
@@ -345,6 +350,8 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	void hideColumnTarget( bool );
 	// The action to show the direction column of the tree view header has been triggered
 	void showColumnTarget( bool );
+void themeChanged();
+
 };
 
 // This is the command that links the applet to the .desktop file

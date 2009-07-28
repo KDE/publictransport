@@ -22,6 +22,51 @@
 #include <qmath.h>
 
 
+KIcon Global::internationalIcon() {
+    // Size of the flag icons is 22x16 => 16x11.64
+    QPixmap pixmap = QPixmap( 32, 32 );
+    pixmap.fill( Qt::transparent );
+    QPainter p(&pixmap);
+
+    QStringList icons = QStringList() << "gb" << "de" << "es" << "jp";
+    int yOffset = 12;
+    int i = 0, x, y = 4;
+    foreach( QString sIcon, icons ) {
+	if ( i % 2 == 0 ) // icon on the left
+	    x = 0;
+	else // icon on the right
+	    x = 16;
+
+	QPixmap pixmapFlag = KIcon( sIcon ).pixmap( 16 );
+	p.drawPixmap( x, y, 16, 12, pixmapFlag );
+
+	if ( i % 2 != 0 )
+	    y += yOffset;
+	++i;
+    }
+    p.end();
+
+    KIcon resultIcon = KIcon();
+    resultIcon.addPixmap(pixmap, QIcon::Normal);
+    return resultIcon;
+}
+
+KIcon Global::putIconIntoBiggerSizeIcon ( const KIcon &icon, const QSize &iconSize, const QSize &resultingSize ) {
+    QPixmap pixmap = QPixmap( resultingSize );
+    pixmap.fill( Qt::transparent );
+    QPainter p(&pixmap);
+
+    QPixmap pixmapIcon = icon.pixmap( resultingSize );//iconSize );
+    p.drawPixmap( (resultingSize.width() - iconSize.width()) / 2,
+		  (resultingSize.height() - iconSize.height()) / 2,
+		  iconSize.width(), iconSize.height(), pixmapIcon );
+    p.end();
+
+    KIcon resultIcon = KIcon();
+    resultIcon.addPixmap(pixmap, QIcon::Normal);
+    return resultIcon;
+}
+
 KIcon Global::makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon, const QSize &overlaySize, int iconExtend ) {
     QPixmap pixmap = icon.pixmap(iconExtend), pixmapOverlay = overlayIcon.pixmap(overlaySize);
     QPainter p(&pixmap);
@@ -86,6 +131,12 @@ KIcon Global::iconFromVehicleType( const VehicleType &vehicleType, const QString
 	case Subway:
 	    icon = KIcon( "vehicle_type_subway" );
 	    break;
+	case Metro:
+	    icon = KIcon( "vehicle_type_metro" );
+	    break;
+	case TrolleyBus:
+	    icon = KIcon( "vehicle_type_trolleybus" );
+	    break;
 	case TrainInterurban:
 	    icon = KIcon( "vehicle_type_train_interurban" );
 	    break;
@@ -101,6 +152,13 @@ KIcon Global::iconFromVehicleType( const VehicleType &vehicleType, const QString
 	    break;
 	case TrainIntercityExpress:
 	    icon = KIcon( "vehicle_type_train_intercityexpress" );
+	    break;
+
+	case Ferry:
+	    icon = KIcon( "vehicle_type_ferry" );
+	    break;
+	case Plane:
+	    icon = KIcon( "vehicle_type_plane" );
 	    break;
 
 	case TrainRegional: // Icon not done yet
@@ -163,6 +221,10 @@ QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural
 	    return plural ? i18n("subways") : i18n("subway");
 	case TrainInterurban:
 	    return plural ? i18n("interurban trains") : i18n("interurban train");
+	case Metro:
+	    return plural ? i18n("metros") : i18n("metro");
+	case TrolleyBus:
+	    return plural ? i18n("trolley buses") : i18n("trolley bus");
 
 	case TrainRegional:
 	    return plural ? i18n("regional trains") : i18n("regional train");
@@ -174,6 +236,11 @@ QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural
 	    return plural ? i18n("intercity / eurocity trains") : i18n("intercity / eurocity");
 	case TrainIntercityExpress:
 	    return plural ? i18n("intercity express trains") : i18n("intercity express");
+
+	case Ferry:
+	    return plural ? i18n("ferries") : i18n("ferry");
+	case Plane:
+	    return plural ? i18n("planes") : i18n("plane");
 
 	case Unknown:
 	default:

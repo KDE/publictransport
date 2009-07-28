@@ -39,7 +39,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Shown directions</string>
+      <string>Shown Directions</string>
      </property>
     </widget>
    </item>
@@ -209,7 +209,6 @@
   <tabstop>showNightLines</tabstop>
   <tabstop>filterMinLine</tabstop>
   <tabstop>filterMaxLine</tabstop>
-  <tabstop>filterLineType</tabstop>
   <tabstop>filterTypeTarget</tabstop>
  </tabstops>
  <resources/>

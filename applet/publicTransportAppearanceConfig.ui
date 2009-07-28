@@ -100,7 +100,7 @@
       <number>1</number>
      </property>
      <property name="maximum">
-      <number>3</number>
+      <number>5</number>
      </property>
      <property name="suffix">
       <string> lines</string>
@@ -301,6 +301,9 @@
    </item>
    <item row="9" column="1" colspan="3">
     <widget class="KComboBox" name="cmbDepartureColumnInfos">
+     <property name="autoCompletion">
+      <bool>false</bool>
+     </property>
      <item>
       <property name="text">
        <string>Show time and remaining time</string>
@@ -337,6 +340,15 @@
    <header>knuminput.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>radioUseDefaultFont</tabstop>
+  <tabstop>radioUseOtherFont</tabstop>
+  <tabstop>font</tabstop>
+  <tabstop>cmbDepartureColumnInfos</tabstop>
+  <tabstop>displayTimeBold</tabstop>
+  <tabstop>showHeader</tabstop>
+  <tabstop>showColumnTarget</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
@@ -352,6 +364,38 @@
     <hint type="destinationlabel">
      <x>345</x>
      <y>89</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>showHeader</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>lblShowColumnTarget</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>308</x>
+     <y>283</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>80</x>
+     <y>310</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>showHeader</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>showColumnTarget</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>308</x>
+     <y>283</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>310</y>
     </hint>
    </hints>
   </connection>

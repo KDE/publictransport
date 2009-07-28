@@ -18,29 +18,16 @@
  */
 
 #include "timetableaccessor_xml.h"
-#include "timetableaccessor_html_infos.h"
+// #include "timetableaccessor_html_infos.h"
 #include <QRegExp>
 #include <QtXml>
+#include <KLocalizedString>
 
 
-TimetableAccessorXml::TimetableAccessorXml()
+TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfo info )
     : m_accessorHTML(0)
 {
-}
-
-TimetableAccessorXml::TimetableAccessorXml ( ServiceProvider serviceProvider )
-    : TimetableAccessor ()
-{
-    switch ( serviceProvider )
-    {
-	case RMV:
-	    m_info = TimetableAccessorInfo_Rmv();
-	    break;
-
-	default:
-	    qDebug() << "TimetableAccessorXml::TimetableAccessorXml" << "Not an XML accessor?" << serviceProvider;
-    }
-
+    m_info = info;
     m_accessorHTML = new TimetableAccessorHtml( m_info );
 }
 
@@ -59,8 +46,7 @@ QStringList TimetableAccessorXml::features() const
 bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys, ParseDocumentMode parseDocumentMode ) {
     Q_UNUSED( parseDocumentMode );
 
-    if ( m_document.isEmpty() )
-    {
+    if ( m_document.isEmpty() ) {
 	qDebug() << "TimetableAccessorXml::parseDocument" << "XML document is empty";
 	return false;
     }
@@ -70,8 +56,7 @@ bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys,
     domDoc.setContent(document);
     QDomElement docElement = domDoc.documentElement();
     QDomNodeList errNodes = docElement.elementsByTagName("Err");
-    if ( !errNodes.isEmpty() )
-    {
+    if ( !errNodes.isEmpty() ) {
 	QDomElement errElement = errNodes.item(0).toElement();
 	QString errCode = errElement.attributeNode("code").nodeValue();
 	QString errMessage = errElement.attributeNode("text").nodeValue();
@@ -84,8 +69,7 @@ bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys,
     qDebug() << "TimetableAccessorXml::parseDocument" << "Parsing...";
     QDomNodeList journeyNodes = docElement.elementsByTagName("Journey");
     int count = journeyNodes.count();
-    for ( int i = 0; i < count; ++i )
-    {
+    for ( int i = 0; i < count; ++i ) {
 	QString sTime, sDelay, sDirection, sLine, sVehicleType, sPlatform, sJourneyNews;
 	QDomNode node = journeyNodes.at(i);
 
@@ -121,6 +105,7 @@ bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys,
 	}
 
 // 	qDebug() << "TIME =" << sTime << ", LINE =" << sLine << ", DIRECTION =" << sDirection << ", DELAY =" << sDelay;
+
 	if ( sDelay.isEmpty() )
 	    journeys->append( new DepartureInfo( sLine, DepartureInfo::getVehicleTypeFromString(sVehicleType), sDirection, QTime::currentTime(), QTime::fromString(sTime, "hh:mm"), false, false, sPlatform, -1, "", sJourneyNews ) );
 	else
@@ -130,30 +115,16 @@ bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys,
     return count > 0;
 }
 
-bool TimetableAccessorXml::parseDocumentPossibleStops ( QMap< QString, QString >* stops ) const
-{
-    // Get the html document
-
-
+bool TimetableAccessorXml::parseDocumentPossibleStops ( QHash< QString, QString >* stops ) const {
     // Let the document get parsed for possible stops by the HTML accessor
     return m_accessorHTML->parseDocumentPossibleStops( m_document, stops );
 }
 
-// QString TimetableAccessorRmv::rawUrl() const
-// {
-// //     QString sTime = QTime::currentTime().toString("hh:mm");
-//
-//     return
-//     "http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time=actual&input=%1 %2&maxJourneys=25&boardType=dep&productsFilter=1111111111100000&maxStops=1&output=xml&start=yes";
-// }
-
-QString TimetableAccessorXml::rawUrl() const
-{
-    return m_info.rawUrlXml();
+QString TimetableAccessorXml::departuresRawUrl() const {
+    return m_info.departureRawUrl();
 }
 
-QString TimetableAccessorXml::differentRawUrl() const
-{ // TODO: needed?
-    return m_info.departureRawUrl();
+QString TimetableAccessorXml::stopSuggestionsRawUrl() const { // TODO: needed?
+    return m_info.stopSuggestionsRawUrl();
 }
 

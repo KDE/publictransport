@@ -20,7 +20,7 @@
 #include "departureinfo.h"
 #include <QDebug>
 
-JourneyInfo::JourneyInfo ( const QList< VehicleType >& vehicleTypes, const QString& startStopName, const QString& targetStopName, const QDateTime& departure, const QDateTime& arrival, int duration, int changes, const QString& pricing, const QString &journeyNews ) : PublicTransportInfo () {
+JourneyInfo::JourneyInfo ( const QList< VehicleType >& vehicleTypes, const QString& startStopName, const QString& targetStopName, const QDateTime& departure, const QDateTime& arrival, int duration, int changes, const QString& pricing, const QString &journeyNews, const QString &operatorName ) : PublicTransportInfo (departure, operatorName) {
     init( vehicleTypes, startStopName, targetStopName, departure, arrival, duration, changes, pricing, journeyNews );
 }
 
@@ -44,11 +44,11 @@ DepartureInfo::DepartureInfo() : PublicTransportInfo() {
     m_delayReason = "";
 }
 
-DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QDateTime& departure, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& journeyNews ) : PublicTransportInfo() {
+DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QDateTime& departure, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& journeyNews, const QString &operatorName ) : PublicTransportInfo(departure, operatorName) {
     init( line, typeOfVehicle, target, departure, nightLine, expressLine, platform, delay, delayReason, journeyNews );
 }
 
-DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QTime &requestTime, const QTime& departureTime, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& journeyNews ) : PublicTransportInfo() {
+DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QTime &requestTime, const QTime& departureTime, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& journeyNews, const QString &operatorName ) : PublicTransportInfo() {
     QDate departureDate;
     if ( departureTime < requestTime.addSecs(-5 * 60) )
 	departureDate = QDate::currentDate().addDays(1);
@@ -56,6 +56,7 @@ DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehi
 	departureDate = QDate::currentDate();
 
     init( line, typeOfVehicle, target, QDateTime(departureDate, departureTime), nightLine, expressLine, platform, delay, delayReason, journeyNews );
+    m_operator = operatorName;
 }
 
 void DepartureInfo::init ( const QString& line, const VehicleType& typeOfVehicle, const QString& target, const QDateTime& departure, bool nightLine, bool expressLine, const QString& platform, int delay, const QString& delayReason, const QString& journeyNews ) {
@@ -87,12 +88,15 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
     else if ( sLineTypeLower == "s-bahn" ||
 	sLineTypeLower == "sbahn" ||
 	sLineTypeLower == "s" ||
+	sLineTypeLower == "s1" || // for sbb.ch
 	sLineTypeLower == "rsb" ) // "regio-s-bahn", austria
 	return TrainInterurban;
 
     else if ( sLineTypeLower == "tram" ||
 	sLineTypeLower == "straßenbahn" ||
 	sLineTypeLower == "str" ||
+	sLineTypeLower == "ntr" || // for sbb.ch
+	sLineTypeLower == "tra" || // for sbb.ch
 	sLineTypeLower == "stb" || // "stadtbahn", germany
 	sLineTypeLower == "dm_train" ||
 	sLineTypeLower == "streetcar (tram)" ) // for imhd.sk
@@ -100,10 +104,23 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 
     else if ( sLineTypeLower == "bus" ||
 	sLineTypeLower == "dm_bus" ||
+	sLineTypeLower == "nbu" || // for sbb.ch
 	sLineTypeLower == "bsv" || // for nasa.de
 	sLineTypeLower == "express bus" || // for imhd.sk
 	sLineTypeLower == "night line - bus" ) // for imhd.sk
 	return Bus;
+
+    else if ( sLineTypeLower == "metro" ||
+	sLineTypeLower == "m" )
+	return Metro;
+
+    else if ( sLineTypeLower == "tro" ||
+	sLineTypeLower == "trolleybus" ||
+	sLineTypeLower == "trolley bus" )
+	return TrolleyBus;
+
+    else if ( sLineTypeLower == "ferry" )
+	return Ferry;
 
     else if ( sLineTypeLower == "rb" ||
 	sLineTypeLower == "mer" || // "metronom", geramny
@@ -139,8 +156,8 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 	sLineTypeLower == "tgv" ||  // france
 	sLineTypeLower == "tha" ||  // thalys
 	sLineTypeLower == "hst" || // great britain
-	sLineTypeLower == "es" || // eurostar italia, High-speed, tilting trains for long-distance services
-	sLineTypeLower == "" ) // spain, High speed trains, speeds up to 300 km/h
+	sLineTypeLower == "es" ) // eurostar italia, High-speed, tilting trains for long-distance services
+// 	sLineTypeLower == "" ) // spain, High speed trains, speeds up to 300 km/h... missing value
 	return TrainIntercityExpress;
 
     else

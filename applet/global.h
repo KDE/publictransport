@@ -122,6 +122,7 @@ enum ItemInformation {
     PlatformItem, /**< The item contains platform */
     JourneyNewsItem, /**< The item contains the journey news */
     DelayItem, /**< The item contains the delay */
+    OperatorItem, /**< The item contains the operator name */
 
     VehicleTypeListItem, /**< The item contains the vehicle types of a journey */
     ArrivalItem, /**< The item contains the arrival time of a journey */
@@ -142,23 +143,32 @@ enum ModelDataRoles {
     OriginalBackgroundColorRole = Qt::UserRole + 7, /**< Used to store the original background color */
     ServiceProviderDataRole = Qt::UserRole + 8, /**< For the service provider combo box */
     RemainingMinutesRole = Qt::UserRole + 9, /**< Used to store an int with the remaining minutes until the predicted departure / arrival (= departure / arrival + delay) */
-    DepartureInfoRole = Qt::UserRole + 10 /**< Used to store the departure */
+    DepartureInfoRole = Qt::UserRole + 10, /**< Used to store the departure */
+    OperatorRole = Qt::UserRole + 11, /**< Used to store the operator name of the departure / arrival / journey. */
+    LocationCodeRole = Qt::UserRole + 12 /**< Used to store the location code (country code or other) in the location model. */
 };
 
 /** The type of the vehicle used for a public transport line.
 * The numbers here must match the ones in the data engine! */
 enum VehicleType {
-    Unknown = 0, /**< The vehicle type is unknown */
-    Tram = 1, /**< The vehicle is a tram */
-    Bus = 2, /**< The vehicle is a bus */
-    Subway = 3, /**< The vehicle is a subway */
-    TrainInterurban = 4, /**< The vehicle is an interurban train */
+    Unknown = 0, /**< The type of the vehicle is unknown. */
 
-    TrainRegional = 10, /**< The vehicle is a regional train */
-    TrainRegionalExpress = 11, /**< The vehicle is a region express */
-    TrainInterregio = 12, /**< The vehicle is an interregional train */
-    TrainIntercityEurocity = 13, /**< The vehicle is a intercity / eurocity train */
-    TrainIntercityExpress = 14 /**< The vehicle is an intercity express (ICE, TGV?, ...?) */
+    Tram = 1, /**< A tram / streetcar. */
+    Bus = 2, /**< A bus. */
+    Subway = 3, /**< A subway. */
+    TrainInterurban = 4, /**< An interurban train. */
+    Metro = 5, /** A metro. */
+    TrolleyBus = 6, /** An electric bus. */
+
+    TrainRegional = 10, /**< A regional train. */
+    TrainRegionalExpress = 11, /**< A regional express train. */
+    TrainInterregio = 12, /**< An inter-regional train. */
+    TrainIntercityEurocity = 13, /**< An intercity / eurocity train. */
+    TrainIntercityExpress = 14, /**< An intercity express. */
+
+    Ferry = 100, /** A ferry. */
+
+    Plane = 200 /** An aeroplane. */
 };
 
 /** The type of services for a public transport line. */
@@ -183,10 +193,21 @@ enum DelayType {
     Delayed = 2 /**< Vehicle will depart / arrive with delay */
 };
 
+/** Different config modes for the time of the first departure. */
+enum FirstDepartureConfigMode {
+    RelativeToCurrentTime = 0, /**< Uses the current date and time and adds an offset. */
+    AtCustomTime = 1 /**< Uses a custom time, but the current date. */
+};
+
 /** @class Global
 @brief Contains global static methods. */
 class Global {
     public:
+	static KIcon putIconIntoBiggerSizeIcon( const KIcon &icon, const QSize &iconSize, const QSize &resultingSize = QSize(32, 32) );
+
+	/** Create an "international" icon with some flag icons */
+	static KIcon internationalIcon();
+
 	/** Creates an icon that has another icon as overlay on the bottom right. */
 	static KIcon makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon, const QSize &overlaySize = QSize(10, 10), int iconExtend = 16 );
 
@@ -201,6 +222,7 @@ class Global {
 
 	/** Gets an icon containing the icons of all vehicle types in the given list. */
 	static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes );
+
 
 	/** Gets the name of the given type of vehicle. */
 	static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );

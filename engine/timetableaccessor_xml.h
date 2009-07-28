@@ -37,23 +37,26 @@ class TimetableAccessorXml : public TimetableAccessor
     friend class TimetableAccessorHtml;
 
     public:
-	/** Creates a new TimetableAccessorXml object. */
-	TimetableAccessorXml();
+	/** Creates a new TimetableAccessorXml object with the given information.
+	* @param info Information about how to download and parse the documents of a
+	* service provider.
+	* @note Can be used if you have a custom TimetableAccessorInfo object. TODO */
+	TimetableAccessorXml( TimetableAccessorInfo info = TimetableAccessorInfo() );
 
-	/** Creates a new TimetableAccessorXml object for the given service provider.
+	/* Creates a new TimetableAccessorXml object for the given service provider.
 	* @param serviceProvider The service provider for that the accessor should be
 	* able to download and parse documents.
 	* @note This constructor is called from TimetableAccessor::getSpecificAccessor(),
 	* what you will normally want to use, as it returns all types of available accessors.
 	* @see TimetableAccessor::getSpecificAccessor() */
-	TimetableAccessorXml( ServiceProvider serviceProvider );
+// 	TimetableAccessorXml( ServiceProvider serviceProvider );
 
 	/** Wheather or not to use the url returned by differentRawUrl() instead of the
 	* one returned by rawUrl().
 	* TimetableAccessorXml always returns true, as it uses an html source to
 	* download stop lists.
 	* @see differentRawUrl() */
-	virtual bool useDifferentUrlForPossibleStops() const { return true; };
+// 	virtual bool hasSpecialUrlForStopSuggestions() const { return true; };
 
 	/** Gets a list of features that this accessor supports. */
 	virtual QStringList features() const;
@@ -75,15 +78,15 @@ class TimetableAccessorXml : public TimetableAccessor
 	* are stop IDs. The results of parsing the document is stored in @p stops.
 	* @return true, if there were no errors.
 	* @return false, if there were an error parsing the document. */
-	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops ) const;
+	virtual bool parseDocumentPossibleStops( QHash<QString,QString> *stops ) const;
 
 	/** Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
 	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
-	virtual QString rawUrl() const; // gets the "raw" url
+	virtual QString departuresRawUrl() const; // gets the "raw" url
 
 	/** Gets a second "raw" url with placeholders for the city ("%1") and the stop ("%2")
 	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
-	virtual QString differentRawUrl() const;
+	virtual QString stopSuggestionsRawUrl() const;
 
     private:
 	TimetableAccessorHtml *m_accessorHTML; // The HTML accessor used to parse possible stop lists

@@ -38,19 +38,19 @@ class TimetableAccessorHtml : public TimetableAccessor
     public:
 	/** Creates a new TimetableAccessorHtml object with the given information.
 	* @param info Information about how to download and parse the documents of a
-	* service provider.
+	* service provider. TODO
 	* @note Can be used if you have a custom TimetableAccessorInfo object.
 	* TimetableAccessorXml uses this to create an HTML accessor for parsing of stop
 	* lists. */
 	TimetableAccessorHtml( TimetableAccessorInfo info = TimetableAccessorInfo() );
 
-	/** Creates a new TimetableAccessorHtml object for the given service provider.
+	/* Creates a new TimetableAccessorHtml object for the given service provider.
 	* @param serviceProvider The service provider for that the accessor should be
 	* able to download and parse documents.
 	* @note This constructor is called from TimetableAccessor::getSpecificAccessor(),
 	* what you will normally want to use, as it returns all types of available accessors.
 	* @see TimetableAccessor::getSpecificAccessor() */
-	TimetableAccessorHtml( ServiceProvider serviceProvider );
+// 	TimetableAccessorHtml( ServiceProvider serviceProvider );
 
 	/** Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
 	static QString decodeHtmlEntities( QString html );
@@ -86,8 +86,8 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* @note Can be used if you have an html document containing a stop list.
 	* TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
 	* document for stops.
-	* @see parseDocumentPossibleStops(QMap<QString,QString>*) const */
-	virtual bool parseDocumentPossibleStops( const QByteArray document, QMap<QString,QString> *stops );
+	* @see parseDocumentPossibleStops(QHash<QString,QString>*) const */
+	virtual bool parseDocumentPossibleStops( const QByteArray document, QHash<QString,QString> *stops );
 
 	/** Parses the contents of a received document for a list of possible stop names
 	* and puts the results into @p stops.
@@ -95,16 +95,16 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* are stop IDs. The results of parsing the document is stored in @p stops.
 	* @return true, if there were no errors.
 	* @return false, if there were an error parsing the document.
-	* @see parseDocumentPossibleStops(const QByteArray, QMap<QString,QString>*) */
-	virtual bool parseDocumentPossibleStops( QMap<QString,QString> *stops ) const;
+	* @see parseDocumentPossibleStops(const QByteArray, QHash<QString,QString>*) */
+	virtual bool parseDocumentPossibleStops( QHash<QString,QString> *stops ) const;
 
 	/** Parses a journey news string. */
 	virtual bool parseJourneyNews( const QString sJourneyNews, QString *sDelay, QString *sDelayReason, QString *sJourneyNewsOther ) const;
 
     private:
-	void postProcessMatchedData( TimetableInformation info, QString matchedData, QMap< TimetableInformation, QVariant > *data );
+	void postProcessMatchedData( TimetableInformation info, QString matchedData, QHash< TimetableInformation, QVariant > *data );
 
-	QMap< QString, QString > *m_preData; // Data collected by parseDocumentPre
+	QHash< QString, QString > *m_preData; // Data collected by parseDocumentPre
 };
 
 #endif // TIMETABLEACCESSOR_HTML_HEADER

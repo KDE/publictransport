@@ -21,7 +21,9 @@
 
 
 void DataSourceTester::connectTestSource() {
-    applet()->dataEngine("publictransport")->connectSource( m_testSource, this );
+    if ( !m_testSource.isEmpty() ) {
+	applet()->dataEngine("publictransport")->connectSource( m_testSource, this );
+    }
 }
 
 void DataSourceTester::disconnectTestSource() {
@@ -39,18 +41,15 @@ void DataSourceTester::setTestSource ( const QString& sourceName ) {
     connectTestSource();
 }
 
-QString DataSourceTester::stopToStopID ( const QString& stopName )
-{
+QString DataSourceTester::stopToStopID ( const QString& stopName ) {
     return m_mapStopToStopID.value( stopName, "" ).toString();
 }
 
-void DataSourceTester::clearStopToStopIdMap()
-{
+void DataSourceTester::clearStopToStopIdMap() {
     m_mapStopToStopID.clear();
 }
 
-void DataSourceTester::dataUpdated ( const QString& sourceName, const Plasma::DataEngine::Data& data )
-{
+void DataSourceTester::dataUpdated ( const QString& sourceName, const Plasma::DataEngine::Data& data ) {
     Q_UNUSED( sourceName );
 //     qDebug() << "DataSourceTester::dataUpdated" << sourceName;
     if ( data.isEmpty() )
@@ -81,21 +80,24 @@ void DataSourceTester::processTestSourcePossibleStopList ( const Plasma::DataEng
     qDebug() << "DataSourceTester::processTestSourcePossibleStopList";
     disconnectTestSource();
 
-    QStringList possibleStops;
-    for (int i = 0; i < data.keys().count(); ++i)
+//     QStringList possibleStops;
+    QHash<QString, QVariant> stopToStopID;
+    int count = data["count"].toInt();
+    for (int i = 0; i < count; ++i)
     {
 	QVariant stopData = data.value( QString("stopName %1").arg(i) );
 	if ( !stopData.isValid() )
-	    break; // Stop on first invalid key. Thats a key with a too high number, maybe the data engine should provide a counter for how many stop names it provides currently
+	    continue;
 
-	QMap<QString, QVariant> dataMap = stopData.toMap();
+	QHash<QString, QVariant> dataMap = stopData.toHash();
 	QString sStopName = dataMap["stopName"].toString();
 	QString sStopID = dataMap["stopID"].toString();
-	possibleStops << sStopName;
+// 	possibleStops << sStopName;
+	stopToStopID.insert( sStopName, sStopID );
 	m_mapStopToStopID.insert( sStopName, sStopID );
     }
 
-    emit testResult( PossibleStopsReceived, m_mapStopToStopID );
+    emit testResult( PossibleStopsReceived, stopToStopID );
 //     m_ui.stop->setCompletedItems( possibleStops );
 //     m_stopIDinConfig = m_mapStopToStopID.value( m_ui.stop->text(), "" );
 }

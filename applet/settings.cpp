@@ -21,13 +21,15 @@
 #include <QTreeView>
 #include <QStandardItemModel>
 
+#include <KTabWidget>
 #include <KConfigDialog>
+#include <KColorScheme>
 
 #include "settings.h"
 #include "htmldelegate.h"
 
 PublicTransportSettings::PublicTransportSettings( AppletWithState *applet )
-    : m_modelServiceProvider(0)
+    : m_modelServiceProvider(0), m_modelLocations(0)
 {
     m_applet = applet;
 
@@ -51,7 +53,7 @@ void PublicTransportSettings::dataUpdated ( const QString& sourceName, const Pla
 		m_uiAccessorInfo.icon->setPixmap( favicon );
 	    if ( m_applet->testState(ConfigDialogShown) ) {
 		for ( int i = 0; i < m_modelServiceProvider->rowCount(); ++i ) {
-		    QMap< QString, QVariant > serviceProviderData = m_modelServiceProvider->item(i)->data( ServiceProviderDataRole ).toMap();
+		    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item(i)->data( ServiceProviderDataRole ).toHash();
 		    QString favIconSource = serviceProviderData["url"].toString();
 		    if ( favIconSource.compare( sourceName ) == 0 )
 			m_modelServiceProvider->item(i)->setIcon( KIcon(favicon) );
@@ -60,6 +62,7 @@ void PublicTransportSettings::dataUpdated ( const QString& sourceName, const Pla
 	}
 	else
 	    qDebug() << "PublicTransport::dataUpdated" << "favicon is NULL";
+
 	m_applet->dataEngine("favicons")->disconnectSource( sourceName, this );
     }
 }
@@ -70,16 +73,25 @@ void PublicTransportSettings::readSettings() {
     m_showRemainingMinutes = cg.readEntry("showRemainingMinutes", true);
     m_showDepartureTime = cg.readEntry("showDepartureTime", true);
     m_displayTimeBold = cg.readEntry("displayTimeBold", true);
-    m_serviceProvider = cg.readEntry("serviceProvider", 1); // 1 is germany (db.de)
+    m_serviceProvider = cg.readEntry("serviceProvider", "de_db"); // "de_db" is "Germany (db.de)" ("Deutsche Bahn")
+    if ( cg.hasKey("location") )
+	m_location = cg.readEntry("location", "showAll");
+    else
+	m_location = KGlobal::locale()->country();
     m_city = cg.readEntry("city", "");
     m_stop = cg.readEntry("stop", "");
     m_stopID = cg.readEntry("stopID", "");
     m_timeOffsetOfFirstDeparture = cg.readEntry("timeOffsetOfFirstDeparture", 0);
+    m_timeOfFirstDepartureCustom = QTime::fromString( cg.readEntry("timeOfFirstDepartureCustom", "12:00"), "hh:mm" );
+    m_firstDepartureConfigMode = static_cast<FirstDepartureConfigMode>(
+	cg.readEntry("firstDepartureConfigMode", static_cast<int>(RelativeToCurrentTime)) );
     m_maximalNumberOfDepartures = cg.readEntry("maximalNumberOfDepartures", 20);
     m_alarmTime = cg.readEntry("alarmTime", 5);
     m_linesPerRow = cg.readEntry("linesPerRow", 2);
-    m_departureArrivalListType = static_cast<DepartureArrivalListType>( cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList)) );
-    m_journeyListType = static_cast<JourneyListType>( cg.readEntry("journeyListType", static_cast<int>(JourneysFromHomeStopList)) );
+    m_departureArrivalListType = static_cast<DepartureArrivalListType>(
+	cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList)) );
+    m_journeyListType = static_cast<JourneyListType>(
+	cg.readEntry("journeyListType", static_cast<int>(JourneysFromHomeStopList)) );
     m_showHeader = cg.readEntry("showHeader", true);
     m_hideColumnTarget = cg.readEntry("hideColumnTarget", false);
 
@@ -88,15 +100,20 @@ void PublicTransportSettings::readSettings() {
     if ( !m_useDefaultFont )
 	m_font = QFont( fontFamily );
 
+    m_showTypeOfVehicle[Unknown] = cg.readEntry(vehicleTypeToConfigName(Unknown), true);
     m_showTypeOfVehicle[Tram] = cg.readEntry(vehicleTypeToConfigName(Tram), true);
     m_showTypeOfVehicle[Bus] = cg.readEntry(vehicleTypeToConfigName(Bus), true);
     m_showTypeOfVehicle[Subway] = cg.readEntry(vehicleTypeToConfigName(Subway), true);
+    m_showTypeOfVehicle[Metro] = cg.readEntry(vehicleTypeToConfigName(Metro), true);
+    m_showTypeOfVehicle[TrolleyBus] = cg.readEntry(vehicleTypeToConfigName(TrolleyBus), true);
     m_showTypeOfVehicle[TrainInterurban] = cg.readEntry(vehicleTypeToConfigName(TrainInterurban), true);
     m_showTypeOfVehicle[TrainRegional] = cg.readEntry(vehicleTypeToConfigName(TrainRegional), true);
     m_showTypeOfVehicle[TrainRegionalExpress] = cg.readEntry(vehicleTypeToConfigName(TrainRegionalExpress), true);
     m_showTypeOfVehicle[TrainInterregio] = cg.readEntry(vehicleTypeToConfigName(TrainInterregio), true);
     m_showTypeOfVehicle[TrainIntercityEurocity] = cg.readEntry(vehicleTypeToConfigName(TrainIntercityEurocity), true);
     m_showTypeOfVehicle[TrainIntercityExpress] = cg.readEntry(vehicleTypeToConfigName(TrainIntercityExpress), true);
+    m_showTypeOfVehicle[Ferry] = cg.readEntry(vehicleTypeToConfigName(Ferry), true);
+    m_showTypeOfVehicle[Plane] = cg.readEntry(vehicleTypeToConfigName(Plane), true);
     m_showNightlines = cg.readEntry("showNightlines", true);
     m_filterMinLine = cg.readEntry("filterMinLine", 1);
     m_filterMaxLine = cg.readEntry("filterMaxLine", 999);
@@ -104,15 +121,15 @@ void PublicTransportSettings::readSettings() {
     m_filterTargetList = cg.readEntry("filterTargetList", QStringList());
 
     getServiceProviderInfo();
+//     selectLocaleLocation();
 }
 
 void PublicTransportSettings::getServiceProviderInfo() {
     Plasma::DataEngine::Data data = m_applet->dataEngine("publictransport")->query("ServiceProviders");
     foreach ( QString serviceProviderName, data.keys() )
     {
-	QMap< QString, QVariant > serviceProviderData = data.value(serviceProviderName).toMap();
-	if ( serviceProvider() == serviceProviderData["id"].toInt() )
-	{
+	QHash< QString, QVariant > serviceProviderData = data.value(serviceProviderName).toHash();
+	if ( serviceProvider() == serviceProviderData["id"].toString() ) {
 	    m_useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
 	    m_onlyUseCitiesInList = serviceProviderData["onlyUseCitiesInList"].toBool();
 	    break;
@@ -161,26 +178,36 @@ QList< VehicleType > PublicTransportSettings::filteredOutVehicleTypes() const {
 
 void PublicTransportSettings::removeAllFiltersByVehicleType() {
     // TODO: go through all vehicle types
+    m_showTypeOfVehicle[Unknown] = true;
     m_showTypeOfVehicle[Tram] = true;
     m_showTypeOfVehicle[Bus] = true;
     m_showTypeOfVehicle[Subway] = true;
+    m_showTypeOfVehicle[Metro] = true;
+    m_showTypeOfVehicle[TrolleyBus] = true;
     m_showTypeOfVehicle[TrainInterurban] = true;
     m_showTypeOfVehicle[TrainRegional] = true;
     m_showTypeOfVehicle[TrainRegionalExpress] = true;
     m_showTypeOfVehicle[TrainInterregio] = true;
     m_showTypeOfVehicle[TrainIntercityEurocity] = true;
     m_showTypeOfVehicle[TrainIntercityExpress] = true;
+    m_showTypeOfVehicle[Ferry] = true;
+    m_showTypeOfVehicle[Plane] = true;
 
     KConfigGroup cg = m_applet->config();
+    cg.writeEntry(vehicleTypeToConfigName(Unknown), true);
     cg.writeEntry(vehicleTypeToConfigName(Tram), true);
     cg.writeEntry(vehicleTypeToConfigName(Bus), true);
     cg.writeEntry(vehicleTypeToConfigName(Subway), true);
+    cg.writeEntry(vehicleTypeToConfigName(Metro), true);
+    cg.writeEntry(vehicleTypeToConfigName(TrolleyBus), true);
     cg.writeEntry(vehicleTypeToConfigName(TrainInterurban), true);
     cg.writeEntry(vehicleTypeToConfigName(TrainRegional), true);
     cg.writeEntry(vehicleTypeToConfigName(TrainRegionalExpress), true);
     cg.writeEntry(vehicleTypeToConfigName(TrainInterregio), true);
     cg.writeEntry(vehicleTypeToConfigName(TrainIntercityEurocity), true);
     cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress), true);
+    cg.writeEntry(vehicleTypeToConfigName(Ferry), true);
+    cg.writeEntry(vehicleTypeToConfigName(Plane), true);
     //     emit settingsChanged();
     emit configNeedsSaving();
     emit modelNeedsUpdate();
@@ -188,12 +215,13 @@ void PublicTransportSettings::removeAllFiltersByVehicleType() {
     // TODO: Synchronize new settings with config dialog widgets
 }
 
+// TODO: Plasma::DataEngine::Data instead of QVariant?
 void PublicTransportSettings::testResult( DataSourceTester::TestResult result, const QVariant &data ) {
     //     qDebug() << "PublicTransport::testResult";
     if ( !m_applet->testState(ConfigDialogShown) )
 	return;
 
-    QMap< QString, QVariant > stopToStopID;
+    QHash< QString, QVariant > stopToStopID;
     switch ( result ) {
 	case DataSourceTester::Error:
 	    setStopNameValid( false, data.toString() );
@@ -201,11 +229,13 @@ void PublicTransportSettings::testResult( DataSourceTester::TestResult result, c
 
 	case DataSourceTester::JourneyListReceived:
 	    setStopNameValid( true );
+	    m_ui.stop->setCompletedItems( QStringList() );
 	    break;
 
 	case DataSourceTester::PossibleStopsReceived:
 	    setStopNameValid( false, i18n("The stop name is ambigous.") );
-	    stopToStopID = data.toMap();
+	    stopToStopID = data.toHash();
+	    qDebug() << "PublicTransportSettings::testResult" << "Set" << stopToStopID.count() << "seggestions.";
 	    m_ui.stop->setCompletedItems( stopToStopID.keys() );
 	    m_stopIDinConfig = stopToStopID.value( m_ui.stop->text(), QString() ).toString();
 	    break;
@@ -237,7 +267,7 @@ bool PublicTransportSettings::checkConfig() {
 	emit configurationRequired(true, i18n("Please set a city and a stop."));
     else if ( m_stop.isEmpty() )
 	emit configurationRequired(true, i18n("Please set a stop."));
-    else if ( m_serviceProvider == -1 )
+    else if ( m_serviceProvider == "" )
 	emit configurationRequired(true, i18n("Please select a service provider."));
     else if ( m_filterMinLine > m_filterMaxLine )
 	emit configurationRequired(true, i18n("The minimal shown line can't be bigger than the maximal shown line."));
@@ -257,7 +287,6 @@ void PublicTransportSettings::setStopNameValid( bool valid, const QString &toolT
     if ( valid ) {
 	m_ui.kledStopValidated->setState( KLed::On );
 	m_ui.kledStopValidated->setToolTip( i18n("The stop name is valid.") );
-	m_ui.stop->setCompletedItems( QStringList() );
     } else {
 	m_ui.kledStopValidated->setState( KLed::Off );
 	m_ui.kledStopValidated->setToolTip( toolTip );
@@ -272,7 +301,7 @@ QString PublicTransportSettings::configCityValue() const {
 }
 
 void PublicTransportSettings::serviceProviderChanged ( int index ) {
-    QMap< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( index )->data( ServiceProviderDataRole ).toMap();
+    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( index )->data( ServiceProviderDataRole ).toHash();
     kDebug() << "New service provider" << serviceProviderData["name"].toString();
 
     m_stopIDinConfig = "";
@@ -283,53 +312,65 @@ void PublicTransportSettings::serviceProviderChanged ( int index ) {
 
     // Only show "Departures"/"Arrivals"-radio buttons if arrivals are supported by the service provider
     bool supportsArrivals = serviceProviderData["features"].toStringList().contains("Arrivals");
-    m_ui.grpDefaultView->setVisible( supportsArrivals );
+    m_uiAdvanced.grpDefaultView->setVisible( supportsArrivals );
     if ( !supportsArrivals )
-	m_ui.showDepartures->setChecked( true );
+	m_uiAdvanced.showDepartures->setChecked( true );
 
     bool useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
     m_ui.lblCity->setVisible( useSeperateCityValue );
     m_ui.city->setVisible( useSeperateCityValue );
 
-    if ( useSeperateCityValue )
-    {
+    if ( useSeperateCityValue ) {
 	m_ui.city->clear();
 	QStringList cities = serviceProviderData["cities"].toStringList();
-	if ( !cities.isEmpty() )
-	{
-	    m_ui.city->setEditText( cities.first() );
+	if ( !cities.isEmpty() ) {
 	    // 	    m_ui.city->setCompletedItems( cities, false );
+	    cities.sort();
 	    m_ui.city->addItems( cities );
+	    m_ui.city->setEditText( cities.first() );
 	}
 	m_ui.city->setEditable( !serviceProviderData["onlyUseCitiesInList"].toBool() );
-    }
-    else
+    } else
 	m_ui.city->setEditText( "" );
 
     stopNameChanged( m_ui.stop->text() );
 }
 
-void PublicTransportSettings::stopNameChanged ( QString stopName ) {
+void PublicTransportSettings::cityNameChanged( const QString &cityName ) {
+    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
+    bool useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
+    QString serviceProviderID = serviceProviderData["id"].toString();
+
+    if ( !useSeperateCityValue )
+	return; // City value not used by service provider
+
+    QString testSource = QString("%5 %1|stop=%2|maxDeps=%3|timeOffset=%4|city=%6")
+	.arg( serviceProviderID )
+	.arg( m_stopIDinConfig.isEmpty() ? m_ui.stop->text() : m_stopIDinConfig )
+	.arg( m_uiAdvanced.maximalNumberOfDepartures->value() )
+	.arg( m_uiAdvanced.timeOfFirstDeparture->value() )
+	.arg( m_uiAdvanced.showArrivals->isChecked() ? "Arrivals" : "Departures" )
+	.arg( cityName );
+    m_dataSourceTester->setTestSource( testSource );
+}
+
+void PublicTransportSettings::stopNameChanged( const QString &stopName ) {
     m_stopIDinConfig = m_dataSourceTester->stopToStopID( stopName );
 
-    QMap< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toMap();
+    // TODO: prevent crash, when no service provider data is available
+    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
     bool useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
-    int serviceProviderIndex = serviceProviderData["id"].toInt();
-    if ( useSeperateCityValue ) {
-	// 	QStringList values = stopName.split(',');
-	// 	if ( values.count() > 1 )
-	// 	{
-	    // 	    if ( m_serviceProvider == 10 ) { // switzerland
-	    // 		m_ui.city->setText( values[1].trimmed() );
-	    // 		m_ui.stop->setText( values[0].trimmed() );
-	    // 	    } else {
-		// 		m_ui.city->setText( values[0].trimmed() );
-		// 		m_ui.stop->setText( values[1].trimmed() );
-		// 	    }
-		// 	}
-	m_dataSourceTester->setTestSource( QString("%6 %1:city%2:stop%3:maxDeps%4:timeOffset%5").arg( serviceProviderIndex ).arg( configCityValue() ).arg( m_stopIDinConfig.isEmpty() ? stopName : m_stopIDinConfig ).arg( m_ui.maximalNumberOfDepartures->value() ).arg( m_ui.timeOfFirstDeparture->value() ).arg( m_ui.showArrivals->isChecked() ? "Arrivals" : "Departures" ) );
-    } else
-	m_dataSourceTester->setTestSource( QString("%5 %1:stop%2:maxDeps%3:timeOffset%4").arg( serviceProviderIndex ).arg(  m_stopIDinConfig.isEmpty() ? stopName : m_stopIDinConfig ).arg( m_ui.maximalNumberOfDepartures->value() ).arg( m_ui.timeOfFirstDeparture->value() ).arg( m_ui.showArrivals->isChecked() ? "Arrivals" : "Departures" ) );
+    QString serviceProviderID = serviceProviderData["id"].toString();
+
+    QString testSource = QString("%5 %1|stop=%2|maxDeps=%3|timeOffset=%4")
+	.arg( serviceProviderID )
+	.arg(  m_stopIDinConfig.isEmpty() ? stopName : m_stopIDinConfig )
+	.arg( m_uiAdvanced.maximalNumberOfDepartures->value() )
+	.arg( m_uiAdvanced.timeOfFirstDeparture->value() )
+	.arg( m_uiAdvanced.showArrivals->isChecked() ? "Arrivals" : "Departures" );
+    if ( useSeperateCityValue )
+	testSource += QString("|city=%1").arg( configCityValue() );
+    m_dataSourceTester->setTestSource( testSource );
 }
 
 void PublicTransportSettings::clickedServiceProviderInfo ( bool ) {
@@ -345,13 +386,15 @@ void PublicTransportSettings::clickedServiceProviderInfo ( bool ) {
     infoDialog->setWindowIcon( KIcon("help-about") );
     connect( infoDialog, SIGNAL(finished()), this, SLOT(accessorInfoDialogFinished()) );
 
-    QMap< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toMap();
+    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
     QIcon favIcon = m_ui.serviceProvider->itemIcon( m_ui.serviceProvider->currentIndex() );
     m_uiAccessorInfo.icon->setPixmap( favIcon.pixmap(32) );
     m_uiAccessorInfo.serviceProviderName->setText( m_ui.serviceProvider->currentText() );
     m_uiAccessorInfo.version->setText( i18n("Version %1", serviceProviderData["version"].toString()) );
     m_uiAccessorInfo.url->setUrl( serviceProviderData["url"].toString() );
     m_uiAccessorInfo.url->setText( QString("<a href='%1'>%1</a>").arg( serviceProviderData["url"].toString() ) );
+    m_uiAccessorInfo.fileName->setUrl( serviceProviderData["fileName"].toString() );
+    m_uiAccessorInfo.fileName->setText( QString("<a href='%1'>%1</a>").arg( serviceProviderData["fileName"].toString() ) );
 
     if ( serviceProviderData["email"].toString().isEmpty() )
 	m_uiAccessorInfo.author->setText( QString("%1").arg( serviceProviderData["author"].toString() ) );
@@ -365,40 +408,286 @@ void PublicTransportSettings::clickedServiceProviderInfo ( bool ) {
     infoDialog->show();
 }
 
-void PublicTransportSettings::createConfigurationInterface ( KConfigDialog* parent, bool stopNameValid ) {
+void PublicTransportSettings::createConfigurationInterface( KConfigDialog* parent, bool stopNameValid ) {
     m_configDialog = parent;
     m_applet->addState( ConfigDialogShown );
-    parent->setButtons( KDialog::Ok | KDialog::Apply | KDialog::Cancel );
+    parent->setButtons( KDialog::Ok | KDialog::Cancel | KDialog::Apply );
 
     QWidget *widget = new QWidget;
+    QWidget *widgetAdvanced = new QWidget;
     QWidget *widgetAppearance = new QWidget;
     QWidget *widgetFilter = new QWidget;
-
     m_ui.setupUi(widget);
+    m_uiAdvanced.setupUi(widgetAdvanced);
     m_uiAppearance.setupUi(widgetAppearance);
     m_uiFilter.setupUi(widgetFilter);
+
+    KTabWidget *tabMain = new KTabWidget;
+    tabMain->addTab(widget, i18n("&Stop selection"));
+    tabMain->addTab(widgetAdvanced, i18n("&Advanced"));
+
+    parent->addPage(tabMain, i18n("General"), "public-transport-stop");
+    parent->addPage(widgetAppearance, i18n("Appearance"), "package_settings_looknfeel");
+    parent->addPage(widgetFilter, i18n("Filter"), "view-filter");
+
+    QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+    QPalette p = m_ui.location->palette();
+    p.setColor( QPalette::Foreground, textColor );
+    m_ui.location->setPalette(p);
+    m_ui.serviceProvider->setPalette(p);
+
+    setStopNameValid( stopNameValid, "" );
+    setValuesOfStopSelectionConfig();
+    setValuesOfAdvancedConfig();
+    setValuesOfAppearanceConfig();
+    setValuesOfFilterConfig();
 
     connect( parent, SIGNAL(finished()), this, SLOT(configDialogFinished()));
     connect( parent, SIGNAL(applyClicked()), this, SLOT(configAccepted()) );
     connect( parent, SIGNAL(okClicked()), this, SLOT(configAccepted()) );
+    connect( m_ui.location, SIGNAL(currentIndexChanged(const QString&)),
+	     this, SLOT(locationChanged(const QString&)) );
+    connect( m_ui.serviceProvider, SIGNAL(currentIndexChanged(int)),
+	     this, SLOT(serviceProviderChanged(int)) );
+    connect( m_ui.city, SIGNAL(currentIndexChanged(QString)),
+	     this, SLOT(cityNameChanged(QString)) );
+    connect( m_ui.stop, SIGNAL(textChanged(QString)),
+	     this, SLOT(stopNameChanged(QString)) );
+    connect( m_ui.btnServiceProviderInfo, SIGNAL(clicked(bool)),
+	     this, SLOT(clickedServiceProviderInfo(bool)));
+    connect( m_uiFilter.filterLineType->selectedListWidget(), SIGNAL(currentRowChanged(int)),
+	     this, SLOT(filterLineTypeSelectedSelctionChanged(int)) );
+    connect( m_uiFilter.filterLineType->availableListWidget(), SIGNAL(currentRowChanged(int)),
+	     this, SLOT(filterLineTypeAvaibleSelctionChanged(int)) );
+    connect( m_uiFilter.filterLineType, SIGNAL(added(QListWidgetItem*)),
+	     this, SLOT(addedFilterLineType(QListWidgetItem*)) );
+    connect( m_uiFilter.filterLineType, SIGNAL(removed(QListWidgetItem*)),
+	     this, SLOT(removedFilterLineType(QListWidgetItem*)) );
 
-    parent->addPage(widget, i18n("General"), "public-transport-stop");
-    parent->addPage(widgetAppearance, i18n("Appearance"), "package_settings_looknfeel");
-    parent->addPage(widgetFilter, i18n("Filter"), "view-filter");
+    // Check stop name validity
+    stopNameChanged( m_ui.stop->text() );
+}
 
+void PublicTransportSettings::setValuesOfStopSelectionConfig() {
+    m_ui.stop->setText(m_stop);
+    m_ui.btnServiceProviderInfo->setIcon( KIcon("help-about") );
+    m_ui.btnServiceProviderInfo->setText( "" );
+
+    // Setup model and item delegate for the service provider combobox
+    if ( m_modelServiceProvider != NULL )
+	delete m_modelServiceProvider;
+    m_modelServiceProvider = new QStandardItemModel( 0, 1 );
+    m_ui.serviceProvider->setModel( m_modelServiceProvider );
+    HtmlDelegate *htmlDelegate = new HtmlDelegate;
+    htmlDelegate->setAlignText( true );
+    m_ui.serviceProvider->setItemDelegate( htmlDelegate );
+
+    // Setup model and item delegate for the location combobox
+    if ( m_modelLocations != NULL )
+	delete m_modelLocations;
+    m_modelLocations = new QStandardItemModel( 0, 1 );
+    m_ui.location->setModel( m_modelLocations );
+    HtmlDelegate *htmlDelegateLocation = new HtmlDelegate;
+    htmlDelegateLocation->setAlignText( true );
+    m_ui.location->setItemDelegate( htmlDelegateLocation );
+    //     m_ui.location->setIconSize(QSize(24, 16));
+
+    // Get locations
+    m_locationData = m_applet->dataEngine("publictransport")->query("Locations");
+    QStringList uniqueCountries = m_locationData.keys();
+    QStringList countries;
+
+    // Get a list of with the location of each service provider (locations can be contained multiple times)
+    m_serviceProviderData = m_applet->dataEngine("publictransport")->query("ServiceProviders");
+    foreach ( QString serviceProviderName, m_serviceProviderData.keys() )  {
+	QHash< QString, QVariant > serviceProviderData = m_serviceProviderData.value(serviceProviderName).toHash();
+	countries << serviceProviderData["country"].toString();
+    }
+
+    QString highlightTextColor;
+    QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+    qDebug() << "     AAA " << qGray(textColor.rgb());
+    if ( qGray(textColor.rgb()) > 192 )
+	highlightTextColor = "red";
+    else
+	highlightTextColor = "darkred";
+
+    // Create location items
+    foreach( QString country, uniqueCountries ) {
+	QStandardItem *item;
+	QString text, sortText, cssTitle;
+	item = new QStandardItem();
+
+	if ( country.compare("international", Qt::CaseInsensitive)  == 0 ) {
+	    text = i18n("International");
+	    sortText = "00000" + text;
+	    cssTitle = QString("color: %1;").arg(highlightTextColor);
+	    item->setIcon( Global::internationalIcon() );
+	} else if ( country.compare("unknown", Qt::CaseInsensitive)  == 0 ) {
+	    text = i18n("Unknown");
+	    sortText = "00000" + text;
+	    cssTitle = "color: darkgray;";
+	    item->setIcon( KIcon("dialog-warning") );
+	} else {
+	    if ( KGlobal::locale()->allCountriesList().contains( country ) )
+		text = KGlobal::locale()->countryCodeToName( country );
+	    else
+		text = country;
+	    sortText = "11111" + text;
+	    item->setIcon( Global::putIconIntoBiggerSizeIcon(KIcon(country), QSize(32, 23)) );
+	}
+
+	QString formattedText = QString( "<span style='%4'><b>%1</b></span> <small>(<b>%2</b>)<br-wrap>%3</small>" )
+	.arg( text )
+	.arg( i18np("%1 accessor", "%1 accessors", countries.count(country)) )
+	.arg( m_locationData[country].toHash()["description"].toString() )
+	.arg( cssTitle );
+
+	item->setText( text );
+	item->setData( country, LocationCodeRole );
+	item->setData( formattedText, HtmlDelegate::FormattedTextRole );
+	item->setData( sortText, SortRole );
+	item->setData( QStringList() << "raised" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole );
+	item->setData( 4, HtmlDelegate::LinesPerRowRole );
+
+	m_modelLocations->appendRow( item );
+    }
+
+    QString sShowAll = i18n("Show all available service providers");
+    QStandardItem *itemShowAll = new QStandardItem();
+    itemShowAll->setData( "000000", SortRole );
+    QString formattedText = QString( "<span style='color:%3;'><b>%1</b></span><br-wrap><small><b>%2</b></small>" )
+	.arg( sShowAll )
+	.arg( i18n("Total: ") + i18np("%1 accessor", "%1 accessors", countries.count()) )
+	.arg( highlightTextColor );
+    itemShowAll->setData( "showAll", LocationCodeRole );
+    itemShowAll->setData( formattedText, HtmlDelegate::FormattedTextRole );
+    itemShowAll->setText( sShowAll );
+    itemShowAll->setData( QStringList() << "raised" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole );
+    itemShowAll->setData( 3, HtmlDelegate::LinesPerRowRole );
+    itemShowAll->setIcon( KIcon("package_network") ); // TODO: Other icon
+    m_modelLocations->appendRow( itemShowAll );
+
+    // TODO: Get error messages from the data engine
+    QStringList errornousAccessorNames = m_applet->dataEngine("publictransport")->query("ErrornousServiceProviders")["names"].toStringList();
+    if ( !errornousAccessorNames.isEmpty() ) {
+	QStringList errorLines;
+	for( int i = 0; i < errornousAccessorNames.count(); ++i ) {
+	    errorLines << QString("<b>%1</b>").arg( errornousAccessorNames[i] );//.arg( errorMessages[i] );
+	}
+	QStandardItem *itemErrors = new QStandardItem();
+	itemErrors->setData( "ZZZZZ", SortRole );
+	formattedText = QString( "<span style='color:%3;'><b>%1</b></span><br-wrap><small>%2</small>" )
+	    .arg( i18np("%1 accessor is errornous:", "%1 accessors are errornous:", errornousAccessorNames.count()) )
+	    .arg( errorLines.join(",<br-wrap>") )
+	    .arg( highlightTextColor );
+	itemErrors->setData( formattedText, HtmlDelegate::FormattedTextRole );
+	itemErrors->setData( QStringList() << "raised" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole );
+	itemErrors->setData( 1 + errornousAccessorNames.count(), HtmlDelegate::LinesPerRowRole );
+	itemErrors->setSelectable( false );
+	itemErrors->setIcon( KIcon("edit-delete") );
+	m_modelLocations->appendRow( itemErrors );
+    }
+
+    m_modelLocations->setSortRole( SortRole );
+    m_modelLocations->sort( 0 );
+
+    // Get (combobox-) index of the currently selected location
+    int curLocationIndex = m_ui.location->findText(m_location);
+    if ( curLocationIndex != -1 )
+	m_ui.location->setCurrentIndex( curLocationIndex );
+
+    int curServiceProviderIndex = updateServiceProviderModel(); // will also select the current service provider (if it's in the list)
+
+    // Select current city
+    QHash<QString, QVariant> serviceProviderData = m_ui.serviceProvider->itemData( curServiceProviderIndex, ServiceProviderDataRole ).toHash();
+    if ( serviceProviderData["onlyUseCitiesInList"].toBool() )
+	m_ui.city->setCurrentItem(m_city);
+    else
+	m_ui.city->setEditText(m_city);
+}
+
+void PublicTransportSettings::setValuesOfAdvancedConfig() {
     if (m_updateTimeout == 0) {
-	m_ui.updateAutomatically->setChecked(false);
-	m_ui.updateTimeout->setValue(60); // Set to default
+	m_uiAdvanced.updateAutomatically->setChecked(false);
+	m_uiAdvanced.updateTimeout->setValue(60); // Set to default
     }
     else {
-	m_ui.updateAutomatically->setChecked(true);
-	m_ui.updateTimeout->setValue(m_updateTimeout);
+	m_uiAdvanced.updateAutomatically->setChecked(true);
+	m_uiAdvanced.updateTimeout->setValue(m_updateTimeout);
     }
-    m_ui.stop->setText(m_stop);
-    m_ui.timeOfFirstDeparture->setValue(m_timeOffsetOfFirstDeparture);
-    m_ui.maximalNumberOfDepartures->setValue(m_maximalNumberOfDepartures);
-    m_ui.alarmTime->setValue(m_alarmTime);
+    m_uiAdvanced.timeOfFirstDeparture->setValue(m_timeOffsetOfFirstDeparture);
+    m_uiAdvanced.timeOfFirstDepartureCustom->setTime(m_timeOfFirstDepartureCustom);
+    m_uiAdvanced.firstDepartureUseCurrentTime->setChecked(m_firstDepartureConfigMode == RelativeToCurrentTime);
+    m_uiAdvanced.firstDepartureUseCustomTime->setChecked(m_firstDepartureConfigMode == AtCustomTime);
+    m_uiAdvanced.maximalNumberOfDepartures->setValue(m_maximalNumberOfDepartures);
+    m_uiAdvanced.alarmTime->setValue(m_alarmTime);
 
+    m_uiAdvanced.showDepartures->setChecked( m_departureArrivalListType == DepartureList );
+    m_uiAdvanced.showArrivals->setChecked( m_departureArrivalListType == ArrivalList );
+    m_uiAdvanced.showJourneysFromHomeStop->setChecked( m_journeyListType == JourneysFromHomeStopList );
+    m_uiAdvanced.showJourneysToHomeStop->setChecked( m_journeyListType == JourneysToHomeStopList );
+}
+
+void PublicTransportSettings::setValuesOfFilterConfig() {
+    QListWidget *available, *selected;
+    available = m_uiFilter.filterLineType->availableListWidget();
+    selected = m_uiFilter.filterLineType->selectedListWidget();
+
+    available->addItems( QStringList() << i18n("Unknown") << i18n("Trams") << i18n("Buses") << i18n("Subways") << i18n("Metros") << i18n("Trolley buses") << i18n("Interurban trains") << i18n("Regional trains") << i18n("Regional express trains") << i18n("Interregio trains") << i18n("Intercity / Eurocity trains") << i18n("Intercity express trains") << i18n("Ferries") << i18n("Planes") );
+
+    available->item( 0 )->setIcon( Global::iconFromVehicleType(Unknown) );
+    available->item( 1 )->setIcon( Global::iconFromVehicleType(Tram) );
+    available->item( 2 )->setIcon( Global::iconFromVehicleType(Bus) );
+    available->item( 3 )->setIcon( Global::iconFromVehicleType(Subway) );
+    available->item( 4 )->setIcon( Global::iconFromVehicleType(Metro) );
+    available->item( 5 )->setIcon( Global::iconFromVehicleType(TrolleyBus) );
+    available->item( 6 )->setIcon( Global::iconFromVehicleType(TrainInterurban) );
+    available->item( 7 )->setIcon( Global::iconFromVehicleType(TrainRegional) );
+    available->item( 8 )->setIcon( Global::iconFromVehicleType(TrainRegionalExpress) );
+    available->item( 9 )->setIcon( Global::iconFromVehicleType(TrainInterregio) );
+    available->item( 10 )->setIcon( Global::iconFromVehicleType(TrainIntercityEurocity) );
+    available->item( 11 )->setIcon( Global::iconFromVehicleType(TrainIntercityExpress) );
+    available->item( 12 )->setIcon( Global::iconFromVehicleType(Ferry) );
+    available->item( 13 )->setIcon( Global::iconFromVehicleType(Plane) );
+
+    if ( m_showTypeOfVehicle[Plane] )
+	selected->addItem( available->takeItem(13) );
+    if ( m_showTypeOfVehicle[Ferry] )
+	selected->addItem( available->takeItem(12) );
+    if ( m_showTypeOfVehicle[TrainIntercityExpress] )
+	selected->addItem( available->takeItem(11) );
+    if ( m_showTypeOfVehicle[TrainIntercityEurocity] )
+	selected->addItem( available->takeItem(10) );
+    if ( m_showTypeOfVehicle[TrainInterregio] )
+	selected->addItem( available->takeItem(9) );
+    if ( m_showTypeOfVehicle[TrainRegionalExpress] )
+	selected->addItem( available->takeItem(8) );
+    if ( m_showTypeOfVehicle[TrainRegional] )
+	selected->addItem( available->takeItem(7));
+    if ( m_showTypeOfVehicle[TrainInterurban] )
+	selected->addItem( available->takeItem(6) );
+    if ( m_showTypeOfVehicle[TrolleyBus] )
+	selected->addItem( available->takeItem(5) );
+    if ( m_showTypeOfVehicle[Metro] )
+	selected->addItem( available->takeItem(4) );
+    if ( m_showTypeOfVehicle[Subway] )
+	selected->addItem( available->takeItem(3) );
+    if ( m_showTypeOfVehicle[Bus] )
+	selected->addItem( available->takeItem(2) );
+    if ( m_showTypeOfVehicle[Tram] )
+	selected->addItem( available->takeItem(1) );
+    if ( m_showTypeOfVehicle[Unknown] )
+	selected->addItem( available->takeItem(0) );
+
+    m_uiFilter.showNightLines->setChecked(m_showNightlines);
+    m_uiFilter.filterMinLine->setValue(m_filterMinLine);
+    m_uiFilter.filterMaxLine->setValue(m_filterMaxLine);
+    m_uiFilter.filterTypeTarget->setCurrentIndex( static_cast<int>(m_filterTypeTarget) );
+    m_uiFilter.filterTargetList->setItems(m_filterTargetList);
+}
+
+void PublicTransportSettings::setValuesOfAppearanceConfig() {
     m_uiAppearance.linesPerRow->setValue(m_linesPerRow);
     if ( m_showRemainingMinutes && m_showDepartureTime )
 	m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex(0);
@@ -413,46 +702,82 @@ void PublicTransportSettings::createConfigurationInterface ( KConfigDialog* pare
     m_uiAppearance.radioUseDefaultFont->setChecked( m_useDefaultFont );
     m_uiAppearance.radioUseOtherFont->setChecked( !m_useDefaultFont );
     m_uiAppearance.font->setCurrentFont( font() );
+}
 
-    m_ui.showDepartures->setChecked( m_departureArrivalListType == DepartureList );
-    m_ui.showArrivals->setChecked( m_departureArrivalListType == ArrivalList );
-    m_ui.showJourneysFromHomeStop->setChecked( m_journeyListType == JourneysFromHomeStopList );
-    m_ui.showJourneysToHomeStop->setChecked( m_journeyListType == JourneysToHomeStopList );
-    m_ui.btnServiceProviderInfo->setIcon( KIcon("help-about") );
-    m_ui.btnServiceProviderInfo->setText( "" );
+void PublicTransportSettings::selectLocaleLocation() {
+    updateServiceProviderModel();
 
-    if ( m_modelServiceProvider != NULL )
-	delete m_modelServiceProvider;
-    m_modelServiceProvider = new QStandardItemModel( 0, 1 );
-    m_ui.serviceProvider->setModel( m_modelServiceProvider );
+    m_location = KGlobal::locale()->country();
+    if ( m_locationData.keys().contains( m_location ) ) {
+	int curLocationIndex = -1;
+	for ( int i = 0; i < m_ui.location->count(); ++i ) {
+	    if ( m_ui.location->itemData(i, LocationCodeRole) == m_location ) {
+		curLocationIndex = i;
+		break;
+	    }
+	}
+	if ( curLocationIndex != -1 )
+	    m_ui.location->setCurrentIndex( curLocationIndex );
+	else
+	    m_ui.location->setCurrentIndex( 0 );
+    } else {
+	m_ui.location->setCurrentIndex( 0 );
+    }
+}
 
-    HtmlDelegate *htmlDelegate = new HtmlDelegate;
-    htmlDelegate->setAlignText( true );
-    m_ui.serviceProvider->setItemDelegate( htmlDelegate );
+void PublicTransportSettings::locationChanged( const QString &newLocation ) { // TODO: use the (int)-version
+    updateServiceProviderModel( newLocation );
 
-    Plasma::DataEngine::Data data = m_applet->dataEngine("publictransport")->query("ServiceProviders");
-    foreach ( QString serviceProviderName, data.keys() )
-    {
-	QMap< QString, QVariant > serviceProviderData = data.value(serviceProviderName).toMap();
-	bool isCountryWide = serviceProviderName.contains( serviceProviderData["country"].toString(), Qt::CaseInsensitive );
+    // Select default accessor of the selected location
+    m_location = m_ui.location->itemData( m_ui.location->findText(newLocation), LocationCodeRole ).toString();
+    foreach( QString serviceProviderName, m_serviceProviderData.keys() ) {
+	QVariantHash serviceProviderData = m_serviceProviderData[serviceProviderName].toHash();
+	if ( serviceProviderData["country"].toString() == m_location ) {
+	    if ( serviceProviderData["id"].toString().compare( m_locationData[m_location].toHash()["defaultAccessor"].toString(), Qt::CaseInsensitive ) == 0 ) {
+		qDebug() << "found default accessor" << serviceProviderName;
+		m_ui.serviceProvider->setCurrentItem( serviceProviderName );
+		break;
+	    }
+	}
+    }
+}
+
+int PublicTransportSettings::updateServiceProviderModel( const QString &itemText ) {
+    m_modelServiceProvider->clear();
+    int index = itemText.isEmpty() ? m_ui.location->currentIndex() : m_ui.location->findText( itemText );
+
+    foreach( QString serviceProviderName, m_serviceProviderData.keys() ) {
+	QVariantHash serviceProviderData = m_serviceProviderData[serviceProviderName].toHash();
+
+	// Filter out service providers with the value of the currently selected location
+	if ( index != 0 && serviceProviderData["country"].toString().toLower() != "international" &&
+	    m_ui.location->itemData(index, LocationCodeRole).toString()
+	    .compare( serviceProviderData["country"].toString(), Qt::CaseInsensitive ) != 0 )
+	    continue;
+
+	bool isCountryWide = serviceProviderName.contains(
+	    serviceProviderData["country"].toString(), Qt::CaseInsensitive );
 	QString formattedText;
 	QStandardItem *item = new QStandardItem( serviceProviderName );
 
-	// TODO: Add titles for city specific accessors
-	if ( isCountryWide ) {
-	    item->setData( QStringList() << "raised" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole ); formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" ).arg( serviceProviderName ).arg( serviceProviderData["features"].toStringList().join(", ")/*.replace(QRegExp("([^,]*,[^,]*,[^,]*,)"), "\\1<br>")*/ );
+// 	if ( isCountryWide ) {
+	    item->setData( QStringList() << "raised" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole ); formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
+		.arg( serviceProviderName )
+		.arg( serviceProviderData["features"].toStringList().join(", ")/*.replace(QRegExp("([^,]*,[^,]*,[^,]*,)"), "\\1<br>")*/ );
 	    item->setData( 4, HtmlDelegate::LinesPerRowRole );
-	}
-	else {
-	    item->setData( QStringList() << "sunken" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole ); formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" ).arg( serviceProviderName ).arg( serviceProviderData["features"].toStringList().join(", ")/*.replace(QRegExp("([^,]*,[^,]*,[^,]*,)"), "\\1<br>")*/ );
-	    item->setData( 3, HtmlDelegate::LinesPerRowRole );
-	}
+// 	} else {
+// 	    item->setData( QStringList() << "sunken" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole ); formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
+// 		.arg( serviceProviderName )
+// 		.arg( serviceProviderData["features"].toStringList().join(", ")/*.replace(QRegExp("([^,]*,[^,]*,[^,]*,)"), "\\1<br>")*/ );
+// 	    item->setData( 4, HtmlDelegate::LinesPerRowRole );
+// 	}
 	item->setData( formattedText, HtmlDelegate::FormattedTextRole );
 	item->setData( serviceProviderData, ServiceProviderDataRole );
-	// Sort service providers containing the contry in it's name to the top of the list for that count
+
+	// Sort service providers containing the country in it's name to the top of the list for that country
 	QString sortString = isCountryWide
-	? serviceProviderData["country"].toString() + "AAAAA" + serviceProviderName
-	: serviceProviderData["country"].toString() + serviceProviderName;
+	    ? serviceProviderData["country"].toString() + "11111" + serviceProviderName
+	    : serviceProviderData["country"].toString() + serviceProviderName;
 	item->setData( sortString, SortRole );
 	m_modelServiceProvider->appendRow( item );
 
@@ -468,14 +793,23 @@ void PublicTransportSettings::createConfigurationInterface ( KConfigDialog* pare
     // Add title items
     QStringList lastTitles;
     for( int row = 0; row < m_modelServiceProvider->rowCount(); ++row ) {
-	QString title = m_modelServiceProvider->item( row )->data( ServiceProviderDataRole ).toMap()["country"].toString();
+	QString title = m_modelServiceProvider->item( row )->data( ServiceProviderDataRole ).toHash()["country"].toString();
+	if ( KGlobal::locale()->allCountriesList().contains(title) )
+	    title = KGlobal::locale()->countryCodeToName(title);
+	else if ( title == "international" )
+	    title = i18n("International");
+	else if ( title == "unknown" )
+	    title = i18n("Unknown");
+
 	if ( lastTitles.contains(title) )
 	    continue;
 
 	QStandardItem *itemTitle = new QStandardItem(title);
-	itemTitle->setData( "<span style='font-weight:bold;font-size:large;text-decoration:underline;'>" + title + ":</span>", HtmlDelegate::FormattedTextRole );
+	QColor textColor = KColorScheme::KColorScheme(QPalette::Active).foreground().color();
+	itemTitle->setData( QString("<span style='font-weight:bold;font-size:large;text-decoration:underline;color:rgb(%1,%2,%3);'>").arg(textColor.red()).arg(textColor.green()).arg(textColor.blue()) + title + ":</span>", HtmlDelegate::FormattedTextRole );
 	itemTitle->setData( 0, HtmlDelegate::GroupTitleRole );
 	itemTitle->setData( 2, HtmlDelegate::LinesPerRowRole );
+// 	itemTitle->setForeground( KColorScheme::KColorScheme(QPalette::Active).foreground() );
 	itemTitle->setSelectable( false );
 	m_modelServiceProvider->insertRow( row, itemTitle );
 
@@ -485,82 +819,38 @@ void PublicTransportSettings::createConfigurationInterface ( KConfigDialog* pare
 
     // Get (combobox-) index of the currently selected service provider
     int curServiceProviderIndex = -1;
-    for ( int i = 0; i < m_ui.serviceProvider->count(); ++i )
-    {
-	if ( m_ui.serviceProvider->itemData( i, ServiceProviderDataRole ).toMap()["id"].toInt() == m_serviceProvider ) {
+    for ( int i = 0; i < m_ui.serviceProvider->count(); ++i ) {
+	if ( m_ui.serviceProvider->itemData( i, ServiceProviderDataRole ).toHash()["id"].toString() == m_serviceProvider ) {
 	    curServiceProviderIndex = i;
 	    break;
 	}
     }
-    connect( m_ui.serviceProvider, SIGNAL(currentIndexChanged(int)), this, SLOT(serviceProviderChanged(int)) );
-    if ( curServiceProviderIndex != -1 )
+    if ( curServiceProviderIndex != -1 ) {
 	m_ui.serviceProvider->setCurrentIndex( curServiceProviderIndex );
+	serviceProviderChanged( curServiceProviderIndex );
+    }
 
-    QMap<QString, QVariant> serviceProviderData = m_ui.serviceProvider->itemData( curServiceProviderIndex, ServiceProviderDataRole ).toMap();
-    if ( serviceProviderData["onlyUseCitiesInList"].toBool() )
-	m_ui.city->setEditText(m_city);
-    else
-	m_ui.city->setCurrentItem(m_city);
-
-    QListWidget *available, *selected;
-    available = m_uiFilter.filterLineType->availableListWidget();
-    selected = m_uiFilter.filterLineType->selectedListWidget();
-
-    available->addItems( QStringList() << i18n("Trams") << i18n("Buses") << i18n("Subways") << i18n("Interurban trains") << i18n("Regional trains") << i18n("Regional express trains") << i18n("Interregio trains") << i18n("Intercity / Eurocity trains") << i18n("Intercity express trains") );
-
-    available->item( 0 )->setIcon( Global::iconFromVehicleType(Tram) );
-    available->item( 1 )->setIcon( Global::iconFromVehicleType(Bus) );
-    available->item( 2 )->setIcon( Global::iconFromVehicleType(Subway) );
-    available->item( 3 )->setIcon( Global::iconFromVehicleType(TrainInterurban) );
-    available->item( 4 )->setIcon( Global::iconFromVehicleType(TrainRegional) );
-    available->item( 5 )->setIcon( Global::iconFromVehicleType(TrainRegionalExpress) );
-    available->item( 6 )->setIcon( Global::iconFromVehicleType(TrainInterregio) );
-    available->item( 7 )->setIcon( Global::iconFromVehicleType(TrainIntercityEurocity) );
-    available->item( 8 )->setIcon( Global::iconFromVehicleType(TrainIntercityExpress) );
-
-    if ( m_showTypeOfVehicle[TrainIntercityExpress] )
-	selected->addItem( available->takeItem(8) );
-    if ( m_showTypeOfVehicle[TrainIntercityEurocity] )
-	selected->addItem( available->takeItem(7) );
-    if ( m_showTypeOfVehicle[TrainInterregio] )
-	selected->addItem( available->takeItem(6) );
-    if ( m_showTypeOfVehicle[TrainRegionalExpress] )
-	selected->addItem( available->takeItem(5) );
-    if ( m_showTypeOfVehicle[TrainRegional] )
-	selected->addItem( available->takeItem(4) );
-    if ( m_showTypeOfVehicle[TrainInterurban] )
-	selected->addItem( available->takeItem(3) );
-    if ( m_showTypeOfVehicle[Subway] )
-	selected->addItem( available->takeItem(2) );
-    if ( m_showTypeOfVehicle[Bus] )
-	selected->addItem( available->takeItem(1) );
-    if ( m_showTypeOfVehicle[Tram] )
-	selected->addItem( available->takeItem(0) );
-
-    m_uiFilter.showNightLines->setChecked(m_showNightlines);
-    m_uiFilter.filterMinLine->setValue(m_filterMinLine);
-    m_uiFilter.filterMaxLine->setValue(m_filterMaxLine);
-    m_uiFilter.filterTypeTarget->setCurrentIndex( static_cast<int>(m_filterTypeTarget) );
-    m_uiFilter.filterTargetList->setItems(m_filterTargetList);
-
-    setStopNameValid( stopNameValid, "" );
-
-    connect( m_ui.stop, SIGNAL(userTextChanged(QString)), this, SLOT(stopNameChanged(QString)) );
-    connect( m_ui.btnServiceProviderInfo, SIGNAL(clicked(bool)), this, SLOT(clickedServiceProviderInfo(bool)));
-
-    connect( selected, SIGNAL(currentRowChanged(int)), this, SLOT(filterLineTypeSelectedSelctionChanged(int)) );
-    connect( available, SIGNAL(currentRowChanged(int)), this, SLOT(filterLineTypeAvaibleSelctionChanged(int)) );
-    connect( m_uiFilter.filterLineType, SIGNAL(added(QListWidgetItem*)), this, SLOT(addedFilterLineType(QListWidgetItem*)) );
-    connect( m_uiFilter.filterLineType, SIGNAL(removed(QListWidgetItem*)), this, SLOT(removedFilterLineType(QListWidgetItem*)) );
+    return curServiceProviderIndex;
 }
 
 void PublicTransportSettings::configAccepted() {
     bool changed = false, changedServiceProviderSettings = false;
 
-    QMap< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toMap();
-    const int serviceProviderIndex = serviceProviderData["id"].toInt();
-    if (m_serviceProvider != serviceProviderIndex) {
-	m_serviceProvider = serviceProviderIndex;
+    if (m_location != m_ui.location->currentText()) {
+	m_location = m_ui.location->currentText();
+
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry("location", m_location);
+	changed = true;
+
+	// 	m_applet->addState( WaitingForDepartureData );
+	emit departureListNeedsClearing(); // Clear departures from the old service provider TODO: don't call multiple times in configAccepted()
+    }
+
+    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
+    const QString serviceProviderID = serviceProviderData["id"].toString();
+    if (m_serviceProvider != serviceProviderID) {
+	m_serviceProvider = serviceProviderID;
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("serviceProvider", m_serviceProvider);
 	changed = true;
@@ -573,13 +863,13 @@ void PublicTransportSettings::configAccepted() {
 	m_useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
     }
 
-    if (!m_ui.updateAutomatically->isChecked() && m_updateTimeout != 0) {
+    if (!m_uiAdvanced.updateAutomatically->isChecked() && m_updateTimeout != 0) {
 	m_updateTimeout = 0;
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("updateTimeout", m_updateTimeout);
 	changed = true;
-    } else if (m_updateTimeout  != m_ui.updateTimeout->value()) {
-	m_updateTimeout = m_ui.updateTimeout->value();
+    } else if (m_updateTimeout  != m_uiAdvanced.updateTimeout->value()) {
+	m_updateTimeout = m_uiAdvanced.updateTimeout->value();
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("updateTimeout", m_updateTimeout);
 	changed = true;
@@ -653,18 +943,40 @@ void PublicTransportSettings::configAccepted() {
 	emit departureListNeedsClearing(); // Clear departures using the old stop name
     }
 
-    if (m_timeOffsetOfFirstDeparture  != m_ui.timeOfFirstDeparture->value()) {
-	m_timeOffsetOfFirstDeparture = m_ui.timeOfFirstDeparture->value();
+    if (m_timeOffsetOfFirstDeparture  != m_uiAdvanced.timeOfFirstDeparture->value()) {
+	m_timeOffsetOfFirstDeparture = m_uiAdvanced.timeOfFirstDeparture->value();
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("timeOffsetOfFirstDeparture", m_timeOffsetOfFirstDeparture);
 	changed = true;
 
 	changedServiceProviderSettings = true;
-// 	m_applet->addState( WaitingForDepartureData );
     }
 
-    if (m_maximalNumberOfDepartures  != m_ui.maximalNumberOfDepartures->value()) {
-	m_maximalNumberOfDepartures = m_ui.maximalNumberOfDepartures->value();
+    if (m_timeOfFirstDepartureCustom  != m_uiAdvanced.timeOfFirstDepartureCustom->time()) {
+	m_timeOfFirstDepartureCustom = m_uiAdvanced.timeOfFirstDepartureCustom->time();
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry("timeOfFirstDepartureCustom", m_timeOfFirstDepartureCustom.toString("hh:mm"));
+	changed = true;
+
+	changedServiceProviderSettings = true;
+    }
+
+    if ( (m_firstDepartureConfigMode == RelativeToCurrentTime &&
+	!m_uiAdvanced.firstDepartureUseCurrentTime->isChecked()) ||
+	(m_firstDepartureConfigMode == AtCustomTime &&
+	!m_uiAdvanced.firstDepartureUseCustomTime->isChecked()) )
+    {
+	m_firstDepartureConfigMode = m_uiAdvanced.firstDepartureUseCurrentTime->isChecked()
+	    ? RelativeToCurrentTime : AtCustomTime;
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry("firstDepartureConfigMode", static_cast<int>(m_firstDepartureConfigMode));
+	changed = true;
+
+	changedServiceProviderSettings = true;
+    }
+
+    if (m_maximalNumberOfDepartures  != m_uiAdvanced.maximalNumberOfDepartures->value()) {
+	m_maximalNumberOfDepartures = m_uiAdvanced.maximalNumberOfDepartures->value();
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("maximalNumberOfDepartures", m_maximalNumberOfDepartures);
 	changed = true;
@@ -673,8 +985,8 @@ void PublicTransportSettings::configAccepted() {
 // 	m_applet->addState( WaitingForDepartureData );
     }
 
-    if (m_alarmTime  != m_ui.alarmTime->value()) {
-	m_alarmTime = m_ui.alarmTime->value();
+    if (m_alarmTime  != m_uiAdvanced.alarmTime->value()) {
+	m_alarmTime = m_uiAdvanced.alarmTime->value();
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("alarmTime", m_alarmTime);
 	changed = true;
@@ -716,10 +1028,10 @@ void PublicTransportSettings::configAccepted() {
 	<< (m_departureArrivalListType == DepartureList && !m_ui.showDepartures->isChecked())
 	<< (m_departureArrivalListType == ArrivalList && !m_ui.showArrivals->isChecked());*/
 
-    if ( (m_departureArrivalListType == DepartureList && !m_ui.showDepartures->isChecked()) ||
-	 (m_departureArrivalListType == ArrivalList && !m_ui.showArrivals->isChecked()) )
+    if ( (m_departureArrivalListType == DepartureList && !m_uiAdvanced.showDepartures->isChecked()) ||
+	(m_departureArrivalListType == ArrivalList && !m_uiAdvanced.showArrivals->isChecked()) )
     {
-	if ( m_ui.showArrivals->isChecked() )
+	if ( m_uiAdvanced.showArrivals->isChecked() )
 	    m_departureArrivalListType = ArrivalList;
 	else
 	    m_departureArrivalListType = DepartureList;
@@ -734,10 +1046,10 @@ void PublicTransportSettings::configAccepted() {
 	emit departureListNeedsClearing(); // Clear departures using the old data source type
     }
 
-    if ((m_journeyListType == JourneysFromHomeStopList && !m_ui.showJourneysFromHomeStop->isChecked()) ||
-	(m_journeyListType == JourneysToHomeStopList && !m_ui.showJourneysToHomeStop->isChecked()))
+if ((m_journeyListType == JourneysFromHomeStopList && !m_uiAdvanced.showJourneysFromHomeStop->isChecked()) ||
+	(m_journeyListType == JourneysToHomeStopList && !m_uiAdvanced.showJourneysToHomeStop->isChecked()))
     {
-	if ( m_ui.showJourneysFromHomeStop->isChecked() )
+	if ( m_uiAdvanced.showJourneysFromHomeStop->isChecked() )
 	    m_journeyListType = JourneysFromHomeStopList;
 	else
 	    m_journeyListType = JourneysToHomeStopList;
@@ -752,15 +1064,27 @@ void PublicTransportSettings::configAccepted() {
     }
 
     QListWidget *selTypes = m_uiFilter.filterLineType->selectedListWidget();
-    bool showTrams = !selTypes->findItems( i18n("Trams"), Qt::MatchExactly ).isEmpty();
+    bool showTrams = !selTypes->findItems( i18n("Unknown"), Qt::MatchExactly ).isEmpty();
+    bool showUnknown = !selTypes->findItems( i18n("Trams"), Qt::MatchExactly ).isEmpty();
     bool showBuses = !selTypes->findItems( i18n("Buses"), Qt::MatchExactly ).isEmpty();
     bool showSubways = !selTypes->findItems( i18n("Subways"), Qt::MatchExactly ).isEmpty();
+    bool showMetros = !selTypes->findItems( i18n("Metros"), Qt::MatchExactly ).isEmpty();
+    bool showTrolleyBuses = !selTypes->findItems( i18n("Trolley buses"), Qt::MatchExactly ).isEmpty();
     bool showInterurbanTrains = !selTypes->findItems( i18n("Interurban trains"), Qt::MatchExactly ).isEmpty();
     bool showRegionalTrains = !selTypes->findItems( i18n("Regional trains"), Qt::MatchExactly ).isEmpty();
     bool showRegionalExpressTrains = !selTypes->findItems( i18n("Regional express trains"), Qt::MatchExactly ).isEmpty();
     bool showInterregioTrains = !selTypes->findItems( i18n("Interregio trains"), Qt::MatchExactly ).isEmpty();
     bool showIntercityEurocityTrains = !selTypes->findItems( i18n("Intercity / Eurocity trains"), Qt::MatchExactly ).isEmpty();
     bool showIntercityExpressTrains = !selTypes->findItems( i18n("Intercity express trains"), Qt::MatchExactly ).isEmpty();
+    bool showFerries = !selTypes->findItems( i18n("Ferries"), Qt::MatchExactly ).isEmpty();
+    bool showPlanes = !selTypes->findItems( i18n("Planes"), Qt::MatchExactly ).isEmpty();
+
+    if (m_showTypeOfVehicle[Unknown] != showUnknown) {
+	m_showTypeOfVehicle[Unknown] = showUnknown;
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry(vehicleTypeToConfigName(Unknown), showUnknown);
+	changed = true;
+    }
 
     if (m_showTypeOfVehicle[Tram] != showTrams) {
 	m_showTypeOfVehicle[Tram] = showTrams;
@@ -780,6 +1104,20 @@ void PublicTransportSettings::configAccepted() {
 	m_showTypeOfVehicle[Subway] = showSubways;
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry(vehicleTypeToConfigName(Subway), showSubways);
+	changed = true;
+    }
+
+    if (m_showTypeOfVehicle[Metro] != showMetros) {
+	m_showTypeOfVehicle[Metro] = showMetros;
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry(vehicleTypeToConfigName(Metro), showMetros);
+	changed = true;
+    }
+
+    if (m_showTypeOfVehicle[TrolleyBus] != showTrolleyBuses) {
+	m_showTypeOfVehicle[TrolleyBus] = showTrolleyBuses;
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry(vehicleTypeToConfigName(TrolleyBus), showTrolleyBuses);
 	changed = true;
     }
 
@@ -822,6 +1160,20 @@ void PublicTransportSettings::configAccepted() {
 	m_showTypeOfVehicle[TrainIntercityExpress] = showIntercityExpressTrains;
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress), showIntercityExpressTrains);
+	changed = true;
+    }
+
+    if (m_showTypeOfVehicle[Ferry] != showFerries) {
+	m_showTypeOfVehicle[Ferry] = showFerries;
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry(vehicleTypeToConfigName(Ferry), showFerries);
+	changed = true;
+    }
+
+    if (m_showTypeOfVehicle[Plane] != showPlanes) {
+	m_showTypeOfVehicle[Plane] = showPlanes;
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry(vehicleTypeToConfigName(Plane), showPlanes);
 	changed = true;
     }
 
@@ -872,6 +1224,9 @@ void PublicTransportSettings::configAccepted() {
 QString PublicTransportSettings::vehicleTypeToConfigName ( const VehicleType& vehicleType ) {
     switch ( vehicleType )
     {
+	case Unknown:
+	    return "showUnknown";
+
 	case Tram:
 	    return "showTrams";
 	case Bus:
@@ -880,6 +1235,10 @@ QString PublicTransportSettings::vehicleTypeToConfigName ( const VehicleType& ve
 	    return "showSubways";
 	case TrainInterurban:
 	    return "showInterurbanTrains";
+	case Metro:
+	    return "showMetros";
+	case TrolleyBus:
+	    return "showTrolleyBuses";
 
 	case TrainRegional:
 	    return "showRegionalTrains";
@@ -892,9 +1251,23 @@ QString PublicTransportSettings::vehicleTypeToConfigName ( const VehicleType& ve
 	case TrainIntercityExpress:
 	    return "showIntercityExpressTrains";
 
-	case Unknown:
+	case Ferry:
+	    return "showFerries";
+	case Plane:
+	    return "showPlanes";
+
 	default:
 	    return "showUnknownTypeOfVehicle";
     }
+}
+
+void PublicTransportSettings::hideTypeOfVehicle ( VehicleType vehicleType ) {
+        m_showTypeOfVehicle[vehicleType] = false;
+
+        KConfigGroup cg = m_applet->config();
+        cg.writeEntry ( vehicleTypeToConfigName(vehicleType), false );
+
+        emit configNeedsSaving();
+        emit modelNeedsUpdate();
 }
 
