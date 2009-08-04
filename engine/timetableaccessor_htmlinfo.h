@@ -224,7 +224,7 @@ class TimetableAccessorInfo
 	void setCityNameToValueReplacementHash( const QHash<QString, QString> &hash );
 
 	/** Sets the name of the XML file that was parsed to get this accessor information object. */
-	void setFileName( const QString &fileName );;
+	void setFileName( const QString &fileName );
 
 	/** Sets the name of this accessor. The name is displayed in the config dialog's
 	* service provider combobox.

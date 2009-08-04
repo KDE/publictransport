@@ -354,7 +354,6 @@ void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &dat
 #ifndef PUBLICTRANSPORTDATAENGINE_HEADER
 #define PUBLICTRANSPORTDATAENGINE_HEADER
 
-class QSizeF;
 
 // Plasma includes
 #include <Plasma/DataEngine>
