@@ -12,6 +12,7 @@ Name[sv]=Kollektivtrafik
 Name[uk]=Громадський транспорт
 Name[x-test]=xxPublic Transportxx
 Comment=Plasma Public Transport shows a departure / arrival board for public transport. It can also show journeys.
+Comment[fr]=« Transport publique pour Plasma » affiche les départs et arrivées imminents des transports publics. Il peut également afficher les temps de parcours.
 Comment[pt]=Os Transportes Públicos do Plasma mostram os horários de partidas / chegadas dos transportes públicos. Também poderá mostrar as carreiras.
 Comment[pt_BR]=Os Transportes Públicos do Plasma mostram os horários de partidas / chegadas dos transportes públicos. Também poderá mostrar as carreiras.
 Comment[sv]=Plasma kollektivtrafik visar avgångs- och ankomsttavla för kollektivtrafik. Resor kan också visas.
