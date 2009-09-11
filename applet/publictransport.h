@@ -66,7 +66,6 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
 #include "settings.h"
 #include "appletwithstate.h"
 
-class QSizeF;
 class QGraphicsLayout;
 
 
