@@ -53,7 +53,6 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
 #include <Plasma/IconWidget>
 
 // KDE includes
-#include <KIcon>
 
 // Qt includes
 #include <QStandardItemModel>

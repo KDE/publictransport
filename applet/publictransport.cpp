@@ -34,17 +34,12 @@
 
 // Qt includes
 #include <QPainter>
-#include <QFontMetrics>
-#include <QSizeF>
-#include <QTextDocument>
 #include <QGraphicsLinearLayout>
-#include <QListWidget>
 #include <QMenu>
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QTreeView>
 #include <QCompleter>
-#include <QStringListModel>
 #include <qmath.h>
 
 // Own includes

@@ -22,12 +22,9 @@
 
 // Qt includes
 #include <QString>
-#include <QTime>
-#include <QRegExp>
 #include <QVariant>
-
+#include <QDateTime>
 // KDE includes
-#include <KLocalizedString>
 
 // Own includes
 #include "global.h"

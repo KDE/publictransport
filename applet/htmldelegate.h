@@ -22,7 +22,6 @@
 
 // Qt includes
 #include <QItemDelegate>
-#include <QTextOption>
 
 class QPainter;
 class QTextLayout;

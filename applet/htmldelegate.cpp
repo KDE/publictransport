@@ -23,8 +23,6 @@
 #include <QTextLayout>
 #include <QDebug>
 #include <qabstractitemview.h>
-#include <QTreeView>
-#include <QAbstractTextDocumentLayout>
 #include <Plasma/PaintUtils>
 #include <QPainter>
 #include "global.h"
