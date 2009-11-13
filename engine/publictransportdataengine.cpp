@@ -43,7 +43,7 @@ PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList
     // Add service provider source, so when using
     // dataEngine("publictransport").sources() in an applet it at least returns this
     setData( I18N_NOOP("ServiceProviders"), DataEngine::Data() );
-    setData( I18N_NOOP("ErrornousServiceProviders"), DataEngine::Data() );
+    setData( I18N_NOOP("ErroneousServiceProviders"), DataEngine::Data() );
     setData( I18N_NOOP("Locations"), DataEngine::Data() );
 }
 
@@ -312,7 +312,7 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name ) {
     bool ret = true;
     if ( name == I18N_NOOP("ServiceProviders") )
 	ret = updateServiceProviderSource( name );
-    else if ( name == I18N_NOOP("ErrornousServiceProviders") )
+    else if ( name == I18N_NOOP("ErroneousServiceProviders") )
 	updateErrornousServiceProviderSource( name );
     else if ( name == I18N_NOOP("Locations") )
 	updateLocationSource( name );
