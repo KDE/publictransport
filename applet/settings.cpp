@@ -233,7 +233,7 @@ void PublicTransportSettings::testResult( DataSourceTester::TestResult result, c
 	    break;
 
 	case DataSourceTester::PossibleStopsReceived:
-	    setStopNameValid( false, i18n("The stop name is ambigous.") );
+	    setStopNameValid( false, i18n("The stop name is ambiguous.") );
 	    stopToStopID = data.toHash();
 	    qDebug() << "PublicTransportSettings::testResult" << "Set" << stopToStopID.count() << "seggestions.";
 	    m_ui.stop->setCompletedItems( stopToStopID.keys() );
@@ -578,7 +578,7 @@ void PublicTransportSettings::setValuesOfStopSelectionConfig() {
 	QStandardItem *itemErrors = new QStandardItem();
 	itemErrors->setData( "ZZZZZ", SortRole );
 	formattedText = QString( "<span style='color:%3;'><b>%1</b></span><br-wrap><small>%2</small>" )
-	    .arg( i18np("%1 accessor is errornous:", "%1 accessors are errornous:", errornousAccessorNames.count()) )
+	    .arg( i18np("%1 accessor is erroneous:", "%1 accessors are erroneous:", errornousAccessorNames.count()) )
 	    .arg( errorLines.join(",<br-wrap>") )
 	    .arg( highlightTextColor );
 	itemErrors->setData( formattedText, HtmlDelegate::FormattedTextRole );
