@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Public transport engine
 Name[de]=Öffentlicher Nahverkehr
+Name[en_GB]=Public transport engine
 Name[es]=Motor de transporte público
 Name[et]=Ühiskondliku transpordi mootor
 Name[fr]=Moteur de transport publique
@@ -12,6 +13,7 @@ Name[sv]=Kollektivtrafikgränssnitt
 Name[uk]=Рушій громадського транспорту
 Name[x-test]=xxPublic transport enginexx
 Comment=Plasma data engine for public transport
+Comment[en_GB]=Plasma data engine for public transport
 Comment[es]=Motor de datos de Plasma para transporte público
 Comment[fr]=Moteur de données pour Transport publique
 Comment[hr]=Plasma podrška za javni prijevoz
