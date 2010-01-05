@@ -25,6 +25,8 @@
 #include <QPersistentModelIndex>
 #include <QDateTime>
 
+/** @class AlarmTimer
+* @brief Stores the QPersistantModelIndex of the item to that the alarm belongs. */
 class AlarmTimer : public QObject {
     Q_OBJECT
 

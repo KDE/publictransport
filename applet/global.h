@@ -157,8 +157,8 @@ enum VehicleType {
     Bus = 2, /**< A bus. */
     Subway = 3, /**< A subway. */
     TrainInterurban = 4, /**< An interurban train. */
-    Metro = 5, /** A metro. */
-    TrolleyBus = 6, /** An electric bus. */
+    Metro = 5, /**< A metro. */
+    TrolleyBus = 6, /**< An electric bus. */
 
     TrainRegional = 10, /**< A regional train. */
     TrainRegionalExpress = 11, /**< A regional express train. */
@@ -166,9 +166,9 @@ enum VehicleType {
     TrainIntercityEurocity = 13, /**< An intercity / eurocity train. */
     TrainIntercityExpress = 14, /**< An intercity express. */
 
-    Ferry = 100, /** A ferry. */
+    Ferry = 100, /**< A ferry. */
 
-    Plane = 200 /** An aeroplane. */
+    Plane = 200 /**< An aeroplane. */
 };
 
 /** The type of services for a public transport line. */

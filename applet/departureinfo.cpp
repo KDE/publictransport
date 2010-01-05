@@ -1,4 +1,5 @@
 
+#include <QDebug>
 #include <QVariant>
 #include "departureinfo.h"
 #include <qmath.h>

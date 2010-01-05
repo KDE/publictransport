@@ -1,5 +1,5 @@
 /*
-*   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2009 Friedrich P?lz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -17,16 +17,31 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// Qt includes
 #include <QListWidget>
 #include <QTreeView>
 #include <QStandardItemModel>
 
+// KDE includes
 #include <KTabWidget>
 #include <KConfigDialog>
 #include <KColorScheme>
+#include <KFileDialog>
 
+#include <kdeversion.h>
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+  #include <knewstuff3/downloaddialog.h>
+#else
+  #include <knewstuff2/engine.h>
+#endif
+
+// Own includes
 #include "settings.h"
 #include "htmldelegate.h"
+#include <qprocess.h>
+#include <KStandardDirs>
+#include <QMenu>
+
 
 PublicTransportSettings::PublicTransportSettings( AppletWithState *applet )
     : m_modelServiceProvider(0), m_modelLocations(0)
@@ -119,7 +134,9 @@ void PublicTransportSettings::readSettings() {
     m_filterMaxLine = cg.readEntry("filterMaxLine", 999);
     m_filterTypeTarget = static_cast<FilterType>(cg.readEntry("filterTypeTarget", static_cast<int>(ShowAll)));
     m_filterTargetList = cg.readEntry("filterTargetList", QStringList());
-
+    m_filterTypeLineNumber = static_cast<FilterType>(cg.readEntry("filterTypeLineNumber", static_cast<int>(ShowAll)));
+    m_filterLineNumberList = cg.readEntry("filterLineNumberList", QStringList());
+    
     getServiceProviderInfo();
 //     selectLocaleLocation();
 }
@@ -242,7 +259,7 @@ void PublicTransportSettings::testResult( DataSourceTester::TestResult result, c
     }
 }
 
-void PublicTransportSettings::setFilterTypeTarget ( FilterType filterType ) {
+void PublicTransportSettings::setFilterTypeTarget( FilterType filterType ) {
     m_filterTypeTarget = filterType;
 
     m_applet->config().writeEntry("filterTypeTarget", static_cast<int>(m_filterTypeTarget));
@@ -251,6 +268,17 @@ void PublicTransportSettings::setFilterTypeTarget ( FilterType filterType ) {
     // Synchronize new settings with config dialog widgets
     if ( m_applet->testState(ConfigDialogShown) )
 	m_uiFilter.filterTypeTarget->setCurrentIndex( static_cast<int>(m_filterTypeTarget) );
+}
+
+void PublicTransportSettings::setFilterTypeLineNumber( FilterType filterType ) {
+    m_filterTypeLineNumber = filterType;
+
+    m_applet->config().writeEntry("filterTypeLineNumber", static_cast<int>(m_filterTypeLineNumber));
+    emit configNeedsSaving();
+
+    // Synchronize new settings with config dialog widgets
+    if ( m_applet->testState(ConfigDialogShown) )
+	m_uiFilter.filterTypeLineNumber->setCurrentIndex( static_cast<int>(m_filterTypeLineNumber) );
 }
 
 void PublicTransportSettings::configDialogFinished() {
@@ -473,6 +501,14 @@ void PublicTransportSettings::setValuesOfStopSelectionConfig() {
     m_ui.btnServiceProviderInfo->setIcon( KIcon("help-about") );
     m_ui.btnServiceProviderInfo->setText( "" );
 
+    QMenu *menu = new QMenu(m_configDialog);
+    menu->addAction( KIcon("get-hot-new-stuff"), "Get new service providers...",
+		    this, SLOT(downloadServiceProvidersClicked(bool)) );
+    menu->addAction( KIcon("text-xml"), "Install new service provider from local file...",
+		     this, SLOT(installServiceProviderClicked(bool)) );
+    m_ui.downloadServiceProviders->setMenu(menu);
+    m_ui.downloadServiceProviders->setIcon( KIcon("list-add") );
+
     // Setup model and item delegate for the service provider combobox
     if ( m_modelServiceProvider != NULL )
 	delete m_modelServiceProvider;
@@ -578,7 +614,7 @@ void PublicTransportSettings::setValuesOfStopSelectionConfig() {
 	QStandardItem *itemErrors = new QStandardItem();
 	itemErrors->setData( "ZZZZZ", SortRole );
 	formattedText = QString( "<span style='color:%3;'><b>%1</b></span><br-wrap><small>%2</small>" )
-	    .arg( i18np("%1 accessor is erroneous:", "%1 accessors are erroneous:", errornousAccessorNames.count()) )
+	    .arg( i18np("%1 accessor is errornous:", "%1 accessors are errornous:", errornousAccessorNames.count()) )
 	    .arg( errorLines.join(",<br-wrap>") )
 	    .arg( highlightTextColor );
 	itemErrors->setData( formattedText, HtmlDelegate::FormattedTextRole );
@@ -680,11 +716,16 @@ void PublicTransportSettings::setValuesOfFilterConfig() {
     if ( m_showTypeOfVehicle[Unknown] )
 	selected->addItem( available->takeItem(0) );
 
-    m_uiFilter.showNightLines->setChecked(m_showNightlines);
-    m_uiFilter.filterMinLine->setValue(m_filterMinLine);
-    m_uiFilter.filterMaxLine->setValue(m_filterMaxLine);
+    // These three are currently not used:
+//     m_uiFilter.showNightLines->setChecked(m_showNightlines);
+//     m_uiFilter.filterMinLine->setValue(m_filterMinLine);
+//     m_uiFilter.filterMaxLine->setValue(m_filterMaxLine);
+
     m_uiFilter.filterTypeTarget->setCurrentIndex( static_cast<int>(m_filterTypeTarget) );
     m_uiFilter.filterTargetList->setItems(m_filterTargetList);
+
+    m_uiFilter.filterTypeLineNumber->setCurrentIndex( static_cast<int>(m_filterTypeLineNumber) );
+    m_uiFilter.filterLineNumberList->setItems(m_filterLineNumberList);
 }
 
 void PublicTransportSettings::setValuesOfAppearanceConfig() {
@@ -702,6 +743,80 @@ void PublicTransportSettings::setValuesOfAppearanceConfig() {
     m_uiAppearance.radioUseDefaultFont->setChecked( m_useDefaultFont );
     m_uiAppearance.radioUseOtherFont->setChecked( !m_useDefaultFont );
     m_uiAppearance.font->setCurrentFont( font() );
+}
+
+void PublicTransportSettings::downloadServiceProvidersClicked( bool ) {
+    if ( !m_applet->testState(ConfigDialogShown) )
+	return;
+
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+    KNS3::DownloadDialog *dialog = new KNS3::DownloadDialog(
+			      "publictransport.knsrc", m_configDialog );
+    dialog->exec();
+    qDebug() << "KNS3 Results: " << dialog->changedEntries().count();
+    
+    KNS3::Entry::List installed = dialog->installedEntries();
+    foreach ( KNS3::Entry entry, installed )
+      kDebug() << entry.name() << entry.installedFiles();
+
+    if ( !dialog->changedEntries().isEmpty() )
+      updateServiceProviderModel(); // TODO
+
+    delete dialog;
+#else
+    KNS::Engine engine(m_configDialog);
+    if (engine.init("publictransport2.knsrc")) {
+	KNS::Entry::List entries = engine.downloadDialogModal(m_configDialog);
+
+	qDebug() << "PublicTransportSettings::downloadServiceProvidersClicked" << entries.count();
+	if (entries.size() > 0) {
+	    foreach ( KNS::Entry *entry, entries ) {
+		// Downloaded file has the name "hotstuff-access" which is wrong (maybe it works
+		// better with archives). So rename the file to the right name from the payload:
+		QString filename = entry->payload().representation()
+		    .remove( QRegExp("^.*\\?file=") ).remove( QRegExp("&site=.*$") );
+		QStringList installedFiles = entry->installedFiles();
+
+		qDebug() << "installedFiles =" << installedFiles;
+		if ( !installedFiles.isEmpty() ) {
+		    QString installedFile = installedFiles[0];
+
+		    QString path = KUrl( installedFile ).path().remove( QRegExp("/[^/]*$") ) + "/";
+		    QFile( installedFile ).rename( path + filename );
+
+		    qDebug() << "PublicTransportSettings::downloadServiceProvidersClicked" <<
+		    "Rename" << installedFile << "to" << path + filename;
+		}
+	    }
+
+	    // Get a list of with the location of each service provider (locations can be contained multiple times)
+	    m_serviceProviderData = m_applet->dataEngine("publictransport")->query("ServiceProviders");
+	    // TODO: Update "ServiceProviders"-data source in the data engine.
+	    // TODO: Update country list (group titles in the combo box)
+// 	    foreach ( QString serviceProviderName, m_serviceProviderData.keys() )  {
+// 		QHash< QString, QVariant > serviceProviderData = m_serviceProviderData.value(serviceProviderName).toHash();
+// 		countries << serviceProviderData["country"].toString();
+// 	    }
+	    updateServiceProviderModel(); // TODO
+	}
+    }
+#endif
+}
+
+void PublicTransportSettings::installServiceProviderClicked( bool ) {
+    if ( !m_applet->testState(ConfigDialogShown) )
+	return;
+
+    QString fileName = KFileDialog::getOpenFileName( KUrl(), "*.xml", m_configDialog );
+    if ( !fileName.isEmpty() ) {
+	QStringList dirs = KGlobal::dirs()->findDirs( "data", "plasma_engine_publictransport/accessorInfos/" );
+	if ( dirs.isEmpty() )
+	    return;
+
+	QString targetDir = dirs[0];
+	qDebug() << "PublicTransportSettings::installServiceProviderClicked" << "Install file" << fileName << "to" << targetDir;
+	QProcess::execute( "kdesu", QStringList() << QString("cp %1 %2").arg( fileName ).arg( targetDir ) );
+    }
 }
 
 void PublicTransportSettings::selectLocaleLocation() {
@@ -1177,26 +1292,26 @@ if ((m_journeyListType == JourneysFromHomeStopList && !m_uiAdvanced.showJourneys
 	changed = true;
     }
 
-    if (m_showNightlines != (m_uiFilter.showNightLines->checkState() == Qt::Checked)) {
-	m_showNightlines = !m_showNightlines;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("showNightlines", m_showNightlines);
-	changed = true;
-    }
+//     if (m_showNightlines != (m_uiFilter.showNightLines->checkState() == Qt::Checked)) {
+// 	m_showNightlines = !m_showNightlines;
+// 	KConfigGroup cg = m_applet->config();
+// 	cg.writeEntry("showNightlines", m_showNightlines);
+// 	changed = true;
+//     }
 
-    if (m_filterMinLine  != m_uiFilter.filterMinLine->value()) {
-	m_filterMinLine = m_uiFilter.filterMinLine->value();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("filterMinLine", m_filterMinLine);
-	changed = true;
-    }
-
-    if (m_filterMaxLine  != m_uiFilter.filterMaxLine->value()) {
-	m_filterMaxLine = m_uiFilter.filterMaxLine->value();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("filterMaxLine", m_filterMaxLine);
-	changed = true;
-    }
+//     if (m_filterMinLine  != m_uiFilter.filterMinLine->value()) {
+// 	m_filterMinLine = m_uiFilter.filterMinLine->value();
+// 	KConfigGroup cg = m_applet->config();
+// 	cg.writeEntry("filterMinLine", m_filterMinLine);
+// 	changed = true;
+//     }
+// 
+//     if (m_filterMaxLine  != m_uiFilter.filterMaxLine->value()) {
+// 	m_filterMaxLine = m_uiFilter.filterMaxLine->value();
+// 	KConfigGroup cg = m_applet->config();
+// 	cg.writeEntry("filterMaxLine", m_filterMaxLine);
+// 	changed = true;
+//     }
 
     if (m_filterTypeTarget  != (m_uiFilter.filterTypeTarget->currentIndex())) {
 	m_filterTypeTarget = static_cast<FilterType>(m_uiFilter.filterTypeTarget->currentIndex());
@@ -1212,7 +1327,22 @@ if ((m_journeyListType == JourneysFromHomeStopList && !m_uiAdvanced.showJourneys
 	cg.writeEntry("filterTargetList", m_filterTargetList);
 	changed = true;
     }
+    
+    if (m_filterTypeLineNumber  != (m_uiFilter.filterTypeLineNumber->currentIndex())) {
+	m_filterTypeLineNumber = static_cast<FilterType>(m_uiFilter.filterTypeLineNumber->currentIndex());
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry("filterTypeLineNumber", static_cast<int>(m_filterTypeLineNumber));
+	changed = true;
+    }
 
+    if (m_filterLineNumberList  != m_uiFilter.filterLineNumberList->items()) {
+	m_filterLineNumberList = m_uiFilter.filterLineNumberList->items();
+	m_filterLineNumberList.removeDuplicates();
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry("filterTargetList", m_filterLineNumberList);
+	changed = true;
+    }
+    
     if (changed) {
 	emit settingsChanged();
 	emit configNeedsSaving();

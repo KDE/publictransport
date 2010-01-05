@@ -23,6 +23,8 @@
 #include <QTextLayout>
 #include <QDebug>
 #include <qabstractitemview.h>
+#include <QTreeView>
+#include <QAbstractTextDocumentLayout>
 #include <Plasma/PaintUtils>
 #include <QPainter>
 #include "global.h"
@@ -97,7 +99,8 @@ void HtmlDelegate::plainTextToHTMLCharCount( const QString &sHtml, int pos, int 
 //     qDebug() << "   HTML " << "htmlPos" << *htmlPos << "htmlCount" << *htmlCount;
 }*/
 
-void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const {
+void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option,
+			   const QModelIndex& index ) const {
     QRect rect = option.rect;
 
     drawBackground( painter, option, index );
@@ -105,7 +108,7 @@ void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option
 	QStringList data = index.data( TextBackgroundRole ).toStringList();
 
 	// TODO: load the svg only once and change when the current theme is changed
-	Plasma::FrameSvg *svg = new Plasma::FrameSvg(parent());
+	Plasma::FrameSvg *svg = new Plasma::FrameSvg( parent() );
 	// 	Plasma::Svg *svg = new Plasma::Svg(  );
 	if ( Plasma::Theme::defaultTheme()->currentThemeHasImage("widgets/frame") )
 	    svg->setImagePath( "widgets/frame" );
@@ -118,7 +121,7 @@ void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option
 	    svg->setEnabledBorders(Plasma::FrameSvg::TopBorder | Plasma::FrameSvg::BottomBorder);
 	    if ( index.column() == 0 )
 		svg->setEnabledBorders(svg->enabledBorders() | Plasma::FrameSvg::LeftBorder);
-	    if ( index.column() == index.model()->columnCount() - 1 )
+	    else if ( index.column() == index.model()->columnCount() - 1 )
 		svg->setEnabledBorders(svg->enabledBorders() | Plasma::FrameSvg::RightBorder);
 	}
 
@@ -149,7 +152,8 @@ void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option
 
     int margin = 4, padding = 2;
     QRect displayRect;
-    if ( index.data( Qt::DecorationRole ).isValid() && !index.data( Qt::DecorationRole ).value<QIcon>().isNull() ) {
+    if ( index.data( Qt::DecorationRole ).isValid()
+	    && !index.data( Qt::DecorationRole ).value<QIcon>().isNull() ) {
 	QIcon icon = index.data( Qt::DecorationRole ).value<QIcon>();
 	QPoint topLeft;
 

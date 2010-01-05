@@ -65,8 +65,8 @@ void DataSourceTester::dataUpdated ( const QString& sourceName, const Plasma::Da
 	// Check if we got a possible stop list or a journey list
 	if ( data.value("receivedPossibleStopList").toBool() ) {
 	    processTestSourcePossibleStopList( data );
-// 	    emit testResult( Error, i18n("The stop name is ambigous.") );
-// 	    setStopNameValid( false, i18n("The stop name is ambigous.") );
+// 	    emit testResult( Error, i18n("The stop name is ambiguous.") );
+// 	    setStopNameValid( false, i18n("The stop name is ambiguous.") );
 	} else {
 	    // List of journeys received
 	    disconnectTestSource();

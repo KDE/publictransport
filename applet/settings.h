@@ -32,6 +32,9 @@
 
 class QStandardItemModel;
 
+/** @class PublicTransportSettings
+* It also creates the configuration dialogs.
+* @brief Manages the settings of the public transport applet. */
 class PublicTransportSettings : public QObject {
     Q_OBJECT
 
@@ -40,6 +43,7 @@ class PublicTransportSettings : public QObject {
     public:
 	PublicTransportSettings( AppletWithState *applet );
 
+	/** Returns a pointer to the public transport applet. */
 	AppletWithState *applet() { return m_applet; };
 
 	void readSettings();
@@ -94,16 +98,30 @@ class PublicTransportSettings : public QObject {
 	/** Hide a type of vehicle. */
 	void hideTypeOfVehicle(VehicleType vehicleType);
 	/** Wheather or not night lines should be shown. */
-	bool	showNightlines() const { return m_showNightlines; };
+	bool showNightlines() const { return m_showNightlines; };
 	/** The minimal line number to be shown. */
 	int filterMinLine() const { return m_filterMinLine; };
 	/** The maximal line number to be shown. */
 	int filterMaxLine() const { return m_filterMaxLine; };
-	/** The type of the filter (ShowAll, ShowMatching, HideMatching). */
+
+	/** The type of the filter for targets  (ShowAll, ShowMatching, HideMatching). */
 	FilterType filterTypeTarget() const { return m_filterTypeTarget; };
 	void setFilterTypeTarget( FilterType filterType );
 	/** A list of targets that should be filtered. */
 	QStringList filterTargetList() const { return m_filterTargetList; };
+	/** Sets the list of targets that should be filtered. */
+	void setFilterTargetList( const QStringList &filters ) {
+	    m_filterTargetList = filters; };
+
+	/** The type of the filter for line numbers (ShowAll, ShowMatching, HideMatching). */
+	FilterType filterTypeLineNumber() const { return m_filterTypeLineNumber; };
+	void setFilterTypeLineNumber( FilterType filterType );
+	/** A list of line numbers that should be filtered. */
+	QStringList filterLineNumberList() const { return m_filterLineNumberList; };
+	/** Sets the list of line numbers that should be filtered. */
+	void setFilterLineNumberList( const QStringList &filters ) {
+	    m_filterLineNumberList = filters; };
+	
 	DepartureArrivalListType departureArrivalListType() const { return m_departureArrivalListType; };
 	JourneyListType journeyListType() const { return m_journeyListType; };
 	bool isHeaderVisible() const { return m_showHeader; };
@@ -170,6 +188,8 @@ class PublicTransportSettings : public QObject {
 	* service provider.*/
 	int updateServiceProviderModel( const QString &itemText = QString() );
 	void locationChanged( const QString &newLocation );
+        void downloadServiceProvidersClicked ( bool );
+        void installServiceProviderClicked ( bool );
 
     private:
 	AppletWithState *m_applet;
@@ -205,8 +225,10 @@ class PublicTransportSettings : public QObject {
 	bool	m_showNightlines; // Wheather or not night lines should be shown
 	int m_filterMinLine; // The minimal line number to be shown
 	int m_filterMaxLine; // The maximal line number to be shown
-	FilterType m_filterTypeTarget; // The type of the filter (ShowAll, ShowMatching, HideMatching)
+	FilterType m_filterTypeTarget; // The type of the filter for targets (ShowAll, ShowMatching, HideMatching)
 	QStringList m_filterTargetList; // A list of targets that should be filtered
+	FilterType m_filterTypeLineNumber; // The type of the filter for line numbers (ShowAll, ShowMatching, HideMatching)
+	QStringList m_filterLineNumberList; // A list of line numbers that should be filtered
 	DepartureArrivalListType m_departureArrivalListType;
 	JourneyListType m_journeyListType;
 	bool m_showHeader;

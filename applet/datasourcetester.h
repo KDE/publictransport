@@ -23,14 +23,19 @@
 #include <Plasma/DataEngine>
 #include <Plasma/Applet>
 
+/** @class DataSourceTester
+* The source with a given source name can be tested. The signal @a testResult
+* is emitted when the test is complete.
+* @brief Tests data sources with the "publictransport"-data engine. */
 class DataSourceTester : public QObject {
     Q_OBJECT
 
     public:
+	/** Results of a data source test. */
 	enum TestResult {
-	    Error,
-	    JourneyListReceived,
-	    PossibleStopsReceived
+	    Error, /**< The used data source name is errornous or the data couldn't be parsed correctly. TODO: It's also possible, that there just weren't any departures / arrivals. In such a case JourneyListReceived should be used. */
+	    JourneyListReceived, /**< The tested data source name gets a list of departures / arrivals or journeys. */
+	    PossibleStopsReceived /**< The tested data source name gets a list of stop suggestions. If you requested a journey list this means that the stop name is ambiguous. You can try to use stop IDs, if the ambiguity can't be removed. */
 	};
 
 	DataSourceTester( const QString &testSource, Plasma::Applet *applet, QObject* parent = 0 ) : QObject(parent) {
@@ -44,9 +49,10 @@ class DataSourceTester : public QObject {
 
 	void processTestSourcePossibleStopList( const Plasma::DataEngine::Data& data );
 
-	// Source name to be tested
+	/** Source name to be tested. */
 	QString testSource() { return m_testSource; };
-	// Sets the source name to be tested and connects it to the data engine
+
+	/** Sets the source name to be tested and connects it to the data engine. */
 	void setTestSource( const QString &sourceName );
 
 	Plasma::Applet *applet() { return m_applet; };
@@ -61,14 +67,15 @@ class DataSourceTester : public QObject {
 	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
     private:
-	// Disconnects the test data source
+	/** Disconnects the test data source. */
 	void disconnectTestSource();
-	// Connects the test data source
+
+	/** Connects the test data source. */
 	void connectTestSource();
 
-	QString m_testSource; // Source name for testing configurations
+	QString m_testSource; /**< Source name for testing configurations. */
 	Plasma::Applet *m_applet;
-	QHash< QString, QVariant > m_mapStopToStopID; // A map with stop names as keys and the corresponding stop IDs as values
+	QHash< QString, QVariant > m_mapStopToStopID; /**< A map with stop names as keys and the corresponding stop IDs as values. */
 };
 
 #endif // DATASOURCETESTER_HEADER
