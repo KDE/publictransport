@@ -71,14 +71,28 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     QDomNodeList nodeList, subNodeList;
     QDomNode node, childNode, subChildNode, subSubChildNode;
 
-//     <name>
+    QString lang = KGlobal::locale()->country();
+
+    //     <name>
+    QString name, nameEn;
     node = docElement.firstChildElement("name");
     if ( node.isNull() ) {
 	qDebug() << "TimetableAccessor::getSpecificAccessor"
 	    << "No <name> tag in service provider information XML named" << serviceProvider;
 	return NULL;
     }
-    QString name = node.toElement().text();
+    while ( !node.isNull() ) {
+	if ( !node.hasAttributes() || node.toElement().attribute("lang") == lang ) {
+	    name = node.toElement().text();
+	    break;
+	}
+	else if ( node.toElement().attribute("lang") == "en" )
+	    nameEn= node.toElement().text();
+
+	node = node.nextSiblingElement("name");
+    }
+    if ( name.isEmpty() )
+	name = nameEn;
 
 //     <author> <fullname>...</fullname><email>...</email> </author>
     QString author, email;
@@ -176,11 +190,20 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     }
 
 //     <description>
-    QString description;
+    QString description, descriptionEn;
     node = docElement.firstChildElement("description");
-    if ( !node.isNull() ) {
-	description = node.toElement().text();
+    while ( !node.isNull() ) {
+	if ( !node.hasAttributes() || node.toElement().attribute("lang") == lang ) {
+	    description = node.toElement().text();
+	    break;
+	}
+	else if ( node.toElement().attribute("lang") == "en" )
+	    descriptionEn= node.toElement().text();
+
+	node = node.nextSiblingElement("description");
     }
+    if ( description.isEmpty() )
+	description = descriptionEn;
 
 //     <url>
     node = docElement.firstChildElement("url");
@@ -515,8 +538,8 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	    subSubChildNode = subChildNode.firstChildElement("regExpRange");
 	    if ( subSubChildNode.isNull() ) {
 		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No child tag <regExpRange> found in the <item> tag int the <possibleStops> tag in the <regExps> tag in service provider information XML named"
-		<< serviceProvider;
+		    << "No child tag <regExpRange> found in the <item> tag int the <possibleStops> tag in the <regExps> tag in service provider information XML named"
+		    << serviceProvider;
 		return NULL;
 	    }
 	    if ( subSubChildNode.firstChild().isCDATASection() )
@@ -570,6 +593,56 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	} // for (all nodes in <regExps><possibleStops>)
     } // <regExps><possibleStops> isn't null
 
+    //     <regExps><departureGroupTitles>
+    //		<regExp>...</regExp>
+    // 	<infos> <info>...</info>... </infos>
+    //     </departureGroupTitles>
+    QString regExpDepartureGroupTitles;
+    QList<TimetableInformation> infosDepartureGroupTitles;
+    childNode = node.firstChildElement("departureGroupTitles");
+    if ( !childNode.isNull() ) {
+	// TODO: Test
+	subChildNode = childNode.firstChildElement("regExp");
+	if ( subChildNode.isNull() ) {
+	    qDebug() << "TimetableAccessor::getSpecificAccessor"
+		<< "Warning: No child tag <regExp> found in the <departureGroupTitles> tag in the <regExps> tag in service provider information XML named"
+		<< serviceProvider;
+	    goto DepartureGroupTitlesTagNotComplete;
+	}
+	else if ( subChildNode.firstChild().isCDATASection() )
+	    regExpDepartureGroupTitles = subSubChildNode.firstChild().toCDATASection().data();
+	else {
+	    qDebug() << "TimetableAccessor::getSpecificAccessor"
+		<< "Warning: No CData section found in <regExp> in the <departureGroupTitles> tag in the <regExps> tag in service provider information XML named"
+		<< serviceProvider;
+	    goto DepartureGroupTitlesTagNotComplete;
+	}
+
+	subChildNode = childNode.firstChildElement("infos");
+	if ( subChildNode.isNull() ) {
+	    qDebug() << "TimetableAccessor::getSpecificAccessor"
+		<< "Warning: No child tag <infos> found in the <departureGroupTitles> tag in the <regExps> tag in service provider information XML named"
+		<< serviceProvider;
+	    regExpDepartureGroupTitles = "";
+	    goto DepartureGroupTitlesTagNotComplete;
+	}
+	subNodeList = subChildNode.childNodes();
+	for ( uint i = 0; i < subNodeList.length(); ++i ) {
+	    if ( subNodeList.at(i).isComment() )
+		continue;
+	    if ( subNodeList.at(i).toElement().tagName() != "info" ) {
+		qDebug() << "TimetableAccessor::getSpecificAccessor"
+		    << "Warning: Invalid child tag (not <info>) found in the <infos> tag int the <departureGroupTitles> tag in the <regExps> tag in service provider information XML named"
+		    << serviceProvider << "The name of the invalid tag is" << subNodeList.at(i).toElement().tagName();
+		continue;
+	    }
+	    if ( !subNodeList.at(i).toElement().text().isEmpty() )
+		infosDepartureGroupTitles << timetableInformationFromString( subNodeList.at(i).toElement().text() );
+	}
+    }
+DepartureGroupTitlesTagNotComplete:
+
+
     TimetableAccessorInfo accessorInfos( name, shortUrl, author, email, version, serviceProvider, type );
     accessorInfos.setFileName( fileName );
     accessorInfos.setCountry( country );
@@ -585,7 +658,10 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     accessorInfos.setStopSuggestionsRawUrl( rawUrlStopSuggestions );
     accessorInfos.setCharsetForUrlEncoding( charsetForUrlEncoding.toAscii() );
     accessorInfos.setJourneyRawUrl( rawUrlJourneys );
-    accessorInfos.setRegExpDepartures( regExpDepartures, infosDepartures, regExpDeparturesPre, infoPreKey, infoPreValue ); // TODO: regExpSearchPre
+    accessorInfos.setRegExpDepartures( regExpDepartures, infosDepartures,
+			    regExpDeparturesPre, infoPreKey, infoPreValue );
+    if ( !regExpDepartureGroupTitles.isEmpty() )
+	accessorInfos.setRegExpDepartureGroupTitles( regExpDepartureGroupTitles, infosDepartureGroupTitles );
     if ( !regExpJourneys.isEmpty() )
 	accessorInfos.setRegExpJourneys( regExpJourneys, infosJourneys );
     for ( int i = 0; i < regExpListJourneyNews.length(); ++i ) {
@@ -653,7 +729,8 @@ VehicleType TimetableAccessor::vehicleTypeFromString( QString sVehicleType ) {
 	return Unknown;
 }
 
-TimetableInformation TimetableAccessor::timetableInformationFromString( const QString& sTimetableInformation ) {
+TimetableInformation TimetableAccessor::timetableInformationFromString(
+			const QString& sTimetableInformation ) {
     if ( sTimetableInformation == "Nothing" )
 	return Nothing;
     else if ( sTimetableInformation == "DepartureDate" )
@@ -792,19 +869,23 @@ void TimetableAccessor::finished(KJob* job) {
     // TODO: less confusing?
 //     qDebug() << "usedDifferentUrl" << usedDifferentUrl;
     if ( !usedDifferentUrl ) {
-	if ( (dataList = new QList<PublicTransportInfo*>()) != NULL && parseDocument(dataList, parseDocumentMode) ) {
+	if ( (dataList = new QList<PublicTransportInfo*>()) != NULL
+		    && parseDocument(dataList, parseDocumentMode) ) {
 	    if ( parseDocumentMode == ParseForDeparturesArrivals ) {
-		qDebug() << "TimetableAccessor::finished" << "emit departureListReceived" << sourceName;
+		qDebug() << "TimetableAccessor::finished"
+			 << "emit departureListReceived" << sourceName;
 		QList<DepartureInfo*>* departures = new QList<DepartureInfo*>();
 		foreach( PublicTransportInfo *info, *dataList )
 		    departures->append( (DepartureInfo*)info );
-		emit departureListReceived( this, *departures, serviceProvider(), sourceName, city, stop, dataType, parseDocumentMode );
+		emit departureListReceived( this, *departures, serviceProvider(),
+					    sourceName, city, stop, dataType, parseDocumentMode );
 	    } else if ( parseDocumentMode == ParseForJourneys ) {
 // 		qDebug() << "TimetableAccessor::finished" << "emit journeyListReceived";
 		QList<JourneyInfo*>* journeys = new QList<JourneyInfo*>();
 		foreach( PublicTransportInfo *info, *dataList )
 		    journeys->append( (JourneyInfo*)info );
-		emit journeyListReceived( this, *journeys, serviceProvider(), sourceName, city, stop, dataType, parseDocumentMode );
+		emit journeyListReceived( this, *journeys, serviceProvider(),
+					  sourceName, city, stop, dataType, parseDocumentMode );
 	    }
 	} else if ( hasSpecialUrlForStopSuggestions() ) {
 // 	    qDebug() << "request possible stop list";
@@ -926,7 +1007,8 @@ QString TimetableAccessor::toPercentEncoding ( QString str, QByteArray charset )
     return encoded;
 }
 
-bool TimetableAccessor::parseDocument( QList<PublicTransportInfo*> *journeys, ParseDocumentMode parseDocumentMode ) {
+bool TimetableAccessor::parseDocument( QList<PublicTransportInfo*> *journeys,
+				       ParseDocumentMode parseDocumentMode ) {
     Q_UNUSED( journeys );
     Q_UNUSED( parseDocumentMode );
     return false;

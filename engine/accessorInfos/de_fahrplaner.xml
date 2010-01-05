@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo>
+<xml_file_version type="publictransport" version="1.0" />
+<name>Lower Saxony, Bremen (fahrplaner.de)</name>
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<version>1.0</version>
+<type>HTML</type>
+<country>Germany</country>
+<cities>
+    <city>Bremen</city> <city>Bremerhaven</city> <city>Hannover</city> <city>Braunschweig</city> <city>Emden</city>
+</cities>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>This service provider works for cities in 'Lower Saxony, Bremen' in Germany and also for many other cities in Germany. These other cities only include trains.</description>
+
+<url>http://www.fahrplaner.de/</url>
+<shortUrl>fahrplaner.de</shortUrl>
+
+<rawUrls>
+    <departures><![CDATA[http://www.fahrplaner.de/hafas/stboard.exe/dn?ld=web&L=vbn&input={stop}&boardType={dataType}&time={time}&showResultPopup=popup&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>
+</rawUrls>
+
+<regExps>
+    <departures>
+	<regExp><![CDATA[(?:<td class="nowrap">\s*<span style="[^"]*">\s*)(Str|Bus|RE|IC|ICE|RB|)(?:\s*)([^<]*)(?:\s*</span>\s*</td>\s*<td class="nowrap">\s*<span style="[^"]*">\s*)([^<]*)(?:\s*(?:<br />\s*<img .+ />&nbsp;\s*<span class="him">\s*<span class="bold">.*</span>.*</span>\s*)?</span>\s*</td>\s*<td>\s*<span style="[^"]*">&nbsp;)([0-9]{2})(?::)([0-9]{2})(?:&nbsp;</span></td>\s*</tr>)]]></regExp>
+	<infos>
+	    <info>TypeOfVehicle</info> <info>TransportLine</info> <info>Target</info> <info>DepartureHour</info> <info>DepartureMinute</info>
+	</infos>
+    </departures>
+
+    <possibleStops>
+	<item>
+	    <regExpRange><![CDATA[(?:<th>Haltestelle:</th>\s*<td>\s*<select name="[^"]*">\s*)(.*)(?:\s*</select>)]]></regExpRange>
+	    <regExp><![CDATA[(?:<option value="[^"]+#)([0-9]+)(?:">)([^<]*)(?:</option>)]]></regExp>
+	    <infos><info>StopID</info> <info>StopName</info></infos>
+	</item>
+    </possibleStops>
+</regExps>
+</accessorInfo>

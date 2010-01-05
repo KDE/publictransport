@@ -8,14 +8,18 @@ add_definitions (${QT_DEFINITIONS} ${KDE4_DEFINITIONS})
 include_directories(
    ${CMAKE_SOURCE_DIR}
    ${CMAKE_BINARY_DIR}
-   ${KDE4_INCLUDES}
-   )
+   ${KDE4_INCLUDES} )
 
-#add_subdirectory(accessorInfos)
+add_subdirectory(accessorInfos)
 
 # We add our source code here
-set(publictransport_engine_SRCS publictransportdataengine.cpp departureinfo.cpp
-    timetableaccessor.cpp timetableaccessor_html.cpp timetableaccessor_htmlinfo.cpp timetableaccessor_xml.cpp )
+set( publictransport_engine_SRCS 
+    publictransportdataengine.cpp 
+    departureinfo.cpp
+    timetableaccessor.cpp 
+    timetableaccessor_html.cpp 
+    timetableaccessor_htmlinfo.cpp 
+    timetableaccessor_xml.cpp )
 
 # Now make sure all files get to the right place
 kde4_add_plugin(plasma_engine_publictransport ${publictransport_engine_SRCS})

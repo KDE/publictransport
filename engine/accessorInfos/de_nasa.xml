@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo>
+<xml_file_version type="publictransport" version="1.0" />
+<name>Saxony-Anhalt (nasa.de)</name>
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<version>1.0</version>
+<type>HTML</type>
+<country>Germany</country>
+<cities>
+    <city>Leipzig</city> <city>Halle</city> <city>Magdeburg</city> <city>Dessau</city> <city>Wernigerode</city> <city>Halberstadt</city> <city>Sangerhausen</city> <city>Merseburg</city> <city>Weissenfels</city> <city>Zeitz</city> <city>Altenburg</city> <city>Delitzsch</city> <city>Wolfen</city> <city>Aschersleben</city> <city>Köthen (Anhalt)</city> <city>Wittenberg</city> <city>Schönebeck (Elbe)</city> <city>Stendal</city>
+</cities>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>Provides departure information for 'Saxony-Anhalt' in Germany.</description>
+
+<url>http://www.nasa.de/</url>
+<shortUrl>nasa.de</shortUrl>
+
+<rawUrls>
+    <departures><![CDATA[http://www.nasa.de/delfi52/stboard.exe/dn?ld=web&L=vbn&input={stop}&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>
+</rawUrls>
+
+<regExps>
+    <departures>
+	<regExp><![CDATA[(?:<tr class=[^>]*>\s*<td class=[^>]*>)([0-9]{2})(?::)([0-9]{2})(?:</td>\s*<td class=[^>]*>\s*<a href="/delfi52/[^"]*"><img src="/img52/)([^_]*)(?:_pic.\w{3,4}"[^>]*>\s*)([^<]*)(?:\s*</a>\s*</td>\s*<td class=[^>]*>\s*<span class=[^>]*>\s*<a href=[^>]*>\s*)([^<]*)(?:\s*</a>\s*</span>\s*<br />\s*<a href=[^>]*>.*</a>.*</td>\s*)(?:<td class=[^>]*>\s*([^<]*)\s*<br />[^<]*</td>\s*)?(?:.*</tr>)]]></regExp>
+	<infos>
+	    <info>DepartureHour</info> <info>DepartureMinute</info> <info>TypeOfVehicle</info> <info>TransportLine</info> <info>Target</info> <info>Platform</info>
+	</infos>
+    </departures>
+
+    <possibleStops>
+	<item>
+	    <regExpRange><![CDATA[(?:<select class="error" name="input">\s*)(.*)(?:\s*</select>)]]></regExpRange>
+	    <regExp><![CDATA[(?:<option value="[^"]+#)([0-9]+)(?:">)([^<]*)(?:</option>)]]></regExp>
+	    <infos><info>StopID</info> <info>StopName</info></infos>
+	</item>
+    </possibleStops>
+</regExps>
+</accessorInfo>

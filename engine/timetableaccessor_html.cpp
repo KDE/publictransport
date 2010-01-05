@@ -20,7 +20,6 @@
 #include "timetableaccessor_html.h"
 #include <QRegExp>
 #include <QDebug>
-// #include "timetableaccessor_html_infos.h"
 #include <qtextcodec.h>
 #include <QMimeData>
 #include <qmath.h>
@@ -73,14 +72,16 @@ QString TimetableAccessorHtml::decodeHtml ( QByteArray document ) {
     return sDocument;
 }
 
-bool TimetableAccessorHtml::parseDocument( QList<PublicTransportInfo*> *journeys, ParseDocumentMode parseDocumentMode ) {
+bool TimetableAccessorHtml::parseDocument( QList<PublicTransportInfo*> *journeys,
+					   ParseDocumentMode parseDocumentMode ) {
     QString document = decodeHtml( m_document );
 
     // Performance(?): Cut everything before "<body>" from the document
     document = document.mid( document.indexOf("<body>", 0, Qt::CaseInsensitive) );
 
     // Preparse the document if there is a regexp to do so.
-    // This preparsing gets a QHash from one DepartureInformation to another to get values from this QHash when parsing the document
+    // This preparsing gets a QHash from one DepartureInformation to another
+    // to get missing values from this QHash when parsing the document.
     bool hasPreData = false;
     TimetableInformation keyInfo = Nothing, valueInfo = Nothing;
     if ( m_info.searchDeparturesPre() && (hasPreData = parseDocumentPre( document )) ) {
@@ -90,14 +91,49 @@ bool TimetableAccessorHtml::parseDocument( QList<PublicTransportInfo*> *journeys
 	valueInfo = infos[1];
     }
 
+    // Split document at titles if a departure group titles regexp is defined
+    QStringList documentParts;
+    QList< QHash< TimetableInformation, QString > > listDocumentPartInfos;
+    if ( m_info.searchDepartureGroupTitles() ) {
+	TimetableRegExpSearch *searchDepartureGroupTitles = m_info.searchDepartureGroupTitles();
+	QRegExp rxTitles = searchDepartureGroupTitles->regExp();
+	QList< TimetableInformation > infosDepartureGroupTitles = searchDepartureGroupTitles->infos();
+
+	int lastPosTitles = -1, posTitles = 0;
+	while ( (posTitles = rxTitles.indexIn(document, posTitles)) != -1 ) {
+	    int len = rxTitles.matchedLength();
+	    if ( lastPosTitles != -1 ) {
+		documentParts << document.mid( lastPosTitles, posTitles - lastPosTitles );
+	    }
+
+	    int i = 0;
+	    QHash< TimetableInformation, QString > hash;
+	    foreach ( TimetableInformation info, infosDepartureGroupTitles ) {
+		hash.insert( info, rxTitles.cap(i++) );
+	    }
+	    listDocumentPartInfos.append( hash );
+
+	    posTitles += len;
+	    lastPosTitles = posTitles;
+	}
+
+	// Add last document part or the whole document if no titles were found
+	if ( lastPosTitles != -1 )
+	    documentParts << document;
+	else
+	    documentParts << document.mid( lastPosTitles );
+    } else
+	documentParts << document; // No regexp for departure group titles, so only one document part
+
     qDebug() << "TimetableAccessorHtml::parseDocument" << "Parsing..." << (parseDocumentMode == ParseForJourneys ? "searching for journeys" : "searching for departures / arrivals");
 
     const QRegExp rx = parseDocumentMode == ParseForDeparturesArrivals
 			    ? m_info.searchDepartures().regExp() : m_info.searchJourneys().regExp();
     QList<TimetableInformation> infos = parseDocumentMode == ParseForDeparturesArrivals
 			    ? m_info.searchDepartures().infos() : m_info.searchJourneys().infos();
-    int pos = 0, count = 0;
-    QList<TimetableInformation> infosToGet = QList<TimetableInformation>() << DepartureDate << DepartureHour << DepartureMinute << TypeOfVehicle << TransportLine << Target << Platform << Delay << DelayReason << JourneyNews << JourneyNewsOther << JourneyNewsLink << NoMatchOnSchedule << StopName << StopID << DepartureHourPrognosis<< DepartureMinutePrognosis << Duration << StartStopName<< StartStopID << TargetStopName << TargetStopID << ArrivalDate << ArrivalHour<< ArrivalMinute<< Changes<< TypesOfVehicleInJourney << Pricing << Operator << DepartureAMorPM << DepartureAMorPMPrognosis << ArrivalAMorPM << Status;
+
+    // TODO: member variable?
+    static QList<TimetableInformation> infosToGet = QList<TimetableInformation>() << DepartureDate << DepartureHour << DepartureMinute << TypeOfVehicle << TransportLine << Target << Platform << Delay << DelayReason << JourneyNews << JourneyNewsOther << JourneyNewsLink << NoMatchOnSchedule << StopName << StopID << DepartureHourPrognosis<< DepartureMinutePrognosis << Duration << StartStopName<< StartStopID << TargetStopName << TargetStopID << ArrivalDate << ArrivalHour<< ArrivalMinute<< Changes<< TypesOfVehicleInJourney << Pricing << Operator << DepartureAMorPM << DepartureAMorPMPrognosis << ArrivalAMorPM << Status;
 
     // TODO (performance): fill calculateMissingValues in TimetableAccessorInfo and store there
     QList<CalculateMissingValue> calculateMissingValues;
@@ -128,102 +164,120 @@ bool TimetableAccessorHtml::parseDocument( QList<PublicTransportInfo*> *journeys
     }
 
     // Process each match of the regular expression
-    while ( (pos = rx.indexIn(document, pos)) != -1 )
-    {
-	QHash< TimetableInformation, QVariant > data;
-	data.insert( Delay, "-1" );
-	foreach ( TimetableInformation info, infosToGet ) {
-	    if ( infos.contains(info) )
-		postProcessMatchedData( info, rx.cap( infos.indexOf( info ) + 1 ).trimmed(), &data );
-	}
-
-	// Get missing data from preparsed matches
-	if ( hasPreData && data.contains(keyInfo) &&
-	    (!data.contains(valueInfo) || (valueInfo == TypeOfVehicle && data[valueInfo] == Unknown)) ) {
-	    qDebug() << "TimetableAccessorHtml::parseDocument" << "Get missing data from preparsed matches"<<m_preData->value( data[keyInfo].toString() );
-	    postProcessMatchedData( valueInfo, m_preData->value( data[keyInfo].toString() ), &data );
-	}
-
-	foreach( CalculateMissingValue calculation, calculateMissingValues ) {
-	    QTime time;
-	    switch( calculation ) {
-		case CalculateDelayFromDepartureAndPrognosis:
-		    qDebug() << "Calculating delay" << data[DepartureHourPrognosis] << data[DepartureMinutePrognosis];
-
-		    data[Delay] = qFloor( (float)QTime(data[DepartureHour].toInt(), data[DepartureMinute].toInt()).secsTo( QTime(data[DepartureHourPrognosis].toInt(), data[DepartureMinutePrognosis].toInt()) ) / 60.0f );
-		    break;
-		case CalculateDepartureDate:
-		    data.insert( DepartureDate, QDate::currentDate() ); // TODO: guess date if it's not parsed, not only currentDate
-		    break;
-		case CalculateArrivalDateFromDepartureDate:
-		    data.insert( ArrivalDate, data[DepartureDate] );
-		    break;
-		case CalculateDurationFromDepartureAndArrival:
-		    data.insert( Duration, qFloor( (float)QTime(data[DepartureHour].toInt(), data[DepartureMinute].toInt()).secsTo( QTime(data[ArrivalHour].toInt(), data[ArrivalMinute].toInt()) ) / 60.0f ) );
-		    break;
-		case CalculateArrivalFromDepartureAndDuration:
-		    time = QTime( data[DepartureHour].toInt(), data[DepartureMinute].toInt() ).addSecs( data[Duration].toInt() * 60 );
-		    data.insert( ArrivalHour, time.hour() );
-		    data.insert( ArrivalMinute, time.minute() );
-		    break;
-		case CalculateDepartureFromArrivalAndDuration:
-		    time = QTime( data[ArrivalHour].toInt(), data[ArrivalMinute].toInt() ).addSecs( -data[Duration].toInt() * 60 );
-		    data.insert( DepartureHour, time.hour() );
-		    data.insert( DepartureMinute, time.minute() );
-		    break;
+    int count = 0, currentPart = 0;
+    foreach ( QString documentPart, documentParts ) {
+	int pos = 0;
+	QHash< TimetableInformation, QString > documentPartInfos;
+	if ( listDocumentPartInfos.count() > currentPart )
+	    documentPartInfos = listDocumentPartInfos.at( currentPart++ );
+	while ( (pos = rx.indexIn(documentPart, pos)) != -1 ) {
+	    QHash< TimetableInformation, QVariant > data;
+	    data.insert( Delay, "-1" );
+	    foreach ( TimetableInformation info, infosToGet ) {
+		if ( infos.contains(info) )
+		    postProcessMatchedData( info, rx.cap( infos.indexOf( info ) + 1 ).trimmed(), &data );
 	    }
-	}
 
-	if ( parseDocumentMode == ParseForJourneys ) {
-	    if ( !data.contains( StartStopName ) )
-		data.insert( StartStopName, "" );
-	    if ( !data.contains( TargetStopName ) )
-		data.insert( TargetStopName, "" );
-	    if ( data.contains(DepartureDate) ) {
-		if ( !data.contains(ArrivalDate) )
-		    data.insert( ArrivalDate, data[DepartureDate] );
-		else if ( data[ArrivalDate].toString().isEmpty() )
-		    data[ArrivalDate] = data[DepartureDate];
+	    // Get missing data from preparsed matches
+	    if ( hasPreData && data.contains(keyInfo) &&
+		(!data.contains(valueInfo) || (valueInfo == TypeOfVehicle && data[valueInfo] == Unknown)) ) {
+		qDebug() << "TimetableAccessorHtml::parseDocument" << "Get missing data from preparsed matches"
+		    << m_preData->value( data[keyInfo].toString() );
+		postProcessMatchedData( valueInfo, m_preData->value( data[keyInfo].toString() ), &data );
 	    }
-	}
 
-	if ( data.contains(JourneyNewsLink) && !data.contains(JourneyNewsOther) )
-	    data[JourneyNewsOther] = data[JourneyNewsLink];
+	    // Get missing data from departure group titles
+	    if ( !documentPartInfos.isEmpty() ) {
+		foreach ( TimetableInformation info, documentPartInfos.keys() ) {
+		    if ( !data.contains(info) || (info == TypeOfVehicle && data[info] == Unknown) ) {
+			qDebug() << "TimetableAccessorHtml::parseDocument" << "Get missing data from departure group titles"
+			    << documentPartInfos.value(info);
+			postProcessMatchedData( info, documentPartInfos.value(info), &data );
+		    }
+		}
+	    }
 
-	if ( !data.contains(TypeOfVehicle) && m_info.defaultVehicleType() != Unknown ) {
-	    qDebug() << "TimetableAccessorHtml::parseDocument" << "Setting vehicle type to default" << m_info.defaultVehicleType();
-	    data[TypeOfVehicle] = m_info.defaultVehicleType();
-	}
+	    foreach( CalculateMissingValue calculation, calculateMissingValues ) {
+		QTime time;
+		switch( calculation ) {
+		    case CalculateDelayFromDepartureAndPrognosis:
+			qDebug() << "Calculating delay" << data[DepartureHourPrognosis] << data[DepartureMinutePrognosis];
 
-// 	qDebug() << " Info =" << data[TransportLine] << data[Direction] << QString("%1:%2").arg( data[DepartureHour] ).arg( data[DepartureMinute] ) << data[Platform] <<  data[Delay].toInt() << data[DelayReason];
+			data[Delay] = qFloor( (float)QTime(data[DepartureHour].toInt(), data[DepartureMinute].toInt()).secsTo( QTime(data[DepartureHourPrognosis].toInt(), data[DepartureMinutePrognosis].toInt()) ) / 60.0f );
+			break;
+		    case CalculateDepartureDate:
+			data.insert( DepartureDate, QDate::currentDate() ); // TODO: guess date if it's not parsed, not only currentDate
+			break;
+		    case CalculateArrivalDateFromDepartureDate:
+			data.insert( ArrivalDate, data[DepartureDate] );
+			break;
+		    case CalculateDurationFromDepartureAndArrival:
+			data.insert( Duration, qFloor( (float)QTime(data[DepartureHour].toInt(), data[DepartureMinute].toInt()).secsTo( QTime(data[ArrivalHour].toInt(), data[ArrivalMinute].toInt()) ) / 60.0f ) );
+			break;
+		    case CalculateArrivalFromDepartureAndDuration:
+			time = QTime( data[DepartureHour].toInt(), data[DepartureMinute].toInt() ).addSecs( data[Duration].toInt() * 60 );
+			data.insert( ArrivalHour, time.hour() );
+			data.insert( ArrivalMinute, time.minute() );
+			break;
+		    case CalculateDepartureFromArrivalAndDuration:
+			time = QTime( data[ArrivalHour].toInt(), data[ArrivalMinute].toInt() ).addSecs( -data[Duration].toInt() * 60 );
+			data.insert( DepartureHour, time.hour() );
+			data.insert( DepartureMinute, time.minute() );
+			break;
+		}
+	    }
 
-// TODO Status, AMorPM
-	// Create DepartureInfo item and append it to the journey list
-	if ( parseDocumentMode == ParseForDeparturesArrivals )
-	    journeys->append( new DepartureInfo( data[TransportLine].toString(),
-		static_cast<VehicleType>(data[TypeOfVehicle].toInt()), data[Target].toString(),
-		QTime::currentTime(), QTime(data[DepartureHour].toInt(), data[DepartureMinute].toInt()),
-		data[TransportLine].toString().isEmpty() ? false : data[TransportLine].toString().at(0) == 'N',
-		false, data[Platform].toString(), data[Delay].toInt(), data[DelayReason].toString(), data[JourneyNewsOther].toString(), data[Operator].toString() ) );
-	else /*if ( parseDocumentMode == ParseForJourneys )*/ {
-	    QList<VehicleType> vehicleTypes;
-	    QList<QVariant> variantList = data[TypesOfVehicleInJourney].toList();
-	    foreach ( QVariant vehicleType, variantList )
-		vehicleTypes.append( static_cast<VehicleType>(vehicleType.toInt()) );
+	    if ( parseDocumentMode == ParseForJourneys ) {
+		if ( !data.contains( StartStopName ) )
+		    data.insert( StartStopName, "" );
+		if ( !data.contains( TargetStopName ) )
+		    data.insert( TargetStopName, "" );
+		if ( data.contains(DepartureDate) ) {
+		    if ( !data.contains(ArrivalDate) )
+			data.insert( ArrivalDate, data[DepartureDate] );
+		    else if ( data[ArrivalDate].toString().isEmpty() )
+			data[ArrivalDate] = data[DepartureDate];
+		}
+	    }
 
-// 	    qDebug() << "parsing journey list..." << QTime(data[DepartureHour].toInt(), data[DepartureMinute].toInt()) << QTime(data[ArrivalHour].toInt(), data[ArrivalMinute].toInt()) << "duration =" << data[Duration] << /*"pricing =" << data[Pricing] <<*/ "StartStopName =" << data[StartStopName] << "TargetStopName =" << data[TargetStopName] << " =" << data[TypesOfVehicleInJourney];
+	    if ( data.contains(JourneyNewsLink) && !data.contains(JourneyNewsOther) )
+		data[JourneyNewsOther] = data[JourneyNewsLink];
 
-	    journeys->append( new JourneyInfo( vehicleTypes,
-		data[StartStopName].toString(), data[TargetStopName].toString(),
-		QDateTime( data[DepartureDate].toDate(), QTime(data[DepartureHour].toInt(), data[DepartureMinute].toInt()) ),
-		QDateTime( data[ArrivalDate].toDate(), QTime(data[ArrivalHour].toInt(), data[ArrivalMinute].toInt()) ),
-		data[Duration].toInt(), data[Changes].toInt(), data[Pricing].toString(),
-		data[JourneyNewsOther].toString(), data[Operator].toString() ) );
-	}
+	    if ( !data.contains(TypeOfVehicle) && m_info.defaultVehicleType() != Unknown ) {
+		qDebug() << "TimetableAccessorHtml::parseDocument" << "Setting vehicle type to default" << m_info.defaultVehicleType();
+		data[TypeOfVehicle] = m_info.defaultVehicleType();
+	    }
 
-        pos += rx.matchedLength();
-	++count;
-    }
+    // 	qDebug() << " Info =" << data[TransportLine] << data[Direction] << QString("%1:%2").arg( data[DepartureHour] ).arg( data[DepartureMinute] ) << data[Platform] <<  data[Delay].toInt() << data[DelayReason];
+
+    // TODO Status, AMorPM
+	    // Create DepartureInfo item and append it to the journey list
+	    if ( parseDocumentMode == ParseForDeparturesArrivals )
+		journeys->append( new DepartureInfo( data[TransportLine].toString(),
+		    static_cast<VehicleType>(data[TypeOfVehicle].toInt()), data[Target].toString(),
+		    QTime::currentTime(), QTime(data[DepartureHour].toInt(), data[DepartureMinute].toInt()),
+		    data[TransportLine].toString().isEmpty() ? false : data[TransportLine].toString().at(0) == 'N',
+		    false, data[Platform].toString(), data[Delay].toInt(), data[DelayReason].toString(), data[JourneyNewsOther].toString(), data[Operator].toString() ) );
+	    else /*if ( parseDocumentMode == ParseForJourneys )*/ {
+		QList<VehicleType> vehicleTypes;
+		QList<QVariant> variantList = data[TypesOfVehicleInJourney].toList();
+		foreach ( QVariant vehicleType, variantList )
+		    vehicleTypes.append( static_cast<VehicleType>(vehicleType.toInt()) );
+
+    // 	    qDebug() << "parsing journey list..." << QTime(data[DepartureHour].toInt(), data[DepartureMinute].toInt()) << QTime(data[ArrivalHour].toInt(), data[ArrivalMinute].toInt()) << "duration =" << data[Duration] << /*"pricing =" << data[Pricing] <<*/ "StartStopName =" << data[StartStopName] << "TargetStopName =" << data[TargetStopName] << " =" << data[TypesOfVehicleInJourney];
+
+		journeys->append( new JourneyInfo( vehicleTypes,
+		    data[StartStopName].toString(), data[TargetStopName].toString(),
+		    QDateTime( data[DepartureDate].toDate(), QTime(data[DepartureHour].toInt(), data[DepartureMinute].toInt()) ),
+		    QDateTime( data[ArrivalDate].toDate(), QTime(data[ArrivalHour].toInt(), data[ArrivalMinute].toInt()) ),
+		    data[Duration].toInt(), data[Changes].toInt(), data[Pricing].toString(),
+		    data[JourneyNewsOther].toString(), data[Operator].toString() ) );
+	    }
+
+	    pos += rx.matchedLength();
+	    ++count;
+	} // while ( (pos = rx.indexIn(documentPart, pos)) != -1 )
+    } // foreach ( QString documentPart, documentParts )
 
     // Delete preparsed data
     if ( m_preData ) {
@@ -326,7 +380,7 @@ void TimetableAccessorHtml::postProcessMatchedData( TimetableInformation info, Q
 	    if ( matchedData.contains( "F&#228;hre" ) )
 		data->insert( TypeOfVehicle, Ferry );
 
-	    data->insert( TransportLine, matchedData );
+	    data->insert( TransportLine, matchedData.trimmed() );
 	    // TODO: strip away from beginning: "S-Bahn"/"RegionalBahn"/"InterCity"/"RegionalExpress"/"InterCityExpress"?
 	    break;
 

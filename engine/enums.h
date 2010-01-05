@@ -88,6 +88,7 @@ enum TimetableInformation {
     DepartureAMorPMPrognosis = 18, /**< Used to match the string "am" or "pm" for the prognosis departure time. */
     ArrivalAMorPM = 19, /**< Used to match the string "am" or "pm" for the arrival time. */
     Status = 20, /**< The current status of the departure / arrival. Currently only used for planes. */
+    DepartureYear = 21, /**< The year of the departure, to be used when the year is seperated from the date. */ // TODO: add to timetableInformationToString()
 
     Duration = 50, /**< The duration of a journey. */
     StartStopName = 51, /**< The name of the starting stop of a journey. */
@@ -128,8 +129,8 @@ enum VehicleType {
     Bus = 2, /**< A bus. */
     Subway = 3, /**< A subway. */
     TrainInterurban = 4, /**< An interurban train. */
-    Metro = 5, /** A metro. */
-    TrolleyBus = 6, /** An electric bus. */
+    Metro = 5, /**< A metro. */
+    TrolleyBus = 6, /**< An electric bus. */
 
     TrainRegional = 10, /**< A regional train. */
     TrainRegionalExpress = 11, /**< A regional express train. */
@@ -137,9 +138,11 @@ enum VehicleType {
     TrainIntercityEurocity = 13, /**< An intercity / eurocity train. */
     TrainIntercityExpress = 14, /**< An intercity express. */
 
-    Ferry = 100, /** A ferry. */
+    Ferry = 100, /**< A ferry. */
 
-    Plane = 200 /** An aeroplane. */
+    Plane = 200, /**< An aeroplane. */
+
+    Spacecraft = 300, /**< A spacecraft. */ // TODO: add to applet!
 };
 
 /** The type of services for a public transport line. */

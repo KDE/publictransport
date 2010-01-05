@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo>
+<xml_file_version type="publictransport" version="1.0" />
+<name>Stuttgart (vvs.de)</name>
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<version>1.0</version>
+<type>HTML</type>
+<country>Germany</country>
+<cities><city>Stuttgart</city></cities>
+<useSeperateCityValue>true</useSeperateCityValue>
+<description>Provides departure information for Stuttgart in Germany.</description>
+
+<url>http://www.vvs.de/</url>
+<shortUrl>vvs.de</shortUrl>
+
+<rawUrls>
+    <departures><![CDATA[http://www2.vvs.de/vvs/XSLT_DM_REQUEST?language=de&type_dm=stop&mode=direct&place_dm={city}&name_dm={stop}&deleteAssignedStops=1]]></departures>
+</rawUrls>
+
+<regExps>
+    <departures>
+	<regExp><![CDATA[(?:<tr><td class="[^"]*" /><td>\s*)([0-9]{2})(?::)([0-9]{2})(?:\s*</td>(?:<td />)?<td class="[^"]*" style="[^"]*"><div style="[^"]*"><img src="[^"]*" alt="[^"]*" title=")([^"]*)(?:" border=[^>]*></div><div style="[^"]*">\s*)([^<]*)(?:\s*</div></td><td>\s*)([^<]*)(?:\s*</td><td>)([^<]*)(?:</td><td>)(?:<span class="hinweis"><p[^>]*><a[^>]*>)?([^<]*)?(?:</a></p></span>)?(?:</td></tr>)]]></regExp>
+	<infos>
+	    <info>DepartureHour</info> <info>DepartureMinute</info> <info>TypeOfVehicle</info> <info>TransportLine</info> <info>Target</info> <info>Platform</info> <info>JourneyNewsOther</info>
+	</infos>
+    </departures>
+</regExps>
+</accessorInfo>

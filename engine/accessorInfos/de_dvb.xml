@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo>
+<xml_file_version type="publictransport" version="1.0" />
+<name>Dresden (dvb.de)</name>
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<version>1.0</version>
+<type>HTML</type>
+<country>Germany</country>
+<cities><city>Dresden</city></cities>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>Provides departure information for Dresden in Germany.</description>
+
+<url>http://www.dvb.de/</url>
+<shortUrl>dvb.de</shortUrl>
+
+<rawUrls>
+    <departures><![CDATA[http://www.dvb.de:80/de/Fahrplan/Abfahrtsmonitor/abfahrten.do/{stop}#result]]></departures>
+</rawUrls>
+
+<regExps>
+    <departures>
+	<regExp><![CDATA[(?:<tr class=".*">\s*<td>\s*)([0-9]{2})(?::)([0-9]{2})(?:\s*.?\s*</td>\s*<td><img src="/images/design/pikto_([^\.]*).\w{3,4}" title="[^"]*" alt=".*" class=".*" /></td>\s*<td>)(\w*\s*[0-9]+)(?:</td>\s*<td>\s*)([^<]*)(?:.*</td>\s*</tr>)]]></regExp>
+	<infos>
+	    <info>DepartureHour</info> <info>DepartureMinute</info> <info>TypeOfVehicle</info> <info>TransportLine</info> <info>Target</info>
+	</infos>
+    </departures>
+</regExps>
+</accessorInfo>

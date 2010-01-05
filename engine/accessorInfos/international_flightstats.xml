@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo>
+<xml_file_version type="publictransport" version="1.0" />
+<name>International Flights (flightstats.com)</name>
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<version>1.0</version>
+<type>HTML</type>
+<country>International</country>
+<useSeperateCityValue>false</useSeperateCityValue>
+<defaultVehicleType>Plane</defaultVehicleType>
+<description>This accessor gets flight departures and arrivals for airports around the world.</description>
+
+<url>http://www.flightstats.com/</url>
+<shortUrl>flightstats.com</shortUrl>
+
+<rawUrls>
+    <departures><![CDATA[http://www.flightstats.com/go/FlightStatus/flightStatusByAirport.do?airport=({stop})&airportQueryDate={date:yyyy-mm-dd}&airportQueryTime=-1&airlineToFilter=&airportQueryType=0]]></departures>
+
+    <stopSuggestions><![CDATA[http://www.flightstats.com/go/Suggest/airportSuggestProcessSecure.do?searchSubstring={stop}]]></stopSuggestions>
+</rawUrls>
+
+<regExps>
+    <departures>
+	<regExp><![CDATA[(?:<tr>\s*<td><a[^>]*>[^<]*</a>([^<]*)</td>\s*<td nowrap>\s*<a[^>]*>([^<]*)</a>\s*(?:<a style="[^"]*" alt="Flight Notes[^"]*" title="[^"]*" href="([^"]*)"><span[^>]*>[^<]*</span></a>\s*|<span class="codeshareIndicator">\^</span>\s*)?</td>\s*<td>(?:<a[^>]*><div class="starRating[^"]*"[^>]*></div></a>\s*)?</td>\s*<td>([^<]*)</td>\s*<td nowrap>\s*([0-9]{1,2}):([0-9]{2}) (PM|AM)\s*</td>\s*<td[^>]*>\s*(?:([0-9]{1,2}):([0-9]{2}) (PM|AM)\s*(?:~\s*)?)?</td>\s*<td>[^<]*</td>\s*<td nowrap>\s*([^<]*)<br />\s*(?:<span[^>]*>[^<]*</span>\s*(On-time)?(?:([0-9]+)\s*min)?\s*)?[^<]</td>\s*<td>\s*[^<]*\s*</td>\s*<td[^>]*>\s*(?:<a[^>]*><img[^>]*></a>\s*<a[^>]*><img[^>]*></a>\s*)?</td>\s*</tr>)]]></regExp>
+	<infos>
+	    <info>Target</info> <info>FlightNumber</info> <info>JourneyNewsLink</info> <info>Operator</info> <info>DepartureHour</info> <info>DepartureMinute</info> <info>DepartureAMorPM</info> <info>DepartureHourPrognosis</info> <info>DepartureMinutePrognosis</info> <info>DepartureAMorPMPrognosis</info> <info>Status</info> <info>NoMatchOnSchedule</info> <info>Delay</info>
+
+<!-- 	    <info>TypeOfVehicle</info> -->
+	</infos>
+    </departures>
+
+    <possibleStops>
+	<item>
+	    <regExpRange><![CDATA[(?:<results>)(.*)(?:</results>)]]></regExpRange>
+	    <regExp><![CDATA[(?:<airport code="([^"]*)" name="([^"]*)"([^>]*)>)]]></regExp>
+	    <infos><info>StopID</info> <info>StopName</info></infos>
+	</item>
+    </possibleStops>
+</regExps>
+</accessorInfo>

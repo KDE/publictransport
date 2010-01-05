@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo>
+<xml_file_version type="publictransport" version="1.0" />
+<name>Rhine-Main (rmv.de)</name>
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<version>1.0</version>
+<type>XML</type>
+<country>Germany</country>
+<cities>
+    <city>Frankfurt (Main)</city> <city>Langen (Hessen)</city> <city>Köln</city> <city>Mainz</city>
+<!--  TODO: add more cities   -->
+</cities>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>Provides departure information for 'Rhine-Main' in Germany. It uses an XML source for departure information and HTML for stop autocompletion.</description>
+
+<url>http://www.rmv.de/</url>
+<shortUrl>rmv.de</shortUrl>
+
+<rawUrls>
+    <departures><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxDeps}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=xml&start=yes]]></departures>
+
+    <stopSuggestions><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxDeps}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=html&start=yes]]></stopSuggestions>
+</rawUrls>
+
+<regExps>
+    <possibleStops>
+	<item>
+	    <regExpRange><![CDATA[(?:<td class="result" nowrap>\s*<img[^>]*>\s*<select name="input">\s*)(.*)(?:\s*</select>\s*</td>)]]></regExpRange>
+	    <regExp><![CDATA[(?:<option value="[^"]+#)([0-9]+)(?:">)([^<]*)(?:</option>)]]></regExp>
+	    <infos><info>StopID</info> <info>StopName</info></infos>
+	</item>
+    </possibleStops>
+</regExps>
+</accessorInfo>

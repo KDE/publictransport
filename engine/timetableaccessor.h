@@ -195,9 +195,9 @@ class TimetableAccessor : public QObject
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source for which the stops have been
 	* downloaded and parsed.
-	* @param city The city the (ambigous) stop is in. May be empty if the service provider
+	* @param city The city the (ambiguous) stop is in. May be empty if the service provider
 	* doesn't need a seperate city value.
-	* @param stop The (ambigous) stop name for which the stop list has been received.
+	* @param stop The (ambiguous) stop name for which the stop list has been received.
 	* @param dataType "stopList".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */

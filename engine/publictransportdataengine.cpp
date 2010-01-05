@@ -17,11 +17,15 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Qt includes
 #include <QtXml>
+#include <QFileSystemWatcher>
 
+// KDE includes
 #include <Plasma/DataContainer>
 #include <KStandardDirs>
 
+// Own includes
 #include "publictransportdataengine.h"
 
 
@@ -34,6 +38,7 @@ PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList
 
     m_lastJourneyCount = 0;
     m_lastStopNameCount = 0;
+    m_fileSystemWatcher = NULL;
 
     // This prevents applets from setting an unnecessarily high update interval
     // and using too much CPU.
@@ -43,7 +48,7 @@ PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList
     // Add service provider source, so when using
     // dataEngine("publictransport").sources() in an applet it at least returns this
     setData( I18N_NOOP("ServiceProviders"), DataEngine::Data() );
-    setData( I18N_NOOP("ErroneousServiceProviders"), DataEngine::Data() );
+    setData( I18N_NOOP("ErrornousServiceProviders"), DataEngine::Data() );
     setData( I18N_NOOP("Locations"), DataEngine::Data() );
 }
 
@@ -130,6 +135,12 @@ bool PublicTransportEngine::updateServiceProviderSource( const QString &name ) {
 	// 	    qDebug() << "PublicTransportEngine::updateSourceEvent" << "Data source" << name << "is up to date";
 	dataSource = m_dataSources[name].toHash();
     } else {
+	QStringList dirList = KGlobal::dirs()->findDirs( "data", "plasma_engine_publictransport/accessorInfos" );
+	if ( m_fileSystemWatcher == NULL )
+	    m_fileSystemWatcher = new QFileSystemWatcher( dirList );
+	connect( m_fileSystemWatcher, SIGNAL(directoryChanged(QString)),
+	    this, SLOT(accessorInfoDirChanged(QString)) );
+
 	QStringList fileNames = KGlobal::dirs()->findAllResources( "data", "plasma_engine_publictransport/accessorInfos/*.xml" );
 	if ( fileNames.isEmpty() ) {
 	    qDebug() << "PublicTransportEngine::updateSourceEvent"
@@ -285,16 +296,20 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 
 	if ( newlyCreated ) {
 	    // 		if ( parseDocumentMode == ParseForDeparturesArrivals ) {
-	    connect( accessor, SIGNAL(departureListReceived(TimetableAccessor*,QList<DepartureInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
-		this, SLOT(departureListReceived(TimetableAccessor*,QList<DepartureInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
+	    connect( accessor,
+		     SIGNAL(departureListReceived(TimetableAccessor*,QList<DepartureInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
+		     this, SLOT(departureListReceived(TimetableAccessor*,QList<DepartureInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
 	    // 		} else { // if ( parseDocumentMode == ParseForJourneys )
-	    connect( accessor, SIGNAL(journeyListReceived(TimetableAccessor*,QList<JourneyInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
-		this, SLOT(journeyListReceived(TimetableAccessor*,QList<JourneyInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
+	    connect( accessor,
+		     SIGNAL(journeyListReceived(TimetableAccessor*,QList<JourneyInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
+		     this, SLOT(journeyListReceived(TimetableAccessor*,QList<JourneyInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
 	    // 		}
-	    connect( accessor, SIGNAL(stopListReceived(TimetableAccessor*,QHash<QString,QString>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
-		this, SLOT(stopListReceived(TimetableAccessor*,QHash<QString,QString>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
-	    connect( accessor, SIGNAL(errorParsing(TimetableAccessor*,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
-		this, SLOT(errorParsing(TimetableAccessor*,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
+	    connect( accessor,
+		     SIGNAL(stopListReceived(TimetableAccessor*,QHash<QString,QString>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
+		     this, SLOT(stopListReceived(TimetableAccessor*,QHash<QString,QString>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
+	    connect( accessor,
+		     SIGNAL(errorParsing(TimetableAccessor*,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
+		     this, SLOT(errorParsing(TimetableAccessor*,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
 	}
 
 	if ( parseDocumentMode == ParseForDeparturesArrivals )
@@ -306,13 +321,20 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
     return true;
 }
 
+void PublicTransportEngine::accessorInfoDirChanged( QString path ) {
+    qDebug() << "PublicTransportEngine::accessorInfoDirChanged" << path << "was changed";
+    if ( m_dataSources.keys().contains(I18N_NOOP("ServiceProviders")) )
+	m_dataSources.remove(I18N_NOOP("ServiceProviders"));
+    updateServiceProviderSource(I18N_NOOP("ServiceProviders"));
+}
+
 bool PublicTransportEngine::updateSourceEvent( const QString &name ) {
     qDebug() << "PublicTransportEngine::updateSourceEvent" << name;
 
     bool ret = true;
     if ( name == I18N_NOOP("ServiceProviders") )
 	ret = updateServiceProviderSource( name );
-    else if ( name == I18N_NOOP("ErroneousServiceProviders") )
+    else if ( name == I18N_NOOP("ErrornousServiceProviders") )
 	updateErrornousServiceProviderSource( name );
     else if ( name == I18N_NOOP("Locations") )
 	updateLocationSource( name );
@@ -327,14 +349,19 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name ) {
     return ret;
 }
 
-void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor, QList< DepartureInfo* > departures, const QString &serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode ) {
+void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
+		  QList< DepartureInfo* > departures,
+		  const QString &serviceProvider, const QString &sourceName,
+		  const QString &city, const QString &stop,
+		  const QString &dataType, ParseDocumentMode parseDocumentMode ) {
     Q_UNUSED(accessor);
     Q_UNUSED(serviceProvider);
     Q_UNUSED(city);
     Q_UNUSED(stop);
     Q_UNUSED(dataType);
     Q_UNUSED(parseDocumentMode);
-    qDebug() << "PublicTransportEngine::departureListReceived" << departures.count() << "departures / arrivals received";
+    qDebug() << "PublicTransportEngine::departureListReceived"
+	     << departures.count() << "departures / arrivals received";
 
     int i = 0;
     m_dataSources.remove( sourceName );

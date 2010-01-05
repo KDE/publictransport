@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo>
+<xml_file_version type="publictransport" version="1.0" />
+<name>Switzerland (sbb.ch)</name>
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<version>1.0</version>
+<type>HTML</type>
+<!-- <country>ch</country> -->
+<!-- <cities><city></city></cities> -->
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>This service provider works for cities in Switzerland and also for many cities in Europe. Cities in Switzerland include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>
+
+<url>http://fahrplan.sbb.ch/</url>
+<shortUrl>sbb.ch</shortUrl>
+
+<rawUrls>
+    <!--  TODO: "?" after the stop name => force possible stop list -->
+    <!-- 	 "!" after stop name => force no ambiguities -->
+    <departures><![CDATA[http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?input={stop}&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>
+
+    <journeys><![CDATA[http://fahrplan.sbb.ch/bin/query.exe/dn?S={startStop}&Z={targetStop}&time={time}&maxJourneys={maxDeps}&start=yes]]></journeys>
+</rawUrls>
+
+<regExps>
+    <departures>
+	<regExp><![CDATA[(?:<tr[^>]*>\s*<td[^>]*>\s*<span[^>]*>)([0-9]{2})(?::)([0-9]{2})(?:</span>\s*</td>\s*(?:<td[^>]*>.*</td>\s*)?<td[^>]*>\s*<a[^>]*>\s*<img src="[^"]*/products/)([^_]*)(?:_pic\.\w{3,4}"[^>]*>\s*</a>\s*</td>\s*<td[^>]*>\s*<span[^>]*>\s*<a href=[^>]*>\s*)([^<]*)(?:\s*</a>\s*</span>\s*</td>\s*<td[^>]*>\s*<span[^>]*>\s*<a href=[^>]*>)([^<]*)(?:</a></span>\s*<br>.*<span[^>]*>\s*</span>\s*</td>)(?:\s*<td class[^>]*>\s*([^<]*)\s*</td>)?(?:.*\s*</tr>)]]></regExp>
+	<infos>
+	    <info>DepartureHour</info> <info>DepartureMinute</info> <info>TypeOfVehicle</info> <info>TransportLine</info> <info>Target</info> <info>Platform</info>
+	</infos>
+    </departures>
+<!--   <tr class="zebra-row-3"><td class="result" valign="top" align="left"><span class="bold">19:59</span></td>
+<td class="result" valign="top" nowrap>
+<span class="prognosis">
+&nbsp;
+</span>
+</td>
+<td class="result" align="left" valign="top">
+<a href="http://fahrplan.sbb.ch/bin/traininfo.exe/dn/175686/290214/432896/157898/95?date=22.07.09&station_evaId=8506000&station_type=dep">
+<img src="/img/1/products/bus_pic.gif" border="0" width="18" height="18" vspace="2" hspace="1" alt="Bus 14">
+</a>
+</td>
+<td class="result" align="left" valign="top" nowrap>
+<span class="bold">
+<a href="http://fahrplan.sbb.ch/bin/traininfo.exe/dn/175686/290214/432896/157898/95?date=22.07.09&station_evaId=8506000&station_type=dep">
+Bus 14
+</a>
+</span>
+</td>
+<td class="result">
+<span class="bold">
+<a href="http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?input=106457&boardType=dep&time=now&selectDate=today&maxJourneys=105&productsFilter=0&start=yes">Winterthur, Bahnhof Hegi</a></span>
+<br>  ...<a>...</a>...
+<span class="rs">
+</span>
+</td>
+<td class="result" align="left">
+Winterthur, Bahnhof
+</td>
+<td class="result">
+<div style="width:65px;height:15px;line-height:15px;">
+<div style="float:left;width:30px;height:15px;line-height:15px;">
+</div>
+<div style="float:left;width:30px;height:15px;line-height:15px;margin-left:4px;">
+</div>
+</div>
+</td>
+</tr>  -->
+<!-- <tr class="zebra-row-0">
+<td headers="details" class="result" nowrap="nowrap" rowspan="2"><div class="asbutton" style="width: 19px; height: 19px;"><a href="#1" accesskey="1" title="Details - Verbindung 1">1</a></div><input type="checkbox" name="guiVCtrl_connection_detailsOut_select_C0-0" checked value="yes"></td><td headers="location" class="result" nowrap="nowrap"><a href="..."><img[^>]*></a>&nbsp;<a href="...">Lausanne</a></td><td headers="date" class="result" nowrap>Mo, 20.07.09</td>
+<td headers="time" class="result timeLeft">ab</td><td headers="time" class="result timeRight">15:45&nbsp;</td>
+<td headers="time" class="result" valign="bottom" rowspan="2"><span class="hint_realtime">&nbsp;</span></td>
+<td headers="duration" class="result" nowrap rowspan="2" valign="top">14:31</td>
+<td headers="changes" class="result" nowrap rowspan="2" valign="top">3</td>
+<td headers="products" class="result" nowrap="nowrap" rowspan="2" valign="top">ICN, EC, EN, R&nbsp;</td>
+<td headers="capacity" class="result" nowrap="nowrap" rowspan="2" valign="top"><div style="width:65px;height:15px;line-height:15px;"><div style="float:left;width:30px;height:15px;line-height:15px;">
+1. <img src="/img/1/icon_capacity1.gif" alt="Tiefe bis mittlere Belegung erwartet" title="Tiefe bis mittlere Belegung erwartet" style="border:0px;width:14px;height12:px" />
+</div><div style="float:left;width:30px;height:15px;line-height:15px;margin-left:4px;">
+2. <img src="/img/1/icon_capacity2.gif" alt="Hohe Belegung erwartet" title="Hohe Belegung erwartet" style="border:0px;width:14px;height12:px" /></div></div></td></tr>
+<tr class="zebra-row-0"><td headers="location" class="result" nowrap="nowrap"><a href="..."><img[^>]*></a>&nbsp;<a href="...">Wien Praterstern</a></td><td headers="date" class="result" nowrap>
+Di, 21.07.09&nbsp;</td><td headers="time" class="result timeLeft">an</td><td headers="time" class="result timeRight">06:16&nbsp;</td></tr> -->
+    <journeys>
+	<regExp><![CDATA[(?:<tr class=[^>]*>\s*<td headers="details"[^>]*><div[^>]*><a[^>]*>\d*</a>\s*</div><input type="checkbox"[^>]*></td><td headers="location"[^>]*><a href=[^>]*><img[^>]*></a>[^<]*<a href=[^>]*>)([^<]*)(?:</a></td><td headers="date"[^>]*>[^,]*,?\s*)([0-9]{2}\.[0-9]{2}\.[0-9]{2})(?:\s*</td>\s*<td headers="time" [^>]*>[^<]*</td>\s*<td[^>]*>)([0-9]{2})(?::)([0-9]{2})(?:\s*&nbsp;)?(?:\s*</td>\s*<td headers="time"[^>]*><span class=[^>]*>[^<]*</span></td>\s*<td headers="duration"[^>]*>\s*)([0-9]{1,2}:[0-9]{2})(?:\s*</td>\s*<td headers="changes"[^>]*>\s*)([0-9]*)(?:\s*</td>\s*<td headers="products"[^>]*>\s*)([^<]*)(?:&nbsp;)?(?:\s*</td>\s*<td headers="capacity"[^>]*>.*</td>\s*</tr>\s*<tr class=[^>]*>\s*<td headers="location"[^>]*><a href=[^>]*><img src=[^>]*></a>[^<]*<a href=[^>]*>)([^<]*)(?:</a></td><td headers="date"[^>]*>\s*(?:[^,]*,?\s*([0-9]{2}\.[0-9]{2}\.[0-9]{2}))?(?:&nbsp;)?\s*</td>\s*<td headers="time"[^>]*>[^<]*</td>\s*<td headers="time"[^>]*>)([0-9]{2})(?::)([0-9]{2})(?:(?:&nbsp;)?\s*</td>\s*</tr>)]]></regExp>
+<!--
+	<regExp><![CDATA[(?:<tr class=[^>]*>\s*<td headers="details"[^>]*><div[^>]*><a[^>]*>\d*</a>\s*</div><input type="checkbox"[^>]*></td><td headers="location"[^>]*><a href=[^>]*><img[^>]*></a>[^<]*<a href=[^>]*>)([^<]*)(?:</a></td><td headers="date"[^>]*>[^,]*,?\s*)([0-9]{2}\.[0-9]{2}\.[0-9]{2})(?:\s*</td>\s*<td headers="time" [^>]*>[^<]*</td>\s*<td[^>]*>)([0-9]{2})(?::)([0-9]{2})(?:\s*&nbsp;)?(?:\s*</td>\s*<td headers="time"[^>]*><span class=[^>]*>[^<]*</span></td>\s*<td[^>]*>)(?:<a href="[^"]*" title="([^"]*)">\s*<img src=[^>]*>\s*</a>)?(?:[^<]*</td>\s*<td headers="duration"[^>]*>\s*)([0-9]{1,2}:[0-9]{2})(?:\s*</td>\s*<td headers="changes"[^>]*>\s*)([0-9]*)(?:\s*</td>\s*<td headers="products"[^>]*>\s*)([^<]*)(?:&nbsp;)?(?:\s*</td>\s*<td headers="capacity"[^>]*>.*</td>\s*</tr>\s*<tr class=[^>]*>\s*<td headers="location"[^>]*><a href=[^>]*><img src=[^>]*></a>[^<]*<a href=[^>]*>)([^<]*)(?:</a></td><td headers="date"[^>]*>\s*(?:[^,]*,?\s*([0-9]{2}\.[0-9]{2}\.[0-9]{2}))?(?:&nbsp;)?\s*</td>\s*<td headers="time"[^>]*>[^<]*</td>\s*<td headers="time"[^>]*>)([0-9]{2})(?::)([0-9]{2})(?:(?:&nbsp;)?\s*</td>\s*</tr>)]]></regExp> -->
+	<infos>
+	    <info>StartStopName</info> <info>DepartureDate</info> <info>DepartureHour</info> <info>DepartureMinute</info> <!--<info>JourneyNewsOther</info>--> <info>Duration</info> <info>Changes</info> <info>TypesOfVehicleInJourney</info> <info>TargetStopName</info> <info>ArrivalDate</info> <info>ArrivalHour</info> <info>ArrivalMinute</info>
+	</infos>
+    </journeys>
+
+    <possibleStops>
+	<item>
+	    <regExpRange><![CDATA[(?:<td class="[^"]*" nowrap>\s*<select name="input">\s*)(.*)(?:</select>\s*</td>)]]></regExpRange>
+	    <regExp><![CDATA[(?:<option value="[^"]+#)([0-9]+)(?:">)(.*)(?:</option>)]]></regExp>
+	    <infos><info>StopID</info> <info>StopName</info></infos>
+	</item>
+	<item>
+
+	    <!-- Possible stops for targets of journeys -->
+	    <regExpRange><![CDATA[(?:<select name="REQ0JourneyStopsZ0K"[^>]*>)(.*)(?:</select>)]]></regExpRange>
+	    <regExp><![CDATA[(?:<option value="[^"]*">)([^<]*)(?:</option>)]]></regExp>
+	    <infos><info>StopName</info></infos>
+	</item>
+    </possibleStops>
+</regExps>
+</accessorInfo>

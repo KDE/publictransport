@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo>
+<xml_file_version type="publictransport" version="1.0" />
+<name>Slovakia (imhd.sk)</name>
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<version>1.0</version>
+<type>HTML</type>
+<country>Slovakia</country>
+<cities>
+    <city replaceWith="ba">Bratislava</city>
+    <city replaceWith="bb">Banská Bystrica</city>
+    <city replaceWith="ke">Košice</city>
+    <city replaceWith="hc">Hlohovec</city>
+    <city replaceWith="lm">Liptovský Mikuláš</city>
+    <city replaceWith="nr">Nitra</city>
+    <city replaceWith="pn">Piešťany</city>
+    <city replaceWith="pb">Považská Bystrica</city>
+    <city replaceWith="po">Prešov</city>
+    <city replaceWith="pd">Prievidza</city>
+    <city replaceWith="se">Senica</city>
+    <city replaceWith="si">Skalica</city>
+    <city replaceWith="tn">Trenčín</city>
+    <city replaceWith="tt">Trnava</city>
+    <city replaceWith="tatry">Vysoké Tatry</city>
+    <city replaceWith="za">Žilina</city>
+</cities>
+<useSeperateCityValue>true</useSeperateCityValue>
+<onlyUseCitiesInList>true</onlyUseCitiesInList>
+<charsetForUrlEncoding>windows-1250</charsetForUrlEncoding>
+<description>Provides departure information for Bratislava in Slovakia.</description>
+
+<url>http://www.imhd.zoznam.sk/ba/</url>
+<shortUrl>imhd.zoznam.sk</shortUrl>
+
+<rawUrls>
+    <departures><![CDATA[http://www.imhd.zoznam.sk/{city}/index.php?w=212b36213433213aef2f302523ea&lang=en&hladaj={stop}]]></departures>
+</rawUrls>
+
+<regExps>
+    <possibleStops>
+	<item>
+	    <regExpRange><![CDATA[(?:<form.*name="zastavka">\s*<select[^>]*>\s*<option value="[^"]*">[^<]*</option>)(.*)(?:</select>)]]></regExpRange>
+	    <regExp><![CDATA[(?:<option value="[^"]*">)([^<]*)(?:</option>)]]></regExp>
+	    <infos><info>StopName</info></infos>
+	</item>
+    </possibleStops>
+    <departures>
+	<regExp><![CDATA[(?:<tr><td><b>)([0-9]{2})(?:\.)([0-9]{2})(?:</b></td><td><center><b><em>)(N?[0-9]+)(?:</em></b></center></td><td>)(.*)(?:</td></tr>)]]></regExp>
+	<infos>
+	    <info>DepartureHour</info> <info>DepartureMinute</info> <info>TransportLine</info> <info>Target</info>
+	</infos>
+	<regExpPre key="TransportLine" value="TypeOfVehicle"><![CDATA[(?:<tr><td class="[^"]*"><center><b>)([^<]*)(?:</b></center></td><td><center>)([^<]*)(?:</center></td>)]]></repExpPre>
+    </departures>
+</regExps>
+</accessorInfo>

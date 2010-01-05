@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo>
+<xml_file_version type="publictransport" version="1.0" />
+<name>Berlin (bvg.de)</name>
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<version>1.0</version>
+<type>HTML</type>
+<country>Germany</country>
+<cities><city>Berlin</city></cities>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>Provides departure information for Berlin in Germany.</description>
+
+<url>http://www.bvg.de/index.php</url>
+<shortUrl>bvg.de</shortUrl>
+
+<rawUrls>
+    <departures><![CDATA[http://www.fahrinfo-berlin.de/IstAbfahrtzeiten/index;ref=3?input={stop}&submit=Anzeigen]]></departures>
+</rawUrls>
+
+<regExps>
+    <departures>
+	<regExp><![CDATA[(?:<tr class="">\s*<td>\s*)([0-9]{2})(?::)([0-9]{2})(?:\s*</td>\s*<td>\s*<img src="[^"]*" class="ivuTDProductPicture" alt="[^"]*"\s*class="ivuTDProductPicture" />)(\w{1,10})(?:\s*)((\w*\s*)?[0-9]+)(?:\s*</td>\s*<td>\s*<a class="ivuLink"[^>]*>)(.*)(?:</a>\s*</td>\s*<td>\s*<!-- .* -->\s*<a class="ivuLink"[^>]*>[0-9]+</a>\s*</td>\s*</tr>)]]></regExp>
+	<infos>
+	    <info>DepartureHour</info> <info>DepartureMinute</info> <info>TypeOfVehicle</info> <info>TransportLine</info> <info>Target</info>
+	</infos>
+    </departures>
+
+    <possibleStops>
+	<item>
+	    <regExpRange><![CDATA[(?:<select name="[^"]*" size="[^"]*" class="ivuSelectBox">\s*)(.*)(?:\s*</select>)]]></regExpRange>
+	    <regExp><![CDATA[(?:<option value="[^"]*">\s*)([^\s][^<]*[^\s])(?:\s*</option>)]]></regExp>
+	    <infos><info>StopName</info></infos>
+	</item>
+    </possibleStops>
+</regExps>
+</accessorInfo>

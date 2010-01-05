@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo>
+<xml_file_version type="publictransport" version="1.0" />
+<name>Rhine-Neckar (vrn.de)</name>
+<author> <fullname>Martin Gräßlin</fullname> <email>kde@martin-graesslin.com</email> </author>
+<version>1.0</version>
+<type>HTML</type>
+<country>Germany</country>
+<cities>
+    <city>Karlsruhe</city>
+</cities>
+<useSeperateCityValue>true</useSeperateCityValue>
+<description lang="en">Provides departures for the Rhine-Neckar region in germany.</description>
+<description lang="de">Stellt Abfahrten für die Rhein-Neckar-Region in Deutschland bereit.</description>
+
+<url>http://www.vrn.de/</url>
+<shortUrl>vrn.de</shortUrl>
+
+<rawUrls>
+    <departures><![CDATA[http://efa9.vrn.de/vrn/XSLT_DM_REQUEST?language=de&type_dm=stop&mode=direct&place_dm={city}&name_dm={stop}&deleteAssignedStops=1]]></departures>
+</rawUrls>
+
+<regExps>
+    <departures>
+	<regExp><![CDATA[(<td[^>]*>([0-9]{2}):([0-9]{2})</td>.*<td[^>]*"><img src="images/response/(.*)\.[^"]*" alt="[^"]*"></td>.*<td class="[^"]*" nowrap>(.*)</td>.*<td[^>]*>(.*)</td>)]]></regExp>
+	<infos>
+	    <info>Nothing</info> <info>DepartureHour</info> <info>DepartureMinute</info> <info>TypeOfVehicle</info> <info>TransportLine</info> <info>Target</info>
+	</infos>
+    </departures>
+</regExps>
+</accessorInfo>

@@ -102,20 +102,20 @@ class TimetableAccessorInfo
 	QString stopSuggestionsRawUrl() const;
 	/** A description of the service provider. */
 	QString description() const;
-	/** The author of the accessor information to be used by the accessor. */
-	QString author() const;
 	/** The version of the accessor information. */
 	QString version() const;
+	/** The author of the accessor information to be used by the accessor. */
+	QString author() const;
 	/** The email address of the author. */
 	QString email() const;
 	/** The main/home url of the service provider. */
 	QString url() const;
 	/** A short version of the url without protocol or "www"  to be displayed in links. */
 	QString shortUrl() const;
-	/** A raw url that is used to get journeys. */
-	QString journeyRawUrl() const;
 	/** A raw url that is used to get departures. */
 	QString departureRawUrl() const;
+	/** A raw url that is used to get journeys. */
+	QString journeyRawUrl() const;
 
 	/** The service provider this accessor is designed for. */
 	QString serviceProvider() const;
@@ -134,6 +134,11 @@ class TimetableAccessorInfo
 	* by searchDepartures() or searchJourneys().
 	* @return NULL if there is no regular expression defined for preparsing the document.*/
 	TimetableRegExpSearch *searchDeparturesPre() const;
+	/** Gets a pointer to the TimetableRegExpSearch object used to parse the
+	* document for split points, before it gets parsed with the TimetableRegExpSearch object returned
+	* by searchDepartures() or searchJourneys(). TODO: Documentation
+	* @return NULL if there is no regular expression defined for preparsing the document.*/
+	TimetableRegExpSearch *searchDepartureGroupTitles() const;
 	/** Gets a list of regular expression patterns used to search for a substring
 	* in the document which contains a list of possible stops. */
 	QStringList regExpSearchPossibleStopsRanges() const;
@@ -182,7 +187,15 @@ class TimetableAccessorInfo
 	* parsing the document using @p regExpSearch to get missing values.
 	* @param regExpInfoKeyPre TODO: documentation
 	* @param regExpInfoValuePre */
-	void setRegExpDepartures( const QString &regExpSearch, const QList< TimetableInformation > &regExpInfos, const QString &regExpSearchPre = QString(), TimetableInformation regExpInfoKeyPre = Nothing, TimetableInformation regExpInfoValuePre = Nothing );
+	void setRegExpDepartures( const QString &regExpSearch,
+				  const QList< TimetableInformation > &regExpInfos,
+				  const QString &regExpSearchPre = QString(),
+				  TimetableInformation regExpInfoKeyPre = Nothing,
+				  TimetableInformation regExpInfoValuePre = Nothing );
+
+	// TODO: Documentation
+	void setRegExpDepartureGroupTitles( const QString &regExpSearch,
+				    const QList< TimetableInformation > &regExpInfos );
 
 	/** Sets a regular expression for parsing an html document for a list of journeys.
 	* A list of TimetableInformation values is needed to know what's the meaning
@@ -190,7 +203,8 @@ class TimetableAccessorInfo
 	* @param regExpSearch The regular expression used to parse a document for journeys.
 	* @param regExpInfos A list of TimetableInformation values that describe what
 	* each match of the regular expression in @p regExpSearch means. */
-	void setRegExpJourneys( const QString &regExpSearch, const QList< TimetableInformation > &regExpInfos );
+	void setRegExpJourneys( const QString &regExpSearch,
+				const QList< TimetableInformation > &regExpInfos );
 
 	/** Adds a regular expression for parsing an html document for a list of possible stops.
 	* @param regExpRange A regular expression for getting a subset of the html
@@ -224,7 +238,7 @@ class TimetableAccessorInfo
 	void setCityNameToValueReplacementHash( const QHash<QString, QString> &hash );
 
 	/** Sets the name of the XML file that was parsed to get this accessor information object. */
-	void setFileName( const QString &fileName );
+	void setFileName( const QString &fileName );;
 
 	/** Sets the name of this accessor. The name is displayed in the config dialog's
 	* service provider combobox.
@@ -322,6 +336,7 @@ class TimetableAccessorInfo
 	TimetableRegExpSearch m_searchDepartures;
 	TimetableRegExpSearch m_searchJourneys;
 	TimetableRegExpSearch *m_searchDeparturesPre;
+	TimetableRegExpSearch *m_searchDepartureGroupTitles;
 	QStringList m_regExpSearchPossibleStopsRanges;
 	QList<TimetableRegExpSearch> m_searchPossibleStops;
 	QList<TimetableRegExpSearch> m_searchJourneyNews;
