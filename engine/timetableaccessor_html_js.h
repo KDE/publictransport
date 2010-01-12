@@ -18,57 +18,44 @@
  */
 
 /** @file
-* @brief This file contains the base class for all HTML based accessors used by the public transport data engine.
+* @brief This file contains the base class for all HTML based accessors using javascript files for parsing that are used by the public transport data engine.
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#ifndef TIMETABLEACCESSOR_HTML_HEADER
-#define TIMETABLEACCESSOR_HTML_HEADER
+#ifndef TIMETABLEACCESSOR_HTML_JS_HEADER
+#define TIMETABLEACCESSOR_HTML_JS_HEADER
 
 #include "timetableaccessor.h"
 
+#include <QScriptEngine>
 
-/** @class TimetableAccessorHtml
-* @brief The base class for all HTML accessors.
+/** @class TimetableAccessorHtmlJs
+* @brief The base class for all HTML accessors using java script files for parsing.
 */
-class TimetableAccessorHtml : public TimetableAccessor
-{
-    // Because the XML accessor uses TimetableAccessorHtml::parseDocumentPossibleStops().
-    friend class TimetableAccessorXml;
-
+class TimetableAccessorHtmlJs : public TimetableAccessor {
     public:
-	/** Creates a new TimetableAccessorHtml object with the given information.
-	* @param info Information about how to download and parse the documents of a
-	* service provider. TODO
+	/** Creates a new TimetableAccessorHtmlJs object with the given information.
+	* @param info Information about how to download and parse the documents
+	* of a service provider.
 	* @note Can be used if you have a custom TimetableAccessorInfo object.
-	* TimetableAccessorXml uses this to create an HTML accessor for parsing of stop
-	* lists. */
-	TimetableAccessorHtml( TimetableAccessorInfo info = TimetableAccessorInfo() );
-
-	/** Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
-	static QString decodeHtmlEntities( QString html );
-
-	/** Decodes the given HTML document. First it tries QTextCodec::codecForHtml().
-        * If that doesn't work, it parses the document for the charset in a meta-tag. */
-	static QString decodeHtml( QByteArray document );
+	* TimetableAccessorXml uses this to create an HTML accessor for parsing 
+	* of stop lists. */
+	TimetableAccessorHtmlJs( TimetableAccessorInfo info = TimetableAccessorInfo() );
 
     protected:
-	/** Parses the contents of a received document for a list of departures / arrivals
-	* and puts the results into @p journeys.
-	* @param journeys A pointer to a list of departure/arrival or journey informations.
-	* The results of parsing the document is stored in @p journeys.
-	* @param parseDocumentMode The mode of parsing, e.g. parse for departures/arrivals or journeys.
+	/** Parses the contents of a received document for a list of departures 
+	* / arrivals and puts the results into @p journeys.
+	* @param journeys A pointer to a list of departure/arrival or journey 
+	* informations. The results of parsing the document is stored in @p journeys.
+	* @param parseDocumentMode The mode of parsing, e.g. parse for 
+	* departures/arrivals or journeys.
 	* @return true, if there were no errors and the data in @p journeys is valid.
 	* @return false, if there were an error parsing the document. */
 	virtual bool parseDocument( QList<PublicTransportInfo*> *journeys,
 				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
-	/** Exceuted before parseDocument() if there is a regexp to use before starting
-	* parseDocument. It collects data matched by the regexp to be used in parseDocument.
-	* @param document A string containing the whole document from the service provider.
-	* @return true, if there were no errors.
-	* @return false, if there were an error parsing the document. */
-	virtual bool parseDocumentPre( QString document );
-
+	virtual QString parseDocumentForLaterJourneysUrl();
+	virtual QString parseDocumentForDetailedJourneysUrl();
+	
 	/** Parses the contents of the given document for a list of possible stop names
 	* and puts the results into @p stops.
 	* @param document A document to be parsed.
@@ -88,7 +75,7 @@ class TimetableAccessorHtml : public TimetableAccessor
 	/** Parses the contents of a received document for a list of possible stop names
 	* and puts the results into @p stops.
 	* @param stops A pointer to a string list, where the stop names are stored.
-	* @param stopToStopId A pointer to a map, where the keys are stop names
+	* @param stopToStopId A pointer to a map, where the keys are stop names 
 	* and the values are stop IDs.
 	* @return true, if there were no errors.
 	* @return false, if there were an error parsing the document.
@@ -96,16 +83,13 @@ class TimetableAccessorHtml : public TimetableAccessor
 	virtual bool parseDocumentPossibleStops( QStringList *stops,
 						 QHash<QString,QString> *stopToStopId ) const;
 
-	/** Parses a journey news string. */
-	virtual bool parseJourneyNews( const QString sJourneyNews, QString *sDelay,
-				       QString *sDelayReason, QString *sJourneyNewsOther ) const;
-
+	bool loadScript(const QString& fileName);
+	bool isScriptLoaded() { return m_scriptLoaded; };
+	
     private:
-	void postProcessMatchedData( TimetableInformation info,
-				     QString matchedData,
-				     QHash< TimetableInformation, QVariant > *data );
-
-	QHash< QString, QString > *m_preData; // Data collected by parseDocumentPre
+	bool m_scriptLoaded;
+	QScriptEngine m_engine;
+	QScriptValue m_parser;
 };
 
-#endif // TIMETABLEACCESSOR_HTML_HEADER
+#endif // TIMETABLEACCESSOR_HTML_JS_HEADER

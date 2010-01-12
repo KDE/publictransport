@@ -110,11 +110,6 @@
     </possibleStops>
     <departures>
 	<regExp><![CDATA[(?:<tr class="[^"]*">\s*<td class="datedt">)([0-9]{1,2})(?::)([0-9]{2})(?:</td><td>[^<]*</td><td class="[^"]*">.*</td><td class="[^"]*">.*</td><td><img src="[^"]*" alt=")([^"]*)(?:" title="[^"]*" />\s*<a href="[^"]*" title="[^\(]*\([^>]*>>\s)([^\)]*)(?:\)"[^>]*>)([^<]*)(?:</a>\s*)(?:<img [^>]*>\s*)?(?:</td>\s*</tr>)]]></regExp>
-		<!--<regExp><![CDATA[(?:<tr class="[^"]*">\s*<td class="datedt">)([0-9]{1,2})(?::)([0-9]{2})(?:</td><td>[^<]*</td><td class="[^"]*"></td><td class="[^"]*">[^<]*</td><td><img src="[^"]*" alt=")([^"]*)(?:" title="[^"]*" />\s*<a href="[^"]*" title="[^\(]*\([^>]*>>\s)([^\)]*)(?:\)"[^>]*>)([^<]*)(?:</a>\s*)(?:<img [^>]*>\s*)?(?:</td>\s*</tr>)]]></regExp>-->
-<!--
-			<td class="datedt">5:23</td><td>Koldinova u masokomb. </td><td class="right"></td><td class="right">&nbsp;</td><td><img src="img/bus_p.gif" alt="Bus" title="Bus" /> <a href="/draha/?p=OTAlNzQlMSUtMSUwJTAlJTU6MjMlJTAxLjAxLjAwMDE-&amp;irk=LTg1MTA2NjgwMA--" title="Bus: autobus (Koldinova u masokomb. >> nádraží ČD)" style="color:#0000FF;" onclick="return PopupOpen(event,'route');">4</a> </td>-->
-	<!--	<tr class="septr">
-			<td class="datedt">4:57</td><td>Ametystová </td><td class="right"><span>x</span></td><td class="right"><a href="http://portalpid.idos.cz/LineDetail.aspx?l=245&amp;d=0001-01-01&amp;menu=true" target="_blank"><img src="img/pdf.gif" alt="Timetable in PDF" title="Timetable in PDF" /></a> </td><td><img src="img/bus_p.gif" alt="Bus" title="Bus" /> <a href="/draha/?p=MzglNDA1OTElMTI3NDAwMDElLTElMCUzJSU0OjU3JSUwMS4wMS4wMDAx&amp;irk=LTg1MTA2NjgwMA--" title="Bus: bus (Nádraží Radotín >> Nádraží Radotín)" style="color:#0000FF;" onclick="return PopupOpen(event,'route');">245</a> </td>-->
 	<infos>
 	    <info>DepartureHour</info> <info>DepartureMinute</info> <info>TypeOfVehicle</info> <info>Target</info> <info>TransportLine</info>
 	</infos>

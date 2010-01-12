@@ -86,13 +86,13 @@ bool TimetableAccessorInfo::supportsByJourneyNewsParsing( const TimetableInforma
     return false;
 }
 
-QString TimetableAccessorInfo::fileName() const {
-    return m_fileName;
-}
+// QString TimetableAccessorInfo::fileName() const {
+//     return m_fileName;
+// }
 
-void TimetableAccessorInfo::setFileName ( const QString& fileName ) {
-    m_fileName = fileName;
-}
+// void TimetableAccessorInfo::setFileName ( const QString& fileName ) {
+//     m_fileName = fileName;
+// }
 
 QString TimetableAccessorInfo::name() const {
     return m_name;

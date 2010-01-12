@@ -73,28 +73,30 @@ class TimetableAccessorInfo
 
     public:
 	/** Creates a new TimetableAccessorInfo object.
-	* TODO: Don't use so many parameters in the constructor. The setters need to be called anyway.
+	* TODO: Don't use so many parameters in the constructor. The setters 
+	* need to be called anyway.
 	* @param name The name of the accessor.
-	* @param shortUrl A short version of the url to the service provider home page. This can be used by the visualization as displayed text of links.
+	* @param shortUrl A short version of the url to the service provider 
+	* home page. This can be used by the visualization as displayed text of links.
 	* @param author The author of the accessor.
 	* @param email The email address of the author given in @p author.
 	* @param version The version of the accessor information.
-	* @param serviceProviderID The service provider for which this accessor is designed for.
+	* @param serviceProviderID The service provider for which this accessor 
+	* is designed for.
 	* @param accessorType The type of the accessor.
 	* @see AccessorType */
-	TimetableAccessorInfo( const QString& name = QString(), const QString& shortUrl = QString(), const QString& author = QString(), const QString& email = QString(), const QString& version = QString(), const QString& serviceProviderID = QString(), const AccessorType& accessorType = NoAccessor );
-
-// 	virtual ~TimetableAccessorInfo() {
-// 	    if ( searchJourneysPre )
-// 	    {
-// 		delete searchJourneysPre;
-// 		searchJourneysPre = NULL;
-// 	    }
-// 	};
+	TimetableAccessorInfo( const QString& name = QString(),
+			       const QString& shortUrl = QString(),
+			       const QString& author = QString(),
+			       const QString& email = QString(),
+			       const QString& version = QString(),
+			       const QString& serviceProviderID = QString(),
+			       const AccessorType& accessorType = NoAccessor );
 
 	/** Gets the name of this accessor, which can be displayed by the visualization. */
 	QString name() const;
-	/** If empty, use unicode (QUrl::toPercentEncoding()), otherwise use own toPercentEncoding() with this charset. */
+	/** If empty, use unicode (QUrl::toPercentEncoding()), otherwise use 
+	* own toPercentEncoding() with this charset. */
 	QByteArray charsetForUrlEncoding() const;
 	/** Type of the accessor (HTML, XML) */
 	AccessorType accessorType() const;
@@ -110,7 +112,7 @@ class TimetableAccessorInfo
 	QString email() const;
 	/** The main/home url of the service provider. */
 	QString url() const;
-	/** A short version of the url without protocol or "www"  to be displayed in links. */
+	/** A short version of the url without protocol or "www" to be displayed in links. */
 	QString shortUrl() const;
 	/** A raw url that is used to get departures. */
 	QString departureRawUrl() const;
@@ -159,7 +161,9 @@ class TimetableAccessorInfo
 	* @returns Either the value for the given city if it exists, or @p city itself. */
 	QString mapCityNameToValue( const QString &city ) const;
 	/** The name of the XML file that was parsed to get this accessor information object. */
-	QString fileName() const;
+	QString fileName() const { return m_fileName; };
+	/** The file name of the script file to parse html pages. */
+	QString scriptFileName() const { return m_scriptFileName; };
 	/** A list of features this accessor supports. */
 	QStringList features() const;
 	/** Wheather or not this accessor supports stop name autocompletion. */
@@ -213,8 +217,10 @@ class TimetableAccessorInfo
 	* the list matched by @p regExpRange.
 	* @param regExpInfos A list of TimetableInformation values that describe what
 	* each match of the regular expression in @p regExpSearch means. */
-	void addRegExpPossibleStops( const QString &regExpRange, const QString &regExpSearch,
-				     const QList< TimetableInformation > &regExpInfos = QList< TimetableInformation >() << StopName );
+	void addRegExpPossibleStops( const QString &regExpRange,
+				     const QString &regExpSearch,
+				     const QList< TimetableInformation > &regExpInfos
+					= QList< TimetableInformation >() << StopName );
 
 	/** Adds a regular expression for parsing a string matched by the regular
 	* expression set by setRegExpJourneys() that is assocciated with the
@@ -224,7 +230,8 @@ class TimetableAccessorInfo
 	* @param regExpInfos A list of TimetableInformation values that describe what
 	* each match of the regular expression in @p regExpSearch means.
 	* @see setRegExpJourneys() */
-	void addRegExpJouneyNews( const QString &regExpSearch, const QList< TimetableInformation > &regExpInfos );
+	void addRegExpJouneyNews( const QString &regExpSearch,
+				  const QList< TimetableInformation > &regExpInfos );
 
 	/** Adds a replacement for the city name @p city. Before a city name is inserted
 	* into a raw url it is checked if there are replacements for the city name.
@@ -238,8 +245,12 @@ class TimetableAccessorInfo
 	void setCityNameToValueReplacementHash( const QHash<QString, QString> &hash );
 
 	/** Sets the name of the XML file that was parsed to get this accessor information object. */
-	void setFileName( const QString &fileName );;
-
+	void setFileName( const QString &fileName ) { m_fileName = fileName; };
+	
+	/** Sets the file name of the script file to parse html pages. */
+	void setScriptFile( const QString &scriptFileName )
+	    { m_scriptFileName = scriptFileName; };
+	
 	/** Sets the name of this accessor. The name is displayed in the config dialog's
 	* service provider combobox.
 	* @param name The new name of this accessor. */
@@ -307,6 +318,8 @@ class TimetableAccessorInfo
 
 	// The name of the XML file that was parsed to get this accessor information object
 	QString m_fileName;
+	// The file name of the script file to parse html pages
+	QString m_scriptFileName;
 	// The name of this accessor, which can be displayed by the visualization
 	QString m_name;
 	// A short version of the url without protocol or "www"  to be displayed in links
@@ -321,7 +334,8 @@ class TimetableAccessorInfo
 	QString m_version;
 	// The main/home url of the service provider
 	QString m_url;
-	// If empty, use unicode (QUrl::toPercentEncoding()), otherwise use own toPercentEncoding() with this charset
+	// If empty, use unicode (QUrl::toPercentEncoding()), otherwise use own
+	// toPercentEncoding() with this charset
 	QByteArray m_charsetForUrlEncoding;
 	// Raw url to a site containing a list of stop name suggestions
 	QString m_stopSuggestionsRawUrl;

@@ -21,53 +21,16 @@
 * @brief This file contains enumerations used by the public transport data engine.
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-// #include <vector>
-
 #ifndef ENUMS_HEADER
 #define ENUMS_HEADER
 
-// /** Enumeration of implemented service providers with IDs as values.
-//* Use availableServiceProviders to loop over all available service providers.
-//* If you implemented support for a new service provider, add a value here and
-//* also add it to availableServiceProvidersArray. */
-// enum ServiceProvider {
-//     NoServiceProvider = -1, /**< @internal No service provider, invalid value */
-//
-// // Germany (0 .. 50? in germany.)
-//     DB = 1, /**< Service provider for Germany. */
-//     RMV = 2, /**< Service provider for the Rhine-Main region in germany. */
-//     VVS = 3, /**< Service provider for Stuttgart in germany. */
-//     VRN = 4, /**< Service provider for the Rhine-Neckar region in germany. */
-//     BVG = 5, /**< Service provider for Berlin in germany. */
-//     DVB = 6, /**< Service provider for Dresden in germany. */
-//     NASA = 7, /**< Service provider for Saxony-Anhalt in germany. */
-//     Fahrplaner = 8, /**< Service provider for Lower Saxony / Bremen in Germany. */
-//
-//     SBB = 20, /**< Service provider for Switzerland. */
-//
-//     OEBB = 30, /**< Service provider for Autstria. */
-//
-//     // Slovakia (1000 .. 1009)
-//     IMHD = 1000, /**< Service provider for Bratislava. */
-//
-//     // Czech (1010 .. 1019)
-//     IDNES = 1010,  /**< Service provider for Czechia. */
-//
-//     // Poland (1020 .. 1029)
-//     PKP = 1020 /**< Service provider for Poland. */
-// };
-
-// /** An array containing all available service providers. */
-// const ServiceProvider availableServiceProvidersArray[] = { Fahrplaner, RMV, VVS, VRN, BVG, DVB, NASA, DB, SBB, OEBB, IMHD, IDNES, PKP };
-
-// /** A std::vector used to loop through all available service providers. */
-// const std::vector<ServiceProvider> availableServiceProviders( availableServiceProvidersArray, availableServiceProvidersArray + sizeof(availableServiceProvidersArray) / sizeof(int) );
-
+#include <QDebug>
 
 /** Different types of information. */
 enum TimetableInformation {
     Nothing = 0, /**< No usable information. */
 
+    // Departures / arrival / journey infos
     DepartureDate = 1, /**< The date of the departure. */
     DepartureHour = 2, /**< The hour of the departure. */
     DepartureMinute = 3, /**< The minute of the departure. */
@@ -89,7 +52,19 @@ enum TimetableInformation {
     ArrivalAMorPM = 19, /**< Used to match the string "am" or "pm" for the arrival time. */
     Status = 20, /**< The current status of the departure / arrival. Currently only used for planes. */
     DepartureYear = 21, /**< The year of the departure, to be used when the year is seperated from the date. */ // TODO: add to timetableInformationToString()
-
+    RouteStops = 22, /**< A list of stops of the departure / arrival to it's destination stop or a list of stops of the journey from it's start to it's destination stop. If @ref RouteStops and @ref RouteTimes are both set, they should contain the same number of elements. And elements with equal indices should be associated (the times at which the vehicle is at the stops). For journeys @ref RouteTimesDeparture and @ref RouteTimesArrival should be used instead of @ref RouteTimes. */
+    RouteTimes = 23, /**< A list of times of the departure / arrival to it's destination stop. If @ref RouteStops and @ref RouteTimes are both set, they should contain the same number of elements. And elements with equal indices should be associated (the times at which the vehicle is at the stops). */
+    RouteTimesDeparture = 24, /**< A list of departure times of the journey. If @ref RouteStops and @ref RouteTimesDeparture are both set, the latter should contain one elements less (because the last stop has no departure, only an arrival time). Elements with equal indices should be associated (the times at which the vehicle departs from the stops). */
+    RouteTimesArrival = 25, /**< A list of arrival times of the journey. If @ref RouteStops and @ref RouteTimesArrival are both set, the latter should contain one elements less (because the first stop has no arrival, only a departure time). Elements with equal indices should be associated (the times at which the vehicle arrives at the stops). */
+    RouteExactStops = 26, /**< The number of exact route stops. The route stop list isn't complete from the last exact route stop. */
+    RouteTypesOfVehicles = 27, /**< The types of vehicles used for each "sub-journey" of a journey. */
+    RouteTransportLines = 28, /**< The transport lines used for each "sub-journey" of a journey. */
+    RoutePlatformsDeparture = 29, /**< The platforms of departures used for each "sub-journey" of a journey. */
+    RoutePlatformsArrival = 30, /**< The platforms of arrivals used for each "sub-journey" of a journey. */
+    RouteTimesDepartureDelay = 31, /**< A list of delays in minutes for each departure time of a route (RouteTimesDeparture). */
+    RouteTimesArrivalDelay = 32, /**< A list of delays in minutes for each arrival time of a route (RouteTimesArrival). */
+    
+    // Journey infos
     Duration = 50, /**< The duration of a journey. */
     StartStopName = 51, /**< The name of the starting stop of a journey. */
     StartStopID = 52, /**< The ID of the starting stop of a journey. */
@@ -102,16 +77,19 @@ enum TimetableInformation {
     TypesOfVehicleInJourney = 59, /**< A list of vehicle types used in a journey. */
     Pricing = 60, /**< Information about the pricing of a journey. */
 
+    // Special infos
     NoMatchOnSchedule = 100, /**< Vehicle is expected to depart on schedule, no regexp-matched string is needed for this info */
 
+    // Possible stop infos
     StopName = 200, /**< The name of a stop / station. */
     StopID = 201 /**< The ID of a stop / station. */
 };
 
 /** Different modes for parsing documents. */
 enum ParseDocumentMode {
-    ParseForDeparturesArrivals, /**< Parsing for departures or arrivals. */
-    ParseForJourneys /**< Parsing for journeys. */
+    ParseForDeparturesArrivals = 1, /**< Parsing for departures or arrivals. */
+    ParseForJourneys, /**< Parsing for journeys. */
+    ParseForStopSuggestions  /**< Parsing for stop suggestions. */
 };
 
 /** The type of an accessor. */
@@ -137,8 +115,11 @@ enum VehicleType {
     TrainInterregio = 12, /**< An inter-regional train. */
     TrainIntercityEurocity = 13, /**< An intercity / eurocity train. */
     TrainIntercityExpress = 14, /**< An intercity express. */
-
+    
+    Feet = 50, /**< By feet. */
+    
     Ferry = 100, /**< A ferry. */
+    Ship = 101, /**< A ship. */
 
     Plane = 200, /**< An aeroplane. */
 
@@ -162,6 +143,120 @@ enum CalculateMissingValue {
     CalculateDurationFromDepartureAndArrival,
     CalculateArrivalFromDepartureAndDuration,
     CalculateDepartureFromArrivalAndDuration
+};
+
+inline QDebug &operator <<( QDebug debug, ParseDocumentMode parseDocumentMode ) {
+    switch ( parseDocumentMode ) {
+	case ParseForDeparturesArrivals:
+	    return debug << "ParseForDeparturesArrivals";
+	case ParseForJourneys:
+	    return debug << "ParseForJourneys";
+	case ParseForStopSuggestions:
+	    return debug << "ParseForStopSuggestions";
+	    
+	default:
+	    return debug << "ParseDocumentMode unknown" << parseDocumentMode;
+    }
+}
+
+inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformation ) {
+    switch ( timetableInformation ) {
+	case Nothing:
+	    return debug << "Nothing";
+	case DepartureDate:
+	    return debug << "DepartureDate";
+	case DepartureHour:
+	    return debug << "DepartureHour";
+	case DepartureMinute:
+	    return debug << "DepartureMinute";
+	case TypeOfVehicle:
+	    return debug << "TypeOfVehicle";
+	case TransportLine:
+	    return debug << "TransportLine";
+	case Target:
+	    return debug << "Target";
+	case Platform:
+	    return debug << "Platform";
+	case Delay:
+	    return debug << "Delay";
+	case DelayReason:
+	    return debug << "DelayReason";
+	case JourneyNews:
+	    return debug << "JourneyNews";
+	case JourneyNewsOther:
+	    return debug << "JourneyNewsOther";
+	case JourneyNewsLink:
+	    return debug << "JourneyNewsLink";
+	case DepartureHourPrognosis:
+	    return debug << "DepartureHourPrognosis";
+	case DepartureMinutePrognosis:
+	    return debug << "DepartureMinutePrognosis";
+	case Operator:
+	    return debug << "Operator";
+	case DepartureAMorPM:
+	    return debug << "DepartureAMorPM";
+	case DepartureAMorPMPrognosis:
+	    return debug << "DepartureAMorPMPrognosis";
+	case ArrivalAMorPM:
+	    return debug << "ArrivalAMorPM";
+	case Status:
+	    return debug << "Status";
+	case DepartureYear:
+	    return debug << "DepartureYear";
+	case Duration:
+	    return debug << "Duration";
+	case StartStopName:
+	    return debug << "StartStopName";
+	case StartStopID:
+	    return debug << "StartStopID";
+	case TargetStopName:
+	    return debug << "TargetStopName";
+	case TargetStopID:
+	    return debug << "TargetStopID";
+	case ArrivalDate:
+	    return debug << "ArrivalDate";
+	case ArrivalHour:
+	    return debug << "ArrivalHour";
+	case ArrivalMinute:
+	    return debug << "ArrivalMinute";
+	case Changes:
+	    return debug << "Changes";
+	case TypesOfVehicleInJourney:
+	    return debug << "TypesOfVehicleInJourney";
+	case Pricing:
+	    return debug << "Pricing";
+	case NoMatchOnSchedule:
+	    return debug << "NoMatchOnSchedule";
+	case StopName:
+	    return debug << "StopName";
+	case StopID:
+	    return debug << "StopID";
+	case RouteStops:
+	    return debug << "RouteStops";
+	case RouteTimes:
+	    return debug << "RouteTimes";
+	case RouteTimesDeparture:
+	    return debug << "RouteTimesDeparture";
+	case RouteTimesArrival:
+	    return debug << "RouteTimesArrival";
+	case RouteExactStops:
+	    return debug << "RouteExactStops";
+	case RouteTypesOfVehicles:
+	    return debug << "RouteTypesOfVehicles";
+	case RouteTransportLines:
+	    return debug << "RouteTransportLines";
+	case RoutePlatformsDeparture:
+	    return debug << "RoutePlatformsDeparture";
+	case RoutePlatformsArrival:
+	    return debug << "RoutePlatformsArrival";
+	case RouteTimesDepartureDelay:
+	    return debug << "RouteTimesDepartureDelay";
+	case RouteTimesArrivalDelay:
+	    return debug << "RouteTimesArrivalDelay";
+
+	default:
+	    return debug << "TimetableInformation unknown" << timetableInformation;
+    }
 };
 
 #endif // ENUMS_HEADER

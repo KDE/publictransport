@@ -29,22 +29,18 @@
 // Own includes
 #include "timetableaccessor.h"
 #include "timetableaccessor_html.h"
+#include "timetableaccessor_html_js.h"
 #include "timetableaccessor_xml.h"
 #include "timetableaccessor_htmlinfo.h"
 #include <KLocale>
 
 
-TimetableAccessor::TimetableAccessor() {
-}
-
-TimetableAccessor::~TimetableAccessor() {
-}
-
 TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &serviceProvider ) {
-    QString fileName = KGlobal::dirs()->findResource( "data", QString("plasma_engine_publictransport/accessorInfos/%1.xml").arg(serviceProvider) );
+    QString fileName = KGlobal::dirs()->findResource( "data",
+	    QString("plasma_engine_publictransport/accessorInfos/%1.xml")
+	    .arg(serviceProvider) );
     if ( fileName.isEmpty() ) {
-	qDebug() << "TimetableAccessor::getSpecificAccessor"
-	    << "Couldn't find a service provider information XML named" << serviceProvider;
+	kDebug() << "Couldn't find a service provider information XML named" << serviceProvider;
 	return NULL;
     }
 
@@ -53,18 +49,19 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     QByteArray document = file.readAll();
     file.close();
     if ( document.isEmpty() ) {
-	qDebug() << "TimetableAccessor::getSpecificAccessor"
-	    << "Found service provider information XML named" << serviceProvider << "but is empty."
-	    << "Filename =" << fileName;
+	kDebug() << "Found service provider information XML named"
+	    << serviceProvider << "but is empty." << "Filename =" << fileName;
 	return NULL;
     }
 
     // Get country code from filename
     QString country = "international";
     QRegExp rx("^([^_]+)");
-    if ( rx.indexIn( serviceProvider ) != -1 && KGlobal::locale()->allCountriesList().contains(rx.cap()) )
+    if ( rx.indexIn( serviceProvider ) != -1
+	    && KGlobal::locale()->allCountriesList().contains(rx.cap()) )
 	country = rx.cap();
-
+    
+    // TODO: create a subclass of QXmlReader for reading accessor infos
     QDomDocument domDoc;
     domDoc.setContent(document);
     QDomElement docElement = domDoc.documentElement();
@@ -77,7 +74,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     QString name, nameEn;
     node = docElement.firstChildElement("name");
     if ( node.isNull() ) {
-	qDebug() << "TimetableAccessor::getSpecificAccessor"
+	kDebug()
 	    << "No <name> tag in service provider information XML named" << serviceProvider;
 	return NULL;
     }
@@ -105,7 +102,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 //     <version>
     node = docElement.firstChildElement("version");
     if ( node.isNull() ) {
-	qDebug() << "TimetableAccessor::getSpecificAccessor"
+	kDebug()
 	    << "No <version> tag in service provider information XML named" << serviceProvider;
 	return NULL;
     }
@@ -114,26 +111,17 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 //     <type>
     node = docElement.firstChildElement("type");
     if ( node.isNull() ) {
-	qDebug() << "TimetableAccessor::getSpecificAccessor"
+	kDebug()
 	    << "No <type> tag in service provider information XML named" << serviceProvider;
 	return NULL;
     }
     AccessorType type = accessorTypeFromString( node.toElement().text() );
     if ( type == NoAccessor ) {
-	qDebug() << "TimetableAccessor::getSpecificAccessor"
-	    << "The <type> tag in service provider information XML named" << serviceProvider
-	    << "is invalid. Currently there are two values allowed: HTML and XML.";
+	kDebug() << "The <type> tag in service provider information XML named"
+	    << serviceProvider << "is invalid. Currently there are two values "
+	    "allowed: HTML and XML.";
 	return NULL;
     }
-
-//     <country> // DEPRECATED is now parsed from the filename
-//     node = docElement.firstChildElement("country");
-//     if ( node.isNull() ) {
-// 	qDebug() << "TimetableAccessor::getSpecificAccessor"
-// 	    << "No <country> tag in service provider information XML named" << serviceProvider;
-// 	return NULL;
-//     }
-//     QString country = node.toElement().text();
 
 //     <cities> <city>...</city> </cities>
     QStringList cities;
@@ -145,7 +133,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	    if ( nodeList.at(i).isComment() )
 		continue;
 	    if ( nodeList.at(i).toElement().tagName() != "city" ) {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
+		kDebug()
 		    << "Warninbg: Invalid child tag (not <city>) found in the <cities> tag in service provider information XML named"
 		    << serviceProvider << "The name of the invalid tag is" << nodeList.at(i).toElement().tagName();
 		continue;
@@ -208,7 +196,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 //     <url>
     node = docElement.firstChildElement("url");
     if ( node.isNull() ) {
-	qDebug() << "TimetableAccessor::getSpecificAccessor"
+	kDebug()
 	    << "No <url> tag in service provider information XML named" << serviceProvider;
 	return NULL;
     }
@@ -217,7 +205,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     //     <shortUrl>
     node = docElement.firstChildElement("shortUrl");
     if ( node.isNull() ) {
-	qDebug() << "TimetableAccessor::getSpecificAccessor"
+	kDebug()
 	<< "No <shortUrl> tag in service provider information XML named" << serviceProvider;
 	return NULL;
     }
@@ -233,8 +221,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 //     <rawUrls>
     node = docElement.firstChildElement("rawUrls");
     if ( node.isNull() ) {
-	qDebug() << "TimetableAccessor::getSpecificAccessor"
-	    << "No <rawUrls> tag in service provider information XML named" << serviceProvider;
+	kDebug() << "No <rawUrls> tag in service provider information XML named" << serviceProvider;
 	return NULL;
     }
 
@@ -243,8 +230,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     childNode = node.firstChildElement("departures");
     if ( childNode.isNull() ) {
 	if ( type == HTML ) {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No child tag <departures> found in the <rawUrls> tag in service provider information XML named"
+	    kDebug() << "No child tag <departures> found in the <rawUrls> tag in service provider information XML named"
 		<< serviceProvider;
 	    return NULL;
 	}
@@ -252,9 +238,8 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	if ( childNode.firstChild().isCDATASection() )
 	    rawUrlDepartures = childNode.firstChild().toCDATASection().data();
 	else {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-	    << "No CData section found in <rawUrls><departures> in service provider information XML named"
-	    << serviceProvider;
+	    kDebug() << "No CData section found in <rawUrls><departures> in service provider information XML named"
+		<< serviceProvider;
 	    return NULL;
 	}
     }
@@ -263,19 +248,11 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     QString rawUrlStopSuggestions;
     childNode = node.firstChildElement("stopSuggestions");
     if ( !childNode.isNull() ) {
-// 	if ( type == XML ) {
-// 	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-// 	    << "No child tag <stopSuggestions> found in the <rawUrls> tag in service provider information XML named"
-// 	    << serviceProvider;
-// 	    return NULL;
-// 	}
-//     } else {
 	if ( childNode.firstChild().isCDATASection() )
 	    rawUrlStopSuggestions = childNode.firstChild().toCDATASection().data();
 	else {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-	    << "No CData section found in <rawUrls><stopSuggestions> in service provider information XML named"
-	    << serviceProvider;
+	    kDebug() << "No CData section found in <rawUrls><stopSuggestions> "
+		"in service provider information XML named" << serviceProvider;
 	    return NULL;
 	}
     }
@@ -287,33 +264,51 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	if ( childNode.firstChild().isCDATASection() )
 	    rawUrlJourneys = childNode.firstChild().toCDATASection().data();
 	else {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-	    << "No CData section found in <rawUrls><journeys> in service provider information XML named"
-	    << serviceProvider;
+	    kDebug() << "No CData section found in <rawUrls><journeys> in "
+		"service provider information XML named" << serviceProvider;
 	    return NULL;
 	}
     }
     // </rawUrls>
-
+    
+    
+    QString regExpDepartureGroupTitles, regExpDepartures, regExpDeparturesPre, regExpJourneys;
+    QList<TimetableInformation> infosDepartureGroupTitles, infosDepartures, infosJourneys;
+    QList< QList<TimetableInformation> > infosListPossibleStops, infosListJourneyNews;
+    QStringList regExpListPossibleStopsRange, regExpListPossibleStops, regExpListJourneyNews;
+    TimetableInformation infoPreKey = Nothing, infoPreValue = Nothing;
+    
+    bool useRegExps = true;
+    node = docElement.firstChildElement("javaScript");
+    QString javaScriptFile;
+    if ( !node.isNull() ) {
+	javaScriptFile = QFileInfo( fileName ).path() + "/" + node.toElement().text();
+	if ( !QFile::exists(javaScriptFile) ) {
+	    kDebug() << "The script file " << javaScriptFile << "referenced by "
+		     << "the service provider information XML named"
+		     << serviceProvider << "wasn't found";
+	    return NULL;
+	}
+	
+	kDebug() << "Using " << javaScriptFile << " as javaScript file for parsing";
+	useRegExps = false;
+	goto DepartureGroupTitlesTagNotComplete; // The naming could be better...
+    }
+    
     // <regExps>
     node = docElement.firstChildElement("regExps");
     if ( node.isNull() ) {
-	qDebug() << "TimetableAccessor::getSpecificAccessor"
-	    << "No <regExps> tag in service provider information XML named" << serviceProvider;
+	kDebug() << "No <regExps> tag in service provider information XML named"
+	    << serviceProvider;
 	return NULL;
     }
-
-// <regExps><departures>
-    QString regExpDepartures;
-    QList<TimetableInformation> infosDepartures;
-    QString regExpDeparturesPre;
-    TimetableInformation infoPreKey = Nothing, infoPreValue = Nothing;
+    
+    // <regExps><departures>
     childNode = node.firstChildElement("departures");
     if ( childNode.isNull() ) {
 	if ( type == HTML ) {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No child tag <departures> found in the <regExps> tag in service provider information XML named"
-		<< serviceProvider;
+	    kDebug() << "No child tag <departures> found in the <regExps> tag "
+		"in service provider information XML named" << serviceProvider;
 	    return NULL;
 	}
     } else {
@@ -321,24 +316,27 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	subChildNode = childNode.firstChildElement("regExpPre");
 	if ( !subChildNode.isNull() ) {
 	    if ( subChildNode.toElement().hasAttribute("key") && subChildNode.toElement().hasAttribute("value") ) {
-		infoPreKey = timetableInformationFromString( subChildNode.toElement().attribute("key", "") );
-		infoPreValue = timetableInformationFromString( subChildNode.toElement().attribute("value", "") );
+		infoPreKey = timetableInformationFromString(
+			subChildNode.toElement().attribute("key", "") );
+		infoPreValue = timetableInformationFromString(
+			subChildNode.toElement().attribute("value", "") );
 	    } else {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No attributes 'key' and 'value' found in <regExps><departures><regExpPre> in service provider information XML named"
-		<< serviceProvider;
+		kDebug() << "No attributes 'key' and 'value' found in "
+		    "<regExps><departures><regExpPre> in service provider "
+		    "information XML named" << serviceProvider;
 		return NULL;
 	    }
 
 	    if ( subChildNode.firstChild().isCDATASection() ) {
 		regExpDeparturesPre = subChildNode.firstChild().toCDATASection().data();
 		if ( !QRegExp(regExpDeparturesPre).isValid() )
-		    qDebug() << "TimetableAccessor::getSpecificAccessor" << "The regular expression in <regExps><departures><regExpPre> is invalid." << QRegExp(regExpDeparturesPre).errorString();
+		    kDebug() << "The regular expression in <regExps><departures><regExpPre> "
+			"is invalid." << QRegExp(regExpDeparturesPre).errorString();
 	    }
 	    else {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No CData section found in <regExpPre> in the <departures> tag in the <regExps> tag in service provider information XML named"
-		<< serviceProvider;
+		kDebug() << "No CData section found in <regExpPre> in the "
+		    "<departures> tag in the <regExps> tag in service provider "
+		    "information XML named" << serviceProvider;
 		return NULL;
 	    }
 	}
@@ -346,19 +344,20 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	// <regExps><departures> <regExp></regExp>
 	subChildNode = childNode.firstChildElement("regExp");
 	if ( subChildNode.isNull() ) {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No child tag <regExp> found in the <departures> tag in the <regExps> tag in service provider information XML named"
+	    kDebug() << "No child tag <regExp> found in the <departures> tag in "
+		"the <regExps> tag in service provider information XML named"
 		<< serviceProvider;
 	    return NULL;
 	}
 	if ( subChildNode.firstChild().isCDATASection() ) {
 	    regExpDepartures = subChildNode.firstChild().toCDATASection().data();
 	    if ( !QRegExp(regExpDepartures).isValid() )
-		qDebug() << "TimetableAccessor::getSpecificAccessor" << "The regular expression in <regExps><departures><regExp> is invalid." << QRegExp(regExpDepartures).errorString();
+		kDebug() << "The regular expression in <regExps><departures><regExp> "
+		    "is invalid." << QRegExp(regExpDepartures).errorString();
 	}
 	else {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No CData section found in <regExp> in the <departures> tag in the <regExps> tag in service provider information XML named"
+	    kDebug() << "No CData section found in <regExp> in the <departures> "
+		"tag in the <regExps> tag in service provider information XML named"
 		<< serviceProvider;
 	    return NULL;
 	}
@@ -366,8 +365,8 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	// <regExps><departures> <infos> <info>...</info>... </infos>
 	subChildNode = childNode.firstChildElement("infos");
 	if ( subChildNode.isNull() ) {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No child tag <infos> found in the <departures> tag in the <regExps> tag in service provider information XML named"
+	    kDebug() << "No child tag <infos> found in the <departures> tag in "
+		"the <regExps> tag in service provider information XML named"
 		<< serviceProvider;
 	    return NULL;
 	}
@@ -377,8 +376,8 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	    if ( nodeList.at(i).isComment() )
 		continue;
 	    if ( nodeList.at(i).toElement().tagName() != "info" ) {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		    << "Warning: Invalid child tag (not <info>) found in the <infos> tag in service provider information XML named"
+		kDebug() << "Warning: Invalid child tag (not <info>) found in "
+		    "the <infos> tag in service provider information XML named"
 		    << serviceProvider << "The name of the invalid tag is" << nodeList.at(i).toElement().tagName();
 		continue;
 	    }
@@ -388,35 +387,34 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     }	// </departures>
 
     // <regExps><journeys>
-    QString regExpJourneys;
-    QList<TimetableInformation> infosJourneys;
     childNode = node.firstChildElement("journeys");
     if ( !childNode.isNull() ) {
 	// <regExps><journeys><regExp>
 	subChildNode = childNode.firstChildElement("regExp");
 	if ( subChildNode.isNull() ) {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No child tag <regExp> found in the <journeys> tag in the <regExps> tag in service provider information XML named"
+	    kDebug() << "No child tag <regExp> found in the <journeys> tag in "
+		"the <regExps> tag in service provider information XML named"
 		<< serviceProvider;
 	    return NULL;
 	}
 	if ( subChildNode.firstChild().isCDATASection() ) {
 	    regExpJourneys = subChildNode.firstChild().toCDATASection().data();
 	    if ( !QRegExp(regExpJourneys).isValid() )
-		qDebug() << "TimetableAccessor::getSpecificAccessor" << "The regular expression in <regExps><journeys><regExp> is invalid." << QRegExp(regExpJourneys).errorString();
+		kDebug() << "The regular expression in <regExps><journeys><regExp> "
+			"is invalid." << QRegExp(regExpJourneys).errorString();
 	}
 	else {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-	    << "No CData section found in <regExp> in the <journeys> tag in the <regExps> tag in service provider information XML named"
-	    << serviceProvider;
+	    kDebug() << "No CData section found in <regExp> in the <journeys> "
+		"tag in the <regExps> tag in service provider information XML named"
+		<< serviceProvider;
 	    return NULL;
 	}
 
 	// <regExps><journeys> <infos><info>...</info>..</infos>
 	subChildNode = childNode.firstChildElement("infos");
 	if ( subChildNode.isNull() ) {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No child tag <infos> found in the <journeys> tag in the <regExps> tag in service provider information XML named"
+	    kDebug() << "No child tag <infos> found in the <journeys> tag in "
+		"the <regExps> tag in service provider information XML named"
 		<< serviceProvider;
 	    return NULL;
 	}
@@ -425,9 +423,11 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	    if ( nodeList.at(i).isComment() )
 		continue;
 	    if ( nodeList.at(i).toElement().tagName() != "info" ) {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		    << "Warning: Invalid child tag (not <info>) found in the <infos> tag in the <journeys> tag in the <regExps> tag in service provider information XML named"
-		    << serviceProvider << "The name of the invalid tag is" << nodeList.at(i).toElement().tagName();
+		kDebug() << "Warning: Invalid child tag (not <info>) found in "
+		    "the <infos> tag in the <journeys> tag in the <regExps> tag "
+		    "in service provider information XML named"
+		    << serviceProvider << "The name of the invalid tag is"
+		    << nodeList.at(i).toElement().tagName();
 		continue;
 	    }
 	    if ( !nodeList.at(i).toElement().text().isEmpty() )
@@ -439,8 +439,6 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 //     <regExps><journeyNews> <item>
 //		<regExp>...</regExp> <infos> <info>...</info>... </infos>
 //     </item>... </journeyNews>
-    QStringList regExpListJourneyNews;
-    QList< QList<TimetableInformation> > infosListJourneyNews;
     childNode = node.firstChildElement("journeyNews");
     if ( !childNode.isNull() ) {
 	nodeList = childNode.childNodes();
@@ -448,8 +446,9 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	    if ( nodeList.at(i).isComment() )
 		continue;
 	    if ( nodeList.at(i).toElement().tagName() != "item" ) {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		    << "Warning: Invalid child tag (not <item>) found in the <journeyNews> tag in the <regExps> tag in service provider information XML named"
+		kDebug() << "Warning: Invalid child tag (not <item>) found in "
+		    "the <journeyNews> tag in the <regExps> tag in service "
+		    "provider information XML named"
 		    << serviceProvider << "The name of the invalid tag is"
 		    << nodeList.at(i).toElement().tagName();
 		continue;
@@ -458,30 +457,30 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	    subChildNode = nodeList.at(i).toElement();
 	    subSubChildNode = subChildNode.firstChildElement("regExp");
 	    if ( subSubChildNode.isNull() ) {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		    << "No child tag <regExp> found in the <item> tag int the <journeyNews> tag in the <regExps> tag in service provider information XML named"
-		    << serviceProvider;
+		kDebug() << "No child tag <regExp> found in the <item> tag int "
+		    "the <journeyNews> tag in the <regExps> tag in service "
+		    "provider information XML named" << serviceProvider;
 		return NULL;
 	    }
 	    if ( subSubChildNode.firstChild().isCDATASection() ) {
 		regExpListJourneyNews << subSubChildNode.firstChild().toCDATASection().data();
 		if ( !QRegExp(regExpListJourneyNews.last()).isValid() )
-		    qDebug() << "TimetableAccessor::getSpecificAccessor"
-			<< "The regular expression in <regExps><journeyNews><item><regExp> is invalid."
-			<< "item:" << i << QRegExp(regExpListJourneyNews.last()).errorString();
+		    kDebug() << "The regular expression in <regExps><journeyNews><item><regExp> "
+			"is invalid." << "item:" << i
+			<< QRegExp(regExpListJourneyNews.last()).errorString();
 	    }
 	    else {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		    << "No CData section found in <regExp> in <item> in the <journeyNews> tag in the <regExps> tag in service provider information XML named"
-		    << serviceProvider;
+		kDebug() << "No CData section found in <regExp> in <item> in "
+		    "the <journeyNews> tag in the <regExps> tag in service "
+		    "provider information XML named" << serviceProvider;
 		return NULL;
 	    }
 
 	    subSubChildNode = subChildNode.firstChildElement("infos");
 	    if ( subSubChildNode.isNull() ) {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		    << "No child tag <infos> found in the <item> tag in the <journeyNews> tag in the <regExps> tag in service provider information XML named"
-		    << serviceProvider;
+		kDebug() << "No child tag <infos> found in the <item> tag in "
+		    "the <journeyNews> tag in the <regExps> tag in service "
+		    "provider information XML named" << serviceProvider;
 		return NULL;
 	    }
 	    QList<TimetableInformation> infoList;
@@ -492,7 +491,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 		    continue;
 
 		if ( subNodeList.at(i).toElement().tagName() != "info" ) {
-		    qDebug() << "TimetableAccessor::getSpecificAccessor"
+		    kDebug()
 			<< "Warning: Invalid child tag (not <info>) found in the <infos> tag int the <item> tag in the <journeyNews> tag in the <regExps> tag in service provider information XML named"
 			<< serviceProvider << "The name of the invalid tag is"
 			<< subNodeList.at(i).toElement().tagName();
@@ -500,12 +499,12 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 		}
 
 		if ( !subNodeList.at(i).toElement().text().isEmpty() ) {
-// 		    qDebug() << "TimetableAccessor::getSpecificAccessor" << "timetableInformationFromString"
+// 		    kDebug() << "timetableInformationFromString"
 // 			<< subNodeList.at(i).toElement().text() << "=>"
 // 			<< timetableInformationFromString( subNodeList.at(i).toElement().text() );
 		    infoList << timetableInformationFromString( subNodeList.at(i).toElement().text() );
 		} else {
-		    qDebug() << "TimetableAccessor::getSpecificAccessor"
+		    kDebug()
 			<< "Warning: No text found in the <info> tag in the <infos> tag int the <item> tag in the <journeyNews> tag in the <regExps> tag in service provider information XML named"
 			<< serviceProvider;
 		}
@@ -519,8 +518,6 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 //		<regExp>...</regExp>
 // 		<infos> <info>...</info>... </infos>
 //     </item>... </possibleStops>
-    QStringList regExpListPossibleStopsRange, regExpListPossibleStops;
-    QList< QList<TimetableInformation> > infosListPossibleStops;
     childNode = node.firstChildElement("possibleStops");
     if ( !childNode.isNull() ) {
 	nodeList = childNode.childNodes();
@@ -528,7 +525,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	    if ( nodeList.at(i).isComment() )
 		continue;
 	    if ( nodeList.at(i).toElement().tagName() != "item" ) {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
+		kDebug()
 		<< "Warning: Invalid child tag (not <item>) found in the <possibleStops> tag in the <regExps> tag in service provider information XML named"
 		<< serviceProvider << "The name of the invalid tag is" << nodeList.at(i).toElement().tagName();
 		continue;
@@ -537,42 +534,42 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	    subChildNode = nodeList.at(i).toElement();
 	    subSubChildNode = subChildNode.firstChildElement("regExpRange");
 	    if ( subSubChildNode.isNull() ) {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		    << "No child tag <regExpRange> found in the <item> tag int the <possibleStops> tag in the <regExps> tag in service provider information XML named"
-		    << serviceProvider;
+		kDebug() << "No child tag <regExpRange> found in the <item> tag "
+		    "int the <possibleStops> tag in the <regExps> tag in service "
+		    "provider information XML named" << serviceProvider;
 		return NULL;
 	    }
 	    if ( subSubChildNode.firstChild().isCDATASection() )
 		regExpListPossibleStopsRange << subSubChildNode.firstChild().toCDATASection().data();
 	    else {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No CData section found in <regExpRange> in <item> in the <possibleStops> tag in the <regExps> tag in service provider information XML named"
-		<< serviceProvider;
+		kDebug() << "No CData section found in <regExpRange> in <item> "
+		    "in the <possibleStops> tag in the <regExps> tag in service "
+		    "provider information XML named" << serviceProvider;
 		return NULL;
 	    }
 
 	    subChildNode = nodeList.at(i).toElement();
 	    subSubChildNode = subChildNode.firstChildElement("regExp");
 	    if ( subSubChildNode.isNull() ) {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No child tag <regExp> found in the <item> tag int the <possibleStops> tag in the <regExps> tag in service provider information XML named"
-		<< serviceProvider;
+		kDebug() << "No child tag <regExp> found in the <item> tag int "
+		    "the <possibleStops> tag in the <regExps> tag in service "
+		    "provider information XML named" << serviceProvider;
 		return NULL;
 	    }
 	    if ( subSubChildNode.firstChild().isCDATASection() )
 		regExpListPossibleStops << subSubChildNode.firstChild().toCDATASection().data();
 	    else {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No CData section found in <regExp> in <item> in the <possibleStops> tag in the <regExps> tag in service provider information XML named"
-		<< serviceProvider;
+		kDebug() << "No CData section found in <regExp> in <item> in "
+		    "the <possibleStops> tag in the <regExps> tag in service "
+		    "provider information XML named" << serviceProvider;
 		return NULL;
 	    }
 
 	    subSubChildNode = subChildNode.firstChildElement("infos");
 	    if ( subSubChildNode.isNull() ) {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "No child tag <infos> found in the <item> tag in the <possibleStops> tag in the <regExps> tag in service provider information XML named"
-		<< serviceProvider;
+		kDebug() << "No child tag <infos> found in the <item> tag in "
+		    "the <possibleStops> tag in the <regExps> tag in service "
+		    "provider information XML named" << serviceProvider;
 		return NULL;
 	    }
 	    QList<TimetableInformation> infos;
@@ -581,9 +578,12 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 		if ( subNodeList.at(i).isComment() )
 		    continue;
 		if ( subNodeList.at(i).toElement().tagName() != "info" ) {
-		    qDebug() << "TimetableAccessor::getSpecificAccessor"
-		    << "Warning: Invalid child tag (not <info>) found in the <infos> tag int the <item> tag in the <possibleStops> tag in the <regExps> tag in service provider information XML named"
-		    << serviceProvider << "The name of the invalid tag is" << subNodeList.at(i).toElement().tagName();
+		    kDebug() << "Warning: Invalid child tag (not <info>) found "
+			"in the <infos> tag int the <item> tag in the "
+			"<possibleStops> tag in the <regExps> tag in service "
+			"provider information XML named" << serviceProvider
+			<< "The name of the invalid tag is"
+			<< subNodeList.at(i).toElement().tagName();
 		    continue;
 		}
 		if ( !subNodeList.at(i).toElement().text().isEmpty() )
@@ -597,32 +597,30 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     //		<regExp>...</regExp>
     // 	<infos> <info>...</info>... </infos>
     //     </departureGroupTitles>
-    QString regExpDepartureGroupTitles;
-    QList<TimetableInformation> infosDepartureGroupTitles;
     childNode = node.firstChildElement("departureGroupTitles");
     if ( !childNode.isNull() ) {
 	// TODO: Test
 	subChildNode = childNode.firstChildElement("regExp");
 	if ( subChildNode.isNull() ) {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "Warning: No child tag <regExp> found in the <departureGroupTitles> tag in the <regExps> tag in service provider information XML named"
-		<< serviceProvider;
+	    kDebug() << "Warning: No child tag <regExp> found in the "
+		"<departureGroupTitles> tag in the <regExps> tag in service "
+		"provider information XML named" << serviceProvider;
 	    goto DepartureGroupTitlesTagNotComplete;
 	}
 	else if ( subChildNode.firstChild().isCDATASection() )
 	    regExpDepartureGroupTitles = subSubChildNode.firstChild().toCDATASection().data();
 	else {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "Warning: No CData section found in <regExp> in the <departureGroupTitles> tag in the <regExps> tag in service provider information XML named"
-		<< serviceProvider;
+	    kDebug() << "Warning: No CData section found in <regExp> in the "
+		"<departureGroupTitles> tag in the <regExps> tag in service "
+		"provider information XML named" << serviceProvider;
 	    goto DepartureGroupTitlesTagNotComplete;
 	}
 
 	subChildNode = childNode.firstChildElement("infos");
 	if ( subChildNode.isNull() ) {
-	    qDebug() << "TimetableAccessor::getSpecificAccessor"
-		<< "Warning: No child tag <infos> found in the <departureGroupTitles> tag in the <regExps> tag in service provider information XML named"
-		<< serviceProvider;
+	    kDebug() << "Warning: No child tag <infos> found in the "
+		"<departureGroupTitles> tag in the <regExps> tag in service "
+		"provider information XML named" << serviceProvider;
 	    regExpDepartureGroupTitles = "";
 	    goto DepartureGroupTitlesTagNotComplete;
 	}
@@ -631,8 +629,9 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	    if ( subNodeList.at(i).isComment() )
 		continue;
 	    if ( subNodeList.at(i).toElement().tagName() != "info" ) {
-		qDebug() << "TimetableAccessor::getSpecificAccessor"
-		    << "Warning: Invalid child tag (not <info>) found in the <infos> tag int the <departureGroupTitles> tag in the <regExps> tag in service provider information XML named"
+		kDebug() << "Warning: Invalid child tag (not <info>) found in "
+		    "the <infos> tag int the <departureGroupTitles> tag in the "
+		    "<regExps> tag in service provider information XML named"
 		    << serviceProvider << "The name of the invalid tag is" << subNodeList.at(i).toElement().tagName();
 		continue;
 	    }
@@ -640,10 +639,10 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 		infosDepartureGroupTitles << timetableInformationFromString( subNodeList.at(i).toElement().text() );
 	}
     }
+    
 DepartureGroupTitlesTagNotComplete:
-
-
-    TimetableAccessorInfo accessorInfos( name, shortUrl, author, email, version, serviceProvider, type );
+    TimetableAccessorInfo accessorInfos( name, shortUrl, author, email, version,
+					 serviceProvider, type );
     accessorInfos.setFileName( fileName );
     accessorInfos.setCountry( country );
     accessorInfos.setCities( cities );
@@ -658,30 +657,39 @@ DepartureGroupTitlesTagNotComplete:
     accessorInfos.setStopSuggestionsRawUrl( rawUrlStopSuggestions );
     accessorInfos.setCharsetForUrlEncoding( charsetForUrlEncoding.toAscii() );
     accessorInfos.setJourneyRawUrl( rawUrlJourneys );
-    accessorInfos.setRegExpDepartures( regExpDepartures, infosDepartures,
-			    regExpDeparturesPre, infoPreKey, infoPreValue );
-    if ( !regExpDepartureGroupTitles.isEmpty() )
-	accessorInfos.setRegExpDepartureGroupTitles( regExpDepartureGroupTitles, infosDepartureGroupTitles );
-    if ( !regExpJourneys.isEmpty() )
-	accessorInfos.setRegExpJourneys( regExpJourneys, infosJourneys );
-    for ( int i = 0; i < regExpListJourneyNews.length(); ++i ) {
-	QString regExpJourneyNews = regExpListJourneyNews[i];
-	QList<TimetableInformation> infosJourneyNews = infosListJourneyNews[i];
-	accessorInfos.addRegExpJouneyNews( regExpJourneyNews, infosJourneyNews );
-    }
-    for ( int i = 0; i < regExpListPossibleStopsRange.length(); ++i ) {
-	QString regExpPossibleStopsRange = regExpListPossibleStopsRange[i];
-	QString regExpPossibleStops = regExpListPossibleStops[i];
-	QList<TimetableInformation> infosPossibleStops = infosListPossibleStops[i];
-	accessorInfos.addRegExpPossibleStops( regExpPossibleStopsRange, regExpPossibleStops, infosPossibleStops );
+
+    // Set regular expressions
+    if ( useRegExps ) {
+	accessorInfos.setRegExpDepartures( regExpDepartures, infosDepartures,
+				regExpDeparturesPre, infoPreKey, infoPreValue );
+	if ( !regExpDepartureGroupTitles.isEmpty() )
+	    accessorInfos.setRegExpDepartureGroupTitles( regExpDepartureGroupTitles, infosDepartureGroupTitles );
+	if ( !regExpJourneys.isEmpty() )
+	    accessorInfos.setRegExpJourneys( regExpJourneys, infosJourneys );
+	for ( int i = 0; i < regExpListJourneyNews.length(); ++i ) {
+	    QString regExpJourneyNews = regExpListJourneyNews[i];
+	    QList<TimetableInformation> infosJourneyNews = infosListJourneyNews[i];
+	    accessorInfos.addRegExpJouneyNews( regExpJourneyNews, infosJourneyNews );
+	}
+	for ( int i = 0; i < regExpListPossibleStopsRange.length(); ++i ) {
+	    QString regExpPossibleStopsRange = regExpListPossibleStopsRange[i];
+	    QString regExpPossibleStops = regExpListPossibleStops[i];
+	    QList<TimetableInformation> infosPossibleStops = infosListPossibleStops[i];
+	    accessorInfos.addRegExpPossibleStops( regExpPossibleStopsRange, regExpPossibleStops, infosPossibleStops );
+	}
+    } else {
+	accessorInfos.setScriptFile( javaScriptFile );
     }
 
-    if ( type == HTML )
-	return new TimetableAccessorHtml( accessorInfos );
-    else if ( type == XML )
+    if ( type == HTML ) {
+	if ( useRegExps )
+	    return new TimetableAccessorHtml( accessorInfos );
+	else
+	    return new TimetableAccessorHtmlJs( accessorInfos );
+    } else if ( type == XML )
 	return new TimetableAccessorXml( accessorInfos );
     else {
-	qDebug() << "TimetableAccessor::getSpecificAccessor" << "Accessor type not supported" << type;
+	kDebug() << "Accessor type not supported" << type;
 	return NULL;
     }
 }
@@ -721,8 +729,12 @@ VehicleType TimetableAccessor::vehicleTypeFromString( QString sVehicleType ) {
 	return TrainIntercityEurocity;
     else if ( sVehicleType == "TrainIntercityExpress" )
 	return TrainIntercityExpress;
+    else if ( sVehicleType == "Feet" )
+	return Feet;
     else if ( sVehicleType == "Ferry" )
 	return Ferry;
+    else if ( sVehicleType == "Ship" )
+	return Ship;
     else if ( sVehicleType == "Plane" )
 	return Plane;
     else
@@ -765,6 +777,30 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
 	return DepartureMinutePrognosis;
     else if ( sTimetableInformation == "Status" )
 	return Status;
+    else if ( sTimetableInformation == "DepartureYear" )
+	return DepartureYear;
+    else if ( sTimetableInformation == "RouteStops" )
+	return RouteStops;
+    else if ( sTimetableInformation == "RouteTimes" )
+	return RouteTimes;
+    else if ( sTimetableInformation == "RouteTimesDeparture" )
+	return RouteTimesDeparture;
+    else if ( sTimetableInformation == "RouteTimesArrival" )
+	return RouteTimesArrival;
+    else if ( sTimetableInformation == "RouteExactStops" )
+	return RouteExactStops;
+    else if ( sTimetableInformation == "RouteTypesOfVehicles" )
+	return RouteTypesOfVehicles;
+    else if ( sTimetableInformation == "RouteTransportLines" )
+	return RouteTransportLines;
+    else if ( sTimetableInformation == "RoutePlatformsDeparture" )
+	return RoutePlatformsDeparture;
+    else if ( sTimetableInformation == "RoutePlatformsArrival" )
+	return RoutePlatformsArrival;
+    else if ( sTimetableInformation == "RouteTimesDepartureDelay" )
+	return RouteTimesDepartureDelay;
+    else if ( sTimetableInformation == "RouteTimesArrivalDelay" )
+	return RouteTimesArrivalDelay;
     else if ( sTimetableInformation == "Operator" )
 	return Operator;
     else if ( sTimetableInformation == "DepartureAMorPM" )
@@ -802,7 +838,8 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
     else if ( sTimetableInformation == "StopID" )
 	return StopID;
     else {
-	qDebug() << "TimetableAccessor::timetableInformationFromString" << sTimetableInformation << "is an unknown timetable information value! Assuming value Nothing.";
+	kDebug() << sTimetableInformation
+		 << "is an unknown timetable information value! Assuming value Nothing.";
 	return Nothing;
     }
 }
@@ -811,35 +848,66 @@ QStringList TimetableAccessor::features() const {
     return m_info.features();
 }
 
-KIO::TransferJob *TimetableAccessor::requestDepartures( const QString &sourceName, const QString &city, const QString &stop, int maxDeps, const QDateTime &dateTime, const QString &dataType, bool useDifferentUrl ) {
-    qDebug() << "TimetableAccessor::requestDepartures" << "URL =" << getUrl(city, stop, maxDeps, dateTime, dataType, useDifferentUrl).url();
-
-    // Creating a kioslave
-    if ( useDifferentUrl )
-	qDebug() << "using a different url";
-    KIO::TransferJob *job = KIO::get( getUrl(city, stop, maxDeps, dateTime, dataType, useDifferentUrl), KIO::NoReload, KIO::HideProgressInfo );
-    m_jobInfos.insert( job, QList<QVariant>() << static_cast<int>(ParseForDeparturesArrivals) << sourceName << city << stop << maxDeps << dateTime << dataType << useDifferentUrl );
+KIO::TransferJob *TimetableAccessor::requestDepartures( const QString &sourceName,
+		const QString &city, const QString &stop, int maxDeps,
+		const QDateTime &dateTime, const QString &dataType,
+		bool useDifferentUrl ) {
+    KUrl url = getUrl( city, stop, maxDeps, dateTime, dataType, useDifferentUrl );
+    KIO::TransferJob *job = KIO::get( url, KIO::NoReload, KIO::HideProgressInfo );
+    m_jobInfos.insert( job, QVariantList() << static_cast<int>(ParseForDeparturesArrivals)
+	<< sourceName << city << stop << maxDeps << dateTime << dataType
+	<< useDifferentUrl << (QUrl)url );
     m_document = "";
 
-    connect( job, SIGNAL(data(KIO::Job*,QByteArray)), this, SLOT(dataReceived(KIO::Job*,QByteArray)) );
+    connect( job, SIGNAL(data(KIO::Job*,QByteArray)),
+	     this, SLOT(dataReceived(KIO::Job*,QByteArray)) );
     connect( job, SIGNAL(finished(KJob*)), this, SLOT(finished(KJob*)) );
 
     return job;
 }
 
-KIO::TransferJob *TimetableAccessor::requestJourneys ( const QString &sourceName, const QString &city, const QString &startStopName, const QString &targetStopName, int maxDeps, const QDateTime &dateTime, const QString &dataType,  bool useDifferentUrl ) {
-    qDebug() << "TimetableAccessor::requestJourneys" << "URL =" << getJourneyUrl(city, startStopName, targetStopName, maxDeps, dateTime, dataType, useDifferentUrl).url();
+KIO::TransferJob* TimetableAccessor::requestStopSuggestions( const QString& sourceName,
+							     const QString& stop ) {
+    if ( hasSpecialUrlForStopSuggestions() ) {
+	KUrl url = getStopSuggestionsUrl( stop );
+	KIO::TransferJob *job = KIO::get( url, KIO::NoReload, KIO::HideProgressInfo );
+	m_jobInfos.insert( job, QVariantList() << static_cast<int>(ParseForStopSuggestions)
+	    << sourceName << (QUrl)url << stop );
+	m_document = "";
+	
+	connect( job, SIGNAL(data(KIO::Job*,QByteArray)),
+		 this, SLOT(dataReceived(KIO::Job*,QByteArray)) );
+	connect( job, SIGNAL(finished(KJob*)), this, SLOT(finished(KJob*)) );
+	
+	return job;
+    } else
+	return requestDepartures( sourceName, QString(), stop, 1, QDateTime::currentDateTime() );
+}
 
+KIO::TransferJob *TimetableAccessor::requestJourneys( const QString &sourceName,
+		const QString &city, const QString &startStopName,
+		const QString &targetStopName, int maxDeps,
+		const QDateTime &dateTime, const QString &dataType,
+		bool useDifferentUrl ) {
     // Creating a kioslave
-    if ( useDifferentUrl )
-	qDebug() << "using a different url";
-    KIO::TransferJob *job = KIO::get( getJourneyUrl(city, startStopName, targetStopName, maxDeps, dateTime, dataType, useDifferentUrl), KIO::NoReload, KIO::HideProgressInfo );
-    m_jobInfos.insert( job, QList<QVariant>() << static_cast<int>(ParseForJourneys) << sourceName << city << startStopName << maxDeps << dateTime << dataType << useDifferentUrl << targetStopName );
+    KUrl url = getJourneyUrl( city, startStopName, targetStopName, maxDeps,
+			      dateTime, dataType, useDifferentUrl );
+    KIO::TransferJob *job = requestJourneys( url );
+    m_jobInfos.insert( job, QVariantList() << static_cast<int>(ParseForJourneys)
+	    << sourceName << city << startStopName << maxDeps << dateTime
+	    << dataType << useDifferentUrl << (QUrl)url << targetStopName << 0 );
+
+    return job;
+}
+
+KIO::TransferJob* TimetableAccessor::requestJourneys( const KUrl& url ) {
     m_document = "";
-
-    connect( job, SIGNAL(data(KIO::Job*,QByteArray)), this, SLOT(dataReceived(KIO::Job*,QByteArray)) );
+    KIO::TransferJob *job = KIO::get( url, KIO::NoReload, KIO::HideProgressInfo );
+    
+    connect( job, SIGNAL(data(KIO::Job*,QByteArray)),
+	     this, SLOT(dataReceived(KIO::Job*,QByteArray)) );
     connect( job, SIGNAL(finished(KJob*)), this, SLOT(finished(KJob*)) );
-
+    
     return job;
 }
 
@@ -847,62 +915,118 @@ void TimetableAccessor::dataReceived ( KIO::Job*, const QByteArray& data ) {
     m_document += data;
 }
 
-void TimetableAccessor::finished(KJob* job) {
-    QList<QVariant> jobInfo = m_jobInfos.value(job);
-    m_jobInfos.remove(job);
-
+void TimetableAccessor::finished( KJob* job ) {
+    QList<QVariant> jobInfo = m_jobInfos.value( job );
+    m_jobInfos.remove( job );
+    
+    QList< PublicTransportInfo* > *dataList;
+    QStringList *stops;
+    QHash< QString, QString > *stopToStopId;
     ParseDocumentMode parseDocumentMode = static_cast<ParseDocumentMode>( jobInfo.at(0).toInt() );
+    kDebug() << "\n\nFINISHED:    " << parseDocumentMode;
+    
     QString sourceName = jobInfo.at(1).toString();
-    QString city = jobInfo.at(2).toString();
     QString stop = jobInfo.at(3).toString();
+    if ( parseDocumentMode == ParseForStopSuggestions ) {
+	QUrl url = jobInfo.at(2).toUrl();
+	if ( (stops = new QStringList)
+		&& (stopToStopId = new QHash<QString, QString>)
+		&& parseDocumentPossibleStops(stops, stopToStopId) ) {
+	    // 	    kDebug() << "possible stop list received";
+	    emit stopListReceived( this, url, *stops, *stopToStopId, serviceProvider(),
+				   sourceName, QString(), stop, QString(), parseDocumentMode );
+	} else {
+	    emit errorParsing( this, url, serviceProvider(), sourceName, QString(),
+			       stop, QString(), parseDocumentMode );
+	}
+
+	return;
+    }
+    
+    QString city = jobInfo.at(2).toString();
     int maxDeps = jobInfo.at(4).toInt();
     QDateTime dateTime = jobInfo.at(5).toDateTime();
     QString dataType = jobInfo.at(6).toString();
     bool usedDifferentUrl = jobInfo.at(7).toBool();
+    QUrl url = jobInfo.at(8).toUrl();
     QString targetStop;
-    if ( parseDocumentMode == ParseForJourneys )
-	targetStop = jobInfo.at(8).toString();
+    int roundTrips = 0;
+    if ( parseDocumentMode == ParseForJourneys ) {
+	targetStop = jobInfo.at(9).toString();
+	roundTrips = jobInfo.at(10).toInt();
+	kDebug() << "\n\n     FINISHED JOURNEY SEARCH" << roundTrips;
+    }
     m_curCity = city;
-    QList< PublicTransportInfo* > *dataList;
-    QHash< QString, QString > *stops;
 
-    // TODO: less confusing?
-//     qDebug() << "usedDifferentUrl" << usedDifferentUrl;
+//     kDebug() << "usedDifferentUrl" << usedDifferentUrl;
     if ( !usedDifferentUrl ) {
-	if ( (dataList = new QList<PublicTransportInfo*>()) != NULL
-		    && parseDocument(dataList, parseDocumentMode) ) {
+	QString sNextUrl;
+	if ( parseDocumentMode == ParseForJourneys ) {
+	    if ( roundTrips < 2 )
+		sNextUrl = parseDocumentForLaterJourneysUrl();
+	    else if ( roundTrips == 2 )
+		sNextUrl = parseDocumentForDetailedJourneysUrl();
+	}
+	kDebug() << "     PARSE RESULTS" << parseDocumentMode;
+	
+	dataList = new QList<PublicTransportInfo*>();
+	if ( parseDocument(dataList, parseDocumentMode) ) {
 	    if ( parseDocumentMode == ParseForDeparturesArrivals ) {
-		qDebug() << "TimetableAccessor::finished"
-			 << "emit departureListReceived" << sourceName;
+// 		kDebug() << "emit departureListReceived" << sourceName;
 		QList<DepartureInfo*>* departures = new QList<DepartureInfo*>();
 		foreach( PublicTransportInfo *info, *dataList )
 		    departures->append( (DepartureInfo*)info );
-		emit departureListReceived( this, *departures, serviceProvider(),
-					    sourceName, city, stop, dataType, parseDocumentMode );
+		emit departureListReceived( this, url, *departures, serviceProvider(),
+					    sourceName, city, stop, dataType,
+					    parseDocumentMode );
 	    } else if ( parseDocumentMode == ParseForJourneys ) {
-// 		qDebug() << "TimetableAccessor::finished" << "emit journeyListReceived";
+// 		kDebug() << "emit journeyListReceived";
 		QList<JourneyInfo*>* journeys = new QList<JourneyInfo*>();
 		foreach( PublicTransportInfo *info, *dataList )
 		    journeys->append( (JourneyInfo*)info );
-		emit journeyListReceived( this, *journeys, serviceProvider(),
-					  sourceName, city, stop, dataType, parseDocumentMode );
+		emit journeyListReceived( this, url, *journeys, serviceProvider(),
+					  sourceName, city, stop, dataType,
+					  parseDocumentMode );
 	    }
 	} else if ( hasSpecialUrlForStopSuggestions() ) {
-// 	    qDebug() << "request possible stop list";
-	    requestDepartures( sourceName, m_curCity, stop, maxDeps, dateTime, dataType, true );
-	} else if ( (stops = new QHash<QString, QString>()) != NULL && parseDocumentPossibleStops(stops) ) {
-// 	    qDebug() << "possible stop list received";
-	    emit stopListReceived( this, *stops, serviceProvider(), sourceName, city, stop, dataType, parseDocumentMode );
+// 	    kDebug() << "request possible stop list";
+	    requestDepartures( sourceName, m_curCity, stop, maxDeps, dateTime,
+			       dataType, true );
+	} else if ( (stops = new QStringList)
+		&& (stopToStopId = new QHash<QString, QString>)
+		&& parseDocumentPossibleStops(stops, stopToStopId) ) {
+	    kDebug() << "Stop suggestion list received" << parseDocumentMode;
+	    emit stopListReceived( this, url, *stops, *stopToStopId, serviceProvider(),
+				   sourceName, city, stop, dataType, parseDocumentMode );
 	} else
-	    emit errorParsing( this, serviceProvider(), sourceName, city, stop, dataType, parseDocumentMode );
-    } else if ( (stops = new QHash<QString, QString>()) != NULL && parseDocumentPossibleStops(stops) ) {
-// 	qDebug() << "possible stop list received ok";
-	emit stopListReceived( this, *stops, serviceProvider(), sourceName, city, stop, dataType, parseDocumentMode );
+	    emit errorParsing( this, url, serviceProvider(), sourceName, city,
+			       stop, dataType, parseDocumentMode );
+
+	if ( parseDocumentMode == ParseForJourneys ) {
+	    if ( !sNextUrl.isNull() && !sNextUrl.isEmpty() ) {
+		kDebug() << "\n\n     REQUEST PARSED URL:   " << sNextUrl << "\n\n";
+		++roundTrips;
+		KIO::TransferJob *job = requestJourneys( KUrl(sNextUrl) );
+		m_jobInfos.insert( job, QList<QVariant>() << static_cast<int>(ParseForJourneys)
+		    << sourceName << city << stop << maxDeps << dateTime << dataType
+		    << usedDifferentUrl << (QUrl)url << targetStop << roundTrips );
+// 		return;
+	    }
+	}
+    } else if ( (stops = new QStringList)
+	    && (stopToStopId = new QHash<QString, QString>()) != NULL
+	    && parseDocumentPossibleStops(stops, stopToStopId) ) {
+// 	kDebug() << "possible stop list received ok";
+	emit stopListReceived( this, url, *stops, *stopToStopId, serviceProvider(), sourceName,
+			       city, stop, dataType, parseDocumentMode );
     } else
-	emit errorParsing( this, serviceProvider(), city, sourceName, stop, dataType, parseDocumentMode );
+	emit errorParsing( this, url, serviceProvider(), city, sourceName,
+			   stop, dataType, parseDocumentMode );
 }
 
-KUrl TimetableAccessor::getUrl ( const QString &city, const QString &stop, int maxDeps, const QDateTime &dateTime, const QString &dataType, bool useDifferentUrl ) const {
+KUrl TimetableAccessor::getUrl ( const QString &city, const QString &stop,
+				 int maxDeps, const QDateTime &dateTime,
+				 const QString &dataType, bool useDifferentUrl ) const {
     QString sRawUrl = useDifferentUrl ? stopSuggestionsRawUrl() : departuresRawUrl();
     QString sTime = dateTime.time().toString("hh:mm");
     QString sDataType;
@@ -926,7 +1050,10 @@ KUrl TimetableAccessor::getUrl ( const QString &city, const QString &stop, int m
     // Construct the url from the "raw" url by replacing values
     if ( useSeperateCityValue() )
 	sRawUrl = sRawUrl.replace( "{city}", sCity );
-    sRawUrl = sRawUrl.replace( "{time}", sTime ).replace( "{maxDeps}", QString("%1").arg(maxDeps) ).replace( "{stop}", sStop ).replace( "{dataType}", sDataType );
+    sRawUrl = sRawUrl.replace( "{time}", sTime )
+		     .replace( "{maxDeps}", QString("%1").arg(maxDeps) )
+		     .replace( "{stop}", sStop )
+		     .replace( "{dataType}", sDataType );
 
     QRegExp rx = QRegExp("{date:([^}]*)}", Qt::CaseInsensitive);
     if ( rx.indexIn(sRawUrl) != -1 )
@@ -935,7 +1062,28 @@ KUrl TimetableAccessor::getUrl ( const QString &city, const QString &stop, int m
     return KUrl( sRawUrl );
 }
 
-KUrl TimetableAccessor::getJourneyUrl ( const QString& city, const QString& startStopName, const QString& targetStopName, int maxDeps, const QDateTime &dateTime, const QString& dataType, bool useDifferentUrl ) const {
+KUrl TimetableAccessor::getStopSuggestionsUrl( const QString& stop ) {
+    QString sRawUrl = stopSuggestionsRawUrl();
+    QString sStop = stop.toLower();
+    
+    // Encode stop
+    if ( charsetForUrlEncoding().isEmpty() ) {
+	sStop = QString::fromAscii(QUrl::toPercentEncoding(sStop));
+    } else {
+	sStop = toPercentEncoding( sStop, charsetForUrlEncoding() );
+    }
+
+    sRawUrl = sRawUrl.replace( "{stop}", sStop );
+
+    return KUrl( sRawUrl );
+}
+
+KUrl TimetableAccessor::getJourneyUrl( const QString& city,
+				       const QString& startStopName,
+				       const QString& targetStopName,
+				       int maxDeps, const QDateTime &dateTime,
+				       const QString& dataType,
+				       bool useDifferentUrl ) const {
     Q_UNUSED( useDifferentUrl );
 
     QString sRawUrl = m_info.journeyRawUrl();
@@ -964,7 +1112,11 @@ KUrl TimetableAccessor::getJourneyUrl ( const QString& city, const QString& star
     if ( useSeperateCityValue() )
 	sRawUrl = sRawUrl.replace( "{city}", sCity );
 
-    sRawUrl = sRawUrl.replace( "{time}", sTime ).replace( "{maxDeps}", QString("%1").arg(maxDeps) ).replace( "{startStop}", sStartStopName ).replace( "{targetStop}", sTargetStopName ).replace( "{dataType}", sDataType );
+    sRawUrl = sRawUrl.replace( "{time}", sTime )
+		     .replace( "{maxDeps}", QString("%1").arg(maxDeps) )
+		     .replace( "{startStop}", sStartStopName )
+		     .replace( "{targetStop}", sTargetStopName )
+		     .replace( "{dataType}", sDataType );
 
     QRegExp rx = QRegExp("{date:([^}]*)}", Qt::CaseInsensitive);
     if ( rx.indexIn(sRawUrl) != -1 )
@@ -973,32 +1125,26 @@ KUrl TimetableAccessor::getJourneyUrl ( const QString& city, const QString& star
     return KUrl( sRawUrl );
 }
 
-QString TimetableAccessor::gethex ( ushort decimal ) {
+QString TimetableAccessor::gethex( ushort decimal ) {
     QString hexchars = "0123456789ABCDEFabcdef";
     return "%" + hexchars[decimal >> 4] + hexchars[decimal & 0xF];
 }
 
-QString TimetableAccessor::toPercentEncoding ( QString str, QByteArray charset ) {
+QString TimetableAccessor::toPercentEncoding( QString str, QByteArray charset ) {
     QString unreserved = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_.~";
 //     QString reserved = "!*'();:@&=+$,/?%#[]";
     QString encoded;
 
     QByteArray ba = QTextCodec::codecForName(charset)->fromUnicode(str);
-    for ( int i = 0; i < ba.length(); ++i )
-    {
+    for ( int i = 0; i < ba.length(); ++i ) {
 	char ch = ba[i];
-	if ( unreserved.indexOf(ch) != -1 )
-	{
+	if ( unreserved.indexOf(ch) != -1 ) {
 	    encoded += ch;
 // 	    qDebug() << "  Unreserved char" << encoded;
-	}
-	else if ( ch < 0 )
-	{
+	} else if ( ch < 0 ) {
 	    encoded += gethex(256 + ch);
 // 	    qDebug() << "  Encoding char < 0" << encoded;
-	}
-	else
-	{
+	} else {
 	    encoded += gethex(ch);
 // 	    qDebug() << "  Encoding char >= 0" << encoded;
 	}
@@ -1014,8 +1160,10 @@ bool TimetableAccessor::parseDocument( QList<PublicTransportInfo*> *journeys,
     return false;
 }
 
-bool TimetableAccessor::parseDocumentPossibleStops ( QHash<QString,QString> *stops ) const {
+bool TimetableAccessor::parseDocumentPossibleStops( QStringList *stops,
+				QHash<QString,QString> *stopToStopId ) const {
     Q_UNUSED( stops );
+    Q_UNUSED( stopToStopId );
     return false;
 }
 
@@ -1030,31 +1178,6 @@ QString TimetableAccessor::stopSuggestionsRawUrl() const {
 QByteArray TimetableAccessor::charsetForUrlEncoding() const {
     return m_info.charsetForUrlEncoding();
 }
-/*
-QString TimetableAccessor::regExpSearch() const
-{
-    return m_info.searchJourneys.regExp();
-}
-
-QList< TimetableInformation > TimetableAccessor::regExpInfos() const
-{
-    return m_info.searchJourneys.infos();
-}
-
-QString TimetableAccessor::regExpSearchPossibleStopsRange() const
-{
-    return m_info.regExpSearchPossibleStopsRange;
-}
-
-QString TimetableAccessor::regExpSearchPossibleStops() const
-{
-    return m_info.searchPossibleStops.regExp();
-}
-
-QList< TimetableInformation > TimetableAccessor::regExpInfosPossibleStops() const
-{
-    return m_info.searchPossibleStops.infos();
-}*/
 
 TimetableAccessorInfo TimetableAccessor::timetableAccessorInfo() const {
     return m_info;

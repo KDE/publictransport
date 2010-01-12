@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo>
+<xml_file_version type="publictransport" version="1.0" />
+<name>Dresden (dvb.de, JS)</name>
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<version>1.0</version>
+<type>HTML</type>
+<country>Germany</country>
+<cities><city>Dresden</city></cities>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>Provides departure information for Dresden in Germany.</description>
+
+<url>http://www.dvb.de/</url>
+<shortUrl>dvb.de</shortUrl>
+
+<rawUrls>
+    <departures><![CDATA[http://www.dvb.de:80/de/Fahrplan/Abfahrtsmonitor/abfahrten.do/{stop}#result]]></departures>
+</rawUrls>
+
+<javaScript>de_dvb.js</javaScript>
+</accessorInfo>

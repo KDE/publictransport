@@ -115,9 +115,10 @@ bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys,
     return count > 0;
 }
 
-bool TimetableAccessorXml::parseDocumentPossibleStops ( QHash< QString, QString >* stops ) const {
+bool TimetableAccessorXml::parseDocumentPossibleStops ( QStringList *stops,
+			    QHash<QString,QString> *stopToStopId ) const {
     // Let the document get parsed for possible stops by the HTML accessor
-    return m_accessorHTML->parseDocumentPossibleStops( m_document, stops );
+    return m_accessorHTML->parseDocumentPossibleStops( m_document, stops, stopToStopId );
 }
 
 QString TimetableAccessorXml::departuresRawUrl() const {

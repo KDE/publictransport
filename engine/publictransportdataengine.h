@@ -86,6 +86,7 @@ class PublicTransportEngine : public Plasma::DataEngine
 	/** A list of departures / arrivals was received.
 	* @param accessor The accessor that was used to download and parse the
 	* departures / arrivals.
+	* @param requestUrl The url used to request the information.
 	* @param departures A list of departures / arrivals that were received.
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source for which the departures /
@@ -96,10 +97,18 @@ class PublicTransportEngine : public Plasma::DataEngine
 	* @param dataType "departures" or "arrivals".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */
-	void departureListReceived( TimetableAccessor *accessor, QList<DepartureInfo*> departures, const QString &serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
+	void departureListReceived( TimetableAccessor *accessor,
+				    const QUrl &requestUrl,
+				    QList<DepartureInfo*> departures,
+				    const QString &serviceProvider,
+				    const QString &sourceName,
+				    const QString &city, const QString &stop,
+				    const QString &dataType,
+				    ParseDocumentMode parseDocumentMode );
 
 	/** A list of journey was received.
 	* @param accessor The accessor that was used to download and parse the journeys.
+	* @param requestUrl The url used to request the information.
 	* @param journeys A list of journeys that were received.
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source for which the journeys have
@@ -110,11 +119,20 @@ class PublicTransportEngine : public Plasma::DataEngine
 	* @param dataType "journeys".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */
-	void journeyListReceived( TimetableAccessor *accessor, QList<JourneyInfo*> journeys, const QString &serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
+	void journeyListReceived( TimetableAccessor *accessor,
+				  const QUrl &requestUrl,
+				  QList<JourneyInfo*> journeys,
+				  const QString &serviceProvider,
+				  const QString &sourceName,
+				  const QString &city, const QString &stop,
+				  const QString &dataType,
+				  ParseDocumentMode parseDocumentMode );
 
 	/** A list of stops was received.
 	* @param accessor The accessor that was used to download and parse the stops.
-	* @param stops A QHash containing the received stop names as keys and the stop
+	* @param requestUrl The url used to request the information.
+	* @param stops A string list containing the received stop names.
+	* @param stopToStopId A QHash containing the received stop names as keys and the stop
 	* IDs as values (stop IDs may be empty).
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source for which the stops have been
@@ -125,11 +143,19 @@ class PublicTransportEngine : public Plasma::DataEngine
 	* @param dataType "stopList".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */
-	void stopListReceived( TimetableAccessor *accessor, QHash<QString, QString> stops, const QString &serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
+	void stopListReceived( TimetableAccessor *accessor,
+			       const QUrl &requestUrl,
+			       const QStringList &stops,
+			       const QHash<QString, QString> &stopToStopId,
+			       const QString &serviceProvider,
+			       const QString &sourceName, const QString &city,
+			       const QString &stop, const QString &dataType,
+			       ParseDocumentMode parseDocumentMode );
 
 	/** An error was received.
 	* @param accessor The accessor that was used to download and parse information
 	* from the service provider.
+	* @param requestUrl The url used to request the information.
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source.
 	* @param city The city the stop is in. May be empty if the service provider
@@ -138,7 +164,11 @@ class PublicTransportEngine : public Plasma::DataEngine
 	* @param dataType "nothing".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */
-	void errorParsing( TimetableAccessor *accessor, const QString &serviceProvider, const QString &sourceName, const QString &city, const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
+	void errorParsing( TimetableAccessor *accessor, const QUrl &requestUrl,
+			   const QString &serviceProvider,
+			   const QString &sourceName, const QString &city,
+			   const QString &stop, const QString &dataType,
+			   ParseDocumentMode parseDocumentMode );
 
 	/** A directory with accessor info xmls was changed. */
         void accessorInfoDirChanged ( QString path );
