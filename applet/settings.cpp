@@ -920,11 +920,11 @@ int PublicTransportSettings::updateServiceProviderModel( const QString &itemText
 	    continue;
 
 	QStandardItem *itemTitle = new QStandardItem(title);
-	QColor textColor = KColorScheme::KColorScheme(QPalette::Active).foreground().color();
+	QColor textColor = KColorScheme(QPalette::Active).foreground().color();
 	itemTitle->setData( QString("<span style='font-weight:bold;font-size:large;text-decoration:underline;color:rgb(%1,%2,%3);'>").arg(textColor.red()).arg(textColor.green()).arg(textColor.blue()) + title + ":</span>", HtmlDelegate::FormattedTextRole );
 	itemTitle->setData( 0, HtmlDelegate::GroupTitleRole );
 	itemTitle->setData( 2, HtmlDelegate::LinesPerRowRole );
-// 	itemTitle->setForeground( KColorScheme::KColorScheme(QPalette::Active).foreground() );
+// 	itemTitle->setForeground( KColorScheme(QPalette::Active).foreground() );
 	itemTitle->setSelectable( false );
 	m_modelServiceProvider->insertRow( row, itemTitle );
 
