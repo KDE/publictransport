@@ -1,5 +1,5 @@
 /*
-*   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -27,7 +27,8 @@
 class AppletWithState : public Plasma::PopupApplet {
     public:
 	// Basic Create/Destroy
-	AppletWithState(QObject *parent, const QVariantList &args) : Plasma::PopupApplet(parent, args) {};
+	AppletWithState( QObject *parent, const QVariantList &args )
+	    : Plasma::PopupApplet(parent, args) {};
 
 	virtual bool testState( AppletState state ) const = 0;
 	virtual void addState( AppletState state ) = 0;

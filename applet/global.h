@@ -1,5 +1,5 @@
 /*
- *   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -123,6 +123,7 @@ enum ItemInformation {
     JourneyNewsItem, /**< The item contains the journey news */
     DelayItem, /**< The item contains the delay */
     OperatorItem, /**< The item contains the operator name */
+    RouteItem, /**< The item contains a list of stops in the route (to the destination for departures / arrivals) */
 
     VehicleTypeListItem, /**< The item contains the vehicle types of a journey */
     ArrivalItem, /**< The item contains the arrival time of a journey */
@@ -166,9 +167,14 @@ enum VehicleType {
     TrainIntercityEurocity = 13, /**< An intercity / eurocity train. */
     TrainIntercityExpress = 14, /**< An intercity express. */
 
-    Ferry = 100, /**< A ferry. */
+    Feet = 50, /**< By feet. */
 
-    Plane = 200 /**< An aeroplane. */
+    Ferry = 100, /**< A ferry. */
+    Ship = 101, /**< A ship. */
+
+    Plane = 200, /**< An aeroplane. */
+
+    Spacecraft = 300, /**< A spacecraft. */
 };
 
 /** The type of services for a public transport line. */
@@ -221,7 +227,8 @@ class Global {
 	static KIcon iconFromVehicleType( const VehicleType &vehicleType, const QString &overlayIcon = QString() );
 
 	/** Gets an icon containing the icons of all vehicle types in the given list. */
-	static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes );
+	static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes,
+					      int extend = 32 );
 
 
 	/** Gets the name of the given type of vehicle. */

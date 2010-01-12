@@ -1,5 +1,5 @@
 /*
-*   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -61,7 +61,8 @@ class DataSourceTester : public QObject {
 	void clearStopToStopIdMap();
 
     signals:
-	void testResult( DataSourceTester::TestResult testResult, const QVariant &data );
+	void testResult( DataSourceTester::TestResult testResult,
+			 const QVariant &data, const QVariant &data2 );
 
     public slots:
 	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );

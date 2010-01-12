@@ -1,5 +1,5 @@
 /*
- *   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -37,7 +37,9 @@ class HtmlDelegate : public QItemDelegate
 	    TextBackgroundRole = Qt::UserRole + 501,
 	    DecorationPositionRole = Qt::UserRole + 502,
 	    GroupTitleRole = Qt::UserRole + 503,
-	    LinesPerRowRole = Qt::UserRole + 504 /**< Used to change the number of lines for a row. */
+	    LinesPerRowRole = Qt::UserRole + 504, /**< Used to change the number of lines for a row. */
+	    IconSizeRole = Qt::UserRole + 505, /**< Used to set a specific icon size for an element. */
+	    DrawBabkgroundGradientRole = Qt::UserRole + 506 /**< Used to draw a border at the bottom for an element. */
 	};
 
 	/** Position of the decoration. */

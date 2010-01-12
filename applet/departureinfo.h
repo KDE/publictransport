@@ -1,5 +1,5 @@
 /*
-*   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -42,17 +42,55 @@ class JourneyInfo {
     public:
 	QDateTime departure, arrival;
 	QString operatorName, pricing, startStopName, targetStopName, journeyNews;
-	QList<VehicleType> vehicleTypes;
-	int duration, changes;
+	QList<VehicleType> vehicleTypes, routeVehicleTypes;
+	int duration, changes, routeExactStops;
+	QStringList routeStops, routeTransportLines,
+		    routePlatformsDeparture, routePlatformsArrival;
+	QList<QTime> routeTimesDeparture, routeTimesArrival;
+	QList<int> routeTimesDepartureDelay, routeTimesArrivalDelay;
 
 	JourneyInfo() {
 	    duration = -1;
 	};
 
-	JourneyInfo( const QString &operatorName, const QVariantList &vehicleTypesVariant, const QDateTime &departure, const QDateTime &arrival, const QString &pricing, const QString &startStopName, const QString &targetStopName, int duration, int changes, const QString &journeyNews = QString() );
+	JourneyInfo( const QString &operatorName,
+		     const QVariantList &vehicleTypesVariant,
+		     const QDateTime &departure, const QDateTime &arrival,
+		     const QString &pricing, const QString &startStopName,
+		     const QString &targetStopName, int duration, int changes,
+		     const QString &journeyNews = QString(),
+		     const QStringList &routeStops = QStringList(),
+		     const QStringList &routeTransportLines = QStringList(),
+		     const QStringList &routePlatformsDeparture = QStringList(),
+		     const QStringList &routePlatformsArrival = QStringList(),
+		     const QVariantList &routeVehicleTypes = QVariantList(),
+		     const QList<QTime> &routeTimesDeparture = QList<QTime>(),
+		     const QList<QTime> &routeTimesArrival = QList<QTime>(),
+		     const QList<int> &routeTimesDepartureDelay = QList<int>(),
+		     const QList<int> &routeTimesArrivalDelay = QList<int>(),
+		     int routeExactStops = 0 );
 
-	JourneyInfo( const QString &operatorName, const QList<VehicleType> &vehicleTypes, const QDateTime &departure, const QDateTime &arrival, const QString &pricing, const QString &startStopName, const QString &targetStopName, int duration, int changes, const QString &journeyNews = QString() ) {
-	    init( operatorName, vehicleTypes, departure, arrival, pricing, startStopName, targetStopName, duration, changes, journeyNews );
+	JourneyInfo( const QString &operatorName, const QList<VehicleType> &vehicleTypes,
+		     const QDateTime &departure, const QDateTime &arrival,
+		     const QString &pricing, const QString &startStopName,
+		     const QString &targetStopName, int duration, int changes,
+		     const QString &journeyNews = QString(),
+		     const QStringList &routeStops = QStringList(),
+		     const QStringList &routeTransportLines = QStringList(),
+		     const QStringList &routePlatformsDeparture = QStringList(),
+		     const QStringList &routePlatformsArrival = QStringList(),
+		     const QList<VehicleType> &routeVehicleTypes = QList<VehicleType>(),
+		     const QList<QTime> &routeTimesDeparture = QList<QTime>(),
+		     const QList<QTime> &routeTimesArrival = QList<QTime>(),
+		     const QList<int> &routeTimesDepartureDelay = QList<int>(),
+		     const QList<int> &routeTimesArrivalDelay = QList<int>(),
+		     int routeExactStops = 0  ) {
+	    init( operatorName, vehicleTypes, departure, arrival, pricing,
+		  startStopName, targetStopName, duration, changes, journeyNews,
+		  routeStops, routeTransportLines, routePlatformsDeparture,
+		  routePlatformsArrival, routeVehicleTypes, routeTimesDeparture,
+		  routeTimesArrival, routeTimesDepartureDelay, routeTimesArrivalDelay,
+		  routeExactStops );
 	};
 
 	bool isValid() const { return duration >= 0; };
@@ -61,7 +99,21 @@ class JourneyInfo {
 	QString durationToDepartureString( bool toArrival = false ) const;
 
     private:
-	void init( const QString &operatorName, const QList<VehicleType> &vehicleTypes, const QDateTime &departure, const QDateTime &arrival, const QString &pricing, const QString &startStopName, const QString &targetStopName, int duration, int changes, const QString &journeyNews = QString() );
+	void init( const QString &operatorName, const QList<VehicleType> &vehicleTypes,
+		   const QDateTime &departure, const QDateTime &arrival,
+		   const QString &pricing, const QString &startStopName,
+		   const QString &targetStopName, int duration, int changes,
+		   const QString &journeyNews = QString(),
+		   const QStringList &routeStops = QStringList(),
+		   const QStringList &routeTransportLines = QStringList(),
+		   const QStringList &routePlatformsDeparture = QStringList(),
+		   const QStringList &routePlatformsArrival = QStringList(),
+		   const QList<VehicleType> &routeVehicleTypes = QList<VehicleType>(),
+		   const QList<QTime> &routeTimesDeparture = QList<QTime>(),
+		   const QList<QTime> &routeTimesArrival = QList<QTime>(),
+		   const QList<int> &routeTimesDepartureDelay = QList<int>(),
+		   const QList<int> &routeTimesArrivalDelay = QList<int>(),
+		   int routeExactStops = 0 );
 };
 
 bool operator < ( const JourneyInfo &ji1, const JourneyInfo &ji2 );
@@ -77,26 +129,56 @@ class DepartureInfo {
 	int delay; /**< The delay in minutes. */
 	VehicleType vehicleType;
 	LineServices lineServices;
+	QStringList routeStops;
+	QList<QTime> routeTimes;
+	int routeExactStops;
 
 	/** Creates an invalid DepartureInfo object. */
 	DepartureInfo() {
 	};
 
-	DepartureInfo( const QString &operatorName, const QString &line, const QString &target, const QDateTime &departure, VehicleType lineType ) {
-	    init( operatorName, line, target, departure, lineType );
+	DepartureInfo( const QString &operatorName, const QString &line,
+		       const QString &target, const QDateTime &departure,
+		       VehicleType lineType,
+		       const QStringList &routeStops = QStringList(),
+		       const QList<QTime> &routeTimes = QList<QTime>(),
+		       int routeExactStops = 0 ) {
+	    init( operatorName, line, target, departure, lineType, NoLineService,
+		  QString(), -1, QString(), QString(), routeStops, routeTimes,
+		  routeExactStops );
 	};
 
-	DepartureInfo( const QString &operatorName, const QString &line, const QString &target, const QDateTime &departure, VehicleType lineType, bool nightLine, bool expressLine, const QString &platform = "", int delay = -1, const QString &delayReason = "", const QString &journeyNews = "" ) {
+	DepartureInfo( const QString &operatorName, const QString &line,
+		       const QString &target, const QDateTime &departure,
+		       VehicleType lineType, bool nightLine, bool expressLine,
+		       const QString &platform = QString(), int delay = -1,
+		       const QString &delayReason = QString(),
+		       const QString &journeyNews = QString(),
+		       const QStringList &routeStops = QStringList(),
+		       const QList<QTime> &routeTimes = QList<QTime>(),
+		       int routeExactStops = 0 ) {
 	    LineServices lineServices = NoLineService;
 	    if ( nightLine )
 		lineServices |= NightLine;
 	    if ( expressLine )
 		lineServices |= ExpressLine;
-	    init( operatorName, line, target, departure, lineType, lineServices, platform, delay, delayReason, journeyNews );
+	    init( operatorName, line, target, departure, lineType, lineServices,
+		  platform, delay, delayReason, journeyNews, routeStops,
+		  routeTimes, routeExactStops );
 	};
 
-	DepartureInfo( const QString &operatorName, const QString &line, const QString &target, const QDateTime &departure, VehicleType lineType, LineServices lineServices, const QString &platform = "", int delay = -1, const QString &delayReason = "", const QString &journeyNews = "" ) {
-	    init( operatorName, line, target, departure, lineType, lineServices, platform, delay, delayReason, journeyNews );
+	DepartureInfo( const QString &operatorName, const QString &line,
+		       const QString &target, const QDateTime &departure,
+		       VehicleType lineType, LineServices lineServices,
+		       const QString &platform = QString(), int delay = -1,
+		       const QString &delayReason = QString(),
+		       const QString &journeyNews = QString(),
+		       const QStringList &routeStops = QStringList(),
+		       const QList<QTime> &routeTimes = QList<QTime>(),
+		       int routeExactStops = 0 ) {
+	    init( operatorName, line, target, departure, lineType, lineServices,
+		  platform, delay, delayReason, journeyNews, routeStops,
+		  routeTimes, routeExactStops );
 	};
 
 	/** Wheather or not this DepartureInfo object is valid. It currently checks
@@ -140,7 +222,15 @@ class DepartureInfo {
 	};
 
     private:
-	void init( const QString &operatorName, const QString &line, const QString &target, const QDateTime &departure, VehicleType lineType, LineServices lineServices = NoLineService, const QString &platform = "", int delay = -1, const QString &delayReason = "", const QString &journeyNews = "" );
+	void init( const QString &operatorName, const QString &line,
+		   const QString &target, const QDateTime &departure,
+		   VehicleType lineType, LineServices lineServices = NoLineService,
+		   const QString &platform = QString(), int delay = -1,
+		   const QString &delayReason = QString(),
+		   const QString &journeyNews = QString(),
+		   const QStringList &routeStops = QStringList(),
+		   const QList<QTime> &routeTimes = QList<QTime>(),
+		   int routeExactStops = 0 );
 };
 
 bool operator < ( const DepartureInfo &di1, const DepartureInfo &di2 );

@@ -6,47 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>585</width>
-    <height>606</height>
+    <width>474</width>
+    <height>420</height>
    </rect>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" colspan="2">
-    <widget class="KActionSelector" name="filterLineType">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>10</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="focusPolicy">
-      <enum>Qt::NoFocus</enum>
-     </property>
-     <property name="availableInsertionPolicy">
-      <enum>KActionSelector::Sorted</enum>
-     </property>
-     <property name="showUpDownButtons">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0" colspan="2">
-    <spacer name="verticalSpacer_2">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Fixed</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>64</width>
-       <height>10</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="8" column="0">
+   <item row="6" column="0">
     <widget class="KTabWidget" name="ktabwidget">
      <property name="minimumSize">
       <size>
@@ -57,6 +22,35 @@
      <property name="currentIndex">
       <number>0</number>
      </property>
+     <widget class="QWidget" name="tab_3">
+      <attribute name="title">
+       <string>Shown Vehicle Types</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="KActionSelector" name="filterLineType">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>10</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="focusPolicy">
+          <enum>Qt::NoFocus</enum>
+         </property>
+         <property name="whatsThis">
+          <string>Select the vehicle types to be displayed in the timetable.</string>
+         </property>
+         <property name="availableInsertionPolicy">
+          <enum>KActionSelector::Sorted</enum>
+         </property>
+         <property name="showUpDownButtons">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="tab">
       <attribute name="title">
        <string>Shown Directions</string>
@@ -84,13 +78,10 @@
        <item row="1" column="0">
         <widget class="KEditListBox" name="filterTargetList">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>10</verstretch>
           </sizepolicy>
-         </property>
-         <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
          </property>
          <property name="title">
           <string/>
@@ -112,8 +103,8 @@
       <attribute name="title">
        <string>Shown Lines</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_3">
-       <item row="0" column="0">
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
         <widget class="KComboBox" name="filterTypeLineNumber">
          <item>
           <property name="text">
@@ -132,10 +123,10 @@
          </item>
         </widget>
        </item>
-       <item row="1" column="0">
+       <item>
         <widget class="KEditListBox" name="filterLineNumberList">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>10</verstretch>
           </sizepolicy>

@@ -1,5 +1,5 @@
 /*
-*   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -58,33 +58,31 @@ void DataSourceTester::dataUpdated ( const QString& sourceName, const Plasma::Da
 
     // Check for errors from the data engine
     if ( data.value("error").toBool() ) {
-	emit testResult( Error, i18n("The stop name is invalid.") );
+	emit testResult( Error, i18n("The stop name is invalid."), QVariant() );
 	// setStopNameValid( false, i18n("The stop name is invalid.") );
 	// m_ui.stop->setCompletedItems( QStringList() );
     } else {
 	// Check if we got a possible stop list or a journey list
 	if ( data.value("receivedPossibleStopList").toBool() ) {
 	    processTestSourcePossibleStopList( data );
-// 	    emit testResult( Error, i18n("The stop name is ambiguous.") );
+	    // 	    emit testResult( Error, i18n("The stop name is ambiguous."), QVariant() );
 // 	    setStopNameValid( false, i18n("The stop name is ambiguous.") );
 	} else {
 	    // List of journeys received
 	    disconnectTestSource();
-	    emit testResult( JourneyListReceived, QVariant() );
+	    emit testResult( JourneyListReceived, QVariant(), QVariant() );
 // 	    setStopNameValid( true );
 	}
     }
 }
 
 void DataSourceTester::processTestSourcePossibleStopList ( const Plasma::DataEngine::Data& data ) {
-    qDebug() << "DataSourceTester::processTestSourcePossibleStopList";
     disconnectTestSource();
 
-//     QStringList possibleStops;
+    QStringList stops;
     QHash<QString, QVariant> stopToStopID;
     int count = data["count"].toInt();
-    for (int i = 0; i < count; ++i)
-    {
+    for (int i = 0; i < count; ++i) {
 	QVariant stopData = data.value( QString("stopName %1").arg(i) );
 	if ( !stopData.isValid() )
 	    continue;
@@ -92,12 +90,12 @@ void DataSourceTester::processTestSourcePossibleStopList ( const Plasma::DataEng
 	QHash<QString, QVariant> dataMap = stopData.toHash();
 	QString sStopName = dataMap["stopName"].toString();
 	QString sStopID = dataMap["stopID"].toString();
-// 	possibleStops << sStopName;
+	stops.append( sStopName );
 	stopToStopID.insert( sStopName, sStopID );
 	m_mapStopToStopID.insert( sStopName, sStopID );
     }
 
-    emit testResult( PossibleStopsReceived, stopToStopID );
+    emit testResult( PossibleStopsReceived, stops, stopToStopID );
 //     m_ui.stop->setCompletedItems( possibleStops );
 //     m_stopIDinConfig = m_mapStopToStopID.value( m_ui.stop->text(), "" );
 }

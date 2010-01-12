@@ -4,14 +4,54 @@
 #include "departureinfo.h"
 #include <qmath.h>
 
-JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList& vehicleTypesVariant, const QDateTime& departure, const QDateTime& arrival, const QString& pricing, const QString& startStopName, const QString& targetStopName, int duration, int changes, const QString &journeyNews ) {
+JourneyInfo::JourneyInfo( const QString &operatorName,
+			  const QVariantList &vehicleTypesVariant,
+			  const QDateTime &departure, const QDateTime &arrival,
+			  const QString& pricing, const QString& startStopName,
+			  const QString& targetStopName, int duration, int changes,
+			  const QString &journeyNews, const QStringList &routeStops,
+			  const QStringList &routeTransportLines,
+			  const QStringList &routePlatformsDeparture,
+			  const QStringList &routePlatformsArrival,
+			  const QVariantList &routeVehicleTypesVariant,
+			  const QList<QTime> &routeTimesDeparture,
+			  const QList<QTime> &routeTimesArrival,
+			  const QList<int> &routeTimesDepartureDelay,
+			  const QList<int> &routeTimesArrivalDelay,
+			  int routeExactStops ) {
     QList<VehicleType> vehicleTypes;
-    foreach( QVariant vehicleType, vehicleTypesVariant )
-	vehicleTypes.append( static_cast<VehicleType>(vehicleType.toInt()) );
-    init( operatorName, vehicleTypes, departure, arrival, pricing, startStopName, targetStopName, duration, changes, journeyNews );
+    foreach( QVariant vehicleTypeVariant, vehicleTypesVariant ) {
+	VehicleType vehicleType = static_cast<VehicleType>( vehicleTypeVariant.toInt() );
+	if ( !vehicleTypes.contains(vehicleType) )
+	    vehicleTypes.append( vehicleType );
+    }
+
+    QList<VehicleType> routeVehicleTypes;
+    foreach( QVariant routeVehicleType, routeVehicleTypesVariant )
+	routeVehicleTypes.append( static_cast<VehicleType>(routeVehicleType.toInt()) );
+
+    init( operatorName, vehicleTypes, departure, arrival, pricing, startStopName,
+	  targetStopName, duration, changes, journeyNews, routeStops,
+	  routeTransportLines, routePlatformsDeparture, routePlatformsArrival,
+	  routeVehicleTypes, routeTimesDeparture, routeTimesArrival,
+	  routeTimesDepartureDelay, routeTimesArrivalDelay, routeExactStops );
 }
 
-void JourneyInfo::init( const QString &operatorName, const QList< VehicleType >& vehicleTypes, const QDateTime& departure, const QDateTime& arrival, const QString& pricing, const QString& startStopName, const QString& targetStopName, int duration, int changes, const QString &journeyNews ) {
+void JourneyInfo::init( const QString &operatorName,
+			const QList< VehicleType > &vehicleTypes,
+			const QDateTime& departure, const QDateTime& arrival,
+			const QString& pricing, const QString& startStopName,
+			const QString& targetStopName, int duration, int changes,
+			const QString &journeyNews, const QStringList &routeStops,
+			const QStringList &routeTransportLines,
+			const QStringList &routePlatformsDeparture,
+			const QStringList &routePlatformsArrival,
+			const QList< VehicleType > &routeVehicleTypes,
+			const QList<QTime> &routeTimesDeparture,
+			const QList<QTime> &routeTimesArrival,
+			const QList<int> &routeTimesDepartureDelay,
+			const QList<int> &routeTimesArrivalDelay,
+			int routeExactStops ) {
     this->operatorName = operatorName;
     this->vehicleTypes = vehicleTypes;
     this->departure = departure;
@@ -22,6 +62,16 @@ void JourneyInfo::init( const QString &operatorName, const QList< VehicleType >&
     this->duration = duration;
     this->changes = changes;
     this->journeyNews = journeyNews;
+    this->routeStops = routeStops;
+    this->routeTransportLines = routeTransportLines;
+    this->routePlatformsDeparture = routePlatformsDeparture;
+    this->routePlatformsArrival = routePlatformsArrival;
+    this->routeVehicleTypes = routeVehicleTypes;
+    this->routeTimesDeparture = routeTimesDeparture;
+    this->routeTimesArrival = routeTimesArrival;
+    this->routeTimesDepartureDelay = routeTimesDepartureDelay;
+    this->routeTimesArrivalDelay = routeTimesArrivalDelay;
+    this->routeExactStops = routeExactStops;
 }
 
 QList< QVariant > JourneyInfo::vehicleTypesVariant() const {
@@ -92,10 +142,17 @@ QString DepartureInfo::durationString () const {
 	    str = i18n("now");
     }
 
-    return str.replace(' ', "&nbsp;");;
+    return str.replace( ' ', "&nbsp;" );
 }
 
-void DepartureInfo::init ( const QString &operatorName, const QString &line, const QString &target, const QDateTime &departure, VehicleType lineType, LineServices lineServices, const QString &platform, int delay, const QString &delayReason, const QString &journeyNews ) {
+void DepartureInfo::init( const QString &operatorName, const QString &line,
+			  const QString &target, const QDateTime &departure,
+			  VehicleType lineType, LineServices lineServices,
+			  const QString &platform, int delay,
+			  const QString &delayReason, const QString &journeyNews,
+			  const QStringList &routeStops,
+			  const QList<QTime> &routeTimes,
+			  int routeExactStops ) {
     QRegExp rx ( "[0-9]*$" );
     rx.indexIn ( line );
     if ( rx.isValid() )
@@ -113,6 +170,10 @@ void DepartureInfo::init ( const QString &operatorName, const QString &line, con
     this->delay = delay;
     this->delayReason = delayReason;
     this->journeyNews = journeyNews;
+
+    this->routeStops = routeStops;
+    this->routeTimes = routeTimes;
+    this->routeExactStops = routeExactStops;
 }
 
 bool operator< ( const JourneyInfo& ji1, const JourneyInfo& ji2 ) {

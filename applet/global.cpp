@@ -1,5 +1,5 @@
 /*
-*   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -137,10 +137,14 @@ KIcon Global::iconFromVehicleType( const VehicleType &vehicleType, const QString
 	case TrolleyBus:
 	    icon = KIcon( "vehicle_type_trolleybus" );
 	    break;
+	case Feet:
+	    icon = KIcon( "vehicle_type_feet" );
+	    break;
+
 	case TrainInterurban:
 	    icon = KIcon( "vehicle_type_train_interurban" );
 	    break;
-
+	case TrainRegional: // Icon not done yet, using this for now
 	case TrainRegionalExpress:
 	    icon = KIcon( "vehicle_type_train_regionalexpress" );
 	    break;
@@ -155,13 +159,13 @@ KIcon Global::iconFromVehicleType( const VehicleType &vehicleType, const QString
 	    break;
 
 	case Ferry:
+	case Ship:
 	    icon = KIcon( "vehicle_type_ferry" );
 	    break;
 	case Plane:
 	    icon = KIcon( "vehicle_type_plane" );
 	    break;
 
-	case TrainRegional: // Icon not done yet
 	case Unknown:
 	default:
 	    icon = KIcon( "status_unknown" );
@@ -173,29 +177,31 @@ KIcon Global::iconFromVehicleType( const VehicleType &vehicleType, const QString
     return icon;
 }
 
-KIcon Global::iconFromVehicleTypeList ( const QList< VehicleType >& vehicleTypes ) {
-    QPixmap pixmap = QPixmap( 32, 32 );
+KIcon Global::iconFromVehicleTypeList( const QList< VehicleType >& vehicleTypes,
+				       int extend ) {
+    QPixmap pixmap = QPixmap( extend, extend );
+    int halfExtend = extend / 2;
     pixmap.fill( Qt::transparent );
     QPainter p(&pixmap);
 
     int rows = qCeil((float)vehicleTypes.count() / 2.0f); // Two vehicle types per row
-    int yOffset = rows <= 1 ? 0 : 16 / (rows - 1);
+    int yOffset = rows <= 1 ? 0 : halfExtend / (rows - 1);
     int x, y, i = 0;
     if ( rows == 1 )
-	y = (32 - 16) / 2;
+	y = halfExtend / 2;
     else
 	y = 0;
     foreach( VehicleType vehicleType, vehicleTypes ) {
 	if ( i % 2 == 0 ) { // icon on the left
 	    if ( i == vehicleTypes.count() - 1 ) // align last vehicle type to the center
-		x = (32 - 16) / 2;
+		x = halfExtend / 2;
 	    else
 		x = 0;
 	}
 	else // icon on the right
-	    x = 16;
+	    x = halfExtend;
 
-	QPixmap pixmapVehicleType = iconFromVehicleType( vehicleType ).pixmap( 16 );
+	QPixmap pixmapVehicleType = iconFromVehicleType( vehicleType ).pixmap( halfExtend );
 	p.drawPixmap( x, y, pixmapVehicleType );
 
 	if ( i % 2 != 0 )
@@ -237,8 +243,13 @@ QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural
 	case TrainIntercityExpress:
 	    return plural ? i18n("intercity express trains") : i18n("intercity express");
 
+	case Feet:
+	    return i18n("Footway");
+	    
 	case Ferry:
 	    return plural ? i18n("ferries") : i18n("ferry");
+	case Ship:
+	    return plural ? i18n("ships") : i18n("ship");
 	case Plane:
 	    return plural ? i18n("planes") : i18n("plane");
 

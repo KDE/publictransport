@@ -1,5 +1,5 @@
 /*
- *   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -58,7 +58,7 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 
     public:
         /** Basic create. */
-	PublicTransport(QObject *parent, const QVariantList &args);
+	PublicTransport( QObject *parent, const QVariantList &args );
 	/** Basic destroy. */
         ~PublicTransport();
 
@@ -130,7 +130,8 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	/** Disconnects a currently connected journey data source and connects again
 	* using the current configuration. */
 	void reconnectJourneySource( const QString &targetStopName = QString(),
-				     const QDateTime &dateTime = QDateTime::currentDateTime() );
+				     const QDateTime &dateTime = QDateTime::currentDateTime(),
+				     bool requestStopSuggestions = false );
 
 	/** Processes data received from the data engine.
 	* @param data The data object from the data engine. */
@@ -274,40 +275,6 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	/** Gets the name of a column, to be displayed in the column's header. */
 	QString nameForTimetableColumn( TimetableColumn timetableColumn, DepartureArrivalListType departureArrivalListType = _UseCurrentDepartureArrivalListType );
 
-    private:
-	AppletStates m_appletStates; /**< The current states of this applet */
-	TitleType m_titleType; /**< The type of items to be shown as title above the tree view */
-
-	QGraphicsWidget *m_graphicsWidget;
-	Plasma::IconWidget *m_icon; /**< The icon that displayed in the top left corner */
-	Plasma::IconWidget *m_iconClose; /**< The icon that displayed in the top right corner to close the journey view */
-	Plasma::Label *m_label; /**< A label used to display a title */
-	Plasma::Label *m_labelInfo; /**< A label used to display additional information */
-	Plasma::TreeView *m_treeView; /**< A treeview displaying the departure board */
-	Plasma::LineEdit *m_journeySearch; /**< A line edit for inputting the target of a journey */
-	Plasma::TreeView *m_listPossibleStops; /**< A list of possible stops for the current input */
-	QGraphicsProxyWidget *m_dateTimeProxy; /**< Graphics proxy widget for the date time widget for the journey search */
-	KDateTimeWidget *m_dateTimeWidget; /**< Date time widget for the journey search */
-	QStandardItemModel *m_model; /**< The model for the tree view containing the departure / arrival board */
-	QStandardItemModel *m_modelJourneys; /**< The model for journeys from or to the "home stop" */
-	QList<DepartureInfo> m_departureInfos; /**< List of current departures / arrivals */
-	QList<JourneyInfo> m_journeyInfos; /**< List of current journeys */
-	QString m_currentSource; /**< Current source name at the publictransport data engine */
-	QString m_currentJourneySource; /**< Current source name for journeys at the publictransport data engine */
-	QString m_lastSecondStopName; /**< The last used second stop name for journey search */
-	QDateTime m_lastJourneyDateTime; /**< The last used date and time for journey search */
-	QDateTime m_lastSourceUpdate; /**< The last update of the data source inside the data engine */
-	QColor m_colorSubItemLabels; /**< The color to be used for sub item labels ("Delay:", "Platform:", ...) */
-
-	PublicTransportSettings m_settings;
-	bool m_stopNameValid; /**< Wheather or not the current stop name (m_stop) is valid */
-
-	QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in the tree view for the context menu actions */
-	QList< AlarmTimer* > m_abandonedAlarmTimer; /**< List of AlarmTimer's which departure row has disappeared from the list of received departures. It's kept to set the alarm again, when the departure appears again. */
-
-	QList<TimetableColumn> m_departureViewColumns;
-	QList<TimetableColumn> m_journeyViewColumns;
-
     signals:
 	/** Emitted when the settings have changed. */
 	void settingsChanged();
@@ -409,6 +376,41 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	void showColumnTarget( bool );
 	/** The plasma theme has been changed. */
 	void themeChanged();
+	
+    private:
+	AppletStates m_appletStates; /**< The current states of this applet */
+	TitleType m_titleType; /**< The type of items to be shown as title above the tree view */
+	
+	QGraphicsWidget *m_graphicsWidget;
+	Plasma::IconWidget *m_icon; /**< The icon that displayed in the top left corner */
+	Plasma::IconWidget *m_iconClose; /**< The icon that displayed in the top right corner to close the journey view */
+	Plasma::Label *m_label; /**< A label used to display a title */
+	Plasma::Label *m_labelInfo; /**< A label used to display additional information */
+	Plasma::TreeView *m_treeView; /**< A treeview displaying the departure board */
+	Plasma::LineEdit *m_journeySearch; /**< A line edit for inputting the target of a journey */
+	Plasma::TreeView *m_listPossibleStops; /**< A list of possible stops for the current input */
+	QGraphicsProxyWidget *m_dateTimeProxy; /**< Graphics proxy widget for the date time widget for the journey search */
+	KDateTimeWidget *m_dateTimeWidget; /**< Date time widget for the journey search */
+	QStandardItemModel *m_model; /**< The model for the tree view containing the departure / arrival board */
+	QStandardItemModel *m_modelJourneys; /**< The model for journeys from or to the "home stop" */
+	QList<DepartureInfo> m_departureInfos; /**< List of current departures / arrivals */
+	QList<JourneyInfo> m_journeyInfos; /**< List of current journeys */
+	QString m_currentSource; /**< Current source name at the publictransport data engine */
+	QString m_currentJourneySource; /**< Current source name for journeys at the publictransport data engine */
+	QString m_lastSecondStopName; /**< The last used second stop name for journey search */
+	QDateTime m_lastJourneyDateTime; /**< The last used date and time for journey search */
+	QDateTime m_lastSourceUpdate; /**< The last update of the data source inside the data engine */
+	QColor m_colorSubItemLabels; /**< The color to be used for sub item labels ("Delay:", "Platform:", ...) */
+	QUrl m_urlDeparturesArrivals, m_urlJourneys; /**< Urls to set as associated application urls, when switching from/to journey mode. */
+	
+	PublicTransportSettings m_settings;
+	bool m_stopNameValid; /**< Wheather or not the current stop name (m_stop) is valid */
+	
+	QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in the tree view for the context menu actions */
+	QList< AlarmTimer* > m_abandonedAlarmTimer; /**< List of AlarmTimer's which departure row has disappeared from the list of received departures. It's kept to set the alarm again, when the departure appears again. */
+	
+	QList<TimetableColumn> m_departureViewColumns;
+	QList<TimetableColumn> m_journeyViewColumns;
 };
 
 // This is the command that links the applet to the .desktop file

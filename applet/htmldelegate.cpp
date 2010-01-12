@@ -1,5 +1,5 @@
 /*
- *   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -149,7 +149,13 @@ void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option
     QString formattedText = index.data( FormattedTextRole ).toString();
     QString text = formattedText.isEmpty() ? index.data( Qt::DisplayRole ).toString() : formattedText;
 //     qDebug() << index.data( Qt::DecorationRole );
-
+    
+    QSize iconSize;
+    if ( index.data( IconSizeRole ).isValid() )
+	iconSize = index.data( IconSizeRole ).toSize();
+    else
+	iconSize = option.decorationSize;
+    
     int margin = 4, padding = 2;
     QRect displayRect;
     if ( index.data( Qt::DecorationRole ).isValid()
@@ -159,26 +165,61 @@ void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option
 
 	DecorationPosition decorationPos;
 	if ( index.data( DecorationPositionRole ).isValid() )
-	    decorationPos = static_cast<DecorationPosition>( index.data( DecorationPositionRole ).toInt() );
+	    decorationPos = static_cast<DecorationPosition>(
+		    index.data( DecorationPositionRole ).toInt() );
 	else
 	    decorationPos = Left;
+	
 	if ( decorationPos == Left ) {
-	    topLeft = option.rect.topLeft() + QPoint(margin, (rect.height() - option.decorationSize.height()) / 2);
-	    displayRect = QRect( rect.topLeft() + QPoint(margin + option.decorationSize.width() + padding, 0), rect.bottomRight() );
+	    topLeft = option.rect.topLeft() +
+		    QPoint(margin, (rect.height() - iconSize.height()) / 2);
+	    displayRect = QRect( rect.topLeft() +
+		    QPoint(margin + iconSize.width() + padding, 0), rect.bottomRight() );
 	} else { // decorationPos == Right
-	    topLeft = rect.topRight() + QPoint(-margin - option.decorationSize.width(), (rect.height() - option.decorationSize.height()) / 2);
-	    displayRect = QRect( rect.topLeft(), rect.bottomRight() - QPoint(margin + option.decorationSize.width() + padding, 0) );
+	    topLeft = rect.topRight() + QPoint(-margin - iconSize.width(),
+					       (rect.height() - iconSize.height()) / 2);
+	    displayRect = QRect( rect.topLeft(), rect.bottomRight() -
+		    QPoint(margin + iconSize.width() + padding, 0) );
 	}
 
-	QRect decorationRect( topLeft, topLeft + QPoint(option.decorationSize.width(), option.decorationSize.height()) );
-	drawDecoration( painter, option, decorationRect, icon.pixmap(option.decorationSize) );
+	QRect decorationRect( topLeft, topLeft + QPoint(iconSize.width(), iconSize.height()) );
+	drawDecoration( painter, option, decorationRect, icon.pixmap(iconSize) );
     } else { // no decoration
 	displayRect = rect;
-	if ( m_alignText && !index.data( GroupTitleRole ).isValid() )
-	    displayRect.adjust(margin + option.decorationSize.width() + padding, 0, 0, 0);
+	if ( m_alignText && !index.data(GroupTitleRole).isValid() )
+	    displayRect.adjust(margin + iconSize.width() + padding, 0, 0, 0);
     }
 
-    if ( index.data( GroupTitleRole ).isValid() )
+    if ( index.data(DrawBabkgroundGradientRole).isValid() ) {
+	QPixmap pixmap( option.rect.width(), option.rect.height() / 2 );
+	pixmap.fill( Qt::transparent );
+	QPainter p( &pixmap );
+	
+	QLinearGradient bgGradient( 0, 0, 0, 1 );
+	bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+	bgGradient.setColorAt( 0, QColor(72, 72, 72, 0) );
+	bgGradient.setColorAt( 1, QColor(72, 72, 72, 40) );
+	p.fillRect( 0, 0, option.rect.width(), option.rect.height() / 2, bgGradient );
+
+	// Fade out left and right
+	QLinearGradient alphaGradient1( 0, 0, 1, 0 );
+	QLinearGradient alphaGradient2( 1, 0, 0, 0 );
+	alphaGradient1.setCoordinateMode( QGradient::ObjectBoundingMode );
+	alphaGradient2.setCoordinateMode( QGradient::ObjectBoundingMode );
+	alphaGradient1.setColorAt( 0, QColor(0, 0, 0, 0) );
+	alphaGradient1.setColorAt( 1, QColor(0, 0, 0, 255) );
+	alphaGradient2.setColorAt( 0, QColor(0, 0, 0, 0) );
+	alphaGradient2.setColorAt( 1, QColor(0, 0, 0, 255) );
+	p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+	p.fillRect( 0, 0, option.rect.width() / 5, option.rect.height() / 2, alphaGradient1 );
+	p.fillRect( option.rect.right() - option.rect.width() / 5 - option.rect.left(), 0,
+		    option.rect.width() / 5 + 1, option.rect.height() / 2, alphaGradient2 );
+	p.end();
+	
+	painter->drawPixmap( rect.left(), rect.top() + rect.height() / 2, pixmap );
+    }
+
+    if ( index.data(GroupTitleRole).isValid() )
 	drawDisplayWithShadow( painter, option, displayRect, text, true );
     else
 	drawDisplayWithShadow( painter, option, displayRect, text );
@@ -191,7 +232,8 @@ void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option
 //     QItemDelegate::paint ( painter, option, index );
 }
 
-void HtmlDelegate::drawDecoration( QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QPixmap& pixmap ) const {
+void HtmlDelegate::drawDecoration( QPainter* painter, const QStyleOptionViewItem& option,
+				   const QRect& rect, const QPixmap& pixmap ) const {
     // Add 2 pixels around the pixmap to have enough space for the shadow
     QRect rcBuffer = rect.adjusted( -2, -2, 2, 2 );
     QPixmap bufferPixmap( rcBuffer.size() );
@@ -204,9 +246,9 @@ void HtmlDelegate::drawDecoration( QPainter* painter, const QStyleOptionViewItem
     // Draw shadow
     QColor shadowColor;
     if ( qGray(option.palette.foreground().color().rgb()) > 192 )
-        shadowColor = Qt::black;
-    else
         shadowColor = Qt::white;
+    else
+        shadowColor = Qt::darkGray;
 
     QImage shadow = bufferPixmap.toImage();
     Plasma::PaintUtils::shadowBlur( shadow, 2, shadowColor );
@@ -219,7 +261,10 @@ void HtmlDelegate::drawDecoration( QPainter* painter, const QStyleOptionViewItem
     painter->drawPixmap( rcBuffer.topLeft(), bufferPixmap );
 }
 
-void HtmlDelegate::drawDisplayWithShadow( QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text, bool bigContrastShadow ) const {
+void HtmlDelegate::drawDisplayWithShadow( QPainter* painter,
+					  const QStyleOptionViewItem& option,
+					  const QRect& rect, const QString& text,
+					  bool bigContrastShadow ) const {
     painter->setRenderHint(QPainter::Antialiasing);
 
     int margin = 3;
@@ -242,7 +287,10 @@ void HtmlDelegate::drawDisplayWithShadow( QPainter* painter, const QStyleOptionV
     document.setDefaultTextOption( textOption );
 
     QString sStyleSheet = QString("body { color:rgba(%1,%2,%3,%4); margin-left: %5px; margin-right: %5px; }")
-	.arg( textColor.red() ).arg( textColor.green() ).arg( textColor.blue() ).arg( textColor.alpha() )
+	.arg( textColor.red() )
+	.arg( textColor.green() )
+	.arg( textColor.blue() )
+	.arg( textColor.alpha() )
 	.arg( margin );
     document.setDefaultStyleSheet( sStyleSheet );
 
@@ -346,7 +394,8 @@ void HtmlDelegate::drawDisplayWithShadow( QPainter* painter, const QStyleOptionV
 //     QItemDelegate::drawDisplay( painter, option, rect, text );
 }
 
-QSize HtmlDelegate::sizeHint ( const QStyleOptionViewItem& option, const QModelIndex& index ) const {
+QSize HtmlDelegate::sizeHint ( const QStyleOptionViewItem& option,
+			       const QModelIndex& index ) const {
     QSize size = QItemDelegate::sizeHint ( option, index );
 
     if ( index.data( LinesPerRowRole ).isValid() ) {
@@ -361,133 +410,3 @@ QSize HtmlDelegate::sizeHint ( const QStyleOptionViewItem& option, const QModelI
 
     return size;
 }
-
-/*
-QSize HtmlDelegate::layoutText( QTextLayout& layout, const QString& text, const QSize& constraints ) const
-{
-    QFontMetrics metrics(layout.font());
-    int leading     = metrics.leading();
-    int height      = 0;
-    int maxWidth    = constraints.width();
-    int widthUsed   = 0;
-    int lineSpacing = metrics.lineSpacing();
-    QTextLine line;
-
-    layout.setText(text);
-    layout.beginLayout();
-    while ((line = layout.createLine()).isValid()) {
-        height += leading;
-
-        // Make the last line that will fit infinitely long.
-        // drawTextLayout() will handle this by fading the line out
-        // if it won't fit in the contraints.
-        if (height + 2 * lineSpacing > constraints.height()) {
-            line.setPosition(QPoint(0, height));
-            break;
-        }
-
-        line.setLineWidth(maxWidth);
-        line.setPosition(QPoint(0, height));
-
-        height += int(line.height());
-        widthUsed = int(qMax(qreal(widthUsed), line.naturalTextWidth()));
-    }
-    layout.endLayout();
-
-    return QSize(widthUsed, height);
-}
-
-void HtmlDelegate::drawTextLayout ( QPainter* painter, const QTextLayout& layout, const QRect& rect, const QStyleOptionViewItem& option ) const
-{
-    if (rect.width() < 1 || rect.height() < 1)
-        return;
-
-    QColor textColor = option.palette.text().color();
-    painter->setPen(QPen(textColor, 1.0));
-
-    // Create the alpha gradient for the fade out effect
-    QLinearGradient alphaGradient(0, 0, 1, 0);
-    alphaGradient.setCoordinateMode(QGradient::ObjectBoundingMode);
-    if ( layout.textOption().textDirection() == Qt::LeftToRight )
-    {
-        alphaGradient.setColorAt(0, QColor(0, 0, 0, 255));
-        alphaGradient.setColorAt(1, QColor(0, 0, 0, 0));
-    } else
-    {
-        alphaGradient.setColorAt(0, QColor(0, 0, 0, 0));
-        alphaGradient.setColorAt(1, QColor(0, 0, 0, 255));
-    }
-//     int lineCount = 0, maxLineCount = rc.height() / option.fontMetrics.lineSpacing();
-//     for ( int b = 0; b < document.blockCount(); ++b )
-// 	lineCount += document.findBlockByLineNumber( b ).layout()->lineCount();
-//     if ( lineCount > maxLineCount )
-//     {qDebug() << "restricted to " << maxLineCount;
-// 	lineCount = maxLineCount;
-//     }
-//     qDebug() << rc.height() << "/" << option.fontMetrics.lineSpacing() << "......" << maxLineCount << lineCount;
-
-    QFontMetrics fm(layout.font());
-    int textHeight = layout.lineCount() * fm.lineSpacing();
-    QPointF position = textHeight < rect.height() ?
-            QPointF(0, (rect.height() - textHeight) / 2 + (fm.tightBoundingRect("M").height() - fm.xHeight())) : QPointF(0, 0);
-    QList<QRect> fadeRects;
-    int fadeWidth = 30;
-
-    QPixmap pixmap( rect.size() );
-    pixmap.fill( Qt::transparent );
-
-    QPainter p( &pixmap );
-    p.setPen( painter->pen() );
-
-//     for ( int b = 0; b < document.blockCount(); ++b )
-//     {
-// 	QTextLayout *textLayout = document.findBlockByLineNumber( b ).layout();
-
-// 	qDebug() << textLayout->text() << textLayout->boundingRect().size();
-// 	for ( int l = 0; l < textLayout->lineCount(); ++l )
-    // Draw each line in the layout
-    for ( int i = 0; i < layout.lineCount(); i++ )
-    {
-	QTextLine textLine = layout.lineAt( i );
-	textLine.draw( &p, position );
-
-	// Add a fade out rect to the list if the line is too long
-	if ( textLine.naturalTextWidth() > rect.width() )
-	{
-	    int x = int(qMin(textLine.naturalTextWidth(), (qreal)rect.width())) - fadeWidth;
-	    int y = int(textLine.position().y() + position.y());
-	    QRect r = QStyle::visualRect(layout.textOption().textDirection(), pixmap.rect(),
-					QRect(x, y, fadeWidth, int(textLine.height())));
-	    fadeRects.append(r);
-	}
-    }
-//     }
-
-    // Reduce the alpha in each fade out rect using the alpha gradient
-    if ( !fadeRects.isEmpty() )
-    {
-        p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-        foreach (const QRect &rect, fadeRects)
-            p.fillRect(rect, alphaGradient);
-    }
-
-    p.end();
-
-    QColor shadowColor;
-    if ( qGray(textColor.rgb()) > 192 )
-        shadowColor = Qt::black;
-    else
-        shadowColor = Qt::white;
-
-    QImage shadow = pixmap.toImage();
-    Plasma::PaintUtils::shadowBlur( shadow, 2, shadowColor );
-
-    if ( shadowColor == Qt::white )
-        painter->drawImage( rect.topLeft(), shadow );
-    else
-        painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );
-
-    painter->drawPixmap( rect.topLeft(), pixmap );
-}*/
-
-

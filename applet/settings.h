@@ -1,5 +1,5 @@
 /*
-*   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -28,6 +28,7 @@
 #include "datasourcetester.h"
 #include "global.h"
 #include "appletwithstate.h"
+
 #include <Plasma/Theme>
 
 class QStandardItemModel;
@@ -81,6 +82,8 @@ class PublicTransportSettings : public QObject {
 	QString stopIDinConfig() const { return m_stopIDinConfig; };
 	/** How many lines each row in the tree view should have. */
 	int linesPerRow() const { return m_linesPerRow; };
+	/** The size factor of the timetable. */
+	float sizeFactor() const { return (m_size + 3) * 0.2f; };
 	/** The id of the current service provider. */
 	QString serviceProvider() const { return m_serviceProvider; };
 	/** The offset in minutes from now of the first departure. */
@@ -168,7 +171,8 @@ class PublicTransportSettings : public QObject {
 	/** The config dialog has been closed. */
 	void configDialogFinished();
 	/** The result of a data source test is ready. */
-	void testResult( DataSourceTester::TestResult result, const QVariant &data );
+	void testResult( DataSourceTester::TestResult result,
+			 const QVariant &data, const QVariant &data2 );
 	/** The info button in the config dialog for showing all service provider information has been clicked. */
 	void clickedServiceProviderInfo( bool );
 	/** The data from the data engine was updated. */
@@ -179,9 +183,9 @@ class PublicTransportSettings : public QObject {
 	/** A vehicle type was removed from the shown vehicle types list widget. */
 	void removedFilterLineType( QListWidgetItem* );
 	/** Another item was selected in the shown vehicle types list widget. */
-	void filterLineTypeSelectedSelctionChanged( int );
+	void filterLineTypeSelectedSelectionChanged( int );
 	/** Another item was selected in the hidden vehicle types list widget. */
-	void filterLineTypeAvaibleSelctionChanged( int );
+	void filterLineTypeAvaibleSelectionChanged( int );
 	/** Updates the service provider model by inserting service provider for the
 	* current location.
 	* @return The index in the service provider combobox of the currently selected
@@ -214,6 +218,7 @@ class PublicTransportSettings : public QObject {
 	QString m_stopID; // The ID of the currently selected stop or an empty string if the ID isn't available
 	QString m_stopIDinConfig; // The ID of the currently typed stop in the config dialog
 	int m_linesPerRow; // How many lines each row in the tree view should have
+	int m_size; // The size of the timetable
 	QString m_serviceProvider; // The id of the current service provider
 	QString m_location; // The current location code
 	int m_timeOffsetOfFirstDeparture; // The offset in minutes from now of the first departure
