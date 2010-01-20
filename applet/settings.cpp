@@ -21,12 +21,16 @@
 #include <QListWidget>
 #include <QTreeView>
 #include <QStandardItemModel>
+#include <QMenu>
+#include <QProcess>
 
 // KDE includes
 #include <KTabWidget>
 #include <KConfigDialog>
 #include <KColorScheme>
 #include <KFileDialog>
+#include <KStandardDirs>
+#include <KMessageBox>
 
 #include <kdeversion.h>
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
@@ -38,15 +42,14 @@
 // Own includes
 #include "settings.h"
 #include "htmldelegate.h"
-#include <qprocess.h>
-#include <KStandardDirs>
-#include <QMenu>
-#include <KMessageBox>
+
+#define NO_EXPORT_PLASMA_APPLET
+#include "publictransport.h"
+#undef NO_EXPORT_PLASMA_APPLET
 
 
-PublicTransportSettings::PublicTransportSettings( AppletWithState *applet )
-    : m_modelServiceProvider(0), m_modelLocations(0)
-{
+PublicTransportSettings::PublicTransportSettings( PublicTransport *applet )
+	    : m_modelServiceProvider(0), m_modelLocations(0) {
     m_applet = applet;
 
 //     m_stopNameValid = false;
@@ -56,7 +59,8 @@ PublicTransportSettings::PublicTransportSettings( AppletWithState *applet )
 	     this, SLOT(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&)) );
 }
 
-void PublicTransportSettings::dataUpdated ( const QString& sourceName, const Plasma::DataEngine::Data& data ) {
+void PublicTransportSettings::dataUpdated( const QString& sourceName,
+					   const Plasma::DataEngine::Data& data ) {
     if ( data.isEmpty() )
 	return;
 
@@ -99,17 +103,19 @@ void PublicTransportSettings::readSettings() {
     m_stop = cg.readEntry("stop", "");
     m_stopID = cg.readEntry("stopID", "");
     m_timeOffsetOfFirstDeparture = cg.readEntry("timeOffsetOfFirstDeparture", 0);
-    m_timeOfFirstDepartureCustom = QTime::fromString( cg.readEntry("timeOfFirstDepartureCustom", "12:00"), "hh:mm" );
+    m_timeOfFirstDepartureCustom = QTime::fromString(
+	    cg.readEntry("timeOfFirstDepartureCustom", "12:00"), "hh:mm" );
     m_firstDepartureConfigMode = static_cast<FirstDepartureConfigMode>(
-	cg.readEntry("firstDepartureConfigMode", static_cast<int>(RelativeToCurrentTime)) );
+	    cg.readEntry("firstDepartureConfigMode",
+			 static_cast<int>(RelativeToCurrentTime)) );
     m_maximalNumberOfDepartures = cg.readEntry("maximalNumberOfDepartures", 20);
     m_alarmTime = cg.readEntry("alarmTime", 5);
     m_linesPerRow = cg.readEntry("linesPerRow", 2);
     m_size = cg.readEntry("size", 2);
     m_departureArrivalListType = static_cast<DepartureArrivalListType>(
-	cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList)) );
+	    cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList)) );
     m_journeyListType = static_cast<JourneyListType>(
-	cg.readEntry("journeyListType", static_cast<int>(JourneysFromHomeStopList)) );
+	    cg.readEntry("journeyListType", static_cast<int>(JourneysFromHomeStopList)) );
     m_showHeader = cg.readEntry("showHeader", true);
     m_hideColumnTarget = cg.readEntry("hideColumnTarget", false);
 
@@ -153,6 +159,7 @@ void PublicTransportSettings::getServiceProviderInfo() {
 	if ( serviceProvider() == serviceProviderData["id"].toString() ) {
 	    m_useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
 	    m_onlyUseCitiesInList = serviceProviderData["onlyUseCitiesInList"].toBool();
+	    m_serviceProviderFeatures = serviceProviderData["features"].toStringList();
 	    break;
 	}
     }
@@ -177,7 +184,7 @@ void PublicTransportSettings::setHideColumnTarget( bool hideColumnTarget ) {
     emit configNeedsSaving();
 }
 
-void PublicTransportSettings::filterLineTypeAvaibleSelectionChanged( int ) {
+void PublicTransportSettings::filterLineTypeAvailableSelectionChanged( int ) {
     m_uiFilter.filterLineType->setButtonsEnabled();
 }
 
@@ -335,7 +342,7 @@ QString PublicTransportSettings::configCityValue() const {
 	return m_ui.city->currentText();
 }
 
-void PublicTransportSettings::serviceProviderChanged ( int index ) {
+void PublicTransportSettings::serviceProviderChanged( int index ) {
     QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( index )->data( ServiceProviderDataRole ).toHash();
     kDebug() << "New service provider" << serviceProviderData["name"].toString();
 
@@ -442,7 +449,7 @@ void PublicTransportSettings::clickedServiceProviderInfo ( bool ) {
 	m_uiAccessorInfo.author->setToolTip( i18n("Write an email to %1 <%2>").arg( serviceProviderData["author"].toString() ).arg( serviceProviderData["email"].toString() ) );
     }
     m_uiAccessorInfo.description->setText( serviceProviderData["description"].toString() );
-    m_uiAccessorInfo.features->setText( serviceProviderData["features"].toStringList().join(", ") );
+    m_uiAccessorInfo.features->setText( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
 
     infoDialog->show();
 }
@@ -497,7 +504,7 @@ void PublicTransportSettings::createConfigurationInterface( KConfigDialog* paren
     connect( m_uiFilter.filterLineType->selectedListWidget(), SIGNAL(currentRowChanged(int)),
 	     this, SLOT(filterLineTypeSelectedSelectionChanged(int)) );
     connect( m_uiFilter.filterLineType->availableListWidget(), SIGNAL(currentRowChanged(int)),
-	     this, SLOT(filterLineTypeAvaibleSelctionChanged(int)) );
+	     this, SLOT(filterLineTypeAvailableSelectionChanged(int)) );
     connect( m_uiFilter.filterLineType, SIGNAL(added(QListWidgetItem*)),
 	     this, SLOT(addedFilterLineType(QListWidgetItem*)) );
     connect( m_uiFilter.filterLineType, SIGNAL(removed(QListWidgetItem*)),
@@ -553,7 +560,6 @@ void PublicTransportSettings::setValuesOfStopSelectionConfig() {
 
     QString highlightTextColor;
     QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
-    qDebug() << "     AAA " << qGray(textColor.rgb());
     if ( qGray(textColor.rgb()) > 192 )
 	highlightTextColor = "red";
     else
@@ -996,6 +1002,7 @@ void PublicTransportSettings::configAccepted() {
 
 	m_onlyUseCitiesInList = serviceProviderData["onlyUseCitiesInList"].toBool();
 	m_useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
+	m_serviceProviderFeatures = serviceProviderData["features"].toStringList();
     }
 
     if (!m_uiAdvanced.updateAutomatically->isChecked() && m_updateTimeout != 0) {

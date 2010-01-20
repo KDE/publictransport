@@ -50,27 +50,31 @@
 // Own includes
 #include "publictransport.h"
 #include "htmldelegate.h"
+#include <KColorScheme>
 
 
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
-    : AppletWithState(parent, args), //Plasma::PopupApplet(parent, args),
-    m_graphicsWidget(0),
-    m_icon(0),
-    m_label(0),
-    m_labelInfo(0),
-    m_treeView(0),
-    m_model(0),
-    m_currentSource(""),
-    m_settings( this )
-{
+	    : Plasma::PopupApplet(parent, args),
+	    m_graphicsWidget(0),
+	    m_icon(0),
+	    m_label(0),
+	    m_labelInfo(0),
+	    m_treeView(0),
+	    m_journeySearch(0),
+	    m_listPossibleStops(0),
+	    m_model(0),
+	    m_currentSource(""),
+	    m_settings( this ) {
     m_departureViewColumns << LineStringColumn << TargetColumn << DepartureColumn;
-    m_journeyViewColumns << VehicleTypeListColumn << JourneyInfoColumn << DepartureColumn << ArrivalColumn;
+    m_journeyViewColumns << VehicleTypeListColumn << JourneyInfoColumn
+			 << DepartureColumn << ArrivalColumn;
 
-    setBackgroundHints(DefaultBackground);
-    setAspectRatioMode(Plasma::IgnoreAspectRatio);
+    m_journeySearchLastTextLength = 0;
+    setBackgroundHints( DefaultBackground );
+    setAspectRatioMode( Plasma::IgnoreAspectRatio );
 //     m_svg.setImagePath("widgets/background");
-    setHasConfigurationInterface(true);
-    resize(300, 200);
+    setHasConfigurationInterface( true );
+    resize( 350, 300 );
 
     connect( &m_settings, SIGNAL(configNeedsSaving()),
 	     this, SLOT(emitConfigNeedsSaving()) );
@@ -90,35 +94,21 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	     this, SLOT(journeyListTypeChanged(JourneyListType)) );
 }
 
-void PublicTransport::emitConfigNeedsSaving() {
-    emit configNeedsSaving();
-}
-
-void PublicTransport::emitSettingsChanged() {
-    emit settingsChanged();
-}
-
 void PublicTransport::configurationIsRequired( bool needsConfiguring,
 					       const QString &reason ) {
     setConfigurationRequired( needsConfiguring, reason );
 }
 
-void PublicTransport::departureListNeedsClearing() {
-    m_departureInfos.clear();
-}
-
-void PublicTransport::modelNeedsUpdate() {
-    updateModel();
-}
-
 PublicTransport::~PublicTransport() {
-    if (hasFailedToLaunch()) {
+    if ( hasFailedToLaunch() ) {
         // Do some cleanup here
     } else {
-	delete m_label; // I *think* this gets deleted when I delete m_graphicsWidget...
+	m_journeySearch->removeEventFilter( this );
+
+	// TODO: are these deleted by plasma?
+	delete m_label;
 	delete m_labelInfo;
-// 	delete m_treeWidget; // I *think* this gets deleted when I delete m_graphicsWidget...
-	delete m_graphicsWidget; // ...which I *think* also gets deleted automatically by plasma?
+	delete m_graphicsWidget;
     }
 }
 
@@ -147,10 +137,6 @@ void PublicTransport::init() {
 
     setupActions();
     reconnectSource();
-}
-
-void PublicTransport::themeChanged() {
-    useCurrentPlasmaTheme();
 }
 
 void PublicTransport::setupActions() {
@@ -279,7 +265,7 @@ void PublicTransport::updateDataSource ( bool ) {
 }
 
 QString PublicTransport::stop() const {
-    // TODO: create new method in PublicTransportSettings::stopOrStopID()
+    // TODO: create new method in PublicTransportSettings::stopOrStopID()?
     return m_settings.stopID().isEmpty() ? m_settings.stop() : m_settings.stopID();
 }
 
@@ -292,6 +278,7 @@ void PublicTransport::disconnectJourneySource() {
 
 void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 					      const QDateTime& dateTime,
+					      bool stopIsTarget, bool timeIsDeparture,
 					      bool requestStopSuggestions ) {
     disconnectJourneySource();
 
@@ -309,13 +296,15 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 		.arg( m_settings.serviceProvider() )
 		.arg( _targetStopName );
     } else {
-	m_currentJourneySource = QString( m_settings.journeyListType() == JourneysFromHomeStopList
-		? "Journeys %1|originStop=%2|targetStop=%3|maxDeps=%4|datetime=%5"
-		: "Journeys %1|originStop=%3|targetStop=%2|maxDeps=%4|datetime=%5" )
+	m_currentJourneySource = QString( /*m_settings.journeyListType() == JourneysFromHomeStopList*/
+		stopIsTarget
+		? "%6 %1|originStop=%2|targetStop=%3|maxDeps=%4|datetime=%5"
+		: "%6 %1|originStop=%3|targetStop=%2|maxDeps=%4|datetime=%5" )
 		.arg( m_settings.serviceProvider() )
 		.arg( stop() ).arg( _targetStopName )
 		.arg( m_settings.maximalNumberOfDepartures() )
-		.arg( _dateTime.toString() );
+		.arg( _dateTime.toString() )
+		.arg( timeIsDeparture ? "Journeys" : "JourneysArr" );
     }
 //     if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime ) {
 // 	m_currentJourneySource += QString("|timeOffset=%1")
@@ -385,7 +374,7 @@ void PublicTransport::processJourneyList( const Plasma::DataEngine::Data& data )
 	if ( !journeyData.isValid()
 		|| m_journeyInfos.count() >= m_settings.maximalNumberOfDepartures() ) {
 	    if ( !journeyData.isValid() )
-		kDebug() << i << "Journey data is invalid";// << data;
+		kDebug() << i << "Journey data is invalid";
 	    break;
 	}
 
@@ -439,21 +428,17 @@ void PublicTransport::processJourneyList( const Plasma::DataEngine::Data& data )
 				 routeTimesDeparture, routeTimesArrival,
 				 routeTimesDepartureDelay, routeTimesArrivalDelay );
 
-	// Only add journeys that are in the future
-	// TODO: adjust for journeys TO the home stop (this works for journeys FROM the home stop)
-	int secsToDepartureTime = QDateTime::currentDateTime().secsTo( journeyInfo.departure );
-	if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime )
-	    secsToDepartureTime -= m_settings.timeOffsetOfFirstDeparture() * 60;
-	if ( -secsToDepartureTime / 3600 >= 23 )
-	    secsToDepartureTime += 24 * 3600;
-	if ( secsToDepartureTime > -60 )
+	// ¿Only add journeys that are in the future?
+// 	int secsToDepartureTime = QDateTime::currentDateTime().secsTo( journeyInfo.departure );
+// 	if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime )
+// 	    secsToDepartureTime -= m_settings.timeOffsetOfFirstDeparture() * 60;
+// 	if ( -secsToDepartureTime / 3600 >= 23 )
+// 	    secsToDepartureTime += 24 * 3600;
+// 	if ( secsToDepartureTime > -60 )
 	    m_journeyInfos.append( journeyInfo );
     }
 
     kDebug() << m_journeyInfos.count() << "journeys received";
-//     setBusy( false ); // call SetBusy() in add/removeState()
-//     setConfigurationRequired( false );
-//     m_stopNameValid = true;
 //     m_lastSourceUpdate = data["updated"].toDateTime();
     updateModelJourneys();
 }
@@ -466,7 +451,8 @@ void PublicTransport::processDepartureList( const Plasma::DataEngine::Data& data
     QUrl url = data["requestUrl"].toUrl();
     kDebug() << "APP-URL" << url;
     m_urlDeparturesArrivals = url;
-    if ( testState(ShowingDepartureArrivalList) || testState(ShowingJourneySearch) )
+    if ( testState(ShowingDepartureArrivalList) || testState(ShowingJourneySearch)
+	    || testState(ShowingJourneysNotSupported) )
 	setAssociatedApplicationUrls( KUrl::List() << url );
     #endif
 
@@ -561,7 +547,8 @@ void PublicTransport::processData( const Plasma::DataEngine::Data& data ) {
 	    QUrl url = data["requestUrl"].toUrl();
 	    kDebug() << "Errorneous departure/arrival url" << url;
 	    m_urlDeparturesArrivals = url;
-	    if ( testState(ShowingDepartureArrivalList) || testState(ShowingJourneySearch) )
+	    if ( testState(ShowingDepartureArrivalList) || testState(ShowingJourneySearch)
+		    || testState(ShowingJourneysNotSupported) )
 		setAssociatedApplicationUrls( KUrl::List() << url );
 	    #endif
 	    
@@ -635,7 +622,8 @@ void PublicTransport::processData( const Plasma::DataEngine::Data& data ) {
     removeState( ServiceProviderSettingsJustChanged );
 }
 
-void PublicTransport::dataUpdated ( const QString& sourceName, const Plasma::DataEngine::Data& data ) {
+void PublicTransport::dataUpdated( const QString& sourceName,
+				   const Plasma::DataEngine::Data& data ) {
     Q_UNUSED( sourceName );
 
 //     kDebug() << sourceName; // << data;
@@ -656,7 +644,8 @@ void PublicTransport::geometryChanged() {
 
     QTreeView *treeView = m_treeView->nativeWidget();
     QHeaderView *header = treeView->header();
-    disconnect ( header, SIGNAL(sectionResized(int,int,int)), this, SLOT(treeViewSectionResized(int,int,int)) );
+    disconnect( header, SIGNAL(sectionResized(int,int,int)),
+		this, SLOT(treeViewSectionResized(int,int,int)) );
 
     if ( testState(ShowingDepartureArrivalList) ) {
 	int lineSectionSize = treeView->columnWidth(m_departureViewColumns.indexOf(LineStringColumn));
@@ -833,8 +822,8 @@ AlarmTimer* PublicTransport::getNextAlarm() {
 }
 
 void PublicTransport::configChanged() {
-    disconnect(this, SIGNAL(settingsChanged()), this, SLOT(configChanged()));
-
+    disconnect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
+    addState( ShowingDepartureArrivalList );
     addState( SettingsJustChanged );
 
     setDepartureArrivalListType( m_settings.departureArrivalListType() );
@@ -856,7 +845,6 @@ void PublicTransport::configChanged() {
     m_labelInfo->nativeWidget()->setFont( font );
     m_listPossibleStops->nativeWidget()->setFont( font );
     m_journeySearch->nativeWidget()->setFont( font );
-//     m_treeView->nativeWidget()->updateGeometry(); // TODO: check if this helps resizing items when the font changed
 
     int iconExtend = (testState(ShowingDepartureArrivalList) ? 16 : 32) * m_settings.sizeFactor();
     m_treeView->nativeWidget()->setIconSize( QSize(iconExtend, iconExtend) );
@@ -875,7 +863,7 @@ void PublicTransport::configChanged() {
     else
 	showColumnTarget(true);
 
-    connect(this, SIGNAL(settingsChanged()), this, SLOT(configChanged()));
+    connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
 }
 
 void PublicTransport::serviceProviderSettingsChanged() {
@@ -911,7 +899,7 @@ void PublicTransport::setMainIconDisplay( MainIconDisplay mainIconDisplay ) {
 		icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
 			    QList<KIcon>() << KIcon("go-home") << KIcon("go-next"),
 			    QSize(iconExtend / 2, iconExtend / 2), iconExtend );
-	    } else{
+	    } else {
 		icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
 			    QList<KIcon>() << KIcon("go-next") << KIcon("go-home"),
 			    QSize(iconExtend / 2, iconExtend / 2), iconExtend );
@@ -984,32 +972,406 @@ void PublicTransport::iconClicked() {
 
     switch( m_titleType ) {
 	case ShowSearchJourneyLineEdit:
+	case ShowSearchJourneyLineEditDisabled:
 	    addState( ShowingDepartureArrivalList );
 	    break;
 	case ShowJourneyListTitle:
 	case ShowDepartureArrivalListTitle:
-	    addState( ShowingJourneySearch );
+	    showJourneySearch( false );
 	    break;
     }
-// 	setTitleType( ShowSearchJourneyLineEdit );
-//     } else if ( m_titleType == ShowDepartureArrivalListTitle )
-// 	setTitleType( ShowSearchJourneyLineEdit );
-// 	addState( ShowingJourneySearch );
 }
 
 void PublicTransport::iconCloseClicked() {
-//     setTitleType( ShowDepartureArrivalListTitle );
     addState( ShowingDepartureArrivalList );
+}
+
+bool PublicTransport::parseDate( const QString& sDate, QDate* date ) const {
+    if ( sDate == i18n("today") ) {
+	*date = QDate::currentDate();
+	return true;
+    } else if ( sDate == i18n("tomorrow") ) {
+	*date = QDate::currentDate().addDays( 1 );
+	return true;
+    }
+	
+    bool ok;
+    *date = KGlobal::locale()->readDate( sDate, &ok );
+    if ( !ok ) {
+	// Allow date input without year
+	if ( sDate.count('-') == 1 ) {
+	    *date = KGlobal::locale()->readDate(
+		    QDate::currentDate().toString("yy") + "-" + sDate, &ok );
+	} else if ( sDate.count('.') == 1 ) {
+	    *date = KGlobal::locale()->readDate(
+		    sDate + "." + QDate::currentDate().toString("yy"), &ok );
+	} else if ( sDate.count('.') == 2 && sDate.endsWith('.') ) {
+	    *date = KGlobal::locale()->readDate(
+		    sDate + QDate::currentDate().toString("yy"), &ok );
+	}
+
+	if ( !ok )
+	    *date = QDate::currentDate();
+    }
+    return ok;
+}
+
+bool PublicTransport::parseTime( const QString& sTime, QTime *time ) const {
+    if ( sTime == i18n("now") ) {
+	*time = QTime::currentTime();
+	return true;
+    }
+    
+    bool ok;
+    *time = KGlobal::locale()->readTime( sTime, &ok );
+    if ( !ok )
+	*time = QTime::currentTime();
+    return ok;
+}
+
+void PublicTransport::stopNamePosition( int *posStart, int *len ) const {
+    QString stop;
+    bool stopIsTarget, timeIsDeparture;
+    QDateTime departure;
+    parseJourneySearch( m_journeySearch->text(), &stop, &departure,
+			&stopIsTarget, &timeIsDeparture, posStart, len, false );
+}
+
+bool PublicTransport::parseJourneySearch( const QString& search, QString *stop,
+					  QDateTime *departure,
+					  bool *stopIsTarget, bool *timeIsDeparture,
+					  int *posStart, int *len,
+					  bool correctString ) const {
+    QString searchLine = search;
+    *stopIsTarget = true;
+    *timeIsDeparture = true;
+    int removedFromLeft = 0;
+
+    // First search for keywords at the beginning of the string ('to' or 'from')
+    QString toKeyword = i18nc("Keyword in the journey search field, indicating "
+			      "that a journey TO the given stop should be searched. "
+			      "This keyword needs to be placed at the beginning of "
+			      "the field.", "to") + " ";
+    QString fromKeyword = i18nc("Keyword in the journey search field, indicating "
+			        "that a journey FROM the given stop should be searched. "
+			        "This keyword needs to be placed at the beginning of "
+			        "the field.", "from") + " ";
+    if ( searchLine.startsWith(toKeyword, Qt::CaseInsensitive) ) {
+	searchLine = searchLine.mid( toKeyword.length() ).trimmed();
+	removedFromLeft = toKeyword.length();
+    } else if ( searchLine.startsWith(fromKeyword, Qt::CaseInsensitive) ) {
+	searchLine = searchLine.mid( fromKeyword.length() ).trimmed();
+	*stopIsTarget = false; // the given stop is the origin
+	removedFromLeft = fromKeyword.length();
+    }
+    if ( posStart )
+	*posStart = removedFromLeft;
+
+    QStringList departureKeywords = i18nc("A comma seperated list of keywords for the "
+				          "journey search to indicate that given times "
+				          "are meant as departures (default). "
+				          "The order is used for autocompletion.",
+				          "departing,depart,departure,dep")
+				          .split(',', QString::SkipEmptyParts);
+    QStringList arrivalKeywords = i18nc("A comma seperated list of keywords for the "
+				        "journey search to indicate that given times "
+				        "are meant as arrivals. "
+				        "The order is used for autocompletion.",
+					"arriving,arrive,arrival,arr")
+					.split(',', QString::SkipEmptyParts);
+    QString timeKeyword1 = " " + i18nc("Keyword in the journey search field, "
+				       "indicating that a date/time string follows.",
+				       "at");
+    QString timeKeyword2 = " " + i18nc("Keyword in the journey search field, "
+				       "indicating that a relative time string follows.",
+				       "in");
+    QString timeKeyword3 = " " + i18n("tomorrow");
+    
+    // Do corrections
+    if ( correctString ) {
+	int selStart = -1, selLength = 0;
+	if ( searchLine.endsWith(timeKeyword1) ) {
+	    // Automatically add the current time after 'at'
+	    QString formattedTime = KGlobal::locale()->formatTime( QTime::currentTime() );
+	    selStart = searchLine.length() + 1; // +1 for the added space
+	    selLength = formattedTime.length();
+	    searchLine += " " + formattedTime;
+	} else if ( searchLine.endsWith(timeKeyword2) ) {
+	    // Automatically add '5 minutes' after 'in'
+	    QString defaultRelTime = i18nc("The automatically added relative time "
+		    "string, when the journey search line ends with the keyword 'in'."
+		    "This should be match by the regular expression for a relative "
+		    "time, like '(in) 5 minutes'. "
+		    "That regexp and the keyword ('in') are also localizable. "
+		    "Don't include the 'in' here.", "%1 minutes", 5);
+	    selStart = searchLine.length() + 1; // +1 for the added space
+	    selLength = 1; // only select the number (5)
+	    searchLine += " " + defaultRelTime;
+	} else {
+	    // Use a regexp to search for departure/arrival keywords that are 
+	    // already in the string, to not autocomplete another such keyword
+	    QRegExp rxDepArr( "(" + departureKeywords.join("|") + "|"
+				  + arrivalKeywords.join("|") + ")\\s+\\S+" );
+	    if ( rxDepArr.indexIn(searchLine) == -1 ) {
+		// Autocomplete departure keywords
+		bool depArrKeywordFound = false;
+		foreach ( QString departureKeyword, departureKeywords ) {
+		    QString autoCompletionWord = departureKeyword.trimmed();
+		    departureKeyword = " ";
+		    for ( int n = 0; n < autoCompletionWord.length() - 1; ++n ) {
+			departureKeyword += autoCompletionWord[ n ];
+			if ( searchLine.endsWith(departureKeyword) ) {
+			    selStart = searchLine.length();
+			    selLength = autoCompletionWord.length() - n - 1;
+			    searchLine += autoCompletionWord.right( selLength );
+			    depArrKeywordFound = true;
+			    break;
+			}
+		    }
+		}
+		if ( !depArrKeywordFound ) {
+		    // Autocomplete arrival keywords
+		    foreach ( QString arrivalKeyword, arrivalKeywords ) {
+			QString autoCompletionWord = arrivalKeyword.trimmed();
+			arrivalKeyword = " ";
+			for ( int n = 0; n < autoCompletionWord.length() - 1; ++n ) {
+			    arrivalKeyword += autoCompletionWord[ n ];
+			    if ( searchLine.endsWith(arrivalKeyword) ) {
+				selStart = searchLine.length();
+				selLength = autoCompletionWord.length() - n - 1;
+				searchLine += autoCompletionWord.right( selLength );
+				depArrKeywordFound = true;
+				break;
+			    }
+			}
+		    }
+		} // if ( !depArrKeywordFound ) {
+	    } // if ( rxDepArr.indexIn(searchLine) == -1 ) {
+
+	    // Autocomplete tomorrow keyword
+	    QString autoCompletionWord = timeKeyword3.trimmed();
+	    QString keyword = " ";
+	    for ( int n = 0; n < autoCompletionWord.length() - 1; ++n ) {
+		keyword += autoCompletionWord[ n ];
+		if ( searchLine.endsWith(keyword) ) {
+		    selStart = searchLine.length();
+		    selLength = autoCompletionWord.length() - n - 1;
+		    searchLine += autoCompletionWord.right( selLength );
+		    break;
+		}
+	    }
+	}
+
+	// Select an appropriate substring after inserting something
+	if ( selStart != -1 ) {
+	    QString correctedSearch = search.left( removedFromLeft ) + searchLine;
+	    selStart += removedFromLeft;
+	    m_journeySearch->setText( correctedSearch );
+	    m_journeySearch->nativeWidget()->setSelection( selStart, selLength );
+	}
+    } // Do corrections
+
+    // Now search for keywords inside the string
+    timeKeyword1 += " ";
+    timeKeyword2 += " ";
+    QStringList parts;
+    if ( (searchLine.contains(timeKeyword1) && (parts = searchLine.split(timeKeyword1,
+		QString::KeepEmptyParts, Qt::CaseInsensitive)).count() >= 2 ) ) {
+	// " at " keyword contained with a string following
+	*stop = parts[ 0 ].trimmed();
+	QString sDeparture = parts[ 1 ];
+	QStringList timeValues = sDeparture.split( QRegExp("\\s|,"),
+						   QString::SkipEmptyParts );
+	QDate date;
+	QTime time;
+
+	// If the tomorrow keyword is found before 'at', set date to tomorrow
+	if ( stop->endsWith(timeKeyword3, Qt::CaseInsensitive) ) {
+	    *stop = stop->left( stop->length() - timeKeyword3.length() ).trimmed();
+	    date = QDate::currentDate().addDays( 1 );
+	}
+
+	bool depArrKeywordFound = false;
+	// If a departure keyword is found before 'at', use given times as departure times
+	foreach ( QString departureKeyword, departureKeywords ) {
+	    departureKeyword = " " + departureKeyword.trimmed();
+	    if ( stop->endsWith(departureKeyword, Qt::CaseInsensitive) ) {
+		*stop = stop->left( stop->length() - departureKeyword.length() ).trimmed();
+		*timeIsDeparture = true;
+		depArrKeywordFound = true;
+		break;
+	    }
+	}
+	if ( !depArrKeywordFound ) {
+	    // If an arrival keyword is found before 'at', use given times as arrival times
+	    foreach ( QString arrivalKeyword, arrivalKeywords ) {
+		arrivalKeyword = " " + arrivalKeyword.trimmed();
+		if ( stop->endsWith(arrivalKeyword, Qt::CaseInsensitive) ) {
+		    *stop = stop->left( stop->length() - arrivalKeyword.length() ).trimmed();
+		    *timeIsDeparture = false;
+		    depArrKeywordFound = true;
+		    break;
+		}
+	    }
+	}
+
+	// Parse date and/or time from the string after 'at'
+	if ( timeValues.count() >= 2 ) {
+	    if ( date.isNull() ) {
+		if ( !parseDate(timeValues[0], &date)
+			&& !parseDate(timeValues[1], &date) )
+		    date = QDate::currentDate();
+	    }
+	    
+	    if ( !parseTime(timeValues[1], &time)
+		    && !parseTime(timeValues[0], &time) )
+		time = QTime::currentTime();
+	} else {
+	    if ( !parseTime(sDeparture, &time) ) {
+		time = QTime::currentTime();
+		if ( date.isNull() && !parseDate(sDeparture, &date) )
+		    date = QDate::currentDate();
+	    } else if ( date.isNull() )
+		date = QDate::currentDate();
+	}
+	
+	*departure = QDateTime( date, time );
+	
+	if ( len )
+	    *len = stop->length();
+	return true;
+    } else if ( searchLine.contains(timeKeyword2) && (parts = searchLine.split(timeKeyword2,
+		QString::KeepEmptyParts, Qt::CaseInsensitive)).count() >= 2 ) {
+	// " in " keyword contained with a string following
+	*stop = parts[ 0 ].trimmed();
+	QString sDeparture = parts[ 1 ];
+	QRegExp rx( i18nc("This is a regular expression used to match a string "
+			  "after the 'in' keyword in the journey search line. "
+			  "The english version matches strings like '5 mins.', "
+			  "'1 minute', ... '\\d+' stands for at least one digit, "
+			  "'\\.' is just a point, a '?' after a character means "
+			  "that it's optional (eg. the 's' in 'mins?' is optional "
+			  "to match singular and plural forms). Normally you will "
+			  "only have to translate 'mins?' and 'minutes?'."
+			  "The regexp must include one pair of matching parantheses, "
+			  "that match an int (the number of minutes from now). "
+			  "Note: '(?:...)' are non-matching parantheses.",
+			  "(\\d+)\\s+(?:mins?\\.?|minutes?)"), Qt::CaseInsensitive );
+			  
+	bool depArrKeywordFound = false;
+	// If a departure keyword is found before 'in', use given times as departure times
+	foreach ( QString departureKeyword, departureKeywords ) {
+	    departureKeyword = " " + departureKeyword.trimmed();
+	    if ( stop->endsWith(departureKeyword, Qt::CaseInsensitive) ) {
+		*stop = stop->left( stop->length() - departureKeyword.length() ).trimmed();
+		*timeIsDeparture = true;
+		depArrKeywordFound = true;
+		break;
+	    }
+	}
+	if ( !depArrKeywordFound ) {
+	    // If an arrival keyword is found before 'in', use given times as arrival times
+	    foreach ( QString arrivalKeyword, arrivalKeywords ) {
+		arrivalKeyword = " " + arrivalKeyword.trimmed();
+		if ( stop->endsWith(arrivalKeyword, Qt::CaseInsensitive) ) {
+		    *stop = stop->left( stop->length() - arrivalKeyword.length() ).trimmed();
+		    *timeIsDeparture = false;
+		    depArrKeywordFound = true;
+		    break;
+		}
+	    }
+	}
+	
+	// Match the regexp and construct the relative datetime value
+	int pos = rx.indexIn( sDeparture );
+	if ( pos != -1 ) {
+	    int minutes = rx.cap( 1 ).toInt();
+	    
+	    // If the tomorrow keyword is found before 'in', set date to tomorrow
+	    if ( stop->endsWith(timeKeyword3, Qt::CaseInsensitive) ) {
+		*stop = stop->left( stop->length() - timeKeyword3.length() ).trimmed();
+		*departure = QDateTime::currentDateTime().addDays( 1 ).addSecs( minutes * 60 );
+	    } else
+		*departure = QDateTime::currentDateTime().addSecs( minutes * 60 );
+	    
+	    if ( len )
+		*len = stop->length();
+	    return true;
+	}
+    }
+    
+    bool depArrKeywordFound = false;
+    // If a departure keyword is found at the end, use given times as departure times
+    foreach ( QString departureKeyword, departureKeywords ) {
+	departureKeyword = " " + departureKeyword.trimmed();
+	if ( searchLine.endsWith(departureKeyword, Qt::CaseInsensitive) ) {
+	    searchLine = searchLine.left( searchLine.length() - departureKeyword.length() ).trimmed();
+	    *timeIsDeparture = true;
+	    depArrKeywordFound = true;
+	    break;
+	}
+    }
+    if ( !depArrKeywordFound ) {
+	// If an arrival keyword is found at the end, use given times as arrival times
+	foreach ( QString arrivalKeyword, arrivalKeywords ) {
+	    arrivalKeyword = " " + arrivalKeyword.trimmed();
+	    if ( searchLine.endsWith(arrivalKeyword, Qt::CaseInsensitive) ) {
+		searchLine = searchLine.left( searchLine.length() - arrivalKeyword.length() ).trimmed();
+		*timeIsDeparture = false;
+		depArrKeywordFound = true;
+		break;
+	    }
+	}
+    }
+
+    if ( searchLine.endsWith(timeKeyword3, Qt::CaseInsensitive) ) {
+	// " tomorrow" keyword found at the end of the string
+	*stop = searchLine.left( searchLine.length() - timeKeyword3.length() ).trimmed();
+	*departure = QDateTime::currentDateTime().addDays( 1 );
+	
+	if ( len )
+	    *len = stop->length();
+	return true;
+    }
+
+    // Nothing matched except maybe 'to' or 'from'
+    *stop = searchLine;
+    *departure = QDateTime::currentDateTime();
+    
+    if ( len )
+	*len = stop->length();
+    return false;
 }
 
 void PublicTransport::journeySearchInputFinished() {
     clearJourneys();
     addState( ShowingJourneyList );
-    reconnectJourneySource( m_journeySearch->text(), m_dateTimeWidget->dateTime() );
+
+    QString stop;
+    QDateTime departure;
+    bool stopIsTarget;
+    bool timeIsDeparture;
+    parseJourneySearch( m_journeySearch->text(), &stop, &departure,
+			&stopIsTarget, &timeIsDeparture );
+    reconnectJourneySource( stop, departure, stopIsTarget, timeIsDeparture );
 }
 
 void PublicTransport::journeySearchInputEdited( const QString &newText ) {
-    reconnectJourneySource( newText, m_dateTimeWidget->dateTime(), true );
+    QString stop;
+    QDateTime departure;
+    bool stopIsTarget;
+    bool timeIsDeparture;
+    
+    // Only correct the input string if letter were added
+    // (eg. not after pressing backspace).
+    bool correctString = newText.length() > m_journeySearchLastTextLength;
+    
+    parseJourneySearch( newText, &stop, &departure,
+			&stopIsTarget, &timeIsDeparture, 0, 0, correctString );
+    reconnectJourneySource( stop, departure, stopIsTarget, timeIsDeparture, true );
+
+    m_journeySearchLastTextLength = m_journeySearch->text().length()
+	    - m_journeySearch->nativeWidget()->selectedText().length();
 }
 
 QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
@@ -1024,18 +1386,16 @@ QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
 	    layoutTop->addItem( m_label, 0, 1 );
 	    layoutTop->addItem( m_labelInfo, 0, 2 );
 	    break;
-
+	    
 	case ShowSearchJourneyLineEdit:
+	case ShowSearchJourneyLineEditDisabled:
 	    m_icon->setVisible( true );
 	    m_journeySearch->setVisible( true );
+	    m_journeySearch->nativeWidget()->setInputMask( "" );
 	    m_journeySearch->setText( i18n("Type a target stop name") );
-
-	    m_dateTimeProxy->setVisible( true );
-	    m_dateTimeWidget->setDateTime( QDateTime::currentDateTime() );
 	    
 	    layoutTop->addItem( m_icon, 0, 0 );
 	    layoutTop->addItem( m_journeySearch, 0, 1 );
-	    layoutTop->addItem( m_dateTimeProxy, 1, 0, 1, 2 );
 	    break;
 
 	case ShowJourneyListTitle:
@@ -1051,7 +1411,16 @@ QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
 }
 
 void PublicTransport::possibleStopClicked( const QModelIndex &modelIndex ) {
-    m_journeySearch->setText( modelIndex.data().toString() );
+    // Insert the clicked stop into the journey search line,
+    // don't override keywords and other infos
+    int posStart, len;
+    stopNamePosition( &posStart, &len );
+    if ( posStart == -1 )
+	m_journeySearch->setText( modelIndex.data().toString() );
+    else {
+	m_journeySearch->setText( m_journeySearch->text().replace(
+		posStart, len, modelIndex.data().toString()) );
+    }
     m_journeySearch->setFocus();
 }
 
@@ -1138,14 +1507,30 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	labelInfo->setWordWrap( false );
 
 	m_journeySearch = new Plasma::LineEdit;
+	QColor c = KColorScheme( QPalette::Active ).foreground( KColorScheme::PositiveText ).color();
+	QString sColor = QString( "#%1%2%3" )
+		.arg( c.red(), 2, 16, QLatin1Char('0') )
+		.arg( c.green(), 2, 16, QLatin1Char('0') )
+		.arg( c.blue(), 2, 16, QLatin1Char('0') );
+	m_journeySearch->setToolTip( i18nc("This should match the localized keywords.",
+		"Type a <b>target stop</b> or <b>journey request</b>: "
+		"<span style='color:%1;'><i>to</i>/<i>from</i> stopname "
+		"<i>arriving</i>/<i>departing</i> <i>at</i> time/date or "
+		"<i>in X minutes</i></span>,<br> eg. \"<i>to <u>target</u> in 15 mins</i>\" "
+		"or \"<i>from <u>origin</u> arriving tomorrow at 18:00</i>\"", sColor) );
+	m_journeySearch->installEventFilter( this ); // Handle up/down keys (selecting stop suggestions)
 	QLineEdit *journeySearch = m_journeySearch->nativeWidget();
 	journeySearch->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
 
-	m_dateTimeWidget = new KDateTimeWidget;
-	m_dateTimeWidget->setToolTip( i18n("The date and time when the journey should start") );
-	m_dateTimeWidget->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
-	m_dateTimeProxy = new QGraphicsProxyWidget;
-	m_dateTimeProxy->setWidget( m_dateTimeWidget );
+	m_labelJourneysNotSupported = new Plasma::Label;
+	m_labelJourneysNotSupported->setAlignment( Qt::AlignCenter );
+	m_labelJourneysNotSupported->setSizePolicy( QSizePolicy::Expanding,
+						    QSizePolicy::Expanding, QSizePolicy::Label );
+	m_labelJourneysNotSupported->setText( i18n("Journey searches aren't supported "
+						   "by the currently used service provider "
+						   "or it's accessor.") );
+	QLabel *labelJourneysNotSupported = m_labelJourneysNotSupported->nativeWidget();
+	labelJourneysNotSupported->setWordWrap( true );
 
 	m_listPossibleStops = new Plasma::TreeView(m_graphicsWidget);
 	m_listPossibleStops->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
@@ -1159,7 +1544,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	completer->setCaseSensitivity( Qt::CaseInsensitive );
 	completer->setCompletionMode( QCompleter::InlineCompletion );
 	m_journeySearch->nativeWidget()->setCompleter( completer );
-
+	
 	connect( m_journeySearch, SIGNAL(returnPressed()),
 		 this, SLOT(journeySearchInputFinished()) );
 	connect( m_journeySearch, SIGNAL(textEdited(QString)),
@@ -1232,18 +1617,75 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
     return m_graphicsWidget;
 }
 
-void PublicTransport::constraintsEvent(Plasma::Constraints constraints) {
-    if (!m_graphicsWidget) {
+bool PublicTransport::eventFilter( QObject *watched, QEvent *event ) {
+    if ( watched && watched == m_journeySearch && m_listPossibleStops
+		&& m_listPossibleStops->model()
+		&& m_listPossibleStops->model()->rowCount() > 0 ) {
+	QKeyEvent *keyEvent;
+	QModelIndex curIndex;
+	int row;
+	switch ( event->type() ) {
+	    case QEvent::KeyPress:
+		keyEvent = dynamic_cast<QKeyEvent*>( event );
+		curIndex = m_listPossibleStops->nativeWidget()->currentIndex();
+		
+		if ( keyEvent->key() == Qt::Key_Up ) {
+		    if ( !curIndex.isValid() ) {
+			curIndex = m_listPossibleStops->nativeWidget()->model()->index( 0, 0 );
+			m_listPossibleStops->nativeWidget()->setCurrentIndex( curIndex );
+			possibleStopClicked( curIndex );
+			return true;
+		    } else {
+			row = curIndex.row();
+			if ( row >= 1 ) {
+			    m_listPossibleStops->nativeWidget()->setCurrentIndex(
+				    m_listPossibleStops->model()->index(row - 1,
+				    curIndex.column(), curIndex.parent()) );
+			    possibleStopClicked( m_listPossibleStops->nativeWidget()->currentIndex() );
+			    return true;
+			} else
+			    return false;
+		    }
+		} else if ( keyEvent->key() == Qt::Key_Down ) {
+		    if ( !curIndex.isValid() ) {
+			curIndex = m_listPossibleStops->nativeWidget()->model()->index( 0, 0 );
+			m_listPossibleStops->nativeWidget()->setCurrentIndex( curIndex );
+			possibleStopClicked( curIndex );
+			return true;
+		    } else {
+			row = curIndex.row();
+			if ( row < m_listPossibleStops->model()->rowCount() - 1 ) {
+			    m_listPossibleStops->nativeWidget()->setCurrentIndex(
+				    m_listPossibleStops->model()->index(row + 1,
+				    curIndex.column(), curIndex.parent()) );
+			    possibleStopClicked( m_listPossibleStops->nativeWidget()->currentIndex() );
+			    return true;
+			} else
+			    return false;
+		    }
+		} else
+		    return Plasma::PopupApplet::eventFilter( watched, event );
+		break;
+	    
+	    default:
+		return Plasma::PopupApplet::eventFilter( watched, event );
+	}
+    } else
+	return Plasma::PopupApplet::eventFilter( watched, event );
+}
+
+void PublicTransport::constraintsEvent( Plasma::Constraints /*constraints*/ ) {
+    if ( !m_graphicsWidget ) {
         graphicsWidget();
     }
 
-    if ((constraints|Plasma::FormFactorConstraint || constraints|Plasma::SizeConstraint) &&
-        layout()->itemAt(0) != m_graphicsWidget) {
-    }
+//     if ( (constraints|Plasma::FormFactorConstraint || constraints|Plasma::SizeConstraint) &&
+//         layout()->itemAt(0) != m_graphicsWidget ) {
+//     }
 }
 
-void PublicTransport::paintInterface(QPainter *p,
-        const QStyleOptionGraphicsItem *option, const QRect &contentsRect) {
+void PublicTransport::paintInterface( QPainter *p,
+        const QStyleOptionGraphicsItem *option, const QRect &contentsRect ) {
     Q_UNUSED(p)
     Q_UNUSED(option)
     Q_UNUSED(contentsRect)
@@ -1362,6 +1804,7 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	    m_labelInfo->setText( infoText() );
 
 	    m_listPossibleStops->setVisible( false );
+	    m_labelJourneysNotSupported->setVisible( false );
 	    m_treeView->setVisible( true );
 	    m_iconClose->setVisible( false );
 	    layoutMain->removeAt( 1 );
@@ -1372,11 +1815,26 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	    setMainIconDisplay( AbortJourneySearchIcon );
 	    m_icon->setToolTip( i18n("Abort search for journeys to or from the home stop") );
 
+	    m_journeySearch->setEnabled( true );
 	    m_treeView->setVisible( false );
-	    m_listPossibleStops->setVisible(true );
+	    m_listPossibleStops->setVisible( true );
+	    m_labelJourneysNotSupported->setVisible( false );
 	    m_iconClose->setVisible( false );
 	    layoutMain->removeAt( 1 );
 	    layoutMain->insertItem( 1, m_listPossibleStops );
+	    break;
+	    
+	case ShowSearchJourneyLineEditDisabled:
+	    setMainIconDisplay( AbortJourneySearchIcon );
+	    m_icon->setToolTip( i18n("Abort search for journeys to or from the home stop") );
+
+	    m_journeySearch->setEnabled( false );
+	    m_treeView->setVisible( false );
+	    m_listPossibleStops->setVisible( false );
+	    m_labelJourneysNotSupported->setVisible( true );
+	    m_iconClose->setVisible( false );
+	    layoutMain->removeAt( 1 );
+	    layoutMain->insertItem( 1, m_labelJourneysNotSupported );
 	    break;
 
 	case ShowJourneyListTitle:
@@ -1387,6 +1845,7 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	    m_label->setText( i18n("<b>Journeys</b>") );
 
 	    m_listPossibleStops->setVisible(false );
+	    m_labelJourneysNotSupported->setVisible( false );
 	    m_treeView->setVisible( true );
 	    layoutMain->removeAt( 1 );
 	    layoutMain->insertItem( 1, m_treeView );
@@ -1433,8 +1892,11 @@ void PublicTransport::addState( AppletState state ) {
 	    setBusy( testState(WaitingForDepartureData) );
 	    disconnectJourneySource();
 	    
+	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
 	    setAssociatedApplicationUrls( KUrl::List() << m_urlDeparturesArrivals );
-	    unsetStates( QList<AppletState>() << ShowingJourneyList << ShowingJourneySearch );
+	    #endif
+	    unsetStates( QList<AppletState>() << ShowingJourneyList
+		    << ShowingJourneySearch << ShowingJourneysNotSupported );
 	    break;
 
 	case ShowingJourneyList:
@@ -1445,8 +1907,11 @@ void PublicTransport::addState( AppletState state ) {
 		    QSize(32 * m_settings.sizeFactor(), 32 * m_settings.sizeFactor()) );
 	    setBusy( testState(WaitingForJourneyData) );
 	    
+	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
 	    setAssociatedApplicationUrls( KUrl::List() << m_urlJourneys );
-	    unsetStates( QList<AppletState>() << ShowingDepartureArrivalList << ShowingJourneySearch );
+	    #endif
+	    unsetStates( QList<AppletState>() << ShowingDepartureArrivalList
+		    << ShowingJourneySearch << ShowingJourneysNotSupported );
 	    break;
 
 	case ShowingJourneySearch:
@@ -1454,7 +1919,17 @@ void PublicTransport::addState( AppletState state ) {
 	    m_icon->setToolTip( i18n("Go back to the departure / arrival list") );
 	    setBusy( false);
 
-	    unsetStates( QList<AppletState>() << ShowingDepartureArrivalList << ShowingJourneyList );
+	    unsetStates( QList<AppletState>() << ShowingDepartureArrivalList
+		    << ShowingJourneyList << ShowingJourneysNotSupported );
+	    break;
+
+	case ShowingJourneysNotSupported:
+	    setTitleType( ShowSearchJourneyLineEditDisabled );
+	    m_icon->setToolTip( i18n("Go back to the departure / arrival list") );
+	    setBusy( false);
+	    
+	    unsetStates( QList<AppletState>() << ShowingDepartureArrivalList
+		    << ShowingJourneyList << ShowingJourneySearch );
 	    break;
 
 	case ReceivedValidDepartureData:
@@ -1534,6 +2009,7 @@ void PublicTransport::removeState( AppletState state ) {
 	case ServiceProviderSettingsJustChanged:
 	case ShowingDepartureArrivalList:
 	case ShowingJourneySearch:
+	case ShowingJourneysNotSupported:
 	case WaitingForDepartureData:
 	case ReceivedValidDepartureData:
 	case ReceivedErroneousDepartureData:
@@ -1998,7 +2474,8 @@ void PublicTransport::addLineNumberToFilterListAndHide( bool b ) {
 }
 
 void PublicTransport::showJourneySearch( bool ) {
-    addState( ShowingJourneySearch );
+    addState( m_settings.serviceProviderSupportsJourneySearch()
+	      ? ShowingJourneySearch : ShowingJourneysNotSupported );
 }
 
 void PublicTransport::markAlarmRow ( const QPersistentModelIndex& modelIndex, AlarmState alarmState ) {
@@ -2226,11 +2703,24 @@ QString PublicTransport::infoText() const {
 	    .arg( m_lastSourceUpdate.toString("hh:mm") ).arg( sServiceProvider );
 }
 
+QString PublicTransport::formatDateFancyFuture( const QDate& date ) const {
+    int dayDiff = QDate::currentDate().daysTo( date );
+    if ( dayDiff == 1 )
+	return i18n( "tomorrow" );
+    else if ( dayDiff <= 6 )
+	return date.toString( "ddd" );
+    else
+	return KGlobal::locale()->formatDate( date, KLocale::ShortDate );
+}
+
 QString PublicTransport::departureText( const JourneyInfo& journeyInfo ) const {
     QString sTime, sDeparture = journeyInfo.departure.toString("hh:mm");
     if ( m_settings.displayTimeBold() )
 	sDeparture = sDeparture.prepend("<span style='font-weight:bold;'>").append("</span>");
-
+    
+    if ( journeyInfo.departure.date() != QDate::currentDate() )
+	sDeparture += ", " + formatDateFancyFuture( journeyInfo.departure.date() );
+    
     if ( m_settings.isDepartureTimeShown() && m_settings.isRemainingMinutesShown() ) {
 	QString sText = journeyInfo.durationToDepartureString();
 	sText = sText.replace(QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"), "<span style='color:red;'>+&nbsp;\\1</span>");
@@ -2251,20 +2741,23 @@ QString PublicTransport::departureText( const JourneyInfo& journeyInfo ) const {
 }
 
 QString PublicTransport::arrivalText( const JourneyInfo& journeyInfo ) const {
-    QString sTime, sDeparture = journeyInfo.arrival.toString("hh:mm");
+    QString sTime, sArrival = journeyInfo.arrival.toString("hh:mm");
     if ( m_settings.displayTimeBold() )
-	sDeparture = sDeparture.prepend("<span style='font-weight:bold;'>").append("</span>");
-
+	sArrival = sArrival.prepend("<span style='font-weight:bold;'>").append("</span>");
+    
+    if ( journeyInfo.arrival.date() != QDate::currentDate() )
+	sArrival += ", " + formatDateFancyFuture( journeyInfo.arrival.date() );
+    
     if ( m_settings.isDepartureTimeShown() && m_settings.isRemainingMinutesShown() ) {
 	QString sText = journeyInfo.durationToDepartureString(true);
 	sText = sText.replace(QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"), "<span style='color:red;'>+&nbsp;\\1</span>");
 
 	if ( m_settings.linesPerRow() > 1 )
-	    sTime = QString("%1<br>(%2)").arg( sDeparture ).arg( sText );
+	    sTime = QString("%1<br>(%2)").arg( sArrival ).arg( sText );
 	else
-	    sTime = QString("%1 (%2)").arg( sDeparture ).arg( sText );
+	    sTime = QString("%1 (%2)").arg( sArrival ).arg( sText );
     } else if (m_settings.isDepartureTimeShown()) {
-	sTime = sDeparture;
+	sTime = sArrival;
     } else if (m_settings.isRemainingMinutesShown()) {
 	sTime = journeyInfo.durationToDepartureString(true);
 	sTime = sTime.replace(QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"), "<span style='color:red;'>+&nbsp;\\1</span>");
@@ -2275,15 +2768,18 @@ QString PublicTransport::arrivalText( const JourneyInfo& journeyInfo ) const {
 }
 
 QString PublicTransport::departureText( const DepartureInfo &departureInfo ) const {
-    QString sTime, sDeparture = departureInfo.predictedDeparture().toString("hh:mm");
+    QDateTime predictedDeparture = departureInfo.predictedDeparture();
+    QString sTime, sDeparture = predictedDeparture.toString("hh:mm");
     QString sColor;
     if ( departureInfo.delayType() == OnSchedule )
-	sColor = "color:darkgreen;"; // TODO: works good with Air-Theme, but too dark for dark themes
+	sColor = "color:darkgreen;"; // TODO: works good with Air-Theme, but is too dark for dark themes
     else if ( departureInfo.delayType() == Delayed )
 	sColor = "color:darkred;"; // TODO: works good with Air-Theme, but is too dark for dark themes
 
     if ( m_settings.displayTimeBold() )
 	sDeparture = sDeparture.prepend(QString("<span style='font-weight:bold;%1'>").arg(sColor)).append("</span>");
+    if ( predictedDeparture.date() != QDate::currentDate() )
+	sDeparture += ", " + formatDateFancyFuture( predictedDeparture.date() );
 
     if (m_settings.isDepartureTimeShown() && m_settings.isRemainingMinutesShown()) {
 	QString sText = departureInfo.durationString();
@@ -2447,7 +2943,7 @@ void PublicTransport::setValuesOfJourneyItem ( QStandardItem* journeyItem,
 					       ItemInformation journeyInformation,
 					       bool update ) {
     QStringList sList;
-    QString s, s2;
+    QString s, s2, s3;
     QStandardItem *item;
     int row;
     switch ( journeyInformation ) {
@@ -2488,12 +2984,14 @@ void PublicTransport::setValuesOfJourneyItem ( QStandardItem* journeyItem,
 	    s2 = journeyInfo.journeyNews;
 	    if ( s2.startsWith("http://") ) // TODO: Make the link clickable...
 		s2 = QString("<a href='%1'>%2</a>").arg(s2).arg(i18n("Link to journey news"));
-	    s = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public transport, like 'platform changed'", "News:") ).arg( s2 );
+	    s = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public "
+			"transport, like 'platform changed'", "News:") ).arg( s2 );
+	    s3 = s.replace(QRegExp("<[^>]*>"), "");
 	    journeyItem->setData( s, HtmlDelegate::FormattedTextRole );
-	    journeyItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
+	    journeyItem->setText( s3 );
 	    if ( !update ) {
 		journeyItem->setData( 4, SortRole );
-		journeyItem->setData( 3, HtmlDelegate::LinesPerRowRole ); // 3 lines for journey news
+		journeyItem->setData( qMin(3, s3.length() / 20), HtmlDelegate::LinesPerRowRole );
 		setTextColorOfHtmlItem( journeyItem, m_colorSubItemLabels );
 	    }
 	    break;
@@ -2502,17 +3000,18 @@ void PublicTransport::setValuesOfJourneyItem ( QStandardItem* journeyItem,
 	    journeyItem->setData( s = departureText(journeyInfo),
 				  HtmlDelegate::FormattedTextRole );
 	    if ( m_settings.linesPerRow() > 1 ) {
-		// Get longest line
+		// Get longest line for auto column sizing
 		sList = s.split("<br>", QString::SkipEmptyParts, Qt::CaseInsensitive);
 		s = "";
 		foreach( QString sCurrent, sList ) {
-		    sCurrent.replace(QRegExp("(<[^>]*>|&\\w{2,5};|&#\\d{3,4};)"), "");
-		    if ( sCurrent.length() > s.length() )
+		    sCurrent.replace(QRegExp("<[^>]*>"), "");
+		    if ( sCurrent.replace(QRegExp("(&\\w{2,5};|&#\\d{3,4};)"), " ").length()
+				> s.length() )
 			s = sCurrent;
 		}
-		journeyItem->setText( s );
+		journeyItem->setText( s ); // This is just used for auto column sizing
 	    } else
-		journeyItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
+		journeyItem->setText( s.replace(QRegExp("<[^>]*>"), "") ); // This is just used for auto column sizing
 	    journeyItem->setData( journeyInfo.departure, SortRole );
 	    journeyItem->setData( m_settings.linesPerRow(), HtmlDelegate::LinesPerRowRole );
 	    journeyItem->setData( qCeil((float)QDateTime::currentDateTime().secsTo(
@@ -2528,17 +3027,18 @@ void PublicTransport::setValuesOfJourneyItem ( QStandardItem* journeyItem,
 	    journeyItem->setData( s = arrivalText(journeyInfo),
 				  HtmlDelegate::FormattedTextRole );
 	    if ( m_settings.linesPerRow() > 1 ) {
-		// Get longest line
+		// Get longest line for auto column sizing
 		sList = s.split("<br>", QString::SkipEmptyParts, Qt::CaseInsensitive);
 		s = "";
 		foreach( QString sCurrent, sList ) {
-		    sCurrent.replace(QRegExp("(<[^>]*>|&\\w{2,5};|&#\\d{3,4};)"), "");
-		    if ( sCurrent.length() > s.length() )
+		    sCurrent.replace(QRegExp("<[^>]*>"), "");
+		    if ( sCurrent.replace(QRegExp("(&\\w{2,5};|&#\\d{3,4};)"), " ").length()
+				> s.length() )
 			s = sCurrent;
 		}
-		journeyItem->setText( s );
+		journeyItem->setText( s ); // This is just used for auto column sizing
 	    } else
-		journeyItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
+		journeyItem->setText( s.replace(QRegExp("<[^>]*>"), "") ); // This is just used for auto column sizing
 	    journeyItem->setData( journeyInfo.arrival, SortRole );
 	    journeyItem->setData( m_settings.linesPerRow(), HtmlDelegate::LinesPerRowRole );
 	    journeyItem->setData( qCeil((float)QDateTime::currentDateTime().secsTo( journeyInfo.arrival ) / 60.0f), RemainingMinutesRole );
@@ -2724,7 +3224,7 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 						DepartureInfo departureInfo,
 						ItemInformation departureInformation,
 						bool update ) {
-    QString s, s2;
+    QString s, s2, s3;
     QStringList sList;
     QStandardItem *item;
     int row;
@@ -2765,18 +3265,18 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 	    departureItem->setData( s = departureText(departureInfo),
 				    HtmlDelegate::FormattedTextRole );
 	    if ( m_settings.linesPerRow() > 1 ) {
-		// Get longest line
+		// Get longest line for auto column sizing
 		sList = s.split("<br>", QString::SkipEmptyParts, Qt::CaseInsensitive);
-
 		s = "";
 		foreach( QString sCurrent, sList ) {
-		    sCurrent.replace(QRegExp("(<[^>]*>|&\\w{2,5};|&#\\d{3,4};)"), "");
-		    if ( sCurrent.length() > s.length() )
+		    sCurrent.replace(QRegExp("<[^>]*>"), "");
+		    if ( sCurrent.replace(QRegExp("(&\\w{2,5};|&#\\d{3,4};)"), " ").length()
+				> s.length() )
 			s = sCurrent;
 		}
-		departureItem->setText( s );
+		departureItem->setText( s ); // This is just used for auto column sizing
 	    } else
-		departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
+		departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") ); // This is just used for auto column sizing
 	    departureItem->setData( departureInfo.predictedDeparture(), SortRole ); // TODO: Could make findDeparture not working, when the delay has changed. Maybe change to departure with seperate TimeRole..
 	    departureItem->setData( m_settings.linesPerRow(), HtmlDelegate::LinesPerRowRole );
 	    departureItem->setData( qCeil((float)QDateTime::currentDateTime().secsTo(
@@ -2854,12 +3354,14 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 	    s2 = departureInfo.journeyNews;
 	    if ( s2.startsWith("http://") ) // TODO: Make the link clickable...
 		s2 = QString("<a href='%1'>%2</a>").arg(s2).arg(i18n("Link to journey news"));
-	    s = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public transport, like 'platform changed'", "News:") ).arg( s2 );
+	    s = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public "
+		    "transport, like 'platform changed'", "News:") ).arg( s2 );
+	    s3 = s.replace( QRegExp("<[^>]*>"), "" );
 	    departureItem->setData( s, HtmlDelegate::FormattedTextRole );
-	    departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
+	    departureItem->setText( s3 );
 	    if ( !update ) {
 		departureItem->setData( 2, SortRole );
-		departureItem->setData( 3, HtmlDelegate::LinesPerRowRole ); // 3 lines for journey news
+		departureItem->setData( qMin(3, s3.length() / 20), HtmlDelegate::LinesPerRowRole );
 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
 	    }
 	    break;
@@ -2955,7 +3457,8 @@ void PublicTransport::appendJourney ( const JourneyInfo& journeyInfo ) {
 	QStandardItem *itemRoute = new QStandardItem();
 	setValuesOfJourneyItem( itemRoute, journeyInfo, RouteItem );
 	items[0]->insertRow( iRow++, itemRoute );
-	
+
+	m_treeView->nativeWidget()->expand( itemRoute->index() );
 	for ( int row = 0; row < itemRoute->rowCount(); ++row ) {
 	    m_treeView->nativeWidget()->setFirstColumnSpanned(
 		    row, itemRoute->index(), true );
@@ -3163,6 +3666,8 @@ void PublicTransport::updateJourney ( int row, const JourneyInfo& journeyInfo ) 
 	} else // Update old route item
 	    setValuesOfJourneyItem( itemRoute, journeyInfo, RouteItem, true );
 	
+	m_treeView->nativeWidget()->expand( itemRoute->index() );
+	
 	for ( int row = 0; row < itemRoute->rowCount(); ++row ) {
 	    m_treeView->nativeWidget()->setFirstColumnSpanned(
 	    row, itemRoute->index(), true );
@@ -3176,7 +3681,7 @@ void PublicTransport::updateJourney ( int row, const JourneyInfo& journeyInfo ) 
 	m_treeView->nativeWidget()->setFirstColumnSpanned(row, itemFirst->index(), true);
 }
 
-void PublicTransport::updateDeparture ( int row, const DepartureInfo& departureInfo ) {
+void PublicTransport::updateDeparture( int row, const DepartureInfo& departureInfo ) {
     QStandardItem *itemLineString = m_model->item( row, m_departureViewColumns.indexOf(LineStringColumn) );
     QStandardItem *itemTarget = m_model->item( row, m_departureViewColumns.indexOf(TargetColumn) );
     QStandardItem *itemDeparture = m_model->item( row, m_departureViewColumns.indexOf(DepartureColumn) );
@@ -3339,14 +3844,15 @@ void PublicTransport::removeOldJourneys() {
     foreach( JourneyInfo journeyInfo, m_journeyInfos ) {
 	int row = findJourney( journeyInfo );
 	if ( row != -1 ) {
-	    // TODO: filtering for journeys
-	    if ( /* !filterOut( journeyInfo ) && */ !notFoundRows.removeOne( m_modelJourneys->index(row, 0) ) )
+	    // TODO: Filtering for journeys?
+	    if ( /* !filterOut(journeyInfo) && */
+		    !notFoundRows.removeOne( m_modelJourneys->index(row, 0) ) )
 		kDebug() << "Couldn't remove index";
 	}
     }
 
     foreach( QModelIndex notFoundRow, notFoundRows ) {
-	kDebug() << "remove row" << notFoundRow.row();
+// 	kDebug() << "remove row" << notFoundRow.row();
 
 	// TODO:
 // 	QStandardItem *itemDeparture = m_modelJourneys->item( notFoundRow.row(), 2 );

@@ -1,0 +1,4 @@
+[KNewStuff3]
+ProvidersUrl=http://newstuff.kde.org/cgi-bin/hotstuff-provider?site=publictransport
+TargetDir=plasma_engine_publictransport/accessorInfos
+Uncompress=archive

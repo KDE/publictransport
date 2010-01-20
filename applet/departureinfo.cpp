@@ -3,6 +3,7 @@
 #include <QVariant>
 #include "departureinfo.h"
 #include <qmath.h>
+#include <KLocale>
 
 JourneyInfo::JourneyInfo( const QString &operatorName,
 			  const QVariantList &vehicleTypesVariant,
@@ -83,22 +84,54 @@ QList< QVariant > JourneyInfo::vehicleTypesVariant() const {
 
 QString JourneyInfo::durationToDepartureString( bool toArrival ) const {
     int totalSeconds = QDateTime::currentDateTime().secsTo( toArrival ? arrival : departure );
-//     if ( -totalSeconds / 3600 >= 23 )
-// 	totalSeconds += 24 * 3600;
+    if ( totalSeconds < 0 )
+    	return i18n("depart is in the past");
+    else
+	return KGlobal::locale()->prettyFormatDuration( (ulong)(totalSeconds * 1000) );
+// //     if ( -totalSeconds / 3600 >= 23 )
+// // 	totalSeconds += 24 * 3600;
 
-    int seconds = totalSeconds % 60;
-    totalSeconds -= seconds;
-    if (seconds > 0)
-	totalSeconds += 60;
-    if (totalSeconds < 0)
-	return i18n("depart is in the past");
+//     int seconds = totalSeconds % 60;
+//     totalSeconds -= seconds;
+//     if (seconds > 0)
+// 	totalSeconds += 60;
+    
+//     if (totalSeconds < 0)
+// 	return i18n("depart is in the past");
 
-    return Global::durationString(totalSeconds).replace(' ', "&nbsp;");
+//     return Global::durationString(totalSeconds).replace(' ', "&nbsp;");
 }
 
 
 QString DepartureInfo::durationString () const {
     int totalSeconds = QDateTime::currentDateTime().secsTo( predictedDeparture() );
+    int totalMinutes = qCeil( (qreal)totalSeconds / 60.0 );
+    int remDelay = delayType() == Delayed ? delay : 0;
+    if ( totalMinutes < 0 ) {
+	if ( !(delayType() == Delayed && -totalMinutes > delay) )
+	    return i18n("depart is in the past");
+	else {
+	    remDelay += totalMinutes;
+	    if ( remDelay == 0 )
+		return i18n("now");
+	    else
+		return "+ " + KGlobal::locale()->prettyFormatDuration( remDelay * 60000 );
+	}
+    }
+
+    QString sDuration;
+    if ( totalMinutes == 0 )
+	sDuration = i18n("now");
+    else
+	sDuration = KGlobal::locale()->prettyFormatDuration( totalMinutes * 60000 )
+			.replace( ' ', "&nbsp;" );
+			
+    if ( remDelay == 0 )
+	return sDuration;
+    else
+	return sDuration + " + " + KGlobal::locale()->prettyFormatDuration( remDelay * 60000 );
+// 	    + i18nc("+ remaining delay in minutes", "+ %1 minutes", remDelay );
+    /*
     if ( -totalSeconds / 3600 >= 23 )
 	totalSeconds += 24 * 3600;
     int seconds = totalSeconds % 60;
@@ -142,7 +175,7 @@ QString DepartureInfo::durationString () const {
 	    str = i18n("now");
     }
 
-    return str.replace( ' ', "&nbsp;" );
+    return str.replace( ' ', "&nbsp;" );*/
 }
 
 void DepartureInfo::init( const QString &operatorName, const QString &line,

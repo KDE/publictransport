@@ -34,18 +34,15 @@
 
 // KDE includes
 #include <KIcon>
-#include <KDateTimeWidget>
 
 // Qt includes
 #include <QStandardItemModel>
-#include <QGraphicsProxyWidget>
 
 // Own includes
 #include "global.h"
 #include "departureinfo.h"
 #include "alarmtimer.h"
 #include "settings.h"
-#include "appletwithstate.h"
 
 class QSizeF;
 class QGraphicsLayout;
@@ -53,7 +50,7 @@ class QGraphicsLayout;
 
 /** @class PublicTransport
 * @brief Shows departure / arrival times for public transport. It uses the "publictransport"-data engine. */
-class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
+class PublicTransport : public Plasma::PopupApplet {
     Q_OBJECT
 
     public:
@@ -76,15 +73,32 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 
 	/** The constraints have changed. */
 	virtual void constraintsEvent ( Plasma::Constraints constraints );
-
+	
+	/** Tests the given state.
+	* @param state The state to test.
+	* @returns true, if the state is set.
+	* @returns false, if the state is not set.*/
+	virtual bool testState( AppletState state ) const;
+	
+	/** Adds the given state. Operations are processed to set the new applet state.
+	* @param state The state to add. */
+	virtual void addState( AppletState state );
+	
+	/** Removes the given state. Operations are processed to unset the new applet state.
+	* @param state The state to remove. */
+	virtual void removeState( AppletState state );
+	
     protected:
 	/** Create the configuration dialog contents.
 	* @param parent The config dialog in which the config interface should be created. */
-	void createConfigurationInterface(KConfigDialog *parent);
+	void createConfigurationInterface( KConfigDialog *parent );
 
 	/** The popup pops up. */
-	virtual void popupEvent ( bool show );
+	virtual void popupEvent( bool show );
 
+	/** Watching for up/down key presses in m_journeySearch to select stop suggestions. */
+	virtual bool eventFilter( QObject* watched, QEvent* event );
+	
 	/** Creates all used QAction's. */
 	void setupActions();
 
@@ -131,6 +145,7 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	* using the current configuration. */
 	void reconnectJourneySource( const QString &targetStopName = QString(),
 				     const QDateTime &dateTime = QDateTime::currentDateTime(),
+				     bool stopIsTarget = true, bool timeIsDeparture = true,
 				     bool requestStopSuggestions = false );
 
 	/** Processes data received from the data engine.
@@ -169,6 +184,10 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	* @param departureInfo The departure / arrival for which the departure text
 	* should be returned. */
 	QString departureText( const DepartureInfo &departureInfo ) const;
+
+	/** Unfortunately KLocale::FancyShortDate is only fancy for dates in the past.
+	* This method formats future dates fancy. */
+	QString formatDateFancyFuture( const QDate &date ) const;
 
 	/** Gets the text to be displayed in the item for delay information.
 	* @param departureInfo The departure / arrival for which the delay text
@@ -254,20 +273,6 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	/** Creates a layout for the given title type. */
 	QGraphicsLayout *createLayoutTitle( TitleType titleType );
 
-	/** Tests the given state.
-	* @param state The state to test.
-	* @returns true, if the state is set.
-	* @returns false, if the state is not set.*/
-	virtual bool testState( AppletState state ) const;
-
-	/** Adds the given state. Operations are processed to set the new applet state.
-	* @param state The state to add. */
-	virtual void addState( AppletState state );
-
-	/** Removes the given state. Operations are processed to unset the new applet state.
-	* @param state The state to remove. */
-	virtual void removeState( AppletState state );
-
 	/** Unsets the given states. No other operations are processed.
 	* @param states A list of states to unset. */
 	virtual void unsetStates( QList<AppletState> states );
@@ -307,20 +312,29 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	void iconClicked();
 	/** The icon widget to close the journey view was clicked. */
 	void iconCloseClicked();
+	bool parseJourneySearch( const QString &search, QString *stop,
+				 QDateTime *departure, bool *stopIsTarget,
+				 bool *timeIsDeparture,
+				 int *posStart = NULL, int *len = NULL,
+				 bool correctString = true ) const;
+	void stopNamePosition( int *posStart, int *len ) const;
+	bool parseTime( const QString &sTime, QTime *time ) const;
+	bool parseDate( const QString &sDate, QDate *date ) const;
+				 
 	void journeySearchInputFinished();
 	void journeySearchInputEdited( const QString &newText );
 	void possibleStopClicked( const QModelIndex &modelIndex );
 	void possibleStopDoubleClicked( const QModelIndex &modelIndex );
 
-	void emitConfigNeedsSaving();
+	void emitConfigNeedsSaving() { emit configNeedsSaving(); };
 	void configurationIsRequired( bool needsConfiguring, const QString &reason );
-	void emitSettingsChanged();
+	void emitSettingsChanged() { emit settingsChanged(); };
 	/** Called from PublicTransportSettings to indicate the need to update the
 	* model by calling updateModel(). */
-	void modelNeedsUpdate();
+	void modelNeedsUpdate() { updateModel(); };
 	/** Called from PublicTransportSettings to indicate the need to clear the
 	* departure list. */
-	void departureListNeedsClearing();
+	void departureListNeedsClearing() { m_departureInfos.clear(); };
 	void departureArrivalListTypeChanged ( DepartureArrivalListType departureArrivalListType );
 	void journeyListTypeChanged ( JourneyListType journeyListType );
 
@@ -375,7 +389,7 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	/** The action to show the direction column of the tree view header has been triggered. */
 	void showColumnTarget( bool );
 	/** The plasma theme has been changed. */
-	void themeChanged();
+	void themeChanged() { useCurrentPlasmaTheme(); };
 	
     private:
 	AppletStates m_appletStates; /**< The current states of this applet */
@@ -388,9 +402,9 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	Plasma::Label *m_labelInfo; /**< A label used to display additional information */
 	Plasma::TreeView *m_treeView; /**< A treeview displaying the departure board */
 	Plasma::LineEdit *m_journeySearch; /**< A line edit for inputting the target of a journey */
+	int m_journeySearchLastTextLength; /**< The last number of unselected characters in the journey search input field. */
 	Plasma::TreeView *m_listPossibleStops; /**< A list of possible stops for the current input */
-	QGraphicsProxyWidget *m_dateTimeProxy; /**< Graphics proxy widget for the date time widget for the journey search */
-	KDateTimeWidget *m_dateTimeWidget; /**< Date time widget for the journey search */
+	Plasma::Label *m_labelJourneysNotSupported; /**< A label used to display an info about unsupported journey search */
 	QStandardItemModel *m_model; /**< The model for the tree view containing the departure / arrival board */
 	QStandardItemModel *m_modelJourneys; /**< The model for journeys from or to the "home stop" */
 	QList<DepartureInfo> m_departureInfos; /**< List of current departures / arrivals */
@@ -413,8 +427,10 @@ class PublicTransport : public AppletWithState { //Plasma::PopupApplet {
 	QList<TimetableColumn> m_journeyViewColumns;
 };
 
+#ifndef NO_EXPORT_PLASMA_APPLET // Needed for settings.cpp to include publictransport.h
 // This is the command that links the applet to the .desktop file
-K_EXPORT_PLASMA_APPLET(publictransport, PublicTransport)
+K_EXPORT_PLASMA_APPLET( publictransport, PublicTransport )
+#endif
 
 
 /** @mainpage Public Transport Applet

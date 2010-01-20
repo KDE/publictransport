@@ -27,11 +27,11 @@
 #include "ui_accessorInfo.h"
 #include "datasourcetester.h"
 #include "global.h"
-#include "appletwithstate.h"
 
 #include <Plasma/Theme>
 
 class QStandardItemModel;
+class PublicTransport;
 
 /** @class PublicTransportSettings
 * It also creates the configuration dialogs.
@@ -39,13 +39,11 @@ class QStandardItemModel;
 class PublicTransportSettings : public QObject {
     Q_OBJECT
 
-//     friend class PublicTransport;
-
     public:
-	PublicTransportSettings( AppletWithState *applet );
+	PublicTransportSettings( PublicTransport *applet );
 
 	/** Returns a pointer to the public transport applet. */
-	AppletWithState *applet() { return m_applet; };
+	PublicTransport *applet() { return m_applet; };
 
 	void readSettings();
 
@@ -68,9 +66,9 @@ class PublicTransportSettings : public QObject {
 
 	/** A timeout to reload the timetable information from the internet. */
 	int updateTimeout() const { return m_updateTimeout; };
-	/** Wheather or not remaining minutes until departure should be shown. */
+	/** Whether or not remaining minutes until departure should be shown. */
 	bool isRemainingMinutesShown() const { return m_showRemainingMinutes; };
-	/** Wheather or not departure times should be shown. */
+	/** Whether or not departure times should be shown. */
 	bool isDepartureTimeShown() const { return m_showDepartureTime; };
 	/** The currently selected city. */
 	QString city() const { return m_city; };
@@ -86,21 +84,26 @@ class PublicTransportSettings : public QObject {
 	float sizeFactor() const { return (m_size + 3) * 0.2f; };
 	/** The id of the current service provider. */
 	QString serviceProvider() const { return m_serviceProvider; };
+	/** Whether or not the current service provider supports journey searches. */
+	bool serviceProviderSupportsJourneySearch() const {
+		return m_serviceProviderFeatures.contains("JourneySearch"); };
 	/** The offset in minutes from now of the first departure. */
 	int timeOffsetOfFirstDeparture() const { return m_timeOffsetOfFirstDeparture; };
 	/** A custom time for the first departure. */
 	QTime timeOfFirstDepartureCustom() const { return m_timeOfFirstDepartureCustom; };
 	/** The config mode for the time of the first departure. */
-	FirstDepartureConfigMode firstDepartureConfigMode() const { return m_firstDepartureConfigMode; };
+	FirstDepartureConfigMode firstDepartureConfigMode() const {
+		return m_firstDepartureConfigMode; };
 	/** The maximal number of displayed departures. */
 	int maximalNumberOfDepartures() const { return m_maximalNumberOfDepartures; };
 	/** The time in minutes before the departure at which the alarm should be fired. */
 	int alarmTime() const { return m_alarmTime; };
-	/** Wheather or not a type of vehicle should be shown TODO: rename!. */
-	bool isTypeOfVehicleShown(VehicleType vehicleType) const { return m_showTypeOfVehicle[vehicleType]; };
+	/** Whether or not a type of vehicle should be shown. */
+	bool isTypeOfVehicleShown(VehicleType vehicleType) const {
+		return m_showTypeOfVehicle[vehicleType]; };
 	/** Hide a type of vehicle. */
 	void hideTypeOfVehicle(VehicleType vehicleType);
-	/** Wheather or not night lines should be shown. */
+	/** Whether or not night lines should be shown. */
 	bool showNightlines() const { return m_showNightlines; };
 	/** The minimal line number to be shown. */
 	int filterMinLine() const { return m_filterMinLine; };
@@ -131,18 +134,19 @@ class PublicTransportSettings : public QObject {
 	void setShowHeader( bool showHeader );
 	bool isColumnTargetHidden() const { return m_hideColumnTarget; };
 	void setHideColumnTarget( bool hideColumnTarget );
-	/** Wheather or not the current service provider uses a seperate city value. */
+	/** Whether or not the current service provider uses a seperate city value. */
 	bool useSeperateCityValue() const { return m_useSeperateCityValue; };
-	/** Wheather or not the city name input is restricted to the given list of city names. */
+	/** Whether or not the city name input is restricted to the given list of city names. */
 	bool onlyUseCitiesInList() const { return m_onlyUseCitiesInList; };
 	void getServiceProviderInfo();
 	bool useDefaultFont() const { return m_useDefaultFont; };
-	QFont font() const { return m_useDefaultFont ? Plasma::Theme::defaultTheme()->font(Plasma::Theme::DefaultFont) : m_font; };
+	QFont font() const { return m_useDefaultFont
+		? Plasma::Theme::defaultTheme()->font(Plasma::Theme::DefaultFont) : m_font; };
 	bool displayTimeBold() const { return m_displayTimeBold; };
 
 	void selectLocaleLocation();
 
-	/** Gets the config name used to store wheather or not the given type of vehicle should be shown. */
+	/** Gets the config name used to store whether or not the given type of vehicle should be shown. */
 	static QString vehicleTypeToConfigName( const VehicleType &vehicleType );
 
     signals:
@@ -185,7 +189,7 @@ class PublicTransportSettings : public QObject {
 	/** Another item was selected in the shown vehicle types list widget. */
 	void filterLineTypeSelectedSelectionChanged( int );
 	/** Another item was selected in the hidden vehicle types list widget. */
-	void filterLineTypeAvaibleSelectionChanged( int );
+	void filterLineTypeAvailableSelectionChanged( int );
 	/** Updates the service provider model by inserting service provider for the
 	* current location.
 	* @return The index in the service provider combobox of the currently selected
@@ -196,7 +200,7 @@ class PublicTransportSettings : public QObject {
         void installServiceProviderClicked ( bool );
 
     private:
-	AppletWithState *m_applet;
+	PublicTransport *m_applet;
 	DataSourceTester *m_dataSourceTester; // Tests data sources
 
 	Ui::publicTransportConfig m_ui; // The "general" settings page
@@ -211,8 +215,8 @@ class PublicTransportSettings : public QObject {
 	QVariantHash m_locationData; // Location information from the data engine.
 
 	int m_updateTimeout; // A timeout to reload the timetable information from the internet
-	bool m_showRemainingMinutes; // Wheather or not remaining minutes until departure should be shown
-	bool m_showDepartureTime; // Wheather or not departure times should be shown
+	bool m_showRemainingMinutes; // Whether or not remaining minutes until departure should be shown
+	bool m_showDepartureTime; // Whether or not departure times should be shown
 	QString m_city; // The currently selected city
 	QString m_stop; // The currently selected stop
 	QString m_stopID; // The ID of the currently selected stop or an empty string if the ID isn't available
@@ -220,14 +224,15 @@ class PublicTransportSettings : public QObject {
 	int m_linesPerRow; // How many lines each row in the tree view should have
 	int m_size; // The size of the timetable
 	QString m_serviceProvider; // The id of the current service provider
+	QStringList m_serviceProviderFeatures; // The features of the current service provider
 	QString m_location; // The current location code
 	int m_timeOffsetOfFirstDeparture; // The offset in minutes from now of the first departure
 	QTime m_timeOfFirstDepartureCustom; // A custom time for the first departure
 	FirstDepartureConfigMode m_firstDepartureConfigMode; // The config mode for the time of the first departure
 	int m_maximalNumberOfDepartures; // The maximal number of displayed departures
 	int m_alarmTime; // The time in minutes before the departure at which the alarm should be fired
-	QHash< VehicleType, bool > m_showTypeOfVehicle; // Wheather or not a type of vehicle should be shown
-	bool	m_showNightlines; // Wheather or not night lines should be shown
+	QHash< VehicleType, bool > m_showTypeOfVehicle; // Whether or not a type of vehicle should be shown
+	bool m_showNightlines; // Whether or not night lines should be shown
 	int m_filterMinLine; // The minimal line number to be shown
 	int m_filterMaxLine; // The maximal line number to be shown
 	FilterType m_filterTypeTarget; // The type of the filter for targets (ShowAll, ShowMatching, HideMatching)
@@ -241,10 +246,10 @@ class PublicTransportSettings : public QObject {
 	bool m_useDefaultFont;
 	QFont m_font;
 	bool m_displayTimeBold;
-// 	bool m_stopNameValid; // Wheather or not the current stop name (m_stop) is valid
+// 	bool m_stopNameValid; // Whether or not the current stop name (m_stop) is valid
 
-	bool m_useSeperateCityValue; // Wheather or not the current service provider uses a seperate city value
-	bool m_onlyUseCitiesInList; // Wheather or not the city name input is restricted to the given list of city names
+	bool m_useSeperateCityValue; // Whether or not the current service provider uses a seperate city value
+	bool m_onlyUseCitiesInList; // Whether or not the city name input is restricted to the given list of city names
         void setValuesOfAdvancedConfig();
         void setValuesOfFilterConfig();
         void setValuesOfStopSelectionConfig();

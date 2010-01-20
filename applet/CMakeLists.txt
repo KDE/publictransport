@@ -46,7 +46,4 @@ install(FILES plasma-applet-publictransport.desktop
 install(FILES publictransport.knsrc
 	DESTINATION ${CONFIG_INSTALL_DIR})
 
-# install(FILES public-transport-stop.svgz
-#         DESTINATION ${KDE4_ICON_INSTALL_DIR})
-
  #add_subdirectory(kbflags)

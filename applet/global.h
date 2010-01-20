@@ -78,31 +78,49 @@ enum JourneyListType {
 /** Types of the title of the applet. */
 enum TitleType {
     ShowDepartureArrivalListTitle = 0, /**< Shows an icon, the stop name and additional information */
-    ShowSearchJourneyLineEdit = 1, /**< Shows a line edit to enter stop names for a journey search */
-    ShowJourneyListTitle = 2 /**< Shows an icon, a title and additional information */
+    ShowSearchJourneyLineEdit = 1, /**< Shows a line edit for journey search requests */
+    ShowSearchJourneyLineEditDisabled = 2, /**< Shows a disabled line edit for journey search requests */
+    ShowJourneyListTitle = 3 /**< Shows an icon, a title and additional information */
 };
 
 /** Global states of the applet. */
 enum AppletState {
-    NoState = 0x0000, /**< No state. */
+    NoState 				= 0x000000, /**< No state. */
 
-    ShowingDepartureArrivalList = 0x0001, /**< The applet is currently showing a departure / arrival list */
-    ShowingJourneyList = 0x0002, /**< The applet is currently showing a journey list */
-    ShowingJourneySearch = 0x0004, /**< The applet is currently showing a journey list */
+    ShowingDepartureArrivalList 	= 0x000001, /**< The applet is currently
+						    * showing a departure / arrival list */
+    ShowingJourneyList 			= 0x000002, /**< The applet is currently 
+						    * showing a journey list */
+    ShowingJourneySearch 		= 0x000004, /**< The applet is currently
+						    * showing the journey search interface */
+    ShowingJourneysNotSupported 	= 0x000008, /**< The applet is currently showing 
+						    * an info, that journey searches aren't 
+						    * supported by the current service provider. */
 
-    WaitingForDepartureData = 0x0008, /**< The applet is waiting for departure data from the data engine */
-    ReceivedValidDepartureData = 0x0010, /**< The applet received valid departure data from the data engine */
-    ReceivedErroneousDepartureData = 0x0020, /**< The applet received erroneous departure data from the data engine */
+    WaitingForDepartureData 		= 0x000100, /**< The applet is waiting for 
+						    * departure data from the data engine */
+    ReceivedValidDepartureData 		= 0x000200, /**< The applet received valid departure
+						    * data from the data engine */
+    ReceivedErroneousDepartureData 	= 0x000400, /**< The applet received erroneous
+						    * departure data from the data engine */
 
-    WaitingForJourneyData = 0x0040, /**< The applet is waiting for journey data from the data engine */
-    ReceivedValidJourneyData = 0x0080, /**< The applet received valid journey data from the data engine */
-    ReceivedErroneousJourneyData = 0x0100, /**< The applet received erroneous journey data from the data engine */
+    WaitingForJourneyData 		= 0x001000, /**< The applet is waiting for journey
+						    * data from the data engine */
+    ReceivedValidJourneyData 		= 0x002000, /**< The applet received valid journey
+						    * data from the data engine */
+    ReceivedErroneousJourneyData 	= 0x004000, /**< The applet received erroneous
+						    * journey data from the data engine */
 
-    ConfigDialogShown = 0x0200, /**< The configuration dialog is currently shown */
-    AccessorInfoDialogShown = 0x0400, /**< The accessor information dialog is currently shown */
+    ConfigDialogShown 			= 0x010000, /**< The configuration dialog is
+						    * currently shown */
+    AccessorInfoDialogShown 		= 0x020000, /**< The accessor information
+						    * dialog is currently shown */
 
-    SettingsJustChanged = 0x0800, /**< The settings have just changed and dataUpdated() hasn't been called since that */
-    ServiceProviderSettingsJustChanged = 0x1000 /**< Settings were just changed that require a new data request */
+    SettingsJustChanged 		= 0x040000, /**< The settings have just changed
+						    * and dataUpdated() hasn't been called
+						    * since that */
+    ServiceProviderSettingsJustChanged 	= 0x080000 /**< Settings were just changed that
+						    * require a new data request */
 };
 Q_DECLARE_FLAGS( AppletStates, AppletState )
 Q_DECLARE_OPERATORS_FOR_FLAGS( AppletStates )
