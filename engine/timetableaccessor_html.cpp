@@ -478,6 +478,9 @@ bool TimetableAccessorHtml::parseJourneyNews( const QString sJourneyNews, QStrin
 
 // Couldn't find such a function anywhere in Qt or KDE (but it must be there somewhere...)
 QString TimetableAccessorHtml::decodeHtmlEntities( QString html ) {
+    if ( html.isEmpty() )
+	return html;
+    
     QRegExp rx("(?:&#)([0-9]+)(?:;)");
     rx.setMinimal(true);
     int pos = 0;
@@ -511,7 +514,7 @@ bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray documen
 }
 
 bool TimetableAccessorHtml::parseDocumentPossibleStops( QStringList *stops,
-			    QHash<QString,QString> *stopToStopId ) const {
+			    QHash<QString,QString> *stopToStopId ) {
     if ( m_info.regExpSearchPossibleStopsRanges().isEmpty() ) {
 	kDebug() << "Possible stop lists not supported by accessor or service provider";
 	return false;

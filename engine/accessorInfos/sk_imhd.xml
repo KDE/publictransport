@@ -37,6 +37,8 @@
     <departures><![CDATA[http://www.imhd.zoznam.sk/{city}/index.php?w=212b36213433213aef2f302523ea&lang=en&hladaj={stop}]]></departures>
 </rawUrls>
 
+<javaScript>sk_imhd.js</javaScript>
+<!--
 <regExps>
     <possibleStops>
 	<item>
@@ -52,5 +54,5 @@
 	</infos>
 	<regExpPre key="TransportLine" value="TypeOfVehicle"><![CDATA[(?:<tr><td class="[^"]*"><center><b>)([^<]*)(?:</b></center></td><td><center>)([^<]*)(?:</center></td>)]]></repExpPre>
     </departures>
-</regExps>
+</regExps>-->
 </accessorInfo>

@@ -20,11 +20,11 @@
 <shortUrl>db.de</shortUrl>
 
 <rawUrls>
-    <departures><![CDATA[http://reiseauskunft.bahn.de/bin/bhftafel.exe/dn?rt=1&input={stop}!&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxDeps}&start=yes&productsFilter=111111111]]></departures>
+    <departures><![CDATA[http://reiseauskunft.bahn.de/bin/bhftafel.exe/dn?rt=1&input={stop}!&boardType={dataType}&date={date:dd.MM.yy}&time={time}&disableEquivs=no&maxJourneys={maxDeps}&start=yes&productsFilter=111111111]]></departures>
 <!-- GUIREQProduct_0&GUIREQProduct_1&GUIREQProduct_2&GUIREQProduct_3&GUIREQProduct_4&GUIREQProduct_5&GUIREQProduct_6&GUIREQProduct_7&GUIREQProduct_8 -->
     <stopSuggestions><![CDATA[http://reiseauskunft.bahn.de/bin/bhftafel.exe/dn?rt=1&input={stop}?]]></stopSuggestions>
 
-    <journeys><![CDATA[http://reiseauskunft.bahn.de/bin/query.exe/dn?S={startStop}!&Z={targetStop}!&time={time}&maxJourneys={maxDeps}&start=yes&HWAI=JS!ajax=yes!&HWAI=CONNECTION$C0-0!id=C0-0!HwaiDetailStatus=details!;CONNECTION$C0-1!id=C0-1!HwaiDetailStatus=details!;CONNECTION$C0-2!id=C0-2!HwaiDetailStatus=details!;CONNECTION$C0-3!id=C0-3!HwaiDetailStatus=details!;CONNECTION$C0-4!id=C0-4!HwaiDetailStatus=details!;CONNECTION$C1-0!id=C1-0!HwaiDetailStatus=details!;CONNECTION$C1-1!id=C1-1!HwaiDetailStatus=details!;CONNECTION$C1-2!id=C1-2!HwaiDetailStatus=details!;CONNECTION$C1-3!id=C1-3!HwaiDetailStatus=details!;CONNECTION$C1-4!id=C1-4!HwaiDetailStatus=details!;CONNECTION$C2-0!id=C2-0!HwaiDetailStatus=details!;CONNECTION$C2-1!id=C2-1!HwaiDetailStatus=details!;CONNECTION$C2-2!id=C2-2!HwaiDetailStatus=details!;CONNECTION$C2-3!id=C2-3!HwaiDetailStatus=details!;CONNECTION$C2-4!id=C2-4!HwaiDetailStatus=details!;]]></journeys>
+    <journeys><![CDATA[http://reiseauskunft.bahn.de/bin/query.exe/dn?S={startStop}!&Z={targetStop}!&date={date:dd.MM.yy}&time={time}&REQ0HafasSearchForw={dep=1|arr=0}&maxJourneys={maxDeps}&start=yes&HWAI=JS!ajax=yes!&HWAI=CONNECTION$C0-0!id=C0-0!HwaiDetailStatus=details!;CONNECTION$C0-1!id=C0-1!HwaiDetailStatus=details!;CONNECTION$C0-2!id=C0-2!HwaiDetailStatus=details!;CONNECTION$C0-3!id=C0-3!HwaiDetailStatus=details!;CONNECTION$C0-4!id=C0-4!HwaiDetailStatus=details!;CONNECTION$C1-0!id=C1-0!HwaiDetailStatus=details!;CONNECTION$C1-1!id=C1-1!HwaiDetailStatus=details!;CONNECTION$C1-2!id=C1-2!HwaiDetailStatus=details!;CONNECTION$C1-3!id=C1-3!HwaiDetailStatus=details!;CONNECTION$C1-4!id=C1-4!HwaiDetailStatus=details!;CONNECTION$C2-0!id=C2-0!HwaiDetailStatus=details!;CONNECTION$C2-1!id=C2-1!HwaiDetailStatus=details!;CONNECTION$C2-2!id=C2-2!HwaiDetailStatus=details!;CONNECTION$C2-3!id=C2-3!HwaiDetailStatus=details!;CONNECTION$C2-4!id=C2-4!HwaiDetailStatus=details!;]]></journeys>
 </rawUrls>
 
 <javaScript>de_db.js</javaScript>

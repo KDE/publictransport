@@ -52,8 +52,8 @@ class TimetableAccessorHtml : public TimetableAccessor
 	static QString decodeHtml( QByteArray document );
 
     protected:
-	/** Parses the contents of a received document for a list of departures / arrivals
-	* and puts the results into @p journeys.
+	/** Parses the contents of a received document for a list of departures/arrivals
+	* or journeys (depending on @p parseDocumentMode) and puts the results into @p journeys.
 	* @param journeys A pointer to a list of departure/arrival or journey informations.
 	* The results of parsing the document is stored in @p journeys.
 	* @param parseDocumentMode The mode of parsing, e.g. parse for departures/arrivals or journeys.
@@ -80,7 +80,7 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* @note Can be used if you have an html document containing a stop list.
 	* TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
 	* document for stops.
-	* @see parseDocumentPossibleStops(QHash<QString,QString>*) const */
+	* @see parseDocumentPossibleStops(QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( const QByteArray document,
 						 QStringList *stops,
 						 QHash<QString,QString> *stopToStopId );
@@ -94,7 +94,7 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* @return false, if there were an error parsing the document.
 	* @see parseDocumentPossibleStops(const QByteArray, QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( QStringList *stops,
-						 QHash<QString,QString> *stopToStopId ) const;
+						 QHash<QString,QString> *stopToStopId );
 
 	/** Parses a journey news string. */
 	virtual bool parseJourneyNews( const QString sJourneyNews, QString *sDelay,

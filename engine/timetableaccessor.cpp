@@ -29,7 +29,7 @@
 // Own includes
 #include "timetableaccessor.h"
 #include "timetableaccessor_html.h"
-#include "timetableaccessor_html_js.h"
+#include "timetableaccessor_html_script.h"
 #include "timetableaccessor_xml.h"
 #include "timetableaccessor_htmlinfo.h"
 #include <KLocale>
@@ -74,8 +74,8 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     QString name, nameEn;
     node = docElement.firstChildElement("name");
     if ( node.isNull() ) {
-	kDebug()
-	    << "No <name> tag in service provider information XML named" << serviceProvider;
+	kDebug() << "No <name> tag in service provider information XML named"
+		 << serviceProvider;
 	return NULL;
     }
     while ( !node.isNull() ) {
@@ -684,8 +684,13 @@ DepartureGroupTitlesTagNotComplete:
     if ( type == HTML ) {
 	if ( useRegExps )
 	    return new TimetableAccessorHtml( accessorInfos );
-	else
-	    return new TimetableAccessorHtmlJs( accessorInfos );
+	else {
+	    TimetableAccessorHtmlScript *jsAccessor = new TimetableAccessorHtmlScript( accessorInfos );
+	    if ( jsAccessor->isScriptLoaded() )
+		return jsAccessor;
+	    else
+		return NULL; // Couldn't correctly load the script (bad script)
+	}
     } else if ( type == XML )
 	return new TimetableAccessorXml( accessorInfos );
     else {
@@ -743,99 +748,100 @@ VehicleType TimetableAccessor::vehicleTypeFromString( QString sVehicleType ) {
 
 TimetableInformation TimetableAccessor::timetableInformationFromString(
 			const QString& sTimetableInformation ) {
-    if ( sTimetableInformation == "Nothing" )
+    QString sInfo = sTimetableInformation.toLower();
+    if ( sInfo == "nothing" )
 	return Nothing;
-    else if ( sTimetableInformation == "DepartureDate" )
+    else if ( sInfo == "departuredate" )
 	return DepartureDate;
-    else if ( sTimetableInformation == "DepartureHour" )
+    else if ( sInfo == "departurehour" )
 	return DepartureHour;
-    else if ( sTimetableInformation == "DepartureMinute" )
+    else if ( sInfo == "departureminute" )
 	return DepartureMinute;
-    else if ( sTimetableInformation == "TypeOfVehicle" )
+    else if ( sInfo == "typeofvehicle" )
 	return TypeOfVehicle;
-    else if ( sTimetableInformation == "TransportLine" )
+    else if ( sInfo == "transportline" )
 	return TransportLine;
-    else if ( sTimetableInformation == "FlightNumber" )
+    else if ( sInfo == "flightnumber" )
 	return FlightNumber;
-    else if ( sTimetableInformation == "Target" )
+    else if ( sInfo == "target" )
 	return Target;
-    else if ( sTimetableInformation == "Platform" )
+    else if ( sInfo == "platform" )
 	return Platform;
-    else if ( sTimetableInformation == "Delay" )
+    else if ( sInfo == "delay" )
 	return Delay;
-    else if ( sTimetableInformation == "DelayReason" )
+    else if ( sInfo == "delayreason" )
 	return DelayReason;
-    else if ( sTimetableInformation == "JourneyNews" )
+    else if ( sInfo == "journeynews" )
 	return JourneyNews;
-    else if ( sTimetableInformation == "JourneyNewsOther" )
+    else if ( sInfo == "journeynewsother" )
 	return JourneyNewsOther;
-    else if ( sTimetableInformation == "JourneyNewsLink" )
+    else if ( sInfo == "journeynewslink" )
 	return JourneyNewsLink;
-    else if ( sTimetableInformation == "DepartureHourPrognosis" )
+    else if ( sInfo == "departurehourprognosis" )
 	return DepartureHourPrognosis;
-    else if ( sTimetableInformation == "DepartureMinutePrognosis" )
+    else if ( sInfo == "departureminuteprognosis" )
 	return DepartureMinutePrognosis;
-    else if ( sTimetableInformation == "Status" )
+    else if ( sInfo == "status" )
 	return Status;
-    else if ( sTimetableInformation == "DepartureYear" )
+    else if ( sInfo == "departureyear" )
 	return DepartureYear;
-    else if ( sTimetableInformation == "RouteStops" )
+    else if ( sInfo == "routestops" )
 	return RouteStops;
-    else if ( sTimetableInformation == "RouteTimes" )
+    else if ( sInfo == "routetimes" )
 	return RouteTimes;
-    else if ( sTimetableInformation == "RouteTimesDeparture" )
+    else if ( sInfo == "routetimesdeparture" )
 	return RouteTimesDeparture;
-    else if ( sTimetableInformation == "RouteTimesArrival" )
+    else if ( sInfo == "routetimesarrival" )
 	return RouteTimesArrival;
-    else if ( sTimetableInformation == "RouteExactStops" )
+    else if ( sInfo == "routeexactstops" )
 	return RouteExactStops;
-    else if ( sTimetableInformation == "RouteTypesOfVehicles" )
+    else if ( sInfo == "routetypesofvehicles" )
 	return RouteTypesOfVehicles;
-    else if ( sTimetableInformation == "RouteTransportLines" )
+    else if ( sInfo == "routetransportlines" )
 	return RouteTransportLines;
-    else if ( sTimetableInformation == "RoutePlatformsDeparture" )
+    else if ( sInfo == "routeplatformsdeparture" )
 	return RoutePlatformsDeparture;
-    else if ( sTimetableInformation == "RoutePlatformsArrival" )
+    else if ( sInfo == "routeplatformsarrival" )
 	return RoutePlatformsArrival;
-    else if ( sTimetableInformation == "RouteTimesDepartureDelay" )
+    else if ( sInfo == "routetimesdeparturedelay" )
 	return RouteTimesDepartureDelay;
-    else if ( sTimetableInformation == "RouteTimesArrivalDelay" )
+    else if ( sInfo == "routetimesarrivaldelay" )
 	return RouteTimesArrivalDelay;
-    else if ( sTimetableInformation == "Operator" )
+    else if ( sInfo == "operator" )
 	return Operator;
-    else if ( sTimetableInformation == "DepartureAMorPM" )
+    else if ( sInfo == "departureamorpm" )
 	return DepartureAMorPM;
-    else if ( sTimetableInformation == "DepartureAMorPMPrognosis" )
+    else if ( sInfo == "departureamorpmprognosis" )
 	return DepartureAMorPMPrognosis;
-    else if ( sTimetableInformation == "ArrivalAMorPM" )
+    else if ( sInfo == "arrivalamorpm" )
 	return ArrivalAMorPM;
-    else if ( sTimetableInformation == "Duration" )
+    else if ( sInfo == "duration" )
 	return Duration;
-    else if ( sTimetableInformation == "StartStopName" )
+    else if ( sInfo == "startstopname" )
 	return StartStopName;
-    else if ( sTimetableInformation == "StartStopID" )
+    else if ( sInfo == "startstopid" )
 	return StartStopID;
-    else if ( sTimetableInformation == "TargetStopName" )
+    else if ( sInfo == "targetstopname" )
 	return TargetStopName;
-    else if ( sTimetableInformation == "TargetStopID" )
+    else if ( sInfo == "targetstopid" )
 	return TargetStopID;
-    else if ( sTimetableInformation == "ArrivalDate" )
+    else if ( sInfo == "arrivaldate" )
 	return ArrivalDate;
-    else if ( sTimetableInformation == "ArrivalHour" )
+    else if ( sInfo == "arrivalhour" )
 	return ArrivalHour;
-    else if ( sTimetableInformation == "ArrivalMinute" )
+    else if ( sInfo == "arrivalminute" )
 	return ArrivalMinute;
-    else if ( sTimetableInformation == "Changes" )
+    else if ( sInfo == "changes" )
 	return Changes;
-    else if ( sTimetableInformation == "TypesOfVehicleInJourney" )
+    else if ( sInfo == "typesofvehicleinjourney" )
 	return TypesOfVehicleInJourney;
-    else if ( sTimetableInformation == "Pricing" )
+    else if ( sInfo == "pricing" )
 	return Pricing;
-    else if ( sTimetableInformation == "NoMatchOnSchedule" )
+    else if ( sInfo == "nomatchonschedule" )
 	return NoMatchOnSchedule;
-    else if ( sTimetableInformation == "StopName" )
+    else if ( sInfo == "stopname" )
 	return StopName;
-    else if ( sTimetableInformation == "StopID" )
+    else if ( sInfo == "stopid" )
 	return StopID;
     else {
 	kDebug() << sTimetableInformation
@@ -845,7 +851,91 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
 }
 
 QStringList TimetableAccessor::features() const {
-    return m_info.features();
+    QStringList list;
+    
+    if ( m_info.m_departureRawUrl.contains( "{dataType}" ) )
+	list << "Arrivals";
+
+    if ( m_info.scriptFileName().isEmpty() ) {
+	if ( m_info.supportsStopAutocompletion() )
+	    list << "Autocompletion";
+	if ( !m_info.m_searchJourneys.regExp().isEmpty() )
+	    list << "JourneySearch";
+	if ( m_info.supportsTimetableAccessorInfo(Delay) )
+	    list << "Delay";
+	if ( m_info.supportsTimetableAccessorInfo(DelayReason) )
+	    list << "DelayReason";
+	if ( m_info.supportsTimetableAccessorInfo(Platform) )
+	    list << "Platform";
+	if ( m_info.supportsTimetableAccessorInfo(JourneyNews)
+		    || m_info.supportsTimetableAccessorInfo(JourneyNewsOther)
+		    || m_info.supportsTimetableAccessorInfo(JourneyNewsLink) )
+	    list << "JourneyNews";
+	if ( m_info.supportsTimetableAccessorInfo(TypeOfVehicle) )
+	    list << "TypeOfVehicle";
+	if ( m_info.supportsTimetableAccessorInfo(Status) )
+	    list << "Status";
+	if ( m_info.supportsTimetableAccessorInfo(Operator) )
+	    list << "Operator";
+	if ( m_info.supportsTimetableAccessorInfo(StopID) )
+	    list << "StopID";
+    } else
+	list << scriptFeatures();
+
+    list.removeDuplicates();
+    return list;
+}
+
+QStringList TimetableAccessor::featuresLocalized() const {
+    QStringList featuresl10n;
+    QStringList featureList = features();
+
+    if ( featureList.contains("Arrivals") )
+	featuresl10n << i18nc("Support for getting arrivals for a stop of public "
+			      "transport. This string is used in a feature list, "
+			      "should be short.", "Arrivals");
+    if ( featureList.contains("Autocompletion") )
+	featuresl10n << i18nc("Autocompletion for names of public transport stops",
+			      "Autocompletion");
+    if ( featureList.contains("JourneySearch") )
+	featuresl10n << i18nc("Support for getting journeys from one stop to another. "
+			      "This string is used in a feature list, should be short.",
+			      "Journey search");
+    if ( featureList.contains("Delay") )
+	featuresl10n << i18nc("Support for getting delay information. This string is "
+			      "used in a feature list, should be short.", "Delay");
+    if ( featureList.contains("DelayReason") )
+	featuresl10n << i18nc("Support for getting the reason of a delay. This string "
+			      "is used in a feature list, should be short.",
+			      "Delay reason");
+    if ( featureList.contains("Platform") )
+	featuresl10n << i18nc("Support for getting the information from which platform "
+			      "a public transport vehicle departs / at which it "
+			      "arrives. This string is used in a feature list, "
+			      "should be short.", "Platform");
+    if ( featureList.contains("JourneyNews") )
+	featuresl10n << i18nc("Support for getting the news about a journey with public "
+			      "transport, such as a platform change. This string is "
+			      "used in a feature list, should be short.", "Journey news");
+    if ( featureList.contains("TypeOfVehicle") )
+	featuresl10n << i18nc("Support for getting information about the type of "
+			      "vehicle of a journey with public transport. This string "
+			      "is used in a feature list, should be short.",
+			      "Type of vehicle");
+    if ( featureList.contains("Status") )
+	featuresl10n << i18nc("Support for getting information about the status of a "
+			      "journey with public transport or an aeroplane. This "
+			      "string is used in a feature list, should be short.",
+			      "Status");
+    if ( featureList.contains("Operator") )
+	featuresl10n << i18nc("Support for getting the operator of a journey with public "
+			      "transport or an aeroplane. This string is used in a "
+			      "feature list, should be short.", "Operator");
+    if ( featureList.contains("StopID") )
+	featuresl10n << i18nc("Support for getting the id of a stop of public transport. "
+			      "This string is used in a feature list, should be short.",
+			      "Stop ID");
+    return featuresl10n;
 }
 
 KIO::TransferJob *TimetableAccessor::requestDepartures( const QString &sourceName,
@@ -853,8 +943,12 @@ KIO::TransferJob *TimetableAccessor::requestDepartures( const QString &sourceNam
 		const QDateTime &dateTime, const QString &dataType,
 		bool useDifferentUrl ) {
     KUrl url = getUrl( city, stop, maxDeps, dateTime, dataType, useDifferentUrl );
+    kDebug() << url;
+    
     KIO::TransferJob *job = KIO::get( url, KIO::NoReload, KIO::HideProgressInfo );
-    m_jobInfos.insert( job, QVariantList() << static_cast<int>(ParseForDeparturesArrivals)
+    int parseType = maxDeps == -1 ? static_cast<int>(ParseForStopSuggestions)
+	    : static_cast<int>(ParseForDeparturesArrivals);
+    m_jobInfos.insert( job, QVariantList() << parseType
 	<< sourceName << city << stop << maxDeps << dateTime << dataType
 	<< useDifferentUrl << (QUrl)url );
     m_document = "";
@@ -866,13 +960,14 @@ KIO::TransferJob *TimetableAccessor::requestDepartures( const QString &sourceNam
     return job;
 }
 
-KIO::TransferJob* TimetableAccessor::requestStopSuggestions( const QString& sourceName,
-							     const QString& stop ) {
+KIO::TransferJob* TimetableAccessor::requestStopSuggestions( const QString &sourceName,
+							     const QString &city,
+							     const QString &stop ) {
     if ( hasSpecialUrlForStopSuggestions() ) {
-	KUrl url = getStopSuggestionsUrl( stop );
+	KUrl url = getStopSuggestionsUrl( city, stop );
 	KIO::TransferJob *job = KIO::get( url, KIO::NoReload, KIO::HideProgressInfo );
 	m_jobInfos.insert( job, QVariantList() << static_cast<int>(ParseForStopSuggestions)
-	    << sourceName << (QUrl)url << stop );
+	    << sourceName<< city << stop << (QUrl)url  ); // TODO list ordering... replace by a hash?
 	m_document = "";
 	
 	connect( job, SIGNAL(data(KIO::Job*,QByteArray)),
@@ -881,7 +976,8 @@ KIO::TransferJob* TimetableAccessor::requestStopSuggestions( const QString& sour
 	
 	return job;
     } else
-	return requestDepartures( sourceName, QString(), stop, 1, QDateTime::currentDateTime() );
+	return requestDepartures( sourceName, city, stop, -1,
+				  QDateTime::currentDateTime() );
 }
 
 KIO::TransferJob *TimetableAccessor::requestJourneys( const QString &sourceName,
@@ -901,6 +997,8 @@ KIO::TransferJob *TimetableAccessor::requestJourneys( const QString &sourceName,
 }
 
 KIO::TransferJob* TimetableAccessor::requestJourneys( const KUrl& url ) {
+    kDebug() << url;
+    
     m_document = "";
     KIO::TransferJob *job = KIO::get( url, KIO::NoReload, KIO::HideProgressInfo );
     
@@ -923,27 +1021,31 @@ void TimetableAccessor::finished( KJob* job ) {
     QStringList *stops;
     QHash< QString, QString > *stopToStopId;
     ParseDocumentMode parseDocumentMode = static_cast<ParseDocumentMode>( jobInfo.at(0).toInt() );
-    kDebug() << "\n\nFINISHED:    " << parseDocumentMode;
+    kDebug() << "\n      FINISHED:" << parseDocumentMode;
     
     QString sourceName = jobInfo.at(1).toString();
+    QString city = jobInfo.at(2).toString();
     QString stop = jobInfo.at(3).toString();
     if ( parseDocumentMode == ParseForStopSuggestions ) {
-	QUrl url = jobInfo.at(2).toUrl();
+	QUrl url = jobInfo.at(4).toUrl();
+
+	kDebug() << "Stop suggestions request finished" << sourceName << city << stop;
 	if ( (stops = new QStringList)
 		&& (stopToStopId = new QHash<QString, QString>)
 		&& parseDocumentPossibleStops(stops, stopToStopId) ) {
-	    // 	    kDebug() << "possible stop list received";
+	    kDebug() << "finished parsing for stop suggestions";
 	    emit stopListReceived( this, url, *stops, *stopToStopId, serviceProvider(),
-				   sourceName, QString(), stop, QString(), parseDocumentMode );
+				   sourceName, city, stop, QString(), parseDocumentMode );
+	    kDebug() << "emit stopListReceived finished";
 	} else {
-	    emit errorParsing( this, url, serviceProvider(), sourceName, QString(),
+	    kDebug() << "error parsing for stop suggestions";
+	    emit errorParsing( this, url, serviceProvider(), sourceName, city,
 			       stop, QString(), parseDocumentMode );
 	}
 
 	return;
     }
     
-    QString city = jobInfo.at(2).toString();
     int maxDeps = jobInfo.at(4).toInt();
     QDateTime dateTime = jobInfo.at(5).toDateTime();
     QString dataType = jobInfo.at(6).toString();
@@ -954,7 +1056,7 @@ void TimetableAccessor::finished( KJob* job ) {
     if ( parseDocumentMode == ParseForJourneys ) {
 	targetStop = jobInfo.at(9).toString();
 	roundTrips = jobInfo.at(10).toInt();
-	kDebug() << "\n\n     FINISHED JOURNEY SEARCH" << roundTrips;
+	kDebug() << "\n    FINISHED JOURNEY SEARCH" << roundTrips;
     }
     m_curCity = city;
 
@@ -1024,9 +1126,9 @@ void TimetableAccessor::finished( KJob* job ) {
 			   stop, dataType, parseDocumentMode );
 }
 
-KUrl TimetableAccessor::getUrl ( const QString &city, const QString &stop,
-				 int maxDeps, const QDateTime &dateTime,
-				 const QString &dataType, bool useDifferentUrl ) const {
+KUrl TimetableAccessor::getUrl( const QString &city, const QString &stop,
+				int maxDeps, const QDateTime &dateTime,
+				const QString &dataType, bool useDifferentUrl ) const {
     QString sRawUrl = useDifferentUrl ? stopSuggestionsRawUrl() : departuresRawUrl();
     QString sTime = dateTime.time().toString("hh:mm");
     QString sDataType;
@@ -1055,24 +1157,29 @@ KUrl TimetableAccessor::getUrl ( const QString &city, const QString &stop,
 		     .replace( "{stop}", sStop )
 		     .replace( "{dataType}", sDataType );
 
-    QRegExp rx = QRegExp("{date:([^}]*)}", Qt::CaseInsensitive);
+    QRegExp rx = QRegExp("\\{date:([^\\}]*)\\}", Qt::CaseInsensitive);
     if ( rx.indexIn(sRawUrl) != -1 )
-	sRawUrl.replace( rx, dateTime.date().toString(rx.cap()) );
+	sRawUrl.replace( rx, dateTime.date().toString(rx.cap(1)) );
 
     return KUrl( sRawUrl );
 }
 
-KUrl TimetableAccessor::getStopSuggestionsUrl( const QString& stop ) {
+KUrl TimetableAccessor::getStopSuggestionsUrl( const QString &city,
+					       const QString& stop ) {
     QString sRawUrl = stopSuggestionsRawUrl();
-    QString sStop = stop.toLower();
+    QString sCity = city.toLower(), sStop = stop.toLower();
     
     // Encode stop
     if ( charsetForUrlEncoding().isEmpty() ) {
+	sCity = QString::fromAscii(QUrl::toPercentEncoding(sCity));
 	sStop = QString::fromAscii(QUrl::toPercentEncoding(sStop));
     } else {
+	sCity = toPercentEncoding( sCity, charsetForUrlEncoding() );
 	sStop = toPercentEncoding( sStop, charsetForUrlEncoding() );
     }
-
+    
+    if ( useSeperateCityValue() )
+	sRawUrl = sRawUrl.replace( "{city}", sCity );
     sRawUrl = sRawUrl.replace( "{stop}", sStop );
 
     return KUrl( sRawUrl );
@@ -1089,10 +1196,11 @@ KUrl TimetableAccessor::getJourneyUrl( const QString& city,
     QString sRawUrl = m_info.journeyRawUrl();
     QString sTime = dateTime.time().toString("hh:mm");
     QString sDataType;
-    QString sCity = city.toLower(), sStartStopName = startStopName.toLower(), sTargetStopName = targetStopName.toLower();
-    if ( dataType == "arrivals" )
+    QString sCity = city.toLower(), sStartStopName = startStopName.toLower(),
+	    sTargetStopName = targetStopName.toLower();
+    if ( dataType == "arrivals" || dataType == "journeysArr" )
 	sDataType = "arr";
-    else if ( dataType == "departures" || dataType == "journeys" )
+    else if ( dataType == "departures" || dataType == "journeysDep" )
 	sDataType = "dep";
 
     sCity = timetableAccessorInfo().mapCityNameToValue(sCity);
@@ -1118,10 +1226,18 @@ KUrl TimetableAccessor::getJourneyUrl( const QString& city,
 		     .replace( "{targetStop}", sTargetStopName )
 		     .replace( "{dataType}", sDataType );
 
-    QRegExp rx = QRegExp("{date:([^}]*)}", Qt::CaseInsensitive);
+    QRegExp rx = QRegExp("\\{date:([^\\}]*)\\}", Qt::CaseInsensitive);
     if ( rx.indexIn(sRawUrl) != -1 )
-	sRawUrl.replace( rx, dateTime.date().toString(rx.cap()) );
-
+	sRawUrl.replace( rx, dateTime.date().toString(rx.cap(1)) );
+    
+    rx = QRegExp("\\{dep=([^\\|]*)\\|arr=([^\\}]*)\\}", Qt::CaseInsensitive);
+    if ( rx.indexIn(sRawUrl) != -1 ) {
+	if ( sDataType == "arr" )
+	    sRawUrl.replace( rx, rx.cap(2) );
+	else
+	    sRawUrl.replace( rx, rx.cap(1) );
+    }
+    
     return KUrl( sRawUrl );
 }
 
@@ -1161,7 +1277,7 @@ bool TimetableAccessor::parseDocument( QList<PublicTransportInfo*> *journeys,
 }
 
 bool TimetableAccessor::parseDocumentPossibleStops( QStringList *stops,
-				QHash<QString,QString> *stopToStopId ) const {
+				QHash<QString,QString> *stopToStopId ) {
     Q_UNUSED( stops );
     Q_UNUSED( stopToStopId );
     return false;

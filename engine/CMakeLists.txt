@@ -20,13 +20,15 @@ set( publictransport_engine_SRCS
     timetableaccessor_html.cpp
     timetableaccessor_html_js.cpp 
     timetableaccessor_htmlinfo.cpp 
-    timetableaccessor_xml.cpp )
+    timetableaccessor_xml.cpp
+    scripting.cpp )
 
 # Now make sure all files get to the right place
 kde4_add_plugin(plasma_engine_publictransport ${publictransport_engine_SRCS})
+
 target_link_libraries(plasma_engine_publictransport
     ${KDE4_PLASMA_LIBS}
-    ${QT_QTSCRIPT_LIBRARY}
+    ${KDE4_KROSSCORE_LIBS}
     QtXml kio)
 
 install(TARGETS plasma_engine_publictransport

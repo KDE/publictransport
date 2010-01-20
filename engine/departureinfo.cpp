@@ -72,7 +72,7 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
 	if ( m_data[DepartureDate].canConvert(QVariant::String) ) {
 	    QString sDate = m_data[DepartureDate].toString();
 	    
-	    m_data[ DepartureDate ] = QDate::fromString( sDate, "dd.mm.YYYY" );
+	    m_data[ DepartureDate ] = QDate::fromString( sDate, "dd.MM.yyyy" );
 	    
 	    if ( !m_data[DepartureDate].toDate().isValid() ) {
 		int currentYear = QDate::currentDate().year();
@@ -401,9 +401,12 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 	sLineTypeLower == "by feet" ||
 	sLineTypeLower == "fu&#223;weg" ||
 	sLineTypeLower == "fu&szlig;weg" ||
+	sLineTypeLower == "fussweg" ||
 	sLineTypeLower == "zu fu&#223;" ||
 	sLineTypeLower == "zu fu&szlig;" ||
+	sLineTypeLower == "zu fuss" ||
 	sLineTypeLower == "&#220;bergang" ||
+	sLineTypeLower == "uebergang" ||
 	sLineTypeLower == "&uuml;bergang" )
 	return Feet;
 
@@ -415,9 +418,10 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 	sLineTypeLower == "schiff" )
 	return Ship;
 
-    else if ( sLineTypeLower == "rb" ||
-	sLineTypeLower == "me" || // "metronom", germany
-	sLineTypeLower == "erb" || // "eurobahn", germany
+    else if ( sLineTypeLower == "rb" || // Regional, "RegionalBahn", germany
+	sLineTypeLower == "me" || // "Metronom", germany
+	sLineTypeLower == "mer" || // "Metronom", germany
+	sLineTypeLower == "erb" || // "EuroBahn", germany
 	sLineTypeLower == "wfb" || // "WestfalenBahn", germany
 	sLineTypeLower == "nwb" || // "NordWestBahn", germany
 	sLineTypeLower == "osb" || // "Ortenau-S-Bahn GmbH" (no interurban train), germany
@@ -437,27 +441,30 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 	return TrainRegionalExpress;
 
     else if ( sLineTypeLower == "ir" ||
+	sLineTypeLower == "d" || // schnellzug, swiss
 	sLineTypeLower == "ire" ||  // almost a local train (Nahverkehrszug) stopping at few stations; semi-fast
 	sLineTypeLower == "er" ||  // border-crossing local train stopping at few stations; semi-fast
-	sLineTypeLower == "ex" )// czech, express trains with no supplementary fare, similar to the German Interregio or also Regional-Express
+	sLineTypeLower == "ex" ) // czech, express trains with no supplementary fare, similar to the German Interregio or also Regional-Express
 	return TrainInterregio;
 
-    else if ( sLineTypeLower == "ec_ic" ||
+    else if ( sLineTypeLower == "ec_ic" || // Eurocity / Intercity
 	sLineTypeLower == "ec" || // Eurocity
-	sLineTypeLower == "ic" ||
+	sLineTypeLower == "ic" || // Intercity
 	sLineTypeLower == "cnl" || // CityNightLine
+	sLineTypeLower == "en" || // EuroNight
+	sLineTypeLower == "nz" || // "Nachtzug"
 	sLineTypeLower == "oec" || // austria
 	sLineTypeLower == "oic" || // austria
 	sLineTypeLower == "icn" ) // national long-distance train with tilting technology
 	return TrainIntercityEurocity;
 
     else if ( sLineTypeLower == "ice" || // germany
+	sLineTypeLower == "rj" ||  // "railjet", austria
 	sLineTypeLower == "tgv" ||  // france
 	sLineTypeLower == "tha" ||  // thalys
 	sLineTypeLower == "hst" || // great britain
 	sLineTypeLower == "est" || // eurostar
 	sLineTypeLower == "es" ) // eurostar, High-speed, tilting trains for long-distance services
-// 	sLineTypeLower == "" ) // spain, High speed trains, speeds up to 300 km/h... missing value
 	return TrainIntercityExpress;
 
     else

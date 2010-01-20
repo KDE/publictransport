@@ -18,32 +18,48 @@
  */
 
 /** @file
-* @brief This file contains the base class for all HTML based accessors using javascript files for parsing that are used by the public transport data engine.
+* @brief This file contains the base class for all HTML based accessors using script files for parsing that are used by the public transport data engine.
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#ifndef TIMETABLEACCESSOR_HTML_JS_HEADER
-#define TIMETABLEACCESSOR_HTML_JS_HEADER
+#ifndef TIMETABLEACCESSOR_HTML_SCRIPT_HEADER
+#define TIMETABLEACCESSOR_HTML_SCRIPT_HEADER
 
 #include "timetableaccessor.h"
 
-#include <QScriptEngine>
+namespace Kross {
+    class Action;
+}
+class ResultObject;
 
-/** @class TimetableAccessorHtmlJs
-* @brief The base class for all HTML accessors using java script files for parsing.
+/** @class TimetableAccessorHtmlScript
+* @brief The base class for all HTML accessors using script files for parsing.
 */
-class TimetableAccessorHtmlJs : public TimetableAccessor {
+class TimetableAccessorHtmlScript : public TimetableAccessor {
+    Q_OBJECT
+    
     public:
-	/** Creates a new TimetableAccessorHtmlJs object with the given information.
+	/** Creates a new TimetableAccessorHtmlScript object with the given information.
 	* @param info Information about how to download and parse the documents
 	* of a service provider.
 	* @note Can be used if you have a custom TimetableAccessorInfo object.
 	* TimetableAccessorXml uses this to create an HTML accessor for parsing 
 	* of stop lists. */
-	TimetableAccessorHtmlJs( TimetableAccessorInfo info = TimetableAccessorInfo() );
+	TimetableAccessorHtmlScript( TimetableAccessorInfo info = TimetableAccessorInfo() );
 
+	/** Destructor. */
+	virtual ~TimetableAccessorHtmlScript();
+
+	/** Whether or not the script has been successfully loaded. */
+	bool isScriptLoaded() { return m_scriptLoaded; };
+	
+	/** Gets a list of features that this accessor supports through a script. */
+	virtual QStringList scriptFeatures() const;
+	
     protected:
-	/** Parses the contents of a received document for a list of departures 
-	* / arrivals and puts the results into @p journeys.
+	/** Calls the 'parseTimetable'/'parseJourneys' function in the script to 
+	* parse the contents of a received document for a list of departures/arrivals 
+	* or journeys (depending on @p parseDocumentMode) and puts the results 
+	* into @p journeys.
 	* @param journeys A pointer to a list of departure/arrival or journey 
 	* informations. The results of parsing the document is stored in @p journeys.
 	* @param parseDocumentMode The mode of parsing, e.g. parse for 
@@ -53,11 +69,21 @@ class TimetableAccessorHtmlJs : public TimetableAccessor {
 	virtual bool parseDocument( QList<PublicTransportInfo*> *journeys,
 				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
+	/** Calls the 'getUrlForLaterJourneyResults' function in the script to
+	* parse the contents of a received document for an url to a document
+	* containing later journeys. 
+	* @return The parsed url. */
 	virtual QString parseDocumentForLaterJourneysUrl();
+	
+	/** Calls the 'getUrlForDetailedJourneyResults' function in the script to
+	* parse the contents of a received document for an url to a document
+	* containing detailed journey infos.
+	* @return The parsed url. */
 	virtual QString parseDocumentForDetailedJourneysUrl();
 	
-	/** Parses the contents of the given document for a list of possible stop names
-	* and puts the results into @p stops.
+	/** Calls the 'parsePossibleStops' function in the script to parse the 
+	* contents of the given document for a list of possible stop names and puts
+	* the results into @p stops.
 	* @param document A document to be parsed.
 	* @param stops A pointer to a string list, where the stop names are stored.
 	* @param stopToStopId A pointer to a map, where the keys are stop names
@@ -67,7 +93,7 @@ class TimetableAccessorHtmlJs : public TimetableAccessor {
 	* @note Can be used if you have an html document containing a stop list.
 	* TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
 	* document for stops.
-	* @see parseDocumentPossibleStops(QHash<QString,QString>*) const */
+	* @see parseDocumentPossibleStops(QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( const QByteArray document,
 						 QStringList *stops,
 						 QHash<QString,QString> *stopToStopId );
@@ -81,15 +107,13 @@ class TimetableAccessorHtmlJs : public TimetableAccessor {
 	* @return false, if there were an error parsing the document.
 	* @see parseDocumentPossibleStops(const QByteArray, QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( QStringList *stops,
-						 QHash<QString,QString> *stopToStopId ) const;
-
-	bool loadScript(const QString& fileName);
-	bool isScriptLoaded() { return m_scriptLoaded; };
+						 QHash<QString,QString> *stopToStopId );
 	
     private:
-	bool m_scriptLoaded;
-	QScriptEngine m_engine;
-	QScriptValue m_parser;
+	bool m_scriptLoaded; // Whether or not the script was successfully loaded
+
+	Kross::Action *m_script; // The script object
+	ResultObject *m_resultObject; // An object used by the script to store results in
 };
 
-#endif // TIMETABLEACCESSOR_HTML_JS_HEADER
+#endif // TIMETABLEACCESSOR_HTML_SCRIPT_HEADER

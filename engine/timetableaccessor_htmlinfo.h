@@ -164,8 +164,6 @@ class TimetableAccessorInfo
 	QString fileName() const { return m_fileName; };
 	/** The file name of the script file to parse html pages. */
 	QString scriptFileName() const { return m_scriptFileName; };
-	/** A list of features this accessor supports. */
-	QStringList features() const;
 	/** Wheather or not this accessor supports stop name autocompletion. */
 	bool supportsStopAutocompletion() const;
 	/** Wheather or not this accessor supports the given TimetableInformation. */

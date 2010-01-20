@@ -44,8 +44,7 @@
 *	- serviceProvider()  (you also need to add an enum value to ServiceProvider)
 * 	- country(), cities()
 * 	- rawUrl(), parseDocument() */
-class TimetableAccessor : public QObject
-{
+class TimetableAccessor : public QObject {
     Q_OBJECT
 
     friend class TimetableAccessorInfo; // Because TimetableAccessor needs to set values in TimetableAccessorInfo when reading xml files
@@ -55,7 +54,7 @@ class TimetableAccessor : public QObject
 	* to get an accessor that can download and parse documents from the given service
 	* provider. */
 	TimetableAccessor() {};
-        ~TimetableAccessor() {};
+        virtual ~TimetableAccessor() {};
 
 	/** Gets a timetable accessor that is able to parse results from the given service provider. */
 	static TimetableAccessor *getSpecificAccessor( const QString &serviceProvider );
@@ -75,6 +74,12 @@ class TimetableAccessor : public QObject
 	/** Gets a list of features that this accessor supports. */
 	virtual QStringList features() const;
 
+	/** Gets a list of short localized strings describing the supported features. */
+	QStringList featuresLocalized() const;
+
+	/** Gets a list of features that this accessor supports through a script. */
+	virtual QStringList scriptFeatures() const { return QStringList(); };
+
 	/** The country for which the accessor returns results. */
 	virtual QString country() const { return m_info.country(); };
 
@@ -90,6 +95,7 @@ class TimetableAccessor : public QObject
 					     bool useDifferentUrl = false );
 
 	KIO::TransferJob *requestStopSuggestions( const QString &sourceName,
+						  const QString &city,
 						  const QString &stop );
 
 	/** Requests a list of journeys. When the journey list is completely received
@@ -139,7 +145,16 @@ class TimetableAccessor : public QObject
 	virtual bool parseDocument( QList<PublicTransportInfo*> *journeys,
 				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
+	/** Override this method to parse the contents of a received document for
+	* an url to a document containing later journeys. The default implementation 
+	* returns a null string.
+	* @return The parsed url. */
 	virtual QString parseDocumentForLaterJourneysUrl() { return QString(); };
+	
+	/** Override this method to parse the contents of a received document for
+	* an url to a document containing detailed journey infos. The default 
+	* implementation returns a null string.
+	* @return The parsed url. */
 	virtual QString parseDocumentForDetailedJourneysUrl() { return QString(); };
 				    
 	/** Parses the contents of a received document for a list of possible stop names
@@ -151,7 +166,7 @@ class TimetableAccessor : public QObject
 	* @return false, if there were an error parsing the document.
 	* @see parseDocument() */
 	virtual bool parseDocumentPossibleStops( QStringList *stops,
-				QHash<QString,QString> *stopToStopId ) const;
+				QHash<QString,QString> *stopToStopId );
 
 	/** Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
 	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
@@ -176,7 +191,7 @@ class TimetableAccessor : public QObject
 
 	/** Constructs an url to a page containing stop suggestions by combining 
 	* the "raw" url with the needed information. */
-	KUrl getStopSuggestionsUrl( const QString &stop );
+	KUrl getStopSuggestionsUrl( const QString &city, const QString &stop );
 		     
 	/** Constructs an url to the journey list by combining the "raw" url with the
 	* needed information. */

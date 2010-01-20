@@ -151,35 +151,6 @@ QString TimetableAccessorInfo::email() const {
     return m_email;
 }
 
-QStringList TimetableAccessorInfo::features() const {
-    QStringList list;
-
-    if ( supportsStopAutocompletion() )
-	list << i18nc("Autocompletion for names of public transport stops", "Autocompletion");
-    if ( supportsTimetableAccessorInfo(Delay) )
-	list << i18nc("Support for getting delay information. This string is used in a feature list, should be short.", "Delay");
-    if ( supportsTimetableAccessorInfo(DelayReason) )
-	list << i18nc("Support for getting the reason of a delay. This string is used in a feature list, should be short.", "Delay reason");
-    if ( supportsTimetableAccessorInfo(Platform) )
-	list << i18nc("Support for getting the information from which platform a public transport vehicle departs / at which it arrives. This string is used in a feature list, should be short.", "Platform");
-    if ( supportsTimetableAccessorInfo(JourneyNews) || supportsTimetableAccessorInfo(JourneyNewsOther) || supportsTimetableAccessorInfo(JourneyNewsLink) )
-	list << i18nc("Support for getting the news about a journey with public transport, such as a platform change. This string is used in a feature list, should be short.", "Journey news");
-    if ( supportsTimetableAccessorInfo(TypeOfVehicle) )
-	list << i18nc("Support for getting information about the type of vehicle of a journey with public transport. This string is used in a feature list, should be short.", "Type of vehicle");
-    if ( supportsTimetableAccessorInfo(Status) )
-	list << i18nc("Support for getting information about the status of a journey with public transport or an aeroplane. This string is used in a feature list, should be short.", "Status");
-    if ( supportsTimetableAccessorInfo(Operator) )
-	list << i18nc("Support for getting the operator of a journey with public transport or an aeroplane. This string is used in a feature list, should be short.", "Operator");
-    if ( supportsTimetableAccessorInfo(StopID) )
-	list << i18nc("Support for getting the id of a stop of public transport. This string is used in a feature list, should be short.", "Stop ID");
-    if ( m_departureRawUrl.contains( "{dataType}" ) )
-	list << i18nc("Support for getting arrivals for a stop of public transport. This string is used in a feature list, should be short.", "Arrivals");
-    if ( !m_searchJourneys.regExp().isEmpty() )
-	list << i18nc("Support for getting journeys from one stop to another. This string is used in a feature list, should be short.", "Journey search");
-
-    return list;
-}
-
 void TimetableAccessorInfo::setUrl ( const QString& url ) {
     m_url = url;
 }
