@@ -96,6 +96,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** The popup pops up. */
 	virtual void popupEvent( bool show );
 
+	virtual bool sceneEventFilter( QGraphicsItem* watched, QEvent* event );
+    
 	/** Watching for up/down key presses in m_journeySearch to select stop suggestions. */
 	virtual bool eventFilter( QObject* watched, QEvent* event );
 	
@@ -263,9 +265,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	* @param departureArrivalListType The departure / arrival list - type to be set. */
 	void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
 
-	/** Sets the type of the journey list. Can be a list of journeys to or from the home stop.
-	* @param departureArrivalListType The journey list - type to be set. */
-	void setJourneyListType( JourneyListType journeyListType );
+	/** Initializes the journey list. */
+	void initJourneyList();
 
 	/** Sets the type of title to be displayed. */
 	void setTitleType( TitleType titleType );
@@ -312,15 +313,9 @@ class PublicTransport : public Plasma::PopupApplet {
 	void iconClicked();
 	/** The icon widget to close the journey view was clicked. */
 	void iconCloseClicked();
-	bool parseJourneySearch( const QString &search, QString *stop,
-				 QDateTime *departure, bool *stopIsTarget,
-				 bool *timeIsDeparture,
-				 int *posStart = NULL, int *len = NULL,
-				 bool correctString = true ) const;
-	void stopNamePosition( int *posStart, int *len ) const;
-	bool parseTime( const QString &sTime, QTime *time ) const;
-	bool parseDate( const QString &sDate, QDate *date ) const;
-				 
+
+	void infoLabelLinkActivated( const QString &link );
+	
 	void journeySearchInputFinished();
 	void journeySearchInputEdited( const QString &newText );
 	void possibleStopClicked( const QModelIndex &modelIndex );
@@ -336,7 +331,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	* departure list. */
 	void departureListNeedsClearing() { m_departureInfos.clear(); };
 	void departureArrivalListTypeChanged ( DepartureArrivalListType departureArrivalListType );
-	void journeyListTypeChanged ( JourneyListType journeyListType );
 
 	/** The action to update the data source has been triggered. */
 	void updateDataSource( bool );
@@ -392,6 +386,15 @@ class PublicTransport : public Plasma::PopupApplet {
 	void themeChanged() { useCurrentPlasmaTheme(); };
 	
     private:
+	bool parseJourneySearch( const QString &search, QString *stop,
+				 QDateTime *departure, bool *stopIsTarget,
+				 bool *timeIsDeparture,
+				 int *posStart = NULL, int *len = NULL,
+				 bool correctString = true ) const;
+	void stopNamePosition( int *posStart, int *len ) const;
+	bool parseTime( const QString &sTime, QTime *time ) const;
+	bool parseDate( const QString &sDate, QDate *date ) const;
+				 
 	AppletStates m_appletStates; /**< The current states of this applet */
 	TitleType m_titleType; /**< The type of items to be shown as title above the tree view */
 	

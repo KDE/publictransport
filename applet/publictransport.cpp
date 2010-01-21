@@ -23,6 +23,7 @@
 #include <KIconEffect>
 #include <KNotification>
 #include <KConfigDialog>
+#include <KToolInvocation>
 
 // Plasma includes
 #include <Plasma/PaintUtils>
@@ -90,8 +91,6 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	     this, SLOT(serviceProviderSettingsChanged()) );
     connect( &m_settings, SIGNAL(departureArrivalListTypeChanged(DepartureArrivalListType)),
 	     this, SLOT(departureArrivalListTypeChanged(DepartureArrivalListType)) );
-    connect( &m_settings, SIGNAL(journeyListTypeChanged(JourneyListType)),
-	     this, SLOT(journeyListTypeChanged(JourneyListType)) );
 }
 
 void PublicTransport::configurationIsRequired( bool needsConfiguring,
@@ -114,14 +113,25 @@ PublicTransport::~PublicTransport() {
 
 void PublicTransport::init() {
     m_settings.readSettings();
-
+    
+    switch ( formFactor() ) {
+	case Plasma::Horizontal:
+	case Plasma::Vertical:
+	    Plasma::ToolTipManager::self()->registerWidget(this);
+	    break;
+	    
+	default:
+	    Plasma::ToolTipManager::self()->unregisterWidget(this);
+	    break;
+    }
+    
     createModels();
     graphicsWidget();
     createTooltip();
     createPopupIcon();
 
     setDepartureArrivalListType( m_settings.departureArrivalListType() );
-    setJourneyListType( m_settings.journeyListType() );
+    initJourneyList();
     addState( ShowingDepartureArrivalList );
     addState( WaitingForDepartureData );
 
@@ -144,12 +154,14 @@ void PublicTransport::setupActions() {
     connect( actionUpdate, SIGNAL(triggered(bool)), this, SLOT(updateDataSource(bool)) );
     addAction( "updateTimetable", actionUpdate );
 
-    QAction *actionSetAlarmForDeparture = new QAction( Global::makeOverlayIcon(KIcon("kalarm"), "list-add"), m_settings.departureArrivalListType() == DepartureList ? i18n("Set &alarm for this departure") : i18n("Set &alarm for this arrival"), this );
+    QAction *actionSetAlarmForDeparture = new QAction( Global::makeOverlayIcon(KIcon("kalarm"), "list-add"), m_settings.departureArrivalListType() == DepartureList
+	    ? i18n("Set &Alarm for This Departure") : i18n("Set &Alarm for This Arrival"), this );
     connect( actionSetAlarmForDeparture, SIGNAL(triggered(bool)),
 	     this, SLOT(setAlarmForDeparture(bool)) );
     addAction( "setAlarmForDeparture", actionSetAlarmForDeparture );
 
-    QAction *actionRemoveAlarmForDeparture = new QAction( Global::makeOverlayIcon(KIcon("kalarm"), "list-remove"), m_settings.departureArrivalListType() == DepartureList ? i18n("Remove &alarm for this departure") : i18n("Remove &alarm for this arrival"), this );
+    QAction *actionRemoveAlarmForDeparture = new QAction( Global::makeOverlayIcon(KIcon("kalarm"), "list-remove"), m_settings.departureArrivalListType() == DepartureList
+	    ? i18n("Remove &Alarm for This Departure") : i18n("Remove &Alarm for This Arrival"), this );
     connect( actionRemoveAlarmForDeparture, SIGNAL(triggered(bool)),
 	     this, SLOT(removeAlarmForDeparture(bool)) );
     addAction( "removeAlarmForDeparture", actionRemoveAlarmForDeparture );
@@ -720,10 +732,10 @@ void PublicTransport::treeViewSectionResized ( int logicalIndex, int oldSize, in
     geometryChanged();
 }
 
-void PublicTransport::popupEvent ( bool show ) {
-//     m_label->setMaximumSize(9999, 9999);
+void PublicTransport::popupEvent( bool show ) {
+    addState( ShowingDepartureArrivalList );
 
-    Plasma::PopupApplet::popupEvent ( show );
+    Plasma::PopupApplet::popupEvent( show );
 }
 
 void PublicTransport::createPopupIcon() {
@@ -827,7 +839,6 @@ void PublicTransport::configChanged() {
     addState( SettingsJustChanged );
 
     setDepartureArrivalListType( m_settings.departureArrivalListType() );
-    setJourneyListType( m_settings.journeyListType() );
     m_treeView->nativeWidget()->header()->setVisible( m_settings.isHeaderVisible() );
     m_treeView->nativeWidget()->setColumnHidden( 1, m_settings.isColumnTargetHidden() );
 
@@ -923,31 +934,17 @@ void PublicTransport::setMainIconDisplay( MainIconDisplay mainIconDisplay ) {
 	    break;
 
 	case JourneyListOkIcon:
-	    if ( m_settings.journeyListType() == JourneysFromHomeStopList ) {
-		icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
-			    QList<KIcon>() << KIcon("go-home")
-			    << KIcon("go-next-view") << KIcon("public-transport-stop"),
-			    QSize(iconExtend / 3, iconExtend / 3), iconExtend );
-	    } else {
-		icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
-			    QList<KIcon>() << KIcon("public-transport-stop")
-			    << KIcon("go-next-view") << KIcon("go-home"),
-			    QSize(iconExtend / 3, iconExtend / 3), iconExtend );
-	    }
+	    icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
+			QList<KIcon>() << KIcon("go-home")
+			<< KIcon("go-next-view") << KIcon("public-transport-stop"),
+			QSize(iconExtend / 3, iconExtend / 3), iconExtend );
 	    break;
 
 	case JourneyListErrorIcon:
-	    if ( m_settings.journeyListType() == JourneysFromHomeStopList ) {
-		icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
-			    QList<KIcon>() << KIcon("go-home")
-			    << KIcon("go-next-view") << KIcon("public-transport-stop"),
-			    QSize(iconExtend / 3, iconExtend / 3), iconExtend );
-	    } else {
-		icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
-			    QList<KIcon>() << KIcon("public-transport-stop")
-			    << KIcon("go-next-view") << KIcon("go-home"),
-			    QSize(iconExtend / 3, iconExtend / 3), iconExtend );
-	    }
+	    icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
+			QList<KIcon>() << KIcon("go-home")
+			<< KIcon("go-next-view") << KIcon("public-transport-stop"),
+			QSize(iconExtend / 3, iconExtend / 3), iconExtend );
 	    pixmap = icon.pixmap( iconExtend );
 	    pixmap = iconEffect.apply( pixmap, KIconLoader::Small, KIconLoader::DisabledState );
 	    icon = KIcon();
@@ -1090,13 +1087,13 @@ bool PublicTransport::parseJourneySearch( const QString& search, QString *stop,
     // Do corrections
     if ( correctString ) {
 	int selStart = -1, selLength = 0;
-	if ( searchLine.endsWith(timeKeyword1) ) {
+	if ( searchLine.endsWith(timeKeyword1, Qt::CaseInsensitive) ) {
 	    // Automatically add the current time after 'at'
 	    QString formattedTime = KGlobal::locale()->formatTime( QTime::currentTime() );
 	    selStart = searchLine.length() + 1; // +1 for the added space
 	    selLength = formattedTime.length();
 	    searchLine += " " + formattedTime;
-	} else if ( searchLine.endsWith(timeKeyword2) ) {
+	} else if ( searchLine.endsWith(timeKeyword2, Qt::CaseInsensitive) ) {
 	    // Automatically add '5 minutes' after 'in'
 	    QString defaultRelTime = i18nc("The automatically added relative time "
 		    "string, when the journey search line ends with the keyword 'in'."
@@ -1111,16 +1108,17 @@ bool PublicTransport::parseJourneySearch( const QString& search, QString *stop,
 	    // Use a regexp to search for departure/arrival keywords that are 
 	    // already in the string, to not autocomplete another such keyword
 	    QRegExp rxDepArr( "(" + departureKeywords.join("|") + "|"
-				  + arrivalKeywords.join("|") + ")\\s+\\S+" );
+				  + arrivalKeywords.join("|") + ")\\s+\\S+",
+			      Qt::CaseInsensitive );
+	    bool depArrKeywordFound = false;
 	    if ( rxDepArr.indexIn(searchLine) == -1 ) {
 		// Autocomplete departure keywords
-		bool depArrKeywordFound = false;
 		foreach ( QString departureKeyword, departureKeywords ) {
 		    QString autoCompletionWord = departureKeyword.trimmed();
 		    departureKeyword = " ";
 		    for ( int n = 0; n < autoCompletionWord.length() - 1; ++n ) {
 			departureKeyword += autoCompletionWord[ n ];
-			if ( searchLine.endsWith(departureKeyword) ) {
+			if ( searchLine.endsWith(departureKeyword, Qt::CaseInsensitive) ) {
 			    selStart = searchLine.length();
 			    selLength = autoCompletionWord.length() - n - 1;
 			    searchLine += autoCompletionWord.right( selLength );
@@ -1136,7 +1134,7 @@ bool PublicTransport::parseJourneySearch( const QString& search, QString *stop,
 			arrivalKeyword = " ";
 			for ( int n = 0; n < autoCompletionWord.length() - 1; ++n ) {
 			    arrivalKeyword += autoCompletionWord[ n ];
-			    if ( searchLine.endsWith(arrivalKeyword) ) {
+			    if ( searchLine.endsWith(arrivalKeyword, Qt::CaseInsensitive) ) {
 				selStart = searchLine.length();
 				selLength = autoCompletionWord.length() - n - 1;
 				searchLine += autoCompletionWord.right( selLength );
@@ -1149,15 +1147,39 @@ bool PublicTransport::parseJourneySearch( const QString& search, QString *stop,
 	    } // if ( rxDepArr.indexIn(searchLine) == -1 ) {
 
 	    // Autocomplete tomorrow keyword
+	    bool tomorrowKeywordFound = false;
 	    QString autoCompletionWord = timeKeyword3.trimmed();
 	    QString keyword = " ";
 	    for ( int n = 0; n < autoCompletionWord.length() - 1; ++n ) {
 		keyword += autoCompletionWord[ n ];
-		if ( searchLine.endsWith(keyword) ) {
+		if ( searchLine.endsWith(keyword, Qt::CaseInsensitive) ) {
 		    selStart = searchLine.length();
 		    selLength = autoCompletionWord.length() - n - 1;
 		    searchLine += autoCompletionWord.right( selLength );
+		    tomorrowKeywordFound = true;
 		    break;
+		}
+	    }
+
+	    if ( !depArrKeywordFound && !tomorrowKeywordFound
+			&& m_listPossibleStops->model() ) {
+		// Autocomplete stop names
+		for ( int row = 0; row < m_listPossibleStops->model()->rowCount(); ++row ) {
+		    QString autoCompletionWord = m_listPossibleStops->model()->data(
+			    m_listPossibleStops->model()->index(row, 0) ).toString();
+		    if ( autoCompletionWord.length() < 3 )
+			continue;
+		    
+		    QString currentCompletion = autoCompletionWord.left( 3 );
+		    for ( int n = 3; n < autoCompletionWord.length() - 1; ++n ) {
+			currentCompletion += autoCompletionWord[ n ];
+			if ( searchLine.endsWith(currentCompletion, Qt::CaseInsensitive) ) {
+			    selStart = searchLine.length();
+			    selLength = autoCompletionWord.length() - n - 1;
+			    searchLine += autoCompletionWord.right( selLength );
+			    break;
+			}
+		    }
 		}
 	    }
 	}
@@ -1385,6 +1407,8 @@ QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
 	    layoutTop->addItem( m_icon, 0, 0 );
 	    layoutTop->addItem( m_label, 0, 1 );
 	    layoutTop->addItem( m_labelInfo, 0, 2 );
+
+	    m_labelInfo->installSceneEventFilter( this );
 	    break;
 	    
 	case ShowSearchJourneyLineEdit:
@@ -1492,7 +1516,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 
 	m_label = new Plasma::Label;
 	m_label->setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
-	m_label->setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Fixed,
+	m_label->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed,
 				QSizePolicy::Label );
 	QLabel *label = m_label->nativeWidget();
 	label->setTextInteractionFlags( Qt::LinksAccessibleByMouse );
@@ -1500,8 +1524,10 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 
 	m_labelInfo = new Plasma::Label;
 	m_labelInfo->setAlignment( Qt::AlignTop | Qt::AlignRight );
-	m_labelInfo->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred,
+	m_labelInfo->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Preferred,
 				    QSizePolicy::Label );
+	connect( m_labelInfo, SIGNAL(linkActivated(QString)),
+		 this, SLOT(infoLabelLinkActivated(QString)) );
 	QLabel *labelInfo = m_labelInfo->nativeWidget();
 	labelInfo->setOpenExternalLinks( true );
 	labelInfo->setWordWrap( false );
@@ -1600,21 +1626,35 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	layout->setSpacing( 0 );
 	layout->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
 
-	QGraphicsLayout *layoutTop = new QGraphicsLinearLayout(Qt::Horizontal); // = createLayoutTitle();
+	QGraphicsLayout *layoutTop = new QGraphicsLinearLayout( Qt::Horizontal ); // = createLayoutTitle();
 	layout->addItem( layoutTop );
 
 	layout->addItem( m_treeView );
-	m_graphicsWidget->setLayout(layout);
+	m_graphicsWidget->setLayout( layout );
 
-	registerAsDragHandle(m_graphicsWidget);
-	registerAsDragHandle(m_label);
-	registerAsDragHandle(m_labelInfo);
-// 	registerAsDragHandle(m_treeView);
+// 	registerAsDragHandle( m_graphicsWidget );
+	registerAsDragHandle( m_label );
+// 	registerAsDragHandle( m_labelInfo );
+// 	registerAsDragHandle( m_treeView );
 
 	useCurrentPlasmaTheme();
     }
 
     return m_graphicsWidget;
+}
+
+void PublicTransport::infoLabelLinkActivated( const QString& link ) {
+    KToolInvocation::invokeBrowser( link );
+}
+
+bool PublicTransport::sceneEventFilter( QGraphicsItem* watched, QEvent* event ) {
+    if ( watched && watched == m_labelInfo ) {
+	if ( event->type() == QEvent::GraphicsSceneMousePress )
+	    return true; // To make links clickable, otherwise Plasma takes all 
+			 // clicks to move the applet
+    }
+    
+    return Plasma::Applet::sceneEventFilter( watched, event );
 }
 
 bool PublicTransport::eventFilter( QObject *watched, QEvent *event ) {
@@ -1731,12 +1771,9 @@ QString PublicTransport::nameForTimetableColumn( TimetableColumn timetableColumn
     return QString();
 }
 
-void PublicTransport::departureArrivalListTypeChanged( DepartureArrivalListType departureArrivalListType ) {
+void PublicTransport::departureArrivalListTypeChanged(
+		DepartureArrivalListType departureArrivalListType ) {
     setDepartureArrivalListType( departureArrivalListType );
-}
-
-void PublicTransport::journeyListTypeChanged ( JourneyListType journeyListType ) {
-    setJourneyListType( journeyListType );
 }
 
 void PublicTransport::setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType ) {
@@ -1756,9 +1793,7 @@ void PublicTransport::setDepartureArrivalListType( DepartureArrivalListType depa
     }
 }
 
-void PublicTransport::setJourneyListType( JourneyListType journeyListType ) {
-    Q_UNUSED( journeyListType );
-
+void PublicTransport::initJourneyList() {
     QBrush textBrush = QBrush( Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor) );
     QStringList titles;
 
@@ -1884,7 +1919,7 @@ void PublicTransport::addState( AppletState state ) {
     switch ( state ) {
 	case ShowingDepartureArrivalList:
 	    setTitleType( ShowDepartureArrivalListTitle );
-	    m_icon->setToolTip( i18n("Search journey to or from the home stop") );
+	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
 	    m_treeView->setModel( m_model );
 	    m_treeView->nativeWidget()->setIconSize(
 		    QSize(16 * m_settings.sizeFactor(), 16 * m_settings.sizeFactor()) );
@@ -1901,7 +1936,7 @@ void PublicTransport::addState( AppletState state ) {
 
 	case ShowingJourneyList:
 	    setTitleType( ShowJourneyListTitle );
-	    m_icon->setToolTip( i18n("Search for new journey to or from the home stop") );
+	    m_icon->setToolTip( i18n("Search for new journeys to or from the home stop") );
 	    m_treeView->setModel( m_modelJourneys );
 	    m_treeView->nativeWidget()->setIconSize(
 		    QSize(32 * m_settings.sizeFactor(), 32 * m_settings.sizeFactor()) );
@@ -2621,21 +2656,40 @@ void PublicTransport::showAlarmMessage( const QPersistentModelIndex &modelIndex 
     QString message;
     if ( minsToDeparture > 0 ) {
 	if ( vehicleType == Unknown )
-	    message = i18np("Line %2 to '%3' departs in %1 minute at %4", "Line %2 to '%3' departs in %1 minutes at %4", minsToDeparture, sLine, sTarget, predictedDeparture.toString("hh:mm") );
+	    message = i18np("Line %2 to '%3' departs in %1 minute at %4",
+			    "Line %2 to '%3' departs in %1 minutes at %4",
+			    minsToDeparture, sLine, sTarget, predictedDeparture.toString("hh:mm") );
 	else
-	    message = i18ncp("%2: Line string (e.g. 'U3'), %4: Vehicle type name (e.g. tram, subway)", "The %4 %2 to '%3' departs in %1 minute at %5", "The %4 %2 to '%3' departs in %1 minutes at %5", minsToDeparture, sLine, sTarget, Global::vehicleTypeToString(vehicleType), predictedDeparture.toString("hh:mm"));
+	    message = i18ncp("%2: Line string (e.g. 'U3'), %4: Vehicle type name (e.g. tram, subway)",
+			     "The %4 %2 to '%3' departs in %1 minute at %5",
+			     "The %4 %2 to '%3' departs in %1 minutes at %5",
+			     minsToDeparture, sLine, sTarget,
+			     Global::vehicleTypeToString(vehicleType),
+			     predictedDeparture.toString("hh:mm"));
     }
     else if ( minsToDeparture < 0 ) {
 	if ( vehicleType == Unknown )
-	    message = i18np("Line %2 to '%3' has departed %1 minute ago at %4", "Line %2 to '%3' has departed %1 minutes ago at %4", -minsToDeparture, sLine, sTarget, predictedDeparture.toString("hh:mm"));
+	    message = i18np("Line %2 to '%3' has departed %1 minute ago at %4",
+			    "Line %2 to '%3' has departed %1 minutes ago at %4",
+			    -minsToDeparture, sLine, sTarget,
+			    predictedDeparture.toString("hh:mm"));
 	else
-	    message = i18ncp("%2: Line string (e.g. 'U3'), %4: Vehicle type name (e.g. tram, subway)", "The %4 %2 to '%3' has departed %1 minute ago at %5", "The %4 %2 to %3 has departed %1 minutes ago at %5", -minsToDeparture, sLine, sTarget, Global::vehicleTypeToString(vehicleType), predictedDeparture.toString("hh:mm"));
+	    message = i18ncp("%2: Line string (e.g. 'U3'), %4: Vehicle type name (e.g. tram, subway)",
+			     "The %4 %2 to '%3' has departed %1 minute ago at %5",
+			     "The %4 %2 to %3 has departed %1 minutes ago at %5",
+			     -minsToDeparture, sLine, sTarget,
+			     Global::vehicleTypeToString(vehicleType),
+			     predictedDeparture.toString("hh:mm"));
     }
     else {
 	if ( vehicleType == Unknown )
-	    message = i18n("Line %1 to '%2' departs now at %3", sLine, sTarget, predictedDeparture.toString("hh:mm"));
+	    message = i18n("Line %1 to '%2' departs now at %3", sLine, sTarget,
+			   predictedDeparture.toString("hh:mm"));
 	else
-	    message = i18nc("%2: Line string (e.g. 'U3'), %4: Vehicle type name (e.g. tram, subway)", "The %3 %1 to '%2' departs now at %3", sLine, sTarget, Global::vehicleTypeToString(vehicleType), predictedDeparture.toString("hh:mm"));
+	    message = i18nc("%1: Line string (e.g. 'U3'), %3: Vehicle type name (e.g. tram, subway)",
+			    "The %3 %1 to '%2' departs now at %4", sLine, sTarget,
+			    Global::vehicleTypeToString(vehicleType),
+			    predictedDeparture.toString("hh:mm"));
     }
 
     KNotification::event( KNotification::Warning, message,
@@ -2984,9 +3038,9 @@ void PublicTransport::setValuesOfJourneyItem ( QStandardItem* journeyItem,
 	    s2 = journeyInfo.journeyNews;
 	    if ( s2.startsWith("http://") ) // TODO: Make the link clickable...
 		s2 = QString("<a href='%1'>%2</a>").arg(s2).arg(i18n("Link to journey news"));
-	    s = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public "
+	    s3 = s = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public "
 			"transport, like 'platform changed'", "News:") ).arg( s2 );
-	    s3 = s.replace(QRegExp("<[^>]*>"), "");
+	    s3.replace(QRegExp("<[^>]*>"), "");
 	    journeyItem->setData( s, HtmlDelegate::FormattedTextRole );
 	    journeyItem->setText( s3 );
 	    if ( !update ) {
@@ -3354,9 +3408,9 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 	    s2 = departureInfo.journeyNews;
 	    if ( s2.startsWith("http://") ) // TODO: Make the link clickable...
 		s2 = QString("<a href='%1'>%2</a>").arg(s2).arg(i18n("Link to journey news"));
-	    s = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public "
+	    s3 = s = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public "
 		    "transport, like 'platform changed'", "News:") ).arg( s2 );
-	    s3 = s.replace( QRegExp("<[^>]*>"), "" );
+	    s3.replace( QRegExp("<[^>]*>"), "" );
 	    departureItem->setData( s, HtmlDelegate::FormattedTextRole );
 	    departureItem->setText( s3 );
 	    if ( !update ) {

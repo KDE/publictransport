@@ -114,8 +114,6 @@ void PublicTransportSettings::readSettings() {
     m_size = cg.readEntry("size", 2);
     m_departureArrivalListType = static_cast<DepartureArrivalListType>(
 	    cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList)) );
-    m_journeyListType = static_cast<JourneyListType>(
-	    cg.readEntry("journeyListType", static_cast<int>(JourneysFromHomeStopList)) );
     m_showHeader = cg.readEntry("showHeader", true);
     m_hideColumnTarget = cg.readEntry("hideColumnTarget", false);
 
@@ -432,21 +430,41 @@ void PublicTransportSettings::clickedServiceProviderInfo ( bool ) {
     infoDialog->setWindowIcon( KIcon("help-about") );
     connect( infoDialog, SIGNAL(finished()), this, SLOT(accessorInfoDialogFinished()) );
 
-    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
+    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item(
+	    m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
     QIcon favIcon = m_ui.serviceProvider->itemIcon( m_ui.serviceProvider->currentIndex() );
     m_uiAccessorInfo.icon->setPixmap( favIcon.pixmap(32) );
     m_uiAccessorInfo.serviceProviderName->setText( m_ui.serviceProvider->currentText() );
     m_uiAccessorInfo.version->setText( i18n("Version %1", serviceProviderData["version"].toString()) );
     m_uiAccessorInfo.url->setUrl( serviceProviderData["url"].toString() );
-    m_uiAccessorInfo.url->setText( QString("<a href='%1'>%1</a>").arg( serviceProviderData["url"].toString() ) );
+    m_uiAccessorInfo.url->setText( QString("<a href='%1'>%1</a>").arg(
+	    serviceProviderData["url"].toString() ) );
+
     m_uiAccessorInfo.fileName->setUrl( serviceProviderData["fileName"].toString() );
-    m_uiAccessorInfo.fileName->setText( QString("<a href='%1'>%1</a>").arg( serviceProviderData["fileName"].toString() ) );
+    m_uiAccessorInfo.fileName->setText( QString("<a href='%1'>%1</a>").arg(
+	    serviceProviderData["fileName"].toString() ) );
+
+    QString scriptFileName = serviceProviderData["scriptFileName"].toString();
+    if ( scriptFileName.isEmpty() ) {
+	m_uiAccessorInfo.lblScriptFileName->setVisible( false );
+	m_uiAccessorInfo.scriptFileName->setVisible( false );
+    } else {
+	m_uiAccessorInfo.lblScriptFileName->setVisible( true );
+	m_uiAccessorInfo.scriptFileName->setVisible( true );
+	m_uiAccessorInfo.scriptFileName->setUrl( scriptFileName );
+	m_uiAccessorInfo.scriptFileName->setText( QString("<a href='%1'>%1</a>")
+		.arg(scriptFileName) );
+    }
 
     if ( serviceProviderData["email"].toString().isEmpty() )
 	m_uiAccessorInfo.author->setText( QString("%1").arg( serviceProviderData["author"].toString() ) );
     else {
-	m_uiAccessorInfo.author->setText( QString("<a href='mailto:%2'>%1</a>").arg( serviceProviderData["author"].toString() ).arg( serviceProviderData["email"].toString() ) );
-	m_uiAccessorInfo.author->setToolTip( i18n("Write an email to %1 <%2>").arg( serviceProviderData["author"].toString() ).arg( serviceProviderData["email"].toString() ) );
+	m_uiAccessorInfo.author->setText( QString("<a href='mailto:%2'>%1</a>")
+		.arg( serviceProviderData["author"].toString() )
+		.arg( serviceProviderData["email"].toString() ) );
+	m_uiAccessorInfo.author->setToolTip( i18n("Write an email to %1 <%2>")
+		.arg( serviceProviderData["author"].toString() )
+		.arg( serviceProviderData["email"].toString() ) );
     }
     m_uiAccessorInfo.description->setText( serviceProviderData["description"].toString() );
     m_uiAccessorInfo.features->setText( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
@@ -520,9 +538,9 @@ void PublicTransportSettings::setValuesOfStopSelectionConfig() {
     m_ui.btnServiceProviderInfo->setText( "" );
 
     QMenu *menu = new QMenu(m_configDialog);
-    menu->addAction( KIcon("get-hot-new-stuff"), "Get new service providers...",
+    menu->addAction( KIcon("get-hot-new-stuff"), i18n("Get new service providers..."),
 		    this, SLOT(downloadServiceProvidersClicked(bool)) );
-    menu->addAction( KIcon("text-xml"), "Install new service provider from local file...",
+    menu->addAction( KIcon("text-xml"), i18n("Install new service provider from local file..."),
 		     this, SLOT(installServiceProviderClicked(bool)) );
     m_ui.downloadServiceProviders->setMenu(menu);
     m_ui.downloadServiceProviders->setIcon( KIcon("list-add") );
@@ -678,8 +696,6 @@ void PublicTransportSettings::setValuesOfAdvancedConfig() {
 
     m_uiAdvanced.showDepartures->setChecked( m_departureArrivalListType == DepartureList );
     m_uiAdvanced.showArrivals->setChecked( m_departureArrivalListType == ArrivalList );
-    m_uiAdvanced.showJourneysFromHomeStop->setChecked( m_journeyListType == JourneysFromHomeStopList );
-    m_uiAdvanced.showJourneysToHomeStop->setChecked( m_journeyListType == JourneysToHomeStopList );
 }
 
 void PublicTransportSettings::setValuesOfFilterConfig() {
@@ -1193,23 +1209,6 @@ void PublicTransportSettings::configAccepted() {
 	changedServiceProviderSettings = true;
 	emit departureArrivalListTypeChanged( m_departureArrivalListType );
 	emit departureListNeedsClearing(); // Clear departures using the old data source type
-    }
-
-if ((m_journeyListType == JourneysFromHomeStopList && !m_uiAdvanced.showJourneysFromHomeStop->isChecked()) ||
-	(m_journeyListType == JourneysToHomeStopList && !m_uiAdvanced.showJourneysToHomeStop->isChecked()))
-    {
-	if ( m_uiAdvanced.showJourneysFromHomeStop->isChecked() )
-	    m_journeyListType = JourneysFromHomeStopList;
-	else
-	    m_journeyListType = JourneysToHomeStopList;
-
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("journeyListType", static_cast<int>(m_journeyListType));
-	changed = true;
-
-	changedServiceProviderSettings = true;
-// 	m_applet->addState( WaitingForJourneyData );
-	emit journeyListTypeChanged( m_journeyListType );
     }
 
     QListWidget *selTypes = m_uiFilter.filterLineType->selectedListWidget();

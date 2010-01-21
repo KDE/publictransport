@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>375</width>
+    <width>374</width>
     <height>317</height>
    </rect>
   </property>
@@ -36,7 +36,7 @@
    <item row="2" column="1" colspan="2">
     <widget class="QLabel" name="version">
      <property name="text">
-      <string>Version 1.0</string>
+      <string notr="true">Version 1.0</string>
      </property>
     </widget>
    </item>
@@ -56,7 +56,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Service provider</string>
+      <string notr="true">Service provider</string>
      </property>
      <property name="openExternalLinks">
       <bool>true</bool>
@@ -66,7 +66,7 @@
      </property>
     </widget>
    </item>
-   <item row="8" column="2">
+   <item row="9" column="2">
     <widget class="QLabel" name="description">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -75,7 +75,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Short description of the service provider, hints for using...</string>
+      <string notr="true">Short description of the service provider, hints for using...</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -85,7 +85,7 @@
      </property>
     </widget>
    </item>
-   <item row="9" column="2">
+   <item row="10" column="2">
     <widget class="QLabel" name="features">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -94,7 +94,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Journey news, delay, delay reason, stop autocompletion, ...</string>
+      <string notr="true">Journey news, delay, delay reason, stop autocompletion, ...</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -124,7 +124,7 @@
      </property>
     </widget>
    </item>
-   <item row="8" column="0" colspan="2">
+   <item row="9" column="0" colspan="2">
     <widget class="QLabel" name="lblDescription">
      <property name="text">
       <string>Description:</string>
@@ -134,7 +134,7 @@
      </property>
     </widget>
    </item>
-   <item row="9" column="0" colspan="2">
+   <item row="10" column="0" colspan="2">
     <widget class="QLabel" name="lblFeatures">
      <property name="text">
       <string>Features:</string>
@@ -165,7 +165,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Service provider name</string>
+      <string notr="true">Service provider name</string>
      </property>
     </widget>
    </item>
@@ -178,7 +178,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Author</string>
+      <string notr="true">Author</string>
      </property>
      <property name="openExternalLinks">
       <bool>true</bool>
@@ -194,7 +194,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>file:///config/xx_xx.xml</string>
+      <string notr="true">file:///config/xx_xx.xml</string>
      </property>
      <property name="openExternalLinks">
       <bool>true</bool>
@@ -205,12 +205,41 @@
     </widget>
    </item>
    <item row="7" column="0" colspan="2">
-    <widget class="QLabel" name="lblUrl_2">
+    <widget class="QLabel" name="lblFileName">
      <property name="text">
       <string>Source XML:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0" colspan="2">
+    <widget class="QLabel" name="lblScriptFileName">
+     <property name="text">
+      <string>Parser script:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="2">
+    <widget class="KUrlLabel" name="scriptFileName">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string notr="true">file:///config/xx_xx.js</string>
+     </property>
+     <property name="openExternalLinks">
+      <bool>true</bool>
+     </property>
+     <property name="useCursor">
+      <bool>false</bool>
      </property>
     </widget>
    </item>

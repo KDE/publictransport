@@ -66,15 +66,6 @@ enum DepartureArrivalListType {
     ArrivalList = 1 /**< A list of arrivals at the home stop */
 };
 
-/** Types of journey lists.
-* The values of the enumerators shouldn't be changed because they are saved to the config file. */
-enum JourneyListType {
-//     _UseCurrentJourneyListType = 999, /**< Only for use as default parameter to use the settings from PublicTransportSettings */
-
-    JourneysFromHomeStopList = 0, /**< A list of journeys starting at the home stop */
-    JourneysToHomeStopList = 1 /**< A list of journeys ending at the home stop */
-};
-
 /** Types of the title of the applet. */
 enum TitleType {
     ShowDepartureArrivalListTitle = 0, /**< Shows an icon, the stop name and additional information */

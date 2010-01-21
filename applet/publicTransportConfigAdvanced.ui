@@ -363,62 +363,6 @@ Here you can set when the alarm should be fired, relative to the departure / arr
        </layout>
       </widget>
      </item>
-     <item>
-      <widget class="QGroupBox" name="grpTypeOfJourneys">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="title">
-        <string>Journey view</string>
-       </property>
-       <property name="flat">
-        <bool>false</bool>
-       </property>
-       <property name="checkable">
-        <bool>false</bool>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_3">
-        <item row="0" column="0">
-         <widget class="QRadioButton" name="showJourneysFromHomeStop">
-          <property name="text">
-           <string>Starting at &amp;home stop</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QRadioButton" name="showJourneysToHomeStop">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="layoutDirection">
-           <enum>Qt::LeftToRight</enum>
-          </property>
-          <property name="text">
-           <string>&amp;Targetting home stop (todo)</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
     </layout>
    </item>
    <item row="11" column="0" colspan="5">
@@ -558,8 +502,6 @@ Here you can set when the alarm should be fired, relative to the departure / arr
   <tabstop>timeOfFirstDepartureCustom</tabstop>
   <tabstop>showDepartures</tabstop>
   <tabstop>showArrivals</tabstop>
-  <tabstop>showJourneysFromHomeStop</tabstop>
-  <tabstop>showJourneysToHomeStop</tabstop>
  </tabstops>
  <resources/>
  <connections>

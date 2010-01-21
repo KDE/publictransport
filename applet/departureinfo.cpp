@@ -84,10 +84,11 @@ QList< QVariant > JourneyInfo::vehicleTypesVariant() const {
 
 QString JourneyInfo::durationToDepartureString( bool toArrival ) const {
     int totalSeconds = QDateTime::currentDateTime().secsTo( toArrival ? arrival : departure );
-    if ( totalSeconds < 0 )
+    int totalMinutes = qCeil( (qreal)totalSeconds / 60.0 );
+    if ( totalMinutes < 0 )
     	return i18n("depart is in the past");
     else
-	return KGlobal::locale()->prettyFormatDuration( (ulong)(totalSeconds * 1000) );
+	return KGlobal::locale()->prettyFormatDuration( (ulong)(totalMinutes * 60000) );
 // //     if ( -totalSeconds / 3600 >= 23 )
 // // 	totalSeconds += 24 * 3600;
 

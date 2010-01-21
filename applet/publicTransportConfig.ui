@@ -195,7 +195,7 @@ p, li { white-space: pre-wrap; }
       <string>Show information about the current service provider.</string>
      </property>
      <property name="text">
-      <string>?</string>
+      <string notr="true">?</string>
      </property>
     </widget>
    </item>

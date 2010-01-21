@@ -40,7 +40,7 @@
    <item row="3" column="1" colspan="3">
     <widget class="QRadioButton" name="radioUseDefaultFont">
      <property name="text">
-      <string>Use &amp;default plasma theme font</string>
+      <string>Use &amp;default workspace theme font</string>
      </property>
      <property name="checked">
       <bool>true</bool>
@@ -170,7 +170,7 @@
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>Whether or not the departure / arrival time should be bold.</string>
+      <string>Whether or not departure / arrival times should be bold.</string>
      </property>
      <property name="text">
       <string/>
@@ -231,7 +231,7 @@
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>Whether or not a header should be shown. You can only resize columns when the header is shown.</string>
+      <string>Whether or not the header should be shown. You can only resize columns when the header is shown.</string>
      </property>
      <property name="text">
       <string/>

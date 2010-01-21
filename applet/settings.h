@@ -128,8 +128,8 @@ class PublicTransportSettings : public QObject {
 	void setFilterLineNumberList( const QStringList &filters ) {
 	    m_filterLineNumberList = filters; };
 	
-	DepartureArrivalListType departureArrivalListType() const { return m_departureArrivalListType; };
-	JourneyListType journeyListType() const { return m_journeyListType; };
+	DepartureArrivalListType departureArrivalListType() const {
+		return m_departureArrivalListType; };
 	bool isHeaderVisible() const { return m_showHeader; };
 	void setShowHeader( bool showHeader );
 	bool isColumnTargetHidden() const { return m_hideColumnTarget; };
@@ -159,7 +159,6 @@ class PublicTransportSettings : public QObject {
 	/** Settings that require a new data request have been changed. */
 	void serviceProviderSettingsChanged();
 	void departureArrivalListTypeChanged( DepartureArrivalListType departureArrivalListType );
-	void journeyListTypeChanged( JourneyListType journeyListType );
 
     public slots:
 	/** Ok pressed in the config dialog. */
@@ -240,7 +239,6 @@ class PublicTransportSettings : public QObject {
 	FilterType m_filterTypeLineNumber; // The type of the filter for line numbers (ShowAll, ShowMatching, HideMatching)
 	QStringList m_filterLineNumberList; // A list of line numbers that should be filtered
 	DepartureArrivalListType m_departureArrivalListType;
-	JourneyListType m_journeyListType;
 	bool m_showHeader;
 	bool m_hideColumnTarget;
 	bool m_useDefaultFont;
