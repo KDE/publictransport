@@ -14,10 +14,10 @@ TimetableRegExpSearch::TimetableRegExpSearch ( QString regExpSearch,
 
 
 TimetableAccessorInfo::TimetableAccessorInfo ( const QString& name,
-	const QString& shortUrl, const QString &author, const QString &email,
-	const QString &version, const QString& serviceProviderID,
-	const AccessorType& accessorType )
-    : m_searchDeparturesPre( 0 ), m_searchDepartureGroupTitles( 0 ) {
+	    const QString& shortUrl, const QString &author, const QString &email,
+	    const QString &version, const QString& serviceProviderID,
+	    const AccessorType& accessorType )
+	    : m_searchDeparturesPre( 0 ), m_searchDepartureGroupTitles( 0 ) {
     m_name = name;
     m_shortUrl = shortUrl;
     m_author = author;
@@ -27,6 +27,7 @@ TimetableAccessorInfo::TimetableAccessorInfo ( const QString& name,
     m_accessorType = accessorType;
     m_onlyUseCitiesInList = false;
     m_defaultVehicleType = Unknown;
+    m_minFetchWait = 0;
 }
 
 void TimetableAccessorInfo::setRegExpDepartures( const QString &regExpSearch,
@@ -36,7 +37,8 @@ void TimetableAccessorInfo::setRegExpDepartures( const QString &regExpSearch,
     m_searchDepartures = TimetableRegExpSearch( regExpSearch, regExpInfos );
     if ( !regExpSearchPre.isEmpty() )
     {
-	m_searchDeparturesPre = new TimetableRegExpSearch( regExpSearchPre, QList< TimetableInformation >() << regExpInfoKeyPre << regExpInfoValuePre );
+	m_searchDeparturesPre = new TimetableRegExpSearch( regExpSearchPre,
+		QList< TimetableInformation >() << regExpInfoKeyPre << regExpInfoValuePre );
     }
 }
 

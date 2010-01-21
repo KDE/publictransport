@@ -127,6 +127,9 @@ class TimetableAccessorInfo
 	/** A list of cities for which the service provider has data. */
 	QStringList cities() const;
 	VehicleType defaultVehicleType() const;
+	/** Gets the minimum seconds to wait between two data-fetches from the
+	* service provider. */
+	int minFetchWait() const { return m_minFetchWait; };
 	/** Gets the TimetableRegExpSearch object used to search for departures / arrivals. */
 	TimetableRegExpSearch searchDepartures() const;
 	/** Gets the TimetableRegExpSearch object used to search for journeys. */
@@ -282,6 +285,8 @@ class TimetableAccessorInfo
 	* @see url() @see setUrl() */
 	void setShortUrl( const QString &shortUrl );
 
+	void setMinFetchWait( int minFetchWait ) { m_minFetchWait = minFetchWait; };
+
 	void setDefaultVehicleType( VehicleType vehicleType );
 
 	/** Sets the raw url for xml files to an xml file containing departure / arrival lists.
@@ -342,6 +347,7 @@ class TimetableAccessorInfo
 	// A raw url that is used to get journeys
 	QString m_journeyRawUrl;
 	VehicleType m_defaultVehicleType;
+	int m_minFetchWait;
 	QString m_serviceProviderID;
 	QString m_departureRawUrl;
 	QString m_country;

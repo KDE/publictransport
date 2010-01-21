@@ -33,10 +33,61 @@ class Helper : public QObject {
 	Helper( QObject* parent = 0 ) : QObject( parent ) {};
 
     public Q_SLOTS:
+	QString trim( const QString &str ) {
+	    return str.trimmed().replace( QRegExp("^(&nbsp;)+|(&nbsp;)+$",
+						  Qt::CaseInsensitive), "" );
+	};
+	
 	QString stripTags( const QString &str ) {
 	    QRegExp rx( "<\\/?[^>]+>" );
 	    rx.setMinimal( true );
 	    return QString( str ).replace( rx, "" );
+	};
+
+	QString camelCase( const QString &str ) {
+	    QString ret = str.toLower();
+	    QRegExp rx( "(^\\w)|\\W(\\w)" );
+	    int pos = 0;
+	    while ( (pos = rx.indexIn(ret, pos)) != -1 ) {
+		ret[ rx.pos(2) ] = ret[ rx.pos(2) ].toUpper();
+		pos += rx.matchedLength();
+	    }
+	    return ret;
+	};
+
+	QString extractBlock( const QString &str,
+			      const QString &beginString, const QString &endString ) {
+	    int pos = str.indexOf( beginString );
+	    if ( pos == -1 )
+		return "";
+	    
+	    int end = str.indexOf( endString, pos + 1 );
+	    return str.mid( pos, end - pos );
+	};
+
+	QVariantList matchTime( const QString &str, const QString &format = "hh:mm") {
+	    QString pattern = QRegExp::escape( format );
+	    pattern = pattern.replace( "hh", "(\\d{2})" )
+			     .replace( "h", "(\\d{1,2})" )
+			     .replace( "mm", "(\\d{2})" )
+			     .replace( "m", "(\\d{1,2})" );
+	    QVariantList ret;
+	    QRegExp rx( pattern );
+	    if ( rx.indexIn(str) != -1 )
+		ret << rx.cap( 1 ) << rx.cap( 2 );
+	    return ret;
+	};
+
+	QString addMinsToTime( const QString &sTime, int minsToAdd,
+			       const QString &format = "hh:mm" ) {
+	    QTime time = QTime::fromString( sTime, format );
+	    if ( !time.isValid() )
+		return "";
+	    return time.addSecs( minsToAdd * 60 ).toString( format );
+	};
+
+	QStringList splitSkipEmptyParts( const QString &str, const QString &sep ) {
+	    return str.split( sep, QString::SkipEmptyParts );
 	};
 };
 

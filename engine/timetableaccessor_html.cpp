@@ -376,6 +376,10 @@ void TimetableAccessorHtml::postProcessMatchedData( TimetableInformation info, Q
 	case TypeOfVehicle:
 	    data->insert( TypeOfVehicle,
 		static_cast<int>(PublicTransportInfo::getVehicleTypeFromString(matchedData)) );
+		
+	    if ( !data->contains(Operator) )
+		data->insert( Operator,
+			PublicTransportInfo::operatorFromVehicleTypeString(sVehicleType) );
 	    break;
 
 	case TransportLine:

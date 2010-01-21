@@ -10,7 +10,7 @@
 <description lang="de">Dieser Service-Provider liefert Ergebnisse für Städte in Deutschland und auch für viele andere Städte in Europa. Für Städte in Deutschland enthalten die Ergebnisse Straßenbahnen, Busse, U-Bahnen, regionalen Zugverkehr und andere Züge, während die Städte in anderen Ländern nur Züge enthalten. Verzögerungen sind auf fünf Minuten gerundet (es gibt derzeit keine Möglichkeit Verzögerungen mit Minuten-Genauigkeit zu erhalten). Eine Verzögerung zwischen null und vier Minuten wird nicht angezeigt, fünf bis neun Minuten Verzögerung werden als fünf Minuten Verzögerung angezeigt und so weiter. </description>
 
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.1</version>
+<version>1.2</version>
 <type>HTML</type>
 <!-- <country>Germany</country> -->
 <!-- <cities><city></city></cities> -->
@@ -18,6 +18,7 @@
 
 <url>http://reiseauskunft.bahn.de/bin/query.exe/d</url>
 <shortUrl>db.de</shortUrl>
+<!-- <minFetchWait>300</minFetchWait> -->
 
 <rawUrls>
     <departures><![CDATA[http://reiseauskunft.bahn.de/bin/bhftafel.exe/dn?rt=1&input={stop}!&boardType={dataType}&date={date:dd.MM.yy}&time={time}&disableEquivs=no&maxJourneys={maxDeps}&start=yes&productsFilter=111111111]]></departures>

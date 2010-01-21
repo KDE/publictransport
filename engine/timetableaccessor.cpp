@@ -196,8 +196,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 //     <url>
     node = docElement.firstChildElement("url");
     if ( node.isNull() ) {
-	kDebug()
-	    << "No <url> tag in service provider information XML named" << serviceProvider;
+	kDebug() << "No <url> tag in service provider information XML named" << serviceProvider;
 	return NULL;
     }
     QString url = node.toElement().text();
@@ -205,11 +204,16 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
     //     <shortUrl>
     node = docElement.firstChildElement("shortUrl");
     if ( node.isNull() ) {
-	kDebug()
-	<< "No <shortUrl> tag in service provider information XML named" << serviceProvider;
+	kDebug() << "No <shortUrl> tag in service provider information XML named" << serviceProvider;
 	return NULL;
     }
     QString shortUrl = node.toElement().text();
+    
+    //     <minFetchWait>
+    node = docElement.firstChildElement("minFetchWait");
+    int minFetchWait = 0;
+    if ( !node.isNull() )
+	minFetchWait = node.toElement().text().toInt();
 
     //     <charsetForUrlEncoding>
     QString charsetForUrlEncoding;
@@ -653,6 +657,7 @@ DepartureGroupTitlesTagNotComplete:
     accessorInfos.setDefaultVehicleType( vehicleTypeFromString(defaultVehicleType) );
     accessorInfos.setUrl( url );
     accessorInfos.setShortUrl( shortUrl );
+    accessorInfos.setMinFetchWait( minFetchWait );
     accessorInfos.setDepartureRawUrl( rawUrlDepartures );
     accessorInfos.setStopSuggestionsRawUrl( rawUrlStopSuggestions );
     accessorInfos.setCharsetForUrlEncoding( charsetForUrlEncoding.toAscii() );

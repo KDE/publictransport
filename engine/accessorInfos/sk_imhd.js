@@ -1,10 +1,6 @@
 /** Accessor for imhd.sk.
 * © 2010, Friedrich Pülz */
 
-function trim( str ) {
-    return str.replace( /^\s+|\s+$/g, '' );
-}
-
 function usedTimetableInformations() {
     return [ 'TypeOfVehicle' ];
 }
@@ -42,13 +38,13 @@ function parseTimetable( html ) {
 	var transportLine = transportLineRegExp1.exec( columns[0] );
 	if ( transportLine == null )
 	    continue; // Unexcepted string in transport line column
-	transportLine = trim( transportLine[1] );
+	transportLine = helper.trim( transportLine[1] );
 
 	// Parse type of vehicle column
 	var typeOfVehicle = typeOfVehicleRegExp.exec( columns[1] );
 	if ( transportLine == null )
 	    continue; // Unexcepted string in type of vehicle column
-	typeOfVehicle = trim( typeOfVehicle[1] );
+	typeOfVehicle = helper.trim( typeOfVehicle[1] );
 
 	typesOfVehicle[ transportLine ] = typeOfVehicle;
     }
@@ -64,7 +60,6 @@ function parseTimetable( html ) {
     // Initialize regular expressions (compile them only once)
     var departuresRegExp = /<tr>([\s\S]*?)<\/tr>/ig;
     var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
-    var timeRegExp = /(\d{1,2})\.(\d{2})/i;
     var transportLineRegExp = /<center><b><em>(N?[0-9]+)<\/em><\/b><\/center>/i;
 
     // Go through all departure blocks
@@ -81,30 +76,28 @@ function parseTimetable( html ) {
 	    continue; // Too less columns
 
 	// Parse time column
-	var timeValues = timeRegExp.exec( columns[0] );
-	if ( timeValues == null || timeValues.length != 3 )
+	var time = helper.matchTime( columns[0], "h.mm" );
+	if ( time.length != 2 )
 	    continue; // Unexpected string in time column
-	var hour = timeValues[1];
-	var minute = timeValues[2];
 
 	// Parse transport line column
 	var transportLine = transportLineRegExp.exec( columns[1] );
 	if ( transportLine == null )
 	    continue; // Unexcepted string in transport line column
-	transportLine = trim( transportLine[1] );
+	transportLine = helper.trim( transportLine[1] );
 
 	var typeOfVehicle = typesOfVehicle[ transportLine ];
 
 	// Parse target column
-	var targetString = trim( columns[2] );
+	var targetString = helper.trim( columns[2] );
 
 	// Add departure
 	timetableData.clear();
 	timetableData.set( 'TransportLine', transportLine );
 	timetableData.set( 'TypeOfVehicle', typeOfVehicle );
 	timetableData.set( 'Target', targetString );
-	timetableData.set( 'DepartureHour', hour );
-	timetableData.set( 'DepartureMinute', minute );
+	timetableData.set( 'DepartureHour', time[0] );
+	timetableData.set( 'DepartureMinute', time[1] );
 	result.addData( timetableData );
     }
 }
@@ -116,7 +109,7 @@ function parsePossibleStops( html ) {
     var str = stopBlockRegExp.exec( html );
     if ( str == null )
 	return false; // Unexcepted string
-    str = trim( str[1] );
+    str = helper.trim( str[1] );
 
     // Initialize regular expressions (compile them only once)
     var stopRegExp = /<option value="[^"]*?">([^<]*?)<\/option>/ig;

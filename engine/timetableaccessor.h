@@ -25,11 +25,13 @@
 #define TIMETABLEACCESSOR_HEADER
 
 #include <KUrl>
-#include <QHash>
-#include <QTime>
 #include "kio/scheduler.h"
 #include "kio/jobclasses.h"
+
+#include <QHash>
+#include <QTime>
 #include <QDebug>
+
 #include "departureinfo.h"
 #include "enums.h"
 #include "timetableaccessor_htmlinfo.h"
@@ -63,13 +65,18 @@ class TimetableAccessor : public QObject {
 	static AccessorType accessorTypeFromString( const QString &sAccessorType );
 
 	/** Gets the TimetableInformation enumerable for the given string. */
-	static TimetableInformation timetableInformationFromString( const QString &sTimetableInformation );
+	static TimetableInformation timetableInformationFromString(
+		const QString &sTimetableInformation );
 
 	/** Gets the VehicleType enumerable for the given string. */
 	static VehicleType vehicleTypeFromString( QString sVehicleType );
-
+	
 	/** Gets the service provider the accessor is designed for. */
 	virtual QString serviceProvider() const { return m_info.serviceProvider(); };
+	
+	/** Gets the minimum seconds to wait between two data-fetches from the
+	* service provider. */
+	virtual int minFetchWait() const { return m_info.minFetchWait(); };
 
 	/** Gets a list of features that this accessor supports. */
 	virtual QStringList features() const;

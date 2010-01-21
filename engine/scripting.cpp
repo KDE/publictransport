@@ -22,6 +22,7 @@
 void TimetableData::set( const QString& sTimetableInformation, const QVariant& value ) {
     TimetableInformation info =
 	    TimetableAccessor::timetableInformationFromString( sTimetableInformation );
+
     if ( info == Nothing ) {
 	kDebug() << "Unknown timetable information" << sTimetableInformation
 	<< "with value" << (value.isNull() ? "NULL" : value.toString());
@@ -35,7 +36,7 @@ void TimetableData::set( const QString& sTimetableInformation, const QVariant& v
 	    || info == Platform || info == DelayReason
 	    || info == Status || info == Pricing) ) {
 	    m_values[ info ] = TimetableAccessorHtml::decodeHtmlEntities(
-	    value.toString() );
+		    value.toString() );
 	} else
 	    m_values[ info ] = value;
     }

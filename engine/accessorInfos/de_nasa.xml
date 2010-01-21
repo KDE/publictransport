@@ -2,7 +2,8 @@
 
 <accessorInfo>
 <xml_file_version type="publictransport" version="1.0" />
-<name>Saxony-Anhalt (nasa.de)</name>
+<name lang="en">Saxony-Anhalt (nasa.de)</name>
+<name lang="de">Sachsen-Anhalt (nasa.de)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
 <version>1.0</version>
 <type>HTML</type>

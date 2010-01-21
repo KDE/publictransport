@@ -1,10 +1,6 @@
 /** Accessor atlas.sk.
 * © 2010, Friedrich Pülz */
 
-function trim( str ) {
-    return str.replace( /^\s+|\s+$/g, '' );
-}
-
 function usedTimetableInformations() {
     return [ 'TypeOfVehicle' ];
 }
@@ -20,7 +16,6 @@ function parseTimetable( html ) {
     // Initialize regular expressions (compile them only once)
     var departuresRegExp = /<tr class="[^"]*?">([\s\S]*?)<\/tr>/ig;
     var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
-    var timeRegExp = /(\d{1,2}):(\d{2})/i;
     var typeOfVehicleRegExp = /<img src="[^"]*?" alt="([^"]*?)" title="[^"]*?" \/>/i;
     var targetAndTransportLineRegExp = /<a href="[^"]*?" title="[^\(]*?\([^>]*?>>\s([^\)]*?)\)" style="[^"]*?" onclick="[^"]*?">([^<]*?)<\/a>/i;
 
@@ -38,11 +33,9 @@ function parseTimetable( html ) {
 	    continue; // Too less columns
 
 	// Parse time column
-	var timeValues = timeRegExp.exec( columns[0] );
-	if ( timeValues == null || timeValues.length != 3 )
+	var time = helper.matchTime( columns[0], "h:mm" );
+	if ( time.length != 2 )
 	    continue; // Unexpected string in time column
-	var hour = timeValues[1];
-	var minute = timeValues[2];
 
 	// Parse type of vehicle column
 	var typeOfVehicle = typeOfVehicleRegExp.exec( columns[4] );
@@ -54,16 +47,16 @@ function parseTimetable( html ) {
 	var targetAndTransportLine = targetAndTransportLineRegExp.exec( columns[4] );
 	if ( targetAndTransportLine == null )
 	    continue; // Unexcepted string in target & transport line column
-	var targetString = trim( targetAndTransportLine[1] );
-	var transportLine = trim( targetAndTransportLine[2] );
+	var targetString = helper.trim( targetAndTransportLine[1] );
+	var transportLine = helper.trim( targetAndTransportLine[2] );
 	
 	// Add departure
 	timetableData.clear();
 	timetableData.set( 'TransportLine', transportLine );
 	timetableData.set( 'TypeOfVehicle', typeOfVehicle );
 	timetableData.set( 'Target', targetString );
-	timetableData.set( 'DepartureHour', hour );
-	timetableData.set( 'DepartureMinute', minute );
+	timetableData.set( 'DepartureHour', time[0] );
+	timetableData.set( 'DepartureMinute', time[1] );
 	result.addData( timetableData );
     }
 }

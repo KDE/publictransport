@@ -2,7 +2,8 @@
 
 <accessorInfo>
 <xml_file_version type="publictransport" version="1.0" />
-<name>International Flights (flightstats.com)</name>
+<name lang="en">International Flights (flightstats.com)</name>
+<name lang="de">Internationale Flüge (flightstats.com)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
 <version>1.0</version>
 <type>HTML</type>

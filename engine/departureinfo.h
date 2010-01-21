@@ -104,6 +104,12 @@ class PublicTransportInfo {
 	* @return The type of vehicle that was parsed or VehicleType::Unknown if
 	* it couldn't be parsed. */
 	static VehicleType getVehicleTypeFromString( const QString &sLineType );
+	
+	/** Gets the operator for the given vehicle type string.
+	* @param sLineType The string to get the operator for (e.g. "ME", "ERB", "NWB", ...).
+	* @return The operator for the given vehicle type string or QString() if
+	* it couldn't be determined. */
+	static QString operatorFromVehicleTypeString( const QString &sLineType );
 
     protected:
 	bool m_isValid;

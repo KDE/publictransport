@@ -2,7 +2,8 @@
 
 <accessorInfo>
 <xml_file_version type="publictransport" version="1.0" />
-<name>Rhine-Neckar (vrn.de)</name>
+<name lang="en">Rhine-Neckar (vrn.de)</name>
+<name lang="de">Rhein-Neckar (vrn.de)</name>
 <author> <fullname>Martin Gräßlin</fullname> <email>kde@martin-graesslin.com</email> </author>
 <version>1.0</version>
 <type>HTML</type>

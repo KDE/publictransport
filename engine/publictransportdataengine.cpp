@@ -56,8 +56,9 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
     Q_ASSERT( accessor != NULL );
 
     QHash<QString, QVariant> dataServiceProvider;
-    dataServiceProvider.insert( "id", /*static_cast<int>(*/accessor->serviceProvider()/*)*/ );
+    dataServiceProvider.insert( "id", accessor->serviceProvider() );
     dataServiceProvider.insert( "fileName", accessor->timetableAccessorInfo().fileName() );
+    dataServiceProvider.insert( "scriptFileName", accessor->timetableAccessorInfo().scriptFileName() );
     dataServiceProvider.insert( "name", accessor->timetableAccessorInfo().name() );
     dataServiceProvider.insert( "shortUrl", accessor->timetableAccessorInfo().shortUrl() );
     dataServiceProvider.insert( "country", accessor->country() );
@@ -88,6 +89,12 @@ QHash< QString, QVariant > PublicTransportEngine::locations() {
     locationHash.insert( "name", name = "de" );
     locationHash.insert( "description", i18n("Support for all cities in Germany. There is also support for providers specific to regions / cities.") );
     locationHash.insert( "defaultAccessor", "de_db" );
+    ret.insert( name, locationHash );
+    
+    locationHash.clear();
+    locationHash.insert( "name", name = "fr" );
+    locationHash.insert( "description", i18n("Support for some cities in France. No local public transportation information.") );
+    locationHash.insert( "defaultAccessor", "fr_gares" );
     ret.insert( name, locationHash );
 
     locationHash.clear();
@@ -156,7 +163,8 @@ bool PublicTransportEngine::updateServiceProviderSource( const QString &name ) {
 	    QString s = KUrl(fileName).fileName().remove(QRegExp("\\..*$")); // Remove file extension
 	    const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( s );
 	    if ( accessor ) {
-		dataSource.insert( accessor->timetableAccessorInfo().name(), serviceProviderInfo(accessor) );
+		dataSource.insert( accessor->timetableAccessorInfo().name(),
+				   serviceProviderInfo(accessor) );
 		loadedAccessors << s;
 	    }
 	    else {
@@ -192,7 +200,7 @@ void PublicTransportEngine::updateLocationSource( const QString &name ) {
 }
 
 bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name ) {
-    bool containsDataSource = m_dataSources.keys().contains(name);
+    bool containsDataSource = m_dataSources.keys().contains( name );
     if ( containsDataSource && isSourceUpToDate(name) )
     { // Data is stored in the map and up to date
 	kDebug() << "Data source" << name << "is up to date";
@@ -396,7 +404,6 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 // 	    kDebug() << "Departure isn't valid" << departureInfo->line();
 // 	    continue;
 // 	}
-
 	QHash<QString, QVariant> data;
 	data.insert("line", departureInfo->line());
 	data.insert("target", departureInfo->target());
@@ -429,6 +436,7 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 	removeData( sourceName, QString("stopName %1").arg(i++) );
     m_lastStopNameCount = 0;
     
+    setData( sourceName, "serviceProvider", serviceProvider );
     setData( sourceName, "count", departures.count() );
     setData( sourceName, "requestUrl", requestUrl );
     setData( sourceName, "parseMode", "departures" );
@@ -438,6 +446,7 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 
     // Store received data in the data source map
+    dataSource.insert( "serviceProvider", serviceProvider );
     dataSource.insert( "count", departures.count() );
     dataSource.insert( "requestUrl", requestUrl );
     dataSource.insert( "parseMode", "departures" );
@@ -512,7 +521,8 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     for ( i = 0 ; i < m_lastStopNameCount; ++i )
 	removeData( sourceName, QString("stopName %1").arg(i++) );
     m_lastStopNameCount = 0;
-
+    
+    setData( sourceName, "serviceProvider", serviceProvider );
     setData( sourceName, "count", journeys.count() );
     setData( sourceName, "requestUrl", requestUrl );
     setData( sourceName, "parseMode", "journeys" );
@@ -522,6 +532,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 
     // Store received data in the data source map
+    dataSource.insert( "serviceProvider", serviceProvider );
     dataSource.insert( "count", journeys.count() );
     dataSource.insert( "requestUrl", requestUrl );
     dataSource.insert( "parseMode", "journeys" );
@@ -567,7 +578,8 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
     for ( i = stops.count(); i < m_lastStopNameCount; ++i )
 	removeData( sourceName, QString("stopName %1").arg(i) );
     m_lastStopNameCount = stops.count();
-
+    
+    setData( sourceName, "serviceProvider", serviceProvider );
     setData( sourceName, "count", stops.count() );
     setData( sourceName, "requestUrl", requestUrl );
     if ( parseDocumentMode == ParseForDeparturesArrivals )
@@ -599,6 +611,7 @@ void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
     kDebug() << "Error while parsing" << requestUrl
 	     << "\n  sourceName =" << sourceName << ", " << dataType << parseDocumentMode;
 
+    setData( sourceName, "serviceProvider", serviceProvider );
     setData( sourceName, "count", 0 );
     setData( sourceName, "requestUrl", requestUrl );
     if ( parseDocumentMode == ParseForDeparturesArrivals )
@@ -612,12 +625,24 @@ void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 }
 
-bool PublicTransportEngine::isSourceUpToDate ( const QString& name ) {
+bool PublicTransportEngine::isSourceUpToDate( const QString& name ) {
     if ( !m_dataSources.keys().contains(name) )
 	return false;
-    // Data source stays up to date for UPDATE_TIMEOUT seconds
+    
+    // Data source stays up to date for min(UPDATE_TIMEOUT, minFetchWait) seconds
     QHash<QString, QVariant> dataSource = m_dataSources[name].toHash();
-    return dataSource["updated"].toDateTime().secsTo( QDateTime::currentDateTime() ) < UPDATE_TIMEOUT;
+    
+    TimetableAccessor *accessor;
+    QString serviceProvider = dataSource[ "serviceProvider" ].toString();
+    if ( !m_accessors.contains(serviceProvider) ) {
+	accessor = TimetableAccessor::getSpecificAccessor(serviceProvider);
+	m_accessors.insert( serviceProvider, accessor );
+    } else
+	accessor = m_accessors.value(serviceProvider);
+    int minFetchWait = qMax( accessor->minFetchWait(), UPDATE_TIMEOUT );
+
+    return dataSource["updated"].toDateTime().secsTo(
+	    QDateTime::currentDateTime() ) < minFetchWait;
 }
 
 // This does the magic that allows Plasma to load

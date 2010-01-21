@@ -2,7 +2,8 @@
 
 <accessorInfo>
 <xml_file_version type="publictransport" version="1.0" />
-<name>Lower Saxony, Bremen (fahrplaner.de)</name>
+<name lang="en">Lower Saxony, Bremen (fahrplaner.de)</name>
+<name lang="de">Niedersachsen, Bremen (fahrplaner.de)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
 <version>1.0</version>
 <type>HTML</type>

@@ -48,7 +48,7 @@ class PublicTransportEngine : public Plasma::DataEngine
 
 	/** Timeout in seconds to request new data. Before the timeout is over, old
 	* stored data from previous requests is used. */
-	static const int UPDATE_TIMEOUT = 120; //
+	static const int UPDATE_TIMEOUT = 120;
 
 	/** The default number of maximum departures. This is used if it wasn't
 	* specified in the source name. */
