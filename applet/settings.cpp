@@ -49,13 +49,12 @@
 
 
 PublicTransportSettings::PublicTransportSettings( PublicTransport *applet )
-	    : m_modelServiceProvider(0), m_modelLocations(0) {
+	: m_configDialog(0), m_modelServiceProvider(0), m_modelLocations(0) {
     m_applet = applet;
 
-//     m_stopNameValid = false;
-
     m_dataSourceTester = new DataSourceTester( "", m_applet );
-    connect( m_dataSourceTester, SIGNAL(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&)),
+    connect( m_dataSourceTester,
+	     SIGNAL(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&)),
 	     this, SLOT(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&)) );
 }
 
@@ -82,7 +81,7 @@ void PublicTransportSettings::dataUpdated( const QString& sourceName,
 	    }
 	}
 	else
-	    qDebug() << "PublicTransport::dataUpdated" << "favicon is NULL";
+	    kDebug() << "favicon is NULL";
 
 	m_applet->dataEngine("favicons")->disconnectSource( sourceName, this );
     }
@@ -122,6 +121,16 @@ void PublicTransportSettings::readSettings() {
     if ( !m_useDefaultFont )
 	m_font = QFont( fontFamily );
 
+    // Read filter settings
+    m_filterConfiguration = cg.readEntry("filterConfiguration", "Default");
+    m_filterConfigurationList = cg.readEntry("filterConfigurationList", QStringList() << "Default");
+    if ( !m_filterConfigurationList.contains("Default") )
+	m_filterConfigurationList.prepend( "Default" );
+    m_filterConfigChanged = isCurrentFilterConfigChanged();
+    kDebug() << "Read filter config settings:" << m_filterConfiguration
+	     << "changed?" << m_filterConfigChanged
+	     << "list" << m_filterConfigurationList;
+    
     m_showTypeOfVehicle[Unknown] = cg.readEntry(vehicleTypeToConfigName(Unknown), true);
     m_showTypeOfVehicle[Tram] = cg.readEntry(vehicleTypeToConfigName(Tram), true);
     m_showTypeOfVehicle[Bus] = cg.readEntry(vehicleTypeToConfigName(Bus), true);
@@ -146,6 +155,64 @@ void PublicTransportSettings::readSettings() {
     
     getServiceProviderInfo();
 //     selectLocaleLocation();
+}
+
+bool PublicTransportSettings::isCurrentFilterConfigChanged() {
+    return isCurrentFilterConfigChangedFrom( m_applet->config(
+	    "filterConfig_" + m_filterConfiguration) );
+}
+
+bool PublicTransportSettings::isCurrentFilterConfigChangedFrom( const KConfigGroup& cg ) {
+    kDebug() << "Changed?" << cg.name();
+    if ( m_showTypeOfVehicle[Unknown] != cg.readEntry(vehicleTypeToConfigName(Unknown), true) )
+	return true;
+    if ( m_showTypeOfVehicle[Tram] != cg.readEntry(vehicleTypeToConfigName(Tram), true) )
+	return true;
+    if ( m_showTypeOfVehicle[Bus] != cg.readEntry(vehicleTypeToConfigName(Bus), true) )
+	return true;
+    if ( m_showTypeOfVehicle[Subway] != cg.readEntry(vehicleTypeToConfigName(Subway), true) )
+	return true;
+    if ( m_showTypeOfVehicle[Metro] != cg.readEntry(vehicleTypeToConfigName(Metro), true) )
+	return true;
+    if ( m_showTypeOfVehicle[TrolleyBus] !=
+		cg.readEntry(vehicleTypeToConfigName(TrolleyBus), true) )
+	return true;
+    if ( m_showTypeOfVehicle[TrainInterurban] !=
+		cg.readEntry(vehicleTypeToConfigName(TrainInterurban), true) )
+	return true;
+    if ( m_showTypeOfVehicle[TrainRegional] !=
+		cg.readEntry(vehicleTypeToConfigName(TrainRegional), true) )
+	return true;
+    if ( m_showTypeOfVehicle[TrainRegionalExpress] !=
+		cg.readEntry(vehicleTypeToConfigName(TrainRegionalExpress), true) )
+	return true;
+    if ( m_showTypeOfVehicle[TrainInterregio] !=
+		cg.readEntry(vehicleTypeToConfigName(TrainInterregio), true) )
+	return true;
+    if ( m_showTypeOfVehicle[TrainIntercityEurocity] !=
+		cg.readEntry(vehicleTypeToConfigName(TrainIntercityEurocity), true) )
+	return true;
+    if ( m_showTypeOfVehicle[TrainIntercityExpress] !=
+		cg.readEntry(vehicleTypeToConfigName(TrainIntercityExpress), true) )
+	return true;
+    if ( m_showTypeOfVehicle[Ferry] != cg.readEntry(vehicleTypeToConfigName(Ferry), true) )
+	return true;
+    if ( m_showTypeOfVehicle[Plane] != cg.readEntry(vehicleTypeToConfigName(Plane), true) )
+	return true;
+    
+    if ( m_filterTypeTarget != static_cast<FilterType>(
+		cg.readEntry("filterTypeTarget", static_cast<int>(ShowAll))) )
+	return true;
+    if ( m_filterTargetList != cg.readEntry("filterTargetList", QStringList()) )
+	return true;
+    if ( m_filterTypeLineNumber != static_cast<FilterType>(
+		cg.readEntry("filterTypeLineNumber", static_cast<int>(ShowAll))) )
+	return true;
+    if ( m_filterLineNumberList != cg.readEntry("filterLineNumberList", QStringList()) )
+	return true;
+
+    kDebug() << "Not changed";
+    return false;
 }
 
 void PublicTransportSettings::getServiceProviderInfo() {
@@ -192,10 +259,12 @@ void PublicTransportSettings::filterLineTypeSelectedSelectionChanged( int ) {
 
 void PublicTransportSettings::addedFilterLineType( QListWidgetItem* ) {
     m_uiFilter.filterLineType->setButtonsEnabled();
+    setFilterConfigurationChanged();
 }
 
 void PublicTransportSettings::removedFilterLineType( QListWidgetItem* ) {
     m_uiFilter.filterLineType->setButtonsEnabled();
+    setFilterConfigurationChanged();
 }
 
 QList< VehicleType > PublicTransportSettings::filteredOutVehicleTypes() const {
@@ -238,6 +307,7 @@ void PublicTransportSettings::removeAllFiltersByVehicleType() {
     emit configNeedsSaving();
     emit modelNeedsUpdate();
 
+    setFilterConfigurationChanged();
     // TODO: Synchronize new settings with config dialog widgets
 }
 
@@ -296,6 +366,7 @@ void PublicTransportSettings::setFilterTypeLineNumber( FilterType filterType ) {
 void PublicTransportSettings::configDialogFinished() {
     m_dataSourceTester->setTestSource("");
     m_applet->removeState( ConfigDialogShown );
+    m_configDialog = NULL;
 }
 
 void PublicTransportSettings::accessorInfoDialogFinished() {
@@ -417,7 +488,7 @@ void PublicTransportSettings::stopNameChanged( const QString &stopName ) {
     m_dataSourceTester->setTestSource( testSource );
 }
 
-void PublicTransportSettings::clickedServiceProviderInfo ( bool ) {
+void PublicTransportSettings::clickedServiceProviderInfo( bool ) {
     QWidget *widget = new QWidget;
     m_uiAccessorInfo.setupUi( widget );
     m_applet->addState( AccessorInfoDialogShown );
@@ -472,7 +543,8 @@ void PublicTransportSettings::clickedServiceProviderInfo ( bool ) {
     infoDialog->show();
 }
 
-void PublicTransportSettings::createConfigurationInterface( KConfigDialog* parent, bool stopNameValid ) {
+void PublicTransportSettings::createConfigurationInterface( KConfigDialog* parent,
+							    bool stopNameValid ) {
     m_configDialog = parent;
     m_applet->addState( ConfigDialogShown );
     parent->setButtons( KDialog::Ok | KDialog::Cancel | KDialog::Apply );
@@ -505,7 +577,12 @@ void PublicTransportSettings::createConfigurationInterface( KConfigDialog* paren
     setValuesOfAdvancedConfig();
     setValuesOfAppearanceConfig();
     setValuesOfFilterConfig();
-
+    
+    m_uiFilter.saveFilterConfiguration->setIcon( KIcon("document-save") );
+    m_uiFilter.addFilterConfiguration->setIcon( KIcon("list-add") );
+    m_uiFilter.removeFilterConfiguration->setIcon( KIcon("list-remove") );
+    m_uiFilter.renameFilterConfiguration->setIcon( KIcon("edit-rename") );
+    
     connect( parent, SIGNAL(finished()), this, SLOT(configDialogFinished()));
     connect( parent, SIGNAL(applyClicked()), this, SLOT(configAccepted()) );
     connect( parent, SIGNAL(okClicked()), this, SLOT(configAccepted()) );
@@ -527,6 +604,27 @@ void PublicTransportSettings::createConfigurationInterface( KConfigDialog* paren
 	     this, SLOT(addedFilterLineType(QListWidgetItem*)) );
     connect( m_uiFilter.filterLineType, SIGNAL(removed(QListWidgetItem*)),
 	     this, SLOT(removedFilterLineType(QListWidgetItem*)) );
+
+    connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+	     this, SLOT(loadFilterConfiguration(QString)) );
+    connect( m_uiFilter.saveFilterConfiguration, SIGNAL(clicked()),
+	     this, SLOT(saveFilterConfiguration()) );
+    connect( m_uiFilter.addFilterConfiguration, SIGNAL(clicked()),
+	     this, SLOT(addFilterConfiguration()) );
+    connect( m_uiFilter.removeFilterConfiguration, SIGNAL(clicked()),
+	     this, SLOT(removeFilterConfiguration()) );
+    connect( m_uiFilter.renameFilterConfiguration, SIGNAL(clicked()),
+	     this, SLOT(renameFilterConfiguration()) );
+
+    connect( m_uiFilter.filterTypeTarget, SIGNAL(currentIndexChanged(int)),
+	     this, SLOT(filterTypeTargetChanged(int)) );
+    connect( m_uiFilter.filterTargetList, SIGNAL(changed()),
+	     this, SLOT(filterTargetListChanged()) );
+
+    connect( m_uiFilter.filterTypeLineNumber, SIGNAL(currentIndexChanged(int)),
+	     this, SLOT(filterTypeLineNumberChanged(int)) );
+    connect( m_uiFilter.filterLineNumberList, SIGNAL(changed()),
+	     this, SLOT(filterLineNumberListChanged()) );
 
     // Check stop name validity
     stopNameChanged( m_ui.stop->text() );
@@ -698,12 +796,395 @@ void PublicTransportSettings::setValuesOfAdvancedConfig() {
     m_uiAdvanced.showArrivals->setChecked( m_departureArrivalListType == ArrivalList );
 }
 
+void PublicTransportSettings::exportFilterSettings() {
+    QString fileName = KFileDialog::getSaveFileName(
+	    KUrl("kfiledialog:///filterSettings"), QString(), m_configDialog,
+	    i18n("Export Filter Settings") );
+    if ( fileName.isEmpty() )
+	return;
+	    
+    KConfig config( fileName, KConfig::SimpleConfig );
+    writeFilterConfig( config.group(QString()), false );
+}
+
+void PublicTransportSettings::importFilterSettings() {
+    QString fileName = KFileDialog::getOpenFileName(
+	    KUrl("kfiledialog:///filterSettings"), QString(), m_configDialog,
+	    i18n("Import Filter Settings") );
+    if ( fileName.isEmpty() )
+	return;
+    
+    KConfig config( fileName, KConfig::SimpleConfig );
+    readFilterConfig( config.group(QString()) );
+}
+
+void PublicTransportSettings::addFilterConfiguration() {
+    QString newFilterConfig = i18n( "New Configuration" );
+    int i = 2;
+    while ( m_filterConfigurationList.contains(newFilterConfig) ) {
+	newFilterConfig = i18n( "New Configuration %1", i );
+	++i;
+    }
+
+    kDebug() << "Add new filter config" << newFilterConfig;
+
+    writeFilterConfig( m_applet->config("filterConfig_" + newFilterConfig) );
+    
+    m_filterConfigurationList.append( newFilterConfig );
+    KConfigGroup cg = m_applet->config();
+    cg.writeEntry("filterConfigurationList", m_filterConfigurationList);
+    
+    m_filterConfiguration = newFilterConfig;
+
+    if ( m_configDialog )
+	m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true );
+    
+    kDebug() << "END: Added new filter config" << newFilterConfig;
+    
+//     renameFilterConfiguration();
+
+//     if ( m_uiFilter.filterConfigurations->currentText().isEmpty() ) {
+	// Rename canceled
+// 	removeFilterConfiguration();
+// 	m_uiFilter.filterConfigurations->removeItem(
+// 		m_uiFilter.filterConfigurations->currentIndex() );
+// 	m_uiFilter.filterConfigurations->setCurrentIndex(
+// 		filterConfigurationIndex(i18n("Default")) );
+//     }
+}
+
+void PublicTransportSettings::removeFilterConfiguration() {
+    if ( KMessageBox::warningContinueCancel(m_configDialog,
+		i18n("This will permanently delete the selected filter configuration."))
+		!= KMessageBox::Continue )
+	return;
+
+    kDebug() << "Delete filter config" << m_filterConfiguration;
+//     m_applet->config().m_filterConfiguration )
+    KConfigGroup cgOld = m_applet->config();
+    cgOld.deleteGroup( "filterConfig_" + m_filterConfiguration );
+    
+    if ( m_filterConfigurationList.contains(m_filterConfiguration) ) {
+	m_filterConfigurationList.removeOne(m_filterConfiguration);
+	
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry("filterConfigurationList", m_filterConfigurationList);
+    }
+    
+    if ( m_configDialog ) {
+	int index = filterConfigurationIndex( translateKey(m_filterConfiguration) );
+	kDebug() << "Found current filter config in combo box?" << index;
+	if ( index != -1  )
+	    m_uiFilter.filterConfigurations->removeItem( index );
+
+	index = filterConfigurationIndex( i18n("Default") );
+	kDebug() << "Found default filter config in combo box?" << index;
+	if ( index != -1 )
+	    m_uiFilter.filterConfigurations->setCurrentIndex( index );
+	else
+	    kDebug() << "Default filter configuration not found!";
+    }
+}
+
+QString PublicTransportSettings::showStringInputBox( const QString &labelString,
+						     const QString &initialText,
+						     const QString &clickMessage,
+						     const QString &title,
+						     QValidator *validator ) {
+    KDialog *dialog = new KDialog( m_configDialog );
+    dialog->setButtons( KDialog::Ok | KDialog::Cancel );
+    dialog->setWindowTitle( title );
+    
+    QWidget *w = new QWidget;
+    QVBoxLayout *layout = new QVBoxLayout;
+    QLabel *label = new QLabel( labelString );
+    label->setAlignment( Qt::AlignRight );
+    KLineEdit *input = new KLineEdit( initialText );
+    input->setClearButtonShown( true );
+    input->setClickMessage( clickMessage );
+    validator->setParent( input );
+    input->setValidator( validator );
+    
+    layout->addWidget( label );
+    layout->addWidget( input );
+    w->setLayout( layout );
+    dialog->setMainWidget( w );
+    
+    input->setFocus();
+    if ( dialog->exec() == KDialog::Rejected ) {
+	delete dialog;
+	return QString();
+    }
+
+    QString text = input->text();
+    delete dialog;
+    
+    return text;
+}
+
+void PublicTransportSettings::renameFilterConfiguration() {
+    QString newFilterConfig = showStringInputBox( i18n("New Name of the Filter Configuration:"),
+						  translateKey(m_filterConfiguration),
+						  i18nc("This is a clickMessage for the line edit "
+							"in the rename filter config dialog",
+							"Type the new name"),
+						  i18n("Choose a Name"),
+						  new QRegExpValidator(QRegExp("[^\\*]*"), this) );
+    if ( newFilterConfig.isNull() )
+	return; // Canceled
+
+    kDebug() << "newFilterConfig:" << newFilterConfig
+	     << "current filter config:" << m_filterConfiguration;
+    if ( newFilterConfig == m_filterConfiguration )
+	return; // Not changed, but accepted
+
+    // Check if the new name is valid.
+    // '*' isn't allowed in the name but already validated by a QRegExpValidator.
+    if ( newFilterConfig.isEmpty() ) {
+	KMessageBox::information( m_configDialog, i18n("Empty names can't be used.") );
+	return;
+    } else if ( newFilterConfig == i18n("Default") ) {
+	KMessageBox::information( m_configDialog, i18n("The filter configuration "
+		"'%1' can't be changed.", i18n("Default")) );
+	return;
+    }
+    
+    if ( m_filterConfigurationList.contains(newFilterConfig)
+		&& KMessageBox::warningYesNo(m_configDialog,
+		   i18n("There is already a filter configuration with the name '%1'.\n"
+		   "Do you want to overwrite it?") ) != KMessageBox::Yes ) {
+	return; // No pressed
+    }
+    
+    if ( m_configDialog ) {
+	disconnect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+		    this, SLOT(loadFilterConfiguration(QString)) );
+    }
+    QString newFilterConfigUntranslated = untranslateKey( newFilterConfig );
+    KConfigGroup newConfigGroup = m_applet->config(
+	    "filterConfig_" + newFilterConfigUntranslated );
+    //     writeFilterConfig( newConfigGroup ); // OLDTODO: Warn the user that the settings get applied?
+    m_applet->config("filterConfig_" + m_filterConfiguration).copyTo( &newConfigGroup );
+    m_applet->config().deleteGroup( "filterConfig_" + m_filterConfiguration );
+    
+    if ( m_filterConfigurationList.contains(m_filterConfiguration) )
+	m_filterConfigurationList.removeOne(m_filterConfiguration);
+    if ( !m_filterConfigurationList.contains(newFilterConfigUntranslated) )
+	m_filterConfigurationList << newFilterConfigUntranslated;
+    kDebug() << "New Filter Configuration List" << m_filterConfigurationList;
+    KConfigGroup cg = m_applet->config();
+    cg.writeEntry("filterConfigurationList", m_filterConfigurationList);
+
+    if ( m_configDialog ) {
+	int index = m_uiFilter.filterConfigurations->findText( translateKey(m_filterConfiguration) );
+	if ( index != -1  ) {
+	    kDebug() << "Remove old filter config" << m_filterConfiguration;
+	    m_uiFilter.filterConfigurations->removeItem( index );
+	}
+    }
+    
+    kDebug() << "Set current filter config" << newFilterConfigUntranslated;
+    m_filterConfiguration = newFilterConfigUntranslated;
+    m_applet->config().writeEntry("filterConfiguration", m_filterConfiguration);
+
+    if ( m_configDialog ) {
+	m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true );
+	connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+		this, SLOT(loadFilterConfiguration(QString)) );
+    }
+}
+
+QString PublicTransportSettings::translateKey( const QString& key ) const {
+    if ( key == "Default" )
+	return i18n("Default");
+    else if ( key == "Default*" )
+	return i18n("Default") + "*";
+    else
+	return key;
+}
+
+QString PublicTransportSettings::untranslateKey( const QString& translatedKey ) const {
+    if ( translatedKey == i18n("Default") || translatedKey == i18n("Default") + "*" )
+	return "Default";
+    else
+	return translatedKey;
+}
+
+void PublicTransportSettings::saveFilterConfiguration() {
+    if ( m_filterConfiguration == "Default" ) {
+	// TODO: Put this text as label into the rename mini-dialog
+// 	KMessageBox::information( m_configDialog, i18n("The filter configuration "
+// 		"'%1' can't be changed. Choose a new name.", i18n("Default")) );
+	renameFilterConfiguration();
+	
+	if ( m_filterConfiguration == "Default" )
+	    return;
+    }
+
+    if ( !m_filterConfigurationList.contains(m_filterConfiguration) ) {
+	m_filterConfigurationList << m_filterConfiguration;
+	
+	KConfigGroup cg = m_applet->config();
+	cg.writeEntry("filterConfigurationList", m_filterConfigurationList);
+    }
+
+    if ( m_configDialog ) {
+	QString _filterConfiguration = translateKey( m_filterConfiguration );
+	int index = filterConfigurationIndex( _filterConfiguration );
+	if ( index != -1 )
+	    m_uiFilter.filterConfigurations->setItemText( index, _filterConfiguration );
+	else
+	    kDebug() << "Item to remove changed indicator (*) from not found";
+    }
+	
+    QString filterConfig = "filterConfig_" + m_filterConfiguration;
+    writeFilterConfig( m_applet->config(filterConfig), false );
+    setFilterConfigurationChanged( false );
+}
+
+int PublicTransportSettings::filterConfigurationIndex( const QString& filterConfig ) {
+    int index = m_uiFilter.filterConfigurations->findText( filterConfig );
+    if ( index == -1 )
+	index = m_uiFilter.filterConfigurations->findText( filterConfig + "*" );
+    else
+	kDebug() << "Item" << filterConfig << "not found!";
+
+    return index;
+}
+
+void PublicTransportSettings::loadFilterConfiguration( const QString& filterConfig ) {
+    QString _filterConfig = untranslateKey( filterConfig );
+    if ( _filterConfig == m_filterConfiguration )
+	return;
+    
+    if ( m_filterConfigChanged && m_filterConfiguration != "Default" ) {
+	QString _filterConfiguration = translateKey( m_filterConfiguration );
+
+	int result = KMessageBox::questionYesNoCancel( m_configDialog,
+		    i18n("The current filter configuration is unsaved.\n"
+			 "Do you want to store it now to '%1'?", _filterConfiguration),
+		    i18n("Save Filter Configuration?") );
+	if ( result == KMessageBox::Cancel )
+	    return;
+	else if ( result == KMessageBox::Yes )
+	    saveFilterConfiguration();
+
+	if ( m_configDialog ) {
+	    int index = filterConfigurationIndex( _filterConfiguration );
+	    if ( index == -1 ) {
+		kDebug() << "Didn't find" << _filterConfiguration;
+	    } else {
+		kDebug() << "Rename" << index << _filterConfiguration + "*"
+			<< "to" << _filterConfiguration;
+		m_uiFilter.filterConfigurations->setItemText( index, _filterConfiguration );
+	    }
+	}
+    }
+
+    kDebug() << "Loading" << "filterConfig_" + _filterConfig
+	     << "Current filterconfig:" << m_filterConfiguration;
+    m_filterConfiguration = _filterConfig;
+    m_applet->config().writeEntry("filterConfiguration", m_filterConfiguration);
+    
+    readFilterConfig( m_applet->config("filterConfig_" + _filterConfig) );
+    setFilterConfigurationChanged( false );
+
+    if ( !m_configDialog ) {
+	emit configNeedsSaving();
+	emit modelNeedsUpdate(); // Apply new filter settings when no dialog is shown
+				 // ie. the slot was called from the context menu
+    }
+}
+
+void PublicTransportSettings::filterTypeTargetChanged( int ) {
+    setFilterConfigurationChanged();
+}
+
+void PublicTransportSettings::filterTargetListChanged() {
+    setFilterConfigurationChanged();
+}
+
+void PublicTransportSettings::filterTypeLineNumberChanged( int ) {
+    setFilterConfigurationChanged();
+}
+
+void PublicTransportSettings::filterLineNumberListChanged() {
+    setFilterConfigurationChanged();
+}
+
+void PublicTransportSettings::setFilterConfigurationChanged( bool changed ) {
+    if ( m_filterConfigChanged == changed )
+	return;
+
+    if ( m_configDialog ) {
+	bool deaultFilterConfig = m_filterConfiguration == "Default";
+	m_uiFilter.saveFilterConfiguration->setEnabled( changed && !deaultFilterConfig );
+	m_uiFilter.removeFilterConfiguration->setDisabled( deaultFilterConfig );
+	m_uiFilter.renameFilterConfiguration->setDisabled( deaultFilterConfig );
+
+	QString sTitle = m_uiFilter.filterConfigurations->currentText();
+	if ( changed && !sTitle.endsWith('*') )
+	    sTitle.append( '*' );
+	else if ( !changed && sTitle.endsWith('*') )
+	    sTitle.chop( 1 );
+	disconnect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+		    this, SLOT(loadFilterConfiguration(QString)) );
+	m_uiFilter.filterConfigurations->setItemText(
+		m_uiFilter.filterConfigurations->currentIndex(), sTitle );
+	connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+		this, SLOT(loadFilterConfiguration(QString)) );
+    }
+	    
+    m_filterConfigChanged = changed;
+}
+
 void PublicTransportSettings::setValuesOfFilterConfig() {
+    if ( !m_applet->config().hasGroup("filterConfig_Default") ) {
+	kDebug() << "Adding 'filterConfig_Default'";
+	writeDefaultFilterConfig( m_applet->config("filterConfig_Default") );
+    }
+    if ( !m_filterConfigurationList.contains("Default") )
+	m_filterConfigurationList.prepend( "Default" );
+    
+    QStringList filterConfigGroups;
+    kDebug() << "Group list" << m_applet->config().groupList();
+    kDebug() << "Filter Config List:" << m_filterConfigurationList;
+    foreach ( QString filterConfig, m_filterConfigurationList )
+	filterConfigGroups << translateKey( filterConfig );
+
+    bool deaultFilterConfig = m_filterConfiguration == "Default";
+    m_uiFilter.saveFilterConfiguration->setEnabled( m_filterConfigChanged && !deaultFilterConfig );
+    m_uiFilter.removeFilterConfiguration->setDisabled( deaultFilterConfig );
+    m_uiFilter.renameFilterConfiguration->setDisabled( deaultFilterConfig );
+    
+    disconnect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+	     this, SLOT(loadFilterConfiguration(QString)) );
+    m_uiFilter.filterConfigurations->clear();
+    m_uiFilter.filterConfigurations->addItems( filterConfigGroups );
+
+    QString _filterConfig = translateKey( m_filterConfiguration );
+    kDebug() << "Set current item to" << _filterConfig;
+    m_uiFilter.filterConfigurations->setCurrentItem( _filterConfig );
+    if ( m_filterConfigChanged ) {
+	m_uiFilter.filterConfigurations->setItemText(
+		m_uiFilter.filterConfigurations->currentIndex(), _filterConfig + "*" );
+    }
+    connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+	     this, SLOT(loadFilterConfiguration(QString)) );
+    
     QListWidget *available, *selected;
     available = m_uiFilter.filterLineType->availableListWidget();
     selected = m_uiFilter.filterLineType->selectedListWidget();
 
-    available->addItems( QStringList() << i18n("Unknown") << i18n("Trams") << i18n("Buses") << i18n("Subways") << i18n("Metros") << i18n("Trolley buses") << i18n("Interurban trains") << i18n("Regional trains") << i18n("Regional express trains") << i18n("Interregio trains") << i18n("Intercity / Eurocity trains") << i18n("Intercity express trains") << i18n("Ferries") << i18n("Planes") );
+    available->clear();
+    selected->clear();
+    available->addItems( QStringList() << i18n("Unknown") << i18n("Trams")
+	    << i18n("Buses") << i18n("Subways") << i18n("Metros")
+	    << i18n("Trolley buses") << i18n("Interurban trains")
+	    << i18n("Regional trains") << i18n("Regional express trains")
+	    << i18n("Interregio trains") << i18n("Intercity / Eurocity trains")
+	    << i18n("Intercity express trains") << i18n("Ferries")
+	    << i18n("Planes") );
 
     available->item( 0 )->setIcon( Global::iconFromVehicleType(Unknown) );
     available->item( 1 )->setIcon( Global::iconFromVehicleType(Tram) );
@@ -749,15 +1230,11 @@ void PublicTransportSettings::setValuesOfFilterConfig() {
     if ( m_showTypeOfVehicle[Unknown] )
 	selected->addItem( available->takeItem(0) );
 
-    // These three are currently not used:
-//     m_uiFilter.showNightLines->setChecked(m_showNightlines);
-//     m_uiFilter.filterMinLine->setValue(m_filterMinLine);
-//     m_uiFilter.filterMaxLine->setValue(m_filterMaxLine);
-
     m_uiFilter.filterTypeTarget->setCurrentIndex( static_cast<int>(m_filterTypeTarget) );
     m_uiFilter.filterTargetList->setItems(m_filterTargetList);
 
-    m_uiFilter.filterTypeLineNumber->setCurrentIndex( static_cast<int>(m_filterTypeLineNumber) );
+    m_uiFilter.filterTypeLineNumber->setCurrentIndex(
+	    static_cast<int>(m_filterTypeLineNumber) );
     m_uiFilter.filterLineNumberList->setItems(m_filterLineNumberList);
 }
 
@@ -848,12 +1325,14 @@ void PublicTransportSettings::installServiceProviderClicked( bool ) {
 
     QString fileName = KFileDialog::getOpenFileName( KUrl(), "*.xml", m_configDialog );
     if ( !fileName.isEmpty() ) {
-	QStringList dirs = KGlobal::dirs()->findDirs( "data", "plasma_engine_publictransport/accessorInfos/" );
+	QStringList dirs = KGlobal::dirs()->findDirs( "data",
+		"plasma_engine_publictransport/accessorInfos/" );
 	if ( dirs.isEmpty() )
 	    return;
 
 	QString targetDir = dirs[0];
-	qDebug() << "PublicTransportSettings::installServiceProviderClicked" << "Install file" << fileName << "to" << targetDir;
+	kDebug() << "PublicTransportSettings::installServiceProviderClicked"
+		 << "Install file" << fileName << "to" << targetDir;
 	QProcess::execute( "kdesu", QStringList() << QString("cp %1 %2").arg( fileName ).arg( targetDir ) );
     }
 }
@@ -1210,178 +1689,286 @@ void PublicTransportSettings::configAccepted() {
 	emit departureArrivalListTypeChanged( m_departureArrivalListType );
 	emit departureListNeedsClearing(); // Clear departures using the old data source type
     }
-
-    QListWidget *selTypes = m_uiFilter.filterLineType->selectedListWidget();
-    bool showTrams = !selTypes->findItems( i18n("Unknown"), Qt::MatchExactly ).isEmpty();
-    bool showUnknown = !selTypes->findItems( i18n("Trams"), Qt::MatchExactly ).isEmpty();
-    bool showBuses = !selTypes->findItems( i18n("Buses"), Qt::MatchExactly ).isEmpty();
-    bool showSubways = !selTypes->findItems( i18n("Subways"), Qt::MatchExactly ).isEmpty();
-    bool showMetros = !selTypes->findItems( i18n("Metros"), Qt::MatchExactly ).isEmpty();
-    bool showTrolleyBuses = !selTypes->findItems( i18n("Trolley buses"), Qt::MatchExactly ).isEmpty();
-    bool showInterurbanTrains = !selTypes->findItems( i18n("Interurban trains"), Qt::MatchExactly ).isEmpty();
-    bool showRegionalTrains = !selTypes->findItems( i18n("Regional trains"), Qt::MatchExactly ).isEmpty();
-    bool showRegionalExpressTrains = !selTypes->findItems( i18n("Regional express trains"), Qt::MatchExactly ).isEmpty();
-    bool showInterregioTrains = !selTypes->findItems( i18n("Interregio trains"), Qt::MatchExactly ).isEmpty();
-    bool showIntercityEurocityTrains = !selTypes->findItems( i18n("Intercity / Eurocity trains"), Qt::MatchExactly ).isEmpty();
-    bool showIntercityExpressTrains = !selTypes->findItems( i18n("Intercity express trains"), Qt::MatchExactly ).isEmpty();
-    bool showFerries = !selTypes->findItems( i18n("Ferries"), Qt::MatchExactly ).isEmpty();
-    bool showPlanes = !selTypes->findItems( i18n("Planes"), Qt::MatchExactly ).isEmpty();
-
-    if (m_showTypeOfVehicle[Unknown] != showUnknown) {
-	m_showTypeOfVehicle[Unknown] = showUnknown;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(Unknown), showUnknown);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[Tram] != showTrams) {
-	m_showTypeOfVehicle[Tram] = showTrams;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(Tram), showTrams);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[Bus] != showBuses) {
-	m_showTypeOfVehicle[Bus] = showBuses;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(Bus), showBuses);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[Subway] != showSubways) {
-	m_showTypeOfVehicle[Subway] = showSubways;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(Subway), showSubways);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[Metro] != showMetros) {
-	m_showTypeOfVehicle[Metro] = showMetros;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(Metro), showMetros);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[TrolleyBus] != showTrolleyBuses) {
-	m_showTypeOfVehicle[TrolleyBus] = showTrolleyBuses;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(TrolleyBus), showTrolleyBuses);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[TrainInterurban] != showInterurbanTrains) {
-	m_showTypeOfVehicle[TrainInterurban] = showInterurbanTrains;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(TrainInterurban), showInterurbanTrains);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[TrainRegional] != showRegionalTrains) {
-	m_showTypeOfVehicle[TrainRegional] = showRegionalTrains;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(TrainRegional), showRegionalTrains);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[TrainRegionalExpress] != showRegionalExpressTrains) {
-	m_showTypeOfVehicle[TrainRegionalExpress] = showRegionalExpressTrains;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(TrainRegionalExpress), showRegionalExpressTrains);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[TrainInterregio] != showInterregioTrains) {
-	m_showTypeOfVehicle[TrainInterregio] = showInterregioTrains;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(TrainInterregio), showInterregioTrains);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[TrainIntercityEurocity] != showIntercityEurocityTrains) {
-	m_showTypeOfVehicle[TrainIntercityEurocity] = showIntercityEurocityTrains;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(TrainIntercityEurocity), showIntercityEurocityTrains);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[TrainIntercityExpress] != showIntercityExpressTrains) {
-	m_showTypeOfVehicle[TrainIntercityExpress] = showIntercityExpressTrains;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress), showIntercityExpressTrains);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[Ferry] != showFerries) {
-	m_showTypeOfVehicle[Ferry] = showFerries;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(Ferry), showFerries);
-	changed = true;
-    }
-
-    if (m_showTypeOfVehicle[Plane] != showPlanes) {
-	m_showTypeOfVehicle[Plane] = showPlanes;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry(vehicleTypeToConfigName(Plane), showPlanes);
-	changed = true;
-    }
-
-//     if (m_showNightlines != (m_uiFilter.showNightLines->checkState() == Qt::Checked)) {
-// 	m_showNightlines = !m_showNightlines;
-// 	KConfigGroup cg = m_applet->config();
-// 	cg.writeEntry("showNightlines", m_showNightlines);
-// 	changed = true;
-//     }
-
-//     if (m_filterMinLine  != m_uiFilter.filterMinLine->value()) {
-// 	m_filterMinLine = m_uiFilter.filterMinLine->value();
-// 	KConfigGroup cg = m_applet->config();
-// 	cg.writeEntry("filterMinLine", m_filterMinLine);
-// 	changed = true;
-//     }
-// 
-//     if (m_filterMaxLine  != m_uiFilter.filterMaxLine->value()) {
-// 	m_filterMaxLine = m_uiFilter.filterMaxLine->value();
-// 	KConfigGroup cg = m_applet->config();
-// 	cg.writeEntry("filterMaxLine", m_filterMaxLine);
-// 	changed = true;
-//     }
-
-    if (m_filterTypeTarget  != (m_uiFilter.filterTypeTarget->currentIndex())) {
-	m_filterTypeTarget = static_cast<FilterType>(m_uiFilter.filterTypeTarget->currentIndex());
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("filterTypeTarget", static_cast<int>(m_filterTypeTarget));
-	changed = true;
-    }
-
-    if (m_filterTargetList  != m_uiFilter.filterTargetList->items()) {
-	m_filterTargetList = m_uiFilter.filterTargetList->items();
-	m_filterTargetList.removeDuplicates();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("filterTargetList", m_filterTargetList);
-	changed = true;
-    }
     
-    if (m_filterTypeLineNumber  != (m_uiFilter.filterTypeLineNumber->currentIndex())) {
-	m_filterTypeLineNumber = static_cast<FilterType>(m_uiFilter.filterTypeLineNumber->currentIndex());
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("filterTypeLineNumber", static_cast<int>(m_filterTypeLineNumber));
+    KConfigGroup cg = m_applet->config();
+    cg.writeEntry("filterConfiguration", m_filterConfiguration);
+    cg.writeEntry("filterConfigurationList", m_filterConfigurationList);
+    if ( writeFilterConfig(m_applet->config()) )
 	changed = true;
-    }
-
-    if (m_filterLineNumberList  != m_uiFilter.filterLineNumberList->items()) {
-	m_filterLineNumberList = m_uiFilter.filterLineNumberList->items();
-	m_filterLineNumberList.removeDuplicates();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("filterTargetList", m_filterLineNumberList);
-	changed = true;
-    }
     
-    if (changed) {
+    if ( changed ) {
 	emit settingsChanged();
 	emit configNeedsSaving();
     }
     if (changedServiceProviderSettings)
 	emit serviceProviderSettingsChanged();
+}
+
+bool PublicTransportSettings::readFilterConfig( const KConfigGroup& cg ) {
+    kDebug() << "Read filter config from" << cg.name();
+    
+    m_showTypeOfVehicle[Unknown] =
+	    cg.readEntry(vehicleTypeToConfigName(Unknown), true);
+    m_showTypeOfVehicle[Tram] =
+	    cg.readEntry(vehicleTypeToConfigName(Tram), true);
+    m_showTypeOfVehicle[Bus] =
+	    cg.readEntry(vehicleTypeToConfigName(Bus), true);
+    m_showTypeOfVehicle[Subway] =
+	    cg.readEntry(vehicleTypeToConfigName(Subway), true);
+    m_showTypeOfVehicle[Metro] =
+	    cg.readEntry(vehicleTypeToConfigName(Metro), true);
+    m_showTypeOfVehicle[TrolleyBus] =
+	    cg.readEntry(vehicleTypeToConfigName(TrolleyBus), true);
+    m_showTypeOfVehicle[TrainInterurban] =
+	    cg.readEntry(vehicleTypeToConfigName(TrainInterurban), true);
+    m_showTypeOfVehicle[TrainRegional] =
+	    cg.readEntry(vehicleTypeToConfigName(TrainRegional), true);
+    m_showTypeOfVehicle[TrainRegionalExpress] =
+	     cg.readEntry(vehicleTypeToConfigName(TrainRegionalExpress), true);
+    m_showTypeOfVehicle[TrainInterregio] =
+	    cg.readEntry(vehicleTypeToConfigName(TrainInterregio), true);
+    m_showTypeOfVehicle[TrainIntercityEurocity] =
+	     cg.readEntry(vehicleTypeToConfigName(TrainIntercityEurocity), true);
+    m_showTypeOfVehicle[TrainIntercityExpress] =
+	     cg.readEntry(vehicleTypeToConfigName(TrainIntercityExpress), true);
+    m_showTypeOfVehicle[Ferry] =
+	    cg.readEntry(vehicleTypeToConfigName(Ferry), true);
+    m_showTypeOfVehicle[Plane] =
+	    cg.readEntry(vehicleTypeToConfigName(Plane), true);
+
+    m_filterTypeTarget = static_cast<FilterType>(
+	    cg.readEntry("filterTypeTarget", static_cast<int>(ShowAll)) );
+    m_filterTargetList = cg.readEntry("filterTargetList", QStringList());
+    m_filterTargetList.removeDuplicates();
+
+    m_filterTypeLineNumber = static_cast<FilterType>(
+	    cg.readEntry("filterTypeLineNumber", static_cast<int>(ShowAll)) );
+    m_filterLineNumberList = cg.readEntry("filterLineNumberList", QStringList());
+    m_filterLineNumberList.removeDuplicates();
+
+    kDebug() << "read ok, set values";
+    setFilterConfigurationChanged( false );
+    if ( m_configDialog )
+	setValuesOfFilterConfig();
+
+    return true;
+}
+
+void PublicTransportSettings::writeDefaultFilterConfig( KConfigGroup cg ) {
+    cg.writeEntry(vehicleTypeToConfigName(Unknown), true);
+    cg.writeEntry(vehicleTypeToConfigName(Tram), true);
+    cg.writeEntry(vehicleTypeToConfigName(Bus), true);
+    cg.writeEntry(vehicleTypeToConfigName(Subway), true);
+    cg.writeEntry(vehicleTypeToConfigName(Metro), true);
+    cg.writeEntry(vehicleTypeToConfigName(TrolleyBus), true);
+    cg.writeEntry(vehicleTypeToConfigName(TrainInterurban), true);
+    cg.writeEntry(vehicleTypeToConfigName(TrainRegional), true);
+    cg.writeEntry(vehicleTypeToConfigName(TrainRegionalExpress), true);
+    cg.writeEntry(vehicleTypeToConfigName(TrainInterregio), true);
+    cg.writeEntry(vehicleTypeToConfigName(TrainIntercityEurocity), true);
+    cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress), true);
+    cg.writeEntry(vehicleTypeToConfigName(Ferry), true);
+    cg.writeEntry(vehicleTypeToConfigName(Plane), true);
+    
+    cg.writeEntry("filterTypeTarget", 0);
+    cg.writeEntry("filterTargetList", QStringList());
+    
+    cg.writeEntry("filterTypeLineNumber", 0);
+    cg.writeEntry("filterLineNumberList", QStringList());
+}
+
+bool PublicTransportSettings::writeFilterConfig( KConfigGroup cg,
+						 bool mainConfig ) {
+    kDebug() << "Write filter config to" << cg.name();
+
+    if ( m_configDialog ) {
+	QListWidget *selTypes = m_uiFilter.filterLineType->selectedListWidget();
+	bool showUnknown = !selTypes->findItems( i18n("Unknown"), Qt::MatchExactly ).isEmpty();
+	bool showTrams = !selTypes->findItems( i18n("Trams"), Qt::MatchExactly ).isEmpty();
+	bool showBuses = !selTypes->findItems( i18n("Buses"), Qt::MatchExactly ).isEmpty();
+	bool showSubways = !selTypes->findItems( i18n("Subways"), Qt::MatchExactly ).isEmpty();
+	bool showMetros = !selTypes->findItems( i18n("Metros"), Qt::MatchExactly ).isEmpty();
+	bool showTrolleyBuses = !selTypes->findItems( i18n("Trolley buses"), Qt::MatchExactly ).isEmpty();
+	bool showInterurbanTrains = !selTypes->findItems( i18n("Interurban trains"), Qt::MatchExactly ).isEmpty();
+	bool showRegionalTrains = !selTypes->findItems( i18n("Regional trains"), Qt::MatchExactly ).isEmpty();
+	bool showRegionalExpressTrains = !selTypes->findItems( i18n("Regional express trains"), Qt::MatchExactly ).isEmpty();
+	bool showInterregioTrains = !selTypes->findItems( i18n("Interregio trains"), Qt::MatchExactly ).isEmpty();
+	bool showIntercityEurocityTrains = !selTypes->findItems( i18n("Intercity / Eurocity trains"), Qt::MatchExactly ).isEmpty();
+	bool showIntercityExpressTrains = !selTypes->findItems( i18n("Intercity express trains"), Qt::MatchExactly ).isEmpty();
+	bool showFerries = !selTypes->findItems( i18n("Ferries"), Qt::MatchExactly ).isEmpty();
+	bool showPlanes = !selTypes->findItems( i18n("Planes"), Qt::MatchExactly ).isEmpty();
+
+	if ( mainConfig ) {
+	    bool changed = false;
+
+	    if (m_showTypeOfVehicle[Unknown] != showUnknown) {
+		m_showTypeOfVehicle[Unknown] = showUnknown;
+		cg.writeEntry(vehicleTypeToConfigName(Unknown), showUnknown);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[Tram] != showTrams) {
+		m_showTypeOfVehicle[Tram] = showTrams;
+		cg.writeEntry(vehicleTypeToConfigName(Tram), showTrams);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[Bus] != showBuses) {
+		m_showTypeOfVehicle[Bus] = showBuses;
+		cg.writeEntry(vehicleTypeToConfigName(Bus), showBuses);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[Subway] != showSubways) {
+		m_showTypeOfVehicle[Subway] = showSubways;
+		cg.writeEntry(vehicleTypeToConfigName(Subway), showSubways);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[Metro] != showMetros) {
+		m_showTypeOfVehicle[Metro] = showMetros;
+		cg.writeEntry(vehicleTypeToConfigName(Metro), showMetros);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[TrolleyBus] != showTrolleyBuses) {
+		m_showTypeOfVehicle[TrolleyBus] = showTrolleyBuses;
+		cg.writeEntry(vehicleTypeToConfigName(TrolleyBus), showTrolleyBuses);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[TrainInterurban] != showInterurbanTrains) {
+		m_showTypeOfVehicle[TrainInterurban] = showInterurbanTrains;
+		cg.writeEntry(vehicleTypeToConfigName(TrainInterurban), showInterurbanTrains);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[TrainRegional] != showRegionalTrains) {
+		m_showTypeOfVehicle[TrainRegional] = showRegionalTrains;
+		cg.writeEntry(vehicleTypeToConfigName(TrainRegional), showRegionalTrains);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[TrainRegionalExpress] != showRegionalExpressTrains) {
+		m_showTypeOfVehicle[TrainRegionalExpress] = showRegionalExpressTrains;
+		cg.writeEntry(vehicleTypeToConfigName(TrainRegionalExpress), showRegionalExpressTrains);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[TrainInterregio] != showInterregioTrains) {
+		m_showTypeOfVehicle[TrainInterregio] = showInterregioTrains;
+		cg.writeEntry(vehicleTypeToConfigName(TrainInterregio), showInterregioTrains);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[TrainIntercityEurocity] != showIntercityEurocityTrains) {
+		m_showTypeOfVehicle[TrainIntercityEurocity] = showIntercityEurocityTrains;
+		cg.writeEntry(vehicleTypeToConfigName(TrainIntercityEurocity), showIntercityEurocityTrains);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[TrainIntercityExpress] != showIntercityExpressTrains) {
+		m_showTypeOfVehicle[TrainIntercityExpress] = showIntercityExpressTrains;
+		cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress), showIntercityExpressTrains);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[Ferry] != showFerries) {
+		m_showTypeOfVehicle[Ferry] = showFerries;
+		cg.writeEntry(vehicleTypeToConfigName(Ferry), showFerries);
+		changed = true;
+	    }
+
+	    if (m_showTypeOfVehicle[Plane] != showPlanes) {
+		m_showTypeOfVehicle[Plane] = showPlanes;
+		cg.writeEntry(vehicleTypeToConfigName(Plane), showPlanes);
+		changed = true;
+	    }
+
+
+	    if (m_filterTypeTarget  != (m_uiFilter.filterTypeTarget->currentIndex())) {
+		m_filterTypeTarget = static_cast<FilterType>(m_uiFilter.filterTypeTarget->currentIndex());
+		cg.writeEntry("filterTypeTarget", static_cast<int>(m_filterTypeTarget));
+		changed = true;
+	    }
+
+	    if (m_filterTargetList  != m_uiFilter.filterTargetList->items()) {
+		m_filterTargetList = m_uiFilter.filterTargetList->items();
+		m_filterTargetList.removeDuplicates();
+		cg.writeEntry("filterTargetList", m_filterTargetList);
+		changed = true;
+	    }
+
+	    if (m_filterTypeLineNumber != (m_uiFilter.filterTypeLineNumber->currentIndex())) {
+		m_filterTypeLineNumber = static_cast<FilterType>(m_uiFilter.filterTypeLineNumber->currentIndex());
+		cg.writeEntry("filterTypeLineNumber", static_cast<int>(m_filterTypeLineNumber));
+		changed = true;
+	    }
+
+	    if (m_filterLineNumberList != m_uiFilter.filterLineNumberList->items()) {
+		m_filterLineNumberList = m_uiFilter.filterLineNumberList->items();
+		m_filterLineNumberList.removeDuplicates();
+		cg.writeEntry("filterLineNumberList", m_filterLineNumberList);
+		changed = true;
+	    }
+
+	    return changed;
+	} else {
+	    cg.writeEntry(vehicleTypeToConfigName(Unknown), showUnknown);
+	    cg.writeEntry(vehicleTypeToConfigName(Tram), showTrams);
+	    cg.writeEntry(vehicleTypeToConfigName(Bus), showBuses);
+	    cg.writeEntry(vehicleTypeToConfigName(Subway), showSubways);
+	    cg.writeEntry(vehicleTypeToConfigName(Metro), showMetros);
+	    cg.writeEntry(vehicleTypeToConfigName(TrolleyBus), showTrolleyBuses);
+	    cg.writeEntry(vehicleTypeToConfigName(TrainInterurban), showInterurbanTrains);
+	    cg.writeEntry(vehicleTypeToConfigName(TrainRegional), showRegionalTrains);
+	    cg.writeEntry(vehicleTypeToConfigName(TrainRegionalExpress), showRegionalExpressTrains);
+	    cg.writeEntry(vehicleTypeToConfigName(TrainInterregio), showInterregioTrains);
+	    cg.writeEntry(vehicleTypeToConfigName(TrainIntercityEurocity), showIntercityEurocityTrains);
+	    cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress), showIntercityExpressTrains);
+	    cg.writeEntry(vehicleTypeToConfigName(Ferry), showFerries);
+	    cg.writeEntry(vehicleTypeToConfigName(Plane), showPlanes);
+
+	    cg.writeEntry("filterTypeTarget", m_uiFilter.filterTypeTarget->currentIndex());
+	    cg.writeEntry("filterTargetList", m_uiFilter.filterTargetList->items());
+
+	    cg.writeEntry("filterTypeLineNumber", m_uiFilter.filterTypeLineNumber->currentIndex());
+	    cg.writeEntry("filterLineNumberList", m_uiFilter.filterLineNumberList->items());
+
+	    return true;
+	}
+    } else { // Config dialog not shown
+	cg.writeEntry(vehicleTypeToConfigName(Unknown), m_showTypeOfVehicle[Unknown]);
+	cg.writeEntry(vehicleTypeToConfigName(Tram), m_showTypeOfVehicle[Tram]);
+	cg.writeEntry(vehicleTypeToConfigName(Bus), m_showTypeOfVehicle[Bus]);
+	cg.writeEntry(vehicleTypeToConfigName(Subway), m_showTypeOfVehicle[Subway]);
+	cg.writeEntry(vehicleTypeToConfigName(Metro), m_showTypeOfVehicle[Metro]);
+	cg.writeEntry(vehicleTypeToConfigName(TrolleyBus),
+		      m_showTypeOfVehicle[TrolleyBus]);
+	cg.writeEntry(vehicleTypeToConfigName(TrainInterurban),
+		      m_showTypeOfVehicle[TrainInterurban]);
+	cg.writeEntry(vehicleTypeToConfigName(TrainRegional),
+		      m_showTypeOfVehicle[TrainRegional]);
+	cg.writeEntry(vehicleTypeToConfigName(TrainRegionalExpress),
+		      m_showTypeOfVehicle[TrainRegionalExpress]);
+	cg.writeEntry(vehicleTypeToConfigName(TrainInterregio),
+		      m_showTypeOfVehicle[TrainInterregio]);
+	cg.writeEntry(vehicleTypeToConfigName(TrainIntercityEurocity),
+		      m_showTypeOfVehicle[TrainIntercityEurocity]);
+	cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress),
+		      m_showTypeOfVehicle[TrainIntercityExpress]);
+	cg.writeEntry(vehicleTypeToConfigName(Ferry), m_showTypeOfVehicle[Ferry]);
+	cg.writeEntry(vehicleTypeToConfigName(Plane), m_showTypeOfVehicle[Plane]);
+	
+	cg.writeEntry("filterTypeTarget", static_cast<int>(m_filterTypeTarget));
+	cg.writeEntry("filterTargetList", m_filterTargetList);
+	
+	cg.writeEntry("filterTypeLineNumber", static_cast<int>(m_filterTypeLineNumber));
+	cg.writeEntry("filterLineNumberList", m_filterLineNumberList);
+
+	emit settingsChanged();
+	return true;
+    }
 }
 
 QString PublicTransportSettings::vehicleTypeToConfigName ( const VehicleType& vehicleType ) {
@@ -1424,13 +2011,13 @@ QString PublicTransportSettings::vehicleTypeToConfigName ( const VehicleType& ve
     }
 }
 
-void PublicTransportSettings::hideTypeOfVehicle ( VehicleType vehicleType ) {
-        m_showTypeOfVehicle[vehicleType] = false;
+void PublicTransportSettings::hideTypeOfVehicle( VehicleType vehicleType ) {
+    m_showTypeOfVehicle[vehicleType] = false;
 
-        KConfigGroup cg = m_applet->config();
-        cg.writeEntry ( vehicleTypeToConfigName(vehicleType), false );
+    KConfigGroup cg = m_applet->config();
+    cg.writeEntry ( vehicleTypeToConfigName(vehicleType), false );
 
-        emit configNeedsSaving();
-        emit modelNeedsUpdate();
+    emit configNeedsSaving();
+    emit modelNeedsUpdate();
 }
 

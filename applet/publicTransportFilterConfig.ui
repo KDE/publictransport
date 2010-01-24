@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>474</width>
+    <width>480</width>
     <height>420</height>
    </rect>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="6" column="0">
+   <item row="4" column="0" rowspan="3" colspan="6">
     <widget class="KTabWidget" name="ktabwidget">
      <property name="minimumSize">
       <size>
@@ -150,6 +150,59 @@
        </item>
       </layout>
      </widget>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QLabel" name="lblFilterConfigurations">
+     <property name="text">
+      <string>Filter Configuration:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="1">
+    <widget class="KComboBox" name="filterConfigurations"/>
+   </item>
+   <item row="7" column="3">
+    <widget class="QToolButton" name="removeFilterConfiguration">
+     <property name="toolTip">
+      <string>Delete the selected filter configuration</string>
+     </property>
+     <property name="text">
+      <string>...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="5">
+    <widget class="QToolButton" name="saveFilterConfiguration">
+     <property name="toolTip">
+      <string>Save the current filters to the selected filter configuration</string>
+     </property>
+     <property name="text">
+      <string>...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="4">
+    <widget class="QToolButton" name="renameFilterConfiguration">
+     <property name="toolTip">
+      <string>Rename the selected filter configuration</string>
+     </property>
+     <property name="text">
+      <string>...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="2">
+    <widget class="QToolButton" name="addFilterConfiguration">
+     <property name="toolTip">
+      <string>Add a new filter configuration</string>
+     </property>
+     <property name="text">
+      <string>...</string>
+     </property>
     </widget>
    </item>
   </layout>

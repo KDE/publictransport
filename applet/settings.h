@@ -53,7 +53,7 @@ class PublicTransportSettings : public QObject {
 	bool checkConfig();
 
 	/** Creates the configuration dialog contents. */
-	void createConfigurationInterface(KConfigDialog *parent, bool stopNameValid);
+	void createConfigurationInterface( KConfigDialog *parent, bool stopNameValid );
 
 	/** Sets the status and tooltip of the KLed in the config dialog. */
 	void setStopNameValid( bool valid, const QString &toolTip = "" );
@@ -144,6 +144,16 @@ class PublicTransportSettings : public QObject {
 		? Plasma::Theme::defaultTheme()->font(Plasma::Theme::DefaultFont) : m_font; };
 	bool displayTimeBold() const { return m_displayTimeBold; };
 
+	QStringList filterConfigurationListLocalized() const {
+	    QStringList ret;
+	    foreach ( QString filterConfig, m_filterConfigurationList )
+		ret << translateKey( filterConfig );
+	    return ret; };
+	QString filterConfiguration() const { return m_filterConfiguration; };
+	QString filterConfigurationLocalized() const { return translateKey( m_filterConfiguration ); };
+	
+	bool isCurrentFilterConfigChanged();
+	
 	void selectLocaleLocation();
 
 	/** Gets the config name used to store whether or not the given type of vehicle should be shown. */
@@ -196,9 +206,45 @@ class PublicTransportSettings : public QObject {
 	int updateServiceProviderModel( const QString &itemText = QString() );
 	void locationChanged( const QString &newLocation );
         void downloadServiceProvidersClicked ( bool );
-        void installServiceProviderClicked ( bool );
+	void installServiceProviderClicked ( bool );
+
+	void filterTypeTargetChanged( int );
+	void filterTargetListChanged();
+	void filterTypeLineNumberChanged( int );
+	void filterLineNumberListChanged();
+	     
+	void loadFilterConfiguration( const QString &filterConfig );
+	void saveFilterConfiguration();
+	void addFilterConfiguration();
+	void removeFilterConfiguration();
+	void renameFilterConfiguration();
+	void setFilterConfigurationChanged( bool changed = true );
+	
+	void exportFilterSettings();
+	void importFilterSettings();
 
     private:
+        void setValuesOfAdvancedConfig();
+        void setValuesOfFilterConfig();
+        void setValuesOfStopSelectionConfig();
+        void setValuesOfAppearanceConfig();
+
+	void writeDefaultFilterConfig( KConfigGroup config );
+	bool writeFilterConfig( KConfigGroup config, bool mainConfig = true );
+	bool readFilterConfig( const KConfigGroup &config );
+	
+	QString translateKey( const QString &key ) const;
+	QString untranslateKey( const QString &translatedKey ) const;
+
+	QString showStringInputBox( const QString &label = QString(),
+				    const QString &initialText = QString(),
+				    const QString &clickMessage = QString(),
+				    const QString &title = QString(),
+				    QValidator *validator = NULL );
+	int filterConfigurationIndex( const QString &filterConfig );
+	bool isCurrentFilterConfigChangedFrom( const KConfigGroup &config );
+				    
+	
 	PublicTransport *m_applet;
 	DataSourceTester *m_dataSourceTester; // Tests data sources
 
@@ -230,6 +276,9 @@ class PublicTransportSettings : public QObject {
 	FirstDepartureConfigMode m_firstDepartureConfigMode; // The config mode for the time of the first departure
 	int m_maximalNumberOfDepartures; // The maximal number of displayed departures
 	int m_alarmTime; // The time in minutes before the departure at which the alarm should be fired
+	QString m_filterConfiguration; // The last set filter configuration
+	QStringList m_filterConfigurationList; // A list of defined filter configurations
+	bool m_filterConfigChanged; // Whether or not the filter configuration has changed from that defined in the filter configuration with the name [m_filterConfiguration]
 	QHash< VehicleType, bool > m_showTypeOfVehicle; // Whether or not a type of vehicle should be shown
 	bool m_showNightlines; // Whether or not night lines should be shown
 	int m_filterMinLine; // The minimal line number to be shown
@@ -248,10 +297,6 @@ class PublicTransportSettings : public QObject {
 
 	bool m_useSeperateCityValue; // Whether or not the current service provider uses a seperate city value
 	bool m_onlyUseCitiesInList; // Whether or not the city name input is restricted to the given list of city names
-        void setValuesOfAdvancedConfig();
-        void setValuesOfFilterConfig();
-        void setValuesOfStopSelectionConfig();
-        void setValuesOfAppearanceConfig();
 };
 
 #endif // SETTINGS_HEADER

@@ -344,7 +344,9 @@ class PublicTransport : public Plasma::PopupApplet {
 	
 	/** The action to show all departures/arrivals has been triggered (remove all filters). */
 	void showEverything( bool );
-	
+
+//	/** One of the actions of the switch filter configuration action has been triggered. */
+// 	void switchFilterConfiguration( const QString &newFilterConfig );
 	/** The action to add the target of the selected departure/arrival to the filter list has been triggered. */
 	void addTargetToFilterList( bool );
 	/** The action to remove the target of the selected departure/arrival from the filter list has been triggered. */

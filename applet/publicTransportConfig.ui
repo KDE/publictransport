@@ -215,7 +215,7 @@ p, li { white-space: pre-wrap; }
    <item row="5" column="1" colspan="4">
     <widget class="QComboBox" name="location">
      <property name="whatsThis">
-      <string>The location the stop / station / airport is at.</string>
+      <string>The country the stop / station / airport is in.</string>
      </property>
     </widget>
    </item>

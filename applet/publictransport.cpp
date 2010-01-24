@@ -52,6 +52,7 @@
 #include "publictransport.h"
 #include "htmldelegate.h"
 #include <KColorScheme>
+#include <KSelectAction>
 
 
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
@@ -142,7 +143,8 @@ void PublicTransport::init() {
 
     connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
-    connect( Plasma::Theme::defaultTheme(), SIGNAL(themeChanged()), this, SLOT(themeChanged()) );
+    connect( Plasma::Theme::defaultTheme(), SIGNAL(themeChanged()),
+	     this, SLOT(themeChanged()) );
     emit settingsChanged();
 
     setupActions();
@@ -154,14 +156,20 @@ void PublicTransport::setupActions() {
     connect( actionUpdate, SIGNAL(triggered(bool)), this, SLOT(updateDataSource(bool)) );
     addAction( "updateTimetable", actionUpdate );
 
-    QAction *actionSetAlarmForDeparture = new QAction( Global::makeOverlayIcon(KIcon("kalarm"), "list-add"), m_settings.departureArrivalListType() == DepartureList
-	    ? i18n("Set &Alarm for This Departure") : i18n("Set &Alarm for This Arrival"), this );
+    QAction *actionSetAlarmForDeparture = new QAction(
+	    Global::makeOverlayIcon(KIcon("kalarm"), "list-add"),
+	    m_settings.departureArrivalListType() == DepartureList
+	    ? i18n("Set &Alarm for This Departure")
+	    : i18n("Set &Alarm for This Arrival"), this );
     connect( actionSetAlarmForDeparture, SIGNAL(triggered(bool)),
 	     this, SLOT(setAlarmForDeparture(bool)) );
     addAction( "setAlarmForDeparture", actionSetAlarmForDeparture );
 
-    QAction *actionRemoveAlarmForDeparture = new QAction( Global::makeOverlayIcon(KIcon("kalarm"), "list-remove"), m_settings.departureArrivalListType() == DepartureList
-	    ? i18n("Remove &Alarm for This Departure") : i18n("Remove &Alarm for This Arrival"), this );
+    QAction *actionRemoveAlarmForDeparture = new QAction(
+	    Global::makeOverlayIcon(KIcon("kalarm"), "list-remove"),
+	    m_settings.departureArrivalListType() == DepartureList
+	    ? i18n("Remove &Alarm for This Departure")
+	    : i18n("Remove &Alarm for This Arrival"), this );
     connect( actionRemoveAlarmForDeparture, SIGNAL(triggered(bool)),
 	     this, SLOT(removeAlarmForDeparture(bool)) );
     addAction( "removeAlarmForDeparture", actionRemoveAlarmForDeparture );
@@ -172,27 +180,49 @@ void PublicTransport::setupActions() {
 	     this, SLOT(showJourneySearch(bool)) );
     addAction( "searchJourneys", actionSearchJourneys );
 
+    KSelectAction *actionSwitchFilterConfiguration = new KSelectAction(
+	    Global::makeOverlayIcon(KIcon("folder"), "view-filter"),
+	    i18n("Switch filter Configuration"), this );
+    connect( actionSwitchFilterConfiguration, SIGNAL(triggered(QString)),
+	     &m_settings, SLOT(loadFilterConfiguration(QString)) ); //SLOT(switchFilterConfiguration(QString)) );
+    addAction( "switchFilterConfiguration", actionSwitchFilterConfiguration );
 
-    QAction *actionAddTargetToFilterList = new QAction( Global::makeOverlayIcon(KIcon("view-filter"), "list-add"), m_settings.departureArrivalListType() == DepartureList ? i18n("&Hide target") : i18n("&Hide origin"), this );
-    connect( actionAddTargetToFilterList, SIGNAL(triggered(bool)), this, SLOT(addTargetToFilterList(bool)) );
+    QAction *actionAddTargetToFilterList = new QAction(
+	    Global::makeOverlayIcon(KIcon("view-filter"), "list-add"),
+	    m_settings.departureArrivalListType() == DepartureList
+	    ? i18n("&Hide target") : i18n("&Hide origin"), this );
+    connect( actionAddTargetToFilterList, SIGNAL(triggered(bool)),
+	     this, SLOT(addTargetToFilterList(bool)) );
     addAction( "addTargetToFilterList", actionAddTargetToFilterList );
 
-    QAction *actionRemoveTargetFromFilterList = new QAction( Global::makeOverlayIcon(KIcon("view-filter"), "list-remove"), m_settings.departureArrivalListType() == DepartureList ? i18n("Remove target from the &filter list") : i18n("Remove origin from the &filter list"), this );
-    connect( actionRemoveTargetFromFilterList, SIGNAL(triggered(bool)), this, SLOT(removeTargetFromFilterList(bool)) );
+    QAction *actionRemoveTargetFromFilterList = new QAction(
+	    Global::makeOverlayIcon(KIcon("view-filter"), "list-remove"),
+	    m_settings.departureArrivalListType() == DepartureList
+	    ? i18n("Remove target from the &filter list")
+	    : i18n("Remove origin from the &filter list"), this );
+    connect( actionRemoveTargetFromFilterList, SIGNAL(triggered(bool)),
+	     this, SLOT(removeTargetFromFilterList(bool)) );
     addAction( "removeTargetFromFilterList", actionRemoveTargetFromFilterList );
 
-    QAction *actionAddTargetToFilterListAndHide = new QAction( Global::makeOverlayIcon(KIcon("view-filter"), "list-add"), m_settings.departureArrivalListType() == DepartureList ? i18n("&Hide target") : i18n("&Hide origin"), this );
-    connect( actionAddTargetToFilterListAndHide, SIGNAL(triggered(bool)), this, SLOT(addTargetToFilterListAndHide(bool)) );
+    QAction *actionAddTargetToFilterListAndHide = new QAction(
+	    Global::makeOverlayIcon(KIcon("view-filter"), "list-add"),
+	    m_settings.departureArrivalListType() == DepartureList
+	    ? i18n("&Hide target") : i18n("&Hide origin"), this );
+    connect( actionAddTargetToFilterListAndHide, SIGNAL(triggered(bool)),
+	     this, SLOT(addTargetToFilterListAndHide(bool)) );
     addAction( "addTargetToFilterListAndHide", actionAddTargetToFilterListAndHide );
 
-    QAction *actionSetFilterListToHideMatching = new QAction( KIcon("view-filter"), m_settings.departureArrivalListType() == DepartureList ? i18n("&Hide target") : i18n("&Hide origin"), this );
-    connect( actionSetFilterListToHideMatching, SIGNAL(triggered(bool)), this, SLOT(setTargetFilterToHideMatching(bool)) );
+    QAction *actionSetFilterListToHideMatching = new QAction( KIcon("view-filter"),
+	    m_settings.departureArrivalListType() == DepartureList
+	    ? i18n("&Hide target") : i18n("&Hide origin"), this );
+    connect( actionSetFilterListToHideMatching, SIGNAL(triggered(bool)),
+	     this, SLOT(setTargetFilterToHideMatching(bool)) );
     addAction( "setFilterListToHideMatching", actionSetFilterListToHideMatching );
 
     QAction *actionSetFilterListToShowAll = new QAction(
-	Global::makeOverlayIcon(KIcon("view-filter"), "edit-delete"),
-	m_settings.departureArrivalListType() == DepartureList ?
-	  i18n("Show all &targets") : i18n("&Show all origins"), this );
+	    Global::makeOverlayIcon(KIcon("view-filter"), "edit-delete"),
+	    m_settings.departureArrivalListType() == DepartureList
+	    ? i18n("Show all &targets") : i18n("&Show all origins"), this );
     connect( actionSetFilterListToShowAll, SIGNAL(triggered(bool)),
 	     this, SLOT(setTargetFilterToShowAll(bool)) );
     addAction( "setFilterListToShowAll", actionSetFilterListToShowAll );
@@ -324,8 +354,8 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 //     } else {
 // 	m_currentJourneySource += QString("|time=%1")
 // 		.arg( m_settings.timeOfFirstDepartureCustom().toString("hh:mm") );
-    
 //     }
+    
     if ( m_settings.useSeperateCityValue() )
 	m_currentJourneySource += QString("|city=%1").arg( m_settings.city() );
     /*
@@ -352,7 +382,11 @@ void PublicTransport::reconnectSource() {
 	dataEngine("publictransport")->disconnectSource(m_currentSource, this);
     }
 
-    m_currentSource = QString("%4 %1|stop=%2|maxDeps=%3").arg( m_settings.serviceProvider() ).arg( stop() ).arg( m_settings.maximalNumberOfDepartures() ).arg( m_settings.departureArrivalListType() == ArrivalList ? "Arrivals" : "Departures" );
+    m_currentSource = QString("%4 %1|stop=%2|maxDeps=%3")
+	    .arg( m_settings.serviceProvider() )
+	    .arg( stop() ).arg( m_settings.maximalNumberOfDepartures() )
+	    .arg( m_settings.departureArrivalListType() == ArrivalList
+		  ? "Arrivals" : "Departures" );
     if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime )
 	m_currentSource += QString("|timeOffset=%1").arg( m_settings.timeOffsetOfFirstDeparture() );
     else
@@ -2306,6 +2340,7 @@ void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
 		    actions.append( subMenuAction );
 		}
 	    }
+	    
 	    if ( !restoreFilterList.isEmpty() ) {
 		if ( addSeperator )
 		    actions.append( updatedAction("seperator") );
@@ -2324,6 +2359,26 @@ void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
 		  subMenuAction->setMenu( subMenu );
 		  actions.append( subMenuAction );
 		}
+	    }
+
+	    QStringList filterConfigurationList = m_settings.filterConfigurationListLocalized();
+	    if ( !filterConfigurationList.isEmpty() ) {
+		KSelectAction *actionSwitch = dynamic_cast< KSelectAction* >(
+			action("switchFilterConfiguration") );
+
+		actionSwitch->clear();
+		foreach ( QString filterConfig, filterConfigurationList ) {
+		    actionSwitch->addAction( filterConfig );
+		    if ( filterConfig == m_settings.filterConfigurationLocalized() ) {
+			QAction *actionFilterConfig =
+				actionSwitch->selectableActionGroup()->actions().last();
+			actionFilterConfig->setChecked( true );
+			
+			if ( m_settings.isCurrentFilterConfigChanged() )
+			    actionFilterConfig->setText( actionFilterConfig->text() + "*" );
+		    }
+		}
+		actions.append( actionSwitch );
 	    }
 	}
 
@@ -2356,12 +2411,32 @@ void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
 		restoreFilterList.insert( 1, updatedAction("seperator") );
 		
 		QAction *subMenuAction = new QAction(
-		Global::makeOverlayIcon(KIcon("view-filter"), "list-remove"),
-					      i18n("&Remove filters"), this );
-					      QMenu *subMenu = new QMenu;
-					      subMenu->addActions( restoreFilterList );
-					      subMenuAction->setMenu( subMenu );
-					      actions.append( subMenuAction );
+			Global::makeOverlayIcon(KIcon("view-filter"), "list-remove"),
+			i18n("&Remove filters"), this );
+		QMenu *subMenu = new QMenu;
+		subMenu->addActions( restoreFilterList );
+		subMenuAction->setMenu( subMenu );
+		actions.append( subMenuAction );
+	    }
+	    
+	    QStringList filterConfigurationList = m_settings.filterConfigurationListLocalized();
+	    if ( !filterConfigurationList.isEmpty() ) {
+		KSelectAction *actionSwitch = dynamic_cast< KSelectAction* >(
+		action("switchFilterConfiguration") );
+		
+		actionSwitch->clear();
+		foreach ( QString filterConfig, filterConfigurationList ) {
+		    actionSwitch->addAction( filterConfig );
+		    if ( filterConfig == m_settings.filterConfigurationLocalized() ) {
+			QAction *actionFilterConfig =
+				actionSwitch->selectableActionGroup()->actions().last();
+			actionFilterConfig->setChecked( true );
+			
+			if ( m_settings.isCurrentFilterConfigChanged() )
+			    actionFilterConfig->setText( actionFilterConfig->text() + "*" );
+		    }
+		}
+		actions.append( actionSwitch );
 	    }
 	}
 	if ( !treeView->header()->isVisible() )
