@@ -28,6 +28,7 @@
 // Plasma includes
 #include <Plasma/PopupApplet>
 #include <Plasma/Label>
+#include <Plasma/ToolButton>
 #include <Plasma/LineEdit>
 #include <Plasma/TreeView>
 #include <Plasma/IconWidget>
@@ -56,8 +57,11 @@ class PublicTransport : public Plasma::PopupApplet {
     public:
         /** Basic create. */
 	PublicTransport( QObject *parent, const QVariantList &args );
-	/** Basic destroy. */
+	
+	/** Destructor. Saves the list of recently used journey searches. */
         ~PublicTransport();
+
+	static const int MAX_RECENT_JOURNEY_SEARCHES = 10;
 
 	/** Initializes the applet. */
 	void init();
@@ -246,14 +250,21 @@ class PublicTransport : public Plasma::PopupApplet {
 	void removeOldJourneys();
 
 	/** Sets the values of a QStandardItem in the tree view (text, icon, data, ...). */
-	void setValuesOfDepartureItem( QStandardItem *departureItem, DepartureInfo departureInfo, ItemInformation departureInformation, bool update = false );
+	void setValuesOfDepartureItem( QStandardItem *departureItem,
+				       DepartureInfo departureInfo,
+				       ItemInformation departureInformation,
+				       bool update = false );
 
 	/** Sets the values of a QStandardItem in the tree view (text, icon, data, ...)
 	* to be displayed as journey item. */
-	void setValuesOfJourneyItem( QStandardItem *departureItem, JourneyInfo journeyInfo, ItemInformation journeyInformation, bool update = false );
+	void setValuesOfJourneyItem( QStandardItem *departureItem,
+				     JourneyInfo journeyInfo,
+				     ItemInformation journeyInformation,
+				     bool update = false );
 
 	/** Sets an alarm for the given departure / arrival. */
-	void setAlarmForDeparture( const QPersistentModelIndex &modelIndex, AlarmTimer *alarmTimer = NULL );
+	void setAlarmForDeparture( const QPersistentModelIndex &modelIndex,
+				   AlarmTimer *alarmTimer = NULL );
 
 	/** Marks a row in the tree view as having an alarm or not. */
 	void markAlarmRow( const QPersistentModelIndex &index, AlarmState alarmState );
@@ -279,7 +290,9 @@ class PublicTransport : public Plasma::PopupApplet {
 	virtual void unsetStates( QList<AppletState> states );
 
 	/** Gets the name of a column, to be displayed in the column's header. */
-	QString nameForTimetableColumn( TimetableColumn timetableColumn, DepartureArrivalListType departureArrivalListType = _UseCurrentDepartureArrivalListType );
+	QString nameForTimetableColumn( TimetableColumn timetableColumn,
+					DepartureArrivalListType departureArrivalListType
+					= _UseCurrentDepartureArrivalListType );
 
     signals:
 	/** Emitted when the settings have changed. */
@@ -345,8 +358,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** The action to show all departures/arrivals has been triggered (remove all filters). */
 	void showEverything( bool );
 
-//	/** One of the actions of the switch filter configuration action has been triggered. */
-// 	void switchFilterConfiguration( const QString &newFilterConfig );
 	/** The action to add the target of the selected departure/arrival to the filter list has been triggered. */
 	void addTargetToFilterList( bool );
 	/** The action to remove the target of the selected departure/arrival from the filter list has been triggered. */
@@ -387,13 +398,17 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** The plasma theme has been changed. */
 	void themeChanged() { useCurrentPlasmaTheme(); };
 	
+	void setJourneySearchStopNameCompletion( const QString &match );
+	void setJourneySearchWordCompletion( const QString &match );
+	void recentJourneyActionTriggered( QAction *action );
+	
     private:
 	bool parseJourneySearch( const QString &search, QString *stop,
 				 QDateTime *departure, bool *stopIsTarget,
 				 bool *timeIsDeparture,
 				 int *posStart = NULL, int *len = NULL,
-				 bool correctString = true ) const;
-	void stopNamePosition( int *posStart, int *len ) const;
+				 bool correctString = true );
+	void stopNamePosition( int *posStart, int *len, QString *stop = NULL );
 	bool parseTime( const QString &sTime, QTime *time ) const;
 	bool parseDate( const QString &sDate, QDate *date ) const;
 				 
@@ -406,10 +421,15 @@ class PublicTransport : public Plasma::PopupApplet {
 	Plasma::Label *m_label; /**< A label used to display a title */
 	Plasma::Label *m_labelInfo; /**< A label used to display additional information */
 	Plasma::TreeView *m_treeView; /**< A treeview displaying the departure board */
-	Plasma::LineEdit *m_journeySearch; /**< A line edit for inputting the target of a journey */
-	int m_journeySearchLastTextLength; /**< The last number of unselected characters in the journey search input field. */
-	Plasma::TreeView *m_listPossibleStops; /**< A list of possible stops for the current input */
 	Plasma::Label *m_labelJourneysNotSupported; /**< A label used to display an info about unsupported journey search */
+	Plasma::LineEdit *m_journeySearch; /**< A line edit for inputting the target of a journey */
+	Plasma::TreeView *m_listStopsSuggestions; /**< A list of stop suggestions for the current input */
+	Plasma::ToolButton *m_btnLastJourneySearches; /**< A tool button that shows last used journey searches. */
+
+	QStringList m_recentJourneySearches; /** A list of last used journey searches. */
+	int m_journeySearchLastTextLength; /**< The last number of unselected characters in the journey search input field. */
+	bool m_lettersAddedToJourneySearchLine; /**< Whether or not the last edit of the journey search line added letters o(r not. Used for auto completion. */
+
 	QStandardItemModel *m_model; /**< The model for the tree view containing the departure / arrival board */
 	QStandardItemModel *m_modelJourneys; /**< The model for journeys from or to the "home stop" */
 	QList<DepartureInfo> m_departureInfos; /**< List of current departures / arrivals */
