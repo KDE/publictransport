@@ -54,8 +54,8 @@ PublicTransportSettings::PublicTransportSettings( PublicTransport *applet )
 
     m_dataSourceTester = new DataSourceTester( "", m_applet );
     connect( m_dataSourceTester,
-	     SIGNAL(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&)),
-	     this, SLOT(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&)) );
+	     SIGNAL(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)),
+	     this, SLOT(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)) );
 }
 
 void PublicTransportSettings::dataUpdated( const QString& sourceName,
@@ -313,13 +313,17 @@ void PublicTransportSettings::removeAllFiltersByVehicleType() {
 
 // TODO: Plasma::DataEngine::Data instead of QVariant?
 void PublicTransportSettings::testResult( DataSourceTester::TestResult result,
-					  const QVariant &data, const QVariant &data2 ) {
+					  const QVariant &data, const QVariant &data2,
+					  const QVariant &data3 ) {
     //     qDebug() << "PublicTransport::testResult";
     if ( !m_applet->testState(ConfigDialogShown) )
 	return;
 
-    QStringList stops;
+    bool hasAtLeastOneWeight = false;
+    int stopWeight;
+    QStringList stops, weightedStops;
     QHash< QString, QVariant > stopToStopID;
+    QHash< QString, QVariant > stopToStopWeight;
     switch ( result ) {
 	case DataSourceTester::Error:
 	    setStopNameValid( false, data.toString() );
@@ -327,15 +331,39 @@ void PublicTransportSettings::testResult( DataSourceTester::TestResult result,
 
 	case DataSourceTester::JourneyListReceived:
 	    setStopNameValid( true );
-	    m_ui.stop->setCompletedItems( QStringList() );
 	    break;
 
 	case DataSourceTester::PossibleStopsReceived:
 	    setStopNameValid( false, i18n("The stop name is ambiguous.") );
 	    stops = data.toStringList();
 	    stopToStopID = data2.toHash();
-	    kDebug() << "Set" << stopToStopID.count() << "suggestions.";
-	    m_ui.stop->setCompletedItems( stops );
+	    stopToStopWeight = data3.toHash();
+
+	    foreach ( QString stop, stops ) {
+		stopWeight = stopToStopWeight[ stop ].toInt();
+		if ( stopWeight <= 0 )
+		    stopWeight = 0;
+		else
+		    hasAtLeastOneWeight = true;
+		
+		weightedStops << QString( "%1:%2" ).arg( stop ).arg( stopWeight );
+	    }
+
+	    KCompletion *comp = m_ui.stop->completionObject();
+	    comp->setIgnoreCase( true );
+	    if ( hasAtLeastOneWeight ) {
+		comp->setOrder( KCompletion::Weighted );
+		comp->insertItems( weightedStops );
+// 		m_ui.stop->setCompletedItems( weightedStops );
+	    } else {
+		comp->setOrder( KCompletion::Insertion);
+		comp->insertItems( stops );
+// 		m_ui.stop->setCompletedItems( stops );
+	    }
+	    // Complete manually, because the completions are requested asynchronously
+	    m_ui.stop->doCompletion( m_ui.stop->text() );
+// 	    comp->substringCompletion( m_ui.stop->text() );
+	    
 	    m_stopIDinConfig = stopToStopID.value( m_ui.stop->text(), QString() ).toString();
 	    break;
     }
@@ -569,15 +597,15 @@ void PublicTransportSettings::createConfigurationInterface( KConfigDialog* paren
     QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
     QPalette p = m_ui.location->palette();
     p.setColor( QPalette::Foreground, textColor );
-    m_ui.location->setPalette(p);
-    m_ui.serviceProvider->setPalette(p);
+    m_ui.location->setPalette( p );
+    m_ui.serviceProvider->setPalette( p );
 
     setStopNameValid( stopNameValid, "" );
     setValuesOfStopSelectionConfig();
     setValuesOfAdvancedConfig();
     setValuesOfAppearanceConfig();
     setValuesOfFilterConfig();
-    
+
     m_uiFilter.saveFilterConfiguration->setIcon( KIcon("document-save") );
     m_uiFilter.addFilterConfiguration->setIcon( KIcon("list-add") );
     m_uiFilter.removeFilterConfiguration->setIcon( KIcon("list-remove") );
@@ -592,7 +620,7 @@ void PublicTransportSettings::createConfigurationInterface( KConfigDialog* paren
 	     this, SLOT(serviceProviderChanged(int)) );
     connect( m_ui.city, SIGNAL(currentIndexChanged(QString)),
 	     this, SLOT(cityNameChanged(QString)) );
-    connect( m_ui.stop, SIGNAL(textChanged(QString)),
+    connect( m_ui.stop, SIGNAL(textEdited(QString)),
 	     this, SLOT(stopNameChanged(QString)) );
     connect( m_ui.btnServiceProviderInfo, SIGNAL(clicked(bool)),
 	     this, SLOT(clickedServiceProviderInfo(bool)));
@@ -631,11 +659,15 @@ void PublicTransportSettings::createConfigurationInterface( KConfigDialog* paren
 }
 
 void PublicTransportSettings::setValuesOfStopSelectionConfig() {
-    m_ui.stop->setText(m_stop);
+    m_ui.stop->setText( m_stop );
+    m_ui.stop->setCompletionMode( KGlobalSettings::CompletionPopup );
+    m_ui.stop->setClearButtonShown( true );
+    m_ui.stop->setClickMessage( i18n("Your home stop") );
+    
     m_ui.btnServiceProviderInfo->setIcon( KIcon("help-about") );
     m_ui.btnServiceProviderInfo->setText( "" );
 
-    QMenu *menu = new QMenu(m_configDialog);
+    QMenu *menu = new QMenu( m_configDialog );
     menu->addAction( KIcon("get-hot-new-stuff"), i18n("Get new service providers..."),
 		    this, SLOT(downloadServiceProvidersClicked(bool)) );
     menu->addAction( KIcon("text-xml"), i18n("Install new service provider from local file..."),
@@ -1231,11 +1263,11 @@ void PublicTransportSettings::setValuesOfFilterConfig() {
 	selected->addItem( available->takeItem(0) );
 
     m_uiFilter.filterTypeTarget->setCurrentIndex( static_cast<int>(m_filterTypeTarget) );
-    m_uiFilter.filterTargetList->setItems(m_filterTargetList);
+    m_uiFilter.filterTargetList->setItems( m_filterTargetList );
 
     m_uiFilter.filterTypeLineNumber->setCurrentIndex(
 	    static_cast<int>(m_filterTypeLineNumber) );
-    m_uiFilter.filterLineNumberList->setItems(m_filterLineNumberList);
+    m_uiFilter.filterLineNumberList->setItems( m_filterLineNumberList );
 }
 
 void PublicTransportSettings::setValuesOfAppearanceConfig() {

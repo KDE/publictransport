@@ -58,7 +58,7 @@ void DataSourceTester::dataUpdated ( const QString& sourceName, const Plasma::Da
 
     // Check for errors from the data engine
     if ( data.value("error").toBool() ) {
-	emit testResult( Error, i18n("The stop name is invalid."), QVariant() );
+	emit testResult( Error, i18n("The stop name is invalid."), QVariant(), QVariant() );
 	// setStopNameValid( false, i18n("The stop name is invalid.") );
 	// m_ui.stop->setCompletedItems( QStringList() );
     } else {
@@ -70,7 +70,7 @@ void DataSourceTester::dataUpdated ( const QString& sourceName, const Plasma::Da
 	} else {
 	    // List of journeys received
 	    disconnectTestSource();
-	    emit testResult( JourneyListReceived, QVariant(), QVariant() );
+	    emit testResult( JourneyListReceived, QVariant(), QVariant(), QVariant() );
 // 	    setStopNameValid( true );
 	}
     }
@@ -81,6 +81,7 @@ void DataSourceTester::processTestSourcePossibleStopList ( const Plasma::DataEng
 
     QStringList stops;
     QHash<QString, QVariant> stopToStopID;
+    QHash<QString, QVariant> stopToStopWeight;
     int count = data["count"].toInt();
     for (int i = 0; i < count; ++i) {
 	QVariant stopData = data.value( QString("stopName %1").arg(i) );
@@ -90,12 +91,14 @@ void DataSourceTester::processTestSourcePossibleStopList ( const Plasma::DataEng
 	QHash<QString, QVariant> dataMap = stopData.toHash();
 	QString sStopName = dataMap["stopName"].toString();
 	QString sStopID = dataMap["stopID"].toString();
+	int stopWeight = dataMap["stopWeight"].toInt();
 	stops.append( sStopName );
 	stopToStopID.insert( sStopName, sStopID );
+	stopToStopWeight.insert( sStopName, stopWeight );
+	
 	m_mapStopToStopID.insert( sStopName, sStopID );
     }
-
-    emit testResult( PossibleStopsReceived, stops, stopToStopID );
+    emit testResult( PossibleStopsReceived, stops, stopToStopID, stopToStopWeight );
 //     m_ui.stop->setCompletedItems( possibleStops );
 //     m_stopIDinConfig = m_mapStopToStopID.value( m_ui.stop->text(), "" );
 }

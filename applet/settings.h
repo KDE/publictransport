@@ -185,8 +185,9 @@ class PublicTransportSettings : public QObject {
 	void configDialogFinished();
 	/** The result of a data source test is ready. */
 	void testResult( DataSourceTester::TestResult result,
-			 const QVariant &data, const QVariant &data2 );
-	/** The info button in the config dialog for showing all service provider information has been clicked. */
+			 const QVariant &data, const QVariant &data2, const QVariant &data3 );
+	/** The info button in the config dialog for showing all service provider 
+	* information has been clicked. */
 	void clickedServiceProviderInfo( bool );
 	/** The data from the data engine was updated. */
 	void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data );

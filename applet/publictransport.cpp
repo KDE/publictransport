@@ -605,9 +605,11 @@ void PublicTransport::processData( const Plasma::DataEngine::Data& data ) {
 	    if ( journeyData )
 		addState( ReceivedErroneousJourneyData );
 	    QHash< QString, QVariant > stopToStopID;
-	    QStringList possibleStops;
+	    QHash< QString, int > stopToStopWeight;
+	    QStringList possibleStops, weightedStops;
 
 	    int count = data["count"].toInt();
+	    bool hasAtLeastOneWeight = false;
 	    for( int i = 0; i < count; ++i ) {
 		if ( !data.contains( QString("stopName %1").arg(i) ) ) {
 		    kDebug() << "doesn't contain 'stopName" << i << "'! count ="
@@ -619,11 +621,18 @@ void PublicTransport::processData( const Plasma::DataEngine::Data& data ) {
 			QString("stopName %1").arg(i) ).toHash();
 		QString sStopName = dataMap["stopName"].toString();
 		QString sStopID = dataMap["stopID"].toString();
+		int stopWeight = dataMap["stopWeight"].toInt();
 		possibleStops << sStopName;
+		if ( stopWeight <= 0 )
+		    stopWeight = 0;
+		else
+		    hasAtLeastOneWeight = true;
+		weightedStops << QString( "%1:%2" ).arg( sStopName ).arg( stopWeight );
+		
 		stopToStopID.insert( sStopName, sStopID );
+		stopToStopWeight.insert( sStopName, stopWeight );
 	    }
 
-	    kDebug() << "Letters added?" << m_lettersAddedToJourneySearchLine;
 	    if ( m_lettersAddedToJourneySearchLine
 			&& m_journeySearch->nativeWidget()->completionMode() !=
 			KGlobalSettings::CompletionNone ) {
@@ -639,8 +648,12 @@ void PublicTransport::processData( const Plasma::DataEngine::Data& data ) {
 		if ( stopNameChanged ) {
 // 		    QString stopName = m_journeySearch->text().mid( posStart, len );
 		    KCompletion *comp = m_journeySearch->nativeWidget()->completionObject( false );
-		    comp->setItems( possibleStops );
 		    comp->setIgnoreCase( true );
+		    if ( hasAtLeastOneWeight ) {
+			comp->setOrder( KCompletion::Weighted );
+			comp->setItems( weightedStops );
+		    } else
+			comp->setItems( possibleStops );
 		    QString completion = comp->makeCompletion( stopName );
 
 		    if ( completion != stopName )

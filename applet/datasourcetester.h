@@ -63,7 +63,7 @@ class DataSourceTester : public QObject {
 
     signals:
 	void testResult( DataSourceTester::TestResult testResult,
-			 const QVariant &data, const QVariant &data2 );
+			 const QVariant &data, const QVariant &data2, const QVariant &data3 );
 
     public slots:
 	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
