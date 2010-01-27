@@ -1166,6 +1166,8 @@ bool PublicTransport::parseJourneySearch( const QString& search, QString *stop,
 	words.insert( quotedStart, combinedWord.trimmed() );
     }
 
+    // Check if the cursor is inside the (first) two double quotes,
+    // to disable autocompletion
     int posQuotes1 = searchLine.indexOf( '\"' );
     int posQuotes2 = searchLine.indexOf( '\"', posQuotes1 + 1 );
     if ( posQuotes2 == -1 )
@@ -1217,8 +1219,13 @@ bool PublicTransport::parseJourneySearch( const QString& search, QString *stop,
 	cursorPos -= firstWord.length() + 1;
 	++removedWordsFromLeft;
     }
-    if ( posStart )
-	*posStart = ( (QStringList)words.mid(0, removedWordsFromLeft) ).join( " " ).length() + 1;
+    if ( posStart ) {
+	QStringList removedWords = (QStringList)words.mid( 0, removedWordsFromLeft );
+	if ( removedWords.isEmpty() )
+	    *posStart = 0;
+	else
+	    *posStart = removedWords.join( " " ).length() + 1;
+    }
     
     // Do corrections
     if ( correctString && !isInsideQuotedString
@@ -1260,7 +1267,6 @@ bool PublicTransport::parseJourneySearch( const QString& search, QString *stop,
 		completionItems << timeKeywordsTomorrow;
 		completionItems << departureKeywords;
 		completionItems << arrivalKeywords;
-		kDebug() << "COMPLETION ITEMS" << completionItems;
 
 		KCompletion *comp = m_journeySearch->nativeWidget()->completionObject( false );
 		comp->setItems( completionItems );
@@ -1298,39 +1304,49 @@ bool PublicTransport::parseJourneySearch( const QString& search, QString *stop,
 	    QDate date;
 	    QTime time;
 
-	    // Split date and time
-	    QStringList timeValues = sDeparture.split( QRegExp("\\s|,"),
-						       QString::SkipEmptyParts );
-
-	    if ( !stop->trimmed().isEmpty()
-			&& !(stop->startsWith('\"') && stop->endsWith('\"')) ) {
-		// If the tomorrow keyword is found before 'at', set date to tomorrow
-		QStringList wordsStop = stop->split( ' ', QString::SkipEmptyParts );
-		QString lastWordInStop = wordsStop.last();
-		if ( !lastWordInStop.isEmpty()
-			    && timeKeywordsTomorrow.contains(lastWordInStop, Qt::CaseInsensitive) ) {
-		    *stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
-		    date = QDate::currentDate().addDays( 1 );
-
-		    lastWordInStop = wordsStop.count() >= 2
-			    ? wordsStop[ wordsStop.count() - 2 ] : "";
-		}
-	    
-		// Search for departure / arrival keywords
-		if ( !lastWordInStop.isEmpty() ) {
-		    if ( departureKeywords.contains(lastWordInStop, Qt::CaseInsensitive) ) {
-			// If a departure keyword is found before 'at', use given time as departure time
+	    // Search for keywords before 'at'
+	    if ( !(stop->startsWith('\"') && stop->endsWith('\"')) ) {
+		bool continueSearch = true;
+		while ( continueSearch && !stop->trimmed().isEmpty() ) {
+		    continueSearch = false;
+		    
+		    // If the tomorrow keyword is found before 'at', set date to tomorrow
+		    QStringList wordsStop = stop->split( ' ', QString::SkipEmptyParts );
+		    QString lastWordInStop = wordsStop.last();
+		    if ( !lastWordInStop.isEmpty()
+				&& timeKeywordsTomorrow.contains(lastWordInStop,
+								 Qt::CaseInsensitive) ) {
 			*stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
-			*timeIsDeparture = true;
-		    } else if ( arrivalKeywords.contains(lastWordInStop, Qt::CaseInsensitive) ) {
-			// If an arrival keyword is found before 'at', use given time as arrival time
-			*stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
-			*timeIsDeparture = false;
+			date = QDate::currentDate().addDays( 1 );
+		    
+			continueSearch = true;
+			lastWordInStop = wordsStop.count() >= 2
+				? wordsStop[ wordsStop.count() - 2 ] : "";
+		    }
+
+		    // Search for departure / arrival keywords
+		    if ( !lastWordInStop.isEmpty() ) {
+			if ( departureKeywords.contains(lastWordInStop, Qt::CaseInsensitive) ) {
+			    // If a departure keyword is found before 'at', 
+			    // use given time as departure time
+			    *stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
+			    *timeIsDeparture = true;
+			    continueSearch = true;
+			} else if ( arrivalKeywords.contains(lastWordInStop,
+							     Qt::CaseInsensitive) ) {
+			    // If an arrival keyword is found before 'at', 
+			    // use given time as arrival time
+			    *stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
+			    *timeIsDeparture = false;
+			    continueSearch = true;
+			}
 		    }
 		}
 	    }
 	    
 	    // Parse date and/or time from the string after 'at'
+	    QStringList timeValues = sDeparture.split( QRegExp("\\s|,"),
+						       QString::SkipEmptyParts );
 	    if ( timeValues.count() >= 2 ) {
 		if ( date.isNull() ) {
 		    if ( !parseDate(timeValues[0], &date) && !parseDate(timeValues[1], &date) )
@@ -1379,31 +1395,46 @@ bool PublicTransport::parseJourneySearch( const QString& search, QString *stop,
 		int minutes = rx.cap( 1 ).toInt();
 		QDate date = QDate::currentDate();
 		
-		if ( !stop->trimmed().isEmpty()
-			    && !(stop->startsWith('\"') && stop->endsWith('\"')) ) {
-		    QStringList wordsStop = stop->split( ' ', QString::SkipEmptyParts );
-		    QString lastWordInStop = wordsStop.last();
-		    
-		    // If the tomorrow keyword is found before 'at', set date to tomorrow
-		    if ( !lastWordInStop.isEmpty()
-				&& timeKeywordsTomorrow.contains(lastWordInStop, Qt::CaseInsensitive) ) {
-			*stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
-			date = QDate::currentDate().addDays( 1 );
-		    
-			lastWordInStop = wordsStop.count() >= 2
-				? wordsStop[ wordsStop.count() - 2 ] : "";
-		    }
-		    
-		    // Search for departure / arrival keywords
-		    if ( !lastWordInStop.isEmpty() ) {
-			if ( departureKeywords.contains(lastWordInStop, Qt::CaseInsensitive) ) {
-			    // If a departure keyword is found before 'in', use given time as departure time
-			    *stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
-			    *timeIsDeparture = true;
-			} else if ( arrivalKeywords.contains(lastWordInStop, Qt::CaseInsensitive) ) {
-			    // If an arrival keyword is found before 'in', use given time as arrival time
-			    *stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
-			    *timeIsDeparture = false;
+		// Search for keywords before 'in'
+		if ( !(stop->startsWith('\"') && stop->endsWith('\"')) ) {
+		    bool continueSearch = true;
+		    while ( continueSearch && !stop->trimmed().isEmpty() ) {
+			continueSearch = false;
+			
+			QStringList wordsStop = stop->split( ' ', QString::SkipEmptyParts );
+			QString lastWordInStop = wordsStop.last();
+
+			// If the tomorrow keyword is found before 'at', set date to tomorrow
+			if ( !lastWordInStop.isEmpty()
+				    && timeKeywordsTomorrow.contains(lastWordInStop, Qt::CaseInsensitive) ) {
+			    *stop = stop->left( stop->length() -
+				    lastWordInStop.length() ).trimmed();
+			    date = QDate::currentDate().addDays( 1 );
+			
+			    continueSearch = true;
+			    lastWordInStop = wordsStop.count() >= 2
+				    ? wordsStop[ wordsStop.count() - 2 ] : "";
+			}
+
+			// Search for departure / arrival keywords
+			if ( !lastWordInStop.isEmpty() ) {
+			    if ( departureKeywords.contains(lastWordInStop,
+							    Qt::CaseInsensitive) ) {
+				// If a departure keyword is found before 'in', 
+				// use given time as departure time
+				*stop = stop->left( stop->length() -
+					lastWordInStop.length() ).trimmed();
+				*timeIsDeparture = true;
+				continueSearch = true;
+			    } else if ( arrivalKeywords.contains(lastWordInStop,
+								 Qt::CaseInsensitive) ) {
+				// If an arrival keyword is found before 'in', 
+				// use given time as arrival time
+				*stop = stop->left( stop->length() -
+					lastWordInStop.length() ).trimmed();
+				*timeIsDeparture = false;
+				continueSearch = true;
+			    }
 			}
 		    }
 		}
@@ -1420,29 +1451,40 @@ bool PublicTransport::parseJourneySearch( const QString& search, QString *stop,
     
     *stop = searchLine;
     QDate date = QDate::currentDate();
-    QString lastWordInStop = words.last();
+//     QString lastWordInStop = words.last();
     
-    // If the tomorrow keyword is found before 'at', set date to tomorrow
-    if ( !lastWordInStop.isEmpty()
-		&& !(lastWordInStop.startsWith('\"') && lastWordInStop.endsWith('\"'))
-		&& timeKeywordsTomorrow.contains(lastWordInStop, Qt::CaseInsensitive) ) {
-	*stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
-	date = QDate::currentDate().addDays( 1 );
+    bool continueSearch = true;
+    while ( continueSearch && !stop->trimmed().isEmpty() ) {
+	continueSearch = false;
+	
+	QStringList wordsStop = stop->split( ' ', QString::SkipEmptyParts );
+	QString lastWordInStop = wordsStop.last();
+	
+	// If the tomorrow keyword is found before 'at', set date to tomorrow
+	if ( !lastWordInStop.isEmpty()
+		    && !(lastWordInStop.startsWith('\"') && lastWordInStop.endsWith('\"'))
+		    && timeKeywordsTomorrow.contains(lastWordInStop, Qt::CaseInsensitive) ) {
+	    *stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
+	    date = QDate::currentDate().addDays( 1 );
 
-	lastWordInStop = words.count() >= 2 ? words[ words.count() - 2 ] : "";
-    }
-    
-    // Search for departure / arrival keywords
-    if ( !lastWordInStop.isEmpty()
-		&& !(lastWordInStop.startsWith('\"') && lastWordInStop.endsWith('\"')) ) {
-	if ( departureKeywords.contains(lastWordInStop, Qt::CaseInsensitive) ) {
-	    // If a departure keyword is found before 'in', use given time as departure time
-	    *stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
-	    *timeIsDeparture = true;
-	} else if ( arrivalKeywords.contains(lastWordInStop, Qt::CaseInsensitive) ) {
-	    // If an arrival keyword is found before 'in', use given time as arrival time
-	    *stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
-	    *timeIsDeparture = false;
+	    continueSearch = true;
+	    lastWordInStop = words.count() >= 2 ? words[ words.count() - 2 ] : "";
+	}
+
+	// Search for departure / arrival keywords
+	if ( !lastWordInStop.isEmpty()
+		    && !(lastWordInStop.startsWith('\"') && lastWordInStop.endsWith('\"')) ) {
+	    if ( departureKeywords.contains(lastWordInStop, Qt::CaseInsensitive) ) {
+		// If a departure keyword is found before 'in', use given time as departure time
+		*stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
+		*timeIsDeparture = true;
+		continueSearch = true;
+	    } else if ( arrivalKeywords.contains(lastWordInStop, Qt::CaseInsensitive) ) {
+		// If an arrival keyword is found before 'in', use given time as arrival time
+		*stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
+		*timeIsDeparture = false;
+		continueSearch = true;
+	    }
 	}
     }
 
