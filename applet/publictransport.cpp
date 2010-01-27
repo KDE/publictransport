@@ -2980,9 +2980,10 @@ QString PublicTransport::titleText() const {
 }
 
 QString PublicTransport::infoText() const {
-    QString sServiceProvider = serviceProviderData()["shortUrl"].toString();
-    return QString("<small>last update: %1<br>data by: <a href='http://www.%2'>%2</a></small>")
-	    .arg( m_lastSourceUpdate.toString("hh:mm") ).arg( sServiceProvider );
+    QString shortUrl = serviceProviderData()["shortUrl"].toString();
+    QString url = serviceProviderData()["url"].toString();
+    return QString("<small>last update: %1<br>data by: <a href='%2'>%3</a></small>")
+	    .arg( m_lastSourceUpdate.toString("hh:mm"), url, shortUrl );
 }
 
 QString PublicTransport::formatDateFancyFuture( const QDate& date ) const {
