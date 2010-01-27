@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.0" type="HTML">
+
 <name>Austria (oebb.at)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.0</version>
-<type>HTML</type>
-<!-- <country>at</country> -->
 <!-- <cities><city></city></cities> -->
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>This service provider works for cities in Austria and also for many cities in Europe. Cities in Austria include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>

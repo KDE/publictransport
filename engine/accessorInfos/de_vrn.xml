@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.0" type="HTML">
+
 <name lang="en">Rhine-Neckar (vrn.de)</name>
 <name lang="de">Rhein-Neckar (vrn.de)</name>
 <author> <fullname>Martin Gräßlin</fullname> <email>kde@martin-graesslin.com</email> </author>
-<version>1.0</version>
-<type>HTML</type>
 <country>Germany</country>
 <cities>
     <city>Karlsruhe</city>

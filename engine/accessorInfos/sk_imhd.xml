@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.1" type="HTML">
+
 <name>Slovakia (imhd.sk)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.1</version>
-<type>HTML</type>
 <country>Slovakia</country>
 <cities>
     <city replaceWith="ba">Bratislava</city>
@@ -37,7 +35,7 @@
     <departures><![CDATA[http://www.imhd.zoznam.sk/{city}/index.php?w=212b36213433213aef2f302523ea&lang=en&hladaj={stop}]]></departures>
 </rawUrls>
 
-<javaScript>sk_imhd.js</javaScript>
+<script>sk_imhd.js</script>
 <!--
 <regExps>
     <possibleStops>

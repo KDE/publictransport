@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.0" type="HTML">
+
 <name lang="en">Saxony-Anhalt (nasa.de)</name>
 <name lang="de">Sachsen-Anhalt (nasa.de)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.0</version>
-<type>HTML</type>
 <country>Germany</country>
 <cities>
     <city>Leipzig</city> <city>Halle</city> <city>Magdeburg</city> <city>Dessau</city> <city>Wernigerode</city> <city>Halberstadt</city> <city>Sangerhausen</city> <city>Merseburg</city> <city>Weissenfels</city> <city>Zeitz</city> <city>Altenburg</city> <city>Delitzsch</city> <city>Wolfen</city> <city>Aschersleben</city> <city>Köthen (Anhalt)</city> <city>Wittenberg</city> <city>Schönebeck (Elbe)</city> <city>Stendal</city>

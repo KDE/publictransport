@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.0" type="HTML">
+
 <name>NASA (nasa.gov)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.0</version>
-<type>HTML</type>
-<!-- <country>United States</country> -->
 <!-- <cities><city></city></cities> TODO: <noStopSelection>-->
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>Provides departure information for spacecrafts in the United States.</description>

@@ -16,6 +16,7 @@ add_subdirectory(accessorInfos)
 set( publictransport_engine_SRCS 
     publictransportdataengine.cpp 
     departureinfo.cpp
+    accessorinfoxmlreader.cpp
     timetableaccessor.cpp
     timetableaccessor_html.cpp
     timetableaccessor_html_js.cpp 

@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.1" type="HTML">
+
 <name>Slovakia (cp.atlas.sk)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.1</version>
-<type>HTML</type>
 <country>Slovakia</country>
 <cities>
     <city replaceWith="bus">Autobusy</city>
@@ -61,7 +59,7 @@
     <departures><![CDATA[http://cp.atlas.sk/{city}/odchody/?f={stop}&time=actual&submit=true&lng=E]]></departures>
 </rawUrls>
 
-<javaScript>sk_atlas.js</javaScript>
+<script>sk_atlas.js</script>
 <!--
 <regExps>
     <departures>

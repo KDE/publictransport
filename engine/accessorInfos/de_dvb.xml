@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.1" type="HTML">
+
 <name>Dresden (dvb.de)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.1</version>
-<type>HTML</type>
 <country>Germany</country>
 <cities><city>Dresden</city></cities>
 <useSeperateCityValue>false</useSeperateCityValue>
@@ -18,5 +16,5 @@
     <departures><![CDATA[http://www.dvb.de:80/de/Fahrplan/Abfahrtsmonitor/abfahrten.do/{stop}#result]]></departures>
 </rawUrls>
 
-<javaScript>de_dvb.js</javaScript>
+<script>de_dvb.js</script>
 </accessorInfo>

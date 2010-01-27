@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.1" type="HTML">
+
 <name>Switzerland (sbb.ch)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.1</version>
-<type>HTML</type>
-<!-- <country>ch</country> -->
 <!-- <cities><city></city></cities> -->
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>This service provider works for cities in Switzerland and also for many cities in Europe. Cities in Switzerland include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>
@@ -22,7 +19,7 @@
     <journeys><![CDATA[http://fahrplan.sbb.ch/bin/query.exe/dn?S={startStop}!&Z={targetStop}!&time={time}&maxJourneys={maxDeps}&start=yes]]></journeys>
 </rawUrls>
 
-<javaScript>ch_sbb.js</javaScript>
+<script>ch_sbb.js</script>
 <!--
 <regExps>
     <departures>

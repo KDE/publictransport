@@ -67,9 +67,8 @@ class TimetableRegExpSearch
 * by TimetableAccessor to downlaod and parse documents from different
 * service providers.
 * @brief Provides information about how to download and parse documents from service providers. */
-class TimetableAccessorInfo
-{
-    friend class TimetableAccessor; // Because TimetableAccessor needs to set values when reading xml files
+class TimetableAccessorInfo {
+    friend class AccessorInfoXmlReader; // Because AccessorInfoXmlReader needs to set values when reading xml files
 
     public:
 	/** Creates a new TimetableAccessorInfo object.

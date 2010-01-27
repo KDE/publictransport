@@ -1,5 +1,5 @@
 /*
- *   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -48,8 +48,6 @@
 * 	- rawUrl(), parseDocument() */
 class TimetableAccessor : public QObject {
     Q_OBJECT
-
-    friend class TimetableAccessorInfo; // Because TimetableAccessor needs to set values in TimetableAccessorInfo when reading xml files
 
     public:
 	/** Constructs a new TimetableAccessor object. You should use getSpecificAccessor()

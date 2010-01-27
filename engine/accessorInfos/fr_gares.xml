@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.0" type="HTML">
 
 <name lang="en">France (gares-en-mouvement.com)</name>
 <name lang="fr">France (gares-en-mouvement.com)</name>
@@ -11,8 +10,6 @@
 <description lang="de">Dieser Service-Provider liefert Ergebnisse für Züge und einige Busse in Frankreich.</description>
 
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.0</version>
-<type>HTML</type>
 <useSeperateCityValue>false</useSeperateCityValue>
 
 <url>http://www.gares-en-mouvement.com/</url>
@@ -24,6 +21,6 @@
     <stopSuggestions><![CDATA[http://www.gares-en-mouvement.com/accueil-en-1.html]]></stopSuggestions>
 </rawUrls>
 
-<javaScript>fr_gares.js</javaScript>
+<script>fr_gares.js</script>
 
 </accessorInfo>

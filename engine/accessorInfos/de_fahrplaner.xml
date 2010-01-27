@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.0" type="HTML">
+
 <name lang="en">Lower Saxony, Bremen (fahrplaner.de)</name>
 <name lang="de">Niedersachsen, Bremen (fahrplaner.de)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.0</version>
-<type>HTML</type>
 <country>Germany</country>
 <cities>
     <city>Bremen</city> <city>Bremerhaven</city> <city>Hannover</city> <city>Braunschweig</city> <city>Emden</city>

@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.0" type="XML">
+
 <name lang="en">Rhine-Main (rmv.de)</name>
 <name lang="de">Rhein-Main (rmv.de)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.0</version>
-<type>XML</type>
 <country>Germany</country>
 <cities>
     <city>Frankfurt (Main)</city> <city>Langen (Hessen)</city> <city>Köln</city> <city>Mainz</city>

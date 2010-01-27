@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo>
-<xml_file_version type="publictransport" version="1.0" />
+<accessorInfo fileVersion="1.0" version="1.2" type="HTML">
 
 <name lang="en">Germany (german railway)</name>
 <name lang="de">Deutschland (Deutsche Bahn)</name>
@@ -10,9 +9,6 @@
 <description lang="de">Dieser Service-Provider liefert Ergebnisse für Städte in Deutschland und auch für viele andere Städte in Europa. Für Städte in Deutschland enthalten die Ergebnisse Straßenbahnen, Busse, U-Bahnen, regionalen Zugverkehr und andere Züge, während die Städte in anderen Ländern nur Züge enthalten. Verzögerungen sind auf fünf Minuten gerundet (es gibt derzeit keine Möglichkeit Verzögerungen mit Minuten-Genauigkeit zu erhalten). Eine Verzögerung zwischen null und vier Minuten wird nicht angezeigt, fünf bis neun Minuten Verzögerung werden als fünf Minuten Verzögerung angezeigt und so weiter. </description>
 
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<version>1.2</version>
-<type>HTML</type>
-<!-- <country>Germany</country> -->
 <!-- <cities><city></city></cities> -->
 <useSeperateCityValue>false</useSeperateCityValue>
 
@@ -31,7 +27,7 @@
     <journeys><![CDATA[http://reiseauskunft.bahn.de/bin/query.exe/dn?S={startStop}!&Z={targetStop}!&date={date:dd.MM.yy}&time={time}&REQ0HafasSearchForw={dep=1|arr=0}&maxJourneys={maxDeps}&start=yes&HWAI=JS!ajax=yes!&HWAI=CONNECTION$C0-0!id=C0-0!HwaiDetailStatus=details!;CONNECTION$C0-1!id=C0-1!HwaiDetailStatus=details!;CONNECTION$C0-2!id=C0-2!HwaiDetailStatus=details!;CONNECTION$C0-3!id=C0-3!HwaiDetailStatus=details!;CONNECTION$C0-4!id=C0-4!HwaiDetailStatus=details!;CONNECTION$C1-0!id=C1-0!HwaiDetailStatus=details!;CONNECTION$C1-1!id=C1-1!HwaiDetailStatus=details!;CONNECTION$C1-2!id=C1-2!HwaiDetailStatus=details!;CONNECTION$C1-3!id=C1-3!HwaiDetailStatus=details!;CONNECTION$C1-4!id=C1-4!HwaiDetailStatus=details!;CONNECTION$C2-0!id=C2-0!HwaiDetailStatus=details!;CONNECTION$C2-1!id=C2-1!HwaiDetailStatus=details!;CONNECTION$C2-2!id=C2-2!HwaiDetailStatus=details!;CONNECTION$C2-3!id=C2-3!HwaiDetailStatus=details!;CONNECTION$C2-4!id=C2-4!HwaiDetailStatus=details!;]]></journeys>
 </rawUrls>
 
-<javaScript>de_db.js</javaScript>
+<script>de_db.js</script>
 <!--
 <regExps>
     <departures>
