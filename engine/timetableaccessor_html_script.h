@@ -96,7 +96,8 @@ class TimetableAccessorHtmlScript : public TimetableAccessor {
 	* @see parseDocumentPossibleStops(QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( const QByteArray document,
 						 QStringList *stops,
-						 QHash<QString,QString> *stopToStopId );
+						 QHash<QString,QString> *stopToStopId,
+						 QHash<QString,int> *stopToStopWeight );
 
 	/** Parses the contents of a received document for a list of possible stop names
 	* and puts the results into @p stops.
@@ -107,7 +108,8 @@ class TimetableAccessorHtmlScript : public TimetableAccessor {
 	* @return false, if there were an error parsing the document.
 	* @see parseDocumentPossibleStops(const QByteArray, QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( QStringList *stops,
-						 QHash<QString,QString> *stopToStopId );
+						 QHash<QString,QString> *stopToStopId,
+						 QHash<QString,int> *stopToStopWeight );
 	
     private:
 	bool m_scriptLoaded; // Whether or not the script was successfully loaded

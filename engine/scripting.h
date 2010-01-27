@@ -26,6 +26,7 @@
 #include "timetableaccessor.h"
 #include <KDebug>
 #include "timetableaccessor_html.h"
+#include <qtextcodec.h>
 
 class Helper : public QObject {
     Q_OBJECT 

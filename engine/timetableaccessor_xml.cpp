@@ -18,10 +18,12 @@
  */
 
 #include "timetableaccessor_xml.h"
-// #include "timetableaccessor_html_infos.h"
+
 #include <QRegExp>
 #include <QtXml>
+
 #include <KLocalizedString>
+#include <KDebug>
 
 
 TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfo info )
@@ -43,7 +45,8 @@ QStringList TimetableAccessorXml::features() const
 	<< i18nc("Support for getting the id of a stop of public transport. This string is used in a feature list, should be short.", "Stop ID");
 }
 
-bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys, ParseDocumentMode parseDocumentMode ) {
+bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys,
+					  ParseDocumentMode parseDocumentMode ) {
     Q_UNUSED( parseDocumentMode );
 
     if ( m_document.isEmpty() ) {
@@ -61,7 +64,9 @@ bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys,
 	QString errCode = errElement.attributeNode("code").nodeValue();
 	QString errMessage = errElement.attributeNode("text").nodeValue();
 	QString errLevel = errElement.attributeNode("level").nodeValue();
-	qDebug() << "TimetableAccessorXml::parseDocument" << "Received an error:" << errCode << errMessage << "level" << errLevel << (errLevel.toLower() == "e" ? "Error is fatal" : "Error isn't fatal");
+	kDebug() << "TimetableAccessorXml::parseDocument" << "Received an error:"
+		 << errCode << errMessage << "level" << errLevel
+		 << (errLevel.toLower() == "e" ? "Error is fatal" : "Error isn't fatal");
 	if ( errLevel.toLower() == "e" )
 	    return false;
     }
@@ -85,8 +90,7 @@ bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys,
 	sPlatform = stop.firstChildElement("Platform").text();
 
 	QDomElement journeyAttribute = node.firstChildElement("JourneyAttributeList").firstChildElement("JourneyAttribute");
-	while( !journeyAttribute.isNull() )
-	{
+	while( !journeyAttribute.isNull() ) {
 	    QDomElement attribute = journeyAttribute.firstChildElement("Attribute");
 	    if ( attribute.attributeNode("type").nodeValue() == "DIRECTION" ) {
 		sDirection = attribute.firstChildElement("AttributeVariant").firstChildElement("Text").text();
@@ -116,9 +120,11 @@ bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys,
 }
 
 bool TimetableAccessorXml::parseDocumentPossibleStops ( QStringList *stops,
-			    QHash<QString,QString> *stopToStopId ) {
+							QHash<QString,QString> *stopToStopId,
+							QHash<QString,int> *stopToStopWeight ) {
     // Let the document get parsed for possible stops by the HTML accessor
-    return m_accessorHTML->parseDocumentPossibleStops( m_document, stops, stopToStopId );
+    return m_accessorHTML->parseDocumentPossibleStops( m_document, stops,
+						       stopToStopId, stopToStopWeight );
 }
 
 QString TimetableAccessorXml::departuresRawUrl() const {

@@ -465,22 +465,20 @@ function parsePossibleStops( html ) {
 }
     
 function parsePossibleStops_1( html ) {
-    // Find block of stops
-    var str = helper.extractBlock( html,
-	    '<select class="error" id="rplc0" name="input">', '</select>' );
-
     // Initialize regular expressions (compile them only once)
-    var stopRegExp = /<option value="[^"]+?#([0-9]+)">([^<]*?)<\/option>/ig;
+    var stopRegExp = /{"value":"([^"]*?)","id":"[^"]*?@L=([0-9]+)@[^"]*?"[^}]*?"weight":"(\d+)"[^}]*?}/ig;
 
     // Go through all stop options
-    while ( (stop = stopRegExp.exec(str)) ) {
-	var stopID = stop[1];
-	var stopName = stop[2];
+    while ( (stop = stopRegExp.exec(html)) ) {
+	var stopName = stop[1];
+	var stopID = stop[2];
+	var stopWeight = stop[3];
 	
 	// Add stop
 	timetableData.clear();
 	timetableData.set( 'StopName', stopName );
 	timetableData.set( 'StopID', stopID );
+	timetableData.set( 'StopWeight', stopWeight ); // TODO Weight
 	result.addData( timetableData );
     }
 

@@ -56,15 +56,19 @@ bool TimetableAccessorHtml::parseDocumentPre( QString document ) {
     return count > 0;
 }
 
-QString TimetableAccessorHtml::decodeHtml( QByteArray document ) {
+QString TimetableAccessorHtml::decodeHtml( const QByteArray &document,
+					   const QByteArray &fallbackCharset ) {
     // Get charset of the received document and convert it to a unicode QString
-    // First parse the charset with a regexp to get a fallback charset if QTextCodec::codecForHtml doesn't find the charset
-    QString sDocument = QString(document);
+    // First parse the charset with a regexp to get a fallback charset 
+    // if QTextCodec::codecForHtml doesn't find the charset
+    QString sDocument = QString( document );
     QTextCodec *textCodec;
-    QRegExp rxCharset("(?:<head>.*<meta http-equiv=\"Content-Type\" content=\"text/html; charset=)([^\"]*)(?:\"[^>]*>)", Qt::CaseInsensitive);
+    QRegExp rxCharset( "(?:<head>.*<meta http-equiv=\"Content-Type\" content=\"text/html; charset=)([^\"]*)(?:\"[^>]*>)", Qt::CaseInsensitive );
     rxCharset.setMinimal( true );
     if ( rxCharset.indexIn(sDocument) != -1 && rxCharset.isValid() )
 	textCodec = QTextCodec::codecForName( rxCharset.cap(1).trimmed().toUtf8() );
+    else if ( !fallbackCharset.isEmpty() )
+	textCodec = QTextCodec::codecForName( fallbackCharset );
     else
 	textCodec = QTextCodec::codecForName( "UTF-8" );
     sDocument = QTextCodec::codecForHtml( document, textCodec )->toUnicode( document );
@@ -481,44 +485,49 @@ bool TimetableAccessorHtml::parseJourneyNews( const QString sJourneyNews, QStrin
 }
 
 // Couldn't find such a function anywhere in Qt or KDE (but it must be there somewhere...)
-QString TimetableAccessorHtml::decodeHtmlEntities( QString html ) {
+QString TimetableAccessorHtml::decodeHtmlEntities( const QString &html ) {
     if ( html.isEmpty() )
 	return html;
-    
+
+    QString ret = html;
     QRegExp rx("(?:&#)([0-9]+)(?:;)");
     rx.setMinimal(true);
     int pos = 0;
-    while ((pos = rx.indexIn(html, pos)) != -1)
+    while ((pos = rx.indexIn(ret, pos)) != -1)
     {
 	int charCode = rx.cap(1).toInt();
 	QChar ch(charCode);
-	html = html.replace( QString("&#%1;").arg(charCode), ch );
+	ret = ret.replace( QString("&#%1;").arg(charCode), ch );
     }
 
-    html = html.replace( "&nbsp;", " " );
-    html = html.replace( "&amp;", "&" );
-    html = html.replace( "&lt;", "<" );
-    html = html.replace( "&gt;", ">" );
-    html = html.replace( "&szlig;", "ß" );
-    html = html.replace( "&auml;", "ä" );
-    html = html.replace( "&Auml;", "Ä" );
-    html = html.replace( "&ouml;", "ö" );
-    html = html.replace( "&Ouml;", "Ö" );
-    html = html.replace( "&uuml;", "ü" );
-    html = html.replace( "&Uuml;", "Ü" );
+    ret = ret.replace( "&nbsp;", " " );
+    ret = ret.replace( "&amp;", "&" );
+    ret = ret.replace( "&lt;", "<" );
+    ret = ret.replace( "&gt;", ">" );
+    ret = ret.replace( "&szlig;", "ß" );
+    ret = ret.replace( "&auml;", "ä" );
+    ret = ret.replace( "&Auml;", "Ä" );
+    ret = ret.replace( "&ouml;", "ö" );
+    ret = ret.replace( "&Ouml;", "Ö" );
+    ret = ret.replace( "&uuml;", "ü" );
+    ret = ret.replace( "&Uuml;", "Ü" );
 
-    return html;
+    return ret;
 }
 
 bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray document,
-					QStringList *stops,
-					QHash<QString,QString> *stopToStopId ) {
+							QStringList *stops,
+							QHash<QString,QString> *stopToStopId,
+							QHash<QString,int> *stopToStopWeight ) {
     m_document = document;
-    return parseDocumentPossibleStops( stops, stopToStopId );
+    return parseDocumentPossibleStops( stops, stopToStopId, stopToStopWeight );
 }
 
 bool TimetableAccessorHtml::parseDocumentPossibleStops( QStringList *stops,
-			    QHash<QString,QString> *stopToStopId ) {
+							QHash<QString,QString> *stopToStopId,
+							QHash<QString,int> *stopToStopWeight ) {
+    Q_UNUSED( stopToStopWeight );
+    
     if ( m_info.regExpSearchPossibleStopsRanges().isEmpty() ) {
 	kDebug() << "Possible stop lists not supported by accessor or service provider";
 	return false;

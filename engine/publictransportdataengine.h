@@ -147,6 +147,7 @@ class PublicTransportEngine : public Plasma::DataEngine
 			       const QUrl &requestUrl,
 			       const QStringList &stops,
 			       const QHash<QString, QString> &stopToStopId,
+			       const QHash<QString, int> &stopToStopWeight,
 			       const QString &serviceProvider,
 			       const QString &sourceName, const QString &city,
 			       const QString &stop, const QString &dataType,

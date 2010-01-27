@@ -45,11 +45,12 @@ class TimetableAccessorHtml : public TimetableAccessor
 	TimetableAccessorHtml( TimetableAccessorInfo info = TimetableAccessorInfo() );
 
 	/** Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
-	static QString decodeHtmlEntities( QString html );
+	static QString decodeHtmlEntities( const QString &html );
 
 	/** Decodes the given HTML document. First it tries QTextCodec::codecForHtml().
         * If that doesn't work, it parses the document for the charset in a meta-tag. */
-	static QString decodeHtml( QByteArray document );
+	static QString decodeHtml( const QByteArray &document,
+				   const QByteArray &fallbackCharset = QByteArray() );
 
     protected:
 	/** Parses the contents of a received document for a list of departures/arrivals
@@ -83,7 +84,8 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* @see parseDocumentPossibleStops(QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( const QByteArray document,
 						 QStringList *stops,
-						 QHash<QString,QString> *stopToStopId );
+						 QHash<QString,QString> *stopToStopId,
+						 QHash<QString,int> *stopToStopWeight );
 
 	/** Parses the contents of a received document for a list of possible stop names
 	* and puts the results into @p stops.
@@ -94,7 +96,8 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* @return false, if there were an error parsing the document.
 	* @see parseDocumentPossibleStops(const QByteArray, QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( QStringList *stops,
-						 QHash<QString,QString> *stopToStopId );
+						 QHash<QString,QString> *stopToStopId,
+						 QHash<QString,int> *stopToStopWeight );
 
 	/** Parses a journey news string. */
 	virtual bool parseJourneyNews( const QString sJourneyNews, QString *sDelay,

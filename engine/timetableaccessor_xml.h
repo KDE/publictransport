@@ -66,7 +66,8 @@ class TimetableAccessorXml : public TimetableAccessor
 	* @return true, if there were no errors.
 	* @return false, if there were an error parsing the document. */
 	virtual bool parseDocumentPossibleStops( QStringList *stops,
-						 QHash<QString,QString> *stopToStopId );
+						 QHash<QString,QString> *stopToStopId,
+						 QHash<QString,int> *stopToStopWeight );
 
 	/** Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
 	* or only for the stop ("%1") if putCityIntoUrl() returns false. */

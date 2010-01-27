@@ -98,6 +98,7 @@ class TimetableAccessorInfo
 	/** If empty, use unicode (QUrl::toPercentEncoding()), otherwise use 
 	* own toPercentEncoding() with this charset. */
 	QByteArray charsetForUrlEncoding() const;
+	QByteArray fallbackCharset() const { return m_fallbackCharset; };
 	/** Type of the accessor (HTML, XML) */
 	AccessorType accessorType() const;
 	/** Raw url to an xml file for xml accessors */
@@ -249,8 +250,8 @@ class TimetableAccessorInfo
 	void setFileName( const QString &fileName ) { m_fileName = fileName; };
 	
 	/** Sets the file name of the script file to parse html pages. */
-	void setScriptFile( const QString &scriptFileName )
-	    { m_scriptFileName = scriptFileName; };
+	void setScriptFile( const QString &scriptFileName ) {
+		m_scriptFileName = scriptFileName; };
 	
 	/** Sets the name of this accessor. The name is displayed in the config dialog's
 	* service provider combobox.
@@ -260,6 +261,12 @@ class TimetableAccessorInfo
 	/** Sets the charset used to encode documents from the service provider.
 	* @param charsetForUrlEncoding The charset used for encoding. */
 	void setCharsetForUrlEncoding( const QByteArray &charsetForUrlEncoding );
+	
+	/** Sets the charset used to encode documents where it couldn't be determined
+	* automatically.
+	* @param fallbackCharset The charset used if it couldn't be determined. */
+	void setFallbackCharset( const QByteArray &fallbackCharset ) {
+		m_fallbackCharset = fallbackCharset; };
 
 	/** Sets the description of this accessor.
 	* @param description A description of this accessor. */
@@ -339,7 +346,7 @@ class TimetableAccessorInfo
 	QString m_url;
 	// If empty, use unicode (QUrl::toPercentEncoding()), otherwise use own
 	// toPercentEncoding() with this charset
-	QByteArray m_charsetForUrlEncoding;
+	QByteArray m_charsetForUrlEncoding, m_fallbackCharset;
 	// Raw url to a site containing a list of stop name suggestions
 	QString m_stopSuggestionsRawUrl;
 	// Type of the accessor (HTML, XML)

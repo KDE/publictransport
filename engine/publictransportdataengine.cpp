@@ -134,7 +134,7 @@ bool PublicTransportEngine::sourceRequestEvent( const QString &name ) {
     kDebug() << name;
 
     setData( name, DataEngine::Data() ); // Create source, TODO: check if [name] is valid
-    return updateSourceEvent(name);
+    return updateSourceEvent( name );
 }
 
 bool PublicTransportEngine::updateServiceProviderSource( const QString &name ) {
@@ -200,7 +200,7 @@ void PublicTransportEngine::updateLocationSource( const QString &name ) {
 }
 
 bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name ) {
-    bool containsDataSource = m_dataSources.keys().contains( name );
+    bool containsDataSource = m_dataSources.contains( name );
     if ( containsDataSource && isSourceUpToDate(name) )
     { // Data is stored in the map and up to date
 	kDebug() << "Data source" << name << "is up to date";
@@ -333,8 +333,8 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 		     this, SLOT(journeyListReceived(TimetableAccessor*,const QUrl&,QList<JourneyInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
 	    // 		}
 	    connect( accessor,
-		     SIGNAL(stopListReceived(TimetableAccessor*,const QUrl&,QStringList,QHash<QString,QString>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
-		     this, SLOT(stopListReceived(TimetableAccessor*,const QUrl&,QStringList,QHash<QString,QString>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
+		     SIGNAL(stopListReceived(TimetableAccessor*,const QUrl&,const QStringList&,const QHash<QString,QString>&,const QHash<QString, int>&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
+		     this, SLOT(stopListReceived(TimetableAccessor*,const QUrl&,const QStringList&,const QHash<QString,QString>&,const QHash<QString, int>&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
 	    connect( accessor,
 		     SIGNAL(errorParsing(TimetableAccessor*,const QUrl&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
 		     this, SLOT(errorParsing(TimetableAccessor*,const QUrl&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
@@ -547,6 +547,7 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 					      const QUrl &requestUrl,
 					      const QStringList &stops,
 					      const QHash<QString, QString> &stopToStopId,
+					      const QHash<QString, int> &stopToStopWeight,
 					      const QString &serviceProvider,
 					      const QString &sourceName,
 					      const QString &city,
@@ -569,6 +570,8 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 	data.insert("stopName", stopName);
 	if ( stopToStopId.contains(stopName) )
 	    data.insert("stopID", stopToStopId.value(stopName, "") );
+	if ( stopToStopWeight.contains(stopName) )
+	    data.insert("stopWeight", stopToStopWeight.value(stopName, 0) );
 	
 // 	kDebug() << "setData" << i << data;
 	setData( sourceName, QString("stopName %1").arg(i++), data );

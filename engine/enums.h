@@ -82,7 +82,8 @@ enum TimetableInformation {
 
     // Possible stop infos
     StopName = 200, /**< The name of a stop / station. */
-    StopID = 201 /**< The ID of a stop / station. */
+    StopID = 201, /**< The ID of a stop / station. */
+    StopWeight = 202 /**< The weight of a stop suggestion. */
 };
 
 /** Different modes for parsing documents. */
@@ -209,6 +210,8 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
 	    return debug << "StartStopName";
 	case StartStopID:
 	    return debug << "StartStopID";
+	case StopWeight:
+	    return debug << "StopWeight";
 	case TargetStopName:
 	    return debug << "TargetStopName";
 	case TargetStopID:

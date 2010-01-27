@@ -173,7 +173,8 @@ class TimetableAccessor : public QObject {
 	* @return false, if there were an error parsing the document.
 	* @see parseDocument() */
 	virtual bool parseDocumentPossibleStops( QStringList *stops,
-				QHash<QString,QString> *stopToStopId );
+						 QHash<QString,QString> *stopToStopId,
+						 QHash<QString,int> *stopToStopWeight );
 
 	/** Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
 	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
@@ -275,8 +276,9 @@ class TimetableAccessor : public QObject {
 	* @see TimetableAccessor::useSeperateCityValue() */
 	void stopListReceived( TimetableAccessor *accessor,
 			       const QUrl &requestUrl,
-			       QStringList stops,
-			       QHash<QString, QString> stopToStopId,
+			       const QStringList &stops,
+			       const QHash<QString, QString> &stopToStopId,
+			       const QHash<QString, int> &stopToStopWeight,
 			       const QString &serviceProvider,
 			       const QString &sourceName, const QString &city,
 			       const QString &stop, const QString &dataType,

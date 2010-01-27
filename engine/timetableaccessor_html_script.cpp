@@ -196,13 +196,15 @@ QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl() {
 
 bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray document,
 						QStringList* stops,
-						QHash<QString,QString>* stopToStopId ) {
+						QHash<QString,QString>* stopToStopId,
+						QHash<QString,int> *stopToStopWeight ) {
     m_document = document;
-    return parseDocumentPossibleStops( stops, stopToStopId );
+    return parseDocumentPossibleStops( stops, stopToStopId, stopToStopWeight );
 }
 
 bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( QStringList *stops,
-				    QHash<QString,QString> *stopToStopId ) {
+				    QHash<QString,QString> *stopToStopId,
+				    QHash<QString,int> *stopToStopWeight ) {
     if ( !m_scriptLoaded ) {
 	kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
 	return false;
@@ -213,8 +215,8 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( QStringList *stops
 	return false;
     }
 
-    QString document = TimetableAccessorHtml::decodeHtml( m_document );
-//     kDebug() << document;
+    QString document = TimetableAccessorHtml::decodeHtml( m_document,
+							  m_info.fallbackCharset() );
 
     // Call script
     m_resultObject->clear();
@@ -225,14 +227,21 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( QStringList *stops
     foreach ( TimetableData timetableData, data ) {
 	QString stopName = timetableData.value( StopName ).toString();
 	QString stopID;
-	if ( timetableData.values().contains(StopID) )
-	    stopID = timetableData.value( StopID ).toString();
+	int stopWeight = -1;
+	
 	if ( stopName == "" )
 	    continue;
+	
+	if ( timetableData.values().contains(StopID) )
+	    stopID = timetableData.value( StopID ).toString();
+	if ( timetableData.values().contains(StopWeight) )
+	    stopWeight = timetableData.value( StopWeight ).toInt();
 	
 	stops->append( stopName );
 // 	if ( !stopID.isEmpty() )
 	    stopToStopId->insert( stopName, stopID );
+	if ( stopWeight != -1 )
+	    stopToStopWeight->insert( stopName, stopWeight );
 	++count;
     }
 
