@@ -489,7 +489,7 @@ QString PublicTransportInfo::operatorFromVehicleTypeString( const QString& sLine
 	return "Arriva";
     else if ( sLineTypeLower == "abg" )
 	return "Anhaltische Bahn Gesellschaft mbH";
-    else if ( sLineTypeLower == "" )
+    else if ( sLineTypeLower == "abr" )
 	return "ABELLIO Rail NRW GmbH";
     else if ( sLineTypeLower == "akn" )
 	return "AKN Eisenbahn AG";

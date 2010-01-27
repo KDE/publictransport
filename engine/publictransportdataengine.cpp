@@ -96,6 +96,24 @@ QHash< QString, QVariant > PublicTransportEngine::locations() {
     locationHash.insert( "description", i18n("Support for some cities in France. No local public transportation information.") );
     locationHash.insert( "defaultAccessor", "fr_gares" );
     ret.insert( name, locationHash );
+    
+    locationHash.clear();
+    locationHash.insert( "name", name = "be" );
+    locationHash.insert( "description", i18n("Support for some cities in Belgium.") );
+    locationHash.insert( "defaultAccessor", "be_brail" );
+    ret.insert( name, locationHash );
+    
+    locationHash.clear();
+    locationHash.insert( "name", name = "dk" );
+    locationHash.insert( "description", i18n("Support for some cities in Denmark.") );
+    locationHash.insert( "defaultAccessor", "dk_rejseplanen" );
+    ret.insert( name, locationHash );
+    
+    locationHash.clear();
+    locationHash.insert( "name", name = "us" );
+    locationHash.insert( "description", i18n("Support for Southeastern Pennsylvania.") );
+    locationHash.insert( "defaultAccessor", "us_septa" );
+    ret.insert( name, locationHash );
 
     locationHash.clear();
     locationHash.insert( "name", name = "ch" );

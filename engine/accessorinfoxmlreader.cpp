@@ -36,7 +36,8 @@ TimetableAccessor* AccessorInfoXmlReader::read( QIODevice* device,
 						const QString &fileName,
 						const QString &country ) {
     Q_ASSERT( device );
-    
+
+    kDebug() << "Reading accessor info xml for" << serviceProvider;
     bool closeAfterRead; // Only close after reading if it wasn't open before
     if ( (closeAfterRead = !device->isOpen()) && !device->open(QIODevice::ReadOnly) )
 	return NULL;

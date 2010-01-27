@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo fileVersion="1.0" version="1.0" type="HTML">
+
+<name lang="en">Denmark (Rejseplanen)</name>
+<name lang="de">Dänemark (Rejseplanen)</name>
+
+<description lang="en">This service provider works for cities in Denmark and some other cities in europe.</description>
+<description lang="de">Dieser Service-Provider liefert Ergebnisse für Städte in Dänemark und auch für einige andere Städte in Europa. </description>
+
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<!-- <cities><city></city></cities> -->
+<useSeperateCityValue>false</useSeperateCityValue>
+
+<url>http://www.rejseplanen.dk</url>
+<shortUrl>rejseplanen.dk</shortUrl>
+<!-- <minFetchWait>300</minFetchWait> -->
+<fallbackCharset>latin1</fallbackCharset>
+
+<script>dk_rejseplanen.js</script>
+
+<rawUrls>
+    <departures><![CDATA[http://www.rejseplanen.dk/bin/stboard.exe/en?rt=1&input={stop}!&boardType={dataType}&date={date:dd.MM.yy}&time={time}&disableEquivs=no&maxJourneys={maxDeps}&start=yes&productsFilter=111111111]]></departures>
+    
+    <stopSuggestions><![CDATA[http://rejseplanen.dk/bin/ajax-getstop.exe/dn?REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G={stop}]]></stopSuggestions>
+
+<!--     <journeys><![CDATA[http://hafas.bene-system.com/bin/query.exe/dn?...]]></journeys> -->
+</rawUrls>
+
+</accessorInfo>

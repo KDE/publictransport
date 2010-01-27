@@ -22,11 +22,13 @@
 
 #include <QObject>
 #include <QHash>
+#include <QTextCodec>
+
+#include <KDebug>
+
 #include "enums.h"
 #include "timetableaccessor.h"
-#include <KDebug>
 #include "timetableaccessor_html.h"
-#include <qtextcodec.h>
 
 class Helper : public QObject {
     Q_OBJECT 
@@ -68,15 +70,36 @@ class Helper : public QObject {
 
 	QVariantList matchTime( const QString &str, const QString &format = "hh:mm") {
 	    QString pattern = QRegExp::escape( format );
-	    pattern = pattern.replace( "hh", "(\\d{2})" )
-			     .replace( "h", "(\\d{1,2})" )
-			     .replace( "mm", "(\\d{2})" )
-			     .replace( "m", "(\\d{1,2})" );
+	    pattern = pattern.replace( "hh", "\\d{2}" )
+			     .replace( "h", "\\d{1,2}" )
+			     .replace( "mm", "\\d{2}" )
+			     .replace( "m", "\\d{1,2}" )
+			     .replace( "AP", "(AM|PM)" )
+			     .replace( "ap", "(am|pm)" );
+			     
 	    QVariantList ret;
 	    QRegExp rx( pattern );
-	    if ( rx.indexIn(str) != -1 )
-		ret << rx.cap( 1 ) << rx.cap( 2 );
+	    if ( rx.indexIn(str) != -1 ) {
+		QTime time = QTime::fromString( rx.cap(), format );
+		ret << time.hour() << time.minute();
+	    }
 	    return ret;
+	};
+
+	QString formatTime( int hour, int minute, const QString &format = "hh:mm") {
+	    return QTime( hour, minute ).toString( format );
+	};
+	
+	int duration( const QString &sTime1, const QString &sTime2,
+		      const QString &format = "hh:mm" ) {
+	    QTime time1 = QTime::fromString( sTime1, format );
+	    QTime time2 = QTime::fromString( sTime2, format );
+	    kDebug() << "FROM" << time1 << "TO" << time2;
+	    if ( !time1.isValid() || !time2.isValid() )
+		return -1;
+
+	    kDebug() << time1.secsTo( time2 ) / 60;
+	    return time1.secsTo( time2 ) / 60;
 	};
 
 	QString addMinsToTime( const QString &sTime, int minsToAdd,

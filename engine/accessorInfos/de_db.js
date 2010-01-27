@@ -26,7 +26,7 @@ function usedTimetableInformations() {
     return [ 'Delay', 'DelayReason', 'Platform', 'JourneyNews', 'TypeOfVehicle',
 	     'StopID', 'Pricing', 'Changes', 'RouteStops', 'RoutePlatformsDeparture',
 	     'RoutePlatformsArrival', 'RouteTimesDeparture', 'RoutePlatformsArrival',
-	     'RouteTransportLines', 'StopID' ];
+	     'RouteTransportLines' ];
 }
 
 function getUrlForLaterJourneyResults( html ) {
@@ -478,7 +478,7 @@ function parsePossibleStops_1( html ) {
 	timetableData.clear();
 	timetableData.set( 'StopName', stopName );
 	timetableData.set( 'StopID', stopID );
-	timetableData.set( 'StopWeight', stopWeight ); // TODO Weight
+	timetableData.set( 'StopWeight', stopWeight );
 	result.addData( timetableData );
     }
 
