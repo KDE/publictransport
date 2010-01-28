@@ -19,7 +19,7 @@ set( publictransport_engine_SRCS
     accessorinfoxmlreader.cpp
     timetableaccessor.cpp
     timetableaccessor_html.cpp
-    timetableaccessor_html_js.cpp 
+    timetableaccessor_html_script.cpp
     timetableaccessor_htmlinfo.cpp 
     timetableaccessor_xml.cpp
     scripting.cpp )
