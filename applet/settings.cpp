@@ -1736,6 +1736,28 @@ void PublicTransportSettings::configAccepted() {
 	emit serviceProviderSettingsChanged();
 }
 
+void PublicTransportSettings::setShowDepartures() {
+    m_departureArrivalListType = DepartureList;
+    
+    KConfigGroup cg = m_applet->config();
+    cg.writeEntry("departureArrivalListType", static_cast<int>(m_departureArrivalListType));
+    emit departureArrivalListTypeChanged( m_departureArrivalListType );
+    emit departureListNeedsClearing(); // Clear departures using the old data source type
+    emit configNeedsSaving();
+    emit serviceProviderSettingsChanged();
+}
+
+void PublicTransportSettings::setShowArrivals() {
+    m_departureArrivalListType = ArrivalList;
+    
+    KConfigGroup cg = m_applet->config();
+    cg.writeEntry("departureArrivalListType", static_cast<int>(m_departureArrivalListType));
+    emit departureArrivalListTypeChanged( m_departureArrivalListType );
+    emit departureListNeedsClearing(); // Clear departures using the old data source type
+    emit configNeedsSaving();
+    emit serviceProviderSettingsChanged();
+}
+
 bool PublicTransportSettings::readFilterConfig( const KConfigGroup& cg ) {
     kDebug() << "Read filter config from" << cg.name();
     

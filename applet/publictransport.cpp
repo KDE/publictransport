@@ -27,14 +27,23 @@
 #include <KColorScheme>
 #include <KSelectAction>
 #include <KCompletion>
-#include <KCompletionBox>
 
 // Plasma includes
+#include <Plasma/IconWidget>
+#include <Plasma/Label>
+#include <Plasma/ToolButton>
+#include <Plasma/LineEdit>
+#include <Plasma/TreeView>
+#include <Plasma/PushButton>
 #include <Plasma/PaintUtils>
-#include <Plasma/Svg>
 #include <Plasma/Theme>
 #include <Plasma/ToolTipManager>
 #include <Plasma/ToolTipContent>
+
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+    #include <Plasma/Animator>
+    #include <Plasma/Animation>
+#endif
 
 // Qt includes
 #include <QPainter>
@@ -43,22 +52,136 @@
 #include <QTextDocument>
 #include <QGraphicsLinearLayout>
 #include <QGraphicsGridLayout>
+#include <QGraphicsScene>
 #include <QListWidget>
 #include <QMenu>
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QTreeView>
+#include <QStandardItemModel>
 #include <QStringListModel>
 #include <qmath.h>
 
 // Own includes
 #include "publictransport.h"
 #include "htmldelegate.h"
+#include "alarmtimer.h"
+
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+#include <QGraphicsEffect>
+#include <QSequentialAnimationGroup>
+#include <QParallelAnimationGroup>
+
+Plasma::Animation *fadeAnimation( QGraphicsWidget *w, qreal targetOpacity ) {
+    if ( w->geometry().width() * w->geometry().height() > 250000 ) {
+	// Don't fade big widgets for performance reasons
+	w->setOpacity( targetOpacity );
+	return NULL;
+    }
+    
+    Plasma::Animation *anim = Plasma::Animator::create( Plasma::Animator::FadeAnimation );
+    anim->setTargetWidget( w );
+    anim->setProperty( "startOpacity", w->opacity() );
+    anim->setProperty( "targetOpacity", targetOpacity );
+    return anim;
+}
+
+void startFadeAnimation( QGraphicsWidget *w, qreal targetOpacity ) {
+    Plasma::Animation *anim = fadeAnimation( w, targetOpacity );
+    if ( anim )
+	anim->start( QAbstractAnimation::DeleteWhenStopped );
+}
+#endif
+
+OverlayWidget::OverlayWidget( QGraphicsWidget* parent, QGraphicsWidget* under )
+	    : QGraphicsWidget( parent ), opacity( 0.4 )
+#if QT_VERSION >= 0x040600
+	    , m_under( 0 ), m_blur( 0 )
+#endif
+	    {
+    resize( parent->size() );
+    setZValue( 10000 );
+    m_under = under;
+    under->setEnabled( false );
+    
+#if QT_VERSION >= 0x040600
+    if ( under ) {
+	m_blur = new QGraphicsBlurEffect( this );
+	m_blur->setBlurHints( QGraphicsBlurEffect::AnimationHint );
+	QPropertyAnimation *blurAnim = new QPropertyAnimation( m_blur, "blurRadius" );
+	blurAnim->setStartValue( 0 );
+	blurAnim->setEndValue( 5 );
+	blurAnim->setDuration( 1000 );
+	under->setGraphicsEffect( m_blur );
+	blurAnim->start( QAbstractAnimation::DeleteWhenStopped );
+    }
+#endif
+}
+
+void OverlayWidget::destroy() {
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+    Plasma::Animation *fadeAnim = fadeAnimation( this, 0 );
+    QPropertyAnimation *blurAnim = new QPropertyAnimation( m_blur, "blurRadius" );
+    blurAnim->setStartValue( m_blur->blurRadius() );
+    blurAnim->setEndValue( 0 );
+    
+    QParallelAnimationGroup *parGroup = new QParallelAnimationGroup;
+    connect( parGroup, SIGNAL(finished()), this, SLOT(overlayAnimationComplete()) );
+    if ( fadeAnim )
+	parGroup->addAnimation( fadeAnim );
+    parGroup->addAnimation( blurAnim );
+    parGroup->start( QAbstractAnimation::DeleteWhenStopped );
+    
+    m_under->setEnabled( true );
+#else
+    overlayAnimationComplete();
+#endif
+}
+
+void OverlayWidget::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
+			   QWidget* widget ) {
+    Q_UNUSED( option )
+    Q_UNUSED( widget )
+
+    if ( qFuzzyCompare(1, 1 + opacity) )
+	return;
+
+    QColor wash = Plasma::Theme::defaultTheme()->color( Plasma::Theme::BackgroundColor );
+    wash.setAlphaF( opacity );
+
+    Plasma::Applet *applet = qobject_cast<Plasma::Applet *>(parentWidget());
+    QPainterPath backgroundShape;
+    if (!applet || applet->backgroundHints() & Plasma::Applet::StandardBackground) {
+	// FIXME: a resize here is nasty, but perhaps still better than an eventfilter just for that..
+	if ( parentWidget()->contentsRect().size() != size() )
+	    resize( parentWidget()->contentsRect().size() );
+
+	backgroundShape = Plasma::PaintUtils::roundedRectangle(contentsRect(), 5);
+    } else {
+	backgroundShape = shape();
+    }
+
+    painter->setRenderHints( QPainter::Antialiasing );
+    painter->fillPath( backgroundShape, wash );
+}
+
+void OverlayWidget::overlayAnimationComplete() {
+    if ( scene() )
+	scene()->removeItem( this );
+    deleteLater();
+
+    m_under->setEnabled( true );
+#if QT_VERSION >= 0x040600
+    m_under->setGraphicsEffect( NULL );
+#endif
+}
+
 
 
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	    : Plasma::PopupApplet(parent, args),
 	    m_graphicsWidget(0),
+	    m_mainGraphicsWidget(0),
 	    m_icon(0),
 	    m_label(0),
 	    m_labelInfo(0),
@@ -66,6 +189,7 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	    m_journeySearch(0),
 	    m_listStopsSuggestions(0),
 	    m_btnLastJourneySearches(0),
+	    m_overlay(0),
 	    m_model(0),
 	    m_currentSource(""),
 	    m_settings( this ) {
@@ -180,6 +304,31 @@ void PublicTransport::setupActions() {
 	     this, SLOT(showJourneySearch(bool)) );
     addAction( "searchJourneys", actionSearchJourneys );
 
+    int iconExtend = 32;
+    QAction *actionShowDepartures = new QAction(
+		    Global::makeOverlayIcon(KIcon("public-transport-stop"),
+		    QList<KIcon>() << KIcon("go-home") << KIcon("go-next"),
+		    QSize(iconExtend / 2, iconExtend / 2), iconExtend),
+		    i18n("Show &Departures"), this );
+    connect( actionShowDepartures, SIGNAL(triggered(bool)),
+	     &m_settings, SLOT(setShowDepartures()) );
+    addAction( "showDepartures", actionShowDepartures );
+
+    QAction *actionShowArrivals = new QAction(
+		    Global::makeOverlayIcon(KIcon("public-transport-stop"),
+		    QList<KIcon>() << KIcon("go-next") << KIcon("go-home"),
+		    QSize(iconExtend / 2, iconExtend / 2), iconExtend),
+		    i18n("Show &Arrivals"), this );
+    connect( actionShowArrivals, SIGNAL(triggered(bool)),
+	     &m_settings, SLOT(setShowArrivals()) );
+    addAction( "showArrivals", actionShowArrivals );
+    
+    QAction *actionBackToDepartures = new QAction( KIcon("go-previous"),
+		    i18n("Back to &Departure List"), this );
+    connect( actionBackToDepartures, SIGNAL(triggered(bool)),
+	     this, SLOT(goBackToDepartures()) );
+    addAction( "backToDepartures", actionBackToDepartures );
+	
     KSelectAction *actionSwitchFilterConfiguration = new KSelectAction(
 	    Global::makeOverlayIcon(KIcon("folder"), "view-filter"),
 	    i18n("Switch filter Configuration"), this );
@@ -803,6 +952,7 @@ void PublicTransport::treeViewSectionResized ( int logicalIndex, int oldSize, in
 }
 
 void PublicTransport::popupEvent( bool show ) {
+    destroyOverlay();
     addState( ShowingDepartureArrivalList ); // Hide opened journey views, ie. back to departure view
 
     Plasma::PopupApplet::popupEvent( show );
@@ -916,6 +1066,7 @@ void PublicTransport::configChanged() {
     m_treeView->nativeWidget()->setColumnHidden( 1, m_settings.isColumnTargetHidden() );
 
     QFont font = m_settings.font();
+    QFont smallFont = font;
     float sizeFactor = m_settings.sizeFactor();
     if ( font.pointSize() == -1 ) {
 	int pixelSize = font.pixelSize() * sizeFactor;
@@ -924,11 +1075,14 @@ void PublicTransport::configChanged() {
 	int pointSize = font.pointSize() * sizeFactor;
 	font.setPointSize( pointSize > 0 ? pointSize : 1 );
     }
-    m_treeView->nativeWidget()->setFont( font );
-    m_label->nativeWidget()->setFont( font );
-    m_labelInfo->nativeWidget()->setFont( font );
-    m_listStopsSuggestions->nativeWidget()->setFont( font );
-    m_journeySearch->nativeWidget()->setFont( font );
+    int smallPointSize = KGlobalSettings::smallestReadableFont().pointSize() * sizeFactor;
+    smallFont.setPointSize( smallPointSize > 0 ? smallPointSize : 1 );
+    
+    m_treeView->setFont( font );
+    m_label->setFont( font );
+    m_labelInfo->setFont( smallFont );
+    m_listStopsSuggestions->setFont( font );
+    m_journeySearch->setFont( font );
 
     int iconExtend = (testState(ShowingDepartureArrivalList) ? 16 : 32) * m_settings.sizeFactor();
     m_treeView->nativeWidget()->setIconSize( QSize(iconExtend, iconExtend) );
@@ -1037,7 +1191,7 @@ void PublicTransport::setMainIconDisplay( MainIconDisplay mainIconDisplay ) {
 }
 
 void PublicTransport::iconClicked() {
-    if ( m_graphicsWidget == NULL )
+    if ( !m_graphicsWidget )
 	return;
 
     switch( m_titleType ) {
@@ -1045,11 +1199,102 @@ void PublicTransport::iconClicked() {
 	case ShowSearchJourneyLineEditDisabled:
 	    addState( ShowingDepartureArrivalList );
 	    break;
+	    
 	case ShowJourneyListTitle:
 	case ShowDepartureArrivalListTitle:
-	    showJourneySearch( false );
+	    showActionButtons();
+// 	    showJourneySearch( false );
 	    break;
     }
+}
+
+void PublicTransport::destroyOverlay() {
+    if ( m_overlay ) {
+	m_overlay->destroy();
+	m_overlay = NULL;
+    }
+}
+
+void PublicTransport::showActionButtons() {
+    m_overlay = new OverlayWidget( m_graphicsWidget, m_mainGraphicsWidget );
+    m_overlay->setGeometry( m_graphicsWidget->contentsRect() );
+
+    Plasma::PushButton *btnJourney = new Plasma::PushButton( m_overlay );
+    btnJourney->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
+    btnJourney->setAction( action("searchJourneys") );
+    connect( btnJourney, SIGNAL(clicked()), this, SLOT(destroyOverlay()) );
+
+    Plasma::PushButton *btnShowDepArr = new Plasma::PushButton( m_overlay );
+    btnShowDepArr->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
+    if ( testState(ShowingJourneyList) ) {
+	btnShowDepArr->setAction( updatedAction("backToDepartures") );
+    } else {
+	if ( m_settings.departureArrivalListType() == DepartureList )
+	    btnShowDepArr->setAction( action("showArrivals") );
+	else
+	    btnShowDepArr->setAction( action("showDepartures") );
+    }
+    connect( btnShowDepArr, SIGNAL(clicked()), this, SLOT(destroyOverlay()) );
+    
+    Plasma::PushButton *btnCancel = new Plasma::PushButton( m_overlay );
+    btnCancel->setText( i18n("Cancel") );
+    btnCancel->setIcon( KIcon("dialog-cancel") );
+    btnCancel->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
+    connect( btnCancel, SIGNAL(clicked()), this, SLOT(destroyOverlay()) );
+
+    QGraphicsWidget *spacer = new QGraphicsWidget( m_overlay );
+    spacer->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
+    QGraphicsWidget *spacer2 = new QGraphicsWidget( m_overlay );
+    spacer2->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
+
+    // Create a seperate layout for the cancel button to have some more space betwenn
+    // the cancel button and the others
+    QGraphicsLinearLayout *layoutCancel = new QGraphicsLinearLayout( Qt::Vertical );
+    layoutCancel->setContentsMargins( 0, 10, 0, 0 );
+    layoutCancel->addItem( btnCancel );
+    
+    QGraphicsLinearLayout *layout = new QGraphicsLinearLayout( Qt::Vertical );
+    layout->setContentsMargins( 15, 10, 15, 10 );
+    layout->setContentsMargins( 15, 10, 15, 10 );
+    layout->addItem( spacer );
+    layout->addItem( btnJourney );
+    layout->setAlignment( btnJourney, Qt::AlignCenter );
+    layout->addItem( btnShowDepArr );
+    layout->setAlignment( btnShowDepArr, Qt::AlignCenter );
+    layout->addItem( layoutCancel );
+    layout->setAlignment( layoutCancel, Qt::AlignCenter );
+    layout->addItem( spacer2 );
+    layout->setStretchFactor( btnCancel, 10 );
+    m_overlay->setLayout( layout );
+
+    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+	m_overlay->setOpacity( 0 );
+	Plasma::Animation *fadeAnimOverlay = fadeAnimation( m_overlay, 1 );
+
+	btnJourney->setOpacity( 0 );
+	btnShowDepArr->setOpacity( 0 );
+	btnCancel->setOpacity( 0 );
+	Plasma::Animation *fadeAnim1 = fadeAnimation( btnJourney, 1 );
+	Plasma::Animation *fadeAnim2 = fadeAnimation( btnShowDepArr, 1 );
+	Plasma::Animation *fadeAnim3 = fadeAnimation( btnCancel, 1 );
+	if ( fadeAnim1 )
+	    fadeAnim1->setProperty( "duration", 150 );
+	if ( fadeAnim2 )
+	    fadeAnim2->setProperty( "duration", 150 );
+	if ( fadeAnim3 )
+	    fadeAnim3->setProperty( "duration", 150 );
+	
+	QSequentialAnimationGroup *seqGroup = new QSequentialAnimationGroup;
+	if ( fadeAnimOverlay )
+	    seqGroup->addAnimation( fadeAnimOverlay );
+	if ( fadeAnim1 )
+	    seqGroup->addAnimation( fadeAnim1 );
+	if ( fadeAnim2 )
+	    seqGroup->addAnimation( fadeAnim2 );
+	if ( fadeAnim3 )
+	    seqGroup->addAnimation( fadeAnim3 );
+	seqGroup->start( QAbstractAnimation::DeleteWhenStopped );
+    #endif
 }
 
 void PublicTransport::iconCloseClicked() {
@@ -1683,6 +1928,16 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
         m_graphicsWidget->setMinimumSize( 225, 150 );
         m_graphicsWidget->setPreferredSize( 350, 350 );
 	
+	// Create a child graphics widget, eg. to apply a blur effect to it
+	// but not to an overlay widget (which then gets a child of m_graphicsWidget).
+	m_mainGraphicsWidget = new QGraphicsWidget( this );
+	m_mainGraphicsWidget->setSizePolicy( QSizePolicy::Expanding,
+					     QSizePolicy::Expanding );
+	QGraphicsLinearLayout *mainLayout = new QGraphicsLinearLayout( Qt::Vertical );
+	mainLayout->setContentsMargins( 0, 0, 0, 0 );
+	mainLayout->addItem( m_mainGraphicsWidget );
+	m_graphicsWidget->setLayout( mainLayout );
+
 	int iconExtend = 32 * m_settings.sizeFactor();
 	
 	m_iconClose = new Plasma::IconWidget;
@@ -1701,23 +1956,22 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 
 	m_label = new Plasma::Label;
 	m_label->setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
-	m_label->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed,
+	m_label->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred,
 				QSizePolicy::Label );
 	QLabel *label = m_label->nativeWidget();
 	label->setTextInteractionFlags( Qt::LinksAccessibleByMouse );
 	label->setWordWrap( true );
 
 	m_labelInfo = new Plasma::Label;
-	m_labelInfo->setAlignment( Qt::AlignTop | Qt::AlignRight );
+	m_labelInfo->setAlignment( Qt::AlignVCenter | Qt::AlignRight );
 	m_labelInfo->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Preferred,
 				    QSizePolicy::Label );
 	connect( m_labelInfo, SIGNAL(linkActivated(QString)),
 		 this, SLOT(infoLabelLinkActivated(QString)) );
 	QLabel *labelInfo = m_labelInfo->nativeWidget();
 	labelInfo->setOpenExternalLinks( true );
-	labelInfo->setWordWrap( false );
+	labelInfo->setWordWrap( true );
 
-	// TODO: Load old journey searches
 	m_btnLastJourneySearches = new Plasma::ToolButton;
 	m_btnLastJourneySearches->setIcon( KIcon("document-open-recent") );
 	m_btnLastJourneySearches->setToolTip( i18n("Use a recent journey search") );
@@ -1753,13 +2007,16 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	QLabel *labelJourneysNotSupported = m_labelJourneysNotSupported->nativeWidget();
 	labelJourneysNotSupported->setWordWrap( true );
 
-	m_listStopsSuggestions = new Plasma::TreeView( m_graphicsWidget );
+	m_listStopsSuggestions = new Plasma::TreeView( m_mainGraphicsWidget );
 	m_listStopsSuggestions->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
 	m_listStopsSuggestions->nativeWidget()->setRootIsDecorated( false );
 	m_listStopsSuggestions->nativeWidget()->setHeaderHidden( true );
 	m_listStopsSuggestions->nativeWidget()->setAlternatingRowColors( true );
 	m_listStopsSuggestions->nativeWidget()->setEditTriggers( QAbstractItemView::NoEditTriggers );
-	m_listStopsSuggestions->hide();
+	#if KDE_VERSION < KDE_MAKE_VERSION(4,3,80)
+	    m_listStopsSuggestions->hide();
+	#endif
+	m_listStopsSuggestions->setOpacity( 0 );
 
 	m_journeySearch->nativeWidget()->setCompletionMode( KGlobalSettings::CompletionAuto );
 	m_journeySearch->nativeWidget()->setCompletionModeDisabled(
@@ -1783,7 +2040,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 		 this, SLOT(possibleStopDoubleClicked(QModelIndex)) );
 
 	// Create treeview
-	m_treeView = new Plasma::TreeView( m_graphicsWidget );
+	m_treeView = new Plasma::TreeView( m_mainGraphicsWidget );
 	m_treeView->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
 	QTreeView *treeView =m_treeView->nativeWidget();
 // 	treeView->setAlternatingRowColors( true );
@@ -1798,6 +2055,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	treeView->setEditTriggers( QAbstractItemView::NoEditTriggers );
 	treeView->setSelectionMode( QAbstractItemView::NoSelection );
 	treeView->setSelectionBehavior( QAbstractItemView::SelectRows );
+	treeView->setVerticalScrollMode( QAbstractItemView::ScrollPerPixel );
 	treeView->header()->setCascadingSectionResizes( true );
 	treeView->header()->setResizeMode( QHeaderView::Interactive );
 	treeView->header()->setSortIndicator( 2, Qt::AscendingOrder );
@@ -1829,9 +2087,9 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	QGraphicsGridLayout *layoutTop = new QGraphicsGridLayout(); // = createLayoutTitle();
 	layout->addItem( layoutTop );
 	layout->addItem( m_treeView );
-	m_graphicsWidget->setLayout( layout );
+	m_mainGraphicsWidget->setLayout( layout );
 
-// 	registerAsDragHandle( m_graphicsWidget );
+	registerAsDragHandle( m_mainGraphicsWidget );
 	registerAsDragHandle( m_label );
 // 	registerAsDragHandle( m_labelInfo );
 // 	registerAsDragHandle( m_treeView );
@@ -1849,7 +2107,7 @@ void PublicTransport::infoLabelLinkActivated( const QString& link ) {
 bool PublicTransport::sceneEventFilter( QGraphicsItem* watched, QEvent* event ) {
     if ( watched && watched == m_labelInfo ) {
 	if ( event->type() == QEvent::GraphicsSceneMousePress )
-	    return true; // To make links clickable, otherwise Plasma takes all 
+	    return true; // To make links clickable, otherwise Plasma takes all
 			 // clicks to move the applet
     }
     
@@ -1921,21 +2179,6 @@ void PublicTransport::constraintsEvent( Plasma::Constraints /*constraints*/ ) {
 //     if ( (constraints|Plasma::FormFactorConstraint || constraints|Plasma::SizeConstraint) &&
 //         layout()->itemAt(0) != m_graphicsWidget ) {
 //     }
-}
-
-void PublicTransport::paintInterface( QPainter *p,
-        const QStyleOptionGraphicsItem *option, const QRect &contentsRect ) {
-    Q_UNUSED(p)
-    Q_UNUSED(option)
-    Q_UNUSED(contentsRect)
-
-//     p->setRenderHint(QPainter::SmoothPixmapTransform);
-//     p->setRenderHint(QPainter::Antialiasing);
-
-// p->drawImage( QPoint(0,0), KIcon("kalarm").pixmap(16).toImage() );
-    // Now we draw the applet, starting with our svg
-//     m_svg.resize((int)contentsRect.width(), (int)contentsRect.height());
-//     m_svg.paint(p, (int)contentsRect.left(), (int)contentsRect.top());
 }
 
 void PublicTransport::createConfigurationInterface( KConfigDialog* parent ) {
@@ -2011,22 +2254,32 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	return;
 
     QGraphicsLinearLayout *layoutMain =
-	    dynamic_cast<QGraphicsLinearLayout*>( m_graphicsWidget->layout() );
+	    dynamic_cast<QGraphicsLinearLayout*>( m_mainGraphicsWidget->layout() );
     QGraphicsGridLayout *layoutTop =
 	    dynamic_cast<QGraphicsGridLayout*>( layoutMain->itemAt(0) );
     Q_ASSERT( layoutTop );
     Q_ASSERT( layoutMain );
-
+    
     QGraphicsWidget *w = static_cast< QGraphicsWidget* >( layoutMain->itemAt(1) );
-    if ( w )
-	w->hide();
+    if ( w ) {
+	#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+	    startFadeAnimation( w, 0 );
+	#else
+	    w->hide();
+	#endif
+    }
     
     // Hide widgets from the old title layout
     for ( int col = 0; col < layoutTop->columnCount(); ++col ) {
 	for ( int row = 0; row < layoutTop->rowCount(); ++row ) {
 	    QGraphicsWidget *w = static_cast< QGraphicsWidget* >( layoutTop->itemAt(row, col) );
-	    if ( w )
-		w->hide();
+	    if ( w ) {
+		#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+		    startFadeAnimation( w, 0 );
+		#else
+		    w->hide();
+		#endif
+	    }
 	}
     }
     
@@ -2039,7 +2292,7 @@ void PublicTransport::setTitleType( TitleType titleType ) {
     layoutMainNew->setContentsMargins( 0, 0, 0, 0 );
     layoutMainNew->setSpacing( 0 );
     layoutMainNew->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
-    m_graphicsWidget->setLayout( layoutMainNew );
+    m_mainGraphicsWidget->setLayout( layoutMainNew );
     layoutMain = NULL;
     
     // Add new title layout
@@ -2056,9 +2309,23 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 		    ? DepartureListOkIcon : DepartureListErrorIcon );
 	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
 	    m_label->setText( titleText() );
+	    m_labelInfo->setToolTip( courtesyToolTip() );
 	    m_labelInfo->setText( infoText() );
-
-	    m_treeView->show();
+	    
+	    // Set to fixed width, because otherwise it would be too big.
+	    // With word wrap off it works, but then Plasma fades the text out on the
+	    // right, because it calculates the text size as plain text.
+	    m_labelInfo->nativeWidget()->setFixedWidth(
+		    m_labelInfo->nativeWidget()->sizeHint().width() + 5 );
+		    
+	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+		startFadeAnimation( m_icon, 1 );
+		startFadeAnimation( m_label, 1 );
+		startFadeAnimation( m_labelInfo, 1 );
+		startFadeAnimation( m_treeView, 1 );
+	    #else
+		m_treeView->show();
+	    #endif
 	    layoutMainNew->addItem( m_treeView );
 	    break;
 
@@ -2067,8 +2334,16 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	    m_icon->setToolTip( i18n("Abort search for journeys to or from the home stop") );
 
 	    m_journeySearch->setEnabled( true );
-	    m_listStopsSuggestions->show();
-	    m_btnLastJourneySearches->show();
+	    
+	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+		startFadeAnimation( m_icon, 1 );
+		startFadeAnimation( m_journeySearch, 1 );
+		startFadeAnimation( m_listStopsSuggestions, 1 );
+		startFadeAnimation( m_btnLastJourneySearches, 1 );
+	    #else
+		m_listStopsSuggestions->show();
+		m_btnLastJourneySearches->show();
+	    #endif
 	    layoutMainNew->addItem( m_listStopsSuggestions );
 	    break;
 	    
@@ -2078,8 +2353,15 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 
 	    m_journeySearch->setEnabled( false );
 	    m_btnLastJourneySearches->setEnabled( false );
-	    m_btnLastJourneySearches->show();
-	    m_labelJourneysNotSupported->show();
+	    
+	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+		startFadeAnimation( m_icon, 1 );
+		startFadeAnimation( m_btnLastJourneySearches, 1 );
+		startFadeAnimation( m_labelJourneysNotSupported, 1 );
+	    #else
+		m_btnLastJourneySearches->show();
+		m_labelJourneysNotSupported->show();
+	    #endif
 	    layoutMainNew->addItem( m_labelJourneysNotSupported );
 	    break;
 
@@ -2089,8 +2371,15 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
 	    m_iconClose->setToolTip( i18n("Show departures / arrivals") );
 	    m_label->setText( i18n("<b>Journeys</b>") );
-
-	    m_treeView->show();
+	    
+	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+		startFadeAnimation( m_label, 1 );
+		startFadeAnimation( m_icon, 1 );
+		startFadeAnimation( m_iconClose, 1 );
+		startFadeAnimation( m_treeView, 1 );
+	    #else
+		m_treeView->show();
+	    #endif
 	    layoutMainNew->addItem( m_treeView );
 	    break;
     }
@@ -2361,8 +2650,12 @@ QAction* PublicTransport::updatedAction ( const QString& actionName ) {
 	QStandardItem *itemDirection = m_model->item( m_clickedItemIndex.row(), 1 );
 	direction = itemDirection->text();
     }
-    
-    if ( actionName == "toggleExpanded" ) {
+
+    if ( actionName == "backToDepartures" ) {
+	a->setText( m_settings.departureArrivalListType() == DepartureList
+	    ? i18n("Back to &Departure List")
+	    : i18n("Back to &Arrival List") );
+    } else if ( actionName == "toggleExpanded" ) {
 	if ( m_treeView->nativeWidget()->isExpanded( model->index(m_clickedItemIndex.row(), 0) ) ) {
 	    a->setText( i18n("Hide Additional &Information") );
 	    a->setIcon( KIcon("arrow-up") );
@@ -2783,6 +3076,10 @@ void PublicTransport::showJourneySearch( bool ) {
 	      ? ShowingJourneySearch : ShowingJourneysNotSupported );
 }
 
+void PublicTransport::goBackToDepartures() {
+    addState( ShowingDepartureArrivalList );
+}
+
 void PublicTransport::markAlarmRow ( const QPersistentModelIndex& modelIndex, AlarmState alarmState ) {
     if( !modelIndex.isValid() ) {
 	kDebug() << "!index.isValid(), row =" << modelIndex.row();
@@ -3022,10 +3319,16 @@ QString PublicTransport::titleText() const {
 }
 
 QString PublicTransport::infoText() const {
-    QString shortUrl = serviceProviderData()["shortUrl"].toString();
-    QString url = serviceProviderData()["url"].toString();
-    return QString("<small>last update: %1<br>data by: <a href='%2'>%3</a></small>")
+    QHash< QString, QVariant > data = serviceProviderData();
+    QString shortUrl = data["shortUrl"].toString();
+    QString url = data["url"].toString();
+    return QString("<nobr>last update: %1<br>data by: <a href='%2'>%3</a></nobr>")
 	    .arg( m_lastSourceUpdate.toString("hh:mm"), url, shortUrl );
+}
+
+QString PublicTransport::courtesyToolTip() const {
+    QHash< QString, QVariant > data = serviceProviderData();
+    return i18n( "By courtesy of %1 (%2)", data["credit"].toString(), data["url"].toString() );
 }
 
 QString PublicTransport::formatDateFancyFuture( const QDate& date ) const {
@@ -4192,14 +4495,11 @@ void PublicTransport::removeOldJourneys() {
 }
 
 void PublicTransport::updateModelJourneys() {
-    if (m_graphicsWidget == NULL)
+    if ( !m_graphicsWidget )
 	graphicsWidget();
 
     int sortSection = m_treeView->nativeWidget()->header()->sortIndicatorSection();
     Qt::SortOrder sortOrder = m_treeView->nativeWidget()->header()->sortIndicatorOrder();
-
-//     m_label->setText( titleText() );
-//     m_labelInfo->setText( infoText() );
 
     removeOldJourneys(); //  also remove filtered departures  (after changing filter settings)?
     foreach( JourneyInfo journeyInfo, m_journeyInfos )
@@ -4229,7 +4529,7 @@ void PublicTransport::updateModelJourneys() {
 }
 
 void PublicTransport::updateModel() {
-    if (m_graphicsWidget == NULL)
+    if ( !m_graphicsWidget )
 	graphicsWidget();
 
     int sortSection = m_treeView->nativeWidget()->header()->sortIndicatorSection();
@@ -4237,7 +4537,14 @@ void PublicTransport::updateModel() {
 
     if ( m_titleType == ShowDepartureArrivalListTitle ) {
 	m_label->setText( titleText() );
+	m_labelInfo->setToolTip( courtesyToolTip() );
 	m_labelInfo->setText( infoText() );
+	
+	// Set to fixed width, because otherwise it would be too big.
+	// With word wrap off it works, but then Plasma fades the text out on the 
+	// right, because it calculates the text size as plain text.
+	m_labelInfo->nativeWidget()->setFixedWidth(
+		m_labelInfo->nativeWidget()->sizeHint().width() + 5 );
     }
 
     removeOldDepartures(); // also remove filtered departures  (after changing filter settings)?

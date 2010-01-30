@@ -21,32 +21,58 @@
 * @brief This file contains the public transport applet.
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-
 #ifndef PUBLICTRANSPORT_HEADER
 #define PUBLICTRANSPORT_HEADER
 
 // Plasma includes
 #include <Plasma/PopupApplet>
-#include <Plasma/Label>
-#include <Plasma/ToolButton>
-#include <Plasma/LineEdit>
-#include <Plasma/TreeView>
-#include <Plasma/IconWidget>
-
-// KDE includes
-#include <KIcon>
-
-// Qt includes
-#include <QStandardItemModel>
 
 // Own includes
 #include "global.h"
 #include "departureinfo.h"
-#include "alarmtimer.h"
 #include "settings.h"
 
+namespace Plasma {
+    class IconWidget;
+    class TreeView;
+    class LineEdit;
+    class ToolButton;
+    class Label;
+};
+
+class AlarmTimer;
 class QSizeF;
 class QGraphicsLayout;
+class QStandardItemModel;
+
+#if QT_VERSION >= 0x040600
+class QGraphicsBlurEffect;
+#endif
+
+// Mostly copied from Plasma::Applet (the AppletOverlayWidget displayed when
+// calling setConfigurationRequired(true)). But with a blur effect ;)
+class OverlayWidget : public QGraphicsWidget {
+    Q_OBJECT
+
+public:
+    OverlayWidget( QGraphicsWidget* parent = 0, QGraphicsWidget* under = 0 );
+    void destroy();
+
+protected:
+    virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
+			QWidget* widget = 0 );
+
+public slots:
+    void overlayAnimationComplete();
+
+private:
+    qreal opacity;
+    QGraphicsWidget* m_under; // TODO Better name...
+    
+    #if QT_VERSION >= 0x040600
+    QGraphicsBlurEffect *m_blur;
+    #endif
+};
 
 
 /** @class PublicTransport
@@ -61,13 +87,12 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** Destructor. Saves the list of recently used journey searches. */
         ~PublicTransport();
 
+	/** Maximum number of recent journey searches. When more journey searches
+	* get added, the oldest when gets removed. */
 	static const int MAX_RECENT_JOURNEY_SEARCHES = 10;
 
 	/** Initializes the applet. */
 	void init();
-
-	// Deprecated..
-        void paintInterface(QPainter *painter, const QStyleOptionGraphicsItem *option, const QRect& contentsRect);
 
 	/** Returns the widget with the contents of the applet. */
 	virtual QGraphicsWidget* graphicsWidget();
@@ -80,8 +105,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	
 	/** Tests the given state.
 	* @param state The state to test.
-	* @returns true, if the state is set.
-	* @returns false, if the state is not set.*/
+	* @returns True, if the state is set. False, otherwise.*/
 	virtual bool testState( AppletState state ) const;
 	
 	/** Adds the given state. Operations are processed to set the new applet state.
@@ -182,8 +206,10 @@ class PublicTransport : public Plasma::PopupApplet {
 	QString titleText() const;
 
 	/** Gets the text to be displayed on right of the treeview as additional
-	* information (html-tags allowed). */
+	* information (html-tags allowed). Contains courtesy information. */
 	QString infoText() const;
+
+	QString courtesyToolTip() const;
 
 	/** Gets the text to be displayed in the column departure / arrival for a given
 	* DepartureInfo object.
@@ -354,6 +380,8 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	/** The action to switch to the journey search mode has been triggered. */
 	void showJourneySearch( bool );
+	void goBackToDepartures();
+	void showActionButtons();
 	
 	/** The action to show all departures/arrivals has been triggered (remove all filters). */
 	void showEverything( bool );
@@ -401,6 +429,9 @@ class PublicTransport : public Plasma::PopupApplet {
 	void setJourneySearchStopNameCompletion( const QString &match );
 	void setJourneySearchWordCompletion( const QString &match );
 	void recentJourneyActionTriggered( QAction *action );
+
+    protected slots:
+	void destroyOverlay();
 	
     private:
 	bool parseJourneySearch( const QString &search, QString *stop,
@@ -411,11 +442,13 @@ class PublicTransport : public Plasma::PopupApplet {
 	void stopNamePosition( int *posStart, int *len, QString *stop = NULL );
 	bool parseTime( const QString &sTime, QTime *time ) const;
 	bool parseDate( const QString &sDate, QDate *date ) const;
+
+	
 				 
 	AppletStates m_appletStates; /**< The current states of this applet */
 	TitleType m_titleType; /**< The type of items to be shown as title above the tree view */
 	
-	QGraphicsWidget *m_graphicsWidget;
+	QGraphicsWidget *m_graphicsWidget, *m_mainGraphicsWidget;
 	Plasma::IconWidget *m_icon; /**< The icon that displayed in the top left corner */
 	Plasma::IconWidget *m_iconClose; /**< The icon that displayed in the top right corner to close the journey view */
 	Plasma::Label *m_label; /**< A label used to display a title */
@@ -425,6 +458,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	Plasma::LineEdit *m_journeySearch; /**< A line edit for inputting the target of a journey */
 	Plasma::TreeView *m_listStopsSuggestions; /**< A list of stop suggestions for the current input */
 	Plasma::ToolButton *m_btnLastJourneySearches; /**< A tool button that shows last used journey searches. */
+	OverlayWidget *m_overlay;
 
 	QStringList m_recentJourneySearches; /** A list of last used journey searches. */
 	int m_journeySearchLastTextLength; /**< The last number of unselected characters in the journey search input field. */
@@ -451,6 +485,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	QList<TimetableColumn> m_departureViewColumns;
 	QList<TimetableColumn> m_journeyViewColumns;
 };
+
+Q_DECLARE_METATYPE(Plasma::Animation*)
 
 #ifndef NO_EXPORT_PLASMA_APPLET // Needed for settings.cpp to include publictransport.h
 // This is the command that links the applet to the .desktop file

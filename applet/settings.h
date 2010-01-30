@@ -127,7 +127,7 @@ class PublicTransportSettings : public QObject {
 	/** Sets the list of line numbers that should be filtered. */
 	void setFilterLineNumberList( const QStringList &filters ) {
 	    m_filterLineNumberList = filters; };
-	
+
 	DepartureArrivalListType departureArrivalListType() const {
 		return m_departureArrivalListType; };
 	bool isHeaderVisible() const { return m_showHeader; };
@@ -206,9 +206,12 @@ class PublicTransportSettings : public QObject {
 	* service provider.*/
 	int updateServiceProviderModel( const QString &itemText = QString() );
 	void locationChanged( const QString &newLocation );
-        void downloadServiceProvidersClicked ( bool );
-	void installServiceProviderClicked ( bool );
-
+        void downloadServiceProvidersClicked( bool );
+	void installServiceProviderClicked( bool );
+	
+	void setShowDepartures();
+	void setShowArrivals();
+	
 	void filterTypeTargetChanged( int );
 	void filterTargetListChanged();
 	void filterTypeLineNumberChanged( int );

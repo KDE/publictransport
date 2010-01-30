@@ -18,89 +18,28 @@
  */
 
 #include "htmldelegate.h"
+#include "global.h"
+
 #include <QTextDocument>
 #include <QTextBlock>
 #include <QTextLayout>
-#include <QDebug>
-#include <qabstractitemview.h>
+#include <QAbstractItemView>
 #include <QTreeView>
 #include <QAbstractTextDocumentLayout>
-#include <Plasma/PaintUtils>
 #include <QPainter>
-#include "global.h"
-#include <Plasma/Svg>
-#include <plasma/framesvg.h>
 #include <qmath.h>
+#include <QDebug>
+
+#include <Plasma/PaintUtils>
+#include <Plasma/FrameSvg>
+
 
 HtmlDelegate::HtmlDelegate() : QItemDelegate() {
     m_alignText = false;
 }
 
-/*
-// TODO: simplify this... (not neede anymore?)
-void HtmlDelegate::plainTextToHTMLCharPos( const QString& sHtml, int pos, int* htmlPos ) const
-{
-    int i = 0;
-    bool insideHtmlTag = false;
-    *htmlPos = 0;
-
-//     qDebug() << "   HTML " << sHtml << "pos" << pos << "plainTextCount" << plainTextCount;
-
-    // Get pos in html
-    if ( pos != 0 )
-	while( pos >= 0 && i < sHtml.count() )
-	{
-	    QChar ch = sHtml[i];
-	    if ( ch == '<' )
-		insideHtmlTag = true;
-	    else if ( pos == 0 )
-		break;
-
-	    if ( !insideHtmlTag )
-		--pos;
-	    ++*htmlPos;
-	    ++i;
-
-	    if ( ch == '>' )
-		insideHtmlTag = false;
-	}
-
-    if ( *htmlPos > 0 )
-	--*htmlPos;
-}
-
-// TODO: ...and simplify that (not neede anymore?)
-void HtmlDelegate::plainTextToHTMLCharCount( const QString &sHtml, int pos, int plainTextCount, int *htmlPos, int *htmlCount ) const
-{
-    int i = 0;
-    bool insideHtmlTag = false;
-    *htmlCount = 0;
-
-    plainTextToHTMLCharPos( sHtml, pos, htmlPos );
-
-    i = *htmlPos;
-    while( plainTextCount >= 0 && i < sHtml.count() )
-    {
-	QChar ch = sHtml[i];
-	if ( ch == '<' )
-	    insideHtmlTag = true;
-	else if ( plainTextCount == 0 )
-	    break;
-
-	if ( !insideHtmlTag )
-	    --plainTextCount;
-	++*htmlCount;
-	++i;
-
-	if ( ch == '>' )
-	    insideHtmlTag = false;
-    }
-
-//     qDebug() << "   HTML " << "htmlPos" << *htmlPos << "htmlCount" << *htmlCount;
-}*/
-
-void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option,
-			   const QModelIndex& index ) const {
+void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
+			  const QModelIndex& index ) const {
     QRect rect = option.rect;
 
     drawBackground( painter, option, index );
@@ -109,7 +48,6 @@ void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option
 
 	// TODO: load the svg only once and change when the current theme is changed
 	Plasma::FrameSvg *svg = new Plasma::FrameSvg( parent() );
-	// 	Plasma::Svg *svg = new Plasma::Svg(  );
 	if ( Plasma::Theme::defaultTheme()->currentThemeHasImage("widgets/frame") )
 	    svg->setImagePath( "widgets/frame" );
 	else
@@ -124,21 +62,6 @@ void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option
 	    else if ( index.column() == index.model()->columnCount() - 1 )
 		svg->setEnabledBorders(svg->enabledBorders() | Plasma::FrameSvg::RightBorder);
 	}
-
-// 	painter->save();
-// 	QPixmap bgPixmap( rect.size() );
-// 	QPainter p( &bgPixmap );
-// // 	painter->setClipRegion( svg->mask().translated(rect.topLeft()) );
-// // 	bgPixmap.fill( Qt::transparent );
-// // 	p.translate( -rect.topLeft() );
-// // 	drawBackground( &p, option, index );
-// 	p.fillRect( 0, 0, rect.width(), rect.height(), Qt::red );
-//
-// 	p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-// 	p.drawPixmap( 0, 0, svg->alphaMask() );
-// 	p.end();
-// 	painter->drawPixmap( rect, bgPixmap );
-// 	painter->restore();
 
 	svg->paintFrame( painter, rect.topLeft() );
     }
@@ -223,13 +146,6 @@ void HtmlDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option
 	drawDisplayWithShadow( painter, option, displayRect, text, true );
     else
 	drawDisplayWithShadow( painter, option, displayRect, text );
-
-//     painter->save();
-//     painter->setRenderHint(QPainter::Antialiasing, true);
-//     if (option.state & QStyle::State_Selected)
-//     painter->restore();
-
-//     QItemDelegate::paint ( painter, option, index );
 }
 
 void HtmlDelegate::drawDecoration( QPainter* painter, const QStyleOptionViewItem& option,
@@ -327,10 +243,8 @@ void HtmlDelegate::drawDisplayWithShadow( QPainter* painter,
 
     for ( int b = 0; b < document.blockCount(); ++b )
 	lineCount += document.findBlockByLineNumber( b ).layout()->lineCount();
-//     qDebug() << lineCount << text << "max=" << maxLineCount;
     if ( lineCount > maxLineCount )
 	lineCount = maxLineCount;
-//     qDebug() << rect.height() << "/" << option.fontMetrics.lineSpacing() << "=" << rect.height() / option.fontMetrics.lineSpacing() << ", lineCount=" << lineCount;
 
     int textHeight = lineCount * option.fontMetrics.lineSpacing() - option.fontMetrics.leading();
 
@@ -350,8 +264,6 @@ void HtmlDelegate::drawDisplayWithShadow( QPainter* painter,
 
 	for ( int l = 0; l < textLayout->lineCount(); ++l ) {
 	    QTextLine textLine = textLayout->lineAt( l );
-// 	    if ( l == maxLineCount - 1 ) // make last line "infinitly" long, but doesn't work when not layouting..
-// 		textLine.setLineWidth(9999999); // also doesn't work for right-aligned text!
 	    textLine.draw( &p, position );
 
 	    // Add a fade out rect to the list if the line is too long
@@ -390,8 +302,6 @@ void HtmlDelegate::drawDisplayWithShadow( QPainter* painter,
         painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );
 
     painter->drawPixmap( rect.topLeft(), pixmap );
-
-//     QItemDelegate::drawDisplay( painter, option, rect, text );
 }
 
 QSize HtmlDelegate::sizeHint ( const QStyleOptionViewItem& option,
@@ -400,9 +310,8 @@ QSize HtmlDelegate::sizeHint ( const QStyleOptionViewItem& option,
 
     if ( index.data( LinesPerRowRole ).isValid() ) {
 	int lines = qMax( index.data( LinesPerRowRole ).toInt(), 1 );
-// 	size.setHeight( option.fontMetrics.lineSpacing() * lines + 4 );
-	int height = option.fontMetrics.boundingRect( 0, 0, size.width(), 999999, 0, "AlpfIgj(" ).height();
-	// size.setHeight( (option.fontMetrics.lineSpacing() * 1.2f) * lines + 4 );
+	int height = option.fontMetrics.boundingRect( 0, 0, size.width(), 999999,
+						      0, "AlpfIgj(" ).height();
 	size.setHeight( (height + option.fontMetrics.leading()) * lines + 4 );
     }
     else
