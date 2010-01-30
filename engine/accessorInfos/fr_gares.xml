@@ -14,6 +14,7 @@
 
 <url>http://www.gares-en-mouvement.com/</url>
 <shortUrl>gares-en-mouvement.com</shortUrl>
+<credit>Société Nationale des Chemins de fer Français (SNCF)</credit>
 
 <rawUrls>
     <departures><![CDATA[http://www.gares-en-mouvement.com/infostempsreel-depart-en-1-{stop}-0.html]]></departures>

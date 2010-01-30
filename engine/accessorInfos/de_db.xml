@@ -14,6 +14,7 @@
 
 <url>http://reiseauskunft.bahn.de/bin/query.exe/d</url>
 <shortUrl>db.de</shortUrl>
+<credit>Deutsche Bahn AG</credit>
 <!-- <minFetchWait>300</minFetchWait> -->
 <fallbackCharset>latin1</fallbackCharset>
 

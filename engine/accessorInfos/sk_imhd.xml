@@ -30,6 +30,7 @@
 
 <url>http://www.imhd.zoznam.sk/ba/</url>
 <shortUrl>imhd.zoznam.sk</shortUrl>
+<credit>iMHD.sk</credit>
 
 <rawUrls>
     <departures><![CDATA[http://www.imhd.zoznam.sk/{city}/index.php?w=212b36213433213aef2f302523ea&lang=en&hladaj={stop}]]></departures>

@@ -1,5 +1,6 @@
 #include "timetableaccessor_htmlinfo.h"
 #include <KLocalizedString>
+#include <KDebug>
 
 TimetableRegExpSearch::TimetableRegExpSearch() {
 }

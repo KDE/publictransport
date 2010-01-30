@@ -12,6 +12,7 @@
 
 <url>http://www.flightstats.com/</url>
 <shortUrl>flightstats.com</shortUrl>
+<credit>Conducive Technology Corp.</credit>
 
 <rawUrls>
     <departures><![CDATA[http://www.flightstats.com/go/FlightStatus/flightStatusByAirport.do?airport=({stop})&airportQueryDate={date:yyyy-mm-dd}&airportQueryTime=-1&airlineToFilter=&airportQueryType=0]]></departures>

@@ -10,6 +10,7 @@
 
 <url>http://fahrplan.sbb.ch/</url>
 <shortUrl>sbb.ch</shortUrl>
+<credit>Schweizerische Bundesbahnen SBB</credit>
 
 <rawUrls>
     <departures><![CDATA[http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?input={stop}!&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>

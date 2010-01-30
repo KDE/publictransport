@@ -10,6 +10,7 @@
 
 <url>http://www.oebb.at/</url>
 <shortUrl>oebb.at</shortUrl>
+<credit>ÖBB-Konzern</credit>
 
 <rawUrls>
     <departures><![CDATA[http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&input={stop}&boardType={dataType}&time={time}&REQ0JourneyProduct_list=0:1111111111010000-000000.&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>

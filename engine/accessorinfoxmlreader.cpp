@@ -90,7 +90,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
     AccessorType type;
     QString version, nameLocal, nameEn, descriptionLocal, descriptionEn,
 	    authorName, authorEmail, defaultVehicleType, url, shortUrl,
-	    charsetForUrlEncoding, fallbackCharset, scriptFile,
+	    charsetForUrlEncoding, fallbackCharset, scriptFile, credit,
 	    rawUrlDepartures, rawUrlStopSuggestions, rawUrlJourneys;
     QStringList cities;
     QHash<QString, QString> cityNameReplacements;
@@ -179,6 +179,8 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 			     << nameEn << "wasn't found";
 		    return NULL;
 		}
+	    } else if ( name().compare("credit", Qt::CaseInsensitive) == 0 ) {
+		credit = readElementText();
 	    } else
 		readUnknownElement();
 	}
@@ -205,6 +207,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
     accessorInfos.setFileName( fileName );
     accessorInfos.setCountry( country );
     accessorInfos.setCities( cities );
+    accessorInfos.setCredit( credit );
     accessorInfos.setCityNameToValueReplacementHash( cityNameReplacements );
     accessorInfos.setUseSeperateCityValue( useSeperateCityValue );
     accessorInfos.setOnlyUseCitiesInList( onlyUseCitiesInList );
@@ -305,13 +308,15 @@ void AccessorInfoXmlReader::readCities( QStringList *cities,
 	
 	if ( isStartElement() ) {
 	    if ( name().compare("city", Qt::CaseInsensitive) == 0 ) {
-		QString city = readElementText();
 		if ( attributes().hasAttribute("replaceWith") ) {
-		    cityNameReplacements->insert( city,
-			    attributes().value("replaceWith").toString().toLower() );
+		    QString replacement = attributes().value("replaceWith").toString().toLower();
+		    QString city = readElementText();
+		    cityNameReplacements->insert( city.toLower(), replacement );
+		    cities->append( city );
+		} else {
+		    QString city = readElementText();
+		    cities->append( city );
 		}
-		
-		cities->append( city );
 	    } else
 		readUnknownElement();
 	}

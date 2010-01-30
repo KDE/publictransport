@@ -63,6 +63,7 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
     dataServiceProvider.insert( "shortUrl", accessor->timetableAccessorInfo().shortUrl() );
     dataServiceProvider.insert( "country", accessor->country() );
     dataServiceProvider.insert( "cities", accessor->cities() );
+    dataServiceProvider.insert( "credit", accessor->credit() );
     dataServiceProvider.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
     dataServiceProvider.insert( "onlyUseCitiesInList", accessor->onlyUseCitiesInList() );
     dataServiceProvider.insert( "features", accessor->features() );
@@ -87,7 +88,7 @@ QHash< QString, QVariant > PublicTransportEngine::locations() {
 
     locationHash.clear();
     locationHash.insert( "name", name = "de" );
-    locationHash.insert( "description", i18n("Support for all cities in Germany. There is also support for providers specific to regions / cities.") );
+    locationHash.insert( "description", i18n("Support for all cities in Germany (and limited support for cities in europe). There is also support for providers specific to regions / cities.") );
     locationHash.insert( "defaultAccessor", "de_db" );
     ret.insert( name, locationHash );
     

@@ -11,6 +11,7 @@
 
 <url>http://www.vvs.de/</url>
 <shortUrl>vvs.de</shortUrl>
+<credit>Verkehrs- und Tarifverbund Stuttgart GmbH</credit>
 
 <rawUrls>
     <departures><![CDATA[http://www2.vvs.de/vvs/XSLT_DM_REQUEST?language=de&type_dm=stop&mode=direct&place_dm={city}&name_dm={stop}&deleteAssignedStops=1]]></departures>

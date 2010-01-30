@@ -91,6 +91,8 @@ class TimetableAccessor : public QObject {
 	/** A list of cities for which the accessor returns results. */
 	virtual QStringList cities() const { return m_info.cities(); };
 
+	QString credit() const { return m_info.credit(); };
+
 	/** Requests a list of departures / arrivals. When the departure / arrival list
 	* is completely received departureListReceived() is emitted. */
 	KIO::TransferJob *requestDepartures( const QString &sourceName,

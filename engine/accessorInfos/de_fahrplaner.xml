@@ -14,6 +14,7 @@
 
 <url>http://www.fahrplaner.de/</url>
 <shortUrl>fahrplaner.de</shortUrl>
+<credit>Weser-Ems Busverkehr GmbH</credit>
 
 <rawUrls>
     <departures><![CDATA[http://www.fahrplaner.de/hafas/stboard.exe/dn?ld=web&L=vbn&input={stop}&boardType={dataType}&time={time}&showResultPopup=popup&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>

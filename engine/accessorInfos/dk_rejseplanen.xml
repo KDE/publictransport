@@ -14,6 +14,7 @@
 
 <url>http://www.rejseplanen.dk</url>
 <shortUrl>rejseplanen.dk</shortUrl>
+<credit>Rejseplanen A/S (co-owners and suppliers: Arriva, BAT, Fynbus, Sydtrafik, http://www.Midttrafik.dk, North Jut land’s Transport Company, Movia, Ørestadsselskabet, Abildskou Busser, see website)</credit>
 <!-- <minFetchWait>300</minFetchWait> -->
 <fallbackCharset>latin1</fallbackCharset>
 

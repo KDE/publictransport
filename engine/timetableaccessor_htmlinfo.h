@@ -126,6 +126,7 @@ class TimetableAccessorInfo {
 	QString country() const;
 	/** A list of cities for which the service provider has data. */
 	QStringList cities() const;
+	QString credit() const { return m_credit; };
 	VehicleType defaultVehicleType() const;
 	/** Gets the minimum seconds to wait between two data-fetches from the
 	* service provider. */
@@ -315,6 +316,8 @@ class TimetableAccessorInfo {
 	* @see setOnlyUseCitiesInList() */
 	void setCities( const QStringList &cities );
 
+	void setCredit( const QString &credit ) { m_credit = credit; };
+
 	/** Sets wheather or not the service provider needs a seperate city value. */
 	void setUseSeperateCityValue( bool useSeperateCityValue );
 	/** Sets wheather or not cities may be freely chosen.
@@ -365,6 +368,7 @@ class TimetableAccessorInfo {
 	QList<TimetableRegExpSearch> m_searchPossibleStops;
 	QList<TimetableRegExpSearch> m_searchJourneyNews;
 	QStringList m_cities;
+	QString m_credit;
 	bool m_useSeperateCityValue;
 	bool m_onlyUseCitiesInList;
 	QHash<QString, QString> m_hashCityNameToValue; // The city value is used for the url (e.g. "ba" for city name "bratislava").

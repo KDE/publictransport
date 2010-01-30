@@ -14,6 +14,7 @@
 
 <url>http://www.septa.org/</url>
 <shortUrl>septa.org</shortUrl>
+<credit>Southeastern Pennsylvania Transportation Authority ("SEPTA")</credit>
 <!-- <minFetchWait>300</minFetchWait> -->
 
 <script>us_septa.js</script>

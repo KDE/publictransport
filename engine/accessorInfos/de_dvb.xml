@@ -11,6 +11,7 @@
 
 <url>http://www.dvb.de/</url>
 <shortUrl>dvb.de</shortUrl>
+<credit>Dresdner Verkehrsbetriebe AG</credit>
 
 <rawUrls>
     <departures><![CDATA[http://www.dvb.de:80/de/Fahrplan/Abfahrtsmonitor/abfahrten.do/{stop}#result]]></departures>

@@ -15,6 +15,7 @@
 
 <url>http://www.vrn.de/</url>
 <shortUrl>vrn.de</shortUrl>
+<credit>Verkehrsverbund Rhein-Neckar GmbH</credit>
 
 <rawUrls>
     <departures><![CDATA[http://efa9.vrn.de/vrn/XSLT_DM_REQUEST?language=de&type_dm=stop&mode=direct&place_dm={city}&name_dm={stop}&deleteAssignedStops=1]]></departures>

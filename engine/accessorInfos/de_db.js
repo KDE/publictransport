@@ -42,7 +42,11 @@ function parseTimetable( html ) {
     // Find block of departures
     var str = helper.extractBlock( html,
 	    '<table class="result stboard dep">', '</table>' );
-	    
+    if ( str.length == 0 ) {
+	str = helper.extractBlock( html,
+	    '<table class="result stboard arr">', '</table>' );
+    }
+
     // Initialize regular expressions (compile them only once)
     var departuresRegExp = /<tr>([\s\S]*?)<\/tr>/ig;
     var columnsRegExp = /<td class="([^"]*?)">([\s\S]*?)<\/td>/ig;
@@ -78,7 +82,7 @@ function parseTimetable( html ) {
 	if ( !columnMeanings.contains("time") || !columnMeanings.contains("route")
 	    || !columnMeanings.contains("train1") || !columnMeanings.contains("train2") )
 	    continue; // Not all columns where not found
-
+	    
 	// Initialize result variables with defaults
 	var time, typeOfVehicle, transportLine, targetString, platformString = "",
 	    delay = -1, delayReason = "", journeyNews = "",
