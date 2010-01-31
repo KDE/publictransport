@@ -43,35 +43,32 @@ void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
     QRect rect = option.rect;
 
     drawBackground( painter, option, index );
-    if ( index.data( TextBackgroundRole ).isValid() ) {
+    if ( index.data(TextBackgroundRole).isValid() ) {
 	QStringList data = index.data( TextBackgroundRole ).toStringList();
 
-	// TODO: load the svg only once and change when the current theme is changed
-	Plasma::FrameSvg *svg = new Plasma::FrameSvg( parent() );
+	static Plasma::FrameSvg svg;
 	if ( Plasma::Theme::defaultTheme()->currentThemeHasImage("widgets/frame") )
-	    svg->setImagePath( "widgets/frame" );
+	    svg.setImagePath( "widgets/frame" );
 	else
-	    svg->setImagePath( "widgets/tooltip" );
-	svg->setElementPrefix( data.at(0) );
-	svg->resizeFrame( rect.size() );
+	    svg.setImagePath( "widgets/tooltip" );
+	svg.setElementPrefix( data.at(0) );
+	svg.resizeFrame( rect.size() );
 
 	if ( data.contains("drawFrameForWholeRow") ) {
-	    svg->setEnabledBorders(Plasma::FrameSvg::TopBorder | Plasma::FrameSvg::BottomBorder);
+	    svg.setEnabledBorders(Plasma::FrameSvg::TopBorder | Plasma::FrameSvg::BottomBorder);
 	    if ( index.column() == 0 )
-		svg->setEnabledBorders(svg->enabledBorders() | Plasma::FrameSvg::LeftBorder);
+		svg.setEnabledBorders(svg.enabledBorders() | Plasma::FrameSvg::LeftBorder);
 	    else if ( index.column() == index.model()->columnCount() - 1 )
-		svg->setEnabledBorders(svg->enabledBorders() | Plasma::FrameSvg::RightBorder);
+		svg.setEnabledBorders(svg.enabledBorders() | Plasma::FrameSvg::RightBorder);
 	}
 
-	svg->paintFrame( painter, rect.topLeft() );
+	svg.paintFrame( painter, rect.topLeft() );
     }
 //     else
 // 	drawBackground( painter, option, index );
 
-//     int size = qMin(rect.width(), rect.height());
     QString formattedText = index.data( FormattedTextRole ).toString();
     QString text = formattedText.isEmpty() ? index.data( Qt::DisplayRole ).toString() : formattedText;
-//     qDebug() << index.data( Qt::DecorationRole );
     
     QSize iconSize;
     if ( index.data( IconSizeRole ).isValid() )

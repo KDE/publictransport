@@ -49,13 +49,15 @@
 
 
 PublicTransportSettings::PublicTransportSettings( PublicTransport *applet )
-	: m_configDialog(0), m_modelServiceProvider(0), m_modelLocations(0) {
-    m_applet = applet;
-
-    m_dataSourceTester = new DataSourceTester( "", m_applet );
+	    : m_applet(applet), m_dataSourceTester(new DataSourceTester("", applet)),
+	      m_configDialog(0), m_modelServiceProvider(0), m_modelLocations(0) {
     connect( m_dataSourceTester,
 	     SIGNAL(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)),
 	     this, SLOT(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)) );
+}
+
+PublicTransportSettings::~PublicTransportSettings() {
+    delete m_dataSourceTester;
 }
 
 void PublicTransportSettings::dataUpdated( const QString& sourceName,

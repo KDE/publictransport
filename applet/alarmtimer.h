@@ -31,25 +31,23 @@ class AlarmTimer : public QObject {
     Q_OBJECT
 
     public:
-	AlarmTimer( QTimer *timer, QPersistentModelIndex data = QPersistentModelIndex() ) {
-	    setData( data );
-	    setTimer( timer );
+	AlarmTimer( QTimer *timer, QPersistentModelIndex data = QPersistentModelIndex() )
+		    : m_timer(timer) {
+	    m_data = data;
 	};
-	AlarmTimer( int msecs, QPersistentModelIndex data = QPersistentModelIndex(), bool singleShot = true ) {
+	AlarmTimer( int msecs, QPersistentModelIndex data = QPersistentModelIndex(),
+		    bool singleShot = true ) : m_timer(0) {
 	    setupSingleShotTimer( msecs, data, singleShot );
 	};
+	~AlarmTimer();
 
-	QPersistentModelIndex data() const {
-	    return m_data;
-	};
-	void setData( const QPersistentModelIndex &data ) {
-	    m_data = data;
-	}
-	QTimer *timer() const {
-	    return m_timer;
-	};
+	QPersistentModelIndex data() const { return m_data; };
+	void setData( const QPersistentModelIndex &data ) { m_data = data; };
+	QTimer *timer() const { return m_timer; };
 	void setTimer( QTimer *timer );
-	QTimer *setupSingleShotTimer( int msecs, QPersistentModelIndex data = QPersistentModelIndex(), bool singleShot = true );
+	QTimer *setupSingleShotTimer( int msecs,
+				      QPersistentModelIndex data = QPersistentModelIndex(),
+				      bool singleShot = true );
 
 	QDateTime startedAt() { return m_startedAt; };
 

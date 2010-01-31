@@ -19,28 +19,33 @@
 
 #include "alarmtimer.h"
 
-void AlarmTimer::setTimer ( QTimer* timer )
-{
+
+AlarmTimer::~AlarmTimer() {
+    delete m_timer;
+}
+
+void AlarmTimer::setTimer( QTimer* timer ) {
     m_timer = timer;
-    connect ( m_timer, SIGNAL ( timeout() ), this, SLOT ( timeout() ) );
+    connect( m_timer, SIGNAL(timeout()), this, SLOT(timeout()) );
     m_startedAt = QDateTime::currentDateTime();
     m_timer->start();
 }
 
-QTimer* AlarmTimer::setupSingleShotTimer ( int msecs, QPersistentModelIndex data, bool singleShot )
-{
-    m_timer = new QTimer ( this );
-    m_timer->setSingleShot ( singleShot );
-    m_timer->setInterval ( msecs );
-    setData ( data );
-    connect ( m_timer, SIGNAL ( timeout() ), this, SLOT ( timeoutReceived() ) );
+QTimer* AlarmTimer::setupSingleShotTimer( int msecs, QPersistentModelIndex data,
+					  bool singleShot ) {
+    m_timer = new QTimer( this );
+    m_timer->setSingleShot( singleShot );
+    m_timer->setInterval( msecs );
+    setData( data );
+    connect( m_timer, SIGNAL(timeout()), this, SLOT(timeoutReceived()) );
     m_startedAt = QDateTime::currentDateTime();
     m_timer->start();
 
     return m_timer;
 }
 
-void AlarmTimer::timeoutReceived()
-{
-    emit timeout ( m_data );
+void AlarmTimer::timeoutReceived() {
+    emit timeout( m_data );
+    
+    deleteLater(); // Delete timer once finished
 }

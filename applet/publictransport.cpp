@@ -40,11 +40,6 @@
 #include <Plasma/ToolTipManager>
 #include <Plasma/ToolTipContent>
 
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-    #include <Plasma/Animator>
-    #include <Plasma/Animation>
-#endif
-
 // Qt includes
 #include <QPainter>
 #include <QFontMetrics>
@@ -55,8 +50,6 @@
 #include <QGraphicsScene>
 #include <QListWidget>
 #include <QMenu>
-#include <QDBusInterface>
-#include <QDBusReply>
 #include <QTreeView>
 #include <QStandardItemModel>
 #include <QStringListModel>
@@ -67,10 +60,16 @@
 #include "htmldelegate.h"
 #include "alarmtimer.h"
 
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+#if QT_VERSION >= 0x040600
 #include <QGraphicsEffect>
+#include <QPropertyAnimation>
 #include <QSequentialAnimationGroup>
 #include <QParallelAnimationGroup>
+#endif
+
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+#include <Plasma/Animator>
+#include <Plasma/Animation>
 
 Plasma::Animation *fadeAnimation( QGraphicsWidget *w, qreal targetOpacity ) {
     if ( w->geometry().width() * w->geometry().height() > 250000 ) {
@@ -225,6 +224,18 @@ void PublicTransport::configurationIsRequired( bool needsConfiguring,
 }
 
 PublicTransport::~PublicTransport() {
+    for ( int row = 0; row < m_model->rowCount(); ++row )
+	removeAlarmForDeparture( row );
+    
+    delete m_model;
+    delete m_modelJourneys;
+    if ( m_treeView ) {
+	HtmlDelegate *htmlDelegate = static_cast< HtmlDelegate* >(
+		m_treeView->nativeWidget()->itemDelegate() );
+	delete htmlDelegate;
+    }
+    qDeleteAll( m_abandonedAlarmTimer );
+    
     if ( hasFailedToLaunch() ) {
         // Do some cleanup here
     } else {
@@ -232,9 +243,10 @@ PublicTransport::~PublicTransport() {
 	config().writeEntry( "recentJourneySearches", m_recentJourneySearches );
 	emit configNeedsSaving();
 
-	// TODO: are these deleted by plasma?
 	delete m_label;
 	delete m_labelInfo;
+	delete m_labelJourneysNotSupported;
+	delete m_btnLastJourneySearches;
 	delete m_graphicsWidget;
     }
 }
@@ -242,17 +254,6 @@ PublicTransport::~PublicTransport() {
 void PublicTransport::init() {
     m_settings.readSettings();
     m_recentJourneySearches = config().readEntry( "recentJourneySearches", QStringList() );
-    
-    switch ( formFactor() ) {
-	case Plasma::Horizontal:
-	case Plasma::Vertical:
-	    Plasma::ToolTipManager::self()->registerWidget(this);
-	    break;
-	    
-	default:
-	    Plasma::ToolTipManager::self()->unregisterWidget(this);
-	    break;
-    }
     
     createModels();
     graphicsWidget();
@@ -1032,7 +1033,7 @@ void PublicTransport::createTooltip() {
     
     data.setImage( KIcon("public-transport-stop").pixmap(IconSize(KIconLoader::Desktop)) );
     
-    Plasma::ToolTipManager::self()->setContent(this, data);
+    Plasma::ToolTipManager::self()->setContent( this, data );
 }
 
 DepartureInfo PublicTransport::getFirstNotFilteredDeparture() {
@@ -1930,7 +1931,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	
 	// Create a child graphics widget, eg. to apply a blur effect to it
 	// but not to an overlay widget (which then gets a child of m_graphicsWidget).
-	m_mainGraphicsWidget = new QGraphicsWidget( this );
+	m_mainGraphicsWidget = new QGraphicsWidget( m_graphicsWidget );
 	m_mainGraphicsWidget->setSizePolicy( QSizePolicy::Expanding,
 					     QSizePolicy::Expanding );
 	QGraphicsLinearLayout *mainLayout = new QGraphicsLinearLayout( Qt::Vertical );
@@ -2013,10 +2014,11 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	m_listStopsSuggestions->nativeWidget()->setHeaderHidden( true );
 	m_listStopsSuggestions->nativeWidget()->setAlternatingRowColors( true );
 	m_listStopsSuggestions->nativeWidget()->setEditTriggers( QAbstractItemView::NoEditTriggers );
-	#if KDE_VERSION < KDE_MAKE_VERSION(4,3,80)
+	#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+	    m_listStopsSuggestions->setOpacity( 0 );
+	#else
 	    m_listStopsSuggestions->hide();
 	#endif
-	m_listStopsSuggestions->setOpacity( 0 );
 
 	m_journeySearch->nativeWidget()->setCompletionMode( KGlobalSettings::CompletionAuto );
 	m_journeySearch->nativeWidget()->setCompletionModeDisabled(
@@ -2084,7 +2086,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	layout->setSpacing( 0 );
 	layout->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
 
-	QGraphicsGridLayout *layoutTop = new QGraphicsGridLayout(); // = createLayoutTitle();
+	QGraphicsGridLayout *layoutTop = new QGraphicsGridLayout; // = createLayoutTitle();
 	layout->addItem( layoutTop );
 	layout->addItem( m_treeView );
 	m_mainGraphicsWidget->setLayout( layout );
@@ -2749,6 +2751,8 @@ void PublicTransport::showHeaderContextMenu ( const QPoint& position ) {
 void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
     QTreeView* treeView = m_treeView->nativeWidget();
     QList<QAction *> actions;
+    QAction *subMenuAction = 0;
+    QMenu *subMenu = 0;
 
     if ( (m_clickedItemIndex = treeView->indexAt(position)).isValid() ) {
 	while( m_clickedItemIndex.parent().isValid() )
@@ -2817,12 +2821,12 @@ void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
 		if ( addFilterList.count() == 1 ) {
 		    actions.append( addFilterList );
 		} else {
-		    QAction *subMenuAction = new QAction(
+		    subMenuAction = new QAction(
 			Global::makeOverlayIcon(KIcon("view-filter"), "list-add"),
 			m_settings.departureArrivalListType() == DepartureList
 			? i18n("&Filter This Departure") : i18n("&Filter This Arrival"),
 			this );
-		    QMenu *subMenu = new QMenu;
+		    subMenu = new QMenu;
 		    subMenu->addActions( addFilterList );
 		    subMenuAction->setMenu( subMenu );
 		    actions.append( subMenuAction );
@@ -2839,10 +2843,10 @@ void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
 		  restoreFilterList.insert( 0, action("showEverything") );
 		  restoreFilterList.insert( 1, updatedAction("seperator") );
 
-		  QAction *subMenuAction = new QAction(
+		  subMenuAction = new QAction(
 		      Global::makeOverlayIcon(KIcon("view-filter"), "list-remove"),
 		      i18n("&Remove filters"), this );
-		  QMenu *subMenu = new QMenu;
+		  subMenu = new QMenu;
 		  subMenu->addActions( restoreFilterList );
 		  subMenuAction->setMenu( subMenu );
 		  actions.append( subMenuAction );
@@ -2898,10 +2902,10 @@ void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
 		restoreFilterList.insert( 0, action("showEverything") );
 		restoreFilterList.insert( 1, updatedAction("seperator") );
 		
-		QAction *subMenuAction = new QAction(
+		subMenuAction = new QAction(
 			Global::makeOverlayIcon(KIcon("view-filter"), "list-remove"),
 			i18n("&Remove filters"), this );
-		QMenu *subMenu = new QMenu;
+		subMenu = new QMenu;
 		subMenu->addActions( restoreFilterList );
 		subMenuAction->setMenu( subMenu );
 		actions.append( subMenuAction );
@@ -2931,8 +2935,12 @@ void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
 	    actions.append( action("showHeader") );
     }
 
-    if ( actions.count() > 0 && view() )
+    if ( actions.count() > 0 && view() ) {
 	QMenu::exec( actions, QCursor::pos() );
+
+	delete subMenuAction;
+	delete subMenu;
+    }
 }
 
 void PublicTransport::showEverything( bool b ) {
@@ -3110,18 +3118,20 @@ void PublicTransport::markAlarmRow ( const QPersistentModelIndex& modelIndex, Al
 	QBrush brush =  itemDeparture->data(OriginalBackgroundColorRole).value<QBrush>();
 	itemDeparture->setBackground( brush );
 	KIconEffect iconEffect;
-	QPixmap pixmap = iconEffect.apply( KIcon("kalarm").pixmap(16 * m_settings.sizeFactor()), KIconLoader::Small, KIconLoader::DisabledState);
+	QPixmap pixmap = iconEffect.apply( KIcon("kalarm").pixmap(16 * m_settings.sizeFactor()),
+					   KIconLoader::Small, KIconLoader::DisabledState );
 	KIcon disabledAlarmIcon;
-	disabledAlarmIcon.addPixmap(pixmap, QIcon::Normal);
+	disabledAlarmIcon.addPixmap( pixmap, QIcon::Normal );
 	itemDeparture->setIcon( disabledAlarmIcon );
-	itemDeparture->setData( static_cast<int>(HtmlDelegate::Right), HtmlDelegate::DecorationPositionRole );
+	itemDeparture->setData( static_cast<int>(HtmlDelegate::Right),
+				HtmlDelegate::DecorationPositionRole );
 	m_model->item( modelIndex.row(), 0 )->setBackground( brush );
 	m_model->item( modelIndex.row(), 1 )->setBackground( brush );
     }
 }
 
-void PublicTransport::removeAlarmForDeparture ( bool ) {
-    QStandardItem *itemDeparture = m_model->item( m_clickedItemIndex.row(), 2 );
+void PublicTransport::removeAlarmForDeparture( int row ) {
+    QStandardItem *itemDeparture = m_model->item( row, 2 );
     AlarmTimer *alarmTimer = (AlarmTimer*)itemDeparture->data( AlarmTimerRole ).value<void*>();
     if ( alarmTimer ) {
 	itemDeparture->setData( 0, AlarmTimerRole );
@@ -3129,8 +3139,12 @@ void PublicTransport::removeAlarmForDeparture ( bool ) {
 	delete alarmTimer;
 	markAlarmRow( m_clickedItemIndex, NoAlarm );
     }
-
+    
     createPopupIcon();
+}
+
+void PublicTransport::removeAlarmForDeparture( bool ) {
+    removeAlarmForDeparture( m_clickedItemIndex.row() );
 }
 
 void PublicTransport::setAlarmForDeparture( const QPersistentModelIndex &modelIndex,
@@ -3145,13 +3159,15 @@ void PublicTransport::setAlarmForDeparture( const QPersistentModelIndex &modelIn
 
     if ( alarmTimer == NULL ) {
 	QDateTime predictedDeparture = itemDeparture->data( SortRole ).toDateTime();
-	int secsTo = QDateTime::currentDateTime().secsTo( predictedDeparture.addSecs(-m_settings.alarmTime() * 60) );
+	int secsTo = QDateTime::currentDateTime().secsTo(
+		predictedDeparture.addSecs(-m_settings.alarmTime() * 60) );
 	if ( secsTo < 0 )
 	    secsTo = 0;
 	alarmTimer = new AlarmTimer( secsTo * 1000, modelIndex );
     }
     itemDeparture->setData( qVariantFromValue((void*)alarmTimer), AlarmTimerRole );
-    connect( alarmTimer, SIGNAL(timeout(const QPersistentModelIndex &)), this, SLOT(showAlarmMessage(const QPersistentModelIndex &)) );
+    connect( alarmTimer, SIGNAL(timeout(const QPersistentModelIndex &)),
+	     this, SLOT(showAlarmMessage(const QPersistentModelIndex &)) );
 
     createPopupIcon();
 }
@@ -3217,8 +3233,9 @@ void PublicTransport::showAlarmMessage( const QPersistentModelIndex &modelIndex 
     QString sLine = m_model->item( row, 0 )->text();
     QString sTarget = m_model->item( row, 1 )->text();
     QDateTime predictedDeparture = m_model->item( row, 2 )->data( SortRole ).toDateTime();
-    int minsToDeparture = qCeil((float)QDateTime::currentDateTime().secsTo( predictedDeparture ) / 60.0f);
-    VehicleType vehicleType = static_cast<VehicleType>( m_model->item( row, 2 )->data( VehicleTypeRole ).toInt() );
+    int minsToDeparture = qCeil( (float)QDateTime::currentDateTime().secsTo(predictedDeparture) / 60.0f );
+    VehicleType vehicleType = static_cast<VehicleType>(
+	    m_model->item(row, 2)->data(VehicleTypeRole).toInt() );
 //     kDebug() << vehicleType << m_model->item( row, 2 )->data( VehicleTypeRole ).toInt();
     QString message;
     if ( minsToDeparture > 0 ) {
@@ -4043,13 +4060,6 @@ void PublicTransport::appendJourney ( const JourneyInfo& journeyInfo ) {
     }
     m_modelJourneys->appendRow( items );
 
-    // Search if an abandoned alarm timer matches
-//     for( int i = m_abandonedAlarmTimer.count() - 1; i >= 0; --i ) {
-// 	AlarmTimer* alarmTimer = m_abandonedAlarmTimer[i];
-// 	setAlarmForDeparture( itemDeparture->index(), alarmTimer );
-// 	m_abandonedAlarmTimer.removeAt(i);
-//     }
-
     int iRow = 0;
     if ( journeyInfo.changes >= 0 ) {
 	QStandardItem *itemChanges = new QStandardItem();
@@ -4437,8 +4447,7 @@ void PublicTransport::removeOldDepartures() {
     QList< QModelIndex > notFoundRows;
     for ( int row = m_model->rowCount() - 1; row >= 0; --row )
 	notFoundRows.append( m_model->index(row, 0) );
-    foreach( DepartureInfo departureInfo, m_departureInfos )
-    {
+    foreach( DepartureInfo departureInfo, m_departureInfos ) {
 	int row = findDeparture( departureInfo );
 	if ( row != -1 ) {
 	    if ( filterOut(departureInfo) )
@@ -4448,8 +4457,7 @@ void PublicTransport::removeOldDepartures() {
 	}
     }
 
-    foreach( QModelIndex notFoundRow, notFoundRows )
-    {
+    foreach( QModelIndex notFoundRow, notFoundRows ) {
 // 	kDebug() << "remove row" << notFoundRow.row();
 
 	QStandardItem *itemDeparture = m_model->item( notFoundRow.row(), 2 );

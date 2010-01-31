@@ -320,6 +320,8 @@ class PublicTransport : public Plasma::PopupApplet {
 					DepartureArrivalListType departureArrivalListType
 					= _UseCurrentDepartureArrivalListType );
 
+	void removeAlarmForDeparture( int row );
+
     signals:
 	/** Emitted when the settings have changed. */
 	void settingsChanged();
@@ -485,8 +487,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	QList<TimetableColumn> m_departureViewColumns;
 	QList<TimetableColumn> m_journeyViewColumns;
 };
-
-Q_DECLARE_METATYPE(Plasma::Animation*)
 
 #ifndef NO_EXPORT_PLASMA_APPLET // Needed for settings.cpp to include publictransport.h
 // This is the command that links the applet to the .desktop file
