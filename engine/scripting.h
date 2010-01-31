@@ -94,11 +94,8 @@ class Helper : public QObject {
 		      const QString &format = "hh:mm" ) {
 	    QTime time1 = QTime::fromString( sTime1, format );
 	    QTime time2 = QTime::fromString( sTime2, format );
-	    kDebug() << "FROM" << time1 << "TO" << time2;
 	    if ( !time1.isValid() || !time2.isValid() )
 		return -1;
-
-	    kDebug() << time1.secsTo( time2 ) / 60;
 	    return time1.secsTo( time2 ) / 60;
 	};
 

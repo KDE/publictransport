@@ -45,6 +45,7 @@ class PublicTransportEngine : public Plasma::DataEngine
     public:
         /** Every data engine needs a constructor with these arguments. */
         PublicTransportEngine( QObject* parent, const QVariantList& args );
+	~PublicTransportEngine();
 
 	/** Timeout in seconds to request new data. Before the timeout is over, old
 	* stored data from previous requests is used. */

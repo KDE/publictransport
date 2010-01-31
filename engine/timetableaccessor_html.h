@@ -42,7 +42,7 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* @note Can be used if you have a custom TimetableAccessorInfo object.
 	* TimetableAccessorXml uses this to create an HTML accessor for parsing of stop
 	* lists. */
-	TimetableAccessorHtml( TimetableAccessorInfo info = TimetableAccessorInfo() );
+	TimetableAccessorHtml( const TimetableAccessorInfo &info = TimetableAccessorInfo() );
 
 	/** Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
 	static QString decodeHtmlEntities( const QString &html );
@@ -68,7 +68,7 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* @param document A string containing the whole document from the service provider.
 	* @return true, if there were no errors.
 	* @return false, if there were an error parsing the document. */
-	virtual bool parseDocumentPre( QString document );
+	virtual bool parseDocumentPre( const QString &document );
 
 	/** Parses the contents of the given document for a list of possible stop names
 	* and puts the results into @p stops.
@@ -100,12 +100,12 @@ class TimetableAccessorHtml : public TimetableAccessor
 						 QHash<QString,int> *stopToStopWeight );
 
 	/** Parses a journey news string. */
-	virtual bool parseJourneyNews( const QString sJourneyNews, QString *sDelay,
+	virtual bool parseJourneyNews( const QString &sJourneyNews, QString *sDelay,
 				       QString *sDelayReason, QString *sJourneyNewsOther ) const;
 
     private:
 	void postProcessMatchedData( TimetableInformation info,
-				     QString matchedData,
+				     const QString &matchedData,
 				     QHash< TimetableInformation, QVariant > *data );
 
 	QHash< QString, QString > *m_preData; // Data collected by parseDocumentPre

@@ -28,7 +28,7 @@
 #include <kross/core/manager.h>
 #include <KLocalizedString>
 
-TimetableAccessorHtmlScript::TimetableAccessorHtmlScript( TimetableAccessorInfo info )
+TimetableAccessorHtmlScript::TimetableAccessorHtmlScript( const TimetableAccessorInfo &info )
 	: TimetableAccessor() {
     m_info = info;
 
@@ -104,7 +104,7 @@ QStringList TimetableAccessorHtmlScript::scriptFeatures() const {
 }
 
 bool TimetableAccessorHtmlScript::parseDocument( QList<PublicTransportInfo*> *journeys,
-					     ParseDocumentMode parseDocumentMode ) {
+						 ParseDocumentMode parseDocumentMode ) {
     if ( !m_scriptLoaded ) {
 	kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
 	return false;
@@ -136,8 +136,11 @@ bool TimetableAccessorHtmlScript::parseDocument( QList<PublicTransportInfo*> *jo
 	else
 	    info = new DepartureInfo( timetableData.values() );
 	
-	if ( !info->isValid() )
+	if ( !info->isValid() ) {
+	    delete info;
 	    continue;
+	}
+	
 	journeys->append( info );
 	++count;
     }
@@ -194,7 +197,7 @@ QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl() {
 	return TimetableAccessorHtml::decodeHtmlEntities( result );
 }
 
-bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray document,
+bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &document,
 						QStringList* stops,
 						QHash<QString,QString>* stopToStopId,
 						QHash<QString,int> *stopToStopWeight ) {

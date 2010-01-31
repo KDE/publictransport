@@ -31,13 +31,13 @@
 
 
 PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList& args)
-			    : Plasma::DataEngine(parent, args) {
+			    : Plasma::DataEngine(parent, args),
+			    m_fileSystemWatcher(0) {
     // We ignore any arguments - data engines do not have much use for them
-    Q_UNUSED(args)
+    Q_UNUSED( args )
 
     m_lastJourneyCount = 0;
     m_lastStopNameCount = 0;
-    m_fileSystemWatcher = NULL;
 
     // This prevents applets from setting an unnecessarily high update interval
     // and using too much CPU.
@@ -49,6 +49,11 @@ PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList
     setData( I18N_NOOP("ServiceProviders"), DataEngine::Data() );
     setData( I18N_NOOP("ErrornousServiceProviders"), DataEngine::Data() );
     setData( I18N_NOOP("Locations"), DataEngine::Data() );
+}
+
+PublicTransportEngine::~PublicTransportEngine() {
+    qDeleteAll( m_accessors.values() );
+    delete m_fileSystemWatcher;
 }
 
 QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
@@ -164,7 +169,7 @@ bool PublicTransportEngine::updateServiceProviderSource( const QString &name ) {
     } else {
 	QStringList dirList = KGlobal::dirs()->findDirs( "data",
 			"plasma_engine_publictransport/accessorInfos" );
-	if ( m_fileSystemWatcher == NULL )
+	if ( !m_fileSystemWatcher )
 	    m_fileSystemWatcher = new QFileSystemWatcher( dirList );
 	connect( m_fileSystemWatcher, SIGNAL(directoryChanged(QString)),
 	    this, SLOT(accessorInfoDirChanged(QString)) );
@@ -176,6 +181,7 @@ bool PublicTransportEngine::updateServiceProviderSource( const QString &name ) {
 	    return false;
 	}
 
+	kDebug() << "Check accessors";
 	QStringList loadedAccessors;
 	m_errornousAccessors.clear();
 	foreach( QString fileName, fileNames ) {
@@ -185,6 +191,8 @@ bool PublicTransportEngine::updateServiceProviderSource( const QString &name ) {
 		dataSource.insert( accessor->timetableAccessorInfo().name(),
 				   serviceProviderInfo(accessor) );
 		loadedAccessors << s;
+
+		delete accessor;
 	    }
 	    else {
 		m_errornousAccessors << s;
@@ -444,6 +452,7 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 	dataSource.insert( sKey, data );
 // 	kDebug() << "setData" << sourceName << data;
     }
+    qDeleteAll( departures );
 
     // Remove old jouneys
     for ( ; i < m_lastJourneyCount; ++i )
@@ -530,6 +539,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 	dataSource.insert( sKey, data );
 	// 	kDebug() << "setData" << sourceName << data;
     }
+    qDeleteAll( journeys );
 
     // Remove old journeys
     for ( ; i < m_lastJourneyCount; ++i )

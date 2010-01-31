@@ -118,7 +118,7 @@ class TimetableAccessor : public QObject {
 	KIO::TransferJob *requestJourneys( const KUrl &url );
 
 	/** Gets the information object used by this accessor. */
-	TimetableAccessorInfo timetableAccessorInfo() const;
+	const TimetableAccessorInfo &timetableAccessorInfo() const { return m_info; };
 
 	/** Wheather or not the city should be put into the "raw" url. */
 	virtual bool useSeperateCityValue() const { return m_info.useSeperateCityValue(); };

@@ -44,7 +44,7 @@ class TimetableAccessorHtmlScript : public TimetableAccessor {
 	* @note Can be used if you have a custom TimetableAccessorInfo object.
 	* TimetableAccessorXml uses this to create an HTML accessor for parsing 
 	* of stop lists. */
-	TimetableAccessorHtmlScript( TimetableAccessorInfo info = TimetableAccessorInfo() );
+	TimetableAccessorHtmlScript( const TimetableAccessorInfo &info = TimetableAccessorInfo() );
 
 	/** Destructor. */
 	virtual ~TimetableAccessorHtmlScript();
@@ -94,7 +94,7 @@ class TimetableAccessorHtmlScript : public TimetableAccessor {
 	* TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
 	* document for stops.
 	* @see parseDocumentPossibleStops(QHash<QString,QString>*) */
-	virtual bool parseDocumentPossibleStops( const QByteArray document,
+	virtual bool parseDocumentPossibleStops( const QByteArray &document,
 						 QStringList *stops,
 						 QHash<QString,QString> *stopToStopId,
 						 QHash<QString,int> *stopToStopWeight );

@@ -41,7 +41,9 @@ class TimetableAccessorXml : public TimetableAccessor
 	* @param info Information about how to download and parse the documents of a
 	* service provider.
 	* @note Can be used if you have a custom TimetableAccessorInfo object. TODO */
-	TimetableAccessorXml( TimetableAccessorInfo info = TimetableAccessorInfo() );
+	TimetableAccessorXml( const TimetableAccessorInfo &info = TimetableAccessorInfo() );
+
+	~TimetableAccessorXml();
 
 	/** Gets a list of features that this accessor supports. */
 	virtual QStringList features() const;

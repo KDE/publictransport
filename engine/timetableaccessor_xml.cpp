@@ -26,15 +26,16 @@
 #include <KDebug>
 
 
-TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfo info )
-    : m_accessorHTML(0)
-{
+TimetableAccessorXml::TimetableAccessorXml( const TimetableAccessorInfo &info )
+	    : m_accessorHTML( new TimetableAccessorHtml(m_info) ) {
     m_info = info;
-    m_accessorHTML = new TimetableAccessorHtml( m_info );
 }
 
-QStringList TimetableAccessorXml::features() const
-{
+TimetableAccessorXml::~TimetableAccessorXml() {
+    delete m_accessorHTML;
+}
+
+QStringList TimetableAccessorXml::features() const {
 // 	list << i18nc("Support for getting information about the type of vehicle of a journey with public transport. This string is used in a feature list, should be short.", "Type of vehicle");
 
     return QStringList() << i18nc("Autocompletion for names of public transport stops", "Autocompletion")

@@ -376,10 +376,10 @@ void TimetableAccessor::finished( KJob* job ) {
     QList<QVariant> jobInfo = m_jobInfos.value( job );
     m_jobInfos.remove( job );
     
-    QList< PublicTransportInfo* > *dataList;
-    QStringList *stops;
-    QHash< QString, QString > *stopToStopId;
-    QHash< QString, int > *stopToStopWeight;
+    QList< PublicTransportInfo* > dataList;
+    QStringList stops;
+    QHash<QString, QString> stopToStopId;
+    QHash<QString, int> stopToStopWeight;
     ParseDocumentMode parseDocumentMode = static_cast<ParseDocumentMode>( jobInfo.at(0).toInt() );
     kDebug() << "\n      FINISHED:" << parseDocumentMode;
     
@@ -390,12 +390,9 @@ void TimetableAccessor::finished( KJob* job ) {
 	QUrl url = jobInfo.at(4).toUrl();
 
 	kDebug() << "Stop suggestions request finished" << sourceName << city << stop;
-	if ( (stops = new QStringList)
-		&& (stopToStopId = new QHash<QString, QString>)
-		&& (stopToStopWeight = new QHash<QString, int>)
-		&& parseDocumentPossibleStops(stops, stopToStopId, stopToStopWeight) ) {
+	if ( parseDocumentPossibleStops(&stops, &stopToStopId, &stopToStopWeight) ) {
 	    kDebug() << "finished parsing for stop suggestions";
-	    emit stopListReceived( this, url, *stops, *stopToStopId, *stopToStopWeight,
+	    emit stopListReceived( this, url, stops, stopToStopId, stopToStopWeight,
 				   serviceProvider(), sourceName, city, stop, QString(),
 				   parseDocumentMode );
 	    kDebug() << "emit stopListReceived finished";
@@ -421,7 +418,7 @@ void TimetableAccessor::finished( KJob* job ) {
 	kDebug() << "\n    FINISHED JOURNEY SEARCH" << roundTrips;
     }
     m_curCity = city;
-
+    
 //     kDebug() << "usedDifferentUrl" << usedDifferentUrl;
     if ( !usedDifferentUrl ) {
 	QString sNextUrl;
@@ -433,22 +430,21 @@ void TimetableAccessor::finished( KJob* job ) {
 	}
 	kDebug() << "     PARSE RESULTS" << parseDocumentMode;
 	
-	dataList = new QList<PublicTransportInfo*>();
-	if ( parseDocument(dataList, parseDocumentMode) ) {
+	if ( parseDocument(&dataList, parseDocumentMode) ) {
 	    if ( parseDocumentMode == ParseForDeparturesArrivals ) {
 // 		kDebug() << "emit departureListReceived" << sourceName;
-		QList<DepartureInfo*>* departures = new QList<DepartureInfo*>();
-		foreach( PublicTransportInfo *info, *dataList )
-		    departures->append( (DepartureInfo*)info );
-		emit departureListReceived( this, url, *departures, serviceProvider(),
+		QList<DepartureInfo*> departures;
+		foreach( PublicTransportInfo *info, dataList )
+		    departures << dynamic_cast< DepartureInfo* >( info );
+		emit departureListReceived( this, url, departures, serviceProvider(),
 					    sourceName, city, stop, dataType,
 					    parseDocumentMode );
 	    } else if ( parseDocumentMode == ParseForJourneys ) {
 // 		kDebug() << "emit journeyListReceived";
-		QList<JourneyInfo*>* journeys = new QList<JourneyInfo*>();
-		foreach( PublicTransportInfo *info, *dataList )
-		    journeys->append( (JourneyInfo*)info );
-		emit journeyListReceived( this, url, *journeys, serviceProvider(),
+		QList<JourneyInfo*> journeys ;
+		foreach( PublicTransportInfo *info, dataList )
+		    journeys << dynamic_cast< JourneyInfo* >( info );
+		emit journeyListReceived( this, url, journeys, serviceProvider(),
 					  sourceName, city, stop, dataType,
 					  parseDocumentMode );
 	    }
@@ -456,12 +452,9 @@ void TimetableAccessor::finished( KJob* job ) {
 // 	    kDebug() << "request possible stop list";
 	    requestDepartures( sourceName, m_curCity, stop, maxDeps, dateTime,
 			       dataType, true );
-	} else if ( (stops = new QStringList)
-		&& (stopToStopId = new QHash<QString, QString>)
-		&& (stopToStopWeight = new QHash<QString, int>)
-		&& parseDocumentPossibleStops(stops, stopToStopId, stopToStopWeight) ) {
+	} else if ( parseDocumentPossibleStops(&stops, &stopToStopId, &stopToStopWeight) ) {
 	    kDebug() << "Stop suggestion list received" << parseDocumentMode;
-	    emit stopListReceived( this, url, *stops, *stopToStopId, *stopToStopWeight,
+	    emit stopListReceived( this, url, stops, stopToStopId, stopToStopWeight,
 				   serviceProvider(), sourceName, city, stop, dataType,
 				   parseDocumentMode );
 	} else
@@ -479,12 +472,9 @@ void TimetableAccessor::finished( KJob* job ) {
 // 		return;
 	    }
 	}
-    } else if ( (stops = new QStringList)
-	    && (stopToStopId = new QHash<QString, QString>())
-	    && (stopToStopWeight = new QHash<QString, int>)
-	    && parseDocumentPossibleStops(stops, stopToStopId, stopToStopWeight) ) {
+    } else if (parseDocumentPossibleStops(&stops, &stopToStopId, &stopToStopWeight) ) {
 // 	kDebug() << "possible stop list received ok";
-	emit stopListReceived( this, url, *stops, *stopToStopId, *stopToStopWeight,
+	emit stopListReceived( this, url, stops, stopToStopId, stopToStopWeight,
 			       serviceProvider(), sourceName, city, stop, dataType,
 			       parseDocumentMode );
     } else
@@ -661,10 +651,6 @@ QString TimetableAccessor::stopSuggestionsRawUrl() const {
 
 QByteArray TimetableAccessor::charsetForUrlEncoding() const {
     return m_info.charsetForUrlEncoding();
-}
-
-TimetableAccessorInfo TimetableAccessor::timetableAccessorInfo() const {
-    return m_info;
 }
 
 
