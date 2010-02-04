@@ -221,21 +221,19 @@ void HtmlDelegate::drawDisplayWithShadow( QPainter* painter,
     // Create the alpha gradient for the fade out effect
     QLinearGradient alphaGradient(0, 0, 1, 0);
     alphaGradient.setCoordinateMode(QGradient::ObjectBoundingMode);
-    if ( option.direction == Qt::LeftToRight )
-    {
+    if ( option.direction == Qt::LeftToRight ) {
         alphaGradient.setColorAt(0, QColor(0, 0, 0, 255));
         alphaGradient.setColorAt(1, QColor(0, 0, 0, 0));
-    } else
-    {
+    } else {
         alphaGradient.setColorAt(0, QColor(0, 0, 0, 0));
         alphaGradient.setColorAt(1, QColor(0, 0, 0, 255));
     }
     // Right-aligned text would be aligned far too far on the right ;)
     if ( maxLineCount == 1 && !option.displayAlignment.testFlag(Qt::AlignRight) &&
-	!option.displayAlignment.testFlag(Qt::AlignCenter) &&
-	!option.displayAlignment.testFlag(Qt::AlignHCenter) )
+	    !option.displayAlignment.testFlag(Qt::AlignCenter) &&
+	    !option.displayAlignment.testFlag(Qt::AlignHCenter) ) {
 	document.setPageSize( QSize(99999, textRect.height()) );
-    else
+    } else
 	document.setPageSize( textRect.size() );
 
     for ( int b = 0; b < document.blockCount(); ++b )

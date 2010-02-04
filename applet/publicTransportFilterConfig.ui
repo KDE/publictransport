@@ -171,7 +171,7 @@
       <string>Delete the selected filter configuration</string>
      </property>
      <property name="text">
-      <string>...</string>
+      <string notr="true">...</string>
      </property>
     </widget>
    </item>
@@ -181,7 +181,7 @@
       <string>Save the current filters to the selected filter configuration</string>
      </property>
      <property name="text">
-      <string>...</string>
+      <string notr="true">...</string>
      </property>
     </widget>
    </item>
@@ -191,7 +191,7 @@
       <string>Rename the selected filter configuration</string>
      </property>
      <property name="text">
-      <string>...</string>
+      <string notr="true">...</string>
      </property>
     </widget>
    </item>
@@ -201,7 +201,7 @@
       <string>Add a new filter configuration</string>
      </property>
      <property name="text">
-      <string>...</string>
+      <string notr="true">...</string>
      </property>
     </widget>
    </item>

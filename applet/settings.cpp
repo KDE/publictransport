@@ -47,6 +47,15 @@
 #include "publictransport.h"
 #undef NO_EXPORT_PLASMA_APPLET
 
+#include <QLayout>
+#include <QGraphicsLayout>
+
+#if QT_VERSION >= 0x040600
+    #include <QParallelAnimationGroup>
+    #include <QPropertyAnimation>
+#endif
+#include <QGraphicsEffect>
+
 
 PublicTransportSettings::PublicTransportSettings( PublicTransport *applet )
 	    : m_applet(applet), m_dataSourceTester(new DataSourceTester("", applet)),
@@ -89,6 +98,142 @@ void PublicTransportSettings::dataUpdated( const QString& sourceName,
     }
 }
 
+void PublicTransportSettings::clickedAddStop() {
+    addStop( QString(), true );
+
+    QWidgetList stopWidgets = m_additionalStopWidgets.last();
+    foreach ( QWidget *widget, stopWidgets ) {
+	KLineEdit *additionalStop = dynamic_cast< KLineEdit* >( widget );
+	if ( additionalStop ) {
+	    additionalStop->setFocus();
+	    return;
+	}
+    }
+}
+
+void PublicTransportSettings::clickedRemoveStop() {
+    QToolButton *btn = dynamic_cast< QToolButton* >( sender() );
+    if ( !btn ) {
+	kDebug() << "Couldn't determine which button was pressed, sorry..." << sender();
+	return;
+    }
+
+    int stopIndex = m_removeStopButtons.indexOf( btn );
+    if ( stopIndex == -1 ) {
+	kDebug() << "Couldn't determine the stop index of the pressed button, sorry..." << sender();
+	return;
+    }
+    
+    QGridLayout *layout = dynamic_cast< QGridLayout* >(
+	    m_ui.stop->parentWidget()->layout() );
+    Q_ASSERT( layout );
+    QWidgetList stopWidgets = m_additionalStopWidgets.takeAt( stopIndex );
+    foreach ( QWidget *widget, stopWidgets ) {
+	layout->removeWidget( widget );
+	delete widget;
+    }
+
+    m_removeStopButtons.removeAt( stopIndex );
+
+    // Adjust labels
+    for ( int i = 0; i < m_additionalStopWidgets.count(); ++i ) {
+	QWidgetList stopWidgets = m_additionalStopWidgets[i];
+	foreach ( QWidget *widget, stopWidgets ) {
+	    QLabel *lblAdditionalStop = dynamic_cast< QLabel* >( widget );
+	    if ( lblAdditionalStop ) {
+		lblAdditionalStop->setText( i18n("Additional Stop &%1:", i + 1) );
+		break;
+	    }
+	}
+    }
+}
+
+void PublicTransportSettings::addStop( const QString& stop, bool fadeInAnimation ) {
+    QGridLayout *layout = dynamic_cast< QGridLayout* >(
+	    m_ui.stop->parentWidget()->layout() );
+    if ( !layout ) {
+	kDebug() << "No grid layout found";
+	return;
+    }
+    
+    QLabel *lblAdditionalStop = new QLabel( i18n("Additional Stop &%1:",
+					    m_additionalStopWidgets.count() + 1) );
+    lblAdditionalStop->setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Fixed );
+    lblAdditionalStop->setAlignment( Qt::AlignRight );
+    
+    KLineEdit *additionalStop = new KLineEdit( stop );
+    additionalStop->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
+    additionalStop->setCompletionMode( KGlobalSettings::CompletionPopup );
+    additionalStop->setClearButtonShown( true );
+    additionalStop->setClickMessage( i18n("An additional stop") );
+    lblAdditionalStop->setBuddy( additionalStop );
+    connect( additionalStop, SIGNAL(textEdited(QString)),
+	     this, SLOT(stopNameChanged(QString)) );
+	     
+    QToolButton *btnRemove = new QToolButton;
+    btnRemove->setIcon( KIcon("list-remove") );
+    btnRemove->setToolTip( i18n("Remove this additional stop") );
+    connect( btnRemove, SIGNAL(clicked()), this, SLOT(clickedRemoveStop()) );
+
+    #if QT_VERSION >= 0x040600
+    if ( fadeInAnimation ) {
+	QParallelAnimationGroup *parGroup = new QParallelAnimationGroup( m_configDialog );
+	
+	QGraphicsOpacityEffect *effectLabel = new QGraphicsOpacityEffect( parGroup );
+	QGraphicsOpacityEffect *effectStop = new QGraphicsOpacityEffect( parGroup );
+	QGraphicsOpacityEffect *effectBtn = new QGraphicsOpacityEffect( parGroup );
+	lblAdditionalStop->setGraphicsEffect( effectLabel );
+	additionalStop->setGraphicsEffect( effectStop );
+	btnRemove->setGraphicsEffect( effectBtn );
+	QPropertyAnimation *animFadeLabel = new QPropertyAnimation( effectLabel, "opacity" );
+	QPropertyAnimation *animFadeStop = new QPropertyAnimation( effectStop, "opacity" );
+	QPropertyAnimation *animFadeBtn = new QPropertyAnimation( effectBtn, "opacity" );
+	animFadeLabel->setStartValue( 0 );
+	animFadeStop->setStartValue( 0 );
+	animFadeBtn->setStartValue( 0 );
+	animFadeLabel->setEndValue( 1 );
+	animFadeStop->setEndValue( 1 );
+	animFadeBtn->setEndValue( 1 );
+
+	parGroup->addAnimation( animFadeLabel );
+	parGroup->addAnimation( animFadeStop );
+	parGroup->addAnimation( animFadeBtn );
+	parGroup->start( QAbstractAnimation::DeleteWhenStopped );
+    }
+    #endif
+    
+    layout->removeItem( m_ui.vSpacer );
+    int row = layout->rowCount();
+    Q_ASSERT( row >= 0 );
+    layout->addWidget( lblAdditionalStop, row, 0, 1, 1, Qt::AlignVCenter );
+    layout->addWidget( additionalStop, row, 1, 1, 2, Qt::AlignVCenter );
+    layout->addWidget( btnRemove, row, 3, 1, 1, Qt::AlignVCenter );
+    layout->addItem( m_ui.vSpacer, row + 1, 0, 1, 3 );
+
+    lblAdditionalStop->show();
+    additionalStop->show();
+    btnRemove->show();
+    m_removeStopButtons << btnRemove;
+    QWidgetList widgets = QWidgetList() << lblAdditionalStop << additionalStop << btnRemove;
+    m_additionalStopWidgets << widgets;
+}
+
+QStringList PublicTransportSettings::getAdditionalStops() {
+    QStringList ret;
+    
+    KLineEdit *additionalStop;
+    foreach ( QWidgetList widgets, m_additionalStopWidgets ) {
+	foreach ( QWidget *widget, widgets ) {
+	    if ( (additionalStop = dynamic_cast<KLineEdit*>(widget)) ) {
+		ret << additionalStop->text();
+		break;
+	    }
+	}
+    }
+    
+    return ret;
+}
+
 void PublicTransportSettings::readSettings() {
     KConfigGroup cg = m_applet->config();
     m_updateTimeout = cg.readEntry("updateTimeout", 60);
@@ -101,8 +246,9 @@ void PublicTransportSettings::readSettings() {
     else
 	m_location = KGlobal::locale()->country();
     m_city = cg.readEntry("city", "");
-    m_stop = cg.readEntry("stop", "");
-    m_stopID = cg.readEntry("stopID", "");
+    m_currentStopIndex = cg.readEntry("currentStopIndex", -1);
+    m_stops = cg.readEntry("stop", QStringList());
+    m_stopIDs = cg.readEntry("stopID", QStringList());
     m_timeOffsetOfFirstDeparture = cg.readEntry("timeOffsetOfFirstDeparture", 0);
     m_timeOfFirstDepartureCustom = QTime::fromString(
 	    cg.readEntry("timeOfFirstDepartureCustom", "12:00"), "hh:mm" );
@@ -351,22 +497,47 @@ void PublicTransportSettings::testResult( DataSourceTester::TestResult result,
 		weightedStops << QString( "%1:%2" ).arg( stop ).arg( stopWeight );
 	    }
 
-	    KCompletion *comp = m_ui.stop->completionObject();
-	    comp->setIgnoreCase( true );
-	    if ( hasAtLeastOneWeight ) {
-		comp->setOrder( KCompletion::Weighted );
-		comp->insertItems( weightedStops );
-// 		m_ui.stop->setCompletedItems( weightedStops );
+	    KLineEdit *stop = NULL;
+	    if ( m_ui.stop->hasFocus() ) {
+		stop = m_ui.stop;
 	    } else {
-		comp->setOrder( KCompletion::Insertion);
-		comp->insertItems( stops );
-// 		m_ui.stop->setCompletedItems( stops );
+		foreach ( QWidgetList stopWidgets, m_additionalStopWidgets ) {
+		    KLineEdit *additionalStop = NULL;
+		    foreach ( QWidget *widget, stopWidgets ) {
+			additionalStop = dynamic_cast< KLineEdit* >( widget );
+			if ( additionalStop && additionalStop->hasFocus() ) {
+			    stop = additionalStop;
+			    break;
+			}
+		    }
+		    if ( stop )
+			break;
+		}
 	    }
-	    // Complete manually, because the completions are requested asynchronously
-	    m_ui.stop->doCompletion( m_ui.stop->text() );
-// 	    comp->substringCompletion( m_ui.stop->text() );
 	    
-	    m_stopIDinConfig = stopToStopID.value( m_ui.stop->text(), QString() ).toString();
+	    if ( stop ) { // One stop edit line has focus
+		KCompletion *comp = stop->completionObject();
+		comp->setIgnoreCase( true );
+		if ( hasAtLeastOneWeight ) {
+		    comp->setOrder( KCompletion::Weighted );
+		    comp->insertItems( weightedStops );
+    // 		m_ui.stop->setCompletedItems( weightedStops );
+		} else {
+		    comp->setOrder( KCompletion::Insertion);
+		    comp->insertItems( stops );
+    // 		m_ui.stop->setCompletedItems( stops );
+		}
+		// Complete manually, because the completions are requested asynchronously
+		if ( m_ui.stop == stop ) {
+		    stop->doCompletion( stop->text() );
+		    m_stopIDinConfig = stopToStopID.value( stop->text(), QString() ).toString();
+		} else {
+		    stop->doCompletion( stop->text() );
+		    // TODO set stop id in a hash
+		}
+    // 	    comp->substringCompletion( m_ui.stop->text() );
+	    }
+
 	    break;
     }
 }
@@ -404,9 +575,10 @@ void PublicTransportSettings::accessorInfoDialogFinished() {
 }
 
 bool PublicTransportSettings::checkConfig() {
-    if ( m_useSeperateCityValue && (m_city.isEmpty() || m_stop.isEmpty()) )
+    if ( m_useSeperateCityValue && (m_city.isEmpty()
+	    || m_stops.isEmpty() || m_stops.first().isEmpty()) )
 	emit configurationRequired(true, i18n("Please set a city and a stop."));
-    else if ( m_stop.isEmpty() )
+    else if ( m_stops.isEmpty() || m_stops.first().isEmpty() )
 	emit configurationRequired(true, i18n("Please set a stop."));
     else if ( m_serviceProvider == "" )
 	emit configurationRequired(true, i18n("Please select a service provider."));
@@ -420,18 +592,17 @@ bool PublicTransportSettings::checkConfig() {
     return false;
 }
 
-void PublicTransportSettings::setStopNameValid( bool valid, const QString &toolTip ) {
-    // For safety's sake:
-    if ( !m_applet->testState(ConfigDialogShown) )
-	return;
+void PublicTransportSettings::setStopNameValid( bool /*valid*/, const QString &/*toolTip*/ ) {
+//     if ( !m_applet->testState(ConfigDialogShown) )
+// 	return;
 
-    if ( valid ) {
-	m_ui.kledStopValidated->setState( KLed::On );
-	m_ui.kledStopValidated->setToolTip( i18n("The stop name is valid.") );
-    } else {
-	m_ui.kledStopValidated->setState( KLed::Off );
-	m_ui.kledStopValidated->setToolTip( toolTip );
-    }
+//     if ( valid ) {
+// 	m_ui.kledStopValidated->setState( KLed::On );
+// 	m_ui.kledStopValidated->setToolTip( i18n("The stop name is valid.") );
+//     } else {
+// 	m_ui.kledStopValidated->setState( KLed::Off );
+// 	m_ui.kledStopValidated->setToolTip( toolTip );
+//     }
 }
 
 QString PublicTransportSettings::configCityValue() const {
@@ -448,8 +619,8 @@ void PublicTransportSettings::serviceProviderChanged( int index ) {
     m_stopIDinConfig = "";
     m_dataSourceTester->clearStopToStopIdMap();
 
-    m_ui.kledStopValidated->setState( KLed::Off );
-    m_ui.kledStopValidated->setToolTip( i18n("Checking validity of the stop name.") );
+//     m_ui.kledStopValidated->setState( KLed::Off );
+//     m_ui.kledStopValidated->setToolTip( i18n("Checking validity of the stop name.") );
 
     // Only show "Departures"/"Arrivals"-radio buttons if arrivals are supported by the service provider
     bool supportsArrivals =
@@ -497,10 +668,13 @@ void PublicTransportSettings::cityNameChanged( const QString &cityName ) {
 }
 
 void PublicTransportSettings::stopNameChanged( const QString &stopName ) {
-    m_stopIDinConfig = m_dataSourceTester->stopToStopID( stopName );
+    if ( m_ui.stop->hasFocus() || m_ui.stop->text() == stopName )
+	m_stopIDinConfig = m_dataSourceTester->stopToStopID( stopName );
+    // else TODO: set stop id in a hash for each stop
 
-    // TODO: prevent crash, when no service provider data is available
-    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
+    // TODO: Prevent crash, when no service provider data is available?
+    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item(
+	    m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
     bool useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
     QString serviceProviderID = serviceProviderData["id"].toString();
 
@@ -518,7 +692,7 @@ void PublicTransportSettings::stopNameChanged( const QString &stopName ) {
     m_dataSourceTester->setTestSource( testSource );
 }
 
-void PublicTransportSettings::clickedServiceProviderInfo( bool ) {
+void PublicTransportSettings::clickedServiceProviderInfo() {
     QWidget *widget = new QWidget;
     m_uiAccessorInfo.setupUi( widget );
     m_applet->addState( AccessorInfoDialogShown );
@@ -592,15 +766,18 @@ void PublicTransportSettings::createConfigurationInterface( KConfigDialog* paren
     tabMain->addTab(widget, i18n("&Stop selection"));
     tabMain->addTab(widgetAdvanced, i18n("&Advanced"));
 
-    parent->addPage(tabMain, i18n("General"), "public-transport-stop");
-    parent->addPage(widgetAppearance, i18n("Appearance"), "package_settings_looknfeel");
-    parent->addPage(widgetFilter, i18n("Filter"), "view-filter");
+    parent->addPage( tabMain, i18n("General"), "public-transport-stop" );
+    parent->addPage( widgetAppearance, i18n("Appearance"), "package_settings_looknfeel" );
+    parent->addPage( widgetFilter, i18n("Filter"), "view-filter" );
 
     QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
     QPalette p = m_ui.location->palette();
     p.setColor( QPalette::Foreground, textColor );
     m_ui.location->setPalette( p );
     m_ui.serviceProvider->setPalette( p );
+
+    m_additionalStopWidgets.clear();
+    m_removeStopButtons.clear();
 
     setStopNameValid( stopNameValid, "" );
     setValuesOfStopSelectionConfig();
@@ -624,8 +801,10 @@ void PublicTransportSettings::createConfigurationInterface( KConfigDialog* paren
 	     this, SLOT(cityNameChanged(QString)) );
     connect( m_ui.stop, SIGNAL(textEdited(QString)),
 	     this, SLOT(stopNameChanged(QString)) );
-    connect( m_ui.btnServiceProviderInfo, SIGNAL(clicked(bool)),
-	     this, SLOT(clickedServiceProviderInfo(bool)));
+    connect( m_ui.btnServiceProviderInfo, SIGNAL(clicked()),
+	     this, SLOT(clickedServiceProviderInfo()) );
+    connect( m_ui.btnAddStop, SIGNAL(clicked()),
+	     this, SLOT(clickedAddStop()) );
     connect( m_uiFilter.filterLineType->selectedListWidget(), SIGNAL(currentRowChanged(int)),
 	     this, SLOT(filterLineTypeSelectedSelectionChanged(int)) );
     connect( m_uiFilter.filterLineType->availableListWidget(), SIGNAL(currentRowChanged(int)),
@@ -661,7 +840,19 @@ void PublicTransportSettings::createConfigurationInterface( KConfigDialog* paren
 }
 
 void PublicTransportSettings::setValuesOfStopSelectionConfig() {
-    m_ui.stop->setText( m_stop );
+    if ( m_stops.isEmpty() ) {
+	m_stops << m_ui.stop->text();
+	if ( m_stopIDs.isEmpty() )
+	    m_stopIDs << m_stopIDinConfig;
+    }
+
+    m_ui.btnAddStop->setIcon( KIcon("list-add") );
+
+    kDebug() << "ADD STOPS" << m_stops;
+    m_ui.stop->setText( m_stops.first() );
+    for ( int i = 1; i < m_stops.count(); ++i )
+	addStop( m_stops[i] );
+    
     m_ui.stop->setCompletionMode( KGlobalSettings::CompletionPopup );
     m_ui.stop->setClearButtonShown( true );
     m_ui.stop->setClickMessage( i18n("Your home stop") );
@@ -1601,12 +1792,24 @@ void PublicTransportSettings::configAccepted() {
 	}
     }
 
-    if (m_stop != m_ui.stop->text()) {
-	m_stop = m_ui.stop->text();
-	m_stopID = m_stopIDinConfig;
+    QStringList additionalStops = getAdditionalStops();
+    kDebug() << additionalStops << "| Stops:" << m_stops;
+    bool stopsChanged = m_stops.count() != additionalStops.count()
+	    || m_stops.first() != m_ui.stop->text();
+    for ( int i = 0; i < additionalStops.count() && !stopsChanged; ++i ) {
+	if ( m_stops[i] != additionalStops[i] ) {
+	    stopsChanged = true;
+	    break;
+	}
+    }
+    
+    if ( stopsChanged ) {
+	m_stops = QStringList() << m_ui.stop->text() << additionalStops;
+	m_stopIDs = QStringList() << m_stopIDinConfig << additionalStops; // TODO: IDs for each additional stop
+	kDebug() << "Stops changed: " << m_stops << "Stop IDs:" << m_stopIDs;
 	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("stop", m_stop);
-	cg.writeEntry("stopID", m_stopID);
+	cg.writeEntry("stop", m_stops);
+	cg.writeEntry("stopID", m_stopIDs);
 	changed = true;
 
 	changedServiceProviderSettings = true;
@@ -1736,6 +1939,14 @@ void PublicTransportSettings::configAccepted() {
     }
     if (changedServiceProviderSettings)
 	emit serviceProviderSettingsChanged();
+}
+
+void PublicTransportSettings::writeNoGuiSettings() {
+    KConfigGroup cg = m_applet->config();
+    cg.writeEntry("currentStopIndex", m_currentStopIndex);
+    
+    emit settingsChanged();
+    emit configNeedsSaving();
 }
 
 void PublicTransportSettings::setShowDepartures() {

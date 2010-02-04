@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>389</width>
-    <height>295</height>
+    <width>388</width>
+    <height>395</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,7 +20,7 @@
    <enum>Qt::LeftToRight</enum>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="10" column="0" colspan="6">
+   <item row="10" column="0" colspan="4">
     <spacer name="verticalSpacer_3">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -36,7 +36,7 @@
      </property>
     </spacer>
    </item>
-   <item row="11" column="0" colspan="6">
+   <item row="11" column="0" colspan="4">
     <widget class="QLabel" name="lblHomeStop">
      <property name="font">
       <font>
@@ -50,53 +50,7 @@
      </property>
     </widget>
    </item>
-   <item row="12" column="5" rowspan="2">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <spacer name="verticalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>0</width>
-         <height>0</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="KLed" name="kledStopValidated">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="state">
-        <enum>KLed::Off</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="verticalSpacer">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>0</width>
-         <height>0</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </item>
-   <item row="12" column="1" colspan="4">
+   <item row="12" column="1" colspan="2">
     <widget class="KComboBox" name="city">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -109,14 +63,16 @@
      </property>
     </widget>
    </item>
-   <item row="13" column="1" colspan="4">
+   <item row="13" column="1" colspan="2">
     <widget class="KLineEdit" name="stop">
      <property name="enabled">
       <bool>true</bool>
      </property>
      <property name="whatsThis">
-      <string>You need to fill in a stop name for which you want to see the departures.
-If the green lamp on the right shines, the stop name is valid and will give you a departure list.</string>
+      <string>You need to fill in a stop name for which you want to see the departures.</string>
+     </property>
+     <property name="text">
+      <string notr="true"/>
      </property>
     </widget>
    </item>
@@ -146,23 +102,7 @@ If the green lamp on the right shines, the stop name is valid and will give you 
      </property>
     </widget>
    </item>
-   <item row="14" column="0" colspan="6">
-    <spacer name="verticalSpacer_11">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Expanding</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>64</width>
-       <height>10</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="7" column="1" colspan="4">
+   <item row="7" column="1" colspan="2">
     <widget class="KComboBox" name="serviceProvider">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -189,7 +129,7 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="7" column="5">
+   <item row="7" column="3">
     <widget class="QToolButton" name="btnServiceProviderInfo">
      <property name="toolTip">
       <string>Show information about the current service provider.</string>
@@ -212,14 +152,14 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="5" column="1" colspan="4">
+   <item row="5" column="1" colspan="2">
     <widget class="QComboBox" name="location">
      <property name="whatsThis">
       <string>The country the stop / station / airport is in.</string>
      </property>
     </widget>
    </item>
-   <item row="3" column="0" colspan="6">
+   <item row="3" column="0" colspan="4">
     <widget class="QLabel" name="lblDataSource_2">
      <property name="font">
       <font>
@@ -246,7 +186,7 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="2" column="0" colspan="6">
+   <item row="2" column="0" colspan="4">
     <spacer name="verticalSpacer_12">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -262,21 +202,42 @@ p, li { white-space: pre-wrap; }
      </property>
     </spacer>
    </item>
-   <item row="9" column="4">
+   <item row="9" column="2">
     <widget class="KPushButton" name="downloadServiceProviders">
      <property name="text">
       <string>&amp;Install new service providers</string>
      </property>
     </widget>
    </item>
+   <item row="12" column="3" rowspan="2">
+    <widget class="QToolButton" name="btnAddStop">
+     <property name="toolTip">
+      <string>Add another stop</string>
+     </property>
+     <property name="whatsThis">
+      <string>Multiple stops can be added. The departure / arrival list can show the results of all stops or just one of them. This can be switched by clicking the icon in the top-left corner of the applet.</string>
+     </property>
+     <property name="text">
+      <string notr="true">+</string>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="0" colspan="4">
+    <spacer name="vSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>10</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
   </layout>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>KLed</class>
-   <extends>QWidget</extends>
-   <header>kled.h</header>
-  </customwidget>
   <customwidget>
    <class>KPushButton</class>
    <extends>QPushButton</extends>

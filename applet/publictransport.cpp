@@ -179,18 +179,11 @@ void OverlayWidget::overlayAnimationComplete() {
 
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	    : Plasma::PopupApplet(parent, args),
-	    m_graphicsWidget(0),
-	    m_mainGraphicsWidget(0),
-	    m_icon(0),
-	    m_label(0),
-	    m_labelInfo(0),
-	    m_treeView(0),
-	    m_journeySearch(0),
-	    m_listStopsSuggestions(0),
-	    m_btnLastJourneySearches(0),
+	    m_graphicsWidget(0), m_mainGraphicsWidget(0),
+	    m_icon(0), m_label(0), m_labelInfo(0), m_treeView(0),
+	    m_journeySearch(0), m_listStopsSuggestions(0), m_btnLastJourneySearches(0),
 	    m_overlay(0),
 	    m_model(0),
-	    m_currentSource(""),
 	    m_settings( this ) {
     m_departureViewColumns << LineStringColumn << TargetColumn << DepartureColumn;
     m_journeyViewColumns << VehicleTypeListColumn << JourneyInfoColumn
@@ -245,6 +238,9 @@ PublicTransport::~PublicTransport() {
 
 	delete m_label;
 	delete m_labelInfo;
+	delete m_icon;
+	delete m_iconClose;
+	delete m_journeySearch;
 	delete m_labelJourneysNotSupported;
 	delete m_btnLastJourneySearches;
 	delete m_graphicsWidget;
@@ -458,13 +454,47 @@ void PublicTransport::updateDataSource ( bool ) {
 
 QString PublicTransport::stop() const {
     // TODO: create new method in PublicTransportSettings::stopOrStopID()?
-    return m_settings.stopID().isEmpty() ? m_settings.stop() : m_settings.stopID();
+    if ( m_settings.stops().count() > 1 )
+	return m_settings.stopIDs().count() == m_settings.stops().count()
+		? m_settings.stopIDs().join(",") : m_settings.stops().join(",");
+    else
+	return m_settings.stopIDs().first().isEmpty()
+		? m_settings.stops().first() : m_settings.stopIDs().first();
+}
+
+QStringList PublicTransport::stopValues() const {
+    QStringList ret;
+
+    kDebug() << "Stops:" << m_settings.stops() << "Stop IDs:" << m_settings.stopIDs();
+    if ( m_settings.stopIDs().count() == m_settings.stops().count() ) {
+	int i = 0;
+	foreach ( QString stopID, m_settings.stopIDs() ) {
+	    if ( !stopID.isEmpty() ) {
+		ret << stopID;
+	    } else if ( m_settings.stops()[i].isEmpty() ) {
+		kDebug() << "Empty stop and stop ID";
+	    } else {
+		kDebug() << "Empty stop ID, using stop name";
+		ret << m_settings.stops()[ i ];
+	    }
+	    ++i;
+	}
+    } else {
+	foreach ( QString stop, m_settings.stops() ) {
+	    if ( !stop.isEmpty() )
+		ret << stop;
+	    else
+		kDebug() << "Empty stop";
+	}
+    }
+
+    return ret;
 }
 
 void PublicTransport::disconnectJourneySource() {
     if ( !m_currentJourneySource.isEmpty() ) {
 	kDebug() << "Disconnect journey data source" << m_currentJourneySource;
-	dataEngine("publictransport")->disconnectSource(m_currentJourneySource, this);
+	dataEngine("publictransport")->disconnectSource( m_currentJourneySource, this );
     }
 }
 
@@ -514,34 +544,60 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 // 			m_settings.updateTimeout() * 1000, Plasma::AlignToMinute );
 }
 
+void PublicTransport::disconnectSources() {
+    if ( !m_currentSources.isEmpty() ) {
+	foreach ( QString currentSource, m_currentSources ) {
+	    kDebug() << "Disconnect data source" << currentSource;
+	    dataEngine( "publictransport" )->disconnectSource( currentSource, this );
+	}
+	m_currentSources.clear();
+    }
+}
+
 void PublicTransport::reconnectSource() {
-    if ( !m_currentSource.isEmpty() ) {
-	kDebug() << "Disconnect data source" << m_currentSource;
-	dataEngine("publictransport")->disconnectSource(m_currentSource, this);
+    disconnectSources();
+    
+    // Get a list of stops (or stop IDs if available) which results are currently shown
+    QStringList stops = stopValues();
+    if ( m_settings.currentStopIndex() != -1 ) { // Show only results of one stop
+	if ( m_settings.currentStopIndex() >= stops.count() ) {
+	    kDebug() << "Stop with index" << m_settings.currentStopIndex()
+		     << "not found, using -1. Stop values:" << stops;
+	    m_settings.setCurrentStopIndex( -1 );
+	} else {
+	    kDebug() << "Show only stop" << m_settings.currentStopIndex() << "- Stop values:" << stops;
+	    stops = QStringList() << stops[ m_settings.currentStopIndex() ];
+	}
+    }
+    
+    kDebug() << "Connect" << m_settings.currentStopIndex() << stops;
+    foreach ( QString stopValue, stops ) {
+	QString currentSource = QString("%4 %1|stop=%2|maxDeps=%3")
+		.arg( m_settings.serviceProvider() )
+		.arg( stopValue ).arg( m_settings.maximalNumberOfDepartures() )
+		.arg( m_settings.departureArrivalListType() == ArrivalList
+		    ? "Arrivals" : "Departures" );
+	if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime ) {
+	    currentSource += QString("|timeOffset=%1").arg(
+		    m_settings.timeOffsetOfFirstDeparture() );
+	} else {
+	    currentSource += QString("|time=%1").arg(
+		    m_settings.timeOfFirstDepartureCustom().toString("hh:mm") );
+	}
+	if ( m_settings.useSeperateCityValue() )
+	    currentSource += QString("|city=%1").arg( m_settings.city() );
+
+	kDebug() << "Connect data source" << currentSource << "Timeout" << m_settings.updateTimeout();
+	m_currentSources << currentSource;
+	if ( m_settings.updateTimeout() == 0 )
+	    dataEngine("publictransport")->connectSource( currentSource, this );
+	else
+	    dataEngine("publictransport")->connectSource( currentSource, this,
+							  m_settings.updateTimeout() * 1000,
+							  Plasma::AlignToMinute );
     }
 
-    m_currentSource = QString("%4 %1|stop=%2|maxDeps=%3")
-	    .arg( m_settings.serviceProvider() )
-	    .arg( stop() ).arg( m_settings.maximalNumberOfDepartures() )
-	    .arg( m_settings.departureArrivalListType() == ArrivalList
-		  ? "Arrivals" : "Departures" );
-    if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime )
-	m_currentSource += QString("|timeOffset=%1").arg( m_settings.timeOffsetOfFirstDeparture() );
-    else
-	m_currentSource += QString("|time=%1").arg(
-		m_settings.timeOfFirstDepartureCustom().toString("hh:mm") );
-    if ( m_settings.useSeperateCityValue() )
-	m_currentSource += QString("|city=%1").arg( m_settings.city() );
-
     addState( WaitingForDepartureData );
-
-    kDebug() << "Connect data source" << m_currentSource << "Timeout" << m_settings.updateTimeout();
-    if ( m_settings.updateTimeout() == 0 )
-	dataEngine("publictransport")->connectSource( m_currentSource, this );
-    else
-	dataEngine("publictransport")->connectSource( m_currentSource, this,
-						      m_settings.updateTimeout() * 1000,
-						      Plasma::AlignToMinute );
 }
 
 void PublicTransport::processJourneyList( const Plasma::DataEngine::Data& data ) {
@@ -631,7 +687,7 @@ void PublicTransport::processJourneyList( const Plasma::DataEngine::Data& data )
 
 void PublicTransport::processDepartureList( const Plasma::DataEngine::Data& data ) {
     // Remove old departure / arrival list
-    m_departureInfos.clear();
+//     m_departureInfos.clear();
     
     #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
     QUrl url = data["requestUrl"].toUrl();
@@ -643,11 +699,14 @@ void PublicTransport::processDepartureList( const Plasma::DataEngine::Data& data
     #endif
 
     int count = data["count"].toInt();
-    for (int i = 0; i < count; ++i)
-    {
+    for (int i = 0; i < count; ++i) {
 	QVariant departureData = data.value( QString("%1").arg(i) );
-	if ( !departureData.isValid() || m_departureInfos.count() >= m_settings.maximalNumberOfDepartures() ) {
-	    if ( !(m_departureInfos.count() >= m_settings.maximalNumberOfDepartures()) )
+	// Don't process invalid data and stop processing once the maximal
+	// departure number is reached (except multiple stops are set)
+	if ( !departureData.isValid() ) {
+// 	    || (!m_settings.hasMultipleStops()
+// 		    && m_departureInfos.count() >= m_settings.maximalNumberOfDepartures()) ) {
+// 	    if ( !(m_departureInfos.count() >= m_settings.maximalNumberOfDepartures()) )
 		kDebug() << "Departure data for departure" << i << "is invalid" << data;
 	    break;
 	}
@@ -675,14 +734,15 @@ void PublicTransport::processDepartureList( const Plasma::DataEngine::Data& data
 				     dataMap["routeExactStops"].toInt() );
 
 	// Only add departures / arrivals that are in the future
-	QDateTime predictedDeparture = departureInfo.predictedDeparture();
-	int secsToDepartureTime = QDateTime::currentDateTime().secsTo( predictedDeparture );
-	if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime )
-	    secsToDepartureTime -= m_settings.timeOffsetOfFirstDeparture() * 60;
-	if ( -secsToDepartureTime / 3600 >= 23 )
-	    secsToDepartureTime += 24 * 3600;
-	if ( secsToDepartureTime > -60 )
+	if ( isTimeShown(departureInfo.predictedDeparture()) )
 	    m_departureInfos.append( departureInfo );
+	else
+	    kDebug() << "Departure is in the past" << departureInfo.predictedDeparture();
+    }
+
+    for ( int i = m_departureInfos.count() - 1; i >= 0; --i ) {
+	if ( !isTimeShown(m_departureInfos[i].predictedDeparture()) )
+	    m_departureInfos.removeAt( i );
     }
 
     kDebug() << m_departureInfos.count() << "departures / arrivals received";
@@ -693,9 +753,18 @@ void PublicTransport::processDepartureList( const Plasma::DataEngine::Data& data
     updateModel();
 }
 
+bool PublicTransport::isTimeShown( const QDateTime& dateTime ) const {
+    int secsToDepartureTime = QDateTime::currentDateTime().secsTo( dateTime );
+    if ( m_settings.firstDepartureConfigMode() == RelativeToCurrentTime )
+	secsToDepartureTime -= m_settings.timeOffsetOfFirstDeparture() * 60;
+    if ( -secsToDepartureTime / 3600 >= 23 )
+	secsToDepartureTime += 24 * 3600;
+    return secsToDepartureTime > -60;
+}
+
 void PublicTransport::clearDepartures() {
     m_departureInfos.clear(); // Clear data from data engine
-    if (m_model != NULL) {
+    if ( m_model ) {
 	m_model->removeRows( 0, m_model->rowCount() ); // Clear data to be displayed
 	updateModel(); // TODO: Check if this is needed
     }
@@ -851,7 +920,8 @@ void PublicTransport::dataUpdated( const QString& sourceName,
 				   const Plasma::DataEngine::Data& data ) {
     Q_UNUSED( sourceName );
 
-    if ( data.isEmpty() || (sourceName != m_currentSource && sourceName != m_currentJourneySource) )
+    if ( data.isEmpty() || (!m_currentSources.contains(sourceName)
+		&& sourceName != m_currentJourneySource) )
 	return;
 
     processData( data );
@@ -1021,13 +1091,25 @@ void PublicTransport::createTooltip() {
 	data.setSubText( i18n("View departure times for public transport") );
     else if ( (nextDeparture = getFirstNotFilteredDeparture()).isValid() ) {
 	if ( m_settings.departureArrivalListType() ==  DepartureList ) {
-	    data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
-		    "Next departure from '%1': line %2 (%3) %4", m_settings.stop(),
+	    if ( m_settings.stops().count() == 1 ) {
+		data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
+		    "Next departure from '%1': line %2 (%3) %4", m_settings.stops().first(),
 		    nextDeparture.lineString, nextDeparture.target , nextDeparture.durationString() ) );
+	    } else {
+		data.setSubText( i18nc("%3 is the translated duration text, e.g. in 3 minutes",
+		    "Next departure from your home stop: line %1 (%2) %3", 
+		    nextDeparture.lineString, nextDeparture.target , nextDeparture.durationString() ) );
+	    }
 	} else {
-	    data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
-		    "Next arrival at '%1': line %2 (%3) %4", m_settings.stop(),
+	    if ( m_settings.stops().count() == 1 ) {
+		data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
+				       "Next arrival at '%1': line %2 (%3) %4", m_settings.stops().first(),
 		    nextDeparture.lineString, nextDeparture.target , nextDeparture.durationString() ) );
+	    } else {
+		data.setSubText( i18nc("%3 is the translated duration text, e.g. in 3 minutes",
+				       "Next arrival at your home stop: line %1 (%2) %3",
+		    nextDeparture.lineString, nextDeparture.target , nextDeparture.durationString() ) );
+	    }
 	}
     }
     
@@ -1236,6 +1318,44 @@ void PublicTransport::showActionButtons() {
 	    btnShowDepArr->setAction( action("showDepartures") );
     }
     connect( btnShowDepArr, SIGNAL(clicked()), this, SLOT(destroyOverlay()) );
+
+    // Add stop selector if multiple stops are defined
+    Plasma::PushButton *btnMultipleStops = NULL;
+    if ( m_settings.hasMultipleStops() ) {
+	btnMultipleStops = new Plasma::PushButton( m_overlay );
+	btnMultipleStops->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
+	btnMultipleStops->setIcon( KIcon("public-transport-stop") );
+	btnMultipleStops->setZValue( 1000 );
+	QMenu *menu = new QMenu( btnMultipleStops->nativeWidget() );
+	if ( m_settings.currentStopIndex() >= m_settings.stops().count() ) {
+	    kDebug() << "Invalid stop index, using -1, was" << m_settings.currentStopIndex();
+	    m_settings.setCurrentStopIndex( -1 );
+	}
+	
+	if ( m_settings.currentStopIndex() == -1 ) {
+	    btnMultipleStops->setText( i18n("Show Results For All Stops") );
+	} else {
+	    btnMultipleStops->setText( i18n("Show Results Only For '%1'",
+					    m_settings.stops()[m_settings.currentStopIndex()]) );
+	    QAction *action = menu->addAction( KIcon("public-transport-stop"),
+			     i18n("Show Results For All Stops") );
+	    action->setData( -1 );
+	    connect( action, SIGNAL(triggered(bool)), this, SLOT(destroyOverlay()) );
+	}
+
+	for ( int i = 0; i < m_settings.stops().count(); ++i ) {
+	    if ( i != m_settings.currentStopIndex() ) {
+		QAction *action = menu->addAction( KIcon("public-transport-stop"),
+			i18n("Show Results Only For '%1'", m_settings.stops()[i]) );
+		action->setData( i );
+		connect( action, SIGNAL(triggered(bool)), this, SLOT(destroyOverlay()) );
+	    }
+	}
+
+	connect( menu, SIGNAL(triggered(QAction*)),
+		 this, SLOT(setCurrentStopIndex(QAction*)) );
+	btnMultipleStops->nativeWidget()->setMenu( menu );
+    }
     
     Plasma::PushButton *btnCancel = new Plasma::PushButton( m_overlay );
     btnCancel->setText( i18n("Cancel") );
@@ -1262,6 +1382,10 @@ void PublicTransport::showActionButtons() {
     layout->setAlignment( btnJourney, Qt::AlignCenter );
     layout->addItem( btnShowDepArr );
     layout->setAlignment( btnShowDepArr, Qt::AlignCenter );
+    if ( btnMultipleStops ) {
+	layout->addItem( btnMultipleStops );
+	layout->setAlignment( btnMultipleStops, Qt::AlignCenter );
+    }
     layout->addItem( layoutCancel );
     layout->setAlignment( layoutCancel, Qt::AlignCenter );
     layout->addItem( spacer2 );
@@ -1278,24 +1402,50 @@ void PublicTransport::showActionButtons() {
 	Plasma::Animation *fadeAnim1 = fadeAnimation( btnJourney, 1 );
 	Plasma::Animation *fadeAnim2 = fadeAnimation( btnShowDepArr, 1 );
 	Plasma::Animation *fadeAnim3 = fadeAnimation( btnCancel, 1 );
-	if ( fadeAnim1 )
-	    fadeAnim1->setProperty( "duration", 150 );
-	if ( fadeAnim2 )
-	    fadeAnim2->setProperty( "duration", 150 );
-	if ( fadeAnim3 )
-	    fadeAnim3->setProperty( "duration", 150 );
-	
+	Plasma::Animation *fadeAnim4 = NULL;
+	if ( btnMultipleStops ) {
+	    btnMultipleStops->setOpacity( 0 );
+	    fadeAnim4 = fadeAnimation( btnMultipleStops, 1 );
+	} 
+
 	QSequentialAnimationGroup *seqGroup = new QSequentialAnimationGroup;
 	if ( fadeAnimOverlay )
 	    seqGroup->addAnimation( fadeAnimOverlay );
-	if ( fadeAnim1 )
+	if ( fadeAnim1 ) {
+	    fadeAnim1->setProperty( "duration", 150 );
 	    seqGroup->addAnimation( fadeAnim1 );
-	if ( fadeAnim2 )
+	}
+	if ( fadeAnim2 ) {
+	    fadeAnim2->setProperty( "duration", 150 );
 	    seqGroup->addAnimation( fadeAnim2 );
-	if ( fadeAnim3 )
+	}
+	if ( fadeAnim4 ) {
+	    fadeAnim4->setProperty( "duration", 150 );
+	    seqGroup->addAnimation( fadeAnim4 );
+	}
+	if ( fadeAnim3 ) {
+	    fadeAnim3->setProperty( "duration", 150 );
 	    seqGroup->addAnimation( fadeAnim3 );
+	}
 	seqGroup->start( QAbstractAnimation::DeleteWhenStopped );
     #endif
+}
+
+void PublicTransport::setCurrentStopIndex( QAction* action ) {
+    bool ok;
+    int stopIndex = action->data().toInt( &ok );
+    if ( !ok ) {
+	kDebug() << "Couldn't find stop index";
+	return;
+    }
+
+    kDebug() << stopIndex;
+    disconnectSources();
+    m_settings.setCurrentStopIndex( stopIndex );
+    clearDepartures();
+    reconnectSource();
+    configChanged();
+    
 }
 
 void PublicTransport::iconCloseClicked() {
@@ -2464,7 +2614,7 @@ void PublicTransport::addState( AppletState state ) {
 		    menu->addAction( recent );
 		menu->addSeparator();
 		menu->addAction( KIcon("edit-clear-list"),
-				 i18n("&Clear recent journey list") )->setData( true );
+				 i18n("&Clear list") )->setData( true );
 		connect( menu, SIGNAL(triggered(QAction*)),
 			this, SLOT(recentJourneyActionTriggered(QAction*)) );
 		m_btnLastJourneySearches->nativeWidget()->setMenu( menu );
@@ -3310,7 +3460,8 @@ bool PublicTransport::filterOut( const DepartureInfo &departureInfo ) const {
 	    && m_settings.filterLineNumberList().contains(departureInfo.lineString)) ||
 
 	// Filter past departures
-	QDateTime::currentDateTime().secsTo( departureInfo.predictedDeparture() ) < -60;
+	!isTimeShown( departureInfo.predictedDeparture() );
+// 	QDateTime::currentDateTime().secsTo( departureInfo.predictedDeparture() ) < -60;
 }
 
 QHash<QString, QVariant> PublicTransport::serviceProviderData() const {
@@ -3329,10 +3480,13 @@ QHash<QString, QVariant> PublicTransport::serviceProviderData() const {
 
 QString PublicTransport::titleText() const {
     QString sServiceProvider = serviceProviderData()["shortUrl"].toString();
+    QString sStops = m_settings.currentStopIndex() == -1
+	    ? m_settings.stops().join(", ") : m_settings.stops()[m_settings.currentStopIndex()];
     if ( m_settings.useSeperateCityValue() )
-	return QString("<b>%1, %2</b>").arg( m_settings.stop() ).arg( m_settings.city() );
+	return QString("<b>%1, %2</b>").arg( sStops )
+				       .arg( m_settings.city() );
     else
-	return QString("<b>%1</b>").arg( m_settings.stop() );
+	return QString("<b>%1</b>").arg( sStops );
 }
 
 QString PublicTransport::infoText() const {
@@ -3583,10 +3737,10 @@ QString PublicTransport::delayText( const DepartureInfo& departureInfo ) const {
 }
 
 // TODO
-void PublicTransport::setValuesOfJourneyItem ( QStandardItem* journeyItem,
-					       JourneyInfo journeyInfo,
-					       ItemInformation journeyInformation,
-					       bool update ) {
+void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
+					      JourneyInfo journeyInfo,
+					      ItemInformation journeyInformation,
+					      bool update ) {
     QStringList sList;
     QString s, s2, s3;
     QStandardItem *item;
@@ -4447,12 +4601,16 @@ void PublicTransport::removeOldDepartures() {
     QList< QModelIndex > notFoundRows;
     for ( int row = m_model->rowCount() - 1; row >= 0; --row )
 	notFoundRows.append( m_model->index(row, 0) );
-    foreach( DepartureInfo departureInfo, m_departureInfos ) {
+    
+    for ( int i = m_departureInfos.count() - 1; i >= 0; --i ) {
+	DepartureInfo departureInfo = m_departureInfos[ i ];
 	int row = findDeparture( departureInfo );
 	if ( row != -1 ) {
-	    if ( filterOut(departureInfo) )
-		kDebug() << "Item will be removed at row" << row << "because filterOut returns true for that item";
-	    else if ( !notFoundRows.removeOne(m_model->index(row, 0)) )
+	    if ( filterOut(departureInfo) ) {
+		kDebug() << "Item will be removed at row" << row
+			 << "because filterOut returns true for that item";
+		m_departureInfos.removeAt( i );
+	    } else if ( !notFoundRows.removeOne(m_model->index(row, 0)) )
 		kDebug() << "Couldn't find item not to be removed at row" << row;
 	}
     }
@@ -4556,13 +4714,12 @@ void PublicTransport::updateModel() {
     }
 
     removeOldDepartures(); // also remove filtered departures  (after changing filter settings)?
-    foreach( DepartureInfo departureInfo, m_departureInfos )
-    {
-	int row = findDeparture(departureInfo);
-
+    foreach( DepartureInfo departureInfo, m_departureInfos ) {
 	// Apply filters
 	if ( filterOut(departureInfo) )
 	    continue;
+
+	int row = findDeparture(departureInfo);
 
 	if ( row != -1 ) { // just update departure data
 	    updateDeparture( row, departureInfo );

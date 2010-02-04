@@ -65,6 +65,8 @@ class PublicTransportSettings : public QObject {
 	/** Gets a list of all filtered out vehicle types. */
 	QList<VehicleType> filteredOutVehicleTypes() const;
 
+	void writeNoGuiSettings();
+
 	/** A timeout to reload the timetable information from the internet. */
 	int updateTimeout() const { return m_updateTimeout; };
 	/** Whether or not remaining minutes until departure should be shown. */
@@ -73,10 +75,18 @@ class PublicTransportSettings : public QObject {
 	bool isDepartureTimeShown() const { return m_showDepartureTime; };
 	/** The currently selected city. */
 	QString city() const { return m_city; };
+	bool hasMultipleStops() const { return m_stops.count() > 1; };
+	/** The index of the current stop or -1 to show all results of the additional stops. */
+	int currentStopIndex() const { return m_currentStopIndex; };
+	/** Set (and write) the index of the current stop or -1 to show all 
+	* results of the additional stops. */
+	void setCurrentStopIndex( int currentStopIndex ) {
+		m_currentStopIndex = currentStopIndex;
+		writeNoGuiSettings(); };
 	/** The currently selected stop. */
-	QString stop() const { return m_stop; };
+	QStringList stops() const { return m_stops; };
 	/** The ID of the currently selected stop or an empty string if the ID isn't available. */
-	QString stopID() const { return m_stopID; };
+	QStringList stopIDs() const { return m_stopIDs; };
 	/** The ID of the currently typed stop in the config dialog. */
 	QString stopIDinConfig() const { return m_stopIDinConfig; };
 	/** How many lines each row in the tree view should have. */
@@ -159,7 +169,7 @@ class PublicTransportSettings : public QObject {
 
 	/** Gets the config name used to store whether or not the given type of vehicle should be shown. */
 	static QString vehicleTypeToConfigName( const VehicleType &vehicleType );
-
+	
     signals:
 	void modelNeedsUpdate();
 	void departureListNeedsClearing();
@@ -189,7 +199,9 @@ class PublicTransportSettings : public QObject {
 			 const QVariant &data, const QVariant &data2, const QVariant &data3 );
 	/** The info button in the config dialog for showing all service provider 
 	* information has been clicked. */
-	void clickedServiceProviderInfo( bool );
+	void clickedServiceProviderInfo();
+	void clickedAddStop();
+	void clickedRemoveStop();
 	/** The data from the data engine was updated. */
 	void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data );
 
@@ -229,6 +241,9 @@ class PublicTransportSettings : public QObject {
 	void importFilterSettings();
 
     private:
+	void addStop( const QString &stop = QString(), bool fadeInAnimation = false );
+	QStringList getAdditionalStops();
+	
         void setValuesOfAdvancedConfig();
         void setValuesOfFilterConfig();
         void setValuesOfStopSelectionConfig();
@@ -264,12 +279,16 @@ class PublicTransportSettings : public QObject {
 	Plasma::DataEngine::Data m_serviceProviderData; // Service provider information from the data engine
 	QVariantHash m_locationData; // Location information from the data engine.
 
+	QList< QWidgetList > m_additionalStopWidgets;
+	QList< QToolButton* > m_removeStopButtons;
+
 	int m_updateTimeout; // A timeout to reload the timetable information from the internet
 	bool m_showRemainingMinutes; // Whether or not remaining minutes until departure should be shown
 	bool m_showDepartureTime; // Whether or not departure times should be shown
 	QString m_city; // The currently selected city
-	QString m_stop; // The currently selected stop
-	QString m_stopID; // The ID of the currently selected stop or an empty string if the ID isn't available
+	int m_currentStopIndex; // The index of the current stop or -1 to show all results of the additional stops
+	QStringList m_stops; // The currently selected stops
+	QStringList m_stopIDs; // The IDs of the currently selected stops, can contain empty strings if the ID isn't available
 	QString m_stopIDinConfig; // The ID of the currently typed stop in the config dialog
 	int m_linesPerRow; // How many lines each row in the tree view should have
 	int m_size; // The size of the timetable

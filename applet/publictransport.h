@@ -38,6 +38,7 @@ namespace Plasma {
     class LineEdit;
     class ToolButton;
     class Label;
+    class PushButton;
 };
 
 class AlarmTimer;
@@ -168,6 +169,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	* connects again using the current configuration. */
 	void reconnectSource();
 
+	void disconnectSources();
+
 	/** Disconnects a currently connected journey data source. */
 	void disconnectJourneySource();
 
@@ -193,7 +196,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** Clears the departure / arrival list received from the data engine and
 	* displayed by the applet. */
 	void clearDepartures();
-
+	
 	/** Clears the journey list received from the data engine and displayed by
 	* the applet. */
 	void clearJourneys();
@@ -242,6 +245,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** Gets the current stop id if available. Otherwise it returns the current
 	* stop name. */
 	QString stop() const;
+
+	QStringList stopValues() const;
 
 	/** Gets a list of actions for the context menu. */
 	virtual QList<QAction*> contextualActions();
@@ -434,6 +439,7 @@ class PublicTransport : public Plasma::PopupApplet {
 
     protected slots:
 	void destroyOverlay();
+	void setCurrentStopIndex( QAction *action );
 	
     private:
 	bool parseJourneySearch( const QString &search, QString *stop,
@@ -444,7 +450,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	void stopNamePosition( int *posStart, int *len, QString *stop = NULL );
 	bool parseTime( const QString &sTime, QTime *time ) const;
 	bool parseDate( const QString &sDate, QDate *date ) const;
-
+	bool isTimeShown( const QDateTime &datime ) const;
 	
 				 
 	AppletStates m_appletStates; /**< The current states of this applet */
@@ -470,7 +476,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	QStandardItemModel *m_modelJourneys; /**< The model for journeys from or to the "home stop" */
 	QList<DepartureInfo> m_departureInfos; /**< List of current departures / arrivals */
 	QList<JourneyInfo> m_journeyInfos; /**< List of current journeys */
-	QString m_currentSource; /**< Current source name at the publictransport data engine */
+	QStringList m_currentSources; /**< Current source name at the publictransport data engine */
 	QString m_currentJourneySource; /**< Current source name for journeys at the publictransport data engine */
 	QString m_lastSecondStopName; /**< The last used second stop name for journey search */
 	QDateTime m_lastJourneyDateTime; /**< The last used date and time for journey search */
