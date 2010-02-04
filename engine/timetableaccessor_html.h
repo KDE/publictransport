@@ -60,7 +60,7 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* @param parseDocumentMode The mode of parsing, e.g. parse for departures/arrivals or journeys.
 	* @return true, if there were no errors and the data in @p journeys is valid.
 	* @return false, if there were an error parsing the document. */
-	virtual bool parseDocument( QList<PublicTransportInfo*> *journeys,
+	virtual bool parseDocument( const QByteArray &document, QList<PublicTransportInfo*> *journeys,
 				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
 	/** Exceuted before parseDocument() if there is a regexp to use before starting
@@ -82,20 +82,8 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
 	* document for stops.
 	* @see parseDocumentPossibleStops(QHash<QString,QString>*) */
-	virtual bool parseDocumentPossibleStops( const QByteArray document,
+	virtual bool parseDocumentPossibleStops( const QByteArray &document,
 						 QStringList *stops,
-						 QHash<QString,QString> *stopToStopId,
-						 QHash<QString,int> *stopToStopWeight );
-
-	/** Parses the contents of a received document for a list of possible stop names
-	* and puts the results into @p stops.
-	* @param stops A pointer to a string list, where the stop names are stored.
-	* @param stopToStopId A pointer to a map, where the keys are stop names
-	* and the values are stop IDs.
-	* @return true, if there were no errors.
-	* @return false, if there were an error parsing the document.
-	* @see parseDocumentPossibleStops(const QByteArray, QHash<QString,QString>*) */
-	virtual bool parseDocumentPossibleStops( QStringList *stops,
 						 QHash<QString,QString> *stopToStopId,
 						 QHash<QString,int> *stopToStopWeight );
 

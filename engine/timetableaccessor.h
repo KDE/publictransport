@@ -149,20 +149,25 @@ class TimetableAccessor : public QObject {
 	* @return true, if there were no errors and the data in @p journeys is valid.
 	* @return false, if there were an error parsing the document.
 	* @see parseDocumentPossibleStops() */
-	virtual bool parseDocument( QList<PublicTransportInfo*> *journeys,
+	virtual bool parseDocument( const QByteArray &document,
+				    QList<PublicTransportInfo*> *journeys,
 				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
 	/** Override this method to parse the contents of a received document for
 	* an url to a document containing later journeys. The default implementation 
 	* returns a null string.
 	* @return The parsed url. */
-	virtual QString parseDocumentForLaterJourneysUrl() { return QString(); };
+	virtual QString parseDocumentForLaterJourneysUrl( const QByteArray &document ) {
+		Q_UNUSED( document );
+		return QString(); };
 	
 	/** Override this method to parse the contents of a received document for
 	* an url to a document containing detailed journey infos. The default 
 	* implementation returns a null string.
 	* @return The parsed url. */
-	virtual QString parseDocumentForDetailedJourneysUrl() { return QString(); };
+	virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document ) {
+		Q_UNUSED( document );
+		return QString(); };
 				    
 	/** Parses the contents of a received document for a list of possible stop names
 	* and puts the results into @p stops.
@@ -172,7 +177,8 @@ class TimetableAccessor : public QObject {
 	* @return true, if there were no errors.
 	* @return false, if there were an error parsing the document.
 	* @see parseDocument() */
-	virtual bool parseDocumentPossibleStops( QStringList *stops,
+	virtual bool parseDocumentPossibleStops( const QByteArray &document,
+						 QStringList *stops,
 						 QHash<QString,QString> *stopToStopId,
 						 QHash<QString,int> *stopToStopWeight );
 
@@ -210,7 +216,7 @@ class TimetableAccessor : public QObject {
 			    bool useDifferentUrl = false ) const;
 
 
-	QByteArray m_document; /**< Stores the downloaded parts of a reply. */
+	QHash< QString, QByteArray > m_document; /**< Stores the downloaded parts of a reply for each source name. */
 	QString m_curCity; /**< Stores the currently used city. */
 	TimetableAccessorInfo m_info; /**< Stores service provider specific information that is used to parse the html pages. */
 

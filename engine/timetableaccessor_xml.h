@@ -57,7 +57,8 @@ class TimetableAccessorXml : public TimetableAccessor
 	* departures/arrivals or journeys.
 	* @return true, if there were no errors and the data in @p journeys is valid.
 	* @return false, if there were an error parsing the document. */
-	virtual bool parseDocument( QList<PublicTransportInfo*> *journeys,
+	virtual bool parseDocument( const QByteArray &document,
+				    QList<PublicTransportInfo*> *journeys,
 				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
 	/** Parses the contents of a received document for a list of possible stop names
@@ -67,7 +68,8 @@ class TimetableAccessorXml : public TimetableAccessor
 	* and the values are stop IDs.
 	* @return true, if there were no errors.
 	* @return false, if there were an error parsing the document. */
-	virtual bool parseDocumentPossibleStops( QStringList *stops,
+	virtual bool parseDocumentPossibleStops( const QByteArray &document,
+						 QStringList *stops,
 						 QHash<QString,QString> *stopToStopId,
 						 QHash<QString,int> *stopToStopWeight );
 

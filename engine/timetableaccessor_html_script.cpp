@@ -103,7 +103,8 @@ QStringList TimetableAccessorHtmlScript::scriptFeatures() const {
     return features;
 }
 
-bool TimetableAccessorHtmlScript::parseDocument( QList<PublicTransportInfo*> *journeys,
+bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
+						 QList<PublicTransportInfo*> *journeys,
 						 ParseDocumentMode parseDocumentMode ) {
     if ( !m_scriptLoaded ) {
 	kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
@@ -117,9 +118,9 @@ bool TimetableAccessorHtmlScript::parseDocument( QList<PublicTransportInfo*> *jo
 	return false;
     }
     
-    QString document = TimetableAccessorHtml::decodeHtml( m_document );
+    QString doc = TimetableAccessorHtml::decodeHtml( document );
     // Performance(?): Cut everything before "<body>" from the document
-    document = document.mid( document.indexOf("<body>", 0, Qt::CaseInsensitive) );
+    doc = doc.mid( doc.indexOf("<body>", 0, Qt::CaseInsensitive) );
 
     kDebug() << "Parsing..." << parseDocumentMode;
 
@@ -150,7 +151,8 @@ bool TimetableAccessorHtmlScript::parseDocument( QList<PublicTransportInfo*> *jo
     return count > 0;
 }
 
-QString TimetableAccessorHtmlScript::parseDocumentForLaterJourneysUrl() {
+QString TimetableAccessorHtmlScript::parseDocumentForLaterJourneysUrl(
+	    const QByteArray &document ) {
     if ( !m_scriptLoaded ) {
 	kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
 	return QString();
@@ -161,20 +163,21 @@ QString TimetableAccessorHtmlScript::parseDocumentForLaterJourneysUrl() {
 	return QString();
     }
     
-    QString document = TimetableAccessorHtml::decodeHtml( m_document );
+    QString doc = TimetableAccessorHtml::decodeHtml( document );
     // Performance(?): Cut everything before "<body>" from the document
-    document = document.mid( document.indexOf("<body>", 0, Qt::CaseInsensitive) );
+    doc = doc.mid( doc.indexOf("<body>", 0, Qt::CaseInsensitive) );
     
     // Call script
     QString result = m_script->callFunction( "getUrlForLaterJourneyResults",
-					     QVariantList() << document ).toString();
+					     QVariantList() << doc ).toString();
     if ( result.isEmpty() || result == "null" )
 	return QString();
     else
 	return TimetableAccessorHtml::decodeHtmlEntities( result );
 }
 
-QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl() {
+QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl(
+		const QByteArray &document ) {
     if ( !m_scriptLoaded ) {
 	kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
 	return QString();
@@ -185,12 +188,12 @@ QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl() {
 	return QString();
     }
     
-    QString document = TimetableAccessorHtml::decodeHtml( m_document );
+    QString doc = TimetableAccessorHtml::decodeHtml( document );
     // Performance(?): Cut everything before "<body>" from the document
-    document = document.mid( document.indexOf("<body>", 0, Qt::CaseInsensitive) );
+    doc = doc.mid( doc.indexOf("<body>", 0, Qt::CaseInsensitive) );
 
     QString result = m_script->callFunction( "getUrlForDetailedJourneyResults",
-					     QVariantList() << document ).toString();
+					     QVariantList() << doc ).toString();
     if ( result.isEmpty() || result == "null" )
 	return QString();
     else
@@ -198,14 +201,7 @@ QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl() {
 }
 
 bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &document,
-						QStringList* stops,
-						QHash<QString,QString>* stopToStopId,
-						QHash<QString,int> *stopToStopWeight ) {
-    m_document = document;
-    return parseDocumentPossibleStops( stops, stopToStopId, stopToStopWeight );
-}
-
-bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( QStringList *stops,
+				    QStringList *stops,
 				    QHash<QString,QString> *stopToStopId,
 				    QHash<QString,int> *stopToStopWeight ) {
     if ( !m_scriptLoaded ) {
@@ -218,12 +214,11 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( QStringList *stops
 	return false;
     }
 
-    QString document = TimetableAccessorHtml::decodeHtml( m_document,
-							  m_info.fallbackCharset() );
+    QString doc = TimetableAccessorHtml::decodeHtml( document, m_info.fallbackCharset() );
 
     // Call script
     m_resultObject->clear();
-    QVariant result = m_script->callFunction( "parsePossibleStops", QVariantList() << document );
+    QVariant result = m_script->callFunction( "parsePossibleStops", QVariantList() << doc );
     QList<TimetableData> data = m_resultObject->data();
 
     int count = 0;

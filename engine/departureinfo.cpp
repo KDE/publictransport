@@ -369,15 +369,15 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
     else if ( sLineTypeLower == "s-bahn" ||
 	sLineTypeLower == "sbahn" ||
 	sLineTypeLower == "s" ||
-	sLineTypeLower == "s1" || // for sbb.ch
-	sLineTypeLower == "rsb" ) // "regio-s-bahn", austria
+	sLineTypeLower == "s1" || // ch_sbb
+	sLineTypeLower == "rsb" ) // "regio-s-bahn", au_oebb
 	return TrainInterurban;
 
     else if ( sLineTypeLower == "tram" ||
 	sLineTypeLower == "straßenbahn" ||
 	sLineTypeLower == "str" ||
-	sLineTypeLower == "ntr" || // for sbb.ch
-	sLineTypeLower == "tra" || // for sbb.ch
+	sLineTypeLower == "ntr" || // for ch_sbb
+	sLineTypeLower == "tra" || // for ch_sbb
 	sLineTypeLower == "stb" || // "stadtbahn", germany
 	sLineTypeLower == "dm_train" ||
 	sLineTypeLower == "streetcar (tram)" ) // for imhd.sk
@@ -385,10 +385,11 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 
     else if ( sLineTypeLower == "bus" ||
 	sLineTypeLower == "dm_bus" ||
-	sLineTypeLower == "nbu" || // for sbb.ch
-	sLineTypeLower == "bsv" || // for nasa.de
-	sLineTypeLower == "express bus" || // for imhd.sk
-	sLineTypeLower == "night line - bus" ) // for imhd.sk
+	sLineTypeLower == "au" || // it_cup2000, "autobus"
+	sLineTypeLower == "nbu" || // for ch_sbb
+	sLineTypeLower == "bsv" || // for de_nasa
+	sLineTypeLower == "express bus" || // for sk_imhd
+	sLineTypeLower == "night line - bus" ) // for sk_imhd
 	return Bus;
 
     else if ( sLineTypeLower == "metro" ||

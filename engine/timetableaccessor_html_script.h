@@ -66,20 +66,21 @@ class TimetableAccessorHtmlScript : public TimetableAccessor {
 	* departures/arrivals or journeys.
 	* @return true, if there were no errors and the data in @p journeys is valid.
 	* @return false, if there were an error parsing the document. */
-	virtual bool parseDocument( QList<PublicTransportInfo*> *journeys,
+	virtual bool parseDocument( const QByteArray &document,
+				    QList<PublicTransportInfo*> *journeys,
 				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
 	/** Calls the 'getUrlForLaterJourneyResults' function in the script to
 	* parse the contents of a received document for an url to a document
 	* containing later journeys. 
 	* @return The parsed url. */
-	virtual QString parseDocumentForLaterJourneysUrl();
+	virtual QString parseDocumentForLaterJourneysUrl( const QByteArray &document );
 	
 	/** Calls the 'getUrlForDetailedJourneyResults' function in the script to
 	* parse the contents of a received document for an url to a document
 	* containing detailed journey infos.
 	* @return The parsed url. */
-	virtual QString parseDocumentForDetailedJourneysUrl();
+	virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document );
 	
 	/** Calls the 'parsePossibleStops' function in the script to parse the 
 	* contents of the given document for a list of possible stop names and puts
@@ -96,18 +97,6 @@ class TimetableAccessorHtmlScript : public TimetableAccessor {
 	* @see parseDocumentPossibleStops(QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( const QByteArray &document,
 						 QStringList *stops,
-						 QHash<QString,QString> *stopToStopId,
-						 QHash<QString,int> *stopToStopWeight );
-
-	/** Parses the contents of a received document for a list of possible stop names
-	* and puts the results into @p stops.
-	* @param stops A pointer to a string list, where the stop names are stored.
-	* @param stopToStopId A pointer to a map, where the keys are stop names 
-	* and the values are stop IDs.
-	* @return true, if there were no errors.
-	* @return false, if there were an error parsing the document.
-	* @see parseDocumentPossibleStops(const QByteArray, QHash<QString,QString>*) */
-	virtual bool parseDocumentPossibleStops( QStringList *stops,
 						 QHash<QString,QString> *stopToStopId,
 						 QHash<QString,int> *stopToStopWeight );
 	

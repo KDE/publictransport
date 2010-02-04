@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo fileVersion="1.0" version="1.0" type="HTML">
+
+<name lang="en">Italia (Regione Emilia-Romagna)</name>
+
+<description lang="en">This service provider works for cities in Italia.</description>
+
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<!-- <cities><city></city></cities> -->
+<useSeperateCityValue>false</useSeperateCityValue>
+
+<url>http://travelplanner.cup2000.it</url>
+<shortUrl>travelplanner.cup2000.it</shortUrl>
+<credit>Cup 2000 SpA</credit>
+<!-- <minFetchWait>300</minFetchWait> -->
+<!-- <fallbackCharset>latin1</fallbackCharset> -->
+
+<script>it_cup2000.js</script>
+
+<rawUrls>
+    <departures><![CDATA[http://212.131.171.232/rer/bin/stboard.exe/en?input={stop}!&time={time}&boardType={dataType}&date={date:dd.MM.yy}&disableEquivs=no&maxJourneys={maxDeps}&start=yes&productsFilter=111111111]]></departures>
+
+    <stopSuggestions><![CDATA[http://212.131.171.232/rer/bin/stboard.exe/en?input={stop}?]]></stopSuggestions>
+
+<!--     <journeys><![CDATA[http://hafas.bene-system.com/bin/query.exe/dn?...]]></journeys> -->
+</rawUrls>
+
+</accessorInfo>

@@ -46,18 +46,19 @@ QStringList TimetableAccessorXml::features() const {
 	<< i18nc("Support for getting the id of a stop of public transport. This string is used in a feature list, should be short.", "Stop ID");
 }
 
-bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys,
+bool TimetableAccessorXml::parseDocument( const QByteArray &document,
+					  QList<PublicTransportInfo*> *journeys,
 					  ParseDocumentMode parseDocumentMode ) {
     Q_UNUSED( parseDocumentMode );
 
-    if ( m_document.isEmpty() ) {
+    if ( document.isEmpty() ) {
 	qDebug() << "TimetableAccessorXml::parseDocument" << "XML document is empty";
 	return false;
     }
 
-    QString document = QString(m_document);
+    QString doc = QString( document );
     QDomDocument domDoc;
-    domDoc.setContent(document);
+    domDoc.setContent( doc );
     QDomElement docElement = domDoc.documentElement();
     QDomNodeList errNodes = docElement.elementsByTagName("Err");
     if ( !errNodes.isEmpty() ) {
@@ -111,20 +112,28 @@ bool TimetableAccessorXml::parseDocument( QList<PublicTransportInfo*> *journeys,
 
 // 	qDebug() << "TIME =" << sTime << ", LINE =" << sLine << ", DIRECTION =" << sDirection << ", DELAY =" << sDelay;
 
-	if ( sDelay.isEmpty() )
-	    journeys->append( new DepartureInfo( sLine, DepartureInfo::getVehicleTypeFromString(sVehicleType), sDirection, QTime::currentTime(), QTime::fromString(sTime, "hh:mm"), false, false, sPlatform, -1, "", sJourneyNews ) );
-	else
-	    journeys->append( new DepartureInfo( sLine, DepartureInfo::getVehicleTypeFromString(sVehicleType), sDirection, QTime::currentTime(), QTime::fromString(sTime, "hh:mm"), false, false, sPlatform, sDelay.toInt(), "", sJourneyNews ) );
+	if ( sDelay.isEmpty() ) {
+	    journeys->append( new DepartureInfo(sLine,
+		    DepartureInfo::getVehicleTypeFromString(sVehicleType),
+		    sDirection, QTime::currentTime(), QTime::fromString(sTime, "hh:mm"),
+		    false, false, sPlatform, -1, "", sJourneyNews) );
+	} else {
+	    journeys->append( new DepartureInfo(sLine,
+		    DepartureInfo::getVehicleTypeFromString(sVehicleType),
+		    sDirection, QTime::currentTime(), QTime::fromString(sTime, "hh:mm"),
+		    false, false, sPlatform, sDelay.toInt(), "", sJourneyNews) );
+	}
     }
 
     return count > 0;
 }
 
-bool TimetableAccessorXml::parseDocumentPossibleStops ( QStringList *stops,
-							QHash<QString,QString> *stopToStopId,
-							QHash<QString,int> *stopToStopWeight ) {
+bool TimetableAccessorXml::parseDocumentPossibleStops( const QByteArray &document,
+						       QStringList *stops,
+						       QHash<QString,QString> *stopToStopId,
+						       QHash<QString,int> *stopToStopWeight ) {
     // Let the document get parsed for possible stops by the HTML accessor
-    return m_accessorHTML->parseDocumentPossibleStops( m_document, stops,
+    return m_accessorHTML->parseDocumentPossibleStops( document, stops,
 						       stopToStopId, stopToStopWeight );
 }
 

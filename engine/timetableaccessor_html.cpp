@@ -73,19 +73,20 @@ QString TimetableAccessorHtml::decodeHtml( const QByteArray &document,
     return sDocument;
 }
 
-bool TimetableAccessorHtml::parseDocument( QList<PublicTransportInfo*> *journeys,
+bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
+					   QList<PublicTransportInfo*> *journeys,
 					   ParseDocumentMode parseDocumentMode ) {
-    QString document = decodeHtml( m_document );
+    QString doc = decodeHtml( document );
 
     // Performance(?): Cut everything before "<body>" from the document
-    document = document.mid( document.indexOf("<body>", 0, Qt::CaseInsensitive) );
+    doc = doc.mid( doc.indexOf("<body>", 0, Qt::CaseInsensitive) );
 
     // Preparse the document if there is a regexp to do so.
     // This preparsing gets a QHash from one DepartureInformation to another
     // to get missing values from this QHash when parsing the document.
     bool hasPreData = false;
     TimetableInformation keyInfo = Nothing, valueInfo = Nothing;
-    if ( (hasPreData = parseDocumentPre(document)) ) {
+    if ( (hasPreData = parseDocumentPre(doc)) ) {
 	QList< TimetableInformation > infos = m_info.searchDeparturesPre().infos();
 	Q_ASSERT( infos.length() >= 2 );
 	keyInfo = infos[0];
@@ -101,10 +102,10 @@ bool TimetableAccessorHtml::parseDocument( QList<PublicTransportInfo*> *journeys
 		m_info.searchDepartureGroupTitles().infos();
 
 	int lastPosTitles = -1, posTitles = 0;
-	while ( (posTitles = rxTitles.indexIn(document, posTitles)) != -1 ) {
+	while ( (posTitles = rxTitles.indexIn(doc, posTitles)) != -1 ) {
 	    int len = rxTitles.matchedLength();
 	    if ( lastPosTitles != -1 ) {
-		documentParts << document.mid( lastPosTitles, posTitles - lastPosTitles );
+		documentParts << doc.mid( lastPosTitles, posTitles - lastPosTitles );
 	    }
 
 	    int i = 0;
@@ -120,11 +121,11 @@ bool TimetableAccessorHtml::parseDocument( QList<PublicTransportInfo*> *journeys
 
 	// Add last document part or the whole document if no titles were found
 	if ( lastPosTitles != -1 )
-	    documentParts << document;
+	    documentParts << doc;
 	else
-	    documentParts << document.mid( lastPosTitles );
+	    documentParts << doc.mid( lastPosTitles );
     } else
-	documentParts << document; // No regexp for departure group titles, so only one document part
+	documentParts << doc; // No regexp for departure group titles, so only one document part
 
     kDebug() << "Parsing..." << (parseDocumentMode == ParseForJourneys
 	    ? "searching for journeys" : "searching for departures / arrivals");
@@ -516,15 +517,8 @@ QString TimetableAccessorHtml::decodeHtmlEntities( const QString &html ) {
     return ret;
 }
 
-bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray document,
+bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray &document,
 							QStringList *stops,
-							QHash<QString,QString> *stopToStopId,
-							QHash<QString,int> *stopToStopWeight ) {
-    m_document = document;
-    return parseDocumentPossibleStops( stops, stopToStopId, stopToStopWeight );
-}
-
-bool TimetableAccessorHtml::parseDocumentPossibleStops( QStringList *stops,
 							QHash<QString,QString> *stopToStopId,
 							QHash<QString,int> *stopToStopWeight ) {
     Q_UNUSED( stopToStopWeight );
@@ -534,7 +528,7 @@ bool TimetableAccessorHtml::parseDocumentPossibleStops( QStringList *stops,
 	return false;
     }
 
-    QString document = decodeHtml( m_document );
+    QString doc = decodeHtml( document );
     kDebug() << "Parsing for a list of possible stop names...";
 
     bool matched = false;
@@ -542,7 +536,7 @@ bool TimetableAccessorHtml::parseDocumentPossibleStops( QStringList *stops,
     for( int i = 0; i < m_info.regExpSearchPossibleStopsRanges().count(); ++i ) {
 	QRegExp rxRange(m_info.regExpSearchPossibleStopsRanges()[i], Qt::CaseInsensitive);
 	rxRange.setMinimal( true );
-	if ( rxRange.indexIn(document) == -1 || !rxRange.isValid() )
+	if ( rxRange.indexIn(doc) == -1 || !rxRange.isValid() )
 	    continue;
 
 	QString possibleStopRange = rxRange.cap(1);
