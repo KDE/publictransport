@@ -13,8 +13,8 @@
 <description>Provides departure information for 'Saxony-Anhalt' in Germany.</description>
 
 <url>http://www.nasa.de/</url>
-<shortUrl>nasa.de</shortUrl>
-<credit>Nahverkehrsservice Sachsen-Anhalt GmbH</credit>
+<shortUrl>www.nasa.de</shortUrl>
+<!-- <credit>Nahverkehrsservice Sachsen-Anhalt GmbH</credit> -->
 
 <rawUrls>
     <departures><![CDATA[http://www.nasa.de/delfi52/stboard.exe/dn?ld=web&L=vbn&input={stop}&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>

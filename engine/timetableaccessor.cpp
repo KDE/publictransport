@@ -369,7 +369,6 @@ KIO::TransferJob* TimetableAccessor::requestJourneys( const KUrl& url ) {
 }
 
 void TimetableAccessor::dataReceived( KIO::Job *job, const QByteArray& data ) {
-    // FIXME: Use the right document
     QList<QVariant> jobInfo = m_jobInfos.value( job );
     QString sourceName = jobInfo.at(1).toString();
     
@@ -385,7 +384,7 @@ void TimetableAccessor::finished( KJob* job ) {
     QHash<QString, QString> stopToStopId;
     QHash<QString, int> stopToStopWeight;
     ParseDocumentMode parseDocumentMode = static_cast<ParseDocumentMode>( jobInfo.at(0).toInt() );
-    kDebug() << "\n      FINISHED:" << parseDocumentMode;
+    kDebug() << "FINISHED:" << parseDocumentMode;
     
     QString sourceName = jobInfo.at(1).toString();
     QByteArray document = m_document[ sourceName ];
@@ -420,7 +419,7 @@ void TimetableAccessor::finished( KJob* job ) {
     if ( parseDocumentMode == ParseForJourneys ) {
 	targetStop = jobInfo.at(9).toString();
 	roundTrips = jobInfo.at(10).toInt();
-	kDebug() << "\n    FINISHED JOURNEY SEARCH" << roundTrips;
+	kDebug() << "    FINISHED JOURNEY SEARCH" << roundTrips;
     }
     m_curCity = city;
     
@@ -437,7 +436,6 @@ void TimetableAccessor::finished( KJob* job ) {
 	
 	if ( parseDocument(document, &dataList, parseDocumentMode) ) {
 	    if ( parseDocumentMode == ParseForDeparturesArrivals ) {
-// 		kDebug() << "emit departureListReceived" << sourceName;
 		QList<DepartureInfo*> departures;
 		foreach( PublicTransportInfo *info, dataList )
 		    departures << dynamic_cast< DepartureInfo* >( info );
@@ -445,8 +443,7 @@ void TimetableAccessor::finished( KJob* job ) {
 					    sourceName, city, stop, dataType,
 					    parseDocumentMode );
 	    } else if ( parseDocumentMode == ParseForJourneys ) {
-// 		kDebug() << "emit journeyListReceived";
-		QList<JourneyInfo*> journeys ;
+		QList<JourneyInfo*> journeys;
 		foreach( PublicTransportInfo *info, dataList )
 		    journeys << dynamic_cast< JourneyInfo* >( info );
 		emit journeyListReceived( this, url, journeys, serviceProvider(),

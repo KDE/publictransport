@@ -9,7 +9,7 @@
 <description>Provides departure information for spacecrafts in the United States.</description>
 
 <url>http://www.nasa.gov/missions/highlights/schedule.html</url>
-<shortUrl>nasa.gov</shortUrl>
+<shortUrl>www.nasa.gov</shortUrl>
 
 <rawUrls>
     <departures><![CDATA[http://www.nasa.gov/missions/highlights/schedule.html]]></departures>

@@ -185,24 +185,28 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 	    QHash< TimetableInformation, QVariant > data;
 	    data.insert( Delay, "-1" );
 	    foreach ( TimetableInformation info, infosToGet ) {
-		if ( infos.contains(info) )
-		    postProcessMatchedData( info, rx.cap(infos.indexOf(info) + 1).trimmed(), &data );
+		if ( infos.contains(info) ) {
+		    postProcessMatchedData( info,
+			    rx.cap(infos.indexOf(info) + 1).trimmed(), &data );
+		}
 	    }
 
 	    // Get missing data from preparsed matches
-	    if ( hasPreData && data.contains(keyInfo) &&
-		(!data.contains(valueInfo) || (valueInfo == TypeOfVehicle && data[valueInfo] == Unknown)) ) {
-		qDebug() << "TimetableAccessorHtml::parseDocument" << "Get missing data from preparsed matches"
-		    << m_preData->value( data[keyInfo].toString() );
-		postProcessMatchedData( valueInfo, m_preData->value( data[keyInfo].toString() ), &data );
+	    if ( hasPreData && data.contains(keyInfo)
+		    && (!data.contains(valueInfo)
+		    || (valueInfo == TypeOfVehicle && data[valueInfo] == Unknown)) ) {
+		kDebug() << "Get missing data from preparsed matches"
+			 << m_preData->value( data[keyInfo].toString() );
+		postProcessMatchedData( valueInfo,
+			m_preData->value(data[keyInfo].toString()), &data );
 	    }
 
 	    // Get missing data from departure group titles
 	    if ( !documentPartInfos.isEmpty() ) {
 		foreach ( TimetableInformation info, documentPartInfos.keys() ) {
 		    if ( !data.contains(info) || (info == TypeOfVehicle && data[info] == Unknown) ) {
-			qDebug() << "TimetableAccessorHtml::parseDocument" << "Get missing data from departure group titles"
-			    << documentPartInfos.value(info);
+			kDebug() << "Get missing data from departure group titles"
+				 << documentPartInfos.value(info);
 			postProcessMatchedData( info, documentPartInfos.value(info), &data );
 		    }
 		}
@@ -273,13 +277,13 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 
     // TODO Status, AMorPM
 	    // Create DepartureInfo item and append it to the journey list
-	    if ( parseDocumentMode == ParseForDeparturesArrivals )
+	    if ( parseDocumentMode == ParseForDeparturesArrivals ) {
 		journeys->append( new DepartureInfo( data[TransportLine].toString(),
 		    static_cast<VehicleType>(data[TypeOfVehicle].toInt()), data[Target].toString(),
 		    QTime::currentTime(), QTime(data[DepartureHour].toInt(), data[DepartureMinute].toInt()),
 		    data[TransportLine].toString().isEmpty() ? false : data[TransportLine].toString().at(0) == 'N',
 		    false, data[Platform].toString(), data[Delay].toInt(), data[DelayReason].toString(), data[JourneyNewsOther].toString(), data[Operator].toString() ) );
-	    else /*if ( parseDocumentMode == ParseForJourneys )*/ {
+	    } else /*if ( parseDocumentMode == ParseForJourneys )*/ {
 		QList<VehicleType> vehicleTypes;
 		QList<QVariant> variantList = data[TypesOfVehicleInJourney].toList();
 		foreach ( QVariant vehicleType, variantList )
@@ -410,7 +414,7 @@ void TimetableAccessorHtml::postProcessMatchedData( TimetableInformation info,
 	    break;
 
 	case Target:
-	    s = TimetableAccessorHtml::decodeHtmlEntities(matchedData);
+	    s = TimetableAccessorHtml::decodeHtmlEntities( matchedData );
 	    data->insert( Target, s );
 	    break;
 

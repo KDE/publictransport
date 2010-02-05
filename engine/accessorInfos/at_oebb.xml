@@ -9,8 +9,8 @@
 <description>This service provider works for cities in Austria and also for many cities in Europe. Cities in Austria include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>
 
 <url>http://www.oebb.at/</url>
-<shortUrl>oebb.at</shortUrl>
-<credit>ÖBB-Konzern</credit>
+<shortUrl>www.oebb.at</shortUrl>
+<!-- <credit>ÖBB-Konzern</credit> -->
 
 <rawUrls>
     <departures><![CDATA[http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&input={stop}&boardType={dataType}&time={time}&REQ0JourneyProduct_list=0:1111111111010000-000000.&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>

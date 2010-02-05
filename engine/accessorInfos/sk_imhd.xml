@@ -29,29 +29,12 @@
 <description>Provides departure information for Bratislava in Slovakia.</description>
 
 <url>http://www.imhd.zoznam.sk/ba/</url>
-<shortUrl>imhd.zoznam.sk</shortUrl>
-<credit>iMHD.sk</credit>
+<shortUrl>www.imhd.zoznam.sk</shortUrl>
+<!-- <credit>iMHD.sk</credit> -->
 
 <rawUrls>
     <departures><![CDATA[http://www.imhd.zoznam.sk/{city}/index.php?w=212b36213433213aef2f302523ea&lang=en&hladaj={stop}]]></departures>
 </rawUrls>
 
 <script>sk_imhd.js</script>
-<!--
-<regExps>
-    <possibleStops>
-	<item>
-	    <regExpRange><![CDATA[(?:<form.*name="zastavka">\s*<select[^>]*>\s*<option value="[^"]*">[^<]*</option>)(.*)(?:</select>)]]></regExpRange>
-	    <regExp><![CDATA[(?:<option value="[^"]*">)([^<]*)(?:</option>)]]></regExp>
-	    <infos><info>StopName</info></infos>
-	</item>
-    </possibleStops>
-    <departures>
-	<regExp><![CDATA[(?:<tr><td><b>)([0-9]{2})(?:\.)([0-9]{2})(?:</b></td><td><center><b><em>)(N?[0-9]+)(?:</em></b></center></td><td>)(.*)(?:</td></tr>)]]></regExp>
-	<infos>
-	    <info>DepartureHour</info> <info>DepartureMinute</info> <info>TransportLine</info> <info>Target</info>
-	</infos>
-	<regExpPre key="TransportLine" value="TypeOfVehicle"><![CDATA[(?:<tr><td class="[^"]*"><center><b>)([^<]*)(?:</b></center></td><td><center>)([^<]*)(?:</center></td>)]]></repExpPre>
-    </departures>
-</regExps>-->
 </accessorInfo>

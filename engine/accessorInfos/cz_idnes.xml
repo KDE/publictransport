@@ -92,7 +92,7 @@
 
 <url>http://jizdnirady.idnes.cz/vlakyautobusy/spojeni/</url>
 <shortUrl>jizdnirady.idnes.cz</shortUrl>
-<credit>CHAPS spol. s r.o.</credit>
+<!-- <credit>CHAPS spol. s r.o.</credit> -->
 
 <rawUrls>
     <departures><![CDATA[http://jizdnirady.idnes.cz/{city}/odjezdy/?f={stop}&submit=true&lng=E]]></departures>

@@ -1,5 +1,5 @@
 /*
- *   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -18,7 +18,6 @@
  */
 
 // Qt includes
-#include <QtXml>
 #include <QFileSystemWatcher>
 
 // KDE includes
@@ -27,6 +26,7 @@
 
 // Own includes
 #include "publictransportdataengine.h"
+#include "timetableaccessor.h"
 
 
 
@@ -169,9 +169,9 @@ bool PublicTransportEngine::sourceRequestEvent( const QString &name ) {
 
 bool PublicTransportEngine::updateServiceProviderSource( const QString &name ) {
     QHash<QString, QVariant> dataSource;
-    if ( m_dataSources.keys().contains(name) ) {
-	// 	    kDebug() << "Data source" << name << "is up to date";
-	dataSource = m_dataSources[name].toHash();
+    if ( m_dataSources.contains(name) ) {
+// 	kDebug() << "Data source" << name << "is up to date";
+	dataSource = m_dataSources[ name ].toHash();
     } else {
 	QStringList dirList = KGlobal::dirs()->findDirs( "data",
 			"plasma_engine_publictransport/accessorInfos" );
@@ -333,11 +333,11 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 	bool newlyCreated = false;
 	TimetableAccessor *accessor;
 	if ( !m_accessors.contains(serviceProvider) ) {
-	    accessor = TimetableAccessor::getSpecificAccessor(serviceProvider);
+	    accessor = TimetableAccessor::getSpecificAccessor( serviceProvider );
 	    m_accessors.insert( serviceProvider, accessor );
 	    newlyCreated = true;
 	} else {
-	    accessor = m_accessors.value(serviceProvider);
+	    accessor = m_accessors.value( serviceProvider );
 	}
 
 	if ( accessor == NULL ) {
@@ -383,6 +383,14 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
     }
 
     return true;
+}
+
+QString PublicTransportEngine::stripDateAndTimeValues( const QString& sourceName ) {
+    QString ret = sourceName;
+    QRegExp rx( "(time=[^\\|]*|datetime=[^\\|]*)", Qt::CaseInsensitive );
+    rx.setMinimal( true );
+    ret.replace( rx, "" );
+    return ret;
 }
 
 void PublicTransportEngine::accessorInfoDirChanged( QString path ) {
@@ -458,7 +466,15 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 	dataSource.insert( sKey, data );
 // 	kDebug() << "setData" << sourceName << data;
     }
+    int departureCount = departures.count();
+    QDateTime first, last;
+    if ( departureCount > 0 ) {
+	first = departures.first()->departure();
+	last = departures.last()->departure();
+    } else
+	first = last = QDateTime::currentDateTime();
     qDeleteAll( departures );
+    departures.clear();
 
     // Remove old jouneys
     for ( ; i < m_lastJourneyCount; ++i )
@@ -469,9 +485,15 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
     for ( i = 0 ; i < m_lastStopNameCount; ++i )
 	removeData( sourceName, QString("stopName %1").arg(i++) );
     m_lastStopNameCount = 0;
+
+    // Store a proposal for the next download time
+    int secs = QDateTime::currentDateTime().secsTo( last ) / 3;
+    QDateTime downloadTime = QDateTime::currentDateTime().addSecs( secs );
+    m_nextDownloadTimeProposals[ stripDateAndTimeValues(sourceName) ] = downloadTime;
+//     kDebug() << "Set next download time proposal:" << downloadTime;
     
     setData( sourceName, "serviceProvider", serviceProvider );
-    setData( sourceName, "count", departures.count() );
+    setData( sourceName, "count", departureCount );
     setData( sourceName, "requestUrl", requestUrl );
     setData( sourceName, "parseMode", "departures" );
     setData( sourceName, "receivedData", "departures" );
@@ -481,7 +503,7 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 
     // Store received data in the data source map
     dataSource.insert( "serviceProvider", serviceProvider );
-    dataSource.insert( "count", departures.count() );
+    dataSource.insert( "count", departureCount );
     dataSource.insert( "requestUrl", requestUrl );
     dataSource.insert( "parseMode", "departures" );
     dataSource.insert( "receivedData", "departures" );
@@ -512,9 +534,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     int i = 0;
     m_dataSources.remove( sourceName );
     QHash<QString, QVariant> dataSource;
-    foreach ( JourneyInfo *journeyInfo, journeys )
-    {
-// 	kDebug() << journeyInfo->isValid() << journeyInfo->departure() << journeyInfo->duration() << journeyInfo->changes() << journeyInfo->vehicleTypes() << journeyInfo->startStopName() << journeyInfo->targetStopName() << journeyInfo->arrival();
+    foreach ( JourneyInfo *journeyInfo, journeys ) {
 	if ( !journeyInfo->isValid() )
 	    continue;
 
@@ -545,7 +565,15 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 	dataSource.insert( sKey, data );
 	// 	kDebug() << "setData" << sourceName << data;
     }
+    int journeyCount = journeys.count();
+    QDateTime first, last;
+    if ( journeyCount > 0 ) {
+	first = journeys.first()->departure();
+	last = journeys.last()->departure();
+    } else
+	first = last = QDateTime::currentDateTime();
     qDeleteAll( journeys );
+    journeys.clear();
 
     // Remove old journeys
     for ( ; i < m_lastJourneyCount; ++i )
@@ -557,8 +585,13 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 	removeData( sourceName, QString("stopName %1").arg(i++) );
     m_lastStopNameCount = 0;
     
+    // Store a proposal for the next download time
+    int secs = (journeyCount / 3) * first.secsTo( last );
+    QDateTime downloadTime = QDateTime::currentDateTime().addSecs( secs );
+    m_nextDownloadTimeProposals[ stripDateAndTimeValues(sourceName) ] = downloadTime;
+    
     setData( sourceName, "serviceProvider", serviceProvider );
-    setData( sourceName, "count", journeys.count() );
+    setData( sourceName, "count", journeyCount );
     setData( sourceName, "requestUrl", requestUrl );
     setData( sourceName, "parseMode", "journeys" );
     setData( sourceName, "receivedData", "journeys" );
@@ -568,7 +601,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 
     // Store received data in the data source map
     dataSource.insert( "serviceProvider", serviceProvider );
-    dataSource.insert( "count", journeys.count() );
+    dataSource.insert( "count", journeyCount );
     dataSource.insert( "requestUrl", requestUrl );
     dataSource.insert( "parseMode", "journeys" );
     dataSource.insert( "receivedData", "journeys" );
@@ -664,23 +697,34 @@ void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
 }
 
 bool PublicTransportEngine::isSourceUpToDate( const QString& name ) {
-    if ( !m_dataSources.keys().contains(name) )
+    if ( !m_dataSources.contains(name) )
 	return false;
     
-    // Data source stays up to date for min(UPDATE_TIMEOUT, minFetchWait) seconds
-    QHash<QString, QVariant> dataSource = m_dataSources[name].toHash();
+    // Data source stays up to date for max(UPDATE_TIMEOUT, minFetchWait) seconds
+    QHash<QString, QVariant> dataSource = m_dataSources[ name ].toHash();
     
     TimetableAccessor *accessor;
     QString serviceProvider = dataSource[ "serviceProvider" ].toString();
     if ( !m_accessors.contains(serviceProvider) ) {
-	accessor = TimetableAccessor::getSpecificAccessor(serviceProvider);
+	accessor = TimetableAccessor::getSpecificAccessor( serviceProvider );
 	m_accessors.insert( serviceProvider, accessor );
     } else
-	accessor = m_accessors.value(serviceProvider);
-    int minFetchWait = qMax( accessor->minFetchWait(), UPDATE_TIMEOUT );
+	accessor = m_accessors.value( serviceProvider );
+
+    QDateTime downloadTime = m_nextDownloadTimeProposals[ stripDateAndTimeValues(name) ];
+    int minForSufficientChanges = downloadTime.isValid()
+	    ? QDateTime::currentDateTime().secsTo(downloadTime) : 0;
+    int minFetchWait = qMax( minForSufficientChanges, MIN_UPDATE_TIMEOUT );
+    // If delays are available set maximum fetch wait
+    if ( accessor->features().contains("Delay") )
+	minFetchWait = qMin( minFetchWait, MAX_UPDATE_TIMEOUT_DELAY );
+    minFetchWait = qMax( minFetchWait, accessor->minFetchWait() );
+    kDebug() << "Wait time until next download:"
+	     << ((minFetchWait - dataSource["updated"].toDateTime().secsTo(
+		 QDateTime::currentDateTime())) / 60) << "min";
 
     return dataSource["updated"].toDateTime().secsTo(
-	    QDateTime::currentDateTime() ) < minFetchWait;
+			QDateTime::currentDateTime() ) < minFetchWait;
 }
 
 // This does the magic that allows Plasma to load

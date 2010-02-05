@@ -13,8 +13,8 @@
 <useSeperateCityValue>false</useSeperateCityValue>
 
 <url>http://hafas.bene-system.com/</url>
-<shortUrl>bene-system.com</shortUrl>
-<credit>SNCB</credit>
+<shortUrl>hafas.bene-system.com</shortUrl>
+<!-- <credit>SNCB</credit> -->
 <!-- <minFetchWait>300</minFetchWait> -->
 <script>be_brail.js</script>
 

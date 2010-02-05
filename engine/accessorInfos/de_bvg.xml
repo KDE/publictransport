@@ -10,8 +10,8 @@
 <description>Provides departure information for Berlin in Germany.</description>
 
 <url>http://www.bvg.de/index.php</url>
-<shortUrl>bvg.de</shortUrl>
-<credit>Berliner Verkehrsbetriebe (BVG)</credit>
+<shortUrl>www.bvg.de</shortUrl>
+<!-- <credit>Berliner Verkehrsbetriebe (BVG)</credit> -->
 
 <rawUrls>
     <departures><![CDATA[http://www.fahrinfo-berlin.de/IstAbfahrtzeiten/index;ref=3?input={stop}&submit=Anzeigen]]></departures>

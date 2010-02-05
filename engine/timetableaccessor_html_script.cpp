@@ -126,7 +126,7 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 
     // Call script using Kross
     m_resultObject->clear();
-    QVariant result = m_script->callFunction( functionName, QVariantList() << document );
+    QVariant result = m_script->callFunction( functionName, QVariantList() << doc );
     QList<TimetableData> data = m_resultObject->data();
 
     int count = 0;

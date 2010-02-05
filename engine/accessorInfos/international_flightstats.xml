@@ -11,8 +11,8 @@
 <description>This accessor gets flight departures and arrivals for airports around the world.</description>
 
 <url>http://www.flightstats.com/</url>
-<shortUrl>flightstats.com</shortUrl>
-<credit>Conducive Technology Corp.</credit>
+<shortUrl>www.flightstats.com</shortUrl>
+<!-- <credit>Conducive Technology Corp.</credit> -->
 
 <rawUrls>
     <departures><![CDATA[http://www.flightstats.com/go/FlightStatus/flightStatusByAirport.do?airport=({stop})&airportQueryDate={date:yyyy-mm-dd}&airportQueryTime=-1&airlineToFilter=&airportQueryType=0]]></departures>

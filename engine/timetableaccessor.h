@@ -29,8 +29,6 @@
 #include "kio/jobclasses.h"
 
 #include <QHash>
-#include <QTime>
-#include <QDebug>
 
 #include "departureinfo.h"
 #include "enums.h"
@@ -319,8 +317,9 @@ class TimetableAccessor : public QObject {
     private:
 	static QString gethex( ushort decimal );
 
+	
 	// Stores information about currently running download jobs
-	QHash<KJob*, QVariantList> m_jobInfos;
+	QHash< KJob*, QVariantList > m_jobInfos;
 };
 
 #endif // TIMETABLEACCESSOR_HEADER

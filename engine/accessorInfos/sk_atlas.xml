@@ -54,7 +54,7 @@
 
 <url>http://cp.atlas.sk/vlakbus/odchody/</url>
 <shortUrl>cp.atlas.sk</shortUrl>
-<credit>INPROP, s. r. o.</credit>
+<!-- <credit>INPROP, s. r. o.</credit> -->
 
 <rawUrls>
     <departures><![CDATA[http://cp.atlas.sk/{city}/odchody/?f={stop}&time=actual&submit=true&lng=E]]></departures>

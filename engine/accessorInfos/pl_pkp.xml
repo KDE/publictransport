@@ -11,7 +11,7 @@
 
 <url>http://rozklad-pkp.pl/?q=en/node/143</url>
 <shortUrl>rozklad-pkp.pl</shortUrl>
-<credit>Polskie Koleje Państwowe</credit>
+<!-- <credit>Polskie Koleje Państwowe</credit> -->
 
 <rawUrls>
     <departures><![CDATA[http://rozklad-pkp.pl/stboard.php/en?q=en/node/149&input={stop}&boardType={dataType}&time={time}&start=yes]]></departures>

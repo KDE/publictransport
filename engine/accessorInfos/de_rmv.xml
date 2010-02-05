@@ -14,8 +14,8 @@
 <description>Provides departure information for 'Rhine-Main' in Germany. It uses an XML source for departure information and HTML for stop autocompletion.</description>
 
 <url>http://www.rmv.de/</url>
-<shortUrl>rmv.de</shortUrl>
-<credit>Rhein-Main-Verkehrsverbund GmbH</credit>
+<shortUrl>www.rmv.de</shortUrl>
+<!-- <credit>Rhein-Main-Verkehrsverbund GmbH</credit> -->
 
 <rawUrls>
     <departures><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxDeps}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=xml&start=yes]]></departures>

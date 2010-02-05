@@ -28,10 +28,12 @@
 #include <Plasma/DataEngine>
 
 // Own includes
-#include "timetableaccessor.h"
+#include "enums.h"
 
-class QSizeF;
 class QFileSystemWatcher;
+class TimetableAccessor;
+class DepartureInfo;
+class JourneyInfo;
 
 
 /** @class PublicTransportEngine
@@ -47,9 +49,13 @@ class PublicTransportEngine : public Plasma::DataEngine
         PublicTransportEngine( QObject* parent, const QVariantList& args );
 	~PublicTransportEngine();
 
-	/** Timeout in seconds to request new data. Before the timeout is over, old
-	* stored data from previous requests is used. */
-	static const int UPDATE_TIMEOUT = 120;
+	/** Minimum timeout in seconds to request new data. Before the timeout 
+	* is over, old stored data from previous requests is used. */
+	static const int MIN_UPDATE_TIMEOUT = 120;
+	
+	/** Maximum timeout in seconds to request new data, if delays are avaiable. 
+	* Before the timeout is over, old stored data from previous requests is used. */
+	static const int MAX_UPDATE_TIMEOUT_DELAY = 5 * 60;
 
 	/** The default number of maximum departures. This is used if it wasn't
 	* specified in the source name. */
@@ -57,7 +63,7 @@ class PublicTransportEngine : public Plasma::DataEngine
 
 	/** Will be added to a given maximum departures value (otherwise the data
 	* couldn't provide enough departures until the update-timeout). */
-	static const int ADDITIONAL_MAXIMUM_DEPARTURES = UPDATE_TIMEOUT / 20;
+	static const int ADDITIONAL_MAXIMUM_DEPARTURES = MIN_UPDATE_TIMEOUT / 20;
 
 	/** The default time offset from now for the first departure / arrival / journey
 	* in the list. This is used if it wasn't specified in the source name. */
@@ -178,14 +184,22 @@ class PublicTransportEngine : public Plasma::DataEngine
     private:
 	/** Gets a map with information about an accessor.
 	* @param accessor The accessor to get information about. */
-	QHash<QString, QVariant> serviceProviderInfo( const TimetableAccessor *&accessor );
-	QHash<QString, QVariant> locations();
+	QHash< QString, QVariant > serviceProviderInfo( const TimetableAccessor *&accessor );
+	QHash< QString, QVariant > locations();
 
-	QHash<QString, TimetableAccessor *> m_accessors;
-	QHash<QString, QVariant> m_dataSources;
-	QStringList m_errornousAccessors;
-	QFileSystemWatcher *m_fileSystemWatcher;
+	QString stripDateAndTimeValues( const QString &sourceName );
+
+	
+	QHash< QString, TimetableAccessor* > m_accessors; // List of already loaded accessors
+	QHash< QString, QVariant > m_dataSources; // List of already used data sources
+	QStringList m_errornousAccessors; // List of errornous accessors
+	QFileSystemWatcher *m_fileSystemWatcher; // watch the accessor directory
 	int m_lastStopNameCount, m_lastJourneyCount;
+	
+	// The next times at which new downloads will have sufficient changes
+	// (enough departures in past or maybe changed delays, estimated),
+	// for each data source name.
+	QHash< QString, QDateTime > m_nextDownloadTimeProposals;
 };
 
 /** @mainpage Public Transport Data Engine

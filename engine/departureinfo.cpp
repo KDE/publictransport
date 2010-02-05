@@ -380,7 +380,7 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 	sLineTypeLower == "tra" || // for ch_sbb
 	sLineTypeLower == "stb" || // "stadtbahn", germany
 	sLineTypeLower == "dm_train" ||
-	sLineTypeLower == "streetcar (tram)" ) // for imhd.sk
+	sLineTypeLower == "streetcar (tram)" ) // for sk_imhd
 	return Tram;
 
     else if ( sLineTypeLower == "bus" ||
@@ -398,7 +398,8 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 
     else if ( sLineTypeLower == "tro" ||
 	sLineTypeLower == "trolleybus" ||
-	sLineTypeLower == "trolley bus" )
+	sLineTypeLower == "trolley bus" ||
+	sLineTypeLower.startsWith("trolleybus") ) // for sk_imhd
 	return TrolleyBus;
 
     else if ( sLineTypeLower == "feet" ||
