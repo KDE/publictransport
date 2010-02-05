@@ -55,21 +55,19 @@ class HtmlDelegate : public QItemDelegate
 	void setAlignText( bool alignText ) { m_alignText = alignText; };
 
     protected:
-	virtual void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const;
+	virtual void paint( QPainter* painter, const QStyleOptionViewItem& option,
+			    const QModelIndex& index ) const;
 
-	virtual void drawDecoration( QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QPixmap& pixmap ) const;
-	virtual void drawDisplayWithShadow( QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect, const QString& text, bool bigContrastShadow = false ) const;
+	virtual void drawDecoration( QPainter* painter, const QStyleOptionViewItem& option,
+				     const QRect& rect, const QPixmap& pixmap ) const;
+	virtual void drawDisplayWithShadow( QPainter* painter,
+					    const QStyleOptionViewItem& option,
+					    const QRect& rect, const QString& text,
+					    bool bigContrastShadow = false ) const;
 
 
     private:
 	bool m_alignText;
-// 	void plainTextToHTMLCharCount( const QString &sHtml, int pos, int plainTextCount, int *htmlPos, int *htmlCount ) const;
-// 	void plainTextToHTMLCharPos( const QString &sHtml, int pos, int *htmlPos ) const;
-
-	// From the tasks plasmoid
-// 	QSize layoutText( QTextLayout &layout, const QString &text, const QSize &constraints ) const;
-	// From the tasks plasmoid
-// 	void drawTextLayout( QPainter *painter, const QTextLayout &layout, const QRect &rect, const QStyleOptionViewItem& option ) const;
 };
 
 #endif // HTMLDELEGATE_HEADER

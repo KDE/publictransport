@@ -45,6 +45,7 @@ class AlarmTimer;
 class QSizeF;
 class QGraphicsLayout;
 class QStandardItemModel;
+class QStandardItem;
 
 #if QT_VERSION >= 0x040600
 class QGraphicsBlurEffect;
@@ -183,15 +184,15 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	/** Processes data received from the data engine.
 	* @param data The data object from the data engine. */
-	void processData( const Plasma::DataEngine::Data& data );
+	void processData( const QString &sourceName, const Plasma::DataEngine::Data& data );
 
 	/** Processes departure / arrival list data received from the data engine.
 	* @param data The data object from the data engine. */
-	void processDepartureList( const Plasma::DataEngine::Data& data );
+	void processDepartureList( const QString &sourceName, const Plasma::DataEngine::Data& data );
 
 	/** Processes journey list data received from the data engine.
 	* @param data The data object from the data engine. */
-	void processJourneyList( const Plasma::DataEngine::Data& data );
+	void processJourneyList( const QString &sourceName, const Plasma::DataEngine::Data& data );
 
 	/** Clears the departure / arrival list received from the data engine and
 	* displayed by the applet. */
@@ -282,14 +283,14 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	/** Sets the values of a QStandardItem in the tree view (text, icon, data, ...). */
 	void setValuesOfDepartureItem( QStandardItem *departureItem,
-				       DepartureInfo departureInfo,
+				       const DepartureInfo &departureInfo,
 				       ItemInformation departureInformation,
 				       bool update = false );
 
 	/** Sets the values of a QStandardItem in the tree view (text, icon, data, ...)
 	* to be displayed as journey item. */
 	void setValuesOfJourneyItem( QStandardItem *departureItem,
-				     JourneyInfo journeyInfo,
+				     const JourneyInfo &journeyInfo,
 				     ItemInformation journeyInformation,
 				     bool update = false );
 
@@ -301,7 +302,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	void markAlarmRow( const QPersistentModelIndex &index, AlarmState alarmState );
 
 	/** Helper function to set the text color of an html item with a surrounding span-tag. */
-	void setTextColorOfHtmlItem( QStandardItem *item, QColor textColor );
+	void setTextColorOfHtmlItem( QStandardItem *item, const QColor &textColor );
 
 	/** Sets the type of the departure / arrival list. Can be a list of departures or a list of arrivals.
 	* @param departureArrivalListType The departure / arrival list - type to be set. */
@@ -353,7 +354,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** The context menu has been requested by the tree view header. */
 	void showHeaderContextMenu( const QPoint &position );
 	/** An item in the tree view has been double clicked. */
-	void doubleClickedDepartureItem( QModelIndex modelIndex );
+	void doubleClickedDepartureItem( const QModelIndex &modelIndex );
 
 	/** The icon widget was clicked. */
 	void iconClicked();
@@ -452,6 +453,10 @@ class PublicTransport : public Plasma::PopupApplet {
 	bool parseDate( const QString &sDate, QDate *date ) const;
 	bool isTimeShown( const QDateTime &datime ) const;
 	
+	/** List of current departures / arrivals for the selected stop(s). */
+	QList<DepartureInfo> departureInfos() const;
+	QString stripDateAndTimeValues( const QString &sourceName ) const;
+	
 				 
 	AppletStates m_appletStates; /**< The current states of this applet */
 	TitleType m_titleType; /**< The type of items to be shown as title above the tree view */
@@ -473,11 +478,14 @@ class PublicTransport : public Plasma::PopupApplet {
 	bool m_lettersAddedToJourneySearchLine; /**< Whether or not the last edit of the journey search line added letters o(r not. Used for auto completion. */
 
 	QStandardItemModel *m_model; /**< The model for the tree view containing the departure / arrival board */
+	QHash< QString, QList<DepartureInfo> > m_departureInfos; /**< List of current departures / arrivals for each stop */
+	QHash< int, QString > m_stopIndexToSourceName; /**< A hash from the stop index to the source name */
+	QStringList m_currentSources; /**< Current source names at the publictransport data engine */
+
 	QStandardItemModel *m_modelJourneys; /**< The model for journeys from or to the "home stop" */
-	QList<DepartureInfo> m_departureInfos; /**< List of current departures / arrivals */
 	QList<JourneyInfo> m_journeyInfos; /**< List of current journeys */
-	QStringList m_currentSources; /**< Current source name at the publictransport data engine */
 	QString m_currentJourneySource; /**< Current source name for journeys at the publictransport data engine */
+	
 	QString m_lastSecondStopName; /**< The last used second stop name for journey search */
 	QDateTime m_lastJourneyDateTime; /**< The last used date and time for journey search */
 	QDateTime m_lastSourceUpdate; /**< The last update of the data source inside the data engine */

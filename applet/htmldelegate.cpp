@@ -41,6 +41,7 @@ HtmlDelegate::HtmlDelegate() : QItemDelegate() {
 void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
 			  const QModelIndex& index ) const {
     QRect rect = option.rect;
+    painter->setRenderHints( QPainter::SmoothPixmapTransform | QPainter::Antialiasing );
 
     drawBackground( painter, option, index );
     if ( index.data(TextBackgroundRole).isValid() ) {
@@ -55,11 +56,13 @@ void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
 	svg.resizeFrame( rect.size() );
 
 	if ( data.contains("drawFrameForWholeRow") ) {
-	    svg.setEnabledBorders(Plasma::FrameSvg::TopBorder | Plasma::FrameSvg::BottomBorder);
-	    if ( index.column() == 0 )
-		svg.setEnabledBorders(svg.enabledBorders() | Plasma::FrameSvg::LeftBorder);
-	    else if ( index.column() == index.model()->columnCount() - 1 )
-		svg.setEnabledBorders(svg.enabledBorders() | Plasma::FrameSvg::RightBorder);
+	    svg.setEnabledBorders( Plasma::FrameSvg::TopBorder | Plasma::FrameSvg::BottomBorder );
+	    
+	    QStyleOptionViewItemV4 opt = option;
+	    if ( opt.viewItemPosition == QStyleOptionViewItemV4::Beginning )
+		svg.setEnabledBorders( svg.enabledBorders() | Plasma::FrameSvg::LeftBorder );
+	    else if ( opt.viewItemPosition == QStyleOptionViewItemV4::End )
+		svg.setEnabledBorders( svg.enabledBorders() | Plasma::FrameSvg::RightBorder );
 	}
 
 	svg.paintFrame( painter, rect.topLeft() );
@@ -178,7 +181,7 @@ void HtmlDelegate::drawDisplayWithShadow( QPainter* painter,
 					  const QStyleOptionViewItem& option,
 					  const QRect& rect, const QString& text,
 					  bool bigContrastShadow ) const {
-    painter->setRenderHint(QPainter::Antialiasing);
+    painter->setRenderHint( QPainter::Antialiasing );
 
     int margin = 3;
     int lineCount = 0, maxLineCount = qMax( qFloor(rect.height() / option.fontMetrics.lineSpacing()), 1 );

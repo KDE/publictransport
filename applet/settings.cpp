@@ -53,8 +53,8 @@
 #if QT_VERSION >= 0x040600
     #include <QParallelAnimationGroup>
     #include <QPropertyAnimation>
+    #include <QGraphicsEffect>
 #endif
-#include <QGraphicsEffect>
 
 
 PublicTransportSettings::PublicTransportSettings( PublicTransport *applet )
@@ -165,7 +165,9 @@ void PublicTransportSettings::addStop( const QString& stop, bool fadeInAnimation
     additionalStop->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
     additionalStop->setCompletionMode( KGlobalSettings::CompletionPopup );
     additionalStop->setClearButtonShown( true );
-    additionalStop->setClickMessage( i18n("An additional stop") );
+    additionalStop->setClickMessage( i18nc("Click message for the input fields for "
+					   "additional stop names.",
+					   "An additional stop") );
     lblAdditionalStop->setBuddy( additionalStop );
     connect( additionalStop, SIGNAL(textEdited(QString)),
 	     this, SLOT(stopNameChanged(QString)) );
