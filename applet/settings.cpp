@@ -238,7 +238,7 @@ QStringList PublicTransportSettings::getAdditionalStops() {
 
 void PublicTransportSettings::readSettings() {
     KConfigGroup cg = m_applet->config();
-    m_updateTimeout = cg.readEntry("updateTimeout", 60);
+    m_autoUpdate = cg.readEntry("autoUpdate", true);
     m_showRemainingMinutes = cg.readEntry("showRemainingMinutes", true);
     m_showDepartureTime = cg.readEntry("showDepartureTime", true);
     m_displayTimeBold = cg.readEntry("displayTimeBold", true);
@@ -1004,20 +1004,15 @@ void PublicTransportSettings::setValuesOfStopSelectionConfig() {
 }
 
 void PublicTransportSettings::setValuesOfAdvancedConfig() {
-    if (m_updateTimeout == 0) {
-	m_uiAdvanced.updateAutomatically->setChecked(false);
-	m_uiAdvanced.updateTimeout->setValue(60); // Set to default
-    }
-    else {
-	m_uiAdvanced.updateAutomatically->setChecked(true);
-	m_uiAdvanced.updateTimeout->setValue(m_updateTimeout);
-    }
-    m_uiAdvanced.timeOfFirstDeparture->setValue(m_timeOffsetOfFirstDeparture);
-    m_uiAdvanced.timeOfFirstDepartureCustom->setTime(m_timeOfFirstDepartureCustom);
-    m_uiAdvanced.firstDepartureUseCurrentTime->setChecked(m_firstDepartureConfigMode == RelativeToCurrentTime);
-    m_uiAdvanced.firstDepartureUseCustomTime->setChecked(m_firstDepartureConfigMode == AtCustomTime);
-    m_uiAdvanced.maximalNumberOfDepartures->setValue(m_maximalNumberOfDepartures);
-    m_uiAdvanced.alarmTime->setValue(m_alarmTime);
+    m_uiAdvanced.updateAutomatically->setChecked( m_autoUpdate );
+    m_uiAdvanced.timeOfFirstDeparture->setValue( m_timeOffsetOfFirstDeparture );
+    m_uiAdvanced.timeOfFirstDepartureCustom->setTime( m_timeOfFirstDepartureCustom );
+    m_uiAdvanced.firstDepartureUseCurrentTime->setChecked(
+	    m_firstDepartureConfigMode == RelativeToCurrentTime );
+    m_uiAdvanced.firstDepartureUseCustomTime->setChecked(
+	    m_firstDepartureConfigMode == AtCustomTime );
+    m_uiAdvanced.maximalNumberOfDepartures->setValue( m_maximalNumberOfDepartures );
+    m_uiAdvanced.alarmTime->setValue( m_alarmTime );
 
     m_uiAdvanced.showDepartures->setChecked( m_departureArrivalListType == DepartureList );
     m_uiAdvanced.showArrivals->setChecked( m_departureArrivalListType == ArrivalList );
@@ -1699,7 +1694,7 @@ int PublicTransportSettings::updateServiceProviderModel( const QString &itemText
 void PublicTransportSettings::configAccepted() {
     bool changed = false, changedServiceProviderSettings = false;
 
-    if (m_location != m_ui.location->currentText()) {
+    if ( m_location != m_ui.location->currentText() ) {
 	m_location = m_ui.location->currentText();
 
 	KConfigGroup cg = m_applet->config();
@@ -1712,7 +1707,7 @@ void PublicTransportSettings::configAccepted() {
 
     QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
     const QString serviceProviderID = serviceProviderData["id"].toString();
-    if (m_serviceProvider != serviceProviderID) {
+    if ( m_serviceProvider != serviceProviderID ) {
 	m_serviceProvider = serviceProviderID;
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("serviceProvider", m_serviceProvider);
@@ -1727,40 +1722,35 @@ void PublicTransportSettings::configAccepted() {
 	m_serviceProviderFeatures = serviceProviderData["features"].toStringList();
     }
 
-    if (!m_uiAdvanced.updateAutomatically->isChecked() && m_updateTimeout != 0) {
-	m_updateTimeout = 0;
+    if ( m_uiAdvanced.updateAutomatically->isChecked() != m_autoUpdate ) {
+	m_autoUpdate = m_uiAdvanced.updateAutomatically->isChecked();
 	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("updateTimeout", m_updateTimeout);
-	changed = true;
-    } else if (m_updateTimeout != m_uiAdvanced.updateTimeout->value()) {
-	m_updateTimeout = m_uiAdvanced.updateTimeout->value();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("updateTimeout", m_updateTimeout);
+	cg.writeEntry( "autoUpdate", m_autoUpdate );
 	changed = true;
     }
 
-    if (m_showRemainingMinutes != (m_uiAppearance.cmbDepartureColumnInfos->currentIndex() != 1)) {
+    if ( m_showRemainingMinutes != (m_uiAppearance.cmbDepartureColumnInfos->currentIndex() != 1) ) {
 	m_showRemainingMinutes = !m_showRemainingMinutes;
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("showRemainingMinutes", m_showRemainingMinutes);
 	changed = true;
     }
 
-    if (m_showDepartureTime != (m_uiAppearance.cmbDepartureColumnInfos->currentIndex() <= 1)) {
+    if ( m_showDepartureTime != (m_uiAppearance.cmbDepartureColumnInfos->currentIndex() <= 1) ) {
 	m_showDepartureTime = !m_showDepartureTime;
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("showDepartureTime", m_showDepartureTime);
 	changed = true;
     }
 
-    if (m_displayTimeBold != (m_uiAppearance.displayTimeBold->checkState() == Qt::Checked)) {
+    if ( m_displayTimeBold != (m_uiAppearance.displayTimeBold->checkState() == Qt::Checked) ) {
 	m_displayTimeBold = !m_displayTimeBold;
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("displayTimeBold", m_displayTimeBold);
 	changed = true;
     }
 
-    if (m_showHeader != (m_uiAppearance.showHeader->checkState() == Qt::Checked)) {
+    if ( m_showHeader != (m_uiAppearance.showHeader->checkState() == Qt::Checked) ) {
 	m_showHeader = !m_showHeader;
 // 	m_applet->m_treeView->nativeWidget()->header()->setVisible( m_showHeader );
 	KConfigGroup cg = m_applet->config();
@@ -1768,7 +1758,7 @@ void PublicTransportSettings::configAccepted() {
 	changed = true;
     }
 
-    if (m_hideColumnTarget == (m_uiAppearance.showColumnTarget->checkState() == Qt::Checked)) {
+    if ( m_hideColumnTarget == (m_uiAppearance.showColumnTarget->checkState() == Qt::Checked) ) {
 	m_hideColumnTarget = !m_hideColumnTarget;
 // 	if ( m_hideColumnTarget )
 // 	    m_applet->showColumnTarget(true);
@@ -1780,7 +1770,7 @@ void PublicTransportSettings::configAccepted() {
 	changed = true;
     }
 
-    if (m_city != configCityValue()) {
+    if ( m_city != configCityValue() ) {
 	m_city = configCityValue();
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("city", m_city);
@@ -1819,7 +1809,7 @@ void PublicTransportSettings::configAccepted() {
 	emit departureListNeedsClearing(); // Clear departures using the old stop name
     }
 
-    if (m_timeOffsetOfFirstDeparture != m_uiAdvanced.timeOfFirstDeparture->value()) {
+    if ( m_timeOffsetOfFirstDeparture != m_uiAdvanced.timeOfFirstDeparture->value() ) {
 	m_timeOffsetOfFirstDeparture = m_uiAdvanced.timeOfFirstDeparture->value();
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("timeOffsetOfFirstDeparture", m_timeOffsetOfFirstDeparture);
@@ -1828,7 +1818,7 @@ void PublicTransportSettings::configAccepted() {
 	changedServiceProviderSettings = true;
     }
 
-    if (m_timeOfFirstDepartureCustom != m_uiAdvanced.timeOfFirstDepartureCustom->time()) {
+    if ( m_timeOfFirstDepartureCustom != m_uiAdvanced.timeOfFirstDepartureCustom->time() ) {
 	m_timeOfFirstDepartureCustom = m_uiAdvanced.timeOfFirstDepartureCustom->time();
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("timeOfFirstDepartureCustom", m_timeOfFirstDepartureCustom.toString("hh:mm"));
@@ -1837,11 +1827,10 @@ void PublicTransportSettings::configAccepted() {
 	changedServiceProviderSettings = true;
     }
 
-    if ( (m_firstDepartureConfigMode == RelativeToCurrentTime &&
-	!m_uiAdvanced.firstDepartureUseCurrentTime->isChecked()) ||
-	(m_firstDepartureConfigMode == AtCustomTime &&
-	!m_uiAdvanced.firstDepartureUseCustomTime->isChecked()) )
-    {
+    if ( (m_firstDepartureConfigMode == RelativeToCurrentTime
+		&& !m_uiAdvanced.firstDepartureUseCurrentTime->isChecked()) ||
+		(m_firstDepartureConfigMode == AtCustomTime
+		&& !m_uiAdvanced.firstDepartureUseCustomTime->isChecked()) ) {
 	m_firstDepartureConfigMode = m_uiAdvanced.firstDepartureUseCurrentTime->isChecked()
 	    ? RelativeToCurrentTime : AtCustomTime;
 	KConfigGroup cg = m_applet->config();
@@ -1851,7 +1840,7 @@ void PublicTransportSettings::configAccepted() {
 	changedServiceProviderSettings = true;
     }
 
-    if (m_maximalNumberOfDepartures != m_uiAdvanced.maximalNumberOfDepartures->value()) {
+    if ( m_maximalNumberOfDepartures != m_uiAdvanced.maximalNumberOfDepartures->value() ) {
 	m_maximalNumberOfDepartures = m_uiAdvanced.maximalNumberOfDepartures->value();
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("maximalNumberOfDepartures", m_maximalNumberOfDepartures);
@@ -1861,28 +1850,28 @@ void PublicTransportSettings::configAccepted() {
 // 	m_applet->addState( WaitingForDepartureData );
     }
 
-    if (m_alarmTime != m_uiAdvanced.alarmTime->value()) {
+    if ( m_alarmTime != m_uiAdvanced.alarmTime->value() ) {
 	m_alarmTime = m_uiAdvanced.alarmTime->value();
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("alarmTime", m_alarmTime);
 	changed = true;
     }
     
-    if (m_linesPerRow != m_uiAppearance.linesPerRow->value()) {
+    if ( m_linesPerRow != m_uiAppearance.linesPerRow->value() ) {
 	m_linesPerRow = m_uiAppearance.linesPerRow->value();
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("linesPerRow", m_linesPerRow);
 	changed = true;
     }
     
-    if (m_size != m_uiAppearance.size->value()) {
+    if ( m_size != m_uiAppearance.size->value() ) {
 	m_size = m_uiAppearance.size->value();
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("size", m_size);
 	changed = true;
     }
 
-    if (m_useDefaultFont != m_uiAppearance.radioUseDefaultFont->isChecked()) {
+    if ( m_useDefaultFont != m_uiAppearance.radioUseDefaultFont->isChecked() ) {
 	m_useDefaultFont = !m_useDefaultFont;
 
 	if ( m_useDefaultFont ) {
@@ -1897,7 +1886,7 @@ void PublicTransportSettings::configAccepted() {
 	}
     }
 
-    if ( !m_useDefaultFont && m_font.family() != m_uiAppearance.font->currentFont().family()) {
+    if ( !m_useDefaultFont && m_font.family() != m_uiAppearance.font->currentFont().family() ) {
 	m_font.setFamily( m_uiAppearance.font->currentFont().family() );
 	KConfigGroup cg = m_applet->config();
 	cg.writeEntry("fontFamily", m_font.family());
@@ -1911,9 +1900,10 @@ void PublicTransportSettings::configAccepted() {
 	<< (m_departureArrivalListType == DepartureList && !m_ui.showDepartures->isChecked())
 	<< (m_departureArrivalListType == ArrivalList && !m_ui.showArrivals->isChecked());*/
 
-    if ( (m_departureArrivalListType == DepartureList && !m_uiAdvanced.showDepartures->isChecked()) ||
-	(m_departureArrivalListType == ArrivalList && !m_uiAdvanced.showArrivals->isChecked()) )
-    {
+    if ( (m_departureArrivalListType == DepartureList
+		&& !m_uiAdvanced.showDepartures->isChecked())
+		|| (m_departureArrivalListType == ArrivalList
+		&& !m_uiAdvanced.showArrivals->isChecked()) ) {
 	if ( m_uiAdvanced.showArrivals->isChecked() )
 	    m_departureArrivalListType = ArrivalList;
 	else
@@ -1939,7 +1929,7 @@ void PublicTransportSettings::configAccepted() {
 	emit settingsChanged();
 	emit configNeedsSaving();
     }
-    if (changedServiceProviderSettings)
+    if ( changedServiceProviderSettings )
 	emit serviceProviderSettingsChanged();
 }
 

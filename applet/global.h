@@ -155,7 +155,8 @@ enum ModelDataRoles {
     RemainingMinutesRole = Qt::UserRole + 9, /**< Used to store an int with the remaining minutes until the predicted departure / arrival (= departure / arrival + delay) */
     DepartureInfoRole = Qt::UserRole + 10, /**< Used to store the departure */
     OperatorRole = Qt::UserRole + 11, /**< Used to store the operator name of the departure / arrival / journey. */
-    LocationCodeRole = Qt::UserRole + 12 /**< Used to store the location code (country code or other) in the location model. */
+    LocationCodeRole = Qt::UserRole + 12, /**< Used to store the location code (country code or other) in the location model. */
+    TimetableItemHashRole = Qt::UserRole + 13 /**< Used to store a hash for the current timetable item in the model. */
 };
 
 /** The type of the vehicle used for a public transport line.

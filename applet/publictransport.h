@@ -139,14 +139,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	* @return The updated action.*/
 	QAction* updatedAction( const QString &actionName );
 
-	/** Updates the departure / arrival data model with the departure / arrival
-	* list received from the data engine. */
-	void updateModel();
-
-	/** Updates the journey data model with the journey list received from the
-	* data engine. */
-	void updateModelJourneys();
-
 	/** Creates the used models. */
 	void createModels();
 
@@ -342,6 +334,14 @@ class PublicTransport : public Plasma::PopupApplet {
 	void serviceProviderSettingsChanged();
 	/** New data arrived from the data engine. */
 	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
+	
+	/** Updates the departure / arrival data model with the departure / arrival
+	* list received from the data engine. */
+	void updateModel();
+	
+	/** Updates the journey data model with the journey list received from the
+	* data engine. */
+	void updateModelJourneys();
 
 	/** Shows an alarm message for given modelIndex. */
 	void showAlarmMessage( const QPersistentModelIndex &modelIndex );
@@ -498,8 +498,13 @@ class PublicTransport : public Plasma::PopupApplet {
 	QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in the tree view for the context menu actions */
 	QList< AlarmTimer* > m_abandonedAlarmTimer; /**< List of AlarmTimer's which departure row has disappeared from the list of received departures. It's kept to set the alarm again, when the departure appears again. */
 	
+	QTimer *m_departureListUpdater; /**< Updates the departure/arrival list (durations) when auto updates from the data engine aren't enabled. */
+	QTimer *m_journeyListUpdater; /**< Updates the journey list (durations) when auto updates from the data engine aren't enabled. */
+	
 	QList<TimetableColumn> m_departureViewColumns;
 	QList<TimetableColumn> m_journeyViewColumns;
+
+	QHash< QString, int > m_itemHashToRow; /**< Stores the row in the timetable model for each hash. */
 };
 
 #ifndef NO_EXPORT_PLASMA_APPLET // Needed for settings.cpp to include publictransport.h

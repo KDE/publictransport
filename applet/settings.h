@@ -67,8 +67,8 @@ class PublicTransportSettings : public QObject {
 
 	void writeNoGuiSettings();
 
-	/** A timeout to reload the timetable information from the internet. */
-	int updateTimeout() const { return m_updateTimeout; };
+	/** Whether or not timetable information should be updated automatically. */
+	bool isAutoUpdateEnabled() const { return m_autoUpdate; };
 	/** Whether or not remaining minutes until departure should be shown. */
 	bool isRemainingMinutesShown() const { return m_showRemainingMinutes; };
 	/** Whether or not departure times should be shown. */
@@ -282,7 +282,7 @@ class PublicTransportSettings : public QObject {
 	QList< QWidgetList > m_additionalStopWidgets;
 	QList< QToolButton* > m_removeStopButtons;
 
-	int m_updateTimeout; // A timeout to reload the timetable information from the internet
+	bool m_autoUpdate; // Wheather or not timetable data should be updated automatically
 	bool m_showRemainingMinutes; // Whether or not remaining minutes until departure should be shown
 	bool m_showDepartureTime; // Whether or not departure times should be shown
 	QString m_city; // The currently selected city

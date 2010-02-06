@@ -53,37 +53,38 @@ void JourneyInfo::init( const QString &operatorName,
 			const QList<int> &routeTimesDepartureDelay,
 			const QList<int> &routeTimesArrivalDelay,
 			int routeExactStops ) {
-    this->operatorName = operatorName;
-    this->vehicleTypes = vehicleTypes;
-    this->departure = departure;
-    this->arrival = arrival;
-    this->pricing = pricing;
-    this->startStopName = startStopName;
-    this->targetStopName = targetStopName;
-    this->duration = duration;
-    this->changes = changes;
-    this->journeyNews = journeyNews;
-    this->routeStops = routeStops;
-    this->routeTransportLines = routeTransportLines;
-    this->routePlatformsDeparture = routePlatformsDeparture;
-    this->routePlatformsArrival = routePlatformsArrival;
-    this->routeVehicleTypes = routeVehicleTypes;
-    this->routeTimesDeparture = routeTimesDeparture;
-    this->routeTimesArrival = routeTimesArrival;
-    this->routeTimesDepartureDelay = routeTimesDepartureDelay;
-    this->routeTimesArrivalDelay = routeTimesArrivalDelay;
-    this->routeExactStops = routeExactStops;
+    m_operator = operatorName;
+    m_vehicleTypes = vehicleTypes;
+    m_departure = departure;
+    m_arrival = arrival;
+    m_pricing = pricing;
+    m_startStopName = startStopName;
+    m_targetStopName = targetStopName;
+    m_duration = duration;
+    m_changes = changes;
+    m_journeyNews = journeyNews;
+    m_routeStops = routeStops;
+    m_routeTransportLines = routeTransportLines;
+    m_routePlatformsDeparture = routePlatformsDeparture;
+    m_routePlatformsArrival = routePlatformsArrival;
+    m_routeVehicleTypes = routeVehicleTypes;
+    m_routeTimesDeparture = routeTimesDeparture;
+    m_routeTimesArrival = routeTimesArrival;
+    m_routeTimesDepartureDelay = routeTimesDepartureDelay;
+    m_routeTimesArrivalDelay = routeTimesArrivalDelay;
+    m_routeExactStops = routeExactStops;
 }
 
 QList< QVariant > JourneyInfo::vehicleTypesVariant() const {
     QList<QVariant> vehicleTypesVariant;
-    foreach( VehicleType vehicleType, vehicleTypes )
+    foreach( VehicleType vehicleType, m_vehicleTypes )
 	vehicleTypesVariant.append( static_cast<int>(vehicleType) );
     return vehicleTypesVariant;
 }
 
 QString JourneyInfo::durationToDepartureString( bool toArrival ) const {
-    int totalSeconds = QDateTime::currentDateTime().secsTo( toArrival ? arrival : departure );
+    int totalSeconds = QDateTime::currentDateTime().secsTo(
+	    toArrival ? m_arrival : m_departure );
     int totalMinutes = qCeil( (qreal)totalSeconds / 60.0 );
     if ( totalMinutes < 0 )
     	return i18n("depart is in the past");
@@ -107,9 +108,9 @@ QString JourneyInfo::durationToDepartureString( bool toArrival ) const {
 QString DepartureInfo::durationString () const {
     int totalSeconds = QDateTime::currentDateTime().secsTo( predictedDeparture() );
     int totalMinutes = qCeil( (qreal)totalSeconds / 60.0 );
-    int remDelay = delayType() == Delayed ? delay : 0;
+    int remDelay = delayType() == Delayed ? m_delay : 0;
     if ( totalMinutes < 0 ) {
-	if ( !(delayType() == Delayed && -totalMinutes > delay) )
+	if ( !(delayType() == Delayed && -totalMinutes > m_delay) )
 	    return i18n("depart is in the past");
 	else {
 	    remDelay += totalMinutes;
@@ -190,28 +191,36 @@ void DepartureInfo::init( const QString &operatorName, const QString &line,
     QRegExp rx ( "[0-9]*$" );
     rx.indexIn ( line );
     if ( rx.isValid() )
-        this->lineNumber = rx.cap().toInt();
+	m_lineNumber = rx.cap().toInt();
     else
-        this->lineNumber = 0;
+	m_lineNumber = 0;
 
-    this->operatorName = operatorName;
-    this->lineString = line;
-    this->target = target;
-    this->departure = departure;
-    this->vehicleType = lineType;
-    this->lineServices = lineServices;
-    this->platform = platform;
-    this->delay = delay;
-    this->delayReason = delayReason;
-    this->journeyNews = journeyNews;
+    m_operator = operatorName;
+    m_lineString = line;
+    m_target = target;
+    m_departure = departure;
+    m_vehicleType = lineType;
+    m_lineServices = lineServices;
+    m_platform = platform;
+    m_delay = delay;
+    m_delayReason = delayReason;
+    m_journeyNews = journeyNews;
 
-    this->routeStops = routeStops;
-    this->routeTimes = routeTimes;
-    this->routeExactStops = routeExactStops;
+    m_routeStops = routeStops;
+    m_routeTimes = routeTimes;
+    m_routeExactStops = routeExactStops;
+
+    generateHash();
+}
+
+void DepartureInfo::generateHash() {
+    m_hash = QString( "%1%2%3" ).arg( m_departure.toString("hhmm") )
+				.arg( static_cast<int>(m_vehicleType) )
+				.arg( m_lineString );
 }
 
 bool operator< ( const JourneyInfo& ji1, const JourneyInfo& ji2 ) {
-    return ji1.departure < ji2.departure;
+    return ji1.departure() < ji2.departure();
 }
 
 bool operator < ( const DepartureInfo &di1, const DepartureInfo &di2 ) {
