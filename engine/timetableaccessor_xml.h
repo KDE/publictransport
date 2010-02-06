@@ -59,6 +59,7 @@ class TimetableAccessorXml : public TimetableAccessor
 	* @return false, if there were an error parsing the document. */
 	virtual bool parseDocument( const QByteArray &document,
 				    QList<PublicTransportInfo*> *journeys,
+				    GlobalTimetableInfo *globalInfo,
 				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
 	/** Parses the contents of a received document for a list of possible stop names

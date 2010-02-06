@@ -105,6 +105,7 @@ QStringList TimetableAccessorHtmlScript::scriptFeatures() const {
 
 bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 						 QList<PublicTransportInfo*> *journeys,
+						 GlobalTimetableInfo *globalInfo,
 						 ParseDocumentMode parseDocumentMode ) {
     if ( !m_scriptLoaded ) {
 	kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
@@ -127,8 +128,16 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
     // Call script using Kross
     m_resultObject->clear();
     QVariant result = m_script->callFunction( functionName, QVariantList() << doc );
-    QList<TimetableData> data = m_resultObject->data();
 
+    if ( result.isValid() && result.canConvert(QVariant::StringList) ) {
+	QStringList globalInfos = result.toStringList();
+	if ( globalInfos.contains("no delays", Qt::CaseInsensitive) ) {
+	    // No delay information available for the given stop
+	    globalInfo->delayInfoAvailable = false;
+	}
+    }
+    
+    QList<TimetableData> data = m_resultObject->data();
     int count = 0;
     foreach ( TimetableData timetableData, data ) {
 	PublicTransportInfo *info;

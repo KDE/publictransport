@@ -380,6 +380,7 @@ void TimetableAccessor::finished( KJob* job ) {
     m_jobInfos.remove( job );
     
     QList< PublicTransportInfo* > dataList;
+    GlobalTimetableInfo globalInfo;
     QStringList stops;
     QHash<QString, QString> stopToStopId;
     QHash<QString, int> stopToStopWeight;
@@ -434,21 +435,21 @@ void TimetableAccessor::finished( KJob* job ) {
 	}
 	kDebug() << "     PARSE RESULTS" << parseDocumentMode;
 	
-	if ( parseDocument(document, &dataList, parseDocumentMode) ) {
+	if ( parseDocument(document, &dataList, &globalInfo, parseDocumentMode) ) {
 	    if ( parseDocumentMode == ParseForDeparturesArrivals ) {
 		QList<DepartureInfo*> departures;
 		foreach( PublicTransportInfo *info, dataList )
 		    departures << dynamic_cast< DepartureInfo* >( info );
-		emit departureListReceived( this, url, departures, serviceProvider(),
-					    sourceName, city, stop, dataType,
-					    parseDocumentMode );
+		emit departureListReceived( this, url, departures, globalInfo,
+					    serviceProvider(), sourceName,
+					    city, stop, dataType, parseDocumentMode );
 	    } else if ( parseDocumentMode == ParseForJourneys ) {
 		QList<JourneyInfo*> journeys;
 		foreach( PublicTransportInfo *info, dataList )
 		    journeys << dynamic_cast< JourneyInfo* >( info );
-		emit journeyListReceived( this, url, journeys, serviceProvider(),
-					  sourceName, city, stop, dataType,
-					  parseDocumentMode );
+		emit journeyListReceived( this, url, journeys, globalInfo,
+					  serviceProvider(), sourceName,
+					  city, stop, dataType, parseDocumentMode );
 	    }
 	} else if ( hasSpecialUrlForStopSuggestions() ) {
 // 	    kDebug() << "request possible stop list";
@@ -629,9 +630,11 @@ QString TimetableAccessor::toPercentEncoding( QString str, QByteArray charset ) 
 
 bool TimetableAccessor::parseDocument( const QByteArray &document,
 				       QList<PublicTransportInfo*> *journeys,
+				       GlobalTimetableInfo *globalInfo,
 				       ParseDocumentMode parseDocumentMode ) {
     Q_UNUSED( document );
     Q_UNUSED( journeys );
+    Q_UNUSED( globalInfo );
     Q_UNUSED( parseDocumentMode );
     return false;
 }

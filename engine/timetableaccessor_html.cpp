@@ -75,6 +75,7 @@ QString TimetableAccessorHtml::decodeHtml( const QByteArray &document,
 
 bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 					   QList<PublicTransportInfo*> *journeys,
+					   GlobalTimetableInfo *globalInfo,
 					   ParseDocumentMode parseDocumentMode ) {
     QString doc = decodeHtml( document );
 

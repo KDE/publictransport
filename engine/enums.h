@@ -26,6 +26,14 @@
 
 #include <QDebug>
 
+struct GlobalTimetableInfo {
+    GlobalTimetableInfo() {
+	delayInfoAvailable = true;
+    };
+    
+    bool delayInfoAvailable;
+};
+
 /** Different types of information. */
 enum TimetableInformation {
     Nothing = 0, /**< No usable information. */

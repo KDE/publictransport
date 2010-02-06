@@ -60,7 +60,9 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* @param parseDocumentMode The mode of parsing, e.g. parse for departures/arrivals or journeys.
 	* @return true, if there were no errors and the data in @p journeys is valid.
 	* @return false, if there were an error parsing the document. */
-	virtual bool parseDocument( const QByteArray &document, QList<PublicTransportInfo*> *journeys,
+	virtual bool parseDocument( const QByteArray &document,
+				    QList<PublicTransportInfo*> *journeys,
+				    GlobalTimetableInfo *globalInfo,
 				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
 	/** Exceuted before parseDocument() if there is a regexp to use before starting

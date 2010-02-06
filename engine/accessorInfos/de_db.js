@@ -39,6 +39,10 @@ function getUrlForLaterJourneyResults( html ) {
 }
 
 function parseTimetable( html ) {
+    var returnValue = new Array;
+    if ( html.indexOf('<p class="red">F&#252;r diese Haltestelle sind keine aktuellen Informationen verf&#252;gbar.</p>') != -1 )
+	returnValue.push( 'no delays' );
+
     // Find block of departures
     var str = helper.extractBlock( html,
 	    '<table class="result stboard dep">', '</table>' );
@@ -176,7 +180,7 @@ function parseTimetable( html ) {
 	result.addData( timetableData );
     }
 
-    return true;
+    return returnValue;
 }
 
 function parseJourneys( html ) {

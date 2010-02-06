@@ -48,6 +48,7 @@ QStringList TimetableAccessorXml::features() const {
 
 bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 					  QList<PublicTransportInfo*> *journeys,
+					  GlobalTimetableInfo *globalInfo,
 					  ParseDocumentMode parseDocumentMode ) {
     Q_UNUSED( parseDocumentMode );
 

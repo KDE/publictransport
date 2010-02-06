@@ -40,14 +40,34 @@ class JourneyInfo;
  @brief This engine provides departure / arrival times and journeys for public transport.
  @see @ref usage_sec (how to use this data engine in an applet?)
  */
-class PublicTransportEngine : public Plasma::DataEngine
-{
+class PublicTransportEngine : public Plasma::DataEngine {
     Q_OBJECT
 
     public:
+	enum SourceType {
+	    InvalidSourceName = 0,
+	    
+	    ServiceProviders,
+	    ErrornousServiceProviders,
+	    Locations,
+	    
+	    Departures = 10,
+	    Arrivals,
+	    Stops,
+	    Journeys,
+	    JourneysDep,
+	    JourneysArr
+	};
+	
         /** Every data engine needs a constructor with these arguments. */
         PublicTransportEngine( QObject* parent, const QVariantList& args );
 	~PublicTransportEngine();
+
+	static const QString sourceTypeKeyword( SourceType sourceType );
+
+	SourceType sourceTypeFromName( const QString &sourceName ) const;
+	bool isDataRequestingSourceType( SourceType sourceType ) const {
+	    return static_cast< int >( sourceType ) >= 10; };
 
 	/** Minimum timeout in seconds to request new data. Before the timeout 
 	* is over, old stored data from previous requests is used. */
@@ -106,7 +126,8 @@ class PublicTransportEngine : public Plasma::DataEngine
 	* @see TimetableAccessor::useSeperateCityValue() */
 	void departureListReceived( TimetableAccessor *accessor,
 				    const QUrl &requestUrl,
-				    QList<DepartureInfo*> departures,
+				    const QList<DepartureInfo*> &departures,
+				    const GlobalTimetableInfo &globalInfo,
 				    const QString &serviceProvider,
 				    const QString &sourceName,
 				    const QString &city, const QString &stop,
@@ -128,7 +149,8 @@ class PublicTransportEngine : public Plasma::DataEngine
 	* @see TimetableAccessor::useSeperateCityValue() */
 	void journeyListReceived( TimetableAccessor *accessor,
 				  const QUrl &requestUrl,
-				  QList<JourneyInfo*> journeys,
+				  const QList<JourneyInfo*> &journeys,
+				  const GlobalTimetableInfo &globalInfo,
 				  const QString &serviceProvider,
 				  const QString &sourceName,
 				  const QString &city, const QString &stop,
@@ -179,7 +201,7 @@ class PublicTransportEngine : public Plasma::DataEngine
 			   ParseDocumentMode parseDocumentMode );
 
 	/** A directory with accessor info xmls was changed. */
-        void accessorInfoDirChanged ( QString path );
+	void accessorInfoDirChanged( QString path );
 
     private:
 	/** Gets a map with information about an accessor.

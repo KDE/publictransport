@@ -46,9 +46,9 @@ PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList
 
     // Add service provider source, so when using
     // dataEngine("publictransport").sources() in an applet it at least returns this
-    setData( I18N_NOOP("ServiceProviders"), DataEngine::Data() );
-    setData( I18N_NOOP("ErrornousServiceProviders"), DataEngine::Data() );
-    setData( I18N_NOOP("Locations"), DataEngine::Data() );
+    setData( sourceTypeKeyword(ServiceProviders), DataEngine::Data() );
+    setData( sourceTypeKeyword(ErrornousServiceProviders), DataEngine::Data() );
+    setData( sourceTypeKeyword(Locations), DataEngine::Data() );
 }
 
 PublicTransportEngine::~PublicTransportEngine() {
@@ -173,12 +173,13 @@ bool PublicTransportEngine::updateServiceProviderSource( const QString &name ) {
 // 	kDebug() << "Data source" << name << "is up to date";
 	dataSource = m_dataSources[ name ].toHash();
     } else {
-	QStringList dirList = KGlobal::dirs()->findDirs( "data",
-			"plasma_engine_publictransport/accessorInfos" );
-	if ( !m_fileSystemWatcher )
+	if ( !m_fileSystemWatcher ) {
+	    QStringList dirList = KGlobal::dirs()->findDirs( "data",
+		    "plasma_engine_publictransport/accessorInfos" );
 	    m_fileSystemWatcher = new QFileSystemWatcher( dirList );
-	connect( m_fileSystemWatcher, SIGNAL(directoryChanged(QString)),
-	    this, SLOT(accessorInfoDirChanged(QString)) );
+	    connect( m_fileSystemWatcher, SIGNAL(directoryChanged(QString)),
+		     this, SLOT(accessorInfoDirChanged(QString)) );
+	}
 
 	QStringList fileNames = KGlobal::dirs()->findAllResources( "data",
 			"plasma_engine_publictransport/accessorInfos/*.xml" );
@@ -253,38 +254,35 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 	kDebug() << name;
 
 	QString parameters;
-	if ( name.startsWith(I18N_NOOP("Departures"), Qt::CaseInsensitive) ) {
-	    parameters = name.mid( QString(I18N_NOOP("Departures")).length() );
+	SourceType sourceType = sourceTypeFromName( name );
+	if ( sourceType == Departures ) {
+	    parameters = name.mid( sourceTypeKeyword(Departures).length() );
 	    parseDocumentMode = ParseForDeparturesArrivals;
 	    dataType = "departures";
-	} else if ( name.startsWith(I18N_NOOP("Arrivals"), Qt::CaseInsensitive) ) {
-	    parameters = name.mid( QString(I18N_NOOP("Arrivals")).length() );
+	} else if ( sourceType == Arrivals ) {
+	    parameters = name.mid( sourceTypeKeyword(Arrivals).length() );
 	    parseDocumentMode = ParseForDeparturesArrivals;
 	    dataType = "arrivals";
-	} else if ( name.startsWith(I18N_NOOP("Stops"), Qt::CaseInsensitive) ) {
-	    parameters = name.mid( QString(I18N_NOOP("Stops")).length() );
+	} else if ( sourceType == Stops ) {
+	    parameters = name.mid( sourceTypeKeyword(Stops).length() );
 	    parseDocumentMode = ParseForStopSuggestions;
 	    dataType = "stopSuggestions";
-	} else if ( name.startsWith(I18N_NOOP("JourneysDep"), Qt::CaseInsensitive) ) {
-	    parameters = name.mid( QString(I18N_NOOP("JourneysDep")).length() );
+	} else if ( sourceType == JourneysDep ) {
+	    parameters = name.mid( sourceTypeKeyword(JourneysDep).length() );
 	    parseDocumentMode = ParseForJourneys;
 	    dataType = "journeysDep";
-	} else if ( name.startsWith(I18N_NOOP("JourneysArr"), Qt::CaseInsensitive) ) {
-	    parameters = name.mid( QString(I18N_NOOP("JourneysArr")).length() );
+	} else if ( sourceType == JourneysArr ) {
+	    parameters = name.mid( sourceTypeKeyword(JourneysArr).length() );
 	    parseDocumentMode = ParseForJourneys;
 	    dataType = "journeysArr";
-	} else if ( name.startsWith(I18N_NOOP("Journeys"), Qt::CaseInsensitive) ) {
-	    parameters = name.mid( QString(I18N_NOOP("Journeys")).length() );
+	} else if ( sourceType == Journeys ) {
+	    parameters = name.mid( sourceTypeKeyword(Journeys).length() );
 	    parseDocumentMode = ParseForJourneys;
 	    dataType = "journeysDep";
-	}
+	} else
+	    return false;
+	
 	input = parameters.trimmed().split("|", QString::SkipEmptyParts);
-
-// 	    if ( input.length() < 2 ) {
-// 		kDebug() << QString("Wrong input: '%1'").arg(name);
-// 		return false; // wrong input
-// 	    }
-
 	QString serviceProvider = input.at(0).trimmed();
 
 	for ( int i = 0; i < input.length(); ++i ) {
@@ -358,12 +356,12 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 	if ( newlyCreated ) {
 	    // 		if ( parseDocumentMode == ParseForDeparturesArrivals ) {
 	    connect( accessor,
-		     SIGNAL(departureListReceived(TimetableAccessor*,const QUrl&,QList<DepartureInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
-		     this, SLOT(departureListReceived(TimetableAccessor*,const QUrl&,QList<DepartureInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
+		     SIGNAL(departureListReceived(TimetableAccessor*,const QUrl&,const QList<DepartureInfo*>&,const GlobalTimetableInfo&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
+		     this, SLOT(departureListReceived(TimetableAccessor*,const QUrl&,const QList<DepartureInfo*>&,const GlobalTimetableInfo&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
 	    // 		} else { // if ( parseDocumentMode == ParseForJourneys )
 	    connect( accessor,
-		     SIGNAL(journeyListReceived(TimetableAccessor*,const QUrl&,QList<JourneyInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
-		     this, SLOT(journeyListReceived(TimetableAccessor*,const QUrl&,QList<JourneyInfo*>,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
+		     SIGNAL(journeyListReceived(TimetableAccessor*,const QUrl&,const QList<JourneyInfo*>&,const GlobalTimetableInfo&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
+		     this, SLOT(journeyListReceived(TimetableAccessor*,const QUrl&,const QList<JourneyInfo*>&,const GlobalTimetableInfo&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
 	    // 		}
 	    connect( accessor,
 		     SIGNAL(stopListReceived(TimetableAccessor*,const QUrl&,const QStringList&,const QHash<QString,QString>&,const QHash<QString, int>&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
@@ -395,40 +393,115 @@ QString PublicTransportEngine::stripDateAndTimeValues( const QString& sourceName
 
 void PublicTransportEngine::accessorInfoDirChanged( QString path ) {
     kDebug() << path << "was changed";
-    if ( m_dataSources.keys().contains(I18N_NOOP("ServiceProviders")) )
-	m_dataSources.remove(I18N_NOOP("ServiceProviders"));
-    updateServiceProviderSource(I18N_NOOP("ServiceProviders"));
+
+    // Remove all accessors (could have been changed)
+    qDeleteAll( m_accessors );
+    m_accessors.clear();
+    
+    // Clear all cached data (use the new accessor to parse the data again)
+    QStringList cachedSources = m_dataSources.keys();
+    foreach ( QString cachedSource, cachedSources ) {
+	SourceType sourceType = sourceTypeFromName( cachedSource );
+	if ( isDataRequestingSourceType(sourceType) )
+	    m_dataSources.remove( cachedSource );
+    }
+
+    // Remove cached service provider source
+    const QString serviceProvidersKey = sourceTypeKeyword( ServiceProviders );
+    if ( m_dataSources.keys().contains(serviceProvidersKey) )
+	m_dataSources.remove( serviceProvidersKey );
+    
+    updateServiceProviderSource( serviceProvidersKey );
+}
+
+const QString PublicTransportEngine::sourceTypeKeyword( SourceType sourceType ) {
+    switch ( sourceType ) {
+	case ServiceProviders:
+	    return "ServiceProviders";
+	case ErrornousServiceProviders:
+	    return "ErrornousServiceProviders";
+	case Locations:
+	    return "Locations";
+	case Departures:
+	    return "Departures";
+	case Arrivals:
+	    return "Arrivals";
+	case Stops:
+	    return "Stops";
+	case Journeys:
+	    return "Journeys";
+	case JourneysDep:
+	    return "JourneysDep";
+	case JourneysArr:
+	    return "JourneysArr";
+	    
+	default:
+	    return "";
+    }
+}
+
+PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
+		const QString& sourceName ) const {
+    if ( sourceName.compare(sourceTypeKeyword(ServiceProviders), Qt::CaseInsensitive) == 0 )
+	return ServiceProviders;
+    else if ( sourceName.compare(sourceTypeKeyword(ErrornousServiceProviders),
+				 Qt::CaseInsensitive) == 0 )
+	return ErrornousServiceProviders;
+    else if ( sourceName.compare(sourceTypeKeyword(Locations), Qt::CaseInsensitive) == 0 )
+	return Locations;
+    else if ( sourceName.startsWith(sourceTypeKeyword(Departures), Qt::CaseInsensitive) )
+	return Departures;
+    else if ( sourceName.startsWith(sourceTypeKeyword(Arrivals), Qt::CaseInsensitive) )
+	return Arrivals;
+    else if ( sourceName.startsWith(sourceTypeKeyword(Stops), Qt::CaseInsensitive) )
+	return Stops;
+    else if ( sourceName.startsWith(sourceTypeKeyword(JourneysDep), Qt::CaseInsensitive) )
+	return JourneysDep;
+    else if ( sourceName.startsWith(sourceTypeKeyword(JourneysArr), Qt::CaseInsensitive) )
+	return JourneysArr;
+    else if ( sourceName.startsWith(sourceTypeKeyword(Journeys), Qt::CaseInsensitive) )
+	return Journeys;
+    else
+	return InvalidSourceName;
 }
 
 bool PublicTransportEngine::updateSourceEvent( const QString &name ) {
     kDebug() << name;
 
     bool ret = true;
-    if ( name.compare(I18N_NOOP("ServiceProviders"), Qt::CaseInsensitive) == 0 )
-	ret = updateServiceProviderSource( name );
-    else if ( name.compare(I18N_NOOP("ErrornousServiceProviders"), Qt::CaseInsensitive) == 0 )
-	updateErrornousServiceProviderSource( name );
-    else if ( name.compare(I18N_NOOP("Locations"), Qt::CaseInsensitive) == 0 )
-	updateLocationSource( name );
-    else if ( name.startsWith(I18N_NOOP("Departures"), Qt::CaseInsensitive)
-		|| name.startsWith(I18N_NOOP("Arrivals"), Qt::CaseInsensitive)
-		|| name.startsWith(I18N_NOOP("Stops"), Qt::CaseInsensitive)
-		|| name.startsWith(I18N_NOOP("Journeys"), Qt::CaseInsensitive) )
-	ret = updateDepartureOrJourneySource( name );
-    else {
-	kDebug() << "Source name incorrect" << name;
-	return false;
+    SourceType sourceType = sourceTypeFromName( name );
+    switch ( sourceType ) {
+	case ServiceProviders:
+	    ret = updateServiceProviderSource( name );
+	    break;
+	case ErrornousServiceProviders:
+	    updateErrornousServiceProviderSource( name );
+	    break;
+	case Locations:
+	    updateLocationSource( name );
+	    break;
+	case Departures:
+	case Arrivals:
+	case Stops:
+	case Journeys:
+	    ret = updateDepartureOrJourneySource( name );
+	    break;
+	default:
+	    kDebug() << "Source name incorrect" << name;
+	    ret = false;
+	    break;
     }
 
     return ret;
 }
 
 void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
-		  const QUrl &requestUrl,
-		  QList< DepartureInfo* > departures,
-		  const QString &serviceProvider, const QString &sourceName,
-		  const QString &city, const QString &stop,
-		  const QString &dataType, ParseDocumentMode parseDocumentMode ) {
+		const QUrl &requestUrl,
+		const QList<DepartureInfo*> &departures,
+		const GlobalTimetableInfo &globalInfo,
+		const QString &serviceProvider, const QString &sourceName,
+		const QString &city, const QString &stop,
+		const QString &dataType, ParseDocumentMode parseDocumentMode ) {
     Q_UNUSED(accessor);
     Q_UNUSED(serviceProvider);
     Q_UNUSED(city);
@@ -474,7 +547,6 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
     } else
 	first = last = QDateTime::currentDateTime();
     qDeleteAll( departures );
-    departures.clear();
 
     // Remove old jouneys
     for ( ; i < m_lastJourneyCount; ++i )
@@ -494,6 +566,7 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
     
     setData( sourceName, "serviceProvider", serviceProvider );
     setData( sourceName, "count", departureCount );
+    setData( sourceName, "delayInfoAvailable", globalInfo.delayInfoAvailable );
     setData( sourceName, "requestUrl", requestUrl );
     setData( sourceName, "parseMode", "departures" );
     setData( sourceName, "receivedData", "departures" );
@@ -504,6 +577,7 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
     // Store received data in the data source map
     dataSource.insert( "serviceProvider", serviceProvider );
     dataSource.insert( "count", departureCount );
+    dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
     dataSource.insert( "requestUrl", requestUrl );
     dataSource.insert( "parseMode", "departures" );
     dataSource.insert( "receivedData", "departures" );
@@ -516,7 +590,8 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 
 void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 						 const QUrl &requestUrl,
-						 QList< JourneyInfo* > journeys,
+						 const QList<JourneyInfo*> &journeys,
+						 const GlobalTimetableInfo &globalInfo,
 						 const QString &serviceProvider,
 						 const QString& sourceName,
 						 const QString& city,
@@ -573,7 +648,6 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     } else
 	first = last = QDateTime::currentDateTime();
     qDeleteAll( journeys );
-    journeys.clear();
 
     // Remove old journeys
     for ( ; i < m_lastJourneyCount; ++i )
@@ -592,6 +666,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     
     setData( sourceName, "serviceProvider", serviceProvider );
     setData( sourceName, "count", journeyCount );
+    setData( sourceName, "delayInfoAvailable", globalInfo.delayInfoAvailable );
     setData( sourceName, "requestUrl", requestUrl );
     setData( sourceName, "parseMode", "journeys" );
     setData( sourceName, "receivedData", "journeys" );
@@ -602,6 +677,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     // Store received data in the data source map
     dataSource.insert( "serviceProvider", serviceProvider );
     dataSource.insert( "count", journeyCount );
+    dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
     dataSource.insert( "requestUrl", requestUrl );
     dataSource.insert( "parseMode", "journeys" );
     dataSource.insert( "receivedData", "journeys" );
@@ -715,9 +791,12 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name ) {
     int minForSufficientChanges = downloadTime.isValid()
 	    ? QDateTime::currentDateTime().secsTo(downloadTime) : 0;
     int minFetchWait = qMax( minForSufficientChanges, MIN_UPDATE_TIMEOUT );
+    
     // If delays are available set maximum fetch wait
-    if ( accessor->features().contains("Delay") )
+    if ( accessor->features().contains("Delay")
+		&& dataSource["delayInfoAvailable"].toBool() )
 	minFetchWait = qMin( minFetchWait, MAX_UPDATE_TIMEOUT_DELAY );
+    
     minFetchWait = qMax( minFetchWait, accessor->minFetchWait() );
     kDebug() << "Wait time until next download:"
 	     << ((minFetchWait - dataSource["updated"].toDateTime().secsTo(

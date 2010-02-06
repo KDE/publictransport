@@ -68,6 +68,7 @@ class TimetableAccessorHtmlScript : public TimetableAccessor {
 	* @return false, if there were an error parsing the document. */
 	virtual bool parseDocument( const QByteArray &document,
 				    QList<PublicTransportInfo*> *journeys,
+				    GlobalTimetableInfo *globalInfo,
 				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
 	/** Calls the 'getUrlForLaterJourneyResults' function in the script to

@@ -149,6 +149,7 @@ class TimetableAccessor : public QObject {
 	* @see parseDocumentPossibleStops() */
 	virtual bool parseDocument( const QByteArray &document,
 				    QList<PublicTransportInfo*> *journeys,
+				    GlobalTimetableInfo *globalInfo,
 				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
 	/** Override this method to parse the contents of a received document for
@@ -235,7 +236,8 @@ class TimetableAccessor : public QObject {
 	* @see TimetableAccessor::useSeperateCityValue() */
 	void departureListReceived( TimetableAccessor *accessor,
 				    const QUrl &requestUrl,
-				    QList<DepartureInfo*> journeys,
+				    const QList<DepartureInfo*> &journeys,
+				    const GlobalTimetableInfo &globalInfo,
 				    const QString &serviceProvider,
 				    const QString &sourceName, const QString &city,
 				    const QString &stop, const QString &dataType,
@@ -256,7 +258,8 @@ class TimetableAccessor : public QObject {
 	* @see TimetableAccessor::useSeperateCityValue() */
 	void journeyListReceived( TimetableAccessor *accessor,
 				  const QUrl &requestUrl,
-				  QList<JourneyInfo*> journeys,
+				  const QList<JourneyInfo*> &journeys,
+				  const GlobalTimetableInfo &globalInfo,
 				  const QString &serviceProvider,
 				  const QString &sourceName,
 				  const QString &city, const QString &stop,
