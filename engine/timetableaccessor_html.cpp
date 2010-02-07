@@ -77,6 +77,7 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 					   QList<PublicTransportInfo*> *journeys,
 					   GlobalTimetableInfo *globalInfo,
 					   ParseDocumentMode parseDocumentMode ) {
+    Q_UNUSED( globalInfo );
     QString doc = decodeHtml( document );
 
     // Performance(?): Cut everything before "<body>" from the document

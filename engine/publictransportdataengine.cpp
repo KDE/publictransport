@@ -65,6 +65,7 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
     dataServiceProvider.insert( "fileName", accessor->timetableAccessorInfo().fileName() );
     dataServiceProvider.insert( "scriptFileName", accessor->timetableAccessorInfo().scriptFileName() );
     dataServiceProvider.insert( "name", accessor->timetableAccessorInfo().name() );
+    dataServiceProvider.insert( "url", accessor->timetableAccessorInfo().url() );
     dataServiceProvider.insert( "shortUrl", accessor->timetableAccessorInfo().shortUrl() );
     dataServiceProvider.insert( "country", accessor->country() );
     dataServiceProvider.insert( "cities", accessor->cities() );
@@ -73,7 +74,6 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
     dataServiceProvider.insert( "onlyUseCitiesInList", accessor->onlyUseCitiesInList() );
     dataServiceProvider.insert( "features", accessor->features() );
     dataServiceProvider.insert( "featuresLocalized", accessor->featuresLocalized() );
-    dataServiceProvider.insert( "url", accessor->timetableAccessorInfo().url() );
     dataServiceProvider.insert( "author", accessor->timetableAccessorInfo().author() );
     dataServiceProvider.insert( "email", accessor->timetableAccessorInfo().email() );
     dataServiceProvider.insert( "description", accessor->timetableAccessorInfo().description() );
@@ -530,9 +530,9 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 	data.insert("delayReason", departureInfo->delayReason());
 	data.insert("journeyNews", departureInfo->journeyNews());
 	data.insert("operator", departureInfo->operatorName());
-	data.insert("routeStops", departureInfo->routeStops()); // TODO update doc
-	data.insert("routeTimes", departureInfo->routeTimesVariant()); // TODO update doc
-	data.insert("routeExactStops", departureInfo->routeExactStops()); // TODO update doc
+	data.insert("routeStops", departureInfo->routeStops());
+	data.insert("routeTimes", departureInfo->routeTimesVariant());
+	data.insert("routeExactStops", departureInfo->routeExactStops());
 
 	QString sKey = QString( "%1" ).arg( i++ );
 	setData( sourceName, sKey, data );
@@ -624,16 +624,16 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 	data.insert("startStopName", journeyInfo->startStopName());
 	data.insert("targetStopName", journeyInfo->targetStopName());
 	data.insert("Operator", journeyInfo->operatorName());
-	data.insert("routeStops", journeyInfo->routeStops()); // TODO update doc
-	data.insert("routeTimesDeparture", journeyInfo->routeTimesDepartureVariant()); // TODO update doc
-	data.insert("routeTimesArrival", journeyInfo->routeTimesArrivalVariant()); // TODO update doc
-	data.insert("routeExactStops", journeyInfo->routeExactStops()); // TODO update doc
-	data.insert("routeVehicleTypes", journeyInfo->routeVehicleTypesVariant()); // TODO update doc
-	data.insert("routeTransportLines", journeyInfo->routeTransportLines()); // TODO update doc
-	data.insert("routePlatformsDeparture", journeyInfo->routePlatformsDeparture()); // TODO update doc
-	data.insert("routePlatformsArrival", journeyInfo->routePlatformsArrival()); // TODO update doc
-	data.insert("routeTimesDepartureDelay", journeyInfo->routeTimesDepartureDelay()); // TODO update doc
-	data.insert("routeTimesArrivalDelay", journeyInfo->routeTimesArrivalDelay()); // TODO update doc
+	data.insert("routeStops", journeyInfo->routeStops());
+	data.insert("routeTimesDeparture", journeyInfo->routeTimesDepartureVariant());
+	data.insert("routeTimesArrival", journeyInfo->routeTimesArrivalVariant());
+	data.insert("routeExactStops", journeyInfo->routeExactStops());
+	data.insert("routeVehicleTypes", journeyInfo->routeVehicleTypesVariant());
+	data.insert("routeTransportLines", journeyInfo->routeTransportLines());
+	data.insert("routePlatformsDeparture", journeyInfo->routePlatformsDeparture());
+	data.insert("routePlatformsArrival", journeyInfo->routePlatformsArrival());
+	data.insert("routeTimesDepartureDelay", journeyInfo->routeTimesDepartureDelay());
+	data.insert("routeTimesArrivalDelay", journeyInfo->routeTimesArrivalDelay());
 
 	QString sKey = QString("%1").arg(i++);
 	setData( sourceName, sKey, data );

@@ -37,26 +37,36 @@ class JourneyInfo;
 
 
 /** @class PublicTransportEngine
- @brief This engine provides departure / arrival times and journeys for public transport.
+ @brief This engine provides departure/arrival times and journeys for public transport.
  @see @ref usage_sec (how to use this data engine in an applet?)
  */
 class PublicTransportEngine : public Plasma::DataEngine {
     Q_OBJECT
 
     public:
+	/** The available types of sources of this data engine. They all have
+	* an associated keyword with that data source names start.
+	* @see sourceTypeKeyword
+	* @see sourceTypeFromName */
 	enum SourceType {
-	    InvalidSourceName = 0,
+	    InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName, if
+				      * the source name is invalid. */
 	    
-	    ServiceProviders,
-	    ErrornousServiceProviders,
-	    Locations,
+	    ServiceProviders, /**< The source contains infos about available 
+				 * service providers. */
+	    ErrornousServiceProviders, /**< The source contains a list of errornous
+					  * service provider accessors. */
+	    Locations, /**< The source contains information about locations
+			  * for which accessors to service providers exist. */
 	    
-	    Departures = 10,
-	    Arrivals,
-	    Stops,
-	    Journeys,
-	    JourneysDep,
-	    JourneysArr
+	    Departures = 10, /**< The source contains timetable data for departures. */
+	    Arrivals, /**< The source contains timetable data for arrivals. */
+	    Stops, /**< The source contains a list of stop suggestions. */
+	    Journeys, /**< The source contains infos about journeys. */
+	    JourneysDep, /**< The source contains infos about journeys, 
+			    * that depart at the given date and time. */
+	    JourneysArr /**< The source contains infos about journeys, 
+			   * that arrive at the given date and time. */
 	};
 	
         /** Every data engine needs a constructor with these arguments. */
@@ -114,7 +124,8 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param accessor The accessor that was used to download and parse the
 	* departures / arrivals.
 	* @param requestUrl The url used to request the information.
-	* @param departures A list of departures / arrivals that were received.
+	* @param departures A list of departures/arrivals that were received.
+	* @param globalInfo Global information that affects all departures/arrivals.
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source for which the departures /
 	* arrivals have been downloaded and parsed.
@@ -138,6 +149,7 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param accessor The accessor that was used to download and parse the journeys.
 	* @param requestUrl The url used to request the information.
 	* @param journeys A list of journeys that were received.
+	* @param globalInfo Global information that affects all journeys.
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source for which the journeys have
 	* been downloaded and parsed.
@@ -211,6 +223,11 @@ class PublicTransportEngine : public Plasma::DataEngine {
 
 	QString stripDateAndTimeValues( const QString &sourceName );
 
+// 	struct AccessorCheck {
+// 	    QDateTime checkTime;
+// 	    bool result;
+// 	    QString error;
+// 	};
 	
 	QHash< QString, TimetableAccessor* > m_accessors; // List of already loaded accessors
 	QHash< QString, QVariant > m_dataSources; // List of already used data sources
@@ -222,6 +239,8 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	// (enough departures in past or maybe changed delays, estimated),
 	// for each data source name.
 	QHash< QString, QDateTime > m_nextDownloadTimeProposals;
+	
+// 	QHash< QString, AccessorCheck > m_checkedAccessors;
 };
 
 /** @mainpage Public Transport Data Engine
@@ -314,16 +333,18 @@ with the display name of the service provider. These keys point to the service
 provider information, stored as a QHash with the following keys:<br>
 <table>
 <tr><td><i>id</i></td> <td>QString</td> <td>The ID of the service provider.</td></tr>
-<tr><td><i>fileName</i></td> <td>QString</td> <td>The file name of the XML file that was parsed to get the
-accessor information.</td> </tr>
+<tr><td><i>fileName</i></td> <td>QString</td> <td>The file name of the XML file containing the accessor information.</td> </tr>
+<tr><td><i>scriptFileName</i></td> <td>QString</td> <td>The file name of the script file used by the accessor for parsing, if any.</td> </tr>
 <tr><td><i>name</i></td> <td>QString</td> <td>The name of the accessor.</td></tr>
 <tr><td><i>url</i></td> <td>QString</td> <td>The url to the home page of the service provider.</td></tr>
 <tr><td><i>shortUrl</i></td> <td>QString</td> <td>A short version of the url to the home page of the service provider. This can be used to display short links, while using "url" as the url of that link.</td></tr>
 <tr><td><i>country</i></td> <td>QString</td> <td>The country the service provider is (mainly) designed for.</td></tr>
 <tr><td><i>cities</i></td> <td>QStringList</td> <td>A list of cities the service provider supports.</td></tr>
+<tr><td><i>credit</i></td> <td>QString</td> <td>The ones who run the service provider (companies).</td></tr>
 <tr><td><i>useSeperateCityValue</i></td> <td>bool</td> <td>Wheather or not the service provider needs a seperate city value. If this is true, you need to specify a "city" parameter in data source names for @ref usage_departures_sec and @ref usage_journeys_sec .</td></tr>
 <tr><td><i>onlyUseCitiesInList</i></td> <td>bool</td> <td>Wheather or not the service provider only accepts cities that are in the "cities" list.</td></tr>
-<tr><td><i>features</i></td> <td>QStringList</td> <td>A list of strings describing which features the accessor has.</td></tr>
+<tr><td><i>features</i></td> <td>QStringList</td> <td>A list of strings, each string stands for a featureof the accessor.</td></tr>
+<tr><td><i>featuresLocalized</i></td> <td>QStringList</td> <td>A list of localized strings describing which features the accessor has.</td></tr>
 <tr><td><i>author</i></td> <td>QString</td> <td>The author of the accessor.</td></tr>
 <tr><td><i>email</i></td> <td>QString</td> <td>The email address of the author of the accessor.</td></tr>
 <tr><td><i>description</i></td> <td>QString</td> <td>A description of the accessor.</td></tr>
@@ -360,11 +381,12 @@ service provider has useSeperateCityValue set to true (see
 The following parameters are allowed:<br>
 <table>
 <tr><td><i>stop</i></td> <td>The name or ID of the stop to get departures / arrivals for.</td></tr>
-<tr><td><i>city</i></td> <td>The city to get departures / arrivals for, if needed.</td></tr>
-<tr><td><i>maxDeps</i></td> <td>The maximum departure / arrival count to get.</td></tr>
+<tr><td><i>city</i></td> <td>The city to get departures/arrivals for, if needed.</td></tr>
+<tr><td><i>maxDeps</i></td> <td>The maximum departure/arrival count to get.</td></tr>
 <tr><td><i>timeOffset</i></td> <td>The offset in minutes from now for the first departure /
 arrival to get.</td></tr>
-<tr><td><i>time</i></td> <td>The time for the first departure / arrival to get ("hh:mm").</td></tr>
+<tr><td><i>time</i></td> <td>The time of the first departure/arrival to get ("hh:mm"). This uses the current date. To use another date use 'datetime'.</td></tr>
+<tr><td><i>datetime</i></td> <td>The date and time of the first departure/arrival to get (use QDateTime::toString()).</td></tr>
 </table>
 <br>
 
@@ -439,6 +461,10 @@ departure / arrival. You can cast the ID to VehicleType using "static_cast<Vehic
 <tr><td><i>delayReason</i></td> <td>QString</td> <td>The reason of a delay.</td></tr>
 <tr><td><i>journeyNews</i></td> <td>QString</td> <td>News for the journey.</td></tr>
 <tr><td><i>operator</i></td> <td>QString</td> <td>The company that is responsible for the journey.</td></tr>
+<tr><td><i>routeStops</i></td> <td>QStringList</td> <td>A list of stops of the departure/arrival to it's destination stop or a list of stops of the journey from it's start to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
+<tr><td><i>routeTimes</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of times of the departure/arrival to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
+<tr><td><i>routeExactStops</i></td> <td>int</td> <td>The number of exact route stops. The route stop list isn't complete from the last exact route stop.</td></tr>
+
 </table>
 
 <br>
@@ -536,9 +562,18 @@ example) has the following keys:<br>
 <tr><td><i>pricing</i></td> <td>QString</td> <td>Information about the pricing of the journey.</td></tr>
 <tr><td><i>journeyNews</i></td> <td>QString</td> <td>News for the journey.</td></tr>
 <tr><td><i>startStopName</i></td> <td>QString</td> <td>The name or ID of the origin stop.</td></tr>
-
 <tr><td><i>targetStopName</i></td> <td>QString</td> <td>The name or ID of the target stop (QString).</td></tr>
 <tr><td><i>operator</i></td> <td>QString</td> <td>The company that is responsible for the journey.</td></tr>
+<tr><td><i>routeStops</i></td> <td>QStringList</td> <td>A list of stops of the journey from it's start to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
+<tr><td><i>routeTimesDeparture</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of departure times of the journey to it's destination stop. If 'routeStops' and 'routeTimesDeparture' are both set, the latter contains one element less (because the last stop has no departure, only an arrival time). Elements with equal indices are associated (the times at which the vehicle departs from the stops).</td></tr>
+<tr><td><i>routeTimesArrival</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of arrival times of the journey to it's destination stop. If 'routeStops' and 'routeTimesArrival' are both set, the latter contains one element less (because the last stop has no departure, only an arrival time). Elements with equal indices are associated (the times at which the vehicle departs from the stops).</td></tr>
+<tr><td><i>routeExactStops</i></td> <td>int</td> <td>The number of exact route stops. The route stop list isn't complete from the last exact route stop.</td></tr>
+<tr><td><i>routeVehicleTypes</i></td> <td>QList< int > (stored as QVariantList)</td> <td>A list of vehicle types used for each "sub-journey" in the journey. The vehicle types are described by integers (see @ref pageUsage).</td></tr>
+<tr><td><i>routeTransportLines</i></td> <td>QStringList</td> <td>A list of transport lines used for each "sub-journey" in the journey.</td></tr>
+<tr><td><i>routePlatformsDeparture</i></td> <td>QStringList</td> <td>A list of platforms of the departure used for each stop in the journey.</td></tr>
+<tr><td><i>routePlatformsArrival</i></td> <td>QStringList</td> <td>A list of platforms of the arrival used for each stop in the journey.</td></tr>
+<tr><td><i>routeTimesDepartureDelay</i></td> <td>QList< int > (stored as QVariantList)</td> <td>A list of delays in minutes of the departures at each stop in the journey. A value of 0 means, that the vehicle is on schedule, -1 means, that there's no information about delays.</td></tr>
+<tr><td><i>routeTimesArrivalDelay</i></td> <td>QList< int > (stored as QVariantList)</td> <td>A list of delays in minutes of the arrivals at each stop in the journey. A value of 0 means, that the vehicle is on schedule, -1 means, that there's no information about delays.</td></tr>
 </table>
 
 <br>

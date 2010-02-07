@@ -82,7 +82,7 @@ class PublicTransportInfo {
 	QString operatorName() const { return m_data.contains(Operator)
 		? m_data[Operator].toString() : QString(); };
 
-	/** Gets a list of stops of the departure / arrival to it's destination 
+	/** Gets a list of stops of the departure/arrival to it's destination
 	* stop or a list of stops of the journey from it's start to it's 
 	* destination stop.
 	* @note: If @ref routeStops and @ref routeTimes are both set,
@@ -229,8 +229,7 @@ class JourneyInfo : public PublicTransportInfo {
 		return m_data.contains(RouteTimesDeparture)
 		    ? m_data[RouteTimesDeparture].toList() : QVariantList(); };
 
-	/** Gets a list of times of the departure / arrival to it's destination
-	* stop.
+	/** Gets a list of times of the journey to it's destination stop.
 	* @note: If @ref routeStops and @ref routeTimesDeparture are both set,
 	* the latter contains one element less (because the last stop has no
 	* departure, only an arrival time). Elements with equal indices are
