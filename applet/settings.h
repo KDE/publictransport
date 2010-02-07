@@ -41,7 +41,6 @@ class PublicTransportSettings : public QObject {
 
     public:
 	PublicTransportSettings( PublicTransport *applet );
-	~PublicTransportSettings();
 
 	/** Returns a pointer to the public transport applet. */
 	PublicTransport *applet() { return m_applet; };

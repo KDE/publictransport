@@ -33,16 +33,15 @@ class DataSourceTester : public QObject {
     public:
 	/** Results of a data source test. */
 	enum TestResult {
-	    Error, /**< The used data source name is errornous or the data couldn't be parsed correctly. TODO: It's also possible, that there just weren't any departures / arrivals. In such a case JourneyListReceived should be used. */
+	    Error, /**< The used data source name is errornous or the data couldn't be parsed correctly. TODO: It's also possible, that there just weren't any departures / arrivals. In such a case JourneyListReceived should be used (or a new EmptyJourneyListReceived?). */
 	    JourneyListReceived, /**< The tested data source name gets a list of departures / arrivals or journeys. */
 	    PossibleStopsReceived /**< The tested data source name gets a list of stop suggestions. If you requested a journey list this means that the stop name is ambiguous. You can try to use stop IDs, if the ambiguity can't be removed. */
 	};
 
-	DataSourceTester( const QString &testSource, Plasma::Applet *applet, QObject* parent = 0 )
-		    : QObject(parent) {
-	    Q_ASSERT( applet != NULL);
-	    m_testSource = testSource;
-	    m_applet = applet;
+	DataSourceTester( const QString &testSource, Plasma::Applet *applet,
+			  QObject* parent = 0 )
+		    : QObject(parent), m_testSource(testSource), m_applet(applet) {
+	    Q_ASSERT( applet );
 	};
 	~DataSourceTester() {
 	    disconnectTestSource();

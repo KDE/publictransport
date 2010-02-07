@@ -218,6 +218,8 @@ void HtmlDelegate::drawDisplayWithShadow( QPainter* painter,
 
     document.setHtml( sText );
     document.setDocumentMargin( 0 );
+    
+    document.setDocumentLayout( 0 ); // This is to prevent a memory leak in setHtml()
     document.documentLayout();
 
     // From the tasks plasmoid

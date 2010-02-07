@@ -58,15 +58,12 @@
 
 
 PublicTransportSettings::PublicTransportSettings( PublicTransport *applet )
-	    : m_applet(applet), m_dataSourceTester(new DataSourceTester("", applet)),
+	    : m_applet(applet), m_dataSourceTester(new DataSourceTester("", applet, this)),
 	      m_configDialog(0), m_modelServiceProvider(0), m_modelLocations(0) {
+    setParent( applet );
     connect( m_dataSourceTester,
 	     SIGNAL(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)),
 	     this, SLOT(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)) );
-}
-
-PublicTransportSettings::~PublicTransportSettings() {
-    delete m_dataSourceTester;
 }
 
 void PublicTransportSettings::dataUpdated( const QString& sourceName,
@@ -627,7 +624,7 @@ void PublicTransportSettings::serviceProviderChanged( int index ) {
     // Only show "Departures"/"Arrivals"-radio buttons if arrivals are supported by the service provider
     bool supportsArrivals =
 	serviceProviderData["features"].toStringList().contains("Arrivals");
-    m_uiAdvanced.grpDefaultView->setVisible( supportsArrivals );
+    m_uiAdvanced.showArrivals->setEnabled( supportsArrivals );
     if ( !supportsArrivals )
 	m_uiAdvanced.showDepartures->setChecked( true );
 

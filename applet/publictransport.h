@@ -30,7 +30,6 @@
 // Own includes
 #include "global.h"
 #include "departureinfo.h"
-#include "settings.h"
 
 namespace Plasma {
     class IconWidget;
@@ -41,6 +40,7 @@ namespace Plasma {
     class PushButton;
 };
 
+class PublicTransportSettings;
 class AlarmTimer;
 class QSizeF;
 class QGraphicsLayout;
@@ -448,7 +448,23 @@ class PublicTransport : public Plasma::PopupApplet {
 				 bool *timeIsDeparture,
 				 int *posStart = NULL, int *len = NULL,
 				 bool correctString = true );
+	bool searchForJourneySearchKeywords( const QString &journeySearch,
+			    const QStringList &timeKeywordsTomorrow,
+			    const QStringList &departureKeywords,
+			    const QStringList &arrivalKeywords,
+			    QDate *date, QString *stop, bool *timeIsDeparture,
+			    int *len ) const;
 	void stopNamePosition( int *posStart, int *len, QString *stop = NULL );
+	void parseDateAndTime( const QString &sDateTime, QDateTime *dateTime,
+			       QDate *alreadyParsedDate ) const;
+	void combineDoubleQuotedWords( QStringList *words ) const;
+			       
+	/** Get the strings left and right of the word at @p splitWordPos 
+	* in @p wordList. The extracted strings are stored to @p leftOfSplitWord
+	* and @p rightOfSplitWord. */
+	void splitWordList( const QStringList &wordList, int splitWordPos,
+			    QString *leftOfSplitWord, QString *rightOfSplitWord,
+			    int excludeWordsFromleft = 0 );
 	bool parseTime( const QString &sTime, QTime *time ) const;
 	bool parseDate( const QString &sDate, QDate *date ) const;
 	bool isTimeShown( const QDateTime &datime ) const;
@@ -492,7 +508,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	QColor m_colorSubItemLabels; /**< The color to be used for sub item labels ("Delay:", "Platform:", ...) */
 	QUrl m_urlDeparturesArrivals, m_urlJourneys; /**< Urls to set as associated application urls, when switching from/to journey mode. */
 	
-	PublicTransportSettings m_settings;
+	PublicTransportSettings *m_settings;
 	bool m_stopNameValid; /**< Wheather or not the current stop name (m_stop) is valid */
 	
 	QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in the tree view for the context menu actions */

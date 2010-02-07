@@ -6,18 +6,28 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>320</width>
-    <height>297</height>
+    <width>371</width>
+    <height>372</height>
    </rect>
   </property>
   <layout class="QFormLayout" name="formLayout_3">
    <property name="fieldGrowthPolicy">
     <enum>QFormLayout::ExpandingFieldsGrow</enum>
    </property>
-   <property name="rowWrapPolicy">
-    <enum>QFormLayout::DontWrapRows</enum>
-   </property>
-   <item row="0" column="0">
+   <item row="2" column="0" colspan="2">
+    <widget class="QLabel" name="lblTimetable_2">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Departure/Arrival View Settings</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
     <widget class="QLabel" name="lblUpdateAutomatically">
      <property name="text">
       <string>Update &amp;automatically:</string>
@@ -30,7 +40,7 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1">
+   <item row="3" column="1">
     <widget class="QCheckBox" name="updateAutomatically">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -46,7 +56,7 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item row="4" column="0">
     <widget class="QLabel" name="lblAlarmTime">
      <property name="text">
       <string>A&amp;larm time:</string>
@@ -59,7 +69,7 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
+   <item row="4" column="1">
     <widget class="QSpinBox" name="alarmTime">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -69,7 +79,7 @@
      </property>
      <property name="minimumSize">
       <size>
-       <width>190</width>
+       <width>185</width>
        <height>0</height>
       </size>
      </property>
@@ -94,7 +104,7 @@ Here you can set when the alarm should be fired, relative to the departure / arr
      </property>
     </widget>
    </item>
-   <item row="2" column="0">
+   <item row="5" column="0">
     <widget class="QLabel" name="lblMaximalNumberOfDepartures">
      <property name="text">
       <string>Maximum Departures:</string>
@@ -107,7 +117,7 @@ Here you can set when the alarm should be fired, relative to the departure / arr
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
+   <item row="5" column="1">
     <widget class="QSpinBox" name="maximalNumberOfDepartures">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -135,8 +145,151 @@ Here you can set when the alarm should be fired, relative to the departure / arr
      </property>
     </widget>
    </item>
-   <item row="3" column="0" colspan="2">
-    <spacer name="verticalSpacer_3">
+   <item row="6" column="0">
+    <widget class="QLabel" name="lblFirstDeparture">
+     <property name="text">
+      <string>First Departure:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QWidget" name="widget" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>25</height>
+      </size>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="margin">
+       <number>0</number>
+      </property>
+      <item>
+       <layout class="QFormLayout" name="formLayout">
+        <property name="fieldGrowthPolicy">
+         <enum>QFormLayout::ExpandingFieldsGrow</enum>
+        </property>
+        <property name="rowWrapPolicy">
+         <enum>QFormLayout::WrapLongRows</enum>
+        </property>
+        <property name="horizontalSpacing">
+         <number>-1</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="QRadioButton" name="firstDepartureUseCurrentTime">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>&amp;Relative to current time:</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="timeOfFirstDeparture">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="whatsThis">
+           <string>Here you can set the starting time of the departure list. No earlier departures will be shown.</string>
+          </property>
+          <property name="specialValueText">
+           <string>Now</string>
+          </property>
+          <property name="suffix">
+           <string> minutes</string>
+          </property>
+          <property name="prefix">
+           <string>Now + </string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QFormLayout" name="formLayout_2">
+        <property name="rowWrapPolicy">
+         <enum>QFormLayout::WrapLongRows</enum>
+        </property>
+        <property name="horizontalSpacing">
+         <number>-1</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <item row="1" column="1">
+         <widget class="QTimeEdit" name="timeOfFirstDepartureCustom">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="time">
+           <time>
+            <hour>12</hour>
+            <minute>0</minute>
+            <second>0</second>
+           </time>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QRadioButton" name="firstDepartureUseCustomTime">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <property name="text">
+           <string>At &amp;custom time:</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="7" column="0" colspan="2">
+    <spacer name="verticalSpacer_5">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
@@ -145,151 +298,38 @@ Here you can set when the alarm should be fired, relative to the departure / arr
      </property>
      <property name="sizeHint" stdset="0">
       <size>
-       <width>20</width>
+       <width>64</width>
        <height>10</height>
       </size>
      </property>
     </spacer>
    </item>
-   <item row="4" column="0" colspan="2">
-    <widget class="QGroupBox" name="grpFirstDeparture">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+   <item row="8" column="0" colspan="2">
+    <widget class="QLabel" name="lblTimetable_3">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
      </property>
-     <property name="title">
-      <string>&amp;First departure</string>
+     <property name="text">
+      <string>Default View</string>
      </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-     </property>
-     <property name="flat">
-      <bool>false</bool>
-     </property>
-     <layout class="QFormLayout" name="formLayout_2">
-      <property name="labelAlignment">
-       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-      </property>
-      <property name="horizontalSpacing">
-       <number>-1</number>
-      </property>
-      <property name="leftMargin">
-       <number>4</number>
-      </property>
-      <item row="0" column="0">
-       <widget class="QRadioButton" name="firstDepartureUseCurrentTime">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>&amp;Relative to current time:</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QSpinBox" name="timeOfFirstDeparture">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="whatsThis">
-         <string>Here you can set the starting time of the departure list. No earlier departures will be shown.</string>
-        </property>
-        <property name="specialValueText">
-         <string>Now</string>
-        </property>
-        <property name="suffix">
-         <string> minutes</string>
-        </property>
-        <property name="prefix">
-         <string>Now + </string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QRadioButton" name="firstDepartureUseCustomTime">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="layoutDirection">
-         <enum>Qt::LeftToRight</enum>
-        </property>
-        <property name="text">
-         <string>At &amp;custom time:</string>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QTimeEdit" name="timeOfFirstDepartureCustom">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="time">
-         <time>
-          <hour>12</hour>
-          <minute>0</minute>
-          <second>0</second>
-         </time>
-        </property>
-       </widget>
-      </item>
-     </layout>
     </widget>
    </item>
-   <item row="6" column="0" colspan="2">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
+   <item row="9" column="1">
+    <widget class="QWidget" name="widget_2" native="true">
+     <property name="minimumSize">
       <size>
-       <width>20</width>
-       <height>0</height>
+       <width>0</width>
+       <height>25</height>
       </size>
      </property>
-    </spacer>
-   </item>
-   <item row="5" column="0" colspan="2">
-    <widget class="QGroupBox" name="grpDefaultView">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="title">
-      <string>Default view</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-     </property>
-     <property name="flat">
-      <bool>false</bool>
-     </property>
-     <layout class="QFormLayout" name="formLayout">
-      <item row="0" column="0" colspan="2">
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <property name="margin">
+       <number>0</number>
+      </property>
+      <item>
        <widget class="QRadioButton" name="showDepartures">
         <property name="text">
          <string>Show &amp;departure list</string>
@@ -299,7 +339,7 @@ Here you can set when the alarm should be fired, relative to the departure / arr
         </property>
        </widget>
       </item>
-      <item row="1" column="0" colspan="2">
+      <item>
        <widget class="QRadioButton" name="showArrivals">
         <property name="text">
          <string>Show &amp;arrival list</string>
@@ -311,14 +351,6 @@ Here you can set when the alarm should be fired, relative to the departure / arr
    </item>
   </layout>
  </widget>
- <tabstops>
-  <tabstop>updateAutomatically</tabstop>
-  <tabstop>alarmTime</tabstop>
-  <tabstop>maximalNumberOfDepartures</tabstop>
-  <tabstop>firstDepartureUseCurrentTime</tabstop>
-  <tabstop>showDepartures</tabstop>
-  <tabstop>showArrivals</tabstop>
- </tabstops>
  <resources/>
  <connections>
   <connection>
