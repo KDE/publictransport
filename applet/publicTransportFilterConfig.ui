@@ -7,151 +7,10 @@
     <x>0</x>
     <y>0</y>
     <width>480</width>
-    <height>420</height>
+    <height>419</height>
    </rect>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="4" column="0" rowspan="3" colspan="6">
-    <widget class="KTabWidget" name="ktabwidget">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="currentIndex">
-      <number>0</number>
-     </property>
-     <widget class="QWidget" name="tab_3">
-      <attribute name="title">
-       <string>Shown Vehicle Types</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <widget class="KActionSelector" name="filterLineType">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>10</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="focusPolicy">
-          <enum>Qt::NoFocus</enum>
-         </property>
-         <property name="whatsThis">
-          <string>Select the vehicle types to be displayed in the timetable.</string>
-         </property>
-         <property name="availableInsertionPolicy">
-          <enum>KActionSelector::Sorted</enum>
-         </property>
-         <property name="showUpDownButtons">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tab">
-      <attribute name="title">
-       <string>Shown Directions</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_2">
-       <item row="0" column="0">
-        <widget class="KComboBox" name="filterTypeTarget">
-         <item>
-          <property name="text">
-           <string>Show all directions</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Show matching directions</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Hide matching directions</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="KEditListBox" name="filterTargetList">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>10</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="title">
-          <string/>
-         </property>
-         <property name="flat">
-          <bool>true</bool>
-         </property>
-         <property name="checkable">
-          <bool>false</bool>
-         </property>
-         <property name="buttons">
-          <set>KEditListBox::Add|KEditListBox::Remove</set>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tab_2">
-      <attribute name="title">
-       <string>Shown Lines</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <widget class="KComboBox" name="filterTypeLineNumber">
-         <item>
-          <property name="text">
-           <string>Show all lines</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Show matching lines</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Hide matching lines</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item>
-        <widget class="KEditListBox" name="filterLineNumberList">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>10</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
-         </property>
-         <property name="title">
-          <string/>
-         </property>
-         <property name="flat">
-          <bool>true</bool>
-         </property>
-         <property name="checkable">
-          <bool>false</bool>
-         </property>
-         <property name="buttons">
-          <set>KEditListBox::Add|KEditListBox::Remove</set>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </widget>
-   </item>
    <item row="7" column="0">
     <widget class="QLabel" name="lblFilterConfigurations">
      <property name="text">
@@ -203,6 +62,198 @@
      <property name="text">
       <string notr="true">...</string>
      </property>
+    </widget>
+   </item>
+   <item row="4" column="0" rowspan="3" colspan="6">
+    <widget class="KTabWidget" name="ktabwidget">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab_3">
+      <attribute name="title">
+       <string>Shown Vehicle Types</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="KActionSelector" name="filterLineType">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>10</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="focusPolicy">
+          <enum>Qt::NoFocus</enum>
+         </property>
+         <property name="whatsThis">
+          <string>Select the vehicle types to be displayed in the timetable.</string>
+         </property>
+         <property name="availableInsertionPolicy">
+          <enum>KActionSelector::Sorted</enum>
+         </property>
+         <property name="showUpDownButtons">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>Shown Directions</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <property name="verticalSpacing">
+        <number>0</number>
+       </property>
+       <item row="0" column="0" colspan="2">
+        <widget class="KComboBox" name="filterTypeTarget">
+         <item>
+          <property name="text">
+           <string>Show all directions</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Show matching directions</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Hide matching directions</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="2">
+        <widget class="KEditListBox" name="filterTargetList">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>10</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="title">
+          <string/>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+         <property name="buttons">
+          <set>KEditListBox::Add|KEditListBox::Remove</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Filter Type:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="KComboBox" name="filterPatternTarget">
+         <item>
+          <property name="text">
+           <string>Plain Text</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Wildcard Pattern</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Regular Expression</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>4</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="title">
+       <string>Shown Lines</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="KComboBox" name="filterTypeLineNumber">
+         <item>
+          <property name="text">
+           <string>Show all lines</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Show matching lines</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Hide matching lines</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item>
+        <widget class="KEditListBox" name="filterLineNumberList">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>10</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="title">
+          <string/>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+         <property name="buttons">
+          <set>KEditListBox::Add|KEditListBox::Remove</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>

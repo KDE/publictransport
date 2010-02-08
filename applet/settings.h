@@ -120,6 +120,8 @@ class PublicTransportSettings : public QObject {
 	/** The maximal line number to be shown. */
 	int filterMaxLine() const { return m_filterMaxLine; };
 
+	bool isTargetFiltered( const QString &target ) const;
+	QRegExp::PatternSyntax filterPatternTarget() const { return m_filterPatternTarget; };
 	/** The type of the filter for targets  (ShowAll, ShowMatching, HideMatching). */
 	FilterType filterTypeTarget() const { return m_filterTypeTarget; };
 	void setFilterTypeTarget( FilterType filterType );
@@ -262,7 +264,31 @@ class PublicTransportSettings : public QObject {
 				    QValidator *validator = NULL );
 	int filterConfigurationIndex( const QString &filterConfig );
 	bool isCurrentFilterConfigChangedFrom( const KConfigGroup &config );
-				    
+	QRegExp::PatternSyntax patternSyntaxFromIndex( int index ) const {
+	    if ( index == 0 )
+		return QRegExp::FixedString;
+	    else if ( index == 1 )
+		return QRegExp::Wildcard;
+	    else if ( index == 2 )
+		return QRegExp::RegExp;
+	    else {
+		kDebug() << "Unknown pattern syntax" << index;
+		return QRegExp::FixedString;
+	    }
+	};
+	int indexFromPatternSyntax( QRegExp::PatternSyntax patternSyntax ) const {
+	    if ( patternSyntax == QRegExp::FixedString )
+		return 0;
+	    else if ( patternSyntax == QRegExp::Wildcard )
+		return 1;
+	    else if ( patternSyntax == QRegExp::RegExp )
+		return 2;
+	    else {
+		kDebug() << "Unknown pattern syntax" << patternSyntax;
+		return 0;
+	    }
+	};
+	
 	
 	PublicTransport *m_applet;
 	DataSourceTester *m_dataSourceTester; // Tests data sources
@@ -306,6 +332,7 @@ class PublicTransportSettings : public QObject {
 	bool m_showNightlines; // Whether or not night lines should be shown
 	int m_filterMinLine; // The minimal line number to be shown
 	int m_filterMaxLine; // The maximal line number to be shown
+	QRegExp::PatternSyntax m_filterPatternTarget;
 	FilterType m_filterTypeTarget; // The type of the filter for targets (ShowAll, ShowMatching, HideMatching)
 	QStringList m_filterTargetList; // A list of targets that should be filtered
 	FilterType m_filterTypeLineNumber; // The type of the filter for line numbers (ShowAll, ShowMatching, HideMatching)

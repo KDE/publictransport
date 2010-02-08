@@ -3491,10 +3491,7 @@ bool PublicTransport::filterOut( const DepartureInfo &departureInfo ) const {
 	    m_settings->filterMinLine(), m_settings->filterMaxLine() )) ||
 
 	// Filter target (direction)
-	(m_settings->filterTypeTarget() == ShowMatching
-	    && !m_settings->filterTargetList().contains(departureInfo.target())) ||
-	(m_settings->filterTypeTarget() == HideMatching
-	    && m_settings->filterTargetList().contains(departureInfo.target())) ||
+	m_settings->isTargetFiltered(departureInfo.target()) ||
 
 	// Filter line numbers
 	(m_settings->filterTypeLineNumber() == ShowMatching

@@ -125,7 +125,7 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	/** The popup pops up. */
 	virtual void popupEvent( bool show );
-
+    
 	virtual bool sceneEventFilter( QGraphicsItem* watched, QEvent* event );
     
 	/** Watching for up/down key presses in m_journeySearch to select stop suggestions. */

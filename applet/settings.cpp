@@ -295,9 +295,13 @@ void PublicTransportSettings::readSettings() {
     m_showNightlines = cg.readEntry("showNightlines", true);
     m_filterMinLine = cg.readEntry("filterMinLine", 1);
     m_filterMaxLine = cg.readEntry("filterMaxLine", 999);
-    m_filterTypeTarget = static_cast<FilterType>(cg.readEntry("filterTypeTarget", static_cast<int>(ShowAll)));
+    m_filterPatternTarget = static_cast<QRegExp::PatternSyntax>( cg.readEntry("filterPatternTarget",
+					static_cast<int>(QRegExp::FixedString)) );
+    m_filterTypeTarget = static_cast<FilterType>( cg.readEntry("filterTypeTarget",
+					static_cast<int>(ShowAll)) );
     m_filterTargetList = cg.readEntry("filterTargetList", QStringList());
-    m_filterTypeLineNumber = static_cast<FilterType>(cg.readEntry("filterTypeLineNumber", static_cast<int>(ShowAll)));
+    m_filterTypeLineNumber = static_cast<FilterType>( cg.readEntry("filterTypeLineNumber",
+					static_cast<int>(ShowAll)) );
     m_filterLineNumberList = cg.readEntry("filterLineNumberList", QStringList());
     
     getServiceProviderInfo();
@@ -346,7 +350,10 @@ bool PublicTransportSettings::isCurrentFilterConfigChangedFrom( const KConfigGro
 	return true;
     if ( m_showTypeOfVehicle[Plane] != cg.readEntry(vehicleTypeToConfigName(Plane), true) )
 	return true;
-    
+
+    if ( m_filterPatternTarget != static_cast<QRegExp::PatternSyntax>(
+		cg.readEntry("filterPatternTarget", static_cast<int>(QRegExp::FixedString))) )
+	return true;
     if ( m_filterTypeTarget != static_cast<FilterType>(
 		cg.readEntry("filterTypeTarget", static_cast<int>(ShowAll))) )
 	return true;
@@ -1059,17 +1066,6 @@ void PublicTransportSettings::addFilterConfiguration() {
 	m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true );
     
     kDebug() << "END: Added new filter config" << newFilterConfig;
-    
-//     renameFilterConfiguration();
-
-//     if ( m_uiFilter.filterConfigurations->currentText().isEmpty() ) {
-	// Rename canceled
-// 	removeFilterConfiguration();
-// 	m_uiFilter.filterConfigurations->removeItem(
-// 		m_uiFilter.filterConfigurations->currentIndex() );
-// 	m_uiFilter.filterConfigurations->setCurrentIndex(
-// 		filterConfigurationIndex(i18n("Default")) );
-//     }
 }
 
 void PublicTransportSettings::removeFilterConfiguration() {
@@ -1231,9 +1227,6 @@ QString PublicTransportSettings::untranslateKey( const QString& translatedKey ) 
 
 void PublicTransportSettings::saveFilterConfiguration() {
     if ( m_filterConfiguration == "Default" ) {
-	// TODO: Put this text as label into the rename mini-dialog
-// 	KMessageBox::information( m_configDialog, i18n("The filter configuration "
-// 		"'%1' can't be changed. Choose a new name.", i18n("Default")) );
 	renameFilterConfiguration();
 	
 	if ( m_filterConfiguration == "Default" )
@@ -1448,7 +1441,8 @@ void PublicTransportSettings::setValuesOfFilterConfig() {
 	selected->addItem( available->takeItem(1) );
     if ( m_showTypeOfVehicle[Unknown] )
 	selected->addItem( available->takeItem(0) );
-
+// regexp=0 wildcard=1 plain=2
+    m_uiFilter.filterPatternTarget->setCurrentIndex( indexFromPatternSyntax(m_filterPatternTarget) );
     m_uiFilter.filterTypeTarget->setCurrentIndex( static_cast<int>(m_filterTypeTarget) );
     m_uiFilter.filterTargetList->setItems( m_filterTargetList );
 
@@ -1991,7 +1985,8 @@ bool PublicTransportSettings::readFilterConfig( const KConfigGroup& cg ) {
 	    cg.readEntry(vehicleTypeToConfigName(Ferry), true);
     m_showTypeOfVehicle[Plane] =
 	    cg.readEntry(vehicleTypeToConfigName(Plane), true);
-
+	    
+    m_filterPatternTarget = static_cast<QRegExp::PatternSyntax>(cg.readEntry("filterPatternTarget", static_cast<int>(QRegExp::FixedString)));
     m_filterTypeTarget = static_cast<FilterType>(
 	    cg.readEntry("filterTypeTarget", static_cast<int>(ShowAll)) );
     m_filterTargetList = cg.readEntry("filterTargetList", QStringList());
@@ -2026,6 +2021,7 @@ void PublicTransportSettings::writeDefaultFilterConfig( KConfigGroup cg ) {
     cg.writeEntry(vehicleTypeToConfigName(Ferry), true);
     cg.writeEntry(vehicleTypeToConfigName(Plane), true);
     
+    cg.writeEntry("filterTargetUseRegExp", false);
     cg.writeEntry("filterTypeTarget", 0);
     cg.writeEntry("filterTargetList", QStringList());
     
@@ -2141,14 +2137,21 @@ bool PublicTransportSettings::writeFilterConfig( KConfigGroup cg,
 		changed = true;
 	    }
 
+	    if (m_filterPatternTarget != patternSyntaxFromIndex(
+			    m_uiFilter.filterPatternTarget->currentIndex())) {
+		m_filterPatternTarget = patternSyntaxFromIndex(
+			m_uiFilter.filterPatternTarget->currentIndex() );
+		cg.writeEntry("filterTargetUseRegExp", static_cast<int>(m_filterPatternTarget));
+		changed = true;
+	    }
 
-	    if (m_filterTypeTarget  != (m_uiFilter.filterTypeTarget->currentIndex())) {
+	    if (m_filterTypeTarget != (m_uiFilter.filterTypeTarget->currentIndex())) {
 		m_filterTypeTarget = static_cast<FilterType>(m_uiFilter.filterTypeTarget->currentIndex());
 		cg.writeEntry("filterTypeTarget", static_cast<int>(m_filterTypeTarget));
 		changed = true;
 	    }
-
-	    if (m_filterTargetList  != m_uiFilter.filterTargetList->items()) {
+	    
+	    if (m_filterTargetList != m_uiFilter.filterTargetList->items()) {
 		m_filterTargetList = m_uiFilter.filterTargetList->items();
 		m_filterTargetList.removeDuplicates();
 		cg.writeEntry("filterTargetList", m_filterTargetList);
@@ -2184,7 +2187,9 @@ bool PublicTransportSettings::writeFilterConfig( KConfigGroup cg,
 	    cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress), showIntercityExpressTrains);
 	    cg.writeEntry(vehicleTypeToConfigName(Ferry), showFerries);
 	    cg.writeEntry(vehicleTypeToConfigName(Plane), showPlanes);
-
+	    
+	    cg.writeEntry("filterPatternTarget", static_cast<int>(patternSyntaxFromIndex(
+		    m_uiFilter.filterPatternTarget->currentIndex())));
 	    cg.writeEntry("filterTypeTarget", m_uiFilter.filterTypeTarget->currentIndex());
 	    cg.writeEntry("filterTargetList", m_uiFilter.filterTargetList->items());
 
@@ -2216,6 +2221,7 @@ bool PublicTransportSettings::writeFilterConfig( KConfigGroup cg,
 	cg.writeEntry(vehicleTypeToConfigName(Ferry), m_showTypeOfVehicle[Ferry]);
 	cg.writeEntry(vehicleTypeToConfigName(Plane), m_showTypeOfVehicle[Plane]);
 	
+	cg.writeEntry("filterPatternTarget", static_cast<int>(m_filterPatternTarget));
 	cg.writeEntry("filterTypeTarget", static_cast<int>(m_filterTypeTarget));
 	cg.writeEntry("filterTargetList", m_filterTargetList);
 	
@@ -2227,7 +2233,33 @@ bool PublicTransportSettings::writeFilterConfig( KConfigGroup cg,
     }
 }
 
-QString PublicTransportSettings::vehicleTypeToConfigName ( const VehicleType& vehicleType ) {
+bool PublicTransportSettings::isTargetFiltered( const QString& target ) const {
+    if ( m_filterPatternTarget == QRegExp::FixedString ) {
+	return ( m_filterTypeTarget == ShowMatching
+		&& !m_filterTargetList.contains(target) ) ||
+	       ( m_filterTypeTarget == HideMatching
+		&& m_filterTargetList.contains(target) );
+    } else {
+	if ( m_filterTypeTarget == ShowAll )
+	    return false;
+	else {
+	    bool matched = false;
+	    foreach ( const QString &filter, m_filterTargetList ) {
+		QRegExp rx( filter, Qt::CaseInsensitive, m_filterPatternTarget );
+		int pos = rx.indexIn( target );
+		if ( pos != -1 ) {
+		    matched = true;
+		    break;
+		}
+	    }
+
+	    return ( m_filterTypeTarget == ShowMatching && !matched ) ||
+		   ( m_filterTypeTarget == HideMatching && matched );
+	}
+    }
+}
+
+QString PublicTransportSettings::vehicleTypeToConfigName( const VehicleType& vehicleType ) {
     switch ( vehicleType )
     {
 	case Unknown:
