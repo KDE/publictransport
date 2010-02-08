@@ -15,9 +15,12 @@
 <url>http://www.fahrplaner.de/</url>
 <shortUrl>www.fahrplaner.de</shortUrl>
 <!-- <credit>Weser-Ems Busverkehr GmbH</credit> -->
+<fallbackCharset>latin1</fallbackCharset>
 
 <rawUrls>
-    <departures><![CDATA[http://www.fahrplaner.de/hafas/stboard.exe/dn?ld=web&L=vbn&input={stop}&boardType={dataType}&time={time}&showResultPopup=popup&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>
+    <departures><![CDATA[http://www.fahrplaner.de/hafas/stboard.exe/dn?ld=web&L=vbn&input={stop}!&boardType={dataType}&time={time}&showResultPopup=popup&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>
+
+    <stopSuggestions><![CDATA[http://www.fahrplaner.de/hafas/ajax-getstop.exe/dn?REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G={stop}]]></stopSuggestions>
 </rawUrls>
 
 <regExps>
@@ -30,9 +33,10 @@
 
     <possibleStops>
 	<item>
-	    <regExpRange><![CDATA[(?:<th>Haltestelle:</th>\s*<td>\s*<select name="[^"]*">\s*)(.*)(?:\s*</select>)]]></regExpRange>
-	    <regExp><![CDATA[(?:<option value="[^"]+#)([0-9]+)(?:">)([^<]*)(?:</option>)]]></regExp>
-	    <infos><info>StopID</info> <info>StopName</info></infos>
+	    <regExpRange><![CDATA[]]></regExpRange>
+	    <regExp><![CDATA[\{"value":"([^"]*)","id":"[^"]*@L=([0-9]+)@[^"]*"[^\}]*"weight":"(\d+)"[^\}]*\}]]></regExp>
+	    <infos><info>StopName</info> <info>StopID</info> <info>StopWeight</info></infos>
+<!-- 	    \{"value":"([^"]*)","id":"[^"]*@L=([0-9]+)@[^"]*"[^\}]*"weight":"(\d+)"[^\}]*\} -->
 	</item>
     </possibleStops>
 </regExps>

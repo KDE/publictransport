@@ -328,6 +328,7 @@ KIO::TransferJob* TimetableAccessor::requestStopSuggestions( const QString &sour
 	m_jobInfos.insert( job, QVariantList() << static_cast<int>(ParseForStopSuggestions)
 	    << sourceName<< city << stop << (QUrl)url  ); // TODO list ordering... replace by a hash?
 	m_document[sourceName] = "";
+// 	kDebug() << url;
 	
 	connect( job, SIGNAL(data(KIO::Job*,QByteArray)),
 		 this, SLOT(dataReceived(KIO::Job*,QByteArray)) );

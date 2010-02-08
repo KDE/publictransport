@@ -236,7 +236,7 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 	QString stopID;
 	int stopWeight = -1;
 	
-	if ( stopName == "" )
+	if ( stopName.isEmpty() )
 	    continue;
 	
 	if ( timetableData.values().contains(StopID) )

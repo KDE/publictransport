@@ -76,7 +76,7 @@ function parseTimetable( html ) {
 	    continue; // Too less columns
 
 	// Parse time column
-	var time = helper.matchTime( columns[0], "h.mm" );
+	var time = helper.matchTime( columns[0], "h:mm" );
 	if ( time.length != 2 )
 	    continue; // Unexpected string in time column
 

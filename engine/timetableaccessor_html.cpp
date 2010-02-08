@@ -534,21 +534,32 @@ bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray &docume
 	return false;
     }
 
-    QString doc = decodeHtml( document );
+    QString doc = decodeHtml( document, m_info.fallbackCharset() );
     kDebug() << "Parsing for a list of possible stop names...";
 
     bool matched = false;
     int pos = 0;
     for( int i = 0; i < m_info.regExpSearchPossibleStopsRanges().count(); ++i ) {
-	QRegExp rxRange(m_info.regExpSearchPossibleStopsRanges()[i], Qt::CaseInsensitive);
-	rxRange.setMinimal( true );
-	if ( rxRange.indexIn(doc) == -1 || !rxRange.isValid() )
-	    continue;
+	QString possibleStopRange;
+	if ( m_info.regExpSearchPossibleStopsRanges()[i].isEmpty() ) {
+	    QRegExp rxRange(m_info.regExpSearchPossibleStopsRanges()[i], Qt::CaseInsensitive);
+	    rxRange.setMinimal( true );
+	    if ( rxRange.indexIn(doc) == -1 || !rxRange.isValid() )
+		continue;
+	    possibleStopRange = rxRange.cap(1);
+	} else {
+	    kDebug() << "Empty reg exp for stop ranges, using full document.";
+	    possibleStopRange = doc;
+	}
 
-	QString possibleStopRange = rxRange.cap(1);
+	if ( possibleStopRange.isEmpty() ) {
+	    kDebug() << "No stop range matched, using full document.";
+	    possibleStopRange = doc;
+	}
+	
 	matched = true;
-	//     qDebug() << "TimetableAccessorHtml::parseDocumentPossibleStops" << "Possible stop range = " << possibleStopRange;
-
+// 	kDebug() << "Possible stop range = " << possibleStopRange;
+	
 	const QRegExp rx = m_info.searchPossibleStops()[i].regExp();
 	while ( (pos = rx.indexIn(possibleStopRange, pos)) != -1 ) {
 	    if (!rx.isValid()) {
@@ -561,15 +572,20 @@ bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray &docume
 		return false;
 	    else {
 		QString sStopName, sStopID;
+		int stopWeight = -1;
 		if ( infos.contains(StopName) ) {
-		    sStopName = rx.cap( infos.indexOf( StopName ) + 1 );
+		    sStopName = rx.cap( infos.indexOf(StopName) + 1 );
 		    sStopName = TimetableAccessorHtml::decodeHtmlEntities( sStopName );
 		}
 		if ( infos.contains(StopID) )
-		    sStopID = rx.cap( infos.indexOf( StopID ) + 1 );
+		    sStopID = rx.cap( infos.indexOf(StopID) + 1 );
+		if ( infos.contains(StopWeight) )
+		    stopWeight = rx.cap( infos.indexOf(StopWeight) + 1 ).toInt();
 
 		stops->append( sStopName );
 		stopToStopId->insert( sStopName, sStopID );
+		if ( stopWeight != -1 )
+		    stopToStopWeight->insert( sStopName, stopWeight );
 	    }
 	    pos += rx.matchedLength();
 	} // while ( (pos = rx.indexIn(document, pos)) != -1 ) {

@@ -82,6 +82,13 @@ class Helper : public QObject {
 	    if ( rx.indexIn(str) != -1 ) {
 		QTime time = QTime::fromString( rx.cap(), format );
 		ret << time.hour() << time.minute();
+	    } else if ( format != "hh:mm" ) {
+		// Try default format if the one specified doesn't work
+		QRegExp rx2( "\\d{1,2}:\\d{2}" );
+		if ( rx2.indexIn(str) != -1 ) {
+		    QTime time = QTime::fromString( rx2.cap(), "hh:mm" );
+		    ret << time.hour() << time.minute();
+		}
 	    }
 	    return ret;
 	};
