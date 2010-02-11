@@ -297,41 +297,34 @@ QStringList TimetableAccessor::featuresLocalized() const {
     return featuresl10n;
 }
 
-KIO::TransferJob *TimetableAccessor::requestDepartures( const QString &sourceName,
+KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sourceName,
 		const QString &city, const QString &stop, int maxDeps,
 		const QDateTime &dateTime, const QString &dataType,
 		bool useDifferentUrl ) {
     KUrl url = getUrl( city, stop, maxDeps, dateTime, dataType, useDifferentUrl );
     kDebug() << url;
     
-    KIO::TransferJob *job = KIO::get( url, KIO::NoReload, KIO::HideProgressInfo );
+    KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
     int parseType = maxDeps == -1 ? static_cast<int>(ParseForStopSuggestions)
 	    : static_cast<int>(ParseForDeparturesArrivals);
     m_jobInfos.insert( job, QVariantList() << parseType
 	<< sourceName << city << stop << maxDeps << dateTime << dataType
 	<< useDifferentUrl << (QUrl)url );
-    m_document[sourceName] = "";
 
-    connect( job, SIGNAL(data(KIO::Job*,QByteArray)),
-	     this, SLOT(dataReceived(KIO::Job*,QByteArray)) );
     connect( job, SIGNAL(finished(KJob*)), this, SLOT(finished(KJob*)) );
 
     return job;
 }
 
-KIO::TransferJob* TimetableAccessor::requestStopSuggestions( const QString &sourceName,
+KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString &sourceName,
 							     const QString &city,
 							     const QString &stop ) {
     if ( hasSpecialUrlForStopSuggestions() ) {
 	KUrl url = getStopSuggestionsUrl( city, stop );
-	KIO::TransferJob *job = KIO::get( url, KIO::NoReload, KIO::HideProgressInfo );
+	KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
 	m_jobInfos.insert( job, QVariantList() << static_cast<int>(ParseForStopSuggestions)
 	    << sourceName<< city << stop << (QUrl)url  ); // TODO list ordering... replace by a hash?
-	m_document[sourceName] = "";
-// 	kDebug() << url;
 	
-	connect( job, SIGNAL(data(KIO::Job*,QByteArray)),
-		 this, SLOT(dataReceived(KIO::Job*,QByteArray)) );
 	connect( job, SIGNAL(finished(KJob*)), this, SLOT(finished(KJob*)) );
 	
 	return job;
@@ -340,16 +333,15 @@ KIO::TransferJob* TimetableAccessor::requestStopSuggestions( const QString &sour
 				  QDateTime::currentDateTime() );
 }
 
-KIO::TransferJob *TimetableAccessor::requestJourneys( const QString &sourceName,
+KIO::StoredTransferJob *TimetableAccessor::requestJourneys( const QString &sourceName,
 		const QString &city, const QString &startStopName,
 		const QString &targetStopName, int maxDeps,
 		const QDateTime &dateTime, const QString &dataType,
 		bool useDifferentUrl ) {
     // Creating a kioslave
-    m_document[ sourceName ] = "";
     KUrl url = getJourneyUrl( city, startStopName, targetStopName, maxDeps,
 			      dateTime, dataType, useDifferentUrl );
-    KIO::TransferJob *job = requestJourneys( url );
+    KIO::StoredTransferJob *job = requestJourneys( url );
     m_jobInfos.insert( job, QVariantList() << static_cast<int>(ParseForJourneys)
 	    << sourceName << city << startStopName << maxDeps << dateTime
 	    << dataType << useDifferentUrl << (QUrl)url << targetStopName << 0 );
@@ -357,28 +349,20 @@ KIO::TransferJob *TimetableAccessor::requestJourneys( const QString &sourceName,
     return job;
 }
 
-KIO::TransferJob* TimetableAccessor::requestJourneys( const KUrl& url ) {
+KIO::StoredTransferJob* TimetableAccessor::requestJourneys( const KUrl& url ) {
     kDebug() << url;
 
-    KIO::TransferJob *job = KIO::get( url, KIO::NoReload, KIO::HideProgressInfo );
-    
-    connect( job, SIGNAL(data(KIO::Job*,QByteArray)),
-	     this, SLOT(dataReceived(KIO::Job*,QByteArray)) );
+    KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
     connect( job, SIGNAL(finished(KJob*)), this, SLOT(finished(KJob*)) );
     
     return job;
 }
 
-void TimetableAccessor::dataReceived( KIO::Job *job, const QByteArray& data ) {
-    QList<QVariant> jobInfo = m_jobInfos.value( job );
-    QString sourceName = jobInfo.at(1).toString();
-    
-    m_document[ sourceName ] += data;
-}
-
 void TimetableAccessor::finished( KJob* job ) {
     QList<QVariant> jobInfo = m_jobInfos.value( job );
     m_jobInfos.remove( job );
+    KIO::StoredTransferJob *storedJob = static_cast< KIO::StoredTransferJob* >( job );
+    QByteArray document = storedJob->data();
     
     QList< PublicTransportInfo* > dataList;
     GlobalTimetableInfo globalInfo;
@@ -389,7 +373,6 @@ void TimetableAccessor::finished( KJob* job ) {
     kDebug() << "FINISHED:" << parseDocumentMode;
     
     QString sourceName = jobInfo.at(1).toString();
-    QByteArray document = m_document[ sourceName ];
     QString city = jobInfo.at(2).toString();
     QString stop = jobInfo.at(3).toString();
     if ( parseDocumentMode == ParseForStopSuggestions ) {
@@ -469,7 +452,7 @@ void TimetableAccessor::finished( KJob* job ) {
 	    if ( !sNextUrl.isNull() && !sNextUrl.isEmpty() ) {
 		kDebug() << "\n\n     REQUEST PARSED URL:   " << sNextUrl << "\n\n";
 		++roundTrips;
-		KIO::TransferJob *job = requestJourneys( KUrl(sNextUrl) );
+		KIO::StoredTransferJob *job = requestJourneys( KUrl(sNextUrl) );
 		m_jobInfos.insert( job, QList<QVariant>() << static_cast<int>(ParseForJourneys)
 		    << sourceName << city << stop << maxDeps << dateTime << dataType
 		    << usedDifferentUrl << (QUrl)url << targetStop << roundTrips );

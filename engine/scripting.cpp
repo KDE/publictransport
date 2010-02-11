@@ -19,24 +19,21 @@
 
 #include "scripting.h"
 
-void TimetableData::set( const QString& sTimetableInformation, const QVariant& value ) {
-    TimetableInformation info =
-	    TimetableAccessor::timetableInformationFromString( sTimetableInformation );
-
+void TimetableData::set( TimetableInformation info, const QVariant& value ) {
     if ( info == Nothing ) {
-	kDebug() << "Unknown timetable information" << sTimetableInformation
-	<< "with value" << (value.isNull() ? "NULL" : value.toString());
+	kDebug() << "Unknown timetable information" << info
+		 << "with value" << (value.isNull() ? "NULL" : value.toString());
     } else if ( value.isNull() ) {
 	kDebug() << "Value is NULL for" << info;
     } else {
 	if ( value.isValid() && value.canConvert(QVariant::String)
-	    && (info == StopName || info == Target
-	    || info == StartStopName || info == TargetStopName
-	    || info == Operator || info == TransportLine
-	    || info == Platform || info == DelayReason
-	    || info == Status || info == Pricing) ) {
+		&& (info == StopName || info == Target
+		|| info == StartStopName || info == TargetStopName
+		|| info == Operator || info == TransportLine
+		|| info == Platform || info == DelayReason
+		|| info == Status || info == Pricing) ) {
 	    m_values[ info ] = TimetableAccessorHtml::decodeHtmlEntities(
-		    value.toString() );
+	    value.toString() );
 	} else
 	    m_values[ info ] = value;
     }

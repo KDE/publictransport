@@ -139,7 +139,34 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
     
     QList<TimetableData> data = m_resultObject->data();
     int count = 0;
+    QDate curDate;
+    QTime lastTime;
     foreach ( TimetableData timetableData, data ) {
+	QDate date = timetableData.value( DepartureDate ).toDate();
+	QTime departureTime = QTime( timetableData.value(DepartureHour).toInt(),
+					timetableData.value(DepartureMinute).toInt() );
+	if ( !date.isValid() ) {
+	    if ( curDate.isNull() ) {
+		// First departure
+		if ( QTime::currentTime().hour() < 3 && departureTime.hour() > 21 )
+		    date = QDate::currentDate().addDays( -1 );
+		else if ( QTime::currentTime().hour() > 21 && departureTime.hour() < 3 )
+		    date = QDate::currentDate().addDays( 1 );
+		else
+		    date = QDate::currentDate();
+	    } else if ( lastTime.secsTo(departureTime) < -5 * 60 ) {
+		// Time too much ealier than last time, estimate it's tomorrow
+		date = curDate.addDays( 1 );
+	    } else {
+		date = curDate;
+	    }
+
+	    timetableData.set( DepartureDate, date );
+	}
+	
+	curDate = date;
+	lastTime = departureTime;
+	
 	PublicTransportInfo *info;
 	if ( parseDocumentMode == ParseForJourneys )
 	    info = new JourneyInfo( timetableData.values() );

@@ -114,9 +114,10 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
 		&& !m_data.contains(DepartureDate) ) {
 	QTime departureTime = QTime( m_data[DepartureHour].toInt(),
 				     m_data[DepartureMinute].toInt() );
-	if ( departureTime < QTime::currentTime().addSecs(-5 * 60) )
+	if ( departureTime < QTime::currentTime().addSecs(-5 * 60) ) {
+	    // This could produce wrong dates (better give DepartureDate in scripts)
 	    m_data[ DepartureDate ] = QDate::currentDate().addDays( 1 );
-	else
+	} else
 	    m_data[ DepartureDate ] = QDate::currentDate();
 	m_data.insert( DepartureYear, m_data[DepartureDate].toDate().year() );
     }

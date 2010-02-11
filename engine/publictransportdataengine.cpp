@@ -29,7 +29,6 @@
 #include "timetableaccessor.h"
 
 
-
 PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList& args)
 			    : Plasma::DataEngine(parent, args),
 			    m_fileSystemWatcher(0) {
@@ -167,7 +166,42 @@ bool PublicTransportEngine::sourceRequestEvent( const QString &name ) {
     return updateSourceEvent( name );
 }
 
-bool PublicTransportEngine::updateServiceProviderSource( const QString &name ) {
+bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString& name ) {
+    if ( !updateServiceProviderSource() )
+	return false;
+    
+    QStringList s = name.split( " ", QString::SkipEmptyParts );
+    if ( s.count() < 2 )
+	return false;
+
+    
+    QString countryCode = s[ 1 ];
+    QHash<QString, QVariant> locations =
+	    m_dataSources[ sourceTypeKeyword(Locations) ].toHash();
+    QHash<QString, QVariant> locationCountry = locations[ countryCode.toLower() ].toHash();
+    QString defaultAccessor = locationCountry[ "defaultAccessor" ].toString();
+    if ( defaultAccessor.isEmpty() )
+	return false;
+
+//     QString fileName = KGlobal::dirs()->findResource( "data",
+// 	    "plasma_engine_publictransport/accessorInfos/" + defaultAccessor + ".xml" );
+	    
+    kDebug() << "Check accessor" << defaultAccessor;
+    const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( defaultAccessor );
+    if ( accessor ) {
+	setData( name, serviceProviderInfo(accessor) );
+	delete accessor;
+    } else {
+	if ( !m_errornousAccessors.contains(defaultAccessor) )
+	    m_errornousAccessors << defaultAccessor;
+	return false;
+    }
+
+    return true;
+}
+
+bool PublicTransportEngine::updateServiceProviderSource() {
+    const QString name = sourceTypeKeyword( ServiceProviders );
     QHash<QString, QVariant> dataSource;
     if ( m_dataSources.contains(name) ) {
 // 	kDebug() << "Data source" << name << "is up to date";
@@ -198,10 +232,8 @@ bool PublicTransportEngine::updateServiceProviderSource( const QString &name ) {
 		dataSource.insert( accessor->timetableAccessorInfo().name(),
 				   serviceProviderInfo(accessor) );
 		loadedAccessors << s;
-
 		delete accessor;
-	    }
-	    else {
+	    } else {
 		m_errornousAccessors << s;
 	    }
 	}
@@ -411,11 +443,13 @@ void PublicTransportEngine::accessorInfoDirChanged( QString path ) {
     if ( m_dataSources.keys().contains(serviceProvidersKey) )
 	m_dataSources.remove( serviceProvidersKey );
     
-    updateServiceProviderSource( serviceProvidersKey );
+    updateServiceProviderSource();
 }
 
 const QString PublicTransportEngine::sourceTypeKeyword( SourceType sourceType ) {
     switch ( sourceType ) {
+	case ServiceProvider:
+	    return "ServiceProvider";
 	case ServiceProviders:
 	    return "ServiceProviders";
 	case ErrornousServiceProviders:
@@ -442,7 +476,9 @@ const QString PublicTransportEngine::sourceTypeKeyword( SourceType sourceType ) 
 
 PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
 		const QString& sourceName ) const {
-    if ( sourceName.compare(sourceTypeKeyword(ServiceProviders), Qt::CaseInsensitive) == 0 )
+    if ( sourceName.startsWith(sourceTypeKeyword(ServiceProvider) + " ", Qt::CaseInsensitive) )
+	return ServiceProvider;
+    else if ( sourceName.compare(sourceTypeKeyword(ServiceProviders), Qt::CaseInsensitive) == 0 )
 	return ServiceProviders;
     else if ( sourceName.compare(sourceTypeKeyword(ErrornousServiceProviders),
 				 Qt::CaseInsensitive) == 0 )
@@ -471,8 +507,11 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name ) {
     bool ret = true;
     SourceType sourceType = sourceTypeFromName( name );
     switch ( sourceType ) {
+	case ServiceProvider:
+	    ret = updateServiceProviderForCountrySource( name );
+	    break;
 	case ServiceProviders:
-	    ret = updateServiceProviderSource( name );
+	    ret = updateServiceProviderSource();
 	    break;
 	case ErrornousServiceProviders:
 	    updateErrornousServiceProviderSource( name );

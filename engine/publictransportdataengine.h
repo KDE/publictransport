@@ -1,5 +1,5 @@
 /*
- *   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -52,12 +52,14 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	    InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName, if
 				      * the source name is invalid. */
 	    
-	    ServiceProviders, /**< The source contains infos about available 
-				 * service providers. */
-	    ErrornousServiceProviders, /**< The source contains a list of errornous
-					  * service provider accessors. */
-	    Locations, /**< The source contains information about locations
-			  * for which accessors to service providers exist. */
+	    ServiceProvider = 1, /**< The source contains infos about available
+				    * service providers for a given country. */
+	    ServiceProviders = 2, /**< The source contains infos about available
+				     * service providers. */
+	    ErrornousServiceProviders = 3, /**< The source contains a list of errornous
+				  	      * service provider accessors. */
+	    Locations = 4, /**< The source contains information about locations
+			      * for which accessors to service providers exist. */
 	    
 	    Departures = 10, /**< The source contains timetable data for departures. */
 	    Arrivals, /**< The source contains timetable data for arrivals. */
@@ -104,13 +106,14 @@ class PublicTransportEngine : public Plasma::DataEngine {
         * @param name The name of the requested data source. */
         bool sourceRequestEvent( const QString& name );
 
-        /**  This virtual function is called when an automatic update is
-	* triggered for an existing source (ie: when a valid update interval is set
+        /** This virtual function is called when an automatic update is triggered 
+        * for an existing source (ie: when a valid update interval is set
 	* when requesting a source).
 	* @param name The name of the data source to be updated. */
         bool updateSourceEvent( const QString& name );
 
-	bool updateServiceProviderSource( const QString &name );
+	bool updateServiceProviderForCountrySource( const QString &name );
+	bool updateServiceProviderSource();
 	void updateErrornousServiceProviderSource( const QString &name );
 	void updateLocationSource( const QString &name );
 	bool updateDepartureOrJourneySource( const QString &name );

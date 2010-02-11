@@ -135,7 +135,10 @@ class TimetableData : public QObject {
     public Q_SLOTS:
 	void clear() { m_values.clear(); };
 
-	void set( const QString &sTimetableInformation, const QVariant &value );
+	inline void set( const QString &sTimetableInformation, const QVariant &value ) {
+	    set( TimetableAccessor::timetableInformationFromString(sTimetableInformation),
+		 value ); };
+	void set( TimetableInformation timetableInformation, const QVariant &value );
 	
 	QHash<TimetableInformation, QVariant> values() const { return m_values; };
 	QVariant value( TimetableInformation info ) const { return m_values[info]; };

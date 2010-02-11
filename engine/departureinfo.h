@@ -76,7 +76,9 @@ class PublicTransportInfo {
 				  QTime(m_data[DepartureHour].toInt(),
 					m_data[DepartureMinute].toInt()) );
 	    } else
-		return QDateTime(); };
+		return QDateTime( QDate::currentDate(),
+				  QTime(m_data[DepartureHour].toInt(),
+					m_data[DepartureMinute].toInt()) ); };
 
 	/** Get the company that is responsible for this departure / arrival. */
 	QString operatorName() const { return m_data.contains(Operator)
