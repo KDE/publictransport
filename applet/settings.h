@@ -185,6 +185,8 @@ class PublicTransportSettings : public QObject {
     public slots:
 	/** Ok pressed in the config dialog. */
 	void configAccepted();
+	bool getStopFromGeolocation( bool setInGui = false );
+	void gelocateClicked() { getStopFromGeolocation( true ); };
 	/** The selected service provider in the config dialog's combobox has changed. */
 	void serviceProviderChanged( int index );
 	/** The stop name in the corresponding input field in the config dialog has changed. */
@@ -203,6 +205,7 @@ class PublicTransportSettings : public QObject {
 	void clickedServiceProviderInfo();
 	void clickedAddStop();
 	void clickedRemoveStop();
+	
 	/** The data from the data engine was updated. */
 	void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data );
 
@@ -240,6 +243,8 @@ class PublicTransportSettings : public QObject {
 	
 	void exportFilterSettings();
 	void importFilterSettings();
+	
+	void setGeolocateTooltip();
 
     private:
 	void addStop( const QString &stop = QString(), bool fadeInAnimation = false );
@@ -288,6 +293,10 @@ class PublicTransportSettings : public QObject {
 		return 0;
 	    }
 	};
+	void processOsmData( const QString &sourceName, const Plasma::DataEngine::Data &data );
+	void setStopValues( const QString &serviceProviderId,
+			    const QString &country, const QString &city,
+			    const QString &stop = QString(), bool setInGui = false );
 	
 	
 	PublicTransport *m_applet;
@@ -347,6 +356,8 @@ class PublicTransportSettings : public QObject {
 
 	bool m_useSeperateCityValue; // Whether or not the current service provider uses a seperate city value
 	bool m_onlyUseCitiesInList; // Whether or not the city name input is restricted to the given list of city names
+
+	QStringList m_stopCityCombinations;
 };
 
 #endif // SETTINGS_HEADER

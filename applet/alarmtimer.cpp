@@ -47,5 +47,5 @@ QTimer* AlarmTimer::setupSingleShotTimer( int msecs, QPersistentModelIndex data,
 void AlarmTimer::timeoutReceived() {
     emit timeout( m_data );
     
-    deleteLater(); // Delete timer once finished
+//     deleteLater(); // Delete timer once finished, update: Now deleted by PublicTransport
 }

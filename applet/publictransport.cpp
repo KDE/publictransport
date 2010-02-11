@@ -777,7 +777,7 @@ void PublicTransport::processDepartureList( const QString &sourceName,
 				     dataMap["routeStops"].toStringList(),
 				     routeTimes,
 				     dataMap["routeExactStops"].toInt() );
-
+				     
 	// Only add departures / arrivals that are in the future
 	if ( isTimeShown(departureInfo.predictedDeparture()) )
 	    m_departureInfos[ strippedSourceName ].append( departureInfo );
@@ -1217,8 +1217,9 @@ DepartureInfo PublicTransport::getFirstNotFilteredDeparture() {
 AlarmTimer* PublicTransport::getNextAlarm() {
     for ( int row = 0; row < m_model->rowCount(); ++row ) {
 	QStandardItem *itemDeparture = m_model->item( row, 2 );
-	AlarmTimer *alarmTimer = (AlarmTimer*)itemDeparture->data( AlarmTimerRole ).value<void*>();
-	if ( alarmTimer != NULL && alarmTimer->timer()->isActive() )
+	AlarmTimer *alarmTimer = static_cast< AlarmTimer* >(
+		itemDeparture->data(AlarmTimerRole).value<void*>() );
+	if ( alarmTimer && alarmTimer->timer()->isActive() )
 	    return alarmTimer;
     }
 
@@ -2924,7 +2925,7 @@ QAction* PublicTransport::updatedAction ( const QString& actionName ) {
     return a;
 }
 
-void PublicTransport::showHeaderContextMenu ( const QPoint& position ) {
+void PublicTransport::showHeaderContextMenu( const QPoint& position ) {
     Q_UNUSED( position );
     QHeaderView *header = m_treeView->nativeWidget()->header();
     QList<QAction *> actions;
@@ -3286,7 +3287,7 @@ void PublicTransport::markAlarmRow ( const QPersistentModelIndex& modelIndex, Al
 	kDebug() << "!index.isValid(), row =" << modelIndex.row();
 	return;
     }
-
+    
     QStandardItem *itemDeparture = m_model->item( modelIndex.row(), 2 );
     if ( !itemDeparture )
 	return;
@@ -3325,14 +3326,15 @@ void PublicTransport::markAlarmRow ( const QPersistentModelIndex& modelIndex, Al
 
 void PublicTransport::removeAlarmForDeparture( int row ) {
     QStandardItem *itemDeparture = m_model->item( row, 2 );
-    AlarmTimer *alarmTimer = (AlarmTimer*)itemDeparture->data( AlarmTimerRole ).value<void*>();
+    AlarmTimer *alarmTimer = static_cast< AlarmTimer* >(
+	    itemDeparture->data(AlarmTimerRole).value<void*>() );
     if ( alarmTimer ) {
 	itemDeparture->setData( 0, AlarmTimerRole );
 	alarmTimer->timer()->stop();
 	delete alarmTimer;
-	markAlarmRow( m_clickedItemIndex, NoAlarm );
     }
     
+    markAlarmRow( m_clickedItemIndex, NoAlarm );
     createPopupIcon();
 }
 
@@ -3350,7 +3352,7 @@ void PublicTransport::setAlarmForDeparture( const QPersistentModelIndex &modelIn
     QStandardItem *itemDeparture = m_model->item( modelIndex.row(), 2 );
     markAlarmRow( modelIndex, AlarmPending );
 
-    if ( alarmTimer == NULL ) {
+    if ( !alarmTimer ) {
 	QDateTime predictedDeparture = itemDeparture->data( SortRole ).toDateTime();
 	int secsTo = QDateTime::currentDateTime().secsTo(
 		predictedDeparture.addSecs(-m_settings->alarmTime() * 60) );
@@ -3421,11 +3423,17 @@ void PublicTransport::showAlarmMessage( const QPersistentModelIndex &modelIndex 
     while( topLevelIndex.parent().isValid() )
 	topLevelIndex = topLevelIndex.parent();
     markAlarmRow( topLevelIndex, AlarmFired );
-
+    
     int row = topLevelIndex.row();
+    QStandardItem *itemDeparture = m_model->item( row, 2 );
+    AlarmTimer *alarmTimer = static_cast< AlarmTimer* >(
+	    itemDeparture->data(AlarmTimerRole).value<void*>() );    
+    itemDeparture->setData( 0, AlarmTimerRole );
+    delete alarmTimer;
+
     QString sLine = m_model->item( row, 0 )->text();
     QString sTarget = m_model->item( row, 1 )->text();
-    QDateTime predictedDeparture = m_model->item( row, 2 )->data( SortRole ).toDateTime();
+    QDateTime predictedDeparture = itemDeparture->data( SortRole ).toDateTime();
     int minsToDeparture = qCeil( (float)QDateTime::currentDateTime().secsTo(predictedDeparture) / 60.0f );
     VehicleType vehicleType = static_cast<VehicleType>(
 	    m_model->item(row, 2)->data(VehicleTypeRole).toInt() );

@@ -55,6 +55,7 @@
     #include <QPropertyAnimation>
     #include <QGraphicsEffect>
 #endif
+#include <QTimer>
 
 
 PublicTransportSettings::PublicTransportSettings( PublicTransport *applet )
@@ -66,13 +67,85 @@ PublicTransportSettings::PublicTransportSettings( PublicTransport *applet )
 	     this, SLOT(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)) );
 }
 
-void PublicTransportSettings::dataUpdated( const QString& sourceName,
-					   const Plasma::DataEngine::Data& data ) {
-    if ( data.isEmpty() )
+void PublicTransportSettings::processOsmData( const QString& sourceName,
+					      const Plasma::DataEngine::Data& data ) {
+    m_applet->dataEngine("openstreetmap")->disconnectSource( sourceName, this );
+    m_configDialog->setEnabled( true );
+    
+    kDebug() << data;
+    QStringList stops = data[ "names" ].toStringList();
+
+    // Get data from the geolocation data engine
+    Plasma::DataEngine::Data dataGeo =
+	    m_applet->dataEngine("geolocation")->query("location");
+    QString country = dataGeo["country code"].toString().toLower();
+    QString city = dataGeo["city"].toString();
+    int accuracy = dataGeo["accuracy"].toInt();
+    QString stop;
+
+    // Check if a service provider is available for the given country
+    Plasma::DataEngine::Data dataProvider =
+	    m_applet->dataEngine("publictransport")->query("ServiceProvider " + country);
+    if ( dataProvider.isEmpty() )
 	return;
 
-    if ( sourceName.contains(QRegExp("^http")) ) {
-	if ( m_modelServiceProvider == NULL )
+    if ( !stops.isEmpty() ) {
+	if ( stops.count() > 1 ) {
+	    KDialog *dlg = new KDialog( m_configDialog );
+	    bool chk;
+	    KMessageBox::createKMessageBox( dlg, QMessageBox::Question,
+					    accuracy > 10000
+					    ? i18n("These stops may be near you, "
+					    "but your position couldn't be determined "
+					    "exactly. Choose one of them or cancel.")
+					    : i18n("These stops have been found "
+					    "to be near you. Choose one of them "
+					    "or cancel."),
+					    stops, QString(), &chk,
+					    KMessageBox::Notify | KMessageBox::NoExec );
+
+	    QListView *list = dlg->findChild< QListView* >();
+	    if ( !list ) {
+		kDebug() << "No QListView found in KMessageBox";
+		return;
+	    }
+	    list->setSelectionMode( QAbstractItemView::SingleSelection );
+
+	    int test;
+	    if ( (test = dlg->exec()) == QDialog::Rejected ) {
+		delete dlg;
+		return;
+	    }
+
+	    int stopIndex = list->currentIndex().row();
+	    delete dlg;
+
+	    if ( stopIndex == -1 ) {
+		kDebug() << "No stop selected";
+		return;
+	    }
+
+	    stop = stops[ stopIndex ];
+	} else {
+	    stop = stops.first();
+	}
+
+	kDebug() << stop;
+    }
+
+    // Set values in the dialog (the GUI) or only in the current settings (member variables)
+    setStopValues( dataProvider["id"].toString(), country, city, stop, true );
+}
+
+void PublicTransportSettings::dataUpdated( const QString& sourceName,
+					   const Plasma::DataEngine::Data& data ) {
+        if ( data.isEmpty() )
+	return;
+
+    if ( sourceName.contains("publictransportstops") ) {
+	processOsmData( sourceName, data );
+    } else if ( sourceName.contains(QRegExp("^http")) ) {
+	if ( !m_modelServiceProvider )
 	    return;
 
 	QPixmap favicon(QPixmap::fromImage(data["Icon"].value<QImage>()));
@@ -233,21 +306,140 @@ QStringList PublicTransportSettings::getAdditionalStops() {
     return ret;
 }
 
+bool PublicTransportSettings::getStopFromGeolocation( bool setInGui ) {
+    // Get data from the geolocation data engine
+    Plasma::DataEngine::Data dataGeo =
+	    m_applet->dataEngine("geolocation")->query("location");
+    if ( dataGeo.isEmpty() ) {
+	if ( setInGui )
+	    QTimer::singleShot( 100, this, SLOT(gelocateClicked()) );
+	else
+	    QTimer::singleShot( 100, this, SLOT(getStopFromGeolocation()) );
+	return true;
+    }
+    QString country = dataGeo["country code"].toString().toLower();
+    QString city = dataGeo["city"].toString();
+    qreal latitude = dataGeo["latitude"].toReal();
+    qreal longitude = dataGeo["longitude"].toReal();
+    int accuracy = dataGeo["accuracy"].toInt();
+    
+    // Check if a service provider is available for the given country
+    Plasma::DataEngine::Data dataProvider =
+	    m_applet->dataEngine("publictransport")->query("ServiceProvider " + country);
+    if ( dataProvider.isEmpty() ) {
+	kDebug() << "No service provider found for country" << country;
+	return false;
+    }
+
+    // Get stop list near the user from the openStreetMap data engine
+    QString stop;
+    Plasma::DataEngine *osmEngine = m_applet->dataEngine( "openstreetmap" );
+    if ( osmEngine->isValid() ) {
+	double areaSize = accuracy > 10000 ? 1.0 : 0.02;
+	QString sourceName = QString( "%1,%2 %3 publictransportstops" )
+		.arg( latitude ).arg( longitude ).arg( areaSize );
+	Plasma::DataEngine::Data dataOsm = osmEngine->query( sourceName );
+	
+	if ( dataOsm.isEmpty() ) {
+	    kDebug() << "Connect to OSM data engine";
+	    m_configDialog->setEnabled( false ); // TODO: Add some waiting info
+	    osmEngine->connectSource( sourceName, this );
+	} else {
+	    kDebug() << "Got data from OSM data engine" << dataOsm;
+	    processOsmData( sourceName, dataOsm );
+	}
+	return true;
+    }
+
+    // Set values in the dialog (the GUI) or only in the current settings (member variables)
+    setStopValues( dataProvider["id"].toString(), country, city, stop, setInGui );
+
+    return true;
+}
+
+void PublicTransportSettings::setStopValues( const QString &serviceProviderId,
+					     const QString &country,
+					     const QString &city,
+					     const QString &stop, bool setInGui ) {
+    if ( setInGui ) {
+// 	item->setData( country, LocationCodeRole );
+	int curLocationIndex = m_ui.location->findData( country, LocationCodeRole );
+	if ( curLocationIndex != -1 )
+	    m_ui.location->setCurrentIndex( curLocationIndex );
+	else {
+	    kDebug() << "Country" << country << "not found";
+	    return;
+	}
+
+	int serviceProviderIndex = -1;
+	for ( int i = 0; i < m_ui.serviceProvider->count(); ++i ) {
+	    if ( m_ui.serviceProvider->itemData(i, ServiceProviderDataRole).toHash()["id"].toString() == serviceProviderId ) {
+		serviceProviderIndex = i;
+		break;
+	    }
+	}
+	if ( serviceProviderIndex != -1 ) {
+	    if ( m_ui.serviceProvider->currentIndex() != serviceProviderIndex ) {
+		m_ui.serviceProvider->setCurrentIndex( serviceProviderIndex );
+		serviceProviderChanged( serviceProviderIndex );
+	    }
+	} else {
+	    kDebug() << "Service provider not found" << serviceProviderId;
+	    return;
+	}
+
+	if ( m_useSeperateCityValue )
+	    m_ui.city->setCurrentItem( city );
+
+	if ( stop.isNull() )
+	    m_ui.stop->setText( city );
+	else
+	    m_ui.stop->setText( stop );
+
+	// Load completions (the filled in stop name could be invalid..)
+	if ( !stop.contains(city) ) {
+	    m_stopCityCombinations << stop + " " + city;
+	    m_stopCityCombinations << stop + ", " + city;
+	    m_stopCityCombinations << city + " " + stop;
+	    kDebug() << m_stopCityCombinations;
+	}
+	m_ui.stop->setFocus();
+	stopNameChanged( m_ui.stop->text() );
+    } else {
+	m_location = country;
+	m_serviceProvider = serviceProviderId;
+	if ( m_useSeperateCityValue )
+	    m_city = city;
+
+	QString stopToBeUsed = stop.isNull() ? city : stop;
+	if ( m_stops.isEmpty() ) {
+	    m_stops << stopToBeUsed;
+	    m_stopIDs << stopToBeUsed;
+	} else {
+	    m_stops[0] = stopToBeUsed;
+	    m_stopIDs[0] = stopToBeUsed;
+	}
+    }
+}
+
 void PublicTransportSettings::readSettings() {
     KConfigGroup cg = m_applet->config();
     m_autoUpdate = cg.readEntry("autoUpdate", true);
     m_showRemainingMinutes = cg.readEntry("showRemainingMinutes", true);
     m_showDepartureTime = cg.readEntry("showDepartureTime", true);
     m_displayTimeBold = cg.readEntry("displayTimeBold", true);
+    
+    bool hasConfig = cg.hasKey("serviceProvider");
     m_serviceProvider = cg.readEntry("serviceProvider", "de_db"); // "de_db" is "Germany (db.de)" ("Deutsche Bahn")
-    if ( cg.hasKey("location") )
-	m_location = cg.readEntry("location", "showAll");
-    else
-	m_location = KGlobal::locale()->country();
+    m_location = cg.readEntry("location", KGlobal::locale()->country());
     m_city = cg.readEntry("city", "");
-    m_currentStopIndex = cg.readEntry("currentStopIndex", -1);
     m_stops = cg.readEntry("stop", QStringList());
     m_stopIDs = cg.readEntry("stopID", QStringList());
+    if ( !hasConfig ) {
+	// No config, applet just added
+	getStopFromGeolocation();
+    }
+    m_currentStopIndex = cg.readEntry("currentStopIndex", -1);
     m_timeOffsetOfFirstDeparture = cg.readEntry("timeOffsetOfFirstDeparture", 0);
     m_timeOfFirstDepartureCustom = QTime::fromString(
 	    cg.readEntry("timeOfFirstDepartureCustom", "12:00"), "hh:mm" );
@@ -506,6 +698,15 @@ void PublicTransportSettings::testResult( DataSourceTester::TestResult result,
 	    KLineEdit *stop = NULL;
 	    if ( m_ui.stop->hasFocus() ) {
 		stop = m_ui.stop;
+
+		if ( !m_stopCityCombinations.isEmpty() ) {
+		    foreach ( QString stopCityCombination, m_stopCityCombinations ) {
+			if ( stops.contains(stopCityCombination, Qt::CaseInsensitive) ) {
+			    stop->setText( stopCityCombination );
+			    break;
+			}
+		    }
+		}
 	    } else {
 		foreach ( QWidgetList stopWidgets, m_additionalStopWidgets ) {
 		    KLineEdit *additionalStop = NULL;
@@ -520,6 +721,9 @@ void PublicTransportSettings::testResult( DataSourceTester::TestResult result,
 			break;
 		}
 	    }
+	    
+	    if ( !m_stopCityCombinations.isEmpty() )
+		m_stopCityCombinations.clear();
 	    
 	    if ( stop ) { // One stop edit line has focus
 		KCompletion *comp = stop->completionObject();
@@ -652,6 +856,7 @@ void PublicTransportSettings::serviceProviderChanged( int index ) {
     } else
 	m_ui.city->setEditText( "" );
 
+    m_ui.stop->setFocus();
     stopNameChanged( m_ui.stop->text() );
 }
 
@@ -799,6 +1004,7 @@ void PublicTransportSettings::createConfigurationInterface( KConfigDialog* paren
     connect( parent, SIGNAL(finished()), this, SLOT(configDialogFinished()));
     connect( parent, SIGNAL(applyClicked()), this, SLOT(configAccepted()) );
     connect( parent, SIGNAL(okClicked()), this, SLOT(configAccepted()) );
+    connect( m_ui.geolocate, SIGNAL(clicked()), this, SLOT(gelocateClicked()) );
     connect( m_ui.location, SIGNAL(currentIndexChanged(const QString&)),
 	     this, SLOT(locationChanged(const QString&)) );
     connect( m_ui.serviceProvider, SIGNAL(currentIndexChanged(int)),
@@ -845,19 +1051,38 @@ void PublicTransportSettings::createConfigurationInterface( KConfigDialog* paren
     stopNameChanged( m_ui.stop->text() );
 }
 
+void PublicTransportSettings::setGeolocateTooltip() {
+    // Get data from the geolocation data engine
+    Plasma::DataEngine::Data dataGeo =
+	    m_applet->dataEngine("geolocation")->query("location");
+    if ( dataGeo.isEmpty() ) {
+	kDebug() << endl << endl << "NOOOOT FOUND" << endl << endl;
+	QTimer::singleShot( 500, this, SLOT(setGeolocateTooltip()) );
+    } else {
+	int accuracy = dataGeo["accuracy"].toInt();
+	kDebug() << endl << endl << "FOUND" << accuracy << endl << endl;
+	if ( accuracy > 10000 ) {
+	    m_ui.geolocate->setToolTip( i18nc("Tooltip of the 'Find Near Stops...' "
+		    "button for low accuracy of the users position",
+		    "Tries to find a stop near you. Your position can't be determined "
+		    "exactly, so this might not work correctly.") );
+	} else {
+	    m_ui.geolocate->setToolTip( i18nc("Tooltip of the 'Find Near Stops...' "
+		    "button for good/high accuracy of the users position",
+		    "Shows stops near you to choose from.") );
+	}
+    }
+}
+
 void PublicTransportSettings::setValuesOfStopSelectionConfig() {
     if ( m_stops.isEmpty() ) {
 	m_stops << m_ui.stop->text();
 	if ( m_stopIDs.isEmpty() )
 	    m_stopIDs << m_stopIDinConfig;
     }
-
     m_ui.btnAddStop->setIcon( KIcon("list-add") );
-
-    kDebug() << "ADD STOPS" << m_stops;
-    m_ui.stop->setText( m_stops.first() );
-    for ( int i = 1; i < m_stops.count(); ++i )
-	addStop( m_stops[i] );
+    m_ui.geolocate->setIcon( KIcon("tools-wizard") );
+    setGeolocateTooltip();
     
     m_ui.stop->setCompletionMode( KGlobalSettings::CompletionPopup );
     m_ui.stop->setClearButtonShown( true );
@@ -898,10 +1123,11 @@ void PublicTransportSettings::setValuesOfStopSelectionConfig() {
     QStringList uniqueCountries = m_locationData.keys();
     QStringList countries;
 
-    // Get a list of with the location of each service provider (locations can be contained multiple times)
+    // Get a list with the location of each service provider (locations can be contained multiple times)
     m_serviceProviderData = m_applet->dataEngine("publictransport")->query("ServiceProviders");
     foreach ( QString serviceProviderName, m_serviceProviderData.keys() )  {
-	QHash< QString, QVariant > serviceProviderData = m_serviceProviderData.value(serviceProviderName).toHash();
+	QHash< QString, QVariant > serviceProviderData =
+		m_serviceProviderData.value(serviceProviderName).toHash();
 	countries << serviceProviderData["country"].toString();
     }
 
@@ -993,7 +1219,7 @@ void PublicTransportSettings::setValuesOfStopSelectionConfig() {
     m_modelLocations->sort( 0 );
 
     // Get (combobox-) index of the currently selected location
-    int curLocationIndex = m_ui.location->findText(m_location);
+    int curLocationIndex = m_ui.location->findText( m_location );
     if ( curLocationIndex != -1 )
 	m_ui.location->setCurrentIndex( curLocationIndex );
 
@@ -1375,7 +1601,6 @@ void PublicTransportSettings::setValuesOfFilterConfig() {
     m_uiFilter.filterConfigurations->addItems( filterConfigGroups );
 
     QString _filterConfig = translateKey( m_filterConfiguration );
-    kDebug() << "Set current item to" << _filterConfig;
     m_uiFilter.filterConfigurations->setCurrentItem( _filterConfig );
     if ( m_filterConfigChanged ) {
 	m_uiFilter.filterConfigurations->setItemText(
@@ -1590,16 +1815,19 @@ void PublicTransportSettings::locationChanged( const QString &newLocation ) { //
 
 int PublicTransportSettings::updateServiceProviderModel( const QString &itemText ) {
     m_modelServiceProvider->clear();
-    int index = itemText.isEmpty() ? m_ui.location->currentIndex() : m_ui.location->findText( itemText );
+    int index = itemText.isEmpty()
+	    ? m_ui.location->currentIndex() : m_ui.location->findText( itemText );
 
     foreach( QString serviceProviderName, m_serviceProviderData.keys() ) {
 	QVariantHash serviceProviderData = m_serviceProviderData[serviceProviderName].toHash();
 
 	// Filter out service providers with the value of the currently selected location
-	if ( index != 0 && serviceProviderData["country"].toString().toLower() != "international" &&
-	    m_ui.location->itemData(index, LocationCodeRole).toString()
-	    .compare( serviceProviderData["country"].toString(), Qt::CaseInsensitive ) != 0 )
+	if ( index != 0 && serviceProviderData["country"].toString().toLower() != "international"
+		    && m_ui.location->itemData(index, LocationCodeRole).toString()
+		       .compare( serviceProviderData["country"].toString(),
+				 Qt::CaseInsensitive ) != 0 ) {
 	    continue;
+	}
 
 	bool isCountryWide = serviceProviderName.contains(
 	    serviceProviderData["country"].toString(), Qt::CaseInsensitive );

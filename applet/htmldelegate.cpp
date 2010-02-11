@@ -48,10 +48,12 @@ void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
 	QStringList data = index.data( TextBackgroundRole ).toStringList();
 
 	static Plasma::FrameSvg svg;
-	if ( Plasma::Theme::defaultTheme()->currentThemeHasImage("widgets/frame") )
-	    svg.setImagePath( "widgets/frame" );
-	else
-	    svg.setImagePath( "widgets/tooltip" );
+	if ( svg.imagePath().isEmpty() ) {
+	    if ( Plasma::Theme::defaultTheme()->currentThemeHasImage("widgets/frame") )
+		svg.setImagePath( "widgets/frame" );
+	    else
+		svg.setImagePath( "widgets/tooltip" );
+	}
 	svg.setElementPrefix( data.at(0) );
 	svg.resizeFrame( rect.size() );
 
@@ -276,6 +278,7 @@ void HtmlDelegate::drawDisplayWithShadow( QPainter* painter,
 	    }
 	}
     }
+    document.setPlainText( QString() ); // This is to prevent a memory leak in setHtml()
 
     // Reduce the alpha in each fade out rect using the alpha gradient
     if ( !fadeRects.isEmpty() ) {
