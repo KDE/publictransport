@@ -22,7 +22,7 @@
 
 void OsmReader::read() {
     m_data.clear();
-    
+
     while ( !atEnd() || waitOnRecoverableError() ) {
 	readNext();
 	
@@ -40,7 +40,9 @@ void OsmReader::read() {
 
 bool OsmReader::waitOnRecoverableError() {
     if ( error() == PrematureEndOfDocumentError ) {
-	emit chunkRead( this, m_data );
+	if ( !m_data.isEmpty() )
+	    emit chunkRead( this, m_data );
+	m_data.clear(); // Clear old data
 	m_loop.exec(); // Wait for more data
 	return true;
     } else

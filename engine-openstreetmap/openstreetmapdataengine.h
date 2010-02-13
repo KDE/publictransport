@@ -31,15 +31,15 @@ namespace KIO {
 class QSizeF;
 class QBuffer;
 
-// This engine searches for information from OpenStreetMap.
-// The source name is:
-//   "[longitude],[latitude] ([mapArea]) ([element] [filter]|[short-filter])".
-// For example: "53.069,8.8 theatre"
-// 		"53.069,8.8 0.1 theatre" (search in a bigger area)
-// 		"53.069,8.8 publictransportstops"
-// 		"53.069,8.8 node amenity=theatre" (custom search)
-//
-// TODO: Could use libweb from Project Silk, the base class for REST apis?
+/** @brief This engine searches for information from OpenStreetMap.
+* The source name is:
+*   "[longitude],[latitude] ([mapArea]) ([element] [filter]|[short-filter])".
+* For example: "53.069,8.8 theatre"
+* 		"53.069,8.8 0.1 theatre" (search in a bigger area)
+* 		"53.069,8.8 publictransportstops"
+* 		"53.069,8.8 node amenity=theatre" (custom search)
+*
+* TODO: Could use libweb from Project Silk, the base class for REST apis? */
 class OpenStreetMapEngine : public Plasma::DataEngine {
     Q_OBJECT
     public:
@@ -58,11 +58,18 @@ class OpenStreetMapEngine : public Plasma::DataEngine {
 		return "http://xapi.openstreetmap.org/api/0.6/"; };
 
     public slots:
+	/** Download has finished. */
 	void finished( KJob *job );
-	void data( KIO::Job *job, const QByteArray &ba );
 	
-	void osmChunkRead( OsmReader *osmReader, const Plasma::DataEngine::Data &data );
+	/** More downloaded data is available. */
+	void data( KIO::Job *job, const QByteArray &ba );
+
+	/** Reading an XML document has finished (reached the end of the document).
+	* @Note @p data only contains the last chunk of data. */
 	void osmFinishedReading( OsmReader *osmReader, const Plasma::DataEngine::Data &data );
+	
+	/** A new chunk of the XML document has been read. */
+	void osmChunkRead( OsmReader *osmReader, const Plasma::DataEngine::Data &data );
 	
     private:
 	enum Element {
@@ -79,6 +86,7 @@ class OpenStreetMapEngine : public Plasma::DataEngine {
 		this->filter = filter; };
 	};
 
+	/** Data stored for each download job. */
 	struct JobInfo {
 	    QString sourceName;
 	    OsmReader *osmReader;

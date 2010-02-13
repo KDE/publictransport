@@ -41,8 +41,13 @@ class OsmReader : public QObject, public QXmlStreamReader {
 	QString associatedSourceName() const { return m_associatedSourceName; };
 
     signals:
+	/** Reading an XML document has finished (reached the end of the document).
+	* @Note @p lastDataChunk only contains the last chunk of data. */
+	void finishedReading( OsmReader *reader,
+			      const Plasma::DataEngine::Data &lastDataChunk );
+			      
+	/** A new chunk of the XML document has been read. */
 	void chunkRead( OsmReader *reader, const Plasma::DataEngine::Data &dataChunk );
-	void finishedReading( OsmReader *reader, const Plasma::DataEngine::Data &data );
 	
     private:
 	void readUnknownElement();

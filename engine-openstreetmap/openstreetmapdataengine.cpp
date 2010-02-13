@@ -127,6 +127,9 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
 	sFilter = source.mid( pos2 + 1 ).trimmed();
     }
 
+    // Tell visualizations that not all data has been read
+    setData( source, "finished", false );
+    
     // Build url
     QString osmUrl = QString( "%1%2[%3][bbox=%4,%5,%6,%7]" )
 	    .arg( baseUrl(), element, sFilter )
@@ -154,11 +157,19 @@ void OpenStreetMapEngine::data( KIO::Job* job, const QByteArray& ba ) {
     JobInfo &jobInfo = m_jobInfos[ job ]; // Get associated infos
 
     jobInfo.osmReader->addData( ba );
-    jobInfo.osmReader->resumeReading(); // Continue parsing
-    if ( !jobInfo.readStarted ) {
+    if ( jobInfo.readStarted ) {
+	// Continue reading
+	jobInfo.osmReader->resumeReading(); 
+    } else {
+	// Start reading if not already started
 	jobInfo.readStarted = true;
 	jobInfo.osmReader->read();
     }
+}
+
+void OpenStreetMapEngine::finished( KJob* job ) {
+    // Remove the finished job from the job info hash
+    m_jobInfos.remove( job );
 }
 
 void OpenStreetMapEngine::osmChunkRead( OsmReader *osmReader,
@@ -167,28 +178,34 @@ void OpenStreetMapEngine::osmChunkRead( OsmReader *osmReader,
     setData( osmReader->associatedSourceName(), data );
 }
 
-void OpenStreetMapEngine::finished( KJob* job ) {
-    JobInfo jobInfo = m_jobInfos[ job ]; // Get associated infos
-    m_jobInfos.remove( job );
-}
-
 void OpenStreetMapEngine::osmFinishedReading( OsmReader* osmReader,
 					      const Plasma::DataEngine::Data& data ) {
     // Update data
-    kDebug() << "Finished" << osmReader->data().count() << "items";
     setData( osmReader->associatedSourceName(), data );
     
+    // Tell visualizations that all data has been read
+    setData( osmReader->associatedSourceName(), "finished", true );
+
+    // Kill still running jobs (probably receiving a NULL string)
+    QHash< KJob*, JobInfo >::const_iterator it;
+    for( it = m_jobInfos.constBegin(); it != m_jobInfos.constEnd(); ++it ) {
+	if ( it.value().osmReader == osmReader ) {
+	    // Don't get more data, when the XML reader has completed reading
+	    // otherwise the data engine crashes (because osmReader gets deleted here)
+	    it.key()->kill( KJob::EmitResult );
+	    break;
+	}
+    }
+
+    // Delete the finished reader
     osmReader->deleteLater();
 }
 
 QString OpenStreetMapEngine::elementToString( OpenStreetMapEngine::Element element ) const {
     switch ( element ) {
-	case Node:
-	    return "node";
-	case Relation:
-	    return "relation";
-	case Way:
-	    return "way";
+	case Node: 	return "node";
+	case Relation: 	return "relation";
+	case Way: 	return "way";
 
 	default:
 	    kDebug() << "Element unknown";
