@@ -22,9 +22,13 @@
 #include <KLocale>
 #include <kio/jobclasses.h>
 #include <kio/job.h>
+#include <QBuffer>
 
 OpenStreetMapEngine::OpenStreetMapEngine( QObject *parent, const QVariantList &args )
 	    : Plasma::DataEngine(parent, args) {
+    // Update maximally every 5 mins, openstreetmap data doesn't change too much
+    setMinimumPollingInterval( 300000 );
+		
     // Fill list of 'short filters'.
     // TODO: Maybe plurals are better here?
     m_shortFilter.insert( "bank", Filter(Node, "amenity=bank") );
@@ -59,15 +63,23 @@ OpenStreetMapEngine::OpenStreetMapEngine( QObject *parent, const QVariantList &a
 }
 
 bool OpenStreetMapEngine::sourceRequestEvent( const QString& source ) {
+    kDebug() << "Request" << source;
     setData( source, DataEngine::Data() ); // Create source, TODO: check if [source] is valid?
     return updateSourceEvent( source );
 }
 
 bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
+    foreach ( JobInfo jobInfo, m_jobInfos ) {
+	if ( jobInfo.sourceName == source ) {
+	    kDebug() << "Source gets already updated" << source;
+	    return true;
+	}
+    }
+    kDebug() << "Update" << source;
+    
     // Parse the source name
     // "[longitude],[latitude] ([mapArea]) ([element] [filter]|[short-filter])"
     // mapArea should be < 0.5, otherwise parsing could take some time.
-    
     int pos = source.indexOf( " " );
     int pos2 = source.indexOf( " ", pos + 1 );
     if ( pos == -1 )
@@ -123,36 +135,50 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
     kDebug() << "URL:" << osmUrl;
 
     // Start download
-    KIO::StoredTransferJob *job = KIO::storedGet( osmUrl, KIO::NoReload, KIO::HideProgressInfo );
-    connect( job, SIGNAL(finished(KJob*)), this, SLOT(finished(KJob*)) );
-    m_jobInfos.insert( job, source ); // Store source name associated with the job
+    KIO::TransferJob *job = KIO::get( osmUrl, KIO::NoReload, KIO::HideProgressInfo );
+    connect( job, SIGNAL(data(KIO::Job*,QByteArray)),
+	     this, SLOT(data(KIO::Job*,QByteArray)) );
+    connect( job, SIGNAL(result(KJob*)), this, SLOT(finished(KJob*)) );
+
+    // Store source name and reader associated with the job
+    OsmReader *osmReader = new OsmReader( source );
+    connect( osmReader, SIGNAL(chunkRead(OsmReader*,Plasma::DataEngine::Data)),
+	     this, SLOT(osmChunkRead(OsmReader*,Plasma::DataEngine::Data)) );
+    connect( osmReader, SIGNAL(finishedReading(OsmReader*,Plasma::DataEngine::Data)),
+	     this, SLOT(osmFinishedReading(OsmReader*,Plasma::DataEngine::Data)) );
+    m_jobInfos.insert( job, JobInfo(source, osmReader) );
     return true;
 }
 
-void OpenStreetMapEngine::finished( KJob* job ) {
-    QString source = m_jobInfos[ job ]; // Get associated source name
-    m_jobInfos.remove( job );
+void OpenStreetMapEngine::data( KIO::Job* job, const QByteArray& ba ) {
+    JobInfo &jobInfo = m_jobInfos[ job ]; // Get associated infos
 
-    KIO::StoredTransferJob *storedJob = static_cast< KIO::StoredTransferJob* >( job );
-    QString data = QString::fromUtf8( storedJob->data() );
-
-    // Simply search for named things
-    // TODO: Write a QXmlStreamReader? to parse the received XML data (asynchronous?)
-    QStringList result;
-    QRegExp rx( "<tag k='name' v='([^']*)'/>" );
-    int pos = 0;
-    while ( (pos = rx.indexIn(data, pos)) != -1 ) {
-	// TODO: HTML entities need to be decoded (eg. "&apos;")
-	result << rx.cap( 1 );
-	pos += rx.matchedLength();
-
-	if ( result.count() == maxResults )
-	    break; // Prevent parsing for too long or too many items
+    jobInfo.osmReader->addData( ba );
+    jobInfo.osmReader->resumeReading(); // Continue parsing
+    if ( !jobInfo.readStarted ) {
+	jobInfo.readStarted = true;
+	jobInfo.osmReader->read();
     }
-    result.removeDuplicates();
+}
+
+void OpenStreetMapEngine::osmChunkRead( OsmReader *osmReader,
+					const Plasma::DataEngine::Data &data ) {
+    // Update data
+    setData( osmReader->associatedSourceName(), data );
+}
+
+void OpenStreetMapEngine::finished( KJob* job ) {
+    JobInfo jobInfo = m_jobInfos[ job ]; // Get associated infos
+    m_jobInfos.remove( job );
+}
+
+void OpenStreetMapEngine::osmFinishedReading( OsmReader* osmReader,
+					      const Plasma::DataEngine::Data& data ) {
+    // Update data
+    kDebug() << "Finished" << osmReader->data().count() << "items";
+    setData( osmReader->associatedSourceName(), data );
     
-    kDebug() << "Finished" << result;
-    setData( source, result );
+    osmReader->deleteLater();
 }
 
 QString OpenStreetMapEngine::elementToString( OpenStreetMapEngine::Element element ) const {

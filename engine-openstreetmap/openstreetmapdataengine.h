@@ -22,8 +22,14 @@
 
 #include <Plasma/DataEngine>
 
+#include "osmreader.h"
+
 class KJob;
+namespace KIO {
+    class Job;
+}
 class QSizeF;
+class QBuffer;
 
 // This engine searches for information from OpenStreetMap.
 // The source name is:
@@ -53,6 +59,10 @@ class OpenStreetMapEngine : public Plasma::DataEngine {
 
     public slots:
 	void finished( KJob *job );
+	void data( KIO::Job *job, const QByteArray &ba );
+	
+	void osmChunkRead( OsmReader *osmReader, const Plasma::DataEngine::Data &data );
+	void osmFinishedReading( OsmReader *osmReader, const Plasma::DataEngine::Data &data );
 	
     private:
 	enum Element {
@@ -69,10 +79,23 @@ class OpenStreetMapEngine : public Plasma::DataEngine {
 		this->filter = filter; };
 	};
 
+	struct JobInfo {
+	    QString sourceName;
+	    OsmReader *osmReader;
+	    bool readStarted;
+
+	    JobInfo() {};
+	    JobInfo( const QString &sourceName, OsmReader *osmReader ) {
+		this->sourceName = sourceName;
+		this->osmReader = osmReader;
+		this->readStarted = false;
+	    };
+	};
+
 	QString elementToString( Element element ) const;
 
 	
-	QHash< KJob*, QString > m_jobInfos;
+	QHash< KJob*, JobInfo > m_jobInfos;
 	QHash< QString, Filter > m_shortFilter;
 };
 

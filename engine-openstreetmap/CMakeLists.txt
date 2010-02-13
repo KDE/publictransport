@@ -11,7 +11,8 @@ include_directories(
    ${KDE4_INCLUDES} )
  
 # We add our source code here
-set( openstreetmapdataengine_SRCS openstreetmapdataengine.cpp )
+set( openstreetmapdataengine_SRCS openstreetmapdataengine.cpp
+				  osmreader.cpp )
  
 # Now make sure all files get to the right place
 kde4_add_plugin( plasma_engine_openstreetmap ${openstreetmapdataengine_SRCS} )
