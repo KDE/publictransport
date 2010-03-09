@@ -119,7 +119,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 	}
     } else
 	type = HTML;
-	    
+    
     while ( !atEnd() ) {
 	readNext();
 	

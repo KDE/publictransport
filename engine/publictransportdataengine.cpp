@@ -162,18 +162,18 @@ QHash< QString, QVariant > PublicTransportEngine::locations() {
 bool PublicTransportEngine::sourceRequestEvent( const QString &name ) {
     kDebug() << name;
 
-    setData( name, DataEngine::Data() ); // Create source, TODO: check if [name] is valid
+    if ( isDataRequestingSourceType(sourceTypeFromName(name)) )
+	setData( name, DataEngine::Data() ); // Create source, TODO: check if [name] is valid
     return updateSourceEvent( name );
 }
 
 bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString& name ) {
-    if ( !updateServiceProviderSource() )
+    if ( !updateServiceProviderSource() || !updateLocationSource() )
 	return false;
     
     QStringList s = name.split( " ", QString::SkipEmptyParts );
     if ( s.count() < 2 )
 	return false;
-
     
     QString countryCode = s[ 1 ];
     QHash<QString, QVariant> locations =
@@ -253,7 +253,8 @@ void PublicTransportEngine::updateErrornousServiceProviderSource( const QString 
     setData( name, "names", m_errornousAccessors );
 }
 
-void PublicTransportEngine::updateLocationSource( const QString &name ) {
+bool PublicTransportEngine::updateLocationSource() {
+    const QString name = sourceTypeKeyword( Locations );
     QHash<QString, QVariant> dataSource;
     if ( m_dataSources.keys().contains(name) )
 	dataSource = m_dataSources[name].toHash(); // locations already loaded
@@ -263,6 +264,8 @@ void PublicTransportEngine::updateLocationSource( const QString &name ) {
 
     foreach ( QString key, dataSource.keys() )
 	setData( name, key, dataSource[key] );
+
+    return true;
 }
 
 bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name ) {
@@ -517,7 +520,7 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name ) {
 	    updateErrornousServiceProviderSource( name );
 	    break;
 	case Locations:
-	    updateLocationSource( name );
+	    ret = updateLocationSource();
 	    break;
 	case Departures:
 	case Arrivals:
@@ -829,12 +832,15 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name ) {
     QDateTime downloadTime = m_nextDownloadTimeProposals[ stripDateAndTimeValues(name) ];
     int minForSufficientChanges = downloadTime.isValid()
 	    ? QDateTime::currentDateTime().secsTo(downloadTime) : 0;
-    int minFetchWait = qMax( minForSufficientChanges, MIN_UPDATE_TIMEOUT );
+    int minFetchWait;
     
     // If delays are available set maximum fetch wait
     if ( accessor->features().contains("Delay")
-		&& dataSource["delayInfoAvailable"].toBool() )
-	minFetchWait = qMin( minFetchWait, MAX_UPDATE_TIMEOUT_DELAY );
+		&& dataSource["delayInfoAvailable"].toBool() ) {
+	minFetchWait = qBound( (int)MIN_UPDATE_TIMEOUT, minForSufficientChanges,
+			       (int)MAX_UPDATE_TIMEOUT_DELAY );
+    } else
+	minFetchWait = qMax( minForSufficientChanges, MIN_UPDATE_TIMEOUT );
     
     minFetchWait = qMax( minFetchWait, accessor->minFetchWait() );
     kDebug() << "Wait time until next download:"

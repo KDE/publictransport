@@ -115,7 +115,7 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	bool updateServiceProviderForCountrySource( const QString &name );
 	bool updateServiceProviderSource();
 	void updateErrornousServiceProviderSource( const QString &name );
-	void updateLocationSource( const QString &name );
+	bool updateLocationSource();
 	bool updateDepartureOrJourneySource( const QString &name );
 
 	/** Returns wheather or not the given source is up to date.

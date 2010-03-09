@@ -1,5 +1,5 @@
 /*
- *   Copyright 2009 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -114,6 +114,9 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
     QString functionName = parseDocumentMode == ParseForJourneys
 	    ? "parseJourneys" : "parseTimetable";
     if ( !m_script->functionNames().contains(functionName) ) {
+	// TODO: Use alternative function name that uses a previously loaded
+	// QWebFrame inside the scripts to more easily navigate in the web page
+	// (QWebFrame::findAllElements).
 	kDebug() << "The script has no '" << functionName << "' function";
 	kDebug() << "Functions in the script:" << m_script->functionNames();
 	return false;

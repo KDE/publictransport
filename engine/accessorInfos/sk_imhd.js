@@ -8,17 +8,18 @@ function usedTimetableInformations() {
 function parseTimetable( html ) {
     // First parse types of vehicle
     var typesOfVehicle = new Array;
-
     var pos = html.indexOf( '<table class="tab" border="1" bordercolor="#000000" cellpadding="5" cellspacing="0" align="center"><tr><th>Line</th><th>Type</th><th>Terminus</th>' );
-    if ( pos == -1 )
+    if ( pos == -1 ) {
+	println( "The table containing vehicle types wasn't found." );
 	return;
+    }
     var end = html.indexOf( '</table>', pos + 1 );
     var str = html.substr( pos, end - pos );
 
     // Initialize regular expressions (compile them only once)
     var typeOfVehicleRowRegExp = /<tr>([\s\S]*?)<\/tr>/ig;
     var columnsRegExp1 = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
-    var transportLineRegExp1 = /<center><b>([^<]*?)<\/b><\/center>/i;
+    var transportLineRegExp1 = /<center><b>(.*?)<\/b><\/center>/i;
     var typeOfVehicleRegExp = /<center>([^<]*?)<\/center>/i;
 
     // Go through all type of vehicle blocks
@@ -31,19 +32,25 @@ function parseTimetable( html ) {
 	    column = column[1];
 	    columns.push( column );
 	}
-	if ( columns.length < 3 )
+	if ( columns.length < 3 ) {
+	    println( "Found a (vehicle type) row with too less columns: " + typeOfVehicleRow );
 	    continue; // Too less columns
+	}
 
 	// Parse transport line column
 	var transportLine = transportLineRegExp1.exec( columns[0] );
-	if ( transportLine == null )
-	    continue; // Unexcepted string in transport line column
-	transportLine = helper.trim( transportLine[1] );
+	if ( transportLine == null ) {
+	    println( "Unexcepted string in (vehicle type) transport line column: " + columns[0] );
+	    continue;
+	}
+	transportLine = helper.trim( helper.stripTags(transportLine[1]) );
 
 	// Parse type of vehicle column
 	var typeOfVehicle = typeOfVehicleRegExp.exec( columns[1] );
-	if ( transportLine == null )
-	    continue; // Unexcepted string in type of vehicle column
+	if ( typeOfVehicle == null ) {
+	    println( "Unexcepted string in (vehicle type) type of vehicle column: " +  columns[1] );
+	    continue;
+	}
 	typeOfVehicle = helper.trim( typeOfVehicle[1] );
 
 	typesOfVehicle[ transportLine ] = typeOfVehicle;
@@ -52,15 +59,17 @@ function parseTimetable( html ) {
 
     // Find block of departures
     pos = html.indexOf( '<table class="tab" border="1" bordercolor="#000000" cellpadding="5" cellspacing="0" align="center"><tr><th>Time</th><th>Line</th><th>Terminus</th></tr>' );
-    if ( pos == -1 )
+    if ( pos == -1 ) {
+	println( "The table containing departures wasn't found." );
 	return;
+    }
     end = html.indexOf( '</table>', pos + 1 );
     str = html.substr( pos, end - pos );
 
     // Initialize regular expressions (compile them only once)
     var departuresRegExp = /<tr>([\s\S]*?)<\/tr>/ig;
     var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
-    var transportLineRegExp = /<center><b><em>(N?[0-9]+)<\/em><\/b><\/center>/i;
+    var transportLineRegExp = /<center><b><span[^>]*?>(N?[0-9]+)<\/span><\/b><\/center>/i;
 
     // Go through all departure blocks
     while ( (departure = departuresRegExp.exec(str)) ) {
@@ -72,21 +81,29 @@ function parseTimetable( html ) {
 	    column = column[1];
 	    columns.push( column );
 	}
-	if ( columns.length < 3 )
+	if ( columns.length < 3 ) {
+	    println( "Found a (departure) row with too less columns: " + departure );
 	    continue; // Too less columns
+	}
 
 	// Parse time column
 	var time = helper.matchTime( columns[0], "h:mm" );
-	if ( time.length != 2 )
-	    continue; // Unexpected string in time column
+	if ( time.length != 2 ) {
+	    println( "Unexpected string in time column: " + columns[0] );
+	    continue;
+	}
 
 	// Parse transport line column
 	var transportLine = transportLineRegExp.exec( columns[1] );
-	if ( transportLine == null )
-	    continue; // Unexcepted string in transport line column
+	if ( transportLine == null ) {
+	    println( "Unexpected string in transport line column: " + columns[1] );
+	    continue;
+	}
 	transportLine = helper.trim( transportLine[1] );
 
 	var typeOfVehicle = typesOfVehicle[ transportLine ];
+	if ( typeOfVehicle == null )
+	    typeOfVehicle = "";
 
 	// Parse target column
 	var targetString = helper.trim( columns[2] );
