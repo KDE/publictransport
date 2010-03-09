@@ -50,6 +50,11 @@ StopWidget::StopWidget( const StopSettings& stopSettings,
     m_provider = new QLabel( this );
     m_filterConfiguration = new QLabel( this );
 
+    m_stop->setWordWrap( true );
+    m_provider->setWordWrap( true );
+    m_filterConfiguration->setWordWrap( true );
+    m_stop->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
+
     infoLayout->addRow( stopSettings.stops.count() > 1 ? i18n("Stops:")
                         : i18n("Stop:"), m_stop );
     infoLayout->addRow( i18n("Service Provider:"), m_provider );
@@ -61,7 +66,7 @@ StopWidget::StopWidget( const StopSettings& stopSettings,
 
     QHBoxLayout *mainLayout = new QHBoxLayout( this );
     mainLayout->addLayout( infoLayout );
-    mainLayout->addSpacerItem( new QSpacerItem(0, 0, QSizePolicy::Expanding) );
+//     mainLayout->addSpacerItem( new QSpacerItem(0, 0, QSizePolicy::Expanding) );
     mainLayout->addWidget( change );
 }
 

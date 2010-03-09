@@ -312,7 +312,7 @@ void SettingsUiManager::initModels() {
     m_modelLocations = new QStandardItemModel( 0, 1, this );
 
     // Get locations
-    m_locationData = m_publicTransportEngine->query("Locations");
+    m_locationData = m_publicTransportEngine->query( "Locations" );
     QStringList uniqueCountries = m_locationData.keys();
     QStringList countries;
 

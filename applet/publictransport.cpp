@@ -239,48 +239,66 @@ PublicTransport::~PublicTransport() {
 
 void PublicTransport::init() {
     m_settings = SettingsIO::readSettings( config() );
-    m_currentServiceProviderFeatures =
-	    currentServiceProviderData()["features"].toStringList();
+    kDebug() << "1";
+    kDebug() << "2";
 
     if ( m_settings.stopSettingsList.isEmpty() ) {
 	// Applet is loaded without stored settings
+	kDebug() << "A";
 	QString countryCode = KGlobal::locale()->country();
 	Plasma::DataEngine::Data locationData =
 		dataEngine( "publictransport" )->query( "Locations" );
+	kDebug() << "B";
 	QString defaultServiceProviderId =
 		locationData[countryCode].toHash()["defaultAccessor"].toString();
+	kDebug() << "C";
 
 	StopSettings stopSettings;
 	if ( defaultServiceProviderId.isEmpty() ) {
 	    stopSettings.location = "showAll";
+	    kDebug() << "Da";
 	} else {
 	    stopSettings.location = countryCode;
 	    stopSettings.serviceProviderID = defaultServiceProviderId;
+	    kDebug() << "Db";
 	}
 	stopSettings.stops << "";
 	// TODO: Get initial stop names using StopFinder
 
 	m_settings.stopSettingsList << stopSettings;
+	kDebug() << "E";
+    } else {
+	m_currentServiceProviderFeatures =
+		currentServiceProviderData()["features"].toStringList();
     }
 
     createModels();
+    kDebug() << "F";
     graphicsWidget();
+    kDebug() << "G";
     createTooltip();
+    kDebug() << "H";
     createPopupIcon();
+    kDebug() << "I";
 
     setDepartureArrivalListType( m_settings.departureArrivalListType );
     initJourneyList();
+    kDebug() << "J";
     addState( ShowingDepartureArrivalList );
+    kDebug() << "K";
     addState( WaitingForDepartureData );
+    kDebug() << "L";
 
     connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
     connect( Plasma::Theme::defaultTheme(), SIGNAL(themeChanged()),
 	     this, SLOT(themeChanged()) );
     emit settingsChanged();
-
+    
+    kDebug() << "M";
     setupActions();
     reconnectSource();
+    kDebug() << "N";
 }
 
 void PublicTransport::setupActions() {

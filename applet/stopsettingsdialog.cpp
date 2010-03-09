@@ -239,10 +239,13 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings ) {
 	
 	QVariantHash curServiceProviderData = m_uiStop.serviceProvider->itemData(
 		curServiceProviderIndex, ServiceProviderDataRole ).toHash();
-	if ( curServiceProviderData["onlyUseCitiesInList"].toBool() )
-	    m_uiStop.city->setCurrentItem( stopSettings.city );
-	else
-	    m_uiStop.city->setEditText( stopSettings.city );
+	if ( curServiceProviderData["useSeperateCityValue"].toBool() ) {
+	    if ( curServiceProviderData["onlyUseCitiesInList"].toBool() )
+		m_uiStop.city->setCurrentItem( stopSettings.city );
+	    else
+		m_uiStop.city->setEditText( stopSettings.city );
+	} else
+	    m_uiStop.city->setCurrentItem( QString() );
     }
 }
 
@@ -254,7 +257,10 @@ StopSettings StopSettingsDialog::stopSettings() const {
     stopSettings.serviceProviderID = serviceProviderData["id"].toString();
     stopSettings.location = m_uiStop.location->itemData(
 	m_uiStop.location->currentIndex(), LocationCodeRole ).toString();
-    if ( m_uiStop.city->isVisible() ) {
+
+    QVariantHash curServiceProviderData = m_uiStop.serviceProvider->itemData(
+	m_uiStop.serviceProvider->currentIndex(), ServiceProviderDataRole ).toHash();
+    if ( curServiceProviderData["useSeperateCityValue"].toBool() ) {
 	stopSettings.city = m_uiStop.city->isEditable()
 		? m_uiStop.city->lineEdit()->text() : m_uiStop.city->currentText();
     }
