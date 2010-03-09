@@ -31,8 +31,17 @@ class OsmReader : public QObject, public QXmlStreamReader {
     Q_OBJECT;
     
     public:
-	OsmReader( const QString &associatedSourceName ) : QXmlStreamReader() {
-	    m_associatedSourceName = associatedSourceName; };
+	enum ResultFlag {
+	    AllResults = 0x0000,
+	    OnlyResultsWithNameAttribute = 0x0001
+	};
+	Q_DECLARE_FLAGS( ResultFlags, ResultFlag );
+	
+	OsmReader( const QString &associatedSourceName,
+		   ResultFlags resultFlags = ResultFlags(AllResults) )
+		   : QXmlStreamReader() {
+	    m_associatedSourceName = associatedSourceName;
+	    m_resultFlags = resultFlags; };
 
 	void read();
 	Plasma::DataEngine::Data data() const { return m_data; };
@@ -50,6 +59,8 @@ class OsmReader : public QObject, public QXmlStreamReader {
 	void chunkRead( OsmReader *reader, const Plasma::DataEngine::Data &dataChunk );
 	
     private:
+	bool isResultValid( const QVariantHash &data ) const;
+	
 	void readUnknownElement();
 	void readOsm();
 	void readNode();
@@ -62,6 +73,8 @@ class OsmReader : public QObject, public QXmlStreamReader {
 	Plasma::DataEngine::Data m_data;
 	QEventLoop m_loop;
 	QString m_associatedSourceName;
+	ResultFlags m_resultFlags;
 };
+Q_DECLARE_OPERATORS_FOR_FLAGS( OsmReader::ResultFlags );
 
 #endif // OSMREADER_HEADER

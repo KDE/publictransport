@@ -34,7 +34,7 @@ void OsmReader::read() {
 	}
     }
 
-    kDebug() << "Read complete:" << errorString();
+    kDebug() << "Read complete:" << (hasError() ? "No error." : errorString() );
     emit finishedReading( this, m_data );
 }
 
@@ -45,8 +45,9 @@ bool OsmReader::waitOnRecoverableError() {
 	m_data.clear(); // Clear old data
 	m_loop.exec(); // Wait for more data
 	return true;
-    } else
+    } else {
 	return false;
+    }
 }
 
 void OsmReader::readUnknownElement() {
@@ -67,8 +68,10 @@ void OsmReader::readOsm() {
     while ( !atEnd() || waitOnRecoverableError() ) {
 	readNext();
 	
-	if ( isEndElement() && name().compare("osm", Qt::CaseInsensitive) == 0 )
+	if ( isEndElement() && name().compare("osm", Qt::CaseInsensitive) == 0 ) {
+	    kDebug() << "Closing </osm> tag read";
 	    break;
+	}
 
 	if ( isStartElement() ) {
 	    if ( name().compare("node", Qt::CaseInsensitive) == 0 ) {
@@ -81,6 +84,13 @@ void OsmReader::readOsm() {
 		readUnknownElement();
 	}
     }
+
+    kDebug() << "Finished reading the <osm> tag";
+}
+
+bool OsmReader::isResultValid( const QVariantHash& data ) const {
+    return !m_resultFlags.testFlag(OnlyResultsWithNameAttribute)
+	   || data.contains("name");
 }
 
 void OsmReader::readNode() {
@@ -89,7 +99,7 @@ void OsmReader::readNode() {
     double latitude = attributes().value( "lat" ).toString().toDouble();
     // Could read more infos from attributes (user, uid, timestamp, version, changeset)
     
-    QHash< QString, QVariant > nodeData;
+    QVariantHash nodeData;
     nodeData.insert( "longitude", longitude );
     nodeData.insert( "latitude", latitude );
     nodeData.insert( "type", "node" );
@@ -108,13 +118,14 @@ void OsmReader::readNode() {
 	}
     }
 
-    m_data.insert( id, nodeData );
+    if ( isResultValid(nodeData) )
+	m_data.insert( id, nodeData );
 }
 
 void OsmReader::readWay() {
     QString id = attributes().value( "id" ).toString();
     // Could read more infos from attributes (user, uid, timestamp, version, changeset)
-    QHash< QString, QVariant > nodeData;
+    QVariantHash nodeData;
     QStringList nodes;
     nodeData.insert( "type", "way" );
     
@@ -136,21 +147,24 @@ void OsmReader::readWay() {
 	}
     }
     
-    nodeData.insert( "nodes", nodes ); // IDs of associated nodes
-    m_data.insert( id, nodeData );
+    if ( isResultValid(nodeData) ) {
+	if ( !nodes.isEmpty() )
+	    nodeData.insert( "nodes", nodes ); // IDs of associated nodes
+	m_data.insert( id, nodeData );
+    }
 }
 
 void OsmReader::readRelation() {
     QString id = attributes().value( "id" ).toString();
     // Could read more infos from attributes (user, uid, timestamp, version, changeset)
-    QHash< QString, QVariant > nodeData;
+    QVariantHash nodeData;
     QStringList nodes, ways;
     nodeData.insert( "type", "relation" );
     
     while ( !atEnd() || waitOnRecoverableError() ) {
 	readNext();
 	
-	if ( isEndElement() && name().compare("way", Qt::CaseInsensitive) == 0 )
+	if ( isEndElement() && name().compare("relation", Qt::CaseInsensitive) == 0 )
 	    break;
 	
 	if ( isStartElement() ) {
@@ -172,13 +186,17 @@ void OsmReader::readRelation() {
 		readUnknownElement();
 	}
     }
-    
-    nodeData.insert( "nodes", nodes ); // IDs of associated nodes
-    nodeData.insert( "ways", ways ); // IDs of associated ways
-    m_data.insert( id, nodeData );
+
+    if ( isResultValid(nodeData) ) {
+	if ( !nodes.isEmpty() )
+	    nodeData.insert( "nodes", nodes ); // IDs of associated nodes
+	if ( !ways.isEmpty() )
+	    nodeData.insert( "ways", ways ); // IDs of associated ways
+	m_data.insert( id, nodeData );
+    }
 }
 
-void OsmReader::readTag( QHash< QString, QVariant > *nodeData ) {
+void OsmReader::readTag( QVariantHash *nodeData ) {
     if ( !attributes().hasAttribute("k") || !attributes().hasAttribute("v") )
 	kDebug() << "Key or value attribute not found for <tag>";
 

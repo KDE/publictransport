@@ -59,11 +59,12 @@ OpenStreetMapEngine::OpenStreetMapEngine( QObject *parent, const QVariantList &a
     m_shortFilter.insert( "forest", Filter(Node, "natural=forest") );
     m_shortFilter.insert( "park", Filter(Node, "natural=park") );
     
-    m_shortFilter.insert( "publictransportstops", Filter(Relation, "public_transport=stop_area") );
+    m_shortFilter.insert( "publictransportstops",
+			  Filter(Relation, "public_transport=stop_area") );
 }
 
 bool OpenStreetMapEngine::sourceRequestEvent( const QString& source ) {
-    kDebug() << "Request" << source;
+//     kDebug() << "Request" << source;
     setData( source, DataEngine::Data() ); // Create source, TODO: check if [source] is valid?
     return updateSourceEvent( source );
 }
@@ -104,7 +105,8 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
     if ( ok ) {
 	// Area given, use next word as element or 'short filter'
 	int pos3 = source.indexOf( " ", pos2 + 1 );
-	maybeElement = source.mid( pos2 + 1, pos3 - pos2 - 1 ).toLower();
+	maybeElement = pos3 == -1 ? source.mid( pos2 + 1 ).toLower()
+		       : source.mid( pos2 + 1, pos3 - pos2 - 1 ).toLower();
 	pos2 = pos3;
 
 	// Prevent too big areas
@@ -116,11 +118,15 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
     }
 
     QString sFilter;
+    OsmReader::ResultFlags resultFlags = OsmReader::AllResults;
     if ( m_shortFilter.contains(maybeElement) ) {
 	// Replace 'short filters', like "hospital" -> "amenity=hospital" (with element="node")
 	Filter filter = m_shortFilter[ maybeElement ];
 	element = elementToString( filter.element );
 	sFilter = filter.filter;
+
+	if ( maybeElement == "publictransportstops" )
+	    resultFlags |= OsmReader::OnlyResultsWithNameAttribute;
     } else {
 	// A custom filter
 	element = maybeElement;
@@ -144,7 +150,7 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
     connect( job, SIGNAL(result(KJob*)), this, SLOT(finished(KJob*)) );
 
     // Store source name and reader associated with the job
-    OsmReader *osmReader = new OsmReader( source );
+    OsmReader *osmReader = new OsmReader( source, resultFlags );
     connect( osmReader, SIGNAL(chunkRead(OsmReader*,Plasma::DataEngine::Data)),
 	     this, SLOT(osmChunkRead(OsmReader*,Plasma::DataEngine::Data)) );
     connect( osmReader, SIGNAL(finishedReading(OsmReader*,Plasma::DataEngine::Data)),
@@ -175,13 +181,15 @@ void OpenStreetMapEngine::finished( KJob* job ) {
 void OpenStreetMapEngine::osmChunkRead( OsmReader *osmReader,
 					const Plasma::DataEngine::Data &data ) {
     // Update data
-    setData( osmReader->associatedSourceName(), data );
+    if ( !data.isEmpty() )
+	setData( osmReader->associatedSourceName(), data );
 }
 
 void OpenStreetMapEngine::osmFinishedReading( OsmReader* osmReader,
 					      const Plasma::DataEngine::Data& data ) {
     // Update data
-    setData( osmReader->associatedSourceName(), data );
+    if ( !data.isEmpty() )
+	setData( osmReader->associatedSourceName(), data );
     
     // Tell visualizations that all data has been read
     setData( osmReader->associatedSourceName(), "finished", true );
