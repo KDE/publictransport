@@ -20,9 +20,18 @@
 // Qt includes
 #include <QListWidget>
 #include <QTreeView>
+#include <QScrollBar>
 #include <QStandardItemModel>
+#include <QStringListModel>
 #include <QMenu>
-#include <QProcess>
+#include <QTimer>
+#include <QLayout>
+#include <QGraphicsLayout>
+#if QT_VERSION >= 0x040600
+    #include <QParallelAnimationGroup>
+    #include <QPropertyAnimation>
+    #include <QGraphicsEffect>
+#endif
 
 // KDE includes
 #include <KTabWidget>
@@ -31,1100 +40,285 @@
 #include <KFileDialog>
 #include <KStandardDirs>
 #include <KMessageBox>
-
-#include <kdeversion.h>
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-  #include <knewstuff3/downloaddialog.h>
-#else
-  #include <knewstuff2/engine.h>
-#endif
+#include <KLineEdit>
 
 // Own includes
 #include "settings.h"
 #include "htmldelegate.h"
-
-#define NO_EXPORT_PLASMA_APPLET
-#include "publictransport.h"
-#undef NO_EXPORT_PLASMA_APPLET
-
-#include <QLayout>
-#include <QGraphicsLayout>
-
-#if QT_VERSION >= 0x040600
-    #include <QParallelAnimationGroup>
-    #include <QPropertyAnimation>
-    #include <QGraphicsEffect>
-#endif
-#include <QTimer>
-
-
-PublicTransportSettings::PublicTransportSettings( PublicTransport *applet )
-	    : m_applet(applet), m_dataSourceTester(new DataSourceTester("", applet, this)),
-	      m_configDialog(0), m_modelServiceProvider(0), m_modelLocations(0) {
-    setParent( applet );
-    connect( m_dataSourceTester,
-	     SIGNAL(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)),
-	     this, SLOT(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)) );
-}
-
-void PublicTransportSettings::processOsmData( const QString& sourceName,
-					      const Plasma::DataEngine::Data& data ) {
-    m_applet->dataEngine("openstreetmap")->disconnectSource( sourceName, this );
-    m_configDialog->setEnabled( true );
-    
-    kDebug() << data;
-    QStringList stops = data[ "names" ].toStringList();
-
-    // Get data from the geolocation data engine
-    Plasma::DataEngine::Data dataGeo =
-	    m_applet->dataEngine("geolocation")->query("location");
-    QString country = dataGeo["country code"].toString().toLower();
-    QString city = dataGeo["city"].toString();
-    int accuracy = dataGeo["accuracy"].toInt();
-    QString stop;
-
-    // Check if a service provider is available for the given country
-    Plasma::DataEngine::Data dataProvider =
-	    m_applet->dataEngine("publictransport")->query("ServiceProvider " + country);
-    if ( dataProvider.isEmpty() )
-	return;
-
-    if ( !stops.isEmpty() ) {
-	if ( stops.count() > 1 ) {
-	    KDialog *dlg = new KDialog( m_configDialog );
-	    bool chk;
-	    KMessageBox::createKMessageBox( dlg, QMessageBox::Question,
-					    accuracy > 10000
-					    ? i18n("These stops may be near you, "
-					    "but your position couldn't be determined "
-					    "exactly. Choose one of them or cancel.")
-					    : i18n("These stops have been found "
-					    "to be near you. Choose one of them "
-					    "or cancel."),
-					    stops, QString(), &chk,
-					    KMessageBox::Notify | KMessageBox::NoExec );
-
-	    QListView *list = dlg->findChild< QListView* >();
-	    if ( !list ) {
-		kDebug() << "No QListView found in KMessageBox";
-		return;
-	    }
-	    list->setSelectionMode( QAbstractItemView::SingleSelection );
-
-	    int test;
-	    if ( (test = dlg->exec()) == QDialog::Rejected ) {
-		delete dlg;
-		return;
-	    }
-
-	    int stopIndex = list->currentIndex().row();
-	    delete dlg;
-
-	    if ( stopIndex == -1 ) {
-		kDebug() << "No stop selected";
-		return;
-	    }
-
-	    stop = stops[ stopIndex ];
-	} else {
-	    stop = stops.first();
-	}
-
-	kDebug() << stop;
-    }
-
-    // Set values in the dialog (the GUI) or only in the current settings (member variables)
-    setStopValues( dataProvider["id"].toString(), country, city, stop, true );
-}
-
-void PublicTransportSettings::dataUpdated( const QString& sourceName,
-					   const Plasma::DataEngine::Data& data ) {
-        if ( data.isEmpty() )
-	return;
-
-    if ( sourceName.contains("publictransportstops") ) {
-	processOsmData( sourceName, data );
-    } else if ( sourceName.contains(QRegExp("^http")) ) {
-	if ( !m_modelServiceProvider )
-	    return;
-
-	QPixmap favicon(QPixmap::fromImage(data["Icon"].value<QImage>()));
-	if ( !favicon.isNull() ) {
-	    if ( m_applet->testState(AccessorInfoDialogShown) )
-		m_uiAccessorInfo.icon->setPixmap( favicon );
-	    if ( m_applet->testState(ConfigDialogShown) ) {
-		for ( int i = 0; i < m_modelServiceProvider->rowCount(); ++i ) {
-		    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item(i)->data( ServiceProviderDataRole ).toHash();
-		    QString favIconSource = serviceProviderData["url"].toString();
-		    if ( favIconSource.compare( sourceName ) == 0 )
-			m_modelServiceProvider->item(i)->setIcon( KIcon(favicon) );
-		}
-	    }
-	}
-	else
-	    kDebug() << "favicon is NULL";
-
-	m_applet->dataEngine("favicons")->disconnectSource( sourceName, this );
-    }
-}
-
-void PublicTransportSettings::clickedAddStop() {
-    addStop( QString(), true );
-
-    QWidgetList stopWidgets = m_additionalStopWidgets.last();
-    foreach ( QWidget *widget, stopWidgets ) {
-	KLineEdit *additionalStop = dynamic_cast< KLineEdit* >( widget );
-	if ( additionalStop ) {
-	    additionalStop->setFocus();
-	    return;
-	}
-    }
-}
-
-void PublicTransportSettings::clickedRemoveStop() {
-    QToolButton *btn = dynamic_cast< QToolButton* >( sender() );
-    if ( !btn ) {
-	kDebug() << "Couldn't determine which button was pressed, sorry..." << sender();
-	return;
-    }
-
-    int stopIndex = m_removeStopButtons.indexOf( btn );
-    if ( stopIndex == -1 ) {
-	kDebug() << "Couldn't determine the stop index of the pressed button, sorry..." << sender();
-	return;
-    }
-    
-    QGridLayout *layout = dynamic_cast< QGridLayout* >(
-	    m_ui.stop->parentWidget()->layout() );
-    Q_ASSERT( layout );
-    QWidgetList stopWidgets = m_additionalStopWidgets.takeAt( stopIndex );
-    foreach ( QWidget *widget, stopWidgets ) {
-	layout->removeWidget( widget );
-	delete widget;
-    }
-
-    m_removeStopButtons.removeAt( stopIndex );
-
-    // Adjust labels
-    for ( int i = 0; i < m_additionalStopWidgets.count(); ++i ) {
-	QWidgetList stopWidgets = m_additionalStopWidgets[i];
-	foreach ( QWidget *widget, stopWidgets ) {
-	    QLabel *lblAdditionalStop = dynamic_cast< QLabel* >( widget );
-	    if ( lblAdditionalStop ) {
-		lblAdditionalStop->setText( i18n("Additional Stop &%1:", i + 1) );
-		break;
-	    }
-	}
-    }
-}
-
-void PublicTransportSettings::addStop( const QString& stop, bool fadeInAnimation ) {
-    QGridLayout *layout = dynamic_cast< QGridLayout* >(
-	    m_ui.stop->parentWidget()->layout() );
-    if ( !layout ) {
-	kDebug() << "No grid layout found";
-	return;
-    }
-    
-    QLabel *lblAdditionalStop = new QLabel( i18n("Additional Stop &%1:",
-					    m_additionalStopWidgets.count() + 1) );
-    lblAdditionalStop->setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Fixed );
-    lblAdditionalStop->setAlignment( Qt::AlignRight );
-    
-    KLineEdit *additionalStop = new KLineEdit( stop );
-    additionalStop->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
-    additionalStop->setCompletionMode( KGlobalSettings::CompletionPopup );
-    additionalStop->setClearButtonShown( true );
-    additionalStop->setClickMessage( i18nc("Click message for the input fields for "
-					   "additional stop names.",
-					   "An additional stop") );
-    lblAdditionalStop->setBuddy( additionalStop );
-    connect( additionalStop, SIGNAL(textEdited(QString)),
-	     this, SLOT(stopNameChanged(QString)) );
-	     
-    QToolButton *btnRemove = new QToolButton;
-    btnRemove->setIcon( KIcon("list-remove") );
-    btnRemove->setToolTip( i18n("Remove this additional stop") );
-    connect( btnRemove, SIGNAL(clicked()), this, SLOT(clickedRemoveStop()) );
-
-    #if QT_VERSION >= 0x040600
-    if ( fadeInAnimation ) {
-	QParallelAnimationGroup *parGroup = new QParallelAnimationGroup( m_configDialog );
-	
-	QGraphicsOpacityEffect *effectLabel = new QGraphicsOpacityEffect( parGroup );
-	QGraphicsOpacityEffect *effectStop = new QGraphicsOpacityEffect( parGroup );
-	QGraphicsOpacityEffect *effectBtn = new QGraphicsOpacityEffect( parGroup );
-	lblAdditionalStop->setGraphicsEffect( effectLabel );
-	additionalStop->setGraphicsEffect( effectStop );
-	btnRemove->setGraphicsEffect( effectBtn );
-	QPropertyAnimation *animFadeLabel = new QPropertyAnimation( effectLabel, "opacity" );
-	QPropertyAnimation *animFadeStop = new QPropertyAnimation( effectStop, "opacity" );
-	QPropertyAnimation *animFadeBtn = new QPropertyAnimation( effectBtn, "opacity" );
-	animFadeLabel->setStartValue( 0 );
-	animFadeStop->setStartValue( 0 );
-	animFadeBtn->setStartValue( 0 );
-	animFadeLabel->setEndValue( 1 );
-	animFadeStop->setEndValue( 1 );
-	animFadeBtn->setEndValue( 1 );
-
-	parGroup->addAnimation( animFadeLabel );
-	parGroup->addAnimation( animFadeStop );
-	parGroup->addAnimation( animFadeBtn );
-	parGroup->start( QAbstractAnimation::DeleteWhenStopped );
-    }
-    #endif
-    
-    layout->removeItem( m_ui.vSpacer );
-    int row = layout->rowCount();
-    Q_ASSERT( row >= 0 );
-    layout->addWidget( lblAdditionalStop, row, 0, 1, 1, Qt::AlignVCenter );
-    layout->addWidget( additionalStop, row, 1, 1, 2, Qt::AlignVCenter );
-    layout->addWidget( btnRemove, row, 3, 1, 1, Qt::AlignVCenter );
-    layout->addItem( m_ui.vSpacer, row + 1, 0, 1, 3 );
-
-    lblAdditionalStop->show();
-    additionalStop->show();
-    btnRemove->show();
-    m_removeStopButtons << btnRemove;
-    QWidgetList widgets = QWidgetList() << lblAdditionalStop << additionalStop << btnRemove;
-    m_additionalStopWidgets << widgets;
-}
-
-QStringList PublicTransportSettings::getAdditionalStops() {
-    QStringList ret;
-    
-    KLineEdit *additionalStop;
-    foreach ( QWidgetList widgets, m_additionalStopWidgets ) {
-	foreach ( QWidget *widget, widgets ) {
-	    if ( (additionalStop = dynamic_cast<KLineEdit*>(widget)) ) {
-		ret << additionalStop->text();
-		break;
-	    }
-	}
-    }
-    
-    return ret;
-}
-
-bool PublicTransportSettings::getStopFromGeolocation( bool setInGui ) {
-    // Get data from the geolocation data engine
-    Plasma::DataEngine::Data dataGeo =
-	    m_applet->dataEngine("geolocation")->query("location");
-    if ( dataGeo.isEmpty() ) {
-	if ( setInGui )
-	    QTimer::singleShot( 100, this, SLOT(gelocateClicked()) );
-	else
-	    QTimer::singleShot( 100, this, SLOT(getStopFromGeolocation()) );
-	return true;
-    }
-    QString country = dataGeo["country code"].toString().toLower();
-    QString city = dataGeo["city"].toString();
-    qreal latitude = dataGeo["latitude"].toReal();
-    qreal longitude = dataGeo["longitude"].toReal();
-    int accuracy = dataGeo["accuracy"].toInt();
-    
-    // Check if a service provider is available for the given country
-    Plasma::DataEngine::Data dataProvider =
-	    m_applet->dataEngine("publictransport")->query("ServiceProvider " + country);
-    if ( dataProvider.isEmpty() ) {
-	kDebug() << "No service provider found for country" << country;
-	return false;
-    }
-
-    // Get stop list near the user from the openStreetMap data engine
-    QString stop;
-    Plasma::DataEngine *osmEngine = m_applet->dataEngine( "openstreetmap" );
-    if ( osmEngine->isValid() ) {
-	double areaSize = accuracy > 10000 ? 1.0 : 0.02;
-	QString sourceName = QString( "%1,%2 %3 publictransportstops" )
-		.arg( latitude ).arg( longitude ).arg( areaSize );
-	Plasma::DataEngine::Data dataOsm = osmEngine->query( sourceName );
-	
-	if ( dataOsm.isEmpty() ) {
-	    kDebug() << "Connect to OSM data engine";
-	    m_configDialog->setEnabled( false ); // TODO: Add some waiting info
-	    osmEngine->connectSource( sourceName, this );
-	} else {
-	    kDebug() << "Got data from OSM data engine" << dataOsm;
-	    processOsmData( sourceName, dataOsm );
-	}
-	return true;
-    }
-
-    // Set values in the dialog (the GUI) or only in the current settings (member variables)
-    setStopValues( dataProvider["id"].toString(), country, city, stop, setInGui );
-
-    return true;
-}
-
-void PublicTransportSettings::setStopValues( const QString &serviceProviderId,
-					     const QString &country,
-					     const QString &city,
-					     const QString &stop, bool setInGui ) {
-    if ( setInGui ) {
-// 	item->setData( country, LocationCodeRole );
-	int curLocationIndex = m_ui.location->findData( country, LocationCodeRole );
-	if ( curLocationIndex != -1 )
-	    m_ui.location->setCurrentIndex( curLocationIndex );
-	else {
-	    kDebug() << "Country" << country << "not found";
-	    return;
-	}
-
-	int serviceProviderIndex = -1;
-	for ( int i = 0; i < m_ui.serviceProvider->count(); ++i ) {
-	    if ( m_ui.serviceProvider->itemData(i, ServiceProviderDataRole).toHash()["id"].toString() == serviceProviderId ) {
-		serviceProviderIndex = i;
-		break;
-	    }
-	}
-	if ( serviceProviderIndex != -1 ) {
-	    if ( m_ui.serviceProvider->currentIndex() != serviceProviderIndex ) {
-		m_ui.serviceProvider->setCurrentIndex( serviceProviderIndex );
-		serviceProviderChanged( serviceProviderIndex );
-	    }
-	} else {
-	    kDebug() << "Service provider not found" << serviceProviderId;
-	    return;
-	}
-
-	if ( m_useSeperateCityValue )
-	    m_ui.city->setCurrentItem( city );
-
-	if ( stop.isNull() )
-	    m_ui.stop->setText( city );
-	else
-	    m_ui.stop->setText( stop );
-
-	// Load completions (the filled in stop name could be invalid..)
-	if ( !stop.contains(city) ) {
-	    m_stopCityCombinations << stop + " " + city;
-	    m_stopCityCombinations << stop + ", " + city;
-	    m_stopCityCombinations << city + " " + stop;
-	    kDebug() << m_stopCityCombinations;
-	}
-	m_ui.stop->setFocus();
-	stopNameChanged( m_ui.stop->text() );
-    } else {
-	m_location = country;
-	m_serviceProvider = serviceProviderId;
-	if ( m_useSeperateCityValue )
-	    m_city = city;
-
-	QString stopToBeUsed = stop.isNull() ? city : stop;
-	if ( m_stops.isEmpty() ) {
-	    m_stops << stopToBeUsed;
-	    m_stopIDs << stopToBeUsed;
-	} else {
-	    m_stops[0] = stopToBeUsed;
-	    m_stopIDs[0] = stopToBeUsed;
-	}
-    }
-}
-
-void PublicTransportSettings::readSettings() {
-    KConfigGroup cg = m_applet->config();
-    m_autoUpdate = cg.readEntry("autoUpdate", true);
-    m_showRemainingMinutes = cg.readEntry("showRemainingMinutes", true);
-    m_showDepartureTime = cg.readEntry("showDepartureTime", true);
-    m_displayTimeBold = cg.readEntry("displayTimeBold", true);
-    
-    bool hasConfig = cg.hasKey("serviceProvider");
-    m_serviceProvider = cg.readEntry("serviceProvider", "de_db"); // "de_db" is "Germany (db.de)" ("Deutsche Bahn")
-    m_location = cg.readEntry("location", KGlobal::locale()->country());
-    m_city = cg.readEntry("city", "");
-    m_stops = cg.readEntry("stop", QStringList());
-    m_stopIDs = cg.readEntry("stopID", QStringList());
-    if ( !hasConfig ) {
-	// No config, applet just added
-	getStopFromGeolocation();
-    }
-    m_currentStopIndex = cg.readEntry("currentStopIndex", -1);
-    m_timeOffsetOfFirstDeparture = cg.readEntry("timeOffsetOfFirstDeparture", 0);
-    m_timeOfFirstDepartureCustom = QTime::fromString(
-	    cg.readEntry("timeOfFirstDepartureCustom", "12:00"), "hh:mm" );
-    m_firstDepartureConfigMode = static_cast<FirstDepartureConfigMode>(
-	    cg.readEntry("firstDepartureConfigMode",
-			 static_cast<int>(RelativeToCurrentTime)) );
-    m_maximalNumberOfDepartures = cg.readEntry("maximalNumberOfDepartures", 20);
-    m_alarmTime = cg.readEntry("alarmTime", 5);
-    m_linesPerRow = cg.readEntry("linesPerRow", 2);
-    m_size = cg.readEntry("size", 2);
-    m_departureArrivalListType = static_cast<DepartureArrivalListType>(
-	    cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList)) );
-    m_showHeader = cg.readEntry("showHeader", true);
-    m_hideColumnTarget = cg.readEntry("hideColumnTarget", false);
-
-    QString fontFamily = cg.readEntry("fontFamily", "");
-    m_useDefaultFont = fontFamily.isEmpty();
-    if ( !m_useDefaultFont )
-	m_font = QFont( fontFamily );
-
-    // Read filter settings
-    m_filterConfiguration = cg.readEntry("filterConfiguration", "Default");
-    m_filterConfigurationList = cg.readEntry("filterConfigurationList", QStringList() << "Default");
-    if ( !m_filterConfigurationList.contains("Default") )
-	m_filterConfigurationList.prepend( "Default" );
-    m_filterConfigChanged = isCurrentFilterConfigChanged();
-    kDebug() << "Read filter config settings:" << m_filterConfiguration
-	     << "changed?" << m_filterConfigChanged
-	     << "list" << m_filterConfigurationList;
-    
-    m_showTypeOfVehicle[Unknown] = cg.readEntry(vehicleTypeToConfigName(Unknown), true);
-    m_showTypeOfVehicle[Tram] = cg.readEntry(vehicleTypeToConfigName(Tram), true);
-    m_showTypeOfVehicle[Bus] = cg.readEntry(vehicleTypeToConfigName(Bus), true);
-    m_showTypeOfVehicle[Subway] = cg.readEntry(vehicleTypeToConfigName(Subway), true);
-    m_showTypeOfVehicle[Metro] = cg.readEntry(vehicleTypeToConfigName(Metro), true);
-    m_showTypeOfVehicle[TrolleyBus] = cg.readEntry(vehicleTypeToConfigName(TrolleyBus), true);
-    m_showTypeOfVehicle[TrainInterurban] = cg.readEntry(vehicleTypeToConfigName(TrainInterurban), true);
-    m_showTypeOfVehicle[TrainRegional] = cg.readEntry(vehicleTypeToConfigName(TrainRegional), true);
-    m_showTypeOfVehicle[TrainRegionalExpress] = cg.readEntry(vehicleTypeToConfigName(TrainRegionalExpress), true);
-    m_showTypeOfVehicle[TrainInterregio] = cg.readEntry(vehicleTypeToConfigName(TrainInterregio), true);
-    m_showTypeOfVehicle[TrainIntercityEurocity] = cg.readEntry(vehicleTypeToConfigName(TrainIntercityEurocity), true);
-    m_showTypeOfVehicle[TrainIntercityExpress] = cg.readEntry(vehicleTypeToConfigName(TrainIntercityExpress), true);
-    m_showTypeOfVehicle[Ferry] = cg.readEntry(vehicleTypeToConfigName(Ferry), true);
-    m_showTypeOfVehicle[Plane] = cg.readEntry(vehicleTypeToConfigName(Plane), true);
-    m_showNightlines = cg.readEntry("showNightlines", true);
-    m_filterMinLine = cg.readEntry("filterMinLine", 1);
-    m_filterMaxLine = cg.readEntry("filterMaxLine", 999);
-    m_filterPatternTarget = static_cast<QRegExp::PatternSyntax>( cg.readEntry("filterPatternTarget",
-					static_cast<int>(QRegExp::FixedString)) );
-    m_filterTypeTarget = static_cast<FilterType>( cg.readEntry("filterTypeTarget",
-					static_cast<int>(ShowAll)) );
-    m_filterTargetList = cg.readEntry("filterTargetList", QStringList());
-    m_filterTypeLineNumber = static_cast<FilterType>( cg.readEntry("filterTypeLineNumber",
-					static_cast<int>(ShowAll)) );
-    m_filterLineNumberList = cg.readEntry("filterLineNumberList", QStringList());
-    
-    getServiceProviderInfo();
-//     selectLocaleLocation();
-}
-
-bool PublicTransportSettings::isCurrentFilterConfigChanged() {
-    return isCurrentFilterConfigChangedFrom( m_applet->config(
-	    "filterConfig_" + m_filterConfiguration) );
-}
-
-bool PublicTransportSettings::isCurrentFilterConfigChangedFrom( const KConfigGroup& cg ) {
-    kDebug() << "Changed?" << cg.name();
-    if ( m_showTypeOfVehicle[Unknown] != cg.readEntry(vehicleTypeToConfigName(Unknown), true) )
-	return true;
-    if ( m_showTypeOfVehicle[Tram] != cg.readEntry(vehicleTypeToConfigName(Tram), true) )
-	return true;
-    if ( m_showTypeOfVehicle[Bus] != cg.readEntry(vehicleTypeToConfigName(Bus), true) )
-	return true;
-    if ( m_showTypeOfVehicle[Subway] != cg.readEntry(vehicleTypeToConfigName(Subway), true) )
-	return true;
-    if ( m_showTypeOfVehicle[Metro] != cg.readEntry(vehicleTypeToConfigName(Metro), true) )
-	return true;
-    if ( m_showTypeOfVehicle[TrolleyBus] !=
-		cg.readEntry(vehicleTypeToConfigName(TrolleyBus), true) )
-	return true;
-    if ( m_showTypeOfVehicle[TrainInterurban] !=
-		cg.readEntry(vehicleTypeToConfigName(TrainInterurban), true) )
-	return true;
-    if ( m_showTypeOfVehicle[TrainRegional] !=
-		cg.readEntry(vehicleTypeToConfigName(TrainRegional), true) )
-	return true;
-    if ( m_showTypeOfVehicle[TrainRegionalExpress] !=
-		cg.readEntry(vehicleTypeToConfigName(TrainRegionalExpress), true) )
-	return true;
-    if ( m_showTypeOfVehicle[TrainInterregio] !=
-		cg.readEntry(vehicleTypeToConfigName(TrainInterregio), true) )
-	return true;
-    if ( m_showTypeOfVehicle[TrainIntercityEurocity] !=
-		cg.readEntry(vehicleTypeToConfigName(TrainIntercityEurocity), true) )
-	return true;
-    if ( m_showTypeOfVehicle[TrainIntercityExpress] !=
-		cg.readEntry(vehicleTypeToConfigName(TrainIntercityExpress), true) )
-	return true;
-    if ( m_showTypeOfVehicle[Ferry] != cg.readEntry(vehicleTypeToConfigName(Ferry), true) )
-	return true;
-    if ( m_showTypeOfVehicle[Plane] != cg.readEntry(vehicleTypeToConfigName(Plane), true) )
-	return true;
-
-    if ( m_filterPatternTarget != static_cast<QRegExp::PatternSyntax>(
-		cg.readEntry("filterPatternTarget", static_cast<int>(QRegExp::FixedString))) )
-	return true;
-    if ( m_filterTypeTarget != static_cast<FilterType>(
-		cg.readEntry("filterTypeTarget", static_cast<int>(ShowAll))) )
-	return true;
-    if ( m_filterTargetList != cg.readEntry("filterTargetList", QStringList()) )
-	return true;
-    if ( m_filterTypeLineNumber != static_cast<FilterType>(
-		cg.readEntry("filterTypeLineNumber", static_cast<int>(ShowAll))) )
-	return true;
-    if ( m_filterLineNumberList != cg.readEntry("filterLineNumberList", QStringList()) )
-	return true;
-
-    kDebug() << "Not changed";
-    return false;
-}
-
-void PublicTransportSettings::getServiceProviderInfo() {
-    Plasma::DataEngine::Data data =
-	    m_applet->dataEngine("publictransport")->query("ServiceProviders");
-    foreach ( QString serviceProviderName, data.keys() ) {
-	QHash< QString, QVariant > serviceProviderData =
-		data.value(serviceProviderName).toHash();
-	if ( serviceProvider() == serviceProviderData["id"].toString() ) {
-	    m_useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
-	    m_onlyUseCitiesInList = serviceProviderData["onlyUseCitiesInList"].toBool();
-	    m_serviceProviderFeatures = serviceProviderData["features"].toStringList();
-	    break;
-	}
-    }
-}
-
-void PublicTransportSettings::setShowHeader( bool showHeader ) {
-    m_showHeader = showHeader;
-
-    KConfigGroup cg = m_applet->config();
-    cg.writeEntry( "showHeader", m_showHeader );
-//     emit settingsChanged();
-    emit configNeedsSaving();
-}
-
-void PublicTransportSettings::setHideColumnTarget( bool hideColumnTarget ) {
-    m_hideColumnTarget = hideColumnTarget;
-
-    KConfigGroup cg = m_applet->config();
-    cg.writeEntry( "hideColumnTarget", m_hideColumnTarget );
-//     qDebug() << "PublicTransportSettings::setHideColumnTarget" << hideColumnTarget;
-//     emit settingsChanged();
-    emit configNeedsSaving();
-}
-
-void PublicTransportSettings::filterLineTypeAvailableSelectionChanged( int ) {
-    m_uiFilter.filterLineType->setButtonsEnabled();
-}
-
-void PublicTransportSettings::filterLineTypeSelectedSelectionChanged( int ) {
-    m_uiFilter.filterLineType->setButtonsEnabled();
-}
-
-void PublicTransportSettings::addedFilterLineType( QListWidgetItem* ) {
-    m_uiFilter.filterLineType->setButtonsEnabled();
-    setFilterConfigurationChanged();
-}
-
-void PublicTransportSettings::removedFilterLineType( QListWidgetItem* ) {
-    m_uiFilter.filterLineType->setButtonsEnabled();
-    setFilterConfigurationChanged();
-}
-
-QList< VehicleType > PublicTransportSettings::filteredOutVehicleTypes() const {
-    return m_showTypeOfVehicle.keys( false );
-}
-
-void PublicTransportSettings::removeAllFiltersByVehicleType() {
-    // TODO: go through all vehicle types
-    m_showTypeOfVehicle[Unknown] = true;
-    m_showTypeOfVehicle[Tram] = true;
-    m_showTypeOfVehicle[Bus] = true;
-    m_showTypeOfVehicle[Subway] = true;
-    m_showTypeOfVehicle[Metro] = true;
-    m_showTypeOfVehicle[TrolleyBus] = true;
-    m_showTypeOfVehicle[TrainInterurban] = true;
-    m_showTypeOfVehicle[TrainRegional] = true;
-    m_showTypeOfVehicle[TrainRegionalExpress] = true;
-    m_showTypeOfVehicle[TrainInterregio] = true;
-    m_showTypeOfVehicle[TrainIntercityEurocity] = true;
-    m_showTypeOfVehicle[TrainIntercityExpress] = true;
-    m_showTypeOfVehicle[Ferry] = true;
-    m_showTypeOfVehicle[Plane] = true;
-
-    KConfigGroup cg = m_applet->config();
-    cg.writeEntry(vehicleTypeToConfigName(Unknown), true);
-    cg.writeEntry(vehicleTypeToConfigName(Tram), true);
-    cg.writeEntry(vehicleTypeToConfigName(Bus), true);
-    cg.writeEntry(vehicleTypeToConfigName(Subway), true);
-    cg.writeEntry(vehicleTypeToConfigName(Metro), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrolleyBus), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainInterurban), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainRegional), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainRegionalExpress), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainInterregio), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainIntercityEurocity), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress), true);
-    cg.writeEntry(vehicleTypeToConfigName(Ferry), true);
-    cg.writeEntry(vehicleTypeToConfigName(Plane), true);
-    //     emit settingsChanged();
-    emit configNeedsSaving();
-    emit modelNeedsUpdate();
-
-    setFilterConfigurationChanged();
-    // TODO: Synchronize new settings with config dialog widgets
-}
-
-// TODO: Plasma::DataEngine::Data instead of QVariant?
-void PublicTransportSettings::testResult( DataSourceTester::TestResult result,
-					  const QVariant &data, const QVariant &data2,
-					  const QVariant &data3 ) {
-    //     qDebug() << "PublicTransport::testResult";
-    if ( !m_applet->testState(ConfigDialogShown) )
-	return;
-
-    bool hasAtLeastOneWeight = false;
-    int stopWeight;
-    QStringList stops, weightedStops;
-    QHash< QString, QVariant > stopToStopID;
-    QHash< QString, QVariant > stopToStopWeight;
-    switch ( result ) {
-	case DataSourceTester::Error:
-	    setStopNameValid( false, data.toString() );
-	    break;
-
-	case DataSourceTester::JourneyListReceived:
-	    setStopNameValid( true );
-	    break;
-
-	case DataSourceTester::PossibleStopsReceived:
-	    setStopNameValid( false, i18n("The stop name is ambiguous.") );
-	    stops = data.toStringList();
-	    stopToStopID = data2.toHash();
-	    stopToStopWeight = data3.toHash();
-
-	    foreach ( QString stop, stops ) {
-		stopWeight = stopToStopWeight[ stop ].toInt();
-		if ( stopWeight <= 0 )
-		    stopWeight = 0;
-		else
-		    hasAtLeastOneWeight = true;
-		
-		weightedStops << QString( "%1:%2" ).arg( stop ).arg( stopWeight );
-	    }
-
-	    KLineEdit *stop = NULL;
-	    if ( m_ui.stop->hasFocus() ) {
-		stop = m_ui.stop;
-
-		if ( !m_stopCityCombinations.isEmpty() ) {
-		    foreach ( QString stopCityCombination, m_stopCityCombinations ) {
-			if ( stops.contains(stopCityCombination, Qt::CaseInsensitive) ) {
-			    stop->setText( stopCityCombination );
-			    break;
-			}
-		    }
-		}
-	    } else {
-		foreach ( QWidgetList stopWidgets, m_additionalStopWidgets ) {
-		    KLineEdit *additionalStop = NULL;
-		    foreach ( QWidget *widget, stopWidgets ) {
-			additionalStop = dynamic_cast< KLineEdit* >( widget );
-			if ( additionalStop && additionalStop->hasFocus() ) {
-			    stop = additionalStop;
-			    break;
-			}
-		    }
-		    if ( stop )
-			break;
-		}
-	    }
-	    
-	    if ( !m_stopCityCombinations.isEmpty() )
-		m_stopCityCombinations.clear();
-	    
-	    if ( stop ) { // One stop edit line has focus
-		KCompletion *comp = stop->completionObject();
-		comp->setIgnoreCase( true );
-		if ( hasAtLeastOneWeight ) {
-		    comp->setOrder( KCompletion::Weighted );
-		    comp->insertItems( weightedStops );
-    // 		m_ui.stop->setCompletedItems( weightedStops );
-		} else {
-		    comp->setOrder( KCompletion::Insertion);
-		    comp->insertItems( stops );
-    // 		m_ui.stop->setCompletedItems( stops );
-		}
-		// Complete manually, because the completions are requested asynchronously
-		if ( m_ui.stop == stop ) {
-		    stop->doCompletion( stop->text() );
-		    m_stopIDinConfig = stopToStopID.value( stop->text(), QString() ).toString();
-		} else {
-		    stop->doCompletion( stop->text() );
-		    // TODO set stop id in a hash
-		}
-    // 	    comp->substringCompletion( m_ui.stop->text() );
-	    }
-
-	    break;
-    }
-}
-
-void PublicTransportSettings::setFilterTypeTarget( FilterType filterType ) {
-    m_filterTypeTarget = filterType;
-
-    m_applet->config().writeEntry("filterTypeTarget", static_cast<int>(m_filterTypeTarget));
-    emit configNeedsSaving();
-
-    // Synchronize new settings with config dialog widgets
-    if ( m_applet->testState(ConfigDialogShown) )
-	m_uiFilter.filterTypeTarget->setCurrentIndex( static_cast<int>(m_filterTypeTarget) );
-}
-
-void PublicTransportSettings::setFilterTypeLineNumber( FilterType filterType ) {
-    m_filterTypeLineNumber = filterType;
-
-    m_applet->config().writeEntry("filterTypeLineNumber", static_cast<int>(m_filterTypeLineNumber));
-    emit configNeedsSaving();
-
-    // Synchronize new settings with config dialog widgets
-    if ( m_applet->testState(ConfigDialogShown) )
-	m_uiFilter.filterTypeLineNumber->setCurrentIndex( static_cast<int>(m_filterTypeLineNumber) );
-}
-
-void PublicTransportSettings::configDialogFinished() {
-    m_dataSourceTester->setTestSource("");
-    m_applet->removeState( ConfigDialogShown );
-    m_configDialog = NULL;
-}
-
-void PublicTransportSettings::accessorInfoDialogFinished() {
-    m_applet->removeState( AccessorInfoDialogShown );
-}
-
-bool PublicTransportSettings::checkConfig() {
-    if ( m_useSeperateCityValue && (m_city.isEmpty()
-	    || m_stops.isEmpty() || m_stops.first().isEmpty()) )
-	emit configurationRequired(true, i18n("Please set a city and a stop."));
-    else if ( m_stops.isEmpty() || m_stops.first().isEmpty() )
-	emit configurationRequired(true, i18n("Please set a stop."));
-    else if ( m_serviceProvider == "" )
-	emit configurationRequired(true, i18n("Please select a service provider."));
-    else if ( m_filterMinLine > m_filterMaxLine )
-	emit configurationRequired(true, i18n("The minimal shown line can't be bigger than the maximal shown line."));
-    else {
-	emit configurationRequired(false);
-	return true;
-    }
-
-    return false;
-}
-
-void PublicTransportSettings::setStopNameValid( bool /*valid*/, const QString &/*toolTip*/ ) {
-//     if ( !m_applet->testState(ConfigDialogShown) )
-// 	return;
-
-//     if ( valid ) {
-// 	m_ui.kledStopValidated->setState( KLed::On );
-// 	m_ui.kledStopValidated->setToolTip( i18n("The stop name is valid.") );
-//     } else {
-// 	m_ui.kledStopValidated->setState( KLed::Off );
-// 	m_ui.kledStopValidated->setToolTip( toolTip );
-//     }
-}
-
-QString PublicTransportSettings::configCityValue() const {
-    if ( m_ui.city->isEditable() )
-	return m_ui.city->lineEdit()->text();
-    else
-	return m_ui.city->currentText();
-}
-
-void PublicTransportSettings::serviceProviderChanged( int index ) {
-    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( index )->data( ServiceProviderDataRole ).toHash();
-    kDebug() << "New service provider" << serviceProviderData["name"].toString();
-
-    m_stopIDinConfig = "";
-    m_dataSourceTester->clearStopToStopIdMap();
-
-//     m_ui.kledStopValidated->setState( KLed::Off );
-//     m_ui.kledStopValidated->setToolTip( i18n("Checking validity of the stop name.") );
-
-    // Only show "Departures"/"Arrivals"-radio buttons if arrivals are supported by the service provider
-    bool supportsArrivals =
-	serviceProviderData["features"].toStringList().contains("Arrivals");
-    m_uiAdvanced.showArrivals->setEnabled( supportsArrivals );
-    if ( !supportsArrivals )
-	m_uiAdvanced.showDepartures->setChecked( true );
-
-    bool useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
-    m_ui.lblCity->setVisible( useSeperateCityValue );
-    m_ui.city->setVisible( useSeperateCityValue );
-
-    if ( useSeperateCityValue ) {
-	m_ui.city->clear();
-	QStringList cities = serviceProviderData["cities"].toStringList();
-	if ( !cities.isEmpty() ) {
-	    // 	    m_ui.city->setCompletedItems( cities, false );
-	    cities.sort();
-	    m_ui.city->addItems( cities );
-	    m_ui.city->setEditText( cities.first() );
-	}
-	m_ui.city->setEditable( !serviceProviderData["onlyUseCitiesInList"].toBool() );
-    } else
-	m_ui.city->setEditText( "" );
-
-    m_ui.stop->setFocus();
-    stopNameChanged( m_ui.stop->text() );
-}
-
-void PublicTransportSettings::cityNameChanged( const QString &cityName ) {
-    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
-    bool useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
-    QString serviceProviderID = serviceProviderData["id"].toString();
-
-    if ( !useSeperateCityValue )
-	return; // City value not used by service provider
-
-    QString testSource = QString("%5 %1|stop=%2|maxDeps=%3|timeOffset=%4|city=%6")
-	.arg( serviceProviderID )
-	.arg( m_stopIDinConfig.isEmpty() ? m_ui.stop->text() : m_stopIDinConfig )
-	.arg( m_uiAdvanced.maximalNumberOfDepartures->value() )
-	.arg( m_uiAdvanced.timeOfFirstDeparture->value() )
-	.arg( m_uiAdvanced.showArrivals->isChecked() ? "Arrivals" : "Departures" )
-	.arg( cityName );
-    m_dataSourceTester->setTestSource( testSource );
-}
-
-void PublicTransportSettings::stopNameChanged( const QString &stopName ) {
-    if ( m_ui.stop->hasFocus() || m_ui.stop->text() == stopName )
-	m_stopIDinConfig = m_dataSourceTester->stopToStopID( stopName );
-    // else TODO: set stop id in a hash for each stop
-
-    // TODO: Prevent crash, when no service provider data is available?
-    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item(
-	    m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
-    bool useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
-    QString serviceProviderID = serviceProviderData["id"].toString();
-
-    QString testSource = QString("Stops %1|stop=%2")
-	.arg( serviceProviderID )
-	.arg( stopName );
-//     QString testSource = QString("%5 %1|stop=%2|maxDeps=%3|timeOffset=%4")
-// 	.arg( serviceProviderID )
-// 	.arg( m_stopIDinConfig.isEmpty() ? stopName : m_stopIDinConfig )
-// 	.arg( m_uiAdvanced.maximalNumberOfDepartures->value() )
-// 	.arg( m_uiAdvanced.timeOfFirstDeparture->value() )
-// 	.arg( m_uiAdvanced.showArrivals->isChecked() ? "Arrivals" : "Departures" );
-    if ( useSeperateCityValue )
-	testSource += QString("|city=%1").arg( configCityValue() );
-    m_dataSourceTester->setTestSource( testSource );
-}
-
-void PublicTransportSettings::clickedServiceProviderInfo() {
-    QWidget *widget = new QWidget;
-    m_uiAccessorInfo.setupUi( widget );
-    m_applet->addState( AccessorInfoDialogShown );
-
-    KDialog *infoDialog = new KDialog( m_configDialog );
-    infoDialog->setModal( true );
-    infoDialog->setButtons( KDialog::Ok );
-    infoDialog->setMainWidget( widget );
-    infoDialog->setWindowTitle( i18n("Service provider info") );
-    infoDialog->setWindowIcon( KIcon("help-about") );
-    connect( infoDialog, SIGNAL(finished()), this, SLOT(accessorInfoDialogFinished()) );
-
-    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item(
-	    m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
-    QIcon favIcon = m_ui.serviceProvider->itemIcon( m_ui.serviceProvider->currentIndex() );
-    m_uiAccessorInfo.icon->setPixmap( favIcon.pixmap(32) );
-    m_uiAccessorInfo.serviceProviderName->setText( m_ui.serviceProvider->currentText() );
-    m_uiAccessorInfo.version->setText( i18n("Version %1", serviceProviderData["version"].toString()) );
-    m_uiAccessorInfo.url->setUrl( serviceProviderData["url"].toString() );
-    m_uiAccessorInfo.url->setText( QString("<a href='%1'>%1</a>").arg(
-	    serviceProviderData["url"].toString() ) );
-
-    m_uiAccessorInfo.fileName->setUrl( serviceProviderData["fileName"].toString() );
-    m_uiAccessorInfo.fileName->setText( QString("<a href='%1'>%1</a>").arg(
-	    serviceProviderData["fileName"].toString() ) );
-
-    QString scriptFileName = serviceProviderData["scriptFileName"].toString();
-    if ( scriptFileName.isEmpty() ) {
-	m_uiAccessorInfo.lblScriptFileName->setVisible( false );
-	m_uiAccessorInfo.scriptFileName->setVisible( false );
-    } else {
-	m_uiAccessorInfo.lblScriptFileName->setVisible( true );
-	m_uiAccessorInfo.scriptFileName->setVisible( true );
-	m_uiAccessorInfo.scriptFileName->setUrl( scriptFileName );
-	m_uiAccessorInfo.scriptFileName->setText( QString("<a href='%1'>%1</a>")
-		.arg(scriptFileName) );
-    }
-
-    if ( serviceProviderData["email"].toString().isEmpty() )
-	m_uiAccessorInfo.author->setText( QString("%1").arg( serviceProviderData["author"].toString() ) );
-    else {
-	m_uiAccessorInfo.author->setText( QString("<a href='mailto:%2'>%1</a>")
-		.arg( serviceProviderData["author"].toString() )
-		.arg( serviceProviderData["email"].toString() ) );
-	m_uiAccessorInfo.author->setToolTip( i18n("Write an email to %1 <%2>")
-		.arg( serviceProviderData["author"].toString() )
-		.arg( serviceProviderData["email"].toString() ) );
-    }
-    m_uiAccessorInfo.description->setText( serviceProviderData["description"].toString() );
-    m_uiAccessorInfo.features->setText( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
-
-    infoDialog->show();
-}
-
-void PublicTransportSettings::createConfigurationInterface( KConfigDialog* parent,
-							    bool stopNameValid ) {
-    m_configDialog = parent;
-    m_applet->addState( ConfigDialogShown );
-    parent->setButtons( KDialog::Ok | KDialog::Cancel | KDialog::Apply );
-
-    QWidget *widget = new QWidget;
+#include "filterwidget.h"
+#include "stopwidget.h"
+// #include "datasourcetester.h"
+
+
+SettingsUiManager::SettingsUiManager( const Settings &settings,
+	    Plasma::DataEngine* publicTransportEngine, Plasma::DataEngine* osmEngine,
+	    Plasma::DataEngine* favIconEngine, Plasma::DataEngine* geolocationEngine,
+	    KConfigDialog *parentDialog, DeletionPolicy deletionPolicy )
+	    : QObject( parentDialog ), m_deletionPolicy(deletionPolicy),
+// 	    m_dataSourceTester(new DataSourceTester("", publicTransportEngine, this)),
+	    m_configDialog(parentDialog), m_modelServiceProvider(0),
+	    m_modelLocations(0), m_stopListWidget(0), m_filterListWidget(0),
+	    m_publicTransportEngine(publicTransportEngine), m_osmEngine(osmEngine),
+	    m_favIconEngine(favIconEngine), m_geolocationEngine(geolocationEngine) {
+//     m_applet->addState( ConfigDialogShown );
+    m_currentStopSettingsIndex = settings.currentStopSettingsIndex;
+    m_recentJourneySearches = settings.recentJourneySearches;
+
+    kDebug() << "Create UI with" << settings.filterSettings.keys();
+    m_filterSettings = settings.filterSettings;
+
+    QWidget *widgetStop = new QWidget;
     QWidget *widgetAdvanced = new QWidget;
     QWidget *widgetAppearance = new QWidget;
     QWidget *widgetFilter = new QWidget;
-    m_ui.setupUi(widget);
-    m_uiAdvanced.setupUi(widgetAdvanced);
-    m_uiAppearance.setupUi(widgetAppearance);
-    m_uiFilter.setupUi(widgetFilter);
+    m_ui.setupUi( widgetStop );
+    m_uiAdvanced.setupUi( widgetAdvanced );
+    m_uiAppearance.setupUi( widgetAppearance );
+    m_uiFilter.setupUi( widgetFilter );
 
     KTabWidget *tabMain = new KTabWidget;
-    tabMain->addTab(widget, i18n("&Stop selection"));
-    tabMain->addTab(widgetAdvanced, i18n("&Advanced"));
+    tabMain->addTab( widgetStop, i18n("&Stop selection") );
+    tabMain->addTab( widgetAdvanced, i18n("&Advanced") );
 
-    parent->addPage( tabMain, i18n("General"), "public-transport-stop" );
-    parent->addPage( widgetAppearance, i18n("Appearance"), "package_settings_looknfeel" );
-    parent->addPage( widgetFilter, i18n("Filter"), "view-filter" );
+    m_configDialog->addPage( tabMain, i18n("General"), "public-transport-stop" );
+    m_configDialog->addPage( widgetAppearance, i18n("Appearance"),
+			     "package_settings_looknfeel" );
+    m_configDialog->addPage( widgetFilter, i18n("Filter"), "view-filter" );
 
-    QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
-    QPalette p = m_ui.location->palette();
-    p.setColor( QPalette::Foreground, textColor );
-    m_ui.location->setPalette( p );
-    m_ui.serviceProvider->setPalette( p );
+    initModels();
 
-    m_additionalStopWidgets.clear();
-    m_removeStopButtons.clear();
+    // Setup stop widgets
+    QStringList trFilterConfigurationList;
+    foreach ( const QString &filterConfiguration, settings.filterSettings.keys() )
+	trFilterConfigurationList << translateKey( filterConfiguration );
+    m_stopListWidget = new StopListWidget( settings.stopSettingsList,
+	    trFilterConfigurationList, m_modelLocations,
+	    m_modelServiceProvider, m_publicTransportEngine, m_osmEngine,
+	    m_geolocationEngine, m_ui.stopList );
+    m_stopListWidget->setWhatsThis( i18n("<b>This shows the stop settings you "
+	    "have set.</b><br>"
+	    "The applet shows results for one of them at a time. To switch the "
+	    "currently used stop setting use the context menu of the applet.<br>"
+	    "For each stop setting another filter configuration can be used, "
+	    "to edit filter configurations use the filter section in the settings "
+	    "dialog. You can define a list of stops for each stop setting that "
+	    "are then displayed combined (eg. stops near to each other).") );
+    m_stopListWidget->setCurrentStopSettingIndex( m_currentStopSettingsIndex );
+    
+    QVBoxLayout *lStop = new QVBoxLayout( m_ui.stopList );
+    lStop->setContentsMargins( 0, 0, 0, 0 );
+    lStop->addWidget( m_stopListWidget );
+    connect( m_stopListWidget, SIGNAL(changed(int,StopSettings)),
+	     this, SLOT(updateFilterInfoLabel()) );
 
-    setStopNameValid( stopNameValid, "" );
-    setValuesOfStopSelectionConfig();
-    setValuesOfAdvancedConfig();
-    setValuesOfAppearanceConfig();
+    // Setup filter widgets
+    m_filterListWidget = new FilterListWidget( m_uiFilter.filters );
+    m_filterListWidget->setWhatsThis( i18n("<b>This shows the filters of the "
+	    "selected filter configuration.</b><br>"
+	    "Each filter configuration consists of a filter action and a list "
+	    "of filters. Each filter contains a list of constraints.<br>"
+	    "A filter matches, if all it's constraints match.<br>"
+	    "To use a filter configuration select it in the stop settings. "
+	    "Each stop settings can use another filter configuration.") );
+    
+    QVBoxLayout *l = new QVBoxLayout( m_uiFilter.filters );
+    l->addWidget( m_filterListWidget );
+    connect( m_filterListWidget, SIGNAL(changed()),
+	     this, SLOT(setFilterConfigurationChanged()) );
+
+    setValuesOfAdvancedConfig( settings );
+    setValuesOfAppearanceConfig( settings );
     setValuesOfFilterConfig();
 
-    m_uiFilter.saveFilterConfiguration->setIcon( KIcon("document-save") );
+//     m_uiFilter.saveFilterConfiguration->setIcon( KIcon("document-save") );
     m_uiFilter.addFilterConfiguration->setIcon( KIcon("list-add") );
     m_uiFilter.removeFilterConfiguration->setIcon( KIcon("list-remove") );
     m_uiFilter.renameFilterConfiguration->setIcon( KIcon("edit-rename") );
-    
-    connect( parent, SIGNAL(finished()), this, SLOT(configDialogFinished()));
-    connect( parent, SIGNAL(applyClicked()), this, SLOT(configAccepted()) );
-    connect( parent, SIGNAL(okClicked()), this, SLOT(configAccepted()) );
-    connect( m_ui.geolocate, SIGNAL(clicked()), this, SLOT(gelocateClicked()) );
-    connect( m_ui.location, SIGNAL(currentIndexChanged(const QString&)),
-	     this, SLOT(locationChanged(const QString&)) );
-    connect( m_ui.serviceProvider, SIGNAL(currentIndexChanged(int)),
-	     this, SLOT(serviceProviderChanged(int)) );
-    connect( m_ui.city, SIGNAL(currentIndexChanged(QString)),
-	     this, SLOT(cityNameChanged(QString)) );
-    connect( m_ui.stop, SIGNAL(textEdited(QString)),
-	     this, SLOT(stopNameChanged(QString)) );
-    connect( m_ui.btnServiceProviderInfo, SIGNAL(clicked()),
-	     this, SLOT(clickedServiceProviderInfo()) );
-    connect( m_ui.btnAddStop, SIGNAL(clicked()),
-	     this, SLOT(clickedAddStop()) );
-    connect( m_uiFilter.filterLineType->selectedListWidget(), SIGNAL(currentRowChanged(int)),
-	     this, SLOT(filterLineTypeSelectedSelectionChanged(int)) );
-    connect( m_uiFilter.filterLineType->availableListWidget(), SIGNAL(currentRowChanged(int)),
-	     this, SLOT(filterLineTypeAvailableSelectionChanged(int)) );
-    connect( m_uiFilter.filterLineType, SIGNAL(added(QListWidgetItem*)),
-	     this, SLOT(addedFilterLineType(QListWidgetItem*)) );
-    connect( m_uiFilter.filterLineType, SIGNAL(removed(QListWidgetItem*)),
-	     this, SLOT(removedFilterLineType(QListWidgetItem*)) );
+
+    connect( m_configDialog, SIGNAL(finished()), this, SLOT(configFinished()) );
+    connect( m_configDialog, SIGNAL(okClicked()), this, SLOT(configAccepted()) );
+
+    connect( m_uiFilter.filterAction, SIGNAL(currentIndexChanged(int)),
+	     this, SLOT(filterActionChanged(int)) );
 
     connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
 	     this, SLOT(loadFilterConfiguration(QString)) );
-    connect( m_uiFilter.saveFilterConfiguration, SIGNAL(clicked()),
-	     this, SLOT(saveFilterConfiguration()) );
     connect( m_uiFilter.addFilterConfiguration, SIGNAL(clicked()),
 	     this, SLOT(addFilterConfiguration()) );
     connect( m_uiFilter.removeFilterConfiguration, SIGNAL(clicked()),
 	     this, SLOT(removeFilterConfiguration()) );
     connect( m_uiFilter.renameFilterConfiguration, SIGNAL(clicked()),
 	     this, SLOT(renameFilterConfiguration()) );
-
-    connect( m_uiFilter.filterTypeTarget, SIGNAL(currentIndexChanged(int)),
-	     this, SLOT(filterTypeTargetChanged(int)) );
-    connect( m_uiFilter.filterTargetList, SIGNAL(changed()),
-	     this, SLOT(filterTargetListChanged()) );
-
-    connect( m_uiFilter.filterTypeLineNumber, SIGNAL(currentIndexChanged(int)),
-	     this, SLOT(filterTypeLineNumberChanged(int)) );
-    connect( m_uiFilter.filterLineNumberList, SIGNAL(changed()),
-	     this, SLOT(filterLineNumberListChanged()) );
-
-    // Check stop name validity
-    stopNameChanged( m_ui.stop->text() );
+	     
+//     connect( m_dataSourceTester,
+// 	     SIGNAL(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)),
+// 	     this, SLOT(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)) );
 }
 
-void PublicTransportSettings::setGeolocateTooltip() {
-    // Get data from the geolocation data engine
-    Plasma::DataEngine::Data dataGeo =
-	    m_applet->dataEngine("geolocation")->query("location");
-    if ( dataGeo.isEmpty() ) {
-	kDebug() << endl << endl << "NOOOOT FOUND" << endl << endl;
-	QTimer::singleShot( 500, this, SLOT(setGeolocateTooltip()) );
-    } else {
-	int accuracy = dataGeo["accuracy"].toInt();
-	kDebug() << endl << endl << "FOUND" << accuracy << endl << endl;
-	if ( accuracy > 10000 ) {
-	    m_ui.geolocate->setToolTip( i18nc("Tooltip of the 'Find Near Stops...' "
-		    "button for low accuracy of the users position",
-		    "Tries to find a stop near you. Your position can't be determined "
-		    "exactly, so this might not work correctly.") );
-	} else {
-	    m_ui.geolocate->setToolTip( i18nc("Tooltip of the 'Find Near Stops...' "
-		    "button for good/high accuracy of the users position",
-		    "Shows stops near you to choose from.") );
+void SettingsUiManager::configFinished() {
+    if ( m_deletionPolicy == DeleteWhenFinished )
+	deleteLater();
+}
+
+void SettingsUiManager::configAccepted() {
+    emit settingsAccepted( settings() );
+    
+    //     TODO THIS CODE SHOULD BE MOVED TO publictransport.cpp
+//     bool changedServiceProviderSettings;
+//     if ( SettingsReaderWrite::writeSettings(newsettings, m_settings, config(),
+// 					    &changedServiceProviderSettings) ) {
+// 	settingsChanged();
+// 	configNeedsSaving();
+// 	if ( changedServiceProviderSettings )
+// 	    serviceProviderSettingsChanged();
+//     }
+}
+
+void SettingsUiManager::setValuesOfAdvancedConfig( const Settings &settings ) {
+    m_uiAdvanced.showDepartures->setEnabled(
+	    settings.departureArrivalListType == DepartureList );
+    m_uiAdvanced.showArrivals->setEnabled(
+	    settings.departureArrivalListType == ArrivalList );
+    m_uiAdvanced.updateAutomatically->setChecked( settings.autoUpdate );
+    m_uiAdvanced.timeOfFirstDeparture->setValue( settings.timeOffsetOfFirstDeparture );
+    m_uiAdvanced.timeOfFirstDepartureCustom->setTime( settings.timeOfFirstDepartureCustom );
+    m_uiAdvanced.firstDepartureUseCurrentTime->setChecked(
+	    settings.firstDepartureConfigMode == RelativeToCurrentTime );
+    m_uiAdvanced.firstDepartureUseCustomTime->setChecked(
+	    settings.firstDepartureConfigMode == AtCustomTime );
+    m_uiAdvanced.maximalNumberOfDepartures->setValue( settings.maximalNumberOfDepartures );
+    m_uiAdvanced.alarmTime->setValue( settings.alarmTime );
+}
+
+void SettingsUiManager::setValuesOfAppearanceConfig( const Settings &settings ) {
+    m_uiAppearance.linesPerRow->setValue( settings.linesPerRow );
+    kDebug() << "SET SIZE TO" << settings.size;
+    m_uiAppearance.size->setValue( settings.size );
+    if ( settings.showRemainingMinutes && settings.showDepartureTime )
+	m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex(0);
+    else if ( settings.showRemainingMinutes )
+	m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex(2);
+    else
+	m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex(1);
+    m_uiAppearance.displayTimeBold->setChecked( settings.displayTimeBold );
+    
+    m_uiAppearance.showHeader->setChecked( settings.showHeader );
+    m_uiAppearance.showColumnTarget->setChecked( !settings.hideColumnTarget );
+    m_uiAppearance.radioUseDefaultFont->setChecked( settings.useDefaultFont );
+    m_uiAppearance.radioUseOtherFont->setChecked( !settings.useDefaultFont );
+    m_uiAppearance.font->setCurrentFont( settings.font );
+}
+
+void SettingsUiManager::updateFilterInfoLabel() {
+    QString filterConfiguration = untranslateKey(
+	    m_uiFilter.filterConfigurations->currentText() );
+    int usedByCount = 0;
+    QStringList usedByList;
+    foreach ( const StopSettings &stopSettings, m_stopListWidget->stopSettingsList() ) {
+	if ( stopSettings.filterConfiguration == filterConfiguration ) {
+	    ++usedByCount;
+	    usedByList << stopSettings.stops.join(", ");
 	}
     }
+    m_uiFilter.lblInfo->setText( usedByCount == 0
+	? i18n("Not used by any stop settings.")
+	: i18np("Used by %1 stop setting.", "Used by %1 stop settings.", usedByCount) );
+    m_uiFilter.lblInfo->setToolTip( i18n("Used by these stops:\n %1",
+					 usedByList.join(",\n")) );
 }
 
-void PublicTransportSettings::setValuesOfStopSelectionConfig() {
-    if ( m_stops.isEmpty() ) {
-	m_stops << m_ui.stop->text();
-	if ( m_stopIDs.isEmpty() )
-	    m_stopIDs << m_stopIDinConfig;
+void SettingsUiManager::setValuesOfFilterConfig() {
+//     TODO: Move to reader
+//     if ( !m_applet->config().hasGroup("filterConfig_Default") ) {
+// 	kDebug() << "Adding 'filterConfig_Default'";
+// 	writeDefaultFilterConfig( m_applet->config("filterConfig_Default") );
+//     }
+//     if ( !m_settings.filterConfigurationList.contains("Default") )
+// 	m_settings.filterConfigurationList.prepend( "Default" );
+//     kDebug() << "Group list" << m_applet->config().groupList();
+//     kDebug() << "Filter Config List:" << m_settings.filterConfigurationList;
+//     // Delete old filter configs
+//     foreach ( const QString &group, m_applet->config().groupList() ) {
+// 	if ( !m_settings.filterConfigurationList.contains(group.mid(QString("filterConfig_").length())) ) {
+// 	    kDebug() << "Delete old group" << group;
+// 	    m_applet->config().deleteGroup( group );
+// 	}
+//     }
+
+    if ( m_uiFilter.filterConfigurations->currentIndex() == -1 ) {
+	kDebug() << "SELECT FIRST ITEM";
+	m_uiFilter.filterConfigurations->setCurrentIndex( 0 );
     }
-    m_ui.btnAddStop->setIcon( KIcon("list-add") );
-    m_ui.geolocate->setIcon( KIcon("tools-wizard") );
-    setGeolocateTooltip();
     
-    m_ui.stop->setCompletionMode( KGlobalSettings::CompletionPopup );
-    m_ui.stop->setClearButtonShown( true );
-    m_ui.stop->setClickMessage( i18n("Your home stop") );
+    QStringList filterConfigGroups;
+    foreach ( const QString &filterConfig, m_filterSettings.keys() ) //m_settings.filterConfigurationList )
+	filterConfigGroups << translateKey( filterConfig );
+    kDebug() << "FILTERS (localized):" << filterConfigGroups
+	     << "FILTERS:" << m_filterSettings.keys();
+
+    QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+
+    disconnect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+		this, SLOT(loadFilterConfiguration(QString)) );
+    m_uiFilter.filterConfigurations->clear();
+    m_uiFilter.filterConfigurations->addItems( filterConfigGroups );
+    if ( trFilterConfiguration.isEmpty() )
+	m_uiFilter.filterConfigurations->setCurrentIndex( 0 );
+    else
+	m_uiFilter.filterConfigurations->setCurrentItem( trFilterConfiguration );
+    connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+	     this, SLOT(loadFilterConfiguration(QString)) );
     
-    m_ui.btnServiceProviderInfo->setIcon( KIcon("help-about") );
-    m_ui.btnServiceProviderInfo->setText( "" );
+    if ( trFilterConfiguration.isEmpty() ) {
+	kDebug() << "No Item Selected";
+	trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+    }
+    Q_ASSERT_X( !trFilterConfiguration.isEmpty(),
+		"SettingsUiManager::setValuesOfFilterConfig",
+		"No filter configuration" );
 
-    QMenu *menu = new QMenu( m_configDialog );
-    menu->addAction( KIcon("get-hot-new-stuff"), i18n("Get new service providers..."),
-		    this, SLOT(downloadServiceProvidersClicked(bool)) );
-    menu->addAction( KIcon("text-xml"), i18n("Install new service provider from local file..."),
-		     this, SLOT(installServiceProviderClicked(bool)) );
-    m_ui.downloadServiceProviders->setMenu(menu);
-    m_ui.downloadServiceProviders->setIcon( KIcon("list-add") );
+    updateFilterInfoLabel();
 
-    // Setup model and item delegate for the service provider combobox
-    if ( m_modelServiceProvider != NULL )
-	delete m_modelServiceProvider;
-    m_modelServiceProvider = new QStandardItemModel( 0, 1 );
-    m_ui.serviceProvider->setModel( m_modelServiceProvider );
-    HtmlDelegate *htmlDelegate = new HtmlDelegate;
-    htmlDelegate->setAlignText( true );
-    m_ui.serviceProvider->setItemDelegate( htmlDelegate );
+    QString filterConfiguration = untranslateKey( trFilterConfiguration );
+    bool isDefaultFilterConfig = filterConfiguration == "Default";
+    m_uiFilter.removeFilterConfiguration->setDisabled( isDefaultFilterConfig );
+    m_uiFilter.renameFilterConfiguration->setDisabled( isDefaultFilterConfig );
+	     
+    FilterSettings filterSettings = m_filterSettings[ filterConfiguration ];
+    m_uiFilter.filterAction->setCurrentIndex(
+	    static_cast<int>(filterSettings.filterAction) );
+    filterActionChanged( m_uiFilter.filterAction->currentIndex() );
 
-    // Setup model and item delegate for the location combobox
-    if ( m_modelLocations != NULL )
-	delete m_modelLocations;
-    m_modelLocations = new QStandardItemModel( 0, 1 );
-    m_ui.location->setModel( m_modelLocations );
-    HtmlDelegate *htmlDelegateLocation = new HtmlDelegate;
-    htmlDelegateLocation->setAlignText( true );
-    m_ui.location->setItemDelegate( htmlDelegateLocation );
-    //     m_ui.location->setIconSize(QSize(24, 16));
+    // Clear old filter widgets
+    int minWidgetCount = m_filterListWidget->minimumWidgetCount();
+    int maxWidgetCount = m_filterListWidget->maximumWidgetCount();
+    m_filterListWidget->setWidgetCountRange();
+    m_filterListWidget->removeAllWidgets();
+    
+    // Setup FilterWidgets from m_filters
+    kDebug() << "ADD NEW FILTERS" << filterSettings.filters.count();
+    foreach ( const Filter &filter, filterSettings.filters ) //m_settings.filters )
+	m_filterListWidget->addFilter( filter );
+    m_filterListWidget->setWidgetCountRange( minWidgetCount, maxWidgetCount );
+
+    setFilterConfigurationChanged( false );
+}
+
+void SettingsUiManager::initModels() {
+    // Setup model for the service provider combobox
+    m_modelServiceProvider = new QStandardItemModel( 0, 1, this );
+
+    // Setup model for the location combobox
+    m_modelLocations = new QStandardItemModel( 0, 1, this );
 
     // Get locations
-    m_locationData = m_applet->dataEngine("publictransport")->query("Locations");
+    m_locationData = m_publicTransportEngine->query("Locations");
     QStringList uniqueCountries = m_locationData.keys();
     QStringList countries;
 
-    // Get a list with the location of each service provider (locations can be contained multiple times)
-    m_serviceProviderData = m_applet->dataEngine("publictransport")->query("ServiceProviders");
+    // Get a list with the location of each service provider
+    // (locations can be contained multiple times)
+    m_serviceProviderData = m_publicTransportEngine->query("ServiceProviders");
     foreach ( QString serviceProviderName, m_serviceProviderData.keys() )  {
 	QHash< QString, QVariant > serviceProviderData =
 		m_serviceProviderData.value(serviceProviderName).toHash();
@@ -1142,7 +336,7 @@ void PublicTransportSettings::setValuesOfStopSelectionConfig() {
     foreach( QString country, uniqueCountries ) {
 	QStandardItem *item;
 	QString text, sortText, cssTitle;
-	item = new QStandardItem();
+	item = new QStandardItem;
 
 	if ( country.compare("international", Qt::CaseInsensitive)  == 0 ) {
 	    text = i18n("International");
@@ -1163,52 +357,60 @@ void PublicTransportSettings::setValuesOfStopSelectionConfig() {
 	    item->setIcon( Global::putIconIntoBiggerSizeIcon(KIcon(country), QSize(32, 23)) );
 	}
 
-	QString formattedText = QString( "<span style='%4'><b>%1</b></span> <small>(<b>%2</b>)<br-wrap>%3</small>" )
-	.arg( text )
-	.arg( i18np("%1 accessor", "%1 accessors", countries.count(country)) )
-	.arg( m_locationData[country].toHash()["description"].toString() )
-	.arg( cssTitle );
+	QString formattedText = QString( "<span style='%4'><b>%1</b></span> "
+					 "<small>(<b>%2</b>)<br-wrap>%3</small>" )
+		.arg( text )
+		.arg( i18np("%1 accessor", "%1 accessors", countries.count(country)) )
+		.arg( m_locationData[country].toHash()["description"].toString() )
+		.arg( cssTitle );
 
 	item->setText( text );
 	item->setData( country, LocationCodeRole );
 	item->setData( formattedText, HtmlDelegate::FormattedTextRole );
 	item->setData( sortText, SortRole );
-	item->setData( QStringList() << "raised" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole );
+	item->setData( QStringList() << "raised" << "drawFrameForWholeRow",
+		       HtmlDelegate::TextBackgroundRole );
 	item->setData( 4, HtmlDelegate::LinesPerRowRole );
 
 	m_modelLocations->appendRow( item );
     }
 
+    // Append item to show all service providers
     QString sShowAll = i18n("Show all available service providers");
     QStandardItem *itemShowAll = new QStandardItem();
     itemShowAll->setData( "000000", SortRole );
-    QString formattedText = QString( "<span style='color:%3;'><b>%1</b></span><br-wrap><small><b>%2</b></small>" )
+    QString formattedText = QString( "<span style='color:%3;'><b>%1</b></span>"
+				     "<br-wrap><small><b>%2</b></small>" )
 	.arg( sShowAll )
 	.arg( i18n("Total: ") + i18np("%1 accessor", "%1 accessors", countries.count()) )
 	.arg( highlightTextColor );
     itemShowAll->setData( "showAll", LocationCodeRole );
     itemShowAll->setData( formattedText, HtmlDelegate::FormattedTextRole );
     itemShowAll->setText( sShowAll );
-    itemShowAll->setData( QStringList() << "raised" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole );
+    itemShowAll->setData( QStringList() << "raised" << "drawFrameForWholeRow",
+			  HtmlDelegate::TextBackgroundRole );
     itemShowAll->setData( 3, HtmlDelegate::LinesPerRowRole );
-    itemShowAll->setIcon( KIcon("package_network") ); // TODO: Other icon
+    itemShowAll->setIcon( KIcon("package_network") ); // TODO: Other icon?
     m_modelLocations->appendRow( itemShowAll );
 
-    // TODO: Get error messages from the data engine
-    QStringList errornousAccessorNames = m_applet->dataEngine("publictransport")->query("ErrornousServiceProviders")["names"].toStringList();
+    // Get errornous service providers (TODO: Get error messages)
+    QStringList errornousAccessorNames = m_publicTransportEngine
+	    ->query("ErrornousServiceProviders")["names"].toStringList();
     if ( !errornousAccessorNames.isEmpty() ) {
 	QStringList errorLines;
 	for( int i = 0; i < errornousAccessorNames.count(); ++i ) {
 	    errorLines << QString("<b>%1</b>").arg( errornousAccessorNames[i] );//.arg( errorMessages[i] );
 	}
 	QStandardItem *itemErrors = new QStandardItem();
-	itemErrors->setData( "ZZZZZ", SortRole );
+	itemErrors->setData( "ZZZZZ", SortRole ); // Sort to the end
 	formattedText = QString( "<span style='color:%3;'><b>%1</b></span><br-wrap><small>%2</small>" )
-	    .arg( i18np("%1 accessor is errornous:", "%1 accessors are errornous:", errornousAccessorNames.count()) )
+	    .arg( i18np("%1 accessor is errornous:", "%1 accessors are errornous:",
+			errornousAccessorNames.count()) )
 	    .arg( errorLines.join(",<br-wrap>") )
 	    .arg( highlightTextColor );
 	itemErrors->setData( formattedText, HtmlDelegate::FormattedTextRole );
-	itemErrors->setData( QStringList() << "raised" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole );
+	itemErrors->setData( QStringList() << "raised" << "drawFrameForWholeRow",
+			     HtmlDelegate::TextBackgroundRole );
 	itemErrors->setData( 1 + errornousAccessorNames.count(), HtmlDelegate::LinesPerRowRole );
 	itemErrors->setSelectable( false );
 	itemErrors->setIcon( KIcon("edit-delete") );
@@ -1218,121 +420,129 @@ void PublicTransportSettings::setValuesOfStopSelectionConfig() {
     m_modelLocations->setSortRole( SortRole );
     m_modelLocations->sort( 0 );
 
-    // Get (combobox-) index of the currently selected location
-    int curLocationIndex = m_ui.location->findText( m_location );
-    if ( curLocationIndex != -1 )
-	m_ui.location->setCurrentIndex( curLocationIndex );
+    // Init service provider model
+    QList< QStandardItem* > appendItems;
+    foreach( QString serviceProviderName, m_serviceProviderData.keys() ) {
+	QVariantHash serviceProviderData = m_serviceProviderData[serviceProviderName].toHash();
 
-    int curServiceProviderIndex = updateServiceProviderModel(); // will also select the current service provider (if it's in the list)
+	bool isCountryWide = serviceProviderName.contains(
+	    serviceProviderData["country"].toString(), Qt::CaseInsensitive );
+	QString formattedText;
+	QStandardItem *item = new QStandardItem( serviceProviderName ); // TODO: delete?
 
-    // Select current city
-    QHash<QString, QVariant> serviceProviderData = m_ui.serviceProvider->itemData( curServiceProviderIndex, ServiceProviderDataRole ).toHash();
-    if ( serviceProviderData["onlyUseCitiesInList"].toBool() )
-	m_ui.city->setCurrentItem(m_city);
-    else
-	m_ui.city->setEditText(m_city);
-}
+	item->setData( QStringList() << "raised" << "drawFrameForWholeRow",
+			HtmlDelegate::TextBackgroundRole );
+	formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
+	    .arg( serviceProviderName )
+	    .arg( serviceProviderData["features"].toStringList().join(", ") );
+	item->setData( 4, HtmlDelegate::LinesPerRowRole );
+	item->setData( formattedText, HtmlDelegate::FormattedTextRole );
+	item->setData( serviceProviderData, ServiceProviderDataRole );
+	item->setData( serviceProviderData["country"], LocationCodeRole );
+	item->setData( serviceProviderData["id"], ServiceProviderIdRole );
 
-void PublicTransportSettings::setValuesOfAdvancedConfig() {
-    m_uiAdvanced.updateAutomatically->setChecked( m_autoUpdate );
-    m_uiAdvanced.timeOfFirstDeparture->setValue( m_timeOffsetOfFirstDeparture );
-    m_uiAdvanced.timeOfFirstDepartureCustom->setTime( m_timeOfFirstDepartureCustom );
-    m_uiAdvanced.firstDepartureUseCurrentTime->setChecked(
-	    m_firstDepartureConfigMode == RelativeToCurrentTime );
-    m_uiAdvanced.firstDepartureUseCustomTime->setChecked(
-	    m_firstDepartureConfigMode == AtCustomTime );
-    m_uiAdvanced.maximalNumberOfDepartures->setValue( m_maximalNumberOfDepartures );
-    m_uiAdvanced.alarmTime->setValue( m_alarmTime );
+	// Sort service providers containing the country in it's
+	// name to the top of the list for that country
+	QString locationCode = serviceProviderData["country"].toString();
+	QString sortString;
+	if ( locationCode == "international" ) {
+	    sortString = "XXXXX" + serviceProviderName;
+	} else if ( locationCode == "unknown" ) {
+	    sortString = "YYYYY" + serviceProviderName;
+	} else {
+	    QString countryName = KGlobal::locale()->countryCodeToName( locationCode );
+	    sortString = isCountryWide ? "11111" + countryName + serviceProviderName
+				       : countryName + serviceProviderName;
+	}
+	item->setData( sortString, SortRole );
+	m_modelServiceProvider->appendRow( item );
 
-    m_uiAdvanced.showDepartures->setChecked( m_departureArrivalListType == DepartureList );
-    m_uiAdvanced.showArrivals->setChecked( m_departureArrivalListType == ArrivalList );
-}
-
-void PublicTransportSettings::exportFilterSettings() {
-    QString fileName = KFileDialog::getSaveFileName(
-	    KUrl("kfiledialog:///filterSettings"), QString(), m_configDialog,
-	    i18n("Export Filter Settings") );
-    if ( fileName.isEmpty() )
-	return;
-	    
-    KConfig config( fileName, KConfig::SimpleConfig );
-    writeFilterConfig( config.group(QString()), false );
-}
-
-void PublicTransportSettings::importFilterSettings() {
-    QString fileName = KFileDialog::getOpenFileName(
-	    KUrl("kfiledialog:///filterSettings"), QString(), m_configDialog,
-	    i18n("Import Filter Settings") );
-    if ( fileName.isEmpty() )
-	return;
-    
-    KConfig config( fileName, KConfig::SimpleConfig );
-    readFilterConfig( config.group(QString()) );
-}
-
-void PublicTransportSettings::addFilterConfiguration() {
-    QString newFilterConfig = i18n( "New Configuration" );
-    int i = 2;
-    while ( m_filterConfigurationList.contains(newFilterConfig) ) {
-	newFilterConfig = i18n( "New Configuration %1", i );
-	++i;
+	// Request favicons
+	QString favIconSource = serviceProviderData["url"].toString();
+	m_favIconEngine->disconnectSource( favIconSource, this );
+	m_favIconEngine->connectSource( favIconSource, this );
+	m_favIconEngine->query( favIconSource );
     }
+    m_modelServiceProvider->setSortRole( SortRole );
+    m_modelServiceProvider->sort( 0 );
 
-    kDebug() << "Add new filter config" << newFilterConfig;
-
-    writeFilterConfig( m_applet->config("filterConfig_" + newFilterConfig) );
-    
-    m_filterConfigurationList.append( newFilterConfig );
-    KConfigGroup cg = m_applet->config();
-    cg.writeEntry("filterConfigurationList", m_filterConfigurationList);
-    
-    m_filterConfiguration = newFilterConfig;
-
-    if ( m_configDialog )
-	m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true );
-    
-    kDebug() << "END: Added new filter config" << newFilterConfig;
-}
-
-void PublicTransportSettings::removeFilterConfiguration() {
-    if ( KMessageBox::warningContinueCancel(m_configDialog,
-		i18n("This will permanently delete the selected filter configuration."))
-		!= KMessageBox::Continue )
-	return;
-
-    kDebug() << "Delete filter config" << m_filterConfiguration;
-//     m_applet->config().m_filterConfiguration )
-    KConfigGroup cgOld = m_applet->config();
-    cgOld.deleteGroup( "filterConfig_" + m_filterConfiguration );
-    
-    if ( m_filterConfigurationList.contains(m_filterConfiguration) ) {
-	m_filterConfigurationList.removeOne(m_filterConfiguration);
-	
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("filterConfigurationList", m_filterConfigurationList);
-    }
-    
-    if ( m_configDialog ) {
-	int index = filterConfigurationIndex( translateKey(m_filterConfiguration) );
-	kDebug() << "Found current filter config in combo box?" << index;
-	if ( index != -1  )
-	    m_uiFilter.filterConfigurations->removeItem( index );
-
-	index = filterConfigurationIndex( i18n("Default") );
-	kDebug() << "Found default filter config in combo box?" << index;
-	if ( index != -1 )
-	    m_uiFilter.filterConfigurations->setCurrentIndex( index );
+    // Add title items
+    QStringList lastTitles;
+    for( int row = 0; row < m_modelServiceProvider->rowCount(); ++row ) {
+	QString locationCode = m_modelServiceProvider->item( row )->data( ServiceProviderDataRole ).toHash()["country"].toString();
+	QString title;
+	if ( locationCode == "international" )
+	    title = i18n("International");
+	else if ( locationCode == "unknown" )
+	    title = i18n("Unknown");
 	else
-	    kDebug() << "Default filter configuration not found!";
+	    title = KGlobal::locale()->countryCodeToName( locationCode );
+
+	if ( lastTitles.contains(title) )
+	    continue;
+
+	QStandardItem *itemTitle = new QStandardItem( title );
+	QColor textColor = KColorScheme( QPalette::Active ).foreground().color();
+	itemTitle->setData( QString("<span style='font-weight:bold;font-size:large;text-decoration:underline;color:rgb(%1,%2,%3);'>")
+		.arg(textColor.red()).arg(textColor.green()).arg(textColor.blue())
+		+ title + ":</span>", HtmlDelegate::FormattedTextRole );
+	itemTitle->setData( 0, HtmlDelegate::GroupTitleRole );
+	itemTitle->setData( 2, HtmlDelegate::LinesPerRowRole );
+	itemTitle->setData( locationCode, LocationCodeRole );
+	itemTitle->setSelectable( false );
+	m_modelServiceProvider->insertRow( row, itemTitle );
+
+	lastTitles << title;
+	++row;
     }
 }
 
-QString PublicTransportSettings::showStringInputBox( const QString &labelString,
-						     const QString &initialText,
-						     const QString &clickMessage,
-						     const QString &title,
-						     QValidator *validator ) {
-    KDialog *dialog = new KDialog( m_configDialog );
+void SettingsUiManager::dataUpdated( const QString& sourceName,
+				     const Plasma::DataEngine::Data& data ) {
+    if ( sourceName.contains(QRegExp("^http")) ) {
+	// Favicon of a service provider arrived
+	if ( !m_modelServiceProvider )
+	    return;
+
+	QPixmap favicon( QPixmap::fromImage(data["Icon"].value<QImage>()) );
+	if ( !favicon.isNull() ) {
+	    for ( int i = 0; i < m_modelServiceProvider->rowCount(); ++i ) {
+		QHash< QString, QVariant > serviceProviderData
+		    = m_modelServiceProvider->item(i)->data( ServiceProviderDataRole ).toHash();
+		QString favIconSource = serviceProviderData["url"].toString();
+		if ( favIconSource.compare( sourceName ) == 0 )
+		    m_modelServiceProvider->item(i)->setIcon( KIcon(favicon) );
+	    }
+	}
+	else
+	    kDebug() << "Favicon is NULL for" << sourceName;
+
+	m_favIconEngine->disconnectSource( sourceName, this );
+    }
+}
+
+QString SettingsUiManager::translateKey( const QString& key ) {
+    if ( key == "Default" )
+	return i18n("Default");
+//     else if ( key == "Default*" )
+// 	return i18n("Default") + "*";
+    else
+	return key;
+}
+
+QString SettingsUiManager::untranslateKey( const QString& translatedKey ) {
+    if ( translatedKey == i18n("Default") /*|| translatedKey == i18n("Default") + "*"*/ )
+	return "Default";
+//     else if ( translatedKey.endsWith("*") )
+// 	return translatedKey.left( translatedKey.length() - 1 );
+    else
+	return translatedKey;
+}
+
+QString SettingsUiManager::showStringInputBox( const QString& labelString,
+			const QString& initialText, const QString& clickMessage,
+			const QString& title, QValidator* validator, QWidget *parent ) {
+    KDialog *dialog = new KDialog( parent );
     dialog->setButtons( KDialog::Ok | KDialog::Cancel );
     dialog->setWindowTitle( title );
     
@@ -1356,1184 +566,553 @@ QString PublicTransportSettings::showStringInputBox( const QString &labelString,
 	delete dialog;
 	return QString();
     }
-
+    
     QString text = input->text();
     delete dialog;
     
     return text;
 }
 
-void PublicTransportSettings::renameFilterConfiguration() {
-    QString newFilterConfig = showStringInputBox( i18n("New Name of the Filter Configuration:"),
-						  translateKey(m_filterConfiguration),
-						  i18nc("This is a clickMessage for the line edit "
-							"in the rename filter config dialog",
-							"Type the new name"),
-						  i18n("Choose a Name"),
-						  new QRegExpValidator(QRegExp("[^\\*]*"), this) );
+Settings SettingsUiManager::settings() {
+    Settings ret;
+
+    ret.stopSettingsList = m_stopListWidget->stopSettingsList();
+    foreach ( StopSettings stopSettings, ret.stopSettingsList ) {
+	stopSettings.filterConfiguration = untranslateKey(
+		stopSettings.filterConfiguration );
+    }
+
+    // Set stored "no-Gui" settings
+    ret.recentJourneySearches = m_recentJourneySearches;
+    ret.currentStopSettingsIndex = m_currentStopSettingsIndex;
+    if ( ret.currentStopSettingsIndex >= ret.stopSettingsList.count() )
+	ret.currentStopSettingsIndex = ret.stopSettingsList.count() - 1;
+
+    if ( m_filterConfigChanged ) {
+	QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+	QString filterConfiguration = untranslateKey( trFilterConfiguration );
+	m_filterSettings[ filterConfiguration ] = currentFilterSettings();
+    }
+    ret.filterSettings = m_filterSettings;
+    
+    if ( m_uiAdvanced.showArrivals->isChecked() )
+	ret.departureArrivalListType = ArrivalList;
+    else
+	ret.departureArrivalListType = DepartureList;
+    ret.autoUpdate = m_uiAdvanced.updateAutomatically->isChecked();
+    ret.timeOffsetOfFirstDeparture = m_uiAdvanced.timeOfFirstDeparture->value();
+    ret.timeOfFirstDepartureCustom = m_uiAdvanced.timeOfFirstDepartureCustom->time();
+    ret.firstDepartureConfigMode = m_uiAdvanced.firstDepartureUseCurrentTime->isChecked()
+					? RelativeToCurrentTime : AtCustomTime;
+    ret.maximalNumberOfDepartures = m_uiAdvanced.maximalNumberOfDepartures->value();
+    ret.alarmTime = m_uiAdvanced.alarmTime->value();
+    
+    ret.showRemainingMinutes = m_uiAppearance.cmbDepartureColumnInfos->currentIndex() != 1;
+    ret.showDepartureTime = m_uiAppearance.cmbDepartureColumnInfos->currentIndex() <= 1;
+    ret.displayTimeBold = m_uiAppearance.displayTimeBold->checkState() == Qt::Checked;
+    ret.showHeader = m_uiAppearance.showHeader->checkState() == Qt::Checked;
+    ret.hideColumnTarget = m_uiAppearance.showColumnTarget->checkState() == Qt::Unchecked;
+    ret.linesPerRow = m_uiAppearance.linesPerRow->value();
+    ret.size = m_uiAppearance.size->value();
+    ret.sizeFactor = (ret.size + 3) * 0.2f;
+    ret.useDefaultFont = m_uiAppearance.radioUseDefaultFont->isChecked();
+    if ( !ret.useDefaultFont ) // TODO: why "if(!"... ?
+	ret.font.setFamily( m_uiAppearance.font->currentFont().family() );
+    else
+	ret.font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
+
+    return ret;
+}
+
+FilterSettings SettingsUiManager::currentFilterSettings() const {
+    FilterSettings filterSettings;
+    filterSettings.filterAction = static_cast< FilterAction >(
+	    m_uiFilter.filterAction->currentIndex() );
+    filterSettings.filters = m_filterListWidget->filters();
+    return filterSettings;
+}
+
+void SettingsUiManager::loadFilterConfiguration( const QString& filterConfig ) {
+    if ( filterConfig.isEmpty() )
+	return;
+    
+    QString untrFilterConfig = untranslateKey( filterConfig );
+    if ( untrFilterConfig == m_lastFilterConfiguration )
+	return;
+
+    if ( m_filterConfigChanged && !m_lastFilterConfiguration.isEmpty() ) {
+	// Store to last edited filter settings
+	m_filterSettings[ m_lastFilterConfiguration ] = currentFilterSettings();
+    }
+
+    m_lastFilterConfiguration = untrFilterConfig;
+
+    setFilterConfigurationChanged( false );
+    setValuesOfFilterConfig();
+}
+
+void SettingsUiManager::addFilterConfiguration() {
+    QString newFilterConfig = i18n( "New Configuration" );
+    int i = 2;
+    while ( m_filterSettings.keys().contains(newFilterConfig) ) {
+	newFilterConfig = i18n( "New Configuration %1", i );
+	++i;
+    }
+
+    QString untrNewFilterConfig = untranslateKey( newFilterConfig );
+    kDebug() << "Add new filter config" << newFilterConfig << untrNewFilterConfig;
+    
+    // Append new filter settings
+    m_filterSettings.insert( untrNewFilterConfig, FilterSettings() );
+    
+    m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true );
+    
+    QStringList trFilterConfigurationList;
+    foreach ( const QString &filterConfiguration, m_filterSettings.keys() )
+	trFilterConfigurationList << translateKey( filterConfiguration );
+    m_stopListWidget->setFilterConfigurations( trFilterConfigurationList );
+}
+
+void SettingsUiManager::removeFilterConfiguration() {
+    QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+    if ( KMessageBox::warningContinueCancel(m_configDialog,
+	i18n("This will permanently delete the selected filter configuration '%1'.",
+	     trFilterConfiguration))
+	!= KMessageBox::Continue )
+	return;
+    
+    QString filterConfiguration = untranslateKey( trFilterConfiguration );
+    m_filterSettings.remove( filterConfiguration );
+
+    int index = m_uiFilter.filterConfigurations->currentIndex();
+    if ( index != -1  )
+	m_uiFilter.filterConfigurations->removeItem( index );
+    else
+	kDebug() << "No selection";
+
+    index = filterConfigurationIndex( i18n("Default") );
+    kDebug() << "Found default filter config in combo box?" << index;
+    if ( index != -1 )
+	m_uiFilter.filterConfigurations->setCurrentIndex( index );
+    else
+	kDebug() << "Default filter configuration not found!";
+    
+    QStringList trFilterConfigurationList;
+    foreach ( const QString &filterConfiguration, m_filterSettings.keys() )
+	trFilterConfigurationList << translateKey( filterConfiguration );
+    m_stopListWidget->setFilterConfigurations( trFilterConfigurationList );
+}
+
+void SettingsUiManager::renameFilterConfiguration() {
+    QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+    QString newFilterConfig = showStringInputBox(
+	    i18n("New Name of the Filter Configuration:"),
+	    trFilterConfiguration, i18nc("This is a clickMessage for the line edit "
+	    "in the rename filter config dialog", "Type the new name"),
+	    i18n("Choose a Name"), new QRegExpValidator(QRegExp("[^\\*]*"), this) );
     if ( newFilterConfig.isNull() )
 	return; // Canceled
 
+    QString filterConfiguration = untranslateKey( trFilterConfiguration );
     kDebug() << "newFilterConfig:" << newFilterConfig
-	     << "current filter config:" << m_filterConfiguration;
-    if ( newFilterConfig == m_filterConfiguration )
-	return; // Not changed, but accepted
+	     << "current filter config:" << filterConfiguration;
+    if ( newFilterConfig == trFilterConfiguration )
+	return; // Not changed, but the old name was accepted
 
     // Check if the new name is valid.
-    // '*' isn't allowed in the name but already validated by a QRegExpValidator.
+    // '*' is also not allowed in the name but that's already validated by a QRegExpValidator.
     if ( newFilterConfig.isEmpty() ) {
-	KMessageBox::information( m_configDialog, i18n("Empty names can't be used.") );
-	return;
-    } else if ( newFilterConfig == i18n("Default") ) {
-	KMessageBox::information( m_configDialog, i18n("The filter configuration "
-		"'%1' can't be changed.", i18n("Default")) );
+	KMessageBox::information( m_configDialog, i18n("Empty names are not allowed.") );
 	return;
     }
-    
-    if ( m_filterConfigurationList.contains(newFilterConfig)
-		&& KMessageBox::warningYesNo(m_configDialog,
-		   i18n("There is already a filter configuration with the name '%1'.\n"
-		   "Do you want to overwrite it?") ) != KMessageBox::Yes ) {
+
+    // Check if the new name is already used and ask if it should be overwritten
+    QString untrNewFilterConfig = untranslateKey( newFilterConfig );
+    if ( m_filterSettings.keys().contains(untrNewFilterConfig)
+	    && KMessageBox::warningYesNo(m_configDialog,
+		i18n("There is already a filter configuration with the name '%1'.\n"
+		"Do you want to overwrite it?", newFilterConfig) ) != KMessageBox::Yes ) {
 	return; // No pressed
     }
-    
-    if ( m_configDialog ) {
-	disconnect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
-		    this, SLOT(loadFilterConfiguration(QString)) );
-    }
-    QString newFilterConfigUntranslated = untranslateKey( newFilterConfig );
-    KConfigGroup newConfigGroup = m_applet->config(
-	    "filterConfig_" + newFilterConfigUntranslated );
-    //     writeFilterConfig( newConfigGroup ); // OLDTODO: Warn the user that the settings get applied?
-    m_applet->config("filterConfig_" + m_filterConfiguration).copyTo( &newConfigGroup );
-    m_applet->config().deleteGroup( "filterConfig_" + m_filterConfiguration );
-    
-    if ( m_filterConfigurationList.contains(m_filterConfiguration) )
-	m_filterConfigurationList.removeOne(m_filterConfiguration);
-    if ( !m_filterConfigurationList.contains(newFilterConfigUntranslated) )
-	m_filterConfigurationList << newFilterConfigUntranslated;
-    kDebug() << "New Filter Configuration List" << m_filterConfigurationList;
-    KConfigGroup cg = m_applet->config();
-    cg.writeEntry("filterConfigurationList", m_filterConfigurationList);
 
-    if ( m_configDialog ) {
-	int index = m_uiFilter.filterConfigurations->findText( translateKey(m_filterConfiguration) );
-	if ( index != -1  ) {
-	    kDebug() << "Remove old filter config" << m_filterConfiguration;
-	    m_uiFilter.filterConfigurations->removeItem( index );
-	}
-    }
-    
-    kDebug() << "Set current filter config" << newFilterConfigUntranslated;
-    m_filterConfiguration = newFilterConfigUntranslated;
-    m_applet->config().writeEntry("filterConfiguration", m_filterConfiguration);
-
-    if ( m_configDialog ) {
-	m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true );
-	connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+    disconnect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
 		this, SLOT(loadFilterConfiguration(QString)) );
-    }
-}
+    FilterSettings filterSettings = m_filterSettings[ filterConfiguration ];
+    m_filterSettings.remove( filterConfiguration );
+    m_filterSettings[ untrNewFilterConfig ] = filterSettings;
 
-QString PublicTransportSettings::translateKey( const QString& key ) const {
-    if ( key == "Default" )
-	return i18n("Default");
-    else if ( key == "Default*" )
-	return i18n("Default") + "*";
-    else
-	return key;
-}
-
-QString PublicTransportSettings::untranslateKey( const QString& translatedKey ) const {
-    if ( translatedKey == i18n("Default") || translatedKey == i18n("Default") + "*" )
-	return "Default";
-    else
-	return translatedKey;
-}
-
-void PublicTransportSettings::saveFilterConfiguration() {
-    if ( m_filterConfiguration == "Default" ) {
-	renameFilterConfiguration();
-	
-	if ( m_filterConfiguration == "Default" )
-	    return;
+    int index = m_uiFilter.filterConfigurations->currentIndex();
+    if ( index != -1  ) {
+	kDebug() << "Remove old filter config" << trFilterConfiguration;
+	m_uiFilter.filterConfigurations->removeItem( index );
     }
 
-    if ( !m_filterConfigurationList.contains(m_filterConfiguration) ) {
-	m_filterConfigurationList << m_filterConfiguration;
-	
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("filterConfigurationList", m_filterConfigurationList);
-    }
+    m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true );
+    m_lastFilterConfiguration = untrNewFilterConfig;
+    connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+	     this, SLOT(loadFilterConfiguration(QString)) );
 
-    if ( m_configDialog ) {
-	QString _filterConfiguration = translateKey( m_filterConfiguration );
-	int index = filterConfigurationIndex( _filterConfiguration );
-	if ( index != -1 )
-	    m_uiFilter.filterConfigurations->setItemText( index, _filterConfiguration );
-	else
-	    kDebug() << "Item to remove changed indicator (*) from not found";
+    // Update filter configuration name in stop settings
+    StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
+    for ( int i = 0; i < stopSettingsList.count(); ++i ) {
+	if ( stopSettingsList[i].filterConfiguration == filterConfiguration )
+	    stopSettingsList[ i ].filterConfiguration = untrNewFilterConfig;
     }
-	
-    QString filterConfig = "filterConfig_" + m_filterConfiguration;
-    writeFilterConfig( m_applet->config(filterConfig), false );
-    setFilterConfigurationChanged( false );
+    m_stopListWidget->setStopSettingsList( stopSettingsList );
+
+    QStringList trFilterConfigurationList;
+    foreach ( const QString &filterConfiguration, m_filterSettings.keys() )
+	trFilterConfigurationList << translateKey( filterConfiguration );
+    m_stopListWidget->setFilterConfigurations( trFilterConfigurationList );
 }
 
-int PublicTransportSettings::filterConfigurationIndex( const QString& filterConfig ) {
+void SettingsUiManager::filterActionChanged( int index ) {
+    FilterAction filterAction = static_cast< FilterAction >( index );
+    bool enableFilters = filterAction != ShowAll;
+    m_uiFilter.filters->setEnabled( enableFilters );
+    
+    // Store to last edited filter settings
+    QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+    QString filterConfiguration = untranslateKey( trFilterConfiguration );
+    m_filterSettings[ filterConfiguration ].filterAction = filterAction;
+
+    setFilterConfigurationChanged();
+}
+
+void SettingsUiManager::setFilterConfigurationChanged( bool changed ) {
+    if ( m_filterConfigChanged == changed )
+	return;
+kDebug() << "SET CHANGED TO" << changed;
+    QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+    QString filterConfiguration = untranslateKey( trFilterConfiguration );
+    bool deaultFilterConfig = filterConfiguration == "Default";
+    m_uiFilter.removeFilterConfiguration->setDisabled( deaultFilterConfig );
+    m_uiFilter.renameFilterConfiguration->setDisabled( deaultFilterConfig );
+
+    m_filterConfigChanged = changed;
+}
+
+int SettingsUiManager::filterConfigurationIndex( const QString& filterConfig ) {
     int index = m_uiFilter.filterConfigurations->findText( filterConfig );
     if ( index == -1 )
 	index = m_uiFilter.filterConfigurations->findText( filterConfig + "*" );
     else
 	kDebug() << "Item" << filterConfig << "not found!";
-
+    
     return index;
 }
 
-void PublicTransportSettings::loadFilterConfiguration( const QString& filterConfig ) {
-    QString _filterConfig = untranslateKey( filterConfig );
-    if ( _filterConfig == m_filterConfiguration )
-	return;
-    
-    if ( m_filterConfigChanged && m_filterConfiguration != "Default" ) {
-	QString _filterConfiguration = translateKey( m_filterConfiguration );
-
-	int result = KMessageBox::questionYesNoCancel( m_configDialog,
-		    i18n("The current filter configuration is unsaved.\n"
-			 "Do you want to store it now to '%1'?", _filterConfiguration),
-		    i18n("Save Filter Configuration?") );
-	if ( result == KMessageBox::Cancel )
-	    return;
-	else if ( result == KMessageBox::Yes )
-	    saveFilterConfiguration();
-
-	if ( m_configDialog ) {
-	    int index = filterConfigurationIndex( _filterConfiguration );
-	    if ( index == -1 ) {
-		kDebug() << "Didn't find" << _filterConfiguration;
-	    } else {
-		kDebug() << "Rename" << index << _filterConfiguration + "*"
-			<< "to" << _filterConfiguration;
-		m_uiFilter.filterConfigurations->setItemText( index, _filterConfiguration );
-	    }
-	}
-    }
-
-    kDebug() << "Loading" << "filterConfig_" + _filterConfig
-	     << "Current filterconfig:" << m_filterConfiguration;
-    m_filterConfiguration = _filterConfig;
-    m_applet->config().writeEntry("filterConfiguration", m_filterConfiguration);
-    
-    readFilterConfig( m_applet->config("filterConfig_" + _filterConfig) );
-    setFilterConfigurationChanged( false );
-
-    if ( !m_configDialog ) {
-	emit configNeedsSaving();
-	emit modelNeedsUpdate(); // Apply new filter settings when no dialog is shown
-				 // ie. the slot was called from the context menu
-    }
-}
-
-void PublicTransportSettings::filterTypeTargetChanged( int ) {
-    setFilterConfigurationChanged();
-}
-
-void PublicTransportSettings::filterTargetListChanged() {
-    setFilterConfigurationChanged();
-}
-
-void PublicTransportSettings::filterTypeLineNumberChanged( int ) {
-    setFilterConfigurationChanged();
-}
-
-void PublicTransportSettings::filterLineNumberListChanged() {
-    setFilterConfigurationChanged();
-}
-
-void PublicTransportSettings::setFilterConfigurationChanged( bool changed ) {
-    if ( m_filterConfigChanged == changed )
+void SettingsUiManager::exportFilterSettings() {
+    QString fileName = KFileDialog::getSaveFileName(
+	    KUrl("kfiledialog:///filterSettings"), QString(), m_configDialog,
+	    i18n("Export Filter Settings") );
+    if ( fileName.isEmpty() )
 	return;
 
-    if ( m_configDialog ) {
-	bool deaultFilterConfig = m_filterConfiguration == "Default";
-	m_uiFilter.saveFilterConfiguration->setEnabled( changed && !deaultFilterConfig );
-	m_uiFilter.removeFilterConfiguration->setDisabled( deaultFilterConfig );
-	m_uiFilter.renameFilterConfiguration->setDisabled( deaultFilterConfig );
-
-	QString sTitle = m_uiFilter.filterConfigurations->currentText();
-	if ( changed && !sTitle.endsWith('*') )
-	    sTitle.append( '*' );
-	else if ( !changed && sTitle.endsWith('*') )
-	    sTitle.chop( 1 );
-	disconnect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
-		    this, SLOT(loadFilterConfiguration(QString)) );
-	m_uiFilter.filterConfigurations->setItemText(
-		m_uiFilter.filterConfigurations->currentIndex(), sTitle );
-	connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
-		this, SLOT(loadFilterConfiguration(QString)) );
-    }
-	    
-    m_filterConfigChanged = changed;
+    KConfig config( fileName, KConfig::SimpleConfig );
+    SettingsIO::writeFilterConfig( currentFilterSettings(), config.group(QString()) );
 }
 
-void PublicTransportSettings::setValuesOfFilterConfig() {
-    if ( !m_applet->config().hasGroup("filterConfig_Default") ) {
-	kDebug() << "Adding 'filterConfig_Default'";
-	writeDefaultFilterConfig( m_applet->config("filterConfig_Default") );
-    }
-    if ( !m_filterConfigurationList.contains("Default") )
-	m_filterConfigurationList.prepend( "Default" );
-    
-    QStringList filterConfigGroups;
-    kDebug() << "Group list" << m_applet->config().groupList();
-    kDebug() << "Filter Config List:" << m_filterConfigurationList;
-    foreach ( QString filterConfig, m_filterConfigurationList )
-	filterConfigGroups << translateKey( filterConfig );
+void SettingsUiManager::importFilterSettings() {
+    QString fileName = KFileDialog::getOpenFileName(
+	    KUrl("kfiledialog:///filterSettings"), QString(), m_configDialog,
+	    i18n("Import Filter Settings") );
+    if ( fileName.isEmpty() )
+	return;
 
-    bool deaultFilterConfig = m_filterConfiguration == "Default";
-    m_uiFilter.saveFilterConfiguration->setEnabled( m_filterConfigChanged && !deaultFilterConfig );
-    m_uiFilter.removeFilterConfiguration->setDisabled( deaultFilterConfig );
-    m_uiFilter.renameFilterConfiguration->setDisabled( deaultFilterConfig );
-    
-    disconnect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
-	     this, SLOT(loadFilterConfiguration(QString)) );
-    m_uiFilter.filterConfigurations->clear();
-    m_uiFilter.filterConfigurations->addItems( filterConfigGroups );
-
-    QString _filterConfig = translateKey( m_filterConfiguration );
-    m_uiFilter.filterConfigurations->setCurrentItem( _filterConfig );
-    if ( m_filterConfigChanged ) {
-	m_uiFilter.filterConfigurations->setItemText(
-		m_uiFilter.filterConfigurations->currentIndex(), _filterConfig + "*" );
-    }
-    connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
-	     this, SLOT(loadFilterConfiguration(QString)) );
-    
-    QListWidget *available, *selected;
-    available = m_uiFilter.filterLineType->availableListWidget();
-    selected = m_uiFilter.filterLineType->selectedListWidget();
-
-    available->clear();
-    selected->clear();
-    available->addItems( QStringList() << i18n("Unknown") << i18n("Trams")
-	    << i18n("Buses") << i18n("Subways") << i18n("Metros")
-	    << i18n("Trolley buses") << i18n("Interurban trains")
-	    << i18n("Regional trains") << i18n("Regional express trains")
-	    << i18n("Interregio trains") << i18n("Intercity / Eurocity trains")
-	    << i18n("Intercity express trains") << i18n("Ferries")
-	    << i18n("Planes") );
-
-    available->item( 0 )->setIcon( Global::iconFromVehicleType(Unknown) );
-    available->item( 1 )->setIcon( Global::iconFromVehicleType(Tram) );
-    available->item( 2 )->setIcon( Global::iconFromVehicleType(Bus) );
-    available->item( 3 )->setIcon( Global::iconFromVehicleType(Subway) );
-    available->item( 4 )->setIcon( Global::iconFromVehicleType(Metro) );
-    available->item( 5 )->setIcon( Global::iconFromVehicleType(TrolleyBus) );
-    available->item( 6 )->setIcon( Global::iconFromVehicleType(TrainInterurban) );
-    available->item( 7 )->setIcon( Global::iconFromVehicleType(TrainRegional) );
-    available->item( 8 )->setIcon( Global::iconFromVehicleType(TrainRegionalExpress) );
-    available->item( 9 )->setIcon( Global::iconFromVehicleType(TrainInterregio) );
-    available->item( 10 )->setIcon( Global::iconFromVehicleType(TrainIntercityEurocity) );
-    available->item( 11 )->setIcon( Global::iconFromVehicleType(TrainIntercityExpress) );
-    available->item( 12 )->setIcon( Global::iconFromVehicleType(Ferry) );
-    available->item( 13 )->setIcon( Global::iconFromVehicleType(Plane) );
-
-    if ( m_showTypeOfVehicle[Plane] )
-	selected->addItem( available->takeItem(13) );
-    if ( m_showTypeOfVehicle[Ferry] )
-	selected->addItem( available->takeItem(12) );
-    if ( m_showTypeOfVehicle[TrainIntercityExpress] )
-	selected->addItem( available->takeItem(11) );
-    if ( m_showTypeOfVehicle[TrainIntercityEurocity] )
-	selected->addItem( available->takeItem(10) );
-    if ( m_showTypeOfVehicle[TrainInterregio] )
-	selected->addItem( available->takeItem(9) );
-    if ( m_showTypeOfVehicle[TrainRegionalExpress] )
-	selected->addItem( available->takeItem(8) );
-    if ( m_showTypeOfVehicle[TrainRegional] )
-	selected->addItem( available->takeItem(7));
-    if ( m_showTypeOfVehicle[TrainInterurban] )
-	selected->addItem( available->takeItem(6) );
-    if ( m_showTypeOfVehicle[TrolleyBus] )
-	selected->addItem( available->takeItem(5) );
-    if ( m_showTypeOfVehicle[Metro] )
-	selected->addItem( available->takeItem(4) );
-    if ( m_showTypeOfVehicle[Subway] )
-	selected->addItem( available->takeItem(3) );
-    if ( m_showTypeOfVehicle[Bus] )
-	selected->addItem( available->takeItem(2) );
-    if ( m_showTypeOfVehicle[Tram] )
-	selected->addItem( available->takeItem(1) );
-    if ( m_showTypeOfVehicle[Unknown] )
-	selected->addItem( available->takeItem(0) );
-// regexp=0 wildcard=1 plain=2
-    m_uiFilter.filterPatternTarget->setCurrentIndex( indexFromPatternSyntax(m_filterPatternTarget) );
-    m_uiFilter.filterTypeTarget->setCurrentIndex( static_cast<int>(m_filterTypeTarget) );
-    m_uiFilter.filterTargetList->setItems( m_filterTargetList );
-
-    m_uiFilter.filterTypeLineNumber->setCurrentIndex(
-	    static_cast<int>(m_filterTypeLineNumber) );
-    m_uiFilter.filterLineNumberList->setItems( m_filterLineNumberList );
+    KConfig config( fileName, KConfig::SimpleConfig );
+    FilterSettings filterSettings = SettingsIO::readFilterConfig( config.group(QString()) );
+//     TODO: Set filterSettings in GUI
 }
 
-void PublicTransportSettings::setValuesOfAppearanceConfig() {
-    m_uiAppearance.linesPerRow->setValue(m_linesPerRow);
-    m_uiAppearance.size->setValue(m_size);
-    if ( m_showRemainingMinutes && m_showDepartureTime )
-	m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex(0);
-    else if ( m_showRemainingMinutes )
-	m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex(2);
+
+
+Settings::Settings() {
+    currentStopSettingsIndex = 0;
+}
+
+
+
+Settings SettingsIO::readSettings( KConfigGroup cg ) {
+    Settings settings;
+    settings.autoUpdate = cg.readEntry( "autoUpdate", true );
+    settings.showRemainingMinutes = cg.readEntry( "showRemainingMinutes", true );
+    settings.showDepartureTime = cg.readEntry( "showDepartureTime", true );
+    settings.displayTimeBold = cg.readEntry( "displayTimeBold", true );
+
+    int stopSettingCount = cg.readEntry( "stopSettings", 1 );
+    QString test = "location";
+    int i = 1;
+    while ( cg.hasKey(test) ) {
+	StopSettings stopSettings;
+	QString suffix = i == 1 ? QString() : "_" + QString::number( i );
+	stopSettings.location = cg.readEntry( "location" + suffix, "showAll" );
+	stopSettings.serviceProviderID = cg.readEntry(
+		"serviceProvider" + suffix, "de_db" );
+	stopSettings.filterConfiguration = cg.readEntry(
+		"filterConfiguration" + suffix, "Default" );
+	stopSettings.city = cg.readEntry( "city" + suffix, QString() );
+	stopSettings.stops = cg.readEntry( "stop" + suffix, QStringList() );
+	stopSettings.stopIDs = cg.readEntry( "stopID" + suffix, QStringList() );
+	settings.stopSettingsList << stopSettings;
+
+	++i;
+	test = "location_" + QString::number( i );
+	if ( i > stopSettingCount )
+	    break;
+    }
+
+    settings.currentStopSettingsIndex = cg.readEntry( "currentStopIndex", 0 ); // TODO Rename settings key to "currentStopSettingsIndex"?
+    if ( settings.currentStopSettingsIndex < 0 )
+	settings.currentStopSettingsIndex = 0; // For compatibility with versions < 0.7
+	
+    settings.recentJourneySearches = cg.readEntry( "recentJourneySearches", QStringList() );
+	
+    settings.timeOffsetOfFirstDeparture = cg.readEntry( "timeOffsetOfFirstDeparture", 0 );
+    settings.timeOfFirstDepartureCustom = QTime::fromString(
+	    cg.readEntry("timeOfFirstDepartureCustom", "12:00"), "hh:mm" );
+    settings.firstDepartureConfigMode = static_cast<FirstDepartureConfigMode>(
+	    cg.readEntry("firstDepartureConfigMode",
+			 static_cast<int>(RelativeToCurrentTime)) );
+    settings.maximalNumberOfDepartures = cg.readEntry( "maximalNumberOfDepartures", 20 );
+    settings.alarmTime = cg.readEntry( "alarmTime", 5 );
+    settings.linesPerRow = cg.readEntry( "linesPerRow", 2 );
+    settings.size = cg.readEntry( "size", 2 );
+    settings.sizeFactor = (settings.size + 3) * 0.2f;
+    settings.departureArrivalListType = static_cast<DepartureArrivalListType>(
+	    cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList)) );
+    settings.showHeader = cg.readEntry( "showHeader", true );
+    settings.hideColumnTarget = cg.readEntry( "hideColumnTarget", false );
+
+    QString fontFamily = cg.readEntry( "fontFamily", QString() );
+    settings.useDefaultFont = fontFamily.isEmpty();
+    if ( !settings.useDefaultFont )
+	settings.font = QFont( fontFamily );
     else
-	m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex(1);
-    m_uiAppearance.displayTimeBold->setChecked( m_displayTimeBold );
+	settings.font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
 
-    m_uiAppearance.showHeader->setChecked( m_showHeader );
-    m_uiAppearance.showColumnTarget->setChecked( !m_hideColumnTarget );
-    m_uiAppearance.radioUseDefaultFont->setChecked( m_useDefaultFont );
-    m_uiAppearance.radioUseOtherFont->setChecked( !m_useDefaultFont );
-    m_uiAppearance.font->setCurrentFont( font() );
+    QStringList filterConfigurationList =
+	    cg.readEntry( "filterConfigurationList", QStringList() << "Default");
+    for ( int i = filterConfigurationList.count() - 1; i >= 0; --i ) {
+	const QString &filterConfiguration = filterConfigurationList[ i ];
+	if ( filterConfiguration.isEmpty() )
+	    filterConfigurationList.removeAt( i );
+    }
+    // Make sure, "Default" is the first
+    filterConfigurationList.removeOne( "Default" );
+    filterConfigurationList.prepend( "Default" );
+
+    kDebug() << "Group list" << cg.groupList();
+    kDebug() << "Filter Config List:" << filterConfigurationList;
+    // Delete old filter configs
+    foreach ( const QString &group, cg.groupList() ) {
+	if ( !filterConfigurationList.contains(
+		    group.mid(QString("filterConfig_").length())) ) {
+	    kDebug() << "Delete old group" << group;
+	    cg.deleteGroup( group );
+	}
+    }
+
+    settings.filterSettings.clear();
+    foreach ( const QString &filterConfiguration, filterConfigurationList ) {
+	settings.filterSettings[ filterConfiguration ] =
+		readFilterConfig( cg.group("filterConfig_" + filterConfiguration) );
+    }
+	
+    return settings;
 }
 
-void PublicTransportSettings::downloadServiceProvidersClicked( bool ) {
-    if ( !m_applet->testState(ConfigDialogShown) )
-	return;
+void SettingsIO::writeNoGuiSettings( const Settings& settings, KConfigGroup cg ) {
+    kDebug() << "settings.currentStopSettingsIndex" << settings.currentStopSettingsIndex;
+    cg.writeEntry( "currentStopIndex", settings.currentStopSettingsIndex );
+    cg.writeEntry( "recentJourneySearches", settings.recentJourneySearches );
+}
 
-    if ( KMessageBox::warningContinueCancel(m_configDialog,
-	    i18n("The downloading may currently not work as expected, sorry."))
-	    == KMessageBox::Cancel )
-	return;
+SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
+			    const Settings &oldSettings, KConfigGroup cg ) {
+    ChangedFlags changed = NothingChanged;
 
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-    KNS3::DownloadDialog *dialog = new KNS3::DownloadDialog(
-			      "publictransport.knsrc", m_configDialog );
-    dialog->exec();
-    qDebug() << "KNS3 Results: " << dialog->changedEntries().count();
+    // Read stop settings
+    if ( settings.stopSettingsList != oldSettings.stopSettingsList ) {
+	changed |= IsChanged | ChangedStopSettings;
+	int i = 1;
+	cg.writeEntry( "stopSettings", settings.stopSettingsList.count() ); // Not needed if deleteEntry/Group works, don't know what's wrong (sync() and Plasma::Applet::configNeedsSaving() doesn't help)
+	foreach ( StopSettings stopSettings, settings.stopSettingsList ) {
+	    QString suffix = i == 1 ? QString() : "_" + QString::number( i );
+	    kDebug() << "WRITING" << ("location" + suffix) << stopSettings.location
+		    << stopSettings.stops << stopSettings.serviceProviderID;
+	    cg.writeEntry( "location" + suffix, stopSettings.location );
+	    cg.writeEntry( "serviceProvider" + suffix, stopSettings.serviceProviderID );
+	    cg.writeEntry( "filterConfiguration" + suffix, stopSettings.filterConfiguration );
+	    cg.writeEntry( "city" + suffix, stopSettings.city );
+	    cg.writeEntry( "stop" + suffix, stopSettings.stops );
+	    cg.writeEntry( "stopID" + suffix, stopSettings.stopIDs );
+	    ++i;
+	}
+
+	// Delete old stop settings entries
+	QString test = "location_" + QString::number( i );
+	while ( cg.hasKey(test) ) {
+	    QString suffix = "_" + QString::number( i );
+	    cg.deleteEntry( "location" + suffix );
+	    cg.deleteEntry( "serviceProvider" + suffix );
+	    cg.deleteEntry( "filterConfiguration" + suffix );
+	    cg.deleteEntry( "city" + suffix );
+	    cg.deleteEntry( "stop" + suffix );
+	    cg.deleteEntry( "stopID" + suffix );
+	    kDebug() << "Delete" << test;
+	    ++i;
+	    test = "location_" + QString::number( i );
+	}
+    }
     
-    KNS3::Entry::List installed = dialog->installedEntries();
-    foreach ( KNS3::Entry entry, installed )
-      kDebug() << entry.name() << entry.installedFiles();
-
-    if ( !dialog->changedEntries().isEmpty() )
-      updateServiceProviderModel(); // TODO
-
-    delete dialog;
-#else
-    KNS::Engine engine(m_configDialog);
-    if (engine.init("publictransport2.knsrc")) {
-	KNS::Entry::List entries = engine.downloadDialogModal(m_configDialog);
-
-	qDebug() << "PublicTransportSettings::downloadServiceProvidersClicked" << entries.count();
-	if (entries.size() > 0) {
-	    foreach ( KNS::Entry *entry, entries ) {
-		// Downloaded file has the name "hotstuff-access" which is wrong (maybe it works
-		// better with archives). So rename the file to the right name from the payload:
-		QString filename = entry->payload().representation()
-		    .remove( QRegExp("^.*\\?file=") ).remove( QRegExp("&site=.*$") );
-		QStringList installedFiles = entry->installedFiles();
-
-		qDebug() << "installedFiles =" << installedFiles;
-		if ( !installedFiles.isEmpty() ) {
-		    QString installedFile = installedFiles[0];
-
-		    QString path = KUrl( installedFile ).path().remove( QRegExp("/[^/]*$") ) + "/";
-		    QFile( installedFile ).rename( path + filename );
-
-		    qDebug() << "PublicTransportSettings::downloadServiceProvidersClicked" <<
-		    "Rename" << installedFile << "to" << path + filename;
-		}
-	    }
-
-	    // Get a list of with the location of each service provider (locations can be contained multiple times)
-	    m_serviceProviderData = m_applet->dataEngine("publictransport")->query("ServiceProviders");
-	    // TODO: Update "ServiceProviders"-data source in the data engine.
-	    // TODO: Update country list (group titles in the combo box)
-// 	    foreach ( QString serviceProviderName, m_serviceProviderData.keys() )  {
-// 		QHash< QString, QVariant > serviceProviderData = m_serviceProviderData.value(serviceProviderName).toHash();
-// 		countries << serviceProviderData["country"].toString();
-// 	    }
-	    updateServiceProviderModel(); // TODO
-	}
+    if ( settings.autoUpdate != oldSettings.autoUpdate ) {
+	cg.writeEntry( "autoUpdate", settings.autoUpdate );
+	changed |= IsChanged;
     }
-#endif
-}
-
-void PublicTransportSettings::installServiceProviderClicked( bool ) {
-    if ( !m_applet->testState(ConfigDialogShown) )
-	return;
-
-    QString fileName = KFileDialog::getOpenFileName( KUrl(), "*.xml", m_configDialog );
-    if ( !fileName.isEmpty() ) {
-	QStringList dirs = KGlobal::dirs()->findDirs( "data",
-		"plasma_engine_publictransport/accessorInfos/" );
-	if ( dirs.isEmpty() )
-	    return;
-
-	QString targetDir = dirs[0];
-	kDebug() << "PublicTransportSettings::installServiceProviderClicked"
-		 << "Install file" << fileName << "to" << targetDir;
-	QProcess::execute( "kdesu", QStringList() << QString("cp %1 %2").arg( fileName ).arg( targetDir ) );
+    
+    if ( settings.showRemainingMinutes != oldSettings.showRemainingMinutes ) {
+	cg.writeEntry( "showRemainingMinutes", settings.showRemainingMinutes );
+	changed |= IsChanged;
     }
-}
-
-void PublicTransportSettings::selectLocaleLocation() {
-    updateServiceProviderModel();
-
-    m_location = KGlobal::locale()->country();
-    if ( m_locationData.keys().contains( m_location ) ) {
-	int curLocationIndex = -1;
-	for ( int i = 0; i < m_ui.location->count(); ++i ) {
-	    if ( m_ui.location->itemData(i, LocationCodeRole) == m_location ) {
-		curLocationIndex = i;
-		break;
-	    }
-	}
-	if ( curLocationIndex != -1 )
-	    m_ui.location->setCurrentIndex( curLocationIndex );
-	else
-	    m_ui.location->setCurrentIndex( 0 );
-    } else {
-	m_ui.location->setCurrentIndex( 0 );
+    
+    if ( settings.showDepartureTime != oldSettings.showDepartureTime ) {
+	cg.writeEntry( "showDepartureTime", settings.showDepartureTime );
+	changed |= IsChanged;
     }
-}
-
-void PublicTransportSettings::locationChanged( const QString &newLocation ) { // TODO: use the (int)-version
-    updateServiceProviderModel( newLocation );
-
-    // Select default accessor of the selected location
-    m_location = m_ui.location->itemData( m_ui.location->findText(newLocation), LocationCodeRole ).toString();
-    foreach( QString serviceProviderName, m_serviceProviderData.keys() ) {
-	QVariantHash serviceProviderData = m_serviceProviderData[serviceProviderName].toHash();
-	if ( serviceProviderData["country"].toString() == m_location ) {
-	    if ( serviceProviderData["id"].toString().compare( m_locationData[m_location].toHash()["defaultAccessor"].toString(), Qt::CaseInsensitive ) == 0 ) {
-		qDebug() << "found default accessor" << serviceProviderName;
-		m_ui.serviceProvider->setCurrentItem( serviceProviderName );
-		break;
-	    }
-	}
+    
+    if ( settings.displayTimeBold != oldSettings.displayTimeBold ) {
+	cg.writeEntry( "displayTimeBold", settings.displayTimeBold );
+	changed |= IsChanged;
     }
-}
+    
+    if ( settings.showHeader != oldSettings.showHeader ) {
+	cg.writeEntry( "showHeader", settings.showHeader );
+	changed |= IsChanged;
+    }
+    
+    if ( settings.hideColumnTarget == oldSettings.hideColumnTarget ) {
+	cg.writeEntry( "hideColumnTarget", settings.hideColumnTarget );
+	changed |= IsChanged;
+    }
+    
+    if ( settings.timeOffsetOfFirstDeparture != oldSettings.timeOffsetOfFirstDeparture ) {
+	cg.writeEntry("timeOffsetOfFirstDeparture", settings.timeOffsetOfFirstDeparture);
+	changed |= IsChanged | ChangedServiceProvider;
+    }
+    
+    if ( settings.timeOfFirstDepartureCustom != oldSettings.timeOfFirstDepartureCustom ) {
+	cg.writeEntry( "timeOfFirstDepartureCustom",
+		       settings.timeOfFirstDepartureCustom.toString("hh:mm") );
+	changed |= IsChanged | ChangedServiceProvider;
+    }
+    
+    if ( settings.firstDepartureConfigMode != oldSettings.firstDepartureConfigMode ) {
+	cg.writeEntry( "firstDepartureConfigMode",
+		    static_cast<int>(settings.firstDepartureConfigMode) );
+	changed |= IsChanged | ChangedServiceProvider;
+    }
+    
+    if ( settings.maximalNumberOfDepartures != oldSettings.maximalNumberOfDepartures ) {
+	cg.writeEntry( "maximalNumberOfDepartures", settings.maximalNumberOfDepartures );
+	changed |= IsChanged | ChangedServiceProvider;
+    }
+    
+    if ( settings.alarmTime != oldSettings.alarmTime ) {
+	cg.writeEntry( "alarmTime", settings.alarmTime );
+	changed |= IsChanged;
+    }
+    
+    if ( settings.linesPerRow != oldSettings.linesPerRow ) {
+	cg.writeEntry( "linesPerRow", settings.linesPerRow );
+	changed |= IsChanged;
+    }
 
-int PublicTransportSettings::updateServiceProviderModel( const QString &itemText ) {
-    m_modelServiceProvider->clear();
-    int index = itemText.isEmpty()
-	    ? m_ui.location->currentIndex() : m_ui.location->findText( itemText );
+    if ( settings.size != oldSettings.size ) {
+	cg.writeEntry( "size", settings.size );
+	changed |= IsChanged;
+    }
+    
+    if ( settings.useDefaultFont != oldSettings.useDefaultFont
+		|| (!settings.useDefaultFont && settings.font != oldSettings.font) ) {
+	cg.writeEntry( "fontFamily", settings.useDefaultFont
+			? QString() : settings.font.family() );
+	changed |= IsChanged;
+    }
+    
+    if ( settings.departureArrivalListType != oldSettings.departureArrivalListType ) {
+	cg.writeEntry( "departureArrivalListType",
+		       static_cast<int>(settings.departureArrivalListType) );
+	changed |= IsChanged | ChangedServiceProvider | ChangedDepartureArrivalListType;
+    }
 
-    foreach( QString serviceProviderName, m_serviceProviderData.keys() ) {
-	QVariantHash serviceProviderData = m_serviceProviderData[serviceProviderName].toHash();
+    if ( settings.filterSettings.keys() != oldSettings.filterSettings.keys() ) {
+	cg.writeEntry( "filterConfigurationList", settings.filterSettings.keys() );
+	changed |= IsChanged;
+    }
 
-	// Filter out service providers with the value of the currently selected location
-	if ( index != 0 && serviceProviderData["country"].toString().toLower() != "international"
-		    && m_ui.location->itemData(index, LocationCodeRole).toString()
-		       .compare( serviceProviderData["country"].toString(),
-				 Qt::CaseInsensitive ) != 0 ) {
+    QHash< QString, FilterSettings >::const_iterator it;
+    for ( it = settings.filterSettings.constBegin();
+	    it != settings.filterSettings.constEnd(); ++it ) {
+	QString currentFilterConfig = it.key();
+	if ( currentFilterConfig.isEmpty() ) {
+	    kDebug() << "Empty filter config name, can't write settings";
 	    continue;
 	}
-
-	bool isCountryWide = serviceProviderName.contains(
-	    serviceProviderData["country"].toString(), Qt::CaseInsensitive );
-	QString formattedText;
-	QStandardItem *item = new QStandardItem( serviceProviderName );
-
-// 	if ( isCountryWide ) {
-	    item->setData( QStringList() << "raised" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole ); formattedText =
-		QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
-		.arg( serviceProviderName )
-		.arg( serviceProviderData["features"].toStringList().join(", ")/*.replace(QRegExp("([^,]*,[^,]*,[^,]*,)"), "\\1<br>")*/ );
-	    item->setData( 4, HtmlDelegate::LinesPerRowRole );
-// 	} else {
-// 	    item->setData( QStringList() << "sunken" << "drawFrameForWholeRow", HtmlDelegate::TextBackgroundRole ); formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
-// 		.arg( serviceProviderName )
-// 		.arg( serviceProviderData["features"].toStringList().join(", ")/*.replace(QRegExp("([^,]*,[^,]*,[^,]*,)"), "\\1<br>")*/ );
-// 	    item->setData( 4, HtmlDelegate::LinesPerRowRole );
-// 	}
-	item->setData( formattedText, HtmlDelegate::FormattedTextRole );
-	item->setData( serviceProviderData, ServiceProviderDataRole );
-
-	// Sort service providers containing the country in it's name to the top of the list for that country
-	QString sortString = isCountryWide
-	    ? serviceProviderData["country"].toString() + "11111" + serviceProviderName
-	    : serviceProviderData["country"].toString() + serviceProviderName;
-	item->setData( sortString, SortRole );
-	m_modelServiceProvider->appendRow( item );
-
-	// TODO: add favicon to data engine?
-	QString favIconSource = serviceProviderData["url"].toString();
-	m_applet->dataEngine("favicons")->disconnectSource( favIconSource, this );
-	m_applet->dataEngine("favicons")->connectSource( favIconSource, this );
-	m_applet->dataEngine("favicons")->query( favIconSource );
-    }
-    m_modelServiceProvider->setSortRole( SortRole );
-    m_modelServiceProvider->sort( 0 );
-
-    // Add title items
-    QStringList lastTitles;
-    for( int row = 0; row < m_modelServiceProvider->rowCount(); ++row ) {
-	QString title = m_modelServiceProvider->item( row )->data( ServiceProviderDataRole ).toHash()["country"].toString();
-	if ( KGlobal::locale()->allCountriesList().contains(title) )
-	    title = KGlobal::locale()->countryCodeToName(title);
-	else if ( title == "international" )
-	    title = i18n("International");
-	else if ( title == "unknown" )
-	    title = i18n("Unknown");
-
-	if ( lastTitles.contains(title) )
-	    continue;
-
-	QStandardItem *itemTitle = new QStandardItem(title);
-	QColor textColor = KColorScheme( QPalette::Active ).foreground().color();
-	itemTitle->setData( QString("<span style='font-weight:bold;font-size:large;text-decoration:underline;color:rgb(%1,%2,%3);'>")
-		.arg(textColor.red()).arg(textColor.green()).arg(textColor.blue())
-		+ title + ":</span>", HtmlDelegate::FormattedTextRole );
-	itemTitle->setData( 0, HtmlDelegate::GroupTitleRole );
-	itemTitle->setData( 2, HtmlDelegate::LinesPerRowRole );
-// 	itemTitle->setForeground( KColorScheme(QPalette::Active).foreground() );
-	itemTitle->setSelectable( false );
-	m_modelServiceProvider->insertRow( row, itemTitle );
-
-	lastTitles << title;
-	++row;
-    }
-
-    // Get (combobox-) index of the currently selected service provider
-    int curServiceProviderIndex = -1;
-    for ( int i = 0; i < m_ui.serviceProvider->count(); ++i ) {
-	if ( m_ui.serviceProvider->itemData( i, ServiceProviderDataRole ).toHash()["id"].toString() == m_serviceProvider ) {
-	    curServiceProviderIndex = i;
-	    break;
-	}
-    }
-    if ( curServiceProviderIndex != -1 ) {
-	m_ui.serviceProvider->setCurrentIndex( curServiceProviderIndex );
-	serviceProviderChanged( curServiceProviderIndex );
-    }
-
-    return curServiceProviderIndex;
-}
-
-void PublicTransportSettings::configAccepted() {
-    bool changed = false, changedServiceProviderSettings = false;
-
-    if ( m_location != m_ui.location->currentText() ) {
-	m_location = m_ui.location->currentText();
-
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("location", m_location);
-	changed = true;
-
-	// 	m_applet->addState( WaitingForDepartureData );
-	emit departureListNeedsClearing(); // Clear departures from the old service provider TODO: don't call multiple times in configAccepted()
-    }
-
-    QHash< QString, QVariant > serviceProviderData = m_modelServiceProvider->item( m_ui.serviceProvider->currentIndex() )->data( ServiceProviderDataRole ).toHash();
-    const QString serviceProviderID = serviceProviderData["id"].toString();
-    if ( m_serviceProvider != serviceProviderID ) {
-	m_serviceProvider = serviceProviderID;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("serviceProvider", m_serviceProvider);
-	changed = true;
-
-	changedServiceProviderSettings = true;
-	// 	m_applet->addState( WaitingForDepartureData );
-	emit departureListNeedsClearing(); // Clear departures from the old service provider
-
-	m_onlyUseCitiesInList = serviceProviderData["onlyUseCitiesInList"].toBool();
-	m_useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
-	m_serviceProviderFeatures = serviceProviderData["features"].toStringList();
-    }
-
-    if ( m_uiAdvanced.updateAutomatically->isChecked() != m_autoUpdate ) {
-	m_autoUpdate = m_uiAdvanced.updateAutomatically->isChecked();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry( "autoUpdate", m_autoUpdate );
-	changed = true;
-    }
-
-    if ( m_showRemainingMinutes != (m_uiAppearance.cmbDepartureColumnInfos->currentIndex() != 1) ) {
-	m_showRemainingMinutes = !m_showRemainingMinutes;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("showRemainingMinutes", m_showRemainingMinutes);
-	changed = true;
-    }
-
-    if ( m_showDepartureTime != (m_uiAppearance.cmbDepartureColumnInfos->currentIndex() <= 1) ) {
-	m_showDepartureTime = !m_showDepartureTime;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("showDepartureTime", m_showDepartureTime);
-	changed = true;
-    }
-
-    if ( m_displayTimeBold != (m_uiAppearance.displayTimeBold->checkState() == Qt::Checked) ) {
-	m_displayTimeBold = !m_displayTimeBold;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("displayTimeBold", m_displayTimeBold);
-	changed = true;
-    }
-
-    if ( m_showHeader != (m_uiAppearance.showHeader->checkState() == Qt::Checked) ) {
-	m_showHeader = !m_showHeader;
-// 	m_applet->m_treeView->nativeWidget()->header()->setVisible( m_showHeader );
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry( "showHeader", m_showHeader );
-	changed = true;
-    }
-
-    if ( m_hideColumnTarget == (m_uiAppearance.showColumnTarget->checkState() == Qt::Checked) ) {
-	m_hideColumnTarget = !m_hideColumnTarget;
-// 	if ( m_hideColumnTarget )
-// 	    m_applet->showColumnTarget(true);
-// 	else
-// 	    m_applet->hideColumnTarget(true);
-	// 	((QTreeView*)m_treeView->widget())->header()->setSectionHidden( 1, !m_ui.showColumnTarget->isChecked() );
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry( "hideColumnTarget", m_hideColumnTarget );
-	changed = true;
-    }
-
-    if ( m_city != configCityValue() ) {
-	m_city = configCityValue();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("city", m_city);
-	changed = true;
-
-	// Service provider data must only be newly requested caused by a city value change, if the current service provider uses this city value
-	if ( m_useSeperateCityValue ) {
-	    changedServiceProviderSettings = true;
-    // 	m_applet->addState( WaitingForDepartureData );
-	    emit departureListNeedsClearing(); // Clear departures using the old city name
-	}
-    }
-
-    QStringList additionalStops = getAdditionalStops();
-    kDebug() << additionalStops << "| Stops:" << m_stops;
-    bool stopsChanged = m_stops.count() != additionalStops.count()
-	    || m_stops.first() != m_ui.stop->text();
-    for ( int i = 0; i < additionalStops.count() && !stopsChanged; ++i ) {
-	if ( m_stops[i] != additionalStops[i] ) {
-	    stopsChanged = true;
-	    break;
-	}
-    }
-    
-    if ( stopsChanged ) {
-	m_stops = QStringList() << m_ui.stop->text() << additionalStops;
-	m_stopIDs = QStringList() << m_stopIDinConfig << additionalStops; // TODO: IDs for each additional stop
-	kDebug() << "Stops changed: " << m_stops << "Stop IDs:" << m_stopIDs;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("stop", m_stops);
-	cg.writeEntry("stopID", m_stopIDs);
-	changed = true;
-
-	changedServiceProviderSettings = true;
-// 	m_applet->addState( WaitingForDepartureData );
-	emit departureListNeedsClearing(); // Clear departures using the old stop name
-    }
-
-    if ( m_timeOffsetOfFirstDeparture != m_uiAdvanced.timeOfFirstDeparture->value() ) {
-	m_timeOffsetOfFirstDeparture = m_uiAdvanced.timeOfFirstDeparture->value();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("timeOffsetOfFirstDeparture", m_timeOffsetOfFirstDeparture);
-	changed = true;
-
-	changedServiceProviderSettings = true;
-    }
-
-    if ( m_timeOfFirstDepartureCustom != m_uiAdvanced.timeOfFirstDepartureCustom->time() ) {
-	m_timeOfFirstDepartureCustom = m_uiAdvanced.timeOfFirstDepartureCustom->time();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("timeOfFirstDepartureCustom", m_timeOfFirstDepartureCustom.toString("hh:mm"));
-	changed = true;
-
-	changedServiceProviderSettings = true;
-    }
-
-    if ( (m_firstDepartureConfigMode == RelativeToCurrentTime
-		&& !m_uiAdvanced.firstDepartureUseCurrentTime->isChecked()) ||
-		(m_firstDepartureConfigMode == AtCustomTime
-		&& !m_uiAdvanced.firstDepartureUseCustomTime->isChecked()) ) {
-	m_firstDepartureConfigMode = m_uiAdvanced.firstDepartureUseCurrentTime->isChecked()
-	    ? RelativeToCurrentTime : AtCustomTime;
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("firstDepartureConfigMode", static_cast<int>(m_firstDepartureConfigMode));
-	changed = true;
-
-	changedServiceProviderSettings = true;
-    }
-
-    if ( m_maximalNumberOfDepartures != m_uiAdvanced.maximalNumberOfDepartures->value() ) {
-	m_maximalNumberOfDepartures = m_uiAdvanced.maximalNumberOfDepartures->value();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("maximalNumberOfDepartures", m_maximalNumberOfDepartures);
-	changed = true;
-
-	changedServiceProviderSettings = true;
-// 	m_applet->addState( WaitingForDepartureData );
-    }
-
-    if ( m_alarmTime != m_uiAdvanced.alarmTime->value() ) {
-	m_alarmTime = m_uiAdvanced.alarmTime->value();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("alarmTime", m_alarmTime);
-	changed = true;
-    }
-    
-    if ( m_linesPerRow != m_uiAppearance.linesPerRow->value() ) {
-	m_linesPerRow = m_uiAppearance.linesPerRow->value();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("linesPerRow", m_linesPerRow);
-	changed = true;
-    }
-    
-    if ( m_size != m_uiAppearance.size->value() ) {
-	m_size = m_uiAppearance.size->value();
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("size", m_size);
-	changed = true;
-    }
-
-    if ( m_useDefaultFont != m_uiAppearance.radioUseDefaultFont->isChecked() ) {
-	m_useDefaultFont = !m_useDefaultFont;
-
-	if ( m_useDefaultFont ) {
-	    KConfigGroup cg = m_applet->config();
-	    cg.writeEntry("fontFamily", "");
-	    changed = true;
+	
+	kDebug() << " currentFilterConfig =" << currentFilterConfig;
+	FilterSettings currentfilterSettings = it.value();
+	if ( oldSettings.filterSettings.contains(currentFilterConfig) ) {
+	    if ( SettingsIO::writeFilterConfig(currentfilterSettings,
+		    oldSettings.filterSettings[currentFilterConfig],
+		    cg.group("filterConfig_" + currentFilterConfig)) ) {
+		changed |= IsChanged;
+	    }
 	} else {
-	    m_font.setFamily( m_uiAppearance.font->currentFont().family() );
-	    KConfigGroup cg = m_applet->config();
-	    cg.writeEntry("fontFamily", m_font.family());
-	    changed = true;
+	    SettingsIO::writeFilterConfig( currentfilterSettings,
+		    cg.group("filterConfig_" + currentFilterConfig) );
+	    changed |= IsChanged;
 	}
     }
 
-    if ( !m_useDefaultFont && m_font.family() != m_uiAppearance.font->currentFont().family() ) {
-	m_font.setFamily( m_uiAppearance.font->currentFont().family() );
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("fontFamily", m_font.family());
-	changed = true;
-    }
-
-/*
-    qDebug()  << "PublicTransportSettings::configAccepted" << m_departureArrivalListType
-	<< "showDepartures =" << m_ui.showDepartures->isChecked()
-	<< "showArrivals =" << m_ui.showArrivals->isChecked()
-	<< (m_departureArrivalListType == DepartureList && !m_ui.showDepartures->isChecked())
-	<< (m_departureArrivalListType == ArrivalList && !m_ui.showArrivals->isChecked());*/
-
-    if ( (m_departureArrivalListType == DepartureList
-		&& !m_uiAdvanced.showDepartures->isChecked())
-		|| (m_departureArrivalListType == ArrivalList
-		&& !m_uiAdvanced.showArrivals->isChecked()) ) {
-	if ( m_uiAdvanced.showArrivals->isChecked() )
-	    m_departureArrivalListType = ArrivalList;
-	else
-	    m_departureArrivalListType = DepartureList;
-
-	KConfigGroup cg = m_applet->config();
-	cg.writeEntry("departureArrivalListType", static_cast<int>(m_departureArrivalListType));
-	changed = true;
-
-// 	m_applet->addState( WaitingForDepartureData );
-	changedServiceProviderSettings = true;
-	emit departureArrivalListTypeChanged( m_departureArrivalListType );
-	emit departureListNeedsClearing(); // Clear departures using the old data source type
-    }
-    
-    KConfigGroup cg = m_applet->config();
-    cg.writeEntry("filterConfiguration", m_filterConfiguration);
-    cg.writeEntry("filterConfigurationList", m_filterConfigurationList);
-    if ( writeFilterConfig(m_applet->config()) )
-	changed = true;
-    
-    if ( changed ) {
-	emit settingsChanged();
-	emit configNeedsSaving();
-    }
-    if ( changedServiceProviderSettings )
-	emit serviceProviderSettingsChanged();
+    return changed;
 }
 
-void PublicTransportSettings::writeNoGuiSettings() {
-    KConfigGroup cg = m_applet->config();
-    cg.writeEntry("currentStopIndex", m_currentStopIndex);
-    
-    emit settingsChanged();
-    emit configNeedsSaving();
-}
-
-void PublicTransportSettings::setShowDepartures() {
-    m_departureArrivalListType = DepartureList;
-    
-    KConfigGroup cg = m_applet->config();
-    cg.writeEntry("departureArrivalListType", static_cast<int>(m_departureArrivalListType));
-    emit departureArrivalListTypeChanged( m_departureArrivalListType );
-    emit departureListNeedsClearing(); // Clear departures using the old data source type
-    emit configNeedsSaving();
-    emit serviceProviderSettingsChanged();
-}
-
-void PublicTransportSettings::setShowArrivals() {
-    m_departureArrivalListType = ArrivalList;
-    
-    KConfigGroup cg = m_applet->config();
-    cg.writeEntry("departureArrivalListType", static_cast<int>(m_departureArrivalListType));
-    emit departureArrivalListTypeChanged( m_departureArrivalListType );
-    emit departureListNeedsClearing(); // Clear departures using the old data source type
-    emit configNeedsSaving();
-    emit serviceProviderSettingsChanged();
-}
-
-bool PublicTransportSettings::readFilterConfig( const KConfigGroup& cg ) {
+FilterSettings SettingsIO::readFilterConfig( const KConfigGroup &cg ) {
     kDebug() << "Read filter config from" << cg.name();
-    
-    m_showTypeOfVehicle[Unknown] =
-	    cg.readEntry(vehicleTypeToConfigName(Unknown), true);
-    m_showTypeOfVehicle[Tram] =
-	    cg.readEntry(vehicleTypeToConfigName(Tram), true);
-    m_showTypeOfVehicle[Bus] =
-	    cg.readEntry(vehicleTypeToConfigName(Bus), true);
-    m_showTypeOfVehicle[Subway] =
-	    cg.readEntry(vehicleTypeToConfigName(Subway), true);
-    m_showTypeOfVehicle[Metro] =
-	    cg.readEntry(vehicleTypeToConfigName(Metro), true);
-    m_showTypeOfVehicle[TrolleyBus] =
-	    cg.readEntry(vehicleTypeToConfigName(TrolleyBus), true);
-    m_showTypeOfVehicle[TrainInterurban] =
-	    cg.readEntry(vehicleTypeToConfigName(TrainInterurban), true);
-    m_showTypeOfVehicle[TrainRegional] =
-	    cg.readEntry(vehicleTypeToConfigName(TrainRegional), true);
-    m_showTypeOfVehicle[TrainRegionalExpress] =
-	     cg.readEntry(vehicleTypeToConfigName(TrainRegionalExpress), true);
-    m_showTypeOfVehicle[TrainInterregio] =
-	    cg.readEntry(vehicleTypeToConfigName(TrainInterregio), true);
-    m_showTypeOfVehicle[TrainIntercityEurocity] =
-	     cg.readEntry(vehicleTypeToConfigName(TrainIntercityEurocity), true);
-    m_showTypeOfVehicle[TrainIntercityExpress] =
-	     cg.readEntry(vehicleTypeToConfigName(TrainIntercityExpress), true);
-    m_showTypeOfVehicle[Ferry] =
-	    cg.readEntry(vehicleTypeToConfigName(Ferry), true);
-    m_showTypeOfVehicle[Plane] =
-	    cg.readEntry(vehicleTypeToConfigName(Plane), true);
+    FilterSettings filterSettings;
+    filterSettings.filterAction = static_cast< FilterAction >(
+	    cg.readEntry("FilterAction", static_cast<int>(ShowAll)) );
 	    
-    m_filterPatternTarget = static_cast<QRegExp::PatternSyntax>(cg.readEntry("filterPatternTarget", static_cast<int>(QRegExp::FixedString)));
-    m_filterTypeTarget = static_cast<FilterType>(
-	    cg.readEntry("filterTypeTarget", static_cast<int>(ShowAll)) );
-    m_filterTargetList = cg.readEntry("filterTargetList", QStringList());
-    m_filterTargetList.removeDuplicates();
-
-    m_filterTypeLineNumber = static_cast<FilterType>(
-	    cg.readEntry("filterTypeLineNumber", static_cast<int>(ShowAll)) );
-    m_filterLineNumberList = cg.readEntry("filterLineNumberList", QStringList());
-    m_filterLineNumberList.removeDuplicates();
-
-    kDebug() << "read ok, set values";
-    setFilterConfigurationChanged( false );
-    if ( m_configDialog )
-	setValuesOfFilterConfig();
-
-    return true;
+    QByteArray baFilters = cg.readEntry( "Filters", QByteArray() );
+    filterSettings.filters.fromData( baFilters );
+    return filterSettings;
 }
 
-void PublicTransportSettings::writeDefaultFilterConfig( KConfigGroup cg ) {
-    cg.writeEntry(vehicleTypeToConfigName(Unknown), true);
-    cg.writeEntry(vehicleTypeToConfigName(Tram), true);
-    cg.writeEntry(vehicleTypeToConfigName(Bus), true);
-    cg.writeEntry(vehicleTypeToConfigName(Subway), true);
-    cg.writeEntry(vehicleTypeToConfigName(Metro), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrolleyBus), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainInterurban), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainRegional), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainRegionalExpress), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainInterregio), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainIntercityEurocity), true);
-    cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress), true);
-    cg.writeEntry(vehicleTypeToConfigName(Ferry), true);
-    cg.writeEntry(vehicleTypeToConfigName(Plane), true);
-    
-    cg.writeEntry("filterTargetUseRegExp", false);
-    cg.writeEntry("filterTypeTarget", 0);
-    cg.writeEntry("filterTargetList", QStringList());
-    
-    cg.writeEntry("filterTypeLineNumber", 0);
-    cg.writeEntry("filterLineNumberList", QStringList());
-}
-
-bool PublicTransportSettings::writeFilterConfig( KConfigGroup cg,
-						 bool mainConfig ) {
+bool SettingsIO::writeFilterConfig( const FilterSettings &filterSettings,
+				    const FilterSettings &oldFilterSettings,
+				    KConfigGroup cg ) {
     kDebug() << "Write filter config to" << cg.name();
+    bool changed = false;
 
-    if ( m_configDialog ) {
-	QListWidget *selTypes = m_uiFilter.filterLineType->selectedListWidget();
-	bool showUnknown = !selTypes->findItems( i18n("Unknown"), Qt::MatchExactly ).isEmpty();
-	bool showTrams = !selTypes->findItems( i18n("Trams"), Qt::MatchExactly ).isEmpty();
-	bool showBuses = !selTypes->findItems( i18n("Buses"), Qt::MatchExactly ).isEmpty();
-	bool showSubways = !selTypes->findItems( i18n("Subways"), Qt::MatchExactly ).isEmpty();
-	bool showMetros = !selTypes->findItems( i18n("Metros"), Qt::MatchExactly ).isEmpty();
-	bool showTrolleyBuses = !selTypes->findItems( i18n("Trolley buses"), Qt::MatchExactly ).isEmpty();
-	bool showInterurbanTrains = !selTypes->findItems( i18n("Interurban trains"), Qt::MatchExactly ).isEmpty();
-	bool showRegionalTrains = !selTypes->findItems( i18n("Regional trains"), Qt::MatchExactly ).isEmpty();
-	bool showRegionalExpressTrains = !selTypes->findItems( i18n("Regional express trains"), Qt::MatchExactly ).isEmpty();
-	bool showInterregioTrains = !selTypes->findItems( i18n("Interregio trains"), Qt::MatchExactly ).isEmpty();
-	bool showIntercityEurocityTrains = !selTypes->findItems( i18n("Intercity / Eurocity trains"), Qt::MatchExactly ).isEmpty();
-	bool showIntercityExpressTrains = !selTypes->findItems( i18n("Intercity express trains"), Qt::MatchExactly ).isEmpty();
-	bool showFerries = !selTypes->findItems( i18n("Ferries"), Qt::MatchExactly ).isEmpty();
-	bool showPlanes = !selTypes->findItems( i18n("Planes"), Qt::MatchExactly ).isEmpty();
-
-	if ( mainConfig ) {
-	    bool changed = false;
-
-	    if (m_showTypeOfVehicle[Unknown] != showUnknown) {
-		m_showTypeOfVehicle[Unknown] = showUnknown;
-		cg.writeEntry(vehicleTypeToConfigName(Unknown), showUnknown);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[Tram] != showTrams) {
-		m_showTypeOfVehicle[Tram] = showTrams;
-		cg.writeEntry(vehicleTypeToConfigName(Tram), showTrams);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[Bus] != showBuses) {
-		m_showTypeOfVehicle[Bus] = showBuses;
-		cg.writeEntry(vehicleTypeToConfigName(Bus), showBuses);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[Subway] != showSubways) {
-		m_showTypeOfVehicle[Subway] = showSubways;
-		cg.writeEntry(vehicleTypeToConfigName(Subway), showSubways);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[Metro] != showMetros) {
-		m_showTypeOfVehicle[Metro] = showMetros;
-		cg.writeEntry(vehicleTypeToConfigName(Metro), showMetros);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[TrolleyBus] != showTrolleyBuses) {
-		m_showTypeOfVehicle[TrolleyBus] = showTrolleyBuses;
-		cg.writeEntry(vehicleTypeToConfigName(TrolleyBus), showTrolleyBuses);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[TrainInterurban] != showInterurbanTrains) {
-		m_showTypeOfVehicle[TrainInterurban] = showInterurbanTrains;
-		cg.writeEntry(vehicleTypeToConfigName(TrainInterurban), showInterurbanTrains);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[TrainRegional] != showRegionalTrains) {
-		m_showTypeOfVehicle[TrainRegional] = showRegionalTrains;
-		cg.writeEntry(vehicleTypeToConfigName(TrainRegional), showRegionalTrains);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[TrainRegionalExpress] != showRegionalExpressTrains) {
-		m_showTypeOfVehicle[TrainRegionalExpress] = showRegionalExpressTrains;
-		cg.writeEntry(vehicleTypeToConfigName(TrainRegionalExpress), showRegionalExpressTrains);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[TrainInterregio] != showInterregioTrains) {
-		m_showTypeOfVehicle[TrainInterregio] = showInterregioTrains;
-		cg.writeEntry(vehicleTypeToConfigName(TrainInterregio), showInterregioTrains);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[TrainIntercityEurocity] != showIntercityEurocityTrains) {
-		m_showTypeOfVehicle[TrainIntercityEurocity] = showIntercityEurocityTrains;
-		cg.writeEntry(vehicleTypeToConfigName(TrainIntercityEurocity), showIntercityEurocityTrains);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[TrainIntercityExpress] != showIntercityExpressTrains) {
-		m_showTypeOfVehicle[TrainIntercityExpress] = showIntercityExpressTrains;
-		cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress), showIntercityExpressTrains);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[Ferry] != showFerries) {
-		m_showTypeOfVehicle[Ferry] = showFerries;
-		cg.writeEntry(vehicleTypeToConfigName(Ferry), showFerries);
-		changed = true;
-	    }
-
-	    if (m_showTypeOfVehicle[Plane] != showPlanes) {
-		m_showTypeOfVehicle[Plane] = showPlanes;
-		cg.writeEntry(vehicleTypeToConfigName(Plane), showPlanes);
-		changed = true;
-	    }
-
-	    if (m_filterPatternTarget != patternSyntaxFromIndex(
-			    m_uiFilter.filterPatternTarget->currentIndex())) {
-		m_filterPatternTarget = patternSyntaxFromIndex(
-			m_uiFilter.filterPatternTarget->currentIndex() );
-		cg.writeEntry("filterTargetUseRegExp", static_cast<int>(m_filterPatternTarget));
-		changed = true;
-	    }
-
-	    if (m_filterTypeTarget != (m_uiFilter.filterTypeTarget->currentIndex())) {
-		m_filterTypeTarget = static_cast<FilterType>(m_uiFilter.filterTypeTarget->currentIndex());
-		cg.writeEntry("filterTypeTarget", static_cast<int>(m_filterTypeTarget));
-		changed = true;
-	    }
-	    
-	    if (m_filterTargetList != m_uiFilter.filterTargetList->items()) {
-		m_filterTargetList = m_uiFilter.filterTargetList->items();
-		m_filterTargetList.removeDuplicates();
-		cg.writeEntry("filterTargetList", m_filterTargetList);
-		changed = true;
-	    }
-
-	    if (m_filterTypeLineNumber != (m_uiFilter.filterTypeLineNumber->currentIndex())) {
-		m_filterTypeLineNumber = static_cast<FilterType>(m_uiFilter.filterTypeLineNumber->currentIndex());
-		cg.writeEntry("filterTypeLineNumber", static_cast<int>(m_filterTypeLineNumber));
-		changed = true;
-	    }
-
-	    if (m_filterLineNumberList != m_uiFilter.filterLineNumberList->items()) {
-		m_filterLineNumberList = m_uiFilter.filterLineNumberList->items();
-		m_filterLineNumberList.removeDuplicates();
-		cg.writeEntry("filterLineNumberList", m_filterLineNumberList);
-		changed = true;
-	    }
-
-	    return changed;
-	} else {
-	    cg.writeEntry(vehicleTypeToConfigName(Unknown), showUnknown);
-	    cg.writeEntry(vehicleTypeToConfigName(Tram), showTrams);
-	    cg.writeEntry(vehicleTypeToConfigName(Bus), showBuses);
-	    cg.writeEntry(vehicleTypeToConfigName(Subway), showSubways);
-	    cg.writeEntry(vehicleTypeToConfigName(Metro), showMetros);
-	    cg.writeEntry(vehicleTypeToConfigName(TrolleyBus), showTrolleyBuses);
-	    cg.writeEntry(vehicleTypeToConfigName(TrainInterurban), showInterurbanTrains);
-	    cg.writeEntry(vehicleTypeToConfigName(TrainRegional), showRegionalTrains);
-	    cg.writeEntry(vehicleTypeToConfigName(TrainRegionalExpress), showRegionalExpressTrains);
-	    cg.writeEntry(vehicleTypeToConfigName(TrainInterregio), showInterregioTrains);
-	    cg.writeEntry(vehicleTypeToConfigName(TrainIntercityEurocity), showIntercityEurocityTrains);
-	    cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress), showIntercityExpressTrains);
-	    cg.writeEntry(vehicleTypeToConfigName(Ferry), showFerries);
-	    cg.writeEntry(vehicleTypeToConfigName(Plane), showPlanes);
-	    
-	    cg.writeEntry("filterPatternTarget", static_cast<int>(patternSyntaxFromIndex(
-		    m_uiFilter.filterPatternTarget->currentIndex())));
-	    cg.writeEntry("filterTypeTarget", m_uiFilter.filterTypeTarget->currentIndex());
-	    cg.writeEntry("filterTargetList", m_uiFilter.filterTargetList->items());
-
-	    cg.writeEntry("filterTypeLineNumber", m_uiFilter.filterTypeLineNumber->currentIndex());
-	    cg.writeEntry("filterLineNumberList", m_uiFilter.filterLineNumberList->items());
-
-	    return true;
-	}
-    } else { // Config dialog not shown
-	cg.writeEntry(vehicleTypeToConfigName(Unknown), m_showTypeOfVehicle[Unknown]);
-	cg.writeEntry(vehicleTypeToConfigName(Tram), m_showTypeOfVehicle[Tram]);
-	cg.writeEntry(vehicleTypeToConfigName(Bus), m_showTypeOfVehicle[Bus]);
-	cg.writeEntry(vehicleTypeToConfigName(Subway), m_showTypeOfVehicle[Subway]);
-	cg.writeEntry(vehicleTypeToConfigName(Metro), m_showTypeOfVehicle[Metro]);
-	cg.writeEntry(vehicleTypeToConfigName(TrolleyBus),
-		      m_showTypeOfVehicle[TrolleyBus]);
-	cg.writeEntry(vehicleTypeToConfigName(TrainInterurban),
-		      m_showTypeOfVehicle[TrainInterurban]);
-	cg.writeEntry(vehicleTypeToConfigName(TrainRegional),
-		      m_showTypeOfVehicle[TrainRegional]);
-	cg.writeEntry(vehicleTypeToConfigName(TrainRegionalExpress),
-		      m_showTypeOfVehicle[TrainRegionalExpress]);
-	cg.writeEntry(vehicleTypeToConfigName(TrainInterregio),
-		      m_showTypeOfVehicle[TrainInterregio]);
-	cg.writeEntry(vehicleTypeToConfigName(TrainIntercityEurocity),
-		      m_showTypeOfVehicle[TrainIntercityEurocity]);
-	cg.writeEntry(vehicleTypeToConfigName(TrainIntercityExpress),
-		      m_showTypeOfVehicle[TrainIntercityExpress]);
-	cg.writeEntry(vehicleTypeToConfigName(Ferry), m_showTypeOfVehicle[Ferry]);
-	cg.writeEntry(vehicleTypeToConfigName(Plane), m_showTypeOfVehicle[Plane]);
-	
-	cg.writeEntry("filterPatternTarget", static_cast<int>(m_filterPatternTarget));
-	cg.writeEntry("filterTypeTarget", static_cast<int>(m_filterTypeTarget));
-	cg.writeEntry("filterTargetList", m_filterTargetList);
-	
-	cg.writeEntry("filterTypeLineNumber", static_cast<int>(m_filterTypeLineNumber));
-	cg.writeEntry("filterLineNumberList", m_filterLineNumberList);
-
-	emit settingsChanged();
-	return true;
+    if ( filterSettings.filters != oldFilterSettings.filters ) {
+	cg.writeEntry( "Filters", filterSettings.filters.toData() );
+	changed = true;
     }
+
+    if ( filterSettings.filterAction != oldFilterSettings.filterAction ) {
+	cg.writeEntry( "FilterAction", static_cast<int>(filterSettings.filterAction) );
+	changed = true;
+    }
+
+    return changed;
 }
 
-bool PublicTransportSettings::isTargetFiltered( const QString& target ) const {
-    if ( m_filterPatternTarget == QRegExp::FixedString ) {
-	return ( m_filterTypeTarget == ShowMatching
-		&& !m_filterTargetList.contains(target) ) ||
-	       ( m_filterTypeTarget == HideMatching
-		&& m_filterTargetList.contains(target) );
-    } else {
-	if ( m_filterTypeTarget == ShowAll )
-	    return false;
-	else {
-	    bool matched = false;
-	    foreach ( const QString &filter, m_filterTargetList ) {
-		QRegExp rx( filter, Qt::CaseInsensitive, m_filterPatternTarget );
-		int pos = rx.indexIn( target );
-		if ( pos != -1 ) {
-		    matched = true;
-		    break;
-		}
-	    }
-
-	    return ( m_filterTypeTarget == ShowMatching && !matched ) ||
-		   ( m_filterTypeTarget == HideMatching && matched );
-	}
-    }
-}
-
-QString PublicTransportSettings::vehicleTypeToConfigName( const VehicleType& vehicleType ) {
-    switch ( vehicleType )
-    {
-	case Unknown:
-	    return "showUnknown";
-
-	case Tram:
-	    return "showTrams";
-	case Bus:
-	    return "showBuses";
-	case Subway:
-	    return "showSubways";
-	case TrainInterurban:
-	    return "showInterurbanTrains";
-	case Metro:
-	    return "showMetros";
-	case TrolleyBus:
-	    return "showTrolleyBuses";
-
-	case TrainRegional:
-	    return "showRegionalTrains";
-	case TrainRegionalExpress:
-	    return "showRegionalExpressTrains";
-	case TrainInterregio:
-	    return "showInterregioTrains";
-	case TrainIntercityEurocity:
-	    return "showIntercityEurocityTrains";
-	case TrainIntercityExpress:
-	    return "showIntercityExpressTrains";
-
-	case Ferry:
-	    return "showFerries";
-	case Plane:
-	    return "showPlanes";
-
-	default:
-	    return "showUnknownTypeOfVehicle";
-    }
-}
-
-void PublicTransportSettings::hideTypeOfVehicle( VehicleType vehicleType ) {
-    m_showTypeOfVehicle[vehicleType] = false;
-
-    KConfigGroup cg = m_applet->config();
-    cg.writeEntry ( vehicleTypeToConfigName(vehicleType), false );
-
-    emit configNeedsSaving();
-    emit modelNeedsUpdate();
+void SettingsIO::writeFilterConfig( const FilterSettings& filterSettings,
+				    KConfigGroup cg ) {
+    kDebug() << "Write (new) filter config to" << cg.name();
+    
+    cg.writeEntry( "Filters", filterSettings.filters.toData() );
+    cg.writeEntry( "FilterAction", static_cast<int>(filterSettings.filterAction) );
 }
 

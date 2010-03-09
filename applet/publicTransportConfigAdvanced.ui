@@ -14,20 +14,10 @@
    <property name="fieldGrowthPolicy">
     <enum>QFormLayout::ExpandingFieldsGrow</enum>
    </property>
-   <item row="2" column="0" colspan="2">
-    <widget class="QLabel" name="lblTimetable_2">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Departure/Arrival View Settings</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
+   <property name="formAlignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+   </property>
+   <item row="2" column="0">
     <widget class="QLabel" name="lblUpdateAutomatically">
      <property name="text">
       <string>Update &amp;automatically:</string>
@@ -40,7 +30,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="1">
+   <item row="2" column="1">
     <widget class="QCheckBox" name="updateAutomatically">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -56,7 +46,7 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="0">
+   <item row="3" column="0">
     <widget class="QLabel" name="lblAlarmTime">
      <property name="text">
       <string>A&amp;larm time:</string>
@@ -69,7 +59,7 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="1">
+   <item row="3" column="1">
     <widget class="QSpinBox" name="alarmTime">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -104,7 +94,7 @@ Here you can set when the alarm should be fired, relative to the departure / arr
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
+   <item row="4" column="0">
     <widget class="QLabel" name="lblMaximalNumberOfDepartures">
      <property name="text">
       <string>Maximum Departures:</string>
@@ -117,7 +107,7 @@ Here you can set when the alarm should be fired, relative to the departure / arr
      </property>
     </widget>
    </item>
-   <item row="5" column="1">
+   <item row="4" column="1">
     <widget class="QSpinBox" name="maximalNumberOfDepartures">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -145,7 +135,7 @@ Here you can set when the alarm should be fired, relative to the departure / arr
      </property>
     </widget>
    </item>
-   <item row="6" column="0">
+   <item row="5" column="0">
     <widget class="QLabel" name="lblFirstDeparture">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -158,7 +148,7 @@ Here you can set when the alarm should be fired, relative to the departure / arr
      </property>
     </widget>
    </item>
-   <item row="6" column="1">
+   <item row="5" column="1">
     <widget class="QWidget" name="widget" native="true">
      <property name="minimumSize">
       <size>
@@ -294,36 +284,7 @@ Here you can set when the alarm should be fired, relative to the departure / arr
      </layout>
     </widget>
    </item>
-   <item row="7" column="0" colspan="2">
-    <spacer name="verticalSpacer_5">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Fixed</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>64</width>
-       <height>10</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="8" column="0" colspan="2">
-    <widget class="QLabel" name="lblTimetable_3">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Default View</string>
-     </property>
-    </widget>
-   </item>
-   <item row="9" column="1">
+   <item row="1" column="1">
     <widget class="QWidget" name="widget_2" native="true">
      <property name="minimumSize">
       <size>
@@ -353,6 +314,25 @@ Here you can set when the alarm should be fired, relative to the departure / arr
        </widget>
       </item>
      </layout>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="lblUpdateAutomatically_2">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Default View:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>updateAutomatically</cstring>
+     </property>
     </widget>
    </item>
   </layout>

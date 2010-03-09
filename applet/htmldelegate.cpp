@@ -28,7 +28,6 @@
 #include <QAbstractTextDocumentLayout>
 #include <QPainter>
 #include <qmath.h>
-#include <QDebug>
 
 #include <Plasma/PaintUtils>
 #include <Plasma/FrameSvg>
@@ -191,7 +190,6 @@ void HtmlDelegate::drawDisplayWithShadow( QPainter* painter,
     QTextDocument document;
     document.setDefaultFont( option.font );
     QColor textColor = option.palette.foreground().color();
-//     qDebug() << "HtmlDelegate::drawDisplay" << text << textColor;
     QTextOption textOption( option.displayAlignment );
     textOption.setTextDirection( option.direction );
     if ( maxLineCount == 1 )

@@ -16,6 +16,13 @@ set( publictransport_SRCS
     publictransport.cpp 
     global.cpp 
     settings.cpp 
+    stopfinder.cpp
+    dynamicwidget.cpp
+    stopwidget.cpp
+    filter.cpp
+    filterwidget.cpp
+    stopsettingsdialog.cpp
+    checkcombobox.cpp
     datasourcetester.cpp 
     alarmtimer.cpp 
     htmldelegate.cpp 
@@ -23,6 +30,7 @@ set( publictransport_SRCS
 
 kde4_add_ui_files( publictransport_SRCS 
     publicTransportConfig.ui 
+    publicTransportStopConfig.ui
     publicTransportConfigAdvanced.ui 
     publicTransportAppearanceConfig.ui 
     publicTransportFilterConfig.ui 

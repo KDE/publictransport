@@ -197,6 +197,9 @@ class DepartureInfo {
 		  routeTimes, routeExactStops );
 	};
 
+	bool isVisible() const { return m_visible; };
+	void setVisible( bool visible = true ) { m_visible = visible; };
+
 	/** Wheather or not this DepartureInfo object is valid. It currently checks
 	* validity by checking if the lineString is empty. */
 	bool isValid() const { return !m_lineString.isEmpty(); };
@@ -205,7 +208,7 @@ class DepartureInfo {
 	bool isLineNumberValid() const {
 	    return m_lineNumber > 0 &&
 		    m_vehicleType != Unknown && // May not been parsed correctly
-		    m_vehicleType < 10; // Isn't a train (bus | tram | subway | interurbantrain | metro | trolleybus). Line numbers are only valid for those.
+		    m_vehicleType < 10; // Isn't a train (bus | tram | subway | interurbantrain | metro | trolleybus). Line numbers are only valid for those. TODO: Change this?
 	};
 
 	/**< The line number. @see isLineNumberValid */
@@ -247,7 +250,7 @@ class DepartureInfo {
 	QString delayReason() const { return m_delayReason; };
 	QString journeyNews() const { return m_journeyNews; };
 	QDateTime departure() const { return m_departure; };
-	/** The delay in minutes. */
+	/** The delay in minutes or -1 if there's no information about delays. */
 	int delay() const { return m_delay; };
 	VehicleType vehicleType() const { return m_vehicleType; };
 	LineServices lineServices() const { return m_lineServices; };
@@ -280,6 +283,7 @@ class DepartureInfo {
 	QList<QTime> m_routeTimes;
 	int m_routeExactStops;
 	QString m_hash;
+	bool m_visible;
 };
 
 bool operator < ( const DepartureInfo &di1, const DepartureInfo &di2 );

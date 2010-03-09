@@ -30,7 +30,9 @@
 // Own includes
 #include "global.h"
 #include "departureinfo.h"
+#include "settings.h"
 
+class KSelectAction;
 namespace Plasma {
     class IconWidget;
     class TreeView;
@@ -101,14 +103,12 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	/** Sets values of the current plasma theme. */
 	void useCurrentPlasmaTheme();
-
-	/** The constraints have changed. */
-	virtual void constraintsEvent ( Plasma::Constraints constraints );
 	
 	/** Tests the given state.
 	* @param state The state to test.
 	* @returns True, if the state is set. False, otherwise.*/
-	virtual bool testState( AppletState state ) const;
+	virtual bool testState( AppletState state ) const {
+	    return m_appletStates.testFlag( state ); };
 	
 	/** Adds the given state. Operations are processed to set the new applet state.
 	* @param state The state to add. */
@@ -232,15 +232,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	* returned. */
 	QString arrivalText( const JourneyInfo &journeyInfo ) const;
 
-	/** Gets the data of the current service provider. */
-	QHash<QString, QVariant> serviceProviderData() const;
-
-	/** Gets the current stop id if available. Otherwise it returns the current
-	* stop name. */
-	QString stop() const;
-
-	QStringList stopValues() const;
-
 	/** Gets a list of actions for the context menu. */
 	virtual QList<QAction*> contextualActions();
 
@@ -347,8 +338,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	void showAlarmMessage( const QPersistentModelIndex &modelIndex );
 	/** A column (section) of the tree view was resized. */
 	void treeViewSectionResized( int logicalIndex, int oldSize, int newSize );
-	/** The popup dialog of the applet was resized. */
-	void dialogSizeChanged();
 	/** The context menu has been requested by the tree view. */
 	void showDepartureContextMenu( const QPoint &position );
 	/** The context menu has been requested by the tree view header. */
@@ -368,7 +357,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	void possibleStopClicked( const QModelIndex &modelIndex );
 	void possibleStopDoubleClicked( const QModelIndex &modelIndex );
 
-	void emitConfigNeedsSaving() { emit configNeedsSaving(); };
+	void emitConfigNeedsSaving() { kDebug() << "emit configNeedsSaving();"; emit configNeedsSaving(); };
 	void configurationIsRequired( bool needsConfiguring, const QString &reason );
 	void emitSettingsChanged() { emit settingsChanged(); };
 	/** Called from PublicTransportSettings to indicate the need to update the
@@ -376,7 +365,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	void modelNeedsUpdate() { updateModel(); };
 	/** Called from PublicTransportSettings to indicate the need to clear the
 	* departure list. */
-	void departureListNeedsClearing() { m_departureInfos.clear(); };
+// 	void clearDepartureList() { m_departureInfos.clear(); };
 	void departureArrivalListTypeChanged ( DepartureArrivalListType departureArrivalListType );
 
 	/** The action to update the data source has been triggered. */
@@ -396,30 +385,9 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	/** The action to add the target of the selected departure/arrival to the filter list has been triggered. */
 	void addTargetToFilterList( bool );
-	/** The action to remove the target of the selected departure/arrival from the filter list has been triggered. */
-	void removeTargetFromFilterList( bool );
-	/** The action to add the target of the selected departure/arrival from the filter list and set the filter type to HideMatching has been triggered. */
-	void addTargetToFilterListAndHide( bool );
-	/** The action to set the filter type for targets to ShowAll has been triggered. */
-	void setTargetFilterToShowAll( bool );
-	/** The action to set the filter type for targets to HideMatching has been triggered. */
-	void setTargetFilterToHideMatching( bool );
-	
-	/** The action to add the line number of the selected departure/arrival to the filter list has been triggered. */
-	void addLineNumberToFilterList( bool );
-	/** The action to remove the line number of the selected departure/arrival from the filter list has been triggered. */
-	void removeLineNumberFromFilterList( bool );
-	/** The action to add the line number of the selected departure/arrival from the filter list and set the filter type to HideMatching has been triggered. */
-	void addLineNumberToFilterListAndHide( bool );
-	/** The action to set the filter type for line numbers to ShowAll has been triggered. */
-	void setLineNumberFilterToShowAll( bool );
-	/** The action to set the filter type for line numbers to HideMatching has been triggered. */
-	void setLineNumberFilterToHideMatching( bool );
 	
 	/** The action to add the vehicle type of the selected departure/arrival to the list of filtered vehicle types has been triggered. */
 	void filterOutByVehicleType( bool );
-	/** The action to clear the list of filtered vehicle types has been triggered. */
-	void removeAllFiltersByVehicleType( bool );
 	
 	/** The action to expand / collapse of the selected departure/arrival has been triggered. */
 	void toggleExpanded( bool );
@@ -442,6 +410,15 @@ class PublicTransport : public Plasma::PopupApplet {
 	void destroyOverlay();
 	void setCurrentStopIndex( QAction *action );
 	
+	void writeSettings( const Settings &settings );
+// 	void deleteFilterSettings( const QString &name );
+// 	void saveFilterSettings( const QString &name, const FilterSettings &filterSettings );
+// 	void renameFilterSettings( const QString &oldName, const QString &newName );
+
+	void setShowDepartures();
+	void setShowArrivals();
+	void switchFilterConfiguration( const QString &newFilterConfiguration );
+	
     private:
 	bool parseJourneySearch( const QString &search, QString *stop,
 				 QDateTime *departure, bool *stopIsTarget,
@@ -458,7 +435,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	void parseDateAndTime( const QString &sDateTime, QDateTime *dateTime,
 			       QDate *alreadyParsedDate ) const;
 	void combineDoubleQuotedWords( QStringList *words ) const;
-			       
+	
 	/** Get the strings left and right of the word at @p splitWordPos 
 	* in @p wordList. The extracted strings are stored to @p leftOfSplitWord
 	* and @p rightOfSplitWord. */
@@ -472,6 +449,12 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** List of current departures / arrivals for the selected stop(s). */
 	QList<DepartureInfo> departureInfos() const;
 	QString stripDateAndTimeValues( const QString &sourceName ) const;
+
+	KSelectAction *switchStopAction( QObject *parent,
+					 bool destroyOverlayOnTrigger = false ) const;
+	QVariantHash currentServiceProviderData() const {
+	    return serviceProviderData( m_settings.currentStopSettings().serviceProviderID ); };
+	QVariantHash serviceProviderData( const QString &id ) const;
 	
 				 
 	AppletStates m_appletStates; /**< The current states of this applet */
@@ -489,7 +472,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	Plasma::ToolButton *m_btnLastJourneySearches; /**< A tool button that shows last used journey searches. */
 	OverlayWidget *m_overlay;
 
-	QStringList m_recentJourneySearches; /** A list of last used journey searches. */
+	//QStringList m_recentJourneySearches; /** A list of last used journey searches. */
 	int m_journeySearchLastTextLength; /**< The last number of unselected characters in the journey search input field. */
 	bool m_lettersAddedToJourneySearchLine; /**< Whether or not the last edit of the journey search line added letters o(r not. Used for auto completion. */
 
@@ -507,8 +490,10 @@ class PublicTransport : public Plasma::PopupApplet {
 	QDateTime m_lastSourceUpdate; /**< The last update of the data source inside the data engine */
 	QColor m_colorSubItemLabels; /**< The color to be used for sub item labels ("Delay:", "Platform:", ...) */
 	QUrl m_urlDeparturesArrivals, m_urlJourneys; /**< Urls to set as associated application urls, when switching from/to journey mode. */
-	
-	PublicTransportSettings *m_settings;
+
+	Settings m_settings; // TODO RENAME TO m_settings, and remove the other one
+// 	PublicTransportSettings *m_settings;
+	QStringList m_currentServiceProviderFeatures;
 	bool m_stopNameValid; /**< Wheather or not the current stop name (m_stop) is valid */
 	
 	QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in the tree view for the context menu actions */

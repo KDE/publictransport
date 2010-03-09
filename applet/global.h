@@ -32,6 +32,38 @@
 #include <KIconLoader>
 #include <QPainter>
 
+struct StopSettings {
+    QString city; /**< The currently selected city */
+    QStringList stops; /**< The currently selected stops */
+    QStringList stopIDs; /**< The IDs of the currently selected stops, can
+    * contain empty strings if the ID isn't available */
+    QString serviceProviderID; /**< The id of the current service provider */
+    QString location; /**< The current location code (country code or 'showAll', 
+			 * 'international', 'unknown') */
+    QString filterConfiguration; /**< The filter configuration to be used for the stop */
+
+    StopSettings() {
+	filterConfiguration = "Default";
+    }
+
+    QString stopOrStopId( int index ) {
+	if ( index < stopIDs.count() && !stopIDs[index].isEmpty() )
+	    return stopIDs[ index ];
+	else if ( index < stops.count() )
+	    return stops[ index ];
+	else
+	    return QString();
+    };
+
+    bool operator ==( const StopSettings &other ) {
+	return city == other.city && stops == other.stops && stopIDs == other.stopIDs
+	    && serviceProviderID == other.serviceProviderID
+	    && location == other.location
+	    && filterConfiguration == other.filterConfiguration;
+    };
+};
+typedef QList<StopSettings> StopSettingsList;
+
 /** Columns of the tree view containing the timetable information */
 enum TimetableColumn {
     LineStringColumn, /**< Column containing line strings and vehicle type icons */
@@ -102,15 +134,10 @@ enum AppletState {
     ReceivedErroneousJourneyData 	= 0x004000, /**< The applet received erroneous
 						    * journey data from the data engine */
 
-    ConfigDialogShown 			= 0x010000, /**< The configuration dialog is
-						    * currently shown */
-    AccessorInfoDialogShown 		= 0x020000, /**< The accessor information
-						    * dialog is currently shown */
-
-    SettingsJustChanged 		= 0x040000, /**< The settings have just changed
+    SettingsJustChanged 		= 0x010000, /**< The settings have just changed
 						    * and dataUpdated() hasn't been called
 						    * since that */
-    ServiceProviderSettingsJustChanged 	= 0x080000 /**< Settings were just changed that
+    ServiceProviderSettingsJustChanged 	= 0x020000 /**< Settings were just changed that
 						    * require a new data request */
 };
 Q_DECLARE_FLAGS( AppletStates, AppletState )
@@ -156,7 +183,8 @@ enum ModelDataRoles {
     DepartureInfoRole = Qt::UserRole + 10, /**< Used to store the departure */
     OperatorRole = Qt::UserRole + 11, /**< Used to store the operator name of the departure / arrival / journey. */
     LocationCodeRole = Qt::UserRole + 12, /**< Used to store the location code (country code or other) in the location model. */
-    TimetableItemHashRole = Qt::UserRole + 13 /**< Used to store a hash for the current timetable item in the model. */
+    TimetableItemHashRole = Qt::UserRole + 13, /**< Used to store a hash for the current timetable item in the model. */
+    ServiceProviderIdRole = Qt::UserRole + 14
 };
 
 /** The type of the vehicle used for a public transport line.
@@ -195,8 +223,35 @@ enum LineService {
     ExpressLine = 2 /**< The public transport line is an express line */
 };
 
-/** The type of filtering by target / origin. */
 enum FilterType {
+    InvalidFilter = -1,
+    
+    FilterByVehicleType = 0,
+    FilterByTransportLine = 1,
+    FilterByTransportLineNumber = 2,
+    FilterByTarget = 3,
+    FilterByDelay = 4
+};
+
+enum FilterVariant {
+    FilterNoVariant = 0,
+    
+    FilterContains = 1,
+    FilterDoesntContain = 2,
+    FilterEquals = 3,
+    FilterDoesntEqual = 4,
+    FilterMatchesRegExp = 5,
+    FilterDoesntMatchRegExp = 6,
+    
+    FilterIsOneOf = 7,
+    FilterIsntOneOf = 8,
+
+    FilterGreaterThan = 9,
+    FilterLessThan = 10
+};
+
+/** The action of filters. */
+enum FilterAction {
     ShowAll = 0, /**< Show all targets / origins */
     ShowMatching = 1, /**< Show only targets / origins that are in the list of filter targets / origins */
     HideMatching = 2 /**< Hide targets / origins that are in the list of filter targets / origins */
@@ -239,7 +294,6 @@ class Global {
 	/** Gets an icon containing the icons of all vehicle types in the given list. */
 	static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes,
 					      int extend = 32 );
-
 
 	/** Gets the name of the given type of vehicle. */
 	static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );

@@ -22,26 +22,25 @@
 
 void DataSourceTester::connectTestSource() {
     if ( !m_testSource.isEmpty() ) {
-	applet()->dataEngine("publictransport")->connectSource( m_testSource, this );
+	m_publicTransportEngine->connectSource( m_testSource, this );
     }
 }
 
 void DataSourceTester::disconnectTestSource() {
     if ( !m_testSource.isEmpty() ) {
-	applet()->dataEngine("publictransport")->disconnectSource( m_testSource, this );
+	m_publicTransportEngine->disconnectSource( m_testSource, this );
 	m_testSource = "";
     }
 }
 
-void DataSourceTester::setTestSource ( const QString& sourceName ) {
+void DataSourceTester::setTestSource( const QString& sourceName ) {
     disconnectTestSource();
 
-//     qDebug() << "DataSourceTester::setTestSource" << sourceName;
     m_testSource = sourceName;
     connectTestSource();
 }
 
-QString DataSourceTester::stopToStopID ( const QString& stopName ) {
+QString DataSourceTester::stopToStopID( const QString& stopName ) {
     return m_mapStopToStopID.value( stopName, "" ).toString();
 }
 
@@ -49,9 +48,8 @@ void DataSourceTester::clearStopToStopIdMap() {
     m_mapStopToStopID.clear();
 }
 
-void DataSourceTester::dataUpdated ( const QString& sourceName, const Plasma::DataEngine::Data& data ) {
+void DataSourceTester::dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data ) {
     Q_UNUSED( sourceName );
-//     qDebug() << "DataSourceTester::dataUpdated" << sourceName;
     if ( data.isEmpty() )
 	return;
     disconnectTestSource();

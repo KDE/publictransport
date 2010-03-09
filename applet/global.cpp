@@ -18,7 +18,8 @@
 */
 
 #include "global.h"
-#include <QDebug>
+
+#include <KDebug>
 #include <qmath.h>
 
 
@@ -87,12 +88,13 @@ KIcon Global::makeOverlayIcon( const KIcon &icon, const QString &overlayIconName
     return makeOverlayIcon( icon, KIcon(overlayIconName), overlaySize, iconExtend );
 }
 
-KIcon Global::makeOverlayIcon ( const KIcon& icon, const QList<KIcon> &overlayIconsBottom, const QSize& overlaySize, int iconExtend ) {
+KIcon Global::makeOverlayIcon ( const KIcon& icon, const QList<KIcon> &overlayIconsBottom,
+				const QSize& overlaySize, int iconExtend ) {
     Q_ASSERT( !icon.isNull() );
 
     QPixmap pixmap = icon.pixmap(iconExtend);
     if ( pixmap.isNull() ) {
-	qDebug() << "Global::makeOverlayIcon" << "pixmap is Null";
+	kDebug() << "pixmap is Null";
 	return icon;
     }
 //     QPixmap pixmapOverlayBottomLeft = overlayIconBottomLeft.pixmap(overlaySize);

@@ -1,7 +1,7 @@
 
-#include <QDebug>
-#include <QVariant>
 #include "departureinfo.h"
+
+#include <QVariant>
 #include <qmath.h>
 #include <KLocale>
 
@@ -188,6 +188,8 @@ void DepartureInfo::init( const QString &operatorName, const QString &line,
 			  const QStringList &routeStops,
 			  const QList<QTime> &routeTimes,
 			  int routeExactStops ) {
+    m_visible = true;
+    
     QRegExp rx ( "[0-9]*$" );
     rx.indexIn ( line );
     if ( rx.isValid() )
@@ -217,6 +219,15 @@ void DepartureInfo::generateHash() {
     m_hash = QString( "%1%2%3" ).arg( m_departure.toString("hhmm") )
 				.arg( static_cast<int>(m_vehicleType) )
 				.arg( m_lineString );
+}
+
+void JourneyInfo::generateHash() {
+    QString vehicles;
+    foreach ( int vehicleType, m_vehicleTypes )
+	vehicles += QString::number( static_cast<int>(vehicleType) );
+    m_hash = QString( "%1%2%3" ).arg( m_departure.toString("hhmm") )
+				.arg( m_duration ).arg( m_changes )
+				.arg( vehicles );
 }
 
 bool operator< ( const JourneyInfo& ji1, const JourneyInfo& ji2 ) {
