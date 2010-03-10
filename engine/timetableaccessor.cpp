@@ -386,7 +386,7 @@ void TimetableAccessor::finished( KJob* job ) {
 				   parseDocumentMode );
 	    kDebug() << "emit stopListReceived finished";
 	} else {
-	    kDebug() << "error parsing for stop suggestions";
+	    kDebug() << "error parsing for stop suggestions" << sourceName;
 	    emit errorParsing( this, url, serviceProvider(), sourceName, city,
 			       stop, QString(), parseDocumentMode );
 	}
@@ -408,7 +408,7 @@ void TimetableAccessor::finished( KJob* job ) {
     }
     m_curCity = city;
     
-//     kDebug() << "usedDifferentUrl" << usedDifferentUrl;
+    kDebug() << "usedDifferentUrl" << usedDifferentUrl;
     if ( !usedDifferentUrl ) {
 	QString sNextUrl;
 	if ( parseDocumentMode == ParseForJourneys ) {
@@ -444,9 +444,11 @@ void TimetableAccessor::finished( KJob* job ) {
 	    emit stopListReceived( this, url, stops, stopToStopId, stopToStopWeight,
 				   serviceProvider(), sourceName, city, stop, dataType,
 				   parseDocumentMode );
-	} else
+	} else {
+	    kDebug() << "Error parsing for stop suggestions B" << sourceName;
 	    emit errorParsing( this, url, serviceProvider(), sourceName, city,
 			       stop, dataType, parseDocumentMode );
+	}
 
 	if ( parseDocumentMode == ParseForJourneys ) {
 	    if ( !sNextUrl.isNull() && !sNextUrl.isEmpty() ) {
@@ -464,9 +466,11 @@ void TimetableAccessor::finished( KJob* job ) {
 	emit stopListReceived( this, url, stops, stopToStopId, stopToStopWeight,
 			       serviceProvider(), sourceName, city, stop, dataType,
 			       parseDocumentMode );
-    } else
-	emit errorParsing( this, url, serviceProvider(), city, sourceName,
+    } else {
+	kDebug() << "Error parsing for stop suggestions C" << sourceName;
+	emit errorParsing( this, url, serviceProvider(), sourceName, city,
 			   stop, dataType, parseDocumentMode );
+    }
 }
 
 KUrl TimetableAccessor::getUrl( const QString &city, const QString &stop,

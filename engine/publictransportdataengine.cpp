@@ -797,8 +797,8 @@ void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
     Q_UNUSED(city);
     Q_UNUSED(stop);
     Q_UNUSED(dataType);
-    kDebug() << "Error while parsing" << requestUrl
-	     << "\n  sourceName =" << sourceName << ", " << dataType << parseDocumentMode;
+    kDebug() << "Error while parsing" << requestUrl << serviceProvider
+	     << "\n  sourceName =" << sourceName << dataType << parseDocumentMode;
 
     setData( sourceName, "serviceProvider", serviceProvider );
     setData( sourceName, "count", 0 );
