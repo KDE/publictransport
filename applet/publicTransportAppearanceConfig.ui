@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>430</width>
+    <width>449</width>
     <height>399</height>
    </rect>
   </property>
@@ -85,7 +85,7 @@
    <item row="2" column="0">
     <widget class="QLabel" name="lblLinesPerRow">
      <property name="text">
-      <string>&amp;Lines per row:</string>
+      <string>&amp;Lines per Row:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -205,7 +205,7 @@
    <item row="8" column="0">
     <widget class="QLabel" name="lblcmbDepartureColumnInfos">
      <property name="text">
-      <string>&amp;Information shown:</string>
+      <string>&amp;Information Shown:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -243,7 +243,7 @@
    <item row="9" column="0">
     <widget class="QLabel" name="lblDisplayTimeBold">
      <property name="text">
-      <string>Display time &amp;bold:</string>
+      <string>Display Time &amp;Bold:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -291,7 +291,7 @@
    <item row="12" column="0">
     <widget class="QLabel" name="lblShowHeader">
      <property name="text">
-      <string>Show &amp;header:</string>
+      <string>Show &amp;Header:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -323,7 +323,7 @@
    <item row="13" column="0">
     <widget class="QLabel" name="lblShowColumnTarget">
      <property name="text">
-      <string>Show &amp;column target/origin:</string>
+      <string>Show &amp;Column Target/Origin:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>

@@ -21,6 +21,7 @@
 
 #include "filter.h"
 #include "departureinfo.h"
+#include "checkcombobox.h"
 
 #include <QLabel>
 
@@ -163,43 +164,16 @@ void FilterWidget::filterTypeChanged( int index ) {
 	kDebug() << "No new index (-1)";
 	return;
     }
-kDebug() << index << "D'OH!";
 
     KComboBox *cmbFilterType = qobject_cast< KComboBox* >( sender() );
     if ( !cmbFilterType ) // sender is this, called from addConstraint()...
         cmbFilterType = m_filterTypes.last(); // ...therefore the combo box is the last in the list
     Q_ASSERT( cmbFilterType );
     int filterIndex = m_filterTypes.indexOf( cmbFilterType );
-    kDebug() << "FilterIndex =" << filterIndex << dynamicWidgets().count();
-//     QFormLayout *l = dynamic_cast< QFormLayout* >( layout() );
-//     Q_ASSERT( l );
 
     FilterType type = static_cast< FilterType >( cmbFilterType->itemData(index).toInt() );
-//     ConstraintWidget *oldFilter = m_constraintWidgets[ filterIndex ];
-//     QWidgetList permanentWidgets;
-//     int row;
-//     if ( oldFilter ) {
-//         QFormLayout::ItemRole role;
-// 	l->getWidgetPosition( oldFilter, &row, &role );
-// 	l->removeWidget( oldFilter );
-// 	permanentWidgets = oldFilter->permanentWidgets();
-// 	oldFilter->removePermanentWidgets();
-//     } else
-// 	row = l->rowCount() - 1;
-
     ConstraintWidget *newFilter = createFilter( type );
     dynamicWidgets().at( filterIndex )->replaceContentWidget( newFilter );
-//     if ( newFilter ) {
-// 	l->setWidget( row, QFormLayout::FieldRole, newFilter );
-// 	newFilter->addPermanentWidgets( permanentWidgets );
-// 	if ( filterIndex > 0 || !m_closeButton )
-// 	    newFilter->layout()->addItem( new QSpacerItem(closeButtonSpacing(), 0) );
-//     }
-
-//     if ( oldFilter )
-// 	delete oldFilter;
-    
-//     m_constraintWidgets[ filterIndex ] = newFilter;
     connect( newFilter, SIGNAL(changed()), this, SIGNAL(changed()) );
     emit changed();
 }
@@ -235,7 +209,8 @@ QString ConstraintWidget::filterVariantName( FilterVariant filterVariant ) const
     }
 }
 
-ConstraintWidget::ConstraintWidget( FilterType type, QList< FilterVariant > availableVariants,
+ConstraintWidget::ConstraintWidget( FilterType type,
+			    QList< FilterVariant > availableVariants,
 			    FilterVariant initialVariant, QWidget* parent )
 			    : QWidget( parent ), m_containerWidget(0) {
     m_constraint.type = type;
@@ -290,8 +265,6 @@ ConstraintListWidget::ConstraintListWidget( FilterType type, FilterVariant initi
 
     connect( m_list, SIGNAL(checkedItemsChanged()),
              this, SLOT(checkedItemsChanged()) );
-// 	    connect( m_list, SIGNAL(currentIndexChanged(int)),
-// 		     this, SLOT(valueChanged(int)) );
 }
 
 ConstraintStringWidget::ConstraintStringWidget( FilterType type, FilterVariant initialVariant,
@@ -355,5 +328,101 @@ FilterListWidget::FilterListWidget( QWidget* parent ) : AbstractDynamicWidgetCon
     addButton()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
     addButton()->setText( i18n("&Add Filter") );
     addButton()->setToolTip( i18n("Add another filter") );
+}
+
+void ConstraintWidget::variantChanged( int index ) {
+    FilterVariant newVariant = static_cast< FilterVariant >(
+	    m_variantsCmb->itemData(index).toInt() );
+
+    if ( m_constraint.variant != newVariant ) {
+	m_constraint.variant = newVariant;
+	bool visible = true; //m_variant != FilterDisregard;
+	foreach ( QWidget *w, m_widgets )
+	    w->setVisible( visible );
+	emit changed();
+    }
+}
+	
+QWidget* FilterWidget::createNewLabelWidget( int ) {
+    KComboBox *cmbFilterType = new KComboBox( this );
+    cmbFilterType->addItem( filterName(FilterByVehicleType) + ":",
+			    static_cast<int>(FilterByVehicleType) );
+    cmbFilterType->addItem( filterName(FilterByTransportLine) + ":",
+			    static_cast<int>(FilterByTransportLine) );
+    cmbFilterType->addItem( filterName(FilterByTransportLineNumber) + ":",
+			    static_cast<int>(FilterByTransportLineNumber) );
+    cmbFilterType->addItem( filterName(FilterByTarget) + ":",
+			    static_cast<int>(FilterByTarget) );
+    cmbFilterType->addItem( filterName(FilterByDelay) + ":",
+			    static_cast<int>(FilterByDelay) );
+    return cmbFilterType;
+}
+
+DynamicWidget* FilterWidget::addWidget( QWidget* labelWidget, QWidget* widget ) {
+    KComboBox *cmbFilterType = qobject_cast< KComboBox* >( labelWidget );
+    Q_ASSERT_X( cmbFilterType, "FilterWidget::addWidget",
+		"Wrong label widget type or NULL label widget" );
+    DynamicWidget *dynamicWidget =
+	AbstractDynamicLabeledWidgetContainer::addWidget( labelWidget, widget );
+    if ( dynamicWidget ) {
+	m_filterTypes << cmbFilterType;
+
+	ConstraintWidget *constraintWidget =
+		dynamicWidget->contentWidget< ConstraintWidget* >();
+	cmbFilterType->setCurrentIndex( cmbFilterType->findData(
+		static_cast<int>(constraintWidget->type())) );
+
+	connect( cmbFilterType, SIGNAL(currentIndexChanged(int)),
+		this, SLOT(filterTypeChanged(int)) );
+	connect( constraintWidget, SIGNAL(changed()), this, SIGNAL(changed()) );
+
+	if ( dynamicWidget->removeButton() )
+	    dynamicWidget->removeButton()->setToolTip(
+		    i18n("Remove this criterion from the filter") );
+	if ( dynamicWidget->addButton() )
+	    dynamicWidget->addButton()->setToolTip(
+		    i18n("Add another criterion to this filter") );
+
+	emit changed();
+	emit constraintAdded( constraintWidget );
+    }
+    return dynamicWidget;
+}
+	
+DynamicWidget* FilterListWidget::addWidget( QWidget* widget ) {
+    DynamicWidget *newWidget = AbstractDynamicWidgetContainer::addWidget( widget );
+    if ( newWidget->removeButton() ) {
+	newWidget->removeButton()->setToolTip(
+		i18n("Remove this filter with all it's criteria") );
+    }
+
+    emit changed();
+    return newWidget;
+}
+	
+QWidget* FilterListWidget::createSeparator( const QString& separatorText ) {
+    return AbstractDynamicWidgetContainer::createSeparator(
+	    separatorText.isEmpty() ? i18n("or") : separatorText );
+}
+
+QList< FilterWidget* > FilterListWidget::filterWidgets() const {
+    QList< FilterWidget* > list;
+    foreach ( DynamicWidget *dynamicWidget, dynamicWidgets() )
+	list << qobject_cast< FilterWidget* >( dynamicWidget->contentWidget() );
+    return list;
+}
+
+FilterList FilterListWidget::filters() const {
+    FilterList list;
+    foreach ( DynamicWidget *dynamicWidget, dynamicWidgets() )
+	list << qobject_cast< FilterWidget* >( dynamicWidget->contentWidget() )->filter();
+    return list;
+}
+
+void ConstraintListWidget::checkedItemsChanged() {
+    m_values.clear();
+    foreach ( QModelIndex index, m_list->checkedItems() )
+	m_values << index.data( Qt::UserRole );
+    emit changed();
 }
 

@@ -57,7 +57,8 @@ void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
 	svg.resizeFrame( rect.size() );
 
 	if ( data.contains("drawFrameForWholeRow") ) {
-	    svg.setEnabledBorders( Plasma::FrameSvg::TopBorder | Plasma::FrameSvg::BottomBorder );
+	    svg.setEnabledBorders( Plasma::FrameSvg::TopBorder |
+				   Plasma::FrameSvg::BottomBorder );
 	    
 	    QStyleOptionViewItemV4 opt = option;
 	    if ( opt.viewItemPosition == QStyleOptionViewItemV4::Beginning )

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>stopConfigDetails</class>
+ <widget class="QWidget" name="stopConfigDetails">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>353</width>
+    <height>68</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string/>
+  </property>
+  <layout class="QFormLayout" name="formLayout">
+   <item row="0" column="0" colspan="2">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="lblFilterConfiguration">
+     <property name="text">
+      <string>&amp;Filter Configuration:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>filterConfiguration</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="KComboBox" name="filterConfiguration">
+     <property name="toolTip">
+      <string>The filter configuration to be used with this stop(s)</string>
+     </property>
+     <property name="whatsThis">
+      <string>Each stop can use a different filter configuration. Choose one of the available filter configurations here.
+To create/edit/remove filter configurations use the filter page in the settings dialog.</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="KPushButton" name="downloadServiceProviders">
+     <property name="text">
+      <string>&amp;Install new service providers</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>KPushButton</class>
+   <extends>QPushButton</extends>
+   <header>kpushbutton.h</header>
+  </customwidget>
+  <customwidget>
+   <class>KComboBox</class>
+   <extends>QComboBox</extends>
+   <header>kcombobox.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

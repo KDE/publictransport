@@ -79,27 +79,28 @@ DynamicWidget::DynamicWidget( QWidget* contentWidget,
 	l->setAlignment( d_ptr->buttonsWidget, Qt::AlignRight | Qt::AlignTop );
 	
 	foreach ( ButtonType buttonType, buttonTypes ) {
-	    switch ( buttonType ) {
-		case RemoveButton:
-		    d_ptr->removeButton = new QToolButton( this );
-		    d_ptr->removeButton->setIcon( KIcon(container->removeButtonIcon()) );
-		    buttonLayout->addWidget( d_ptr->removeButton );
-		    connect( d_ptr->removeButton, SIGNAL(clicked()),
-			     this, SIGNAL(removeClicked()) );
-		    break;
-
-		case AddButton:
-		    d_ptr->addButton = new QToolButton( this );
-		    d_ptr->addButton->setIcon( KIcon(container->addButtonIcon()) );
-		    buttonLayout->addWidget( d_ptr->addButton );
-		    connect( d_ptr->addButton, SIGNAL(clicked()),
-			     this, SIGNAL(addClicked()) );
-		    break;
-
-		case ButtonSpacer:
-		    buttonLayout->addItem( new QSpacerItem(d_ptr->toolButtonSpacing(), 0) );
-		    break;
-	    }
+	    addButton( container, buttonType );
+// 	    switch ( buttonType ) {
+// 		case RemoveButton:
+// 		    d_ptr->removeButton = new QToolButton( this );
+// 		    d_ptr->removeButton->setIcon( KIcon(container->removeButtonIcon()) );
+// 		    buttonLayout->addWidget( d_ptr->removeButton );
+// 		    connect( d_ptr->removeButton, SIGNAL(clicked()),
+// 			     this, SIGNAL(removeClicked()) );
+// 		    break;
+// 
+// 		case AddButton:
+// 		    d_ptr->addButton = new QToolButton( this );
+// 		    d_ptr->addButton->setIcon( KIcon(container->addButtonIcon()) );
+// 		    buttonLayout->addWidget( d_ptr->addButton );
+// 		    connect( d_ptr->addButton, SIGNAL(clicked()),
+// 			     this, SIGNAL(addClicked()) );
+// 		    break;
+// 
+// 		case ButtonSpacer:
+// 		    buttonLayout->addItem( new QSpacerItem(d_ptr->toolButtonSpacing(), 0) );
+// 		    break;
+// 	    }
 	}
     }
 }
@@ -107,6 +108,41 @@ DynamicWidget::DynamicWidget( QWidget* contentWidget,
 DynamicWidget::~DynamicWidget() {
     delete contentWidget();
     delete d_ptr;
+}
+
+QToolButton* DynamicWidget::addButton( AbstractDynamicWidgetContainer *container,
+				       ButtonType buttonType ) {
+    Q_D( DynamicWidget );
+    QHBoxLayout *buttonLayout =
+	    dynamic_cast< QHBoxLayout* >( d->buttonsWidget->layout() );
+    switch ( buttonType ) {
+	case RemoveButton:
+	    if ( d->removeButton )
+		return NULL;
+	    d->removeButton = new QToolButton( this );
+	    d->removeButton->setIcon( KIcon(container->removeButtonIcon()) );
+	    buttonLayout->addWidget( d_ptr->removeButton );
+	    connect( d_ptr->removeButton, SIGNAL(clicked()),
+			this, SIGNAL(removeClicked()) );
+	    return d->removeButton;
+
+	case AddButton:
+	    if ( d->addButton )
+		return NULL;
+	    d->addButton = new QToolButton( this );
+	    d->addButton->setIcon( KIcon(container->addButtonIcon()) );
+	    buttonLayout->addWidget( d->addButton );
+	    connect( d->addButton, SIGNAL(clicked()),
+			this, SIGNAL(addClicked()) );
+	    return d->addButton;
+
+	case ButtonSpacer:
+	    buttonLayout->addItem( new QSpacerItem(d->toolButtonSpacing(), 0) );
+	    return NULL;
+
+	default:
+	    return NULL;
+    }
 }
 
 void DynamicWidget::setButtonAlignment( Qt::Alignment alignment ) {
@@ -288,6 +324,7 @@ class AbstractDynamicWidgetContainerPrivate {
 		addButton->setEnabled( q->isEnabled() && (maxWidgetCount == -1
 				    || dynamicWidgets.count() < maxWidgetCount) );
 	    }
+	    
 	    if ( removeButton ) {
 		removeButton->setEnabled( q->isEnabled() && !dynamicWidgets.isEmpty()
 				    && dynamicWidgets.count() > minWidgetCount );
@@ -498,6 +535,17 @@ int AbstractDynamicWidgetContainer::removeWidget( QWidget *contentWidget ) {
 	removeSeparator( d->contentWidget->layout()->itemAt(index - 1) );
     else if ( d->dynamicWidgets.count() > 1 )
 	removeSeparator( d->contentWidget->layout()->itemAt(index + 1) );
+    
+    // When the first widget gets removed move it's add button to the next widget
+    if ( index == 0 && dynamicWidget->addButton() ) {
+	if ( d->dynamicWidgets.count() >= 2 ) {
+	    d->addButton = d->dynamicWidgets[ 1 ]->addButton(
+		    this, DynamicWidget::AddButton );
+	    connect( d->addButton, SIGNAL(clicked()), this, SLOT(createAndAddWidget()) );
+	    delete d->dynamicWidgets[ 1 ]->takeRemoveButton();
+	} else
+	    d->addButton = NULL;
+    }
     
     if ( !d->dynamicWidgets.removeOne(dynamicWidget) )
 	kDebug() << "Widget to be removed not found in list" << dynamicWidget;
@@ -786,7 +834,18 @@ int AbstractDynamicLabeledWidgetContainer::removeWidget( QWidget *widget ) {
     else if ( d->dynamicWidgets.count() > 1 )
 	removeSeparator( formLayout->itemAt(row + 1, QFormLayout::SpanningRole) );
 
-    QWidget *label = d->labelWidgets[index];
+    // When the first widget gets removed move it's add button to the next widget
+    if ( index == 0 && dynamicWidget->addButton() ) {
+	if ( d->dynamicWidgets.count() >= 2 ) {
+	    d->addButton = d->dynamicWidgets[ 1 ]->addButton(
+		    this, DynamicWidget::AddButton );
+	    connect( d->addButton, SIGNAL(clicked()), this, SLOT(createAndAddWidget()) );
+	    delete d->dynamicWidgets[ 1 ]->takeRemoveButton();
+	} else
+	    d->addButton = NULL;
+    }
+
+    QWidget *label = d->labelWidgets[ index ];
     formLayout->removeWidget( label );
     formLayout->removeWidget( dynamicWidget );
     d->labelWidgets.removeAt( index );
@@ -794,14 +853,12 @@ int AbstractDynamicLabeledWidgetContainer::removeWidget( QWidget *widget ) {
     emit removed( dynamicWidget->contentWidget() );
     delete label;
     delete dynamicWidget;
-
+    
     d->updateButtonStates();
 
-    // Update labels beginning with the first default label after the removed one
-    for ( int i = qMax(index, d->specialLabelTexts.count());
-	    i < d->dynamicWidgets.count(); ++i ) {
+    // Update labels after the removed one
+    for ( int i = index; i < d->dynamicWidgets.count(); ++i )
 	updateLabelWidget( d->labelWidgets[i], i );
-    }
     return index;
 }
 
@@ -914,6 +971,20 @@ void DynamicLabeledLineEditList::setLineEditTexts( const QStringList& lineEditTe
 	KLineEdit *lineEdit = lineEdits[ i ];
 	lineEdit->setText( lineEditTexts[i] );
     }
+}
+
+int DynamicLabeledLineEditList::removeLineEditsByText( const QString& text,
+					Qt::CaseSensitivity caseSensitivity ) {
+    int removed = 0;
+    QList< KLineEdit* > lineEdits = lineEditWidgets();
+    foreach ( KLineEdit *lineEdit, lineEdits ) {
+	if ( lineEdit->text().compare(text, caseSensitivity) == 0 ) {
+	    if ( removeWidget(lineEdit) != -1 )
+		++removed;
+	}
+    }
+
+    return removed;
 }
 
 int DynamicLabeledLineEditList::removeWidget( QWidget* widget ) {

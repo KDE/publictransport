@@ -33,18 +33,20 @@
 #include <KNumInput>
 #include <KDebug>
 
-// TODO: Forward Declarations?
 #include "global.h"
-#include "checkcombobox.h"
-#include "dynamicwidget.h"
 #include "filter.h"
+#include "dynamicwidget.h"
 
+class CheckCombobox;
+class KComboBox;
 class ConstraintWidget : public QWidget {
     Q_OBJECT
 
     public:
-	ConstraintWidget( FilterType type, QList<FilterVariant> availableVariants = QList<FilterVariant>(),
-			  FilterVariant initialVariant = FilterNoVariant, QWidget* parent = 0 );
+	ConstraintWidget( FilterType type,
+			  QList<FilterVariant> availableVariants = QList<FilterVariant>(),
+			  FilterVariant initialVariant = FilterNoVariant,
+			  QWidget* parent = 0 );
 
 	FilterType type() const { return m_constraint.type; };
 	FilterVariant variant() const { return m_constraint.variant; };
@@ -60,64 +62,26 @@ class ConstraintWidget : public QWidget {
 	    m_widgets << w;
 	};
 
-	QWidget *containerWidget() const { return m_containerWidget; };
-	QWidgetList permanentWidgets() const { return m_permanentWidgets; };
-	void addPermanentWidgets( QWidgetList widgets ) {
-	    foreach ( QWidget *w, widgets )
-		addPermanentWidget( w ); };
-	void addPermanentWidget( QWidget *w ) {
-// 	    if ( m_permanentWidgets.isEmpty() )
-// 		layout()->addItem( new QSpacerItem(0, 0, QSizePolicy::Expanding) );
-	    if ( !m_containerWidget ) {
-		m_containerWidget = new QWidget( this );
-		layout()->addWidget( m_containerWidget );
-		layout()->setAlignment( m_containerWidget, Qt::AlignRight );
-		m_containerWidget->setLayout( new QHBoxLayout(m_containerWidget) );
-		m_containerWidget->layout()->setSpacing( 1 );
-		m_containerWidget->layout()->setContentsMargins( 0, 0, 0, 0 );
-	    }
-	    m_containerWidget->layout()->addWidget( w );
-	    m_permanentWidgets << w; };
-	void removePermanentWidgets() {
-	    foreach ( QWidget *w, m_permanentWidgets )
-		m_containerWidget->layout()->removeWidget( w );
-	    m_permanentWidgets.clear(); };
-	void removePermanentWidget( QWidget *w ) {
-	    m_containerWidget->layout()->removeWidget( w );
-	    m_permanentWidgets.removeOne( w ); };
-
 	inline static ConstraintWidget *create( Constraint constraint,
 						QWidget *parent = 0 ) {
 	    return create( constraint.type, constraint.variant,
 			   constraint.value, parent );
 	};
 	static ConstraintWidget *create( FilterType type,
-					 FilterVariant variant = FilterNoVariant,
-					 const QVariant &value = QVariant(),
-					 QWidget *parent = 0 );
+		FilterVariant variant = FilterNoVariant,
+		const QVariant &value = QVariant(), QWidget *parent = 0 );
 
     signals:
 	void changed();
 					 
     protected slots:
-	virtual void variantChanged( int index ) {
-	    FilterVariant newVariant = static_cast< FilterVariant >(
-		    m_variantsCmb->itemData(index).toInt() );
-
-	    if ( m_constraint.variant != newVariant ) {
-		m_constraint.variant = newVariant;
-		bool visible = true; //m_variant != FilterDisregard;
-		foreach ( QWidget *w, m_widgets )
-		    w->setVisible( visible );
-		emit changed();
-	    }
-	};
+	virtual void variantChanged( int index );
 	
     private:
 	QString filterVariantName( FilterVariant filterVariant ) const;
 
 	Constraint m_constraint;
-	KComboBox* m_variantsCmb;
+	KComboBox *m_variantsCmb;
 	QWidget *m_containerWidget;
 	QWidgetList m_widgets, m_permanentWidgets;
 };
@@ -149,13 +113,7 @@ class ConstraintListWidget : public ConstraintWidget {
 	QModelIndex indexFromValue( const QVariant &value );
 
     protected slots:
-	void checkedItemsChanged() {
-	    m_values.clear();
-	    foreach ( QModelIndex index, m_list->checkedItems() )
-		m_values << index.data( Qt::UserRole );
-	    emit changed();
-	    kDebug() << "EMIT CHANGED";
-	};
+	void checkedItemsChanged();
 
     private:
 	CheckCombobox *m_list;
@@ -171,7 +129,8 @@ class ConstraintStringWidget : public ConstraintWidget {
 				QWidget* parent = 0 );
 			    
 	virtual QVariant value() const { return m_string->text(); };
-	virtual void setValue( const QVariant &value ) { m_string->setText(value.toString()); };
+	virtual void setValue( const QVariant &value ) {
+	    m_string->setText(value.toString()); };
 	
     protected slots:
 	void stringChanged( const QString &newString ) {
@@ -250,61 +209,15 @@ class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 
     protected slots:
 	void filterTypeChanged( int index );
-// 	virtual void createAndAddWidget() { addConstraint(); };
 
     protected:
 	virtual QWidget *createNewWidget() {
-	    return createFilter( firstUnusedFilterType() );
-	};
-	
-	virtual QWidget* createNewLabelWidget( int ) {
-	    KComboBox *cmbFilterType = new KComboBox( this );
-	    cmbFilterType->addItem( filterName(FilterByVehicleType) + ":",
-				    static_cast<int>(FilterByVehicleType) );
-	    cmbFilterType->addItem( filterName(FilterByTransportLine) + ":",
-				    static_cast<int>(FilterByTransportLine) );
-	    cmbFilterType->addItem( filterName(FilterByTransportLineNumber) + ":",
-				    static_cast<int>(FilterByTransportLineNumber) );
-	    cmbFilterType->addItem( filterName(FilterByTarget) + ":",
-				    static_cast<int>(FilterByTarget) );
-	    cmbFilterType->addItem( filterName(FilterByDelay) + ":",
-				    static_cast<int>(FilterByDelay) );
-	    return cmbFilterType;
-	};
+	    return createFilter( firstUnusedFilterType() ); };
+	virtual QWidget* createNewLabelWidget( int );
 	
 	virtual DynamicWidget *addWidget( QWidget *widget ) {
 	    return AbstractDynamicLabeledWidgetContainer::addWidget( widget ); };
-	
-	virtual DynamicWidget *addWidget( QWidget *labelWidget, QWidget *widget ) {
-	    KComboBox *cmbFilterType = qobject_cast< KComboBox* >( labelWidget );
-	    Q_ASSERT_X( cmbFilterType, "FilterWidget::addWidget",
-			"Wrong label widget type or NULL label widget" );
-	    DynamicWidget *dynamicWidget =
-		AbstractDynamicLabeledWidgetContainer::addWidget( labelWidget, widget );
-	    if ( dynamicWidget ) {
-		m_filterTypes << cmbFilterType;
-
-		ConstraintWidget *constraintWidget =
-			dynamicWidget->contentWidget< ConstraintWidget* >();
-		cmbFilterType->setCurrentIndex( cmbFilterType->findData(
-			static_cast<int>(constraintWidget->type())) );
-			
-		connect( cmbFilterType, SIGNAL(currentIndexChanged(int)),
-			this, SLOT(filterTypeChanged(int)) );
-		connect( constraintWidget, SIGNAL(changed()), this, SIGNAL(changed()) );
-		
-		if ( dynamicWidget->removeButton() )
-		    dynamicWidget->removeButton()->setToolTip(
-			    i18n("Remove this criterion from the filter") );
-		if ( dynamicWidget->addButton() )
-		    dynamicWidget->addButton()->setToolTip(
-			    i18n("Add another criterion to this filter") );
-		
-		emit changed();
-		emit constraintAdded( constraintWidget );
-	    }
-	    return dynamicWidget;
-	};
+	virtual DynamicWidget *addWidget( QWidget *labelWidget, QWidget *widget );
 
 	virtual void updateLabelWidget( QWidget*, int ) {};
 
@@ -321,19 +234,8 @@ class FilterListWidget : public AbstractDynamicWidgetContainer {
     public:
 	FilterListWidget( QWidget* parent = 0 );
 	
-	QList< FilterWidget* > filterWidgets() const {
-	    QList< FilterWidget* > list;
-	    foreach ( DynamicWidget *dynamicWidget, dynamicWidgets() )
-		list << qobject_cast< FilterWidget* >( dynamicWidget->contentWidget() );
-	    return list;
-	};
-
-	FilterList filters() const {
-	    FilterList list;
-	    foreach ( DynamicWidget *dynamicWidget, dynamicWidgets() )
-		list << qobject_cast< FilterWidget* >( dynamicWidget->contentWidget() )->filter();
-	    return list;
-	};
+	QList< FilterWidget* > filterWidgets() const;
+	FilterList filters() const;
 
 	void addFilter() {
 	    Filter filter;
@@ -350,7 +252,8 @@ class FilterListWidget : public AbstractDynamicWidgetContainer {
 	    addWidget( filterWidget );
 	};
 	
-	static FilterListWidget *create( const FilterList &filterList, QWidget *parent = 0 ) {
+	static FilterListWidget *create( const FilterList &filterList,
+					 QWidget *parent = 0 ) {
 	    FilterListWidget *filterListWidget = new FilterListWidget( parent );
 	    foreach ( Filter filter, filterList )
 		filterListWidget->addFilter( filter );
@@ -367,15 +270,7 @@ class FilterListWidget : public AbstractDynamicWidgetContainer {
 	    return FilterWidget::create( filter, this );
 	};
 	
-	virtual DynamicWidget *addWidget( QWidget* widget ) {
-	    DynamicWidget *newWidget = AbstractDynamicWidgetContainer::addWidget( widget );
-	    if ( newWidget->removeButton() )
-		newWidget->removeButton()->setToolTip(
-			i18n("Remove this filter with all it's criteria") );
-	    
-	    emit changed();
-	    return newWidget;
-	};
+	virtual DynamicWidget *addWidget( QWidget* widget );
 	
 	virtual int removeWidget( QWidget* widget ) {
 	    int index = AbstractDynamicWidgetContainer::removeWidget( widget );
@@ -383,10 +278,7 @@ class FilterListWidget : public AbstractDynamicWidgetContainer {
 	    return index;
 	};
 	
-	virtual QWidget *createSeparator( const QString &separatorText = QString() ) {
-	    return AbstractDynamicWidgetContainer::createSeparator(
-		    separatorText.isEmpty() ? i18n("or") : separatorText );
-	};
+	virtual QWidget *createSeparator( const QString &separatorText = QString() );
 };
 
 #endif // Multiple inclusion guard

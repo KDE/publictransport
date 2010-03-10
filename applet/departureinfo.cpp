@@ -4,6 +4,7 @@
 #include <QVariant>
 #include <qmath.h>
 #include <KLocale>
+#include <KGlobal>
 
 JourneyInfo::JourneyInfo( const QString &operatorName,
 			  const QVariantList &vehicleTypesVariant,

@@ -25,6 +25,7 @@
 #include <QSortFilterProxyModel>
 
 #include "ui_publicTransportStopConfig.h"
+#include "ui_stopConfigDetails.h"
 #include "ui_accessorInfo.h"
 
 #include "global.h"
@@ -57,12 +58,13 @@ class StopSettingsDialog : public KDialog {
 	void cityNameChanged( const QString &cityName );
 	void locationChanged( const QString &newLocation );
 	void clickedServiceProviderInfo();
-	void gelocateClicked();
+	void geolocateClicked();
 	void stopNameEdited( const QString &text, int widgetIndex );
 	void stopAdded( QWidget *lineEdit );
 	void downloadServiceProvidersClicked();
 	void installServiceProviderClicked();
 	void nearStopsDialogFinished( int result );
+	void adjustStopListLayout();
 	
 	void stopFinderGeolocationData( const QString &countryCode, const QString &city,
 			      qreal latitude, qreal longitude, int accuracy );
@@ -77,6 +79,7 @@ class StopSettingsDialog : public KDialog {
 
     protected:
 	virtual void resizeEvent( QResizeEvent* );
+	virtual void accept();
 	
     private:
 	/** Updates the service provider model by inserting service provider for the
@@ -87,6 +90,7 @@ class StopSettingsDialog : public KDialog {
 	void processStopSuggestions( const Plasma::DataEngine::Data& data );
 	
 	Ui::publicTransportStopConfig m_uiStop;
+	Ui::stopConfigDetails m_uiStopDetails;
 	Ui::accessorInfo m_uiAccessorInfo;
 
 	StopFinder *m_stopFinder;

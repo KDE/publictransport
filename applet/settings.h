@@ -191,7 +191,21 @@ struct Settings {
 
     bool checkConfig() {
 	// TODO: Check when adding stops in StopSettingsDialog
-	return !stopSettingsList.isEmpty();
+	if ( stopSettingsList.isEmpty() )
+	    return false;
+	else {
+	    foreach ( const StopSettings &stopSettings, stopSettingsList ) {
+		if ( stopSettings.stops.isEmpty() )
+		    return false;
+		else {
+		    foreach ( const QString &stop, stopSettings.stops ) {
+			if ( stop.isEmpty() )
+			    return false;
+		    }
+		}
+	    }
+	}
+	return true;
 
 	//     if ( m_useSeperateCityValue && (m_city.isEmpty()
 	// 	    || m_stops.isEmpty() || m_stops.first().isEmpty()) )

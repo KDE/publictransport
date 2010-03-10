@@ -61,7 +61,13 @@ class DynamicWidget : public QWidget {
 	/** Replaces the current content widget with @p contentWidget. The old
 	* content widget gets deleted. */
 	void replaceContentWidget( QWidget *contentWidget );
-
+	
+	/** Adds a button of type @p buttonType.
+	* @return A pointer to the added button or NULL if no button was added.
+	* For example @ref ButtonSpacer adds a spacer but returns NULL. */
+	QToolButton *addButton( AbstractDynamicWidgetContainer *container,
+				ButtonType buttonType );
+	
 	/** Returns a pointer to the remove button if any. */
 	QToolButton *removeButton() const;
 	/** Returns a pointer to the add button if any. */
@@ -407,6 +413,16 @@ class DynamicLabeledLineEditList : public AbstractDynamicLabeledWidgetContainer 
 	* @see maximumWidgetCount */
 	void setLineEditTexts( const QStringList &lineEditTexts );
 
+	/** Convenience method to remove all empty line edits.
+	* @note This leaves at least the minimum widget count of line edits.
+	* @return The number of removed line edits. */
+	inline int removeEmptyLineEdits() { return removeLineEditsByText( QString() ); };
+	/** Removes all line edits that have @p text as content.
+	* @note This leaves at least the minimum widget count of line edits. 
+	* @return The number of removed line edits. */
+	int removeLineEditsByText( const QString &text,
+		Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive);
+
 	/** Gets a list of all contained line edit widgets. */
 	QList< KLineEdit* > lineEditWidgets() const;
 	/** Gets the label used for @p lineEdit. */
@@ -430,6 +446,10 @@ class DynamicLabeledLineEditList : public AbstractDynamicLabeledWidgetContainer 
 	
     protected:
 	virtual QWidget* createNewWidget();
+	/** Removes @p widget, it's DynamicWidget and it's label widget from the layout.
+	* This also removes separators if needed.
+	* @return The index of the widget or -1, if the minimum widget count is
+	* already reached. */
 	virtual int removeWidget( QWidget* widget );
 
     private:

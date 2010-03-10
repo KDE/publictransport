@@ -47,8 +47,10 @@ class StopWidget : public QWidget {
 	
 	void setFilterConfigurations( const QStringList &filterConfigurations ) {
 	    m_filterConfigurations = filterConfigurations; };
-	
+
+	/** Adds the given @p button. */
 	void addButton( QToolButton *button );
+	/** Removes the given @p button. */
 	void removeButton( QToolButton *button );
 
 	bool isHighlighted() const;

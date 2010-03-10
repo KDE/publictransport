@@ -501,8 +501,8 @@ void SettingsUiManager::dataUpdated( const QString& sourceName,
 				     const Plasma::DataEngine::Data& data ) {
     if ( sourceName.contains(QRegExp("^http")) ) {
 	// Favicon of a service provider arrived
-	if ( !m_modelServiceProvider )
-	    return;
+	Q_ASSERT_X( m_modelServiceProvider, "SettingsUiManager::dataUpdated",
+		    "No service provider model" );
 
 	QPixmap favicon( QPixmap::fromImage(data["Icon"].value<QImage>()) );
 	if ( !favicon.isNull() ) {

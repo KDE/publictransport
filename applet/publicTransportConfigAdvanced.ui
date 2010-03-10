@@ -20,7 +20,7 @@
    <item row="2" column="0">
     <widget class="QLabel" name="lblUpdateAutomatically">
      <property name="text">
-      <string>Update &amp;automatically:</string>
+      <string>Update &amp;Automatically:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -49,7 +49,7 @@
    <item row="3" column="0">
     <widget class="QLabel" name="lblAlarmTime">
      <property name="text">
-      <string>A&amp;larm time:</string>
+      <string>A&amp;larm Time:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>

@@ -21,6 +21,17 @@
 
 #include <KDebug>
 #include <qmath.h>
+#include <QPainter>
+#include <KIconEffect>
+#include <KIconLoader>
+#include <KGlobal>
+#include <KLocale>
+
+
+StopSettings::StopSettings() {
+    location = KGlobal::locale()->country();
+    filterConfiguration = "Default";
+}
 
 
 KIcon Global::internationalIcon() {
@@ -68,7 +79,8 @@ KIcon Global::putIconIntoBiggerSizeIcon ( const KIcon &icon, const QSize &iconSi
     return resultIcon;
 }
 
-KIcon Global::makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon, const QSize &overlaySize, int iconExtend ) {
+KIcon Global::makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon,
+			       const QSize &overlaySize, int iconExtend ) {
     QPixmap pixmap = icon.pixmap(iconExtend), pixmapOverlay = overlayIcon.pixmap(overlaySize);
     QPainter p(&pixmap);
     p.drawPixmap(QPoint(iconExtend - overlaySize.width(), iconExtend - overlaySize.height()), pixmapOverlay);
@@ -84,7 +96,8 @@ KIcon Global::makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon, cons
     return resultIcon;
 }
 
-KIcon Global::makeOverlayIcon( const KIcon &icon, const QString &overlayIconName, const QSize &overlaySize, int iconExtend ) {
+KIcon Global::makeOverlayIcon( const KIcon &icon, const QString &overlayIconName,
+			       const QSize &overlaySize, int iconExtend ) {
     return makeOverlayIcon( icon, KIcon(overlayIconName), overlaySize, iconExtend );
 }
 

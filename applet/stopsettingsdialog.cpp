@@ -131,6 +131,14 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
 	      m_osmEngine( osmEngine ), m_geolocationEngine( geolocationEngine ) {
     setWindowTitle( i18n("Change Stop(s)") );
     m_uiStop.setupUi( mainWidget() );
+
+    setButtons( Ok | Cancel | Details | User1 );
+    setButtonIcon( User1, KIcon("tools-wizard") );
+    setButtonText( User1, i18n("Nearby Stops...") );
+    
+    QWidget *detailsWidget = new QWidget( this );
+    m_uiStopDetails.setupUi( detailsWidget );
+    setDetailsWidget( detailsWidget );
     
     // Create model that filters service providers for the current location
     m_modelLocationServiceProviders = new QSortFilterProxyModel( this );
@@ -142,7 +150,10 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
 	    DynamicLabeledLineEditList::RemoveButtonsBesideWidgets,
 	    DynamicLabeledLineEditList::AddButtonBesideFirstWidget,
 	    DynamicLabeledLineEditList::NoSeparator, QString(), this );
+    m_stopList->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
     connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(stopAdded(QWidget*)) );
+    connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(adjustStopListLayout()) );
+    connect( m_stopList, SIGNAL(removed(QWidget*)), this, SLOT(adjustStopListLayout()) );
     m_stopList->setLabelTexts( i18n("Additional Stop %1:"), QStringList() << "Stop:" );
     m_stopList->setWidgetCountRange( 1, 3 );
     if ( m_stopList->addButton() ) {
@@ -157,12 +168,11 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     l->setContentsMargins( 0, 0, 0, 0 );
     l->addWidget( m_stopList );
 
-    m_uiStop.downloadServiceProviders->setIcon( KIcon("list-add") );
-    m_uiStop.geolocate->setIcon( KIcon("tools-wizard") );
+//     m_uiStop.geolocate->setIcon( KIcon("tools-wizard") );
     m_uiStop.btnServiceProviderInfo->setIcon( KIcon("help-about") );
     m_uiStop.btnServiceProviderInfo->setText( QString() );
 
-    m_uiStop.filterConfiguration->addItems( filterConfigurations );
+    m_uiStopDetails.filterConfiguration->addItems( filterConfigurations );
 
     QMenu *menu = new QMenu( this );
     menu->addAction( KIcon("get-hot-new-stuff"), i18n("Get new service providers..."),
@@ -170,7 +180,8 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     menu->addAction( KIcon("text-xml"),
 		     i18n("Install new service provider from local file..."),
 		     this, SLOT(installServiceProviderClicked()) );
-    m_uiStop.downloadServiceProviders->setMenu( menu );
+    m_uiStopDetails.downloadServiceProviders->setMenu( menu );
+    m_uiStopDetails.downloadServiceProviders->setIcon( KIcon("list-add") );
 
     m_uiStop.serviceProvider->setModel( m_modelLocationServiceProviders );
     m_uiStop.location->setModel( m_modelLocations );
@@ -187,10 +198,9 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     p.setColor( QPalette::Foreground, textColor );
     m_uiStop.location->setPalette( p );
     m_uiStop.serviceProvider->setPalette( p );
-
-    setStopSettings( stopSettings );
-
-    connect( m_uiStop.geolocate, SIGNAL(clicked()), this, SLOT(gelocateClicked()) );
+    
+    connect( this, SIGNAL(user1Clicked()), this, SLOT(geolocateClicked()) );
+//     connect( m_uiStop.geolocate, SIGNAL(clicked()), this, SLOT(gelocateClicked()) );
     connect( m_uiStop.location, SIGNAL(currentIndexChanged(const QString&)),
 	     this, SLOT(locationChanged(const QString&)) );
     connect( m_uiStop.serviceProvider, SIGNAL(currentIndexChanged(int)),
@@ -201,6 +211,9 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
 	     this, SLOT(stopNameEdited(QString,int)) );
     connect( m_uiStop.btnServiceProviderInfo, SIGNAL(clicked()),
 	     this, SLOT(clickedServiceProviderInfo()) );
+    
+    setStopSettings( stopSettings );
+    m_stopList->lineEditWidgets().first()->setFocus(); // Minimum widget count is 1
 }
 
 StopSettingsDialog::~StopSettingsDialog() {
@@ -215,8 +228,8 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings ) {
     // Select filter configuration from stopSettings
     QString trFilterConfiguration = SettingsUiManager::translateKey(
 	    stopSettings.filterConfiguration );
-    if ( m_uiStop.filterConfiguration->contains(trFilterConfiguration) )
-	m_uiStop.filterConfiguration->setCurrentItem( trFilterConfiguration );
+    if ( m_uiStopDetails.filterConfiguration->contains(trFilterConfiguration) )
+	m_uiStopDetails.filterConfiguration->setCurrentItem( trFilterConfiguration );
     
     // Select location from stopSettings
     QModelIndexList indicesLocation = m_modelLocations->match(
@@ -224,28 +237,28 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings ) {
 	    stopSettings.location, 1, Qt::MatchFixedString );
     if ( !indicesLocation.isEmpty() )
 	m_uiStop.location->setCurrentIndex( indicesLocation.first().row() );
-    
-    // Set service providers for the current location
-    updateServiceProviderModel( stopSettings.location );
+    else
+	m_uiStop.location->setCurrentIndex( 1 );
     
     // Select service provider from stopSettings
-    QModelIndexList indices = m_modelLocationServiceProviders->match(
-	    m_modelLocationServiceProviders->index(0, 0), ServiceProviderIdRole,
-	    stopSettings.serviceProviderID, 1, Qt::MatchFixedString );
-    if ( !indices.isEmpty() ) {
-	int curServiceProviderIndex = indices.first().row();
-	m_uiStop.serviceProvider->setCurrentIndex( curServiceProviderIndex );
-	serviceProviderChanged( curServiceProviderIndex );
-	
-	QVariantHash curServiceProviderData = m_uiStop.serviceProvider->itemData(
-		curServiceProviderIndex, ServiceProviderDataRole ).toHash();
-	if ( curServiceProviderData["useSeperateCityValue"].toBool() ) {
-	    if ( curServiceProviderData["onlyUseCitiesInList"].toBool() )
-		m_uiStop.city->setCurrentItem( stopSettings.city );
-	    else
-		m_uiStop.city->setEditText( stopSettings.city );
-	} else
-	    m_uiStop.city->setCurrentItem( QString() );
+    if ( !stopSettings.serviceProviderID.isEmpty() ) {
+	QModelIndexList indices = m_modelLocationServiceProviders->match(
+		m_modelLocationServiceProviders->index(0, 0), ServiceProviderIdRole,
+		stopSettings.serviceProviderID, 1, Qt::MatchFixedString );
+	if ( !indices.isEmpty() ) {
+	    int curServiceProviderIndex = indices.first().row();
+	    m_uiStop.serviceProvider->setCurrentIndex( curServiceProviderIndex );
+
+	    QVariantHash curServiceProviderData = m_uiStop.serviceProvider->itemData(
+		    curServiceProviderIndex, ServiceProviderDataRole ).toHash();
+	    if ( curServiceProviderData["useSeperateCityValue"].toBool() ) {
+		if ( curServiceProviderData["onlyUseCitiesInList"].toBool() )
+		    m_uiStop.city->setCurrentItem( stopSettings.city );
+		else
+		    m_uiStop.city->setEditText( stopSettings.city );
+	    } else
+		m_uiStop.city->setCurrentItem( QString() );
+	}
     }
 }
 
@@ -265,7 +278,7 @@ StopSettings StopSettingsDialog::stopSettings() const {
 		? m_uiStop.city->lineEdit()->text() : m_uiStop.city->currentText();
     }
     stopSettings.filterConfiguration = SettingsUiManager::untranslateKey(
-	    m_uiStop.filterConfiguration->currentText() );
+	    m_uiStopDetails.filterConfiguration->currentText() );
     stopSettings.stops = m_stopList->lineEditTexts();
     foreach ( const QString &stop, stopSettings.stops ) {
 	if ( m_stopToStopID.contains(stop) )
@@ -276,7 +289,7 @@ StopSettings StopSettingsDialog::stopSettings() const {
     return stopSettings;
 }
 
-void StopSettingsDialog::gelocateClicked() {
+void StopSettingsDialog::geolocateClicked() {
     m_stopFinder = new StopFinder( StopFinder::ValidatedStopNamesFromOSM,
 		    m_publicTransportEngine, m_osmEngine, m_geolocationEngine,
 		    25, StopFinder::DeleteWhenFinished, this );
@@ -389,12 +402,28 @@ void StopSettingsDialog::nearStopsDialogFinished( int result ) {
 //     }
 // }
 
+void StopSettingsDialog::accept() {
+    m_stopList->removeEmptyLineEdits();
+
+    QStringList stops = m_stopList->lineEditTexts();
+    int indexOfFirstEmpty = stops.indexOf( QString() );
+    if ( indexOfFirstEmpty != -1 ) {
+	KMessageBox::information( this, i18n("Empty stop names are not allowed.") );
+	m_stopList->lineEditWidgets()[ indexOfFirstEmpty ]->setFocus();
+    } else {
+	QDialog::accept();
+    }
+}
+
 void StopSettingsDialog::resizeEvent( QResizeEvent *event ) {
     QDialog::resizeEvent( event );
-    
+    adjustStopListLayout();
+}
+
+void StopSettingsDialog::adjustStopListLayout() {
     // Align elements in m_stopList with the main dialog's layout (at least a bit ;))
     QWidgetList labelList = QWidgetList() << m_uiStop.lblLocation
-		<< m_uiStop.lblServiceProvider << m_uiStop.lblCity;
+	    << m_uiStop.lblServiceProvider << m_uiStop.lblCity;
     int maxLabelWidth = 0;
     foreach ( QWidget *w, labelList ) {
 	if ( w->width() > maxLabelWidth )
@@ -512,7 +541,6 @@ void StopSettingsDialog::locationChanged( const QString& newLocation ) {
     Plasma::DataEngine::Data locationData = m_publicTransportEngine->query( "Locations" );
     QString defaultServiceProviderId =
 	    locationData[locationCode].toHash()["defaultAccessor"].toString();
-
     QModelIndexList indices = m_modelLocationServiceProviders->match(
 	    m_modelLocationServiceProviders->index(0, 0), ServiceProviderIdRole,
 	    defaultServiceProviderId, 1, Qt::MatchFixedString );

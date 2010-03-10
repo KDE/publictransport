@@ -25,12 +25,7 @@
 #define ENUMS_HEADER
 
 #include <qnamespace.h>
-#include <KLocalizedString>
-
 #include <KIcon>
-#include <KIconEffect>
-#include <KIconLoader>
-#include <QPainter>
 
 struct StopSettings {
     QString city; /**< The currently selected city */
@@ -42,9 +37,7 @@ struct StopSettings {
 			 * 'international', 'unknown') */
     QString filterConfiguration; /**< The filter configuration to be used for the stop */
 
-    StopSettings() {
-	filterConfiguration = "Default";
-    }
+    StopSettings();
 
     QString stopOrStopId( int index ) {
 	if ( index < stopIDs.count() && !stopIDs[index].isEmpty() )

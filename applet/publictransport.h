@@ -411,9 +411,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	void setCurrentStopIndex( QAction *action );
 	
 	void writeSettings( const Settings &settings );
-// 	void deleteFilterSettings( const QString &name );
-// 	void saveFilterSettings( const QString &name, const FilterSettings &filterSettings );
-// 	void renameFilterSettings( const QString &oldName, const QString &newName );
 
 	void setShowDepartures();
 	void setShowArrivals();
@@ -455,6 +452,13 @@ class PublicTransport : public Plasma::PopupApplet {
 	QVariantHash currentServiceProviderData() const {
 	    return serviceProviderData( m_settings.currentStopSettings().serviceProviderID ); };
 	QVariantHash serviceProviderData( const QString &id ) const;
+
+	int updateOrCreateItem( bool remove, QStandardItem *parentItem,
+		QStandardItem *item, int row, const JourneyInfo &journeyInfo,
+		ItemInformation itemInfo );
+	int updateOrCreateItem( bool remove, QStandardItem *parentItem,
+		QStandardItem *item, int row, const DepartureInfo &departureInfo,
+		ItemInformation itemInfo );
 	
 				 
 	AppletStates m_appletStates; /**< The current states of this applet */

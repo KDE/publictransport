@@ -6,28 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>319</height>
+    <width>401</width>
+    <height>192</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string/>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" colspan="4">
-    <widget class="QLabel" name="lblDataSource_2">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <italic>false</italic>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Data Source</string>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="0">
     <widget class="QLabel" name="lblLocation">
      <property name="text">
@@ -44,14 +30,19 @@
    <item row="1" column="1" colspan="2">
     <widget class="QComboBox" name="location">
      <property name="whatsThis">
-      <string>The country the stop / station / airport is in.</string>
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Liberation Sans [unknown]'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;The country the stop / station / airport is in. When you select a country only matching service providers will be shown.&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;You can also &lt;span style=&quot; font-weight:600;&quot;&gt;show all available service providers&lt;/span&gt; or only &lt;span style=&quot; font-weight:600;&quot;&gt;international&lt;/span&gt; ones.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
    </item>
    <item row="2" column="0">
     <widget class="QLabel" name="lblServiceProvider">
      <property name="text">
-      <string>Service &amp;provider:</string>
+      <string>Service &amp;Provider:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -71,28 +62,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="2">
-    <widget class="KPushButton" name="downloadServiceProviders">
-     <property name="text">
-      <string>&amp;Install new service providers</string>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="0" colspan="4">
-    <widget class="QLabel" name="lblHomeStop">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <italic>false</italic>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Stops</string>
-     </property>
-    </widget>
-   </item>
-   <item row="9" column="0">
+   <item row="6" column="0">
     <widget class="QLabel" name="lblCity">
      <property name="text">
       <string>&amp;City:</string>
@@ -105,7 +75,7 @@
      </property>
     </widget>
    </item>
-   <item row="9" column="1" colspan="2">
+   <item row="6" column="1" colspan="2">
     <widget class="KComboBox" name="city">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -117,39 +87,6 @@
       <bool>true</bool>
      </property>
     </widget>
-   </item>
-   <item row="11" column="2">
-    <widget class="KPushButton" name="geolocate">
-     <property name="text">
-      <string>&amp;Find Stop Near You...</string>
-     </property>
-    </widget>
-   </item>
-   <item row="12" column="0" colspan="4">
-    <spacer name="vSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="3" column="1">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>40</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
    </item>
    <item row="2" column="1" colspan="2">
     <widget class="KComboBox" name="serviceProvider">
@@ -169,78 +106,16 @@
       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'FreeSans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Use this to &lt;span style=&quot; font-weight:600;&quot;&gt;choose a service provider&lt;/span&gt;. Different service providers can provide support for different cities or features.&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;To see &lt;span style=&quot; font-weight:600;&quot;&gt;full information&lt;/span&gt; about a service provider click on the info button on the right.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Liberation Sans [unknown]'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'FreeSans';&quot;&gt;Use this to &lt;/span&gt;&lt;span style=&quot; font-family:'FreeSans'; font-weight:600;&quot;&gt;choose a service provider&lt;/span&gt;&lt;span style=&quot; font-family:'FreeSans';&quot;&gt;. Different service providers can provide support for different cities or features. Some service providers that are listed in one country may also provide some data for others &lt;/span&gt;&lt;span style=&quot; font-family:'FreeSans';&quot;&gt;(limited, eg. no local public transport)&lt;/span&gt;&lt;span style=&quot; font-family:'FreeSans';&quot;&gt;.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'FreeSans';&quot;&gt;To see &lt;/span&gt;&lt;span style=&quot; font-family:'FreeSans'; font-weight:600;&quot;&gt;full information&lt;/span&gt;&lt;span style=&quot; font-family:'FreeSans';&quot;&gt; about a service provider click on the info button on the right.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="sizeAdjustPolicy">
       <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
      </property>
     </widget>
    </item>
-   <item row="11" column="1">
-    <spacer name="horizontalSpacer_2">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>40</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="5" column="0" colspan="4">
-    <widget class="QLabel" name="lblHomeStop_2">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <italic>false</italic>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Filter Configuration</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1" colspan="2">
-    <widget class="KComboBox" name="filterConfiguration"/>
-   </item>
-   <item row="4" column="0" colspan="4">
-    <spacer name="verticalSpacer_6">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Fixed</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>64</width>
-       <height>10</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
    <item row="7" column="0" colspan="4">
-    <spacer name="verticalSpacer_7">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Fixed</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>64</width>
-       <height>10</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="10" column="0" colspan="4">
     <widget class="QWidget" name="stops" native="true">
      <property name="minimumSize">
       <size>
@@ -253,11 +128,6 @@ p, li { white-space: pre-wrap; }
   </layout>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>KPushButton</class>
-   <extends>QPushButton</extends>
-   <header>kpushbutton.h</header>
-  </customwidget>
   <customwidget>
    <class>KComboBox</class>
    <extends>QComboBox</extends>
