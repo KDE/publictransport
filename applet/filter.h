@@ -35,7 +35,7 @@ struct Constraint {
     Constraint() {
 	type = FilterByVehicleType;
 	variant = FilterIsOneOf;
-	value = static_cast< int >( Unknown );
+	value = QVariantList() << static_cast< int >( Unknown );
     };
     
     Constraint( FilterType type, FilterVariant variant, const QVariant &value = QVariant() ) {
@@ -86,7 +86,7 @@ struct FilterSettings {
     FilterList filters;
 
     FilterSettings() {
-	filterAction = ShowAll;
+	filterAction = ShowMatching;
     };
     
     bool filterOut( const DepartureInfo& departureInfo ) const;

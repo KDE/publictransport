@@ -26,10 +26,12 @@
 #include <KToolInvocation>
 #include <KColorScheme>
 #include <KSelectAction>
+#include <KToggleAction>
 #include <KLineEdit>
 #include <KCompletion>
 #include <KSqueezedTextLabel>
 #include <KPushButton>
+#include <KMenu>
 
 // Plasma includes
 #include <Plasma/IconWidget>
@@ -344,12 +346,24 @@ void PublicTransport::setupActions() {
 	     this, SLOT(goBackToDepartures()) );
     addAction( "backToDepartures", actionBackToDepartures );
 	
-    KSelectAction *actionSwitchFilterConfiguration = new KSelectAction(
-	    Global::makeOverlayIcon(KIcon("folder"), "view-filter"),
-	    i18n("Switch filter Configuration"), this );
-    connect( actionSwitchFilterConfiguration, SIGNAL(triggered(QString)),
-	     this, SLOT(switchFilterConfiguration(QString)) );
-    addAction( "switchFilterConfiguration", actionSwitchFilterConfiguration );
+    KToggleAction *actionEnableFilters = new KToggleAction( i18n("Enable Filters"), this );
+    connect( actionEnableFilters, SIGNAL(toggled(bool)), this, SLOT(setFiltersEnabled(bool)) );
+    addAction( "enableFilters", actionEnableFilters );
+
+    m_filtersGroup = new QActionGroup( this );
+    m_filtersGroup->setExclusive( true );
+    connect( m_filtersGroup, SIGNAL(triggered(QAction*)),
+	     this, SLOT(switchFilterConfiguration(QAction*)) );
+    
+    KAction *actionFilterConfiguration = new KSelectAction( KIcon("view-filter"),
+	    i18n("Filter"), this );
+    KMenu *menu = new KMenu;
+    menu->addAction( actionEnableFilters );
+    menu->addSeparator();
+    menu->addTitle( KIcon("view-filter"), i18n("Used Filter Configuration") );
+    actionFilterConfiguration->setMenu( menu ); // TODO: Does this take ownership of menu?
+    actionFilterConfiguration->setEnabled( true );
+    addAction( "filterConfiguration", actionFilterConfiguration );
 
     QAction *actionShowEverything = new QAction(
 	Global::makeOverlayIcon(KIcon("view-filter"), "edit-delete"),
@@ -383,20 +397,27 @@ QList< QAction* > PublicTransport::contextualActions() {
     QAction *switchDepArr = m_settings.departureArrivalListType == DepartureList
 	    ? action("showArrivals") : action("showDepartures");
 
-    KSelectAction *actionSwitchFilter = NULL;
+    KAction *actionFilter = NULL;
     QStringList filterConfigurationList = m_settings.filterSettings.keys();
     if ( !filterConfigurationList.isEmpty() ) {
-	actionSwitchFilter = qobject_cast< KSelectAction* >(
-		action("switchFilterConfiguration") );
-	actionSwitchFilter->clear();
-	foreach ( QString filterConfig, filterConfigurationList ) {
-	    actionSwitchFilter->addAction( SettingsUiManager::translateKey(filterConfig) );
-	    if ( filterConfig == m_settings.currentStopSettings().filterConfiguration ) {
-		QAction *actionFilterConfig =
-			actionSwitchFilter->selectableActionGroup()->actions().last();
-		actionFilterConfig->setChecked( true );
-	    }
+	actionFilter = qobject_cast< KAction* >( action("filterConfiguration") );
+	action("enableFilters")->setChecked( m_settings.filtersEnabled ); // TODO change checked state when filtersEnabled changes?
+	QList< QAction* > oldActions = m_filtersGroup->actions();
+	foreach ( QAction *oldAction, oldActions ) {
+	    m_filtersGroup->removeAction( oldAction );
+	    delete oldAction;
 	}
+	
+	QMenu *menu = actionFilter->menu();
+	QString currentFilterConfig = m_settings.currentStopSettings().filterConfiguration;
+	foreach ( QString filterConfig, filterConfigurationList ) {
+	    QAction *action = new QAction( SettingsUiManager::translateKey(filterConfig), m_filtersGroup );
+	    action->setCheckable( true );
+	    menu->addAction( action );
+	    if ( filterConfig == currentFilterConfig )
+		action->setChecked( true );
+	}
+	m_filtersGroup->setEnabled( m_settings.filtersEnabled );
     }
 
     QList< QAction* > actions;
@@ -404,8 +425,8 @@ QList< QAction* > PublicTransport::contextualActions() {
     if ( m_currentServiceProviderFeatures.contains("JourneySearch") )
 	actions << action("searchJourneys");
     actions << switchDepArr << switchStopAction( this );
-    if ( actionSwitchFilter )
-	actions << actionSwitchFilter;
+    if ( actionFilter )
+	actions << actionFilter;
     return actions;
 }
 
@@ -1472,13 +1493,26 @@ void PublicTransport::setShowArrivals() {
     serviceProviderSettingsChanged(); // TODO: is this needed?
 }
 
+void PublicTransport::switchFilterConfiguration( QAction* action ) {
+    switchFilterConfiguration( KGlobal::locale()->removeAcceleratorMarker(action->text()) );
+}
+
 void PublicTransport::switchFilterConfiguration( const QString& newFilterConfiguration ) {
     Settings oldSettings = m_settings;
     m_settings.stopSettingsList[ m_settings.currentStopSettingsIndex ]
 	    .filterConfiguration = SettingsUiManager::untranslateKey(newFilterConfiguration);
     if ( SettingsIO::writeSettings(m_settings, oldSettings, config()) ) {
-	emit settingsChanged();
 	configNeedsSaving();
+	emit settingsChanged();
+    }
+}
+
+void PublicTransport::setFiltersEnabled( bool enable ) {
+    Settings oldSettings = m_settings;
+    m_settings.filtersEnabled = enable;
+    if ( SettingsIO::writeSettings(m_settings, oldSettings, config()) ) {
+	configNeedsSaving();
+	emit settingsChanged();
     }
 }
 
@@ -2333,8 +2367,8 @@ void PublicTransport::writeSettings( const Settings& settings ) {
 	m_settings = settings;
 	m_currentServiceProviderFeatures =
 		currentServiceProviderData()["features"].toStringList();
-	emit settingsChanged();
 	configNeedsSaving();
+	emit settingsChanged();
 
 	if ( changed.testFlag(SettingsIO::ChangedServiceProvider) )
 	    serviceProviderSettingsChanged();
@@ -2344,7 +2378,8 @@ void PublicTransport::writeSettings( const Settings& settings ) {
 	    clearDepartures();
 	    reconnectSource();
 	}
-    }
+    } else
+	kDebug() << "No changes made in the settings";
 }
 
 QString PublicTransport::nameForTimetableColumn( TimetableColumn timetableColumn,
@@ -2822,7 +2857,7 @@ QAction* PublicTransport::updatedAction ( const QString& actionName ) {
 	    a->setText( i18n("By &Vehicle Type (unknown)") );
 	} else {
 	    a->setIcon( Global::makeOverlayIcon(KIcon("view-filter"),
-			Global::iconFromVehicleType(vehicleType)) );
+			Global::vehicleTypeToIcon(vehicleType)) );
 	    a->setText( i18n("By &Vehicle Type (%1)",
 			     Global::vehicleTypeToString(vehicleType, true)) );
 	}
@@ -2949,22 +2984,22 @@ void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
 	    
 	    QStringList filterConfigurationList = m_settings.filterSettings.keys();
 	    if ( !filterConfigurationList.isEmpty() ) {
-		KSelectAction *actionSwitch = qobject_cast< KSelectAction* >(
-			action("switchFilterConfiguration") );
-		
-		actionSwitch->clear();
-		foreach ( const QString &filterConfig, filterConfigurationList ) {
-		    QString trFilterConfig =
-			    SettingsUiManager::translateKey( filterConfig );
-		    actionSwitch->addAction( trFilterConfig );
-		    if ( filterConfig ==
-				m_settings.currentStopSettings().filterConfiguration ) {
-			QAction *actionFilterConfig =
-				actionSwitch->selectableActionGroup()->actions().last();
-			actionFilterConfig->setChecked( true );
-		    }
-		}
-		actions.append( actionSwitch );
+// 		KSelectAction *actionSwitch = qobject_cast< KSelectAction* >(
+// 			action("switchFilterConfiguration") );
+// 		
+// 		actionSwitch->clear();
+// 		foreach ( const QString &filterConfig, filterConfigurationList ) {
+// 		    QString trFilterConfig =
+// 			    SettingsUiManager::translateKey( filterConfig );
+// 		    actionSwitch->addAction( trFilterConfig );
+// 		    if ( filterConfig ==
+// 				m_settings.currentStopSettings().filterConfiguration ) {
+// 			QAction *actionFilterConfig =
+// 				actionSwitch->selectableActionGroup()->actions().last();
+// 			actionFilterConfig->setChecked( true );
+// 		    }
+// 		}
+// 		actions.append( actionSwitch );
 	    }
 	}
 	if ( !treeView->header()->isVisible() )
@@ -2980,8 +3015,9 @@ void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
 }
 
 void PublicTransport::showEverything( bool ) {
-    m_settings.filterSettings[ m_settings.currentStopSettings().filterConfiguration ]
-	    .filterAction = ShowAll;
+    m_settings.filtersEnabled = false;
+//     m_settings.filterSettings[ m_settings.currentStopSettings().filterConfiguration ]
+// 	    .filterAction = ShowAll;
 }
 
 // TODO
@@ -3170,7 +3206,8 @@ void PublicTransport::showAlarmMessage( const QPersistentModelIndex &modelIndex 
 }
 
 bool PublicTransport::filterOut( const DepartureInfo &departureInfo ) const {
-    return m_settings.currentFilterSettings().filterOut( departureInfo )
+    return ( m_settings.filtersEnabled
+	    && m_settings.currentFilterSettings().filterOut(departureInfo) )
 	    || !isTimeShown( departureInfo.predictedDeparture() );
 }
 
@@ -3319,7 +3356,6 @@ int PublicTransport::findDeparture( const DepartureInfo& departureInfo ) const {
     // Compute some index that is somewhere at the position of that time.
     QModelIndexList indices = m_model->match( m_model->index(0, 0),
 	    TimetableItemHashRole, departureInfo.hash(), 1, Qt::MatchFixedString );
-
     return indices.isEmpty() ? -1 : indices.first().row();
 }
 
@@ -3328,11 +3364,10 @@ int PublicTransport::findJourney( const JourneyInfo& journeyInfo ) const {
     // Compute some index that is somewhere at the position of that time.
     QModelIndexList indices = m_modelJourneys->match( m_modelJourneys->index(0, 0),
 	    TimetableItemHashRole, journeyInfo.hash(), 1, Qt::MatchFixedString );
-
     return indices.isEmpty() ? -1 : indices.first().row();
 }
 
-// TODO: move to DepartureInfo
+// TODO: move to DepartureInfo?
 QString PublicTransport::delayText( const DepartureInfo& departureInfo ) const {
     QString sText;
     switch ( departureInfo.delayType() ) {
@@ -3565,7 +3600,7 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		QString sTransportLine = "";
 		if ( row < journeyInfo.routeVehicleTypes().count()
 			    && journeyInfo.routeVehicleTypes()[row] != Unknown)
-		    icon = Global::iconFromVehicleType( journeyInfo.routeVehicleTypes()[row] );
+		    icon = Global::vehicleTypeToIcon( journeyInfo.routeVehicleTypes()[row] );
 		    if ( journeyInfo.routeVehicleTypes()[row] == Feet )
 			sTransportLine = i18n("Footway");
 		    else if ( journeyInfo.routeTransportLines().count() > row )
@@ -3672,7 +3707,7 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 	    departureItem->setData( m_settings.linesPerRow, HtmlDelegate::LinesPerRowRole );
 // 	    departureItem->setData( QVariant::fromValue<DepartureInfo>(departureInfo), DepartureInfoRole );
 	    if ( departureInfo.vehicleType() != Unknown )
-		departureItem->setIcon( Global::iconFromVehicleType(departureInfo.vehicleType()) );
+		departureItem->setIcon( Global::vehicleTypeToIcon(departureInfo.vehicleType()) );
 	    if ( !update ) {
 		departureItem->setTextAlignment( Qt::AlignRight );
 		departureItem->setData( departureInfo.hash(), TimetableItemHashRole );
@@ -4209,8 +4244,6 @@ void PublicTransport::removeOldDepartures() {
 	    int row = findDeparture( departureInfo );
 	    if ( row != -1 ) {
 		if ( filterOut(departureInfo) ) {
-		    // Filtered out because departure/arrival is in the past
-		    // or because of a change to the filter settings;
 		    departureInfo.setVisible( false );
 		} else {
 		    foundRows << row;
@@ -4312,7 +4345,6 @@ void PublicTransport::updateModel() {
     
     QList< DepartureInfo > depInfos = departureInfos();
     kDebug() << "Update / add" << depInfos.count() << "departures";
-    // FIXME: Much CPU usage in this loop
     int updated = 0, appended = 0;
 //     QTime filterTime = QTime( 0, 0 ), findTime = QTime( 0, 0 ),
 // 	  updateTime = QTime( 0, 0 ), appendTime = QTime( 0, 0 );

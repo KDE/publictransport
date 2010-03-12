@@ -74,6 +74,8 @@ void JourneyInfo::init( const QString &operatorName,
     m_routeTimesDepartureDelay = routeTimesDepartureDelay;
     m_routeTimesArrivalDelay = routeTimesArrivalDelay;
     m_routeExactStops = routeExactStops;
+    
+    generateHash();
 }
 
 QList< QVariant > JourneyInfo::vehicleTypesVariant() const {

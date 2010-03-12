@@ -132,7 +132,7 @@ KIcon Global::makeOverlayIcon ( const KIcon& icon, const QList<KIcon> &overlayIc
     return resultIcon;
 }
 
-KIcon Global::iconFromVehicleType( const VehicleType &vehicleType, const QString &overlayIcon ) {
+KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType, const QString &overlayIcon ) {
     KIcon icon;
 
     switch ( vehicleType )
@@ -216,7 +216,7 @@ KIcon Global::iconFromVehicleTypeList( const QList< VehicleType >& vehicleTypes,
 	else // icon on the right
 	    x = halfExtend;
 
-	QPixmap pixmapVehicleType = iconFromVehicleType( vehicleType ).pixmap( halfExtend );
+	QPixmap pixmapVehicleType = vehicleTypeToIcon( vehicleType ).pixmap( halfExtend );
 	p.drawPixmap( x, y, pixmapVehicleType );
 
 	if ( i % 2 != 0 )

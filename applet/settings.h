@@ -97,6 +97,9 @@ class SettingsUiManager : public QObject {
 	void exportFilterSettings();
 	void importFilterSettings();
 
+	void stopSettingsChanged();
+	void usedFilterConfigChanged( QWidget *widget );
+
     private:
 	FilterSettings currentFilterSettings() const;
 	int filterConfigurationIndex( const QString &filterConfig );
@@ -134,7 +137,8 @@ class SettingsIO {
 	    IsChanged = 0x0001, /**< This flag is set if something has changed. */
 	    ChangedServiceProvider = 0x0002,
 	    ChangedDepartureArrivalListType = 0x0004,
-	    ChangedStopSettings = 0x0008
+	    ChangedStopSettings = 0x0008,
+	    ChangedFilterSettings = 0x0010
 	};
 	Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag );
 	
@@ -185,6 +189,7 @@ struct Settings {
     StopSettings currentStopSettings() const {
 	    return stopSettingsList[ currentStopSettingsIndex ]; };
 
+    bool filtersEnabled;
     QHash< QString, FilterSettings > filterSettings;
     FilterSettings currentFilterSettings() const {
 	    return filterSettings[ currentStopSettings().filterConfiguration ]; };

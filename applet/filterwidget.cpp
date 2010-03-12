@@ -102,7 +102,7 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
 	    values << ConstraintListWidget::ListItem(
 		    Global::vehicleTypeToString(vehicleType),
 		    static_cast<int>(vehicleType),
-		    Global::iconFromVehicleType(vehicleType) );
+		    Global::vehicleTypeToIcon(vehicleType) );
         }
         return new ConstraintListWidget( type, variant, values, value.toList(), parent );
 
@@ -120,10 +120,11 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
     }
 }
 
-ConstraintWidget* FilterWidget::createFilter( FilterType type ) {
+ConstraintWidget* FilterWidget::createConstraint( FilterType type ) {
     switch ( type ) {
     case FilterByVehicleType:
-	return ConstraintWidget::create( type, FilterIsOneOf, QVariantList() << Unknown, this );
+	return ConstraintWidget::create( type, FilterIsOneOf,
+					 QVariantList() << Unknown, this );
 
     case FilterByTransportLine:
     case FilterByTarget:
@@ -172,9 +173,9 @@ void FilterWidget::filterTypeChanged( int index ) {
     int filterIndex = m_filterTypes.indexOf( cmbFilterType );
 
     FilterType type = static_cast< FilterType >( cmbFilterType->itemData(index).toInt() );
-    ConstraintWidget *newFilter = createFilter( type );
-    dynamicWidgets().at( filterIndex )->replaceContentWidget( newFilter );
-    connect( newFilter, SIGNAL(changed()), this, SIGNAL(changed()) );
+    ConstraintWidget *newConstraint = createConstraint( type );
+    dynamicWidgets().at( filterIndex )->replaceContentWidget( newConstraint );
+    connect( newConstraint, SIGNAL(changed()), this, SLOT(changed()) );
     emit changed();
 }
 
@@ -212,7 +213,7 @@ QString ConstraintWidget::filterVariantName( FilterVariant filterVariant ) const
 ConstraintWidget::ConstraintWidget( FilterType type,
 			    QList< FilterVariant > availableVariants,
 			    FilterVariant initialVariant, QWidget* parent )
-			    : QWidget( parent ), m_containerWidget(0) {
+			    : QWidget( parent ) {
     m_constraint.type = type;
     setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
     QHBoxLayout *layout = new QHBoxLayout( this );
@@ -221,7 +222,8 @@ ConstraintWidget::ConstraintWidget( FilterType type,
 
     if ( !availableVariants.isEmpty() ) {
 	if ( !availableVariants.contains(initialVariant) ) {
-	    kDebug() << "Initial variant" << initialVariant << "not found in" << availableVariants;
+	    kDebug() << "Initial variant" << initialVariant
+		     << "not found in" << availableVariants << "for type" << type;
 	    initialVariant = availableVariants.first();
 	}
 	
@@ -232,10 +234,9 @@ ConstraintWidget::ConstraintWidget( FilterType type,
                                     static_cast<int>(variant) );
         }
         int index = m_variantsCmb->findData( static_cast<int>(initialVariant) );
+	connect( m_variantsCmb, SIGNAL(currentIndexChanged(int)),
+		 this, SLOT(variantChanged(int)) );
 	m_variantsCmb->setCurrentIndex( index );
-        variantChanged( index );
-        connect( m_variantsCmb, SIGNAL(currentIndexChanged(int)),
-                 this, SLOT(variantChanged(int)) );
         layout->addWidget( m_variantsCmb );
     } else
 	m_constraint.variant = FilterNoVariant;
@@ -299,7 +300,7 @@ ConstraintIntWidget::ConstraintIntWidget( FilterType type, FilterVariant initial
 }
 
 void ConstraintListWidget::setValue( const QVariant& value ) {
-    QModelIndexList indices/* = m_list->checkedItems()*/;
+    QModelIndexList indices;
     if ( value.isValid() ) {
 	QVariantList values = value.toList();
 	foreach ( QVariant value, values ) {
@@ -336,9 +337,9 @@ void ConstraintWidget::variantChanged( int index ) {
 
     if ( m_constraint.variant != newVariant ) {
 	m_constraint.variant = newVariant;
-	bool visible = true; //m_variant != FilterDisregard;
-	foreach ( QWidget *w, m_widgets )
-	    w->setVisible( visible );
+// 	bool visible = true; //m_variant != FilterDisregard;
+// 	foreach ( QWidget *w, m_widgets )
+// 	    w->setVisible( visible );
 	emit changed();
     }
 }
@@ -399,7 +400,14 @@ DynamicWidget* FilterListWidget::addWidget( QWidget* widget ) {
     emit changed();
     return newWidget;
 }
-	
+
+DynamicWidget* FilterListWidget::createDynamicWidget( QWidget* widget ) {
+    // Set spacing between the contained constraint list and the remove filter button
+    DynamicWidget *dynamicWidget = AbstractDynamicWidgetContainer::createDynamicWidget( widget );
+    dynamicWidget->layout()->setSpacing( 1 );
+    return dynamicWidget;
+}
+
 QWidget* FilterListWidget::createSeparator( const QString& separatorText ) {
     return AbstractDynamicWidgetContainer::createSeparator(
 	    separatorText.isEmpty() ? i18n("or") : separatorText );

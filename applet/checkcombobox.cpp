@@ -30,9 +30,14 @@ class CheckComboboxPrivate {
     public:
 	CheckComboboxPrivate() {
 	    allowNoCheck = true;
+	    multipleSelectionOptions = CheckCombobox::ShowIconList;
+	    separator = ", ";
+	    noSelectionText = i18n( "(none)" );
 	};
 	
 	bool allowNoCheck;
+	CheckCombobox::MultipleSelectionOptions multipleSelectionOptions;
+	QString separator, noSelectionText;
 };
 
 CheckCombobox::CheckCombobox( QWidget* parent ) : KComboBox( parent ),
@@ -43,6 +48,37 @@ CheckCombobox::CheckCombobox( QWidget* parent ) : KComboBox( parent ),
 
 CheckCombobox::~CheckCombobox() {
     delete d_ptr;
+}
+
+CheckCombobox::MultipleSelectionOptions CheckCombobox::multipleSelectionOptions() const {
+    Q_D( const CheckCombobox );
+    return d->multipleSelectionOptions;
+}
+
+void CheckCombobox::setMultipleSelectionOptions(
+	CheckCombobox::MultipleSelectionOptions multipleSelectionOptions ) {
+    Q_D( CheckCombobox );
+    d->multipleSelectionOptions = multipleSelectionOptions;
+}
+
+QString CheckCombobox::separator() const {
+    Q_D( const CheckCombobox );
+    return d->separator;
+}
+
+void CheckCombobox::setSeparator( const QString& separator ) {
+    Q_D( CheckCombobox );
+    d->separator = separator;
+}
+
+QString CheckCombobox::noSelectionText() const {
+    Q_D( const CheckCombobox );
+    return d->noSelectionText;
+}
+
+void CheckCombobox::setNoSelectionText( const QString& noSelectionText ) {
+    Q_D( CheckCombobox );
+    d->noSelectionText = noSelectionText;
 }
 
 bool CheckCombobox::allowNoCheckedItem() const {
@@ -102,6 +138,8 @@ bool CheckCombobox::eventFilter( QObject* object, QEvent* event ) {
 }
 
 void CheckCombobox::paintEvent( QPaintEvent* ) {
+    Q_D( const CheckCombobox );
+    
     QStylePainter painter( this );
     painter.setPen( palette().color(QPalette::Text) );
 
@@ -115,7 +153,7 @@ void CheckCombobox::paintEvent( QPaintEvent* ) {
     opt.currentText.clear();
     foreach ( QModelIndex index, items ) {
         if ( !opt.currentText.isEmpty() )
-            opt.currentText += ", ";
+            opt.currentText += d->separator;
         opt.currentText += index.data().toString();
         icons << index.data( Qt::DecorationRole ).value<QIcon>();
     }
@@ -123,9 +161,9 @@ void CheckCombobox::paintEvent( QPaintEvent* ) {
     painter.drawComplexControl( QStyle::CC_ComboBox, opt );
 
     // Draw the icon and text
-    if ( icons.count() <= 1 ) {
+    if ( icons.count() <= 1 || d->multipleSelectionOptions == ShowStringList ) {
         if ( icons.isEmpty() ) {
-            opt.currentText = i18n( "(none)" );
+	    opt.currentText = d->noSelectionText;
             opt.currentIcon = QIcon();
         } else
             opt.currentIcon = icons.first();
@@ -165,6 +203,7 @@ void CheckCombobox::paintEvent( QPaintEvent* ) {
         else
             opt.currentText = QString( "%1 / %2" ).arg( icons.count() )
                               .arg( view()->model()->rowCount() );
+	
         painter.drawControl( QStyle::CE_ComboBoxLabel, opt );
     }
 }
@@ -198,7 +237,8 @@ QSize CheckCombobox::sizeHint() const {
     return size;
 }
 
-void CheckCombobox::setItemCheckState( const QModelIndex& index, Qt::CheckState checkState ) {
+void CheckCombobox::setItemCheckState( const QModelIndex& index,
+				       Qt::CheckState checkState ) {
     Qt::CheckState prevCheckState = static_cast< Qt::CheckState >(
 	    view()->model()->data( index, Qt::CheckStateRole ).toInt() );
     view()->model()->setData( index, checkState, Qt::CheckStateRole );

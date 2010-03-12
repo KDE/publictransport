@@ -203,8 +203,9 @@ class AbstractDynamicWidgetContainer : public QWidget {
 	int maximumWidgetCount() const;
 	/** Sets the minimum and maximum widget count. It also makes sure that
 	* the actual widget count is in the given range by adding or removing
-	* widgets if needed if @p putIntoRange is true. */
-	void setWidgetCountRange( int minWidgetCount = 0, int maxWidgetCount = -1,
+	* widgets if needed if @p putIntoRange is true. 
+	* @return The number of added widgets (negative, if widgets were removed). */
+	int setWidgetCountRange( int minWidgetCount = 0, int maxWidgetCount = -1,
 				  bool putIntoRange = true );
 	int buttonSpacing() const;
 	Qt::Alignment buttonAlignment() const;

@@ -78,30 +78,8 @@ DynamicWidget::DynamicWidget( QWidget* contentWidget,
 	l->addWidget( d_ptr->buttonsWidget );
 	l->setAlignment( d_ptr->buttonsWidget, Qt::AlignRight | Qt::AlignTop );
 	
-	foreach ( ButtonType buttonType, buttonTypes ) {
+	foreach ( ButtonType buttonType, buttonTypes )
 	    addButton( container, buttonType );
-// 	    switch ( buttonType ) {
-// 		case RemoveButton:
-// 		    d_ptr->removeButton = new QToolButton( this );
-// 		    d_ptr->removeButton->setIcon( KIcon(container->removeButtonIcon()) );
-// 		    buttonLayout->addWidget( d_ptr->removeButton );
-// 		    connect( d_ptr->removeButton, SIGNAL(clicked()),
-// 			     this, SIGNAL(removeClicked()) );
-// 		    break;
-// 
-// 		case AddButton:
-// 		    d_ptr->addButton = new QToolButton( this );
-// 		    d_ptr->addButton->setIcon( KIcon(container->addButtonIcon()) );
-// 		    buttonLayout->addWidget( d_ptr->addButton );
-// 		    connect( d_ptr->addButton, SIGNAL(clicked()),
-// 			     this, SIGNAL(addClicked()) );
-// 		    break;
-// 
-// 		case ButtonSpacer:
-// 		    buttonLayout->addItem( new QSpacerItem(d_ptr->toolButtonSpacing(), 0) );
-// 		    break;
-// 	    }
-	}
     }
 }
 
@@ -559,10 +537,8 @@ int AbstractDynamicWidgetContainer::removeWidget( QWidget *contentWidget ) {
 
 void AbstractDynamicWidgetContainer::removeAllWidgets() {
     Q_D( AbstractDynamicWidgetContainer );
-    foreach ( DynamicWidget *dynamicWidget, d->dynamicWidgets ) {
-	kDebug() << "Remove in loop" << dynamicWidget;
+    foreach ( DynamicWidget *dynamicWidget, d->dynamicWidgets )
 	removeWidget( dynamicWidget );
-    }
 }
 
 QWidget* AbstractDynamicWidgetContainer::createSeparator( const QString& separatorText ) {
@@ -685,20 +661,28 @@ int AbstractDynamicWidgetContainer::maximumWidgetCount() const {
     return d->maxWidgetCount;
 }
 
-void AbstractDynamicWidgetContainer::setWidgetCountRange(
+int AbstractDynamicWidgetContainer::setWidgetCountRange(
 		int minWidgetCount, int maxWidgetCount, bool putIntoRange ) {
     Q_D( AbstractDynamicWidgetContainer );
     d->minWidgetCount = minWidgetCount;
     d->maxWidgetCount = maxWidgetCount;
+
+    int added = 0;
     if ( putIntoRange ) {
-	while ( d->dynamicWidgets.count() < minWidgetCount )
+	while ( d->dynamicWidgets.count() < minWidgetCount ) {
 	    createAndAddWidget();
+	    ++added;
+	}
 	if ( maxWidgetCount != -1 ) {
-	    while ( d->dynamicWidgets.count() > maxWidgetCount )
+	    while ( d->dynamicWidgets.count() > maxWidgetCount ) {
 		removeLastWidget();
+		--added;
+	    }
 	}
     }
+    
     d->updateButtonStates();
+    return added;
 }
 
 

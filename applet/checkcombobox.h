@@ -21,6 +21,7 @@
 #define CHECKCOMBOBOX_HEADER
 
 #include <KComboBox>
+#include <KLocalizedString>
 
 class CheckComboboxPrivate;
 /** A combobox to select multiple items of the list by adding check boxes.
@@ -30,14 +31,31 @@ class CheckComboboxPrivate;
 class CheckCombobox : public KComboBox {
     Q_OBJECT
     Q_PROPERTY( int allowNoCheckedItem READ allowNoCheckedItem WRITE setAllowNoCheckedItem )
+    Q_PROPERTY( MultipleSelectionOptions multipleSelectionOptions READ multipleSelectionOptions WRITE setMultipleSelectionOptions )
+    Q_PROPERTY( QString separator READ separator WRITE setSeparator )
+    Q_PROPERTY( QString noSelectionText READ noSelectionText WRITE setNoSelectionText )
     Q_PROPERTY( QModelIndexList checkedItems READ checkedItems WRITE setCheckedItems )
     
     public:
+	enum MultipleSelectionOptions {
+	    ShowStringList,
+	    ShowIconList
+	};
+	
 	/** Creates a new CheckCombobox. */
 	CheckCombobox( QWidget* parent = 0 );
 
 	/** Destructor. */
 	~CheckCombobox();
+
+	MultipleSelectionOptions multipleSelectionOptions() const;
+	void setMultipleSelectionOptions( MultipleSelectionOptions multipleSelectionOptions );
+
+	QString separator() const;
+	void setSeparator( const QString &separator = ", " );
+
+	QString noSelectionText() const;
+	void setNoSelectionText( const QString &noSelectionText = i18n("(none)") );
 
 	/** Gets whether or not it's allowed that no item is checked.
 	* If this is false, the last checked item can't be unchecked. */

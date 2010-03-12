@@ -411,6 +411,7 @@
   </customwidget>
  </customwidgets>
  <tabstops>
+  <tabstop>size</tabstop>
   <tabstop>radioUseDefaultFont</tabstop>
   <tabstop>radioUseOtherFont</tabstop>
   <tabstop>font</tabstop>

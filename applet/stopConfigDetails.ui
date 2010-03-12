@@ -66,6 +66,10 @@ To create/edit/remove filter configurations use the filter page in the settings 
    <header>kcombobox.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>downloadServiceProviders</tabstop>
+  <tabstop>filterConfiguration</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

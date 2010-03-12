@@ -134,6 +134,12 @@ p, li { white-space: pre-wrap; }
    <header>kcombobox.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>location</tabstop>
+  <tabstop>serviceProvider</tabstop>
+  <tabstop>btnServiceProviderInfo</tabstop>
+  <tabstop>city</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

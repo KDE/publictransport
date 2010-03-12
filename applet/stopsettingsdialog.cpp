@@ -154,15 +154,16 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(stopAdded(QWidget*)) );
     connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(adjustStopListLayout()) );
     connect( m_stopList, SIGNAL(removed(QWidget*)), this, SLOT(adjustStopListLayout()) );
-    m_stopList->setLabelTexts( i18n("Additional Stop %1:"), QStringList() << "Stop:" );
+    m_stopList->setLabelTexts( i18n("Combined Stop %1:"), QStringList() << "Stop:" );
     m_stopList->setWidgetCountRange( 1, 3 );
     if ( m_stopList->addButton() ) {
 	m_stopList->addButton()->setToolTip( i18n("Add another stop.\n"
 		"The departures/arrivals of all stops get combined.") );
-	m_stopList->addButton()->setWhatsThis( i18n("A list of stops can be defined "
-		"for each stop settings. All departures/arrivals for the stop list "
-		"get displayed combined in the applet.") );
     }
+    m_stopList->setWhatsThis( i18n("All departures/arrivals for these stops get "
+	    "<b>displayed combined</b> in the applet.<br>"
+	    "To add a stop that doesn't get combined with others use the 'Add Stop' "
+	    "button of the main settings dialog.") );
     
     QVBoxLayout *l = new QVBoxLayout( m_uiStop.stops );
     l->setContentsMargins( 0, 0, 0, 0 );
@@ -172,6 +173,7 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     m_uiStop.btnServiceProviderInfo->setIcon( KIcon("help-about") );
     m_uiStop.btnServiceProviderInfo->setText( QString() );
 
+//     m_uiStopDetails.filterConfiguration->addItem( i18n("(none)"), "none" );
     m_uiStopDetails.filterConfiguration->addItems( filterConfigurations );
 
     QMenu *menu = new QMenu( this );
@@ -228,8 +230,13 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings ) {
     // Select filter configuration from stopSettings
     QString trFilterConfiguration = SettingsUiManager::translateKey(
 	    stopSettings.filterConfiguration );
-    if ( m_uiStopDetails.filterConfiguration->contains(trFilterConfiguration) )
+    if ( m_uiStopDetails.filterConfiguration->contains(trFilterConfiguration) ) {
 	m_uiStopDetails.filterConfiguration->setCurrentItem( trFilterConfiguration );
+    } /*else if ( trFilterConfiguration.isEmpty() ) {
+	int noneIndex = m_uiStopDetails.filterConfiguration->findData( "none" );
+	kDebug() << "NONE INDEX" << noneIndex;
+	m_uiStopDetails.filterConfiguration->setCurrentIndex( noneIndex );
+    }*/
     
     // Select location from stopSettings
     QModelIndexList indicesLocation = m_modelLocations->match(
@@ -277,8 +284,13 @@ StopSettings StopSettingsDialog::stopSettings() const {
 	stopSettings.city = m_uiStop.city->isEditable()
 		? m_uiStop.city->lineEdit()->text() : m_uiStop.city->currentText();
     }
-    stopSettings.filterConfiguration = SettingsUiManager::untranslateKey(
-	    m_uiStopDetails.filterConfiguration->currentText() );
+//     if ( m_uiStopDetails.filterConfiguration->itemData(
+// 	    m_uiStopDetails.filterConfiguration->currentIndex()).toString() == "none" ) {
+// 	stopSettings.filterConfiguration = QString();
+//     } else {
+	stopSettings.filterConfiguration = SettingsUiManager::untranslateKey(
+		m_uiStopDetails.filterConfiguration->currentText() );
+//     }
     stopSettings.stops = m_stopList->lineEditTexts();
     foreach ( const QString &stop, stopSettings.stops ) {
 	if ( m_stopToStopID.contains(stop) )
@@ -541,13 +553,15 @@ void StopSettingsDialog::locationChanged( const QString& newLocation ) {
     Plasma::DataEngine::Data locationData = m_publicTransportEngine->query( "Locations" );
     QString defaultServiceProviderId =
 	    locationData[locationCode].toHash()["defaultAccessor"].toString();
-    QModelIndexList indices = m_modelLocationServiceProviders->match(
-	    m_modelLocationServiceProviders->index(0, 0), ServiceProviderIdRole,
-	    defaultServiceProviderId, 1, Qt::MatchFixedString );
-    if ( !indices.isEmpty() ) {
-	int curServiceProviderIndex = indices.first().row();
-	m_uiStop.serviceProvider->setCurrentIndex( curServiceProviderIndex );
-	serviceProviderChanged( curServiceProviderIndex );
+    if ( !defaultServiceProviderId.isEmpty() ) {
+	QModelIndexList indices = m_modelLocationServiceProviders->match(
+		m_modelLocationServiceProviders->index(0, 0), ServiceProviderIdRole,
+		defaultServiceProviderId, 1, Qt::MatchFixedString );
+	if ( !indices.isEmpty() ) {
+	    int curServiceProviderIndex = indices.first().row();
+	    m_uiStop.serviceProvider->setCurrentIndex( curServiceProviderIndex );
+	    serviceProviderChanged( curServiceProviderIndex );
+	}
     }
 }
 

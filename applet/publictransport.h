@@ -414,7 +414,10 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	void setShowDepartures();
 	void setShowArrivals();
+	
 	void switchFilterConfiguration( const QString &newFilterConfiguration );
+	void switchFilterConfiguration( QAction *action );
+	void setFiltersEnabled( bool enable );
 	
     private:
 	bool parseJourneySearch( const QString &search, QString *stop,
@@ -505,6 +508,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	
 	QTimer *m_departureListUpdater; /**< Updates the departure/arrival list (durations) when auto updates from the data engine aren't enabled. */
 	QTimer *m_journeyListUpdater; /**< Updates the journey list (durations) when auto updates from the data engine aren't enabled. */
+
+	QActionGroup *m_filtersGroup;
 	
 	QList<TimetableColumn> m_departureViewColumns;
 	QList<TimetableColumn> m_journeyViewColumns;

@@ -56,11 +56,7 @@ class ConstraintWidget : public QWidget {
 	    m_constraint.value = value();
 	    return m_constraint; };
 	
-	void addWidget( QWidget *w ) {
-	    w->setVisible( true ); //m_variant != FilterDisregard );
-	    layout()->addWidget( w );
-	    m_widgets << w;
-	};
+	void addWidget( QWidget *w ) { layout()->addWidget( w ); };
 
 	inline static ConstraintWidget *create( Constraint constraint,
 						QWidget *parent = 0 ) {
@@ -82,8 +78,8 @@ class ConstraintWidget : public QWidget {
 
 	Constraint m_constraint;
 	KComboBox *m_variantsCmb;
-	QWidget *m_containerWidget;
-	QWidgetList m_widgets, m_permanentWidgets;
+// 	QWidget *m_containerWidget;
+// 	QWidgetList m_widgets;
 };
 
 class ConstraintListWidget : public ConstraintWidget {
@@ -169,12 +165,15 @@ class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 	FilterWidget( QWidget* parent = 0 );
 	FilterWidget( QList<FilterType> filterTypes, QWidget* parent = 0 );
 
+	/** Returns a list of all contained constraint widgets. */
 	QList< ConstraintWidget* > constraintWidgets() const {
 	    QList< ConstraintWidget* > list;
 	    foreach ( DynamicWidget *dynamicWidget, dynamicWidgets() )
 		list << qobject_cast< ConstraintWidget* >( dynamicWidget->contentWidget() );
 	    return list;
 	};
+
+	/** Returns a Filter object with all constraints of this FilterWidget. */
 	Filter filter() const {
 	    Filter f;
 	    foreach ( ConstraintWidget *constraint, constraintWidgets() )
@@ -183,7 +182,7 @@ class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 	};
 
 	inline void addConstraint( FilterType filterType ) {
-	    addConstraint( createFilter(filterType) ); };
+	    addConstraint( createConstraint(filterType) ); };
 	void addConstraint( const Constraint &constraint ) {
 	    addConstraint( ConstraintWidget::create(constraint, this) );
 	};
@@ -212,7 +211,7 @@ class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 
     protected:
 	virtual QWidget *createNewWidget() {
-	    return createFilter( firstUnusedFilterType() ); };
+	    return createConstraint( firstUnusedFilterType() ); };
 	virtual QWidget* createNewLabelWidget( int );
 	
 	virtual DynamicWidget *addWidget( QWidget *widget ) {
@@ -222,7 +221,7 @@ class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 	virtual void updateLabelWidget( QWidget*, int ) {};
 
     private:
-	ConstraintWidget *createFilter( FilterType type );
+	ConstraintWidget *createConstraint( FilterType type );
 	QString filterName( FilterType filter ) const;
 	FilterType firstUnusedFilterType() const;
 	
@@ -269,9 +268,9 @@ class FilterListWidget : public AbstractDynamicWidgetContainer {
 	    filter << Constraint();
 	    return FilterWidget::create( filter, this );
 	};
+	virtual DynamicWidget* createDynamicWidget( QWidget* widget );
 	
 	virtual DynamicWidget *addWidget( QWidget* widget );
-	
 	virtual int removeWidget( QWidget* widget ) {
 	    int index = AbstractDynamicWidgetContainer::removeWidget( widget );
 	    emit changed();

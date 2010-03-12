@@ -24,8 +24,6 @@
 
 bool FilterSettings::filterOut( const DepartureInfo& departureInfo ) const {
     switch ( filterAction ) {
-	case ShowAll:
-	    return false;
 	case ShowMatching:
 	    return !filters.match( departureInfo );
 	case HideMatching:

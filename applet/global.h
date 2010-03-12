@@ -245,9 +245,9 @@ enum FilterVariant {
 
 /** The action of filters. */
 enum FilterAction {
-    ShowAll = 0, /**< Show all targets / origins */
-    ShowMatching = 1, /**< Show only targets / origins that are in the list of filter targets / origins */
-    HideMatching = 2 /**< Hide targets / origins that are in the list of filter targets / origins */
+   // ShowAll = 0, /**< Show all targets / origins */ TODO Remove this, filters are globally enabled/disabled
+    ShowMatching = 0, /**< Show only targets / origins that are in the list of filter targets / origins */
+    HideMatching = 1 /**< Hide targets / origins that are in the list of filter targets / origins */
 };
 
 /** The type of the delay of a departure / arrival. */
@@ -282,7 +282,7 @@ class Global {
 	static KIcon makeOverlayIcon( const KIcon &icon, const QList<KIcon> &overlayIconsBottom, const QSize &overlaySize = QSize(10, 10), int iconExtend = 16 );
 
 	/** Gets an icon for the given type of vehicle. */
-	static KIcon iconFromVehicleType( const VehicleType &vehicleType, const QString &overlayIcon = QString() );
+	static KIcon vehicleTypeToIcon( const VehicleType &vehicleType, const QString &overlayIcon = QString() );
 
 	/** Gets an icon containing the icons of all vehicle types in the given list. */
 	static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes,

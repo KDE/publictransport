@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>371</width>
-    <height>372</height>
+    <height>283</height>
    </rect>
   </property>
   <layout class="QFormLayout" name="formLayout_3">
@@ -337,6 +337,17 @@ Here you can set when the alarm should be fired, relative to the departure / arr
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>showDepartures</tabstop>
+  <tabstop>showArrivals</tabstop>
+  <tabstop>updateAutomatically</tabstop>
+  <tabstop>alarmTime</tabstop>
+  <tabstop>maximalNumberOfDepartures</tabstop>
+  <tabstop>firstDepartureUseCurrentTime</tabstop>
+  <tabstop>timeOfFirstDeparture</tabstop>
+  <tabstop>firstDepartureUseCustomTime</tabstop>
+  <tabstop>timeOfFirstDepartureCustom</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
