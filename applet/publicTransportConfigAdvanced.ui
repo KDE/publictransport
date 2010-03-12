@@ -97,7 +97,7 @@ Here you can set when the alarm should be fired, relative to the departure / arr
    <item row="4" column="0">
     <widget class="QLabel" name="lblMaximalNumberOfDepartures">
      <property name="text">
-      <string>Maximum Departures:</string>
+      <string>&amp;Maximum Departures:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -144,7 +144,10 @@ Here you can set when the alarm should be fired, relative to the departure / arr
       </sizepolicy>
      </property>
      <property name="text">
-      <string>First Departure:</string>
+      <string>&amp;First Departure:</string>
+     </property>
+     <property name="buddy">
+      <cstring>firstDepartureUseCurrentTime</cstring>
      </property>
     </widget>
    </item>
@@ -325,13 +328,13 @@ Here you can set when the alarm should be fired, relative to the departure / arr
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Default View:</string>
+      <string>&amp;Default View:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
      <property name="buddy">
-      <cstring>updateAutomatically</cstring>
+      <cstring>showDepartures</cstring>
      </property>
     </widget>
    </item>
