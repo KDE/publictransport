@@ -2,8 +2,7 @@
 
 <accessorInfo fileVersion="1.0" version="1.0" type="XML">
 
-<name lang="en">Rhine-Main (rmv.de)</name>
-<name lang="de">Rhein-Main (rmv.de)</name>
+<name lang="en">Rhein-Main-Verkehrsverbund GmbH</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
 <country>Germany</country>
 <cities>

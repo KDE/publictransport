@@ -29,6 +29,13 @@
 #include "timetableaccessor.h"
 
 
+const int PublicTransportEngine::MIN_UPDATE_TIMEOUT = 120;
+const int PublicTransportEngine::MAX_UPDATE_TIMEOUT_DELAY = 5 * 60;
+const int PublicTransportEngine::DEFAULT_MAXIMUM_DEPARTURES = 20;
+const int PublicTransportEngine::ADDITIONAL_MAXIMUM_DEPARTURES =
+			PublicTransportEngine::MIN_UPDATE_TIMEOUT / 20;
+const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
+
 PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList& args)
 			    : Plasma::DataEngine(parent, args),
 			    m_fileSystemWatcher(0) {

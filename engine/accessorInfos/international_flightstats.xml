@@ -2,8 +2,7 @@
 
 <accessorInfo fileVersion="1.0" version="1.0" type="HTML">
 <xml_file_version type="publictransport" version="1.0" />
-<name lang="en">International Flights (flightstats.com)</name>
-<name lang="de">Internationale Flüge (flightstats.com)</name>
+<name lang="en">Conducive Technology Corp. (flightstats.com)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
 <country>International</country>
 <useSeperateCityValue>false</useSeperateCityValue>
