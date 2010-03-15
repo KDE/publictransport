@@ -43,11 +43,23 @@ bool FilterList::match( const DepartureInfo& departureInfo ) const {
 }
 
 bool Filter::match( const DepartureInfo& departureInfo ) const {
+    bool viaMatched;
     foreach ( const Constraint &constraint, *this ) {
 	switch ( constraint.type ) {
 	    case FilterByTarget:
 		if ( !matchString(constraint.variant, constraint.value.toString(),
 				  departureInfo.target()) )
+		    return false;
+		break;
+	    case FilterByVia:
+		viaMatched = false;
+		foreach ( const QString &via, departureInfo.routeStops() ) {
+		    if ( matchString(constraint.variant, constraint.value.toString(), via) ) {
+			viaMatched = true;
+			break;
+		    }
+		}
+		if ( !viaMatched )
 		    return false;
 		break;
 	    case FilterByTransportLine:
@@ -194,6 +206,7 @@ QDataStream& operator<<( QDataStream& out, const Filter &filter ) {
 		break;
 		
 	    case FilterByTarget:
+	    case FilterByVia:
 	    case FilterByTransportLine:
 		out << constraint.value.toString();
 		break;
@@ -238,6 +251,7 @@ QDataStream& operator>>( QDataStream& in, Filter &filter ) {
 		break;
 		
 	    case FilterByTarget:
+	    case FilterByVia:
 	    case FilterByTransportLine:
 		in >> s;
 		constraint.value = s;
@@ -261,6 +275,6 @@ QDataStream& operator>>( QDataStream& in, Filter &filter ) {
     return in;
 }
 
-bool operator==(const Constraint& a, const Constraint& b) {
+bool operator==( const Constraint& a, const Constraint& b ) {
     return a.type == b.type && a.variant == b.variant && a.value == b.value;
 }

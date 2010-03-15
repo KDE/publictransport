@@ -50,7 +50,7 @@ FilterType FilterWidget::firstUnusedFilterType() const {
 	filterTypes << constraint->type();
 
     QList< FilterType > allFilterTypes;
-    allFilterTypes << FilterByVehicleType << FilterByTarget
+    allFilterTypes << FilterByVehicleType << FilterByTarget << FilterByVia
 	    << FilterByTransportLine << FilterByTransportLineNumber << FilterByDelay;
     foreach ( FilterType filterType, allFilterTypes ) {
 	if ( !filterTypes.contains(filterType) )
@@ -108,6 +108,7 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
 
     case FilterByTransportLine:
     case FilterByTarget:
+    case FilterByVia:
 	return new ConstraintStringWidget( type, variant, value.toString(), parent );
 
     case FilterByTransportLineNumber:
@@ -128,6 +129,7 @@ ConstraintWidget* FilterWidget::createConstraint( FilterType type ) {
 
     case FilterByTransportLine:
     case FilterByTarget:
+    case FilterByVia:
 	return ConstraintWidget::create( type, FilterContains, QString(), this );
 
     case FilterByTransportLineNumber:
@@ -151,6 +153,8 @@ QString FilterWidget::filterName( FilterType filter ) const {
 	return i18n("Line number");
     case FilterByTarget:
         return i18n("Target");
+    case FilterByVia:
+	return i18n("Via");
     case FilterByDelay:
 	return i18n("Delay");
 
@@ -237,6 +241,7 @@ ConstraintWidget::ConstraintWidget( FilterType type,
 	connect( m_variantsCmb, SIGNAL(currentIndexChanged(int)),
 		 this, SLOT(variantChanged(int)) );
 	m_variantsCmb->setCurrentIndex( index );
+	m_constraint.variant = initialVariant;
         layout->addWidget( m_variantsCmb );
     } else
 	m_constraint.variant = FilterNoVariant;
@@ -354,6 +359,8 @@ QWidget* FilterWidget::createNewLabelWidget( int ) {
 			    static_cast<int>(FilterByTransportLineNumber) );
     cmbFilterType->addItem( filterName(FilterByTarget) + ":",
 			    static_cast<int>(FilterByTarget) );
+    cmbFilterType->addItem( filterName(FilterByVia) + ":",
+			    static_cast<int>(FilterByVia) );
     cmbFilterType->addItem( filterName(FilterByDelay) + ":",
 			    static_cast<int>(FilterByDelay) );
     return cmbFilterType;

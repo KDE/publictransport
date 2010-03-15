@@ -43,7 +43,7 @@
         <x>0</x>
         <y>0</y>
         <width>323</width>
-        <height>267</height>
+        <height>248</height>
        </rect>
       </property>
       <layout class="QFormLayout" name="formLayout_2">
@@ -65,6 +65,13 @@
        </item>
       </layout>
      </widget>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Stops are shared between all public transport applets.</string>
+     </property>
     </widget>
    </item>
   </layout>

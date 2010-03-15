@@ -208,6 +208,21 @@ void PublicTransport::configurationIsRequired( bool needsConfiguring,
 }
 
 PublicTransport::~PublicTransport() {
+    // Store column sizes and positions
+    QTreeView *treeView = m_treeView->nativeWidget();
+    int colDeparture = m_departureViewColumns.indexOf( DepartureColumn );
+    int colTarget = m_departureViewColumns.indexOf( TargetColumn );
+    int colLine = m_departureViewColumns.indexOf( LineStringColumn );
+    KConfigGroup cg = config();
+    cg.writeEntry( "colDepartureWidth", treeView->columnWidth(colDeparture) );
+    cg.writeEntry( "colTargetWidth", treeView->columnWidth(colTarget) );
+    cg.writeEntry( "colLineWidth", treeView->columnWidth(colLine) );
+    if ( treeView->header()->sectionsMoved() ) {
+	cg.writeEntry( "colDeparturePos", treeView->header()->visualIndex(colDeparture) );
+	cg.writeEntry( "colTargetPos", treeView->header()->visualIndex(colTarget) );
+	cg.writeEntry( "colLinePos", treeView->header()->visualIndex(colLine) );
+    }
+    
     for ( int row = 0; row < m_model->rowCount(); ++row )
 	removeAlarmForDeparture( row );
     
@@ -240,7 +255,18 @@ PublicTransport::~PublicTransport() {
 }
 
 void PublicTransport::init() {
-    m_settings = SettingsIO::readSettings( config() );
+    m_settings = SettingsIO::readSettings( config(), globalConfig() );
+
+    // Load stops/filters from non-global settings (they're stored in the global
+    // config since version 0.7 beta 4)
+    if ( m_settings.stopSettingsList.isEmpty() ) {
+	kDebug() << "No global stop settings, storing non-global stop settings globally.";
+	Settings newSettings = SettingsIO::readSettings( config(), config() );
+
+	// Store stops/filters into the global settings
+	SettingsIO::writeSettings( newSettings, m_settings, config(), globalConfig() );
+	m_settings = newSettings;
+    }
 
     if ( m_settings.stopSettingsList.isEmpty() ) {
 	// Applet is loaded without stored settings
@@ -424,7 +450,10 @@ QList< QAction* > PublicTransport::contextualActions() {
     actions << action("updateTimetable"); //<< action("showActionButtons")
     if ( m_currentServiceProviderFeatures.contains("JourneySearch") )
 	actions << action("searchJourneys");
-    actions << switchDepArr << switchStopAction( this );
+    if ( m_currentServiceProviderFeatures.contains("Arrivals") )
+	actions << switchDepArr;
+    if ( m_settings.stopSettingsList.count() > 1 )
+	actions << switchStopAction( this );
     if ( actionFilter )
 	actions << actionFilter;
     return actions;
@@ -533,8 +562,9 @@ void PublicTransport::reconnectSource() {
     disconnectSources();
     
     // Get a list of stops (or stop IDs if available) which results are currently shown
-    QStringList stops = m_settings.currentStopSettings().stops;
-    QStringList stopIDs = m_settings.currentStopSettings().stopIDs;
+    StopSettings curStopSettings = m_settings.currentStopSettings();
+    QStringList stops = curStopSettings.stops;
+    QStringList stopIDs = curStopSettings.stopIDs;
     if ( stopIDs.isEmpty() )
 	stopIDs = stops;
     
@@ -548,16 +578,15 @@ void PublicTransport::reconnectSource() {
 		.arg( stopValue ).arg( m_settings.maximalNumberOfDepartures )
 		.arg( m_settings.departureArrivalListType == ArrivalList
 		    ? "Arrivals" : "Departures" );
-	if ( m_settings.firstDepartureConfigMode == RelativeToCurrentTime ) {
+	if ( curStopSettings.firstDepartureConfigMode == RelativeToCurrentTime ) {
 	    currentSource += QString("|timeOffset=%1").arg(
-		    m_settings.timeOffsetOfFirstDeparture );
+		    curStopSettings.timeOffsetOfFirstDeparture );
 	} else {
 	    currentSource += QString("|time=%1").arg(
-		    m_settings.timeOfFirstDepartureCustom.toString("hh:mm") );
+		    curStopSettings.timeOfFirstDepartureCustom.toString("hh:mm") );
 	}
-	if ( !m_settings.currentStopSettings().city.isEmpty() )
-	    currentSource += QString("|city=%1").arg(
-		    m_settings.currentStopSettings().city );
+	if ( !curStopSettings.city.isEmpty() )
+	    currentSource += QString("|city=%1").arg( curStopSettings.city );
 	
 	m_stopIndexToSourceName[ i ] = currentSource;
 	sources << currentSource;
@@ -746,12 +775,13 @@ void PublicTransport::processDepartureList( const QString &sourceName,
 }
 
 bool PublicTransport::isTimeShown( const QDateTime& dateTime ) const {
-    QDateTime firstDepartureTime = m_settings.firstDepartureConfigMode == AtCustomTime
-	    ? QDateTime( QDate::currentDate(), m_settings.timeOfFirstDepartureCustom )
+    StopSettings curStopSettings = m_settings.currentStopSettings();
+    QDateTime firstDepartureTime = curStopSettings.firstDepartureConfigMode == AtCustomTime
+	    ? QDateTime( QDate::currentDate(), curStopSettings.timeOfFirstDepartureCustom )
 	    : QDateTime::currentDateTime();
     int secsToDepartureTime = firstDepartureTime.secsTo( dateTime );
-    if ( m_settings.firstDepartureConfigMode == RelativeToCurrentTime )
-	secsToDepartureTime -= m_settings.timeOffsetOfFirstDeparture * 60;
+    if ( curStopSettings.firstDepartureConfigMode == RelativeToCurrentTime )
+	secsToDepartureTime -= curStopSettings.timeOffsetOfFirstDeparture * 60;
     if ( -secsToDepartureTime / 3600 >= 23 )
 	secsToDepartureTime += 24 * 3600;
     return secsToDepartureTime > -60;
@@ -953,6 +983,8 @@ void PublicTransport::dataUpdated( const QString& sourceName,
 }
 
 void PublicTransport::geometryChanged() {
+    setHeightOfCourtesyLabel();
+    
     // Update column sizes
     QTreeView *treeView = m_treeView->nativeWidget();
     QHeaderView *header = treeView->header();
@@ -980,8 +1012,7 @@ void PublicTransport::geometryChanged() {
     // 	kDebug() << "new column width" << lineSectionSize << departureSectionSize << "total =" << (lineSectionSize + departureSectionSize) << "of" << treeView->header()->width();
 	} else {
 	    treeView->header()->setResizeMode( 1, QHeaderView::Interactive );
-	    if ( lineSectionSize + departureSectionSize > header->width() - 10 )
-	    {
+	    if ( lineSectionSize + departureSectionSize > header->width() - 10 ) {
 		float lineSectionSizeFactor = (float)lineSectionSize
 			/ (float)(lineSectionSize + departureSectionSize);
 		lineSectionSize = header->width() * lineSectionSizeFactor;
@@ -1187,6 +1218,7 @@ void PublicTransport::configChanged() {
     m_labelInfo->setFont( smallFont );
     m_listStopsSuggestions->setFont( font );
     m_journeySearch->setFont( font );
+    setHeightOfCourtesyLabel();
 
     int iconExtend = (testState(ShowingDepartureArrivalList) ? 16 : 32) * m_settings.sizeFactor;
     m_treeView->nativeWidget()->setIconSize( QSize(iconExtend, iconExtend) );
@@ -1404,7 +1436,6 @@ void PublicTransport::showActionButtons() {
     
     QGraphicsLinearLayout *layout = new QGraphicsLinearLayout( Qt::Vertical );
     layout->setContentsMargins( 15, 10, 15, 10 );
-    layout->setContentsMargins( 15, 10, 15, 10 );
     layout->addItem( spacer );
     if ( btnJourney ) {
 	layout->addItem( btnJourney );
@@ -1475,7 +1506,7 @@ void PublicTransport::setCurrentStopIndex( QAction* action ) {
     kDebug() << stopIndex;
     disconnectSources();
     m_settings.currentStopSettingsIndex = stopIndex;
-    SettingsIO::writeNoGuiSettings( m_settings, config() );
+    SettingsIO::writeNoGuiSettings( m_settings, config(), globalConfig() );
     clearDepartures();
     reconnectSource();
     configChanged();
@@ -1501,7 +1532,7 @@ void PublicTransport::switchFilterConfiguration( const QString& newFilterConfigu
     Settings oldSettings = m_settings;
     m_settings.stopSettingsList[ m_settings.currentStopSettingsIndex ]
 	    .filterConfiguration = SettingsUiManager::untranslateKey(newFilterConfiguration);
-    if ( SettingsIO::writeSettings(m_settings, oldSettings, config()) ) {
+    if ( SettingsIO::writeSettings(m_settings, oldSettings, config(), globalConfig()) ) {
 	configNeedsSaving();
 	emit settingsChanged();
     }
@@ -1510,7 +1541,7 @@ void PublicTransport::switchFilterConfiguration( const QString& newFilterConfigu
 void PublicTransport::setFiltersEnabled( bool enable ) {
     Settings oldSettings = m_settings;
     m_settings.filtersEnabled = enable;
-    if ( SettingsIO::writeSettings(m_settings, oldSettings, config()) ) {
+    if ( SettingsIO::writeSettings(m_settings, oldSettings, config(), globalConfig()) ) {
 	configNeedsSaving();
 	emit settingsChanged();
     }
@@ -1984,7 +2015,7 @@ void PublicTransport::journeySearchInputFinished() {
     while ( m_settings.recentJourneySearches.count() > MAX_RECENT_JOURNEY_SEARCHES )
 	m_settings.recentJourneySearches.takeLast();
     
-    SettingsIO::writeNoGuiSettings( m_settings, config() );
+    SettingsIO::writeNoGuiSettings( m_settings, config(), globalConfig() );
     
     QString stop;
     QDateTime departure;
@@ -2110,7 +2141,7 @@ void PublicTransport::useCurrentPlasmaTheme() {
 QGraphicsWidget* PublicTransport::graphicsWidget() {
     if ( !m_graphicsWidget ) {
 	m_graphicsWidget = new QGraphicsWidget( this );
-        m_graphicsWidget->setMinimumSize( 250, 150 );
+        m_graphicsWidget->setMinimumSize( 150, 150 );
         m_graphicsWidget->setPreferredSize( 400, 300 );
 	
 	// Create a child graphics widget, eg. to apply a blur effect to it
@@ -2151,6 +2182,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	QLabel *labelInfo = m_labelInfo->nativeWidget();
 	labelInfo->setOpenExternalLinks( true );
 	labelInfo->setWordWrap( true );
+	setHeightOfCourtesyLabel();
 
 	m_btnLastJourneySearches = new Plasma::ToolButton;
 	m_btnLastJourneySearches->setIcon( KIcon("document-open-recent") );
@@ -2237,7 +2269,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	connect( treeView, SIGNAL(customContextMenuRequested(const QPoint &)),
 		 this, SLOT(showDepartureContextMenu(const QPoint &)) );
 	connect( treeView->header(), SIGNAL(customContextMenuRequested(const QPoint &)),
-		this, SLOT(showHeaderContextMenu(const QPoint &)) );
+		 this, SLOT(showHeaderContextMenu(const QPoint &)) );
 
 	if ( KGlobalSettings::singleClick() ) {
 	    connect( treeView, SIGNAL(clicked(const QModelIndex &)),
@@ -2252,7 +2284,40 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	m_treeView->setModel( m_model );
 	treeView->header()->setStretchLastSection( false );
 	treeView->header()->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-	treeView->header()->resizeSection( 0, 60 );
+
+	// Read column sizes and positions from config
+	KConfigGroup cg = config();
+	if ( cg.hasKey("colLineWidth") ) {
+	    QTreeView *treeView = m_treeView->nativeWidget();
+	    int colDeparture = m_departureViewColumns.indexOf( DepartureColumn );
+	    int colTarget = m_departureViewColumns.indexOf( TargetColumn );
+	    int colLine = m_departureViewColumns.indexOf( LineStringColumn );
+
+	    // Restore column sizes
+	    int colDepartureWidth = cg.readEntry( "colDepartureWidth", -1 );
+	    int colTargetWidth = cg.readEntry( "colTargetWidth", -1 );
+	    int colLineWidth = cg.readEntry( "colLineWidth", 60 );
+	    if ( colDepartureWidth != -1 )
+		treeView->header()->resizeSection( colDeparture, colDepartureWidth );
+	    if ( colTargetWidth != -1 )
+		treeView->header()->resizeSection( colTarget, colTargetWidth );
+	    treeView->header()->resizeSection( colLine, colLineWidth );
+
+	    // Restore column positions
+	    int colDeparturePos = cg.readEntry( "colDeparturePos", colDeparture );
+	    int colTargetPos = cg.readEntry( "colTargetPos", colTarget );
+	    int colLinePos = cg.readEntry( "colLinePos", colLine );
+	    treeView->header()->moveSection(
+		    treeView->header()->visualIndex(colDeparture), colDeparturePos );
+	    treeView->header()->moveSection(
+		    treeView->header()->visualIndex(colTarget), colTargetPos );
+	    treeView->header()->moveSection(
+		    treeView->header()->visualIndex(colLine), colLinePos );
+	    
+	    geometryChanged();
+	} else {
+	    treeView->header()->resizeSection( 0, 60 );
+	}
 	connect ( treeView->header(), SIGNAL(sectionResized(int,int,int)),
 		  this, SLOT(treeViewSectionResized(int,int,int)) );
 
@@ -2276,6 +2341,21 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
     }
 
     return m_graphicsWidget;
+}
+
+void PublicTransport::setHeightOfCourtesyLabel() {
+    m_labelInfo->setText( infoText() );
+//     QFontMetrics fm( m_labelInfo->font() );
+//     
+//     QRegExp rx( "<\\/?[^>]+>" );
+//     rx.setMinimal( true );
+//     int width = fm.width( infoText().remove(rx) );
+// 
+//     kDebug() << width << "/" << graphicsWidget()->size().width();
+//     int height = fm.height() +
+// 	    (qCeil(width / graphicsWidget()->size().width()) - 1) * fm.lineSpacing();
+//     m_labelInfo->nativeWidget()->setFixedHeight( height );
+//     kDebug() << "SET HEIGHT TO" << height;
 }
 
 void PublicTransport::infoLabelLinkActivated( const QString& link ) {
@@ -2361,8 +2441,8 @@ void PublicTransport::createConfigurationInterface( KConfigDialog* parent ) {
 
 void PublicTransport::writeSettings( const Settings& settings ) {
     SettingsIO::ChangedFlags changed =
-	    SettingsIO::writeSettings( settings, m_settings, config() );
-
+	    SettingsIO::writeSettings( settings, m_settings, config(), globalConfig() );
+    
     if ( changed.testFlag(SettingsIO::IsChanged) ) {
 	m_settings = settings;
 	m_currentServiceProviderFeatures =
@@ -2586,7 +2666,7 @@ void PublicTransport::recentJourneyActionTriggered( QAction* action ) {
 	// Clear recent journey list
 	m_settings.recentJourneySearches.clear();
 	m_btnLastJourneySearches->setEnabled( false );
-	SettingsIO::writeNoGuiSettings( m_settings, config() );
+	SettingsIO::writeNoGuiSettings( m_settings, config(), globalConfig() );
     } else
 	m_journeySearch->setText( action->text() );
 
@@ -2759,27 +2839,38 @@ void PublicTransport::removeState( AppletState state ) {
 void PublicTransport::hideHeader( bool ) {
     QTreeView *treeView = m_treeView->nativeWidget();
     treeView->header()->setVisible( false );
-    m_settings.showHeader = false;
+    
+    Settings settings = m_settings;
+    settings.showHeader = false;
+    writeSettings( settings );
 }
 
 void PublicTransport::showHeader( bool ) {
     QTreeView *treeView = m_treeView->nativeWidget();
     treeView->header()->setVisible( true );
-    m_settings.showHeader = true;
+    
+    Settings settings = m_settings;
+    settings.showHeader = true;
+    writeSettings( settings );
 }
 
 void PublicTransport::hideColumnTarget( bool ) {
     QTreeView *treeView = m_treeView->nativeWidget();
     treeView->hideColumn( 1 );
     treeView->header()->setStretchLastSection( true );
-    m_settings.hideColumnTarget = true;
+
+    Settings settings = m_settings;
+    settings.hideColumnTarget = true;
+    writeSettings( settings );
 }
 
 void PublicTransport::showColumnTarget( bool ) {
     QTreeView *treeView = m_treeView->nativeWidget();
     treeView->showColumn( 1 );
-
-    m_settings.hideColumnTarget = false;
+    
+    Settings settings = m_settings;
+    settings.hideColumnTarget = false;
+    writeSettings( settings );
     geometryChanged();
 }
 
@@ -3120,7 +3211,7 @@ void PublicTransport::setAlarmForDeparture( const QPersistentModelIndex &modelIn
     if ( !alarmTimer ) {
 	QDateTime predictedDeparture = itemDeparture->data( SortRole ).toDateTime();
 	int secsTo = QDateTime::currentDateTime().secsTo(
-		predictedDeparture.addSecs(-m_settings.alarmTime * 60) );
+		predictedDeparture.addSecs(-m_settings.currentStopSettings().alarmTime * 60) );
 	if ( secsTo < 0 )
 	    secsTo = 0;
 	alarmTimer = new AlarmTimer( secsTo * 1000, modelIndex );
@@ -3220,7 +3311,7 @@ QString PublicTransport::titleText() const {
 	return QString("%1").arg( sStops );
 }
 
-QString PublicTransport::infoText() const {
+QString PublicTransport::infoText() {
     QVariantHash data = currentServiceProviderData();
     QString shortUrl = data[ "shortUrl" ].toString();
     QString url = data[ "url" ].toString();
@@ -3228,8 +3319,24 @@ QString PublicTransport::infoText() const {
     if ( sLastUpdate.isEmpty() )
 	sLastUpdate = i18nc("This is used as 'last data update' text when there "
 			    "hasn't been any updates yet.", "none");
-    return QString("<nobr>%4: %1, %5: <a href='%2'>%3</a></nobr>")
-	.arg( sLastUpdate, url, shortUrl, i18n("last update"), i18n("data by") );
+
+    // HACK: This breaks the text at one position if needed
+    // Plasma::Label doesn't work well will HTML formatted text and word wrap: 
+    // It sets the height as if the label shows the HTML source.
+    QString textNoHtml1 = QString("%1: %2").arg( i18n("last update"), sLastUpdate );
+    QString textNoHtml2 = QString("%1: %2").arg( i18n("data by"), shortUrl );
+    QFontMetrics fm( m_labelInfo->font() );
+    int width1 = fm.width( textNoHtml1 );
+    int width2 = fm.width( textNoHtml2 );
+    int width = width1 + fm.width( ", " ) + width2;
+    if ( width > m_graphicsWidget->size().width() ) {
+	m_graphicsWidget->setMinimumWidth( qMax(150, qMax(width1, width2)) );
+	return QString("<nobr>%1: %2<br>%3: <a href='%4'>%5</a><nobr>")
+	    .arg( i18n("last update"), sLastUpdate, i18n("data by"), url, shortUrl );
+    } else {
+	return QString("<nobr>%1: %2, %3: <a href='%4'>%5</a><nobr>")
+	    .arg( i18n("last update"), sLastUpdate, i18n("data by"), url, shortUrl );
+    }
 }
 
 QString PublicTransport::courtesyToolTip() const {

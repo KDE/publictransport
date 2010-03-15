@@ -26,6 +26,13 @@
 
 #include <qnamespace.h>
 #include <KIcon>
+#include <QTime>
+
+/** Different config modes for the time of the first departure. */
+enum FirstDepartureConfigMode {
+    RelativeToCurrentTime = 0, /**< Uses the current date and time and adds an offset. */
+    AtCustomTime = 1 /**< Uses a custom time, but the current date. */
+};
 
 struct StopSettings {
     QString city; /**< The currently selected city */
@@ -36,7 +43,15 @@ struct StopSettings {
     QString location; /**< The current location code (country code or 'showAll', 
 			 * 'international', 'unknown') */
     QString filterConfiguration; /**< The filter configuration to be used for the stop */
-
+    
+    int alarmTime; /**< The time in minutes before the departure at which the
+		      * alarm should be fired. */
+    FirstDepartureConfigMode firstDepartureConfigMode; /**< The config mode for
+			    * the time of the first departure. */
+    int timeOffsetOfFirstDeparture; /**< The offset in minutes from the current
+			    * time until the first departure. */
+    QTime timeOfFirstDepartureCustom; /**< A custom time for the first departure. */
+    
     StopSettings();
 
     QString stopOrStopId( int index ) {
@@ -52,7 +67,11 @@ struct StopSettings {
 	return city == other.city && stops == other.stops && stopIDs == other.stopIDs
 	    && serviceProviderID == other.serviceProviderID
 	    && location == other.location
-	    && filterConfiguration == other.filterConfiguration;
+	    && filterConfiguration == other.filterConfiguration
+	    && alarmTime == other.alarmTime
+	    && firstDepartureConfigMode == other.firstDepartureConfigMode
+	    && timeOffsetOfFirstDeparture == other.timeOffsetOfFirstDeparture
+	    && timeOfFirstDepartureCustom == other.timeOfFirstDepartureCustom;
     };
 };
 typedef QList<StopSettings> StopSettingsList;
@@ -216,18 +235,22 @@ enum LineService {
     ExpressLine = 2 /**< The public transport line is an express line */
 };
 
+/** Types of filters. */
 enum FilterType {
-    InvalidFilter = -1,
+    InvalidFilter = -1, /**< An invalid filter. */
     
-    FilterByVehicleType = 0,
-    FilterByTransportLine = 1,
-    FilterByTransportLineNumber = 2,
-    FilterByTarget = 3,
-    FilterByDelay = 4
+    FilterByVehicleType = 0, /**< Filter by vehicle type. */
+    FilterByTransportLine = 1, /**< Filter by transport line string. */
+    FilterByTransportLineNumber = 2, /**< Filter by transport line number. */
+    FilterByTarget = 3, /**< Filter by target/origin. */
+    FilterByDelay = 4, /**< Filter by delay. */
+    FilterByVia = 5 /**< Filter by intermediate stops. */
 };
 
+/** Variants of filters. */
 enum FilterVariant {
-    FilterNoVariant = 0,
+    FilterNoVariant = 0, /**< Used for parameters, eg. as initial variant to use
+			* the first available filter variant. */
     
     FilterContains = 1,
     FilterDoesntContain = 2,
@@ -255,12 +278,6 @@ enum DelayType {
     DelayUnknown = 0, /**< No information about delay available */
     OnSchedule = 1, /**< Vehicle will depart / arrive on schedule */
     Delayed = 2 /**< Vehicle will depart / arrive with delay */
-};
-
-/** Different config modes for the time of the first departure. */
-enum FirstDepartureConfigMode {
-    RelativeToCurrentTime = 0, /**< Uses the current date and time and adds an offset. */
-    AtCustomTime = 1 /**< Uses a custom time, but the current date. */
 };
 
 /** @class Global

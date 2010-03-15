@@ -142,17 +142,18 @@ class SettingsIO {
 	};
 	Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag );
 	
-	static Settings readSettings( KConfigGroup cg );
+	static Settings readSettings( KConfigGroup cg, KConfigGroup cgGlobal );
 	static ChangedFlags writeSettings( const Settings &settings,
-				   const Settings &oldSettings, KConfigGroup cg );
-	static void writeNoGuiSettings( const Settings &settings, KConfigGroup cg );
+		const Settings &oldSettings, KConfigGroup cg, KConfigGroup cgGlobal );
+	static void writeNoGuiSettings( const Settings &settings,
+					KConfigGroup cg, KConfigGroup cgGlobal );
 	
-	static FilterSettings readFilterConfig( const KConfigGroup &cg );
+	static FilterSettings readFilterConfig( const KConfigGroup &cgGlobal );
 	static bool writeFilterConfig( const FilterSettings &filterSettings,
 				       const FilterSettings &oldFilterSettings,
-				       KConfigGroup cg );
+				       KConfigGroup cgGlobal );
 	static void writeFilterConfig( const FilterSettings &filterSettings,
-				       KConfigGroup cg );
+				       KConfigGroup cgGlobal );
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( SettingsIO::ChangedFlags );
 
@@ -170,27 +171,22 @@ struct Settings {
     int size; /**< The size of the timetable. @note Use @ref sizeFactor to size items. */
     float sizeFactor; /**< A factor to use for item sizes, calculated like this:
 			    * (size + 3) * 0.2. */
-    int timeOffsetOfFirstDeparture; /**< The offset in minutes from the current
-			    * time until the first departure. */
-    QTime timeOfFirstDepartureCustom; /**< A custom time for the first departure. */
-    FirstDepartureConfigMode firstDepartureConfigMode; /**< The config mode for 
-			    * the time of the first departure. */
     int maximalNumberOfDepartures; /**< The maximal number of displayed departures. */
-    int alarmTime; /**< The time in minutes before the departure at which the 
-			    * alarm should be fired. */
     DepartureArrivalListType departureArrivalListType;
-    bool showHeader;
-    bool hideColumnTarget;
+    bool showHeader; /** Whether or not the header of the departure view should 
+		       * be shown. */
+    bool hideColumnTarget; /** Whether or not the target/origin column should be 
+			     * shown in the departure view. */
     bool useDefaultFont; /**< Whether or not the default plasma theme's font is used. */
     QFont font; /**< The font to be used. */
-    bool displayTimeBold;
+    bool displayTimeBold; /** Whether or not the time should be displayed bold. */
     
-    StopSettingsList stopSettingsList;
+    StopSettingsList stopSettingsList; /** A list of all stop settings. */
     StopSettings currentStopSettings() const {
 	    return stopSettingsList[ currentStopSettingsIndex ]; };
 
-    bool filtersEnabled;
-    QHash< QString, FilterSettings > filterSettings;
+    bool filtersEnabled; /** Whether or not filters are enabled. */
+    QHash< QString, FilterSettings > filterSettings; /** A list of all filter settings. */
     FilterSettings currentFilterSettings() const {
 	    return filterSettings[ currentStopSettings().filterConfiguration ]; };
 

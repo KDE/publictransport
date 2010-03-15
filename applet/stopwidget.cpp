@@ -39,7 +39,7 @@ StopWidget::StopWidget( const StopSettings& stopSettings,
 			: QWidget( parent ), m_newlyAdded(stopSettings.stops.isEmpty()),
 			m_stopSettings( stopSettings ),
 			m_filterConfigurations(filterConfigurations),
-			m_stop(0), m_provider(0), m_filterConfiguration(0),
+			m_stop(0), m_provider(0), //m_filterConfiguration(0),
 			m_modelLocations( modelLocations ),
 			m_modelServiceProviders( modelServiceProviders ),
 			m_publicTransportEngine( publicTransportEngine ),
@@ -48,17 +48,17 @@ StopWidget::StopWidget( const StopSettings& stopSettings,
     QFormLayout *infoLayout = new QFormLayout;
     m_stop = new QLabel( this );
     m_provider = new QLabel( this );
-    m_filterConfiguration = new QLabel( this );
+//     m_filterConfiguration = new QLabel( this );
 
     m_stop->setWordWrap( true );
     m_provider->setWordWrap( true );
-    m_filterConfiguration->setWordWrap( true );
+//     m_filterConfiguration->setWordWrap( true );
     m_stop->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
 
     infoLayout->addRow( stopSettings.stops.count() > 1 ? i18n("Stops:")
                         : i18n("Stop:"), m_stop );
     infoLayout->addRow( i18n("Service Provider:"), m_provider );
-    infoLayout->addRow( i18n("Filter Configuration:"), m_filterConfiguration );
+//     infoLayout->addRow( i18n("Filter Configuration:"), m_filterConfiguration );
 
     KPushButton *change = new KPushButton( KIcon("configure"),
                                            i18n("&Change..."), this );
@@ -66,7 +66,6 @@ StopWidget::StopWidget( const StopSettings& stopSettings,
 
     QHBoxLayout *mainLayout = new QHBoxLayout( this );
     mainLayout->addLayout( infoLayout );
-//     mainLayout->addSpacerItem( new QSpacerItem(0, 0, QSizePolicy::Expanding) );
     mainLayout->addWidget( change );
 }
 
@@ -87,8 +86,8 @@ void StopWidget::setStopSettings( const StopSettings& stopSettings ) {
     } else
         m_provider->setText( indices.first().data().toString() );
 
-    m_filterConfiguration->setText( SettingsUiManager::translateKey(
-				stopSettings.filterConfiguration) );
+//     m_filterConfiguration->setText( SettingsUiManager::translateKey(
+// 				stopSettings.filterConfiguration) );
 
     m_stopSettings = stopSettings;
     m_newlyAdded = false;

@@ -267,6 +267,16 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings ) {
 		m_uiStop.city->setCurrentItem( QString() );
 	}
     }
+
+    m_uiStopDetails.timeOfFirstDeparture->setValue(
+	    stopSettings.timeOffsetOfFirstDeparture );
+    m_uiStopDetails.timeOfFirstDepartureCustom->setTime(
+	    stopSettings.timeOfFirstDepartureCustom );
+    m_uiStopDetails.firstDepartureUseCurrentTime->setChecked(
+	    stopSettings.firstDepartureConfigMode == RelativeToCurrentTime );
+    m_uiStopDetails.firstDepartureUseCustomTime->setChecked(
+	    stopSettings.firstDepartureConfigMode == AtCustomTime );
+    m_uiStopDetails.alarmTime->setValue( stopSettings.alarmTime );
 }
 
 StopSettings StopSettingsDialog::stopSettings() const {
@@ -298,6 +308,14 @@ StopSettings StopSettingsDialog::stopSettings() const {
 	else
 	    stopSettings.stopIDs << stop;
     }
+    
+    stopSettings.timeOffsetOfFirstDeparture = m_uiStopDetails.timeOfFirstDeparture->value();
+    stopSettings.timeOfFirstDepartureCustom = m_uiStopDetails.timeOfFirstDepartureCustom->time();
+    stopSettings.firstDepartureConfigMode =
+	    m_uiStopDetails.firstDepartureUseCurrentTime->isChecked()
+	    ? RelativeToCurrentTime : AtCustomTime;
+    stopSettings.alarmTime = m_uiStopDetails.alarmTime->value();
+    
     return stopSettings;
 }
 
@@ -690,9 +708,9 @@ void StopSettingsDialog::downloadServiceProvidersClicked(  ) {
 
     delete dialog;
 #else
-    KNS::Engine engine(m_configDialog);
+    KNS::Engine engine( this );
     if (engine.init("publictransport2.knsrc")) {
-	KNS::Entry::List entries = engine.downloadDialogModal(m_configDialog);
+	KNS::Entry::List entries = engine.downloadDialogModal( this );
 
 	kDebug() << entries.count();
 	if (entries.size() > 0) {

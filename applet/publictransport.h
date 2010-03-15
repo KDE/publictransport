@@ -203,7 +203,7 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	/** Gets the text to be displayed on right of the treeview as additional
 	* information (html-tags allowed). Contains courtesy information. */
-	QString infoText() const;
+	QString infoText();
 
 	QString courtesyToolTip() const;
 
@@ -462,6 +462,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	int updateOrCreateItem( bool remove, QStandardItem *parentItem,
 		QStandardItem *item, int row, const DepartureInfo &departureInfo,
 		ItemInformation itemInfo );
+
+	void setHeightOfCourtesyLabel();
 	
 				 
 	AppletStates m_appletStates; /**< The current states of this applet */
@@ -498,8 +500,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	QColor m_colorSubItemLabels; /**< The color to be used for sub item labels ("Delay:", "Platform:", ...) */
 	QUrl m_urlDeparturesArrivals, m_urlJourneys; /**< Urls to set as associated application urls, when switching from/to journey mode. */
 
-	Settings m_settings; // TODO RENAME TO m_settings, and remove the other one
-// 	PublicTransportSettings *m_settings;
+	Settings m_settings;
 	QStringList m_currentServiceProviderFeatures;
 	bool m_stopNameValid; /**< Wheather or not the current stop name (m_stop) is valid */
 	

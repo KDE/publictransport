@@ -67,7 +67,7 @@ class StopWidget : public QWidget {
 	bool m_newlyAdded;
 	StopSettings m_stopSettings;
 	QStringList m_filterConfigurations;
-	QLabel *m_stop, *m_provider, *m_filterConfiguration;
+	QLabel *m_stop, *m_provider; //, *m_filterConfiguration;
 	QStandardItemModel *m_modelLocations; // Model of locations
 	QStandardItemModel *m_modelServiceProviders; // Model of service providers
 	Plasma::DataEngine *m_publicTransportEngine;

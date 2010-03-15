@@ -78,8 +78,6 @@ class ConstraintWidget : public QWidget {
 
 	Constraint m_constraint;
 	KComboBox *m_variantsCmb;
-// 	QWidget *m_containerWidget;
-// 	QWidgetList m_widgets;
 };
 
 class ConstraintListWidget : public ConstraintWidget {
