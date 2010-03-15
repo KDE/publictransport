@@ -9,6 +9,7 @@ Name[uk]=Рушій даних OpenStreetMap
 Name[x-test]=xxOpenStreetMap data enginexx
 Comment=The OpenStreetMap data engine can be used to query things near the user.
 Comment[en_GB]=The OpenStreetMap data engine can be used to query things near the user.
+Comment[es]=Motor de datos de OpenStreetMap para buscar cosas cercanas al usuario.
 Comment[pt]=O motor de dados do OpenStreetMap pode ser usado para consultar as coisas próximas do utilizador.
 Comment[pt_BR]=O mecanismo de dados OpenStreetMap pode ser usado para consultar coisas próximas ao usuário.
 Comment[sv]=OpenStreetMap-datagränssnittet kan användas för att fråga om saker i användarens närhet.
