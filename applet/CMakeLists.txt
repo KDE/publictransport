@@ -23,6 +23,7 @@ set( publictransport_SRCS
     filterwidget.cpp
     stopsettingsdialog.cpp
     checkcombobox.cpp
+    categorycombobox.cpp
     datasourcetester.cpp
     alarmtimer.cpp
     htmldelegate.cpp

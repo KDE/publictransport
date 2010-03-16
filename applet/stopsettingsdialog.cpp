@@ -48,6 +48,9 @@
     #include <QPropertyAnimation>
     #include <QGraphicsEffect>
 #endif
+#include <KCategorizedSortFilterProxyModel>
+#include <KCategorizedView>
+#include <KCategoryDrawer>
 
 
 class NearStopsDialog : public KDialog {
@@ -141,10 +144,13 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     setDetailsWidget( detailsWidget );
     
     // Create model that filters service providers for the current location
-    m_modelLocationServiceProviders = new QSortFilterProxyModel( this );
+    KCategorizedSortFilterProxyModel *modelCategorized =
+	    new KCategorizedSortFilterProxyModel( this );
+    modelCategorized->setCategorizedModel( true );
+    m_modelLocationServiceProviders = modelCategorized;
     m_modelLocationServiceProviders->setSourceModel( modelServiceProviders );
     m_modelLocationServiceProviders->setFilterRole( LocationCodeRole );
-
+    
     // Create stop list widget
     m_stopList = new DynamicLabeledLineEditList( 
 	    DynamicLabeledLineEditList::RemoveButtonsBesideWidgets,
@@ -169,11 +175,9 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     l->setContentsMargins( 0, 0, 0, 0 );
     l->addWidget( m_stopList );
 
-//     m_uiStop.geolocate->setIcon( KIcon("tools-wizard") );
     m_uiStop.btnServiceProviderInfo->setIcon( KIcon("help-about") );
     m_uiStop.btnServiceProviderInfo->setText( QString() );
 
-//     m_uiStopDetails.filterConfiguration->addItem( i18n("(none)"), "none" );
     m_uiStopDetails.filterConfiguration->addItems( filterConfigurations );
 
     QMenu *menu = new QMenu( this );
@@ -184,7 +188,20 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
 		     this, SLOT(installServiceProviderClicked()) );
     m_uiStopDetails.downloadServiceProviders->setMenu( menu );
     m_uiStopDetails.downloadServiceProviders->setIcon( KIcon("list-add") );
+    
+    KCategorizedView *serviceProviderView = new KCategorizedView( this );
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
+    KCategoryDrawerV2 *categoryDrawer = new KCategoryDrawerV2( this );
+    serviceProviderView->setCategorySpacing( 10 );
+#else
+    categoryDrawer = new KCategoryDrawer();
+#endif
+    serviceProviderView->setWordWrap( true );
+    serviceProviderView->setCategoryDrawer( categoryDrawer );
+    serviceProviderView->setSelectionMode( QAbstractItemView::SingleSelection );
+    serviceProviderView->setVerticalScrollMode( QAbstractItemView::ScrollPerPixel ); // If ScrollPerItem is used the view can't be scrolled in QListView::ListMode.
 
+    m_uiStop.serviceProvider->setView( serviceProviderView );
     m_uiStop.serviceProvider->setModel( m_modelLocationServiceProviders );
     m_uiStop.location->setModel( m_modelLocations );
 
@@ -193,16 +210,8 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     m_htmlDelegate->setAlignText( true );
     m_uiStop.serviceProvider->setItemDelegate( m_htmlDelegate );
     m_uiStop.location->setItemDelegate( m_htmlDelegate );
-    
-    // Set colors for html delegate
-    QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
-    QPalette p = m_uiStop.location->palette();
-    p.setColor( QPalette::Foreground, textColor );
-    m_uiStop.location->setPalette( p );
-    m_uiStop.serviceProvider->setPalette( p );
-    
+
     connect( this, SIGNAL(user1Clicked()), this, SLOT(geolocateClicked()) );
-//     connect( m_uiStop.geolocate, SIGNAL(clicked()), this, SLOT(gelocateClicked()) );
     connect( m_uiStop.location, SIGNAL(currentIndexChanged(const QString&)),
 	     this, SLOT(locationChanged(const QString&)) );
     connect( m_uiStop.serviceProvider, SIGNAL(currentIndexChanged(int)),
@@ -221,6 +230,10 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
 StopSettingsDialog::~StopSettingsDialog() {
     delete m_modelLocationServiceProviders;
     delete m_htmlDelegate;
+    
+#if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
+    delete categoryDrawer;
+#endif
 }
 
 void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings ) {

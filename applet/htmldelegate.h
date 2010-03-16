@@ -29,17 +29,16 @@ class QTextLayout;
 
 /** @class HtmlDelegate
 * @brief A delegate than can display html formatted text. */
-class HtmlDelegate : public QItemDelegate
-{
+class HtmlDelegate : public QItemDelegate {
     public:
 	enum DataRole {
 	    FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text. The text of an item should not contain html tags, if used in a combo box. */
 	    TextBackgroundRole = Qt::UserRole + 501,
 	    DecorationPositionRole = Qt::UserRole + 502,
-	    GroupTitleRole = Qt::UserRole + 503,
+// 	    GroupTitleRole = Qt::UserRole + 503,
 	    LinesPerRowRole = Qt::UserRole + 504, /**< Used to change the number of lines for a row. */
 	    IconSizeRole = Qt::UserRole + 505, /**< Used to set a specific icon size for an element. */
-	    DrawBabkgroundGradientRole = Qt::UserRole + 506 /**< Used to draw a border at the bottom for an element. */
+	    DrawBackgroundGradientRole = Qt::UserRole + 506 /**< Used to draw a border at the bottom for an element. */
 	};
 
 	/** Position of the decoration. */
@@ -48,11 +47,23 @@ class HtmlDelegate : public QItemDelegate
 	    Right /**< Show the decoration on the right. */
 	};
 
-	HtmlDelegate();
+	enum Option {
+	    NoOption = 0x0000,
+	    DrawShadows = 0x0001,
+	    DontDrawBackground = 0x0002
+	};
+	Q_DECLARE_FLAGS( Options, Option );
 
-	virtual QSize sizeHint ( const QStyleOptionViewItem& option, const QModelIndex& index ) const;
+	HtmlDelegate( Options options = NoOption );
+
+	virtual QSize sizeHint ( const QStyleOptionViewItem& option,
+				 const QModelIndex& index ) const;
+				 
 	bool alignText() const { return m_alignText; };
 	void setAlignText( bool alignText ) { m_alignText = alignText; };
+
+	Options options() const { return m_options; };
+	void setOptions( Options options ) { m_options = options; };
 
     protected:
 	virtual void paint( QPainter* painter, const QStyleOptionViewItem& option,
@@ -60,14 +71,23 @@ class HtmlDelegate : public QItemDelegate
 
 	virtual void drawDecoration( QPainter* painter, const QStyleOptionViewItem& option,
 				     const QRect& rect, const QPixmap& pixmap ) const;
-	virtual void drawDisplayWithShadow( QPainter* painter,
+	virtual void drawDisplay( QPainter* painter,
 					    const QStyleOptionViewItem& option,
-					    const QRect& rect, const QString& text,
-					    bool bigContrastShadow = false ) const;
-
+					    const QRect& rect, const QString& text ) const;
 
     private:
 	bool m_alignText;
+	Options m_options;
+};
+Q_DECLARE_OPERATORS_FOR_FLAGS( HtmlDelegate::Options );
+
+class PublicTransportDelegate : public HtmlDelegate {
+    public:
+	PublicTransportDelegate();
+	
+    protected:
+	virtual void paint( QPainter* painter, const QStyleOptionViewItem& option,
+			    const QModelIndex& index ) const;
 };
 
 #endif // HTMLDELEGATE_HEADER

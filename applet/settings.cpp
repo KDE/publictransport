@@ -27,6 +27,7 @@
 #include <QTimer>
 #include <QLayout>
 #include <QGraphicsLayout>
+#include <QSignalMapper>
 #if QT_VERSION >= 0x040600
     #include <QParallelAnimationGroup>
     #include <QPropertyAnimation>
@@ -41,6 +42,7 @@
 #include <KStandardDirs>
 #include <KMessageBox>
 #include <KLineEdit>
+#include <KCategorizedSortFilterProxyModel>
 
 // Own includes
 #include "settings.h"
@@ -48,7 +50,6 @@
 #include "filterwidget.h"
 #include "stopwidget.h"
 // #include "datasourcetester.h"
-#include <QSignalMapper>
 
 
 SettingsUiManager::SettingsUiManager( const Settings &settings,
@@ -391,28 +392,19 @@ void SettingsUiManager::initModels() {
 	countries << serviceProviderData["country"].toString();
     }
 
-    QString highlightTextColor;
-    QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
-    if ( qGray(textColor.rgb()) > 192 )
-	highlightTextColor = "red";
-    else
-	highlightTextColor = "darkred";
-
     // Create location items
     foreach( QString country, uniqueCountries ) {
 	QStandardItem *item;
-	QString text, sortText, cssTitle;
+	QString text, sortText;
 	item = new QStandardItem;
 
 	if ( country.compare("international", Qt::CaseInsensitive)  == 0 ) {
 	    text = i18n("International");
 	    sortText = "00000" + text;
-	    cssTitle = QString("color: %1;").arg(highlightTextColor);
 	    item->setIcon( Global::internationalIcon() );
 	} else if ( country.compare("unknown", Qt::CaseInsensitive)  == 0 ) {
 	    text = i18n("Unknown");
 	    sortText = "00000" + text;
-	    cssTitle = "color: darkgray;";
 	    item->setIcon( KIcon("dialog-warning") );
 	} else {
 	    if ( KGlobal::locale()->allCountriesList().contains( country ) )
@@ -423,12 +415,11 @@ void SettingsUiManager::initModels() {
 	    item->setIcon( Global::putIconIntoBiggerSizeIcon(KIcon(country), QSize(32, 23)) );
 	}
 
-	QString formattedText = QString( "<span style='%4'><b>%1</b></span> "
+	QString formattedText = QString( "<span><b>%1</b></span> "
 					 "<small>(<b>%2</b>)<br-wrap>%3</small>" )
 		.arg( text )
 		.arg( i18np("%1 accessor", "%1 accessors", countries.count(country)) )
-		.arg( m_locationData[country].toHash()["description"].toString() )
-		.arg( cssTitle );
+		.arg( m_locationData[country].toHash()["description"].toString() );
 
 	item->setText( text );
 	item->setData( country, LocationCodeRole );
@@ -445,11 +436,10 @@ void SettingsUiManager::initModels() {
     QString sShowAll = i18n("Show all available service providers");
     QStandardItem *itemShowAll = new QStandardItem();
     itemShowAll->setData( "000000", SortRole );
-    QString formattedText = QString( "<span style='color:%3;'><b>%1</b></span>"
+    QString formattedText = QString( "<span><b>%1</b></span>"
 				     "<br-wrap><small><b>%2</b></small>" )
 	.arg( sShowAll )
-	.arg( i18n("Total: ") + i18np("%1 accessor", "%1 accessors", countries.count()) )
-	.arg( highlightTextColor );
+	.arg( i18n("Total: ") + i18np("%1 accessor", "%1 accessors", countries.count()) );
     itemShowAll->setData( "showAll", LocationCodeRole );
     itemShowAll->setData( formattedText, HtmlDelegate::FormattedTextRole );
     itemShowAll->setText( sShowAll );
@@ -469,15 +459,15 @@ void SettingsUiManager::initModels() {
 	}
 	QStandardItem *itemErrors = new QStandardItem();
 	itemErrors->setData( "ZZZZZ", SortRole ); // Sort to the end
-	formattedText = QString( "<span style='color:%3;'><b>%1</b></span><br-wrap><small>%2</small>" )
+	formattedText = QString( "<span><b>%1</b></span><br-wrap><small>%2</small>" )
 	    .arg( i18np("%1 accessor is errornous:", "%1 accessors are errornous:",
 			errornousAccessorNames.count()) )
-	    .arg( errorLines.join(",<br-wrap>") )
-	    .arg( highlightTextColor );
+	    .arg( errorLines.join(",<br-wrap>") );
 	itemErrors->setData( formattedText, HtmlDelegate::FormattedTextRole );
 	itemErrors->setData( QStringList() << "raised" << "drawFrameForWholeRow",
 			     HtmlDelegate::TextBackgroundRole );
-	itemErrors->setData( 1 + errornousAccessorNames.count(), HtmlDelegate::LinesPerRowRole );
+	itemErrors->setData( 1 + errornousAccessorNames.count(),
+			     HtmlDelegate::LinesPerRowRole );
 	itemErrors->setSelectable( false );
 	itemErrors->setIcon( KIcon("edit-delete") );
 	m_modelLocations->appendRow( itemErrors );
@@ -493,7 +483,7 @@ void SettingsUiManager::initModels() {
 
 	// TODO Add a flag to the accessor XML files, maybe <countryWide />
 	bool isCountryWide = serviceProviderName.contains(
-	    serviceProviderData["country"].toString(), Qt::CaseInsensitive );
+		serviceProviderData["country"].toString(), Qt::CaseInsensitive );
 	QString formattedText;
 	QStandardItem *item = new QStandardItem( serviceProviderName ); // TODO: delete?
 
@@ -523,6 +513,19 @@ void SettingsUiManager::initModels() {
 		    : "WWWWW" + countryName + serviceProviderName;
 	}
 	item->setData( sortString, SortRole );
+	
+	QString title;
+	if ( locationCode == "international" )
+	    title = i18n("International");
+	else if ( locationCode == "unknown" )
+	    title = i18n("Unknown");
+	else
+	    title = KGlobal::locale()->countryCodeToName( locationCode );
+	item->setData( title,
+		       KCategorizedSortFilterProxyModel::CategoryDisplayRole );
+	item->setData( sortString,
+		       KCategorizedSortFilterProxyModel::CategorySortRole );
+	
 	m_modelServiceProvider->appendRow( item );
 
 	// Request favicons
@@ -533,36 +536,6 @@ void SettingsUiManager::initModels() {
     }
     m_modelServiceProvider->setSortRole( SortRole );
     m_modelServiceProvider->sort( 0 );
-
-    // Add title items
-    QStringList lastTitles;
-    for( int row = 0; row < m_modelServiceProvider->rowCount(); ++row ) {
-	QString locationCode = m_modelServiceProvider->item( row )->data( ServiceProviderDataRole ).toHash()["country"].toString();
-	QString title;
-	if ( locationCode == "international" )
-	    title = i18n("International");
-	else if ( locationCode == "unknown" )
-	    title = i18n("Unknown");
-	else
-	    title = KGlobal::locale()->countryCodeToName( locationCode );
-
-	if ( lastTitles.contains(title) )
-	    continue;
-
-	QStandardItem *itemTitle = new QStandardItem( title );
-	QColor textColor = KColorScheme( QPalette::Active ).foreground().color();
-	itemTitle->setData( QString("<span style='font-weight:bold;font-size:large;text-decoration:underline;color:rgb(%1,%2,%3);'>")
-		.arg(textColor.red()).arg(textColor.green()).arg(textColor.blue())
-		+ title + ":</span>", HtmlDelegate::FormattedTextRole );
-	itemTitle->setData( 0, HtmlDelegate::GroupTitleRole );
-	itemTitle->setData( 2, HtmlDelegate::LinesPerRowRole );
-	itemTitle->setData( locationCode, LocationCodeRole );
-	itemTitle->setSelectable( false );
-	m_modelServiceProvider->insertRow( row, itemTitle );
-
-	lastTitles << title;
-	++row;
-    }
 }
 
 void SettingsUiManager::dataUpdated( const QString& sourceName,
@@ -573,17 +546,19 @@ void SettingsUiManager::dataUpdated( const QString& sourceName,
 		    "No service provider model" );
 
 	QPixmap favicon( QPixmap::fromImage(data["Icon"].value<QImage>()) );
-	if ( !favicon.isNull() ) {
-	    for ( int i = 0; i < m_modelServiceProvider->rowCount(); ++i ) {
-		QHash< QString, QVariant > serviceProviderData
-		    = m_modelServiceProvider->item(i)->data( ServiceProviderDataRole ).toHash();
-		QString favIconSource = serviceProviderData["url"].toString();
-		if ( favIconSource.compare( sourceName ) == 0 )
-		    m_modelServiceProvider->item(i)->setIcon( KIcon(favicon) );
-	    }
-	}
-	else
+	if ( favicon.isNull() ) {
 	    kDebug() << "Favicon is NULL for" << sourceName;
+	    favicon = QPixmap( 16, 16 );
+	    favicon.fill( Qt::transparent );
+	}
+	
+	for ( int i = 0; i < m_modelServiceProvider->rowCount(); ++i ) {
+	    QVariantHash serviceProviderData = m_modelServiceProvider->item(i)
+		    ->data( ServiceProviderDataRole ).toHash();
+	    QString favIconSource = serviceProviderData["url"].toString();
+	    if ( favIconSource.compare(sourceName) == 0 )
+		m_modelServiceProvider->item(i)->setIcon( KIcon(favicon) );
+	}
 
 	m_favIconEngine->disconnectSource( sourceName, this );
     }
@@ -592,17 +567,13 @@ void SettingsUiManager::dataUpdated( const QString& sourceName,
 QString SettingsUiManager::translateKey( const QString& key ) {
     if ( key == "Default" )
 	return i18n("Default");
-//     else if ( key == "Default*" )
-// 	return i18n("Default") + "*";
     else
 	return key;
 }
 
 QString SettingsUiManager::untranslateKey( const QString& translatedKey ) {
-    if ( translatedKey == i18n("Default") /*|| translatedKey == i18n("Default") + "*"*/ )
+    if ( translatedKey == i18n("Default") )
 	return "Default";
-//     else if ( translatedKey.endsWith("*") )
-// 	return translatedKey.left( translatedKey.length() - 1 );
     else
 	return translatedKey;
 }

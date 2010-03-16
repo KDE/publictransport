@@ -31,6 +31,8 @@
 #include "global.h"
 #include "stopfinder.h"
 
+
+
 class DynamicLabeledLineEditList;
 class HtmlDelegate;
 class QStandardItemModel;
@@ -107,10 +109,12 @@ class StopSettingsDialog : public KDialog {
 	
 	QHash< QString, QVariant > m_stopToStopID; /**< A hash with stop names as 
 				* keys and the corresponding stop IDs as values. */
-	
+				
+#if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
+	KCategoryDrawer *categoryDrawer; // not derived from QObject before KDE 4.4
+#endif
     private:
 	Q_DISABLE_COPY( StopSettingsDialog )
 };
-
 
 #endif // Multiple inclusion guard

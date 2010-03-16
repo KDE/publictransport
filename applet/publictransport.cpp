@@ -230,11 +230,8 @@ PublicTransport::~PublicTransport() {
     delete m_modelJourneys;
     delete m_departureListUpdater;
     delete m_journeyListUpdater;
-    if ( m_treeView ) {
-	HtmlDelegate *htmlDelegate = static_cast< HtmlDelegate* >(
-		m_treeView->nativeWidget()->itemDelegate() );
-	delete htmlDelegate;
-    }
+    if ( m_treeView )
+	delete m_treeView->nativeWidget()->itemDelegate();
     qDeleteAll( m_abandonedAlarmTimer );
     
     if ( hasFailedToLaunch() ) {
@@ -2111,13 +2108,10 @@ void PublicTransport::useCurrentPlasmaTheme() {
     // Get theme colors
     QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
     QColor baseColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::BackgroundColor );
-    // 	QColor altBaseColor = baseColor.darker();
-    // 	int green = altBaseColor.green() * 1.8;
-    // 	altBaseColor.setGreen( green > 255 ? 255 : green ); // tint green
     QColor buttonColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::BackgroundColor );
-    baseColor.setAlpha(50);
-    // 	altBaseColor.setAlpha(50);
-    buttonColor.setAlpha(130);
+    baseColor.setAlpha( 50 );
+    // 	altBaseColor.setAlpha( 50 );
+    buttonColor.setAlpha( 130 );
     m_colorSubItemLabels = textColor;
     m_colorSubItemLabels.setAlpha( 170 );
 
@@ -2125,13 +2119,12 @@ void PublicTransport::useCurrentPlasmaTheme() {
     QPalette p = palette();
     p.setColor( QPalette::Background, baseColor );
     p.setColor( QPalette::Base, baseColor );
-    // 	p.setColor( QPalette::AlternateBase, altBaseColor );
     p.setColor( QPalette::Button, buttonColor );
     p.setColor( QPalette::Foreground, textColor );
     p.setColor( QPalette::Text, textColor );
 
     QTreeView *treeView = m_treeView->nativeWidget();
-    treeView->setPalette(p);
+    treeView->setPalette( p );
     treeView->header()->setPalette( p );
 
     // To set new text color of the header items
@@ -2241,12 +2234,13 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 		 this, SLOT(journeySearchInputEdited(QString)) );
 	connect( m_listStopsSuggestions->nativeWidget(), SIGNAL(clicked(QModelIndex)),
 		 this, SLOT(possibleStopClicked(QModelIndex)) );
-	connect( m_listStopsSuggestions->nativeWidget(), SIGNAL(doubleClicked(QModelIndex)),
+	connect( m_listStopsSuggestions->nativeWidget(),
+		 SIGNAL(doubleClicked(QModelIndex)),
 		 this, SLOT(possibleStopDoubleClicked(QModelIndex)) );
 
 	// Create treeview for departures / arrivals
 	m_treeView = new Plasma::TreeView( m_mainGraphicsWidget );
-	QTreeView *treeView =m_treeView->nativeWidget();
+	QTreeView *treeView = m_treeView->nativeWidget();
 	treeView->setAllColumnsShowFocus( true );
 	treeView->setRootIsDecorated( false );
 	treeView->setAnimated( true );
@@ -2264,7 +2258,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	treeView->header()->setSortIndicator( 2, Qt::AscendingOrder );
 	treeView->header()->setContextMenuPolicy( Qt::CustomContextMenu );
 	treeView->setContextMenuPolicy( Qt::CustomContextMenu );
-	HtmlDelegate *htmlDelegate = new HtmlDelegate;
+	PublicTransportDelegate *htmlDelegate = new PublicTransportDelegate;
 	treeView->setItemDelegate( htmlDelegate );
 	connect( treeView, SIGNAL(customContextMenuRequested(const QPoint &)),
 		 this, SLOT(showDepartureContextMenu(const QPoint &)) );
@@ -3148,7 +3142,8 @@ void PublicTransport::markAlarmRow( const QPersistentModelIndex& modelIndex,
 	// Make background ground color light red and store original background color
 	QColor color( 255, 200, 200, 180 );
 	itemDeparture->setIcon( KIcon("kalarm") );
-	itemDeparture->setData( static_cast<int>(HtmlDelegate::Right), HtmlDelegate::DecorationPositionRole );
+	itemDeparture->setData( static_cast<int>(HtmlDelegate::Right),
+				HtmlDelegate::DecorationPositionRole );
 	itemDeparture->setData( itemDeparture->background(), OriginalBackgroundColorRole );
 	itemDeparture->setBackground( QBrush(color) );
 	m_model->item( modelIndex.row(), 0 )->setBackground( QBrush(color) );
@@ -3774,7 +3769,7 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		    item->setData( 3, HtmlDelegate::LinesPerRowRole );
 		}
 
-		item->setData( true, HtmlDelegate::DrawBabkgroundGradientRole );
+		item->setData( true, HtmlDelegate::DrawBackgroundGradientRole );
 		item->setData( row, SortRole );
 		int iconExtend = 16 * m_settings.sizeFactor;
 		item->setData( QSize(iconExtend, iconExtend),
@@ -3947,7 +3942,8 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 	    departureItem->setText( s3 );
 	    if ( !update ) {
 		departureItem->setData( static_cast<int>(JourneyNewsItem), Qt::UserRole );
-		departureItem->setData( qMin(3, s3.length() / 20), HtmlDelegate::LinesPerRowRole );
+		departureItem->setData( qMin(3, s3.length() / 20),
+					HtmlDelegate::LinesPerRowRole );
 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
 	    }
 	    break;
