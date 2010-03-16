@@ -2,8 +2,8 @@
 
 <accessorInfo fileVersion="1.0" version="1.0" type="HTML">
 
-<name lang="en">ÖBB-Group (Austria)</name>
-<name lang="de">ÖBB-Konzern (Österreich)</name>
+<name lang="en">ÖBB-Group</name>
+<name lang="de">ÖBB-Konzern</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
 <!-- <cities><city></city></cities> -->
 <useSeperateCityValue>false</useSeperateCityValue>

@@ -52,7 +52,7 @@
 <onlyUseCitiesInList>true</onlyUseCitiesInList>
 <description>This service provider has static data. That means, that displayed departures may actually not be valid for today. Please view the journey news, to see if a departure is valid for today (e.g. 'Mo-Fr').</description>
 
-<url>http://cp.atlas.sk/vlakbus/odchody/</url>
+<url>http://cp.atlas.sk/vlakbus/odchody</url>
 <shortUrl>cp.atlas.sk</shortUrl>
 <!-- <credit>INPROP, s. r. o.</credit> -->
 

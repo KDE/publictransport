@@ -2,8 +2,7 @@
 
 <accessorInfo fileVersion="1.0" version="1.0" type="HTML">
 
-<name lang="en">SNCB (Belgium)</name>
-<name lang="de">SNCB (Belgien)</name>
+<name>NMBS/SNCB</name>
 
 <description lang="en">This service provider works for cities in Belgium and some other cities in europe.</description>
 <description lang="de">Dieser Service-Provider liefert Ergebnisse für Städte in Belgien und auch für einige andere Städte in Europa. </description>
@@ -12,8 +11,8 @@
 <!-- <cities><city></city></cities> -->
 <useSeperateCityValue>false</useSeperateCityValue>
 
-<url>http://hafas.bene-system.com/</url>
-<shortUrl>hafas.bene-system.com</shortUrl>
+<url>http://www.b-rail.be</url>
+<shortUrl>www.b-rail.be</shortUrl>
 <!-- <credit>SNCB</credit> -->
 <!-- <minFetchWait>300</minFetchWait> -->
 <script>be_brail.js</script>

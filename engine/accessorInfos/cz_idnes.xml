@@ -90,7 +90,7 @@
 <onlyUseCitiesInList>true</onlyUseCitiesInList>
 <description>This service provider has static data. That means, that displayed departures may actually not be valid for today. Please view the journey news, to see if a departure is valid for today (e.g. 'Mo-Fr').</description>
 
-<url>http://jizdnirady.idnes.cz/vlakyautobusy/spojeni/</url>
+<url>http://jizdnirady.idnes.cz/vlakyautobusy/spojeni</url>
 <shortUrl>jizdnirady.idnes.cz</shortUrl>
 <!-- <credit>CHAPS spol. s r.o.</credit> -->
 
