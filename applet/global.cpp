@@ -31,7 +31,6 @@
 StopSettings::StopSettings() {
     location = KGlobal::locale()->country();
     filterConfiguration = "Default";
-    stops << "";
 }
 
 

@@ -530,7 +530,7 @@ void PublicTransport::setupActions() {
 	     this, SLOT(goBackToDepartures()) );
     addAction( "backToDepartures", actionBackToDepartures );
 	
-    KToggleAction *actionEnableFilters = new KToggleAction( i18n("Enable Filters"), this );
+    KToggleAction *actionEnableFilters = new KToggleAction( i18n("&Enable Filters"), this );
     connect( actionEnableFilters, SIGNAL(toggled(bool)), this, SLOT(setFiltersEnabled(bool)) );
     addAction( "enableFilters", actionEnableFilters );
 

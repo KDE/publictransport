@@ -493,7 +493,7 @@ void SettingsUiManager::initModels() {
 			HtmlDelegate::TextBackgroundRole );
 	formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
 	    .arg( serviceProviderName )
-	    .arg( serviceProviderData["features"].toStringList().join(", ") );
+	    .arg( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
 	item->setData( 4, HtmlDelegate::LinesPerRowRole );
 	item->setData( formattedText, HtmlDelegate::FormattedTextRole );
 	item->setData( serviceProviderData, ServiceProviderDataRole );

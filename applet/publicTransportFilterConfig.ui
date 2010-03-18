@@ -29,7 +29,7 @@
      <property name="currentIndex">
       <number>0</number>
      </property>
-     <widget class="QWidget" name="tabFilters" native="true">
+     <widget class="QWidget" name="tabFilters">
       <attribute name="title">
        <string>&amp;Filter Configurations</string>
       </attribute>
@@ -214,6 +214,9 @@
          <property name="text">
           <string>Each stop can use another filter configuration.
 Select the filter configurations to be used by your current stops.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
