@@ -1455,18 +1455,25 @@ void PublicTransport::showActionButtons() {
 	btnJourney->setAction( action("searchJourneys") );
 	connect( btnJourney, SIGNAL(clicked()), this, SLOT(destroyOverlay()) );
     }
-
-    Plasma::PushButton *btnShowDepArr = new Plasma::PushButton( m_overlay );
-    btnShowDepArr->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
+    
+    Plasma::PushButton *btnBackToDepartures = 0;
     if ( testState(ShowingJourneyList) ) {
-	btnShowDepArr->setAction( updatedAction("backToDepartures") );
-    } else {
+	btnBackToDepartures = new Plasma::PushButton( m_overlay );
+	btnBackToDepartures->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
+	btnBackToDepartures->setAction( updatedAction("backToDepartures") );
+	connect( btnBackToDepartures, SIGNAL(clicked()), this, SLOT(destroyOverlay()) );
+    }
+	
+    Plasma::PushButton *btnShowDepArr = 0;
+    if ( m_currentServiceProviderFeatures.contains("Arrivals") ) {
+	btnShowDepArr = new Plasma::PushButton( m_overlay );
+	btnShowDepArr->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
 	if ( m_settings.departureArrivalListType == DepartureList )
 	    btnShowDepArr->setAction( action("showArrivals") );
 	else
 	    btnShowDepArr->setAction( action("showDepartures") );
+	connect( btnShowDepArr, SIGNAL(clicked()), this, SLOT(destroyOverlay()) );
     }
-    connect( btnShowDepArr, SIGNAL(clicked()), this, SLOT(destroyOverlay()) );
 
     // Add stop selector if multiple stops are defined
     Plasma::PushButton *btnMultipleStops = NULL;
@@ -1508,8 +1515,14 @@ void PublicTransport::showActionButtons() {
 	layout->addItem( btnJourney );
 	layout->setAlignment( btnJourney, Qt::AlignCenter );
     }
-    layout->addItem( btnShowDepArr );
-    layout->setAlignment( btnShowDepArr, Qt::AlignCenter );
+    if ( btnBackToDepartures ) {
+	layout->addItem( btnBackToDepartures );
+	layout->setAlignment( btnBackToDepartures, Qt::AlignCenter );
+    }
+    if ( btnShowDepArr ) {
+	layout->addItem( btnShowDepArr );
+	layout->setAlignment( btnShowDepArr, Qt::AlignCenter );
+    }
     if ( btnMultipleStops ) {
 	layout->addItem( btnMultipleStops );
 	layout->setAlignment( btnMultipleStops, Qt::AlignCenter );
@@ -1524,20 +1537,27 @@ void PublicTransport::showActionButtons() {
 	Plasma::Animation *fadeAnimOverlay = fadeAnimation( m_overlay, 1 );
 
 	Plasma::Animation *fadeAnim1 = NULL;
-	Plasma::Animation *fadeAnim2 = fadeAnimation( btnShowDepArr, 1 );
-	Plasma::Animation *fadeAnim3 = fadeAnimation( btnCancel, 1 );
+	Plasma::Animation *fadeAnim2 = NULL;
+	Plasma::Animation *fadeAnim3 = NULL;
 	Plasma::Animation *fadeAnim4 = NULL;
+	Plasma::Animation *fadeAnim5 = fadeAnimation( btnCancel, 1 );
 	if ( btnJourney ) {
 	    btnJourney->setOpacity( 0 );
 	    fadeAnim1 = fadeAnimation( btnJourney, 1 );
 	}
-	btnShowDepArr->setOpacity( 0 );
-	btnCancel->setOpacity( 0 );
-
+	if ( btnShowDepArr ) {
+	    btnShowDepArr->setOpacity( 0 );
+	    fadeAnim2 = fadeAnimation( btnShowDepArr, 1 );
+	}
+	if ( btnBackToDepartures ) {
+	    btnBackToDepartures->setOpacity( 0 );
+	    fadeAnim3 = fadeAnimation( btnBackToDepartures, 1 );
+	}
 	if ( btnMultipleStops ) {
 	    btnMultipleStops->setOpacity( 0 );
 	    fadeAnim4 = fadeAnimation( btnMultipleStops, 1 );
-	} 
+	}
+	btnCancel->setOpacity( 0 );
 
 	QSequentialAnimationGroup *seqGroup = new QSequentialAnimationGroup;
 	if ( fadeAnimOverlay )
@@ -1550,13 +1570,17 @@ void PublicTransport::showActionButtons() {
 	    fadeAnim2->setProperty( "duration", 150 );
 	    seqGroup->addAnimation( fadeAnim2 );
 	}
+	if ( fadeAnim3 ) {
+	    fadeAnim3->setProperty( "duration", 150 );
+	    seqGroup->addAnimation( fadeAnim3 );
+	}
 	if ( fadeAnim4 ) {
 	    fadeAnim4->setProperty( "duration", 150 );
 	    seqGroup->addAnimation( fadeAnim4 );
 	}
-	if ( fadeAnim3 ) {
-	    fadeAnim3->setProperty( "duration", 150 );
-	    seqGroup->addAnimation( fadeAnim3 );
+	if ( fadeAnim5 ) {
+	    fadeAnim5->setProperty( "duration", 150 );
+	    seqGroup->addAnimation( fadeAnim5 );
 	}
 	seqGroup->start( QAbstractAnimation::DeleteWhenStopped );
     #endif
@@ -1570,10 +1594,11 @@ void PublicTransport::setCurrentStopIndex( QAction* action ) {
 	return;
     }
 
-    kDebug() << stopIndex;
     disconnectSources();
     m_settings.currentStopSettingsIndex = stopIndex;
     SettingsIO::writeNoGuiSettings( m_settings, config(), globalConfig() );
+    m_currentServiceProviderFeatures =
+	    currentServiceProviderData()["features"].toStringList();
     clearDepartures();
     reconnectSource();
     configChanged();

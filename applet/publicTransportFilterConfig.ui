@@ -212,7 +212,7 @@
           </sizepolicy>
          </property>
          <property name="text">
-          <string>Each stop can use another filter configuration.
+          <string>For each stop another filter configuration can be used.
 Select the filter configurations to be used by your current stops.</string>
          </property>
          <property name="wordWrap">
