@@ -186,7 +186,7 @@
      </item>
     </layout>
    </item>
-   <item row="6" column="0" colspan="2">
+   <item row="7" column="0" colspan="2">
     <spacer name="verticalSpacer_4">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -202,7 +202,7 @@
      </property>
     </spacer>
    </item>
-   <item row="8" column="0">
+   <item row="9" column="0">
     <widget class="QLabel" name="lblcmbDepartureColumnInfos">
      <property name="text">
       <string>&amp;Information Shown:</string>
@@ -215,7 +215,7 @@
      </property>
     </widget>
    </item>
-   <item row="8" column="1">
+   <item row="9" column="1">
     <widget class="KComboBox" name="cmbDepartureColumnInfos">
      <property name="toolTip">
       <string/>
@@ -240,7 +240,7 @@
      </item>
     </widget>
    </item>
-   <item row="9" column="0">
+   <item row="10" column="0">
     <widget class="QLabel" name="lblDisplayTimeBold">
      <property name="text">
       <string>Display Time &amp;Bold:</string>
@@ -253,7 +253,7 @@
      </property>
     </widget>
    </item>
-   <item row="9" column="1">
+   <item row="10" column="1">
     <widget class="QCheckBox" name="displayTimeBold">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -272,7 +272,7 @@
      </property>
     </widget>
    </item>
-   <item row="10" column="0" colspan="2">
+   <item row="11" column="0" colspan="2">
     <spacer name="verticalSpacer_5">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -288,7 +288,7 @@
      </property>
     </spacer>
    </item>
-   <item row="12" column="0">
+   <item row="13" column="0">
     <widget class="QLabel" name="lblShowHeader">
      <property name="text">
       <string>Show &amp;Header:</string>
@@ -301,7 +301,7 @@
      </property>
     </widget>
    </item>
-   <item row="12" column="1">
+   <item row="13" column="1">
     <widget class="QCheckBox" name="showHeader">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -320,7 +320,7 @@
      </property>
     </widget>
    </item>
-   <item row="13" column="0">
+   <item row="14" column="0">
     <widget class="QLabel" name="lblShowColumnTarget">
      <property name="text">
       <string>Show &amp;Column Target/Origin:</string>
@@ -333,10 +333,10 @@
      </property>
     </widget>
    </item>
-   <item row="13" column="1">
+   <item row="14" column="1">
     <widget class="QCheckBox" name="showColumnTarget">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -365,7 +365,7 @@
      </property>
     </widget>
    </item>
-   <item row="7" column="0" colspan="2">
+   <item row="8" column="0" colspan="2">
     <widget class="QLabel" name="lblTimetable_2">
      <property name="font">
       <font>
@@ -378,7 +378,7 @@
      </property>
     </widget>
    </item>
-   <item row="11" column="0" colspan="2">
+   <item row="12" column="0" colspan="2">
     <widget class="QLabel" name="lblTimetable_3">
      <property name="font">
       <font>
@@ -388,6 +388,38 @@
      </property>
      <property name="text">
       <string>Timetable Header</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QLabel" name="lblFont_2">
+     <property name="text">
+      <string>Shadow:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>font</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QCheckBox" name="shadow">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>Whether or not departure / arrival times should be bold.</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -435,38 +467,6 @@
     <hint type="destinationlabel">
      <x>345</x>
      <y>89</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>showHeader</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>lblShowColumnTarget</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>308</x>
-     <y>283</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>80</x>
-     <y>310</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>showHeader</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>showColumnTarget</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>308</x>
-     <y>283</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>308</x>
-     <y>310</y>
     </hint>
    </hints>
   </connection>

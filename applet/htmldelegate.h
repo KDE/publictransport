@@ -54,7 +54,7 @@ class HtmlDelegate : public QItemDelegate {
 	};
 	Q_DECLARE_FLAGS( Options, Option );
 
-	HtmlDelegate( Options options = NoOption );
+	HtmlDelegate( Options options = NoOption, QObject *parent = 0 );
 
 	virtual QSize sizeHint ( const QStyleOptionViewItem& option,
 				 const QModelIndex& index ) const;
@@ -63,6 +63,11 @@ class HtmlDelegate : public QItemDelegate {
 	void setAlignText( bool alignText ) { m_alignText = alignText; };
 
 	Options options() const { return m_options; };
+	void setOption( Option option, bool enable ) {
+	    if ( enable )
+		m_options |= option;
+	    else if ( m_options.testFlag(option) )
+		m_options ^= option; };
 	void setOptions( Options options ) { m_options = options; };
 
     protected:
@@ -71,9 +76,8 @@ class HtmlDelegate : public QItemDelegate {
 
 	virtual void drawDecoration( QPainter* painter, const QStyleOptionViewItem& option,
 				     const QRect& rect, const QPixmap& pixmap ) const;
-	virtual void drawDisplay( QPainter* painter,
-					    const QStyleOptionViewItem& option,
-					    const QRect& rect, const QString& text ) const;
+	void drawDisplay( QPainter* painter, const QStyleOptionViewItem& option,
+			  const QRect& rect, const QString& text ) const;
 
     private:
 	bool m_alignText;
@@ -83,7 +87,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( HtmlDelegate::Options );
 
 class PublicTransportDelegate : public HtmlDelegate {
     public:
-	PublicTransportDelegate();
+	PublicTransportDelegate( QObject *parent = 0 );
 	
     protected:
 	virtual void paint( QPainter* painter, const QStyleOptionViewItem& option,

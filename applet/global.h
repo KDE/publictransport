@@ -164,7 +164,7 @@ enum AlarmState {
 
 /** Indicates the information that an item displays (a cell in the tree view). */
 enum ItemInformation {
-    LineNameItem, /**< The item contains the line name */
+    LineNameItem = 1, /**< The item contains the line name */
     TargetItem, /**< The item contains the target / origin */
     DepartureItem, /**< The item contains the departure time or the arrival time if the item is an arrival */
     PlatformItem, /**< The item contains platform */

@@ -51,6 +51,7 @@
 #include "stopwidget.h"
 // #include "datasourcetester.h"
 
+#include <KDateTime> // TODO REMOVE
 
 SettingsUiManager::SettingsUiManager( const Settings &settings,
 	    Plasma::DataEngine* publicTransportEngine, Plasma::DataEngine* osmEngine,
@@ -307,7 +308,8 @@ void SettingsUiManager::setValuesOfAppearanceConfig( const Settings &settings ) 
     else
 	m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex(1);
     m_uiAppearance.displayTimeBold->setChecked( settings.displayTimeBold );
-    
+
+    m_uiAppearance.shadow->setChecked( settings.drawShadows );
     m_uiAppearance.showHeader->setChecked( settings.showHeader );
     m_uiAppearance.showColumnTarget->setChecked( !settings.hideColumnTarget );
     m_uiAppearance.radioUseDefaultFont->setChecked( settings.useDefaultFont );
@@ -641,15 +643,11 @@ Settings SettingsUiManager::settings() {
 	ret.departureArrivalListType = DepartureList;
     ret.autoUpdate = m_uiAdvanced.updateAutomatically->isChecked();
     ret.maximalNumberOfDepartures = m_uiAdvanced.maximalNumberOfDepartures->value();
-//     ret.timeOffsetOfFirstDeparture = m_uiAdvanced.timeOfFirstDeparture->value();
-//     ret.timeOfFirstDepartureCustom = m_uiAdvanced.timeOfFirstDepartureCustom->time();
-//     ret.firstDepartureConfigMode = m_uiAdvanced.firstDepartureUseCurrentTime->isChecked()
-// 					? RelativeToCurrentTime : AtCustomTime;
-//     ret.alarmTime = m_uiAdvanced.alarmTime->value();
     
     ret.showRemainingMinutes = m_uiAppearance.cmbDepartureColumnInfos->currentIndex() != 1;
     ret.showDepartureTime = m_uiAppearance.cmbDepartureColumnInfos->currentIndex() <= 1;
     ret.displayTimeBold = m_uiAppearance.displayTimeBold->checkState() == Qt::Checked;
+    ret.drawShadows = m_uiAppearance.shadow->checkState() == Qt::Checked;
     ret.showHeader = m_uiAppearance.showHeader->checkState() == Qt::Checked;
     ret.hideColumnTarget = m_uiAppearance.showColumnTarget->checkState() == Qt::Unchecked;
     ret.linesPerRow = m_uiAppearance.linesPerRow->value();
@@ -880,7 +878,8 @@ Settings::Settings() {
 
 
 
-Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal ) {
+Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
+				   Plasma::DataEngine *publictransportEngine ) {
     Settings settings;
     settings.autoUpdate = cg.readEntry( "autoUpdate", true );
     settings.showRemainingMinutes = cg.readEntry( "showRemainingMinutes", true );
@@ -918,9 +917,40 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal ) {
     }
 
     settings.currentStopSettingsIndex = cg.readEntry( "currentStopIndex", 0 ); // TODO Rename settings key to "currentStopSettingsIndex"?
+
+    // Add initial stop settings when no settings are available
+    if ( settings.stopSettingsList.isEmpty() ) {
+	kDebug() << "Stop settings list in settings is empty";
+	if ( publictransportEngine ) {
+	    QString countryCode = KGlobal::locale()->country();
+	    Plasma::DataEngine::Data locationData =
+		    publictransportEngine->query( "Locations" );
+	    QString defaultServiceProviderId =
+		locationData[countryCode].toHash()["defaultAccessor"].toString();
+
+	    StopSettings stopSettings;
+	    if ( defaultServiceProviderId.isEmpty() ) {
+		stopSettings.location = "showAll";
+	    } else {
+		stopSettings.location = countryCode;
+		stopSettings.serviceProviderID = defaultServiceProviderId;
+	    }
+	    stopSettings.stops << "";
+	    // TODO: Get initial stop names using StopFinder
+
+	    settings.stopSettingsList << stopSettings;
+	} else
+	    settings.stopSettingsList << StopSettings();
+
+    }
+    
     if ( settings.currentStopSettingsIndex < 0 )
 	settings.currentStopSettingsIndex = 0; // For compatibility with versions < 0.7
-	
+    else if ( settings.currentStopSettingsIndex >= settings.stopSettingsList.count() ) {
+	kDebug() << "Current stop index in settings invalid";
+	settings.currentStopSettingsIndex = settings.stopSettingsList.count() - 1;
+    }
+
     settings.recentJourneySearches = cgGlobal.readEntry( "recentJourneySearches", QStringList() );
 	
     settings.maximalNumberOfDepartures = cg.readEntry( "maximalNumberOfDepartures", 20 );
@@ -929,6 +959,7 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal ) {
     settings.sizeFactor = (settings.size + 3) * 0.2f;
     settings.departureArrivalListType = static_cast<DepartureArrivalListType>(
 	    cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList)) );
+    settings.drawShadows = cg.readEntry( "drawShadows", true );
     settings.showHeader = cg.readEntry( "showHeader", true );
     settings.hideColumnTarget = cg.readEntry( "hideColumnTarget", false );
 
@@ -1043,6 +1074,11 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
     
     if ( settings.displayTimeBold != oldSettings.displayTimeBold ) {
 	cg.writeEntry( "displayTimeBold", settings.displayTimeBold );
+	changed |= IsChanged;
+    }
+    
+    if ( settings.drawShadows != oldSettings.drawShadows ) {
+	cg.writeEntry( "drawShadows", settings.drawShadows );
 	changed |= IsChanged;
     }
     

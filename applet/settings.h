@@ -142,7 +142,8 @@ class SettingsIO {
 	};
 	Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag );
 	
-	static Settings readSettings( KConfigGroup cg, KConfigGroup cgGlobal );
+	static Settings readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
+				      Plasma::DataEngine *publicTransportEngine = 0 );
 	static ChangedFlags writeSettings( const Settings &settings,
 		const Settings &oldSettings, KConfigGroup cg, KConfigGroup cgGlobal );
 	static void writeNoGuiSettings( const Settings &settings,
@@ -173,6 +174,7 @@ struct Settings {
 			    * (size + 3) * 0.2. */
     int maximalNumberOfDepartures; /**< The maximal number of displayed departures. */
     DepartureArrivalListType departureArrivalListType;
+    bool drawShadows; /** Whether or not shadows should be drawn for departure items. */
     bool showHeader; /** Whether or not the header of the departure view should 
 		       * be shown. */
     bool hideColumnTarget; /** Whether or not the target/origin column should be 
@@ -183,7 +185,15 @@ struct Settings {
     
     StopSettingsList stopSettingsList; /** A list of all stop settings. */
     StopSettings currentStopSettings() const {
-	    return stopSettingsList[ currentStopSettingsIndex ]; };
+	    if ( currentStopSettingsIndex < 0 ||
+		 currentStopSettingsIndex >= stopSettingsList.count() )
+	    {
+		kDebug() << "Current stop index invalid" << currentStopSettingsIndex
+			 << "Stop settings count:" << stopSettingsList.count();
+		return StopSettings();
+	    }
+	    return stopSettingsList[ currentStopSettingsIndex ];
+    };
 
     bool filtersEnabled; /** Whether or not filters are enabled. */
     QHash< QString, FilterSettings > filterSettings; /** A list of all filter settings. */

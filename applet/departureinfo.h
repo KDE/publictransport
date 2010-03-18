@@ -203,6 +203,9 @@ class DepartureInfo {
 	/** Wheather or not this DepartureInfo object is valid. It currently checks
 	* validity by checking if the lineString is empty. */
 	bool isValid() const { return !m_lineString.isEmpty(); };
+	
+	/** Gets the text to be displayed in the item for delay information. */
+	QString delayText() const;
 
 	/** Wheather or not the line number of this departure / arrival is valid. */
 	bool isLineNumberValid() const {

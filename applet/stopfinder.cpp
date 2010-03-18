@@ -105,7 +105,7 @@ void StopFinder::dataUpdated( const QString& sourceName,
     } else if ( sourceName.contains("publictransportstops") ) {
 	bool finished = processOpenStreetMapData( data );
 	if ( finished || (m_foundStops.count() + m_stopsToBeChecked.count())
-	    >= m_resultLimit ) {
+		    >= m_resultLimit ) {
 	    m_osmEngine->disconnectSource( sourceName, this );
 	}
     }

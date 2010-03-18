@@ -233,6 +233,31 @@ void JourneyInfo::generateHash() {
 				.arg( vehicles );
 }
 
+QString DepartureInfo::delayText() const {
+    QString sText;
+    switch ( delayType() ) {
+	case OnSchedule:
+	    sText = i18nc("A public transport vehicle departs on schedule", "On schedule");
+	    sText = sText.prepend("<span style='color:green;'>").append("</span>");
+	    break;
+	case Delayed:
+	    sText = i18np("+%1 minute", "+%1 minutes", delay());
+	    sText = sText.replace(QRegExp("(+?\\s*\\d+)"), "<span style='color:red;'>+&nbsp;\\1</span>");
+	    
+	    if ( !delayReason().isEmpty() ) {
+		sText += ", " + delayReason();
+	    }
+	    break;
+	    
+	case DelayUnknown:
+	default:
+	    sText = i18n("No information available");
+	    break;
+    }
+    
+    return sText;
+}
+
 bool operator< ( const JourneyInfo& ji1, const JourneyInfo& ji2 ) {
     return ji1.departure() < ji2.departure();
 }

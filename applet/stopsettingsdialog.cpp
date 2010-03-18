@@ -144,12 +144,14 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     setDetailsWidget( detailsWidget );
     
     // Create model that filters service providers for the current location
+    m_modelLocationServiceProviders = new QSortFilterProxyModel( this );
+    m_modelLocationServiceProviders->setSourceModel( modelServiceProviders );
+    m_modelLocationServiceProviders->setFilterRole( LocationCodeRole );
+
     KCategorizedSortFilterProxyModel *modelCategorized =
 	    new KCategorizedSortFilterProxyModel( this );
     modelCategorized->setCategorizedModel( true );
-    m_modelLocationServiceProviders = modelCategorized;
-    m_modelLocationServiceProviders->setSourceModel( modelServiceProviders );
-    m_modelLocationServiceProviders->setFilterRole( LocationCodeRole );
+    modelCategorized->setSourceModel( m_modelLocationServiceProviders );
     
     // Create stop list widget
     m_stopList = new DynamicLabeledLineEditList( 
@@ -202,11 +204,11 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     serviceProviderView->setVerticalScrollMode( QAbstractItemView::ScrollPerPixel ); // If ScrollPerItem is used the view can't be scrolled in QListView::ListMode.
 
     m_uiStop.serviceProvider->setView( serviceProviderView );
-    m_uiStop.serviceProvider->setModel( m_modelLocationServiceProviders );
+    m_uiStop.serviceProvider->setModel( modelCategorized );
     m_uiStop.location->setModel( m_modelLocations );
 
     // Set html delegate
-    m_htmlDelegate = new HtmlDelegate;
+    m_htmlDelegate = new HtmlDelegate( HtmlDelegate::NoOption, this );
     m_htmlDelegate->setAlignText( true );
     m_uiStop.serviceProvider->setItemDelegate( m_htmlDelegate );
     m_uiStop.location->setItemDelegate( m_htmlDelegate );
@@ -228,9 +230,6 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
 }
 
 StopSettingsDialog::~StopSettingsDialog() {
-    delete m_modelLocationServiceProviders;
-    delete m_htmlDelegate;
-    
 #if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
     delete categoryDrawer;
 #endif

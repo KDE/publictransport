@@ -217,11 +217,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	* This method formats future dates fancy. */
 	QString formatDateFancyFuture( const QDate &date ) const;
 
-	/** Gets the text to be displayed in the item for delay information.
-	* @param departureInfo The departure / arrival for which the delay text
-	* should be returned. */
-	QString delayText( const DepartureInfo& departureInfo ) const;
-
 	/** Gets the text to be displayed in the column departure for a journey.
 	* @param departureInfo The journey for which the departure text should be
 	* returned. */
@@ -380,15 +375,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	void goBackToDepartures();
 	void showActionButtons();
 	
-	/** The action to show all departures/arrivals has been triggered (remove all filters). */
-	void showEverything( bool );
-
-	/** The action to add the target of the selected departure/arrival to the filter list has been triggered. */
-	void addTargetToFilterList( bool );
-	
-	/** The action to add the vehicle type of the selected departure/arrival to the list of filtered vehicle types has been triggered. */
-	void filterOutByVehicleType( bool );
-	
 	/** The action to expand / collapse of the selected departure/arrival has been triggered. */
 	void toggleExpanded( bool );
 	/** The action to hide the header of the tree view has been triggered. */
@@ -456,11 +442,11 @@ class PublicTransport : public Plasma::PopupApplet {
 	    return serviceProviderData( m_settings.currentStopSettings().serviceProviderID ); };
 	QVariantHash serviceProviderData( const QString &id ) const;
 
-	int updateOrCreateItem( bool remove, QStandardItem *parentItem,
-		QStandardItem *item, int row, const JourneyInfo &journeyInfo,
+	void updateOrCreateItem( bool remove, QStandardItem *parentItem,
+		QStandardItem *item, const JourneyInfo &journeyInfo,
 		ItemInformation itemInfo );
-	int updateOrCreateItem( bool remove, QStandardItem *parentItem,
-		QStandardItem *item, int row, const DepartureInfo &departureInfo,
+	void updateOrCreateItem( bool remove, QStandardItem *parentItem,
+		QStandardItem *item, const DepartureInfo &departureInfo,
 		ItemInformation itemInfo );
 
 	void setHeightOfCourtesyLabel();
