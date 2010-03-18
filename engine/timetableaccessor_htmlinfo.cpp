@@ -28,13 +28,13 @@ TimetableAccessorInfo::TimetableAccessorInfo( const QString& name,
 }
 
 TimetableAccessorInfo::~TimetableAccessorInfo() {
-//     delete m_regExps;
 }
 
 void TimetableAccessorInfo::setRegExpDepartures( const QString &regExpSearch,
 	const QList< TimetableInformation > &regExpInfos,
 	const QString &regExpSearchPre, TimetableInformation regExpInfoKeyPre,
-	TimetableInformation regExpInfoValuePre ) {
+	TimetableInformation regExpInfoValuePre )
+{
     m_regExps.searchDepartures = TimetableRegExpSearch( regExpSearch, regExpInfos );
     if ( !regExpSearchPre.isEmpty() ) {
 	m_regExps.searchDeparturesPre = TimetableRegExpSearch( regExpSearchPre,
@@ -43,13 +43,14 @@ void TimetableAccessorInfo::setRegExpDepartures( const QString &regExpSearch,
 }
 
 void TimetableAccessorInfo::addRegExpPossibleStops( const QString &regExpRange,
-						    const QString &regExpSearch,
-						    const QList< TimetableInformation > &regExpInfos ) {
+	const QString &regExpSearch, const QList< TimetableInformation > &regExpInfos )
+{
     m_regExps.regExpSearchPossibleStopsRanges << regExpRange;
     m_regExps.searchPossibleStops << TimetableRegExpSearch( regExpSearch, regExpInfos );
 }
 
-bool TimetableAccessorInfo::supportsTimetableAccessorInfo( const TimetableInformation& info ) const {
+bool TimetableAccessorInfo::supportsTimetableAccessorInfo(
+				const TimetableInformation& info ) const {
     if ( m_regExps.searchDepartures.infos().contains(info) ||
 	    (!m_regExps.searchDeparturesPre.regExp().isEmpty()
 	    && m_regExps.searchDepartures.infos().contains(
@@ -68,7 +69,8 @@ bool TimetableAccessorInfo::supportsTimetableAccessorInfo( const TimetableInform
     return supportedByPossibleStopRegExps || supportsByJourneyNewsParsing( info );
 }
 
-bool TimetableAccessorInfo::supportsByJourneyNewsParsing( const TimetableInformation &info ) const {
+bool TimetableAccessorInfo::supportsByJourneyNewsParsing(
+				const TimetableInformation &info ) const {
     foreach ( TimetableRegExpSearch search, m_regExps.searchJourneyNews ) {
 	if ( search.infos().contains( info ) )
 	    return true;

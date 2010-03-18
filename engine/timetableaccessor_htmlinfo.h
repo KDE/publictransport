@@ -373,14 +373,14 @@ class TimetableAccessorInfo {
 	bool supportsByJourneyNewsParsing( const TimetableInformation &info ) const;
 	
 	struct RegExps {
-	public:
-	    TimetableRegExpSearch searchDepartures;
-	    TimetableRegExpSearch searchJourneys;
-	    TimetableRegExpSearch searchDeparturesPre;
-	    TimetableRegExpSearch searchDepartureGroupTitles;
-	    QStringList regExpSearchPossibleStopsRanges;
-	    QList<TimetableRegExpSearch> searchPossibleStops;
-	    QList<TimetableRegExpSearch> searchJourneyNews;
+	    public:
+		TimetableRegExpSearch searchDepartures;
+		TimetableRegExpSearch searchJourneys;
+		TimetableRegExpSearch searchDeparturesPre;
+		TimetableRegExpSearch searchDepartureGroupTitles;
+		QStringList regExpSearchPossibleStopsRanges;
+		QList<TimetableRegExpSearch> searchPossibleStops;
+		QList<TimetableRegExpSearch> searchJourneyNews;
 	};
 
 	

@@ -27,7 +27,7 @@
 
 
 TimetableAccessorXml::TimetableAccessorXml( const TimetableAccessorInfo &info )
-	    : m_accessorHTML( new TimetableAccessorHtml(m_info) ) {
+	    : m_accessorHTML( new TimetableAccessorHtml(info) ) {
     m_info = info;
 }
 
@@ -37,13 +37,8 @@ TimetableAccessorXml::~TimetableAccessorXml() {
 
 QStringList TimetableAccessorXml::features() const {
 // 	list << i18nc("Support for getting information about the type of vehicle of a journey with public transport. This string is used in a feature list, should be short.", "Type of vehicle");
-
-    return QStringList() << i18nc("Autocompletion for names of public transport stops", "Autocompletion")
-	<< i18nc("Support for getting delay information. This string is used in a feature list, should be short.", "Delay")
-	<< i18nc("Support for getting the information from which platform a public transport vehicle departs / at which it arrives. This string is used in a feature list, should be short.", "Platform")
-	<< i18nc("Support for getting information about the type of vehicle of a journey with public transport. This string is used in a feature list, should be short.", "Type of vehicle")
-	<< i18nc("Support for getting the news about a journey with public transport, such as a platform change. This string is used in a feature list, should be short.", "Journey news")
-	<< i18nc("Support for getting the id of a stop of public transport. This string is used in a feature list, should be short.", "Stop ID");
+    return QStringList() << "Autocompletion" << "Delay" << "Platform"
+			 << "Type of vehicle" << "Journey news" << "Stop ID";
 }
 
 bool TimetableAccessorXml::parseDocument( const QByteArray &document,
@@ -112,8 +107,6 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 	    journeyAttribute = journeyAttribute.nextSiblingElement("JourneyAttribute");
 	}
 
-// 	qDebug() << "TIME =" << sTime << ", LINE =" << sLine << ", DIRECTION =" << sDirection << ", DELAY =" << sDelay;
-
 	if ( sDelay.isEmpty() ) {
 	    journeys->append( new DepartureInfo(sLine,
 		    DepartureInfo::getVehicleTypeFromString(sVehicleType),
@@ -131,9 +124,8 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 }
 
 bool TimetableAccessorXml::parseDocumentPossibleStops( const QByteArray &document,
-						       QStringList *stops,
-						       QHash<QString,QString> *stopToStopId,
-						       QHash<QString,int> *stopToStopWeight ) {
+			    QStringList *stops, QHash<QString,QString> *stopToStopId,
+			    QHash<QString,int> *stopToStopWeight ) {
     // Let the document get parsed for possible stops by the HTML accessor
     return m_accessorHTML->parseDocumentPossibleStops( document, stops,
 						       stopToStopId, stopToStopWeight );

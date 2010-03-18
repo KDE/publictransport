@@ -37,7 +37,6 @@ TimetableAccessor* AccessorInfoXmlReader::read( QIODevice* device,
 						const QString &country ) {
     Q_ASSERT( device );
 
-    kDebug() << "Reading accessor info xml for" << serviceProvider;
     bool closeAfterRead; // Only close after reading if it wasn't open before
     if ( (closeAfterRead = !device->isOpen()) && !device->open(QIODevice::ReadOnly) )
 	return NULL;
@@ -239,7 +238,8 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 	    QString regExpPossibleStopsRange = regExpListPossibleStopsRange[i];
 	    QString regExpPossibleStops = regExpListPossibleStops[i];
 	    QList<TimetableInformation> infosPossibleStops = infosListPossibleStops[i];
-	    accessorInfos.addRegExpPossibleStops( regExpPossibleStopsRange, regExpPossibleStops, infosPossibleStops );
+	    accessorInfos.addRegExpPossibleStops( regExpPossibleStopsRange,
+					regExpPossibleStops, infosPossibleStops );
 	}
     } else {
 	accessorInfos.setScriptFile( scriptFile );
@@ -385,7 +385,7 @@ bool AccessorInfoXmlReader::readRegExps( QString* regExpDepartures,
 		readUnknownElement();
 	}
     }
-
+    
     return true;
 }
 
