@@ -26,11 +26,17 @@
 #include <KIconLoader>
 #include <KGlobal>
 #include <KLocale>
+#include <Plasma/Theme>
+#include <KColorUtils>
 
 
 StopSettings::StopSettings() {
     location = KGlobal::locale()->country();
     filterConfiguration = "Default";
+    alarmTime = 5;
+    firstDepartureConfigMode = RelativeToCurrentTime;
+    timeOfFirstDepartureCustom = QTime( 12, 0 );
+    timeOffsetOfFirstDeparture = 0;
 }
 
 
@@ -288,4 +294,14 @@ QString Global::durationString ( int seconds ) {
 	return i18np("%1 minute", "%1 minutes", minutes);
     else
 	return i18n("now");
+}
+
+QColor Global::textColorOnSchedule() {
+    QColor color = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+    return KColorUtils::tint( color, Qt::green, 0.5 );
+}
+
+QColor Global::textColorDelayed() {
+    QColor color = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+    return KColorUtils::tint( color, Qt::red, 0.5 );
 }

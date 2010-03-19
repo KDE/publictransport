@@ -217,7 +217,8 @@ class DepartureInfo {
 	/**< The line number. @see isLineNumberValid */
 	int lineNumber() const { return m_lineNumber; };
 	
-	QString durationString() const;
+	QString durationString( bool showDelay = true ) const;
+	QString delayString() const;
 
 	bool isNightLine() const { return m_lineServices.testFlag(NightLine); };
 	bool isExpressLine() const { return m_lineServices.testFlag(ExpressLine); };

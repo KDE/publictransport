@@ -5,6 +5,9 @@
 #include <qmath.h>
 #include <KLocale>
 #include <KGlobal>
+#include <KDebug>
+#include <Plasma/Theme>
+#include <KColorUtils>
 
 JourneyInfo::JourneyInfo( const QString &operatorName,
 			  const QVariantList &vehicleTypesVariant,
@@ -93,94 +96,25 @@ QString JourneyInfo::durationToDepartureString( bool toArrival ) const {
     	return i18n("depart is in the past");
     else
 	return KGlobal::locale()->prettyFormatDuration( (ulong)(totalMinutes * 60000) );
-// //     if ( -totalSeconds / 3600 >= 23 )
-// // 	totalSeconds += 24 * 3600;
-
-//     int seconds = totalSeconds % 60;
-//     totalSeconds -= seconds;
-//     if (seconds > 0)
-// 	totalSeconds += 60;
-    
-//     if (totalSeconds < 0)
-// 	return i18n("depart is in the past");
-
-//     return Global::durationString(totalSeconds).replace(' ', "&nbsp;");
 }
 
+QString DepartureInfo::delayString() const {
+    return delayType() == Delayed ? QString(" (+%1)").arg(m_delay) : QString();
+}
 
-QString DepartureInfo::durationString () const {
+QString DepartureInfo::durationString( bool showDelay ) const {
     int totalSeconds = QDateTime::currentDateTime().secsTo( predictedDeparture() );
     int totalMinutes = qCeil( (qreal)totalSeconds / 60.0 );
-    int remDelay = delayType() == Delayed ? m_delay : 0;
-    if ( totalMinutes < 0 ) {
-	if ( !(delayType() == Delayed && -totalMinutes > m_delay) )
-	    return i18n("depart is in the past");
-	else {
-	    remDelay += totalMinutes;
-	    if ( remDelay == 0 )
-		return i18n("now");
-	    else
-		return "+ " + KGlobal::locale()->prettyFormatDuration( remDelay * 60000 );
-	}
-    }
+    if ( totalMinutes < 0 )
+	return i18n("depart is in the past");
 
     QString sDuration;
     if ( totalMinutes == 0 )
 	sDuration = i18n("now");
     else
-	sDuration = KGlobal::locale()->prettyFormatDuration( totalMinutes * 60000 )
-			.replace( ' ', "&nbsp;" );
-			
-    if ( remDelay == 0 )
-	return sDuration;
-    else
-	return sDuration + " + " + KGlobal::locale()->prettyFormatDuration( remDelay * 60000 );
-// 	    + i18nc("+ remaining delay in minutes", "+ %1 minutes", remDelay );
-    /*
-    if ( -totalSeconds / 3600 >= 23 )
-	totalSeconds += 24 * 3600;
-    int seconds = totalSeconds % 60;
-    totalSeconds -= seconds;
-    if (seconds > 0)
-	totalSeconds += 60;
-    int remainingDelay = delayType() == Delayed ? delay : 0;
-    if (totalSeconds < 0) {
-	if (!(delayType() == Delayed && -totalSeconds > delay * 60))
-	    return i18n("depart is in the past");
-	else
-	    remainingDelay -= qFloor( (float)totalSeconds / 60.0f );
-    }
+	sDuration = KGlobal::locale()->prettyFormatDuration( totalMinutes * 60000 );
 
-    int minutes = (totalSeconds / 60) % 60;
-    int hours = totalSeconds / 3600;
-    QString str;
-
-    if ( delayType() == Delayed ) {
-	if (hours > 0) {
-	    if (minutes > 0)
-		str = i18nc("h:mm + delay in minutes", "%1:%2 + %3 minutes", hours, QString("%1").arg(minutes, 2, 10, QLatin1Char('0')), remainingDelay);
-	    else
-		str = i18ncp("Hour(s) + delay in minutes", "%1 hour + %2 minutes", "in %1 hours + %2 minutes", hours, remainingDelay);
-	} else if (minutes > 0)
-	    str = i18nc("Minute(s) + delay in minutes", "%1 + %2 minutes", minutes, remainingDelay);
-	else if (hours == 0 && minutes == 0)
-	    str = i18nc("Now + delay in minutes", "now + %1 minutes", remainingDelay );
-	else
-	    str = i18nc("+ remaining delay in minutes", "+ %1 minutes", remainingDelay );
-    } else {
-	if (hours > 0) {
-	    if (minutes > 0)
-		str = i18nc("h:mm", "%1:%2 hours", hours, QString("%1").arg(minutes, 2, 10, QLatin1Char('0')));
-	    else
-		str = i18np("%1 hour", "%1 hours", hours);
-	}
-	else if (minutes > 0)
-	    str = i18np("%1 minute", "%1 minutes", minutes);
-	else
-	    str = i18n("now");
-    }
-
-    return str.replace( ' ', "&nbsp;" );*/
+    return showDelay ? sDuration + delayString() : sDuration;
 }
 
 void DepartureInfo::init( const QString &operatorName, const QString &line,
@@ -235,24 +169,22 @@ void JourneyInfo::generateHash() {
 
 QString DepartureInfo::delayText() const {
     QString sText;
-    switch ( delayType() ) {
-	case OnSchedule:
-	    sText = i18nc("A public transport vehicle departs on schedule", "On schedule");
-	    sText = sText.prepend("<span style='color:green;'>").append("</span>");
-	    break;
-	case Delayed:
-	    sText = i18np("+%1 minute", "+%1 minutes", delay());
-	    sText = sText.replace(QRegExp("(+?\\s*\\d+)"), "<span style='color:red;'>+&nbsp;\\1</span>");
-	    
-	    if ( !delayReason().isEmpty() ) {
-		sText += ", " + delayReason();
-	    }
-	    break;
-	    
-	case DelayUnknown:
-	default:
-	    sText = i18n("No information available");
-	    break;
+    DelayType type = delayType();
+    if ( type == OnSchedule ) {
+	sText = i18nc("A public transport vehicle departs on schedule", "On schedule");
+	sText = sText.prepend( QString("<span style='color:%1;'>")
+		     .arg(Global::textColorOnSchedule().name()) ).append( "</span>" );
+    } else if ( type == Delayed ) {
+	sText = i18np("+%1 minute", "+%1 minutes", delay());
+	sText = sText.replace( QRegExp("(+?\\s*\\d+)"),
+		QString("<span style='color:%1;'>+&nbsp;\\1</span>")
+		.arg(Global::textColorDelayed().name()) );
+
+	if ( !delayReason().isEmpty() ) {
+	    sText += ", " + delayReason();
+	}
+    } else { // DelayUnknown:
+	sText = i18n("No information available");
     }
     
     return sText;

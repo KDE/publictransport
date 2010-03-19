@@ -211,7 +211,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	* DepartureInfo object.
 	* @param departureInfo The departure / arrival for which the departure text
 	* should be returned. */
-	QString departureText( const DepartureInfo &departureInfo ) const;
+	QString departureText( const DepartureInfo &departureInfo,
+			       bool htmlFormatted = true ) const;
 
 	/** Unfortunately KLocale::FancyShortDate is only fancy for dates in the past.
 	* This method formats future dates fancy. */
@@ -220,7 +221,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** Gets the text to be displayed in the column departure for a journey.
 	* @param departureInfo The journey for which the departure text should be
 	* returned. */
-	QString departureText( const JourneyInfo &journeyInfo ) const;
+	QString departureText( const JourneyInfo &journeyInfo,
+			       bool htmlFormatted = true ) const;
 
 	/** Gets the text to be displayed in the column arrival for a journey.
 	* @param departureInfo The journey for which the arrival text should be
@@ -391,6 +393,9 @@ class PublicTransport : public Plasma::PopupApplet {
 	void setJourneySearchStopNameCompletion( const QString &match );
 	void setJourneySearchWordCompletion( const QString &match );
 	void recentJourneyActionTriggered( QAction *action );
+	
+	void sectionPressed(int);
+	void sectionMoved(int,int,int);
 
     protected slots:
 	void destroyOverlay();

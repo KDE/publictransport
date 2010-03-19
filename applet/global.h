@@ -189,7 +189,6 @@ enum ModelDataRoles {
     AlarmTimerRole = Qt::UserRole + 4, /**< Used to store the alarm timer */
     VehicleTypeRole = Qt::UserRole + 5, /**< Used to store the vehicle type */
     VehicleTypeListRole = Qt::UserRole + 6, /**< Used to store the vehicle type */
-    OriginalBackgroundColorRole = Qt::UserRole + 7, /**< Used to store the original background color */
     ServiceProviderDataRole = Qt::UserRole + 8, /**< For the service provider combo box */
     RemainingMinutesRole = Qt::UserRole + 9, /**< Used to store an int with the remaining minutes until the predicted departure / arrival (= departure / arrival + delay) */
     DepartureInfoRole = Qt::UserRole + 10, /**< Used to store the departure */
@@ -284,29 +283,39 @@ enum DelayType {
 @brief Contains global static methods. */
 class Global {
     public:
-	static KIcon putIconIntoBiggerSizeIcon( const KIcon &icon, const QSize &iconSize, const QSize &resultingSize = QSize(32, 32) );
+	static QColor textColorOnSchedule();
+	static QColor textColorDelayed();
+	
+	static KIcon putIconIntoBiggerSizeIcon( const KIcon &icon,
+		const QSize &iconSize, const QSize &resultingSize = QSize(32, 32) );
 
 	/** Create an "international" icon with some flag icons */
 	static KIcon internationalIcon();
 
 	/** Creates an icon that has another icon as overlay on the bottom right. */
-	static KIcon makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon, const QSize &overlaySize = QSize(10, 10), int iconExtend = 16 );
+	static KIcon makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon,
+				      const QSize &overlaySize = QSize(10, 10),
+				      int iconExtend = 16 );
 
 	/** Creates an icon that has another icon as overlay on the bottom right. */
-	static KIcon makeOverlayIcon( const KIcon &icon, const QString &overlayIconName, const QSize &overlaySize = QSize(10, 10), int iconExtend = 16 );
+	static KIcon makeOverlayIcon( const KIcon &icon, const QString &overlayIconName,
+				      const QSize &overlaySize = QSize(10, 10),
+				      int iconExtend = 16 );
 
 	/** Creates an icon that has other icons as overlay on the bottom. */
 	static KIcon makeOverlayIcon( const KIcon &icon, const QList<KIcon> &overlayIconsBottom, const QSize &overlaySize = QSize(10, 10), int iconExtend = 16 );
 
 	/** Gets an icon for the given type of vehicle. */
-	static KIcon vehicleTypeToIcon( const VehicleType &vehicleType, const QString &overlayIcon = QString() );
+	static KIcon vehicleTypeToIcon( const VehicleType &vehicleType,
+					const QString &overlayIcon = QString() );
 
 	/** Gets an icon containing the icons of all vehicle types in the given list. */
 	static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes,
 					      int extend = 32 );
 
 	/** Gets the name of the given type of vehicle. */
-	static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );
+	static QString vehicleTypeToString( const VehicleType &vehicleType,
+					    bool plural = false );
 
 	/** Gets a string like "25 minutes". */
 	static QString durationString( int seconds );

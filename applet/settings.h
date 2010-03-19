@@ -138,7 +138,8 @@ class SettingsIO {
 	    ChangedServiceProvider = 0x0002,
 	    ChangedDepartureArrivalListType = 0x0004,
 	    ChangedStopSettings = 0x0008,
-	    ChangedFilterSettings = 0x0010
+	    ChangedFilterSettings = 0x0010,
+	    ChangedLinesPerRow = 0x0020
 	};
 	Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag );
 	

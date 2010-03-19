@@ -33,6 +33,7 @@
 #include <KPushButton>
 #include <KMenu>
 #include <KMimeTypeTrader>
+#include <KColorUtils>
 
 // Plasma includes
 #include <Plasma/IconWidget>
@@ -194,7 +195,7 @@ class HeaderView : public QHeaderView {
 	    setAutoFillBackground( false );
 	    setAttribute( Qt::WA_NoSystemBackground );
 	};
-
+	
     protected:
 	virtual void paintEvent( QPaintEvent *e ) {
 	    Plasma::FrameSvg svg;
@@ -277,7 +278,7 @@ class HeaderView : public QHeaderView {
 * completely private in QTreeView. */
 class TreeView : public QTreeView {
     public:
-	static const int fadeHeight = 25;
+	static const int fadeHeight = 16;
 	
 	TreeView( QStyle *style ) : QTreeView() {
 	    // Set plasma style (like it's done in Plasma::TreeView)
@@ -325,8 +326,31 @@ class TreeView : public QTreeView {
 		updateRegion = updateRegion.united( topFadeRect );
 	    viewport()->update( updateRegion );
 	};
+
+	void drawRowBackground( QPainter *painter, const QStyleOptionViewItem& options,
+				const QModelIndex& index ) const {
+	    QModelIndex topLevelParent = index;
+	    while ( topLevelParent.parent().isValid() )
+		topLevelParent = topLevelParent.parent();
+	    QBrush bgBrush = alternatingRowColors() && topLevelParent.row() & 1
+		    ? options.palette.alternateBase() : options.palette.base();
+	    painter->fillRect( options.rect, bgBrush );
+
+	    if ( topLevelParent.data(HtmlDelegate::DrawAlarmBackground).toBool() ) {
+		QColor alarmColor = KColorScheme( QPalette::Active )
+			.background( KColorScheme::NegativeBackground ).color();
+		QLinearGradient bgGradient( 0, 0, 1, 0 );
+		bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+		bgGradient.setColorAt( 0, Qt::transparent );
+		bgGradient.setColorAt( 0.3, alarmColor );
+		bgGradient.setColorAt( 0.7, alarmColor );
+		bgGradient.setColorAt( 1, Qt::transparent );
+		painter->fillRect( options.rect, QBrush(bgGradient) );
+	    }
+
+	};
 	
-	virtual void drawRow( QPainter* painter, const QStyleOptionViewItem& options,
+	virtual void drawRow( QPainter *painter, const QStyleOptionViewItem& options,
 			      const QModelIndex& index ) const {
 	    const QRect cr = viewport()->contentsRect();
 	    const QRect topFadeRect( cr.x(), cr.y(), cr.width(), fadeHeight );
@@ -334,18 +358,26 @@ class TreeView : public QTreeView {
 					QSize(cr.width(), fadeHeight) );
 	    int scrollValue = verticalScrollBar()->value();
 
+	    QStyleOptionViewItem optNoAlternateBase = options;
+	    optNoAlternateBase.palette.setBrush( QPalette::All, QPalette::AlternateBase,
+						 options.palette.base() );
+	    
 	    if ( (scrollValue < verticalScrollBar()->maximum() &&
-		 !horizontalScrollBar()->isVisible() && bottomFadeRect.intersects(options.rect)) ||
-		 (scrollValue > 0 && isHeaderHidden() && topFadeRect.intersects(options.rect)) )
+		 !horizontalScrollBar()->isVisible()
+		 && bottomFadeRect.intersects(options.rect)) ||
+		 (scrollValue > 0 && isHeaderHidden()
+		 && topFadeRect.intersects(options.rect)) )
 	    {
+		QStyleOptionViewItem opt = options;
+		opt.rect.moveTopLeft( QPoint(0, 0) );
+		optNoAlternateBase.rect.moveTopLeft( QPoint(0, 0) );
+
+		// Draw row into pixmap
 		QPixmap pixmap( options.rect.size() );
 		pixmap.fill( Qt::transparent );
 		QPainter p( &pixmap );
-
-		// Draw row into pixmap
-		QStyleOptionViewItem opt = options;
-		opt.rect.moveTopLeft( QPoint(0, 0) );
-		QTreeView::drawRow( &p, opt, index );
+		drawRowBackground( &p, opt, index );
+		QTreeView::drawRow( &p, optNoAlternateBase, index );
 
 		// Fade out parts of the row that intersect with the fade rect
 		p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
@@ -360,12 +392,16 @@ class TreeView : public QTreeView {
 
 		// Draw faded row
 		painter->drawPixmap( options.rect.topLeft(), pixmap );
-	    } else
-		QTreeView::drawRow( painter, options, index );
+	    } else {
+		drawRowBackground( painter, options, index );
+		QTreeView::drawRow( painter, optNoAlternateBase, index );
+	    }
 	};
 
     private:
 	QPixmap m_bottomFadeTile, m_topFadeTile;
+	int m_current;
+	QModelIndex m_firstDrawnIndex;
 };
 
 
@@ -381,7 +417,7 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 			 << DepartureColumn << ArrivalColumn;
 
     m_journeySearchLastTextLength = 0;
-    setBackgroundHints( TranslucentBackground );
+    setBackgroundHints( StandardBackground ); //TranslucentBackground );
     setAspectRatioMode( Plasma::IgnoreAspectRatio );
     setHasConfigurationInterface( true );
     resize( 400, 300 );
@@ -971,14 +1007,12 @@ QList< DepartureInfo > PublicTransport::departureInfos() const {
 
 void PublicTransport::clearDepartures() {
     m_departureInfos.clear(); // Clear data from data engine
-    if ( m_model )
-	m_model->removeRows( 0, m_model->rowCount() ); // Clear data to be displayed
+    m_model->removeRows( 0, m_model->rowCount() ); // Clear data to be displayed
 }
 
 void PublicTransport::clearJourneys() {
     m_journeyInfos.clear(); // Clear data from data engine
-    if ( m_modelJourneys )
-	m_modelJourneys->removeRows( 0, m_modelJourneys->rowCount() ); // Clear data to be displayed
+    m_modelJourneys->removeRows( 0, m_modelJourneys->rowCount() ); // Clear data to be displayed
 }
 
 void PublicTransport::processData( const QString &sourceName,
@@ -1212,28 +1246,28 @@ void PublicTransport::createTooltip() {
 	if ( m_settings.departureArrivalListType ==  DepartureList ) {
 	    if ( m_settings.currentStopSettings().stops.count() == 1 ) {
 		data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
-				       "Next departure from '%1': line %2 (%3) %4",
-				       m_settings.currentStopSettings().stops.first(),
-				       nextDeparture.lineString(), nextDeparture.target(),
-				       nextDeparture.durationString() ) );
+				"Next departure from '%1': line %2 (%3) %4",
+				m_settings.currentStopSettings().stops.first(),
+				nextDeparture.lineString(), nextDeparture.target(),
+				nextDeparture.durationString() ) );
 	    } else {
 		data.setSubText( i18nc("%3 is the translated duration text, e.g. in 3 minutes",
-				       "Next departure from your home stop: line %1 (%2) %3",
-				       nextDeparture.lineString(), nextDeparture.target(),
-				       nextDeparture.durationString() ) );
+				 "Next departure from your home stop: line %1 (%2) %3",
+				 nextDeparture.lineString(), nextDeparture.target(),
+				 nextDeparture.durationString() ) );
 	    }
 	} else {
 	    if ( m_settings.currentStopSettings().stops.count() == 1 ) {
 		data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
-				       "Next arrival at '%1': line %2 (%3) %4",
-				       m_settings.currentStopSettings().stops.first(),
-				       nextDeparture.lineString(), nextDeparture.target(),
-				       nextDeparture.durationString() ) );
+				 "Next arrival at '%1': line %2 (%3) %4",
+				 m_settings.currentStopSettings().stops.first(),
+				 nextDeparture.lineString(), nextDeparture.target(),
+				 nextDeparture.durationString() ) );
 	    } else {
 		data.setSubText( i18nc("%3 is the translated duration text, e.g. in 3 minutes",
-				       "Next arrival at your home stop: line %1 (%2) %3",
-				       nextDeparture.lineString(), nextDeparture.target(),
-				       nextDeparture.durationString() ) );
+				 "Next arrival at your home stop: line %1 (%2) %3",
+				 nextDeparture.lineString(), nextDeparture.target(),
+				 nextDeparture.durationString() ) );
 	    }
 	}
     }
@@ -1710,7 +1744,7 @@ bool PublicTransport::searchForJourneySearchKeywords( const QString& journeySear
     } else if ( stop->trimmed().isEmpty() ) {
 	if ( len )
 	    *len = 0;
-	*stop = "";
+	*stop = QString();
 	return false;
     }
     
@@ -2201,7 +2235,19 @@ void PublicTransport::useCurrentPlasmaTheme() {
     p.setColor( QPalette::Foreground, textColor );
     p.setColor( QPalette::Text, textColor );
     p.setColor( QPalette::ButtonText, textColor );
-
+    
+    QColor bgColor = KColorScheme( QPalette::Active )
+	    .background( KColorScheme::AlternateBackground ).color();
+    bgColor.setAlpha( bgColor.alpha() / 3 );
+    QLinearGradient bgGradient( 0, 0, 1, 0 );
+    bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+    bgGradient.setColorAt( 0, Qt::transparent );
+    bgGradient.setColorAt( 0.3, bgColor );
+    bgGradient.setColorAt( 0.7, bgColor );
+    bgGradient.setColorAt( 1, Qt::transparent );
+    QBrush brush( bgGradient );
+    p.setBrush( QPalette::AlternateBase, brush );
+    
     QTreeView *treeView = m_treeView->nativeWidget();
     treeView->setPalette( p );
     treeView->header()->setPalette( p );
@@ -2318,8 +2364,10 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 
 	// Create treeview for departures / arrivals
 	m_treeView = new Plasma::TreeView( m_mainGraphicsWidget );
-	m_treeView->setWidget( new TreeView(m_treeView->nativeWidget()->verticalScrollBar()->style()) );
-	QTreeView *treeView = m_treeView->nativeWidget();
+	QTreeView *treeView = new TreeView(
+		m_treeView->nativeWidget()->verticalScrollBar()->style() );
+	m_treeView->setWidget( treeView );
+	treeView->setAlternatingRowColors( true );
 	treeView->setAllColumnsShowFocus( true );
 	treeView->setRootIsDecorated( false );
 	treeView->setAnimated( true );
@@ -2491,6 +2539,7 @@ void PublicTransport::writeSettings( const Settings& settings ) {
 		currentServiceProviderData()["features"].toStringList();
 	configNeedsSaving();
 	emit settingsChanged();
+// 	m_treeView->nativeWidget()->doItemsLayout();
 
 	if ( changed.testFlag(SettingsIO::ChangedServiceProvider) )
 	    serviceProviderSettingsChanged();
@@ -2499,6 +2548,10 @@ void PublicTransport::writeSettings( const Settings& settings ) {
 	if ( changed.testFlag(SettingsIO::ChangedStopSettings) ) {
 	    clearDepartures();
 	    reconnectSource();
+	} else if ( changed.testFlag(SettingsIO::ChangedLinesPerRow) ) {
+	    // Refill model to recompute item sizehints
+	    m_model->removeRows( 0, m_model->rowCount() );
+	    updateModel();
 	}
     } else
 	kDebug() << "No changes made in the settings";
@@ -2549,6 +2602,27 @@ void PublicTransport::setDepartureArrivalListType(
 	m_model->horizontalHeaderItem( i )->setTextAlignment(
 		Qt::AlignLeft | Qt::AlignVCenter );
     }
+    connect( m_treeView->nativeWidget()->header(), SIGNAL(sectionPressed(int)),
+	     this, SLOT(sectionPressed(int)) );
+    connect( m_treeView->nativeWidget()->header(), SIGNAL(sectionMoved(int,int,int)),
+	     this, SLOT(sectionMoved(int,int,int)) );
+}
+
+void PublicTransport::sectionMoved( int logicalIndex, int oldVisualIndex,
+				    int newVisualIndex ) {
+    // Don't allow sections to be moved to visual index 0
+    // because otherwise the child items aren't spanned...
+    if ( newVisualIndex == 0 ) {
+	m_treeView->nativeWidget()->header()->moveSection(
+		m_treeView->nativeWidget()->header()->visualIndex(logicalIndex),
+		oldVisualIndex );
+    }
+}
+
+void PublicTransport::sectionPressed( int logicalIndex ) {
+    // Don't allow moving of visual index 0
+    m_treeView->nativeWidget()->header()->setMovable(
+	m_treeView->nativeWidget()->header()->visualIndex(logicalIndex) != 0 );
 }
 
 void PublicTransport::initJourneyList() {
@@ -3046,26 +3120,12 @@ void PublicTransport::markAlarmRow( const QPersistentModelIndex& modelIndex,
     if ( !itemDeparture )
 	return;
     if ( alarmState == AlarmPending ) {
-	// Make background ground color light red and store original background color
-	QColor color( 255, 200, 200, 180 );
 	itemDeparture->setIcon( KIcon("kalarm") );
 	itemDeparture->setData( static_cast<int>(HtmlDelegate::Right),
 				HtmlDelegate::DecorationPositionRole );
-	itemDeparture->setData( itemDeparture->background(), OriginalBackgroundColorRole );
-	itemDeparture->setBackground( QBrush(color) );
-	m_model->item( modelIndex.row(), 0 )->setBackground( QBrush(color) );
-	m_model->item( modelIndex.row(), 1 )->setBackground( QBrush(color) );
     } else if (alarmState == NoAlarm) {
-	// Set background color back to original
-	QBrush brush =  itemDeparture->data(OriginalBackgroundColorRole).value<QBrush>();
-	itemDeparture->setBackground( brush );
 	itemDeparture->setIcon( KIcon() );
-	m_model->item( modelIndex.row(), 0 )->setBackground( brush );
-	m_model->item( modelIndex.row(), 1 )->setBackground( brush );
     } else if (alarmState == AlarmFired) {
-	// Set background color back to original
-	QBrush brush =  itemDeparture->data(OriginalBackgroundColorRole).value<QBrush>();
-	itemDeparture->setBackground( brush );
 	KIconEffect iconEffect;
 	QPixmap pixmap = iconEffect.apply(
 		KIcon("kalarm").pixmap(16 * m_settings.sizeFactor),
@@ -3075,9 +3135,15 @@ void PublicTransport::markAlarmRow( const QPersistentModelIndex& modelIndex,
 	itemDeparture->setIcon( disabledAlarmIcon );
 	itemDeparture->setData( static_cast<int>(HtmlDelegate::Right),
 				HtmlDelegate::DecorationPositionRole );
-	m_model->item( modelIndex.row(), 0 )->setBackground( brush );
-	m_model->item( modelIndex.row(), 1 )->setBackground( brush );
     }
+    
+    for ( int col = 0; col < m_model->columnCount(); ++col ) {
+	m_model->item( modelIndex.row(), col )->setData(
+		alarmState == AlarmPending, HtmlDelegate::DrawAlarmBackground );
+    }
+
+    if ( m_treeView->nativeWidget()->isExpanded(m_model->index(modelIndex.row(), 0)) )
+	m_treeView->update(); // Update children with the new row color
 }
 
 void PublicTransport::removeAlarmForDeparture( int row ) {
@@ -3260,29 +3326,40 @@ QString PublicTransport::formatDateFancyFuture( const QDate& date ) const {
 	return KGlobal::locale()->formatDate( date, KLocale::ShortDate );
 }
 
-QString PublicTransport::departureText( const JourneyInfo& journeyInfo ) const {
+QString PublicTransport::departureText( const JourneyInfo& journeyInfo,
+					bool htmlFormatted ) const {
     QString sTime, sDeparture = journeyInfo.departure().toString("hh:mm");
-    if ( m_settings.displayTimeBold )
-	sDeparture = sDeparture.prepend("<span style='font-weight:bold;'>").append("</span>");
+    if ( htmlFormatted && m_settings.displayTimeBold )
+	sDeparture = sDeparture.prepend("<span style='font-weight:bold;'>")
+			       .append("</span>");
     
     if ( journeyInfo.departure().date() != QDate::currentDate() )
 	sDeparture += ", " + formatDateFancyFuture( journeyInfo.departure().date() );
     
     if ( m_settings.showDepartureTime && m_settings.showRemainingMinutes ) {
 	QString sText = journeyInfo.durationToDepartureString();
-	sText = sText.replace(QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"), "<span style='color:red;'>+&nbsp;\\1</span>");
+	if ( htmlFormatted ) {
+	    sText = sText.replace( QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"),
+		    QString("<span style='color:%1;'>+&nbsp;\\1</span>")
+		    .arg(Global::textColorDelayed().name()) );
+	}
 
 	if ( m_settings.linesPerRow > 1 )
-	    sTime = QString("%1<br>(%2)").arg( sDeparture ).arg( sText );
+	    sTime = QString(htmlFormatted ? "%1<br>(%2)" : "%1\n(%2)")
+		    .arg( sDeparture ).arg( sText );
 	else
 	    sTime = QString("%1 (%2)").arg( sDeparture ).arg( sText );
     } else if ( m_settings.showDepartureTime ) {
 	sTime = sDeparture;
     } else if ( m_settings.showRemainingMinutes ) {
 	sTime = journeyInfo.durationToDepartureString();
-	sTime = sTime.replace(QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"), "<span style='color:red;'>+&nbsp;\\1</span>");
+	if ( htmlFormatted ) {
+	    sTime = sTime.replace( QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"),
+		    QString("<span style='color:%1;'>+&nbsp;\\1</span>")
+		    .arg(Global::textColorDelayed().name()) );
+	}
     } else
-	sTime = "";
+	sTime = QString();
 
     return sTime;
 }
@@ -3297,7 +3374,9 @@ QString PublicTransport::arrivalText( const JourneyInfo& journeyInfo ) const {
     
     if ( m_settings.showDepartureTime && m_settings.showRemainingMinutes ) {
 	QString sText = journeyInfo.durationToDepartureString(true);
-	sText = sText.replace(QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"), "<span style='color:red;'>+&nbsp;\\1</span>");
+	sText = sText.replace( QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"),
+		QString("<span style='color:%1;'>+&nbsp;\\1</span>")
+		.arg(Global::textColorDelayed().name()) );
 
 	if ( m_settings.linesPerRow > 1 )
 	    sTime = QString("%1<br>(%2)").arg( sArrival ).arg( sText );
@@ -3306,50 +3385,77 @@ QString PublicTransport::arrivalText( const JourneyInfo& journeyInfo ) const {
     } else if ( m_settings.showDepartureTime ) {
 	sTime = sArrival;
     } else if ( m_settings.showRemainingMinutes ) {
-	sTime = journeyInfo.durationToDepartureString(true);
-	sTime = sTime.replace(QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"), "<span style='color:red;'>+&nbsp;\\1</span>");
+	sTime = journeyInfo.durationToDepartureString( true );
+	sTime = sTime.replace( QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"),
+		QString("<span style='color:%1;'>+&nbsp;\\1</span>")
+		.arg(Global::textColorDelayed().name()) );
     } else
-	sTime = "";
+	sTime = QString();
 
     return sTime;
 }
 
-QString PublicTransport::departureText( const DepartureInfo &departureInfo ) const {
+QString PublicTransport::departureText( const DepartureInfo &departureInfo,
+					bool htmlFormatted ) const {
     QDateTime predictedDeparture = departureInfo.predictedDeparture();
     QString sTime, sDeparture = predictedDeparture.toString("hh:mm");
     QString sColor;
-    if ( departureInfo.delayType() == OnSchedule )
-	sColor = "color:darkgreen;"; // TODO: works good with Air-Theme, but is too dark for dark themes
-    else if ( departureInfo.delayType() == Delayed )
-	sColor = "color:darkred;"; // TODO: works good with Air-Theme, but is too dark for dark themes
+    if ( htmlFormatted ) {
+	if ( departureInfo.delayType() == OnSchedule )
+	    sColor = QString( "color:%1;" ).arg( Global::textColorOnSchedule().name() );
+	else if ( departureInfo.delayType() == Delayed )
+	    sColor = QString( "color:%1;" ).arg( Global::textColorDelayed().name() );
 
-    if ( m_settings.displayTimeBold )
-	sDeparture = sDeparture.prepend(QString("<span style='font-weight:bold;%1'>").arg(sColor)).append("</span>");
+	QString sBold;
+	if ( m_settings.displayTimeBold )
+	    sBold = "font-weight:bold;";
+	
+	sDeparture = sDeparture.prepend(
+		QString("<span style='%1%2'>").arg(sColor).arg(sBold) )
+		.append( "</span>" );
+    }
     if ( predictedDeparture.date() != QDate::currentDate() )
 	sDeparture += ", " + formatDateFancyFuture( predictedDeparture.date() );
 
     if ( m_settings.showDepartureTime && m_settings.showRemainingMinutes ) {
-	QString sText = departureInfo.durationString();
-	sText = sText.replace( QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"),
-			       "<span style='color:red;'>+&nbsp;\\1</span>" );
-
-	if ( m_settings.linesPerRow > 1 )
-	    sTime = QString("%1<br>(%2)").arg( sDeparture ).arg( sText );
-	else
-	    sTime = QString("%1 (%2)").arg( sDeparture ).arg( sText );
+	QString sText = departureInfo.durationString( false );
+	sDeparture += departureInfo.delayString(); // Show delay after time
+	if ( htmlFormatted ) {
+	    sDeparture = sDeparture.replace( QRegExp("(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)"),
+		    QString("<span style='color:%1;'>\\1</span>")
+		    .arg(Global::textColorDelayed().name()) );
+	    sTime = QString( m_settings.linesPerRow > 1 ? "%1<br>(%2)" : "%1 (%2)" )
+		    .arg( sDeparture ).arg( sText );
+	} else
+	    sTime = QString( m_settings.linesPerRow > 1 ? "%1\n(%2)" : "%1 (%2)" )
+		    .arg( sDeparture ).arg( sText );
     } else if ( m_settings.showDepartureTime ) {
+	if ( htmlFormatted ) {
+	    sDeparture += departureInfo.delayString().replace(
+		    QRegExp("(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)"),
+		    QString("<span style='color:%1;'>\\1</span>")
+		    .arg(Global::textColorDelayed().name()) ); // Show delay after time
+	} else
+	    sDeparture += departureInfo.delayString();
 	sTime = sDeparture;
-	if ( departureInfo.delayType() == Delayed ) {
-	    QString sText = i18np("+ %1 minute", "+ %1 minutes", departureInfo.delay() );
-	    sText = sText.prepend(" (").append(")");
-	    sText = sText.replace(QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"), "<span style='color:red;'>+&nbsp;\\1</span>");
-	    sTime += sText;
-	}
     } else if ( m_settings.showRemainingMinutes ) {
 	sTime = departureInfo.durationString();
-	sTime = sTime.replace(QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"), "<span style='color:red;'>+&nbsp;\\1</span>");
+	if ( htmlFormatted ) {
+	    if ( m_settings.linesPerRow == 1 )
+		sTime = sTime.replace( ' ', "&nbsp;" ); // No line breaking
+	    DelayType type = departureInfo.delayType();
+	    if ( type == Delayed ) {
+		sTime = sTime.replace( QRegExp("(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)"),
+			QString("<span style='color:%1;'>\\1</span>")
+			.arg(Global::textColorDelayed().name()) );
+	    } else if ( type == OnSchedule ) {
+		sTime = sTime.prepend( QString("<span style='color:%1;'>")
+			.arg(Global::textColorOnSchedule().name()) )
+			.append( "</span>" );
+	    }
+	}
     } else
-	sTime = "";
+	sTime = QString();
 
     return sTime;
 }
@@ -3437,22 +3543,21 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 	    break;
 	    
 	case DepartureItem:
-	    journeyItem->setData( s = departureText(journeyInfo),
+	    journeyItem->setData( departureText(journeyInfo),
 				  HtmlDelegate::FormattedTextRole );
+	    s = departureText( journeyInfo, false );
 	    if ( m_settings.linesPerRow > 1 ) {
 		// Get longest line for auto column sizing
-		sList = s.split("<br>", QString::SkipEmptyParts, Qt::CaseInsensitive);
-		s = "";
+		sList = s.split( "\n", QString::SkipEmptyParts, Qt::CaseInsensitive );
+		s = QString();
 		foreach( QString sCurrent, sList ) {
-		    sCurrent.replace(QRegExp("<[^>]*>"), "");
-		    if ( sCurrent.replace(QRegExp("(&\\w{2,5};|&#\\d{3,4};)"),
-					  " ").length() > s.length() ) {
+// 		    sCurrent.replace(QRegExp("<[^>]*>"), "");
+		    if ( sCurrent.length() > s.length() )
 			s = sCurrent;
-		    }
 		}
-		journeyItem->setText( s ); // This is just used for auto column sizing
-	    } else
-		journeyItem->setText( s.replace(QRegExp("<[^>]*>"), "") ); // This is just used for auto column sizing
+	    }
+	    journeyItem->setText( s ); // This is just used for auto column sizing
+	    
 	    journeyItem->setData( journeyInfo.departure(), SortRole );
 	    journeyItem->setData( m_settings.linesPerRow, HtmlDelegate::LinesPerRowRole );
 	    journeyItem->setData( qCeil((float)QDateTime::currentDateTime().secsTo(
@@ -3467,10 +3572,11 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 	case ArrivalItem:
 	    journeyItem->setData( s = arrivalText(journeyInfo),
 				  HtmlDelegate::FormattedTextRole );
+				  // TODO arrivalText() with htmlFormatted == false
 	    if ( m_settings.linesPerRow > 1 ) {
 		// Get longest line for auto column sizing
 		sList = s.split("<br>", QString::SkipEmptyParts, Qt::CaseInsensitive);
-		s = "";
+		s = QString();
 		foreach( QString sCurrent, sList ) {
 		    sCurrent.replace(QRegExp("<[^>]*>"), "");
 		    if ( sCurrent.replace(QRegExp("(&\\w{2,5};|&#\\d{3,4};)"), " ").length()
@@ -3581,7 +3687,7 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		}
 
 		KIcon icon;
-		QString sTransportLine = "";
+		QString sTransportLine;
 		if ( row < journeyInfo.routeVehicleTypes().count()
 			    && journeyInfo.routeVehicleTypes()[row] != Unknown)
 		    icon = Global::vehicleTypeToIcon( journeyInfo.routeVehicleTypes()[row] );
@@ -3612,11 +3718,12 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		if ( journeyInfo.routeTimesDepartureDelay().count() > row ) {
 		    int delay = journeyInfo.routeTimesDepartureDelay()[ row ];
 		    if ( delay > 0 ) {
-			sTimeDep += QString( " <span style='color:red;'>+%1</span>" )
-				.arg( delay );
+			sTimeDep += QString( " <span style='color:%2;'>+%1</span>" )
+				.arg( delay ).arg( Global::textColorDelayed().name() );
 		    } else if ( delay == 0 ) {
-			sTimeDep = sTimeDep.prepend( "<span style='color:green;'>" )
-					   .append( "</span>" );
+			sTimeDep = sTimeDep.prepend( QString("<span style='color:%1;'>")
+				.arg(Global::textColorOnSchedule().name()) )
+				.append( "</span>" );
 		    }
 		}
 		
@@ -3624,11 +3731,12 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		if ( journeyInfo.routeTimesArrivalDelay().count() > row ) {
 		    int delay = journeyInfo.routeTimesArrivalDelay()[ row ];
 		    if ( delay > 0 ) {
-			sTimeArr += QString( " <span style='color:red;'>+%1</span>" )
-				.arg( delay );
+			sTimeArr += QString( " <span style='color:%2;'>+%1</span>" )
+				.arg( delay ).arg( Global::textColorDelayed().name() );
 		    } else if ( delay == 0 ) {
-			sTimeArr = sTimeArr.prepend( "<span style='color:green;'>" )
-					   .append( "</span>" );
+			sTimeArr = sTimeArr.prepend( QString("<span style='color:%1;'>")
+				.arg(Global::textColorOnSchedule().name()) )
+				.append( "</span>" );
 		    }
 		    
 		}
@@ -3720,21 +3828,20 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 
 	case DepartureItem:
 	    s = departureText( departureInfo );
+	    s2 = departureText( departureInfo, false );
 	    v = departureItem->data( HtmlDelegate::FormattedTextRole );
 	    if ( !v.isValid() || v.toString() != s ) {
 		departureItem->setData( s, HtmlDelegate::FormattedTextRole );
 		if ( m_settings.linesPerRow > 1 ) {
 		    // Get longest line for auto column sizing
-		    sList = s.split("<br>", QString::SkipEmptyParts, Qt::CaseInsensitive);
-		    s = QString();
+		    sList = s2.split( "\n", QString::SkipEmptyParts, Qt::CaseInsensitive );
+		    s2 = QString();
 		    foreach( QString sCurrent, sList ) {
-			sCurrent = sCurrent.replace(QRegExp("(<[^>]*>|&\\w{2,5};|&#\\d{3,4};)"), "");
-			if ( sCurrent/*.replace(QRegExp("("), " ")*/.length() > s.length() )
+			if ( sCurrent.length() > s.length() )
 			    s = sCurrent;
 		    }
-		    departureItem->setText( s ); // This is just used for auto column sizing
-		} else
-		    departureItem->setText( s.replace(QRegExp("(<[^>]*>|&\\w{2,5};|&#\\d{3,4};)"), "") ); // This is just used for auto column sizing
+		}
+		departureItem->setText( s2 ); // This is just used for auto column sizing
 	    }
 	    departureItem->setData( departureInfo.predictedDeparture(), SortRole );
 	    departureItem->setData( m_settings.linesPerRow, HtmlDelegate::LinesPerRowRole );

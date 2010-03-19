@@ -35,10 +35,10 @@ class HtmlDelegate : public QItemDelegate {
 	    FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text. The text of an item should not contain html tags, if used in a combo box. */
 	    TextBackgroundRole = Qt::UserRole + 501,
 	    DecorationPositionRole = Qt::UserRole + 502,
-// 	    GroupTitleRole = Qt::UserRole + 503,
+	    DrawAlarmBackground = Qt::UserRole + 503,
 	    LinesPerRowRole = Qt::UserRole + 504, /**< Used to change the number of lines for a row. */
 	    IconSizeRole = Qt::UserRole + 505, /**< Used to set a specific icon size for an element. */
-	    DrawBackgroundGradientRole = Qt::UserRole + 506 /**< Used to draw a border at the bottom for an element. */
+	    DrawBackgroundGradientRole = Qt::UserRole + 506 /**< Used to draw a background gradient at the bottom for an element. */
 	};
 
 	/** Position of the decoration. */

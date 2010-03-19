@@ -31,6 +31,7 @@
 
 #include <Plasma/PaintUtils>
 #include <Plasma/FrameSvg>
+#include <KColorScheme>
 
 
 PublicTransportDelegate::PublicTransportDelegate( QObject *parent )
@@ -72,7 +73,7 @@ void PublicTransportDelegate::paint( QPainter* painter,
     }
     
     HtmlDelegate::paint( painter, option, index );
-
+    
     if ( index.data(TextBackgroundRole).isValid() ) {
 	QStringList data = index.data( TextBackgroundRole ).toStringList();
 	if ( data.contains("drawFrameForWholeRow")
@@ -81,7 +82,7 @@ void PublicTransportDelegate::paint( QPainter* painter,
 	    // Draw line above
 	    QLinearGradient bgGradient;
 	    QRect bgRect = option.state.testFlag( QStyle::State_HasFocus )
-		? QRect( 0, 0, option.rect.width(), option.rect.height() )
+		? QRect( QPoint(0, 0), option.rect.size() )
 		: QRect( 0, 0, option.rect.width(), 1 );
 	    QPixmap pixmap( bgRect.size() );
 	    pixmap.fill( Qt::transparent );
@@ -93,7 +94,9 @@ void PublicTransportDelegate::paint( QPainter* painter,
 	    p.fillRect( bgRect, bgColor );
 
 	    QStyleOptionViewItemV4 opt = option;
-	    if ( opt.viewItemPosition == QStyleOptionViewItemV4::Beginning ) {
+	    if ( opt.viewItemPosition == QStyleOptionViewItemV4::Beginning
+		 || opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
+	    {
 		// Fade out left
 		p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
 		QLinearGradient alphaGradient1( 0, 0, 1, 0 );
@@ -102,7 +105,11 @@ void PublicTransportDelegate::paint( QPainter* painter,
 		alphaGradient1.setColorAt( 1, QColor(0, 0, 0, 255) );
 		p.fillRect( 0, 0, option.rect.width() / 3,
 			    option.rect.height(), alphaGradient1 );
-	    } else if ( opt.viewItemPosition == QStyleOptionViewItemV4::End ) {
+	    }
+
+	    if ( opt.viewItemPosition == QStyleOptionViewItemV4::End
+		 || opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
+	    {
 		// Fade out right
 		p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
 		QLinearGradient alphaGradient2( 1, 0, 0, 0 );
@@ -176,7 +183,15 @@ void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
 	    displayRect.adjust( margin + iconSize.width() + padding, 0, 0, 0 );
     }
 
-    drawDisplay( painter, option, displayRect, text );
+    QStyleOptionViewItem opt = option;
+    QModelIndex topLevelParent = index;
+    while ( topLevelParent.parent().isValid() )
+	topLevelParent = topLevelParent.parent();
+    if ( topLevelParent.data(DrawAlarmBackground).toBool() ) {
+	opt.palette.setColor( QPalette::Text, KColorScheme( QPalette::Active )
+		.foreground( KColorScheme::NegativeText ).color() );
+    }
+    drawDisplay( painter, opt, displayRect, text );
     drawFocus( painter, option, displayRect );
 }
 
@@ -209,6 +224,7 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
     QRect textRect = rect.adjusted( margin, 0, 0, 0 );
     QColor textColor = option.state.testFlag( QStyle::State_Selected )
 	? option.palette.highlightedText().color() : option.palette.text().color();
+
     bool drawHalos = m_options.testFlag(DrawShadows) && qGray(textColor.rgb()) < 192;
 	
     QList< QRect > fadeRects, haloRects;

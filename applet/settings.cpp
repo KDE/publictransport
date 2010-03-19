@@ -1099,7 +1099,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
     
     if ( settings.linesPerRow != oldSettings.linesPerRow ) {
 	cg.writeEntry( "linesPerRow", settings.linesPerRow );
-	changed |= IsChanged;
+	changed |= IsChanged | ChangedLinesPerRow;
     }
 
     if ( settings.size != oldSettings.size ) {
