@@ -129,12 +129,12 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	    "configuration matches, if one of it's filters match.<br>"
 	    "To use a filter configuration select it in the 'Filter Uses' tab. "
 	    "Each stop settings can use another filter configuration.<br><br>"
-	    "<b>Filter Types</b>"
-	    "- <b>Vehicle:</b> Filters by vehicle types."
-	    "- <b>Line String:</b> Filters by transport line strings."
-	    "- <b>Line number:</b> Filters by transport line numbers."
-	    "- <b>Target:</b> Filters by target/origin."
-	    "- <b>Via:</b> Filters by intermediate stops."
+	    "<b>Filter Types</b><br>"
+	    "- <b>Vehicle:</b> Filters by vehicle types.<br>"
+	    "- <b>Line String:</b> Filters by transport line strings.<br>"
+	    "- <b>Line number:</b> Filters by transport line numbers.<br>"
+	    "- <b>Target:</b> Filters by target/origin.<br>"
+	    "- <b>Via:</b> Filters by intermediate stops.<br>"
 	    "- <b>Delay:</b> Filters by delay.") );
     
     QVBoxLayout *l = new QVBoxLayout( m_uiFilter.filters );
