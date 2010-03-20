@@ -14,6 +14,7 @@ include_directories(
 # We add our source code here
 set( publictransport_SRCS
     publictransport.cpp
+    publictransporttreeview.cpp
     global.cpp
     settings.cpp
     stopfinder.cpp
@@ -41,26 +42,14 @@ kde4_add_ui_files( publictransport_SRCS
 # Now make sure all files get to the right place
 kde4_add_plugin( plasma_applet_publictransport ${publictransport_SRCS} )
 
-if ( ${KDE_VERSION} VERSION_LESS "4.3.80" )
-    target_link_libraries( plasma_applet_publictransport
-	${KDE4_PLASMA_LIBS}
-	${KDE4_KDEUI_LIBS}
-	${KDE4_KIO_LIBS}
-	${KDE4_KNEWSTUFF2_LIBS} )
-    install( FILES publictransport2.knsrc
-	    DESTINATION ${CONFIG_INSTALL_DIR} )
-else ( ${KDE_VERSION} VERSION_LESS "4.3.80" )
-    target_link_libraries( plasma_applet_publictransport
-	${KDE4_PLASMA_LIBS}
-	${KDE4_KDEUI_LIBS}
-	${KDE4_KIO_LIBS}
-	${KDE4_KNEWSTUFF3_LIBS} )
-    install( FILES publictransport.knsrc
-	    DESTINATION ${CONFIG_INSTALL_DIR} )
-endif ( ${KDE_VERSION} VERSION_LESS "4.3.80" )
-    
-add_subdirectory( kbflags )
-add_subdirectory( l10n )
+target_link_libraries( plasma_applet_publictransport
+    ${KDE4_PLASMA_LIBS}
+    ${KDE4_KDEUI_LIBS}
+    ${KDE4_KIO_LIBS}
+    ${KDE4_KNEWSTUFF3_LIBS} )
+
+install( FILES publictransport.knsrc
+	 DESTINATION ${CONFIG_INSTALL_DIR} )
 
 install( TARGETS plasma_applet_publictransport
          DESTINATION ${PLUGIN_INSTALL_DIR} )

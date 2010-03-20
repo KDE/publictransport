@@ -46,7 +46,7 @@ class HtmlDelegate : public QItemDelegate {
 	    Left, /**< Show the decoration on the left. */
 	    Right /**< Show the decoration on the right. */
 	};
-
+	
 	enum Option {
 	    NoOption = 0x0000,
 	    DrawShadows = 0x0001,

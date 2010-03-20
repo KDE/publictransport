@@ -181,7 +181,7 @@ void SettingsUiManager::configAccepted() {
 }
 
 void SettingsUiManager::stopSettingsChanged() {
-    // Delete old widgets
+    // Delete old "filter uses" widgets
     if ( m_uiFilter.filterUsesArea->layout() ) {
 	QWidgetList oldWidgets = m_uiFilter.filterUsesArea->findChildren< QWidget* >(
 		QRegExp("*Uses*", Qt::CaseSensitive, QRegExp::Wildcard) );
@@ -190,7 +190,7 @@ void SettingsUiManager::stopSettingsChanged() {
 	delete m_uiFilter.filterUsesArea->layout();
     }
 
-    // Add new widgets
+    // Add new "filter uses" widgets
     QGridLayout *l = new QGridLayout( m_uiFilter.filterUsesArea );
     l->setContentsMargins( 0, 0, 0, 0 );
 
@@ -220,7 +220,7 @@ void SettingsUiManager::stopSettingsChanged() {
 	cmbFilterConfigs->setObjectName( QString::number(row) );
 	cmbFilterConfigs->addItems( trFilterConfigurations );
 	cmbFilterConfigs->setCurrentItem( translateKey(stopSettings.filterConfiguration) );
-	cmbFilterConfigs->setObjectName( "lblUsesConfigs" + sRow );
+	cmbFilterConfigs->setObjectName( "lblUsesConfigs" + sRow ); // This must be 14 chars, followed by an int, see usedFilterConfigChanged().
 	connect( cmbFilterConfigs, SIGNAL(currentIndexChanged(int)),
 		 mapper, SLOT(map()) );
 	mapper->setMapping( cmbFilterConfigs, cmbFilterConfigs );
@@ -247,7 +247,7 @@ void SettingsUiManager::usedFilterConfigChanged( QWidget* widget ) {
     disconnect( m_stopListWidget, SIGNAL(removed(QWidget*)),
 		this, SLOT(stopSettingsChanged()) );
     
-    int index = widget->objectName().toInt();
+    int index = widget->objectName().mid( 14 ).toInt();
     StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
     if ( stopSettingsList.count() > index ) {
 	stopSettingsList[ index ].filterConfiguration = untranslateKey(

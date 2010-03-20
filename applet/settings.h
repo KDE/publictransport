@@ -186,14 +186,26 @@ struct Settings {
     
     StopSettingsList stopSettingsList; /** A list of all stop settings. */
     StopSettings currentStopSettings() const {
-	    if ( currentStopSettingsIndex < 0 ||
-		 currentStopSettingsIndex >= stopSettingsList.count() )
-	    {
-		kDebug() << "Current stop index invalid" << currentStopSettingsIndex
-			 << "Stop settings count:" << stopSettingsList.count();
-		return StopSettings();
-	    }
-	    return stopSettingsList[ currentStopSettingsIndex ];
+	if ( !isCurrentStopSettingsIndexValid() ) {
+	    kDebug() << "Current stop index invalid" << currentStopSettingsIndex
+			<< "Stop settings count:" << stopSettingsList.count();
+	    return StopSettings();
+	}
+	return stopSettingsList[ currentStopSettingsIndex ];
+    };
+
+    /** This crashes with invalid stop settings index.
+    * @see isCurrentStopSettingsIndexValid */
+    StopSettings &currentStopSettings() {
+	Q_ASSERT_X( isCurrentStopSettingsIndexValid(), "StopSettings::currentStopSettings",
+		    QString("There's no stop settings with index %1 to get a "
+		    "reference to").arg(currentStopSettingsIndex) );
+	return stopSettingsList[ currentStopSettingsIndex ];
+    };
+
+    bool isCurrentStopSettingsIndexValid() const {
+	return currentStopSettingsIndex >= 0 &&
+	       currentStopSettingsIndex < stopSettingsList.count();
     };
 
     bool filtersEnabled; /** Whether or not filters are enabled. */

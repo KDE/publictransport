@@ -74,6 +74,7 @@
 #include "htmldelegate.h"
 #include "alarmtimer.h"
 #include "settings.h"
+#include "publictransporttreeview.h"
 
 
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
@@ -187,224 +188,6 @@ void OverlayWidget::overlayAnimationComplete() {
 }
 
 
-/** Plasma like HeaderView. */
-class HeaderView : public QHeaderView {
-    public:
-	HeaderView( Qt::Orientation orientation, QWidget* parent = 0 )
-		    : QHeaderView( orientation, parent ) {
-	    setAutoFillBackground( false );
-	    setAttribute( Qt::WA_NoSystemBackground );
-	};
-	
-    protected:
-	virtual void paintEvent( QPaintEvent *e ) {
-	    Plasma::FrameSvg svg;
-	    if ( Plasma::Theme::defaultTheme()->currentThemeHasImage("widgets/frame") )
-		svg.setImagePath( "widgets/frame" );
-	    else
-		svg.setImagePath( "widgets/tooltip" );
-	    svg.setElementPrefix( "raised" );
-	    svg.resizeFrame( rect().size() );
-	    svg.setEnabledBorders( Plasma::FrameSvg::TopBorder |
-		    Plasma::FrameSvg::BottomBorder | Plasma::FrameSvg::LeftBorder |
-		    Plasma::FrameSvg::RightBorder );
-
-	    QPixmap pix( rect().size() );
-	    pix.fill( Qt::transparent );
-	    QPainter p( &pix );
-	    svg.paintFrame( &p, rect().topLeft() );
-	    p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-	    p.fillRect( rect(), QColor(0, 0, 0, 160) );
-	    p.end();
-
-	    QPainter painter( viewport() );
-	    painter.setRenderHints( QPainter::SmoothPixmapTransform | QPainter::Antialiasing );
-	    painter.drawPixmap( rect(), pix );
-	    painter.end();
-
-	    QHeaderView::paintEvent( e );
-	};
-
-	virtual void paintSection( QPainter *painter, const QRect& rect,
-				   int logicalIndex ) const {
-	    QString text = model()->headerData( logicalIndex, orientation() ).toString();
-	    painter->setPen( palette().color(QPalette::Text) );
-	    painter->setRenderHints( QPainter::SmoothPixmapTransform |
-				     QPainter::Antialiasing );
-
-	    // Get the state of the section
-	    QStyleOptionHeader opt;
-	    initStyleOption( &opt );
-
-	    // Setup the style options structure
-	    opt.rect = rect;
-	    opt.section = logicalIndex;
-	    opt.text = text;
-
-	    QVariant textAlignment = model()->headerData( logicalIndex, orientation(),
-							  Qt::TextAlignmentRole );
-	    opt.textAlignment = textAlignment.isValid()
-		    ? Qt::Alignment(textAlignment.toInt()) : defaultAlignment();
-
-	    if ( isSortIndicatorShown() && sortIndicatorSection() == logicalIndex ) {
-		opt.sortIndicator = (sortIndicatorOrder() == Qt::AscendingOrder)
-				    ? QStyleOptionHeader::SortDown : QStyleOptionHeader::SortUp;
-	    }
-
-	    QStyleOptionHeader optArrow = opt;
-	    optArrow.rect = style()->subElementRect( QStyle::SE_HeaderArrow, &opt, this );
-	    style()->drawPrimitive( QStyle::PE_IndicatorHeaderArrow, &optArrow, painter, this );
-
-	    QStyleOptionHeader optLabel = opt;
-	    optLabel.rect = style()->subElementRect( QStyle::SE_HeaderLabel, &opt, this );
-	    style()->drawControl( QStyle::CE_HeaderLabel, &optLabel, painter, this );
-
-	    if ( resizeMode(logicalIndex) == QHeaderView::Interactive
-			&& visualIndex(logicalIndex) < count() - hiddenSectionCount() - 1 ) {
-		QStyleOption optSplitter = opt;
-		int w = style()->pixelMetric( QStyle::PM_SplitterWidth );
-		optSplitter.palette = QApplication::palette();
-		optSplitter.rect = QRect( rect.right() - w, 0, w, rect.height() );
-		if ( orientation() == Qt::Horizontal )
-		    optSplitter.state |= QStyle::State_Horizontal;
-		style()->drawControl( QStyle::CE_Splitter, &optSplitter, painter, this );
-	    }
-	};
-};
-
-/** A QTreeView which viewport fades out on bottom (if the horizontal scrollbar 
-* is hidden) and on top (if the header is hidden).
-* @note It doesn't fade out while animating, because the animation is done 
-* completely private in QTreeView. */
-class TreeView : public QTreeView {
-    public:
-	static const int fadeHeight = 16;
-	
-	TreeView( QStyle *style ) : QTreeView() {
-	    // Set plasma style (like it's done in Plasma::TreeView)
-	    setAttribute( Qt::WA_NoSystemBackground );
-	    setFrameStyle( QFrame::NoFrame );
-	    verticalScrollBar()->setStyle( style );
-	    horizontalScrollBar()->setStyle( style );
-	    
-	    // Create fade tiles
-	    m_topFadeTile = createFadeTile( Qt::transparent, Qt::black );
-	    m_bottomFadeTile = createFadeTile( Qt::black, Qt::transparent );
-	};
-
-    protected:
-	QPixmap createFadeTile( const QColor &start, const QColor &end ) {
-	    // This code is copied from the folder view applet :)
-	    QPixmap fadeTile( 256, fadeHeight );
-	    fadeTile.fill( Qt::transparent );
-	    QLinearGradient g( 0, 0, 0, fadeHeight );
-	    g.setColorAt( 0, start );
-	    g.setColorAt( 1, end );
-	    QPainter p( &fadeTile );
-	    p.setCompositionMode( QPainter::CompositionMode_Source );
-	    p.fillRect( 0, 0, 256, fadeHeight, g );
-	    p.end();
-	    return fadeTile;
-	};
-	
-	virtual void scrollContentsBy( int dx, int dy ) {
-	    setUpdatesEnabled( false );
-	    QTreeView::scrollContentsBy( dx, dy );
-	    setUpdatesEnabled( true );
-
-	    const QRect cr = viewport()->contentsRect();
-	    int addYBottom = dy > 0 ? dy : 0;
-	    int addYTop = dy < 0 ? -dy : 0;
-	    const QRect topFadeRect( cr.x(), cr.y(), cr.width(), fadeHeight + addYTop );
-	    const QRect bottomFadeRect( cr.bottomLeft() - QPoint(0, fadeHeight + addYBottom + 1),
-					QSize(cr.width(), fadeHeight + addYBottom) );
-
-	    QRegion updateRegion;
-	    if ( !horizontalScrollBar()->isVisible() )
-		updateRegion = updateRegion.united( bottomFadeRect );
-	    if ( isHeaderHidden() )
-		updateRegion = updateRegion.united( topFadeRect );
-	    viewport()->update( updateRegion );
-	};
-
-	void drawRowBackground( QPainter *painter, const QStyleOptionViewItem& options,
-				const QModelIndex& index ) const {
-	    QModelIndex topLevelParent = index;
-	    while ( topLevelParent.parent().isValid() )
-		topLevelParent = topLevelParent.parent();
-	    QBrush bgBrush = alternatingRowColors() && topLevelParent.row() & 1
-		    ? options.palette.alternateBase() : options.palette.base();
-	    painter->fillRect( options.rect, bgBrush );
-
-	    if ( topLevelParent.data(HtmlDelegate::DrawAlarmBackground).toBool() ) {
-		QColor alarmColor = KColorScheme( QPalette::Active )
-			.background( KColorScheme::NegativeBackground ).color();
-		QLinearGradient bgGradient( 0, 0, 1, 0 );
-		bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-		bgGradient.setColorAt( 0, Qt::transparent );
-		bgGradient.setColorAt( 0.3, alarmColor );
-		bgGradient.setColorAt( 0.7, alarmColor );
-		bgGradient.setColorAt( 1, Qt::transparent );
-		painter->fillRect( options.rect, QBrush(bgGradient) );
-	    }
-
-	};
-	
-	virtual void drawRow( QPainter *painter, const QStyleOptionViewItem& options,
-			      const QModelIndex& index ) const {
-	    const QRect cr = viewport()->contentsRect();
-	    const QRect topFadeRect( cr.x(), cr.y(), cr.width(), fadeHeight );
-	    const QRect bottomFadeRect( cr.bottomLeft() - QPoint(0, fadeHeight),
-					QSize(cr.width(), fadeHeight) );
-	    int scrollValue = verticalScrollBar()->value();
-
-	    QStyleOptionViewItem optNoAlternateBase = options;
-	    optNoAlternateBase.palette.setBrush( QPalette::All, QPalette::AlternateBase,
-						 options.palette.base() );
-	    
-	    if ( (scrollValue < verticalScrollBar()->maximum() &&
-		 !horizontalScrollBar()->isVisible()
-		 && bottomFadeRect.intersects(options.rect)) ||
-		 (scrollValue > 0 && isHeaderHidden()
-		 && topFadeRect.intersects(options.rect)) )
-	    {
-		QStyleOptionViewItem opt = options;
-		opt.rect.moveTopLeft( QPoint(0, 0) );
-		optNoAlternateBase.rect.moveTopLeft( QPoint(0, 0) );
-
-		// Draw row into pixmap
-		QPixmap pixmap( options.rect.size() );
-		pixmap.fill( Qt::transparent );
-		QPainter p( &pixmap );
-		drawRowBackground( &p, opt, index );
-		QTreeView::drawRow( &p, optNoAlternateBase, index );
-
-		// Fade out parts of the row that intersect with the fade rect
-		p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-		if ( bottomFadeRect.intersects(options.rect) ) {
-		    p.drawTiledPixmap( 0, cr.height() - fadeHeight - options.rect.top() + 1,
-				       pixmap.width(), fadeHeight, m_bottomFadeTile );
-		} else {
-		    p.drawTiledPixmap( 0, -options.rect.top(),
-				       pixmap.width(), fadeHeight, m_topFadeTile );
-		}
-		p.end();
-
-		// Draw faded row
-		painter->drawPixmap( options.rect.topLeft(), pixmap );
-	    } else {
-		drawRowBackground( painter, options, index );
-		QTreeView::drawRow( painter, optNoAlternateBase, index );
-	    }
-	};
-
-    private:
-	QPixmap m_bottomFadeTile, m_topFadeTile;
-	int m_current;
-	QModelIndex m_firstDrawnIndex;
-};
-
-
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	    : Plasma::PopupApplet(parent, args),
 	    m_graphicsWidget(0), m_mainGraphicsWidget(0),
@@ -412,6 +195,7 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	    m_journeySearch(0), m_listStopsSuggestions(0), m_btnLastJourneySearches(0),
 	    m_overlay(0), m_model(0), m_modelJourneys(0), 
 	    m_departureListUpdater(0), m_journeyListUpdater(0) {
+    m_currentMessage = MessageNone;
     m_departureViewColumns << LineStringColumn << TargetColumn << DepartureColumn;
     m_journeyViewColumns << VehicleTypeListColumn << JourneyInfoColumn
 			 << DepartureColumn << ArrivalColumn;
@@ -421,11 +205,6 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
     setAspectRatioMode( Plasma::IgnoreAspectRatio );
     setHasConfigurationInterface( true );
     resize( 400, 300 );
-}
-
-void PublicTransport::configurationIsRequired( bool needsConfiguring,
-					       const QString &reason ) {
-    setConfigurationRequired( needsConfiguring, reason );
 }
 
 PublicTransport::~PublicTransport() {
@@ -460,6 +239,7 @@ PublicTransport::~PublicTransport() {
 }
 
 void PublicTransport::init() {
+    checkNetworkStatus();
     m_settings = SettingsIO::readSettings( config(), globalConfig() );
 
     // Load stops/filters from non-global settings (they're stored in the global
@@ -498,12 +278,73 @@ void PublicTransport::init() {
 
     connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
+    connect( this, SIGNAL(messageButtonPressed(MessageButton)),
+	     this, SLOT(slotMessageButtonPressed(MessageButton)) );
     connect( Plasma::Theme::defaultTheme(), SIGNAL(themeChanged()),
 	     this, SLOT(themeChanged()) );
     emit settingsChanged();
     
     setupActions();
     reconnectSource();
+}
+
+PublicTransport::NetworkStatus PublicTransport::queryNetworkStatus() {
+    NetworkStatus status = StatusUnavailable;
+    const QStringList interfaces = dataEngine("network")->sources();
+    if ( interfaces.isEmpty() )
+	return StatusUnknown;
+    
+    foreach ( const QString &iface, interfaces ) {
+	QString sStatus = dataEngine("network")->query(iface)["ConnectionStatus"].toString();
+	if ( sStatus.isEmpty() )
+	    return StatusUnknown;
+	
+	if ( sStatus == "Activated" ) {
+	    status = StatusActivated;
+	    break;
+	} else if ( sStatus == "Configuring" )
+	    status = StatusConfiguring;
+    }
+    
+    return status;
+}
+
+bool PublicTransport::checkNetworkStatus() {
+    NetworkStatus status = queryNetworkStatus();
+    if ( status == StatusUnavailable ) {
+	hideMessage();
+	m_currentMessage = MessageError;
+	showMessage( KIcon("dialog-error"),
+		     i18n("No network connection. Press Ok to retry."), Plasma::ButtonOk );
+	return false;
+    } else if ( status == StatusConfiguring ) {
+	hideMessage();
+	m_currentMessage = MessageError;
+	showMessage( KIcon("dialog-error"),
+		     i18n("Network gets configured. Please wait..."), Plasma::ButtonOk );
+	return false;
+    } else if ( status == StatusActivated
+		&& m_currentMessage == MessageError ) {
+	hideMessage();
+	m_currentMessage = MessageErrorResolved;
+	showMessage( KIcon("task-complete"),
+		     i18n("Network connection established."), Plasma::ButtonOk );
+	return false;
+    } else {
+	kDebug() << "Unknown network status or no error message was shown" << status;
+	return true;
+    }
+}
+
+void PublicTransport::slotMessageButtonPressed( MessageButton button ) {
+    switch ( button ) {
+	case Plasma::ButtonOk:
+	default:
+	    if ( m_currentMessage == MessageError )
+		reconnectSource();
+	    hideMessage();
+	    break;
+    }
 }
 
 void PublicTransport::setupActions() {
@@ -1017,8 +858,8 @@ void PublicTransport::clearJourneys() {
 
 void PublicTransport::processData( const QString &sourceName,
 				   const Plasma::DataEngine::Data& data ) {
-    bool departureData = data.value("parseMode").toString() == "departures";
-    bool journeyData = data.value("parseMode").toString() == "journeys";
+    bool departureData = data["parseMode"].toString() == "departures";
+    bool journeyData = data["parseMode"].toString() == "journeys";
 
     // Check for errors from the data engine
     if ( data.value("error").toBool() ) {
@@ -1046,13 +887,38 @@ void PublicTransport::processData( const QString &sourceName,
 	    #endif
 	    
 // 	    if ( testState(ServiceProviderSettingsJustChanged) ) {
-		if ( m_settings.departureArrivalListType == DepartureList ) {
-		    this->setConfigurationRequired( true, i18n("Error parsing "
-			    "departure information or currently no departures") );
-		} else {
-		    this->setConfigurationRequired( true, i18n("Error parsing "
-			    "arrival information or currently no arrivals") );
+	    QString error = data["errorString"].toString();
+	    if ( error.isEmpty() ) {
+		if ( m_currentMessage == MessageNone ) {
+		    if ( m_settings.departureArrivalListType == DepartureList ) {
+			setConfigurationRequired( true, i18n("Error parsing "
+				"departure information or currently no departures") );
+		    } else {
+			setConfigurationRequired( true, i18n("Error parsing "
+				"arrival information or currently no arrivals") );
+		    }
 		}
+	    } else {
+// 		bool hasActivatedInterface = false;
+// 		QStringList interfaces = dataEngine("network")->sources();
+// 		foreach ( const QString &interface, interfaces ) {
+// 		    QString status = dataEngine("network")->query(interface)
+// 					    ["ConnectionStatus"].toString();
+// 		    if ( status == "Activated" ) {
+// 			hasActivatedInterface = true;
+// 			break;
+// 		    }
+// 		}
+
+		hideMessage();
+		m_currentMessage = MessageError;
+		if ( checkNetworkStatus() ) {
+		    showMessage( KIcon("dialog-error"),
+			    i18n("There was an error:\n%1\n\nThe server may be "
+			    "temporarily unavailable. Press Ok to retry", error),
+			    Plasma::ButtonOk );
+		}
+	    }
 // 	    }
 
 	    // Update remaining times
@@ -1131,13 +997,13 @@ void PublicTransport::processData( const QString &sourceName,
 		item->setIcon( KIcon("public-transport-stop") );
 		model->appendRow( item );
 	    }
-	} else if ( departureData ) {
+	} else if ( departureData && m_currentMessage == MessageNone ) {
 	    m_stopNameValid = false;
 	    addState( ReceivedErroneousDepartureData );
 	    clearDepartures();
-	    this->setConfigurationRequired( true, i18n("The stop name is ambiguous.") );
+	    setConfigurationRequired( true, i18n("The stop name is ambiguous.") );
 	}
-    } else {// List of departures / arrivals / journeys received
+    } else { // List of departures / arrivals / journeys received
 	if ( journeyData ) {
 	    addState( ReceivedValidJourneyData );
 	    if ( testState(ShowingJourneyList) )
@@ -1352,8 +1218,10 @@ void PublicTransport::serviceProviderSettingsChanged() {
 
 	if ( !m_currentJourneySource.isEmpty() )
 	    reconnectJourneySource();
-    } else
+    } else {
+	hideMessage();
 	setConfigurationRequired( true, i18n("Please check your configuration.") );
+    }
 }
 
 void PublicTransport::createModels() {
@@ -1655,9 +1523,10 @@ void PublicTransport::switchFilterConfiguration( QAction* action ) {
 }
 
 void PublicTransport::switchFilterConfiguration( const QString& newFilterConfiguration ) {
+    kDebug() << "Switch filter configuration to" << newFilterConfiguration << m_settings.currentStopSettingsIndex;
     Settings oldSettings = m_settings;
-    m_settings.stopSettingsList[ m_settings.currentStopSettingsIndex ]
-	    .filterConfiguration = SettingsUiManager::untranslateKey(newFilterConfiguration);
+    m_settings.currentStopSettings().filterConfiguration =
+	    SettingsUiManager::untranslateKey(newFilterConfiguration);
     if ( SettingsIO::writeSettings(m_settings, oldSettings, config(), globalConfig()) ) {
 	configNeedsSaving();
 	emit settingsChanged();
@@ -2224,8 +2093,8 @@ void PublicTransport::useCurrentPlasmaTheme() {
 
     // Get theme colors
     QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
-    m_colorSubItemLabels = textColor;
-    m_colorSubItemLabels.setAlpha( 180 );
+//     m_colorSubItemLabels = textColor;
+//     m_colorSubItemLabels.setAlpha( 180 );
 
     // Create palette with the used theme colors
     QPalette p = palette();
@@ -2874,6 +2743,14 @@ void PublicTransport::addState( AppletState state ) {
 	    if ( m_titleType == ShowDepartureArrivalListTitle ) {
 		setMainIconDisplay( DepartureListOkIcon );
 		setBusy( false );
+	    }
+
+	    if ( m_currentMessage == MessageError ) {
+		hideMessage();
+		m_currentMessage = MessageNone;
+// 		m_currentMessage = MessageErrorResolved;
+// 		showMessage( QIcon(), i18n("Network connection established."),
+// 			     Plasma::ButtonOk );
 	    }
 	    unsetStates( QList<AppletState>() << WaitingForDepartureData << ReceivedErroneousDepartureData );
 	    break;
@@ -3538,7 +3415,7 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		journeyItem->setData( static_cast<int>(JourneyNewsItem), Qt::UserRole );
 		journeyItem->setData( qMin(3, s3.length() / 20),
 				      HtmlDelegate::LinesPerRowRole );
-		setTextColorOfHtmlItem( journeyItem, m_colorSubItemLabels );
+// 		setTextColorOfHtmlItem( journeyItem, m_colorSubItemLabels );
 	    }
 	    break;
 	    
@@ -3655,7 +3532,7 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 	    journeyItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
 	    if ( !update ) {
 		journeyItem->setData( static_cast<int>(OperatorItem), Qt::UserRole );
-		setTextColorOfHtmlItem( journeyItem, m_colorSubItemLabels );
+// 		setTextColorOfHtmlItem( journeyItem, m_colorSubItemLabels );
 	    }
 	    break;
 	    
@@ -3682,7 +3559,7 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		if ( row == journeyInfo.routeExactStops() && row > 0 ) {
 		    QStandardItem *itemSeparator = new QStandardItem(
 			    i18n("  - End of exact route -  ") );
-		    setTextColorOfHtmlItem( itemSeparator, m_colorSubItemLabels );
+// 		    setTextColorOfHtmlItem( itemSeparator, m_colorSubItemLabels );
 		    journeyItem->appendRow( itemSeparator );
 		}
 
@@ -3764,14 +3641,14 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		int iconExtend = 16 * m_settings.sizeFactor;
 		item->setData( QSize(iconExtend, iconExtend),
 			       HtmlDelegate::IconSizeRole );
-		setTextColorOfHtmlItem( item, m_colorSubItemLabels );
+// 		setTextColorOfHtmlItem( item, m_colorSubItemLabels );
 
 		journeyItem->appendRow( item );
 	    }
 	    
 	    if ( !update ) {
 		journeyItem->setData( static_cast<int>(RouteItem), Qt::UserRole );
-		setTextColorOfHtmlItem( journeyItem, m_colorSubItemLabels );
+// 		setTextColorOfHtmlItem( journeyItem, m_colorSubItemLabels );
 	    }
 	    break;
 
@@ -3863,7 +3740,7 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 	    departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
 	    if ( !update ) {
 		departureItem->setData( static_cast<int>(PlatformItem), Qt::UserRole );
-		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
+// 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
 	    }
 	    break;
 
@@ -3873,7 +3750,7 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 	    departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
 	    if ( !update ) {
 		departureItem->setData( static_cast<int>(OperatorItem), Qt::UserRole );
-		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
+// 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
 	    }
 	    break;
 	    
@@ -3899,7 +3776,7 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 		if ( row == departureInfo.routeExactStops() && row > 0 ) {
 		    QStandardItem *itemSeparator = new QStandardItem(
 			    i18n("  - End of exact route -  "));
-		    setTextColorOfHtmlItem( itemSeparator, m_colorSubItemLabels );
+// 		    setTextColorOfHtmlItem( itemSeparator, m_colorSubItemLabels );
 		    departureItem->appendRow( itemSeparator );
 		}
 		
@@ -3908,13 +3785,13 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 			.arg(departureInfo.routeTimes()[row].toString("hh:mm"))
 			.arg(departureInfo.routeStops()[row]) );
 		item->setData( row, SortRole );
-		setTextColorOfHtmlItem( item, m_colorSubItemLabels );
+// 		setTextColorOfHtmlItem( item, m_colorSubItemLabels );
 		departureItem->appendRow( item );
 	    }
 	    
 	    if ( !update ) {
 		departureItem->setData( static_cast<int>(RouteItem), Qt::UserRole );
-		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
+// 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
 	    }
 	    break;
 
@@ -3931,7 +3808,7 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 		departureItem->setData( static_cast<int>(JourneyNewsItem), Qt::UserRole );
 		departureItem->setData( qMin(3, s3.length() / 20),
 					HtmlDelegate::LinesPerRowRole );
-		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
+// 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
 	    }
 	    break;
 
@@ -3952,7 +3829,7 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 	    departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
 	    if ( !update ) {
 		departureItem->setData( static_cast<int>(DelayItem), Qt::UserRole );
-		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
+// 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
 	    }
 	    break;
 

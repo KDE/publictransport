@@ -173,12 +173,6 @@ QWidget* DynamicWidget::contentWidget() const {
     return d->contentWidget;
 }
 
-// template< class WidgetType >
-// WidgetType DynamicWidget::contentWidget() const {
-//     Q_D( const DynamicWidget );
-//     return qobject_cast< WidgetType >( d->contentWidget );
-// }
-
 QToolButton* DynamicWidget::removeButton() const {
     Q_D( const DynamicWidget );
     return d->removeButton;
@@ -591,25 +585,6 @@ QList< DynamicWidget* > AbstractDynamicWidgetContainer::dynamicWidgets() const {
     Q_D( const AbstractDynamicWidgetContainer );
     return d->dynamicWidgets;
 }
-
-// template< class WidgetType >
-// QList< WidgetType > AbstractDynamicWidgetContainer::widgets() const {
-//     Q_D( const AbstractDynamicWidgetContainer );
-//     QList< WidgetType > widgetList;
-//     foreach ( DynamicWidget *dynamicWidget, d->dynamicWidgets )
-// 	widgetList << dynamicWidget->contentWidget< WidgetType >();
-//     return widgetList;
-// }
-
-// template< class WidgetType >
-// WidgetType AbstractDynamicWidgetContainer::focusedWidget() const {
-//     Q_D( const AbstractDynamicWidgetContainer );
-//     foreach ( DynamicWidget *dynamicWidget, d->dynamicWidgets ) {
-// 	if ( dynamicWidget->contentWidget()->hasFocus() )
-// 	    return dynamicWidget->contentWidget< WidgetType >();
-//     }
-//     return NULL; // No content widget currently has focus
-// }
 
 QString AbstractDynamicWidgetContainer::addButtonIcon() const {
     Q_D( const AbstractDynamicWidgetContainer );

@@ -78,12 +78,12 @@ private:
     #endif
 };
 
+typedef Plasma::MessageButton MessageButton;
 
 /** @class PublicTransport
 * @brief Shows departure / arrival times for public transport. It uses the "publictransport"-data engine. */
 class PublicTransport : public Plasma::PopupApplet {
     Q_OBJECT
-
     public:
         /** Basic create. */
 	PublicTransport( QObject *parent, const QVariantList &args );
@@ -354,16 +354,10 @@ class PublicTransport : public Plasma::PopupApplet {
 	void possibleStopClicked( const QModelIndex &modelIndex );
 	void possibleStopDoubleClicked( const QModelIndex &modelIndex );
 
-	void emitConfigNeedsSaving() { kDebug() << "emit configNeedsSaving();"; emit configNeedsSaving(); };
-	void configurationIsRequired( bool needsConfiguring, const QString &reason );
-	void emitSettingsChanged() { emit settingsChanged(); };
-	/** Called from PublicTransportSettings to indicate the need to update the
-	* model by calling updateModel(). */
-	void modelNeedsUpdate() { updateModel(); };
 	/** Called from PublicTransportSettings to indicate the need to clear the
 	* departure list. */
-// 	void clearDepartureList() { m_departureInfos.clear(); };
-	void departureArrivalListTypeChanged ( DepartureArrivalListType departureArrivalListType );
+	void departureArrivalListTypeChanged(
+		DepartureArrivalListType departureArrivalListType );
 
 	/** The action to update the data source has been triggered. */
 	void updateDataSource( bool );
@@ -410,7 +404,26 @@ class PublicTransport : public Plasma::PopupApplet {
 	void switchFilterConfiguration( QAction *action );
 	void setFiltersEnabled( bool enable );
 	
+	void slotMessageButtonPressed( MessageButton button );
+	
     private:
+	enum MessageType {
+	    MessageNone = 0,
+	    MessageError,
+	    MessageErrorResolved
+	};
+	enum NetworkStatus {
+	    StatusUnknown = 0,
+	    StatusUnavailable,
+	    StatusConfiguring,
+	    StatusActivated
+	};
+
+	NetworkStatus queryNetworkStatus();
+	/** Shows an error message when no interface is activated.
+	* @return True, if no message is shown. False, otherwise. */
+	bool checkNetworkStatus();
+	
 	bool parseJourneySearch( const QString &search, QString *stop,
 				 QDateTime *departure, bool *stopIsTarget,
 				 bool *timeIsDeparture,
@@ -455,6 +468,11 @@ class PublicTransport : public Plasma::PopupApplet {
 		ItemInformation itemInfo );
 
 	void setHeightOfCourtesyLabel();
+
+	void hideMessage() {
+	    m_currentMessage = MessageNone;
+	    showMessage( QIcon(), QString(), Plasma::ButtonNone );
+	};
 	
 				 
 	AppletStates m_appletStates; /**< The current states of this applet */
@@ -507,6 +525,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	QList<TimetableColumn> m_journeyViewColumns;
 
 	QHash< QString, int > m_itemHashToRow; /**< Stores the row in the timetable model for each hash. */
+
+	MessageType m_currentMessage;
 };
 
 #ifndef NO_EXPORT_PLASMA_APPLET // Needed for settings.cpp to include publictransport.h
