@@ -26,12 +26,23 @@
 
 #include <QDebug>
 
+/** Contains global information about a downloaded timetable that affects
+* all departures/arrivals/journeys. */
 struct GlobalTimetableInfo {
     GlobalTimetableInfo() {
 	delayInfoAvailable = true;
     };
     
-    bool delayInfoAvailable;
+    bool delayInfoAvailable; /** Whether or not delay information is available.
+	    * True, if there may be delay information available. False, if no
+	    * delay information is/will be available for the given stop. */
+};
+
+enum ErrorType {
+    NoError = 0,
+
+    ErrorDownloadFailed,
+    ErrorParsingFailed
 };
 
 /** Different types of information. */
@@ -132,7 +143,7 @@ enum VehicleType {
 
     Plane = 200, /**< An aeroplane. */
 
-    Spacecraft = 300, /**< A spacecraft. */ // TODO: add to applet!
+    Spacecraft = 300, /**< A spacecraft. */ // TODO: add to applet
 };
 
 /** The type of services for a public transport line. */

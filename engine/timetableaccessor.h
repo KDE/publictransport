@@ -41,7 +41,7 @@
 * from TimetableAccessorInfo and use it with TimetableAccessorHtml.
 * To implement support for a new class of service providers create a new class based on
 * TimetableAccessor or it's derivates and overwrite
-*	- serviceProvider()  (you also need to add an enum value to ServiceProvider)
+*	- serviceProvider()
 * 	- country(), cities()
 * 	- rawUrl(), parseDocument() */
 class TimetableAccessor : public QObject {
@@ -93,19 +93,19 @@ class TimetableAccessor : public QObject {
 
 	/** Requests a list of departures / arrivals. When the departure / arrival list
 	* is completely received departureListReceived() is emitted. */
-	KIO::TransferJob *requestDepartures( const QString &sourceName,
+	KIO::StoredTransferJob *requestDepartures( const QString &sourceName,
 					     const QString &city, const QString &stop,
 					     int maxDeps, const QDateTime &dateTime,
 					     const QString &dataType = "departures",
 					     bool useDifferentUrl = false );
 
-	KIO::TransferJob *requestStopSuggestions( const QString &sourceName,
+	KIO::StoredTransferJob *requestStopSuggestions( const QString &sourceName,
 						  const QString &city,
 						  const QString &stop );
 
 	/** Requests a list of journeys. When the journey list is completely received
 	* journeyListReceived() is emitted. */
-	KIO::TransferJob *requestJourneys( const QString &sourceName,
+	KIO::StoredTransferJob *requestJourneys( const QString &sourceName,
 					   const QString &city,
 					   const QString &startStopName,
 					   const QString &targetStopName,
@@ -113,7 +113,7 @@ class TimetableAccessor : public QObject {
 					   const QString &dataType = "journeys",
 					   bool useDifferentUrl = false );
 					   
-	KIO::TransferJob *requestJourneys( const KUrl &url );
+	KIO::StoredTransferJob *requestJourneys( const KUrl &url );
 
 	/** Gets the information object used by this accessor. */
 	const TimetableAccessorInfo &timetableAccessorInfo() const { return m_info; };
@@ -214,8 +214,6 @@ class TimetableAccessor : public QObject {
 			    const QString &dataType = "departures",
 			    bool useDifferentUrl = false ) const;
 
-
-	QHash< QString, QByteArray > m_document; /**< Stores the downloaded parts of a reply for each source name. */
 	QString m_curCity; /**< Stores the currently used city. */
 	TimetableAccessorInfo m_info; /**< Stores service provider specific information that is used to parse the html pages. */
 
@@ -294,6 +292,9 @@ class TimetableAccessor : public QObject {
 	/** Emitted when an error occured while parsing.
 	* @param accessor The accessor that was used to download and parse information
 	* from the service provider.
+	* @param errorType The type of error or NoError if there was no error.
+	* @param errorString If @p errorType isn't NoError this contains a 
+	* description of the error.
 	* @param requestUrl The url used to request the information.
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source.
@@ -304,6 +305,8 @@ class TimetableAccessor : public QObject {
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */
 	void errorParsing( TimetableAccessor *accessor,
+			   ErrorType errorType,
+			   const QString &errorString,
 			   const QUrl &requestUrl,
 			   const QString &serviceProvider,
 			   const QString &sourceName, const QString &city,
@@ -311,18 +314,51 @@ class TimetableAccessor : public QObject {
 			   ParseDocumentMode parseDocumentMode );
 
     public slots:
-	/** Some data has been received. */
-	void dataReceived( KIO::Job *job, const QByteArray &data );
-
 	/** All data of a journey list has been received. */
-	void finished( KJob* job );
+	void result( KJob* job );
 
     private:
 	static QString gethex( ushort decimal );
 
+	struct JobInfos {
+	    JobInfos() {
+	    };
+	    
+	    JobInfos( ParseDocumentMode parseDocumentMode,
+		      const QString &sourceName, const QString &city,
+		      const QString &stop, const QUrl &url,
+		      const QString &dataType = QString(),
+		      int maxDeps = -1, const QDateTime &dateTime = QDateTime(),
+		      bool useDifferentUrl = false,
+		      const QString &targetStop = QString(), int roundTrips = 0 ) {
+		this->parseDocumentMode = parseDocumentMode;
+		this->sourceName = sourceName;
+		this->city = city;
+		this->stop = stop;
+		this->url = url;
+		this->dataType = dataType;
+		this->maxDeps = maxDeps;
+		this->dateTime = dateTime;
+		this->usedDifferentUrl = useDifferentUrl;
+		this->targetStop = targetStop;
+		this->roundTrips = roundTrips;
+	    };
+
+	    ParseDocumentMode parseDocumentMode;
+	    QString sourceName;
+	    QString city;
+	    QString stop;
+	    QString dataType;
+	    QUrl url;
+	    int maxDeps;
+	    QDateTime dateTime;
+	    bool usedDifferentUrl;
+	    QString targetStop;
+	    int roundTrips;
+	};
 	
 	// Stores information about currently running download jobs
-	QHash< KJob*, QVariantList > m_jobInfos;
+	QHash< KJob*, JobInfos > m_jobInfos;
 };
 
 #endif // TIMETABLEACCESSOR_HEADER

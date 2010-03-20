@@ -300,32 +300,29 @@ QStringList TimetableAccessor::featuresLocalized() const {
 KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sourceName,
 		const QString &city, const QString &stop, int maxDeps,
 		const QDateTime &dateTime, const QString &dataType,
-		bool useDifferentUrl ) {
-    KUrl url = getUrl( city, stop, maxDeps, dateTime, dataType, useDifferentUrl );
+		bool usedDifferentUrl ) {
+    KUrl url = getUrl( city, stop, maxDeps, dateTime, dataType, usedDifferentUrl );
     kDebug() << url;
     
     KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-    int parseType = maxDeps == -1 ? static_cast<int>(ParseForStopSuggestions)
-	    : static_cast<int>(ParseForDeparturesArrivals);
-    m_jobInfos.insert( job, QVariantList() << parseType
-	<< sourceName << city << stop << maxDeps << dateTime << dataType
-	<< useDifferentUrl << (QUrl)url );
+    ParseDocumentMode parseType = maxDeps == -1
+	    ? ParseForStopSuggestions : ParseForDeparturesArrivals;
+    m_jobInfos.insert( job, JobInfos(parseType, sourceName, city, stop, url,
+				     dataType, maxDeps, dateTime, usedDifferentUrl) );
 
-    connect( job, SIGNAL(finished(KJob*)), this, SLOT(finished(KJob*)) );
+    connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
 
     return job;
 }
 
-KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString &sourceName,
-							     const QString &city,
-							     const QString &stop ) {
+KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions(
+		const QString &sourceName, const QString &city, const QString &stop ) {
     if ( hasSpecialUrlForStopSuggestions() ) {
 	KUrl url = getStopSuggestionsUrl( city, stop );
 	KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-	m_jobInfos.insert( job, QVariantList() << static_cast<int>(ParseForStopSuggestions)
-	    << sourceName<< city << stop << (QUrl)url  ); // TODO list ordering... replace by a hash?
+	m_jobInfos.insert( job, JobInfos(ParseForStopSuggestions, sourceName, city, stop, url) );
 	
-	connect( job, SIGNAL(finished(KJob*)), this, SLOT(finished(KJob*)) );
+	connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
 	
 	return job;
     } else
@@ -337,14 +334,13 @@ KIO::StoredTransferJob *TimetableAccessor::requestJourneys( const QString &sourc
 		const QString &city, const QString &startStopName,
 		const QString &targetStopName, int maxDeps,
 		const QDateTime &dateTime, const QString &dataType,
-		bool useDifferentUrl ) {
+		bool usedDifferentUrl ) {
     // Creating a kioslave
     KUrl url = getJourneyUrl( city, startStopName, targetStopName, maxDeps,
-			      dateTime, dataType, useDifferentUrl );
+			      dateTime, dataType, usedDifferentUrl );
     KIO::StoredTransferJob *job = requestJourneys( url );
-    m_jobInfos.insert( job, QVariantList() << static_cast<int>(ParseForJourneys)
-	    << sourceName << city << startStopName << maxDeps << dateTime
-	    << dataType << useDifferentUrl << (QUrl)url << targetStopName << 0 );
+    m_jobInfos.insert( job, JobInfos(ParseForJourneys, sourceName, city, startStopName,
+		url, dataType, maxDeps, dateTime, usedDifferentUrl, targetStopName) );
 
     return job;
 }
@@ -353,13 +349,13 @@ KIO::StoredTransferJob* TimetableAccessor::requestJourneys( const KUrl& url ) {
     kDebug() << url;
 
     KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-    connect( job, SIGNAL(finished(KJob*)), this, SLOT(finished(KJob*)) );
+    connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
     
     return job;
 }
 
-void TimetableAccessor::finished( KJob* job ) {
-    QList<QVariant> jobInfo = m_jobInfos.value( job );
+void TimetableAccessor::result( KJob* job ) {
+    JobInfos jobInfo = m_jobInfos.value( job );
     m_jobInfos.remove( job );
     KIO::StoredTransferJob *storedJob = static_cast< KIO::StoredTransferJob* >( job );
     QByteArray document = storedJob->data();
@@ -369,15 +365,22 @@ void TimetableAccessor::finished( KJob* job ) {
     QStringList stops;
     QHash<QString, QString> stopToStopId;
     QHash<QString, int> stopToStopWeight;
-    ParseDocumentMode parseDocumentMode = static_cast<ParseDocumentMode>( jobInfo.at(0).toInt() );
+    ParseDocumentMode parseDocumentMode = jobInfo.parseDocumentMode;
     kDebug() << "FINISHED:" << parseDocumentMode;
     
-    QString sourceName = jobInfo.at(1).toString();
-    QString city = jobInfo.at(2).toString();
-    QString stop = jobInfo.at(3).toString();
+    QString sourceName = jobInfo.sourceName;
+    QString city = jobInfo.city;
+    QString stop = jobInfo.stop;
+    QString dataType = jobInfo.dataType;
+    QUrl url = jobInfo.url;
+    if ( storedJob->error() != 0 ) {
+	kDebug() << "Error in job" << storedJob->error() << storedJob->errorString();
+	emit errorParsing( this, ErrorDownloadFailed, storedJob->errorString(),
+			   jobInfo.url, serviceProvider(), jobInfo.sourceName, jobInfo.city,
+			   stop, dataType, parseDocumentMode );
+    }
+    
     if ( parseDocumentMode == ParseForStopSuggestions ) {
-	QUrl url = jobInfo.at(4).toUrl();
-
 	kDebug() << "Stop suggestions request finished" << sourceName << city << stop;
 	if ( parseDocumentPossibleStops(document, &stops, &stopToStopId, &stopToStopWeight) ) {
 	    kDebug() << "finished parsing for stop suggestions";
@@ -387,23 +390,21 @@ void TimetableAccessor::finished( KJob* job ) {
 	    kDebug() << "emit stopListReceived finished";
 	} else {
 	    kDebug() << "error parsing for stop suggestions" << sourceName;
-	    emit errorParsing( this, url, serviceProvider(), sourceName, city,
+	    emit errorParsing( this, ErrorParsingFailed, i18n("Error while parsing "
+			       "the timetable document."),
+			       url, serviceProvider(), sourceName, city,
 			       stop, QString(), parseDocumentMode );
 	}
 
 	return;
     }
     
-    int maxDeps = jobInfo.at(4).toInt();
-    QDateTime dateTime = jobInfo.at(5).toDateTime();
-    QString dataType = jobInfo.at(6).toString();
-    bool usedDifferentUrl = jobInfo.at(7).toBool();
-    QUrl url = jobInfo.at(8).toUrl();
-    QString targetStop;
-    int roundTrips = 0;
+    int maxDeps = jobInfo.maxDeps;
+    QDateTime dateTime = jobInfo.dateTime;
+    bool usedDifferentUrl = jobInfo.usedDifferentUrl;
+    QString targetStop = jobInfo.targetStop;
+    int roundTrips = jobInfo.roundTrips;
     if ( parseDocumentMode == ParseForJourneys ) {
-	targetStop = jobInfo.at(9).toString();
-	roundTrips = jobInfo.at(10).toInt();
 	kDebug() << "    FINISHED JOURNEY SEARCH" << roundTrips;
     }
     m_curCity = city;
@@ -439,14 +440,17 @@ void TimetableAccessor::finished( KJob* job ) {
 // 	    kDebug() << "request possible stop list";
 	    requestDepartures( sourceName, m_curCity, stop, maxDeps, dateTime,
 			       dataType, true );
-	} else if ( parseDocumentPossibleStops(document, &stops, &stopToStopId, &stopToStopWeight) ) {
+	} else if ( parseDocumentPossibleStops(document, &stops, &stopToStopId,
+		    &stopToStopWeight) ) {
 	    kDebug() << "Stop suggestion list received" << parseDocumentMode;
 	    emit stopListReceived( this, url, stops, stopToStopId, stopToStopWeight,
 				   serviceProvider(), sourceName, city, stop, dataType,
 				   parseDocumentMode );
 	} else {
 	    kDebug() << "Error parsing for stop suggestions B" << sourceName;
-	    emit errorParsing( this, url, serviceProvider(), sourceName, city,
+	    emit errorParsing( this, ErrorParsingFailed, i18n("Error while parsing "
+			       "the stop suggestions document."),
+			       url, serviceProvider(), sourceName, city,
 			       stop, dataType, parseDocumentMode );
 	}
 
@@ -455,9 +459,9 @@ void TimetableAccessor::finished( KJob* job ) {
 		kDebug() << "\n\n     REQUEST PARSED URL:   " << sNextUrl << "\n\n";
 		++roundTrips;
 		KIO::StoredTransferJob *job = requestJourneys( KUrl(sNextUrl) );
-		m_jobInfos.insert( job, QList<QVariant>() << static_cast<int>(ParseForJourneys)
-		    << sourceName << city << stop << maxDeps << dateTime << dataType
-		    << usedDifferentUrl << (QUrl)url << targetStop << roundTrips );
+		m_jobInfos.insert( job, JobInfos(ParseForJourneys, sourceName,
+			    city, stop, url, dataType, maxDeps, dateTime,
+			    usedDifferentUrl, targetStop, roundTrips) );
 // 		return;
 	    }
 	}
@@ -468,7 +472,9 @@ void TimetableAccessor::finished( KJob* job ) {
 			       parseDocumentMode );
     } else {
 	kDebug() << "Error parsing for stop suggestions C" << sourceName;
-	emit errorParsing( this, url, serviceProvider(), sourceName, city,
+	emit errorParsing( this, ErrorParsingFailed, i18n("Error while parsing "
+			   "the stop suggestions document."),
+			   url, serviceProvider(), sourceName, city,
 			   stop, dataType, parseDocumentMode );
     }
 }

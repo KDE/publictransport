@@ -200,6 +200,9 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	/** An error was received.
 	* @param accessor The accessor that was used to download and parse information
 	* from the service provider.
+	* @param errorType The type of error or NoError if there was no error.
+	* @param errorString If @p errorType isn't NoError this contains a
+	* description of the error.
 	* @param requestUrl The url used to request the information.
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source.
@@ -209,7 +212,8 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param dataType "nothing".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */
-	void errorParsing( TimetableAccessor *accessor, const QUrl &requestUrl,
+	void errorParsing( TimetableAccessor *accessor, ErrorType errorType,
+			   const QString &errorString, const QUrl &requestUrl,
 			   const QString &serviceProvider,
 			   const QString &sourceName, const QString &city,
 			   const QString &stop, const QString &dataType,

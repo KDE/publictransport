@@ -280,7 +280,7 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
     if ( containsDataSource && isSourceUpToDate(name) )
     { // Data is stored in the map and up to date
 	kDebug() << "Data source" << name << "is up to date";
-	QHash<QString, QVariant> dataSource = m_dataSources[name].toHash();
+	QVariantHash dataSource = m_dataSources[name].toHash();
 	foreach ( QString key, dataSource.keys() )
 	    setData( name, key, dataSource[key] );
     } else { // Request new data
@@ -409,8 +409,8 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 		     SIGNAL(stopListReceived(TimetableAccessor*,const QUrl&,const QStringList&,const QHash<QString,QString>&,const QHash<QString, int>&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
 		     this, SLOT(stopListReceived(TimetableAccessor*,const QUrl&,const QStringList&,const QHash<QString,QString>&,const QHash<QString, int>&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
 	    connect( accessor,
-		     SIGNAL(errorParsing(TimetableAccessor*,const QUrl&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
-		     this, SLOT(errorParsing(TimetableAccessor*,const QUrl&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
+		     SIGNAL(errorParsing(TimetableAccessor*,ErrorType,const QString&,const QUrl&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)),
+		     this, SLOT(errorParsing(TimetableAccessor*,ErrorType,const QString&,const QUrl&,const QString&,const QString&,const QString&,const QString&,const QString&,ParseDocumentMode)) );
 	}
 
 	if ( parseDocumentMode == ParseForDeparturesArrivals )
@@ -793,6 +793,8 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 }
 
 void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
+					  ErrorType errorType,
+					  const QString &errorString,
 					  const QUrl &requestUrl,
 					  const QString &serviceProvider,
 					  const QString &sourceName,
@@ -806,6 +808,7 @@ void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
     Q_UNUSED(dataType);
     kDebug() << "Error while parsing" << requestUrl << serviceProvider
 	     << "\n  sourceName =" << sourceName << dataType << parseDocumentMode;
+    kDebug() << errorType << errorString;
 
     setData( sourceName, "serviceProvider", serviceProvider );
     setData( sourceName, "count", 0 );
@@ -818,6 +821,8 @@ void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
 	setData( sourceName, "parseMode", "stopSuggestions" );
     setData( sourceName, "receivedData", "nothing" );
     setData( sourceName, "error", true );
+    setData( sourceName, "errorCode", errorType );
+    setData( sourceName, "errorString", errorString );
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 }
 
