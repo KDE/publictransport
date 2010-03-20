@@ -152,19 +152,36 @@ void DepartureInfo::init( const QString &operatorName, const QString &line,
     generateHash();
 }
 
+bool DepartureInfo::operator ==( const DepartureInfo& other ) {
+    return m_hash == other.m_hash
+// 	These are already in m_hash
+// 	&& m_departure == other.m_departure
+// 	&& m_vehicleType == other.m_vehicleType
+// 	&& m_lineString == other.m_lineString
+	&& m_lineNumber == other.m_lineNumber
+	&& m_target == other.m_target
+	&& m_delay == other.m_delay
+	&& m_platform == other.m_platform
+	&& m_delayReason == other.m_delayReason
+	&& m_operator == other.m_operator
+	&& m_journeyNews == other.m_journeyNews
+	&& m_lineServices == other.m_lineServices
+	&& m_routeStops == other.m_routeStops
+	&& m_routeTimes == other.m_routeTimes
+	&& m_routeExactStops == other.m_routeExactStops;
+}
+
 void DepartureInfo::generateHash() {
-    m_hash = QString( "%1%2%3" ).arg( m_departure.toString("hhmm") )
-				.arg( static_cast<int>(m_vehicleType) )
-				.arg( m_lineString );
+    m_hash = qHash( QString("%1%2%3").arg(m_departure.toString("dMyyhhmm"))
+		.arg(static_cast<int>(m_vehicleType)).arg(m_lineString) );
 }
 
 void JourneyInfo::generateHash() {
     QString vehicles;
     foreach ( int vehicleType, m_vehicleTypes )
 	vehicles += QString::number( static_cast<int>(vehicleType) );
-    m_hash = QString( "%1%2%3" ).arg( m_departure.toString("hhmm") )
-				.arg( m_duration ).arg( m_changes )
-				.arg( vehicles );
+    m_hash = qHash( QString("%1%2%3%4").arg(m_departure.toString("dMyyhhmm"))
+		.arg(m_duration).arg(m_changes).arg(vehicles) );
 }
 
 QString DepartureInfo::delayText() const {
@@ -190,10 +207,10 @@ QString DepartureInfo::delayText() const {
     return sText;
 }
 
-bool operator< ( const JourneyInfo& ji1, const JourneyInfo& ji2 ) {
+bool operator <( const JourneyInfo& ji1, const JourneyInfo& ji2 ) {
     return ji1.departure() < ji2.departure();
 }
 
-bool operator < ( const DepartureInfo &di1, const DepartureInfo &di2 ) {
+bool operator <( const DepartureInfo &di1, const DepartureInfo &di2 ) {
     return di1.predictedDeparture() < di2.predictedDeparture();
 }

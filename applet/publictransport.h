@@ -234,7 +234,7 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	/** Returns the index of the given departure / arrival info.
 	* @return -1 if the given departure / arrival info couldn't be found. */
-	int findDeparture( const DepartureInfo &departureInfo ) const;
+	int findDeparture( const DepartureInfo &departureInfo, int startAt = 0 ) const;
 
 	/** Returns the index of the given journey info.
 	* @return -1 if the given journey info couldn't be found. */
@@ -506,7 +506,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	QString m_lastSecondStopName; /**< The last used second stop name for journey search */
 	QDateTime m_lastJourneyDateTime; /**< The last used date and time for journey search */
 	QDateTime m_lastSourceUpdate; /**< The last update of the data source inside the data engine */
-	QColor m_colorSubItemLabels; /**< The color to be used for sub item labels ("Delay:", "Platform:", ...) */
 	QUrl m_urlDeparturesArrivals, m_urlJourneys; /**< Urls to set as associated application urls, when switching from/to journey mode. */
 
 	Settings m_settings;

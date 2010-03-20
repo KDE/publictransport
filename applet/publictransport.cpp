@@ -1172,7 +1172,6 @@ void PublicTransport::configChanged() {
     }
 
     QFont font = m_settings.font;
-    QFont smallFont = font, boldFont = font;
     float sizeFactor = m_settings.sizeFactor;
     if ( font.pointSize() == -1 ) {
 	int pixelSize = font.pixelSize() * sizeFactor;
@@ -1182,6 +1181,7 @@ void PublicTransport::configChanged() {
 	font.setPointSize( pointSize > 0 ? pointSize : 1 );
     }
     int smallPointSize = KGlobalSettings::smallestReadableFont().pointSize() * sizeFactor;
+    QFont smallFont = font, boldFont = font;
     smallFont.setPointSize( smallPointSize > 0 ? smallPointSize : 1 );
     boldFont.setBold( true );
     
@@ -1191,6 +1191,8 @@ void PublicTransport::configChanged() {
     m_listStopsSuggestions->setFont( font );
     m_journeySearch->setFont( font );
     setHeightOfCourtesyLabel();
+
+    m_treeView->nativeWidget()->setIndentation( 20 * m_settings.sizeFactor );
 
     int iconExtend = (testState(ShowingDepartureArrivalList) ? 16 : 32) * m_settings.sizeFactor;
     m_treeView->nativeWidget()->setIconSize( QSize(iconExtend, iconExtend) );
@@ -2093,8 +2095,6 @@ void PublicTransport::useCurrentPlasmaTheme() {
 
     // Get theme colors
     QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
-//     m_colorSubItemLabels = textColor;
-//     m_colorSubItemLabels.setAlpha( 180 );
 
     // Create palette with the used theme colors
     QPalette p = palette();
@@ -3343,11 +3343,11 @@ void PublicTransport::setTextColorOfHtmlItem( QStandardItem *item, const QColor 
 	    .arg( textColor.alpha() ).append("</span>") );
 }
 
-int PublicTransport::findDeparture( const DepartureInfo& departureInfo ) const {
-    // TODO: Could start at an index based on the departure time.
-    // Compute some index that is somewhere at the position of that time.
-    QModelIndexList indices = m_model->match( m_model->index(0, 0),
-	    TimetableItemHashRole, departureInfo.hash(), 1, Qt::MatchFixedString );
+int PublicTransport::findDeparture( const DepartureInfo& departureInfo,
+				    int startAt ) const {
+    QModelIndexList indices = m_model->match( m_model->index(startAt, 0),
+			    TimetableItemHashRole, departureInfo.hash(), 1,
+			    Qt::MatchExactly | Qt::MatchWrap );
     return indices.isEmpty() ? -1 : indices.first().row();
 }
 
@@ -3355,7 +3355,8 @@ int PublicTransport::findJourney( const JourneyInfo& journeyInfo ) const {
     // TODO: Could start at an index based on the departure time.
     // Compute some index that is somewhere at the position of that time.
     QModelIndexList indices = m_modelJourneys->match( m_modelJourneys->index(0, 0),
-	    TimetableItemHashRole, journeyInfo.hash(), 1, Qt::MatchFixedString );
+			    TimetableItemHashRole, journeyInfo.hash(), 1,
+			    Qt::MatchExactly | Qt::MatchWrap );
     return indices.isEmpty() ? -1 : indices.first().row();
 }
 
@@ -3415,7 +3416,6 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		journeyItem->setData( static_cast<int>(JourneyNewsItem), Qt::UserRole );
 		journeyItem->setData( qMin(3, s3.length() / 20),
 				      HtmlDelegate::LinesPerRowRole );
-// 		setTextColorOfHtmlItem( journeyItem, m_colorSubItemLabels );
 	    }
 	    break;
 	    
@@ -3530,10 +3530,8 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		    .arg( journeyInfo.operatorName() );
 	    journeyItem->setData( s, HtmlDelegate::FormattedTextRole );
 	    journeyItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
-	    if ( !update ) {
+	    if ( !update )
 		journeyItem->setData( static_cast<int>(OperatorItem), Qt::UserRole );
-// 		setTextColorOfHtmlItem( journeyItem, m_colorSubItemLabels );
-	    }
 	    break;
 	    
 	case RouteItem:
@@ -3559,7 +3557,6 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		if ( row == journeyInfo.routeExactStops() && row > 0 ) {
 		    QStandardItem *itemSeparator = new QStandardItem(
 			    i18n("  - End of exact route -  ") );
-// 		    setTextColorOfHtmlItem( itemSeparator, m_colorSubItemLabels );
 		    journeyItem->appendRow( itemSeparator );
 		}
 
@@ -3641,15 +3638,12 @@ void PublicTransport::setValuesOfJourneyItem( QStandardItem* journeyItem,
 		int iconExtend = 16 * m_settings.sizeFactor;
 		item->setData( QSize(iconExtend, iconExtend),
 			       HtmlDelegate::IconSizeRole );
-// 		setTextColorOfHtmlItem( item, m_colorSubItemLabels );
 
 		journeyItem->appendRow( item );
 	    }
 	    
-	    if ( !update ) {
+	    if ( !update )
 		journeyItem->setData( static_cast<int>(RouteItem), Qt::UserRole );
-// 		setTextColorOfHtmlItem( journeyItem, m_colorSubItemLabels );
-	    }
 	    break;
 
 	default:
@@ -3675,7 +3669,8 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 	    departureItem->setData( departureInfo.lineString(), SortRole );
 	    departureItem->setData( departureInfo.operatorName(), OperatorRole );
 	    departureItem->setData( m_settings.linesPerRow, HtmlDelegate::LinesPerRowRole );
-// 	    departureItem->setData( QVariant::fromValue<DepartureInfo>(departureInfo), DepartureInfoRole );
+	    departureItem->setData( QVariant::fromValue<DepartureInfo>(departureInfo),
+				    DepartureInfoRole );
 	    if ( departureInfo.vehicleType() != Unknown )
 		departureItem->setIcon( Global::vehicleTypeToIcon(departureInfo.vehicleType()) );
 	    if ( !update ) {
@@ -3738,20 +3733,16 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 		    .arg( departureInfo.platform() );
 	    departureItem->setData( s, HtmlDelegate::FormattedTextRole );
 	    departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
-	    if ( !update ) {
+	    if ( !update )
 		departureItem->setData( static_cast<int>(PlatformItem), Qt::UserRole );
-// 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
-	    }
 	    break;
 
 	case OperatorItem:
 	    s = QString("<b>%1</b> %2").arg( i18nc("The company that is responsible for this departure/arrival/journey", "Operator:") ).arg( departureInfo.operatorName() );
 	    departureItem->setData( s, HtmlDelegate::FormattedTextRole );
 	    departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
-	    if ( !update ) {
+	    if ( !update )
 		departureItem->setData( static_cast<int>(OperatorItem), Qt::UserRole );
-// 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
-	    }
 	    break;
 	    
 	case RouteItem:
@@ -3776,7 +3767,6 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 		if ( row == departureInfo.routeExactStops() && row > 0 ) {
 		    QStandardItem *itemSeparator = new QStandardItem(
 			    i18n("  - End of exact route -  "));
-// 		    setTextColorOfHtmlItem( itemSeparator, m_colorSubItemLabels );
 		    departureItem->appendRow( itemSeparator );
 		}
 		
@@ -3785,14 +3775,11 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 			.arg(departureInfo.routeTimes()[row].toString("hh:mm"))
 			.arg(departureInfo.routeStops()[row]) );
 		item->setData( row, SortRole );
-// 		setTextColorOfHtmlItem( item, m_colorSubItemLabels );
 		departureItem->appendRow( item );
 	    }
 	    
-	    if ( !update ) {
+	    if ( !update )
 		departureItem->setData( static_cast<int>(RouteItem), Qt::UserRole );
-// 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
-	    }
 	    break;
 
 	case JourneyNewsItem:
@@ -3808,7 +3795,6 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 		departureItem->setData( static_cast<int>(JourneyNewsItem), Qt::UserRole );
 		departureItem->setData( qMin(3, s3.length() / 20),
 					HtmlDelegate::LinesPerRowRole );
-// 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
 	    }
 	    break;
 
@@ -3827,10 +3813,8 @@ void PublicTransport::setValuesOfDepartureItem( QStandardItem* departureItem,
 
 	    departureItem->setData( s, HtmlDelegate::FormattedTextRole );
 	    departureItem->setText( s.replace(QRegExp("<[^>]*>"), "") );
-	    if ( !update ) {
+	    if ( !update )
 		departureItem->setData( static_cast<int>(DelayItem), Qt::UserRole );
-// 		setTextColorOfHtmlItem( departureItem, m_colorSubItemLabels );
-	    }
 	    break;
 
 	default:
@@ -4092,14 +4076,26 @@ void PublicTransport::updateOrCreateItem( bool remove, QStandardItem* parentItem
 
 void PublicTransport::updateDeparture( int row, const DepartureInfo& departureInfo ) {
     QStandardItem *itemLineString = m_model->item(
-	    row, m_departureViewColumns.indexOf(LineStringColumn) );
+		    row, m_departureViewColumns.indexOf(LineStringColumn) );
+    DepartureInfo oldDepartureInfo = itemLineString->data(
+		    DepartureInfoRole ).value<DepartureInfo>();
+    bool unchanged = oldDepartureInfo == departureInfo;
+
+    if ( m_settings.showRemainingMinutes || !unchanged ) {
+	// In the departure column only the remaining minutes change, 
+	// unless delay/departure change
+	QStandardItem *itemDeparture = m_model->item(
+		row, m_departureViewColumns.indexOf(DepartureColumn) );
+	setValuesOfDepartureItem( itemDeparture, departureInfo, DepartureItem, true );
+    }
+    
+    if ( unchanged )
+	return;
+	    
     QStandardItem *itemTarget = m_model->item(
 	    row, m_departureViewColumns.indexOf(TargetColumn) );
-    QStandardItem *itemDeparture = m_model->item(
-	    row, m_departureViewColumns.indexOf(DepartureColumn) );
     setValuesOfDepartureItem( itemLineString, departureInfo, LineNameItem, true );
     setValuesOfDepartureItem( itemTarget, departureInfo, TargetItem, true );
-    setValuesOfDepartureItem( itemDeparture, departureInfo, DepartureItem, true );
 
     // Get items
     QStandardItem *itemPlatform = NULL, *itemJourneyNews = NULL,
@@ -4169,6 +4165,19 @@ void PublicTransport::removeOldDepartures() {
     // Go through departure lists of all stops.
     // Add all departures that can be found in the model to foundRows.
     int newDepartureCount = 0;
+    int startAt, sorting = 0;
+    bool canTakeAdvantageOfSorting = m_treeView->nativeWidget()->header()->sortIndicatorSection()
+		== m_departureViewColumns.indexOf( DepartureColumn );
+    if ( canTakeAdvantageOfSorting ) {
+	if ( m_treeView->nativeWidget()->header()->sortIndicatorOrder() == Qt::AscendingOrder ) {
+	    startAt = 0;
+	    sorting = 1;
+	} else {
+	    startAt = m_model->rowCount() - 1;
+	    sorting = -1;
+	}
+    } else
+	startAt = 0;
     QList< int > foundRows;
     for ( int n = m_stopIndexToSourceName.count() - 1; n >= 0; --n ) {
 	QString strippedSourceName = stripDateAndTimeValues( m_stopIndexToSourceName[n] );
@@ -4176,22 +4185,27 @@ void PublicTransport::removeOldDepartures() {
 	    kDebug() << "Source has no stored data in applet" << strippedSourceName;
 	    continue;
 	}
-	
+
 	// Go through departure infos of the current stop in the loop
+	bool jump = false;
 	QList<DepartureInfo> &depInfos = m_departureInfos[ strippedSourceName ];
 	newDepartureCount += depInfos.count(); // For debug only
-	for ( int i = depInfos.count() - 1; i >= 0; --i ) {
+	for ( int i = 0; i < depInfos.count(); ++i ) {
 	    DepartureInfo &departureInfo = depInfos[ i ];
-	    int row = findDeparture( departureInfo );
+	    departureInfo.setVisible( !filterOut(departureInfo) );
+	    int row = findDeparture( departureInfo, startAt );
 	    if ( row != -1 ) {
-		if ( filterOut(departureInfo) ) {
-		    departureInfo.setVisible( false );
-		} else {
-		    foundRows << row;
-		    departureInfo.setVisible( true );
+		if ( canTakeAdvantageOfSorting ) {
+		    if ( startAt == row )
+			startAt += sorting;
+		    else if ( jump ) {
+			startAt = row + sorting;
+			jump = false;
+		    } else
+			jump = true;
 		}
-	    } else {
-		departureInfo.setVisible( !filterOut(departureInfo) );
+		if ( departureInfo.isVisible() )
+		    foundRows << row;
 	    }
 	}
     }
@@ -4264,15 +4278,29 @@ void PublicTransport::updateModel() {
 	m_labelInfo->setText( infoText() );
     }
     removeOldDepartures();
-    
+
+    int startAt, sorting = 0;
+    bool canTakeAdvantageOfSorting = m_treeView->nativeWidget()->header()->sortIndicatorSection()
+		== m_departureViewColumns.indexOf( DepartureColumn );
+    if ( canTakeAdvantageOfSorting ) {
+	if ( m_treeView->nativeWidget()->header()->sortIndicatorOrder() == Qt::AscendingOrder ) {
+	    startAt = 0;
+	    sorting = 1;
+	} else {
+	    startAt = m_model->rowCount() - 1;
+	    sorting = -1;
+	}
+    } else
+	startAt = 0;
     QList< DepartureInfo > depInfos = departureInfos();
     kDebug() << "Update / add" << depInfos.count() << "departures";
     foreach( const DepartureInfo &departureInfo, depInfos ) {
-	QTime findStart = QTime::currentTime();
-	int row = findDeparture( departureInfo );
-	if ( row != -1 ) // just update departure data
+	int row = findDeparture( departureInfo, startAt );
+	if ( row != -1 ) { // update departure data
+	    if ( canTakeAdvantageOfSorting )
+		startAt = row + sorting;
 	    updateDeparture( row, departureInfo );
-	else // append new departure
+	} else // append new departure
 	    appendDeparture( departureInfo );
     }
 }

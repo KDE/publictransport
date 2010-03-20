@@ -109,7 +109,7 @@ class JourneyInfo {
 	QList<QTime> routeTimesArrival() const { return m_routeTimesArrival; };
 	QList<int> routeTimesDepartureDelay() const { return m_routeTimesDepartureDelay; };
 	QList<int> routeTimesArrivalDelay() const { return m_routeTimesArrivalDelay; };
-	QString hash() const { return m_hash; };
+	uint hash() const { return m_hash; };
 	
     private:
 	void init( const QString &operatorName, const QList<VehicleType> &vehicleTypes,
@@ -139,10 +139,10 @@ class JourneyInfo {
 		m_routePlatformsDeparture, m_routePlatformsArrival;
 	QList<QTime> m_routeTimesDeparture, m_routeTimesArrival;
 	QList<int> m_routeTimesDepartureDelay, m_routeTimesArrivalDelay;
-	QString m_hash;
+	uint m_hash;
 };
 
-bool operator < ( const JourneyInfo &ji1, const JourneyInfo &ji2 );
+bool operator <( const JourneyInfo &ji1, const JourneyInfo &ji2 );
 
 /** @class DepartureInfo
 *
@@ -196,6 +196,8 @@ class DepartureInfo {
 		  platform, delay, delayReason, journeyNews, routeStops,
 		  routeTimes, routeExactStops );
 	};
+	
+	bool operator ==( const DepartureInfo &other );
 
 	bool isVisible() const { return m_visible; };
 	void setVisible( bool visible = true ) { m_visible = visible; };
@@ -261,7 +263,7 @@ class DepartureInfo {
 	QStringList routeStops() const { return m_routeStops; };
 	QList<QTime> routeTimes() const { return m_routeTimes; };
 	int routeExactStops() const { return m_routeExactStops; };
-	QString hash() const { return m_hash; };
+	uint hash() const { return m_hash; };
 	
     private:
 	void init( const QString &operatorName, const QString &line,
@@ -286,10 +288,11 @@ class DepartureInfo {
 	QStringList m_routeStops;
 	QList<QTime> m_routeTimes;
 	int m_routeExactStops;
-	QString m_hash;
+	uint m_hash;
 	bool m_visible;
 };
+Q_DECLARE_METATYPE( DepartureInfo );
 
-bool operator < ( const DepartureInfo &di1, const DepartureInfo &di2 );
+bool operator <( const DepartureInfo &di1, const DepartureInfo &di2 );
 
 #endif // DEPARTUREINFO_HEADER
