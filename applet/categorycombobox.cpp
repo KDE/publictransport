@@ -7,6 +7,7 @@
 #include <QApplication>
 #include <QDesktopWidget>
 #include <KDebug>
+#include <kdeversion.h>
 
 void CategoryComboBox::showPopup() {
     KComboBox::showPopup();
@@ -36,8 +37,12 @@ void CategoryComboBox::showPopup() {
 
     categories.removeDuplicates();
     int categoryCount = categories.count();
-    int categoriesHeight = categoryCount * categoryHeight +
-			   (categoryCount - 1) * catView->categorySpacing();
+    #if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
+    int categoriesHeight = categoryCount * categoryHeight + (categoryCount - 1);
+    #else
+    int categoriesHeight = categoryCount * (categoryHeight + catView->categorySpacing())
+			    - catView->categorySpacing();
+    #endif
     QSize size = view()->parentWidget()->size();
     int resultHeight = size.height() + categoriesHeight + 20;
     

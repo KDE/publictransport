@@ -20,6 +20,7 @@
 #include "publictransporttreeview.h"
 
 #include "htmldelegate.h"
+#include "departuremodel.h"
 
 #include <Plasma/FrameSvg>
 #include <Plasma/Theme>
@@ -165,7 +166,7 @@ void TreeView::drawRowBackground( QPainter* painter,
 	    ? options.palette.alternateBase() : options.palette.base();
     painter->fillRect( options.rect, bgBrush );
 
-    if ( topLevelParent.data(HtmlDelegate::DrawAlarmBackground).toBool() ) {
+    if ( topLevelParent.data(DrawAlarmBackground).toBool() ) {
 	QColor alarmColor = KColorScheme( QPalette::Active )
 		.background( KColorScheme::NegativeBackground ).color();
 	QLinearGradient bgGradient( 0, 0, 1, 0 );

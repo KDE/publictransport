@@ -347,6 +347,18 @@ AbstractDynamicWidgetContainer::~AbstractDynamicWidgetContainer() {
     delete d_ptr;
 }
 
+void AbstractDynamicWidgetContainer::setSeparatorOptions(
+			SeparatorOptions separatorOptions ) {
+    Q_D( AbstractDynamicWidgetContainer );
+    d->showSeparators = separatorOptions ==
+		AbstractDynamicWidgetContainer::ShowSeparators;
+}
+
+AbstractDynamicWidgetContainer::SeparatorOptions AbstractDynamicWidgetContainer::separatorOptions() const {
+    Q_D( const AbstractDynamicWidgetContainer );
+    return d->showSeparators ? ShowSeparators : NoSeparator;
+}
+
 void AbstractDynamicWidgetContainer::changeEvent( QEvent* event ) {
     Q_D( AbstractDynamicWidgetContainer );
     if ( event->type() == QEvent::EnabledChange )
@@ -522,7 +534,7 @@ int AbstractDynamicWidgetContainer::removeWidget( QWidget *contentWidget ) {
     if ( !d->dynamicWidgets.removeOne(dynamicWidget) )
 	kDebug() << "Widget to be removed not found in list" << dynamicWidget;
     vBoxLayout->removeWidget( dynamicWidget );
-    emit removed( dynamicWidget->contentWidget() );
+    emit removed( dynamicWidget->contentWidget(), widgetIndex );
     delete dynamicWidget;
     
     d->updateButtonStates();
@@ -755,8 +767,13 @@ DynamicWidget *AbstractDynamicLabeledWidgetContainer::addWidget(
 		    "widget count of" << d->maxWidgetCount << "is reached";
 	return NULL;
     }
-    if ( d->showSeparators && !d->dynamicWidgets.isEmpty() )
-	d->contentWidget->layout()->addWidget( createSeparator() );
+    if ( d->showSeparators && !d->dynamicWidgets.isEmpty() ) {
+	QFormLayout *l = dynamic_cast<QFormLayout*>( d->contentWidget->layout() );
+	if ( l )
+	    l->addRow( createSeparator() );
+	else
+	    d->contentWidget->layout()->addWidget( createSeparator() );
+    }
 
     d->labelWidgets << labelWidget;
     DynamicWidget *dynWidget = createDynamicWidget( widget );
@@ -809,7 +826,7 @@ int AbstractDynamicLabeledWidgetContainer::removeWidget( QWidget *widget ) {
     formLayout->removeWidget( dynamicWidget );
     d->labelWidgets.removeAt( index );
     d->dynamicWidgets.removeAt( index );
-    emit removed( dynamicWidget->contentWidget() );
+    emit removed( dynamicWidget->contentWidget(), index );
     delete label;
     delete dynamicWidget;
     

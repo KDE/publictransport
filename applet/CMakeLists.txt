@@ -15,6 +15,10 @@ include_directories(
 set( publictransport_SRCS
     publictransport.cpp
     publictransporttreeview.cpp
+    departureprocessor.cpp
+    departuremodel.cpp
+    journeysearchparser.cpp
+    overlaywidget.cpp
     global.cpp
     settings.cpp
     stopfinder.cpp
@@ -26,7 +30,6 @@ set( publictransport_SRCS
     checkcombobox.cpp
     categorycombobox.cpp
     datasourcetester.cpp
-    alarmtimer.cpp
     htmldelegate.cpp
     departureinfo.cpp )
 
@@ -37,6 +40,7 @@ kde4_add_ui_files( publictransport_SRCS
     publicTransportConfigAdvanced.ui
     publicTransportAppearanceConfig.ui
     publicTransportFilterConfig.ui
+    alarmConfig.ui
     accessorInfo.ui )
 
 # Now make sure all files get to the right place

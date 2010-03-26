@@ -31,22 +31,6 @@ class QTextLayout;
 * @brief A delegate than can display html formatted text. */
 class HtmlDelegate : public QItemDelegate {
     public:
-	enum DataRole {
-	    FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text. The text of an item should not contain html tags, if used in a combo box. */
-	    TextBackgroundRole = Qt::UserRole + 501,
-	    DecorationPositionRole = Qt::UserRole + 502,
-	    DrawAlarmBackground = Qt::UserRole + 503,
-	    LinesPerRowRole = Qt::UserRole + 504, /**< Used to change the number of lines for a row. */
-	    IconSizeRole = Qt::UserRole + 505, /**< Used to set a specific icon size for an element. */
-	    DrawBackgroundGradientRole = Qt::UserRole + 506 /**< Used to draw a background gradient at the bottom for an element. */
-	};
-
-	/** Position of the decoration. */
-	enum DecorationPosition {
-	    Left, /**< Show the decoration on the left. */
-	    Right /**< Show the decoration on the right. */
-	};
-	
 	enum Option {
 	    NoOption = 0x0000,
 	    DrawShadows = 0x0001,

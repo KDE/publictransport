@@ -56,7 +56,13 @@ class CheckCombobox : public KComboBox {
 
 	QString noSelectionText() const;
 	void setNoSelectionText( const QString &noSelectionText = i18n("(none)") );
-
+	
+	QString allSelectedText() const;
+	void setAllSelectedText( const QString &allSelectedText = i18n("(all)") );
+	
+	void addItem( const QString &text );
+	void addItems( const QStringList &texts );
+	
 	/** Gets whether or not it's allowed that no item is checked.
 	* If this is false, the last checked item can't be unchecked. */
 	bool allowNoCheckedItem() const;
@@ -66,9 +72,14 @@ class CheckCombobox : public KComboBox {
 
 	/** Returns a list of indices of the model that are currently checked. */
 	QModelIndexList checkedItems() const;
+	/** Returns a list of rows of the model that are currently checked. */
+	QList<int> checkedRows() const;
 	/** Sets all items for the given @p indices checked. All other items get
 	* unchecked. */
 	void setCheckedItems( const QModelIndexList &indices );
+	/** Sets all items at the given @p rows checked. All other items get
+	* unchecked. */
+	void setCheckedRows( const QList<int> &rows );
 	/** Sets the check state of the given @p index to @p checkState. */
 	void setItemCheckState( const QModelIndex &index, Qt::CheckState checkState );
 	/** Checks if the model has at least @p count checked items. */
@@ -80,6 +91,7 @@ class CheckCombobox : public KComboBox {
 	
     protected:
 	CheckComboboxPrivate* const d_ptr;
+	
 	/** Reimplemented to change the check state of the current item when 
 	* space is pressed. */
 	virtual void keyPressEvent( QKeyEvent *event );

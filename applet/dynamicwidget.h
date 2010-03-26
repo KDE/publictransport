@@ -146,18 +146,19 @@ class AbstractDynamicWidgetContainer : public QWidget {
     Q_PROPERTY( Qt::Alignment buttonAlignment READ buttonAlignment WRITE setButtonAlignment )
     Q_PROPERTY( bool autoRaiseButtons READ autoRaiseButtons WRITE setAutoRaiseButtons )
     Q_PROPERTY( Qt::Alignment buttonAlignment READ buttonAlignment WRITE setButtonAlignment )
+    Q_PROPERTY( SeparatorOptions separatorOptions READ separatorOptions WRITE setSeparatorOptions )
     friend class DynamicWidget; // To access the constructor of DynamicWidget
 
     public:
 	/** Options for separators between widgets. */
 	enum SeparatorOptions {
-	    NoSeparator, /**< Don't add separators between widgets. */
+	    NoSeparator = 0, /**< Don't add separators between widgets. */
 	    ShowSeparators /**< Add separators between widgets. */
 	};
 
 	/** Options for the buttons to remove widgets. */
 	enum RemoveButtonOptions {
-	    NoRemoveButton, /**< Don't show remove buttons. You can manually remove
+	    NoRemoveButton = 0, /**< Don't show remove buttons. You can manually remove
 		* widgets by calling @ref removeWidget(). */
 	    RemoveButtonsBesideWidgets, /**< Show a remove button beside each widget. */
 	    RemoveButtonAfterLastWidget /**< Show a remove button after the last widget.
@@ -166,7 +167,7 @@ class AbstractDynamicWidgetContainer : public QWidget {
 	
 	/** Options for the buttons to add new widgets. */
 	enum AddButtonOptions {
-	    NoAddButton, /**< Don't show add buttons. You can manually add widgets
+	    NoAddButton = 0, /**< Don't show add buttons. You can manually add widgets
 		* by calling @ref addWidget(). */
 	    AddButtonBesideFirstWidget, /**< Show an add button beside the first widget. */
 	    AddButtonAfterLastWidget /**< Show an add button after the last widget. */
@@ -177,6 +178,12 @@ class AbstractDynamicWidgetContainer : public QWidget {
 		AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
 		SeparatorOptions separatorOptions = NoSeparator, QWidget *parent = 0 );
 	~AbstractDynamicWidgetContainer();
+
+	/** @warning The new @p separatorOptions will only be applied for newly 
+	* added widgets. */
+	void setSeparatorOptions( SeparatorOptions separatorOptions = NoSeparator );
+	/** Returns the current separator options. */
+	SeparatorOptions separatorOptions() const;
 	
 	/** Set a custom add button, to let it automatically be set enabled/disabled
 	* depending on the current/maximum numbers of widgets. It also uses the
@@ -222,7 +229,7 @@ class AbstractDynamicWidgetContainer : public QWidget {
 	/** A @p widget has been added. */
 	void added( QWidget *widget );
 	/** A @p widget has been removed. */
-	void removed( QWidget *widget );
+	void removed( QWidget *widget, int widgetIndex );
 
     protected Q_SLOTS:
 	/** This slot is connected to the removeClicked signal of every contained

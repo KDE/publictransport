@@ -44,7 +44,7 @@ struct Constraint {
 	this->value = value;
     };
 };
-bool operator==( const Constraint &a, const Constraint &b );
+bool operator==( const Constraint &l, const Constraint &r );
 
 class FilterWidget;
 class DepartureInfo;
@@ -56,12 +56,17 @@ class Filter : public QList< Constraint > {
 	/** Returns true, if all constraints of this filter match. */
 	bool match( const DepartureInfo &departureInfo ) const;
 	
+	QByteArray toData() const;
+	void fromData( const QByteArray &ba );
+	
     private:
 	bool matchString( FilterVariant variant, const QString &filterString,
 			  const QString &testString ) const;
 	bool matchInt( FilterVariant variant, int filterInt, int testInt ) const;
 	bool matchList( FilterVariant variant, const QVariantList &filterValues,
 			const QVariant &testValue ) const;
+	bool matchTime( FilterVariant variant, const QTime &filterTime,
+			const QTime &testTime ) const;
 };
 QDataStream& operator<<( QDataStream &out, const Filter &filter );
 QDataStream& operator>>( QDataStream &in, Filter &filter );
@@ -76,7 +81,7 @@ class FilterList : public QList< Filter > {
 	bool match( const DepartureInfo &departureInfo ) const;
 	
 	QByteArray toData() const;
-	void fromData( const QByteArray &s );
+	void fromData( const QByteArray &ba );
 };
 QDataStream& operator<<( QDataStream &out, const FilterList &filterList );
 QDataStream& operator>>( QDataStream &in, FilterList &filterList );
@@ -92,5 +97,6 @@ struct FilterSettings {
     bool filterOut( const DepartureInfo& departureInfo ) const;
 };
 typedef QList< FilterSettings > FilterSettingsList;
+bool operator ==( const FilterSettings &l, const FilterSettings &r );
 
 #endif // Multiple inclusion guard

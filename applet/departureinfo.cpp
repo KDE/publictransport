@@ -23,7 +23,7 @@ JourneyInfo::JourneyInfo( const QString &operatorName,
 			  const QList<QTime> &routeTimesArrival,
 			  const QList<int> &routeTimesDepartureDelay,
 			  const QList<int> &routeTimesArrivalDelay,
-			  int routeExactStops ) {
+			  int routeExactStops ) : PublicTransportInfo() {
     QList<VehicleType> vehicleTypes;
     foreach( QVariant vehicleTypeVariant, vehicleTypesVariant ) {
 	VehicleType vehicleType = static_cast<VehicleType>( vehicleTypeVariant.toInt() );
@@ -81,6 +81,79 @@ void JourneyInfo::init( const QString &operatorName,
     generateHash();
 }
 
+QString JourneyInfo::departureText( bool htmlFormatted, bool displayTimeBold,
+				    bool showRemainingMinutes, bool showDepartureTime,
+				    int linesPerRow) const {
+    QString sTime, sDeparture = departure().toString("hh:mm");
+    if ( htmlFormatted && displayTimeBold )
+	sDeparture = sDeparture.prepend("<span style='font-weight:bold;'>")
+			       .append("</span>");
+
+    if ( departure().date() != QDate::currentDate() )
+	sDeparture += ", " + DepartureInfo::formatDateFancyFuture(
+		departure().date() );
+
+    if ( showDepartureTime && showRemainingMinutes ) {
+	QString sText = durationToDepartureString();
+	if ( htmlFormatted ) {
+	    sText = sText.replace( QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"),
+		    QString("<span style='color:%1;'>+&nbsp;\\1</span>")
+		    .arg(Global::textColorDelayed().name()) );
+	}
+
+	if ( linesPerRow > 1 )
+	    sTime = QString(htmlFormatted ? "%1<br>(%2)" : "%1\n(%2)")
+		    .arg( sDeparture ).arg( sText );
+	else
+	    sTime = QString("%1 (%2)").arg( sDeparture ).arg( sText );
+    } else if ( showDepartureTime ) {
+	sTime = sDeparture;
+    } else if ( showRemainingMinutes ) {
+	sTime = durationToDepartureString();
+	if ( htmlFormatted ) {
+	    sTime = sTime.replace( QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"),
+		    QString("<span style='color:%1;'>+&nbsp;\\1</span>")
+		    .arg(Global::textColorDelayed().name()) );
+	}
+    } else
+	sTime = QString();
+
+    return sTime;
+}
+
+QString JourneyInfo::arrivalText( bool /*htmlFormatted*/, bool displayTimeBold,
+				  bool showRemainingMinutes, bool showDepartureTime,
+				  int linesPerRow) const {
+    QString sTime, sArrival = arrival().toString("hh:mm");
+    if ( displayTimeBold )
+	sArrival = sArrival.prepend("<span style='font-weight:bold;'>").append("</span>");
+
+    if ( arrival().date() != QDate::currentDate() )
+	sArrival += ", " + DepartureInfo::formatDateFancyFuture( arrival().date() );
+
+    if ( showDepartureTime && showRemainingMinutes ) {
+	QString sText = durationToDepartureString( true );
+	sText = sText.replace( QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"),
+		QString("<span style='color:%1;'>+&nbsp;\\1</span>")
+		.arg(Global::textColorDelayed().name()) );
+
+	if ( linesPerRow > 1 )
+	    sTime = QString("%1<br>(%2)").arg( sArrival ).arg( sText );
+	else
+	    sTime = QString("%1 (%2)").arg( sArrival ).arg( sText );
+    } else if ( showDepartureTime ) {
+	sTime = sArrival;
+    } else if ( showRemainingMinutes ) {
+	sTime = durationToDepartureString( true );
+	sTime = sTime.replace( QRegExp("\\+(?:\\s*|&nbsp;)(\\d+)"),
+		QString("<span style='color:%1;'>+&nbsp;\\1</span>")
+		.arg(Global::textColorDelayed().name()) );
+    } else
+	sTime = QString();
+
+    return sTime;
+}
+
 QList< QVariant > JourneyInfo::vehicleTypesVariant() const {
     QList<QVariant> vehicleTypesVariant;
     foreach( VehicleType vehicleType, m_vehicleTypes )
@@ -93,7 +166,7 @@ QString JourneyInfo::durationToDepartureString( bool toArrival ) const {
 	    toArrival ? m_arrival : m_departure );
     int totalMinutes = qCeil( (qreal)totalSeconds / 60.0 );
     if ( totalMinutes < 0 )
-    	return i18n("depart is in the past");
+    	return i18n("already left");
     else
 	return KGlobal::locale()->prettyFormatDuration( (ulong)(totalMinutes * 60000) );
 }
@@ -106,7 +179,7 @@ QString DepartureInfo::durationString( bool showDelay ) const {
     int totalSeconds = QDateTime::currentDateTime().secsTo( predictedDeparture() );
     int totalMinutes = qCeil( (qreal)totalSeconds / 60.0 );
     if ( totalMinutes < 0 )
-	return i18n("depart is in the past");
+	return i18n("already left");
 
     QString sDuration;
     if ( totalMinutes == 0 )
@@ -125,7 +198,7 @@ void DepartureInfo::init( const QString &operatorName, const QString &line,
 			  const QStringList &routeStops,
 			  const QList<QTime> &routeTimes,
 			  int routeExactStops ) {
-    m_visible = true;
+    m_filteredOut = false;
     
     QRegExp rx ( "[0-9]*$" );
     rx.indexIn ( line );
@@ -152,7 +225,7 @@ void DepartureInfo::init( const QString &operatorName, const QString &line,
     generateHash();
 }
 
-bool DepartureInfo::operator ==( const DepartureInfo& other ) {
+bool DepartureInfo::operator ==( const DepartureInfo& other ) const {
     return m_hash == other.m_hash
 // 	These are already in m_hash
 // 	&& m_departure == other.m_departure
@@ -184,6 +257,16 @@ void JourneyInfo::generateHash() {
 		.arg(m_duration).arg(m_changes).arg(vehicles) );
 }
 
+QString DepartureInfo::formatDateFancyFuture( const QDate& date ) {
+    int dayDiff = QDate::currentDate().daysTo( date );
+    if ( dayDiff == 1 )
+	return i18n( "tomorrow" );
+    else if ( dayDiff <= 6 )
+	return date.toString( "ddd" );
+    else
+	return KGlobal::locale()->formatDate( date, KLocale::ShortDate );
+}
+
 QString DepartureInfo::delayText() const {
     QString sText;
     DelayType type = delayType();
@@ -205,6 +288,76 @@ QString DepartureInfo::delayText() const {
     }
     
     return sText;
+}
+
+QString DepartureInfo::departureText( bool htmlFormatted, bool displayTimeBold,
+				      bool showRemainingMinutes,
+				      bool showDepartureTime, int linesPerRow ) const {
+    QDateTime predictedDep = predictedDeparture();
+    QString sTime, sDeparture = predictedDep.toString( "hh:mm" );
+    QString sColor;
+    if ( htmlFormatted ) {
+	if ( delayType() == OnSchedule )
+	    sColor = QString( "color:%1;" ).arg( Global::textColorOnSchedule().name() );
+	else if ( delayType() == Delayed )
+	    sColor = QString( "color:%1;" ).arg( Global::textColorDelayed().name() );
+
+	QString sBold;
+	if ( displayTimeBold )
+	    sBold = "font-weight:bold;";
+
+	sDeparture = sDeparture.prepend(
+		QString("<span style='%1%2'>").arg(sColor).arg(sBold) )
+		.append( "</span>" );
+    }
+    if ( predictedDeparture().date() != QDate::currentDate() )
+	sDeparture += ", " + formatDateFancyFuture( predictedDep.date() );
+
+    if ( showDepartureTime && showRemainingMinutes ) {
+	QString sText = durationString( false );
+	sDeparture += delayString(); // Show delay after time
+	if ( htmlFormatted ) {
+	    sDeparture = sDeparture.replace( QRegExp("(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)"),
+		    QString("<span style='color:%1;'>\\1</span>")
+		    .arg(Global::textColorDelayed().name()) );
+	    sTime = QString( linesPerRow > 1 ? "%1<br>(%2)" : "%1 (%2)" )
+		    .arg( sDeparture ).arg( sText );
+	} else
+	    sTime = QString( linesPerRow > 1 ? "%1\n(%2)" : "%1 (%2)" )
+		    .arg( sDeparture ).arg( sText );
+    } else if ( showDepartureTime ) {
+	if ( htmlFormatted ) {
+	    sDeparture += delayString().replace(
+		    QRegExp("(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)"),
+		    QString("<span style='color:%1;'>\\1</span>")
+		    .arg(Global::textColorDelayed().name()) ); // Show delay after time
+	} else
+	    sDeparture += delayString();
+	sTime = sDeparture;
+    } else if ( showRemainingMinutes ) {
+	sTime = durationString();
+	if ( htmlFormatted ) {
+	    if ( linesPerRow == 1 )
+		sTime = sTime.replace( ' ', "&nbsp;" ); // No line breaking
+	    DelayType type = delayType();
+	    if ( type == Delayed ) {
+		sTime = sTime.replace( QRegExp("(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)"),
+			QString("<span style='color:%1;'>\\1</span>")
+			.arg(Global::textColorDelayed().name()) );
+	    } else if ( type == OnSchedule ) {
+		sTime = sTime.prepend( QString("<span style='color:%1;'>")
+			.arg(Global::textColorOnSchedule().name()) )
+			.append( "</span>" );
+	    }
+	}
+    } else
+	sTime = QString();
+
+    return sTime;
+}
+
+uint qHash( const DepartureInfo& departureInfo ) {
+    return departureInfo.hash();
 }
 
 bool operator <( const JourneyInfo& ji1, const JourneyInfo& ji2 ) {

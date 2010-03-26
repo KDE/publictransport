@@ -92,6 +92,17 @@ bool Filter::match( const DepartureInfo& departureInfo ) const {
 		    return false;
 		break;
 
+	    case FilterByDeparture:
+		if ( !matchTime(constraint.variant, constraint.value.toTime(),
+			        departureInfo.departure().time()) )
+		    return false;
+		break;
+	    case FilterByDayOfWeek:
+		if ( !matchList(constraint.variant, constraint.value.toList(),
+				static_cast<int>(departureInfo.departure().date().dayOfWeek())) )
+		    return false;
+		break;
+
 	    default:
 		kDebug() << "Filter unknown or invalid" << constraint.type;
 	}
@@ -157,6 +168,37 @@ bool Filter::matchString( FilterVariant variant, const QString& filterString,
     }
 }
 
+bool Filter::matchTime( FilterVariant variant, const QTime& filterTime,
+			const QTime& testTime ) const {
+    switch ( variant ) {
+	case FilterEquals:
+	    return testTime == filterTime;
+	case FilterDoesntEqual:
+	    return testTime != filterTime;
+
+	case FilterGreaterThan:
+	    return testTime > filterTime;
+	case FilterLessThan:
+	    return testTime < filterTime;
+
+	default:
+	    kDebug() << "Invalid filter variant for time matching:" << variant;
+	    return false;
+    }
+}
+
+QByteArray Filter::toData() const {
+    QByteArray ba;
+    QDataStream stream( &ba, QIODevice::WriteOnly );
+    stream << *this;
+    return ba;
+}
+
+void Filter::fromData( const QByteArray& ba ) {
+    QDataStream stream( ba );
+    stream >> *this;
+}
+
 QByteArray FilterList::toData() const {
     QByteArray ba;
     QDataStream stream( &ba, QIODevice::WriteOnly );
@@ -199,6 +241,7 @@ QDataStream& operator<<( QDataStream& out, const Filter &filter ) {
 	QVariantList list;
 	switch ( constraint.type ) {
 	    case FilterByVehicleType:
+	    case FilterByDayOfWeek:
 		list = constraint.value.toList();
 		out << list.count();
 		foreach ( const QVariant &value, list )
@@ -214,6 +257,10 @@ QDataStream& operator<<( QDataStream& out, const Filter &filter ) {
 	    case FilterByTransportLineNumber:
 	    case FilterByDelay:
 		out << constraint.value.toInt();
+		break;
+
+	    case FilterByDeparture:
+		out << constraint.value.toTime();
 		break;
 		
 	    default:
@@ -240,8 +287,10 @@ QDataStream& operator>>( QDataStream& in, Filter &filter ) {
 	QVariant v;
 	QString s;
 	int i, count;
+	QTime time;
 	switch ( constraint.type ) {
 	    case FilterByVehicleType:
+	    case FilterByDayOfWeek:
 		in >> count;
 		for ( int m = 0; m < count; ++m ) {
 		    in >> i;
@@ -263,6 +312,11 @@ QDataStream& operator>>( QDataStream& in, Filter &filter ) {
 		constraint.value = i;
 		break;
 		
+	    case FilterByDeparture:
+		in >> time;
+		constraint.value = time;
+		break;
+		
 	    default:
 		kDebug() << "Unknown filter type" << constraint.type << type;
 		constraint.type = FilterByVehicleType;
@@ -275,6 +329,10 @@ QDataStream& operator>>( QDataStream& in, Filter &filter ) {
     return in;
 }
 
-bool operator==( const Constraint& a, const Constraint& b ) {
-    return a.type == b.type && a.variant == b.variant && a.value == b.value;
+bool operator==( const Constraint& l, const Constraint& r ) {
+    return l.type == r.type && l.variant == r.variant && l.value == r.value;
+}
+
+bool operator==( const FilterSettings& l, const FilterSettings& r ) {
+    return l.filterAction == r.filterAction && l.filters == r.filters;
 }

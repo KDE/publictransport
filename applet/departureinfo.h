@@ -31,16 +31,26 @@
 
 // Own includes
 #include "global.h"
-
+#include "settings.h"
 
 Q_DECLARE_FLAGS( LineServices, LineService )
+
+class PublicTransportInfo {
+    public:
+	PublicTransportInfo() { };
+	
+	uint hash() const { return m_hash; };
+	
+    protected:
+	uint m_hash;
+};
 
 /** @class JourneyInfo
 *
 * @brief Stores information about journeys. */
-class JourneyInfo {
+class JourneyInfo : public PublicTransportInfo {
     public:
-	JourneyInfo() {
+	JourneyInfo() : PublicTransportInfo() {
 	    m_duration = -1;
 	};
 
@@ -75,7 +85,7 @@ class JourneyInfo {
 		     const QList<QTime> &routeTimesArrival = QList<QTime>(),
 		     const QList<int> &routeTimesDepartureDelay = QList<int>(),
 		     const QList<int> &routeTimesArrivalDelay = QList<int>(),
-		     int routeExactStops = 0  ) {
+		     int routeExactStops = 0  ) : PublicTransportInfo() {
 	    init( operatorName, vehicleTypes, departure, arrival, pricing,
 		  startStopName, targetStopName, duration, changes, journeyNews,
 		  routeStops, routeTransportLines, routePlatformsDeparture,
@@ -85,7 +95,14 @@ class JourneyInfo {
 	};
 
 	bool isValid() const { return m_duration >= 0; };
-
+	
+	QString departureText( bool htmlFormatted, bool displayTimeBold,
+			       bool showRemainingMinutes, bool showDepartureTime,
+			       int linesPerRow ) const;
+	QString arrivalText( bool htmlFormatted, bool displayTimeBold,
+			     bool showRemainingMinutes, bool showDepartureTime,
+			     int linesPerRow ) const;
+			       
 	QList<QVariant> vehicleTypesVariant() const;
 	QString durationToDepartureString( bool toArrival = false ) const;
 	
@@ -109,7 +126,6 @@ class JourneyInfo {
 	QList<QTime> routeTimesArrival() const { return m_routeTimesArrival; };
 	QList<int> routeTimesDepartureDelay() const { return m_routeTimesDepartureDelay; };
 	QList<int> routeTimesArrivalDelay() const { return m_routeTimesArrivalDelay; };
-	uint hash() const { return m_hash; };
 	
     private:
 	void init( const QString &operatorName, const QList<VehicleType> &vehicleTypes,
@@ -139,7 +155,6 @@ class JourneyInfo {
 		m_routePlatformsDeparture, m_routePlatformsArrival;
 	QList<QTime> m_routeTimesDeparture, m_routeTimesArrival;
 	QList<int> m_routeTimesDepartureDelay, m_routeTimesArrivalDelay;
-	uint m_hash;
 };
 
 bool operator <( const JourneyInfo &ji1, const JourneyInfo &ji2 );
@@ -147,10 +162,10 @@ bool operator <( const JourneyInfo &ji1, const JourneyInfo &ji2 );
 /** @class DepartureInfo
 *
 * @brief Stores information about departures / arrivals. */
-class DepartureInfo {
+class DepartureInfo : public PublicTransportInfo {
     public:
 	/** Creates an invalid DepartureInfo object. */
-	DepartureInfo() {
+	DepartureInfo() : PublicTransportInfo() {
 	};
 
 	DepartureInfo( const QString &operatorName, const QString &line,
@@ -158,7 +173,7 @@ class DepartureInfo {
 		       VehicleType lineType,
 		       const QStringList &routeStops = QStringList(),
 		       const QList<QTime> &routeTimes = QList<QTime>(),
-		       int routeExactStops = 0 ) {
+		       int routeExactStops = 0 ) : PublicTransportInfo() {
 	    init( operatorName, line, target, departure, lineType, NoLineService,
 		  QString(), -1, QString(), QString(), routeStops, routeTimes,
 		  routeExactStops );
@@ -172,7 +187,7 @@ class DepartureInfo {
 		       const QString &journeyNews = QString(),
 		       const QStringList &routeStops = QStringList(),
 		       const QList<QTime> &routeTimes = QList<QTime>(),
-		       int routeExactStops = 0 ) {
+		       int routeExactStops = 0 ) : PublicTransportInfo() {
 	    LineServices lineServices = NoLineService;
 	    if ( nightLine )
 		lineServices |= NightLine;
@@ -191,16 +206,18 @@ class DepartureInfo {
 		       const QString &journeyNews = QString(),
 		       const QStringList &routeStops = QStringList(),
 		       const QList<QTime> &routeTimes = QList<QTime>(),
-		       int routeExactStops = 0 ) {
+		       int routeExactStops = 0 ) : PublicTransportInfo() {
 	    init( operatorName, line, target, departure, lineType, lineServices,
 		  platform, delay, delayReason, journeyNews, routeStops,
 		  routeTimes, routeExactStops );
 	};
-	
-	bool operator ==( const DepartureInfo &other );
 
-	bool isVisible() const { return m_visible; };
-	void setVisible( bool visible = true ) { m_visible = visible; };
+	static QString formatDateFancyFuture( const QDate& date );
+	
+	bool operator ==( const DepartureInfo &other ) const;
+
+	bool isFilteredOut() const { return m_filteredOut; };
+	void setFilteredOut( bool filteredOut = false ) { m_filteredOut = filteredOut; };
 
 	/** Wheather or not this DepartureInfo object is valid. It currently checks
 	* validity by checking if the lineString is empty. */
@@ -208,7 +225,11 @@ class DepartureInfo {
 	
 	/** Gets the text to be displayed in the item for delay information. */
 	QString delayText() const;
-
+	
+	QString departureText( bool htmlFormatted, bool displayTimeBold,
+			       bool showRemainingMinutes, bool showDepartureTime,
+			       int linesPerRow ) const;
+	
 	/** Wheather or not the line number of this departure / arrival is valid. */
 	bool isLineNumberValid() const {
 	    return m_lineNumber > 0 &&
@@ -263,7 +284,9 @@ class DepartureInfo {
 	QStringList routeStops() const { return m_routeStops; };
 	QList<QTime> routeTimes() const { return m_routeTimes; };
 	int routeExactStops() const { return m_routeExactStops; };
-	uint hash() const { return m_hash; };
+	
+	QList< int > matchedAlarms() const { return m_matchedAlarms; };
+	QList< int > &matchedAlarms() { return m_matchedAlarms; };
 	
     private:
 	void init( const QString &operatorName, const QString &line,
@@ -288,11 +311,12 @@ class DepartureInfo {
 	QStringList m_routeStops;
 	QList<QTime> m_routeTimes;
 	int m_routeExactStops;
-	uint m_hash;
-	bool m_visible;
+	bool m_filteredOut;
+	QList< int > m_matchedAlarms;
 };
 Q_DECLARE_METATYPE( DepartureInfo );
 
+uint qHash( const DepartureInfo &departureInfo );
 bool operator <( const DepartureInfo &di1, const DepartureInfo &di2 );
 
 #endif // DEPARTUREINFO_HEADER

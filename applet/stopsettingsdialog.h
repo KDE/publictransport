@@ -31,8 +31,6 @@
 #include "global.h"
 #include "stopfinder.h"
 
-
-
 class DynamicLabeledLineEditList;
 class HtmlDelegate;
 class QStandardItemModel;
@@ -111,6 +109,7 @@ class StopSettingsDialog : public KDialog {
 				* keys and the corresponding stop IDs as values. */
 				
 #if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
+	class KCategoryDrawer;
 	KCategoryDrawer *categoryDrawer; // not derived from QObject before KDE 4.4
 #endif
     private:

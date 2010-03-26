@@ -38,11 +38,10 @@ class DataSourceTester : public QObject {
 	    PossibleStopsReceived /**< The tested data source name gets a list of stop suggestions. If you requested a journey list this means that the stop name is ambiguous. You can try to use stop IDs, if the ambiguity can't be removed. */
 	};
 
-	DataSourceTester( const QString &testSource, Plasma::DataEngine *publicTransportEngine, //Plasma::Applet *applet,
+	DataSourceTester( const QString &testSource, Plasma::DataEngine *publicTransportEngine,
 			  QObject* parent = 0 )
 			  : QObject(parent), m_testSource(testSource),
-			  m_publicTransportEngine(publicTransportEngine) /*m_applet(applet)*/ {
-	    Q_ASSERT( applet );
+			  m_publicTransportEngine(publicTransportEngine) {
 	};
 	~DataSourceTester() {
 	    disconnectTestSource();

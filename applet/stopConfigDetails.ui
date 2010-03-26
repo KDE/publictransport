@@ -10,6 +10,9 @@
     <height>172</height>
    </rect>
   </property>
+  <property name="windowTitle">
+   <string/>
+  </property>
   <layout class="QFormLayout" name="formLayout">
    <item row="0" column="0" colspan="2">
     <widget class="Line" name="line">
@@ -262,5 +265,38 @@ Here you can set when the alarm should be fired, relative to the departure / arr
   <tabstop>filterConfiguration</tabstop>
  </tabstops>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>firstDepartureUseCustomTime</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>timeOfFirstDepartureCustom</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>170</x>
+     <y>135</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>261</x>
+     <y>137</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>firstDepartureUseCurrentTime</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>timeOfFirstDeparture</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>193</x>
+     <y>108</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>338</x>
+     <y>110</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

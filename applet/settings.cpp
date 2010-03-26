@@ -49,9 +49,8 @@
 #include "htmldelegate.h"
 #include "filterwidget.h"
 #include "stopwidget.h"
+#include "departuremodel.h"
 // #include "datasourcetester.h"
-
-#include <KDateTime> // TODO REMOVE
 
 SettingsUiManager::SettingsUiManager( const Settings &settings,
 	    Plasma::DataEngine* publicTransportEngine, Plasma::DataEngine* osmEngine,
@@ -60,22 +59,29 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	    : QObject( parentDialog ), m_deletionPolicy(deletionPolicy),
 // 	    m_dataSourceTester(new DataSourceTester("", publicTransportEngine, this)),
 	    m_configDialog(parentDialog), m_modelServiceProvider(0),
-	    m_modelLocations(0), m_stopListWidget(0), m_filterListWidget(0),
+	    m_modelLocations(0), m_stopListWidget(0),
 	    m_publicTransportEngine(publicTransportEngine), m_osmEngine(osmEngine),
 	    m_favIconEngine(favIconEngine), m_geolocationEngine(geolocationEngine) {
     m_currentStopSettingsIndex = settings.currentStopSettingsIndex;
     m_recentJourneySearches = settings.recentJourneySearches;
 
     m_filterSettings = settings.filterSettings;
+    m_filterConfigChanged = false;
+
+    m_alarmSettings = settings.alarmSettings;
+    m_lastAlarm = -1;
+    m_alarmsChanged = false;
 
     QWidget *widgetStop = new QWidget;
     QWidget *widgetAdvanced = new QWidget;
     QWidget *widgetAppearance = new QWidget;
     QWidget *widgetFilter = new QWidget;
+    QWidget *widgetAlarms = new QWidget;
     m_ui.setupUi( widgetStop );
     m_uiAdvanced.setupUi( widgetAdvanced );
     m_uiAppearance.setupUi( widgetAppearance );
     m_uiFilter.setupUi( widgetFilter );
+    m_uiAlarms.setupUi( widgetAlarms );
 
     KTabWidget *tabMain = new KTabWidget;
     tabMain->addTab( widgetStop, i18n("&Stop selection") );
@@ -85,6 +91,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     m_configDialog->addPage( widgetAppearance, i18n("Appearance"),
 			     "package_settings_looknfeel" );
     m_configDialog->addPage( widgetFilter, i18n("Filter"), "view-filter" );
+    m_configDialog->addPage( widgetAlarms, i18n("Alarms"), "task-reminder" );
 
     initModels();
 
@@ -108,9 +115,9 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     connect( m_stopListWidget, SIGNAL(changed(int,StopSettings)),
 	     this, SLOT(stopSettingsChanged()) );
     connect( m_stopListWidget, SIGNAL(added(QWidget*)),
-	     this, SLOT(stopSettingsChanged()) );
-    connect( m_stopListWidget, SIGNAL(removed(QWidget*)),
-	     this, SLOT(stopSettingsChanged()) );
+	     this, SLOT(stopSettingsAdded()) );
+    connect( m_stopListWidget, SIGNAL(removed(QWidget*,int)),
+	     this, SLOT(stopSettingsRemoved(QWidget*,int)) );
     stopSettingsChanged();
     
     QVBoxLayout *lStop = new QVBoxLayout( m_ui.stopList );
@@ -120,8 +127,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	     this, SLOT(updateFilterInfoLabel()) );
 
     // Setup filter widgets
-    m_filterListWidget = new FilterListWidget( m_uiFilter.filters );
-    m_filterListWidget->setWhatsThis( i18n("<b>This shows the filters of the "
+    m_uiFilter.filters->setWhatsThis( i18n("<b>This shows the filters of the "
 	    "selected filter configuration.</b><br>"
 	    "Each filter configuration consists of a filter action and a list "
 	    "of filters. Each filter contains a list of constraints.<br>"
@@ -136,16 +142,41 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	    "- <b>Target:</b> Filters by target/origin.<br>"
 	    "- <b>Via:</b> Filters by intermediate stops.<br>"
 	    "- <b>Delay:</b> Filters by delay.") );
-    
-    QVBoxLayout *l = new QVBoxLayout( m_uiFilter.filters );
-    l->addWidget( m_filterListWidget );
-    connect( m_filterListWidget, SIGNAL(changed()),
+    connect( m_uiFilter.filters, SIGNAL(changed()),
 	     this, SLOT(setFilterConfigurationChanged()) );
+
+    // Setup alarm widgets
+//     m_uiAlarms.alarmFilter->setSeparatorOptions( AbstractDynamicWidgetContainer::ShowSeparators );
+//     m_uiAlarms.alarmFilter->setSeparatorText( i18n("and") );
+    m_uiAlarms.alarmFilter->setWidgetCountRange();
+    m_uiAlarms.alarmFilter->removeAllWidgets();
+    m_uiAlarms.alarmFilter->setAllowedFilterTypes( QList<FilterType>()
+	    << FilterByDeparture << FilterByDayOfWeek << FilterByVehicleType
+	    << FilterByTarget << FilterByVia << FilterByTransportLine
+	    << FilterByTransportLineNumber << FilterByDelay );
+    m_uiAlarms.alarmFilter->setWidgetCountRange( 1 );
+    m_uiAlarms.affectedStops->setMultipleSelectionOptions( CheckCombobox::ShowStringList );
+    m_uiAlarms.addAlarm->setIcon( KIcon("list-add") );
+    m_uiAlarms.removeAlarm->setIcon( KIcon("list-remove") );
+    connect( m_uiAlarms.alarmList, SIGNAL(currentRowChanged(int)),
+	     this, SLOT(currentAlarmChanged(int)) );
+    connect( m_uiAlarms.alarmList, SIGNAL(itemChanged(QListWidgetItem*)),
+	     this, SLOT(alarmChanged(QListWidgetItem*)) );
+    connect( m_uiAlarms.addAlarm, SIGNAL(clicked()), this, SLOT(addAlarmClicked()) );
+    connect( m_uiAlarms.removeAlarm, SIGNAL(clicked()), this, SLOT(removeAlarmClicked()) );
+    connect( m_uiAlarms.alarmFilter, SIGNAL(changed()), this, SLOT(alarmChanged()) );
+    connect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)),
+	     this, SLOT(currentAlarmTypeChanged(int)) );
+    connect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()),
+	     this, SLOT(affectedStopsChanged()) );
 
     setValuesOfAdvancedConfig( settings );
     setValuesOfAppearanceConfig( settings );
+    setValuesOfAlarmConfig();
     setValuesOfFilterConfig();
     m_uiFilter.enableFilters->setChecked( settings.filtersEnabled );
+    if ( !m_alarmSettings.isEmpty() )
+	currentAlarmChanged( 0 );
 
     m_uiFilter.addFilterConfiguration->setIcon( KIcon("list-add") );
     m_uiFilter.removeFilterConfiguration->setIcon( KIcon("list-remove") );
@@ -172,6 +203,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 }
 
 void SettingsUiManager::configFinished() {
+    emit settingsFinished();
     if ( m_deletionPolicy == DeleteWhenFinished )
 	deleteLater();
 }
@@ -180,7 +212,207 @@ void SettingsUiManager::configAccepted() {
     emit settingsAccepted( settings() );
 }
 
+void SettingsUiManager::removeAlarms( const AlarmSettingsList& /*newAlarmSettings*/,
+				      const QList<int> &/*removedAlarms*/ ) {
+//     foreach ( int alarmIndex, removedAlarms ) {
+// 	m_alarmSettings.removeAt( alarmIndex );
+// 	disconnect( m_uiAlarms.alarmList, SIGNAL(currentRowChanged(int)),
+// 		    this, SLOT(currentAlarmChanged(int)) );
+// 	delete m_uiAlarms.alarmList->takeItem( m_uiAlarms.alarmList->currentRow() );
+// 	connect( m_uiAlarms.alarmList, SIGNAL(currentRowChanged(int)),
+// 		this, SLOT(currentAlarmChanged(int)) );
+// 	m_lastAlarm = m_uiAlarms.alarmList->currentRow();
+// 	setValuesOfAlarmConfig();
+//     }
+
+//     alarmChanged();
+}
+
+void SettingsUiManager::alarmChanged( QListWidgetItem *item ) {
+    int row = m_uiAlarms.alarmList->row( item );
+    m_alarmSettings[ row ].name = item->text();
+    m_alarmSettings[ row ].enabled = item->checkState() == Qt::Checked;
+    m_alarmsChanged = true; // Leave values of autoGenerated and lastFired
+    kDebug() << "ALARM CHANGED" << m_alarmSettings[ row ].name << m_alarmSettings[ row ].enabled;
+}
+
+void SettingsUiManager::currentAlarmChanged( int row ) {
+    if ( row == -1 ) {
+	m_uiAlarms.splitter->widget( 1 )->setDisabled( true );
+    } else {
+	if ( m_alarmsChanged && m_lastAlarm != -1 ) {
+	    // Store to last edited alarm settings
+	    if ( m_lastAlarm < m_alarmSettings.count() ) {
+		m_alarmSettings[ m_lastAlarm ] = currentAlarmSettings(
+			m_uiAlarms.alarmList->item(m_lastAlarm)->text() );
+	    } else
+		kDebug() << "m_lastAlarm is bad" << m_lastAlarm;
+	}
+
+	disconnect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)),
+		    this, SLOT(currentAlarmTypeChanged(int)) );
+	disconnect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()),
+		    this, SLOT(affectedStopsChanged()) );
+	setValuesOfAlarmConfig();
+	connect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)),
+		 this, SLOT(currentAlarmTypeChanged(int)) );
+	connect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()),
+		this, SLOT(affectedStopsChanged()) );
+
+	setAlarmTextColor( m_uiAlarms.alarmList->currentItem(),
+			   m_uiAlarms.affectedStops->hasCheckedItems() );
+	m_alarmsChanged = false;
+	m_uiAlarms.splitter->widget( 1 )->setEnabled( true );
+    }
+	
+    m_lastAlarm = row;
+}
+
+void SettingsUiManager::addAlarmClicked() {
+    QString name = i18n( "New Alarm" );
+    int i = 2;
+    for ( int n = 0; n < m_alarmSettings.count(); ++n ) {
+	if ( m_alarmSettings[n].name == name ) {
+	    name = i18n( "New Alarm %1", i );
+	    n = 0; // Restart loop with new name
+	    ++i;
+	}
+    }
+    
+    // Append new alarm settings
+    AlarmSettings alarmSettings = AlarmSettings( name );
+    m_alarmSettings << alarmSettings;
+    
+    disconnect( m_uiAlarms.alarmList, SIGNAL(currentRowChanged(int)),
+		this, SLOT(currentAlarmChanged(int)) );
+    QListWidgetItem *item = new QListWidgetItem( name );
+    item->setFlags( item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsEditable );
+    item->setCheckState( Qt::Checked );
+    setAlarmTextColor( item, !alarmSettings.affectedStops.isEmpty() );
+    m_uiAlarms.alarmList->addItem( item );
+    connect( m_uiAlarms.alarmList, SIGNAL(currentRowChanged(int)),
+	     this, SLOT(currentAlarmChanged(int)) );
+    m_uiAlarms.alarmList->setCurrentRow( m_uiAlarms.alarmList->count() - 1 );
+    m_uiAlarms.alarmList->editItem( m_uiAlarms.alarmList->currentItem() );
+
+    alarmChanged();
+}
+
+void SettingsUiManager::removeAlarmClicked() {
+    if ( m_uiAlarms.alarmList->currentRow() == -1 )
+	return;
+    
+    m_alarmSettings.removeAt( m_uiAlarms.alarmList->currentRow() );
+    disconnect( m_uiAlarms.alarmList, SIGNAL(currentRowChanged(int)),
+		this, SLOT(currentAlarmChanged(int)) );
+    delete m_uiAlarms.alarmList->takeItem( m_uiAlarms.alarmList->currentRow() );
+    connect( m_uiAlarms.alarmList, SIGNAL(currentRowChanged(int)),
+	     this, SLOT(currentAlarmChanged(int)) );
+    m_lastAlarm = m_uiAlarms.alarmList->currentRow();
+    setValuesOfAlarmConfig();
+
+    alarmChanged();
+}
+
+void SettingsUiManager::alarmChanged() {
+    int row = m_uiAlarms.alarmList->currentRow();
+    if ( row != -1 ) {
+	m_alarmSettings[ row ].lastFired = QDateTime(); // Reenable this alarm for all departure if changed
+	m_alarmSettings[ row ].autoGenerated = false;
+    }
+    m_alarmsChanged = true;
+}
+
+void SettingsUiManager::currentAlarmTypeChanged( int index ) {
+    // Make font bold if a recurring alarm is selected
+    QListWidgetItem *item = m_uiAlarms.alarmList->currentItem();
+    QFont font = item->font();
+    font.setBold( static_cast<AlarmType>(index) != AlarmRemoveAfterFirstMatch );
+    item->setFont( font );
+    
+    alarmChanged();
+}
+
+void SettingsUiManager::affectedStopsChanged() {
+    QListWidgetItem *item = m_uiAlarms.alarmList->currentItem();
+    setAlarmTextColor( item, m_uiAlarms.affectedStops->hasCheckedItems() );
+    
+    alarmChanged();
+}
+
+void SettingsUiManager::setAlarmTextColor( QListWidgetItem *item, bool hasAffectedStops ) const {
+    // Use negative text color if no affected stop is selected
+    QColor color = !hasAffectedStops
+	    ? KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText).color()
+	    : KColorScheme(QPalette::Active).foreground(KColorScheme::NormalText).color();
+    item->setTextColor( color );
+    QPalette p = m_uiAlarms.affectedStops->palette();
+    KColorScheme::adjustForeground( p, hasAffectedStops ? KColorScheme::NormalText
+				    : KColorScheme::NegativeText,
+				    QPalette::ButtonText, KColorScheme::Button );
+    m_uiAlarms.affectedStops->setPalette( p );
+}
+
+void SettingsUiManager::stopSettingsAdded() {
+    StopSettings stopSettings = m_stopListWidget->stopSettingsList().last();
+    QString text = stopSettings.stops.join( ", " );
+    if ( !stopSettings.city.isEmpty() )
+	text += " in " + stopSettings.city;
+    m_uiAlarms.affectedStops->addItem( text );
+    
+    stopSettingsChanged();
+}
+
+void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex ) {
+    // Store current alarm settings
+    if ( m_alarmsChanged && m_uiAlarms.alarmList->currentRow() != -1 )
+	m_alarmSettings[ m_uiAlarms.alarmList->currentRow() ] = currentAlarmSettings();
+
+    // Adjust stop indices
+    for ( int i = m_alarmSettings.count() - 1; i >= 0; --i ) {
+	AlarmSettings &alarmSettings = m_alarmSettings[ i ];
+	for ( int n = alarmSettings.affectedStops.count() - 1; n >= 0; --n ) {
+	    if ( alarmSettings.affectedStops[n] == widgetIndex )
+		alarmSettings.affectedStops.removeAt( n );
+	    else if ( alarmSettings.affectedStops[n] > widgetIndex )
+		--alarmSettings.affectedStops[n];
+	}
+    }
+    
+    QStringList stopLabels;
+    StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
+    foreach ( const StopSettings &stopSettings, stopSettingsList ) {
+	QString text = stopSettings.stops.join( ", " );
+	if ( !stopSettings.city.isEmpty() )
+	    text += " in " + stopSettings.city;
+	stopLabels << text;
+    }
+    m_uiAlarms.affectedStops->clear();
+    m_uiAlarms.affectedStops->addItems( stopLabels );
+    if ( m_uiAlarms.alarmList->currentRow() != -1 ) {
+	m_uiAlarms.affectedStops->setCheckedRows(
+		m_alarmSettings[m_uiAlarms.alarmList->currentRow()].affectedStops );
+    }
+    
+    stopSettingsChanged();
+}
+
 void SettingsUiManager::stopSettingsChanged() {
+    StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
+
+    // Update affected stops combobox in the alarm page
+    for ( int i = 0; i < stopSettingsList.count(); ++i ) {
+	const StopSettings &stopSettings = stopSettingsList[ i ];
+	QString text = stopSettings.stops.join( ", " );
+	if ( !stopSettings.city.isEmpty() )
+	    text += " in " + stopSettings.city;
+
+	if ( i < m_uiAlarms.affectedStops->count() )
+	    m_uiAlarms.affectedStops->setItemText( i, text );
+	else
+	    m_uiAlarms.affectedStops->addItem( text );
+    }
+    
     // Delete old "filter uses" widgets
     if ( m_uiFilter.filterUsesArea->layout() ) {
 	QWidgetList oldWidgets = m_uiFilter.filterUsesArea->findChildren< QWidget* >(
@@ -201,7 +433,6 @@ void SettingsUiManager::stopSettingsChanged() {
 
     QSignalMapper *mapper = new QSignalMapper( m_uiFilter.filterUsesArea );
     int row = 0;
-    StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
     foreach ( const StopSettings &stopSettings, stopSettingsList ) {
 	QString sRow = QString::number( row );
 	QString text = stopSettings.stops.join( ", " );
@@ -243,9 +474,9 @@ void SettingsUiManager::usedFilterConfigChanged( QWidget* widget ) {
     disconnect( m_stopListWidget, SIGNAL(changed(int,StopSettings)),
 		this, SLOT(stopSettingsChanged()) );
     disconnect( m_stopListWidget, SIGNAL(added(QWidget*)),
-		this, SLOT(stopSettingsChanged()) );
-    disconnect( m_stopListWidget, SIGNAL(removed(QWidget*)),
-		this, SLOT(stopSettingsChanged()) );
+		this, SLOT(stopSettingsAdded()) );
+    disconnect( m_stopListWidget, SIGNAL(removed(QWidget*,int)),
+		this, SLOT(stopSettingsRemoved(QWidget*,int)) );
     
     int index = widget->objectName().mid( 14 ).toInt();
     StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
@@ -258,9 +489,9 @@ void SettingsUiManager::usedFilterConfigChanged( QWidget* widget ) {
     connect( m_stopListWidget, SIGNAL(changed(int,StopSettings)),
 	     this, SLOT(stopSettingsChanged()) );
     connect( m_stopListWidget, SIGNAL(added(QWidget*)),
-	     this, SLOT(stopSettingsChanged()) );
-    connect( m_stopListWidget, SIGNAL(removed(QWidget*)),
-	     this, SLOT(stopSettingsChanged()) );
+	     this, SLOT(stopSettingsAdded()) );
+    connect( m_stopListWidget, SIGNAL(removed(QWidget*,int)),
+	     this, SLOT(stopSettingsRemoved(QWidget*,int)) );
     updateFilterInfoLabel();
 }
 
@@ -317,6 +548,48 @@ void SettingsUiManager::setValuesOfAppearanceConfig( const Settings &settings ) 
     m_uiAppearance.font->setCurrentFont( settings.font );
 }
 
+void SettingsUiManager::setValuesOfAlarmConfig() {
+    kDebug() << "Set Alarm Values, in list:" << m_uiAlarms.alarmList->count()
+	     << "in variable:" << m_alarmSettings.count();
+	
+    disconnect( m_uiAlarms.alarmList, SIGNAL(currentRowChanged(int)),
+		this, SLOT(currentAlarmChanged(int)) );
+    int row = m_uiAlarms.alarmList->currentRow();
+    m_uiAlarms.alarmList->clear();
+    foreach ( AlarmSettings alarmSettings, m_alarmSettings ) {
+	QListWidgetItem *item = new QListWidgetItem( alarmSettings.name );
+	item->setFlags( item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsEditable );
+	item->setCheckState( alarmSettings.enabled ? Qt::Checked : Qt::Unchecked );
+	if ( alarmSettings.type != AlarmRemoveAfterFirstMatch ) {
+	    // TODO: Update this on alarm type change
+	    QFont font = item->font();
+	    font.setBold( true );
+	    item->setFont( font );
+	}
+	kDebug() << "ADD ALARM ITEM WITH NAME" << alarmSettings.name;
+	
+	setAlarmTextColor( item, !alarmSettings.affectedStops.isEmpty() );
+	m_uiAlarms.alarmList->addItem( item );
+    }
+    if ( row < m_alarmSettings.count() && row != -1 )
+	m_uiAlarms.alarmList->setCurrentRow( row );
+    else if ( !m_alarmSettings.isEmpty() )
+	m_uiAlarms.alarmList->setCurrentRow( row = 0 );
+    else
+	kDebug() << "Cannot reselect row" << row;
+
+    if ( row < m_alarmSettings.count() && row != -1 ) {
+	const AlarmSettings alarmSettings = m_alarmSettings.at( row );
+	m_uiAlarms.alarmType->setCurrentIndex( static_cast<int>(alarmSettings.type) );
+	m_uiAlarms.affectedStops->setCheckedRows( alarmSettings.affectedStops );
+	m_uiAlarms.alarmFilter->setFilter( alarmSettings.filter );
+    }
+
+    m_uiAlarms.splitter->widget( 1 )->setDisabled( m_uiAlarms.alarmList->currentRow() == -1 );
+    connect( m_uiAlarms.alarmList, SIGNAL(currentRowChanged(int)),
+	     this, SLOT(currentAlarmChanged(int)) );
+}
+
 void SettingsUiManager::setValuesOfFilterConfig() {
     if ( m_uiFilter.filterConfigurations->currentIndex() == -1 )
 	m_uiFilter.filterConfigurations->setCurrentIndex( 0 );
@@ -360,16 +633,16 @@ void SettingsUiManager::setValuesOfFilterConfig() {
     filterActionChanged( m_uiFilter.filterAction->currentIndex() );
 
     // Clear old filter widgets
-    int minWidgetCount = m_filterListWidget->minimumWidgetCount();
-    int maxWidgetCount = m_filterListWidget->maximumWidgetCount();
-    m_filterListWidget->setWidgetCountRange();
-    m_filterListWidget->removeAllWidgets();
+    int minWidgetCount = m_uiFilter.filters->minimumWidgetCount();
+    int maxWidgetCount = m_uiFilter.filters->maximumWidgetCount();
+    m_uiFilter.filters->setWidgetCountRange();
+    m_uiFilter.filters->removeAllWidgets();
     
     // Setup FilterWidgets from m_filters
-    foreach ( const Filter &filter, filterSettings.filters ) //m_settings.filters )
-	m_filterListWidget->addFilter( filter );
+    foreach ( const Filter &filter, filterSettings.filters )
+	m_uiFilter.filters->addFilter( filter );
     
-    int added = m_filterListWidget->setWidgetCountRange( minWidgetCount, maxWidgetCount );
+    int added = m_uiFilter.filters->setWidgetCountRange( minWidgetCount, maxWidgetCount );
     setFilterConfigurationChanged( added != 0 );
 }
 
@@ -425,11 +698,9 @@ void SettingsUiManager::initModels() {
 
 	item->setText( text );
 	item->setData( country, LocationCodeRole );
-	item->setData( formattedText, HtmlDelegate::FormattedTextRole );
+	item->setData( formattedText, FormattedTextRole );
 	item->setData( sortText, SortRole );
-	item->setData( QStringList() << "raised" << "drawFrameForWholeRow",
-		       HtmlDelegate::TextBackgroundRole );
-	item->setData( 4, HtmlDelegate::LinesPerRowRole );
+	item->setData( 4, LinesPerRowRole );
 
 	m_modelLocations->appendRow( item );
     }
@@ -443,11 +714,9 @@ void SettingsUiManager::initModels() {
 	.arg( sShowAll )
 	.arg( i18n("Total: ") + i18np("%1 accessor", "%1 accessors", countries.count()) );
     itemShowAll->setData( "showAll", LocationCodeRole );
-    itemShowAll->setData( formattedText, HtmlDelegate::FormattedTextRole );
+    itemShowAll->setData( formattedText, FormattedTextRole );
     itemShowAll->setText( sShowAll );
-    itemShowAll->setData( QStringList() << "raised" << "drawFrameForWholeRow",
-			  HtmlDelegate::TextBackgroundRole );
-    itemShowAll->setData( 3, HtmlDelegate::LinesPerRowRole );
+    itemShowAll->setData( 3, LinesPerRowRole );
     itemShowAll->setIcon( KIcon("package_network") ); // TODO: Other icon?
     m_modelLocations->appendRow( itemShowAll );
 
@@ -465,11 +734,9 @@ void SettingsUiManager::initModels() {
 	    .arg( i18np("%1 accessor is errornous:", "%1 accessors are errornous:",
 			errornousAccessorNames.count()) )
 	    .arg( errorLines.join(",<br-wrap>") );
-	itemErrors->setData( formattedText, HtmlDelegate::FormattedTextRole );
-	itemErrors->setData( QStringList() << "raised" << "drawFrameForWholeRow",
-			     HtmlDelegate::TextBackgroundRole );
+	itemErrors->setData( formattedText, FormattedTextRole );
 	itemErrors->setData( 1 + errornousAccessorNames.count(),
-			     HtmlDelegate::LinesPerRowRole );
+			     LinesPerRowRole );
 	itemErrors->setSelectable( false );
 	itemErrors->setIcon( KIcon("edit-delete") );
 	m_modelLocations->appendRow( itemErrors );
@@ -489,13 +756,11 @@ void SettingsUiManager::initModels() {
 	QString formattedText;
 	QStandardItem *item = new QStandardItem( serviceProviderName ); // TODO: delete?
 
-	item->setData( QStringList() << "raised" << "drawFrameForWholeRow",
-			HtmlDelegate::TextBackgroundRole );
 	formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
 	    .arg( serviceProviderName )
 	    .arg( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
-	item->setData( 4, HtmlDelegate::LinesPerRowRole );
-	item->setData( formattedText, HtmlDelegate::FormattedTextRole );
+	item->setData( 4, LinesPerRowRole );
+	item->setData( formattedText, FormattedTextRole );
 	item->setData( serviceProviderData, ServiceProviderDataRole );
 	item->setData( serviceProviderData["country"], LocationCodeRole );
 	item->setData( serviceProviderData["id"], ServiceProviderIdRole );
@@ -636,6 +901,10 @@ Settings SettingsUiManager::settings() {
     }
     ret.filterSettings = m_filterSettings;
     ret.filtersEnabled = m_uiFilter.enableFilters->isChecked();
+
+    if ( m_alarmsChanged && m_uiAlarms.alarmList->currentRow() != -1 )
+	m_alarmSettings[ m_uiAlarms.alarmList->currentRow() ] = currentAlarmSettings();
+    ret.alarmSettings = m_alarmSettings;
     
     if ( m_uiAdvanced.showArrivals->isChecked() )
 	ret.departureArrivalListType = ArrivalList;
@@ -666,8 +935,26 @@ FilterSettings SettingsUiManager::currentFilterSettings() const {
     FilterSettings filterSettings;
     filterSettings.filterAction = static_cast< FilterAction >(
 	    m_uiFilter.filterAction->currentIndex() );
-    filterSettings.filters = m_filterListWidget->filters();
+    filterSettings.filters = m_uiFilter.filters->filters();
     return filterSettings;
+}
+
+AlarmSettings SettingsUiManager::currentAlarmSettings( const QString &name ) const {
+    Q_ASSERT( m_uiAlarms.alarmList->currentRow() != -1 );
+    
+    AlarmSettings alarmSettings;
+    int row = m_uiAlarms.alarmList->currentRow();
+    if ( row >= 0 && row < m_alarmSettings.count() )
+	alarmSettings = m_alarmSettings[ row ];
+    else
+	kDebug() << "No existing alarm settings found for the current alarm" << name;
+    alarmSettings.enabled = m_uiAlarms.alarmList->currentItem()->checkState() == Qt::Checked;
+    alarmSettings.name = name.isNull() ? m_uiAlarms.alarmList->currentItem()->text()
+				       : name;
+    alarmSettings.affectedStops = m_uiAlarms.affectedStops->checkedRows();
+    alarmSettings.type = static_cast<AlarmType>( m_uiAlarms.alarmType->currentIndex() );
+    alarmSettings.filter = m_uiAlarms.alarmFilter->filter();
+    return alarmSettings;
 }
 
 void SettingsUiManager::loadFilterConfiguration( const QString& filterConfig ) {
@@ -829,9 +1116,9 @@ void SettingsUiManager::setFilterConfigurationChanged( bool changed ) {
     
     QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
     QString filterConfiguration = untranslateKey( trFilterConfiguration );
-    bool deaultFilterConfig = filterConfiguration == "Default";
-    m_uiFilter.removeFilterConfiguration->setDisabled( deaultFilterConfig );
-    m_uiFilter.renameFilterConfiguration->setDisabled( deaultFilterConfig );
+    bool defaultFilterConfig = filterConfiguration == "Default";
+    m_uiFilter.removeFilterConfiguration->setDisabled( defaultFilterConfig );
+    m_uiFilter.renameFilterConfiguration->setDisabled( defaultFilterConfig );
 
     m_filterConfigChanged = changed;
 }
@@ -869,15 +1156,6 @@ void SettingsUiManager::importFilterSettings() {
 //     TODO: Set filterSettings in GUI
 }
 
-
-
-Settings::Settings() {
-    currentStopSettingsIndex = 0;
-    filtersEnabled = false;
-}
-
-
-
 Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
 				   Plasma::DataEngine *publictransportEngine ) {
     Settings settings;
@@ -885,7 +1163,8 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
     settings.showRemainingMinutes = cg.readEntry( "showRemainingMinutes", true );
     settings.showDepartureTime = cg.readEntry( "showDepartureTime", true );
     settings.displayTimeBold = cg.readEntry( "displayTimeBold", true );
-
+    
+    settings.stopSettingsList.clear();
     int stopSettingCount = cgGlobal.readEntry( "stopSettings", 1 );
     QString test = "location";
     int i = 1;
@@ -997,8 +1276,31 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
 	settings.filterSettings[ filterConfiguration ] =
 		readFilterConfig( cgGlobal.group("filterConfig_" + filterConfiguration) );
     }
-    
     settings.filtersEnabled = cg.readEntry( "filtersEnabled", false );
+
+    // Read alarm settings
+    int alarmCount = cg.readEntry( "alarmCount", 0 );
+    test = "alarmType";
+    i = 1;
+    while ( cgGlobal.hasKey(test) ) {
+	AlarmSettings alarmSettings;
+	QString suffix = i == 1 ? QString() : "_" + QString::number( i );
+	alarmSettings.type = static_cast<AlarmType>(
+		cgGlobal.readEntry("alarmType" + suffix, static_cast<int>(AlarmRemoveAfterFirstMatch)) );
+	alarmSettings.affectedStops = cgGlobal.readEntry( "alarmStops" + suffix, QList<int>() );
+	alarmSettings.enabled = cgGlobal.readEntry( "alarmEnabled" + suffix, true );
+	alarmSettings.name = cgGlobal.readEntry( "alarmName" + suffix, "Unnamed" );
+	alarmSettings.lastFired = cgGlobal.readEntry( "alarmLastFired" + suffix, QDateTime() );
+	alarmSettings.autoGenerated = cgGlobal.readEntry( "alarmAutogenerated" + suffix, false );
+	QByteArray baAlarmFilter = cgGlobal.readEntry( "alarmFilter" + suffix, QByteArray() );
+	alarmSettings.filter.fromData( baAlarmFilter );
+	settings.alarmSettings << alarmSettings;
+
+	++i;
+	test = "alarmType_" + QString::number( i );
+	if ( i > alarmCount )
+	    break;
+    }
 	
     return settings;
 }
@@ -1120,31 +1422,34 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 	changed |= IsChanged | ChangedServiceProvider | ChangedDepartureArrivalListType;
     }
 
+    // Write filter settings
     if ( settings.filterSettings.keys() != oldSettings.filterSettings.keys() ) {
 	cgGlobal.writeEntry( "filterConfigurationList", settings.filterSettings.keys() );
 	changed |= IsChanged;
     }
 
-    QHash< QString, FilterSettings >::const_iterator it;
-    for ( it = settings.filterSettings.constBegin();
-	    it != settings.filterSettings.constEnd(); ++it ) {
-	QString currentFilterConfig = it.key();
-	if ( currentFilterConfig.isEmpty() ) {
-	    kDebug() << "Empty filter config name, can't write settings";
-	    continue;
-	}
-	
-	FilterSettings currentfilterSettings = it.value();
-	if ( oldSettings.filterSettings.contains(currentFilterConfig) ) {
-	    if ( SettingsIO::writeFilterConfig(currentfilterSettings,
-		    oldSettings.filterSettings[currentFilterConfig],
-		    cgGlobal.group("filterConfig_" + currentFilterConfig)) ) {
+    if ( settings.filterSettings != oldSettings.filterSettings ) {
+	QHash< QString, FilterSettings >::const_iterator it;
+	for ( it = settings.filterSettings.constBegin();
+		it != settings.filterSettings.constEnd(); ++it ) {
+	    QString currentFilterConfig = it.key();
+	    if ( currentFilterConfig.isEmpty() ) {
+		kDebug() << "Empty filter config name, can't write settings";
+		continue;
+	    }
+
+	    FilterSettings currentfilterSettings = it.value();
+	    if ( oldSettings.filterSettings.contains(currentFilterConfig) ) {
+		if ( SettingsIO::writeFilterConfig(currentfilterSettings,
+			oldSettings.filterSettings[currentFilterConfig],
+			cgGlobal.group("filterConfig_" + currentFilterConfig)) ) {
+		    changed |= IsChanged | ChangedFilterSettings;
+		}
+	    } else {
+		SettingsIO::writeFilterConfig( currentfilterSettings,
+			cgGlobal.group("filterConfig_" + currentFilterConfig) );
 		changed |= IsChanged | ChangedFilterSettings;
 	    }
-	} else {
-	    SettingsIO::writeFilterConfig( currentfilterSettings,
-		    cgGlobal.group("filterConfig_" + currentFilterConfig) );
-	    changed |= IsChanged | ChangedFilterSettings;
 	}
     }
     
@@ -1153,6 +1458,39 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 	changed |= IsChanged;
     }
 
+    // Write alarm settingsAccepted
+    if ( settings.alarmSettings != oldSettings.alarmSettings ) {
+	changed |= IsChanged | ChangedAlarmSettings;
+	int i = 1;
+	cg.writeEntry( "alarmCount", settings.alarmSettings.count() );
+	foreach ( AlarmSettings alarmSettings, settings.alarmSettings ) {
+	    QString suffix = i == 1 ? QString() : "_" + QString::number( i );
+	    cgGlobal.writeEntry( "alarmType" + suffix, static_cast<int>(alarmSettings.type) );
+	    cgGlobal.writeEntry( "alarmStops" + suffix, alarmSettings.affectedStops );
+	    cgGlobal.writeEntry( "alarmFilter" + suffix, alarmSettings.filter.toData() );
+	    cgGlobal.writeEntry( "alarmEnabled" + suffix, alarmSettings.enabled );
+	    cgGlobal.writeEntry( "alarmName" + suffix, alarmSettings.name );
+	    cgGlobal.writeEntry( "alarmLastFired" + suffix, alarmSettings.lastFired );
+	    cgGlobal.writeEntry( "alarmAutogenerated" + suffix, alarmSettings.autoGenerated );
+	    ++i;
+	}
+	
+	// Delete old stop settings entries
+	QString test = "alarmType" + QString::number( i );
+	while ( cgGlobal.hasKey(test) ) {
+	    QString suffix = i == 1 ? QString() : "_" + QString::number( i );
+	    cgGlobal.deleteEntry( "alarmType" + suffix );
+	    cgGlobal.deleteEntry( "alarmStops" + suffix );
+	    cgGlobal.deleteEntry( "alarmFilter" + suffix );
+	    cgGlobal.deleteEntry( "alarmEnabled" + suffix );
+	    cgGlobal.deleteEntry( "alarmName" + suffix );
+	    cgGlobal.deleteEntry( "alarmLastFired" + suffix );
+	    cgGlobal.deleteEntry( "alarmAutogenerated" + suffix );
+	    ++i;
+	    test = "alarmType_" + QString::number( i );
+	}
+    }
+    
     return changed;
 }
 
@@ -1190,3 +1528,8 @@ void SettingsIO::writeFilterConfig( const FilterSettings& filterSettings,
     cgGlobal.writeEntry( "FilterAction", static_cast<int>(filterSettings.filterAction) );
 }
 
+bool operator ==( const AlarmSettings &l, const AlarmSettings &r ) {
+    return l.name == r.name && l.enabled == r.enabled && l.type == r.type
+	    && l.affectedStops == r.affectedStops && l.filter == r.filter
+	    && l.lastFired == r.lastFired;
+};

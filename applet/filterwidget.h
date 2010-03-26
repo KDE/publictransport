@@ -24,6 +24,7 @@
 #include <QCheckBox>
 #include <QToolButton>
 #include <QListView>
+#include <QTimeEdit>
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QApplication>
@@ -56,7 +57,14 @@ class ConstraintWidget : public QWidget {
 	    m_constraint.value = value();
 	    return m_constraint; };
 	
-	void addWidget( QWidget *w ) { layout()->addWidget( w ); };
+	void addWidget( QWidget *w ) {
+	    QFormLayout *l = dynamic_cast< QFormLayout* >( layout() );
+	    QLayoutItem *item = l->itemAt( 0 );
+	    if ( item ) {
+		l->removeItem( item );
+		l->addRow( item->widget(), w );
+	    }
+	};
 
 	inline static ConstraintWidget *create( Constraint constraint,
 						QWidget *parent = 0 ) {
@@ -100,6 +108,8 @@ class ConstraintListWidget : public ConstraintWidget {
 			  const QList< ListItem > &values,
 			  const QVariantList& initialValues,
 			  QWidget* parent = 0 );
+			  
+	CheckCombobox *list() const { return m_list; };
 			  
 	virtual QVariant value() const { return m_values; };
 	virtual void setValue( const QVariant &value );
@@ -156,12 +166,38 @@ class ConstraintIntWidget : public ConstraintWidget {
 	KIntSpinBox *m_num;
 };
 
-class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
+class ConstraintTimeWidget : public ConstraintWidget {
     Q_OBJECT
 
     public:
-	FilterWidget( QWidget* parent = 0 );
-	FilterWidget( QList<FilterType> filterTypes, QWidget* parent = 0 );
+	ConstraintTimeWidget( FilterType type, FilterVariant initialVariant,
+			      QTime value = QTime::currentTime(), QWidget* parent = 0 );
+
+	virtual QVariant value() const { return m_time->time(); };
+	virtual void setValue( const QVariant &value ) { m_time->setTime(value.toTime()); };
+
+    protected slots:
+	void timeChanged( const QTime &newTime ) {
+	    Q_UNUSED( newTime );
+	    emit changed();
+	};
+
+    private:
+	QTimeEdit *m_time;
+};
+
+class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
+    Q_OBJECT
+    Q_PROPERTY( QString separatorText READ separatorText WRITE setSeparatorText )
+
+    public:
+	FilterWidget( QWidget *parent,
+		      AbstractDynamicWidgetContainer::SeparatorOptions seperatorOptions
+		      = AbstractDynamicLabeledWidgetContainer::NoSeparator );
+	FilterWidget( const QList<FilterType> &allowedFilterTypes = QList<FilterType>(),
+		      QWidget* parent = 0,
+		      AbstractDynamicWidgetContainer::SeparatorOptions seperatorOptions
+		      = AbstractDynamicLabeledWidgetContainer::NoSeparator );
 
 	/** Returns a list of all contained constraint widgets. */
 	QList< ConstraintWidget* > constraintWidgets() const {
@@ -171,6 +207,13 @@ class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 	    return list;
 	};
 
+	void setAllowedFilterTypes( const QList<FilterType> &allowedFilterTypes );
+	
+	/** Is only used for new separators. */
+	void setSeparatorText( const QString &separatorText ) {
+	    m_separatorText = separatorText; };
+	QString separatorText() const { return m_separatorText; };
+
 	/** Returns a Filter object with all constraints of this FilterWidget. */
 	Filter filter() const {
 	    Filter f;
@@ -178,6 +221,7 @@ class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 		f << constraint->constraint();
 	    return f;
 	};
+	void setFilter( const Filter &filter );
 
 	inline void addConstraint( FilterType filterType ) {
 	    addConstraint( createConstraint(filterType) ); };
@@ -188,9 +232,11 @@ class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 	virtual int removeWidget( QWidget* widget );
 
 	static FilterWidget *create( const Filter &filter, QWidget *parent = 0 ) {
-	    FilterWidget *filterWidget = new FilterWidget( parent );
-	    foreach ( Constraint constraint, filter )
-		filterWidget->addConstraint( constraint );
+	    FilterWidget *filterWidget = new FilterWidget( QList<FilterType>()
+		    << FilterByVehicleType << FilterByTarget
+		    << FilterByVia << FilterByTransportLine
+		    << FilterByTransportLineNumber << FilterByDelay, parent );
+	    filterWidget->setFilter( filter );
 	    return filterWidget;
 	};
 	
@@ -211,6 +257,7 @@ class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 	virtual QWidget *createNewWidget() {
 	    return createConstraint( firstUnusedFilterType() ); };
 	virtual QWidget* createNewLabelWidget( int );
+	virtual QWidget* createSeparator( const QString& separatorText = QString() );
 	
 	virtual DynamicWidget *addWidget( QWidget *widget ) {
 	    return AbstractDynamicLabeledWidgetContainer::addWidget( widget ); };
@@ -224,6 +271,9 @@ class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 	FilterType firstUnusedFilterType() const;
 	
 	QList< KComboBox* > m_filterTypes;
+	QList< FilterType > m_allowedFilterTypes;
+	QString m_separatorText;
+
 };
 
 class FilterListWidget : public AbstractDynamicWidgetContainer {
@@ -233,7 +283,7 @@ class FilterListWidget : public AbstractDynamicWidgetContainer {
 	
 	QList< FilterWidget* > filterWidgets() const;
 	FilterList filters() const;
-
+	
 	void addFilter() {
 	    Filter filter;
 	    filter << Constraint();

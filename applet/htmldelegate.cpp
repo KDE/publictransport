@@ -19,6 +19,7 @@
 
 #include "htmldelegate.h"
 #include "global.h"
+#include "departuremodel.h"
 
 #include <QTextDocument>
 #include <QTextBlock>
@@ -74,56 +75,51 @@ void PublicTransportDelegate::paint( QPainter* painter,
     
     HtmlDelegate::paint( painter, option, index );
     
-    if ( index.data(TextBackgroundRole).isValid() ) {
-	QStringList data = index.data( TextBackgroundRole ).toStringList();
-	if ( data.contains("drawFrameForWholeRow")
-		    && (option.state.testFlag(QStyle::State_HasFocus)
-		    || index.row() > 0) ) {
-	    // Draw line above
-	    QLinearGradient bgGradient;
-	    QRect bgRect = option.state.testFlag( QStyle::State_HasFocus )
-		? QRect( QPoint(0, 0), option.rect.size() )
-		: QRect( 0, 0, option.rect.width(), 1 );
-	    QPixmap pixmap( bgRect.size() );
-	    pixmap.fill( Qt::transparent );
-	    QPainter p( &pixmap );
+    if ( !index.parent().isValid() && index.row() > 0 ) {
+	// Draw line above
+	QLinearGradient bgGradient;
+	QRect bgRect = option.state.testFlag( QStyle::State_HasFocus )
+	    ? QRect( QPoint(0, 0), option.rect.size() )
+	    : QRect( 0, 0, option.rect.width(), 1 );
+	QPixmap pixmap( bgRect.size() );
+	pixmap.fill( Qt::transparent );
+	QPainter p( &pixmap );
 
-	    QColor bgColor1 = option.palette.color( QPalette::Base );
-	    QColor bgColor = option.palette.color( QPalette::Text );
-	    bgColor.setAlpha( 140 );
-	    p.fillRect( bgRect, bgColor );
+	QColor bgColor1 = option.palette.color( QPalette::Base );
+	QColor bgColor = option.palette.color( QPalette::Text );
+	bgColor.setAlpha( 140 );
+	p.fillRect( bgRect, bgColor );
 
-	    QStyleOptionViewItemV4 opt = option;
-	    if ( opt.viewItemPosition == QStyleOptionViewItemV4::Beginning
-		 || opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
-	    {
-		// Fade out left
-		p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-		QLinearGradient alphaGradient1( 0, 0, 1, 0 );
-		alphaGradient1.setCoordinateMode( QGradient::ObjectBoundingMode );
-		alphaGradient1.setColorAt( 0, QColor(0, 0, 0, 0) );
-		alphaGradient1.setColorAt( 1, QColor(0, 0, 0, 255) );
-		p.fillRect( 0, 0, option.rect.width() / 3,
-			    option.rect.height(), alphaGradient1 );
-	    }
-
-	    if ( opt.viewItemPosition == QStyleOptionViewItemV4::End
-		 || opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
-	    {
-		// Fade out right
-		p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-		QLinearGradient alphaGradient2( 1, 0, 0, 0 );
-		alphaGradient2.setCoordinateMode( QGradient::ObjectBoundingMode );
-		alphaGradient2.setColorAt( 0, QColor(0, 0, 0, 0) );
-		alphaGradient2.setColorAt( 1, QColor(0, 0, 0, 255) );
-		p.fillRect( option.rect.right() - option.rect.width() / 3 -
-			    option.rect.left(), 0, option.rect.width() / 3 + 1,
-			    option.rect.height(), alphaGradient2 );
-	    }
-	    p.end();
-
-	    painter->drawPixmap( option.rect.topLeft(), pixmap );
+	QStyleOptionViewItemV4 opt = option;
+	if ( opt.viewItemPosition == QStyleOptionViewItemV4::Beginning
+		|| opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
+	{
+	    // Fade out left
+	    p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+	    QLinearGradient alphaGradient1( 0, 0, 1, 0 );
+	    alphaGradient1.setCoordinateMode( QGradient::ObjectBoundingMode );
+	    alphaGradient1.setColorAt( 0, QColor(0, 0, 0, 0) );
+	    alphaGradient1.setColorAt( 1, QColor(0, 0, 0, 255) );
+	    p.fillRect( 0, 0, option.rect.width() / 3,
+			option.rect.height(), alphaGradient1 );
 	}
+
+	if ( opt.viewItemPosition == QStyleOptionViewItemV4::End
+		|| opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
+	{
+	    // Fade out right
+	    p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+	    QLinearGradient alphaGradient2( 1, 0, 0, 0 );
+	    alphaGradient2.setCoordinateMode( QGradient::ObjectBoundingMode );
+	    alphaGradient2.setColorAt( 0, QColor(0, 0, 0, 0) );
+	    alphaGradient2.setColorAt( 1, QColor(0, 0, 0, 255) );
+	    p.fillRect( option.rect.right() - option.rect.width() / 3 -
+			option.rect.left(), 0, option.rect.width() / 3 + 1,
+			option.rect.height(), alphaGradient2 );
+	}
+	p.end();
+
+	painter->drawPixmap( option.rect.topLeft(), pixmap );
     }
 }
 
@@ -160,9 +156,9 @@ void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
 
 	DecorationPosition decorationPos = index.data(DecorationPositionRole).isValid()
 	    ? static_cast<DecorationPosition>(index.data(DecorationPositionRole).toInt())
-	    : Left;
+	    : DecorationLeft;
 	
-	if ( decorationPos == Left ) {
+	if ( decorationPos == DecorationLeft ) {
 	    topLeft = option.rect.topLeft() +
 		    QPoint(margin, (option.rect.height() - iconSize.height()) / 2);
 	    displayRect = QRect( option.rect.topLeft() +
@@ -224,8 +220,11 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
     QRect textRect = rect.adjusted( margin, 0, 0, 0 );
     QColor textColor = option.state.testFlag( QStyle::State_Selected )
 	? option.palette.highlightedText().color() : option.palette.text().color();
-
+    #if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
+    bool drawHalos = false; // No Plasma::PaintUtils::drawHalo() for KDE < 4.4
+    #else
     bool drawHalos = m_options.testFlag(DrawShadows) && qGray(textColor.rgb()) < 192;
+    #endif
 	
     QList< QRect > fadeRects, haloRects;
     int fadeWidth = 30;
@@ -331,10 +330,13 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
     p.end();
     
     if ( m_options.testFlag(DrawShadows) ) {
+	#if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
 	if ( drawHalos ) {
 	    foreach ( QRect haloRect, haloRects )
 		Plasma::PaintUtils::drawHalo( painter, haloRect );
-	} else {
+	} else
+	#endif
+	{
 	    QImage shadow = pixmap.toImage();
 	    Plasma::PaintUtils::shadowBlur( shadow, 2, Qt::black );
 	    painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );

@@ -24,24 +24,37 @@
 #include "checkcombobox.h"
 
 #include <QLabel>
+#include <KGlobal>
+#include <KLocale>
 
-
-FilterWidget::FilterWidget( QWidget* parent )
+FilterWidget::FilterWidget( QWidget* parent,
+			    AbstractDynamicWidgetContainer::SeparatorOptions seperatorOptions )
 	    : AbstractDynamicLabeledWidgetContainer( RemoveButtonsBesideWidgets,
-	      AddButtonBesideFirstWidget, NoSeparator, QString(), parent ) {
+	      AddButtonBesideFirstWidget, seperatorOptions, QString(), parent ) {
+    m_allowedFilterTypes << FilterByVehicleType << FilterByTarget << FilterByVia
+	    << FilterByTransportLine << FilterByTransportLineNumber << FilterByDelay;
     setWidgetCountRange( 1, 10, false );
     setAutoRaiseButtons( true );
     setRemoveButtonIcon( "edit-delete" );
 }
 
-FilterWidget::FilterWidget( QList< FilterType > filterTypes, QWidget* parent )
+FilterWidget::FilterWidget( const QList<FilterType> &allowedFilterTypes, QWidget* parent,
+			    AbstractDynamicWidgetContainer::SeparatorOptions seperatorOptions )
 	    : AbstractDynamicLabeledWidgetContainer( RemoveButtonsBesideWidgets,
-	      AddButtonBesideFirstWidget, NoSeparator, QString(), parent ) {
+	      AddButtonBesideFirstWidget, seperatorOptions, QString(), parent ) {
+    if ( allowedFilterTypes.isEmpty() ) {
+	m_allowedFilterTypes << FilterByVehicleType << FilterByTarget << FilterByVia
+	    << FilterByTransportLine << FilterByTransportLineNumber << FilterByDelay;
+    } else {
+	m_allowedFilterTypes = allowedFilterTypes;
+    }
     setWidgetCountRange( 1, 10, false );
     setAutoRaiseButtons( true );
     setRemoveButtonIcon( "edit-delete" );
-    foreach ( FilterType filterType, filterTypes )
-	addConstraint( filterType );
+}
+
+void FilterWidget::setAllowedFilterTypes( const QList< FilterType >& allowedFilterTypes ) {
+    m_allowedFilterTypes = allowedFilterTypes;
 }
 
 FilterType FilterWidget::firstUnusedFilterType() const {
@@ -49,10 +62,7 @@ FilterType FilterWidget::firstUnusedFilterType() const {
     foreach ( ConstraintWidget* constraint, constraintWidgets() )
 	filterTypes << constraint->type();
 
-    QList< FilterType > allFilterTypes;
-    allFilterTypes << FilterByVehicleType << FilterByTarget << FilterByVia
-	    << FilterByTransportLine << FilterByTransportLineNumber << FilterByDelay;
-    foreach ( FilterType filterType, allFilterTypes ) {
+    foreach ( FilterType filterType, m_allowedFilterTypes ) {
 	if ( !filterTypes.contains(filterType) )
 	    return filterType;
     }
@@ -60,6 +70,25 @@ FilterType FilterWidget::firstUnusedFilterType() const {
     return FilterByTarget; // Already used
 }
 
+void FilterWidget::setFilter( const Filter& filter ) {
+    if ( !dynamicWidgets().isEmpty() ) {
+	// Clear old filter widgets
+	int minWidgetCount = minimumWidgetCount();
+	int maxWidgetCount = maximumWidgetCount();
+	setWidgetCountRange();
+	removeAllWidgets();
+	
+	// Setup ConstraintWidgets from filters
+	foreach ( Constraint constraint, filter )
+	    addConstraint( constraint );
+	
+	// Restor widget count range
+	setWidgetCountRange( minWidgetCount, maxWidgetCount );
+    } else {
+	foreach ( Constraint constraint, filter )
+	    addConstraint( constraint );
+    }
+}
 void FilterWidget::addConstraint( ConstraintWidget* filter ) {
     KComboBox *cmbFilterType = qobject_cast< KComboBox* >( createNewLabelWidget(0) );
     Q_ASSERT( cmbFilterType );
@@ -90,10 +119,11 @@ int FilterWidget::removeWidget( QWidget* widget ) {
 
 ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant variant,
 					    const QVariant &value, QWidget *parent ) {
-    QList< VehicleType > filterVehicleTypes;
-    QList< ConstraintListWidget::ListItem > values;
     switch ( type ) {
     case FilterByVehicleType:
+    {
+	QList< VehicleType > filterVehicleTypes;
+	QList< ConstraintListWidget::ListItem > values;
 	filterVehicleTypes = QList< VehicleType >()
 		<< Unknown << Tram << Bus << TrolleyBus << Subway << TrainInterurban
 		<< Metro << TrainRegional << TrainRegionalExpress << TrainInterregio
@@ -105,6 +135,7 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
 		    Global::vehicleTypeToIcon(vehicleType) );
         }
         return new ConstraintListWidget( type, variant, values, value.toList(), parent );
+    }
 
     case FilterByTransportLine:
     case FilterByTarget:
@@ -114,6 +145,36 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
     case FilterByTransportLineNumber:
     case FilterByDelay:
 	return new ConstraintIntWidget( type, variant, value.toInt(), 0, 10000, parent );
+
+    case FilterByDeparture:
+	return new ConstraintTimeWidget( type, variant, value.toTime(), parent );
+	
+    case FilterByDayOfWeek:
+    {
+	QList< int > filterDaysOfWeek;
+	QList< ConstraintListWidget::ListItem > values;
+	int weekStartDay = KGlobal::locale()->weekStartDay();
+	for ( int weekday = weekStartDay; weekday <= 7; ++weekday ) {
+	    filterDaysOfWeek << weekday;
+	    if ( (weekStartDay > 1 && weekday == weekStartDay - 1)
+		 || (weekStartDay == 1 && weekday == 7) )
+	    {
+		break;
+	    } else if ( weekday == 7 )
+		weekday = 1;
+	}
+	
+	foreach ( int dayOfWeek, filterDaysOfWeek ) {
+	    values << ConstraintListWidget::ListItem(
+		    QDate::longDayName(dayOfWeek, QDate::StandaloneFormat),
+		    dayOfWeek, KIcon() );
+        }
+        ConstraintListWidget *listWidget = new ConstraintListWidget( type,
+				    variant, values, value.toList(), parent );
+	listWidget->list()->setAllSelectedText( i18n("(all days)") );
+	listWidget->list()->setMultipleSelectionOptions( CheckCombobox::ShowStringList );
+        return listWidget;
+    }
 
     default:
         kDebug() << "Unknown filter type" << type;
@@ -135,7 +196,12 @@ ConstraintWidget* FilterWidget::createConstraint( FilterType type ) {
     case FilterByTransportLineNumber:
     case FilterByDelay:
 	return ConstraintWidget::create( type, FilterEquals, 0, this );
-// 	return new FilterIntWidget( type, FilterEquals, 0, 0, 10000, this );
+
+    case FilterByDeparture:
+	return ConstraintWidget::create( type, FilterEquals, QTime::currentTime(), this );
+    case FilterByDayOfWeek:
+	return ConstraintWidget::create( type, FilterIsOneOf,
+			QVariantList() << 1 << 2 << 3 << 4 << 5 << 6 << 7, this );
 
     default:
         kDebug() << "Unknown filter type" << type;
@@ -157,6 +223,10 @@ QString FilterWidget::filterName( FilterType filter ) const {
 	return i18n("Via");
     case FilterByDelay:
 	return i18n("Delay");
+    case FilterByDeparture:
+	return i18n("Departure");
+    case FilterByDayOfWeek:
+	return i18n("Day of Week");
 
     default:
         kDebug() << "Filter unknown" << filter;
@@ -220,9 +290,11 @@ ConstraintWidget::ConstraintWidget( FilterType type,
 			    : QWidget( parent ) {
     m_constraint.type = type;
     setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
-    QHBoxLayout *layout = new QHBoxLayout( this );
-    setLayout( layout );
+//     QHBoxLayout *layout = new QHBoxLayout( this );
+    QFormLayout *layout = new QFormLayout( this );
     layout->setContentsMargins( 0, 0, 0, 0 );
+    layout->setRowWrapPolicy( QFormLayout::WrapLongRows );
+    setLayout( layout );
 
     if ( !availableVariants.isEmpty() ) {
 	if ( !availableVariants.contains(initialVariant) ) {
@@ -285,6 +357,7 @@ ConstraintStringWidget::ConstraintStringWidget( FilterType type, FilterVariant i
     m_string->setMinimumWidth( 50 );
     m_string->setClearButtonShown( true );
     m_string->setText( filterText );
+    m_string->setMinimumWidth( 60 );
     addWidget( m_string );
 
     connect( m_string, SIGNAL(textChanged(QString)), this, SLOT(stringChanged(QString)) );
@@ -302,6 +375,20 @@ ConstraintIntWidget::ConstraintIntWidget( FilterType type, FilterVariant initial
     addWidget( m_num );
 
     connect( m_num, SIGNAL(valueChanged(int)), this, SLOT(intChanged(int)) );
+}
+
+ConstraintTimeWidget::ConstraintTimeWidget( FilterType type,
+			FilterVariant initialVariant, QTime value, QWidget* parent)
+			: ConstraintWidget( type, QList< FilterVariant >()
+					    << FilterEquals << FilterDoesntEqual
+					    << FilterGreaterThan << FilterLessThan,
+					    initialVariant, parent ) {
+    m_time = new QTimeEdit( this );
+    value.setHMS( value.hour(), value.minute(), 0 );
+    m_time->setTime( value );
+    addWidget( m_time );
+
+    connect( m_time, SIGNAL(timeChanged(QTime)), this, SLOT(timeChanged(QTime)) );
 }
 
 void ConstraintListWidget::setValue( const QVariant& value ) {
@@ -351,19 +438,16 @@ void ConstraintWidget::variantChanged( int index ) {
 	
 QWidget* FilterWidget::createNewLabelWidget( int ) {
     KComboBox *cmbFilterType = new KComboBox( this );
-    cmbFilterType->addItem( filterName(FilterByVehicleType) + ":",
-			    static_cast<int>(FilterByVehicleType) );
-    cmbFilterType->addItem( filterName(FilterByTransportLine) + ":",
-			    static_cast<int>(FilterByTransportLine) );
-    cmbFilterType->addItem( filterName(FilterByTransportLineNumber) + ":",
-			    static_cast<int>(FilterByTransportLineNumber) );
-    cmbFilterType->addItem( filterName(FilterByTarget) + ":",
-			    static_cast<int>(FilterByTarget) );
-    cmbFilterType->addItem( filterName(FilterByVia) + ":",
-			    static_cast<int>(FilterByVia) );
-    cmbFilterType->addItem( filterName(FilterByDelay) + ":",
-			    static_cast<int>(FilterByDelay) );
+    foreach ( FilterType filterType, m_allowedFilterTypes ) {
+	cmbFilterType->addItem( filterName(filterType) + ":",
+				static_cast<int>(filterType) );
+    }
     return cmbFilterType;
+}
+
+QWidget* FilterWidget::createSeparator( const QString& separatorText ) {
+    return AbstractDynamicWidgetContainer::createSeparator(
+	    separatorText.isEmpty() ? m_separatorText : separatorText );
 }
 
 DynamicWidget* FilterWidget::addWidget( QWidget* labelWidget, QWidget* widget ) {

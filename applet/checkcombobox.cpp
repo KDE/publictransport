@@ -33,16 +33,17 @@ class CheckComboboxPrivate {
 	    multipleSelectionOptions = CheckCombobox::ShowIconList;
 	    separator = ", ";
 	    noSelectionText = i18n( "(none)" );
+	    allSelectedText = i18n( "(all)" );
 	};
 	
 	bool allowNoCheck;
 	CheckCombobox::MultipleSelectionOptions multipleSelectionOptions;
-	QString separator, noSelectionText;
+	QString separator, noSelectionText, allSelectedText;
 };
 
 CheckCombobox::CheckCombobox( QWidget* parent ) : KComboBox( parent ),
 		d_ptr(new CheckComboboxPrivate) {
-    view()->setEditTriggers( QAbstractItemView::CurrentChanged );
+    view()->setEditTriggers( QAbstractItemView::NoEditTriggers );
     view()->viewport()->installEventFilter( this );
 }
 
@@ -59,6 +60,10 @@ void CheckCombobox::setMultipleSelectionOptions(
 	CheckCombobox::MultipleSelectionOptions multipleSelectionOptions ) {
     Q_D( CheckCombobox );
     d->multipleSelectionOptions = multipleSelectionOptions;
+    if ( multipleSelectionOptions == ShowStringList )
+	setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
+    else
+	setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Fixed );
 }
 
 QString CheckCombobox::separator() const {
@@ -81,6 +86,16 @@ void CheckCombobox::setNoSelectionText( const QString& noSelectionText ) {
     d->noSelectionText = noSelectionText;
 }
 
+QString CheckCombobox::allSelectedText() const {
+    Q_D( const CheckCombobox );
+    return d->allSelectedText;
+}
+
+void CheckCombobox::setAllSelectedText( const QString& allSelectedText ) {
+    Q_D( CheckCombobox );
+    d->allSelectedText = allSelectedText;
+}
+
 bool CheckCombobox::allowNoCheckedItem() const {
     Q_D( const CheckCombobox );
     return d->allowNoCheck;
@@ -89,6 +104,24 @@ bool CheckCombobox::allowNoCheckedItem() const {
 void CheckCombobox::setAllowNoCheckedItem( bool allow ) {
     Q_D( CheckCombobox );
     d->allowNoCheck = allow;
+}
+
+void CheckCombobox::addItem( const QString& text ) {
+    KComboBox::addItem( text );
+    for ( int row = 0; row < model()->rowCount(); ++row ) {
+	QModelIndex index = model()->index( row, modelColumn() );
+	if ( !model()->data(index, Qt::CheckStateRole).isValid() )
+	    model()->setData( index, Qt::Unchecked, Qt::CheckStateRole );
+    }
+}
+
+void CheckCombobox::addItems( const QStringList& texts ) {
+    KComboBox::addItems( texts );
+    for ( int row = 0; row < model()->rowCount(); ++row ) {
+	QModelIndex index = model()->index( row, modelColumn() );
+	if ( !model()->data(index, Qt::CheckStateRole).isValid() )
+	    model()->setData( index, Qt::Unchecked, Qt::CheckStateRole );
+    }
 }
 
 void CheckCombobox::keyPressEvent( QKeyEvent* event ) {
@@ -165,6 +198,8 @@ void CheckCombobox::paintEvent( QPaintEvent* ) {
         if ( icons.isEmpty() ) {
 	    opt.currentText = d->noSelectionText;
             opt.currentIcon = QIcon();
+	} else if ( icons.count() > 1 && icons.count() == view()->model()->rowCount() ) {
+	    opt.currentText = d->allSelectedText;
         } else
             opt.currentIcon = icons.first();
         painter.drawControl( QStyle::CE_ComboBoxLabel, opt );
@@ -180,7 +215,6 @@ void CheckCombobox::paintEvent( QPaintEvent* ) {
 
             // Leave some place for text, arrow, frame...
         } while ( width < opt.rect.width() - 80 );
-        bool tooManyIcons = shownIcons < icons.count();
 
         opt.iconSize.setWidth( width );
         QPixmap pix( opt.iconSize );
@@ -196,13 +230,21 @@ void CheckCombobox::paintEvent( QPaintEvent* ) {
         }
         p.end();
         opt.currentIcon = QIcon( pix );
-        if ( tooManyIcons )
-            opt.currentText = QString( "%1%2/%3" ).arg( QChar(0x2026) )
-                              .arg( icons.count() )
-                              .arg( view()->model()->rowCount() );
-        else
-            opt.currentText = QString( "%1 / %2" ).arg( icons.count() )
-                              .arg( view()->model()->rowCount() );
+	if ( icons.count() == view()->model()->rowCount() ) {
+	    if ( shownIcons < icons.count() )
+		opt.currentText = QChar(0x2026) + d->allSelectedText; // '...'
+		else
+		    opt.currentText = d->allSelectedText;
+	} else {
+	    if ( shownIcons < icons.count() ) {
+		opt.currentText = QString( "%1%2/%3" ).arg( QChar(0x2026) ) // '...'
+				.arg( icons.count() )
+				.arg( view()->model()->rowCount() );
+	    } else {
+		opt.currentText = QString( "%1 / %2" ).arg( icons.count() )
+				.arg( view()->model()->rowCount() );
+	    }
+	}
 	
         painter.drawControl( QStyle::CE_ComboBoxLabel, opt );
     }
@@ -220,7 +262,15 @@ void CheckCombobox::setCheckedItems( const QModelIndexList& indices ) {
     emit checkedItemsChanged();
 }
 
+void CheckCombobox::setCheckedRows( const QList< int > &rows ) {
+    QModelIndexList indices;
+    foreach ( int row, rows )
+	indices << view()->model()->index( row, modelColumn() );
+    setCheckedItems( indices );
+}
+
 QSize CheckCombobox::sizeHint() const {
+    Q_D( const CheckCombobox );
     QSize size = KComboBox::sizeHint();
     
     int checkboxSpace = style()->pixelMetric( QStyle::PM_IndicatorWidth )
@@ -231,6 +281,19 @@ QSize CheckCombobox::sizeHint() const {
 			iconSize().height() );
     QStyleOptionComboBox opt;
     initStyleOption( &opt );
+    if ( d->multipleSelectionOptions == ShowStringList ) {
+	QModelIndexList items = checkedItems();
+	if ( items.count() == count() )
+	    opt.currentText = d->allSelectedText;
+	else {
+	    opt.currentText.clear();
+	    foreach ( QModelIndex index, items ) {
+		if ( !opt.currentText.isEmpty() )
+		    opt.currentText += d->separator;
+		opt.currentText += index.data().toString();
+	    }
+	}
+    }
     QSize customSize = style()->sizeFromContents( QStyle::CT_ComboBox, &opt, contentsSize );
     
     size.setWidth( qMax(size.width() + checkboxSpace, customSize.width()) );
@@ -257,4 +320,12 @@ QModelIndexList CheckCombobox::checkedItems() const {
     return view()->model()->match( view()->model()->index(0, 0),
                                    Qt::CheckStateRole, Qt::Checked,
                                    -1, Qt::MatchExactly );
+}
+
+QList< int > CheckCombobox::checkedRows() const {
+    QModelIndexList indices = checkedItems();
+    QList< int > rows;
+    foreach ( const QModelIndex &index, indices )
+	rows << index.row();
+    return rows;
 }

@@ -29,6 +29,10 @@
 #include <Plasma/Theme>
 #include <KColorUtils>
 
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+#include <Plasma/Animator>
+#include <Plasma/Animation>
+#endif
 
 StopSettings::StopSettings() {
     location = KGlobal::locale()->country();
@@ -69,7 +73,8 @@ KIcon Global::internationalIcon() {
     return resultIcon;
 }
 
-KIcon Global::putIconIntoBiggerSizeIcon ( const KIcon &icon, const QSize &iconSize, const QSize &resultingSize ) {
+KIcon Global::putIconIntoBiggerSizeIcon ( const KIcon &icon, const QSize &iconSize,
+					  const QSize &resultingSize ) {
     QPixmap pixmap = QPixmap( resultingSize );
     pixmap.fill( Qt::transparent );
     QPainter p(&pixmap);
@@ -138,11 +143,10 @@ KIcon Global::makeOverlayIcon ( const KIcon& icon, const QList<KIcon> &overlayIc
     return resultIcon;
 }
 
-KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType, const QString &overlayIcon ) {
+KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType,
+				 const QString &overlayIcon ) {
     KIcon icon;
-
-    switch ( vehicleType )
-    {
+    switch ( vehicleType ) {
 	case Tram:
 	    icon = KIcon( "vehicle_type_tram" );
 	    break;
@@ -305,3 +309,25 @@ QColor Global::textColorDelayed() {
     QColor color = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
     return KColorUtils::tint( color, Qt::red, 0.5 );
 }
+
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+void Global::startFadeAnimation( QGraphicsWidget* w, qreal targetOpacity ) {
+    Plasma::Animation *anim = Global::fadeAnimation( w, targetOpacity );
+    if ( anim )
+	anim->start( QAbstractAnimation::DeleteWhenStopped );
+}
+
+Plasma::Animation* Global::fadeAnimation( QGraphicsWidget* w, qreal targetOpacity ) {
+    if ( w->geometry().width() * w->geometry().height() > 250000 ) {
+	// Don't fade big widgets for performance reasons
+	w->setOpacity( targetOpacity );
+	return NULL;
+    }
+
+    Plasma::Animation *anim = Plasma::Animator::create( Plasma::Animator::FadeAnimation );
+    anim->setTargetWidget( w );
+    anim->setProperty( "startOpacity", w->opacity() );
+    anim->setProperty( "targetOpacity", targetOpacity );
+    return anim;
+}
+#endif

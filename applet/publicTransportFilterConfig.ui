@@ -134,7 +134,7 @@
             <number>0</number>
            </property>
            <item row="0" column="0" colspan="2">
-            <widget class="QWidget" name="filters" native="true"/>
+            <widget class="FilterListWidget" name="filters" native="true"/>
            </item>
           </layout>
          </widget>
@@ -270,6 +270,12 @@ Select the filter configurations to be used by your current stops.</string>
    <class>KComboBox</class>
    <extends>QComboBox</extends>
    <header>kcombobox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>FilterListWidget</class>
+   <extends>QWidget</extends>
+   <header>filterwidget.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>
