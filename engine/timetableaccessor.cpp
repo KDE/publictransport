@@ -302,7 +302,7 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 		const QDateTime &dateTime, const QString &dataType,
 		bool usedDifferentUrl ) {
     KUrl url = getUrl( city, stop, maxDeps, dateTime, dataType, usedDifferentUrl );
-    kDebug() << url;
+//     kDebug() << url;
     
     KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
     ParseDocumentMode parseType = maxDeps == -1
@@ -346,7 +346,7 @@ KIO::StoredTransferJob *TimetableAccessor::requestJourneys( const QString &sourc
 }
 
 KIO::StoredTransferJob* TimetableAccessor::requestJourneys( const KUrl& url ) {
-    kDebug() << url;
+//     kDebug() << url;
 
     KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
     connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );

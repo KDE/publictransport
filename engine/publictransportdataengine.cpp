@@ -29,11 +29,8 @@
 #include "timetableaccessor.h"
 
 
-const int PublicTransportEngine::MIN_UPDATE_TIMEOUT = 120;
-const int PublicTransportEngine::MAX_UPDATE_TIMEOUT_DELAY = 5 * 60;
-const int PublicTransportEngine::DEFAULT_MAXIMUM_DEPARTURES = 20;
-const int PublicTransportEngine::ADDITIONAL_MAXIMUM_DEPARTURES =
-			PublicTransportEngine::MIN_UPDATE_TIMEOUT / 20;
+const int PublicTransportEngine::MIN_UPDATE_TIMEOUT = 120; // in seconds
+const int PublicTransportEngine::MAX_UPDATE_TIMEOUT_DELAY = 5 * 60; // if delays are available
 const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
 
 PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList& args)
@@ -47,8 +44,8 @@ PublicTransportEngine::PublicTransportEngine(QObject* parent, const QVariantList
 
     // This prevents applets from setting an unnecessarily high update interval
     // and using too much CPU.
-    // 30 seconds should be enough, departure / arrival times have minute precision.
-    setMinimumPollingInterval( 30000 );
+    // 60 seconds should be enough, departure / arrival times have minute precision.
+    setMinimumPollingInterval( 60000 );
 
     // Add service provider source, so when using
     // dataEngine("publictransport").sources() in an applet it at least returns this
@@ -167,7 +164,7 @@ QHash< QString, QVariant > PublicTransportEngine::locations() {
 }
 
 bool PublicTransportEngine::sourceRequestEvent( const QString &name ) {
-    kDebug() << name;
+//     kDebug() << name;
 
     if ( isDataRequestingSourceType(sourceTypeFromName(name)) )
 	setData( name, DataEngine::Data() ); // Create source, TODO: check if [name] is valid
@@ -290,7 +287,6 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 	QStringList input;
 	ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals;
 	QString city, stop, targetStop, originStop, dataType;
-	int maxDeps = DEFAULT_MAXIMUM_DEPARTURES;
 	QDateTime dateTime;
 
 	kDebug() << name;
@@ -337,10 +333,7 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 		targetStop = input.at(i).mid( QString("targetStop=").length() ).trimmed();
 	    else if ( s.startsWith("originStop=", Qt::CaseInsensitive) )
 		originStop = input.at(i).mid( QString("originStop=").length() ).trimmed();
-	    else if ( s.startsWith("maxdeps=", Qt::CaseInsensitive) ) {
-		s = input.at(i).mid( QString("maxdeps=").length() ).trimmed();
-		maxDeps = s.toInt() == 0 ? 20 : s.toInt();
-	    } else if ( s.startsWith("timeoffset=", Qt::CaseInsensitive) ) {
+	    else if ( s.startsWith("timeoffset=", Qt::CaseInsensitive) ) {
 		s = input.at(i).mid( QString("timeoffset=").length() ).trimmed();
 		dateTime = QDateTime::currentDateTime().addSecs( s.toInt() * 60 );
 	    } else if ( s.startsWith("time=", Qt::CaseInsensitive) ) {
@@ -351,7 +344,6 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 		dateTime = QDateTime::fromString( s );
 	    }
 	}
-	maxDeps += ADDITIONAL_MAXIMUM_DEPARTURES;
 
 	if ( dateTime.isNull() )
 	    dateTime = QDateTime::currentDateTime().addSecs( DEFAULT_TIME_OFFSET * 60 );
@@ -414,12 +406,12 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 	}
 
 	if ( parseDocumentMode == ParseForDeparturesArrivals )
-	    accessor->requestDepartures( name, city, stop, maxDeps, dateTime, dataType );
+	    accessor->requestDepartures( name, city, stop, 100, dateTime, dataType );
 	else if ( parseDocumentMode == ParseForStopSuggestions )
 	    accessor->requestStopSuggestions( name, city, stop );
 	else // if ( parseDocumentMode == ParseForJourneys )
 	    accessor->requestJourneys( name, city, originStop, targetStop,
-				       maxDeps, dateTime, dataType );
+				       100, dateTime, dataType );
     }
 
     return true;
@@ -533,6 +525,8 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name ) {
 	case Arrivals:
 	case Stops:
 	case Journeys:
+	case JourneysArr:
+	case JourneysDep:
 	    ret = updateDepartureOrJourneySource( name );
 	    break;
 	default:

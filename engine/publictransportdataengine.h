@@ -35,7 +35,6 @@ class TimetableAccessor;
 class DepartureInfo;
 class JourneyInfo;
 
-
 /** @class PublicTransportEngine
  @brief This engine provides departure/arrival times and journeys for public transport.
  @see @ref usage_sec (how to use this data engine in an applet?)
@@ -88,14 +87,6 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	/** Maximum timeout in seconds to request new data, if delays are avaiable. 
 	* Before the timeout is over, old stored data from previous requests is used. */
 	static const int MAX_UPDATE_TIMEOUT_DELAY;
-
-	/** The default number of maximum departures. This is used if it wasn't
-	* specified in the source name. */
-	static const int DEFAULT_MAXIMUM_DEPARTURES;
-
-	/** Will be added to a given maximum departures value (otherwise the data
-	* couldn't provide enough departures until the update-timeout). */
-	static const int ADDITIONAL_MAXIMUM_DEPARTURES;
 
 	/** The default time offset from now for the first departure / arrival / journey
 	* in the list. This is used if it wasn't specified in the source name. */
