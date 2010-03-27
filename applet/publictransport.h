@@ -164,7 +164,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	void createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex );
 	void removeAlarmForDeparture( int row );
 	
-	void stretchAllDepartureChildren( const QModelIndex &parent,
+	void stretchAllChildren( const QModelIndex &parent,
 					  QAbstractItemModel *model );
 
 	/** Helper function to set the text color of an html item with a surrounding span-tag. */
@@ -367,6 +367,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	JourneyModel *m_modelJourneys; /**< The model for journeys from or to the "home stop" */
 	QList<JourneyInfo> m_journeyInfos; /**< List of current journeys */
 	QString m_currentJourneySource; /**< Current source name for journeys at the publictransport data engine */
+	QString m_journeyTitleText;
 	
 	QString m_lastSecondStopName; /**< The last used second stop name for journey search */
 	QDateTime m_lastJourneyDateTime; /**< The last used date and time for journey search */

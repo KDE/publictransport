@@ -122,9 +122,7 @@ class DepartureProcessor : public QThread {
 	
 	FilterSettings m_filterSettings;
 	bool m_filtersEnabled;
-
 	AlarmSettingsList m_alarmSettings;
-	
 	FirstDepartureConfigMode m_firstDepartureConfigMode;
 	QTime m_timeOfFirstDepartureCustom;
 	int m_timeOffsetOfFirstDeparture;

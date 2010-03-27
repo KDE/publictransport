@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>449</width>
-    <height>399</height>
+    <width>433</width>
+    <height>328</height>
    </rect>
   </property>
   <layout class="QFormLayout" name="formLayout">
@@ -23,6 +23,19 @@
    <property name="formAlignment">
     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
    </property>
+   <item row="0" column="0" colspan="2">
+    <widget class="QLabel" name="lblTimetable">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Timetable</string>
+     </property>
+    </widget>
+   </item>
    <item row="1" column="0">
     <widget class="QLabel" name="lblSize">
      <property name="text">
@@ -186,6 +199,38 @@
      </item>
     </layout>
    </item>
+   <item row="6" column="0">
+    <widget class="QLabel" name="lblFont_2">
+     <property name="text">
+      <string>Shadow:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>font</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QCheckBox" name="shadow">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>Whether or not departure / arrival times should be bold.</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
    <item row="7" column="0" colspan="2">
     <spacer name="verticalSpacer_4">
      <property name="orientation">
@@ -201,6 +246,19 @@
       </size>
      </property>
     </spacer>
+   </item>
+   <item row="8" column="0" colspan="2">
+    <widget class="QLabel" name="lblTimetable_2">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Departure / Arrival Column</string>
+     </property>
+    </widget>
    </item>
    <item row="9" column="0">
     <widget class="QLabel" name="lblcmbDepartureColumnInfos">
@@ -272,157 +330,6 @@
      </property>
     </widget>
    </item>
-   <item row="11" column="0" colspan="2">
-    <spacer name="verticalSpacer_5">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Fixed</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>64</width>
-       <height>10</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="13" column="0">
-    <widget class="QLabel" name="lblShowHeader">
-     <property name="text">
-      <string>Show &amp;Header:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-     <property name="buddy">
-      <cstring>showHeader</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="13" column="1">
-    <widget class="QCheckBox" name="showHeader">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>Whether or not the header should be shown. You can only resize columns when the header is shown.</string>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="14" column="0">
-    <widget class="QLabel" name="lblShowColumnTarget">
-     <property name="text">
-      <string>Show &amp;Column Target/Origin:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-     <property name="buddy">
-      <cstring>showColumnTarget</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="14" column="1">
-    <widget class="QCheckBox" name="showColumnTarget">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>Whether or not the column displaying the target / origin should be shown.</string>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0" colspan="2">
-    <widget class="QLabel" name="lblTimetable">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Timetable</string>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="0" colspan="2">
-    <widget class="QLabel" name="lblTimetable_2">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Departure / Arrival Column</string>
-     </property>
-    </widget>
-   </item>
-   <item row="12" column="0" colspan="2">
-    <widget class="QLabel" name="lblTimetable_3">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Timetable Header</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0">
-    <widget class="QLabel" name="lblFont_2">
-     <property name="text">
-      <string>Shadow:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-     <property name="buddy">
-      <cstring>font</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1">
-    <widget class="QCheckBox" name="shadow">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>Whether or not departure / arrival times should be bold.</string>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -449,8 +356,6 @@
   <tabstop>font</tabstop>
   <tabstop>cmbDepartureColumnInfos</tabstop>
   <tabstop>displayTimeBold</tabstop>
-  <tabstop>showHeader</tabstop>
-  <tabstop>showColumnTarget</tabstop>
  </tabstops>
  <resources/>
  <connections>

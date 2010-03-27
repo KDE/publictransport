@@ -19,7 +19,7 @@
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
        <property name="sizeConstraint">
         <enum>QLayout::SetMaximumSize</enum>
@@ -32,7 +32,7 @@
          <item row="0" column="0" colspan="2">
           <widget class="QListWidget" name="alarmList">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -166,7 +166,7 @@
             <x>0</x>
             <y>0</y>
             <width>453</width>
-            <height>52</height>
+            <height>153</height>
            </rect>
           </property>
           <layout class="QFormLayout" name="formLayout_2">

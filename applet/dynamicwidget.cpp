@@ -569,7 +569,7 @@ QWidget* AbstractDynamicWidgetContainer::createSeparator( const QString& separat
 	separatorLabel->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Maximum );
 	
 	QHBoxLayout *separatorLayout = new QHBoxLayout( separator );
-	separatorLayout->setContentsMargins( 0, 4, 0, 0 );
+	separatorLayout->setContentsMargins( 0, 0, 0, 0 );
 	separatorLayout->addWidget( separatorL );
 	separatorLayout->addWidget( separatorLabel );
 	separatorLayout->addWidget( separatorR );

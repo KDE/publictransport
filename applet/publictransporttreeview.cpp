@@ -177,6 +177,30 @@ void TreeView::drawRowBackground( QPainter* painter,
 	bgGradient.setColorAt( 1, Qt::transparent );
 	painter->fillRect( options.rect, QBrush(bgGradient) );
     }
+
+    QVariant vr = topLevelParent.data( JourneyRatingRole );
+    if ( vr.isValid() ) {
+	qreal rating = vr.toReal();
+	QColor ratingColor;
+	if ( rating >= 0 && rating <= 0.2 ) {
+	    ratingColor = KColorScheme( QPalette::Active )
+		    .background( KColorScheme::PositiveBackground ).color();
+	    ratingColor.setAlphaF( (0.2 - rating) * 5 );
+	} else if ( rating >= 0.8 && rating <= 1.0 ) {
+	    ratingColor = KColorScheme( QPalette::Active )
+		    .background( KColorScheme::NegativeBackground ).color();
+	    ratingColor.setAlphaF( (rating - 0.8) * 5 );
+	} else
+	    return;
+
+	QLinearGradient bgGradient( 0, 0, 1, 0 );
+	bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+	bgGradient.setColorAt( 0, Qt::transparent );
+	bgGradient.setColorAt( 0.3, ratingColor );
+	bgGradient.setColorAt( 0.7, ratingColor );
+	bgGradient.setColorAt( 1, Qt::transparent );
+	painter->fillRect( options.rect, QBrush(bgGradient) );
+    }
 }
 
 void TreeView::drawRow( QPainter* painter, const QStyleOptionViewItem& options,

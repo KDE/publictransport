@@ -178,7 +178,7 @@ void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
 	if ( m_alignText ) // Align text as if an icon would be shown
 	    displayRect.adjust( margin + iconSize.width() + padding, 0, 0, 0 );
     }
-
+    
     QStyleOptionViewItem opt = option;
     QModelIndex topLevelParent = index;
     while ( topLevelParent.parent().isValid() )

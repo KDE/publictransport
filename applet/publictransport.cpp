@@ -460,6 +460,11 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 		.arg( m_settings.maximalNumberOfDepartures )
 		.arg( _dateTime.toString() )
 		.arg( timeIsDeparture ? "Journeys" : "JourneysArr" );
+	QString currentStop = m_settings.currentStopSettings().stops.first();
+	m_journeyTitleText = stopIsTarget
+		? i18n("From %1<br>to <b>%2</b>", currentStop, _targetStopName)
+		: i18n("From <b>%1</b><br>to %2", _targetStopName, currentStop);
+	m_label->setText( m_journeyTitleText );
     }
     
     if ( !m_settings.currentStopSettings().city.isEmpty() ) { //TODO CHECK useSeperateCityValue )
@@ -976,7 +981,7 @@ void PublicTransport::configChanged() {
     m_icon->setMaximumSize( mainIconExtend, mainIconExtend );
     m_iconClose->setMinimumSize( mainIconExtend, mainIconExtend );
     m_iconClose->setMaximumSize( mainIconExtend, mainIconExtend );
-
+    
     if ( m_titleType == ShowDepartureArrivalListTitle )
 	m_label->setText( titleText() );
     m_labelInfo->setToolTip( courtesyToolTip() );
@@ -1846,9 +1851,6 @@ void PublicTransport::sectionPressed( int logicalIndex ) {
 }
 
 void PublicTransport::setTitleType( TitleType titleType ) {
-    if ( !m_graphicsWidget )//|| m_titleType == titleType )
-	return;
-
     QGraphicsLinearLayout *layoutMain =
 	    dynamic_cast<QGraphicsLinearLayout*>( m_mainGraphicsWidget->layout() );
     QGraphicsGridLayout *layoutTop =
@@ -2212,8 +2214,10 @@ void PublicTransport::doubleClickedDepartureItem( const QModelIndex &modelIndex 
     QTreeView* treeView = m_treeView->nativeWidget();
     if ( treeView->isExpanded(firstIndex) )
 	treeView->collapse( firstIndex );
-    else
+    else {
+	kDebug() << "Expanding index" << firstIndex;
 	treeView->expand( firstIndex );
+    }
 }
 
 QAction* PublicTransport::updatedAction( const QString& actionName ) {
@@ -2477,7 +2481,6 @@ void PublicTransport::removeAlarms( const AlarmSettingsList &newAlarmSettings,
 }
 
 QString PublicTransport::titleText() const {
-    QString sServiceProvider = currentServiceProviderData()["shortUrl"].toString();
     QString sStops = m_settings.currentStopSettings().stops.join(", ");
     if ( !m_settings.currentStopSettings().city.isEmpty() )
 	return QString("%1, %2").arg( sStops ).arg( m_settings.currentStopSettings().city );
@@ -2536,17 +2539,7 @@ void PublicTransport::appendJourney( const JourneyInfo& journeyInfo ) {
     ChildItem *routeItem = item->childByType( RouteItem );
     if ( routeItem )
 	m_treeView->nativeWidget()->expand( routeItem->index() );
-    stretchAllDepartureChildren( m_modelJourneys->indexFromItem(item), m_modelJourneys );
-}
-
-void PublicTransport::stretchAllDepartureChildren( const QModelIndex& parent,
-						   QAbstractItemModel *model ) {
-    if ( !parent.isValid() )
-	return; // Don't stretch top level items
-    for ( int row = 0; row < model->rowCount(parent); ++row ) {
-	m_treeView->nativeWidget()->setFirstColumnSpanned( row, parent, true );
-	stretchAllDepartureChildren( model->index(row, 0, parent), model );
-    }
+    stretchAllChildren( m_modelJourneys->indexFromItem(item), m_modelJourneys );
 }
 
 void PublicTransport::appendDeparture( const DepartureInfo& departureInfo ) {
@@ -2557,7 +2550,7 @@ void PublicTransport::appendDeparture( const DepartureInfo& departureInfo ) {
     ChildItem *routeItem = item->childByType( RouteItem );
     if ( routeItem ) 
 	m_treeView->nativeWidget()->expand( routeItem->index() );
-    stretchAllDepartureChildren( m_model->indexFromItem(item), m_model );
+    stretchAllChildren( m_model->indexFromItem(item), m_model );
 }
 
 void PublicTransport::fillModelJourney( const QList< JourneyInfo > &journeys ) {
@@ -2568,7 +2561,10 @@ void PublicTransport::fillModelJourney( const QList< JourneyInfo > &journeys ) {
 	else {
 	    JourneyItem *item = static_cast<JourneyItem*>( m_modelJourneys->itemFromInfo(journeyInfo) );
 	    m_modelJourneys->updateItem( item, journeyInfo );
-	    stretchAllDepartureChildren( m_modelJourneys->indexFromItem(item), m_modelJourneys );
+	    ChildItem *routeItem = item->childByType( RouteItem );
+	    if ( routeItem )
+		m_treeView->nativeWidget()->expand( routeItem->index() );
+	    stretchAllChildren( m_modelJourneys->indexFromItem(item), m_modelJourneys );
 	}
     }
 }
@@ -2585,9 +2581,22 @@ void PublicTransport::fillModel( const QList<DepartureInfo> &departures ) {
 	} else if ( !departureInfo.isFilteredOut() ) {
 	    DepartureItem *item = static_cast<DepartureItem*>( m_model->itemFromInfo(departureInfo) );
 	    m_model->updateItem( item, departureInfo );
-	    stretchAllDepartureChildren( m_model->indexFromItem(item), m_model );
+	    ChildItem *routeItem = item->childByType( RouteItem );
+	    if ( routeItem )
+		m_treeView->nativeWidget()->expand( routeItem->index() );
+	    stretchAllChildren( m_model->indexFromItem(item), m_model );
 	} else
 	    m_model->removeItem( m_model->itemFromInfo(departureInfo) );
+    }
+}
+
+void PublicTransport::stretchAllChildren( const QModelIndex& parent,
+						   QAbstractItemModel *model ) {
+    if ( !parent.isValid() )
+	return; // Don't stretch top level items
+    for ( int row = 0; row < model->rowCount(parent); ++row ) {
+	m_treeView->nativeWidget()->setFirstColumnSpanned( row, parent, true );
+	stretchAllChildren( model->index(row, 0, parent), model );
     }
 }
 

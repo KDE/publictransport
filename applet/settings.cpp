@@ -62,8 +62,11 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	    m_modelLocations(0), m_stopListWidget(0),
 	    m_publicTransportEngine(publicTransportEngine), m_osmEngine(osmEngine),
 	    m_favIconEngine(favIconEngine), m_geolocationEngine(geolocationEngine) {
+    // Store settings that have no associated widgets
     m_currentStopSettingsIndex = settings.currentStopSettingsIndex;
     m_recentJourneySearches = settings.recentJourneySearches;
+    m_showHeader = settings.showHeader;
+    m_hideColumnTarget = settings.hideColumnTarget;
 
     m_filterSettings = settings.filterSettings;
     m_filterConfigChanged = false;
@@ -541,8 +544,6 @@ void SettingsUiManager::setValuesOfAppearanceConfig( const Settings &settings ) 
     m_uiAppearance.displayTimeBold->setChecked( settings.displayTimeBold );
 
     m_uiAppearance.shadow->setChecked( settings.drawShadows );
-    m_uiAppearance.showHeader->setChecked( settings.showHeader );
-    m_uiAppearance.showColumnTarget->setChecked( !settings.hideColumnTarget );
     m_uiAppearance.radioUseDefaultFont->setChecked( settings.useDefaultFont );
     m_uiAppearance.radioUseOtherFont->setChecked( !settings.useDefaultFont );
     m_uiAppearance.font->setCurrentFont( settings.font );
@@ -893,6 +894,8 @@ Settings SettingsUiManager::settings() {
     ret.currentStopSettingsIndex = m_currentStopSettingsIndex;
     if ( ret.currentStopSettingsIndex >= ret.stopSettingsList.count() )
 	ret.currentStopSettingsIndex = ret.stopSettingsList.count() - 1;
+    ret.showHeader = m_showHeader;
+    ret.hideColumnTarget = m_hideColumnTarget;
 
     if ( m_filterConfigChanged ) {
 	QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
@@ -917,16 +920,14 @@ Settings SettingsUiManager::settings() {
     ret.showDepartureTime = m_uiAppearance.cmbDepartureColumnInfos->currentIndex() <= 1;
     ret.displayTimeBold = m_uiAppearance.displayTimeBold->checkState() == Qt::Checked;
     ret.drawShadows = m_uiAppearance.shadow->checkState() == Qt::Checked;
-    ret.showHeader = m_uiAppearance.showHeader->checkState() == Qt::Checked;
-    ret.hideColumnTarget = m_uiAppearance.showColumnTarget->checkState() == Qt::Unchecked;
     ret.linesPerRow = m_uiAppearance.linesPerRow->value();
     ret.size = m_uiAppearance.size->value();
     ret.sizeFactor = (ret.size + 3) * 0.2f;
     ret.useDefaultFont = m_uiAppearance.radioUseDefaultFont->isChecked();
-    if ( !ret.useDefaultFont ) // TODO: why "if(!"... ?
-	ret.font.setFamily( m_uiAppearance.font->currentFont().family() );
-    else
+    if ( ret.useDefaultFont )
 	ret.font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
+    else
+	ret.font.setFamily( m_uiAppearance.font->currentFont().family() );
 
     return ret;
 }

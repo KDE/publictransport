@@ -166,6 +166,7 @@ class SettingsUiManager : public QObject {
 
 	int m_currentStopSettingsIndex;
 	QStringList m_recentJourneySearches;
+	bool m_showHeader, m_hideColumnTarget;
 	
 	QHash< QString, FilterSettings > m_filterSettings;
 	QString m_lastFilterConfiguration; // The last set filter configuration

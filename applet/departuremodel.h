@@ -25,12 +25,16 @@
 #include "settings.h" // For AlarmSettings. Should be removed here.
 
 enum AdditionalRoles {
-    FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text. The text of an item should not contain html tags, if used in a combo box. */
-    DecorationPositionRole = Qt::UserRole + 502,
-    DrawAlarmBackground = Qt::UserRole + 503,
+    FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text. 
+	* The text of an item should not contain html tags, if used in a combo box. */
+    DecorationPositionRole = Qt::UserRole + 501,
+    DrawAlarmBackground = Qt::UserRole + 502,
+    JourneyRatingRole = Qt::UserRole + 503, /**< Stores a value between 0 and 1. 
+	* 0 for the journey with the biggest duration, 1 for the smallest duration. */
     LinesPerRowRole = Qt::UserRole + 504, /**< Used to change the number of lines for a row. */
     IconSizeRole = Qt::UserRole + 505, /**< Used to set a specific icon size for an element. */
-    DrawBackgroundGradientRole = Qt::UserRole + 506 /**< Used to draw a background gradient at the bottom for an element. */
+    DrawBackgroundGradientRole = Qt::UserRole + 506 /**< Used to draw a background 
+	* gradient at the bottom for an element. */
 };
 
 enum DecorationPosition {
@@ -150,16 +154,6 @@ class ChildItem : public ItemBase {
 	ItemType m_type;
 };
 
-class DepartureModel;
-class DepartureItem;
-// typedef ChildItem<DepartureModel, DepartureItem> DepartureChildItem;
-// typedef ItemBase<DepartureModel, DepartureItem, DepartureChildItem > DepartureItemBase;
-
-class JourneyModel;
-class JourneyItem;
-// typedef ChildItem<JourneyModel, JourneyItem> JourneyChildItem;
-// typedef ItemBase<JourneyModel, JourneyItem, JourneyChildItem> JourneyItemBase;
-
 class JourneyItem : public ItemBase {
     public:
 	JourneyItem( const JourneyInfo &journeyInfo, const Infos *infos );
@@ -198,6 +192,7 @@ class JourneyItem : public ItemBase {
 	bool hasDataForChildType( ItemType itemType );
 	QString childItemText( ItemType itemType, int *linesPerRow = NULL );
 	ChildItem *createRouteItem();
+	qreal rating() const;
 	
 	JourneyInfo m_journeyInfo;
 	QHash< int, QHash<int, QVariant> > m_columnData;
@@ -392,6 +387,7 @@ class JourneyModel : public PublicTransportModel {
 	virtual int columnCount( const QModelIndex& parent = QModelIndex() ) const;
 	virtual bool removeRows( int row, int count,
 				 const QModelIndex& parent = QModelIndex() );
+	virtual void clear();
 	virtual QVariant headerData( int section, Qt::Orientation orientation,
 				     int role = Qt::DisplayRole ) const;
 	virtual void sort( int column, Qt::SortOrder order = Qt::AscendingOrder );
@@ -411,11 +407,16 @@ class JourneyModel : public PublicTransportModel {
 	Infos infos() const { return m_infos; };
 	void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
 	
+	int smallestDuration() const { return m_smallestDuration; };
+	int biggestDuration() const { return m_biggestDuration; };
+	
     protected slots:
 	virtual void update();
 	
     private:
 	virtual JourneyItem *findNextItem( bool sortedByDepartureAscending = false ) const;
+
+	int m_smallestDuration, m_biggestDuration;
 };
 
 #endif // Multiple inclusion guard

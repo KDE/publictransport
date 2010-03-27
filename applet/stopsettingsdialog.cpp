@@ -48,9 +48,12 @@
     #include <QPropertyAnimation>
     #include <QGraphicsEffect>
 #endif
-#include <KCategorizedSortFilterProxyModel>
-#include <KCategorizedView>
-#include <KCategoryDrawer>
+
+#ifdef USE_KCATEGORYVIEW
+    #include <KCategorizedSortFilterProxyModel>
+    #include <KCategorizedView>
+    #include <KCategoryDrawer>
+#endif
 
 
 class NearStopsDialog : public KDialog {
@@ -147,11 +150,13 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     m_modelLocationServiceProviders = new QSortFilterProxyModel( this );
     m_modelLocationServiceProviders->setSourceModel( modelServiceProviders );
     m_modelLocationServiceProviders->setFilterRole( LocationCodeRole );
-
+    
+    #ifdef USE_KCATEGORYVIEW
     KCategorizedSortFilterProxyModel *modelCategorized =
 	    new KCategorizedSortFilterProxyModel( this );
     modelCategorized->setCategorizedModel( true );
     modelCategorized->setSourceModel( m_modelLocationServiceProviders );
+    #endif
     
     // Create stop list widget
     m_stopList = new DynamicLabeledLineEditList( 
@@ -191,13 +196,14 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     m_uiStopDetails.downloadServiceProviders->setMenu( menu );
     m_uiStopDetails.downloadServiceProviders->setIcon( KIcon("list-add") );
     
+#ifdef USE_KCATEGORYVIEW
     KCategorizedView *serviceProviderView = new KCategorizedView( this );
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
+    #if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
     KCategoryDrawerV2 *categoryDrawer = new KCategoryDrawerV2( this );
     serviceProviderView->setCategorySpacing( 10 );
-#else
+    #else
     categoryDrawer = new KCategoryDrawer();
-#endif
+    #endif
     serviceProviderView->setWordWrap( true );
     serviceProviderView->setCategoryDrawer( categoryDrawer );
     serviceProviderView->setSelectionMode( QAbstractItemView::SingleSelection );
@@ -205,8 +211,11 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
 
     m_uiStop.serviceProvider->setView( serviceProviderView );
     m_uiStop.serviceProvider->setModel( modelCategorized );
+#else
+    m_uiStop.serviceProvider->setModel( m_modelLocationServiceProviders );
+#endif
     m_uiStop.location->setModel( m_modelLocations );
-
+    
     // Set html delegate
     m_htmlDelegate = new HtmlDelegate( HtmlDelegate::NoOption, this );
     m_htmlDelegate->setAlignText( true );
@@ -230,8 +239,10 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
 }
 
 StopSettingsDialog::~StopSettingsDialog() {
+#ifdef USE_KCATEGORYVIEW
 #if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
     delete categoryDrawer;
+#endif
 #endif
 }
 

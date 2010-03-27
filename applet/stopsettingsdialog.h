@@ -20,6 +20,7 @@
 #ifndef STOPSETTINGSDIALOG_HEADER
 #define STOPSETTINGSDIALOG_HEADER
 
+
 #include <KDialog>
 #include <Plasma/DataEngine>
 #include <QSortFilterProxyModel>
@@ -30,6 +31,10 @@
 
 #include "global.h"
 #include "stopfinder.h"
+
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
+#define USE_KCATEGORYVIEW // Comment out to not use KCategoryView, which causes problems with KDE 4.3
+#endif
 
 class DynamicLabeledLineEditList;
 class HtmlDelegate;
@@ -107,10 +112,12 @@ class StopSettingsDialog : public KDialog {
 	
 	QHash< QString, QVariant > m_stopToStopID; /**< A hash with stop names as 
 				* keys and the corresponding stop IDs as values. */
-				
+
+#ifdef USE_KCATEGORYVIEW
 #if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
 	class KCategoryDrawer;
 	KCategoryDrawer *categoryDrawer; // not derived from QObject before KDE 4.4
+#endif
 #endif
     private:
 	Q_DISABLE_COPY( StopSettingsDialog )

@@ -220,6 +220,9 @@ QVariant ChildItem::data( int role, int ) const {
 	return p->hasPendingAlarm();
     } else if ( role == FormattedTextRole ) {
 	return m_data.value( Qt::DisplayRole );
+    } else if ( role == JourneyRatingRole && dynamic_cast<JourneyModel*>(m_model) ) {
+	JourneyItem *topLevelJourneyItem = static_cast<JourneyItem*>( topLevelParent() );
+	return topLevelJourneyItem->data( JourneyRatingRole );
     }
     
     return QVariant();
@@ -269,13 +272,16 @@ QVariant JourneyItem::data( int role, int column ) const {
 		return m_infos->linesPerRow;
 	    case Qt::TextAlignmentRole:
 		return static_cast<int>( (column == 0 ? Qt::AlignRight : Qt::AlignLeft)
-		| Qt::AlignVCenter );
+				    | Qt::AlignVCenter );
 	    case DecorationPositionRole:
 		return column == 0 ? DecorationLeft : DecorationRight;
 
 	    case FormattedTextRole: // No formatted text defined
 		if ( column < m_columnData.count() )
 		    return m_columnData[column].value( Qt::DisplayRole );
+		
+	    case JourneyRatingRole:
+		return rating();
 
 	    default:
 		return QVariant();
@@ -283,6 +289,18 @@ QVariant JourneyItem::data( int role, int column ) const {
     }
 
     return QVariant();
+}
+
+qreal JourneyItem::rating() const {
+    if ( !m_model )
+	return 0.5;
+    
+    JourneyModel *model = static_cast<JourneyModel*>( m_model );
+    int div = model->biggestDuration() - model->smallestDuration();
+    if ( div == 0 ) // all journeys have equal durations
+	return 0.5;
+    else
+	return qreal(journeyInfo()->duration() - model->smallestDuration()) / qreal(div);
 }
 
 void JourneyItem::setData( Columns column, const QVariant& data, int role ) {
@@ -310,11 +328,11 @@ void JourneyItem::updateValues() {
     setIcon( ColumnLineString, Global::iconFromVehicleTypeList(
 	    m_journeyInfo.vehicleTypes(), 32 * m_infos->sizeFactor) );
 
-    QString text = QString( m_infos->linesPerRow > 1
-	    ? i18n("<b>From:</b> %1<br><b>To:</b> %2")
-	    : i18n("<b>From:</b> %1, <b>To:</b> %2") )
-	    .arg( m_journeyInfo.startStopName() )
-	    .arg( m_journeyInfo.targetStopName() );
+    QString sDuration = KGlobal::locale()->prettyFormatDuration(
+	    m_journeyInfo.duration() * 60 * 1000 );
+    QString text = i18np("<b>Duration:</b> %2, <nobr><b>%1</b> change</nobr>",
+			 "<b>Duration:</b> %2, <nobr><b>%1</b> changes</nobr>",
+			 m_journeyInfo.changes(), sDuration);
     setFormattedText( ColumnJourneyInfo, text );
 //     setText( s.replace(QRegExp("<[^>]*>"), "") );
     if ( !m_journeyInfo.journeyNews().isEmpty() ) {
@@ -503,7 +521,9 @@ QString JourneyItem::childItemText( ItemType itemType, int* linesPerRow ) {
 		    .arg( m_journeyInfo.pricing() );
 	    break;
 	case RouteItem:
-	    if ( m_journeyInfo.routeExactStops() < m_journeyInfo.routeStops().count() ) {
+	    if ( m_journeyInfo.routeExactStops() > 0
+	      && m_journeyInfo.routeExactStops() < m_journeyInfo.routeStops().count() )
+	    {
 		text = QString("<b>%1</b> %2")
 		    .arg( i18nc("The route of this departure/arrival/journey", "Route:") )
 		    .arg( i18n("> %1 stops", m_journeyInfo.routeStops().count()) );
@@ -819,7 +839,9 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow ) {
 		.arg( m_departureInfo.operatorName() );
 	    break;
 	case RouteItem:
-	    if ( m_departureInfo.routeExactStops() < m_departureInfo.routeStops().count() ) {
+	    if ( m_departureInfo.routeExactStops() > 0
+	      && m_departureInfo.routeExactStops() < m_departureInfo.routeStops().count() )
+	    {
 		text = QString("<b>%1</b> %2")
 		    .arg( i18nc("The route of this departure/arrival/journey", "Route:") )
 		    .arg( i18n("> %1 stops", m_departureInfo.routeStops().count()) );
@@ -869,8 +891,7 @@ QVariant DepartureItem::data( int role, int column ) const {
     if ( column < m_columnData.count() && m_columnData[column].contains(role) ) {
 	return m_columnData[column].value( role );
     } else if ( role == DrawAlarmBackground ) {
-	DepartureItem *p = static_cast<DepartureItem*>( topLevelParent() );
-	return p->m_alarm.testFlag( AlarmPending );
+	return m_alarm.testFlag( AlarmPending );
     } else if ( !m_parent ) {
 	switch ( role ) {
 	    case LinesPerRowRole:
@@ -1078,6 +1099,8 @@ void PublicTransportModel::clear() {
 }
 
 JourneyModel::JourneyModel( QObject* parent ) : PublicTransportModel(parent) {
+    m_smallestDuration = 999999;
+    m_biggestDuration = 0;
 }
 
 int JourneyModel::columnCount( const QModelIndex& parent ) const {
@@ -1109,12 +1132,28 @@ bool JourneyModel::removeRows( int row, int count, const QModelIndex& parent ) {
 	    m_infoToItem.remove( item->journeyInfo()->hash() );
 	    if ( m_nextItem == item )
 		m_nextItem = findNextItem();
+// 	    if ( item->journeyInfo()->duration() == m_biggestDuration )
+		// TODO Find new biggest duration item
+// 	    else if ( item->journeyInfo()->duration() == m_smallestDuration )
+		// TODO Find new smallest duration item
 	    delete item;
 	}
+    }
+
+    if ( isEmpty() ) {
+	m_smallestDuration = 999999;
+	m_biggestDuration = 0;
     }
     endRemoveRows();
 
     return true;
+}
+
+void JourneyModel::clear() {
+    PublicTransportModel::clear();
+    
+    m_smallestDuration = 999999;
+    m_biggestDuration = 0;
 }
 
 void JourneyModel::update() {
@@ -1200,14 +1239,21 @@ JourneyItem* JourneyModel::addItem( const JourneyInfo& journeyInfo,
     endInsertRows();
 
     if ( m_nextItem ) {
-	if ( static_cast<JourneyItem*>(item)->journeyInfo()->departure()
+	if ( item->journeyInfo()->departure()
 	   < static_cast<JourneyItem*>(m_nextItem)->journeyInfo()->departure() )
 	{
 	    m_nextItem = item;
 	}
-    } else
+    } else {
 	m_nextItem = findNextItem( sortColumn == ColumnDeparture
 				   && sortOrder == Qt::AscendingOrder );
+    }
+
+    if ( item->journeyInfo()->duration() > m_biggestDuration )
+	m_biggestDuration = item->journeyInfo()->duration();
+    else if ( item->journeyInfo()->duration() < m_smallestDuration )
+	m_smallestDuration = item->journeyInfo()->duration();
+    
 
     return item;
 }
