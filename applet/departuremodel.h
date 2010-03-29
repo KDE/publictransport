@@ -32,9 +32,7 @@ enum AdditionalRoles {
     JourneyRatingRole = Qt::UserRole + 503, /**< Stores a value between 0 and 1. 
 	* 0 for the journey with the biggest duration, 1 for the smallest duration. */
     LinesPerRowRole = Qt::UserRole + 504, /**< Used to change the number of lines for a row. */
-    IconSizeRole = Qt::UserRole + 505, /**< Used to set a specific icon size for an element. */
-    DrawBackgroundGradientRole = Qt::UserRole + 506 /**< Used to draw a background 
-	* gradient at the bottom for an element. */
+    IconSizeRole = Qt::UserRole + 505 /**< Used to set a specific icon size for an element. */
 };
 
 enum DecorationPosition {

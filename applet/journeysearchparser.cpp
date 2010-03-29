@@ -28,6 +28,60 @@
 #include <KLineEdit>
 #include <KDebug>
 
+const QStringList JourneySearchParser::arrivalKeywords() {
+    return i18nc("A comma seperated list of keywords for the journey search to indicate "
+	    "that given times are meant as arrivals. The order is used for "
+	    "autocompletion.\nNote: Keywords should be unique for each meaning.",
+	    "arriving,arrive,arrival,arr").split(',', QString::SkipEmptyParts);
+}
+
+const QStringList JourneySearchParser::departureKeywords() {
+    return i18nc("A comma seperated list of keywords for the journey search to indicate "
+	    "that given times are meant as departures (default). The order is used "
+	    "for autocompletion.\nNote: Keywords should be unique for each meaning.",
+	    "departing,depart,departure,dep").split(',', QString::SkipEmptyParts);
+}
+
+const QStringList JourneySearchParser::fromKeywords() {
+    return i18nc("A comma seperated list of keywords for the journey search, indicating "
+	    "that a journey FROM the given stop should be searched. This keyword "
+	    "needs to be placed at the beginning of the field.", "from")
+	    .split(',', QString::SkipEmptyParts);
+}
+
+const QStringList JourneySearchParser::toKeywords() {
+    return i18nc("A comma seperated list of keywords for the journey search, indicating "
+	    "that a journey TO the given stop should be searched. This keyword needs "
+	    "to be placed at the beginning of the field.", "to")
+	    .split(',', QString::SkipEmptyParts);
+}
+
+const QStringList JourneySearchParser::timeKeywordsAt() {
+    return i18nc("A comma seperated list of keywords for the journey search field, "
+	    "indicating that a date/time string follows.\nNote: Keywords should be "
+	    "unique for each meaning.", "at").split(',', QString::SkipEmptyParts);
+}
+
+const QStringList JourneySearchParser::timeKeywordsIn() {
+    return i18nc("A comma seperated list of keywords for the journey search field, "
+	    "indicating that a relative time string follows.\nNote: Keywords should "
+	    "be unique for each meaning.", "in").split(',', QString::SkipEmptyParts);
+}
+
+const QStringList JourneySearchParser::timeKeywordsTomorrow() {
+    return i18nc("A comma seperated list of keywords for the journey search field, as "
+	    "replacement for tomorrows date.\nNote: Keywords should be unique for "
+	    "each meaning.", "tomorrow").split(',', QString::SkipEmptyParts);
+}
+
+const QString JourneySearchParser::relativeTimeString() {
+    return i18nc("The automatically added relative time string, when the journey "
+	    "search line ends with the keyword 'in'. This should be match by the "
+	    "regular expression for a relative time, like '(in) 5 minutes'. That "
+	    "regexp and the keyword ('in') are also localizable. Don't include "
+	    "the 'in' here.", "%1 minutes", 5);
+}
+
 bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
 	    const QString& search, QString* stop, QDateTime* departure,
 	    bool* stopIsTarget, bool* timeIsDeparture, int* posStart, int* len,
@@ -73,45 +127,13 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
     bool isInsideQuotedString = posQuotes1 == -1
 	    ? false : cursorPos > posQuotes1 && cursorPos <= posQuotes2;
 
-    // Localized keywords
-    const QStringList toKeywords = i18nc("A comma seperated list of keywords for the "
-	    "journey search, indicating that a journey TO the given stop should "
-	    "be searched. This keyword needs to be placed at the beginning of "
-	    "the field.", "to").split(',', QString::SkipEmptyParts);
-    const QStringList fromKeywords = i18nc("A comma seperated list of keywords for the "
-	    "journey search, indicating that a journey FROM the given stop should "
-	    "be searched. This keyword needs to be placed at the beginning of the "
-	    "field.", "from").split(',', QString::SkipEmptyParts);
-    const QStringList departureKeywords = i18nc("A comma seperated list of keywords for "
-	    "the journey search to indicate that given times are meant as "
-	    "departures (default). The order is used for autocompletion.\n"
-	    "Note: Keywords should be unique for each meaning.",
-	    "departing,depart,departure,dep").split(',', QString::SkipEmptyParts);
-    const QStringList arrivalKeywords = i18nc("A comma seperated list of keywords for the "
-	    "journey search to indicate that given times are meant as arrivals. "
-	    "The order is used for autocompletion.\n"
-	    "Note: Keywords should be unique for each meaning.",
-	    "arriving,arrive,arrival,arr").split(',', QString::SkipEmptyParts);
-    const QStringList timeKeywordsAt = i18nc("A comma seperated list of keywords for "
-	    "the journey search field, indicating that a date/time string follows.\n"
-	    "Note: Keywords should be unique for each meaning.",
-	    "at").split(',', QString::SkipEmptyParts);
-    const QStringList timeKeywordsIn = i18nc("A comma seperated list of keywords for "
-	    "the journey search field, indicating that a relative time string "
-	    "follows.\nNote: Keywords should be unique for each meaning.",
-	    "in").split(',', QString::SkipEmptyParts);
-    const QStringList timeKeywordsTomorrow = i18nc("A comma seperated list of keywords "
-	    "for the journey search field, as replacement for tomorrows date.\n"
-	    "Note: Keywords should be unique for each meaning.",
-	    "tomorrow").split(',', QString::SkipEmptyParts);
-
     // First search for keywords at the beginning of the string ('to' or 'from')
     QString firstWord = words.first();
-    if ( toKeywords.contains(firstWord, Qt::CaseInsensitive) ) {
+    if ( toKeywords().contains(firstWord, Qt::CaseInsensitive) ) {
 	searchLine = searchLine.mid( firstWord.length() + 1 );
 	cursorPos -= firstWord.length() + 1;
 	++removedWordsFromLeft;
-    } else if ( fromKeywords.contains(firstWord, Qt::CaseInsensitive) ) {
+    } else if ( fromKeywords().contains(firstWord, Qt::CaseInsensitive) ) {
 	searchLine = searchLine.mid( firstWord.length() + 1 );
 	*stopIsTarget = false; // the given stop is the origin
 	cursorPos -= firstWord.length() + 1;
@@ -139,31 +161,24 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
 	if ( posEnd == cursorPos && pos != -1
 		    && !(lastWordBeforeCursor = searchLine.mid(
 			pos, posEnd - pos).trimmed()).isEmpty() ) {
-	    if ( timeKeywordsAt.contains(lastWordBeforeCursor, Qt::CaseInsensitive) ) {
+	    if ( timeKeywordsAt().contains(lastWordBeforeCursor, Qt::CaseInsensitive) ) {
 		// Automatically add the current time after 'at'
 		QString formattedTime = KGlobal::locale()->formatTime( QTime::currentTime() );
 		searchLine.insert( posEnd, " " + formattedTime );
 		selStart = posEnd + 1; // +1 for the added space
 		selLength = formattedTime.length();
-	    } else if ( timeKeywordsIn.contains(lastWordBeforeCursor, Qt::CaseInsensitive) ) {
+	    } else if ( timeKeywordsIn().contains(lastWordBeforeCursor, Qt::CaseInsensitive) ) {
 		// Automatically add '5 minutes' after 'in'
-		QString defaultRelTime = i18nc("The automatically added relative time "
-			"string, when the journey search line ends with the keyword 'in'."
-			"This should be match by the regular expression for a relative "
-			"time, like '(in) 5 minutes'. "
-			"That regexp and the keyword ('in') are also localizable. "
-			"Don't include the 'in' here.",
-			"%1 minutes", 5);
-		searchLine.insert( posEnd, " " + defaultRelTime );
+		searchLine.insert( posEnd, " " + relativeTimeString() );
 		selStart = posEnd + 1; // +1 for the added space
 		selLength = 1; // only select the number (5)
 	    } else {
 		QStringList completionItems;
-		completionItems << timeKeywordsAt;
-		completionItems << timeKeywordsIn;
-		completionItems << timeKeywordsTomorrow;
-		completionItems << departureKeywords;
-		completionItems << arrivalKeywords;
+		completionItems << timeKeywordsAt();
+		completionItems << timeKeywordsIn();
+		completionItems << timeKeywordsTomorrow();
+		completionItems << departureKeywords();
+		completionItems << arrivalKeywords();
 
 		KCompletion *comp = lineEdit->completionObject( false );
 		comp->setItems( completionItems );
@@ -193,21 +208,21 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
     QStringList parts;
     for ( int i = words.count() - 1; i >= removedWordsFromLeft; --i ) {
 	QString word = words[ i ];
-	if ( timeKeywordsAt.contains(word, Qt::CaseInsensitive) ) {
+	if ( timeKeywordsAt().contains(word, Qt::CaseInsensitive) ) {
 	    // An 'at' keyword was found at position i
 	    QString sDeparture;
 	    JourneySearchParser::splitWordList( words, i, stop, &sDeparture, removedWordsFromLeft );
 
 	    // Search for keywords before 'at'
 	    QDate date;
-	    JourneySearchParser::searchForJourneySearchKeywords( *stop, timeKeywordsTomorrow,
-					    departureKeywords, arrivalKeywords,
-					    &date, stop, timeIsDeparture, len );
+	    JourneySearchParser::searchForJourneySearchKeywords( *stop,
+		    timeKeywordsTomorrow(), departureKeywords(), arrivalKeywords(),
+		    &date, stop, timeIsDeparture, len );
 
 	    // Parse date and/or time from the string after 'at'
 	    JourneySearchParser::parseDateAndTime( sDeparture, departure, &date );
 	    return true;
-	} else if ( timeKeywordsIn.contains(word, Qt::CaseInsensitive) ) {
+	} else if ( timeKeywordsIn().contains(word, Qt::CaseInsensitive) ) {
 	    // An 'in' keyword was found at position i
 	    QString sDeparture;
 	    JourneySearchParser::splitWordList( words, i, stop, &sDeparture, removedWordsFromLeft );
@@ -232,9 +247,9 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
 
 		// Search for keywords before 'in'
 		QDate date = QDate::currentDate();
-		JourneySearchParser::searchForJourneySearchKeywords( *stop, timeKeywordsTomorrow,
-						departureKeywords, arrivalKeywords,
-						&date, stop, timeIsDeparture, len );
+		JourneySearchParser::searchForJourneySearchKeywords( *stop,
+			timeKeywordsTomorrow(), departureKeywords(), arrivalKeywords(),
+			&date, stop, timeIsDeparture, len );
 		*departure = QDateTime( date, QTime::currentTime().addSecs(minutes * 60) );
 		return true;
 	    }
@@ -245,8 +260,8 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
 
     // Search for keywords at the end of the string
     QDate date = QDate::currentDate();
-    JourneySearchParser::searchForJourneySearchKeywords( *stop, timeKeywordsTomorrow,
-				    departureKeywords, arrivalKeywords,
+    JourneySearchParser::searchForJourneySearchKeywords( *stop, timeKeywordsTomorrow(),
+				    departureKeywords(), arrivalKeywords(),
 				    &date, stop, timeIsDeparture, len );
     *departure = QDateTime( date, QTime::currentTime() );
     return false;
@@ -369,7 +384,14 @@ bool JourneySearchParser::searchForJourneySearchKeywords( const QString& journey
     return found;
 }
 
-void JourneySearchParser::combineDoubleQuotedWords( QStringList* words ) {
+QStringList JourneySearchParser::notDoubleQuotedWords( const QString& searchLine ) {
+    QStringList words = searchLine.split( ' ', QString::SkipEmptyParts );
+    combineDoubleQuotedWords( &words, false );
+    return words;
+}
+
+void JourneySearchParser::combineDoubleQuotedWords( QStringList* words,
+						    bool reinsertQuotedWords ) {
     int quotedStart = -1, quotedEnd = -1;
     for ( int i = 0; i < words->count(); ++i ) {
 	if ( words->at(i).startsWith('\"') )
@@ -387,7 +409,9 @@ void JourneySearchParser::combineDoubleQuotedWords( QStringList* words ) {
 	QString combinedWord;
 	for ( int i = quotedEnd; i >= quotedStart; --i )
 	    combinedWord = words->takeAt( i ) + " " + combinedWord;
-	words->insert( quotedStart, combinedWord.trimmed() );
+
+	if ( reinsertQuotedWords )
+	    words->insert( quotedStart, combinedWord.trimmed() );
     }
 }
 
@@ -402,7 +426,6 @@ void JourneySearchParser::splitWordList( const QStringList& wordList, int splitW
 
 void JourneySearchParser::parseDateAndTime( const QString& sDateTime,
 				QDateTime* dateTime, QDate* alreadyParsedDate ) {
-
     QDate date;
     QTime time;
     bool callParseDate = alreadyParsedDate->isNull();

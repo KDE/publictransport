@@ -28,8 +28,6 @@ class QDateTime;
 class KLineEdit;
 class JourneySearchParser {
     public:
-// 	JourneySearchParser() {};
-
 	static bool parseJourneySearch( KLineEdit *lineEdit, const QString &search,
 		QString *stop, QDateTime *departure, bool *stopIsTarget,
 		bool *timeIsDeparture, int *posStart = 0, int *len = 0,
@@ -40,6 +38,17 @@ class JourneySearchParser {
 
 	static void setJourneySearchStopNameCompletion( KLineEdit *lineEdit,
 							const QString &completion );
+							
+	static QStringList notDoubleQuotedWords( const QString &searchLine );
+	
+	static const QStringList toKeywords();
+	static const QStringList fromKeywords();
+	static const QStringList departureKeywords();
+	static const QStringList arrivalKeywords();
+	static const QStringList timeKeywordsAt();
+	static const QStringList timeKeywordsIn();
+	static const QStringList timeKeywordsTomorrow();
+	static const QString relativeTimeString();
 
     private:
 	static void setJourneySearchWordCompletion( KLineEdit *lineEdit,
@@ -50,7 +59,8 @@ class JourneySearchParser {
 		const QStringList &arrivalKeywords, QDate *date, QString *stop,
 		bool *timeIsDeparture, int *len );
 	
-	static void combineDoubleQuotedWords( QStringList *words );
+	static void combineDoubleQuotedWords( QStringList *words,
+					      bool reinsertQuotedWords = true );
 
 	/** Get the strings left and right of the word at @p splitWordPos
 	* in @p wordList. The extracted strings are stored to @p leftOfSplitWord

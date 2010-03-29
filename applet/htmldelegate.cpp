@@ -43,83 +43,51 @@ void PublicTransportDelegate::paint( QPainter* painter,
 	    const QStyleOptionViewItem& option, const QModelIndex& index) const {
     painter->setRenderHints( QPainter::SmoothPixmapTransform | QPainter::Antialiasing );
 
-    if ( index.data(DrawBackgroundGradientRole).isValid() ) {
-	QPixmap pixmap( option.rect.width(), option.rect.height() / 2 );
-	pixmap.fill( Qt::transparent );
-	QPainter p( &pixmap );
-
-	QLinearGradient bgGradient( 0, 0, 0, 1 );
+    if ( option.state.testFlag(QStyle::State_HasFocus)
+      || option.state.testFlag(QStyle::State_Selected) )
+    {
+	QColor focusColor = KColorScheme( QPalette::Active, KColorScheme::Selection )
+		.background( KColorScheme::NormalBackground ).color();
+	if ( option.state.testFlag(QStyle::State_Selected) )
+	    focusColor.setAlpha( focusColor.alpha() * 0.55f );
+	QLinearGradient bgGradient( 0, 0, 1, 0 );
 	bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-	bgGradient.setColorAt( 0, QColor(72, 72, 72, 0) );
-	bgGradient.setColorAt( 1, QColor(72, 72, 72, 80) );
-	p.fillRect( 0, 0, option.rect.width(), option.rect.height() / 2, bgGradient );
+	bgGradient.setColorAt( 0, Qt::transparent );
+	bgGradient.setColorAt( 0.1, focusColor );
+	bgGradient.setColorAt( 0.6, focusColor );
+	bgGradient.setColorAt( 1, Qt::transparent );
 
-	// Fade out left and right
-	QLinearGradient alphaGradient1( 0, 0, 1, 0 );
-	QLinearGradient alphaGradient2( 1, 0, 0, 0 );
-	alphaGradient1.setCoordinateMode( QGradient::ObjectBoundingMode );
-	alphaGradient2.setCoordinateMode( QGradient::ObjectBoundingMode );
-	alphaGradient1.setColorAt( 0, QColor(0, 0, 0, 0) );
-	alphaGradient1.setColorAt( 1, QColor(0, 0, 0, 255) );
-	alphaGradient2.setColorAt( 0, QColor(0, 0, 0, 0) );
-	alphaGradient2.setColorAt( 1, QColor(0, 0, 0, 255) );
-	p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-	p.fillRect( 0, 0, option.rect.width() / 5, option.rect.height() / 2, alphaGradient1 );
-	p.fillRect( option.rect.right() - option.rect.width() / 5 - option.rect.left(), 0,
-		    option.rect.width() / 5 + 1, option.rect.height() / 2, alphaGradient2 );
-	p.end();
-
-	painter->drawPixmap( option.rect.left(),
-			     option.rect.top() + option.rect.height() / 2, pixmap );
+	painter->fillRect( option.rect, QBrush(bgGradient) );
     }
     
     HtmlDelegate::paint( painter, option, index );
     
     if ( !index.parent().isValid() && index.row() > 0 ) {
 	// Draw line above
-	QLinearGradient bgGradient;
-	QRect bgRect = option.state.testFlag( QStyle::State_HasFocus )
-	    ? QRect( QPoint(0, 0), option.rect.size() )
-	    : QRect( 0, 0, option.rect.width(), 1 );
-	QPixmap pixmap( bgRect.size() );
-	pixmap.fill( Qt::transparent );
-	QPainter p( &pixmap );
-
-	QColor bgColor1 = option.palette.color( QPalette::Base );
-	QColor bgColor = option.palette.color( QPalette::Text );
-	bgColor.setAlpha( 140 );
-	p.fillRect( bgRect, bgColor );
-
+	QRect lineRect = QRect( option.rect.left(), option.rect.top(), option.rect.width(), 1 );
+	QColor lineColor = option.palette.color( QPalette::Text );
+	lineColor.setAlpha( 140 );
+	QLinearGradient lineGradient( 0, 0, 1, 0 );
+	lineGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+	
 	QStyleOptionViewItemV4 opt = option;
 	if ( opt.viewItemPosition == QStyleOptionViewItemV4::Beginning
-		|| opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
+	    || opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
 	{
-	    // Fade out left
-	    p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-	    QLinearGradient alphaGradient1( 0, 0, 1, 0 );
-	    alphaGradient1.setCoordinateMode( QGradient::ObjectBoundingMode );
-	    alphaGradient1.setColorAt( 0, QColor(0, 0, 0, 0) );
-	    alphaGradient1.setColorAt( 1, QColor(0, 0, 0, 255) );
-	    p.fillRect( 0, 0, option.rect.width() / 3,
-			option.rect.height(), alphaGradient1 );
-	}
-
+	    lineGradient.setColorAt( 0, option.palette.color(QPalette::Base) );
+	    lineGradient.setColorAt( 0.3, lineColor );
+	} else
+	    lineGradient.setColorAt( 0, lineColor );
+	
 	if ( opt.viewItemPosition == QStyleOptionViewItemV4::End
-		|| opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
+	    || opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
 	{
-	    // Fade out right
-	    p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-	    QLinearGradient alphaGradient2( 1, 0, 0, 0 );
-	    alphaGradient2.setCoordinateMode( QGradient::ObjectBoundingMode );
-	    alphaGradient2.setColorAt( 0, QColor(0, 0, 0, 0) );
-	    alphaGradient2.setColorAt( 1, QColor(0, 0, 0, 255) );
-	    p.fillRect( option.rect.right() - option.rect.width() / 3 -
-			option.rect.left(), 0, option.rect.width() / 3 + 1,
-			option.rect.height(), alphaGradient2 );
-	}
-	p.end();
-
-	painter->drawPixmap( option.rect.topLeft(), pixmap );
+	    lineGradient.setColorAt( 0.7, lineColor );
+	    lineGradient.setColorAt( 1, option.palette.color(QPalette::Base) );
+	} else
+	    lineGradient.setColorAt( 1, lineColor );
+	
+	painter->fillRect( lineRect, QBrush(lineGradient) );
     }
 }
 

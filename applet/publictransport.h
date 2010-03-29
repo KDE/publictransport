@@ -382,8 +382,9 @@ class PublicTransport : public Plasma::PopupApplet {
 	Plasma::TreeView *m_treeView, *m_treeViewJourney; /**< A treeview displaying the departure board */
 	Plasma::Label *m_labelJourneysNotSupported; /**< A label used to display an info about unsupported journey search */
 	Plasma::LineEdit *m_journeySearch; /**< A line edit for inputting the target of a journey */
-	Plasma::TreeView *m_listStopsSuggestions; /**< A list of stop suggestions for the current input */
+	Plasma::TreeView *m_listStopSuggestions; /**< A list of stop suggestions for the current input */
 	Plasma::ToolButton *m_btnLastJourneySearches; /**< A tool button that shows last used journey searches. */
+	Plasma::ToolButton *m_btnStartJourneySearch; /**< A tool button to start the journey search. */
 	OverlayWidget *m_overlay;
 
 	int m_journeySearchLastTextLength; /**< The last number of unselected characters in the journey search input field. */

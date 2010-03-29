@@ -237,8 +237,8 @@ class AbstractDynamicWidgetContainerPrivate {
 	virtual ~AbstractDynamicWidgetContainerPrivate() {
 	};
 	
-	virtual QLayout* createContentLayout() {
-	    QVBoxLayout *vBoxLayout = new QVBoxLayout();
+	virtual QLayout* createContentLayout( QWidget *parent ) {
+	    QVBoxLayout *vBoxLayout = new QVBoxLayout( parent );
 	    vBoxLayout->setSpacing( 0 );
 	    vBoxLayout->setContentsMargins( 0, 0, 0, 0 );
 	    return vBoxLayout;
@@ -276,7 +276,7 @@ class AbstractDynamicWidgetContainerPrivate {
 		updateButtonStates();
 	    }
 	    
-	    contentWidget->setLayout( createContentLayout() );
+	    createContentLayout( contentWidget );
 	};
 
 	void init( AbstractDynamicWidgetContainer::RemoveButtonOptions removeButtonOptions,
@@ -682,8 +682,8 @@ class AbstractDynamicLabeledWidgetContainerPrivate : public AbstractDynamicWidge
 	    widgetNumberOffset = 1;
 	};
 	
-	virtual QLayout* createContentLayout() {
-	    QFormLayout *formLayout = new QFormLayout;
+	virtual QLayout* createContentLayout( QWidget *parent ) {
+	    QFormLayout *formLayout = new QFormLayout( parent );
 	    formLayout->setRowWrapPolicy( QFormLayout::WrapLongRows );
 	    formLayout->setVerticalSpacing( 2 );
 	    formLayout->setContentsMargins( 0, 0, 0, 0 );
