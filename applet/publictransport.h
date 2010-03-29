@@ -57,7 +57,30 @@ class QStandardItem;
 class QGraphicsBlurEffect;
 #endif
 
+#include <QPainter> // TODO
+
 typedef Plasma::MessageButton MessageButton;
+
+/** Simple pixmap graphics widgets (QGraphicsPixmapItem isn't a QGraphicsWidget). */
+class GraphicsPixmapWidget : public QGraphicsWidget {
+    public:
+	GraphicsPixmapWidget( const QPixmap &pixmap, QGraphicsWidget *parent = 0 )
+			    : QGraphicsWidget( parent ), m_pixmap( pixmap ) {
+	    setGeometry( QRectF(m_pixmap.rect()) );
+	};
+
+	QPixmap pixmap() const { return m_pixmap; };
+	virtual QRectF boundingRect() const { return geometry(); };
+	virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
+			    QWidget* /*widget*/ = 0 ) {
+	    if ( !option->rect.isValid() )
+		return;
+	    painter->drawPixmap( option->rect, m_pixmap );
+	};
+
+    private:
+	QPixmap m_pixmap;
+};
 
 /** @class PublicTransport
 * @brief Shows departure / arrival times for public transport. It uses the "publictransport"-data engine. */
@@ -88,102 +111,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	* @param state The state to remove. */
 	virtual void removeState( AppletState state );
 	
-    protected:
-	/** Create the configuration dialog contents.
-	* @param parent The config dialog in which the config interface should be created. */
-	void createConfigurationInterface( KConfigDialog *parent );
-	
-	/** Gets a list of actions for the context menu. */
-	virtual QList<QAction*> contextualActions();
-	/** The popup gets shown or hidden. */
-	virtual void popupEvent( bool show );
-	
-	virtual bool sceneEventFilter( QGraphicsItem* watched, QEvent* event );
-	/** Watching for up/down key presses in m_journeySearch to select stop suggestions. */
-	virtual bool eventFilter( QObject* watched, QEvent* event );
-	
-	/** Creates all used QAction's. */
-	void setupActions();
-	/** Gets an action with string and icon updated to the current settings.
-	* @param actionName The name of the action to return updated.
-	* @return The updated action.*/
-	QAction* updatedAction( const QString &actionName );
-
-	/** Creates the used models. */
-	void createModels();
-	/** Generates tooltip data and registers this applet at plasma's TooltipManager. */
-	void createTooltip();
-	/** Creates the popup icon with information about the next departure / alarm. */
-	void createPopupIcon();
-
-	/** Gets the first departure / arrival that doesn't get filtered out. */
-	DepartureInfo getFirstNotFilteredDeparture();
-
-	/** Sets the icon that should be painted as main icon.
-	* @param mainIconDisplay The icon to be set. */
-	void setMainIconDisplay( MainIconDisplay mainIconDisplay );
-
-	/** Gets the text to be displayed above the treeview as title (html-tags allowed). */
-	QString titleText() const;
-	/** Gets the text to be displayed on right of the treeview as additional
-	* information (html-tags allowed). Contains courtesy information. */
-	QString infoText();
-	QString courtesyToolTip() const;
-
-	/** Disconnects a currently connected departure / arrival data source and
-	* connects a new source using the current configuration. */
-	void reconnectSource();
-	void disconnectSources();
-
-	/** Disconnects a currently connected journey data source and connects
-	* a new source using the current configuration. */
-	void reconnectJourneySource( const QString &targetStopName = QString(),
-				     const QDateTime &dateTime = QDateTime::currentDateTime(),
-				     bool stopIsTarget = true, bool timeIsDeparture = true,
-				     bool requestStopSuggestions = false );
-	/** Disconnects a currently connected journey data source. */
-	void disconnectJourneySource();
-
-	void handleDataError( const QString &sourceName, const Plasma::DataEngine::Data& data );
-	void processStopSuggestions( const QString &sourceName, const Plasma::DataEngine::Data& data );
-	/** Clears the departure / arrival list received from the data engine and
-	* displayed by the applet. */
-	void clearDepartures();
-	/** Clears the journey list received from the data engine and displayed by
-	* the applet. */
-	void clearJourneys();
-
-	/** Appends a new departure / arrival to the model.
-	* @param departureInfo The departure / arrival to be added. */
-	void appendDeparture( const DepartureInfo &departureInfo );
-
-	/** Appends a new journey to the model. */
-	void appendJourney( const JourneyInfo &journeyInfo );
-
-	/** Sets an alarm for the given departure / arrival. */
-	void createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex );
-	void removeAlarmForDeparture( int row );
-	
-	void stretchAllChildren( const QModelIndex &parent,
-					  QAbstractItemModel *model );
-
-	/** Helper function to set the text color of an html item with a surrounding span-tag. */
-	void setTextColorOfHtmlItem( QStandardItem *item, const QColor &textColor );
-
-	/** Sets the type of title to be displayed. */
-	void setTitleType( TitleType titleType );
-	/** Creates a layout for the given title type. */
-	QGraphicsLayout *createLayoutTitle( TitleType titleType );
-
-	/** Unsets the given states. No other operations are processed.
-	* @param states A list of states to unset. */
-	virtual void unsetStates( QList<AppletState> states );
-
-	/** Gets the name of a column, to be displayed in the column's header. */
-	QString nameForTimetableColumn( TimetableColumn timetableColumn,
-					DepartureArrivalListType departureArrivalListType
-					= _UseCurrentDepartureArrivalListType );
-
     signals:
 	/** Emitted when the settings have changed. */
 	void settingsChanged();
@@ -262,6 +189,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	
 	void sectionPressed( int logicalIndex );
 	void sectionMoved( int logicalIndex, int oldVisualIndex, int newVisualIndex );
+	void sectionResized( int logicalIndex, int oldSize, int newSize );
 	
 	void beginDepartureProcessing( const QString &sourceName );
 	void departuresProcessed( const QString &sourceName,
@@ -278,8 +206,9 @@ class PublicTransport : public Plasma::PopupApplet {
 				const QList< JourneyInfo > &journeys,
 				const QUrl &requestUrl,
 				const QDateTime &lastUpdate );
+				
+	void oldItemAnimationFinished();
 
-    protected slots:
 	void destroyOverlay();
 	void setCurrentStopIndex( QAction *action );
 	
@@ -297,7 +226,104 @@ class PublicTransport : public Plasma::PopupApplet {
 	void alarmFired( DepartureItem *item );
 	void removeAlarms( const AlarmSettingsList &newAlarmSettings,
 			   const QList<int> &removedAlarms );
-	
+
+    protected:
+	/** Create the configuration dialog contents.
+	* @param parent The config dialog in which the config interface should be created. */
+	void createConfigurationInterface( KConfigDialog *parent );
+
+	/** Gets a list of actions for the context menu. */
+	virtual QList<QAction*> contextualActions();
+	/** The popup gets shown or hidden. */
+	virtual void popupEvent( bool show );
+
+	virtual bool sceneEventFilter( QGraphicsItem* watched, QEvent* event );
+	/** Watching for up/down key presses in m_journeySearch to select stop suggestions. */
+	virtual bool eventFilter( QObject* watched, QEvent* event );
+
+	/** Creates all used QAction's. */
+	void setupActions();
+	/** Gets an action with string and icon updated to the current settings.
+	* @param actionName The name of the action to return updated.
+	* @return The updated action.*/
+	QAction* updatedAction( const QString &actionName );
+
+	/** Creates the used models. */
+	void createModels();
+	/** Generates tooltip data and registers this applet at plasma's TooltipManager. */
+	void createTooltip();
+	/** Creates the popup icon with information about the next departure / alarm. */
+	void createPopupIcon();
+
+	/** Gets the first departure / arrival that doesn't get filtered out. */
+	DepartureInfo getFirstNotFilteredDeparture();
+
+	/** Sets the icon that should be painted as main icon.
+	* @param mainIconDisplay The icon to be set. */
+	void setMainIconDisplay( MainIconDisplay mainIconDisplay );
+
+	/** Gets the text to be displayed above the treeview as title (html-tags allowed). */
+	QString titleText() const;
+	/** Gets the text to be displayed on right of the treeview as additional
+	* information (html-tags allowed). Contains courtesy information. */
+	QString infoText();
+	QString courtesyToolTip() const;
+
+	/** Disconnects a currently connected departure / arrival data source and
+	* connects a new source using the current configuration. */
+	void reconnectSource();
+	void disconnectSources();
+
+	/** Disconnects a currently connected journey data source and connects
+	* a new source using the current configuration. */
+	void reconnectJourneySource( const QString &targetStopName = QString(),
+				     const QDateTime &dateTime = QDateTime::currentDateTime(),
+				     bool stopIsTarget = true, bool timeIsDeparture = true,
+				     bool requestStopSuggestions = false );
+	/** Disconnects a currently connected journey data source. */
+	void disconnectJourneySource();
+
+	void handleDataError( const QString &sourceName, const Plasma::DataEngine::Data& data );
+	void processStopSuggestions( const QString &sourceName, const Plasma::DataEngine::Data& data );
+	/** Clears the departure / arrival list received from the data engine and
+	* displayed by the applet. */
+	void clearDepartures();
+	/** Clears the journey list received from the data engine and displayed by
+	* the applet. */
+	void clearJourneys();
+
+	/** Appends a new departure / arrival to the model.
+	* @param departureInfo The departure / arrival to be added. */
+	void appendDeparture( const DepartureInfo &departureInfo );
+
+	/** Appends a new journey to the model. */
+	void appendJourney( const JourneyInfo &journeyInfo );
+
+	/** Sets an alarm for the given departure / arrival. */
+	void createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex );
+	void removeAlarmForDeparture( int row );
+
+	void stretchAllChildren( const QModelIndex &parent,
+					  QAbstractItemModel *model );
+
+	/** Helper function to set the text color of an html item with a surrounding span-tag. */
+	void setTextColorOfHtmlItem( QStandardItem *item, const QColor &textColor );
+
+	QGraphicsWidget *widgetForType( TitleType titleType );
+	/** Sets the type of title to be displayed. */
+	void setTitleType( TitleType titleType );
+	/** Creates a layout for the given title type. */
+	QGraphicsLayout *createLayoutTitle( TitleType titleType );
+
+	/** Unsets the given states. No other operations are processed.
+	* @param states A list of states to unset. */
+	virtual void unsetStates( QList<AppletState> states );
+
+	/** Gets the name of a column, to be displayed in the column's header. */
+	QString nameForTimetableColumn( TimetableColumn timetableColumn,
+					DepartureArrivalListType departureArrivalListType
+					= _UseCurrentDepartureArrivalListType );
+
     private:
 	enum MessageType {
 	    MessageNone = 0,
@@ -339,17 +365,21 @@ class PublicTransport : public Plasma::PopupApplet {
 	    m_currentMessage = MessageNone;
 	    showMessage( QIcon(), QString(), Plasma::ButtonNone );
 	};
+
+	void initTreeView( Plasma::TreeView *treeView );
+	void createJourneySearchWidgets();
 	
 				 
 	AppletStates m_appletStates; /**< The current states of this applet */
 	TitleType m_titleType; /**< The type of items to be shown as title above the tree view */
 	
 	QGraphicsWidget *m_graphicsWidget, *m_mainGraphicsWidget;
+	GraphicsPixmapWidget *m_oldItem;
 	Plasma::IconWidget *m_icon; /**< The icon that displayed in the top left corner */
 	Plasma::IconWidget *m_iconClose; /**< The icon that displayed in the top right corner to close the journey view */
 	Plasma::Label *m_label; /**< A label used to display a title */
 	Plasma::Label *m_labelInfo; /**< A label used to display additional information */
-	Plasma::TreeView *m_treeView; /**< A treeview displaying the departure board */
+	Plasma::TreeView *m_treeView, *m_treeViewJourney; /**< A treeview displaying the departure board */
 	Plasma::Label *m_labelJourneysNotSupported; /**< A label used to display an info about unsupported journey search */
 	Plasma::LineEdit *m_journeySearch; /**< A line edit for inputting the target of a journey */
 	Plasma::TreeView *m_listStopsSuggestions; /**< A list of stop suggestions for the current input */

@@ -344,7 +344,6 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
 				 routeTimesDepartureDelay, routeTimesArrivalDelay );
 
 	journeyInfos << journeyInfo;
-	kDebug() << journeyInfos.count();
 	if ( journeyInfos.count() == JOURNEY_BATCH_SIZE ) {
 	    QMutexLocker locker( &m_mutex );
 	    if ( m_abortCurrentJob )

@@ -409,6 +409,8 @@ class JourneyModel : public PublicTransportModel {
 	
 	int smallestDuration() const { return m_smallestDuration; };
 	int biggestDuration() const { return m_biggestDuration; };
+	int smallestChanges() const { return m_smallestChanges; };
+	int biggestChanges() const { return m_biggestChanges; };
 	
     protected slots:
 	virtual void update();
@@ -417,6 +419,7 @@ class JourneyModel : public PublicTransportModel {
 	virtual JourneyItem *findNextItem( bool sortedByDepartureAscending = false ) const;
 
 	int m_smallestDuration, m_biggestDuration;
+	int m_smallestChanges, m_biggestChanges;
 };
 
 #endif // Multiple inclusion guard

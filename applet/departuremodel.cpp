@@ -97,8 +97,10 @@ public:
 	switch ( column ) {
 	    case ColumnDeparture:
 		return l->departure() < r->departure();
+	    case ColumnArrival:
+		return l->arrival() < r->arrival();
 	    case ColumnTarget:
-		return l->targetStopName() < r->targetStopName();
+		return l->duration() < r->duration();
 	    case ColumnLineString:
 		if ( l->vehicleTypes().count() < r->vehicleTypes().count() )
 		    return true;
@@ -124,8 +126,10 @@ public:
 	switch ( column ) {
 	    case ColumnDeparture:
 		return l->departure() > r->departure();
+	    case ColumnArrival:
+		return l->arrival() > r->arrival();
 	    case ColumnTarget:
-		return l->targetStopName() > r->targetStopName();
+		return l->duration() > r->duration();
 	    case ColumnLineString:
 		if ( l->vehicleTypes().count() > r->vehicleTypes().count() )
 		    return true;
@@ -296,11 +300,31 @@ qreal JourneyItem::rating() const {
 	return 0.5;
     
     JourneyModel *model = static_cast<JourneyModel*>( m_model );
-    int div = model->biggestDuration() - model->smallestDuration();
-    if ( div == 0 ) // all journeys have equal durations
-	return 0.5;
-    else
-	return qreal(journeyInfo()->duration() - model->smallestDuration()) / qreal(div);
+    int durationSpan = model->biggestDuration() - model->smallestDuration();
+    int changesSpan = model->biggestChanges() - model->smallestChanges();
+    
+    if ( (journeyInfo()->changes() == model->biggestChanges()
+	  && changesSpan > 4 && model->biggestChanges() >  3 * model->smallestChanges())
+      || (journeyInfo()->duration() == model->biggestDuration() && durationSpan > 30) )
+    {
+	return 1.0;
+    }
+
+    qreal durationRating = durationSpan == 0 ? -1.0
+	    : qreal(journeyInfo()->duration() - model->smallestDuration()) / qreal(durationSpan);
+    qreal changesRating = changesSpan == 0 ? -1.0
+	    : qreal(journeyInfo()->changes() - model->smallestChanges()) / qreal(changesSpan);
+
+    if ( durationRating == -1.0 )
+	return changesRating;
+    else if ( changesRating == -1.0 )
+	return durationRating;
+    else {
+	if ( changesRating < 0.1 || changesRating > 0.9 )
+	    return durationRating * 0.75 + changesRating * 0.25;
+	else
+	    return durationRating;
+    }
 }
 
 void JourneyItem::setData( Columns column, const QVariant& data, int role ) {
@@ -1101,6 +1125,8 @@ void PublicTransportModel::clear() {
 JourneyModel::JourneyModel( QObject* parent ) : PublicTransportModel(parent) {
     m_smallestDuration = 999999;
     m_biggestDuration = 0;
+    m_smallestChanges = 999999;
+    m_biggestChanges = 0;
 }
 
 int JourneyModel::columnCount( const QModelIndex& parent ) const {
@@ -1143,6 +1169,8 @@ bool JourneyModel::removeRows( int row, int count, const QModelIndex& parent ) {
     if ( isEmpty() ) {
 	m_smallestDuration = 999999;
 	m_biggestDuration = 0;
+	m_smallestChanges = 999999;
+	m_biggestChanges = 0;
     }
     endRemoveRows();
 
@@ -1154,6 +1182,8 @@ void JourneyModel::clear() {
     
     m_smallestDuration = 999999;
     m_biggestDuration = 0;
+    m_smallestChanges = 999999;
+    m_biggestChanges = 0;
 }
 
 void JourneyModel::update() {
@@ -1254,6 +1284,10 @@ JourneyItem* JourneyModel::addItem( const JourneyInfo& journeyInfo,
     else if ( item->journeyInfo()->duration() < m_smallestDuration )
 	m_smallestDuration = item->journeyInfo()->duration();
     
+    if ( item->journeyInfo()->changes() > m_biggestChanges )
+	m_biggestChanges = item->journeyInfo()->changes();
+    else if ( item->journeyInfo()->changes() < m_smallestChanges )
+	m_smallestChanges = item->journeyInfo()->changes();
 
     return item;
 }

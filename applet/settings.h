@@ -235,6 +235,18 @@ struct Settings {
     QFont font; /**< The font to be used. */
     bool displayTimeBold; /** Whether or not the time should be displayed bold. */
 
+    QFont sizedFont() const {
+	QFont f = font;
+	if ( f.pointSize() == -1 ) {
+	    int pixelSize = f.pixelSize() * sizeFactor;
+	    f.setPixelSize( pixelSize > 0 ? pixelSize : 1 );
+	} else {
+	    int pointSize = f.pointSize() * sizeFactor;
+	    f.setPointSize( pointSize > 0 ? pointSize : 1 );
+	}
+	return f;
+    };
+
     AlarmSettingsList alarmSettings; /** A list of all alarm settings. */
     
     StopSettingsList stopSettingsList; /** A list of all stop settings. */

@@ -52,6 +52,7 @@
 
 // Qt includes
 #include <QPainter>
+#include <QGraphicsView>
 #include <QFontMetrics>
 #include <QSizeF>
 #include <QGraphicsLinearLayout>
@@ -82,8 +83,8 @@
 
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	    : Plasma::PopupApplet(parent, args),
-	    m_graphicsWidget(0), m_mainGraphicsWidget(0),
-	    m_icon(0), m_label(0), m_labelInfo(0), m_treeView(0),
+	    m_graphicsWidget(0), m_mainGraphicsWidget(0), m_oldItem(0), 
+	    m_icon(0), m_iconClose(0), m_label(0), m_labelInfo(0), m_treeView(0), m_treeViewJourney(0),
 	    m_journeySearch(0), m_listStopsSuggestions(0), m_btnLastJourneySearches(0),
 	    m_overlay(0), m_model(0), m_modelJourneys(0), m_departureProcessor(0) {
     m_currentMessage = MessageNone;
@@ -102,7 +103,7 @@ PublicTransport::~PublicTransport() {
     if ( hasFailedToLaunch() ) {
         // Do some cleanup here
     } else {
-	m_journeySearch->removeEventFilter( this );
+// 	m_journeySearch->removeEventFilter( this );
 // 	emit configNeedsSaving();
 
 	// Store header state
@@ -115,9 +116,9 @@ PublicTransport::~PublicTransport() {
 	delete m_label;
 	delete m_labelInfo;
 	delete m_icon;
-	delete m_iconClose;
-	delete m_journeySearch;
-	delete m_labelJourneysNotSupported;
+// 	delete m_iconClose;
+// 	delete m_journeySearch;
+// 	delete m_labelJourneysNotSupported;
 	delete m_btnLastJourneySearches;
 	delete m_graphicsWidget;
     }
@@ -464,7 +465,8 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 	m_journeyTitleText = stopIsTarget
 		? i18n("From %1<br>to <b>%2</b>", currentStop, _targetStopName)
 		: i18n("From <b>%1</b><br>to %2", _targetStopName, currentStop);
-	m_label->setText( m_journeyTitleText );
+	if ( testState(ShowingJourneyList) )
+	    m_label->setText( m_journeyTitleText );
     }
     
     if ( !m_settings.currentStopSettings().city.isEmpty() ) { //TODO CHECK useSeperateCityValue )
@@ -949,26 +951,29 @@ void PublicTransport::configChanged() {
 	m_treeView->nativeWidget()->setColumnHidden(
 	    m_departureViewColumns.indexOf(TargetColumn), m_settings.hideColumnTarget );
     }
-
-    QFont font = m_settings.font;
-    float sizeFactor = m_settings.sizeFactor;
-    if ( font.pointSize() == -1 ) {
-	int pixelSize = font.pixelSize() * sizeFactor;
-	font.setPixelSize( pixelSize > 0 ? pixelSize : 1 );
-    } else {
-	int pointSize = font.pointSize() * sizeFactor;
-	font.setPointSize( pointSize > 0 ? pointSize : 1 );
-    }
-    int smallPointSize = KGlobalSettings::smallestReadableFont().pointSize() * sizeFactor;
+    
+    QFont font = m_settings.sizedFont();
+//     QFont font = m_settings.font;
+//     float sizeFactor = m_settings.sizeFactor;
+//     if ( font.pointSize() == -1 ) {
+// 	int pixelSize = font.pixelSize() * sizeFactor;
+// 	font.setPixelSize( pixelSize > 0 ? pixelSize : 1 );
+//     } else {
+// 	int pointSize = font.pointSize() * sizeFactor;
+// 	font.setPointSize( pointSize > 0 ? pointSize : 1 );
+//     }
+    int smallPointSize = KGlobalSettings::smallestReadableFont().pointSize() * m_settings.sizeFactor;
     QFont smallFont = font, boldFont = font;
     smallFont.setPointSize( smallPointSize > 0 ? smallPointSize : 1 );
     boldFont.setBold( true );
     
     m_treeView->setFont( font );
+    if ( m_treeViewJourney )
+	m_treeViewJourney->setFont( font );
     m_label->setFont( boldFont );
     m_labelInfo->setFont( smallFont );
-    m_listStopsSuggestions->setFont( font );
-    m_journeySearch->setFont( font );
+//     m_listStopsSuggestions->setFont( font );
+//     m_journeySearch->setFont( font );
     setHeightOfCourtesyLabel();
 
     m_treeView->nativeWidget()->setIndentation( 20 * m_settings.sizeFactor );
@@ -979,8 +984,8 @@ void PublicTransport::configChanged() {
     int mainIconExtend = 32 * m_settings.sizeFactor;
     m_icon->setMinimumSize( mainIconExtend, mainIconExtend );
     m_icon->setMaximumSize( mainIconExtend, mainIconExtend );
-    m_iconClose->setMinimumSize( mainIconExtend, mainIconExtend );
-    m_iconClose->setMaximumSize( mainIconExtend, mainIconExtend );
+//     m_iconClose->setMinimumSize( mainIconExtend, mainIconExtend );
+//     m_iconClose->setMaximumSize( mainIconExtend, mainIconExtend );
     
     if ( m_titleType == ShowDepartureArrivalListTitle )
 	m_label->setText( titleText() );
@@ -1369,11 +1374,9 @@ void PublicTransport::iconCloseClicked() {
 
 void PublicTransport::journeySearchInputFinished() {
     clearJourneys();
-    addState( ShowingJourneyList );
 
     if ( !m_settings.recentJourneySearches.contains(m_journeySearch->text(), Qt::CaseInsensitive) )
 	m_settings.recentJourneySearches.prepend( m_journeySearch->text() );
-    
     while ( m_settings.recentJourneySearches.count() > MAX_RECENT_JOURNEY_SEARCHES )
 	m_settings.recentJourneySearches.takeLast();
     
@@ -1387,6 +1390,7 @@ void PublicTransport::journeySearchInputFinished() {
 					     m_journeySearch->text(), &stop, &departure,
 					     &stopIsTarget, &timeIsDeparture );
     reconnectJourneySource( stop, departure, stopIsTarget, timeIsDeparture );
+    addState( ShowingJourneyList );
 }
 
 void PublicTransport::journeySearchInputEdited( const QString &newText ) {
@@ -1420,7 +1424,7 @@ QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
 	case ShowSearchJourneyLineEdit:
 	case ShowSearchJourneyLineEditDisabled:
 	    m_icon->setVisible( true );
-	    m_journeySearch->setVisible( true );
+// 	    m_journeySearch->setVisible( true );
 	    layoutTop->addItem( m_icon, 0, 0 );
 	    layoutTop->addItem( m_journeySearch, 0, 1 );
 	    layoutTop->addItem( m_btnLastJourneySearches, 0, 2 );
@@ -1429,7 +1433,7 @@ QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
 	case ShowJourneyListTitle:
 	    m_icon->setVisible( true );
 	    m_label->setVisible( true );
-	    m_iconClose->setVisible( true );
+// 	    m_iconClose->setVisible( true );
 	    layoutTop->addItem( m_icon, 0, 0 );
 	    layoutTop->addItem( m_label, 0, 1 );
 	    layoutTop->addItem( m_iconClose, 0, 2 );
@@ -1512,13 +1516,6 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	m_graphicsWidget->setLayout( mainLayout );
 
 	int iconExtend = 32 * m_settings.sizeFactor;
-	m_iconClose = new Plasma::IconWidget;
-	m_iconClose->setIcon("window-close");
-	m_iconClose->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
-	m_iconClose->setMinimumSize( iconExtend, iconExtend );
-	m_iconClose->setMaximumSize( iconExtend, iconExtend );
-	connect( m_iconClose, SIGNAL(clicked()), this, SLOT(iconCloseClicked()) );
-
 	m_icon = new Plasma::IconWidget;
 	m_icon->setIcon( "public-transport-stop" );
 	m_icon->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
@@ -1540,113 +1537,12 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	labelInfo->setWordWrap( true );
 	setHeightOfCourtesyLabel();
 
-	m_btnLastJourneySearches = new Plasma::ToolButton;
-	m_btnLastJourneySearches->setIcon( KIcon("document-open-recent") );
-	m_btnLastJourneySearches->setToolTip( i18n("Use a recent journey search") );
-	m_btnLastJourneySearches->nativeWidget()->setPopupMode( QToolButton::InstantPopup );
-
-	m_journeySearch = new Plasma::LineEdit;
-	m_journeySearch->setToolTip( i18nc("This should match the localized keywords.",
-		"Type a <b>target stop</b> or <b>journey request</b>."
-		"<br><br> <b>Samples:</b><br>"
-		"&nbsp;&nbsp;&bull; <i>To target in 15 mins</i><br>"
-		"&nbsp;&nbsp;&bull; <i>From origin arriving tomorrow at 18:00</i><br>"
-		"&nbsp;&nbsp;&bull; <i>Target at 6:00 2010-03-07</i>"/*, sColor*/) );
-	m_journeySearch->installEventFilter( this ); // Handle up/down keys (selecting stop suggestions)
-	KLineEdit *journeySearch = m_journeySearch->nativeWidget();
-	journeySearch->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
-	journeySearch->setClickMessage( i18n("Target stop name or journey request") );
-
-	m_labelJourneysNotSupported = new Plasma::Label;
-	m_labelJourneysNotSupported->setAlignment( Qt::AlignCenter );
-	m_labelJourneysNotSupported->setSizePolicy( QSizePolicy::Expanding,
-						    QSizePolicy::Expanding, QSizePolicy::Label );
-	m_labelJourneysNotSupported->setText( i18n("Journey searches aren't supported "
-						   "by the currently used service provider "
-						   "or it's accessor.") );
-	QLabel *labelJourneysNotSupported = m_labelJourneysNotSupported->nativeWidget();
-	labelJourneysNotSupported->setWordWrap( true );
-
-	m_listStopsSuggestions = new Plasma::TreeView( m_mainGraphicsWidget );
-	m_listStopsSuggestions->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
-	m_listStopsSuggestions->nativeWidget()->setRootIsDecorated( false );
-	m_listStopsSuggestions->nativeWidget()->setHeaderHidden( true );
-	m_listStopsSuggestions->nativeWidget()->setAlternatingRowColors( true );
-	m_listStopsSuggestions->nativeWidget()->setEditTriggers( QAbstractItemView::NoEditTriggers );
-	#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-	    m_listStopsSuggestions->setOpacity( 0 );
-	#else
-	    m_listStopsSuggestions->hide();
-	#endif
-
-	m_journeySearch->nativeWidget()->setCompletionMode( KGlobalSettings::CompletionAuto );
-	m_journeySearch->nativeWidget()->setCompletionModeDisabled(
-		KGlobalSettings::CompletionMan );
-	m_journeySearch->nativeWidget()->setCompletionModeDisabled(
-		KGlobalSettings::CompletionPopup );
-	m_journeySearch->nativeWidget()->setCompletionModeDisabled(
-		KGlobalSettings::CompletionPopupAuto );
-	m_journeySearch->nativeWidget()->setCompletionModeDisabled(
-		KGlobalSettings::CompletionShell );
-	KCompletion *completion = m_journeySearch->nativeWidget()->completionObject( false );
-	completion->setIgnoreCase( true );
-	
-	connect( m_journeySearch, SIGNAL(returnPressed()),
-		 this, SLOT(journeySearchInputFinished()) );
-	connect( m_journeySearch, SIGNAL(textEdited(QString)),
-		 this, SLOT(journeySearchInputEdited(QString)) );
-	connect( m_listStopsSuggestions->nativeWidget(), SIGNAL(clicked(QModelIndex)),
-		 this, SLOT(possibleStopClicked(QModelIndex)) );
-	connect( m_listStopsSuggestions->nativeWidget(),
-		 SIGNAL(doubleClicked(QModelIndex)),
-		 this, SLOT(possibleStopDoubleClicked(QModelIndex)) );
-
 	// Create treeview for departures / arrivals
-	m_treeView = new Plasma::TreeView( m_mainGraphicsWidget );
-	QTreeView *treeView = new TreeView(
-		m_treeView->nativeWidget()->verticalScrollBar()->style() );
-	m_treeView->setWidget( treeView );
-	treeView->setAlternatingRowColors( true );
-	treeView->setAllColumnsShowFocus( true );
-	treeView->setRootIsDecorated( false );
-	treeView->setAnimated( true );
-	treeView->setSortingEnabled( true ); // TODO
-	treeView->setWordWrap( true );
-	treeView->setExpandsOnDoubleClick( false );
-	treeView->setEditTriggers( QAbstractItemView::NoEditTriggers );
-	treeView->setSelectionMode( QAbstractItemView::NoSelection );
-	treeView->setVerticalScrollMode( QAbstractItemView::ScrollPerPixel );
-	treeView->setContextMenuPolicy( Qt::CustomContextMenu );
-	
-	QHeaderView *header = new HeaderView( Qt::Horizontal );
-	treeView->setHeader( header );
-	header->setCascadingSectionResizes( true );
-// 	header->setStretchLastSection( true ); // TODO check
-	header->setResizeMode( QHeaderView::Interactive );
-	header->setSortIndicator( 2, Qt::AscendingOrder );
-	header->setContextMenuPolicy( Qt::CustomContextMenu );
-	header->setMinimumSectionSize( 20 );
-	header->setDefaultSectionSize( 60 );
-	PublicTransportDelegate *htmlDelegate = new PublicTransportDelegate( this );
-	treeView->setItemDelegate( htmlDelegate );
-	
-	connect( treeView, SIGNAL(customContextMenuRequested(const QPoint &)),
-		 this, SLOT(showDepartureContextMenu(const QPoint &)) );
-	if ( KGlobalSettings::singleClick() ) {
-	    connect( treeView, SIGNAL(clicked(const QModelIndex &)),
-		     this, SLOT(doubleClickedDepartureItem(const QModelIndex &)) );
-	} else {
-	    connect( treeView, SIGNAL(doubleClicked(const QModelIndex &)),
-		     this, SLOT(doubleClickedDepartureItem(const QModelIndex &)) );
-	}
-	connect( header, SIGNAL(sectionPressed(int)), this, SLOT(sectionPressed(int)) );
-	connect( header, SIGNAL(sectionMoved(int,int,int)),
-		 this, SLOT(sectionMoved(int,int,int)) );
-	connect( header, SIGNAL(customContextMenuRequested(const QPoint &)),
-		 this, SLOT(showHeaderContextMenu(const QPoint &)) );
-
+	m_treeView = new Plasma::TreeView();
+	initTreeView( m_treeView );
 	m_treeView->setModel( m_model );
 
+	QHeaderView *header = m_treeView->nativeWidget()->header();
 	KConfigGroup cg = config();
 	if ( cg.hasKey("headerState") ) {
 	    // Restore header state
@@ -1668,6 +1564,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	layout->addItem( m_labelInfo );
 	layout->setAlignment( m_labelInfo, Qt::AlignRight | Qt::AlignVCenter );
 	m_mainGraphicsWidget->setLayout( layout );
+	setTitleType( ShowDepartureArrivalListTitle );
 
 	registerAsDragHandle( m_mainGraphicsWidget );
 	registerAsDragHandle( m_label );
@@ -1679,6 +1576,56 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
     }
 
     return m_graphicsWidget;
+}
+
+void PublicTransport::initTreeView( Plasma::TreeView* treeView ) {
+    // Create treeview for departures / arrivals
+    QTreeView *_treeView = new TreeView(
+	    treeView->nativeWidget()->verticalScrollBar()->style() );
+    treeView->setWidget( _treeView );
+    _treeView->setAlternatingRowColors( true );
+    _treeView->setAllColumnsShowFocus( true );
+    _treeView->setRootIsDecorated( false );
+    _treeView->setAnimated( true );
+    _treeView->setSortingEnabled( true );
+    _treeView->setWordWrap( true );
+    _treeView->setExpandsOnDoubleClick( false );
+    _treeView->setEditTriggers( QAbstractItemView::NoEditTriggers );
+    _treeView->setSelectionMode( QAbstractItemView::NoSelection );
+    _treeView->setVerticalScrollMode( QAbstractItemView::ScrollPerPixel );
+    _treeView->setContextMenuPolicy( Qt::CustomContextMenu );
+
+    QHeaderView *header = new HeaderView( Qt::Horizontal );
+    _treeView->setHeader( header );
+//     header->setCascadingSectionResizes( true );
+    header->setStretchLastSection( true ); // TODO check
+    header->setResizeMode( QHeaderView::Interactive );
+    header->setSortIndicator( 2, Qt::AscendingOrder );
+    header->setContextMenuPolicy( Qt::CustomContextMenu );
+    header->setMinimumSectionSize( 20 );
+    header->setDefaultSectionSize( 60 );
+    _treeView->setItemDelegate( new PublicTransportDelegate(this) );
+
+    connect( _treeView, SIGNAL(customContextMenuRequested(const QPoint &)),
+		this, SLOT(showDepartureContextMenu(const QPoint &)) );
+    if ( KGlobalSettings::singleClick() ) {
+	connect( _treeView, SIGNAL(clicked(const QModelIndex &)),
+		    this, SLOT(doubleClickedDepartureItem(const QModelIndex &)) );
+    } else {
+	connect( _treeView, SIGNAL(doubleClicked(const QModelIndex &)),
+		    this, SLOT(doubleClickedDepartureItem(const QModelIndex &)) );
+    }
+    connect( header, SIGNAL(sectionResized(int,int,int)),
+	     this, SLOT(sectionResized(int,int,int)) );
+    connect( header, SIGNAL(sectionPressed(int)), this, SLOT(sectionPressed(int)) );
+    connect( header, SIGNAL(sectionMoved(int,int,int)),
+	     this, SLOT(sectionMoved(int,int,int)) );
+    connect( header, SIGNAL(customContextMenuRequested(const QPoint &)),
+	     this, SLOT(showHeaderContextMenu(const QPoint &)) );
+
+    _treeView->setIndentation( 20 * m_settings.sizeFactor );
+    int iconExtend = (testState(ShowingDepartureArrivalList) ? 16 : 32) * m_settings.sizeFactor; // TODO
+    _treeView->setIconSize( QSize(iconExtend, iconExtend) );
 }
 
 void PublicTransport::setHeightOfCourtesyLabel() {
@@ -1844,53 +1791,192 @@ void PublicTransport::sectionMoved( int logicalIndex, int oldVisualIndex,
     }
 }
 
+void PublicTransport::sectionResized( int logicalIndex, int /*oldSize*/, int newSize ) {
+    QHeaderView *header = static_cast<QHeaderView*>( sender() );
+    if ( header ) {
+	int visibleCount = header->count() - header->hiddenSectionCount();
+	if ( header->visualIndex(logicalIndex) == visibleCount - 1 ) {
+	    // Section on the right
+	    int size = 0;
+	    for ( int i = 0; i < header->count(); ++i ) {
+		if ( !header->isSectionHidden(i) )
+		    size += header->sectionSize( i );
+	    }
+
+	    int remainingSize = header->contentsRect().width() - size;
+	    if ( newSize > remainingSize )
+		header->resizeSection( logicalIndex, remainingSize );
+	}
+    } else
+	kDebug() << "Couldn't get the header view";
+}
+
 void PublicTransport::sectionPressed( int logicalIndex ) {
     // Don't allow moving of visual index 0
     m_treeView->nativeWidget()->header()->setMovable(
 	m_treeView->nativeWidget()->header()->visualIndex(logicalIndex) != 0 );
 }
 
-void PublicTransport::setTitleType( TitleType titleType ) {
-    QGraphicsLinearLayout *layoutMain =
-	    dynamic_cast<QGraphicsLinearLayout*>( m_mainGraphicsWidget->layout() );
-    QGraphicsGridLayout *layoutTop =
-	    dynamic_cast<QGraphicsGridLayout*>( layoutMain->itemAt(0) );
-    Q_ASSERT( layoutTop );
-    Q_ASSERT( layoutMain );
+void PublicTransport::createJourneySearchWidgets() {
+    m_btnLastJourneySearches = new Plasma::ToolButton;
+    m_btnLastJourneySearches->setIcon( KIcon("document-open-recent") );
+    m_btnLastJourneySearches->setToolTip( i18n("Use a recent journey search") );
+    m_btnLastJourneySearches->nativeWidget()->setPopupMode( QToolButton::InstantPopup );
     
-    QGraphicsWidget *w = static_cast< QGraphicsWidget* >( layoutMain->itemAt(1) );
-    if ( w ) {
-	#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-	    Global::startFadeAnimation( w, 0 );
-	#else
-	    w->hide();
-	#endif
-    }
-    
-    // Hide widgets from the old title layout
-    for ( int col = 0; col < layoutTop->columnCount(); ++col ) {
-	for ( int row = 0; row < layoutTop->rowCount(); ++row ) {
-	    QGraphicsWidget *w = static_cast< QGraphicsWidget* >( layoutTop->itemAt(row, col) );
-	    if ( w ) {
-		#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-		    Global::startFadeAnimation( w, 0 );
-		#else
-		    w->hide();
-		#endif
-	    }
-	}
-    }
-    
-    // Delete old title layout
-    layoutMain->removeItem( layoutTop );
-    delete layoutTop;
+    // This is needed, to have the popup menu drawn above other widgets
+    m_btnLastJourneySearches->setZValue( 999 );
 
+    m_journeySearch = new Plasma::LineEdit;
+    m_journeySearch->setToolTip( i18nc("This should match the localized keywords.",
+	    "Type a <b>target stop</b> or <b>journey request</b>."
+	    "<br><br> <b>Samples:</b><br>"
+	    "&nbsp;&nbsp;&bull; <i>To target in 15 mins</i><br>"
+	    "&nbsp;&nbsp;&bull; <i>From origin arriving tomorrow at 18:00</i><br>"
+	    "&nbsp;&nbsp;&bull; <i>Target at 6:00 2010-03-07</i>"/*, sColor*/) );
+    m_journeySearch->installEventFilter( this ); // Handle up/down keys (selecting stop suggestions)
+    m_journeySearch->nativeWidget()->setCompletionMode( KGlobalSettings::CompletionAuto );
+    m_journeySearch->nativeWidget()->setCompletionModeDisabled(
+	    KGlobalSettings::CompletionMan );
+    m_journeySearch->nativeWidget()->setCompletionModeDisabled(
+	    KGlobalSettings::CompletionPopup );
+    m_journeySearch->nativeWidget()->setCompletionModeDisabled(
+	    KGlobalSettings::CompletionPopupAuto );
+    m_journeySearch->nativeWidget()->setCompletionModeDisabled(
+	    KGlobalSettings::CompletionShell );
+    m_journeySearch->setEnabled( true );
+    KLineEdit *journeySearch = m_journeySearch->nativeWidget();
+    journeySearch->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
+    journeySearch->setClickMessage( i18n("Target stop name or journey request") );
+    KCompletion *completion = journeySearch->completionObject( false );
+    completion->setIgnoreCase( true );
+    m_journeySearch->setFont( m_settings.sizedFont() );
+    connect( m_journeySearch, SIGNAL(returnPressed()),
+	    this, SLOT(journeySearchInputFinished()) );
+    connect( m_journeySearch, SIGNAL(textEdited(QString)),
+	    this, SLOT(journeySearchInputEdited(QString)) );
+}
+
+QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType ) {
     // Setup new main layout
-    QGraphicsLinearLayout *layoutMainNew = new QGraphicsLinearLayout( Qt::Vertical );
+    QGraphicsLinearLayout *layoutMainNew = new QGraphicsLinearLayout( Qt::Vertical, m_mainGraphicsWidget );
     layoutMainNew->setContentsMargins( 0, 0, 0, 0 );
     layoutMainNew->setSpacing( 0 );
-    m_mainGraphicsWidget->setLayout( layoutMainNew );
-    layoutMain = NULL;
+
+    // Delete widgets of the old view
+    switch ( m_titleType ) {
+	case ShowSearchJourneyLineEdit:
+	    m_listStopsSuggestions->deleteLater();
+	    m_listStopsSuggestions = NULL;
+	    m_journeySearch->deleteLater();
+	    m_journeySearch = NULL;
+	    m_btnLastJourneySearches->deleteLater();
+	    m_btnLastJourneySearches = NULL;
+	    break;
+	    
+	case ShowSearchJourneyLineEditDisabled:
+	    m_labelJourneysNotSupported->deleteLater();
+	    m_labelJourneysNotSupported = NULL;
+	    m_journeySearch->deleteLater();
+	    m_journeySearch = NULL;
+	    m_btnLastJourneySearches->deleteLater();
+	    m_btnLastJourneySearches = NULL;
+	    break;
+
+	case ShowJourneyListTitle:
+	    m_iconClose->deleteLater();
+	    m_iconClose = NULL;
+	    m_treeViewJourney->deleteLater();
+	    m_treeViewJourney = NULL;
+	    break;
+
+	default:
+	    break;
+    }
+
+    QGraphicsWidget *widget;
+    m_treeView->setVisible( titleType == ShowDepartureArrivalListTitle );
+
+    // New type
+    QFont font = m_settings.sizedFont();
+    switch ( titleType ) {
+	case ShowDepartureArrivalListTitle:
+	    setMainIconDisplay( testState(ReceivedValidDepartureData)
+		    ? DepartureListOkIcon : DepartureListErrorIcon );
+	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
+	    m_label->setText( titleText() );
+	    m_labelInfo->setToolTip( courtesyToolTip() );
+	    m_labelInfo->setText( infoText() );
+	    widget = m_treeView;
+	    break;
+	    
+	case ShowSearchJourneyLineEdit: {
+	    setMainIconDisplay( AbortJourneySearchIcon );
+	    m_icon->setToolTip( i18n("Abort search for journeys to or from the home stop") );
+
+	    createJourneySearchWidgets();
+	    m_listStopsSuggestions = new Plasma::TreeView( /*m_graphicsWidget*/ );
+	    m_listStopsSuggestions->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
+	    m_listStopsSuggestions->nativeWidget()->setRootIsDecorated( false );
+	    m_listStopsSuggestions->nativeWidget()->setHeaderHidden( true );
+	    m_listStopsSuggestions->nativeWidget()->setAlternatingRowColors( true );
+	    m_listStopsSuggestions->nativeWidget()->setEditTriggers( QAbstractItemView::NoEditTriggers );
+	    m_listStopsSuggestions->setFont( font );
+	    
+	    connect( m_listStopsSuggestions->nativeWidget(), SIGNAL(clicked(QModelIndex)),
+		    this, SLOT(possibleStopClicked(QModelIndex)) );
+	    connect( m_listStopsSuggestions->nativeWidget(),
+		    SIGNAL(doubleClicked(QModelIndex)),
+		    this, SLOT(possibleStopDoubleClicked(QModelIndex)) );
+	    widget = m_listStopsSuggestions;
+	    break;
+	}
+	case ShowSearchJourneyLineEditDisabled:
+	    setMainIconDisplay( AbortJourneySearchIcon );
+	    m_icon->setToolTip( i18n("Abort search for journeys to or from the home stop") );
+	    
+	    createJourneySearchWidgets();
+	    m_labelJourneysNotSupported = new Plasma::Label;
+	    m_labelJourneysNotSupported->setAlignment( Qt::AlignCenter );
+	    m_labelJourneysNotSupported->setSizePolicy( QSizePolicy::Expanding,
+							QSizePolicy::Expanding, QSizePolicy::Label );
+	    m_labelJourneysNotSupported->setText( i18n("Journey searches aren't supported "
+						    "by the currently used service provider "
+						    "or it's accessor.") );
+	    m_labelJourneysNotSupported->nativeWidget()->setWordWrap( true );
+	    
+	    m_journeySearch->setEnabled( false );
+	    m_btnLastJourneySearches->setEnabled( false );
+	    widget = m_labelJourneysNotSupported;
+	    break;
+
+	case ShowJourneyListTitle: {
+	    setMainIconDisplay( testState(ReceivedValidJourneyData)
+		    ? JourneyListOkIcon : JourneyListErrorIcon );
+	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
+	    m_label->setText( m_journeyTitleText.isEmpty() ? i18n("<b>Journeys</b>") : m_journeyTitleText );
+	    
+	    int iconExtend = 32 * m_settings.sizeFactor;
+	    m_iconClose = new Plasma::IconWidget;
+	    m_iconClose->setIcon( "window-close" );
+	    m_iconClose->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
+	    m_iconClose->setMinimumSize( iconExtend, iconExtend );
+	    m_iconClose->setMaximumSize( iconExtend, iconExtend );
+	    connect( m_iconClose, SIGNAL(clicked()), this, SLOT(iconCloseClicked()) );
+	    m_iconClose->setToolTip( i18n("Show departures / arrivals") );
+	    
+	    m_treeViewJourney = new Plasma::TreeView;
+	    initTreeView( m_treeViewJourney );
+	    QTreeView *treeViewJourneys = m_treeViewJourney->nativeWidget();
+	    treeViewJourneys->setPalette( m_treeView->nativeWidget()->palette() );
+	    treeViewJourneys->header()->setPalette( m_treeView->nativeWidget()->header()->palette() );
+	    treeViewJourneys->setIconSize( QSize(32 * m_settings.sizeFactor, 32 * m_settings.sizeFactor) );
+	    treeViewJourneys->header()->resizeSection( 1, 120 );
+	    m_treeViewJourney->setModel( m_modelJourneys );
+
+	    widget = m_treeViewJourney;
+	    break;
+	}
+    }
     
     // Add new title layout
     QGraphicsLayout *layoutTopNew = createLayoutTitle( titleType );
@@ -1898,6 +1984,24 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	layoutMainNew->addItem( layoutTopNew );
 	layoutMainNew->setAlignment( layoutTopNew, Qt::AlignTop );
     }
+    layoutMainNew->addItem( widget );
+    layoutMainNew->addItem( m_labelInfo );
+    layoutMainNew->setAlignment( m_labelInfo, Qt::AlignRight | Qt::AlignVCenter );
+    return m_mainGraphicsWidget;
+}
+
+void PublicTransport::setTitleType( TitleType titleType ) {
+    // Draw old appearance to pixmap
+    QPixmap pix( m_mainGraphicsWidget->size().toSize() );
+    pix.fill( Qt::transparent );
+    QPainter p( &pix );
+    QRect sourceRect = m_mainGraphicsWidget->mapToScene( m_mainGraphicsWidget->boundingRect() ).boundingRect().toRect();
+    QRectF rect( QPointF(0, 0), m_mainGraphicsWidget->size() );
+    scene()->render( &p, rect, sourceRect );
+    p.end();
+
+//     m_mainGraphicsWidget->hide();
+    m_mainGraphicsWidget = widgetForType( titleType ); // TODO
 
     // Setup the new main layout
     switch( titleType ) {
@@ -1908,34 +2012,15 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	    m_label->setText( titleText() );
 	    m_labelInfo->setToolTip( courtesyToolTip() );
 	    m_labelInfo->setText( infoText() );
-		    
-	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-		Global::startFadeAnimation( m_icon, 1 );
-		Global::startFadeAnimation( m_label, 1 );
-		Global::startFadeAnimation( m_labelInfo, 1 );
-		Global::startFadeAnimation( m_treeView, 1 );
-	    #else
-		m_treeView->show();
-	    #endif
-	    layoutMainNew->addItem( m_treeView );
 	    break;
 
 	case ShowSearchJourneyLineEdit:
 	    setMainIconDisplay( AbortJourneySearchIcon );
 	    m_icon->setToolTip( i18n("Abort search for journeys to or from the home stop") );
-
 	    m_journeySearch->setEnabled( true );
 	    
-	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-		Global::startFadeAnimation( m_icon, 1 );
-		Global::startFadeAnimation( m_journeySearch, 1 );
-		Global::startFadeAnimation( m_listStopsSuggestions, 1 );
-		Global::startFadeAnimation( m_btnLastJourneySearches, 1 );
-	    #else
-		m_listStopsSuggestions->show();
-		m_btnLastJourneySearches->show();
-	    #endif
-	    layoutMainNew->addItem( m_listStopsSuggestions );
+	    m_journeySearch->setFocus();
+	    m_journeySearch->nativeWidget()->selectAll();
 	    break;
 	    
 	case ShowSearchJourneyLineEditDisabled:
@@ -1944,16 +2029,6 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 
 	    m_journeySearch->setEnabled( false );
 	    m_btnLastJourneySearches->setEnabled( false );
-	    
-	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-		Global::startFadeAnimation( m_icon, 1 );
-		Global::startFadeAnimation( m_btnLastJourneySearches, 1 );
-		Global::startFadeAnimation( m_labelJourneysNotSupported, 1 );
-	    #else
-		m_btnLastJourneySearches->show();
-		m_labelJourneysNotSupported->show();
-	    #endif
-	    layoutMainNew->addItem( m_labelJourneysNotSupported );
 	    break;
 
 	case ShowJourneyListTitle:
@@ -1962,28 +2037,28 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
 	    m_iconClose->setToolTip( i18n("Show departures / arrivals") );
 	    m_label->setText( i18n("<b>Journeys</b>") );
-	    
-	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-		Global::startFadeAnimation( m_label, 1 );
-		Global::startFadeAnimation( m_icon, 1 );
-		Global::startFadeAnimation( m_iconClose, 1 );
-		Global::startFadeAnimation( m_treeView, 1 );
-	    #else
-		m_treeView->show();
-	    #endif
-	    layoutMainNew->addItem( m_treeView );
 	    break;
     }
 
-    layoutMainNew->addItem( m_labelInfo );
-    layoutMainNew->setAlignment( m_labelInfo, Qt::AlignRight | Qt::AlignVCenter );
-
-    if ( titleType == ShowSearchJourneyLineEdit )
-	m_journeySearch->setFocus();
-    if ( titleType != ShowDepartureArrivalListTitle )
-	m_journeySearch->nativeWidget()->selectAll();
-
+    oldItemAnimationFinished();
+    m_oldItem = new GraphicsPixmapWidget( pix, m_graphicsWidget );
+    m_oldItem->setPos( 0, 0 );
+    m_oldItem->setZValue( 1000 );
+    Plasma::Animation *animOut = Plasma::Animator::create( Plasma::Animator::FadeAnimation );
+    animOut->setProperty( "startOpacity", 1 );
+    animOut->setProperty( "targetOpacity", 0 );
+    animOut->setTargetWidget( m_oldItem );
+    connect( animOut, SIGNAL(finished()), this, SLOT(oldItemAnimationFinished()) );
+    animOut->start( QAbstractAnimation::DeleteWhenStopped );
+    
     m_titleType = titleType;
+}
+
+void PublicTransport::oldItemAnimationFinished() {
+    if ( m_oldItem && m_oldItem->scene() )
+	m_oldItem->scene()->removeItem( m_oldItem );
+    delete m_oldItem;
+    m_oldItem = NULL;
 }
 
 void PublicTransport::recentJourneyActionTriggered( QAction* action ) {
@@ -1999,10 +2074,8 @@ void PublicTransport::recentJourneyActionTriggered( QAction* action ) {
 }
 
 void PublicTransport::unsetStates( QList< AppletState > states ) {
-    foreach( AppletState appletState, states ) {
-	if ( m_appletStates.testFlag(appletState) )
-	    m_appletStates ^= appletState;
-    }
+    foreach( AppletState appletState, states )
+	m_appletStates &= ~appletState;
 }
 
 void PublicTransport::addState( AppletState state ) {
@@ -2013,7 +2086,7 @@ void PublicTransport::addState( AppletState state ) {
 	case ShowingDepartureArrivalList:
 	    setTitleType( ShowDepartureArrivalListTitle );
 	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
-	    m_treeView->setModel( m_model );
+// 	    m_treeView->setModel( m_model );
 	    m_treeView->nativeWidget()->setIconSize(
 		    QSize(16 * m_settings.sizeFactor, 16 * m_settings.sizeFactor) );
 	    m_treeView->nativeWidget()->setColumnHidden(
@@ -2032,11 +2105,6 @@ void PublicTransport::addState( AppletState state ) {
 	case ShowingJourneyList:
 	    setTitleType( ShowJourneyListTitle );
 	    m_icon->setToolTip( i18n("Quick configuration and journey search") );
-	    m_treeView->setModel( m_modelJourneys );
-	    m_treeView->nativeWidget()->setIconSize(
-		    QSize(32 * m_settings.sizeFactor, 32 * m_settings.sizeFactor) );
-	    m_treeView->nativeWidget()->setColumnHidden(
-		m_departureViewColumns.indexOf(TargetColumn), false );
 	    setBusy( testState(WaitingForJourneyData) && m_modelJourneys->rowCount() == 0 );
 	    
 	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
@@ -2148,7 +2216,8 @@ void PublicTransport::removeState( AppletState state ) {
 
     switch ( state ) {
 	case ShowingJourneyList:
-	    setMainIconDisplay( m_appletStates.testFlag(ReceivedValidDepartureData) ? DepartureListOkIcon : DepartureListErrorIcon );
+	    setMainIconDisplay( m_appletStates.testFlag(ReceivedValidDepartureData)
+				? DepartureListOkIcon : DepartureListErrorIcon );
 	    setDepartureArrivalListType( m_settings.departureArrivalListType );
 	    break;
 
@@ -2171,7 +2240,7 @@ void PublicTransport::removeState( AppletState state ) {
 }
 
 void PublicTransport::hideHeader() {
-    QTreeView *treeView = m_treeView->nativeWidget();
+    QTreeView *treeView = m_treeViewJourney ? m_treeViewJourney->nativeWidget() : m_treeView->nativeWidget();
     treeView->header()->setVisible( false );
     
     Settings settings = m_settings;
@@ -2180,7 +2249,7 @@ void PublicTransport::hideHeader() {
 }
 
 void PublicTransport::showHeader() {
-    QTreeView *treeView = m_treeView->nativeWidget();
+    QTreeView *treeView = m_treeViewJourney ? m_treeViewJourney->nativeWidget() : m_treeView->nativeWidget();
     treeView->header()->setVisible( true );
     
     Settings settings = m_settings;
@@ -2211,13 +2280,11 @@ void PublicTransport::doubleClickedDepartureItem( const QModelIndex &modelIndex 
     else
 	firstIndex = m_modelJourneys->index( modelIndex.row(), 0, modelIndex.parent() );
 
-    QTreeView* treeView = m_treeView->nativeWidget();
+    QTreeView* treeView =  m_treeViewJourney ? m_treeViewJourney->nativeWidget() : m_treeView->nativeWidget();
     if ( treeView->isExpanded(firstIndex) )
 	treeView->collapse( firstIndex );
-    else {
-	kDebug() << "Expanding index" << firstIndex;
+    else
 	treeView->expand( firstIndex );
-    }
 }
 
 QAction* PublicTransport::updatedAction( const QString& actionName ) {
@@ -2244,7 +2311,7 @@ QAction* PublicTransport::updatedAction( const QString& actionName ) {
 	    ? i18n("Back to &Departure List")
 	    : i18n("Back to &Arrival List") );
     } else if ( actionName == "toggleExpanded" ) {
-	if ( m_treeView->nativeWidget()->isExpanded( model->index(m_clickedItemIndex.row(), 0) ) ) {
+	if ( ( m_treeViewJourney ? m_treeViewJourney : m_treeView)->nativeWidget()->isExpanded( model->index(m_clickedItemIndex.row(), 0) ) ) {
 	    a->setText( i18n("Hide Additional &Information") );
 	    a->setIcon( KIcon("arrow-up") );
 	} else {
@@ -2266,7 +2333,7 @@ QAction* PublicTransport::updatedAction( const QString& actionName ) {
 
 void PublicTransport::showHeaderContextMenu( const QPoint& position ) {
     Q_UNUSED( position );
-    QHeaderView *header = m_treeView->nativeWidget()->header();
+    QHeaderView *header = ( m_treeViewJourney ? m_treeViewJourney : m_treeView)->nativeWidget()->header();
     QList<QAction *> actions;
 
     if ( testState(ShowingDepartureArrivalList) ) {
@@ -2282,7 +2349,7 @@ void PublicTransport::showHeaderContextMenu( const QPoint& position ) {
 }
 
 void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
-    QTreeView* treeView = m_treeView->nativeWidget();
+    QTreeView* treeView =  m_treeViewJourney ? m_treeViewJourney->nativeWidget() : m_treeView->nativeWidget();
     QList<QAction *> actions;
     QAction *infoAction = NULL;
 
@@ -2532,7 +2599,7 @@ void PublicTransport::setTextColorOfHtmlItem( QStandardItem *item, const QColor 
 }
 
 void PublicTransport::appendJourney( const JourneyInfo& journeyInfo ) {
-    QHeaderView *header = m_treeView->nativeWidget()->header();
+    QHeaderView *header =  (m_treeViewJourney ? m_treeViewJourney : m_treeView)->nativeWidget()->header();
     JourneyItem *item = m_modelJourneys->addItem( journeyInfo,
 	    static_cast<Columns>(header->sortIndicatorSection()),
 	    header->sortIndicatorOrder() );
@@ -2543,13 +2610,13 @@ void PublicTransport::appendJourney( const JourneyInfo& journeyInfo ) {
 }
 
 void PublicTransport::appendDeparture( const DepartureInfo& departureInfo ) {
-    QHeaderView *header = m_treeView->nativeWidget()->header();
+    QHeaderView *header =  (m_treeViewJourney ? m_treeViewJourney : m_treeView)->nativeWidget()->header();
     DepartureItem *item = m_model->addItem( departureInfo,
 	    static_cast<Columns>(header->sortIndicatorSection()),
 	    header->sortIndicatorOrder() );
     ChildItem *routeItem = item->childByType( RouteItem );
     if ( routeItem ) 
-	m_treeView->nativeWidget()->expand( routeItem->index() );
+	(m_treeViewJourney ? m_treeViewJourney : m_treeView)->nativeWidget()->expand( routeItem->index() );
     stretchAllChildren( m_model->indexFromItem(item), m_model );
 }
 
@@ -2563,7 +2630,7 @@ void PublicTransport::fillModelJourney( const QList< JourneyInfo > &journeys ) {
 	    m_modelJourneys->updateItem( item, journeyInfo );
 	    ChildItem *routeItem = item->childByType( RouteItem );
 	    if ( routeItem )
-		m_treeView->nativeWidget()->expand( routeItem->index() );
+		m_treeViewJourney->nativeWidget()->expand( routeItem->index() );
 	    stretchAllChildren( m_modelJourneys->indexFromItem(item), m_modelJourneys );
 	}
     }
@@ -2591,11 +2658,11 @@ void PublicTransport::fillModel( const QList<DepartureInfo> &departures ) {
 }
 
 void PublicTransport::stretchAllChildren( const QModelIndex& parent,
-						   QAbstractItemModel *model ) {
+					  QAbstractItemModel *model ) {
     if ( !parent.isValid() )
 	return; // Don't stretch top level items
     for ( int row = 0; row < model->rowCount(parent); ++row ) {
-	m_treeView->nativeWidget()->setFirstColumnSpanned( row, parent, true );
+	(m_treeViewJourney ? m_treeViewJourney : m_treeView)->nativeWidget()->setFirstColumnSpanned( row, parent, true );
 	stretchAllChildren( model->index(row, 0, parent), model );
     }
 }

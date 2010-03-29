@@ -338,7 +338,7 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
 	#endif
 	{
 	    QImage shadow = pixmap.toImage();
-	    Plasma::PaintUtils::shadowBlur( shadow, 2, Qt::black );
+	    Plasma::PaintUtils::shadowBlur( shadow, 3, Qt::black );
 	    painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );
 	}
     }

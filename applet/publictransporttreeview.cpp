@@ -29,6 +29,7 @@
 #include <QPainter>
 #include <QApplication>
 #include <QScrollBar>
+#include <KColorUtils>
 
 HeaderView::HeaderView( Qt::Orientation orientation, QWidget* parent )
 	    : QHeaderView( orientation, parent ) {
@@ -65,7 +66,7 @@ void HeaderView::paintEvent( QPaintEvent* e ) {
 }
 
 void HeaderView::paintSection( QPainter* painter, const QRect& rect,
-			int logicalIndex ) const {
+			       int logicalIndex ) const {
     QString text = model()->headerData( logicalIndex, orientation() ).toString();
     painter->setPen( palette().color(QPalette::Text) );
     painter->setRenderHints( QPainter::SmoothPixmapTransform |
@@ -182,22 +183,22 @@ void TreeView::drawRowBackground( QPainter* painter,
     if ( vr.isValid() ) {
 	qreal rating = vr.toReal();
 	QColor ratingColor;
-	if ( rating >= 0 && rating <= 0.2 ) {
-	    ratingColor = KColorScheme( QPalette::Active )
-		    .background( KColorScheme::PositiveBackground ).color();
-	    ratingColor.setAlphaF( (0.2 - rating) * 5 );
-	} else if ( rating >= 0.8 && rating <= 1.0 ) {
-	    ratingColor = KColorScheme( QPalette::Active )
-		    .background( KColorScheme::NegativeBackground ).color();
-	    ratingColor.setAlphaF( (rating - 0.8) * 5 );
+	ratingColor = KColorUtils::mix( KColorScheme(QPalette::Active)
+		.background(KColorScheme::PositiveBackground).color(),
+		KColorScheme(QPalette::Active)
+		.background(KColorScheme::NegativeBackground).color(), rating );
+	if ( rating >= 0 && rating <= 0.5 ) {
+	    ratingColor.setAlphaF( (0.5 - rating) * 2 );
+	} else if ( rating >= 0.5 && rating <= 1.0 ) {
+	    ratingColor.setAlphaF( (rating - 0.5) * 2 );
 	} else
 	    return;
 
 	QLinearGradient bgGradient( 0, 0, 1, 0 );
 	bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
 	bgGradient.setColorAt( 0, Qt::transparent );
-	bgGradient.setColorAt( 0.3, ratingColor );
-	bgGradient.setColorAt( 0.7, ratingColor );
+	bgGradient.setColorAt( 0.1, ratingColor );
+	bgGradient.setColorAt( 0.9, ratingColor );
 	bgGradient.setColorAt( 1, Qt::transparent );
 	painter->fillRect( options.rect, QBrush(bgGradient) );
     }
