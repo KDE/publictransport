@@ -153,6 +153,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	
 	void journeySearchInputFinished();
 	void journeySearchInputEdited( const QString &newText );
+	void possibleStopItemActivated( const QModelIndex &modelIndex );
 	void possibleStopClicked( const QModelIndex &modelIndex );
 	void possibleStopDoubleClicked( const QModelIndex &modelIndex );
 
@@ -319,11 +320,6 @@ class PublicTransport : public Plasma::PopupApplet {
 	* @param states A list of states to unset. */
 	virtual void unsetStates( QList<AppletState> states );
 
-	/** Gets the name of a column, to be displayed in the column's header. */
-	QString nameForTimetableColumn( TimetableColumn timetableColumn,
-					DepartureArrivalListType departureArrivalListType
-					= _UseCurrentDepartureArrivalListType );
-
     private:
 	enum MessageType {
 	    MessageNone = 0,
@@ -349,6 +345,12 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** List of current departures / arrivals for the selected stop(s). */
 	QList<DepartureInfo> departureInfos() const;
 	QString stripDateAndTimeValues( const QString &sourceName ) const;
+
+	void maybeAddAllKeywordAddRemoveitems( QStandardItemModel *model = 0 );
+	void maybeAddKeywordAddRemoveItems( QStandardItemModel *model,
+		const QStringList &words, const QStringList &keywords,
+		const QString &type, const QStringList &descriptions,
+		const QStringList &extraRegExps = QStringList() );
 	
 	/** Sets values of the current plasma theme. */
 	void useCurrentPlasmaTheme();
@@ -413,9 +415,9 @@ class PublicTransport : public Plasma::PopupApplet {
 	QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in the tree view for the context menu actions */
 
 	QActionGroup *m_filtersGroup;
-	
+/*	
 	QList<TimetableColumn> m_departureViewColumns;
-	QList<TimetableColumn> m_journeyViewColumns;
+	QList<TimetableColumn> m_journeyViewColumns;*/
 
 	MessageType m_currentMessage;
 	DepartureProcessor *m_departureProcessor;

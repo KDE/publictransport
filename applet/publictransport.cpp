@@ -80,6 +80,7 @@
 #include "departuremodel.h"
 #include "overlaywidget.h"
 #include "journeysearchparser.h"
+#include "journeysearchlineedit.h"
 
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	    : Plasma::PopupApplet(parent, args),
@@ -89,9 +90,6 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	    m_btnStartJourneySearch(0),
 	    m_overlay(0), m_model(0), m_modelJourneys(0), m_departureProcessor(0) {
     m_currentMessage = MessageNone;
-    m_departureViewColumns << LineStringColumn << TargetColumn << DepartureColumn;
-    m_journeyViewColumns << VehicleTypeListColumn << JourneyInfoColumn
-			 << DepartureColumn << ArrivalColumn;
 
     m_journeySearchLastTextLength = 0;
     setBackgroundHints( StandardBackground ); //TranslucentBackground );
@@ -799,62 +797,125 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
 	// Add journey search string additions
 	if ( !m_journeySearch->text().isEmpty() ) {
 	    QStringList words = JourneySearchParser::notDoubleQuotedWords( m_journeySearch->text() );
-	    QStringList additionalKeywordsAtEnd;
-	    QString timeKeywordIn = JourneySearchParser::timeKeywordsIn().first();
-	    QString timeKeywordAt = JourneySearchParser::timeKeywordsAt().first();
-	    additionalKeywordsAtEnd << JourneySearchParser::arrivalKeywords().first();
-	    additionalKeywordsAtEnd << JourneySearchParser::departureKeywords().first();
-	    additionalKeywordsAtEnd << timeKeywordAt;
-	    additionalKeywordsAtEnd << timeKeywordIn;
-	    foreach( const QString &additional, additionalKeywordsAtEnd ) {
-		if ( words.contains(additional, Qt::CaseInsensitive) ) {
-		    QStandardItem *item = new QStandardItem( KIcon("list-remove"),
-					i18n("<b>Remove Keyword:</b> %1", additional) );
-		    item->setData( "additionalKeywordAtEndRemove", Qt::UserRole + 1 );
-		    item->setData( additional, Qt::UserRole + 2 );
-		    if ( additional == timeKeywordIn ) {
-			QString extraRegExp = JourneySearchParser::relativeTimeString();
-			extraRegExp = extraRegExp.replace( QRegExp("\\d{1,}"), "\\d{1,}" );
-			item->setData( extraRegExp, Qt::UserRole + 3 );
-		    } else if ( additional == timeKeywordAt ) {
-			QString extraRegExp = "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))";
-			extraRegExp = QString( "%1(, %1)?" ).arg( extraRegExp );
-			item->setData( extraRegExp, Qt::UserRole + 3 );
-		    }
-		    model->appendRow( item );
-		} else {
-		    QStandardItem *item = new QStandardItem( KIcon("list-add"),
-					i18n("<b>Add Keyword:</b> %1", additional) );
-		    item->setData( "additionalKeywordAtEnd", Qt::UserRole + 1 );
-		    item->setData( additional, Qt::UserRole + 2 );
-		    model->appendRow( item );
-		}
-	    }
+	    const QString timeKeywordIn = JourneySearchParser::timeKeywordsIn().first();
+	    const QString timeKeywordAt = JourneySearchParser::timeKeywordsAt().first();
+	    const QString arrivalKeyword = JourneySearchParser::arrivalKeywords().first();
+	    const QString departureKeyword = JourneySearchParser::departureKeywords().first();
+	    const QString toKeyword = JourneySearchParser::toKeywords().first();
+	    const QString fromKeyword = JourneySearchParser::fromKeywords().first();
 	    
-	    QStringList additionalKeywordsAtBegin;
-	    additionalKeywordsAtBegin << JourneySearchParser::toKeywords().first();
-	    additionalKeywordsAtBegin << JourneySearchParser::fromKeywords().first();
-	    foreach( const QString &additional, additionalKeywordsAtBegin ) {
-		if ( words.contains(additional, Qt::CaseInsensitive) ) {
-		    QStandardItem *item = new QStandardItem( KIcon("list-remove"),
-					i18n("<b>Remove Keyword:</b> %1", additional) );
-		    item->setData( "additionalKeywordAtBeginRemove", Qt::UserRole + 1 );
-		    item->setData( additional, Qt::UserRole + 2 );
-		    model->appendRow( item );
-		} else {
-		    QStandardItem *item = new QStandardItem( KIcon("list-add"),
-					i18n("<b>Add Keyword:</b> %1", additional) );
-		    item->setData( "additionalKeywordAtBegin", Qt::UserRole + 1 );
-		    item->setData( additional, Qt::UserRole + 2 );
-		    model->appendRow( item );
-		}
-	    }
+	    maybeAddKeywordAddRemoveItems( model, words,
+		    QStringList() << timeKeywordAt << timeKeywordIn,
+		    "additionalKeywordAtEnd",
+		    QStringList() << i18n("Specify the departure/arrival time, eg. \"%1 12:00, 20.04.2010\"", timeKeywordAt)
+			<< i18n("Specify the departure/arrival time, eg. \"%1 %2\"", timeKeywordIn, JourneySearchParser::relativeTimeString()),
+		    QStringList() << "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))"
+			<< JourneySearchParser::relativeTimeString("\\d{1,}") );
+	    maybeAddKeywordAddRemoveItems( model, words,
+		    QStringList() << arrivalKeyword << departureKeyword,
+		    "additionalKeywordAlmostAtEnd",
+		    QStringList() << i18n("Get journeys departing at the given date/time")
+			<< i18n("Get journeys arriving at the given date/time") );
+	    maybeAddKeywordAddRemoveItems( model, words,
+		    QStringList() << toKeyword << fromKeyword,
+		    "additionalKeywordAtBegin",
+		    QStringList() << i18n("Get journeys to the given stop")
+			<< i18n("Get journeys from the given stop") );
 	}
     } else if ( data["parseMode"].toString() == "departures" && m_currentMessage == MessageNone ) {
 	m_stopNameValid = false;
 	addState( ReceivedErroneousDepartureData );
 	clearDepartures();
 	setConfigurationRequired( true, i18n("The stop name is ambiguous.") );
+    }
+}
+
+void PublicTransport::maybeAddAllKeywordAddRemoveitems( QStandardItemModel* model ) {
+    if ( !model && !(model = qobject_cast<QStandardItemModel*>(m_listStopSuggestions->model())) )
+	return;
+    
+    if ( !m_journeySearch->text().isEmpty() ) {
+	QStringList words = JourneySearchParser::notDoubleQuotedWords( m_journeySearch->text() );
+	QString timeKeywordIn, timeKeywordAt, arrivalKeyword, departureKeyword,
+		toKeyword, fromKeyword;
+
+	// Use the first keyword of each type for keyword suggestions
+	if ( !JourneySearchParser::timeKeywordsIn().isEmpty() )
+	    timeKeywordIn = JourneySearchParser::timeKeywordsIn().first();
+	if ( !JourneySearchParser::timeKeywordsAt().isEmpty() )
+	    timeKeywordAt = JourneySearchParser::timeKeywordsAt().first();
+	if ( !JourneySearchParser::arrivalKeywords().isEmpty() )
+	    arrivalKeyword = JourneySearchParser::arrivalKeywords().first();
+	if ( !JourneySearchParser::departureKeywords().isEmpty() )
+	    departureKeyword = JourneySearchParser::departureKeywords().first();
+	if ( !JourneySearchParser::toKeywords().isEmpty() )
+	    toKeyword = JourneySearchParser::toKeywords().first();
+	if ( !JourneySearchParser::fromKeywords().isEmpty() )
+	    fromKeyword = JourneySearchParser::fromKeywords().first();
+
+	// Add keyword suggestions, ie. keyword add/remove items
+	maybeAddKeywordAddRemoveItems( model, words,
+		QStringList() << timeKeywordAt << timeKeywordIn,
+		"additionalKeywordAtEnd",
+		QStringList() << i18n("Specify the departure/arrival time, eg. "
+				      "\"%1 12:00, 20.04.2010\"", timeKeywordAt)
+		    << i18n("Specify the departure/arrival time, eg. \"%1 %2\"",
+			    timeKeywordIn, JourneySearchParser::relativeTimeString()),
+		QStringList() << "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))"
+		    << JourneySearchParser::relativeTimeString("\\d{1,}") );
+	maybeAddKeywordAddRemoveItems( model, words,
+		QStringList() << arrivalKeyword << departureKeyword,
+		"additionalKeywordAtEnd",
+		QStringList() << i18n("Get journeys departing at the given date/time")
+		    << i18n("Get journeys arriving at the given date/time") );
+	maybeAddKeywordAddRemoveItems( model, words,
+		QStringList() << toKeyword << fromKeyword,
+		"additionalKeywordAtBegin",
+		QStringList() << i18n("Get journeys to the given stop")
+		    << i18n("Get journeys from the given stop") );
+    }
+
+}
+
+void PublicTransport::maybeAddKeywordAddRemoveItems( QStandardItemModel* model,
+			const QStringList &words, const QStringList &keywords,
+			const QString &type, const QStringList &descriptions,
+			const QStringList &extraRegExps ) {
+    bool added = false;
+    QList<QStandardItem*> addItems;
+    for ( int i = 0; i < keywords.count(); ++i ) {
+	const QString keyword = keywords.at( i );
+	QString description = descriptions.at( i );
+	QString extraRegExp;
+	if ( i < extraRegExps.count() )
+	    extraRegExp = extraRegExps.at( i );
+	
+	QStandardItem *item;
+	QColor keywordColor = KColorScheme( QPalette::Active )
+		.foreground( KColorScheme::PositiveText ).color();
+	if ( words.contains(keyword, Qt::CaseInsensitive) ) {
+	    item = new QStandardItem( KIcon("list-remove"),
+		    i18n("<b>Remove Keyword:</b> <span style='color=%3;'>%1</span><br>&nbsp;&nbsp;%2",
+			 keyword, description, keywordColor.name()) );
+	    item->setData( type + "Remove", Qt::UserRole + 1 );
+	    if ( !extraRegExp.isNull() )
+		item->setData( extraRegExp, Qt::UserRole + 3 );
+	    model->appendRow( item );
+	    added = true;
+	} else {
+	    item = new QStandardItem( KIcon("list-add"),
+		    i18n("<b>Add Keyword:</b> <span style='color=%3;'>%1</span><br>&nbsp;&nbsp;%2",
+			 keyword, description, keywordColor.name()) );
+	    item->setData( type, Qt::UserRole + 1 );
+	    addItems << item;
+	}
+	item->setData( keyword, Qt::UserRole + 2 );
+	item->setData( 2, LinesPerRowRole );
+    }
+
+    if ( !added ) {
+	foreach ( QStandardItem *item, addItems )
+	    model->appendRow( item );
     }
 }
 
@@ -952,6 +1013,10 @@ void PublicTransport::createPopupIcon() {
 }
 
 void PublicTransport::createTooltip() {
+    if ( isPopupShowing() || (formFactor() != Plasma::Horizontal
+			    && formFactor() != Plasma::Vertical) )
+	return;
+    
     DepartureInfo nextDeparture;
     Plasma::ToolTipContent data;
     data.setMainText( i18n("Public transport") );
@@ -1003,10 +1068,8 @@ void PublicTransport::configChanged() {
     setDepartureArrivalListType( m_settings.departureArrivalListType );
     m_treeView->nativeWidget()->header()->setVisible( m_settings.showHeader );
     
-    if ( testState(ShowingDepartureArrivalList) ) {
-	m_treeView->nativeWidget()->setColumnHidden(
-	    m_departureViewColumns.indexOf(TargetColumn), m_settings.hideColumnTarget );
-    }
+    if ( testState(ShowingDepartureArrivalList) )
+	m_treeView->nativeWidget()->setColumnHidden( ColumnTarget, m_settings.hideColumnTarget );
     
     QFont font = m_settings.sizedFont();
 //     QFont font = m_settings.font;
@@ -1460,9 +1523,10 @@ void PublicTransport::journeySearchInputEdited( const QString &newText ) {
 			0, 0, m_lettersAddedToJourneySearchLine );
     m_journeySearchLastTextLength = m_journeySearch->text().length()
 	    - m_journeySearch->nativeWidget()->selectedText().length();
-	    
+
     reconnectJourneySource( stop, departure, stopIsTarget, timeIsDeparture, true );
 
+    // Disable start search button if the journey search line is empty
     m_btnStartJourneySearch->setEnabled( !m_journeySearch->text().isEmpty() );
 }
 
@@ -1499,20 +1563,41 @@ QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
     return layoutTop;
 }
 
+void PublicTransport::possibleStopItemActivated( const QModelIndex& modelIndex ) {
+    if ( !modelIndex.data(Qt::UserRole + 1).isValid() )
+	possibleStopClicked( modelIndex );
+}
+
 void PublicTransport::possibleStopClicked( const QModelIndex &modelIndex ) {
-    if ( modelIndex.data(Qt::UserRole + 1).toString() == "recent" ) {
+    QString type = modelIndex.data( Qt::UserRole + 1 ).toString();
+    if ( type == "recent" ) {
 	m_journeySearch->setText( modelIndex.data(Qt::UserRole + 2).toString() );
     } else if ( modelIndex.data(Qt::UserRole + 1).toString() == "additionalKeywordAtEnd" ) {
 	m_journeySearch->setText( m_journeySearch->text() + " " +
 				  modelIndex.data(Qt::UserRole + 2).toString() );
 	m_listStopSuggestions->model()->removeRow( modelIndex.row() );
 	journeySearchInputEdited( m_journeySearch->text() ); // for autocompletion / to add a remove keyword item
-    } else if ( modelIndex.data(Qt::UserRole + 1).toString() == "additionalKeywordAtBegin" ) {
+    } else if ( type == "additionalKeywordAlmostAtEnd" ) {
+	int posStart, len;
+	JourneySearchParser::stopNamePosition( m_journeySearch->nativeWidget(),
+					       &posStart, &len );
+	if ( posStart != -1 ) {
+	    m_journeySearch->setText( m_journeySearch->text().insert(posStart + len,
+		    " " + modelIndex.data(Qt::UserRole + 2).toString()) );
+	} else {
+	    m_journeySearch->setText( m_journeySearch->text() + " " +
+		    modelIndex.data(Qt::UserRole + 2).toString() );
+	}
+	m_listStopSuggestions->model()->removeRow( modelIndex.row() );
+	journeySearchInputEdited( m_journeySearch->text() ); // for autocompletion / add a remove keyword item
+    } else if ( type == "additionalKeywordAtBegin" ) {
 	m_journeySearch->setText( modelIndex.data(Qt::UserRole + 2).toString() +
 				  " " + m_journeySearch->text() );
 	m_listStopSuggestions->model()->removeRow( modelIndex.row() );
 	journeySearchInputEdited( m_journeySearch->text() ); // to add a remove keyword item
-    } else if ( modelIndex.data(Qt::UserRole + 1).toString() == "additionalKeywordAtEndRemove" ) {
+    } else if ( type == "additionalKeywordAtEndRemove"
+	     || type == "additionalKeywordAlmostAtEndRemove" )
+    {
 	QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
 	QString pattern;
 	if ( modelIndex.data(Qt::UserRole + 3).isValid() ) {
@@ -1530,7 +1615,7 @@ void PublicTransport::possibleStopClicked( const QModelIndex &modelIndex ) {
 	    m_listStopSuggestions->model()->removeRow( modelIndex.row() );
 	    journeySearchInputEdited( m_journeySearch->text() ); // for autocompletion
 	}
-    } else if ( modelIndex.data(Qt::UserRole + 1).toString() == "additionalKeywordAtBeginRemove" ) {
+    } else if ( type == "additionalKeywordAtBeginRemove" ) {
 	QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
 	m_journeySearch->setText( m_journeySearch->text().trimmed().remove(
 		QRegExp(QString("^%1\\s").arg(keyword), Qt::CaseInsensitive)) );
@@ -1547,7 +1632,9 @@ void PublicTransport::possibleStopClicked( const QModelIndex &modelIndex ) {
 	} else {
 	    m_journeySearch->setText( m_journeySearch->text().replace(
 		    posStart, len, quotedStop) );
+	    m_journeySearch->nativeWidget()->setCursorPosition( posStart + quotedStop.length() );
 	}
+	journeySearchInputEdited( m_journeySearch->text() ); // for autocompletion
     }
     m_journeySearch->setFocus();
 }
@@ -1644,7 +1731,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	    if ( !headerState.isNull() )
 		header->restoreState( headerState );
 	} else {
-	    header->resizeSection( m_departureViewColumns.indexOf(LineStringColumn), 60 );
+	    header->resizeSection( ColumnLineString, 60 );
 	}
 	header->setMovable( true );
 
@@ -1754,7 +1841,7 @@ bool PublicTransport::eventFilter( QObject *watched, QEvent *event ) {
 		    if ( !curIndex.isValid() ) {
 			curIndex = m_listStopSuggestions->nativeWidget()->model()->index( 0, 0 );
 			m_listStopSuggestions->nativeWidget()->setCurrentIndex( curIndex );
-			possibleStopClicked( curIndex );
+			possibleStopItemActivated( curIndex );
 			return true;
 		    } else {
 			row = curIndex.row();
@@ -1762,7 +1849,7 @@ bool PublicTransport::eventFilter( QObject *watched, QEvent *event ) {
 			    m_listStopSuggestions->nativeWidget()->setCurrentIndex(
 				    m_listStopSuggestions->model()->index(row - 1,
 				    curIndex.column(), curIndex.parent()) );
-			    possibleStopClicked( m_listStopSuggestions->nativeWidget()->currentIndex() );
+			    possibleStopItemActivated( m_listStopSuggestions->nativeWidget()->currentIndex() );
 			    return true;
 			} else
 			    return false;
@@ -1771,7 +1858,7 @@ bool PublicTransport::eventFilter( QObject *watched, QEvent *event ) {
 		    if ( !curIndex.isValid() ) {
 			curIndex = m_listStopSuggestions->nativeWidget()->model()->index( 0, 0 );
 			m_listStopSuggestions->nativeWidget()->setCurrentIndex( curIndex );
-			possibleStopClicked( curIndex );
+			possibleStopItemActivated( curIndex );
 			return true;
 		    } else {
 			row = curIndex.row();
@@ -1779,7 +1866,7 @@ bool PublicTransport::eventFilter( QObject *watched, QEvent *event ) {
 			    m_listStopSuggestions->nativeWidget()->setCurrentIndex(
 				    m_listStopSuggestions->model()->index(row + 1,
 				    curIndex.column(), curIndex.parent()) );
-			    possibleStopClicked( m_listStopSuggestions->nativeWidget()->currentIndex() );
+			    possibleStopItemActivated( m_listStopSuggestions->nativeWidget()->currentIndex() );
 			    return true;
 			} else
 			    return false;
@@ -1837,36 +1924,6 @@ void PublicTransport::writeSettings( const Settings& settings ) {
 	}
     } else
 	kDebug() << "No changes made in the settings";
-}
-
-// TODO: This is now only used for the journey model, which is still a QStandardItemModel
-QString PublicTransport::nameForTimetableColumn( TimetableColumn timetableColumn,
-						 DepartureArrivalListType departureArrivalListType ) {
-    if ( departureArrivalListType == _UseCurrentDepartureArrivalListType )
-	departureArrivalListType = m_settings.departureArrivalListType;
-
-    switch( timetableColumn ) {
-	case LineStringColumn:
-	    return i18nc("A tramline or busline", "Line");
-	case TargetColumn:
-	    if ( !testState(ShowingDepartureArrivalList) || departureArrivalListType == DepartureList )
-		return i18nc("Target of a tramline or busline", "Target");
-	    else // if ( departureArrivalListType == ArrivalList )
-		return i18nc("Origin of a tramline or busline", "Origin");
-	case DepartureColumn:
-	    if ( !testState(ShowingDepartureArrivalList) || departureArrivalListType == DepartureList )
-		return i18nc("Time of departure of a tram or bus", "Departure");
-	    else
-		return i18nc("Time of arrival of a tram or bus", "Arrival");
-	case ArrivalColumn:
-	    return i18nc("Time of arrival of a tram or bus", "Arrival");
-	case JourneyInfoColumn:
-	    return i18nc("Information about a journey with public transport", "Information");
-	case VehicleTypeListColumn:
-	    return i18nc("Vehicle types used in a journey with public transport", "Vehicle types");
-    }
-
-    return QString();
 }
 
 void PublicTransport::setDepartureArrivalListType(
@@ -1928,6 +1985,7 @@ void PublicTransport::createJourneySearchWidgets() {
 	     this, SLOT(journeySearchInputFinished()) );
 
     m_journeySearch = new Plasma::LineEdit;
+    m_journeySearch->setNativeWidget( new JourneySearchLineEdit );
     m_journeySearch->setToolTip( i18nc("This should match the localized keywords.",
 	    "Type a <b>target stop</b> or <b>journey request</b>."
 	    "<br><br> <b>Samples:</b><br>"
@@ -1966,6 +2024,10 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType ) {
 
     // Delete widgets of the old view
     switch ( m_titleType ) {
+	case ShowDepartureArrivalListTitle:
+	    m_label->hide();
+	    break;
+	
 	case ShowSearchJourneyLineEdit:
 	    m_listStopSuggestions->deleteLater();
 	    m_listStopSuggestions = NULL;
@@ -2007,6 +2069,7 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType ) {
 		    ? DepartureListOkIcon : DepartureListErrorIcon );
 	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
 	    m_label->setText( titleText() );
+	    m_label->show();
 	    m_labelInfo->setToolTip( courtesyToolTip() );
 	    m_labelInfo->setText( infoText() );
 	    widget = m_treeView;
@@ -2211,8 +2274,7 @@ void PublicTransport::addState( AppletState state ) {
 // 	    m_treeView->setModel( m_model );
 	    m_treeView->nativeWidget()->setIconSize(
 		    QSize(16 * m_settings.sizeFactor, 16 * m_settings.sizeFactor) );
-	    m_treeView->nativeWidget()->setColumnHidden(
-		m_departureViewColumns.indexOf(TargetColumn), m_settings.hideColumnTarget );
+	    m_treeView->nativeWidget()->setColumnHidden( ColumnTarget, m_settings.hideColumnTarget );
 	    geometryChanged(); // TODO: Only resize columns
 	    setBusy( testState(WaitingForDepartureData) && m_model->rowCount() == 0 );
 	    disconnectJourneySource();
@@ -2516,7 +2578,7 @@ void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
 	if ( !treeView->header()->isVisible() ) {
 	    actions.append( updatedAction("separator") );
 	    actions.append( action("showHeader") );
-	} else if ( treeView->header()->isSectionHidden(m_departureViewColumns.indexOf(TargetColumn)) ) {
+	} else if ( treeView->header()->isSectionHidden(ColumnTarget) ) {
 	    if ( testState(ShowingDepartureArrivalList) ) {
 		actions.append( updatedAction("separator") );
 		actions.append( action("showColumnTarget") );

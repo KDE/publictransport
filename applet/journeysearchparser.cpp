@@ -74,12 +74,12 @@ const QStringList JourneySearchParser::timeKeywordsTomorrow() {
 	    "each meaning.", "tomorrow").split(',', QString::SkipEmptyParts);
 }
 
-const QString JourneySearchParser::relativeTimeString() {
+const QString JourneySearchParser::relativeTimeString( const QVariant &value ) {
     return i18nc("The automatically added relative time string, when the journey "
 	    "search line ends with the keyword 'in'. This should be match by the "
 	    "regular expression for a relative time, like '(in) 5 minutes'. That "
 	    "regexp and the keyword ('in') are also localizable. Don't include "
-	    "the 'in' here.", "%1 minutes", 5);
+	    "the 'in' here.", "%1 minutes", value.toString());
 }
 
 bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
@@ -351,14 +351,16 @@ bool JourneySearchParser::searchForJourneySearchKeywords( const QString& journey
 	
 	// If the tomorrow keyword is found, set date to tomorrow
 	QStringList wordsStop = journeySearch.split( ' ', QString::SkipEmptyParts );
+	if ( wordsStop.isEmpty() )
+	    continue;
 	QString lastWordInStop = wordsStop.last();
-	if ( !lastWordInStop.isEmpty() && timeKeywordsTomorrow.contains(lastWordInStop,
-	    Qt::CaseInsensitive) ) {
+	if ( !lastWordInStop.isEmpty() && timeKeywordsTomorrow.contains(
+		    lastWordInStop, Qt::CaseInsensitive) ) {
 	    *stop = stop->left( stop->length() - lastWordInStop.length() ).trimmed();
-	*date = QDate::currentDate().addDays( 1 );
-	
-	found = continueSearch = true;
-	lastWordInStop = wordsStop.count() >= 2 ? wordsStop[ wordsStop.count() - 2 ] : "";
+	    *date = QDate::currentDate().addDays( 1 );
+
+	    found = continueSearch = true;
+	    lastWordInStop = wordsStop.count() >= 2 ? wordsStop[ wordsStop.count() - 2 ] : "";
 	}
 	
 	// Search for departure / arrival keywords

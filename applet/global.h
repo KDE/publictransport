@@ -77,16 +77,6 @@ struct StopSettings {
 };
 typedef QList<StopSettings> StopSettingsList;
 
-/** Columns of the tree view containing the timetable information */
-enum TimetableColumn {
-    LineStringColumn, /**< Column containing line strings and vehicle type icons */
-    TargetColumn, /**< Column containing targets / origins and an info icon for departures / arrivals with journey news */
-    DepartureColumn, /**< Column containing departure / arrival times, remaining minutes and delays */
-    ArrivalColumn, /**< Column containing arrival times for journeys to or from the home stop */
-    JourneyInfoColumn, /**< Column containing additional information for journeys to or from the home stop */
-    VehicleTypeListColumn /**< Column containing icons of the used vehicle types for journeys */
-};
-
 /** Icons to be displayed by the Plasma::IconWidget in the applet's top left corner. */
 enum MainIconDisplay {
     DepartureListErrorIcon,

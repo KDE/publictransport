@@ -132,13 +132,6 @@ class SettingsUiManager : public QObject {
 
 	void initModels(); // init m_modelServiceProvider and m_modelLocations
 
-	static QString showStringInputBox( const QString &label = QString(),
-					   const QString &initialText = QString(),
-					   const QString &clickMessage = QString(),
-					   const QString &title = QString(),
-					   QValidator *validator = 0,
-					   QWidget *parent = 0 );
-
     private:
 	FilterSettings currentFilterSettings() const;
 	AlarmSettings currentAlarmSettings( const QString &name = QString() ) const;

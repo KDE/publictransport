@@ -228,7 +228,7 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
 
     document.setHtml( sText );
     document.setDocumentMargin( 0 );
-    document.setDocumentLayout( 0 ); // This is to prevent a memory leak in setHtml()
+    document.setDocumentLayout( 0 ); // This is to prevent a memory leak in setHtml(), which maybe isn't one...
     document.documentLayout();
 
     // Right-aligned text would be aligned far too far on the right

@@ -18,6 +18,7 @@ set( publictransport_SRCS
     departureprocessor.cpp
     departuremodel.cpp
     journeysearchparser.cpp
+    journeysearchlineedit.cpp
     overlaywidget.cpp
     global.cpp
     settings.cpp

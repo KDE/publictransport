@@ -51,6 +51,7 @@
 #include "stopwidget.h"
 #include "departuremodel.h"
 // #include "datasourcetester.h"
+#include <KInputDialog>
 
 SettingsUiManager::SettingsUiManager( const Settings &settings,
 	    Plasma::DataEngine* publicTransportEngine, Plasma::DataEngine* osmEngine,
@@ -849,40 +850,6 @@ QString SettingsUiManager::untranslateKey( const QString& translatedKey ) {
 	return translatedKey;
 }
 
-QString SettingsUiManager::showStringInputBox( const QString& labelString,
-			const QString& initialText, const QString& clickMessage,
-			const QString& title, QValidator* validator, QWidget *parent ) {
-    KDialog *dialog = new KDialog( parent );
-    dialog->setButtons( KDialog::Ok | KDialog::Cancel );
-    dialog->setWindowTitle( title );
-    
-    QWidget *w = new QWidget;
-    QVBoxLayout *layout = new QVBoxLayout;
-    QLabel *label = new QLabel( labelString );
-    label->setAlignment( Qt::AlignRight );
-    KLineEdit *input = new KLineEdit( initialText );
-    input->setClearButtonShown( true );
-    input->setClickMessage( clickMessage );
-    validator->setParent( input );
-    input->setValidator( validator );
-    
-    layout->addWidget( label );
-    layout->addWidget( input );
-    w->setLayout( layout );
-    dialog->setMainWidget( w );
-    
-    input->setFocus();
-    if ( dialog->exec() == KDialog::Rejected ) {
-	delete dialog;
-	return QString();
-    }
-    
-    QString text = input->text();
-    delete dialog;
-    
-    return text;
-}
-
 Settings SettingsUiManager::settings() {
     Settings ret;
 
@@ -1038,11 +1005,12 @@ void SettingsUiManager::removeFilterConfiguration() {
 
 void SettingsUiManager::renameFilterConfiguration() {
     QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
-    QString newFilterConfig = showStringInputBox(
-	    i18n("New Name of the Filter Configuration:"),
-	    trFilterConfiguration, i18nc("This is a clickMessage for the line edit "
-	    "in the rename filter config dialog", "Type the new name"),
-	    i18n("Choose a Name"), new QRegExpValidator(QRegExp("[^\\*]*"), this) );
+    bool ok;
+    QString newFilterConfig = KInputDialog::getText( i18n("Choose a Name"),
+	    i18n("New Name of the Filter Configuration:"), trFilterConfiguration,
+	    &ok, m_configDialog, new QRegExpValidator(QRegExp("[^\\*]*"), this) );
+// 	    i18nc("This is a clickMessage for the line edit "
+// 	    "in the rename filter config dialog", "Type the new name")
     if ( newFilterConfig.isNull() )
 	return; // Canceled
 
