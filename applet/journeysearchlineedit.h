@@ -42,13 +42,15 @@ class JourneySearchHighlighter : public QSyntaxHighlighter {
 	QTextCharFormat &formatError() { return m_formatError; };
 	
     protected:
-	void highlightKeywords( const QString &text, const QStringList &keywords,
-				const QTextCharFormat &format,
-				int maxAllowedOccurances = -1, int needsToStartAt = -1 );
-	void highlightCombinations( const QString &text, const QStringList &keywords,
-				    const QStringList &keywordValues,
-				    const QTextCharFormat &format,
-				    int maxAllowedOccurances = -1, int needsToStartAt = -1 );
+	/** @return The number of matched keywords. */
+	int highlightKeywords( const QString &text, const QStringList &keywords,
+			       const QTextCharFormat &format,
+			       int maxAllowedOccurances = -1, int needsToStartAt = -1 );
+	/** @return The number of matched keyword value combinations. */
+	int highlightCombinations( const QString &text, const QStringList &keywords,
+				   const QStringList &keywordValues,
+				   const QTextCharFormat &format,
+				   int maxAllowedOccurances = -1, int needsToStartAt = -1 );
 	
 	virtual void highlightBlock( const QString& text );
 

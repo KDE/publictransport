@@ -346,7 +346,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	QList<DepartureInfo> departureInfos() const;
 	QString stripDateAndTimeValues( const QString &sourceName ) const;
 
-	void maybeAddAllKeywordAddRemoveitems( QStandardItemModel *model = 0 );
+	void maybeAddAllKeywordAddRemoveitems( bool clearFirst = false,
+					       QStandardItemModel *model = 0 );
 	void maybeAddKeywordAddRemoveItems( QStandardItemModel *model,
 		const QStringList &words, const QStringList &keywords,
 		const QString &type, const QStringList &descriptions,

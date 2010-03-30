@@ -39,7 +39,7 @@ JourneySearchHighlighter::JourneySearchHighlighter( QTextDocument* parent )
     m_formatError.setForeground( Qt::red );
 }
 
-void JourneySearchHighlighter::highlightKeywords( const QString& text,
+int JourneySearchHighlighter::highlightKeywords( const QString& text,
 		    const QStringList& keywords, const QTextCharFormat& format,
 		    int maxAllowedOccurances, int needsToStartAt ) {
     QTextCharFormat curFormat = format, curKeywordFormat = m_formatKeyword;
@@ -47,7 +47,9 @@ void JourneySearchHighlighter::highlightKeywords( const QString& text,
     int index = text.indexOf( expression );
     int count = 0;
     while ( index >= 0 ) {
-        if ( needsToStartAt != -1 && index != needsToStartAt ) {
+        if ( (needsToStartAt != -1 && index != needsToStartAt)
+	    || count == maxAllowedOccurances )
+	{
 	    // The keyword doesn't start at needsToStartAt, if given
 	    curFormat = m_formatError;
 	    curKeywordFormat = m_formatError;
@@ -62,25 +64,24 @@ void JourneySearchHighlighter::highlightKeywords( const QString& text,
 
 	// Get next keyword
 	index = text.indexOf( expression, index + expression.matchedLength() );
-
         ++count;
-        if ( count == maxAllowedOccurances ) {
-	    // Max occurance count of keywords reached
-            curFormat = m_formatError;
-            curKeywordFormat = m_formatError;
-	}
     }
+
+    return count;
 }
 
-void JourneySearchHighlighter::highlightCombinations( const QString& text,
+int JourneySearchHighlighter::highlightCombinations( const QString& text,
 		const QStringList& keywords, const QStringList& keywordValues,
 		const QTextCharFormat& format, int maxAllowedOccurances, int needsToStartAt ) {
+    int count = 0;
     foreach ( const QString &keyword, keywords ) {
         foreach ( const QString &value, keywordValues ) {
             QString str = QString("(%1) (%2)").arg(keyword).arg(value);
-            highlightKeywords( text, QStringList() << str, format, maxAllowedOccurances, needsToStartAt );
+            count += highlightKeywords( text, QStringList() << str, format,
+					maxAllowedOccurances, needsToStartAt );
         }
     }
+    return count;
 }
 
 void JourneySearchHighlighter::highlightBlock( const QString& text ) {
@@ -96,7 +97,7 @@ void JourneySearchHighlighter::highlightBlock( const QString& text ) {
 
     // Highlight date/time keys and values 
     // ("[time]" or "[date]" or "[time], [date]" or "[date], [time]")
-    highlightCombinations( text, JourneySearchParser::timeKeywordsAt(),
+    int matched = highlightCombinations( text, JourneySearchParser::timeKeywordsAt(),
                            QStringList()
                            << "\\d{2}:\\d{2}(, \\d{2}\\.\\d{2}\\.(\\d{2,4})?)?"
                            << "\\d{2}:\\d{2}(, \\d{2}-\\d{2}(-\\d{2,4})?)?"
@@ -109,7 +110,7 @@ void JourneySearchHighlighter::highlightBlock( const QString& text ) {
     // Highlight relative time keys and values
     highlightCombinations( text, JourneySearchParser::timeKeywordsIn(),
                            QStringList() << JourneySearchParser::relativeTimeString( "\\d{1,}" ),
-                           m_formatValue, 1 );
+                           m_formatValue, matched == 0 ? 1 : 0 );
 
     // Highlight stop name if it is inside double quotes
     QRegExp expression = QRegExp( "\\s?\"[^\"]*\"\\s?" );
@@ -150,7 +151,7 @@ void JourneySearchLineEdit::init() {
     connect( this, SIGNAL(textChanged(QString)), this, SLOT(slotTextChanged(QString)) );
 }
 
-void JourneySearchLineEdit::slotTextChanged( const QString& newText ) {
+void JourneySearchLineEdit::slotTextChanged( const QString& ) {
     m_doc.setHtml( text() );
     m_doc.documentLayout();
 }
