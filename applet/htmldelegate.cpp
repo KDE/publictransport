@@ -44,18 +44,38 @@ void PublicTransportDelegate::paint( QPainter* painter,
     painter->setRenderHints( QPainter::SmoothPixmapTransform | QPainter::Antialiasing );
 
     if ( option.state.testFlag(QStyle::State_HasFocus)
-      || option.state.testFlag(QStyle::State_Selected) )
+      || option.state.testFlag(QStyle::State_Selected)
+      || option.state.testFlag(QStyle::State_MouseOver) )
     {
 	QColor focusColor = KColorScheme( QPalette::Active, KColorScheme::Selection )
 		.background( KColorScheme::NormalBackground ).color();
-	if ( option.state.testFlag(QStyle::State_Selected) )
-	    focusColor.setAlpha( focusColor.alpha() * 0.55f );
+	if ( option.state.testFlag(QStyle::State_Selected) ) {
+	    if ( option.state.testFlag(QStyle::State_MouseOver) )
+		focusColor.setAlpha( focusColor.alpha() * 0.7f );
+	    else
+		focusColor.setAlpha( focusColor.alpha() * 0.55f );
+	} else if ( option.state.testFlag(QStyle::State_MouseOver) )
+	    focusColor.setAlpha( focusColor.alpha() * 0.2f );
+	
 	QLinearGradient bgGradient( 0, 0, 1, 0 );
 	bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-	bgGradient.setColorAt( 0, Qt::transparent );
-	bgGradient.setColorAt( 0.1, focusColor );
-	bgGradient.setColorAt( 0.6, focusColor );
-	bgGradient.setColorAt( 1, Qt::transparent );
+	
+	QStyleOptionViewItemV4 opt = option;
+	if ( opt.viewItemPosition == QStyleOptionViewItemV4::Beginning
+	    || opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
+	{
+	    bgGradient.setColorAt( 0, Qt::transparent );
+	    bgGradient.setColorAt( 0.1, focusColor );
+	} else
+	    bgGradient.setColorAt( 0, focusColor );
+	
+	if ( opt.viewItemPosition == QStyleOptionViewItemV4::End
+	    || opt.viewItemPosition == QStyleOptionViewItemV4::OnlyOne )
+	{
+	    bgGradient.setColorAt( 0.6, focusColor );
+	    bgGradient.setColorAt( 1, Qt::transparent );
+	} else
+	    bgGradient.setColorAt( 1, focusColor );
 
 	painter->fillRect( option.rect, QBrush(bgGradient) );
     }
@@ -284,11 +304,11 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
 	QLinearGradient alphaGradient( 0, 0, 1, 0 );
 	alphaGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
 	if ( option.direction == Qt::LeftToRight ) {
-	    alphaGradient.setColorAt( 0, QColor(0, 0, 0, 255) );
-	    alphaGradient.setColorAt( 1, QColor(0, 0, 0, 0) );
+	    alphaGradient.setColorAt( 0, Qt::black );
+	    alphaGradient.setColorAt( 1, Qt::transparent );
 	} else {
-	    alphaGradient.setColorAt( 0, QColor(0, 0, 0, 0) );
-	    alphaGradient.setColorAt( 1, QColor(0, 0, 0, 255) );
+	    alphaGradient.setColorAt( 0, Qt::transparent );
+	    alphaGradient.setColorAt( 1, Qt::black );
 	}
 	
         p.setCompositionMode( QPainter::CompositionMode_DestinationIn );

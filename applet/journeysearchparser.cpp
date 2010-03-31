@@ -82,6 +82,81 @@ const QString JourneySearchParser::relativeTimeString( const QVariant &value ) {
 	    "the 'in' here.", "%1 minutes", value.toString());
 }
 
+const QString JourneySearchParser::relativeTimeStringPattern() {
+    return i18nc("This is a regular expression used to match a string after the "
+	    "'in' keyword in the journey search line. The english version matches "
+	    "'strings like '5 mins.', '1 minute', ... '\\d+' stands for at least "
+	    "'one digit, '\\.' is just a point, a '?' after a character means "
+	    "that it's optional (eg. the 's' in 'mins?' is optional to match "
+	    "singular and plural forms). Normally you will only have to translate "
+	    "'mins?' and 'minutes?'. The regexp must include one pair of matching "
+	    "'parantheses, that match an int (the number of minutes from now). "
+	    "Note: '(?:...)' are non-matching parantheses.",
+	    "(\\d+)\\s+(?:mins?\\.?|minutes?)");
+}
+
+void JourneySearchParser::doCorrections( KLineEdit *lineEdit,
+				QString *searchLine, int cursorPos,
+				const QStringList &words, int removedWordsFromLeft) {
+    int selStart = -1;
+    int selLength = 0;
+
+    int pos = searchLine->lastIndexOf( ' ', cursorPos - 1 );
+    int posEnd = searchLine->indexOf( ' ', cursorPos );
+    if ( posEnd == -1 )
+	posEnd = searchLine->length();
+    QString lastWordBeforeCursor;
+    if ( posEnd == cursorPos && pos != -1
+		&& !(lastWordBeforeCursor = searchLine->mid(
+		    pos, posEnd - pos).trimmed()).isEmpty() ) {
+	if ( timeKeywordsAt().contains(lastWordBeforeCursor, Qt::CaseInsensitive) ) {
+	    // Automatically add the current time after 'at'
+	    QString formattedTime = KGlobal::locale()->formatTime( QTime::currentTime() );
+	    searchLine->insert( posEnd, " " + formattedTime );
+	    selStart = posEnd + 1; // +1 for the added space
+	    selLength = formattedTime.length();
+	} else if ( timeKeywordsIn().contains(lastWordBeforeCursor, Qt::CaseInsensitive) ) {
+	    // Automatically add '5 minutes' after 'in'
+	    searchLine->insert( posEnd, " " + relativeTimeString() );
+	    selStart = posEnd + 1; // +1 for the added space
+	    selLength = 1; // only select the number (5)
+	} else {
+	    QStringList completionItems;
+	    completionItems << timeKeywordsAt() << timeKeywordsIn() << timeKeywordsTomorrow()
+			    << departureKeywords() << arrivalKeywords();
+
+	    KCompletion *comp = lineEdit->completionObject( false );
+	    comp->setItems( completionItems );
+	    comp->setIgnoreCase( true );
+	    QString completion = comp->makeCompletion( lastWordBeforeCursor );
+	    setJourneySearchWordCompletion( lineEdit, completion );
+	}
+    }
+
+    // Select an appropriate substring after inserting something
+    if ( selStart != -1 ) {
+	QStringList removedWords = (QStringList)words.mid( 0, removedWordsFromLeft );
+	QString removedPart = removedWords.join( " " ).trimmed();
+	QString correctedSearch;
+	if ( removedPart.isEmpty() ) {
+	    correctedSearch = *searchLine;
+	} else {
+	    correctedSearch = removedPart + " " + *searchLine;
+	    selStart += removedPart.length() + 1;
+	}
+	lineEdit->setText( correctedSearch );
+	lineEdit->setSelection( selStart, selLength );
+    }
+}
+
+bool JourneySearchParser::isInsideQuotedString( const QString& testString, int cursorPos ) {
+    int posQuotes1 = testString.indexOf( '\"' );
+    int posQuotes2 = testString.indexOf( '\"', posQuotes1 + 1 );
+    if ( posQuotes2 == -1 )
+	posQuotes2 = testString.length();
+    return posQuotes1 == -1 ? false : cursorPos > posQuotes1 && cursorPos <= posQuotes2;
+}
+
 bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
 	    const QString& search, QString* stop, QDateTime* departure,
 	    bool* stopIsTarget, bool* timeIsDeparture, int* posStart, int* len,
@@ -118,15 +193,6 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
     // to allow stop names containing keywords.
     JourneySearchParser::combineDoubleQuotedWords( &words );
 
-    // Check if the cursor is inside the (first) two double quotes,
-    // to disable autocompletion
-    int posQuotes1 = searchLine.indexOf( '\"' );
-    int posQuotes2 = searchLine.indexOf( '\"', posQuotes1 + 1 );
-    if ( posQuotes2 == -1 )
-	posQuotes2 = searchLine.length();
-    bool isInsideQuotedString = posQuotes1 == -1
-	    ? false : cursorPos > posQuotes1 && cursorPos <= posQuotes2;
-
     // First search for keywords at the beginning of the string ('to' or 'from')
     QString firstWord = words.first();
     if ( toKeywords().contains(firstWord, Qt::CaseInsensitive) ) {
@@ -141,71 +207,16 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
     }
     if ( posStart ) {
 	QStringList removedWords = (QStringList)words.mid( 0, removedWordsFromLeft );
-	if ( removedWords.isEmpty() )
-	    *posStart = 0;
-	else
-	    *posStart = removedWords.join( " " ).length() + 1;
+	*posStart = removedWords.isEmpty() ? 0 : removedWords.join( " " ).length() + 1;
     }
 
     // Do corrections
-    if ( correctString && !isInsideQuotedString
+    if ( correctString && !isInsideQuotedString(searchLine, cursorPos)
 		&& lineEdit->completionMode() != KGlobalSettings::CompletionNone ) {
-	selStart = -1;
-	selLength = 0;
-
-	int pos = searchLine.lastIndexOf( ' ', cursorPos - 1 );
-	int posEnd = searchLine.indexOf( ' ', cursorPos );
-	if ( posEnd == -1 )
-	    posEnd = searchLine.length();
-	QString lastWordBeforeCursor;
-	if ( posEnd == cursorPos && pos != -1
-		    && !(lastWordBeforeCursor = searchLine.mid(
-			pos, posEnd - pos).trimmed()).isEmpty() ) {
-	    if ( timeKeywordsAt().contains(lastWordBeforeCursor, Qt::CaseInsensitive) ) {
-		// Automatically add the current time after 'at'
-		QString formattedTime = KGlobal::locale()->formatTime( QTime::currentTime() );
-		searchLine.insert( posEnd, " " + formattedTime );
-		selStart = posEnd + 1; // +1 for the added space
-		selLength = formattedTime.length();
-	    } else if ( timeKeywordsIn().contains(lastWordBeforeCursor, Qt::CaseInsensitive) ) {
-		// Automatically add '5 minutes' after 'in'
-		searchLine.insert( posEnd, " " + relativeTimeString() );
-		selStart = posEnd + 1; // +1 for the added space
-		selLength = 1; // only select the number (5)
-	    } else {
-		QStringList completionItems;
-		completionItems << timeKeywordsAt();
-		completionItems << timeKeywordsIn();
-		completionItems << timeKeywordsTomorrow();
-		completionItems << departureKeywords();
-		completionItems << arrivalKeywords();
-
-		KCompletion *comp = lineEdit->completionObject( false );
-		comp->setItems( completionItems );
-		comp->setIgnoreCase( true );
-		QString completion = comp->makeCompletion( lastWordBeforeCursor );
-		setJourneySearchWordCompletion( lineEdit, completion );
-	    }
-	}
-
-	// Select an appropriate substring after inserting something
-	if ( selStart != -1 ) {
-	    QStringList removedWords = (QStringList)words.mid( 0, removedWordsFromLeft );
-	    QString removedPart = removedWords.join( " " ).trimmed();
-	    QString correctedSearch;
-	    if ( removedPart.isEmpty() ) {
-		correctedSearch = searchLine;
-	    } else {
-		correctedSearch = removedPart + " " + searchLine;
-		selStart += removedPart.length() + 1;
-	    }
-	    lineEdit->setText( correctedSearch );
-	    lineEdit->setSelection( selStart, selLength );
-	}
-    } // Do corrections
+	doCorrections( lineEdit, &searchLine, cursorPos, words, removedWordsFromLeft );
+    }
 
     // Now search for keywords inside the string from back
-    QStringList parts;
     for ( int i = words.count() - 1; i >= removedWordsFromLeft; --i ) {
 	QString word = words[ i ];
 	if ( timeKeywordsAt().contains(word, Qt::CaseInsensitive) ) {
@@ -227,20 +238,8 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
 	    QString sDeparture;
 	    JourneySearchParser::splitWordList( words, i, stop, &sDeparture, removedWordsFromLeft );
 
-	    QRegExp rx( i18nc("This is a regular expression used to match a string "
-			    "after the 'in' keyword in the journey search line. "
-			    "The english version matches strings like '5 mins.', "
-			    "'1 minute', ... '\\d+' stands for at least one digit, "
-			    "'\\.' is just a point, a '?' after a character means "
-			    "that it's optional (eg. the 's' in 'mins?' is optional "
-			    "to match singular and plural forms). Normally you will "
-			    "only have to translate 'mins?' and 'minutes?'."
-			    "The regexp must include one pair of matching parantheses, "
-			    "that match an int (the number of minutes from now). "
-			    "Note: '(?:...)' are non-matching parantheses.",
-			    "(\\d+)\\s+(?:mins?\\.?|minutes?)"), Qt::CaseInsensitive );
-
 	    // Match the regexp and extract the relative datetime value
+	    QRegExp rx( relativeTimeStringPattern(), Qt::CaseInsensitive );
 	    int pos = rx.indexIn( sDeparture );
 	    if ( pos != -1 ) {
 		int minutes = rx.cap( 1 ).toInt();
@@ -265,6 +264,62 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
 				    &date, stop, timeIsDeparture, len );
     *departure = QDateTime( date, QTime::currentTime() );
     return false;
+}
+
+QHash< JourneySearchParser::Keyword, QVariant > JourneySearchParser::keywordValues(
+		const QString& searchLine ) {
+    QHash< Keyword, QVariant > ret;
+    
+    // Get word list
+    QStringList words = searchLine.split( ' ', QString::SkipEmptyParts );
+    if ( words.isEmpty() )
+	return ret;
+    
+    // Combine words between double quotes to one word
+    // to allow stop names containing keywords.
+    JourneySearchParser::combineDoubleQuotedWords( &words );
+
+    // First search for keywords at the beginning of the string ('to' or 'from')
+    int removedWordsFromLeft = 0;
+    QString firstWord = words.first();
+    if ( toKeywords().contains(firstWord, Qt::CaseInsensitive) ) {
+	ret.insert( KeywordTo, true );
+	++removedWordsFromLeft;
+    } else if ( fromKeywords().contains(firstWord, Qt::CaseInsensitive) ) {
+	ret.insert( KeywordFrom, true );
+	++removedWordsFromLeft;
+    }
+    
+    for ( int i = words.count() - 1; i >= removedWordsFromLeft; --i ) {
+	QString word = words[ i ];
+	if ( timeKeywordsAt().contains(word, Qt::CaseInsensitive) ) {
+	    // An 'at' keyword was found at position i
+	    QString sDeparture, stop;
+	    QDate date;
+	    JourneySearchParser::splitWordList( words, i, &stop, &sDeparture, removedWordsFromLeft );
+
+	    // Parse date and/or time from the string after 'at'
+	    QDateTime departure;
+	    JourneySearchParser::parseDateAndTime( sDeparture, &departure, &date );
+	    ret.insert( KeywordTimeAt, departure );
+	    break;
+	} else if ( timeKeywordsIn().contains(word, Qt::CaseInsensitive) ) {
+	    // An 'in' keyword was found at position i
+	    QString sDeparture, stop;
+	    JourneySearchParser::splitWordList( words, i, &stop, &sDeparture, removedWordsFromLeft );
+
+	    // Match the regexp and extract the relative datetime value
+	    QRegExp rx( relativeTimeStringPattern(), Qt::CaseInsensitive );
+	    int pos = rx.indexIn( sDeparture );
+	    if ( pos != -1 ) {
+		int minutes = rx.cap( 1 ).toInt();
+		ret.insert( KeywordTimeIn, minutes );
+		break;
+	    }
+	}
+    }
+
+    return ret;
 }
 
 void JourneySearchParser::stopNamePosition( KLineEdit *lineEdit,

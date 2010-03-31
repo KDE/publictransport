@@ -780,15 +780,7 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
 	}
 
 	// Add recent items
-	foreach ( const QString &recent, m_settings.recentJourneySearches ) {
-	    if ( !recent.contains(m_journeySearch->text(), Qt::CaseInsensitive) )
-		continue;
-	    QStandardItem *item = new QStandardItem( KIcon("emblem-favorite"),
-						     i18n("<b>Recent:</b> %1", recent) );
-	    item->setData( "recent", Qt::UserRole + 1 );
-	    item->setData( recent, Qt::UserRole + 2 );
-	    model->appendRow( item );
-	}
+	addJourneySearchCompletions();
 
 	// Add stop suggestion items
 	foreach( const QString &stop, stopSuggestions )
@@ -804,6 +796,144 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
     }
 }
 
+void PublicTransport::addJourneySearchCompletions() {
+    QStandardItemModel *model = qobject_cast<QStandardItemModel*>( m_listStopSuggestions->model() );
+    if ( !model ) {
+	model = new QStandardItemModel( m_listStopSuggestions );
+	m_listStopSuggestions->setModel( model );
+    }
+
+    // Add recent journey searches
+    QString text = m_journeySearch->text();
+    int recentCount = 0;
+    foreach ( const QString &recent, m_settings.recentJourneySearches ) {
+	if ( recent.contains(text) ) {
+	    QStandardItem *item = new QStandardItem( KIcon("emblem-favorite"),
+						    i18n("<b>Recent:</b> %1", recent) );
+	    item->setData( "recent", Qt::UserRole + 1 );
+	    item->setData( recent, Qt::UserRole + 2 );
+	    model->appendRow( item );
+	    
+	    ++recentCount;
+	    if ( recentCount == 5 )
+		break; // Only show the last five recent journey searches
+	}
+    }
+
+    // Add other suggestions
+    if ( !m_journeySearch->text().isEmpty() ) {
+	QStringList suggestions, suggestionValues;
+	// Check if there's already an "at" or "in" (time) keyword
+	QStringList words = JourneySearchParser::notDoubleQuotedWords( m_journeySearch->text() );
+	QString timeKeywordIn, timeKeywordAt;
+	if ( !JourneySearchParser::timeKeywordsIn().isEmpty() )
+	    timeKeywordIn = JourneySearchParser::timeKeywordsIn().first();
+	if ( !JourneySearchParser::timeKeywordsAt().isEmpty() )
+	    timeKeywordAt = JourneySearchParser::timeKeywordsAt().first();
+	bool hasInKeyword = words.contains( timeKeywordIn );
+	bool hasAtKeyword = words.contains( timeKeywordAt );
+	bool hasTimeKeyword = hasInKeyword || hasAtKeyword;
+
+	QString type;
+	QString extraRegExp;
+	if ( hasTimeKeyword ) {
+	    type = "replaceTimeKeyword";
+	    
+	    QHash<JourneySearchParser::Keyword, QVariant> keywordValues =
+		    JourneySearchParser::keywordValues( m_journeySearch->text() );
+	    if ( keywordValues.contains(JourneySearchParser::KeywordTimeAt) ) {
+		QDateTime dateTime = keywordValues[ JourneySearchParser::KeywordTimeAt ].toDateTime();
+		extraRegExp = "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))";
+		
+		// Add "30 minutes later"
+		suggestions << i18n( "%1 minutes later", 30 );
+		suggestionValues << QString("%1 %2").arg( timeKeywordAt )
+			.arg( KGlobal::locale()->formatTime(dateTime.addSecs(30 * 60).time()) );
+
+		// Add "60 minutes later"
+		suggestions << i18n( "%1 minutes later", 60 );
+		suggestionValues << QString("%1 %2").arg( timeKeywordAt )
+			.arg( KGlobal::locale()->formatTime(dateTime.addSecs(60 * 60).time()) );
+			
+		// Add "30 minutes earlier"
+		suggestions << i18n( "%1 minutes earlier", 30 );
+		suggestionValues << QString("%1 %2").arg( timeKeywordAt )
+			.arg( KGlobal::locale()->formatTime(dateTime.addSecs(-30 * 60).time()) );
+	    } else if ( keywordValues.contains(JourneySearchParser::KeywordTimeIn) ) {
+		int minutes = keywordValues[ JourneySearchParser::KeywordTimeIn ].toInt();
+		extraRegExp = JourneySearchParser::relativeTimeString("\\d{1,}");
+		
+		// Add "30 minutes later"
+		suggestions << i18n( "%1 minutes later", 30 );
+		suggestionValues << QString("%1 %2").arg( timeKeywordIn )
+			.arg( JourneySearchParser::relativeTimeString(minutes + 30) );
+		
+		// Add "60 minutes later"
+		suggestions << i18n( "%1 minutes later", 60 );
+		suggestionValues << QString("%1 %2").arg( timeKeywordIn )
+			.arg( JourneySearchParser::relativeTimeString(minutes + 60) );
+			
+		// Add "30 minutes earlier"
+		suggestions << i18n( "%1 minutes earlier", 30 );
+		suggestionValues << QString("%1 %2").arg( timeKeywordIn )
+			.arg( JourneySearchParser::relativeTimeString(minutes - 30) );
+	    }
+	} else {
+	    type = "additionalKeywordAtEnd";
+	    
+	    // Use the first keyword of some types for suggestions
+	    if ( !timeKeywordIn.isEmpty() ) {
+		// Add "in 5 minutes"
+		QString in5Minutes = QString("%1 %2").arg( timeKeywordIn )
+				.arg( JourneySearchParser::relativeTimeString(5) );
+		suggestions << in5Minutes;
+		suggestionValues << in5Minutes;
+
+		// Add "in 15 minutes"
+		QString in15Minutes = QString("%1 %2").arg( timeKeywordIn )
+				.arg( JourneySearchParser::relativeTimeString(15) );
+		suggestions << in15Minutes;
+		suggestionValues << in15Minutes;
+
+		// Add "in 30 minutes"
+		QString in30Minutes = QString("%1 %2").arg( timeKeywordIn )
+				.arg( JourneySearchParser::relativeTimeString(30) );
+		suggestions << in30Minutes;
+		suggestionValues << in30Minutes;
+	    }
+	    if ( !timeKeywordAt.isEmpty() ) {
+		QString timeKeywordTomorrow;
+		if ( !JourneySearchParser::timeKeywordsTomorrow().isEmpty() )
+		    timeKeywordTomorrow = JourneySearchParser::timeKeywordsTomorrow().first();
+
+		if ( timeKeywordTomorrow.isNull() ) {
+		    // Add "at 6:00"
+		    QString at6 = QString("%1 %2").arg( timeKeywordAt )
+				    .arg( QTime(6, 0).toString("hh:mm") );
+		    suggestions << at6;
+		    suggestionValues << at6;
+		} else {
+		    // Add "tomorrow at 6:00"
+		    QString tomorrowAt6 = QString("%1 %2 %3").arg( timeKeywordTomorrow )
+			    .arg( timeKeywordAt ).arg( QTime(6, 0).toString("hh:mm") );
+		    suggestions << tomorrowAt6;
+		    suggestionValues << tomorrowAt6;
+		}
+	    }
+	}
+	
+	for ( int i = 0; i < suggestions.count(); ++i ) {
+	    QStandardItem *item = new QStandardItem( KIcon("chronometer"),
+			    i18n("<b>Suggestion:</b> %1", suggestions.at(i)) );
+	    item->setData( type, Qt::UserRole + 1 );
+	    item->setData( suggestionValues.at(i), Qt::UserRole + 2 );
+	    if ( !extraRegExp.isNull() )
+		item->setData( extraRegExp, Qt::UserRole + 3 );
+	    model->appendRow( item );
+	}
+    }
+}
+
 void PublicTransport::maybeAddAllKeywordAddRemoveitems( bool clearFirst,
 							QStandardItemModel* model ) {
     if ( m_journeySearch->text().isEmpty()
@@ -816,7 +946,6 @@ void PublicTransport::maybeAddAllKeywordAddRemoveitems( bool clearFirst,
 	// Remove previously added keyword add/remove items
 	QModelIndexList indices = model->match( model->index(0, 0),
 			    Qt::UserRole + 5, true, -1, Qt::MatchExactly );
-	kDebug() << "CLEAR FIRST :)" << indices;
 	for ( int i = indices.count() - 1; i >= 0; --i )
 	    model->removeRow( indices.at(i).row() );
     }
@@ -841,6 +970,16 @@ void PublicTransport::maybeAddAllKeywordAddRemoveitems( bool clearFirst,
 
     // Add keyword suggestions, ie. keyword add/remove items
     maybeAddKeywordAddRemoveItems( model, words,
+	    QStringList() << toKeyword << fromKeyword,
+	    "additionalKeywordAtBegin",
+	    QStringList() << i18n("Get journeys to the given stop")
+		<< i18n("Get journeys from the given stop") );
+    maybeAddKeywordAddRemoveItems( model, words,
+	    QStringList() << arrivalKeyword << departureKeyword,
+	    "additionalKeywordAlmostAtEnd",
+	    QStringList() << i18n("Get journeys departing at the given date/time")
+		<< i18n("Get journeys arriving at the given date/time") );
+    maybeAddKeywordAddRemoveItems( model, words,
 	    QStringList() << timeKeywordAt << timeKeywordIn,
 	    "additionalKeywordAtEnd",
 	    QStringList() << i18n("Specify the departure/arrival time, eg. "
@@ -849,16 +988,6 @@ void PublicTransport::maybeAddAllKeywordAddRemoveitems( bool clearFirst,
 			timeKeywordIn, JourneySearchParser::relativeTimeString()),
 	    QStringList() << "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))"
 		<< JourneySearchParser::relativeTimeString("\\d{1,}") );
-    maybeAddKeywordAddRemoveItems( model, words,
-	    QStringList() << arrivalKeyword << departureKeyword,
-	    "additionalKeywordAlmostAtEnd",
-	    QStringList() << i18n("Get journeys departing at the given date/time")
-		<< i18n("Get journeys arriving at the given date/time") );
-    maybeAddKeywordAddRemoveItems( model, words,
-	    QStringList() << toKeyword << fromKeyword,
-	    "additionalKeywordAtBegin",
-	    QStringList() << i18n("Get journeys to the given stop")
-		<< i18n("Get journeys from the given stop") );
 }
 
 void PublicTransport::maybeAddKeywordAddRemoveItems( QStandardItemModel* model,
@@ -946,6 +1075,10 @@ void PublicTransport::dataUpdated( const QString& sourceName,
 
 void PublicTransport::geometryChanged() {
     setHeightOfCourtesyLabel();
+
+    QHeaderView *header = m_treeView->nativeWidget()->header();
+    int lastIndex = header->count() - 1;
+    header->resizeSection( lastIndex, header->sectionSize(lastIndex) - 1 );
 }
 
 void PublicTransport::popupEvent( bool show ) {
@@ -1541,7 +1674,6 @@ QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
 	case ShowSearchJourneyLineEdit:
 	case ShowSearchJourneyLineEditDisabled:
 	    m_icon->setVisible( true );
-// 	    m_journeySearch->setVisible( true );
 	    layoutTop->addItem( m_icon, 0, 0 );
 	    layoutTop->addItem( m_journeySearch, 0, 1 );
 	    layoutTop->addItem( m_btnLastJourneySearches, 0, 2 );
@@ -1551,7 +1683,6 @@ QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
 	case ShowJourneyListTitle:
 	    m_icon->setVisible( true );
 	    m_label->setVisible( true );
-// 	    m_iconClose->setVisible( true );
 	    layoutTop->addItem( m_icon, 0, 0 );
 	    layoutTop->addItem( m_label, 0, 1 );
 	    layoutTop->addItem( m_iconClose, 0, 2 );
@@ -1561,95 +1692,117 @@ QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
 }
 
 void PublicTransport::possibleStopItemActivated( const QModelIndex& modelIndex ) {
-    if ( !modelIndex.data(Qt::UserRole + 1).isValid() )
+    // Only start search if a stop suggestion or a recent item was activated
+    if ( !modelIndex.data(Qt::UserRole + 1).isValid()
+	|| modelIndex.data(Qt::UserRole + 1).toString() == "recent" )
+    {
 	possibleStopClicked( modelIndex );
+    }
+}
+
+void PublicTransport::journeySearchItemCompleted( const QString &newJourneySearch,
+						  const QModelIndex& index ) {
+    if ( index.isValid() )
+	m_listStopSuggestions->model()->removeRow( index.row() );
+    m_journeySearch->setText( newJourneySearch );
+    
+    // For autocompletion and to update keyword suggestions
+    journeySearchInputEdited( m_journeySearch->text() );
 }
 
 void PublicTransport::possibleStopClicked( const QModelIndex &modelIndex ) {
     QString type = modelIndex.data( Qt::UserRole + 1 ).toString();
-    kDebug() << "TYPE" << type;
     if ( type == "recent" ) {
 	// Set recent journey search string
-	m_journeySearch->setText( modelIndex.data(Qt::UserRole + 2).toString() );
+	QString newText = modelIndex.data( Qt::UserRole + 2 ).toString();
+	m_journeySearch->setText( newText );
+	maybeAddAllKeywordAddRemoveitems( true );
+	// Disable start search button if the recent journey search line is empty
+	m_btnStartJourneySearch->setEnabled( !m_journeySearch->text().isEmpty() );
     } else if ( type == "additionalKeywordAtEnd" ) {
 	// Add keyword at the end
-	m_journeySearch->setText( m_journeySearch->text() + " " +
-				  modelIndex.data(Qt::UserRole + 2).toString() );
-	m_listStopSuggestions->model()->removeRow( modelIndex.row() );
-	journeySearchInputEdited( m_journeySearch->text() ); // for autocompletion / to add a remove keyword item
+	QString newText = m_journeySearch->text() + " " +
+			modelIndex.data( Qt::UserRole + 2 ).toString();
+	journeySearchItemCompleted( newText, modelIndex );
     } else if ( type == "additionalKeywordAlmostAtEnd" ) {
 	// Add keyword after the stop name, if any
 	int posStart, len;
+	QString newText;
 	JourneySearchParser::stopNamePosition( m_journeySearch->nativeWidget(),
 					       &posStart, &len );
 	if ( posStart != -1 ) {
-	    m_journeySearch->setText( m_journeySearch->text().insert(posStart + len,
-		    " " + modelIndex.data(Qt::UserRole + 2).toString()) );
+	    newText = m_journeySearch->text().insert( posStart + len,
+		    " " + modelIndex.data(Qt::UserRole + 2).toString() );
 	} else {
-	    m_journeySearch->setText( m_journeySearch->text() + " " +
-		    modelIndex.data(Qt::UserRole + 2).toString() );
+	    newText = m_journeySearch->text() + " " +
+		    modelIndex.data( Qt::UserRole + 2 ).toString();
 	}
-	m_listStopSuggestions->model()->removeRow( modelIndex.row() );
-	journeySearchInputEdited( m_journeySearch->text() ); // for autocompletion / to add a remove keyword item
+	journeySearchItemCompleted( newText, modelIndex );
     } else if ( type == "additionalKeywordAtBegin" ) {
 	// Add keyword to the beginning
-	m_journeySearch->setText( modelIndex.data(Qt::UserRole + 2).toString() +
-				  " " + m_journeySearch->text() );
-	m_listStopSuggestions->model()->removeRow( modelIndex.row() );
-	journeySearchInputEdited( m_journeySearch->text() ); // to add a remove keyword item
+	QString newText = modelIndex.data( Qt::UserRole + 2 ).toString() +
+				  " " + m_journeySearch->text();
+	journeySearchItemCompleted( newText, modelIndex );
     } else if ( type == "additionalKeywordAtEndRemove"
-	     || type == "additionalKeywordAlmostAtEndRemove" )
+	     || type == "additionalKeywordAlmostAtEndRemove"
+	     || type == "replaceTimeKeyword" )
     {
 	// Remove first keyword appearance after the stop name, if any
 	QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
-	kDebug() << "REMOVE" << keyword;
+	if ( type == "replaceTimeKeyword" )
+	    keyword = keyword.left( keyword.indexOf(' ') );
+	
 	QString pattern;
 	if ( modelIndex.data(Qt::UserRole + 3).isValid() ) {
+	    // Use "extra reg exp" to also match values for keywords, eg. "[in] 5 minutes"
 	    QString extraRegExp = modelIndex.data( Qt::UserRole + 3 ).toString();
 	    pattern = QString("(?:\"[^\"]*\".*)?(\\s%1\\s%2)").arg( keyword ).arg( extraRegExp );
 	} else {
 	    pattern = QString("(?:\"[^\"]*\".*)?(\\s%1)").arg( keyword );
 	}
+	
 	QRegExp regExp( pattern, Qt::CaseInsensitive );
 	regExp.setMinimal( true );
-	int pos = regExp.lastIndexIn( m_journeySearch->text() );
+	QString newText = m_journeySearch->text().trimmed();
+	int pos = regExp.lastIndexIn( newText );
 	if ( pos != -1 ) {
-	    m_journeySearch->setText( m_journeySearch->text().trimmed().remove(
-		    regExp.pos(1), regExp.cap(1).length()) );
-	    m_listStopSuggestions->model()->removeRow( modelIndex.row() );
-	    journeySearchInputEdited( m_journeySearch->text() ); // for autocompletion
-	} else
-	    kDebug() << "Keyword" << keyword << "not found";
+	    // Keyword (and values) found, remove
+	    newText = newText.remove( regExp.pos(1), regExp.cap(1).length() );
+	    if ( type == "replaceTimeKeyword" ) // Add new time keyword
+		newText = newText + " " + modelIndex.data( Qt::UserRole + 2 ).toString();
+	    journeySearchItemCompleted( newText, modelIndex );
+	}
     } else if ( type == "additionalKeywordAtBeginRemove" ) {
 	// Remove keyword from the beginning
 	QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
-	m_journeySearch->setText( m_journeySearch->text().trimmed().remove(
-		QRegExp(QString("^%1\\s").arg(keyword), Qt::CaseInsensitive)) );
-	m_listStopSuggestions->model()->removeRow( modelIndex.row() );
-	journeySearchInputEdited( m_journeySearch->text() ); // for autocompletion
+	QString newText = m_journeySearch->text().trimmed().remove(
+		QRegExp(QString("^%1\\s").arg(keyword), Qt::CaseInsensitive) );
+	journeySearchItemCompleted( newText, modelIndex );
     } else {
 	// Insert the clicked stop into the journey search line,
-	// don't override keywords and other infos
+	// don't override keywords and other text
 	int posStart, len;
 	JourneySearchParser::stopNamePosition( m_journeySearch->nativeWidget(), &posStart, &len );
-
+	
 	QString quotedStop = "\"" + modelIndex.data().toString() + "\"";
 	if ( posStart == -1 ) {
+	    // No stop name found
 	    m_journeySearch->setText( quotedStop );
 	} else {
-	    m_journeySearch->setText( m_journeySearch->text().replace(
-		    posStart, len, quotedStop) );
+	    m_journeySearch->setText( m_journeySearch->text().replace(posStart, len, quotedStop) );
 	    m_journeySearch->nativeWidget()->setCursorPosition( posStart + quotedStop.length() );
 	}
-	journeySearchInputEdited( m_journeySearch->text() ); // for autocompletion
     }
     m_journeySearch->setFocus();
 }
 
 void PublicTransport::possibleStopDoubleClicked( const QModelIndex& modelIndex ) {
-    // Only start search if a stop suggestion was double clicked
-    if ( !modelIndex.data(Qt::UserRole + 1).isValid() )
+    // Only start search if a stop suggestion or a recent item was double clicked
+    if ( !modelIndex.data(Qt::UserRole + 1).isValid()
+	|| modelIndex.data(Qt::UserRole + 1).toString() == "recent" )
+    {
 	journeySearchInputFinished();
+    }
 }
 
 void PublicTransport::useCurrentPlasmaTheme() {
@@ -1730,6 +1883,8 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	m_treeView = new Plasma::TreeView();
 	initTreeView( m_treeView );
 	m_treeView->setModel( m_model );
+	connect( m_treeView->nativeWidget()->horizontalScrollBar(),
+		 SIGNAL(rangeChanged(int,int)), this, SLOT(geometryChanged()) );
 
 	QHeaderView *header = m_treeView->nativeWidget()->header();
 	KConfigGroup cg = config();
@@ -2001,7 +2156,7 @@ void PublicTransport::createJourneySearchWidgets() {
 	    "&nbsp;&nbsp;&bull; <i>From origin arriving tomorrow at 18:00</i><br>"
 	    "&nbsp;&nbsp;&bull; <i>Target at 6:00 2010-03-07</i>"/*, sColor*/) );
     m_journeySearch->installEventFilter( this ); // Handle up/down keys (selecting stop suggestions)
-//     m_journeySearch->setClearButtonShown( true );
+    m_journeySearch->setClearButtonShown( true );
     m_journeySearch->nativeWidget()->setCompletionMode( KGlobalSettings::CompletionAuto );
     m_journeySearch->nativeWidget()->setCompletionModeDisabled(
 	    KGlobalSettings::CompletionMan );
@@ -2101,17 +2256,7 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType ) {
 	    treeView->setPalette( m_treeView->nativeWidget()->palette() );
 	    m_listStopSuggestions->setFont( m_settings.sizedFont() );
 
-	    if ( !m_settings.recentJourneySearches.isEmpty() ) {
-		QStandardItemModel *model = new QStandardItemModel( m_listStopSuggestions );
-		foreach ( const QString &recent, m_settings.recentJourneySearches ) {
-		    QStandardItem *item = new QStandardItem( KIcon("emblem-favorite"),
-							     i18n("<b>Recent:</b> %1", recent) );
-		    item->setData( "recent", Qt::UserRole + 1 );
-		    item->setData( recent, Qt::UserRole + 2 );
-		    model->appendRow( item );
-		}
-		m_listStopSuggestions->setModel( model );
-	    }
+	    addJourneySearchCompletions();
 	    
 	    connect( treeView, SIGNAL(clicked(QModelIndex)),
 		     this, SLOT(possibleStopClicked(QModelIndex)) );
@@ -2161,9 +2306,9 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType ) {
 	    treeViewJourneys->setPalette( m_treeView->nativeWidget()->palette() );
 	    treeViewJourneys->header()->setPalette( m_treeView->nativeWidget()->header()->palette() );
 	    treeViewJourneys->setIconSize( QSize(32 * m_settings.sizeFactor, 32 * m_settings.sizeFactor) );
-	    treeViewJourneys->header()->resizeSection( 1, 120 );
 	    m_treeViewJourney->setModel( m_modelJourneys );
 	    m_treeViewJourney->setFont( m_settings.sizedFont() );
+	    treeViewJourneys->header()->resizeSection( 1, 120 );
 
 	    widget = m_treeViewJourney;
 	    break;

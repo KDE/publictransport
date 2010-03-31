@@ -179,6 +179,16 @@ void JourneySearchLineEdit::mouseDoubleClickEvent( QMouseEvent* ev ) {
 
 void JourneySearchLineEdit::mousePressEvent( QMouseEvent* ev ) {
     if ( ev->button() == Qt::LeftButton ) {
+	// Send clicks on the clear button to KLineEdit
+	if ( isClearButtonShown() ) {
+	    QSize sz = clearButtonUsedSize();
+	    QRect rect( width() - sz.width(), 0, sz.width(), sz.height() );
+	    if ( rect.contains(ev->pos()) ) {
+		KLineEdit::mousePressEvent( ev );
+		return;
+	    }
+	}
+	    
         bool mark = ev->modifiers() & Qt::ShiftModifier;
         QRect cr = lineEditContents();
         m_cursor = m_doc.documentLayout()->hitTest(
@@ -224,6 +234,9 @@ void JourneySearchLineEdit::paintEvent( QPaintEvent* ) {
     int cursorPos = cursorPosition();
     QTextBlock block = m_doc.findBlockByNumber( 0 );
     if ( block.isValid() ) {
+	int width = cr.width();
+	if ( isClearButtonShown() ) // Add space for the clear button
+	    width -= clearButtonUsedSize().width();
         QTextLine line = block.layout()->lineForTextPosition(
 		block.layout()->isValidCursorPosition(cursorPos) ? cursorPos : cursorPos - 1 );
         if ( line.isValid() ) {
@@ -232,25 +245,26 @@ void JourneySearchLineEdit::paintEvent( QPaintEvent* ) {
             int minLB = qMax( 0, -fontMetrics().minLeftBearing() );
             int minRB = qMax( 0, -fontMetrics().minRightBearing() );
             int widthUsed = line.width() + 1 + minRB;
-            if ( (minLB + widthUsed) <=  cr.width() ) {
+	    if ( (minLB + widthUsed) <= width ) {
                 switch ( alignment() ) {
                 case Qt::AlignRight:
-                    m_hScroll = widthUsed - cr.width();
+		    m_hScroll = widthUsed - width;
                     break;
                 case Qt::AlignHCenter:
-                    m_hScroll = ( widthUsed - cr.width() ) / 2;
+		    m_hScroll = ( widthUsed - width ) / 2;
                     break;
                 default:
                     m_hScroll = 0;
                     break;
                 }
                 m_hScroll -= minLB;
-            } else if ( cix - m_hScroll >= cr.width() ) {
-                m_hScroll = cix - cr.width() + 1;
+	    } else if ( cix - m_hScroll >= width ) {
+		m_hScroll = cix - width + 1; // Scroll to the right
             } else if ( cix - m_hScroll < 0 ) {
-                m_hScroll = cix;
-            } else if ( widthUsed - m_hScroll < cr.width() ) {
-                m_hScroll = widthUsed - cr.width() + 1;
+                m_hScroll = cix; // Scroll to the left
+	    } else if ( widthUsed - m_hScroll < width ) {
+		// Scroll to the left, because there's space on the right
+		m_hScroll = widthUsed - width + 1;
             }
         }
         QPoint topLeft = cr.topLeft() - QPoint( m_hScroll, 0 );
@@ -268,8 +282,61 @@ void JourneySearchLineEdit::paintEvent( QPaintEvent* ) {
 
         // Draw text and cursor
         block.layout()->drawCursor( &p, topLeft, cursorPosition() );
-	p.setClipRect( cr ); // the clipping of QTextLayout::draw doesn't work with no selection
-        block.layout()->draw( &p, topLeft, formats, cr );
+
+	// The clipping of QTextLayout::draw doesn't work with no selection
+	p.setClipRect( cr );
+	// Get text width
+	int textWidth = 0;
+	QTextBlock block = m_doc.findBlockByNumber( 0 );
+	if ( block.isValid() )
+	    textWidth = block.layout()->boundingRect().width();
+	if ( m_hScroll > 0 || textWidth > cr.width() + m_hScroll ) {
+	    int fadeArea = 20;
+	    
+	    QPixmap pix( cr.size() );
+	    pix.fill( Qt::transparent );
+	    QPainter pixPainter( &pix );
+
+	    // Draw text
+	    block.layout()->draw( &pixPainter, QPoint(-m_hScroll, 0), formats,
+				  QRect(0, 0, cr.width(), cr.height()) );
+
+	    // Draw fade out rects
+	    pixPainter.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+	    if ( m_hScroll > 0 ) {
+		QLinearGradient alphaGradient( 0, 0, 1, 0 );
+		alphaGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+		if ( isLeftToRight() ) {
+		    alphaGradient.setColorAt( 0, Qt::transparent );
+		    alphaGradient.setColorAt( 1, Qt::black );
+		} else {
+		    alphaGradient.setColorAt( 0, Qt::black );
+		    alphaGradient.setColorAt( 1, Qt::transparent );
+		}
+
+		pixPainter.fillRect( QRect(0, 0, fadeArea, cr.height()), alphaGradient );
+	    }
+
+	    if ( textWidth > width + m_hScroll ) {
+		QLinearGradient alphaGradient( 0, 0, 1, 0 );
+		alphaGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+		if ( isLeftToRight() ) {
+		    alphaGradient.setColorAt( 0, Qt::black );
+		    alphaGradient.setColorAt( 1, Qt::transparent );
+		} else {
+		    alphaGradient.setColorAt( 0, Qt::transparent );
+		    alphaGradient.setColorAt( 1, Qt::black );
+		}
+
+		if ( isClearButtonShown() )
+		    fadeArea += clearButtonUsedSize().width();
+		pixPainter.fillRect( QRect(cr.width() - fadeArea, 0, fadeArea, cr.height()), alphaGradient );
+	    }
+	    
+	    pixPainter.end();
+	    p.drawPixmap( cr, pix );
+	} else
+	    block.layout()->draw( &p, topLeft, formats, cr );
     }
 }
 

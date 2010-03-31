@@ -28,12 +28,24 @@ class QDate;
 class QTime;
 class QDateTime;
 class KLineEdit;
+/** Provides static methods to parse journey search strings.
+* TODO: Could need some improvement, eg. parseJourneySearch() with a QString,
+* not KLineEdit, new methods for getting a list of keywords inside a given QString,
+* removing/adding keywords. */
 class JourneySearchParser {
     public:
+	enum Keyword {
+	    KeywordTo,
+	    KeywordFrom,
+	    KeywordTimeAt,
+	    KeywordTimeIn
+	};
+	
 	static bool parseJourneySearch( KLineEdit *lineEdit, const QString &search,
 		QString *stop, QDateTime *departure, bool *stopIsTarget,
 		bool *timeIsDeparture, int *posStart = 0, int *len = 0,
 		bool correctString = true );
+	static QHash<Keyword, QVariant> keywordValues( const QString &searchLine );
 
 	/** Searches for the stop name in the given @p lineEdit, eg. a double
 	* quoted string or the words between a to/from keyword (or from the 
@@ -45,6 +57,10 @@ class JourneySearchParser {
 
 	static void setJourneySearchStopNameCompletion( KLineEdit *lineEdit,
 							const QString &completion );
+
+	static bool isInsideQuotedString( const QString &testString, int cursorPos );
+	static void doCorrections( KLineEdit *lineEdit, QString *searchLine,
+		int cursorPos, const QStringList &words, int removedWordsFromLeft );
 
 	/** Returns a list of words in @p searchLine that aren't double quoted,
 	* ie. may be keywords. */
@@ -72,6 +88,7 @@ class JourneySearchParser {
 	static const QStringList timeKeywordsTomorrow();
 	
 	static const QString relativeTimeString( const QVariant &value = 5 );
+	static const QString relativeTimeStringPattern();
 
     private:
 	static void setJourneySearchWordCompletion( KLineEdit *lineEdit,

@@ -346,12 +346,15 @@ class PublicTransport : public Plasma::PopupApplet {
 	QList<DepartureInfo> departureInfos() const;
 	QString stripDateAndTimeValues( const QString &sourceName ) const;
 
+	void addJourneySearchCompletions();
 	void maybeAddAllKeywordAddRemoveitems( bool clearFirst = false,
 					       QStandardItemModel *model = 0 );
 	void maybeAddKeywordAddRemoveItems( QStandardItemModel *model,
 		const QStringList &words, const QStringList &keywords,
 		const QString &type, const QStringList &descriptions,
 		const QStringList &extraRegExps = QStringList() );
+	void journeySearchItemCompleted( const QString &newJourneySearch,
+					 const QModelIndex &index = QModelIndex() );
 	
 	/** Sets values of the current plasma theme. */
 	void useCurrentPlasmaTheme();

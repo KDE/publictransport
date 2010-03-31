@@ -1050,7 +1050,11 @@ QModelIndex PublicTransportModel::parent( const QModelIndex& child ) const {
     if ( !child.isValid() )
 	return QModelIndex();
     
-    ItemBase *parent = static_cast<ItemBase*>( child.internalPointer() )->parent();
+    ItemBase *childItem = static_cast<ItemBase*>( child.internalPointer() );
+    if ( !childItem )
+	return QModelIndex();
+    
+    ItemBase *parent = childItem->parent();
     if ( parent )
 	return createIndex( parent->row(), 0, parent );
     else
