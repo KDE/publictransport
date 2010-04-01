@@ -24,6 +24,9 @@
 #include <KDebug>
 #include <QTimer>
 #include "settings.h"
+#include <QPropertyAnimation>
+#include <Plasma/Animator>
+#include <Plasma/Animation>
 
 class DepartureModelLessThan {
 public:
@@ -159,7 +162,7 @@ void ItemBase::setModel( PublicTransportModel* model ) {
 ItemBase* ItemBase::topLevelParent() const {
     ItemBase *p = const_cast< ItemBase* >( this );
     while ( p->parent() )
-	p = parent();
+	p = p->parent();
     return p;
 }
 
@@ -196,6 +199,15 @@ void ItemBase::appendChild( ChildItem* child ) {
     child->m_model = m_model;
 }
 
+TopLevelItem::TopLevelItem( const Infos* infos ) : ItemBase( infos ) {
+}
+
+void TopLevelItem::setData( Columns column, const QVariant& data, int role ) {
+    m_columnData[ column ][ role ] = data;
+    if ( m_model )
+	m_model->itemChanged( this, column, column );
+}
+
 ChildItem::ChildItem( ItemType itemType,
 	    const QString& formattedText, const QIcon& icon, const Infos *infos )
 	    : ItemBase(infos) {
@@ -219,9 +231,9 @@ ChildItem::ChildItem( ItemType itemType, const Infos* infos)
 QVariant ChildItem::data( int role, int ) const {
     if ( m_data.contains(role) ) {
 	return m_data.value( role );
-    } else if ( role == DrawAlarmBackground ) {
+    } else if ( role == DrawAlarmBackgroundRole ) {
 	ItemBase *p = topLevelParent();
-	return p->hasPendingAlarm();
+	return p->data( role );
     } else if ( role == FormattedTextRole ) {
 	return m_data.value( Qt::DisplayRole );
     } else if ( role == JourneyRatingRole && dynamic_cast<JourneyModel*>(m_model) ) {
@@ -240,7 +252,7 @@ void ChildItem::setData( const QVariant& data, int role ) {
 
 
 JourneyItem::JourneyItem( const JourneyInfo& journeyInfo, const Infos* infos )
-				: ItemBase( infos ) {
+				: TopLevelItem( infos ) {
     setJourneyInfo( journeyInfo );
 }
 
@@ -326,12 +338,12 @@ qreal JourneyItem::rating() const {
 	    return durationRating;
     }
 }
-
+/*
 void JourneyItem::setData( Columns column, const QVariant& data, int role ) {
     m_columnData[ column ][ role ] = data;
     if ( m_model )
 	m_model->itemChanged( this, column, column );
-}
+}*/
 
 void JourneyItem::setJourneyInfo( const JourneyInfo& journeyInfo ) {
     if ( m_journeyInfo.isValid() ) {
@@ -663,8 +675,9 @@ ChildItem* JourneyItem::createRouteItem() {
 }
 
 DepartureItem::DepartureItem( const DepartureInfo &departureInfo, const Infos *infos )
-				: ItemBase( infos ) {
+				: TopLevelItem( infos ) {
     m_alarm = NoAlarm;
+    m_alarmColorIntensity = 0.0;
     setDepartureInfo( departureInfo );
 }
 
@@ -685,10 +698,19 @@ QHash< ItemType, ChildItem* > DepartureItem::typedChildren() const {
     return children;
 }
 
+void DepartureItem::setAlarmColorIntensity( qreal alarmColorIntensity ) {
+    m_alarmColorIntensity = alarmColorIntensity;
+    if ( m_model )
+	m_model->itemChanged( this, 0, 2 );
+}
+
 void DepartureItem::setDepartureInfo( const DepartureInfo &departureInfo ) {
     if ( m_departureInfo.isValid() ) {
-	if ( m_departureInfo == departureInfo )
-	    return; // Unchanged
+	if ( m_departureInfo == departureInfo ) {
+	    // Unchanged, but matchedAlarms may have changed
+	    m_departureInfo = departureInfo;
+	    return;
+	}
 	
 	m_departureInfo = departureInfo;
 	updateValues();
@@ -914,8 +936,10 @@ QVariant DepartureItem::data( int role, int column ) const {
 
     if ( column < m_columnData.count() && m_columnData[column].contains(role) ) {
 	return m_columnData[column].value( role );
-    } else if ( role == DrawAlarmBackground ) {
-	return m_alarm.testFlag( AlarmPending );
+    } else if ( role == DrawAlarmBackgroundRole ) {
+	return m_alarm.testFlag( AlarmPending ) || !qFuzzyIsNull(m_alarmColorIntensity);
+    } else if ( role == AlarmColorIntensityRole ) {
+	return m_alarm.testFlag( AlarmPending ) ? 1.0 : m_alarmColorIntensity;
     } else if ( !m_parent ) {
 	switch ( role ) {
 	    case LinesPerRowRole:
@@ -936,12 +960,6 @@ QVariant DepartureItem::data( int role, int column ) const {
     }
 
     return QVariant();
-}
-
-void DepartureItem::setData( Columns column, const QVariant& data, int role ) {
-    m_columnData[ column ][ role ] = data;
-    if ( m_model )
-	m_model->itemChanged( this, column, column );
 }
 
 void DepartureItem::setAlarm() {
@@ -1577,15 +1595,7 @@ bool DepartureModel::removeRows( int row, int count, const QModelIndex& parent )
 
 void DepartureModel::clear() {
     PublicTransportModel::clear();
-//     beginRemoveRows( QModelIndex(), 0, m_items.count() );
-//     
-//     m_infoToItem.clear();
-//     qDeleteAll( m_items );
-//     m_items.clear();
     m_alarms.clear();
-//     m_nextDeparture = NULL;
-    
-//     endRemoveRows();
 }
 
 void DepartureModel::addAlarm( DepartureItem* item ) {
@@ -1601,7 +1611,7 @@ void DepartureModel::addAlarm( DepartureItem* item ) {
 void DepartureModel::removeAlarm( DepartureItem* item ) {
     int index = m_alarms.values().indexOf( item );
     if ( index == -1 ) {
-	kDebug() << "ALARM NOT FOUND!" << item;
+	kDebug() << "Alarm not found!" << item;
 	return;
     }
     int removed = m_alarms.remove( m_alarms.keys().at(index), item );
@@ -1647,6 +1657,16 @@ void DepartureModel::fireAlarm( const QDateTime& dateTime, DepartureItem* item )
 	if ( m_infos.alarmSettings[matchedAlarm].type == AlarmRemoveAfterFirstMatch )
 	    alarmsToRemove << matchedAlarm;
 	m_infos.alarmSettings[ matchedAlarm ].lastFired = QDateTime::currentDateTime();
+
+	#if QT_VERSION >= 0x040600
+	QPropertyAnimation *anim = new QPropertyAnimation( item, "alarmColorIntensity", this );
+	anim->setStartValue( 1.0 );
+	anim->setEndValue( 0.0 );
+	anim->setDuration( 1000 );
+	anim->setLoopCount( 5 );
+	anim->start( QAbstractAnimation::DeleteWhenStopped );
+	kDebug() << "Start anim";
+	#endif
     }
     kDebug() << "ALARMS TO BE REMOVED" << alarmsToRemove << item->departureInfo()->lineString()
 	     << item->departureInfo()->target() << item->departureInfo()->departure();

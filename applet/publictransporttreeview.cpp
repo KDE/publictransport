@@ -24,6 +24,7 @@
 
 #include <Plasma/FrameSvg>
 #include <Plasma/Theme>
+#include <Plasma/PaintUtils>
 #include <KColorScheme>
 
 #include <QPainter>
@@ -121,6 +122,15 @@ TreeView::TreeView( QStyle* style ) : QTreeView() {
     // Create fade tiles
     m_topFadeTile = createFadeTile( Qt::transparent, Qt::black );
     m_bottomFadeTile = createFadeTile( Qt::black, Qt::transparent );
+
+    // Set initial no-items-text
+    m_noItemsText = i18n( "No items." );
+}
+
+void TreeView::setNoItemsText( const QString& noItemsText ) {
+    m_noItemsText = noItemsText;
+    if ( model()->rowCount() == 0 )
+	QWidget::update();
 }
 
 QPixmap TreeView::createFadeTile( const QColor& start, const QColor& end ) {
@@ -167,14 +177,19 @@ void TreeView::drawRowBackground( QPainter* painter,
 	    ? options.palette.alternateBase() : options.palette.base();
     painter->fillRect( options.rect, bgBrush );
 
-    if ( topLevelParent.data(DrawAlarmBackground).toBool() ) {
+    if ( topLevelParent.data(DrawAlarmBackgroundRole).toBool() )
+    {
+	qreal bias = topLevelParent.data( AlarmColorIntensityRole ).toReal();
 	QColor alarmColor = KColorScheme( QPalette::Active )
 		.background( KColorScheme::NegativeBackground ).color();
+	QColor transparentAlarmColor = alarmColor;
+	transparentAlarmColor.setAlpha( 0 );
+	QColor color = KColorUtils::mix( transparentAlarmColor, alarmColor, bias );
 	QLinearGradient bgGradient( 0, 0, 1, 0 );
 	bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
 	bgGradient.setColorAt( 0, Qt::transparent );
-	bgGradient.setColorAt( 0.3, alarmColor );
-	bgGradient.setColorAt( 0.7, alarmColor );
+	bgGradient.setColorAt( 0.3, color );
+	bgGradient.setColorAt( 0.7, color );
 	bgGradient.setColorAt( 1, Qt::transparent );
 	painter->fillRect( options.rect, QBrush(bgGradient) );
     }
@@ -212,16 +227,17 @@ void TreeView::drawRow( QPainter* painter, const QStyleOptionViewItem& options,
 				QSize(cr.width(), fadeHeight) );
     int scrollValue = verticalScrollBar()->value();
 
+    // Style options with transparent alternate base to be used 
+    // by QTreeView::drawRow() because the alternate base is already drawn 
+    // in drawRowBackground().
     QStyleOptionViewItem optNoAlternateBase = options;
     optNoAlternateBase.palette.setBrush( QPalette::All, QPalette::AlternateBase,
-					    options.palette.base() );
+					 options.palette.base() );
 
     if ( (scrollValue < verticalScrollBar()->maximum() &&
-	    !horizontalScrollBar()->isVisible()
-	    && bottomFadeRect.intersects(options.rect)) ||
-	    (scrollValue > 0 && isHeaderHidden()
-	    && topFadeRect.intersects(options.rect)) )
-    {
+	    !horizontalScrollBar()->isVisible() && bottomFadeRect.intersects(options.rect))
+      || (scrollValue > 0 && isHeaderHidden() && topFadeRect.intersects(options.rect)) )
+    { // row gets faded on top or bottom
 	QStyleOptionViewItem opt = options;
 	opt.rect.moveTopLeft( QPoint(0, 0) );
 	optNoAlternateBase.rect.moveTopLeft( QPoint(0, 0) );
@@ -237,10 +253,10 @@ void TreeView::drawRow( QPainter* painter, const QStyleOptionViewItem& options,
 	p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
 	if ( bottomFadeRect.intersects(options.rect) ) {
 	    p.drawTiledPixmap( 0, cr.height() - fadeHeight - options.rect.top() + 1,
-				pixmap.width(), fadeHeight, m_bottomFadeTile );
-	} else {
+			       pixmap.width(), fadeHeight, m_bottomFadeTile );
+	} else { // intersects topFadeRect
 	    p.drawTiledPixmap( 0, -options.rect.top(),
-				pixmap.width(), fadeHeight, m_topFadeTile );
+			       pixmap.width(), fadeHeight, m_topFadeTile );
 	}
 	p.end();
 
@@ -250,6 +266,45 @@ void TreeView::drawRow( QPainter* painter, const QStyleOptionViewItem& options,
 	drawRowBackground( painter, options, index );
 	QTreeView::drawRow( painter, optNoAlternateBase, index );
     }
+}
+
+void TreeView::paintEvent( QPaintEvent* event ) {
+    if ( model() && model()->rowCount() == 0 ) {
+	#if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0) // No Plasma::PaintUtils::drawHalo() for KDE < 4.4
+	bool drawHalos = qGray(palette().text().color().rgb()) < 192;
+	#endif
+	
+	QRect textRect = fontMetrics().boundingRect( contentsRect(),
+					Qt::AlignCenter, m_noItemsText );
+	QPainter p( viewport() );
+	#if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
+	if ( drawHalos ) {
+	    Plasma::PaintUtils::drawHalo( &p, QRectF(textRect) );
+	    p.setFont( font() );
+	    p.setPen( palette().text().color() );
+	    p.drawText( contentsRect(), Qt::AlignCenter, m_noItemsText );
+	} else
+	#endif
+	{
+	    // Draw the text into a pixmap and then apply a shadow to it
+	    QPixmap pixmap( textRect.size() );
+	    pixmap.fill( Qt::transparent );
+	    QPainter pPix( &pixmap );
+	    pPix.setFont( font() );
+	    pPix.setPen( palette().text().color() );
+	    pPix.drawText( QRect(QPoint(0, 0), pixmap.size()), Qt::AlignCenter, m_noItemsText );
+	    pPix.end();
+	    
+	    QImage shadow = pixmap.toImage();
+	    Plasma::PaintUtils::shadowBlur( shadow, 3, Qt::black );
+
+	    // Draw shadow
+	    p.drawImage( textRect.topLeft() + QPoint(1, 2), shadow );
+	    // Draw text
+	    p.drawPixmap( textRect.topLeft(), pixmap );
+	}
+    } else
+	QTreeView::paintEvent(event);
 }
 
 #include "publictransporttreeview.h"

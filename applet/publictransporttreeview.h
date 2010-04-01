@@ -39,10 +39,14 @@ class HeaderView : public QHeaderView {
 * @note It doesn't fade out while animating, because the animation is done
 * completely private in QTreeView. */
 class TreeView : public QTreeView {
+    Q_OBJECT
     public:
 	static const int fadeHeight = 16;
 
 	TreeView( QStyle *style );
+
+	QString noItemsText() const { return m_noItemsText; };
+	void setNoItemsText( const QString &noItemsText );
 
     protected:
 	QPixmap createFadeTile( const QColor &start, const QColor &end );
@@ -52,11 +56,13 @@ class TreeView : public QTreeView {
 				const QModelIndex& index ) const;
 	virtual void drawRow( QPainter *painter, const QStyleOptionViewItem& options,
 			      const QModelIndex& index ) const;
+	virtual void paintEvent( QPaintEvent* event );
 
     private:
 	QPixmap m_bottomFadeTile, m_topFadeTile;
 	int m_current;
 	QModelIndex m_firstDrawnIndex;
+	QString m_noItemsText;
 };
 
 #endif // Multiple inclusion guard

@@ -33,6 +33,7 @@
 #include <Plasma/PaintUtils>
 #include <Plasma/FrameSvg>
 #include <KColorScheme>
+#include <KColorUtils>
 
 
 PublicTransportDelegate::PublicTransportDelegate( QObject *parent )
@@ -171,9 +172,13 @@ void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
     QModelIndex topLevelParent = index;
     while ( topLevelParent.parent().isValid() )
 	topLevelParent = topLevelParent.parent();
-    if ( topLevelParent.data(DrawAlarmBackground).toBool() ) {
-	opt.palette.setColor( QPalette::Text, KColorScheme( QPalette::Active )
-		.foreground( KColorScheme::NegativeText ).color() );
+    if ( topLevelParent.data(DrawAlarmBackgroundRole).toBool() ) {
+	qreal bias = index.data( AlarmColorIntensityRole ).toReal();
+	QColor alarmTextColor = KColorScheme( QPalette::Active )
+		.foreground( KColorScheme::NegativeText ).color();
+	QColor color = KColorUtils::mix( opt.palette.color(QPalette::Text),
+					 alarmTextColor, bias );
+	opt.palette.setColor( QPalette::Text, color );
     }
     drawDisplay( painter, opt, displayRect, text );
     drawFocus( painter, option, displayRect );

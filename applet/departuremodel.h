@@ -24,17 +24,20 @@
 #include "departureinfo.h"
 #include "settings.h" // For AlarmSettings. Should be removed here.
 
+/** Additional data roles used by DepartureModel / JourneyModel. */
 enum AdditionalRoles {
     FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text. 
 	* The text of an item should not contain html tags, if used in a combo box. */
     DecorationPositionRole = Qt::UserRole + 501,
-    DrawAlarmBackground = Qt::UserRole + 502,
-    JourneyRatingRole = Qt::UserRole + 503, /**< Stores a value between 0 and 1. 
+    DrawAlarmBackgroundRole = Qt::UserRole + 502,
+    AlarmColorIntensityRole = Qt::UserRole + 503,
+    JourneyRatingRole = Qt::UserRole + 504, /**< Stores a value between 0 and 1.
 	* 0 for the journey with the biggest duration, 1 for the smallest duration. */
-    LinesPerRowRole = Qt::UserRole + 504, /**< Used to change the number of lines for a row. */
-    IconSizeRole = Qt::UserRole + 505 /**< Used to set a specific icon size for an element. */
+    LinesPerRowRole = Qt::UserRole + 505, /**< Used to change the number of lines for a row. */
+    IconSizeRole = Qt::UserRole + 506 /**< Used to set a specific icon size for an element. */
 };
 
+/** The position of the decoration. */
 enum DecorationPosition {
     DecorationLeft,
     DecorationRight
@@ -57,6 +60,7 @@ struct Infos {
     float sizeFactor;
 };
 
+/** Child item types. */
 enum ItemType {
     OtherItem, /**< For childs of child items. */
     PlatformItem, /**< The item contains the platform */
@@ -71,6 +75,7 @@ enum ItemType {
     PricingItem /**< The item contains the pricing of a journey */
 };
 
+/** Columns for the departure/journey model. */
 enum Columns {
     ColumnLineString = 0,
     ColumnTarget = 1,
@@ -82,29 +87,47 @@ enum Columns {
 
 class ChildItem;
 class PublicTransportModel;
+/** Base class for items of PublicTransportModel. */
 class ItemBase {
     public:
 	ItemBase( const Infos *infos );
 	virtual ~ItemBase();
-	
-	ItemBase *parent() const { return m_parent; };
-	
-	ItemBase *topLevelParent() const;
-	ChildItem *childByType( ItemType itemType ) const;
-	ChildItem *child( int row ) const { return m_children[row]; };
-	QList< ChildItem* > children() const { return m_children; };
-	
-	int childCount() const { return m_children.count(); };
-	QModelIndex index();
-	virtual int row() const = 0;
-	virtual QVariant data( int role = Qt::DisplayRole, int column = 0 ) const = 0;
-	PublicTransportModel *model() const { return m_model; };
-	void setModel( PublicTransportModel *model );
 
+	/** @returns the parent item of this item, or NULL if this item is a 
+	* toplevel item. */
+	ItemBase *parent() const { return m_parent; };
+	/** @returns the toplevel parent item of this item, or a pointer to this
+	* item if it is a toplevel item itself. Never returns NULL. */
+	ItemBase *topLevelParent() const;
+
+	/** @returns the first child item with the given @p itemType. */
+	ChildItem *childByType( ItemType itemType ) const;
+	/** @returns the child item in the given @p row.. */
+	ChildItem *child( int row ) const { return m_children[row]; };
+	/** @returns a list of all child items. */
+	QList< ChildItem* > children() const { return m_children; };
+	/** @returns the number of child items. */
+	int childCount() const { return m_children.count(); };
+
+	/** Removes @p count child items beginning with the child item at row @p first. */
 	void removeChildren( int first, int count );
+	/** Removes the given @p child item. */
 	void removeChild( ChildItem *child ) {
 	    removeChildren( m_children.indexOf(child), 1 ); };
+	/** Appends the given @p child item. */
 	void appendChild( ChildItem *child );
+
+	/** @returns the QModelIndex of this item. */
+	QModelIndex index();
+	/** @returns the row of this item. */
+	virtual int row() const = 0;
+	/** @returns the data of this item in the given @p role at the given @p column. */
+	virtual QVariant data( int role = Qt::DisplayRole, int column = 0 ) const = 0;
+
+	/** @returns a pointer to the model of this item if any. */
+	PublicTransportModel *model() const { return m_model; };
+	/** Sets the model of this item to @p model. */
+	void setModel( PublicTransportModel *model );
 
 	virtual bool hasPendingAlarm() const { return false; };
 	virtual void updateTimeValues() {};
@@ -116,6 +139,7 @@ class ItemBase {
 	const Infos *m_infos;
 };
 
+/** A child item in PublicTransportModel. */
 class ChildItem : public ItemBase {
     public:
 	ChildItem( ItemType itemType, const QString &formattedText,
@@ -127,6 +151,7 @@ class ChildItem : public ItemBase {
 	virtual int row() const {
 	    return m_parent ? m_parent->children().indexOf( const_cast< ChildItem* >(this) ) : -1; };
 
+	/** The type of this child item. */
 	ItemType type() const { return m_type; };
 
 	virtual QVariant data( int role = Qt::DisplayRole, int = 0 ) const;
@@ -152,22 +177,18 @@ class ChildItem : public ItemBase {
 	ItemType m_type;
 };
 
-class JourneyItem : public ItemBase {
+/** Base class for top level items in PublicTransportModel. */
+class TopLevelItem : public ItemBase {
     public:
-	JourneyItem( const JourneyInfo &journeyInfo, const Infos *infos );
+	TopLevelItem( const Infos *infos );
 	
-	virtual int row() const;
-	const JourneyInfo *journeyInfo() const { return &m_journeyInfo; };
-	QHash< ItemType, ChildItem* > typedChildren() const;
+	virtual void setData( Columns column, const QVariant &data, int role = Qt::UserRole );
 	
-	virtual QVariant data( int role = Qt::DisplayRole, int column = 0 ) const;
-	void setData( Columns column, const QVariant &data, int role = Qt::UserRole );
-
 	inline QString text( Columns column = ColumnLineString ) const {
 	    return m_columnData.value( column )[ Qt::DisplayRole ].toString(); };
 	inline void setText( Columns column, const QString &text ) {
 	    setData( column, text, Qt::DisplayRole ); };
-	
+
 	inline QString formattedText( Columns column = ColumnLineString ) const {
 	    return m_columnData.value( column )[ FormattedTextRole ].toString(); };
 	inline void setFormattedText( Columns column, const QString &text ) {
@@ -177,8 +198,31 @@ class JourneyItem : public ItemBase {
 	    return m_columnData.value( column )[ Qt::DecorationRole ].value< QIcon >(); };
 	inline void setIcon( Columns column, const QIcon &icon ) {
 	    setData( column, icon, Qt::DecorationRole ); };
-	    
+
+    protected:
+	QHash< int, QHash<int, QVariant> > m_columnData;
+};
+
+/** An item which automatically creates/updates child items according to the 
+* information in @ref journeyInfo. To update this item and it's child items
+* call @ref setJourneyInfo. To only update remaining time values, call
+* @ref updateTimeValues. */
+class JourneyItem : public TopLevelItem {
+    public:
+	JourneyItem( const JourneyInfo &journeyInfo, const Infos *infos );
+	
+	virtual int row() const;
+	/** @returns the information that this item currently shows. */
+	const JourneyInfo *journeyInfo() const { return &m_journeyInfo; };
+	/** @returns a hash with child items by their type. */
+	QHash< ItemType, ChildItem* > typedChildren() const;
+	
+	virtual QVariant data( int role = Qt::DisplayRole, int column = 0 ) const;
+
+	/** Updates remaining time values in the departure/arrival column. */
 	virtual void updateTimeValues();
+	/** Updates this item and all it's child items according to the 
+	* inforamtion in @p journeyInfo. */
 	void setJourneyInfo( const JourneyInfo &journeyInfo );
 	
     protected:
@@ -193,37 +237,28 @@ class JourneyItem : public ItemBase {
 	qreal rating() const;
 	
 	JourneyInfo m_journeyInfo;
-	QHash< int, QHash<int, QVariant> > m_columnData;
-	
 };
 
-class DepartureItem : public ItemBase {
+/** An item which automatically creates/updates child items according to the
+* information in @ref departureInfo. To update this item and it's child items
+* call @ref setDepartureInfo. To only update remaining time values, call
+* @ref updateTimeValues. */
+class DepartureItem : public QObject, public TopLevelItem {
+    Q_OBJECT
+    Q_PROPERTY( qreal alarmColorIntensity READ alarmColorIntensity WRITE setAlarmColorIntensity )
     public:
 	DepartureItem( const DepartureInfo &departureInfo, const Infos *infos );
 	
 	virtual int row() const;
+	/** @returns the information that this item currently shows. */
 	const DepartureInfo *departureInfo() const { return &m_departureInfo; };
+	/** @returns a hash with child items by their type. */
 	QHash< ItemType, ChildItem* > typedChildren() const;
 	
 	virtual QVariant data( int role = Qt::DisplayRole, int column = 0 ) const;
-	void setData( Columns column, const QVariant &data, int role = Qt::UserRole );
-
-	inline QString text( Columns column = ColumnLineString ) const {
-	    return m_columnData.value( column )[ Qt::DisplayRole ].toString(); };
-	inline void setText( Columns column, const QString &text ) {
-	    setData( column, text, Qt::DisplayRole ); };
-	
-	inline QString formattedText( Columns column = ColumnLineString ) const {
-	    return m_columnData.value( column )[ FormattedTextRole ].toString(); };
-	inline void setFormattedText( Columns column, const QString &text ) {
-	    setData( column, text, FormattedTextRole ); };
-	
-	inline QIcon icon( Columns column = ColumnLineString ) const {
-	    return m_columnData.value( column )[ Qt::DecorationRole ].value< QIcon >(); };
-	inline void setIcon( Columns column, const QIcon &icon ) {
-	    setData( column, icon, Qt::DecorationRole ); };
 
 	AlarmStates alarmStates() const { return m_alarm; };
+	void setAlarmStates( AlarmStates alarmStates );
 	bool hasAlarm() const { return m_alarm.testFlag(AlarmPending) || m_alarm.testFlag(AlarmFired); };
 	void setAlarm();
 	void removeAlarm();
@@ -233,9 +268,13 @@ class DepartureItem : public ItemBase {
 	    return m_departureInfo.predictedDeparture().addSecs(
 		    -m_infos->alarmMinsBeforeDeparture * 60 );
 	};
-
+	qreal alarmColorIntensity() const { return m_alarmColorIntensity; };
+	void setAlarmColorIntensity( qreal alarmColorIntensity );
+	
+	/** Updates remaining time values in the departure column. */
 	virtual void updateTimeValues();
-	void setAlarmStates( AlarmStates alarmStates );
+	/** Updates this item and all it's child items according to the
+	* inforamtion in @p departureInfo. */
 	void setDepartureInfo( const DepartureInfo &departureInfo );
 	
     protected:
@@ -249,17 +288,16 @@ class DepartureItem : public ItemBase {
 	ChildItem *createRouteItem();
 
 	DepartureInfo m_departureInfo;
-	QHash< int, QHash<int, QVariant> > m_columnData;
-
 	AlarmStates m_alarm;
+	qreal m_alarmColorIntensity;
 };
 
+/** Base class for DepartureModel and JourneyModel. */
 class PublicTransportModel : public QAbstractItemModel {
     Q_OBJECT
     public:
 	PublicTransportModel( QObject *parent = 0 );
-	virtual ~PublicTransportModel() {
-	    qDeleteAll( m_items ); };
+	virtual ~PublicTransportModel() { qDeleteAll( m_items ); };
 
 	virtual QModelIndex index( int row, int column,
 				   const QModelIndex& parent = QModelIndex() ) const;
@@ -269,6 +307,7 @@ class PublicTransportModel : public QAbstractItemModel {
 	virtual QModelIndex parent( const QModelIndex& child ) const;
 	virtual QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const;
 
+	/** @returns a pointer to the toplevel item at the given @p row. */
 	ItemBase *item( int row ) const { return m_items.at( row ); };
 	ItemBase *itemFromIndex( const QModelIndex &index ) const;
 	QModelIndex indexFromItem( ItemBase *item, int column = 0 ) const;
@@ -279,6 +318,7 @@ class PublicTransportModel : public QAbstractItemModel {
 	    return removeRows( item->row(), 1 ); };
 	/** Removes all items from the model, but doesn't clear header data. */
 	virtual void clear();
+	/** @returns true, if this model has no items. */
 	inline bool isEmpty() const { return rowCount() == 0; };
 
 	Infos infos() const { return m_infos; };

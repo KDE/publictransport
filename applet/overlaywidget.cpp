@@ -49,36 +49,43 @@ OverlayWidget::OverlayWidget( QGraphicsWidget* parent, QGraphicsWidget* under )
     under->setEnabled( false );
 
 #if QT_VERSION >= 0x040600
-    if ( under && KGlobalSettings::graphicEffectsLevel() != KGlobalSettings::NoEffects ) {
+    if ( under && KGlobalSettings::graphicEffectsLevel() != KGlobalSettings::NoEffects )
+    {
 	m_blur = new QGraphicsBlurEffect( this );
-	m_blur->setBlurHints( QGraphicsBlurEffect::AnimationHint );
-	QPropertyAnimation *blurAnim = new QPropertyAnimation( m_blur, "blurRadius" );
-	blurAnim->setStartValue( 0 );
-	blurAnim->setEndValue( 5 );
-	blurAnim->setDuration( 1000 );
 	under->setGraphicsEffect( m_blur );
-	blurAnim->start( QAbstractAnimation::DeleteWhenStopped );
-    }
+	if ( under->geometry().width() * under->geometry().height() <= 250000 ) {
+	    m_blur->setBlurHints( QGraphicsBlurEffect::AnimationHint );
+	    QPropertyAnimation *blurAnim = new QPropertyAnimation( m_blur, "blurRadius" );
+	    blurAnim->setStartValue( 0 );
+	    blurAnim->setEndValue( 5 );
+	    blurAnim->setDuration( 1000 );
+	    blurAnim->start( QAbstractAnimation::DeleteWhenStopped );
+	}
+    } else // widget is too big
+	m_blur->setBlurHints( QGraphicsBlurEffect::PerformanceHint );
 #endif
 }
 
 void OverlayWidget::destroy() {
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-    Plasma::Animation *fadeAnim = Global::fadeAnimation( this, 0 );
+    if ( m_under->geometry().width() * m_under->geometry().height() <= 250000 ) {
+	Plasma::Animation *fadeAnim = Global::fadeAnimation( this, 0 );
 
-    QParallelAnimationGroup *parGroup = new QParallelAnimationGroup;
-    connect( parGroup, SIGNAL(finished()), this, SLOT(overlayAnimationComplete()) );
-    if ( fadeAnim )
-	parGroup->addAnimation( fadeAnim );
-    if ( m_blur ) {
-	QPropertyAnimation *blurAnim = new QPropertyAnimation( m_blur, "blurRadius" );
-	blurAnim->setStartValue( m_blur->blurRadius() );
-	blurAnim->setEndValue( 0 );
-	parGroup->addAnimation( blurAnim );
-    }
-    parGroup->start( QAbstractAnimation::DeleteWhenStopped );
+	QParallelAnimationGroup *parGroup = new QParallelAnimationGroup;
+	connect( parGroup, SIGNAL(finished()), this, SLOT(overlayAnimationComplete()) );
+	if ( fadeAnim )
+	    parGroup->addAnimation( fadeAnim );
+	if ( m_blur ) {
+	    QPropertyAnimation *blurAnim = new QPropertyAnimation( m_blur, "blurRadius" );
+	    blurAnim->setStartValue( m_blur->blurRadius() );
+	    blurAnim->setEndValue( 0 );
+	    parGroup->addAnimation( blurAnim );
+	}
+	parGroup->start( QAbstractAnimation::DeleteWhenStopped );
 
-    m_under->setEnabled( true );
+	m_under->setEnabled( true );
+    } else // widget is too big
+	overlayAnimationComplete();
 #else
     overlayAnimationComplete();
 #endif

@@ -354,7 +354,7 @@ class PublicTransport : public Plasma::PopupApplet {
 		const QString &type, const QStringList &descriptions,
 		const QStringList &extraRegExps = QStringList() );
 	void journeySearchItemCompleted( const QString &newJourneySearch,
-					 const QModelIndex &index = QModelIndex() );
+		const QModelIndex &index = QModelIndex(), int newCursorPos = -1 );
 	
 	/** Sets values of the current plasma theme. */
 	void useCurrentPlasmaTheme();
