@@ -29,47 +29,47 @@
 #include <KDebug>
 
 const QStringList JourneySearchParser::arrivalKeywords() {
-    return i18nc("A comma seperated list of keywords for the journey search to indicate "
+    return i18nc("A comma separated list of keywords for the journey search to indicate "
 	    "that given times are meant as arrivals. The order is used for "
 	    "autocompletion.\nNote: Keywords should be unique for each meaning.",
 	    "arriving,arrive,arrival,arr").split(',', QString::SkipEmptyParts);
 }
 
 const QStringList JourneySearchParser::departureKeywords() {
-    return i18nc("A comma seperated list of keywords for the journey search to indicate "
+    return i18nc("A comma separated list of keywords for the journey search to indicate "
 	    "that given times are meant as departures (default). The order is used "
 	    "for autocompletion.\nNote: Keywords should be unique for each meaning.",
 	    "departing,depart,departure,dep").split(',', QString::SkipEmptyParts);
 }
 
 const QStringList JourneySearchParser::fromKeywords() {
-    return i18nc("A comma seperated list of keywords for the journey search, indicating "
+    return i18nc("A comma separated list of keywords for the journey search, indicating "
 	    "that a journey FROM the given stop should be searched. This keyword "
 	    "needs to be placed at the beginning of the field.", "from")
 	    .split(',', QString::SkipEmptyParts);
 }
 
 const QStringList JourneySearchParser::toKeywords() {
-    return i18nc("A comma seperated list of keywords for the journey search, indicating "
+    return i18nc("A comma separated list of keywords for the journey search, indicating "
 	    "that a journey TO the given stop should be searched. This keyword needs "
 	    "to be placed at the beginning of the field.", "to")
 	    .split(',', QString::SkipEmptyParts);
 }
 
 const QStringList JourneySearchParser::timeKeywordsAt() {
-    return i18nc("A comma seperated list of keywords for the journey search field, "
+    return i18nc("A comma separated list of keywords for the journey search field, "
 	    "indicating that a date/time string follows.\nNote: Keywords should be "
 	    "unique for each meaning.", "at").split(',', QString::SkipEmptyParts);
 }
 
 const QStringList JourneySearchParser::timeKeywordsIn() {
-    return i18nc("A comma seperated list of keywords for the journey search field, "
+    return i18nc("A comma separated list of keywords for the journey search field, "
 	    "indicating that a relative time string follows.\nNote: Keywords should "
 	    "be unique for each meaning.", "in").split(',', QString::SkipEmptyParts);
 }
 
 const QStringList JourneySearchParser::timeKeywordsTomorrow() {
-    return i18nc("A comma seperated list of keywords for the journey search field, as "
+    return i18nc("A comma separated list of keywords for the journey search field, as "
 	    "replacement for tomorrows date.\nNote: Keywords should be unique for "
 	    "each meaning.", "tomorrow").split(',', QString::SkipEmptyParts);
 }
@@ -112,12 +112,12 @@ void JourneySearchParser::doCorrections( KLineEdit *lineEdit,
 	if ( timeKeywordsAt().contains(lastWordBeforeCursor, Qt::CaseInsensitive) ) {
 	    // Automatically add the current time after 'at'
 	    QString formattedTime = KGlobal::locale()->formatTime( QTime::currentTime() );
-	    searchLine->insert( posEnd, " " + formattedTime );
+	    searchLine->insert( posEnd, ' ' + formattedTime );
 	    selStart = posEnd + 1; // +1 for the added space
 	    selLength = formattedTime.length();
 	} else if ( timeKeywordsIn().contains(lastWordBeforeCursor, Qt::CaseInsensitive) ) {
 	    // Automatically add '5 minutes' after 'in'
-	    searchLine->insert( posEnd, " " + relativeTimeString() );
+	    searchLine->insert( posEnd, ' ' + relativeTimeString() );
 	    selStart = posEnd + 1; // +1 for the added space
 	    selLength = 1; // only select the number (5)
 	} else {
@@ -141,7 +141,7 @@ void JourneySearchParser::doCorrections( KLineEdit *lineEdit,
 	if ( removedPart.isEmpty() ) {
 	    correctedSearch = *searchLine;
 	} else {
-	    correctedSearch = removedPart + " " + *searchLine;
+	    correctedSearch = removedPart + ' ' + *searchLine;
 	    selStart += removedPart.length() + 1;
 	}
 	lineEdit->setText( correctedSearch );
@@ -396,7 +396,7 @@ bool JourneySearchParser::searchForJourneySearchKeywords( const QString& journey
     } else if ( stop->trimmed().isEmpty() ) {
 	if ( len )
 	    *len = 0;
-	*stop = QString();
+	stop->clear();
 	return false;
     }
     
@@ -465,7 +465,7 @@ void JourneySearchParser::combineDoubleQuotedWords( QStringList* words,
 	// Combine words
 	QString combinedWord;
 	for ( int i = quotedEnd; i >= quotedStart; --i )
-	    combinedWord = words->takeAt( i ) + " " + combinedWord;
+	    combinedWord = words->takeAt( i ) + ' ' + combinedWord;
 
 	if ( reinsertQuotedWords )
 	    words->insert( quotedStart, combinedWord.trimmed() );

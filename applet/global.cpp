@@ -53,7 +53,7 @@ KIcon Global::internationalIcon() {
     QStringList icons = QStringList() << "gb" << "de" << "es" << "jp";
     int yOffset = 12;
     int i = 0, x, y = 4;
-    foreach( QString sIcon, icons ) {
+    foreach( const QString &sIcon, icons ) {
 	if ( i % 2 == 0 ) // icon on the left
 	    x = 0;
 	else // icon on the right
@@ -125,7 +125,7 @@ KIcon Global::makeOverlayIcon ( const KIcon& icon, const QList<KIcon> &overlayIc
 //     QPixmap pixmapOverlayBottomRight = overlayIconBottomRight.pixmap(overlaySize);
     QPainter p(&pixmap);
     int x = 0, xStep = iconExtend / overlayIconsBottom.count();
-    foreach( KIcon overlayIcon, overlayIconsBottom ) {
+    foreach( const KIcon &overlayIcon, overlayIconsBottom ) {
 	p.drawPixmap(QPoint(x, iconExtend - overlaySize.height()), overlayIcon.pixmap(overlaySize));
 	x += xStep;
     }

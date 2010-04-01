@@ -56,9 +56,9 @@ typedef QList<AlarmSettings> AlarmSettingsList;
 bool operator ==( const AlarmSettings &l, const AlarmSettings &r );
 
 class KConfigDialog;
+class QStandardItemModel;
 class StopListWidget;
 class FilterListWidget;
-class QStandardItemModel;
 // class DataSourceTester;
 class Settings;
 class SettingsUiManager : public QObject {
@@ -289,7 +289,7 @@ struct Settings {
 	}
 	return true;
 
-	//     if ( m_useSeperateCityValue && (m_city.isEmpty()
+	//     if ( m_useSeparateCityValue && (m_city.isEmpty()
 	// 	    || m_stops.isEmpty() || m_stops.first().isEmpty()) )
 	// 	emit configurationRequired(true, i18n("Please set a city and a stop."));
 	//     else if ( m_stops.isEmpty() || m_stops.first().isEmpty() )

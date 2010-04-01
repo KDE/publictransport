@@ -44,7 +44,7 @@ class ConstraintWidget : public QWidget {
     Q_OBJECT
 
     public:
-	ConstraintWidget( FilterType type,
+	explicit ConstraintWidget( FilterType type,
 			  QList<FilterVariant> availableVariants = QList<FilterVariant>(),
 			  FilterVariant initialVariant = FilterNoVariant,
 			  QWidget* parent = 0 );
@@ -194,7 +194,7 @@ class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 	FilterWidget( QWidget *parent,
 		      AbstractDynamicWidgetContainer::SeparatorOptions seperatorOptions
 		      = AbstractDynamicLabeledWidgetContainer::NoSeparator );
-	FilterWidget( const QList<FilterType> &allowedFilterTypes = QList<FilterType>(),
+	explicit FilterWidget( const QList<FilterType> &allowedFilterTypes = QList<FilterType>(),
 		      QWidget* parent = 0,
 		      AbstractDynamicWidgetContainer::SeparatorOptions seperatorOptions
 		      = AbstractDynamicLabeledWidgetContainer::NoSeparator );

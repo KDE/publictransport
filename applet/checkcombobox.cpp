@@ -184,7 +184,7 @@ void CheckCombobox::paintEvent( QPaintEvent* ) {
     QModelIndexList items = checkedItems();
     QList< QIcon > icons;
     opt.currentText.clear();
-    foreach ( QModelIndex index, items ) {
+    foreach ( const QModelIndex &index, items ) {
         if ( !opt.currentText.isEmpty() )
             opt.currentText += d->separator;
         opt.currentText += index.data().toString();
@@ -252,10 +252,10 @@ void CheckCombobox::paintEvent( QPaintEvent* ) {
 
 void CheckCombobox::setCheckedItems( const QModelIndexList& indices ) {
     QModelIndexList checked = checkedItems();
-    foreach ( QModelIndex checkedIndex, checked )
+    foreach ( const QModelIndex &checkedIndex, checked )
 	view()->model()->setData( checkedIndex, Qt::Unchecked, Qt::CheckStateRole );
 
-    foreach ( QModelIndex index, indices )
+    foreach ( const QModelIndex &index, indices )
 	view()->model()->setData( index, Qt::Checked, Qt::CheckStateRole );
 
     updateGeometry();
@@ -287,7 +287,7 @@ QSize CheckCombobox::sizeHint() const {
 	    opt.currentText = d->allSelectedText;
 	else {
 	    opt.currentText.clear();
-	    foreach ( QModelIndex index, items ) {
+	    foreach ( const QModelIndex &index, items ) {
 		if ( !opt.currentText.isEmpty() )
 		    opt.currentText += d->separator;
 		opt.currentText += index.data().toString();

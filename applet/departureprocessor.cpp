@@ -211,7 +211,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
 	QList< QTime > routeTimes;
 	if ( dataMap.contains("routeTimes") ) {
 	    QVariantList times = dataMap[ "routeTimes" ].toList();
-	    foreach ( QVariant time, times )
+	    foreach ( const QVariant &time, times )
 		routeTimes << time.toTime();
 	}
 	DepartureInfo departureInfo( dataMap["operator"].toString(),
@@ -296,12 +296,12 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
 	QList<QTime> routeTimesDeparture, routeTimesArrival;
 	if ( dataMap.contains("routeTimesDeparture") ) {
 	    QVariantList times = dataMap[ "routeTimesDeparture" ].toList();
-	    foreach ( QVariant time, times )
+	    foreach ( const QVariant &time, times )
 		routeTimesDeparture << time.toTime();
 	}
 	if ( dataMap.contains("routeTimesArrival") ) {
 	    QVariantList times = dataMap[ "routeTimesArrival" ].toList();
-	    foreach ( QVariant time, times )
+	    foreach ( const QVariant &time, times )
 		routeTimesArrival << time.toTime();
 	}
 	QStringList routeStops, routeTransportLines,
@@ -318,12 +318,12 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
 	QList<int> routeTimesDepartureDelay, routeTimesArrivalDelay;
 	if ( dataMap.contains("routeTimesDepartureDelay") ) {
 	    QVariantList list = dataMap[ "routeTimesDepartureDelay" ].toList();
-	    foreach ( QVariant var, list )
+	    foreach ( const QVariant &var, list )
 		routeTimesDepartureDelay << var.toInt();
 	}
 	if ( dataMap.contains("routeTimesArrivalDelay") ) {
 	    QVariantList list = dataMap[ "routeTimesArrivalDelay" ].toList();
-	    foreach ( QVariant var, list )
+	    foreach ( const QVariant &var, list )
 		routeTimesArrivalDelay << var.toInt();
 	}
 

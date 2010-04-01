@@ -1,3 +1,21 @@
+/*
+*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*
+*   This program is free software; you can redistribute it and/or modify
+*   it under the terms of the GNU Library General Public License as
+*   published by the Free Software Foundation; either version 2 or
+*   (at your option) any later version.
+*
+*   This program is distributed in the hope that it will be useful,
+*   but WITHOUT ANY WARRANTY; without even the implied warranty of
+*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*   GNU General Public License for more details
+*
+*   You should have received a copy of the GNU Library General Public
+*   License along with this program; if not, write to the
+*   Free Software Foundation, Inc.,
+*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "departureinfo.h"
 
@@ -25,14 +43,14 @@ JourneyInfo::JourneyInfo( const QString &operatorName,
 			  const QList<int> &routeTimesArrivalDelay,
 			  int routeExactStops ) : PublicTransportInfo() {
     QList<VehicleType> vehicleTypes;
-    foreach( QVariant vehicleTypeVariant, vehicleTypesVariant ) {
+    foreach( const QVariant &vehicleTypeVariant, vehicleTypesVariant ) {
 	VehicleType vehicleType = static_cast<VehicleType>( vehicleTypeVariant.toInt() );
 	if ( !vehicleTypes.contains(vehicleType) )
 	    vehicleTypes.append( vehicleType );
     }
 
     QList<VehicleType> routeVehicleTypes;
-    foreach( QVariant routeVehicleType, routeVehicleTypesVariant )
+    foreach( const QVariant &routeVehicleType, routeVehicleTypesVariant )
 	routeVehicleTypes.append( static_cast<VehicleType>(routeVehicleType.toInt()) );
 
     init( operatorName, vehicleTypes, departure, arrival, pricing, startStopName,
@@ -116,7 +134,7 @@ QString JourneyInfo::departureText( bool htmlFormatted, bool displayTimeBold,
 		    .arg(Global::textColorDelayed().name()) );
 	}
     } else
-	sTime = QString();
+	sTime.clear();
 
     return sTime;
 }
@@ -149,7 +167,7 @@ QString JourneyInfo::arrivalText( bool /*htmlFormatted*/, bool displayTimeBold,
 		QString("<span style='color:%1;'>+&nbsp;\\1</span>")
 		.arg(Global::textColorDelayed().name()) );
     } else
-	sTime = QString();
+	sTime.clear();
 
     return sTime;
 }
@@ -351,7 +369,7 @@ QString DepartureInfo::departureText( bool htmlFormatted, bool displayTimeBold,
 	    }
 	}
     } else
-	sTime = QString();
+	sTime.clear();
 
     return sTime;
 }

@@ -33,7 +33,7 @@ void StopSuggester::requestSuggestions( const QString &serviceProviderID,
 	m_sourceNames.clear();
     }
     
-    if ( !city.isEmpty() ) { // m_useSeperateCityValue ) {
+    if ( !city.isEmpty() ) { // m_useSeparateCityValue ) {
 	m_sourceNames << QString( "Stops %1|stop=%2|city=%3" )
 		.arg( serviceProviderID, stopSubstring, city );
     } else {
@@ -45,7 +45,7 @@ void StopSuggester::requestSuggestions( const QString &serviceProviderID,
 
 void StopSuggester::dataUpdated( const QString& sourceName,
 				 const Plasma::DataEngine::Data& data ) {
-    if ( sourceName.startsWith("Stops", Qt::CaseInsensitive) ) {
+    if ( sourceName.startsWith(QLatin1String("Stops"), Qt::CaseInsensitive) ) {
 	m_publicTransportEngine->disconnectSource( sourceName, this );
 	if ( !m_sourceNames.removeOne(sourceName) ) {
 	    kDebug() << "Source" << sourceName << "was aborted";
@@ -96,7 +96,7 @@ void StopFinder::start() {
 
 void StopFinder::dataUpdated( const QString& sourceName,
 			      const Plasma::DataEngine::Data& data ) {
-    if ( sourceName.startsWith("Stops", Qt::CaseInsensitive) ) {
+    if ( sourceName.startsWith(QLatin1String("Stops"), Qt::CaseInsensitive) ) {
 	m_publicTransportEngine->disconnectSource( sourceName, this );
 	processPublicTransportData( data );
     } else if ( sourceName == "location" ) {
@@ -230,7 +230,7 @@ bool StopFinder::validateNextStop() {
 
     QString stop = m_stopsToBeChecked.dequeue();
     kDebug() << "Validate stop" << stop;
-    if ( !m_city.isEmpty() ) { // m_useSeperateCityValue ) {
+    if ( !m_city.isEmpty() ) { // m_useSeparateCityValue ) {
 	m_publicTransportEngine->connectSource(
 		QString( "Stops %1|stop=%2|city=%3" )
 		.arg( m_serviceProviderID, stop, m_city ), this );

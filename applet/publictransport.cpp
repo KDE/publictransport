@@ -17,6 +17,17 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Own includes
+#include "publictransport.h"
+#include "htmldelegate.h"
+#include "settings.h"
+#include "publictransporttreeview.h"
+#include "departureprocessor.h"
+#include "departuremodel.h"
+#include "overlaywidget.h"
+#include "journeysearchparser.h"
+#include "journeysearchlineedit.h"
+
 // KDE includes
 #include <KDebug>
 #include <KLocale>
@@ -70,17 +81,6 @@
 #if QT_VERSION >= 0x040600
     #include <QSequentialAnimationGroup>
 #endif
-
-// Own includes
-#include "publictransport.h"
-#include "htmldelegate.h"
-#include "settings.h"
-#include "publictransporttreeview.h"
-#include "departureprocessor.h"
-#include "departuremodel.h"
-#include "overlaywidget.h"
-#include "journeysearchparser.h"
-#include "journeysearchlineedit.h"
 
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	    : Plasma::PopupApplet(parent, args),
@@ -361,7 +361,7 @@ QList< QAction* > PublicTransport::contextualActions() {
 	
 	QMenu *menu = actionFilter->menu();
 	QString currentFilterConfig = m_settings.currentStopSettings().filterConfiguration;
-	foreach ( QString filterConfig, filterConfigurationList ) {
+	foreach ( const QString &filterConfig, filterConfigurationList ) {
 	    QAction *action = new QAction( SettingsUiManager::translateKey(filterConfig), m_filtersGroup );
 	    action->setCheckable( true );
 	    menu->addAction( action );
@@ -397,8 +397,10 @@ QList< QAction* > PublicTransport::contextualActions() {
 QVariantHash PublicTransport::serviceProviderData( const QString& id ) const {
     Plasma::DataEngine::Data serviceProviderData =
 	    dataEngine("publictransport")->query("ServiceProviders");
-    foreach ( QString serviceProviderName, serviceProviderData.keys() )  {
-	QVariantHash data = serviceProviderData.value( serviceProviderName ).toHash();
+    for ( Plasma::DataEngine::Data::const_iterator it = serviceProviderData.constBegin();
+	it != serviceProviderData.constEnd(); ++it )
+    {
+	QVariantHash data = serviceProviderData.value( it.key() ).toHash();
 	if ( data["id"] == id )
 	    return data;
     }
@@ -458,7 +460,7 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 	    m_label->setText( m_journeyTitleText );
     }
     
-    if ( !m_settings.currentStopSettings().city.isEmpty() ) { //TODO CHECK useSeperateCityValue )
+    if ( !m_settings.currentStopSettings().city.isEmpty() ) { //TODO CHECK useSeparateCityValue )
 	m_currentJourneySource += QString("|city=%1").arg(
 		m_settings.currentStopSettings().city );
     }
@@ -472,7 +474,7 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 
 void PublicTransport::disconnectSources() {
     if ( !m_currentSources.isEmpty() ) {
-	foreach ( QString currentSource, m_currentSources ) {
+	foreach ( const QString &currentSource, m_currentSources ) {
 	    kDebug() << "Disconnect data source" << currentSource;
 	    dataEngine( "publictransport" )->disconnectSource( currentSource, this );
 	}
@@ -514,7 +516,7 @@ void PublicTransport::reconnectSource() {
 	sources << currentSource;
     }
 
-    foreach ( QString currentSource, sources ) {
+    foreach ( const QString &currentSource, sources ) {
 	kDebug() << "Connect data source" << currentSource
 		 << "Autoupdate" << m_settings.autoUpdate;
 	m_currentSources << currentSource;
@@ -624,7 +626,7 @@ QString PublicTransport::stripDateAndTimeValues( const QString& sourceName ) con
     QString ret = sourceName;
     QRegExp rx( "(time=[^\\|]*|datetime=[^\\|]*)", Qt::CaseInsensitive );
     rx.setMinimal( true );
-    ret.replace( rx, "" );
+    ret.replace( rx, QChar() );
     return ret;
 }
 
@@ -1200,15 +1202,6 @@ void PublicTransport::configChanged() {
 	m_treeView->nativeWidget()->setColumnHidden( ColumnTarget, m_settings.hideColumnTarget );
     
     QFont font = m_settings.sizedFont();
-//     QFont font = m_settings.font;
-//     float sizeFactor = m_settings.sizeFactor;
-//     if ( font.pointSize() == -1 ) {
-// 	int pixelSize = font.pixelSize() * sizeFactor;
-// 	font.setPixelSize( pixelSize > 0 ? pixelSize : 1 );
-//     } else {
-// 	int pointSize = font.pointSize() * sizeFactor;
-// 	font.setPointSize( pointSize > 0 ? pointSize : 1 );
-//     }
     int smallPointSize = KGlobalSettings::smallestReadableFont().pointSize() * m_settings.sizeFactor;
     QFont smallFont = font, boldFont = font;
     smallFont.setPointSize( smallPointSize > 0 ? smallPointSize : 1 );
@@ -1465,7 +1458,7 @@ void PublicTransport::showActionButtons() {
     QGraphicsWidget *spacer2 = new QGraphicsWidget( m_overlay );
     spacer2->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
 
-    // Create a seperate layout for the cancel button to have some more space 
+    // Create a separate layout for the cancel button to have some more space
     // between the cancel button and the others
     QGraphicsLinearLayout *layoutCancel = new QGraphicsLinearLayout( Qt::Vertical );
     layoutCancel->setContentsMargins( 0, 10, 0, 0 );
@@ -1727,7 +1720,7 @@ void PublicTransport::possibleStopClicked( const QModelIndex &modelIndex ) {
 	m_btnStartJourneySearch->setEnabled( !m_journeySearch->text().isEmpty() );
     } else if ( type == "additionalKeywordAtEnd" ) {
 	// Add keyword at the endint newCursorPos
-	QString newText = m_journeySearch->text() + " " +
+	QString newText = m_journeySearch->text() + ' ' +
 			modelIndex.data( Qt::UserRole + 2 ).toString();
 	journeySearchItemCompleted( newText, modelIndex );
     } else if ( type == "additionalKeywordAlmostAtEnd" ) {
@@ -1737,16 +1730,16 @@ void PublicTransport::possibleStopClicked( const QModelIndex &modelIndex ) {
 	JourneySearchParser::stopNamePosition( m_journeySearch->nativeWidget(),
 					       &posStart, &len );
 	if ( posStart != -1 ) {
-	    newText = m_journeySearch->text().insert( posStart + len, " " + keyword );
+	    newText = m_journeySearch->text().insert( posStart + len, ' ' + keyword );
 	    journeySearchItemCompleted( newText, modelIndex, posStart + len + keyword.length() + 1 );
 	} else {
-	    newText = m_journeySearch->text() + " " + keyword;
+	    newText = m_journeySearch->text() + ' ' + keyword;
 	    journeySearchItemCompleted( newText, modelIndex );
 	}
     } else if ( type == "additionalKeywordAtBegin" ) {
 	// Add keyword to the beginning
 	QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
-	QString newText = keyword + " " + m_journeySearch->text();
+	QString newText = keyword + ' ' + m_journeySearch->text();
 	journeySearchItemCompleted( newText, modelIndex, keyword.length() + 1 );
     } else if ( type == "additionalKeywordAtEndRemove"
 	     || type == "additionalKeywordAlmostAtEndRemove"
@@ -1774,7 +1767,7 @@ void PublicTransport::possibleStopClicked( const QModelIndex &modelIndex ) {
 	    // Keyword (and values) found, remove
 	    newText = newText.remove( regExp.pos(1), regExp.cap(1).length() );
 	    if ( type == "replaceTimeKeyword" ) { // Add new time keyword
-		newText = newText + " " + modelIndex.data( Qt::UserRole + 2 ).toString();
+		newText = newText + ' ' + modelIndex.data( Qt::UserRole + 2 ).toString();
 		journeySearchItemCompleted( newText, modelIndex );
 	    } else
 		journeySearchItemCompleted( newText, modelIndex, regExp.pos(1) );
@@ -2464,7 +2457,7 @@ void PublicTransport::addState( AppletState state ) {
 		m_btnLastJourneySearches->setEnabled( false );
 	    } else {
 		menu = new QMenu( m_btnLastJourneySearches->nativeWidget() );
-		foreach ( QString recent, m_settings.recentJourneySearches )
+		foreach ( const QString &recent, m_settings.recentJourneySearches )
 		    menu->addAction( recent );
 		menu->addSeparator();
 		menu->addAction( KIcon("edit-clear-list"),

@@ -26,7 +26,7 @@
 /** Plasma like HeaderView. */
 class HeaderView : public QHeaderView {
     public:
-	HeaderView( Qt::Orientation orientation, QWidget* parent = 0 );
+	explicit HeaderView( Qt::Orientation orientation, QWidget* parent = 0 );
 
     protected:
 	virtual void paintEvent( QPaintEvent *e );

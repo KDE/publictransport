@@ -144,8 +144,8 @@ public:
     Columns column;
 };
 
-ItemBase::ItemBase( const Infos *infos ) : m_parent(0), m_model(0), m_infos(infos) {
-    Q_ASSERT_X( infos, "DepartureModelItemBase::DepartureModelItemBase",
+ItemBase::ItemBase( const Info *info ) : m_parent(0), m_model(0), m_info(info) {
+    Q_ASSERT_X( info, "DepartureModelItemBase::DepartureModelItemBase",
 		"The pointer to the Info object must be given." );
 }
 
@@ -199,7 +199,7 @@ void ItemBase::appendChild( ChildItem* child ) {
     child->m_model = m_model;
 }
 
-TopLevelItem::TopLevelItem( const Infos* infos ) : ItemBase( infos ) {
+TopLevelItem::TopLevelItem( const Info* info ) : ItemBase( info ) {
 }
 
 void TopLevelItem::setData( Columns column, const QVariant& data, int role ) {
@@ -209,22 +209,21 @@ void TopLevelItem::setData( Columns column, const QVariant& data, int role ) {
 }
 
 ChildItem::ChildItem( ItemType itemType,
-	    const QString& formattedText, const QIcon& icon, const Infos *infos )
-	    : ItemBase(infos) {
+	    const QString& formattedText, const QIcon& icon, const Info *info )
+	    : ItemBase(info) {
     m_type = itemType;
     setFormattedText( formattedText );
     setIcon( icon );
 }
 
-ChildItem::ChildItem( ItemType itemType,
-			    const QString& formattedText, const Infos* infos )
-			    : ItemBase(infos) {
+ChildItem::ChildItem( ItemType itemType, const QString& formattedText, const Info* info )
+			    : ItemBase(info) {
     m_type = itemType;
     setFormattedText( formattedText );
 }
 
-ChildItem::ChildItem( ItemType itemType, const Infos* infos)
-				: ItemBase(infos) {
+ChildItem::ChildItem( ItemType itemType, const Info* info)
+				: ItemBase(info) {
     m_type = itemType;
 }
 
@@ -251,8 +250,8 @@ void ChildItem::setData( const QVariant& data, int role ) {
 }
 
 
-JourneyItem::JourneyItem( const JourneyInfo& journeyInfo, const Infos* infos )
-				: TopLevelItem( infos ) {
+JourneyItem::JourneyItem( const JourneyInfo& journeyInfo, const Info* info )
+				: TopLevelItem( info ) {
     setJourneyInfo( journeyInfo );
 }
 
@@ -285,7 +284,7 @@ QVariant JourneyItem::data( int role, int column ) const {
     } else if ( !m_parent ) {
 	switch ( role ) {
 	    case LinesPerRowRole:
-		return m_infos->linesPerRow;
+		return m_info->linesPerRow;
 	    case Qt::TextAlignmentRole:
 		return static_cast<int>( (column == 0 ? Qt::AlignRight : Qt::AlignLeft)
 				    | Qt::AlignVCenter );
@@ -362,7 +361,7 @@ void JourneyItem::setJourneyInfo( const JourneyInfo& journeyInfo ) {
 
 void JourneyItem::updateValues() {
     setIcon( ColumnLineString, Global::iconFromVehicleTypeList(
-	    m_journeyInfo.vehicleTypes(), 32 * m_infos->sizeFactor) );
+	    m_journeyInfo.vehicleTypes(), 32 * m_info->sizeFactor) );
 
     QString sDuration = KGlobal::locale()->prettyFormatDuration(
 	    m_journeyInfo.duration() * 60 * 1000 );
@@ -426,7 +425,7 @@ ChildItem* JourneyItem::appendNewChild( ItemType itemType ) {
     } else {
 	int linesPerRow;
 	child = new ChildItem(
-		itemType, childItemText(itemType, &linesPerRow), KIcon(), m_infos );
+		itemType, childItemText(itemType, &linesPerRow), KIcon(), m_info );
 	if ( itemType == JourneyNewsItem || itemType == DelayItem )
 	    child->setData( linesPerRow, LinesPerRowRole );
     }
@@ -437,23 +436,19 @@ ChildItem* JourneyItem::appendNewChild( ItemType itemType ) {
 
 void JourneyItem::updateTimeValues() {
     QString depTextFormatted = m_journeyInfo.departureText( true,
-	    m_infos->displayTimeBold, true, true,
-// 	    m_infos->showRemainingMinutes, m_infos->showDepartureTime,
-	    m_infos->linesPerRow );
+	    m_info->displayTimeBold, true, true, m_info->linesPerRow );
     QString oldTextFormatted = formattedText( ColumnDeparture );
     if ( oldTextFormatted != depTextFormatted ) {
 	setFormattedText( ColumnDeparture, depTextFormatted );
 
 	QString longestLine;
 	QString depText = m_journeyInfo.departureText( false,
-		m_infos->displayTimeBold, true, true,
-// 	    m_infos->showRemainingMinutes, m_infos->showDepartureTime,
-		m_infos->linesPerRow );
-	if ( m_infos->linesPerRow > 1 ) {
+		m_info->displayTimeBold, true, true, m_info->linesPerRow );
+	if ( m_info->linesPerRow > 1 ) {
 	    // Get longest line for auto column sizing
-	    QStringList lines = depText.split( "\n", QString::SkipEmptyParts,
+	    QStringList lines = depText.split( '\n', QString::SkipEmptyParts,
 					       Qt::CaseInsensitive );
-	    foreach( QString sCurrent, lines ) {
+	    foreach( const QString &sCurrent, lines ) {
 		if ( sCurrent.length() > longestLine.length() )
 		    longestLine = sCurrent;
 	    }
@@ -463,23 +458,19 @@ void JourneyItem::updateTimeValues() {
     }
     
     QString arrTextFormatted = m_journeyInfo.arrivalText( true,
-	    m_infos->displayTimeBold,true, true,
-// 	    m_infos->showRemainingMinutes, m_infos->showDepartureTime,
-	    m_infos->linesPerRow );
+	    m_info->displayTimeBold,true, true, m_info->linesPerRow );
     oldTextFormatted = formattedText( ColumnArrival );
     if ( oldTextFormatted != arrTextFormatted ) {
 	setFormattedText( ColumnArrival, arrTextFormatted );
 	
 	QString longestLine;
 	QString depText = m_journeyInfo.departureText( false,
-		m_infos->displayTimeBold, true, true,
-// 	    m_infos->showRemainingMinutes, m_infos->showDepartureTime,
-		m_infos->linesPerRow );
-	if ( m_infos->linesPerRow > 1 ) {
+		m_info->displayTimeBold, true, true, m_info->linesPerRow );
+	if ( m_info->linesPerRow > 1 ) {
 	    // Get longest line for auto column sizing
-	    QStringList lines = depText.split( "\n", QString::SkipEmptyParts,
+	    QStringList lines = depText.split( '\n', QString::SkipEmptyParts,
 					       Qt::CaseInsensitive );
-	    foreach( QString sCurrent, lines ) {
+	    foreach( const QString &sCurrent, lines ) {
 		if ( sCurrent.length() > longestLine.length() )
 		    longestLine = sCurrent;
 	    }
@@ -523,7 +514,7 @@ QString JourneyItem::childItemText( ItemType itemType, int* linesPerRow ) {
     switch ( itemType ) {
 	case JourneyNewsItem:
 	    text = m_journeyInfo.journeyNews();
-	    if ( text.startsWith("http://") ) // TODO: Make the link clickable...
+	    if ( text.startsWith(QLatin1String("http://")) ) // TODO: Make the link clickable...
 		text = QString("<a href='%1'>%2</a>").arg(text).arg(i18n("Link to journey news"));
 	    text = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public "
 			"transport, like 'platform changed'", "News:") ).arg( text );
@@ -580,14 +571,14 @@ QString JourneyItem::childItemText( ItemType itemType, int* linesPerRow ) {
 }
 
 ChildItem* JourneyItem::createRouteItem() {
-    ChildItem *routeItem = new ChildItem( RouteItem, childItemText(RouteItem), m_infos );
+    ChildItem *routeItem = new ChildItem( RouteItem, childItemText(RouteItem), m_info );
 
     // Add route stops as child rows				TODO: -1 ?
     for ( int row = 0; row < m_journeyInfo.routeStops().count() - 1; ++row ) {
 	// Add a separator item, when the exact route ends
 	if ( row == m_journeyInfo.routeExactStops() && row > 0 ) {
 	    ChildItem *separatorItem = new ChildItem(
-		    OtherItem, i18n("  - End of exact route -  "), m_infos );
+		    OtherItem, i18n("  - End of exact route -  "), m_info );
 	    routeItem->appendChild( separatorItem );
 	}
 
@@ -652,7 +643,7 @@ ChildItem* JourneyItem::createRouteItem() {
 			    "%3 the arrival time, %4 the target stop name.",
 			    "dep: %1 - %2<br>arr: %3 - %4",
 			    sTimeDep, stopDep, sTimeArr, stopArr),
-			    icon, m_infos );
+			    icon, m_info );
 	    routeStopItem->setData( 2, LinesPerRowRole );
 	} else {
 	    routeStopItem = new ChildItem( OtherItem,
@@ -661,11 +652,11 @@ ChildItem* JourneyItem::createRouteItem() {
 			    "%5 the transport line.",
 			    "<b>%5</b><br>dep: %1 - %2<br>arr: %3 - %4",
 			    sTimeDep, stopDep, sTimeArr, stopArr,
-			    sTransportLine), icon, m_infos );
+			    sTransportLine), icon, m_info );
 	    routeStopItem->setData( 3, LinesPerRowRole );
 	}
 
-	int iconExtend = 16 * m_infos->sizeFactor;
+	int iconExtend = 16 * m_info->sizeFactor;
 	routeStopItem->setData( QSize(iconExtend, iconExtend), IconSizeRole );
 
 	routeItem->appendChild( routeStopItem );
@@ -674,8 +665,8 @@ ChildItem* JourneyItem::createRouteItem() {
     return routeItem;
 }
 
-DepartureItem::DepartureItem( const DepartureInfo &departureInfo, const Infos *infos )
-				: TopLevelItem( infos ) {
+DepartureItem::DepartureItem( const DepartureInfo &departureInfo, const Info *info )
+				: QObject(0), TopLevelItem( info ) {
     m_alarm = NoAlarm;
     m_alarmColorIntensity = 0.0;
     setDepartureInfo( departureInfo );
@@ -784,7 +775,7 @@ ChildItem* DepartureItem::appendNewChild( ItemType itemType ) {
 	child = createRouteItem();
     } else {
 	int linesPerRow;
-	child = new ChildItem( itemType, childItemText(itemType, &linesPerRow), KIcon(), m_infos );
+	child = new ChildItem( itemType, childItemText(itemType, &linesPerRow), KIcon(), m_info );
 	if ( itemType == JourneyNewsItem || itemType == DelayItem )
 	    child->setData( linesPerRow, LinesPerRowRole );
     }
@@ -795,19 +786,19 @@ ChildItem* DepartureItem::appendNewChild( ItemType itemType ) {
 
 void DepartureItem::updateTimeValues() {
     QString depTextFormatted = m_departureInfo.departureText( true,
-	    m_infos->displayTimeBold, m_infos->showRemainingMinutes,
-	    m_infos->showDepartureTime, m_infos->linesPerRow );
+	    m_info->displayTimeBold, m_info->showRemainingMinutes,
+	    m_info->showDepartureTime, m_info->linesPerRow );
     QString oldTextFormatted = formattedText( ColumnDeparture );
     if ( oldTextFormatted != depTextFormatted ) {
 	setFormattedText( ColumnDeparture, depTextFormatted );
 
 	QString longestLine;
 	QString depText = m_departureInfo.departureText( false,
-		m_infos->displayTimeBold, m_infos->showRemainingMinutes,
-		m_infos->showDepartureTime, m_infos->linesPerRow );
-	if ( m_infos->linesPerRow > 1 ) {
+		m_info->displayTimeBold, m_info->showRemainingMinutes,
+		m_info->showDepartureTime, m_info->linesPerRow );
+	if ( m_info->linesPerRow > 1 ) {
 	    // Get longest line for auto column sizing
-	    QStringList lines = depText.split( "\n", QString::SkipEmptyParts,
+	    QStringList lines = depText.split( '\n', QString::SkipEmptyParts,
 					       Qt::CaseInsensitive );
 	    foreach( QString sCurrent, lines ) {
 		if ( sCurrent.length() > longestLine.length() )
@@ -856,7 +847,7 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow ) {
 	    break;
 	case JourneyNewsItem:
 	    text = m_departureInfo.journeyNews();
-	    if ( text.startsWith("http://") ) { // TODO: Make the link clickable...
+	    if ( text.startsWith(QLatin1String("http://")) ) { // TODO: Make the link clickable...
 		text = QString("<a href='%1'>%2</a>").arg(text)
 			    .arg(i18n("Link to journey news"));
 	    }
@@ -870,7 +861,7 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow ) {
 		"of a journey with public transport", "Delay:") )
 		.arg( m_departureInfo.delayText() );
 	    if ( m_departureInfo.delayType() == Delayed ) {
-		text += "<br><b>" + (m_infos->departureArrivalListType == ArrivalList
+		text += "<br><b>" + (m_info->departureArrivalListType == ArrivalList
 		    ? i18n("Original arrival time:")
 		    : i18n("Original departure time:")) + "</b> " +
 			m_departureInfo.departure().toString("hh:mm");
@@ -908,14 +899,14 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow ) {
 }
 
 ChildItem* DepartureItem::createRouteItem() {
-    ChildItem *routeItem = new ChildItem( RouteItem, childItemText(RouteItem), m_infos );
+    ChildItem *routeItem = new ChildItem( RouteItem, childItemText(RouteItem), m_info );
 
     // Add route stops as child rows
     for ( int row = 0; row < m_departureInfo.routeStops().count(); ++row ) {
 	// Add a separator item, when the exact route ends
 	if ( row == m_departureInfo.routeExactStops() && row > 0 ) {
 	    ChildItem *separatorItem = new ChildItem(
-		    OtherItem, i18n("  - End of exact route -  "), m_infos );
+		    OtherItem, i18n("  - End of exact route -  "), m_info );
 	    routeItem->appendChild( separatorItem );
 	}
 
@@ -923,7 +914,7 @@ ChildItem* DepartureItem::createRouteItem() {
 		.arg(m_departureInfo.routeTimes()[row].toString("hh:mm"))
 		.arg(m_departureInfo.routeStops()[row]);
 	ChildItem *routeStopItem = new ChildItem(
-		OtherItem, text, KIcon("public-transport-stop"), m_infos );
+		OtherItem, text, KIcon("public-transport-stop"), m_info );
 	routeItem->appendChild( routeStopItem );
     }
 
@@ -943,7 +934,7 @@ QVariant DepartureItem::data( int role, int column ) const {
     } else if ( !m_parent ) {
 	switch ( role ) {
 	    case LinesPerRowRole:
-		return m_infos->linesPerRow;
+		return m_info->linesPerRow;
 	    case Qt::TextAlignmentRole:
 		return static_cast<int>( (column == 0 ? Qt::AlignRight : Qt::AlignLeft)
 			| Qt::AlignVCenter );
@@ -988,7 +979,7 @@ void DepartureItem::setAlarmStates( AlarmStates alarmStates ) {
 	KIcon icon = alarmStates.testFlag(AlarmIsRecurring)
 		? KIcon("task-reminder", NULL, QStringList() << "task-recurring")
 		: KIcon("task-reminder");
-	QPixmap pixmap = iconEffect.apply( icon.pixmap(16 * m_infos->sizeFactor),
+	QPixmap pixmap = iconEffect.apply( icon.pixmap(16 * m_info->sizeFactor),
 		KIconLoader::Small, KIconLoader::DisabledState );
 	KIcon disabledAlarmIcon;
 	disabledAlarmIcon.addPixmap( pixmap, QIcon::Normal );
@@ -1022,22 +1013,22 @@ void PublicTransportModel::callAtNextFullMinute( const char* member ) {
 }
 
 void PublicTransportModel::setLinesPerRow( int linesPerRow ) {
-    if ( m_infos.linesPerRow == linesPerRow )
+    if ( m_info.linesPerRow == linesPerRow )
 	return;
-    m_infos.linesPerRow = linesPerRow;
+    m_info.linesPerRow = linesPerRow;
     emit dataChanged( index(0, 0), index(rowCount(), 0) );
 }
 
 void PublicTransportModel::setSizeFactor( float sizeFactor ) {
-    m_infos.sizeFactor = sizeFactor;
+    m_info.sizeFactor = sizeFactor;
     //     TODO: Update items?
 }
 
 void PublicTransportModel::setDepartureColumnSettings( bool displayTimeBold,
 			    bool showRemainingMinutes, bool showDepartureTime) {
-    m_infos.displayTimeBold = displayTimeBold;
-    m_infos.showRemainingMinutes = showRemainingMinutes;
-    m_infos.showDepartureTime = showDepartureTime;
+    m_info.displayTimeBold = displayTimeBold;
+    m_info.showRemainingMinutes = showRemainingMinutes;
+    m_info.showDepartureTime = showDepartureTime;
     foreach ( ItemBase *item, m_items )
 	item->updateTimeValues();
 }
@@ -1209,7 +1200,7 @@ void JourneyModel::clear() {
 }
 
 void JourneyModel::update() {
-//     if ( m_infos.showRemainingMinutes ) {
+//     if ( m_info.showRemainingMinutes ) {
 	foreach ( ItemBase *item, m_items )
 	    item->updateTimeValues();
 //     }
@@ -1284,7 +1275,7 @@ JourneyItem* JourneyModel::addItem( const JourneyInfo& journeyInfo,
     }
 
     beginInsertRows( QModelIndex(), insertBefore, insertBefore );
-    JourneyItem *item = new JourneyItem( journeyInfo, &m_infos );
+    JourneyItem *item = new JourneyItem( journeyInfo, &m_info );
     m_infoToItem.insert( journeyInfo.hash(), item );
     m_items.insert( insertBefore, item );
     item->setModel( this );
@@ -1358,7 +1349,7 @@ void DepartureModel::update() {
 	m_nextItem = findNextItem();
     }
 
-    if ( m_infos.showRemainingMinutes ) {
+    if ( m_info.showRemainingMinutes ) {
 	foreach ( ItemBase *item, m_items )
 	    item->updateTimeValues();
     }
@@ -1369,17 +1360,21 @@ int DepartureModel::columnCount( const QModelIndex& parent ) const {
 }
 
 void DepartureModel::setAlarmSettings( const AlarmSettingsList& alarmSettings ) {
-    m_infos.alarmSettings = alarmSettings;
+    m_info.alarmSettings = alarmSettings;
 
     // Remove old alarms
     QMultiMap< QDateTime, DepartureItem* >::iterator it;
-    for ( it = m_alarms.begin(); it != m_alarms.end(); ++it )
-	removeAlarm( *it );
+    for ( it = m_alarms.begin(); it != m_alarms.end(); ++it ) {
+	disconnect( *it, SIGNAL(destroyed(QObject*)), this, SLOT(alarmItemDestroyed(QObject*)) );
+	(*it)->setAlarmStates( NoAlarm );
+	
+	it = m_alarms.erase( it );
+    }
 
     // Set new alarms
     for ( int row = 0; row < m_items.count(); ++row ) {
-	for ( int a = 0; a < m_infos.alarmSettings.count(); ++a ) {
-	    AlarmSettings alarmSettings = m_infos.alarmSettings.at( a );
+	for ( int a = 0; a < m_info.alarmSettings.count(); ++a ) {
+	    AlarmSettings alarmSettings = m_info.alarmSettings.at( a );
 	    if ( alarmSettings.enabled
 		&& alarmSettings.filter.match(*static_cast<DepartureItem*>(m_items[row])->departureInfo()) )
 	    {
@@ -1400,9 +1395,9 @@ void DepartureModel::setAlarmSettings( const AlarmSettingsList& alarmSettings ) 
 
 void DepartureModel::setDepartureArrivalListType(
 		DepartureArrivalListType departureArrivalListType ) {
-    if ( m_infos.departureArrivalListType == departureArrivalListType )
+    if ( m_info.departureArrivalListType == departureArrivalListType )
 	return;
-    m_infos.departureArrivalListType = departureArrivalListType;
+    m_info.departureArrivalListType = departureArrivalListType;
     emit headerDataChanged( Qt::Horizontal, 1, 2 );
 }
 
@@ -1412,12 +1407,12 @@ QVariant DepartureModel::headerData( int section, Qt::Orientation orientation,
 	switch ( section ) {
 	    case 0: return i18nc( "A public transport line", "Line" );
 	    case 1:
-		if ( m_infos.departureArrivalListType == DepartureList )
+		if ( m_info.departureArrivalListType == DepartureList )
 		    return i18nc("Target of a tramline or busline", "Target");
 		else
 		    return i18nc("Origin of a tramline or busline", "Origin");
 	    case 2:
-		if ( m_infos.departureArrivalListType == DepartureList )
+		if ( m_info.departureArrivalListType == DepartureList )
 		    return i18nc("Time of departure of a tram or bus", "Departure");
 		else
 		    return i18nc("Time of arrival of a tram or bus", "Arrival");
@@ -1522,54 +1517,53 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
     }
 
     beginInsertRows( QModelIndex(), insertBefore, insertBefore );
-    DepartureItem *item = new DepartureItem( departureInfo, &m_infos );
-    m_infoToItem.insert( departureInfo.hash(), item );
-    m_items.insert( insertBefore, item );
-    item->setModel( this );
+    DepartureItem *newItem = new DepartureItem( departureInfo, &m_info );
+    m_infoToItem.insert( departureInfo.hash(), newItem );
+    m_items.insert( insertBefore, newItem );
+    newItem->setModel( this );
     endInsertRows();
 
     if ( m_nextItem ) {
-	if ( item->departureInfo()->predictedDeparture() <
+	if ( newItem->departureInfo()->predictedDeparture() <
 		static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture() )
-	    m_nextItem = item;
+	    m_nextItem = newItem;
     } else
 	m_nextItem = findNextItem( sortColumn == ColumnDeparture
 				   && sortOrder == Qt::AscendingOrder );
 
-    
     // Handle alarms
     if ( !departureInfo.matchedAlarms().isEmpty() ) {
-	addAlarm( item );
+	addAlarm( newItem );
 
 	// Check if there's only one matching autogenerated alarm 
 	// and/or at least one recurring alarm
 	if ( departureInfo.matchedAlarms().count() == 1 ) {
 	    int matchedAlarm = departureInfo.matchedAlarms().first();
-	    if ( matchedAlarm < 0 || matchedAlarm >= m_infos.alarmSettings.count() ) {
+	    if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarmSettings.count() ) {
 		kDebug() << "Matched alarm is out of range of current alarm settings";
 	    } else {
-		AlarmSettings alarmSettings = m_infos.alarmSettings.at( matchedAlarm );
+		AlarmSettings alarmSettings = m_info.alarmSettings.at( matchedAlarm );
 		if ( alarmSettings.autoGenerated )
-		    item->setAlarmStates( item->alarmStates() | AlarmIsAutoGenerated );
+		    newItem->setAlarmStates( newItem->alarmStates() | AlarmIsAutoGenerated );
 		if ( alarmSettings.type != AlarmRemoveAfterFirstMatch )
-		    item->setAlarmStates( item->alarmStates() | AlarmIsRecurring );
+		    newItem->setAlarmStates( newItem->alarmStates() | AlarmIsRecurring );
 	    }
 	} else {
 	    for ( int a = 0; a < departureInfo.matchedAlarms().count(); ++a ) {
 		int matchedAlarm = departureInfo.matchedAlarms().at( a );
-		if ( matchedAlarm < 0 || matchedAlarm >= m_infos.alarmSettings.count() ) {
+		if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarmSettings.count() ) {
 		    kDebug() << "Matched alarm is out of range of current alarm settings";
 		    continue;
 		}
-		if ( m_infos.alarmSettings.at(matchedAlarm).type != AlarmRemoveAfterFirstMatch ) {
-		    item->setAlarmStates( item->alarmStates() | AlarmIsRecurring );
+		if ( m_info.alarmSettings.at(matchedAlarm).type != AlarmRemoveAfterFirstMatch ) {
+		    newItem->setAlarmStates( newItem->alarmStates() | AlarmIsRecurring );
 		    break;
 		}
 	    }
 	}
     }
-
-    return item;
+    
+    return newItem;
 }
 
 bool DepartureModel::removeRows( int row, int count, const QModelIndex& parent ) {
@@ -1598,11 +1592,20 @@ void DepartureModel::clear() {
     m_alarms.clear();
 }
 
+void DepartureModel::alarmItemDestroyed( QObject* item ) {
+    DepartureItem *depItem = qobject_cast< DepartureItem* >( item );
+kDebug() << "DESTROYYYY" << depItem;
+    int index;
+    while ( (index = m_alarms.values().indexOf(depItem)) != -1 )
+	m_alarms.remove( m_alarms.keys().at(index), depItem );
+}
+
 void DepartureModel::addAlarm( DepartureItem* item ) {
     const QDateTime alarmTime = item->alarmTime();
     if ( QDateTime::currentDateTime() > alarmTime ) {
 	fireAlarm( alarmTime, item );
     } else {
+	connect( item, SIGNAL(destroyed(QObject*)), this, SLOT(alarmItemDestroyed(QObject*)) );
 	m_alarms.insert( alarmTime, item );
 	item->setAlarmStates( (item->alarmStates() & ~AlarmFired) | AlarmPending );
     }
@@ -1611,12 +1614,14 @@ void DepartureModel::addAlarm( DepartureItem* item ) {
 void DepartureModel::removeAlarm( DepartureItem* item ) {
     int index = m_alarms.values().indexOf( item );
     if ( index == -1 ) {
-	kDebug() << "Alarm not found!" << item;
+	kDebug() << "Alarm not found!";
 	return;
     }
     int removed = m_alarms.remove( m_alarms.keys().at(index), item );
-    if ( removed > 0 )
+    if ( removed > 0 ) {
+	disconnect( item, SIGNAL(destroyed(QObject*)), this, SLOT(alarmItemDestroyed(QObject*)) );
 	item->setAlarmStates( NoAlarm );
+    }
 }
 
 void DepartureModel::fireAlarm( const QDateTime& dateTime, DepartureItem* item ) {
@@ -1627,12 +1632,12 @@ void DepartureModel::fireAlarm( const QDateTime& dateTime, DepartureItem* item )
     bool fireAlarm = true;
     for ( int i = item->departureInfo()->matchedAlarms().count() - 1; i >= 0; --i ) {
 	int matchedAlarm = item->departureInfo()->matchedAlarms().at( i );
-	if ( matchedAlarm < 0 || matchedAlarm >= m_infos.alarmSettings.count() ) {
+	if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarmSettings.count() ) {
 	    kDebug() << "Matched alarm is out of range of current alarm settings";
 	    continue;
 	}
 	
-	QDateTime lastFired = m_infos.alarmSettings[ matchedAlarm ].lastFired;
+	QDateTime lastFired = m_info.alarmSettings[ matchedAlarm ].lastFired;
 	if ( lastFired.isValid() ) {
 	    int secs = lastFired.secsTo( dateTime );
 	    kDebug() << "Alarm already fired?" << secs << "seconds from last fired to alarm time.";
@@ -1650,13 +1655,13 @@ void DepartureModel::fireAlarm( const QDateTime& dateTime, DepartureItem* item )
     QList< int > alarmsToRemove;
     for ( int i = item->departureInfo()->matchedAlarms().count() - 1; i >= 0; --i ) {
 	int matchedAlarm = item->departureInfo()->matchedAlarms().at( i );
-	if ( matchedAlarm < 0 || matchedAlarm >= m_infos.alarmSettings.count() ) {
+	if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarmSettings.count() ) {
 	    kDebug() << "Matched alarm is out of range of current alarm settings";
 	    continue;
 	}
-	if ( m_infos.alarmSettings[matchedAlarm].type == AlarmRemoveAfterFirstMatch )
+	if ( m_info.alarmSettings[matchedAlarm].type == AlarmRemoveAfterFirstMatch )
 	    alarmsToRemove << matchedAlarm;
-	m_infos.alarmSettings[ matchedAlarm ].lastFired = QDateTime::currentDateTime();
+	m_info.alarmSettings[ matchedAlarm ].lastFired = QDateTime::currentDateTime();
 
 	#if QT_VERSION >= 0x040600
 	QPropertyAnimation *anim = new QPropertyAnimation( item, "alarmColorIntensity", this );
@@ -1672,8 +1677,8 @@ void DepartureModel::fireAlarm( const QDateTime& dateTime, DepartureItem* item )
 	     << item->departureInfo()->target() << item->departureInfo()->departure();
     if ( !alarmsToRemove.isEmpty() ) {
 	foreach ( int i, alarmsToRemove ) // stored in descending order...
-	    m_infos.alarmSettings.removeAt( i ); // ...so removing is ok
-	emit updateAlarms( m_infos.alarmSettings, alarmsToRemove );
+	    m_info.alarmSettings.removeAt( i ); // ...so removing is ok
+	emit updateAlarms( m_info.alarmSettings, alarmsToRemove );
     }
 }
 

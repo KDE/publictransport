@@ -33,7 +33,7 @@ class StopSuggester : public QObject {
 	    KeepRunningRequests
 	};
 	
-	StopSuggester( Plasma::DataEngine *publicTransportEngine, QObject* parent = 0 );
+	explicit StopSuggester( Plasma::DataEngine *publicTransportEngine, QObject* parent = 0 );
 
 	void requestSuggestions( const QString &serviceProviderID,
 		const QString &stopSubstring, const QString &city = QString(),

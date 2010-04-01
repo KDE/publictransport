@@ -79,13 +79,13 @@ void FilterWidget::setFilter( const Filter& filter ) {
 	removeAllWidgets();
 	
 	// Setup ConstraintWidgets from filters
-	foreach ( Constraint constraint, filter )
+	foreach ( const Constraint &constraint, filter )
 	    addConstraint( constraint );
 	
 	// Restor widget count range
 	setWidgetCountRange( minWidgetCount, maxWidgetCount );
     } else {
-	foreach ( Constraint constraint, filter )
+	foreach ( const Constraint &constraint, filter )
 	    addConstraint( constraint );
     }
 }
@@ -395,7 +395,7 @@ void ConstraintListWidget::setValue( const QVariant& value ) {
     QModelIndexList indices;
     if ( value.isValid() ) {
 	QVariantList values = value.toList();
-	foreach ( QVariant value, values ) {
+	foreach ( const QVariant &value, values ) {
 	    QModelIndex index = indexFromValue( value );
 	    if ( index.isValid() )
 		indices << index;
@@ -429,9 +429,6 @@ void ConstraintWidget::variantChanged( int index ) {
 
     if ( m_constraint.variant != newVariant ) {
 	m_constraint.variant = newVariant;
-// 	bool visible = true; //m_variant != FilterDisregard;
-// 	foreach ( QWidget *w, m_widgets )
-// 	    w->setVisible( visible );
 	emit changed();
     }
 }
@@ -439,7 +436,7 @@ void ConstraintWidget::variantChanged( int index ) {
 QWidget* FilterWidget::createNewLabelWidget( int ) {
     KComboBox *cmbFilterType = new KComboBox( this );
     foreach ( FilterType filterType, m_allowedFilterTypes ) {
-	cmbFilterType->addItem( filterName(filterType) + ":",
+	cmbFilterType->addItem( filterName(filterType) + ':',
 				static_cast<int>(filterType) );
     }
     return cmbFilterType;
@@ -520,7 +517,7 @@ FilterList FilterListWidget::filters() const {
 
 void ConstraintListWidget::checkedItemsChanged() {
     m_values.clear();
-    foreach ( QModelIndex index, m_list->checkedItems() )
+    foreach ( const QModelIndex &index, m_list->checkedItems() )
 	m_values << index.data( Qt::UserRole );
     emit changed();
 }

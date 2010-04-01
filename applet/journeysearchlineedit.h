@@ -38,7 +38,7 @@ class JourneySearchHighlighter : public QSyntaxHighlighter {
 	QTextCharFormat &formatValue() { return m_formatValue; };
 	/** Format for syntax errors, eg. a keyword which is already in the string
 	* but only allowed once.
-	* @note Not all syntax error are catched currently. */
+	* @note Not all syntax error are noticed currently. */
 	QTextCharFormat &formatError() { return m_formatError; };
 	
     protected:
@@ -67,7 +67,7 @@ class JourneySearchLineEdit : public KLineEdit {
     Q_OBJECT
     public:
 	JourneySearchLineEdit( QWidget* parent = 0 );
-	JourneySearchLineEdit( const QString &string, QWidget* parent = 0 );
+	explicit JourneySearchLineEdit( const QString &string, QWidget* parent = 0 );
 
 	~JourneySearchLineEdit() { delete m_highlighter; };
 

@@ -17,6 +17,15 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// Own includes
+#include "settings.h"
+#include "htmldelegate.h"
+#include "filterwidget.h"
+#include "stopwidget.h"
+#include "departuremodel.h"
+// #include "datasourcetester.h"
+#include "departureprocessor.h"
+
 // Qt includes
 #include <QListWidget>
 #include <QTreeView>
@@ -39,19 +48,11 @@
 #include <KConfigDialog>
 #include <KColorScheme>
 #include <KFileDialog>
+#include <KInputDialog>
 #include <KStandardDirs>
 #include <KMessageBox>
 #include <KLineEdit>
 #include <KCategorizedSortFilterProxyModel>
-
-// Own includes
-#include "settings.h"
-#include "htmldelegate.h"
-#include "filterwidget.h"
-#include "stopwidget.h"
-#include "departuremodel.h"
-// #include "datasourcetester.h"
-#include <KInputDialog>
 
 SettingsUiManager::SettingsUiManager( const Settings &settings,
 	    Plasma::DataEngine* publicTransportEngine, Plasma::DataEngine* osmEngine,
@@ -101,8 +102,11 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 
     // Setup stop widgets
     QStringList trFilterConfigurationList;
-    foreach ( const QString &filterConfiguration, settings.filterSettings.keys() )
-	trFilterConfigurationList << translateKey( filterConfiguration );
+    for ( QHash<QString, FilterSettings>::const_iterator it = settings.filterSettings.constBegin();
+	  it != settings.filterSettings.constEnd(); ++it )
+    {
+	trFilterConfigurationList << translateKey( it.key() );
+    }
     m_stopListWidget = new StopListWidget( settings.stopSettingsList,
 	    trFilterConfigurationList, m_modelLocations,
 	    m_modelServiceProvider, m_publicTransportEngine, m_osmEngine,
@@ -200,7 +204,6 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	     this, SLOT(removeFilterConfiguration()) );
     connect( m_uiFilter.renameFilterConfiguration, SIGNAL(clicked()),
 	     this, SLOT(renameFilterConfiguration()) );
-    
 //     connect( m_dataSourceTester,
 // 	     SIGNAL(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)),
 // 	     this, SLOT(testResult(DataSourceTester::TestResult,const QVariant&,const QVariant&,const QVariant&)) );
@@ -561,7 +564,7 @@ void SettingsUiManager::setValuesOfAlarmConfig() {
 		this, SLOT(currentAlarmChanged(int)) );
     int row = m_uiAlarms.alarmList->currentRow();
     m_uiAlarms.alarmList->clear();
-    foreach ( AlarmSettings alarmSettings, m_alarmSettings ) {
+    foreach ( const AlarmSettings &alarmSettings, m_alarmSettings ) {
 	QListWidgetItem *item = new QListWidgetItem( alarmSettings.name );
 	item->setFlags( item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsEditable );
 	item->setCheckState( alarmSettings.enabled ? Qt::Checked : Qt::Unchecked );
@@ -600,8 +603,11 @@ void SettingsUiManager::setValuesOfFilterConfig() {
 	m_uiFilter.filterConfigurations->setCurrentIndex( 0 );
     
     QStringList filterConfigs;
-    foreach ( const QString &filterConfig, m_filterSettings.keys() )
-	filterConfigs << translateKey( filterConfig );
+    for ( QHash<QString, FilterSettings>::const_iterator it = m_filterSettings.constBegin();
+	  it != m_filterSettings.constEnd(); ++it )
+    {
+	filterConfigs << translateKey( it.key() );
+    }
 
     QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
 
@@ -666,14 +672,16 @@ void SettingsUiManager::initModels() {
     // Get a list with the location of each service provider
     // (locations can be contained multiple times)
     m_serviceProviderData = m_publicTransportEngine->query("ServiceProviders");
-    foreach ( QString serviceProviderName, m_serviceProviderData.keys() )  {
+    for ( Plasma::DataEngine::Data::const_iterator it = m_serviceProviderData.constBegin();
+	  it != m_serviceProviderData.constEnd(); ++it )
+    {
 	QHash< QString, QVariant > serviceProviderData =
-		m_serviceProviderData.value(serviceProviderName).toHash();
+		m_serviceProviderData.value(it.key()).toHash();
 	countries << serviceProviderData["country"].toString();
     }
 
     // Create location items
-    foreach( QString country, uniqueCountries ) {
+    foreach( const QString &country, uniqueCountries ) {
 	QStandardItem *item;
 	QString text, sortText;
 	item = new QStandardItem;
@@ -752,17 +760,20 @@ void SettingsUiManager::initModels() {
 
     // Init service provider model
     QList< QStandardItem* > appendItems;
-    foreach( QString serviceProviderName, m_serviceProviderData.keys() ) {
-	QVariantHash serviceProviderData = m_serviceProviderData[serviceProviderName].toHash();
+    for ( Plasma::DataEngine::Data::const_iterator it = m_serviceProviderData.constBegin();
+	it != m_serviceProviderData.constEnd(); ++it )
+    {
+//     foreach( const QString &serviceProviderName, m_serviceProviderData.keys() ) {
+	QVariantHash serviceProviderData = it.value().toHash();
 
 	// TODO Add a flag to the accessor XML files, maybe <countryWide />
-	bool isCountryWide = serviceProviderName.contains(
+	bool isCountryWide = it.key().contains(
 		serviceProviderData["country"].toString(), Qt::CaseInsensitive );
 	QString formattedText;
-	QStandardItem *item = new QStandardItem( serviceProviderName ); // TODO: delete?
+	QStandardItem *item = new QStandardItem( it.key() ); // TODO: delete?
 
 	formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
-	    .arg( serviceProviderName )
+	    .arg( it.key() )
 	    .arg( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
 	item->setData( 4, LinesPerRowRole );
 	item->setData( formattedText, FormattedTextRole );
@@ -775,14 +786,14 @@ void SettingsUiManager::initModels() {
 	QString locationCode = serviceProviderData["country"].toString();
 	QString sortString;
 	if ( locationCode == "international" ) {
-	    sortString = "XXXXX" + serviceProviderName;
+	    sortString = "XXXXX" + it.key();
 	} else if ( locationCode == "unknown" ) {
-	    sortString = "YYYYY" + serviceProviderName;
+	    sortString = "YYYYY" + it.key();
 	} else {
 	    QString countryName = KGlobal::locale()->countryCodeToName( locationCode );
 	    sortString = isCountryWide
-		    ? "WWWWW" + countryName + "11111" + serviceProviderName
-		    : "WWWWW" + countryName + serviceProviderName;
+		    ? "WWWWW" + countryName + "11111" + it.key()
+		    : "WWWWW" + countryName + it.key();
 	}
 	item->setData( sortString, SortRole );
 	
@@ -854,7 +865,8 @@ Settings SettingsUiManager::settings() {
     Settings ret;
 
     ret.stopSettingsList = m_stopListWidget->stopSettingsList();
-    foreach ( StopSettings stopSettings, ret.stopSettingsList ) {
+    for ( int i = 0; i < ret.stopSettingsList.count(); ++i ) {
+	StopSettings stopSettings = ret.stopSettingsList.at( i );
 	stopSettings.filterConfiguration = untranslateKey(
 		stopSettings.filterConfiguration );
     }
@@ -964,8 +976,11 @@ void SettingsUiManager::addFilterConfiguration() {
 						     m_uiFilter.filterConfigurations->count()-1);
     
     QStringList trFilterConfigurationList;
-    foreach ( const QString &filterConfiguration, m_filterSettings.keys() )
-	trFilterConfigurationList << translateKey( filterConfiguration );
+    for ( QHash<QString, FilterSettings>::const_iterator it = m_filterSettings.constBegin();
+	  it != m_filterSettings.constEnd(); ++it )
+    {
+	trFilterConfigurationList << translateKey( it.key() );
+    }
     m_stopListWidget->setFilterConfigurations( trFilterConfigurationList );
     
     stopSettingsChanged(); // Rebuild "Filter Uses" tab in filter page
@@ -996,8 +1011,11 @@ void SettingsUiManager::removeFilterConfiguration() {
 	kDebug() << "Default filter configuration not found!";
     
     QStringList trFilterConfigurationList;
-    foreach ( const QString &filterConfiguration, m_filterSettings.keys() )
-	trFilterConfigurationList << translateKey( filterConfiguration );
+    for ( QHash<QString, FilterSettings>::const_iterator it = m_filterSettings.constBegin();
+	it != m_filterSettings.constEnd(); ++it )
+    {
+	trFilterConfigurationList << translateKey( it.key() );
+    }
     m_stopListWidget->setFilterConfigurations( trFilterConfigurationList );
     
     stopSettingsChanged(); // Rebuild "Filter Uses" tab in filter page
@@ -1062,8 +1080,11 @@ void SettingsUiManager::renameFilterConfiguration() {
     m_stopListWidget->setStopSettingsList( stopSettingsList );
 
     QStringList trFilterConfigurationList;
-    foreach ( const QString &filterConfiguration, m_filterSettings.keys() )
-	trFilterConfigurationList << translateKey( filterConfiguration );
+    for ( QHash<QString, FilterSettings>::const_iterator it = m_filterSettings.constBegin();
+	it != m_filterSettings.constEnd(); ++it )
+    {
+	trFilterConfigurationList << translateKey( it.key() );
+    }
     m_stopListWidget->setFilterConfigurations( trFilterConfigurationList );
 
     stopSettingsChanged(); // Rebuild "Filter Uses" tab in filter page
@@ -1098,8 +1119,6 @@ void SettingsUiManager::setFilterConfigurationChanged( bool changed ) {
 int SettingsUiManager::filterConfigurationIndex( const QString& filterConfig ) {
     int index = m_uiFilter.filterConfigurations->findText( filterConfig );
     if ( index == -1 )
-	index = m_uiFilter.filterConfigurations->findText( filterConfig + "*" );
-    else
 	kDebug() << "Item" << filterConfig << "not found!";
     
     return index;
@@ -1142,7 +1161,7 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
     int i = 1;
     while ( cgGlobal.hasKey(test) ) {
 	StopSettings stopSettings;
-	QString suffix = i == 1 ? QString() : "_" + QString::number( i );
+	QString suffix = i == 1 ? QString() : '_' + QString::number( i );
 	stopSettings.location = cgGlobal.readEntry( "location" + suffix, "showAll" );
 	stopSettings.serviceProviderID = cgGlobal.readEntry(
 		"serviceProvider" + suffix, "de_db" );
@@ -1256,7 +1275,7 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
     i = 1;
     while ( cgGlobal.hasKey(test) ) {
 	AlarmSettings alarmSettings;
-	QString suffix = i == 1 ? QString() : "_" + QString::number( i );
+	QString suffix = i == 1 ? QString() : '_' + QString::number( i );
 	alarmSettings.type = static_cast<AlarmType>(
 		cgGlobal.readEntry("alarmType" + suffix, static_cast<int>(AlarmRemoveAfterFirstMatch)) );
 	alarmSettings.affectedStops = cgGlobal.readEntry( "alarmStops" + suffix, QList<int>() );
@@ -1292,8 +1311,8 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 	changed |= IsChanged | ChangedStopSettings;
 	int i = 1;
 	cgGlobal.writeEntry( "stopSettings", settings.stopSettingsList.count() ); // Not needed if deleteEntry/Group works, don't know what's wrong (sync() and Plasma::Applet::configNeedsSaving() doesn't help)
-	foreach ( StopSettings stopSettings, settings.stopSettingsList ) {
-	    QString suffix = i == 1 ? QString() : "_" + QString::number( i );
+	foreach ( const StopSettings &stopSettings, settings.stopSettingsList ) {
+	    QString suffix = i == 1 ? QString() : '_' + QString::number( i );
 	    cgGlobal.writeEntry( "location" + suffix, stopSettings.location );
 	    cgGlobal.writeEntry( "serviceProvider" + suffix, stopSettings.serviceProviderID );
 	    cgGlobal.writeEntry( "city" + suffix, stopSettings.city );
@@ -1315,7 +1334,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 	// Delete old stop settings entries
 	QString test = "location_" + QString::number( i );
 	while ( cgGlobal.hasKey(test) ) {
-	    QString suffix = "_" + QString::number( i );
+	    QString suffix = '_' + QString::number( i );
 	    cgGlobal.deleteEntry( "location" + suffix );
 	    cgGlobal.deleteEntry( "serviceProvider" + suffix );
 	    cgGlobal.deleteEntry( "city" + suffix );
@@ -1435,8 +1454,8 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 	changed |= IsChanged | ChangedAlarmSettings;
 	int i = 1;
 	cg.writeEntry( "alarmCount", settings.alarmSettings.count() );
-	foreach ( AlarmSettings alarmSettings, settings.alarmSettings ) {
-	    QString suffix = i == 1 ? QString() : "_" + QString::number( i );
+	foreach ( const AlarmSettings &alarmSettings, settings.alarmSettings ) {
+	    QString suffix = i == 1 ? QString() : '_' + QString::number( i );
 	    cgGlobal.writeEntry( "alarmType" + suffix, static_cast<int>(alarmSettings.type) );
 	    cgGlobal.writeEntry( "alarmStops" + suffix, alarmSettings.affectedStops );
 	    cgGlobal.writeEntry( "alarmFilter" + suffix, alarmSettings.filter.toData() );
@@ -1450,7 +1469,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 	// Delete old stop settings entries
 	QString test = "alarmType" + QString::number( i );
 	while ( cgGlobal.hasKey(test) ) {
-	    QString suffix = i == 1 ? QString() : "_" + QString::number( i );
+	    QString suffix = i == 1 ? QString() : '_' + QString::number( i );
 	    cgGlobal.deleteEntry( "alarmType" + suffix );
 	    cgGlobal.deleteEntry( "alarmStops" + suffix );
 	    cgGlobal.deleteEntry( "alarmFilter" + suffix );

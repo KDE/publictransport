@@ -57,7 +57,7 @@ class DepartureProcessor : public QThread {
 	void processDepartures( const QString &sourceName, const QVariantHash &data );
 	void filterDepartures( const QString &sourceName,
 			       const QList< DepartureInfo > &departures,
-			       const QList< uint > &shownDepartures );
+			       const QList< uint > &shownDepartures = QList< uint >() );
 	void processJourneys( const QString &sourceName, const QVariantHash &data );
 	
 	void abortJobs( JobTypes jobTypes );

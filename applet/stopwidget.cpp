@@ -114,7 +114,7 @@ void StopWidget::setHighlighted( bool highlighted ) {
 }
 
 void StopWidget::changeClicked() {
-    StopSettingsDialog *dlg = new StopSettingsDialog( m_stopSettings,
+    QPointer<StopSettingsDialog> dlg = new StopSettingsDialog( m_stopSettings,
             m_filterConfigurations, m_modelLocations, m_modelServiceProviders,
             m_publicTransportEngine, m_osmEngine, m_geolocationEngine, this );
     int result = dlg->exec();

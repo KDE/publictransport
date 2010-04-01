@@ -213,7 +213,7 @@ void FilterList::fromData( const QByteArray& ba ) {
 
 QDataStream& operator<<( QDataStream& out, const FilterList &filterList ) {
     out << filterList.count();
-    foreach ( Filter filter, filterList )
+    foreach ( const Filter &filter, filterList )
 	out << filter;
     return out;
 }
@@ -234,7 +234,7 @@ QDataStream& operator>>( QDataStream& in, FilterList &filterList ) {
 
 QDataStream& operator<<( QDataStream& out, const Filter &filter ) {
     out << filter.count();
-    foreach ( Constraint constraint, filter ) {
+    foreach ( const Constraint &constraint, filter ) {
 	out << constraint.type;
 	out << constraint.variant;
 	

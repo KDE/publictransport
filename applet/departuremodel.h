@@ -43,8 +43,8 @@ enum DecorationPosition {
     DecorationRight
 };
 
-struct Infos {
-    Infos() {
+struct Info {
+    Info() {
 	departureArrivalListType = DepartureList;
 	linesPerRow = 2;
 	displayTimeBold = showRemainingMinutes = true;
@@ -90,7 +90,7 @@ class PublicTransportModel;
 /** Base class for items of PublicTransportModel. */
 class ItemBase {
     public:
-	ItemBase( const Infos *infos );
+	ItemBase( const Info *info );
 	virtual ~ItemBase();
 
 	/** @returns the parent item of this item, or NULL if this item is a 
@@ -136,17 +136,17 @@ class ItemBase {
 	ItemBase *m_parent;
 	PublicTransportModel *m_model;
 	QList< ChildItem* > m_children;
-	const Infos *m_infos;
+	const Info *m_info;
 };
 
 /** A child item in PublicTransportModel. */
 class ChildItem : public ItemBase {
     public:
 	ChildItem( ItemType itemType, const QString &formattedText,
-		   const QIcon &icon, const Infos *infos );
+		   const QIcon &icon, const Info *info );
 	ChildItem( ItemType itemType, const QString &formattedText,
-		   const Infos *infos );
-	ChildItem( ItemType itemType, const Infos *infos );
+		   const Info *info );
+	ChildItem( ItemType itemType, const Info *info );
 
 	virtual int row() const {
 	    return m_parent ? m_parent->children().indexOf( const_cast< ChildItem* >(this) ) : -1; };
@@ -180,7 +180,7 @@ class ChildItem : public ItemBase {
 /** Base class for top level items in PublicTransportModel. */
 class TopLevelItem : public ItemBase {
     public:
-	TopLevelItem( const Infos *infos );
+	TopLevelItem( const Info *info );
 	
 	virtual void setData( Columns column, const QVariant &data, int role = Qt::UserRole );
 	
@@ -209,7 +209,7 @@ class TopLevelItem : public ItemBase {
 * @ref updateTimeValues. */
 class JourneyItem : public TopLevelItem {
     public:
-	JourneyItem( const JourneyInfo &journeyInfo, const Infos *infos );
+	JourneyItem( const JourneyInfo &journeyInfo, const Info *info );
 	
 	virtual int row() const;
 	/** @returns the information that this item currently shows. */
@@ -247,7 +247,7 @@ class DepartureItem : public QObject, public TopLevelItem {
     Q_OBJECT
     Q_PROPERTY( qreal alarmColorIntensity READ alarmColorIntensity WRITE setAlarmColorIntensity )
     public:
-	DepartureItem( const DepartureInfo &departureInfo, const Infos *infos );
+	DepartureItem( const DepartureInfo &departureInfo, const Info *info );
 	
 	virtual int row() const;
 	/** @returns the information that this item currently shows. */
@@ -266,7 +266,7 @@ class DepartureItem : public QObject, public TopLevelItem {
 	
 	QDateTime alarmTime() const {
 	    return m_departureInfo.predictedDeparture().addSecs(
-		    -m_infos->alarmMinsBeforeDeparture * 60 );
+		    -m_info->alarmMinsBeforeDeparture * 60 );
 	};
 	qreal alarmColorIntensity() const { return m_alarmColorIntensity; };
 	void setAlarmColorIntensity( qreal alarmColorIntensity );
@@ -321,9 +321,9 @@ class PublicTransportModel : public QAbstractItemModel {
 	/** @returns true, if this model has no items. */
 	inline bool isEmpty() const { return rowCount() == 0; };
 
-	Infos infos() const { return m_infos; };
+	Info info() const { return m_info; };
 	void setAlarmMinsBeforeDeparture( int alarmMinsBeforeDeparture = 5 ) {
-	    m_infos.alarmMinsBeforeDeparture = alarmMinsBeforeDeparture; };
+	    m_info.alarmMinsBeforeDeparture = alarmMinsBeforeDeparture; };
 	void setLinesPerRow( int linesPerRow );
 	void setSizeFactor( float sizeFactor );
 	void setDepartureColumnSettings( bool displayTimeBold = true,
@@ -345,7 +345,7 @@ class PublicTransportModel : public QAbstractItemModel {
 	QHash< uint, ItemBase* > m_infoToItem;
 	ItemBase *m_nextItem;
 
-	Infos m_infos;
+	Info m_info;
 	QTimer *m_updateTimer;
 };
 
@@ -378,7 +378,7 @@ class DepartureModel : public PublicTransportModel {
 	/** Removes all departures from the model, but doesn't clear header data. */
 	virtual void clear();
 
-	Infos infos() const { return m_infos; };
+	Info info() const { return m_info; };
 	void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
 	void setAlarmSettings( const AlarmSettingsList &alarmSettings );
 
@@ -408,6 +408,7 @@ class DepartureModel : public PublicTransportModel {
 
     protected slots:
 	virtual void update();
+	void alarmItemDestroyed( QObject *item );
 
     private:
 	virtual DepartureItem *findNextItem( bool sortedByDepartureAscending = false ) const;
@@ -442,7 +443,7 @@ class JourneyModel : public PublicTransportModel {
 	virtual void updateItem( JourneyItem *journeyItem, const JourneyInfo &newJourneyInfo ) {
 	    journeyItem->setJourneyInfo( newJourneyInfo ); };
 
-	Infos infos() const { return m_infos; };
+	Info info() const { return m_info; };
 	void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
 	
 	int smallestDuration() const { return m_smallestDuration; };

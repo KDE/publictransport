@@ -64,7 +64,7 @@ typedef Plasma::MessageButton MessageButton;
 /** Simple pixmap graphics widgets (QGraphicsPixmapItem isn't a QGraphicsWidget). */
 class GraphicsPixmapWidget : public QGraphicsWidget {
     public:
-	GraphicsPixmapWidget( const QPixmap &pixmap, QGraphicsWidget *parent = 0 )
+	explicit GraphicsPixmapWidget( const QPixmap &pixmap, QGraphicsWidget *parent = 0 )
 			    : QGraphicsWidget( parent ), m_pixmap( pixmap ) {
 	    setGeometry( QRectF(m_pixmap.rect()) );
 	};

@@ -325,7 +325,7 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
     if ( m_options.testFlag(DrawShadows) ) {
 	#if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
 	if ( drawHalos ) {
-	    foreach ( QRect haloRect, haloRects )
+	    foreach ( const QRect &haloRect, haloRects )
 		Plasma::PaintUtils::drawHalo( painter, haloRect );
 	} else
 	#endif

@@ -32,7 +32,7 @@ class OverlayWidget : public QGraphicsWidget {
     Q_OBJECT
     
     public:
-	OverlayWidget( QGraphicsWidget* parent = 0, QGraphicsWidget* under = 0 );
+	explicit OverlayWidget( QGraphicsWidget* parent = 0, QGraphicsWidget* under = 0 );
 	void destroy();
 	
     protected:

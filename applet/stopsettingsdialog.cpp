@@ -167,7 +167,7 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(stopAdded(QWidget*)) );
     connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(adjustStopListLayout()) );
     connect( m_stopList, SIGNAL(removed(QWidget*)), this, SLOT(adjustStopListLayout()) );
-    m_stopList->setLabelTexts( i18n("Combined Stop %1:"), QStringList() << "Stop:" );
+    m_stopList->setLabelTexts( i18n("Combined Stop") + " %1", QStringList() << "Stop:" );
     m_stopList->setWidgetCountRange( 1, 3 );
     if ( m_stopList->addButton() ) {
 	m_stopList->addButton()->setToolTip( i18n("Add another stop.\n"
@@ -281,7 +281,7 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings ) {
 
 	    QVariantHash curServiceProviderData = m_uiStop.serviceProvider->itemData(
 		    curServiceProviderIndex, ServiceProviderDataRole ).toHash();
-	    if ( curServiceProviderData["useSeperateCityValue"].toBool() ) {
+	    if ( curServiceProviderData["useSeparateCityValue"].toBool() ) {
 		if ( curServiceProviderData["onlyUseCitiesInList"].toBool() )
 		    m_uiStop.city->setCurrentItem( stopSettings.city );
 		else
@@ -313,7 +313,7 @@ StopSettings StopSettingsDialog::stopSettings() const {
 
     QVariantHash curServiceProviderData = m_uiStop.serviceProvider->itemData(
 	m_uiStop.serviceProvider->currentIndex(), ServiceProviderDataRole ).toHash();
-    if ( curServiceProviderData["useSeperateCityValue"].toBool() ) {
+    if ( curServiceProviderData["useSeparateCityValue"].toBool() ) {
 	stopSettings.city = m_uiStop.city->isEditable()
 		? m_uiStop.city->lineEdit()->text() : m_uiStop.city->currentText();
     }
@@ -417,7 +417,7 @@ void StopSettingsDialog::stopFinderGeolocationData( const QString& countryCode,
 }
 
 void StopSettingsDialog::nearStopsDialogFinished( int result ) {
-    if ( result == QDialog::Accepted ) {
+    if ( result == KDialog::Accepted ) {
 	QString stop = m_nearStopsDialog->selectedStop();
 	m_stopFinder->deleteLater();
 	m_stopFinder = NULL;
@@ -464,12 +464,12 @@ void StopSettingsDialog::accept() {
 	KMessageBox::information( this, i18n("Empty stop names are not allowed.") );
 	m_stopList->lineEditWidgets()[ indexOfFirstEmpty ]->setFocus();
     } else {
-	QDialog::accept();
+	KDialog::accept();
     }
 }
 
 void StopSettingsDialog::resizeEvent( QResizeEvent *event ) {
-    QDialog::resizeEvent( event );
+    KDialog::resizeEvent( event );
     adjustStopListLayout();
 }
 
@@ -499,7 +499,7 @@ void StopSettingsDialog::stopNameEdited( const QString&, int widgetIndex ) {
 
 void StopSettingsDialog::requestStopSuggestions( int stopIndex ) {
     StopSettings settings = stopSettings();
-    if ( !settings.city.isEmpty() ) { // m_useSeperateCityValue ) {
+    if ( !settings.city.isEmpty() ) { // m_useSeparateCityValue ) {
 	m_publicTransportEngine->connectSource( QString("Stops %1|stop=%2|city=%3")
 		.arg(settings.serviceProviderID, settings.stops[stopIndex],
 		settings.city), this );
@@ -511,7 +511,7 @@ void StopSettingsDialog::requestStopSuggestions( int stopIndex ) {
 
 void StopSettingsDialog::dataUpdated( const QString& sourceName,
 				      const Plasma::DataEngine::Data& data ) {
-    if ( sourceName.startsWith("Stops") ) {
+    if ( sourceName.startsWith(QLatin1String("Stops")) ) {
 	// Stop suggestions data
 	if ( data.value("error").toBool() ) {
 	    kDebug() << "Stop suggestions error";
@@ -543,7 +543,7 @@ void StopSettingsDialog::processStopSuggestions( const Plasma::DataEngine::Data&
     }
 
     // Construct weighted stop list for KCompletion
-    foreach ( QString stop, stops ) {
+    foreach ( const QString &stop, stops ) {
 	int stopWeight = stopToStopWeight[ stop ].toInt();
 	if ( stopWeight <= 0 )
 	    stopWeight = 0;
@@ -617,11 +617,11 @@ void StopSettingsDialog::serviceProviderChanged( int index ) {
 //     if ( !supportsArrivals )
 // 	m_ui.showDepartures->setChecked( true );
     
-    bool useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
-    m_uiStop.lblCity->setVisible( useSeperateCityValue );
-    m_uiStop.city->setVisible( useSeperateCityValue );
+    bool useSeparateCityValue = serviceProviderData["useSeparateCityValue"].toBool();
+    m_uiStop.lblCity->setVisible( useSeparateCityValue );
+    m_uiStop.city->setVisible( useSeparateCityValue );
     
-    if ( useSeperateCityValue ) {
+    if ( useSeparateCityValue ) {
 	m_uiStop.city->clear();
 	QStringList cities = serviceProviderData["cities"].toStringList();
 	if ( !cities.isEmpty() ) {
@@ -638,9 +638,9 @@ void StopSettingsDialog::cityNameChanged( const QString& /*cityName*/ ) {
 //     QVariantHash serviceProviderData = m_modelLocationServiceProviders->index(
 // 	    m_uiStop.serviceProvider->currentIndex(), 0 )
 // 	    .data( ServiceProviderDataRole ).toHash();
-//     bool useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
+//     bool useSeparateCityValue = serviceProviderData["useSeparateCityValue"].toBool();
 //     QString serviceProviderID = serviceProviderData["id"].toString();
-//     if ( !useSeperateCityValue )
+//     if ( !useSeparateCityValue )
 // 	return; // City value not used by service provider
 	
 //     QString testSource = QString("Stops %1|stop=%2|city=%3").arg( serviceProviderID )
@@ -701,9 +701,9 @@ void StopSettingsDialog::clickedServiceProviderInfo() {
 	m_uiAccessorInfo.author->setText( QString("<a href='mailto:%2'>%1</a>")
 		.arg( serviceProviderData["author"].toString() )
 		.arg( serviceProviderData["email"].toString() ) );
-	m_uiAccessorInfo.author->setToolTip( i18n("Write an email to %1 <%2>")
-		.arg( serviceProviderData["author"].toString() )
-		.arg( serviceProviderData["email"].toString() ) );
+	m_uiAccessorInfo.author->setToolTip( i18n("Write an email to %1 <%2>",
+		serviceProviderData["author"].toString(),
+		serviceProviderData["email"].toString()) );
     }
     m_uiAccessorInfo.description->setText( serviceProviderData["description"].toString() );
     m_uiAccessorInfo.features->setText( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
@@ -723,7 +723,7 @@ void StopSettingsDialog::downloadServiceProvidersClicked(  ) {
     kDebug() << "KNS3 Results: " << dialog->changedEntries().count();
 
     KNS3::Entry::List installed = dialog->installedEntries();
-    foreach ( KNS3::Entry entry, installed )
+    foreach ( const KNS3::Entry &entry, installed )
       kDebug() << entry.name() << entry.installedFiles();
 
 //     if ( !dialog->changedEntries().isEmpty() )
@@ -748,7 +748,7 @@ void StopSettingsDialog::downloadServiceProvidersClicked(  ) {
 		if ( !installedFiles.isEmpty() ) {
 		    QString installedFile = installedFiles[0];
 
-		    QString path = KUrl( installedFile ).path().remove( QRegExp("/[^/]*$") ) + "/";
+		    QString path = KUrl( installedFile ).path().remove( QRegExp("/[^/]*$") ) + '/';
 		    QFile( installedFile ).rename( path + filename );
 
 		    kDebug() << "Rename" << installedFile << "to" << path + filename;

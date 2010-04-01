@@ -17,12 +17,12 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#ifndef GLOBAL_HEADER
+#define GLOBAL_HEADER
+
 /** @file
 * This file contains enumerations and Global used by the public transport applet.
 * @author Friedrich Pülz <fpuelz@gmx.de> */
-
-#ifndef ENUMS_HEADER
-#define ENUMS_HEADER
 
 #include <qnamespace.h>
 #include <QTime>
@@ -309,4 +309,4 @@ class Global {
 	static QString durationString( int seconds );
 };
 
-#endif // ENUMS_HEADER
+#endif // Multiple inclusion guard

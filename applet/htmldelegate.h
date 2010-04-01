@@ -38,7 +38,7 @@ class HtmlDelegate : public QItemDelegate {
 	};
 	Q_DECLARE_FLAGS( Options, Option );
 
-	HtmlDelegate( Options options = NoOption, QObject *parent = 0 );
+	explicit HtmlDelegate( Options options = NoOption, QObject *parent = 0 );
 
 	virtual QSize sizeHint ( const QStyleOptionViewItem& option,
 				 const QModelIndex& index ) const;
