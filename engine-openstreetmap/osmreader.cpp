@@ -97,7 +97,7 @@ void OsmReader::readNode() {
     QString id = attributes().value( "id" ).toString();
     double longitude = attributes().value( "lon" ).toString().toDouble();
     double latitude = attributes().value( "lat" ).toString().toDouble();
-    // Could read more infos from attributes (user, uid, timestamp, version, changeset)
+    // Could read more information from attributes (user, uid, timestamp, version, changeset)
     
     QVariantHash nodeData;
     nodeData.insert( "longitude", longitude );
@@ -124,7 +124,7 @@ void OsmReader::readNode() {
 
 void OsmReader::readWay() {
     QString id = attributes().value( "id" ).toString();
-    // Could read more infos from attributes (user, uid, timestamp, version, changeset)
+    // Could read more information from attributes (user, uid, timestamp, version, changeset)
     QVariantHash nodeData;
     QStringList nodes;
     nodeData.insert( "type", "way" );
@@ -156,7 +156,7 @@ void OsmReader::readWay() {
 
 void OsmReader::readRelation() {
     QString id = attributes().value( "id" ).toString();
-    // Could read more infos from attributes (user, uid, timestamp, version, changeset)
+    // Could read more information from attributes (user, uid, timestamp, version, changeset)
     QVariantHash nodeData;
     QStringList nodes, ways;
     nodeData.insert( "type", "relation" );

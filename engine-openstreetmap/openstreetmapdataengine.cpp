@@ -160,7 +160,7 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
 }
 
 void OpenStreetMapEngine::data( KIO::Job* job, const QByteArray& ba ) {
-    JobInfo &jobInfo = m_jobInfos[ job ]; // Get associated infos
+    JobInfo &jobInfo = m_jobInfos[ job ]; // Get associated information
 
     jobInfo.osmReader->addData( ba );
     if ( jobInfo.readStarted ) {
