@@ -89,10 +89,10 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
     bool hasPreData = false;
     TimetableInformation keyInfo = Nothing, valueInfo = Nothing;
     if ( (hasPreData = parseDocumentPre(doc)) ) {
-	QList< TimetableInformation > infos = m_info.searchDeparturesPre().infos();
-	Q_ASSERT( infos.length() >= 2 );
-	keyInfo = infos[0];
-	valueInfo = infos[1];
+	QList< TimetableInformation > info = m_info.searchDeparturesPre().info();
+	Q_ASSERT( info.length() >= 2 );
+	keyInfo = info[0];
+	valueInfo = info[1];
     }
 
     // Split document at titles if a departure group titles regexp is defined
@@ -101,7 +101,7 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
     if ( !m_info.searchDepartureGroupTitles().regExp().isEmpty() ) {
 	QRegExp rxTitles = m_info.searchDepartureGroupTitles().regExp();
 	QList< TimetableInformation > infosDepartureGroupTitles =
-		m_info.searchDepartureGroupTitles().infos();
+		m_info.searchDepartureGroupTitles().info();
 
 	int lastPosTitles = -1, posTitles = 0;
 	while ( (posTitles = rxTitles.indexIn(doc, posTitles)) != -1 ) {
@@ -112,7 +112,7 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 
 	    int i = 0;
 	    QHash< TimetableInformation, QString > hash;
-	    foreach ( TimetableInformation info, infosDepartureGroupTitles ) {
+	    foreach ( const TimetableInformation &info, infosDepartureGroupTitles ) {
 		hash.insert( info, rxTitles.cap(i++) );
 	    }
 	    listDocumentPartInfos.append( hash );
@@ -134,8 +134,8 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 
     const QRegExp rx = parseDocumentMode == ParseForDeparturesArrivals
 	    ? m_info.searchDepartures().regExp() : m_info.searchJourneys().regExp();
-    QList<TimetableInformation> infos = parseDocumentMode == ParseForDeparturesArrivals
-	    ? m_info.searchDepartures().infos() : m_info.searchJourneys().infos();
+    QList<TimetableInformation> info = parseDocumentMode == ParseForDeparturesArrivals
+	    ? m_info.searchDepartures().info() : m_info.searchJourneys().info();
 
     static QList<TimetableInformation> infosToGet = QList<TimetableInformation>()
 	    << DepartureDate << DepartureHour << DepartureMinute << TypeOfVehicle
@@ -150,35 +150,35 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 
     // TODO (performance): fill calculateMissingValues in TimetableAccessorInfo and store there
     QList<CalculateMissingValue> calculateMissingValues;
-    if ( !infos.contains(Delay) && infos.contains(DepartureHourPrognosis) &&
-	infos.contains(DepartureMinutePrognosis) && infos.contains(DepartureHour) &&
-	infos.contains( DepartureMinute) )
+    if ( !info.contains(Delay) && info.contains(DepartureHourPrognosis) &&
+	info.contains(DepartureMinutePrognosis) && info.contains(DepartureHour) &&
+	info.contains( DepartureMinute) )
     {
 	calculateMissingValues << CalculateDelayFromDepartureAndPrognosis;
     }
 
-    if ( !infos.contains( DepartureDate ) )
+    if ( !info.contains( DepartureDate ) )
 	calculateMissingValues << CalculateDepartureDate;
     if ( parseDocumentMode == ParseForJourneys ) {
-	if ( !infos.contains(Duration) && infos.contains(ArrivalHour) &&
-	    infos.contains(ArrivalMinute) && infos.contains(DepartureHour) &&
-	    infos.contains( DepartureMinute) ) {
+	if ( !info.contains(Duration) && info.contains(ArrivalHour) &&
+	    info.contains(ArrivalMinute) && info.contains(DepartureHour) &&
+	    info.contains( DepartureMinute) ) {
 	    calculateMissingValues << CalculateDurationFromDepartureAndArrival;
-	} else if ( (!infos.contains(ArrivalHour) || !infos.contains(ArrivalMinute)) &&
-	    infos.contains(Duration) && infos.contains(DepartureHour) && infos.contains( DepartureMinute) ) {
+	} else if ( (!info.contains(ArrivalHour) || !info.contains(ArrivalMinute)) &&
+	    info.contains(Duration) && info.contains(DepartureHour) && info.contains( DepartureMinute) ) {
 	    calculateMissingValues << CalculateArrivalFromDepartureAndDuration;
-	} else if ( (!infos.contains(DepartureHour) || !infos.contains(DepartureMinute)) &&
-	    infos.contains(Duration) && infos.contains(ArrivalHour) && infos.contains( ArrivalMinute) ) {
+	} else if ( (!info.contains(DepartureHour) || !info.contains(DepartureMinute)) &&
+	    info.contains(Duration) && info.contains(ArrivalHour) && info.contains( ArrivalMinute) ) {
 	    calculateMissingValues << CalculateDepartureFromArrivalAndDuration;
 	}
 
-	if ( !infos.contains( ArrivalDate ) )
+	if ( !info.contains( ArrivalDate ) )
 	    calculateMissingValues << CalculateArrivalDateFromDepartureDate;
     }
 
     // Process each match of the regular expression
     int count = 0, currentPart = 0;
-    foreach ( QString documentPart, documentParts ) {
+    foreach ( const QString &documentPart, documentParts ) {
 	int pos = 0;
 	QHash< TimetableInformation, QString > documentPartInfos;
 	if ( listDocumentPartInfos.count() > currentPart )
@@ -186,10 +186,10 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 	while ( (pos = rx.indexIn(documentPart, pos)) != -1 ) {
 	    QHash< TimetableInformation, QVariant > data;
 	    data.insert( Delay, "-1" );
-	    foreach ( TimetableInformation info, infosToGet ) {
-		if ( infos.contains(info) ) {
-		    postProcessMatchedData( info,
-			    rx.cap(infos.indexOf(info) + 1).trimmed(), &data );
+	    foreach ( const TimetableInformation &curInfo, infosToGet ) {
+		if ( info.contains(curInfo) ) {
+		    postProcessMatchedData( curInfo,
+			    rx.cap(info.indexOf(curInfo) + 1).trimmed(), &data );
 		}
 	    }
 
@@ -205,11 +205,16 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 
 	    // Get missing data from departure group titles
 	    if ( !documentPartInfos.isEmpty() ) {
-		foreach ( TimetableInformation info, documentPartInfos.keys() ) {
-		    if ( !data.contains(info) || (info == TypeOfVehicle && data[info] == Unknown) ) {
+		QHash<TimetableInformation, QString>::const_iterator it;
+		for ( it = documentPartInfos.constBegin();
+		      it != documentPartInfos.constEnd(); ++it )
+		{
+		    if ( !data.contains(it.key())
+			|| (it.key() == TypeOfVehicle && data[it.key()] == Unknown) )
+		    {
 			kDebug() << "Get missing data from departure group titles"
-				 << documentPartInfos.value(info);
-			postProcessMatchedData( info, documentPartInfos.value(info), &data );
+				 << it.value();
+			postProcessMatchedData( it.key(), it.value(), &data );
 		    }
 		}
 	    }
@@ -288,7 +293,7 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 	    } else /*if ( parseDocumentMode == ParseForJourneys )*/ {
 		QList<VehicleType> vehicleTypes;
 		QList<QVariant> variantList = data[TypesOfVehicleInJourney].toList();
-		foreach ( QVariant vehicleType, variantList )
+		foreach ( const QVariant &vehicleType, variantList )
 		    vehicleTypes.append( static_cast<VehicleType>(vehicleType.toInt()) );
 
 		journeys->append( new JourneyInfo( vehicleTypes,
@@ -378,7 +383,7 @@ void TimetableAccessorHtml::postProcessMatchedData( TimetableInformation info,
 
 	case TypesOfVehicleInJourney:
 	    stringList = matchedData.split(',', QString::SkipEmptyParts);
-	    foreach ( QString sTypeOfVehicle, stringList )
+	    foreach ( const QString &sTypeOfVehicle, stringList )
 		variantList.append( static_cast<int>(PublicTransportInfo::getVehicleTypeFromString(sTypeOfVehicle)) );
 	    data->insert( TypesOfVehicleInJourney, variantList );
 	    break;
@@ -438,7 +443,7 @@ void TimetableAccessorHtml::postProcessMatchedData( TimetableInformation info,
 	case NoMatchOnSchedule:
 	    // Only if something matched and no delay was parsed previously
 	    if ( !matchedData.isEmpty() && data->operator[](Delay).toString() == "-1" )
-		data->operator[](Delay) = "0";
+		data->operator[](Delay) = '0';
 	    break;
 
 	default:
@@ -452,43 +457,30 @@ void TimetableAccessorHtml::postProcessMatchedData( TimetableInformation info,
 bool TimetableAccessorHtml::parseJourneyNews( const QString &sJourneyNews,
 					      QString *sDelay, QString *sDelayReason,
 					      QString *sJourneyNewsOther ) const {
-//     if ( !sJourneyNews.isEmpty() )
-// 	qDebug() << "TimetableAccessorHtml::parseJourneyNews" << "Journey news string:" << sJourneyNews;
-
     *sDelay = "-1";
     *sDelayReason = "";
     *sJourneyNewsOther = "";
-    foreach ( TimetableRegExpSearch search, m_info.searchJourneyNews() ) {
-// 	if ( !sJourneyNews.isEmpty() )
-// 	    qDebug() << "     TimetableAccessorHtml::parseJourneyNews" << "Testing" << search.regExp();
-
+    foreach ( const TimetableRegExpSearch &search, m_info.searchJourneyNews() ) {
 	const QRegExp rx = search.regExp();
 	if ( rx.indexIn(sJourneyNews) != -1 && rx.isValid() ) {
-// 	    qDebug() << "     TimetableAccessorHtml::parseJourneyNews" << "Matched!" << "(" << rx.pattern() << ")";
-
-	    if ( search.infos().contains(NoMatchOnSchedule) ) {
-// 		qDebug() << "NoMatchOnSchedule";
-		*sDelay = "0";
+	    if ( search.info().contains(NoMatchOnSchedule) ) {
+		*sDelay = '0';
 	    } else {
-		if ( search.infos().contains(Delay) ) {
-// 		    qDebug() << "Delay";
-		    *sDelay = rx.cap( search.infos().indexOf(Delay) + 1 ).trimmed();
+		if ( search.info().contains(Delay) ) {
+		    *sDelay = rx.cap( search.info().indexOf(Delay) + 1 ).trimmed();
 		}
-		if ( search.infos().contains(DelayReason) ) {
-// 		    qDebug() << "DelayReason";
-		    *sDelayReason = rx.cap( search.infos().indexOf(DelayReason) + 1 ).trimmed();
+		if ( search.info().contains(DelayReason) ) {
+		    *sDelayReason = rx.cap( search.info().indexOf(DelayReason) + 1 ).trimmed();
 		    *sDelayReason = TimetableAccessorHtml::decodeHtmlEntities(*sDelayReason);
 		}
 	    }
-	    if ( search.infos().contains(JourneyNewsOther) ) {
-		*sJourneyNewsOther = rx.cap( search.infos().indexOf(JourneyNewsOther) + 1 ).trimmed();
+	    if ( search.info().contains(JourneyNewsOther) ) {
+		*sJourneyNewsOther = rx.cap( search.info().indexOf(JourneyNewsOther) + 1 ).trimmed();
 		*sJourneyNewsOther = TimetableAccessorHtml::decodeHtmlEntities(*sJourneyNewsOther);
 	    }
 	} // if found and is valid
     } // foreach
-
-//     if ( !sJourneyNews.isEmpty() )
-// 	qDebug() << "     TimetableAccessorHtml::parseJourneyNews" << sJourneyNews << *sDelay<< *sDelayReason<< *sJourneyNewsOther;
+    
     return true;
 }
 
@@ -567,20 +559,20 @@ bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray &docume
 		return false; // parse error
 	    }
 
-	    QList< TimetableInformation > infos = m_info.searchPossibleStops()[i].infos();
-	    if ( infos.isEmpty() )
+	    QList< TimetableInformation > info = m_info.searchPossibleStops()[i].info();
+	    if ( info.isEmpty() )
 		return false;
 	    else {
 		QString sStopName, sStopID;
 		int stopWeight = -1;
-		if ( infos.contains(StopName) ) {
-		    sStopName = rx.cap( infos.indexOf(StopName) + 1 );
+		if ( info.contains(StopName) ) {
+		    sStopName = rx.cap( info.indexOf(StopName) + 1 );
 		    sStopName = TimetableAccessorHtml::decodeHtmlEntities( sStopName );
 		}
-		if ( infos.contains(StopID) )
-		    sStopID = rx.cap( infos.indexOf(StopID) + 1 );
-		if ( infos.contains(StopWeight) )
-		    stopWeight = rx.cap( infos.indexOf(StopWeight) + 1 ).toInt();
+		if ( info.contains(StopID) )
+		    sStopID = rx.cap( info.indexOf(StopID) + 1 );
+		if ( info.contains(StopWeight) )
+		    stopWeight = rx.cap( info.indexOf(StopWeight) + 1 ).toInt();
 
 		stops->append( sStopName );
 		stopToStopId->insert( sStopName, sStopID );

@@ -53,7 +53,7 @@ class TimetableRegExpSearch {
 	const QRegExp &regExp() const { return m_regExpSearch; };
 
 	/** Gets a list of meanings for each matched string of the regular expression. */
-	QList< TimetableInformation > infos () const { return m_regExpInfos; };
+	QList< TimetableInformation > info() const { return m_regExpInfos; };
 
     private:
 	QRegExp m_regExpSearch;
@@ -82,7 +82,7 @@ class TimetableAccessorInfo {
 	* is designed for.
 	* @param accessorType The type of the accessor.
 	* @see AccessorType */
-	TimetableAccessorInfo( const QString& name = QString(),
+	explicit TimetableAccessorInfo( const QString& name = QString(),
 			       const QString& shortUrl = QString(),
 			       const QString& author = QString(),
 			       const QString& email = QString(),
@@ -176,8 +176,8 @@ class TimetableAccessorInfo {
 	* object, eg. with @ref setRegExpDepartures. Otherwise this crashes. */
 	QList<TimetableRegExpSearch> searchJourneyNews() const {
 		return m_regExps.searchJourneyNews; };
-	/** Wheather or not the service provider needs a seperate city value. */
-	bool useSeperateCityValue() const { return m_useSeperateCityValue; };
+	/** Wheather or not the service provider needs a separate city value. */
+	bool useSeparateCityValue() const { return m_useSeparateCityValue; };
 	/** Wheather or not cities may be chosen freely.
 	* @return true if only cities in the list returned by cities()  are valid.
 	* @return false (default) if cities may be chosen freely, but may be invalid. */
@@ -361,7 +361,7 @@ class TimetableAccessorInfo {
 
 	/** Sets wheather or not the service provider needs a seperate city value. */
 	void setUseSeperateCityValue( bool useSeperateCityValue ) {
-		m_useSeperateCityValue = useSeperateCityValue; };
+		m_useSeparateCityValue = useSeperateCityValue; };
 	
 	/** Sets wheather or not cities may be freely chosen.
 	* @param onlyUseCitiesInList true if only cities in the list returned by cities()  are valid.
@@ -420,7 +420,7 @@ class TimetableAccessorInfo {
 	QString m_country;
 	QStringList m_cities;
 	QString m_credit;
-	bool m_useSeperateCityValue;
+	bool m_useSeparateCityValue;
 	bool m_onlyUseCitiesInList;
 	QHash<QString, QString> m_hashCityNameToValue; // The city value is used for the url (e.g. "ba" for city name "bratislava").
 };

@@ -51,9 +51,9 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	    InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName, if
 				      * the source name is invalid. */
 	    
-	    ServiceProvider = 1, /**< The source contains infos about available
+	    ServiceProvider = 1, /**< The source contains information about available
 				    * service providers for a given country. */
-	    ServiceProviders = 2, /**< The source contains infos about available
+	    ServiceProviders = 2, /**< The source contains information about available
 				     * service providers. */
 	    ErrornousServiceProviders = 3, /**< The source contains a list of errornous
 				  	      * service provider accessors. */
@@ -63,10 +63,10 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	    Departures = 10, /**< The source contains timetable data for departures. */
 	    Arrivals, /**< The source contains timetable data for arrivals. */
 	    Stops, /**< The source contains a list of stop suggestions. */
-	    Journeys, /**< The source contains infos about journeys. */
-	    JourneysDep, /**< The source contains infos about journeys, 
+	    Journeys, /**< The source contains information about journeys. */
+	    JourneysDep, /**< The source contains information about journeys,
 			    * that depart at the given date and time. */
-	    JourneysArr /**< The source contains infos about journeys, 
+	    JourneysArr /**< The source contains information about journeys,
 			   * that arrive at the given date and time. */
 	};
 	
@@ -124,11 +124,11 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param sourceName The name of the data source for which the departures /
 	* arrivals have been downloaded and parsed.
 	* @param city The city the stop is in. May be empty if the service provider
-	* doesn't need a seperate city value.
+	* doesn't need a separate city value.
 	* @param stop The stop name for which the departures / arrivals have been received.
 	* @param dataType "departures" or "arrivals".
 	* @param parseDocumentMode What has been parsed from the document.
-	* @see TimetableAccessor::useSeperateCityValue() */
+	* @see TimetableAccessor::useSeparateCityValue() */
 	void departureListReceived( TimetableAccessor *accessor,
 				    const QUrl &requestUrl,
 				    const QList<DepartureInfo*> &departures,
@@ -148,11 +148,11 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param sourceName The name of the data source for which the journeys have
 	* been downloaded and parsed.
 	* @param city The city the stop is in. May be empty if the service provider
-	* doesn't need a seperate city value.
+	* doesn't need a separate city value.
 	* @param stop The stop name for which the departures / arrivals have been received.
 	* @param dataType "journeys".
 	* @param parseDocumentMode What has been parsed from the document.
-	* @see TimetableAccessor::useSeperateCityValue() */
+	* @see TimetableAccessor::useSeparateCityValue() */
 	void journeyListReceived( TimetableAccessor *accessor,
 				  const QUrl &requestUrl,
 				  const QList<JourneyInfo*> &journeys,
@@ -173,11 +173,11 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param sourceName The name of the data source for which the stops have been
 	* downloaded and parsed.
 	* @param city The city the (ambiguous) stop is in. May be empty if the service provider
-	* doesn't need a seperate city value.
+	* doesn't need a separate city value.
 	* @param stop The (ambiguous) stop name for which the stop list has been received.
 	* @param dataType "stopList".
 	* @param parseDocumentMode What has been parsed from the document.
-	* @see TimetableAccessor::useSeperateCityValue() */
+	* @see TimetableAccessor::useSeparateCityValue() */
 	void stopListReceived( TimetableAccessor *accessor,
 			       const QUrl &requestUrl,
 			       const QStringList &stops,
@@ -198,11 +198,11 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source.
 	* @param city The city the stop is in. May be empty if the service provider
-	* doesn't need a seperate city value.
-	* @param stop The stop name for which the error occured.
+	* doesn't need a separate city value.
+	* @param stop The stop name for which the error occurred.
 	* @param dataType "nothing".
 	* @param parseDocumentMode What has been parsed from the document.
-	* @see TimetableAccessor::useSeperateCityValue() */
+	* @see TimetableAccessor::useSeparateCityValue() */
 	void errorParsing( TimetableAccessor *accessor, ErrorType errorType,
 			   const QString &errorString, const QUrl &requestUrl,
 			   const QString &serviceProvider,
@@ -297,7 +297,7 @@ arrivals (@ref usage_departures_sec) and one contains journeys
 <br>
 This enumeration can be used in your applet to ease the usage of the data engine.
 Don't change the numbers, as they need to match the ones in the data engine,
-which uses a similiar enumeration.
+which uses a similar enumeration.
 @code
 // The type of the vehicle used for a public transport line.
 // The numbers here must match the ones in the data engine!
@@ -339,7 +339,7 @@ provider information, stored as a QHash with the following keys:<br>
 <tr><td><i>country</i></td> <td>QString</td> <td>The country the service provider is (mainly) designed for.</td></tr>
 <tr><td><i>cities</i></td> <td>QStringList</td> <td>A list of cities the service provider supports.</td></tr>
 <tr><td><i>credit</i></td> <td>QString</td> <td>The ones who run the service provider (companies).</td></tr>
-<tr><td><i>useSeperateCityValue</i></td> <td>bool</td> <td>Wheather or not the service provider needs a seperate city value. If this is true, you need to specify a "city" parameter in data source names for @ref usage_departures_sec and @ref usage_journeys_sec .</td></tr>
+<tr><td><i>useSeparateCityValue</i></td> <td>bool</td> <td>Wheather or not the service provider needs a separate city value. If this is true, you need to specify a "city" parameter in data source names for @ref usage_departures_sec and @ref usage_journeys_sec .</td></tr>
 <tr><td><i>onlyUseCitiesInList</i></td> <td>bool</td> <td>Wheather or not the service provider only accepts cities that are in the "cities" list.</td></tr>
 <tr><td><i>features</i></td> <td>QStringList</td> <td>A list of strings, each string stands for a featureof the accessor.</td></tr>
 <tr><td><i>featuresLocalized</i></td> <td>QStringList</td> <td>A list of localized strings describing which features the accessor has.</td></tr>
@@ -360,7 +360,7 @@ foreach( QString serviceProviderName, data.keys() )
     QString name = serviceProviderData["name"].toString(); // The name is already in serviceProviderName
     QString country = serviceProviderData["country"].toString();
     QStringList features = serviceProviderData["features"].toStringList();
-    bool useSeperateCityValue = serviceProviderData["useSeperateCityValue"].toBool();
+    bool useSeparateCityValue = serviceProviderData["useSeparateCityValue"].toBool();
 }
 @endcode
 
@@ -370,10 +370,10 @@ To get a list of departures / arrivals you need to construct the name of the
 data source. For departures it begins with "Departures", for arrivals it begins
 with "Arrivals". Next comes a space (" "), then the ID of the service provider
 to use, e.g. "de_db" for db.de, a service provider for germany ("Deutsche Bahn").
-The following parameters are seperated by "|" and start with the parameter name
+The following parameters are separated by "|" and start with the parameter name
 followed by "=". The sorting of the additional parameters doesn't matter. The
 parameter <i>stop</i> is needed and can be the stop name or the stop ID. If the
-service provider has useSeperateCityValue set to true (see
+service provider has useSeparateCityValue set to true (see
 @ref usage_serviceproviders_sec), the parameter <i>city</i> is also needed
 (otherwise it is ignored).<br>
 The following parameters are allowed:<br>
@@ -434,7 +434,7 @@ class Applet : public Plasma::Applet {
 <br>
 The data received from the data engine always contains these keys:<br>
 <table>
-<tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occured while parsing.</td></tr>
+<tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
 <tr><td><i>receivedPossibleStopList</i></td> <td>bool</td> <td>True, if the given stop name is ambiguous and
 a list of possible stops was received, see @ref usage_stopList_sec .</td></tr>
 <tr><td><i>count</i></td> <td>int</td> <td>The number of received departures / arrivals / stops or 0 if there was
@@ -472,10 +472,10 @@ name of the data source (much like the data source for departures / arrivals).
 The data source name begins with "Journeys". Next comes a space (" "), then
 the ID of the service provider to use, e.g. "de_db" for db.de, a service
 provider for germany ("Deutsche Bahn").
-The following parameters are seperated by "|" and start with the parameter name
+The following parameters are separated by "|" and start with the parameter name
 followed by "=". The sorting of the additional parameters doesn't matter. The
 parameters <i>originStop</i> and <i>targetStop</i> are needed and can be the
-stop names or the stop IDs. If the service provider has useSeperateCityValue
+stop names or the stop IDs. If the service provider has useSeparateCityValue
 set to true (see @ref usage_serviceproviders_sec), the parameter <i>city</i> is
 also needed (otherwise it is ignored).<br>
 The following parameters are allowed:<br>
@@ -539,7 +539,7 @@ class Applet : public Plasma::Applet {
 <br>
 The data received from the data engine always contains these keys:<br>
 <table>
-<tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occured while parsing.</td></tr>
+<tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
 <tr><td><i>receivedPossibleStopList</i></td> <td>bool</td> <td>True, if the given stop name is ambiguous and
 a list of possible stops was received, see @ref usage_stopList_sec .</td></tr>
 <tr><td><i>count</i></td> <td>int</td> <td>The number of received journeys / stops or 0 if there was
@@ -787,7 +787,7 @@ digraph publicTransportDataEngine {
 
 	node [ fillcolor="#dfffdf" ];
 
-//	label="{TimetableAccessorInfo|Information about where to download the documents \land how to parse them.\l|+ name() : QString\l+ charsetForUrlEncoding() : QByteArray\l+ stopSuggestionsRawUrl() : QString\l+ description() : QString\l+ author() : QString\l+ email() : QString\l+ version() : QString\l+ url() : QString\l+ shortUrl() : QString\l+ departureRawUrl() : QString\l+ journeyRawUrl() : QString\l+ serviceProvider() : QString\l+ country() : QString\l+ cities() : QStringList\l+ defaultVehicleType() : VehicleType\l+ searchDepartures() : TimetableRegExpSearch\l+ searchJourneys() : TimetableRegExpSearch\l+ searchDeparturesPre() : TimetableRegExpSearch*\l+ regExpSearchPossibleStopsRanges() : QStringList\l+ searchPossibleStops() : QList\<TimetableRegExpSearch\>\l+ searchJourneyNews() : QList\<TimetableRegExpSearch\>\l+ useSeperateCityValue() : bool\l+ onlyUseCitiesInList() : bool\l+ mapCityNameToValue(cityName) : QString\l+ fileName() : QString\l+ features() : QStringList\l+ supportsStopAutocompletion() : bool\l+ supportsTimetableAccessorInfo(info) : bool\l }"
+//	label="{TimetableAccessorInfo|Information about where to download the documents \land how to parse them.\l|+ name() : QString\l+ charsetForUrlEncoding() : QByteArray\l+ stopSuggestionsRawUrl() : QString\l+ description() : QString\l+ author() : QString\l+ email() : QString\l+ version() : QString\l+ url() : QString\l+ shortUrl() : QString\l+ departureRawUrl() : QString\l+ journeyRawUrl() : QString\l+ serviceProvider() : QString\l+ country() : QString\l+ cities() : QStringList\l+ defaultVehicleType() : VehicleType\l+ searchDepartures() : TimetableRegExpSearch\l+ searchJourneys() : TimetableRegExpSearch\l+ searchDeparturesPre() : TimetableRegExpSearch*\l+ regExpSearchPossibleStopsRanges() : QStringList\l+ searchPossibleStops() : QList\<TimetableRegExpSearch\>\l+ searchJourneyNews() : QList\<TimetableRegExpSearch\>\l+ useSeparateCityValue() : bool\l+ onlyUseCitiesInList() : bool\l+ mapCityNameToValue(cityName) : QString\l+ fileName() : QString\l+ features() : QStringList\l+ supportsStopAutocompletion() : bool\l+ supportsTimetableAccessorInfo(info) : bool\l }"
 
 	accessorInfo [
 	label="{TimetableAccessorInfo|Information about where to download the documents \land how to parse them.\l|+ name() : QString\l+ stopSuggestionsRawUrl() : QString\l+ departureRawUrl() : QString\l+ journeyRawUrl() : QString\l+ searchDepartures() : TimetableRegExpSearch\l+ searchJourneys() : TimetableRegExpSearch\l+ searchDeparturesPre() : TimetableRegExpSearch*\l+ regExpSearchPossibleStopsRanges() : QStringList\l+ searchPossibleStops() : QList\<TimetableRegExpSearch\>\l+ searchJourneyNews() : QList\<TimetableRegExpSearch\>\l+ features() : QStringList\l... }"

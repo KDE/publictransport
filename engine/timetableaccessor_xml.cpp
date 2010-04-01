@@ -20,7 +20,7 @@
 #include "timetableaccessor_xml.h"
 
 #include <QRegExp>
-#include <QtXml>
+#include <QDomDocument>
 
 #include <KLocalizedString>
 #include <KDebug>
@@ -78,7 +78,7 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 	QDomNode node = journeyNodes.at(i);
 
 	sLine = node.firstChildElement("Product").attributeNode("name").nodeValue().trimmed();
-	sLine = sLine.replace("tram", "", Qt::CaseInsensitive).trimmed();
+	sLine = sLine.replace( "tram", QChar(), Qt::CaseInsensitive ).trimmed();
 	sJourneyNews = node.firstChildElement("InfoTextList").firstChildElement("InfoText").attributeNode("text").nodeValue();
 
 	QDomElement stop = node.firstChildElement("MainStop");

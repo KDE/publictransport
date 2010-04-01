@@ -66,10 +66,10 @@ class AccessorInfoXmlReader : public QXmlStreamReader {
 			  QList< QList< TimetableInformation > >* infosListPossibleStops,
 			  QStringList* regExpListJourneyNews,
 			  QList< QList< TimetableInformation > >* infosListJourneyNews );
-	bool readRegExp( QString *regExp, QList<TimetableInformation> *infos,
+	bool readRegExp( QString *regExp, QList<TimetableInformation> *info,
 			 QString *regExpPreOrRanges = 0, TimetableInformation *infoPreKey = 0,
 			 TimetableInformation *infoPreValue = 0 );
-	void readRegExpInfos( QList<TimetableInformation> *infos );
+	void readRegExpInfos( QList<TimetableInformation> *info );
 	bool readRegExpPre( QString *regExpPre, TimetableInformation *infoPreKey,
 			    TimetableInformation *infoPreValue );
 	bool readRegExpItems( QStringList *regExps,

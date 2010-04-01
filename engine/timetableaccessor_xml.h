@@ -51,7 +51,7 @@ class TimetableAccessorXml : public TimetableAccessor
     protected:
 	/** Parses the contents of a document that was requested using requestJourneys()
 	* and puts the results into @p journeys..
-	* @param journeys A pointer to a list of departure/arrival or journey informations.
+	* @param journeys A pointer to a list of departure/arrival or journey information.
 	* The results of parsing the document is stored in @p journeys.
 	* @param parseDocumentMode The mode of parsing, e.g. parse for
 	* departures/arrivals or journeys.

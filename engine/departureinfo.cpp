@@ -31,11 +31,11 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
 	QVariantList times;
 	if ( m_data[RouteTimes].canConvert(QVariant::StringList) ) {
 	    QStringList strings = m_data[ RouteTimes ].toStringList();
-	    foreach ( QString str, strings )
+	    foreach ( const QString &str, strings )
 		times << QTime::fromString( str.trimmed(), "hh:mm" );
 	} else if ( m_data[RouteTimes].canConvert(QVariant::List) ) {
 	    QVariantList vars = m_data[ RouteTimes ].toList();
-	    foreach ( QVariant var, vars )
+	    foreach ( const QVariant &var, vars )
 		times << var.toTime();
 	}
 
@@ -130,14 +130,14 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
 	
 	if ( m_data[TypesOfVehicleInJourney].canConvert(QVariant::StringList) ) {
 	    QStringList strings = m_data[ TypesOfVehicleInJourney ].toStringList();
-	    foreach ( QString str, strings ) {
+	    foreach ( const QString &str, strings ) {
 		int vehicleType = static_cast<int>( getVehicleTypeFromString(str) );
 		if ( !vehicleTypes.contains(vehicleType) )
 		    vehicleTypes << vehicleType;
 	    }
 	} else if ( m_data[TypesOfVehicleInJourney].canConvert(QVariant::List) ) {
 	    QVariantList vars = m_data[ TypesOfVehicleInJourney ].toList();
-	    foreach ( QVariant var, vars ) {
+	    foreach ( const QVariant &var, vars ) {
 		if ( var.canConvert(QVariant::Int) ) {
 		    int vehicleType = var.toInt();
 		    if ( !vehicleTypes.contains(vehicleType) )
@@ -154,11 +154,11 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
 	
 	if ( m_data[RouteTypesOfVehicles].canConvert(QVariant::StringList) ) {
 	    QStringList strings = m_data[ RouteTypesOfVehicles ].toStringList();
-	    foreach ( QString str, strings )
+	    foreach ( const QString &str, strings )
 		vehicleTypes << static_cast<int>( getVehicleTypeFromString(str) );
 	} else if ( m_data[RouteTypesOfVehicles].canConvert(QVariant::List) ) {
 	    QVariantList vars = m_data[ RouteTypesOfVehicles ].toList();
-	    foreach ( QVariant var, vars ) {
+	    foreach ( const QVariant &var, vars ) {
 		if ( var.canConvert(QVariant::Int) )
 		    vehicleTypes << var.toInt();
 	    }
@@ -227,11 +227,11 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
 	QVariantList times;
 	if ( m_data[RouteTimesDeparture].canConvert(QVariant::StringList) ) {
 	    QStringList strings = m_data[ RouteTimesDeparture ].toStringList();
-	    foreach ( QString str, strings )
+	    foreach ( const QString &str, strings )
 		times << QTime::fromString( str.trimmed(), "hh:mm" );
 	} else if ( m_data[RouteTimesDeparture].canConvert(QVariant::List) ) {
 	    QVariantList vars = m_data[ RouteTimesDeparture ].toList();
-	    foreach ( QVariant var, vars )
+	    foreach ( const QVariant &var, vars )
 		times << var.toTime();
 	}
 
@@ -242,11 +242,11 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
 	QVariantList times;
 	if ( m_data[RouteTimesArrival].canConvert(QVariant::StringList) ) {
 	    QStringList strings = m_data[ RouteTimesArrival ].toStringList();
-	    foreach ( QString str, strings )
+	    foreach ( const QString &str, strings )
 		times << QTime::fromString( str.trimmed(), "hh:mm" );
 	} else if ( m_data[RouteTimesArrival].canConvert(QVariant::List) ) {
 	    QVariantList vars = m_data[ RouteTimesArrival ].toList();
-	    foreach ( QVariant var, vars )
+	    foreach ( const QVariant &var, vars )
 		times << var.toTime();
 	}
 	
@@ -400,7 +400,7 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
     else if ( sLineTypeLower == "tro" ||
 	sLineTypeLower == "trolleybus" ||
 	sLineTypeLower == "trolley bus" ||
-	sLineTypeLower.startsWith("trolleybus") ) // for sk_imhd
+	sLineTypeLower.startsWith(QLatin1String("trolleybus")) ) // for sk_imhd
 	return TrolleyBus;
 
     else if ( sLineTypeLower == "feet" ||

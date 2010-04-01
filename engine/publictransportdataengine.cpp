@@ -17,17 +17,16 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Own includes
+#include "publictransportdataengine.h"
+#include "timetableaccessor.h"
+
 // Qt includes
 #include <QFileSystemWatcher>
 
 // KDE includes
 #include <Plasma/DataContainer>
 #include <KStandardDirs>
-
-// Own includes
-#include "publictransportdataengine.h"
-#include "timetableaccessor.h"
-
 
 const int PublicTransportEngine::MIN_UPDATE_TIMEOUT = 120; // in seconds
 const int PublicTransportEngine::MAX_UPDATE_TIMEOUT_DELAY = 5 * 60; // if delays are available
@@ -63,7 +62,7 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
 			    const TimetableAccessor *&accessor ) {
     Q_ASSERT( accessor != NULL );
 
-    QHash<QString, QVariant> dataServiceProvider;
+    QVariantHash dataServiceProvider;
     dataServiceProvider.insert( "id", accessor->serviceProvider() );
     dataServiceProvider.insert( "fileName", accessor->timetableAccessorInfo().fileName() );
     dataServiceProvider.insert( "scriptFileName", accessor->timetableAccessorInfo().scriptFileName() );
@@ -73,7 +72,7 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
     dataServiceProvider.insert( "country", accessor->country() );
     dataServiceProvider.insert( "cities", accessor->cities() );
     dataServiceProvider.insert( "credit", accessor->credit() );
-    dataServiceProvider.insert( "useSeperateCityValue", accessor->useSeperateCityValue() );
+    dataServiceProvider.insert( "useSeparateCityValue", accessor->useSeparateCityValue() );
     dataServiceProvider.insert( "onlyUseCitiesInList", accessor->onlyUseCitiesInList() );
     dataServiceProvider.insert( "features", accessor->features() );
     dataServiceProvider.insert( "featuresLocalized", accessor->featuresLocalized() );
@@ -86,7 +85,7 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
 }
 
 QHash< QString, QVariant > PublicTransportEngine::locations() {
-    QHash<QString, QVariant> ret, locationHash;
+    QVariantHash ret, locationHash;
     QString name;
 
     locationHash.insert( "name", name = "international" );
@@ -175,14 +174,14 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
     if ( !updateServiceProviderSource() || !updateLocationSource() )
 	return false;
     
-    QStringList s = name.split( " ", QString::SkipEmptyParts );
+    QStringList s = name.split( ' ', QString::SkipEmptyParts );
     if ( s.count() < 2 )
 	return false;
     
     QString countryCode = s[ 1 ];
-    QHash<QString, QVariant> locations =
+    QVariantHash locations =
 	    m_dataSources[ sourceTypeKeyword(Locations) ].toHash();
-    QHash<QString, QVariant> locationCountry = locations[ countryCode.toLower() ].toHash();
+    QVariantHash locationCountry = locations[ countryCode.toLower() ].toHash();
     QString defaultAccessor = locationCountry[ "defaultAccessor" ].toString();
     if ( defaultAccessor.isEmpty() )
 	return false;
@@ -206,7 +205,7 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
 
 bool PublicTransportEngine::updateServiceProviderSource() {
     const QString name = sourceTypeKeyword( ServiceProviders );
-    QHash<QString, QVariant> dataSource;
+    QVariantHash dataSource;
     if ( m_dataSources.contains(name) ) {
 // 	kDebug() << "Data source" << name << "is up to date";
 	dataSource = m_dataSources[ name ].toHash();
@@ -229,7 +228,7 @@ bool PublicTransportEngine::updateServiceProviderSource() {
 	kDebug() << "Check accessors";
 	QStringList loadedAccessors;
 	m_errornousAccessors.clear();
-	foreach( QString fileName, fileNames ) {
+	foreach( const QString &fileName, fileNames ) {
 	    QString s = KUrl(fileName).fileName().remove(QRegExp("\\..*$")); // Remove file extension
 	    const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( s );
 	    if ( accessor ) {
@@ -248,8 +247,10 @@ bool PublicTransportEngine::updateServiceProviderSource() {
 	m_dataSources.insert( name, dataSource );
     }
 
-    foreach ( QString key, dataSource.keys() )
-	setData( name, key, dataSource[key] );
+    for ( QVariantHash::const_iterator it = dataSource.constBegin();
+	    it != dataSource.constEnd(); ++it ) {
+	setData( name, it.key(), it.value() );
+    }
     return true;
 }
 
@@ -259,15 +260,17 @@ void PublicTransportEngine::updateErrornousServiceProviderSource( const QString 
 
 bool PublicTransportEngine::updateLocationSource() {
     const QString name = sourceTypeKeyword( Locations );
-    QHash<QString, QVariant> dataSource;
+    QVariantHash dataSource;
     if ( m_dataSources.keys().contains(name) )
 	dataSource = m_dataSources[name].toHash(); // locations already loaded
     else
 	dataSource = locations();
     m_dataSources.insert( name, dataSource );
 
-    foreach ( QString key, dataSource.keys() )
-	setData( name, key, dataSource[key] );
+    for ( QVariantHash::const_iterator it = dataSource.constBegin();
+	    it != dataSource.constEnd(); ++it ) {
+	setData( name, it.key(), it.value() );
+    }
 
     return true;
 }
@@ -278,8 +281,10 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
     { // Data is stored in the map and up to date
 	kDebug() << "Data source" << name << "is up to date";
 	QVariantHash dataSource = m_dataSources[name].toHash();
-	foreach ( QString key, dataSource.keys() )
-	    setData( name, key, dataSource[key] );
+	for ( QVariantHash::const_iterator it = dataSource.constBegin();
+		it != dataSource.constEnd(); ++it ) {
+	    setData( name, it.key(), it.value() );
+	}
     } else { // Request new data
 	if ( containsDataSource )
 	    m_dataSources.remove(name); // Clear old data
@@ -320,26 +325,26 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 	} else
 	    return false;
 	
-	input = parameters.trimmed().split("|", QString::SkipEmptyParts);
+	input = parameters.trimmed().split( '|', QString::SkipEmptyParts );
 	QString serviceProvider = input.at(0).trimmed();
 
 	for ( int i = 0; i < input.length(); ++i ) {
 	    QString s = input.at(i).toLower();
-	    if ( s.startsWith("city=", Qt::CaseInsensitive) )
+	    if ( s.startsWith(QLatin1String("city="), Qt::CaseInsensitive) )
 		city = input.at(i).mid( QString("city=").length() ).trimmed();
-	    else if ( s.startsWith("stop=", Qt::CaseInsensitive) )
+	    else if ( s.startsWith(QLatin1String("stop="), Qt::CaseInsensitive) )
 		stop = input.at(i).mid( QString("stop=").length() ).trimmed();
-	    else if ( s.startsWith("targetStop=", Qt::CaseInsensitive) )
+	    else if ( s.startsWith(QLatin1String("targetStop="), Qt::CaseInsensitive) )
 		targetStop = input.at(i).mid( QString("targetStop=").length() ).trimmed();
-	    else if ( s.startsWith("originStop=", Qt::CaseInsensitive) )
+	    else if ( s.startsWith(QLatin1String("originStop="), Qt::CaseInsensitive) )
 		originStop = input.at(i).mid( QString("originStop=").length() ).trimmed();
-	    else if ( s.startsWith("timeoffset=", Qt::CaseInsensitive) ) {
+	    else if ( s.startsWith(QLatin1String("timeoffset="), Qt::CaseInsensitive) ) {
 		s = input.at(i).mid( QString("timeoffset=").length() ).trimmed();
 		dateTime = QDateTime::currentDateTime().addSecs( s.toInt() * 60 );
-	    } else if ( s.startsWith("time=", Qt::CaseInsensitive) ) {
+	    } else if ( s.startsWith(QLatin1String("time="), Qt::CaseInsensitive) ) {
 		s = input.at(i).mid( QString("time=").length() ).trimmed();
 		dateTime = QDateTime( QDate::currentDate(), QTime::fromString(s, "hh:mm") );
-	    } else if ( s.startsWith("datetime=", Qt::CaseInsensitive) ) {
+	    } else if ( s.startsWith(QLatin1String("datetime="), Qt::CaseInsensitive) ) {
 		s = input.at(i).mid( QString("datetime=").length() ).trimmed();
 		dateTime = QDateTime::fromString( s );
 	    }
@@ -375,11 +380,11 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 	if ( accessor == NULL ) {
 	    kDebug() << QString("Accessor %1 couldn't be created").arg(serviceProvider);
 	    return false; // accessor couldn't be created
-	} else if ( accessor->useSeperateCityValue() && city.isEmpty() ) {
-	    kDebug() << QString("Accessor %1 needs a seperate city value. Add to "
+	} else if ( accessor->useSeparateCityValue() && city.isEmpty() ) {
+	    kDebug() << QString("Accessor %1 needs a separate city value. Add to "
 				"source name '|city=X', where X stands for the city "
 				"name.").arg(serviceProvider);
-	    return false; // accessor needs a seperate city value
+	    return false; // accessor needs a separate city value
 	} else if ( parseDocumentMode == ParseForJourneys
 		    && !accessor->features().contains("JourneySearch") ) {
 	    kDebug() << QString("Accessor %1 doesn't support journey searches.")
@@ -421,7 +426,7 @@ QString PublicTransportEngine::stripDateAndTimeValues( const QString& sourceName
     QString ret = sourceName;
     QRegExp rx( "(time=[^\\|]*|datetime=[^\\|]*)", Qt::CaseInsensitive );
     rx.setMinimal( true );
-    ret.replace( rx, "" );
+    ret.replace( rx, QChar() );
     return ret;
 }
 
@@ -434,7 +439,7 @@ void PublicTransportEngine::accessorInfoDirChanged( QString path ) {
     
     // Clear all cached data (use the new accessor to parse the data again)
     QStringList cachedSources = m_dataSources.keys();
-    foreach ( QString cachedSource, cachedSources ) {
+    foreach ( const QString &cachedSource, cachedSources ) {
 	SourceType sourceType = sourceTypeFromName( cachedSource );
 	if ( isDataRequestingSourceType(sourceType) )
 	    m_dataSources.remove( cachedSource );
@@ -478,7 +483,7 @@ const QString PublicTransportEngine::sourceTypeKeyword( SourceType sourceType ) 
 
 PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
 		const QString& sourceName ) const {
-    if ( sourceName.startsWith(sourceTypeKeyword(ServiceProvider) + " ", Qt::CaseInsensitive) )
+    if ( sourceName.startsWith(sourceTypeKeyword(ServiceProvider) + ' ', Qt::CaseInsensitive) )
 	return ServiceProvider;
     else if ( sourceName.compare(sourceTypeKeyword(ServiceProviders), Qt::CaseInsensitive) == 0 )
 	return ServiceProviders;
@@ -555,13 +560,13 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 
     int i = 0;
     m_dataSources.remove( sourceName );
-    QHash<QString, QVariant> dataSource;
+    QVariantHash dataSource;
     foreach ( DepartureInfo *departureInfo, departures ) {
 // 	if ( !departureInfo->isValid() ) {
 // 	    kDebug() << "Departure isn't valid" << departureInfo->line();
 // 	    continue;
 // 	}
-	QHash<QString, QVariant> data;
+	QVariantHash data;
 	data.insert("line", departureInfo->line());
 	data.insert("target", departureInfo->target());
 	data.insert("departure", departureInfo->departure());
@@ -577,10 +582,10 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 	data.insert("routeTimes", departureInfo->routeTimesVariant());
 	data.insert("routeExactStops", departureInfo->routeExactStops());
 
-	QString sKey = QString( "%1" ).arg( i++ );
+	QString sKey = QString( "%1" ).arg( i );
 	setData( sourceName, sKey, data );
 	dataSource.insert( sKey, data );
-// 	kDebug() << "setData" << sourceName << data;
+	++i;
     }
     int departureCount = departures.count();
     QDateTime first, last;
@@ -593,12 +598,12 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 
     // Remove old jouneys
     for ( ; i < m_lastJourneyCount; ++i )
-	removeData( sourceName, QString("%1").arg(i++) );
+	removeData( sourceName, QString("%1").arg(i) );
     m_lastJourneyCount = departures.count();
 
     // Remove old stop suggestions
     for ( i = 0 ; i < m_lastStopNameCount; ++i )
-	removeData( sourceName, QString("stopName %1").arg(i++) );
+	removeData( sourceName, QString("stopName %1").arg(i) );
     m_lastStopNameCount = 0;
 
     // Store a proposal for the next download time
@@ -651,12 +656,12 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 
     int i = 0;
     m_dataSources.remove( sourceName );
-    QHash<QString, QVariant> dataSource;
+    QVariantHash dataSource;
     foreach ( JourneyInfo *journeyInfo, journeys ) {
 	if ( !journeyInfo->isValid() )
 	    continue;
 
-	QHash<QString, QVariant> data;
+	QVariantHash data;
 	data.insert("vehicleTypes", journeyInfo->vehicleTypesVariant());
 	data.insert("arrival", journeyInfo->arrival());
 	data.insert("departure", journeyInfo->departure());
@@ -694,12 +699,12 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 
     // Remove old journeys
     for ( ; i < m_lastJourneyCount; ++i )
-	removeData( sourceName, QString("%1").arg(i++) );
+	removeData( sourceName, QString("%1").arg(i) );
     m_lastJourneyCount = journeys.count();
 
     // Remove old stop suggestions
     for ( i = 0 ; i < m_lastStopNameCount; ++i )
-	removeData( sourceName, QString("stopName %1").arg(i++) );
+	removeData( sourceName, QString("stopName %1").arg(i) );
     m_lastStopNameCount = 0;
     
     // Store a proposal for the next download time
@@ -753,7 +758,7 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 
     int i = 0;
     foreach ( const QString &stopName, stops ) {
-	QHash<QString, QVariant> data;
+	QVariantHash data;
 	data.insert("stopName", stopName);
 	if ( stopToStopId.contains(stopName) )
 	    data.insert("stopID", stopToStopId.value(stopName, "") );
@@ -825,7 +830,7 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name ) {
 	return false;
     
     // Data source stays up to date for max(UPDATE_TIMEOUT, minFetchWait) seconds
-    QHash<QString, QVariant> dataSource = m_dataSources[ name ].toHash();
+    QVariantHash dataSource = m_dataSources[ name ].toHash();
     
     TimetableAccessor *accessor;
     QString serviceProvider = dataSource[ "serviceProvider" ].toString();

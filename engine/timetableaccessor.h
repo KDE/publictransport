@@ -119,7 +119,7 @@ class TimetableAccessor : public QObject {
 	const TimetableAccessorInfo &timetableAccessorInfo() const { return m_info; };
 
 	/** Wheather or not the city should be put into the "raw" url. */
-	virtual bool useSeperateCityValue() const { return m_info.useSeperateCityValue(); };
+	virtual bool useSeparateCityValue() const { return m_info.useSeparateCityValue(); };
 
 	/** Wheather or not cities may be chosen freely.
 	* @return true if only cities in the list returned by cities()  are valid.
@@ -140,7 +140,7 @@ class TimetableAccessor : public QObject {
     protected:
 	/** Parses the contents of a document that was requested using requestJourneys()
 	* and puts the results into @p journeys..
-	* @param journeys A pointer to a list of departure/arrival or journey informations.
+	* @param journeys A pointer to a list of departure/arrival or journey information.
 	* The results of parsing the document is stored in @p journeys.
 	* @param parseDocumentMode The mode of parsing, e.g. parse for
 	* departures/arrivals or journeys.
@@ -161,7 +161,7 @@ class TimetableAccessor : public QObject {
 		return QString(); };
 	
 	/** Override this method to parse the contents of a received document for
-	* an url to a document containing detailed journey infos. The default 
+	* an url to a document containing detailed journey information. The default
 	* implementation returns a null string.
 	* @return The parsed url. */
 	virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document ) {
@@ -227,7 +227,7 @@ class TimetableAccessor : public QObject {
 	* @param sourceName The name of the data source for which the departures /
 	* arrivals have been downloaded and parsed.
 	* @param city The city the stop is in. May be empty if the service provider
-	* doesn't need a seperate city value.
+	* doesn't need a separate city value.
 	* @param stop The stop name for which the departures / arrivals have been received.
 	* @param dataType "departures" or "arrivals".
 	* @param parseDocumentMode What has been parsed from the document.
@@ -249,7 +249,7 @@ class TimetableAccessor : public QObject {
 	* @param sourceName The name of the data source for which the journeys have
 	* been downloaded and parsed.
 	* @param city The city the stop is in. May be empty if the service provider
-	* doesn't need a seperate city value.
+	* doesn't need a separate city value.
 	* @param stop The stop name for which the departures / arrivals have been received.
 	* @param dataType "journeys".
 	* @param parseDocumentMode What has been parsed from the document.
@@ -274,7 +274,7 @@ class TimetableAccessor : public QObject {
 	* @param sourceName The name of the data source for which the stops have been
 	* downloaded and parsed.
 	* @param city The city the (ambiguous) stop is in. May be empty if the service provider
-	* doesn't need a seperate city value.
+	* doesn't need a separate city value.
 	* @param stop The (ambiguous) stop name for which the stop list has been received.
 	* @param dataType "stopList".
 	* @param parseDocumentMode What has been parsed from the document.
@@ -289,7 +289,7 @@ class TimetableAccessor : public QObject {
 			       const QString &stop, const QString &dataType,
 			       ParseDocumentMode parseDocumentMode );
 
-	/** Emitted when an error occured while parsing.
+	/** Emitted when an error occurred while parsing.
 	* @param accessor The accessor that was used to download and parse information
 	* from the service provider.
 	* @param errorType The type of error or NoError if there was no error.
@@ -299,7 +299,7 @@ class TimetableAccessor : public QObject {
 	* @param serviceProvider The service provider the data came from.
 	* @param sourceName The name of the data source.
 	* @param city The city the stop is in. May be empty if the service provider
-	* doesn't need a seperate city value.
+	* doesn't need a separate city value.
 	* @param stop The stop name for which the error occured.
 	* @param dataType "nothing".
 	* @param parseDocumentMode What has been parsed from the document.

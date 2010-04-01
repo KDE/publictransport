@@ -144,7 +144,8 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
     int count = 0;
     QDate curDate;
     QTime lastTime;
-    foreach ( TimetableData timetableData, data ) {
+    for ( int i = 0; i < data.count(); ++ i ) {
+        TimetableData timetableData = data.at( i );
 	QDate date = timetableData.value( DepartureDate ).toDate();
 	QTime departureTime = QTime( timetableData.value(DepartureHour).toInt(),
 					timetableData.value(DepartureMinute).toInt() );
@@ -261,7 +262,7 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
     QList<TimetableData> data = m_resultObject->data();
 
     int count = 0;
-    foreach ( TimetableData timetableData, data ) {
+    foreach ( const TimetableData &timetableData, data ) {
 	QString stopName = timetableData.value( StopName ).toString();
 	QString stopID;
 	int stopWeight = -1;

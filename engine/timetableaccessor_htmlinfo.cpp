@@ -1,3 +1,22 @@
+/*
+*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*
+*   This program is free software; you can redistribute it and/or modify
+*   it under the terms of the GNU Library General Public License as
+*   published by the Free Software Foundation; either version 2 or
+*   (at your option) any later version.
+*
+*   This program is distributed in the hope that it will be useful,
+*   but WITHOUT ANY WARRANTY; without even the implied warranty of
+*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*   GNU General Public License for more details
+*
+*   You should have received a copy of the GNU Library General Public
+*   License along with this program; if not, write to the
+*   Free Software Foundation, Inc.,
+*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 #include "timetableaccessor_htmlinfo.h"
 #include <KLocalizedString>
 #include <KDebug>
@@ -51,16 +70,16 @@ void TimetableAccessorInfo::addRegExpPossibleStops( const QString &regExpRange,
 
 bool TimetableAccessorInfo::supportsTimetableAccessorInfo(
 				const TimetableInformation& info ) const {
-    if ( m_regExps.searchDepartures.infos().contains(info) ||
+    if ( m_regExps.searchDepartures.info().contains(info) ||
 	    (!m_regExps.searchDeparturesPre.regExp().isEmpty()
-	    && m_regExps.searchDepartures.infos().contains(
-	    m_regExps.searchDeparturesPre.infos().at(0) )
-	    && m_regExps.searchDeparturesPre.infos().at(1) == info) )
+	    && m_regExps.searchDepartures.info().contains(
+	    m_regExps.searchDeparturesPre.info().at(0) )
+	    && m_regExps.searchDeparturesPre.info().at(1) == info) )
 	return true;
 	
     bool supportedByPossibleStopRegExps = false;
-    foreach ( TimetableRegExpSearch searchPossibleStops, m_regExps.searchPossibleStops ) {
-	if ( searchPossibleStops.infos().contains(info) ) {
+    foreach ( const TimetableRegExpSearch &searchPossibleStops, m_regExps.searchPossibleStops ) {
+	if ( searchPossibleStops.info().contains(info) ) {
 	    supportedByPossibleStopRegExps = true;
 	    break;
 	}
@@ -71,8 +90,8 @@ bool TimetableAccessorInfo::supportsTimetableAccessorInfo(
 
 bool TimetableAccessorInfo::supportsByJourneyNewsParsing(
 				const TimetableInformation &info ) const {
-    foreach ( TimetableRegExpSearch search, m_regExps.searchJourneyNews ) {
-	if ( search.infos().contains( info ) )
+    foreach ( const TimetableRegExpSearch &search, m_regExps.searchJourneyNews ) {
+	if ( search.info().contains( info ) )
 	    return true;
     }
 

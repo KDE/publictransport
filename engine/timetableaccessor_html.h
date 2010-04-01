@@ -55,7 +55,7 @@ class TimetableAccessorHtml : public TimetableAccessor
     protected:
 	/** Parses the contents of a received document for a list of departures/arrivals
 	* or journeys (depending on @p parseDocumentMode) and puts the results into @p journeys.
-	* @param journeys A pointer to a list of departure/arrival or journey informations.
+	* @param journeys A pointer to a list of departure/arrival or journey information.
 	* The results of parsing the document is stored in @p journeys.
 	* @param parseDocumentMode The mode of parsing, e.g. parse for departures/arrivals or journeys.
 	* @return true, if there were no errors and the data in @p journeys is valid.

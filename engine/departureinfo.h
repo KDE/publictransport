@@ -54,7 +54,8 @@ class PublicTransportInfo {
 	
 	/** Constructs a new PublicTransportInfo object.
 	* @param departure The date and time of the departure / arrival of the vehicle. */
-	PublicTransportInfo( const QDateTime &departure, const QString &operatorName = QString() ) {
+	explicit PublicTransportInfo( const QDateTime &departure,
+				      const QString &operatorName = QString() ) {
 	    m_data[ DepartureDate ] = departure.date();
 	    m_data[ DepartureYear ] = departure.date().year();
 	    m_data[ DepartureHour ] = departure.time().hour();
@@ -116,8 +117,6 @@ class PublicTransportInfo {
     protected:
 	bool m_isValid;
 	QHash< TimetableInformation, QVariant > m_data;
-	//QString m_operator; /**< Stores the name of the company that is responsibe for this departure / arrival / journey. */
-	//QDateTime m_departure; /**< Stores a departure time. Can be used by derived classes. */
 };
 
 /** @class JourneyInfo
@@ -304,11 +303,6 @@ class JourneyInfo : public PublicTransportInfo {
 		   const QString &targetStopName, const QDateTime &arrival,
 		   int duration, int changes = 0, const QString &pricing = QString(),
 		   const QString &journeyNews = QString() );
-
-// 	QString m_pricing, m_startStopName, m_targetStopName, m_journeyNews;
-// 	QDateTime m_arrival;
-// 	QList<VehicleType> m_vehicleTypes;
-// 	int m_duration, m_changes;
 };
 
 /** @class DepartureInfo
@@ -444,11 +438,7 @@ class DepartureInfo : public PublicTransportInfo {
 		   const QString &delayReason = QString(),
 		   const QString &sJourneyNews = QString() );
 
-// 	QString m_target, m_line, m_platform, m_delayReason, m_journeyNews;
-// 	int m_delay;
-// 	VehicleType m_vehicleType;
 	LineServices m_lineServices;
 };
-
 
 #endif // DEPARTUREINFO_HEADER

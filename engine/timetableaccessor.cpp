@@ -17,6 +17,10 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Own includes
+#include "timetableaccessor.h"
+#include "accessorinfoxmlreader.h"
+
 // Qt includes
 #include <QTextCodec>
 #include <QFile>
@@ -26,11 +30,6 @@
 #include <KStandardDirs>
 #include <KLocale>
 #include <KDebug>
-
-// Own includes
-#include "timetableaccessor.h"
-#include "accessorinfoxmlreader.h"
-
 
 TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &serviceProvider ) {
     QString fileName = KGlobal::dirs()->findResource( "data",
@@ -503,7 +502,7 @@ KUrl TimetableAccessor::getUrl( const QString &city, const QString &stop,
     }
 
     // Construct the url from the "raw" url by replacing values
-    if ( useSeperateCityValue() )
+    if ( useSeparateCityValue() )
 	sRawUrl = sRawUrl.replace( "{city}", sCity );
     sRawUrl = sRawUrl.replace( "{time}", sTime )
 		     .replace( "{maxDeps}", QString("%1").arg(maxDeps) )
@@ -531,7 +530,7 @@ KUrl TimetableAccessor::getStopSuggestionsUrl( const QString &city,
 	sStop = toPercentEncoding( sStop, charsetForUrlEncoding() );
     }
     
-    if ( useSeperateCityValue() )
+    if ( useSeparateCityValue() )
 	sRawUrl = sRawUrl.replace( "{city}", sCity );
     sRawUrl = sRawUrl.replace( "{stop}", sStop );
 
@@ -570,7 +569,7 @@ KUrl TimetableAccessor::getJourneyUrl( const QString& city,
     }
 
     // Construct the url from the "raw" url by replacing values
-    if ( useSeperateCityValue() )
+    if ( useSeparateCityValue() )
 	sRawUrl = sRawUrl.replace( "{city}", sCity );
 
     sRawUrl = sRawUrl.replace( "{time}", sTime )
@@ -596,7 +595,7 @@ KUrl TimetableAccessor::getJourneyUrl( const QString& city,
 
 QString TimetableAccessor::gethex( ushort decimal ) {
     QString hexchars = "0123456789ABCDEFabcdef";
-    return "%" + hexchars[decimal >> 4] + hexchars[decimal & 0xF];
+    return QChar('%') + hexchars[decimal >> 4] + hexchars[decimal & 0xF];
 }
 
 QString TimetableAccessor::toPercentEncoding( QString str, QByteArray charset ) {
