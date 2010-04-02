@@ -92,7 +92,7 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
     m_currentMessage = MessageNone;
 
     m_journeySearchLastTextLength = 0;
-    setBackgroundHints( StandardBackground ); //TranslucentBackground );
+    setBackgroundHints( StandardBackground );
     setAspectRatioMode( Plasma::IgnoreAspectRatio );
     setHasConfigurationInterface( true );
     resize( 400, 300 );
@@ -114,9 +114,9 @@ PublicTransport::~PublicTransport() {
 }
 
 void PublicTransport::init() {
-    checkNetworkStatus();
     m_settings = SettingsIO::readSettings( config(), globalConfig() );
 
+    // Create the worker thread
     m_departureProcessor = new DepartureProcessor( this );
     connect( m_departureProcessor, SIGNAL(beginDepartureProcessing(QString)),
 	     this, SLOT(beginDepartureProcessing(QString)) );
@@ -158,6 +158,7 @@ void PublicTransport::init() {
 
     createModels();
     graphicsWidget();
+    checkNetworkStatus();
     createTooltip();
     createPopupIcon();
 
@@ -167,8 +168,6 @@ void PublicTransport::init() {
 
     connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
-    connect( this, SIGNAL(messageButtonPressed(MessageButton)),
-	     this, SLOT(slotMessageButtonPressed(MessageButton)) );
     connect( Plasma::Theme::defaultTheme(), SIGNAL(themeChanged()),
 	     this, SLOT(themeChanged()) );
     emit settingsChanged();
@@ -182,7 +181,9 @@ PublicTransport::NetworkStatus PublicTransport::queryNetworkStatus() {
     const QStringList interfaces = dataEngine("network")->sources();
     if ( interfaces.isEmpty() )
 	return StatusUnknown;
-    
+
+    // Check if there is an activated interface or at least one that's
+    // currently being configured
     foreach ( const QString &iface, interfaces ) {
 	QString sStatus = dataEngine("network")->query(iface)["ConnectionStatus"].toString();
 	if ( sStatus.isEmpty() )
@@ -200,24 +201,19 @@ PublicTransport::NetworkStatus PublicTransport::queryNetworkStatus() {
 
 bool PublicTransport::checkNetworkStatus() {
     NetworkStatus status = queryNetworkStatus();
+    TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
     if ( status == StatusUnavailable ) {
-	hideMessage();
 	m_currentMessage = MessageError;
-	showMessage( KIcon("dialog-error"),
-		     i18n("No network connection. Press Ok to retry."), Plasma::ButtonOk );
+	treeView->setNoItemsText( i18n("No network connection.") );
 	return false;
     } else if ( status == StatusConfiguring ) {
-	hideMessage();
 	m_currentMessage = MessageError;
-	showMessage( KIcon("dialog-error"),
-		     i18n("Network gets configured. Please wait..."), Plasma::ButtonOk );
+	treeView->setNoItemsText( i18n("Network gets configured. Please wait...") );
 	return false;
     } else if ( status == StatusActivated
 		&& m_currentMessage == MessageError ) {
-	hideMessage();
 	m_currentMessage = MessageErrorResolved;
-	showMessage( KIcon("task-complete"),
-		     i18n("Network connection established."), Plasma::ButtonOk );
+	treeView->setNoItemsText( i18n("Network connection established") );
 	return false;
     } else {
 	kDebug() << "Unknown network status or no error message was shown" << status;
@@ -225,15 +221,10 @@ bool PublicTransport::checkNetworkStatus() {
     }
 }
 
-void PublicTransport::slotMessageButtonPressed( MessageButton button ) {
-    switch ( button ) {
-	case Plasma::ButtonOk:
-	default:
-	    if ( m_currentMessage == MessageError )
-		reconnectSource();
-	    hideMessage();
-	    break;
-    }
+void PublicTransport::noItemsTextClicked() {
+    // Update the timetable if an error message inside the tree view has been clicked
+    if ( m_currentMessage == MessageError )
+	updateDataSource();
 }
 
 void PublicTransport::setupActions() {
@@ -321,6 +312,7 @@ void PublicTransport::setupActions() {
 	     this, SLOT(toggleExpanded()) );
     addAction( "toggleExpanded", actionToggleExpanded );
 
+    // TODO: Combine actionHideHeader and actionShowHeader into one action
     QAction *actionHideHeader = new QAction( KIcon("edit-delete"),
 					     i18n("&Hide header"), this );
     connect( actionHideHeader, SIGNAL(triggered()), this, SLOT(hideHeader()) );
@@ -330,7 +322,8 @@ void PublicTransport::setupActions() {
 					     i18n("Show &header"), this );
     connect( actionShowHeader, SIGNAL(triggered()), this, SLOT(showHeader()) );
     addAction( "showHeader", actionShowHeader );
-
+    
+    // TODO: Combine actionHideColumnTarget and actionShowColumnTarget into one action
     QAction *actionHideColumnTarget = new QAction( KIcon("view-right-close"),
 					i18n("Hide &target column"), this );
     connect( actionHideColumnTarget, SIGNAL(triggered()),
@@ -372,6 +365,7 @@ QList< QAction* > PublicTransport::contextualActions() {
     }
 
     QList< QAction* > actions;
+    // Add actions: Update Timetable, Search Journeys
     actions << action("updateTimetable"); //<< action("showActionButtons")
     if ( m_currentServiceProviderFeatures.contains("JourneySearch") )
 	actions << action("searchJourneys");
@@ -379,7 +373,9 @@ QList< QAction* > PublicTransport::contextualActions() {
     QAction *separator = new QAction( this );
     separator->setSeparator( true );
     actions.append( separator );
-    
+
+    // Add actions: Switch Departures/Arrivals, Switch Current Stop, 
+    // Switch Filter Configuration
     if ( m_currentServiceProviderFeatures.contains("Arrivals") )
 	actions << switchDepArr;
     if ( m_settings.stopSettingsList.count() > 1 )
@@ -521,7 +517,7 @@ void PublicTransport::reconnectSource() {
 		 << "Autoupdate" << m_settings.autoUpdate;
 	m_currentSources << currentSource;
 	if ( m_settings.autoUpdate ) {
-	    // Update once a minute to show updated duration times
+	    // Update once a minute
 	    dataEngine("publictransport")->connectSource( currentSource, this,
 							  60000, Plasma::AlignToMinute );
 	} else {
@@ -540,17 +536,18 @@ void PublicTransport::departuresFiltered( const QString& sourceName,
 	m_departureInfos[ sourceName ] = departures;
     else
 	kDebug() << "Source name not found" << sourceName << "in" << m_departureInfos.keys();
-    
+
+    // Remove previously visible and now filtered out departures
     kDebug() << "Remove" << newlyFiltered.count() << "previously unfiltered departures, if they are visible";
     foreach ( const DepartureInfo &departureInfo, newlyFiltered ) {
 	int row = m_model->indexFromInfo( departureInfo ).row();
-	if ( row == -1 ) {
-	    kDebug() << "Didn't find departure" << departureInfo.lineString()
-		     << departureInfo.target() << departureInfo.departure();
-	} else
+	if ( row == -1 )
+	    kDebug() << "Didn't find departure" << departureInfo;
+	else
 	    m_model->removeItem( m_model->itemFromInfo(departureInfo) );
     }
-    
+
+    // Append previously filtered out departures
     kDebug() << "Add" << newlyNotFiltered.count() << "previously filtered departures";
     foreach ( const DepartureInfo &departureInfo, newlyNotFiltered )
 	appendDeparture( departureInfo );
@@ -561,6 +558,7 @@ void PublicTransport::departuresFiltered( const QString& sourceName,
 }
 
 void PublicTransport::beginJourneyProcessing( const QString &/*sourceName*/ ) {
+    // Clear old journey list
     m_journeyInfos.clear();
 }
 
@@ -637,6 +635,7 @@ QList< DepartureInfo > PublicTransport::departureInfos() const {
 	QString sourceName = stripDateAndTimeValues( m_stopIndexToSourceName[n] );
 	if ( m_departureInfos.contains(sourceName) ) {
 	    foreach ( const DepartureInfo &departureInfo, m_departureInfos[sourceName] ) {
+		// Only add not filtered items
 		if ( !departureInfo.isFilteredOut() )
 		    ret << departureInfo;
 	    }
@@ -663,6 +662,7 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
 	addState( ReceivedErroneousJourneyData );
 
 	#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+	// Set associated application url
 	QUrl url = data["requestUrl"].toUrl();
 	kDebug() << "Errorneous journey url" << url;
 	m_urlJourneys = url;
@@ -674,6 +674,7 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
 	m_stopNameValid = false;
 
 	#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+	// Set associated application url
 	QUrl url = data["requestUrl"].toUrl();
 	kDebug() << "Errorneous departure/arrival url" << url;
 	m_urlDeparturesArrivals = url;
@@ -695,13 +696,11 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
 		}
 	    }
 	} else {
-	    hideMessage();
 	    m_currentMessage = MessageError;
 	    if ( checkNetworkStatus() ) {
-		showMessage( KIcon("dialog-error"),
-			i18n("There was an error:\n%1\n\nThe server may be "
-			"temporarily unavailable. Press Ok to retry", error),
-			Plasma::ButtonOk );
+		TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
+		treeView->setNoItemsText( i18n("There was an error:\n%1\n\n"
+			"The server may be temporarily unavailable.", error) );
 	    }
 	}
 // 	    }
@@ -718,7 +717,7 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
 	QHash< QString, int > stopToStopWeight;
 	QStringList stopSuggestions, weightedStops;
 
-	int count = data["count"].toInt();
+	int count = data["count"].toInt(); // The number of received stop suggestions
 	bool hasAtLeastOneWeight = false;
 	for( int i = 0; i < count; ++i ) {
 	    if ( !data.contains( QString("stopName %1").arg(i) ) ) {
@@ -727,8 +726,9 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
 		break;
 	    }
 
-	    QHash<QString, QVariant> dataMap = data.value(
-		    QString("stopName %1").arg(i) ).toHash();
+	    // Each stop suggestion is stored as a hash in a key named "stopName X",
+	    // where X is the index of the stop suggestion
+	    QVariantHash dataMap = data.value( QString("stopName %1").arg(i) ).toHash();
 	    QString sStopName = dataMap["stopName"].toString();
 	    QString sStopID = dataMap["stopID"].toString();
 	    int stopWeight = dataMap["stopWeight"].toInt();
@@ -1049,13 +1049,16 @@ void PublicTransport::dataUpdated( const QString& sourceName,
 				   const Plasma::DataEngine::Data& data ) {
     if ( data.isEmpty() || (!m_currentSources.contains(sourceName)
 		&& sourceName != m_currentJourneySource) ) {
+	// Source isn't used anymore
 	kDebug() << "Data discarded" << sourceName;
 	return;
     }
 
     if ( data.value("error").toBool() ) {
+	// Error while parsing the data or no connection to server
 	handleDataError( sourceName, data );
-    } else if ( data.value("receivedPossibleStopList").toBool() ) { // Possible stop list received
+    } else if ( data.value("receivedPossibleStopList").toBool() ) {
+	// Possible stop list received
 	processStopSuggestions( sourceName, data );
     } else { // List of departures / arrivals / journeys received
 	if ( data["parseMode"].toString() == "journeys" ) {
@@ -1078,6 +1081,7 @@ void PublicTransport::dataUpdated( const QString& sourceName,
 void PublicTransport::geometryChanged() {
     setHeightOfCourtesyLabel();
 
+    // Adjust column sizes
     QHeaderView *header = m_treeView->nativeWidget()->header();
     int lastIndex = header->count() - 1;
     header->resizeSection( lastIndex, header->sectionSize(lastIndex) - 1 );
@@ -1085,7 +1089,9 @@ void PublicTransport::geometryChanged() {
 
 void PublicTransport::popupEvent( bool show ) {
     destroyOverlay();
-    addState( ShowingDepartureArrivalList ); // Hide opened journey views, ie. back to departure view
+    
+    // Hide opened journey views, ie. back to departure view
+    addState( ShowingDepartureArrivalList );
 
     Plasma::PopupApplet::popupEvent( show );
 }
@@ -1093,6 +1099,7 @@ void PublicTransport::popupEvent( bool show ) {
 void PublicTransport::createPopupIcon() {
     QDateTime alarmTime = m_model->nextAlarmTime();
     if ( !alarmTime.isNull() ) {
+	// Draw an alarm icon and the remaining time until the next alarm
 	int minutesToAlarm = qCeil( QDateTime::currentDateTime().secsTo(alarmTime) / 60.0 );
 	int hoursToAlarm = minutesToAlarm / 60;
 	minutesToAlarm %= 60;
@@ -1103,8 +1110,8 @@ void PublicTransport::createPopupIcon() {
 
 	QFont font = Plasma::Theme::defaultTheme()->font(Plasma::Theme::DefaultFont);
 
-	QPixmap pixmapIcon128 = KIcon( "public-transport-stop" ).pixmap(128);
-	QPixmap pixmapAlarmIcon32 = KIcon( "task-reminder" ).pixmap(32);
+	QPixmap pixmapIcon128 = KIcon( "public-transport-stop" ).pixmap( 128 );
+	QPixmap pixmapAlarmIcon32 = KIcon( "task-reminder" ).pixmap( 32 );
 	QPainter p128( &pixmapIcon128 );
 	font.setPixelSize( 40 );
 	p128.setFont( font );
@@ -1154,26 +1161,32 @@ void PublicTransport::createTooltip() {
 	data.setSubText( i18n("View departure times for public transport") );
     else if ( (nextDeparture = getFirstNotFilteredDeparture()).isValid() ) {
 	if ( m_settings.departureArrivalListType ==  DepartureList ) {
+	    // Showing a departure list
 	    if ( m_settings.currentStopSettings().stops.count() == 1 ) {
+		// Only one stop (not combined with others)
 		data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
 				"Next departure from '%1': line %2 (%3) %4",
 				m_settings.currentStopSettings().stops.first(),
 				nextDeparture.lineString(), nextDeparture.target(),
 				nextDeparture.durationString() ) );
 	    } else {
+		// Results for multiple combined stops are shown
 		data.setSubText( i18nc("%3 is the translated duration text, e.g. in 3 minutes",
 				 "Next departure from your home stop: line %1 (%2) %3",
 				 nextDeparture.lineString(), nextDeparture.target(),
 				 nextDeparture.durationString() ) );
 	    }
 	} else {
+	    // Showing an arrival list
 	    if ( m_settings.currentStopSettings().stops.count() == 1 ) {
+		// Only one stop (not combined with others)
 		data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
 				 "Next arrival at '%1': line %2 (%3) %4",
 				 m_settings.currentStopSettings().stops.first(),
 				 nextDeparture.lineString(), nextDeparture.target(),
 				 nextDeparture.durationString() ) );
 	    } else {
+		// Results for multiple combined stops are shown
 		data.setSubText( i18nc("%3 is the translated duration text, e.g. in 3 minutes",
 				 "Next arrival at your home stop: line %1 (%2) %3",
 				 nextDeparture.lineString(), nextDeparture.target(),
@@ -1256,8 +1269,6 @@ void PublicTransport::configChanged() {
 	m_model->removeRows( m_settings.maximalNumberOfDepartures,
 			     m_model->rowCount() - m_settings.maximalNumberOfDepartures );
     }
-    
-//     updateModelJourneys();
 
     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
 }
@@ -1271,7 +1282,6 @@ void PublicTransport::serviceProviderSettingsChanged() {
 	if ( !m_currentJourneySource.isEmpty() )
 	    reconnectJourneySource();
     } else {
-	hideMessage();
 	setConfigurationRequired( true, i18n("Please check your configuration.") );
     }
 }
@@ -1311,18 +1321,18 @@ void PublicTransport::setMainIconDisplay( MainIconDisplay mainIconDisplay ) {
 	    icon.addPixmap( pixmap, QIcon::Normal );
 	    break;
 
-	case DepartureListOkIcon:
-	    if ( m_settings.departureArrivalListType == DepartureList ) {
-		icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
-			    QList<KIcon>() << KIcon("go-home") << KIcon("go-next"),
-			    QSize(iconExtend / 2, iconExtend / 2), iconExtend );
-	    } else {
-		icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
-			    QList<KIcon>() << KIcon("go-next") << KIcon("go-home"),
-			    QSize(iconExtend / 2, iconExtend / 2), iconExtend );
-	    }
+	case DepartureListOkIcon: {
+	    QList<KIcon> overlays;
+	    if ( m_settings.departureArrivalListType == DepartureList )
+		overlays << KIcon("go-home") << KIcon("go-next");
+	    else
+		overlays << KIcon("go-next") << KIcon("go-home");
+	    if ( m_settings.filtersEnabled )
+		overlays << KIcon("view-filter");
+	    icon = Global::makeOverlayIcon( KIcon("public-transport-stop"), overlays,
+				    QSize(iconExtend / 2, iconExtend / 2), iconExtend );
 	    break;
-
+	}
 	case JourneyListOkIcon:
 	    icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
 			QList<KIcon>() << KIcon("go-home")
@@ -1383,6 +1393,9 @@ KSelectAction* PublicTransport::switchStopAction( QObject *parent,
 	QString stopListShort = m_settings.stopSettingsList[ i ].stops.join( ", " );
 	if ( stopListShort.length() > 30 )
 	    stopListShort = stopListShort.left( 30 ).trimmed() + "...";
+
+	// Use a shortened stop name list as display text 
+	// and the complete version as tooltip
 	QAction *action = new QAction( i18n("Show Results For '%1'", stopListShort),
 				       parent );
 	action->setToolTip( stopList );
@@ -1882,6 +1895,8 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	// Create treeview for departures / arrivals
 	m_treeView = new Plasma::TreeView();
 	initTreeView( m_treeView );
+	TreeView *treeView = static_cast<TreeView*>( m_treeView->nativeWidget() );
+	connect( treeView, SIGNAL(noItemsTextClicked()), this, SLOT(noItemsTextClicked()) );
 	m_treeView->setModel( m_model );
 	connect( m_treeView->nativeWidget()->horizontalScrollBar(),
 		 SIGNAL(rangeChanged(int,int)), this, SLOT(geometryChanged()) );
@@ -1954,10 +1969,10 @@ void PublicTransport::initTreeView( Plasma::TreeView* treeView ) {
 		this, SLOT(showDepartureContextMenu(const QPoint &)) );
     if ( KGlobalSettings::singleClick() ) {
 	connect( _treeView, SIGNAL(clicked(const QModelIndex &)),
-		    this, SLOT(doubleClickedDepartureItem(const QModelIndex &)) );
+		    this, SLOT(doubleClickedItem(const QModelIndex &)) );
     } else {
 	connect( _treeView, SIGNAL(doubleClicked(const QModelIndex &)),
-		    this, SLOT(doubleClickedDepartureItem(const QModelIndex &)) );
+		    this, SLOT(doubleClickedItem(const QModelIndex &)) );
     }
     connect( header, SIGNAL(sectionResized(int,int,int)),
 	     this, SLOT(sectionResized(int,int,int)) );
@@ -2495,7 +2510,7 @@ void PublicTransport::addState( AppletState state ) {
 		    "see more departures") : i18n("No departures.") );
 
 	    if ( m_currentMessage == MessageError ) {
-		hideMessage();
+// 		hideMessage();
 		m_currentMessage = MessageNone;
 	    }
 	    unsetStates( QList<AppletState>() << WaitingForDepartureData << ReceivedErroneousDepartureData );
@@ -2620,10 +2635,10 @@ void PublicTransport::showColumnTarget() {
 }
 
 void PublicTransport::toggleExpanded() {
-    doubleClickedDepartureItem( m_clickedItemIndex );
+    doubleClickedItem( m_clickedItemIndex );
 }
 
-void PublicTransport::doubleClickedDepartureItem( const QModelIndex &modelIndex ) {
+void PublicTransport::doubleClickedItem( const QModelIndex &modelIndex ) {
     QModelIndex firstIndex;
     if ( testState(ShowingDepartureArrivalList) )
 	firstIndex = m_model->index( modelIndex.row(), 0, modelIndex.parent() );
@@ -3017,9 +3032,17 @@ void PublicTransport::stretchAllChildren( const QModelIndex& parent,
     if ( !parent.isValid() )
 	return; // Don't stretch top level items
     for ( int row = 0; row < model->rowCount(parent); ++row ) {
-	(m_treeViewJourney ? m_treeViewJourney : m_treeView)->nativeWidget()->setFirstColumnSpanned( row, parent, true );
+	Plasma::TreeView *treeView = m_treeViewJourney ? m_treeViewJourney : m_treeView;
+	treeView->nativeWidget()->setFirstColumnSpanned( row, parent, true );
 	stretchAllChildren( model->index(row, 0, parent), model );
     }
+}
+
+void GraphicsPixmapWidget::paint( QPainter* painter,
+				  const QStyleOptionGraphicsItem* option, QWidget* ) {
+    if ( !option->rect.isValid() )
+	return;
+    painter->drawPixmap( option->rect, m_pixmap );
 }
 
 #include "publictransport.moc"

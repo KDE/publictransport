@@ -307,4 +307,11 @@ void TreeView::paintEvent( QPaintEvent* event ) {
 	QTreeView::paintEvent(event);
 }
 
+void TreeView::mouseReleaseEvent( QMouseEvent* event ) {
+    QTreeView::mouseReleaseEvent( event );
+
+    if ( (!model() || model()->rowCount() == 0) && !m_noItemsText.isEmpty() )
+	emit noItemsTextClicked();
+}
+
 #include "publictransporttreeview.h"

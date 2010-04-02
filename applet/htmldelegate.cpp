@@ -52,7 +52,7 @@ void PublicTransportDelegate::paint( QPainter* painter,
 		.background( KColorScheme::NormalBackground ).color();
 	if ( option.state.testFlag(QStyle::State_Selected) ) {
 	    if ( option.state.testFlag(QStyle::State_MouseOver) )
-		focusColor.setAlpha( focusColor.alpha() * 0.7f );
+		focusColor.setAlpha( focusColor.alpha() * 0.65f );
 	    else
 		focusColor.setAlpha( focusColor.alpha() * 0.55f );
 	} else if ( option.state.testFlag(QStyle::State_MouseOver) )

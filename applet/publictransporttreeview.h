@@ -45,9 +45,16 @@ class TreeView : public QTreeView {
 
 	TreeView( QStyle *style );
 
+	/** Gets the text to be displayed when the model is empty. */
 	QString noItemsText() const { return m_noItemsText; };
+	/** Sets the text to be displayed when the model is empty. */
 	void setNoItemsText( const QString &noItemsText );
 
+    signals:
+	/** The tree view has been clicked but the model is empty and a text
+	* is displayed. */
+	void noItemsTextClicked();
+	
     protected:
 	QPixmap createFadeTile( const QColor &start, const QColor &end );
 	virtual void scrollContentsBy( int dx, int dy );
@@ -57,6 +64,7 @@ class TreeView : public QTreeView {
 	virtual void drawRow( QPainter *painter, const QStyleOptionViewItem& options,
 			      const QModelIndex& index ) const;
 	virtual void paintEvent( QPaintEvent* event );
+	virtual void mouseReleaseEvent( QMouseEvent* event );
 
     private:
 	QPixmap m_bottomFadeTile, m_topFadeTile;

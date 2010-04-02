@@ -188,7 +188,7 @@ void StopListWidget::setStopSettingsList( const StopSettingsList& stopSettingsLi
 	addWidget( widget );
     }
     
-    setWidgetCountRange( 1, 5 );
+    setWidgetCountRange( 1 );
 }
 
 StopSettingsList StopListWidget::stopSettingsList() const {

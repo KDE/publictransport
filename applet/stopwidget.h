@@ -42,7 +42,9 @@ class StopWidget : public QWidget {
 		    Plasma::DataEngine *osmEngine,
 		    Plasma::DataEngine *geolocationEngine, QWidget* parent );
 
+	/** Gets the stop settings of this StopWidget. */
 	StopSettings stopSettings() const { return m_stopSettings; };
+	/** Sets the stop settings of this StopWidget to @p stopSettings. */
 	void setStopSettings( const StopSettings &stopSettings );
 	
 	void setFilterConfigurations( const QStringList &filterConfigurations ) {
@@ -53,14 +55,19 @@ class StopWidget : public QWidget {
 	/** Removes the given @p button. */
 	void removeButton( QToolButton *button );
 
+	/** Whether or not this stop is highlighted, ie. currently used in the applet. */
 	bool isHighlighted() const;
+	/** Sets whether or not this stop is highlighted, ie. currently used in the applet. */
 	void setHighlighted( bool highlighted );
 
     signals:
+	/** The settings of this StopWidget have been changed (StopSettingsDialog accepted). */
 	void changed( const StopSettings &stopSettings );
 	void remove();
 
     public slots:
+	/** The change button has been clicked. This opens a @ref StopSettingsDialog
+	* to change the settings of this StopWidget. */
 	void changeClicked();
 
     private:
@@ -75,6 +82,7 @@ class StopWidget : public QWidget {
 	Plasma::DataEngine *m_geolocationEngine;
 };
 
+/** Manages a list of @ref StopWidget. */
 class StopListWidget : public AbstractDynamicWidgetContainer {
     Q_OBJECT
 
@@ -87,7 +95,9 @@ class StopListWidget : public AbstractDynamicWidgetContainer {
 			Plasma::DataEngine *osmEngine,
 			Plasma::DataEngine *geolocationEngine, QWidget *parent = 0 );
 
+	/** Gets a list of stop settings. */
 	StopSettingsList stopSettingsList() const;
+	/** Sets the list of stop settings. */
 	void setStopSettingsList( const StopSettingsList &stopSettingsList );
 	void setFilterConfigurations( const QStringList &filterConfigurations );
 

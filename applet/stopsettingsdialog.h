@@ -55,16 +55,25 @@ class StopSettingsDialog : public KDialog {
 			    QWidget *parent = 0 );
 	~StopSettingsDialog();
 
+	/** @returns the current stop settings of the dialog. */
 	StopSettings stopSettings() const;
+	/** Sets the values of the widgets according to @p stopSettings. */
 	void setStopSettings( const StopSettings &stopSettings );
 
     protected slots:
+	/** Another service provider has been selected. */
 	void serviceProviderChanged( int index );
+	/** The city name has been changed. */
 	void cityNameChanged( const QString &cityName );
+	/** Another location has been selected. */
 	void locationChanged( const QString &newLocation );
+	/** The info button has been clicked. This shows information about the
+	* currently selected service provider in a dialog. */
 	void clickedServiceProviderInfo();
 	void geolocateClicked();
+	/** The stop name has been edited. */
 	void stopNameEdited( const QString &text, int widgetIndex );
+	/** Another combined stop has been added. */
 	void stopAdded( QWidget *lineEdit );
 	void downloadServiceProvidersClicked();
 	void installServiceProviderClicked();

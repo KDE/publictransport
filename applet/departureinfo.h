@@ -94,6 +94,7 @@ class JourneyInfo : public PublicTransportInfo {
 		  routeExactStops );
 	};
 
+	/** Whether or not this journey information is valid. */
 	bool isValid() const { return m_duration >= 0; };
 	
 	QString departureText( bool htmlFormatted, bool displayTimeBold,
@@ -105,19 +106,32 @@ class JourneyInfo : public PublicTransportInfo {
 			       
 	QList<QVariant> vehicleTypesVariant() const;
 	QString durationToDepartureString( bool toArrival = false ) const;
-	
+
+	/** @returns the departure date and time of this journey. */
 	QDateTime departure() const { return m_departure; };
+	/** @returns the arrival date and time of this journey. */
 	QDateTime arrival() const { return m_arrival; };
+	/** @returns the operator for this journey. */
 	QString operatorName() const { return m_operator; };
+	/** @returns pricing information for this journey. */
 	QString pricing() const { return m_pricing; };
+	/** @returns the name of the start stop of this journey. */
 	QString startStopName() const { return m_startStopName; };
+	/** @returns the name of the target stop of this journey. */
 	QString targetStopName() const { return m_targetStopName; };
+	/** @returns an information string with news for this journey. */
 	QString journeyNews() const { return m_journeyNews; };
+	/** @returns a list of vehicle types used by this journey. */
 	QList<VehicleType> vehicleTypes() const { return m_vehicleTypes; };
 	QList<VehicleType> routeVehicleTypes() const { return m_routeVehicleTypes; };
+	/** @returns the duration of this journey in minutes. */
 	int duration() const { return m_duration; };
+	/** @returns the needed changes for this journey. */
 	int changes() const { return m_changes; };
+	/** @returns the number of exact stops in @ref routeStops. Some of the
+	* following stops have been omitted. */
 	int routeExactStops() const { return m_routeExactStops; };
+	/** @returns a list of intermediate stop names. */
 	QStringList routeStops() const { return m_routeStops; };
 	QStringList routeTransportLines() const { return m_routeTransportLines; };
 	QStringList routePlatformsDeparture() const { return m_routePlatformsDeparture; };
@@ -225,7 +239,6 @@ class DepartureInfo : public PublicTransportInfo {
 	
 	/** Gets the text to be displayed in the item for delay information. */
 	QString delayText() const;
-	
 	QString departureText( bool htmlFormatted, bool displayTimeBold,
 			       bool showRemainingMinutes, bool showDepartureTime,
 			       int linesPerRow ) const;
@@ -269,20 +282,32 @@ class DepartureInfo : public PublicTransportInfo {
 	bool isLineNumberInRange( int min, int max ) const {
 	    return (m_lineNumber >= min && m_lineNumber <= max) || m_lineNumber >= 1000;
 	};
-	
+
+	/** @returns the operator for this departure/arrival. */
 	QString operatorName() const { return m_operator; };
+	/** @returns the target/origin of this departure/arrival. */
 	QString target() const { return m_target; };
+	/** @returns the line string of this departure/arrival. */
 	QString lineString() const { return m_lineString; };
+	/** @returns the platform at which this departure departs or this arrival arrives. */
 	QString platform() const { return m_platform; };
+	/** @returns a string containing the reason of a delay if any. */
 	QString delayReason() const { return m_delayReason; };
 	QString journeyNews() const { return m_journeyNews; };
+	/** @returns the departure/arrival time. */
 	QDateTime departure() const { return m_departure; };
 	/** The delay in minutes or -1 if there's no information about delays. */
 	int delay() const { return m_delay; };
+	/** @returns the vehicle type of this departure/arrival. */
 	VehicleType vehicleType() const { return m_vehicleType; };
 	LineServices lineServices() const { return m_lineServices; };
+	/** @returns a list of intermediate stop names. */
 	QStringList routeStops() const { return m_routeStops; };
+	/** @returns a list of QTime objects. Each time corresponds to the stop
+	* in @ref routeStops with the same index. */
 	QList<QTime> routeTimes() const { return m_routeTimes; };
+	/** @returns the number of exact stops in @ref routeStops. Some of the
+	* following stops have been omitted. */
 	int routeExactStops() const { return m_routeExactStops; };
 	
 	QList< int > matchedAlarms() const { return m_matchedAlarms; };
@@ -318,5 +343,7 @@ Q_DECLARE_METATYPE( DepartureInfo );
 
 uint qHash( const DepartureInfo &departureInfo );
 bool operator <( const DepartureInfo &di1, const DepartureInfo &di2 );
+QDebug &operator <<( QDebug debug, const DepartureInfo &departureInfo );
+QDebug &operator <<( QDebug debug, const JourneyInfo &journeyInfo );
 
 #endif // DEPARTUREINFO_HEADER

@@ -385,3 +385,19 @@ bool operator <( const JourneyInfo& ji1, const JourneyInfo& ji2 ) {
 bool operator <( const DepartureInfo &di1, const DepartureInfo &di2 ) {
     return di1.predictedDeparture() < di2.predictedDeparture();
 }
+
+QDebug& operator<<( QDebug debug, const DepartureInfo& departureInfo ) {
+    return debug << QString( "(%1 %2 at %3)" )
+	    .arg( departureInfo.lineString() )
+	    .arg( departureInfo.target() )
+	    .arg( departureInfo.predictedDeparture().toString() );
+}
+
+QDebug& operator<<( QDebug debug, const JourneyInfo& journeyInfo ) {
+    return debug << QString( "(from %1 to %2, %3, %4 changes at %5)" )
+	    .arg( journeyInfo.startStopName() )
+	    .arg( journeyInfo.targetStopName() )
+	    .arg( journeyInfo.durationToDepartureString() )
+	    .arg( journeyInfo.changes() )
+	    .arg( journeyInfo.departure().toString() );
+}

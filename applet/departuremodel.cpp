@@ -853,6 +853,7 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow ) {
 	    }
 	    text = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public "
 		    "transport, like 'platform changed'", "News:") ).arg( text );
+	    // Try to set enough lines to show all text
 	    if ( linesPerRow )
 		*linesPerRow = qMin( 3, text.length() / 25 );
 	    break;
@@ -864,7 +865,8 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow ) {
 		text += "<br><b>" + (m_info->departureArrivalListType == ArrivalList
 		    ? i18n("Original arrival time:")
 		    : i18n("Original departure time:")) + "</b> " +
-			m_departureInfo.departure().toString("hh:mm");
+		    m_departureInfo.departure().toString("hh:mm");
+		// When there's a delay use two lines
 		if ( linesPerRow )
 		    *linesPerRow = 2;
 	    } else if ( linesPerRow )
@@ -910,6 +912,7 @@ ChildItem* DepartureItem::createRouteItem() {
 	    routeItem->appendChild( separatorItem );
 	}
 
+	// Add the current route stop ("departure - stop name")
 	QString text = QString("%1 - %2")
 		.arg(m_departureInfo.routeTimes()[row].toString("hh:mm"))
 		.arg(m_departureInfo.routeStops()[row]);
@@ -932,6 +935,7 @@ QVariant DepartureItem::data( int role, int column ) const {
     } else if ( role == AlarmColorIntensityRole ) {
 	return m_alarm.testFlag( AlarmPending ) ? 1.0 : m_alarmColorIntensity;
     } else if ( !m_parent ) {
+	// Top level item (m_parent should always be NULL for DepartureItems)
 	switch ( role ) {
 	    case LinesPerRowRole:
 		return m_info->linesPerRow;
@@ -955,7 +959,6 @@ QVariant DepartureItem::data( int role, int column ) const {
 
 void DepartureItem::setAlarm() {
     removeAlarm(); // Remove old alarm, if any
-
     static_cast<DepartureModel*>(m_model)->addAlarm( this );
 }
 
@@ -968,13 +971,19 @@ void DepartureItem::setAlarmStates( AlarmStates alarmStates ) {
     m_alarm = alarmStates;
 
     if ( alarmStates.testFlag(AlarmPending) ) {
-	if ( alarmStates.testFlag(AlarmIsRecurring) )
-	    setIcon( ColumnDeparture, KIcon("task-reminder", NULL, QStringList() << "task-recurring") );
-	else
+	if ( alarmStates.testFlag(AlarmIsRecurring) ) {
+	    // Add alarm icon with a recurring-icon as overlay
+	    setIcon( ColumnDeparture, KIcon("task-reminder", NULL,
+					    QStringList() << "task-recurring") );
+	} else {
+	    // Add alarm icon
 	    setIcon( ColumnDeparture, KIcon("task-reminder") );
+	}
     } else if ( alarmStates == NoAlarm ) {
+	// Remove alarm icon
 	setIcon( ColumnDeparture, KIcon() );
     } else if ( alarmStates.testFlag(AlarmFired) ) {
+	// Add disabled alarm icon
 	KIconEffect iconEffect;
 	KIcon icon = alarmStates.testFlag(AlarmIsRecurring)
 		? KIcon("task-reminder", NULL, QStringList() << "task-recurring")
@@ -1246,9 +1255,10 @@ void JourneyModel::sort( int column, Qt::SortOrder order ) {
 
 JourneyItem* JourneyModel::addItem( const JourneyInfo& journeyInfo,
 				    Columns sortColumn, Qt::SortOrder sortOrder) {
-    if ( m_infoToItem.contains(journeyInfo.hash()) ) {
-	kDebug() << "Journey already added to the model";
-	return NULL;
+    ItemBase *existingItem = m_infoToItem.value( journeyInfo.hash(), NULL );
+    if ( existingItem ) {
+	kDebug() << "Journey already added to the model" << journeyInfo;
+	return static_cast<JourneyItem*>( existingItem );
     }
 
     // Find the row where to insert the new journey
@@ -1281,6 +1291,7 @@ JourneyItem* JourneyModel::addItem( const JourneyInfo& journeyInfo,
     item->setModel( this );
     endInsertRows();
 
+    // Update next departing journey
     if ( m_nextItem ) {
 	if ( item->journeyInfo()->departure()
 	   < static_cast<JourneyItem*>(m_nextItem)->journeyInfo()->departure() )
@@ -1292,6 +1303,7 @@ JourneyItem* JourneyModel::addItem( const JourneyInfo& journeyInfo,
 				   && sortOrder == Qt::AscendingOrder );
     }
 
+    // Update biggest/smallest duration and changes for rating of journeys
     if ( item->journeyInfo()->duration() > m_biggestDuration )
 	m_biggestDuration = item->journeyInfo()->duration();
     else if ( item->journeyInfo()->duration() < m_smallestDuration )
@@ -1326,6 +1338,7 @@ DepartureModel::DepartureModel( QObject* parent ) : PublicTransportModel( parent
 }
 
 void DepartureModel::update() {
+    // Check for alarms that should now be fired
     if ( !m_alarms.isEmpty() ) {
 	QDateTime nextAlarm = m_alarms.keys().first();
 	int secs = QDateTime::currentDateTime().secsTo( nextAlarm );
@@ -1342,13 +1355,13 @@ void DepartureModel::update() {
 	&& static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture() <
 		QDateTime::currentDateTime() )
     {
-	kDebug() << endl << "REMOVE OLD DEPARTURE AT" << m_nextItem->row() << endl
-		 << static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture() 
-		 << "<" << QDateTime::currentDateTime() << endl;
+	kDebug() << "Remove old departure at" << m_nextItem->row()
+		 << static_cast<DepartureItem*>(m_nextItem)->departureInfo();
 	removeRows( m_nextItem->row(), 1 );
 	m_nextItem = findNextItem();
     }
 
+    // Update departure column if neccessary
     if ( m_info.showRemainingMinutes ) {
 	foreach ( ItemBase *item, m_items )
 	    item->updateTimeValues();
@@ -1356,6 +1369,8 @@ void DepartureModel::update() {
 }
 
 int DepartureModel::columnCount( const QModelIndex& parent ) const {
+    // Top level items have three columns (line, target, departure),
+    // child items have only one stretched column
     return parent.isValid() ? 1 : 3;
 }
 
@@ -1371,13 +1386,14 @@ void DepartureModel::setAlarmSettings( const AlarmSettingsList& alarmSettings ) 
 	it = m_alarms.erase( it );
     }
 
-    // Set new alarms
+    // Set new alarms (go through all alarm settings for all departures)
     for ( int row = 0; row < m_items.count(); ++row ) {
 	for ( int a = 0; a < m_info.alarmSettings.count(); ++a ) {
 	    AlarmSettings alarmSettings = m_info.alarmSettings.at( a );
 	    if ( alarmSettings.enabled
 		&& alarmSettings.filter.match(*static_cast<DepartureItem*>(m_items[row])->departureInfo()) )
 	    {
+		// Current alarm is enabled and matches the current departure
 		DepartureItem *depItem = static_cast<DepartureItem*>( m_items[row] );
 		if ( !depItem->hasAlarm() )
 		    addAlarm( depItem );
@@ -1447,7 +1463,7 @@ void DepartureModel::sort( int column, Qt::SortOrder order ) {
 	DepartureModelGreaterThan gt( static_cast<Columns>(column) );
 	qStableSort( sortable.begin(), sortable.end(), gt );
     }
-    
+
     QModelIndexList changedPersistentIndexesFrom, changedPersistentIndexesTo;
     QList< ItemBase* > sorted_children;
     for ( int i = 0; i < m_items.count(); ++i ) {
@@ -1455,6 +1471,7 @@ void DepartureModel::sort( int column, Qt::SortOrder order ) {
 	ItemBase *item = m_items[r];
 	sorted_children << item;
 
+	// Store changed persistent indices
 	for ( int c = 0; c < columnCount(); ++c ) {
 	    changedPersistentIndexesFrom.append( createIndex(r, c) );
 	    changedPersistentIndexesTo.append( createIndex(i, c) );
@@ -1474,6 +1491,7 @@ DepartureItem* DepartureModel::findNextItem( bool sortedByDepartureAscending ) c
     if ( sortedByDepartureAscending )
 	return static_cast<DepartureItem*>( m_items.first() );
     else {
+	// Find the next departing item
 	DepartureItem *earliest = static_cast<DepartureItem*>( m_items.first() );
 	for ( int i = 1; i < m_items.count(); ++i ) {
 	    DepartureItem *item = static_cast<DepartureItem*>( m_items[i] );
@@ -1488,9 +1506,10 @@ DepartureItem* DepartureModel::findNextItem( bool sortedByDepartureAscending ) c
 DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
 				   Columns sortColumn,
 				   Qt::SortOrder sortOrder ) {
-    if ( m_infoToItem.contains(departureInfo.hash()) ) {
-	kDebug() << "Departure already added to the model";
-	return NULL;
+    ItemBase *existingItem = m_infoToItem.value( departureInfo.hash(), NULL );
+    if ( existingItem ) {
+	kDebug() << "Departure already added to the model at index" << departureInfo;
+	return static_cast<DepartureItem*>( existingItem );
     }
 
     // Find the row where to insert the new departure
@@ -1525,11 +1544,14 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
 
     if ( m_nextItem ) {
 	if ( newItem->departureInfo()->predictedDeparture() <
-		static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture() )
+	    static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture() )
+	{
 	    m_nextItem = newItem;
-    } else
+	}
+    } else {
 	m_nextItem = findNextItem( sortColumn == ColumnDeparture
 				   && sortOrder == Qt::AscendingOrder );
+    }
 
     // Handle alarms
     if ( !departureInfo.matchedAlarms().isEmpty() ) {
@@ -1540,7 +1562,7 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
 	if ( departureInfo.matchedAlarms().count() == 1 ) {
 	    int matchedAlarm = departureInfo.matchedAlarms().first();
 	    if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarmSettings.count() ) {
-		kDebug() << "Matched alarm is out of range of current alarm settings";
+		kDebug() << "Matched alarm is out of range of current alarm settings" << matchedAlarm;
 	    } else {
 		AlarmSettings alarmSettings = m_info.alarmSettings.at( matchedAlarm );
 		if ( alarmSettings.autoGenerated )
@@ -1552,7 +1574,7 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
 	    for ( int a = 0; a < departureInfo.matchedAlarms().count(); ++a ) {
 		int matchedAlarm = departureInfo.matchedAlarms().at( a );
 		if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarmSettings.count() ) {
-		    kDebug() << "Matched alarm is out of range of current alarm settings";
+		    kDebug() << "Matched alarm is out of range of current alarm settings" << matchedAlarm;
 		    continue;
 		}
 		if ( m_info.alarmSettings.at(matchedAlarm).type != AlarmRemoveAfterFirstMatch ) {

@@ -34,11 +34,18 @@ class KLineEdit;
 * removing/adding keywords. */
 class JourneySearchParser {
     public:
+	/** Keywords to be used in a journey search line. 
+	* TODO Add all keywords. */
 	enum Keyword {
-	    KeywordTo,
-	    KeywordFrom,
-	    KeywordTimeAt,
-	    KeywordTimeIn
+	    KeywordTo, /**< The "to" keyword indicates that journey to the given
+		    * stop should be searched. */
+	    KeywordFrom, /**< The "from" keyword indicates that journey from the
+		    * given stop should be searched. */
+	    KeywordTimeAt, /**< The "at" keyword is followed by a time and or date
+		    * string, indicating when the journeys should depart/arrive. */
+	    KeywordTimeIn /**< The "in" keyword is followed by a relative time 
+		    * string (ie. "in 5 minutes"), indicating when the journeys 
+		    * should depart/arrive relative to the current time. */
 	};
 	
 	static bool parseJourneySearch( KLineEdit *lineEdit, const QString &search,

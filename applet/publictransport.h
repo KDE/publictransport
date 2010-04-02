@@ -57,10 +57,6 @@ class QStandardItem;
 class QGraphicsBlurEffect;
 #endif
 
-#include <QPainter> // TODO
-
-typedef Plasma::MessageButton MessageButton;
-
 /** Simple pixmap graphics widgets (QGraphicsPixmapItem isn't a QGraphicsWidget). */
 class GraphicsPixmapWidget : public QGraphicsWidget {
     public:
@@ -72,11 +68,7 @@ class GraphicsPixmapWidget : public QGraphicsWidget {
 	QPixmap pixmap() const { return m_pixmap; };
 	virtual QRectF boundingRect() const { return geometry(); };
 	virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-			    QWidget* /*widget*/ = 0 ) {
-	    if ( !option->rect.isValid() )
-		return;
-	    painter->drawPixmap( option->rect, m_pixmap );
-	};
+			    QWidget* /*widget*/ = 0 );
 
     private:
 	QPixmap m_pixmap;
@@ -130,11 +122,14 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** New data arrived from the data engine. */
 	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 	
-	/** Fills the departure / arrival data model with the given 
-	* departure / arrival list without removing departures that were already
+	/** Fills the departure/arrival data model with the given
+	* departure/arrival list without removing departures that were already
 	* in the model. This will stop if the maximum departure count is reached
 	* or if all @p departures have been added. */
 	void fillModel( const QList<DepartureInfo> &departures );
+	/** Fills the journey data model with the given journey list without 
+	* removing departures that were already in the model. This will stop if 
+	* all @p journeys have been added. */
 	void fillModelJourney( const QList<JourneyInfo> &journeys );
 
 	/** The context menu has been requested by the tree view. */
@@ -142,7 +137,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** The context menu has been requested by the tree view header. */
 	void showHeaderContextMenu( const QPoint &position );
 	/** An item in the tree view has been double clicked. */
-	void doubleClickedDepartureItem( const QModelIndex &modelIndex );
+	void doubleClickedItem( const QModelIndex &modelIndex );
+	void noItemsTextClicked();
 
 	/** The icon widget was clicked. */
 	void iconClicked();
@@ -150,8 +146,11 @@ class PublicTransport : public Plasma::PopupApplet {
 	void iconCloseClicked();
 
 	void infoLabelLinkActivated( const QString &link );
-	
+
+	/** Finished editing the journey search line (return pressed, start search 
+	* button clicked or stop suggestion double clicked). */
 	void journeySearchInputFinished();
+	/** The journey search line has been edited. */
 	void journeySearchInputEdited( const QString &newText );
 	void possibleStopItemActivated( const QModelIndex &modelIndex );
 	void possibleStopClicked( const QModelIndex &modelIndex );
@@ -170,7 +169,9 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	/** The action to switch to the journey search mode has been triggered. */
 	void showJourneySearch();
+	/** The action to go back to the departure/arrival view has been triggered. */
 	void goBackToDepartures();
+	/** The action to show the action button overlay has been triggered. */
 	void showActionButtons();
 	
 	/** The action to expand / collapse of the selected departure/arrival has been triggered. */
@@ -221,9 +222,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	void switchFilterConfiguration( const QString &newFilterConfiguration );
 	void switchFilterConfiguration( QAction *action );
 	void setFiltersEnabled( bool enable );
-	
-	void slotMessageButtonPressed( MessageButton button );
-	
+
+	/** An alarm has been fired for the given @p item. */
 	void alarmFired( DepartureItem *item );
 	void removeAlarms( const AlarmSettingsList &newAlarmSettings,
 			   const QList<int> &removedAlarms );
@@ -268,6 +268,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** Gets the text to be displayed on right of the treeview as additional
 	* information (html-tags allowed). Contains courtesy information. */
 	QString infoText();
+	/** Gets the text to be displayed as tooltip for the info label. */
 	QString courtesyToolTip() const;
 
 	/** Disconnects a currently connected departure / arrival data source and
@@ -285,7 +286,9 @@ class PublicTransport : public Plasma::PopupApplet {
 	void disconnectJourneySource();
 
 	void handleDataError( const QString &sourceName, const Plasma::DataEngine::Data& data );
+	/** Read stop suggestions from the data engine. */
 	void processStopSuggestions( const QString &sourceName, const Plasma::DataEngine::Data& data );
+	
 	/** Clears the departure / arrival list received from the data engine and
 	* displayed by the applet. */
 	void clearDepartures();
@@ -296,16 +299,16 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** Appends a new departure / arrival to the model.
 	* @param departureInfo The departure / arrival to be added. */
 	void appendDeparture( const DepartureInfo &departureInfo );
-
 	/** Appends a new journey to the model. */
 	void appendJourney( const JourneyInfo &journeyInfo );
 
-	/** Sets an alarm for the given departure / arrival. */
+	/** Sets an autogenerated alarm for the given departure/arrival. */
 	void createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex );
+	/** Removes an autogenerated alarm from this departure/arrival if any. */
 	void removeAlarmForDeparture( int row );
 
-	void stretchAllChildren( const QModelIndex &parent,
-					  QAbstractItemModel *model );
+	/** Calls setFirstColumnSpanned on each child item and their children. */
+	void stretchAllChildren( const QModelIndex &parent, QAbstractItemModel *model );
 
 	/** Helper function to set the text color of an html item with a surrounding span-tag. */
 	void setTextColorOfHtmlItem( QStandardItem *item, const QColor &textColor );
@@ -367,15 +370,10 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	void setHeightOfCourtesyLabel();
 
-	void hideMessage() {
-	    m_currentMessage = MessageNone;
-	    showMessage( QIcon(), QString(), Plasma::ButtonNone );
-	};
-
 	void initTreeView( Plasma::TreeView *treeView );
 	void createJourneySearchWidgets();
 	
-				 
+	
 	AppletStates m_appletStates; /**< The current states of this applet */
 	TitleType m_titleType; /**< The type of items to be shown as title above the tree view */
 	

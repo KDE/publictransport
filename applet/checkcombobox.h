@@ -38,8 +38,8 @@ class CheckCombobox : public KComboBox {
     
     public:
 	enum MultipleSelectionOptions {
-	    ShowStringList,
-	    ShowIconList
+	    ShowStringList, /** Show the texts of selected items. */
+	    ShowIconList /**< Show all icons of selected items. */
 	};
 	
 	/** Creates a new CheckCombobox. */
@@ -51,16 +51,24 @@ class CheckCombobox : public KComboBox {
 	MultipleSelectionOptions multipleSelectionOptions() const;
 	void setMultipleSelectionOptions( MultipleSelectionOptions multipleSelectionOptions );
 
+	/** Gets the separator between checked item texts. 
+	* Only used with @ref ShowStringList. */
 	QString separator() const;
 	void setSeparator( const QString &separator = ", " );
 
+	/** Gets the text that is shown if no item is checked. */
 	QString noSelectionText() const;
+	/** Sets the text that is shown if no item is checked to @p noSelectionText. */
 	void setNoSelectionText( const QString &noSelectionText = i18n("(none)") );
 	
+	/** Gets the text that is shown if all items are checked. */
 	QString allSelectedText() const;
+	/** Sets the text that is shown if all items are checked to @p allSelectedText. */
 	void setAllSelectedText( const QString &allSelectedText = i18n("(all)") );
-	
+
+	/** Adds an item with the given @p text. */
 	void addItem( const QString &text );
+	/** Adds items with the given @p texts. */
 	void addItems( const QStringList &texts );
 	
 	/** Gets whether or not it's allowed that no item is checked.
