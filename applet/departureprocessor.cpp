@@ -49,10 +49,16 @@ void DepartureProcessor::abortJobs( DepartureProcessor::JobTypes jobTypes ) {
 
     if ( jobTypes.testFlag(m_currentJob) )
 	m_abortCurrentJob = true;
-    
-    for ( int i = m_jobQueue.count() - 1; i >= 0; --i ) {
-	if ( jobTypes.testFlag(m_jobQueue[i]->type) )
-	    m_jobQueue.removeAt( i );
+
+    if ( jobTypes == AllJobs ) {
+	// Clear all jobs in the queue
+	m_jobQueue.clear();
+    } else {
+	// Remove jobs of the given types
+	for ( int i = m_jobQueue.count() - 1; i >= 0; --i ) {
+	    if ( jobTypes.testFlag(m_jobQueue[i]->type) )
+		m_jobQueue.removeAt( i );
+	}
     }
 }
 
@@ -228,6 +234,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
 		    routeTimes,
 		    dataMap["routeExactStops"].toInt() );
 
+	// Update the list of alarms that match the current departure
 	departureInfo.matchedAlarms().clear();
 	for ( int a = 0; a < alarmSettingsList.count(); ++a ) {
 	    AlarmSettings alarmSettings = alarmSettingsList.at( a );
@@ -238,7 +245,8 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
 	    }
 	}
 
-	// Only add departures / arrivals that are in the future
+	// Mark departures/arrivals as filtered out that are either filtered out
+	// or shouldn't be shown because of the first departure settings
 	if ( !isTimeShown(departureInfo.predictedDeparture(),
 		    firstDepartureConfigMode, timeOfFirstDepartureCustom,
 		    timeOffsetOfFirstDeparture)
@@ -371,11 +379,22 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
 void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJob ) {
     QList< DepartureInfo > departures = filterJob->departures;
     QList< DepartureInfo > newlyFiltered, newlyNotFiltered;
+    
+    m_mutex.lock();
+    bool filtersEnabled = m_filtersEnabled;
+    FilterSettings filterSettings;
+    if ( filtersEnabled )
+	filterSettings = m_filterSettings;
+    
+    FirstDepartureConfigMode firstDepartureConfigMode = m_firstDepartureConfigMode;
+    const QTime &timeOfFirstDepartureCustom = m_timeOfFirstDepartureCustom;
+    int timeOffsetOfFirstDeparture = m_timeOffsetOfFirstDeparture;
+    m_mutex.unlock();
 
     emit beginFiltering( filterJob->sourceName );
     kDebug() << "  - " << departures.count() << "departures to be filtered";
     for ( int i = 0; i < departures.count(); ++i ) {
-	bool filterOut = m_filterSettings.filterOut( departures[i] );
+	const bool filterOut = filtersEnabled && filterSettings.filterOut( departures[i] );
 	DepartureInfo &departureInfo = departures[ i ];
 
 	// Newly filtered departures are now filtered out and were shown.
@@ -389,8 +408,14 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
 
 	// Newly not filtered departures are now not filtered out and
 	// weren't shown, ie. were filtered out.
-	} else if ( !filterOut && (departureInfo.isFilteredOut()
-	    || !filterJob->shownDepartures.contains(departureInfo.hash())) )
+	// Newly not filtered departures also need to be shown with the current
+	// first departure settings
+	} else if ( !filterOut
+	    && (departureInfo.isFilteredOut()
+		|| !filterJob->shownDepartures.contains(departureInfo.hash()))
+	    && isTimeShown(departureInfo.predictedDeparture(),
+			   firstDepartureConfigMode, timeOfFirstDepartureCustom,
+			   timeOffsetOfFirstDeparture) )
 	{
 	    newlyNotFiltered << departureInfo;
 	}

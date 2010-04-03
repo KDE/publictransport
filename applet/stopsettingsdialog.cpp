@@ -167,7 +167,7 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(stopAdded(QWidget*)) );
     connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(adjustStopListLayout()) );
     connect( m_stopList, SIGNAL(removed(QWidget*)), this, SLOT(adjustStopListLayout()) );
-    m_stopList->setLabelTexts( i18n("Combined Stop") + " %1", QStringList() << "Stop:" );
+    m_stopList->setLabelTexts( i18n("Combined Stop") + " %1:", QStringList() << "Stop:" );
     m_stopList->setWidgetCountRange( 1, 3 );
     if ( m_stopList->addButton() ) {
 	m_stopList->addButton()->setToolTip( i18n("Add another stop.\n"

@@ -86,14 +86,19 @@ class FilterList : public QList< Filter > {
 QDataStream& operator<<( QDataStream &out, const FilterList &filterList );
 QDataStream& operator>>( QDataStream &in, FilterList &filterList );
 
+/** Contains information about a filter configuration, ie. the settings of a filter. */
 struct FilterSettings {
+    /** The action to take on matching items. */
     FilterAction filterAction;
+    /** A list of filters for this filter configuration. Filters are OR combined
+    * while there constraints are AND combined. */
     FilterList filters;
 
     FilterSettings() {
 	filterAction = ShowMatching;
     };
-    
+
+    /** Applies this filter configuration on the given @p departureInfo. */
     bool filterOut( const DepartureInfo& departureInfo ) const;
 };
 typedef QList< FilterSettings > FilterSettingsList;

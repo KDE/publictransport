@@ -162,10 +162,17 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
 	    bool* stopIsTarget, bool* timeIsDeparture, int* posStart, int* len,
 	    bool correctString ) {
     kDebug() << search;
-
-    QString searchLine = search;
+    // Initialize output parameters
+    *stop = QString();
+    *departure = QDateTime();
     *stopIsTarget = true;
     *timeIsDeparture = true;
+    if ( posStart )
+	*posStart = -1;
+    if ( len )
+	*len = 0;
+    
+    QString searchLine = search;
     int removedWordsFromLeft = 0;
 
     // Remove double spaces without changing the cursor position or selection

@@ -781,6 +781,8 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
 	    m_listStopSuggestions->setModel( model );
 	}
 
+	removeSuggestionItems();
+	
 	// Add recent items
 	addJourneySearchCompletions();
 
@@ -789,13 +791,28 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
 	    model->appendRow( new QStandardItem(KIcon("public-transport-stop"), stop) );
 
 	// Add journey search keyword suggestions
-	maybeAddAllKeywordAddRemoveitems( false, model );
+	addAllKeywordAddRemoveitems( model );
     } else if ( data["parseMode"].toString() == "departures" && m_currentMessage == MessageNone ) {
 	m_stopNameValid = false;
 	addState( ReceivedErroneousDepartureData );
 	clearDepartures();
 	setConfigurationRequired( true, i18n("The stop name is ambiguous.") );
     }
+}
+
+void PublicTransport::removeSuggestionItems() {
+    QStandardItemModel *model = NULL;
+    if ( m_journeySearch->text().isEmpty()
+	|| !(model = qobject_cast<QStandardItemModel*>(m_listStopSuggestions->model())) )
+    {
+	return;
+    }
+    
+    // Remove previously added suggestion items
+    QModelIndexList indices = model->match( model->index(0, 0),
+			Qt::UserRole + 5, true, -1, Qt::MatchExactly );
+    for ( int i = indices.count() - 1; i >= 0; --i )
+	model->removeRow( indices.at(i).row() );
 }
 
 void PublicTransport::addJourneySearchCompletions() {
@@ -805,16 +822,25 @@ void PublicTransport::addJourneySearchCompletions() {
 	m_listStopSuggestions->setModel( model );
     }
 
+    // Insert journey search completions to the top of the list
+    int row = 0;
+
     // Add recent journey searches
     QString text = m_journeySearch->text();
     int recentCount = 0;
     foreach ( const QString &recent, m_settings.recentJourneySearches ) {
-	if ( recent.contains(text) ) {
+	int posStart, len;
+	QString stop;
+	JourneySearchParser::stopNamePosition( m_journeySearch->nativeWidget(),
+					       &posStart, &len, &stop );
+	if ( recent.contains(stop) ) {
 	    QStandardItem *item = new QStandardItem( KIcon("emblem-favorite"),
 						    i18n("<b>Recent:</b> %1", recent) );
 	    item->setData( "recent", Qt::UserRole + 1 );
 	    item->setData( recent, Qt::UserRole + 2 );
-	    model->appendRow( item );
+	    item->setData( true, Qt::UserRole + 5 ); // Mark as suggestion item to easily remove it again
+	    model->insertRow( row, item );
+	    ++row;
 	    
 	    ++recentCount;
 	    if ( recentCount == 5 )
@@ -931,25 +957,18 @@ void PublicTransport::addJourneySearchCompletions() {
 	    item->setData( suggestionValues.at(i), Qt::UserRole + 2 );
 	    if ( !extraRegExp.isNull() )
 		item->setData( extraRegExp, Qt::UserRole + 3 );
-	    model->appendRow( item );
+	    item->setData( true, Qt::UserRole + 5 ); // Mark as suggestion item to easily remove it again
+	    model->insertRow( row, item );
+	    ++row;
 	}
     }
 }
 
-void PublicTransport::maybeAddAllKeywordAddRemoveitems( bool clearFirst,
-							QStandardItemModel* model ) {
+void PublicTransport::addAllKeywordAddRemoveitems(QStandardItemModel* model ) {
     if ( m_journeySearch->text().isEmpty()
 	|| (!model && !(model = qobject_cast<QStandardItemModel*>(m_listStopSuggestions->model()))) )
     {
 	return;
-    }
-
-    if ( clearFirst ) {
-	// Remove previously added keyword add/remove items
-	QModelIndexList indices = model->match( model->index(0, 0),
-			    Qt::UserRole + 5, true, -1, Qt::MatchExactly );
-	for ( int i = indices.count() - 1; i >= 0; --i )
-	    model->removeRow( indices.at(i).row() );
     }
 
     QStringList words = JourneySearchParser::notDoubleQuotedWords( m_journeySearch->text() );
@@ -1031,7 +1050,7 @@ void PublicTransport::maybeAddKeywordAddRemoveItems( QStandardItemModel* model,
 
 	if ( item ) {
 	    item->setData( keyword, Qt::UserRole + 2 ); // Store the keyword
-	    item->setData( true, Qt::UserRole + 5 ); // Mark as keyword item to easily remove it again
+	    item->setData( true, Qt::UserRole + 5 ); // Mark as suggestion item to easily remove it again
 	    item->setData( 2, LinesPerRowRole ); // The description is displayed in the second row
 	}
     }
@@ -1244,7 +1263,7 @@ void PublicTransport::configChanged() {
     TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
     treeView->setNoItemsText( m_settings.filtersEnabled
 	    ? i18n("No unfiltered departures.\nYou can disable filters to "
-	    "see more departures") : i18n("No departures.") );
+	    "see all departures.") : i18n("No departures.") );
     
     HtmlDelegate *htmlDelegate = dynamic_cast< HtmlDelegate* >( m_treeView->nativeWidget()->itemDelegate() );
     htmlDelegate->setOption( HtmlDelegate::DrawShadows, m_settings.drawShadows );
@@ -1327,8 +1346,6 @@ void PublicTransport::setMainIconDisplay( MainIconDisplay mainIconDisplay ) {
 		overlays << KIcon("go-home") << KIcon("go-next");
 	    else
 		overlays << KIcon("go-next") << KIcon("go-home");
-	    if ( m_settings.filtersEnabled )
-		overlays << KIcon("view-filter");
 	    icon = Global::makeOverlayIcon( KIcon("public-transport-stop"), overlays,
 				    QSize(iconExtend / 2, iconExtend / 2), iconExtend );
 	    break;
@@ -1571,15 +1588,15 @@ void PublicTransport::setCurrentStopIndex( QAction* action ) {
 }
 
 void PublicTransport::setShowDepartures() {
-    m_settings.departureArrivalListType = DepartureList;
-    setDepartureArrivalListType( DepartureList );
-    serviceProviderSettingsChanged(); // TODO: is this needed?
+    Settings settings = m_settings;
+    settings.departureArrivalListType = DepartureList;
+    writeSettings( settings );
 }
 
 void PublicTransport::setShowArrivals() {
-    m_settings.departureArrivalListType = ArrivalList;
-    setDepartureArrivalListType( ArrivalList );
-    serviceProviderSettingsChanged(); // TODO: is this needed?
+    Settings settings = m_settings;
+    settings.departureArrivalListType = ArrivalList;
+    writeSettings( settings );
 }
 
 void PublicTransport::switchFilterConfiguration( QAction* action ) {
@@ -1588,13 +1605,13 @@ void PublicTransport::switchFilterConfiguration( QAction* action ) {
 
 void PublicTransport::switchFilterConfiguration( const QString& newFilterConfiguration ) {
     kDebug() << "Switch filter configuration to" << newFilterConfiguration << m_settings.currentStopSettingsIndex;
-    Settings oldSettings = m_settings;
-    m_settings.currentStopSettings().filterConfiguration =
+    Settings settings = m_settings;
+    settings.currentStopSettings().filterConfiguration =
 	    SettingsUiManager::untranslateKey(newFilterConfiguration);
     SettingsIO::ChangedFlags changed = SettingsIO::writeSettings(
-			    m_settings, oldSettings, config(), globalConfig() );
+			    settings, m_settings, config(), globalConfig() );
     if ( changed.testFlag(SettingsIO::IsChanged) ) {
-	configNeedsSaving();
+	emit configNeedsSaving();
 	emit settingsChanged();
 
 	for ( int n = 0; n < m_stopIndexToSourceName.count(); ++n ) {
@@ -1611,7 +1628,7 @@ void PublicTransport::setFiltersEnabled( bool enable ) {
     SettingsIO::ChangedFlags changed = SettingsIO::writeSettings(
 			    m_settings, oldSettings, config(), globalConfig() );
     if ( changed.testFlag(SettingsIO::IsChanged) ) {
-	configNeedsSaving();
+	emit configNeedsSaving();
 	emit settingsChanged();
 	
 	for ( int n = 0; n < m_stopIndexToSourceName.count(); ++n ) {
@@ -1651,8 +1668,10 @@ void PublicTransport::journeySearchInputEdited( const QString &newText ) {
     QString stop;
     QDateTime departure;
     bool stopIsTarget, timeIsDeparture;
-    
-    maybeAddAllKeywordAddRemoveitems( true );
+
+    removeSuggestionItems();
+    addJourneySearchCompletions();
+    addAllKeywordAddRemoveitems();
     
     // Only correct the input string if letters were added (eg. not after pressing backspace).
     m_lettersAddedToJourneySearchLine = newText.length() > m_journeySearchLastTextLength;
@@ -1715,7 +1734,7 @@ void PublicTransport::journeySearchItemCompleted( const QString &newJourneySearc
 	m_listStopSuggestions->model()->removeRow( index.row() );
     m_journeySearch->setText( newJourneySearch );
     
-    // For autocompletion and to update keyword suggestions
+    // For autocompletion and to update suggestions
     journeySearchInputEdited( m_journeySearch->text() );
 
     if ( newCursorPos != -1 )
@@ -1728,7 +1747,9 @@ void PublicTransport::possibleStopClicked( const QModelIndex &modelIndex ) {
 	// Set recent journey search string
 	QString newText = modelIndex.data( Qt::UserRole + 2 ).toString();
 	m_journeySearch->setText( newText );
-	maybeAddAllKeywordAddRemoveitems( true );
+	removeSuggestionItems();
+	addJourneySearchCompletions();
+	addAllKeywordAddRemoveitems();
 	// Disable start search button if the recent journey search line is empty
 	m_btnStartJourneySearch->setEnabled( !m_journeySearch->text().isEmpty() );
     } else if ( type == "additionalKeywordAtEnd" ) {
@@ -1796,7 +1817,7 @@ void PublicTransport::possibleStopClicked( const QModelIndex &modelIndex ) {
 	// don't override keywords and other text
 	int posStart, len;
 	JourneySearchParser::stopNamePosition( m_journeySearch->nativeWidget(), &posStart, &len );
-	
+
 	QString quotedStop = "\"" + modelIndex.data().toString() + "\"";
 	if ( posStart == -1 ) {
 	    // No stop name found
@@ -1805,6 +1826,11 @@ void PublicTransport::possibleStopClicked( const QModelIndex &modelIndex ) {
 	    m_journeySearch->setText( m_journeySearch->text().replace(posStart, len, quotedStop) );
 	    m_journeySearch->nativeWidget()->setCursorPosition( posStart + quotedStop.length() );
 	}
+
+	// Update suggestions
+	removeSuggestionItems();
+	addJourneySearchCompletions();
+	addAllKeywordAddRemoveitems();
     }
     m_journeySearch->setFocus();
 }
@@ -2079,7 +2105,7 @@ void PublicTransport::writeSettings( const Settings& settings ) {
 	m_settings = settings;
 	m_currentServiceProviderFeatures =
 		currentServiceProviderData()["features"].toStringList();
-	configNeedsSaving();
+	emit configNeedsSaving();
 	emit settingsChanged();
 
 	if ( changed.testFlag(SettingsIO::ChangedServiceProvider) )
@@ -2507,7 +2533,7 @@ void PublicTransport::addState( AppletState state ) {
 	    TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
 	    treeView->setNoItemsText( m_settings.filtersEnabled
 		    ? i18n("No unfiltered departures.\nYou can disable filters to "
-		    "see more departures") : i18n("No departures.") );
+		    "see all departures.") : i18n("No departures.") );
 
 	    if ( m_currentMessage == MessageError ) {
 // 		hideMessage();

@@ -81,7 +81,7 @@ class PublicTransport : public Plasma::PopupApplet {
     public:
         /** Basic create. */
 	PublicTransport( QObject *parent, const QVariantList &args );
-	/** Destructor. Saves the list of recently used journey searches. */
+	/** Destructor. Saves the state of the header. */
         ~PublicTransport();
 
 	/** Maximum number of recent journey searches. When more journey searches
@@ -188,22 +188,50 @@ class PublicTransport : public Plasma::PopupApplet {
 	void themeChanged() { useCurrentPlasmaTheme(); };
 	
 	void recentJourneyActionTriggered( QAction *action );
-	
+
+	/** The section with the given @p logicalIndex in the departure tree 
+	* view was pressed. */
 	void sectionPressed( int logicalIndex );
+	/** The section with the given @p logicalIndex in the departure tree
+	* view was move from @p oldVisualIndex to @p newVisualIndex. */
 	void sectionMoved( int logicalIndex, int oldVisualIndex, int newVisualIndex );
+	/** The section with the given @p logicalIndex in the departure tree
+	* view was resized from @p oldSize to @p newSize. */
 	void sectionResized( int logicalIndex, int oldSize, int newSize );
 	
+	/** The worker thread starts processing departures/arrivals from the 
+	* data engine.
+	* @param sourceName The data engine source name for the departure data. */
 	void beginDepartureProcessing( const QString &sourceName );
+	/** The worker thread has finished processing departures/arrivals.
+	* @param sourceName The data engine source name for the departure data. 
+	* @param departures A list of departures that were read by the worker thread.
+	* @param requestUrl The url that was used to download the departure data.
+	* @param lastUpdate The date and time of the last update of the data. */
 	void departuresProcessed( const QString &sourceName,
 				  const QList< DepartureInfo > &departures,
 				  const QUrl &requestUrl,
 				  const QDateTime &lastUpdate );
+	/** The worker thread has finished filtering departures. 
+	* @param sourceName The data engine source name for the departure data.
+	* @param departures The list of departures that were filtered. Each 
+	* departure now returns the correct value with isFilteredOut() according
+	* to the filter settings given to the worker thread.
+	* @param newlyFiltered A list of departures that should be made visible 
+	* to match the current filter settings.
+	* @param newlyNotFiltered A list of departures that should be made 
+	* invisible to match the current filter settings. */
 	void departuresFiltered( const QString &sourceName,
 				 const QList< DepartureInfo > &departures,
 				 const QList< DepartureInfo > &newlyFiltered,
 				 const QList< DepartureInfo > &newlyNotFiltered );
-				 
+	/** The worker thread starts processing journeys from the data engine. */
 	void beginJourneyProcessing( const QString &sourceName );
+	/** The worker thread has finished processing journeys.
+	* @param sourceName The data engine source name for the journey data.
+	* @param journeys A list of journeys that were read by the worker thread.
+	* @param requestUrl The url that was used to download the journey data.
+	* @param lastUpdate The date and time of the last update of the data. */
 	void journeysProcessed( const QString &sourceName,
 				const QList< JourneyInfo > &journeys,
 				const QUrl &requestUrl,
@@ -216,7 +244,13 @@ class PublicTransport : public Plasma::PopupApplet {
 	
 	void writeSettings( const Settings &settings );
 
+	/** Write new settings with @ref Settings::departureArrivalListType set
+	* to @p DepartureList. This also updates the departure tree view on 
+	* @ref configChanged. */
 	void setShowDepartures();
+	/** Write new settings with @ref Settings::departureArrivalListType set
+	* to @p ArrivalList. This also updates the departure tree view on
+	* @ref configChanged. */
 	void setShowArrivals();
 	
 	void switchFilterConfiguration( const QString &newFilterConfiguration );
@@ -350,8 +384,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	QString stripDateAndTimeValues( const QString &sourceName ) const;
 
 	void addJourneySearchCompletions();
-	void maybeAddAllKeywordAddRemoveitems( bool clearFirst = false,
-					       QStandardItemModel *model = 0 );
+	void removeSuggestionItems();
+	void addAllKeywordAddRemoveitems( QStandardItemModel *model = 0 );
 	void maybeAddKeywordAddRemoveItems( QStandardItemModel *model,
 		const QStringList &words, const QStringList &keywords,
 		const QString &type, const QStringList &descriptions,

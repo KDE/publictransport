@@ -415,6 +415,7 @@ class PublicTransportModel : public QAbstractItemModel {
 };
 
 class QTimer;
+/** A model for departure items. */
 class DepartureModel : public PublicTransportModel {
     Q_OBJECT
     
@@ -433,10 +434,14 @@ class DepartureModel : public PublicTransportModel {
 	QModelIndex indexFromInfo( const DepartureInfo &info ) const {
 	    return m_infoToItem.contains(info.hash()) ? m_infoToItem[info.hash()]->index() : QModelIndex(); };
 
+	/** A list of hashes of all departure items. Hashes can be retrieved 
+	* using qHash or @ref DepartureInfo::hash. */
 	QList< uint > itemHashes() const;
 	virtual DepartureItem *addItem( const DepartureInfo &departureInfo,
 			   Columns sortColumn = ColumnDeparture,
 			   Qt::SortOrder sortOrder = Qt::AscendingOrder );
+	/** Updates the given @p departureItem with the given @p newDepartureInfo.
+	* This simply calls setDepartureInfo() on @p deoartureItem. */
 	virtual void updateItem( DepartureItem *departureItem,
 				 const DepartureInfo &newDepartureInfo ) {
 	    departureItem->setDepartureInfo( newDepartureInfo ); };
@@ -462,7 +467,9 @@ class DepartureModel : public PublicTransportModel {
 	* each alarm time. */
 	const QMultiMap< QDateTime, DepartureItem* > *alarms() const {
 	    return &m_alarms; };
+	/** Adds an alarm for the given @p item. */
 	void addAlarm( DepartureItem *item );
+	/** Removes an alarm from the given @p item. */
 	void removeAlarm( DepartureItem *item );
 
     signals:
@@ -472,6 +479,8 @@ class DepartureModel : public PublicTransportModel {
 			   const QList< int > &removedAlarms );
 
     protected slots:
+	/** Called each full minute. Updates time values, checks for alarms
+	* and sorts out old departures */
 	virtual void update();
 	void alarmItemDestroyed( QObject *item );
 
@@ -482,6 +491,7 @@ class DepartureModel : public PublicTransportModel {
 	QMultiMap< QDateTime, DepartureItem* > m_alarms;
 };
 
+/** A model for journey items. */
 class JourneyModel : public PublicTransportModel {
     Q_OBJECT
 
@@ -491,6 +501,7 @@ class JourneyModel : public PublicTransportModel {
 	virtual int columnCount( const QModelIndex& parent = QModelIndex() ) const;
 	virtual bool removeRows( int row, int count,
 				 const QModelIndex& parent = QModelIndex() );
+	/** Removes all journeys from the model, but doesn't clear header data. */
 	virtual void clear();
 	virtual QVariant headerData( int section, Qt::Orientation orientation,
 				     int role = Qt::DisplayRole ) const;
@@ -500,7 +511,9 @@ class JourneyModel : public PublicTransportModel {
 	    return m_infoToItem.contains(info.hash()) ? m_infoToItem[info.hash()] : NULL; };
 	QModelIndex indexFromInfo( const JourneyInfo &info ) const {
 	    return m_infoToItem.contains(info.hash()) ? m_infoToItem[info.hash()]->index() : QModelIndex(); };
-
+	    
+	/** A list of hashes of all departure items. Hashes can be retrieved
+	* using qHash or @ref JourneyInfo::hash. */
 	QList< uint > itemHashes() const;
 	virtual JourneyItem *addItem( const JourneyInfo &journeyInfo,
 			   Columns sortColumn = ColumnDeparture,

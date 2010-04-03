@@ -290,7 +290,10 @@ void JourneySearchLineEdit::paintEvent( QPaintEvent* ) {
 	QTextBlock block = m_doc.findBlockByNumber( 0 );
 	if ( block.isValid() )
 	    textWidth = block.layout()->boundingRect().width();
-	if ( m_hScroll > 0 || textWidth > cr.width() + m_hScroll ) {
+	int availableWidth = cr.width() + m_hScroll;
+	if ( isClearButtonShown() )
+	    availableWidth -= clearButtonUsedSize().width();
+	if ( m_hScroll > 0 || textWidth > availableWidth ) {
 	    int fadeArea = 20;
 	    
 	    QPixmap pix( cr.size() );
