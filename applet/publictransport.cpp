@@ -1285,8 +1285,6 @@ void PublicTransport::configChanged() {
     HtmlDelegate *htmlDelegate = dynamic_cast< HtmlDelegate* >( m_treeView->nativeWidget()->itemDelegate() );
     htmlDelegate->setOption( HtmlDelegate::DrawShadows, m_settings.drawShadows );
 
-    kDebug() << "SET FILTER SETTINGS" << m_settings.currentStopSettings().filterConfiguration
-	<< "Filter count:" << m_settings.currentFilterSettings().filters.count();
     m_departureProcessor->setFilterSettings( m_settings.currentFilterSettings(),
 					     m_settings.filtersEnabled );
     StopSettings stopSettings = m_settings.currentStopSettings();
@@ -1624,7 +1622,7 @@ void PublicTransport::switchFilterConfiguration( QAction* action ) {
 
 void PublicTransport::switchFilterConfiguration( const QString& newFilterConfiguration ) {
     QString filterConfig = SettingsUiManager::untranslateKey( newFilterConfiguration );
-    kDebug() << "Switch filter configuration to" << newFilterConfiguration << filterConfig
+    kDebug() << "Switch filter configuration to" << filterConfig
 	     << m_settings.currentStopSettingsIndex;
     if ( !m_settings.filterSettings.contains(filterConfig) ) {
 	kDebug() << "Filter" << filterConfig << "not found!";
@@ -1635,8 +1633,6 @@ void PublicTransport::switchFilterConfiguration( const QString& newFilterConfigu
     settings.currentStopSettings().filterConfiguration = filterConfig;
     SettingsIO::ChangedFlags changed = SettingsIO::writeSettings(
 			    settings, m_settings, config(), globalConfig() );
-    kDebug() << settings.currentStopSettings().filterConfiguration
-	     << m_settings.currentStopSettings().filterConfiguration;
     if ( changed.testFlag(SettingsIO::IsChanged) ) {
 	m_settings = settings;
 	emit configNeedsSaving();

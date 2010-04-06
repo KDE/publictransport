@@ -178,10 +178,10 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
 		"The departures/arrivals of all stops get combined.</para>") );
     }
     m_stopList->setWhatsThis( i18nc("@info:whatsthis",
-	    "All departures/arrivals for these stops get <emphasis>displayed "
-	    "combined</emphasis> in the applet.<nl/>"
-	    "To add a stop that doesn't get combined with others use the 'Add Stop' "
-	    "button of the main settings dialog.") );
+	    "<para>All departures/arrivals for these stops get <emphasis strong='1'>"
+	    "displayed combined</emphasis> in the applet.</para>"
+	    "<para>To add a stop that doesn't get combined with others use the "
+	    "<interface>Add Stop</interface> button of the main settings dialog.</para>") );
     
     QVBoxLayout *l = new QVBoxLayout( m_uiStop.stops );
     l->setContentsMargins( 0, 0, 0, 0 );

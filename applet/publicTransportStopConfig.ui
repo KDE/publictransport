@@ -29,8 +29,11 @@
    </item>
    <item row="0" column="1">
     <widget class="KComboBox" name="location">
+     <property name="toolTip">
+      <string comment="@info:tooltip">Only </string>
+     </property>
      <property name="whatsThis">
-      <string comment="@info:whatsthis">&lt;para&gt;The country the stop / station / airport is in. Only matching service providers will be shown.&lt;/para&gt;
+      <string comment="@info:whatsthis">&lt;para&gt;The country the stop/station/airport is in. &lt;note&gt;Only matching service providers will be shown.&lt;/note&gt;&lt;/para&gt;
 &lt;para&gt;You can also &lt;emphasis strong='1'&gt;show all available service providers&lt;/emphasis&gt; or only &lt;emphasis strong='1'&gt;international&lt;/emphasis&gt; ones.&lt;/para&gt;</string>
      </property>
     </widget>
@@ -59,8 +62,12 @@
      <item>
       <widget class="CategoryComboBox" name="serviceProvider">
        <property name="whatsThis">
-        <string comment="@info:whatsthis">&lt;para&gt;Use this to &lt;emphasis strong='1'&gt;choose a service provider&lt;/emphasis&gt;. Different service providers can provide support for different cities or features. Some service providers that are listed in one country may also provide some data for others (limited, eg. no local public transport).&lt;/para&gt;
-&lt;para&gt;To see &lt;emphasis strong='1'&gt;full information&lt;/emphasis&gt; about a service provider click on the info button on the right.&lt;/para&gt;</string>
+        <string comment="@info:whatsthis">&lt;para&gt;Use this to &lt;emphasis strong='1'&gt;choose a service provider&lt;/emphasis&gt;, which provides data for your stop. Different service providers provide support for different cities and features.&lt;/para&gt;
+
+&lt;para&gt;
+&lt;note&gt;Some service providers that are listed in one country may also provide some data for others (limited, eg. no local public transport).&lt;/note&gt;
+&lt;note&gt;To see &lt;emphasis strong='1'&gt;full information&lt;/emphasis&gt; about a service provider click on the info button on the right.&lt;/note&gt;
+&lt;/para&gt;</string>
        </property>
       </widget>
      </item>

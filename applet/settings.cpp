@@ -116,10 +116,11 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	    "<subtitle>This shows the stop settings you have set.</subtitle>"
 	    "<para>The applet shows results for one of them at a time. To switch the "
 	    "currently used stop setting use the context menu of the applet.</para>"
-	    "<para>For each stop setting another filter configuration can be used, "
-	    "to edit filter configurations use the filter section in the settings "
-	    "dialog. You can define a list of stops for each stop setting that "
-	    "are then displayed combined (eg. stops near to each other).</para>") );
+	    "<para>For each stop setting another filter configuration can be used. "
+	    "To edit filter configurations use the <interface>Filter</interface> "
+	    "section in the settings dialog. You can define a list of stops for "
+	    "each stop setting that are then displayed combined (eg. stops near "
+	    "to each other).</para>") );
     m_stopListWidget->setCurrentStopSettingIndex( m_currentStopSettingsIndex );
     connect( m_stopListWidget, SIGNAL(changed(int,StopSettings)),
 	     this, SLOT(stopSettingsChanged()) );
@@ -142,7 +143,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	    "of filters. Each filter contains a list of constraints.</para>"
 	    "<para>A filter matches, if all it's constraints match while a filter "
 	    "configuration matches, if one of it's filters match.</para>"
-	    "<para>To use a filter configuration select it in the 'Filter Uses' tab. "
+	    "<para>To use a filter configuration select it in the <interface>Filter Uses</interface> tab. "
 	    "Each stop settings can use another filter configuration.</para>"
 	    "<para><emphasis strong='1'>Filter Types</emphasis><list>"
 	    "<item><emphasis>Vehicle:</emphasis> Filters by vehicle types.</item>"
@@ -185,8 +186,8 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     setValuesOfAlarmConfig();
     setValuesOfFilterConfig();
     m_uiFilter.enableFilters->setChecked( settings.filtersEnabled );
-    if ( !m_alarmSettings.isEmpty() )
-	currentAlarmChanged( 0 );
+    currentAlarmChanged( m_uiAlarms.alarmList->currentRow() );
+    m_uiAlarms.removeAlarm->setDisabled( m_alarmSettings.isEmpty() );
 
     m_uiFilter.addFilterConfiguration->setIcon( KIcon("list-add") );
     m_uiFilter.removeFilterConfiguration->setIcon( KIcon("list-remove") );
@@ -249,6 +250,10 @@ void SettingsUiManager::currentAlarmChanged( int row ) {
     if ( row == -1 ) {
 	m_uiAlarms.alarmFilter->removeAllWidgets();
 	m_uiAlarms.splitter->widget( 1 )->setDisabled( true );
+	m_uiAlarms.lblAlarmType->setDisabled( true );
+	m_uiAlarms.alarmType->setDisabled( true );
+	m_uiAlarms.affectedStops->setDisabled( true );
+	m_uiAlarms.lblAffectedStops->setDisabled( true );
     } else {
 	if ( m_alarmsChanged && m_lastAlarm != -1 ) {
 	    // Store to last edited alarm settings
@@ -273,17 +278,21 @@ void SettingsUiManager::currentAlarmChanged( int row ) {
 			   m_uiAlarms.affectedStops->hasCheckedItems() );
 	m_alarmsChanged = false;
 	m_uiAlarms.splitter->widget( 1 )->setEnabled( true );
+	m_uiAlarms.lblAlarmType->setEnabled( true );
+	m_uiAlarms.alarmType->setEnabled( true );
+	m_uiAlarms.affectedStops->setEnabled( true );
+	m_uiAlarms.lblAffectedStops->setEnabled( true );
     }
 	
     m_lastAlarm = row;
 }
 
 void SettingsUiManager::addAlarmClicked() {
-    QString name = i18nc("@info:plain Default name of a new alarm", "New Alarm");
+    QString name = i18nc("@info/plain Default name of a new alarm", "New Alarm");
     int i = 2;
     for ( int n = 0; n < m_alarmSettings.count(); ++n ) {
 	if ( m_alarmSettings[n].name == name ) {
-	    name = i18nc("@info:plain Default name of a new alarm, if other default "
+	    name = i18nc("@info/plain Default name of a new alarm, if other default "
 			 "names are already used", "New Alarm %1", i);
 	    n = 0; // Restart loop with new name
 	    ++i;
@@ -320,7 +329,8 @@ void SettingsUiManager::removeAlarmClicked() {
     connect( m_uiAlarms.alarmList, SIGNAL(currentRowChanged(int)),
 	     this, SLOT(currentAlarmChanged(int)) );
     m_lastAlarm = m_uiAlarms.alarmList->currentRow();
-    setValuesOfAlarmConfig();
+//     setValuesOfAlarmConfig();
+    currentAlarmChanged( m_lastAlarm );
 
     alarmChanged();
 }
@@ -597,7 +607,7 @@ void SettingsUiManager::setValuesOfAlarmConfig() {
 	m_uiAlarms.alarmFilter->setFilter( alarmSettings.filter );
     }
 
-    m_uiAlarms.splitter->widget( 1 )->setDisabled( m_uiAlarms.alarmList->currentRow() == -1 );
+//     m_uiAlarms.splitter->widget( 1 )->setDisabled( m_uiAlarms.alarmList->currentRow() == -1 );
     connect( m_uiAlarms.alarmList, SIGNAL(currentRowChanged(int)),
 	     this, SLOT(currentAlarmChanged(int)) );
 }
@@ -969,11 +979,11 @@ void SettingsUiManager::loadFilterConfiguration( const QString& filterConfig ) {
 }
 
 void SettingsUiManager::addFilterConfiguration() {
-    QString newFilterConfig = i18nc( "@info Default name of a new filter configuration",
+    QString newFilterConfig = i18nc( "@info/plain Default name of a new filter configuration",
 				     "New Configuration" );
     int i = 2;
     while ( m_filterSettings.keys().contains(newFilterConfig) ) {
-	newFilterConfig = i18nc( "@info Default name of a new filter configuration "
+	newFilterConfig = i18nc( "@info/plain Default name of a new filter configuration "
 				 "if the other default names are already used",
 				 "New Configuration %1", i );
 	++i;
@@ -1171,7 +1181,8 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
     settings.showRemainingMinutes = cg.readEntry( "showRemainingMinutes", true );
     settings.showDepartureTime = cg.readEntry( "showDepartureTime", true );
     settings.displayTimeBold = cg.readEntry( "displayTimeBold", true );
-    
+
+    // Read stop settings
     settings.stopSettingsList.clear();
     int stopSettingCount = cgGlobal.readEntry( "stopSettings", 1 );
     QString test = "location";
@@ -1290,7 +1301,8 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
     int alarmCount = cg.readEntry( "alarmCount", 0 );
     test = "alarmType";
     i = 1;
-    while ( cgGlobal.hasKey(test) ) {
+    kDebug() << "ALARM COUNT IS" << alarmCount;
+    while ( i <= alarmCount && cgGlobal.hasKey(test) ) {
 	AlarmSettings alarmSettings;
 	QString suffix = i == 1 ? QString() : '_' + QString::number( i );
 	alarmSettings.type = static_cast<AlarmType>(
@@ -1306,8 +1318,6 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
 
 	++i;
 	test = "alarmType_" + QString::number( i );
-	if ( i > alarmCount )
-	    break;
     }
 	
     return settings;
@@ -1468,7 +1478,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 	changed |= IsChanged;
     }
 
-    // Write alarm settingsAccepted
+    // Write alarm settings
     if ( settings.alarmSettings != oldSettings.alarmSettings ) {
 	changed |= IsChanged | ChangedAlarmSettings;
 	int i = 1;
