@@ -149,7 +149,7 @@ void PublicTransport::init() {
     }
 
     if ( QAction *runAction = action("run associated application") ) {
-	runAction->setText( i18n("&Show in Web-Browser") );
+	runAction->setText( i18nc("@item:inmenu", "&Show in Web-Browser") );
 
 	KService::Ptr offer = KMimeTypeTrader::self()->preferredService( "text/html" );
 	if ( !offer.isNull() )
@@ -204,16 +204,16 @@ bool PublicTransport::checkNetworkStatus() {
     TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
     if ( status == StatusUnavailable ) {
 	m_currentMessage = MessageError;
-	treeView->setNoItemsText( i18n("No network connection.") );
+	treeView->setNoItemsText( i18nc("@info", "No network connection.") );
 	return false;
     } else if ( status == StatusConfiguring ) {
 	m_currentMessage = MessageError;
-	treeView->setNoItemsText( i18n("Network gets configured. Please wait...") );
+	treeView->setNoItemsText( i18nc("@info", "Network gets configured. Please wait...") );
 	return false;
     } else if ( status == StatusActivated
 		&& m_currentMessage == MessageError ) {
 	m_currentMessage = MessageErrorResolved;
-	treeView->setNoItemsText( i18n("Network connection established") );
+	treeView->setNoItemsText( i18nc("@info", "Network connection established") );
 	return false;
     } else {
 	kDebug() << "Unknown network status or no error message was shown" << status;
@@ -229,7 +229,7 @@ void PublicTransport::noItemsTextClicked() {
 
 void PublicTransport::setupActions() {
     QAction *actionUpdate = new QAction( KIcon("view-refresh"),
-					 i18n("&Update timetable"), this );
+					 i18nc("@action:inmenu", "&Update timetable"), this );
     connect( actionUpdate, SIGNAL(triggered()), this, SLOT(updateDataSource()) );
     addAction( "updateTimetable", actionUpdate );
 
@@ -241,8 +241,8 @@ void PublicTransport::setupActions() {
     QAction *actionSetAlarmForDeparture = new QAction(
 	    Global::makeOverlayIcon(KIcon("task-reminder"), "list-add"),
 	    m_settings.departureArrivalListType == DepartureList
-	    ? i18n("Set &Alarm for This Departure")
-	    : i18n("Set &Alarm for This Arrival"), this );
+	    ? i18nc("@action:inmenu", "Set &Alarm for This Departure")
+	    : i18nc("@action:inmenu", "Set &Alarm for This Arrival"), this );
     connect( actionSetAlarmForDeparture, SIGNAL(triggered()),
 	     this, SLOT(setAlarmForDeparture()) );
     addAction( "setAlarmForDeparture", actionSetAlarmForDeparture );
@@ -250,14 +250,14 @@ void PublicTransport::setupActions() {
     QAction *actionRemoveAlarmForDeparture = new QAction(
 	    Global::makeOverlayIcon(KIcon("task-reminder"), "list-remove"),
 	    m_settings.departureArrivalListType == DepartureList
-	    ? i18n("Remove &Alarm for This Departure")
-	    : i18n("Remove &Alarm for This Arrival"), this );
+	    ? i18nc("@action:inmenu", "Remove &Alarm for This Departure")
+	    : i18nc("@action:inmenu", "Remove &Alarm for This Arrival"), this );
     connect( actionRemoveAlarmForDeparture, SIGNAL(triggered()),
 	     this, SLOT(removeAlarmForDeparture()) );
     addAction( "removeAlarmForDeparture", actionRemoveAlarmForDeparture );
 
     QAction *actionSearchJourneys = new QAction( KIcon("edit-find"),
-			    i18n("Search for &Journeys..."), this );
+		    i18nc("@action", "Search for &Journeys..."), this );
     connect( actionSearchJourneys, SIGNAL(triggered()),
 	     this, SLOT(showJourneySearch()) );
     addAction( "searchJourneys", actionSearchJourneys );
@@ -267,7 +267,7 @@ void PublicTransport::setupActions() {
 		    Global::makeOverlayIcon(KIcon("public-transport-stop"),
 		    QList<KIcon>() << KIcon("go-home") << KIcon("go-next"),
 		    QSize(iconExtend / 2, iconExtend / 2), iconExtend),
-		    i18n("Show &Departures"), this );
+		    i18nc("@action", "Show &Departures"), this );
     connect( actionShowDepartures, SIGNAL(triggered()),
 	     this, SLOT(setShowDepartures()) );
     addAction( "showDepartures", actionShowDepartures );
@@ -276,18 +276,19 @@ void PublicTransport::setupActions() {
 		    Global::makeOverlayIcon(KIcon("public-transport-stop"),
 		    QList<KIcon>() << KIcon("go-next") << KIcon("go-home"),
 		    QSize(iconExtend / 2, iconExtend / 2), iconExtend),
-		    i18n("Show &Arrivals"), this );
+		    i18nc("@action", "Show &Arrivals"), this );
     connect( actionShowArrivals, SIGNAL(triggered()),
 	     this, SLOT(setShowArrivals()) );
     addAction( "showArrivals", actionShowArrivals );
     
     QAction *actionBackToDepartures = new QAction( KIcon("go-previous"),
-		    i18n("Back to &Departure List"), this );
+		    i18nc("@action", "Back to &Departure List"), this );
     connect( actionBackToDepartures, SIGNAL(triggered()),
 	     this, SLOT(goBackToDepartures()) );
     addAction( "backToDepartures", actionBackToDepartures );
 	
-    KToggleAction *actionEnableFilters = new KToggleAction( i18n("&Enable Filters"), this );
+    KToggleAction *actionEnableFilters = new KToggleAction(
+	    i18nc("@action", "&Enable Filters"), this );
     connect( actionEnableFilters, SIGNAL(toggled(bool)), this, SLOT(setFiltersEnabled(bool)) );
     addAction( "enableFilters", actionEnableFilters );
 
@@ -297,41 +298,41 @@ void PublicTransport::setupActions() {
 	     this, SLOT(switchFilterConfiguration(QAction*)) );
     
     KAction *actionFilterConfiguration = new KSelectAction( KIcon("view-filter"),
-	    i18n("Filter"), this );
+	    i18nc("@action", "Filter"), this );
     KMenu *menu = new KMenu;
     menu->addAction( actionEnableFilters );
     menu->addSeparator();
-    menu->addTitle( KIcon("view-filter"), i18n("Used Filter Configuration") );
+    menu->addTitle( KIcon("view-filter"), i18nc("@item:inmenu", "Used Filter Configuration") );
     actionFilterConfiguration->setMenu( menu ); // TODO: Does this take ownership of menu?
     actionFilterConfiguration->setEnabled( true );
     addAction( "filterConfiguration", actionFilterConfiguration );
 
     QAction *actionToggleExpanded = new QAction( KIcon("arrow-down"),
-				i18n("&Show additional information"), this );
+		    i18nc("@action:inmenu", "&Show Additional Information"), this );
     connect( actionToggleExpanded, SIGNAL(triggered()),
 	     this, SLOT(toggleExpanded()) );
     addAction( "toggleExpanded", actionToggleExpanded );
 
     // TODO: Combine actionHideHeader and actionShowHeader into one action
     QAction *actionHideHeader = new QAction( KIcon("edit-delete"),
-					     i18n("&Hide header"), this );
+			    i18nc("@action:inmenu", "&Hide Header"), this );
     connect( actionHideHeader, SIGNAL(triggered()), this, SLOT(hideHeader()) );
     addAction( "hideHeader", actionHideHeader );
 
     QAction *actionShowHeader = new QAction( KIcon("list-add"),
-					     i18n("Show &header"), this );
+			    i18nc("@action:inmenu", "Show &Header"), this );
     connect( actionShowHeader, SIGNAL(triggered()), this, SLOT(showHeader()) );
     addAction( "showHeader", actionShowHeader );
     
     // TODO: Combine actionHideColumnTarget and actionShowColumnTarget into one action
     QAction *actionHideColumnTarget = new QAction( KIcon("view-right-close"),
-					i18n("Hide &target column"), this );
+			    i18nc("@action:inmenu", "Hide &target column"), this );
     connect( actionHideColumnTarget, SIGNAL(triggered()),
 	     this, SLOT(hideColumnTarget()) );
     addAction( "hideColumnTarget", actionHideColumnTarget );
 
     QAction *actionShowColumnTarget = new QAction( KIcon("view-right-new"),
-					i18n("Show &target column"), this );
+			    i18nc("@action:inmenu", "Show &target column"), this );
     connect( actionShowColumnTarget, SIGNAL(triggered()),
 	     this, SLOT(showColumnTarget()) );
     addAction( "showColumnTarget", actionShowColumnTarget );
@@ -450,8 +451,10 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 		.arg( timeIsDeparture ? "Journeys" : "JourneysArr" );
 	QString currentStop = m_settings.currentStopSettings().stops.first();
 	m_journeyTitleText = stopIsTarget
-		? i18n("From %1<br>to <b>%2</b>", currentStop, _targetStopName)
-		: i18n("From <b>%1</b><br>to %2", _targetStopName, currentStop);
+		? i18nc("@info", "From %1<nl/>to <emphasis strong='1'>%2</emphasis>",
+			currentStop, _targetStopName)
+		: i18nc("@info", "From <emphasis strong='1'>%1</emphasis><nl/>to %2",
+			_targetStopName, currentStop);
 	if ( testState(ShowingJourneyList) )
 	    m_label->setText( m_journeyTitleText );
     }
@@ -688,10 +691,10 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
 	if ( error.isEmpty() ) {
 	    if ( m_currentMessage == MessageNone ) {
 		if ( m_settings.departureArrivalListType == DepartureList ) {
-		    setConfigurationRequired( true, i18n("Error parsing "
+		    setConfigurationRequired( true, i18nc("@info", "Error parsing "
 			    "departure information or currently no departures") );
 		} else {
-		    setConfigurationRequired( true, i18n("Error parsing "
+		    setConfigurationRequired( true, i18nc("@info", "Error parsing "
 			    "arrival information or currently no arrivals") );
 		}
 	    }
@@ -699,7 +702,8 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
 	    m_currentMessage = MessageError;
 	    if ( checkNetworkStatus() ) {
 		TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
-		treeView->setNoItemsText( i18n("There was an error:\n%1\n\n"
+		treeView->setNoItemsText( i18nc("@info/plain", "There was an error:<nl/>"
+			"<message>%1</message><nl/><nl/>"
 			"The server may be temporarily unavailable.", error) );
 	    }
 	}
@@ -780,7 +784,7 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
 	    model = new QStandardItemModel( m_listStopSuggestions );
 	    m_listStopSuggestions->setModel( model );
 	}
-
+	
 	removeSuggestionItems();
 	
 	// Add recent items
@@ -796,7 +800,7 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
 	m_stopNameValid = false;
 	addState( ReceivedErroneousDepartureData );
 	clearDepartures();
-	setConfigurationRequired( true, i18n("The stop name is ambiguous.") );
+	setConfigurationRequired( true, i18nc("@info", "The stop name is ambiguous.") );
     }
 }
 
@@ -835,7 +839,7 @@ void PublicTransport::addJourneySearchCompletions() {
 					       &posStart, &len, &stop );
 	if ( recent.contains(stop) ) {
 	    QStandardItem *item = new QStandardItem( KIcon("emblem-favorite"),
-						    i18n("<b>Recent:</b> %1", recent) );
+		    i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Recent:</emphasis> %1", recent) );
 	    item->setData( "recent", Qt::UserRole + 1 );
 	    item->setData( recent, Qt::UserRole + 2 );
 	    item->setData( true, Qt::UserRole + 5 ); // Mark as suggestion item to easily remove it again
@@ -874,17 +878,17 @@ void PublicTransport::addJourneySearchCompletions() {
 		extraRegExp = "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))";
 		
 		// Add "30 minutes later"
-		suggestions << i18n( "%1 minutes later", 30 );
+		suggestions << i18nc("@item:inlistbox/rich", "%1 minutes later", 30 );
 		suggestionValues << QString("%1 %2").arg( timeKeywordAt )
 			.arg( KGlobal::locale()->formatTime(dateTime.addSecs(30 * 60).time()) );
 
 		// Add "60 minutes later"
-		suggestions << i18n( "%1 minutes later", 60 );
+		suggestions << i18nc("@item:inlistbox/rich", "%1 minutes later", 60 );
 		suggestionValues << QString("%1 %2").arg( timeKeywordAt )
 			.arg( KGlobal::locale()->formatTime(dateTime.addSecs(60 * 60).time()) );
 			
 		// Add "30 minutes earlier"
-		suggestions << i18n( "%1 minutes earlier", 30 );
+		suggestions << i18nc("@item:inlistbox/rich", "%1 minutes earlier", 30 );
 		suggestionValues << QString("%1 %2").arg( timeKeywordAt )
 			.arg( KGlobal::locale()->formatTime(dateTime.addSecs(-30 * 60).time()) );
 	    } else if ( keywordValues.contains(JourneySearchParser::KeywordTimeIn) ) {
@@ -892,17 +896,17 @@ void PublicTransport::addJourneySearchCompletions() {
 		extraRegExp = JourneySearchParser::relativeTimeString("\\d{1,}");
 		
 		// Add "30 minutes later"
-		suggestions << i18n( "%1 minutes later", 30 );
+		suggestions << i18nc("@item:inlistbox/rich", "%1 minutes later", 30 );
 		suggestionValues << QString("%1 %2").arg( timeKeywordIn )
 			.arg( JourneySearchParser::relativeTimeString(minutes + 30) );
 		
 		// Add "60 minutes later"
-		suggestions << i18n( "%1 minutes later", 60 );
+		suggestions << i18nc("@item:inlistbox/rich", "%1 minutes later", 60 );
 		suggestionValues << QString("%1 %2").arg( timeKeywordIn )
 			.arg( JourneySearchParser::relativeTimeString(minutes + 60) );
 			
 		// Add "30 minutes earlier"
-		suggestions << i18n( "%1 minutes earlier", 30 );
+		suggestions << i18nc("@item:inlistbox/rich", "%1 minutes earlier", 30 );
 		suggestionValues << QString("%1 %2").arg( timeKeywordIn )
 			.arg( JourneySearchParser::relativeTimeString(minutes - 30) );
 	    }
@@ -952,7 +956,9 @@ void PublicTransport::addJourneySearchCompletions() {
 	
 	for ( int i = 0; i < suggestions.count(); ++i ) {
 	    QStandardItem *item = new QStandardItem( KIcon("chronometer"),
-			    i18n("<b>Suggestion:</b> %1", suggestions.at(i)) );
+		    i18nc("@item:inlistbox/rich",
+			  "<emphasis strong='1'>Suggestion:</emphasis> %1",
+			  suggestions.at(i)) );
 	    item->setData( type, Qt::UserRole + 1 );
 	    item->setData( suggestionValues.at(i), Qt::UserRole + 2 );
 	    if ( !extraRegExp.isNull() )
@@ -993,19 +999,25 @@ void PublicTransport::addAllKeywordAddRemoveitems(QStandardItemModel* model ) {
     maybeAddKeywordAddRemoveItems( model, words,
 	    QStringList() << toKeyword << fromKeyword,
 	    "additionalKeywordAtBegin",
-	    QStringList() << i18n("Get journeys to the given stop")
-		<< i18n("Get journeys from the given stop") );
+	    QStringList() << i18nc("@info Description for the 'to' keyword",
+				   "Get journeys to the given stop")
+		<< i18nc("@info Description for the 'from' keyword",
+			 "Get journeys from the given stop") );
     maybeAddKeywordAddRemoveItems( model, words,
 	    QStringList() << arrivalKeyword << departureKeyword,
 	    "additionalKeywordAlmostAtEnd",
-	    QStringList() << i18n("Get journeys departing at the given date/time")
-		<< i18n("Get journeys arriving at the given date/time") );
+	    QStringList() << i18nc("@info Description for the 'departing' keyword",
+				   "Get journeys departing at the given date/time")
+		<< i18nc("@info Description for the 'arriving' keyword",
+			 "Get journeys arriving at the given date/time") );
     maybeAddKeywordAddRemoveItems( model, words,
 	    QStringList() << timeKeywordAt << timeKeywordIn,
 	    "additionalKeywordAtEnd",
-	    QStringList() << i18n("Specify the departure/arrival time, eg. "
+	    QStringList() << i18nc("@info Description for the 'at' keyword",
+				   "Specify the departure/arrival time, eg. "
 				    "\"%1 12:00, 20.04.2010\"", timeKeywordAt)
-		<< i18n("Specify the departure/arrival time, eg. \"%1 %2\"",
+		<< i18nc("@info Description for the 'in' keyword",
+			 "Specify the departure/arrival time, eg. \"%1 %2\"",
 			timeKeywordIn, JourneySearchParser::relativeTimeString()),
 	    QStringList() << "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))"
 		<< JourneySearchParser::relativeTimeString("\\d{1,}") );
@@ -1031,8 +1043,10 @@ void PublicTransport::maybeAddKeywordAddRemoveItems( QStandardItemModel* model,
 	if ( words.contains(keyword, Qt::CaseInsensitive) ) {
 	    // Keyword found, add a "remove keyword" item
 	    item = new QStandardItem( KIcon("list-remove"),
-		    i18n("<b>Remove Keyword:</b> <span style='color=%3;'>%1</span><br>&nbsp;&nbsp;%2",
-			 keyword, description, keywordColor.name()) );
+		    i18nc("@item:inlistbox/rich",
+			  "<emphasis strong='1'>Remove Keyword: "
+			  "<span style='color:%3;'>%1</span></emphasis><nl/>%2",
+			  keyword, description, keywordColor.name()) );
 	    item->setData( type + "Remove", Qt::UserRole + 1 );
 	    if ( !extraRegExp.isNull() )
 		item->setData( extraRegExp, Qt::UserRole + 3 );
@@ -1042,8 +1056,10 @@ void PublicTransport::maybeAddKeywordAddRemoveItems( QStandardItemModel* model,
 	    // Keyword not found, add an "add keyword" item if no "remove keyword"
 	    // items will get added
 	    item = new QStandardItem( KIcon("list-add"),
-		    i18n("<b>Add Keyword:</b> <span style='color=%3;'>%1</span><br>&nbsp;&nbsp;%2",
-			 keyword, description, keywordColor.name()) );
+		    i18nc("@item:inlistbox/rich",
+			  "<emphasis strong='1'>Add Keyword: "
+			  "<span style='color:%3;'>%1</span></emphasis><nl/>%2",
+			  keyword, description, keywordColor.name()) );
 	    item->setData( type, Qt::UserRole + 1 );
 	    addItems << item;
 	}
@@ -1175,22 +1191,22 @@ void PublicTransport::createTooltip() {
     
     DepartureInfo nextDeparture;
     Plasma::ToolTipContent data;
-    data.setMainText( i18n("Public transport") );
+    data.setMainText( i18nc("@info", "Public Transport") );
     if ( m_model->isEmpty() )
-	data.setSubText( i18n("View departure times for public transport") );
+	data.setSubText( i18nc("@info", "View departure times for public transport") );
     else if ( (nextDeparture = getFirstNotFilteredDeparture()).isValid() ) {
 	if ( m_settings.departureArrivalListType ==  DepartureList ) {
 	    // Showing a departure list
 	    if ( m_settings.currentStopSettings().stops.count() == 1 ) {
 		// Only one stop (not combined with others)
-		data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
+		data.setSubText( i18nc("@info %4 is the translated duration text, e.g. in 3 minutes",
 				"Next departure from '%1': line %2 (%3) %4",
 				m_settings.currentStopSettings().stops.first(),
 				nextDeparture.lineString(), nextDeparture.target(),
 				nextDeparture.durationString() ) );
 	    } else {
 		// Results for multiple combined stops are shown
-		data.setSubText( i18nc("%3 is the translated duration text, e.g. in 3 minutes",
+		data.setSubText( i18nc("@info %3 is the translated duration text, e.g. in 3 minutes",
 				 "Next departure from your home stop: line %1 (%2) %3",
 				 nextDeparture.lineString(), nextDeparture.target(),
 				 nextDeparture.durationString() ) );
@@ -1199,14 +1215,14 @@ void PublicTransport::createTooltip() {
 	    // Showing an arrival list
 	    if ( m_settings.currentStopSettings().stops.count() == 1 ) {
 		// Only one stop (not combined with others)
-		data.setSubText( i18nc("%4 is the translated duration text, e.g. in 3 minutes",
+		data.setSubText( i18nc("@info %4 is the translated duration text, e.g. in 3 minutes",
 				 "Next arrival at '%1': line %2 (%3) %4",
 				 m_settings.currentStopSettings().stops.first(),
 				 nextDeparture.lineString(), nextDeparture.target(),
 				 nextDeparture.durationString() ) );
 	    } else {
 		// Results for multiple combined stops are shown
-		data.setSubText( i18nc("%3 is the translated duration text, e.g. in 3 minutes",
+		data.setSubText( i18nc("@info %3 is the translated duration text, e.g. in 3 minutes",
 				 "Next arrival at your home stop: line %1 (%2) %3",
 				 nextDeparture.lineString(), nextDeparture.target(),
 				 nextDeparture.durationString() ) );
@@ -1262,12 +1278,15 @@ void PublicTransport::configChanged() {
 
     TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
     treeView->setNoItemsText( m_settings.filtersEnabled
-	    ? i18n("No unfiltered departures.\nYou can disable filters to "
-	    "see all departures.") : i18n("No departures.") );
+	    ? i18nc("@info/plain", "No unfiltered departures.<nl/>You can disable filters "
+	      "to see all departures.")
+	    : i18nc("@info/plain", "No departures.") );
     
     HtmlDelegate *htmlDelegate = dynamic_cast< HtmlDelegate* >( m_treeView->nativeWidget()->itemDelegate() );
     htmlDelegate->setOption( HtmlDelegate::DrawShadows, m_settings.drawShadows );
 
+    kDebug() << "SET FILTER SETTINGS" << m_settings.currentStopSettings().filterConfiguration
+	<< "Filter count:" << m_settings.currentFilterSettings().filters.count();
     m_departureProcessor->setFilterSettings( m_settings.currentFilterSettings(),
 					     m_settings.filtersEnabled );
     StopSettings stopSettings = m_settings.currentStopSettings();
@@ -1301,7 +1320,7 @@ void PublicTransport::serviceProviderSettingsChanged() {
 	if ( !m_currentJourneySource.isEmpty() )
 	    reconnectJourneySource();
     } else {
-	setConfigurationRequired( true, i18n("Please check your configuration.") );
+	setConfigurationRequired( true, i18nc("@info/plain", "Please check your configuration.") );
     }
 }
 
@@ -1404,7 +1423,7 @@ void PublicTransport::destroyOverlay() {
 KSelectAction* PublicTransport::switchStopAction( QObject *parent,
 					bool destroyOverlayOnTrigger ) const {
     KSelectAction *switchStopAction = new KSelectAction(
-	    KIcon("public-transport-stop"), i18n("Switch Current Stop"), parent );
+	    KIcon("public-transport-stop"), i18nc("@action", "Switch Current Stop"), parent );
     for ( int i = 0; i < m_settings.stopSettingsList.count(); ++i ) {
 	QString stopList = m_settings.stopSettingsList[ i ].stops.join( ",\n" );
 	QString stopListShort = m_settings.stopSettingsList[ i ].stops.join( ", " );
@@ -1413,7 +1432,7 @@ KSelectAction* PublicTransport::switchStopAction( QObject *parent,
 
 	// Use a shortened stop name list as display text 
 	// and the complete version as tooltip
-	QAction *action = new QAction( i18n("Show Results For '%1'", stopListShort),
+	QAction *action = new QAction( i18nc("@action", "Show Results For '%1'", stopListShort),
 				       parent );
 	action->setToolTip( stopList );
 	action->setData( i );
@@ -1468,7 +1487,7 @@ void PublicTransport::showActionButtons() {
 	btnMultipleStops->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
 	btnMultipleStops->setIcon( KIcon("public-transport-stop") );
 	btnMultipleStops->setZValue( 1000 );
-	btnMultipleStops->setText( i18n("Switch Current Stop") );
+	btnMultipleStops->setText( i18nc("@action:button", "Switch Current Stop") );
 	
 	QMenu *menu = new QMenu( btnMultipleStops->nativeWidget() );
 	QList< QAction* > actionList =
@@ -1478,7 +1497,7 @@ void PublicTransport::showActionButtons() {
     }
     
     Plasma::PushButton *btnCancel = new Plasma::PushButton( m_overlay );
-    btnCancel->setText( i18n("Cancel") );
+    btnCancel->setText( i18nc("@action:button", "Cancel") );
     btnCancel->setIcon( KIcon("dialog-cancel") );
     btnCancel->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
     connect( btnCancel, SIGNAL(clicked()), this, SLOT(destroyOverlay()) );
@@ -1604,13 +1623,22 @@ void PublicTransport::switchFilterConfiguration( QAction* action ) {
 }
 
 void PublicTransport::switchFilterConfiguration( const QString& newFilterConfiguration ) {
-    kDebug() << "Switch filter configuration to" << newFilterConfiguration << m_settings.currentStopSettingsIndex;
+    QString filterConfig = SettingsUiManager::untranslateKey( newFilterConfiguration );
+    kDebug() << "Switch filter configuration to" << newFilterConfiguration << filterConfig
+	     << m_settings.currentStopSettingsIndex;
+    if ( !m_settings.filterSettings.contains(filterConfig) ) {
+	kDebug() << "Filter" << filterConfig << "not found!";
+	return;
+    }
+    
     Settings settings = m_settings;
-    settings.currentStopSettings().filterConfiguration =
-	    SettingsUiManager::untranslateKey(newFilterConfiguration);
+    settings.currentStopSettings().filterConfiguration = filterConfig;
     SettingsIO::ChangedFlags changed = SettingsIO::writeSettings(
 			    settings, m_settings, config(), globalConfig() );
+    kDebug() << settings.currentStopSettings().filterConfiguration
+	     << m_settings.currentStopSettings().filterConfiguration;
     if ( changed.testFlag(SettingsIO::IsChanged) ) {
+	m_settings = settings;
 	emit configNeedsSaving();
 	emit settingsChanged();
 
@@ -2175,7 +2203,7 @@ void PublicTransport::sectionPressed( int logicalIndex ) {
 void PublicTransport::createJourneySearchWidgets() {
     m_btnLastJourneySearches = new Plasma::ToolButton;
     m_btnLastJourneySearches->setIcon( KIcon("document-open-recent") );
-    m_btnLastJourneySearches->setToolTip( i18n("Use a recent journey search") );
+    m_btnLastJourneySearches->setToolTip( i18nc("@info:tooltip", "Use a recent journey search") );
     m_btnLastJourneySearches->nativeWidget()->setPopupMode( QToolButton::InstantPopup );
     
     // This is needed, to have the popup menu drawn above other widgets
@@ -2183,19 +2211,22 @@ void PublicTransport::createJourneySearchWidgets() {
 
     m_btnStartJourneySearch = new Plasma::ToolButton;
     m_btnStartJourneySearch->setIcon( KIcon("edit-find") );
-    m_btnStartJourneySearch->setToolTip( i18n("Find journeys") );
+    m_btnStartJourneySearch->setToolTip( i18nc("@info:tooltip", "Find journeys") );
     m_btnStartJourneySearch->setEnabled( false );
     connect( m_btnStartJourneySearch, SIGNAL(clicked()),
 	     this, SLOT(journeySearchInputFinished()) );
 
     m_journeySearch = new Plasma::LineEdit;
     m_journeySearch->setNativeWidget( new JourneySearchLineEdit );
-    m_journeySearch->setToolTip( i18nc("This should match the localized keywords.",
-	    "Type a <b>target stop</b> or <b>journey request</b>."
-	    "<br><br> <b>Samples:</b><br>"
-	    "&nbsp;&nbsp;&bull; <i>To target in 15 mins</i><br>"
-	    "&nbsp;&nbsp;&bull; <i>From origin arriving tomorrow at 18:00</i><br>"
-	    "&nbsp;&nbsp;&bull; <i>Target at 6:00 2010-03-07</i>"/*, sColor*/) );
+    m_journeySearch->setToolTip( i18nc("@info:tooltip This should match the "
+	    "localized keywords.",
+	    "<para>Type a <emphasis strong='1'>target stop</emphasis> or "
+	    "<emphasis strong='1'>journey request</emphasis>.</para>"
+	    "<para><emphasis strong='1'>Samples:</emphasis><list>"
+	    "<item><emphasis>To target in 15 mins</emphasis></item>"
+	    "<item><emphasis>From origin arriving tomorrow at 18:00</emphasis></item>"
+	    "<item><emphasis>Target at 6:00 2010-03-07</emphasis></item>"
+	    "</list></para>") );
     m_journeySearch->installEventFilter( this ); // Handle up/down keys (selecting stop suggestions)
     m_journeySearch->setClearButtonShown( true );
     m_journeySearch->nativeWidget()->setCompletionMode( KGlobalSettings::CompletionAuto );
@@ -2210,7 +2241,7 @@ void PublicTransport::createJourneySearchWidgets() {
     m_journeySearch->setEnabled( true );
     KLineEdit *journeySearch = m_journeySearch->nativeWidget();
     journeySearch->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
-    journeySearch->setClickMessage( i18n("Target stop name or journey request") );
+    journeySearch->setClickMessage( i18nc("@info/plain", "Target stop name or journey request") );
     KCompletion *completion = journeySearch->completionObject( false );
     completion->setIgnoreCase( true );
     m_journeySearch->setFont( m_settings.sizedFont() );
@@ -2271,7 +2302,8 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType ) {
 	case ShowDepartureArrivalListTitle:
 	    setMainIconDisplay( testState(ReceivedValidDepartureData)
 		    ? DepartureListOkIcon : DepartureListErrorIcon );
-	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
+	    m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from "
+				      "the home stop") );
 	    m_label->setText( titleText() );
 	    m_label->show();
 	    m_labelInfo->setToolTip( courtesyToolTip() );
@@ -2281,7 +2313,8 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType ) {
 	    
 	case ShowSearchJourneyLineEdit: {
 	    setMainIconDisplay( AbortJourneySearchIcon );
-	    m_icon->setToolTip( i18n("Abort search for journeys to or from the home stop") );
+	    m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys "
+				      "to or from the home stop") );
 
 	    createJourneySearchWidgets();
 	    m_listStopSuggestions = new Plasma::TreeView();
@@ -2308,16 +2341,17 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType ) {
 	}
 	case ShowSearchJourneyLineEditDisabled:
 	    setMainIconDisplay( AbortJourneySearchIcon );
-	    m_icon->setToolTip( i18n("Abort search for journeys to or from the home stop") );
+	    m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys "
+				      "to or from the home stop") );
 	    
 	    createJourneySearchWidgets();
 	    m_labelJourneysNotSupported = new Plasma::Label;
 	    m_labelJourneysNotSupported->setAlignment( Qt::AlignCenter );
 	    m_labelJourneysNotSupported->setSizePolicy( QSizePolicy::Expanding,
-							QSizePolicy::Expanding, QSizePolicy::Label );
-	    m_labelJourneysNotSupported->setText( i18n("Journey searches aren't supported "
-						    "by the currently used service provider "
-						    "or it's accessor.") );
+				    QSizePolicy::Expanding, QSizePolicy::Label );
+	    m_labelJourneysNotSupported->setText( i18nc("@info/plain",
+		    "Journey searches aren't supported by the currently used "
+		    "service provider or it's accessor.") );
 	    m_labelJourneysNotSupported->nativeWidget()->setWordWrap( true );
 	    
 	    m_journeySearch->setEnabled( false );
@@ -2329,8 +2363,10 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType ) {
 	case ShowJourneyListTitle: {
 	    setMainIconDisplay( testState(ReceivedValidJourneyData)
 		    ? JourneyListOkIcon : JourneyListErrorIcon );
-	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
-	    m_label->setText( m_journeyTitleText.isEmpty() ? i18n("<b>Journeys</b>") : m_journeyTitleText );
+	    m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
+	    m_label->setText( m_journeyTitleText.isEmpty()
+		    ? i18nc("@info", "<emphasis strong='1'>Journeys</emphasis>")
+		    : m_journeyTitleText );
 	    
 	    int iconExtend = 32 * m_settings.sizeFactor;
 	    m_iconClose = new Plasma::IconWidget;
@@ -2339,7 +2375,7 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType ) {
 	    m_iconClose->setMinimumSize( iconExtend, iconExtend );
 	    m_iconClose->setMaximumSize( iconExtend, iconExtend );
 	    connect( m_iconClose, SIGNAL(clicked()), this, SLOT(iconCloseClicked()) );
-	    m_iconClose->setToolTip( i18n("Show departures / arrivals") );
+	    m_iconClose->setToolTip( i18nc("@info:tooltip", "Show departures / arrivals") );
 	    
 	    m_treeViewJourney = new Plasma::TreeView;
 	    initTreeView( m_treeViewJourney );
@@ -2386,7 +2422,8 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	case ShowDepartureArrivalListTitle:
 	    setMainIconDisplay( testState(ReceivedValidDepartureData)
 		    ? DepartureListOkIcon : DepartureListErrorIcon );
-	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
+	    m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or "
+				      "from the home stop") );
 	    m_label->setText( titleText() );
 	    m_labelInfo->setToolTip( courtesyToolTip() );
 	    m_labelInfo->setText( infoText() );
@@ -2394,7 +2431,8 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 
 	case ShowSearchJourneyLineEdit:
 	    setMainIconDisplay( AbortJourneySearchIcon );
-	    m_icon->setToolTip( i18n("Abort search for journeys to or from the home stop") );
+	    m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys "
+				      "to or from the home stop") );
 	    m_journeySearch->setEnabled( true );
 	    
 	    m_journeySearch->setFocus();
@@ -2403,7 +2441,7 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	    
 	case ShowSearchJourneyLineEditDisabled:
 // 	    setMainIconDisplay( AbortJourneySearchIcon );
-// 	    m_icon->setToolTip( i18n("Abort search for journeys to or from the home stop") );
+// 	    m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys to or from the home stop") );
 
 // 	    m_journeySearch->setEnabled( false );
 // 	    m_btnLastJourneySearches->setEnabled( false );
@@ -2413,9 +2451,9 @@ void PublicTransport::setTitleType( TitleType titleType ) {
 	case ShowJourneyListTitle:
 	    setMainIconDisplay( testState(ReceivedValidJourneyData)
 		    ? JourneyListOkIcon : JourneyListErrorIcon );
-	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
-	    m_iconClose->setToolTip( i18n("Show departures / arrivals") );
-	    m_label->setText( i18n("<b>Journeys</b>") );
+	    m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
+	    m_iconClose->setToolTip( i18nc("@info:tooltip", "Show departures / arrivals") );
+	    m_label->setText( i18nc("@info", "<emphasis strong='1'>Journeys</emphasis>") );
 	    break;
     }
 
@@ -2453,7 +2491,7 @@ void PublicTransport::recentJourneyActionTriggered( QAction* action ) {
 }
 
 void PublicTransport::unsetStates( QList< AppletState > states ) {
-    foreach( AppletState appletState, states )
+    foreach( const AppletState &appletState, states )
 	m_appletStates &= ~appletState;
 }
 
@@ -2464,7 +2502,7 @@ void PublicTransport::addState( AppletState state ) {
     switch ( state ) {
 	case ShowingDepartureArrivalList:
 	    setTitleType( ShowDepartureArrivalListTitle );
-	    m_icon->setToolTip( i18n("Search journeys to or from the home stop") );
+	    m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
 	    m_treeView->nativeWidget()->setIconSize(
 		    QSize(16 * m_settings.sizeFactor, 16 * m_settings.sizeFactor) );
 	    m_treeView->nativeWidget()->setColumnHidden( ColumnTarget, m_settings.hideColumnTarget );
@@ -2481,7 +2519,7 @@ void PublicTransport::addState( AppletState state ) {
 
 	case ShowingJourneyList:
 	    setTitleType( ShowJourneyListTitle );
-	    m_icon->setToolTip( i18n("Quick configuration and journey search") );
+	    m_icon->setToolTip( i18nc("@info:tooltip", "Quick configuration and journey search") );
 	    setBusy( testState(WaitingForJourneyData) && m_modelJourneys->isEmpty() );
 	    
 	    #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
@@ -2502,14 +2540,14 @@ void PublicTransport::addState( AppletState state ) {
 		    menu->addAction( recent );
 		menu->addSeparator();
 		menu->addAction( KIcon("edit-clear-list"),
-				 i18n("&Clear list") )->setData( true );
+			i18nc("@action:button", "&Clear list") )->setData( true );
 		connect( menu, SIGNAL(triggered(QAction*)),
 			this, SLOT(recentJourneyActionTriggered(QAction*)) );
 		m_btnLastJourneySearches->nativeWidget()->setMenu( menu );
 		m_btnLastJourneySearches->setEnabled( true );
 	    }
 
-	    m_icon->setToolTip( i18n("Go back to the departure / arrival list") );
+	    m_icon->setToolTip( i18nc("@info:tooltip", "Go back to the departure / arrival list") );
 	    setBusy( false);
 
 	    unsetStates( QList<AppletState>() << ShowingDepartureArrivalList
@@ -2518,7 +2556,7 @@ void PublicTransport::addState( AppletState state ) {
 
 	case ShowingJourneysNotSupported:
 	    setTitleType( ShowSearchJourneyLineEditDisabled );
-	    m_icon->setToolTip( i18n("Go back to the departure / arrival list") );
+	    m_icon->setToolTip( i18nc("@info:tooltip", "Go back to the departure / arrival list") );
 	    setBusy( false);
 	    
 	    unsetStates( QList<AppletState>() << ShowingDepartureArrivalList
@@ -2532,13 +2570,12 @@ void PublicTransport::addState( AppletState state ) {
 	    }
 	    TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
 	    treeView->setNoItemsText( m_settings.filtersEnabled
-		    ? i18n("No unfiltered departures.\nYou can disable filters to "
-		    "see all departures.") : i18n("No departures.") );
+		    ? i18nc("@info/plain", "No unfiltered departures.<nl/>"
+		      "You can disable filters to see all departures.")
+		    : i18nc("@info/plain", "No departures.") );
 
-	    if ( m_currentMessage == MessageError ) {
-// 		hideMessage();
+	    if ( m_currentMessage == MessageError )
 		m_currentMessage = MessageNone;
-	    }
 	    unsetStates( QList<AppletState>() << WaitingForDepartureData << ReceivedErroneousDepartureData );
 	    break;
 	}
@@ -2547,7 +2584,7 @@ void PublicTransport::addState( AppletState state ) {
 		setMainIconDisplay( JourneyListOkIcon );
 		setBusy( false );
 		TreeView *treeView = qobject_cast<TreeView*>( m_treeViewJourney->nativeWidget() );
-		treeView->setNoItemsText( i18n("No journeys.") );
+		treeView->setNoItemsText( i18nc("@info/plain", "No journeys.") );
 	    }
 	    unsetStates( QList<AppletState>() << WaitingForJourneyData << ReceivedErroneousJourneyData );
 	    break;
@@ -2558,7 +2595,7 @@ void PublicTransport::addState( AppletState state ) {
 		setBusy( false );
 	    }
 	    TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
-	    treeView->setNoItemsText( i18n("No departures due to an error.") );
+	    treeView->setNoItemsText( i18nc("@info/plain", "No departures due to an error.") );
 	    unsetStates( QList<AppletState>() << WaitingForDepartureData << ReceivedValidDepartureData );
 	    break;
 	}
@@ -2567,7 +2604,7 @@ void PublicTransport::addState( AppletState state ) {
 		setMainIconDisplay( JourneyListErrorIcon );
 		setBusy( false );
 		TreeView *treeView = qobject_cast<TreeView*>( m_treeViewJourney->nativeWidget() );
-		treeView->setNoItemsText( i18n("No journeys due to an error.") );
+		treeView->setNoItemsText( i18nc("@info/plain", "No journeys due to an error.") );
 	    }
 	    unsetStates( QList<AppletState>() << WaitingForJourneyData << ReceivedValidJourneyData );
 	    break;
@@ -2578,7 +2615,7 @@ void PublicTransport::addState( AppletState state ) {
 		setBusy( m_model->isEmpty() );
 	    }
 	    TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
-	    treeView->setNoItemsText( i18n("Waiting for depatures...") );
+	    treeView->setNoItemsText( i18nc("@info/plain", "Waiting for depatures...") );
 	    unsetStates( QList<AppletState>() << ReceivedValidDepartureData << ReceivedErroneousDepartureData );
 	    break;
 	}
@@ -2587,7 +2624,7 @@ void PublicTransport::addState( AppletState state ) {
 		setMainIconDisplay( JourneyListErrorIcon );
 		setBusy( m_modelJourneys->isEmpty() );
 		TreeView *treeView = qobject_cast<TreeView*>( m_treeViewJourney->nativeWidget() );
-		treeView->setNoItemsText( i18n("Waiting for journeys...") );
+		treeView->setNoItemsText( i18nc("@info/plain", "Waiting for journeys...") );
 	    }
 	    unsetStates( QList<AppletState>() << ReceivedValidJourneyData << ReceivedErroneousJourneyData );
 	    break;
@@ -2699,24 +2736,24 @@ QAction* PublicTransport::updatedAction( const QString& actionName ) {
 
     if ( actionName == "backToDepartures" ) {
 	a->setText( m_settings.departureArrivalListType == DepartureList
-	    ? i18n("Back to &Departure List")
-	    : i18n("Back to &Arrival List") );
+	    ? i18nc("@action", "Back to &Departure List")
+	    : i18nc("@action", "Back to &Arrival List") );
     } else if ( actionName == "toggleExpanded" ) {
 	if ( ( m_treeViewJourney ? m_treeViewJourney : m_treeView)->nativeWidget()->isExpanded( model->index(m_clickedItemIndex.row(), 0) ) ) {
-	    a->setText( i18n("Hide Additional &Information") );
+	    a->setText( i18nc("@action", "Hide Additional &Information") );
 	    a->setIcon( KIcon("arrow-up") );
 	} else {
-	    a->setText( i18n("Show Additional &Information") );
+	    a->setText( i18nc("@action", "Show Additional &Information") );
 	    a->setIcon( KIcon("arrow-down") );
 	}
     } else if ( actionName == "removeAlarmForDeparture" ) {
 	a->setText( m_settings.departureArrivalListType == DepartureList
-		? i18n("Remove &Alarm for This Departure")
-		: i18n("Remove &Alarm for This Arrival") );
+		? i18nc("@action", "Remove &Alarm for This Departure")
+		: i18nc("@action", "Remove &Alarm for This Arrival") );
     } else if ( actionName == "setAlarmForDeparture" ) {
 	a->setText( m_settings.departureArrivalListType == DepartureList
-		? i18n("Set &Alarm for This Departure")
-		: i18n("Set &Alarm for This Arrival") );
+		? i18nc("@action", "Set &Alarm for This Departure")
+		: i18nc("@action", "Set &Alarm for This Arrival") );
     }
 
     return a;
@@ -2760,18 +2797,18 @@ void PublicTransport::showDepartureContextMenu ( const QPoint& position ) {
 				"used with autogenerated alarms.";
 		    if ( item->departureInfo()->matchedAlarms().count() == 1 ) {
 			infoAction = new QAction( KIcon("task-recurring"),
-						  i18n("(has a recurring alarm)"), this );
+				    i18nc("@info/plain", "(has a recurring alarm)"), this );
 		    } else {
-			infoAction = new QAction( i18n("(has multiple alarms)"), this );
+			infoAction = new QAction( i18nc("@info/plain", "(has multiple alarms)"), this );
 		    }
 		} else {
 		    kDebug() << "The 'Remove this Alarm' menu entry can only be "
 				"used with autogenerated alarms.";
 		    if ( item->departureInfo()->matchedAlarms().count() == 1 ) {
 			infoAction = new QAction( KIcon("task-recurring"),
-						  i18n("(has a custom alarm)"), this );
+						  i18nc("@info/plain", "(has a custom alarm)"), this );
 		    } else {
-			infoAction = new QAction( i18n("(has multiple alarms)"), this );
+			infoAction = new QAction( i18nc("@info/plain", "(has multiple alarms)"), this );
 		    }
 		}
 		if ( infoAction ) {
@@ -2859,7 +2896,7 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
     DepartureInfo info = *item->departureInfo();
     AlarmSettings alarm;
     QString departureTime = KGlobal::locale()->formatTime( info.departure().time() );
-    alarm.name = i18nc( "Name of new automatically generated alarm filters. "
+    alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
 			"%1 is the departure time, %2 is the target.",
 			"At %1 to %2", departureTime, info.target() );
     alarm.autoGenerated = true;
@@ -2895,11 +2932,12 @@ void PublicTransport::alarmFired( DepartureItem* item ) {
     QString message;
     if ( minsToDeparture > 0 ) {
 	if ( departureInfo->vehicleType() == Unknown )
-	    message = i18np("Line %2 to '%3' departs in %1 minute at %4",
-			    "Line %2 to '%3' departs in %1 minutes at %4",
-			    minsToDeparture, sLine, sTarget, predictedDeparture.toString("hh:mm") );
+	    message = i18ncp("@info/plain", "Line %2 to '%3' departs in %1 minute at %4",
+			     "Line %2 to '%3' departs in %1 minutes at %4",
+			     minsToDeparture, sLine, sTarget, predictedDeparture.toString("hh:mm") );
 	else
-	    message = i18ncp("%2: Line string (e.g. 'U3'), %4: Vehicle type name (e.g. tram, subway)",
+	    message = i18ncp("@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle "
+			     "type name (e.g. tram, subway)",
 			     "The %4 %2 to '%3' departs in %1 minute at %5",
 			     "The %4 %2 to '%3' departs in %1 minutes at %5",
 			     minsToDeparture, sLine, sTarget,
@@ -2908,12 +2946,13 @@ void PublicTransport::alarmFired( DepartureItem* item ) {
     }
     else if ( minsToDeparture < 0 ) {
 	if ( departureInfo->vehicleType() == Unknown )
-	    message = i18np("Line %2 to '%3' has departed %1 minute ago at %4",
+	    message = i18ncp("@info/plain", "Line %2 to '%3' has departed %1 minute ago at %4",
 			    "Line %2 to '%3' has departed %1 minutes ago at %4",
 			    -minsToDeparture, sLine, sTarget,
 			    predictedDeparture.toString("hh:mm"));
 	else
-	    message = i18ncp("%2: Line string (e.g. 'U3'), %4: Vehicle type name (e.g. tram, subway)",
+	    message = i18ncp("@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle "
+			     "type name (e.g. tram, subway)",
 			     "The %4 %2 to '%3' has departed %1 minute ago at %5",
 			     "The %4 %2 to %3 has departed %1 minutes ago at %5",
 			     -minsToDeparture, sLine, sTarget,
@@ -2922,10 +2961,11 @@ void PublicTransport::alarmFired( DepartureItem* item ) {
     }
     else {
 	if ( departureInfo->vehicleType() == Unknown )
-	    message = i18n("Line %1 to '%2' departs now at %3", sLine, sTarget,
-			   predictedDeparture.toString("hh:mm"));
+	    message = i18nc("@info/plain", "Line %1 to '%2' departs now at %3",
+			    sLine, sTarget, predictedDeparture.toString("hh:mm"));
 	else
-	    message = i18nc("%1: Line string (e.g. 'U3'), %3: Vehicle type name (e.g. tram, subway)",
+	    message = i18nc("@info/plain %1: Line string (e.g. 'U3'), %3: Vehicle "
+			    "type name (e.g. tram, subway)",
 			    "The %3 %1 to '%2' departs now at %4", sLine, sTarget,
 			    Global::vehicleTypeToString(departureInfo->vehicleType()),
 			    predictedDeparture.toString("hh:mm"));
@@ -2957,14 +2997,14 @@ QString PublicTransport::infoText() {
     QString url = data[ "url" ].toString();
     QString sLastUpdate = m_lastSourceUpdate.toString( "hh:mm" );
     if ( sLastUpdate.isEmpty() )
-	sLastUpdate = i18nc("This is used as 'last data update' text when there "
+	sLastUpdate = i18nc("@info/plain This is used as 'last data update' text when there "
 			    "hasn't been any updates yet.", "none");
 
     // HACK: This breaks the text at one position if needed
     // Plasma::Label doesn't work well will HTML formatted text and word wrap: 
     // It sets the height as if the label shows the HTML source.
-    QString textNoHtml1 = QString("%1: %2").arg( i18n("last update"), sLastUpdate );
-    QString textNoHtml2 = QString("%1: %2").arg( i18n("data by"), shortUrl );
+    QString textNoHtml1 = QString("%1: %2").arg( i18nc("@info/plain", "last update"), sLastUpdate );
+    QString textNoHtml2 = QString("%1: %2").arg( i18nc("@info/plain", "data by"), shortUrl );
     QFontMetrics fm( m_labelInfo->font() );
     int width1 = fm.width( textNoHtml1 );
     int width2 = fm.width( textNoHtml2 );
@@ -2972,10 +3012,12 @@ QString PublicTransport::infoText() {
     if ( width > m_graphicsWidget->size().width() ) {
 	m_graphicsWidget->setMinimumWidth( qMax(150, qMax(width1, width2)) );
 	return QString("<nobr>%1: %2<br>%3: <a href='%4'>%5</a><nobr>")
-	    .arg( i18n("last update"), sLastUpdate, i18n("data by"), url, shortUrl );
+		.arg( i18nc("@info/plain", "last update"), sLastUpdate,
+		      i18nc("@info/plain", "data by"), url, shortUrl );
     } else {
 	return QString("<nobr>%1: %2, %3: <a href='%4'>%5</a><nobr>")
-	    .arg( i18n("last update"), sLastUpdate, i18n("data by"), url, shortUrl );
+		.arg( i18nc("@info/plain", "last update"), sLastUpdate,
+		      i18nc("@info/plain", "data by"), url, shortUrl );
     }
 }
 
@@ -2985,7 +3027,7 @@ QString PublicTransport::courtesyToolTip() const {
     if ( credit.isEmpty() )
 	return QString();
     else
-	return i18n( "By courtesy of %1 (%2)", credit, data["url"].toString() );
+	return i18nc( "@info/plain", "By courtesy of %1 (%2)", credit, data["url"].toString() );
 }
 
 void PublicTransport::setTextColorOfHtmlItem( QStandardItem *item, const QColor &textColor ) {

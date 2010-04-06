@@ -89,14 +89,15 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     m_uiAlarms.setupUi( widgetAlarms );
 
     KTabWidget *tabMain = new KTabWidget;
-    tabMain->addTab( widgetStop, i18n("&Stop selection") );
-    tabMain->addTab( widgetAdvanced, i18n("&Advanced") );
+    tabMain->addTab( widgetStop, i18nc("@title:tab", "&Stop selection") );
+    tabMain->addTab( widgetAdvanced, i18nc("@title:tab Advanced settings tab label", "&Advanced") );
 
-    m_configDialog->addPage( tabMain, i18n("General"), "public-transport-stop" );
-    m_configDialog->addPage( widgetAppearance, i18n("Appearance"),
+    m_configDialog->addPage( tabMain, i18nc("@title:group General settings page name", "General"),
+			     "public-transport-stop" );
+    m_configDialog->addPage( widgetAppearance, i18nc("@title:group", "Appearance"),
 			     "package_settings_looknfeel" );
-    m_configDialog->addPage( widgetFilter, i18n("Filter"), "view-filter" );
-    m_configDialog->addPage( widgetAlarms, i18n("Alarms"), "task-reminder" );
+    m_configDialog->addPage( widgetFilter, i18nc("@title:group", "Filter"), "view-filter" );
+    m_configDialog->addPage( widgetAlarms, i18nc("@title:group", "Alarms"), "task-reminder" );
 
     initModels();
 
@@ -111,14 +112,14 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	    trFilterConfigurationList, m_modelLocations,
 	    m_modelServiceProvider, m_publicTransportEngine, m_osmEngine,
 	    m_geolocationEngine, m_ui.stopList );
-    m_stopListWidget->setWhatsThis( i18n("<b>This shows the stop settings you "
-	    "have set.</b><br>"
-	    "The applet shows results for one of them at a time. To switch the "
-	    "currently used stop setting use the context menu of the applet.<br>"
-	    "For each stop setting another filter configuration can be used, "
+    m_stopListWidget->setWhatsThis( i18nc("@info:whatsthis",
+	    "<subtitle>This shows the stop settings you have set.</subtitle>"
+	    "<para>The applet shows results for one of them at a time. To switch the "
+	    "currently used stop setting use the context menu of the applet.</para>"
+	    "<para>For each stop setting another filter configuration can be used, "
 	    "to edit filter configurations use the filter section in the settings "
 	    "dialog. You can define a list of stops for each stop setting that "
-	    "are then displayed combined (eg. stops near to each other).") );
+	    "are then displayed combined (eg. stops near to each other).</para>") );
     m_stopListWidget->setCurrentStopSettingIndex( m_currentStopSettingsIndex );
     connect( m_stopListWidget, SIGNAL(changed(int,StopSettings)),
 	     this, SLOT(stopSettingsChanged()) );
@@ -135,21 +136,22 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	     this, SLOT(updateFilterInfoLabel()) );
 
     // Setup filter widgets
-    m_uiFilter.filters->setWhatsThis( i18n("<b>This shows the filters of the "
-	    "selected filter configuration.</b><br>"
-	    "Each filter configuration consists of a filter action and a list "
-	    "of filters. Each filter contains a list of constraints.<br>"
-	    "A filter matches, if all it's constraints match while a filter "
-	    "configuration matches, if one of it's filters match.<br>"
-	    "To use a filter configuration select it in the 'Filter Uses' tab. "
-	    "Each stop settings can use another filter configuration.<br><br>"
-	    "<b>Filter Types</b><br>"
-	    "- <b>Vehicle:</b> Filters by vehicle types.<br>"
-	    "- <b>Line String:</b> Filters by transport line strings.<br>"
-	    "- <b>Line number:</b> Filters by transport line numbers.<br>"
-	    "- <b>Target:</b> Filters by target/origin.<br>"
-	    "- <b>Via:</b> Filters by intermediate stops.<br>"
-	    "- <b>Delay:</b> Filters by delay.") );
+    m_uiFilter.filters->setWhatsThis( i18nc("@info:whatsthis",
+	    "<subtitle>This shows the filters of the selected filter configuration.</subtitle>"
+	    "<para>Each filter configuration consists of a filter action and a list "
+	    "of filters. Each filter contains a list of constraints.</para>"
+	    "<para>A filter matches, if all it's constraints match while a filter "
+	    "configuration matches, if one of it's filters match.</para>"
+	    "<para>To use a filter configuration select it in the 'Filter Uses' tab. "
+	    "Each stop settings can use another filter configuration.</para>"
+	    "<para><emphasis strong='1'>Filter Types</emphasis><list>"
+	    "<item><emphasis>Vehicle:</emphasis> Filters by vehicle types.</item>"
+	    "<item><emphasis>Line String:</emphasis> Filters by transport line strings.</item>"
+	    "<item><emphasis>Line number:</emphasis> Filters by transport line numbers.</item>"
+	    "<item><emphasis>Target:</emphasis> Filters by target/origin.</item>"
+	    "<item><emphasis>Via:</emphasis> Filters by intermediate stops.</item>"
+	    "<item><emphasis>Delay:</emphasis> Filters by delay.</item>"
+	    "</list></para>") );
     connect( m_uiFilter.filters, SIGNAL(changed()),
 	     this, SLOT(setFilterConfigurationChanged()) );
 
@@ -277,11 +279,12 @@ void SettingsUiManager::currentAlarmChanged( int row ) {
 }
 
 void SettingsUiManager::addAlarmClicked() {
-    QString name = i18n( "New Alarm" );
+    QString name = i18nc("@info:plain Default name of a new alarm", "New Alarm");
     int i = 2;
     for ( int n = 0; n < m_alarmSettings.count(); ++n ) {
 	if ( m_alarmSettings[n].name == name ) {
-	    name = i18n( "New Alarm %1", i );
+	    name = i18nc("@info:plain Default name of a new alarm, if other default "
+			 "names are already used", "New Alarm %1", i);
 	    n = 0; // Restart loop with new name
 	    ++i;
 	}
@@ -453,7 +456,7 @@ void SettingsUiManager::stopSettingsChanged() {
 	label->setAlignment( Qt::AlignRight | Qt::AlignVCenter );
 	label->setObjectName( "lblUsesStop" + sRow );
 	
-	QLabel *lblUses = new QLabel( i18n("<b>uses</b>") );
+	QLabel *lblUses = new QLabel( i18nc("@info", "<emphasis strong='1'>uses</emphasis>") );
 	lblUses->setAlignment( Qt::AlignCenter );
 	lblUses->setObjectName( "lblUses" + sRow );
 	
@@ -516,14 +519,15 @@ void SettingsUiManager::updateFilterInfoLabel() {
     
     QPalette palette = m_uiFilter.lblInfo->palette();
     if ( usedByList.isEmpty() ) {
-	m_uiFilter.lblInfo->setText( i18n("Not used by any stop settings.") );
+	m_uiFilter.lblInfo->setText( i18nc("@info", "Not used by any stop settings.") );
 	m_uiFilter.lblInfo->setToolTip( QString() );
 	KColorScheme::adjustForeground( palette, KColorScheme::NegativeText, QPalette::WindowText );
     } else {
-	m_uiFilter.lblInfo->setText( i18np("Used by %1 stop setting.",
+	m_uiFilter.lblInfo->setText( i18ncp("@info", "Used by %1 stop setting.",
 			"Used by %1 stop settings.", usedByList.count()) );
-	m_uiFilter.lblInfo->setToolTip( i18n("Used by these stops:\n - %1",
-					    usedByList.join("\n - ")) );
+	m_uiFilter.lblInfo->setToolTip( i18nc("@info:tooptip",
+		"<para>Used by these stops:<list>%1</list></para>",
+		"<item>" + usedByList.join("</item><item>") + "</item>") );
 	KColorScheme::adjustForeground( palette, KColorScheme::NormalText, QPalette::WindowText );
     }
     m_uiFilter.lblInfo->setPalette( palette );
@@ -687,11 +691,13 @@ void SettingsUiManager::initModels() {
 	item = new QStandardItem;
 
 	if ( country.compare("international", Qt::CaseInsensitive)  == 0 ) {
-	    text = i18n("International");
+	    text = i18nc("@item:inlistbox Name of the category for international "
+			 "service providers", "International");
 	    sortText = "00000" + text;
 	    item->setIcon( Global::internationalIcon() );
 	} else if ( country.compare("unknown", Qt::CaseInsensitive)  == 0 ) {
-	    text = i18n("Unknown");
+	    text = i18nc("@item:inlistbox Name of the category for service providers "
+			 "with unknown contries", "Unknown");
 	    sortText = "00000" + text;
 	    item->setIcon( KIcon("dialog-warning") );
 	} else {
@@ -719,13 +725,14 @@ void SettingsUiManager::initModels() {
     }
 
     // Append item to show all service providers
-    QString sShowAll = i18n("Show all available service providers");
+    QString sShowAll = i18nc("@item:inlistbox", "Show all available service providers");
     QStandardItem *itemShowAll = new QStandardItem();
     itemShowAll->setData( "000000", SortRole );
     QString formattedText = QString( "<span><b>%1</b></span>"
 				     "<br-wrap><small><b>%2</b></small>" )
 	.arg( sShowAll )
-	.arg( i18n("Total: ") + i18np("%1 accessor", "%1 accessors", countries.count()) );
+	.arg( i18nc("@info:plain Label for the total number of accessors", "Total: ")
+	    + i18ncp("@info:plain", "%1 accessor", "%1 accessors", countries.count()) );
     itemShowAll->setData( "showAll", LocationCodeRole );
     itemShowAll->setData( formattedText, FormattedTextRole );
     itemShowAll->setText( sShowAll );
@@ -744,7 +751,7 @@ void SettingsUiManager::initModels() {
 	QStandardItem *itemErrors = new QStandardItem();
 	itemErrors->setData( "ZZZZZ", SortRole ); // Sort to the end
 	formattedText = QString( "<span><b>%1</b></span><br-wrap><small>%2</small>" )
-	    .arg( i18np("%1 accessor is errornous:", "%1 accessors are errornous:",
+	    .arg( i18ncp("@info:plain", "%1 accessor is errornous:", "%1 accessors are errornous:",
 			errornousAccessorNames.count()) )
 	    .arg( errorLines.join(",<br-wrap>") );
 	itemErrors->setData( formattedText, FormattedTextRole );
@@ -799,9 +806,11 @@ void SettingsUiManager::initModels() {
 	
 	QString title;
 	if ( locationCode == "international" )
-	    title = i18n("International");
+	    title = i18nc("@info:inlistbox Name of the category for international "
+			  "service providers", "International");
 	else if ( locationCode == "unknown" )
-	    title = i18n("Unknown");
+	    title = i18nc("@info:inlistbox Name of the category for service providers "
+			  "with unknown contries", "Unknown");
 	else
 	    title = KGlobal::locale()->countryCodeToName( locationCode );
 	item->setData( title,
@@ -849,13 +858,13 @@ void SettingsUiManager::dataUpdated( const QString& sourceName,
 
 QString SettingsUiManager::translateKey( const QString& key ) {
     if ( key == "Default" )
-	return i18n("Default");
+	return i18nc("@info/plain The name of the default filter configuration", "Default");
     else
 	return key;
 }
 
 QString SettingsUiManager::untranslateKey( const QString& translatedKey ) {
-    if ( translatedKey == i18n("Default") )
+    if ( translatedKey == i18nc("@info/plain The name of the default filter configuration", "Default") )
 	return "Default";
     else
 	return translatedKey;
@@ -960,10 +969,13 @@ void SettingsUiManager::loadFilterConfiguration( const QString& filterConfig ) {
 }
 
 void SettingsUiManager::addFilterConfiguration() {
-    QString newFilterConfig = i18n( "New Configuration" );
+    QString newFilterConfig = i18nc( "@info Default name of a new filter configuration",
+				     "New Configuration" );
     int i = 2;
     while ( m_filterSettings.keys().contains(newFilterConfig) ) {
-	newFilterConfig = i18n( "New Configuration %1", i );
+	newFilterConfig = i18nc( "@info Default name of a new filter configuration "
+				 "if the other default names are already used",
+				 "New Configuration %1", i );
 	++i;
     }
 
@@ -989,10 +1001,12 @@ void SettingsUiManager::addFilterConfiguration() {
 void SettingsUiManager::removeFilterConfiguration() {
     QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
     if ( KMessageBox::warningContinueCancel(m_configDialog,
-	i18n("This will permanently delete the selected filter configuration '%1'.",
-	     trFilterConfiguration))
-	!= KMessageBox::Continue )
+	i18nc("@info", "<warning>This will permanently delete the selected filter "
+	      "configuration <resource>%1</resource>.</warning>",
+	      trFilterConfiguration)) != KMessageBox::Continue )
+    {
 	return;
+    }
     
     QString filterConfiguration = untranslateKey( trFilterConfiguration );
     m_filterSettings.remove( filterConfiguration );
@@ -1003,7 +1017,8 @@ void SettingsUiManager::removeFilterConfiguration() {
     else
 	kDebug() << "No selection";
 
-    index = filterConfigurationIndex( i18n("Default") );
+    index = filterConfigurationIndex( i18nc("@info/plain The name of the default "
+	    "filter configuration", "Default") );
     kDebug() << "Found default filter config in combo box?" << index;
     if ( index != -1 )
 	m_uiFilter.filterConfigurations->setCurrentIndex( index );
@@ -1024,8 +1039,8 @@ void SettingsUiManager::removeFilterConfiguration() {
 void SettingsUiManager::renameFilterConfiguration() {
     QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
     bool ok;
-    QString newFilterConfig = KInputDialog::getText( i18n("Choose a Name"),
-	    i18n("New Name of the Filter Configuration:"), trFilterConfiguration,
+    QString newFilterConfig = KInputDialog::getText( i18nc("@title:window", "Choose a Name"),
+	    i18nc("@label:textbox", "New Name of the Filter Configuration:"), trFilterConfiguration,
 	    &ok, m_configDialog, new QRegExpValidator(QRegExp("[^\\*]*"), this) );
 // 	    i18nc("This is a clickMessage for the line edit "
 // 	    "in the rename filter config dialog", "Type the new name")
@@ -1041,16 +1056,18 @@ void SettingsUiManager::renameFilterConfiguration() {
     // Check if the new name is valid.
     // '*' is also not allowed in the name but that's already validated by a QRegExpValidator.
     if ( newFilterConfig.isEmpty() ) {
-	KMessageBox::information( m_configDialog, i18n("Empty names are not allowed.") );
+	KMessageBox::information( m_configDialog, i18nc("@info", "Empty names are not allowed.") );
 	return;
     }
 
     // Check if the new name is already used and ask if it should be overwritten
     QString untrNewFilterConfig = untranslateKey( newFilterConfig );
     if ( m_filterSettings.keys().contains(untrNewFilterConfig)
-	    && KMessageBox::warningYesNo(m_configDialog,
-		i18n("There is already a filter configuration with the name '%1'.\n"
-		"Do you want to overwrite it?", newFilterConfig) ) != KMessageBox::Yes ) {
+	&& KMessageBox::warningYesNo(m_configDialog, i18n("<warning>There is already a "
+	    "filter configuration with the name <resource>%1</resource>.</warning><nl>"
+	    "Do you want to overwrite it?", newFilterConfig) )
+	!= KMessageBox::Yes )
+    {
 	return; // No (don't overwrite) pressed
     }
 
@@ -1127,7 +1144,7 @@ int SettingsUiManager::filterConfigurationIndex( const QString& filterConfig ) {
 void SettingsUiManager::exportFilterSettings() {
     QString fileName = KFileDialog::getSaveFileName(
 	    KUrl("kfiledialog:///filterSettings"), QString(), m_configDialog,
-	    i18n("Export Filter Settings") );
+	    i18nc("@title:window", "Export Filter Settings") );
     if ( fileName.isEmpty() )
 	return;
 
@@ -1138,7 +1155,7 @@ void SettingsUiManager::exportFilterSettings() {
 void SettingsUiManager::importFilterSettings() {
     QString fileName = KFileDialog::getOpenFileName(
 	    KUrl("kfiledialog:///filterSettings"), QString(), m_configDialog,
-	    i18n("Import Filter Settings") );
+	    i18nc("@title:window", "Import Filter Settings") );
     if ( fileName.isEmpty() )
 	return;
 
@@ -1308,6 +1325,8 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 
     // Write stop settings
     if ( settings.stopSettingsList != oldSettings.stopSettingsList ) {
+	kDebug() << "STOP SETTINGS CHANGED";
+	
 	changed |= IsChanged | ChangedStopSettings;
 	int i = 1;
 	cgGlobal.writeEntry( "stopSettings", settings.stopSettingsList.count() ); // Not needed if deleteEntry/Group works, don't know what's wrong (sync() and Plasma::Applet::configNeedsSaving() doesn't help)

@@ -31,7 +31,7 @@
      </property>
      <widget class="QWidget" name="tabFilters">
       <attribute name="title">
-       <string>&amp;Filter Configurations</string>
+       <string comment="@title:tab">&amp;Filter Configurations</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout">
        <item row="0" column="0" colspan="4">
@@ -86,7 +86,7 @@
        <item row="1" column="0">
         <widget class="QLabel" name="lblFilterAction">
          <property name="text">
-          <string>Filter Action:</string>
+          <string comment="@label:listbox">Filter Action:</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -203,7 +203,7 @@
      </widget>
      <widget class="QWidget" name="tabFilterUses">
       <attribute name="title">
-       <string>Filter &amp;Uses</string>
+       <string comment="@title:tab">Filter &amp;Uses</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>

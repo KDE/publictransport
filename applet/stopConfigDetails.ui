@@ -24,7 +24,7 @@
    <item row="2" column="0">
     <widget class="QLabel" name="lblFilterConfiguration">
      <property name="text">
-      <string>&amp;Filter Configuration:</string>
+      <string comment="@label:listbox">&amp;Filter Configuration:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -37,11 +37,11 @@
    <item row="2" column="1">
     <widget class="KComboBox" name="filterConfiguration">
      <property name="toolTip">
-      <string>The filter configuration to be used with this stop(s)</string>
+      <string comment="@info:tooltip">The filter configuration to be used with this stop(s)</string>
      </property>
      <property name="whatsThis">
-      <string>Each stop can use a different filter configuration. Choose one of the available filter configurations here.
-To create/edit/remove filter configurations use the filter page in the settings dialog.</string>
+      <string comment="@info:whatsthis">&lt;para&gt;Each stop can use a different filter configuration. Choose one of the available filter configurations here.
+&lt;note&gt;To create/edit/remove filter configurations use the filter page in the settings dialog.&lt;/note&gt;&lt;/para&gt;</string>
      </property>
     </widget>
    </item>
@@ -61,7 +61,7 @@ To create/edit/remove filter configurations use the filter page in the settings 
       </sizepolicy>
      </property>
      <property name="text">
-      <string>&amp;First Departure:</string>
+      <string comment="@label">&amp;First Departure:</string>
      </property>
      <property name="buddy">
       <cstring>firstDepartureUseCurrentTime</cstring>
@@ -71,7 +71,7 @@ To create/edit/remove filter configurations use the filter page in the settings 
    <item row="3" column="0">
     <widget class="QLabel" name="lblAlarmTime">
      <property name="text">
-      <string>A&amp;larm Time:</string>
+      <string comment="@label:spinbox">A&amp;larm Time:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -195,9 +195,6 @@ To create/edit/remove filter configurations use the filter page in the settings 
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <property name="layoutDirection">
-           <enum>Qt::LeftToRight</enum>
-          </property>
           <property name="text">
            <string>At &amp;custom time:</string>
           </property>
@@ -226,8 +223,8 @@ To create/edit/remove filter configurations use the filter page in the settings 
       </size>
      </property>
      <property name="whatsThis">
-      <string>Alarms can be set for specific departures / arrivals through the context menu. The alarm will be shown as notification.
-Here you can set when the alarm should be fired, relative to the departure / arrival time.</string>
+      <string comment="@info:whatsthis">&lt;para&gt;Alarms can be set for specific departures/arrivals through the context menu. The alarm will be shown as notification.&lt;/para&gt;
+&lt;para&gt;Here you can set &lt;emphasis&gt;when the alarm should be fired&lt;/emphasis&gt;, relative to the departure/arrival time.&lt;/para&gt;</string>
      </property>
      <property name="specialValueText">
       <string>On depart</string>

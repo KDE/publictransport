@@ -59,12 +59,14 @@ class CheckCombobox : public KComboBox {
 	/** Gets the text that is shown if no item is checked. */
 	QString noSelectionText() const;
 	/** Sets the text that is shown if no item is checked to @p noSelectionText. */
-	void setNoSelectionText( const QString &noSelectionText = i18n("(none)") );
+	void setNoSelectionText( const QString &noSelectionText = i18nc(
+		"@info/plain Default text of a CheckCombobox if no item is checked", "(none)") );
 	
 	/** Gets the text that is shown if all items are checked. */
 	QString allSelectedText() const;
 	/** Sets the text that is shown if all items are checked to @p allSelectedText. */
-	void setAllSelectedText( const QString &allSelectedText = i18n("(all)") );
+	void setAllSelectedText( const QString &allSelectedText = i18nc(
+		"@info/plain Default text of a CheckCombobox if all items are checked", "(all)") );
 
 	/** Adds an item with the given @p text. */
 	void addItem( const QString &text );

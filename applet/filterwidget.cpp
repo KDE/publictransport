@@ -171,7 +171,8 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
         }
         ConstraintListWidget *listWidget = new ConstraintListWidget( type,
 				    variant, values, value.toList(), parent );
-	listWidget->list()->setAllSelectedText( i18n("(all days)") );
+	listWidget->list()->setAllSelectedText( i18nc("@info/plain Text of a "
+		"CheckCombobox with weekday names if all days are checked", "(all days)") );
 	listWidget->list()->setMultipleSelectionOptions( CheckCombobox::ShowStringList );
         return listWidget;
     }
@@ -212,21 +213,22 @@ ConstraintWidget* FilterWidget::createConstraint( FilterType type ) {
 QString FilterWidget::filterName( FilterType filter ) const {
     switch ( filter ) {
     case FilterByVehicleType:
-        return i18n("Vehicle");
+        return i18nc("@item:inlistbox Name of the filter for vehicle types", "Vehicle");
     case FilterByTransportLine:
-        return i18n("Line string");
+	return i18nc("@item:inlistbox Name of the filter for transport line strings", "Line string");
     case FilterByTransportLineNumber:
-	return i18n("Line number");
+	return i18nc("@item:inlistbox Name of the filter for transport line numers, "
+		     "eg. 6 when the transport line string is 'N6'", "Line number");
     case FilterByTarget:
-        return i18n("Target");
+	return i18nc("@item:inlistbox Name of the filter for targets/origins", "Target");
     case FilterByVia:
-	return i18n("Via");
+	return i18nc("@item:inlistbox Name of the filter for intermediate stops", "Via");
     case FilterByDelay:
-	return i18n("Delay");
+	return i18nc("@item:inlistbox Name of the filter for delays", "Delay");
     case FilterByDeparture:
-	return i18n("Departure");
+	return i18nc("@item:inlistbox Name of the filter for departure times", "Departure");
     case FilterByDayOfWeek:
-	return i18n("Day of Week");
+	return i18nc("@item:inlistbox Name of the filter for departure weekdays", "Day of Week");
 
     default:
         kDebug() << "Filter unknown" << filter;
@@ -256,27 +258,39 @@ void FilterWidget::filterTypeChanged( int index ) {
 QString ConstraintWidget::filterVariantName( FilterVariant filterVariant ) const {
     switch ( filterVariant ) {
     case FilterContains:
-        return i18n("Contains");
+        return i18nc("@item:inlistbox Name of the filter variant that matches "
+		"the filter word is contained", "Contains");
     case FilterDoesntContain:
-        return i18n("Does not Contain");
+        return i18nc("@item:inlistbox Name of the filter variant that matches if "
+		"the filter word is not contained", "Does not Contain");
     case FilterEquals:
-        return i18n("Equals");
+        return i18nc("@item:inlistbox Name of the filter variant that matches if "
+		"the filter word is found as complete text (not only contained) or "
+		"if the filter value is equal for non-string-filters", "Equals");
     case FilterDoesntEqual:
-        return i18n("Does not Equal");
+        return i18nc("@item:inlistbox Name of the filter variant that matches if "
+		"the filter word is not found as complete text (or only contained) or "
+		"if the filter value is not equal for non-string-filters", "Does not Equal");
     case FilterMatchesRegExp:
-        return i18n("Matches Regular Expr.");
+        return i18nc("@item:inlistbox Name of the filter variant that matches if "
+		"a regular expression matches", "Matches Regular Expr.");
     case FilterDoesntMatchRegExp:
-        return i18n("Doesn't Match Reg. Expr.");
+        return i18nc("@item:inlistbox Name of the filter variant that matches if "
+		"a regular expression doesn't match", "Doesn't Match Reg. Expr.");
 	
     case FilterIsOneOf:
-	return i18n("One of");
+	return i18nc("@item:inlistbox Name of the filter variant that matches if "
+		"a value is contained in a list of values, eg. strings.", "One of");
     case FilterIsntOneOf:
-	return i18n("None of");
+	return i18nc("@item:inlistbox Name of the filter variant that matches if "
+		"a value is not contained in a list of values, eg. strings.", "None of");
 
     case FilterGreaterThan:
-	return i18n("Greater Than");
+	return i18nc("@item:inlistbox Name of the filter variant that matches if "
+		"a value is greater than the filter value.", "Greater Than");
     case FilterLessThan:
-	return i18n("Less Than");
+	return i18nc("@item:inlistbox Name of the filter variant that matches if "
+		"a value is less than the filter value.", "Less Than");
 
     default:
         kDebug() << "Filter variant unknown" << filterVariant;
@@ -305,7 +319,7 @@ ConstraintWidget::ConstraintWidget( FilterType type,
 	
         m_variantsCmb = new KComboBox( this );
 	m_variantsCmb->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
-        foreach ( FilterVariant variant, availableVariants ) {
+        foreach ( const FilterVariant &variant, availableVariants ) {
             m_variantsCmb->addItem( filterVariantName(variant),
                                     static_cast<int>(variant) );
         }
@@ -419,8 +433,8 @@ FilterListWidget::FilterListWidget( QWidget* parent ) : AbstractDynamicWidgetCon
 			    ShowSeparators, parent ) {
     setWidgetCountRange( 1, 10, false );
     addButton()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-    addButton()->setText( i18n("&Add Filter") );
-    addButton()->setToolTip( i18n("Add another filter") );
+    addButton()->setText( i18nc("@action:button", "&Add Filter") );
+    addButton()->setToolTip( i18nc("@info:tooltip", "Add another filter") );
 }
 
 void ConstraintWidget::variantChanged( int index ) {
@@ -467,10 +481,10 @@ DynamicWidget* FilterWidget::addWidget( QWidget* labelWidget, QWidget* widget ) 
 
 	if ( dynamicWidget->removeButton() )
 	    dynamicWidget->removeButton()->setToolTip(
-		    i18n("Remove this criterion from the filter") );
+		    i18nc("@info:tooltip", "Remove this criterion from the filter") );
 	if ( dynamicWidget->addButton() )
 	    dynamicWidget->addButton()->setToolTip(
-		    i18n("Add another criterion to this filter") );
+		    i18nc("@info:tooltip", "Add another criterion to this filter") );
 
 	emit changed();
 	emit constraintAdded( constraintWidget );
@@ -482,7 +496,7 @@ DynamicWidget* FilterListWidget::addWidget( QWidget* widget ) {
     DynamicWidget *newWidget = AbstractDynamicWidgetContainer::addWidget( widget );
     if ( newWidget->removeButton() ) {
 	newWidget->removeButton()->setToolTip(
-		i18n("Remove this filter with all it's criteria") );
+		i18nc("@info:tooltip", "Remove this filter with all it's criteria") );
     }
 
     emit changed();
@@ -498,7 +512,7 @@ DynamicWidget* FilterListWidget::createDynamicWidget( QWidget* widget ) {
 
 QWidget* FilterListWidget::createSeparator( const QString& separatorText ) {
     return AbstractDynamicWidgetContainer::createSeparator(
-	    separatorText.isEmpty() ? i18n("or") : separatorText );
+	    separatorText.isEmpty() ? i18nc("@info/plain", "or") : separatorText );
 }
 
 QList< FilterWidget* > FilterListWidget::filterWidgets() const {

@@ -365,9 +365,12 @@ void JourneyItem::updateValues() {
 
     QString sDuration = KGlobal::locale()->prettyFormatDuration(
 	    m_journeyInfo.duration() * 60 * 1000 );
-    QString text = i18np("<b>Duration:</b> %2, <nobr><b>%1</b> change</nobr>",
-			 "<b>Duration:</b> %2, <nobr><b>%1</b> changes</nobr>",
-			 m_journeyInfo.changes(), sDuration);
+    QString text = i18ncp("@info Text of journey items in an 'info' column",
+			  "<emphasis strong='1'>Duration:</emphasis> %2, "
+			  "<nobr><emphasis strong='1'>%1</emphasis> change</nobr>",
+			  "<emphasis strong='1'>Duration:</emphasis> %2, "
+			  "<nobr><emphasis strong='1'>%1</emphasis> changes</nobr>",
+			  m_journeyInfo.changes(), sDuration);
     setFormattedText( ColumnJourneyInfo, text );
 //     setText( s.replace(QRegExp("<[^>]*>"), "") );
     if ( !m_journeyInfo.journeyNews().isEmpty() ) {
@@ -514,37 +517,40 @@ QString JourneyItem::childItemText( ItemType itemType, int* linesPerRow ) {
     switch ( itemType ) {
 	case JourneyNewsItem:
 	    text = m_journeyInfo.journeyNews();
-	    if ( text.startsWith(QLatin1String("http://")) ) // TODO: Make the link clickable...
-		text = QString("<a href='%1'>%2</a>").arg(text).arg(i18n("Link to journey news"));
-	    text = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public "
+	    if ( text.startsWith(QLatin1String("http://")) ) { // TODO: Make the link clickable...
+		text = QString("<a href='%1'>%2</a>").arg(text)
+			.arg(i18nc("@info/plain", "Link to journey news"));
+	    }
+	    text = QString("<b>%1</b> %2").arg( i18nc("@info/plain News for a journey with public "
 			"transport, like 'platform changed'", "News:") ).arg( text );
 	    if ( linesPerRow )
 		*linesPerRow = qMin( 3, text.length() / 25 );
 	    break;
 	case OperatorItem:
-	    text = QString("<b>%1</b> %2").arg( i18nc("The company that is "
-		"responsible for this departure/arrival/journey", "Operator:") )
-		.arg( m_journeyInfo.operatorName() );
+	    text = QString("<b>%1</b> %2")
+		    .arg( i18nc("@info/plain The company that is responsible for "
+				"this departure/arrival/journey", "Operator:") )
+		    .arg( m_journeyInfo.operatorName() );
 	    break;
 	case DurationItem:
 	    if ( m_journeyInfo.duration() <= 0 ) {
 		text = QString( "<b>%1</b> %2" )
-		    .arg( i18nc("The duration of a journey", "Duration:") )
+		    .arg( i18nc("@info/plain The duration of a journey", "Duration:") )
 		    .arg( 0 );
 	    } else {
 		text = QString( "<b>%1</b> %2" )
-		    .arg( i18nc("The duration of a journey", "Duration:") )
+		    .arg( i18nc("@info/plain The duration of a journey", "Duration:") )
 		    .arg( Global::durationString(m_journeyInfo.duration() * 60) );
 	    }
 	    break;
 	case ChangesItem:
 	    text = QString( "<b>%1</b> %2" )
-		    .arg( i18nc("The changes of a journey", "Changes:") )
+		    .arg( i18nc("@info/plain The changes of a journey", "Changes:") )
 		    .arg( m_journeyInfo.changes() );
 	    break;
 	case PricingItem:
 	    text = QString( "<b>%1</b> %2" )
-		    .arg( i18nc("The pricing of a journey", "Pricing:") )
+		    .arg( i18nc("@info/plain The pricing of a journey", "Pricing:") )
 		    .arg( m_journeyInfo.pricing() );
 	    break;
 	case RouteItem:
@@ -552,12 +558,16 @@ QString JourneyItem::childItemText( ItemType itemType, int* linesPerRow ) {
 	      && m_journeyInfo.routeExactStops() < m_journeyInfo.routeStops().count() )
 	    {
 		text = QString("<b>%1</b> %2")
-		    .arg( i18nc("The route of this departure/arrival/journey", "Route:") )
-		    .arg( i18n("> %1 stops", m_journeyInfo.routeStops().count()) );
+		    .arg( i18nc("@info/plain The route of this departure/arrival/journey", "Route:") )
+		    .arg( i18nc("@info/plain For routes of journey items, if not "
+		    		"all intermediate stops are known", "> %1 stops",
+				m_journeyInfo.routeStops().count()) );
 	    } else {
 		text = QString("<b>%1</b> %2")
-		    .arg( i18nc("The route of this departure/arrival/journey", "Route:") )
-		    .arg( i18n("%1 stops", m_journeyInfo.routeStops().count()) );
+		    .arg( i18nc("@info/plain The route of this departure/arrival/journey", "Route:") )
+		    .arg( i18nc("@info/plain For routes of journey items, if all "
+				"intermediate stops are known", "%1 stops",
+				m_journeyInfo.routeStops().count()) );
 	    }
 	    break;
 
@@ -578,7 +588,10 @@ ChildItem* JourneyItem::createRouteItem() {
 	// Add a separator item, when the exact route ends
 	if ( row == m_journeyInfo.routeExactStops() && row > 0 ) {
 	    ChildItem *separatorItem = new ChildItem(
-		    OtherItem, i18n("  - End of exact route -  "), m_info );
+		    OtherItem, i18nc("@info/plain Marker for the first place in a list of "
+				     "intermediate stops, where at least one stop "
+				     "has been omitted",
+				     "  - End of exact route -  "), m_info );
 	    routeItem->appendChild( separatorItem );
 	}
 
@@ -588,7 +601,7 @@ ChildItem* JourneyItem::createRouteItem() {
 		    && m_journeyInfo.routeVehicleTypes()[row] != Unknown)
 	    icon = Global::vehicleTypeToIcon( m_journeyInfo.routeVehicleTypes()[row] );
 	    if ( m_journeyInfo.routeVehicleTypes()[row] == Feet )
-		sTransportLine = i18n("Footway");
+		sTransportLine = i18nc("@info/plain", "Footway");
 	    else if ( m_journeyInfo.routeTransportLines().count() > row )
 		sTransportLine = m_journeyInfo.routeTransportLines()[row];
 	else {
@@ -601,12 +614,12 @@ ChildItem* JourneyItem::createRouteItem() {
 	QString stopArr = m_journeyInfo.routeStops()[row + 1];
 	if ( m_journeyInfo.routePlatformsDeparture().count() > row
 		&& !m_journeyInfo.routePlatformsDeparture()[row].isEmpty() ) {
-	    stopDep = i18n("Platform %1", m_journeyInfo.routePlatformsDeparture()[row])
+	    stopDep = i18nc("@info/plain", "Platform %1", m_journeyInfo.routePlatformsDeparture()[row])
 		    + " - " + stopDep;
 	}
 	if ( m_journeyInfo.routePlatformsArrival().count() > row
 		&& !m_journeyInfo.routePlatformsArrival()[row].isEmpty() ) {
-	    stopArr = i18n("Platform %1", m_journeyInfo.routePlatformsArrival()[row])
+	    stopArr = i18nc("@info/plain", "Platform %1", m_journeyInfo.routePlatformsArrival()[row])
 		    + " - " + stopArr;
 	}
 
@@ -639,20 +652,20 @@ ChildItem* JourneyItem::createRouteItem() {
 	ChildItem *routeStopItem;
 	if ( sTransportLine.isEmpty() ) {
 	    routeStopItem = new ChildItem( OtherItem,
-		    i18nc("%1 is the departure time, %2 the origin stop name, "
-			    "%3 the arrival time, %4 the target stop name.",
-			    "dep: %1 - %2<br>arr: %3 - %4",
-			    sTimeDep, stopDep, sTimeArr, stopArr),
-			    icon, m_info );
+		    i18nc("@info/plain %1 is the departure time, %2 the origin stop name, "
+			  "%3 the arrival time, %4 the target stop name.",
+			  "dep: %1 - %2<br/>arr: %3 - %4",
+			  sTimeDep, stopDep, sTimeArr, stopArr),
+		    icon, m_info );
 	    routeStopItem->setData( 2, LinesPerRowRole );
 	} else {
 	    routeStopItem = new ChildItem( OtherItem,
-		    i18nc("%1 is the departure time, %2 the origin stop name, "
-			    "%3 the arrival time, %4 the target stop name, "
-			    "%5 the transport line.",
-			    "<b>%5</b><br>dep: %1 - %2<br>arr: %3 - %4",
-			    sTimeDep, stopDep, sTimeArr, stopArr,
-			    sTransportLine), icon, m_info );
+		    i18nc("@info/plain %1 is the departure time, %2 the origin stop name, "
+			  "%3 the arrival time, %4 the target stop name, "
+			  "%5 the transport line.",
+			  "<b>%5</b><br/>dep: %1 - %2<br/>arr: %3 - %4",
+			  sTimeDep, stopDep, sTimeArr, stopArr, sTransportLine),
+		    icon, m_info );
 	    routeStopItem->setData( 3, LinesPerRowRole );
 	}
 
@@ -800,7 +813,7 @@ void DepartureItem::updateTimeValues() {
 	    // Get longest line for auto column sizing
 	    QStringList lines = depText.split( '\n', QString::SkipEmptyParts,
 					       Qt::CaseInsensitive );
-	    foreach( QString sCurrent, lines ) {
+	    foreach( const QString &sCurrent, lines ) {
 		if ( sCurrent.length() > longestLine.length() )
 		    longestLine = sCurrent;
 	    }
@@ -842,7 +855,7 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow ) {
     switch ( itemType ) {
 	case PlatformItem:
 	    text = QString("<b>%1</b> %2")
-		.arg( i18nc("The platform from which a tram/bus/train departs", "Platform:") )
+		.arg( i18nc("@info/plain The platform from which a tram/bus/train departs", "Platform:") )
 		.arg( m_departureInfo.platform() );
 	    break;
 	case JourneyNewsItem:
@@ -851,20 +864,20 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow ) {
 		text = QString("<a href='%1'>%2</a>").arg(text)
 			    .arg(i18n("Link to journey news"));
 	    }
-	    text = QString("<b>%1</b> %2").arg( i18nc("News for a journey with public "
+	    text = QString("<b>%1</b> %2").arg( i18nc("@info/plain News for a journey with public "
 		    "transport, like 'platform changed'", "News:") ).arg( text );
 	    // Try to set enough lines to show all text
 	    if ( linesPerRow )
 		*linesPerRow = qMin( 3, text.length() / 25 );
 	    break;
 	case DelayItem:
-	    text = QString("<b>%1</b> %2").arg( i18nc("Information about delays "
+	    text = QString("<b>%1</b> %2").arg( i18nc("@info/plain Information about delays "
 		"of a journey with public transport", "Delay:") )
 		.arg( m_departureInfo.delayText() );
 	    if ( m_departureInfo.delayType() == Delayed ) {
 		text += "<br><b>" + (m_info->departureArrivalListType == ArrivalList
-		    ? i18n("Original arrival time:")
-		    : i18n("Original departure time:")) + "</b> " +
+		    ? i18nc("@info/plain", "Original arrival time:")
+		    : i18nc("@info/plain", "Original departure time:")) + "</b> " +
 		    m_departureInfo.departure().toString("hh:mm");
 		// When there's a delay use two lines
 		if ( linesPerRow )
@@ -873,7 +886,7 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow ) {
 		*linesPerRow = 1;
 	    break;
 	case OperatorItem:
-	    text = QString("<b>%1</b> %2").arg( i18nc("The company that is "
+	    text = QString("<b>%1</b> %2").arg( i18nc("@info/plain The company that is "
 		"responsible for this departure/arrival/journey", "Operator:") )
 		.arg( m_departureInfo.operatorName() );
 	    break;
@@ -882,12 +895,16 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow ) {
 	      && m_departureInfo.routeExactStops() < m_departureInfo.routeStops().count() )
 	    {
 		text = QString("<b>%1</b> %2")
-		    .arg( i18nc("The route of this departure/arrival/journey", "Route:") )
-		    .arg( i18n("> %1 stops", m_departureInfo.routeStops().count()) );
+		    .arg( i18nc("@info/plain The route of this departure/arrival/journey", "Route:") )
+		    .arg( i18nc("@info/plain For routes of departure/arrival items, if "
+				"not all intermediate stops are known", "> %1 stops",
+				m_departureInfo.routeStops().count()) );
 	    } else {
 		text = QString("<b>%1</b> %2")
-		    .arg( i18nc("The route of this departure/arrival/journey", "Route:") )
-		    .arg( i18n("%1 stops", m_departureInfo.routeStops().count()) );
+		    .arg( i18nc("@info/plain The route of this departure/arrival/journey", "Route:") )
+		    .arg( i18nc("@info/plain For routes of departure/arrival items, if "
+				"all intermediate stops are known", "%1 stops",
+				m_departureInfo.routeStops().count()) );
 	    }
 	    break;
 
@@ -908,7 +925,7 @@ ChildItem* DepartureItem::createRouteItem() {
 	// Add a separator item, when the exact route ends
 	if ( row == m_departureInfo.routeExactStops() && row > 0 ) {
 	    ChildItem *separatorItem = new ChildItem(
-		    OtherItem, i18n("  - End of exact route -  "), m_info );
+		    OtherItem, i18nc("@info/plain", "  - End of exact route -  "), m_info );
 	    routeItem->appendChild( separatorItem );
 	}
 
@@ -1159,10 +1176,10 @@ QVariant JourneyModel::headerData( int section, Qt::Orientation orientation,
 				   int role ) const {
     if ( orientation == Qt::Horizontal && role == Qt::DisplayRole ) {
 	switch ( section ) {
-	    case 0: return i18nc( "A public transport line", "Line" );
-	    case 1: return i18nc("Information about a journey with public transport", "Information");
-	    case 2: return i18nc("Time of departure of a tram or bus", "Departure");
-	    case 3: return i18nc("Time of arrival of a tram or bus", "Arrival");
+	    case 0: return i18nc("@title:column A public transport line", "Line" );
+	    case 1: return i18nc("@title:column Information about a journey with public transport", "Information");
+	    case 2: return i18nc("@title:column Time of departure of a tram or bus", "Departure");
+	    case 3: return i18nc("@title:column Time of arrival of a tram or bus", "Arrival");
 	}
     }
 
@@ -1361,7 +1378,7 @@ void DepartureModel::update() {
 	m_nextItem = findNextItem();
     }
 
-    // Update departure column if neccessary
+    // Update departure column if necessary
     if ( m_info.showRemainingMinutes ) {
 	foreach ( ItemBase *item, m_items )
 	    item->updateTimeValues();
@@ -1421,17 +1438,17 @@ QVariant DepartureModel::headerData( int section, Qt::Orientation orientation,
 				     int role ) const {
     if ( orientation == Qt::Horizontal && role == Qt::DisplayRole ) {
 	switch ( section ) {
-	    case 0: return i18nc( "A public transport line", "Line" );
+	    case 0: return i18nc("@title:column A public transport line", "Line");
 	    case 1:
 		if ( m_info.departureArrivalListType == DepartureList )
-		    return i18nc("Target of a tramline or busline", "Target");
+		    return i18nc("@title:column Target of a tramline or busline", "Target");
 		else
-		    return i18nc("Origin of a tramline or busline", "Origin");
+		    return i18nc("@title:column Origin of a tramline or busline", "Origin");
 	    case 2:
 		if ( m_info.departureArrivalListType == DepartureList )
-		    return i18nc("Time of departure of a tram or bus", "Departure");
+		    return i18nc("@title:column Time of departure of a tram or bus", "Departure");
 		else
-		    return i18nc("Time of arrival of a tram or bus", "Arrival");
+		    return i18nc("@title:column Time of arrival of a tram or bus", "Arrival");
 	}
     }
 

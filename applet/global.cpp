@@ -245,38 +245,52 @@ QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural
     switch ( vehicleType )
     {
 	case Tram:
-	    return plural ? i18n("trams") :i18n ("tram");
+	    return plural ? i18nc("@info/plain", "trams")
+			  : i18nc("@info/plain", "tram");
 	case Bus:
-	    return plural ? i18n("buses") : i18n("bus");
+	    return plural ? i18nc("@info/plain", "buses")
+			  : i18nc("@info/plain", "bus");
 	case Subway:
-	    return plural ? i18n("subways") : i18n("subway");
+	    return plural ? i18nc("@info/plain", "subways")
+			  : i18nc("@info/plain", "subway");
 	case TrainInterurban:
-	    return plural ? i18n("interurban trains") : i18n("interurban train");
+	    return plural ? i18nc("@info/plain", "interurban trains")
+			  : i18nc("@info/plain", "interurban train");
 	case Metro:
-	    return plural ? i18n("metros") : i18n("metro");
+	    return plural ? i18nc("@info/plain", "metros")
+			  : i18nc("@info/plain", "metro");
 	case TrolleyBus:
-	    return plural ? i18n("trolley buses") : i18n("trolley bus");
+	    return plural ? i18nc("@info/plain", "trolley buses")
+			  : i18nc("@info/plain", "trolley bus");
 
 	case TrainRegional:
-	    return plural ? i18n("regional trains") : i18n("regional train");
+	    return plural ? i18nc("@info/plain", "regional trains")
+			  : i18nc("@info/plain", "regional train");
 	case TrainRegionalExpress:
-	    return plural ? i18n("regional express trains") : i18n("regional express");
+	    return plural ? i18nc("@info/plain", "regional express trains")
+			  : i18nc("@info/plain", "regional express train");
 	case TrainInterregio:
-	    return plural ? i18n("interregional trains") : i18n("interregional train" );
+	    return plural ? i18nc("@info/plain", "interregional trains")
+			  : i18nc("@info/plain", "interregional train" );
 	case TrainIntercityEurocity:
-	    return plural ? i18n("intercity / eurocity trains") : i18n("intercity / eurocity");
+	    return plural ? i18nc("@info/plain", "intercity / eurocity trains")
+			  : i18nc("@info/plain", "intercity / eurocity train");
 	case TrainIntercityExpress:
-	    return plural ? i18n("intercity express trains") : i18n("intercity express");
+	    return plural ? i18nc("@info/plain", "intercity express trains")
+			  : i18nc("@info/plain", "intercity express train");
 
 	case Feet:
-	    return i18n("Footway");
+	    return i18nc("@info/plain", "Footway");
 	    
 	case Ferry:
-	    return plural ? i18n("ferries") : i18n("ferry");
+	    return plural ? i18nc("@info/plain", "ferries")
+			  : i18nc("@info/plain", "ferry");
 	case Ship:
-	    return plural ? i18n("ships") : i18n("ship");
+	    return plural ? i18nc("@info/plain", "ships")
+			  : i18nc("@info/plain", "ship");
 	case Plane:
-	    return plural ? i18n("planes") : i18n("plane");
+	    return plural ? i18nc("@info/plain airplanes", "planes")
+			  : i18nc("@info/plain an airplane", "plane");
 
 	case Unknown:
 	default:
@@ -297,7 +311,7 @@ QString Global::durationString ( int seconds ) {
     else if (minutes > 0)
 	return i18np("%1 minute", "%1 minutes", minutes);
     else
-	return i18n("now");
+	return i18nc("@info/plain Used as duration string if the duration is less than a minute", "now");
 }
 
 QColor Global::textColorOnSchedule() {

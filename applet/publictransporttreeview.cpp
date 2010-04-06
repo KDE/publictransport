@@ -124,7 +124,8 @@ TreeView::TreeView( QStyle* style ) : QTreeView() {
     m_bottomFadeTile = createFadeTile( Qt::black, Qt::transparent );
 
     // Set initial no-items-text
-    m_noItemsText = i18n( "No items." );
+    m_noItemsText = i18nc( "@info/plain Displayed in the view if no items are contained", 
+			   "No items." );
 }
 
 void TreeView::setNoItemsText( const QString& noItemsText ) {

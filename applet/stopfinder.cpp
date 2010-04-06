@@ -155,7 +155,7 @@ void StopFinder::processGeolocationData( const Plasma::DataEngine::Data& data ) 
     Plasma::DataEngine::Data dataProvider =
 	    m_publicTransportEngine->query("ServiceProvider " + m_countryCode);
     if ( dataProvider.isEmpty() ) {
-	QString errorMessage = i18n( "There's no supported "
+	QString errorMessage = i18nc( "@info", "There's no supported "
 		"service provider for the country you're currently in (%1).\n"
 		"You can try service providers for other countries, as some of "
 		"them also provide data for adjacent countries.",
@@ -177,7 +177,7 @@ void StopFinder::processGeolocationData( const Plasma::DataEngine::Data& data ) 
 	} else {
 	    kDebug() << "OSM engine not available";
 	    emit error( OpenStreetMapDataEngineNotAvailable,
-			i18n("OpenStreetMap data engine not available") );
+			i18nc("@info", "OpenStreetMap data engine not available") );
 	    emit finished();
 	    if ( m_deletionPolicy == DeleteWhenFinished )
 		deleteLater();
@@ -210,7 +210,7 @@ bool StopFinder::processOpenStreetMapData( const Plasma::DataEngine::Data& data 
 	if ( m_mode == StopNamesFromOSM ) {
 	    if ( stops.isEmpty() ) {
 		kDebug() << "No stops found by OSM for the given position";
-		emit error( NoStopsFound, i18n("No stops found by OpenStreetMap "
+		emit error( NoStopsFound, i18nc("@info", "No stops found by OpenStreetMap "
 			"for the given position") );
 	    }
 	    emit finished();

@@ -56,20 +56,16 @@ void DataSourceTester::dataUpdated( const QString& sourceName, const Plasma::Dat
 
     // Check for errors from the data engine
     if ( data.value("error").toBool() ) {
-	emit testResult( Error, i18n("The stop name is invalid."), QVariant(), QVariant() );
-	// setStopNameValid( false, i18n("The stop name is invalid.") );
-	// m_ui.stop->setCompletedItems( QStringList() );
+	emit testResult( Error, i18nc("@info/plain", "The stop name is invalid."), QVariant(), QVariant() );
     } else {
 	// Check if we got a possible stop list or a journey list
 	if ( data.value("receivedPossibleStopList").toBool() ) {
 	    processTestSourcePossibleStopList( data );
-	    // 	    emit testResult( Error, i18n("The stop name is ambiguous."), QVariant() );
-// 	    setStopNameValid( false, i18n("The stop name is ambiguous.") );
+	    // 	    emit testResult( Error, i18nc("@info/plain", "The stop name is ambiguous."), QVariant() );
 	} else {
 	    // List of journeys received
 	    disconnectTestSource();
 	    emit testResult( JourneyListReceived, QVariant(), QVariant(), QVariant() );
-// 	    setStopNameValid( true );
 	}
     }
 }

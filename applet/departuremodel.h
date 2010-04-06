@@ -63,7 +63,7 @@ struct Info {
 
 /** Child item types. */
 enum ItemType {
-    OtherItem, /**< For childs of child items. */
+    OtherItem, /**< For children of child items. */
     PlatformItem, /**< The item contains the platform */
     JourneyNewsItem, /**< The item contains the journey news */
     DelayItem, /**< The item contains the delay */
@@ -261,7 +261,7 @@ class JourneyItem : public TopLevelItem {
 	void updateValues();
 	/** Creates and adds all children for the current data. */
 	void createChildren();
-	/** Updates all child items, add/removes children if neccessary. */
+	/** Updates all child items, add/removes children if necessary. */
 	void updateChildren();
 	/** Adds a new child item of the given @p itemType. */
 	ChildItem *appendNewChild( ItemType itemType );
@@ -336,7 +336,7 @@ class DepartureItem : public QObject, public TopLevelItem {
 	void updateValues();
 	/** Creates and adds all children for the current data. */
 	void createChildren();
-	/** Updates all child items, add/removes children if neccessary. */
+	/** Updates all child items, add/removes children if necessary. */
 	void updateChildren();
 	/** Adds a new child item of the given @p itemType. */
 	ChildItem *appendNewChild( ItemType itemType );

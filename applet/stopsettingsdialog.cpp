@@ -69,7 +69,7 @@ class NearStopsDialog : public KDialog {
 	    m_listView->setSelectionMode( QAbstractItemView::SingleSelection );
 	    m_listView->setEditTriggers( QAbstractItemView::NoEditTriggers );
 	    m_listModel = new QStringListModel( QStringList()
-			    << i18n("Please Wait..."), this );
+			    << i18nc("@item:inlistbox", "Please Wait..."), this );
 	    m_listView->setModel( m_listModel );
 	    layout->addWidget( m_label );
 	    layout->addWidget( m_listView );
@@ -135,12 +135,12 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
 	      m_modelLocationServiceProviders(0),
 	      m_publicTransportEngine( publicTransportEngine ),
 	      m_osmEngine( osmEngine ), m_geolocationEngine( geolocationEngine ) {
-    setWindowTitle( i18n("Change Stop(s)") );
+    setWindowTitle( i18nc("@title:window", "Change Stop(s)") );
     m_uiStop.setupUi( mainWidget() );
 
     setButtons( Ok | Cancel | Details | User1 );
     setButtonIcon( User1, KIcon("tools-wizard") );
-    setButtonText( User1, i18n("Nearby Stops...") );
+    setButtonText( User1, i18nc("@action:button", "Nearby Stops...") );
     
     QWidget *detailsWidget = new QWidget( this );
     m_uiStopDetails.setupUi( detailsWidget );
@@ -167,14 +167,19 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(stopAdded(QWidget*)) );
     connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(adjustStopListLayout()) );
     connect( m_stopList, SIGNAL(removed(QWidget*)), this, SLOT(adjustStopListLayout()) );
-    m_stopList->setLabelTexts( i18n("Combined Stop") + " %1:", QStringList() << "Stop:" );
+    m_stopList->setLabelTexts( i18nc("@info/plain Label for the read only text labels containing "
+	    "additional stop names, which are combined with other defined stops "
+	    "(showing departures/arrivals of all combined stops)",
+	    "Combined Stop") + " %1:", QStringList() << "Stop:" );
     m_stopList->setWidgetCountRange( 1, 3 );
     if ( m_stopList->addButton() ) {
-	m_stopList->addButton()->setToolTip( i18n("Add another stop.\n"
-		"The departures/arrivals of all stops get combined.") );
+	m_stopList->addButton()->setToolTip( i18nc("@info:tooltip",
+		"<subtitle>Add another stop.</subtitle><para>"
+		"The departures/arrivals of all stops get combined.</para>") );
     }
-    m_stopList->setWhatsThis( i18n("All departures/arrivals for these stops get "
-	    "<b>displayed combined</b> in the applet.<br>"
+    m_stopList->setWhatsThis( i18nc("@info:whatsthis",
+	    "All departures/arrivals for these stops get <emphasis>displayed "
+	    "combined</emphasis> in the applet.<nl/>"
 	    "To add a stop that doesn't get combined with others use the 'Add Stop' "
 	    "button of the main settings dialog.") );
     
@@ -188,10 +193,11 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     m_uiStopDetails.filterConfiguration->addItems( filterConfigurations );
 
     QMenu *menu = new QMenu( this );
-    menu->addAction( KIcon("get-hot-new-stuff"), i18n("Get new service providers..."),
+    menu->addAction( KIcon("get-hot-new-stuff"), i18nc("@action:inmenu",
+						       "Get new service providers..."),
 		     this, SLOT(downloadServiceProvidersClicked()) );
     menu->addAction( KIcon("text-xml"),
-		     i18n("Install new service provider from local file..."),
+		     i18nc("@action:inmenu", "Install new service provider from local file..."),
 		     this, SLOT(installServiceProviderClicked()) );
     m_uiStopDetails.downloadServiceProviders->setMenu( menu );
     m_uiStopDetails.downloadServiceProviders->setIcon( KIcon("list-add") );
@@ -381,9 +387,9 @@ void StopSettingsDialog::stopFinderFinished() {
 	QString city = dataGeo["city"].toString();
 
 	KMessageBox::information( this,
-		i18n("No stop could be found for your current position (%2 in %1).\n"
-		     "This doesn't mean that there is no public transport "
-		     "stop near you. Try setting the stop name manually.",
+		i18nc("@info", "No stop could be found for your current position (%2 in %1).\n"
+		     "<note>This doesn't mean that there is no public transport "
+		     "stop near you. Try setting the stop name manually.</note>",
 		KGlobal::locale()->countryCodeToName(country), city) );
     }
 }
@@ -401,11 +407,11 @@ void StopSettingsDialog::stopFinderFoundStops( const QStringList& stops,
 void StopSettingsDialog::stopFinderGeolocationData( const QString& countryCode,
 	const QString& city, qreal /*latitude*/, qreal /*longitude*/, int accuracy ) {
     m_nearStopsDialog = new NearStopsDialog( accuracy > 10000
-	    ? i18n("These stops <b>may</b> be near you, but your position "
+	    ? i18nc("@info", "These stops <b>may</b> be near you, but your position "
 		"couldn't be determined exactly (city: %1, country: %2). "
 		"Choose one of them or cancel.",
 		city, KGlobal::locale()->countryCodeToName(countryCode))
-	    : i18n("These stops have been found to be near you (city: %1, "
+	    : i18nc("@info", "These stops have been found to be near you (city: %1, "
 		"country: %2). Choose one of them or cancel.",
 		city, KGlobal::locale()->countryCodeToName(countryCode)),
 	    this );
@@ -461,7 +467,7 @@ void StopSettingsDialog::accept() {
     QStringList stops = m_stopList->lineEditTexts();
     int indexOfFirstEmpty = stops.indexOf( QString() );
     if ( indexOfFirstEmpty != -1 ) {
-	KMessageBox::information( this, i18n("Empty stop names are not allowed.") );
+	KMessageBox::information( this, i18nc("@info", "Empty stop names are not allowed.") );
 	m_stopList->lineEditWidgets()[ indexOfFirstEmpty ]->setFocus();
     } else {
 	KDialog::accept();
@@ -663,7 +669,7 @@ void StopSettingsDialog::clickedServiceProviderInfo() {
     infoDialog->setModal( true );
     infoDialog->setButtons( KDialog::Ok );
     infoDialog->setMainWidget( widget );
-    infoDialog->setWindowTitle( i18n("Service provider info") );
+    infoDialog->setWindowTitle( i18nc("@title:window", "Service Provider Information") );
     infoDialog->setWindowIcon( KIcon("help-about") );
 
     QVariantHash serviceProviderData = m_modelLocationServiceProviders->index(
@@ -674,7 +680,8 @@ void StopSettingsDialog::clickedServiceProviderInfo() {
     m_uiAccessorInfo.icon->setPixmap( favIcon.pixmap(32) );
     m_uiAccessorInfo.serviceProviderName->setText(
 	    m_uiStop.serviceProvider->currentText() );
-    m_uiAccessorInfo.version->setText( i18n("Version %1", serviceProviderData["version"].toString()) );
+    m_uiAccessorInfo.version->setText( i18n("@info/plain Version %1",
+					    serviceProviderData["version"].toString()) );
     m_uiAccessorInfo.url->setUrl( serviceProviderData["url"].toString() );
     m_uiAccessorInfo.url->setText( QString("<a href='%1'>%1</a>").arg(
 	    serviceProviderData["url"].toString() ) );
@@ -701,7 +708,8 @@ void StopSettingsDialog::clickedServiceProviderInfo() {
 	m_uiAccessorInfo.author->setText( QString("<a href='mailto:%2'>%1</a>")
 		.arg( serviceProviderData["author"].toString() )
 		.arg( serviceProviderData["email"].toString() ) );
-	m_uiAccessorInfo.author->setToolTip( i18n("Write an email to %1 <%2>",
+	m_uiAccessorInfo.author->setToolTip( i18nc("@info",
+		"Write an email to <email address='%2'>%1</email>",
 		serviceProviderData["author"].toString(),
 		serviceProviderData["email"].toString()) );
     }
@@ -713,7 +721,7 @@ void StopSettingsDialog::clickedServiceProviderInfo() {
 
 void StopSettingsDialog::downloadServiceProvidersClicked(  ) {
     if ( KMessageBox::warningContinueCancel(this,
-	    i18n("The downloading may currently not work as expected, sorry."))
+	    i18nc("@info", "The downloading may currently not work as expected, sorry."))
 	    == KMessageBox::Cancel )
 	return;
 

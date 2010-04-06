@@ -10,6 +10,9 @@
     <height>328</height>
    </rect>
   </property>
+  <property name="windowTitle">
+   <string notr="true"/>
+  </property>
   <layout class="QFormLayout" name="formLayout">
    <property name="fieldGrowthPolicy">
     <enum>QFormLayout::ExpandingFieldsGrow</enum>
@@ -39,7 +42,7 @@
    <item row="1" column="0">
     <widget class="QLabel" name="lblSize">
      <property name="text">
-      <string>&amp;Size:</string>
+      <string comment="@label:slider">&amp;Size:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -54,14 +57,14 @@
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>Small</string>
+        <string comment="@item:inrange Small size of the applet, shown at the side of the size slider">Small</string>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QSlider" name="size">
        <property name="toolTip">
-        <string>Sets the size of the applet. Make it big if you want to use the applet fullscreen.</string>
+        <string comment="@item:tooltip">Sets the size of the applet. Make it big if you want to use the applet fullscreen.</string>
        </property>
        <property name="minimum">
         <number>0</number>
@@ -89,7 +92,7 @@
      <item>
       <widget class="QLabel" name="label_2">
        <property name="text">
-        <string>Big</string>
+        <string comment="@item:inrange Big size of the applet, shown at the side of the size slider">Big</string>
        </property>
       </widget>
      </item>
@@ -98,7 +101,7 @@
    <item row="2" column="0">
     <widget class="QLabel" name="lblLinesPerRow">
      <property name="text">
-      <string>&amp;Lines per Row:</string>
+      <string comment="@label:spinbox">&amp;Lines per Row:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -117,10 +120,10 @@
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>The number of lines for each departure / arrival.</string>
+      <string comment="@info:tooltip">The number of lines for each departure / arrival.</string>
      </property>
      <property name="whatsThis">
-      <string>How many lines should be used for a single departure in the list.</string>
+      <string comment="@info:whatsthis">How many lines should be used for a single departure in the list.</string>
      </property>
      <property name="value">
       <number>2</number>
@@ -145,7 +148,7 @@
    <item row="3" column="0">
     <widget class="QLabel" name="lblFont">
      <property name="text">
-      <string>Font:</string>
+      <string comment="@label">Font:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -168,7 +171,7 @@
    <item row="4" column="1">
     <widget class="QRadioButton" name="radioUseOtherFont">
      <property name="text">
-      <string>Other:</string>
+      <string comment="Text of the radio button to use a custom font">Other:</string>
      </property>
     </widget>
    </item>
@@ -202,7 +205,7 @@
    <item row="6" column="0">
     <widget class="QLabel" name="lblFont_2">
      <property name="text">
-      <string>Shadow:</string>
+      <string comment="@label">Shadow:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -221,7 +224,7 @@
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>Whether or not departure / arrival times should be bold.</string>
+      <string comment="@info:tooltip">Whether or not departure / arrival times should be bold.</string>
      </property>
      <property name="text">
       <string/>
@@ -263,7 +266,7 @@
    <item row="9" column="0">
     <widget class="QLabel" name="lblcmbDepartureColumnInfos">
      <property name="text">
-      <string>&amp;Information Shown:</string>
+      <string comment="@label:listbox">&amp;Information Shown:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -275,9 +278,6 @@
    </item>
    <item row="9" column="1">
     <widget class="KComboBox" name="cmbDepartureColumnInfos">
-     <property name="toolTip">
-      <string/>
-     </property>
      <property name="autoCompletion">
       <bool>false</bool>
      </property>
@@ -301,7 +301,7 @@
    <item row="10" column="0">
     <widget class="QLabel" name="lblDisplayTimeBold">
      <property name="text">
-      <string>Display Time &amp;Bold:</string>
+      <string comment="@label">Display Time &amp;Bold:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -320,7 +320,7 @@
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>Whether or not departure / arrival times should be bold.</string>
+      <string comment="@info:tooltip">Whether or not departure / arrival times should be bold.</string>
      </property>
      <property name="text">
       <string/>

@@ -17,7 +17,7 @@
    <item row="0" column="0">
     <widget class="QLabel" name="lblUpdateAutomatically">
      <property name="text">
-      <string>Update &amp;Automatically:</string>
+      <string comment="@label">Update &amp;Automatically:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -52,7 +52,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Default View:</string>
+      <string comment="@label">Default View:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -109,7 +109,7 @@
    <item row="2" column="0">
     <widget class="QLabel" name="lblMaximalNumberOfDepartures">
      <property name="text">
-      <string>&amp;Maximum Departures:</string>
+      <string comment="@label">&amp;Maximum Departures:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -128,7 +128,7 @@
       </sizepolicy>
      </property>
      <property name="whatsThis">
-      <string>Here you can set how many departures should maximally be shown. It could be less, depending on the service provider.</string>
+      <string comment="@info:whatsthis">Here you can set how many departures should maximally be shown. It could be less, depending on the service provider.</string>
      </property>
      <property name="specialValueText">
       <string/>

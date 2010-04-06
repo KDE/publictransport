@@ -286,7 +286,7 @@ struct Settings {
 	return stopSettingsList[ currentStopSettingsIndex ];
     };
 
-    /** This crashes with invalid stop settings index.
+    /** @warning This crashes with invalid stop settings index.
     * @see isCurrentStopSettingsIndexValid */
     StopSettings &currentStopSettings() {
 	Q_ASSERT_X( isCurrentStopSettingsIndexValid(), "StopSettings::currentStopSettings",

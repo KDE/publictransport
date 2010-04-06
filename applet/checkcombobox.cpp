@@ -32,8 +32,10 @@ class CheckComboboxPrivate {
 	    allowNoCheck = true;
 	    multipleSelectionOptions = CheckCombobox::ShowIconList;
 	    separator = ", ";
-	    noSelectionText = i18n( "(none)" );
-	    allSelectedText = i18n( "(all)" );
+	    noSelectionText = i18nc( "@info/plain Default text of a CheckCombobox "
+		    "if no item is checked", "(none)" );
+	    allSelectedText = i18nc( "@info/plain Default text of a CheckCombobox "
+		    "if all items are checked", "(all)" );
 	};
 	
 	bool allowNoCheck;

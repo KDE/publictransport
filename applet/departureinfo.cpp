@@ -184,7 +184,7 @@ QString JourneyInfo::durationToDepartureString( bool toArrival ) const {
 	    toArrival ? m_arrival : m_departure );
     int totalMinutes = qCeil( (qreal)totalSeconds / 60.0 );
     if ( totalMinutes < 0 )
-    	return i18n("already left");
+	return i18nc("@info/plain", "already left");
     else
 	return KGlobal::locale()->prettyFormatDuration( (ulong)(totalMinutes * 60000) );
 }
@@ -197,11 +197,11 @@ QString DepartureInfo::durationString( bool showDelay ) const {
     int totalSeconds = QDateTime::currentDateTime().secsTo( predictedDeparture() );
     int totalMinutes = qCeil( (qreal)totalSeconds / 60.0 );
     if ( totalMinutes < 0 )
-	return i18n("already left");
+	return i18nc("@info/plain", "already left");
 
     QString sDuration;
     if ( totalMinutes == 0 )
-	sDuration = i18n("now");
+	sDuration = i18nc("@info/plain", "now");
     else
 	sDuration = KGlobal::locale()->prettyFormatDuration( totalMinutes * 60000 );
 
@@ -278,7 +278,7 @@ void JourneyInfo::generateHash() {
 QString DepartureInfo::formatDateFancyFuture( const QDate& date ) {
     int dayDiff = QDate::currentDate().daysTo( date );
     if ( dayDiff == 1 )
-	return i18n( "tomorrow" );
+	return i18nc("@info/plain Used for fancy formatted dates in the future.", "tomorrow");
     else if ( dayDiff <= 6 )
 	return date.toString( "ddd" );
     else
@@ -289,11 +289,11 @@ QString DepartureInfo::delayText() const {
     QString sText;
     DelayType type = delayType();
     if ( type == OnSchedule ) {
-	sText = i18nc("A public transport vehicle departs on schedule", "On schedule");
+	sText = i18nc("@info/plain A public transport vehicle departs on schedule", "On schedule");
 	sText = sText.prepend( QString("<span style='color:%1;'>")
 		     .arg(Global::textColorOnSchedule().name()) ).append( "</span>" );
     } else if ( type == Delayed ) {
-	sText = i18np("+%1 minute", "+%1 minutes", delay());
+	sText = i18ncp("@info/plain", "+%1 minute", "+%1 minutes", delay());
 	sText = sText.replace( QRegExp("(+?\\s*\\d+)"),
 		QString("<span style='color:%1;'>+&nbsp;\\1</span>")
 		.arg(Global::textColorDelayed().name()) );
@@ -302,7 +302,7 @@ QString DepartureInfo::delayText() const {
 	    sText += ", " + delayReason();
 	}
     } else { // DelayUnknown:
-	sText = i18n("No information available");
+	sText = i18nc("@info/plain", "No information available");
     }
     
     return sText;

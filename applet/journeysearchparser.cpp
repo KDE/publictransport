@@ -163,7 +163,7 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
 	    bool correctString ) {
     kDebug() << search;
     // Initialize output parameters
-    *stop = QString();
+    stop->clear();
     *departure = QDateTime();
     *stopIsTarget = true;
     *timeIsDeparture = true;
@@ -522,10 +522,10 @@ void JourneySearchParser::parseDateAndTime( const QString& sDateTime,
 }
 
 bool JourneySearchParser::parseDate( const QString& sDate, QDate* date ) {
-    if ( sDate == i18n("today") ) {
+    if ( sDate == i18nc("@info/plain Used as date keyword in the journey search string", "today") ) {
 	*date = QDate::currentDate();
 	return true;
-    } else if ( sDate == i18n("tomorrow") ) {
+    } else if ( sDate == i18nc("@info/plain Used as date keyword in the journey search string", "tomorrow") ) {
 	*date = QDate::currentDate().addDays( 1 );
 	return true;
     }
@@ -536,10 +536,10 @@ bool JourneySearchParser::parseDate( const QString& sDate, QDate* date ) {
 	// Allow date input without year
 	if ( sDate.count('-') == 1 ) { // like 12-31
 	    *date = KGlobal::locale()->readDate(
-		    QDate::currentDate().toString("yy") + "-" + sDate, &ok );
+		    QDate::currentDate().toString("yy") + '-' + sDate, &ok );
 	} else if ( sDate.count('.') == 1 ) { // like 31.12
 	    *date = KGlobal::locale()->readDate(
-		    sDate + "." + QDate::currentDate().toString("yy"), &ok );
+		    sDate + '.' + QDate::currentDate().toString("yy"), &ok );
 	} else if ( sDate.count('.') == 2 && sDate.endsWith('.') ) { // like 31.12.
 	    *date = KGlobal::locale()->readDate(
 		    sDate + QDate::currentDate().toString("yy"), &ok );
@@ -552,7 +552,7 @@ bool JourneySearchParser::parseDate( const QString& sDate, QDate* date ) {
 }
 
 bool JourneySearchParser::parseTime( const QString& sTime, QTime* time ) {
-    if ( sTime == i18n("now") ) {
+    if ( sTime == i18nc("@info/plain", "now") ) {
 	*time = QTime::currentTime();
 	return true;
     }

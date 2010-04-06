@@ -48,20 +48,19 @@ StopWidget::StopWidget( const StopSettings& stopSettings,
     QFormLayout *infoLayout = new QFormLayout;
     m_stop = new QLabel( this );
     m_provider = new QLabel( this );
-//     m_filterConfiguration = new QLabel( this );
 
     m_stop->setWordWrap( true );
     m_provider->setWordWrap( true );
-//     m_filterConfiguration->setWordWrap( true );
     m_stop->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
 
-    infoLayout->addRow( stopSettings.stops.count() > 1 ? i18n("Stops:")
-                        : i18n("Stop:"), m_stop );
-    infoLayout->addRow( i18n("Service Provider:"), m_provider );
-//     infoLayout->addRow( i18n("Filter Configuration:"), m_filterConfiguration );
+    infoLayout->addRow( i18ncp("@info Label for the read only text label containing the "
+			"stop name", "Stop:", "Stops:", stopSettings.stops.count()),
+			m_stop );
+    infoLayout->addRow( i18nc("@info Label for the read only text label containing the "
+			"service provider name", "Service Provider:"), m_provider );
 
     KPushButton *change = new KPushButton( KIcon("configure"),
-                                           i18n("&Change..."), this );
+                                           i18nc("@action:button", "&Change..."), this );
     connect( change, SIGNAL(clicked()), this, SLOT(changeClicked()) );
 
     QHBoxLayout *mainLayout = new QHBoxLayout( this );
@@ -71,10 +70,10 @@ StopWidget::StopWidget( const StopSettings& stopSettings,
 
 void StopWidget::setStopSettings( const StopSettings& stopSettings ) {
     m_stop->setText( stopSettings.city.isEmpty()
-                     ? stopSettings.stops.join(",\n")
-                     : i18nc("Shown in the basic config page for the current stop "
-                             "(%1: stop name(s), %2: city)", "%1 in %2",
-                             stopSettings.stops.join(",\n"), stopSettings.city) );
+	? stopSettings.stops.join(",\n")
+	: i18nc("@info Shown in the basic config page for the current stop "
+		"(%1: stop name(s), %2: city)", "%1 in %2",
+		stopSettings.stops.join(",<nl/>"), stopSettings.city) );
 
     QModelIndexList indices = m_modelServiceProviders->match(
                                   m_modelServiceProviders->index(0, 0),
@@ -85,9 +84,6 @@ void StopWidget::setStopSettings( const StopSettings& stopSettings ) {
         m_provider->setText( "-" );
     } else
         m_provider->setText( indices.first().data().toString() );
-
-//     m_filterConfiguration->setText( SettingsUiManager::translateKey(
-// 				stopSettings.filterConfiguration) );
 
     m_stopSettings = stopSettings;
     m_newlyAdded = false;
@@ -145,7 +141,7 @@ StopListWidget::StopListWidget( const StopSettingsList& stopSettingsList,
 	      m_publicTransportEngine( publicTransportEngine ),
 	      m_osmEngine( osmEngine ), m_geolocationEngine( geolocationEngine ) {
     addButton()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-    addButton()->setText( i18n("&Add Stop") );
+    addButton()->setText( i18nc("@action:button", "&Add Stop") );
 
     m_currentStopIndex = -1;
     setStopSettingsList( stopSettingsList );
