@@ -116,7 +116,7 @@ PublicTransport::~PublicTransport() {
 void PublicTransport::init() {
     m_settings = SettingsIO::readSettings( config(), globalConfig() );
 
-    // Create the worker thread
+    // Create and connect the worker thread
     m_departureProcessor = new DepartureProcessor( this );
     connect( m_departureProcessor, SIGNAL(beginDepartureProcessing(QString)),
 	     this, SLOT(beginDepartureProcessing(QString)) );
@@ -128,8 +128,7 @@ void PublicTransport::init() {
     connect( m_departureProcessor,
 	     SIGNAL(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)),
 	     this, SLOT(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)) );
-    connect( m_departureProcessor,
-	     SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)),
+    connect( m_departureProcessor, SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)),
 	     this, SLOT(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)) );
     
     // Load stops/filters from non-global settings (they're stored in the global
@@ -148,6 +147,7 @@ void PublicTransport::init() {
 		currentServiceProviderData()["features"].toStringList();
     }
 
+    // Set icon and text of the default "run associated application" action
     if ( QAction *runAction = action("run associated application") ) {
 	runAction->setText( i18nc("@item:inmenu", "&Show in Web-Browser") );
 
@@ -229,7 +229,7 @@ void PublicTransport::noItemsTextClicked() {
 
 void PublicTransport::setupActions() {
     QAction *actionUpdate = new QAction( KIcon("view-refresh"),
-					 i18nc("@action:inmenu", "&Update timetable"), this );
+			    i18nc("@action:inmenu", "&Update timetable"), this );
     connect( actionUpdate, SIGNAL(triggered()), this, SLOT(updateDataSource()) );
     addAction( "updateTimetable", actionUpdate );
 
@@ -435,6 +435,7 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 	_dateTime = m_lastJourneyDateTime;
     }
 
+    // Build a source name for the publictransport data engine
     if ( requestStopSuggestions ) {
 	m_currentJourneySource = QString( "Stops %1|stop=%2" )
 		.arg( m_settings.currentStopSettings().serviceProviderID )
@@ -490,7 +491,8 @@ void PublicTransport::reconnectSource() {
     QStringList stopIDs = curStopSettings.stopIDs;
     if ( stopIDs.isEmpty() )
 	stopIDs = stops;
-    
+
+    // Build source names for each (combined) stop for the publictransport data engine
     kDebug() << "Connect" << m_settings.currentStopSettingsIndex << stops;
     QStringList sources;
     m_stopIndexToSourceName.clear();
@@ -537,8 +539,10 @@ void PublicTransport::departuresFiltered( const QString& sourceName,
 					  const QList< DepartureInfo > &newlyNotFiltered ) {
     if ( m_departureInfos.contains(sourceName) )
 	m_departureInfos[ sourceName ] = departures;
-    else
+    else {
 	kDebug() << "Source name not found" << sourceName << "in" << m_departureInfos.keys();
+	return;
+    }
 
     // Remove previously visible and now filtered out departures
     kDebug() << "Remove" << newlyFiltered.count() << "previously unfiltered departures, if they are visible";
@@ -555,6 +559,7 @@ void PublicTransport::departuresFiltered( const QString& sourceName,
     foreach ( const DepartureInfo &departureInfo, newlyNotFiltered )
 	appendDeparture( departureInfo );
 
+    // Limit item count to the maximal number of departure setting
     int delta = m_model->rowCount() - m_settings.maximalNumberOfDepartures;
     if ( delta > 0 )
 	m_model->removeRows( m_settings.maximalNumberOfDepartures, delta );
@@ -569,8 +574,11 @@ void PublicTransport::journeysProcessed( const QString &/*sourceName*/,
 		const QList< JourneyInfo > &journeys, const QUrl &requestUrl,
 		const QDateTime &/*lastUpdate*/ ) {
     #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+    // Set associated app url
     setAssociatedApplicationUrls( associatedApplicationUrls() << requestUrl );
     #endif
+
+    // Append new journeys
     kDebug() << journeys.count() << "journeys received from thread";
     m_journeyInfos << journeys;
     
@@ -588,6 +596,7 @@ void PublicTransport::departuresProcessed( const QString& sourceName,
 	    const QList< DepartureInfo > &departures, const QUrl &requestUrl,
 	    const QDateTime &lastUpdate ) {
     #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+    // Set associated app url
     m_urlDeparturesArrivals = requestUrl;
     if ( testState(ShowingDepartureArrivalList) || testState(ShowingJourneySearch)
 	    || testState(ShowingJourneysNotSupported) )
@@ -714,13 +723,14 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
 void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
 					      const Plasma::DataEngine::Data &data ) {
     bool journeyData = data["parseMode"].toString() == "journeys";
-    if ( journeyData || data.value("parseMode").toString() == "stopSuggestions" ) {
+    if ( journeyData || data["parseMode"].toString() == "stopSuggestions" ) {
 	if ( journeyData )
 	    addState( ReceivedErroneousJourneyData );
 	QVariantHash stopToStopID;
 	QHash< QString, int > stopToStopWeight;
 	QStringList stopSuggestions, weightedStops;
 
+	// Get all stop names, IDs, weights
 	int count = data["count"].toInt(); // The number of received stop suggestions
 	bool hasAtLeastOneWeight = false;
 	for( int i = 0; i < count; ++i ) {
@@ -953,7 +963,8 @@ void PublicTransport::addJourneySearchCompletions() {
 		}
 	    }
 	}
-	
+
+	// Add all suggestions
 	for ( int i = 0; i < suggestions.count(); ++i ) {
 	    QStandardItem *item = new QStandardItem( KIcon("chronometer"),
 		    i18nc("@item:inlistbox/rich",
@@ -1145,6 +1156,7 @@ void PublicTransport::createPopupIcon() {
 
 	QFont font = Plasma::Theme::defaultTheme()->font(Plasma::Theme::DefaultFont);
 
+	// Draw into a 128x128 pixmap
 	QPixmap pixmapIcon128 = KIcon( "public-transport-stop" ).pixmap( 128 );
 	QPixmap pixmapAlarmIcon32 = KIcon( "task-reminder" ).pixmap( 32 );
 	QPainter p128( &pixmapIcon128 );
@@ -1155,19 +1167,20 @@ void PublicTransport::createPopupIcon() {
 	QRect rectText( QPoint(128 - 4 - sizeText.width(),128 - sizeText.height()), sizeText );
 	QRect rectIcon( rectText.left() - 32 - 4,
 			rectText.top() + (rectText.height() - 32) / 2, 32, 32 );
-	p128.drawPixmap( rectIcon, pixmapAlarmIcon32 );
-	p128.drawPixmap( rectText, shadowedText );
+	p128.drawPixmap( rectIcon, pixmapAlarmIcon32 ); // Draw alarm icon
+	p128.drawPixmap( rectText, shadowedText ); // Draw text
 	p128.end();
-
-	QPixmap pixmapIcon48 = KIcon( "public-transport-stop" ).pixmap(48);
-	QPixmap pixmapAlarmIcon13 = KIcon("task-reminder").pixmap(13);
+	
+	// Draw into a 48x48 pixmap
+	QPixmap pixmapIcon48 = KIcon( "public-transport-stop" ).pixmap( 48 );
+	QPixmap pixmapAlarmIcon13 = KIcon("task-reminder").pixmap( 13 );
 	QPainter p48( &pixmapIcon48 );
 	font.setPixelSize( 18 );
 	font.setBold( true );
 	p48.setFont( font );
 	shadowedText = Plasma::PaintUtils::shadowText( text, font );
 	sizeText = QSize( p48.fontMetrics().width(text), p48.fontMetrics().lineSpacing() );
-	rectText = QRect( QPoint(48 - sizeText.width(),48 - sizeText.height()), sizeText );
+	rectText = QRect( QPoint(48 - sizeText.width(), 48 - sizeText.height()), sizeText );
 	rectIcon = QRect( rectText.left() - 11 - 1,
 			  rectText.top() + (rectText.height() - 11) / 2, 13, 13 );
 	rectText.adjust( 0, 2, 0, 2 );
@@ -1243,18 +1256,22 @@ void PublicTransport::configChanged() {
     disconnect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
     addState( SettingsJustChanged );
 
+    // Apply show departures/arrivals setting
     setDepartureArrivalListType( m_settings.departureArrivalListType );
+
+    // Apply header settings
     m_treeView->nativeWidget()->header()->setVisible( m_settings.showHeader );
-    
     if ( testState(ShowingDepartureArrivalList) )
 	m_treeView->nativeWidget()->setColumnHidden( ColumnTarget, m_settings.hideColumnTarget );
-    
+
+    // Get fonts
     QFont font = m_settings.sizedFont();
     int smallPointSize = KGlobalSettings::smallestReadableFont().pointSize() * m_settings.sizeFactor;
     QFont smallFont = font, boldFont = font;
     smallFont.setPointSize( smallPointSize > 0 ? smallPointSize : 1 );
     boldFont.setBold( true );
-    
+
+    // Apply fonts
     m_treeView->setFont( font );
     if ( m_treeViewJourney )
 	m_treeViewJourney->setFont( font );
@@ -1262,6 +1279,7 @@ void PublicTransport::configChanged() {
     m_labelInfo->setFont( smallFont );
     setHeightOfCourtesyLabel();
 
+    // Update indentation and icon sizes to size factor
     m_treeView->nativeWidget()->setIndentation( 20 * m_settings.sizeFactor );
 
     int iconExtend = (testState(ShowingDepartureArrivalList) ? 16 : 32) * m_settings.sizeFactor;
@@ -1270,21 +1288,25 @@ void PublicTransport::configChanged() {
     int mainIconExtend = 32 * m_settings.sizeFactor;
     m_icon->setMinimumSize( mainIconExtend, mainIconExtend );
     m_icon->setMaximumSize( mainIconExtend, mainIconExtend );
-    
+
+    // Update labels
     if ( m_titleType == ShowDepartureArrivalListTitle )
 	m_label->setText( titleText() );
     m_labelInfo->setToolTip( courtesyToolTip() );
     m_labelInfo->setText( infoText() );
 
+    // Update text in the departure/arrival view, if no items are in the model
     TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
     treeView->setNoItemsText( m_settings.filtersEnabled
 	    ? i18nc("@info/plain", "No unfiltered departures.<nl/>You can disable filters "
 	      "to see all departures.")
 	    : i18nc("@info/plain", "No departures.") );
-    
+
+    // Apply shadows setting to the delegate
     HtmlDelegate *htmlDelegate = dynamic_cast< HtmlDelegate* >( m_treeView->nativeWidget()->itemDelegate() );
     htmlDelegate->setOption( HtmlDelegate::DrawShadows, m_settings.drawShadows );
 
+    // Apply filter, first departure and alarm settings to the worker thread
     m_departureProcessor->setFilterSettings( m_settings.currentFilterSettings(),
 					     m_settings.filtersEnabled );
     StopSettings stopSettings = m_settings.currentStopSettings();
@@ -1294,6 +1316,7 @@ void PublicTransport::configChanged() {
 					stopSettings.timeOffsetOfFirstDeparture );
     m_departureProcessor->setAlarmSettings( m_settings.alarmSettings );
 
+    // Apply other settings to the model
     m_model->setLinesPerRow( m_settings.linesPerRow );
     m_model->setSizeFactor( m_settings.sizeFactor );
     m_model->setDepartureColumnSettings( m_settings.displayTimeBold,
@@ -1301,6 +1324,7 @@ void PublicTransport::configChanged() {
     m_model->setAlarmSettings( m_settings.alarmSettings );
     m_model->setAlarmMinsBeforeDeparture( m_settings.currentStopSettings().alarmTime );
 
+    // Limit model item count to the maximal number of departures setting
     if ( m_model->rowCount() > m_settings.maximalNumberOfDepartures ) {
 	m_model->removeRows( m_settings.maximalNumberOfDepartures,
 			     m_model->rowCount() - m_settings.maximalNumberOfDepartures );
@@ -1430,8 +1454,9 @@ KSelectAction* PublicTransport::switchStopAction( QObject *parent,
 
 	// Use a shortened stop name list as display text 
 	// and the complete version as tooltip
-	QAction *action = new QAction( i18nc("@action", "Show Results For '%1'", stopListShort),
-				       parent );
+	QAction *action = m_settings.departureArrivalListType == DepartureList
+	    ? new QAction( i18nc("@action", "Show Departures For '%1'", stopListShort), parent )
+	    : new QAction( i18nc("@action", "Show Arrivals For '%1'", stopListShort), parent );
 	action->setToolTip( stopList );
 	action->setData( i );
 	if ( destroyOverlayOnTrigger )
@@ -1605,12 +1630,16 @@ void PublicTransport::setCurrentStopIndex( QAction* action ) {
 }
 
 void PublicTransport::setShowDepartures() {
+    // Change departure arrival list type in a copy of the settings.
+    // Then write the new settings.
     Settings settings = m_settings;
     settings.departureArrivalListType = DepartureList;
     writeSettings( settings );
 }
 
 void PublicTransport::setShowArrivals() {
+    // Change departure arrival list type in a copy of the settings.
+    // Then write the new settings.
     Settings settings = m_settings;
     settings.departureArrivalListType = ArrivalList;
     writeSettings( settings );
@@ -1628,12 +1657,16 @@ void PublicTransport::switchFilterConfiguration( const QString& newFilterConfigu
 	kDebug() << "Filter" << filterConfig << "not found!";
 	return;
     }
-    
+
+    // Change filter configuration of the current stop in a copy of the settings.
+    // Then write the new settings.
     Settings settings = m_settings;
     settings.currentStopSettings().filterConfiguration = filterConfig;
     SettingsIO::ChangedFlags changed = SettingsIO::writeSettings(
 			    settings, m_settings, config(), globalConfig() );
-    if ( changed.testFlag(SettingsIO::IsChanged) ) {
+
+    // Apply new filter if it has changed (ie. the current stop settings changed)
+    if ( changed.testFlag(SettingsIO::ChangedStopSettings) ) {
 	m_settings = settings;
 	emit configNeedsSaving();
 	emit settingsChanged();
@@ -1647,10 +1680,14 @@ void PublicTransport::switchFilterConfiguration( const QString& newFilterConfigu
 }
 
 void PublicTransport::setFiltersEnabled( bool enable ) {
-    Settings oldSettings = m_settings;
-    m_settings.filtersEnabled = enable;
+    // Change filters enabled in a copy of the settings.
+    // Then write the new settings.
+    Settings settings = m_settings;
+    settings.filtersEnabled = enable;
     SettingsIO::ChangedFlags changed = SettingsIO::writeSettings(
-			    m_settings, oldSettings, config(), globalConfig() );
+			    settings, m_settings, config(), globalConfig() );
+
+    // Apply filter settings if changed
     if ( changed.testFlag(SettingsIO::IsChanged) ) {
 	emit configNeedsSaving();
 	emit settingsChanged();
@@ -1664,12 +1701,15 @@ void PublicTransport::setFiltersEnabled( bool enable ) {
 }
 
 void PublicTransport::iconCloseClicked() {
+    // Go back to the departure/arrival board
     addState( ShowingDepartureArrivalList );
 }
 
 void PublicTransport::journeySearchInputFinished() {
     clearJourneys();
 
+    // Add journey search line to the list of recently used journey searches
+    // and cut recent journey searches if the limit is exceeded
     if ( !m_settings.recentJourneySearches.contains(m_journeySearch->text(), Qt::CaseInsensitive) )
 	m_settings.recentJourneySearches.prepend( m_journeySearch->text() );
     while ( m_settings.recentJourneySearches.count() > MAX_RECENT_JOURNEY_SEARCHES )
@@ -2667,6 +2707,8 @@ void PublicTransport::hideHeader() {
     QTreeView *treeView = m_treeViewJourney ? m_treeViewJourney->nativeWidget() : m_treeView->nativeWidget();
     treeView->header()->setVisible( false );
     
+    // Change show header setting in a copy of the settings.
+    // Then write the new settings.
     Settings settings = m_settings;
     settings.showHeader = false;
     writeSettings( settings );
@@ -2676,18 +2718,24 @@ void PublicTransport::showHeader() {
     QTreeView *treeView = m_treeViewJourney ? m_treeViewJourney->nativeWidget() : m_treeView->nativeWidget();
     treeView->header()->setVisible( true );
     
+    // Change show header setting in a copy of the settings.
+    // Then write the new settings.
     Settings settings = m_settings;
     settings.showHeader = true;
     writeSettings( settings );
 }
 
 void PublicTransport::hideColumnTarget() {
+    // Change hide column target setting in a copy of the settings.
+    // Then write the new settings.
     Settings settings = m_settings;
     settings.hideColumnTarget = true;
     writeSettings( settings );
 }
 
 void PublicTransport::showColumnTarget() {
+    // Change hide column target setting in a copy of the settings.
+    // Then write the new settings.
     Settings settings = m_settings;
     settings.hideColumnTarget = false;
     writeSettings( settings );
@@ -2868,7 +2916,8 @@ void PublicTransport::removeAlarmForDeparture( int row ) {
 	kDebug() << "Couldn't find a matching autogenerated alarm";
 	return;
     }
-    
+
+    // Remove the found alarm
     item->removeAlarm();
     AlarmSettingsList newAlarmSettings = m_settings.alarmSettings;
     newAlarmSettings.removeAt( matchingAlarmSettings );
@@ -2890,8 +2939,10 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
     
     DepartureItem *item = static_cast<DepartureItem*>( m_model->itemFromIndex(modelIndex) );
     DepartureInfo info = *item->departureInfo();
-    AlarmSettings alarm;
     QString departureTime = KGlobal::locale()->formatTime( info.departure().time() );
+
+    // Autogenerate an alarm that only matches the given departure
+    AlarmSettings alarm;
     alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
 			"%1 is the departure time, %2 is the target.",
 			"At %1 to %2", departureTime, info.target() );
@@ -2902,14 +2953,16 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
     alarm.filter.append( Constraint(FilterByVehicleType, FilterIsOneOf,
 				    QVariantList() << info.vehicleType()) );
     alarm.filter.append( Constraint(FilterByTarget, FilterEquals, info.target()) );
+    
+    // Append new alarm in a copy of the settings. Then write the new settings.
     Settings settings = m_settings;
     settings.alarmSettings << alarm;
-    
+    writeSettings( settings );
+
+    // Add the new alarm to the list of alarms that match the given departure
     int index = settings.alarmSettings.count() - 1;
     info.matchedAlarms() << index;
     item->setDepartureInfo( info );
-    
-    writeSettings( settings );
     
     createPopupIcon();
 }
@@ -2927,11 +2980,14 @@ void PublicTransport::alarmFired( DepartureItem* item ) {
 
     QString message;
     if ( minsToDeparture > 0 ) {
-	if ( departureInfo->vehicleType() == Unknown )
+	// Departure is in the future
+	if ( departureInfo->vehicleType() == Unknown ) {
+	    // Vehicle type is unknown
 	    message = i18ncp("@info/plain", "Line %2 to '%3' departs in %1 minute at %4",
 			     "Line %2 to '%3' departs in %1 minutes at %4",
 			     minsToDeparture, sLine, sTarget, predictedDeparture.toString("hh:mm") );
-	else
+	} else {
+	    // Vehicle type is known
 	    message = i18ncp("@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle "
 			     "type name (e.g. tram, subway)",
 			     "The %4 %2 to '%3' departs in %1 minute at %5",
@@ -2939,14 +2995,18 @@ void PublicTransport::alarmFired( DepartureItem* item ) {
 			     minsToDeparture, sLine, sTarget,
 			     Global::vehicleTypeToString(departureInfo->vehicleType()),
 			     predictedDeparture.toString("hh:mm"));
+	}
     }
     else if ( minsToDeparture < 0 ) {
-	if ( departureInfo->vehicleType() == Unknown )
+	// Has already departed
+	if ( departureInfo->vehicleType() == Unknown ) {
+	    // Vehicle type is unknown
 	    message = i18ncp("@info/plain", "Line %2 to '%3' has departed %1 minute ago at %4",
 			    "Line %2 to '%3' has departed %1 minutes ago at %4",
 			    -minsToDeparture, sLine, sTarget,
 			    predictedDeparture.toString("hh:mm"));
-	else
+	} else {
+	    // Vehicle type is known
 	    message = i18ncp("@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle "
 			     "type name (e.g. tram, subway)",
 			     "The %4 %2 to '%3' has departed %1 minute ago at %5",
@@ -2954,17 +3014,22 @@ void PublicTransport::alarmFired( DepartureItem* item ) {
 			     -minsToDeparture, sLine, sTarget,
 			     Global::vehicleTypeToString(departureInfo->vehicleType()),
 			     predictedDeparture.toString("hh:mm"));
+	}
     }
     else {
-	if ( departureInfo->vehicleType() == Unknown )
+	// Departs now
+	if ( departureInfo->vehicleType() == Unknown ) {
+	    // Vehicle type is unknown
 	    message = i18nc("@info/plain", "Line %1 to '%2' departs now at %3",
 			    sLine, sTarget, predictedDeparture.toString("hh:mm"));
-	else
+	} else {
+	    // Vehicle type is known
 	    message = i18nc("@info/plain %1: Line string (e.g. 'U3'), %3: Vehicle "
 			    "type name (e.g. tram, subway)",
 			    "The %3 %1 to '%2' departs now at %4", sLine, sTarget,
 			    Global::vehicleTypeToString(departureInfo->vehicleType()),
 			    predictedDeparture.toString("hh:mm"));
+	}
     }
 
     KNotification::event( KNotification::Warning, message,
@@ -2974,6 +3039,7 @@ void PublicTransport::alarmFired( DepartureItem* item ) {
 
 void PublicTransport::removeAlarms( const AlarmSettingsList &newAlarmSettings,
 				    const QList<int> &/*removedAlarms*/ ) {
+    // Change alarm settings in a copy of the settings. Then write the new settings.
     Settings settings = m_settings;
     settings.alarmSettings = newAlarmSettings;
     writeSettings( settings );
@@ -3075,19 +3141,25 @@ void PublicTransport::fillModel( const QList<DepartureInfo> &departures ) {
     foreach ( const DepartureInfo &departureInfo, departures ) {
 	int row = m_model->indexFromInfo( departureInfo ).row();
 	if ( row == -1 ) {
+	    // Departure wasn't in the model
 	    if ( !modelFilled && !departureInfo.isFilteredOut() ) {
 		appendDeparture( departureInfo );
 		modelFilled = m_model->rowCount() >= m_settings.maximalNumberOfDepartures;
 	    }
 	} else if ( !departureInfo.isFilteredOut() ) {
+	    // Departure isn't filtered out
 	    DepartureItem *item = static_cast<DepartureItem*>( m_model->itemFromInfo(departureInfo) );
 	    m_model->updateItem( item, departureInfo );
+
+	    // Expand route item and stretch all children
 	    ChildItem *routeItem = item->childByType( RouteItem );
 	    if ( routeItem )
 		m_treeView->nativeWidget()->expand( routeItem->index() );
 	    stretchAllChildren( m_model->indexFromItem(item), m_model );
-	} else
+	} else {
+	    // Departure is filtered out but in the model
 	    m_model->removeItem( m_model->itemFromInfo(departureInfo) );
+	}
     }
 }
 

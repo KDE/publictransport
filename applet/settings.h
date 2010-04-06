@@ -162,6 +162,7 @@ class SettingsUiManager : public QObject {
 	AlarmSettings currentAlarmSettings( const QString &name = QString() ) const;
 	int filterConfigurationIndex( const QString &filterConfig );
 	void setAlarmTextColor( QListWidgetItem *item, bool hasAffectedStops = true ) const;
+	void updateFilterConfigurationLists();
 	
 	DeletionPolicy m_deletionPolicy;
 // 	DataSourceTester *m_dataSourceTester; // Tests data sources
@@ -195,9 +196,11 @@ class SettingsUiManager : public QObject {
 	bool m_alarmsChanged;
 };
 
-/** Contains static methods to read/write settings. */
+/** Contains static methods to read/write settings.
+* Stop and filter settings are stored globally for all publicTransport applets. */
 class SettingsIO {
     public:
+	/** These flags describe what settings have changed. */
 	enum ChangedFlag {
 	    NothingChanged = 0x0000, /**< Nothing has changed. */
 	    IsChanged = 0x0001, /**< This flag is set if something has changed. */
@@ -216,7 +219,9 @@ class SettingsIO {
 	static Settings readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
 				      Plasma::DataEngine *publicTransportEngine = 0 );
 	/** Write changed @p settings to @p cg and @p cgGlobal. @p oldSettings
-	* is used to see which settings have been changed. */
+	* is used to see which settings have been changed.
+	* @returns What settings have been changed.
+	* @see ChangedFlags */
 	static ChangedFlags writeSettings( const Settings &settings,
 		const Settings &oldSettings, KConfigGroup cg, KConfigGroup cgGlobal );
 	static void writeNoGuiSettings( const Settings &settings,

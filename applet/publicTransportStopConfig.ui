@@ -29,9 +29,6 @@
    </item>
    <item row="0" column="1">
     <widget class="KComboBox" name="location">
-     <property name="toolTip">
-      <string comment="@info:tooltip">Only </string>
-     </property>
      <property name="whatsThis">
       <string comment="@info:whatsthis">&lt;para&gt;The country the stop/station/airport is in. &lt;note&gt;Only matching service providers will be shown.&lt;/note&gt;&lt;/para&gt;
 &lt;para&gt;You can also &lt;emphasis strong='1'&gt;show all available service providers&lt;/emphasis&gt; or only &lt;emphasis strong='1'&gt;international&lt;/emphasis&gt; ones.&lt;/para&gt;</string>
