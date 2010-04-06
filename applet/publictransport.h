@@ -358,16 +358,18 @@ class PublicTransport : public Plasma::PopupApplet {
 	virtual void unsetStates( QList<AppletState> states );
 
     private:
+	/** Types of messages. */
 	enum MessageType {
-	    MessageNone = 0,
-	    MessageError,
-	    MessageErrorResolved
+	    MessageNone = 0, /**< No message. */
+	    MessageError, /**< An error message. */
+	    MessageErrorResolved /**< A message about a resolved error. */
 	};
+	/** Statuses of the network */
 	enum NetworkStatus {
-	    StatusUnknown = 0,
-	    StatusUnavailable,
-	    StatusConfiguring,
-	    StatusActivated
+	    StatusUnknown = 0, /**< Network status is unknown. */
+	    StatusUnavailable, /**< Network is unavailable. */
+	    StatusConfiguring, /**< Network is being configured. */
+	    StatusActivated /**< Network is activated. */
 	};
 
 	NetworkStatus queryNetworkStatus();

@@ -680,7 +680,7 @@ void StopSettingsDialog::clickedServiceProviderInfo() {
     m_uiAccessorInfo.icon->setPixmap( favIcon.pixmap(32) );
     m_uiAccessorInfo.serviceProviderName->setText(
 	    m_uiStop.serviceProvider->currentText() );
-    m_uiAccessorInfo.version->setText( i18n("@info/plain Version %1",
+    m_uiAccessorInfo.version->setText( i18nc("@info/plain", "Version %1",
 					    serviceProviderData["version"].toString()) );
     m_uiAccessorInfo.url->setUrl( serviceProviderData["url"].toString() );
     m_uiAccessorInfo.url->setText( QString("<a href='%1'>%1</a>").arg(
