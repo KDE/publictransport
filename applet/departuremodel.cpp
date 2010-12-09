@@ -193,6 +193,10 @@ void ItemBase::removeChildren( int first, int count ) {
     }
 }
 
+void ItemBase::removeChild(ChildItem* child) {
+    m_model->removeRow( m_children.indexOf(child), index() );
+}
+
 void ItemBase::appendChild( ChildItem* child ) {
     m_children.append( child );
     child->m_parent = this;

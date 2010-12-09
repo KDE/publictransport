@@ -90,6 +90,10 @@ class ChildItem;
 class PublicTransportModel;
 /** Base class for items of PublicTransportModel. */
 class ItemBase {
+    friend class PublicTransportModel;
+    friend class DepartureModel;
+    friend class JourneyModel;
+    
     public:
 	ItemBase( const Info *info );
 	virtual ~ItemBase();
@@ -110,11 +114,8 @@ class ItemBase {
 	/** @returns the number of child items. */
 	int childCount() const { return m_children.count(); };
 
-	/** Removes @p count child items beginning with the child item at row @p first. */
-	void removeChildren( int first, int count );
 	/** Removes the given @p child item. */
-	void removeChild( ChildItem *child ) {
-	    removeChildren( m_children.indexOf(child), 1 ); };
+	void removeChild( ChildItem *child );
 	/** Appends the given @p child item. */
 	void appendChild( ChildItem *child );
 
@@ -138,6 +139,9 @@ class ItemBase {
 	virtual void updateTimeValues() {};
 
     protected:
+	/** Removes @p count child items beginning with the child item at row @p first. */
+	void removeChildren( int first, int count );
+	
 	ItemBase *m_parent;
 	PublicTransportModel *m_model;
 	QList< ChildItem* > m_children;
@@ -360,6 +364,7 @@ class DepartureItem : public QObject, public TopLevelItem {
 /** Base class for DepartureModel and JourneyModel. */
 class PublicTransportModel : public QAbstractItemModel {
     Q_OBJECT
+    friend class ItemBase;
     public:
 	PublicTransportModel( QObject *parent = 0 );
 	virtual ~PublicTransportModel() { qDeleteAll( m_items ); };
@@ -418,13 +423,13 @@ class QTimer;
 /** A model for departure items. */
 class DepartureModel : public PublicTransportModel {
     Q_OBJECT
+    friend class ItemBase;
     
     public:
 	DepartureModel( QObject *parent = 0 );
 
 	virtual int columnCount( const QModelIndex& parent = QModelIndex() ) const;
-	virtual bool removeRows( int row, int count,
-				 const QModelIndex& parent = QModelIndex() );
+	virtual bool removeRows( int row, int count, const QModelIndex& parent = QModelIndex() );
 	virtual QVariant headerData( int section, Qt::Orientation orientation,
 				     int role = Qt::DisplayRole ) const;
 	virtual void sort( int column, Qt::SortOrder order = Qt::AscendingOrder );
@@ -494,6 +499,7 @@ class DepartureModel : public PublicTransportModel {
 /** A model for journey items. */
 class JourneyModel : public PublicTransportModel {
     Q_OBJECT
+    friend class ItemBase;
 
     public:
 	JourneyModel( QObject *parent = 0 );
