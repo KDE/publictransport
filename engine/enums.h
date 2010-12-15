@@ -165,6 +165,19 @@ enum CalculateMissingValue {
     CalculateDepartureFromArrivalAndDuration
 };
 
+/** @class Global
+  * @brief Contains global static methods. */
+class Global {
+public:
+    /** Gets an icon for the given type of vehicle. */
+    static QString vehicleTypeToIcon( const VehicleType &vehicleType );
+
+    /** Gets the name of the given type of vehicle. */
+    static QString vehicleTypeToString( const VehicleType &vehicleType,
+					bool plural = false );
+};
+
+/* Functions for nicer debug output */
 inline QDebug &operator <<( QDebug debug, ParseDocumentMode parseDocumentMode ) {
     switch ( parseDocumentMode ) {
 	case ParseForDeparturesArrivals:
