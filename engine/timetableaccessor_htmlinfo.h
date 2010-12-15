@@ -359,7 +359,7 @@ class TimetableAccessorInfo {
 
 	void setCredit( const QString &credit ) { m_credit = credit; };
 
-	/** Sets wheather or not the service provider needs a seperate city value. */
+	/** Sets wheather or not the service provider needs a separate city value. */
 	void setUseSeperateCityValue( bool useSeperateCityValue ) {
 		m_useSeparateCityValue = useSeperateCityValue; };
 	

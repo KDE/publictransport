@@ -54,8 +54,12 @@ class TimetableAccessor : public QObject {
 	TimetableAccessor() {};
         virtual ~TimetableAccessor() {};
 
-	/** Gets a timetable accessor that is able to parse results from the given service provider. */
-	static TimetableAccessor *getSpecificAccessor( const QString &serviceProvider );
+	/** Gets a timetable accessor that is able to parse results from the given service provider.
+	  * @param serviceProvider The ID of the service provider to get an accessor for.
+	  * 	The ID starts with a country code, followed by an underscore and it's name.
+	  * 	If it's empty, the default service provider for the users country will
+	  * 	be used, if there is any. */
+	static TimetableAccessor *getSpecificAccessor( const QString &serviceProvider = QString() );
 
 	/** Gets the AccessorType enumerable for the given string. */
 	static AccessorType accessorTypeFromString( const QString &sAccessorType );
@@ -135,7 +139,7 @@ class TimetableAccessor : public QObject {
 	/** Encodes the url in @p str using the charset in @p charset. Then it is
 	* percent encoded.
 	* @see charsetForUrlEncoding() */
-	static QString toPercentEncoding( QString str, QByteArray charset );
+	static QString toPercentEncoding( const QString &str, const QByteArray &charset );
 
     protected:
 	/** Parses the contents of a document that was requested using requestJourneys()
@@ -300,7 +304,7 @@ class TimetableAccessor : public QObject {
 	* @param sourceName The name of the data source.
 	* @param city The city the stop is in. May be empty if the service provider
 	* doesn't need a separate city value.
-	* @param stop The stop name for which the error occured.
+	* @param stop The stop name for which the error occurred.
 	* @param dataType "nothing".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeperateCityValue() */

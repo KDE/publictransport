@@ -74,9 +74,12 @@ class PublicTransportEngine : public Plasma::DataEngine {
         PublicTransportEngine( QObject* parent, const QVariantList& args );
 	~PublicTransportEngine();
 
+	/** @returns the keyword of the given @p sourceType used in source names. */
 	static const QString sourceTypeKeyword( SourceType sourceType );
-
+	/** @returns the type of the given @p sourceName. */
 	SourceType sourceTypeFromName( const QString &sourceName ) const;
+	/** @returns true, if a data source of the given @p sourceType requests
+	* data from a web server. */
 	bool isDataRequestingSourceType( SourceType sourceType ) const {
 	    return static_cast< int >( sourceType ) >= 10; };
 

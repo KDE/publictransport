@@ -33,7 +33,7 @@ TimetableAccessorHtmlScript::TimetableAccessorHtmlScript( const TimetableAccesso
     m_info = info;
 
     // Create the Kross::Action instance
-    m_script = new Kross::Action( this, "TimetableParser" ); // TODO delete in destructor
+    m_script = new Kross::Action( this, "TimetableParser" );
     
     TimetableData *timetableData = new TimetableData( m_script );
     m_resultObject = new ResultObject( m_script );
@@ -114,9 +114,6 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
     QString functionName = parseDocumentMode == ParseForJourneys
 	    ? "parseJourneys" : "parseTimetable";
     if ( !m_script->functionNames().contains(functionName) ) {
-	// TODO: Use alternative function name that uses a previously loaded
-	// QWebFrame inside the scripts to more easily navigate in the web page
-	// (QWebFrame::findAllElements).
 	kDebug() << "The script has no '" << functionName << "' function";
 	kDebug() << "Functions in the script:" << m_script->functionNames();
 	return false;
