@@ -929,7 +929,9 @@ ChildItem* DepartureItem::createRouteItem() {
 	// Add a separator item, when the exact route ends
 	if ( row == m_departureInfo.routeExactStops() && row > 0 ) {
 	    ChildItem *separatorItem = new ChildItem(
-		    OtherItem, i18nc("@info/plain", "  - End of exact route -  "), m_info );
+		    OtherItem, i18nc("@info/plain Marker for the first place in a list of "
+				     "intermediate stops, where at least one stop "
+				     "has been omitted", "  - End of exact route -  "), m_info );
 	    routeItem->appendChild( separatorItem );
 	}
 

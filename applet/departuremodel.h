@@ -39,8 +39,8 @@ enum AdditionalRoles {
 
 /** The position of the decoration. */
 enum DecorationPosition {
-    DecorationLeft,
-    DecorationRight
+    DecorationLeft, /**< Show the decoration on the left side. */
+    DecorationRight /**< Show the decoration on the right side. */
 };
 
 /** Holds information about settings from the applet. */

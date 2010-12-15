@@ -1360,7 +1360,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 
     // Write stop settings
     if ( settings.stopSettingsList != oldSettings.stopSettingsList ) {
-	kDebug() << "STOP SETTINGS CHANGED";
+	kDebug() << "Stop settings changed";
 	
 	changed |= IsChanged | ChangedStopSettings;
 	int i = 1;

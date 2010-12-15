@@ -262,8 +262,9 @@ namespace Plasma {
 }
 class QGraphicsWidget;
 #endif
+
 /** @class Global
-@brief Contains global static methods. */
+  * @brief Contains global static methods. */
 class Global {
     public:
 	#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)

@@ -204,11 +204,14 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     
 #ifdef USE_KCATEGORYVIEW
     KCategorizedView *serviceProviderView = new KCategorizedView( this );
-    #if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
-    KCategoryDrawerV2 *categoryDrawer = new KCategoryDrawerV2( this );
-    serviceProviderView->setCategorySpacing( 10 );
+    #if KDE_VERSION >= KDE_MAKE_VERSION(4,4,60)
+	KCategoryDrawerV3 *categoryDrawer = new KCategoryDrawerV3( serviceProviderView );
+	serviceProviderView->setCategorySpacing( 10 );
+    #elif KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
+	KCategoryDrawerV2 *categoryDrawer = new KCategoryDrawerV2( this );
+	serviceProviderView->setCategorySpacing( 10 );
     #else
-    categoryDrawer = new KCategoryDrawer();
+	categoryDrawer = new KCategoryDrawer();
     #endif
     serviceProviderView->setWordWrap( true );
     serviceProviderView->setCategoryDrawer( categoryDrawer );

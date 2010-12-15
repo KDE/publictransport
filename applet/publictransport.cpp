@@ -442,8 +442,8 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 		.arg( _targetStopName );
     } else {
 	m_currentJourneySource = QString( stopIsTarget
-		? "%6 %1|originStop=%2|targetStop=%3|maxDeps=%4|datetime=%5"
-		: "%6 %1|originStop=%3|targetStop=%2|maxDeps=%4|datetime=%5" )
+		? "%6 %1|originStop=%2|targetStop=%3|maxCount=%4|datetime=%5"
+		: "%6 %1|originStop=%3|targetStop=%2|maxCount=%4|datetime=%5" )
 		.arg( m_settings.currentStopSettings().serviceProviderID )
 		.arg( m_settings.currentStopSettings().stopOrStopId(0) )
 		.arg( _targetStopName )
@@ -1960,6 +1960,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	mainLayout->addItem( m_mainGraphicsWidget );
 	m_graphicsWidget->setLayout( mainLayout );
 
+	// Create the icon
 	int iconExtend = 32 * m_settings.sizeFactor;
 	m_icon = new Plasma::IconWidget;
 	m_icon->setIcon( "public-transport-stop" );
@@ -1968,6 +1969,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	m_icon->setMaximumSize( iconExtend, iconExtend );
 	connect( m_icon, SIGNAL(clicked()), this, SLOT(iconClicked()) );
 
+	// Create the label showing the current stop name
 	m_label = new Plasma::Label;
 	m_label->setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
 	QLabel *label = m_label->nativeWidget();

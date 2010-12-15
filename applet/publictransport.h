@@ -398,6 +398,15 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** Sets values of the current plasma theme. */
 	void useCurrentPlasmaTheme();
 	
+	/**
+	 * Creates a menu action, which lists all stops in the settings 
+	 * for switching between them.
+	 *
+	 * @param parent The parent of the menu action and it's sub-actions.
+	 * @param destroyOverlayOnTrigger True, if the overlay widget should be
+	 * destroyed when triggered. Defaults to false.
+	 * @return KSelectAction* The created menu action.
+	 **/
 	KSelectAction *switchStopAction( QObject *parent,
 					 bool destroyOverlayOnTrigger = false ) const;
 	QVariantHash currentServiceProviderData() const {
@@ -452,7 +461,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	
 	QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in the tree view for the context menu actions */
 
-	QActionGroup *m_filtersGroup;
+	QActionGroup *m_filtersGroup; /**< An action group to toggle between filter configurations */
 /*	
 	QList<TimetableColumn> m_departureViewColumns;
 	QList<TimetableColumn> m_journeyViewColumns;*/

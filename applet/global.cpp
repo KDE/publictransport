@@ -242,8 +242,7 @@ KIcon Global::iconFromVehicleTypeList( const QList< VehicleType >& vehicleTypes,
 
 // Gets the name of the given type of vehicle
 QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural ) {
-    switch ( vehicleType )
-    {
+    switch ( vehicleType ) {
 	case Tram:
 	    return plural ? i18nc("@info/plain", "trams")
 			  : i18nc("@info/plain", "tram");
