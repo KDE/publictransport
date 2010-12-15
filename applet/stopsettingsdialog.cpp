@@ -31,6 +31,7 @@
 #include <KFileDialog>
 #include <KStandardDirs>
 #include <KLineEdit>
+#include <KToolInvocation>
 #include <kdeversion.h>
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
     #include <knewstuff3/downloaddialog.h>
@@ -689,7 +690,24 @@ void StopSettingsDialog::clickedServiceProviderInfo() {
     m_uiAccessorInfo.description->setText( serviceProviderData["description"].toString() );
     m_uiAccessorInfo.features->setText( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
 
+    connect( m_uiAccessorInfo.btnOpenInTimetableMate, SIGNAL(clicked()),
+	     this, SLOT(openInTimetableMate()) );
+    
     infoDialog->show();
+}
+
+void StopSettingsDialog::openInTimetableMate()
+{
+    QVariantHash serviceProviderData = m_uiStop.serviceProvider->model()->index(
+	    m_uiStop.serviceProvider->currentIndex(), 0 )
+	    .data( ServiceProviderDataRole ).toHash();
+    QString error;
+    int result = KToolInvocation::startServiceByDesktopName("timetablemate",
+	    serviceProviderData["fileName"].toString(), &error);
+    if ( result != 0 ) {
+	KMessageBox::error(m_infoDialog, i18nc("@info",
+		"TimetableMate couldn't be started, error message was: '%1'", error));
+    }
 }
 
 void StopSettingsDialog::downloadServiceProvidersClicked(  ) {

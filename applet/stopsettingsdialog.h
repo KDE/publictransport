@@ -71,6 +71,9 @@ class StopSettingsDialog : public KDialog {
 	/** The info button has been clicked. This shows information about the
 	* currently selected service provider in a dialog. */
 	void clickedServiceProviderInfo();
+	/** The button to open the service provider in TimetableMate was clicked
+	* in the service provider info dialog. */
+	void openInTimetableMate();
 	void geolocateClicked();
 	/** The stop name has been edited. */
 	void stopNameEdited( const QString &text, int widgetIndex );
