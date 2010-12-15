@@ -20,7 +20,7 @@
 <script>it_cup2000.js</script>
 
 <rawUrls>
-    <departures><![CDATA[http://212.131.171.232/rer/bin/stboard.exe/en?input={stop}!&time={time}&boardType={dataType}&date={date:dd.MM.yy}&disableEquivs=no&maxJourneys={maxDeps}&start=yes&productsFilter=111111111]]></departures>
+    <departures><![CDATA[http://212.131.171.232/rer/bin/stboard.exe/en?input={stop}!&time={time}&boardType={dataType}&date={date:dd.MM.yy}&disableEquivs=no&maxJourneys={maxCount}&start=yes&productsFilter=111111111]]></departures>
 
     <stopSuggestions><![CDATA[http://212.131.171.232/rer/bin/stboard.exe/en?input={stop}?]]></stopSuggestions>
 

@@ -32,26 +32,55 @@
 #include <KDebug>
 
 TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &serviceProvider ) {
-    QString fileName = KGlobal::dirs()->findResource( "data",
-	    QString("plasma_engine_publictransport/accessorInfos/%1.xml")
-	    .arg(serviceProvider) );
-    if ( fileName.isEmpty() ) {
-	kDebug() << "Couldn't find a service provider information XML named" << fileName;
-	return NULL;
+    QString filePath;
+    QString country = "international";
+    QString sp = serviceProvider;
+    if ( sp.isEmpty() ) {
+	// No service provider ID given, use the default one for the users country
+	country = KGlobal::locale()->country();
+	QStringList dirs = KGlobal::dirs()->findDirs("data",
+		"plasma_engine_publictransport/accessorInfos");
+	QString fileName = QString("%1_default.xml").arg(country);
+	foreach ( const QString &dir, dirs ) {
+	    if ( QFile::exists(dir + fileName) ) {
+		filePath = dir + fileName;
+		break;
+	    }
+	}
+	
+	// Get the real filename the "xx_default.xml"-symlink links to
+	filePath = KGlobal::dirs()->realFilePath(filePath);
+	if ( filePath.isEmpty() ) {
+	    kDebug() << "Couldn't find the default service provider information XML for country" << country;
+	    return NULL;
+	}
+
+	// Extract service provider ID from real filename
+	int pos = filePath.lastIndexOf('/');
+	sp = filePath.mid( pos + 1, filePath.length() - pos - 5 );
+	kDebug() << "No service provider ID given, using the default one for country"
+		<< country << "which is" << sp;
+    } else {
+	filePath = KGlobal::dirs()->findResource("data",
+		QString("plasma_engine_publictransport/accessorInfos/%1.xml").arg(sp));
+	if ( filePath.isEmpty() ) {
+	    kDebug() << "Couldn't find a service provider information XML named" << sp;
+	    return NULL;
+	}
+
+	// Get country code from filename
+	QRegExp rx( "^([^_]+)" );
+	if ( rx.indexIn(sp) != -1
+		&& KGlobal::locale()->allCountriesList().contains(rx.cap()) ) {
+	    country = rx.cap();
+	}
     }
 
-    // Get country code from filename
-    QString country = "international";
-    QRegExp rx( "^([^_]+)" );
-    if ( rx.indexIn(serviceProvider) != -1
-	    && KGlobal::locale()->allCountriesList().contains(rx.cap()) )
-	country = rx.cap();
-
-    QFile file( fileName );
+    QFile file( filePath );
     AccessorInfoXmlReader reader;
-    TimetableAccessor *ret = reader.read( &file, serviceProvider, fileName, country );
+    TimetableAccessor *ret = reader.read( &file, sp, filePath, country );
     if ( !ret )
-	kDebug() << "Error while reading accessor info xml" << fileName << reader.errorString();
+	kDebug() << "Error while reading accessor info xml" << filePath << reader.errorString();
     return ret;
 }
 

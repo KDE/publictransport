@@ -17,9 +17,9 @@
 <!-- <credit>Rhein-Main-Verkehrsverbund GmbH</credit> -->
 
 <rawUrls>
-    <departures><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxDeps}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=xml&start=yes]]></departures>
+    <departures><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxCount}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=xml&start=yes]]></departures>
 
-    <stopSuggestions><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxDeps}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=html&start=yes]]></stopSuggestions>
+    <stopSuggestions><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxCount}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=html&start=yes]]></stopSuggestions>
 </rawUrls>
 
 <regExps>

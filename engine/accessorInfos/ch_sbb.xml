@@ -13,11 +13,11 @@
 <!-- <credit>Schweizerische Bundesbahnen SBB</credit> -->
 
 <rawUrls>
-    <departures><![CDATA[http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?input={stop}!&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>
+    <departures><![CDATA[http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?input={stop}!&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxCount}&start=yes]]></departures>
 
     <stopSuggestions><![CDATA[http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?input={stop}?]]></stopSuggestions>
     
-    <journeys><![CDATA[http://fahrplan.sbb.ch/bin/query.exe/dn?S={startStop}!&Z={targetStop}!&time={time}&maxJourneys={maxDeps}&start=yes]]></journeys>
+    <journeys><![CDATA[http://fahrplan.sbb.ch/bin/query.exe/dn?S={startStop}!&Z={targetStop}!&time={time}&maxJourneys={maxCount}&start=yes]]></journeys>
 </rawUrls>
 
 <script>ch_sbb.js</script>

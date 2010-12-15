@@ -17,7 +17,7 @@
 <fallbackCharset>latin1</fallbackCharset>
 
 <rawUrls>
-    <departures><![CDATA[http://www.fahrplaner.de/hafas/stboard.exe/dn?ld=web&L=vbn&input={stop}!&boardType={dataType}&time={time}&showResultPopup=popup&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>
+    <departures><![CDATA[http://www.fahrplaner.de/hafas/stboard.exe/dn?ld=web&L=vbn&input={stop}!&boardType={dataType}&time={time}&showResultPopup=popup&disableEquivs=no&maxJourneys={maxCount}&start=yes]]></departures>
 
     <stopSuggestions><![CDATA[http://www.fahrplaner.de/hafas/ajax-getstop.exe/dn?REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G={stop}]]></stopSuggestions>
 </rawUrls>

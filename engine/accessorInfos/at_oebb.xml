@@ -14,7 +14,7 @@
 <!-- <credit>ÖBB-Konzern</credit> -->
 
 <rawUrls>
-    <departures><![CDATA[http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&input={stop}&boardType={dataType}&time={time}&REQ0JourneyProduct_list=0:1111111111010000-000000.&disableEquivs=no&maxJourneys={maxDeps}&start=yes]]></departures>
+    <departures><![CDATA[http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&input={stop}&boardType={dataType}&time={time}&REQ0JourneyProduct_list=0:1111111111010000-000000.&disableEquivs=no&maxJourneys={maxCount}&start=yes]]></departures>
 
 <!--     <journeys><![CDATA[http://fahrplan.oebb.ch/bin/query.exe/dn?S=%1&Z=%2&time=%3&maxJourneys=%4&start=yes]]></journeys> -->
 </rawUrls>

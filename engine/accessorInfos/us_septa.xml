@@ -19,9 +19,9 @@
 <script>us_septa.js</script>
 
 <rawUrls>
-    <departures><![CDATA[http://airs1.septa.org/bin/stboard.exe/en?rt=1&input={stop}!&boardType={dataType}&date={date:MM/dd/yyyy}&time={time}&disableEquivs=no&maxJourneys={maxDeps}&start=yes&productsFilter=111111111]]></departures>
+    <departures><![CDATA[http://airs1.septa.org/bin/stboard.exe/en?rt=1&input={stop}!&boardType={dataType}&date={date:MM/dd/yyyy}&time={time}&disableEquivs=no&maxJourneys={maxCount}&start=yes&productsFilter=111111111]]></departures>
 
-    <stopSuggestions><![CDATA[http://airs1.septa.org/bin/stboard.exe/en?rt=1&input={stop}?&boardType={dataType}&date={date:MM/dd/yyyy}&time={time}&disableEquivs=no&maxJourneys={maxDeps}&start=yes&productsFilter=111111111]]></stopSuggestions>
+    <stopSuggestions><![CDATA[http://airs1.septa.org/bin/stboard.exe/en?rt=1&input={stop}?&boardType={dataType}&date={date:MM/dd/yyyy}&time={time}&disableEquivs=no&maxJourneys={maxCount}&start=yes&productsFilter=111111111]]></stopSuggestions>
     
 <!--     <journeys><![CDATA[http://airs1.septa.org/bin/query.exe/en?...]]></journeys> -->
 </rawUrls>
