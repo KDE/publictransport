@@ -26,55 +26,48 @@
 
 #include <QXmlStreamReader>
 #include <QHash>
-
 #include "enums.h"
 
 class TimetableAccessor;
-
 class AccessorInfoXmlReader : public QXmlStreamReader {
-    friend class TimetableAccessorInfo; // Because AccessorInfoXmlReader needs to set values in TimetableAccessorInfo when reading xml files
-    
-    public:
+	friend class TimetableAccessorInfo; // Because AccessorInfoXmlReader needs to set values in TimetableAccessorInfo when reading xml files
+
+public:
 	AccessorInfoXmlReader() : QXmlStreamReader() {};
-	
+
 	TimetableAccessor* read( QIODevice *device, const QString &serviceProvider,
-				 const QString &fileName, const QString &country  );
-	
-    private:
+							 const QString &fileName, const QString &country  );
+
+private:
 	void readUnknownElement();
 	TimetableAccessor* readAccessorInfo( const QString &serviceProvider,
-					     const QString &fileName,
-					     const QString &country  );
+			const QString &fileName, const QString &country  );
 	QString readLocalizedTextElement( QString *lang );
 	bool readBooleanElement();
 	void readAuthor( QString *fullname, QString *email );
-	void readCities( QStringList *cities,
-			 QHash<QString, QString> *cityNameReplacements );
-	void readRawUrls( QString *rawUrlDepartures,
-			  QString *rawUrlStopSuggestions, QString *rawUrlJourneys );
+	void readCities( QStringList *cities, QHash<QString, QString> *cityNameReplacements );
+	void readRawUrls( QString *rawUrlDepartures, QString *rawUrlStopSuggestions,
+					  QString *rawUrlJourneys );
 	bool readRegExps( QString* regExpDepartures,
-			  QList< TimetableInformation >* infosDepartures,
-			  QString* regExpDeparturesPre,
-			  TimetableInformation* infoPreKey,
-			  TimetableInformation* infoPreValue,
-			  QString* regExpJourneys,
-			  QList< TimetableInformation >* infosJourneys,
-			  QString* regExpDepartureGroupTitles,
-			  QList< TimetableInformation >* infosDepartureGroupTitles,
-			  QStringList* regExpListPossibleStopsRange,
-			  QStringList* regExpListPossibleStops,
-			  QList< QList< TimetableInformation > >* infosListPossibleStops,
-			  QStringList* regExpListJourneyNews,
-			  QList< QList< TimetableInformation > >* infosListJourneyNews );
+					  QList< TimetableInformation >* infosDepartures,
+					  QString* regExpDeparturesPre,
+					  TimetableInformation* infoPreKey, TimetableInformation* infoPreValue,
+					  QString* regExpJourneys, QList< TimetableInformation >* infosJourneys,
+					  QString* regExpDepartureGroupTitles,
+					  QList< TimetableInformation >* infosDepartureGroupTitles,
+					  QStringList* regExpListPossibleStopsRange,
+					  QStringList* regExpListPossibleStops,
+					  QList< QList< TimetableInformation > >* infosListPossibleStops,
+					  QStringList* regExpListJourneyNews,
+					  QList< QList< TimetableInformation > >* infosListJourneyNews );
 	bool readRegExp( QString *regExp, QList<TimetableInformation> *info,
-			 QString *regExpPreOrRanges = 0, TimetableInformation *infoPreKey = 0,
-			 TimetableInformation *infoPreValue = 0 );
+					 QString *regExpPreOrRanges = 0, TimetableInformation *infoPreKey = 0,
+					 TimetableInformation *infoPreValue = 0 );
 	void readRegExpInfos( QList<TimetableInformation> *info );
 	bool readRegExpPre( QString *regExpPre, TimetableInformation *infoPreKey,
-			    TimetableInformation *infoPreValue );
-	bool readRegExpItems( QStringList *regExps,
-			      QList< QList< TimetableInformation > >* infosList,
-			      QStringList *regExpsRanges = 0 );
+						TimetableInformation *infoPreValue );
+	bool readRegExpItems( QStringList *regExps, QList< QList< TimetableInformation > >* infosList,
+						  QStringList *regExpsRanges = 0 );
 };
 
 #endif // ACCESSORINFOXMLREADER_HEADER

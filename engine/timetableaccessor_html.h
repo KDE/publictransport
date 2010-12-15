@@ -32,10 +32,10 @@
 */
 class TimetableAccessorHtml : public TimetableAccessor
 {
-    // Because the XML accessor uses TimetableAccessorHtml::parseDocumentPossibleStops().
-    friend class TimetableAccessorXml;
+	// Because the XML accessor uses TimetableAccessorHtml::parseDocumentPossibleStops().
+	friend class TimetableAccessorXml;
 
-    public:
+public:
 	/** Creates a new TimetableAccessorHtml object with the given information.
 	* @param info Information about how to download and parse the documents of a
 	* service provider. TODO
@@ -48,11 +48,11 @@ class TimetableAccessorHtml : public TimetableAccessor
 	static QString decodeHtmlEntities( const QString &html );
 
 	/** Decodes the given HTML document. First it tries QTextCodec::codecForHtml().
-        * If that doesn't work, it parses the document for the charset in a meta-tag. */
+	* If that doesn't work, it parses the document for the charset in a meta-tag. */
 	static QString decodeHtml( const QByteArray &document,
-				   const QByteArray &fallbackCharset = QByteArray() );
+							   const QByteArray &fallbackCharset = QByteArray() );
 
-    protected:
+protected:
 	/** Parses the contents of a received document for a list of departures/arrivals
 	* or journeys (depending on @p parseDocumentMode) and puts the results into @p journeys.
 	* @param journeys A pointer to a list of departure/arrival or journey information.
@@ -61,9 +61,8 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* @return true, if there were no errors and the data in @p journeys is valid.
 	* @return false, if there were an error parsing the document. */
 	virtual bool parseDocument( const QByteArray &document,
-				    QList<PublicTransportInfo*> *journeys,
-				    GlobalTimetableInfo *globalInfo,
-				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
+			QList<PublicTransportInfo*> *journeys, GlobalTimetableInfo *globalInfo,
+			ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
 	/** Exceuted before parseDocument() if there is a regexp to use before starting
 	* parseDocument. It collects data matched by the regexp to be used in parseDocument.
@@ -85,18 +84,16 @@ class TimetableAccessorHtml : public TimetableAccessor
 	* document for stops.
 	* @see parseDocumentPossibleStops(QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( const QByteArray &document,
-						 QStringList *stops,
-						 QHash<QString,QString> *stopToStopId,
-						 QHash<QString,int> *stopToStopWeight );
+			QStringList *stops, QHash<QString,QString> *stopToStopId,
+			QHash<QString,int> *stopToStopWeight );
 
 	/** Parses a journey news string. */
 	virtual bool parseJourneyNews( const QString &sJourneyNews, QString *sDelay,
-				       QString *sDelayReason, QString *sJourneyNewsOther ) const;
+			QString *sDelayReason, QString *sJourneyNewsOther ) const;
 
     private:
 	void postProcessMatchedData( TimetableInformation info,
-				     const QString &matchedData,
-				     QHash< TimetableInformation, QVariant > *data );
+			const QString &matchedData, QHash< TimetableInformation, QVariant > *data );
 
 	QHash< QString, QString > *m_preData; // Data collected by parseDocumentPre
 };

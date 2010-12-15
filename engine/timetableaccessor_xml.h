@@ -33,10 +33,10 @@
 */
 class TimetableAccessorXml : public TimetableAccessor
 {
-    // Because the XML accessor uses TimetableAccessorHtml::parseDocumentPossibleStops().
-    friend class TimetableAccessorHtml;
+	// Because the XML accessor uses TimetableAccessorHtml::parseDocumentPossibleStops().
+	friend class TimetableAccessorHtml;
 
-    public:
+public:
 	/** Creates a new TimetableAccessorXml object with the given information.
 	* @param info Information about how to download and parse the documents of a
 	* service provider.
@@ -48,7 +48,7 @@ class TimetableAccessorXml : public TimetableAccessor
 	/** Gets a list of features that this accessor supports. */
 	virtual QStringList features() const;
 
-    protected:
+protected:
 	/** Parses the contents of a document that was requested using requestJourneys()
 	* and puts the results into @p journeys..
 	* @param journeys A pointer to a list of departure/arrival or journey information.
@@ -57,10 +57,9 @@ class TimetableAccessorXml : public TimetableAccessor
 	* departures/arrivals or journeys.
 	* @return true, if there were no errors and the data in @p journeys is valid.
 	* @return false, if there were an error parsing the document. */
-	virtual bool parseDocument( const QByteArray &document,
-				    QList<PublicTransportInfo*> *journeys,
-				    GlobalTimetableInfo *globalInfo,
-				    ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
+	virtual bool parseDocument( const QByteArray &document, QList<PublicTransportInfo*> *journeys,
+			GlobalTimetableInfo *globalInfo,
+			ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
 	/** Parses the contents of a received document for a list of possible stop names
 	* and puts the results into @p stops.
@@ -69,10 +68,8 @@ class TimetableAccessorXml : public TimetableAccessor
 	* and the values are stop IDs.
 	* @return true, if there were no errors.
 	* @return false, if there were an error parsing the document. */
-	virtual bool parseDocumentPossibleStops( const QByteArray &document,
-						 QStringList *stops,
-						 QHash<QString,QString> *stopToStopId,
-						 QHash<QString,int> *stopToStopWeight );
+	virtual bool parseDocumentPossibleStops( const QByteArray &document, QStringList *stops,
+			QHash<QString,QString> *stopToStopId, QHash<QString,int> *stopToStopWeight );
 
 	/** Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
 	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
@@ -82,7 +79,7 @@ class TimetableAccessorXml : public TimetableAccessor
 	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
 	virtual QString stopSuggestionsRawUrl() const;
 
-    private:
+private:
 	TimetableAccessorHtml *m_accessorHTML; // The HTML accessor used to parse possible stop lists
 };
 

@@ -19,22 +19,23 @@
 
 #include "scripting.h"
 
-void TimetableData::set( TimetableInformation info, const QVariant& value ) {
-    if ( info == Nothing ) {
-	kDebug() << "Unknown timetable information" << info
-		 << "with value" << (value.isNull() ? "NULL" : value.toString());
-    } else if ( value.isNull() ) {
-	kDebug() << "Value is NULL for" << info;
-    } else {
-	if ( value.isValid() && value.canConvert(QVariant::String)
-		&& (info == StopName || info == Target
-		|| info == StartStopName || info == TargetStopName
-		|| info == Operator || info == TransportLine
-		|| info == Platform || info == DelayReason
-		|| info == Status || info == Pricing) ) {
-	    m_values[ info ] = TimetableAccessorHtml::decodeHtmlEntities(
-	    value.toString() );
-	} else
-	    m_values[ info ] = value;
-    }
+void TimetableData::set( TimetableInformation info, const QVariant& value )
+{
+	if ( info == Nothing ) {
+		kDebug() << "Unknown timetable information" << info
+				 << "with value" << ( value.isNull() ? "NULL" : value.toString() );
+	} else if ( value.isNull() ) {
+		kDebug() << "Value is NULL for" << info;
+	} else {
+		if ( value.isValid() && value.canConvert(QVariant::String)
+				&& (info == StopName || info == Target
+					|| info == StartStopName || info == TargetStopName
+					|| info == Operator || info == TransportLine
+					|| info == Platform || info == DelayReason
+					|| info == Status || info == Pricing) ) {
+			m_values[ info ] = TimetableAccessorHtml::decodeHtmlEntities( value.toString() );
+		} else {
+			m_values[ info ] = value;
+		}
+	}
 }

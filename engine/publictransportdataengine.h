@@ -40,38 +40,38 @@ class JourneyInfo;
  @see @ref usage_sec (how to use this data engine in an applet?)
  */
 class PublicTransportEngine : public Plasma::DataEngine {
-    Q_OBJECT
+	Q_OBJECT
 
-    public:
+public:
 	/** The available types of sources of this data engine. They all have
 	* an associated keyword with that data source names start.
 	* @see sourceTypeKeyword
 	* @see sourceTypeFromName */
 	enum SourceType {
-	    InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName, if
-				      * the source name is invalid. */
-	    
-	    ServiceProvider = 1, /**< The source contains information about available
-				    * service providers for a given country. */
-	    ServiceProviders = 2, /**< The source contains information about available
-				     * service providers. */
-	    ErrornousServiceProviders = 3, /**< The source contains a list of errornous
-				  	      * service provider accessors. */
-	    Locations = 4, /**< The source contains information about locations
-			      * for which accessors to service providers exist. */
-	    
-	    Departures = 10, /**< The source contains timetable data for departures. */
-	    Arrivals, /**< The source contains timetable data for arrivals. */
-	    Stops, /**< The source contains a list of stop suggestions. */
-	    Journeys, /**< The source contains information about journeys. */
-	    JourneysDep, /**< The source contains information about journeys,
-			    * that depart at the given date and time. */
-	    JourneysArr /**< The source contains information about journeys,
-			   * that arrive at the given date and time. */
+		InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName, if
+				* the source name is invalid. */
+
+		ServiceProvider = 1, /**< The source contains information about available
+				* service providers for a given country. */
+		ServiceProviders = 2, /**< The source contains information about available
+				* service providers. */
+		ErrornousServiceProviders = 3, /**< The source contains a list of errornous
+				* service provider accessors. */
+		Locations = 4, /**< The source contains information about locations
+				* for which accessors to service providers exist. */
+
+		Departures = 10, /**< The source contains timetable data for departures. */
+		Arrivals, /**< The source contains timetable data for arrivals. */
+		Stops, /**< The source contains a list of stop suggestions. */
+		Journeys, /**< The source contains information about journeys. */
+		JourneysDep, /**< The source contains information about journeys,
+				* that depart at the given date and time. */
+		JourneysArr /**< The source contains information about journeys,
+				* that arrive at the given date and time. */
 	};
-	
-        /** Every data engine needs a constructor with these arguments. */
-        PublicTransportEngine( QObject* parent, const QVariantList& args );
+
+	/** Every data engine needs a constructor with these arguments. */
+	PublicTransportEngine( QObject* parent, const QVariantList& args );
 	~PublicTransportEngine();
 
 	/** @returns the keyword of the given @p sourceType used in source names. */
@@ -81,13 +81,13 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	/** @returns true, if a data source of the given @p sourceType requests
 	* data from a web server. */
 	bool isDataRequestingSourceType( SourceType sourceType ) const {
-	    return static_cast< int >( sourceType ) >= 10; };
+		return static_cast< int >( sourceType ) >= 10; };
 
-	/** Minimum timeout in seconds to request new data. Before the timeout 
+	/** Minimum timeout in seconds to request new data. Before the timeout
 	* is over, old stored data from previous requests is used. */
 	static const int MIN_UPDATE_TIMEOUT;
-	
-	/** Maximum timeout in seconds to request new data, if delays are avaiable. 
+
+	/** Maximum timeout in seconds to request new data, if delays are avaiable.
 	* Before the timeout is over, old stored data from previous requests is used. */
 	static const int MAX_UPDATE_TIMEOUT_DELAY;
 
@@ -95,16 +95,16 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* in the list. This is used if it wasn't specified in the source name. */
 	static const int DEFAULT_TIME_OFFSET;
 
-    protected:
-        /** This virtual function is called when a new source is requested.
-        * @param name The name of the requested data source. */
-        bool sourceRequestEvent( const QString& name );
+protected:
+	/** This virtual function is called when a new source is requested.
+	* @param name The name of the requested data source. */
+	bool sourceRequestEvent( const QString& name );
 
-        /** This virtual function is called when an automatic update is triggered 
-        * for an existing source (ie: when a valid update interval is set
+	/** This virtual function is called when an automatic update is triggered
+	* for an existing source (ie: when a valid update interval is set
 	* when requesting a source).
 	* @param name The name of the data source to be updated. */
-        bool updateSourceEvent( const QString& name );
+	bool updateSourceEvent( const QString& name );
 
 	bool updateServiceProviderForCountrySource( const QString &name );
 	bool updateServiceProviderSource();
@@ -116,7 +116,7 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param name The name of the source to be checked. */
 	bool isSourceUpToDate( const QString& name );
 
-    public slots:
+public slots:
 	/** A list of departures / arrivals was received.
 	* @param accessor The accessor that was used to download and parse the
 	* departures / arrivals.
@@ -133,14 +133,11 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeparateCityValue() */
 	void departureListReceived( TimetableAccessor *accessor,
-				    const QUrl &requestUrl,
-				    const QList<DepartureInfo*> &departures,
-				    const GlobalTimetableInfo &globalInfo,
-				    const QString &serviceProvider,
-				    const QString &sourceName,
-				    const QString &city, const QString &stop,
-				    const QString &dataType,
-				    ParseDocumentMode parseDocumentMode );
+			const QUrl &requestUrl, const QList<DepartureInfo*> &departures,
+			const GlobalTimetableInfo &globalInfo,
+			const QString &serviceProvider, const QString &sourceName,
+			const QString &city, const QString &stop,
+			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
 	/** A list of journey was received.
 	* @param accessor The accessor that was used to download and parse the journeys.
@@ -157,14 +154,11 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeparateCityValue() */
 	void journeyListReceived( TimetableAccessor *accessor,
-				  const QUrl &requestUrl,
-				  const QList<JourneyInfo*> &journeys,
-				  const GlobalTimetableInfo &globalInfo,
-				  const QString &serviceProvider,
-				  const QString &sourceName,
-				  const QString &city, const QString &stop,
-				  const QString &dataType,
-				  ParseDocumentMode parseDocumentMode );
+			const QUrl &requestUrl, const QList<JourneyInfo*> &journeys,
+			const GlobalTimetableInfo &globalInfo,
+			const QString &serviceProvider, const QString &sourceName,
+			const QString &city, const QString &stop,
+			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
 	/** A list of stops was received.
 	* @param accessor The accessor that was used to download and parse the stops.
@@ -182,14 +176,12 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeparateCityValue() */
 	void stopListReceived( TimetableAccessor *accessor,
-			       const QUrl &requestUrl,
-			       const QStringList &stops,
-			       const QHash<QString, QString> &stopToStopId,
-			       const QHash<QString, int> &stopToStopWeight,
-			       const QString &serviceProvider,
-			       const QString &sourceName, const QString &city,
-			       const QString &stop, const QString &dataType,
-			       ParseDocumentMode parseDocumentMode );
+			const QUrl &requestUrl, const QStringList &stops,
+			const QHash<QString, QString> &stopToStopId,
+			const QHash<QString, int> &stopToStopWeight,
+			const QString &serviceProvider,
+			const QString &sourceName, const QString &city, const QString &stop,
+			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
 	/** An error was received.
 	* @param accessor The accessor that was used to download and parse information
@@ -206,17 +198,15 @@ class PublicTransportEngine : public Plasma::DataEngine {
 	* @param dataType "nothing".
 	* @param parseDocumentMode What has been parsed from the document.
 	* @see TimetableAccessor::useSeparateCityValue() */
-	void errorParsing( TimetableAccessor *accessor, ErrorType errorType,
-			   const QString &errorString, const QUrl &requestUrl,
-			   const QString &serviceProvider,
-			   const QString &sourceName, const QString &city,
-			   const QString &stop, const QString &dataType,
-			   ParseDocumentMode parseDocumentMode );
+	void errorParsing( TimetableAccessor *accessor, ErrorType errorType, const QString &errorString,
+			const QUrl &requestUrl, const QString &serviceProvider,
+			const QString &sourceName, const QString &city, const QString &stop,
+			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
 	/** A directory with accessor info xmls was changed. */
 	void accessorInfoDirChanged( QString path );
 
-    private:
+private:
 	/** Gets a map with information about an accessor.
 	* @param accessor The accessor to get information about. */
 	QHash< QString, QVariant > serviceProviderInfo( const TimetableAccessor *&accessor );
@@ -229,18 +219,18 @@ class PublicTransportEngine : public Plasma::DataEngine {
 // 	    bool result;
 // 	    QString error;
 // 	};
-	
+
 	QHash< QString, TimetableAccessor* > m_accessors; // List of already loaded accessors
 	QHash< QString, QVariant > m_dataSources; // List of already used data sources
 	QStringList m_errornousAccessors; // List of errornous accessors
 	QFileSystemWatcher *m_fileSystemWatcher; // watch the accessor directory
 	int m_lastStopNameCount, m_lastJourneyCount;
-	
+
 	// The next times at which new downloads will have sufficient changes
 	// (enough departures in past or maybe changed delays, estimated),
 	// for each data source name.
 	QHash< QString, QDateTime > m_nextDownloadTimeProposals;
-	
+
 // 	QHash< QString, AccessorCheck > m_checkedAccessors;
 };
 

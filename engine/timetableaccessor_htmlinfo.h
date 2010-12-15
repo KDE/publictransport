@@ -34,7 +34,7 @@
 * @brief Stores a regular expression and information about the meaning of the matches.
 *  */
 class TimetableRegExpSearch {
-    public:
+public:
 	/** Creates an invalid TimetableRegExpSearch object. */
 	TimetableRegExpSearch() {};
 
@@ -55,7 +55,7 @@ class TimetableRegExpSearch {
 	/** Gets a list of meanings for each matched string of the regular expression. */
 	QList< TimetableInformation > info() const { return m_regExpInfos; };
 
-    private:
+private:
 	QRegExp m_regExpSearch;
 	QList< TimetableInformation > m_regExpInfos;
 };
@@ -66,35 +66,33 @@ class TimetableRegExpSearch {
 * service providers.
 * @brief Provides information about how to download and parse documents from service providers. */
 class TimetableAccessorInfo {
-    friend class AccessorInfoXmlReader; // Because AccessorInfoXmlReader needs to set values when reading xml files
+	friend class AccessorInfoXmlReader; // Because AccessorInfoXmlReader needs to set values when reading xml files
 
-    public:
+public:
 	/** Creates a new TimetableAccessorInfo object.
-	* TODO: Don't use so many parameters in the constructor. The setters 
+	* TODO: Don't use so many parameters in the constructor. The setters
 	* need to be called anyway.
 	* @param name The name of the accessor.
-	* @param shortUrl A short version of the url to the service provider 
+	* @param shortUrl A short version of the url to the service provider
 	* home page. This can be used by the visualization as displayed text of links.
 	* @param author The author of the accessor.
 	* @param email The email address of the author given in @p author.
 	* @param version The version of the accessor information.
-	* @param serviceProviderID The service provider for which this accessor 
+	* @param serviceProviderID The service provider for which this accessor
 	* is designed for.
 	* @param accessorType The type of the accessor.
 	* @see AccessorType */
 	explicit TimetableAccessorInfo( const QString& name = QString(),
-			       const QString& shortUrl = QString(),
-			       const QString& author = QString(),
-			       const QString& email = QString(),
-			       const QString& version = QString(),
-			       const QString& serviceProviderID = QString(),
-			       const AccessorType& accessorType = NoAccessor );
+			const QString& shortUrl = QString(), const QString& author = QString(),
+			const QString& email = QString(), const QString& version = QString(),
+			const QString& serviceProviderID = QString(),
+			const AccessorType& accessorType = NoAccessor );
 
 	~TimetableAccessorInfo();
 
 	/** Gets the name of this accessor, which can be displayed by the visualization. */
 	QString name() const { return m_name; };
-	/** If empty, use unicode (QUrl::toPercentEncoding()), otherwise use 
+	/** If empty, use unicode (QUrl::toPercentEncoding()), otherwise use
 	* own toPercentEncoding() with this charset. */
 	QByteArray charsetForUrlEncoding() const { return m_charsetForUrlEncoding; };
 	QByteArray fallbackCharset() const { return m_fallbackCharset; };
@@ -145,14 +143,14 @@ class TimetableAccessorInfo {
 	* document, before it gets parsed with the TimetableRegExpSearch object returned
 	* by searchDepartures() or searchJourneys().
 	* @Warning At least one regExp must have been set to initialize the RegExps
-	* object, eg. with @ref setRegExpDepartures. Otherwise this crashes. 
+	* object, eg. with @ref setRegExpDepartures. Otherwise this crashes.
 	* @return NULL if there is no regular expression defined for preparsing the document.*/
 	TimetableRegExpSearch searchDeparturesPre() const {
 		return m_regExps.searchDeparturesPre; };
 	/** Gets a pointer to the TimetableRegExpSearch object used to parse the
 	* document for split points, before it gets parsed with the TimetableRegExpSearch object returned
 	* by searchDepartures() or searchJourneys(). TODO: Documentation
-	* @Warning At least one regExp must have been set to initialize the RegExps 
+	* @Warning At least one regExp must have been set to initialize the RegExps
 	* object, eg. with @ref setRegExpDepartures. Otherwise this crashes.
 	* @return NULL if there is no regular expression defined for preparsing the document.*/
 	TimetableRegExpSearch searchDepartureGroupTitles() const {
@@ -189,7 +187,7 @@ class TimetableAccessorInfo {
 	QString fileName() const { return m_fileName; };
 	/** The file name of the script file to parse html pages. */
 	QString scriptFileName() const { return m_scriptFileName; };
-	/** Wheather or not this accessor supports stop name autocompletion. 
+	/** Wheather or not this accessor supports stop name autocompletion.
 	* @Warning At least one regExp must have been set to initialize the RegExps
 	* object, eg. with @ref setRegExpDepartures. Otherwise this crashes. */
 	bool supportsStopAutocompletion() const {
@@ -197,7 +195,7 @@ class TimetableAccessorInfo {
 	/** Wheather or not this accessor supports the given TimetableInformation. */
 	bool supportsTimetableAccessorInfo( const TimetableInformation &info ) const;
 
-    protected:
+protected:
 	/** Sets a regular expression for parsing an html document for a list of
 	* departures / arrivals. A list of TimetableInformation values is needed to
 	* know what's the meaning of each matched string of the regular expression.
@@ -218,16 +216,16 @@ class TimetableAccessorInfo {
 	* @param regExpInfoKeyPre TODO: documentation
 	* @param regExpInfoValuePre */
 	void setRegExpDepartures( const QString &regExpSearch,
-				  const QList< TimetableInformation > &regExpInfos,
-				  const QString &regExpSearchPre = QString(),
-				  TimetableInformation regExpInfoKeyPre = Nothing,
-				  TimetableInformation regExpInfoValuePre = Nothing );
+			const QList< TimetableInformation > &regExpInfos,
+			const QString &regExpSearchPre = QString(),
+			TimetableInformation regExpInfoKeyPre = Nothing,
+			TimetableInformation regExpInfoValuePre = Nothing );
 
 	// TODO: Documentation
 	void setRegExpDepartureGroupTitles( const QString &regExpSearch,
-				    const QList< TimetableInformation > &regExpInfos ) {
+										const QList< TimetableInformation > &regExpInfos ) {
 	    m_regExps.searchDepartureGroupTitles = TimetableRegExpSearch(
-		    regExpSearch, regExpInfos ); };
+				regExpSearch, regExpInfos); };
 
 	/** Sets a regular expression for parsing an html document for a list of journeys.
 	* A list of TimetableInformation values is needed to know what's the meaning
@@ -236,8 +234,8 @@ class TimetableAccessorInfo {
 	* @param regExpInfos A list of TimetableInformation values that describe what
 	* each match of the regular expression in @p regExpSearch means. */
 	void setRegExpJourneys( const QString &regExpSearch,
-				const QList< TimetableInformation > &regExpInfos ) {
-	    m_regExps.searchJourneys = TimetableRegExpSearch( regExpSearch, regExpInfos ); };
+							const QList< TimetableInformation > &regExpInfos ) {
+		m_regExps.searchJourneys = TimetableRegExpSearch( regExpSearch, regExpInfos ); };
 
 	/** Adds a regular expression for parsing an html document for a list of possible stops.
 	* @param regExpRange A regular expression for getting a subset of the html
@@ -246,10 +244,8 @@ class TimetableAccessorInfo {
 	* the list matched by @p regExpRange.
 	* @param regExpInfos A list of TimetableInformation values that describe what
 	* each match of the regular expression in @p regExpSearch means. */
-	void addRegExpPossibleStops( const QString &regExpRange,
-				     const QString &regExpSearch,
-				     const QList< TimetableInformation > &regExpInfos
-					= QList< TimetableInformation >() << StopName );
+	void addRegExpPossibleStops( const QString &regExpRange, const QString &regExpSearch,
+			const QList<TimetableInformation> &regExpInfos = QList<TimetableInformation>() << StopName );
 
 	/** Adds a regular expression for parsing a string matched by the regular
 	* expression set by setRegExpJourneys() that is assocciated with the
@@ -260,8 +256,8 @@ class TimetableAccessorInfo {
 	* each match of the regular expression in @p regExpSearch means.
 	* @see setRegExpJourneys() */
 	void addRegExpJouneyNews( const QString &regExpSearch,
-				  const QList< TimetableInformation > &regExpInfos ) {
-	    m_regExps.searchJourneyNews.append( TimetableRegExpSearch(regExpSearch, regExpInfos) ); };
+							  const QList< TimetableInformation > &regExpInfos ) {
+		m_regExps.searchJourneyNews.append( TimetableRegExpSearch(regExpSearch, regExpInfos) ); };
 
 	/** Adds a replacement for the city name @p city. Before a city name is inserted
 	* into a raw url it is checked if there are replacements for the city name.
@@ -278,11 +274,11 @@ class TimetableAccessorInfo {
 
 	/** Sets the name of the XML file that was parsed to get this accessor information object. */
 	void setFileName( const QString &fileName ) { m_fileName = fileName; };
-	
+
 	/** Sets the file name of the script file to parse html pages. */
 	void setScriptFile( const QString &scriptFileName ) {
 		m_scriptFileName = scriptFileName; };
-	
+
 	/** Sets the name of this accessor. The name is displayed in the config dialog's
 	* service provider combobox.
 	* @param name The new name of this accessor. */
@@ -292,7 +288,7 @@ class TimetableAccessorInfo {
 	* @param charsetForUrlEncoding The charset used for encoding. */
 	void setCharsetForUrlEncoding( const QByteArray &charsetForUrlEncoding ) {
 		m_charsetForUrlEncoding = charsetForUrlEncoding; };
-	
+
 	/** Sets the charset used to encode documents where it couldn't be determined
 	* automatically.
 	* @param fallbackCharset The charset used if it couldn't be determined. */
@@ -362,18 +358,17 @@ class TimetableAccessorInfo {
 	/** Sets wheather or not the service provider needs a separate city value. */
 	void setUseSeperateCityValue( bool useSeperateCityValue ) {
 		m_useSeparateCityValue = useSeperateCityValue; };
-	
+
 	/** Sets wheather or not cities may be freely chosen.
 	* @param onlyUseCitiesInList true if only cities in the list returned by cities()  are valid.
 	* false (default) if cities may be freely chosen, but may be invalid. */
 	void setOnlyUseCitiesInList( bool onlyUseCitiesInList ) {
 		m_onlyUseCitiesInList = onlyUseCitiesInList; };
 
-    private:
+private:
 	bool supportsByJourneyNewsParsing( const TimetableInformation &info ) const;
-	
+
 	struct RegExps {
-	    public:
 		TimetableRegExpSearch searchDepartures;
 		TimetableRegExpSearch searchJourneys;
 		TimetableRegExpSearch searchDeparturesPre;
@@ -383,7 +378,7 @@ class TimetableAccessorInfo {
 		QList<TimetableRegExpSearch> searchJourneyNews;
 	};
 
-	
+
 	RegExps m_regExps;
 
 	// The name of the XML file that was parsed to get this accessor information object
