@@ -77,6 +77,7 @@ class GraphicsPixmapWidget : public QGraphicsWidget {
 /** @class PublicTransport
 * @brief Shows departure / arrival times for public transport. It uses the "publictransport"-data engine. */
 class PublicTransport : public Plasma::PopupApplet {
+    Q_PROPERTY( int DepartureCount READ departureCount )
     Q_OBJECT
     public:
         /** Basic create. */
@@ -102,6 +103,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** Removes the given state. Operations are processed to unset the new applet state.
 	* @param state The state to remove. */
 	virtual void removeState( AppletState state );
+
+	int departureCount() const { return m_departureInfos.count(); };
 	
     signals:
 	/** Emitted when the settings have changed. */
@@ -110,6 +113,8 @@ class PublicTransport : public Plasma::PopupApplet {
     public slots:
 	/** Initializes the applet. */
 	virtual void init();
+
+	void setSettings( const QString &serviceProviderID, const QString &stopName );
 
     protected slots:
 	/** The geometry of the applet has changed. */

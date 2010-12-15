@@ -177,6 +177,20 @@ void PublicTransport::init() {
     reconnectSource();
 }
 
+void PublicTransport::setSettings( const QString& serviceProviderID,
+				   const QString& stopName ) {
+    // Set stop settings in a copy of the current settings.
+    // Then write the new settings.
+    Settings settings = m_settings;
+    settings.stopSettingsList.clear();
+    StopSettings stopSettings;
+    stopSettings.serviceProviderID = serviceProviderID;
+    stopSettings.stops << stopName;
+    settings.stopSettingsList << stopSettings;
+    writeSettings( settings );
+}
+
+
 PublicTransport::NetworkStatus PublicTransport::queryNetworkStatus() {
     NetworkStatus status = StatusUnavailable;
     const QStringList interfaces = dataEngine("network")->sources();

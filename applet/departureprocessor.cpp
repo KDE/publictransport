@@ -206,7 +206,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     Q_ASSERT( departureJob->alreadyProcessed < count );
     kDebug() << "  - " << count << "departures to be processed";
     for ( int i = departureJob->alreadyProcessed; i < count; ++i ) {
-	QVariant departureData = data.value( QString("%1").arg(i) );
+	QVariant departureData = data.value( QString::number(i) );
 	// Don't process invalid data
 	if ( !departureData.isValid() ) {
 	    kDebug() << "Departure data for departure" << i << "is invalid" << data;

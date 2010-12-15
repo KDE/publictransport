@@ -42,6 +42,9 @@ class DynamicLabeledLineEditList;
 class HtmlDelegate;
 class KLineEdit;
 class NearStopsDialog;
+/**
+ * @brief This dialog is used to select a location, service provider and stop
+ **/
 class StopSettingsDialog : public KDialog {
     Q_OBJECT
     

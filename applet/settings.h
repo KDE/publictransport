@@ -241,6 +241,10 @@ struct Settings {
 	currentStopSettingsIndex = 0;
 	filtersEnabled = false;
     };
+
+    Settings( const Settings &other ) {
+	*this = other;
+    };
     
     bool autoUpdate; /**< Wheather or not timetable data should be updated automatically. */
     bool showRemainingMinutes; /**< Whether or not remaining minutes until 
