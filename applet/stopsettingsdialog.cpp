@@ -22,6 +22,8 @@
 #include "htmldelegate.h"
 #include "dynamicwidget.h"
 #include "settings.h"
+#include "locationmodel.h"
+#include "serviceprovidermodel.h"
 
 #include <Plasma/Theme>
 #include <KColorScheme>
@@ -40,7 +42,6 @@
 #include <QListView>
 #include <QStringListModel>
 #include <QSortFilterProxyModel>
-#include <QStandardItemModel>
 #include <QVBoxLayout>
 #include <QProcess>
 #if QT_VERSION >= 0x040600
@@ -125,8 +126,8 @@ class NearStopsDialog : public KDialog {
 };
 
 StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
-	    const QStringList &filterConfigurations, QStandardItemModel *modelLocations,
-	    QStandardItemModel *modelServiceProviders,
+	    const QStringList &filterConfigurations, LocationModel *modelLocations,
+	    ServiceProviderModel *modelServiceProviders,
 	    Plasma::DataEngine *publicTransportEngine, Plasma::DataEngine *osmEngine,
 	    Plasma::DataEngine *geolocationEngine, QWidget *parent )
 	    : KDialog( parent ), m_stopFinder(0), m_nearStopsDialog( 0 ),
@@ -151,13 +152,6 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     m_modelLocationServiceProviders->setSourceModel( modelServiceProviders );
     m_modelLocationServiceProviders->setFilterRole( LocationCodeRole );
     
-    #ifdef USE_KCATEGORYVIEW
-    KCategorizedSortFilterProxyModel *modelCategorized =
-	    new KCategorizedSortFilterProxyModel( this );
-    modelCategorized->setCategorizedModel( true );
-    modelCategorized->setSourceModel( m_modelLocationServiceProviders );
-    #endif
-    
     // Create stop list widget
     m_stopList = new DynamicLabeledLineEditList( 
 	    DynamicLabeledLineEditList::RemoveButtonsBesideWidgets,
@@ -166,7 +160,7 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     m_stopList->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
     connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(stopAdded(QWidget*)) );
     connect( m_stopList, SIGNAL(added(QWidget*)), this, SLOT(adjustStopListLayout()) );
-    connect( m_stopList, SIGNAL(removed(QWidget*)), this, SLOT(adjustStopListLayout()) );
+    connect( m_stopList, SIGNAL(removed(QWidget*,int)), this, SLOT(adjustStopListLayout()) );
     m_stopList->setLabelTexts( i18nc("@info/plain Label for the read only text labels containing "
 	    "additional stop names, which are combined with other defined stops "
 	    "(showing departures/arrivals of all combined stops)",
@@ -203,23 +197,27 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     m_uiStopDetails.downloadServiceProviders->setIcon( KIcon("list-add") );
     
 #ifdef USE_KCATEGORYVIEW
+    KCategorizedSortFilterProxyModel *modelCategorized =
+	    new KCategorizedSortFilterProxyModel( this );
+    modelCategorized->setCategorizedModel( true );
+    modelCategorized->setSourceModel( m_modelLocationServiceProviders );
+    
     KCategorizedView *serviceProviderView = new KCategorizedView( this );
     #if KDE_VERSION >= KDE_MAKE_VERSION(4,4,60)
 	KCategoryDrawerV3 *categoryDrawer = new KCategoryDrawerV3( serviceProviderView );
 	serviceProviderView->setCategorySpacing( 10 );
-    #elif KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
+    #else
 	KCategoryDrawerV2 *categoryDrawer = new KCategoryDrawerV2( this );
 	serviceProviderView->setCategorySpacing( 10 );
-    #else
-	categoryDrawer = new KCategoryDrawer();
     #endif
-    serviceProviderView->setWordWrap( true );
     serviceProviderView->setCategoryDrawer( categoryDrawer );
+    serviceProviderView->setModel( modelCategorized );
+    serviceProviderView->setWordWrap( true );
     serviceProviderView->setSelectionMode( QAbstractItemView::SingleSelection );
     serviceProviderView->setVerticalScrollMode( QAbstractItemView::ScrollPerPixel ); // If ScrollPerItem is used the view can't be scrolled in QListView::ListMode.
 
-    m_uiStop.serviceProvider->setView( serviceProviderView );
     m_uiStop.serviceProvider->setModel( modelCategorized );
+    m_uiStop.serviceProvider->setView( serviceProviderView );
 #else
     m_uiStop.serviceProvider->setModel( m_modelLocationServiceProviders );
 #endif
@@ -232,8 +230,8 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
     m_uiStop.location->setItemDelegate( m_htmlDelegate );
 
     connect( this, SIGNAL(user1Clicked()), this, SLOT(geolocateClicked()) );
-    connect( m_uiStop.location, SIGNAL(currentIndexChanged(const QString&)),
-	     this, SLOT(locationChanged(const QString&)) );
+    connect( m_uiStop.location, SIGNAL(currentIndexChanged(int)),
+	     this, SLOT(locationChanged(int)) );
     connect( m_uiStop.serviceProvider, SIGNAL(currentIndexChanged(int)),
 	     this, SLOT(serviceProviderChanged(int)) );
     connect( m_uiStop.city, SIGNAL(currentIndexChanged(QString)),
@@ -248,11 +246,6 @@ StopSettingsDialog::StopSettingsDialog( const StopSettings &stopSettings,
 }
 
 StopSettingsDialog::~StopSettingsDialog() {
-#ifdef USE_KCATEGORYVIEW
-#if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
-    delete categoryDrawer;
-#endif
-#endif
 }
 
 void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings ) {
@@ -264,26 +257,22 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings ) {
 	    stopSettings.filterConfiguration );
     if ( m_uiStopDetails.filterConfiguration->contains(trFilterConfiguration) ) {
 	m_uiStopDetails.filterConfiguration->setCurrentItem( trFilterConfiguration );
-    } /*else if ( trFilterConfiguration.isEmpty() ) {
-	int noneIndex = m_uiStopDetails.filterConfiguration->findData( "none" );
-	kDebug() << "NONE INDEX" << noneIndex;
-	m_uiStopDetails.filterConfiguration->setCurrentIndex( noneIndex );
-    }*/
+    }
     
     // Select location from stopSettings
-    QModelIndexList indicesLocation = m_modelLocations->match(
-	    m_modelLocations->index(0, 0), LocationCodeRole,
-	    stopSettings.location, 1, Qt::MatchFixedString );
-    if ( !indicesLocation.isEmpty() )
-	m_uiStop.location->setCurrentIndex( indicesLocation.first().row() );
+    QModelIndex index = m_modelLocations->indexOfLocation(
+	stopSettings.location.isEmpty() ? KGlobal::locale()->country() : stopSettings.location );
+    if ( index.isValid() )
+	m_uiStop.location->setCurrentIndex( index.row() );
     else
-	m_uiStop.location->setCurrentIndex( 1 );
+	m_uiStop.location->setCurrentIndex( 0 );
     
     // Select service provider from stopSettings
     if ( !stopSettings.serviceProviderID.isEmpty() ) {
-	QModelIndexList indices = m_modelLocationServiceProviders->match(
-		m_modelLocationServiceProviders->index(0, 0), ServiceProviderIdRole,
+	QModelIndexList indices = m_uiStop.serviceProvider->model()->match(
+		m_uiStop.serviceProvider->model()->index(0, 0), ServiceProviderIdRole,
 		stopSettings.serviceProviderID, 1, Qt::MatchFixedString );
+	
 	if ( !indices.isEmpty() ) {
 	    int curServiceProviderIndex = indices.first().row();
 	    m_uiStop.serviceProvider->setCurrentIndex( curServiceProviderIndex );
@@ -313,26 +302,22 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings ) {
 
 StopSettings StopSettingsDialog::stopSettings() const {
     StopSettings stopSettings;
-    QVariantHash serviceProviderData = m_modelLocationServiceProviders->index(
-	    m_uiStop.serviceProvider->currentIndex(), 0 )
-	    .data( ServiceProviderDataRole ).toHash();
+
+    QVariantHash serviceProviderData = m_uiStop.serviceProvider->itemData(
+	m_uiStop.serviceProvider->currentIndex(), ServiceProviderDataRole ).toHash();
+//     QVariantHash serviceProviderData = m_modelLocationServiceProviders->index(
+// 	    m_uiStop.serviceProvider->currentIndex(), 0 )
+// 	    .data( ServiceProviderDataRole ).toHash();
     stopSettings.serviceProviderID = serviceProviderData["id"].toString();
     stopSettings.location = m_uiStop.location->itemData(
 	m_uiStop.location->currentIndex(), LocationCodeRole ).toString();
 
-    QVariantHash curServiceProviderData = m_uiStop.serviceProvider->itemData(
-	m_uiStop.serviceProvider->currentIndex(), ServiceProviderDataRole ).toHash();
-    if ( curServiceProviderData["useSeparateCityValue"].toBool() ) {
+    if ( serviceProviderData["useSeparateCityValue"].toBool() ) {
 	stopSettings.city = m_uiStop.city->isEditable()
 		? m_uiStop.city->lineEdit()->text() : m_uiStop.city->currentText();
     }
-//     if ( m_uiStopDetails.filterConfiguration->itemData(
-// 	    m_uiStopDetails.filterConfiguration->currentIndex()).toString() == "none" ) {
-// 	stopSettings.filterConfiguration = QString();
-//     } else {
-	stopSettings.filterConfiguration = SettingsUiManager::untranslateKey(
-		m_uiStopDetails.filterConfiguration->currentText() );
-//     }
+    stopSettings.filterConfiguration = SettingsUiManager::untranslateKey(
+	    m_uiStopDetails.filterConfiguration->currentText() );
     stopSettings.stops = m_stopList->lineEditTexts();
     foreach ( const QString &stop, stopSettings.stops ) {
 	if ( m_stopToStopID.contains(stop) )
@@ -452,18 +437,6 @@ void StopSettingsDialog::nearStopsDialogFinished( int result ) {
     m_nearStopsDialog = NULL;
 }
 
-// void StopSettingsDialog::selectLocaleLocation() {
-//     QString location = KGlobal::locale()->country();
-//     QModelIndexList indices = m_modelLocations->match( m_modelLocations->index(0, 0),
-// 			LocationCodeRole, location, 1, Qt::MatchFixedString );
-//     if ( !indices.isEmpty() ) {
-// 	m_uiStop.location->setCurrentIndex( indices.first().row() );
-//     } else {
-// 	kDebug() << "Location with country code" << location << "not found";
-// 	m_uiStop.location->setCurrentIndex( 0 );
-//     }
-// }
-
 void StopSettingsDialog::accept() {
     m_stopList->removeEmptyLineEdits();
 
@@ -581,10 +554,8 @@ void StopSettingsDialog::processStopSuggestions( const Plasma::DataEngine::Data&
 	kDebug() << "No stop line edit has focus, discard received stops.";
 }
 
-void StopSettingsDialog::updateServiceProviderModel( const QString& locationText ) {
+void StopSettingsDialog::updateServiceProviderModel( int index ) {
     // Filter service providers for the given locationText
-    int index = locationText.isEmpty() ? m_uiStop.location->currentIndex()
-	    : m_uiStop.location->findText( locationText );
     QString locationCode = m_uiStop.location->itemData(index, LocationCodeRole).toString();
     if ( locationCode == "showAll" ) {
 	m_modelLocationServiceProviders->setFilterRegExp( QString() );
@@ -594,18 +565,17 @@ void StopSettingsDialog::updateServiceProviderModel( const QString& locationText
     }
 }
 
-void StopSettingsDialog::locationChanged( const QString& newLocation ) {
-    updateServiceProviderModel( newLocation );
+void StopSettingsDialog::locationChanged( int index ) {
+    updateServiceProviderModel( index );
 
     // Select default accessor of the selected location
-    QString locationCode = m_uiStop.location->itemData(
-	    m_uiStop.location->findText(newLocation), LocationCodeRole ).toString();
+    QString locationCode = m_uiStop.location->itemData( index, LocationCodeRole ).toString();
     Plasma::DataEngine::Data locationData = m_publicTransportEngine->query( "Locations" );
     QString defaultServiceProviderId =
 	    locationData[locationCode].toHash()["defaultAccessor"].toString();
     if ( !defaultServiceProviderId.isEmpty() ) {
-	QModelIndexList indices = m_modelLocationServiceProviders->match(
-		m_modelLocationServiceProviders->index(0, 0), ServiceProviderIdRole,
+	QModelIndexList indices = m_uiStop.serviceProvider->model()->match(
+		m_uiStop.serviceProvider->model()->index(0, 0), ServiceProviderIdRole,
 		defaultServiceProviderId, 1, Qt::MatchFixedString );
 	if ( !indices.isEmpty() ) {
 	    int curServiceProviderIndex = indices.first().row();
@@ -617,7 +587,7 @@ void StopSettingsDialog::locationChanged( const QString& newLocation ) {
 
 void StopSettingsDialog::serviceProviderChanged( int index ) {
     QVariantHash serviceProviderData =
-	    m_modelLocationServiceProviders->index( index, 0 )
+	    m_uiStop.serviceProvider->model()->index( index, 0 )
 	    .data( ServiceProviderDataRole ).toHash();
 
 // TODO: Show warning message in main config dialog, if not all selected stops support arrivals
@@ -644,7 +614,7 @@ void StopSettingsDialog::serviceProviderChanged( int index ) {
 }
 
 void StopSettingsDialog::cityNameChanged( const QString& /*cityName*/ ) {
-//     QVariantHash serviceProviderData = m_modelLocationServiceProviders->index(
+//     QVariantHash serviceProviderData = m_uiStop.serviceProvider->model()->index(
 // 	    m_uiStop.serviceProvider->currentIndex(), 0 )
 // 	    .data( ServiceProviderDataRole ).toHash();
 //     bool useSeparateCityValue = serviceProviderData["useSeparateCityValue"].toBool();
@@ -675,7 +645,7 @@ void StopSettingsDialog::clickedServiceProviderInfo() {
     infoDialog->setWindowTitle( i18nc("@title:window", "Service Provider Information") );
     infoDialog->setWindowIcon( KIcon("help-about") );
 
-    QVariantHash serviceProviderData = m_modelLocationServiceProviders->index(
+    QVariantHash serviceProviderData = m_uiStop.serviceProvider->model()->index(
 	    m_uiStop.serviceProvider->currentIndex(), 0 )
 	    .data( ServiceProviderDataRole ).toHash();
     QIcon favIcon = m_uiStop.serviceProvider->itemIcon(

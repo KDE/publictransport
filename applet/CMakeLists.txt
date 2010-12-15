@@ -21,18 +21,20 @@ set( publictransport_SRCS
     journeysearchlineedit.cpp
     overlaywidget.cpp
     global.cpp
+    filter.cpp
+    htmldelegate.cpp
+    departureinfo.cpp
     settings.cpp
     stopfinder.cpp
     dynamicwidget.cpp
     stopwidget.cpp
-    filter.cpp
     filterwidget.cpp
     stopsettingsdialog.cpp
     checkcombobox.cpp
     categorycombobox.cpp
     datasourcetester.cpp
-    htmldelegate.cpp
-    departureinfo.cpp )
+    locationmodel.cpp
+    serviceprovidermodel.cpp )
 
 kde4_add_ui_files( publictransport_SRCS
     publicTransportConfig.ui

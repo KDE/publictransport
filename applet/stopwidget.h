@@ -29,15 +29,16 @@ namespace Plasma {
     class DataEngine;
 }
 class DynamicWidget;
-class QStandardItemModel;
+class ServiceProviderModel;
+class LocationModel;
 class StopWidget : public QWidget {
     Q_OBJECT
 
     public:
 	StopWidget( const StopSettings &stopSettings,
 		    const QStringList &filterConfigurations,
-		    QStandardItemModel *modelLocations,
-		    QStandardItemModel *modelServiceProviders,
+		    LocationModel *modelLocations,
+		    ServiceProviderModel *modelServiceProviders,
 		    Plasma::DataEngine *publicTransportEngine,
 		    Plasma::DataEngine *osmEngine,
 		    Plasma::DataEngine *geolocationEngine, QWidget* parent );
@@ -75,8 +76,8 @@ class StopWidget : public QWidget {
 	StopSettings m_stopSettings;
 	QStringList m_filterConfigurations;
 	QLabel *m_stop, *m_provider; //, *m_filterConfiguration;
-	QStandardItemModel *m_modelLocations; // Model of locations
-	QStandardItemModel *m_modelServiceProviders; // Model of service providers
+	LocationModel *m_modelLocations; // Model of locations
+	ServiceProviderModel *m_modelServiceProviders; // Model of service providers
 	Plasma::DataEngine *m_publicTransportEngine;
 	Plasma::DataEngine *m_osmEngine;
 	Plasma::DataEngine *m_geolocationEngine;
@@ -89,8 +90,8 @@ class StopListWidget : public AbstractDynamicWidgetContainer {
     public:
 	StopListWidget( const StopSettingsList &stopSettingsList,
 			const QStringList &filterConfigurations,
-			QStandardItemModel *modelLocations,
-			QStandardItemModel *modelServiceProviders,
+			LocationModel *modelLocations,
+			ServiceProviderModel *modelServiceProviders,
 			Plasma::DataEngine *publicTransportEngine,
 			Plasma::DataEngine *osmEngine,
 			Plasma::DataEngine *geolocationEngine, QWidget *parent = 0 );
@@ -118,8 +119,8 @@ class StopListWidget : public AbstractDynamicWidgetContainer {
 
     private:
 	QStringList m_filterConfigurations;
-	QStandardItemModel *m_modelLocations; // Model of locations
-	QStandardItemModel *m_modelServiceProviders; // Model of service providers
+	LocationModel *m_modelLocations; // Model of locations
+	ServiceProviderModel *m_modelServiceProviders; // Model of service providers
 	Plasma::DataEngine *m_publicTransportEngine;
 	Plasma::DataEngine *m_osmEngine;
 	Plasma::DataEngine *m_geolocationEngine;

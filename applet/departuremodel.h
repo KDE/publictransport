@@ -22,20 +22,7 @@
 
 #include <QAbstractItemModel>
 #include "departureinfo.h"
-#include "settings.h" // For AlarmSettings. Should be removed here.
-
-/** Additional data roles used by DepartureModel / JourneyModel. */
-enum AdditionalRoles {
-    FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text. 
-	* The text of an item should not contain html tags, if used in a combo box. */
-    DecorationPositionRole = Qt::UserRole + 501,
-    DrawAlarmBackgroundRole = Qt::UserRole + 502,
-    AlarmColorIntensityRole = Qt::UserRole + 503,
-    JourneyRatingRole = Qt::UserRole + 504, /**< Stores a value between 0 and 1.
-	* 0 for the journey with the biggest duration, 1 for the smallest duration. */
-    LinesPerRowRole = Qt::UserRole + 505, /**< Used to change the number of lines for a row. */
-    IconSizeRole = Qt::UserRole + 506 /**< Used to set a specific icon size for an element. */
-};
+#include "settings.h" // TODO Only used for AlarmSettings. Removed here?
 
 /** The position of the decoration. */
 enum DecorationPosition {

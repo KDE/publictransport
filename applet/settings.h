@@ -32,6 +32,8 @@
 #include <Plasma/Theme>
 #include <Plasma/DataEngine>
 
+class LocationModel;
+class ServiceProviderModel;
 /** Different types of alarms. */
 enum AlarmType {
     AlarmRemoveAfterFirstMatch = 0, /**< The alarm will get removed once fired. */
@@ -103,10 +105,6 @@ class SettingsUiManager : public QObject {
 	void configFinished();
 	/** Ok pressed in the config dialog. */
 	void configAccepted();
-	
-	/** The data from the data engine was updated. */
-	void dataUpdated( const QString& sourceName,
-			  const Plasma::DataEngine::Data& data );
 
 	/** Loads the given @p filterConfig into the dialog. */
 	void loadFilterConfiguration( const QString &filterConfig );
@@ -155,8 +153,6 @@ class SettingsUiManager : public QObject {
         void setValuesOfAlarmConfig();
 	void setValuesOfAppearanceConfig( const Settings &settings );
 
-	void initModels(); // init m_modelServiceProvider and m_modelLocations
-
     private:
 	FilterSettings currentFilterSettings() const;
 	AlarmSettings currentAlarmSettings( const QString &name = QString() ) const;
@@ -174,8 +170,8 @@ class SettingsUiManager : public QObject {
 	Ui::publicTransportFilterConfig m_uiFilter;
 	Ui::alarmConfig m_uiAlarms;
 	
-	QStandardItemModel *m_modelServiceProvider; // The model for the service provider combobox in the config dialog
-	QStandardItemModel *m_modelLocations; // The model for the location combobox in the config dialog
+	ServiceProviderModel *m_modelServiceProvider; // The model for the service provider combobox in the config dialog
+	LocationModel *m_modelLocations; // The model for the location combobox in the config dialog
 	Plasma::DataEngine::Data m_serviceProviderData; // Service provider information from the data engine
 	QVariantHash m_locationData; // Location information from the data engine.
 

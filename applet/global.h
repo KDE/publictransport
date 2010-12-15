@@ -169,7 +169,18 @@ enum ModelDataRoles {
     DepartureInfoRole = Qt::UserRole + 10, /**< Used to store the departure */
     LocationCodeRole = Qt::UserRole + 12, /**< Used to store the location code (country code or other) in the location model. */
     TimetableItemHashRole = Qt::UserRole + 13, /**< Used to store a hash for the current timetable item in the model. */
-    ServiceProviderIdRole = Qt::UserRole + 14 /** Used to store the service provider ID. */
+    ServiceProviderIdRole = Qt::UserRole + 14, /** Used to store the service provider ID. */
+
+    // Additional data roles used by DepartureModel / JourneyModel.
+    FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text.
+	* The text of an item should not contain html tags, if used in a combo box. */
+    DecorationPositionRole = Qt::UserRole + 501,
+    DrawAlarmBackgroundRole = Qt::UserRole + 502,
+    AlarmColorIntensityRole = Qt::UserRole + 503,
+    JourneyRatingRole = Qt::UserRole + 504, /**< Stores a value between 0 and 1.
+	* 0 for the journey with the biggest duration, 1 for the smallest duration. */
+    LinesPerRowRole = Qt::UserRole + 505, /**< Used to change the number of lines for a row. */
+    IconSizeRole = Qt::UserRole + 506 /**< Used to set a specific icon size for an element. */
 };
 
 /** The type of the vehicle used for a public transport line.

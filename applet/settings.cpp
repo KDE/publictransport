@@ -25,6 +25,8 @@
 #include "departuremodel.h"
 // #include "datasourcetester.h"
 #include "departureprocessor.h"
+#include "locationmodel.h"
+#include "serviceprovidermodel.h"
 
 // Qt includes
 #include <QListWidget>
@@ -101,7 +103,13 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     m_configDialog->addPage( widgetFilter, i18nc("@title:group", "Filter"), "view-filter" );
     m_configDialog->addPage( widgetAlarms, i18nc("@title:group", "Alarms"), "task-reminder" );
 
-    initModels();
+    // Setup model for the service provider combobox
+    m_modelServiceProvider = new ServiceProviderModel( this );
+    m_modelServiceProvider->syncWithDataEngine( m_publicTransportEngine, m_favIconEngine );
+
+    // Setup model for the location combobox
+    m_modelLocations = new LocationModel( this );
+    m_modelLocations->syncWithDataEngine( m_publicTransportEngine );
 
     // Setup stop widgets
     // Build a new list of filter configuration names
@@ -694,201 +702,6 @@ void SettingsUiManager::setValuesOfFilterConfig() {
     
     int added = m_uiFilter.filters->setWidgetCountRange( minWidgetCount, maxWidgetCount );
     setFilterConfigurationChanged( added != 0 );
-}
-
-void SettingsUiManager::initModels() {
-    // Setup model for the service provider combobox
-    m_modelServiceProvider = new QStandardItemModel( 0, 1, this );
-
-    // Setup model for the location combobox
-    m_modelLocations = new QStandardItemModel( 0, 1, this );
-
-    // Get locations
-    m_locationData = m_publicTransportEngine->query( "Locations" );
-    QStringList uniqueCountries = m_locationData.keys();
-    QStringList countries;
-
-    // Get a list with the location of each service provider
-    // (locations can be contained multiple times)
-    m_serviceProviderData = m_publicTransportEngine->query("ServiceProviders");
-    for ( Plasma::DataEngine::Data::const_iterator it = m_serviceProviderData.constBegin();
-	  it != m_serviceProviderData.constEnd(); ++it )
-    {
-	QHash< QString, QVariant > serviceProviderData =
-		m_serviceProviderData.value(it.key()).toHash();
-	countries << serviceProviderData["country"].toString();
-    }
-
-    // Create location items
-    foreach( const QString &country, uniqueCountries ) {
-	QStandardItem *item;
-	QString text, sortText;
-	item = new QStandardItem;
-
-	if ( country.compare("international", Qt::CaseInsensitive)  == 0 ) {
-	    text = i18nc("@item:inlistbox Name of the category for international "
-			 "service providers", "International");
-	    sortText = "00000" + text;
-	    item->setIcon( Global::internationalIcon() );
-	} else if ( country.compare("unknown", Qt::CaseInsensitive)  == 0 ) {
-	    text = i18nc("@item:inlistbox Name of the category for service providers "
-			 "with unknown contries", "Unknown");
-	    sortText = "00000" + text;
-	    item->setIcon( KIcon("dialog-warning") );
-	} else {
-	    if ( KGlobal::locale()->allCountriesList().contains( country ) )
-		text = KGlobal::locale()->countryCodeToName( country );
-	    else
-		text = country;
-	    sortText = "11111" + text;
-	    item->setIcon( Global::putIconIntoBiggerSizeIcon(KIcon(country), QSize(32, 23)) );
-	}
-
-	QString formattedText = QString( "<span><b>%1</b></span> "
-					 "<small>(<b>%2</b>)<br-wrap>%3</small>" )
-		.arg( text )
-		.arg( i18np("%1 accessor", "%1 accessors", countries.count(country)) )
-		.arg( m_locationData[country].toHash()["description"].toString() );
-
-	item->setText( text );
-	item->setData( country, LocationCodeRole );
-	item->setData( formattedText, FormattedTextRole );
-	item->setData( sortText, SortRole );
-	item->setData( 4, LinesPerRowRole );
-
-	m_modelLocations->appendRow( item );
-    }
-
-    // Append item to show all service providers
-    QString sShowAll = i18nc("@item:inlistbox", "Show all available service providers");
-    QStandardItem *itemShowAll = new QStandardItem();
-    itemShowAll->setData( "000000", SortRole );
-    QString formattedText = QString( "<span><b>%1</b></span>"
-				     "<br-wrap><small><b>%2</b></small>" )
-	.arg( sShowAll )
-	.arg( i18nc("@info:plain Label for the total number of accessors", "Total: ")
-	    + i18ncp("@info:plain", "%1 accessor", "%1 accessors", countries.count()) );
-    itemShowAll->setData( "showAll", LocationCodeRole );
-    itemShowAll->setData( formattedText, FormattedTextRole );
-    itemShowAll->setText( sShowAll );
-    itemShowAll->setData( 3, LinesPerRowRole );
-    itemShowAll->setIcon( KIcon("package_network") ); // TODO: Other icon?
-    m_modelLocations->appendRow( itemShowAll );
-
-    // Get errornous service providers (TODO: Get error messages)
-    QStringList errornousAccessorNames = m_publicTransportEngine
-	    ->query("ErrornousServiceProviders")["names"].toStringList();
-    if ( !errornousAccessorNames.isEmpty() ) {
-	QStringList errorLines;
-	for( int i = 0; i < errornousAccessorNames.count(); ++i ) {
-	    errorLines << QString("<b>%1</b>").arg( errornousAccessorNames[i] );//.arg( errorMessages[i] );
-	}
-	QStandardItem *itemErrors = new QStandardItem();
-	itemErrors->setData( "ZZZZZ", SortRole ); // Sort to the end
-	formattedText = QString( "<span><b>%1</b></span><br-wrap><small>%2</small>" )
-	    .arg( i18ncp("@info:plain", "%1 accessor is errornous:", "%1 accessors are errornous:",
-			errornousAccessorNames.count()) )
-	    .arg( errorLines.join(",<br-wrap>") );
-	itemErrors->setData( formattedText, FormattedTextRole );
-	itemErrors->setData( 1 + errornousAccessorNames.count(),
-			     LinesPerRowRole );
-	itemErrors->setSelectable( false );
-	itemErrors->setIcon( KIcon("edit-delete") );
-	m_modelLocations->appendRow( itemErrors );
-    }
-
-    m_modelLocations->setSortRole( SortRole );
-    m_modelLocations->sort( 0 );
-
-    // Init service provider model
-    QList< QStandardItem* > appendItems;
-    for ( Plasma::DataEngine::Data::const_iterator it = m_serviceProviderData.constBegin();
-	it != m_serviceProviderData.constEnd(); ++it )
-    {
-//     foreach( const QString &serviceProviderName, m_serviceProviderData.keys() ) {
-	QVariantHash serviceProviderData = it.value().toHash();
-
-	// TODO Add a flag to the accessor XML files, maybe <countryWide />
-	bool isCountryWide = it.key().contains(
-		serviceProviderData["country"].toString(), Qt::CaseInsensitive );
-	QString formattedText;
-	QStandardItem *item = new QStandardItem( it.key() ); // TODO: delete?
-
-	formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
-	    .arg( it.key() )
-	    .arg( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
-	item->setData( 4, LinesPerRowRole );
-	item->setData( formattedText, FormattedTextRole );
-	item->setData( serviceProviderData, ServiceProviderDataRole );
-	item->setData( serviceProviderData["country"], LocationCodeRole );
-	item->setData( serviceProviderData["id"], ServiceProviderIdRole );
-
-	// Sort service providers containing the country in it's
-	// name to the top of the list for that country
-	QString locationCode = serviceProviderData["country"].toString();
-	QString sortString;
-	if ( locationCode == "international" ) {
-	    sortString = "XXXXX" + it.key();
-	} else if ( locationCode == "unknown" ) {
-	    sortString = "YYYYY" + it.key();
-	} else {
-	    QString countryName = KGlobal::locale()->countryCodeToName( locationCode );
-	    sortString = isCountryWide
-		    ? "WWWWW" + countryName + "11111" + it.key()
-		    : "WWWWW" + countryName + it.key();
-	}
-	item->setData( sortString, SortRole );
-	
-	QString title;
-	if ( locationCode == "international" )
-	    title = i18nc("@info:inlistbox Name of the category for international "
-			  "service providers", "International");
-	else if ( locationCode == "unknown" )
-	    title = i18nc("@info:inlistbox Name of the category for service providers "
-			  "with unknown contries", "Unknown");
-	else
-	    title = KGlobal::locale()->countryCodeToName( locationCode );
-	item->setData( title,
-		       KCategorizedSortFilterProxyModel::CategoryDisplayRole );
-	item->setData( sortString,
-		       KCategorizedSortFilterProxyModel::CategorySortRole );
-	
-	m_modelServiceProvider->appendRow( item );
-
-	// Request favicons
-	QString favIconSource = serviceProviderData["url"].toString();
-	m_favIconEngine->disconnectSource( favIconSource, this );
-	m_favIconEngine->connectSource( favIconSource, this );
-	m_favIconEngine->query( favIconSource );
-    }
-    m_modelServiceProvider->setSortRole( SortRole );
-    m_modelServiceProvider->sort( 0 );
-}
-
-void SettingsUiManager::dataUpdated( const QString& sourceName,
-				     const Plasma::DataEngine::Data& data ) {
-    if ( sourceName.contains(QRegExp("^http")) ) {
-	// Favicon of a service provider arrived
-	Q_ASSERT_X( m_modelServiceProvider, "SettingsUiManager::dataUpdated",
-		    "No service provider model" );
-
-	QPixmap favicon( QPixmap::fromImage(data["Icon"].value<QImage>()) );
-	if ( favicon.isNull() ) {
-	    kDebug() << "Favicon is NULL for" << sourceName;
-	    favicon = QPixmap( 16, 16 );
-	    favicon.fill( Qt::transparent );
-	}
-	
-	for ( int i = 0; i < m_modelServiceProvider->rowCount(); ++i ) {
-	    QVariantHash serviceProviderData = m_modelServiceProvider->item(i)
-		    ->data( ServiceProviderDataRole ).toHash();
-	    QString favIconSource = serviceProviderData["url"].toString();
-	    if ( favIconSource.compare(sourceName) == 0 )
-		m_modelServiceProvider->item(i)->setIcon( KIcon(favicon) );
-	}
-
-	m_favIconEngine->disconnectSource( sourceName, this );
-    }
 }
 
 QString SettingsUiManager::translateKey( const QString& key ) {

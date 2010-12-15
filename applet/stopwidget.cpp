@@ -19,6 +19,8 @@
 
 #include "stopwidget.h"
 #include "stopsettingsdialog.h"
+#include "settings.h"
+#include "serviceprovidermodel.h"
 
 #include <KPushButton>
 #include <KDebug>
@@ -26,13 +28,11 @@
 #include <QHBoxLayout>
 #include <QSpacerItem>
 #include <QFormLayout>
-#include <QStandardItemModel>
-#include "settings.h"
 
 StopWidget::StopWidget( const StopSettings& stopSettings,
 			const QStringList& filterConfigurations,
-			QStandardItemModel* modelLocations,
-			QStandardItemModel* modelServiceProviders,
+			LocationModel* modelLocations,
+			ServiceProviderModel* modelServiceProviders,
 			Plasma::DataEngine* publicTransportEngine,
 			Plasma::DataEngine* osmEngine,
 			Plasma::DataEngine* geolocationEngine, QWidget* parent )
@@ -75,15 +75,13 @@ void StopWidget::setStopSettings( const StopSettings& stopSettings ) {
 		"(%1: stop name(s), %2: city)", "%1 in %2",
 		stopSettings.stops.join(",<nl/>"), stopSettings.city) );
 
-    QModelIndexList indices = m_modelServiceProviders->match(
-                                  m_modelServiceProviders->index(0, 0),
-                                  ServiceProviderIdRole, stopSettings.serviceProviderID, 1,
-                                  Qt::MatchFixedString );
-    if ( indices.isEmpty() ) {
+    QModelIndex index = m_modelServiceProviders->indexOfServiceProvider( stopSettings.serviceProviderID );
+    if ( !index.isValid() ) {
         kDebug() << "Didn't find service provider" << stopSettings.serviceProviderID;
         m_provider->setText( "-" );
-    } else
-        m_provider->setText( indices.first().data().toString() );
+    } else {
+        m_provider->setText( index.data().toString() );
+    }
 
     m_stopSettings = stopSettings;
     m_newlyAdded = false;
@@ -129,8 +127,8 @@ void StopWidget::changeClicked() {
 
 StopListWidget::StopListWidget( const StopSettingsList& stopSettingsList,
 	    const QStringList& filterConfigurations,
-	    QStandardItemModel* modelLocations,
-	    QStandardItemModel* modelServiceProviders,
+	    LocationModel* modelLocations,
+	    ServiceProviderModel* modelServiceProviders,
 	    Plasma::DataEngine* publicTransportEngine, Plasma::DataEngine* osmEngine,
 	    Plasma::DataEngine* geolocationEngine, QWidget* parent )
 	    : AbstractDynamicWidgetContainer( RemoveButtonsBesideWidgets,

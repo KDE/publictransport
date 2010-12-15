@@ -33,12 +33,13 @@
 #include "stopfinder.h"
 
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
-#define USE_KCATEGORYVIEW // Comment out to not use KCategoryView, which causes problems with KDE 4.3
+// #define USE_KCATEGORYVIEW // Remove the comment to use KCategoryView
 #endif
 
+class LocationModel;
+class ServiceProviderModel;
 class DynamicLabeledLineEditList;
 class HtmlDelegate;
-class QStandardItemModel;
 class KLineEdit;
 class NearStopsDialog;
 class StopSettingsDialog : public KDialog {
@@ -47,8 +48,8 @@ class StopSettingsDialog : public KDialog {
     public:
 	StopSettingsDialog( const StopSettings &stopSettings,
 			    const QStringList &filterConfigurations,
-			    QStandardItemModel *modelLocations,
-			    QStandardItemModel *modelServiceProviders,
+			    LocationModel *modelLocations,
+			    ServiceProviderModel *modelServiceProviders,
 			    Plasma::DataEngine *publicTransportEngine,
 			    Plasma::DataEngine *osmEngine,
 			    Plasma::DataEngine *geolocationEngine,
@@ -66,7 +67,7 @@ class StopSettingsDialog : public KDialog {
 	/** The city name has been changed. */
 	void cityNameChanged( const QString &cityName );
 	/** Another location has been selected. */
-	void locationChanged( const QString &newLocation );
+	void locationChanged( int index );
 	/** The info button has been clicked. This shows information about the
 	* currently selected service provider in a dialog. */
 	void clickedServiceProviderInfo();
@@ -98,7 +99,7 @@ class StopSettingsDialog : public KDialog {
     private:
 	/** Updates the service provider model by inserting service provider for the
 	* current location. */
-	void updateServiceProviderModel( const QString &locationText = QString() );
+	void updateServiceProviderModel( int index );
 	QString currentCityValue() const;
 	void requestStopSuggestions( int stopIndex );
 	void processStopSuggestions( const Plasma::DataEngine::Data& data );
@@ -111,8 +112,8 @@ class StopSettingsDialog : public KDialog {
 	NearStopsDialog *m_nearStopsDialog;
 	QString m_stopFinderServiceProviderID;
 	
-	QStandardItemModel *m_modelLocations; // Model of locations
-	QStandardItemModel *m_modelServiceProviders; // Model of service providers
+	LocationModel *m_modelLocations; // Model of locations
+	ServiceProviderModel *m_modelServiceProviders; // Model of service providers
 	QSortFilterProxyModel *m_modelLocationServiceProviders; // Model of service providers for the current location
 	HtmlDelegate *m_htmlDelegate;
 	DynamicLabeledLineEditList *m_stopList;
@@ -122,13 +123,8 @@ class StopSettingsDialog : public KDialog {
 	QHash< QString, QVariant > m_stopToStopID; /**< A hash with stop names as 
 				* keys and the corresponding stop IDs as values. */
 
-#ifdef USE_KCATEGORYVIEW
-#if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
-	class KCategoryDrawer;
-	KCategoryDrawer *categoryDrawer; // not derived from QObject before KDE 4.4
-#endif
-#endif
-    private:
+	KDialog *m_infoDialog; // Stores a pointer to the service provider info dialog
+
 	Q_DISABLE_COPY( StopSettingsDialog )
 };
 
