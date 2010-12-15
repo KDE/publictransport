@@ -446,8 +446,9 @@ void TimetableAccessor::result( KJob* job ) {
 	    else if ( roundTrips == 2 )
 		sNextUrl = parseDocumentForDetailedJourneysUrl( document );
 	}
-	kDebug() << "     PARSE RESULTS" << parseDocumentMode;
-	
+	kDebug() << "Parse results" << parseDocumentMode;
+
+	// Try to parse the document
 	if ( parseDocument(document, &dataList, &globalInfo, parseDocumentMode) ) {
 	    if ( parseDocumentMode == ParseForDeparturesArrivals ) {
 		QList<DepartureInfo*> departures;
@@ -464,6 +465,9 @@ void TimetableAccessor::result( KJob* job ) {
 					  serviceProvider(), sourceName,
 					  city, stop, dataType, parseDocumentMode );
 	    }
+	// Parsing has failed, try to parse stop suggestions.
+	// First request departures using a different url if that is a special
+	// url for stop suggestions.
 	} else if ( hasSpecialUrlForStopSuggestions() ) {
 // 	    kDebug() << "request possible stop list";
 	    requestDepartures( sourceName, m_curCity, stop, maxDeps, dateTime,
@@ -493,6 +497,7 @@ void TimetableAccessor::result( KJob* job ) {
 // 		return;
 	    }
 	}
+    // Used a different url for requesting data, the data contains stop suggestions
     } else if ( parseDocumentPossibleStops(document, &stops, &stopToStopId, &stopToStopWeight) ) {
 // 	kDebug() << "possible stop list received ok";
 	emit stopListReceived( this, url, stops, stopToStopId, stopToStopWeight,
@@ -627,7 +632,7 @@ QString TimetableAccessor::gethex( ushort decimal ) {
     return QChar('%') + hexchars[decimal >> 4] + hexchars[decimal & 0xF];
 }
 
-QString TimetableAccessor::toPercentEncoding( QString str, QByteArray charset ) {
+QString TimetableAccessor::toPercentEncoding( const QString &str, const QByteArray &charset ) {
     QString unreserved = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_.~";
 //     QString reserved = "!*'();:@&=+$,/?%#[]";
     QString encoded;
