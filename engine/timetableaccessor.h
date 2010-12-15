@@ -95,7 +95,7 @@ class TimetableAccessor : public QObject {
 	* is completely received departureListReceived() is emitted. */
 	KIO::StoredTransferJob *requestDepartures( const QString &sourceName,
 					     const QString &city, const QString &stop,
-					     int maxDeps, const QDateTime &dateTime,
+					     int maxCount, const QDateTime &dateTime,
 					     const QString &dataType = "departures",
 					     bool useDifferentUrl = false );
 
@@ -109,7 +109,7 @@ class TimetableAccessor : public QObject {
 					   const QString &city,
 					   const QString &startStopName,
 					   const QString &targetStopName,
-					   int maxDeps, const QDateTime &dateTime,
+					   int maxCount, const QDateTime &dateTime,
 					   const QString &dataType = "journeys",
 					   bool useDifferentUrl = false );
 					   
@@ -197,7 +197,7 @@ class TimetableAccessor : public QObject {
 
 	/** Constructs an url to the departure / arrival list by combining the "raw"
 	* url with the needed information. */
-	KUrl getUrl( const QString &city, const QString &stop, int maxDeps,
+	KUrl getUrl( const QString &city, const QString &stop, int maxCount,
 		     const QDateTime &dateTime,
 		     const QString &dataType = "departures",
 		     bool useDifferentUrl = false ) const;
@@ -209,7 +209,7 @@ class TimetableAccessor : public QObject {
 	/** Constructs an url to the journey list by combining the "raw" url with the
 	* needed information. */
 	KUrl getJourneyUrl( const QString &city, const QString &startStopName,
-			    const QString &targetStopName, int maxDeps,
+			    const QString &targetStopName, int maxCount,
 			    const QDateTime &dateTime,
 			    const QString &dataType = "departures",
 			    bool useDifferentUrl = false ) const;
@@ -328,7 +328,7 @@ class TimetableAccessor : public QObject {
 		      const QString &sourceName, const QString &city,
 		      const QString &stop, const QUrl &url,
 		      const QString &dataType = QString(),
-		      int maxDeps = -1, const QDateTime &dateTime = QDateTime(),
+		      int maxCount = -1, const QDateTime &dateTime = QDateTime(),
 		      bool useDifferentUrl = false,
 		      const QString &targetStop = QString(), int roundTrips = 0 ) {
 		this->parseDocumentMode = parseDocumentMode;
@@ -337,7 +337,7 @@ class TimetableAccessor : public QObject {
 		this->stop = stop;
 		this->url = url;
 		this->dataType = dataType;
-		this->maxDeps = maxDeps;
+		this->maxCount = maxCount;
 		this->dateTime = dateTime;
 		this->usedDifferentUrl = useDifferentUrl;
 		this->targetStop = targetStop;
@@ -350,7 +350,7 @@ class TimetableAccessor : public QObject {
 	    QString stop;
 	    QString dataType;
 	    QUrl url;
-	    int maxDeps;
+	    int maxCount;
 	    QDateTime dateTime;
 	    bool usedDifferentUrl;
 	    QString targetStop;

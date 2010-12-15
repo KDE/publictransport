@@ -293,6 +293,9 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 	ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals;
 	QString city, stop, targetStop, originStop, dataType;
 	QDateTime dateTime;
+	// Get 100 items by default to limit server requests (data is cached).
+	// For fast results that are only needed once small numbers should be used.
+	int maxCount = 100; 
 
 	kDebug() << name;
 
@@ -326,30 +329,42 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 	    return false;
 	
 	input = parameters.trimmed().split( '|', QString::SkipEmptyParts );
-	QString serviceProvider = input.at(0).trimmed();
+	QString serviceProvider;
 
 	for ( int i = 0; i < input.length(); ++i ) {
-	    QString s = input.at(i).toLower();
-	    if ( s.startsWith(QLatin1String("city="), Qt::CaseInsensitive) )
-		city = input.at(i).mid( QString("city=").length() ).trimmed();
-	    else if ( s.startsWith(QLatin1String("stop="), Qt::CaseInsensitive) )
-		stop = input.at(i).mid( QString("stop=").length() ).trimmed();
-	    else if ( s.startsWith(QLatin1String("targetStop="), Qt::CaseInsensitive) )
-		targetStop = input.at(i).mid( QString("targetStop=").length() ).trimmed();
-	    else if ( s.startsWith(QLatin1String("originStop="), Qt::CaseInsensitive) )
-		originStop = input.at(i).mid( QString("originStop=").length() ).trimmed();
-	    else if ( s.startsWith(QLatin1String("timeoffset="), Qt::CaseInsensitive) ) {
-		s = input.at(i).mid( QString("timeoffset=").length() ).trimmed();
+	    QString s = input.at(i);
+	    if ( s.startsWith(QLatin1String("city="), Qt::CaseInsensitive) ) {
+		city = s.mid( QString("city=").length() ).trimmed();
+	    } else if ( s.startsWith(QLatin1String("stop="), Qt::CaseInsensitive) ) {
+		stop = s.mid( QString("stop=").length() ).trimmed();
+	    } else if ( s.startsWith(QLatin1String("targetStop="), Qt::CaseInsensitive) ) {
+		targetStop = s.mid( QString("targetStop=").length() ).trimmed();
+	    } else if ( s.startsWith(QLatin1String("originStop="), Qt::CaseInsensitive) ) {
+		originStop = s.mid( QString("originStop=").length() ).trimmed();
+	    } else if ( s.startsWith(QLatin1String("timeoffset="), Qt::CaseInsensitive) ) {
+		s = s.mid( QString("timeoffset=").length() ).trimmed();
 		dateTime = QDateTime::currentDateTime().addSecs( s.toInt() * 60 );
 	    } else if ( s.startsWith(QLatin1String("time="), Qt::CaseInsensitive) ) {
-		s = input.at(i).mid( QString("time=").length() ).trimmed();
+		s = s.mid( QString("time=").length() ).trimmed();
 		dateTime = QDateTime( QDate::currentDate(), QTime::fromString(s, "hh:mm") );
 	    } else if ( s.startsWith(QLatin1String("datetime="), Qt::CaseInsensitive) ) {
-		s = input.at(i).mid( QString("datetime=").length() ).trimmed();
+		s = s.mid( QString("datetime=").length() ).trimmed();
 		dateTime = QDateTime::fromString( s );
+	    } else if ( s.startsWith(QLatin1String("maxCount="), Qt::CaseInsensitive) ) {
+		bool ok;
+		maxCount = s.mid( QString("maxCount=").length() ).trimmed().toInt(&ok);
+		if ( !ok ) {
+		    kDebug() << "Bad value for 'maxCount' in source name:" << s;
+		    maxCount = 100;
+		}
+	    } else if ( !s.isEmpty() && s.indexOf('=') == -1 ) {
+		// No parameter name given, assume the service provider ID
+		serviceProvider = s.trimmed();
+	    } else {
+		kDebug() << "Unknown argument" << s;
 	    }
 	}
-
+	
 	if ( dateTime.isNull() )
 	    dateTime = QDateTime::currentDateTime().addSecs( DEFAULT_TIME_OFFSET * 60 );
 
@@ -411,12 +426,12 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 	}
 
 	if ( parseDocumentMode == ParseForDeparturesArrivals )
-	    accessor->requestDepartures( name, city, stop, 100, dateTime, dataType );
+	    accessor->requestDepartures( name, city, stop, maxCount, dateTime, dataType );
 	else if ( parseDocumentMode == ParseForStopSuggestions )
 	    accessor->requestStopSuggestions( name, city, stop );
 	else // if ( parseDocumentMode == ParseForJourneys )
 	    accessor->requestJourneys( name, city, originStop, targetStop,
-				       100, dateTime, dataType );
+				       maxCount, dateTime, dataType );
     }
 
     return true;

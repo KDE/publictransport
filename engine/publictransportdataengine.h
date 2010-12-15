@@ -380,7 +380,7 @@ The following parameters are allowed:<br>
 <table>
 <tr><td><i>stop</i></td> <td>The name or ID of the stop to get departures / arrivals for.</td></tr>
 <tr><td><i>city</i></td> <td>The city to get departures/arrivals for, if needed.</td></tr>
-<tr><td><i>maxDeps</i></td> <td>The maximum departure/arrival count to get.</td></tr>
+<tr><td><i>maxCount</i></td> <td>The maximum departure/arrival count to get.</td></tr>
 <tr><td><i>timeOffset</i></td> <td>The offset in minutes from now for the first departure /
 arrival to get.</td></tr>
 <tr><td><i>time</i></td> <td>The time of the first departure/arrival to get ("hh:mm"). This uses the current date. To use another date use 'datetime'.</td></tr>
@@ -392,14 +392,14 @@ arrival to get.</td></tr>
 <b>"Departures de_db|stop=Pappelstraße, Bremen"</b><br>
 Gets departures for the stop "Pappelstraße, Bremen" using the service provider db.de.<br><br>
 
-<b>"Arrivals de_db|stop=Leipzig|timeOffset=5|maxDeps=99"</b><br>
+<b>"Arrivals de_db|stop=Leipzig|timeOffset=5|maxCount=99"</b><br>
 Gets arrivals for the stop "Leipzig" using db.de, the first possible arrival is in five minutes from now, the
 maximum arrival count is 99.<br><br>
 
 <b>"Departures de_rmv|stop=Frankfurt (Main) Speyerer Straße|time=08:00"</b><br>
 Gets departures for the stop "Frankfurt (Main) Speyerer Straße" using rmv.de, the first possible departure is at eight o'clock.<br><br>
 
-<b>"Departures de_rmv|stop=3000019|maxDeps=20|timeOffset=1"</b><br>
+<b>"Departures de_rmv|stop=3000019|maxCount=20|timeOffset=1"</b><br>
 Gets departures for the stop with the ID "3000019", the first possible departure is in one minute from now, the maximum departure count is 20.<br><br>
 
 Once you have the data source name, you can connect your applet to that
@@ -483,7 +483,7 @@ The following parameters are allowed:<br>
 <tr><td><i>originStop</i></td> <td>The name or ID of the origin stop.</td></tr>
 <tr><td><i>targetStop</i></td> <td>The name or ID of the target stop.</td></tr>
 <tr><td><i>city</i></td> <td>The city to get journeys for, if needed.</td></tr>
-<tr><td><i>maxDeps</i></td> <td>The maximum journey count to get.</td></tr>
+<tr><td><i>maxCount</i></td> <td>The maximum journey count to get.</td></tr>
 <tr><td><i>timeOffset</i></td> <td>The offset in minutes from now for the first journey to get.</td></tr>
 <tr><td><i>time</i></td> <td>The time for the first journey to get (in format "hh:mm").</td></tr>
 <tr><td><i>datetime</i></td> <td>The date and time for the first journey to get (QDateTime::fromString() is used with default parameters to parse the date).</td></tr>
@@ -495,7 +495,7 @@ The following parameters are allowed:<br>
 Gets journeys from stop "Pappelstraße, Bremen" to stop "Kirchweg, Bremen"
 using the service provider db.de.<br><br>
 
-<b>"Journeys de_db|originStop=Leipzig|targetStop=Hannover|timeOffset=5|maxDeps=99"</b><br>
+<b>"Journeys de_db|originStop=Leipzig|targetStop=Hannover|timeOffset=5|maxCount=99"</b><br>
 Gets journeys from stop "Leipzig" to stop "Hannover" using db.de, the first
 possible journey departs in five minutes from now, the maximum journey count is 99.<br><br>
 
@@ -669,11 +669,11 @@ The email address of the author of this accessor info xml.</td></tr>
 
 <tr><td style="color:#770000;"><b>\<departures\></b></td>
 <td style="color:#bb0000;">\<rawUrls\></td> <td>Required</td>
-<td>A raw url (in a CDATA tag) to a page containing a departure / arrival list. The following substrings are replaced by current values: <b>{stop}</b> (the stop name), <b>{type}</b> (arr or dep for arrivals or departures), <b>{time}</b> (the time of the first departure / arrival), <b>{maxDeps}</b> (maximal number of departures / arrivals).</td></tr>
+<td>A raw url (in a CDATA tag) to a page containing a departure / arrival list. The following substrings are replaced by current values: <b>{stop}</b> (the stop name), <b>{type}</b> (arr or dep for arrivals or departures), <b>{time}</b> (the time of the first departure / arrival), <b>{maxCount}</b> (maximal number of departures / arrivals).</td></tr>
 
 <tr><td style="color:#770000;"><b>\<journeys\></b></td>
 <td style="color:#bb0000;">\<rawUrls\></td> <td>Optional</td>
-<td>A raw url (in a CDATA tag) to a page containing a journey list. The following substrings are replaced by current values: <b>{startStop}</b> (the name of the stop where the journey starts), <b>{targetStop}</b> (the name of the stop where the journey ends), <b>{time}</b> (the time of the first journey), <b>{maxDeps}</b> (maximal number of journeys).</td></tr>
+<td>A raw url (in a CDATA tag) to a page containing a journey list. The following substrings are replaced by current values: <b>{startStop}</b> (the name of the stop where the journey starts), <b>{targetStop}</b> (the name of the stop where the journey ends), <b>{time}</b> (the time of the first journey), <b>{maxCount}</b> (maximal number of journeys).</td></tr>
 
 <tr><td style="color:#770000;"><b>\<stopSuggestions\></b></td>
 <td style="color:#bb0000;">\<rawUrls\></td> <td>Optional</td>

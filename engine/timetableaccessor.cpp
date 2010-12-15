@@ -297,17 +297,17 @@ QStringList TimetableAccessor::featuresLocalized() const {
 }
 
 KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sourceName,
-		const QString &city, const QString &stop, int maxDeps,
+		const QString &city, const QString &stop, int maxCount,
 		const QDateTime &dateTime, const QString &dataType,
 		bool usedDifferentUrl ) {
-    KUrl url = getUrl( city, stop, maxDeps, dateTime, dataType, usedDifferentUrl );
+    KUrl url = getUrl( city, stop, maxCount, dateTime, dataType, usedDifferentUrl );
 //     kDebug() << url;
     
     KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-    ParseDocumentMode parseType = maxDeps == -1
+    ParseDocumentMode parseType = maxCount == -1
 	    ? ParseForStopSuggestions : ParseForDeparturesArrivals;
     m_jobInfos.insert( job, JobInfos(parseType, sourceName, city, stop, url,
-				     dataType, maxDeps, dateTime, usedDifferentUrl) );
+				     dataType, maxCount, dateTime, usedDifferentUrl) );
 
     connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
 
@@ -331,15 +331,15 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions(
 
 KIO::StoredTransferJob *TimetableAccessor::requestJourneys( const QString &sourceName,
 		const QString &city, const QString &startStopName,
-		const QString &targetStopName, int maxDeps,
+		const QString &targetStopName, int maxCount,
 		const QDateTime &dateTime, const QString &dataType,
 		bool usedDifferentUrl ) {
     // Creating a kioslave
-    KUrl url = getJourneyUrl( city, startStopName, targetStopName, maxDeps,
+    KUrl url = getJourneyUrl( city, startStopName, targetStopName, maxCount,
 			      dateTime, dataType, usedDifferentUrl );
     KIO::StoredTransferJob *job = requestJourneys( url );
     m_jobInfos.insert( job, JobInfos(ParseForJourneys, sourceName, city, startStopName,
-		url, dataType, maxDeps, dateTime, usedDifferentUrl, targetStopName) );
+		url, dataType, maxCount, dateTime, usedDifferentUrl, targetStopName) );
 
     return job;
 }
@@ -479,7 +479,7 @@ void TimetableAccessor::result( KJob* job ) {
 }
 
 KUrl TimetableAccessor::getUrl( const QString &city, const QString &stop,
-				int maxDeps, const QDateTime &dateTime,
+				int maxCount, const QDateTime &dateTime,
 				const QString &dataType, bool useDifferentUrl ) const {
     QString sRawUrl = useDifferentUrl ? stopSuggestionsRawUrl() : departuresRawUrl();
     QString sTime = dateTime.time().toString("hh:mm");
@@ -505,7 +505,7 @@ KUrl TimetableAccessor::getUrl( const QString &city, const QString &stop,
     if ( useSeparateCityValue() )
 	sRawUrl = sRawUrl.replace( "{city}", sCity );
     sRawUrl = sRawUrl.replace( "{time}", sTime )
-		     .replace( "{maxDeps}", QString("%1").arg(maxDeps) )
+		     .replace( "{maxCount}", QString("%1").arg(maxCount) )
 		     .replace( "{stop}", sStop )
 		     .replace( "{dataType}", sDataType );
 
@@ -540,7 +540,7 @@ KUrl TimetableAccessor::getStopSuggestionsUrl( const QString &city,
 KUrl TimetableAccessor::getJourneyUrl( const QString& city,
 				       const QString& startStopName,
 				       const QString& targetStopName,
-				       int maxDeps, const QDateTime &dateTime,
+				       int maxCount, const QDateTime &dateTime,
 				       const QString& dataType,
 				       bool useDifferentUrl ) const {
     Q_UNUSED( useDifferentUrl );
@@ -573,7 +573,7 @@ KUrl TimetableAccessor::getJourneyUrl( const QString& city,
 	sRawUrl = sRawUrl.replace( "{city}", sCity );
 
     sRawUrl = sRawUrl.replace( "{time}", sTime )
-		     .replace( "{maxDeps}", QString("%1").arg(maxDeps) )
+		     .replace( "{maxCount}", QString("%1").arg(maxCount) )
 		     .replace( "{startStop}", sStartStopName )
 		     .replace( "{targetStop}", sTargetStopName )
 		     .replace( "{dataType}", sDataType );
