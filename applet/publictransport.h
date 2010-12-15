@@ -144,6 +144,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	void iconClicked();
 	/** The icon widget to close the journey view was clicked. */
 	void iconCloseClicked();
+	/** The filter icon widget was clicked. */
+	void filterIconClicked();
 
 	void infoLabelLinkActivated( const QString &link );
 
@@ -353,6 +355,8 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** Creates a layout for the given title type. */
 	QGraphicsLayout *createLayoutTitle( TitleType titleType );
 
+	void updateFilterWidget();
+
 	/** Unsets the given states. No other operations are processed.
 	* @param states A list of states to unset. */
 	virtual void unsetStates( QList<AppletState> states );
@@ -424,8 +428,11 @@ class PublicTransport : public Plasma::PopupApplet {
 	
 	QGraphicsWidget *m_graphicsWidget, *m_mainGraphicsWidget;
 	GraphicsPixmapWidget *m_oldItem;
-	Plasma::IconWidget *m_icon; /**< The icon that displayed in the top left corner */
-	Plasma::IconWidget *m_iconClose; /**< The icon that displayed in the top right corner to close the journey view */
+	Plasma::IconWidget *m_icon; /**< The icon that is displayed in the top left corner */
+	Plasma::IconWidget *m_iconClose; /**< The icon that is displayed in the top right corner to close the journey view */
+	Plasma::IconWidget *m_filterIcon; /**< The icon that is displayed in the top right corner, clickable to show the filter menu */
+	Plasma::Label *m_filterLabel; /**< A label showing the currently used filter */
+	QGraphicsWidget *m_filterWidget; /**< A widget showing the currently used filters */
 	Plasma::Label *m_label; /**< A label used to display a title */
 	Plasma::Label *m_labelInfo; /**< A label used to display additional information */
 	Plasma::TreeView *m_treeView, *m_treeViewJourney; /**< A treeview displaying the departure board */

@@ -84,8 +84,9 @@
 
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 	    : Plasma::PopupApplet(parent, args),
-	    m_graphicsWidget(0), m_mainGraphicsWidget(0), m_oldItem(0), 
-	    m_icon(0), m_iconClose(0), m_label(0), m_labelInfo(0), m_treeView(0), m_treeViewJourney(0),
+	    m_graphicsWidget(0), m_mainGraphicsWidget(0), m_oldItem(0),
+	    m_icon(0), m_iconClose(0), m_filterIcon(0), m_filterLabel(0), m_filterWidget(0),
+	    m_label(0), m_labelInfo(0), m_treeView(0), m_treeViewJourney(0),
 	    m_journeySearch(0), m_listStopSuggestions(0), m_btnLastJourneySearches(0),
 	    m_btnStartJourneySearch(0),
 	    m_overlay(0), m_model(0), m_modelJourneys(0), m_departureProcessor(0) {
@@ -1619,14 +1620,9 @@ void PublicTransport::setCurrentStopIndex( QAction* action ) {
 	return;
     }
 
-    disconnectSources();
-    m_settings.currentStopSettingsIndex = stopIndex;
-    SettingsIO::writeNoGuiSettings( m_settings, config(), globalConfig() );
-    m_currentServiceProviderFeatures =
-	    currentServiceProviderData()["features"].toStringList();
-    clearDepartures();
-    reconnectSource();
-    configChanged();
+    Settings settings = m_settings;
+    settings.currentStopSettingsIndex = stopIndex;
+    writeSettings( settings );
 }
 
 void PublicTransport::setShowDepartures() {
@@ -1662,21 +1658,7 @@ void PublicTransport::switchFilterConfiguration( const QString& newFilterConfigu
     // Then write the new settings.
     Settings settings = m_settings;
     settings.currentStopSettings().filterConfiguration = filterConfig;
-    SettingsIO::ChangedFlags changed = SettingsIO::writeSettings(
-			    settings, m_settings, config(), globalConfig() );
-
-    // Apply new filter if it has changed (ie. the current stop settings changed)
-    if ( changed.testFlag(SettingsIO::ChangedStopSettings) ) {
-	m_settings = settings;
-	emit configNeedsSaving();
-	emit settingsChanged();
-
-	for ( int n = 0; n < m_stopIndexToSourceName.count(); ++n ) {
-	    QString sourceName = stripDateAndTimeValues( m_stopIndexToSourceName[n] );
-	    m_departureProcessor->filterDepartures( sourceName,
-			m_departureInfos[sourceName], m_model->itemHashes() );
-	}
-    }
+    writeSettings( settings );
 }
 
 void PublicTransport::setFiltersEnabled( bool enable ) {
@@ -1684,20 +1666,7 @@ void PublicTransport::setFiltersEnabled( bool enable ) {
     // Then write the new settings.
     Settings settings = m_settings;
     settings.filtersEnabled = enable;
-    SettingsIO::ChangedFlags changed = SettingsIO::writeSettings(
-			    settings, m_settings, config(), globalConfig() );
-
-    // Apply filter settings if changed
-    if ( changed.testFlag(SettingsIO::IsChanged) ) {
-	emit configNeedsSaving();
-	emit settingsChanged();
-	
-	for ( int n = 0; n < m_stopIndexToSourceName.count(); ++n ) {
-	    QString sourceName = stripDateAndTimeValues( m_stopIndexToSourceName[n] );
-	    m_departureProcessor->filterDepartures( sourceName,
-			m_departureInfos[sourceName], m_model->itemHashes() );
-	}
-    }
+    writeSettings( settings );
 }
 
 void PublicTransport::iconCloseClicked() {
@@ -1708,15 +1677,17 @@ void PublicTransport::iconCloseClicked() {
 void PublicTransport::journeySearchInputFinished() {
     clearJourneys();
 
+    Settings settings = m_settings;
+
     // Add journey search line to the list of recently used journey searches
     // and cut recent journey searches if the limit is exceeded
-    if ( !m_settings.recentJourneySearches.contains(m_journeySearch->text(), Qt::CaseInsensitive) )
-	m_settings.recentJourneySearches.prepend( m_journeySearch->text() );
-    while ( m_settings.recentJourneySearches.count() > MAX_RECENT_JOURNEY_SEARCHES )
-	m_settings.recentJourneySearches.takeLast();
-    
-    SettingsIO::writeNoGuiSettings( m_settings, config(), globalConfig() );
-    
+    if ( !settings.recentJourneySearches.contains(m_journeySearch->text(), Qt::CaseInsensitive) )
+	settings.recentJourneySearches.prepend( m_journeySearch->text() );
+    while ( settings.recentJourneySearches.count() > MAX_RECENT_JOURNEY_SEARCHES )
+	settings.recentJourneySearches.takeLast();
+
+    writeSettings( settings );
+
     QString stop;
     QDateTime departure;
     bool stopIsTarget;
@@ -1756,16 +1727,18 @@ QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
     QGraphicsGridLayout *layoutTop = new QGraphicsGridLayout;
     switch( titleType ) {
 	case ShowDepartureArrivalListTitle:
-	    m_icon->setVisible( true );
-	    m_label->setVisible( true );
-	    m_labelInfo->setVisible( true );
+	    m_icon->show();
+	    m_label->show();
+	    m_labelInfo->show();
+	    m_filterWidget->show();
 	    layoutTop->addItem( m_icon, 0, 0 );
 	    layoutTop->addItem( m_label, 0, 1 );
+	    layoutTop->addItem( m_filterWidget, 0, 2 );
 	    break;
 	    
 	case ShowSearchJourneyLineEdit:
 	case ShowSearchJourneyLineEditDisabled:
-	    m_icon->setVisible( true );
+	    m_icon->show();
 	    layoutTop->addItem( m_icon, 0, 0 );
 	    layoutTop->addItem( m_journeySearch, 0, 1 );
 	    layoutTop->addItem( m_btnLastJourneySearches, 0, 2 );
@@ -1773,14 +1746,61 @@ QGraphicsLayout *PublicTransport::createLayoutTitle( TitleType titleType ) {
 	    break;
 
 	case ShowJourneyListTitle:
-	    m_icon->setVisible( true );
-	    m_label->setVisible( true );
+	    m_icon->show();
+	    m_label->show();
 	    layoutTop->addItem( m_icon, 0, 0 );
 	    layoutTop->addItem( m_label, 0, 1 );
 	    layoutTop->addItem( m_iconClose, 0, 2 );
 	    break;
     }
     return layoutTop;
+}
+
+void PublicTransport::updateFilterWidget() {
+    if ( m_settings.filtersEnabled ) {
+	m_filterWidget->setOpacity( 1 );
+	QFontMetrics fm( m_filterWidget->font() );
+	m_filterLabel->setText( fm.elidedText(SettingsUiManager::translateKey(
+	    m_settings.currentStopSettings().filterConfiguration),
+	    Qt::ElideRight, m_filterLabel->maximumWidth() * 1.8) );
+    } else {
+	m_filterWidget->setOpacity( 0.6 );
+	m_filterLabel->setText( i18n("(No active filter)") );
+    }
+}
+
+void PublicTransport::filterIconClicked() {
+    // TODO make a new function for this (updateFilterMenu())
+    // because of redundancy in PublicTransport::contextualActions().
+    KAction *actionFilter = NULL;
+    QStringList filterConfigurationList = m_settings.filterSettings.keys();
+    if ( !filterConfigurationList.isEmpty() ) {
+	actionFilter = qobject_cast< KAction* >( action("filterConfiguration") );
+	action("enableFilters")->setChecked( m_settings.filtersEnabled ); // TODO change checked state when filtersEnabled changes?
+	QList< QAction* > oldActions = m_filtersGroup->actions();
+	foreach ( QAction *oldAction, oldActions ) {
+	    m_filtersGroup->removeAction( oldAction );
+	    delete oldAction;
+	}
+//
+	QMenu *menu = actionFilter->menu();
+	QString currentFilterConfig = m_settings.currentStopSettings().filterConfiguration;
+	foreach ( const QString &filterConfig, filterConfigurationList ) {
+	    QAction *action = new QAction(
+		    SettingsUiManager::translateKey(filterConfig), m_filtersGroup );
+	    action->setCheckable( true );
+	    menu->addAction( action );
+	    if ( filterConfig == currentFilterConfig )
+		action->setChecked( true );
+	}
+	m_filtersGroup->setEnabled( m_settings.filtersEnabled );
+    }
+
+    // Show the filters menu under the filter icon
+    actionFilter->menu()->exec( QCursor::pos() );
+//     view()->mapToGlobal(
+// 	    view()->mapFromScene(m_filterIcon->mapToScene(0,
+// 			    m_filterIcon->boundingRect().height()))) );
 }
 
 void PublicTransport::possibleStopItemActivated( const QModelIndex& modelIndex ) {
@@ -1984,6 +2004,30 @@ QGraphicsWidget* PublicTransport::graphicsWidget() {
 	labelInfo->setWordWrap( true );
 	setHeightOfCourtesyLabel();
 
+	// Create the filter widget showing the currently active filters
+	m_filterIcon = new Plasma::IconWidget;
+	m_filterIcon->setIcon( "view-filter" );
+	int fitlerIconExtend = 24 * m_settings.sizeFactor;
+	m_filterIcon->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
+	m_filterIcon->setMinimumSize( fitlerIconExtend, fitlerIconExtend );
+	m_filterIcon->setMaximumSize( fitlerIconExtend, fitlerIconExtend );
+
+	m_filterLabel = new Plasma::Label;
+	m_filterLabel->setMaximumWidth( 100 * m_settings.sizeFactor );
+	m_filterLabel->setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,5,0)
+	m_filterLabel->setWordWrap( true );
+#endif
+	m_filterWidget = new QGraphicsWidget( m_graphicsWidget );
+	m_filterWidget->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Preferred );
+	QGraphicsLinearLayout *filterLayout = new QGraphicsLinearLayout( Qt::Horizontal );
+	filterLayout->setContentsMargins( 4, 0, 4, 0 );
+	filterLayout->addItem( m_filterIcon );
+	filterLayout->addItem( m_filterLabel );
+	m_filterWidget->setLayout( filterLayout );
+	updateFilterWidget();
+	connect( m_filterIcon, SIGNAL(clicked()), this, SLOT(filterIconClicked()) );
+
 	// Create treeview for departures / arrivals
 	m_treeView = new Plasma::TreeView();
 	initTreeView( m_treeView );
@@ -2178,7 +2222,11 @@ void PublicTransport::writeSettings( const Settings& settings ) {
 	    serviceProviderSettingsChanged();
 	if ( changed.testFlag(SettingsIO::ChangedDepartureArrivalListType) )
 	    setDepartureArrivalListType( m_settings.departureArrivalListType );
-	if ( changed.testFlag(SettingsIO::ChangedStopSettings) ) {
+
+	// If stop settings have changed the whole model gets cleared and refilled.
+	// Therefore the other change flags can be in 'else' parts
+	if ( changed.testFlag(SettingsIO::ChangedStopSettings) ||
+		changed.testFlag(SettingsIO::ChangedCurrentStop) ) {
 	    clearDepartures();
 	    reconnectSource();
 	} else if ( changed.testFlag(SettingsIO::ChangedFilterSettings) ) {
@@ -2192,8 +2240,14 @@ void PublicTransport::writeSettings( const Settings& settings ) {
 	    m_model->clear();
 	    fillModel( departureInfos() );
 	}
-    } else
+
+	if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
+		changed.testFlag(SettingsIO::ChangedFilterSettings) ) {
+	    updateFilterWidget();
+	}
+    } else {
 	kDebug() << "No changes made in the settings";
+    }
 }
 
 void PublicTransport::setDepartureArrivalListType(
@@ -2299,6 +2353,7 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType ) {
     switch ( m_titleType ) {
 	case ShowDepartureArrivalListTitle:
 	    m_label->hide();
+	    m_filterWidget->hide();
 	    break;
 	
 	case ShowSearchJourneyLineEdit:
@@ -2519,9 +2574,10 @@ void PublicTransport::oldItemAnimationFinished() {
 void PublicTransport::recentJourneyActionTriggered( QAction* action ) {
     if ( action->data().isValid() && action->data().toBool() ) {
 	// Clear recent journey list
-	m_settings.recentJourneySearches.clear();
+	Settings settings = m_settings;
+	settings.recentJourneySearches.clear();
 	m_btnLastJourneySearches->setEnabled( false );
-	SettingsIO::writeNoGuiSettings( m_settings, config(), globalConfig() );
+	writeSettings( settings );
     } else
 	m_journeySearch->setText( action->text() );
 

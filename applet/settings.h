@@ -211,7 +211,10 @@ class SettingsIO {
 	    ChangedStopSettings = 0x0008, /**< Stop settings have been changed. */
 	    ChangedFilterSettings = 0x0010, /**< Filter settings have been changed. */
 	    ChangedLinesPerRow = 0x0020, /**< The lines per row setting has been changed. */
-	    ChangedAlarmSettings = 0x0040 /**< Alarm settings have been changed. */
+	    ChangedAlarmSettings = 0x0040, /**< Alarm settings have been changed. */
+	    ChangedCurrentStop = 0x0080, /**< The current stop has been changed. */
+	    ChangedRecentJourneySearches = 0x0100 /**< The list of recent journey
+		    * searches has been changed. */
 	};
 	Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag );
 
@@ -224,8 +227,6 @@ class SettingsIO {
 	* @see ChangedFlags */
 	static ChangedFlags writeSettings( const Settings &settings,
 		const Settings &oldSettings, KConfigGroup cg, KConfigGroup cgGlobal );
-	static void writeNoGuiSettings( const Settings &settings,
-					KConfigGroup cg, KConfigGroup cgGlobal );
 
 	/** Read filter configuration from @p cgGlobal. */
 	static FilterSettings readFilterConfig( const KConfigGroup &cgGlobal );

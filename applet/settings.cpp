@@ -1348,16 +1348,19 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
     return settings;
 }
 
-void SettingsIO::writeNoGuiSettings( const Settings& settings, KConfigGroup cg,
-				     KConfigGroup cgGlobal ) {
-    cg.writeEntry( "currentStopIndex", settings.currentStopSettingsIndex );
-    cgGlobal.writeEntry( "recentJourneySearches", settings.recentJourneySearches );
-}
-
 SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 	    const Settings &oldSettings, KConfigGroup cg, KConfigGroup cgGlobal ) {
     ChangedFlags changed = NothingChanged;
 
+    if ( settings.currentStopSettingsIndex != oldSettings.currentStopSettingsIndex ) {
+	cg.writeEntry( "currentStopIndex", settings.currentStopSettingsIndex );
+	changed |= IsChanged | ChangedCurrentStop;
+    }
+    if ( settings.recentJourneySearches != oldSettings.recentJourneySearches ) {
+	cgGlobal.writeEntry( "recentJourneySearches", settings.recentJourneySearches );
+	changed |= IsChanged | ChangedRecentJourneySearches;
+    }
+    
     // Write stop settings
     if ( settings.stopSettingsList != oldSettings.stopSettingsList ) {
 	kDebug() << "Stop settings changed";
@@ -1500,7 +1503,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
     
     if ( settings.filtersEnabled != oldSettings.filtersEnabled ) {
 	cg.writeEntry( "filtersEnabled", settings.filtersEnabled );
-	changed |= IsChanged;
+	changed |= IsChanged | ChangedFilterSettings;
     }
 
     // Write alarm settings
