@@ -180,13 +180,38 @@ class JourneyInfo : public PublicTransportInfo {
 	/** Gets the types of vehicle used in the journey. */
 	QList<VehicleType> vehicleTypes() const {
 	    if ( m_data.contains(TypesOfVehicleInJourney) ) {
-		QVariantList listVariant = m_data[TypesOfVehicleInJourney].toList();
-		QList<VehicleType> listRet;
-		foreach ( QVariant vehicleType, listVariant )
-		    listRet.append( static_cast<VehicleType>(vehicleType.toInt()) );
-		return listRet;
-	    } else
-		return QList<VehicleType>();
+			QVariantList listVariant = m_data[TypesOfVehicleInJourney].toList();
+			QList<VehicleType> listRet;
+			foreach ( QVariant vehicleType, listVariant )
+				listRet.append( static_cast<VehicleType>(vehicleType.toInt()) );
+			return listRet;
+	    } else {
+			return QList<VehicleType>();
+		}
+	};
+
+	QStringList vehicleIconNames() const {
+	    if ( !m_data.contains(TypesOfVehicleInJourney) ) {
+			return QStringList();
+		}
+	    QVariantList vehicles = m_data[TypesOfVehicleInJourney].toList();
+	    QStringList iconNames;
+	    foreach ( QVariant vehicle, vehicles ) {
+			iconNames << Global::vehicleTypeToIcon( static_cast<VehicleType>(vehicle.toInt()) );
+	    }
+	    return iconNames;
+	};
+
+	QStringList vehicleNames(bool plural = false) const {
+	    if ( !m_data.contains(TypesOfVehicleInJourney) ) {
+			return QStringList();
+		}
+	    QVariantList vehicles = m_data[TypesOfVehicleInJourney].toList();
+	    QStringList names;
+	    foreach ( QVariant vehicle, vehicles ) {
+			names << Global::vehicleTypeToString( static_cast<VehicleType>(vehicle.toInt()), plural );
+	    }
+	    return names;
 	};
 	
 	/** Gets the types of vehicle used in the journey as QVariantList to be stored

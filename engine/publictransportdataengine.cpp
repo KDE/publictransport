@@ -571,6 +571,9 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 	data.insert("target", departureInfo->target());
 	data.insert("departure", departureInfo->departure());
 	data.insert("vehicleType", static_cast<int>(departureInfo->vehicleType()));
+	data.insert("vehicleIconName", Global::vehicleTypeToIcon(departureInfo->vehicleType()));
+	data.insert("vehicleName", Global::vehicleTypeToString(departureInfo->vehicleType()));
+	data.insert("vehicleNamePlural", Global::vehicleTypeToString(departureInfo->vehicleType(), true));
 	data.insert("nightline", departureInfo->isNightLine());
 	data.insert("expressline", departureInfo->isExpressLine());
 	data.insert("platform", departureInfo->platform());
@@ -663,6 +666,9 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 
 	QVariantHash data;
 	data.insert("vehicleTypes", journeyInfo->vehicleTypesVariant());
+	data.insert("vehicleIconNames", journeyInfo->vehicleIconNames());
+	data.insert("vehicleNames", journeyInfo->vehicleNames());
+	data.insert("vehicleNamesPlural", journeyInfo->vehicleNames(true));
 	data.insert("arrival", journeyInfo->arrival());
 	data.insert("departure", journeyInfo->departure());
 	data.insert("duration", journeyInfo->duration());
