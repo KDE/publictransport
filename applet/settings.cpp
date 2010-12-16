@@ -1234,6 +1234,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 		changed |= IsChanged | ChangedStopSettings;
 		int i = 1;
 		cgGlobal.writeEntry( "stopSettings", settings.stopSettingsList.count() ); // Not needed if deleteEntry/Group works, don't know what's wrong (sync() and Plasma::Applet::configNeedsSaving() doesn't help)
+
 		foreach( const StopSettings &stopSettings, settings.stopSettingsList ) {
 			QString suffix = i == 1 ? QString() : '_' + QString::number( i );
 			cgGlobal.writeEntry( "location" + suffix, stopSettings.location );
@@ -1339,7 +1340,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 	// Write filter settings
 	if ( settings.filterSettings.keys() != oldSettings.filterSettings.keys() ) {
 		cgGlobal.writeEntry( "filterConfigurationList", settings.filterSettings.keys() );
-		changed |= IsChanged;
+		changed |= IsChanged | ChangedFilterSettings;
 	}
 
 	if ( settings.filterSettings != oldSettings.filterSettings ) {

@@ -1768,7 +1768,7 @@ void PublicTransport::switchFilterConfiguration( const QString& newFilterConfigu
 	// Change filter configuration of the current stop in a copy of the settings.
 	// Then write the new settings.
 	Settings settings = m_settings;
-	settings.currentStopSettings().filterConfiguration = filterConfig;
+	settings.stopSettingsList[ settings.currentStopSettingsIndex ].filterConfiguration = filterConfig;
 	writeSettings( settings );
 }
 
@@ -2379,6 +2379,7 @@ void PublicTransport::writeSettings( const Settings& settings )
 		}
 
 		if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
+					changed.testFlag(SettingsIO::ChangedStopSettings) ||
 					changed.testFlag(SettingsIO::ChangedFilterSettings) ) {
 			updateFilterWidget();
 		}
