@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Public Transport
+Name[de]=Öffentlicher Nahverkehr
+Comment=Gives information about public transport departing from a given stop
+Comment[de]=Liefert Informationen über demnächst von gegebener Haltestelle abfahrenden öffentlichen Nahverkehr
+Icon=public-transport-stop
+
+X-KDE-ServiceTypes=Plasma/Runner
+Type=Service
+X-KDE-Library=krunner_publictransport
+X-KDE-PluginInfo-Author=Friedrich Pülz
+X-KDE-PluginInfo-Email=fpuelz@gmx.de
+X-KDE-PluginInfo-Name=PublicTransportRunner
+X-KDE-PluginInfo-Version=0.1
+X-KDE-PluginInfo-License=GPL
+X-KDE-PluginInfo-EnabledByDefault=true
