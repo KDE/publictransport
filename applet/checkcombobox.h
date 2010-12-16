@@ -29,19 +29,19 @@ class CheckComboboxPrivate;
 * If more than one item is selected, the icons of all selected items are painted
 * and the text shows how many items are selected ("x/y"). */
 class CheckCombobox : public KComboBox {
-    Q_OBJECT
-    Q_PROPERTY( int allowNoCheckedItem READ allowNoCheckedItem WRITE setAllowNoCheckedItem )
-    Q_PROPERTY( MultipleSelectionOptions multipleSelectionOptions READ multipleSelectionOptions WRITE setMultipleSelectionOptions )
-    Q_PROPERTY( QString separator READ separator WRITE setSeparator )
-    Q_PROPERTY( QString noSelectionText READ noSelectionText WRITE setNoSelectionText )
-    Q_PROPERTY( QModelIndexList checkedItems READ checkedItems WRITE setCheckedItems )
-    
-    public:
+	Q_OBJECT
+	Q_PROPERTY( int allowNoCheckedItem READ allowNoCheckedItem WRITE setAllowNoCheckedItem )
+	Q_PROPERTY( MultipleSelectionOptions multipleSelectionOptions READ multipleSelectionOptions WRITE setMultipleSelectionOptions )
+	Q_PROPERTY( QString separator READ separator WRITE setSeparator )
+	Q_PROPERTY( QString noSelectionText READ noSelectionText WRITE setNoSelectionText )
+	Q_PROPERTY( QModelIndexList checkedItems READ checkedItems WRITE setCheckedItems )
+
+public:
 	enum MultipleSelectionOptions {
-	    ShowStringList, /** Show the texts of selected items. */
-	    ShowIconList /**< Show all icons of selected items. */
+		ShowStringList, /** Show the texts of selected items. */
+		ShowIconList /**< Show all icons of selected items. */
 	};
-	
+
 	/** Creates a new CheckCombobox. */
 	CheckCombobox( QWidget* parent = 0 );
 
@@ -51,7 +51,7 @@ class CheckCombobox : public KComboBox {
 	MultipleSelectionOptions multipleSelectionOptions() const;
 	void setMultipleSelectionOptions( MultipleSelectionOptions multipleSelectionOptions );
 
-	/** Gets the separator between checked item texts. 
+	/** Gets the separator between checked item texts.
 	* Only used with @ref ShowStringList. */
 	QString separator() const;
 	void setSeparator( const QString &separator = ", " );
@@ -61,7 +61,7 @@ class CheckCombobox : public KComboBox {
 	/** Sets the text that is shown if no item is checked to @p noSelectionText. */
 	void setNoSelectionText( const QString &noSelectionText = i18nc(
 		"@info/plain Default text of a CheckCombobox if no item is checked", "(none)") );
-	
+
 	/** Gets the text that is shown if all items are checked. */
 	QString allSelectedText() const;
 	/** Sets the text that is shown if all items are checked to @p allSelectedText. */
@@ -72,7 +72,7 @@ class CheckCombobox : public KComboBox {
 	void addItem( const QString &text );
 	/** Adds items with the given @p texts. */
 	void addItems( const QStringList &texts );
-	
+
 	/** Gets whether or not it's allowed that no item is checked.
 	* If this is false, the last checked item can't be unchecked. */
 	bool allowNoCheckedItem() const;
@@ -94,15 +94,15 @@ class CheckCombobox : public KComboBox {
 	void setItemCheckState( const QModelIndex &index, Qt::CheckState checkState );
 	/** Checks if the model has at least @p count checked items. */
 	bool hasCheckedItems( int count = 1 ) const;
-	
-    signals:
+
+signals:
 	/** Emitted when an item's check state changes. */
 	void checkedItemsChanged();
-	
-    protected:
+
+protected:
 	CheckComboboxPrivate* const d_ptr;
-	
-	/** Reimplemented to change the check state of the current item when 
+
+	/** Reimplemented to change the check state of the current item when
 	* space is pressed. */
 	virtual void keyPressEvent( QKeyEvent *event );
 	/** Reimplemented to not close the drop down list if an item is clicked
@@ -112,8 +112,8 @@ class CheckCombobox : public KComboBox {
 	virtual void paintEvent( QPaintEvent* );
 	/** Reimplemented to give enough space for multiple selected item's icons. */
 	virtual QSize sizeHint() const;
-	
-    private:
+
+private:
 	Q_DECLARE_PRIVATE( CheckCombobox )
 };
 

@@ -32,24 +32,21 @@ class DynamicWidget;
 class ServiceProviderModel;
 class LocationModel;
 class StopWidget : public QWidget {
-    Q_OBJECT
+	Q_OBJECT
 
-    public:
-	StopWidget( const StopSettings &stopSettings,
-		    const QStringList &filterConfigurations,
-		    LocationModel *modelLocations,
-		    ServiceProviderModel *modelServiceProviders,
-		    Plasma::DataEngine *publicTransportEngine,
-		    Plasma::DataEngine *osmEngine,
-		    Plasma::DataEngine *geolocationEngine, QWidget* parent );
+public:
+	StopWidget( const StopSettings &stopSettings, const QStringList &filterConfigurations,
+			LocationModel *modelLocations, ServiceProviderModel *modelServiceProviders,
+			Plasma::DataEngine *publicTransportEngine, Plasma::DataEngine *osmEngine,
+			Plasma::DataEngine *geolocationEngine, QWidget* parent );
 
 	/** Gets the stop settings of this StopWidget. */
 	StopSettings stopSettings() const { return m_stopSettings; };
 	/** Sets the stop settings of this StopWidget to @p stopSettings. */
 	void setStopSettings( const StopSettings &stopSettings );
-	
+
 	void setFilterConfigurations( const QStringList &filterConfigurations ) {
-	    m_filterConfigurations = filterConfigurations; };
+		m_filterConfigurations = filterConfigurations; };
 
 	/** Adds the given @p button. */
 	void addButton( QToolButton *button );
@@ -61,17 +58,17 @@ class StopWidget : public QWidget {
 	/** Sets whether or not this stop is highlighted, ie. currently used in the applet. */
 	void setHighlighted( bool highlighted );
 
-    signals:
+signals:
 	/** The settings of this StopWidget have been changed (StopSettingsDialog accepted). */
 	void changed( const StopSettings &stopSettings );
 	void remove();
 
-    public slots:
+public slots:
 	/** The change button has been clicked. This opens a @ref StopSettingsDialog
 	* to change the settings of this StopWidget. */
 	void changeClicked();
 
-    private:
+private:
 	bool m_newlyAdded;
 	StopSettings m_stopSettings;
 	QStringList m_filterConfigurations;
@@ -85,16 +82,14 @@ class StopWidget : public QWidget {
 
 /** Manages a list of @ref StopWidget. */
 class StopListWidget : public AbstractDynamicWidgetContainer {
-    Q_OBJECT
+	Q_OBJECT
 
-    public:
+public:
 	StopListWidget( const StopSettingsList &stopSettingsList,
-			const QStringList &filterConfigurations,
-			LocationModel *modelLocations,
-			ServiceProviderModel *modelServiceProviders,
-			Plasma::DataEngine *publicTransportEngine,
-			Plasma::DataEngine *osmEngine,
-			Plasma::DataEngine *geolocationEngine, QWidget *parent = 0 );
+			const QStringList &filterConfigurations, LocationModel *modelLocations,
+			ServiceProviderModel *modelServiceProviders, Plasma::DataEngine *publicTransportEngine,
+			Plasma::DataEngine *osmEngine, Plasma::DataEngine *geolocationEngine,
+			QWidget *parent = 0 );
 
 	/** Gets a list of stop settings. */
 	StopSettingsList stopSettingsList() const;
@@ -104,20 +99,20 @@ class StopListWidget : public AbstractDynamicWidgetContainer {
 
 	int currentStopSettingIndex() const { return m_currentStopIndex; };
 	void setCurrentStopSettingIndex( int currentStopIndex );
-	
-    signals:
+
+signals:
 	void changed( int index, const StopSettings &stopSettings );
-    
-    protected slots:
+
+protected slots:
 	void changed( const StopSettings &stopSettings );
 
-    protected:
+protected:
 	virtual QWidget* createNewWidget();
 	virtual DynamicWidget* createDynamicWidget( QWidget* contentWidget );
 	virtual DynamicWidget* addWidget( QWidget* widget );
 	virtual int removeWidget( QWidget* widget );
 
-    private:
+private:
 	QStringList m_filterConfigurations;
 	LocationModel *m_modelLocations; // Model of locations
 	ServiceProviderModel *m_modelServiceProviders; // Model of service providers

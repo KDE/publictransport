@@ -41,12 +41,12 @@ class OverlayWidget;
 
 class KSelectAction;
 namespace Plasma {
-    class IconWidget;
-    class TreeView;
-    class LineEdit;
-    class ToolButton;
-    class Label;
-    class PushButton;
+	class IconWidget;
+	class TreeView;
+	class LineEdit;
+	class ToolButton;
+	class Label;
+	class PushButton;
 };
 
 class QSizeF;
@@ -59,7 +59,7 @@ class QGraphicsBlurEffect;
 
 /** Simple pixmap graphics widgets (QGraphicsPixmapItem isn't a QGraphicsWidget). */
 class GraphicsPixmapWidget : public QGraphicsWidget {
-    public:
+public:
 	explicit GraphicsPixmapWidget( const QPixmap &pixmap, QGraphicsWidget *parent = 0 )
 			    : QGraphicsWidget( parent ), m_pixmap( pixmap ) {
 	    setGeometry( QRectF(m_pixmap.rect()) );
@@ -68,22 +68,23 @@ class GraphicsPixmapWidget : public QGraphicsWidget {
 	QPixmap pixmap() const { return m_pixmap; };
 	virtual QRectF boundingRect() const { return geometry(); };
 	virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-			    QWidget* /*widget*/ = 0 );
+						QWidget* /*widget*/ = 0 );
 
-    private:
+private:
 	QPixmap m_pixmap;
 };
 
 /** @class PublicTransport
 * @brief Shows departure / arrival times for public transport. It uses the "publictransport"-data engine. */
 class PublicTransport : public Plasma::PopupApplet {
-    Q_PROPERTY( int DepartureCount READ departureCount )
-    Q_OBJECT
-    public:
-        /** Basic create. */
+	Q_PROPERTY( int DepartureCount READ departureCount )
+	Q_OBJECT
+
+public:
+	/** Basic create. */
 	PublicTransport( QObject *parent, const QVariantList &args );
 	/** Destructor. Saves the state of the header. */
-        ~PublicTransport();
+	~PublicTransport();
 
 	/** Maximum number of recent journey searches. When more journey searches
 	* get added, the oldest when gets removed. */
@@ -91,12 +92,12 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	/** Returns the widget with the contents of the applet. */
 	virtual QGraphicsWidget* graphicsWidget();
-	
+
 	/** Tests the given state.
 	* @param state The state to test.
 	* @returns True, if the state is set. False, otherwise.*/
 	virtual bool testState( AppletState state ) const {
-	    return m_appletStates.testFlag( state ); };
+	return m_appletStates.testFlag( state ); };
 	/** Adds the given state. Operations are processed to set the new applet state.
 	* @param state The state to add. */
 	virtual void addState( AppletState state );
@@ -105,18 +106,18 @@ class PublicTransport : public Plasma::PopupApplet {
 	virtual void removeState( AppletState state );
 
 	int departureCount() const { return m_departureInfos.count(); };
-	
-    signals:
+
+signals:
 	/** Emitted when the settings have changed. */
 	void settingsChanged();
 
-    public slots:
+public slots:
 	/** Initializes the applet. */
 	virtual void init();
 
 	void setSettings( const QString &serviceProviderID, const QString &stopName );
 
-    protected slots:
+protected slots:
 	/** The geometry of the applet has changed. */
 	void geometryChanged();
 
@@ -126,14 +127,14 @@ class PublicTransport : public Plasma::PopupApplet {
 	void serviceProviderSettingsChanged();
 	/** New data arrived from the data engine. */
 	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
-	
+
 	/** Fills the departure/arrival data model with the given
 	* departure/arrival list without removing departures that were already
 	* in the model. This will stop if the maximum departure count is reached
 	* or if all @p departures have been added. */
 	void fillModel( const QList<DepartureInfo> &departures );
-	/** Fills the journey data model with the given journey list without 
-	* removing departures that were already in the model. This will stop if 
+	/** Fills the journey data model with the given journey list without
+	* removing departures that were already in the model. This will stop if
 	* all @p journeys have been added. */
 	void fillModelJourney( const QList<JourneyInfo> &journeys );
 
@@ -154,7 +155,7 @@ class PublicTransport : public Plasma::PopupApplet {
 
 	void infoLabelLinkActivated( const QString &link );
 
-	/** Finished editing the journey search line (return pressed, start search 
+	/** Finished editing the journey search line (return pressed, start search
 	* button clicked or stop suggestion double clicked). */
 	void journeySearchInputFinished();
 	/** The journey search line has been edited. */
@@ -180,7 +181,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	void goBackToDepartures();
 	/** The action to show the action button overlay has been triggered. */
 	void showActionButtons();
-	
+
 	/** The action to expand / collapse of the selected departure/arrival has been triggered. */
 	void toggleExpanded();
 	/** The action to hide the header of the tree view has been triggered. */
@@ -193,10 +194,10 @@ class PublicTransport : public Plasma::PopupApplet {
 	void showColumnTarget();
 	/** The plasma theme has been changed. */
 	void themeChanged() { useCurrentPlasmaTheme(); };
-	
+
 	void recentJourneyActionTriggered( QAction *action );
 
-	/** The section with the given @p logicalIndex in the departure tree 
+	/** The section with the given @p logicalIndex in the departure tree
 	* view was pressed. */
 	void sectionPressed( int logicalIndex );
 	/** The section with the given @p logicalIndex in the departure tree
@@ -205,33 +206,30 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** The section with the given @p logicalIndex in the departure tree
 	* view was resized from @p oldSize to @p newSize. */
 	void sectionResized( int logicalIndex, int oldSize, int newSize );
-	
-	/** The worker thread starts processing departures/arrivals from the 
+
+	/** The worker thread starts processing departures/arrivals from the
 	* data engine.
 	* @param sourceName The data engine source name for the departure data. */
 	void beginDepartureProcessing( const QString &sourceName );
 	/** The worker thread has finished processing departures/arrivals.
-	* @param sourceName The data engine source name for the departure data. 
+	* @param sourceName The data engine source name for the departure data.
 	* @param departures A list of departures that were read by the worker thread.
 	* @param requestUrl The url that was used to download the departure data.
 	* @param lastUpdate The date and time of the last update of the data. */
-	void departuresProcessed( const QString &sourceName,
-				  const QList< DepartureInfo > &departures,
-				  const QUrl &requestUrl,
-				  const QDateTime &lastUpdate );
-	/** The worker thread has finished filtering departures. 
+	void departuresProcessed( const QString &sourceName, const QList< DepartureInfo > &departures,
+							  const QUrl &requestUrl, const QDateTime &lastUpdate );
+	/** The worker thread has finished filtering departures.
 	* @param sourceName The data engine source name for the departure data.
-	* @param departures The list of departures that were filtered. Each 
+	* @param departures The list of departures that were filtered. Each
 	* departure now returns the correct value with isFilteredOut() according
 	* to the filter settings given to the worker thread.
-	* @param newlyFiltered A list of departures that should be made visible 
+	* @param newlyFiltered A list of departures that should be made visible
 	* to match the current filter settings.
-	* @param newlyNotFiltered A list of departures that should be made 
+	* @param newlyNotFiltered A list of departures that should be made
 	* invisible to match the current filter settings. */
-	void departuresFiltered( const QString &sourceName,
-				 const QList< DepartureInfo > &departures,
-				 const QList< DepartureInfo > &newlyFiltered,
-				 const QList< DepartureInfo > &newlyNotFiltered );
+	void departuresFiltered( const QString &sourceName, const QList< DepartureInfo > &departures,
+							 const QList< DepartureInfo > &newlyFiltered,
+							 const QList< DepartureInfo > &newlyNotFiltered );
 	/** The worker thread starts processing journeys from the data engine. */
 	void beginJourneyProcessing( const QString &sourceName );
 	/** The worker thread has finished processing journeys.
@@ -239,27 +237,26 @@ class PublicTransport : public Plasma::PopupApplet {
 	* @param journeys A list of journeys that were read by the worker thread.
 	* @param requestUrl The url that was used to download the journey data.
 	* @param lastUpdate The date and time of the last update of the data. */
-	void journeysProcessed( const QString &sourceName,
-				const QList< JourneyInfo > &journeys,
-				const QUrl &requestUrl,
-				const QDateTime &lastUpdate );
-				
+	void journeysProcessed( const QString &sourceName, const QList< JourneyInfo > &journeys,
+							const QUrl &requestUrl,
+							const QDateTime &lastUpdate );
+
 	void oldItemAnimationFinished();
 
 	void destroyOverlay();
 	void setCurrentStopIndex( QAction *action );
-	
+
 	void writeSettings( const Settings &settings );
 
 	/** Write new settings with @ref Settings::departureArrivalListType set
-	* to @p DepartureList. This also updates the departure tree view on 
+	* to @p DepartureList. This also updates the departure tree view on
 	* @ref configChanged. */
 	void setShowDepartures();
 	/** Write new settings with @ref Settings::departureArrivalListType set
 	* to @p ArrivalList. This also updates the departure tree view on
 	* @ref configChanged. */
 	void setShowArrivals();
-	
+
 	void switchFilterConfiguration( const QString &newFilterConfiguration );
 	void switchFilterConfiguration( QAction *action );
 	void setFiltersEnabled( bool enable );
@@ -267,9 +264,9 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** An alarm has been fired for the given @p item. */
 	void alarmFired( DepartureItem *item );
 	void removeAlarms( const AlarmSettingsList &newAlarmSettings,
-			   const QList<int> &removedAlarms );
+					   const QList<int> &removedAlarms );
 
-    protected:
+protected:
 	/** Create the configuration dialog contents.
 	* @param parent The config dialog in which the config interface should be created. */
 	void createConfigurationInterface( KConfigDialog *parent );
@@ -320,16 +317,16 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** Disconnects a currently connected journey data source and connects
 	* a new source using the current configuration. */
 	void reconnectJourneySource( const QString &targetStopName = QString(),
-				     const QDateTime &dateTime = QDateTime::currentDateTime(),
-				     bool stopIsTarget = true, bool timeIsDeparture = true,
-				     bool requestStopSuggestions = false );
+								 const QDateTime &dateTime = QDateTime::currentDateTime(),
+								 bool stopIsTarget = true, bool timeIsDeparture = true,
+								 bool requestStopSuggestions = false );
 	/** Disconnects a currently connected journey data source. */
 	void disconnectJourneySource();
 
 	void handleDataError( const QString &sourceName, const Plasma::DataEngine::Data& data );
 	/** Read stop suggestions from the data engine. */
 	void processStopSuggestions( const QString &sourceName, const Plasma::DataEngine::Data& data );
-	
+
 	/** Clears the departure / arrival list received from the data engine and
 	* displayed by the applet. */
 	void clearDepartures();
@@ -366,19 +363,19 @@ class PublicTransport : public Plasma::PopupApplet {
 	* @param states A list of states to unset. */
 	virtual void unsetStates( QList<AppletState> states );
 
-    private:
+private:
 	/** Types of messages. */
 	enum MessageType {
-	    MessageNone = 0, /**< No message. */
-	    MessageError, /**< An error message. */
-	    MessageErrorResolved /**< A message about a resolved error. */
+		MessageNone = 0, /**< No message. */
+		MessageError, /**< An error message. */
+		MessageErrorResolved /**< A message about a resolved error. */
 	};
 	/** Statuses of the network */
 	enum NetworkStatus {
-	    StatusUnknown = 0, /**< Network status is unknown. */
-	    StatusUnavailable, /**< Network is unavailable. */
-	    StatusConfiguring, /**< Network is being configured. */
-	    StatusActivated /**< Network is activated. */
+		StatusUnknown = 0, /**< Network status is unknown. */
+		StatusUnavailable, /**< Network is unavailable. */
+		StatusConfiguring, /**< Network is being configured. */
+		StatusActivated /**< Network is activated. */
 	};
 
 	NetworkStatus queryNetworkStatus();
@@ -389,7 +386,7 @@ class PublicTransport : public Plasma::PopupApplet {
 	/** Checks if a departure with the given @p dateTime will be shown,
 	* depending on the settings (first departure, maybe at a custom time). */
 	bool isTimeShown( const QDateTime &dateTime ) const;
-	
+
 	/** List of current departures / arrivals for the selected stop(s). */
 	QList<DepartureInfo> departureInfos() const;
 	QString stripDateAndTimeValues( const QString &sourceName ) const;
@@ -398,17 +395,17 @@ class PublicTransport : public Plasma::PopupApplet {
 	void removeSuggestionItems();
 	void addAllKeywordAddRemoveitems( QStandardItemModel *model = 0 );
 	void maybeAddKeywordAddRemoveItems( QStandardItemModel *model,
-		const QStringList &words, const QStringList &keywords,
-		const QString &type, const QStringList &descriptions,
-		const QStringList &extraRegExps = QStringList() );
+			const QStringList &words, const QStringList &keywords,
+			const QString &type, const QStringList &descriptions,
+			const QStringList &extraRegExps = QStringList() );
 	void journeySearchItemCompleted( const QString &newJourneySearch,
-		const QModelIndex &index = QModelIndex(), int newCursorPos = -1 );
-	
+			const QModelIndex &index = QModelIndex(), int newCursorPos = -1 );
+
 	/** Sets values of the current plasma theme. */
 	void useCurrentPlasmaTheme();
-	
+
 	/**
-	 * Creates a menu action, which lists all stops in the settings 
+	 * Creates a menu action, which lists all stops in the settings
 	 * for switching between them.
 	 *
 	 * @param parent The parent of the menu action and it's sub-actions.
@@ -416,21 +413,20 @@ class PublicTransport : public Plasma::PopupApplet {
 	 * destroyed when triggered. Defaults to false.
 	 * @return KSelectAction* The created menu action.
 	 **/
-	KSelectAction *switchStopAction( QObject *parent,
-					 bool destroyOverlayOnTrigger = false ) const;
+	KSelectAction *switchStopAction( QObject *parent, bool destroyOverlayOnTrigger = false ) const;
 	QVariantHash currentServiceProviderData() const {
-	    return serviceProviderData( m_settings.currentStopSettings().serviceProviderID ); };
+		return serviceProviderData( m_settings.currentStopSettings().serviceProviderID ); };
 	QVariantHash serviceProviderData( const QString &id ) const;
 
 	void setHeightOfCourtesyLabel();
 
 	void initTreeView( Plasma::TreeView *treeView );
 	void createJourneySearchWidgets();
-	
-	
+
+
 	AppletStates m_appletStates; /**< The current states of this applet */
 	TitleType m_titleType; /**< The type of items to be shown as title above the tree view */
-	
+
 	QGraphicsWidget *m_graphicsWidget, *m_mainGraphicsWidget;
 	GraphicsPixmapWidget *m_oldItem;
 	Plasma::IconWidget *m_icon; /**< The icon that is displayed in the top left corner */
@@ -460,21 +456,21 @@ class PublicTransport : public Plasma::PopupApplet {
 	QList<JourneyInfo> m_journeyInfos; /**< List of current journeys */
 	QString m_currentJourneySource; /**< Current source name for journeys at the publictransport data engine */
 	QString m_journeyTitleText;
-	
+
 	QString m_lastSecondStopName; /**< The last used second stop name for journey search */
 	QDateTime m_lastJourneyDateTime; /**< The last used date and time for journey search */
-	
+
 	QDateTime m_lastSourceUpdate; /**< The last update of the data source inside the data engine */
 	QUrl m_urlDeparturesArrivals, m_urlJourneys; /**< Urls to set as associated application urls, when switching from/to journey mode. */
 
 	Settings m_settings;
 	QStringList m_currentServiceProviderFeatures;
 	bool m_stopNameValid; /**< Wheather or not the current stop name (m_stop) is valid */
-	
+
 	QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in the tree view for the context menu actions */
 
 	QActionGroup *m_filtersGroup; /**< An action group to toggle between filter configurations */
-/*	
+/*
 	QList<TimetableColumn> m_departureViewColumns;
 	QList<TimetableColumn> m_journeyViewColumns;*/
 

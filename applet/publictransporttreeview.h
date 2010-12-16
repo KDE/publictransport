@@ -25,13 +25,12 @@
 
 /** Plasma like HeaderView. */
 class HeaderView : public QHeaderView {
-    public:
+public:
 	explicit HeaderView( Qt::Orientation orientation, QWidget* parent = 0 );
 
-    protected:
+protected:
 	virtual void paintEvent( QPaintEvent *e );
-	virtual void paintSection( QPainter *painter, const QRect& rect,
-				   int logicalIndex ) const;
+	virtual void paintSection( QPainter *painter, const QRect& rect, int logicalIndex ) const;
 };
 
 /** A QTreeView which viewport fades out on bottom (if the horizontal scrollbar
@@ -39,8 +38,9 @@ class HeaderView : public QHeaderView {
 * @note It doesn't fade out while animating, because the animation is done
 * completely private in QTreeView. */
 class TreeView : public QTreeView {
-    Q_OBJECT
-    public:
+	Q_OBJECT
+
+public:
 	static const int fadeHeight = 16;
 
 	TreeView( QStyle *style );
@@ -50,15 +50,15 @@ class TreeView : public QTreeView {
 	/** Sets the text to be displayed when the model is empty. */
 	void setNoItemsText( const QString &noItemsText );
 
-    signals:
+signals:
 	/** The tree view has been clicked but the model is empty and a text
 	* is displayed. */
 	void noItemsTextClicked();
-	
-    protected:
+
+protected:
 	QPixmap createFadeTile( const QColor &start, const QColor &end );
 	virtual void scrollContentsBy( int dx, int dy );
-	
+
 	void drawRowBackground( QPainter *painter, const QStyleOptionViewItem& options,
 				const QModelIndex& index ) const;
 	virtual void drawRow( QPainter *painter, const QStyleOptionViewItem& options,
@@ -66,7 +66,7 @@ class TreeView : public QTreeView {
 	virtual void paintEvent( QPaintEvent* event );
 	virtual void mouseReleaseEvent( QMouseEvent* event );
 
-    private:
+private:
 	QPixmap m_bottomFadeTile, m_topFadeTile;
 	int m_current;
 	QModelIndex m_firstDrawnIndex;

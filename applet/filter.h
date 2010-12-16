@@ -28,21 +28,21 @@
 * @Note You can create a widget to show/edit this constraint with
 * @ref ConstraintWidget::create. */
 struct Constraint {
-    FilterType type;
-    FilterVariant variant;
-    QVariant value;
-    
-    Constraint() {
-	type = FilterByVehicleType;
-	variant = FilterIsOneOf;
-	value = QVariantList() << static_cast< int >( Unknown );
-    };
-    
-    Constraint( FilterType type, FilterVariant variant, const QVariant &value = QVariant() ) {
-	this->type = type;
-	this->variant = variant;
-	this->value = value;
-    };
+	FilterType type;
+	FilterVariant variant;
+	QVariant value;
+
+	Constraint() {
+		type = FilterByVehicleType;
+		variant = FilterIsOneOf;
+		value = QVariantList() << static_cast< int >( Unknown );
+	};
+
+	Constraint( FilterType type, FilterVariant variant, const QVariant &value = QVariant() ) {
+		this->type = type;
+		this->variant = variant;
+		this->value = value;
+	};
 };
 bool operator==( const Constraint &l, const Constraint &r );
 
@@ -52,21 +52,20 @@ class DepartureInfo;
 * @Note You can create a widget to show/edit this filter with
 * @ref FilterWidget::create. */
 class Filter : public QList< Constraint > {
-    public:
+public:
 	/** Returns true, if all constraints of this filter match. */
 	bool match( const DepartureInfo &departureInfo ) const;
-	
+
 	QByteArray toData() const;
 	void fromData( const QByteArray &ba );
-	
-    private:
+
+private:
 	bool matchString( FilterVariant variant, const QString &filterString,
 			  const QString &testString ) const;
 	bool matchInt( FilterVariant variant, int filterInt, int testInt ) const;
 	bool matchList( FilterVariant variant, const QVariantList &filterValues,
-			const QVariant &testValue ) const;
-	bool matchTime( FilterVariant variant, const QTime &filterTime,
-			const QTime &testTime ) const;
+					const QVariant &testValue ) const;
+	bool matchTime( FilterVariant variant, const QTime &filterTime, const QTime &testTime ) const;
 };
 QDataStream& operator<<( QDataStream &out, const Filter &filter );
 QDataStream& operator>>( QDataStream &in, Filter &filter );
@@ -75,11 +74,11 @@ QDataStream& operator>>( QDataStream &in, Filter &filter );
 * @Note You can create a widget to show/edit this filter list with
 * @ref FilterListWidget::create. */
 class FilterList : public QList< Filter > {
-    public:
+public:
 	/** Returns true, if one of the filters in this FilterList matches.
 	* This uses @ref Filter::match. */
 	bool match( const DepartureInfo &departureInfo ) const;
-	
+
 	QByteArray toData() const;
 	void fromData( const QByteArray &ba );
 };
@@ -88,18 +87,18 @@ QDataStream& operator>>( QDataStream &in, FilterList &filterList );
 
 /** Contains information about a filter configuration, ie. the settings of a filter. */
 struct FilterSettings {
-    /** The action to take on matching items. */
-    FilterAction filterAction;
-    /** A list of filters for this filter configuration. Filters are OR combined
-    * while there constraints are AND combined. */
-    FilterList filters;
+	/** The action to take on matching items. */
+	FilterAction filterAction;
+	/** A list of filters for this filter configuration. Filters are OR combined
+	* while there constraints are AND combined. */
+	FilterList filters;
 
-    FilterSettings() {
-	filterAction = ShowMatching;
-    };
+	FilterSettings() {
+		filterAction = ShowMatching;
+	};
 
-    /** Applies this filter configuration on the given @p departureInfo. */
-    bool filterOut( const DepartureInfo& departureInfo ) const;
+	/** Applies this filter configuration on the given @p departureInfo. */
+	bool filterOut( const DepartureInfo& departureInfo ) const;
 };
 typedef QList< FilterSettings > FilterSettingsList;
 bool operator ==( const FilterSettings &l, const FilterSettings &r );
