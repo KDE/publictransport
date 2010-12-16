@@ -37,26 +37,24 @@ class KLineEdit;
 class NearStopsDialog;
 
 struct StopSettings {
-    QString serviceProviderID;
-    QString location;
-    QString city;
+	QString serviceProviderID;
+	QString location;
+	QString city;
 };
 
 /**
  * @brief This dialog is used to select a location, service provider and stop
  * TODO: This is a copy from the publicTransport applet, with most parts removed.
- * Maybe it's better to use it from a shared library? 
+ * Maybe it's better to use it from a shared library?
  * Other applets/runners could use it too.
  **/
 class StopSettingsDialog : public KDialog {
-    Q_OBJECT
-    
-    public:
-	StopSettingsDialog( const StopSettings &stopSettings,
-			    LocationModel *modelLocations,
-			    ServiceProviderModel *modelServiceProviders,
-			    Plasma::DataEngine *publicTransportEngine,
-			    QWidget *parent = 0 );
+	Q_OBJECT
+
+public:
+	StopSettingsDialog( const StopSettings &stopSettings, LocationModel *modelLocations,
+			ServiceProviderModel *modelServiceProviders, Plasma::DataEngine *publicTransportEngine,
+			QWidget *parent = 0 );
 	~StopSettingsDialog();
 
 	/** @returns the current stop settings of the dialog. */
@@ -64,7 +62,7 @@ class StopSettingsDialog : public KDialog {
 	/** Sets the values of the widgets according to @p stopSettings. */
 	void setStopSettings( const StopSettings &stopSettings );
 
-    protected slots:
+protected slots:
 	/** Another service provider has been selected. */
 	void serviceProviderChanged( int index );
 	/** The city name has been changed. */
@@ -79,24 +77,24 @@ class StopSettingsDialog : public KDialog {
 	void openInTimetableMate();
 // 	void downloadServiceProvidersClicked();
 // 	void installServiceProviderClicked();
-	
-    private:
+
+private:
 	/** Updates the service provider model by inserting service provider for the
 	* current location. */
 	void updateServiceProviderModel( int index );
 	QString currentCityValue() const;
-	
+
 	Ui::publicTransportStopConfig m_uiStop;
 // 	Ui::stopConfigDetails m_uiStopDetails;
 	Ui::accessorInfo m_uiAccessorInfo;
-	
+
 	LocationModel *m_modelLocations; // Model of locations
 	ServiceProviderModel *m_modelServiceProviders; // Model of service providers
 	QSortFilterProxyModel *m_modelLocationServiceProviders; // Model of service providers for the current location
 	HtmlDelegate *m_htmlDelegate;
-	
+
 	Plasma::DataEngine *m_publicTransportEngine;
-	
+
 	KDialog *m_infoDialog; // Stores a pointer to the service provider info dialog
 
 	Q_DISABLE_COPY( StopSettingsDialog )

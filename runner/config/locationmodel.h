@@ -24,57 +24,57 @@
 #include <KIcon>
 
 namespace Plasma {
-    class DataEngine;
+	class DataEngine;
 }
 
 class LocationItem {
 public:
-    /**
-     * The available location item types. The values are also used for sorting.
-     **/
-    enum ItemType {
-	Total = 0,
-	Country = 1,
-	International = 2,
-	Unknown = 3,
-	Errornous = 4
-    };
-    
-    LocationItem( const QString &countryCode, int accessorCount = -1,
-		  const QString &description = QString() );
+	/**
+	* The available location item types. The values are also used for sorting.
+	**/
+	enum ItemType {
+		Total = 0,
+		Country = 1,
+		International = 2,
+		Unknown = 3,
+		Errornous = 4
+	};
 
-    QString countryCode() const { return m_countryCode; };
-    QString text() const { return m_text; };
-    QString formattedText() const { return m_formattedText; };
-    KIcon icon() const { return m_icon; };
-    ItemType itemType() const { return m_itemType; };
+	LocationItem( const QString &countryCode, int accessorCount = -1,
+				  const QString &description = QString() );
+
+	QString countryCode() const { return m_countryCode; };
+	QString text() const { return m_text; };
+	QString formattedText() const { return m_formattedText; };
+	KIcon icon() const { return m_icon; };
+	ItemType itemType() const { return m_itemType; };
 
 private:
-    void setFromCountryCode( const QString &countryCode, int accessorCount = -1,
-			     const QString &description = QString() );
-    
-    QString m_countryCode;
-    QString m_text;
-    QString m_formattedText;
-    KIcon m_icon;
-    ItemType m_itemType;
+	void setFromCountryCode( const QString &countryCode, int accessorCount = -1,
+							 const QString &description = QString() );
+
+	QString m_countryCode;
+	QString m_text;
+	QString m_formattedText;
+	KIcon m_icon;
+	ItemType m_itemType;
 };
 
 class LocationModel : public QAbstractListModel
 {
 public:
-    explicit LocationModel(QObject* parent = 0);
-    
-    virtual QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const;
-    virtual int rowCount( const QModelIndex& parent = QModelIndex() ) const;
-    virtual QModelIndex index( int row, int column, const QModelIndex& parent = QModelIndex() ) const;
-    virtual Qt::ItemFlags flags( const QModelIndex& index ) const;
+	explicit LocationModel(QObject* parent = 0);
 
-    void syncWithDataEngine( Plasma::DataEngine *publicTransportEngine );
-    QModelIndex indexOfLocation( const QString &countryCode );
+	virtual QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const;
+	virtual int rowCount( const QModelIndex& parent = QModelIndex() ) const;
+	virtual QModelIndex index( int row, int column, const QModelIndex& parent = QModelIndex() ) const;
+	virtual Qt::ItemFlags flags( const QModelIndex& index ) const;
+
+	void syncWithDataEngine( Plasma::DataEngine *publicTransportEngine );
+	QModelIndex indexOfLocation( const QString &countryCode );
 
 private:
-    QList<LocationItem*> m_items;
+	QList<LocationItem*> m_items;
 };
 
 #endif // LOCATIONMODEL_H

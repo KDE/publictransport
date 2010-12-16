@@ -50,31 +50,31 @@ static const char CONFIG_RESULT_COUNT[] = "resultCount";
  * TODO: Share this somehow with the publicTransport applet?
  **/
 class PublicTransportRunnerConfig : public KCModule {
-Q_OBJECT
+	Q_OBJECT
 
 public:
-    explicit PublicTransportRunnerConfig(QWidget* parent = 0, const QVariantList& args = QVariantList());
-    virtual ~PublicTransportRunnerConfig();
+	explicit PublicTransportRunnerConfig(QWidget* parent = 0, const QVariantList& args = QVariantList());
+	virtual ~PublicTransportRunnerConfig();
 
 public slots:
-    void save();
-    void load();
-    void defaults();
+	void save();
+	void load();
+	void defaults();
 
 protected slots:
-    void changeStopClicked();
+	void changeStopClicked();
 
 private:
-    void updateServiceProvider();
+	void updateServiceProvider();
 
-    Ui::publicTransportRunnerConfig m_ui;
-    Plasma::DataEngineManager *m_manager; // For loading data engines
-    StopSettings m_stopSettings;
+	Ui::publicTransportRunnerConfig m_ui;
+	Plasma::DataEngineManager *m_manager; // For loading data engines
+	StopSettings m_stopSettings;
 
-    Plasma::DataEngine *m_publicTransportEngine;
-    Plasma::DataEngine *m_favIconEngine;
-    LocationModel *m_modelLocations;
-    ServiceProviderModel *m_modelServiceProviders;
+	Plasma::DataEngine *m_publicTransportEngine;
+	Plasma::DataEngine *m_favIconEngine;
+	LocationModel *m_modelLocations;
+	ServiceProviderModel *m_modelServiceProviders;
 };
 
 #endif

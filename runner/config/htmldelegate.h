@@ -30,52 +30,54 @@ class QTextLayout;
 /** @class HtmlDelegate
 * @brief A delegate than can display html formatted text. */
 class HtmlDelegate : public QItemDelegate {
-    public:
+public:
 	enum Option {
-	    NoOption = 0x0000,
-	    DrawShadows = 0x0001,
-	    DontDrawBackground = 0x0002
+		NoOption = 0x0000,
+		DrawShadows = 0x0001,
+		DontDrawBackground = 0x0002
 	};
 	Q_DECLARE_FLAGS( Options, Option );
 
 	explicit HtmlDelegate( Options options = NoOption, QObject *parent = 0 );
 
 	virtual QSize sizeHint ( const QStyleOptionViewItem& option,
-				 const QModelIndex& index ) const;
-				 
+							 const QModelIndex& index ) const;
+
 	bool alignText() const { return m_alignText; };
 	void setAlignText( bool alignText ) { m_alignText = alignText; };
 
 	Options options() const { return m_options; };
 	void setOption( Option option, bool enable ) {
-	    if ( enable )
-		m_options |= option;
-	    else if ( m_options.testFlag(option) )
-		m_options ^= option; };
+		if ( enable ) {
+			m_options |= option;
+		} else if ( m_options.testFlag(option) ) {
+			m_options ^= option;
+		}
+	};
 	void setOptions( Options options ) { m_options = options; };
 
-    protected:
+protected:
 	virtual void paint( QPainter* painter, const QStyleOptionViewItem& option,
-			    const QModelIndex& index ) const;
+						const QModelIndex& index ) const;
 
 	virtual void drawDecoration( QPainter* painter, const QStyleOptionViewItem& option,
-				     const QRect& rect, const QPixmap& pixmap ) const;
+								 const QRect& rect, const QPixmap& pixmap ) const;
 	void drawDisplay( QPainter* painter, const QStyleOptionViewItem& option,
-			  const QRect& rect, const QString& text ) const;
+					  const QRect& rect, const QString& text ) const;
 
-    private:
+private:
 	bool m_alignText;
 	Options m_options;
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( HtmlDelegate::Options );
 
 class PublicTransportDelegate : public HtmlDelegate {
-    public:
+public:
 	PublicTransportDelegate( QObject *parent = 0 );
-	
-    protected:
+
+protected:
 	virtual void paint( QPainter* painter, const QStyleOptionViewItem& option,
-			    const QModelIndex& index ) const;
+						const QModelIndex& index ) const;
 };
 
 #endif // HTMLDELEGATE_HEADER

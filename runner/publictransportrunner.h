@@ -29,68 +29,67 @@ class PublicTransportRunnerHelper;
 
 // Define our plasma Runner
 class PublicTransportRunner : public Plasma::AbstractRunner {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
-    /**
-     * @brief Used to identify the given keywords.
-     **/
-    enum Keyword {
-	NoKeyword  		= 0x0000,
+	/**
+		* @brief Used to identify the given keywords.
+		**/
+	enum Keyword {
+		NoKeyword  		= 0x0000,
 
-	// Main keywords
-	Journeys		= 0x0001,
-	Departures 		= 0x0002,
-	Arrivals   		= 0x0004,
-	StopSuggestions		= 0x0008,
+		// Main keywords
+		Journeys		= 0x0001,
+		Departures 		= 0x0002,
+		Arrivals   		= 0x0004,
+		StopSuggestions		= 0x0008,
 
-	// Filter keywords
-	OnlyPublicTransport	= 0x0010,
-	OnlyBuses		= 0x0020,
-	OnlyTrams		= 0x0040,
-	OnlyTrains		= 0x0080
-	
-    };
-    Q_DECLARE_FLAGS( Keywords, Keyword );
+		// Filter keywords
+		OnlyPublicTransport	= 0x0010,
+		OnlyBuses		= 0x0020,
+		OnlyTrams		= 0x0040,
+		OnlyTrains		= 0x0080
+	};
+	Q_DECLARE_FLAGS( Keywords, Keyword );
 
-    struct QueryData {
-	Keywords keywords;
-	int minutesUntilFirstResult;
-    };
-    
-    struct Settings {
-	QString location;
-	QString serviceProviderID;
-	QString city;
-	QString keywordDeparture;
-	QString keywordArrival;
-	QString keywordJourney;
-	QString keywordStop;
-	int resultCount;
-    };
-    
-    // Basic Create/Destroy
-    PublicTransportRunner( QObject *parent, const QVariantList& args );
-    ~PublicTransportRunner();
+	struct QueryData {
+		Keywords keywords;
+		int minutesUntilFirstResult;
+	};
 
-    void match(Plasma::RunnerContext &context);
-    void run(const Plasma::RunnerContext &context, const Plasma::QueryMatch &match);
+	struct Settings {
+		QString location;
+		QString serviceProviderID;
+		QString city;
+		QString keywordDeparture;
+		QString keywordArrival;
+		QString keywordJourney;
+		QString keywordStop;
+		int resultCount;
+	};
 
-    virtual void reloadConfiguration();
-    Settings settings() { return m_settings; };
+	// Basic Create/Destroy
+	PublicTransportRunner( QObject *parent, const QVariantList& args );
+	~PublicTransportRunner();
 
-    QMutex &mutex() { return m_mutex; };
+	void match(Plasma::RunnerContext &context);
+	void run(const Plasma::RunnerContext &context, const Plasma::QueryMatch &match);
+
+	virtual void reloadConfiguration();
+	Settings settings() { return m_settings; };
+
+	QMutex &mutex() { return m_mutex; };
 
 signals:
-    void doMatch(PublicTransportRunner *runner, Plasma::DataEngine *engine, Plasma::RunnerContext *context);
-    
+	void doMatch(PublicTransportRunner *runner, Plasma::DataEngine *engine, Plasma::RunnerContext *context);
+
 protected slots:
-    void init();
-    
+	void init();
+
 private:
-    QMutex m_mutex;
-    PublicTransportRunnerHelper *m_helper;
-    Settings m_settings;
+	QMutex m_mutex;
+	PublicTransportRunnerHelper *m_helper;
+	Settings m_settings;
 };
 // This is the command that links the runner to the .desktop file
 K_EXPORT_PLASMA_RUNNER(PublicTransportRunner, PublicTransportRunner)
@@ -98,113 +97,108 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( PublicTransportRunner::Keywords );
 
 
 class PublicTransportRunnerHelper : public QObject {
-    Q_OBJECT
-    
+	Q_OBJECT
+
 public:
-    explicit PublicTransportRunnerHelper(PublicTransportRunner* runner);
+	explicit PublicTransportRunnerHelper(PublicTransportRunner* runner);
 
 public slots:
-    void match(PublicTransportRunner *runner, Plasma::DataEngine *engine, Plasma::RunnerContext *context);
+	void match(PublicTransportRunner *runner, Plasma::DataEngine *engine, Plasma::RunnerContext *context);
 };
 
 
 class AsyncDataEngineUpdater : public QObject {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
-    /**
-    * Contains information about a single match from the search.
-    */
-    class Result {
-    public:
-	Result() {
-	};
+	/**
+	* Contains information about a single match from the search.
+	*/
+	class Result {
+	public:
+		Result() {
+		};
 
-	Result( const Result &other ) {
-	    this->text = other.text;
-	    this->url = other.url;
-	    this->icon = other.icon;
-	    this->subtext = other.subtext;
-	    this->relevance = other.relevance;
-	    this->data = other.data;
-	};
+		Result( const Result &other ) {
+			this->text = other.text;
+			this->url = other.url;
+			this->icon = other.icon;
+			this->subtext = other.subtext;
+			this->relevance = other.relevance;
+			this->data = other.data;
+		};
 
-	Result &operator= (const Result &other) {
-	    this->text = other.text;
-	    this->url = other.url;
-	    this->icon = other.icon;
-	    this->subtext = other.subtext;
-	    this->relevance = other.relevance;
-	    this->data = other.data;
+		Result &operator= (const Result &other) {
+			this->text = other.text;
+			this->url = other.url;
+			this->icon = other.icon;
+			this->subtext = other.subtext;
+			this->relevance = other.relevance;
+			this->data = other.data;
 
-	    return *this;
-	};
+			return *this;
+		};
 
-	/** The main text to show for this timetable result. */
-	QString text;
-	/** Additional text to show for this timetable result. */
-	QString subtext;
-	/** An icon showing the used vehicle type(s) for this timetable result. */
-	KIcon icon;
-	/** The URL of the page containing the match, ie. the service provider. */
-	QUrl url;
-	/** The relevance of this result, computed from sort by using @ref normalizeRelevance. */
-	qreal relevance;
-	/** Additional data to store for the result, could be QVariant, 
-	  * but it's currently only used to cache stop IDs of type QString. */
-	QString data;
+		/** The main text to show for this timetable result. */
+		QString text;
+		/** Additional text to show for this timetable result. */
+		QString subtext;
+		/** An icon showing the used vehicle type(s) for this timetable result. */
+		KIcon icon;
+		/** The URL of the page containing the match, ie. the service provider. */
+		QUrl url;
+		/** The relevance of this result, computed from sort by using @ref normalizeRelevance. */
+		qreal relevance;
+		/** Additional data to store for the result, could be QVariant,
+		* but it's currently only used to cache stop IDs of type QString. */
+		QString data;
     };
 
-    AsyncDataEngineUpdater( Plasma::DataEngine *engine, Plasma::RunnerContext *context,
-			    PublicTransportRunner *runner );
+	AsyncDataEngineUpdater( Plasma::DataEngine *engine, Plasma::RunnerContext *context,
+							PublicTransportRunner *runner );
 
-    QList<Result> results() const;
-    Plasma::DataEngine *engine() const;
-    
+	QList<Result> results() const;
+	Plasma::DataEngine *engine() const;
+
 signals:
-    /**
-    * Emitted when a search has been completed.
-    * @param success true if the search was completed successfully.
-    */
-    void finished( bool success );
+	/**
+	* Emitted when a search has been completed.
+	* @param success true if the search was completed successfully.
+	*/
+	void finished( bool success );
 
 public slots:
-    void query( Plasma::DataEngine *engine,
-		const PublicTransportRunner::QueryData &data,
-		const QString &stop, const QString &stop2 = QString() );
-    
-    /**
-    * Aborts the currently running request.
-    */
-    void abort();
-    
+	void query( Plasma::DataEngine *engine, const PublicTransportRunner::QueryData &data,
+				const QString &stop, const QString &stop2 = QString() );
+
+	/**
+	* Aborts the currently running request.
+	*/
+	void abort();
+
 protected slots:
-    /** New data arrived from the publicTransport data engine. */
-    void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
+	/** New data arrived from the publicTransport data engine. */
+	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
 private:
-    /** Read stop suggestions from the publicTransport data engine. */
-    void processStopSuggestions(const QString &sourceName,
-				const Plasma::DataEngine::Data& data );
+	/** Read stop suggestions from the publicTransport data engine. */
+	void processStopSuggestions(const QString &sourceName, const Plasma::DataEngine::Data& data );
 
-    void processDepartures(const QString &sourceName,
-			   const Plasma::DataEngine::Data& data );
-    
-    void processJourneys(const QString &sourceName,
-			 const Plasma::DataEngine::Data &data );
+	void processDepartures(const QString &sourceName, const Plasma::DataEngine::Data& data );
 
-    static bool isTimeShown( const QDateTime& dateTime,
-			     int timeOffsetOfFirstDeparture );
+	void processJourneys(const QString &sourceName, const Plasma::DataEngine::Data &data );
 
-    void normalizeRelevance( qreal min, qreal max );
-    
-    QList<Result> m_results;
-    Plasma::DataEngine *m_engine;
-    Plasma::RunnerContext *m_context;
-    PublicTransportRunner::QueryData m_data;
-    QString m_sourceName;
-    PublicTransportRunner::Settings m_settings;
-    PublicTransportRunner *m_runner;
+	static bool isTimeShown( const QDateTime& dateTime, int timeOffsetOfFirstDeparture );
+
+	void normalizeRelevance( qreal min, qreal max );
+
+	QList<Result> m_results;
+	Plasma::DataEngine *m_engine;
+	Plasma::RunnerContext *m_context;
+	PublicTransportRunner::QueryData m_data;
+	QString m_sourceName;
+	PublicTransportRunner::Settings m_settings;
+	PublicTransportRunner *m_runner;
 };
 
 #endif
