@@ -17,6 +17,10 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/** @file
+ * @brief This file contains a combobox in which each element can be checked.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #ifndef CHECKCOMBOBOX_HEADER
 #define CHECKCOMBOBOX_HEADER
 

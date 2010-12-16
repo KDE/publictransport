@@ -17,6 +17,10 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/** @file
+ * @brief This file contains widgets to edit filters for departures/arrivals/journeys.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #ifndef FILTERWIDGET_HEADER
 #define FILTERWIDGET_HEADER
 
@@ -40,6 +44,9 @@
 
 class CheckCombobox;
 class KComboBox;
+/**
+ * @brief Base class for widgets allowing to edit a single constraint.
+ **/
 class ConstraintWidget : public QWidget {
 	Q_OBJECT
 
@@ -48,10 +55,16 @@ public:
 			QList<FilterVariant> availableVariants = QList<FilterVariant>(),
 			FilterVariant initialVariant = FilterNoVariant, QWidget* parent = 0 );
 
+	/** @return The type of this constraint. */
 	FilterType type() const { return m_constraint.type; };
+	/** @return The variant of this constraint, like contains / equals, etc. */
 	FilterVariant variant() const { return m_constraint.variant; };
+	/** @return The value of this constraint. */
 	virtual QVariant value() const = 0;
+	/** Set the value of this constraint to @p value.
+	  * @param value The new value for this constraint. */
 	virtual void setValue( const QVariant &value ) = 0;
+	/** @return The Constraint-object for this widget. */
 	Constraint constraint() {
 		m_constraint.value = value();
 		return m_constraint;
@@ -73,6 +86,7 @@ public:
 									 const QVariant &value = QVariant(), QWidget *parent = 0 );
 
 signals:
+	/** Emitted when the value of this constraint has changed. */
 	void changed();
 
 protected slots:
@@ -85,6 +99,9 @@ private:
 	KComboBox *m_variantsCmb;
 };
 
+/**
+ * @brief A widget allowing to edit a single constraint where the user can select a list of values.
+ **/
 class ConstraintListWidget : public ConstraintWidget {
 	Q_OBJECT
 
@@ -121,6 +138,9 @@ private:
 	QVariantList m_values;
 };
 
+/**
+ * @brief A widget allowing to edit a single constraint where the user can enter a string value.
+ **/
 class ConstraintStringWidget : public ConstraintWidget {
 	Q_OBJECT
 
@@ -133,7 +153,7 @@ public:
 		m_string->setText(value.toString());
 	};
 
-    protected slots:
+protected slots:
 	void stringChanged( const QString &newString ) {
 		Q_UNUSED( newString);
 		emit changed();
@@ -143,6 +163,9 @@ private:
 	KLineEdit *m_string;
 };
 
+/**
+ * @brief A widget allowing to edit a single constraint where the user can enter an integer value.
+ **/
 class ConstraintIntWidget : public ConstraintWidget {
 	Q_OBJECT
 
@@ -163,6 +186,9 @@ private:
 	KIntSpinBox *m_num;
 };
 
+/**
+ * @brief A widget allowing to edit a single constraint where the user can enter a time value.
+ **/
 class ConstraintTimeWidget : public ConstraintWidget {
 	Q_OBJECT
 
@@ -183,6 +209,9 @@ private:
 	QTimeEdit *m_time;
 };
 
+/**
+ * @brief A widget allowing to edit a filter, which is a list of constraints.
+ **/
 class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 	Q_OBJECT
 	Q_PROPERTY( QString separatorText READ separatorText WRITE setSeparatorText )
@@ -205,12 +234,14 @@ public:
 		return list;
 	};
 
+	/** Set a list of @ref FilterType which are allowed to be added to this FilterWidget. */
 	void setAllowedFilterTypes( const QList<FilterType> &allowedFilterTypes );
 
-	/** Is only used for new separators. */
+	/** Set the text to be shown between constraints. It's only used for new separators. */
 	void setSeparatorText( const QString &separatorText ) {
 		m_separatorText = separatorText;
 	};
+	/** @return The text that is shown between constraints of this FilterWidget. */
 	QString separatorText() const { return m_separatorText; };
 
 	/** Returns a Filter object with all constraints of this FilterWidget. */
@@ -221,6 +252,7 @@ public:
 		}
 		return f;
 	};
+	/** Sets all constraints in @p filter to this FilterWidget. */
 	void setFilter( const Filter &filter );
 
 	inline void addConstraint( FilterType filterType ) {
@@ -241,14 +273,19 @@ public:
 	};
 
 signals:
+	/** Emitted, when this FilterWidget has changed, ie. a constraint value has changed
+	  * or a constraint was added or removed. */
 	void changed();
+	/** Emitted, after the new constraint @p constraintWidget was added. */
 	void constraintAdded( ConstraintWidget *constraintWidget );
+	/** Emitted, after @p constraint was removed. */
 	void constraintRemoved( const Constraint &constraint );
 
 public slots:
 	inline void addConstraint() {
 		addConstraint( qobject_cast<ConstraintWidget*>(createNewWidget()) );
 	};
+	/** Removes the given @p widget from the list of constraints. */
 	void removeConstraint( ConstraintWidget *widget );
 
 protected slots:
@@ -278,6 +315,9 @@ private:
 	QString m_separatorText;
 };
 
+/**
+ * @brief A widget allowing to edit a list of filters, which are lists of constraints.
+ **/
 class FilterListWidget : public AbstractDynamicWidgetContainer {
 	Q_OBJECT
 

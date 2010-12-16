@@ -17,6 +17,10 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/** @file
+ * @brief This file contains a model for service providers, to be filled by the public transport data engine.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #ifndef SERVICEPROVIDERMODEL_H
 #define SERVICEPROVIDERMODEL_H
 

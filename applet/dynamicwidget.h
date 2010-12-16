@@ -17,6 +17,10 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/** @file
+ * @brief This file contains widgets where the user can dynamically add/remove widgets.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #ifndef DYNAMICWIDGET_HEADER
 #define DYNAMICWIDGET_HEADER
 

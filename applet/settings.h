@@ -17,6 +17,10 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/** @file
+ * @brief This file contains classes for managing settings of the PublicTransport applet.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #ifndef SETTINGS_HEADER
 #define SETTINGS_HEADER
 

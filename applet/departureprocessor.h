@@ -17,6 +17,10 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/** @file
+ * @brief This file contains a QThread-derived class to process data from the public transport data engine.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #ifndef DEPARTUREPROCESSOR_HEADER
 #define DEPARTUREPROCESSOR_HEADER
 

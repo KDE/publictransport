@@ -17,6 +17,10 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/** @file
+ * @brief This file contains classes used to filter departures/arrivals/journeys.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #ifndef FILTER_HEADER
 #define FILTER_HEADER
 

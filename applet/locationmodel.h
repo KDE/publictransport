@@ -17,6 +17,10 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/** @file
+ * @brief This file contains a model for locations, to be filled by the public transport data engine.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #ifndef LOCATIONMODEL_H
 #define LOCATIONMODEL_H
 
