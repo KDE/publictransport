@@ -1,8 +1,21 @@
 [Desktop Entry]
 Name=Public Transport
 Name[de]=Öffentlicher Nahverkehr
+Name[en_GB]=Public Transport
+Name[es]=Transporte público
+Name[et]=Ühiskondlik transport
+Name[fr]=Transport publique
+Name[hr]=Javni Prijevoz
+Name[km]=ការ​បញ្ជូន​សាធារណៈ
+Name[nds]=APNV
+Name[pa]=ਪਬਲਿਕ ਟਰਾਂਸਪੋਰਟ
+Name[pt]=Transportes Públicos
+Name[pt_BR]=Transportes Públicos
+Name[ro]=Transport public
+Name[sv]=Kollektivtrafik
+Name[uk]=Громадський транспорт
+Name[x-test]=xxPublic Transportxx
 Comment=Gives information about public transport departing from a given stop
-Comment[de]=Liefert Informationen über demnächst von gegebener Haltestelle abfahrenden öffentlichen Nahverkehr
 Icon=public-transport-stop
 
 X-KDE-ServiceTypes=Plasma/Runner

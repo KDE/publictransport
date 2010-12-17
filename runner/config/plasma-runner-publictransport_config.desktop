@@ -1,8 +1,6 @@
 [Desktop Entry]
 Name=Public Transport Runner Config
-Name[x-test]=xxPublic Transport Runner Configxx
 Comment=Configuration of the Public Transport Runner
-Comment[x-test]=xxConfiguration of the Public Transport Runnerxx
 Icon=public-transport-stop
 Type=Service
 X-KDE-ServiceTypes=KCModule
