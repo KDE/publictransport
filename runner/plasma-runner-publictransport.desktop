@@ -16,6 +16,9 @@ Name[sv]=Kollektivtrafik
 Name[uk]=Громадський транспорт
 Name[x-test]=xxPublic Transportxx
 Comment=Gives information about public transport departing from a given stop
+Comment[sv]=Ger information om kollektivtrafik som avgår från en angiven hållplats
+Comment[uk]=Надає дані щодо громадського транспорту, яким можна скористатися на вказаній зупинці
+Comment[x-test]=xxGives information about public transport departing from a given stopxx
 Icon=public-transport-stop
 
 X-KDE-ServiceTypes=Plasma/Runner
