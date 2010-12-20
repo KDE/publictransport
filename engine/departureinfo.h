@@ -90,7 +90,7 @@ public:
 	/** Gets a list of stops of the departure/arrival to it's destination
 	* stop or a list of stops of the journey from it's start to it's
 	* destination stop.
-	* @note: If @ref routeStops and @ref routeTimes are both set,
+	* @note: If data for both @ref RouteStops and @ref RouteTimes is set,
 	* they contain the same number of elements. And elements with equal
 	* indices are associated (the times at which the vehicle is at the
 	* stops).

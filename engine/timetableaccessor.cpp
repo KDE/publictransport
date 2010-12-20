@@ -437,7 +437,7 @@ void TimetableAccessor::result( KJob* job )
 	kDebug() << "Finished:" << parseDocumentMode;
 
 	if ( storedJob->error() != 0 ) {
-		kDebug() << "Error in job" << storedJob->error() << storedJob->errorString();
+		kDebug() << "Error in job:" << storedJob->error() << storedJob->errorString();
 		emit errorParsing( this, ErrorDownloadFailed, storedJob->errorString(),
 						   jobInfo.url, serviceProvider(), jobInfo.sourceName,
 						   jobInfo.city, jobInfo.stop, jobInfo.dataType,

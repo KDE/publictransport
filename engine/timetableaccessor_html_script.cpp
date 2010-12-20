@@ -156,6 +156,7 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 	QTime lastTime;
 	for ( int i = 0; i < data.count(); ++ i ) {
 		TimetableData timetableData = data.at( i );
+
 		QDate date = timetableData.value( DepartureDate ).toDate();
 		QTime departureTime = QTime( timetableData.value( DepartureHour ).toInt(),
 		                             timetableData.value( DepartureMinute ).toInt() );

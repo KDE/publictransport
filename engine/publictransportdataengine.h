@@ -37,13 +37,13 @@ class JourneyInfo;
 
 /** @class PublicTransportEngine
  @brief This engine provides departure/arrival times and journeys for public transport.
- @see @ref usage_sec (how to use this data engine in an applet?)
+ @see @ref pageUsage (how to use this data engine in an applet?)
  */
 class PublicTransportEngine : public Plasma::DataEngine {
 	Q_OBJECT
 
 public:
-	/** The available types of sources of this data engine. They all have
+	/** @brief The available types of sources of this data engine. They all have
 	* an associated keyword with that data source names start.
 	* @see sourceTypeKeyword
 	* @see sourceTypeFromName */
@@ -70,7 +70,7 @@ public:
 				* that arrive at the given date and time. */
 	};
 
-	/** Every data engine needs a constructor with these arguments. */
+	/** @brief Every data engine needs a constructor with these arguments. */
 	PublicTransportEngine( QObject* parent, const QVariantList& args );
 	~PublicTransportEngine();
 
@@ -79,31 +79,31 @@ public:
 	/** @returns the type of the given @p sourceName. */
 	SourceType sourceTypeFromName( const QString &sourceName ) const;
 	/** @returns true, if a data source of the given @p sourceType requests
-	* data from a web server. */
+	 * data from a web server. */
 	bool isDataRequestingSourceType( SourceType sourceType ) const {
 		return static_cast< int >( sourceType ) >= 10; };
 
-	/** Minimum timeout in seconds to request new data. Before the timeout
-	* is over, old stored data from previous requests is used. */
+	/** @brief Minimum timeout in seconds to request new data. Before the timeout
+	 * is over, old stored data from previous requests is used. */
 	static const int MIN_UPDATE_TIMEOUT;
 
-	/** Maximum timeout in seconds to request new data, if delays are avaiable.
-	* Before the timeout is over, old stored data from previous requests is used. */
+	/** @brief Maximum timeout in seconds to request new data, if delays are avaiable.
+	 * Before the timeout is over, old stored data from previous requests is used. */
 	static const int MAX_UPDATE_TIMEOUT_DELAY;
 
-	/** The default time offset from now for the first departure / arrival / journey
-	* in the list. This is used if it wasn't specified in the source name. */
+	/** @brief The default time offset from now for the first departure/arrival/journey
+	 * in the list. This is used if it wasn't specified in the source name. */
 	static const int DEFAULT_TIME_OFFSET;
 
 protected:
-	/** This virtual function is called when a new source is requested.
-	* @param name The name of the requested data source. */
+	/** @brief This virtual function is called when a new source is requested.
+	 * @param name The name of the requested data source. */
 	bool sourceRequestEvent( const QString& name );
 
-	/** This virtual function is called when an automatic update is triggered
-	* for an existing source (ie: when a valid update interval is set
-	* when requesting a source).
-	* @param name The name of the data source to be updated. */
+	/** @brief This virtual function is called when an automatic update is triggered
+	 * for an existing source (ie: when a valid update interval is set
+	 * when requesting a source).
+	 * @param name The name of the data source to be updated. */
 	bool updateSourceEvent( const QString& name );
 
 	bool updateServiceProviderForCountrySource( const QString &name );
@@ -112,26 +112,27 @@ protected:
 	bool updateLocationSource();
 	bool updateDepartureOrJourneySource( const QString &name );
 
-	/** Returns wheather or not the given source is up to date.
-	* @param name The name of the source to be checked. */
+	/** @brief Returns wheather or not the given source is up to date.
+	 * @param name The name of the source to be checked. */
 	bool isSourceUpToDate( const QString& name );
 
 public slots:
-	/** A list of departures / arrivals was received.
-	* @param accessor The accessor that was used to download and parse the
-	* departures / arrivals.
-	* @param requestUrl The url used to request the information.
-	* @param departures A list of departures/arrivals that were received.
-	* @param globalInfo Global information that affects all departures/arrivals.
-	* @param serviceProvider The service provider the data came from.
-	* @param sourceName The name of the data source for which the departures /
-	* arrivals have been downloaded and parsed.
-	* @param city The city the stop is in. May be empty if the service provider
-	* doesn't need a separate city value.
-	* @param stop The stop name for which the departures / arrivals have been received.
-	* @param dataType "departures" or "arrivals".
-	* @param parseDocumentMode What has been parsed from the document.
-	* @see TimetableAccessor::useSeparateCityValue() */
+	/** @brief A list of departures / arrivals was received.
+	 *
+	 * @param accessor The accessor that was used to download and parse the
+	 *   departures/arrivals.
+	 * @param requestUrl The url used to request the information.
+	 * @param departures A list of departures/arrivals that were received.
+	 * @param globalInfo Global information that affects all departures/arrivals.
+	 * @param serviceProvider The service provider the data came from.
+	 * @param sourceName The name of the data source for which the departures /
+	 *   arrivals have been downloaded and parsed.
+	 * @param city The city the stop is in. May be empty if the service provider
+	 *   doesn't need a separate city value.
+	 * @param stop The stop name for which the departures / arrivals have been received.
+	 * @param dataType "departures" or "arrivals".
+	 * @param parseDocumentMode What has been parsed from the document.
+	 * @see TimetableAccessor::useSeparateCityValue() */
 	void departureListReceived( TimetableAccessor *accessor,
 			const QUrl &requestUrl, const QList<DepartureInfo*> &departures,
 			const GlobalTimetableInfo &globalInfo,
@@ -139,20 +140,21 @@ public slots:
 			const QString &city, const QString &stop,
 			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
-	/** A list of journey was received.
-	* @param accessor The accessor that was used to download and parse the journeys.
-	* @param requestUrl The url used to request the information.
-	* @param journeys A list of journeys that were received.
-	* @param globalInfo Global information that affects all journeys.
-	* @param serviceProvider The service provider the data came from.
-	* @param sourceName The name of the data source for which the journeys have
-	* been downloaded and parsed.
-	* @param city The city the stop is in. May be empty if the service provider
-	* doesn't need a separate city value.
-	* @param stop The stop name for which the departures / arrivals have been received.
-	* @param dataType "journeys".
-	* @param parseDocumentMode What has been parsed from the document.
-	* @see TimetableAccessor::useSeparateCityValue() */
+	/** @brief A list of journey was received.
+	 *
+	 * @param accessor The accessor that was used to download and parse the journeys.
+	 * @param requestUrl The url used to request the information.
+	 * @param journeys A list of journeys that were received.
+	 * @param globalInfo Global information that affects all journeys.
+	 * @param serviceProvider The service provider the data came from.
+	 * @param sourceName The name of the data source for which the journeys have
+	 *   been downloaded and parsed.
+	 * @param city The city the stop is in. May be empty if the service provider
+	 *   doesn't need a separate city value.
+	 * @param stop The stop name for which the departures / arrivals have been received.
+	 * @param dataType "journeys".
+	 * @param parseDocumentMode What has been parsed from the document.
+	 * @see TimetableAccessor::useSeparateCityValue() */
 	void journeyListReceived( TimetableAccessor *accessor,
 			const QUrl &requestUrl, const QList<JourneyInfo*> &journeys,
 			const GlobalTimetableInfo &globalInfo,
@@ -160,21 +162,22 @@ public slots:
 			const QString &city, const QString &stop,
 			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
-	/** A list of stops was received.
-	* @param accessor The accessor that was used to download and parse the stops.
-	* @param requestUrl The url used to request the information.
-	* @param stops A string list containing the received stop names.
-	* @param stopToStopId A QHash containing the received stop names as keys and the stop
-	* IDs as values (stop IDs may be empty).
-	* @param serviceProvider The service provider the data came from.
-	* @param sourceName The name of the data source for which the stops have been
-	* downloaded and parsed.
-	* @param city The city the (ambiguous) stop is in. May be empty if the service provider
-	* doesn't need a separate city value.
-	* @param stop The (ambiguous) stop name for which the stop list has been received.
-	* @param dataType "stopList".
-	* @param parseDocumentMode What has been parsed from the document.
-	* @see TimetableAccessor::useSeparateCityValue() */
+	/** @brief A list of stops was received.
+	 *
+	 * @param accessor The accessor that was used to download and parse the stops.
+	 * @param requestUrl The url used to request the information.
+	 * @param stops A string list containing the received stop names.
+	 * @param stopToStopId A QHash containing the received stop names as keys and the stop
+	 *   IDs as values (stop IDs may be empty).
+	 * @param serviceProvider The service provider the data came from.
+	 * @param sourceName The name of the data source for which the stops have been
+	 *   downloaded and parsed.
+	 * @param city The city the (ambiguous) stop is in. May be empty if the service provider
+	 *   doesn't need a separate city value.
+	 * @param stop The (ambiguous) stop name for which the stop list has been received.
+	 * @param dataType "stopList".
+	 * @param parseDocumentMode What has been parsed from the document.
+	 * @see TimetableAccessor::useSeparateCityValue() */
 	void stopListReceived( TimetableAccessor *accessor,
 			const QUrl &requestUrl, const QStringList &stops,
 			const QHash<QString, QString> &stopToStopId,
@@ -183,31 +186,32 @@ public slots:
 			const QString &sourceName, const QString &city, const QString &stop,
 			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
-	/** An error was received.
-	* @param accessor The accessor that was used to download and parse information
-	* from the service provider.
-	* @param errorType The type of error or NoError if there was no error.
-	* @param errorString If @p errorType isn't NoError this contains a
-	* description of the error.
-	* @param requestUrl The url used to request the information.
-	* @param serviceProvider The service provider the data came from.
-	* @param sourceName The name of the data source.
-	* @param city The city the stop is in. May be empty if the service provider
-	* doesn't need a separate city value.
-	* @param stop The stop name for which the error occurred.
-	* @param dataType "nothing".
-	* @param parseDocumentMode What has been parsed from the document.
-	* @see TimetableAccessor::useSeparateCityValue() */
+	/** @brief An error was received.
+	 *
+	 * @param accessor The accessor that was used to download and parse information
+	 *   from the service provider.
+	 * @param errorType The type of error or NoError if there was no error.
+	 * @param errorString If @p errorType isn't NoError this contains a
+	 *   description of the error.
+	 * @param requestUrl The url used to request the information.
+	 * @param serviceProvider The service provider the data came from.
+	 * @param sourceName The name of the data source.
+	 * @param city The city the stop is in. May be empty if the service provider
+	 *   doesn't need a separate city value.
+	 * @param stop The stop name for which the error occurred.
+	 * @param dataType "nothing".
+	 * @param parseDocumentMode What has been parsed from the document.
+	 * @see TimetableAccessor::useSeparateCityValue() */
 	void errorParsing( TimetableAccessor *accessor, ErrorType errorType, const QString &errorString,
 			const QUrl &requestUrl, const QString &serviceProvider,
 			const QString &sourceName, const QString &city, const QString &stop,
 			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
-	/** A directory with accessor info xmls was changed. */
+	/** @brief A directory with accessor info xmls was changed. */
 	void accessorInfoDirChanged( QString path );
 
 private:
-	/** Gets a map with information about an accessor.
+	/** @brief Gets a map with information about an accessor.
 	* @param accessor The accessor to get information about. */
 	QHash< QString, QVariant > serviceProviderInfo( const TimetableAccessor *&accessor );
 	QHash< QString, QVariant > locations();
@@ -621,7 +625,7 @@ Here is an overview of the allowed tags:
 <td>The full name of the author of this accessor info xml.</td></tr>
 
 <tr><td style="color:#666600"><b>\<email\></b></td>
-<td style="color:#888800">\<author\></td> <td>Optional</td> <td>
+<td style="color:#888800">\<author\></td> <td>(Optional)</td> <td>
 The email address of the author of this accessor info xml.</td></tr>
 
 <tr><td><b>\<version\></b></td>
@@ -632,16 +636,12 @@ The email address of the author of this accessor info xml.</td></tr>
 <td>\<accessorInfo\></td> <td>Required</td>
 <td>Can be either HTML or XML.</td></tr>
 
-<tr><td>Deprecated (TODO: remove) \<country\></td>
-<td>\<accessorInfo\></td> <td>Required</td>
-<td>The country the service provider has most data for. Can also be "international" or "unknown".</td></tr>
-
 <tr><td style="color:#00bb00"><b>\<cities\></b></td>
-<td>\<accessorInfo\></td> <td>Optional</td>
+<td>\<accessorInfo\></td> <td>(Optional)</td>
 <td>A list of cities the service provider has data for (with surrounding \<city\>-tags).</td></tr>
 
 <tr><td style="color:#007700"><b>\<city\></b></td>
-<td style="color:#00bb00">\<cities\></td> <td>Optional</td>
+<td style="color:#00bb00">\<cities\></td> <td>(Optional)</td>
 <td>A city in the list of cities (\<cities\>). Can have an attribute "replaceWith", to replace city names with values used by the service provider.</td></tr>
 
 <tr><td><b>\<description\></b></td>
@@ -665,11 +665,11 @@ The email address of the author of this accessor info xml.</td></tr>
 <td>A raw url (in a CDATA tag) to a page containing a departure / arrival list. The following substrings are replaced by current values: <b>{stop}</b> (the stop name), <b>{type}</b> (arr or dep for arrivals or departures), <b>{time}</b> (the time of the first departure / arrival), <b>{maxCount}</b> (maximal number of departures / arrivals).</td></tr>
 
 <tr><td style="color:#770000;"><b>\<journeys\></b></td>
-<td style="color:#bb0000;">\<rawUrls\></td> <td>Optional</td>
+<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional)</td>
 <td>A raw url (in a CDATA tag) to a page containing a journey list. The following substrings are replaced by current values: <b>{startStop}</b> (the name of the stop where the journey starts), <b>{targetStop}</b> (the name of the stop where the journey ends), <b>{time}</b> (the time of the first journey), <b>{maxCount}</b> (maximal number of journeys).</td></tr>
 
 <tr><td style="color:#770000;"><b>\<stopSuggestions\></b></td>
-<td style="color:#bb0000;">\<rawUrls\></td> <td>Optional</td>
+<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional)</td>
 <td>A raw url (in a CDATA tag) to a page containing a list of stop suggestions. Normally this tag isn't needed, because the url is the same as the url to the departure list. When the stop name is ambiguous the service provider can show a page containing a list of stop suggestions. You may want to use this tag if you want to parse XML files for departure lists and get the stop suggestions from an HTML page or if there is a special url only for stop suggestions.</td></tr>
 
 <tr><td style="color:#0000bb;"><b>\<regExps\></b></td>
@@ -681,15 +681,15 @@ The email address of the author of this accessor info xml.</td></tr>
 <td>Contains a regular expression used to parse documents with departure / arrival lists.</td></tr>
 
 <tr><td style="color:#000077;"><b>\<journeys\></b></td>
-<td style="color:#0000bb;">\<regExps\></td> <td>Optional</td>
+<td style="color:#0000bb;">\<regExps\></td> <td>(Optional)</td>
 <td>Contains a regular expression used to parse documents with journey lists.</td></tr>
 
 <tr><td style="color:#000077;"><b>\<journeyNews\></b></td>
-<td style="color:#0000bb;">\<regExps\></td> <td>Optional</td>
+<td style="color:#0000bb;">\<regExps\></td> <td>(Optional)</td>
 <td>Contains a list of regular expression used to parse strings matched with the \<info\> "JourneyNews".</td></tr>
 
 <tr><td style="color:#000077;"><b>\<possibleStops\></b></td>
-<td style="color:#0000bb;">\<regExps\></td> <td>Optional</td>
+<td style="color:#0000bb;">\<regExps\></td> <td>(Optional)</td>
 <td>Contains a list of regular expression used to parse documents with stop suggestions. This is used if there's a special raw url for stop suggestions or if no departures / arrivals / journeys could be found in a document.</td></tr>
 
 <tr><td style="color:#000033;"><b>\<regExp\></b></td>
@@ -708,8 +708,23 @@ The email address of the author of this accessor info xml.</td></tr>
 <td style="color:#000077;">\<jorneyNews\>, \<possibleStops\></td> <td>Required</td>
 <td>Contains \<regExp\> and \<infos\> tags. There can be more than one \<item\> tag to use different regular expressions.</td></tr>
 </table>
+@n @n
+@section examples Accessor Examples
+@n
+@subsection examples_xml_script A Simple Accessor Using a Script
+Here is an example of a simple accessor info xml of an accessor which uses a script to parse data from the service provider:
+@verbinclude fr_gares.xml
 
-Here is an example of a simple accessor info xml (de_bvg.xml):
+@n
+@subsection examples_script A Simple Parsing-Script
+This is an example of a script used to parse data from the service provider (actually the one used by the XML from the last section).
+@verbinclude fr_gares.js
+
+@n
+@subsection examples_xml_regexp A Simple Accessor Using Regular Expressions
+Here is an example of a simple accessor info xml of an accessor which uses regular expressions to parse the data from the service provider (de_bvg.xml).
+@note Parsing the data with regular expressions defined in the xml file is deprecated. New accessors should use a script file to do the parsing.
+
 @verbinclude de_bvg.xml
 */
 

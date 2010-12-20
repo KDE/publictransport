@@ -33,6 +33,7 @@ Type=Service
 
 X-KDE-ServiceTypes=Plasma/DataEngine
 X-KDE-Library=plasma_engine_publictransport
+X-Plasma-EngineName=publictransport
 X-KDE-PluginInfo-Author=Friedrich Pülz
 X-KDE-PluginInfo-Email=fpuelz@gmx.de
 X-KDE-PluginInfo-Name=publictransport
