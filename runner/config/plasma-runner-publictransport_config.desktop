@@ -1,11 +1,13 @@
 [Desktop Entry]
 Name=Public Transport Runner Config
 Name[pt]=Configuração da Execução dos Transportes Públicos
+Name[pt_BR]=Configuração da execução dos transportes públicos
 Name[sv]=Inställning av körprogram för kollektivtrafik
 Name[uk]=Налаштування інструменту запуску «Громадського транспорту»
 Name[x-test]=xxPublic Transport Runner Configxx
 Comment=Configuration of the Public Transport Runner
 Comment[pt]=Configuração da Execução dos Transportes Públicos
+Comment[pt_BR]=Configuração da execução dos transportes públicos
 Comment[sv]=Inställning av körprogrammet för kollektivtrafik
 Comment[uk]=Налаштування інструменту запуску «Громадського транспорту»
 Comment[x-test]=xxConfiguration of the Public Transport Runnerxx
