@@ -4,7 +4,6 @@
 <xml_file_version type="publictransport" version="1.0" />
 <name lang="en">Conducive Technology Corp. (flightstats.com)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<country>International</country>
 <useSeperateCityValue>false</useSeperateCityValue>
 <defaultVehicleType>Plane</defaultVehicleType>
 <description>This accessor gets flight departures and arrivals for airports around the world.</description>

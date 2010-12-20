@@ -4,7 +4,6 @@
 
 <name>Weser-Ems Busverkehr GmbH</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<country>Germany</country>
 <cities>
     <city>Bremen</city> <city>Bremerhaven</city> <city>Hannover</city> <city>Braunschweig</city> <city>Emden</city>
 </cities>

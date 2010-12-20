@@ -148,13 +148,6 @@ function parseTimetable( html ) {
 }
 
 function parsePossibleStops( html ) {
-    if ( parsePossibleStops(html) )
-	return true;
-    else
-	return false;
-}
-
-function parsePossibleStops( html ) {
     // Find block of stops
     var str = helper.extractBlock( html, '<select class="error" name="input">',
 				   '</select>' );

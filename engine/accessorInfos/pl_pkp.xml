@@ -4,7 +4,6 @@
 
 <name>Polskie Koleje Państwowe</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<country>Poland</country>
 <!-- <cities><city></city></cities> -->
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>This service provider has static data. That means, that displayed departures may actually not be valid for today. Please view the journey news, to see if a departure is valid for today (e.g. 'Mo-Fr').</description>

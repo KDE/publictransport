@@ -4,7 +4,6 @@
 
 <name>iMHD.sk</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<country>Slovakia</country>
 <cities>
     <city replaceWith="ba">Bratislava</city>
     <city replaceWith="bb">Banská Bystrica</city>

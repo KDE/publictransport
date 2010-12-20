@@ -117,7 +117,7 @@ function parseTimetable( html ) {
 	if ( posRoute != -1 ) {
 	    route = route.substr( posRoute + 6 );
 	    var routeBlocks = route.split( routeBlocksRegExp );
-	    
+
 	    if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) )
 		exactRouteStops = routeBlocks.length;
 	    else {
@@ -132,7 +132,7 @@ function parseTimetable( html ) {
 		var lines = helper.splitSkipEmptyParts( routeBlocks[n], "\n" );
 		if ( lines.count < 2 )
 		    continue;
-		    
+
 		routeStops.push( lines[0] );
 		routeTimes.push( lines[1] );
 	    }
@@ -326,6 +326,7 @@ function parseJourneys( html ) {
 	result.addData( timetableData );
     }
 }
+
 
 function parseJourneyDetails( details, resultObject ) {
     // 	    var exactRouteStops = 0;

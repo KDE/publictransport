@@ -4,7 +4,6 @@
 
 <name>INPROP, s. r. o. (cp.atlas.sk)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<country>Slovakia</country>
 <cities>
     <city replaceWith="bus">Autobusy</city>
     <city replaceWith="lietadla">Lietadlá</city>

@@ -16,8 +16,8 @@
     <departures><![CDATA[http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?input={stop}!&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxCount}&start=yes]]></departures>
 
     <stopSuggestions><![CDATA[http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?input={stop}?]]></stopSuggestions>
-    
-    <journeys><![CDATA[http://fahrplan.sbb.ch/bin/query.exe/dn?S={startStop}!&Z={targetStop}!&time={time}&maxJourneys={maxCount}&start=yes]]></journeys>
+
+	<journeys><![CDATA[http://fahrplan.sbb.ch/bin/query.exe/dn?S={startStop}!&Z={targetStop}!&time={time}&maxJourneys={maxCount}&start=yes&jumpToDetails=yes&HWAI=JS!ajax=yes!&HWAI=CONNECTION$C0-0!id=C0-0!HwaiConId=C0-0!HwaiDetailStatus=details!HwaiConnectionNumber=!;CONNECTION$C0-1!id=C0-1!HwaiConId=C0-1!HwaiDetailStatus=details!HwaiConnectionNumber=!;CONNECTION$C0-2!id=C0-2!HwaiConId=C0-2!HwaiDetailStatus=details!HwaiConnectionNumber=!;CONNECTION$C0-3!id=C0-3!HwaiConId=C0-3!HwaiDetailStatus=details!HwaiConnectionNumber=!;CONNECTION$C0-0!id=C0-0!HwaiConId=C0-0!HwaiDetailStatus=details!HwaiConnectionNumber=1!;CONNECTION$C0-1!id=C0-1!HwaiConId=C0-1!HwaiDetailStatus=details!HwaiConnectionNumber=2!;CONNECTION$C0-2!id=C0-2!HwaiConId=C0-2!HwaiDetailStatus=details!HwaiConnectionNumber=3!;CONNECTION$C0-3!id=C0-3!HwaiConId=C0-3!HwaiDetailStatus=details!HwaiConnectionNumber=4!;CONNECTION$C1-0!id=C1-0!HwaiConId=C1-0!HwaiDetailStatus=details!HwaiConnectionNumber=5!;CONNECTION$C1-1!id=C1-1!HwaiConId=C1-1!HwaiDetailStatus=details!HwaiConnectionNumber=6!;CONNECTION$C1-2!id=C1-2!HwaiConId=C1-2!HwaiDetailStatus=details!HwaiConnectionNumber=7!;CONNECTION$C2-0!id=C2-0!HwaiConId=C2-0!HwaiDetailStatus=details!HwaiConnectionNumber=8!;CONNECTION$C2-1!id=C2-1!HwaiConId=C2-1!HwaiDetailStatus=details!HwaiConnectionNumber=9!;CONNECTION$C2-2!id=C2-2!HwaiConId=C2-2!HwaiDetailStatus=details!HwaiConnectionNumber=10!;]]></journeys>
 </rawUrls>
 
 <script>ch_sbb.js</script>

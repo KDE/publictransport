@@ -4,7 +4,6 @@
 
 <name>Dresdner Verkehrsbetriebe AG</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<country>Germany</country>
 <cities><city>Dresden</city></cities>
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>Provides departure information for Dresden in Germany.</description>

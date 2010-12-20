@@ -4,7 +4,6 @@
 
 <name>Berliner Verkehrsbetriebe (BVG)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<country>Germany</country>
 <cities><city>Berlin</city></cities>
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>Provides departure information for Berlin in Germany.</description>

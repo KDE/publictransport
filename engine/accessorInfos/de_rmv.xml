@@ -4,7 +4,6 @@
 
 <name lang="en">Rhein-Main-Verkehrsverbund GmbH</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<country>Germany</country>
 <cities>
     <city>Frankfurt (Main)</city> <city>Langen (Hessen)</city> <city>Köln</city> <city>Mainz</city>
 <!--  TODO: add more cities   -->

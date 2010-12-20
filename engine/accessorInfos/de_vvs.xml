@@ -4,7 +4,6 @@
 
 <name>Verkehrs- und Tarifverbund Stuttgart GmbH</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
-<country>Germany</country>
 <cities><city>Stuttgart</city></cities>
 <useSeperateCityValue>true</useSeperateCityValue>
 <description>Provides departure information for Stuttgart in Germany.</description>
