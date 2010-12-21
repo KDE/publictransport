@@ -29,12 +29,15 @@
 #include <KIcon>
 #include "kdeversion.h"
 
-/** Different config modes for the time of the first departure. */
+/** @brief Different config modes for the time of the first departure. */
 enum FirstDepartureConfigMode {
 	RelativeToCurrentTime = 0, /**< Uses the current date and time and adds an offset. */
 	AtCustomTime = 1 /**< Uses a custom time, but the current date. */
 };
 
+/** May contain multiple stops that should be combined into one, eg. for stops that have different
+ * names at the service provider but are very close to another.
+ * @brief Stores settings for one stop. */
 struct StopSettings {
 	QString city; /**< The currently selected city */
 	QStringList stops; /**< The currently selected stops */
@@ -78,7 +81,7 @@ struct StopSettings {
 };
 typedef QList<StopSettings> StopSettingsList;
 
-/** Icons to be displayed by the Plasma::IconWidget in the applet's top left corner. */
+/** @brief Icons to be displayed by the Plasma::IconWidget in the applet's top left corner. */
 enum MainIconDisplay {
 	DepartureListErrorIcon,
 	ArrivalListErrorIcon = DepartureListErrorIcon,
@@ -93,8 +96,8 @@ enum MainIconDisplay {
 	JourneyListOkIcon
 };
 
-/** Types of departure / arrival lists.
-* The values of the enumerators shouldn't be changed because they are saved to the config file. */
+/** The values of the enumerators shouldn't be changed because they are saved to the config file.
+* @brief Types of departure / arrival lists. */
 enum DepartureArrivalListType {
 	_UseCurrentDepartureArrivalListType = 999, /**< Only for use as default parameter
 			* to use the settings from PublicTransportSettings */
@@ -103,7 +106,7 @@ enum DepartureArrivalListType {
 	ArrivalList = 1 /**< A list of arrivals at the home stop */
 };
 
-/** Types of the title of the applet. */
+/** @brief Types of the title of the applet. */
 enum TitleType {
 	ShowDepartureArrivalListTitle = 0, /**< Shows an icon, the stop name and additional information */
 	ShowSearchJourneyLineEdit = 1, /**< Shows a line edit for journey search requests */
@@ -111,7 +114,7 @@ enum TitleType {
 	ShowJourneyListTitle = 3 /**< Shows an icon, a title and additional information */
 };
 
-/** Global states of the applet. */
+/** @brief Global states of the applet. */
 enum AppletState {
 	NoState 							= 0x000000, /**< No state. */
 
@@ -148,7 +151,7 @@ enum AppletState {
 Q_DECLARE_FLAGS( AppletStates, AppletState )
 Q_DECLARE_OPERATORS_FOR_FLAGS( AppletStates )
 
-/** Different states of alarm. */
+/** @brief Different states of alarm. */
 enum AlarmState {
 	NoAlarm = 0x0000, /**< No alarm is set */
 
@@ -164,7 +167,7 @@ enum AlarmState {
 Q_DECLARE_FLAGS( AlarmStates, AlarmState )
 Q_DECLARE_OPERATORS_FOR_FLAGS( AlarmStates )
 
-/** Indicates what is saved in a model item's data. */
+/** @brief Indicates what is saved in a model item's data. */
 enum ModelDataRoles {
 	SortRole = Qt::UserRole, /**< Used to store sorting data */
 	ServiceProviderDataRole = Qt::UserRole + 8, /**< For the service provider combo box */
@@ -187,8 +190,8 @@ enum ModelDataRoles {
 	IconSizeRole = Qt::UserRole + 506 /**< Used to set a specific icon size for an element. */
 };
 
-/** The type of the vehicle used for a public transport line.
-* The numbers here must match the ones in the data engine! */
+/** The numbers here must match the ones in the data engine!
+* @brief The type of the vehicle used for a public transport line. */
 enum VehicleType {
 	Unknown = 0, /**< The type of the vehicle is unknown. */
 
@@ -215,7 +218,7 @@ enum VehicleType {
 	Spacecraft = 300, /**< A spacecraft. */
 };
 
-/** The type of services for a public transport line. */
+/** @brief The type of services for a public transport line. */
 enum LineService {
 	NoLineService = 0, /**< The public transport line has no special services */
 
@@ -223,7 +226,8 @@ enum LineService {
 	ExpressLine = 2 /**< The public transport line is an express line */
 };
 
-/** Types of filters. */
+/** @brief Types of filters, ie. what to filter.
+ * @ingroup filterSystem */
 enum FilterType {
 	InvalidFilter = 0, /**< An invalid filter. */
 
@@ -237,7 +241,8 @@ enum FilterType {
 	FilterByDayOfWeek /**< Filter by the day of week of the departure date. */
 };
 
-/** Variants of filters. */
+/** @brief Variants of filters, eg. equals / doesn't equal.
+ * @ingroup filterSystem */
 enum FilterVariant {
 	FilterNoVariant = 0, /**< Used for parameters, eg. as initial variant to use
 			* the first available filter variant. */
@@ -256,14 +261,15 @@ enum FilterVariant {
 	FilterLessThan = 10
 };
 
-/** The action of filters. */
+/** @brief The action to be executed for filters, ie. show or hide matching items.
+ * @ingroup filterSystem */
 enum FilterAction {
 	// ShowAll = 0, /**< Show all targets / origins */ TODO Remove this, filters are globally enabled/disabled
 	ShowMatching = 0, /**< Show only targets / origins that are in the list of filter targets / origins */
 	HideMatching = 1 /**< Hide targets / origins that are in the list of filter targets / origins */
 };
 
-/** The type of the delay of a departure / arrival. */
+/** @brief The type of the delay of a departure / arrival. */
 enum DelayType {
 	DelayUnknown = 0, /**< No information about delay available */
 	OnSchedule = 1, /**< Vehicle will depart / arrive on schedule */

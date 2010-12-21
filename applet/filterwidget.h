@@ -46,11 +46,24 @@ class CheckCombobox;
 class KComboBox;
 /**
  * @brief Base class for widgets allowing to edit a single constraint.
+ * @ingroup filterSystem
  **/
 class ConstraintWidget : public QWidget {
 	Q_OBJECT
 
 public:
+	/**
+	 * @brief Creates a new constraint widget to edit a single constraint.
+	 * @note Use one of the derived classes to create a constraint widget. This class can be
+	 * used to create new types of constraint widgets by deriving from it.
+	 *
+	 * @param type The type of this constraint, ie. what to filter.
+	 * @param availableVariants A list of available variants for this constraint.
+	 * Defaults to QList<FilterVariant>().
+	 * @param initialVariant The initially set variant for this constraint.
+	 * Defaults to FilterNoVariant.
+	 * @param parent The parent object. Defaults to 0.
+	 **/
 	explicit ConstraintWidget( FilterType type,
 			QList<FilterVariant> availableVariants = QList<FilterVariant>(),
 			FilterVariant initialVariant = FilterNoVariant, QWidget* parent = 0 );
@@ -101,15 +114,19 @@ private:
 
 /**
  * @brief A widget allowing to edit a single constraint where the user can select a list of values.
+ * @ingroup filterSystem
  **/
 class ConstraintListWidget : public ConstraintWidget {
 	Q_OBJECT
 
 public:
+	/**
+	 * @brief Helper structure to hold information about one selectable value in the list.
+	 **/
 	struct ListItem {
-		QString text;
-		QVariant value;
-		KIcon icon;
+		QString text; /**< The text of this item. */
+		QVariant value; /**< The value represented by this item. */
+		KIcon icon; /**< The icon to show for this item. */
 
 		ListItem() {};
 		ListItem( const QString &text, const QVariant &value, const KIcon &icon ) {
@@ -119,13 +136,28 @@ public:
 		};
 	};
 
+	/**
+	 * @brief Creates a new constraint widget where the user can select a list of values.
+	 *
+	 * @param type The type of this constraint, ie. what to filter.
+	 * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
+	 * @param values A list of selectable values for this constraint.
+	 * @param initialValues The initially selected values for this constraint.
+	 * @param parent The parent object. Defaults to 0.
+	 **/
 	ConstraintListWidget( FilterType type, FilterVariant initialVariant,
 						  const QList< ListItem > &values, const QVariantList& initialValues,
 						  QWidget* parent = 0 );
 
+	/** @returns the @ref CheckCombobox which is used by this ConstraintListWidget. */
 	CheckCombobox *list() const { return m_list; };
 
+	/** @returns a @ref QVariantList with the currently selected values. */
 	virtual QVariant value() const { return m_values; };
+	/**
+	 * @brief Sets the list of selected values.
+	 * @param value A @ref QVariantList with the values to be selected.
+	 **/
 	virtual void setValue( const QVariant &value );
 
 	QModelIndex indexFromValue( const QVariant &value );
@@ -140,15 +172,29 @@ private:
 
 /**
  * @brief A widget allowing to edit a single constraint where the user can enter a string value.
+ * @ingroup filterSystem
  **/
 class ConstraintStringWidget : public ConstraintWidget {
 	Q_OBJECT
 
 public:
+	/**
+	 * @brief Creates a new constraint widget where the user can enter a string value.
+	 *
+	 * @param type The type of this constraint, ie. what to filter.
+	 * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
+	 * @param filterText The value of this constraint. Defaults to QString().
+	 * @param parent The parent object. Defaults to 0.
+	 **/
 	ConstraintStringWidget( FilterType type, FilterVariant initialVariant,
 							const QString &filterText = QString(), QWidget* parent = 0 );
 
+	/** @returns a @ref QString with the current value of this constraint. */
 	virtual QVariant value() const { return m_string->text(); };
+	/**
+	 * @brief Sets the string value of this constraint.
+	 * @param value A @ref QString with the string to be set for this constraint.
+	 **/
 	virtual void setValue( const QVariant &value ) {
 		m_string->setText(value.toString());
 	};
@@ -165,15 +211,31 @@ private:
 
 /**
  * @brief A widget allowing to edit a single constraint where the user can enter an integer value.
+ * @ingroup filterSystem
  **/
 class ConstraintIntWidget : public ConstraintWidget {
 	Q_OBJECT
 
 public:
+	/**
+	 * @brief Creates a new constraint widget where the user can enter an integer value.
+	 *
+	 * @param type The type of this constraint, ie. what to filter.
+	 * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
+	 * @param value The value of this constraint. Defaults to 0.
+	 * @param min Minimal allowed value for this constraint. Defaults to 0.
+	 * @param max Maximal allowed value for this constraint. Defaults to 10000.
+	 * @param parent The parent object. Defaults to 0.
+	 **/
 	ConstraintIntWidget( FilterType type, FilterVariant initialVariant,
 						 int value = 0, int min = 0, int max = 10000, QWidget* parent = 0 );
 
+	/** @returns an integer with the current value of this constraint. */
 	virtual QVariant value() const { return m_num->value(); };
+	/**
+	 * @brief Sets the integer value of this constraint.
+	 * @param value An integer with the value to be set for this constraint.
+	 **/
 	virtual void setValue( const QVariant &value ) { m_num->setValue(value.toInt()); };
 
 protected slots:
@@ -188,15 +250,29 @@ private:
 
 /**
  * @brief A widget allowing to edit a single constraint where the user can enter a time value.
+ * @ingroup filterSystem
  **/
 class ConstraintTimeWidget : public ConstraintWidget {
 	Q_OBJECT
 
 public:
+	/**
+	 * @brief Creates a new constraint widget where the user can enter a time value.
+	 *
+	 * @param type The type of this constraint, ie. what to filter.
+	 * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
+	 * @param value The value of this constraint. Defaults to QTime::currentTime().
+	 * @param parent The parent object. Defaults to 0.
+	 **/
 	ConstraintTimeWidget( FilterType type, FilterVariant initialVariant,
 						  QTime value = QTime::currentTime(), QWidget* parent = 0 );
 
+	/** @returns a @ref QTime with the current time value of this constraint. */
 	virtual QVariant value() const { return m_time->time(); };
+	/**
+	 * @brief Sets the time value of this constraint.
+	 * @param value A @ref QTime with the time value to be set for this constraint.
+	 **/
 	virtual void setValue( const QVariant &value ) { m_time->setTime(value.toTime()); };
 
 protected slots:
@@ -211,6 +287,8 @@ private:
 
 /**
  * @brief A widget allowing to edit a filter, which is a list of constraints.
+ * Constraints can be dynamically added / removed, buttons are added for that task.
+ * @ingroup filterSystem
  **/
 class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
 	Q_OBJECT
@@ -317,6 +395,8 @@ private:
 
 /**
  * @brief A widget allowing to edit a list of filters, which are lists of constraints.
+ * Filters can be dynamically added / removed, buttons are added for that task.
+ * @ingroup filterSystem
  **/
 class FilterListWidget : public AbstractDynamicWidgetContainer {
 	Q_OBJECT
@@ -351,6 +431,7 @@ public:
 	};
 
 signals:
+	/** Emitted when the value of a constraint of a filter changes. */
 	void changed();
 
 protected:

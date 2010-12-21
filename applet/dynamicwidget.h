@@ -32,12 +32,12 @@ class AbstractDynamicWidgetContainer;
 class DynamicWidgetPrivate;
 /** @brief Wraps widgets in AbstractDynamicWidgetContainer and adds buttons.
 * Provides a widget which embeds a "content widget" and a remove and/or add
-* button. It's used by @ref DynamicWidgetContainer. To get the content widget
+* button. It's used by @ref AbstractDynamicWidgetContainer. To get the content widget
 * use @ref contentWidget. The buttons can be taken out of the DynamicWidget
 * by using @ref takeRemoveButton / @ref takeAddButton. They can then be put into
 * another widget, the connections remain.
 * @note You cannot create DynamicWidgets yourself and mostly don't need to use
-* it at all, that's up to @ref DynamicWidgetContainer.
+* it at all, that's up to @ref AbstractDynamicWidgetContainer.
 * @see AbstractDynamicWidgetContainer */
 class DynamicWidget : public QWidget {
 	Q_OBJECT
