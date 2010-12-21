@@ -405,12 +405,12 @@ void JourneyItem::updateValues()
 
 	QString sDuration = KGlobal::locale()->prettyFormatDuration(
 				m_journeyInfo.duration() * 60 * 1000 );
-	QString text = i18ncp( "@info Text of journey items in an 'info' column",
-						   "<emphasis strong='1'>Duration:</emphasis> %2, "
-						   "<nobr><emphasis strong='1'>%1</emphasis> change</nobr>",
-						   "<emphasis strong='1'>Duration:</emphasis> %2, "
-						   "<nobr><emphasis strong='1'>%1</emphasis> changes</nobr>",
-						   m_journeyInfo.changes(), sDuration );
+	QString text = i18ncp("@info Text of journey items in an 'info' column",
+						  "<emphasis strong='1'>Duration:</emphasis> %2, "
+						  "<nobr><emphasis strong='1'>%1</emphasis> change</nobr>",
+						  "<emphasis strong='1'>Duration:</emphasis> %2, "
+						  "<nobr><emphasis strong='1'>%1</emphasis> changes</nobr>",
+						  m_journeyInfo.changes(), sDuration);
 	setFormattedText( ColumnJourneyInfo, text );
 //     setText( s.replace(QRegExp("<[^>]*>"), "") );
 	if ( !m_journeyInfo.journeyNews().isEmpty() ) {
@@ -1257,8 +1257,9 @@ void PublicTransportModel::childrenChanged( ItemBase* parentItem )
 		QModelIndex indexLast = indexFromItem( parentItem->children().last() );
 		emit dataChanged( indexFirst, indexLast );
 
-		foreach( ChildItem *child, parentItem->children() )
-		childrenChanged( child );
+		foreach( ChildItem *child, parentItem->children() ) {
+			childrenChanged( child );
+		}
 	}
 }
 

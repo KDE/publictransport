@@ -28,13 +28,13 @@
 #include "departureinfo.h"
 #include "settings.h" // TODO Only used for AlarmSettings. Removed here?
 
-/** The position of the decoration. */
+/** @brief The position of the decoration. */
 enum DecorationPosition {
 	DecorationLeft, /**< Show the decoration on the left side. */
 	DecorationRight /**< Show the decoration on the right side. */
 };
 
-/** Holds information about settings from the applet. */
+/** @brief Holds information about settings from the applet. */
 struct Info {
 	Info() {
 		departureArrivalListType = DepartureList;
@@ -52,7 +52,8 @@ struct Info {
 	float sizeFactor;
 };
 
-/** Child item types. */
+/** @brief Child item types.
+ * @ingroup models */
 enum ItemType {
 	OtherItem, /**< For children of child items. */
 	PlatformItem, /**< The item contains the platform */
@@ -67,7 +68,8 @@ enum ItemType {
 	PricingItem /**< The item contains the pricing of a journey */
 };
 
-/** Columns for the departure/journey model. */
+/** Columns for the departure/journey model.
+ * @ingroup models */
 enum Columns {
 	ColumnLineString = 0, /**< The column showing the line string. */
 	ColumnTarget = 1, /**< The column showing the target/origin. */
@@ -79,7 +81,8 @@ enum Columns {
 
 class ChildItem;
 class PublicTransportModel;
-/** Base class for items of PublicTransportModel. */
+/** @brief Base class for items of PublicTransportModel.
+ * @ingroup models */
 class ItemBase {
 	friend class PublicTransportModel;
 	friend class DepartureModel;
@@ -139,7 +142,8 @@ protected:
 	const Info *m_info;
 };
 
-/** A child item in PublicTransportModel. */
+/** @brief A child item in PublicTransportModel.
+ * @ingroup models */
 class ChildItem : public ItemBase {
 public:
 	ChildItem( ItemType itemType, const QString &formattedText, const QIcon &icon, const Info *info );
@@ -188,7 +192,8 @@ protected:
 	ItemType m_type;
 };
 
-/** Base class for top level items in PublicTransportModel. */
+/** @brief Base class for top level items in PublicTransportModel.
+ * @ingroup models */
 class TopLevelItem : public ItemBase {
 public:
 	TopLevelItem( const Info *info );
@@ -226,10 +231,11 @@ protected:
 	QHash< int, QHash<int, QVariant> > m_columnData;
 };
 
-/** An item which automatically creates/updates child items according to the
-* information in @ref journeyInfo. To update this item and it's child items
-* call @ref setJourneyInfo. To only update remaining time values, call
-* @ref updateTimeValues. */
+/**
+ * To update this item and it's child items call @ref setJourneyInfo. To only update remaining
+ * time values, call @ref updateTimeValues.
+ * @brief An item which automatically creates/updates child items according to the information in @ref journeyInfo.
+ * @ingroup models */
 class JourneyItem : public TopLevelItem {
 public:
 	JourneyItem( const JourneyInfo &journeyInfo, const Info *info );
@@ -277,10 +283,11 @@ protected:
 	JourneyInfo m_journeyInfo;
 };
 
-/** An item which automatically creates/updates child items according to the
-* information in @ref departureInfo. To update this item and it's child items
-* call @ref setDepartureInfo. To only update remaining time values, call
-* @ref updateTimeValues. */
+/**
+* To update this item and it's child items call @ref setDepartureInfo. To only update remaining
+* time values, call @ref updateTimeValues.
+* @brief An item which automatically creates/updates child items according to the information in @ref departureInfo.
+* @ingroup models */
 class DepartureItem : public QObject, public TopLevelItem {
 	Q_OBJECT
 	Q_PROPERTY( qreal alarmColorIntensity READ alarmColorIntensity WRITE setAlarmColorIntensity )
@@ -351,7 +358,8 @@ protected:
 	qreal m_alarmColorIntensity;
 };
 
-/** Base class for DepartureModel and JourneyModel. */
+/** @brief Base class for DepartureModel and JourneyModel.
+ * @ingroup models */
 class PublicTransportModel : public QAbstractItemModel {
 	Q_OBJECT
 	friend class ItemBase;
@@ -360,26 +368,67 @@ public:
 	PublicTransportModel( QObject *parent = 0 );
 	virtual ~PublicTransportModel() { qDeleteAll( m_items ); };
 
-	virtual QModelIndex index( int row, int column,
-				   const QModelIndex& parent = QModelIndex() ) const;
+	/** @brief Gets the QModelIndex of the item at @p row and @p column.
+	 *
+	 * @param row The row of the index to get.
+	 * @param column The column of the index to get.
+	 * @param parent The parent index of the index to be returned or an invalid QModelIndex, to get
+	 *   the index of a toplevel item. Defaults to QModelIndex().
+	 * @return The QModelIndex of the item at @p row and @p column.
+	 **/
+	virtual QModelIndex index( int row, int column, const QModelIndex& parent = QModelIndex() ) const;
+	/** @brief Gets the QModelIndex of the given @p item.
+	*
+	* @param item The item to get the index for.
+	* @return The QModelIndex for the given @p item.
+	**/
 	virtual QModelIndex index( ItemBase *item ) const {
 	    return createIndex( item->row(), 0, item ); };
+
+	/** @brief Gets the number of rows for the given @p parent in this model.
+	 *
+	 * @param parent The parent, which row count should be returned. Defaults to QModelIndex(),
+	 *   ie. the toplevel row count.
+	 * @return The number of rows for the given @p parent in this model.
+	 **/
 	virtual int rowCount( const QModelIndex& parent = QModelIndex() ) const;
+	/** @brief Gets the index of the parent item for the given @p child index.
+	 *
+	 * @param child The index of a child item of the parent to be returned
+	 * @return The QModelIndex of the parent of the given @p child.
+	 **/
 	virtual QModelIndex parent( const QModelIndex& child ) const;
 	virtual QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const;
 
-	/** @returns a pointer to the toplevel item at the given @p row. */
+	/** @brief Gets the toplevel item at @p row.
+	 * @returns a pointer to the toplevel item at the given @p row. */
 	ItemBase *item( int row ) const { return m_items.at( row ); };
 	ItemBase *itemFromIndex( const QModelIndex &index ) const;
 	QModelIndex indexFromItem( ItemBase *item, int column = 0 ) const;
+	/** @brief Gets the row of the given toplevel item.
+	 *
+	 * @param item The item which row should be returned.
+	 * @return The row of the given @p item or -1, if it isn't a toplevel item of this model.
+	 **/
 	int rowFromItem( ItemBase *item );
 
+	/** @brief Gets a list of all toplevel items of this model.
+	 *
+	 * @return The list of toplevel items.
+	 **/
 	QList< ItemBase* > items() const { return m_items; };
+	/** @brief Removes the given @p item from the model.
+	 *
+	 * @param item The item to be removed.
+	 * @return True, if the item was successfully removed. False, otherwise. Removing may fail,
+	 *   eg. if it isn't inside the model.
+	 **/
 	virtual bool removeItem( ItemBase *item ) {
 	    return removeRows( item->row(), 1 ); };
-	/** Removes all items from the model, but doesn't clear header data. */
+	/** @brief Removes all items from the model, but doesn't clear header data. */
 	virtual void clear();
-	/** @returns true, if this model has no items. */
+	/** @brief Checks whether or not this model is empty.
+	 * @returns True, if this model has no items, ie. is empty. False, otherwise. */
 	inline bool isEmpty() const { return rowCount() == 0; };
 
 	Info info() const { return m_info; };
@@ -390,12 +439,22 @@ public:
 	void setDepartureColumnSettings( bool displayTimeBold = true,
 		bool showRemainingMinutes = true, bool showDepartureTime = true );
 
+	/** @brief Notifies the model about changes in the given @p item.
+	 *
+	 * @param item The item which data has changed.
+	 * @param columnLeft The first changed column. Defaults to 0.
+	 * @param columnRight The last changed column Defaults to 0.
+	 **/
 	void itemChanged( ItemBase *item, int columnLeft = 0, int columnRight = 0 );
+	/** @brief Notifies the model about changes in childs of the given @p parentItem.
+	 *
+	 * @param parentItem The item, which children were changed.
+	 **/
 	void childrenChanged( ItemBase *parentItem );
 
 protected slots:
 	void startUpdateTimer();
-	/** Called each full minute. */
+	/** @brief Called each full minute. */
 	virtual void update() = 0;
 
 protected:
@@ -411,7 +470,8 @@ protected:
 };
 
 class QTimer;
-/** A model for departure items. */
+/** @brief A model for departure items.
+ * @ingroup models */
 class DepartureModel : public PublicTransportModel {
 	Q_OBJECT
 	friend class ItemBase;
@@ -419,7 +479,22 @@ class DepartureModel : public PublicTransportModel {
 public:
 	DepartureModel( QObject *parent = 0 );
 
+	/** @brief Gets the number of columns for the given @p parent in this model.
+	 *
+	 * @param parent The parent, which column count should be returned. Defaults to QModelIndex(),
+	 *   ie. the toplevel column count.
+	 * @return The number of columns for the given @p parent in this model.
+	 **/
 	virtual int columnCount( const QModelIndex& parent = QModelIndex() ) const;
+
+	/** @brief Removes @p count items beginning at @p row from @p parent.
+	 *
+	 * @param row The row of the first item to be removed.
+	 * @param count The number of items to be removed, beginning at @p row.
+	 * @param parent The QModelIndex parent which child items should be removed or an invalid
+	 *   model index to remove toplevel items. Defaults to QModelIndex().
+	 * @return True, if the items were successfully removed from the model. False, otherwise.
+	 **/
 	virtual bool removeRows( int row, int count, const QModelIndex& parent = QModelIndex() );
 	virtual QVariant headerData( int section, Qt::Orientation orientation,
 								 int role = Qt::DisplayRole ) const;
@@ -430,53 +505,50 @@ public:
 	QModelIndex indexFromInfo( const DepartureInfo &info ) const {
 		return m_infoToItem.contains(info.hash()) ? m_infoToItem[info.hash()]->index() : QModelIndex(); };
 
-	/** A list of hashes of all departure items. Hashes can be retrieved
-	* using qHash or @ref DepartureInfo::hash. */
+	/** @brief A list of hashes of all departure items. Hashes can be retrieved
+	 * using qHash or @ref DepartureInfo::hash. */
 	QList< uint > itemHashes() const;
 	virtual DepartureItem *addItem( const DepartureInfo &departureInfo,
 				Columns sortColumn = ColumnDeparture,
 				Qt::SortOrder sortOrder = Qt::AscendingOrder );
-	/** Updates the given @p departureItem with the given @p newDepartureInfo.
+	/** @brief Updates the given @p departureItem with the given @p newDepartureInfo.
 	* This simply calls setDepartureInfo() on @p deoartureItem. */
-	virtual void updateItem( DepartureItem *departureItem,
-				 const DepartureInfo &newDepartureInfo ) {
+	virtual void updateItem( DepartureItem *departureItem, const DepartureInfo &newDepartureInfo ) {
 		departureItem->setDepartureInfo( newDepartureInfo ); };
-	/** Removes all departures from the model, but doesn't clear header data. */
+		/** @brief Removes all departures from the model, but doesn't clear header data. */
 	virtual void clear();
 
 	Info info() const { return m_info; };
 	void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
 	void setAlarmSettings( const AlarmSettingsList &alarmSettings );
 
-	/** Whether or not there are pending alarms. */
+	/** @brief Whether or not there are pending alarms. */
 	bool hasAlarms() const { return !m_alarms.isEmpty(); };
-	/** The number of pending alarms. */
+	/** @brief The number of pending alarms. */
 	int alarmCount() const { return m_alarms.count(); };
-	/** The date and time of the next alarm or a null QDateTime if
-	* there's no pending alarm. */
+	/** @brief The date and time of the next alarm or a null QDateTime if there's no pending alarm. */
 	QDateTime nextAlarmTime() const {
 		return m_alarms.isEmpty() ? QDateTime() : m_alarms.keys().first(); };
-	/** The departure with the next alarm or NULL if there's no pending alarm. */
+	/** @brief The departure with the next alarm or NULL if there's no pending alarm. */
 	DepartureItem *nextAlarmDeparture() const {
 		return m_alarms.isEmpty() ? NULL : m_alarms.values().first(); };
-	/** A map with all pending alarms. There can be multiple departures for
-	* each alarm time. */
+	/** @brief A map with all pending alarms. There can be multiple departures for each alarm time. */
 	const QMultiMap< QDateTime, DepartureItem* > *alarms() const {
 		return &m_alarms; };
-	/** Adds an alarm for the given @p item. */
+	/** @brief Adds an alarm for the given @p item. */
 	void addAlarm( DepartureItem *item );
-	/** Removes an alarm from the given @p item. */
+	/** @brief Removes an alarm from the given @p item. */
 	void removeAlarm( DepartureItem *item );
 
 signals:
-	/** The alarm for @p item has been fired. */
+	/** @brief The alarm for @p item has been fired. */
 	void alarmFired( DepartureItem *item );
 	void updateAlarms( const AlarmSettingsList &newAlarmSettings,
 			   const QList< int > &removedAlarms );
 
 protected slots:
-	/** Called each full minute. Updates time values, checks for alarms
-	* and sorts out old departures */
+	/** @brief Called each full minute. Updates time values, checks for alarms and sorts out
+	 * old departures */
 	virtual void update();
 	void alarmItemDestroyed( QObject *item );
 
@@ -487,7 +559,8 @@ private:
 	QMultiMap< QDateTime, DepartureItem* > m_alarms;
 };
 
-/** A model for journey items. */
+/** @brief A model for journey items.
+ * @ingroup models */
 class JourneyModel : public PublicTransportModel {
 	Q_OBJECT
 	friend class ItemBase;
@@ -497,7 +570,7 @@ public:
 
 	virtual int columnCount( const QModelIndex& parent = QModelIndex() ) const;
 	virtual bool removeRows( int row, int count, const QModelIndex& parent = QModelIndex() );
-	/** Removes all journeys from the model, but doesn't clear header data. */
+	/** @brief Removes all journeys from the model, but doesn't clear header data. */
 	virtual void clear();
 	virtual QVariant headerData( int section, Qt::Orientation orientation,
 				     int role = Qt::DisplayRole ) const;
@@ -508,8 +581,8 @@ public:
 	QModelIndex indexFromInfo( const JourneyInfo &info ) const {
 		return m_infoToItem.contains(info.hash()) ? m_infoToItem[info.hash()]->index() : QModelIndex(); };
 
-	/** A list of hashes of all departure items. Hashes can be retrieved
-	* using qHash or @ref JourneyInfo::hash. */
+	/** @brief A list of hashes of all departure items. Hashes can be retrieved using qHash
+	 * or @ref JourneyInfo::hash. */
 	QList< uint > itemHashes() const;
 	virtual JourneyItem *addItem( const JourneyInfo &journeyInfo,
 			Columns sortColumn = ColumnDeparture, Qt::SortOrder sortOrder = Qt::AscendingOrder );
@@ -519,9 +592,22 @@ public:
 	Info info() const { return m_info; };
 	void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
 
+	/** @brief Gets the smallest duration in minutes of a journey in this model.
+	 * @return The smallest duration in minutes of a journey in this model.
+	 **/
 	int smallestDuration() const { return m_smallestDuration; };
+	/** @brief Gets the biggest duration in minutes of a journey in this model.
+	 * @return The biggest duration in minutes of a journey in this model.
+	 **/
 	int biggestDuration() const { return m_biggestDuration; };
+
+	/** @brief Gets the smallest number of changes of a journey in this model.
+	 * @return The smallest number of changes of a journey in this model.
+	 **/
 	int smallestChanges() const { return m_smallestChanges; };
+	/** @brief Gets the biggest number of changes of a journey in this model.
+	 * @return The biggest number of changes of a journey in this model.
+	 **/
 	int biggestChanges() const { return m_biggestChanges; };
 
 protected slots:

@@ -39,10 +39,25 @@
 
 Q_DECLARE_FLAGS( LineServices, LineService )
 
+/** @class PublicTransportInfo
+ * @brief Base class for DepartureInfo and JourneyInfo.
+ * Use @ref PublicTransportInfo::hash to get an unsigned integer value unique for this
+ * departure/arrival/journey.
+ * @ingroup models
+ **/
 class PublicTransportInfo {
 public:
 	PublicTransportInfo() { };
 
+	/**
+	 * @brief Gets an unsigned integer value unique for this departure/arrival/journey.
+	 * The value returned by this function will be equal for items (departures/arrivals/journeys)
+	 * that are equal. Two items are considered equal, also if they aren't exactly equal,
+	 * eg. the delay may be different. That is important to be able to find items from the data
+	 * engine in the model of the applet after an update. For example a departure which delay has
+	 * changed is still the same departure and therefore it returns the same hash value.
+	 * @return uint The hash value for this item.
+	 **/
 	uint hash() const { return m_hash; };
 
 protected:
@@ -50,8 +65,8 @@ protected:
 };
 
 /** @class JourneyInfo
-*
-* @brief Stores information about journeys. */
+ * @brief Stores information about journeys.
+ * @ingroup models */
 class JourneyInfo : public PublicTransportInfo {
 public:
 	JourneyInfo() : PublicTransportInfo() {
@@ -172,8 +187,8 @@ private:
 bool operator <( const JourneyInfo &ji1, const JourneyInfo &ji2 );
 
 /** @class DepartureInfo
-*
-* @brief Stores information about departures / arrivals. */
+ * @brief Stores information about departures / arrivals.
+ * @ingroup models */
 class DepartureInfo : public PublicTransportInfo {
 public:
 	/** Creates an invalid DepartureInfo object. */

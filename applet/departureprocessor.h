@@ -33,9 +33,10 @@
 #include "filter.h"
 #include "settings.h"
 
-/** A worker thread that puts data from the publicTransport data engine into
+/** @brief A worker thread that puts data from the publicTransport data engine into
 * DepartureInfo/JourneyInfo instances. It also applies filters and checks if
 * alarm filters match.
+*
 * Filters are given as FilterSettings by @ref setFilterSettings. They contain
 * a list of filters which get OR combined. Each filter has a list of constraints
 * which get AND combined. This could take some time with complex filter settings
@@ -46,19 +47,20 @@
 * The thread uses a job queue, jobs can be cancelled by their type using
 * @ref abortJobs. To add a new job to the queue use @ref processDepartures,
 * @ref processJourneys or @ref filterDepartures.
-* @brief Worker thread for PublicTransport */
+* @brief Worker thread for PublicTransport
+* @ingroup models */
 class DepartureProcessor : public QThread {
 	Q_OBJECT
 
 public:
-	/** Types of jobs. */
+	/** @brief Types of jobs. */
 	enum JobType {
 		NoJob = 0x00, /**< No job. This is returned by @ref currentJob if the
 			* thread is idle. */
 		ProcessDepartures = 0x01, /**< Processing departures, ie. putting data
 			* from the publicTransport data engine into DepartureInfo
 			* instances and apply filters/alarms. */
-		FilterDepartures = 0x02, /**< Filtering departures. */
+		FilterDepartures = 0x02, /**< Filtering departures @see filterSystem. */
 		ProcessJourneys = 0x04, /**< Processing journeys, ie. putting data
 			* from the publicTransport data engine into JourneyInfo instances. */
 		AllJobs = ProcessDepartures | FilterDepartures | ProcessJourneys
@@ -70,26 +72,34 @@ public:
 	DepartureProcessor( QObject *parent = 0 );
 	~DepartureProcessor();
 
+	/** @brief The number of departures/arrivals in one batch, which gets send to the applet.
+	 * If there are more items to be processed, they will be send in a later call to the applet.
+	 **/
 	static const int DEPARTURE_BATCH_SIZE;
+
+	/** @brief The number of journeys in one batch, which gets send to the applet.
+	 * If there are more items to be processed, they will be send in a later call to the applet.
+	 **/
 	static const int JOURNEY_BATCH_SIZE;
 
-	/** Sets the filter settings to be used.
+	/** @brief Sets the filter settings to be used.
 	* @param filterSettings The filter settings to be used. Only used if
 	* @p filtersEnabled is true.
 	* @param filtersEnabled Whether or not filter are enabled. */
 	void setFilterSettings( const FilterSettings &filterSettings, bool filtersEnabled );
-	/** Sets the list of @p alarmSettings to be used. */
+	/** @brief Sets the list of @p alarmSettings to be used. */
 	void setAlarmSettings( const AlarmSettingsList &alarmSettings );
-	/** Sets the first departure settings to be used.
+	/** @brief Sets the first departure settings to be used.
 	* @param firstDepartureConfigMode The first departure time can be relative
 	* to the current time (@ref RelativeToCurrentTime) or a custom time (@ref AtCustomTime).
 	* @param timeOfFirstDepartureCustom A custom, fixed first departure time.
 	* Only used if @p firstDepartureConfigMode is set to @ref AtCustomTime.
+	* @param timeOffsetOfFirstDeparture The offset in minutes of the first result departure/arrival.
 	* @see FirstDepartureConfigMode */
 	void setFirstDepartureSettings( FirstDepartureConfigMode firstDepartureConfigMode,
 			const QTime &timeOfFirstDepartureCustom, int timeOffsetOfFirstDeparture );
 
-	/** Enqueues a job of type @ref ProcessDepartures to the job queue.
+	/** @brief Enqueues a job of type @ref ProcessDepartures to the job queue.
 	* @param sourceName The data engine source name for the departure data.
 	* @param data The departure/arrival data from the publicTransport data
 	* engine to be processed, ie. put the data into DepartureInfo instances
@@ -103,27 +113,38 @@ public:
 	* Hashes can be retrieved using qHash or @ref DepartureInfo::hash. */
 	void filterDepartures( const QString &sourceName, const QList< DepartureInfo > &departures,
 						   const QList< uint > &shownDepartures = QList< uint >() );
-	/** Enqueues a job of type @ref ProcessJourneys to the job queue.
+	/** @brief Enqueues a job of type @ref ProcessJourneys to the job queue.
 	* @param sourceName The data engine source name for the journey data.
 	* @param data The journey data from the publicTransport data engine to
 	* be processed, ie. put the data into JourneyInfo instances. */
 	void processJourneys( const QString &sourceName, const QVariantHash &data );
 
-	/** Aborts all jobs of the given @p jobTypes.
+	/** @brief Aborts all jobs of the given @p jobTypes.
 	* @p jobTypes The types of jobs to abort, by default all jobs are aborted. */
-	void abortJobs( JobTypes jobTypes = AllJobs );
+	void abortJobs( DepartureProcessor::JobTypes jobTypes = AllJobs );
 	/** @returns the job that's currently being processed by this thread. */
 	JobType currentJob() const { return m_currentJob; };
 
+	/** @brief Checks if a departure/arrival/journey should be shown with the given settings.
+	 * Items won't be shown, if it's eg. before the configured time of the first departure/arrival.
+	 * @param dateTime The date and time of the departure/arrival.
+	 * @param firstDepartureConfigMode The settings mode for the first shown departure/arrival.
+	 * @param timeOfFirstDepartureCustom The time set as the first departure/arrival time.
+	 *   Only used if @ref AtCustomTime is used in @p firstDepartureConfigMode.
+	 * @param timeOffsetOfFirstDeparture The offset in minutes from now for the first
+	 *   departure/arrival. Only used if @ref RelativeToCurrentTime is used in
+	 *   @p firstDepartureConfigMode.
+	 * @return True, if the departure/arrival/journey should be shown. False otherwise.
+	 **/
 	static bool isTimeShown( const QDateTime& dateTime,
 			FirstDepartureConfigMode firstDepartureConfigMode,
 			const QTime &timeOfFirstDepartureCustom, int timeOffsetOfFirstDeparture );
 
 signals:
-	/** A departure/arrival processing job now gets started.
+	/** @brief A departure/arrival processing job now gets started.
 	* @param sourceName The data engine source name for the departure data. */
 	void beginDepartureProcessing( const QString &sourceName );
-	/** A departure/arrival processing job is finished.
+	/** @brief A departure/arrival processing job is finished.
 	* @param sourceName The data engine source name for the departure data.
 	* @param departures A list of departures that were read.
 	* @param requestUrl The url that was used to download the departure data.
@@ -131,10 +152,10 @@ signals:
 	void departuresProcessed( const QString &sourceName, const QList< DepartureInfo > &departures,
 			const QUrl &requestUrl, const QDateTime &lastUpdate );
 
-	/** A journey processing job now gets started.
+	/** @brief A journey processing job now gets started.
 	* @param sourceName The data engine source name for the journey data. */
 	void beginJourneyProcessing( const QString &sourceName );
-	/** A journey processing job is finished.
+	/** @brief A journey processing job is finished.
 	* @param sourceName The data engine source name for the journey data.
 	* @param journeys A list of journeys that were read.
 	* @param requestUrl The url that was used to download the journey data.
@@ -142,10 +163,10 @@ signals:
 	void journeysProcessed( const QString &sourceName, const QList< JourneyInfo > &journeys,
 			const QUrl &requestUrl, const QDateTime &lastUpdate );
 
-	/** A filter departures job now gets started.
+	/** @brief A filter departures job now gets started.
 	* @param sourceName The data engine source name for the departure data. */
 	void beginFiltering( const QString &sourceName );
-	/** A filter departures job is finished.
+	/** @brief A filter departures job is finished.
 	* @param sourceName The data engine source name for the departure data.
 	* @param departures The list of departures that were filtered. Each
 	* departure now returns the correct value with isFilteredOut() according
