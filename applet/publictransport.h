@@ -31,7 +31,9 @@
 #include "global.h"
 #include "departureinfo.h"
 #include "settings.h"
+#include "titlewidget.h"
 
+class JourneySearchSuggestionWidget;
 class JourneyModel;
 class DepartureModel;
 class DepartureItem;
@@ -54,7 +56,7 @@ class QGraphicsLayout;
 class QStandardItemModel;
 class QStandardItem;
 #if QT_VERSION >= 0x040600
-class QGraphicsBlurEffect;
+	class QGraphicsBlurEffect;
 #endif
 
 /** @brief Simple pixmap graphics widgets (QGraphicsPixmapItem isn't a QGraphicsWidget). */
@@ -134,11 +136,13 @@ protected slots:
 
 	/** This will stop if the maximum departure count is reached
 	* or if all @p departures have been added.
-	* @brief Fills the departure/arrival data model with the given departure/arrival list without removing departures that were already in the model.
+	* @brief Fills the departure/arrival data model with the given departure/arrival list without
+	*   removing departures that were already in the model.
 	* @ingroup models */
 	void fillModel( const QList<DepartureInfo> &departures );
 	/** This will stop if all @p journeys have been added.
-	* @brief Fills the journey data model with the given journey list without removing departures that were already in the model.
+	* @brief Fills the journey data model with the given journey list without removing departures
+	*   that were already in the model.
 	* @ingroup models */
 	void fillModelJourney( const QList<JourneyInfo> &journeys );
 
@@ -157,16 +161,20 @@ protected slots:
 	/** @brief The filter icon widget was clicked. */
 	void filterIconClicked();
 
-	void infoLabelLinkActivated( const QString &link );
-
-	/** Finished editing the journey search line (return pressed, start search
-	* button clicked or stop suggestion double clicked). */
+	/** @brief Finished editing the journey search line (return pressed, start search
+	 * button clicked or stop suggestion double clicked). */
 	void journeySearchInputFinished();
-	/** The journey search line has been edited. */
-	void journeySearchInputEdited( const QString &newText );
-	void possibleStopItemActivated( const QModelIndex &modelIndex );
-	void possibleStopClicked( const QModelIndex &modelIndex );
-	void possibleStopDoubleClicked( const QModelIndex &modelIndex );
+	/** @brief The journey search line has been changed and parsed.
+	 *
+	 * @param stopName The parsed stop name.
+	 * @param departure The parsed departure date and time.
+	 * @param stopIsTarget Wether or not the parsed stop should be treated as target (true)
+	 *   or as origin stop (false).
+	 * @param timeIsDeparture Wether or not the parsed time should be treated as departure (true)
+	 *   or as arrival time (false).
+	 **/
+	void journeySearchLineChanged( const QString &stopName, const QDateTime &departure,
+								   bool stopIsTarget, bool timeIsDeparture );
 
 	/** @brief Called from PublicTransportSettings to indicate the need to clear the
 	 * departure list. */
@@ -199,7 +207,9 @@ protected slots:
 	/** @brief The plasma theme has been changed. */
 	void themeChanged() { useCurrentPlasmaTheme(); };
 
-	void recentJourneyActionTriggered( QAction *action );
+	/** @brief An "recent journey"-action has been triggered.
+	 * @param recentJourneyAction The type of the executed action. */
+	void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction );
 
 	/** @brief The section with the given @p logicalIndex in the departure tree
 	 * view was pressed. */
@@ -280,8 +290,7 @@ protected slots:
 
 	/** @brief An alarm has been fired for the given @p item. */
 	void alarmFired( DepartureItem *item );
-	void removeAlarms( const AlarmSettingsList &newAlarmSettings,
-					   const QList<int> &removedAlarms );
+	void removeAlarms( const AlarmSettingsList &newAlarmSettings, const QList<int> &removedAlarms );
 
 protected:
 	/** @brief Create the configuration dialog contents.
@@ -309,17 +318,8 @@ protected:
 	/** @brief Creates the popup icon with information about the next departure / alarm. */
 	void createPopupIcon();
 
-	/** Gets the first departure / arrival that doesn't get filtered out. */
-	DepartureInfo getFirstNotFilteredDeparture();
-
-	/** Sets the icon that should be painted as main icon.
-	* @param mainIconDisplay The icon to be set. */
-	void setMainIconDisplay( MainIconDisplay mainIconDisplay );
-
-	/** Gets the text to be displayed above the treeview as title (html-tags allowed). */
-	QString titleText() const;
-	/** Gets the text to be displayed on right of the treeview as additional
-	* information (html-tags allowed). Contains courtesy information. */
+	/** @brief Gets the text to be displayed on right of the treeview as additional
+	 * information (html-tags allowed). Contains courtesy information. */
 	QString infoText();
 	/** @brief Gets the text to be displayed as tooltip for the info label. */
 	QString courtesyToolTip() const;
@@ -378,15 +378,11 @@ protected:
 	/** @brief Helper function to set the text color of an html item with a surrounding span-tag. */
 	void setTextColorOfHtmlItem( QStandardItem *item, const QColor &textColor );
 
-	QGraphicsWidget *widgetForType( TitleType titleType );
-	/** Sets the type of title to be displayed. */
+	QGraphicsWidget *widgetForType( TitleType titleType, TitleType oldTitleType );
+	/** @brief Sets the type of title to be displayed. */
 	void setTitleType( TitleType titleType );
-	/** Creates a layout for the given title type. */
-	QGraphicsLayout *createLayoutTitle( TitleType titleType );
 
-	void updateFilterWidget();
-
-	/** Unsets the given states. No other operations are processed.
+	/** @brief Unsets the given states. No other operations are processed.
 	* @param states A list of states to unset. */
 	virtual void unsetStates( QList<AppletState> states );
 
@@ -410,25 +406,11 @@ private:
 	 * @return True, if no message is shown. False, otherwise. */
 	bool checkNetworkStatus();
 
-	/** Checks if a departure with the given @p dateTime will be shown,
-	* depending on the settings (first departure, maybe at a custom time). */
-	bool isTimeShown( const QDateTime &dateTime ) const;
-
-	/** List of current departures / arrivals for the selected stop(s). */
+	/** @brief List of current departures / arrivals for the selected stop(s). */
 	QList<DepartureInfo> departureInfos() const;
 	QString stripDateAndTimeValues( const QString &sourceName ) const;
 
-	void addJourneySearchCompletions();
-	void removeSuggestionItems();
-	void addAllKeywordAddRemoveitems( QStandardItemModel *model = 0 );
-	void maybeAddKeywordAddRemoveItems( QStandardItemModel *model,
-			const QStringList &words, const QStringList &keywords,
-			const QString &type, const QStringList &descriptions,
-			const QStringList &extraRegExps = QStringList() );
-	void journeySearchItemCompleted( const QString &newJourneySearch,
-			const QModelIndex &index = QModelIndex(), int newCursorPos = -1 );
-
-	/** Sets values of the current plasma theme. */
+	/** @brief Sets values of the current plasma theme. */
 	void useCurrentPlasmaTheme();
 
 	/** @brief Creates a menu action, which lists all stops in the settings
@@ -445,50 +427,39 @@ private:
 		return serviceProviderData( m_settings.currentStopSettings().serviceProviderID ); };
 	QVariantHash serviceProviderData( const QString &id ) const;
 
-	void setHeightOfCourtesyLabel();
-
 	void initTreeView( Plasma::TreeView *treeView );
-	void createJourneySearchWidgets();
 
 
 	AppletStates m_appletStates; /**< The current states of this applet */
-	TitleType m_titleType; /**< The type of items to be shown as title above the tree view */
 
 	QGraphicsWidget *m_graphicsWidget, *m_mainGraphicsWidget;
 	GraphicsPixmapWidget *m_oldItem;
-	Plasma::IconWidget *m_icon; /**< The icon that is displayed in the top left corner */
-	Plasma::IconWidget *m_iconClose; /**< The icon that is displayed in the top right corner to close the journey view */
-	Plasma::IconWidget *m_filterIcon; /**< The icon that is displayed in the top right corner, clickable to show the filter menu */
-	Plasma::Label *m_filterLabel; /**< A label showing the currently used filter */
-	QGraphicsWidget *m_filterWidget; /**< A widget showing the currently used filters */
-	Plasma::Label *m_label; /**< A label used to display a title */
-	Plasma::Label *m_labelInfo; /**< A label used to display additional information */
-	Plasma::TreeView *m_treeView, *m_treeViewJourney; /**< A treeview displaying the departure board */
-	Plasma::Label *m_labelJourneysNotSupported; /**< A label used to display an info about unsupported journey search */
-	Plasma::LineEdit *m_journeySearch; /**< A line edit for inputting the target of a journey */
-	Plasma::TreeView *m_listStopSuggestions; /**< A list of stop suggestions for the current input */
-	Plasma::ToolButton *m_btnLastJourneySearches; /**< A tool button that shows last used journey searches. */
-	Plasma::ToolButton *m_btnStartJourneySearch; /**< A tool button to start the journey search. */
+	TitleWidget *m_titleWidget; /**< A widget used as the title of the applet. */
+	Plasma::Label *m_labelInfo; /**< A label used to display additional information. */
+	Plasma::TreeView *m_treeView; /**< A treeview displaying the departure board. */
+	Plasma::TreeView *m_treeViewJourney; /**< A treeview displaying journeys. */
+	Plasma::Label *m_labelJourneysNotSupported; /**< A label used to display an info about
+			* unsupported journey search. */
+	JourneySearchSuggestionWidget *m_listStopSuggestions; /**< A list of stop suggestions for the current input. */
 	OverlayWidget *m_overlay;
 
-	int m_journeySearchLastTextLength; /**< The last number of unselected characters in the journey search input field. */
-	bool m_lettersAddedToJourneySearchLine; /**< Whether or not the last edit of the journey search line added letters o(r not. Used for auto completion. */
+	DepartureModel *m_model; /**< The model for the tree view containing the departure/arrival board. */
+	QHash< QString, QList<DepartureInfo> > m_departureInfos; /**< List of current
+			* departures/arrivals for each stop. */
+	QHash< int, QString > m_stopIndexToSourceName; /**< A hash from the stop index to the source name. */
+	QStringList m_currentSources; /**< Current source names at the publictransport data engine. */
 
-	DepartureModel *m_model; /**< The model for the tree view containing the departure / arrival board */
-	QHash< QString, QList<DepartureInfo> > m_departureInfos; /**< List of current departures / arrivals for each stop */
-	QHash< int, QString > m_stopIndexToSourceName; /**< A hash from the stop index to the source name */
-	QStringList m_currentSources; /**< Current source names at the publictransport data engine */
-
-	JourneyModel *m_modelJourneys; /**< The model for journeys from or to the "home stop" */
-	QList<JourneyInfo> m_journeyInfos; /**< List of current journeys */
-	QString m_currentJourneySource; /**< Current source name for journeys at the publictransport data engine */
+	JourneyModel *m_modelJourneys; /**< The model for journeys from or to the "home stop" .*/
+	QList<JourneyInfo> m_journeyInfos; /**< List of current journeys. */
+	QString m_currentJourneySource; /**< Current source name for journeys at the publictransport data engine. */
 	QString m_journeyTitleText;
 
-	QString m_lastSecondStopName; /**< The last used second stop name for journey search */
-	QDateTime m_lastJourneyDateTime; /**< The last used date and time for journey search */
+	QString m_lastSecondStopName; /**< The last used second stop name for journey search. */
+	QDateTime m_lastJourneyDateTime; /**< The last used date and time for journey search. */
 
-	QDateTime m_lastSourceUpdate; /**< The last update of the data source inside the data engine */
-	QUrl m_urlDeparturesArrivals, m_urlJourneys; /**< Urls to set as associated application urls, when switching from/to journey mode. */
+	QDateTime m_lastSourceUpdate; /**< The last update of the data source inside the data engine. */
+	QUrl m_urlDeparturesArrivals, m_urlJourneys; /**< Urls to set as associated application urls,
+			* when switching from/to journey mode. */
 
 	Settings m_settings; /**< Current applet settings. */
 	QStringList m_currentServiceProviderFeatures;
