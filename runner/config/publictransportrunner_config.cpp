@@ -36,7 +36,7 @@
 // Qt-Includes
 #include <QLineEdit>
 
-K_EXPORT_RUNNER_CONFIG( PublicTransportRunner, PublicTransportRunnerConfig )
+K_EXPORT_RUNNER_CONFIG( publictransport, PublicTransportRunnerConfig )
 
 PublicTransportRunnerConfig::PublicTransportRunnerConfig( QWidget* parent, const QVariantList& args )
 		: KCModule( ConfigFactory::componentData(), parent, args )/*,

@@ -92,7 +92,7 @@ private:
 	Settings m_settings;
 };
 // This is the command that links the runner to the .desktop file
-K_EXPORT_PLASMA_RUNNER(PublicTransportRunner, PublicTransportRunner)
+K_EXPORT_PLASMA_RUNNER(publictransport, PublicTransportRunner)
 Q_DECLARE_OPERATORS_FOR_FLAGS( PublicTransportRunner::Keywords );
 
 
