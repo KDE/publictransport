@@ -344,7 +344,7 @@ void PublicTransport::setupActions()
 	// TODO: Combine actionHideHeader and actionShowHeader into one action
 	QAction *actionHideHeader = new QAction( KIcon( "edit-delete" ),
 	        i18nc( "@action:inmenu", "&Hide Header" ), this );
-	connect( actionHideHeader, SIGNAL( triggered() ), this, SLOT( hideHeader() ) );
+	connect( actionHideHeader, SIGNAL(triggered()), this, SLOT(hideHeader()) );
 	addAction( "hideHeader", actionHideHeader );
 
 	QAction *actionShowHeader = new QAction( KIcon("list-add"),
@@ -2191,7 +2191,7 @@ void PublicTransport::showHeaderContextMenu( const QPoint& position )
 			actions.append( action( "showColumnTarget" ) );
 		}
 	}
-	actions.append( action( "hideHeader" ) );
+	actions.append( action("hideHeader") );
 
 	if ( actions.count() > 0 && view() ) {
 		QMenu::exec( actions, QCursor::pos() );

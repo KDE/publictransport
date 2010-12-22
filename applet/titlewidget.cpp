@@ -70,25 +70,6 @@ Plasma::Label* TitleWidget::titleWidget() const
 	return m_title;
 }
 
-void TitleWidget::stateChanged(AppletStates appletStates)
-{
-	switch ( m_type ) {
-	case ShowDepartureArrivalListTitle:
-		setIcon( appletStates.testFlag(ReceivedValidDepartureData)
-				? DepartureListOkIcon : DepartureListErrorIcon );
-		m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
-		setTitle( titleText() );
-		break;
-
-	case ShowSearchJourneyLineEdit:
-		setIcon( AbortJourneySearchIcon );
-		m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys "
-												   "to or from the home stop" ) );
-		break;
-
-	}
-}
-
 void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
 {
 	kDebug() << titleType << appletStates;

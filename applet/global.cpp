@@ -272,8 +272,15 @@ QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural
 		return plural ? i18nc( "@info/plain", "metros" )
 		       : i18nc( "@info/plain", "metro" );
 	case TrolleyBus:
-		return plural ? i18nc( "@info/plain", "trolley buses" )
-		       : i18nc( "@info/plain", "trolley bus" );
+		return plural ? i18nc( "@info/plain A trolleybus (also known as trolley bus, trolley "
+							   "coach, trackless trolley, trackless tram or trolley) is an "
+							   "electric bus that draws its electricity from overhead wires "
+							   "(generally suspended from roadside posts) using spring-loaded "
+							   "trolley poles.", "trolley buses" )
+			   : i18nc( "@info/plain A trolleybus (also known as trolley bus, trolley coach, "
+						"trackless trolley, trackless tram or trolley) is an electric bus that "
+						"draws its electricity from overhead wires (generally suspended from "
+						"roadside posts) using spring-loaded trolley poles.", "trolley bus" );
 
 	case TrainRegional:
 		return plural ? i18nc( "@info/plain", "regional trains" )

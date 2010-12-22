@@ -37,6 +37,13 @@ namespace Plasma {
 
 /**
  * @brief Represents the widget used as title for the publictransport applet.
+ *
+ * It uses a linear horizontal layout. The first item is always a Plasma::IconWidget. After that
+ * a title widget is shown (Plasma::Label). The title can easily be changed using @ref setTitle.
+ * Additional widgets are added using @ref addWidget and removed with @ref removeWidget.
+ * You can also clear all additional widgets using @ref clearWidgets.
+ * The widget can switch between different layouts (different sets of widgets shown) using
+ * @ref setTitleType.
  **/
 class TitleWidget : public QGraphicsWidget
 {
@@ -190,8 +197,6 @@ public slots:
 	void updateRecentJourneysMenu();
 	/** @brief Call this when the applet settings have changed. */
 	void settingsChanged();
-	/** @deprecated TODO */
-	void stateChanged( AppletStates appletStates );
 
 protected slots:
 	void slotRecentJourneyActionTriggered( QAction *action );

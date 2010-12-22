@@ -34,6 +34,7 @@ JourneySearchSuggestionWidget::JourneySearchSuggestionWidget( Settings *settings
 		: m_settings(settings), m_lineEdit(0)
 {
 	m_journeySearchLastTextLength = 0;
+	m_enabledSuggestions = AllSuggestions;
 
 	m_model = new QStandardItemModel( this );
 	setModel( m_model );
@@ -111,12 +112,29 @@ void JourneySearchSuggestionWidget::addJourneySearchCompletions()
 
 	// Add recent journey searches
 	int recentCount = 0;
-	if ( m_lineEdit ) {
-		foreach( const QString &recent, m_settings->recentJourneySearches ) {
-			int posStart, len;
-			QString stop;
-			JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(), &posStart, &len, &stop );
-			if ( recent.contains(stop) ) {
+	if ( m_enabledSuggestions.testFlag(RecentJourneySearchSuggestion) ) {
+		if ( m_lineEdit ) {
+			foreach( const QString &recent, m_settings->recentJourneySearches ) {
+				int posStart, len;
+				QString stop;
+				JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(), &posStart, &len, &stop );
+				if ( recent.contains(stop) ) {
+					QStandardItem *item = new QStandardItem( KIcon( "emblem-favorite" ),
+							i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Recent:</emphasis> %1", recent) );
+					item->setData( "recent", Qt::UserRole + 1 );
+					item->setData( recent, Qt::UserRole + 2 );
+					item->setData( true, Qt::UserRole + 5 ); // Mark as suggestion item to easily remove it again
+					m_model->insertRow( row, item );
+					++row;
+
+					++recentCount;
+					if ( recentCount == 5 ) {
+						break; // Only show the last five recent journey searches
+					}
+				}
+			}
+		} else {
+			foreach( const QString &recent, m_settings->recentJourneySearches ) {
 				QStandardItem *item = new QStandardItem( KIcon( "emblem-favorite" ),
 						i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Recent:</emphasis> %1", recent) );
 				item->setData( "recent", Qt::UserRole + 1 );
@@ -131,147 +149,138 @@ void JourneySearchSuggestionWidget::addJourneySearchCompletions()
 				}
 			}
 		}
-	} else {
-		foreach( const QString &recent, m_settings->recentJourneySearches ) {
-			QStandardItem *item = new QStandardItem( KIcon( "emblem-favorite" ),
-					i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Recent:</emphasis> %1", recent) );
-			item->setData( "recent", Qt::UserRole + 1 );
-			item->setData( recent, Qt::UserRole + 2 );
-			item->setData( true, Qt::UserRole + 5 ); // Mark as suggestion item to easily remove it again
-			m_model->insertRow( row, item );
-			++row;
-
-			++recentCount;
-			if ( recentCount == 5 ) {
-				break; // Only show the last five recent journey searches
-			}
-		}
 	}
 
 	// Add other suggestions
-	if ( m_lineEdit && !m_lineEdit->text().isEmpty() ) {
-		QStringList suggestions, suggestionValues;
-		// Check if there's already an "at" or "in" (time) keyword
-		QStringList words = JourneySearchParser::notDoubleQuotedWords( m_lineEdit->text() );
-		QString timeKeywordIn, timeKeywordAt;
-		if ( !JourneySearchParser::timeKeywordsIn().isEmpty() ) {
-			timeKeywordIn = JourneySearchParser::timeKeywordsIn().first();
-		}
-		if ( !JourneySearchParser::timeKeywordsAt().isEmpty() ) {
-			timeKeywordAt = JourneySearchParser::timeKeywordsAt().first();
-		}
-		bool hasInKeyword = words.contains( timeKeywordIn );
-		bool hasAtKeyword = words.contains( timeKeywordAt );
-		bool hasTimeKeyword = hasInKeyword || hasAtKeyword;
-
-		QString type;
-		QString extraRegExp;
-		if ( hasTimeKeyword ) {
-			type = "replaceTimeKeyword";
-
-			QHash<JourneySearchParser::Keyword, QVariant> keywordValues =
-			JourneySearchParser::keywordValues( m_lineEdit->text() );
-			if ( keywordValues.contains( JourneySearchParser::KeywordTimeAt ) ) {
-				QDateTime dateTime = keywordValues[ JourneySearchParser::KeywordTimeAt ].toDateTime();
-				extraRegExp = "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))";
-
-				// Add "30 minutes later"
-				suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes later", 30 );
-				suggestionValues << QString( "%1 %2" ).arg( timeKeywordAt )
-						.arg( KGlobal::locale()->formatTime( dateTime.addSecs(30 * 60).time() ) );
-
-				// Add "60 minutes later"
-				suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes later", 60 );
-				suggestionValues << QString( "%1 %2" ).arg( timeKeywordAt )
-						.arg( KGlobal::locale()->formatTime( dateTime.addSecs(60 * 60).time() ) );
-
-				// Add "30 minutes earlier"
-				suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes earlier", 30 );
-				suggestionValues << QString( "%1 %2" ).arg( timeKeywordAt )
-						.arg( KGlobal::locale()->formatTime( dateTime.addSecs(-30 * 60).time() ) );
-			} else if ( keywordValues.contains( JourneySearchParser::KeywordTimeIn ) ) {
-				int minutes = keywordValues[ JourneySearchParser::KeywordTimeIn ].toInt();
-				extraRegExp = JourneySearchParser::relativeTimeString( "\\d{1,}" );
-
-				// Add "30 minutes later"
-				suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes later", 30 );
-				suggestionValues << QString("%1 %2").arg( timeKeywordIn )
-						.arg( JourneySearchParser::relativeTimeString(minutes + 30) );
-
-				// Add "60 minutes later"
-				suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes later", 60 );
-				suggestionValues << QString("%1 %2").arg( timeKeywordIn )
-						.arg( JourneySearchParser::relativeTimeString(minutes + 60) );
-
-				// Add "30 minutes earlier"
-				suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes earlier", 30 );
-				suggestionValues << QString("%1 %2").arg( timeKeywordIn )
-						.arg( JourneySearchParser::relativeTimeString(minutes - 30) );
+	if ( m_enabledSuggestions.testFlag(KeywordSuggestion) ) {
+		if ( m_lineEdit && !m_lineEdit->text().isEmpty() ) {
+			QStringList suggestions, suggestionValues;
+			// Check if there's already an "at" or "in" (time) keyword
+			QStringList words = JourneySearchParser::notDoubleQuotedWords( m_lineEdit->text() );
+			QString timeKeywordIn, timeKeywordAt;
+			if ( !JourneySearchParser::timeKeywordsIn().isEmpty() ) {
+				timeKeywordIn = JourneySearchParser::timeKeywordsIn().first();
 			}
-		} else {
-			type = "additionalKeywordAtEnd";
-
-			// Use the first keyword of some types for suggestions
-			if ( !timeKeywordIn.isEmpty() ) {
-				// Add "in 5 minutes"
-				QString in5Minutes = QString("%1 %2").arg( timeKeywordIn )
-						.arg( JourneySearchParser::relativeTimeString(5) );
-				suggestions << in5Minutes;
-				suggestionValues << in5Minutes;
-
-				// Add "in 15 minutes"
-				QString in15Minutes = QString("%1 %2").arg( timeKeywordIn )
-						.arg( JourneySearchParser::relativeTimeString(15) );
-				suggestions << in15Minutes;
-				suggestionValues << in15Minutes;
-
-				// Add "in 30 minutes"
-				QString in30Minutes = QString("%1 %2").arg( timeKeywordIn )
-						.arg( JourneySearchParser::relativeTimeString(30) );
-				suggestions << in30Minutes;
-				suggestionValues << in30Minutes;
+			if ( !JourneySearchParser::timeKeywordsAt().isEmpty() ) {
+				timeKeywordAt = JourneySearchParser::timeKeywordsAt().first();
 			}
-			if ( !timeKeywordAt.isEmpty() ) {
-				QString timeKeywordTomorrow;
-				if ( !JourneySearchParser::timeKeywordsTomorrow().isEmpty() ) {
-					timeKeywordTomorrow = JourneySearchParser::timeKeywordsTomorrow().first();
+			bool hasInKeyword = words.contains( timeKeywordIn );
+			bool hasAtKeyword = words.contains( timeKeywordAt );
+			bool hasTimeKeyword = hasInKeyword || hasAtKeyword;
+
+			QString type;
+			QString extraRegExp;
+			if ( hasTimeKeyword ) {
+				type = "replaceTimeKeyword";
+
+				QHash<JourneySearchParser::Keyword, QVariant> keywordValues =
+				JourneySearchParser::keywordValues( m_lineEdit->text() );
+				if ( keywordValues.contains( JourneySearchParser::KeywordTimeAt ) ) {
+					QDateTime dateTime = keywordValues[ JourneySearchParser::KeywordTimeAt ].toDateTime();
+					extraRegExp = "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))";
+
+					// Add "30 minutes later"
+					suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes later", 30 );
+					suggestionValues << QString( "%1 %2" ).arg( timeKeywordAt )
+							.arg( KGlobal::locale()->formatTime( dateTime.addSecs(30 * 60).time() ) );
+
+					// Add "60 minutes later"
+					suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes later", 60 );
+					suggestionValues << QString( "%1 %2" ).arg( timeKeywordAt )
+							.arg( KGlobal::locale()->formatTime( dateTime.addSecs(60 * 60).time() ) );
+
+					// Add "30 minutes earlier"
+					suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes earlier", 30 );
+					suggestionValues << QString( "%1 %2" ).arg( timeKeywordAt )
+							.arg( KGlobal::locale()->formatTime( dateTime.addSecs(-30 * 60).time() ) );
+				} else if ( keywordValues.contains( JourneySearchParser::KeywordTimeIn ) ) {
+					int minutes = keywordValues[ JourneySearchParser::KeywordTimeIn ].toInt();
+					extraRegExp = JourneySearchParser::relativeTimeString( "\\d{1,}" );
+
+					// Add "30 minutes later"
+					suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes later", 30 );
+					suggestionValues << QString("%1 %2").arg( timeKeywordIn )
+							.arg( JourneySearchParser::relativeTimeString(minutes + 30) );
+
+					// Add "60 minutes later"
+					suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes later", 60 );
+					suggestionValues << QString("%1 %2").arg( timeKeywordIn )
+							.arg( JourneySearchParser::relativeTimeString(minutes + 60) );
+
+					// Add "30 minutes earlier"
+					suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes earlier", 30 );
+					suggestionValues << QString("%1 %2").arg( timeKeywordIn )
+							.arg( JourneySearchParser::relativeTimeString(minutes - 30) );
 				}
+			} else {
+				type = "additionalKeywordAtEnd";
 
-				if ( timeKeywordTomorrow.isNull() ) {
-					// Add "at 6:00"
-					QString at6 = QString( "%1 %2" ).arg( timeKeywordAt )
-							.arg( QTime( 6, 0 ).toString( "hh:mm" ) );
-					suggestions << at6;
-					suggestionValues << at6;
-				} else {
-					// Add "tomorrow at 6:00"
-					QString tomorrowAt6 = QString( "%1 %2 %3" ).arg( timeKeywordTomorrow )
-							.arg( timeKeywordAt ).arg( QTime( 6, 0 ).toString( "hh:mm" ) );
-					suggestions << tomorrowAt6;
-					suggestionValues << tomorrowAt6;
+				// Use the first keyword of some types for suggestions
+				if ( !timeKeywordIn.isEmpty() ) {
+					// Add "in 5 minutes"
+					QString in5Minutes = QString("%1 %2").arg( timeKeywordIn )
+							.arg( JourneySearchParser::relativeTimeString(5) );
+					suggestions << in5Minutes;
+					suggestionValues << in5Minutes;
+
+					// Add "in 15 minutes"
+					QString in15Minutes = QString("%1 %2").arg( timeKeywordIn )
+							.arg( JourneySearchParser::relativeTimeString(15) );
+					suggestions << in15Minutes;
+					suggestionValues << in15Minutes;
+
+					// Add "in 30 minutes"
+					QString in30Minutes = QString("%1 %2").arg( timeKeywordIn )
+							.arg( JourneySearchParser::relativeTimeString(30) );
+					suggestions << in30Minutes;
+					suggestionValues << in30Minutes;
+				}
+				if ( !timeKeywordAt.isEmpty() ) {
+					QString timeKeywordTomorrow;
+					if ( !JourneySearchParser::timeKeywordsTomorrow().isEmpty() ) {
+						timeKeywordTomorrow = JourneySearchParser::timeKeywordsTomorrow().first();
+					}
+
+					if ( timeKeywordTomorrow.isNull() ) {
+						// Add "at 6:00"
+						QString at6 = QString( "%1 %2" ).arg( timeKeywordAt )
+								.arg( QTime( 6, 0 ).toString( "hh:mm" ) );
+						suggestions << at6;
+						suggestionValues << at6;
+					} else {
+						// Add "tomorrow at 6:00"
+						QString tomorrowAt6 = QString( "%1 %2 %3" ).arg( timeKeywordTomorrow )
+								.arg( timeKeywordAt ).arg( QTime( 6, 0 ).toString( "hh:mm" ) );
+						suggestions << tomorrowAt6;
+						suggestionValues << tomorrowAt6;
+					}
 				}
 			}
-		}
 
-		// Add all suggestions
-		for ( int i = 0; i < suggestions.count(); ++i ) {
-			QStandardItem *item = new QStandardItem( KIcon("chronometer"),
-					i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Suggestion:</emphasis> %1",
-					suggestions.at(i)) );
-			item->setData( type, Qt::UserRole + 1 );
-			item->setData( suggestionValues.at( i ), Qt::UserRole + 2 );
-			if ( !extraRegExp.isNull() ) {
-				item->setData( extraRegExp, Qt::UserRole + 3 );
+			// Add all suggestions
+			for ( int i = 0; i < suggestions.count(); ++i ) {
+				QStandardItem *item = new QStandardItem( KIcon("chronometer"),
+						i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Suggestion:</emphasis> %1",
+						suggestions.at(i)) );
+				item->setData( type, Qt::UserRole + 1 );
+				item->setData( suggestionValues.at(i), Qt::UserRole + 2 );
+				if ( !extraRegExp.isNull() ) {
+					item->setData( extraRegExp, Qt::UserRole + 3 );
+				}
+				item->setData( true, Qt::UserRole + 5 ); // Mark as suggestion item to easily remove it again
+				m_model->insertRow( row, item );
+				++row;
 			}
-			item->setData( true, Qt::UserRole + 5 ); // Mark as suggestion item to easily remove it again
-			m_model->insertRow( row, item );
-			++row;
 		}
 	}
 }
 
 void JourneySearchSuggestionWidget::addStopSuggestionItems(const QStringList& stopSuggestions)
 {
+	if ( !m_enabledSuggestions.testFlag(StopNameSuggestion) ) {
+		return;
+	}
+
 	foreach( const QString &stop, stopSuggestions ) {
 		m_model->appendRow( new QStandardItem(KIcon("public-transport-stop"), stop) );
 	}

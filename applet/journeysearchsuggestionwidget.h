@@ -35,12 +35,35 @@ class QStandardItemModel;
 
 /**
  * @brief Represents the widget used to display journey search suggestions.
+ *
+ * Derived from Plasma::TreeView, shows suggestions (only one column). Suggestions are
+ * automatically added when the attached line edit widget is edited. To attach a line edit widget
+ * use @ref attachLineEdit. Completions are also automatically set on the attached line edit and
+ * it's text is updated when a suggestion is applied.
+ *
+ * By default all available suggestions are shown. To disable suggestions by type use
+ * @ref setEnabledSuggestions.
  **/
 class JourneySearchSuggestionWidget : public Plasma::TreeView
 {
 	Q_OBJECT
 
 public:
+	/**
+	 * @brief Types of suggestions displayed by this widget.
+	 **/
+	enum Suggestion {
+		NoSuggestions = 0x0000, /**< No suggestions. */
+
+		StopNameSuggestion = 0x0001, /**< A stop name suggestion. */
+		RecentJourneySearchSuggestion = 0x0002, /**< A recent journey search suggestion. */
+		KeywordSuggestion = 0x0004, /**< A keyword add/remove suggestion. */
+
+		AllSuggestions = StopNameSuggestion | RecentJourneySearchSuggestion |
+				KeywordSuggestion /**< All available suggestion types. */
+	};
+	Q_DECLARE_FLAGS(Suggestions, Suggestion);
+
 	/**
 	 * @brief Creates a new journey search suggestion widget.
 	 *
@@ -66,6 +89,12 @@ public:
 
 	/** @brief Clears the suggestion model. */
 	void clear();
+
+	/** @brief Sets the types of suggestions to show to @p suggestions. */
+	void setEnabledSuggestions( Suggestions suggestions = AllSuggestions ) {
+		m_enabledSuggestions = suggestions; };
+	/** @brief Gets the types of suggestions to show. */
+	Suggestions enabledSuggestions() const { return m_enabledSuggestions; };
 
 signals:
 	/** @brief A suggestion has been activated, eg. by a double click. */
@@ -138,11 +167,13 @@ private:
 	QStandardItemModel *m_model;
 	Settings *m_settings;
 	Plasma::LineEdit *m_lineEdit;
+	Suggestions m_enabledSuggestions;
 
 	int m_journeySearchLastTextLength; /**< The last number of unselected characters in the
 			* journey search input field. */
 	bool m_lettersAddedToJourneySearchLine; /**< Whether or not the last edit of the
 			* journey search line added letters o(r not. Used for auto completion. */
 };
+Q_DECLARE_OPERATORS_FOR_FLAGS(JourneySearchSuggestionWidget::Suggestions)
 
 #endif // JOURNEYSEARCHSUGGESTIONWIDGET_H
