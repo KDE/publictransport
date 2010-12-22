@@ -34,7 +34,7 @@ const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
 
 PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantList& args )
 		: Plasma::DataEngine( parent, args ),
-		m_fileSystemWatcher( 0 )
+		m_fileSystemWatcher(0), m_timer(0)
 {
 	// We ignore any arguments - data engines do not have much use for them
 	Q_UNUSED( args )
@@ -220,8 +220,8 @@ bool PublicTransportEngine::updateServiceProviderSource()
 			QStringList dirList = KGlobal::dirs()->findDirs( "data",
 								  "plasma_engine_publictransport/accessorInfos" );
 			m_fileSystemWatcher = new QFileSystemWatcher( dirList );
-			connect( m_fileSystemWatcher, SIGNAL( directoryChanged( QString ) ),
-					 this, SLOT( accessorInfoDirChanged( QString ) ) );
+			connect( m_fileSystemWatcher, SIGNAL(directoryChanged(QString)),
+					 this, SLOT(accessorInfoDirChanged(QString)) );
 		}
 
 		QStringList fileNames = KGlobal::dirs()->findAllResources( "data",
@@ -458,9 +458,27 @@ QString PublicTransportEngine::stripDateAndTimeValues( const QString& sourceName
 	return ret;
 }
 
-void PublicTransportEngine::accessorInfoDirChanged( QString path )
+void PublicTransportEngine::accessorInfoDirChanged( const QString &path )
 {
-	kDebug() << path << "was changed";
+	Q_UNUSED( path )
+
+	// Use a timer to prevent loading all accessors again and again, for every changed file in a
+	// possibly big list of files. It reloads the accessors maximally every 250ms.
+	// Otherwise it can freeze plasma for a while if eg. all accessor files are changed at once.
+	if ( !m_timer ) {
+		m_timer = new QTimer( this );
+		connect( m_timer, SIGNAL(timeout()), this, SLOT(reloadAllAccessors()) );
+	}
+
+	m_timer->start( 250 );
+}
+
+void PublicTransportEngine::reloadAllAccessors()
+{
+	kDebug() << "Reload accessors (the accessor dir changed)";
+
+	delete m_timer;
+	m_timer = NULL;
 
 	// Remove all accessors (could have been changed)
 	qDeleteAll( m_accessors );
@@ -470,14 +488,14 @@ void PublicTransportEngine::accessorInfoDirChanged( QString path )
 	QStringList cachedSources = m_dataSources.keys();
 	foreach( const QString &cachedSource, cachedSources ) {
 		SourceType sourceType = sourceTypeFromName( cachedSource );
-		if ( isDataRequestingSourceType( sourceType ) ) {
+		if ( isDataRequestingSourceType(sourceType) ) {
 			m_dataSources.remove( cachedSource );
 		}
 	}
 
 	// Remove cached service provider source
 	const QString serviceProvidersKey = sourceTypeKeyword( ServiceProviders );
-	if ( m_dataSources.keys().contains( serviceProvidersKey ) ) {
+	if ( m_dataSources.keys().contains(serviceProvidersKey) ) {
 		m_dataSources.remove( serviceProvidersKey );
 	}
 

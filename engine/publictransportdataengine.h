@@ -24,12 +24,13 @@
 #ifndef PUBLICTRANSPORTDATAENGINE_HEADER
 #define PUBLICTRANSPORTDATAENGINE_HEADER
 
-// Plasma includes
-#include <Plasma/DataEngine>
-
 // Own includes
 #include "enums.h"
 
+// Plasma includes
+#include <Plasma/DataEngine>
+
+class QTimer;
 class QFileSystemWatcher;
 class TimetableAccessor;
 class DepartureInfo;
@@ -208,7 +209,9 @@ public slots:
 			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
 	/** @brief A directory with accessor info xmls was changed. */
-	void accessorInfoDirChanged( QString path );
+	void accessorInfoDirChanged( const QString &path );
+
+	void reloadAllAccessors();
 
 private:
 	/** @brief Gets a map with information about an accessor.
@@ -235,6 +238,7 @@ private:
 	// for each data source name.
 	QHash< QString, QDateTime > m_nextDownloadTimeProposals;
 
+	QTimer *m_timer;
 // 	QHash< QString, AccessorCheck > m_checkedAccessors;
 };
 

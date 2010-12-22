@@ -19,108 +19,149 @@
 
 #include "timetableaccessor_html_script.h"
 #include "timetableaccessor_html.h"
+#include "scripting.h"
 
 #include <KDebug>
 #include <QFile>
 #include <QScriptValueIterator>
-#include "scripting.h"
 #include <kross/core/action.h>
 #include <kross/core/manager.h>
 #include <KLocalizedString>
+#include <kconfig.h>
+#include <kconfiggroup.h>
+#include <KStandardDirs>
 
 TimetableAccessorHtmlScript::TimetableAccessorHtmlScript( const TimetableAccessorInfo &info )
-		: TimetableAccessor()
+		: TimetableAccessor(), m_script(0), m_resultObject(0)
 {
 	m_info = info;
+	m_scriptState = WaitingForScriptUsage;
+	m_scriptFeatures = readScriptFeatures();
+}
+
+TimetableAccessorHtmlScript::~TimetableAccessorHtmlScript()
+{
+}
+
+bool TimetableAccessorHtmlScript::lazyLoadScript()
+{
+	if ( m_scriptState == ScriptLoaded ) {
+		return true;
+	}
+
+	kDebug() << "Load script for accessor" << m_info.serviceProvider();
 
 	// Create the Kross::Action instance
 	m_script = new Kross::Action( this, "TimetableParser" );
 
 	TimetableData *timetableData = new TimetableData( m_script );
 	m_resultObject = new ResultObject( m_script );
-	m_script->addQObject( new Helper( m_script ), "helper" );
+	m_script->addQObject( new Helper(m_script), "helper" );
 	m_script->addQObject( timetableData, "timetableData" );
 	m_script->addQObject( m_resultObject, "result"/*, Kross::ChildrenInterface::AutoConnectSignals*/ );
 
-	m_scriptLoaded = m_script->setFile( m_info.scriptFileName() );
-
-	if ( m_scriptLoaded ) {
+	bool ok = m_script->setFile( m_info.scriptFileName() );
+	if ( !ok ) {
+		m_scriptState = ScriptHasErrors;
+	} else {
 		m_script->trigger();
-		m_scriptLoaded = !m_script->hadError();
+		m_scriptState = m_script->hadError() ? ScriptHasErrors : ScriptLoaded;
 	}
 
-//     loadScript( m_info.scriptFileName() );
+	return m_scriptState == ScriptLoaded;
 }
 
-TimetableAccessorHtmlScript::~TimetableAccessorHtmlScript()
+QStringList TimetableAccessorHtmlScript::readScriptFeatures()
 {
-	delete m_script;
+	// Try to load script features from a cache file
+	QString fileName = KGlobal::dirs()->saveLocation("data",
+			"plasma_engine_publictransport/accessorInfos/")
+			.append( QLatin1String("datacache"));
+	bool cacheExists = QFile::exists( fileName );
+	KConfig cfg( fileName, KConfig::SimpleConfig );
+	KConfigGroup grp = cfg.group( m_info.serviceProvider() );
+
+	if ( cacheExists ) {
+		// Check if the script file was modified since the cache was last updated
+		QDateTime scriptModifiedTime = grp.readEntry("scriptModifiedTime", QDateTime());
+		if ( QFileInfo(m_info.scriptFileName()).lastModified() == scriptModifiedTime ) {
+			// Return feature list stored in the cache
+			return grp.readEntry("features", QStringList());
+		}
+	}
+
+	// No actual cached information about the service provider
+	kDebug() << "No up-to-date cache information for service provider" << m_info.serviceProvider();
+	QStringList features;
+	bool ok = lazyLoadScript();
+	if ( ok ) {
+		QStringList functions = m_script->functionNames();
+
+		if ( functions.contains("parsePossibleStops") ) {
+			features << "Autocompletion";
+		}
+		if ( functions.contains("parseJourneys") ) {
+			features << "JourneySearch";
+		}
+
+		if ( !m_script->functionNames().contains("usedTimetableInformations") ) {
+			kDebug() << "The script has no 'usedTimetableInformations' function";
+			kDebug() << "Functions in the script:" << m_script->functionNames();
+			ok = false;
+		}
+
+		if ( ok ) {
+			QStringList usedTimetableInformations = m_script->callFunction(
+					"usedTimetableInformations" ).toStringList();
+
+			if ( usedTimetableInformations.contains("Delay", Qt::CaseInsensitive) ) {
+				features << "Delay";
+			}
+			if ( usedTimetableInformations.contains("DelayReason", Qt::CaseInsensitive) ) {
+				features << "DelayReason";
+			}
+			if ( usedTimetableInformations.contains("Platform", Qt::CaseInsensitive) ) {
+				features << "Platform";
+			}
+			if ( usedTimetableInformations.contains("JourneyNews", Qt::CaseInsensitive)
+				|| usedTimetableInformations.contains("JourneyNewsOther", Qt::CaseInsensitive)
+				|| usedTimetableInformations.contains("JourneyNewsLink", Qt::CaseInsensitive) )
+			{
+				features << "JourneyNews";
+			}
+			if ( usedTimetableInformations.contains("TypeOfVehicle", Qt::CaseInsensitive) ) {
+				features << "TypeOfVehicle";
+			}
+			if ( usedTimetableInformations.contains("Status", Qt::CaseInsensitive) ) {
+				features << "Status";
+			}
+			if ( usedTimetableInformations.contains("Operator", Qt::CaseInsensitive) ) {
+				features << "Operator";
+			}
+			if ( usedTimetableInformations.contains("StopID", Qt::CaseInsensitive) ) {
+				features << "StopID";
+			}
+		}
+	}
+
+	// Store script features in a cache file
+	grp.writeEntry( "scriptModifiedTime", QFileInfo(m_info.scriptFileName()).lastModified() );
+	grp.writeEntry( "hasErrors", !ok );
+	grp.writeEntry( "features", features );
+
+	return features;
 }
 
 QStringList TimetableAccessorHtmlScript::scriptFeatures() const
 {
-	if ( !m_scriptLoaded ) {
-		return QStringList();
-	}
-
-	QStringList functions = m_script->functionNames();
-	QStringList features;
-
-	if ( functions.contains( "parsePossibleStops" ) ) {
-		features << "Autocompletion";
-	}
-	if ( functions.contains( "parseJourneys" ) ) {
-		features << "JourneySearch";
-	}
-
-	if ( !m_scriptLoaded ) {
-		kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
-		return features;
-	}
-	if ( !m_script->functionNames().contains( "usedTimetableInformations" ) ) {
-		kDebug() << "The script has no 'usedTimetableInformations' function";
-		kDebug() << "Functions in the script:" << m_script->functionNames();
-		return features;
-	}
-
-	QStringList usedTimetableInformations = m_script->callFunction(
-			"usedTimetableInformations" ).toStringList();
-
-	if ( usedTimetableInformations.contains("Delay", Qt::CaseInsensitive) ) {
-		features << "Delay";
-	}
-	if ( usedTimetableInformations.contains("DelayReason", Qt::CaseInsensitive) ) {
-		features << "DelayReason";
-	}
-	if ( usedTimetableInformations.contains("Platform", Qt::CaseInsensitive) ) {
-		features << "Platform";
-	}
-	if ( usedTimetableInformations.contains("JourneyNews", Qt::CaseInsensitive)
-	        || usedTimetableInformations.contains("JourneyNewsOther", Qt::CaseInsensitive)
-	        || usedTimetableInformations.contains("JourneyNewsLink", Qt::CaseInsensitive) ) {
-		features << "JourneyNews";
-	}
-	if ( usedTimetableInformations.contains("TypeOfVehicle", Qt::CaseInsensitive) ) {
-		features << "TypeOfVehicle";
-	}
-	if ( usedTimetableInformations.contains("Status", Qt::CaseInsensitive) ) {
-		features << "Status";
-	}
-	if ( usedTimetableInformations.contains("Operator", Qt::CaseInsensitive) ) {
-		features << "Operator";
-	}
-	if ( usedTimetableInformations.contains("StopID", Qt::CaseInsensitive) ) {
-		features << "StopID";
-	}
-
-	return features;
+	return m_scriptFeatures;
 }
 
 bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 		QList<PublicTransportInfo*> *journeys, GlobalTimetableInfo *globalInfo,
 		ParseDocumentMode parseDocumentMode )
 {
-	if ( !m_scriptLoaded ) {
+	if ( !lazyLoadScript() ) {
 		kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
 		return false;
 	}
@@ -207,7 +248,7 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 
 QString TimetableAccessorHtmlScript::parseDocumentForLaterJourneysUrl( const QByteArray &document )
 {
-	if ( !m_scriptLoaded ) {
+	if ( !lazyLoadScript() ) {
 		kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
 		return QString();
 	}
@@ -234,7 +275,7 @@ QString TimetableAccessorHtmlScript::parseDocumentForLaterJourneysUrl( const QBy
 QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl(
     const QByteArray &document )
 {
-	if ( !m_scriptLoaded ) {
+	if ( !lazyLoadScript() ) {
 		kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
 		return QString();
 	}
@@ -261,7 +302,7 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 		QStringList *stops, QHash<QString, QString> *stopToStopId,
 		QHash<QString, int> *stopToStopWeight )
 {
-	if ( !m_scriptLoaded ) {
+	if ( !lazyLoadScript() ) {
 		kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
 		return false;
 	}

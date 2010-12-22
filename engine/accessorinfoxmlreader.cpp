@@ -261,7 +261,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 			return new TimetableAccessorHtml( accessorInfo );
 		} else {
 			TimetableAccessorHtmlScript *jsAccessor = new TimetableAccessorHtmlScript( accessorInfo );
-			if ( jsAccessor->isScriptLoaded() ) {
+			if ( !jsAccessor->hasScriptErrors() ) {
 				return jsAccessor;
 			} else {
 				return NULL; // Couldn't correctly load the script (bad script)

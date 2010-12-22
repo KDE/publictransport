@@ -38,6 +38,13 @@ class TimetableAccessorHtmlScript : public TimetableAccessor {
 	Q_OBJECT
 
 public:
+	/** @brief States of the script, used for loading the script only when needed. */
+	enum ScriptState {
+		WaitingForScriptUsage = 0x00,
+		ScriptLoaded = 0x01,
+		ScriptHasErrors = 0x02
+	};
+
 	/** Creates a new TimetableAccessorHtmlScript object with the given information.
 	* @param info Information about how to download and parse the documents
 	* of a service provider.
@@ -50,12 +57,16 @@ public:
 	virtual ~TimetableAccessorHtmlScript();
 
 	/** Whether or not the script has been successfully loaded. */
-	bool isScriptLoaded() { return m_scriptLoaded; };
+	bool isScriptLoaded() const { return m_scriptState == ScriptLoaded; };
+    bool hasScriptErrors() const { return m_scriptState == ScriptHasErrors; };
 
 	/** Gets a list of features that this accessor supports through a script. */
 	virtual QStringList scriptFeatures() const;
 
 protected:
+	bool lazyLoadScript();
+	QStringList readScriptFeatures();
+
 	/** Calls the 'parseTimetable'/'parseJourneys' function in the script to
 	* parse the contents of a received document for a list of departures/arrivals
 	* or journeys (depending on @p parseDocumentMode) and puts the results
@@ -100,7 +111,8 @@ protected:
 			QHash<QString,int> *stopToStopWeight );
 
 private:
-	bool m_scriptLoaded; // Whether or not the script was successfully loaded
+	ScriptState m_scriptState; // The state of the script
+	QStringList m_scriptFeatures; // Caches the features the script provides
 
 	Kross::Action *m_script; // The script object
 	ResultObject *m_resultObject; // An object used by the script to store results in
