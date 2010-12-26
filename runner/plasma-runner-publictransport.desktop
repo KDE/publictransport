@@ -16,6 +16,7 @@ Name[sv]=Kollektivtrafik
 Name[uk]=Громадський транспорт
 Name[x-test]=xxPublic Transportxx
 Comment=Gives information about public transport departing from a given stop
+Comment[km]=ផ្ដល់​ព័ត៌មាន​អំពី​ការ​ដឹកជញ្ជូន​សាធារណៈ​ពី​កន្លែង​ឈប់​ដែលបានផ្ដល់​ឲ្យ
 Comment[pt]=Dá informações acerca dos transportes públicos que partem de uma dada estação
 Comment[pt_BR]=Fornece informações sobre transportes públicos que partem de um ponto determinado
 Comment[sv]=Ger information om kollektivtrafik som avgår från en angiven hållplats
