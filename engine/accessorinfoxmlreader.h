@@ -18,8 +18,8 @@
 */
 
 /** @file
-* @brief This file contains an xml reader that reads accessor info xml files.
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief This file contains an xml reader that reads accessor info xml files.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef ACCESSORINFOXMLREADER_HEADER
 #define ACCESSORINFOXMLREADER_HEADER
@@ -29,12 +29,32 @@
 #include "enums.h"
 
 class TimetableAccessor;
+
+
+/**
+ * @brief Reads accessor info xml files.
+ * 
+ * In an accessor info xml it's properties are described, like the name of the service provider,
+ * a used script file, raw urls, etc. See @ref page_accessor_infos for more information about the
+ * XML structure.
+ **/
 class AccessorInfoXmlReader : public QXmlStreamReader {
-	friend class TimetableAccessorInfo; // Because AccessorInfoXmlReader needs to set values in TimetableAccessorInfo when reading xml files
+	friend class TimetableAccessorInfo; // Because AccessorInfoXmlReader needs to set values 
+										// in TimetableAccessorInfo when reading xml files
 
 public:
+	/** @brief Creates a new accessor info xml reader. */
 	AccessorInfoXmlReader() : QXmlStreamReader() {};
 
+	/**
+	 * @brief Reads an accessor info xml from @p device.
+	 *
+	 * @param device The QIODevice to read the xml data from.
+	 * @param serviceProvider The service provider ID for the accessor to read.
+	 * @param fileName The filename of the xml file.
+	 * @param country The country the accessor is designed for.
+	 * @return A TimetableAccessor object or NULL on error.
+	 **/
 	TimetableAccessor* read( QIODevice *device, const QString &serviceProvider,
 							 const QString &fileName, const QString &country  );
 

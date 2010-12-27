@@ -26,7 +26,7 @@
 
 #include <KDebug>
 
-TimetableAccessorHtml::TimetableAccessorHtml( const TimetableAccessorInfo &info )
+TimetableAccessorHtml::TimetableAccessorHtml( TimetableAccessorInfoRegExp *info )
 		: TimetableAccessor(), m_preData( 0 )
 {
 	m_info = info;
@@ -34,13 +34,19 @@ TimetableAccessorHtml::TimetableAccessorHtml( const TimetableAccessorInfo &info 
 
 bool TimetableAccessorHtml::parseDocumentPre( const QString &document )
 {
-	if ( m_info.searchDeparturesPre().regExp().isEmpty() ) {
+	TimetableAccessorInfoRegExp *infoRegExp = dynamic_cast<TimetableAccessorInfoRegExp*>(m_info);
+	if ( !infoRegExp ) {
+		kDebug() << "No regular expressions available";
+		return false;
+	}
+	
+	if ( infoRegExp->searchDeparturesPre().regExp().isEmpty() ) {
 		return false;
 	}
 
 	m_preData = new QHash< QString, QString >();
 
-	const QRegExp rx = m_info.searchDeparturesPre().regExp();
+	const QRegExp rx = infoRegExp->searchDeparturesPre().regExp();
 	int pos = 0, count = 0;
 	while (( pos = rx.indexIn( document, pos ) ) != -1 ) {
 		QString sKey, sValue;
@@ -83,6 +89,12 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 		ParseDocumentMode parseDocumentMode )
 {
 	Q_UNUSED( globalInfo );
+	TimetableAccessorInfoRegExp *infoRegExp = dynamic_cast<TimetableAccessorInfoRegExp*>(m_info);
+	if ( !infoRegExp ) {
+		kDebug() << "No regular expressions available";
+		return false;
+	}
+	
 	QString doc = decodeHtml( document );
 
 	// Performance(?): Cut everything before "<body>" from the document
@@ -94,7 +106,7 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 	bool hasPreData = false;
 	TimetableInformation keyInfo = Nothing, valueInfo = Nothing;
 	if (( hasPreData = parseDocumentPre( doc ) ) ) {
-		QList< TimetableInformation > info = m_info.searchDeparturesPre().info();
+		QList< TimetableInformation > info = infoRegExp->searchDeparturesPre().info();
 		Q_ASSERT( info.length() >= 2 );
 		keyInfo = info[0];
 		valueInfo = info[1];
@@ -103,10 +115,10 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 	// Split document at titles if a departure group titles regexp is defined
 	QStringList documentParts;
 	QList< QHash< TimetableInformation, QString > > listDocumentPartInfos;
-	if ( !m_info.searchDepartureGroupTitles().regExp().isEmpty() ) {
-		QRegExp rxTitles = m_info.searchDepartureGroupTitles().regExp();
+	if ( !infoRegExp->searchDepartureGroupTitles().regExp().isEmpty() ) {
+		QRegExp rxTitles = infoRegExp->searchDepartureGroupTitles().regExp();
 		QList< TimetableInformation > infosDepartureGroupTitles =
-				m_info.searchDepartureGroupTitles().info();
+				infoRegExp->searchDepartureGroupTitles().info();
 
 		int lastPosTitles = -1, posTitles = 0;
 		while (( posTitles = rxTitles.indexIn( doc, posTitles ) ) != -1 ) {
@@ -140,9 +152,9 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 	                              ? "searching for journeys" : "searching for departures / arrivals" );
 
 	const QRegExp rx = parseDocumentMode == ParseForDeparturesArrivals
-	                   ? m_info.searchDepartures().regExp() : m_info.searchJourneys().regExp();
+			? infoRegExp->searchDepartures().regExp() : infoRegExp->searchJourneys().regExp();
 	QList<TimetableInformation> info = parseDocumentMode == ParseForDeparturesArrivals
-	                                   ? m_info.searchDepartures().info() : m_info.searchJourneys().info();
+			? infoRegExp->searchDepartures().info() : infoRegExp->searchJourneys().info();
 
 	static QList<TimetableInformation> infosToGet = QList<TimetableInformation>()
 	        << DepartureDate << DepartureHour << DepartureMinute << TypeOfVehicle
@@ -287,10 +299,10 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 			}
 
 			if (( !data.contains( TypeOfVehicle ) || data[TypeOfVehicle] == Unknown ) &&
-			        m_info.defaultVehicleType() != Unknown ) {
+			        m_info->defaultVehicleType() != Unknown ) {
 				qDebug() << "TimetableAccessorHtml::parseDocument"
-						 << "Setting vehicle type to default" << m_info.defaultVehicleType();
-				data[TypeOfVehicle] = m_info.defaultVehicleType();
+						 << "Setting vehicle type to default" << m_info->defaultVehicleType();
+				data[TypeOfVehicle] = m_info->defaultVehicleType();
 			}
 
 			// TODO Status, AMorPM
@@ -382,7 +394,7 @@ void TimetableAccessorHtml::postProcessMatchedData( TimetableInformation info,
 	case JourneyNewsLink:
 		s = TimetableAccessorHtml::decodeHtmlEntities( matchedData ).trimmed();
 		if ( s.startsWith( '/' ) ) {
-			s.prepend( m_info.url() );
+			s.prepend( m_info->url() );
 		}
 		data->insert( info, s );
 		break;
@@ -484,24 +496,31 @@ bool TimetableAccessorHtml::parseJourneyNews( const QString &sJourneyNews,
 		QString *sDelay, QString *sDelayReason, QString *sJourneyNewsOther ) const
 {
 	*sDelay = "-1";
-	*sDelayReason = "";
-	*sJourneyNewsOther = "";
-	foreach( const TimetableRegExpSearch &search, m_info.searchJourneyNews() ) {
+	sDelayReason->clear();
+	sJourneyNewsOther->clear();
+	
+	TimetableAccessorInfoRegExp *infoRegExp = dynamic_cast<TimetableAccessorInfoRegExp*>(m_info);
+	if ( !infoRegExp ) {
+		kDebug() << "No regular expressions available";
+		return false;
+	}
+	
+	foreach( const TimetableRegExpSearch &search, infoRegExp->searchJourneyNews() ) {
 		const QRegExp rx = search.regExp();
 		if ( rx.indexIn( sJourneyNews ) != -1 && rx.isValid() ) {
 			if ( search.info().contains( NoMatchOnSchedule ) ) {
 				*sDelay = '0';
 			} else {
-				if ( search.info().contains( Delay ) ) {
-					*sDelay = rx.cap( search.info().indexOf( Delay ) + 1 ).trimmed();
+				if ( search.info().contains(Delay) ) {
+					*sDelay = rx.cap( search.info().indexOf(Delay) + 1 ).trimmed();
 				}
-				if ( search.info().contains( DelayReason ) ) {
-					*sDelayReason = rx.cap( search.info().indexOf( DelayReason ) + 1 ).trimmed();
+				if ( search.info().contains(DelayReason ) ) {
+					*sDelayReason = rx.cap( search.info().indexOf(DelayReason) + 1 ).trimmed();
 					*sDelayReason = TimetableAccessorHtml::decodeHtmlEntities( *sDelayReason );
 				}
 			}
-			if ( search.info().contains( JourneyNewsOther ) ) {
-				*sJourneyNewsOther = rx.cap( search.info().indexOf( JourneyNewsOther ) + 1 ).trimmed();
+			if ( search.info().contains(JourneyNewsOther ) ) {
+				*sJourneyNewsOther = rx.cap( search.info().indexOf(JourneyNewsOther) + 1 ).trimmed();
 				*sJourneyNewsOther = TimetableAccessorHtml::decodeHtmlEntities( *sJourneyNewsOther );
 			}
 		} // if found and is valid
@@ -521,7 +540,7 @@ QString TimetableAccessorHtml::decodeHtmlEntities( const QString &html )
 	QRegExp rx( "(?:&#)([0-9]+)(?:;)" );
 	rx.setMinimal( true );
 	int pos = 0;
-	while (( pos = rx.indexIn( ret, pos ) ) != -1 ) {
+	while ( (pos = rx.indexIn(ret, pos)) != -1 ) {
 		int charCode = rx.cap( 1 ).toInt();
 		QChar ch( charCode );
 		ret = ret.replace( QString( "&#%1;" ).arg( charCode ), ch );
@@ -547,21 +566,26 @@ bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray &docume
 		QHash<QString, int> *stopToStopWeight )
 {
 	Q_UNUSED( stopToStopWeight );
-
-	if ( m_info.regExpSearchPossibleStopsRanges().isEmpty() ) {
+	TimetableAccessorInfoRegExp *infoRegExp = dynamic_cast<TimetableAccessorInfoRegExp*>(m_info);
+	if ( !infoRegExp ) {
+		kDebug() << "No regular expressions available";
+		return false;
+	}
+	
+	if ( infoRegExp->regExpSearchPossibleStopsRanges().isEmpty() ) {
 		kDebug() << "Possible stop lists not supported by accessor or service provider";
 		return false;
 	}
 
-	QString doc = decodeHtml( document, m_info.fallbackCharset() );
+	QString doc = decodeHtml( document, m_info->fallbackCharset() );
 	kDebug() << "Parsing for a list of possible stop names...";
 
 	bool matched = false;
 	int pos = 0;
-	for ( int i = 0; i < m_info.regExpSearchPossibleStopsRanges().count(); ++i ) {
+	for ( int i = 0; i < infoRegExp->regExpSearchPossibleStopsRanges().count(); ++i ) {
 		QString possibleStopRange;
-		if ( m_info.regExpSearchPossibleStopsRanges()[i].isEmpty() ) {
-			QRegExp rxRange( m_info.regExpSearchPossibleStopsRanges()[i], Qt::CaseInsensitive );
+		if ( infoRegExp->regExpSearchPossibleStopsRanges()[i].isEmpty() ) {
+			QRegExp rxRange( infoRegExp->regExpSearchPossibleStopsRanges()[i], Qt::CaseInsensitive );
 			rxRange.setMinimal( true );
 			if ( rxRange.indexIn( doc ) == -1 || !rxRange.isValid() ) {
 				continue;
@@ -580,14 +604,14 @@ bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray &docume
 		matched = true;
 // 	kDebug() << "Possible stop range = " << possibleStopRange;
 
-		const QRegExp rx = m_info.searchPossibleStops()[i].regExp();
+		const QRegExp rx = infoRegExp->searchPossibleStops()[i].regExp();
 		while (( pos = rx.indexIn( possibleStopRange, pos ) ) != -1 ) {
 			if ( !rx.isValid() ) {
 				kDebug() << "Parse error";
 				return false; // parse error
 			}
 
-			QList< TimetableInformation > info = m_info.searchPossibleStops()[i].info();
+			QList< TimetableInformation > info = infoRegExp->searchPossibleStops()[i].info();
 			if ( info.isEmpty() ) {
 				return false;
 			} else {

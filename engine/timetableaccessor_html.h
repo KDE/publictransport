@@ -36,62 +36,78 @@ class TimetableAccessorHtml : public TimetableAccessor
 	friend class TimetableAccessorXml;
 
 public:
-	/** Creates a new TimetableAccessorHtml object with the given information.
-	* @param info Information about how to download and parse the documents of a
-	* service provider. TODO
-	* @note Can be used if you have a custom TimetableAccessorInfo object.
-	* TimetableAccessorXml uses this to create an HTML accessor for parsing of stop
-	* lists. */
-	TimetableAccessorHtml( const TimetableAccessorInfo &info = TimetableAccessorInfo() );
+	/**  
+	 * @brief Creates a new TimetableAccessorHtml object with the given information.
+	 * 
+	 * @param info Information about how to download and parse the documents of a service provider.
+	 * @note Can be used if you have a custom TimetableAccessorInfo object.
+	 *   TimetableAccessorXml uses this to create an HTML accessor for parsing of stop lists. */
+	TimetableAccessorHtml( TimetableAccessorInfoRegExp *info = new TimetableAccessorInfoRegExp() );
 
-	/** Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
+	/** @brief Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
 	static QString decodeHtmlEntities( const QString &html );
 
-	/** Decodes the given HTML document. First it tries QTextCodec::codecForHtml().
-	* If that doesn't work, it parses the document for the charset in a meta-tag. */
+	/** 
+	 * @brief Decodes the given HTML document. 
+	 * 
+	 * First it tries QTextCodec::codecForHtml().
+	 * If that doesn't work, it parses the document for the charset in a meta-tag. */
 	static QString decodeHtml( const QByteArray &document,
 							   const QByteArray &fallbackCharset = QByteArray() );
 
 protected:
-	/** Parses the contents of a received document for a list of departures/arrivals
-	* or journeys (depending on @p parseDocumentMode) and puts the results into @p journeys.
-	* @param journeys A pointer to a list of departure/arrival or journey information.
-	* The results of parsing the document is stored in @p journeys.
-	* @param parseDocumentMode The mode of parsing, e.g. parse for departures/arrivals or journeys.
-	* @return true, if there were no errors and the data in @p journeys is valid.
-	* @return false, if there were an error parsing the document. */
+	/** 
+	 * @brief Parses the contents of a received document for a list of departures/arrivals
+	 *   or journeys (depending on @p parseDocumentMode) and puts the results into @p journeys.
+	 * 
+	 * @param journeys A pointer to a list of departure/arrival or journey information.
+	 *   The results of parsing the document is stored in @p journeys.
+	 * @param parseDocumentMode The mode of parsing, e.g. parse for departures/arrivals or journeys.
+	 * @return true, if there were no errors and the data in @p journeys is valid.
+	 * @return false, if there were an error parsing the document. */
 	virtual bool parseDocument( const QByteArray &document,
 			QList<PublicTransportInfo*> *journeys, GlobalTimetableInfo *globalInfo,
 			ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
-	/** Exceuted before parseDocument() if there is a regexp to use before starting
-	* parseDocument. It collects data matched by the regexp to be used in parseDocument.
-	* @param document A string containing the whole document from the service provider.
-	* @return true, if there were no errors.
-	* @return false, if there were an error parsing the document. */
+	/** 
+	 * @brief Exceuted before parseDocument() if there is a regexp to use before starting
+	 *   parseDocument. It collects data matched by the regexp to be used in parseDocument.
+	 * 
+	 * @param document A string containing the whole document from the service provider.
+	 * @return true, if there were no errors.
+	 * @return false, if there were an error parsing the document. */
 	virtual bool parseDocumentPre( const QString &document );
 
-	/** Parses the contents of the given document for a list of possible stop names
-	* and puts the results into @p stops.
-	* @param document A document to be parsed.
-	* @param stops A pointer to a string list, where the stop names are stored.
-	* @param stopToStopId A pointer to a map, where the keys are stop names
-	* and the values are stop IDs.
-	* @return true, if there were no errors.
-	* @return false, if there were an error parsing the document.
-	* @note Can be used if you have an html document containing a stop list.
-	* TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
-	* document for stops.
-	* @see parseDocumentPossibleStops(QHash<QString,QString>*) */
+	/** 
+	 * @brief Parses the contents of the given document for a list of possible stop names
+	 *   and puts the results into @p stops.
+	 * 
+	 * @param document A document to be parsed.
+	 * @param stops A pointer to a string list, where the stop names are stored.
+	 * @param stopToStopId A pointer to a map, where the keys are stop names 
+	 *   and the values are stop IDs.
+	 * @return true, if there were no errors.
+	 * @return false, if there were an error parsing the document.
+	 * @note Can be used if you have an html document containing a stop list.
+	 *   TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
+	 *   document for stops.
+	 * @see parseDocumentPossibleStops(QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( const QByteArray &document,
 			QStringList *stops, QHash<QString,QString> *stopToStopId,
 			QHash<QString,int> *stopToStopWeight );
 
-	/** Parses a journey news string. */
+	/** 
+	 * @brief Parses a journey news string using regular expressions from the accessor xml file. 
+	 * 
+	 * @param sJourneyNews A sub-string of the HTML document, that contains journey news.
+	 * @param sDelay[out] The parsed delay gets stored here.
+	 * @param sDelayReason[out] The parsed reason string for a delay gets stored here.
+	 * @param sJourneyNewsOther[out] Other found information gets stored here. 
+	 * @return True, if the journey news could be parsed. False, Otherwise. */
 	virtual bool parseJourneyNews( const QString &sJourneyNews, QString *sDelay,
 			QString *sDelayReason, QString *sJourneyNewsOther ) const;
 
-    private:
+private:
 	void postProcessMatchedData( TimetableInformation info,
 			const QString &matchedData, QHash< TimetableInformation, QVariant > *data );
 

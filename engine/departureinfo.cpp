@@ -337,11 +337,12 @@ DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehi
                               const QTime& departureTime, bool nightLine,
                               bool expressLine, const QString& platform,
                               int delay, const QString& delayReason,
-                              const QString& journeyNews, const QString &operatorName ) : PublicTransportInfo()
+                              const QString& journeyNews, const QString &operatorName )
+		: PublicTransportInfo()
 {
 	// Guess date
-	if ( departureTime < requestTime.addSecs( -5 * 60 ) ) {
-		m_data.insert( DepartureDate, QDate::currentDate().addDays( 1 ) );
+	if ( departureTime < requestTime.addSecs(-5 * 60) ) {
+		m_data.insert( DepartureDate, QDate::currentDate().addDays(1) );
 	} else {
 		m_data.insert( DepartureDate, QDate::currentDate() );
 	}
@@ -374,7 +375,7 @@ void DepartureInfo::init( const QString& line, const VehicleType& typeOfVehicle,
 {
 	m_isValid = true;
 	m_data.insert( TransportLine, line );
-	m_data.insert( TypeOfVehicle, static_cast<int>( typeOfVehicle ) );
+	m_data.insert( TypeOfVehicle, static_cast<int>(typeOfVehicle) );
 	m_data.insert( Target, target );
 
 	m_lineServices = nightLine ? NightLine : NoLineService;

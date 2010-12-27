@@ -74,7 +74,7 @@ QString Global::vehicleTypeToString( const VehicleType& vehicleType, bool plural
 
 	case Unknown:
 	default:
-		return i18nc( "Unknown type of vehicle", "Unknown" );
+		return i18nc( "@info/plain Unknown type of vehicle", "Unknown" );
 	}
 }
 
@@ -83,47 +83,34 @@ QString Global::vehicleTypeToIcon( const VehicleType& vehicleType )
 	switch ( vehicleType ) {
 	case Tram:
 		return "vehicle_type_tram";
-		break;
 	case Bus:
 		return "vehicle_type_bus";
-		break;
 	case Subway:
 		return "vehicle_type_subway";
-		break;
 	case Metro:
 		return "vehicle_type_metro";
-		break;
 	case TrolleyBus:
 		return "vehicle_type_trolleybus";
-		break;
 	case Feet:
 		return "vehicle_type_feet";
-		break;
 
 	case TrainInterurban:
 		return "vehicle_type_train_interurban";
-		break;
 	case TrainRegional: // Icon not done yet, using this for now
 	case TrainRegionalExpress:
 		return "vehicle_type_train_regionalexpress";
-		break;
 	case TrainInterregio:
 		return "vehicle_type_train_interregio";
-		break;
 	case TrainIntercityEurocity:
 		return "vehicle_type_train_intercityeurocity";
-		break;
 	case TrainIntercityExpress:
 		return "vehicle_type_train_intercityexpress";
-		break;
 
 	case Ferry:
 	case Ship:
 		return "vehicle_type_ferry";
-		break;
 	case Plane:
 		return "vehicle_type_plane";
-		break;
 
 	case Unknown:
 	default:

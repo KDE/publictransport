@@ -36,7 +36,8 @@ TimetableAccessor* AccessorInfoXmlReader::read( QIODevice* device,
 	Q_ASSERT( device );
 
 	bool closeAfterRead; // Only close after reading if it wasn't open before
-	if (( closeAfterRead = !device->isOpen() ) && !device->open( QIODevice::ReadOnly ) ) {
+	if ( (closeAfterRead = !device->isOpen()) && !device->open(QIODevice::ReadOnly) ) {
+		raiseError( "Couldn't read the file \"" + fileName + "\"." );
 		return NULL;
 	}
 	setDevice( device );
@@ -117,8 +118,9 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 					 << "is invalid. Currently there are two values allowed: HTML and XML.";
 			return NULL;
 		}
-	} else
+	} else {
 		type = HTML;
+	}
 
 	while ( !atEnd() ) {
 		readNext();
@@ -210,69 +212,74 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 		shortUrl = url;
 	}
 
-	TimetableAccessorInfo accessorInfo( nameLocal, shortUrl, authorName, authorEmail,
-										version, serviceProvider, type );
-	accessorInfo.setFileName( fileName );
-	accessorInfo.setCountry( country );
-	accessorInfo.setCities( cities );
-	accessorInfo.setCredit( credit );
-	accessorInfo.setCityNameToValueReplacementHash( cityNameReplacements );
-	accessorInfo.setUseSeperateCityValue( useSeperateCityValue );
-	accessorInfo.setOnlyUseCitiesInList( onlyUseCitiesInList );
-	accessorInfo.setDescription( descriptionLocal );
-	accessorInfo.setDefaultVehicleType( TimetableAccessor::vehicleTypeFromString( defaultVehicleType ) );
-	accessorInfo.setUrl( url );
-	accessorInfo.setShortUrl( shortUrl );
-	accessorInfo.setMinFetchWait( minFetchWait );
-	accessorInfo.setDepartureRawUrl( rawUrlDepartures );
-	accessorInfo.setStopSuggestionsRawUrl( rawUrlStopSuggestions );
-	accessorInfo.setFallbackCharset( fallbackCharset.toAscii() );
-	accessorInfo.setCharsetForUrlEncoding( charsetForUrlEncoding.toAscii() );
-	accessorInfo.setJourneyRawUrl( rawUrlJourneys );
+	TimetableAccessorInfo *accessorInfo = new TimetableAccessorInfo( 
+			nameLocal, shortUrl, authorName, authorEmail, version, serviceProvider, type );
+	accessorInfo->setFileName( fileName );
+	accessorInfo->setCountry( country );
+	accessorInfo->setCities( cities );
+	accessorInfo->setCredit( credit );
+	accessorInfo->setCityNameToValueReplacementHash( cityNameReplacements );
+	accessorInfo->setUseSeparateCityValue( useSeperateCityValue );
+	accessorInfo->setOnlyUseCitiesInList( onlyUseCitiesInList );
+	accessorInfo->setDescription( descriptionLocal );
+	accessorInfo->setDefaultVehicleType( TimetableAccessor::vehicleTypeFromString( defaultVehicleType ) );
+	accessorInfo->setUrl( url );
+	accessorInfo->setShortUrl( shortUrl );
+	accessorInfo->setMinFetchWait( minFetchWait );
+	accessorInfo->setDepartureRawUrl( rawUrlDepartures );
+	accessorInfo->setStopSuggestionsRawUrl( rawUrlStopSuggestions );
+	accessorInfo->setFallbackCharset( fallbackCharset.toAscii() );
+	accessorInfo->setCharsetForUrlEncoding( charsetForUrlEncoding.toAscii() );
+	accessorInfo->setJourneyRawUrl( rawUrlJourneys );
 
-	// Set regular expressions, if no script file was specified
 	if ( scriptFile.isEmpty() ) {
-		accessorInfo.setRegExpDepartures( regExpDepartures, infosDepartures,
-		                                  regExpDeparturesPre, infoPreKey, infoPreValue );
+		// Set regular expressions, if no script file was specified
+		TimetableAccessorInfoRegExp *accessorInfoRegExp = new TimetableAccessorInfoRegExp( *accessorInfo );
+		delete accessorInfo;
+		accessorInfo = accessorInfoRegExp;
+		
+		accessorInfoRegExp->setRegExpDepartures( regExpDepartures, infosDepartures,
+												regExpDeparturesPre, infoPreKey, infoPreValue );
 		if ( !regExpDepartureGroupTitles.isEmpty() ) {
-			accessorInfo.setRegExpDepartureGroupTitles( regExpDepartureGroupTitles, infosDepartureGroupTitles );
+			accessorInfoRegExp->setRegExpDepartureGroupTitles( regExpDepartureGroupTitles, 
+															infosDepartureGroupTitles );
 		}
 		if ( !regExpJourneys.isEmpty() ) {
-			accessorInfo.setRegExpJourneys( regExpJourneys, infosJourneys );
+			accessorInfoRegExp->setRegExpJourneys( regExpJourneys, infosJourneys );
 		}
 		for ( int i = 0; i < regExpListJourneyNews.length(); ++i ) {
 			QString regExpJourneyNews = regExpListJourneyNews[i];
 			QList<TimetableInformation> infosJourneyNews = infosListJourneyNews[i];
-			accessorInfo.addRegExpJouneyNews( regExpJourneyNews, infosJourneyNews );
+			accessorInfoRegExp->addRegExpJouneyNews( regExpJourneyNews, infosJourneyNews );
 		}
 		for ( int i = 0; i < regExpListPossibleStopsRange.length(); ++i ) {
 			QString regExpPossibleStopsRange = regExpListPossibleStopsRange[i];
 			QString regExpPossibleStops = regExpListPossibleStops[i];
 			QList<TimetableInformation> infosPossibleStops = infosListPossibleStops[i];
-			accessorInfo.addRegExpPossibleStops( regExpPossibleStopsRange,
-												 regExpPossibleStops, infosPossibleStops );
+			accessorInfoRegExp->addRegExpPossibleStops( regExpPossibleStopsRange,
+												regExpPossibleStops, infosPossibleStops );
 		}
-	} else {
-		accessorInfo.setScriptFile( scriptFile );
-	}
-
-	if ( type == HTML ) {
-		if ( scriptFile.isEmpty() ) {
-			return new TimetableAccessorHtml( accessorInfo );
+		
+		if ( type == HTML ) {
+			return new TimetableAccessorHtml( accessorInfoRegExp );
+		} else if ( type == XML ) {
+			return new TimetableAccessorXml( accessorInfoRegExp );
+		}
+	} else if ( type == HTML ) {
+		accessorInfo->setScriptFile( scriptFile );
+		TimetableAccessorHtmlScript *jsAccessor = new TimetableAccessorHtmlScript( accessorInfo );
+		if ( !jsAccessor->hasScriptErrors() ) {
+			return jsAccessor;
 		} else {
-			TimetableAccessorHtmlScript *jsAccessor = new TimetableAccessorHtmlScript( accessorInfo );
-			if ( !jsAccessor->hasScriptErrors() ) {
-				return jsAccessor;
-			} else {
-				return NULL; // Couldn't correctly load the script (bad script)
-			}
+			return NULL; // Couldn't correctly load the script (bad script)
 		}
-	} else if ( type == XML ) {
-		return new TimetableAccessorXml( accessorInfo );
 	} else {
-		kDebug() << "Accessor type not supported" << type;
+		kDebug() << "XML accessors currently don't support scripts";
 		return NULL;
 	}
+	
+	kDebug() << "Accessor type not supported" << type;
+	return NULL;
 }
 
 QString AccessorInfoXmlReader::readLocalizedTextElement( QString *lang )

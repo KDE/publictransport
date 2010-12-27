@@ -31,6 +31,15 @@
 #include <KLocale>
 #include <KDebug>
 
+TimetableAccessor::TimetableAccessor() : m_info(0)
+{
+}
+
+TimetableAccessor::~TimetableAccessor()
+{
+	delete m_info;
+}
+
 TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &serviceProvider )
 {
 	QString filePath;
@@ -249,42 +258,45 @@ QStringList TimetableAccessor::features() const
 {
 	QStringList list;
 
-	if ( m_info.departureRawUrl().contains( "{dataType}" ) ) {
+	if ( m_info->departureRawUrl().contains( "{dataType}" ) ) {
 		list << "Arrivals";
 	}
 
-	if ( m_info.scriptFileName().isEmpty() ) {
-		if ( m_info.supportsStopAutocompletion() ) {
-			list << "Autocompletion";
-		}
-		if ( !m_info.searchJourneys().regExp().isEmpty() ) {
-			list << "JourneySearch";
-		}
-		if ( m_info.supportsTimetableAccessorInfo( Delay ) ) {
-			list << "Delay";
-		}
-		if ( m_info.supportsTimetableAccessorInfo( DelayReason ) ) {
-			list << "DelayReason";
-		}
-		if ( m_info.supportsTimetableAccessorInfo( Platform ) ) {
-			list << "Platform";
-		}
-		if ( m_info.supportsTimetableAccessorInfo( JourneyNews )
-		        || m_info.supportsTimetableAccessorInfo( JourneyNewsOther )
-		        || m_info.supportsTimetableAccessorInfo( JourneyNewsLink ) ) {
-			list << "JourneyNews";
-		}
-		if ( m_info.supportsTimetableAccessorInfo( TypeOfVehicle ) ) {
-			list << "TypeOfVehicle";
-		}
-		if ( m_info.supportsTimetableAccessorInfo( Status ) ) {
-			list << "Status";
-		}
-		if ( m_info.supportsTimetableAccessorInfo( Operator ) ) {
-			list << "Operator";
-		}
-		if ( m_info.supportsTimetableAccessorInfo( StopID ) ) {
-			list << "StopID";
+	if ( m_info->scriptFileName().isEmpty() ) {
+		TimetableAccessorInfoRegExp *infoRegExp = dynamic_cast<TimetableAccessorInfoRegExp*>( m_info );
+		if ( infoRegExp ) {
+			if ( m_info->supportsStopAutocompletion() ) {
+				list << "Autocompletion";
+			}
+			if ( !infoRegExp->searchJourneys().regExp().isEmpty() ) {
+				list << "JourneySearch";
+			}
+			if ( m_info->supportsTimetableAccessorInfo( Delay ) ) {
+				list << "Delay";
+			}
+			if ( m_info->supportsTimetableAccessorInfo( DelayReason ) ) {
+				list << "DelayReason";
+			}
+			if ( m_info->supportsTimetableAccessorInfo( Platform ) ) {
+				list << "Platform";
+			}
+			if ( m_info->supportsTimetableAccessorInfo( JourneyNews )
+					|| m_info->supportsTimetableAccessorInfo( JourneyNewsOther )
+					|| m_info->supportsTimetableAccessorInfo( JourneyNewsLink ) ) {
+				list << "JourneyNews";
+			}
+			if ( m_info->supportsTimetableAccessorInfo( TypeOfVehicle ) ) {
+				list << "TypeOfVehicle";
+			}
+			if ( m_info->supportsTimetableAccessorInfo( Status ) ) {
+				list << "Status";
+			}
+			if ( m_info->supportsTimetableAccessorInfo( Operator ) ) {
+				list << "Operator";
+			}
+			if ( m_info->supportsTimetableAccessorInfo( StopID ) ) {
+				list << "StopID";
+			}
 		}
 	} else {
 		list << scriptFeatures();
@@ -622,7 +634,7 @@ KUrl TimetableAccessor::getJourneyUrl( const QString& city,
 {
 	Q_UNUSED( useDifferentUrl );
 
-	QString sRawUrl = m_info.journeyRawUrl();
+	QString sRawUrl = m_info->journeyRawUrl();
 	QString sTime = dateTime.time().toString( "hh:mm" );
 	QString sDataType;
 	QString sCity = city.toLower(), sStartStopName = startStopName.toLower(),
@@ -726,15 +738,15 @@ bool TimetableAccessor::parseDocumentPossibleStops( const QByteArray &document,
 
 QString TimetableAccessor::departuresRawUrl() const
 {
-	return m_info.departureRawUrl();
+	return m_info->departureRawUrl();
 }
 
 QString TimetableAccessor::stopSuggestionsRawUrl() const
 {
-	return m_info.stopSuggestionsRawUrl();
+	return m_info->stopSuggestionsRawUrl();
 }
 
 QByteArray TimetableAccessor::charsetForUrlEncoding() const
 {
-	return m_info.charsetForUrlEncoding();
+	return m_info->charsetForUrlEncoding();
 }

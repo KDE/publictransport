@@ -52,56 +52,6 @@ TimetableAccessorInfo::~TimetableAccessorInfo()
 {
 }
 
-void TimetableAccessorInfo::setRegExpDepartures( const QString &regExpSearch,
-        const QList< TimetableInformation > &regExpInfos,
-        const QString &regExpSearchPre, TimetableInformation regExpInfoKeyPre,
-        TimetableInformation regExpInfoValuePre )
-{
-	m_regExps.searchDepartures = TimetableRegExpSearch( regExpSearch, regExpInfos );
-	if ( !regExpSearchPre.isEmpty() ) {
-		m_regExps.searchDeparturesPre = TimetableRegExpSearch( regExpSearchPre,
-				QList< TimetableInformation >() << regExpInfoKeyPre << regExpInfoValuePre );
-	}
-}
-
-void TimetableAccessorInfo::addRegExpPossibleStops( const QString &regExpRange,
-        const QString &regExpSearch, const QList< TimetableInformation > &regExpInfos )
-{
-	m_regExps.regExpSearchPossibleStopsRanges << regExpRange;
-	m_regExps.searchPossibleStops << TimetableRegExpSearch( regExpSearch, regExpInfos );
-}
-
-bool TimetableAccessorInfo::supportsTimetableAccessorInfo( const TimetableInformation& info ) const
-{
-	if ( m_regExps.searchDepartures.info().contains(info) ||
-			(!m_regExps.searchDeparturesPre.regExp().isEmpty()
-			&& m_regExps.searchDepartures.info().contains(m_regExps.searchDeparturesPre.info().at(0))
-			&& m_regExps.searchDeparturesPre.info().at(1) == info) ) {
-		return true;
-	}
-
-	bool supportedByPossibleStopRegExps = false;
-	foreach( const TimetableRegExpSearch &searchPossibleStops, m_regExps.searchPossibleStops ) {
-		if ( searchPossibleStops.info().contains( info ) ) {
-			supportedByPossibleStopRegExps = true;
-			break;
-		}
-	}
-
-	return supportedByPossibleStopRegExps || supportsByJourneyNewsParsing( info );
-}
-
-bool TimetableAccessorInfo::supportsByJourneyNewsParsing( const TimetableInformation &info ) const
-{
-	foreach( const TimetableRegExpSearch &search, m_regExps.searchJourneyNews ) {
-		if ( search.info().contains( info ) ) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
 void TimetableAccessorInfo::setAuthor( const QString& author, const QString &email )
 {
 	m_author = author;
@@ -115,4 +65,84 @@ QString TimetableAccessorInfo::mapCityNameToValue( const QString &city ) const
 	} else {
 		return city;
 	}
+}
+
+TimetableAccessorInfoRegExp::TimetableAccessorInfoRegExp( const QString& name, 
+		const QString& shortUrl, const QString& author, const QString& email, 
+		const QString& version, const QString& serviceProviderID, const AccessorType& accessorType )
+		: TimetableAccessorInfo(name, shortUrl, author, email, version, serviceProviderID, accessorType)
+{
+}
+
+TimetableAccessorInfoRegExp::TimetableAccessorInfoRegExp( const TimetableAccessorInfo& info )
+		: TimetableAccessorInfo( info.name(), info.shortUrl(), info.author(), info.email(),
+								 info.version(), info.serviceProvider(), info.accessorType() )
+{
+	setFileName( info.fileName() );
+	setCountry( info.country() );
+	setCities( info.cities() );
+	setCredit( info.credit() );
+	setCityNameToValueReplacementHash( info.cityNameToValueReplacementHash() );
+	setUseSeparateCityValue( info.useSeparateCityValue() );
+	setOnlyUseCitiesInList( info.onlyUseCitiesInList() );
+	setDescription( info.description() );
+	setDefaultVehicleType( info.defaultVehicleType() );
+	setUrl( info.url() );
+	setShortUrl( info.shortUrl() );
+	setMinFetchWait( info.minFetchWait() );
+	setDepartureRawUrl( info.departureRawUrl() );
+	setStopSuggestionsRawUrl( info.stopSuggestionsRawUrl() );
+	setFallbackCharset( info.fallbackCharset() );
+	setCharsetForUrlEncoding( info.charsetForUrlEncoding() );
+	setJourneyRawUrl( info.journeyRawUrl() );
+}
+
+void TimetableAccessorInfoRegExp::setRegExpDepartures( const QString &regExpSearch,
+        const QList< TimetableInformation > &regExpInfos,
+        const QString &regExpSearchPre, TimetableInformation regExpInfoKeyPre,
+        TimetableInformation regExpInfoValuePre )
+{
+	m_searchDepartures = TimetableRegExpSearch( regExpSearch, regExpInfos );
+	if ( !regExpSearchPre.isEmpty() ) {
+		m_searchDeparturesPre = TimetableRegExpSearch( regExpSearchPre,
+				QList< TimetableInformation >() << regExpInfoKeyPre << regExpInfoValuePre );
+	}
+}
+
+void TimetableAccessorInfoRegExp::addRegExpPossibleStops( const QString &regExpRange,
+        const QString &regExpSearch, const QList< TimetableInformation > &regExpInfos )
+{
+	m_regExpSearchPossibleStopsRanges << regExpRange;
+	m_searchPossibleStops << TimetableRegExpSearch( regExpSearch, regExpInfos );
+}
+
+bool TimetableAccessorInfoRegExp::supportsTimetableAccessorInfo( const TimetableInformation& info ) const
+{
+	if ( m_searchDepartures.info().contains(info) ||
+			(!m_searchDeparturesPre.regExp().isEmpty()
+			&& m_searchDepartures.info().contains(m_searchDeparturesPre.info().at(0))
+			&& m_searchDeparturesPre.info().at(1) == info) ) {
+		return true;
+	}
+
+	bool supportedByPossibleStopRegExps = false;
+	foreach( const TimetableRegExpSearch &searchPossibleStops, m_searchPossibleStops ) {
+		if ( searchPossibleStops.info().contains( info ) ) {
+			supportedByPossibleStopRegExps = true;
+			break;
+		}
+	}
+
+	return supportedByPossibleStopRegExps || supportsByJourneyNewsParsing( info );
+}
+
+bool TimetableAccessorInfoRegExp::supportsByJourneyNewsParsing( const TimetableInformation &info ) const
+{
+	foreach( const TimetableRegExpSearch &search, m_searchJourneyNews ) {
+		if ( search.info().contains( info ) ) {
+			return true;
+		}
+	}
+
+	return false;
 }

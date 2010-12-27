@@ -26,8 +26,8 @@
 #include <KDebug>
 
 
-TimetableAccessorXml::TimetableAccessorXml( const TimetableAccessorInfo &info )
-		: m_accessorHTML( new TimetableAccessorHtml( info ) )
+TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfoRegExp *info )
+		: m_accessorHTML( new TimetableAccessorHtml(info) )
 {
 	m_info = info;
 }
@@ -141,10 +141,10 @@ bool TimetableAccessorXml::parseDocumentPossibleStops( const QByteArray &documen
 
 QString TimetableAccessorXml::departuresRawUrl() const
 {
-	return m_info.departureRawUrl();
+	return m_info->departureRawUrl();
 }
 
 QString TimetableAccessorXml::stopSuggestionsRawUrl() const   // TODO: needed?
 {
-	return m_info.stopSuggestionsRawUrl();
+	return m_info->stopSuggestionsRawUrl();
 }

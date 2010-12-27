@@ -31,7 +31,7 @@
 #include <kconfiggroup.h>
 #include <KStandardDirs>
 
-TimetableAccessorHtmlScript::TimetableAccessorHtmlScript( const TimetableAccessorInfo &info )
+TimetableAccessorHtmlScript::TimetableAccessorHtmlScript( TimetableAccessorInfo *info )
 		: TimetableAccessor(), m_script(0), m_resultObject(0)
 {
 	m_info = info;
@@ -49,7 +49,7 @@ bool TimetableAccessorHtmlScript::lazyLoadScript()
 		return true;
 	}
 
-	kDebug() << "Load script for accessor" << m_info.serviceProvider();
+	kDebug() << "Load script for accessor" << m_info->serviceProvider();
 
 	// Create the Kross::Action instance
 	m_script = new Kross::Action( this, "TimetableParser" );
@@ -60,7 +60,7 @@ bool TimetableAccessorHtmlScript::lazyLoadScript()
 	m_script->addQObject( timetableData, "timetableData" );
 	m_script->addQObject( m_resultObject, "result"/*, Kross::ChildrenInterface::AutoConnectSignals*/ );
 
-	bool ok = m_script->setFile( m_info.scriptFileName() );
+	bool ok = m_script->setFile( m_info->scriptFileName() );
 	if ( !ok ) {
 		m_scriptState = ScriptHasErrors;
 	} else {
@@ -79,19 +79,19 @@ QStringList TimetableAccessorHtmlScript::readScriptFeatures()
 			.append( QLatin1String("datacache"));
 	bool cacheExists = QFile::exists( fileName );
 	KConfig cfg( fileName, KConfig::SimpleConfig );
-	KConfigGroup grp = cfg.group( m_info.serviceProvider() );
+	KConfigGroup grp = cfg.group( m_info->serviceProvider() );
 
 	if ( cacheExists ) {
 		// Check if the script file was modified since the cache was last updated
 		QDateTime scriptModifiedTime = grp.readEntry("scriptModifiedTime", QDateTime());
-		if ( QFileInfo(m_info.scriptFileName()).lastModified() == scriptModifiedTime ) {
+		if ( QFileInfo(m_info->scriptFileName()).lastModified() == scriptModifiedTime ) {
 			// Return feature list stored in the cache
 			return grp.readEntry("features", QStringList());
 		}
 	}
 
 	// No actual cached information about the service provider
-	kDebug() << "No up-to-date cache information for service provider" << m_info.serviceProvider();
+	kDebug() << "No up-to-date cache information for service provider" << m_info->serviceProvider();
 	QStringList features;
 	bool ok = lazyLoadScript();
 	if ( ok ) {
@@ -145,7 +145,7 @@ QStringList TimetableAccessorHtmlScript::readScriptFeatures()
 	}
 
 	// Store script features in a cache file
-	grp.writeEntry( "scriptModifiedTime", QFileInfo(m_info.scriptFileName()).lastModified() );
+	grp.writeEntry( "scriptModifiedTime", QFileInfo(m_info->scriptFileName()).lastModified() );
 	grp.writeEntry( "hasErrors", !ok );
 	grp.writeEntry( "features", features );
 
@@ -162,7 +162,7 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 		ParseDocumentMode parseDocumentMode )
 {
 	if ( !lazyLoadScript() ) {
-		kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
+		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return false;
 	}
 	QString functionName = parseDocumentMode == ParseForJourneys
@@ -249,7 +249,7 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 QString TimetableAccessorHtmlScript::parseDocumentForLaterJourneysUrl( const QByteArray &document )
 {
 	if ( !lazyLoadScript() ) {
-		kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
+		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return QString();
 	}
 	if ( !m_script->functionNames().contains( "getUrlForLaterJourneyResults" ) ) {
@@ -276,7 +276,7 @@ QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl(
     const QByteArray &document )
 {
 	if ( !lazyLoadScript() ) {
-		kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
+		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return QString();
 	}
 	if ( !m_script->functionNames().contains( "getUrlForDetailedJourneyResults" ) ) {
@@ -303,7 +303,7 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 		QHash<QString, int> *stopToStopWeight )
 {
 	if ( !lazyLoadScript() ) {
-		kDebug() << "Script couldn't be loaded" << m_info.scriptFileName();
+		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return false;
 	}
 	if ( !m_script->functionNames().contains( "parsePossibleStops" ) ) {
@@ -312,7 +312,7 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 		return false;
 	}
 
-	QString doc = TimetableAccessorHtml::decodeHtml( document, m_info.fallbackCharset() );
+	QString doc = TimetableAccessorHtml::decodeHtml( document, m_info->fallbackCharset() );
 
 	// Call script
 	m_resultObject->clear();

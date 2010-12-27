@@ -26,26 +26,41 @@
 
 #include <QDebug>
 
-/** Contains global information about a downloaded timetable that affects
-* all departures/arrivals/journeys. */
+/** @brief Contains global information about a downloaded timetable that affects
+ * all departures/arrivals/journeys. */
 struct GlobalTimetableInfo {
 	GlobalTimetableInfo() {
 		delayInfoAvailable = true;
 	};
 
-	bool delayInfoAvailable; /** Whether or not delay information is available.
-		* True, if there may be delay information available. False, if no
-		* delay information is/will be available for the given stop. */
+	/**
+	 * @brief Whether or not delay information is available.
+	 * 
+	 *   True, if there may be delay information available. False, if no
+	 *   delay information is/will be available for the given stop.
+	 **/
+	bool delayInfoAvailable;
 };
 
+/**
+ * @brief Error types.
+ **/
 enum ErrorType {
-	NoError = 0,
+	NoError = 0, /**< There were no error. */
 
-	ErrorDownloadFailed,
-	ErrorParsingFailed
+	ErrorDownloadFailed, /**< Download error occured. */
+	ErrorParsingFailed /**< Parsing downloaded data failed. */
 };
 
-/** Different types of information. */
+/** 
+ * @brief Different types of timetable information.
+ * 
+ * In scripts the enumerable names can be used as strings, eg.:
+ * @code
+ * timetableData.set("TypeOfVehicle", "Bus"); // Set the type of vehicle
+ * timetableData.set("Delay", 5); // Set a delay of 5 minutes
+ * @endcode
+ */
 enum TimetableInformation {
 	Nothing = 0, /**< No usable information. */
 

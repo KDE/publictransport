@@ -37,50 +37,69 @@ class TimetableAccessorXml : public TimetableAccessor
 	friend class TimetableAccessorHtml;
 
 public:
-	/** Creates a new TimetableAccessorXml object with the given information.
-	* @param info Information about how to download and parse the documents of a
-	* service provider.
-	* @note Can be used if you have a custom TimetableAccessorInfo object. TODO */
-	TimetableAccessorXml( const TimetableAccessorInfo &info = TimetableAccessorInfo() );
+	/** 
+	 * @brief Creates a new TimetableAccessorXml object with the given information.
+	 *
+	 * @param info Information about how to download and parse the documents of a
+	 *   service provider.
+	 * @note Can be used if you have a custom TimetableAccessorInfo object. TODO */
+	TimetableAccessorXml( TimetableAccessorInfoRegExp *info = new TimetableAccessorInfoRegExp() );
 
+	/** 
+	 * @brief Destructor, destroys the used "sub-" @ref TimetableAccessorHtml, which is used
+	 *  to parse stop suggestion documents in HTML format. */
 	~TimetableAccessorXml();
 
-	/** Gets a list of features that this accessor supports. */
+	/** @brief Gets a list of features that this accessor supports. */
 	virtual QStringList features() const;
 
 protected:
-	/** Parses the contents of a document that was requested using requestJourneys()
-	* and puts the results into @p journeys..
-	* @param journeys A pointer to a list of departure/arrival or journey information.
-	* The results of parsing the document is stored in @p journeys.
-	* @param parseDocumentMode The mode of parsing, e.g. parse for
-	* departures/arrivals or journeys.
-	* @return true, if there were no errors and the data in @p journeys is valid.
-	* @return false, if there were an error parsing the document. */
+	/** 
+	 * @brief Parses the contents of a document that was requested using requestJourneys()
+	 *   and puts the results into @p journeys.
+	 *
+	 * @param document A QByteArray containing the document to be parsed.
+	 * @param[out] journeys A pointer to a list of departure/arrival or journey information.
+	 *   The results of parsing the document is stored in @p journeys.
+	 * @param[out] globalInfo A pointer to a GlobalTimetableInfo object containing information
+	 *   for all departures/arrivals or journeys.
+	 * @param parseDocumentMode The mode of parsing, e.g. parse for
+	 *   departures/arrivals or journeys.
+	 *
+	 * @return true, if there were no errors and the data in @p journeys is valid.
+	 * @return false, if there were an error parsing the document. */
 	virtual bool parseDocument( const QByteArray &document, QList<PublicTransportInfo*> *journeys,
 			GlobalTimetableInfo *globalInfo,
 			ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
 
-	/** Parses the contents of a received document for a list of possible stop names
-	* and puts the results into @p stops.
-	* @param stops A pointer to a string list, where the stop names are stored.
-	* @param stopToStopId A pointer to a map, where the keys are stop names
-	* and the values are stop IDs.
-	* @return true, if there were no errors.
-	* @return false, if there were an error parsing the document. */
+	/** 
+	 * @brief Parses the contents of a received document for a list of possible stop names
+	 *   and puts the results into @p stops.
+	 *
+	 * @param document A QByteArray containing the document to be parsed.
+	 * @param[out] stops A pointer to a string list, where the stop names are stored.
+	 * @param[out] stopToStopId A pointer to a map, where the keys are stop names
+	 *   and the values are stop IDs.
+	 * @param[out] stopToStopWeight A pointer to a map, where the keys are stop names
+	 *   and the values are stop weights.
+	 *
+	 * @return true, if there were no errors.
+	 * @return false, if there were an error parsing the document. */
 	virtual bool parseDocumentPossibleStops( const QByteArray &document, QStringList *stops,
 			QHash<QString,QString> *stopToStopId, QHash<QString,int> *stopToStopWeight );
 
-	/** Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
-	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
+	/** 
+	 * @brief Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
+	 *   or only for the stop ("%1") if putCityIntoUrl() returns false. */
 	virtual QString departuresRawUrl() const; // gets the "raw" url
 
-	/** Gets a second "raw" url with placeholders for the city ("%1") and the stop ("%2")
-	* or only for the stop ("%1") if putCityIntoUrl() returns false. */
+	/** 
+	 * @brief Gets a second "raw" url with placeholders for the city ("%1") and the stop ("%2")
+	 *   or only for the stop ("%1") if putCityIntoUrl() returns false. */
 	virtual QString stopSuggestionsRawUrl() const;
 
 private:
-	TimetableAccessorHtml *m_accessorHTML; // The HTML accessor used to parse possible stop lists
+	TimetableAccessorHtml *m_accessorHTML; // The HTML accessor used to parse stop suggestion documents
 };
 
 #endif // TIMETABLEACCESSOR_XML_HEADER

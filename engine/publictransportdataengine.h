@@ -37,17 +37,18 @@ class DepartureInfo;
 class JourneyInfo;
 
 /** @class PublicTransportEngine
- @brief This engine provides departure/arrival times and journeys for public transport.
- @see @ref pageUsage (how to use this data engine in an applet?)
+ * @brief This engine provides departure/arrival times and journeys for public transport.
+ *
+ * @see @ref pageUsage (how to use this data engine in an applet?)
  */
 class PublicTransportEngine : public Plasma::DataEngine {
 	Q_OBJECT
 
 public:
 	/** @brief The available types of sources of this data engine. They all have
-	* an associated keyword with that data source names start.
-	* @see sourceTypeKeyword
-	* @see sourceTypeFromName */
+	 * an associated keyword with that data source names start.
+	 * @see sourceTypeKeyword
+	 * @see sourceTypeFromName */
 	enum SourceType {
 		InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName, if
 				* the source name is invalid. */
@@ -170,6 +171,8 @@ public slots:
 	 * @param stops A string list containing the received stop names.
 	 * @param stopToStopId A QHash containing the received stop names as keys and the stop
 	 *   IDs as values (stop IDs may be empty).
+	 * @param stopToStopWeight A QHash containing the received stop names as keys and the
+	 *   stop weights as values (stop weights may be empty).
 	 * @param serviceProvider The service provider the data came from.
 	 * @param sourceName The name of the data source for which the stops have been
 	 *   downloaded and parsed.
@@ -252,50 +255,52 @@ for parsing html pages and one for parsing xml files. Both are using information
 from TimetableAccessorInfo, which reads information data from xml files to
 support different service providers.
 
-<br>
+<br />
 @section install_sec Installation
-To install this data engine type the following commands:<br>
-\> cd /path-to-extracted-engine-sources/build<br>
-\> cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` ..<br>
-\> make<br>
-\> make install<br>
-<br>
+To install this data engine type the following commands:<br />
+\> cd /path-to-extracted-engine-sources/build<br />
+\> cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` ..<br />
+\> make<br />
+\> make install<br />
+<br />
 After installation do the following to use the data engine in your plasma desktop:
-Restart plasma to load the data engine:<br>
-\> kquitapp plasma-desktop<br>
-\> plasma-desktop<br>
-<br>
-or test it with:<br>
-\> plasmaengineexplorer<br>
-<br>
+Restart plasma to load the data engine:<br />
+\> kquitapp plasma-desktop<br />
+\> plasma-desktop<br />
+<br />
+or test it with:<br />
+\> plasmaengineexplorer<br />
+<br />
 You might need to run kbuildsycoca4 in order to get the .desktop file recognized.
-<br>
+<br />
 
-<br>
+<br />
+
 @section index_sec Other Pages
-See also
-<ul>
-<li>@ref pageUsage </li>
-<li>@ref pageAccessorInfos </li>
-<li>@ref pageClassDiagram </li>
-</ul>
+@par
+	@li @ref pageUsage
+	@li @ref pageAccessorInfos
+	@li @ref pageClassDiagram
 */
 
 /** @page pageUsage Usage
-<ol>
-<li>@ref usage_serviceproviders_sec </li>
-<li>@ref usage_departures_sec </li>
-<li>@ref usage_journeys_sec </li>
-<li>@ref usage_stopList_sec </li>
-</ol><br>
 
+@par Sections
+	@li @ref usage_serviceproviders_sec
+	@li @ref usage_departures_sec
+	@li @ref usage_journeys_sec
+	@li @ref usage_stopList_sec
+
+<br />
+
+@section usage_introduction_sec Introduction
 To use this data engine in an applet you need to connect it to a data source
 of the public transport data engine. There is one default data source which
 provides information about the available service providers
 (@ref usage_serviceproviders_sec). Another data source contains departures or
 arrivals (@ref usage_departures_sec) and one contains journeys
-(@ref usage_journeys_sec).<br>
-<br>
+(@ref usage_journeys_sec).<br />
+<br />
 This enumeration can be used in your applet to ease the usage of the data engine.
 Don't change the numbers, as they need to match the ones in the data engine,
 which uses a similar enumeration.
@@ -324,12 +329,12 @@ enum VehicleType {
 };
 @endcode
 
-<br>
+<br />
 @section usage_serviceproviders_sec Receiving a List of Available Service Providers
 You can view this data source in the plasmaengineexplorer, it's name is "ServiceProviders".
 For each available service provider it contains a key
 with the display name of the service provider. These keys point to the service
-provider information, stored as a QHash with the following keys:<br>
+provider information, stored as a QHash with the following keys:<br />
 <table>
 <tr><td><i>id</i></td> <td>QString</td> <td>The ID of the service provider.</td></tr>
 <tr><td><i>fileName</i></td> <td>QString</td> <td>The file name of the XML file containing the accessor information.</td> </tr>
@@ -349,7 +354,7 @@ provider information, stored as a QHash with the following keys:<br>
 <tr><td><i>description</i></td> <td>QString</td> <td>A description of the accessor.</td></tr>
 <tr><td><i>version</i></td> <td>QString</td> <td>The version of the accessor.</td></tr>
 </table>
-<br>
+<br />
 Here is an example of how to get service provider information for all available
 service providers:
 @code
@@ -365,7 +370,7 @@ foreach( QString serviceProviderName, data.keys() )
 }
 @endcode
 
-<br>
+<br />
 @section usage_departures_sec Receiving Departures or Arrivals
 To get a list of departures / arrivals you need to construct the name of the
 data source. For departures it begins with "Departures", for arrivals it begins
@@ -376,8 +381,8 @@ followed by "=". The sorting of the additional parameters doesn't matter. The
 parameter <i>stop</i> is needed and can be the stop name or the stop ID. If the
 service provider has useSeparateCityValue set to true (see
 @ref usage_serviceproviders_sec), the parameter <i>city</i> is also needed
-(otherwise it is ignored).<br>
-The following parameters are allowed:<br>
+(otherwise it is ignored).<br />
+The following parameters are allowed:<br />
 <table>
 <tr><td><i>stop</i></td> <td>The name or ID of the stop to get departures / arrivals for.</td></tr>
 <tr><td><i>city</i></td> <td>The city to get departures/arrivals for, if needed.</td></tr>
@@ -387,21 +392,21 @@ arrival to get.</td></tr>
 <tr><td><i>time</i></td> <td>The time of the first departure/arrival to get ("hh:mm"). This uses the current date. To use another date use 'datetime'.</td></tr>
 <tr><td><i>datetime</i></td> <td>The date and time of the first departure/arrival to get (use QDateTime::toString()).</td></tr>
 </table>
-<br>
+<br />
 
-<b>Examples:</b><br>
-<b>"Departures de_db|stop=Pappelstraße, Bremen"</b><br>
-Gets departures for the stop "Pappelstraße, Bremen" using the service provider db.de.<br><br>
+<b>Examples:</b><br />
+<b>"Departures de_db|stop=Pappelstraße, Bremen"</b><br />
+Gets departures for the stop "Pappelstraße, Bremen" using the service provider db.de.<br /><br />
 
-<b>"Arrivals de_db|stop=Leipzig|timeOffset=5|maxCount=99"</b><br>
+<b>"Arrivals de_db|stop=Leipzig|timeOffset=5|maxCount=99"</b><br />
 Gets arrivals for the stop "Leipzig" using db.de, the first possible arrival is in five minutes from now, the
-maximum arrival count is 99.<br><br>
+maximum arrival count is 99.<br /><br />
 
-<b>"Departures de_rmv|stop=Frankfurt (Main) Speyerer Straße|time=08:00"</b><br>
-Gets departures for the stop "Frankfurt (Main) Speyerer Straße" using rmv.de, the first possible departure is at eight o'clock.<br><br>
+<b>"Departures de_rmv|stop=Frankfurt (Main) Speyerer Straße|time=08:00"</b><br />
+Gets departures for the stop "Frankfurt (Main) Speyerer Straße" using rmv.de, the first possible departure is at eight o'clock.<br /><br />
 
-<b>"Departures de_rmv|stop=3000019|maxCount=20|timeOffset=1"</b><br>
-Gets departures for the stop with the ID "3000019", the first possible departure is in one minute from now, the maximum departure count is 20.<br><br>
+<b>"Departures de_rmv|stop=3000019|maxCount=20|timeOffset=1"</b><br />
+Gets departures for the stop with the ID "3000019", the first possible departure is in one minute from now, the maximum departure count is 20.<br /><br />
 
 Once you have the data source name, you can connect your applet to that
 data source from the data engine. Here is an example of how to do this:
@@ -432,8 +437,8 @@ class Applet : public Plasma::Applet {
     };
 };
 @endcode
-<br>
-The data received from the data engine always contains these keys:<br>
+<br />
+The data received from the data engine always contains these keys:<br />
 <table>
 <tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
 <tr><td><i>receivedPossibleStopList</i></td> <td>bool</td> <td>True, if the given stop name is ambiguous and
@@ -444,9 +449,9 @@ an error.</td></tr>
 there was an error.</td></tr>
 <tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was last updated.</td></tr>
 </table>
-<br>
+<br />
 Each departure / arrival in the data received from the data engine (departureData in the code
-example) has the following keys:<br>
+example) has the following keys:<br />
 <table>
 <tr><td><i>line</i></td> <td>QString</td> <td>The name of the public transport line, e.g. "S1", "6", "1E", "RB 24155".</td></tr>
 <tr><td><i>target</i></td> <td>QString</td> <td>The name of the target / origin of the public transport line.</td></tr>
@@ -466,7 +471,7 @@ departure / arrival. You can cast the ID to VehicleType using "static_cast<Vehic
 
 </table>
 
-<br>
+<br />
 @section usage_journeys_sec Receiving Journeys from A to B
 To get a list of journeys from one stop to antoher you need to construct the
 name of the data source (much like the data source for departures / arrivals).
@@ -478,8 +483,8 @@ followed by "=". The sorting of the additional parameters doesn't matter. The
 parameters <i>originStop</i> and <i>targetStop</i> are needed and can be the
 stop names or the stop IDs. If the service provider has useSeparateCityValue
 set to true (see @ref usage_serviceproviders_sec), the parameter <i>city</i> is
-also needed (otherwise it is ignored).<br>
-The following parameters are allowed:<br>
+also needed (otherwise it is ignored).<br />
+The following parameters are allowed:<br />
 <table>
 <tr><td><i>originStop</i></td> <td>The name or ID of the origin stop.</td></tr>
 <tr><td><i>targetStop</i></td> <td>The name or ID of the target stop.</td></tr>
@@ -489,16 +494,16 @@ The following parameters are allowed:<br>
 <tr><td><i>time</i></td> <td>The time for the first journey to get (in format "hh:mm").</td></tr>
 <tr><td><i>datetime</i></td> <td>The date and time for the first journey to get (QDateTime::fromString() is used with default parameters to parse the date).</td></tr>
 </table>
-<br>
+<br />
 
-<b>Examples:</b><br>
-<b>"Journeys de_db|originStop=Pappelstraße, Bremen|targetStop=Kirchweg, Bremen"</b><br>
+<b>Examples:</b><br />
+<b>"Journeys de_db|originStop=Pappelstraße, Bremen|targetStop=Kirchweg, Bremen"</b><br />
 Gets journeys from stop "Pappelstraße, Bremen" to stop "Kirchweg, Bremen"
-using the service provider db.de.<br><br>
+using the service provider db.de.<br /><br />
 
-<b>"Journeys de_db|originStop=Leipzig|targetStop=Hannover|timeOffset=5|maxCount=99"</b><br>
+<b>"Journeys de_db|originStop=Leipzig|targetStop=Hannover|timeOffset=5|maxCount=99"</b><br />
 Gets journeys from stop "Leipzig" to stop "Hannover" using db.de, the first
-possible journey departs in five minutes from now, the maximum journey count is 99.<br><br>
+possible journey departs in five minutes from now, the maximum journey count is 99.<br /><br />
 
 Once you have the data source name, you can connect your applet to that
 data source from the data engine. Here is an example of how to do this:
@@ -537,8 +542,8 @@ class Applet : public Plasma::Applet {
 	};
 };
 @endcode
-<br>
-The data received from the data engine always contains these keys:<br>
+<br />
+The data received from the data engine always contains these keys:<br />
 <table>
 <tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
 <tr><td><i>receivedPossibleStopList</i></td> <td>bool</td> <td>True, if the given stop name is ambiguous and
@@ -549,10 +554,10 @@ an error.</td></tr>
 there was an error.</td></tr>
 <tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was last updated.</td></tr>
 </table>
-<br>
+<br />
 Each journey in the data received from the data engine (journeyData in the code
-example) has the following keys:<br>
-<i>vehicleTypes</i>: A QVariantList containing a list of vehicle types used in the journey. You can cast the list to QList<VehicleType> as seen in the code example (QVariantList).<br>
+example) has the following keys:<br />
+<i>vehicleTypes</i>: A QVariantList containing a list of vehicle types used in the journey. You can cast the list to QList<VehicleType> as seen in the code example (QVariantList).<br />
 <table>
 <tr><td><i>arrival</i></td> <td>QDateTime</td> <td>The date and time of the arrival at the target stop.</td></tr>
 <tr><td><i>departure</i></td> <td>QDateTime</td> <td>The date and time of the departure from the origin stop.</td></tr>
@@ -575,7 +580,7 @@ example) has the following keys:<br>
 <tr><td><i>routeTimesArrivalDelay</i></td> <td>QList< int > (stored as QVariantList)</td> <td>A list of delays in minutes of the arrivals at each stop in the journey. A value of 0 means, that the vehicle is on schedule, -1 means, that there's no information about delays.</td></tr>
 </table>
 
-<br>
+<br />
 @section usage_stopList_sec Receiving Stop Lists
 When you have requested departures, arrivals or journeys from the data engine,
 it may return a list of stops, if the given stop name is ambiguous.
@@ -604,7 +609,15 @@ void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &dat
 */
 
 /** @page pageAccessorInfos Add Support for new Service Providers
-To add support for a new service provider you need to create an "accessor info xml". These xml files describe where to download the data and how to parse it. The filename starts with the country code or "international" or "unknown" followed by "_" and a short name of the service provider, e.g. "de_db", "ch_sbb", "sk_atlas", "international_flightstats".<br>
+@par Sections
+	@li @ref examples
+		@li @ref examples_xml_script
+		@li @ref examples_script
+		@li @ref examples_xml_regexp
+<br />
+
+@section accessor_infos_introduction Introduction
+To add support for a new service provider you need to create an "accessor info xml". These xml files describe where to download the data and how to parse it. The filename starts with the country code or "international" or "unknown" followed by "_" and a short name of the service provider, e.g. "de_db", "ch_sbb", "sk_atlas", "international_flightstats".<br />
 Here is an overview of the allowed tags:
 <table>
 <tr style="background-color: #bbbbbb; font-weight: bold;"><td>Tag</td> <td>Child of</td> <td>Optional?</td> <td>Description</td></tr>
