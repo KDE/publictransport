@@ -34,7 +34,8 @@ TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfoRegExp *info )
 
 TimetableAccessorXml::~TimetableAccessorXml()
 {
-	delete m_accessorHTML;
+	m_info = NULL; // Don't delete m_info in ~TimetableAccessor()
+	delete m_accessorHTML; // This also deletes m_info
 }
 
 QStringList TimetableAccessorXml::features() const

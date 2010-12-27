@@ -48,7 +48,7 @@ public:
 	/** 
 	 * @brief Destructor, destroys the used "sub-" @ref TimetableAccessorHtml, which is used
 	 *  to parse stop suggestion documents in HTML format. */
-	~TimetableAccessorXml();
+	virtual ~TimetableAccessorXml();
 
 	/** @brief Gets a list of features that this accessor supports. */
 	virtual QStringList features() const;
