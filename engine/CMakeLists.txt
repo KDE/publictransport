@@ -22,18 +22,17 @@ set( publictransport_engine_SRCS
     timetableaccessor_html_script.cpp
     timetableaccessor_htmlinfo.cpp 
     timetableaccessor_xml.cpp
-    scripting.cpp )
+    scripting.cpp
+    enums.cpp )
 
 # Now make sure all files get to the right place
-kde4_add_plugin(plasma_engine_publictransport ${publictransport_engine_SRCS})
+kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} )
 
-target_link_libraries(plasma_engine_publictransport
-    ${KDE4_PLASMA_LIBS}
-    ${KDE4_KROSSCORE_LIBS}
-    QtXml kio)
+target_link_libraries( plasma_engine_publictransport
+    ${KDE4_PLASMA_LIBS} ${KDE4_KROSSCORE_LIBS} ${KDE4_KIO_LIBS} QtXml )
 
-install(TARGETS plasma_engine_publictransport
-        DESTINATION ${PLUGIN_INSTALL_DIR})
+install( TARGETS plasma_engine_publictransport
+         DESTINATION ${PLUGIN_INSTALL_DIR} )
 
-install(FILES plasma-engine-publictransport.desktop
-        DESTINATION ${SERVICES_INSTALL_DIR})
+install( FILES plasma-engine-publictransport.desktop
+         DESTINATION ${SERVICES_INSTALL_DIR} )
