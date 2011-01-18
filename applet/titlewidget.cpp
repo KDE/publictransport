@@ -86,14 +86,9 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
 			m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
 			setTitle( titleText() );
 
-// 			m_title->show();
 			addWidget(m_title, WidgetTitle);
 			m_icon->show(); // TEST is this needed?
 			addWidget( m_filterWidget, WidgetFilter );
-
-// 			m_titleInfo->setToolTip( courtesyToolTip() );
-// 			m_titleInfo->setText( infoText() );
-// 			widget = m_treeView;
 			break;
 
 		case ShowSearchJourneyLineEdit: {
@@ -103,7 +98,7 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
 
 // 			m_title->hide();
 			removeWidget( WidgetTitle, HideAndRemoveWidget );
-			m_icon->show(); // TEST is this needed?
+// 			m_icon->show(); // TEST is this needed?
 			addJourneySearchWidgets();
 			Plasma::LineEdit *journeySearchLine = castedWidget<Plasma::LineEdit>(WidgetJourneySearchLine);
 			journeySearchLine->setEnabled( true );
@@ -111,61 +106,25 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
 			journeySearchLine->nativeWidget()->selectAll();
 
 			updateRecentJourneysMenu();
-
-// 			m_listStopSuggestions = new Plasma::TreeView();
-// 			m_listStopSuggestions->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
-// 			QTreeView *treeView = m_listStopSuggestions->nativeWidget();
-// 			treeView->setRootIsDecorated( false );
-// 			treeView->setHeaderHidden( true );
-// 			treeView->setAlternatingRowColors( true );
-// 			treeView->setEditTriggers( QAbstractItemView::NoEditTriggers );
-// 			treeView->setAutoFillBackground( false );
-// 			treeView->setAttribute( Qt::WA_NoSystemBackground );
-// 			treeView->setItemDelegate( new PublicTransportDelegate( m_listStopSuggestions ) );
-// 			treeView->setPalette( m_treeView->nativeWidget()->palette() );
-// 			m_listStopSuggestions->setFont( m_settings.sizedFont() );
-
-// 			addJourneySearchCompletions();
-
-// 			connect( treeView, SIGNAL(clicked(QModelIndex)),
-// 					 this, SLOT(possibleStopClicked(QModelIndex)) );
-// 			connect( treeView, SIGNAL(doubleClicked(QModelIndex)),
-// 					 this, SLOT(possibleStopDoubleClicked(QModelIndex)) );
-// 			widget = m_listStopSuggestions;
 			break;
 		}
 		case ShowSearchJourneyLineEditDisabled:
 			setIcon( AbortJourneySearchIcon );
 			m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys "
 													   "to or from the home stop") );
-			m_icon->show(); // TEST is this needed?
+// 			m_icon->show(); // TEST is this needed?
 
 			addJourneySearchWidgets();
-// 			m_labelJourneysNotSupported = new Plasma::Label;
-// 			m_labelJourneysNotSupported->setAlignment( Qt::AlignCenter );
-// 			m_labelJourneysNotSupported->setSizePolicy( QSizePolicy::Expanding,
-// 														QSizePolicy::Expanding, QSizePolicy::Label );
-// 			m_labelJourneysNotSupported->setText( i18nc( "@info/plain",
-// 														 "Journey searches aren't supported by the currently used "
-// 														 "service provider or it's accessor." ) );
-// 			m_labelJourneysNotSupported->nativeWidget()->setWordWrap( true );
 
 			castedWidget<Plasma::LineEdit>(WidgetJourneySearchLine)->setEnabled( false );
 			castedWidget<Plasma::LineEdit>(WidgetRecentJourneysButton)->setEnabled( false );
 			castedWidget<Plasma::LineEdit>(WidgetJourneySearchButton)->setEnabled( false );
-// 			widget = m_labelJourneysNotSupported;
 			break;
 
 		case ShowJourneyListTitle: {
 			setIcon( appletStates.testFlag(ReceivedValidJourneyData)
 					? JourneyListOkIcon : JourneyListErrorIcon );
 			m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
-			// 		m_title->setText( m_journeyTitleText.isEmpty()
-			// 		? i18nc( "@info", "<emphasis strong='1'>Journeys</emphasis>" )
-			// 		: m_journeyTitleText );
-// 			setTitle( m_journeyTitleText.isEmpty()
-// 					? i18nc( "@info", "<emphasis strong='1'>Journeys</emphasis>" )
-// 					: m_journeyTitleText ); // TODO
 
 			int iconExtend = 32 * m_settings->sizeFactor;
 			Plasma::IconWidget *closeIcon = new Plasma::IconWidget;
@@ -177,20 +136,8 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
 			connect( closeIcon, SIGNAL(clicked()), this, SIGNAL(closeIconClicked()) );
 			addWidget( closeIcon, WidgetCloseIcon );
 
-			m_icon->show(); // TEST is this needed?
+// 			m_icon->show(); // TEST is this needed?
 			addWidget(m_title, WidgetTitle);
-
-// 			m_treeViewJourney = new Plasma::TreeView;
-// 			initTreeView( m_treeViewJourney );
-// 			QTreeView *treeViewJourneys = m_treeViewJourney->nativeWidget();
-// 			treeViewJourneys->setPalette( m_treeView->nativeWidget()->palette() );
-// 			treeViewJourneys->header()->setPalette( m_treeView->nativeWidget()->header()->palette() );
-// 			treeViewJourneys->setIconSize( QSize( 32 * m_settings.sizeFactor, 32 * m_settings.sizeFactor ) );
-// 			m_treeViewJourney->setModel( m_modelJourneys );
-// 			m_treeViewJourney->setFont( m_settings.sizedFont() );
-// 			treeViewJourneys->header()->resizeSection( 1, 120 );
-
-// 			widget = m_treeViewJourney;
 			break;
 		}
 	}
@@ -198,9 +145,9 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
 
 QString TitleWidget::titleText() const
 {
-	QString sStops = m_settings->currentStopSettings().stops.join( ", " );
-	if ( !m_settings->currentStopSettings().city.isEmpty() ) {
-		return QString( "%1, %2" ).arg( sStops ).arg( m_settings->currentStopSettings().city );
+	QString sStops = m_settings->currentStopSettings().stops().join( ", " );
+	if ( !m_settings->currentStopSettings().get<QString>(CitySetting).isEmpty() ) {
+		return QString( "%1, %2" ).arg( sStops ).arg( m_settings->currentStopSettings().get<QString>(CitySetting) );
 	} else {
 		return QString( "%1" ).arg( sStops );
 	}
@@ -208,7 +155,6 @@ QString TitleWidget::titleText() const
 
 void TitleWidget::addJourneySearchWidgets()
 {
-	kDebug() << "";
 	// Add recent journeys button
 	Plasma::ToolButton *recentJourneysButton = new Plasma::ToolButton;
 	recentJourneysButton->setIcon( KIcon("document-open-recent") );
@@ -466,12 +412,13 @@ void TitleWidget::updateFilterWidget()
 	if ( m_settings->filtersEnabled ) {
 		m_filterWidget->setOpacity( 1 );
 		QFontMetrics fm( m_filterWidget->font() );
-		filterLabel->setText( fm.elidedText(SettingsUiManager::translateKey(
-				m_settings->currentStopSettings().filterConfiguration),
+		filterLabel->setText( fm.elidedText(Global::translateFilterKey(
+				m_settings->currentStopSettings().get<QString>(FilterConfigurationSetting)),
 				Qt::ElideRight, filterLabel->maximumWidth() * 1.8) );
 	} else {
 		m_filterWidget->setOpacity( 0.6 );
-		filterLabel->setText( i18n("(No active filter)") );
+		filterLabel->setText( i18nc("@info Shown in the applet to indicate that no filters are "
+									"currently active", "(No active filter)") );
 	}
 }
 

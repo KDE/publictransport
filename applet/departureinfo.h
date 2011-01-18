@@ -51,11 +51,13 @@ public:
 
 	/**
 	 * @brief Gets an unsigned integer value unique for this departure/arrival/journey.
+	 * 
 	 * The value returned by this function will be equal for items (departures/arrivals/journeys)
 	 * that are equal. Two items are considered equal, also if they aren't exactly equal,
 	 * eg. the delay may be different. That is important to be able to find items from the data
 	 * engine in the model of the applet after an update. For example a departure which delay has
 	 * changed is still the same departure and therefore it returns the same hash value.
+	 * 
 	 * @return uint The hash value for this item.
 	 **/
 	uint hash() const { return m_hash; };
@@ -241,7 +243,7 @@ public:
 	bool isFilteredOut() const { return m_filteredOut; };
 	void setFilteredOut( bool filteredOut = false ) { m_filteredOut = filteredOut; };
 
-	/** Wheather or not this DepartureInfo object is valid. It currently checks
+	/** Whether or not this DepartureInfo object is valid. It currently checks
 	* validity by checking if the lineString is empty. */
 	bool isValid() const { return !m_lineString.isEmpty(); };
 
@@ -250,7 +252,7 @@ public:
 	QString departureText( bool htmlFormatted, bool displayTimeBold, bool showRemainingMinutes,
 						   bool showDepartureTime, int linesPerRow ) const;
 
-	/** Wheather or not the line number of this departure / arrival is valid. */
+	/** Whether or not the line number of this departure / arrival is valid. */
 	bool isLineNumberValid() const {
 		return m_lineNumber > 0 &&
 				m_vehicleType != Unknown && // May not been parsed correctly
@@ -281,7 +283,7 @@ public:
 		return delayType() == Delayed ? m_departure.addSecs(m_delay * 60) : m_departure;
 	};
 
-	/** Wheather or not the line number is in the specified range.
+	/** Whether or not the line number is in the specified range.
 	* @return true, if the line number is in the specified range or if it is
 	* greater than 999.
 	* @return false, if the line number is not in the specified range.

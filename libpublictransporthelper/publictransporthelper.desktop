@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Public Transport Helper Library
+Name[x-test]=xxPublic Transportxx
+Comment=A library to be used with the publictransport data engine. It provides widgets/dialogs to setup stop settings.
+Comment[x-test]=xxA library to be used with the publictransport data engine. It provides widgets/dialogs to setup stop settings.xx
+
+Icon=public-transport-stop
+Type=Service
+X-KDE-Library=publictransporthelper
+X-KDE-PluginInfo-Author=Friedrich Pülz
+X-KDE-PluginInfo-Email=fpuelz@gmx.de
+X-KDE-PluginInfo-Name=publictransporthelper
+X-KDE-PluginInfo-Version=0.10
+X-KDE-PluginInfo-Website=http://plasma.kde.org/
+X-KDE-PluginInfo-License=LGPL
+

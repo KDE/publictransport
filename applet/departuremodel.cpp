@@ -714,7 +714,7 @@ ChildItem* JourneyItem::createRouteItem()
 			routeStopItem = new ChildItem( OtherItem,
 					i18nc("@info/plain %1 is the departure time, %2 the origin stop name, "
 						  "%3 the arrival time, %4 the target stop name.",
-						  "dep: %1 - %2<br/>arr: %3 - %4",
+						  "dep: %1 - %2<nl/>arr: %3 - %4",
 						  sTimeDep, stopDep, sTimeArr, stopArr),
 					icon, m_info );
 			routeStopItem->setData( 2, LinesPerRowRole );
@@ -722,7 +722,7 @@ ChildItem* JourneyItem::createRouteItem()
 			routeStopItem = new ChildItem( OtherItem,
 					i18nc("@info/plain %1 is the departure time, %2 the origin stop name, "
 						  "%3 the arrival time, %4 the target stop name, %5 the transport line.",
-						  "<b>%5</b><br/>dep: %1 - %2<br/>arr: %3 - %4",
+						  "<emphasis strong='1'>%5</emphasis><nl/>dep: %1 - %2<nl/>arr: %3 - %4",
 						  sTimeDep, stopDep, sTimeArr, stopArr, sTransportLine),
 					icon, m_info );
 			routeStopItem->setData( 3, LinesPerRowRole );
@@ -945,10 +945,14 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow )
 		text = m_departureInfo.journeyNews();
 		if ( text.startsWith( QLatin1String( "http://" ) ) ) { // TODO: Make the link clickable...
 			text = QString( "<a href='%1'>%2</a>" ).arg( text )
-			       .arg( i18n( "Link to journey news" ) );
+			       .arg( i18nc("@info/plain Display text for a link to a website with "
+							   "journey news for the current journey item",
+							   "Link to journey news") );
 		}
-		text = QString( "<b>%1</b> %2" ).arg( i18nc( "@info/plain News for a journey with public "
-		                                      "transport, like 'platform changed'", "News:" ) ).arg( text );
+		text = QString( "<b>%1</b> %2" )
+				.arg( i18nc("@info/plain News for a journey with public transport, "
+							"like 'platform changed'", "News:") )
+				.arg( text );
 		// Try to set enough lines to show all text
 		if ( linesPerRow ) {
 			*linesPerRow = qMin( 3, text.length() / 25 );

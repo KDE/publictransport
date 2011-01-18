@@ -1,4 +1,3 @@
-# Project Needs a name ofcourse
 project( plasma-publictransport )
 
 # Find the required Libaries
@@ -15,6 +14,8 @@ include_directories(
 set( publictransport_SRCS
     publictransport.cpp
     publictransporttreeview.cpp
+    titlewidget.cpp
+    journeysearchsuggestionwidget.cpp
     departureprocessor.cpp
     departuremodel.cpp
     journeysearchparser.cpp
@@ -25,38 +26,32 @@ set( publictransport_SRCS
     htmldelegate.cpp
     departureinfo.cpp
     settings.cpp
-    stopfinder.cpp
-    dynamicwidget.cpp
-    stopwidget.cpp
     filterwidget.cpp
-    stopsettingsdialog.cpp
-    checkcombobox.cpp
-    categorycombobox.cpp
-    datasourcetester.cpp
-    locationmodel.cpp
-    serviceprovidermodel.cpp )
+    datasourcetester.cpp )
 
 kde4_add_ui_files( publictransport_SRCS
     publicTransportConfig.ui
-    publicTransportStopConfig.ui
-    stopConfigDetails.ui
     publicTransportConfigAdvanced.ui
     publicTransportAppearanceConfig.ui
     publicTransportFilterConfig.ui
-    alarmConfig.ui
-    accessorInfo.ui )
+    alarmConfig.ui )
 
 # Now make sure all files get to the right place
 kde4_add_plugin( plasma_applet_publictransport ${publictransport_SRCS} )
+
+# Add the publictransporthelper library
+add_subdirectory( publictransporthelper )
 
 target_link_libraries( plasma_applet_publictransport
     ${KDE4_PLASMA_LIBS}
     ${KDE4_KDEUI_LIBS}
     ${KDE4_KIO_LIBS}
-    ${KDE4_KNEWSTUFF3_LIBS} )
+    ${KDE4_KNEWSTUFF3_LIBS}
+    publictransporthelper # in sub_directory publictransporthelper
+)
 
 install( FILES publictransport.knsrc
-	 DESTINATION ${CONFIG_INSTALL_DIR} )
+         DESTINATION ${CONFIG_INSTALL_DIR} )
 
 install( TARGETS plasma_applet_publictransport
          DESTINATION ${PLUGIN_INSTALL_DIR} )

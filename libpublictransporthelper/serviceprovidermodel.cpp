@@ -18,50 +18,135 @@
 */
 
 #include "serviceprovidermodel.h"
+// #include "global.h"
+#include "enums.h"
 #include <Plasma/DataEngine>
-#include "global.h"
 #include <KCategorizedSortFilterProxyModel>
 
-ServiceProviderItem::ServiceProviderItem( const QString &name, const QVariantHash &data )
+class ServiceProviderItemPrivate
 {
-	m_name = name;
-	m_data = data;
-	m_formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
+public:
+	ServiceProviderItemPrivate() {};
+
+	QString name;
+	QString formattedText;
+	KIcon icon;
+	QVariantHash data;
+	QString category;
+	QString sortString;
+};
+
+ServiceProviderItem::ServiceProviderItem( const QString &name, const QVariantHash &data )
+		: d_ptr(new ServiceProviderItemPrivate())
+{
+	d_ptr->name = name;
+	d_ptr->data = data;
+	d_ptr->formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
 			.arg( name )
 			.arg( data["featuresLocalized"].toStringList().join( ", " ) );
 
 	QString location = countryCode();
 	if ( location == "international" ) {
-		m_category = i18nc("@info:inlistbox Name of the category for international "
-						   "service providers", "International");
-		m_sortString = "XXXXX" + name;
+		d_ptr->category = i18nc("@item:inlistbox Name of the category for international "
+								"service providers", "International");
+		d_ptr->sortString = "XXXXX" + name;
 	} else if ( location == "unknown" ) {
-		m_category = i18nc("@info:inlistbox Name of the category for service providers "
-						   "with unknown contries", "Unknown");
-		m_sortString = "YYYYY" + name;
+		d_ptr->category = i18nc("@item:inlistbox Name of the category for service providers "
+								"with unknown contries", "Unknown");
+		d_ptr->sortString = "YYYYY" + name;
 	} else {
-		m_category = KGlobal::locale()->countryCodeToName( location );
+		d_ptr->category = KGlobal::locale()->countryCodeToName( location );
 
 		// TODO Add a flag to the accessor XML files, maybe <countryWide />
 		bool isCountryWide = name.contains( location, Qt::CaseInsensitive );
-		m_sortString = isCountryWide
-				? "WWWWW" + m_category + "11111" + name
-				: "WWWWW" + m_category + name;
+		d_ptr->sortString = isCountryWide
+				? "WWWWW" + d_ptr->category + "11111" + name
+				: "WWWWW" + d_ptr->category + name;
 	}
 
 }
 
-ServiceProviderModel::ServiceProviderModel( QObject* parent ) : QAbstractListModel( parent )
+ServiceProviderItem::~ServiceProviderItem()
 {
+	delete d_ptr;
+}
+
+QString ServiceProviderItem::id() const {
+	Q_D( const ServiceProviderItem );
+    return d->data["id"].toString();
+}
+
+QString ServiceProviderItem::name() const {
+    Q_D( const ServiceProviderItem );
+    return d->name;
+}
+
+QString ServiceProviderItem::countryCode() const {
+    Q_D( const ServiceProviderItem );
+    return d->data["country"].toString();
+}
+
+QString ServiceProviderItem::formattedText() const {
+    Q_D( const ServiceProviderItem );
+    return d->formattedText;
+}
+
+QVariantHash ServiceProviderItem::data() const {
+    Q_D( const ServiceProviderItem );
+    return d->data;
+}
+
+KIcon ServiceProviderItem::icon() const {
+    Q_D( const ServiceProviderItem );
+    return d->icon;
+}
+
+QString ServiceProviderItem::category() const {
+    Q_D( const ServiceProviderItem );
+    return d->category;
+}
+
+QString ServiceProviderItem::sortValue() const {
+    Q_D( const ServiceProviderItem );
+    return d->sortString;
+}
+
+void ServiceProviderItem::setIcon(const KIcon& icon) {
+    Q_D( ServiceProviderItem );
+    d->icon = icon;
+}
+
+class ServiceProviderModelPrivate
+{
+public:
+	ServiceProviderModelPrivate() : favIconEngine(0) {};
+	~ServiceProviderModelPrivate() {
+		qDeleteAll( items );
+	};
+
+	QList<ServiceProviderItem*> items;
+	Plasma::DataEngine* favIconEngine;
+};
+
+ServiceProviderModel::ServiceProviderModel( QObject* parent ) 
+		: QAbstractListModel( parent ), d_ptr(new ServiceProviderModelPrivate())
+{
+}
+
+ServiceProviderModel::~ServiceProviderModel()
+{
+	delete d_ptr;
 }
 
 QModelIndex ServiceProviderModel::index( int row, int column, const QModelIndex& parent ) const
 {
+	Q_D( const ServiceProviderModel );
+	
 	if ( parent.isValid() || !hasIndex( row, column, QModelIndex() ) ) {
 		return QModelIndex();
 	} else {
-		if ( row >= 0 && row < m_items.count() && column == 0 ) {
-			return createIndex( row, column, m_items[row] );
+		if ( row >= 0 && row < d->items.count() && column == 0 ) {
+			return createIndex( row, column, d->items[row] );
 		} else {
 			return QModelIndex();
 		}
@@ -102,13 +187,15 @@ QVariant ServiceProviderModel::data( const QModelIndex& index, int role ) const
 
 int ServiceProviderModel::rowCount( const QModelIndex& parent ) const
 {
-	return parent.isValid() ? 0 : m_items.count();
+	Q_D( const ServiceProviderModel );
+	return parent.isValid() ? 0 : d->items.count();
 }
 
 QModelIndex ServiceProviderModel::indexOfServiceProvider( const QString& serviceProviderId )
 {
-	for ( int row = 0; row < m_items.count(); ++row ) {
-		ServiceProviderItem *item = m_items[row];
+	Q_D( const ServiceProviderModel );
+	for ( int row = 0; row < d->items.count(); ++row ) {
+		ServiceProviderItem *item = d->items[row];
 		if ( item->id() == serviceProviderId ) {
 			return createIndex( row, 0, item );
 		}
@@ -126,43 +213,49 @@ bool serviceProviderGreaterThan( ServiceProviderItem* item1, ServiceProviderItem
 void ServiceProviderModel::syncWithDataEngine( Plasma::DataEngine* publicTransportEngine,
         Plasma::DataEngine* favIconEngine )
 {
+	Q_D( ServiceProviderModel );
+	
 	// Store pointer to favicons data engine to be able to disconnect sources from it later
-	m_favIconEngine = favIconEngine;
+	d->favIconEngine = favIconEngine;
 
 	Plasma::DataEngine::Data serviceProviderData = publicTransportEngine->query( "ServiceProviders" );
 	for ( Plasma::DataEngine::Data::const_iterator it = serviceProviderData.constBegin();
 				it != serviceProviderData.constEnd(); ++it ) {
 		// it.key() contains the service provider name
 		QVariantHash serviceProviderData = it.value().toHash();
-		m_items << new ServiceProviderItem( it.key(), serviceProviderData );
+		d->items << new ServiceProviderItem( it.key(), serviceProviderData );
 
 		// Request favicons
-		QString favIconSource = serviceProviderData["url"].toString();
-		favIconEngine->connectSource( favIconSource, this );
+		if ( favIconEngine ) {
+			QString favIconSource = serviceProviderData["url"].toString();
+			favIconEngine->connectSource( favIconSource, this );
+		}
 	}
 
-	qSort( m_items.begin(), m_items.end(), serviceProviderGreaterThan );
+	qSort( d->items.begin(), d->items.end(), serviceProviderGreaterThan );
 }
 
 void ServiceProviderModel::dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data )
 {
-	if ( sourceName.contains( QRegExp( "^http" ) ) ) {
+	Q_D( const ServiceProviderModel );
+	
+	if ( sourceName.contains(QRegExp("^http")) ) {
 		// Favicon of a service provider arrived
 		QPixmap favicon( QPixmap::fromImage( data["Icon"].value<QImage>() ) );
 		if ( favicon.isNull() ) {
-			kDebug() << "Favicon is NULL for" << sourceName << data;
+// 			kDebug() << "No favicon found for" << sourceName;
 			favicon = QPixmap( 16, 16 );
 			favicon.fill( Qt::transparent );
 		}
 
 		for ( int i = 0; i < rowCount(); ++i ) {
-			ServiceProviderItem *item = m_items[i];
+			ServiceProviderItem *item = d->items[i];
 			QString favIconSource = item->data()["url"].toString();
 			if ( favIconSource.compare( sourceName ) == 0 ) {
-				item->setIcon( KIcon( favicon ) );
+				item->setIcon( KIcon(favicon) );
 			}
 		}
 
-		m_favIconEngine->disconnectSource( sourceName, this );
+		d->favIconEngine->disconnectSource( sourceName, this );
 	}
 }

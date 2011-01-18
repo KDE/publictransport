@@ -28,12 +28,6 @@
 #include "departureinfo.h"
 #include "settings.h" // TODO Only used for AlarmSettings. Removed here?
 
-/** @brief The position of the decoration. */
-enum DecorationPosition {
-	DecorationLeft, /**< Show the decoration on the left side. */
-	DecorationRight /**< Show the decoration on the right side. */
-};
-
 /** @brief Holds information about settings from the applet. */
 struct Info {
 	Info() {
@@ -446,7 +440,7 @@ public:
 	 * @param columnRight The last changed column Defaults to 0.
 	 **/
 	void itemChanged( ItemBase *item, int columnLeft = 0, int columnRight = 0 );
-	/** @brief Notifies the model about changes in childs of the given @p parentItem.
+	/** @brief Notifies the model about changes in children of the given @p parentItem.
 	 *
 	 * @param parentItem The item, which children were changed.
 	 **/

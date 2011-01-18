@@ -44,6 +44,8 @@ namespace Plasma {
  * You can also clear all additional widgets using @ref clearWidgets.
  * The widget can switch between different layouts (different sets of widgets shown) using
  * @ref setTitleType.
+ *
+ * @since 0.9.1
  **/
 class TitleWidget : public QGraphicsWidget
 {
@@ -147,7 +149,7 @@ public:
 	/** @brief Removes the widget of the given @p widgetType.
 	 *
 	 * @param widgetType The type of the widget to be removed.
-	 * @param options Options for removing the widget, ie. wether or not to delete the widget
+	 * @param options Options for removing the widget, ie. whether or not to delete the widget
 	 *   after removing it from the layout. Widget of type @ref WidgetFilter and @ref WidgetTitle
 	 *   will never be deleted.
 	 * @returns True on success. Otherwise, false (eg. if there is no widget of the

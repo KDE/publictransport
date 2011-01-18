@@ -30,60 +30,60 @@
 
 const QStringList JourneySearchParser::arrivalKeywords()
 {
-	return i18nc( "A comma separated list of keywords for the journey search to indicate "
-				  "that given times are meant as arrivals. The order is used for "
+	return i18nc( "@info/plain A comma separated list of keywords for the journey search to "
+				  "indicate that given times are meant as arrivals. The order is used for "
 				  "autocompletion.\nNote: Keywords should be unique for each meaning.",
 				  "arriving,arrive,arrival,arr" ).split( ',', QString::SkipEmptyParts );
 }
 
 const QStringList JourneySearchParser::departureKeywords()
 {
-	return i18nc( "A comma separated list of keywords for the journey search to indicate "
-				  "that given times are meant as departures (default). The order is used "
+	return i18nc( "@info/plain A comma separated list of keywords for the journey search to "
+				  "indicate that given times are meant as departures (default). The order is used "
 				  "for autocompletion.\nNote: Keywords should be unique for each meaning.",
 				  "departing,depart,departure,dep" ).split( ',', QString::SkipEmptyParts );
 }
 
 const QStringList JourneySearchParser::fromKeywords()
 {
-	return i18nc( "A comma separated list of keywords for the journey search, indicating "
-				  "that a journey FROM the given stop should be searched. This keyword "
+	return i18nc( "@info/plain A comma separated list of keywords for the journey search, "
+				  "indicating that a journey FROM the given stop should be searched. This keyword "
 				  "needs to be placed at the beginning of the field.", "from" )
 			.split( ',', QString::SkipEmptyParts );
 }
 
 const QStringList JourneySearchParser::toKeywords()
 {
-	return i18nc( "A comma separated list of keywords for the journey search, indicating "
-				  "that a journey TO the given stop should be searched. This keyword needs "
+	return i18nc( "@info/plain A comma separated list of keywords for the journey search, "
+				  "indicating that a journey TO the given stop should be searched. This keyword needs "
 				  "to be placed at the beginning of the field.", "to" )
 			.split( ',', QString::SkipEmptyParts );
 }
 
 const QStringList JourneySearchParser::timeKeywordsAt()
 {
-	return i18nc( "A comma separated list of keywords for the journey search field, "
+	return i18nc( "@info/plain A comma separated list of keywords for the journey search field, "
 				  "indicating that a date/time string follows.\nNote: Keywords should be "
 				  "unique for each meaning.", "at" ).split( ',', QString::SkipEmptyParts );
 }
 
 const QStringList JourneySearchParser::timeKeywordsIn()
 {
-	return i18nc( "A comma separated list of keywords for the journey search field, "
+	return i18nc( "@info/plain A comma separated list of keywords for the journey search field, "
 				  "indicating that a relative time string follows.\nNote: Keywords should "
 				  "be unique for each meaning.", "in" ).split( ',', QString::SkipEmptyParts );
 }
 
 const QStringList JourneySearchParser::timeKeywordsTomorrow()
 {
-	return i18nc( "A comma separated list of keywords for the journey search field, as "
+	return i18nc( "@info/plain A comma separated list of keywords for the journey search field, as "
 				  "replacement for tomorrows date.\nNote: Keywords should be unique for "
 				  "each meaning.", "tomorrow" ).split( ',', QString::SkipEmptyParts );
 }
 
 const QString JourneySearchParser::relativeTimeString( const QVariant &value )
 {
-	return i18nc( "The automatically added relative time string, when the journey "
+	return i18nc( "@info/plain The automatically added relative time string, when the journey "
 				  "search line ends with the keyword 'in'. This should be match by the "
 				  "regular expression for a relative time, like '(in) 5 minutes'. That "
 				  "regexp and the keyword ('in') are also localizable. Don't include "
@@ -92,7 +92,7 @@ const QString JourneySearchParser::relativeTimeString( const QVariant &value )
 
 const QString JourneySearchParser::relativeTimeStringPattern()
 {
-	return i18nc( "This is a regular expression used to match a string after the "
+	return i18nc( "@info/plain This is a regular expression used to match a string after the "
 				  "'in' keyword in the journey search line. The english version matches "
 				  "'strings like '5 mins.', '1 minute', ... '\\d+' stands for at least "
 				  "'one digit, '\\.' is just a point, a '?' after a character means "

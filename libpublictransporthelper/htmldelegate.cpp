@@ -18,15 +18,11 @@
  */
 
 #include "htmldelegate.h"
-#include "global.h"
-// #include "departuremodel.h"
+#include "enums.h"
 
 #include <QTextDocument>
 #include <QTextBlock>
 #include <QTextLayout>
-#include <QAbstractItemView>
-#include <QTreeView>
-#include <QAbstractTextDocumentLayout>
 #include <QPainter>
 #include <qmath.h>
 
@@ -34,7 +30,6 @@
 #include <Plasma/FrameSvg>
 #include <KColorScheme>
 #include <KColorUtils>
-
 
 PublicTransportDelegate::PublicTransportDelegate( QObject *parent )
 		: HtmlDelegate( DrawShadows | DontDrawBackground, parent )
@@ -46,13 +41,13 @@ void PublicTransportDelegate::paint( QPainter* painter, const QStyleOptionViewIt
 {
 	painter->setRenderHints( QPainter::SmoothPixmapTransform | QPainter::Antialiasing );
 
-	if ( option.state.testFlag( QStyle::State_HasFocus )
-				|| option.state.testFlag( QStyle::State_Selected )
-				|| option.state.testFlag( QStyle::State_MouseOver ) ) {
+	if ( option.state.testFlag(QStyle::State_HasFocus)
+				|| option.state.testFlag(QStyle::State_Selected)
+				|| option.state.testFlag(QStyle::State_MouseOver) ) {
 		QColor focusColor = KColorScheme( QPalette::Active, KColorScheme::Selection )
 							.background( KColorScheme::NormalBackground ).color();
-		if ( option.state.testFlag( QStyle::State_Selected ) ) {
-			if ( option.state.testFlag( QStyle::State_MouseOver ) ) {
+		if ( option.state.testFlag(QStyle::State_Selected) ) {
+			if ( option.state.testFlag(QStyle::State_MouseOver) ) {
 				focusColor.setAlpha( focusColor.alpha() * 0.65f );
 			} else {
 				focusColor.setAlpha( focusColor.alpha() * 0.55f );
@@ -81,7 +76,7 @@ void PublicTransportDelegate::paint( QPainter* painter, const QStyleOptionViewIt
 			bgGradient.setColorAt( 1, focusColor );
 		}
 
-		painter->fillRect( option.rect, QBrush( bgGradient ) );
+		painter->fillRect( option.rect, QBrush(bgGradient) );
 	}
 
 	HtmlDelegate::paint( painter, option, index );
@@ -115,19 +110,28 @@ void PublicTransportDelegate::paint( QPainter* painter, const QStyleOptionViewIt
 	}
 }
 
+class HtmlDelegatePrivate {
+public:
+	HtmlDelegatePrivate( HtmlDelegate::Options _options ) {
+		options = _options;
+	};
+	
+	HtmlDelegate::Options options;
+};
+
 HtmlDelegate::HtmlDelegate( Options options, QObject *parent )
-		: QItemDelegate( parent )
+		: QItemDelegate( parent ), d_ptr(new HtmlDelegatePrivate(options))
 {
-	m_alignText = false;
-	m_options = options;
 }
 
 void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
 						  const QModelIndex& index ) const
 {
+	Q_D( const HtmlDelegate );
+	
 	painter->setRenderHints( QPainter::SmoothPixmapTransform | QPainter::Antialiasing );
 
-	if ( !m_options.testFlag( DontDrawBackground ) ) {
+	if ( !d->options.testFlag( DontDrawBackground ) ) {
 		QStyleOptionViewItemV4 opt = option;
 		QStyle *style = QApplication::style();
 		style->drawControl( QStyle::CE_ItemViewItem, &opt, painter );
@@ -169,7 +173,7 @@ void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
 		drawDecoration( painter, option, decorationRect, icon.pixmap( iconSize ) );
 	} else { // no decoration
 		displayRect = option.rect;
-		if ( m_alignText ) { // Align text as if an icon would be shown
+		if ( d->options.testFlag(AlignTextToDecoration) ) { // Align text as if an icon would be shown
 			displayRect.adjust( margin + iconSize.width() + padding, 0, 0, 0 );
 		}
 	}
@@ -191,44 +195,21 @@ void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
 	drawFocus( painter, option, displayRect );
 }
 
-void HtmlDelegate::drawDecoration( QPainter* painter, const QStyleOptionViewItem& option,
-								   const QRect& rect, const QPixmap& pixmap ) const
-{
-	if ( rect.isEmpty() ) {
-		return;
-	}
-
-	QPixmap bufferPixmap( rect.size() );
-	bufferPixmap.fill( Qt::transparent );
-
-	QPainter p( &bufferPixmap );
-	QRect rcPixmap = rect.translated( -rect.topLeft() );
-	QItemDelegate::drawDecoration( &p, option, rcPixmap, pixmap );
-
-//     if ( m_options.testFlag(DrawShadows) )
-// 	Plasma::PaintUtils::drawHalo( painter, rect.adjusted(2, 2, -2, -2) );
-
-	painter->drawPixmap( rect.topLeft(), bufferPixmap );
-}
-
 void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& option,
-								const QRect& rect, const QString& text ) const
-{
-	if ( text.isEmpty() || rect.isEmpty() ) {
-		return;
-	}
+								const QRect& rect, const QString& text ) const {
+	Q_D( const HtmlDelegate );
 
 	int margin = 3;
 	int lineCount = 0;
 	int maxLineCount = qMax( qFloor(rect.height() / option.fontMetrics.lineSpacing()), 1 );
 	QRect textRect = rect.adjusted( margin, 0, 0, 0 );
 	QColor textColor = option.state.testFlag( QStyle::State_Selected )
-	                   ? option.palette.highlightedText().color() : option.palette.text().color();
-#if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
-	bool drawHalos = false; // No Plasma::PaintUtils::drawHalo() for KDE < 4.4
-#else
-	bool drawHalos = m_options.testFlag(DrawShadows) && qGray(textColor.rgb()) < 192;
-#endif
+			? option.palette.highlightedText().color() : option.palette.text().color();
+	#if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
+		bool drawHalos = false; // No Plasma::PaintUtils::drawHalo() for KDE < 4.4
+	#else
+		bool drawHalos = d->options.testFlag(DrawShadows) && qGray(textColor.rgb()) < 192;
+	#endif
 
 	QList< QRect > fadeRects, haloRects;
 	int fadeWidth = 30;
@@ -253,8 +234,8 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
 	document.setDefaultTextOption( textOption );
 
 	QString sStyleSheet = QString( "body { color:rgba(%1,%2,%3,%4); margin-left: %5px; }" )
-	                      .arg( textColor.red() ).arg( textColor.green() ).arg( textColor.blue() )
-	                      .arg( textColor.alpha() ).arg( margin );
+						.arg( textColor.red() ).arg( textColor.green() ).arg( textColor.blue() )
+						.arg( textColor.alpha() ).arg( margin );
 	document.setDefaultStyleSheet( sStyleSheet );
 
 	QString sText = text;
@@ -342,7 +323,7 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
 	}
 	p.end();
 
-	if ( m_options.testFlag( DrawShadows ) ) {
+	if ( d->options.testFlag(HtmlDelegate::DrawShadows) ) {
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
 		if ( drawHalos ) {
 			foreach( const QRect &haloRect, haloRects ) {
@@ -360,20 +341,59 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
 	painter->drawPixmap( rect.topLeft(), pixmap );
 }
 
+void HtmlDelegate::drawDecoration( QPainter* painter, const QStyleOptionViewItem& option,
+								   const QRect& rect, const QPixmap& pixmap ) const
+{
+	if ( rect.isEmpty() ) {
+		return;
+	}
+
+	QPixmap bufferPixmap( rect.size() );
+	bufferPixmap.fill( Qt::transparent );
+
+	QPainter p( &bufferPixmap );
+	QRect rcPixmap = rect.translated( -rect.topLeft() );
+	QItemDelegate::drawDecoration( &p, option, rcPixmap, pixmap );
+
+//     if ( d->options.testFlag(DrawShadows) )
+// 	Plasma::PaintUtils::drawHalo( painter, rect.adjusted(2, 2, -2, -2) );
+
+	painter->drawPixmap( rect.topLeft(), bufferPixmap );
+}
+
 QSize HtmlDelegate::sizeHint( const QStyleOptionViewItem& option,
 							  const QModelIndex& index ) const
 {
 	QSize size = QItemDelegate::sizeHint( option, index );
 
-	if ( index.data( LinesPerRowRole ).isValid() ) {
-		int lines = qMax( index.data( LinesPerRowRole ).toInt(), 1 );
+	if ( index.data(LinesPerRowRole).isValid() ) {
+		int lines = qMax( index.data(LinesPerRowRole).toInt(), 1 );
 // 	int height = option.fontMetrics.boundingRect( 0, 0, size.width(), 999999,
 // 						      0, "AlpfIgj(" ).height();
 // 	size.setHeight( (height + option.fontMetrics.leading()) * lines + 4 );
-		size.setHeight( lines * ( option.fontMetrics.lineSpacing() + 2 ) );
+		size.setHeight( lines * (option.fontMetrics.lineSpacing() + 2) );
 	} else {
 		size.setHeight( option.fontMetrics.lineSpacing() + 4 );
 	}
 
 	return size;
+}
+
+HtmlDelegate::Options HtmlDelegate::options() const {
+	Q_D( const HtmlDelegate );
+    return d->options;
+}
+
+void HtmlDelegate::setOptions(HtmlDelegate::Options options) {
+	Q_D( HtmlDelegate );
+    d->options = options;
+}
+
+void HtmlDelegate::setOption(HtmlDelegate::Option option, bool enable) {
+	Q_D( HtmlDelegate );
+    if ( enable ) {
+        d->options |= option;
+    } else if ( d->options.testFlag(option) ) {
+        d->options ^= option;
+    }
 }

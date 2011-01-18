@@ -172,9 +172,9 @@ protected slots:
 	 * This slot gets called by JourneySearchSuggestionWidget.
 	 * @param stopName The parsed stop name.
 	 * @param departure The parsed departure date and time.
-	 * @param stopIsTarget Wether or not the parsed stop should be treated as target (true)
+	 * @param stopIsTarget Whether or not the parsed stop should be treated as target (true)
 	 *   or as origin stop (false).
-	 * @param timeIsDeparture Wether or not the parsed time should be treated as departure (true)
+	 * @param timeIsDeparture Whether or not the parsed time should be treated as departure (true)
 	 *   or as arrival time (false).
 	 **/
 	void journeySearchLineChanged( const QString &stopName, const QDateTime &departure,
@@ -452,7 +452,7 @@ private:
 	KSelectAction *switchStopAction( QObject *parent, bool destroyOverlayOnTrigger = false ) const;
 
 	QVariantHash currentServiceProviderData() const {
-		return serviceProviderData( m_settings.currentStopSettings().serviceProviderID ); };
+		return serviceProviderData( m_settings.currentStopSettings().get<QString>(ServiceProviderSetting) ); };
 	QVariantHash serviceProviderData( const QString &id ) const;
 
 	void initTreeView( Plasma::TreeView *treeView );
@@ -491,7 +491,7 @@ private:
 
 	Settings m_settings; /**< Current applet settings. */
 	QStringList m_currentServiceProviderFeatures;
-	bool m_stopNameValid; /**< Wheather or not the current stop name (m_stop) is valid. */
+	bool m_stopNameValid; /**< Whether or not the current stop name (m_stop) is valid. */
 
 	QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in the tree view
 			* for the context menu actions. */
@@ -536,37 +536,48 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
 */
 
 /**
- * \defgroup models Models
+ * @defgroup models Models
 @brief Data is retrieved from data engines (like the publictransport data engine), processed in a thread and stored in models.
-The applet uses four data engines: publictransport, geolocation, openstreetmap (to get stops near the user) and favicons (to get favicons from the service providers).
+
+The models used for storing public transport data are: @ref DepartureModel for departures/arrivals and @ref JourneyModel for journeys. They are both based on @ref PublicTransportModel.
+
+The applet uses five data engines: <em>publictransport</em>, <em>geolocation</em>, <em>openstreetmap</em> (to get stops near the user), <em>favicons</em> (to get favicons from the service providers) and <em>network </em>(to check the network status).
 The publictransport data engine expects data source names in a specific format, which is explained in detail in it's documentation. Here are some examples of what source names the applet generates (based on the settings):
 @par
 <em>"Departures de_db|stop=Leipzig|timeOffset=5"</em> for departures from the service provider with the ID "de_db", a stop named "Leipzig" and an offset (from now) in minutes for the first departure of 5.
 @par
 <em>"Journeys de_db|originStop=Leipzig|targetStop=Bremen"</em> for journeys from the service provider with the ID "de_db", an origin stop named "Leipzig" and a target stop named "Bremen".
 
-The format of the data structure returned from the data engine is again explained in detail in the data engine's documentation. It arrives in the slot @ref PublicTransport::dataUpdated. From there one of the following functions is called, based on the data returned by the data engine:
-@ref handleDataError, if the "error" key of the data structure is true
-@ref processStopSuggestions, if the "receivedPossibleStopList" key of the data structure is true, which can also happen if eg. "Departures" where queried for, but the stop name is ambigous
-@ref DepartureProcessor::processJourneys, @ref DepartureProcessor::processDepartures to add the data in a job to the background thread
+@note The service provider ID <em>"de_db"</em> can be left away to use a default service provider for the users country (from KDE's global settings).
+
+The format of the data structure returned from the data engine is again explained in detail in the data engine's documentation (@ref pageUsage). It arrives in the slot @ref PublicTransport::dataUpdated. From there one of the following functions is called, based on the data returned by the data engine:
+@par
+@ref PublicTransport::handleDataError, if the "error" key of the data structure is true, ie. there was an error while running the query in the data engine (eg. server not reachable or an error in the accessor while trying to parse the document from the server),
+@par
+@ref PublicTransport::processStopSuggestions, if the "receivedPossibleStopList" key of the data structure is true, which can also happen if eg. "Departures" were queried for, but the stop name is ambigous,
+@par
+@ref DepartureProcessor::processJourneys, @ref DepartureProcessor::processDepartures if there's no error and no stoplist, but "parseMode" is "journeys" or "departures" (also for arrivals). A job is added at the background thread.
 
 The thread then reads the data and creates data structures of type @ref DepartureInfo for departures/arrivals or @ref JourneyInfo for journeys. It also checks for alarms and applies filters. That way complex filters and or many alarms applied to many departures/arrivals won't freeze the applet.
 
-Before beginning a new departure/arrival/journey job the thread calls @ref PublicTransport::beginDepartureProcessing or @ref PublicTransport::beginJourneyProcessing. Once a chunk of departures/arrivals is ready the thread calls @ref PublicTransport::departuresProcessed. In that function the processed departures are cached based on the source name (but with date and time values stripped) and then the departure/arrival model gets filled with them in @ref PublicTransport::fillModel. If journeys are ready @ref PublicTransport::journeysProcessed gets called by the thread, which calls @ref PublicTransport::fillModelJourney. If filter settings are changed the thread is used again to run filters on the current data. Once the filter job is ready it calls @ref PublicTransport::departuresFiltered.
+Before beginning a new departure/arrival/journey job the thread emits a signal that is connected to @ref PublicTransport::beginDepartureProcessing / @ref PublicTransport::beginJourneyProcessing. Once a chunk of departures/arrivals is ready @ref PublicTransport::departuresProcessed gets called through a signal/slot connection. In that function the processed departures are cached based on the source name (but with date and time values stripped) and then the departure/arrival model gets filled with them in @ref PublicTransport::fillModel. If journeys are ready @ref PublicTransport::journeysProcessed gets called by the thread, which calls @ref PublicTransport::fillModelJourney. If filter settings are changed the thread is used again to run filters on the current data. Once the filter job is ready it calls @ref PublicTransport::departuresFiltered.
 
-The @ref PublicTransport::fillModel and @ref PublicTransport::fillModelJourney functions add, update and/or remove items in the models. Both the departure/arrival and the journey model have funtions called @ref DepartureModel::indexFromInfo / @ref JourneyModel::indexFromInfo, which use a hash generated from the data items (@ref DepartureInfo / @ref JourneyInfo) to quickly check, if there already is an item in the model for a given data item. Hashes are generated automatically in @ref DepartureInfo::generateHash / @ref JourneyInfo::generateHash, the hash of an item can be retrieved using @ref PublicTransportInfo::hash. Two data items don't have to be exactly equal to generade an equal hash. That is important to also find departures/arrivals/journeys which data has changed since the last update, eg. departures with a changed delay.
+The @ref PublicTransport::fillModel and @ref PublicTransport::fillModelJourney functions add, update and/or remove items in the models. Both the departure/arrival and the journey model have functions called @ref DepartureModel::indexFromInfo / @ref JourneyModel::indexFromInfo, which use a hash generated from the data items (@ref DepartureInfo / @ref JourneyInfo) to quickly check, if there already is an item in the model for a given data item. Hashes are generated automatically in the constructors and can be retrieved using @ref PublicTransportInfo::hash. Two data items don't have to be exactly equal to generade an equal hash. That is important to also find departures/arrivals/journeys which data has changed since the last update, eg. departures with a changed delay.
+
+@see filterSystem
 */
 
 /**
- * \defgroup filterSystem Filter System
+ * @defgroup filterSystem Filter System
 @brief The applet has the possibility to filter departures/arrivals based on various constraints. Those constraints are combined to filters using logical AND. Filters on the other hand can be combined to filter lists using logical OR. The filter system is also used to match alarms.
 
 The filtering is performed in classes described under @ref filter_classes_sec,
 while those filters can be setup using widgets described under @ref filter_widgets_sec.
 
+@n
 @section filter_classes_sec Classes That Perform Filtering
 The lowest class in the hierarchy of filter classes is @ref Constraint, which describes a single
-constraint which should or should not match the departures/arrivals to be shown. One step higher
+constraint which should match the departures/arrivals to be shown/hidden. One step higher
 in the hierarchy comes the class @ref Filter, which is a list of constraints (combined using
 logical AND). Another step higher comes @ref FilterList, which is a list of filters (combined
 using logical OR). A @ref FilterList is wrapped by an object of type @ref FilterSettings together
@@ -584,17 +595,23 @@ departures/arrivals that have the same value as stored in the constraint.
 Filters can be serialized using toData() / fromData() methods.
 Filter widgets described in the next section can be easily created from these filter classes.
 
+@n
 @section filter_widgets_sec Widgets for Editing Filters
-There are accompanying widget filter classes for the filter classes from the previous section:
+There are accompanying QWidget based classes for the filter classes from the previous section:
+@par
 @ref ConstraintWidget for @ref Constraint, @ref FilterWidget for @ref Filter and
 @ref FilterListWidget for @ref FilterList. Filter widgets can be constructed from the filter
 classes of the previous section.
 
 For each constraint data type there is a separate constraint widget class:
-@ref ConstraintListWidget to select values of a given list of values,
+@par
+@ref ConstraintListWidget to select values of a given list of values (eg. a list of vehicle types),
+@par
 @ref ConstraintStringWidget to enter a string for matching (eg. matching intermediate stops),
+@par
 @ref ConstraintIntWidget to enter an integer for matching and
-@ref ConstraintTimeWidget to enter a time for matching.
+@par
+@ref ConstraintTimeWidget to enter a time for matching (eg. a departure time, used for alarms).
 
 @ref FilterWidget uses @ref AbstractDynamicLabeledWidgetContainer as base class to allow dynamic
 adding / removing of constraints. @ref FilterListWidget uses @ref AbstractDynamicWidgetContainer

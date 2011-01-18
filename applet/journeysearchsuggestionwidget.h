@@ -43,6 +43,8 @@ class QStandardItemModel;
  *
  * By default all available suggestions are shown. To disable suggestions by type use
  * @ref setEnabledSuggestions.
+ *
+ * @since 0.9.1
  **/
 class JourneySearchSuggestionWidget : public Plasma::TreeView
 {
@@ -70,7 +72,7 @@ public:
 	 * @param settings A pointer to the settings object of the applet.
 	 * @param palette The palette to use. Defaults to QPalette().
 	 **/
-	JourneySearchSuggestionWidget( Settings *settings, const QPalette &palette = QPalette() );
+	explicit JourneySearchSuggestionWidget( Settings *settings, const QPalette &palette = QPalette() );
 
 	/**
 	 * @brief Attaches the given @p lineEdit with this widget. All changes made to the text in
@@ -105,9 +107,9 @@ signals:
 	 *
 	 * @param stopName The parsed stop name.
 	 * @param departure The parsed departure date and time.
-	 * @param stopIsTarget Wether or not the parsed stop should be treated as target (true)
+	 * @param stopIsTarget Whether or not the parsed stop should be treated as target (true)
 	 *   or as origin stop (false).
-	 * @param timeIsDeparture Wether or not the parsed time should be treated as departure (true)
+	 * @param timeIsDeparture Whether or not the parsed time should be treated as departure (true)
 	 *   or as arrival time (false).
 	 **/
 	void journeySearchLineChanged( const QString &stopName, const QDateTime &departure,

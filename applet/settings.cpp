@@ -21,12 +21,12 @@
 #include "settings.h"
 #include "htmldelegate.h"
 #include "filterwidget.h"
-#include "stopwidget.h"
 #include "departuremodel.h"
 // #include "datasourcetester.h"
 #include "departureprocessor.h"
-#include "locationmodel.h"
-#include "serviceprovidermodel.h"
+#include <publictransporthelper/stopwidget.h>
+#include <publictransporthelper/locationmodel.h>
+#include <publictransporthelper/serviceprovidermodel.h>
 
 // Qt includes
 #include <QListWidget>
@@ -117,11 +117,11 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	QStringList trFilterConfigurationList;
 	for ( QHash<QString, FilterSettings>::const_iterator it = settings.filterSettings.constBegin();
 				it != settings.filterSettings.constEnd(); ++it ) {
-		trFilterConfigurationList << translateKey( it.key() );
+		trFilterConfigurationList << Global::translateFilterKey( it.key() );
 	}
-	m_stopListWidget = new StopListWidget( settings.stopSettingsList, trFilterConfigurationList,
-			m_modelLocations, m_modelServiceProvider, m_publicTransportEngine, m_osmEngine,
-			m_geolocationEngine, m_ui.stopList );
+	m_stopListWidget = new StopListWidget( m_ui.stopList, settings.stopSettingsList, 
+			StopSettingsDialog::ExtendedStopSelection, AccessorInfoDialog::DefaultOptions,
+			trFilterConfigurationList );
 	m_stopListWidget->setWhatsThis( i18nc("@info:whatsthis",
 			"<subtitle>This shows the stop settings you have set.</subtitle>"
 			"<para>The applet shows results for one of them at a time. To switch the "
@@ -197,9 +197,9 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	m_uiFilter.enableFilters->setChecked( settings.filtersEnabled );
 	currentAlarmChanged( m_uiAlarms.alarmList->currentRow() );
 
-	m_uiFilter.addFilterConfiguration->setIcon( KIcon( "list-add" ) );
-	m_uiFilter.removeFilterConfiguration->setIcon( KIcon( "list-remove" ) );
-	m_uiFilter.renameFilterConfiguration->setIcon( KIcon( "edit-rename" ) );
+	m_uiFilter.addFilterConfiguration->setIcon( KIcon("list-add") );
+	m_uiFilter.removeFilterConfiguration->setIcon( KIcon("list-remove") );
+	m_uiFilter.renameFilterConfiguration->setIcon( KIcon("edit-rename") );
 
 	connect( m_configDialog, SIGNAL(finished()), this, SLOT(configFinished()) );
 	connect( m_configDialog, SIGNAL(okClicked()), this, SLOT(configAccepted()) );
@@ -404,9 +404,9 @@ void SettingsUiManager::setAlarmTextColor( QListWidgetItem *item, bool hasAffect
 void SettingsUiManager::stopSettingsAdded()
 {
 	StopSettings stopSettings = m_stopListWidget->stopSettingsList().last();
-	QString text = stopSettings.stops.join( ", " );
-	if ( !stopSettings.city.isEmpty() ) {
-		text += " in " + stopSettings.city;
+	QString text = stopSettings.stops().join( ", " );
+	if ( !stopSettings.get<QString>(CitySetting).isEmpty() ) {
+		text += " in " + stopSettings.get<QString>(CitySetting);
 	}
 	m_uiAlarms.affectedStops->addItem( text );
 
@@ -436,9 +436,9 @@ void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex )
 	QStringList stopLabels;
 	StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
 	foreach( const StopSettings &stopSettings, stopSettingsList ) {
-		QString text = stopSettings.stops.join( ", " );
-		if ( !stopSettings.city.isEmpty() ) {
-			text += " in " + stopSettings.city;
+		QString text = stopSettings.stops().join( ", " );
+		if ( !stopSettings.get<QString>(CitySetting).isEmpty() ) {
+			text += " in " + stopSettings.get<QString>(CitySetting);
 		}
 		stopLabels << text;
 	}
@@ -461,9 +461,9 @@ void SettingsUiManager::stopSettingsChanged()
 	// Update affected stops combobox in the alarm page
 	for ( int i = 0; i < stopSettingsList.count(); ++i ) {
 		const StopSettings &stopSettings = stopSettingsList[ i ];
-		QString text = stopSettings.stops.join( ", " );
-		if ( !stopSettings.city.isEmpty() ) {
-			text += " in " + stopSettings.city;
+		QString text = stopSettings.stops().join( ", " );
+		if ( !stopSettings.get<QString>(CitySetting).isEmpty() ) {
+			text += " in " + stopSettings.get<QString>(CitySetting);
 		}
 
 		if ( i < m_uiAlarms.affectedStops->count() ) {
@@ -490,7 +490,7 @@ void SettingsUiManager::stopSettingsChanged()
 	QStringList filterConfigurations = m_filterSettings.keys();
 	QStringList trFilterConfigurations;
 	foreach( const QString &filterConfig, filterConfigurations ) {
-		trFilterConfigurations << translateKey( filterConfig );
+		trFilterConfigurations << Global::translateFilterKey( filterConfig );
 	}
 
 	// The signal mapper is used to map signals of the used filter configuration
@@ -501,9 +501,9 @@ void SettingsUiManager::stopSettingsChanged()
 		QString sRow = QString::number( row );
 
 		// Create label for the current stop settings
-		QString text = stopSettings.stops.join( ", " );
-		if ( !stopSettings.city.isEmpty() ) {
-			text += " in " + stopSettings.city;
+		QString text = stopSettings.stops().join( ", " );
+		if ( !stopSettings.get<QString>(CitySetting).isEmpty() ) {
+			text += " in " + stopSettings.get<QString>(CitySetting);
 		}
 		QLabel *label = new QLabel( text, m_uiFilter.filterUsesArea );
 		label->setWordWrap( true );
@@ -519,7 +519,8 @@ void SettingsUiManager::stopSettingsChanged()
 		KComboBox *cmbFilterConfigs = new KComboBox( m_uiFilter.filterUsesArea );
 		cmbFilterConfigs->setObjectName( QString::number( row ) );
 		cmbFilterConfigs->addItems( trFilterConfigurations );
-		cmbFilterConfigs->setCurrentItem( translateKey( stopSettings.filterConfiguration ) );
+		cmbFilterConfigs->setCurrentItem( Global::translateFilterKey(
+				stopSettings.get<QString>(FilterConfigurationSetting)) );
 		cmbFilterConfigs->setObjectName( "lblUsesConfigs" + sRow ); // This must be 14 chars, followed by an int, see usedFilterConfigChanged().
 		connect( cmbFilterConfigs, SIGNAL(currentIndexChanged(int)), mapper, SLOT(map()) );
 		mapper->setMapping( cmbFilterConfigs, cmbFilterConfigs );
@@ -549,8 +550,8 @@ void SettingsUiManager::usedFilterConfigChanged( QWidget* widget )
 	int index = widget->objectName().mid( 14 ).toInt();
 	StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
 	if ( stopSettingsList.count() > index ) {
-		stopSettingsList[ index ].filterConfiguration = untranslateKey(
-				qobject_cast<KComboBox*>( widget )->currentText() );
+		stopSettingsList[ index ].set( FilterConfigurationSetting,
+				Global::untranslateFilterKey(qobject_cast<KComboBox*>(widget)->currentText()) );
 		m_stopListWidget->setStopSettingsList( stopSettingsList );
 	}
 
@@ -564,13 +565,14 @@ void SettingsUiManager::usedFilterConfigChanged( QWidget* widget )
 
 void SettingsUiManager::updateFilterInfoLabel()
 {
-	QString filterConfiguration = untranslateKey( m_uiFilter.filterConfigurations->currentText() );
+	QString filterConfiguration = Global::untranslateFilterKey( 
+			m_uiFilter.filterConfigurations->currentText() );
 
 	// Build a list of labels for stop settings used by the current filter configuration
 	QStringList usedByList;
 	foreach( const StopSettings &stopSettings, m_stopListWidget->stopSettingsList() ) {
-		if ( stopSettings.filterConfiguration == filterConfiguration ) {
-			usedByList << stopSettings.stops.join( "; " );
+		if ( stopSettings.get<QString>(FilterConfigurationSetting) == filterConfiguration ) {
+			usedByList << stopSettings.stops().join( "; " );
 		}
 	}
 
@@ -578,15 +580,17 @@ void SettingsUiManager::updateFilterInfoLabel()
 	QPalette palette = m_uiFilter.lblInfo->palette();
 	if ( usedByList.isEmpty() ) {
 		// Filter configuration isn't used
-		m_uiFilter.lblInfo->setText( i18nc( "@info", "Not used by any stop settings." ) );
+		m_uiFilter.lblInfo->setText( i18nc("@info Used for the filter info label in the"
+				"filter dialog page", "Not used by any stop settings.") );
 		m_uiFilter.lblInfo->setToolTip( QString() );
 		KColorScheme::adjustForeground( palette, KColorScheme::NegativeText, QPalette::WindowText );
 	} else {
-		m_uiFilter.lblInfo->setText( i18ncp("@info", "Used by %1 stop setting.",
-											"Used by %1 stop settings.", usedByList.count()) );
-		m_uiFilter.lblInfo->setToolTip( i18nc("@info:tooptip",
-											  "<para>Used by these stops:<list>%1</list></para>",
-											  "<item>" + usedByList.join("</item><item>") + "</item>") );
+		m_uiFilter.lblInfo->setText( i18ncp("@info Used for the filter info label in the"
+				"filter dialog page", "Used by %1 stop setting.", "Used by %1 stop settings.",
+				usedByList.count()) );
+		m_uiFilter.lblInfo->setToolTip( i18nc("@info:tooltip Used for the filter info label in the"
+				"filter dialog page", "<para>Used by these stops:<list>%1</list></para>",
+				"<item>" + usedByList.join("</item><item>") + "</item>") );
 		KColorScheme::adjustForeground( palette, KColorScheme::NormalText, QPalette::WindowText );
 	}
 	m_uiFilter.lblInfo->setPalette( palette );
@@ -671,7 +675,7 @@ void SettingsUiManager::setValuesOfFilterConfig()
 	QStringList filterConfigs;
 	for ( QHash<QString, FilterSettings>::const_iterator it = m_filterSettings.constBegin();
 				it != m_filterSettings.constEnd(); ++it ) {
-		filterConfigs << translateKey( it.key() );
+		filterConfigs << Global::translateFilterKey( it.key() );
 	}
 
 	QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
@@ -701,7 +705,7 @@ void SettingsUiManager::setValuesOfFilterConfig()
 	updateFilterInfoLabel();
 	stopSettingsChanged();
 
-	QString filterConfiguration = untranslateKey( trFilterConfiguration );
+	QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
 	bool isDefaultFilterConfig = filterConfiguration == "Default";
 	m_uiFilter.removeFilterConfiguration->setDisabled( isDefaultFilterConfig );
 	m_uiFilter.renameFilterConfiguration->setDisabled( isDefaultFilterConfig );
@@ -726,24 +730,6 @@ void SettingsUiManager::setValuesOfFilterConfig()
 	setFilterConfigurationChanged( added != 0 );
 }
 
-QString SettingsUiManager::translateKey( const QString& key )
-{
-	if ( key == "Default" ) {
-		return i18nc( "@info/plain The name of the default filter configuration", "Default" );
-	} else {
-		return key;
-	}
-}
-
-QString SettingsUiManager::untranslateKey( const QString& translatedKey )
-{
-	if ( translatedKey == i18nc( "@info/plain The name of the default filter configuration", "Default" ) ) {
-		return "Default";
-	} else {
-		return translatedKey;
-	}
-}
-
 Settings SettingsUiManager::settings()
 {
 	Settings ret;
@@ -751,7 +737,8 @@ Settings SettingsUiManager::settings()
 	ret.stopSettingsList = m_stopListWidget->stopSettingsList();
 	for ( int i = 0; i < ret.stopSettingsList.count(); ++i ) {
 		StopSettings stopSettings = ret.stopSettingsList.at( i );
-		stopSettings.filterConfiguration = untranslateKey( stopSettings.filterConfiguration );
+		stopSettings.set( FilterConfigurationSetting,
+				Global::untranslateFilterKey(stopSettings.get<QString>(FilterConfigurationSetting)) );
 	}
 
 	// Set stored "no-Gui" settings
@@ -765,7 +752,7 @@ Settings SettingsUiManager::settings()
 
 	if ( m_filterConfigChanged ) {
 		QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
-		QString filterConfiguration = untranslateKey( trFilterConfiguration );
+		QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
 		m_filterSettings[ filterConfiguration ] = currentFilterSettings();
 	}
 	ret.filterSettings = m_filterSettings;
@@ -834,7 +821,7 @@ void SettingsUiManager::loadFilterConfiguration( const QString& filterConfig )
 		return;
 	}
 
-	QString untrFilterConfig = untranslateKey( filterConfig );
+	QString untrFilterConfig = Global::untranslateFilterKey( filterConfig );
 	if ( untrFilterConfig == m_lastFilterConfiguration ) {
 		return;
 	}
@@ -856,7 +843,7 @@ void SettingsUiManager::updateFilterConfigurationLists()
 	QStringList trFilterConfigurationList;
 	for ( QHash<QString, FilterSettings>::const_iterator it = m_filterSettings.constBegin();
 				it != m_filterSettings.constEnd(); ++it ) {
-		trFilterConfigurationList << translateKey( it.key() );
+		trFilterConfigurationList << Global::translateFilterKey( it.key() );
 	}
 
 	// Update list of filter configuration names in the stop list widget
@@ -878,7 +865,7 @@ void SettingsUiManager::addFilterConfiguration()
 								"New Configuration %1", i);
 		++i;
 	}
-	QString untrNewFilterConfig = untranslateKey( newFilterConfig );
+	QString untrNewFilterConfig = Global::untranslateFilterKey( newFilterConfig );
 
 	// Append new filter settings
 	m_filterSettings.insert( untrNewFilterConfig, FilterSettings() );
@@ -907,7 +894,7 @@ void SettingsUiManager::removeFilterConfiguration()
 	}
 
 	// Remove filter configuration from the filter settings list
-	QString filterConfiguration = untranslateKey( trFilterConfiguration );
+	QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
 	m_filterSettings.remove( filterConfiguration );
 
 	// Remove filter configuration from the UI filter list
@@ -938,7 +925,7 @@ void SettingsUiManager::renameFilterConfiguration()
 	}
 
 	// Get key name of the current filter configuration
-	QString filterConfiguration = untranslateKey( trFilterConfiguration );
+	QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
 	if ( newFilterConfig == trFilterConfiguration ) {
 		return; // Not changed, but the old name was accepted
 	}
@@ -951,12 +938,14 @@ void SettingsUiManager::renameFilterConfiguration()
 	}
 
 	// Check if the new name is already used and ask if it should be overwritten
-	QString untrNewFilterConfig = untranslateKey( newFilterConfig );
+	QString untrNewFilterConfig = Global::untranslateFilterKey( newFilterConfig );
 	if ( m_filterSettings.keys().contains( untrNewFilterConfig )
-			&& KMessageBox::warningYesNo( m_configDialog, i18n( "<warning>There is already a "
-				"filter configuration with the name <resource>%1</resource>.</warning><nl/>"
-				"Do you want to overwrite it?", newFilterConfig ) )
-			!= KMessageBox::Yes ) {
+		&& KMessageBox::warningYesNo( m_configDialog,
+			i18nc("@info", "<warning>There is already a filter configuration with the name "
+						   "<resource>%1</resource>.</warning><nl/>Do you want to overwrite it?",
+						   newFilterConfig) )
+		!= KMessageBox::Yes )
+	{
 		return; // No (don't overwrite) pressed
 	}
 
@@ -985,8 +974,8 @@ void SettingsUiManager::renameFilterConfiguration()
 	// Update filter configuration name in stop settings
 	StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
 	for ( int i = 0; i < stopSettingsList.count(); ++i ) {
-		if ( stopSettingsList[i].filterConfiguration == filterConfiguration ) {
-			stopSettingsList[ i ].filterConfiguration = untrNewFilterConfig;
+		if ( stopSettingsList[i].get<QString>(FilterConfigurationSetting) == filterConfiguration ) {
+			stopSettingsList[i].set( FilterConfigurationSetting, untrNewFilterConfig );
 		}
 	}
 	m_stopListWidget->setStopSettingsList( stopSettingsList );
@@ -1003,7 +992,7 @@ void SettingsUiManager::filterActionChanged( int index )
 
 	// Store to last edited filter settings
 	QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
-	QString filterConfiguration = untranslateKey( trFilterConfiguration );
+	QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
 	m_filterSettings[ filterConfiguration ].filterAction = filterAction;
 
 	setFilterConfigurationChanged();
@@ -1016,7 +1005,7 @@ void SettingsUiManager::setFilterConfigurationChanged( bool changed )
 	}
 
 	QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
-	QString filterConfiguration = untranslateKey( trFilterConfiguration );
+	QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
 	bool defaultFilterConfig = filterConfiguration == "Default";
 	m_uiFilter.removeFilterConfiguration->setDisabled( defaultFilterConfig );
 	m_uiFilter.renameFilterConfiguration->setDisabled( defaultFilterConfig );
@@ -1075,24 +1064,26 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
 	int stopSettingCount = cgGlobal.readEntry( "stopSettings", 1 );
 	QString test = "location";
 	int i = 1;
-	while ( cgGlobal.hasKey( test ) ) {
+	while ( cgGlobal.hasKey(test) ) {
 		StopSettings stopSettings;
 		QString suffix = i == 1 ? QString() : '_' + QString::number( i );
-		stopSettings.location = cgGlobal.readEntry( "location" + suffix, "showAll" );
-		stopSettings.serviceProviderID = cgGlobal.readEntry( "serviceProvider" + suffix, "de_db" );
-		stopSettings.filterConfiguration = cgGlobal.readEntry(
-				"filterConfiguration" + suffix, "Default" );
-		stopSettings.city = cgGlobal.readEntry( "city" + suffix, QString() );
-		stopSettings.stops = cgGlobal.readEntry( "stop" + suffix, QStringList() );
-		stopSettings.stopIDs = cgGlobal.readEntry( "stopID" + suffix, QStringList() );
-		stopSettings.timeOffsetOfFirstDeparture =
-				cgGlobal.readEntry("timeOffsetOfFirstDeparture" + suffix, 0);
-		stopSettings.timeOfFirstDepartureCustom = QTime::fromString(
-				cgGlobal.readEntry("timeOfFirstDepartureCustom" + suffix, "12:00"), "hh:mm" );
-		stopSettings.firstDepartureConfigMode = static_cast<FirstDepartureConfigMode>(
-				cgGlobal.readEntry("firstDepartureConfigMode" + suffix,
-								   static_cast<int>(RelativeToCurrentTime)) );
-		stopSettings.alarmTime = cgGlobal.readEntry( "alarmTime" + suffix, 5 );
+		stopSettings.set( LocationSetting, cgGlobal.readEntry("location" + suffix, "showAll") );
+		stopSettings.set( ServiceProviderSetting, 
+						  cgGlobal.readEntry("serviceProvider" + suffix, "de_db") );
+		stopSettings.set( FilterConfigurationSetting,
+						  cgGlobal.readEntry("filterConfiguration" + suffix, "Default") );
+		stopSettings.set( CitySetting, cgGlobal.readEntry("city" + suffix, QString()) );
+		stopSettings.setStops( cgGlobal.readEntry("stop" + suffix, QStringList()),
+							   cgGlobal.readEntry("stopID" + suffix, QStringList()) );
+		stopSettings.set( TimeOffsetOfFirstDepartureSetting,
+						  cgGlobal.readEntry("timeOffsetOfFirstDeparture" + suffix, 0) );
+		stopSettings.set( TimeOfFirstDepartureSetting,
+						  QTime::fromString(cgGlobal.readEntry("timeOfFirstDepartureCustom" + suffix, 
+															   "12:00"), "hh:mm") );
+		stopSettings.set( FirstDepartureConfigModeSetting,
+						  cgGlobal.readEntry("firstDepartureConfigMode" + suffix, 
+											 static_cast<int>(RelativeToCurrentTime)) );
+		stopSettings.set( AlarmTimeSetting, cgGlobal.readEntry("alarmTime" + suffix, 5) );
 		settings.stopSettingsList << stopSettings;
 
 		++i;
@@ -1102,7 +1093,7 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
 		}
 	}
 
-	settings.currentStopSettingsIndex = cg.readEntry( "currentStopIndex", 0 ); // TODO Rename settings key to "currentStopSettingsIndex"?
+	settings.currentStopSettingsIndex = cg.readEntry( "currentStopIndex", 0 );
 
 	// Add initial stop settings when no settings are available
 	if ( settings.stopSettingsList.isEmpty() ) {
@@ -1115,12 +1106,12 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
 
 			StopSettings stopSettings;
 			if ( defaultServiceProviderId.isEmpty() ) {
-				stopSettings.location = "showAll";
+				stopSettings.set( LocationSetting, "showAll" );
 			} else {
-				stopSettings.location = countryCode;
-				stopSettings.serviceProviderID = defaultServiceProviderId;
+				stopSettings.set( LocationSetting, countryCode );
+				stopSettings.set( ServiceProviderSetting, defaultServiceProviderId );
 			}
-			stopSettings.stops << "";
+			stopSettings.setStop( QString() );
 			// TODO: Get initial stop names using StopFinder
 
 			settings.stopSettingsList << stopSettings;
@@ -1237,21 +1228,23 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 
 		foreach( const StopSettings &stopSettings, settings.stopSettingsList ) {
 			QString suffix = i == 1 ? QString() : '_' + QString::number( i );
-			cgGlobal.writeEntry( "location" + suffix, stopSettings.location );
-			cgGlobal.writeEntry( "serviceProvider" + suffix, stopSettings.serviceProviderID );
-			cgGlobal.writeEntry( "city" + suffix, stopSettings.city );
-			cgGlobal.writeEntry( "stop" + suffix, stopSettings.stops );
-			cgGlobal.writeEntry( "stopID" + suffix, stopSettings.stopIDs );
+			cgGlobal.writeEntry( "location" + suffix, 
+								 stopSettings.get<QString>(LocationSetting) );
+			cgGlobal.writeEntry( "serviceProvider" + suffix, 
+								 stopSettings.get<QString>(ServiceProviderSetting) );
+			cgGlobal.writeEntry( "city" + suffix, stopSettings.get<QString>(CitySetting) );
+			cgGlobal.writeEntry( "stop" + suffix, stopSettings.stops() );
+			cgGlobal.writeEntry( "stopID" + suffix, stopSettings.stopIDs() );
 
 			cgGlobal.writeEntry( "filterConfiguration" + suffix,
-			                     stopSettings.filterConfiguration );
+					stopSettings.get<QString>(FilterConfigurationSetting) );
 			cgGlobal.writeEntry( "timeOffsetOfFirstDeparture" + suffix,
-			                     stopSettings.timeOffsetOfFirstDeparture );
+					stopSettings.get<int>(TimeOffsetOfFirstDepartureSetting) );
 			cgGlobal.writeEntry( "timeOfFirstDepartureCustom" + suffix,
-			                     stopSettings.timeOfFirstDepartureCustom.toString( "hh:mm" ) );
+					stopSettings.get<QTime>(TimeOfFirstDepartureSetting).toString("hh:mm") );
 			cgGlobal.writeEntry( "firstDepartureConfigMode" + suffix,
-			                     static_cast<int>( stopSettings.firstDepartureConfigMode ) );
-			cgGlobal.writeEntry( "alarmTime" + suffix, stopSettings.alarmTime );
+					stopSettings.get<int>(FirstDepartureConfigModeSetting) );
+			cgGlobal.writeEntry( "alarmTime" + suffix, stopSettings.get<int>(AlarmTimeSetting) );
 			++i;
 		}
 

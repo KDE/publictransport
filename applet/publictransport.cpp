@@ -190,8 +190,8 @@ void PublicTransport::setSettings( const QString& serviceProviderID, const QStri
 	Settings settings = m_settings;
 	settings.stopSettingsList.clear();
 	StopSettings stopSettings;
-	stopSettings.serviceProviderID = serviceProviderID;
-	stopSettings.stops << stopName;
+	stopSettings.set( ServiceProviderSetting, serviceProviderID );
+	stopSettings.setStop( stopName );
 	settings.stopSettingsList << stopSettings;
 	writeSettings( settings );
 }
@@ -263,15 +263,15 @@ void PublicTransport::setupActions()
 	addAction( "updateTimetable", actionUpdate );
 
 	QAction *showActionButtons = new QAction( /*KIcon("system-run"),*/ // TODO: better icon
-			i18n("&Quick Actions"), this );
+			i18nc("@action", "&Quick Actions"), this );
 	connect( showActionButtons, SIGNAL( triggered() ), this, SLOT( showActionButtons() ) );
 	addAction( "showActionButtons", showActionButtons );
 
 	QAction *actionSetAlarmForDeparture = new QAction(
 			Global::makeOverlayIcon( KIcon( "task-reminder" ), "list-add" ),
 			m_settings.departureArrivalListType == DepartureList
-			? i18nc( "@action:inmenu", "Set &Alarm for This Departure" )
-			: i18nc( "@action:inmenu", "Set &Alarm for This Arrival" ), this );
+			? i18nc("@action:inmenu", "Set &Alarm for This Departure")
+			: i18nc("@action:inmenu", "Set &Alarm for This Arrival"), this );
 	connect( actionSetAlarmForDeparture, SIGNAL(triggered()),
 			 this, SLOT(setAlarmForDeparture()) );
 	addAction( "setAlarmForDeparture", actionSetAlarmForDeparture );
@@ -279,8 +279,8 @@ void PublicTransport::setupActions()
 	QAction *actionRemoveAlarmForDeparture = new QAction(
 			Global::makeOverlayIcon( KIcon( "task-reminder" ), "list-remove" ),
 			m_settings.departureArrivalListType == DepartureList
-			? i18nc( "@action:inmenu", "Remove &Alarm for This Departure" )
-			: i18nc( "@action:inmenu", "Remove &Alarm for This Arrival" ), this );
+			? i18nc("@action:inmenu", "Remove &Alarm for This Departure")
+			: i18nc("@action:inmenu", "Remove &Alarm for This Arrival"), this );
 	connect( actionRemoveAlarmForDeparture, SIGNAL(triggered()),
 			 this, SLOT(removeAlarmForDeparture()) );
 	addAction( "removeAlarmForDeparture", actionRemoveAlarmForDeparture );
@@ -305,7 +305,7 @@ void PublicTransport::setupActions()
 			Global::makeOverlayIcon( KIcon( "public-transport-stop" ),
 				QList<KIcon>() << KIcon( "go-next" ) << KIcon( "go-home" ),
 				QSize( iconExtend / 2, iconExtend / 2 ), iconExtend ),
-			i18nc( "@action", "Show &Arrivals" ), this );
+			i18nc("@action", "Show &Arrivals"), this );
 	connect( actionShowArrivals, SIGNAL( triggered() ),
 			 this, SLOT( setShowArrivals() ) );
 	addAction( "showArrivals", actionShowArrivals );
@@ -382,10 +382,11 @@ QList< QAction* > PublicTransport::contextualActions()
 		}
 
 		QMenu *menu = actionFilter->menu();
-		QString currentFilterConfig = m_settings.currentStopSettings().filterConfiguration;
+		QString currentFilterConfig = m_settings.currentStopSettings().get<QString>(
+				FilterConfigurationSetting );
 		foreach( const QString &filterConfig, filterConfigurationList ) {
-			QAction *action = new QAction(
-			    SettingsUiManager::translateKey( filterConfig ), m_filtersGroup );
+			QAction *action = new QAction( 
+					Global::translateFilterKey(filterConfig), m_filtersGroup );
 			action->setCheckable( true );
 			menu->addAction( action );
 			if ( filterConfig == currentFilterConfig ) {
@@ -477,19 +478,19 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 	// Build a source name for the publictransport data engine
 	if ( requestStopSuggestions ) {
 		m_currentJourneySource = QString( "Stops %1|stop=%2" )
-				.arg( m_settings.currentStopSettings().serviceProviderID )
+				.arg( m_settings.currentStopSettings().get<QString>(ServiceProviderSetting) )
 				.arg( _targetStopName );
 	} else {
 		m_currentJourneySource = QString( stopIsTarget
 				? "%6 %1|originStop=%2|targetStop=%3|maxCount=%4|datetime=%5"
 				: "%6 %1|originStop=%3|targetStop=%2|maxCount=%4|datetime=%5" )
-					.arg( m_settings.currentStopSettings().serviceProviderID )
-					.arg( m_settings.currentStopSettings().stopOrStopId( 0 ) )
+					.arg( m_settings.currentStopSettings().get<QString>(ServiceProviderSetting) )
+					.arg( m_settings.currentStopSettings().stop(0).nameOrId() )
 					.arg( _targetStopName )
 					.arg( m_settings.maximalNumberOfDepartures )
 					.arg( _dateTime.toString() )
 					.arg( timeIsDeparture ? "Journeys" : "JourneysArr" );
-		QString currentStop = m_settings.currentStopSettings().stops.first();
+		QString currentStop = m_settings.currentStopSettings().stops().first();
 		m_journeyTitleText = stopIsTarget
 				? i18nc("@info", "From %1<nl/>to <emphasis strong='1'>%2</emphasis>",
 						currentStop, _targetStopName)
@@ -500,9 +501,9 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 		}
 	}
 
-	if ( !m_settings.currentStopSettings().city.isEmpty() ) { //TODO CHECK useSeparateCityValue )
+	if ( !m_settings.currentStopSettings().get<QString>(CitySetting).isEmpty() ) { //TODO CHECK useSeparateCityValue )
 		m_currentJourneySource += QString( "|city=%1" ).arg(
-				m_settings.currentStopSettings().city );
+				m_settings.currentStopSettings().get<QString>(CitySetting) );
 	}
 
 	kDebug() << "Connect journey data source" << m_currentJourneySource
@@ -529,8 +530,8 @@ void PublicTransport::reconnectSource()
 
 	// Get a list of stops (or stop IDs if available) which results are currently shown
 	StopSettings curStopSettings = m_settings.currentStopSettings();
-	QStringList stops = curStopSettings.stops;
-	QStringList stopIDs = curStopSettings.stopIDs;
+	QStringList stops = curStopSettings.stops();
+	QStringList stopIDs = curStopSettings.stopIDs();
 	if ( stopIDs.isEmpty() ) {
 		stopIDs = stops;
 	}
@@ -542,19 +543,21 @@ void PublicTransport::reconnectSource()
 	for ( int i = 0; i < stops.count(); ++i ) {
 		QString stopValue = stopIDs[i].isEmpty() ? stops[i] : stopIDs[i];
 		QString currentSource = QString( "%4 %1|stop=%2" )
-				.arg( m_settings.currentStopSettings().serviceProviderID )
+				.arg( m_settings.currentStopSettings().get<QString>(ServiceProviderSetting) )
 				.arg( stopValue )
 				.arg( m_settings.departureArrivalListType == ArrivalList
 					? "Arrivals" : "Departures" );
-		if ( curStopSettings.firstDepartureConfigMode == RelativeToCurrentTime ) {
+		if ( static_cast<FirstDepartureConfigMode>(curStopSettings.get<int>(
+			FirstDepartureConfigModeSetting)) == RelativeToCurrentTime ) 
+		{
 			currentSource += QString( "|timeOffset=%1" ).arg(
-			                     curStopSettings.timeOffsetOfFirstDeparture );
+					curStopSettings.get<int>(TimeOffsetOfFirstDepartureSetting) );
 		} else {
 			currentSource += QString( "|time=%1" ).arg(
-			                     curStopSettings.timeOfFirstDepartureCustom.toString( "hh:mm" ) );
+					curStopSettings.get<QTime>(TimeOfFirstDepartureSetting).toString("hh:mm") );
 		}
-		if ( !curStopSettings.city.isEmpty() ) {
-			currentSource += QString( "|city=%1" ).arg( curStopSettings.city );
+		if ( !curStopSettings.get<QString>(CitySetting).isEmpty() ) {
+			currentSource += QString( "|city=%1" ).arg( curStopSettings.get<QString>(CitySetting) );
 		}
 
 		m_stopIndexToSourceName[ i ] = currentSource;
@@ -855,7 +858,7 @@ void PublicTransport::createPopupIcon()
 		int minutesToAlarm = qCeil( QDateTime::currentDateTime().secsTo( alarmTime ) / 60.0 );
 		int hoursToAlarm = minutesToAlarm / 60;
 		minutesToAlarm %= 60;
-		QString text = i18nc( "This is displayed on the popup icon to indicate "
+		QString text = i18nc( "@info/plain This is displayed on the popup icon to indicate "
 							  "the remaining time to the next alarm, %1=hours, "
 							  "%2=minutes with padded 0", "%1:%2", hoursToAlarm,
 							  QString("%1").arg( minutesToAlarm, 2, 10, QLatin1Char('0') ) );
@@ -922,11 +925,13 @@ void PublicTransport::createTooltip()
 
 			if ( m_settings.departureArrivalListType ==  DepartureList ) {
 				// Showing a departure list
-				if ( m_settings.currentStopSettings().stops.count() == 1 ) {
+				if ( m_settings.currentStopSettings().stops().count() == 1 ) {
 					// Only one stop (not combined with others)
 					data.setSubText( i18nc("@info %4 is the translated duration text, e.g. in 3 minutes",
 							"Next departure from '%1': line %2 (%3) %4",
-							m_settings.currentStopSettings().stops.first(), nextDeparture.lineString(), nextDeparture.target(), nextDeparture.durationString()) );
+							m_settings.currentStopSettings().stops().first(), 
+							nextDeparture.lineString(), nextDeparture.target(), 
+							nextDeparture.durationString()) );
 				} else {
 					// Results for multiple combined stops are shown
 					data.setSubText( i18nc("@info %3 is the translated duration text, e.g. in 3 minutes",
@@ -936,11 +941,11 @@ void PublicTransport::createTooltip()
 				}
 			} else {
 				// Showing an arrival list
-				if ( m_settings.currentStopSettings().stops.count() == 1 ) {
+				if ( m_settings.currentStopSettings().stops().count() == 1 ) {
 					// Only one stop (not combined with others)
 					data.setSubText( i18nc("@info %4 is the translated duration text, e.g. in 3 minutes",
 							"Next arrival at '%1': line %2 (%3) %4",
-							m_settings.currentStopSettings().stops.first(), nextDeparture.lineString(),
+							m_settings.currentStopSettings().stops().first(), nextDeparture.lineString(),
 							nextDeparture.target(), nextDeparture.durationString()) );
 				} else {
 					// Results for multiple combined stops are shown
@@ -1014,9 +1019,10 @@ void PublicTransport::configChanged()
 			m_settings.filtersEnabled );
 	StopSettings stopSettings = m_settings.currentStopSettings();
 	m_departureProcessor->setFirstDepartureSettings(
-			stopSettings.firstDepartureConfigMode,
-			stopSettings.timeOfFirstDepartureCustom,
-			stopSettings.timeOffsetOfFirstDeparture );
+			static_cast<FirstDepartureConfigMode>(stopSettings.get<int>(
+				FirstDepartureConfigModeSetting)),
+			stopSettings.get<QTime>(TimeOfFirstDepartureSetting),
+			stopSettings.get<int>(TimeOffsetOfFirstDepartureSetting) );
 	m_departureProcessor->setAlarmSettings( m_settings.alarmSettings );
 
 	// Apply other settings to the model
@@ -1025,7 +1031,8 @@ void PublicTransport::configChanged()
 	m_model->setDepartureColumnSettings( m_settings.displayTimeBold,
 			m_settings.showRemainingMinutes, m_settings.showDepartureTime );
 	m_model->setAlarmSettings( m_settings.alarmSettings );
-	m_model->setAlarmMinsBeforeDeparture( m_settings.currentStopSettings().alarmTime );
+	m_model->setAlarmMinsBeforeDeparture( 
+			m_settings.currentStopSettings().get<int>(AlarmTimeSetting) );
 
 	// Limit model item count to the maximal number of departures setting
 	if ( m_model->rowCount() > m_settings.maximalNumberOfDepartures ) {
@@ -1080,8 +1087,8 @@ KSelectAction* PublicTransport::switchStopAction( QObject *parent,
 	KSelectAction *switchStopAction = new KSelectAction(
 			KIcon("public-transport-stop"), i18nc("@action", "Switch Current Stop"), parent );
 	for ( int i = 0; i < m_settings.stopSettingsList.count(); ++i ) {
-		QString stopList = m_settings.stopSettingsList[ i ].stops.join( ",\n" );
-		QString stopListShort = m_settings.stopSettingsList[ i ].stops.join( ", " );
+		QString stopList = m_settings.stopSettingsList[ i ].stops().join( ",\n" );
+		QString stopListShort = m_settings.stopSettingsList[ i ].stops().join( ", " );
 		if ( stopListShort.length() > 30 ) {
 			stopListShort = stopListShort.left( 30 ).trimmed() + "...";
 		}
@@ -1113,10 +1120,10 @@ void PublicTransport::showActionButtons()
 	m_overlay->setGeometry( m_graphicsWidget->contentsRect() );
 
 	Plasma::PushButton *btnJourney = 0;
-	if ( m_currentServiceProviderFeatures.contains( "JourneySearch" ) ) {
+	if ( m_currentServiceProviderFeatures.contains("JourneySearch") ) {
 		btnJourney = new Plasma::PushButton( m_overlay );
 		btnJourney->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
-		btnJourney->setAction( action( "searchJourneys" ) );
+		btnJourney->setAction( action("searchJourneys") );
 		connect( btnJourney, SIGNAL( clicked() ), this, SLOT( destroyOverlay() ) );
 	}
 
@@ -1124,18 +1131,18 @@ void PublicTransport::showActionButtons()
 	if ( testState( ShowingJourneyList ) ) {
 		btnBackToDepartures = new Plasma::PushButton( m_overlay );
 		btnBackToDepartures->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
-		btnBackToDepartures->setAction( updatedAction( "backToDepartures" ) );
+		btnBackToDepartures->setAction( updatedAction("backToDepartures") );
 		connect( btnBackToDepartures, SIGNAL( clicked() ), this, SLOT( destroyOverlay() ) );
 	}
 
 	Plasma::PushButton *btnShowDepArr = 0;
-	if ( m_currentServiceProviderFeatures.contains( "Arrivals" ) ) {
+	if ( m_currentServiceProviderFeatures.contains("Arrivals") ) {
 		btnShowDepArr = new Plasma::PushButton( m_overlay );
 		btnShowDepArr->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
 		if ( m_settings.departureArrivalListType == DepartureList ) {
-			btnShowDepArr->setAction( action( "showArrivals" ) );
+			btnShowDepArr->setAction( action("showArrivals") );
 		} else {
-			btnShowDepArr->setAction( action( "showDepartures" ) );
+			btnShowDepArr->setAction( action("showDepartures") );
 		}
 		connect( btnShowDepArr, SIGNAL( clicked() ), this, SLOT( destroyOverlay() ) );
 	}
@@ -1145,9 +1152,9 @@ void PublicTransport::showActionButtons()
 	if ( m_settings.stopSettingsList.count() > 1 ) {
 		btnMultipleStops = new Plasma::PushButton( m_overlay );
 		btnMultipleStops->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
-		btnMultipleStops->setIcon( KIcon( "public-transport-stop" ) );
+		btnMultipleStops->setIcon( KIcon("public-transport-stop") );
 		btnMultipleStops->setZValue( 1000 );
-		btnMultipleStops->setText( i18nc( "@action:button", "Switch Current Stop" ) );
+		btnMultipleStops->setText( i18nc("@action:button", "Switch Current Stop") );
 
 		QMenu *menu = new QMenu( btnMultipleStops->nativeWidget() );
 		QList< QAction* > actionList =
@@ -1157,8 +1164,8 @@ void PublicTransport::showActionButtons()
 	}
 
 	Plasma::PushButton *btnCancel = new Plasma::PushButton( m_overlay );
-	btnCancel->setText( i18nc( "@action:button", "Cancel" ) );
-	btnCancel->setIcon( KIcon( "dialog-cancel" ) );
+	btnCancel->setText( i18nc("@action:button", "Cancel") );
+	btnCancel->setIcon( KIcon("dialog-cancel") );
 	btnCancel->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
 	connect( btnCancel, SIGNAL(clicked()), this, SLOT(destroyOverlay()) );
 
@@ -1288,7 +1295,7 @@ void PublicTransport::switchFilterConfiguration( QAction* action )
 
 void PublicTransport::switchFilterConfiguration( const QString& newFilterConfiguration )
 {
-	QString filterConfig = SettingsUiManager::untranslateKey( newFilterConfiguration );
+	QString filterConfig = Global::untranslateFilterKey( newFilterConfiguration );
 	kDebug() << "Switch filter configuration to" << filterConfig
 			 << m_settings.currentStopSettingsIndex;
 	if ( !m_settings.filterSettings.contains( filterConfig ) ) {
@@ -1299,7 +1306,8 @@ void PublicTransport::switchFilterConfiguration( const QString& newFilterConfigu
 	// Change filter configuration of the current stop in a copy of the settings.
 	// Then write the new settings.
 	Settings settings = m_settings;
-	settings.stopSettingsList[ settings.currentStopSettingsIndex ].filterConfiguration = filterConfig;
+	settings.stopSettingsList[ settings.currentStopSettingsIndex ].set(
+			FilterConfigurationSetting, filterConfig );
 	writeSettings( settings );
 }
 
@@ -1338,7 +1346,7 @@ void PublicTransport::journeySearchInputFinished()
 
 	writeSettings( settings );
 
-	m_journeyTitleText = QString();
+	m_journeyTitleText.clear();
 	QString stop;
 	QDateTime departure;
 	bool stopIsTarget;
@@ -1373,10 +1381,11 @@ void PublicTransport::filterIconClicked()
 		}
 //
 		QMenu *menu = actionFilter->menu();
-		QString currentFilterConfig = m_settings.currentStopSettings().filterConfiguration;
+		QString currentFilterConfig = m_settings.currentStopSettings().get<QString>(
+				FilterConfigurationSetting );
 		foreach( const QString &filterConfig, filterConfigurationList ) {
 			QAction *action = new QAction(
-					SettingsUiManager::translateKey(filterConfig), m_filtersGroup );
+					Global::translateFilterKey(filterConfig), m_filtersGroup );
 			action->setCheckable( true );
 			menu->addAction( action );
 			if ( filterConfig == currentFilterConfig ) {
@@ -1845,15 +1854,24 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType, TitleType 
 
 void PublicTransport::setTitleType( TitleType titleType )
 {
-	// Draw old appearance to pixmap
-	QPixmap pix( m_mainGraphicsWidget->size().toSize() );
-	pix.fill( Qt::transparent );
-	QPainter p( &pix );
-	QRect sourceRect = m_mainGraphicsWidget->mapToScene( m_mainGraphicsWidget->boundingRect() )
-			.boundingRect().toRect();
-	QRectF rect( QPointF( 0, 0 ), m_mainGraphicsWidget->size() );
-	scene()->render( &p, rect, sourceRect );
-	p.end();
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+	kDebug() << m_mainGraphicsWidget->size();	
+	bool doFade = isVisible();
+	kDebug() << doFade;
+
+	QPixmap pix;
+	if ( doFade ) {
+		// Draw old appearance to pixmap
+		pix = QPixmap( m_mainGraphicsWidget->size().toSize() );	
+		pix.fill( Qt::transparent );
+		QPainter p( &pix );
+		QRect sourceRect = m_mainGraphicsWidget->mapToScene( m_mainGraphicsWidget->boundingRect() )
+				.boundingRect().toRect();
+		QRectF rect( QPointF( 0, 0 ), m_mainGraphicsWidget->size() );
+		scene()->render( &p, rect, sourceRect );
+		p.end();
+	}
+#endif
 
 	TitleType oldTitleType = m_titleWidget->titleType();
 	m_titleWidget->setTitleType( titleType, m_appletStates );
@@ -1867,6 +1885,7 @@ void PublicTransport::setTitleType( TitleType titleType )
 		break;
 	case ShowSearchJourneyLineEdit:
 	case ShowSearchJourneyLineEditDisabled:
+
 		break;
 	case ShowJourneyListTitle:
 		m_titleWidget->setTitle( m_journeyTitleText.isEmpty()
@@ -1875,16 +1894,19 @@ void PublicTransport::setTitleType( TitleType titleType )
 	}
 
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-	oldItemAnimationFinished();
-	m_oldItem = new GraphicsPixmapWidget( pix, m_graphicsWidget );
-	m_oldItem->setPos( 0, 0 );
-	m_oldItem->setZValue( 1000 );
-	Plasma::Animation *animOut = Plasma::Animator::create( Plasma::Animator::FadeAnimation );
-	animOut->setProperty( "startOpacity", 1 );
-	animOut->setProperty( "targetOpacity", 0 );
-	animOut->setTargetWidget( m_oldItem );
-	connect( animOut, SIGNAL( finished() ), this, SLOT( oldItemAnimationFinished() ) );
-	animOut->start( QAbstractAnimation::DeleteWhenStopped );
+	if ( doFade ) {
+		// Fade from old to new appearance
+		oldItemAnimationFinished();
+		m_oldItem = new GraphicsPixmapWidget( pix, m_graphicsWidget );
+		m_oldItem->setPos( 0, 0 );
+		m_oldItem->setZValue( 1000 );
+		Plasma::Animation *animOut = Plasma::Animator::create( Plasma::Animator::FadeAnimation );
+		animOut->setProperty( "startOpacity", 1 );
+		animOut->setProperty( "targetOpacity", 0 );
+		animOut->setTargetWidget( m_oldItem );
+		connect( animOut, SIGNAL( finished() ), this, SLOT( oldItemAnimationFinished() ) );
+		animOut->start( QAbstractAnimation::DeleteWhenStopped );
+	}
 #endif
 }
 

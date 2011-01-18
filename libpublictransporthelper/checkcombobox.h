@@ -18,21 +18,26 @@
 */
 
 /** @file
- * @brief This file contains a combobox in which each element can be checked.
+ * @brief Contains a combobox in which each element can be checked.
+ * 
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef CHECKCOMBOBOX_HEADER
 #define CHECKCOMBOBOX_HEADER
 
+#include "publictransporthelper_export.h"
+
 #include <KComboBox>
 #include <KLocalizedString>
 
 class CheckComboboxPrivate;
-/** A combobox to select multiple items of the list by adding check boxes.
-* If no or one item is selected KComboBox paints the combobox in the default way.
-* If more than one item is selected, the icons of all selected items are painted
-* and the text shows how many items are selected ("x/y"). */
-class CheckCombobox : public KComboBox {
+
+/** @brief A combobox to select multiple items of the list by adding check boxes.
+ * 
+ * If no or one item is selected KComboBox paints the combobox in the default way.
+ * If more than one item is selected, the icons of all selected items are painted
+ * and the text shows how many items are selected ("x/y"). */
+class PUBLICTRANSPORTHELPER_EXPORT CheckCombobox : public KComboBox {
 	Q_OBJECT
 	Q_PROPERTY( int allowNoCheckedItem READ allowNoCheckedItem WRITE setAllowNoCheckedItem )
 	Q_PROPERTY( MultipleSelectionOptions multipleSelectionOptions READ multipleSelectionOptions WRITE setMultipleSelectionOptions )

@@ -237,8 +237,9 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
 		QList< QTime > routeTimes;
 		if ( dataMap.contains( "routeTimes" ) ) {
 			QVariantList times = dataMap[ "routeTimes" ].toList();
-			foreach( const QVariant &time, times )
-			routeTimes << time.toTime();
+			foreach( const QVariant &time, times ) {
+				routeTimes << time.toTime();
+			}
 		}
 		DepartureInfo departureInfo( dataMap["operator"].toString(), dataMap["line"].toString(),
 				dataMap["target"].toString(), dataMap["departure"].toDateTime(),

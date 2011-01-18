@@ -17,16 +17,32 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef CATEGORYCOMBOBOX_HEADER
-#define CATEGORYCOMBOBOX_HEADER
+#ifndef PublicTransportHelperGuiTest_H
+#define PublicTransportHelperGuiTest_H
 
-#include <KComboBox>
+#define QT_GUI_LIB
 
-class CategoryComboBox : public KComboBox {
-public:
-	CategoryComboBox( QWidget* parent = 0 ) : KComboBox( parent ) {};
+#include <QtCore/QObject>
+#include <publictransporthelper/stopsettings.h>
 
-	virtual void showPopup();
+class PublicTransportHelperGuiTest : public QObject
+{
+	Q_OBJECT
+	
+private slots:
+	void initTestCase();
+	void init();
+	void cleanup();
+	void cleanupTestCase();
+	
+	// Tests mouse/key clicks in a StopSettingsDialog (adding/removing stops, getting stop suggestions)
+	// TODO When run using "make test" this fails (the script crashes on regexp.exec()).
+	//      When run using "ctest" or when the test executable is run directly this succeeds.
+	void stopSettingsDialogGuiTest();
+	
+private:
+	StopSettings m_stopSettings;
+	QStringList m_filterConfigurations;
 };
 
-#endif // Multiple inclusion guard
+#endif // PublicTransportHelperGuiTest_H

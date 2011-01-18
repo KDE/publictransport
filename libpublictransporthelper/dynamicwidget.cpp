@@ -100,7 +100,7 @@ QToolButton* DynamicWidget::addButton( AbstractDynamicWidgetContainer *container
 			return NULL;
 		}
 		d->removeButton = new QToolButton( this );
-		d->removeButton->setIcon( KIcon( container->removeButtonIcon() ) );
+		d->removeButton->setIcon( KIcon(container->removeButtonIcon()) );
 		buttonLayout->addWidget( d_ptr->removeButton );
 		connect( d_ptr->removeButton, SIGNAL(clicked()), this, SIGNAL(removeClicked()) );
 		return d->removeButton;
@@ -110,7 +110,7 @@ QToolButton* DynamicWidget::addButton( AbstractDynamicWidgetContainer *container
 			return NULL;
 		}
 		d->addButton = new QToolButton( this );
-		d->addButton->setIcon( KIcon( container->addButtonIcon() ) );
+		d->addButton->setIcon( KIcon(container->addButtonIcon()) );
 		buttonLayout->addWidget( d->addButton );
 		connect( d->addButton, SIGNAL(clicked()), this, SIGNAL(addClicked()) );
 		return d->addButton;
@@ -155,7 +155,7 @@ void DynamicWidget::setRemoveButtonIcon( const QString& removeButtonIcon )
 {
 	Q_D( DynamicWidget );
 	if ( d->removeButton ) {
-		d->removeButton->setIcon( KIcon( removeButtonIcon ) );
+		d->removeButton->setIcon( KIcon(removeButtonIcon) );
 	}
 }
 
@@ -163,7 +163,7 @@ void DynamicWidget::setAddButtonIcon( const QString& addButtonIcon )
 {
 	Q_D( DynamicWidget );
 	if ( d->addButton ) {
-		d->addButton->setIcon( KIcon( addButtonIcon ) );
+		d->addButton->setIcon( KIcon(addButtonIcon) );
 	}
 }
 
@@ -211,7 +211,7 @@ QToolButton* DynamicWidget::takeRemoveButton()
 	buttonLayout->removeWidget( d->removeButton );
 
 	// Watch for destroy of the remove button
-	connect( d->removeButton, SIGNAL( destroyed( QObject* ) ), this, SLOT( buttonDestroyed( QObject* ) ) );
+	connect( d->removeButton, SIGNAL(destroyed(QObject*)), this, SLOT(buttonDestroyed(QObject*)) );
 	return d->removeButton;
 }
 
@@ -227,7 +227,7 @@ QToolButton* DynamicWidget::takeAddButton()
 	buttonLayout->removeWidget( d->addButton );
 
 	// Watch for destroy of the add button
-	connect( d->addButton, SIGNAL( destroyed( QObject* ) ), this, SLOT( buttonDestroyed( QObject* ) ) );
+	connect( d->addButton, SIGNAL(destroyed(QObject*)), this, SLOT(buttonDestroyed(QObject*)) );
 	return d->addButton;
 }
 
@@ -278,15 +278,15 @@ public:
 			buttonLayout->setContentsMargins( 0, 0, 0, 0 );
 			if ( addButtonOptions == AbstractDynamicWidgetContainer::AddButtonAfterLastWidget ) {
 				addButton = new QToolButton( q );
-				addButton->setIcon( KIcon( "list-add" ) );
+				addButton->setIcon( KIcon("list-add") );
 				buttonLayout->addWidget( addButton );
-				q->connect( addButton, SIGNAL( clicked() ), q, SLOT( createAndAddWidget() ) );
+				q->connect( addButton, SIGNAL(clicked()), q, SLOT(createAndAddWidget()) );
 			}
 			if ( removeButtonOptions == AbstractDynamicWidgetContainer::RemoveButtonAfterLastWidget ) {
 				removeButton = new QToolButton( q );
-				removeButton->setIcon( KIcon( "list-remove" ) );
+				removeButton->setIcon( KIcon("list-remove") );
 				buttonLayout->addWidget( removeButton );
-				q->connect( removeButton, SIGNAL( clicked() ), q, SLOT( removeLastWidget() ) );
+				q->connect( removeButton, SIGNAL(clicked()), q, SLOT(removeLastWidget()) );
 			}
 			buttonLayout->addSpacerItem( new QSpacerItem( 0, 0, QSizePolicy::Expanding ) );
 
@@ -370,8 +370,13 @@ AbstractDynamicWidgetContainer::~AbstractDynamicWidgetContainer()
 	delete d_ptr;
 }
 
-void AbstractDynamicWidgetContainer::setSeparatorOptions(
-    SeparatorOptions separatorOptions )
+DynamicWidget* AbstractDynamicWidgetContainer::dynamicWidget(int index) const
+{
+	Q_D( const AbstractDynamicWidgetContainer );
+	return d->dynamicWidgets[ index ];
+}
+
+void AbstractDynamicWidgetContainer::setSeparatorOptions( SeparatorOptions separatorOptions )
 {
 	Q_D( AbstractDynamicWidgetContainer );
 	d->showSeparators = separatorOptions ==
@@ -471,12 +476,12 @@ DynamicWidget* AbstractDynamicWidgetContainer::createDynamicWidget( QWidget *wid
 
 	DynamicWidget *dynamicWidget = new DynamicWidget( widget, this, buttons );
 	dynamicWidget->setAutoRaiseButtons( d->autoRaiseButtons );
-	connect( dynamicWidget, SIGNAL( removeClicked() ), this, SLOT( removeWidget() ) );
+	connect( dynamicWidget, SIGNAL(removeClicked()), this, SLOT(removeWidget()) );
 	d->dynamicWidgets << dynamicWidget;
 
 	if ( !d->addButton && dynamicWidget->addButton() ) {
 		d->addButton = dynamicWidget->addButton();
-		connect( d->addButton, SIGNAL( clicked() ), this, SLOT( createAndAddWidget() ) );
+		connect( d->addButton, SIGNAL(clicked()), this, SLOT(createAndAddWidget()) );
 	}
 	d->updateButtonStates();
 
@@ -739,6 +744,12 @@ int AbstractDynamicWidgetContainer::setWidgetCountRange(
 
 	d->updateButtonStates();
 	return added;
+}
+
+int AbstractDynamicWidgetContainer::widgetCount() const
+{
+	Q_D( const AbstractDynamicWidgetContainer );
+	return d->dynamicWidgets.count();
 }
 
 

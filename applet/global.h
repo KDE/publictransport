@@ -28,58 +28,7 @@
 #include <QTime>
 #include <KIcon>
 #include "kdeversion.h"
-
-/** @brief Different config modes for the time of the first departure. */
-enum FirstDepartureConfigMode {
-	RelativeToCurrentTime = 0, /**< Uses the current date and time and adds an offset. */
-	AtCustomTime = 1 /**< Uses a custom time, but the current date. */
-};
-
-/** May contain multiple stops that should be combined into one, eg. for stops that have different
- * names at the service provider but are very close to another.
- * @brief Stores settings for one stop. */
-struct StopSettings {
-	QString city; /**< The currently selected city */
-	QStringList stops; /**< The currently selected stops */
-	QStringList stopIDs; /**< The IDs of the currently selected stops, can
-			* contain empty strings if the ID isn't available */
-	QString serviceProviderID; /**< The id of the current service provider */
-	QString location; /**< The current location code (country code or 'showAll',
-			* 'international', 'unknown') */
-	QString filterConfiguration; /**< The filter configuration to be used for the stop */
-
-	int alarmTime; /**< The time in minutes before the departure at which the
-			* alarm should be fired. */
-	FirstDepartureConfigMode firstDepartureConfigMode; /**< The config mode for
-			* the time of the first departure. */
-	int timeOffsetOfFirstDeparture; /**< The offset in minutes from the current
-			* time until the first departure. */
-	QTime timeOfFirstDepartureCustom; /**< A custom time for the first departure. */
-
-	StopSettings();
-
-	QString stopOrStopId( int index ) {
-		if ( index < stopIDs.count() && !stopIDs[index].isEmpty() ) {
-			return stopIDs[ index ];
-		} else if ( index < stops.count() ) {
-			return stops[ index ];
-		} else {
-			return QString();
-		}
-	};
-
-	bool operator ==( const StopSettings &other ) {
-		return city == other.city && stops == other.stops && stopIDs == other.stopIDs
-				&& serviceProviderID == other.serviceProviderID
-				&& location == other.location
-				&& filterConfiguration == other.filterConfiguration
-				&& alarmTime == other.alarmTime
-				&& firstDepartureConfigMode == other.firstDepartureConfigMode
-				&& timeOffsetOfFirstDeparture == other.timeOffsetOfFirstDeparture
-				&& timeOfFirstDepartureCustom == other.timeOfFirstDepartureCustom;
-	};
-};
-typedef QList<StopSettings> StopSettingsList;
+#include <publictransporthelper/enums.h>
 
 /** @brief Icons to be displayed by the Plasma::IconWidget in the applet's top left corner. */
 enum MainIconDisplay {
@@ -119,104 +68,53 @@ enum AppletState {
 	NoState 							= 0x000000, /**< No state. */
 
 	ShowingDepartureArrivalList 		= 0x000001, /**< The applet is currently
-													* showing a departure / arrival list */
+													 * showing a departure / arrival list */
 	ShowingJourneyList 					= 0x000002, /**< The applet is currently
-													* showing a journey list */
+													 * showing a journey list */
 	ShowingJourneySearch 				= 0x000004, /**< The applet is currently
-													* showing the journey search interface */
+													 * showing the journey search interface */
 	ShowingJourneysNotSupported 		= 0x000008, /**< The applet is currently showing
-													* an info, that journey searches aren't
-													* supported by the current service provider. */
+													 * an info, that journey searches aren't
+													 * supported by the current service provider. */
 
 	WaitingForDepartureData 			= 0x000100, /**< The applet is waiting for
-													* departure data from the data engine */
+													 * departure data from the data engine */
 	ReceivedValidDepartureData 			= 0x000200, /**< The applet received valid departure
-													* data from the data engine */
+													 * data from the data engine */
 	ReceivedErroneousDepartureData 		= 0x000400, /**< The applet received erroneous
-													* departure data from the data engine */
+													 * departure data from the data engine */
 
 	WaitingForJourneyData 				= 0x001000, /**< The applet is waiting for journey
-													* data from the data engine */
+													 * data from the data engine */
 	ReceivedValidJourneyData 			= 0x002000, /**< The applet received valid journey
-													* data from the data engine */
+													 * data from the data engine */
 	ReceivedErroneousJourneyData 		= 0x004000, /**< The applet received erroneous
-													* journey data from the data engine */
+													 * journey data from the data engine */
 
 	SettingsJustChanged 				= 0x010000, /**< The settings have just changed
-													* and dataUpdated() hasn't been called
-													* since that */
+													 * and dataUpdated() hasn't been called
+													 * since that */
 	ServiceProviderSettingsJustChanged 	= 0x020000 /**< Settings were just changed that
-													* require a new data request */
+													 * require a new data request */
 };
 Q_DECLARE_FLAGS( AppletStates, AppletState )
 Q_DECLARE_OPERATORS_FOR_FLAGS( AppletStates )
 
 /** @brief Different states of alarm. */
 enum AlarmState {
-	NoAlarm = 0x0000, /**< No alarm is set */
+	NoAlarm					= 0x0000, /**< No alarm is set */
 
-	AlarmPending = 0x0001, /**< An alarm is set and pending */
-	AlarmFired = 0x0002, /**< An alarm has been fired */
+	AlarmPending 			= 0x0001, /**< An alarm is set and pending */
+	AlarmFired 				= 0x0002, /**< An alarm has been fired */
 
-	AlarmIsAutoGenerated = 0x0004, /**< There is an alarm setting with the
-			* same settings that are used to autogenerate alarms for departures
-			* using the context menu. Items with this alarm state can remove
-			* their alarm. */
-	AlarmIsRecurring = 0x0008 /**< There is a recurring alarm that matches the departure. */
+	AlarmIsAutoGenerated 	= 0x0004, /**< There is an alarm setting with the
+									   * same settings that are used to autogenerate alarms for departures
+									   * using the context menu. Items with this alarm state can remove
+									   * their alarm. */
+	AlarmIsRecurring 		= 0x0008 /**< There is a recurring alarm that matches the departure. */
 };
 Q_DECLARE_FLAGS( AlarmStates, AlarmState )
 Q_DECLARE_OPERATORS_FOR_FLAGS( AlarmStates )
-
-/** @brief Indicates what is saved in a model item's data. */
-enum ModelDataRoles {
-	SortRole = Qt::UserRole, /**< Used to store sorting data */
-	ServiceProviderDataRole = Qt::UserRole + 8, /**< For the service provider combo box */
-	DepartureInfoRole = Qt::UserRole + 10, /**< Used to store the departure */
-	LocationCodeRole = Qt::UserRole + 12, /**< Used to store the location code
-			* (country code or other) in the location model. */
-	TimetableItemHashRole = Qt::UserRole + 13, /**< Used to store a hash for the current
-			* timetable item in the model. */
-	ServiceProviderIdRole = Qt::UserRole + 14, /** Used to store the service provider ID. */
-
-	// Additional data roles used by DepartureModel / JourneyModel.
-	FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text.
-			* The text of an item should not contain html tags, if used in a combo box. */
-	DecorationPositionRole = Qt::UserRole + 501,
-	DrawAlarmBackgroundRole = Qt::UserRole + 502,
-	AlarmColorIntensityRole = Qt::UserRole + 503,
-	JourneyRatingRole = Qt::UserRole + 504, /**< Stores a value between 0 and 1.
-			* 0 for the journey with the biggest duration, 1 for the smallest duration. */
-	LinesPerRowRole = Qt::UserRole + 505, /**< Used to change the number of lines for a row. */
-	IconSizeRole = Qt::UserRole + 506 /**< Used to set a specific icon size for an element. */
-};
-
-/** The numbers here must match the ones in the data engine!
-* @brief The type of the vehicle used for a public transport line. */
-enum VehicleType {
-	Unknown = 0, /**< The type of the vehicle is unknown. */
-
-	Tram = 1, /**< A tram / streetcar. */
-	Bus = 2, /**< A bus. */
-	Subway = 3, /**< A subway. */
-	TrainInterurban = 4, /**< An interurban train. */
-	Metro = 5, /**< A metro. */
-	TrolleyBus = 6, /**< An electric bus. */
-
-	TrainRegional = 10, /**< A regional train. */
-	TrainRegionalExpress = 11, /**< A regional express train. */
-	TrainInterregio = 12, /**< An inter-regional train. */
-	TrainIntercityEurocity = 13, /**< An intercity / eurocity train. */
-	TrainIntercityExpress = 14, /**< An intercity express. */
-
-	Feet = 50, /**< By feet. */
-
-	Ferry = 100, /**< A ferry. */
-	Ship = 101, /**< A ship. */
-
-	Plane = 200, /**< An aeroplane. */
-
-	Spacecraft = 300, /**< A spacecraft. */
-};
 
 /** @brief The type of services for a public transport line. */
 enum LineService {
@@ -326,6 +224,9 @@ public:
 
 	/** Gets a string like "25 minutes". */
 	static QString durationString( int seconds );
+	
+	static QString translateFilterKey( const QString &key );
+	static QString untranslateFilterKey( const QString &translatedKey );
 };
 
 #endif // Multiple inclusion guard
