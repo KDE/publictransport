@@ -10,7 +10,8 @@ include_directories(
    ${CMAKE_BINARY_DIR}
    ${KDE4_INCLUDES} )
 
-add_subdirectory(accessorInfos)
+add_subdirectory( accessorInfos )
+add_subdirectory( tests )
 
 # We add our source code here
 set( publictransport_engine_SRCS 
