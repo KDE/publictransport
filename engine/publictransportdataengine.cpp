@@ -27,6 +27,7 @@
 // KDE includes
 #include <Plasma/DataContainer>
 #include <KStandardDirs>
+#include <QFileInfo>
 
 const int PublicTransportEngine::MIN_UPDATE_TIMEOUT = 120; // in seconds
 const int PublicTransportEngine::MAX_UPDATE_TIMEOUT_DELAY = 5 * 60; // if delays are available
@@ -49,9 +50,9 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
 
 	// Add service provider source, so when using
 	// dataEngine("publictransport").sources() in an applet it at least returns this
-	setData( sourceTypeKeyword( ServiceProviders ), DataEngine::Data() );
-	setData( sourceTypeKeyword( ErrornousServiceProviders ), DataEngine::Data() );
-	setData( sourceTypeKeyword( Locations ), DataEngine::Data() );
+// 	setData( sourceTypeKeyword(ServiceProviders), DataEngine::Data() );
+// 	setData( sourceTypeKeyword(ErrornousServiceProviders), DataEngine::Data() );
+// 	setData( sourceTypeKeyword(Locations), DataEngine::Data() );
 }
 
 PublicTransportEngine::~PublicTransportEngine()
@@ -94,7 +95,7 @@ QHash< QString, QVariant > PublicTransportEngine::locations()
 
 	locationHash.insert( "name", name = "international" );
 	locationHash.insert( "description", i18n( "Contains international providers. There is one for getting flight departures / arrivals." ) );
-	locationHash.insert( "defaultAccessor", "others_flightstats" );
+	locationHash.insert( "defaultAccessor", "international_flightstats" );
 	ret.insert( name, locationHash );
 
 	locationHash.clear();
@@ -176,31 +177,45 @@ bool PublicTransportEngine::sourceRequestEvent( const QString &name )
 
 bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString& name )
 {
-	if ( !updateServiceProviderSource() || !updateLocationSource() ) {
-		return false;
-	}
+	QString accessorId;
+	if ( name.contains('_') ) {
+		// Seems that a service provider ID is given
+		QStringList s = name.split( ' ', QString::SkipEmptyParts );
+		if ( s.count() < 2 ) {
+			return false;
+		}
 
-	QStringList s = name.split( ' ', QString::SkipEmptyParts );
-	if ( s.count() < 2 ) {
-		return false;
-	}
+		accessorId = s[1];
+	} else {
+		// Assume a country code in name
+		if ( !updateServiceProviderSource() || !updateLocationSource() ) {
+			return false;
+		}
 
-	QString countryCode = s[ 1 ];
-	QVariantHash locations = m_dataSources[ sourceTypeKeyword( Locations )].toHash();
-	QVariantHash locationCountry = locations[ countryCode.toLower()].toHash();
-	QString defaultAccessor = locationCountry[ "defaultAccessor" ].toString();
-	if ( defaultAccessor.isEmpty() ) {
-		return false;
-	}
+		QStringList s = name.split( ' ', QString::SkipEmptyParts );
+		if ( s.count() < 2 ) {
+			return false;
+		}
 
-	kDebug() << "Check accessor" << defaultAccessor;
-	const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( defaultAccessor );
+		QString countryCode = s[1];
+		QVariantHash locations = m_dataSources[ sourceTypeKeyword(Locations) ].toHash();
+		QVariantHash locationCountry = locations[ countryCode.toLower() ].toHash();
+		QString defaultAccessor = locationCountry[ "defaultAccessor" ].toString();
+		if ( defaultAccessor.isEmpty() ) {
+			return false;
+		}
+		
+		accessorId = defaultAccessor;
+	}
+	
+	kDebug() << "Check accessor" << accessorId;
+	const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( accessorId );
 	if ( accessor ) {
-		setData( name, serviceProviderInfo( accessor ) );
+		setData( name, serviceProviderInfo(accessor) );
 		delete accessor;
 	} else {
-		if ( !m_errornousAccessors.contains( defaultAccessor ) ) {
-			m_errornousAccessors << defaultAccessor;
+		if ( !m_errornousAccessors.contains(accessorId) ) {
+			m_errornousAccessors << accessorId;
 		}
 		return false;
 	}
@@ -231,15 +246,19 @@ bool PublicTransportEngine::updateServiceProviderSource()
 			return false;
 		}
 
-		kDebug() << "Check accessors";
 		QStringList loadedAccessors;
 		m_errornousAccessors.clear();
 		foreach( const QString &fileName, fileNames ) {
+			if ( QFileInfo(fileName).isSymLink() && fileName.endsWith(QLatin1String("_default.xml")) ) {
+				// Don't use symlinks to default service providers
+				continue;
+			}
+			
 			QString s = KUrl( fileName ).fileName().remove( QRegExp( "\\..*$" ) ); // Remove file extension
 			const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( s );
 			if ( accessor ) {
 				dataSource.insert( accessor->timetableAccessorInfo().name(),
-				                   serviceProviderInfo( accessor ) );
+				                   serviceProviderInfo(accessor) );
 				loadedAccessors << s;
 				delete accessor;
 			} else {
@@ -247,8 +266,10 @@ bool PublicTransportEngine::updateServiceProviderSource()
 			}
 		}
 
-		kDebug() << "Loaded accessors from XML files:" << loadedAccessors;
-		kDebug() << "Errornous accessor info XMLs, that couldn't be loaded:" << m_errornousAccessors;
+		kDebug() << "Loaded" << loadedAccessors.count() << "accessors";
+		if ( !m_errornousAccessors.isEmpty() ) {
+			kDebug() << "Errornous accessor info XMLs, that couldn't be loaded:" << m_errornousAccessors;
+		}
 
 		m_dataSources.insert( name, dataSource );
 	}
