@@ -290,7 +290,7 @@ bool PublicTransportEngine::updateLocationSource()
 {
 	const QString name = sourceTypeKeyword( Locations );
 	QVariantHash dataSource;
-	if ( m_dataSources.keys().contains( name ) ) {
+	if ( m_dataSources.keys().contains(name) ) {
 		dataSource = m_dataSources[name].toHash(); // locations already loaded
 	} else {
 		dataSource = locations();
@@ -308,7 +308,7 @@ bool PublicTransportEngine::updateLocationSource()
 bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name )
 {
 	bool containsDataSource = m_dataSources.contains( name );
-	if ( containsDataSource && isSourceUpToDate( name ) ) { // Data is stored in the map and up to date
+	if ( containsDataSource && isSourceUpToDate(name) ) { // Data is stored in the map and up to date
 		kDebug() << "Data source" << name << "is up to date";
 		QVariantHash dataSource = m_dataSources[name].toHash();
 		for ( QVariantHash::const_iterator it = dataSource.constBegin();
@@ -331,27 +331,27 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 		QString parameters;
 		SourceType sourceType = sourceTypeFromName( name );
 		if ( sourceType == Departures ) {
-			parameters = name.mid( sourceTypeKeyword( Departures ).length() );
+			parameters = name.mid( sourceTypeKeyword(Departures).length() );
 			parseDocumentMode = ParseForDeparturesArrivals;
 			dataType = "departures";
 		} else if ( sourceType == Arrivals ) {
-			parameters = name.mid( sourceTypeKeyword( Arrivals ).length() );
+			parameters = name.mid( sourceTypeKeyword(Arrivals).length() );
 			parseDocumentMode = ParseForDeparturesArrivals;
 			dataType = "arrivals";
 		} else if ( sourceType == Stops ) {
-			parameters = name.mid( sourceTypeKeyword( Stops ).length() );
+			parameters = name.mid( sourceTypeKeyword(Stops).length() );
 			parseDocumentMode = ParseForStopSuggestions;
 			dataType = "stopSuggestions";
 		} else if ( sourceType == JourneysDep ) {
-			parameters = name.mid( sourceTypeKeyword( JourneysDep ).length() );
+			parameters = name.mid( sourceTypeKeyword(JourneysDep).length() );
 			parseDocumentMode = ParseForJourneys;
 			dataType = "journeysDep";
 		} else if ( sourceType == JourneysArr ) {
-			parameters = name.mid( sourceTypeKeyword( JourneysArr ).length() );
+			parameters = name.mid( sourceTypeKeyword(JourneysArr).length() );
 			parseDocumentMode = ParseForJourneys;
 			dataType = "journeysArr";
 		} else if ( sourceType == Journeys ) {
-			parameters = name.mid( sourceTypeKeyword( Journeys ).length() );
+			parameters = name.mid( sourceTypeKeyword(Journeys).length() );
 			parseDocumentMode = ParseForJourneys;
 			dataType = "journeysDep";
 		} else {
@@ -363,26 +363,26 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 
 		for ( int i = 0; i < input.length(); ++i ) {
 			QString s = input.at( i );
-			if ( s.startsWith( QLatin1String( "city=" ), Qt::CaseInsensitive ) ) {
-				city = s.mid( QString( "city=" ).length() ).trimmed();
-			} else if ( s.startsWith( QLatin1String( "stop=" ), Qt::CaseInsensitive ) ) {
-				stop = s.mid( QString( "stop=" ).length() ).trimmed();
-			} else if ( s.startsWith( QLatin1String( "targetStop=" ), Qt::CaseInsensitive ) ) {
-				targetStop = s.mid( QString( "targetStop=" ).length() ).trimmed();
-			} else if ( s.startsWith( QLatin1String( "originStop=" ), Qt::CaseInsensitive ) ) {
-				originStop = s.mid( QString( "originStop=" ).length() ).trimmed();
-			} else if ( s.startsWith( QLatin1String( "timeoffset=" ), Qt::CaseInsensitive ) ) {
-				s = s.mid( QString( "timeoffset=" ).length() ).trimmed();
+			if ( s.startsWith(QLatin1String("city="), Qt::CaseInsensitive) ) {
+				city = s.mid( QString("city=").length() ).trimmed();
+			} else if ( s.startsWith(QLatin1String("stop="), Qt::CaseInsensitive) ) {
+				stop = s.mid( QString("stop=").length() ).trimmed();
+			} else if ( s.startsWith(QLatin1String("targetStop="), Qt::CaseInsensitive) ) {
+				targetStop = s.mid( QString("targetStop=").length() ).trimmed();
+			} else if ( s.startsWith(QLatin1String("originStop="), Qt::CaseInsensitive) ) {
+				originStop = s.mid( QString("originStop=").length() ).trimmed();
+			} else if ( s.startsWith(QLatin1String("timeoffset="), Qt::CaseInsensitive) ) {
+				s = s.mid( QString("timeoffset=").length() ).trimmed();
 				dateTime = QDateTime::currentDateTime().addSecs( s.toInt() * 60 );
-			} else if ( s.startsWith( QLatin1String( "time=" ), Qt::CaseInsensitive ) ) {
-				s = s.mid( QString( "time=" ).length() ).trimmed();
-				dateTime = QDateTime( QDate::currentDate(), QTime::fromString( s, "hh:mm" ) );
-			} else if ( s.startsWith( QLatin1String( "datetime=" ), Qt::CaseInsensitive ) ) {
-				s = s.mid( QString( "datetime=" ).length() ).trimmed();
+			} else if ( s.startsWith(QLatin1String("time="), Qt::CaseInsensitive) ) {
+				s = s.mid( QString("time=").length() ).trimmed();
+				dateTime = QDateTime( QDate::currentDate(), QTime::fromString(s, "hh:mm") );
+			} else if ( s.startsWith(QLatin1String("datetime="), Qt::CaseInsensitive) ) {
+				s = s.mid( QString("datetime=").length() ).trimmed();
 				dateTime = QDateTime::fromString( s );
-			} else if ( s.startsWith( QLatin1String( "maxCount=" ), Qt::CaseInsensitive ) ) {
+			} else if ( s.startsWith(QLatin1String("maxCount="), Qt::CaseInsensitive) ) {
 				bool ok;
-				maxCount = s.mid( QString( "maxCount=" ).length() ).trimmed().toInt( &ok );
+				maxCount = s.mid( QString("maxCount=").length() ).trimmed().toInt( &ok );
 				if ( !ok ) {
 					kDebug() << "Bad value for 'maxCount' in source name:" << s;
 					maxCount = 100;
@@ -555,26 +555,26 @@ const QString PublicTransportEngine::sourceTypeKeyword( SourceType sourceType )
 PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
     const QString& sourceName ) const
 {
-	if ( sourceName.startsWith( sourceTypeKeyword( ServiceProvider ) + ' ', Qt::CaseInsensitive ) ) {
+	if ( sourceName.startsWith(sourceTypeKeyword(ServiceProvider) + ' ', Qt::CaseInsensitive) ) {
 		return ServiceProvider;
-	} else if ( sourceName.compare( sourceTypeKeyword( ServiceProviders ), Qt::CaseInsensitive ) == 0 ) {
+	} else if ( sourceName.compare(sourceTypeKeyword(ServiceProviders), Qt::CaseInsensitive) == 0 ) {
 		return ServiceProviders;
-	} else if ( sourceName.compare( sourceTypeKeyword( ErrornousServiceProviders ),
-									Qt::CaseInsensitive ) == 0 ) {
+	} else if ( sourceName.compare(sourceTypeKeyword(ErrornousServiceProviders), 
+								   Qt::CaseInsensitive) == 0 ) {
 		return ErrornousServiceProviders;
-	} else if ( sourceName.compare( sourceTypeKeyword( Locations ), Qt::CaseInsensitive ) == 0 ) {
+	} else if ( sourceName.compare(sourceTypeKeyword(Locations), Qt::CaseInsensitive) == 0 ) {
 		return Locations;
-	} else if ( sourceName.startsWith( sourceTypeKeyword( Departures ), Qt::CaseInsensitive ) ) {
+	} else if ( sourceName.startsWith(sourceTypeKeyword(Departures), Qt::CaseInsensitive) ) {
 		return Departures;
-	} else if ( sourceName.startsWith( sourceTypeKeyword( Arrivals ), Qt::CaseInsensitive ) ) {
+	} else if ( sourceName.startsWith(sourceTypeKeyword(Arrivals), Qt::CaseInsensitive) ) {
 		return Arrivals;
-	} else if ( sourceName.startsWith( sourceTypeKeyword( Stops ), Qt::CaseInsensitive ) ) {
+	} else if ( sourceName.startsWith(sourceTypeKeyword(Stops), Qt::CaseInsensitive) ) {
 		return Stops;
-	} else if ( sourceName.startsWith( sourceTypeKeyword( JourneysDep ), Qt::CaseInsensitive ) ) {
+	} else if ( sourceName.startsWith(sourceTypeKeyword(JourneysDep), Qt::CaseInsensitive) ) {
 		return JourneysDep;
-	} else if ( sourceName.startsWith( sourceTypeKeyword( JourneysArr ), Qt::CaseInsensitive ) ) {
+	} else if ( sourceName.startsWith(sourceTypeKeyword(JourneysArr), Qt::CaseInsensitive) ) {
 		return JourneysArr;
-	} else if ( sourceName.startsWith( sourceTypeKeyword( Journeys ), Qt::CaseInsensitive ) ) {
+	} else if ( sourceName.startsWith(sourceTypeKeyword(Journeys), Qt::CaseInsensitive) ) {
 		return Journeys;
 	} else {
 		return InvalidSourceName;
@@ -917,7 +917,7 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
 
 	TimetableAccessor *accessor;
 	QString serviceProvider = dataSource[ "serviceProvider" ].toString();
-	if ( !m_accessors.contains( serviceProvider ) ) {
+	if ( !m_accessors.contains(serviceProvider) ) {
 		accessor = TimetableAccessor::getSpecificAccessor( serviceProvider );
 		m_accessors.insert( serviceProvider, accessor );
 	} else {
@@ -926,16 +926,16 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
 
 	QDateTime downloadTime = m_nextDownloadTimeProposals[ stripDateAndTimeValues( name )];
 	int minForSufficientChanges = downloadTime.isValid()
-						? QDateTime::currentDateTime().secsTo( downloadTime ) : 0;
+			? QDateTime::currentDateTime().secsTo( downloadTime ) : 0;
 	int minFetchWait;
 
 	// If delays are available set maximum fetch wait
-	if ( accessor->features().contains( "Delay" )
-			&& dataSource["delayInfoAvailable"].toBool() ) {
-		minFetchWait = qBound(( int )MIN_UPDATE_TIMEOUT, minForSufficientChanges,
-							  ( int )MAX_UPDATE_TIMEOUT_DELAY );
-	} else
+	if ( accessor->features().contains("Delay") && dataSource["delayInfoAvailable"].toBool() ) {
+		minFetchWait = qBound((int)MIN_UPDATE_TIMEOUT, minForSufficientChanges,
+							  (int)MAX_UPDATE_TIMEOUT_DELAY );
+	} else {
 		minFetchWait = qMax( minForSufficientChanges, MIN_UPDATE_TIMEOUT );
+	}
 
 	minFetchWait = qMax( minFetchWait, accessor->minFetchWait() );
 	kDebug() << "Wait time until next download:"

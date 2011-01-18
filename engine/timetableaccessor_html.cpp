@@ -148,8 +148,8 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 		documentParts << doc; // No regexp for departure group titles, so only one document part
 	}
 
-	kDebug() << "Parsing..." << ( parseDocumentMode == ParseForJourneys
-	                              ? "searching for journeys" : "searching for departures / arrivals" );
+	kDebug() << "Parsing..." << (parseDocumentMode == ParseForJourneys
+			? "searching for journeys" : "searching for departures / arrivals");
 
 	const QRegExp rx = parseDocumentMode == ParseForDeparturesArrivals
 			? infoRegExp->searchDepartures().regExp() : infoRegExp->searchJourneys().regExp();
@@ -204,7 +204,7 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 		if ( listDocumentPartInfos.count() > currentPart ) {
 			documentPartInfos = listDocumentPartInfos.at( currentPart++ );
 		}
-		while (( pos = rx.indexIn( documentPart, pos ) ) != -1 ) {
+		while ( (pos = rx.indexIn(documentPart, pos)) != -1 ) {
 			QHash< TimetableInformation, QVariant > data;
 			data.insert( Delay, "-1" );
 			foreach( const TimetableInformation &curInfo, infosToGet ) {
@@ -251,6 +251,7 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 													  data[DepartureMinutePrognosis].toInt()) ) / 60.0f );
 					break;
 				case CalculateDepartureDate:
+					kDebug() << "Guessed DepartureDate as today";
 					data.insert( DepartureDate, QDate::currentDate() ); // TODO: guess date if it's not parsed, not only currentDate
 					break;
 				case CalculateArrivalDateFromDepartureDate:
@@ -300,8 +301,6 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 
 			if (( !data.contains( TypeOfVehicle ) || data[TypeOfVehicle] == Unknown ) &&
 			        m_info->defaultVehicleType() != Unknown ) {
-				qDebug() << "TimetableAccessorHtml::parseDocument"
-						 << "Setting vehicle type to default" << m_info->defaultVehicleType();
 				data[TypeOfVehicle] = m_info->defaultVehicleType();
 			}
 

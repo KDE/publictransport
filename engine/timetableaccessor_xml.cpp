@@ -75,7 +75,6 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 		}
 	}
 
-	qDebug() << "TimetableAccessorXml::parseDocument" << "Parsing...";
 	QDomNodeList journeyNodes = docElement.elementsByTagName("Journey");
 	int count = journeyNodes.count();
 	for ( int i = 0; i < count; ++i ) {

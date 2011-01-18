@@ -182,9 +182,9 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 	m_resultObject->clear();
 	QVariant result = m_script->callFunction( functionName, QVariantList() << doc );
 
-	if ( result.isValid() && result.canConvert( QVariant::StringList ) ) {
+	if ( result.isValid() && result.canConvert(QVariant::StringList) ) {
 		QStringList globalInfos = result.toStringList();
-		if ( globalInfos.contains( "no delays", Qt::CaseInsensitive ) ) {
+		if ( globalInfos.contains(QLatin1String("no delays"), Qt::CaseInsensitive) ) {
 			// No delay information available for the given stop
 			globalInfo->delayInfoAvailable = false;
 		}
@@ -284,14 +284,14 @@ QString TimetableAccessorHtmlScript::parseDocumentForLaterJourneysUrl( const QBy
 	}
 }
 
-QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl(
-    const QByteArray &document )
+QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl( 
+		const QByteArray &document )
 {
 	if ( !lazyLoadScript() ) {
 		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return QString();
 	}
-	if ( !m_script->functionNames().contains( "getUrlForDetailedJourneyResults" ) ) {
+	if ( !m_script->functionNames().contains("getUrlForDetailedJourneyResults") ) {
 		kDebug() << "The script has no 'getUrlForDetailedJourneyResults' function";
 		kDebug() << "Functions in the script:" << m_script->functionNames();
 		return QString();
@@ -342,9 +342,10 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return false;
 	}
-	if ( !m_script->functionNames().contains( "parsePossibleStops" ) ) {
-		kDebug() << "The script has no 'parsePossibleStops' function";
+	if ( !m_script->functionNames().contains("parsePossibleStops") ) {
+		kDebug() << "The script has no 'parsePossibleStops' function" << m_script->file();
 		kDebug() << "Functions in the script:" << m_script->functionNames();
+		kDebug() << m_script->errorMessage();
 		return false;
 	}
 
@@ -377,7 +378,7 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 		}
 
 		stops->append( stopName );
-// 	if ( !stopID.isEmpty() )
+// 		if ( !stopID.isEmpty() )
 		stopToStopId->insert( stopName, stopID );
 		if ( stopWeight != -1 ) {
 			stopToStopWeight->insert( stopName, stopWeight );

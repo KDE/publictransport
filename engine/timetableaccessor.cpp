@@ -589,7 +589,7 @@ KIO::StoredTransferJob* TimetableAccessor::requestJourneys( const KUrl& url )
 //     kDebug() << url;
 
 	KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-	connect( job, SIGNAL( result( KJob* ) ), this, SLOT( result( KJob* ) ) );
+	connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
 
 	return job;
 }
@@ -625,15 +625,12 @@ void TimetableAccessor::result( KJob* job )
 
 	if ( parseDocumentMode == ParseForStopSuggestions ) {
 		// A stop suggestion request has finished
-		kDebug() << "Stop suggestions request finished" << jobInfo.sourceName << jobInfo.city << jobInfo.stop;
-		if ( parseDocumentPossibleStops( document, &stops, &stopToStopId, &stopToStopWeight ) ) {
-			kDebug() << "finished parsing for stop suggestions";
+		if ( parseDocumentPossibleStops(document, &stops, &stopToStopId, &stopToStopWeight) ) {
 			emit stopListReceived( this, jobInfo.url, stops, stopToStopId, stopToStopWeight,
 								   serviceProvider(), jobInfo.sourceName, jobInfo.city,
 								   jobInfo.stop, QString(), parseDocumentMode );
-			kDebug() << "emit stopListReceived finished";
 		} else {
-			kDebug() << "error parsing for stop suggestions" << jobInfo.sourceName;
+			kDebug() << "Error parsing for stop suggestions" << jobInfo.sourceName;
 			emit errorParsing( this, ErrorParsingFailed,
 							   i18n("Error while parsing the timetable document."),
 							   jobInfo.url, serviceProvider(), jobInfo.sourceName,
@@ -681,7 +678,7 @@ void TimetableAccessor::result( KJob* job )
 		kDebug() << "Parse results" << parseDocumentMode;
 
 		// Try to parse the document
-		if ( parseDocument( document, &dataList, &globalInfo, parseDocumentMode ) ) {
+		if ( parseDocument(document, &dataList, &globalInfo, parseDocumentMode) ) {
 			if ( parseDocumentMode == ParseForDeparturesArrivals ) {
 				QList<DepartureInfo*> departures;
 				foreach( PublicTransportInfo *info, dataList )
@@ -784,14 +781,13 @@ KUrl TimetableAccessor::getUrl( const QString &city, const QString &stop,
 
 	QRegExp rx = QRegExp( "\\{date:([^\\}]*)\\}", Qt::CaseInsensitive );
 	if ( rx.indexIn( sRawUrl ) != -1 ) {
-		sRawUrl.replace( rx, dateTime.date().toString( rx.cap( 1 ) ) );
+		sRawUrl.replace( rx, dateTime.date().toString(rx.cap(1)) );
 	}
 
 	return KUrl( sRawUrl );
 }
 
-KUrl TimetableAccessor::getStopSuggestionsUrl( const QString &city,
-        const QString& stop )
+KUrl TimetableAccessor::getStopSuggestionsUrl( const QString &city, const QString& stop )
 {
 	QString sRawUrl = stopSuggestionsRawUrl();
 	QString sCity = city.toLower(), sStop = stop.toLower();
@@ -809,7 +805,7 @@ KUrl TimetableAccessor::getStopSuggestionsUrl( const QString &city,
 		sRawUrl = sRawUrl.replace( "{city}", sCity );
 	}
 	sRawUrl = sRawUrl.replace( "{stop}", sStop );
-
+// 	sRawUrl = sRawUrl.replace( "{timestamp}", QString::number(QDateTime::currentDateTime().toMSecsSinceEpoch()) ); 
 	return KUrl( sRawUrl );
 }
 
