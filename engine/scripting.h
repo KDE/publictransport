@@ -54,6 +54,8 @@
  * 
  * var time2 = helper.addMinsToTime("15:20", duration);
  * // time2 == "15:45"
+ * 
+ * helper.debug("Debug message, eg. something unexpected happened");
  * @endcode
  **/
 class Helper : public QObject {
@@ -62,10 +64,19 @@ class Helper : public QObject {
 public:
 	/**
 	 * @brief Creates a new helper object.
+	 * 
+	 * @param serviceProviderId The ID of the service provider this Helper object is created for.
+	 * 
+	 * @param parent The parent object.
 	 **/
-	Helper( QObject* parent = 0 ) : QObject( parent ) {};
+	Helper( const QString &serviceProviderId, QObject* parent = 0 ) : QObject( parent ) {
+		m_serviceProviderId = serviceProviderId;
+	};
 
 public Q_SLOTS:
+	// TODO Documentation
+	void error( const QString &message, const QString &failedParseText = QString() );
+	
 	/**
 	 * @brief Trims spaces from the beginning and the end of the given string @p str.
 	 *   The HTML entitiy <em>&nbsp;</em> is also trimmed.
@@ -100,6 +111,9 @@ public Q_SLOTS:
 		QRegExp rx( "(^\\w)|\\W(\\w)" );
 		int pos = 0;
 		while ( (pos = rx.indexIn(ret, pos)) != -1 ) {
+			if ( rx.pos(2) < 0 || rx.pos(2) >= ret.length() ) { // TODO
+				break;
+			}
 			ret[ rx.pos(2) ] = ret[ rx.pos(2) ].toUpper();
 			pos += rx.matchedLength();
 		}
@@ -208,7 +222,17 @@ public Q_SLOTS:
 		}
 		return time.addSecs( minsToAdd * 60 ).toString( format );
 	};
-
+	
+	// TODO
+	int* addDaysToDate( const int* dateArray, int daysToAdd ) {
+		QDate date = QDate( dateArray[2], dateArray[1], dateArray[0] ).addDays( daysToAdd );
+		int *ret = new int[3];
+		ret[0] = date.day();
+		ret[1] = date.month();
+		ret[2] = date.year();
+		return ret;
+	};
+	
 	/**
 	 * @brief Splits @p str at @p sep, but skips empty parts.
 	 *
@@ -219,6 +243,9 @@ public Q_SLOTS:
 	QStringList splitSkipEmptyParts( const QString &str, const QString &sep ) {
 		return str.split( sep, QString::SkipEmptyParts );
 	};
+	
+private:
+	QString m_serviceProviderId;
 };
 
 /**

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo fileVersion="1.0" version="1.1" type="HTML">
+<accessorInfo fileVersion="1.0" version="1.2" type="HTML">
 
 <name>INPROP, s. r. o. (cp.atlas.sk)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
@@ -55,25 +55,17 @@
 <shortUrl>cp.atlas.sk</shortUrl>
 <!-- <credit>INPROP, s. r. o.</credit> -->
 
+<sessionKey> 
+	<url>http://cp.atlas.sk/vlakbus/odchody</url> 
+	<putInto data="idoskey">CustomHeader</putInto>
+</sessionKey>
+
 <rawUrls>
     <departures><![CDATA[http://cp.atlas.sk/{city}/odchody/?f={stop}&time=actual&submit=true&lng=E]]></departures>
+	
+	<stopSuggestions method="post" charset="utf-8" contenttype="application/json; charset=utf-8" accept="application/json, text/javascript, */*" data='{"prefixText":"{stop}","count":"20","selectedTT":"BusSk","bindElementValue":"","iLang":"ENGLISH","bCoor":"false"}'><![CDATA[http://cp.atlas.sk/AJAXService.asmx/SearchTimetableObjects]]></stopSuggestions>
 </rawUrls>
 
 <script>sk_atlas.js</script>
-<!--
-<regExps>
-    <departures>
-        <regExp><![CDATA[(?:<tr class="[^"]*">\s*<td class="datedt">)([0-9]{1,2})(?::)([0-9]{2})(?:</td><td>[^<]*</td><td class="[^"]*"></td><td class="[^"]*">[^<]*</td><td><img src="[^"]*" alt=")([^"]*)(?:" title="[^"]*" />\s*<a href="[^"]*" title="[^\(]*\([^>]*>>\s)([^\)]*)(?:\)" style="[^"]*" onclick="[^"]*">)([^<]*)(?:</a>\s*)(?:<img [^>]*>\s*)?(?:</td>\s*</tr>)]]></regExp>
-        <infos>
-            <info>DepartureHour</info> <info>DepartureMinute</info> <info>TypeOfVehicle</info> <info>Target</info> <info>TransportLine</info>
-        </infos>
-    </departures>
-    <possibleStops>
-	<item>
-	    <regExpRange><![CDATA[(?:<select name="ctl[^"]*" id="ctl[^"]*"[^>]*>)(.*)(?:</select>)]]></regExpRange>
-	    <regExp><![CDATA[(?:<option (?:selected="selected" )?value="[^"]*">)([^<]*)(?:</option>)]]></regExp>
-	    <infos><info>StopName</info></infos>
-	</item>
-    </possibleStops>
-</regExps>-->
+
 </accessorInfo>

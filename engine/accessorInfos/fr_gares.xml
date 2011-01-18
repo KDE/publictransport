@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo fileVersion="1.0" version="1.0" type="HTML">
+<accessorInfo fileVersion="1.0" version="1.1" type="HTML">
 
 <name lang="en">National Society of French Railways (SNCF)</name>
 <name lang="fr">Société Nationale des Chemins de fer Français (SNCF)</name>
@@ -16,9 +16,12 @@
 <!-- <credit>Société Nationale des Chemins de fer Français (SNCF)</credit> -->
 
 <rawUrls>
-    <departures><![CDATA[http://www.gares-en-mouvement.com/infostempsreel-depart-en-1-{stop}-0.html]]></departures>
+<!--     <departures><![CDATA[http://www.gares-en-mouvement.com/infostempsreel-depart-en-1-{stop}-0.html]]></departures> -->
+    <departures><![CDATA[http://www.gares-en-mouvement.com/infos_temps_reel.php?gare={stop}&tab=dep&langue=en]]></departures>
     
-    <stopSuggestions><![CDATA[http://www.gares-en-mouvement.com/accueil-en-1.html]]></stopSuggestions>
+<!--     <stopSuggestions><![CDATA[http://www.gares-en-mouvement.com/include/completion.php?q={stop}&limit=10]]></stopSuggestions> -->
+<!--     <stopSuggestions><![CDATA[http://www.gares-en-mouvement.com/accueil-en-1.html]]></stopSuggestions> -->
+    <stopSuggestions><![CDATA[http://www.gares-en-mouvement.com/index.php]]></stopSuggestions>
 </rawUrls>
 
 <script>fr_gares.js</script>

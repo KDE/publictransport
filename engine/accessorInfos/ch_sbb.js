@@ -54,9 +54,14 @@ function getUrlForDetailedJourneyResults( html ) {
 }
 
 function parseTimetable( html ) {
+    var returnValue = new Array;
+	// Dates are set from today, not the requested date. They need to be adjusted by X days,
+	// where X is the difference in days between today and the requested date.
+	returnValue.push( 'dates need adjustment' );
+	
 	// Find block of departures
 	var str = helper.extractBlock( html,
-								   '<table cellspacing="0" class="hafas-content hafas-sq-content">', '</table>' );
+			'<table cellspacing="0" class="hafas-content hafas-sq-content">', '</table>' );
 
 	// Initialize regular expressions (only used once)
 	var meaningsRegExp = /<tr>[\s\S]*?(<th[\s\S]*?)<\/tr>/i;
@@ -98,7 +103,7 @@ function parseTimetable( html ) {
 	var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
 	var typeOfVehicleRegExp = /<img src="[^"]*?\/products\/([^_]*?)\d?_pic\.\w{3,4}"/i;
 	var transportLineRegExp = /<a href="http:\/\/fahrplan.sbb.ch\/bin\/traininfo.exe[^>]*?>([^<]*?)<\/a>/i;
-	var targetRegExp = /<a href="http:\/\/fahrplan.sbb.ch\/bin\/bhftafel.exe[^>]*?>([^<]*?)<\/a><\/span>[\s\S]*?<br>/ig;
+	var targetRegExp = /<a href="http:\/\/fahrplan.sbb.ch[^>]*?>([^<]*?)<\/a>\s*<\/span>[\s\S]*?<br>/i;
 	var platformRegExp = /<strong>([^<]*?)<\/strong>/i;
 	var delayRegExp = /ca.&nbsp;\+(\d)&nbsp;Min\./i;
 
@@ -117,33 +122,38 @@ function parseTimetable( html ) {
 		}
 
 		if ( columns.length < 3 ) {
+			helper.error("Too less columns (" + columns.length + ") found in a departure row!", departure);
 			continue; // Not all columns where not found
 		}
 
 		// Parse time column
 		var time = helper.matchTime( columns[timeCol], "hh:mm" );
 		if ( time.length != 2 ) {
-			continue; // Unexpected string in time column
+			helper.error("Unexpected string in time column!", columns[timeCol]);
+			continue;
 		}
 
 		// Parse type of vehicle column
 		var typeOfVehicle = typeOfVehicleRegExp.exec( columns[typeOfVehicleCol] );
 		if ( typeOfVehicle == null ) {
-			continue; // Unexcepted string in type of vehicle column
+			helper.error("Unexpected string in type of vehicle column!", columns[typeOfVehicleCol]);
+			continue;
 		}
 		typeOfVehicle = helper.trim( typeOfVehicle[1] );
 
 		// Parse transport line column
 		var transportLine = transportLineRegExp.exec( columns[typeOfVehicleCol + 1] );
 		if ( transportLine == null ) {
-			continue; // Unexcepted string in transport line column
+			helper.error("Unexpected string in transport line column!", columns[typeOfVehicleCol]);
+			continue;
 		}
 		transportLine = helper.trim( transportLine[1] );
 
 		// Parse target column
 		var targetString = targetRegExp.exec( columns[targetCol] );
 		if ( targetString == null ) {
-			continue; // Unexcepted string in target column
+			helper.error("Unexpected string in target column!", columns[targetCol]);
+			continue;
 		}
 		targetString = helper.trim( targetString[1] );
 
@@ -180,8 +190,10 @@ function parseTimetable( html ) {
 
 		for ( var n = 0; n < routeBlocks.length; ++n ) {
 			var routeStopArr = routeStopRegExp.exec( routeBlocks[n] );
-			if ( routeStopArr == null )
+			if ( routeStopArr == null ) {
+				helper.error("Unexpected string in route block " + n + "!", routeBlocks[n]);
 				continue; // Unexcepted string in route block
+			}
 
 				routeStops.push( helper.trim(routeStopArr[1]) );
 			routeTimes.push( helper.trim(routeStopArr[2]) );
@@ -201,18 +213,17 @@ function parseTimetable( html ) {
 		timetableData.set( 'RouteExactStops', exactRouteStops );
 		result.addData( timetableData );
 	}
+    return returnValue;
 }
 
 function parseJourneyDetails( details, resultObject ) {
-	println("Parsing details...");
-
 	// 	    var exactRouteStops = 0;
 	// Initialize regular expressions (only used once)
 	var meaningsRegExp = /<tr>[\s\S]*?(<th[\s\S]*?)<\/tr>/ig;
 	var columnMeaningsRegExp = /<th [\s\S]*?id="([^"]*?)-[^\"]*"[^>]*?>[\s\S]*?<\/th>/ig;
 
 	if ( (meanings = meaningsRegExp.exec(details)) == null ) {
-		println("meaningsRegExp didn't match");
+		helper.error("Header row of details table not found !", details);
 		return;
 	}
 	meanings = meanings[1];
@@ -250,7 +261,7 @@ function parseJourneyDetails( details, resultObject ) {
 	}
 
 	if ( timeCol == -1 || typeOfVehicleCol == -1 || stopsCol == -1 ) {
-		println("Required columns not found (time, stop name, type of vehicle)" );
+		helper.error("Required columns not found (time, stop name, type of vehicle)!", meanings);
 		return;
 	}
 
@@ -266,7 +277,6 @@ function parseJourneyDetails( details, resultObject ) {
 
 		var columnsRow1 = new Array;
 		while ( (col = columnsContentsRegExp.exec(detailsBlockRow1)) ) {
-			// 			println(" contents " + columnsRow1.length + ": " + col[1]);
 			columnsRow1.push( col[1] );
 		}
 		if ( columnsRow1.length == 0 ) {
@@ -378,7 +388,7 @@ function parseJourneys( html ) {
 	var pos = html.indexOf( '<table summary="Details - Verbindung 1' );
 	var detailsHtml = pos != -1 ? html.substr( pos ) : '';
 
-	println("PARSE JOURNEYS, total: " + html.length + ", length: " + str.length + ", details length: " + detailsHtml.length);
+// 	println("PARSE JOURNEYS, total: " + html.length + ", length: " + str.length + ", details length: " + detailsHtml.length);
 
 	// Initialize regular expressions (only used once)
 	var meaningsRegExp = /<tr>[\s\S]*?(<th[\s\S]*?)<\/tr>/i;
@@ -386,7 +396,7 @@ function parseJourneys( html ) {
 	var colspanRegExp = /colspan="(\d+)"/i;
 
 	if ( (meanings = meaningsRegExp.exec(str)) == null ) {
-		println("meaningsRegExp didn't match!");
+		helper.error("Didn't find a header row in the result table!", str);
 		return;
 	}
 	meanings = meanings[1];
@@ -431,10 +441,9 @@ function parseJourneys( html ) {
 	}
 
 	if ( timeCol == -1 || typesOfVehicleCol == -1 || durationCol == -1 ) {
-		println("Required columns not found (time, duration, types of vehicle)");
+		helper.error("Required columns not found (time, duration, types of vehicle)", meanings);
 		return;
 	}
-	println("Columns not found " + timeCol + ", " + typesOfVehicleCol + ", " + durationCol);
 
 	// Initialize regular expressions (compile them only once)
 	//     var journeysRegExp = /<tr class="zebra-row-\d">([\s\S]*?)<\/tr>[\s\S]*?<tr class="zebra-row-\d">([\s\S]*?)<\/tr>/ig
@@ -470,6 +479,7 @@ function parseJourneys( html ) {
 		// Parse departure date column
 		var departureDate = dateRegExp.exec( columnsRow1[dateCol] );
 		if ( departureDate == null ) {
+			helper.error("Unexpected string in departure date column!", columnsRow1[dateCol]);
 			continue; // Unexcepted string in departure date column
 		}
 		departureDate = departureDate[1];
@@ -477,6 +487,7 @@ function parseJourneys( html ) {
 		// Parse departure time column
 		var departureTime = helper.matchTime( columnsRow1[timeCol + 1], "hh:mm" );
 		if ( departureTime.length != 2 ) {
+			helper.error("Unexpected string in departure time column!", columnsRow1[timeCol]);
 			continue; // Unexpected string in departure time column
 		}
 
@@ -491,6 +502,7 @@ function parseJourneys( html ) {
 		// Parse arrival time column
 		var arrivalTime = helper.matchTime( columnsRow2[timeCol], "hh:mm" );
 		if ( arrivalTime.length != 2 ) {
+			helper.error("Unexpected string in arrival time column!", columnsRow2[timeCol]);
 			continue; // Unexpected string in arrival time column
 		}
 
@@ -517,17 +529,15 @@ function parseJourneys( html ) {
 		println( "detailsCol = " + detailsCol );
 		if ( detailsCol != -1 ) {
 			var detailsColRegExp = /<h2[^>]*>Verbindung\s+([0-9]+)<\/h2>/i;
-			// 		    /<a .*title=\"[^\"]*([0-9]+)/i;
-			// 		    println("regexp created, run on '" + columnsRow1[detailsCol] + "'");
+			//   /<a .*title=\"[^\"]*([0-9]+)/i;
+			//   println("regexp created, run on '" + columnsRow1[detailsCol] + "'");
 			var res1 = detailsColRegExp.exec( columnsRow1[detailsCol] );
-			println("regexp executed");
+// 			println("regexp executed");
 			if ( res1 != null ) {
-				// 			var journeyNrStr = helper.trim( columnsRow1[detailsCol] );
+				// var journeyNrStr = helper.trim( columnsRow1[detailsCol] );
 
-				println( res1[1] );
+// 				println( res1[1] );
 				var journeyNrStr = res1[1];
-
-				// 			println( "Details Column: " + helper.trim(columnsRow1[detailsCol]) );
 
 				var journeyNrRegExp = /([0-9]+)/i;
 				var res = journeyNrRegExp.exec( journeyNrStr );
@@ -536,14 +546,14 @@ function parseJourneys( html ) {
 					// 			  var journeyNr = helper.trim( helper.stripTags(columnsRow1[detailsCol]) );
 					var journeyNr = parseInt( res[1] );
 					var details = helper.extractBlock( detailsHtml,
-														'<table summary="Details - Verbindung ' + journeyNr +
-														'" cellspacing="0" width="100%" class="hac_detail">', '</table>' );
+							'<table summary="Details - Verbindung ' + journeyNr +
+							'" cellspacing="0" width="100%" class="hac_detail">', '</table>' );
 					// 			println( "    detailsHtml = " + detailsHtml );
 					// 			var details = helper.extractBlock( detailsHtml,
 					// 				'<table summary="Details - Verbindung ' + journeyNr +
 					// 				'" cellspacing="0" width="100%" class="hac_detail">', '</table>' );
 					parseJourneyDetails( details, detailsResults );
-					println("TEST 2 " + detailsResults.routeStops.length);
+// 					println("TEST 2 " + detailsResults.routeStops.length);
 				}
 
 				if ( typeof(detailsResults.routeStops) != 'undefined'
@@ -557,7 +567,9 @@ function parseJourneys( html ) {
 								detailsResults.routeStops.length - 1 ];
 					}
 				}
-			} else println("ERR: " + columnsRow1[detailsCol]);
+			} else { 
+				helper.error("Heading not found in details column", columnsRow1[detailsCol]);
+			}
 		}
 
 		// Parse capacity
@@ -573,18 +585,21 @@ function parseJourneys( html ) {
 			if ( capacity = capacityRegExp.exec(capacityHtml) ) {
 				capacitySecondClass = capacity[1].split( /,/i );
 			}
-			var capacityRemarks = "1. " + capacityFirstClass + ", 2. " + capacitySecondClass;
 
-			// There's no special timetableData item like 'Capacity'.
-			// Plus: There is capacity information for each "sub-journey".
-			// Such a value could be added in the publictransport data engine
-			// and then be visualized in the routes item in the applet.
-			if ( typeof(detailsResults.journeyNews) == 'string'
-				&& detailsResults.journeyNews.length > 0 )
-			{
-				detailsResults.journeyNews += ", " + capacityRemarks;
-			} else {
-				detailsResults.journeyNews = capacityRemarks;
+			if ( capacityFirstClass.length > 0 && capacitySecondClass.length > 0 ) {
+				var capacityRemarks = "1. " + capacityFirstClass + ", 2. " + capacitySecondClass;
+
+				// There's no special timetableData item like 'Capacity'.
+				// Plus: There is capacity information for each "sub-journey".
+				// Such a value could be added in the publictransport data engine
+				// and then be visualized in the routes item in the applet.
+				if ( typeof(detailsResults.journeyNews) == 'string'
+					&& detailsResults.journeyNews.length > 0 )
+				{
+					detailsResults.journeyNews += ", " + capacityRemarks;
+				} else {
+					detailsResults.journeyNews = capacityRemarks;
+				}
 			}
 		}
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo fileVersion="1.0" version="1.1" type="HTML">
+<accessorInfo fileVersion="1.0" version="1.2" type="HTML">
 
 <name>CHAPS spol. s r.o. (jizdnirady.idnes.cz)</name>
 <author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
@@ -94,23 +94,17 @@
 <shortUrl>jizdnirady.idnes.cz</shortUrl>
 <!-- <credit>CHAPS spol. s r.o.</credit> -->
 
+<sessionKey> 
+	<url>http://jizdnirady.idnes.cz</url> 
+	<putInto data="idoskey">CustomHeader</putInto>
+</sessionKey>
+
 <rawUrls>
-    <departures><![CDATA[http://jizdnirady.idnes.cz/{city}/odjezdy/?f={stop}&submit=true&lng=E]]></departures>
+    <departures><![CDATA[http://jizdnirady.idnes.cz/{city}/odjezdy/?f={stop}&submit=true&lng=E&Date={date:dd.M.yyyy}&Time={time}&isDepTime=true]]></departures>
+
+	<stopSuggestions method="post" charset="utf-8" contenttype="application/json; charset=utf-8" accept="application/json, text/javascript, */*" data='{"prefixText":"{stop}","count":"20","selectedTT":"BMCz","bindElementValue":"","iLang":"ENGLISH","bCoor":"false"}'><![CDATA[http://jizdnirady.idnes.cz/AJAXService.asmx/SearchTimetableObjects]]></stopSuggestions>
 </rawUrls>
 
-<regExps>
-    <possibleStops>
-	<item>
-	    <regExpRange><![CDATA[(?:<select name="ctl[^"]*" id="ctl[^"]*"[^>]*>)(.*)(?:</select>)]]></regExpRange>
-	    <regExp><![CDATA[(?:<option (?:selected="selected" )?value="[^"]*">)([^<]*)(?:</option>)]]></regExp>
-	    <infos><info>StopName</info></infos>
-	</item>
-    </possibleStops>
-    <departures>
-	<regExp><![CDATA[(?:<tr class="[^"]*">\s*<td class="datedt">)([0-9]{1,2})(?::)([0-9]{2})(?:</td><td>[^<]*</td><td class="[^"]*">.*</td><td class="[^"]*">.*</td><td><img src="[^"]*" alt=")([^"]*)(?:" title="[^"]*" />\s*<a href="[^"]*" title="[^\(]*\([^>]*>>\s)([^\)]*)(?:\)"[^>]*>)([^<]*)(?:</a>\s*)(?:<img [^>]*>\s*)?(?:</td>\s*</tr>)]]></regExp>
-	<infos>
-	    <info>DepartureHour</info> <info>DepartureMinute</info> <info>TypeOfVehicle</info> <info>Target</info> <info>TransportLine</info>
-	</infos>
-    </departures>
-</regExps>
+<script>cz_idnes.js</script>
+
 </accessorInfo>
