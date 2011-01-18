@@ -56,7 +56,7 @@ bool TimetableAccessorHtmlScript::lazyLoadScript()
 
 	TimetableData *timetableData = new TimetableData( m_script );
 	m_resultObject = new ResultObject( m_script );
-	m_script->addQObject( new Helper(m_script), "helper" );
+	m_script->addQObject( new Helper(m_info->serviceProvider(), m_script), "helper" );
 	m_script->addQObject( timetableData, "timetableData" );
 	m_script->addQObject( m_resultObject, "result"/*, Kross::ChildrenInterface::AutoConnectSignals*/ );
 
@@ -74,9 +74,8 @@ bool TimetableAccessorHtmlScript::lazyLoadScript()
 QStringList TimetableAccessorHtmlScript::readScriptFeatures()
 {
 	// Try to load script features from a cache file
-	QString fileName = KGlobal::dirs()->saveLocation("data",
-			"plasma_engine_publictransport/accessorInfos/")
-			.append( QLatin1String("datacache"));
+	QString fileName = KGlobal::dirs()->saveLocation("data", 
+			"plasma_engine_publictransport/accessorInfos/").append( QLatin1String("datacache"));
 	bool cacheExists = QFile::exists( fileName );
 	KConfig cfg( fileName, KConfig::SimpleConfig );
 	KConfigGroup grp = cfg.group( m_info->serviceProvider() );
@@ -189,12 +188,20 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 			// No delay information available for the given stop
 			globalInfo->delayInfoAvailable = false;
 		}
+		if ( globalInfos.contains(QLatin1String("dates need adjustment"), Qt::CaseInsensitive) ) {
+			globalInfo->datesNeedAdjustment = true;
+		}
 	}
 
 	QList<TimetableData> data = m_resultObject->data();
 	int count = 0;
 	QDate curDate;
 	QTime lastTime;
+	int dayAdjustment = globalInfo->datesNeedAdjustment 
+			? QDate::currentDate().daysTo(globalInfo->requestDate) : 0;
+	if ( dayAdjustment != 0 ) {
+		kDebug() << "Dates get adjusted by" << dayAdjustment << "days";
+	}
 	for ( int i = 0; i < data.count(); ++ i ) {
 		TimetableData timetableData = data.at( i );
 
@@ -218,6 +225,11 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 				date = curDate;
 			}
 
+			timetableData.set( DepartureDate, date );
+		}
+		
+		if ( dayAdjustment != 0 ) {
+			date = date.addDays( dayAdjustment );
 			timetableData.set( DepartureDate, date );
 		}
 
@@ -298,6 +310,30 @@ QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl(
 	}
 }
 
+QString TimetableAccessorHtmlScript::parseDocumentForSessionKey(const QByteArray& document)
+{
+	if ( !lazyLoadScript() ) {
+		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
+		return QString();
+	}
+	if ( !m_script->functionNames().contains("parseSessionKey") ) {
+		kDebug() << "The script has no 'parseSessionKey' function";
+		kDebug() << "Functions in the script:" << m_script->functionNames();
+		return QString();
+	}
+
+	QString doc = TimetableAccessorHtml::decodeHtml( document );
+	// Performance(?): Cut everything before "<body>" from the document
+// 	doc = doc.mid( doc.indexOf( "<body>", 0, Qt::CaseInsensitive ) );
+
+	QString result = m_script->callFunction( "parseSessionKey", QVariantList() << doc ).toString();
+	if ( result.isEmpty() || result == "null" ) {
+		return QString();
+	} else {
+		return result;
+	}
+}
+
 bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &document,
 		QStringList *stops, QHash<QString, QString> *stopToStopId,
 		QHash<QString, int> *stopToStopWeight )
@@ -317,8 +353,12 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 	// Call script
 	m_resultObject->clear();
 	QVariant result = m_script->callFunction( "parsePossibleStops", QVariantList() << doc );
+	if ( m_script->hadError() ) {
+		kDebug() << "Error while running the 'parsePossibleStops' script function"
+				 << m_script->errorMessage() << "at" << m_script->errorLineNo() << m_script->errorTrace();
+	}
+	
 	QList<TimetableData> data = m_resultObject->data();
-
 	int count = 0;
 	foreach( const TimetableData &timetableData, data ) {
 		QString stopName = timetableData.value( StopName ).toString();

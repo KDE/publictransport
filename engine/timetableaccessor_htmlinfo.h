@@ -33,8 +33,8 @@
 #include <QHash>
 
 /** @class TimetableRegExpSearch
-* @brief Stores a regular expression and information about the meaning of the matches.
-*  */
+ * @brief Stores a regular expression and information about the meaning of the matches.
+ **/
 class TimetableRegExpSearch {
 public:
 	/** @brief Creates an invalid TimetableRegExpSearch object. */
@@ -78,7 +78,7 @@ public:
 	/**
 	 * @brief Creates a new TimetableAccessorInfo object.
 	 *
-	 * @todo: Don't use so many parameters in the constructor. The setters
+	 * @todo Don't use so many parameters in the constructor. The setters
 	 *   need to be called anyway.
 	 *
 	 * @param name The name of the accessor.
@@ -126,6 +126,10 @@ public:
 	QString journeyRawUrl() const { return m_journeyRawUrl; };
 	/** @brief Raw url to an xml file for xml accessors */
 	QString stopSuggestionsRawUrl() const { return m_stopSuggestionsRawUrl; };
+	
+	QHash<QString, QString> attributesForStopSuggestions() const { return m_attributesForStopSuggestions; };
+	QHash<QString, QString> attributesForDepatures() const { return m_attributesForDepatures; };
+	QHash<QString, QString> attributesForJourneys() const { return m_attributesForJourneys; };
 
 	/** @brief The country for which the service provider has data. */
 	QString country() const { return m_country; };
@@ -138,6 +142,12 @@ public:
 	 *   own toPercentEncoding() with this charset. */
 	QByteArray charsetForUrlEncoding() const { return m_charsetForUrlEncoding; };
 	QByteArray fallbackCharset() const { return m_fallbackCharset; };
+	
+	// TODO Description
+	QString sessionKeyUrl() const { return m_sessionKeyUrl; };
+	SessionKeyPlace sessionKeyPlace() const { return m_sessionKeyPlace; };
+	QString sessionKeyData() const { return m_sessionKeyData; };
+	
 	/**
 	 * @brief Gets the minimum seconds to wait between two data-fetches from the service provider. */
 	int minFetchWait() const { return m_minFetchWait; };
@@ -192,8 +202,12 @@ protected:
 		m_hashCityNameToValue = hash; };
 		
 
-	/** @brief Sets the name of the XML file that was parsed to get this accessor information object. */
-	void setFileName( const QString &fileName ) { m_fileName = fileName; };
+	/** @brief Sets the name of the XML file that was parsed to get this accessor information object.
+	 *
+	 * If @p fileName is a symlink the real file name gets retrieved (using 
+	 * KStandardDirs::realFilePath, eg. for the default service providers ending with "_default.xml").
+	 **/
+	void setFileName( const QString &fileName );
 
 	/** @brief Sets the file name of the script file to parse html pages. */
 	void setScriptFile( const QString &scriptFileName ) {
@@ -220,6 +234,14 @@ protected:
 	void setFallbackCharset( const QByteArray &fallbackCharset ) {
 		m_fallbackCharset = fallbackCharset; };
 
+	// TODO Description
+	void setSessionKeyData( const QString &sessionKeyUrl, SessionKeyPlace sessionKeyPlace, 
+							const QString &data ) {
+		m_sessionKeyUrl = sessionKeyUrl;
+		m_sessionKeyPlace = sessionKeyPlace;
+		m_sessionKeyData = data;
+	};
+	
 	/**
 	 * @brief Sets the description of this accessor.
 	 *
@@ -281,6 +303,13 @@ protected:
 	void setJourneyRawUrl( const QString &journeyRawUrl ) {
 		m_journeyRawUrl = journeyRawUrl; };
 
+	void setAttributesForStopSuggestions( const QHash<QString, QString> &attributesForStopSuggestions ) { 
+		m_attributesForStopSuggestions = attributesForStopSuggestions; };
+	void setAttributesForDepatures( const QHash<QString, QString> &attributesForDepartures ) { 
+		m_attributesForDepatures = attributesForDepartures; };
+	void setAttributesForJourneys( const QHash<QString, QString> &attributesForJourneys ) { 
+		m_attributesForJourneys = attributesForJourneys; };
+	
 	/**
 	 * @brief Sets the country for which the service provider has data.
 	 *
@@ -336,16 +365,28 @@ protected:
 	// If empty, use unicode (QUrl::toPercentEncoding()), otherwise use own
 	// toPercentEncoding() with this charset
 	QByteArray m_charsetForUrlEncoding, m_fallbackCharset;
+	
+	// Session key data
+	QString m_sessionKeyUrl;
+	SessionKeyPlace m_sessionKeyPlace;
+	QString m_sessionKeyData;
+	
 	// Raw url to a site containing a list of stop name suggestions
 	QString m_stopSuggestionsRawUrl;
-	// Type of the accessor (HTML, XML)
-	AccessorType m_accessorType;
+	// A raw url that is used to get departures/arrivals
+	QString m_departureRawUrl;
 	// A raw url that is used to get journeys
 	QString m_journeyRawUrl;
+	
+	QHash<QString, QString> m_attributesForStopSuggestions;
+	QHash<QString, QString> m_attributesForDepatures;
+	QHash<QString, QString> m_attributesForJourneys;
+	
+	// Type of the accessor (HTML, XML)
+	AccessorType m_accessorType;
 	VehicleType m_defaultVehicleType;
 	int m_minFetchWait;
 	QString m_serviceProviderID;
-	QString m_departureRawUrl;
 	QString m_country;
 	QStringList m_cities;
 	QString m_credit;
@@ -361,7 +402,7 @@ protected:
  * This class is only used by @ref TimetableAccessorHtml, accessors that use scripts can run
  * regular expressions inside the script. 
  *
- * @see TimetableAccessorInfo. */
+ * @see TimetableAccessorInfo */
 class TimetableAccessorInfoRegExp : public TimetableAccessorInfo {
 	friend class AccessorInfoXmlReader; // Because AccessorInfoXmlReader needs to set values when reading xml files
 
@@ -369,7 +410,7 @@ public:
 	/**
 	 * @brief Creates a new TimetableAccessorInfoRegExp object.
 	 *
-	 * @todo: Don't use so many parameters in the constructor. The setters
+	 * @todo Don't use so many parameters in the constructor. The setters
 	 *   need to be called anyway.
 	 *
 	 * @param name The name of the accessor.

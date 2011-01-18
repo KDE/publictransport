@@ -90,9 +90,12 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 
 	AccessorType type;
 	QString version, nameLocal, nameEn, descriptionLocal, descriptionEn,
-	authorName, authorEmail, defaultVehicleType, url, shortUrl,
-	charsetForUrlEncoding, fallbackCharset, scriptFile, credit,
-	rawUrlDepartures, rawUrlStopSuggestions, rawUrlJourneys;
+			authorName, authorEmail, defaultVehicleType, url, shortUrl,
+			charsetForUrlEncoding, fallbackCharset, scriptFile, credit;
+	QString rawUrlDepartures, rawUrlStopSuggestions, rawUrlJourneys;
+	QString sessionKeyUrl, sessionKeyData;
+	SessionKeyPlace sessionKeyPlace;
+	QHash<QString, QString> attributesForDepartures, attributesForStopSuggestions, attributesForJourneys;
 	QStringList cities;
 	QHash<QString, QString> cityNameReplacements;
 	bool useSeperateCityValue = false, onlyUseCitiesInList = false;
@@ -165,7 +168,10 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 			} else if ( name().compare( "fallbackCharset", Qt::CaseInsensitive ) == 0 ) {
 				fallbackCharset = readElementText(); // TODO Implement as attributes in the url tags
 			} else if ( name().compare( "rawUrls", Qt::CaseInsensitive ) == 0 ) {
-				readRawUrls( &rawUrlDepartures, &rawUrlStopSuggestions, &rawUrlJourneys );
+				readRawUrls( &rawUrlDepartures, &rawUrlStopSuggestions, &rawUrlJourneys,
+						&attributesForDepartures, &attributesForStopSuggestions, &attributesForJourneys );
+			} else if ( name().compare( "sessionKey", Qt::CaseInsensitive ) == 0 ) {
+				readSessionKey( &sessionKeyUrl, &sessionKeyPlace, &sessionKeyData );
 			} else if ( name().compare( "regExps", Qt::CaseInsensitive ) == 0 ) {
 				bool ok = readRegExps( &regExpDepartures, &infosDepartures,
 									   &regExpDeparturesPre, &infoPreKey, &infoPreValue,
@@ -228,9 +234,13 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 	accessorInfo->setMinFetchWait( minFetchWait );
 	accessorInfo->setDepartureRawUrl( rawUrlDepartures );
 	accessorInfo->setStopSuggestionsRawUrl( rawUrlStopSuggestions );
+	accessorInfo->setJourneyRawUrl( rawUrlJourneys );
+	accessorInfo->setAttributesForDepatures( attributesForDepartures );
+	accessorInfo->setAttributesForStopSuggestions( attributesForStopSuggestions );
+	accessorInfo->setAttributesForJourneys( attributesForJourneys );
 	accessorInfo->setFallbackCharset( fallbackCharset.toAscii() );
 	accessorInfo->setCharsetForUrlEncoding( charsetForUrlEncoding.toAscii() );
-	accessorInfo->setJourneyRawUrl( rawUrlJourneys );
+	accessorInfo->setSessionKeyData( sessionKeyUrl, sessionKeyPlace, sessionKeyData );
 
 	if ( scriptFile.isEmpty() ) {
 		// Set regular expressions, if no script file was specified
@@ -336,7 +346,7 @@ void AccessorInfoXmlReader::readCities( QStringList *cities,
 
 		if ( isStartElement() ) {
 			if ( name().compare( "city", Qt::CaseInsensitive ) == 0 ) {
-				if ( attributes().hasAttribute( "replaceWith" ) ) {
+				if ( attributes().hasAttribute("replaceWith") ) {
 					QString replacement = attributes().value( "replaceWith" ).toString().toLower();
 					QString city = readElementText();
 					cityNameReplacements->insert( city.toLower(), replacement );
@@ -353,22 +363,87 @@ void AccessorInfoXmlReader::readCities( QStringList *cities,
 }
 
 void AccessorInfoXmlReader::readRawUrls( QString* rawUrlDepartures, QString* rawUrlStopSuggestions,
-										 QString* rawUrlJourneys )
+										 QString* rawUrlJourneys, 
+										 QHash<QString, QString> *attributesForDepartures, 
+										 QHash<QString, QString> *attributesForStopSuggestions, 
+										 QHash<QString, QString> *attributesForJourneys )
 {
 	while ( !atEnd() ) {
 		readNext();
 
-		if ( isEndElement() && name().compare( "rawUrls", Qt::CaseInsensitive ) == 0 ) {
+		if ( isEndElement() && name().compare("rawUrls", Qt::CaseInsensitive) == 0 ) {
 			break;
 		}
 
 		if ( isStartElement() ) {
-			if ( name().compare( "departures", Qt::CaseInsensitive ) == 0 ) {
-				*rawUrlDepartures = readElementText();
-			} else if ( name().compare( "stopSuggestions", Qt::CaseInsensitive ) == 0 ) {
+			if ( name().compare("departures", Qt::CaseInsensitive) == 0 ) {
+				foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
+					attributesForDepartures->insert( attribute.name().toString(), 
+													 attribute.value().toString() );
+				}
+				
+				while ( !atEnd() ) {
+					if ( isStartElement() ) {
+						if ( name().compare("url", Qt::CaseInsensitive) == 0 ) {
+							*rawUrlDepartures = readElementText();
+						} else if ( name().compare("data", Qt::CaseInsensitive) == 0 ) {
+							attributesForDepartures->insert( "data", readElementText() );
+						}
+					} else if ( rawUrlDepartures->isEmpty() && (isCDATA() || isCharacters()) ) {
+						*rawUrlDepartures = text().toString();
+					} else if ( isEndElement() && name().compare("departures", Qt::CaseInsensitive) == 0 ) {
+						// End of <departures> tag
+						break;
+					}
+					
+					if ( atEnd() ) {
+						break;
+					}
+					readNext();
+				}
+			} else if ( name().compare("stopSuggestions", Qt::CaseInsensitive) == 0 ) {
+				foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
+					attributesForStopSuggestions->insert( attribute.name().toString(), 
+														  attribute.value().toString() );
+				}
 				*rawUrlStopSuggestions = readElementText();
-			} else if ( name().compare( "journeys", Qt::CaseInsensitive ) == 0 ) {
+			} else if ( name().compare("journeys", Qt::CaseInsensitive) == 0 ) {
+				foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
+					attributesForJourneys->insert( attribute.name().toString(), 
+												   attribute.value().toString() );
+				}
 				*rawUrlJourneys = readElementText();
+			} else {
+				readUnknownElement();
+			}
+		}
+	}
+}
+
+void AccessorInfoXmlReader::readSessionKey(QString* sessionKeyUrl, SessionKeyPlace* sessionKeyPlace,
+										   QString* data )
+{
+	while ( !atEnd() ) {
+		readNext();
+
+		if ( isEndElement() && name().compare("sessionKey", Qt::CaseInsensitive) == 0 ) {
+			break;
+		}
+
+		if ( isStartElement() ) {
+			if ( name().compare("url", Qt::CaseInsensitive) == 0 ) {
+				*sessionKeyUrl = readElementText();
+			} else if ( name().compare("putInto", Qt::CaseInsensitive) == 0 ) {
+				if ( attributes().hasAttribute(QLatin1String("data")) ) {
+					*data = attributes().value( QLatin1String("data") ).toString();
+				}
+				
+				QString putInto = readElementText();
+				if ( putInto.compare(QLatin1String("CustomHeader"), Qt::CaseInsensitive) == 0 ) {
+					*sessionKeyPlace = PutIntoCustomHeader;
+				} else {
+					*sessionKeyPlace = PutNowhere;
+				}
 			} else {
 				readUnknownElement();
 			}

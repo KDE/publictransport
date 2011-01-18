@@ -67,7 +67,10 @@ private:
 	void readAuthor( QString *fullname, QString *email );
 	void readCities( QStringList *cities, QHash<QString, QString> *cityNameReplacements );
 	void readRawUrls( QString *rawUrlDepartures, QString *rawUrlStopSuggestions,
-					  QString *rawUrlJourneys );
+					  QString *rawUrlJourneys, QHash<QString, QString> *attributesForDepartures, 
+					  QHash<QString, QString> *attributesForStopSuggestions, 
+					  QHash<QString, QString> *attributesForJourneys );
+	void readSessionKey( QString *sessionKeyUrl, SessionKeyPlace *sessionKeyPlace, QString *data );
 	bool readRegExps( QString* regExpDepartures,
 					  QList< TimetableInformation >* infosDepartures,
 					  QString* regExpDeparturesPre,

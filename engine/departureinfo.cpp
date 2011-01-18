@@ -124,8 +124,10 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
 		                             m_data[DepartureMinute].toInt() );
 		if ( departureTime < QTime::currentTime().addSecs( -5 * 60 ) ) {
 			// This could produce wrong dates (better give DepartureDate in scripts)
+			kDebug() << "Guessed DepartureDate as tomorrow";
 			m_data[ DepartureDate ] = QDate::currentDate().addDays( 1 );
 		} else {
+			kDebug() << "Guessed DepartureDate as today";
 			m_data[ DepartureDate ] = QDate::currentDate();
 		}
 		m_data.insert( DepartureYear, m_data[DepartureDate].toDate().year() );
@@ -340,12 +342,17 @@ DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehi
                               const QString& journeyNews, const QString &operatorName )
 		: PublicTransportInfo()
 {
-	// Guess date
-	if ( departureTime < requestTime.addSecs(-5 * 60) ) {
-		m_data.insert( DepartureDate, QDate::currentDate().addDays(1) );
-	} else {
+	// Guess date TODO
+	Q_UNUSED( requestTime );
+	// Interprete as tomorrow, if the time is more than 12 hours ago/in the future.
+// 	if ( departureTime < requestTime.addSecs(-12 * 60 * 60) ) {
+// 		kDebug() << "Guessed DepartureDate as tomorrow, departure is at" 
+// 				 << departureTime << "requested was" << requestTime;
+// 		m_data.insert( DepartureDate, QDate::currentDate().addDays(1) );
+// 	} else {
+		kDebug() << "Guessed DepartureDate as today";
 		m_data.insert( DepartureDate, QDate::currentDate() );
-	}
+// 	}
 	m_data.insert( DepartureYear, m_data[DepartureDate].toDate().year() );
 
 	m_data.insert( DepartureHour, departureTime.hour() );
@@ -400,6 +407,7 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 		return Subway;
 	} else if ( sLineTypeLower == "s-bahn" ||
 			sLineTypeLower == "sbahn" ||
+			sLineTypeLower == "s_bahn" ||
 			sLineTypeLower == "s" ||
 			sLineTypeLower == "s1" || // ch_sbb
 			sLineTypeLower == "rsb" ) { // "regio-s-bahn", au_oebb

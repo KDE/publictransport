@@ -100,7 +100,14 @@ public:
 			const QString &city, const QString &stop,
 			int maxCount, const QDateTime &dateTime, const QString &dataType = "departures",
 			bool useDifferentUrl = false );
+	
+	// TODO Documentation
+	KIO::StoredTransferJob *requestSessionKey( ParseDocumentMode parseMode, const KUrl &url, 
+			const QString &sourceName, const QString &city, const QString &stop, int maxCount = 99, 
+			const QDateTime &dateTime = QDateTime::currentDateTime(), 
+			const QString &dataType = QString(), bool usedDifferentUrl = false );
 
+	// TODO Documentation
 	KIO::StoredTransferJob *requestStopSuggestions( const QString &sourceName,
 			const QString &city, const QString &stop );
 
@@ -170,6 +177,12 @@ protected:
 	 *   implementation returns a null string.
 	 * @return The parsed url. */
 	virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document ) {
+		Q_UNUSED( document );
+		return QString();
+	};
+	
+	// TODO Documentation
+	virtual QString parseDocumentForSessionKey( const QByteArray &document ) {
 		Q_UNUSED( document );
 		return QString();
 	};
@@ -291,6 +304,9 @@ signals:
 			const QHash<QString, int> &stopToStopWeight,
 			const QString &serviceProvider, const QString &sourceName, const QString &city,
 			const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
+	
+	// TODO Documentation
+	void sessionKeyReceived( TimetableAccessor *accessor, const QString &sessionKey );
 
 	/** 
 	 * @brief Emitted when an error occurred while parsing.
@@ -314,10 +330,18 @@ signals:
 			const QString &sourceName, const QString &city, const QString &stop,
 			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
-public slots:
+protected slots:
 	/** @brief All data of a journey list has been received. */
 	void result( KJob* job );
+	
+	// TODO Documentation
+	void clearSessionKey();
 
+protected:
+	// Stores a session key, if it's needed by the accessor
+	QString m_sessionKey;
+	QTime m_sessionKeyGetTime;
+	
 private:
 	static QString gethex( ushort decimal );
 

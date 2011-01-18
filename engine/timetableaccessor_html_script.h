@@ -101,6 +101,9 @@ protected:
 	 * @return The parsed url. */
 	virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document );
 
+	// TODO Documentation
+	virtual QString parseDocumentForSessionKey( const QByteArray &document );
+	
 	/** 
 	 * @brief Calls the 'parsePossibleStops' function in the script to parse the
 	 *   contents of the given document for a list of possible stop names and puts

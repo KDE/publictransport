@@ -25,12 +25,15 @@
 #define ENUMS_HEADER
 
 #include <QDebug>
+#include <QDate>
 
 /** @brief Contains global information about a downloaded timetable that affects
  * all departures/arrivals/journeys. */
 struct GlobalTimetableInfo {
 	GlobalTimetableInfo() {
 		delayInfoAvailable = true;
+		datesNeedAdjustment = false;
+		requestDate = QDate::currentDate();
 	};
 
 	/**
@@ -40,6 +43,19 @@ struct GlobalTimetableInfo {
 	 *   delay information is/will be available for the given stop.
 	 **/
 	bool delayInfoAvailable;
+	
+	/**
+	 * @brief Whether or not dates are set from today instead of the requested date.
+	 * 
+	 * If this is true, all dates need to be adjusted by X days, where X is the difference in days 
+	 * between today and the requested date.
+	 **/
+    bool datesNeedAdjustment;
+	
+	/**
+	 * @brief The requested date of the first departure/arrival/journey.
+	 **/
+	QDate requestDate;
 };
 
 /**
@@ -50,6 +66,13 @@ enum ErrorType {
 
 	ErrorDownloadFailed, /**< Download error occured. */
 	ErrorParsingFailed /**< Parsing downloaded data failed. */
+};
+
+// TODO Documentation
+enum SessionKeyPlace {
+	PutNowhere = 0, /**< Don't place the session key anywhere. */
+	PutIntoCustomHeader /**< Place the session key in a custom header, which name should be given
+			* as session key <em>data</em>. */
 };
 
 /** 
@@ -124,7 +147,9 @@ enum TimetableInformation {
 enum ParseDocumentMode {
 	ParseForDeparturesArrivals = 1, /**< Parsing for departures or arrivals. */
 	ParseForJourneys, /**< Parsing for journeys. */
-	ParseForStopSuggestions  /**< Parsing for stop suggestions. */
+	ParseForStopSuggestions, /**< Parsing for stop suggestions. */
+	ParseForSessionKeyThenStopSuggestions, /**< Parsing for a session key, to be used to get stop suggestions. */
+	ParseForSessionKeyThenDepartures /**< Parsing for a session key, to be used to get departures/arrivals. */
 };
 
 /** The type of an accessor. */
@@ -202,6 +227,10 @@ inline QDebug &operator <<( QDebug debug, ParseDocumentMode parseDocumentMode )
 		return debug << "ParseForJourneys";
 	case ParseForStopSuggestions:
 		return debug << "ParseForStopSuggestions";
+	case ParseForSessionKeyThenDepartures:
+		return debug << "ParseForSessionKeyThenDepartures";
+	case ParseForSessionKeyThenStopSuggestions:
+		return debug << "ParseForSessionKeyThenStopSuggestions";
 
 	default:
 		return debug << "ParseDocumentMode unknown" << parseDocumentMode;

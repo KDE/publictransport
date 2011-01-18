@@ -20,6 +20,7 @@
 #include "timetableaccessor_htmlinfo.h"
 #include <KLocalizedString>
 #include <KDebug>
+#include <KStandardDirs>
 
 TimetableRegExpSearch::TimetableRegExpSearch( const QString &regExpSearch,
         const QList< TimetableInformation > &regExpInfos )
@@ -56,6 +57,11 @@ void TimetableAccessorInfo::setAuthor( const QString& author, const QString &ema
 {
 	m_author = author;
 	m_email = email;
+}
+
+void TimetableAccessorInfo::setFileName(const QString& fileName)
+{
+	m_fileName = KStandardDirs::realFilePath( fileName );
 }
 
 QString TimetableAccessorInfo::mapCityNameToValue( const QString &city ) const
