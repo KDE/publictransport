@@ -97,10 +97,13 @@ TimetableAccessorInfoRegExp::TimetableAccessorInfoRegExp( const TimetableAccesso
 	setShortUrl( info.shortUrl() );
 	setMinFetchWait( info.minFetchWait() );
 	setDepartureRawUrl( info.departureRawUrl() );
+	setJourneyRawUrl( info.journeyRawUrl() );
 	setStopSuggestionsRawUrl( info.stopSuggestionsRawUrl() );
 	setFallbackCharset( info.fallbackCharset() );
 	setCharsetForUrlEncoding( info.charsetForUrlEncoding() );
-	setJourneyRawUrl( info.journeyRawUrl() );
+	setAttributesForDepatures( info.attributesForDepatures() );
+	setAttributesForJourneys( info.attributesForJourneys() );
+	setAttributesForStopSuggestions( info.attributesForStopSuggestions() );
 }
 
 void TimetableAccessorInfoRegExp::setRegExpDepartures( const QString &regExpSearch,

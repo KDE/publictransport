@@ -444,8 +444,13 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 			if ( !codec ) {
 				job->setData( sData.toUtf8() );
 			} else {
+				kDebug() << "Codec:" << sCodec << "couldn't be found to encode the data "
+						"to post, now using UTF-8";
 				job->setData( codec->fromUnicode(sData) );
 			}
+		} else {
+			// No charset specified, use UTF8
+			job->setData( sData.toUtf8() );
 		}
 		
 		if ( m_info->attributesForDepatures().contains(QLatin1String("accept")) ) {
@@ -488,6 +493,11 @@ KIO::StoredTransferJob* TimetableAccessor::requestSessionKey( ParseDocumentMode 
 									 url, dataType, maxCount, dateTime, usedDifferentUrl) );
 	connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
 	return job;
+}
+
+void TimetableAccessor::clearSessionKey()
+{
+	m_sessionKey.clear();
 }
 
 KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions(
@@ -536,6 +546,9 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions(
 				} else {
 					job->setData( codec->fromUnicode(sData) );
 				}
+			} else {
+				// No codec specified, use UTF8
+				job->setData( sData.toUtf8() );
 			}
 			if ( m_info->attributesForStopSuggestions().contains(QLatin1String("accept")) ) {
 				job->addMetaData( "accept", m_info->attributesForStopSuggestions()[QLatin1String("accept")] );
@@ -592,11 +605,6 @@ KIO::StoredTransferJob* TimetableAccessor::requestJourneys( const KUrl& url )
 	connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
 
 	return job;
-}
-
-void TimetableAccessor::clearSessionKey()
-{
-	m_sessionKey.clear();
 }
 
 void TimetableAccessor::result( KJob* job )
