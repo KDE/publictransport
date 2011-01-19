@@ -41,14 +41,15 @@ void Helper::error( const QString& message, const QString &failedParseText )
 	
 	if ( !logFileName.isEmpty() ) {
 		QFile logFile(logFileName);
-		if ( logFile.size() > 1024 * 1024 ) { // == 1 MB
-			if ( !logFile.open(QIODevice::Truncate) ) {
-				kDebug() << "Couldn't open the log file in truncate mode" << logFileName << logFile.errorString();
-				return;
+		if ( logFile.size() > 1024 * 512 ) { // == 0.5 MB
+			if ( !logFile.remove() ) {
+				kDebug() << "Error: Couldn't delete old log file.";
 			} else {
-				kDebug() << "Removed old log file contents, to prevent too much disk usage";
+				kDebug() << "Deleted old log file, because it was getting too big.";
 			}
-		} else if ( !logFile.open(QIODevice::Append | QIODevice::Text) ) {
+		}
+		
+		if ( !logFile.open(QIODevice::Append | QIODevice::Text) ) {
 			kDebug() << "Couldn't open the log file in append mode" << logFileName << logFile.errorString();
 			return;
 		}
