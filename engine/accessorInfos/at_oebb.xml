@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo fileVersion="1.0" version="1.2" type="HTML">
+
+<name lang="en">ÖBB-Group</name>
+<name lang="de">ÖBB-Konzern</name>
+<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<!-- <cities><city></city></cities> -->
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>This service provider works for cities in Austria and also for many cities in Europe. Cities in Austria include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>
+
+<url>http://www.oebb.at/</url>
+<shortUrl>www.oebb.at</shortUrl>
+<fallbackCharset>latin1</fallbackCharset>
+<!-- <credit>ÖBB-Konzern</credit> -->
+
+<rawUrls>
+<!--	<departures method="post" contenttype="application/x-www-form-urlencoded">
+		<data><![CDATA[sqView=2&start=Abfahrtstafel&boardType={dataType}&time={time}&maxJourneys={maxCount}&dateBegin=&dateEnd=&selectDate=&productsFilter=0&editStation=yes&dirInput=&input={stop}]]></data>
+		<url><![CDATA[http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&]]></url>
+	</departures>-->
+<!-- TODO sqView=2 for departures, sqView=?=3 for arrivals? -->
+	<departures><![CDATA[http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&sqView=2&start=Abfahrtstafel&boardType={dataType}&time={time}&maxJourneys={maxCount}&dateBegin=&dateEnd=&selectDate=&productsFilter=0&editStation=yes&dirInput=&input={stop}]]></departures>
+	
+    <stopSuggestions><![CDATA[http://fahrplan.oebb.at/bin/ajax-getstop.exe/dn?REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G={stop}?]]></stopSuggestions>
+<!--     <journeys><![CDATA[http://fahrplan.oebb.ch/bin/query.exe/dn?S=%1&Z=%2&time=%3&maxJourneys=%4&start=yes]]></journeys> -->
+</rawUrls>
+
+<script>at_oebb.js</script>
+<!--<regExps>
+    <departures>
+	<regExp><![CDATA[(?:<tr class="depboard[^"]*">\s*<td class=[^>]*>)([0-9]{2})(?::)([0-9]{2})(?:</td>\s*<td[^>]*>.*</td>\s*<td[^>]*>\s*<a[^>]*><img src="/img/vs_oebb/)([^_]*)(?:_pic.\w{3,4}"[^>]*>\s*)([^<]*)(?:</a>\s*</td>\s*<td[^>]*>\s*<span class="bold">\s*<a[^>]*>)([^<]*)(?:\s*</a>\s*</span>\s*<br />.*</td>\s*</tr>)]]></regExp>
+	<infos>
+	    <info>DepartureHour</info> <info>DepartureMinute</info> <info>TypeOfVehicle</info> <info>TransportLine</info> <info>Target</info>
+	</infos>
+    </departures>
+
+    <possibleStops>
+	<item>
+	    <regExpRange><![CDATA[(?:SLs.sls=\{"suggestions":\s*\[)(.*)(?:\]\};\s*SLs.showSuggestion\(\);)]]></regExpRange>
+	    <regExp><![CDATA[(?:\{"value":")([^"]*)(?:","id":"[^"]*@L=)([^@]*)(?:@[^"]*",.*"weight":")([0-9]+)(?:"\})]]></regExp>
+	    <infos><info>StopName</info> <info>StopID</info> <info>StopWeight</info></infos>
+	</item>
+    </possibleStops>
+</regExps>-->
+</accessorInfo>
