@@ -321,7 +321,7 @@ QString Global::durationString( int seconds )
 						   "%1 hour", "%1 hours", hours );
 		}
 	} else if ( minutes > 0 ) {
-		return i18np( "@info/plain Duration string with zero hours, %1 is minutes",
+		return i18ncp( "@info/plain Duration string with zero hours, %1 is minutes",
 					  "%1 minute", "%1 minutes", minutes );
 	} else {
 		return i18nc( "@info/plain Used as duration string if the duration is less than a minute",
