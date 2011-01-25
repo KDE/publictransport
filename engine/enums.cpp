@@ -43,19 +43,24 @@ QString Global::vehicleTypeToString( const VehicleType& vehicleType, bool plural
 		return plural ? i18nc( "@info/plain", "trolley buses" )
 		       : i18nc( "@info/plain", "trolley bus" );
 
-	case TrainRegional:
+// 	case TrainRegional: // DEPRECATED
+	case RegionalTrain:
 		return plural ? i18nc( "@info/plain", "regional trains" )
 		       : i18nc( "@info/plain", "regional train" );
-	case TrainRegionalExpress:
+// 	case TrainRegionalExpress: // DEPRECATED
+	case RegionalExpressTrain:
 		return plural ? i18nc( "@info/plain", "regional express trains" )
 		       : i18nc( "@info/plain", "regional express train" );
-	case TrainInterregio:
+// 	case TrainInterregio: // DEPRECATED
+	case InterregionalTrain:
 		return plural ? i18nc( "@info/plain", "interregional trains" )
 		       : i18nc( "@info/plain", "interregional train" );
-	case TrainIntercityEurocity:
+// 	case TrainIntercityEurocity: // DEPRECATED
+	case IntercityTrain:
 		return plural ? i18nc( "@info/plain", "intercity / eurocity trains" )
 		       : i18nc( "@info/plain", "intercity / eurocity train" );
-	case TrainIntercityExpress:
+// 	case TrainIntercityExpress: // DEPRECATED
+	case HighSpeedTrain:
 		return plural ? i18nc( "@info/plain", "intercity express trains" )
 		       : i18nc( "@info/plain", "intercity express train" );
 
@@ -94,17 +99,23 @@ QString Global::vehicleTypeToIcon( const VehicleType& vehicleType )
 	case Feet:
 		return "vehicle_type_feet";
 
-	case TrainInterurban:
+// 	case TrainInterurban: // DEPRECATED
+	case InterurbanTrain:
 		return "vehicle_type_train_interurban";
-	case TrainRegional: // Icon not done yet, using this for now
-	case TrainRegionalExpress:
-		return "vehicle_type_train_regionalexpress";
-	case TrainInterregio:
-		return "vehicle_type_train_interregio";
-	case TrainIntercityEurocity:
-		return "vehicle_type_train_intercityeurocity";
-	case TrainIntercityExpress:
-		return "vehicle_type_train_intercityexpress";
+// 	case TrainRegional: // DEPRECATED Icon not done yet, using this for now
+// 	case TrainRegionalExpress: // DEPRECATED
+	case RegionalTrain:
+	case RegionalExpressTrain:
+		return "vehicle_type_train_regional";
+// 	case TrainInterregio: // DEPRECATED
+	case InterregionalTrain:
+		return "vehicle_type_train_interregional";
+// 	case TrainIntercityEurocity: // DEPRECATED
+	case IntercityTrain:
+		return "vehicle_type_train_intercity";
+// 	case TrainIntercityExpress: // DEPRECATED
+	case HighSpeedTrain:
+		return "vehicle_type_train_highspeed";
 
 	case Ferry:
 	case Ship:

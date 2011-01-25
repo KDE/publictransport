@@ -93,6 +93,8 @@ public:
 	virtual QStringList cities() const { return m_info->cities(); };
 
 	QString credit() const { return m_info->credit(); };
+	
+	const TimetableAccessorInfo *info() const { return m_info; };
 
 	/** @brief Requests a list of departures/arrivals. When the departure/arrival list
 	 *   is completely received departureListReceived() is emitted. */

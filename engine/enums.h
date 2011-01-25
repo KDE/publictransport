@@ -168,15 +168,25 @@ enum VehicleType {
 	Tram = 1, /**< A tram / streetcar. */
 	Bus = 2, /**< A bus. */
 	Subway = 3, /**< A subway. */
-	TrainInterurban = 4, /**< An interurban train. */
+	TrainInterurban = 4, /**< An interurban train. @deprecated Use InterurbanTrain instead. */
+	InterurbanTrain = 4, /**< An interurban train. */
 	Metro = 5, /**< A metro. */
 	TrolleyBus = 6, /**< An electric bus. */
 
-	TrainRegional = 10, /**< A regional train. */
-	TrainRegionalExpress = 11, /**< A regional express train. */
-	TrainInterregio = 12, /**< An inter-regional train. */
-	TrainIntercityEurocity = 13, /**< An intercity / eurocity train. */
-	TrainIntercityExpress = 14, /**< An intercity express. */
+	TrainRegional = 10, /**< A regional train. @deprecated Use RegionalTrain instead. */
+	TrainRegionalExpress = 11, /**< A regional express train. @deprecated Use RegionalExpressTrain instead. */
+	TrainInterregio = 12, /**< An inter-regional train. @deprecated Use InterregionalTrain instead. */
+	TrainIntercityEurocity = 13, /**< An intercity / eurocity train. @deprecated Use IntercityTrain instead. */
+	TrainIntercityExpress = 14, /**< An intercity express. @deprecated Use HighSpeedTrain instead. */
+	
+	RegionalTrain = 10, /**< A regional train. Stops at many small stations, slow. */
+	RegionalExpressTrain = 11, /**< A regional express train. Stops at less small stations than 
+			* RegionalTrain but it faster. */
+	InterregionalTrain = 12, /**< An inter-regional train. Higher distances and faster than 
+			* RegionalTrain and RegionalExpressTrain. */
+	IntercityTrain = 13, /**< An intercity / eurocity train. Connects cities. */
+	HighSpeedTrain = 14, /**< A highspeed train, eg. an intercity express (ICE). 
+			* Trains at > 250 km/h, high distances. */
 
 	Feet = 50, /**< By feet. */
 

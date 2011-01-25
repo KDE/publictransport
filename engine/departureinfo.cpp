@@ -438,15 +438,18 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 	if ( sLineTypeLower == "u-bahn" ||
 			sLineTypeLower == "ubahn" ||
 			sLineTypeLower == "u" ||
-			sLineTypeLower == "rt" ) { // regio tram
+			sLineTypeLower == "subway" ||
+			sLineTypeLower == "rt" ||
+			sLineTypeLower.toInt() == static_cast<int>(Subway) ) { // regio tram
 		return Subway;
 	} else if ( sLineTypeLower == "s-bahn" ||
 			sLineTypeLower == "sbahn" ||
 			sLineTypeLower == "s_bahn" ||
 			sLineTypeLower == "s" ||
 			sLineTypeLower == "s1" || // ch_sbb
-			sLineTypeLower == "rsb" ) { // "regio-s-bahn", au_oebb
-		return TrainInterurban;
+			sLineTypeLower == "rsb" ||
+			sLineTypeLower.toInt() == static_cast<int>(InterurbanTrain) ) { // "regio-s-bahn", au_oebb
+		return InterurbanTrain;
 	} else if ( sLineTypeLower == "tram" ||
 			sLineTypeLower == "straßenbahn" ||
 			sLineTypeLower == "str" ||
@@ -454,7 +457,8 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 			sLineTypeLower == "tra" || // for ch_sbb
 			sLineTypeLower == "stb" || // "stadtbahn", germany
 			sLineTypeLower == "dm_train" ||
-			sLineTypeLower == "streetcar (tram)" ) { // for sk_imhd
+			sLineTypeLower == "streetcar (tram)" ||
+			sLineTypeLower.toInt() == static_cast<int>(Tram) ) { // for sk_imhd
 		return Tram;
 	} else if ( sLineTypeLower == "bus" ||
 			sLineTypeLower == "dm_bus" ||
@@ -462,15 +466,18 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 			sLineTypeLower == "nbu" || // for ch_sbb
 			sLineTypeLower == "bsv" || // for de_nasa
 			sLineTypeLower == "express bus" || // for sk_imhd
-			sLineTypeLower == "night line - bus" ) { // for sk_imhd
+			sLineTypeLower == "night line - bus" ||
+			sLineTypeLower.toInt() == static_cast<int>(Bus) ) { // for sk_imhd
 		return Bus;
 	} else if ( sLineTypeLower == "metro" ||
-			sLineTypeLower == "m" ) {
+			sLineTypeLower == "m" ||
+			sLineTypeLower.toInt() == static_cast<int>(Metro) ) {
 		return Metro;
 	} else if ( sLineTypeLower == "tro" ||
 			sLineTypeLower == "trolleybus" ||
 			sLineTypeLower == "trolley bus" ||
-			sLineTypeLower.startsWith( QLatin1String( "trolleybus" ) ) ) { // for sk_imhd
+			sLineTypeLower.startsWith(QLatin1String("trolleybus")) ||
+			sLineTypeLower.toInt() == static_cast<int>(TrolleyBus) ) { // for sk_imhd
 		return TrolleyBus;
 	} else if ( sLineTypeLower == "feet" ||
 			sLineTypeLower == "by feet" ||
@@ -482,14 +489,23 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 			sLineTypeLower == "zu fuss" ||
 			sLineTypeLower == "&#220;bergang" ||
 			sLineTypeLower == "uebergang" ||
-			sLineTypeLower == "&uuml;bergang" ) {
+			sLineTypeLower == "&uuml;bergang" ||
+			sLineTypeLower.toInt() == static_cast<int>(Feet) ) {
 		return Feet;
 	} else if ( sLineTypeLower == "ferry" ||
-			sLineTypeLower == "faehre" ) {
+			sLineTypeLower == "faehre" ||
+			sLineTypeLower.toInt() == static_cast<int>(Ferry) ) {
 		return Ferry;
 	} else if ( sLineTypeLower == "ship" ||
-			sLineTypeLower == "schiff" ) {
+			sLineTypeLower == "boat" ||
+			sLineTypeLower == "schiff" ||
+			sLineTypeLower.toInt() == static_cast<int>(Ship) ) {
 		return Ship;
+	} else if ( sLineTypeLower == "plane" ||
+			sLineTypeLower == "air" ||
+			sLineTypeLower == "aeroplane" ||
+			sLineTypeLower.toInt() == static_cast<int>(Plane) ) {
+		return Plane;
 	} else if ( sLineTypeLower == "rb" || // Regional, "RegionalBahn", germany
 			sLineTypeLower == "me" || // "Metronom", germany
 			sLineTypeLower == "mer" || // "Metronom", germany
@@ -498,37 +514,46 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 			sLineTypeLower == "wfb" || // "WestfalenBahn", germany
 			sLineTypeLower == "nwb" || // "NordWestBahn", germany
 			sLineTypeLower == "osb" || // "Ortenau-S-Bahn GmbH" (no interurban train), germany
+			sLineTypeLower == "regional" ||
 			sLineTypeLower == "r" || // austria, switzerland
 			sLineTypeLower == "os" || // czech, "Osobní vlak", basic local (stopping) trains, Regionalbahn
 			sLineTypeLower == "dpn" || // for rozklad-pkp.pl (TODO: Check if this is the right train type)
 			sLineTypeLower == "t84" || // for rozklad-pkp.pl (TODO: Check if this is the right train type)
-			sLineTypeLower == "r84" ) { // for rozklad-pkp.pl (TODO: Check if this is the right train type)
-		return TrainRegional;
-	} else if ( sLineTypeLower == "re" ||
+			sLineTypeLower == "r84" || // for rozklad-pkp.pl (TODO: Check if this is the right train type)
+			sLineTypeLower.toInt() == static_cast<int>(RegionalTrain) ) {
+		return RegionalTrain;
+	} else if ( sLineTypeLower == "re" || // RegionalExpress
 			sLineTypeLower == "rer" || // france, Reseau Express Regional
 			sLineTypeLower == "sp" || // czech, "Spěšný vlak", semi-fast trains (Eilzug)
 			sLineTypeLower == "rex" || // austria, local train stopping at few stations; semi fast
 			sLineTypeLower == "ez" || // austria ("erlebniszug"), local train stopping at few stations; semi fast
 			sLineTypeLower == "zr" || // slovakia, "Zrýchlený vlak", train serving almost all stations en route fast
-			sLineTypeLower == "regional express trains" ) { // used by gares-en-mouvement.com (france)
-		return TrainRegionalExpress;
-	} else if ( sLineTypeLower == "ir" ||
+			sLineTypeLower == "regional express" ||
+			sLineTypeLower == "regional express trains" || // used by gares-en-mouvement.com (france)
+			sLineTypeLower.toInt() == static_cast<int>(RegionalExpressTrain) ) {
+		return RegionalExpressTrain;
+	} else if ( sLineTypeLower == "ir" || // InterRegio
 			sLineTypeLower == "d" || // schnellzug, swiss
 			sLineTypeLower == "ire" ||  // almost a local train (Nahverkehrszug) stopping at few stations; semi-fast
 			sLineTypeLower == "er" ||  // border-crossing local train stopping at few stations; semi-fast
 			sLineTypeLower == "ex" || // czech, express trains with no supplementary fare, similar to the German Interregio or also Regional-Express
-			sLineTypeLower == "intercity and regional train" ) { // used by gares-en-mouvement.com (france)
-		return TrainInterregio;
+			sLineTypeLower == "express" ||
+			sLineTypeLower == "intercity and regional train" || // used by gares-en-mouvement.com (france)
+			sLineTypeLower.toInt() == static_cast<int>(InterregionalTrain) ) {
+		return InterregionalTrain;
 	} else if ( sLineTypeLower == "ec_ic" || // Eurocity / Intercity
 			sLineTypeLower == "ec" || // Eurocity
 			sLineTypeLower == "ic" || // Intercity
+			sLineTypeLower == "intercity" || // Intercity
+			sLineTypeLower == "eurocity" || // Intercity
 			sLineTypeLower == "cnl" || // CityNightLine
 			sLineTypeLower == "en" || // EuroNight
 			sLineTypeLower == "nz" || // "Nachtzug"
 			sLineTypeLower == "oec" || // austria
 			sLineTypeLower == "oic" || // austria
-			sLineTypeLower == "icn" ) { // national long-distance train with tilting technology
-		return TrainIntercityEurocity;
+			sLineTypeLower == "icn" || // national long-distance train with tilting technology
+			sLineTypeLower.toInt() == static_cast<int>(IntercityTrain) ) { 
+		return IntercityTrain;
 	} else if ( sLineTypeLower == "ice" || // germany
 			sLineTypeLower == "rj" ||  // "railjet", austria
 			sLineTypeLower == "tgv" ||  // france
@@ -536,8 +561,9 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 			sLineTypeLower == "hst" || // great britain
 			sLineTypeLower == "est" || // eurostar
 			sLineTypeLower == "es" || // eurostar, High-speed, tilting trains for long-distance services
-			sLineTypeLower == "high-speed train" ) { // used by gares-en-mouvement.com (france)
-		return TrainIntercityExpress;
+			sLineTypeLower == "high-speed train" || // used by gares-en-mouvement.com (france)
+			sLineTypeLower.toInt() == static_cast<int>(HighSpeedTrain) ) { 
+		return HighSpeedTrain;
 	} else {
 		return Unknown;
 	}

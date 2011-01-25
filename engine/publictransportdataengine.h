@@ -308,15 +308,15 @@ enum VehicleType {
     Tram = 1, // The vehicle is a tram
     Bus = 2, // The vehicle is a bus
     Subway = 3, // The vehicle is a subway
-    TrainInterurban = 4, // The vehicle is an interurban train
+    InterurbanTrain = 4, // The vehicle is an interurban train
     Metro = 5, // The vehicle is a metro
     TrolleyBus = 6, // The vehicle is an electric bus
 
-    TrainRegional = 10, // The vehicle is a regional train
-    TrainRegionalExpress = 11, // The vehicle is a region express
-    TrainInterregio = 12, // The vehicle is an interregional train
-    TrainIntercityEurocity = 13, // The vehicle is a intercity / eurocity train
-    TrainIntercityExpress = 14, // The vehicle is an intercity express (ICE, TGV?, ...?)
+    RegionalTrain = 10, // The vehicle is a regional train
+    RegionalExpressTrain = 11, // The vehicle is a region express
+    InterregionalTrain = 12, // The vehicle is an interregional train
+    IntercityTrain = 13, // The vehicle is a intercity / eurocity train
+    HighspeedTrain = 14, // The vehicle is an intercity express (ICE, TGV?, ...?)
 
     Ferry = 100, // The vehicle is a ferry
 

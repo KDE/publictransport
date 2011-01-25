@@ -118,22 +118,22 @@ VehicleType TimetableAccessor::vehicleTypeFromString( QString sVehicleType )
 		return Bus;
 	} else if ( sLower == "subway" ) {
 		return Subway;
-	} else if ( sLower == "traininterurban" ) {
-		return TrainInterurban;
+	} else if ( sLower == "traininterurban" || sLower == "interurbantrain" ) {
+		return InterurbanTrain;
 	} else if ( sLower == "metro" ) {
 		return Metro;
 	} else if ( sLower == "trolleybus" ) {
 		return TrolleyBus;
-	} else if ( sLower == "trainregional" ) {
-		return TrainRegional;
-	} else if ( sLower == "trainregionalexpress" ) {
-		return TrainRegionalExpress;
-	} else if ( sLower == "traininterregio" ) {
-		return TrainInterregio;
-	} else if ( sLower == "trainintercityeurocity" ) {
-		return TrainIntercityEurocity;
-	} else if ( sLower == "trainintercityexpress" ) {
-		return TrainIntercityExpress;
+	} else if ( sLower == "trainregional" || sLower == "regionaltrain" ) {
+		return RegionalTrain;
+	} else if ( sLower == "trainregionalexpress" || sLower == "regionalexpresstrain" ) {
+		return RegionalExpressTrain;
+	} else if ( sLower == "traininterregio" || sLower == "interregionaltrain" ) {
+		return InterregionalTrain;
+	} else if ( sLower == "trainintercityeurocity" || sLower == "intercitytrain" ) {
+		return IntercityTrain;
+	} else if ( sLower == "trainintercityexpress" || sLower == "highspeedtrain" ) {
+		return HighSpeedTrain;
 	} else if ( sLower == "feet" ) {
 		return Feet;
 	} else if ( sLower == "ferry" ) {
