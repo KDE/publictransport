@@ -31,6 +31,7 @@
 #include <QString>
 #include <QStringList>
 #include <QHash>
+#include "accessorinfoxmlreader.h"
 
 /** @class TimetableRegExpSearch
  * @brief Stores a regular expression and information about the meaning of the matches.
@@ -85,14 +86,16 @@ public:
 	 * @param shortUrl A short version of the url to the service provider
 	 *   home page. This can be used by the visualization as displayed text of links.
 	 * @param author The author of the accessor.
+	 * @param shortAuthor An abbreviation of the authors name.
 	 * @param email The email address of the author given in @p author.
 	 * @param version The version of the accessor information.
 	 * @param serviceProviderID The service provider for which this accessor
 	 *   is designed for.
 	 * @param accessorType The type of the accessor.
 	 * @see AccessorType */
-	explicit TimetableAccessorInfo( const QString& name = QString(),
-			const QString& shortUrl = QString(), const QString& author = QString(),
+	explicit TimetableAccessorInfo( const QString& name = QString(), 
+			const QString& shortUrl = QString(), 
+			const QString& author = QString(), const QString &shortAuthor = QString(),
 			const QString& email = QString(), const QString& version = QString(),
 			const QString& serviceProviderID = QString(),
 			const AccessorType& accessorType = NoAccessor );
@@ -112,6 +115,8 @@ public:
 	
 	/** @brief The author of the accessor information to be used by the accessor. */
 	QString author() const { return m_author; };
+	/** @brief An abbreviation of the authors name. */
+	QString shortAuthor() const { return m_shortAuthor; };
 	/** @brief The email address of the author. */
 	QString email() const { return m_email; };
 	
@@ -168,6 +173,12 @@ public:
 	QString fileName() const { return m_fileName; };
 	/** @brief The file name of the script file to parse html pages. */
 	QString scriptFileName() const { return m_scriptFileName; };
+	
+	QList<ChangelogEntry> changelog() const { return m_changelog; };
+	void setChangelog( const QList<ChangelogEntry> &changelog ) { 
+		m_changelog = changelog;
+	};
+	
 	/**
 	 * @brief Wheather or not this accessor supports stop name autocompletion.
 	 *
@@ -253,8 +264,9 @@ protected:
 	 * @brief Sets the author of this accessor. You can also set the email of the author.
 	 *
 	 * @param author The author of this accessor.
+	 * @param shortAuthor An abbreviation of the authors name.
 	 * @param email The email address of the author. */
-	void setAuthor( const QString &author, const QString &email = QString() );
+	void setAuthor( const QString &author, const QString &shortAuthor, const QString &email = QString() );
 
 	/**
 	 * @brief Sets the version of this accesor.
@@ -356,6 +368,8 @@ protected:
 	QString m_description;
 	// The author of the accessor information to be used by the accessor
 	QString m_author;
+	// An abbreviation of the authors name
+	QString m_shortAuthor;
 	// The email address of the author
 	QString m_email;
 	// The version of the accessor information
@@ -377,6 +391,9 @@ protected:
 	QString m_departureRawUrl;
 	// A raw url that is used to get journeys
 	QString m_journeyRawUrl;
+	
+	// Keys are versions, where the change entries occured (values)
+	QList<ChangelogEntry> m_changelog;
 	
 	QHash<QString, QString> m_attributesForStopSuggestions;
 	QHash<QString, QString> m_attributesForDepatures;
@@ -425,8 +442,8 @@ public:
 	 * @see AccessorType */
 	explicit TimetableAccessorInfoRegExp( const QString& name = QString(),
 			const QString& shortUrl = QString(), const QString& author = QString(),
-			const QString& email = QString(), const QString& version = QString(),
-			const QString& serviceProviderID = QString(),
+			const QString& shortAuthor = QString(), const QString& email = QString(), 
+			const QString& version = QString(), const QString& serviceProviderID = QString(),
 			const AccessorType& accessorType = NoAccessor );
 	
 	explicit TimetableAccessorInfoRegExp( const TimetableAccessorInfo &info );

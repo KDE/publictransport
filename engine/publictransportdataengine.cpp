@@ -81,9 +81,16 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
 	dataServiceProvider.insert( "features", accessor->features() );
 	dataServiceProvider.insert( "featuresLocalized", accessor->featuresLocalized() );
 	dataServiceProvider.insert( "author", accessor->timetableAccessorInfo().author() );
+	dataServiceProvider.insert( "shortAuthor", accessor->timetableAccessorInfo().shortAuthor() );
 	dataServiceProvider.insert( "email", accessor->timetableAccessorInfo().email() );
 	dataServiceProvider.insert( "description", accessor->timetableAccessorInfo().description() );
 	dataServiceProvider.insert( "version", accessor->timetableAccessorInfo().version() );
+	
+	QStringList changelog;
+	foreach ( const ChangelogEntry &entry, accessor->timetableAccessorInfo().changelog() ) {
+		changelog << QString( "%2 (%1): %3" ).arg( entry.since_version ).arg( entry.author ).arg( entry.description );
+	}
+	dataServiceProvider.insert( "changelog", changelog );
 
 	return dataServiceProvider;
 }
@@ -126,6 +133,12 @@ QHash< QString, QVariant > PublicTransportEngine::locations()
 	locationHash.insert( "name", name = "dk" );
 	locationHash.insert( "description", i18n( "Support for some cities in Denmark." ) );
 	locationHash.insert( "defaultAccessor", "dk_rejseplanen" );
+	ret.insert( name, locationHash );
+
+	locationHash.clear();
+	locationHash.insert( "name", name = "se" );
+	locationHash.insert( "description", i18n( "Support for all cities in Sweden." ) );
+	locationHash.insert( "defaultAccessor", "se_resrobot" );
 	ret.insert( name, locationHash );
 
 	locationHash.clear();
@@ -651,6 +664,9 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 		data.insert( "platform", departureInfo->platform() );
 		data.insert( "delay", departureInfo->delay() );
 		data.insert( "delayReason", departureInfo->delayReason() );
+		if ( !departureInfo->status().isEmpty() ) {
+			data.insert( "status", departureInfo->status() );
+		}
 		data.insert( "journeyNews", departureInfo->journeyNews() );
 		data.insert( "operator", departureInfo->operatorName() );
 		data.insert( "routeStops", departureInfo->routeStops() );

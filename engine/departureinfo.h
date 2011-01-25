@@ -406,14 +406,16 @@ public:
 	 * @param delay The delay in minutes of the vehicle. -1 means that no delay information is available.
 	 * @param delayReason The reason of a delay.
 	 * @param journeyNews News for the departure / arrival, such as "platform changed".
-	 * @param operatorName The company that is responsible for this departure / arrival. */
+	 * @param operatorName The company that is responsible for this departure / arrival.
+	 * @param status The Status of the departure. */
 	DepartureInfo( const QString &line, const VehicleType &typeOfVehicle,
 				   const QString &target, const QDateTime &departure,
 				   bool nightLine = false, bool expressLine = false,
 				   const QString &platform = QString(), int delay = -1,
 				   const QString &delayReason = QString(),
 				   const QString &journeyNews = QString(),
-				   const QString &operatorName = QString() );
+				   const QString &operatorName = QString(),
+				   const QString &status = QString() );
 
 	/**
 	 * @brief Constructs a new DepartureInfo object.
@@ -429,14 +431,16 @@ public:
 	 * @param delay The delay in minutes of the vehicle. -1 means that no delay information is available.
 	 * @param delayReason The reason of a delay.
 	 * @param journeyNews News for the departure / arrival, such as "platform changed".
-	 * @param operatorName The company that is responsible for this departure / arrival. */
+	 * @param operatorName The company that is responsible for this departure / arrival. 
+	 * @param status The Status of the departure. */
 	DepartureInfo( const QString &line, const VehicleType &typeOfVehicle,
 				   const QString &target, const QTime &requestTime,
 				   const QTime &departureTime, bool nightLine = false,
 				   bool expressLine = false, const QString &platform = QString(),
 				   int delay = -1, const QString &delayReason = QString(),
 				   const QString &journeyNews = QString(),
-				   const QString &operatorName = QString() );
+				   const QString &operatorName = QString(),
+				   const QString &status = QString() );
 
 	/** @brief Gets the target / origin of the departing / arriving vehicle. */
 	QString target() const { return m_data.contains(Target)
@@ -463,6 +467,10 @@ public:
 	/** @brief Gets news for the departure / arrival, such as "platform changed". */
 	QString journeyNews() const { return m_data.contains(JourneyNews)
 		? m_data[JourneyNews].toString() : QString(); };
+		
+	/** @brief Gets the status of the departure/arrival, such as "departing". */
+	QString status() const { return m_data.contains(Status)
+		? m_data[Status].toString() : QString(); };
 
 	/**
 	 * @brief Gets a list of times of the departure / arrival to it's destination
@@ -513,13 +521,15 @@ private:
 	 * @param platform The platform from/at which the vehicle departs/arrives.
 	 * @param delay The delay in minutes of the vehicle. -1 means that no delay information is available.
 	 * @param delayReason The reason of a delay.
-	 * @param journeyNews News for the departure / arrival, such as "platform changed". */
+	 * @param journeyNews News for the departure / arrival, such as "platform changed".
+	 * @param status The Status of the departure. */
 	void init( const QString &line, const VehicleType &typeOfVehicle,
 			   const QString &target,
 			   bool nightLine = false, bool expressLine = false,
 			   const QString &platform = QString(), int delay = -1,
 			   const QString &delayReason = QString(),
-			   const QString &sJourneyNews = QString() );
+			   const QString &sJourneyNews = QString(),
+			   const QString &status = QString() );
 
 	LineServices m_lineServices;
 };

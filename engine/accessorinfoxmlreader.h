@@ -30,6 +30,14 @@
 
 class TimetableAccessor;
 
+/**
+ * @brief Stores information about a single changelog entry.
+ **/
+struct ChangelogEntry {
+	QString author; /**< The author who implemented the change. */
+	QString since_version; /**< The version where this change was applied. */
+	QString description; /**< A description of the change. */
+};
 
 /**
  * @brief Reads accessor info xml files.
@@ -64,13 +72,14 @@ private:
 			const QString &fileName, const QString &country  );
 	QString readLocalizedTextElement( QString *lang );
 	bool readBooleanElement();
-	void readAuthor( QString *fullname, QString *email );
+	void readAuthor( QString *fullname, QString *shortName, QString *email );
 	void readCities( QStringList *cities, QHash<QString, QString> *cityNameReplacements );
 	void readRawUrls( QString *rawUrlDepartures, QString *rawUrlStopSuggestions,
 					  QString *rawUrlJourneys, QHash<QString, QString> *attributesForDepartures, 
 					  QHash<QString, QString> *attributesForStopSuggestions, 
 					  QHash<QString, QString> *attributesForJourneys );
 	void readSessionKey( QString *sessionKeyUrl, SessionKeyPlace *sessionKeyPlace, QString *data );
+	void readChangelog( QList<ChangelogEntry> *changelog );
 	bool readRegExps( QString* regExpDepartures,
 					  QList< TimetableInformation >* infosDepartures,
 					  QString* regExpDeparturesPre,

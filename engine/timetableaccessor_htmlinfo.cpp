@@ -33,13 +33,14 @@ TimetableRegExpSearch::TimetableRegExpSearch( const QString &regExpSearch,
 
 
 TimetableAccessorInfo::TimetableAccessorInfo( const QString& name,
-        const QString& shortUrl, const QString &author, const QString &email,
-        const QString &version, const QString& serviceProviderID,
+        const QString& shortUrl, const QString &author, const QString &shortAuthor, 
+		const QString &email, const QString &version, const QString& serviceProviderID,
         const AccessorType& accessorType )
 {
 	m_name = name;
 	m_shortUrl = shortUrl;
 	m_author = author;
+	m_shortAuthor = shortAuthor;
 	m_email = email;
 	m_version = version;
 	m_serviceProviderID = serviceProviderID;
@@ -53,9 +54,11 @@ TimetableAccessorInfo::~TimetableAccessorInfo()
 {
 }
 
-void TimetableAccessorInfo::setAuthor( const QString& author, const QString &email )
+void TimetableAccessorInfo::setAuthor( const QString& author, const QString &shortAuthor, 
+									   const QString &email )
 {
 	m_author = author;
+	m_shortAuthor = shortAuthor;
 	m_email = email;
 }
 
@@ -74,15 +77,18 @@ QString TimetableAccessorInfo::mapCityNameToValue( const QString &city ) const
 }
 
 TimetableAccessorInfoRegExp::TimetableAccessorInfoRegExp( const QString& name, 
-		const QString& shortUrl, const QString& author, const QString& email, 
-		const QString& version, const QString& serviceProviderID, const AccessorType& accessorType )
-		: TimetableAccessorInfo(name, shortUrl, author, email, version, serviceProviderID, accessorType)
+		const QString& shortUrl, const QString& author, const QString &shortAuthor, 
+		const QString& email, const QString& version, const QString& serviceProviderID, 
+		const AccessorType& accessorType )
+		: TimetableAccessorInfo(name, shortUrl, author, shortAuthor, email, version, 
+								serviceProviderID, accessorType)
 {
 }
 
 TimetableAccessorInfoRegExp::TimetableAccessorInfoRegExp( const TimetableAccessorInfo& info )
-		: TimetableAccessorInfo( info.name(), info.shortUrl(), info.author(), info.email(),
-								 info.version(), info.serviceProvider(), info.accessorType() )
+		: TimetableAccessorInfo( info.name(), info.shortUrl(), info.author(), info.shortAuthor(),
+								 info.email(), info.version(), info.serviceProvider(), 
+								 info.accessorType() )
 {
 	setFileName( info.fileName() );
 	setCountry( info.country() );

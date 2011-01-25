@@ -327,11 +327,11 @@ DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehi
                               bool nightLine, bool expressLine,
                               const QString& platform, int delay,
                               const QString& delayReason, const QString& journeyNews,
-                              const QString &operatorName )
+                              const QString &operatorName, const QString &status )
 		: PublicTransportInfo( departure, operatorName )
 {
 	init( line, typeOfVehicle, target, nightLine, expressLine,
-		  platform, delay, delayReason, journeyNews );
+		  platform, delay, delayReason, journeyNews, status );
 }
 
 DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle,
@@ -339,7 +339,8 @@ DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehi
                               const QTime& departureTime, bool nightLine,
                               bool expressLine, const QString& platform,
                               int delay, const QString& delayReason,
-                              const QString& journeyNews, const QString &operatorName )
+                              const QString& journeyNews, const QString &operatorName,
+							  const QString &status )
 		: PublicTransportInfo()
 {
 	// Guess date TODO
@@ -365,6 +366,7 @@ DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehi
 		  delayReason, journeyNews );
 
 	m_data[ Operator ] = operatorName;
+	m_data[ Status ] = status;
 }
 
 DepartureInfo::DepartureInfo( const QHash<TimetableInformation, QVariant> &data )
@@ -378,7 +380,7 @@ void DepartureInfo::init( const QString& line, const VehicleType& typeOfVehicle,
                           const QString& target,
                           bool nightLine, bool expressLine, const QString& platform,
                           int delay, const QString& delayReason,
-                          const QString& journeyNews )
+                          const QString& journeyNews, const QString &status )
 {
 	m_isValid = true;
 	m_data.insert( TransportLine, line );
@@ -393,6 +395,7 @@ void DepartureInfo::init( const QString& line, const VehicleType& typeOfVehicle,
 	m_data.insert( Delay, delay );
 	m_data.insert( DelayReason, delayReason );
 	m_data.insert( JourneyNews, journeyNews );
+	m_data.insert( Status, status );
 }
 
 VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineType )

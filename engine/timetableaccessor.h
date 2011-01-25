@@ -139,6 +139,19 @@ public:
 	 * @see differentRawUrl() */
 	bool hasSpecialUrlForStopSuggestions() const {
 		return !m_info->stopSuggestionsRawUrl().isEmpty(); };
+		
+	/** @brief Returns a list of changelog entries. 
+	 * 
+	 * @see ChangelogEntry */
+	QList<ChangelogEntry> changelog() const { return m_info->changelog(); };
+	/** @brief Sets the list of changelog entries. 
+	 * 
+	 * @param changelog The new list of changelog entries.
+	 * 
+	 * @see ChangelogEntry */
+	void setChangelog( const QList<ChangelogEntry> &changelog ) { 
+		m_info->setChangelog( changelog );
+	};
 
 	/** @brief Encodes the url in @p str using the charset in @p charset. Then it is percent encoded.
 	 * 

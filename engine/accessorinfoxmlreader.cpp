@@ -30,6 +30,32 @@
 #include <QFile>
 #include <QFileInfo>
 
+class ChangelogEntryGreaterThan
+{
+public:
+	inline bool operator()( const ChangelogEntry& l, const ChangelogEntry& r ) const {
+		QStringList lVersionParts = l.since_version.split('.');
+		QStringList rVersionParts = r.since_version.split('.');
+		for ( int i = 0; i < lVersionParts.count() && i < rVersionParts.count(); ++i ) {
+			int l = lVersionParts[i].toInt();
+			int r = rVersionParts[i].toInt();
+			if ( l > r ) {
+				return true;
+			} else if  ( l < r ) {
+				return false;
+			}
+		}
+		
+		if ( lVersionParts.count() > rVersionParts.count() ) {
+			return true;
+		} else if ( lVersionParts.count() < rVersionParts.count() ) {
+			return false;
+		}
+		
+		return l.author.compare( r.author, Qt::CaseInsensitive ) < 0;
+	};
+};
+
 TimetableAccessor* AccessorInfoXmlReader::read( QIODevice* device,
 		const QString &serviceProvider, const QString &fileName, const QString &country )
 {
@@ -90,12 +116,13 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 
 	AccessorType type;
 	QString version, nameLocal, nameEn, descriptionLocal, descriptionEn,
-			authorName, authorEmail, defaultVehicleType, url, shortUrl,
+			authorName, shortName, authorEmail, defaultVehicleType, url, shortUrl,
 			charsetForUrlEncoding, fallbackCharset, scriptFile, credit;
 	QString rawUrlDepartures, rawUrlStopSuggestions, rawUrlJourneys;
 	QString sessionKeyUrl, sessionKeyData;
 	SessionKeyPlace sessionKeyPlace;
 	QHash<QString, QString> attributesForDepartures, attributesForStopSuggestions, attributesForJourneys;
+	QList<ChangelogEntry> changelog;
 	QStringList cities;
 	QHash<QString, QString> cityNameReplacements;
 	bool useSeperateCityValue = false, onlyUseCitiesInList = false;
@@ -148,7 +175,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 					descriptionEn = descriptionRead;
 				}
 			} else if ( name().compare( "author", Qt::CaseInsensitive ) == 0 ) {
-				readAuthor( &authorName, &authorEmail );
+				readAuthor( &authorName, &shortName, &authorEmail );
 			} else if ( name().compare( "cities", Qt::CaseInsensitive ) == 0 ) {
 				readCities( &cities, &cityNameReplacements );
 			} else if ( name().compare( "useSeperateCityValue", Qt::CaseInsensitive ) == 0 ) {
@@ -172,6 +199,8 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 						&attributesForDepartures, &attributesForStopSuggestions, &attributesForJourneys );
 			} else if ( name().compare( "sessionKey", Qt::CaseInsensitive ) == 0 ) {
 				readSessionKey( &sessionKeyUrl, &sessionKeyPlace, &sessionKeyData );
+			} else if ( name().compare( "changelog", Qt::CaseInsensitive ) == 0 ) {
+				readChangelog( &changelog );
 			} else if ( name().compare( "regExps", Qt::CaseInsensitive ) == 0 ) {
 				bool ok = readRegExps( &regExpDepartures, &infosDepartures,
 									   &regExpDeparturesPre, &infoPreKey, &infoPreValue,
@@ -217,9 +246,28 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 	if ( shortUrl.isEmpty() ) {
 		shortUrl = url;
 	}
+	
+	// Generate a short name if none is given ("<first letter of prename><family name>")
+	authorName = authorName.trimmed();
+	if ( shortName.isEmpty() && !authorName.isEmpty() ) {
+		int pos = authorName.indexOf(' ');
+		if ( authorName.length() < 5 || pos == -1 ) {
+			shortName = authorName.remove(' ').toLower();
+		} else {
+			shortName = authorName[0].toLower() + authorName.mid(pos + 1).toLower();
+		}
+	}
+	
+	// Use script author as author of the change entry if no one else was set
+	for ( int i = 0; i < changelog.count(); ++i ) {
+		if ( changelog[i].author.isEmpty() ) {
+			changelog[i].author = shortName;
+		}
+	}
+	qSort( changelog.begin(), changelog.end(), ChangelogEntryGreaterThan() );
 
 	TimetableAccessorInfo *accessorInfo = new TimetableAccessorInfo( 
-			nameLocal, shortUrl, authorName, authorEmail, version, serviceProvider, type );
+			nameLocal, shortUrl, authorName, shortName, authorEmail, version, serviceProvider, type );
 	accessorInfo->setFileName( fileName );
 	accessorInfo->setCountry( country );
 	accessorInfo->setCities( cities );
@@ -241,6 +289,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 	accessorInfo->setFallbackCharset( fallbackCharset.toAscii() );
 	accessorInfo->setCharsetForUrlEncoding( charsetForUrlEncoding.toAscii() );
 	accessorInfo->setSessionKeyData( sessionKeyUrl, sessionKeyPlace, sessionKeyData );
+	accessorInfo->setChangelog( changelog );
 
 	if ( scriptFile.isEmpty() ) {
 		// Set regular expressions, if no script file was specified
@@ -313,7 +362,7 @@ bool AccessorInfoXmlReader::readBooleanElement()
 	}
 }
 
-void AccessorInfoXmlReader::readAuthor( QString *fullname, QString *email )
+void AccessorInfoXmlReader::readAuthor( QString *fullname, QString *shortName, QString *email )
 {
 	while ( !atEnd() ) {
 		readNext();
@@ -325,6 +374,8 @@ void AccessorInfoXmlReader::readAuthor( QString *fullname, QString *email )
 		if ( isStartElement() ) {
 			if ( name().compare( "fullName", Qt::CaseInsensitive ) == 0 ) {
 				*fullname = readElementText();
+			} else if ( name().compare( "short", Qt::CaseInsensitive ) == 0 ) {
+				*shortName = readElementText();
 			} else if ( name().compare( "email", Qt::CaseInsensitive ) == 0 ) {
 				*email = readElementText();
 			} else {
@@ -444,6 +495,32 @@ void AccessorInfoXmlReader::readSessionKey(QString* sessionKeyUrl, SessionKeyPla
 				} else {
 					*sessionKeyPlace = PutNowhere;
 				}
+			} else {
+				readUnknownElement();
+			}
+		}
+	}
+}
+
+void AccessorInfoXmlReader::readChangelog(QList<ChangelogEntry>* changelog)
+{
+	while ( !atEnd() ) {
+		readNext();
+		if ( isEndElement() && name().compare("changelog", Qt::CaseInsensitive) == 0 ) {
+			break;
+		}
+
+		if ( isStartElement() ) {
+			if ( name().compare("entry", Qt::CaseInsensitive) == 0 ) {
+				ChangelogEntry currentEntry;
+				if ( attributes().hasAttribute(QLatin1String("since")) ) {
+					currentEntry.since_version = attributes().value( QLatin1String("since") ).toString();
+				}
+				if ( attributes().hasAttribute(QLatin1String("author")) ) {
+					currentEntry.author = attributes().value( QLatin1String("author") ).toString();
+				}
+				currentEntry.description = readElementText();
+				changelog->append( currentEntry );
 			} else {
 				readUnknownElement();
 			}

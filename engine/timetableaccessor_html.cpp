@@ -315,7 +315,7 @@ bool TimetableAccessorHtml::parseDocument( const QByteArray &document,
 							: data[TransportLine].toString().at(0) == 'N',
 						false, data[Platform].toString(), data[Delay].toInt(),
 						data[DelayReason].toString(), data[JourneyNewsOther].toString(),
-						data[Operator].toString()) );
+						data[Operator].toString(), data[Status].toString()) );
 			} else { /*if ( parseDocumentMode == ParseForJourneys )*/
 				QList<VehicleType> vehicleTypes;
 				QList<QVariant> variantList = data[TypesOfVehicleInJourney].toList();
