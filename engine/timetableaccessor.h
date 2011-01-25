@@ -111,7 +111,10 @@ public:
 
 	// TODO Documentation
 	KIO::StoredTransferJob *requestStopSuggestions( const QString &sourceName,
-			const QString &city, const QString &stop );
+			const QString &city, const QString &stop, 
+			ParseDocumentMode parseMode = ParseForStopSuggestions, int maxCount = 1, 
+			const QDateTime &dateTime = QDateTime::currentDateTime(), 
+			const QString &dataType = QString(), bool usedDifferentUrl = false );
 
 	/** @brief Requests a list of journeys. When the journey list is completely received
 	 * journeyListReceived() is emitted. */
@@ -393,6 +396,8 @@ private:
 
 	// Stores information about currently running download jobs
 	QHash< KJob*, JobInfos > m_jobInfos;
+	
+	bool m_idAlreadyRequested;
 };
 
 #endif // TIMETABLEACCESSOR_HEADER

@@ -54,10 +54,9 @@ bool TimetableAccessorHtmlScript::lazyLoadScript()
 	// Create the Kross::Action instance
 	m_script = new Kross::Action( this, "TimetableParser" );
 
-	TimetableData *timetableData = new TimetableData( m_script );
-	m_resultObject = new ResultObject( m_script );
 	m_script->addQObject( new Helper(m_info->serviceProvider(), m_script), "helper" );
-	m_script->addQObject( timetableData, "timetableData" );
+	m_script->addQObject( new TimetableData(m_script), "timetableData" );
+	m_resultObject = new ResultObject( m_script );
 	m_script->addQObject( m_resultObject, "result"/*, Kross::ChildrenInterface::AutoConnectSignals*/ );
 
 	bool ok = m_script->setFile( m_info->scriptFileName() );
@@ -204,6 +203,13 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 	}
 	for ( int i = 0; i < data.count(); ++ i ) {
 		TimetableData timetableData = data.at( i );
+		
+		// Set default vehicle type if none is set
+		if ( !timetableData.values().contains(TypeOfVehicle) || 
+			timetableData.value(TypeOfVehicle).toString().isEmpty() )
+		{
+			timetableData.set(TypeOfVehicle, static_cast<int>(m_info->defaultVehicleType()));
+		}
 
 		QDate date = timetableData.value( DepartureDate ).toDate();
 		QTime departureTime = QTime( timetableData.value( DepartureHour ).toInt(),

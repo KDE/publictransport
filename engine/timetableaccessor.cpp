@@ -33,6 +33,7 @@
 
 TimetableAccessor::TimetableAccessor() : m_info(0)
 {
+	m_idAlreadyRequested = false;
 }
 
 TimetableAccessor::~TimetableAccessor()
@@ -90,7 +91,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	AccessorInfoXmlReader reader;
 	TimetableAccessor *ret = reader.read( &file, sp, filePath, country );
 	if ( !ret ) {
-		kDebug() << "Error while reading accessor info xml" << filePath << reader.errorString();
+		kDebug() << "Error while reading accessor info xml" << filePath << reader.lineNumber() << reader.errorString();
 	}
 	return ret;
 }
@@ -388,6 +389,18 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 		return NULL;
 	}
 	
+	if ( !m_idAlreadyRequested &&
+		m_info->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) &&
+		m_info->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "true" )
+	{
+		kDebug() << "Request a stop ID";
+		m_idAlreadyRequested = true;
+		requestStopSuggestions( sourceName, city, stop, ParseForStopIdThenDepartures, maxCount, 
+								dateTime, dataType, usedDifferentUrl );
+		return NULL;
+	}
+	m_idAlreadyRequested = false;
+	
 	KUrl url = getUrl( city, stop, maxCount, dateTime, dataType, usedDifferentUrl );
 	KIO::StoredTransferJob *job; // = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
 	if ( m_info->attributesForDepatures()[QLatin1String("method")]
@@ -395,9 +408,6 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 	{
 		job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
 	} else if ( m_info->attributesForDepatures().contains(QLatin1String("data")) ) {
-		kDebug() << "Using POST";
-		
-		// TODO
 		QString sData = m_info->attributesForDepatures()[QLatin1String("data")];
 		sData.replace( QLatin1String("{city}"), city );
 		sData.replace( QLatin1String("{stop}"), stop );
@@ -479,9 +489,9 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 		break;
 	}
 				
-	ParseDocumentMode parseType = maxCount == -1 
+	ParseDocumentMode parseMode = maxCount == -1 
 			? ParseForStopSuggestions : ParseForDeparturesArrivals;
-	m_jobInfos.insert( job, JobInfos(parseType, sourceName, city, stop, url,
+	m_jobInfos.insert( job, JobInfos(parseMode, sourceName, city, stop, url,
 									 dataType, maxCount, dateTime, usedDifferentUrl) );
 
 	connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
@@ -504,8 +514,9 @@ void TimetableAccessor::clearSessionKey()
 	m_sessionKey.clear();
 }
 
-KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions(
-    const QString &sourceName, const QString &city, const QString &stop )
+KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString &sourceName, 
+	const QString &city, const QString &stop, ParseDocumentMode parseMode, int maxCount, 
+	const QDateTime &dateTime, const QString &dataType, bool usedDifferentUrl )
 {
 	if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty() 
 		&& m_sessionKeyGetTime.elapsed() > 500 ) 
@@ -562,7 +573,12 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions(
 					 << m_info->fileName() << "but method is \"post\".";
 			return NULL;
 		}
-		m_jobInfos.insert( job, JobInfos(ParseForStopSuggestions, sourceName, city, stop, url) );
+		if ( parseMode == ParseForStopIdThenDepartures ) {
+			m_jobInfos.insert( job, JobInfos(parseMode, sourceName, city, stop, url,
+											 dataType, maxCount, dateTime, usedDifferentUrl ) );
+		} else {
+			m_jobInfos.insert( job, JobInfos(ParseForStopSuggestions, sourceName, city, stop, url) );
+		}
 		
 		// Add the session key
 		switch ( m_info->sessionKeyPlace() ) {
@@ -648,6 +664,32 @@ void TimetableAccessor::result( KJob* job )
 		}
 
 		return;
+	} else if ( parseDocumentMode == ParseForStopIdThenDepartures ) {
+		kDebug() << "MODE IS CURRENTLY" << parseDocumentMode;
+		if ( parseDocumentPossibleStops(document, &stopList) ) {
+			if ( stopList.isEmpty() ) {
+				kDebug() << "No stop suggestions got to get an ID to use to get departures";
+			} else {
+				// Use the ID of the first suggested stop to get departures
+				if ( !stopList.first()->hasId() ) {
+					kDebug() << "No stop ID found for the given stop name, now requesting departures using the stop name";
+					requestDepartures( jobInfo.sourceName, jobInfo.city, jobInfo.stop, 
+									jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,
+									jobInfo.usedDifferentUrl );
+				} else {
+					requestDepartures( jobInfo.sourceName, jobInfo.city, stopList.first()->id(), 
+									jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,
+									jobInfo.usedDifferentUrl );
+				}
+				return;
+			}
+		} else {
+			kDebug() << "Error parsing for stop suggestions to get an ID to use to get departure" << jobInfo.sourceName;
+			emit errorParsing( this, ErrorParsingFailed,
+							   i18n("Error while parsing the timetable document."),
+							   jobInfo.url, serviceProvider(), jobInfo.sourceName,
+							   jobInfo.city, jobInfo.stop, QString(), parseDocumentMode );
+		}
 	} else if ( parseDocumentMode == ParseForSessionKeyThenStopSuggestions ||
 				parseDocumentMode == ParseForSessionKeyThenDepartures ) 
 	{

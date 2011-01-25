@@ -136,6 +136,7 @@ enum TimetableInformation {
 
 	// Special information
 	NoMatchOnSchedule = 100, /**< Vehicle is expected to depart on schedule, no regexp-matched string is needed for this info */
+	IsNightLine = 101, /**< The transport line is a nightline. TODO Use this info in the data engine */
 
 	// Possible stop information
 	StopName = 200, /**< The name of a stop/station. */
@@ -151,7 +152,8 @@ enum ParseDocumentMode {
 	ParseForJourneys, /**< Parsing for journeys. */
 	ParseForStopSuggestions, /**< Parsing for stop suggestions. */
 	ParseForSessionKeyThenStopSuggestions, /**< Parsing for a session key, to be used to get stop suggestions. */
-	ParseForSessionKeyThenDepartures /**< Parsing for a session key, to be used to get departures/arrivals. */
+	ParseForSessionKeyThenDepartures, /**< Parsing for a session key, to be used to get departures/arrivals. */
+	ParseForStopIdThenDepartures /**< Parsing for a stop ID, to be used to get departures/arrivals. */
 };
 
 /** The type of an accessor. */
@@ -243,9 +245,11 @@ inline QDebug &operator <<( QDebug debug, ParseDocumentMode parseDocumentMode )
 		return debug << "ParseForSessionKeyThenDepartures";
 	case ParseForSessionKeyThenStopSuggestions:
 		return debug << "ParseForSessionKeyThenStopSuggestions";
+	case ParseForStopIdThenDepartures:
+		return debug << "ParseForStopIdThenDepartures";
 
 	default:
-		return debug << "ParseDocumentMode unknown" << parseDocumentMode;
+		return debug << "ParseDocumentMode unknown" << static_cast<int>(parseDocumentMode);
 	}
 }
 
@@ -324,6 +328,8 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
 		return debug << "Pricing";
 	case NoMatchOnSchedule:
 		return debug << "NoMatchOnSchedule";
+	case IsNightLine:
+		return debug << "IsNightline";
 	case StopName:
 		return debug << "StopName";
 	case StopID:
@@ -352,7 +358,7 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
 		return debug << "RouteTimesArrivalDelay";
 
 	default:
-		return debug << "TimetableInformation unknown" << timetableInformation;
+		return debug << "TimetableInformation unknown" << static_cast<int>(timetableInformation);
 	}
 };
 
