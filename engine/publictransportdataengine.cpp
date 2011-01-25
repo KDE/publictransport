@@ -455,19 +455,19 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 		if ( newlyCreated ) {
 			// 		if ( parseDocumentMode == ParseForDeparturesArrivals ) {
 			connect( accessor,
-					 SIGNAL( departureListReceived( TimetableAccessor*, const QUrl&, const QList<DepartureInfo*>&, const GlobalTimetableInfo&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode ) ),
-					 this, SLOT( departureListReceived( TimetableAccessor*, const QUrl&, const QList<DepartureInfo*>&, const GlobalTimetableInfo&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode ) ) );
+					 SIGNAL(departureListReceived(TimetableAccessor*, const QUrl&, const QList<DepartureInfo*>&, const GlobalTimetableInfo&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode)),
+					 this, SLOT(departureListReceived(TimetableAccessor*, const QUrl&, const QList<DepartureInfo*>&, const GlobalTimetableInfo&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode)) );
 			// 		} else { // if ( parseDocumentMode == ParseForJourneys )
 			connect( accessor,
-					 SIGNAL( journeyListReceived( TimetableAccessor*, const QUrl&, const QList<JourneyInfo*>&, const GlobalTimetableInfo&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode ) ),
-					 this, SLOT( journeyListReceived( TimetableAccessor*, const QUrl&, const QList<JourneyInfo*>&, const GlobalTimetableInfo&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode ) ) );
+					 SIGNAL(journeyListReceived(TimetableAccessor*, const QUrl&, const QList<JourneyInfo*>&, const GlobalTimetableInfo&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode)),
+					 this, SLOT(journeyListReceived(TimetableAccessor*, const QUrl&, const QList<JourneyInfo*>&, const GlobalTimetableInfo&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode)) );
 			// 		}
 			connect( accessor,
-					 SIGNAL( stopListReceived( TimetableAccessor*, const QUrl&, const QStringList&, const QHash<QString, QString>&, const QHash<QString, int>&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode ) ),
-					 this, SLOT( stopListReceived( TimetableAccessor*, const QUrl&, const QStringList&, const QHash<QString, QString>&, const QHash<QString, int>&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode ) ) );
+					 SIGNAL(stopListReceived(TimetableAccessor*, const QUrl&, const QList<StopInfo*>&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode)),
+					 this, SLOT(stopListReceived(TimetableAccessor*, const QUrl&, const QList<StopInfo*>&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode)) );
 			connect( accessor,
-					 SIGNAL( errorParsing( TimetableAccessor*, ErrorType, const QString&, const QUrl&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode ) ),
-					 this, SLOT( errorParsing( TimetableAccessor*, ErrorType, const QString&, const QUrl&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode ) ) );
+					 SIGNAL(errorParsing(TimetableAccessor*, ErrorType, const QString&, const QUrl&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode)),
+					 this, SLOT(errorParsing(TimetableAccessor*, ErrorType, const QString&, const QUrl&, const QString&, const QString&, const QString&, const QString&, const QString&, ParseDocumentMode)) );
 		}
 
 		if ( parseDocumentMode == ParseForDeparturesArrivals ) {

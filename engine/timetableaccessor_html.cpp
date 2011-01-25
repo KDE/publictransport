@@ -400,7 +400,7 @@ void TimetableAccessorHtml::postProcessMatchedData( TimetableInformation info,
 
 	case Duration:
 		time = QTime::fromString( matchedData, "h:mm" );
-		data->insert( info, time.hour() * 60 + time.minute() ); // TODO: autodetect time format
+		data->insert( info, time.hour() * 60 + time.minute() );
 		break;
 
 	case DepartureDate:
@@ -409,7 +409,7 @@ void TimetableAccessorHtml::postProcessMatchedData( TimetableInformation info,
 		if ( date.year() == QDate::currentDate().year() - 100 ) {
 			date.setDate( date.year() + 100, date.month(), date.day() );
 		}
-		data->insert( info, date ); // TODO: autodetect date format
+		data->insert( info, date );
 		break;
 
 	case TypesOfVehicleInJourney:
@@ -602,7 +602,7 @@ bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray &docume
 // 	kDebug() << "Possible stop range = " << possibleStopRange;
 
 		const QRegExp rx = infoRegExp->searchPossibleStops()[i].regExp();
-		while (( pos = rx.indexIn( possibleStopRange, pos ) ) != -1 ) {
+		while ( (pos = rx.indexIn(possibleStopRange, pos)) != -1 ) {
 			if ( !rx.isValid() ) {
 				kDebug() << "Parse error";
 				return false; // parse error

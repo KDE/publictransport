@@ -68,7 +68,9 @@ enum ErrorType {
 	ErrorParsingFailed /**< Parsing downloaded data failed. */
 };
 
-// TODO Documentation
+/**
+ * @brief Places where the session key should be put in requests.
+ **/
 enum SessionKeyPlace {
 	PutNowhere = 0, /**< Don't place the session key anywhere. */
 	PutIntoCustomHeader /**< Place the session key in a custom header, which name should be given
@@ -108,7 +110,7 @@ enum TimetableInformation {
 	DepartureAMorPMPrognosis = 18, /**< Used to match the string "am" or "pm" for the prognosis departure time. */
 	ArrivalAMorPM = 19, /**< Used to match the string "am" or "pm" for the arrival time. */
 	Status = 20, /**< The current status of the departure / arrival. Currently only used for planes. */
-	DepartureYear = 21, /**< The year of the departure, to be used when the year is separated from the date. */ // TODO: add to timetableInformationToString()
+	DepartureYear = 21, /**< The year of the departure, to be used when the year is separated from the date. */
 	RouteStops = 22, /**< A list of stops of the departure / arrival to it's destination stop or a list of stops of the journey from it's start to it's destination stop. If @ref RouteStops and @ref RouteTimes are both set, they should contain the same number of elements. And elements with equal indices should be associated (the times at which the vehicle is at the stops). For journeys @ref RouteTimesDeparture and @ref RouteTimesArrival should be used instead of @ref RouteTimes. */
 	RouteTimes = 23, /**< A list of times of the departure / arrival to it's destination stop. If @ref RouteStops and @ref RouteTimes are both set, they should contain the same number of elements. And elements with equal indices should be associated (the times at which the vehicle is at the stops). */
 	RouteTimesDeparture = 24, /**< A list of departure times of the journey. If @ref RouteStops and @ref RouteTimesDeparture are both set, the latter should contain one elements less (because the last stop has no departure, only an arrival time). Elements with equal indices should be associated (the times at which the vehicle departs from the stops). */

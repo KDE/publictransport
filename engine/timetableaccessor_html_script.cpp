@@ -41,6 +41,7 @@ TimetableAccessorHtmlScript::TimetableAccessorHtmlScript( TimetableAccessorInfo 
 
 TimetableAccessorHtmlScript::~TimetableAccessorHtmlScript()
 {
+	delete m_script;
 }
 
 bool TimetableAccessorHtmlScript::lazyLoadScript()
@@ -270,7 +271,7 @@ QString TimetableAccessorHtmlScript::parseDocumentForLaterJourneysUrl( const QBy
 		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return QString();
 	}
-	if ( !m_script->functionNames().contains( "getUrlForLaterJourneyResults" ) ) {
+	if ( !m_script->functionNames().contains("getUrlForLaterJourneyResults") ) {
 		kDebug() << "The script has no 'getUrlForLaterJourneyResults' function";
 		kDebug() << "Functions in the script:" << m_script->functionNames();
 		return QString();
@@ -375,10 +376,10 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 			continue;
 		}
 
-		if ( timetableData.values().contains( StopID ) ) {
+		if ( timetableData.values().contains(StopID) ) {
 			stopID = timetableData.value( StopID ).toString();
 		}
-		if ( timetableData.values().contains( StopWeight ) ) {
+		if ( timetableData.values().contains(StopWeight) ) {
 			stopWeight = timetableData.value( StopWeight ).toInt();
 		}
 		if ( timetableData.values().contains(StopCity) ) {

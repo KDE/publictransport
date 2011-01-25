@@ -376,9 +376,8 @@ QStringList TimetableAccessor::featuresLocalized() const
 }
 
 KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sourceName,
-		const QString &city, const QString &stop, int maxCount,
-		const QDateTime &dateTime, const QString &dataType,
-		bool usedDifferentUrl )
+		const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime, 
+		const QString &dataType, bool usedDifferentUrl )
 {
 	if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty() 
 		&& m_sessionKeyGetTime.elapsed() > 500 ) 

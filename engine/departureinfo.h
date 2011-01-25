@@ -464,7 +464,7 @@ public:
 	/** @brief Gets the delay reason. */
 	QString delayReason() const { return m_data.contains(DelayReason)
 		? m_data[DelayReason].toString() : QString(); };
-	/** @brief Gets news for the departure / arrival, such as "platform changed". */
+	/** @brief Gets news for the departure/arrival, such as "platform changed". */
 	QString journeyNews() const { return m_data.contains(JourneyNews)
 		? m_data[JourneyNews].toString() : QString(); };
 		

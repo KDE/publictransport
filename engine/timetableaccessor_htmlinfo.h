@@ -148,9 +148,13 @@ public:
 	QByteArray charsetForUrlEncoding() const { return m_charsetForUrlEncoding; };
 	QByteArray fallbackCharset() const { return m_fallbackCharset; };
 	
-	// TODO Description
+	/** @brief Gets the URL to get a session key. */
 	QString sessionKeyUrl() const { return m_sessionKeyUrl; };
+	/** @brief Gets the place, where to put the session key in a request.
+	 *
+	 * @see SessionKeyPlace */
 	SessionKeyPlace sessionKeyPlace() const { return m_sessionKeyPlace; };
+	/** @brief Gets the data to POST with requests. */
 	QString sessionKeyData() const { return m_sessionKeyData; };
 	
 	/**
@@ -245,7 +249,13 @@ protected:
 	void setFallbackCharset( const QByteArray &fallbackCharset ) {
 		m_fallbackCharset = fallbackCharset; };
 
-	// TODO Description
+	/**
+	 * @brief Sets session key data.
+	 *
+	 * @param sessionKeyUrl An url to a document containing the session key.
+	 * @param sessionKeyPlace The place where to put the session key in requests.
+	 * @param data Data to POST with requests.
+	 **/
 	void setSessionKeyData( const QString &sessionKeyUrl, SessionKeyPlace sessionKeyPlace, 
 							const QString &data ) {
 		m_sessionKeyUrl = sessionKeyUrl;
@@ -469,6 +479,7 @@ public:
 	 *
 	 * @warning At least one regExp must have been set to initialize the RegExps
 	 *   object, eg. with @ref setRegExpDepartures. Otherwise this crashes.
+	 * 
 	 * @return NULL if there is no regular expression defined for preparsing the document.*/
 	TimetableRegExpSearch searchDeparturesPre() const {
 		return m_searchDeparturesPre; };
@@ -479,6 +490,7 @@ public:
 	 *
 	 * @warning At least one regExp must have been set to initialize the RegExps
 	 *   object, eg. with @ref setRegExpDepartures. Otherwise this crashes.
+	 * 
 	 * @return NULL if there is no regular expression defined for preparsing the document.*/
 	TimetableRegExpSearch searchDepartureGroupTitles() const {
 		return m_searchDepartureGroupTitles; };

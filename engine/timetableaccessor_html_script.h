@@ -101,7 +101,11 @@ protected:
 	 * @return The parsed url. */
 	virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document );
 
-	// TODO Documentation
+	/** 
+	 * @brief Calls the 'parseSessionKey' function in the script to
+	 *   parse the contents of a received document for the session key.
+	 * 
+	 * @return The parsed session key or QString() if none was found. */
 	virtual QString parseDocumentForSessionKey( const QByteArray &document );
 	
 	/** 

@@ -97,19 +97,86 @@ public:
 	const TimetableAccessorInfo *info() const { return m_info; };
 
 	/** @brief Requests a list of departures/arrivals. When the departure/arrival list
-	 *   is completely received departureListReceived() is emitted. */
+	 *   is completely received @ref departureListReceived is emitted. */
 	KIO::StoredTransferJob *requestDepartures( const QString &sourceName,
 			const QString &city, const QString &stop,
 			int maxCount, const QDateTime &dateTime, const QString &dataType = "departures",
 			bool useDifferentUrl = false );
 	
-	// TODO Documentation
+	/**
+	 * @brief Requests a session key. May be needed for some service providers to work properly.
+	 *
+	 * When the session key has been received @ref sessionKeyReceived is emitted.
+	 *
+	 * @param parseMode Can be ParseForSessionKeyThenStopSuggestions (calls 
+	 *   @ref requestStopSuggestions after the session key has been retrieved) or 
+	 *   ParseForSessionKeyThenDepartures (calls @ref requestDepartures after the session key has 
+	 *   been retrieved).
+	 * 
+	 * @param url The url to a document which contains the session key.
+	 * 
+	 * @param sourceName The source name in the data engine.
+	 * 
+	 * @param city After the session key has been parsed, @ref requestDepartures is called 
+	 *   with @p city.
+	 * 
+	 * @param stop After the session key has been parsed, @ref requestDepartures is called 
+	 *   with @p stop.
+	 * 
+	 * @param maxCount After the session key has been parsed, @ref requestDepartures is called 
+	 *   with @p maxCount. Default is 99.
+	 * 
+	 * @param dateTime After the session key has been parsed, @ref requestDepartures is called 
+	 *   with @p dateTime. Default is QDateTime::currentDateTime().
+	 * 
+	 * @param dataType After the session key has been parsed, @ref requestDepartures is called 
+	 *   with @p dataType. Default is QString().
+	 * 
+	 * @param usedDifferentUrl After the session key has been parsed, @ref requestDepartures is 
+	 *   called with @p usedDifferentUrl. Default is false.
+	 * 
+	 * @return The KIO-job that handles the download of the session key document. Can be NULL.
+	 **/
 	KIO::StoredTransferJob *requestSessionKey( ParseDocumentMode parseMode, const KUrl &url, 
 			const QString &sourceName, const QString &city, const QString &stop, int maxCount = 99, 
 			const QDateTime &dateTime = QDateTime::currentDateTime(), 
 			const QString &dataType = QString(), bool usedDifferentUrl = false );
 
-	// TODO Documentation
+	/**
+	 * @brief Requests a list of stop suggestions. When the stop list is completely received
+	 *   @ref stopListReceived is emitted.
+	 *
+	 * @param sourceName The source name in the data engine.
+	 * 
+	 * @param city The city to get stop suggestions for (only needed if @ref useSeparateCityValue
+	 *   returns true).
+	 * 
+	 * @param stop The stop name (or a part of it) to get suggestions for.
+	 * 
+	 * @param parseMode Can be ParseForStopSuggestions or ParseForStopIdThenDepartures (then the
+	 *   arguments @p maxCount, @p dateTime, @p dataType, @p usedDifferentUrl are also needed and
+	 *   used for the departure request once a stop suggestion has arrived).
+	 *   Default is ParseForStopSuggestions.
+	 * 
+	 * @param maxCount Only used if @p parseMode is ParseForStopIdThenDepartures. After stop 
+	 *   suggestions are retrieved, @ref requestDepartures is called with @p maxCount. Default is 1,
+	 *   because only the best suggestion is used.
+	 * 
+	 * @param dateTime Only used if @p parseMode is ParseForStopIdThenDepartures. After stop 
+	 *   suggestions are retrieved, @ref requestDepartures is called with @p dateTime. Default is 
+	 *   QDateTime::currentDateTime().
+	 * 
+	 * @param dataType Only used if @p parseMode is ParseForStopIdThenDepartures. After stop 
+	 *   suggestions are retrieved, @ref requestDepartures is called with @p dataType. Default is 
+	 *   QString().
+	 * 
+	 * @param usedDifferentUrl Only used if @p parseMode is ParseForStopIdThenDepartures. After stop 
+	 *   suggestions are retrieved, @ref requestDepartures is called with @p usedDifferentUrl. 
+	 *   Default is false.
+	 * 
+	 * @return The KIO-job that handles the download of the stop suggestion document. Can be NULL
+	 *   if eg. a session key document has to be downloaded first.
+	 **/
 	KIO::StoredTransferJob *requestStopSuggestions( const QString &sourceName,
 			const QString &city, const QString &stop, 
 			ParseDocumentMode parseMode = ParseForStopSuggestions, int maxCount = 1, 
@@ -199,7 +266,10 @@ protected:
 		return QString();
 	};
 	
-	// TODO Documentation
+	/** 
+	 * @brief Override this method to parse the contents of a received document for
+	 *   a session key. The default implementation returns a null string.
+	 * @return The parsed session key. */
 	virtual QString parseDocumentForSessionKey( const QByteArray &document ) {
 		Q_UNUSED( document );
 		return QString();
@@ -209,9 +279,7 @@ protected:
 	 * @brief Parses the contents of a received document for a list of possible stop names
 	 *   and puts the results into @p stops.
 	 * 
-	 * @param stops A pointer to a string list, where the stop names are stored.
-	 * @param stopToStopId A pointer to a map, where the keys are stop names
-	 *   and the values are stop IDs.
+	 * @param stops A pointer to a list of @ref StopInfo objects.
 	 * @return true, if there were no errors.
 	 * @return false, if there were an error parsing the document.
 	 * @see parseDocument() */
@@ -319,7 +387,11 @@ signals:
 			const QString &serviceProvider, const QString &sourceName, const QString &city,
 			const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
 	
-	// TODO Documentation
+	/** 
+	 * @brief Emitted when a session key has been received and parsed.
+	 * 
+	 * @param accessor The accessor that was used to download and parse the session key.
+	 * @param sessionKey The parsed session key. */
 	void sessionKeyReceived( TimetableAccessor *accessor, const QString &sessionKey );
 
 	/** 
@@ -348,7 +420,9 @@ protected slots:
 	/** @brief All data of a journey list has been received. */
 	void result( KJob* job );
 	
-	// TODO Documentation
+	/** @brief Clears the session key. This gets called from time to time by a timer, to enforce
+	 * the download of a new session key the next it's needed. This is done to prevent usage of 
+	 * expired session keys. */
 	void clearSessionKey();
 
 protected:

@@ -142,7 +142,7 @@ QString TimetableAccessorXml::departuresRawUrl() const
 	return m_info->departureRawUrl();
 }
 
-QString TimetableAccessorXml::stopSuggestionsRawUrl() const   // TODO: needed?
+QString TimetableAccessorXml::stopSuggestionsRawUrl() const
 {
 	return m_info->stopSuggestionsRawUrl();
 }
