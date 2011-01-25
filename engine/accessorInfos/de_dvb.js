@@ -72,3 +72,20 @@ function parseTimetable( html ) {
 		result.addData( timetableData );
     }
 }
+
+function parsePossibleStops( html ) {
+    // Initialize regular expressions (compile them only once)
+    var stopRegExp = /<li>([^<]+)<\/li>/ig;
+
+    // Go through all stop options
+    while ( (stop = stopRegExp.exec(html)) ) {
+		var stopName = stop[1];
+
+		// Add stop
+		timetableData.clear();
+		timetableData.set( 'StopName', stopName );
+		result.addData( timetableData );
+    }
+
+    return result.hasData();
+}

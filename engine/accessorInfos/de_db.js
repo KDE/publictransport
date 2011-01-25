@@ -72,10 +72,15 @@ function parseTimetable( html ) {
     var delayOnTimeRegExp = /<span style="[^"]*?">p&#252;nktlich<\/span>/i;
     var trainCanceledRegExp = /<span class="[^"]*?">Zug f&#228;llt aus<\/span>/i;
     
+// println("DE_DB: Go through all departure blocks");
+	
     // Go through all departure blocks
 	var lastHour = 0;
+	var departureNumber = 0;
     while ( (departureRow = departuresRegExp.exec(str)) ) {
 		departureRow = departureRow[1];
+		++departureNumber;
+// println("DE_DB: Next departure Row " + departureNumber);
 
 		// Get column contents
 		var columns = new Array;
@@ -97,32 +102,33 @@ function parseTimetable( html ) {
 		{
 			if ( departureRow.indexOf("<th") == -1 ) {
 				// There's only an error, if this isn't the header row of the table
-				helper.error("Didn't find all columns in a row of the result table!", departureRow);
+				helper.error("Didn't find all columns in a row of the result table!", departureRow == null ? "" : departureRow);
 			}
 			continue; // Not all columns where not found
 		}
 			
 		// Initialize result variables with defaults
-		var time, typeOfVehicle, transportLine, targetString, platformString = "",
+		var time = 0, typeOfVehicle = "", transportLine = "", targetString = "", platformString = "",
 			delay = -1, delayReason = "", journeyNews = "",
 			routeStops = new Array, routeTimes = new Array, exactRouteStops = 0;
 			
 		// Parse time column
 		time = helper.matchTime( columns["time"], "hh:mm" );
 		if ( time.length != 2 ) {
-			helper.error("Unexpected string in time column", columns["time"]);
+			helper.error("Unexpected string in time column", columns["time"] == null ? "" : columns["time"]);
 			continue;
 		}
 		
-		// If 0 o'clock is passed between the last departure time and the current one, increase the date by one day
-		if ( time[0] < lastHour ) {
+		// TODO
+		// If 0 o'clock is passed between the last departure time and the current one, increase the date by one day.
+		if ( time[0] < lastHour || (departureNumber == 1 && time[0] == 0 && now.getHours() == 23) ) {
 			currentDate = helper.addDaysToDate( currentDate, 1 );
 		}
 		lastHour = time[0];
 		
 		// Parse type of vehicle column
 		if ( (typeOfVehicle = typeOfVehicleRegExp.exec(columns["train1"])) == null ) {
-			helper.error("Unexpected string in type of vehicle column", columns["train1"]);
+			helper.error("Unexpected string in type of vehicle column", columns["train1"] == null ? "" : columns["train1"]);
 			continue; // Unexcepted string in type of vehicle column
 		}
 		typeOfVehicle = typeOfVehicle[1];
@@ -133,7 +139,7 @@ function parseTimetable( html ) {
 		// Parse route column ..
 		//  .. target
 		if ( (targetString = targetRegExp.exec(columns["route"])) == null ) {
-			helper.error("Unexpected string in target column", columns["route"]);
+			helper.error("Unexpected string in target column", columns["route"] == null ? "" : columns["route"]);
 			continue; // Unexcepted string in target column
 		}
 		targetString = helper.trim( targetString[1] );
@@ -219,7 +225,7 @@ function parseJourneys( code ) {
 		
 		// Should always start with "BAHN_MNB.fm = {"
 		if ( code.indexOf("BAHN_MNB.fm = {") != 0 ) {
-			helper.error( "The received code doesn't start with \"BAHN_MNB.fm = {\"", code );
+			helper.error( "The received code doesn't start with \"BAHN_MNB.fm = {\"", code == null ? "" : code );
 		} else {
 			code = code.substr( 15 );
 			
@@ -515,14 +521,14 @@ function parseJourneyDetails( details, resultObject ) {
     var journeyNews = null;
     var journeyNewsRegExp = /<tr>\s*?<td colspan="8" class="red bold"[^>]*?>([\s\S]*?)<\/td>\s*?<\/tr>/i;
     if ( (journeyNews = journeyNewsRegExp.exec(details)) != null ) {
-	journeyNews = helper.trim( journeyNews[1] );
-	if ( journeyNews != '' )
-	    resultObject.journeyNews = journeyNews;
+		journeyNews = helper.trim( journeyNews[1] );
+		if ( journeyNews != '' )
+			resultObject.journeyNews = journeyNews;
     }
 
     var headerEndRegExp = /<tr>\s*?<th>[\s\S]*?<\/tr>/ig;
     if ( headerEndRegExp.exec(details) == null )
-	return;
+		return;
     var str = details.substr( headerEndRegExp.lastIndex );
 
     var lastStop = null, lastArrivalTime = '';

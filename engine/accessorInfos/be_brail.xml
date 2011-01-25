@@ -7,7 +7,7 @@
 <description lang="en">This service provider works for cities in Belgium and some other cities in europe.</description>
 <description lang="de">Dieser Service-Provider liefert Ergebnisse für Städte in Belgien und auch für einige andere Städte in Europa. </description>
 
-<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
 <!-- <cities><city></city></cities> -->
 <useSeperateCityValue>false</useSeperateCityValue>
 
@@ -24,5 +24,10 @@
 
 <!--     <journeys><![CDATA[http://hafas.bene-system.com/bin/query.exe/dn?...]]></journeys> -->
 </rawUrls>
+
+<changelog>
+	<entry since="1.1" releasedWith="0.7">Corrected the url for favicons.</entry>
+	<entry since="1.0" releasedWith="0.6.3">Initial version.</entry>
+</changelog>
 
 </accessorInfo>

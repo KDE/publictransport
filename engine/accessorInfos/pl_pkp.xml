@@ -3,7 +3,7 @@
 <accessorInfo fileVersion="1.0" version="1.1" type="HTML">
 
 <name>Polskie Koleje Państwowe</name>
-<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
 <!-- <cities><city></city></cities> -->
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>This service provider has static data. That means, that displayed departures may actually not be valid for today. Please view the journey news, to see if a departure is valid for today (e.g. 'Mo-Fr').</description>
@@ -32,4 +32,8 @@
 	</item>
     </possibleStops>
 </regExps>
+
+<changelog>
+</changelog>
+
 </accessorInfo>

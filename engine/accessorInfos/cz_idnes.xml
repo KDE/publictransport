@@ -3,7 +3,7 @@
 <accessorInfo fileVersion="1.0" version="1.2" type="HTML">
 
 <name>CHAPS spol. s r.o. (jizdnirady.idnes.cz)</name>
-<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
 <cities>
 <!--     <city>Praha</city> -->
     <city replaceWith="autobusy">Autobusy</city>
@@ -106,5 +106,13 @@
 </rawUrls>
 
 <script>cz_idnes.js</script>
+
+<changelog>
+	<entry since="1.2" releasedWith="0.10">Wrote a script, replacing the regular expressions in the XML. Can now also get stop suggestions by using an ASMX web service (with POST requests), which needs a session key. The session key is read from the service provider home page.</entry>
+	<entry since="1.2" releasedWith="0.10">Fixed, didn't show new departures after some time.</entry>
+	<entry since="1.1.1" releasedWith="0.7">Corrected the url for favicons.</entry>
+	<entry since="1.1" releasedWith="0.5.2">Added stop suggestions.</entry>
+	<entry since="1.1" releasedWith="0.5.2">Added list of possible cities (thanks to takanowaka).</entry>
+</changelog>
 
 </accessorInfo>

@@ -1,6 +1,6 @@
 [Dolphin]
 AdditionalInfo=3
-SortOrder=1
-Sorting=2
-Timestamp=2010,3,9,17,56,5
+AdditionalInfoV2=Details_Size,Details_Date,CustomizedDetails
+Timestamp=2011,1,12,13,18,9
+Version=2
 ViewMode=1

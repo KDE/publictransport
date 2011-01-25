@@ -3,7 +3,7 @@
 <accessorInfo fileVersion="1.0" version="1.2" type="HTML">
 
 <name>INPROP, s. r. o. (cp.atlas.sk)</name>
-<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
 <cities>
     <city replaceWith="bus">Autobusy</city>
     <city replaceWith="lietadla">Lietadlá</city>
@@ -67,5 +67,11 @@
 </rawUrls>
 
 <script>sk_atlas.js</script>
+
+<changelog>
+	<entry since="1.2" releasedWith="0.10">Can now also parse stop suggestions using a ASMX web service, which needs a session key. The session key is read from the service provider home page.</entry>
+	<entry since="1.1" releasedWith="0.6.2">Now using a script.</entry>
+	<entry since="1.0" releasedWith="0.5.2">Initial version.</entry>
+</changelog>
 
 </accessorInfo>

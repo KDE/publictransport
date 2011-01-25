@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo fileVersion="1.0" version="1.0" type="HTML">
+<accessorInfo fileVersion="1.0" version="1.0.1" type="HTML">
 
 <name>Berliner Verkehrsbetriebe (BVG)</name>
-<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
 <cities><city>Berlin</city></cities>
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>Provides departure information for Berlin in Germany.</description>
@@ -32,4 +32,10 @@
 	</item>
     </possibleStops>
 </regExps>
+
+<changelog>
+	<entry since="1.0.1" releasedWith="0.7">Corrected the url for favicons.</entry>
+	<entry since="1.0" releasedWith="0.3">Initial version.</entry>
+</changelog>
+
 </accessorInfo>

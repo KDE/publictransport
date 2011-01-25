@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo fileVersion="1.0" version="1.1" type="HTML">
+<accessorInfo fileVersion="1.0" version="1.2" type="HTML">
 
 <name>Dresdner Verkehrsbetriebe AG</name>
-<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
 <cities><city>Dresden</city></cities>
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>Provides departure information for Dresden in Germany.</description>
@@ -14,7 +14,15 @@
 
 <rawUrls>
     <departures><![CDATA[http://www.dvb.de:80/de/Fahrplan/Abfahrtsmonitor/abfahrten.do/{stop}#result]]></departures>
+    <stopSuggestions><![CDATA[http://www.dvb.de:80/de/haltestellen/hpautocomplete.do/amform[startname]?amform[startname]={stop}&ort=Dresden]]></stopSuggestions>
+<!-- 	?uk_id=1295921932  -->
 </rawUrls>
 
 <script>de_dvb.js</script>
+
+<changelog>
+	<entry since="1.2" releasedWith="0.10">New stop suggestion parser.</entry>
+	<entry since="1.1" releasedWith="0.6">Now using a script for parsing.</entry>
+</changelog>
+
 </accessorInfo>

@@ -53,7 +53,6 @@ function parseTimetable( html ) {
     // Initialize regular expressions (compile them only once)
     var departuresRegExp = /<tr class="[^"]*?">([\s\S]*?)<\/tr>/ig;
     var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
-//     var columnsRegExp = /<td class="([^"]*?)">([\s\S]*?)<\/td>/ig;
 	// Matches transport line [1] and type of vehicle [2]
     var typeOfVehicleAndTransportLineRegExp = /<img [^>]*src="\/img\/vs_oebb\/([^_]*)_pic[^"]*" [^>]*alt="([^"]*)"[^>]*>/i;
     var targetRegExp = /<strong>[\s\S]*?<a[^>]*>([^<]*)<\/a>[\s\S]*?<\/strong>/i;
@@ -63,25 +62,6 @@ function parseTimetable( html ) {
 	
     var routeBlocksRegExp = /\r?\n\s*(-|&#8226;)\s*\r?\n/gi;
     var routeBlockEndOfExactRouteMarkerRegExp = /&#8226;/i;
-
-// <td class="timetable">
-// <strong><a href="http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&amp;input=Hamburg-Altona&amp;boardType=arr&amp;time=now&amp;selectDate=today&amp;maxJourneys=100&amp;productsFilter=0&amp;start=yes">
-// Hamburg-Altona</a></strong><br>
-// ...
-	
-// <div class="journeyMessageHIM">
-// <br>
-// <img alt="" title="" src="/img/vs_scotty/info_i.gif" class="himIcon">
-// <span>
-// <strong>
-// &nbsp;
-// (Wien Westbahnhof)
-// </strong>
-// Durch den Umbau des Westbahnhofes ist der Weg von und zu den öffentlichen Verkehrsmitteln in einigen Fällen etwas länger. Bitte beachten Sie dies bei Ihrer Reiseplanung.
-// </span>
-// <a target="_blank" href="http://ftp-pv.oebb.at/mcc_stoerung/bauarbeiten/2010_12/UmbauWestbahnhof.pdf">Fahrgastinformationen</a>
-// </div>
-// </td>
 	
     // Go through all departure blocks
     while ( (departure = departuresRegExp.exec(str)) ) {
@@ -182,7 +162,7 @@ function parseTimetable( html ) {
 		timetableData.set( 'Target', targetString );
 		timetableData.set( 'Platform', platformString );
 		timetableData.set( 'Delay', delay );
-		timetableData.set( 'DelayReaason', delayReason );
+		timetableData.set( 'DelayReason', delayReason );
 		timetableData.set( 'JourneyNews', journeyNews );
 		timetableData.set( 'DepartureHour', time[0] );
 		timetableData.set( 'DepartureMinute', time[1] );

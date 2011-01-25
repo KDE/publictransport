@@ -3,7 +3,7 @@
 <accessorInfo fileVersion="1.0" version="1.0" type="HTML">
 
 <name>NASA (nasa.gov)</name>
-<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
 <!-- <cities><city></city></cities> TODO: <noStopSelection>-->
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>Provides departure information for spacecrafts in the United States.</description>

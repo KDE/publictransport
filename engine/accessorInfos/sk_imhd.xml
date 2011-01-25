@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo fileVersion="1.0" version="1.1" type="HTML">
+<accessorInfo fileVersion="1.0" version="1.1.2" type="HTML">
 
 <name>iMHD.sk</name>
-<author> <fullname>Friedrich Pülz</fullname> <email>fpuelz@gmx.de</email> </author>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
 <cities>
     <city replaceWith="ba">Bratislava</city>
     <city replaceWith="bb">Banská Bystrica</city>
@@ -36,4 +36,12 @@
 </rawUrls>
 
 <script>sk_imhd.js</script>
+
+<changelog>
+	<entry since="1.1.2" releasedWith="0.6.9">Didn't work any longer because the web site has changed the time format from "h.mm" to "hh:mm".</entry>
+	<entry since="1.1.1" releasedWith="0.5.3">Fixed vehicle type parsing.</entry>
+	<entry since="1.1" releasedWith="0.4.1">Added stop suggestions.</entry>
+	<entry since="1.0" releasedWith="0.3">Initial version.</entry>
+</changelog>
+
 </accessorInfo>

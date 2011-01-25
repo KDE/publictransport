@@ -68,6 +68,7 @@ function parseTimetable( html ) {
 	var columnMeaningsRegExp = /<th[^>]*?>([\s\S]*?)<\/th>/ig;
 
 	if ( (meanings = meaningsRegExp.exec(str)) == null ) {
+		helper.error( "Couldn't find result table header!", str );
 		return;
 	}
 	meanings = meanings[1];
@@ -95,6 +96,7 @@ function parseTimetable( html ) {
 	}
 
 	if ( timeCol == -1 || typeOfVehicleCol == -1 || targetCol == -1 ) {
+		helper.error( "Didn't find all required columns in the header!", meanings );
 		return;
 	}
 
