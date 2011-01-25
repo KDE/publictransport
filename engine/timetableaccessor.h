@@ -210,8 +210,7 @@ protected:
 	 * @return true, if there were no errors.
 	 * @return false, if there were an error parsing the document.
 	 * @see parseDocument() */
-	virtual bool parseDocumentPossibleStops( const QByteArray &document, QStringList *stops,
-			QHash<QString,QString> *stopToStopId, QHash<QString,int> *stopToStopWeight );
+	virtual bool parseDocumentPossibleStops( const QByteArray &document, QList<StopInfo*> *stops );
 
 	/** 
 	 * @brief Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
@@ -300,9 +299,7 @@ signals:
 	 * 
 	 * @param accessor The accessor that was used to download and parse the stops.
 	 * @param requestUrl The url used to request the information.
-	 * @param stops A string list containing the received stop names.
-	 * @param stopToStopId A QHash containing the received stop names as keys
-	 *   and the stop IDs as values (stop IDs may be empty).
+	 * @param stops A pointer to a list of @ref StopInfo objects.
 	 * @param serviceProvider The service provider the data came from.
 	 * @param sourceName The name of the data source for which the stops have been
 	 *   downloaded and parsed.
@@ -313,8 +310,7 @@ signals:
 	 * @param parseDocumentMode What has been parsed from the document.
 	 * @see TimetableAccessor::useSeperateCityValue() */
 	void stopListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
-			const QStringList &stops, const QHash<QString, QString> &stopToStopId,
-			const QHash<QString, int> &stopToStopWeight,
+			const QList<StopInfo*> &stops,
 			const QString &serviceProvider, const QString &sourceName, const QString &city,
 			const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
 	

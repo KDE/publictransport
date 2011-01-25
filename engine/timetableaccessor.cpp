@@ -247,6 +247,10 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
 		return StopID;
 	} else if ( sInfo == "stopweight" ) {
 		return StopWeight;
+	} else if ( sInfo == "stopcity" ) {
+		return StopCity;
+	} else if ( sInfo == "stopcountrycode" ) {
+		return StopCountryCode;
 	} else {
 		kDebug() << sTimetableInformation
 		<< "is an unknown timetable information value! Assuming value Nothing.";
@@ -615,9 +619,7 @@ void TimetableAccessor::result( KJob* job )
 	QByteArray document = storedJob->data();
 
 	QList< PublicTransportInfo* > dataList;
-	QStringList stops;
-	QHash<QString, QString> stopToStopId;
-	QHash<QString, int> stopToStopWeight;
+	QList< StopInfo* > stopList;
 	ParseDocumentMode parseDocumentMode = jobInfo.parseDocumentMode;
 	GlobalTimetableInfo globalInfo;
 	globalInfo.requestDate = jobInfo.dateTime.date();
@@ -633,8 +635,8 @@ void TimetableAccessor::result( KJob* job )
 
 	if ( parseDocumentMode == ParseForStopSuggestions ) {
 		// A stop suggestion request has finished
-		if ( parseDocumentPossibleStops(document, &stops, &stopToStopId, &stopToStopWeight) ) {
-			emit stopListReceived( this, jobInfo.url, stops, stopToStopId, stopToStopWeight,
+		if ( parseDocumentPossibleStops(document, &stopList) ) {
+			emit stopListReceived( this, jobInfo.url, stopList,
 								   serviceProvider(), jobInfo.sourceName, jobInfo.city,
 								   jobInfo.stop, QString(), parseDocumentMode );
 		} else {
@@ -712,10 +714,9 @@ void TimetableAccessor::result( KJob* job )
 							   jobInfo.maxCount, jobInfo.dateTime,
 							   jobInfo.dataType, true );
 			// Parse for stop suggestions
-		} else if ( parseDocumentPossibleStops( document, &stops, &stopToStopId,
-		                                        &stopToStopWeight ) ) {
+		} else if ( parseDocumentPossibleStops(document, &stopList) ) {
 			kDebug() << "Stop suggestion list received" << parseDocumentMode;
-			emit stopListReceived( this, jobInfo.url, stops, stopToStopId, stopToStopWeight,
+			emit stopListReceived( this, jobInfo.url, stopList,
 								   serviceProvider(), jobInfo.sourceName,
 								   jobInfo.city, jobInfo.stop, jobInfo.dataType,
 								   parseDocumentMode );
@@ -739,8 +740,8 @@ void TimetableAccessor::result( KJob* job )
 			}
 		}
 		// Used a different url for requesting data, the data contains stop suggestions
-	} else if ( parseDocumentPossibleStops( document, &stops, &stopToStopId, &stopToStopWeight ) ) {
-		emit stopListReceived( this, jobInfo.url, stops, stopToStopId, stopToStopWeight,
+	} else if ( parseDocumentPossibleStops(document, &stopList) ) {
+		emit stopListReceived( this, jobInfo.url, stopList,
 							   serviceProvider(), jobInfo.sourceName, jobInfo.city,
 							   jobInfo.stop, jobInfo.dataType, parseDocumentMode );
 	} else {
@@ -917,14 +918,10 @@ bool TimetableAccessor::parseDocument( const QByteArray &document,
 }
 
 bool TimetableAccessor::parseDocumentPossibleStops( const QByteArray &document,
-        QStringList *stops,
-        QHash<QString, QString> *stopToStopId,
-        QHash<QString, int> *stopToStopWeight )
+        QList<StopInfo*> *stops )
 {
 	Q_UNUSED( document );
 	Q_UNUSED( stops );
-	Q_UNUSED( stopToStopId );
-	Q_UNUSED( stopToStopWeight );
 	return false;
 }
 

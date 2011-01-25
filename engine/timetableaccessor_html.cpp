@@ -561,10 +561,8 @@ QString TimetableAccessorHtml::decodeHtmlEntities( const QString &html )
 }
 
 bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray &document,
-		QStringList *stops, QHash<QString, QString> *stopToStopId,
-		QHash<QString, int> *stopToStopWeight )
+		QList<StopInfo*> *stops )
 {
-	Q_UNUSED( stopToStopWeight );
 	TimetableAccessorInfoRegExp *infoRegExp = dynamic_cast<TimetableAccessorInfoRegExp*>(m_info);
 	if ( !infoRegExp ) {
 		kDebug() << "No regular expressions available";
@@ -614,24 +612,24 @@ bool TimetableAccessorHtml::parseDocumentPossibleStops( const QByteArray &docume
 			if ( info.isEmpty() ) {
 				return false;
 			} else {
-				QString sStopName, sStopID;
+				QString stopName, stopID;
 				int stopWeight = -1;
 				if ( info.contains( StopName ) ) {
-					sStopName = rx.cap( info.indexOf( StopName ) + 1 );
-					sStopName = TimetableAccessorHtml::decodeHtmlEntities( sStopName );
+					stopName = rx.cap( info.indexOf(StopName) + 1 );
+					stopName = TimetableAccessorHtml::decodeHtmlEntities( stopName );
 				}
 				if ( info.contains( StopID ) ) {
-					sStopID = rx.cap( info.indexOf( StopID ) + 1 );
+					stopID = rx.cap( info.indexOf(StopID) + 1 );
 				}
 				if ( info.contains( StopWeight ) ) {
-					stopWeight = rx.cap( info.indexOf( StopWeight ) + 1 ).toInt();
+					stopWeight = rx.cap( info.indexOf(StopWeight) + 1 ).toInt();
 				}
 
-				stops->append( sStopName );
-				stopToStopId->insert( sStopName, sStopID );
-				if ( stopWeight != -1 ) {
-					stopToStopWeight->insert( sStopName, stopWeight );
-				}
+				stops->append( new StopInfo(stopName, stopID, stopWeight) );
+// 				stopToStopId->insert( sStopName, sStopID );
+// 				if ( stopWeight != -1 ) {
+// 					stopToStopWeight->insert( sStopName, stopWeight );
+// 				}
 			}
 			pos += rx.matchedLength();
 		} // while ( (pos = rx.indexIn(document, pos)) != -1 ) {

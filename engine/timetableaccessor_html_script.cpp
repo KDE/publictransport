@@ -335,8 +335,7 @@ QString TimetableAccessorHtmlScript::parseDocumentForSessionKey(const QByteArray
 }
 
 bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &document,
-		QStringList *stops, QHash<QString, QString> *stopToStopId,
-		QHash<QString, int> *stopToStopWeight )
+		QList<StopInfo*> *stops )
 {
 	if ( !lazyLoadScript() ) {
 		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
@@ -363,7 +362,7 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 	int count = 0;
 	foreach( const TimetableData &timetableData, data ) {
 		QString stopName = timetableData.value( StopName ).toString();
-		QString stopID;
+		QString stopID, stopCity, stopCountryCode;
 		int stopWeight = -1;
 
 		if ( stopName.isEmpty() ) {
@@ -376,13 +375,19 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 		if ( timetableData.values().contains( StopWeight ) ) {
 			stopWeight = timetableData.value( StopWeight ).toInt();
 		}
-
-		stops->append( stopName );
-// 		if ( !stopID.isEmpty() )
-		stopToStopId->insert( stopName, stopID );
-		if ( stopWeight != -1 ) {
-			stopToStopWeight->insert( stopName, stopWeight );
+		if ( timetableData.values().contains(StopCity) ) {
+			stopCity = timetableData.value( StopCity ).toString();
 		}
+		if ( timetableData.values().contains(StopCountryCode) ) {
+			stopCountryCode = timetableData.value( StopCountryCode ).toString();
+		}
+
+		stops->append( new StopInfo(stopName, stopID, stopWeight, stopCity, stopCountryCode) );
+// 		if ( !stopID.isEmpty() )
+// 		stopToStopId->insert( stopName, stopID );
+// 		if ( stopWeight != -1 ) {
+// 			stopToStopWeight->insert( stopName, stopWeight );
+// 		}
 		++count;
 	}
 

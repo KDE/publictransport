@@ -131,12 +131,10 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 }
 
 bool TimetableAccessorXml::parseDocumentPossibleStops( const QByteArray &document,
-		QStringList *stops, QHash<QString, QString> *stopToStopId,
-		QHash<QString, int> *stopToStopWeight )
+		QList<StopInfo*> *stops )
 {
 	// Let the document get parsed for possible stops by the HTML accessor
-	return m_accessorHTML->parseDocumentPossibleStops( document, stops,
-	        stopToStopId, stopToStopWeight );
+	return m_accessorHTML->parseDocumentPossibleStops( document, stops );
 }
 
 QString TimetableAccessorXml::departuresRawUrl() const

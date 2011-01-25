@@ -110,18 +110,14 @@ protected:
 	 *   the results into @p stops.
 	 * 
 	 * @param document A document to be parsed.
-	 * @param stops A pointer to a string list, where the stop names are stored.
-	 * @param stopToStopId A pointer to a map, where the keys are stop names
-	 *   and the values are stop IDs.
+	 * @param stops A pointer to a list of @ref StopInfo objects.
 	 * @return true, if there were no errors.
 	 * @return false, if there were an error parsing the document.
 	 * @note Can be used if you have an html document containing a stop list.
 	 *   TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
 	 *   document for stops.
 	 * @see parseDocumentPossibleStops(QHash<QString,QString>*) */
-	virtual bool parseDocumentPossibleStops( const QByteArray &document,
-			QStringList *stops, QHash<QString,QString> *stopToStopId,
-			QHash<QString,int> *stopToStopWeight );
+	virtual bool parseDocumentPossibleStops( const QByteArray &document, QList<StopInfo*> *stops );
 
 private:
 	ScriptState m_scriptState; // The state of the script

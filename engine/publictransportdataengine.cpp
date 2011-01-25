@@ -834,9 +834,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 }
 
 void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
-		const QUrl &requestUrl, const QStringList &stops,
-		const QHash<QString, QString> &stopToStopId,
-		const QHash<QString, int> &stopToStopWeight,
+		const QUrl &requestUrl, const QList<StopInfo*> &stops,
 		const QString &serviceProvider, const QString &sourceName,
 		const QString &city, const QString &stop,
 		const QString &dataType, ParseDocumentMode parseDocumentMode )
@@ -852,14 +850,29 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 // 	sStop = stop;
 
 	int i = 0;
-	foreach( const QString &stopName, stops ) {
+	foreach( const StopInfo *stopInfo, stops ) {
 		QVariantHash data;
-		data.insert( "stopName", stopName );
-		if ( stopToStopId.contains( stopName ) ) {
-			data.insert( "stopID", stopToStopId.value( stopName, "" ) );
+		data.insert( "stopName", stopInfo->name() );
+		
+		kDebug() << stopInfo->name() << stopInfo->id() << stopInfo->city() << stopInfo->countryCode();
+		
+		if ( stopInfo->hasId() && 
+			(!accessor->info()->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) || 
+			accessor->info()->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "false") ) 
+		{
+			data.insert( "stopID", stopInfo->id() );
 		}
-		if ( stopToStopWeight.contains( stopName ) ) {
-			data.insert( "stopWeight", stopToStopWeight.value( stopName, 0 ) );
+		
+		if ( stopInfo->hasWeight() ) {
+			data.insert( "stopWeight", stopInfo->weight() );
+		}
+		
+		if ( stopInfo->hasCity() ) {
+			data.insert( "stopCity", stopInfo->city() );
+		}
+		
+		if ( stopInfo->hasCountryCode() ) {
+			data.insert( "stopCountryCode", stopInfo->countryCode() );
 		}
 
 // 	kDebug() << "setData" << i << data;

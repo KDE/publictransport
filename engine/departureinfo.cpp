@@ -280,6 +280,38 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
 				&& m_data.contains( ArrivalHour ) && m_data.contains( ArrivalMinute );
 }
 
+StopInfo::StopInfo()
+{
+	m_isValid = false;
+}
+
+StopInfo::StopInfo(const QHash< TimetableInformation, QVariant >& data)
+{
+	m_data = data;
+	m_isValid = m_data.contains( StopName );
+}
+
+StopInfo::StopInfo(const QString& name, const QString& id, int weight, const QString& city, 
+				   const QString& countryCode)
+{
+	m_data[StopName] = name;
+	if ( !id.isNull() ) {
+		m_data[StopID] = id;
+	}
+	if ( !city.isNull() ) {
+		m_data[StopCity] = city;
+	}
+	if ( !countryCode.isNull() ) {
+		m_data[StopCountryCode] = countryCode;
+	}
+	if ( weight != -1 ) {
+		m_data[StopWeight] = weight;
+	}
+
+	m_isValid = !name.isEmpty();
+}
+
+
 JourneyInfo::JourneyInfo( const QList< VehicleType >& vehicleTypes,
                           const QString& startStopName,
                           const QString& targetStopName,

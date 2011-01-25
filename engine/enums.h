@@ -138,9 +138,11 @@ enum TimetableInformation {
 	NoMatchOnSchedule = 100, /**< Vehicle is expected to depart on schedule, no regexp-matched string is needed for this info */
 
 	// Possible stop information
-	StopName = 200, /**< The name of a stop / station. */
-	StopID = 201, /**< The ID of a stop / station. */
-	StopWeight = 202 /**< The weight of a stop suggestion. */
+	StopName = 200, /**< The name of a stop/station. */
+	StopID = 201, /**< The ID of a stop/station. */
+	StopWeight = 202, /**< The weight of a stop suggestion. */
+	StopCity = 203, /**< The city in which a stop is. */
+	StopCountryCode = 204 /**< The country code of the country in which the stop is. */
 };
 
 /** Different modes for parsing documents. */
@@ -290,6 +292,10 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
 		return debug << "StartStopID";
 	case StopWeight:
 		return debug << "StopWeight";
+	case StopCity:
+		return debug << "StopCity";
+	case StopCountryCode:
+		return debug << "StopCountryCode";
 	case TargetStopName:
 		return debug << "TargetStopName";
 	case TargetStopID:

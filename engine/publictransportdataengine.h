@@ -35,6 +35,7 @@ class QFileSystemWatcher;
 class TimetableAccessor;
 class DepartureInfo;
 class JourneyInfo;
+class StopInfo;
 
 /** @class PublicTransportEngine
  * @brief This engine provides departure/arrival times and journeys for public transport.
@@ -168,11 +169,7 @@ public slots:
 	 *
 	 * @param accessor The accessor that was used to download and parse the stops.
 	 * @param requestUrl The url used to request the information.
-	 * @param stops A string list containing the received stop names.
-	 * @param stopToStopId A QHash containing the received stop names as keys and the stop
-	 *   IDs as values (stop IDs may be empty).
-	 * @param stopToStopWeight A QHash containing the received stop names as keys and the
-	 *   stop weights as values (stop weights may be empty).
+	 * @param stops A pointer to a list of @ref StopInfo objects.
 	 * @param serviceProvider The service provider the data came from.
 	 * @param sourceName The name of the data source for which the stops have been
 	 *   downloaded and parsed.
@@ -183,9 +180,7 @@ public slots:
 	 * @param parseDocumentMode What has been parsed from the document.
 	 * @see TimetableAccessor::useSeparateCityValue() */
 	void stopListReceived( TimetableAccessor *accessor,
-			const QUrl &requestUrl, const QStringList &stops,
-			const QHash<QString, QString> &stopToStopId,
-			const QHash<QString, int> &stopToStopWeight,
+			const QUrl &requestUrl, const QList<StopInfo*> &stops,
 			const QString &serviceProvider,
 			const QString &sourceName, const QString &city, const QString &stop,
 			const QString &dataType, ParseDocumentMode parseDocumentMode );

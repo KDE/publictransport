@@ -77,16 +77,11 @@ protected:
 	 *   and puts the results into @p stops.
 	 *
 	 * @param document A QByteArray containing the document to be parsed.
-	 * @param[out] stops A pointer to a string list, where the stop names are stored.
-	 * @param[out] stopToStopId A pointer to a map, where the keys are stop names
-	 *   and the values are stop IDs.
-	 * @param[out] stopToStopWeight A pointer to a map, where the keys are stop names
-	 *   and the values are stop weights.
+	 * @param[out] stops A pointer to a list of @ref StopInfo objects.
 	 *
 	 * @return true, if there were no errors.
 	 * @return false, if there were an error parsing the document. */
-	virtual bool parseDocumentPossibleStops( const QByteArray &document, QStringList *stops,
-			QHash<QString,QString> *stopToStopId, QHash<QString,int> *stopToStopWeight );
+	virtual bool parseDocumentPossibleStops( const QByteArray &document, QList<StopInfo*> *stops );
 
 	/** 
 	 * @brief Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")

@@ -534,4 +534,71 @@ private:
 	LineServices m_lineServices;
 };
 
+/**
+ * @brief Stores information about a stop. Used for stop suggestions.
+ * 
+ * @see DepartureInfo
+ * @see JourneyInfo
+ **/
+class StopInfo {
+public:
+	/** @brief Constructs an invalid StopInfo object. */
+	StopInfo();
+
+	/**
+	 * @brief Contructs a new StopInfo object based on the information given with @p data.
+	 *
+	 * @param data A hash that contains values for at least the required TimetableInformations 
+	 *   (StopName). */
+	StopInfo( const QHash<TimetableInformation, QVariant> &data );
+
+	/**
+	 * @brief Constructs a new StopInfo object.
+	 * 
+	 * @param name The name of the stop.
+	 * 
+	 * @param id The ID for the stop @p name, if available.
+	 * 
+	 * @param weight The weight of this stop suggestion, if available. Higher values are set for 
+	 *   more important / better matching stops.
+	 * 
+	 * @param city The city in which the stop is, if available.
+	 * 
+	 * @param countryCode The code of the country in which the stop is, if available.
+	 */
+	StopInfo( const QString &name, const QString &id = QString(), int weight = -1,
+			  const QString &city = QString(), const QString &countryCode = QString() );
+	
+	/** @brief Gets the name of the stop. */
+	QString name() const { return m_data[StopName].toString(); };
+	
+	/** @brief Gets the ID for the stop, if available. */
+	QString id() const { return m_data[StopID].toString(); };
+	
+	/** @brief Gets the weight of the stop. */
+	QString weight() const { return m_data[StopWeight].toString(); };
+	
+	/** @brief Gets the city in which the stop is. */
+	QString city() const { return m_data[StopCity].toString(); };
+	
+	/** @brief Gets the code of the country in which the stop is. */
+	QString countryCode() const { return m_data[StopCountryCode].toString(); };
+	
+	/** @brief Returns whether or not an ID is available for the stop. */
+	bool hasId() const { return m_data.contains(StopID); };
+	
+	/** @brief Returns whether or not a city value is available for the stop. */
+	bool hasCity() const { return m_data.contains(StopCity); };
+	
+	/** @brief Returns whether or not a weight is available for the stop. */
+	bool hasWeight() const { return m_data.contains(StopWeight); };
+	
+	/** @brief Returns whether or not a country code is available for the stop. */
+	bool hasCountryCode() const { return m_data.contains(StopCountryCode); };
+	
+private:
+	bool m_isValid;
+	QHash< TimetableInformation, QVariant > m_data;
+};
+
 #endif // DEPARTUREINFO_HEADER
