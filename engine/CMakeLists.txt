@@ -13,16 +13,15 @@ include_directories(
 add_subdirectory( accessorInfos )
 add_subdirectory( tests )
 
-# We add our source code here
+# Source files
 set( publictransport_engine_SRCS 
     publictransportdataengine.cpp 
     departureinfo.cpp
     accessorinfoxmlreader.cpp
     timetableaccessor.cpp
-    timetableaccessor_html.cpp
-    timetableaccessor_html_script.cpp
-    timetableaccessor_htmlinfo.cpp 
+    timetableaccessor_info.cpp 
     timetableaccessor_xml.cpp
+    timetableaccessor_script.cpp
     scripting.cpp
     enums.cpp )
 

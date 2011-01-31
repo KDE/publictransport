@@ -33,7 +33,6 @@
 
 #include "enums.h"
 #include "timetableaccessor.h"
-#include "timetableaccessor_html.h"
 
 /**
  * @brief A helper class to be used from inside a script.
@@ -79,6 +78,7 @@ public Q_SLOTS:
 	 * @brief Prints @p message on stdout and logs it in a file.
 	 *
 	 * @param message The error message.
+	 * 
 	 * @param failedParseText The text in the source document where parsing failed.
 	 **/
 	void error( const QString &message, const QString &failedParseText = QString() );
@@ -184,9 +184,54 @@ public Q_SLOTS:
 			if ( rx2.indexIn(str) != -1 ) {
 				QTime time = QTime::fromString( rx2.cap(), "hh:mm" );
 				ret << time.hour() << time.minute();
+			} else {
+				kDebug() << "Couldn't match time in" << str << pattern;
 			}
+		} else {
+			kDebug() << "Couldn't match time in" << str << pattern;
 		}
 		return ret;
+	};
+
+	/**
+	 * @brief Gets a list with the day, month and year values parsed from @p str, 
+	 *   which is in the given @p format.
+	 *
+	 * @param str The string containing the date to be parsed, eg. "2010-12-01".
+	 * 
+	 * @param format The format of the time string in @p str. Default is "YY-MM-dd".
+	 * 
+	 * @return A list of two integers: The day, month and year values parsed from @p str.
+	 * 
+	 * @see formatDate TODO
+	 **/
+	QVariantList matchDate( const QString &str, const QString &format = "yyyy-MM-dd") {
+	    QString pattern = QRegExp::escape( format ).replace("d", "D");
+	    pattern = pattern.replace( "DD", "\\d{2}" )
+						 .replace( "D", "\\d{1,2}" )
+						 .replace( "MM", "\\d{2}" )
+						 .replace( "M", "\\d{1,2}" )
+						 .replace( "yyyy", "\\d{4}" )
+						 .replace( "yy", "\\d{2}" );
+			     
+	    QVariantList ret;
+	    QRegExp rx( pattern );
+	    if ( rx.indexIn(str) != -1 ) {
+			QDate date = QDate::fromString( rx.cap(), format );
+			ret << date.year() << date.month() << date.day();
+	    } else if ( format != "yyyy-MM-dd" ) {
+			// Try default format if the one specified doesn't work
+			QRegExp rx2( "\\d{2,4}-\\d{2}-\\d{2}" );
+			if ( rx2.indexIn(str) != -1 ) {
+				QDate date = QDate::fromString( rx2.cap(), "yyyy-MM-dd" );
+				ret << date.year() << date.month() << date.day();
+			} else {
+				kDebug() << "Couldn't match time in" << str << pattern;
+			}
+	    } else {
+			kDebug() << "Couldn't match time in" << str << pattern;
+		}
+	    return ret;
 	};
 
 	/**
@@ -249,11 +294,11 @@ public Q_SLOTS:
 	
 	// TODO
 	int* addDaysToDate( const int* dateArray, int daysToAdd ) {
-		QDate date = QDate( dateArray[2], dateArray[1], dateArray[0] ).addDays( daysToAdd );
+		QDate date = QDate( dateArray[0], dateArray[1], dateArray[2] ).addDays( daysToAdd );
 		int *ret = new int[3];
-		ret[0] = date.day();
+		ret[0] = date.year();
 		ret[1] = date.month();
-		ret[2] = date.year();
+		ret[2] = date.day();
 		return ret;
 	};
 	

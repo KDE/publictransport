@@ -79,27 +79,7 @@ private:
 					  QHash<QString, QString> *attributesForStopSuggestions, 
 					  QHash<QString, QString> *attributesForJourneys );
 	void readSessionKey( QString *sessionKeyUrl, SessionKeyPlace *sessionKeyPlace, QString *data );
-	void readChangelog( QList<ChangelogEntry> *changelog );
-	bool readRegExps( QString* regExpDepartures,
-					  QList< TimetableInformation >* infosDepartures,
-					  QString* regExpDeparturesPre,
-					  TimetableInformation* infoPreKey, TimetableInformation* infoPreValue,
-					  QString* regExpJourneys, QList< TimetableInformation >* infosJourneys,
-					  QString* regExpDepartureGroupTitles,
-					  QList< TimetableInformation >* infosDepartureGroupTitles,
-					  QStringList* regExpListPossibleStopsRange,
-					  QStringList* regExpListPossibleStops,
-					  QList< QList< TimetableInformation > >* infosListPossibleStops,
-					  QStringList* regExpListJourneyNews,
-					  QList< QList< TimetableInformation > >* infosListJourneyNews );
-	bool readRegExp( QString *regExp, QList<TimetableInformation> *info,
-					 QString *regExpPreOrRanges = 0, TimetableInformation *infoPreKey = 0,
-					 TimetableInformation *infoPreValue = 0 );
-	void readRegExpInfos( QList<TimetableInformation> *info );
-	bool readRegExpPre( QString *regExpPre, TimetableInformation *infoPreKey,
-						TimetableInformation *infoPreValue );
-	bool readRegExpItems( QStringList *regExps, QList< QList< TimetableInformation > >* infosList,
-						  QStringList *regExpsRanges = 0 );
+	QList<ChangelogEntry> readChangelog();
 };
 
 #endif // ACCESSORINFOXMLREADER_HEADER

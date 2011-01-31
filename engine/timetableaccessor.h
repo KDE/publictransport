@@ -32,7 +32,7 @@
 
 #include "departureinfo.h"
 #include "enums.h"
-#include "timetableaccessor_htmlinfo.h"
+#include "timetableaccessor_info.h"
 
 /** @class TimetableAccessor
 * @brief Gets timetable information for public transport from different service providers.

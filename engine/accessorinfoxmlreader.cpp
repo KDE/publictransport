@@ -20,8 +20,7 @@
 #include "accessorinfoxmlreader.h"
 
 #include "timetableaccessor.h"
-#include "timetableaccessor_html.h"
-#include "timetableaccessor_html_script.h"
+#include "timetableaccessor_script.h"
 #include "timetableaccessor_xml.h"
 
 #include <KLocalizedString>
@@ -29,32 +28,6 @@
 #include <KDebug>
 #include <QFile>
 #include <QFileInfo>
-
-class ChangelogEntryGreaterThan
-{
-public:
-	inline bool operator()( const ChangelogEntry& l, const ChangelogEntry& r ) const {
-		QStringList lVersionParts = l.since_version.split('.');
-		QStringList rVersionParts = r.since_version.split('.');
-		for ( int i = 0; i < lVersionParts.count() && i < rVersionParts.count(); ++i ) {
-			int l = lVersionParts[i].toInt();
-			int r = rVersionParts[i].toInt();
-			if ( l > r ) {
-				return true;
-			} else if  ( l < r ) {
-				return false;
-			}
-		}
-		
-		if ( lVersionParts.count() > rVersionParts.count() ) {
-			return true;
-		} else if ( lVersionParts.count() < rVersionParts.count() ) {
-			return false;
-		}
-		
-		return l.author.compare( r.author, Qt::CaseInsensitive ) < 0;
-	};
-};
 
 TimetableAccessor* AccessorInfoXmlReader::read( QIODevice* device,
 		const QString &serviceProvider, const QString &fileName, const QString &country )
@@ -113,231 +86,181 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 {
 	QString lang = KGlobal::locale()->country();
 	QString langRead;
+	QString nameLocal, nameEn, descriptionLocal, descriptionEn;
+	TimetableAccessorInfo *accessorInfo = new TimetableAccessorInfo();
 
-	AccessorType type;
-	QString version, nameLocal, nameEn, descriptionLocal, descriptionEn,
-			authorName, shortName, authorEmail, defaultVehicleType, url, shortUrl,
-			charsetForUrlEncoding, fallbackCharset, scriptFile, credit;
-	QString rawUrlDepartures, rawUrlStopSuggestions, rawUrlJourneys;
-	QString sessionKeyUrl, sessionKeyData;
-	SessionKeyPlace sessionKeyPlace;
-	QHash<QString, QString> attributesForDepartures, attributesForStopSuggestions, attributesForJourneys;
-	QList<ChangelogEntry> changelog;
-	QStringList cities;
-	QHash<QString, QString> cityNameReplacements;
-	bool useSeperateCityValue = false, onlyUseCitiesInList = false;
-	int minFetchWait = 0;
-
-	QString regExpDepartureGroupTitles, regExpDepartures, regExpDeparturesPre, regExpJourneys;
-	QList<TimetableInformation> infosDepartureGroupTitles, infosDepartures, infosJourneys;
-	QList< QList<TimetableInformation> > infosListPossibleStops, infosListJourneyNews;
-	QStringList regExpListPossibleStopsRange, regExpListPossibleStops, regExpListJourneyNews;
-	TimetableInformation infoPreKey = Nothing, infoPreValue = Nothing;
-
-
-	if ( attributes().hasAttribute( "version" ) ) {
-		version = attributes().value( "version" ).toString();
+	accessorInfo->setServiceProvider( serviceProvider );
+	accessorInfo->setFileName( fileName );
+	accessorInfo->setCountry( country );
+	
+	if ( attributes().hasAttribute("version") ) {
+		accessorInfo->setVersion( attributes().value("version").toString() );
 	} else {
-		version = "1.0";
+		accessorInfo->setVersion( "1.0" );
 	}
 
-	if ( attributes().hasAttribute( "type" ) ) {
-		type = TimetableAccessor::accessorTypeFromString( attributes().value( "type" ).toString() );
-		if ( type == NoAccessor ) {
-			kDebug() << "The type" << attributes().value( "type" ).toString()
-					 << "is invalid. Currently there are two values allowed: HTML and XML.";
+	if ( attributes().hasAttribute("type") ) {
+		accessorInfo->setType( TimetableAccessor::accessorTypeFromString( 
+				attributes().value("type").toString()) );
+		if ( accessorInfo->accessorType() == NoAccessor ) {
+			delete accessorInfo;
+// 			kDebug() << "The type" << attributes().value("type").toString()
+// 					 << "is invalid. Currently there are two values allowed: HTML and XML.";
+			raiseError( QString("The accessor type %1 is invalid. Currently there are two "
+								"values allowed: HTML and XML.")
+						.arg(attributes().value("type").toString()) );
 			return NULL;
 		}
 	} else {
-		type = HTML;
+		// Type not specified, use default
+		accessorInfo->setType( HTML );
 	}
 
 	while ( !atEnd() ) {
 		readNext();
 
-		if ( isEndElement() && name().compare( "accessorInfo", Qt::CaseInsensitive ) == 0 ) {
+		if ( isEndElement() && name().compare("accessorInfo", Qt::CaseInsensitive) == 0 ) {
 			break;
 		}
 
 		if ( isStartElement() ) {
-			if ( name().compare( "name", Qt::CaseInsensitive ) == 0 ) {
+			if ( name().compare("name", Qt::CaseInsensitive) == 0 ) {
 				QString nameRead = readLocalizedTextElement( &langRead );
 				if ( langRead == lang ) {
 					nameLocal = nameRead;
 				} else {
 					nameEn = nameRead;
 				}
-			} else if ( name().compare( "description", Qt::CaseInsensitive ) == 0 ) {
+			} else if ( name().compare("description", Qt::CaseInsensitive) == 0 ) {
 				QString descriptionRead = readLocalizedTextElement( &langRead );
 				if ( langRead == lang ) {
 					descriptionLocal = descriptionRead;
 				} else {
 					descriptionEn = descriptionRead;
 				}
-			} else if ( name().compare( "author", Qt::CaseInsensitive ) == 0 ) {
+			} else if ( name().compare("author", Qt::CaseInsensitive) == 0 ) {
+				QString authorName, shortName, authorEmail;
 				readAuthor( &authorName, &shortName, &authorEmail );
-			} else if ( name().compare( "cities", Qt::CaseInsensitive ) == 0 ) {
+				accessorInfo->setAuthor( authorName, shortName, authorEmail );
+			} else if ( name().compare("cities", Qt::CaseInsensitive) == 0 ) {
+				QStringList cities;
+				QHash<QString, QString> cityNameReplacements;
 				readCities( &cities, &cityNameReplacements );
-			} else if ( name().compare( "useSeperateCityValue", Qt::CaseInsensitive ) == 0 ) {
-				useSeperateCityValue = readBooleanElement();
-			} else if ( name().compare( "onlyUseCitiesInList", Qt::CaseInsensitive ) == 0 ) {
-				onlyUseCitiesInList = readBooleanElement();
-			} else if ( name().compare( "defaultVehicleType", Qt::CaseInsensitive ) == 0 ) {
-				defaultVehicleType = readElementText();
-			} else if ( name().compare( "url", Qt::CaseInsensitive ) == 0 ) {
-				url = readElementText();
-			} else if ( name().compare( "shortUrl", Qt::CaseInsensitive ) == 0 ) {
-				shortUrl = readElementText();
-			} else if ( name().compare( "minFetchWait", Qt::CaseInsensitive ) == 0 ) {
-				minFetchWait = readElementText().toInt();
-			} else if ( name().compare( "charsetForUrlEncoding", Qt::CaseInsensitive ) == 0 ) {
-				charsetForUrlEncoding = readElementText();
-			} else if ( name().compare( "fallbackCharset", Qt::CaseInsensitive ) == 0 ) {
-				fallbackCharset = readElementText(); // TODO Implement as attributes in the url tags
-			} else if ( name().compare( "rawUrls", Qt::CaseInsensitive ) == 0 ) {
+				accessorInfo->setCities( cities );
+				accessorInfo->setCityNameToValueReplacementHash( cityNameReplacements );
+			} else if ( name().compare("useSeperateCityValue", Qt::CaseInsensitive) == 0 ) {
+				accessorInfo->setUseSeparateCityValue( readBooleanElement() );
+			} else if ( name().compare("onlyUseCitiesInList", Qt::CaseInsensitive) == 0 ) {
+				accessorInfo->setOnlyUseCitiesInList( readBooleanElement() );
+			} else if ( name().compare("defaultVehicleType", Qt::CaseInsensitive) == 0 ) {
+				accessorInfo->setDefaultVehicleType( 
+						TimetableAccessor::vehicleTypeFromString(readElementText()) );
+			} else if ( name().compare("url", Qt::CaseInsensitive) == 0 ) {
+				accessorInfo->setUrl( readElementText() );
+			} else if ( name().compare("shortUrl", Qt::CaseInsensitive) == 0 ) {
+				accessorInfo->setShortUrl( readElementText() );
+			} else if ( name().compare("minFetchWait", Qt::CaseInsensitive) == 0 ) {
+				accessorInfo->setMinFetchWait( readElementText().toInt() );
+			} else if ( name().compare("charsetForUrlEncoding", Qt::CaseInsensitive) == 0 ) {
+				accessorInfo->setCharsetForUrlEncoding( readElementText().toAscii() );
+			} else if ( name().compare("fallbackCharset", Qt::CaseInsensitive) == 0 ) {
+				accessorInfo->setFallbackCharset( readElementText().toAscii() ); // TODO Implement as attributes in the url tags?
+			} else if ( name().compare("rawUrls", Qt::CaseInsensitive) == 0 ) {
+				QString rawUrlDepartures, rawUrlStopSuggestions, rawUrlJourneys;
+				QHash<QString, QString> attributesForDepartures, attributesForStopSuggestions,
+						attributesForJourneys;
 				readRawUrls( &rawUrlDepartures, &rawUrlStopSuggestions, &rawUrlJourneys,
-						&attributesForDepartures, &attributesForStopSuggestions, &attributesForJourneys );
-			} else if ( name().compare( "sessionKey", Qt::CaseInsensitive ) == 0 ) {
+							 &attributesForDepartures, &attributesForStopSuggestions, 
+							 &attributesForJourneys );
+				accessorInfo->setDepartureRawUrl( rawUrlDepartures );
+				accessorInfo->setAttributesForDepatures( attributesForDepartures );
+				accessorInfo->setStopSuggestionsRawUrl( rawUrlStopSuggestions );
+				accessorInfo->setAttributesForStopSuggestions( attributesForStopSuggestions );
+				accessorInfo->setJourneyRawUrl( rawUrlJourneys );
+				accessorInfo->setAttributesForJourneys( attributesForJourneys );
+			} else if ( name().compare("sessionKey", Qt::CaseInsensitive) == 0 ) {
+				QString sessionKeyUrl, sessionKeyData;
+				SessionKeyPlace sessionKeyPlace;
 				readSessionKey( &sessionKeyUrl, &sessionKeyPlace, &sessionKeyData );
-			} else if ( name().compare( "changelog", Qt::CaseInsensitive ) == 0 ) {
-				readChangelog( &changelog );
-			} else if ( name().compare( "regExps", Qt::CaseInsensitive ) == 0 ) {
-				bool ok = readRegExps( &regExpDepartures, &infosDepartures,
-									   &regExpDeparturesPre, &infoPreKey, &infoPreValue,
-									   &regExpJourneys, &infosJourneys,
-									   &regExpDepartureGroupTitles, &infosDepartureGroupTitles,
-									   &regExpListPossibleStopsRange, &regExpListPossibleStops,
-									   &infosListPossibleStops,
-									   &regExpListJourneyNews, &infosListJourneyNews );
-				if ( !ok ) {
+				accessorInfo->setSessionKeyData( sessionKeyUrl, sessionKeyPlace, sessionKeyData );
+			} else if ( name().compare("changelog", Qt::CaseInsensitive) == 0 ) {
+				accessorInfo->setChangelog( readChangelog() );
+			} else if ( name().compare("script", Qt::CaseInsensitive) == 0 ) {
+				QString scriptFile = QFileInfo( fileName ).path() + '/' + readElementText();
+				if ( !QFile::exists(scriptFile) ) {
+// 					kDebug() << "The script file " << scriptFile << "referenced by "
+// 							 << "the service provider information XML named"
+// 							 << nameEn << "wasn't found";
+					raiseError( QString("The script file %1 referenced by the service provider "
+										"information XML named %2 wasn't found")
+								.arg(scriptFile).arg(nameEn) );
+					delete accessorInfo;
 					return NULL;
 				}
-			} else if ( name().compare( "script", Qt::CaseInsensitive ) == 0 ) {
-				scriptFile = QFileInfo( fileName ).path() + '/' + readElementText();
-				if ( !QFile::exists( scriptFile ) ) {
-					kDebug() << "The script file " << scriptFile << "referenced by "
-							 << "the service provider information XML named"
-							 << nameEn << "wasn't found";
-					return NULL;
-				}
-			} else if ( name().compare( "credit", Qt::CaseInsensitive ) == 0 ) {
-				credit = readElementText();
+				accessorInfo->setScriptFile( scriptFile );
+			} else if ( name().compare("credit", Qt::CaseInsensitive) == 0 ) {
+				accessorInfo->setCredit( readElementText() );
 			} else {
 				readUnknownElement();
 			}
 		}
 	}
 
-	if ( url.isEmpty() ) {
+	if ( accessorInfo->url().isEmpty() ) {
+		delete accessorInfo;
 		raiseError( "No <url> tag in accessor info XML" );
 		return NULL;
 	}
-	if ( type == HTML && rawUrlDepartures.isEmpty() ) {
+	if ( accessorInfo->accessorType() == HTML && accessorInfo->departureRawUrl().isEmpty() ) {
+		delete accessorInfo;
 		raiseError( "No raw url for departures in accessor info XML, mandatory for HTML types" );
 		return NULL;
 	}
-
-	if ( nameLocal.isEmpty() ) {
-		nameLocal = nameEn;
-	}
-	if ( descriptionLocal.isEmpty() ) {
-		descriptionLocal = descriptionEn;
-	}
-	if ( shortUrl.isEmpty() ) {
-		shortUrl = url;
-	}
 	
-	// Generate a short name if none is given ("<first letter of prename><family name>")
-	authorName = authorName.trimmed();
-	if ( shortName.isEmpty() && !authorName.isEmpty() ) {
-		int pos = authorName.indexOf(' ');
-		if ( authorName.length() < 5 || pos == -1 ) {
-			shortName = authorName.remove(' ').toLower();
-		} else {
-			shortName = authorName[0].toLower() + authorName.mid(pos + 1).toLower();
-		}
-	}
-	
-	// Use script author as author of the change entry if no one else was set
-	for ( int i = 0; i < changelog.count(); ++i ) {
-		if ( changelog[i].author.isEmpty() ) {
-			changelog[i].author = shortName;
-		}
-	}
-	qSort( changelog.begin(), changelog.end(), ChangelogEntryGreaterThan() );
+	accessorInfo->setName( nameLocal.isEmpty() ? nameEn : nameLocal );
+	accessorInfo->setDescription( descriptionLocal.isEmpty() ? descriptionEn : descriptionLocal );
+	accessorInfo->finish();
 
-	TimetableAccessorInfo *accessorInfo = new TimetableAccessorInfo( 
-			nameLocal, shortUrl, authorName, shortName, authorEmail, version, serviceProvider, type );
-	accessorInfo->setFileName( fileName );
-	accessorInfo->setCountry( country );
-	accessorInfo->setCities( cities );
-	accessorInfo->setCredit( credit );
-	accessorInfo->setCityNameToValueReplacementHash( cityNameReplacements );
-	accessorInfo->setUseSeparateCityValue( useSeperateCityValue );
-	accessorInfo->setOnlyUseCitiesInList( onlyUseCitiesInList );
-	accessorInfo->setDescription( descriptionLocal );
-	accessorInfo->setDefaultVehicleType( TimetableAccessor::vehicleTypeFromString( defaultVehicleType ) );
-	accessorInfo->setUrl( url );
-	accessorInfo->setShortUrl( shortUrl );
-	accessorInfo->setMinFetchWait( minFetchWait );
-	accessorInfo->setDepartureRawUrl( rawUrlDepartures );
-	accessorInfo->setStopSuggestionsRawUrl( rawUrlStopSuggestions );
-	accessorInfo->setJourneyRawUrl( rawUrlJourneys );
-	accessorInfo->setAttributesForDepatures( attributesForDepartures );
-	accessorInfo->setAttributesForStopSuggestions( attributesForStopSuggestions );
-	accessorInfo->setAttributesForJourneys( attributesForJourneys );
-	accessorInfo->setFallbackCharset( fallbackCharset.toAscii() );
-	accessorInfo->setCharsetForUrlEncoding( charsetForUrlEncoding.toAscii() );
-	accessorInfo->setSessionKeyData( sessionKeyUrl, sessionKeyPlace, sessionKeyData );
-	accessorInfo->setChangelog( changelog );
-
-	if ( scriptFile.isEmpty() ) {
-		// Set regular expressions, if no script file was specified
-		TimetableAccessorInfoRegExp *accessorInfoRegExp = new TimetableAccessorInfoRegExp( *accessorInfo );
-		delete accessorInfo;
-		accessorInfo = accessorInfoRegExp;
-		
-		accessorInfoRegExp->setRegExpDepartures( regExpDepartures, infosDepartures,
-												regExpDeparturesPre, infoPreKey, infoPreValue );
-		if ( !regExpDepartureGroupTitles.isEmpty() ) {
-			accessorInfoRegExp->setRegExpDepartureGroupTitles( regExpDepartureGroupTitles, 
-															infosDepartureGroupTitles );
-		}
-		if ( !regExpJourneys.isEmpty() ) {
-			accessorInfoRegExp->setRegExpJourneys( regExpJourneys, infosJourneys );
-		}
-		for ( int i = 0; i < regExpListJourneyNews.length(); ++i ) {
-			QString regExpJourneyNews = regExpListJourneyNews[i];
-			QList<TimetableInformation> infosJourneyNews = infosListJourneyNews[i];
-			accessorInfoRegExp->addRegExpJouneyNews( regExpJourneyNews, infosJourneyNews );
-		}
-		for ( int i = 0; i < regExpListPossibleStopsRange.length(); ++i ) {
-			QString regExpPossibleStopsRange = regExpListPossibleStopsRange[i];
-			QString regExpPossibleStops = regExpListPossibleStops[i];
-			QList<TimetableInformation> infosPossibleStops = infosListPossibleStops[i];
-			accessorInfoRegExp->addRegExpPossibleStops( regExpPossibleStopsRange,
-												regExpPossibleStops, infosPossibleStops );
+	// Create the accessor
+	if ( accessorInfo->accessorType() == HTML ) {
+		// Ensure a script is specified
+		if ( accessorInfo->scriptFileName().isEmpty() ) {
+			delete accessorInfo;
+			raiseError( "HTML accessors need a script for parsing" );
+			return NULL;
 		}
 		
-		if ( type == HTML ) {
-			return new TimetableAccessorHtml( accessorInfoRegExp );
-		} else if ( type == XML ) {
-			return new TimetableAccessorXml( accessorInfoRegExp );
-		}
-	} else if ( type == HTML ) {
-		accessorInfo->setScriptFile( scriptFile );
-		TimetableAccessorHtmlScript *jsAccessor = new TimetableAccessorHtmlScript( accessorInfo );
-		if ( !jsAccessor->hasScriptErrors() ) {
-			return jsAccessor;
+		// Create the accessor and check for script errors
+		TimetableAccessorScript *scriptAccessor = new TimetableAccessorScript( accessorInfo );
+		if ( !scriptAccessor->hasScriptErrors() ) {
+			return scriptAccessor;
 		} else {
-			return NULL; // Couldn't correctly load the script (bad script)
+			delete scriptAccessor;
+			raiseError( "Couldn't correctly load the script (bad script)" );
+			return NULL;
 		}
-	} else {
-		kDebug() << "XML accessors currently don't support scripts";
-		return NULL;
+	} else if ( accessorInfo->accessorType() == XML ) {
+		// Warn if no script is specified
+		if ( accessorInfo->scriptFileName().isEmpty() ) {
+			kDebug() << "XML accessors currently use a script to parse stop suggestions, "
+					"but no script file was specified";
+		}
+		
+		// Create the accessor and check for script errors
+		TimetableAccessorXml *xmlAccessor = new TimetableAccessorXml( accessorInfo );
+		if ( xmlAccessor->stopSuggestionAccessor() && 
+			xmlAccessor->stopSuggestionAccessor()->hasScriptErrors() ) 
+		{
+			delete xmlAccessor;
+			raiseError( "Couldn't correctly load the script (bad script)" );
+			return NULL;
+		} else {
+			return xmlAccessor;
+		}
 	}
 	
-	kDebug() << "Accessor type not supported" << type;
+	delete accessorInfo;
+	raiseError( QString("Accessor type %1 not supported").arg(accessorInfo->accessorType()) );
 	return NULL;
 }
 
@@ -373,11 +296,11 @@ void AccessorInfoXmlReader::readAuthor( QString *fullname, QString *shortName, Q
 
 		if ( isStartElement() ) {
 			if ( name().compare( "fullName", Qt::CaseInsensitive ) == 0 ) {
-				*fullname = readElementText();
+				*fullname = readElementText().trimmed();
 			} else if ( name().compare( "short", Qt::CaseInsensitive ) == 0 ) {
-				*shortName = readElementText();
+				*shortName = readElementText().trimmed();
 			} else if ( name().compare( "email", Qt::CaseInsensitive ) == 0 ) {
-				*email = readElementText();
+				*email = readElementText().trimmed();
 			} else {
 				readUnknownElement();
 			}
@@ -502,8 +425,9 @@ void AccessorInfoXmlReader::readSessionKey(QString* sessionKeyUrl, SessionKeyPla
 	}
 }
 
-void AccessorInfoXmlReader::readChangelog(QList<ChangelogEntry>* changelog)
+QList<ChangelogEntry> AccessorInfoXmlReader::readChangelog()
 {
+	QList<ChangelogEntry> changelog;
 	while ( !atEnd() ) {
 		readNext();
 		if ( isEndElement() && name().compare("changelog", Qt::CaseInsensitive) == 0 ) {
@@ -520,178 +444,11 @@ void AccessorInfoXmlReader::readChangelog(QList<ChangelogEntry>* changelog)
 					currentEntry.author = attributes().value( QLatin1String("author") ).toString();
 				}
 				currentEntry.description = readElementText();
-				changelog->append( currentEntry );
+				changelog.append( currentEntry );
 			} else {
 				readUnknownElement();
 			}
 		}
 	}
-}
-
-bool AccessorInfoXmlReader::readRegExps( QString* regExpDepartures,
-		QList< TimetableInformation >* infosDepartures,
-		QString* regExpDeparturesPre, TimetableInformation* infoPreKey,
-		TimetableInformation* infoPreValue, QString* regExpJourneys,
-		QList< TimetableInformation >* infosJourneys,
-		QString* regExpDepartureGroupTitles,
-		QList< TimetableInformation >* infosDepartureGroupTitles,
-		QStringList* regExpListPossibleStopsRange,
-		QStringList* regExpListPossibleStops,
-		QList< QList< TimetableInformation > >* infosListPossibleStops,
-		QStringList* regExpListJourneyNews,
-		QList< QList< TimetableInformation > >* infosListJourneyNews )
-{
-	while ( !atEnd() ) {
-		readNext();
-
-		if ( isEndElement() && name().compare( "regExps", Qt::CaseInsensitive ) == 0 ) {
-			break;
-		}
-
-		if ( isStartElement() ) {
-			if ( name().compare( "departures", Qt::CaseInsensitive ) == 0 ) {
-				if ( !readRegExp( regExpDepartures, infosDepartures,
-				                  regExpDeparturesPre, infoPreKey, infoPreValue ) ) {
-					return false;
-				}
-			} else if ( name().compare( "journeys", Qt::CaseInsensitive ) == 0 ) {
-				if ( !readRegExp( regExpJourneys, infosJourneys ) ) {
-					return false;
-				}
-			} else if ( name().compare( "journeyNews", Qt::CaseInsensitive ) == 0 ) {
-				if ( !readRegExpItems( regExpListJourneyNews, infosListJourneyNews ) ) {
-					return false;
-				}
-			} else if ( name().compare( "possibleStops", Qt::CaseInsensitive ) == 0 ) {
-				if ( !readRegExpItems( regExpListPossibleStops, infosListPossibleStops,
-				                       regExpListPossibleStopsRange ) ) {
-					return false;
-				}
-			} else if ( name().compare( "departureGroupTitles", Qt::CaseInsensitive ) == 0 ) {
-				if ( !readRegExp( regExpDepartureGroupTitles, infosDepartureGroupTitles ) ) {
-					return false;
-				}
-			} else {
-				readUnknownElement();
-			}
-		}
-	}
-
-	return true;
-}
-
-bool AccessorInfoXmlReader::readRegExp( QString* regExp, QList< TimetableInformation >* info,
-		QString* regExpPreOrRanges, TimetableInformation* infoPreKey, TimetableInformation* infoPreValue )
-{
-	QStringRef tagName = name();
-	while ( !atEnd() ) {
-		readNext();
-
-		if ( isEndElement() && name().compare( tagName, Qt::CaseInsensitive ) == 0 ) {
-			break;
-		}
-
-		if ( isStartElement() ) {
-			if ( name().compare( "regExp", Qt::CaseInsensitive ) == 0 ) {
-				*regExp = readElementText();
-				if ( !QRegExp( *regExp ).isValid() ) {
-					raiseError( QString( "The regular expression in <%1> is invalid: %2." )
-								.arg( tagName.toString(), QRegExp( *regExp ).errorString() ) );
-					return false;
-				}
-			} else if ( name().compare( "infos", Qt::CaseInsensitive ) == 0 ) { // krazy:exclude=spelling
-				readRegExpInfos( info );
-				// 		regExpPreOrRanges regExpRange
-			} else if ( regExpPreOrRanges && !infoPreKey && !infoPreValue
-						&& name().compare( "regExpRange", Qt::CaseInsensitive ) == 0 ) {
-				*regExpPreOrRanges = readElementText();
-				if ( !QRegExp( *regExpPreOrRanges ).isValid() ) {
-					raiseError( QString( "The regular expression (range) in <%1> is invalid: %2." )
-					            .arg( tagName.toString(), QRegExp( *regExpPreOrRanges ).errorString() ) );
-					return false;
-				}
-			} else if ( regExpPreOrRanges && infoPreKey && infoPreValue
-						&& name().compare( "regExpPre", Qt::CaseInsensitive ) == 0 ) {
-				if ( !readRegExpPre( regExpPreOrRanges, infoPreKey, infoPreValue ) ) {
-					return false;
-				}
-			} else
-				readUnknownElement();
-		}
-	}
-
-	return true;
-}
-
-void AccessorInfoXmlReader::readRegExpInfos( QList< TimetableInformation >* info )
-{
-	while ( !atEnd() ) {
-		readNext();
-
-		if ( isEndElement() && name().compare( "infos", Qt::CaseInsensitive ) == 0 ) { // krazy:exclude=spelling
-			break;
-		}
-
-		if ( isStartElement() ) {
-			if ( name().compare( "info", Qt::CaseInsensitive ) == 0 ) {
-				TimetableInformation curInfo =
-						TimetableAccessor::timetableInformationFromString( readElementText() );
-				info->append( curInfo );
-			} else {
-				readUnknownElement();
-			}
-		}
-	}
-}
-
-bool AccessorInfoXmlReader::readRegExpPre( QString* regExpPre,
-		TimetableInformation* infoPreKey,
-		TimetableInformation* infoPreValue )
-{
-	if ( !attributes().hasAttribute( "key" ) || !attributes().hasAttribute( "value" ) ) {
-		raiseError( "Missing attributes in <RegExpPre> tag (key and value are needed)" );
-		return false;
-	}
-
-	*infoPreKey = TimetableAccessor::timetableInformationFromString(
-					attributes().value( "key" ).toString() );
-	*infoPreValue = TimetableAccessor::timetableInformationFromString(
-					attributes().value( "value" ).toString() );
-	*regExpPre = readElementText();
-
-	return true;
-}
-
-bool AccessorInfoXmlReader::readRegExpItems( QStringList* regExps,
-		QList< QList< TimetableInformation > >* infosList,
-		QStringList *regExpsRanges )
-{
-	QStringRef tagName = name();
-	while ( !atEnd() ) {
-		readNext();
-
-		if ( isEndElement() && name().compare( tagName, Qt::CaseInsensitive ) == 0 ) {
-			break;
-		}
-
-		if ( isStartElement() ) {
-			if ( name().compare( "item", Qt::CaseInsensitive ) == 0 ) {
-				QString regExp, regExpRange;
-				QList< TimetableInformation > info;
-				if ( !readRegExp( &regExp, &info, regExpsRanges ? &regExpRange : NULL ) ) {
-					return false;
-				}
-
-				regExps->append( regExp );
-				infosList->append( info );
-				if ( regExpsRanges ) {
-					regExpsRanges->append( regExpRange );
-				}
-			} else {
-				readUnknownElement();
-			}
-		}
-	}
-
-	return true;
+	return changelog;
 }

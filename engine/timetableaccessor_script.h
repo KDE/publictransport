@@ -18,13 +18,13 @@
  */
 
 /** @file
-* @brief This file contains the base class for all HTML based accessors using script files 
+* @brief This file contains the base class for accessors using script files 
 *   for parsing that are used by the public transport data engine.
 * 
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#ifndef TIMETABLEACCESSOR_HTML_SCRIPT_HEADER
-#define TIMETABLEACCESSOR_HTML_SCRIPT_HEADER
+#ifndef TIMETABLEACCESSOR_HTML_HEADER
+#define TIMETABLEACCESSOR_HTML_HEADER
 
 #include "timetableaccessor.h"
 
@@ -33,11 +33,14 @@ namespace Kross {
 }
 class ResultObject;
 
-/** @class TimetableAccessorHtmlScript
-* @brief The base class for all HTML accessors using script files for parsing.
+/** @class TimetableAccessorScript
+* @brief The base class for all scripted accessors.
 */
-class TimetableAccessorHtmlScript : public TimetableAccessor {
+class TimetableAccessorScript : public TimetableAccessor {
 	Q_OBJECT
+	
+	// Because the XML accessor uses TimetableAccessorScript::parseDocumentPossibleStops().
+	friend class TimetableAccessorXml;
 
 public:
 	/** @brief States of the script, used for loading the script only when needed. */
@@ -48,23 +51,36 @@ public:
 	};
 
 	/** 
-	 * @brief Creates a new TimetableAccessorHtmlScript object with the given information.
+	 * @brief Creates a new TimetableAccessorScript object with the given information.
 	 * 
 	 * @param info Information about how to download and parse the documents of a service provider.
+	 * 
 	 * @note Can be used if you have a custom TimetableAccessorInfo object.
 	 *   TimetableAccessorXml uses this to create an HTML accessor for parsing of stop lists. */
-	TimetableAccessorHtmlScript( TimetableAccessorInfo *info = new TimetableAccessorInfo() );
+	TimetableAccessorScript( TimetableAccessorInfo *info = new TimetableAccessorInfo() );
 
 	/** @brief Destructor. */
-	virtual ~TimetableAccessorHtmlScript();
+	virtual ~TimetableAccessorScript();
 
 	/** @brief Whether or not the script has been successfully loaded. */
 	bool isScriptLoaded() const { return m_scriptState == ScriptLoaded; };
+	
     bool hasScriptErrors() const { return m_scriptState == ScriptHasErrors; };
 
 	/** @brief Gets a list of features that this accessor supports through a script. */
 	virtual QStringList scriptFeatures() const;
 
+	/** @brief Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
+	static QString decodeHtmlEntities( const QString &html );
+
+	/** 
+	 * @brief Decodes the given HTML document. 
+	 * 
+	 * First it tries QTextCodec::codecForHtml().
+	 * If that doesn't work, it parses the document for the charset in a meta-tag. */
+	static QString decodeHtml( const QByteArray &document,
+							   const QByteArray &fallbackCharset = QByteArray() );
+	
 protected:
 	bool lazyLoadScript();
 	QStringList readScriptFeatures();
@@ -109,17 +125,21 @@ protected:
 	virtual QString parseDocumentForSessionKey( const QByteArray &document );
 	
 	/** 
-	 * @brief Calls the 'parsePossibleStops' function in the script to parse the
-	 *   contents of the given document for a list of possible stop names and puts
-	 *   the results into @p stops.
+	 * @brief Calls the 'parsePossibleStops' function in the script to parse the contents of the 
+	 *   given document for a list of possible stop names and puts the results into @p stops.
 	 * 
 	 * @param document A document to be parsed.
+	 * 
 	 * @param stops A pointer to a list of @ref StopInfo objects.
+	 * 
 	 * @return true, if there were no errors.
+	 * 
 	 * @return false, if there were an error parsing the document.
+	 * 
 	 * @note Can be used if you have an html document containing a stop list.
 	 *   TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
 	 *   document for stops.
+	 * 
 	 * @see parseDocumentPossibleStops(QHash<QString,QString>*) */
 	virtual bool parseDocumentPossibleStops( const QByteArray &document, QList<StopInfo*> *stops );
 
@@ -131,4 +151,4 @@ private:
 	ResultObject *m_resultObject; // An object used by the script to store results in
 };
 
-#endif // TIMETABLEACCESSOR_HTML_SCRIPT_HEADER
+#endif // TIMETABLEACCESSOR_HTML_HEADER

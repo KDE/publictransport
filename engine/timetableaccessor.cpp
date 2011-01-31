@@ -240,6 +240,8 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
 		return TypesOfVehicleInJourney;
 	} else if ( sInfo == "pricing" ) {
 		return Pricing;
+	} else if ( sInfo == "isnightline" ) {
+		return IsNightLine;
 	} else if ( sInfo == "nomatchonschedule" ) {
 		return NoMatchOnSchedule;
 	} else if ( sInfo == "stopname" ) {
@@ -267,45 +269,45 @@ QStringList TimetableAccessor::features() const
 		list << "Arrivals";
 	}
 
-	if ( m_info->scriptFileName().isEmpty() ) {
-		TimetableAccessorInfoRegExp *infoRegExp = dynamic_cast<TimetableAccessorInfoRegExp*>( m_info );
-		if ( infoRegExp ) {
-			if ( m_info->supportsStopAutocompletion() ) {
-				list << "Autocompletion";
-			}
-			if ( !infoRegExp->searchJourneys().regExp().isEmpty() ) {
-				list << "JourneySearch";
-			}
-			if ( m_info->supportsTimetableAccessorInfo( Delay ) ) {
-				list << "Delay";
-			}
-			if ( m_info->supportsTimetableAccessorInfo( DelayReason ) ) {
-				list << "DelayReason";
-			}
-			if ( m_info->supportsTimetableAccessorInfo( Platform ) ) {
-				list << "Platform";
-			}
-			if ( m_info->supportsTimetableAccessorInfo( JourneyNews )
-					|| m_info->supportsTimetableAccessorInfo( JourneyNewsOther )
-					|| m_info->supportsTimetableAccessorInfo( JourneyNewsLink ) ) {
-				list << "JourneyNews";
-			}
-			if ( m_info->supportsTimetableAccessorInfo( TypeOfVehicle ) ) {
-				list << "TypeOfVehicle";
-			}
-			if ( m_info->supportsTimetableAccessorInfo( Status ) ) {
-				list << "Status";
-			}
-			if ( m_info->supportsTimetableAccessorInfo( Operator ) ) {
-				list << "Operator";
-			}
-			if ( m_info->supportsTimetableAccessorInfo( StopID ) ) {
-				list << "StopID";
-			}
-		}
-	} else {
+// 	if ( m_info->scriptFileName().isEmpty() ) {
+// 		TimetableAccessorInfoRegExp *infoRegExp = dynamic_cast<TimetableAccessorInfoRegExp*>( m_info );
+// 		if ( infoRegExp ) {
+// 			if ( m_info->supportsStopAutocompletion() ) {
+// 				list << "Autocompletion";
+// 			}
+// 			if ( !infoRegExp->searchJourneys().regExp().isEmpty() ) {
+// 				list << "JourneySearch";
+// 			}
+// 			if ( m_info->supportsTimetableAccessorInfo( Delay ) ) {
+// 				list << "Delay";
+// 			}
+// 			if ( m_info->supportsTimetableAccessorInfo( DelayReason ) ) {
+// 				list << "DelayReason";
+// 			}
+// 			if ( m_info->supportsTimetableAccessorInfo( Platform ) ) {
+// 				list << "Platform";
+// 			}
+// 			if ( m_info->supportsTimetableAccessorInfo( JourneyNews )
+// 					|| m_info->supportsTimetableAccessorInfo( JourneyNewsOther )
+// 					|| m_info->supportsTimetableAccessorInfo( JourneyNewsLink ) ) {
+// 				list << "JourneyNews";
+// 			}
+// 			if ( m_info->supportsTimetableAccessorInfo( TypeOfVehicle ) ) {
+// 				list << "TypeOfVehicle";
+// 			}
+// 			if ( m_info->supportsTimetableAccessorInfo( Status ) ) {
+// 				list << "Status";
+// 			}
+// 			if ( m_info->supportsTimetableAccessorInfo( Operator ) ) {
+// 				list << "Operator";
+// 			}
+// 			if ( m_info->supportsTimetableAccessorInfo( StopID ) ) {
+// 				list << "StopID";
+// 			}
+// 		}
+// 	} else {
 		list << scriptFeatures();
-	}
+// 	} TODO 
 
 	list.removeDuplicates();
 	return list;
@@ -716,7 +718,7 @@ void TimetableAccessor::result( KJob* job )
 	}
 
 	m_curCity = jobInfo.city;
-	kDebug() << "usedDifferentUrl" << jobInfo.usedDifferentUrl;
+// 	kDebug() << "usedDifferentUrl" << jobInfo.usedDifferentUrl;
 	if ( !jobInfo.usedDifferentUrl ) {
 		QString sNextUrl;
 		if ( parseDocumentMode == ParseForJourneys ) {
@@ -726,7 +728,7 @@ void TimetableAccessor::result( KJob* job )
 				sNextUrl = parseDocumentForDetailedJourneysUrl( document );
 			}
 		}
-		kDebug() << "Parse results" << parseDocumentMode;
+// 		kDebug() << "Parse results" << parseDocumentMode;
 
 		// Try to parse the document
 		if ( parseDocument(document, &dataList, &globalInfo, parseDocumentMode) ) {

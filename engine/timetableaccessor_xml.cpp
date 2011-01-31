@@ -26,16 +26,22 @@
 #include <KDebug>
 
 
-TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfoRegExp *info )
-		: m_accessorHTML( new TimetableAccessorHtml(info) )
+TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfo *info )
 {
 	m_info = info;
+	
+	// Create a script accessor object to parse stop suggestions if a script filename is given
+	if ( !m_info->scriptFileName().isEmpty() ) {
+		m_accessorScript = new TimetableAccessorScript( info );
+	} else {
+		m_accessorScript = NULL;
+	}
 }
 
 TimetableAccessorXml::~TimetableAccessorXml()
 {
 	m_info = NULL; // Don't delete m_info in ~TimetableAccessor()
-	delete m_accessorHTML; // This also deletes m_info
+	delete m_accessorScript; // This also deletes m_info
 }
 
 QStringList TimetableAccessorXml::features() const
@@ -53,7 +59,7 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 	Q_UNUSED( parseDocumentMode );
 
 	if ( document.isEmpty() ) {
-		qDebug() << "TimetableAccessorXml::parseDocument" << "XML document is empty";
+		kDebug() << "XML document is empty";
 		return false;
 	}
 
@@ -67,9 +73,8 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 		QString errCode = errElement.attributeNode("code").nodeValue();
 		QString errMessage = errElement.attributeNode("text").nodeValue();
 		QString errLevel = errElement.attributeNode("level").nodeValue();
-		kDebug() << "TimetableAccessorXml::parseDocument" << "Received an error:"
-				 << errCode << errMessage << "level" << errLevel
-				 << ( errLevel.toLower() == "e" ? "Error is fatal" : "Error isn't fatal" );
+		kDebug() << "Received an error:" << errCode << errMessage << "level" << errLevel
+				 << (errLevel.toLower() == "e" ? "Error is fatal" : "Error isn't fatal");
 		if ( errLevel.toLower() == "e" ) {
 			return false;
 		}
@@ -117,12 +122,12 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 		if ( sDelay.isEmpty() ) {
 			journeys->append( new DepartureInfo( sLine,
 					DepartureInfo::getVehicleTypeFromString(sVehicleType),
-					sDirection, QTime::currentTime(), QTime::fromString( sTime, "hh:mm" ),
+					sDirection, QTime::currentTime(), QTime::fromString(sTime, "hh:mm"),
 					false, false, sPlatform, -1, "", sJourneyNews ) );
 		} else {
 			journeys->append( new DepartureInfo( sLine,
 					DepartureInfo::getVehicleTypeFromString(sVehicleType),
-					sDirection, QTime::currentTime(), QTime::fromString( sTime, "hh:mm" ),
+					sDirection, QTime::currentTime(), QTime::fromString(sTime, "hh:mm"),
 					false, false, sPlatform, sDelay.toInt(), "", sJourneyNews ) );
 		}
 	}
@@ -133,8 +138,12 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 bool TimetableAccessorXml::parseDocumentPossibleStops( const QByteArray &document,
 		QList<StopInfo*> *stops )
 {
-	// Let the document get parsed for possible stops by the HTML accessor
-	return m_accessorHTML->parseDocumentPossibleStops( document, stops );
+	if ( m_accessorScript ) {
+		// Let the document get parsed for possible stops by the script accessor
+		return m_accessorScript->parseDocumentPossibleStops( document, stops );
+	} else {
+		return false;
+	}
 }
 
 QString TimetableAccessorXml::departuresRawUrl() const

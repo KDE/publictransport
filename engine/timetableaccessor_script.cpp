@@ -17,8 +17,7 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "timetableaccessor_html_script.h"
-#include "timetableaccessor_html.h"
+#include "timetableaccessor_script.h"
 #include "scripting.h"
 
 #include <KDebug>
@@ -31,26 +30,25 @@
 #include <kconfiggroup.h>
 #include <KStandardDirs>
 
-TimetableAccessorHtmlScript::TimetableAccessorHtmlScript( TimetableAccessorInfo *info )
+TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info )
 		: TimetableAccessor(), m_script(0), m_resultObject(0)
 {
 	m_info = info;
 	m_scriptState = WaitingForScriptUsage;
 	m_scriptFeatures = readScriptFeatures();
+// 	kDebug() << "Script accessor created witout initializing script for" << m_info->serviceProvider();
 }
 
-TimetableAccessorHtmlScript::~TimetableAccessorHtmlScript()
+TimetableAccessorScript::~TimetableAccessorScript()
 {
 	delete m_script;
 }
 
-bool TimetableAccessorHtmlScript::lazyLoadScript()
+bool TimetableAccessorScript::lazyLoadScript()
 {
 	if ( m_scriptState == ScriptLoaded ) {
 		return true;
 	}
-
-	kDebug() << "Load script for accessor" << m_info->serviceProvider();
 
 	// Create the Kross::Action instance
 	m_script = new Kross::Action( this, "TimetableParser" );
@@ -67,11 +65,16 @@ bool TimetableAccessorHtmlScript::lazyLoadScript()
 		m_script->trigger();
 		m_scriptState = m_script->hadError() ? ScriptHasErrors : ScriptLoaded;
 	}
+	
+	if ( m_scriptState == ScriptHasErrors ) {
+		kDebug() << "Error in the script" << m_script->errorLineNo() << m_script->errorMessage();
+	}
+// 	kDebug() << "Script initialized for" << m_info->serviceProvider() << m_scriptState;
 
 	return m_scriptState == ScriptLoaded;
 }
 
-QStringList TimetableAccessorHtmlScript::readScriptFeatures()
+QStringList TimetableAccessorScript::readScriptFeatures()
 {
 	// Try to load script features from a cache file
 	QString fileName = KGlobal::dirs()->saveLocation("data", 
@@ -151,15 +154,69 @@ QStringList TimetableAccessorHtmlScript::readScriptFeatures()
 	return features;
 }
 
-QStringList TimetableAccessorHtmlScript::scriptFeatures() const
+QStringList TimetableAccessorScript::scriptFeatures() const
 {
 	return m_scriptFeatures;
 }
 
-bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
+QString TimetableAccessorScript::decodeHtmlEntities(const QString& html)
+{
+	if ( html.isEmpty() ) {
+		return html;
+	}
+
+	QString ret = html;
+	QRegExp rx( "(?:&#)([0-9]+)(?:;)" );
+	rx.setMinimal( true );
+	int pos = 0;
+	while ( (pos = rx.indexIn(ret, pos)) != -1 ) {
+		int charCode = rx.cap( 1 ).toInt();
+		QChar ch( charCode );
+		ret = ret.replace( QString( "&#%1;" ).arg( charCode ), ch );
+	}
+
+	ret = ret.replace( "&nbsp;", " " );
+	ret = ret.replace( "&amp;", "&" );
+	ret = ret.replace( "&lt;", "<" );
+	ret = ret.replace( "&gt;", ">" );
+	ret = ret.replace( "&szlig;", "ß" );
+	ret = ret.replace( "&auml;", "ä" );
+	ret = ret.replace( "&Auml;", "Ä" );
+	ret = ret.replace( "&ouml;", "ö" );
+	ret = ret.replace( "&Ouml;", "Ö" );
+	ret = ret.replace( "&uuml;", "ü" );
+	ret = ret.replace( "&Uuml;", "Ü" );
+
+	return ret;
+}
+
+QString TimetableAccessorScript::decodeHtml(const QByteArray& document, const QByteArray& fallbackCharset)
+{
+	// Get charset of the received document and convert it to a unicode QString
+	// First parse the charset with a regexp to get a fallback charset
+	// if QTextCodec::codecForHtml doesn't find the charset
+	QString sDocument = QString( document );
+	QTextCodec *textCodec;
+	QRegExp rxCharset( "(?:<head>.*<meta http-equiv=\"Content-Type\" content=\"text/html; charset=)([^\"]*)(?:\"[^>]*>)", Qt::CaseInsensitive );
+	rxCharset.setMinimal( true );
+	if ( rxCharset.indexIn( sDocument ) != -1 && rxCharset.isValid() ) {
+		textCodec = QTextCodec::codecForName( rxCharset.cap( 1 ).trimmed().toUtf8() );
+	} else if ( !fallbackCharset.isEmpty() ) {
+		textCodec = QTextCodec::codecForName( fallbackCharset );
+	} else {
+		textCodec = QTextCodec::codecForName( "UTF-8" );
+	}
+	sDocument = QTextCodec::codecForHtml( document, textCodec )->toUnicode( document );
+
+	return sDocument;
+}
+
+bool TimetableAccessorScript::parseDocument( const QByteArray &document,
 		QList<PublicTransportInfo*> *journeys, GlobalTimetableInfo *globalInfo,
 		ParseDocumentMode parseDocumentMode )
 {
+// 	kDebug() << "Called for" << m_info->serviceProvider();
+	
 	if ( !lazyLoadScript() ) {
 		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return false;
@@ -172,7 +229,7 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 		return false;
 	}
 
-	QString doc = TimetableAccessorHtml::decodeHtml( document );
+	QString doc = TimetableAccessorScript::decodeHtml( document );
 	// Performance(?): Cut everything before "<body>" from the document
 	doc = doc.mid( doc.indexOf("<body>", 0, Qt::CaseInsensitive) );
 
@@ -181,7 +238,7 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 	// Call script using Kross
 	m_resultObject->clear();
 	QVariant result = m_script->callFunction( functionName, QVariantList() << doc );
-
+	
 	if ( result.isValid() && result.canConvert(QVariant::StringList) ) {
 		QStringList globalInfos = result.toStringList();
 		if ( globalInfos.contains(QLatin1String("no delays"), Qt::CaseInsensitive) ) {
@@ -265,8 +322,10 @@ bool TimetableAccessorHtmlScript::parseDocument( const QByteArray &document,
 	return count > 0;
 }
 
-QString TimetableAccessorHtmlScript::parseDocumentForLaterJourneysUrl( const QByteArray &document )
+QString TimetableAccessorScript::parseDocumentForLaterJourneysUrl( const QByteArray &document )
 {
+// 	kDebug() << "Called for" << m_info->serviceProvider();
+	
 	if ( !lazyLoadScript() ) {
 		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return QString();
@@ -277,7 +336,7 @@ QString TimetableAccessorHtmlScript::parseDocumentForLaterJourneysUrl( const QBy
 		return QString();
 	}
 
-	QString doc = TimetableAccessorHtml::decodeHtml( document );
+	QString doc = TimetableAccessorScript::decodeHtml( document );
 	// Performance(?): Cut everything before "<body>" from the document
 	doc = doc.mid( doc.indexOf( "<body>", 0, Qt::CaseInsensitive ) );
 
@@ -287,13 +346,15 @@ QString TimetableAccessorHtmlScript::parseDocumentForLaterJourneysUrl( const QBy
 	if ( result.isEmpty() || result == "null" ) {
 		return QString();
 	} else {
-		return TimetableAccessorHtml::decodeHtmlEntities( result );
+		return TimetableAccessorScript::decodeHtmlEntities( result );
 	}
 }
 
-QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl( 
+QString TimetableAccessorScript::parseDocumentForDetailedJourneysUrl( 
 		const QByteArray &document )
 {
+// 	kDebug() << "Called for" << m_info->serviceProvider();
+	
 	if ( !lazyLoadScript() ) {
 		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return QString();
@@ -304,7 +365,7 @@ QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl(
 		return QString();
 	}
 
-	QString doc = TimetableAccessorHtml::decodeHtml( document );
+	QString doc = TimetableAccessorScript::decodeHtml( document );
 	// Performance(?): Cut everything before "<body>" from the document
 	doc = doc.mid( doc.indexOf( "<body>", 0, Qt::CaseInsensitive ) );
 
@@ -313,12 +374,14 @@ QString TimetableAccessorHtmlScript::parseDocumentForDetailedJourneysUrl(
 	if ( result.isEmpty() || result == "null" ) {
 		return QString();
 	} else {
-		return TimetableAccessorHtml::decodeHtmlEntities( result );
+		return TimetableAccessorScript::decodeHtmlEntities( result );
 	}
 }
 
-QString TimetableAccessorHtmlScript::parseDocumentForSessionKey(const QByteArray& document)
+QString TimetableAccessorScript::parseDocumentForSessionKey(const QByteArray& document)
 {
+// 	kDebug() << "Called for" << m_info->serviceProvider();
+	
 	if ( !lazyLoadScript() ) {
 		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return QString();
@@ -329,7 +392,7 @@ QString TimetableAccessorHtmlScript::parseDocumentForSessionKey(const QByteArray
 		return QString();
 	}
 
-	QString doc = TimetableAccessorHtml::decodeHtml( document );
+	QString doc = TimetableAccessorScript::decodeHtml( document );
 	// Performance(?): Cut everything before "<body>" from the document
 // 	doc = doc.mid( doc.indexOf( "<body>", 0, Qt::CaseInsensitive ) );
 
@@ -341,9 +404,11 @@ QString TimetableAccessorHtmlScript::parseDocumentForSessionKey(const QByteArray
 	}
 }
 
-bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &document,
+bool TimetableAccessorScript::parseDocumentPossibleStops( const QByteArray &document,
 		QList<StopInfo*> *stops )
 {
+// 	kDebug() << "Called for" << m_info->serviceProvider();
+	
 	if ( !lazyLoadScript() ) {
 		kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
 		return false;
@@ -355,7 +420,7 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 		return false;
 	}
 
-	QString doc = TimetableAccessorHtml::decodeHtml( document, m_info->fallbackCharset() );
+	QString doc = TimetableAccessorScript::decodeHtml( document, m_info->fallbackCharset() );
 
 	// Call script
 	m_resultObject->clear();
@@ -390,11 +455,6 @@ bool TimetableAccessorHtmlScript::parseDocumentPossibleStops( const QByteArray &
 		}
 
 		stops->append( new StopInfo(stopName, stopID, stopWeight, stopCity, stopCountryCode) );
-// 		if ( !stopID.isEmpty() )
-// 		stopToStopId->insert( stopName, stopID );
-// 		if ( stopWeight != -1 ) {
-// 			stopToStopWeight->insert( stopName, stopWeight );
-// 		}
 		++count;
 	}
 

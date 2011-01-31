@@ -25,7 +25,7 @@
 #define TIMETABLEACCESSOR_XML_HEADER
 
 #include "timetableaccessor.h"
-#include "timetableaccessor_html.h"
+#include "timetableaccessor_script.h"
 
 
 /** @class TimetableAccessorXml
@@ -33,8 +33,8 @@
 */
 class TimetableAccessorXml : public TimetableAccessor
 {
-	// Because the XML accessor uses TimetableAccessorHtml::parseDocumentPossibleStops().
-	friend class TimetableAccessorHtml;
+	// Because the XML accessor uses TimetableAccessorScript::parseDocumentPossibleStops().
+	friend class TimetableAccessorScript;
 
 public:
 	/** 
@@ -42,16 +42,23 @@ public:
 	 *
 	 * @param info Information about how to download and parse the documents of a
 	 *   service provider.
+	 * 
 	 * @note Can be used if you have a custom TimetableAccessorInfo object. TODO */
-	TimetableAccessorXml( TimetableAccessorInfoRegExp *info = new TimetableAccessorInfoRegExp() );
+	TimetableAccessorXml( TimetableAccessorInfo *info = new TimetableAccessorInfo() );
 
 	/** 
-	 * @brief Destructor, destroys the used "sub-" @ref TimetableAccessorHtml, which is used
+	 * @brief Destructor, destroys the used "sub-" @ref TimetableAccessorScript, which is used
 	 *  to parse stop suggestion documents in HTML format. */
 	virtual ~TimetableAccessorXml();
 
 	/** @brief Gets a list of features that this accessor supports. */
 	virtual QStringList features() const;
+	
+	/**
+	 * @brief Returns a pointer to the script accessor object that is used 
+	 *   to parse stop suggestion documents.
+	 **/
+	TimetableAccessorScript *stopSuggestionAccessor() const { return m_accessorScript; };
 
 protected:
 	/** 
@@ -94,7 +101,7 @@ protected:
 	virtual QString stopSuggestionsRawUrl() const;
 
 private:
-	TimetableAccessorHtml *m_accessorHTML; // The HTML accessor used to parse stop suggestion documents
+	TimetableAccessorScript *m_accessorScript; // The scripted accessor used to parse stop suggestion documents
 };
 
 #endif // TIMETABLEACCESSOR_XML_HEADER

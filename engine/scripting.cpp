@@ -18,6 +18,8 @@
 */
 
 #include "scripting.h"
+#include "timetableaccessor_script.h"
+
 #include <KStandardDirs>
 #include <QFile>
 
@@ -31,9 +33,12 @@ void Helper::error( const QString& message, const QString &failedParseText )
 	}
 	shortParseText = shortParseText.replace('\n', "\n    "); // Indent
 	
-	qDebug() << QString("Error in %1 (maybe the website layout changed): \"%2\"\n"
-						"  The text of the document where parsing failed is: \"%3\"")
-				.arg(m_serviceProviderId).arg(message).arg(shortParseText);
+	kDebug() << QString("Error in %1 (maybe the website layout changed): \"%2\"")
+				.arg(m_serviceProviderId).arg(message);
+	if ( !shortParseText.isEmpty() ) {
+		kDebug() << QString("The text of the document where parsing failed is: \"%1\"")
+					.arg(shortParseText);
+	}
 	
 	// Log the complete message to the log file.
 	QString logFileName = KGlobal::dirs()->saveLocation( "data", "plasma_engine_publictransport" );
@@ -76,10 +81,10 @@ void TimetableData::set( TimetableInformation info, const QVariant& value )
 					|| info == Operator || info == TransportLine
 					|| info == Platform || info == DelayReason
 					|| info == Status || info == Pricing) ) {
-			m_values[ info ] = TimetableAccessorHtml::decodeHtmlEntities( value.toString() );
+			m_values[ info ] = TimetableAccessorScript::decodeHtmlEntities( value.toString() );
 		} else if ( value.canConvert(QVariant::List) && info == DepartureDate ) {
 			QVariantList date = value.toList();
-			m_values[ info ] = date.length() == 3 ? QDate(date[2].toInt(), date[1].toInt(), date[0].toInt()) : value;
+			m_values[ info ] = date.length() == 3 ? QDate(date[0].toInt(), date[1].toInt(), date[2].toInt()) : value;
 		} else {
 			m_values[ info ] = value;
 		}
