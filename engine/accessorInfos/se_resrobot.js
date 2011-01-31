@@ -38,6 +38,11 @@ function parseTimetable( html ) {
 		while ( (col = columnsRegExp.exec(departureRow)) )
 			columns.push( col[1] );
 		columnsRegExp.lastIndex = 0;
+		
+		if ( columns.length < 5 ) {
+			helper.error("Too less columns in a departure row found (" + columns.length + ")", departureRow);
+			continue;
+		}
 
 		// Initialize result variables with defaults
 		var time, typeOfVehicle = "", transportLine, targetString, platformString = "",
@@ -47,7 +52,7 @@ function parseTimetable( html ) {
 		// Parse time column
 		time = helper.matchTime( helper.trim(helper.stripTags(columns[timeCol])), "hh:mm" );
 		if ( time.length != 2 ) {
-			println("Unexpected string in time column: \"" + columns[timeCol] + "\"! Website layout may have changed.");
+			helper.error("Unexpected string in time column", columns[timeCol]);
 			continue;
 		}
 		

@@ -1,41 +1,26 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-
-<accessorInfo fileVersion="1.0" version="1.0.1" type="HTML">
-
-<name>Berliner Verkehrsbetriebe (BVG)</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<cities><city>Berlin</city></cities>
-<useSeperateCityValue>false</useSeperateCityValue>
-<description>Provides departure information for Berlin in Germany.</description>
-
-<url>http://www.bvg.de</url>
-<shortUrl>www.bvg.de</shortUrl>
-<!-- <credit>Berliner Verkehrsbetriebe (BVG)</credit> -->
-
-<rawUrls>
-    <departures><![CDATA[http://www.fahrinfo-berlin.de/IstAbfahrtzeiten/index;ref=3?input={stop}&submit=Anzeigen]]></departures>
-</rawUrls>
-
-<regExps>
-    <departures>
-	<regExp><![CDATA[(?:<tr class="">\s*<td>\s*)([0-9]{2})(?::)([0-9]{2})(?:\s*</td>\s*<td>\s*<img src="[^"]*" class="ivuTDProductPicture" alt="[^"]*"\s*class="ivuTDProductPicture" />)(\w{1,10})(?:\s*)((\w*\s*)?[0-9]+)(?:\s*</td>\s*<td>\s*<a class="ivuLink"[^>]*>)(.*)(?:</a>\s*</td>\s*<td>\s*<!-- .* -->\s*<a class="ivuLink"[^>]*>[0-9]+</a>\s*</td>\s*</tr>)]]></regExp>
-	<infos>
-	    <info>DepartureHour</info> <info>DepartureMinute</info> <info>TypeOfVehicle</info> <info>TransportLine</info> <info>Target</info>
-	</infos>
-    </departures>
-
-    <possibleStops>
-	<item>
-	    <regExpRange><![CDATA[(?:<select name="[^"]*" size="[^"]*" class="ivuSelectBox">\s*)(.*)(?:\s*</select>)]]></regExpRange>
-	    <regExp><![CDATA[(?:<option value="[^"]*">\s*)([^\s][^<]*[^\s])(?:\s*</option>)]]></regExp>
-	    <infos><info>StopName</info></infos>
-	</item>
-    </possibleStops>
-</regExps>
-
-<changelog>
-	<entry since="1.0.1" releasedWith="0.7">Corrected the url for favicons.</entry>
-	<entry since="1.0" releasedWith="0.3">Initial version.</entry>
-</changelog>
-
+<?xml version="1.0" encoding="UTF-8"?>
+<accessorInfo fileVersion="1.0" version="1.1" type="HTML">
+    <name lang="en">Berliner Verkehrsbetriebe (BVG)</name>
+    <description lang="en">Provides departure information for Berlin in Germany.</description>
+<!-- 	<credit>Berliner Verkehrsbetriebe (BVG)</credit> -->
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.bvg.de</url>
+    <shortUrl>www.bvg.de</shortUrl>
+    <script>de_bvg.js</script>
+    <cities>
+        <city>Berlin</city>
+    </cities>
+    <rawUrls>
+        <departures><![CDATA[http://www.fahrinfo-berlin.de/IstAbfahrtzeiten/index;ref=3?input={stop}&submit=Anzeigen]]></departures>
+        <stopSuggestions><![CDATA[http://www.fahrinfo-berlin.de/IstAbfahrtzeiten/index;ref=3?input={stop}&submit=Anzeigen]]></stopSuggestions>
+    </rawUrls>
+	
+	<changelog>
+		<entry since="1.1" releasedWith="0.10">Ported to a script.</entry>
+		<entry since="1.0.1" releasedWith="0.7">Corrected the url for favicons.</entry>
+		<entry since="1.0" releasedWith="0.3">Initial version.</entry>
+	</changelog>
 </accessorInfo>

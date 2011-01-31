@@ -51,7 +51,7 @@ function parseTimetable( html ) {
 	returnValue.push( 'dates need adjustment' );
 	
 	var now = new Date();
-	var currentDate = [ now.getDate(), now.getMonth() + 1, now.getFullYear() ];
+	var currentDate = [ now.getFullYear(), now.getMonth() + 1, now.getDate() ];
 
     // Find block of departures
     var str = helper.extractBlock( html, '<table class="result stboard dep">', '</table>' );
@@ -514,7 +514,6 @@ function parseJourneys( code ) {
 	result.addData( timetableData );
     }
 }
-
 
 function parseJourneyDetails( details, resultObject ) {
     // 	    var exactRouteStops = 0;

@@ -6,6 +6,11 @@ function usedTimetableInformations() {
 }
 
 function parseTimetable( html ) {
+	if ( html.search(/<td [^>]*class="errormessage">[^<]*No trains in this space of time[^<]*<\/td>/i) != -1 ) {
+		helper.error("Warning: No trains in this space of time");
+		return;
+	}
+	
     // Find block of departures
     var pos = html.indexOf( '<table class="full">' );
     if ( pos == -1 ) {
@@ -32,7 +37,9 @@ function parseTimetable( html ) {
 			columns.push( column );
 		}
 		if ( columns.length < 4 ) {
-			helper.error("Too less columns (" + columns.length + ") found in a departure row!", departure);
+			if ( departure.indexOf("sp&#228;ter") == -1 ) {
+				helper.error("Too less columns (" + columns.length + ") found in a departure row!", departure);
+			}
 			continue; // Too less columns
 		}
 

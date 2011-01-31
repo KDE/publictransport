@@ -34,7 +34,9 @@ function parseTimetable( html ) {
 			columns.push( column );
 		}
 		if ( columns.length < 8 ) {
-			helper.error("Too less columns (" + columns.length + ") found in a departure row!", departure);
+			if ( departure.indexOf("<th") == -1 ) {
+				helper.error("Too less columns (" + columns.length + ") found in a departure row!", departure);
+			}
 			continue; // Too less columns
 		}
 		

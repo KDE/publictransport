@@ -1,39 +1,30 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo fileVersion="1.0" version="1.1" type="XML">
+<accessorInfo fileVersion="1.0" version="1.2" type="XML">
+	<name lang="en">Rhein-Main-Verkehrsverbund GmbH</name>
+	<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+	<cities>
+		<city>Frankfurt (Main)</city> <city>Langen (Hessen)</city> <city>Köln</city> <city>Mainz</city>
+	<!--  TODO: add more cities   -->
+	</cities>
+	<useSeperateCityValue>false</useSeperateCityValue>
+	<description>Provides departure information for 'Rhine-Main' in Germany. It uses an XML source for departure information and HTML for stop autocompletion.</description>
 
-<name lang="en">Rhein-Main-Verkehrsverbund GmbH</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<cities>
-    <city>Frankfurt (Main)</city> <city>Langen (Hessen)</city> <city>Köln</city> <city>Mainz</city>
-<!--  TODO: add more cities   -->
-</cities>
-<useSeperateCityValue>false</useSeperateCityValue>
-<description>Provides departure information for 'Rhine-Main' in Germany. It uses an XML source for departure information and HTML for stop autocompletion.</description>
+	<url>http://www.rmv.de/</url>
+	<shortUrl>www.rmv.de</shortUrl>
+	<!-- <credit>Rhein-Main-Verkehrsverbund GmbH</credit> -->
 
-<url>http://www.rmv.de/</url>
-<shortUrl>www.rmv.de</shortUrl>
-<!-- <credit>Rhein-Main-Verkehrsverbund GmbH</credit> -->
+	<rawUrls>
+		<departures><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxCount}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=xml&start=yes]]></departures>
 
-<rawUrls>
-    <departures><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxCount}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=xml&start=yes]]></departures>
+		<stopSuggestions><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxCount}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=html&start=yes]]></stopSuggestions>
+	</rawUrls>
 
-    <stopSuggestions><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxCount}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=html&start=yes]]></stopSuggestions>
-</rawUrls>
+	<script>de_rmv.js</script>
 
-<regExps>
-    <possibleStops>
-	<item>
-	    <regExpRange><![CDATA[(?:<td class="result" nowrap>\s*<img[^>]*>\s*<select name="input">\s*)(.*)(?:\s*</select>\s*</td>)]]></regExpRange>
-	    <regExp><![CDATA[(?:<option value="[^"]+#)([0-9]+)(?:">)([^<]*)(?:</option>)]]></regExp>
-	    <infos><info>StopID</info> <info>StopName</info></infos>
-	</item>
-    </possibleStops>
-</regExps>
-
-<changelog>
-	<entry since="1.1" releasedWith="0.7">Corrected the feature list.</entry>
-	<entry since="1.1" releasedWith="0.7">Stop suggestions didn't work, because the HTML accessor that parses stop suggestions for XML accessors was initialized with empty accessor info.</entry>
-</changelog>
-
+	<changelog>
+		<entry since="1.2" releasedWith="0.10">Ported the stop suggestion part to a script.</entry>
+		<entry since="1.1" releasedWith="0.7">Corrected the feature list.</entry>
+		<entry since="1.1" releasedWith="0.7">Stop suggestions didn't work, because the HTML accessor that parses stop suggestions for XML accessors was initialized with empty accessor info.</entry>
+	</changelog>
 </accessorInfo>
