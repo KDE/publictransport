@@ -35,15 +35,15 @@
 #include "timetableaccessor_info.h"
 
 /** @class TimetableAccessor
-* @brief Gets timetable information for public transport from different service providers.
-* 
-* The easiest way to implement support for a new service provider is to derive a new class
-* from TimetableAccessorInfo and use it with TimetableAccessorHtml.
-* To implement support for a new class of service providers create a new class based on
-* TimetableAccessor or it's derivates and overwrite
-*	- serviceProvider()
-*	- country(), cities()
-*	- rawUrl(), parseDocument() */
+ * @brief Gets timetable information for public transport from different service providers.
+ * 
+ * The easiest way to implement support for a new service provider is to add an XML file describing
+ * the service provider and a script to parse timetable documents.
+ * If that's not enough a new class can be derived from TimetableAccessor or it's derivates. These
+ * functions should then be overwritten:
+ *   - serviceProvider()
+ *   - country(), cities()
+ *   - rawUrl(), parseDocument() */
 class TimetableAccessor : public QObject {
 	Q_OBJECT
 public:
@@ -320,6 +320,7 @@ protected:
 	KUrl getJourneyUrl( const QString &city, const QString &startStopName,
 			const QString &targetStopName, int maxCount, const QDateTime &dateTime,
 			const QString &dataType = "departures", bool useDifferentUrl = false ) const;
+			
 
 	QString m_curCity; /**< @brief Stores the currently used city. */
 	TimetableAccessorInfo *m_info; /**< @brief Stores service provider specific information that is 

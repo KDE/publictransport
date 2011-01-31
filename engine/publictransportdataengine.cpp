@@ -429,7 +429,7 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 		// Try to get the specific accessor from m_accessors (if it's not in there it is created)
 		bool newlyCreated = false;
 		TimetableAccessor *accessor;
-		if ( !m_accessors.contains( serviceProvider ) ) {
+		if ( !m_accessors.contains(serviceProvider) ) {
 			accessor = TimetableAccessor::getSpecificAccessor( serviceProvider );
 			m_accessors.insert( serviceProvider, accessor );
 			newlyCreated = true;
@@ -844,7 +844,6 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 	Q_UNUSED( city );
 	Q_UNUSED( stop );
 	Q_UNUSED( dataType );
-	kDebug() << stops.count() << "stops received" << dataType << parseDocumentMode << sourceName;
 //     QString sStop = stopToStopId.value( stop, stop );
 //     if ( sStop.isEmpty() )
 // 	sStop = stop;
@@ -854,7 +853,7 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 		QVariantHash data;
 		data.insert( "stopName", stopInfo->name() );
 		
-		kDebug() << stopInfo->name() << stopInfo->id() << stopInfo->city() << stopInfo->countryCode();
+// 		kDebug() << stopInfo->name() << stopInfo->id() << stopInfo->city() << stopInfo->countryCode();
 		
 		if ( stopInfo->hasId() && 
 			(!accessor->info()->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) || 
