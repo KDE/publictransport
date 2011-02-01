@@ -673,7 +673,7 @@ QWidget* AbstractDynamicWidgetContainer::createSeparator( const QString& separat
 void AbstractDynamicWidgetContainer::removeSeparator( QLayoutItem *separator )
 {
 	Q_D( AbstractDynamicWidgetContainer );
-	if ( separator && !qobject_cast<DynamicWidget*>( separator->widget() ) ) {
+	if ( separator && !qobject_cast<DynamicWidget*>(separator->widget()) ) {
 		QWidget *widget = separator->widget();
 		if ( widget && widget->objectName() == "separator" ) {
 			d->contentWidget->layout()->removeWidget( widget );

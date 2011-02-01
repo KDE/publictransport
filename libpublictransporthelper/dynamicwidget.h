@@ -33,15 +33,19 @@ class QLayoutItem;
 class QToolButton;
 class AbstractDynamicWidgetContainer;
 class DynamicWidgetPrivate;
-/** @brief Wraps widgets in AbstractDynamicWidgetContainer and adds buttons.
+
+/** 
+ * @brief Wraps widgets in AbstractDynamicWidgetContainer and adds buttons.
  *
  * Provides a widget which embeds a "content widget" and a remove and/or add
- * button. It's used by @ref AbstractDynamicWidgetContainer. To get the content widget
+ * button. It's used by @ref AbstractDynamicWidgetContainer. To get the contained widget
  * use @ref contentWidget. The buttons can be taken out of the DynamicWidget
  * by using @ref takeRemoveButton / @ref takeAddButton. They can then be put into
  * another widget, the connections remain.
+ * 
  * @note You cannot create DynamicWidgets yourself and mostly don't need to use
  *   it at all, that's up to @ref AbstractDynamicWidgetContainer.
+ * 
  * @see AbstractDynamicWidgetContainer */
 class PUBLICTRANSPORTHELPER_EXPORT DynamicWidget : public QWidget {
 	Q_OBJECT
@@ -155,14 +159,43 @@ private:
 };
 
 class AbstractDynamicWidgetContainerPrivate;
-/** @brief A widget containing a dynamic list of widgets.
+
+/**
+ * @brief A widget containing a dynamic list of widgets.
  *
- * This widget contains a dynamic list of widgets. The user can add/remove widgets
- * using buttons, that are automatically added. Override @ref createNewWidget to
- * create new a QWidget instance that should be added when the add button is clicked. */
+ * This widget contains a dynamic list of widgets. The user can add/remove widgets using buttons, 
+ * that are automatically added based on the options given in the constructor. Override 
+ * @ref createNewWidget to create new a QWidget instance that should be added when the add button 
+ * is clicked.
+ * 
+ * To show a text on separators (activated with the ShowSeparators option), override 
+ * @ref createSeparator and call the base implementation with the text as argument.
+ *
+ * Add/remove buttons can be added besides widgets or after the last widget. By default new widgets
+ * are added to the bottom of the widget list and global add/remove buttons 
+ * (@ref RemoveButtonAfterLastWidget, @ref AddButtonAfterLastWidget) are shown below the last 
+ * widget. Use @ref AddWidgetsAtTop to add new widgets to the top of the widget list and show 
+ * global buttons above the last (top) widget.
+ * 
+ * To change the add button use the @ref addButton function to get a pointer to the button. For
+ * example you can turn it into a menu button and offer menu items to add widgets with different
+ * predefined values. By default the clicked signal of the add button is connected to the 
+ * @ref createAndAddWidget slot.
+ * 
+ * The remove button's clicked signal is connected to the @ref removeLastWidget slot by default.
+ * If the @ref RemoveButtonsBesideWidgets option is used you can override @ref createDynamicWidget
+ * to change new remove buttons.
+ * 
+ * If you want to only do the adding/removing of widgets programatically, use the 
+ * @ref NoRemoveButton and @ref NoAddButton options.
+ * 
+ * @note Buttons can also be taken out of the dynamic widgets using 
+ *   @ref DynamicWidget::takeAddButton / @ref DynamicWidget::takeRemoveButton. That way you can 
+ *   place them somewhere else.
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT AbstractDynamicWidgetContainer : public QWidget {
 	Q_OBJECT
-	Q_ENUMS( ContainerLayout SeparatorOptions RemoveButtonOptions AddButtonOptions )
+	Q_ENUMS( ContainerLayout SeparatorOptions RemoveButtonOptions AddButtonOptions NewWidgetPosition )
 	Q_PROPERTY( int buttonSpacing READ buttonSpacing WRITE setButtonSpacing )
 	Q_PROPERTY( Qt::Alignment buttonAlignment READ buttonAlignment WRITE setButtonAlignment )
 	Q_PROPERTY( bool autoRaiseButtons READ autoRaiseButtons WRITE setAutoRaiseButtons )
@@ -182,7 +215,10 @@ public:
 		NoRemoveButton = 0, /**< Don't show remove buttons. You can manually remove
 				* widgets by calling @ref removeWidget(). */
 		RemoveButtonsBesideWidgets, /**< Show a remove button beside each widget. */
-		RemoveButtonAfterLastWidget /**< Show a remove button after the last widget.
+		RemoveButtonAfterLastWidget /**< Show a remove button after the last widget. If 
+				* @ref AddWidgetsAtBottom is used (the default) the button gets placed under all
+				* widgets in the list. If @ref AddWidgetsAtTop is used, the button gets placed on
+				* top of all widgets.
 				* @note This creates only one remove button to remove the last widget. */
 	};
 
@@ -207,36 +243,57 @@ public:
 				* widgets (after the last widget = over the last widget, ie. widget on top). */
 	};
 
+	/**
+	 * @brief Creates a new AbstractDynamicWidgetContainer instance.
+	 *
+	 * @param parent The parent widget. Default is 0.
+	 * @param removeButtonOptions Options for remove button(s). Default is RemoveButtonsBesideWidgets.
+	 * @param addButtonOptions Options for the add button. Default is AddButtonBesideFirstWidget.
+	 * @param separatorOptions Options for separators. Default is NoSeparator.
+	 * @param newWidgetPosition The position of newly added widgets. Default is AddWidgetsAtBottom.
+	 **/
 	AbstractDynamicWidgetContainer( QWidget *parent = 0,
-		RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
-		AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
-		SeparatorOptions separatorOptions = NoSeparator, 
-		NewWidgetPosition newWidgetPosition = AddWidgetsAtBottom );
+			RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
+			AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
+			SeparatorOptions separatorOptions = NoSeparator, 
+			NewWidgetPosition newWidgetPosition = AddWidgetsAtBottom );
 	~AbstractDynamicWidgetContainer();
 	
+	/**
+	 * @brief Gets the DynamicWidget at the given @p index.
+	 **/
 	DynamicWidget *dynamicWidget( int index ) const;
 
-	/** @warning The new @p separatorOptions will only be applied for newly added widgets. */
+	/** 
+	 * @brief Changes the separator options.
+	 * 
+	 * @warning The new @p separatorOptions will only be applied for newly added widgets. 
+	 **/
 	void setSeparatorOptions( SeparatorOptions separatorOptions = NoSeparator );
+	
 	/** @brief Returns the current separator options. */
 	SeparatorOptions separatorOptions() const;
 
 	/**
 	 * @brief Set a custom add button, to let it automatically be set enabled/disabled
-	 * depending on the current/maximum numbers of widgets.
+	 *   depending on the current/maximum numbers of widgets.
 	 *
 	 * It also uses the clicked signal of @p addButton to add new widgets. */
 	void setCustomAddButton( QToolButton *addButton );
+	
 	/**
 	 * @brief Gets the add button or NULL if none is set.
 	 *
 	 * If created with @ref AddButtonBesideFirstWidget, the button can be deleted, when the
 	 * first widget gets removed.
+	 * 
 	 * @note This also returns a pointer to the add button, if a custom add
-	 * button has been set using @ref setCustomAddButton. */
+	 *   button has been set using @ref setCustomAddButton. 
+	 **/
 	QToolButton *addButton() const;
+	
 	/** @brief Gets the remove button if only one is set (using @ref RemoveButtonAfterLastWidget). 
-	 * Otherwise this returns NULL. 
+	 *   Otherwise this returns NULL. 
 	 * 
 	 * If @ref RemoveButtonsBesideWidgets is used you can get the remove buttons from the 
 	 * dynamic widgets. You can access the dynamic widgets using @ref dynamicWidget.
@@ -250,58 +307,103 @@ public:
 	 * @brief The minimum number of widgets.
 	 *
 	 * If this number is reached no more widgets can be removed and all remove buttons
-	 * get disabled. */
+	 * get disabled. 
+	 **/
 	int minimumWidgetCount() const;
+	
 	/**
 	 * @brief The maximum number of widgets.
 	 *
-	 * If this number is reached no more widgets can be added and the add button gets disabled. */
+	 * If this number is reached no more widgets can be added and the add button gets disabled. 
+	 **/
 	int maximumWidgetCount() const;
+	
 	/**
 	 * @brief Sets the minimum and maximum widget count.
 	 *
 	 * It also makes sure that the actual widget count is in the given range by adding or removing
 	 * widgets if needed if @p putIntoRange is true.
 	 * 
-	 * @return The number of added widgets (negative, if widgets were removed). */
+	 * @return The number of added widgets (negative, if widgets were removed). 
+	 **/
 	int setWidgetCountRange( int minWidgetCount = 0, int maxWidgetCount = -1,
 							 bool putIntoRange = true );
+	
 	/**
 	 * @brief @brief Gets the number of widgets in this dynamic widget container.
 	 *
 	 * @return The number of widgets.
 	 **/
 	int widgetCount() const;
+	
+	/** @brief Gets the spacing of (add/remove) buttons in DynamicWidgets. */
 	int buttonSpacing() const;
+	
+	/** @brief Gets the alignment of the add/remove button layout. */
 	Qt::Alignment buttonAlignment() const;
+	
+	/** @brief Gets the value used for @ref QToolButton::setAutoRaise for add/remove buttons. */
 	bool autoRaiseButtons() const;
+	
+	/** @brief Gets the name of the icon used for remove buttons. */
 	QString removeButtonIcon() const;
+	
+	/** @brief Gets the name of the icon used for the add button. */
 	QString addButtonIcon() const;
+	
+	/** @brief Sets the spacing of (add/remove) buttons in DynamicWidgets to @p spacing. */
 	void setButtonSpacing( int spacing = 1 );
+	
+	/** @brief Sets the alignment of the add/remove button layout to @p alignment. */
 	void setButtonAlignment( Qt::Alignment alignment = Qt::AlignRight | Qt::AlignTop );
+	
+	/** @brief Sets the value to use for @ref QToolButton::setAutoRaise for existing and new 
+	 *   add/remove buttons. */
 	void setAutoRaiseButtons( bool autoRaiseButtons = true );
+	
+	/** @brief Sets the name of the icon used for remove buttons to @p removeButtonIcon. */
 	void setRemoveButtonIcon( const QString &removeButtonIcon = "list-remove" );
+	
+	/** @brief Sets the name of the icon used for the add button to @p addButtonIcon. */
 	void setAddButtonIcon( const QString &addButtonIcon = "list-add" );
 
 Q_SIGNALS:
-	/** @brief A @p widget has been added. */
+	/** 
+	 * @brief A new @p widget has been added.
+	 *
+	 * To get the add/remove buttons that may have been added for the new widget, the DynamicWidget
+	 * containing them can be retrieved using @ref dynamicWidgetForWidget. The @ref DynamicWidget
+	 * class has functions to get pointers to the buttons: @ref DynamicWidget::addButton and
+	 * @ref DynamicWidget::removeButton. Buttons are only added if @ref AddButtonBesideFirstWidget
+	 * and/or @ref RemoveButtonsBesideWidgets are used.
+	 **/
 	void added( QWidget *widget );
-	/** @brief A @p widget has been removed. */
+	
+	/** @brief The @p widget at @p widgetIndex in the widget list has been removed. */
 	void removed( QWidget *widget, int widgetIndex );
 
 protected Q_SLOTS:
 	/**
 	 * @brief This slot is connected to the removeClicked signal of every contained @ref DynamicWidget.
 	 *
-	 * It uses sender() to find out which widget to remove. */
+	 * It uses sender() to find out which remove button has been clicked. The DynamicWidget 
+	 * containing the sender button gets removed. 
+	 **/
 	void removeWidget();
-	/** @brief Removes the last widget. This slot is connected to the remove button,
-	* if created using @ref RemoveButtonAfterLastWidget. */
+	
+	/** 
+	 * @brief Removes the last widget.
+	 * 
+	 * This slot is connected to the remove button, if created using 
+	 * @ref RemoveButtonAfterLastWidget. 
+	 **/
 	void removeLastWidget();
+	
 	/**
 	 * @brief This slot is connected to the clicked()-signal of the add button to add a new widget.
 	 *
-	 * The new widget is created using @ref createNewWidget and added using @ref addWidget. */
+	 * The new widget is created using @ref createNewWidget and added using @ref addWidget. 
+	 **/
 	void createAndAddWidget();
 
 protected:
@@ -314,35 +416,94 @@ protected:
 	virtual void changeEvent( QEvent *event );
 
 	/**
-	 * @brief Override to create a new QWidget instance that should be added
-	 * when the add button is clicked. */
+	 * @brief Override to create a new QWidget instance that should be added when the add button 
+	 *   is clicked. 
+	 **/
 	virtual QWidget *createNewWidget() = 0;
 	
 	/**
 	 * @brief Adds @p widget to the layout, which gets wrapped by a DynamicWidget.
 	 *
-	 * The new widget is also focused.
-	 * @return The new DynamicWidget or NULL, if the maximum widget count is
-	 * already reached. */
+	 * The new @p widget is also focused. If you want to focus some sub-widget of the @p widget
+	 * you can override this function and set the focus after calling the base implementation.
+	 * 
+	 * A separator widget is automatically added if needed (see ShowSeparators).
+	 * 
+	 * @return The new DynamicWidget or NULL, if the maximum widget count is already reached. 
+	 **/
 	virtual DynamicWidget *addWidget( QWidget *widget );
+	
 	/**
 	 * @brief Removes @p widget and it's DynamicWidget from the layout.
 	 *
 	 * This also removes separators if needed.
-	 * @return The index of the widget or -1, if the minimum widget count is
-	 * already reached. */
+	 * 
+	 * @return The index of the widget or -1, if the minimum widget count is already reached. 
+	 **/
 	virtual int removeWidget( QWidget *widget );
 
+	/**
+	 * @brief Creates a new separator widget with the given @p separatorText.
+	 * 
+	 * The base implementation always calls this function with an empty string, ie. it doesn't show
+	 * any text on separator items. If you want to add some text, override this function and call
+	 * the base implementation with the text that should be shown in the new separator widget.
+	 * 
+	 * This function sets the object name of the newly created separator widget to "separator"
+	 * to easily identify it as a separator. This is used eg. by @ref removeSeparator.
+	 *
+	 * @param separatorText The text to be shown in the separator widget. Default is QString().
+	 * 
+	 * @return The new separator widget.
+	 **/
 	virtual QWidget *createSeparator( const QString &separatorText = QString() );
+	
+	/**
+	 * @brief Removes the separator widget in the given QLayoutItem.
+	 * 
+	 * If there is no separator widget in @p separator that was created using @ref createSeparator 
+	 * the given @p separator won't get removed.
+	 * @note This function gets called automatically if needed.
+	 *
+	 * @param separator The QLayoutItem containing the separator.
+	 **/
 	virtual void removeSeparator( QLayoutItem *separator );
 
+	/** 
+	 * @brief Creates a new @ref DynamicWidget wrapping the given @p widget.
+	 *
+	 * This function gets called by @ref addWidget.
+	 * 
+	 * Overwrite this function to change the DynamicWidget after calling the base implementation
+	 * to create it. You can eg. change add/remove buttons added besides the @p widget 
+	 * (@ref RemoveButtonsBesideWidgets and/or @ref AddButtonBesideFirstWidget).
+	 **/
 	virtual DynamicWidget *createDynamicWidget( QWidget *widget );
+	
+	/**
+	 * @brief Gets the DynamicWidget wrapping the given @p widget.
+	 * 
+	 * The DynamicWidget may also contain an add and/or remove button, depending on the options
+	 * given in the constructor.
+	 *
+	 * @param widget The widget to return the wrapping DynamicWidget for.
+	 * 
+	 * @return The DynamicWidget wrapping the given @p widget.
+	 **/
 	DynamicWidget *dynamicWidgetForWidget( QWidget *widget ) const;
+	
 	/** @brief Gets the index of @p widget. */
 	int indexOf( QWidget *widget ) const;
 
 	/** @brief Gets a list of all contained dynamic widgets. */
 	QList< DynamicWidget* > dynamicWidgets() const;
+	
+	/** @brief Gets the content widget of the dynamic widget at @p index casted to WidgetType. */
+	template< class WidgetType >
+	inline WidgetType *widget( int index ) const {
+		return dynamicWidget( index )->contentWidget< WidgetType >();
+	};
+	
 	/** @brief Gets the content widgets of all dynamic widgets casted to WidgetType. */
 	template< class WidgetType >
 	QList< WidgetType > widgets() const {
@@ -386,6 +547,7 @@ class PUBLICTRANSPORTHELPER_EXPORT AbstractDynamicLabeledWidgetContainer : publi
 	Q_ENUMS( LabelNumberOptions )
 
 public:
+	/** @brief Options for numbering of widget labels. */
 	enum LabelNumberOptions {
 		IncludeSpecialLabelsInWidgetNumbering, /**< Begin widget numbering with 1
 				* for the first label, also if special labels are used. */
@@ -405,11 +567,13 @@ public:
 	 *
 	 * @see specialLabelTexts */
 	QString labelText() const;
+	
 	/**
 	 * @brief Gets special label texts for widgets beginning with the first one.
 	 *
 	 * @see labelText */
 	QStringList specialLabelTexts() const;
+	
 	/**
 	 * @brief Sets the texts of labels. The first labels get a string from @p specialLabelTexts
 	 * if any, the others get @p labelText with "%1" replaced by the widget number.
@@ -434,37 +598,44 @@ protected:
 	/**
 	 * @brief Adds @p widget to the layout, which gets wrapped by a DynamicWidget.
 	 *
-	 * This also creates and adds a default label widget using
-	 * @ref createNewLabelWidget. The new widget is also focused.
+	 * This also creates and adds a default label widget using @ref createNewLabelWidget. The new 
+	 * widget is also focused.
+	 * 
 	 * @return The new DynamicWidget or NULL, if the maximum widget count is already reached. */
 	virtual DynamicWidget *addWidget( QWidget *widget );
+	
 	/**
 	 * @brief Adds @p widget with @p labelWidget as label to the layout, @p widget
-	 * gets wrapped by a DynamicWidget.
+	 *   gets wrapped by a DynamicWidget.
 	 *
 	 * The new widget is also focused.
-	 * @return The new DynamicWidget or NULL, if the maximum widget count is
-	 * already reached. */
+	 * 
+	 * @return The new DynamicWidget or NULL, if the maximum widget count is already reached. */
 	virtual DynamicWidget *addWidget( QWidget *labelWidget, QWidget *widget );
+	
 	/**
 	 * @brief Removes @p widget, it's DynamicWidget and it's label widget from the layout.
 	 *
 	 * This also removes separators if needed.
+	 * 
 	 * @return The index of the widget or -1, if the minimum widget count is already reached. */
 	virtual int removeWidget( QWidget *widget );
+	
 	/**
-	 * @brief Override to create a new QWidget instance that should be added as
-	 * label when the add button is clicked.
+	 * @brief Override to create a new QWidget instance that should be added as label when the 
+	 *   add button is clicked.
 	 *
 	 * The default implementation creates a QLabel with the labelText given in the constructor
 	 * or by @ref setLabelTexts. */
 	virtual QWidget *createNewLabelWidget( int widgetIndex );
+	
 	/**
-	 * @brief Override to update the label widget to it's new widget index,
-	 * eg. update the text of a QLabel.
+	 * @brief Override to update the label widget to it's new widget index, eg. update the text 
+	 *   of a QLabel.
 	 *
 	 * The default implementation updates the QLabel with the labelText given in the constructor. */
 	virtual void updateLabelWidget( QWidget *labelWidget, int widgetIndex );
+	
 	/** @brief Gets the label widget used for @p widget. */
 	QWidget *labelWidgetFor( QWidget *widget ) const;
 
@@ -476,6 +647,7 @@ private:
 class KLineEdit;
 class QLabel;
 class DynamicLabeledLineEditListPrivate;
+
 /** @brief A widget containing a dynamic list of KLineEdits. */
 class PUBLICTRANSPORTHELPER_EXPORT DynamicLabeledLineEditList : public AbstractDynamicLabeledWidgetContainer {
 	Q_OBJECT
@@ -491,6 +663,7 @@ public:
 
 	/** @brief Gets whether or not the line edits in the list have a clear button. */
 	bool clearButtonsShown() const;
+	
 	/** @brief Sets whether or not the line edits in the list should have a clear button. */
 	void setClearButtonsShown( bool clearButtonsShown = true );
 
@@ -499,14 +672,14 @@ public:
 
 	/** @brief Gets a list of texts of all contained line edit widgets. */
 	QStringList lineEditTexts() const;
+	
 	/**
 	 * @brief Sets the texts of the contained line edit widgets.
 	 *
 	 * Line edits are added/removed to match the number of strings in @p lineEditTexts.
-	 * If @p lineEditTexts contains more strings than the maximum number of
-	 * line edits, the remaining strings are unused. If @p lineEditTexts
-	 * contains less strings than the minimum number of line edits, the texts
-	 * of the remaining line edits stay unchanged.
+	 * If @p lineEditTexts contains more strings than the maximum number of line edits, the 
+	 * remaining strings are unused. If @p lineEditTexts contains less strings than the minimum 
+	 * number of line edits, the texts of the remaining line edits stay unchanged.
 	 * @see maximumWidgetCount */
 	void setLineEditTexts( const QStringList &lineEditTexts );
 
@@ -514,20 +687,25 @@ public:
 	 * @brief Convenience method to remove all empty line edits.
 	 *
 	 * @note This leaves at least the minimum widget count of line edits.
+	 * 
 	 * @return The number of removed line edits. */
 	inline int removeEmptyLineEdits() { return removeLineEditsByText( QString() ); };
+	
 	/**
 	 * @brief Removes all line edits that have @p text as content.
 	 *
 	 * @note This leaves at least the minimum widget count of line edits.
+	 * 
 	 * @return The number of removed line edits. */
 	int removeLineEditsByText( const QString &text,
 		Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive);
 
 	/** @brief Gets a list of all contained line edit widgets. */
 	QList< KLineEdit* > lineEditWidgets() const;
+	
 	/** @brief Gets the label used for @p lineEdit. */
 	QLabel *labelFor( KLineEdit *lineEdit ) const;
+	
 	/** @brief Gets the currently focused line edit or NULL, if none has focus. */
 	KLineEdit *focusedLineEdit() const;
 
@@ -537,6 +715,7 @@ Q_SIGNALS:
 	 *
 	 * @p lineEditIndex is the index of the line edit widget that has emitted the signal. */
 	void textEdited( const QString &text, int lineEditIndex );
+	
 	/**
 	 * @brief This signal is emitted whenever a contained line edit widget emits textChanged.
 	 *
@@ -549,12 +728,13 @@ protected Q_SLOTS:
 
 protected:
 	virtual QWidget* createNewWidget();
+	
 	/**
 	 * @brief Removes @p widget, it's DynamicWidget and it's label widget from the layout.
 	 *
 	 * This also removes separators if needed.
-	 * @return The index of the widget or -1, if the minimum widget count is
-	 * already reached. */
+	 * 
+	 * @return The index of the widget or -1, if the minimum widget count is already reached. */
 	virtual int removeWidget( QWidget* widget );
 
 private:

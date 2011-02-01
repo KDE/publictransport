@@ -25,6 +25,7 @@ set( publictransporthelper_LIB_SRCS
 	htmldelegate.cpp
 	stopsettings.cpp
 	global.cpp
+	columnresizer.cpp
 )
 
 kde4_add_ui_files( publictransporthelper_LIB_SRCS
