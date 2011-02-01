@@ -451,11 +451,11 @@ protected Q_SLOTS:
 	 *
 	 * @param lineEdit The line edit widget that was added. */
 	void stopAdded( QWidget *lineEdit );
+	void stopRemoved( QWidget *lineEdit, int index );
 	/** @brief The menu item to use GHNS to download new service providers was clicked. */
 	void downloadServiceProvidersClicked();
 	/** @brief The menu item to install a local accessor info XML was clicked. */
 	void installServiceProviderClicked();
-	void adjustStopListLayout();
 
 	void stopFinderGeolocationData( const QString &countryCode, const QString &city,
 			      qreal latitude, qreal longitude, int accuracy );
@@ -468,7 +468,6 @@ protected Q_SLOTS:
 	void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
 
 protected:
-	virtual void resizeEvent( QResizeEvent* );
 	virtual void accept();
 
 	StopSettingsDialogPrivate* const d_ptr;

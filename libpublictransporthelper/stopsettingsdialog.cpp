@@ -28,6 +28,7 @@
 #include "locationmodel.h"
 #include "serviceprovidermodel.h"
 #include "accessorinfodialog.h"
+#include "columnresizer.h"
 
 #include <Plasma/Theme>
 #include <Plasma/DataEngineManager>
@@ -201,6 +202,9 @@ public:
 		// Setup main UI
 		uiStop.setupUi( q->mainWidget() );
 		
+		resizer = new ColumnResizer(q);
+		resizer->addWidgetsFromLayout(uiStop.mainLayout, 0);
+		
 		// Initialize button flags, later User1 and/or Details are added and setButtons() is called
 		KDialog::ButtonCodes buttonFlags = KDialog::Ok | KDialog::Cancel;
 		
@@ -243,6 +247,11 @@ public:
 			if ( settings.contains(FilterConfigurationSetting) ) {
 				KComboBox *filterConfiguration = settingWidget<KComboBox>( FilterConfigurationSetting );
 				filterConfiguration->addItems( filterConfigurations );
+			}
+			
+			// Add to column resizer
+			if ( detailsLayout ) {
+				resizer->addWidgetsFromLayout(detailsLayout, 0);
 			}
 		}
 		
@@ -301,8 +310,9 @@ public:
 			stopList->setObjectName( QLatin1String("StopList") );
 			stopList->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
 			q->connect( stopList, SIGNAL(added(QWidget*)), q, SLOT(stopAdded(QWidget*)) );
-			q->connect( stopList, SIGNAL(added(QWidget*)), q, SLOT(adjustStopListLayout()) );
-			q->connect( stopList, SIGNAL(removed(QWidget*,int)), q, SLOT(adjustStopListLayout()) );
+// 			q->connect( stopList, SIGNAL(added(QWidget*)), q, SLOT(adjustStopListLayout()) );
+// 			q->connect( stopList, SIGNAL(removed(QWidget*,int)), q, SLOT(adjustStopListLayout()) );
+			q->connect( stopList, SIGNAL(removed(QWidget*,int)), q, SLOT(stopRemoved(QWidget*,int)) );
 			
 			stopList->setLabelTexts( i18nc("@info/plain Label for the read only text labels containing "
 					"additional stop names, which are combined with other defined stops (showing "
@@ -323,10 +333,16 @@ public:
 			QVBoxLayout *l = new QVBoxLayout( uiStop.stops );
 			l->setContentsMargins( 0, 0, 0, 0 );
 			l->addWidget( stopList );
+			
+			// Add to column resizer
+			resizer->addWidgetsFromLayout(stopList->layout(), 0);
 		} else { // if ( !options.testFlag(StopSettingsDialog::ShowStopInputField) )
 			// Set dialog title for a dialog without stop name input
 			q->setWindowTitle( i18nc("@title:window", "Change Service Provider") );
+			
+			// Hide stop/city selection widgets
 			uiStop.stops->hide();
+			uiStop.city->hide();
 		}
 		
 		// Create model that filters service providers for the current location
@@ -710,6 +726,7 @@ public:
 	QSortFilterProxyModel *modelLocationServiceProviders; // Model of service providers for the current location
 	HtmlDelegate *htmlDelegate;
 	DynamicLabeledLineEditList *stopList;
+	ColumnResizer* resizer;
 
 	Plasma::DataEngineManager *dataEngineManager;
 	Plasma::DataEngine *publicTransportEngine;
@@ -815,7 +832,9 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 	if ( !indices.isEmpty() ) {
 		serviceProviderIndex = indices.first();
 	} else {
-		kDebug() << "Service provider not found" << stopSettings.get<QString>(ServiceProviderSetting);
+		kDebug() << "Service provider not found" << stopSettings.get<QString>(ServiceProviderSetting)
+				 << "maybe the wrong location is used for that service provider?";
+		serviceProviderIndex = d->uiStop.serviceProvider->model()->index( 0, 0 );
 	}
 	
 	// Set values of settings to the settings widgets
@@ -904,20 +923,11 @@ StopSettings StopSettingsDialog::stopSettings() const
 	foreach( const QString &stop, stopSettings.stops() ) {
 		if ( d->stopToStopID.contains(stop) ) {
 			stopSettings.setIdOfStop( stop, d->stopToStopID[stop].toString() );
-// 			stopIDs << d->stopToStopID[stop].toString();
 		} else if ( d->oldStopSettings.stops().contains(stop) ) {
 			int index = d->oldStopSettings.stops().indexOf(stop);
 			stopSettings.setIdOfStop( stop, d->oldStopSettings.stop(index).id );
-// 			if ( index < d->oldStopSettings.stopIDs().count() ) {
-// 				stopIDs << d->oldStopSettings.stopIDs()[index];
-// 			} else {
-// 				stopIDs << stop; 
-// 			}
-		} /*else {
-			stopIDs << stop;
-		}*/
+		}
 	}
-// 	stopSettings.setStopIDs( stopIDs );
 	
 	if ( d->options.testFlag(ShowFilterConfigurationConfig) ) {
 		KComboBox *filterConfiguration = d->settingWidget<KComboBox>( 
@@ -1113,38 +1123,25 @@ void StopSettingsDialog::accept()
 	}
 }
 
-void StopSettingsDialog::resizeEvent( QResizeEvent *event )
-{
-	KDialog::resizeEvent( event );
-	adjustStopListLayout();
-}
-
-void StopSettingsDialog::adjustStopListLayout()
-{
-	Q_D( StopSettingsDialog );
-	if ( !d->options.testFlag(ShowStopInputField) ) {
-		return;
-	}
-	
-	// Align elements in m_stopList with the main dialog's layout (at least a bit ;))
-	QWidgetList labelList = QWidgetList() << d->uiStop.lblLocation
-			<< d->uiStop.lblServiceProvider << d->uiStop.lblCity;
-	int maxLabelWidth = 0;
-	foreach( QWidget *w, labelList ) {
-		if ( w->width() > maxLabelWidth ) {
-			maxLabelWidth = w->width();
-		}
-	}
-	QLabel *label = d->stopList->labelFor( d->stopList->lineEditWidgets().first() );
-	label->setMinimumWidth( maxLabelWidth );
-	label->setAlignment( Qt::AlignRight | Qt::AlignVCenter );
-}
-
 void StopSettingsDialog::stopAdded( QWidget *lineEdit )
 {
+	Q_D( StopSettingsDialog );
+	
 	// Enable completer for new line edits
 	KLineEdit *edit = qobject_cast< KLineEdit* >( lineEdit );
 	edit->setCompletionMode( KGlobalSettings::CompletionPopup );
+	
+	// Add to column resizer
+	d->resizer->addWidget( d->stopList->labelFor(qobject_cast<KLineEdit*>(lineEdit)) );
+}
+
+void StopSettingsDialog::stopRemoved( QWidget* lineEdit, int index )
+{
+	Q_UNUSED( index );
+	Q_D( StopSettingsDialog );
+
+	// Remove from column resizer
+	d->resizer->removeWidget( d->stopList->labelFor(qobject_cast<KLineEdit*>(lineEdit)) );
 }
 
 void StopSettingsDialog::stopNameEdited( const QString&, int widgetIndex )
