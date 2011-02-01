@@ -292,10 +292,12 @@ public:
 			q->setWindowTitle( i18nc("@title:window", "Change Stop(s)") );
 		
 			// Create stop widgets
-			stopList = new DynamicLabeledLineEditList(
+			stopList = new DynamicLabeledLineEditList( q,
 					DynamicLabeledLineEditList::RemoveButtonsBesideWidgets,
 					DynamicLabeledLineEditList::AddButtonBesideFirstWidget,
-					DynamicLabeledLineEditList::NoSeparator, QString(), q );
+					DynamicLabeledLineEditList::NoSeparator,
+					DynamicLabeledLineEditList::AddWidgetsAtBottom,
+					QString() );
 			stopList->setObjectName( QLatin1String("StopList") );
 			stopList->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
 			q->connect( stopList, SIGNAL(added(QWidget*)), q, SLOT(stopAdded(QWidget*)) );
@@ -732,17 +734,6 @@ StopSettingsDialog::StopSettingsDialog( QWidget *parent, const StopSettings &sto
 	Q_D( StopSettingsDialog );
 	d->init( stopSettings, filterConfigurations );
 }
-
-// StopSettingsDialog::StopSettingsDialog( QWidget* parent, const StopSettings& stopSettings, 
-// 		const QList<int> &settings, AccessorInfoDialog::Options accessorInfoDialogOptions, 
-// 		const QStringList& filterConfigurations, StopSettingsWidgetFactory::Pointer factory )
-// 		: KDialog(parent),
-// 		d_ptr(new StopSettingsDialogPrivate(stopSettings, 
-// 			settings, accessorInfoDialogOptions, factory, this))
-// {
-// 	Q_D( StopSettingsDialog );
-// 	d->init( stopSettings, filterConfigurations );
-// }
 
 StopSettingsDialog::~StopSettingsDialog()
 {

@@ -271,8 +271,8 @@ StopListWidget::StopListWidget( QWidget* parent, const StopSettingsList& stopSet
 		AccessorInfoDialog::Options accessorInfoDialogOptions,
 		const QStringList& filterConfigurations, QList<int> settings, 
 		StopSettingsWidgetFactory::Pointer factory )
-		: AbstractDynamicWidgetContainer(RemoveButtonsBesideWidgets,
-		                                 AddButtonAfterLastWidget, ShowSeparators, parent),
+		: AbstractDynamicWidgetContainer(parent, RemoveButtonsBesideWidgets,
+		                                 AddButtonAfterLastWidget, ShowSeparators),
 		d_ptr(new StopListWidgetPrivate(this, filterConfigurations, 
 				stopSettingsDialogOptions, accessorInfoDialogOptions, settings, factory))
 {

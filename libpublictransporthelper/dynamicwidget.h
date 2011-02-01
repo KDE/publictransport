@@ -191,13 +191,27 @@ public:
 		NoAddButton = 0, /**< Don't show add buttons. You can manually add widgets
 				* by calling @ref addWidget(). */
 		AddButtonBesideFirstWidget, /**< Show an add button beside the first widget. */
-		AddButtonAfterLastWidget /**< Show an add button after the last widget. */
+		AddButtonAfterLastWidget /**< Show an add button after the last widget. If 
+				* @ref AddWidgetsAtBottom is used (the default) the button gets placed under all
+				* widgets in the list. If @ref AddWidgetsAtTop is used, the button gets placed on
+				* top of all widgets. */
+	};
+	
+	/** @brief Positions for new widgets. */
+	enum NewWidgetPosition {
+		AddWidgetsAtBottom = 0, /**< Add new widgets at the buttom of the widget list. This is 
+				* the default. When the remove button is clicked the last widget gets removed. */
+		AddWidgetsAtTop = 1 /**< Add new widgets at the top of the widget list. When the remove 
+				* button is clicked the widget on top gets removed, which then is the last widget
+				* in the list. Buttons added after the last widget get placed on top of all
+				* widgets (after the last widget = over the last widget, ie. widget on top). */
 	};
 
-	AbstractDynamicWidgetContainer(
+	AbstractDynamicWidgetContainer( QWidget *parent = 0,
 		RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
 		AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
-		SeparatorOptions separatorOptions = NoSeparator, QWidget *parent = 0 );
+		SeparatorOptions separatorOptions = NoSeparator, 
+		NewWidgetPosition newWidgetPosition = AddWidgetsAtBottom );
 	~AbstractDynamicWidgetContainer();
 	
 	DynamicWidget *dynamicWidget( int index ) const;
@@ -292,9 +306,9 @@ protected Q_SLOTS:
 
 protected:
 	AbstractDynamicWidgetContainerPrivate* const d_ptr;
-	AbstractDynamicWidgetContainer( AbstractDynamicWidgetContainerPrivate &dd,
-					RemoveButtonOptions removeButtonOptions,
-					AddButtonOptions addButtonOptions, QWidget *parent );
+	AbstractDynamicWidgetContainer( QWidget *parent, AbstractDynamicWidgetContainerPrivate &dd,
+					RemoveButtonOptions removeButtonOptions, AddButtonOptions addButtonOptions,
+					NewWidgetPosition newWidgetPosition );
 
 	/** @brief Reimplemented to update the enabled state of the add button. */
 	virtual void changeEvent( QEvent *event );
@@ -303,6 +317,7 @@ protected:
 	 * @brief Override to create a new QWidget instance that should be added
 	 * when the add button is clicked. */
 	virtual QWidget *createNewWidget() = 0;
+	
 	/**
 	 * @brief Adds @p widget to the layout, which gets wrapped by a DynamicWidget.
 	 *
@@ -378,11 +393,12 @@ public:
 				* for the first label without a special label text. */
 	};
 
-	AbstractDynamicLabeledWidgetContainer(
+	AbstractDynamicLabeledWidgetContainer( QWidget* parent = 0,
 		RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
 		AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
 		SeparatorOptions separatorOptions = NoSeparator,
-		const QString &labelText = "Item %1:", QWidget *parent = 0 );
+		NewWidgetPosition newWidgetPosition = AddWidgetsAtBottom,
+		const QString &labelText = "Item %1:" );
 
 	/**
 	 * @brief Gets the default label text. "%1" gets replaced by the widget number.
@@ -409,9 +425,11 @@ public:
 			LabelNumberOptions labelNumberOptions = DontIncludeSpecialLabelsInWidgetNumbering  );
 
 protected:
-	AbstractDynamicLabeledWidgetContainer( AbstractDynamicLabeledWidgetContainerPrivate &dd,
+	AbstractDynamicLabeledWidgetContainer( QWidget *parent, 
+			AbstractDynamicLabeledWidgetContainerPrivate &dd,
 			RemoveButtonOptions removeButtonOptions, AddButtonOptions addButtonOptions,
-			const QString &labelText, QWidget *parent );
+			NewWidgetPosition newWidgetPosition,
+			const QString &labelText );
 
 	/**
 	 * @brief Adds @p widget to the layout, which gets wrapped by a DynamicWidget.
@@ -464,11 +482,12 @@ class PUBLICTRANSPORTHELPER_EXPORT DynamicLabeledLineEditList : public AbstractD
 	Q_PROPERTY( bool clearButtonsShown READ clearButtonsShown WRITE setClearButtonsShown )
 
 public:
-	DynamicLabeledLineEditList(
+	DynamicLabeledLineEditList( QWidget* parent = 0,
 			RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
 			AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
-			SeparatorOptions separatorOptions = NoSeparator,
-			const QString &labelText = "Item %1:", QWidget* parent = 0 );
+			SeparatorOptions separatorOptions = NoSeparator, 
+			NewWidgetPosition newWidgetPosition = AddWidgetsAtBottom,
+			const QString &labelText = "Item %1:" );
 
 	/** @brief Gets whether or not the line edits in the list have a clear button. */
 	bool clearButtonsShown() const;
