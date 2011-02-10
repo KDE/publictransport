@@ -201,7 +201,13 @@ function parseTimetable( html ) {
 		timetableData.set( 'TransportLine', transportLine );
 		timetableData.set( 'TypeOfVehicle', typeOfVehicle );
 		timetableData.set( 'Target', targetString );
-		timetableData.set( 'DepartureDate', currentDate );
+// println("  DATA: " + currentDate);
+		if ( currentDate == null ) {
+			helper.error("Error: currentDate is null!");
+		} else {
+			timetableData.set( 'DepartureDate', currentDate );
+		}
+// println("  DATA: " + time[0]);
 		timetableData.set( 'DepartureHour', time[0] );
 		timetableData.set( 'DepartureMinute', time[1] );
 		timetableData.set( 'Platform', platformString );

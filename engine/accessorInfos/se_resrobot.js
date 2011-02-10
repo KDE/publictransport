@@ -32,11 +32,17 @@ function parseTimetable( html ) {
     // Go through all departure blocks
     while ( (departureRowArr = departuresRegExp.exec(str)) ) {
 		departureRow = departureRowArr[1];
+		
+		if ( departureRow.indexOf("<th") != -1 ) {
+			// This is a header row, not a departure/arrival
+			continue;
+		}
 
 		// Get column contents
 		var columns = new Array;
-		while ( (col = columnsRegExp.exec(departureRow)) )
+		while ( (col = columnsRegExp.exec(departureRow)) ) {
 			columns.push( col[1] );
+		}
 		columnsRegExp.lastIndex = 0;
 		
 		if ( columns.length < 5 ) {

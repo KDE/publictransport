@@ -438,6 +438,7 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 			sData = sData.replace( "{city}", sCity );
 		}
 		sData = sData.replace( "{time}", dateTime.time().toString("hh:mm") )
+				.replace( "{timestamp}", QString::number(dateTime.toTime_t()) )
 				.replace( "{maxCount}", QString::number(maxCount).toLatin1() )
 				.replace( "{stop}", sStop.toLatin1() )
 				.replace( "{dataType}", sDataType.toLatin1() );
@@ -801,7 +802,6 @@ KUrl TimetableAccessor::getUrl( const QString &city, const QString &stop,
                                 const QString &dataType, bool useDifferentUrl ) const
 {
 	QString sRawUrl = useDifferentUrl ? stopSuggestionsRawUrl() : departuresRawUrl();
-	QString sTime = dateTime.time().toString( "hh:mm" );
 	QString sDataType;
 	QString sCity = city.toLower(), sStop = stop.toLower();
 	if ( dataType == "arrivals" ) {
@@ -825,7 +825,8 @@ KUrl TimetableAccessor::getUrl( const QString &city, const QString &stop,
 	if ( useSeparateCityValue() ) {
 		sRawUrl = sRawUrl.replace( "{city}", sCity );
 	}
-	sRawUrl = sRawUrl.replace( "{time}", sTime )
+	sRawUrl = sRawUrl.replace( "{time}", dateTime.time().toString("hh:mm") )
+			  .replace( "{timestamp}", QString::number(dateTime.toTime_t()) )
 	          .replace( "{maxCount}", QString( "%1" ).arg( maxCount ) )
 	          .replace( "{stop}", sStop )
 	          .replace( "{dataType}", sDataType )

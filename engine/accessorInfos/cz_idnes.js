@@ -69,7 +69,7 @@ function parsePossibleStops( json ) {
     // Initialize regular expressions (compile them only once)
     var stopRegExp = /\{"__type":"CHAPS.IDOS3.TTWS.TimetableObjectInfo",(?:"[^"]*":[^,]*,)*?"oItem":\{([^\}]+)\}[^\}]*\}/ig;
 	var stopNameRegExp = /"sName":"([^"]+)"/i;
-	var stopIdRegExp = /"iItem":([0-9]+)/i;
+// 	var stopIdRegExp = /"iItem":([0-9]+)/i;
 
     // Go through all stop options
     while ( (oItem = stopRegExp.exec(json)) ) {
@@ -82,20 +82,20 @@ function parsePossibleStops( json ) {
 		}
 		stopName = stopName[1];
 		
-		var stopId = stopIdRegExp.exec(oItem);
-		if ( stopId == null ) {
-			stopId = "";
-			helper.error("Unexpected string in stop suggestion document, didn't find the stop ID!", oItem);
-		} else {
-			stopId = stopId[1];
-		}
+// 		var stopId = stopIdRegExp.exec(oItem);
+// 		if ( stopId == null ) {
+// 			stopId = "";
+// 			helper.error("Unexpected string in stop suggestion document, didn't find the stop ID!", oItem);
+// 		} else {
+// 			stopId = stopId[1];
+// 		}
 		
 		// Add stop
 		timetableData.clear();
 		timetableData.set( 'StopName', stopName );
-		if ( stopId.length > 0 ) {
-			timetableData.set( 'StopID', stopId );
-		}
+// 		if ( stopId.length > 0 ) {
+// 			timetableData.set( 'StopID', stopId );
+// 		}
 		result.addData( timetableData );
     }
 
