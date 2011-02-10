@@ -532,6 +532,7 @@ private:
 
 class QFormLayout;
 class AbstractDynamicLabeledWidgetContainerPrivate;
+
 /** @brief A widget containing a dynamic list of widgets with labels.
  *
  * This widget contains a dynamic list of widgets with a label for each widget.
@@ -542,7 +543,9 @@ class AbstractDynamicLabeledWidgetContainerPrivate;
  * clicked. You an also override @ref createNewLabelWidget to create a new QWidget
  * instance that should be added as label when the add button is clicked. The default
  * implementation creates a QLabel. */
-class PUBLICTRANSPORTHELPER_EXPORT AbstractDynamicLabeledWidgetContainer : public AbstractDynamicWidgetContainer {
+class PUBLICTRANSPORTHELPER_EXPORT AbstractDynamicLabeledWidgetContainer 
+	: public AbstractDynamicWidgetContainer 
+{
 	Q_OBJECT
 	Q_ENUMS( LabelNumberOptions )
 
@@ -649,7 +652,9 @@ class QLabel;
 class DynamicLabeledLineEditListPrivate;
 
 /** @brief A widget containing a dynamic list of KLineEdits. */
-class PUBLICTRANSPORTHELPER_EXPORT DynamicLabeledLineEditList : public AbstractDynamicLabeledWidgetContainer {
+class PUBLICTRANSPORTHELPER_EXPORT DynamicLabeledLineEditList 
+	: public AbstractDynamicLabeledWidgetContainer 
+{
 	Q_OBJECT
 	Q_PROPERTY( bool clearButtonsShown READ clearButtonsShown WRITE setClearButtonsShown )
 
@@ -697,8 +702,8 @@ public:
 	 * @note This leaves at least the minimum widget count of line edits.
 	 * 
 	 * @return The number of removed line edits. */
-	int removeLineEditsByText( const QString &text,
-		Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive);
+	int removeLineEditsByText( const QString &text, 
+			Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive);
 
 	/** @brief Gets a list of all contained line edit widgets. */
 	QList< KLineEdit* > lineEditWidgets() const;

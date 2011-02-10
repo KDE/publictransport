@@ -8,22 +8,22 @@ add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
 include_directories(
 	${CMAKE_SOURCE_DIR}
 	${CMAKE_BINARY_DIR}
-	${KDE4_INCLUDES} )
+	${KDE4_INCLUDES} )   
 
-enable_testing()
-
-set( publictransporthelper_LIB_SRCS
+set( publictransporthelper_LIB_SRCS 
 	locationmodel.cpp
 	serviceprovidermodel.cpp
+	vehicletypemodel.cpp
 	dynamicwidget.cpp
 	categorycombobox.cpp
 	checkcombobox.cpp
+	stopsettings.cpp
 	stopwidget.cpp
 	accessorinfodialog.cpp
 	stopsettingsdialog.cpp
+	stoplineedit.cpp
 	stopfinder.cpp
 	htmldelegate.cpp
-	stopsettings.cpp
 	global.cpp
 	columnresizer.cpp
 )
@@ -38,12 +38,14 @@ set( publictransporthelper_LIB_HDRS
 	# Models
 	locationmodel.h
 	serviceprovidermodel.h
+	vehicletypemodel.h
 	
 	# Widgets
 	dynamicwidget.h
 	categorycombobox.h
 	checkcombobox.h
 	stopwidget.h
+	stoplineedit.h
 	
 	# Dialogs
 	accessorinfodialog.h
@@ -68,7 +70,7 @@ target_link_libraries( publictransporthelper
 	${KDE4_KNEWSTUFF3_LIBS}
 )
 set_target_properties( publictransporthelper
-	PROPERTIES VERSION ${GENERIC_LIB_VERSION} SOVERSION ${GENERIC_LIB_SOVERSION}
+	PROPERTIES VERSION 0 SOVERSION 10
 )
 
 install( TARGETS publictransporthelper ${INSTALL_TARGETS_DEFAULT_ARGS} )

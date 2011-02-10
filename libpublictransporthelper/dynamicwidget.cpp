@@ -995,7 +995,8 @@ class DynamicLabeledLineEditListPrivate : public AbstractDynamicLabeledWidgetCon
 
 public:
 	DynamicLabeledLineEditListPrivate( DynamicLabeledLineEditList *q )
-			: AbstractDynamicLabeledWidgetContainerPrivate( q ) {
+			: AbstractDynamicLabeledWidgetContainerPrivate( q ) 
+	{
 		clearButtonsShown = true;
 	};
 
@@ -1159,6 +1160,7 @@ void DynamicLabeledLineEditList::setClearButtonsShown( bool clearButtonsShown )
 	QList< KLineEdit* > lineEdits = widgets< KLineEdit* >();
 //     foreach ( DynamicWidget *dynamicWidget, d->dynamicWidgets ) {
 //     KLineEdit *lineEdit = qobject_cast< KLineEdit* >( dynamicWidget->contentWidget() );
-	foreach( KLineEdit* lineEdit, lineEdits )
-	lineEdit->setClearButtonShown( clearButtonsShown );
+	foreach( KLineEdit* lineEdit, lineEdits ) {
+		lineEdit->setClearButtonShown( clearButtonsShown );
+	}
 }

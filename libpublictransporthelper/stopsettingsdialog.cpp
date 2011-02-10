@@ -690,7 +690,7 @@ public:
 	Plasma::DataEngine *geolocationEngine;
 
 	QHash< QString, QVariant > stopToStopID; /**< A hash with stop names as
-				* keys and the corresponding stop IDs as values. */
+ 				* keys and the corresponding stop IDs as values. */
 
 protected:
 	StopSettingsDialog* const q_ptr;
