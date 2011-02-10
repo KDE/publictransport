@@ -62,6 +62,12 @@ function parseTimetable( html ) {
 		var typeOfVehicle = typeOfVehicleRegExp.exec(columns[typeOfVehicleCol]);
 		if ( typeOfVehicle != null ) {
 			typeOfVehicle = typeOfVehicle[1];
+			
+			var vehicle = typeOfVehicle.toLowerCase();
+			// TODO: Check if these are the right train type:
+			if ( vehicle == "dpn" || vehicle == "t84" || vehicle == "r84" ) {
+				typeOfVehicle = "regional";
+			}
 		} else {
 			helper.error("Unexpected string in type of vehicle column", columns[typeOfVehicleCol]);
 			typeOfVehicle = "Unknown";

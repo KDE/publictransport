@@ -93,6 +93,16 @@ function parseTimetable( html ) {
 		}
 		var transportLine = helper.trim( typeOfVehicle[2] );
 		typeOfVehicle = typeOfVehicle[1];
+		
+		var vehicle = typeOfVehicle.toLowerCase();
+		if ( vehicle == "rj" ) { // RailJet
+			typeOfVehicle = "highspeed train";
+		} else if ( vehicle == "oec" || vehicle == "oic" ) {
+			typeOfVehicle = "intercity";
+		} else if ( vehicle == "rex"    // local train stopping at few stations, semi fast
+				 || vehicle == "ez" ) { // "ErlebnisZug", local train stopping at few stations, semi fast
+			typeOfVehicle = "regional express";
+		}
 
 		// Parse target column
 		var target = targetRegExp.exec( columns[targetCol] );

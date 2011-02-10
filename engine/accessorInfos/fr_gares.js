@@ -58,8 +58,11 @@ function parseTimetable( html ) {
 		}
 		var operator = vehicleTypeValues[1];
 		var typeOfVehicle = "ICE"; //vehicleTypeValues[2]; TODO
-		if ( operator == null )
+// "intercity and regional train" => "express"
+// "high-speed train" => "highspeed train"
+		if ( operator == null ) {
 			operator = "";
+		}
 
 		// Parse delay column
 		var delay = -1;

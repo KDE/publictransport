@@ -58,6 +58,11 @@ function parseTimetable( html ) {
 		// Parse type of vehicle column
 		if ( (typeOfVehicleArr = typeOfVehicleRegExp.exec(columns[1])) != null ) {
 			typeOfVehicle = typeOfVehicleArr[1];
+			
+			var vehicle = typeOfVehicle.toLowerCase();
+			if ( vehicle == "au" ) { // AutoBus
+				typeOfVehicle = "bus";
+			}
 		} else {
 			helper.error("Unexcepted string in type of vehicle column", columns[1]);
 		}

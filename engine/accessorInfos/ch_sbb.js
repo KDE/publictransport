@@ -142,6 +142,15 @@ function parseTimetable( html ) {
 			continue;
 		}
 		typeOfVehicle = helper.trim( typeOfVehicle[1] );
+		
+		var vehicle = typeOfVehicle.toLowerCase();
+		if ( vehicle == "nbu" ) {
+			typeOfVehicle = "bus";
+		} else if ( vehicle == "s1" ) {
+			typeOfVehicle = "s";
+		} else if ( vehicle == "ntr" || vehicle == "tra" ) {
+			typeOfVehicle = "tram";
+		}
 
 		// Parse transport line column
 		var transportLine = transportLineRegExp.exec( columns[typeOfVehicleCol + 1] );
