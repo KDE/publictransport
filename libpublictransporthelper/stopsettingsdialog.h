@@ -137,41 +137,52 @@ public:
 		ShowInstallAccessorButton = 0x0008, /**< Shows a button on the right of the service 
 				* provider combobox to install new accessors (lokal files or via GHNS). */
 				
-		ShowFilterConfigurationConfig = 0x0010, /**< Shows a combobox in a details section to 
+		ShowServiceProviderConfig = 0x0010, /**< Shows comboboxes for location and service provider
+				* selection. The service provider combobox gets filtered by the country selected
+				* in the location combobox. */
+				
+		ShowFilterConfigurationConfig = 0x0100, /**< Shows a combobox in a details section to 
 				* select a filter configuration. It offers all filter configurations given in the 
 				* constructor. */
-		ShowAlarmTimeConfig = 0x0020, /**< Shows an input field in a details section to edit the
+		ShowAlarmTimeConfig = 0x0200, /**< Shows an input field in a details section to edit the
 				* time in minutes before the actual departure/arrival at which alarms should be 
 				* triggered. */
-		ShowFirstDepartureConfig = 0x0040, /**< Shows widgets in a details section to configure 
+		ShowFirstDepartureConfig = 0x0400, /**< Shows widgets in a details section to configure 
 				* the first shown  departure/arrival. It adds two radio buttons: 
 				* <em>"Relative to current time"</em> (with an integer input field to edit the 
 				* time in minutes from now) and <em>"At custom time"</em> (with a time input 
 				* field to edit the first departure/arrival time directly. */
 				
-		UseHtmlForLocationConfig = 0x0100, /**< Uses an @ref HtmlDelegate to draw the items of
+		UseHtmlForLocationConfig = 0x1000, /**< Uses an @ref HtmlDelegate to draw the items of
 				* the location combobox. */
-		UseHtmlForServiceProviderConfig = 0x0200, /**< Uses an @ref HtmlDelegate to draw the items 
+		UseHtmlForServiceProviderConfig = 0x2000, /**< Uses an @ref HtmlDelegate to draw the items 
 				* of the service provider combobox. */
 				
 		UseHtmlEverywhere = UseHtmlForLocationConfig | UseHtmlForServiceProviderConfig,
 				/** Combination of UseHtmlForLocationConfig and UseHtmlForServiceProviderConfig. */
 		ShowAllDetailsWidgets = ShowInstallAccessorButton | ShowFilterConfigurationConfig |
-				ShowAlarmTimeConfig | ShowFirstDepartureConfig, /** Shows all widgets of the 
-				* details section. Combination of ShowInstallAccessorButton, 
-				* ShowFilterConfigurationConfig, ShowAlarmTimeConfig and 
-				* ShowFirstDepartureConfig. */
+				ShowAlarmTimeConfig | ShowFirstDepartureConfig, 
+				/** Shows all widgets of the 
+				 * details section. Combination of ShowInstallAccessorButton, 
+				 * ShowFilterConfigurationConfig, ShowAlarmTimeConfig and 
+				 * ShowFirstDepartureConfig. */
 		
-		SimpleAccessorSelection = ShowAccessorInfoButton | ShowInstallAccessorButton | 
-				UseHtmlEverywhere, /**< Options for a simple accessor selection dialog. 
-				* It doesn't show stop selection fields, only widgets associated to service
-				* provider selection, including an accessor info button and a button to install
-				* new accessors. */
+		SimpleAccessorSelection = ShowServiceProviderConfig | ShowAccessorInfoButton | 
+				ShowInstallAccessorButton | UseHtmlEverywhere,
+				/**< Options for a simple accessor selection dialog. 
+				 * It doesn't show stop selection fields, only widgets associated to service
+				 * provider selection, including an accessor info button and a button to install
+				 * new accessors. */
+		SingleAccessorSimpleStopSelection = ShowStopInputField | ShowNearbyStopsButton,
+				/** Shows a stop input field with autocompletion, but no widgets to change the
+				 * service provider. This may be used if only one specific service provider should
+				 * be used, eg. one for flights. */
 		SimpleStopSelection = SimpleAccessorSelection | ShowStopInputField | 
-				ShowNearbyStopsButton, /** Extends SimpleServiceProviderSelection with a stop 
-				* input field and a button to search for nearby stops. */
-		ExtendedStopSelection = SimpleStopSelection | ShowAllDetailsWidgets, /**< Extends 
-				* SimpleStopSelection with ShowAllDetailsWidgets. */
+				ShowNearbyStopsButton, 
+				/**< Extends SimpleServiceProviderSelection with a stop input field and a button 
+				 * to search for nearby stops. */
+		ExtendedStopSelection = SimpleStopSelection | ShowAllDetailsWidgets, 
+				/**< Extends SimpleStopSelection with ShowAllDetailsWidgets. */
 				
 		DefaultOptions = SimpleStopSelection /**< Default options. */
 	};
@@ -441,12 +452,6 @@ protected Q_SLOTS:
 	/** @brief The dialog showing stops near the user was closed
 	 *   (after clicking the nearby stops button). */
 	void nearStopsDialogFinished( int result );
-	/** @brief The stop name has been edited.
-	 * 
-	 * @param text The new stop name.
-	 * 
-	 * @param widgetIndex The index of the edited stop name. */
-	void stopNameEdited( const QString &text, int widgetIndex );
 	/** @brief Another combined stop has been added (eg. by clicking the add button.
 	 *
 	 * @param lineEdit The line edit widget that was added. */
@@ -463,9 +468,6 @@ protected Q_SLOTS:
 	void stopFinderFinished();
 	void stopFinderFoundStops( const QStringList &stops, const QStringList &stopIDs,
 				   const QString &serviceProviderID );
-
-	/** @brief The data from the data engine was updated. */
-	void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
 
 protected:
 	virtual void accept();
