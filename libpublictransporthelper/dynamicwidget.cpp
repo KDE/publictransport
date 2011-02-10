@@ -999,15 +999,16 @@ public:
 		clearButtonsShown = true;
 	};
 
-	KLineEdit *createLineEdit() {
-		Q_Q( DynamicLabeledLineEditList );
-		KLineEdit *lineEdit = new KLineEdit( q );
-		lineEdit->setClearButtonShown( clearButtonsShown );
-		indexMapping.insert( lineEdit, dynamicWidgets.count() );
-		q->connect( lineEdit, SIGNAL(textEdited(QString)), q, SLOT(textEdited(QString)) );
-		q->connect( lineEdit, SIGNAL(textChanged(QString)), q, SLOT(textChanged(QString)) );
-		return lineEdit;
-	};
+// 	KLineEdit *createLineEdit() 
+// 	{
+// 		Q_Q( DynamicLabeledLineEditList );
+// 		KLineEdit *lineEdit = new KLineEdit( q );
+// 		lineEdit->setClearButtonShown( clearButtonsShown );
+// 		indexMapping.insert( lineEdit, dynamicWidgets.count() );
+// 		q->connect( lineEdit, SIGNAL(textEdited(QString)), q, SLOT(textEdited(QString)) );
+// 		q->connect( lineEdit, SIGNAL(textChanged(QString)), q, SLOT(textChanged(QString)) );
+// 		return lineEdit;
+// 	};
 
 	bool clearButtonsShown;
 	QHash< QWidget*, int > indexMapping;
@@ -1026,16 +1027,27 @@ DynamicLabeledLineEditList::DynamicLabeledLineEditList( QWidget* parent,
 	d->init( removeButtonOptions, addButtonOptions, separatorOptions, newWidgetPosition );
 }
 
+KLineEdit* DynamicLabeledLineEditList::createLineEdit()
+{
+	return new KLineEdit( this );
+}
+
 QWidget* DynamicLabeledLineEditList::createNewWidget()
 {
 	Q_D( DynamicLabeledLineEditList );
-	return d->createLineEdit();
+	KLineEdit *lineEdit = createLineEdit();
+	lineEdit->setClearButtonShown( d->clearButtonsShown );
+	d->indexMapping.insert( lineEdit, d->dynamicWidgets.count() );
+	connect( lineEdit, SIGNAL(textEdited(QString)), this, SLOT(textEdited(QString)) );
+	connect( lineEdit, SIGNAL(textChanged(QString)), this, SLOT(textChanged(QString)) );
+	return lineEdit;
 }
 
 KLineEdit* DynamicLabeledLineEditList::addLineEdit()
 {
-	Q_D( DynamicLabeledLineEditList );
-	KLineEdit *lineEdit = d->createLineEdit();
+	KLineEdit *lineEdit = qobject_cast<KLineEdit*>( createNewWidget() );
+	Q_ASSERT_X( lineEdit, "DynamicLabeledLineEditList::addLineEdit",
+				"Widgets created in createNewWidget() should be of type KLineEdit or derived from it." );
 	addWidget( lineEdit );
 	return lineEdit;
 }

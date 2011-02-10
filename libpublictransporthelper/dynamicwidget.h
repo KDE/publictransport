@@ -729,6 +729,8 @@ protected Q_SLOTS:
 protected:
 	virtual QWidget* createNewWidget();
 	
+	virtual KLineEdit* createLineEdit();
+	
 	/**
 	 * @brief Removes @p widget, it's DynamicWidget and it's label widget from the layout.
 	 *

@@ -20,14 +20,45 @@
 #include "global.h"
 
 #include <KDebug>
-#include <qmath.h>
-#include <QPainter>
 #include <KIconEffect>
 #include <KIconLoader>
 #include <KGlobal>
 #include <KLocale>
 #include <Plasma/Theme>
-#include <KColorUtils>
+
+#include <qmath.h>
+#include <QPainter>
+
+GeneralVehicleType Global::generalVehicleType( VehicleType vehicleType )
+{
+	switch ( vehicleType ) {
+	case Tram:
+	case Bus:
+	case TrolleyBus:
+	case InterurbanTrain:
+	case Subway:
+	case Metro:
+		return LocalPublicTransport;
+		
+	case RegionalTrain:
+	case RegionalExpressTrain:
+	case InterregionalTrain:
+	case IntercityTrain:
+	case HighSpeedTrain:
+		return Train;
+		
+	case Ferry:
+	case Ship:
+		return WaterVehicle;
+		
+	case Plane:
+		return AirVehicle;
+		
+	case Unknown:
+	default:
+		return UnknownVehicle;
+	}
+}
 
 KIcon Global::internationalIcon()
 {
@@ -209,7 +240,7 @@ QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural
 		       : i18nc( "@info/plain", "intercity express train" );
 
 	case Feet:
-		return i18nc( "@info/plain", "Footway" );
+		return i18nc( "@info/plain", "footway" );
 
 	case Ferry:
 		return plural ? i18nc( "@info/plain", "ferries" )

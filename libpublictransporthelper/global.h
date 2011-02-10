@@ -35,8 +35,10 @@
 
 /** @class Global
   * @brief Contains global static methods. */
-class Global {
+class PUBLICTRANSPORTHELPER_EXPORT Global {
 public:
+	static GeneralVehicleType generalVehicleType( VehicleType vehicleType );
+	
 	/** Create an "international" icon with some flag icons */
 	static KIcon internationalIcon();
 

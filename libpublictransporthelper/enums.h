@@ -105,6 +105,20 @@ enum PUBLICTRANSPORTHELPER_EXPORT DecorationPosition {
 };
 
 /**
+ * @brief A more general vehicle type than @ref VehicleType.
+ * 
+ * For example @ref VehicleType has special enumerables for different types of trains, 
+ * where @ref GerenalVehicleType combines them into one enumerable.
+ */
+enum PUBLICTRANSPORTHELPER_EXPORT GeneralVehicleType {
+	UnknownVehicle = 0,
+	LocalPublicTransport = 1,
+	Train = 2,
+	WaterVehicle = 3,
+	AirVehicle = 4
+};
+
+/**
  * @brief The type of the vehicle used for a public transport line.
  *
  * The numbers here match the ones used by the data engine.
@@ -115,18 +129,28 @@ enum PUBLICTRANSPORTHELPER_EXPORT VehicleType {
 	Tram = 1, /**< A tram / streetcar. */
 	Bus = 2, /**< A bus. */
 	Subway = 3, /**< A subway. */
-	TrainInterurban = 4, /**< An interurban train. */
+	TrainInterurban = 4, /**< An interurban train. @deprecated Use InterurbanTrain instead. */
+	InterurbanTrain = 4, /**< An interurban train. */
 	Metro = 5, /**< A metro. */
 	TrolleyBus = 6, /**< A trolleybus (also known as trolley bus, trolley coach,
 			* trackless trolley, trackless tram or trolley) is an electric bus that draws its
 			* electricity from overhead wires (generally suspended from roadside posts)
 			* using spring-loaded trolley poles. */
 
-	TrainRegional = 10, /**< A regional train. */
-	TrainRegionalExpress = 11, /**< A regional express train. */
-	TrainInterregio = 12, /**< An inter-regional train. */
-	TrainIntercityEurocity = 13, /**< An intercity / eurocity train. */
-	TrainIntercityExpress = 14, /**< An intercity express. */
+	TrainRegional = 10, /**< A regional train. @deprecated Use RegionalTrain instead. */
+	TrainRegionalExpress = 11, /**< A regional express train. @deprecated Use RegionalExpressTrain instead. */
+	TrainInterregio = 12, /**< An inter-regional train. @deprecated Use InterregionalTrain instead. */
+	TrainIntercityEurocity = 13, /**< An intercity / eurocity train. @deprecated Use IntercityTrain instead. */
+	TrainIntercityExpress = 14, /**< An intercity express. @deprecated Use HighSpeedTrain instead. */
+	
+	RegionalTrain = 10, /**< A regional train. Stops at many small stations, slow. */
+	RegionalExpressTrain = 11, /**< A regional express train. Stops at less small stations than 
+			* RegionalTrain but it faster. */
+	InterregionalTrain = 12, /**< An inter-regional train. Higher distances and faster than 
+			* RegionalTrain and RegionalExpressTrain. */
+	IntercityTrain = 13, /**< An intercity / eurocity train. Connects cities. */
+	HighSpeedTrain = 14, /**< A highspeed train, eg. an intercity express (ICE). 
+			* Trains at > 250 km/h, high distances. */
 
 	Feet = 50, /**< By feet, ie. no vehicle. Used for journeys, eg. from platform A to
 			* platform B when changing the vehicle. */
