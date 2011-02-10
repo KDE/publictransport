@@ -90,7 +90,7 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
 		m_overlay(0), m_model(0), m_modelJourneys(0), m_departureProcessor(0)
 {
 	m_currentMessage = MessageNone;
-	m_appletStates = NoState;
+	m_appletStates = Initializing;
 
 	setBackgroundHints( StandardBackground );
 	setAspectRatioMode( Plasma::IgnoreAspectRatio );
@@ -172,6 +172,7 @@ void PublicTransport::init()
 	m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
 	addState( ShowingDepartureArrivalList );
 	addState( WaitingForDepartureData );
+	removeState( Initializing );
 
 	connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
 	connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
@@ -988,7 +989,6 @@ void PublicTransport::configChanged()
 		m_treeViewJourney->setFont( font );
 	}
 	m_labelInfo->setFont( smallFont );
-	m_labelInfo->setText( infoText() );
 
 	// Update indentation and icon sizes to size factor
 	m_treeView->nativeWidget()->setIndentation( 20 * m_settings.sizeFactor );
@@ -1005,10 +1005,17 @@ void PublicTransport::configChanged()
 
 	// Update text in the departure/arrival view, if no items are in the model
 	TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
-	treeView->setNoItemsText( m_settings.filtersEnabled
-			? i18nc("@info/plain", "No unfiltered departures.<nl/>You can disable filters "
-					"to see all departures.")
-			: i18nc("@info/plain", "No departures.") );
+	if ( m_settings.departureArrivalListType == ArrivalList ) {
+		treeView->setNoItemsText( m_settings.filtersEnabled
+				? i18nc("@info/plain", "No unfiltered arrivals.<nl/>You can disable filters "
+						"to see all arrivals.")
+				: i18nc("@info/plain", "No arrivals.") );
+	} else {
+		treeView->setNoItemsText( m_settings.filtersEnabled
+				? i18nc("@info/plain", "No unfiltered departures.<nl/>You can disable filters "
+						"to see all departures.")
+				: i18nc("@info/plain", "No departures.") );
+	}
 
 	// Apply shadows setting to the delegate
 	HtmlDelegate *htmlDelegate = dynamic_cast< HtmlDelegate* >( m_treeView->nativeWidget()->itemDelegate() );
@@ -1856,7 +1863,7 @@ void PublicTransport::setTitleType( TitleType titleType )
 {
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
 	kDebug() << m_mainGraphicsWidget->size();	
-	bool doFade = isVisible();
+	bool doFade = isVisible() && !m_appletStates.testFlag(Initializing);
 	kDebug() << doFade;
 
 	QPixmap pix;
@@ -1990,10 +1997,17 @@ void PublicTransport::addState( AppletState state )
 			setBusy( false );
 		}
 		TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
-		treeView->setNoItemsText( m_settings.filtersEnabled
-				? i18nc("@info/plain", "No unfiltered departures.<nl/>"
-						"You can disable filters to see all departures.")
-				: i18nc("@info/plain", "No departures.") );
+		if ( m_settings.departureArrivalListType == ArrivalList ) {
+			treeView->setNoItemsText( m_settings.filtersEnabled
+					? i18nc("@info/plain", "No unfiltered arrivals.<nl/>You can disable filters "
+							"to see all arrivals.")
+					: i18nc("@info/plain", "No arrivals.") );
+		} else {
+			treeView->setNoItemsText( m_settings.filtersEnabled
+					? i18nc("@info/plain", "No unfiltered departures.<nl/>You can disable filters "
+							"to see all departures.")
+					: i18nc("@info/plain", "No departures.") );
+		}
 
 		if ( m_currentMessage == MessageError )
 			m_currentMessage = MessageNone;
@@ -2016,7 +2030,9 @@ void PublicTransport::addState( AppletState state )
 			setBusy( false );
 		}
 		TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
-		treeView->setNoItemsText( i18nc( "@info/plain", "No departures due to an error." ) );
+		treeView->setNoItemsText( m_settings.departureArrivalListType == ArrivalList
+				? i18nc("@info/plain", "No arrivals due to an error.")
+				: i18nc("@info/plain", "No departures due to an error.") );
 		unsetStates( QList<AppletState>() << WaitingForDepartureData << ReceivedValidDepartureData );
 		break;
 	}
@@ -2052,6 +2068,7 @@ void PublicTransport::addState( AppletState state )
 	}
 	case SettingsJustChanged:
 	case ServiceProviderSettingsJustChanged:
+	case Initializing:
 	case NoState:
 		break;
 	}
@@ -2072,6 +2089,7 @@ void PublicTransport::removeState( AppletState state )
 		m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
 		break;
 
+	case Initializing:
 	case SettingsJustChanged:
 	case ServiceProviderSettingsJustChanged:
 	case ShowingDepartureArrivalList:
@@ -2555,16 +2573,29 @@ void PublicTransport::fillModel( const QList<DepartureInfo> &departures )
 {
 	bool modelFilled = m_model->rowCount() >= m_settings.maximalNumberOfDepartures;
 	foreach( const DepartureInfo &departureInfo, departures ) {
-		int row = m_model->indexFromInfo( departureInfo ).row();
-		if ( row == -1 ) {
+		QModelIndex index = m_model->indexFromInfo( departureInfo );
+		if ( !index.isValid() ) {
 			// Departure wasn't in the model
 			if ( !modelFilled && !departureInfo.isFilteredOut() ) {
 				appendDeparture( departureInfo );
 				modelFilled = m_model->rowCount() >= m_settings.maximalNumberOfDepartures;
 			}
-		} else if ( !departureInfo.isFilteredOut() ) {
+		} else if ( departureInfo.isFilteredOut() ) {
+			// Departure is filtered out but in the model
+// 			kDebug() << "Departure is filtered out but in the model" 
+// 				<< Global::vehicleTypeToString(departureInfo.vehicleType()) 
+// 				<< departureInfo.departure().toString()
+// 				<< departureInfo.target();
+// 			DepartureItem *item = dynamic_cast<DepartureItem*>( m_model->itemFromIndex(index) );
+// 			kDebug() << "Remove item"
+// 				<< Global::vehicleTypeToString(item->departureInfo()->vehicleType()) 
+// 				<< item->departureInfo()->departure().toString()
+// 				<< item->departureInfo()->target(); 
+			
+			m_model->removeItem( m_model->itemFromInfo(departureInfo) );
+		} else {
 			// Departure isn't filtered out
-			DepartureItem *item = static_cast<DepartureItem*>( m_model->itemFromInfo(departureInfo) );
+			DepartureItem *item = dynamic_cast<DepartureItem*>( m_model->itemFromIndex(index) );
 			m_model->updateItem( item, departureInfo );
 
 			// Expand route item and stretch all children
@@ -2573,9 +2604,6 @@ void PublicTransport::fillModel( const QList<DepartureInfo> &departures )
 				m_treeView->nativeWidget()->expand( routeItem->index() );
 			}
 			stretchAllChildren( m_model->indexFromItem( item ), m_model );
-		} else {
-			// Departure is filtered out but in the model
-			m_model->removeItem( m_model->itemFromInfo( departureInfo ) );
 		}
 	}
 }

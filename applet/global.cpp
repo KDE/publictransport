@@ -168,16 +168,16 @@ KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType, const QString &
 		break;
 	case TrainRegional: // Icon not done yet, using this for now
 	case TrainRegionalExpress:
-		icon = KIcon( "vehicle_type_train_regionalexpress" );
+		icon = KIcon( "vehicle_type_train_regional" );
 		break;
 	case TrainInterregio:
-		icon = KIcon( "vehicle_type_train_interregio" );
+		icon = KIcon( "vehicle_type_train_interregional" );
 		break;
 	case TrainIntercityEurocity:
-		icon = KIcon( "vehicle_type_train_intercityeurocity" );
+		icon = KIcon( "vehicle_type_train_intercity" );
 		break;
 	case TrainIntercityExpress:
-		icon = KIcon( "vehicle_type_train_intercityexpress" );
+		icon = KIcon( "vehicle_type_train_highspeed" );
 		break;
 
 	case Ferry:

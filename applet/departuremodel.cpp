@@ -1013,13 +1013,26 @@ ChildItem* DepartureItem::createRouteItem()
 	// Add route stops as child rows
 	for ( int row = 0; row < m_departureInfo.routeStops().count(); ++row ) {
 		// Add a separator item, when the exact route ends
-		if ( row == m_departureInfo.routeExactStops() && row > 0 ) {
-			ChildItem *separatorItem = new ChildItem( OtherItem,
-					i18nc("@info/plain Marker for the first place in a list of "
-						  "intermediate stops, where at least one stop has been omitted",
-						  "  - End of exact route -  "),
-					m_info );
-			routeItem->appendChild( separatorItem );
+		// TODO "End of exact route" is "Start of exact route" for arrivals
+		if ( m_info->departureArrivalListType == ArrivalList ) {
+			// The exact route stops number here means "number of inexact route stops"...
+			if ( row == m_departureInfo.routeExactStops() && row > 0 ) {
+				ChildItem *separatorItem = new ChildItem( OtherItem,
+						i18nc("@info/plain Marker for the first place in a list of "
+							"intermediate stops, where no stop has been omitted (for arrival lists)",
+							"  - Start of exact route -  "),
+						m_info );
+				routeItem->appendChild( separatorItem );
+			}
+		} else { // if ( m_info->departureArrivalListType == DepartureList ) {
+			if ( row == m_departureInfo.routeExactStops() && row > 0 ) {
+				ChildItem *separatorItem = new ChildItem( OtherItem,
+						i18nc("@info/plain Marker for the first place in a list of intermediate "
+							"stops, where at least one stop has been omitted (for departure lists)",
+							"  - End of exact route -  "),
+						m_info );
+				routeItem->appendChild( separatorItem );
+			}
 		}
 
 		// Add the current route stop ("departure - stop name")

@@ -282,8 +282,11 @@ bool DepartureInfo::operator ==( const DepartureInfo& other ) const
 
 void DepartureInfo::generateHash()
 {
-	m_hash = qHash( QString( "%1%2%3" ).arg( m_departure.toString( "dMyyhhmm" ) )
-					.arg( static_cast<int>( m_vehicleType ) ).arg( m_lineString ) );
+	m_hash = qHash( QString("%1%2%3%4")
+					.arg(m_departure.toString("dMyyhhmm"))
+					.arg(static_cast<int>(m_vehicleType))
+					.arg(m_lineString)
+					.arg(m_target.trimmed().toLower()) );
 }
 
 void JourneyInfo::generateHash()
@@ -292,8 +295,11 @@ void JourneyInfo::generateHash()
 	foreach( int vehicleType, m_vehicleTypes ) {
 		vehicles += QString::number( static_cast<int>( vehicleType ) );
 	}
-	m_hash = qHash( QString( "%1%2%3%4" ).arg( m_departure.toString( "dMyyhhmm" ) )
-					.arg( m_duration ).arg( m_changes ).arg( vehicles ) );
+	m_hash = qHash( QString("%1%2%3%4")
+					.arg(m_departure.toString("dMyyhhmm"))
+					.arg(m_duration)
+					.arg(m_changes)
+					.arg(vehicles) );
 }
 
 QString DepartureInfo::formatDateFancyFuture( const QDate& date )

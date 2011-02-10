@@ -66,14 +66,16 @@ enum TitleType {
 /** @brief Global states of the applet. */
 enum AppletState {
 	NoState 							= 0x000000, /**< No state. */
+	
+	Initializing 						= 0x000001, /**< The applet is currently inizializing. */
 
-	ShowingDepartureArrivalList 		= 0x000001, /**< The applet is currently
+	ShowingDepartureArrivalList 		= 0x000010, /**< The applet is currently
 													 * showing a departure / arrival list */
-	ShowingJourneyList 					= 0x000002, /**< The applet is currently
+	ShowingJourneyList 					= 0x000020, /**< The applet is currently
 													 * showing a journey list */
-	ShowingJourneySearch 				= 0x000004, /**< The applet is currently
+	ShowingJourneySearch 				= 0x000040, /**< The applet is currently
 													 * showing the journey search interface */
-	ShowingJourneysNotSupported 		= 0x000008, /**< The applet is currently showing
+	ShowingJourneysNotSupported 		= 0x000080, /**< The applet is currently showing
 													 * an info, that journey searches aren't
 													 * supported by the current service provider. */
 

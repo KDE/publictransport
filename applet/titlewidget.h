@@ -33,6 +33,7 @@ class QGraphicsLinearLayout;
 namespace Plasma {
 	class IconWidget;
 	class Label;
+	class ToolButton;
 }
 
 /**
@@ -222,7 +223,7 @@ protected:
 	TitleType m_type;
 	Plasma::IconWidget *m_icon;
 	Plasma::Label *m_title;
-	QGraphicsWidget *m_filterWidget;
+	Plasma::ToolButton *m_filterWidget;
 	QHash< WidgetType, QGraphicsWidget* > m_widgets;
 	QGraphicsLinearLayout *m_layout;
 	Settings *m_settings;

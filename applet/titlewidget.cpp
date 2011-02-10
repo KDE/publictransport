@@ -313,31 +313,34 @@ QGraphicsWidget* TitleWidget::createAndAddWidget(TitleWidget::WidgetType widgetT
 	case WidgetFilter:
 		if ( !m_filterWidget ) {
 			// Create the filter widget showing the currently active filters
-			m_filterWidget = new QGraphicsWidget( this );
-			m_filterWidget->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Preferred );
+			m_filterWidget = new Plasma::ToolButton( this );
+// 			m_filterWidget->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Preferred );
+			m_filterWidget->setIcon( KIcon("view-filter") );
+			m_filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
 
-			Plasma::IconWidget *filterIcon = new Plasma::IconWidget( m_filterWidget );
-			filterIcon->setIcon( "view-filter" );
-			int fitlerIconExtend = 24 * m_settings->sizeFactor;
-			filterIcon->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
-			filterIcon->setMinimumSize( fitlerIconExtend, fitlerIconExtend );
-			filterIcon->setMaximumSize( fitlerIconExtend, fitlerIconExtend );
+// 			Plasma::IconWidget *filterIcon = new Plasma::IconWidget( m_filterWidget );
+// 			filterIcon->setIcon( "view-filter" );
+// 			int fitlerIconExtend = 24 * m_settings->sizeFactor;
+// 			filterIcon->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
+// 			filterIcon->setMinimumSize( fitlerIconExtend, fitlerIconExtend );
+// 			filterIcon->setMaximumSize( fitlerIconExtend, fitlerIconExtend );
 
-			Plasma::Label *filterLabel = new Plasma::Label( m_filterWidget );
-			filterLabel->setMaximumWidth( 100 * m_settings->sizeFactor );
-			filterLabel->setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
-			#if KDE_VERSION >= KDE_MAKE_VERSION(4,5,0)
-				filterLabel->setWordWrap( true );
-			#endif
+// 			Plasma::Label *filterLabel = new Plasma::Label( m_filterWidget );
+// 			filterLabel->setMaximumWidth( 100 * m_settings->sizeFactor );
+// 			filterLabel->setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
+// 			#if KDE_VERSION >= KDE_MAKE_VERSION(4,5,0)
+// 				filterLabel->setWordWrap( true );
+// 			#endif
 
 			QGraphicsLinearLayout *filterLayout = new QGraphicsLinearLayout(
 					Qt::Horizontal, m_filterWidget );
 			filterLayout->setContentsMargins( 4, 0, 4, 0 );
-			filterLayout->addItem( filterIcon );
-			filterLayout->addItem( filterLabel );
+			filterLayout->addItem( m_filterWidget );
+// 			filterLayout->addItem( filterIcon );
+// 			filterLayout->addItem( filterLabel );
 			m_filterWidget->setLayout( filterLayout );
 
-			connect( filterIcon, SIGNAL(clicked()), this, SIGNAL(filterIconClicked()) );
+			connect( m_filterWidget, SIGNAL(clicked()), this, SIGNAL(filterIconClicked()) );
 		}
 		updateFilterWidget();
 		addWidget( m_filterWidget, WidgetFilter );
@@ -406,19 +409,19 @@ void TitleWidget::clearWidgets()
 
 void TitleWidget::updateFilterWidget()
 {
-	Plasma::Label *filterLabel = qgraphicsitem_cast<Plasma::Label*>(
-			m_filterWidget->layout()->itemAt(1)->graphicsItem() );
-	Q_ASSERT( filterLabel );
+// 	Plasma::Label *filterLabel = qgraphicsitem_cast<Plasma::Label*>(
+// 			m_filterWidget->layout()->itemAt(1)->graphicsItem() );
+// 	Q_ASSERT( filterLabel );
 	if ( m_settings->filtersEnabled ) {
 		m_filterWidget->setOpacity( 1 );
 		QFontMetrics fm( m_filterWidget->font() );
-		filterLabel->setText( fm.elidedText(Global::translateFilterKey(
+		m_filterWidget->setText( fm.elidedText(Global::translateFilterKey(
 				m_settings->currentStopSettings().get<QString>(FilterConfigurationSetting)),
-				Qt::ElideRight, filterLabel->maximumWidth() * 1.8) );
+				Qt::ElideRight, m_filterWidget->maximumWidth() * 1.8) );
 	} else {
 		m_filterWidget->setOpacity( 0.6 );
-		filterLabel->setText( i18nc("@info Shown in the applet to indicate that no filters are "
-									"currently active", "(No active filter)") );
+		m_filterWidget->setText( i18nc("@info/plain Shown in the applet to indicate that no filters are "
+									   "currently active", "(No active filter)") );
 	}
 }
 
@@ -479,11 +482,11 @@ void TitleWidget::settingsChanged()
 	m_title->setFont( boldFont );
 
 	if ( m_filterWidget ) {
-		Plasma::Label *filterLabel = qgraphicsitem_cast<Plasma::Label*>(
-			m_filterWidget->layout()->itemAt(1)->graphicsItem() );
-		if ( filterLabel ) {
-			filterLabel->setFont( font ); // TEST
-		}
+// 		Plasma::Label *filterLabel = qgraphicsitem_cast<Plasma::Label*>(
+// 			m_filterWidget->layout()->itemAt(1)->graphicsItem() );
+// 		if ( filterLabel ) {
+			m_filterWidget->setFont( font );
+// 		}
 	}
 
 	if ( m_type == ShowDepartureArrivalListTitle ) {

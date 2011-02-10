@@ -58,4 +58,3 @@ install( TARGETS plasma_applet_publictransport
 
 install( FILES plasma-applet-publictransport.desktop
          DESTINATION ${SERVICES_INSTALL_DIR} )
-
