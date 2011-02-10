@@ -229,7 +229,7 @@ bool TimetableAccessorScript::parseDocument( const QByteArray &document,
 		return false;
 	}
 
-	QString doc = TimetableAccessorScript::decodeHtml( document );
+	QString doc = TimetableAccessorScript::decodeHtml( document, m_info->fallbackCharset() );
 	// Performance(?): Cut everything before "<body>" from the document
 	doc = doc.mid( doc.indexOf("<body>", 0, Qt::CaseInsensitive) );
 

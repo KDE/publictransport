@@ -92,7 +92,8 @@ public Q_SLOTS:
 	 * @return @p str without spaces at the beginning or end.
 	 **/
 	QString trim( const QString &str ) {
-		return str.trimmed().replace( QRegExp("^(&nbsp;)+|(&nbsp;)+$", Qt::CaseInsensitive), "" );
+		QString s = str;
+		return s.replace( QRegExp("^(&nbsp;)+|(&nbsp;)+$", Qt::CaseInsensitive), "" ).trimmed();
 	};
 
 	/**
