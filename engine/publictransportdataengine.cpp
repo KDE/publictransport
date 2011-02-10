@@ -415,7 +415,7 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 		if ( parseDocumentMode == ParseForDeparturesArrivals
 		        || parseDocumentMode == ParseForStopSuggestions ) {
 			if ( stop.isEmpty() ) {
-				kDebug() << "Stop name is missing in data source name";
+				kDebug() << "Stop name is missing in data source name" << name;
 				return false; // wrong input
 			}
 		} else {

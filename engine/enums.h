@@ -175,7 +175,10 @@ enum VehicleType {
 	TrainInterurban = 4, /**< An interurban train. @deprecated Use InterurbanTrain instead. */
 	InterurbanTrain = 4, /**< An interurban train. */
 	Metro = 5, /**< A metro. */
-	TrolleyBus = 6, /**< An electric bus. */
+	TrolleyBus = 6, /**< A trolleybus (also known as trolley bus, trolley coach,
+			* trackless trolley, trackless tram or trolley) is an electric bus that draws its
+			* electricity from overhead wires (generally suspended from roadside posts)
+			* using spring-loaded trolley poles. */
 
 	TrainRegional = 10, /**< A regional train. @deprecated Use RegionalTrain instead. */
 	TrainRegionalExpress = 11, /**< A regional express train. @deprecated Use RegionalExpressTrain instead. */
@@ -192,7 +195,8 @@ enum VehicleType {
 	HighSpeedTrain = 14, /**< A highspeed train, eg. an intercity express (ICE). 
 			* Trains at > 250 km/h, high distances. */
 
-	Feet = 50, /**< By feet. */
+	Feet = 50, /**< By feet, ie. no vehicle. Used for journeys, eg. from platform A to
+			* platform B when changing the vehicle. */
 
 	Ferry = 100, /**< A ferry. */
 	Ship = 101, /**< A ship. */

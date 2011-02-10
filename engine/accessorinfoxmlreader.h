@@ -34,56 +34,56 @@ class TimetableAccessor;
  * @brief Stores information about a single changelog entry.
  **/
 struct ChangelogEntry {
-	QString author; /**< The author who implemented the change. */
-	QString since_version; /**< The version where this change was applied. */
-	QString description; /**< A description of the change. */
+    QString author; /**< The author who implemented the change. */
+    QString since_version; /**< The version where this change was applied. */
+    QString description; /**< A description of the change. */
 };
 
 /**
  * @brief Reads accessor info xml files.
- * 
+ *
  * In an accessor info xml it's properties are described, like the name of the service provider,
  * a used script file, raw urls, etc. See @ref page_accessor_infos for more information about the
  * XML structure.
  **/
 class AccessorInfoXmlReader : public QXmlStreamReader {
-	friend class TimetableAccessorInfo; // Because AccessorInfoXmlReader needs to set values 
-										// in TimetableAccessorInfo when reading xml files
+    friend class TimetableAccessorInfo; // Because AccessorInfoXmlReader needs to set values
+    // in TimetableAccessorInfo when reading xml files
 
 public:
-	/** @brief Creates a new accessor info xml reader. */
-	AccessorInfoXmlReader() : QXmlStreamReader() {};
+    /** @brief Creates a new accessor info xml reader. */
+    AccessorInfoXmlReader() : QXmlStreamReader() {};
 
-	/**
-	 * @brief Reads an accessor info xml from @p device.
-	 *
-	 * @param device The QIODevice to read the xml data from.
-	 * 
-	 * @param serviceProvider The service provider ID for the accessor to read.
-	 * 
-	 * @param fileName The filename of the xml file.
-	 * 
-	 * @param country The country the accessor is designed for.
-	 * 
-	 * @return A TimetableAccessor object or NULL on error.
-	 **/
-	TimetableAccessor* read( QIODevice *device, const QString &serviceProvider,
-							 const QString &fileName, const QString &country  );
+    /**
+     * @brief Reads an accessor info xml from @p device.
+     *
+     * @param device The QIODevice to read the xml data from.
+     *
+     * @param serviceProvider The service provider ID for the accessor to read.
+     *
+     * @param fileName The filename of the xml file.
+     *
+     * @param country The country the accessor is designed for.
+     *
+     * @return A TimetableAccessor object or NULL on error.
+     **/
+    TimetableAccessor* read( QIODevice *device, const QString &serviceProvider,
+                             const QString &fileName, const QString &country  );
 
 private:
-	void readUnknownElement();
-	TimetableAccessor* readAccessorInfo( const QString &serviceProvider,
-			const QString &fileName, const QString &country  );
-	QString readLocalizedTextElement( QString *lang );
-	bool readBooleanElement();
-	void readAuthor( QString *fullname, QString *shortName, QString *email );
-	void readCities( QStringList *cities, QHash<QString, QString> *cityNameReplacements );
-	void readRawUrls( QString *rawUrlDepartures, QString *rawUrlStopSuggestions,
-					  QString *rawUrlJourneys, QHash<QString, QString> *attributesForDepartures, 
-					  QHash<QString, QString> *attributesForStopSuggestions, 
-					  QHash<QString, QString> *attributesForJourneys );
-	void readSessionKey( QString *sessionKeyUrl, SessionKeyPlace *sessionKeyPlace, QString *data );
-	QList<ChangelogEntry> readChangelog();
+    void readUnknownElement();
+    TimetableAccessor* readAccessorInfo( const QString &serviceProvider,
+                                         const QString &fileName, const QString &country  );
+    QString readLocalizedTextElement( QString *lang );
+    bool readBooleanElement();
+    void readAuthor( QString *fullname, QString *shortName, QString *email );
+    void readCities( QStringList *cities, QHash<QString, QString> *cityNameReplacements );
+    void readRawUrls( QString *rawUrlDepartures, QString *rawUrlStopSuggestions,
+                      QString *rawUrlJourneys, QHash<QString, QString> *attributesForDepartures,
+                      QHash<QString, QString> *attributesForStopSuggestions,
+                      QHash<QString, QString> *attributesForJourneys );
+    void readSessionKey( QString *sessionKeyUrl, SessionKeyPlace *sessionKeyPlace, QString *data );
+    QList<ChangelogEntry> readChangelog();
 };
 
 #endif // ACCESSORINFOXMLREADER_HEADER
