@@ -533,7 +533,7 @@ public:
 	void addAlarm( DepartureItem *item );
 	/** @brief Removes an alarm from the given @p item. */
 	void removeAlarm( DepartureItem *item );
-
+	
 signals:
 	/** @brief The alarm for @p item has been fired. */
 	void alarmFired( DepartureItem *item );

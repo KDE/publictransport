@@ -353,7 +353,7 @@ void HtmlDelegate::drawDisplay( QPainter* painter, const QStyleOptionViewItem& o
 		{
 			QImage shadow = pixmap.toImage();
 			Plasma::PaintUtils::shadowBlur( shadow, 3, Qt::black );
-			painter->drawImage( rect.topLeft() + QPoint( 1, 2 ), shadow );
+			painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );
 		}
 	}
 
@@ -366,11 +366,11 @@ QSize HtmlDelegate::sizeHint( const QStyleOptionViewItem& option,
 	QSize size = QItemDelegate::sizeHint( option, index );
 
 	if ( index.data( LinesPerRowRole ).isValid() ) {
-		int lines = qMax( index.data( LinesPerRowRole ).toInt(), 1 );
+		int lines = qMax( index.data(LinesPerRowRole).toInt(), 1 );
 // 	int height = option.fontMetrics.boundingRect( 0, 0, size.width(), 999999,
 // 						      0, "AlpfIgj(" ).height();
 // 	size.setHeight( (height + option.fontMetrics.leading()) * lines + 4 );
-		size.setHeight( lines * ( option.fontMetrics.lineSpacing() + 2 ) );
+		size.setHeight( lines * (option.fontMetrics.lineSpacing() + 2) );
 	} else {
 		size.setHeight( option.fontMetrics.lineSpacing() + 4 );
 	}

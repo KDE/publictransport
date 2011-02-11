@@ -33,10 +33,13 @@ protected:
 	virtual void paintSection( QPainter *painter, const QRect& rect, int logicalIndex ) const;
 };
 
-/** A QTreeView which viewport fades out on bottom (if the horizontal scrollbar
-* is hidden) and on top (if the header is hidden).
-* @note It doesn't fade out while animating, because the animation is done
-* completely private in QTreeView. */
+/** 
+ * @brief A QTreeView which viewport fades out on bottom (if the horizontal scrollbar is hidden) 
+ *   and on top (if the header is hidden).
+ * 
+ * @note It doesn't fade out while animating, because the animation is done completely private 
+ *   in QTreeView. 
+ **/
 class TreeView : public QTreeView {
 	Q_OBJECT
 
@@ -45,14 +48,13 @@ public:
 
 	TreeView( QStyle *style );
 
-	/** Gets the text to be displayed when the model is empty. */
+	/** @brief Gets the text to be displayed when the model is empty. */
 	QString noItemsText() const { return m_noItemsText; };
-	/** Sets the text to be displayed when the model is empty. */
+	/** @brief Sets the text to be displayed when the model is empty. */
 	void setNoItemsText( const QString &noItemsText );
 
 signals:
-	/** The tree view has been clicked but the model is empty and a text
-	* is displayed. */
+	/** @brief The tree view has been clicked but the model is empty and a text is displayed. */
 	void noItemsTextClicked();
 
 protected:

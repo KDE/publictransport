@@ -796,15 +796,15 @@ void DepartureItem::setDepartureInfo( const DepartureInfo &departureInfo )
 void DepartureItem::updateValues()
 {
 	setText( ColumnLineString, m_departureInfo.lineString() );
-	setFormattedText( ColumnLineString, QString( "<span style='font-weight:bold;'>%1</span>" )
-	                  .arg( m_departureInfo.lineString() ) );
+	setFormattedText( ColumnLineString, QString("<span style='font-weight:bold;'>%1</span>")
+	                  .arg(m_departureInfo.lineString()) );
 	// if ( departureInfo.vehicleType() != Unknown )
-	setIcon( ColumnLineString, Global::vehicleTypeToIcon( m_departureInfo.vehicleType() ) );
+	setIcon( ColumnLineString, Global::vehicleTypeToIcon(m_departureInfo.vehicleType()) );
 
 	setText( ColumnTarget, m_departureInfo.target() );
 	if ( !m_departureInfo.journeyNews().isEmpty() ) {
-		setIcon( ColumnTarget, Global::makeOverlayIcon( KIcon( "view-pim-news" ),
-		         "arrow-down", QSize( 12, 12 ) ) );
+		setIcon( ColumnTarget, Global::makeOverlayIcon(KIcon("view-pim-news"),
+		         "arrow-down", QSize(12, 12)) );
 	}
 
 	updateTimeValues();
@@ -820,13 +820,13 @@ void DepartureItem::updateChildren()
 	QList< ItemType > types;
 	types << PlatformItem << JourneyNewsItem << DelayItem << OperatorItem << RouteItem;
 	foreach( ItemType type, types ) {
-		if ( hasDataForChildType( type ) ) {
-			if ( children.contains( type ) ) {
+		if ( hasDataForChildType(type) ) {
+			if ( children.contains(type) ) {
 				updateChild( type, children[type] );
 			} else {
 				appendNewChild( type );
 			}
-		} else if ( children.contains( type ) ) {
+		} else if ( children.contains(type) ) {
 			removeChild( children[type] );
 		}
 	}
@@ -837,7 +837,7 @@ void DepartureItem::createChildren()
 	QList< ItemType > types;
 	types << PlatformItem << JourneyNewsItem << DelayItem << OperatorItem << RouteItem;
 	foreach( ItemType type, types ) {
-		if ( hasDataForChildType( type ) ) {
+		if ( hasDataForChildType(type) ) {
 			appendNewChild( type );
 		}
 	}
@@ -850,7 +850,7 @@ void DepartureItem::updateChild( ItemType itemType, ChildItem* child )
 		appendNewChild( RouteItem );
 	} else {
 		int linesPerRow;
-		child->setFormattedText( childItemText( itemType, &linesPerRow ) );
+		child->setFormattedText( childItemText(itemType, &linesPerRow) );
 		if ( itemType == JourneyNewsItem || itemType == DelayItem ) {
 			child->setData( linesPerRow, LinesPerRowRole );
 		}
@@ -864,7 +864,7 @@ ChildItem* DepartureItem::appendNewChild( ItemType itemType )
 		child = createRouteItem();
 	} else {
 		int linesPerRow;
-		child = new ChildItem( itemType, childItemText( itemType, &linesPerRow ), KIcon(), m_info );
+		child = new ChildItem( itemType, childItemText(itemType, &linesPerRow), KIcon(), m_info );
 		if ( itemType == JourneyNewsItem || itemType == DelayItem ) {
 			child->setData( linesPerRow, LinesPerRowRole );
 		}
@@ -1591,8 +1591,7 @@ void DepartureModel::setAlarmSettings( const AlarmSettingsList& alarmSettings )
 	}
 }
 
-void DepartureModel::setDepartureArrivalListType(
-    DepartureArrivalListType departureArrivalListType )
+void DepartureModel::setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType )
 {
 	if ( m_info.departureArrivalListType == departureArrivalListType ) {
 		return;
