@@ -20,9 +20,9 @@
 // Project-Includes
 #include "publictransportrunner_config.h"
 #include "global.h"
-#include "stopsettingsdialog.h"
-#include "locationmodel.h"
-#include "serviceprovidermodel.h"
+#include <publictransporthelper/stopsettingsdialog.h>
+#include <publictransporthelper/locationmodel.h>
+#include <publictransporthelper/serviceprovidermodel.h>
 
 // KDE-Includes
 #include <Plasma/AbstractRunner>
@@ -72,9 +72,7 @@ PublicTransportRunnerConfig::~PublicTransportRunnerConfig()
 
 void PublicTransportRunnerConfig::changeStopClicked()
 {
-	StopSettingsDialog *dlg = new StopSettingsDialog(
-	    m_stopSettings, m_modelLocations, m_modelServiceProviders,
-	    m_publicTransportEngine, this );
+	StopSettingsDialog *dlg = StopSettingsDialog::createSimpleAccessorSelectionDialog( this, m_stopSettings );
 	if ( dlg->exec() == QDialog::Accepted ) {
 		m_stopSettings = dlg->stopSettings();
 		updateServiceProvider();
@@ -94,14 +92,14 @@ void PublicTransportRunnerConfig::load()
 	grp = KConfigGroup( &grp, "PublicTransportRunner" );
 
 	// Read and select location
-	m_stopSettings.location = grp.readEntry( CONFIG_LOCATION, "showAll" );
+	m_stopSettings.set( LocationSetting, grp.readEntry(CONFIG_LOCATION, "showAll") );
 
 	// Default is an empty string, the data engine then uses the default
 	// service provider for the users country, if there's any
-	m_stopSettings.serviceProviderID = grp.readEntry( CONFIG_SERVICE_PROVIDER_ID, QString() );
+	m_stopSettings.set( ServiceProviderSetting, grp.readEntry(CONFIG_SERVICE_PROVIDER_ID, QString()) );
 
-	// Select service provider
-	m_stopSettings.city = grp.readEntry( CONFIG_CITY, QString() );
+	// Select city
+	m_stopSettings.set( CitySetting, grp.readEntry(CONFIG_CITY, QString()) );
 
 	updateServiceProvider();
 	m_ui.departureKeyword->setText( grp.readEntry( CONFIG_KEYWORD_DEPARTURE,
@@ -127,9 +125,9 @@ void PublicTransportRunnerConfig::save()
 	KConfigGroup grp = cfg->group( "Runners" );
 	grp = KConfigGroup( &grp, "PublicTransportRunner" );
 
-	grp.writeEntry( CONFIG_LOCATION, m_stopSettings.location );
-	grp.writeEntry( CONFIG_SERVICE_PROVIDER_ID, m_stopSettings.serviceProviderID );
-	grp.writeEntry( CONFIG_CITY, m_stopSettings.city );
+	grp.writeEntry( CONFIG_LOCATION, m_stopSettings[LocationSetting].toString() );
+	grp.writeEntry( CONFIG_SERVICE_PROVIDER_ID, m_stopSettings[ServiceProviderSetting].toString() );
+	grp.writeEntry( CONFIG_CITY, m_stopSettings[CitySetting].toString() );
 	grp.writeEntry( CONFIG_KEYWORD_DEPARTURE, m_ui.departureKeyword->text() );
 	grp.writeEntry( CONFIG_KEYWORD_ARRIVAL, m_ui.arrivalKeyword->text() );
 	grp.writeEntry( CONFIG_KEYWORD_JOURNEY, m_ui.journeyKeyword->text() );
@@ -143,9 +141,9 @@ void PublicTransportRunnerConfig::defaults()
 {
 	KCModule::defaults();
 
-	m_stopSettings.location = "";
-	m_stopSettings.serviceProviderID = "";
-	m_stopSettings.city = "";
+	m_stopSettings.set( LocationSetting, QString() );
+	m_stopSettings.set( ServiceProviderSetting, QString() );
+	m_stopSettings.set( CitySetting, QString() );
 	updateServiceProvider();
 	m_ui.departureKeyword->setText(
 	    i18nc( "This is a runner keyword to search for departures", "departures" ) );
@@ -162,12 +160,12 @@ void PublicTransportRunnerConfig::defaults()
 
 void PublicTransportRunnerConfig::updateServiceProvider()
 {
-	if ( m_stopSettings.serviceProviderID.isEmpty() ) {
-		m_ui.serviceProvider->setText( i18n( "(use default for %1)",
-		                                     KGlobal::locale()->countryCodeToName( KGlobal::locale()->country() ) ) );
+	if ( m_stopSettings[ServiceProviderSetting].toString().isEmpty() ) {
+		m_ui.serviceProvider->setText( i18n("(use default for %1)",
+				KGlobal::locale()->countryCodeToName(KGlobal::locale()->country())) );
 	} else {
 		QString name = m_modelServiceProviders->indexOfServiceProvider(
-		                   m_stopSettings.serviceProviderID ).data().toString();
+		                   m_stopSettings[ServiceProviderSetting].toString() ).data().toString();
 		m_ui.serviceProvider->setText( name );
 	}
 }

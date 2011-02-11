@@ -22,11 +22,11 @@
 
 // Project-Includes
 #include "ui_publicTransportRunnerConfig.h"
+#include <publictransporthelper/stopwidget.h>
 
 // KDE-Includes
 #include <KCModule>
 #include <Plasma/DataEngine>
-#include "stopsettingsdialog.h"
 
 namespace Plasma {
     class DataEngineManager;

@@ -19,37 +19,36 @@ set(krunner_publictransport_SRCS
     global.cpp )
 kde4_add_plugin(krunner_publictransport ${krunner_publictransport_SRCS})
 target_link_libraries(krunner_publictransport
-                      ${KDE4_PLASMA_LIBS} ${KDE4_KDEUI_LIBS})
+	${KDE4_PLASMA_LIBS} 
+	${KDE4_KDEUI_LIBS}
+)
 
 ##########################
 # The runner config ######
 ##########################
 set(kcm_krunner_publictransport_SRCS
     global.cpp
-    config/publictransportrunner_config.cpp
-    config/htmldelegate.cpp
-    config/stopsettingsdialog.cpp
-    config/locationmodel.cpp
-    config/serviceprovidermodel.cpp )
+    config/publictransportrunner_config.cpp )
 kde4_add_ui_files( kcm_krunner_publictransport_SRCS
-    config/publicTransportRunnerConfig.ui
-    config/publicTransportStopConfig.ui
-    config/accessorInfo.ui )
-kde4_add_plugin(kcm_krunner_publictransport ${kcm_krunner_publictransport_SRCS})
-target_link_libraries(kcm_krunner_publictransport
+    config/publicTransportRunnerConfig.ui )
+kde4_add_plugin( kcm_krunner_publictransport ${kcm_krunner_publictransport_SRCS} )
+target_link_libraries( kcm_krunner_publictransport
     ${KDE4_KDECORE_LIBS}
     ${KDE4_KDEUI_LIBS}
     ${KDE4_KCMUTILS_LIBS}
     ${KDE4_PLASMA_LIBS} 
     ${QT_QTCORE_LIBRARY}
     ${QT_QTGUI_LIBRARY}
+    publictransporthelper # in (extern) sub_directory publictransporthelper
 )
+# Add the publictransporthelper library sub directory (extern)
+# add_subdirectory( publictransporthelper )
 
 ##########################
 # Install both ###########
 ##########################
-install(TARGETS krunner_publictransport kcm_krunner_publictransport
-	DESTINATION ${PLUGIN_INSTALL_DIR})
-install(FILES plasma-runner-publictransport.desktop config/plasma-runner-publictransport_config.desktop
-        DESTINATION ${SERVICES_INSTALL_DIR})
+install( TARGETS krunner_publictransport kcm_krunner_publictransport
+		 DESTINATION ${PLUGIN_INSTALL_DIR})
+install( FILES plasma-runner-publictransport.desktop config/plasma-runner-publictransport_config.desktop
+         DESTINATION ${SERVICES_INSTALL_DIR})
 

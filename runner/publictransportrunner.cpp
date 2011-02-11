@@ -207,8 +207,8 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
 					   "'(?:XX)'). 'min(?:utes)?' can match 'min' and 'minutes'. The string is "
 					   "matched case insensitive.",
 	                   "\\bin\\s+(\\d+)\\s+min(?:utes)?\\b" ), Qt::CaseInsensitive );
-	if ( rx.indexIn( stop ) != -1 && rx.captureCount() ) {
-		data.minutesUntilFirstResult = rx.cap( 1 ).toInt();
+	if ( rx.indexIn(stop) != -1 && rx.captureCount() ) {
+		data.minutesUntilFirstResult = rx.cap(1).toInt();
 
 		// Cut the matched string from the query string
 		stop = stop.remove( rx.pos(), rx.matchedLength() );
@@ -220,16 +220,16 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
 	QString stop2;
 	if ( keywords.testFlag( PublicTransportRunner::Journeys ) ) {
 		QString pattern = QString( "^(?:%1\\s+)?(.*)(?:\\s+%2\\s+)(.*)$" )
-				.arg( i18nc( "Used for journey searches before the origin stop", "from" ) )
-				.arg( i18nc( "Used for journey searches before the target stop", "to" ) );
+				.arg( i18nc("Used for journey searches before the origin stop", "from") )
+				.arg( i18nc("Used for journey searches before the target stop", "to") );
 		QRegExp rx( pattern, Qt::CaseInsensitive );
-		if ( rx.indexIn( stop ) == -1 ) {
+		if ( rx.indexIn(stop) == -1 ) {
 			kDebug() << "Journey regexp pattern" << pattern << "not matched in" << stop;
 			return;
 		}
 
-		stop = rx.cap( 1 );
-		stop2 = rx.cap( 2 );
+		stop = rx.cap(1);
+		stop2 = rx.cap(2);
 	}
 
 
@@ -255,7 +255,7 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
 	AsyncDataEngineUpdater asyncUpdater( engine, &context, runner );
 
 	QEventLoop loop;
-	connect( &asyncUpdater, SIGNAL( finished( bool ) ), &loop, SLOT( quit() ) );
+	connect( &asyncUpdater, SIGNAL(finished(bool)), &loop, SLOT(quit()) );
 
 	// Query results from the data engine
 	asyncUpdater.query( engine, data, stop, stop2 );
@@ -336,7 +336,9 @@ void AsyncDataEngineUpdater::query( Plasma::DataEngine *engine,
 
 		m_sourceName = QString( "Journeys %1|originStop=%2|targetStop=%3|maxCount=%4|datetime=%5" )
 		               .arg( m_settings.serviceProviderID ).arg( stop ).arg( stop2 )
-		               .arg( resultCount ).arg( QDateTime::currentDateTime().toString() );
+		               .arg( resultCount )
+					   .arg( QDateTime::currentDateTime()
+							 .addSecs(data.minutesUntilFirstResult * 60).toString() );
 	} else {
 		QString type;
 		if ( keywords.testFlag( PublicTransportRunner::Departures ) ) {

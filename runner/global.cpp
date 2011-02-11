@@ -28,6 +28,7 @@
 #include <KLocale>
 #include <Plasma/Theme>
 #include <KColorUtils>
+#include <KStandardDirs>
 
 KIcon Global::internationalIcon()
 {
@@ -46,7 +47,12 @@ KIcon Global::internationalIcon()
 			x = 16;
 		}
 
-		QPixmap pixmapFlag = KIcon( sIcon ).pixmap( 16 );
+		QString flag( KStandardDirs::locate("locale", QString::fromLatin1("l10n/%1/flag.png")
+				.arg(sIcon)) ); 
+// 		icon.addFile( flag );
+		
+// 		QPixmap pixmapFlag = KIcon( sIcon ).pixmap( 16 );
+		QPixmap pixmapFlag( flag );
 		p.drawPixmap( x, y, 16, 12, pixmapFlag );
 
 		if ( i % 2 != 0 ) {
@@ -54,24 +60,6 @@ KIcon Global::internationalIcon()
 		}
 		++i;
 	}
-	p.end();
-
-	KIcon resultIcon = KIcon();
-	resultIcon.addPixmap( pixmap, QIcon::Normal );
-	return resultIcon;
-}
-
-KIcon Global::putIconIntoBiggerSizeIcon( const KIcon &icon, const QSize &iconSize,
-										 const QSize &resultingSize )
-{
-	QPixmap pixmap = QPixmap( resultingSize );
-	pixmap.fill( Qt::transparent );
-	QPainter p( &pixmap );
-
-	QPixmap pixmapIcon = icon.pixmap( resultingSize );//iconSize );
-	p.drawPixmap((resultingSize.width() - iconSize.width()) / 2,
-				 (resultingSize.height() - iconSize.height()) / 2,
-				 iconSize.width(), iconSize.height(), pixmapIcon );
 	p.end();
 
 	KIcon resultIcon = KIcon();
@@ -160,16 +148,16 @@ KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType, const QString &
 		break;
 	case TrainRegional: // Icon not done yet, using this for now
 	case TrainRegionalExpress:
-		icon = KIcon( "vehicle_type_train_regionalexpress" );
+		icon = KIcon( "vehicle_type_train_regional" );
 		break;
 	case TrainInterregio:
-		icon = KIcon( "vehicle_type_train_interregio" );
+		icon = KIcon( "vehicle_type_train_interregional" );
 		break;
 	case TrainIntercityEurocity:
-		icon = KIcon( "vehicle_type_train_intercityeurocity" );
+		icon = KIcon( "vehicle_type_train_intercity" );
 		break;
 	case TrainIntercityExpress:
-		icon = KIcon( "vehicle_type_train_intercityexpress" );
+		icon = KIcon( "vehicle_type_train_highspeed" );
 		break;
 
 	case Ferry:
