@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -53,22 +53,7 @@ public:
 	 *   with @p data.
 	 *
 	 * @param data A hash that contains values for TimetableInformations. */
-	PublicTransportInfo( const QHash<TimetableInformation, QVariant> &data );
-
-	/**
-	 * @brief Constructs a new PublicTransportInfo object.
-	 *
-	 * @param departure The date and time of the departure/arrival of the vehicle.
-	 * 
-	 * @param operatorName The name of the operator for the departure/arrival/journey. */
-	explicit PublicTransportInfo( const QDateTime &departure,
-								  const QString &operatorName = QString() ) {
-		m_data[ DepartureDate ] = departure.date();
-		m_data[ DepartureYear ] = departure.date().year();
-		m_data[ DepartureHour ] = departure.time().hour();
-		m_data[ DepartureMinute ] = departure.time().minute();
-		m_data[ Operator ] = operatorName;
-	};
+	explicit PublicTransportInfo( const QHash<TimetableInformation, QVariant> &data );
 
 	virtual ~PublicTransportInfo() {};
 
@@ -154,36 +139,7 @@ public:
 	 *
 	 * @param data A hash that contains values for at least the required
 	 *   TimetableInformations (TransportLine, Target, DepartureHour, DepartureMinute). */
-	JourneyInfo( const QHash<TimetableInformation, QVariant> &data );
-
-	/**
-	 * @brief Constructs a new JourneyInfo object.
-	 *
-	 * @param vehicleTypes The types of vehicle used in the journey.
-	 * 
-	 * @param startStopName The stop name at which the journey starts.
-	 * 
-	 * @param targetStopName The stop name of the target of the journey.
-	 * 
-	 * @param departure The date and time of the departure from the starting stop.
-	 * 
-	 * @param arrival The date and time of the arrival at the journey target.
-	 * 
-	 * @param duration The duration in minutes of the journey.
-	 * 
-	 * @param changes How many changes between different vehicles are needed.
-	 * 
-	 * @param pricing Information about the pricing of the journey.
-	 * 
-	 * @param journeyNews News for the journey, such as "platform changed".
-	 * 
-	 * @param operatorName The company that is responsible for this departure / arrival. */
-	JourneyInfo( const QList<VehicleType> &vehicleTypes,
-				 const QString &startStopName, const QString &targetStopName,
-				 const QDateTime &departure, const QDateTime &arrival,
-				 int duration, int changes = 0, const QString &pricing = QString(),
-				 const QString &journeyNews = QString(),
-				 const QString &operatorName = QString() );
+	explicit JourneyInfo( const QHash<TimetableInformation, QVariant> &data );
 
 	/** @brief Gets information about the pricing of the journey. */
 	QString pricing() const { return m_data.contains(Pricing)
@@ -373,28 +329,6 @@ public:
 	};
 
 private:
-	/**
-	 * @brief Initializes this JourneyInfo object. This is used by the constructors.
-	 *
-	 * @param vehicleTypes The types of vehicle used in the journey.
-	 * 
-	 * @param startStopName The stop name at which the journey starts.
-	 * 
-	 * @param targetStopName The stop name of the target of the journey.
-	 * 
-	 * @param arrival The date and time of the arrival at the journey target.
-	 * 
-	 * @param duration The duration in minutes of the journey.
-	 * 
-	 * @param changes How many changes between different vehicles are needed.
-	 * 
-	 * @param pricing Information about the pricing of the journey.
-	 * 
-	 * @param journeyNews News for the journey, such as "platform changed". */
-	void init( const QList<VehicleType> &vehicleTypes, const QString &startStopName,
-			   const QString &targetStopName, const QDateTime &arrival,
-			   int duration, int changes = 0, const QString &pricing = QString(),
-			   const QString &journeyNews = QString() );
 };
 
 /** @class DepartureInfo
@@ -413,79 +347,7 @@ public:
 	 *
 	 * @param data A hash that contains values for at least the required
 	 *   TimetableInformations (TransportLine, Target, DepartureHour, DepartureMinute). */
-	DepartureInfo( const QHash<TimetableInformation, QVariant> &data );
-
-	/**
-	 * @brief Constructs a new DepartureInfo object.
-	 *
-	 * @param line The name of the public transport line (e.g. "6", "3S", "S 4", "RB 24122").
-	 * 
-	 * @param typeOfVehicle The type of vehicle used.
-	 * 
-	 * @param target The target / origin of the vehicle.
-	 * 
-	 * @param departure The date and time of the departure / arrival of the vehicle.
-	 * 
-	 * @param nightLine Wheather or not the public transport line is a night line.
-	 * 
-	 * @param expressLine Wheather or not the public transport line is an express line.
-	 * 
-	 * @param platform The platform from/at which the vehicle departs/arrives.
-	 * 
-	 * @param delay The delay in minutes of the vehicle. -1 means that no delay information is available.
-	 * 
-	 * @param delayReason The reason of a delay.
-	 * 
-	 * @param journeyNews News for the departure / arrival, such as "platform changed".
-	 * 
-	 * @param operatorName The company that is responsible for this departure / arrival.
-	 * 
-	 * @param status The Status of the departure. */
-	DepartureInfo( const QString &line, const VehicleType &typeOfVehicle,
-				   const QString &target, const QDateTime &departure,
-				   bool nightLine = false, bool expressLine = false,
-				   const QString &platform = QString(), int delay = -1,
-				   const QString &delayReason = QString(),
-				   const QString &journeyNews = QString(),
-				   const QString &operatorName = QString(),
-				   const QString &status = QString() );
-
-	/**
-	 * @brief Constructs a new DepartureInfo object.
-	 *
-	 * @param line The name of the public transport line (e.g. "6", "3S", "S 4", "RB 24122").
-	 * 
-	 * @param typeOfVehicle The type of vehicle used.
-	 * 
-	 * @param target The target / origin of the vehicle.
-	 * 
-	 * @param requestTime The time at which the departure / arrival was requested from the service provider.
-	 * 
-	 * @param departureTime The date and time of the departure / arrival of the vehicle.
-	 * 
-	 * @param nightLine Wheather or not the public transport line is a night line.
-	 * 
-	 * @param expressLine Wheather or not the public transport line is an express line.
-	 * 
-	 * @param platform The platform from/at which the vehicle departs/arrives.
-	 * 
-	 * @param delay The delay in minutes of the vehicle. -1 means that no delay information is available.
-	 * 
-	 * @param delayReason The reason of a delay.
-	 * 
-	 * @param journeyNews News for the departure / arrival, such as "platform changed".
-	 * 
-	 * @param operatorName The company that is responsible for this departure / arrival. 
-	 * 
-	 * @param status The Status of the departure. */
-	DepartureInfo( const QString &line, const VehicleType &typeOfVehicle,
-				   const QString &target, const QTime &requestTime,
-				   const QTime &departureTime, bool nightLine = false,
-				   bool expressLine = false, const QString &platform = QString(),
-				   int delay = -1, const QString &delayReason = QString(),
-				   const QString &journeyNews = QString(),
-				   const QString &operatorName = QString(),
-				   const QString &status = QString() );
+	explicit DepartureInfo( const QHash<TimetableInformation, QVariant> &data );
 
 	/** @brief Gets the target / origin of the departing / arriving vehicle. */
 	QString target() const { return m_data.contains(Target)
@@ -554,38 +416,6 @@ public:
 	};
 
 private:
-	/**
-	 * @brief Initializes this DepartureInfo object. This is used by the constructors.
-	 *
-	 * @param line The name of the public transport line (e.g. "6", "3S", "S 4", "RB 24122").
-	 * 
-	 * @param typeOfVehicle The type of vehicle used.
-	 * 
-	 * @param target The target / origin of the vehicle.
-	 * 
-	 * @param departure The date and time of the departure / arrival of the vehicle.
-	 * 
-	 * @param nightLine Wheather or not the public transport line is a night line.
-	 * 
-	 * @param expressLine Wheather or not the public transport line is an express line.
-	 * 
-	 * @param platform The platform from/at which the vehicle departs/arrives.
-	 * 
-	 * @param delay The delay in minutes of the vehicle. -1 means that no delay information is available.
-	 * 
-	 * @param delayReason The reason of a delay.
-	 * 
-	 * @param journeyNews News for the departure / arrival, such as "platform changed".
-	 * 
-	 * @param status The Status of the departure. */
-	void init( const QString &line, const VehicleType &typeOfVehicle,
-			   const QString &target,
-			   bool nightLine = false, bool expressLine = false,
-			   const QString &platform = QString(), int delay = -1,
-			   const QString &delayReason = QString(),
-			   const QString &sJourneyNews = QString(),
-			   const QString &status = QString() );
-
 	LineServices m_lineServices;
 };
 

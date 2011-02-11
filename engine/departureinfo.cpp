@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -311,94 +311,9 @@ StopInfo::StopInfo(const QString& name, const QString& id, int weight, const QSt
 	m_isValid = !name.isEmpty();
 }
 
-
-JourneyInfo::JourneyInfo( const QList< VehicleType >& vehicleTypes,
-                          const QString& startStopName,
-                          const QString& targetStopName,
-                          const QDateTime& departure, const QDateTime& arrival,
-                          int duration, int changes, const QString& pricing,
-                          const QString &journeyNews, const QString &operatorName )
-		: PublicTransportInfo( departure, operatorName )
-{
-	init( vehicleTypes, startStopName, targetStopName, arrival,
-		  duration, changes, pricing, journeyNews );
-}
-
-void JourneyInfo::init( const QList< VehicleType >& vehicleTypes,
-                        const QString& startStopName,
-                        const QString& targetStopName,
-                        const QDateTime& arrival, int duration, int changes,
-                        const QString& pricing, const QString &journeyNews )
-{
-	m_isValid = changes >= 0;
-
-	QVariantList vehicleTypeList;
-	foreach( VehicleType vehicleType, vehicleTypes ) {
-		vehicleTypeList << static_cast<int>( vehicleType );
-	}
-	m_data.insert( TypesOfVehicleInJourney, vehicleTypeList );
-	m_data.insert( StartStopName, startStopName );
-	m_data.insert( TargetStopName, targetStopName );
-	m_data.insert( ArrivalDate, arrival.date() );
-	m_data.insert( ArrivalHour, arrival.time().hour() );
-	m_data.insert( ArrivalMinute, arrival.time().minute() );
-	m_data.insert( Duration, duration );
-	m_data.insert( Changes, changes );
-	m_data.insert( Pricing, pricing );
-	m_data.insert( JourneyNews, journeyNews );
-}
-
-
 DepartureInfo::DepartureInfo() : PublicTransportInfo()
 {
 	m_isValid = false;
-}
-
-DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle,
-                              const QString& target, const QDateTime& departure,
-                              bool nightLine, bool expressLine,
-                              const QString& platform, int delay,
-                              const QString& delayReason, const QString& journeyNews,
-                              const QString &operatorName, const QString &status )
-		: PublicTransportInfo( departure, operatorName )
-{
-	init( line, typeOfVehicle, target, nightLine, expressLine,
-		  platform, delay, delayReason, journeyNews, status );
-}
-
-DepartureInfo::DepartureInfo( const QString& line, const VehicleType& typeOfVehicle,
-                              const QString& target, const QTime &requestTime,
-                              const QTime& departureTime, bool nightLine,
-                              bool expressLine, const QString& platform,
-                              int delay, const QString& delayReason,
-                              const QString& journeyNews, const QString &operatorName,
-							  const QString &status )
-		: PublicTransportInfo()
-{
-	// Guess date TODO
-	Q_UNUSED( requestTime );
-	// Interprete as tomorrow, if the time is more than 12 hours ago/in the future.
-// 	if ( departureTime < requestTime.addSecs(-12 * 60 * 60) ) {
-// 		kDebug() << "Guessed DepartureDate as tomorrow, departure is at" 
-// 				 << departureTime << "requested was" << requestTime;
-// 		m_data.insert( DepartureDate, QDate::currentDate().addDays(1) );
-// 	} else {
-		kDebug() << "Guessed DepartureDate as today";
-		m_data.insert( DepartureDate, QDate::currentDate() );
-// 	}
-	m_data.insert( DepartureYear, m_data[DepartureDate].toDate().year() );
-
-	m_data.insert( DepartureHour, departureTime.hour() );
-	m_data.insert( DepartureMinute, departureTime.minute() );
-
-	m_data[ DepartureHour ] = departureTime.hour();
-	m_data[ DepartureMinute ] = departureTime.minute();
-
-	init( line, typeOfVehicle, target, nightLine, expressLine, platform, delay,
-		  delayReason, journeyNews );
-
-	m_data[ Operator ] = operatorName;
-	m_data[ Status ] = status;
 }
 
 DepartureInfo::DepartureInfo( const QHash<TimetableInformation, QVariant> &data )
@@ -406,28 +321,6 @@ DepartureInfo::DepartureInfo( const QHash<TimetableInformation, QVariant> &data 
 {
 	m_isValid = m_data.contains( TransportLine ) && m_data.contains( Target )
 				&& m_data.contains( DepartureHour ) && m_data.contains( DepartureMinute );
-}
-
-void DepartureInfo::init( const QString& line, const VehicleType& typeOfVehicle,
-                          const QString& target,
-                          bool nightLine, bool expressLine, const QString& platform,
-                          int delay, const QString& delayReason,
-                          const QString& journeyNews, const QString &status )
-{
-	m_isValid = true;
-	m_data.insert( TransportLine, line );
-	m_data.insert( TypeOfVehicle, static_cast<int>(typeOfVehicle) );
-	m_data.insert( Target, target );
-
-	m_lineServices = nightLine ? NightLine : NoLineService;
-	if ( expressLine ) {
-		m_lineServices |= ExpressLine;
-	}
-	m_data.insert( Platform, platform );
-	m_data.insert( Delay, delay );
-	m_data.insert( DelayReason, delayReason );
-	m_data.insert( JourneyNews, journeyNews );
-	m_data.insert( Status, status );
 }
 
 VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineType )
@@ -447,15 +340,12 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 			sLineTypeLower == "s_bahn" ||
 			sLineTypeLower == "s" ||
 			sLineTypeLower == "interurban" ||
-// 			sLineTypeLower == "s1" || // ch_sbb
 			sLineTypeLower == "rsb" || // "regio-s-bahn", TODO move to au_oebb
 			sLineTypeLower.toInt() == static_cast<int>(InterurbanTrain) ) {
 		return InterurbanTrain;
 	} else if ( sLineTypeLower == "tram" ||
 			sLineTypeLower == "straßenbahn" ||
 			sLineTypeLower == "str" ||
-// 			sLineTypeLower == "ntr" || // for ch_sbb
-// 			sLineTypeLower == "tra" || // for ch_sbb
 			sLineTypeLower == "stb" || // "stadtbahn", germany
 			sLineTypeLower == "dm_train" ||
 			sLineTypeLower == "streetcar (tram)" || // for sk_imhd TODO move to the script
@@ -463,9 +353,6 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 		return Tram;
 	} else if ( sLineTypeLower == "bus" ||
 			sLineTypeLower == "dm_bus" ||
-// 			sLineTypeLower == "au" || // it_cup2000, "autobus"
-// 			sLineTypeLower == "nbu" || // for ch_sbb
-// 			sLineTypeLower == "bsv" || // for de_nasa
 			sLineTypeLower == "express bus" || // for sk_imhd
 			sLineTypeLower == "night line - bus" || // for sk_imhd TODO move to the script
 			sLineTypeLower.toInt() == static_cast<int>(Bus) ) {
@@ -491,16 +378,11 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 			sLineTypeLower == "regional" ||
 			sLineTypeLower == "r" || // austria, switzerland
 			sLineTypeLower == "os" || // czech, "Osobní vlak", basic local (stopping) trains
-// 			sLineTypeLower == "dpn" || // for rozklad-pkp.pl
-// 			sLineTypeLower == "t84" || // for rozklad-pkp.pl
-// 			sLineTypeLower == "r84" || // for rozklad-pkp.pl
 			sLineTypeLower.toInt() == static_cast<int>(RegionalTrain) ) {
 		return RegionalTrain;
 	} else if ( sLineTypeLower == "re" || // RegionalExpress
 			sLineTypeLower == "rer" || // france, Reseau Express Regional
 			sLineTypeLower == "sp" || // czech, "Spěšný vlak", semi-fast trains (Eilzug)
-// 			sLineTypeLower == "rex" || // austria, local train stopping at few stations; semi fast
-// 			sLineTypeLower == "ez" || // austria ("erlebniszug"), local train stopping at few stations; semi fast
 			sLineTypeLower == "zr" || // slovakia, "Zrýchlený vlak", train serving almost all stations en route fast
 			sLineTypeLower == "regional express" ||
 			sLineTypeLower == "regional express trains" || // used by gares-en-mouvement.com (france)
@@ -513,7 +395,6 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 			sLineTypeLower == "ex" || // czech, express trains with no supplementary fare, similar to the German Interregio or also Regional-Express
 			sLineTypeLower == "express" ||
 			sLineTypeLower == "interregional" ||
-// 			sLineTypeLower == "intercity and regional train" || // used by gares-en-mouvement.com (france)
 			sLineTypeLower.toInt() == static_cast<int>(InterregionalTrain) ) {
 		return InterregionalTrain;
 	} else if ( sLineTypeLower == "ec_ic" || // Eurocity / Intercity
@@ -524,19 +405,15 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 			sLineTypeLower == "cnl" || // CityNightLine
 			sLineTypeLower == "en" || // EuroNight
 			sLineTypeLower == "nz" || // "Nachtzug"
-// 			sLineTypeLower == "oec" || // austria
-// 			sLineTypeLower == "oic" || // austria
 			sLineTypeLower == "icn" || // national long-distance train with tilting technology
 			sLineTypeLower.toInt() == static_cast<int>(IntercityTrain) ) { 
 		return IntercityTrain;
 	} else if ( sLineTypeLower == "ice" || // germany
-// 			sLineTypeLower == "rj" ||  // "railjet", austria
 			sLineTypeLower == "tgv" ||  // france
 			sLineTypeLower == "tha" ||  // thalys
 			sLineTypeLower == "hst" || // great britain
 			sLineTypeLower == "est" || // eurostar
 			sLineTypeLower == "es" || // eurostar, High-speed, tilting trains for long-distance services
-// 			sLineTypeLower == "high-speed train" || // used by gares-en-mouvement.com (france)
 			sLineTypeLower == "highspeed train" ||
 			sLineTypeLower.toInt() == static_cast<int>(HighSpeedTrain) ) { 
 		return HighSpeedTrain;
