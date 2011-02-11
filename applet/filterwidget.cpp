@@ -29,8 +29,8 @@
 
 FilterWidget::FilterWidget( QWidget* parent,
 							AbstractDynamicWidgetContainer::SeparatorOptions seperatorOptions )
-		: AbstractDynamicLabeledWidgetContainer( RemoveButtonsBesideWidgets,
-		  AddButtonBesideFirstWidget, seperatorOptions, QString(), parent )
+		: AbstractDynamicLabeledWidgetContainer( parent, RemoveButtonsBesideWidgets,
+		  AddButtonBesideFirstWidget, seperatorOptions, AddWidgetsAtBottom, QString() )
 {
 	m_allowedFilterTypes << FilterByVehicleType << FilterByTarget << FilterByVia
 			<< FilterByTransportLine << FilterByTransportLineNumber << FilterByDelay;
@@ -41,8 +41,8 @@ FilterWidget::FilterWidget( QWidget* parent,
 
 FilterWidget::FilterWidget( const QList<FilterType> &allowedFilterTypes, QWidget* parent,
 							AbstractDynamicWidgetContainer::SeparatorOptions seperatorOptions )
-		: AbstractDynamicLabeledWidgetContainer( RemoveButtonsBesideWidgets,
-		  AddButtonBesideFirstWidget, seperatorOptions, QString(), parent )
+		: AbstractDynamicLabeledWidgetContainer( parent, RemoveButtonsBesideWidgets,
+		  AddButtonBesideFirstWidget, seperatorOptions, AddWidgetsAtBottom, QString() )
 {
 	if ( allowedFilterTypes.isEmpty() ) {
 		m_allowedFilterTypes << FilterByVehicleType << FilterByTarget << FilterByVia
@@ -445,7 +445,8 @@ QModelIndex ConstraintListWidget::indexFromValue( const QVariant& value )
 }
 
 FilterListWidget::FilterListWidget( QWidget* parent ) : AbstractDynamicWidgetContainer(
-		RemoveButtonsBesideWidgets, AddButtonAfterLastWidget, ShowSeparators, parent )
+		parent, RemoveButtonsBesideWidgets, AddButtonAfterLastWidget, ShowSeparators,
+		AddWidgetsAtBottom )
 {
 	setWidgetCountRange( 1, 10, false );
 	addButton()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
