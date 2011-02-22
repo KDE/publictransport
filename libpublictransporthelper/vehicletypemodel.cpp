@@ -20,6 +20,8 @@
 #include "vehicletypemodel.h"
 #include "global.h"
 
+using namespace Timetable;
+
 struct VehicleTypeItem {
 	VehicleType vehicleType;
 	bool checked;

@@ -34,7 +34,7 @@
 #include <Plasma/Animation>
 #endif
 
-KIcon Global::internationalIcon()
+KIcon GlobalApplet::internationalIcon()
 {
 	// Size of the flag icons is 22x16 => 16x11.64
 	QPixmap pixmap = QPixmap( 32, 32 );
@@ -66,7 +66,7 @@ KIcon Global::internationalIcon()
 	return resultIcon;
 }
 
-KIcon Global::putIconIntoBiggerSizeIcon( const KIcon &icon, const QSize &iconSize,
+KIcon GlobalApplet::putIconIntoBiggerSizeIcon( const KIcon &icon, const QSize &iconSize,
 										 const QSize &resultingSize )
 {
 	QPixmap pixmap = QPixmap( resultingSize );
@@ -84,7 +84,7 @@ KIcon Global::putIconIntoBiggerSizeIcon( const KIcon &icon, const QSize &iconSiz
 	return resultIcon;
 }
 
-KIcon Global::makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon,
+KIcon GlobalApplet::makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon,
 							   const QSize &overlaySize, int iconExtend )
 {
 	QPixmap pixmap = icon.pixmap( iconExtend ), pixmapOverlay = overlayIcon.pixmap( overlaySize );
@@ -102,13 +102,13 @@ KIcon Global::makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon,
 	return resultIcon;
 }
 
-KIcon Global::makeOverlayIcon( const KIcon &icon, const QString &overlayIconName,
+KIcon GlobalApplet::makeOverlayIcon( const KIcon &icon, const QString &overlayIconName,
 							   const QSize &overlaySize, int iconExtend )
 {
 	return makeOverlayIcon( icon, KIcon( overlayIconName ), overlaySize, iconExtend );
 }
 
-KIcon Global::makeOverlayIcon( const KIcon& icon, const QList<KIcon> &overlayIconsBottom,
+KIcon GlobalApplet::makeOverlayIcon( const KIcon& icon, const QList<KIcon> &overlayIconsBottom,
 							   const QSize& overlaySize, int iconExtend )
 {
 	Q_ASSERT( !icon.isNull() );
@@ -140,7 +140,7 @@ KIcon Global::makeOverlayIcon( const KIcon& icon, const QList<KIcon> &overlayIco
 	return resultIcon;
 }
 
-KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType, const QString &overlayIcon )
+KIcon GlobalApplet::vehicleTypeToIcon( const VehicleType &vehicleType, const QString &overlayIcon )
 {
 	KIcon icon;
 	switch ( vehicleType ) {
@@ -200,7 +200,7 @@ KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType, const QString &
 	return icon;
 }
 
-KIcon Global::iconFromVehicleTypeList( const QList< VehicleType >& vehicleTypes, int extend )
+KIcon GlobalApplet::iconFromVehicleTypeList( const QList< VehicleType >& vehicleTypes, int extend )
 {
 	QPixmap pixmap = QPixmap( extend, extend );
 	int halfExtend = extend / 2;
@@ -242,7 +242,7 @@ KIcon Global::iconFromVehicleTypeList( const QList< VehicleType >& vehicleTypes,
 }
 
 // Gets the name of the given type of vehicle
-QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural )
+QString GlobalApplet::vehicleTypeToString( const VehicleType &vehicleType, bool plural )
 {
 	switch ( vehicleType ) {
 	case Tram:
@@ -306,7 +306,7 @@ QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural
 	}
 }
 
-QString Global::durationString( int seconds )
+QString GlobalApplet::durationString( int seconds )
 {
 	int minutes = ( seconds / 60 ) % 60;
 	int hours = seconds / 3600;
@@ -329,28 +329,28 @@ QString Global::durationString( int seconds )
 	}
 }
 
-QColor Global::textColorOnSchedule()
+QColor GlobalApplet::textColorOnSchedule()
 {
 	QColor color = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
 	return KColorUtils::tint( color, Qt::green, 0.5 );
 }
 
-QColor Global::textColorDelayed()
+QColor GlobalApplet::textColorDelayed()
 {
 	QColor color = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
 	return KColorUtils::tint( color, Qt::red, 0.5 );
 }
 
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-void Global::startFadeAnimation( QGraphicsWidget* w, qreal targetOpacity )
+void GlobalApplet::startFadeAnimation( QGraphicsWidget* w, qreal targetOpacity )
 {
-	Plasma::Animation *anim = Global::fadeAnimation( w, targetOpacity );
+	Plasma::Animation *anim = GlobalApplet::fadeAnimation( w, targetOpacity );
 	if ( anim ) {
 		anim->start( QAbstractAnimation::DeleteWhenStopped );
 	}
 }
 
-Plasma::Animation* Global::fadeAnimation( QGraphicsWidget* w, qreal targetOpacity )
+Plasma::Animation* GlobalApplet::fadeAnimation( QGraphicsWidget* w, qreal targetOpacity )
 {
 	if ( w->geometry().width() * w->geometry().height() > 250000 ) {
 		// Don't fade big widgets for performance reasons
@@ -366,7 +366,7 @@ Plasma::Animation* Global::fadeAnimation( QGraphicsWidget* w, qreal targetOpacit
 }
 #endif
 
-QString Global::translateFilterKey(const QString& key)
+QString GlobalApplet::translateFilterKey(const QString& key)
 {
 	if ( key == "Default" ) {
 		return i18nc("@info/plain The name of the default filter configuration", "Default");
@@ -375,7 +375,7 @@ QString Global::translateFilterKey(const QString& key)
 	}
 }
 
-QString Global::untranslateFilterKey(const QString& translatedKey)
+QString GlobalApplet::untranslateFilterKey(const QString& translatedKey)
 {
 	if ( translatedKey == i18nc("@info/plain The name of the default filter configuration", "Default") ) {
 		return "Default";

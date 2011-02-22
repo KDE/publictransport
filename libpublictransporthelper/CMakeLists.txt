@@ -76,8 +76,11 @@ set_target_properties( publictransporthelper
 install( TARGETS publictransporthelper ${INSTALL_TARGETS_DEFAULT_ARGS} )
 
 install( FILES ${publictransporthelper_LIB_HDRS}
-	DESTINATION ${INCLUDE_INSTALL_DIR}/publictransporthelper
-	COMPONENT Devel
-)
+		 DESTINATION ${INCLUDE_INSTALL_DIR}/publictransporthelper
+		 COMPONENT Devel )
 
-install( FILES publictransporthelper.desktop DESTINATION ${SERVICES_INSTALL_DIR} )
+install( FILES publictransport.knsrc
+	     DESTINATION ${CONFIG_INSTALL_DIR} )
+
+install( FILES publictransporthelper.desktop 
+		 DESTINATION ${SERVICES_INSTALL_DIR} )

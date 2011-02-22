@@ -219,6 +219,9 @@ protected:
 	void removeJourneySearchWidgets();
 	/** @brief Gets a new title string based on the current applet settings. */
 	QString titleText() const;
+	
+    virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
+	void updateTitle();
 
 	TitleType m_type;
 	Plasma::IconWidget *m_icon;
@@ -227,6 +230,7 @@ protected:
 	QHash< WidgetType, QGraphicsWidget* > m_widgets;
 	QGraphicsLinearLayout *m_layout;
 	Settings *m_settings;
+	QString m_titleText;
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TitleWidget::WidgetTypes)
 Q_DECLARE_OPERATORS_FOR_FLAGS(TitleWidget::RemoveWidgetOptions)

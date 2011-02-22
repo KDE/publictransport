@@ -242,6 +242,12 @@ public:
 				* in the list. Buttons added after the last widget get placed on top of all
 				* widgets (after the last widget = over the last widget, ie. widget on top). */
 	};
+	
+// 	/** @brief Other options. */
+// 	enum DynamicWidgetContainerOption {
+// 		NoOption = 0x0000
+// 	};
+// 	Q_DECLARE_FLAGS( DynamicWidgetContainerOptions, DynamicWidgetContainerOption );
 
 	/**
 	 * @brief Creates a new AbstractDynamicWidgetContainer instance.
@@ -529,6 +535,7 @@ private:
 	Q_DECLARE_PRIVATE( AbstractDynamicWidgetContainer )
 	Q_DISABLE_COPY( AbstractDynamicWidgetContainer )
 };
+// Q_DECLARE_OPERATORS_FOR_FLAGS( AbstractDynamicWidgetContainer::DynamicWidgetContainerOptions );
 
 class QFormLayout;
 class AbstractDynamicLabeledWidgetContainerPrivate;

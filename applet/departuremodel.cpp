@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -228,7 +228,7 @@ void ItemBase::appendChild( ChildItem* child )
 	child->m_model = m_model;
 }
 
-TopLevelItem::TopLevelItem( const Info* info ) : ItemBase( info )
+TopLevelItem::TopLevelItem( const Info* info ) : QObject(0), ItemBase( info )
 {
 }
 
@@ -400,8 +400,8 @@ void JourneyItem::setJourneyInfo( const JourneyInfo& journeyInfo )
 
 void JourneyItem::updateValues()
 {
-	setIcon( ColumnLineString, Global::iconFromVehicleTypeList(
-				m_journeyInfo.vehicleTypes(), 32 * m_info->sizeFactor ) );
+	setIcon( ColumnLineString, GlobalApplet::iconFromVehicleTypeList(
+			m_journeyInfo.vehicleTypes().toList(), 32 * m_info->sizeFactor ) );
 
 	QString sDuration = KGlobal::locale()->prettyFormatDuration(
 				m_journeyInfo.duration() * 60 * 1000 );
@@ -414,7 +414,7 @@ void JourneyItem::updateValues()
 	setFormattedText( ColumnJourneyInfo, text );
 //     setText( s.replace(QRegExp("<[^>]*>"), "") );
 	if ( !m_journeyInfo.journeyNews().isEmpty() ) {
-		setIcon( ColumnJourneyInfo, Global::makeOverlayIcon(
+		setIcon( ColumnJourneyInfo, GlobalApplet::makeOverlayIcon(
 					KIcon( "view-pim-news" ), "arrow-down", QSize( 12, 12 ) ) );
 	}
 
@@ -600,7 +600,7 @@ QString JourneyItem::childItemText( ItemType itemType, int* linesPerRow )
 		} else {
 			text = QString( "<b>%1</b> %2" )
 					.arg( i18nc( "@info/plain The duration of a journey", "Duration:" ) )
-					.arg( Global::durationString( m_journeyInfo.duration() * 60 ) );
+					.arg( GlobalApplet::durationString( m_journeyInfo.duration() * 60 ) );
 		}
 		break;
 	case ChangesItem:
@@ -658,7 +658,7 @@ ChildItem* JourneyItem::createRouteItem()
 		QString sTransportLine;
 		if ( row < m_journeyInfo.routeVehicleTypes().count()
 					&& m_journeyInfo.routeVehicleTypes()[row] != Unknown ) {
-			icon = Global::vehicleTypeToIcon( m_journeyInfo.routeVehicleTypes()[row] );
+			icon = GlobalApplet::vehicleTypeToIcon( m_journeyInfo.routeVehicleTypes()[row] );
 		}
 		if ( m_journeyInfo.routeVehicleTypes()[row] == Feet ) {
 			sTransportLine = i18nc( "@info/plain", "Footway" );
@@ -688,10 +688,10 @@ ChildItem* JourneyItem::createRouteItem()
 			int delay = m_journeyInfo.routeTimesDepartureDelay()[ row ];
 			if ( delay > 0 ) {
 				sTimeDep += QString( " <span style='color:%2;'>+%1</span>" )
-							.arg( delay ).arg( Global::textColorDelayed().name() );
+							.arg( delay ).arg( GlobalApplet::textColorDelayed().name() );
 			} else if ( delay == 0 ) {
 				sTimeDep = sTimeDep.prepend( QString( "<span style='color:%1;'>" )
-											 .arg( Global::textColorOnSchedule().name() ) )
+											 .arg( GlobalApplet::textColorOnSchedule().name() ) )
 								   .append( "</span>" );
 			}
 		}
@@ -701,10 +701,10 @@ ChildItem* JourneyItem::createRouteItem()
 			int delay = m_journeyInfo.routeTimesArrivalDelay()[ row ];
 			if ( delay > 0 ) {
 				sTimeArr += QString( " <span style='color:%2;'>+%1</span>" )
-							.arg( delay ).arg( Global::textColorDelayed().name() );
+							.arg( delay ).arg( GlobalApplet::textColorDelayed().name() );
 			} else if ( delay == 0 ) {
 				sTimeArr = sTimeArr.prepend( QString( "<span style='color:%1;'>" )
-											 .arg( Global::textColorOnSchedule().name() ) )
+											 .arg( GlobalApplet::textColorOnSchedule().name() ) )
 								   .append( "</span>" );
 			}
 		}
@@ -738,7 +738,7 @@ ChildItem* JourneyItem::createRouteItem()
 }
 
 DepartureItem::DepartureItem( const DepartureInfo &departureInfo, const Info *info )
-		: QObject( 0 ), TopLevelItem( info )
+		: TopLevelItem( info )
 {
 	m_alarm = NoAlarm;
 	m_alarmColorIntensity = 0.0;
@@ -799,11 +799,11 @@ void DepartureItem::updateValues()
 	setFormattedText( ColumnLineString, QString("<span style='font-weight:bold;'>%1</span>")
 	                  .arg(m_departureInfo.lineString()) );
 	// if ( departureInfo.vehicleType() != Unknown )
-	setIcon( ColumnLineString, Global::vehicleTypeToIcon(m_departureInfo.vehicleType()) );
+	setIcon( ColumnLineString, GlobalApplet::vehicleTypeToIcon(m_departureInfo.vehicleType()) );
 
 	setText( ColumnTarget, m_departureInfo.target() );
 	if ( !m_departureInfo.journeyNews().isEmpty() ) {
-		setIcon( ColumnTarget, Global::makeOverlayIcon(KIcon("view-pim-news"),
+		setIcon( ColumnTarget, GlobalApplet::makeOverlayIcon(KIcon("view-pim-news"),
 		         "arrow-down", QSize(12, 12)) );
 	}
 
@@ -1184,18 +1184,18 @@ QModelIndex PublicTransportModel::index( int row, int column,
         const QModelIndex& parent ) const
 {
 	if ( parent.isValid() ) {
-		ItemBase *parentItem = static_cast<ItemBase*>( parent.internalPointer() );
-		if ( !hasIndex( row, column, parent ) ) {
+		if ( !hasIndex(row, column, parent) ) {
 			return QModelIndex();
 		}
 
+		ItemBase *parentItem = static_cast<ItemBase*>( parent.internalPointer() );
 		if ( row < parentItem->childCount() ) {
-			return createIndex( row, column, parentItem->child( row ) );
+			return createIndex( row, column, parentItem->child(row) );
 		} else {
 			return QModelIndex();
 		}
 	} else {
-		if ( !hasIndex( row, column, QModelIndex() ) ) {
+		if ( !hasIndex(row, column, QModelIndex()) ) {
 			return QModelIndex();
 		}
 
@@ -1292,6 +1292,8 @@ QVariant PublicTransportModel::data( const QModelIndex& index, int role ) const
 
 void PublicTransportModel::clear()
 {
+	emit journeysAboutToBeRemoved( m_items );
+	
 	beginRemoveRows( QModelIndex(), 0, m_items.count() );
 
 	m_infoToItem.clear();
@@ -1331,14 +1333,17 @@ QVariant JourneyModel::headerData( int section, Qt::Orientation orientation,
 }
 
 bool JourneyModel::removeRows( int row, int count, const QModelIndex& parent )
-{
+{	
 	beginRemoveRows( parent, row, row + count - 1 );
 	if ( parent.isValid() ) {
 		ItemBase *item = itemFromIndex( parent );
 		item->removeChildren( row, count );
 	} else {
 		for ( int i = 0; i < count; ++i ) {
-			JourneyItem *item = static_cast<JourneyItem*>( m_items.takeAt( row ) );
+			JourneyItem *item = static_cast<JourneyItem*>( m_items[row] );
+			emit journeysAboutToBeRemoved( QList<ItemBase*>() << item );
+			
+			m_items.removeAt( row );
 			m_infoToItem.remove( item->journeyInfo()->hash() );
 			if ( m_nextItem == item ) {
 				m_nextItem = findNextItem();
@@ -1526,16 +1531,21 @@ void DepartureModel::update()
 	}
 
 	// Sort out departures in the past
+	QList<DepartureInfo> leaving;
 	while ( m_nextItem
-			&& static_cast<DepartureItem*>( m_nextItem )->departureInfo()->predictedDeparture() <
-			QDateTime::currentDateTime() ) {
+		&& static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture() 
+			< QDateTime::currentDateTime() )
+	{
 		kDebug() << "Remove old departure at" << m_nextItem->row()
 				 << static_cast<DepartureItem*>( m_nextItem )->departureInfo();
+		leaving << *static_cast<DepartureItem*>(m_nextItem)->departureInfo();
+		
 		removeRows( m_nextItem->row(), 1 );
 		m_nextItem = findNextItem();
 	}
+	emit departuresLeft( leaving );
 
-	// Update departure column if necessary
+	// Update departure column if necessary (remaining minutes)
 	if ( m_info.showRemainingMinutes ) {
 		foreach( ItemBase *item, m_items ) {
 			item->updateTimeValues();
@@ -1791,7 +1801,10 @@ bool DepartureModel::removeRows( int row, int count, const QModelIndex& parent )
 		item->removeChildren( row, count );
 	} else {
 		for ( int i = 0; i < count; ++i ) {
-			DepartureItem *item = static_cast<DepartureItem*>( m_items.takeAt( row ) );
+			DepartureItem *item = static_cast<DepartureItem*>( m_items[row] );
+			emit journeysAboutToBeRemoved( QList<ItemBase*>() << item );
+			
+			m_items.removeAt( row );
 			item->removeChildren( 0, item->childCount() ); // Needed?
 			m_infoToItem.remove( item->departureInfo()->hash() );
 			if ( item->hasAlarm() ) {

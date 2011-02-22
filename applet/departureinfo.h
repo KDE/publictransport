@@ -89,7 +89,7 @@ public:
 			const QList<int> &routeTimesArrivalDelay = QList<int>(),
 			int routeExactStops = 0 );
 
-	JourneyInfo( const QString &operatorName, const QList<VehicleType> &vehicleTypes,
+	JourneyInfo( const QString &operatorName, const QSet<VehicleType> &vehicleTypes,
 			const QDateTime &departure, const QDateTime &arrival, const QString &pricing,
 			const QString &startStopName, const QString &targetStopName, int duration, int changes,
 			const QString &journeyNews = QString(), const QStringList &routeStops = QStringList(),
@@ -136,9 +136,8 @@ public:
 	QString targetStopName() const { return m_targetStopName; };
 	/** @returns an information string with news for this journey. */
 	QString journeyNews() const { return m_journeyNews; };
-	/** @returns a list of vehicle types used by this journey. */
-	QList<VehicleType> vehicleTypes() const { return m_vehicleTypes; };
-	QList<VehicleType> routeVehicleTypes() const { return m_routeVehicleTypes; };
+	/** @returns a list of vehicle types used by this journey. Each vehicle type is contained only once. */
+	QSet<VehicleType> vehicleTypes() const { return m_vehicleTypes; };
 	/** @returns the duration of this journey in minutes. */
 	int duration() const { return m_duration; };
 	/** @returns the needed changes for this journey. */
@@ -155,9 +154,11 @@ public:
 	QList<QTime> routeTimesArrival() const { return m_routeTimesArrival; };
 	QList<int> routeTimesDepartureDelay() const { return m_routeTimesDepartureDelay; };
 	QList<int> routeTimesArrivalDelay() const { return m_routeTimesArrivalDelay; };
+	/** @returns a list of vehicle types used by this journey in chronological order. */
+	QList<VehicleType> routeVehicleTypes() const { return m_routeVehicleTypes; };
 
 private:
-	void init( const QString &operatorName, const QList<VehicleType> &vehicleTypes,
+	void init( const QString &operatorName, const QSet<VehicleType> &vehicleTypes,
 			const QDateTime &departure, const QDateTime &arrival,
 			const QString &pricing, const QString &startStopName,
 			const QString &targetStopName, int duration, int changes,
@@ -178,7 +179,8 @@ private:
 
 	QDateTime m_departure, m_arrival;
 	QString m_operator, m_pricing, m_startStopName, m_targetStopName, m_journeyNews;
-	QList<VehicleType> m_vehicleTypes, m_routeVehicleTypes;
+	QSet<VehicleType> m_vehicleTypes;
+	QList<VehicleType> m_routeVehicleTypes;
 	int m_duration, m_changes, m_routeExactStops;
 	QStringList m_routeStops, m_routeTransportLines,
 		m_routePlatformsDeparture, m_routePlatformsArrival;

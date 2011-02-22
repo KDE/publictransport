@@ -29,6 +29,8 @@
 #include <qmath.h>
 #include <QPainter>
 
+namespace Timetable {
+
 GeneralVehicleType Global::generalVehicleType( VehicleType vehicleType )
 {
 	switch ( vehicleType ) {
@@ -298,3 +300,5 @@ QString Global::untranslateFilterKey(const QString& translatedKey)
 		return translatedKey;
 	}
 }
+
+}; // namespace Timetable

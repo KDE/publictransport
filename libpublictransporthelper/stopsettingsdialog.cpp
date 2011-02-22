@@ -67,6 +67,8 @@
 	#include <QGraphicsEffect>
 #endif
 
+using namespace Timetable;
+
 // Private dialog to show a list of stops near the users current position
 class NearStopsDialog : public KDialog
 {
@@ -1200,7 +1202,7 @@ void StopSettingsDialog::downloadServiceProvidersClicked( )
 
 	KNS3::Entry::List installed = dialog->installedEntries();
 	foreach( const KNS3::Entry &entry, installed )
-	kDebug() << entry.name() << entry.installedFiles();
+		kDebug() << entry.name() << entry.installedFiles();
 
 //     if ( !dialog->changedEntries().isEmpty() )
 // 	currentServiceProviderIndex();

@@ -13,7 +13,6 @@ include_directories(
 # We add our source code here
 set( publictransport_SRCS
     publictransport.cpp
-    publictransporttreeview.cpp
     titlewidget.cpp
     journeysearchsuggestionwidget.cpp
     departureprocessor.cpp
@@ -27,7 +26,9 @@ set( publictransport_SRCS
     departureinfo.cpp
     settings.cpp
     filterwidget.cpp
-    datasourcetester.cpp )
+    datasourcetester.cpp
+	timetablewidget.cpp
+	routegraphicsitem.cpp )
 
 kde4_add_ui_files( publictransport_SRCS
     publicTransportConfig.ui
@@ -50,11 +51,11 @@ target_link_libraries( plasma_applet_publictransport
     publictransporthelper # in sub_directory publictransporthelper
 )
 
-install( FILES publictransport.knsrc
-         DESTINATION ${CONFIG_INSTALL_DIR} )
-
 install( TARGETS plasma_applet_publictransport
          DESTINATION ${PLUGIN_INSTALL_DIR} )
 
 install( FILES plasma-applet-publictransport.desktop
          DESTINATION ${SERVICES_INSTALL_DIR} )
+
+install( FILES vehicles.svg
+         DESTINATION ${DATA_INSTALL_DIR}/plasma_applet_publictransport )

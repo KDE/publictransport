@@ -42,11 +42,11 @@ JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList &vehic
 						  const QList<int> &routeTimesArrivalDelay,
 						  int routeExactStops ) : PublicTransportInfo()
 {
-	QList<VehicleType> vehicleTypes;
+	QSet<VehicleType> vehicleTypes;
 	foreach( const QVariant &vehicleTypeVariant, vehicleTypesVariant ) {
 		VehicleType vehicleType = static_cast<VehicleType>( vehicleTypeVariant.toInt() );
 		if ( !vehicleTypes.contains( vehicleType ) ) {
-			vehicleTypes.append( vehicleType );
+			vehicleTypes << vehicleType;
 		}
 	}
 
@@ -61,7 +61,7 @@ JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList &vehic
 		  routeTimesDepartureDelay, routeTimesArrivalDelay, routeExactStops );
 }
 
-void JourneyInfo::init( const QString &operatorName, const QList< VehicleType > &vehicleTypes,
+void JourneyInfo::init( const QString &operatorName, const QSet< VehicleType > &vehicleTypes,
 						const QDateTime& departure, const QDateTime& arrival,
 						const QString& pricing, const QString& startStopName,
 						const QString& targetStopName, int duration, int changes,
@@ -118,7 +118,7 @@ QString JourneyInfo::departureText( bool htmlFormatted, bool displayTimeBold,
 		if ( htmlFormatted ) {
 			sText = sText.replace( QRegExp( "\\+(?:\\s*|&nbsp;)(\\d+)" ),
 			                       QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
-			                       .arg( Global::textColorDelayed().name() ) );
+			                       .arg( GlobalApplet::textColorDelayed().name() ) );
 		}
 
 		if ( linesPerRow > 1 ) {
@@ -134,7 +134,7 @@ QString JourneyInfo::departureText( bool htmlFormatted, bool displayTimeBold,
 		if ( htmlFormatted ) {
 			sTime = sTime.replace( QRegExp( "\\+(?:\\s*|&nbsp;)(\\d+)" ),
 								   QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
-								   .arg( Global::textColorDelayed().name() ) );
+								   .arg( GlobalApplet::textColorDelayed().name() ) );
 		}
 	} else {
 		sTime.clear();
@@ -160,7 +160,7 @@ QString JourneyInfo::arrivalText( bool /*htmlFormatted*/, bool displayTimeBold,
 		QString sText = durationToDepartureString( true );
 		sText = sText.replace( QRegExp( "\\+(?:\\s*|&nbsp;)(\\d+)" ),
 		                       QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
-		                       .arg( Global::textColorDelayed().name() ) );
+		                       .arg( GlobalApplet::textColorDelayed().name() ) );
 
 		if ( linesPerRow > 1 ) {
 			sTime = QString( "%1<br>(%2)" ).arg( sArrival ).arg( sText );
@@ -173,7 +173,7 @@ QString JourneyInfo::arrivalText( bool /*htmlFormatted*/, bool displayTimeBold,
 		sTime = durationToDepartureString( true );
 		sTime = sTime.replace( QRegExp( "\\+(?:\\s*|&nbsp;)(\\d+)" ),
 							   QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
-							   .arg( Global::textColorDelayed().name() ) );
+							   .arg( GlobalApplet::textColorDelayed().name() ) );
 	} else {
 		sTime.clear();
 	}
@@ -197,7 +197,7 @@ QString JourneyInfo::durationToDepartureString( bool toArrival ) const
 	if ( totalMinutes < 0 ) {
 		return i18nc( "@info/plain", "already left" );
 	} else {
-		return KGlobal::locale()->prettyFormatDuration(( ulong )( totalMinutes * 60000 ) );
+		return KGlobal::locale()->prettyFormatDuration( (ulong)(totalMinutes * 60000) );
 	}
 }
 
@@ -321,12 +321,12 @@ QString DepartureInfo::delayText() const
 	if ( type == OnSchedule ) {
 		sText = i18nc( "@info/plain A public transport vehicle departs on schedule", "On schedule" );
 		sText = sText.prepend( QString( "<span style='color:%1;'>" )
-								.arg( Global::textColorOnSchedule().name() ) ).append( "</span>" );
+								.arg( GlobalApplet::textColorOnSchedule().name() ) ).append( "</span>" );
 	} else if ( type == Delayed ) {
 		sText = i18ncp( "@info/plain", "+%1 minute", "+%1 minutes", delay() );
 		sText = sText.replace( QRegExp( "(+?\\s*\\d+)" ),
 								QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
-								.arg( Global::textColorDelayed().name() ) );
+								.arg( GlobalApplet::textColorDelayed().name() ) );
 
 		if ( !delayReason().isEmpty() ) {
 			sText += ", " + delayReason();
@@ -347,9 +347,9 @@ QString DepartureInfo::departureText( bool htmlFormatted, bool displayTimeBold,
 	QString sColor;
 	if ( htmlFormatted ) {
 		if ( delayType() == OnSchedule ) {
-			sColor = QString( "color:%1;" ).arg( Global::textColorOnSchedule().name() );
+			sColor = QString( "color:%1;" ).arg( GlobalApplet::textColorOnSchedule().name() );
 		} else if ( delayType() == Delayed ) {
-			sColor = QString( "color:%1;" ).arg( Global::textColorDelayed().name() );
+			sColor = QString( "color:%1;" ).arg( GlobalApplet::textColorDelayed().name() );
 		}
 
 		QString sBold;
@@ -370,7 +370,7 @@ QString DepartureInfo::departureText( bool htmlFormatted, bool displayTimeBold,
 		if ( htmlFormatted ) {
 			sDeparture = sDeparture.replace( QRegExp( "(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)" ),
 			                                 QString( "<span style='color:%1;'>\\1</span>" )
-			                                 .arg( Global::textColorDelayed().name() ) );
+			                                 .arg( GlobalApplet::textColorDelayed().name() ) );
 			sTime = QString( linesPerRow > 1 ? "%1<br>(%2)" : "%1 (%2)" )
 					.arg( sDeparture ).arg( sText );
 		} else {
@@ -381,7 +381,7 @@ QString DepartureInfo::departureText( bool htmlFormatted, bool displayTimeBold,
 		if ( htmlFormatted ) {
 			sDeparture += delayString().replace( QRegExp( "(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)" ),
 							QString( "<span style='color:%1;'>\\1</span>" )
-							.arg( Global::textColorDelayed().name() ) ); // Show delay after time
+							.arg( GlobalApplet::textColorDelayed().name() ) ); // Show delay after time
 		} else {
 			sDeparture += delayString();
 		}
@@ -396,10 +396,10 @@ QString DepartureInfo::departureText( bool htmlFormatted, bool displayTimeBold,
 			if ( type == Delayed ) {
 				sTime = sTime.replace( QRegExp( "(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)" ),
 				                       QString( "<span style='color:%1;'>\\1</span>" )
-				                       .arg( Global::textColorDelayed().name() ) );
+				                       .arg( GlobalApplet::textColorDelayed().name() ) );
 			} else if ( type == OnSchedule ) {
 				sTime = sTime.prepend( QString( "<span style='color:%1;'>" )
-				                       .arg( Global::textColorOnSchedule().name() ) )
+				                       .arg( GlobalApplet::textColorOnSchedule().name() ) )
 				        .append( "</span>" );
 			}
 		}

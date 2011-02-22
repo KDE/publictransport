@@ -70,7 +70,7 @@ void OverlayWidget::destroy()
 {
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
 	if ( m_under->geometry().width() * m_under->geometry().height() <= 250000 ) {
-		Plasma::Animation *fadeAnim = Global::fadeAnimation( this, 0 );
+		Plasma::Animation *fadeAnim = GlobalApplet::fadeAnimation( this, 0 );
 
 		QParallelAnimationGroup *parGroup = new QParallelAnimationGroup;
 		connect( parGroup, SIGNAL( finished() ), this, SLOT( overlayAnimationComplete() ) );

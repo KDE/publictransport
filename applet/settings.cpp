@@ -19,7 +19,6 @@
 
 // Own includes
 #include "settings.h"
-#include "htmldelegate.h"
 #include "filterwidget.h"
 #include "departuremodel.h"
 // #include "datasourcetester.h"
@@ -117,7 +116,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 	QStringList trFilterConfigurationList;
 	for ( QHash<QString, FilterSettings>::const_iterator it = settings.filterSettings.constBegin();
 				it != settings.filterSettings.constEnd(); ++it ) {
-		trFilterConfigurationList << Global::translateFilterKey( it.key() );
+		trFilterConfigurationList << GlobalApplet::translateFilterKey( it.key() );
 	}
 	m_stopListWidget = new StopListWidget( m_ui.stopList, settings.stopSettingsList, 
 			StopSettingsDialog::ExtendedStopSelection, AccessorInfoDialog::DefaultOptions,
@@ -490,7 +489,7 @@ void SettingsUiManager::stopSettingsChanged()
 	QStringList filterConfigurations = m_filterSettings.keys();
 	QStringList trFilterConfigurations;
 	foreach( const QString &filterConfig, filterConfigurations ) {
-		trFilterConfigurations << Global::translateFilterKey( filterConfig );
+		trFilterConfigurations << GlobalApplet::translateFilterKey( filterConfig );
 	}
 
 	// The signal mapper is used to map signals of the used filter configuration
@@ -519,7 +518,7 @@ void SettingsUiManager::stopSettingsChanged()
 		KComboBox *cmbFilterConfigs = new KComboBox( m_uiFilter.filterUsesArea );
 		cmbFilterConfigs->setObjectName( QString::number( row ) );
 		cmbFilterConfigs->addItems( trFilterConfigurations );
-		cmbFilterConfigs->setCurrentItem( Global::translateFilterKey(
+		cmbFilterConfigs->setCurrentItem( GlobalApplet::translateFilterKey(
 				stopSettings.get<QString>(FilterConfigurationSetting)) );
 		cmbFilterConfigs->setObjectName( "lblUsesConfigs" + sRow ); // This must be 14 chars, followed by an int, see usedFilterConfigChanged().
 		connect( cmbFilterConfigs, SIGNAL(currentIndexChanged(int)), mapper, SLOT(map()) );
@@ -551,7 +550,7 @@ void SettingsUiManager::usedFilterConfigChanged( QWidget* widget )
 	StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
 	if ( stopSettingsList.count() > index ) {
 		stopSettingsList[ index ].set( FilterConfigurationSetting,
-				Global::untranslateFilterKey(qobject_cast<KComboBox*>(widget)->currentText()) );
+				GlobalApplet::untranslateFilterKey(qobject_cast<KComboBox*>(widget)->currentText()) );
 		m_stopListWidget->setStopSettingsList( stopSettingsList );
 	}
 
@@ -565,7 +564,7 @@ void SettingsUiManager::usedFilterConfigChanged( QWidget* widget )
 
 void SettingsUiManager::updateFilterInfoLabel()
 {
-	QString filterConfiguration = Global::untranslateFilterKey( 
+	QString filterConfiguration = GlobalApplet::untranslateFilterKey( 
 			m_uiFilter.filterConfigurations->currentText() );
 
 	// Build a list of labels for stop settings used by the current filter configuration
@@ -675,7 +674,7 @@ void SettingsUiManager::setValuesOfFilterConfig()
 	QStringList filterConfigs;
 	for ( QHash<QString, FilterSettings>::const_iterator it = m_filterSettings.constBegin();
 				it != m_filterSettings.constEnd(); ++it ) {
-		filterConfigs << Global::translateFilterKey( it.key() );
+		filterConfigs << GlobalApplet::translateFilterKey( it.key() );
 	}
 
 	QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
@@ -705,7 +704,7 @@ void SettingsUiManager::setValuesOfFilterConfig()
 	updateFilterInfoLabel();
 	stopSettingsChanged();
 
-	QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
+	QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
 	bool isDefaultFilterConfig = filterConfiguration == "Default";
 	m_uiFilter.removeFilterConfiguration->setDisabled( isDefaultFilterConfig );
 	m_uiFilter.renameFilterConfiguration->setDisabled( isDefaultFilterConfig );
@@ -738,7 +737,7 @@ Settings SettingsUiManager::settings()
 	for ( int i = 0; i < ret.stopSettingsList.count(); ++i ) {
 		StopSettings stopSettings = ret.stopSettingsList.at( i );
 		stopSettings.set( FilterConfigurationSetting,
-				Global::untranslateFilterKey(stopSettings.get<QString>(FilterConfigurationSetting)) );
+				GlobalApplet::untranslateFilterKey(stopSettings.get<QString>(FilterConfigurationSetting)) );
 	}
 
 	// Set stored "no-Gui" settings
@@ -752,7 +751,7 @@ Settings SettingsUiManager::settings()
 
 	if ( m_filterConfigChanged ) {
 		QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
-		QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
+		QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
 		m_filterSettings[ filterConfiguration ] = currentFilterSettings();
 	}
 	ret.filterSettings = m_filterSettings;
@@ -821,7 +820,7 @@ void SettingsUiManager::loadFilterConfiguration( const QString& filterConfig )
 		return;
 	}
 
-	QString untrFilterConfig = Global::untranslateFilterKey( filterConfig );
+	QString untrFilterConfig = GlobalApplet::untranslateFilterKey( filterConfig );
 	if ( untrFilterConfig == m_lastFilterConfiguration ) {
 		return;
 	}
@@ -843,7 +842,7 @@ void SettingsUiManager::updateFilterConfigurationLists()
 	QStringList trFilterConfigurationList;
 	for ( QHash<QString, FilterSettings>::const_iterator it = m_filterSettings.constBegin();
 				it != m_filterSettings.constEnd(); ++it ) {
-		trFilterConfigurationList << Global::translateFilterKey( it.key() );
+		trFilterConfigurationList << GlobalApplet::translateFilterKey( it.key() );
 	}
 
 	// Update list of filter configuration names in the stop list widget
@@ -865,7 +864,7 @@ void SettingsUiManager::addFilterConfiguration()
 								"New Configuration %1", i);
 		++i;
 	}
-	QString untrNewFilterConfig = Global::untranslateFilterKey( newFilterConfig );
+	QString untrNewFilterConfig = GlobalApplet::untranslateFilterKey( newFilterConfig );
 
 	// Append new filter settings
 	m_filterSettings.insert( untrNewFilterConfig, FilterSettings() );
@@ -894,7 +893,7 @@ void SettingsUiManager::removeFilterConfiguration()
 	}
 
 	// Remove filter configuration from the filter settings list
-	QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
+	QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
 	m_filterSettings.remove( filterConfiguration );
 
 	// Remove filter configuration from the UI filter list
@@ -925,7 +924,7 @@ void SettingsUiManager::renameFilterConfiguration()
 	}
 
 	// Get key name of the current filter configuration
-	QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
+	QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
 	if ( newFilterConfig == trFilterConfiguration ) {
 		return; // Not changed, but the old name was accepted
 	}
@@ -938,7 +937,7 @@ void SettingsUiManager::renameFilterConfiguration()
 	}
 
 	// Check if the new name is already used and ask if it should be overwritten
-	QString untrNewFilterConfig = Global::untranslateFilterKey( newFilterConfig );
+	QString untrNewFilterConfig = GlobalApplet::untranslateFilterKey( newFilterConfig );
 	if ( m_filterSettings.keys().contains( untrNewFilterConfig )
 		&& KMessageBox::warningYesNo( m_configDialog,
 			i18nc("@info", "<warning>There is already a filter configuration with the name "
@@ -992,7 +991,7 @@ void SettingsUiManager::filterActionChanged( int index )
 
 	// Store to last edited filter settings
 	QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
-	QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
+	QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
 	m_filterSettings[ filterConfiguration ].filterAction = filterAction;
 
 	setFilterConfigurationChanged();
@@ -1005,7 +1004,7 @@ void SettingsUiManager::setFilterConfigurationChanged( bool changed )
 	}
 
 	QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
-	QString filterConfiguration = Global::untranslateFilterKey( trFilterConfiguration );
+	QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
 	bool defaultFilterConfig = filterConfiguration == "Default";
 	m_uiFilter.removeFilterConfiguration->setDisabled( defaultFilterConfig );
 	m_uiFilter.renameFilterConfiguration->setDisabled( defaultFilterConfig );

@@ -175,7 +175,7 @@ bool CheckCombobox::eventFilter( QObject* object, QEvent* event )
 				// Don't let the last checked item get unchecked
 				// if m_allowNoCheck is false
 				bool wasChecked = index.data( Qt::CheckStateRole ) == Qt::Checked;
-				if ( d->allowNoCheck || ( !wasChecked || hasCheckedItems( 2 ) ) ) {
+				if ( d->allowNoCheck || (!wasChecked || hasCheckedItems(2)) ) {
 					view()->model()->setData( index,
 					                          wasChecked ? Qt::Unchecked : Qt::Checked,
 					                          Qt::CheckStateRole );

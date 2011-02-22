@@ -23,6 +23,8 @@
 #include <Plasma/DataEngine>
 #include <KStandardDirs>
 
+using namespace Timetable;
+
 class LocationItemPrivate
 {
 public:

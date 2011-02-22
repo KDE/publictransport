@@ -96,9 +96,9 @@ void StopLineEdit::edited( const QString& newText )
 	// Don't request new suggestions if newText is one of the suggestions, ie. most likely a 
 	// suggestion was selected. To allow choosing another suggestion with arrow keys the old 
 	// suggestions shouldn't be removed in this case and no update is needed.
-	bool suggestionSelected = false;
+// 	bool suggestionSelected = false;
 	foreach ( const Stop &stop, d->stops ) {
-		if ( stop.name == newText ) {
+		if ( stop.name.compare(newText, Qt::CaseInsensitive) == 0 ) {
 			return; // Don't update suggestions
 		}
 	}

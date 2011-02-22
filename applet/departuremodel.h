@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -27,6 +27,7 @@
 #include <QAbstractItemModel>
 #include "departureinfo.h"
 #include "settings.h" // TODO Only used for AlarmSettings. Removed here?
+#include <QSortFilterProxyModel>
 
 /** @brief Holds information about settings from the applet. */
 struct Info {
@@ -92,6 +93,8 @@ public:
 	/** @returns the toplevel parent item of this item, or a pointer to this
 	* item if it is a toplevel item itself. Never returns NULL. */
 	ItemBase *topLevelParent() const;
+	
+	const Info *info() const { return m_info; };
 
 	/** @returns the first child item with the given @p itemType. */
 	ChildItem *childByType( ItemType itemType ) const;
@@ -188,7 +191,9 @@ protected:
 
 /** @brief Base class for top level items in PublicTransportModel.
  * @ingroup models */
-class TopLevelItem : public ItemBase {
+class TopLevelItem : public QObject, public ItemBase {
+	Q_OBJECT
+	
 public:
 	TopLevelItem( const Info *info );
 
@@ -231,6 +236,8 @@ protected:
  * @brief An item which automatically creates/updates child items according to the information in @ref journeyInfo.
  * @ingroup models */
 class JourneyItem : public TopLevelItem {
+	Q_OBJECT
+	
 public:
 	JourneyItem( const JourneyInfo &journeyInfo, const Info *info );
 
@@ -282,7 +289,7 @@ protected:
 * time values, call @ref updateTimeValues.
 * @brief An item which automatically creates/updates child items according to the information in @ref departureInfo.
 * @ingroup models */
-class DepartureItem : public QObject, public TopLevelItem {
+class DepartureItem : public TopLevelItem {
 	Q_OBJECT
 	Q_PROPERTY( qreal alarmColorIntensity READ alarmColorIntensity WRITE setAlarmColorIntensity )
 
@@ -396,7 +403,7 @@ public:
 
 	/** @brief Gets the toplevel item at @p row.
 	 * @returns a pointer to the toplevel item at the given @p row. */
-	ItemBase *item( int row ) const { return m_items.at( row ); };
+	ItemBase *item( int row ) const { return m_items.at(row); };
 	ItemBase *itemFromIndex( const QModelIndex &index ) const;
 	QModelIndex indexFromItem( ItemBase *item, int column = 0 ) const;
 	/** @brief Gets the row of the given toplevel item.
@@ -445,6 +452,9 @@ public:
 	 * @param parentItem The item, which children were changed.
 	 **/
 	void childrenChanged( ItemBase *parentItem );
+	
+signals:
+	void journeysAboutToBeRemoved( const QList<ItemBase*> &items );
 
 protected slots:
 	void startUpdateTimer();
@@ -537,8 +547,15 @@ public:
 signals:
 	/** @brief The alarm for @p item has been fired. */
 	void alarmFired( DepartureItem *item );
-	void updateAlarms( const AlarmSettingsList &newAlarmSettings,
-			   const QList< int > &removedAlarms );
+	
+	void updateAlarms( const AlarmSettingsList &newAlarmSettings, const QList<int> &removedAlarms );
+	
+	/** 
+	 * @brief The @p departures have just left. 
+	 * 
+	 * The DepartureItems for the given @p departures were deleted before emitting this signal.
+	 **/
+	void departuresLeft( const QList<DepartureInfo> &departures );
 
 protected slots:
 	/** @brief Called each full minute. Updates time values, checks for alarms and sorts out
@@ -613,5 +630,85 @@ private:
 	int m_smallestDuration, m_biggestDuration;
 	int m_smallestChanges, m_biggestChanges;
 };
+
+// class GroupedDepartureModel : public QAbstractProxyModel { //QSortFilterProxyModel {
+// public:
+//     GroupedDepartureModel( QObject* parent = 0 ) : QAbstractProxyModel( parent ) {
+// 	};
+// 	
+//     virtual void setSourceModel( QAbstractItemModel* sourceModel ) {
+// 		DepartureModel *model = qobject_cast<DepartureModel*>( sourceModel );
+// 		if ( model ) {
+// 			QAbstractProxyModel::setSourceModel( model );
+// 			updateGroups();
+// 		} else {
+// 			kDebug() << "The given sourceModel isn't a DepartureModel!";
+// 		}
+// 	};
+// 	
+//     virtual int columnCount( const QModelIndex& parent = QModelIndex() ) const {
+// 		return sourceModel()->columnCount( mapToSource(parent) );
+// 	};
+// 	
+//     virtual int rowCount( const QModelIndex& parent = QModelIndex() ) const {
+// 		return m_groups.count();
+// 	};
+// 	
+//     virtual QModelIndex index( int row, int column, const QModelIndex& parent = QModelIndex() ) const {
+// 		if ( parent.isValid() ) {
+// 			if ( !hasIndex(row, column, parent) ) {
+// 				return QModelIndex();
+// 			}
+// 
+// 			ItemBase *parentItem = static_cast<ItemBase*>( parent.internalPointer() );
+// 			if ( parentItem ) {
+// 				// Parent is a departure item
+// 				if ( row < parentItem->childCount() ) {
+// 					return createIndex( row, column, parentItem->child(row) );
+// 				} else {
+// 					return QModelIndex();
+// 				}
+// 			} else {
+// 				// Parent is a grouping item
+// 				return createIndex( row, column );
+// 			}
+// 		} else {
+// 			// Create an index for a grouping item
+// 			if ( !hasIndex(row, column, QModelIndex()) ) {
+// 				return QModelIndex();
+// 			}
+// 
+// 			if ( row >= 0 && row < m_groups.count() ) {
+// 				return createIndex( row, column );
+// 			} else {
+// 				return QModelIndex();
+// 			}
+// 		}
+// 	};
+// 	
+//     virtual QModelIndex parent( const QModelIndex& child ) const {
+// 		
+// 	};
+// 	
+//     virtual QModelIndex mapFromSource( const QModelIndex& sourceIndex ) const {
+// 	};
+// 	
+//     virtual QModelIndex mapToSource( const QModelIndex& proxyIndex ) const {
+// 	};
+// 	
+// protected:
+//     virtual bool filterAcceptsRow( int source_row, const QModelIndex& source_parent ) const {
+// 		// TODO Apply FilterList (currently applied in DepartureProcessor::processDepartures()
+// 		return true;
+// 	};
+// 	
+// 	void updateGroups() {
+// 		m_groups.clear();
+// 		
+// 	};
+// 	
+// private:
+// 	QList<QDateTime> m_groups;
+// };
 
 #endif // Multiple inclusion guard

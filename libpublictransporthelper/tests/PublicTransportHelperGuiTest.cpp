@@ -110,7 +110,7 @@ void PublicTransportHelperGuiTest::stopSettingsDialogGuiTest()
 		stopEdit->setFocus(); // Ensure focus is still set
 		QTest::qWait( 100 );
 		if ( !stopEdit->completionObject()->isEmpty() ) {
-			qDebug() << "Waited ~" << (i * 250) << "ms for stop suggestions";
+			qDebug() << "Waited ~" << (i * 100) << "ms for stop suggestions";
 			break;
 		}
 	}

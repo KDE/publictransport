@@ -17,8 +17,8 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef GLOBAL_HEADER
-#define GLOBAL_HEADER
+#ifndef TIMETABLE_GLOBAL_HEADER
+#define TIMETABLE_GLOBAL_HEADER
 
 /** @file
 * @brief This file contains enumerations and Global used by the public transport helper library.
@@ -32,6 +32,9 @@
 #include <KIcon>
 #include "kdeversion.h"
 #include <QTime>
+
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
 
 /** @class Global
   * @brief Contains global static methods. */
@@ -58,6 +61,8 @@ public:
 	static QString translateFilterKey( const QString &key );
 	static QString untranslateFilterKey( const QString &translatedKey );
 };
+
+}; // namespace Timetable
 
 /** @mainpage
  * 

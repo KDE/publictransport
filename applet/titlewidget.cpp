@@ -48,7 +48,6 @@ TitleWidget::TitleWidget(TitleType titleType, Settings *settings, QGraphicsItem*
 	title->setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
 	QLabel *_title = title->nativeWidget();
 	_title->setTextInteractionFlags( Qt::LinksAccessibleByMouse );
-// 	m_layout->addItem( m_title );
 	addWidget( title, WidgetTitle );
 
 	createAndAddWidget( WidgetFilter );
@@ -224,7 +223,8 @@ void TitleWidget::removeJourneySearchWidgets()
 
 void TitleWidget::setTitle(const QString& title)
 {
-	m_title->setText( title );
+	m_titleText = title;
+	updateTitle();
 }
 
 void TitleWidget::setIcon(Plasma::IconWidget* icon)
@@ -252,11 +252,11 @@ void TitleWidget::setIcon(MainIconDisplay iconType)
 	switch ( iconType ) {
 		case DepartureListErrorIcon:
 			if ( m_settings->departureArrivalListType == DepartureList ) {
-				icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
+				icon = GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"),
 						QList<KIcon>() << KIcon("go-home") << KIcon("go-next"),
 						QSize(iconExtend / 2, iconExtend / 2), iconExtend );
 			} else {
-				icon = Global::makeOverlayIcon( KIcon( "public-transport-stop" ),
+				icon = GlobalApplet::makeOverlayIcon( KIcon( "public-transport-stop" ),
 						QList<KIcon>() << KIcon("go-next") << KIcon("go-home"),
 						QSize(iconExtend / 2, iconExtend / 2), iconExtend );
 			}
@@ -273,19 +273,19 @@ void TitleWidget::setIcon(MainIconDisplay iconType)
 			} else {
 				overlays << KIcon("go-next") << KIcon("go-home");
 			}
-			icon = Global::makeOverlayIcon( KIcon( "public-transport-stop" ), overlays,
+			icon = GlobalApplet::makeOverlayIcon( KIcon( "public-transport-stop" ), overlays,
 					QSize( iconExtend / 2, iconExtend / 2 ), iconExtend );
 			break;
 		}
 		case JourneyListOkIcon:
-			icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
+			icon = GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"),
 					QList<KIcon>() << KIcon("go-home")
 						<< KIcon("go-next-view") << KIcon("public-transport-stop"),
 					QSize(iconExtend / 3, iconExtend / 3), iconExtend );
 			break;
 
 		case JourneyListErrorIcon:
-			icon = Global::makeOverlayIcon( KIcon("public-transport-stop"),
+			icon = GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"),
 					QList<KIcon>() << KIcon("go-home")
 						<< KIcon("go-next-view") << KIcon("public-transport-stop"),
 					QSize(iconExtend / 3, iconExtend / 3), iconExtend );
@@ -307,43 +307,20 @@ void TitleWidget::setIcon(MainIconDisplay iconType)
 	m_icon->setIcon( icon );
 }
 
-QGraphicsWidget* TitleWidget::createAndAddWidget(TitleWidget::WidgetType widgetType)
+QGraphicsWidget* TitleWidget::createAndAddWidget( TitleWidget::WidgetType widgetType )
 {
 	switch ( widgetType ) {
 	case WidgetFilter:
 		if ( !m_filterWidget ) {
 			// Create the filter widget showing the currently active filters
 			m_filterWidget = new Plasma::ToolButton( this );
-// 			m_filterWidget->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Preferred );
 			m_filterWidget->setIcon( KIcon("view-filter") );
 			m_filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-
-// 			Plasma::IconWidget *filterIcon = new Plasma::IconWidget( m_filterWidget );
-// 			filterIcon->setIcon( "view-filter" );
-// 			int fitlerIconExtend = 24 * m_settings->sizeFactor;
-// 			filterIcon->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
-// 			filterIcon->setMinimumSize( fitlerIconExtend, fitlerIconExtend );
-// 			filterIcon->setMaximumSize( fitlerIconExtend, fitlerIconExtend );
-
-// 			Plasma::Label *filterLabel = new Plasma::Label( m_filterWidget );
-// 			filterLabel->setMaximumWidth( 100 * m_settings->sizeFactor );
-// 			filterLabel->setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
-// 			#if KDE_VERSION >= KDE_MAKE_VERSION(4,5,0)
-// 				filterLabel->setWordWrap( true );
-// 			#endif
-
-			QGraphicsLinearLayout *filterLayout = new QGraphicsLinearLayout(
-					Qt::Horizontal, m_filterWidget );
-			filterLayout->setContentsMargins( 4, 0, 4, 0 );
-			filterLayout->addItem( m_filterWidget );
-// 			filterLayout->addItem( filterIcon );
-// 			filterLayout->addItem( filterLabel );
-			m_filterWidget->setLayout( filterLayout );
-
 			connect( m_filterWidget, SIGNAL(clicked()), this, SIGNAL(filterIconClicked()) );
+			addWidget( m_filterWidget, WidgetFilter );
 		}
+		
 		updateFilterWidget();
-		addWidget( m_filterWidget, WidgetFilter );
 		return m_filterWidget;
 
 	default:
@@ -364,6 +341,7 @@ void TitleWidget::addWidget(QGraphicsWidget* widget, WidgetType widgetType)
 		m_layout->insertItem( 1, widget );
 	} else {
 		m_layout->addItem( widget );
+		m_layout->setAlignment( widget, Qt::AlignVCenter | Qt::AlignLeft );
 	}
 	m_widgets.insert( widgetType, widget );
 	widget->show();
@@ -415,7 +393,7 @@ void TitleWidget::updateFilterWidget()
 	if ( m_settings->filtersEnabled ) {
 		m_filterWidget->setOpacity( 1 );
 		QFontMetrics fm( m_filterWidget->font() );
-		m_filterWidget->setText( fm.elidedText(Global::translateFilterKey(
+		m_filterWidget->setText( fm.elidedText(GlobalApplet::translateFilterKey(
 				m_settings->currentStopSettings().get<QString>(FilterConfigurationSetting)),
 				Qt::ElideRight, m_filterWidget->maximumWidth() * 1.8) );
 	} else {
@@ -492,4 +470,61 @@ void TitleWidget::settingsChanged()
 	if ( m_type == ShowDepartureArrivalListTitle ) {
 		setTitle( titleText() );
 	}
+}
+
+void TitleWidget::resizeEvent(QGraphicsSceneResizeEvent* event)
+{
+    QGraphicsWidget::resizeEvent( event );
+	updateTitle();
+}
+
+void TitleWidget::updateTitle()
+{
+	QFontMetrics fm( m_title->font() );
+	qreal maxStopNameWidth = contentsRect().width() - m_icon->boundingRect().right()
+			- m_filterWidget->boundingRect().width() - 10;
+	
+// 	QStringList words = m_titleText.split( ' ', QString::SkipEmptyParts );
+// 	if ( words.count() <= 1 ) {
+	if ( !m_titleText.contains(QRegExp("<\\/?[^>]+>")) ) {
+		m_title->setText( fm.elidedText(m_titleText, Qt::ElideRight, maxStopNameWidth * 2.0) );
+	} else {
+		m_title->setText( m_titleText );
+	}
+// 	} else if ( m_titleText.contains("<br/>") ) {
+// 		QStringList lines = m_titleText.split( "<br/>" );
+// 		kDebug() << lines << "lines" << maxStopNameWidth;
+// 		
+// 		QRegExp rx( "(<\\/?[^>]+>)" );
+// 		for ( int i = 0; i < lines.count(); ++i ) {
+// 			QString line = lines[i];
+// 			rx.setMinimal( true );
+// 			QString lineTags;
+// 			int index = 0;
+// 			while ( (index = rx.indexIn(line, index)) != -1 ) {
+// 				lineTags.append( rx.cap(1) );
+// 				index += rx.matchedLength();
+// 			}
+// 			int tagWidth = fm.width( lineTags );
+// 			
+// 			lines[i] = fm.elidedText( lines[i], Qt::ElideRight, maxStopNameWidth + tagWidth );
+// 		}
+// 		m_title->setText( lines.join("<br/>") );
+// 	} else {
+// 		QStringList words1;
+// 		foreach ( const QString &word, words ) {
+// 			if ( fm.width(words1.join(" ") + ' ' + word) >= maxStopNameWidth ) {
+// 				break;
+// 			}
+// 			words1 << word;
+// 		}
+// 		
+// 		QString part2 = ( (QStringList)words.mid(words1.count()) ).join(" ");
+// 		if ( part2.isEmpty() ) {
+// 			m_title->setText( m_titleText );
+// 		} else {
+// 			m_title->setText( words1.join(" ") + ' ' +
+// 					fm.elidedText(part2, Qt::ElideRight, maxStopNameWidth) );
+// 		}
+// 	}
 }

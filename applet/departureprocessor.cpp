@@ -266,6 +266,9 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
 		if ( !isTimeShown(departureInfo.predictedDeparture(), firstDepartureConfigMode,
 						  timeOfFirstDepartureCustom, timeOffsetOfFirstDeparture)
 		        || (filtersEnabled && filterSettings.filterOut(departureInfo)) ) {
+// 			kDebug() << "Filter out" << filterSettings.filterOut(departureInfo) 
+// 				<< Global::vehicleTypeToString(departureInfo.vehicleType()) << departureInfo.lineString()
+// 				<< departureInfo.target();
 			departureInfo.setFilteredOut( true );
 		}
 		departureInfos << departureInfo;

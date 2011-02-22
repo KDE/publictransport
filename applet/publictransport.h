@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -33,6 +33,13 @@
 #include "settings.h"
 #include "titlewidget.h"
 
+class PublicTransportGraphicsItem;
+class DepartureGraphicsItem;
+class TimetableWidget;
+class JourneyTimetableWidget;
+class ItemBase;
+class QPropertyAnimation;
+class QGraphicsSceneWheelEvent;
 class JourneySearchSuggestionWidget;
 class JourneyModel;
 class DepartureModel;
@@ -40,8 +47,12 @@ class DepartureItem;
 class DepartureProcessor;
 class PublicTransportSettings;
 class OverlayWidget;
-
+class QSizeF;
+class QGraphicsLayout;
+class QStandardItemModel;
+class QStandardItem;
 class KSelectAction;
+
 namespace Plasma {
 	class IconWidget;
 	class TreeView;
@@ -51,10 +62,6 @@ namespace Plasma {
 	class PushButton;
 };
 
-class QSizeF;
-class QGraphicsLayout;
-class QStandardItemModel;
-class QStandardItem;
 #if QT_VERSION >= 0x040600
 	class QGraphicsBlurEffect;
 #endif
@@ -89,6 +96,7 @@ private:
  **/
 class PublicTransport : public Plasma::PopupApplet {
 	Q_PROPERTY( int DepartureCount READ departureCount )
+	Q_PROPERTY( qreal PopupIconDepartureIndex READ popupIconDepartureIndex WRITE setPopupIconDepartureIndex )
 	Q_OBJECT
 
 public:
@@ -97,15 +105,26 @@ public:
 	/** @brief Destructor. Saves the state of the header. */
 	~PublicTransport();
 
-	/** @brief Maximum number of recent journey searches. When more journey searches
-	 * get added, the oldest when gets removed. */
+	/** @brief Maximum number of recent journey searches.
+	 * 
+	 * When more journey searches get added, the oldest gets removed. */
 	static const int MAX_RECENT_JOURNEY_SEARCHES = 10;
+	
+	/** @brief The maximum number of departure groups (at the same time) to cycle through in the
+	 *   popup icon. */
+	static const int POPUP_ICON_DEPARTURE_GROUP_COUNT = 10;
 
 	/** @brief Returns the widget with the contents of the applet. */
 	virtual QGraphicsWidget* graphicsWidget();
 
 	/** @returns the number of shown departures/arrivals. */
 	int departureCount() const { return m_departureInfos.count(); };
+	
+	qreal popupIconDepartureIndex() const { return m_popupIconDepartureIndex; };
+	void setPopupIconDepartureIndex( qreal popupIconDepartureIndex ) { 
+		m_popupIconDepartureIndex = popupIconDepartureIndex;
+		createPopupIcon();
+	};
 
 signals:
 	/** @brief Emitted when the settings have changed. */
@@ -151,6 +170,7 @@ protected slots:
 
 	/** @brief The context menu has been requested by the tree view. */
 	void showDepartureContextMenu( const QPoint &position );
+	void departureContextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
 	/** @brief The context menu has been requested by the tree view header. */
 	void showHeaderContextMenu( const QPoint &position );
 	/** @brief An item in the tree view has been double clicked. */
@@ -215,16 +235,6 @@ protected slots:
 	 * @param recentJourneyAction The type of the executed action. */
 	void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction );
 
-	/** @brief The section with the given @p logicalIndex in the departure tree
-	 *   view was pressed. */
-	void sectionPressed( int logicalIndex );
-	/** @brief The section with the given @p logicalIndex in the departure tree
-	 *   view was move from @p oldVisualIndex to @p newVisualIndex. */
-	void sectionMoved( int logicalIndex, int oldVisualIndex, int newVisualIndex );
-	/** @brief The section with the given @p logicalIndex in the departure tree
-	 *   view was resized from @p oldSize to @p newSize. */
-	void sectionResized( int logicalIndex, int oldSize, int newSize );
-
 	/** @brief The worker thread starts processing departures/arrivals from the
 	 *   data engine.
 	 *
@@ -275,6 +285,8 @@ protected slots:
 
 	/** @brief The animation fading out a pixmap of the old applet appearance has finished. */
 	void oldItemAnimationFinished();
+	
+	void popupIconTransitionAnimationFinished();
 
 	/** @brief Deletes the overlay item used when showing action buttons over the plasmoid. */
 	void destroyOverlay();
@@ -303,6 +315,9 @@ protected slots:
 	/** @brief An alarm has been fired for the given @p item. */
 	void alarmFired( DepartureItem *item );
 	void removeAlarms( const AlarmSettingsList &newAlarmSettings, const QList<int> &removedAlarms );
+	
+	void departuresAboutToBeRemoved( const QList<ItemBase*> &departures );
+	void departuresLeft( const QList<DepartureInfo> &departures );
 
 protected:
 	/** @brief Create the configuration dialog contents.
@@ -345,7 +360,14 @@ protected:
 	void createTooltip();
 	/** @brief Creates the popup icon with information about the next departure / alarm. */
 	void createPopupIcon();
-
+	
+	QPixmap createAlarmPixmap( DepartureItem *departure );
+	QPixmap createDeparturesPixmap( const QList<DepartureItem*> &departures );
+	void createDepartureGroups();
+	
+	/** @brief Mouse wheel rotated on popup icon. */
+    virtual void wheelEvent( QGraphicsSceneWheelEvent* event );
+	
 	/** @brief Gets the text to be displayed on right of the treeview as additional
 	 * information (html-tags allowed). Contains courtesy information. */
 	QString infoText();
@@ -387,21 +409,10 @@ protected:
 	 * @ingroup models */
 	void clearJourneys();
 
-	/** @brief Appends a new departure / arrival to the model.
-	 * @param departureInfo The departure / arrival to be added.
-	 * @ingroup models */
-	void appendDeparture( const DepartureInfo &departureInfo );
-	/** @brief Appends a new journey to the model.
-	 * @ingroup models */
-	void appendJourney( const JourneyInfo &journeyInfo );
-
 	/** @brief Sets an autogenerated alarm for the given departure/arrival. */
 	void createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex );
 	/** @brief Removes an autogenerated alarm from this departure/arrival if any. */
 	void removeAlarmForDeparture( int row );
-
-	/** @brief Calls setFirstColumnSpanned on each child item and their children. */
-	void stretchAllChildren( const QModelIndex &parent, QAbstractItemModel *model );
 
 	/** @brief Helper function to set the text color of an html item with a surrounding span-tag. */
 	void setTextColorOfHtmlItem( QStandardItem *item, const QColor &textColor );
@@ -440,6 +451,9 @@ private:
 
 	/** @brief Sets values of the current plasma theme. */
 	void useCurrentPlasmaTheme();
+	
+	void paintVehicle( QPainter *painter, VehicleType vehicle, const QRectF &rect, 
+					   const QString &transportLine = QString() );
 
 	/** @brief Creates a menu action, which lists all stops in the settings
 	 * for switching between them.
@@ -455,8 +469,6 @@ private:
 		return serviceProviderData( m_settings.currentStopSettings().get<QString>(ServiceProviderSetting) ); };
 	QVariantHash serviceProviderData( const QString &id ) const;
 
-	void initTreeView( Plasma::TreeView *treeView );
-
 
 	AppletStates m_appletStates; /**< The current states of this applet */
 
@@ -464,16 +476,26 @@ private:
 	GraphicsPixmapWidget *m_oldItem;
 	TitleWidget *m_titleWidget; /**< A widget used as the title of the applet. */
 	Plasma::Label *m_labelInfo; /**< A label used to display additional information. */
-	Plasma::TreeView *m_treeView; /**< A treeview displaying the departure board. */
-	Plasma::TreeView *m_treeViewJourney; /**< A treeview displaying journeys. */
+	
+// 	Plasma::TreeView *m_treeView; /**< A treeview displaying the departure board. */
+	TimetableWidget *m_timetable; /**< The graphics widget showing the departure/arrival board. */
+// 	Plasma::TreeView *m_treeViewJourney; /**< A treeview displaying journeys. */
+	JourneyTimetableWidget *m_journeyTimetable; /**< The graphics widget showing journeys. */
+	
 	Plasma::Label *m_labelJourneysNotSupported; /**< A label used to display an info about
 			* unsupported journey search. */
 	JourneySearchSuggestionWidget *m_listStopSuggestions; /**< A list of stop suggestions for the current input. */
 	OverlayWidget *m_overlay;
+	Plasma::Svg m_vehiclesSvg; /**< An SVG containing SVG elements for vehicle types. */
 
 	DepartureModel *m_model; /**< The model for the tree view containing the departure/arrival board. */
 	QHash< QString, QList<DepartureInfo> > m_departureInfos; /**< List of current
 			* departures/arrivals for each stop. */
+	int m_startPopupIconDepartureIndex;
+	int m_endPopupIconDepartureIndex;
+	qreal m_popupIconDepartureIndex;
+	QMap< QDateTime, QList<DepartureItem*> > m_departureGroups; /**< Groups the first few departures by departure time. */
+	QPropertyAnimation *m_popupIconTransitionAnimation;
 	QHash< int, QString > m_stopIndexToSourceName; /**< A hash from the stop index to the source name. */
 	QStringList m_currentSources; /**< Current source names at the publictransport data engine. */
 
