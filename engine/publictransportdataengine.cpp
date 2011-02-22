@@ -855,22 +855,22 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 		
 // 		kDebug() << stopInfo->name() << stopInfo->id() << stopInfo->city() << stopInfo->countryCode();
 		
-		if ( stopInfo->hasId() && 
+		if ( stopInfo->contains(StopID) && 
 			(!accessor->info()->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) || 
 			accessor->info()->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "false") ) 
 		{
 			data.insert( "stopID", stopInfo->id() );
 		}
 		
-		if ( stopInfo->hasWeight() ) {
+		if ( stopInfo->contains(StopWeight) ) {
 			data.insert( "stopWeight", stopInfo->weight() );
 		}
 		
-		if ( stopInfo->hasCity() ) {
+		if ( stopInfo->contains(StopCity) ) {
 			data.insert( "stopCity", stopInfo->city() );
 		}
 		
-		if ( stopInfo->hasCountryCode() ) {
+		if ( stopInfo->contains(StopCountryCode) ) {
 			data.insert( "stopCountryCode", stopInfo->countryCode() );
 		}
 

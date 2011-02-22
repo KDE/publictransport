@@ -72,7 +72,16 @@ void TimetableData::set( TimetableInformation info, const QVariant& value )
 		kDebug() << "Unknown timetable information" << info
 				 << "with value" << (value.isValid() ? (value.isNull() ? "null" : value.toString())
 													 : "invalid");
-	} else if ( !value.isValid() || value.isNull() ) {
+		return;
+	}
+	
+	if ( !value.data() ) {
+		// Can crash sometimes (reason unknown..)
+		kDebug() << "The value given by the script isn't valid for" << info;
+		return;
+	}
+	
+	if ( !value.isValid() || value.isNull() ) {
 		kDebug() << "Value is invalid or null for" << info;
 	} else {
 		if ( value.canConvert(QVariant::String)
@@ -85,6 +94,19 @@ void TimetableData::set( TimetableInformation info, const QVariant& value )
 		} else if ( value.canConvert(QVariant::List) && info == DepartureDate ) {
 			QVariantList date = value.toList();
 			m_values[ info ] = date.length() == 3 ? QDate(date[0].toInt(), date[1].toInt(), date[2].toInt()) : value;
+		} else if ( value.canConvert(QVariant::StringList) 
+				&& (info == RouteStops || info == RoutePlatformsDeparture 
+					|| info == RoutePlatformsArrival) ) 
+		{
+			QStringList stops = value.toStringList();
+			QStringList::iterator it = stops.begin();
+			while ( it != stops.end() ) {
+				*it = TimetableAccessorScript::decodeHtmlEntities( *it )
+						.replace( QRegExp("^(&nbsp;)+|(&nbsp;)+$", Qt::CaseInsensitive), "" )
+						.trimmed();
+				++it;
+			}
+			m_values[ info ] = stops;
 		} else {
 			m_values[ info ] = value;
 		}

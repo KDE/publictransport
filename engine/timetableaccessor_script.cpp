@@ -199,8 +199,8 @@ QString TimetableAccessorScript::decodeHtml(const QByteArray& document, const QB
 	QTextCodec *textCodec;
 	QRegExp rxCharset( "(?:<head>.*<meta http-equiv=\"Content-Type\" content=\"text/html; charset=)([^\"]*)(?:\"[^>]*>)", Qt::CaseInsensitive );
 	rxCharset.setMinimal( true );
-	if ( rxCharset.indexIn( sDocument ) != -1 && rxCharset.isValid() ) {
-		textCodec = QTextCodec::codecForName( rxCharset.cap( 1 ).trimmed().toUtf8() );
+	if ( rxCharset.indexIn(sDocument) != -1 && rxCharset.isValid() ) {
+		textCodec = QTextCodec::codecForName( rxCharset.cap(1).trimmed().toUtf8() );
 	} else if ( !fallbackCharset.isEmpty() ) {
 		textCodec = QTextCodec::codecForName( fallbackCharset );
 	} else {

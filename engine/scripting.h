@@ -251,6 +251,25 @@ public Q_SLOTS:
 	QString formatTime( int hour, int minute, const QString &format = "hh:mm") {
 		return QTime( hour, minute ).toString( format );
 	};
+
+	/**
+	 * @brief Formats the time given by the values @p hour and @p minute 
+	 *   as string in the given @p format.
+	 *
+	 * @param year The year value of the date.
+	 * 
+	 * @param month The month value of the date.
+	 * 
+	 * @param day The day value of the date.
+	 * 
+	 * @param format The format of the date string to return. Default is "yyyy-MM-dd".
+	 * 
+	 * @return The formatted date string.
+	 * @see matchTime
+	 **/
+	QString formatDate( int year, int month, int day, const QString &format = "yyyy-MM-dd") {
+		return QDate( year, month, day ).toString( format );
+	};
 	
 	/**
 	 * @brief Calculates the duration in minutes from the time in @p sTime1 until @p sTime2.
@@ -288,19 +307,31 @@ public Q_SLOTS:
 						   const QString &format = "hh:mm" ) {
 		QTime time = QTime::fromString( sTime, format );
 		if ( !time.isValid() ) {
+			kDebug() << "Couldn't parse the given time" << sTime << format;
 			return "";
 		}
 		return time.addSecs( minsToAdd * 60 ).toString( format );
 	};
 	
-	// TODO
-	int* addDaysToDate( const int* dateArray, int daysToAdd ) {
-		QDate date = QDate( dateArray[0], dateArray[1], dateArray[2] ).addDays( daysToAdd );
-		int *ret = new int[3];
-		ret[0] = date.year();
-		ret[1] = date.month();
-		ret[2] = date.day();
-		return ret;
+	QString addDaysToDate( const QString &sDate, int daysToAdd,
+						   const QString &format = "yyyy-MM-dd" ) {
+		QDate date = QDate::fromString(sDate, format).addDays( daysToAdd );
+		if ( !date.isValid() ) {
+			kDebug() << "Couldn't parse the given date" << sDate << format;
+			return sDate;
+		}
+		return date.toString( format );
+	};
+	
+	QVariantList addDaysToDateArray( const QVariantList &values, int daysToAdd ) {
+		if ( values.count() != 3 ) {
+			kDebug() << "The first argument needs to be a list with three values (year, month, day)";
+			return values;
+		}
+		
+		QDate date( values[0].toInt(), values[1].toInt(), values[2].toInt() );
+		date = date.addDays( daysToAdd );
+		return QVariantList() << date.year() << date.month() << date.day();
 	};
 	
 	/**

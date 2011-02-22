@@ -673,7 +673,7 @@ void TimetableAccessor::result( KJob* job )
 				kDebug() << "No stop suggestions got to get an ID to use to get departures";
 			} else {
 				// Use the ID of the first suggested stop to get departures
-				if ( !stopList.first()->hasId() ) {
+				if ( !stopList.first()->contains(StopID) ) {
 					kDebug() << "No stop ID found for the given stop name, now requesting departures using the stop name";
 					requestDepartures( jobInfo.sourceName, jobInfo.city, jobInfo.stop, 
 									jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,

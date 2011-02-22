@@ -21,137 +21,139 @@
 #include <KDebug>
 
 PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVariant >& data )
+	: QHash<TimetableInformation, QVariant>(data) 
 {
-	m_data = data;
 	m_isValid = false;
 
-	if ( !m_data.contains( Delay ) ) {
-		m_data.insert( Delay, -1 );
+	// Insert -1 as Delay if none is given (-1 means "no delay information available")
+	if ( !contains(Delay) ) {
+		insert( Delay, -1 );
 	}
 
-	if ( m_data.contains( RouteTimes ) ) {
+	// Convert route times list to a list of QTime objects (from string and time objects)
+	if ( contains(RouteTimes) ) {
 		QVariantList times;
-		if ( m_data[RouteTimes].canConvert( QVariant::StringList ) ) {
-			QStringList strings = m_data[ RouteTimes ].toStringList();
-			foreach( const QString &str, strings ) {
-				times << QTime::fromString( str.trimmed(), "hh:mm" );
-			}
-		} else if ( m_data[RouteTimes].canConvert( QVariant::List ) ) {
-			QVariantList vars = m_data[ RouteTimes ].toList();
+		if ( value(RouteTimes).canConvert(QVariant::List) ) {
+			QVariantList vars = value( RouteTimes ).toList();
 			foreach( const QVariant &var, vars ) {
-				times << var.toTime();
-			}
-		}
-
-		m_data[ RouteTimes ] = times;
-	}
-
-	if ( m_data.contains( TypeOfVehicle ) && m_data[TypeOfVehicle].canConvert( QVariant::String ) ) {
-		QString sVehicleType = m_data[TypeOfVehicle].toString();
-		m_data[ TypeOfVehicle ] = getVehicleTypeFromString( sVehicleType );
-
-		if ( !m_data.contains( Operator )
-				|| ( m_data[Operator].canConvert( QVariant::String )
-					 && m_data[Operator].toString().isEmpty() ) ) {
-			QString sOperator = operatorFromVehicleTypeString( sVehicleType );
-			if ( !sOperator.isNull() ) {
-				m_data[ Operator ] = sOperator;
-			}
-		}
-	}
-
-
-	if ( m_data.contains( TransportLine ) ) {
-		QString sVehicleType, sTransportLine = m_data[TransportLine].toString();
-
-		if ( !m_data.contains( Operator )
-				|| ( m_data[Operator].canConvert( QVariant::String )
-					 && m_data[Operator].toString().isEmpty() ) ) {
-			QRegExp rx( "^[abcdefghijklmnopqrstuvwxyz]+", Qt::CaseInsensitive );
-			if ( rx.indexIn( sTransportLine ) != -1 ) {
-				QString sOperator = operatorFromVehicleTypeString( rx.cap() );
-				if ( !sOperator.isNull() ) {
-					m_data[ Operator ] = sOperator;
+				if ( var.canConvert(QVariant::Time) ) {
+					times << var.toTime();
+				} else if ( var.canConvert(QVariant::String) ) {
+					times << QTime::fromString( var.toString().trimmed(), "hh:mm" );
 				}
 			}
 		}
 
-		QRegExp rx = QRegExp( "^(bus|tro|tram|str|s|u|m)\\s*", Qt::CaseInsensitive );
-		rx.indexIn( sTransportLine );
-		sVehicleType = rx.cap();
-		if ( !m_data.contains( TypeOfVehicle ) ) {
-			m_data.insert( TypeOfVehicle, sVehicleType );
-		} else if ( m_data.value( TypeOfVehicle ) == Unknown ) {
-			m_data[TypeOfVehicle] = sVehicleType;
-		}
-
-		sTransportLine = sTransportLine.trimmed();
-		sTransportLine = sTransportLine.remove( QRegExp( "^(bus|tro|tram|str)",
-		                                        Qt::CaseInsensitive ) );
-		sTransportLine = sTransportLine.replace( QRegExp( "\\s{2,}" ), " " );
-
-		if ( sTransportLine.contains( "F&#228;hre" ) ) {
-			m_data.insert( TypeOfVehicle, Ferry );
-		}
-
-		m_data.insert( TransportLine, sTransportLine.trimmed() );
+		insert( RouteTimes, times );
 	}
 
-	if ( m_data.contains( DepartureDate ) && ( !m_data[DepartureDate].canConvert( QVariant::Date )
-				|| !m_data[DepartureDate].toDate().isValid() ) ) {
-		if ( m_data[DepartureDate].canConvert( QVariant::String ) ) {
-			QString sDate = m_data[DepartureDate].toString();
-			m_data[ DepartureDate ] = QDate::fromString( sDate, "dd.MM.yyyy" );
+	// Convert vehicle types given as string to the associated enumerable value
+	if ( contains(TypeOfVehicle) && value(TypeOfVehicle).canConvert(QVariant::String) ) {
+		QString vehicleType = value(TypeOfVehicle).toString();
+		insert( TypeOfVehicle, getVehicleTypeFromString(vehicleType) );
 
-			if ( !m_data[DepartureDate].toDate().isValid() ) {
+		// Try to get operator from vehicle type string if no operator is given
+		if ( !contains(Operator)
+				|| (value(Operator).canConvert(QVariant::String)
+					 && value(Operator).toString().isEmpty()) ) {
+			QString sOperator = operatorFromVehicleTypeString( vehicleType );
+			if ( !sOperator.isNull() ) {
+				insert( Operator, sOperator );
+			}
+		}
+	}
+
+	// Fix transport line string and try to get vehicle type and/or operator from it
+	if ( contains(TransportLine) ) {
+		QString sTransportLine = value(TransportLine).toString();
+
+		// Try to get operator from transport line string if no operator is given
+		if ( !contains(Operator)
+				|| (value(Operator).canConvert(QVariant::String)
+					 && value(Operator).toString().isEmpty()) ) {
+			QRegExp rx( "^[abcdefghijklmnopqrstuvwxyz]+", Qt::CaseInsensitive );
+			if ( rx.indexIn(sTransportLine) != -1 ) {
+				QString sOperator = operatorFromVehicleTypeString( rx.cap() );
+				if ( !sOperator.isNull() ) {
+					insert( Operator, sOperator );
+				}
+			}
+		}
+
+		// Try to get vehicle type from transport line string if no vehicle type is given
+		if ( !contains(TypeOfVehicle) || value(TypeOfVehicle) == Unknown ) {
+			if ( sTransportLine.contains("F&#228;hre") ) {
+				insert( TypeOfVehicle, Ferry );
+			} else {
+				QRegExp rx = QRegExp( "^(bus|tro|tram|str|s|u|m)\\s*", Qt::CaseInsensitive );
+				rx.indexIn( sTransportLine );
+				QString vehicleType = rx.cap();
+				insert( TypeOfVehicle, vehicleType );
+			}
+		}
+
+		sTransportLine = sTransportLine.trimmed()
+				.remove( QRegExp("^(bus|tro|tram|str)", Qt::CaseInsensitive) )
+				.replace( QRegExp("\\s{2,}"), " " );
+		insert( TransportLine, sTransportLine.trimmed() );
+	}
+
+	// Convert date value from string if not given as date
+	if ( contains(DepartureDate) && (!value(DepartureDate).canConvert(QVariant::Date)
+				|| !value(DepartureDate).toDate().isValid()) ) {
+		if ( value(DepartureDate).canConvert(QVariant::String) ) {
+			QString sDate = value(DepartureDate).toString();
+			insert( DepartureDate, QDate::fromString(sDate, "dd.MM.yyyy") );
+
+			if ( !value(DepartureDate).toDate().isValid() ) {
 				int currentYear = QDate::currentDate().year();
 				QDate date = QDate::fromString( sDate, "dd.MM.yy" );
 				if ( date.year() <= currentYear - 99 ) {
 					date.setDate( currentYear, date.month(), date.day() );
 				}
 
-				m_data[ DepartureDate ] = date;
+				insert( DepartureDate, date );
 			}
 		} else {
-			kDebug() << "Departure date is in wrong format:" << m_data[ DepartureDate ];
-			m_data.remove( DepartureDate );
+			kDebug() << "Departure date is in wrong format:" << value( DepartureDate );
+			remove( DepartureDate );
 		}
 	}
 
-	if ( m_data.contains( DepartureHour ) && m_data.contains( DepartureMinute )
-				&& !m_data.contains( DepartureDate ) ) {
-		QTime departureTime = QTime( m_data[DepartureHour].toInt(),
-		                             m_data[DepartureMinute].toInt() );
-		if ( departureTime < QTime::currentTime().addSecs( -5 * 60 ) ) {
-			// This could produce wrong dates (better give DepartureDate in scripts)
+	// Guess date value if none is given,
+	// this could produce wrong dates (better give DepartureDate in scripts)
+	if ( contains(DepartureHour) && contains(DepartureMinute) && !contains(DepartureDate) ) {
+		QTime departureTime = QTime( value(DepartureHour).toInt(),
+		                             value(DepartureMinute).toInt() );
+		if ( departureTime < QTime::currentTime().addSecs(-5 * 60) ) {
 			kDebug() << "Guessed DepartureDate as tomorrow";
-			m_data[ DepartureDate ] = QDate::currentDate().addDays( 1 );
+			insert( DepartureDate, QDate::currentDate().addDays(1) );
 		} else {
 			kDebug() << "Guessed DepartureDate as today";
-			m_data[ DepartureDate ] = QDate::currentDate();
+			insert( DepartureDate, QDate::currentDate() );
 		}
-		m_data.insert( DepartureYear, m_data[DepartureDate].toDate().year() );
+		insert( DepartureYear, value(DepartureDate).toDate().year() );
 	}
 }
 
 JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
 		: PublicTransportInfo( data )
 {
-	if ( m_data.contains( TypesOfVehicleInJourney ) ) {
+	if ( contains( TypesOfVehicleInJourney ) ) {
 		QVariantList vehicleTypes;
 
-		if ( m_data[TypesOfVehicleInJourney].canConvert( QVariant::StringList ) ) {
-			QStringList strings = m_data[ TypesOfVehicleInJourney ].toStringList();
+		if ( value(TypesOfVehicleInJourney).canConvert(QVariant::StringList) ) {
+			QStringList strings = value( TypesOfVehicleInJourney ).toStringList();
 			foreach( const QString &str, strings ) {
-				int vehicleType = static_cast<int>( getVehicleTypeFromString( str ) );
+				int vehicleType = static_cast<int>( getVehicleTypeFromString(str) );
 				if ( !vehicleTypes.contains( vehicleType ) ) {
 					vehicleTypes << vehicleType;
 				}
 			}
-		} else if ( m_data[TypesOfVehicleInJourney].canConvert( QVariant::List ) ) {
-			QVariantList vars = m_data[ TypesOfVehicleInJourney ].toList();
+		} else if ( value(TypesOfVehicleInJourney).canConvert(QVariant::List) ) {
+			QVariantList vars = value( TypesOfVehicleInJourney ).toList();
 			foreach( const QVariant &var, vars ) {
-				if ( var.canConvert( QVariant::Int ) ) {
+				if ( var.canConvert(QVariant::Int) ) {
 					int vehicleType = var.toInt();
 					if ( !vehicleTypes.contains( vehicleType ) ) {
 						vehicleTypes << vehicleType;
@@ -160,124 +162,123 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
 			}
 		}
 
-		m_data[ TypesOfVehicleInJourney ] = vehicleTypes;
+		insert( TypesOfVehicleInJourney, vehicleTypes );
 	}
 
-	if ( m_data.contains( RouteTypesOfVehicles ) ) {
+	if ( contains(RouteTypesOfVehicles) ) {
 		QVariantList vehicleTypes;
 
-		if ( m_data[RouteTypesOfVehicles].canConvert( QVariant::StringList ) ) {
-			QStringList strings = m_data[ RouteTypesOfVehicles ].toStringList();
+		if ( value(RouteTypesOfVehicles).canConvert(QVariant::StringList) ) {
+			QStringList strings = value( RouteTypesOfVehicles ).toStringList();
 			foreach( const QString &str, strings ) {
-				vehicleTypes << static_cast<int>( getVehicleTypeFromString( str ) );
+				vehicleTypes << static_cast<int>( getVehicleTypeFromString(str) );
 			}
-		} else if ( m_data[RouteTypesOfVehicles].canConvert( QVariant::List ) ) {
-			QVariantList vars = m_data[ RouteTypesOfVehicles ].toList();
+		} else if ( value(RouteTypesOfVehicles).canConvert(QVariant::List) ) {
+			QVariantList vars = value( RouteTypesOfVehicles ).toList();
 			foreach( const QVariant &var, vars ) {
-				if ( var.canConvert( QVariant::Int ) ) {
+				if ( var.canConvert(QVariant::Int) ) {
 					vehicleTypes << var.toInt();
 				}
 			}
 		}
 
-		m_data[ RouteTypesOfVehicles ] = vehicleTypes;
+		insert( RouteTypesOfVehicles, vehicleTypes );
 	}
 
-	if ( m_data.contains( ArrivalDate ) && ( !m_data[ArrivalDate].canConvert( QVariant::Date )
-				|| !m_data[ArrivalDate].toDate().isValid() ) ) {
-		if ( m_data[ArrivalDate].canConvert( QVariant::String ) ) {
-			QString sDate = m_data[ArrivalDate].toString();
+	if ( contains(ArrivalDate) && (!value(ArrivalDate).canConvert(QVariant::Date)
+				|| !value(ArrivalDate).toDate().isValid()) ) {
+		if ( value(ArrivalDate).canConvert(QVariant::String) ) {
+			QString sDate = value(ArrivalDate).toString();
 
-			m_data[ ArrivalDate ] = QDate::fromString( sDate, "dd.MM.yyyy" );
+			insert( ArrivalDate, QDate::fromString(sDate, "dd.MM.yyyy") );
 
-			if ( !m_data[ArrivalDate].toDate().isValid() ) {
+			if ( !value(ArrivalDate).toDate().isValid() ) {
 				int currentYear = QDate::currentDate().year();
 				QDate date = QDate::fromString( sDate, "dd.MM.yy" );
 				if ( date.year() <= currentYear - 99 ) {
 					date.setDate( currentYear, date.month(), date.day() );
 				}
 
-				m_data[ ArrivalDate ] = date;
+				insert( ArrivalDate, date );
 			}
 		} else {
-			kDebug() << "Arrival date is in wrong format:" << m_data[ ArrivalDate ];
-			m_data.remove( ArrivalDate );
+			kDebug() << "Arrival date is in wrong format:" << value(ArrivalDate);
+			remove( ArrivalDate );
 		}
 	}
 
-	if ( m_data.contains( ArrivalHour ) && m_data.contains( ArrivalMinute )
-			&& !m_data.contains( ArrivalDate ) ) {
-		QTime arrivalTime = QTime( m_data[ArrivalHour].toInt(),
-								   m_data[ArrivalMinute].toInt() );
-		if ( arrivalTime < QTime::currentTime().addSecs( -5 * 60 ) ) {
-			m_data[ ArrivalDate ] = QDate::currentDate().addDays( 1 );
+	if ( contains(ArrivalHour) && contains(ArrivalMinute) && !contains(ArrivalDate) ) {
+		QTime arrivalTime = QTime( value(ArrivalHour).toInt(),
+								   value(ArrivalMinute).toInt() );
+		if ( arrivalTime < QTime::currentTime().addSecs(-5 * 60) ) {
+			insert( ArrivalDate, QDate::currentDate().addDays(1) );
 		} else {
-			m_data[ ArrivalDate ] = QDate::currentDate();
+			insert( ArrivalDate, QDate::currentDate() );
 		}
 	}
 
-	if ( m_data.contains( Duration ) && m_data[Duration].toInt() <= 0 ) {
-		if ( m_data[Duration].canConvert( QVariant::String ) ) {
-			QString duration = m_data[ Duration ].toString();
+	if ( contains(Duration) && value(Duration).toInt() <= 0 ) {
+		if ( value(Duration).canConvert(QVariant::String) ) {
+			QString duration = value( Duration ).toString();
 			QTime timeDuration = QTime::fromString( duration, "hh:mm" );
 			if ( timeDuration.isValid() ) {
 				int minsDuration = QTime( 0, 0 ).secsTo( timeDuration ) / 60;
-				m_data[Duration] = minsDuration;
+				insert( Duration, minsDuration );
 			}
 		}
 	}
-	if ( m_data[Duration].toInt() <= 0
-			&& m_data.contains( DepartureDate )
-			&& m_data.contains( DepartureHour ) && m_data.contains( DepartureMinute )
-			&& m_data.contains( ArrivalDate )
-			&& m_data.contains( ArrivalHour ) && m_data.contains( ArrivalMinute ) ) {
-		QDateTime departure( m_data[DepartureDate].toDate(),
-							 QTime( m_data[DepartureHour].toInt(),
-									m_data[DepartureMinute].toInt() ) );
-		QDateTime arrival( m_data[ArrivalDate].toDate(),
-						   QTime( m_data[ArrivalHour].toInt(),
-								  m_data[ArrivalMinute].toInt() ) );
+	if ( value(Duration).toInt() <= 0
+			&& contains(DepartureDate)
+			&& contains(DepartureHour) && contains(DepartureMinute)
+			&& contains(ArrivalDate)
+			&& contains(ArrivalHour) && contains(ArrivalMinute) ) {
+		QDateTime departure( value(DepartureDate).toDate(),
+							 QTime( value(DepartureHour).toInt(),
+									value(DepartureMinute).toInt() ) );
+		QDateTime arrival( value(ArrivalDate).toDate(),
+						   QTime( value(ArrivalHour).toInt(),
+								  value(ArrivalMinute).toInt() ) );
 		int minsDuration = departure.secsTo( arrival ) / 60;
-		m_data[Duration] = minsDuration;
+		insert( Duration, minsDuration );
 	}
 
-	if ( m_data.contains( RouteTimesDeparture ) ) {
+	if ( contains(RouteTimesDeparture) ) {
 		QVariantList times;
-		if ( m_data[RouteTimesDeparture].canConvert( QVariant::StringList ) ) {
-			QStringList strings = m_data[ RouteTimesDeparture ].toStringList();
+		if ( value(RouteTimesDeparture).canConvert(QVariant::StringList) ) {
+			QStringList strings = value( RouteTimesDeparture ).toStringList();
 			foreach( const QString &str, strings ) {
 				times << QTime::fromString( str.trimmed(), "hh:mm" );
 			}
-		} else if ( m_data[RouteTimesDeparture].canConvert( QVariant::List ) ) {
-			QVariantList vars = m_data[ RouteTimesDeparture ].toList();
+		} else if ( value(RouteTimesDeparture).canConvert(QVariant::List) ) {
+			QVariantList vars = value( RouteTimesDeparture ).toList();
 			foreach( const QVariant &var, vars ) {
 				times << var.toTime();
 			}
 		}
 
-		m_data[ RouteTimesDeparture ] = times;
+		insert( RouteTimesDeparture, times );
 	}
 
-	if ( m_data.contains( RouteTimesArrival ) ) {
+	if ( contains(RouteTimesArrival) ) {
 		QVariantList times;
-		if ( m_data[RouteTimesArrival].canConvert( QVariant::StringList ) ) {
-			QStringList strings = m_data[ RouteTimesArrival ].toStringList();
+		if ( value(RouteTimesArrival).canConvert(QVariant::StringList) ) {
+			QStringList strings = value( RouteTimesArrival ).toStringList();
 			foreach( const QString &str, strings ) {
 				times << QTime::fromString( str.trimmed(), "hh:mm" );
 			}
-		} else if ( m_data[RouteTimesArrival].canConvert( QVariant::List ) ) {
-			QVariantList vars = m_data[ RouteTimesArrival ].toList();
+		} else if ( value(RouteTimesArrival).canConvert(QVariant::List) ) {
+			QVariantList vars = value( RouteTimesArrival ).toList();
 			foreach( const QVariant &var, vars ) {
 				times << var.toTime();
 			}
 		}
 
-		m_data[ RouteTimesArrival ] = times;
+		insert( RouteTimesArrival, times );
 	}
 
-	m_isValid = m_data.contains( DepartureHour ) && m_data.contains( DepartureMinute )
-				&& m_data.contains( StartStopName ) && m_data.contains( TargetStopName )
-				&& m_data.contains( ArrivalHour ) && m_data.contains( ArrivalMinute );
+	m_isValid = contains( DepartureHour ) && contains( DepartureMinute )
+			&& contains( StartStopName ) && contains( TargetStopName )
+			&& contains( ArrivalHour ) && contains( ArrivalMinute );
 }
 
 StopInfo::StopInfo()
@@ -286,26 +287,26 @@ StopInfo::StopInfo()
 }
 
 StopInfo::StopInfo(const QHash< TimetableInformation, QVariant >& data)
+	: QHash<TimetableInformation, QVariant>(data)
 {
-	m_data = data;
-	m_isValid = m_data.contains( StopName );
+	m_isValid = contains( StopName );
 }
 
 StopInfo::StopInfo(const QString& name, const QString& id, int weight, const QString& city, 
 				   const QString& countryCode)
 {
-	m_data[StopName] = name;
+	insert( StopName, name );
 	if ( !id.isNull() ) {
-		m_data[StopID] = id;
+		insert( StopID, id );
 	}
 	if ( !city.isNull() ) {
-		m_data[StopCity] = city;
+		insert( StopCity, city );
 	}
 	if ( !countryCode.isNull() ) {
-		m_data[StopCountryCode] = countryCode;
+		insert( StopCountryCode, countryCode );
 	}
 	if ( weight != -1 ) {
-		m_data[StopWeight] = weight;
+		insert( StopWeight, weight );
 	}
 
 	m_isValid = !name.isEmpty();
@@ -319,8 +320,8 @@ DepartureInfo::DepartureInfo() : PublicTransportInfo()
 DepartureInfo::DepartureInfo( const QHash<TimetableInformation, QVariant> &data )
 		: PublicTransportInfo( data )
 {
-	m_isValid = m_data.contains( TransportLine ) && m_data.contains( Target )
-				&& m_data.contains( DepartureHour ) && m_data.contains( DepartureMinute );
+	m_isValid = contains( TransportLine ) && contains( Target )
+			&& contains( DepartureHour ) && contains( DepartureMinute );
 }
 
 VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineType )

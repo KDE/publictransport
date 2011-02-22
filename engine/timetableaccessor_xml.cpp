@@ -62,7 +62,9 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 		kDebug() << "XML document is empty";
 		return false;
 	}
-
+kDebug() << "___________________________________________";
+kDebug() << document;
+kDebug() << "___________________________________________";
 	QString doc = QString( document );
 	QDomDocument domDoc;
 	domDoc.setContent( doc );
@@ -228,13 +230,6 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 		
 		// Add departure to the journey list
 		journeys->append( new DepartureInfo(departureInfo) );
-// 		int delay = sDelay.isEmpty() ? -1 : sDelay.toInt();
-// 		DepartureInfo *departureInfo = new DepartureInfo( sLine,
-// 				DepartureInfo::getVehicleTypeFromString(sVehicleType),
-// 				sDirection, QDateTime(currentDate, time),
-// 				false, false, sPlatform, delay, "", sJourneyNews, sOperator );
-// 		departureInfo->
-// 		journeys << departureInfo;
 		
 		lastTime = time;
 	}

@@ -43,10 +43,10 @@ Q_DECLARE_FLAGS( LineServices, LineService )
  * @see JourneyInfo
  * @see DepartureInfo
  */
-class PublicTransportInfo {
+class PublicTransportInfo : public QHash<TimetableInformation, QVariant> {
 public:
 	/** @brief Constructs a new PublicTransportInfo object. */
-	PublicTransportInfo() {};
+	PublicTransportInfo() : QHash<TimetableInformation, QVariant>() {};
 
 	/**
 	 * @brief Contructs a new PublicTransportInfo object based on the information given
@@ -68,20 +68,20 @@ public:
 	/**
 	 * @brief Gets the date and time of the departure or arrival. */
 	QDateTime departure() const {
-	    if ( m_data.contains(DepartureDate) ) {
-			return QDateTime( m_data[DepartureDate].toDate(),
-							  QTime(m_data[DepartureHour].toInt(),
-									m_data[DepartureMinute].toInt()) );
+	    if ( contains(DepartureDate) ) {
+			return QDateTime( value(DepartureDate).toDate(),
+							  QTime(value(DepartureHour).toInt(),
+									value(DepartureMinute).toInt()) );
 	    } else {
 			return QDateTime( QDate::currentDate(),
-							  QTime(m_data[DepartureHour].toInt(),
-									m_data[DepartureMinute].toInt()) );
+							  QTime(value(DepartureHour).toInt(),
+									value(DepartureMinute).toInt()) );
 		}
 	};
 
 	/** @brief Get the company that is responsible for this departure / arrival. */
-	QString operatorName() const { return m_data.contains(Operator)
-		? m_data[Operator].toString() : QString(); };
+	QString operatorName() const { 
+			return contains(Operator) ? value(Operator).toString() : QString(); };
 
 	/**
 	 * @brief Gets a list of stops of the departure/arrival to it's destination
@@ -94,14 +94,14 @@ public:
 	 * 
 	 * @see routeTimes
 	 * @see routeTimesVariant */
-	QStringList routeStops() const { return m_data.contains(RouteStops)
-		? m_data[RouteStops].toStringList() : QStringList(); };
+	QStringList routeStops() const { 
+			return contains(RouteStops) ? value(RouteStops).toStringList() : QStringList(); };
 
 	/**
 	 * @brief The number of exact route stops. The route stop list isn't complete
 	 *   from the last exact route stop. */
-	int routeExactStops() const { return m_data.contains(RouteExactStops)
-		? m_data[RouteExactStops].toInt() : 0; };
+	int routeExactStops() const { 
+			return contains(RouteExactStops) ? value(RouteExactStops).toInt() : 0; };
 
 	/**
 	 * @brief Parses the given string for a vehicle type.
@@ -123,7 +123,6 @@ public:
 
 protected:
 	bool m_isValid;
-	QHash< TimetableInformation, QVariant > m_data;
 };
 
 /** @class JourneyInfo
@@ -142,38 +141,37 @@ public:
 	explicit JourneyInfo( const QHash<TimetableInformation, QVariant> &data );
 
 	/** @brief Gets information about the pricing of the journey. */
-	QString pricing() const { return m_data.contains(Pricing)
-		? m_data[Pricing].toString() : QString(); };
+	QString pricing() const { 
+			return contains(Pricing) ? value(Pricing).toString() : QString(); };
 	/** @brief Gets news for the journey, such as "platform changed". */
-	QString journeyNews() const { return m_data.contains(JourneyNews)
-		? m_data[JourneyNews].toString() : QString(); };
+	QString journeyNews() const { 
+			return contains(JourneyNews) ? value(JourneyNews).toString() : QString(); };
 	/** @brief Gets the stop name at which the journey starts */
-	QString startStopName() const { return m_data.contains(StartStopName)
-		? m_data[StartStopName].toString() : QString(); };
+	QString startStopName() const { 
+			return contains(StartStopName) ? value(StartStopName).toString() : QString(); };
 	/** @brief Gets the stop name of the target of the journey */
-	QString targetStopName() const { return m_data.contains(TargetStopName)
-		? m_data[TargetStopName].toString() : QString(); };
+	QString targetStopName() const { 
+			return contains(TargetStopName) ? value(TargetStopName).toString() : QString(); };
 	/** @brief Gets the date and time of the arrival at the journey target */
 	QDateTime arrival() const {
-		if ( m_data.contains(ArrivalDate) ) {
-			return QDateTime( m_data[ArrivalDate].toDate(),
-							  QTime(m_data[ArrivalHour].toInt(),
-									m_data[ArrivalMinute].toInt()) );
-	    } else if ( m_data.contains(ArrivalHour) && m_data.contains(ArrivalMinute) ) {
+		if ( contains(ArrivalDate) ) {
+			return QDateTime( value(ArrivalDate).toDate(),
+							  QTime(value(ArrivalHour).toInt(),
+									value(ArrivalMinute).toInt()) );
+	    } else if ( contains(ArrivalHour) && contains(ArrivalMinute) ) {
 			return QDateTime( QDate::currentDate(),
-							  QTime(m_data[ArrivalHour].toInt(),
-									m_data[ArrivalMinute].toInt()) );
+							  QTime(value(ArrivalHour).toInt(),
+									value(ArrivalMinute).toInt()) );
 		} else {
 			return QDateTime();
 		}
 	};
 	/** @brief Gets the duration in minutes of the journey. */
-	int duration() const { return m_data.contains(Duration)
-		? m_data[Duration].toInt() : -1; };
+	int duration() const { return contains(Duration) ? value(Duration).toInt() : -1; };
 	/** @brief Gets the types of vehicle used in the journey. */
 	QList<VehicleType> vehicleTypes() const {
-		if ( m_data.contains(TypesOfVehicleInJourney) ) {
-			QVariantList listVariant = m_data[TypesOfVehicleInJourney].toList();
+		if ( contains(TypesOfVehicleInJourney) ) {
+			QVariantList listVariant = value(TypesOfVehicleInJourney).toList();
 			QList<VehicleType> listRet;
 			foreach ( QVariant vehicleType, listVariant ) {
 				listRet.append( static_cast<VehicleType>(vehicleType.toInt()) );
@@ -185,10 +183,10 @@ public:
 	};
 
 	QStringList vehicleIconNames() const {
-		if ( !m_data.contains(TypesOfVehicleInJourney) ) {
+		if ( !contains(TypesOfVehicleInJourney) ) {
 			return QStringList();
 		}
-		QVariantList vehicles = m_data[TypesOfVehicleInJourney].toList();
+		QVariantList vehicles = value(TypesOfVehicleInJourney).toList();
 		QStringList iconNames;
 		foreach ( QVariant vehicle, vehicles ) {
 			iconNames << Global::vehicleTypeToIcon( static_cast<VehicleType>(vehicle.toInt()) );
@@ -197,10 +195,10 @@ public:
 	};
 
 	QStringList vehicleNames(bool plural = false) const {
-		if ( !m_data.contains(TypesOfVehicleInJourney) ) {
+		if ( !contains(TypesOfVehicleInJourney) ) {
 			return QStringList();
 		}
-		QVariantList vehicles = m_data[TypesOfVehicleInJourney].toList();
+		QVariantList vehicles = value(TypesOfVehicleInJourney).toList();
 		QStringList names;
 		foreach ( QVariant vehicle, vehicles ) {
 			names << Global::vehicleTypeToString( static_cast<VehicleType>(vehicle.toInt()), plural );
@@ -211,32 +209,42 @@ public:
 	/**
 	 * @brief Gets the types of vehicle used in the journey as QVariantList to be stored
 	 *   in a Plasma::DataEngine::Data object. */
-	QVariantList vehicleTypesVariant() const { return m_data.contains(TypesOfVehicleInJourney)
-		? m_data[TypesOfVehicleInJourney].toList() : QVariantList(); };
+	QVariantList vehicleTypesVariant() const { 
+		return contains(TypesOfVehicleInJourney)
+				? value(TypesOfVehicleInJourney).toList() : QVariantList(); 
+	};
 
 	/**
 	 * @brief Gets the types of vehicle used for each "sub-journey" in the journey as
 	 *   QVariantList to be stored in a Plasma::DataEngine::Data object. */
-	QVariantList routeVehicleTypesVariant() const { return m_data.contains(RouteTypesOfVehicles)
-		? m_data[RouteTypesOfVehicles].toList() : QVariantList(); };
+	QVariantList routeVehicleTypesVariant() const { 
+		return contains(RouteTypesOfVehicles)
+				? value(RouteTypesOfVehicles).toList() : QVariantList(); 
+	};
 
 	/** @brief Gets the transport line used for each "sub-journey" in the journey. */
-	QStringList routeTransportLines() const { return m_data.contains(RouteTransportLines)
-		? m_data[RouteTransportLines].toStringList() : QStringList(); };
+	QStringList routeTransportLines() const {
+		return contains(RouteTransportLines)
+				? value(RouteTransportLines).toStringList() : QStringList(); 
+	};
 
 	/** @brief Gets the platform of the departure used for each stop in the journey. */
 	QStringList routePlatformsDeparture() const {
-		return m_data.contains(RoutePlatformsDeparture)
-		? m_data[RoutePlatformsDeparture].toStringList() : QStringList(); };
+		return contains(RoutePlatformsDeparture)
+				? value(RoutePlatformsDeparture).toStringList() : QStringList(); 
+	};
 
 	/** @brief Gets the platform of the arrival used for each stop in the journey. */
 	QStringList routePlatformsArrival() const {
-		return m_data.contains(RoutePlatformsArrival)
-		? m_data[RoutePlatformsArrival].toStringList() : QStringList(); };
+		return contains(RoutePlatformsArrival)
+				? value(RoutePlatformsArrival).toStringList() : QStringList(); 
+	};
 
 	/** @brief Gets how many changes between different vehicles are needed */
-	int changes() const { return m_data.contains(Changes)
-		? m_data[Changes].toInt() : -1; };
+	int changes() const {
+		return contains(Changes)
+				? value(Changes).toInt() : -1; 
+	};
 
 	/**
 	 * @brief Gets a list of departure times of the journey. Use QVariant::toTime()
@@ -250,8 +258,9 @@ public:
 	 * @see routeTimesDeparture
 	 * @see routeStops */
 	QVariantList routeTimesDepartureVariant() const {
-		return m_data.contains(RouteTimesDeparture)
-		    ? m_data[RouteTimesDeparture].toList() : QVariantList(); };
+		return contains(RouteTimesDeparture)
+				? value(RouteTimesDeparture).toList() : QVariantList(); 
+	};
 
 	/**
 	 * @brief Gets a list of times of the journey to it's destination stop.
@@ -263,9 +272,9 @@ public:
 	 * @see routeTimesDepartureVariant
 	 * @see routeStops */
 	QList<QTime> routeTimesDeparture() const {
-		if ( m_data.contains(RouteTimesDeparture) ) {
+		if ( contains(RouteTimesDeparture) ) {
 			QList<QTime> ret;
-			QVariantList times = m_data[RouteTimesDeparture].toList();
+			QVariantList times = value(RouteTimesDeparture).toList();
 			foreach ( QVariant time, times ) {
 				ret << time.toTime();
 			}
@@ -287,8 +296,9 @@ public:
 	 * @see routeTimesArrival
 	 * @see routeStops */
 	QVariantList routeTimesArrivalVariant() const {
-		return m_data.contains(RouteTimesArrival)
-			? m_data[RouteTimesArrival].toList() : QVariantList(); };
+		return contains(RouteTimesArrival)
+				? value(RouteTimesArrival).toList() : QVariantList(); 
+	};
 
 	/**
 	 * @brief Gets a list of arrival times of the journey.
@@ -300,9 +310,9 @@ public:
 	 * @see routeTimesArrivalVariant
 	 * @see routeStops */
 	QList<QTime> routeTimesArrival() const {
-		if ( m_data.contains(RouteTimesArrival) ) {
+		if ( contains(RouteTimesArrival) ) {
 			QList<QTime> ret;
-			QVariantList times = m_data[RouteTimesArrival].toList();
+			QVariantList times = value(RouteTimesArrival).toList();
 			foreach ( QVariant time, times ) {
 				ret << time.toTime();
 			}
@@ -313,16 +323,16 @@ public:
 	};
 
 	QVariantList routeTimesDepartureDelay() const {
-		if ( m_data.contains(RouteTimesDepartureDelay) ) {
-			return m_data[RouteTimesDepartureDelay].toList();
+		if ( contains(RouteTimesDepartureDelay) ) {
+			return value(RouteTimesDepartureDelay).toList();
 		} else {
 			return QVariantList();
 		}
 	};
 
 	QVariantList routeTimesArrivalDelay() const {
-		if ( m_data.contains(RouteTimesArrivalDelay) ) {
-			return m_data[RouteTimesArrivalDelay].toList();
+		if ( contains(RouteTimesArrivalDelay) ) {
+			return value(RouteTimesArrivalDelay).toList();
 		} else {
 			return QVariantList();
 		}
@@ -350,34 +360,34 @@ public:
 	explicit DepartureInfo( const QHash<TimetableInformation, QVariant> &data );
 
 	/** @brief Gets the target / origin of the departing / arriving vehicle. */
-	QString target() const { return m_data.contains(Target)
-		? m_data[Target].toString() : QString(); };
+	QString target() const { return contains(Target)
+		? value(Target).toString() : QString(); };
 	/** @brief Gets the line name of the departing / arriving vehicle. */
-	QString line() const { return m_data.contains(TransportLine)
-		? m_data[TransportLine].toString() : QString(); };
+	QString line() const { return contains(TransportLine)
+		? value(TransportLine).toString() : QString(); };
 	/** @brief Gets the type of the departing / arriving vehicle. */
-	VehicleType vehicleType() const { return m_data.contains(TypeOfVehicle)
-		? static_cast<VehicleType>( m_data[TypeOfVehicle].toInt() ) : Unknown; };
+	VehicleType vehicleType() const { return contains(TypeOfVehicle)
+		? static_cast<VehicleType>( value(TypeOfVehicle).toInt() ) : Unknown; };
 	/** @brief Wheather or not the departing / arriving vehicle is a night line. */
 	bool isNightLine() const { return m_lineServices.testFlag( NightLine ); };
 	/** @brief Wheather or not the departing / arriving vehicle is an express line. */
 	bool isExpressLine() const { return m_lineServices.testFlag( ExpressLine ); };
 	/** @brief Gets the platform from/at which the vehicle departs/arrives. */
-	QString platform() const { return m_data.contains(Platform)
-		? m_data[Platform].toString() : QString(); };
+	QString platform() const { return contains(Platform)
+		? value(Platform).toString() : QString(); };
 	/** @brief Gets the delay in minutes of the vehicle. -1 means that no delay information is available. */
-	int delay() const { return m_data.contains(Delay)
-		? m_data[Delay].toInt() : -1; };
+	int delay() const { return contains(Delay)
+		? value(Delay).toInt() : -1; };
 	/** @brief Gets the delay reason. */
-	QString delayReason() const { return m_data.contains(DelayReason)
-		? m_data[DelayReason].toString() : QString(); };
+	QString delayReason() const { return contains(DelayReason)
+		? value(DelayReason).toString() : QString(); };
 	/** @brief Gets news for the departure/arrival, such as "platform changed". */
-	QString journeyNews() const { return m_data.contains(JourneyNews)
-		? m_data[JourneyNews].toString() : QString(); };
+	QString journeyNews() const { return contains(JourneyNews)
+		? value(JourneyNews).toString() : QString(); };
 		
 	/** @brief Gets the status of the departure/arrival, such as "departing". */
-	QString status() const { return m_data.contains(Status)
-		? m_data[Status].toString() : QString(); };
+	QString status() const { return contains(Status)
+		? value(Status).toString() : QString(); };
 
 	/**
 	 * @brief Gets a list of times of the departure / arrival to it's destination
@@ -390,8 +400,8 @@ public:
 	 *   indices are associated (the times at which the vehicle is at the stops).
 	 * @see routeTimes
 	 * @see routeStops */
-	QVariantList routeTimesVariant() const { return m_data.contains(RouteTimes)
-		? m_data[RouteTimes].toList() : QVariantList(); };
+	QVariantList routeTimesVariant() const { return contains(RouteTimes)
+		? value(RouteTimes).toList() : QVariantList(); };
 
 	/**
 	 * @brief Gets a list of times of the departure / arrival to it's destination stop.
@@ -403,9 +413,9 @@ public:
 	 * @see routeTimesVariant
 	 * @see routeStops */
 	QList<QTime> routeTimes() const {
-		if ( m_data.contains(RouteTimes) ) {
+		if ( contains(RouteTimes) ) {
 			QList<QTime> ret;
-			QVariantList times = m_data[RouteTimes].toList();
+			QVariantList times = value(RouteTimes).toList();
 			foreach ( QVariant time, times ) {
 				ret << time.toTime();
 			}
@@ -425,7 +435,7 @@ private:
  * @see DepartureInfo
  * @see JourneyInfo
  **/
-class StopInfo {
+class StopInfo : public QHash<TimetableInformation, QVariant> {
 public:
 	/** @brief Constructs an invalid StopInfo object. */
 	StopInfo();
@@ -455,35 +465,22 @@ public:
 			  const QString &city = QString(), const QString &countryCode = QString() );
 	
 	/** @brief Gets the name of the stop. */
-	QString name() const { return m_data[StopName].toString(); };
+	QString name() const { return value(StopName).toString(); };
 	
 	/** @brief Gets the ID for the stop, if available. */
-	QString id() const { return m_data[StopID].toString(); };
+	QString id() const { return value(StopID).toString(); };
 	
 	/** @brief Gets the weight of the stop. */
-	QString weight() const { return m_data[StopWeight].toString(); };
+	QString weight() const { return value(StopWeight).toString(); };
 	
 	/** @brief Gets the city in which the stop is. */
-	QString city() const { return m_data[StopCity].toString(); };
+	QString city() const { return value(StopCity).toString(); };
 	
 	/** @brief Gets the code of the country in which the stop is. */
-	QString countryCode() const { return m_data[StopCountryCode].toString(); };
-	
-	/** @brief Returns whether or not an ID is available for the stop. */
-	bool hasId() const { return m_data.contains(StopID); };
-	
-	/** @brief Returns whether or not a city value is available for the stop. */
-	bool hasCity() const { return m_data.contains(StopCity); };
-	
-	/** @brief Returns whether or not a weight is available for the stop. */
-	bool hasWeight() const { return m_data.contains(StopWeight); };
-	
-	/** @brief Returns whether or not a country code is available for the stop. */
-	bool hasCountryCode() const { return m_data.contains(StopCountryCode); };
+	QString countryCode() const { return value(StopCountryCode).toString(); };
 	
 private:
 	bool m_isValid;
-	QHash< TimetableInformation, QVariant > m_data;
 };
 
 #endif // DEPARTUREINFO_HEADER

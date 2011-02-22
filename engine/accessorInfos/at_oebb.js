@@ -66,6 +66,11 @@ function parseTimetable( html ) {
     // Go through all departure blocks
     while ( (departure = departuresRegExp.exec(str)) ) {
 		departure = departure[1];
+		
+// 		if ( departure.indexOf("separatingLineRealtime") ) {
+// 			// This row is just a separating line, not a departure/arrival
+// 			continue;
+// 		}
 
 		// Get column contents
 		var columns = new Array;

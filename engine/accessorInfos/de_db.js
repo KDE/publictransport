@@ -1,5 +1,5 @@
 /** Accessor for www.db.de (Deutsche Bahn, germany).
-  * © 2010, Friedrich Pülz */
+  * © 2011, Friedrich Pülz */
 
 Array.prototype.contains = function( element ) {
     for ( var i = 0; i < this.length; i++ ) {
@@ -79,7 +79,6 @@ function parseTimetable( html ) {
 	var departureNumber = 0;
     while ( (departureRow = departuresRegExp.exec(str)) ) {
 		departureRow = departureRow[1];
-		++departureNumber;
 // println("DE_DB: Next departure Row " + departureNumber);
 
 		// Get column contents
@@ -106,6 +105,8 @@ function parseTimetable( html ) {
 			}
 			continue; // Not all columns where not found
 		}
+		
+		++departureNumber;
 			
 		// Initialize result variables with defaults
 		var time = 0, typeOfVehicle = "", transportLine = "", targetString = "", platformString = "",
@@ -121,8 +122,11 @@ function parseTimetable( html ) {
 		
 		// TODO
 		// If 0 o'clock is passed between the last departure time and the current one, increase the date by one day.
-		if ( time[0] < lastHour || (departureNumber == 1 && time[0] == 0 && now.getHours() == 23) ) {
-			currentDate = helper.addDaysToDate( currentDate, 1 );
+// 		println( "Time: " + time[0] + ":" + time[1] + ", departureNumber: " + departureNumber + ", now: " + now.getHours() );
+		if ( time[0] < lastHour - 3 || (departureNumber == 1 && time[0] < now.getHours() - 3) ) {
+// 			println( currentDate[0] + "-" + currentDate[1] + "-" + currentDate[2] );
+			currentDate = helper.addDaysToDateArray( currentDate, 1 );
+// 			println( "+1 => " + currentDate[0] + "-" + currentDate[1] + "-" + currentDate[2] );
 		}
 		lastHour = time[0];
 		
@@ -196,10 +200,14 @@ function parseTimetable( html ) {
 			}
 		}
 		
+// println("DE_DB: Add departure");
 		// Add departure
 		timetableData.clear();
+// println("  DATA: " + transportLine);
 		timetableData.set( 'TransportLine', transportLine );
+// println("  DATA: " + typeOfVehicle);
 		timetableData.set( 'TypeOfVehicle', typeOfVehicle );
+// println("  DATA: " + targetString);
 		timetableData.set( 'Target', targetString );
 // println("  DATA: " + currentDate);
 		if ( currentDate == null ) {
@@ -209,14 +217,23 @@ function parseTimetable( html ) {
 		}
 // println("  DATA: " + time[0]);
 		timetableData.set( 'DepartureHour', time[0] );
+// println("  DATA: " + time[1]);
 		timetableData.set( 'DepartureMinute', time[1] );
+// println("  DATA: " + platformString);
 		timetableData.set( 'Platform', platformString );
+// println("  DATA: " + delay);
 		timetableData.set( 'Delay', delay );
+// println("  DATA: " + delayReason);
 		timetableData.set( 'DelayReason', delayReason );
+// println("  DATA: " + journeyNews);
 		timetableData.set( 'JourneyNews', journeyNews );
+// println("  DATA: " + routeStops);
 		timetableData.set( 'RouteStops', routeStops );
+// println("  DATA: " + routeTimes);
 		timetableData.set( 'RouteTimes', routeTimes );
+// println("  DATA: " + exactRouteStops);
 		timetableData.set( 'RouteExactStops', exactRouteStops );
+// println("___________________________________");
 		result.addData( timetableData );
     }
 
