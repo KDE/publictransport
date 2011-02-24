@@ -67,7 +67,7 @@
      <item>
       <widget class="QSlider" name="size">
        <property name="toolTip">
-        <string comment="@item:tooltip">Sets the size of the applet. Make it big if you want to use the applet fullscreen.</string>
+        <string comment="@item:tooltip">Sets the size of the applet contents. Make it big if you want to use the applet fullscreen.</string>
        </property>
        <property name="minimum">
         <number>0</number>
@@ -227,7 +227,7 @@
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string comment="@info:tooltip">Whether or not departure / arrival times should be bold.</string>
+      <string comment="@info:tooltip">Whether or not shadows should be drawn behind text.</string>
      </property>
      <property name="text">
       <string/>

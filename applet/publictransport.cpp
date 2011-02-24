@@ -1300,6 +1300,7 @@ void PublicTransport::configChanged()
 	// Apply header settings
 	if ( testState(ShowingDepartureArrivalList) ) {
 		m_timetable->setTargetHidden( m_settings.hideColumnTarget );
+		m_timetable->updateItemLayouts();
 	}
 
 	// Get fonts
@@ -1760,6 +1761,7 @@ void PublicTransport::useCurrentPlasmaTheme()
 
 	// To set new text color of the header items
 	m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
+	m_timetable->updateItemLayouts();
 }
 
 QGraphicsWidget* PublicTransport::graphicsWidget()
@@ -1933,12 +1935,14 @@ void PublicTransport::writeSettings( const Settings& settings )
 		}
 		if ( changed.testFlag(SettingsIO::ChangedDepartureArrivalListType) ) {
 			m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
+			m_timetable->updateItemLayouts();
 		}
 
 		// If stop settings have changed the whole model gets cleared and refilled.
 		// Therefore the other change flags can be in 'else' parts
 		if ( changed.testFlag(SettingsIO::ChangedStopSettings) ||
-			 changed.testFlag(SettingsIO::ChangedCurrentStop) )
+			 changed.testFlag(SettingsIO::ChangedCurrentStop) ||
+			 changed.testFlag(SettingsIO::ChangedServiceProvider) )
 		{
 			clearDepartures();
 			reconnectSource();
@@ -1967,6 +1971,7 @@ void PublicTransport::writeSettings( const Settings& settings )
 void PublicTransport::setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType )
 {
 	m_model->setDepartureArrivalListType( departureArrivalListType );
+	m_timetable->updateItemLayouts();
 }
 
 QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType, TitleType oldTitleType )
@@ -2286,6 +2291,7 @@ void PublicTransport::removeState( AppletState state )
 		m_titleWidget->setIcon( m_appletStates.testFlag( ReceivedValidDepartureData )
 				? DepartureListOkIcon : DepartureListErrorIcon );
 		m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
+		m_timetable->updateItemLayouts();
 		break;
 
 	case Initializing:

@@ -224,6 +224,9 @@ public:
 	void setMaxLineCount( int maxLineCount ) { m_maxLineCount = maxLineCount; updateItemGeometries(); };
     int maxLineCount() const { return m_maxLineCount; };
 	
+	/** Call this eg. when the DepartureArrivalListType changes in the model (only header data gets changed...). */
+	void updateItemLayouts();
+	
 signals:
 	void contextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
 	
@@ -239,7 +242,6 @@ protected:
 	virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent* event );
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option, 
 						QWidget* widget = 0 );
-	void updateItemLayouts();
 	void updateItemGeometries();
 	
 	PublicTransportModel *m_model;

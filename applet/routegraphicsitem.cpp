@@ -96,7 +96,7 @@ void RouteGraphicsItem::arrangeStopItems()
 			
 			// Prepend departure time at the current stop, if a time is given
 			if ( i < info->routeTimes().count() && info->routeTimes()[i].isValid() ) {
-				stop = stop.prepend( QString("%1: ")
+				stop = stop.prepend( QString("%1 - ")
 						.arg(KGlobal::locale()->formatTime(info->routeTimes()[i])) );
 			}
 			
@@ -261,8 +261,13 @@ void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem
 	const qreal step = (routeRect.width() - 20 * m_zoomFactor) / count;
 	const qreal routeLineWidth = 4.0 * m_zoomFactor;
 	const qreal smallStopMarkerSize = 3.0 * m_zoomFactor;
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	painter->setBrush( Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor) );
+	painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor) );
+#else
 	painter->setBrush( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor) );
 	painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor) );
+#endif
 	painter->drawRoundedRect( QRectF(routeRect.left(), routeRect.top() + padding(), 
 									 routeRect.width() - step, routeLineWidth), 
 							  routeLineWidth / 2.0, routeLineWidth / 2.0 );
@@ -290,8 +295,13 @@ RouteStopMarkerGraphicsItem::RouteStopMarkerGraphicsItem( QGraphicsItem* parent 
 	setAcceptHoverEvents( true );
 	
 	QPalette p = palette();
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	p.setColor( QPalette::Active, QPalette::Background,
+				Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor) );
+#else
 	p.setColor( QPalette::Active, QPalette::Background,
 				Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor) );
+#endif
 	setPalette( p );
 }
 
@@ -331,8 +341,13 @@ void RouteStopMarkerGraphicsItem::unhover()
 
 void RouteStopMarkerGraphicsItem::setHoverStep( qreal hoverStep )
 {
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	QColor normalColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::BackgroundColor );
+	QColor hoverColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::HighlightColor );
+#else
 	QColor normalColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewBackgroundColor );
 	QColor hoverColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewHoverColor );
+#endif
 	QColor currentColor = KColorUtils::mix( normalColor, hoverColor, hoverStep );
 	QPalette p = palette();
 	p.setColor( QPalette::Active, QPalette::Background, currentColor ); 
@@ -348,7 +363,11 @@ void RouteStopMarkerGraphicsItem::paint( QPainter* painter, const QStyleOptionGr
 	Q_UNUSED( widget );
 	painter->setRenderHint( QPainter::Antialiasing );
 	painter->setBrush( palette().color(QPalette::Active, QPalette::Background) );
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor) );
+#else
 	painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor) );
+#endif
 	painter->drawEllipse( option->rect );
 }
 
@@ -415,8 +434,13 @@ void RouteStopTextGraphicsItem::setExpandStep( qreal expandStep )
 		resize( m_baseSize + (maxSize - m_baseSize) * expandStep, size().height() );
 	}
 	
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	QColor normalColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+	QColor hoverColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::HighlightColor );
+#else
 	QColor normalColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewTextColor );
 	QColor hoverColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewHoverColor );
+#endif
 	QColor currentColor = KColorUtils::mix( normalColor, hoverColor, expandStep / 2.0 );
 	QPalette p = palette();
 	p.setColor( QPalette::Active, QPalette::Text, currentColor ); 
@@ -516,7 +540,11 @@ void JourneyRouteStopGraphicsItem::paint( QPainter* painter, const QStyleOptionG
 {
 	Q_UNUSED( widget );
 	
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+#else
 	QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewTextColor );
+#endif
 	bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 156;
 	QRectF textRect = infoTextRect();
 	TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument, 
@@ -642,8 +670,13 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
 	timelineRect.setLeft( iconSize / 2.0 );
 	const qreal routeLineWidth = 4.0 * m_zoomFactor;
 	
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor) );
+	painter->setBrush( Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor) );
+#else
 	painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor) );
 	painter->setBrush( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor) );
+#endif
 	painter->drawRoundedRect( QRectF(timelineRect.left(), timelineRect.top() + padding(), 
 									 routeLineWidth, timelineRect.height() - 2 * padding()), 
 							  routeLineWidth / 2.0, routeLineWidth / 2.0 );

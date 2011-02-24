@@ -330,10 +330,14 @@ void DepartureGraphicsItem::updateTextLayouts()
 		textOption.setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
 		QString html;
 		const DepartureInfo *info = departureItem()->departureInfo();
-		if ( qobject_cast<TimetableWidget*>(m_parent)->isTargetHidden() ) {
+		TimetableWidget *timetableWidget = qobject_cast<TimetableWidget*>( m_parent );
+		if ( timetableWidget->isTargetHidden() ) {
 			html = i18nc("@info", "<emphasis strong='1'>%1</emphasis>", 
 						 info->lineString());
-		} else {
+		} else if ( departureItem()->model()->info().departureArrivalListType == ArrivalList ) {
+			html = i18nc("@info", "<emphasis strong='1'>%1</emphasis> from %2", 
+						 info->lineString(), info->target());
+		} else { // if ( departureItem()->model()->info().departureArrivalListType == DepartureList ) {
 			html = i18nc("@info", "<emphasis strong='1'>%1</emphasis> to %2", 
 						 info->lineString(), info->target());
 		}
@@ -492,7 +496,11 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
 	
 	QColor alternateBackgroundColor = KColorScheme( QPalette::Active, KColorScheme::View )
 			.background( KColorScheme::AlternateBackground ).color();
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	QColor borderColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor);
+#else
 	QColor borderColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
+#endif
 	alternateBackgroundColor.setAlphaF( 0.3 );
 	borderColor.setAlphaF( 0.5 );
 	if ( index().row() % 2 == 1 ) {
@@ -688,7 +696,11 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
 	painter->drawPixmap( _vehicleRect.topLeft(), fadePixmap );
 	
 	// Draw text
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	QColor textColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor);
+#else
 	QColor textColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
+#endif
 	bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 156;
 	painter->setPen( textColor );
 	TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument, _infoRect, drawHalos );
@@ -729,7 +741,11 @@ void DepartureGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphics
 	
 	QColor alternateBackgroundColor = KColorScheme( QPalette::Active, KColorScheme::View )
 			.background( KColorScheme::AlternateBackground ).color();
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	QColor borderColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor);
+#else
 	QColor borderColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
+#endif
 	alternateBackgroundColor.setAlphaF( 0.3 );
 	borderColor.setAlphaF( 0.5 );
 	if ( index().row() % 2 == 1 ) {
@@ -822,8 +838,13 @@ void DepartureGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphics
 		case Plane: vehicleKey = "plane"; break;
 		default:
 			kDebug() << "Unknown vehicle type" << departureItem()->departureInfo()->vehicleType();
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+			painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor) );
+			painter->setBrush( Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor) );
+#else
 			painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor) );
 			painter->setBrush( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor) );
+#endif
 			painter->drawEllipse( QRectF(shadowWidth, shadowWidth, iconSize.width(), iconSize.height())
 								  .adjusted(2, 2, -2, -2) );
 			painter->drawText( QRectF(shadowWidth, shadowWidth, iconSize.width(), iconSize.height()), 
@@ -865,7 +886,11 @@ void DepartureGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphics
 	}
 		
 	// Draw text
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	QColor textColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor);
+#else
 	QColor textColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
+#endif
 	bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 156;
 	painter->setPen( textColor );
 	TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument, _infoRect, drawHalos );
@@ -891,7 +916,11 @@ void JourneyGraphicsItem::paintExpanded( QPainter* painter, const QStyleOptionGr
 										  const QRectF& rect )
 {
 	painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	QColor textColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor);
+#else
 	QColor textColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
+#endif
 	bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 156;
 	
 	qreal y = rect.top() - padding();
@@ -952,7 +981,11 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
 										   const QRectF& rect )
 {
 	painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
+#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+	QColor textColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor);
+#else
 	QColor textColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
+#endif
 	bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 156;
 	
 	qreal y = rect.top() - padding();
@@ -1140,11 +1173,13 @@ PublicTransportWidget::PublicTransportWidget( QGraphicsItem* parent )
 	m_zoomFactor = 1.0;
 }
 
-JourneyTimetableWidget::JourneyTimetableWidget(QGraphicsItem* parent) : PublicTransportWidget(parent)
+JourneyTimetableWidget::JourneyTimetableWidget( QGraphicsItem* parent ) 
+	: PublicTransportWidget(parent)
 {
 }
 
-TimetableWidget::TimetableWidget(QGraphicsItem* parent) : PublicTransportWidget(parent)
+TimetableWidget::TimetableWidget( QGraphicsItem* parent ) 
+	: PublicTransportWidget(parent)
 {
 	m_targetHidden = false;
 }

@@ -222,7 +222,7 @@
   <customwidget>
    <class>CheckCombobox</class>
    <extends>QComboBox</extends>
-   <header>checkcombobox.h</header>
+   <header location="global">publictransporthelper/checkcombobox.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
