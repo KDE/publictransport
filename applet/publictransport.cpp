@@ -1008,26 +1008,61 @@ QPixmap PublicTransport::createDeparturesPixmap( const QList<DepartureItem*> &de
 // 						  nextDeparture.lineString() );
 	
 	QRectF vehicleRect( 0, 0, pixmap.width(), pixmap.height() );
-	qreal factor = departures.count() == 1 ? 1.0 : 1.0 / (0.75 * departures.count());
-	vehicleRect.setWidth( vehicleRect.width() * factor );
-	vehicleRect.setHeight( vehicleRect.height() * factor );
-	qreal translation = departures.count() == 1 ? 0.0 
-			: (128 - vehicleRect.width()) / (departures.count() - 1);
+// 	qreal factor = departures.count() == 1 ? 1.0 : 1.0 / (0.75 * departures.count());
+// 	vehicleRect.setWidth( vehicleRect.width() * factor );
+// 	vehicleRect.setHeight( vehicleRect.height() * factor );
+	
+	// Calculate values for arranging vehicle type icons
+	const int vehiclesPerRow = qCeil( qSqrt(departures.count()) );
+	const int rows = qCeil( (qreal)departures.count() / (qreal)vehiclesPerRow );
+	const qreal vehicleSize = vehiclesPerRow == 1 ? vehicleRect.width() 
+			: vehicleRect.width() / ( 0.8 * vehiclesPerRow );
+	const qreal vehicleOffsetX = vehiclesPerRow == 1 ? 0.0 
+			: (vehicleRect.width() - vehicleSize) / (vehiclesPerRow - 1);
+	qreal vehicleOffsetY = rows == 1 ? 0.0 
+			: (vehicleRect.height() - vehicleSize) / (rows - 1);
+	int vehiclesInCurrentRow = 0;
+// 	kDebug() << "vehiclesPerRow:" << vehiclesPerRow << "rows:" << rows
+// 			 << "vehicleSize:" << vehicleSize << "offset:" << vehicleOffsetX << vehicleOffsetY;
+	
+// 	qreal translation = departures.count() == 1 ? 0.0 
+// 			: (128 - vehicleRect.width()) / (departures.count() - 1);
 	QDateTime time;
+	int i = 0;
+	qreal x = 0.0;
+	qreal y = 0.0;
+	if ( rows < vehiclesPerRow && rows > 1 ) {
+// 		vehicleOffsetY -= y / departures.count();
+		y = (vehicleRect.height() - vehicleSize + (rows - 1) * vehicleOffsetY) / 2.0;
+	}
 	foreach ( const DepartureItem *item, departures ) {
 		if ( !item ) {
 			continue;
 		}
+		if ( vehiclesInCurrentRow == vehiclesPerRow ) {
+			vehiclesInCurrentRow = 0;
+			if ( departures.count() - i < vehiclesPerRow ) {
+				x = vehicleOffsetX / 2.0;
+			} else {
+				x = 0;
+			}
+			y += vehicleOffsetY;
+		}
 		
 		const DepartureInfo *data = item->departureInfo();
-		paintVehicle( &p, data->vehicleType(), vehicleRect, data->lineString() );
+		paintVehicle( &p, data->vehicleType(), QRectF(x, y, vehicleSize, vehicleSize), 
+					  data->lineString() );
 		
 		// Move to next vehicle type svg position
-		vehicleRect.translate( translation, translation );
+// 		vehicleRect.translate( translation, translation );
 		
 		if ( !time.isValid() ) {
 			time = item->departureInfo()->predictedDeparture();
 		}
+		
+		++vehiclesInCurrentRow;
+		x += vehicleOffsetX;
+		++i;
 	}
 	
 	QDateTime currentTime = QDateTime::currentDateTime();
@@ -2082,7 +2117,8 @@ void PublicTransport::setTitleType( TitleType titleType )
 			QRect sourceRect = m_mainGraphicsWidget->mapToScene( m_mainGraphicsWidget->boundingRect() )
 					.boundingRect().toRect();
 			QRectF rect( QPointF( 0, 0 ), m_mainGraphicsWidget->size() );
-			scene()->render( &p, rect, sourceRect );
+			m_titleWidget->scene()->render( &p, rect, sourceRect );
+// 			scene()->render( &p, rect, sourceRect );
 			p.end();
 		}
 	}
@@ -2783,14 +2819,14 @@ QString PublicTransport::infoText()
 	// HACK: This breaks the text at one position if needed
 	// Plasma::Label doesn't work well will HTML formatted text and word wrap:
 	// It sets the height as if the label shows the HTML source.
-	QString textNoHtml1 = QString( "%1: %2" ).arg( i18nc( "@info/plain", "last update" ), sLastUpdate );
-	QString textNoHtml2 = QString( "%1: %2" ).arg( i18nc( "@info/plain", "data by" ), shortUrl );
+	QString textNoHtml1 = QString( "%1: %2" ).arg( i18nc("@info/plain", "last update"), sLastUpdate );
+	QString textNoHtml2 = QString( "%1: %2" ).arg( i18nc("@info/plain", "data by"), shortUrl );
 	QFontMetrics fm( m_labelInfo->font() );
 	int width1 = fm.width( textNoHtml1 );
 	int width2 = fm.width( textNoHtml2 );
 	int width = width1 + fm.width( ", " ) + width2;
 	if ( width > m_graphicsWidget->size().width() ) {
-		m_graphicsWidget->setMinimumWidth( qMax( 150, qMax( width1, width2 ) ) );
+		m_graphicsWidget->setMinimumWidth( /*qMax(150,*/ qMax(width1, width2)/*)*/ );
 		return QString( "<nobr>%1: %2<br>%3: <a href='%4'>%5</a><nobr>" )
 		       .arg( i18nc( "@info/plain", "last update" ), sLastUpdate,
 		             i18nc( "@info/plain", "data by" ), url, shortUrl );
