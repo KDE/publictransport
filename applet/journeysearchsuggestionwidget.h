@@ -76,7 +76,9 @@ public:
 	 * @brief Creates a new journey search suggestion widget.
 	 *
 	 * @param parent The parent item.
+	 * 
 	 * @param settings A pointer to the settings object of the applet.
+	 * 
 	 * @param palette The palette to use. Defaults to QPalette().
 	 **/
 	explicit JourneySearchSuggestionWidget( QGraphicsItem *parent, Settings *settings, 
@@ -93,9 +95,11 @@ public:
 	 *   @p lineEdit are handled to generate suggestions.
 	 *
 	 * @param lineEdit A pointer to the Plasma::LineEdit to attach with.
+	 * 
 	 * @see detachLineEdit
 	 **/
 	void attachLineEdit( Plasma::LineEdit *lineEdit );
+	
 	/**
 	 * @brief Detaches a previously attached line edit widget.
 	 *
@@ -109,6 +113,7 @@ public:
 	/** @brief Sets the types of suggestions to show to @p suggestions. */
 	void setEnabledSuggestions( Suggestions suggestions = AllSuggestions ) {
 		m_enabledSuggestions = suggestions; };
+		
 	/** @brief Gets the types of suggestions to show. */
 	Suggestions enabledSuggestions() const { return m_enabledSuggestions; };
 
@@ -120,9 +125,12 @@ signals:
 	 * @brief Emitted after the attached line edit has been edited and it's content has been parsed.
 	 *
 	 * @param stopName The parsed stop name.
+	 * 
 	 * @param departure The parsed departure date and time.
+	 * 
 	 * @param stopIsTarget Whether or not the parsed stop should be treated as target (true)
 	 *   or as origin stop (false).
+	 * 
 	 * @param timeIsDeparture Whether or not the parsed time should be treated as departure (true)
 	 *   or as arrival time (false).
 	 **/
@@ -135,9 +143,11 @@ public slots:
 	 *
 	 * It is handled as if the stop suggestion was clicked.
 	 * Only if the item at the given @p index is a stop suggestion or a recent journey search.
+	 * 
 	 * @param index The QModelIndex of the stop suggestion to use.
 	 **/
 	void useStopSuggestion( const QModelIndex &index );
+	
 	/** @brief Updates the stop suggestions with stop suggestions in @p stopSuggestionData.
 	 *
 	 * @param stopSuggestionData Data with stop suggestions from the PublicTransport data engine.
@@ -157,12 +167,14 @@ protected slots:
 	 * @param index The QModelIndex of the clicked item.
 	 **/
 	void suggestionClicked( const QModelIndex &index );
+	
 	/**
 	 * @brief A suggestion item was doubleclicked.
 	 *
 	 * @param index The QModelIndex of the clicked item.
 	 **/
 	void suggestionDoubleClicked( const QModelIndex &index );
+	
 	/**
 	 * @brief The journey search line edit has been edited.
 	 *
@@ -175,10 +187,13 @@ protected:
 	
 	/** @brief Removes all general suggestion items, ie. no stop suggestion items. */
 	void removeGeneralSuggestionItems();
+	
 	/** @brief Add general completions, eg. "in X minutes". */
 	void addJourneySearchCompletions();
+	
 	/** @brief Add stop suggestions given in @p stopSuggestions. */
     void addStopSuggestionItems( const QStringList &stopSuggestions );
+	
 	void addAllKeywordAddRemoveItems();
 	void maybeAddKeywordAddRemoveItems( const QStringList &words, const QStringList &keywords,
 										const QString &type, const QStringList &descriptions,
@@ -201,6 +216,12 @@ private:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(JourneySearchSuggestionWidget::Suggestions)
 
+/**
+ * @brief A QGraphicsWidget representing a single suggestion in a JourneySearchSuggestionWidget.
+ * 
+ * It draws the icon stored in role Qt::DecorationRole and HTML code in Qt::DisplayRole gets
+ * drawn using a QTextDocument.
+ */
 class JourneySearchSuggestionItem : public QGraphicsWidget
 {
 	Q_OBJECT

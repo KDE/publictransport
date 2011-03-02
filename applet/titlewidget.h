@@ -105,12 +105,16 @@ public:
 
 	/** @brief Gets the current type of this title widget. */
 	TitleType titleType() const { return m_type; };
+	
 	/** @brief Gets the main icon widget. */
 	Plasma::IconWidget* icon() const { return m_icon; };
+	
 	/** @brief Gets the title string. */
 	QString title() const;
+	
 	/** @brief Gets the title widget. */
 	Plasma::Label *titleWidget() const;
+	
 	/** @brief Gets additional widgets used for the current @ref titleType. */
 	QList<QGraphicsWidget*> widgets() const { return m_widgets.values(); };
 
@@ -138,15 +142,18 @@ public:
 	 * @param title The new title string.
 	 **/
 	void setTitle( const QString &title );
+	
 	/**
 	 * @brief Changes the icon of the icon widget to the given @p iconType.
 	 *
 	 * @param iconType The new icon type for the icon widget.
 	 **/
 	void setIcon( MainIconDisplay iconType );
+	
 
 	/** @brief Adds a new @p widget of the given @p widgetType to this title item. */
 	void addWidget( QGraphicsWidget *widget, WidgetType widgetType );
+	
 	/** @brief Removes the widget of the given @p widgetType.
 	 *
 	 * @param widgetType The type of the widget to be removed.
@@ -156,8 +163,10 @@ public:
 	 * @returns True on success. Otherwise, false (eg. if there is no widget of the
 	 *   given @p widgetType). */
 	bool removeWidget( WidgetType widgetType, RemoveWidgetOptions options = DeleteWidget );
+	
 	/** @brief Removes and deletes all additional widgets, ie. not the icon and title widgets. */
 	void clearWidgets();
+	
 	QGraphicsWidget *createAndAddWidget( WidgetType widgetType );
 
 signals:
@@ -183,6 +192,7 @@ signals:
 	 * @brief An action of the recent journey menu has been triggered.
 	 *
 	 * @param recentJourneyAction The type of the triggered action.
+	 * 
 	 * @param recentJourney The search string of the triggered recent journey action,
 	 *   if @p recentJourneyAction is @ref ActionUseRecentJourney. Otherwise an empty QString.
 	 *
