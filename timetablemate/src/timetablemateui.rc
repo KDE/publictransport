@@ -1,0 +1,61 @@
+<!DOCTYPE kpartgui SYSTEM "kpartgui.dtd">
+<kpartgui name="timetablemate" version="2">
+<MenuBar>
+    <Menu noMerge="1" name="file"><text>&amp;File</text>
+	<Action name="file_new"/>
+	<Action name="file_open"/>
+	<Action name="file_open_installed"/>
+	<Action name="file_open_recent"/>
+	<Action name="file_save"/>
+	<Action name="file_save_as"/>
+	<Separator/>
+	<Action name="file_install"/>
+	<Action name="file_install_global"/>
+	<Separator/>
+	<Merge/>
+	<Separator/>
+	<Action name="file_quit"/>
+    </Menu>
+
+    <Menu noMerge="1" name="edit"><text>&amp;Edit</text>
+	<Separator/>
+	<Merge/>
+    </Menu>
+    
+    <Menu noMerge="1" name="view"><text>&amp;View</text>
+	<Action name="web_load_page" />
+	<Separator/>
+	<Action name="script_previous_function" />
+	<Action name="script_next_function" />
+	<Separator/>
+	<Merge/>
+    </Menu>
+
+    <Menu noMerge="1" name="tools"><text>&amp;Tools</text>
+	<Action name="tools_check" />
+	<Action name="script_run" />
+	<Separator/>
+	<Merge/>
+    </Menu>
+    
+    <Merge/>
+</MenuBar>
+
+<ToolBar name="mainToolBar">
+    <Action name="file_new" />
+    <Action name="file_open" />
+    <Action name="file_save" />
+    <Separator/>
+    <Merge/>
+    <Separator/>
+    <Action name="web_back" />
+    <Action name="web_forward" />
+    <Action name="web_stop" />
+    <Action name="web_reload" />
+    <Separator/>
+    <Action name="web_load_page" />
+    <Action name="script_run" />
+    <Separator/>
+    <Action name="tools_check" />
+</ToolBar>
+</kpartgui>

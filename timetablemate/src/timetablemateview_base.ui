@@ -1,0 +1,914 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>timetablemateview_base</class>
+ <widget class="QWidget" name="timetablemateview_base">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>461</width>
+    <height>494</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>kapp4_base</string>
+  </property>
+  <property name="autoFillBackground">
+   <bool>true</bool>
+  </property>
+  <layout class="QFormLayout" name="formLayout">
+   <property name="fieldGrowthPolicy">
+    <enum>QFormLayout::ExpandingFieldsGrow</enum>
+   </property>
+   <property name="rowWrapPolicy">
+    <enum>QFormLayout::WrapLongRows</enum>
+   </property>
+   <property name="formAlignment">
+    <set>Qt::AlignHCenter|Qt::AlignTop</set>
+   </property>
+   <item row="0" column="0" colspan="2">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tabGeneral">
+      <attribute name="title">
+       <string comment="@title:tab">&amp;General</string>
+      </attribute>
+      <layout class="QFormLayout" name="formLayout_2">
+       <property name="fieldGrowthPolicy">
+        <enum>QFormLayout::ExpandingFieldsGrow</enum>
+       </property>
+       <item row="0" column="0">
+        <widget class="QLabel" name="lblName">
+         <property name="text">
+          <string>&amp;Name:</string>
+         </property>
+         <property name="buddy">
+          <cstring>name</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lblDescription">
+         <property name="text">
+          <string>&amp;Description:</string>
+         </property>
+         <property name="buddy">
+          <cstring>description</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="lblVersion">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>&amp;Version:</string>
+         </property>
+         <property name="buddy">
+          <cstring>version</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="lblScriptFile">
+         <property name="text">
+          <string>&amp;Script File:</string>
+         </property>
+         <property name="buddy">
+          <cstring>scriptFile</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <layout class="QHBoxLayout" name="scriptFileLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="KLineEdit" name="scriptFile">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="toolTip">
+            <string comment="@info:tooltip">The script file, used to parse documents for departures/arrivals/journeys.</string>
+           </property>
+           <property name="whatsThis">
+            <string comment="@info:whatsthis">&lt;subtitle&gt;Script File&lt;/subtitle&gt;
+&lt;para&gt;The script file, used to parse documents for departures/arrivals/journeys.&lt;/para&gt;
+&lt;para&gt;&lt;note&gt;The script file needs to be in the same directory as the XML file. You need to save the XML file before you can add a new script file.&lt;/note&gt;&lt;/para&gt;</string>
+           </property>
+           <property name="inputMask">
+            <string/>
+           </property>
+           <property name="urlDropsEnabled">
+            <bool>false</bool>
+           </property>
+           <property name="clickMessage">
+            <string>The script file used to parse documents</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="btnCreateScriptFile">
+           <property name="toolTip">
+            <string comment="@info:tooltip">Creates a new script file and attaches it to this accessor.</string>
+           </property>
+           <property name="text">
+            <string notr="true">*</string>
+           </property>
+           <property name="popupMode">
+            <enum>QToolButton::InstantPopup</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="btnDetachScriptFile">
+           <property name="toolTip">
+            <string comment="@info:tooltip">Detaches the script file from this accessor.</string>
+           </property>
+           <property name="text">
+            <string notr="true">x</string>
+           </property>
+           <property name="popupMode">
+            <enum>QToolButton::InstantPopup</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="btnBrowseForScriptFile">
+           <property name="toolTip">
+            <string comment="@info:tooltip">Attaches an existing script to this accessor.</string>
+           </property>
+           <property name="text">
+            <string notr="true">...</string>
+           </property>
+           <property name="popupMode">
+            <enum>QToolButton::InstantPopup</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="lblAuthor">
+         <property name="text">
+          <string>&amp;Author:</string>
+         </property>
+         <property name="buddy">
+          <cstring>author</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="KLineEdit" name="author">
+         <property name="inputMask">
+          <string/>
+         </property>
+         <property name="clickMessage">
+          <string>Your name</string>
+         </property>
+         <property name="showClearButton" stdset="0">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="lblEmail">
+         <property name="text">
+          <string>&amp;E-Mail:</string>
+         </property>
+         <property name="buddy">
+          <cstring>email</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="KLineEdit" name="email">
+         <property name="inputMask">
+          <string/>
+         </property>
+         <property name="clickMessage">
+          <string>Your e-mail address</string>
+         </property>
+         <property name="showClearButton" stdset="0">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="KLineEdit" name="version">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string comment="@info:tooltip">The version of this accessor.</string>
+         </property>
+         <property name="inputMask">
+          <string/>
+         </property>
+         <property name="maxLength">
+          <number>64</number>
+         </property>
+         <property name="showClearButton" stdset="0">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="nameLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="KLineEdit" name="name">
+           <property name="toolTip">
+            <string comment="@info:tooltip">The name of the service provider. At least a name in english must be given and is used as fallback for other languages.</string>
+           </property>
+           <property name="inputMask">
+            <string/>
+           </property>
+           <property name="clickMessage">
+            <string>Name of the service provider</string>
+           </property>
+           <property name="showClearButton" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="KLanguageButton" name="currentLanguage">
+           <property name="toolTip">
+            <string comment="@info:tooltip">Change the language to edit the name and description.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="1">
+        <widget class="KRichTextWidget" name="description">
+         <property name="clickMessage">
+          <string>Description of the accessor. Should contain the supported cities / countries, things that may not work with this accessor, etc.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="KLineEdit" name="shortAuthor">
+         <property name="inputMask">
+          <string/>
+         </property>
+         <property name="clickMessage">
+          <string>A short version of your name</string>
+         </property>
+         <property name="showClearButton" stdset="0">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="lblShortAuthor">
+         <property name="text">
+          <string>Short Author &amp;Name:</string>
+         </property>
+         <property name="buddy">
+          <cstring>shortAuthor</cstring>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabURLs">
+      <attribute name="title">
+       <string comment="@title:tab">&amp;URLs</string>
+      </attribute>
+      <layout class="QFormLayout" name="formLayout_3">
+       <property name="fieldGrowthPolicy">
+        <enum>QFormLayout::ExpandingFieldsGrow</enum>
+       </property>
+       <item row="0" column="0">
+        <widget class="QLabel" name="lblUrl">
+         <property name="text">
+          <string>Home Page &amp;URL:</string>
+         </property>
+         <property name="buddy">
+          <cstring>url</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="KLineEdit" name="url">
+           <property name="toolTip">
+            <string comment="@info:tooltip">This can be used by applets to provide a link to the service provider's home page.</string>
+           </property>
+           <property name="whatsThis">
+            <string/>
+           </property>
+           <property name="inputMask">
+            <string/>
+           </property>
+           <property name="clickMessage">
+            <string>An URL to the service provider's home page</string>
+           </property>
+           <property name="showClearButton" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="btnUrlOpen">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="toolTip">
+            <string comment="@info:tooltip">Open the URL.</string>
+           </property>
+           <property name="text">
+            <string notr="true">...</string>
+           </property>
+           <property name="popupMode">
+            <enum>QToolButton::InstantPopup</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lblShortUrl">
+         <property name="text">
+          <string>Short U&amp;RL:</string>
+         </property>
+         <property name="buddy">
+          <cstring>shortUrl</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="KLineEdit" name="shortUrl">
+         <property name="toolTip">
+          <string comment="@info:tooltip">Short version of the home page URL, ie. don't include &quot;www.&quot; here.&lt;nl/&gt;This is only used as display string for links.</string>
+         </property>
+         <property name="inputMask">
+          <string/>
+         </property>
+         <property name="clickMessage">
+          <string>Same as Home Page URL, but shorter</string>
+         </property>
+         <property name="showClearButton" stdset="0">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="KSeparator" name="kseparator_3"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="lblRawDepartureUrl">
+         <property name="text">
+          <string>Raw &amp;Departure URL:</string>
+         </property>
+         <property name="buddy">
+          <cstring>rawDepartureUrl</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="KLineEdit" name="rawDepartureUrl">
+           <property name="toolTip">
+            <string comment="@info:tooltip">An URL with placeholders, pointing &lt;emphasis&gt;directly&lt;/emphasis&gt; to the departure/arrival board.&lt;nl/&gt;Click the button on the right to insert placeholders.</string>
+           </property>
+           <property name="whatsThis">
+            <string comment="@info:whatsthis">&lt;subtitle&gt;Raw Departure URL&lt;/subtitle&gt;
+&lt;para&gt;An URL with placeholders, pointing &lt;emphasis&gt;directly&lt;/emphasis&gt; to the departure/arrival board. The body of that document will be given to the script to be parsed.&lt;/para&gt;
+&lt;para&gt;&lt;note&gt;You can click the button on the right to insert placeholders.&lt;/note&gt;&lt;/para&gt;
+&lt;para&gt;&lt;note label='Tip'&gt;To find out how the URL looks like, with most service providers it's not possible to just copy the contents of the URL bar in your browser, because the URL parameters might not be included. To get a usable URL view the sources of the HTML file with the formular to enter a stop name and other values to get a departure board on submit. The &lt;emphasis&gt;name attribute&lt;/emphasis&gt; of the input box for the stop name might be the correct name of the URL parameter for the stop name for example.&lt;/note&gt;&lt;/para&gt;</string>
+           </property>
+           <property name="inputMask">
+            <string/>
+           </property>
+           <property name="clickMessage">
+            <string>An URL to a departure board</string>
+           </property>
+           <property name="showClearButton" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="btnDepartureUrlInsertPlaceHolder">
+           <property name="toolTip">
+            <string comment="@info:tooltip">Insert a placeholder.</string>
+           </property>
+           <property name="text">
+            <string notr="true">...</string>
+           </property>
+           <property name="popupMode">
+            <enum>QToolButton::InstantPopup</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="btnDepartureUrlOpen">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="toolTip">
+            <string comment="@info:tooltip">Open the URL.</string>
+           </property>
+           <property name="text">
+            <string notr="true">...</string>
+           </property>
+           <property name="popupMode">
+            <enum>QToolButton::InstantPopup</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="lblRawJourneyUrl">
+         <property name="text">
+          <string>Raw J&amp;ourney URL:</string>
+         </property>
+         <property name="buddy">
+          <cstring>rawJourneyUrl</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="KLineEdit" name="rawJourneyUrl">
+           <property name="toolTip">
+            <string comment="@info:tooltip">An URL with placeholders, pointing &lt;emphasis&gt;directly&lt;/emphasis&gt; to the journey list.&lt;nl/&gt;Click the button on the right to insert placeholders.</string>
+           </property>
+           <property name="whatsThis">
+            <string comment="@info:whatsthis">&lt;subtitle&gt;Raw Journey URL&lt;/subtitle&gt;
+&lt;para&gt;An URL with placeholders, pointing &lt;emphasis&gt;directly&lt;/emphasis&gt; to the journey list. The body of that document will be given to the script to be parsed.&lt;/para&gt;
+&lt;para&gt;&lt;note&gt;You can click the button on the right to insert placeholders.&lt;/note&gt;&lt;/para&gt;
+&lt;para&gt;&lt;note label='Tip'&gt;To find out how the URL looks like, with most service providers it's not possible to just copy the contents of the URL bar in your browser, because the URL parameters might not be included. To get a usable URL &lt;emphasis&gt;view the sources of the HTML file&lt;/emphasis&gt; with the formular to enter a start and target stop name and other values to get a journey list on submit. The &lt;emphasis&gt;name attribute&lt;/emphasis&gt; of the input boxes for the stop names might be the correct names of the URL parameters for the stop names for example.&lt;/note&gt;&lt;/para&gt;</string>
+           </property>
+           <property name="inputMask">
+            <string/>
+           </property>
+           <property name="clickMessage">
+            <string>An URL to a journey timetable</string>
+           </property>
+           <property name="showClearButton" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="btnJourneyUrlInsertPlaceHolder">
+           <property name="toolTip">
+            <string comment="@info:tooltip">Insert a placeholder.</string>
+           </property>
+           <property name="text">
+            <string notr="true">...</string>
+           </property>
+           <property name="popupMode">
+            <enum>QToolButton::InstantPopup</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="btnJourneyUrlOpen">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="toolTip">
+            <string comment="@info:tooltip">Open the URL.</string>
+           </property>
+           <property name="text">
+            <string notr="true">...</string>
+           </property>
+           <property name="popupMode">
+            <enum>QToolButton::InstantPopup</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="lblRawStopSuggestionsUrl">
+         <property name="text">
+          <string>Raw Stop Su&amp;ggestion URL:</string>
+         </property>
+         <property name="buddy">
+          <cstring>rawStopSuggestionsUrl</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="KLineEdit" name="rawStopSuggestionsUrl">
+           <property name="toolTip">
+            <string comment="@info:tooltip">An URL with placeholders, pointing &lt;emphasis&gt;directly&lt;/emphasis&gt; to a document with stop suggestions for a given substring.&lt;nl/&gt;Click the button on the right to insert placeholders.</string>
+           </property>
+           <property name="whatsThis">
+            <string comment="@info:whatsthis">&lt;subtitle&gt;Raw Stop Suggestions URL&lt;/subtitle&gt;
+&lt;para&gt;An URL with placeholders, pointing &lt;emphasis&gt;directly&lt;/emphasis&gt; to a document with stop suggestions for a given substring. The body of that document will be given to the script to be parsed.&lt;/para&gt;
+&lt;para&gt;&lt;note&gt;You can click the button on the right to insert placeholders.&lt;/note&gt;&lt;/para&gt;
+&lt;para&gt;&lt;note label='Tip'&gt;To find out how the URL looks like, with most service providers it's not possible to just copy the contents of the URL bar in your browser, because the URL parameters might not be included. To get a usable URL view the sources of the HTML file with the formular to enter a part of the stop name to get stop suggestions on submit. The &lt;emphasis&gt;name attribute&lt;/emphasis&gt; of the input box for the stop name might be the correct name of the URL parameter for the stop name for example.&lt;/note&gt;&lt;/para&gt;</string>
+           </property>
+           <property name="inputMask">
+            <string/>
+           </property>
+           <property name="clickMessage">
+            <string>An URL to a stop suggestions document</string>
+           </property>
+           <property name="showClearButton" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="btnStopUrlInsertPlaceHolder">
+           <property name="toolTip">
+            <string comment="@info:tooltip">Insert a placeholder.</string>
+           </property>
+           <property name="text">
+            <string notr="true">...</string>
+           </property>
+           <property name="popupMode">
+            <enum>QToolButton::InstantPopup</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="btnStopUrlOpen">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="toolTip">
+            <string comment="@info:tooltip">Open the URL.</string>
+           </property>
+           <property name="text">
+            <string notr="true">...</string>
+           </property>
+           <property name="popupMode">
+            <enum>QToolButton::InstantPopup</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabAdvanced">
+      <attribute name="title">
+       <string comment="@title:tab">&amp;Advanced</string>
+      </attribute>
+      <layout class="QFormLayout" name="formLayout_4">
+       <property name="fieldGrowthPolicy">
+        <enum>QFormLayout::ExpandingFieldsGrow</enum>
+       </property>
+       <item row="0" column="0">
+        <widget class="QLabel" name="lblFileVersion">
+         <property name="text">
+          <string>File Type &amp;Version:</string>
+         </property>
+         <property name="buddy">
+          <cstring>fileVersion</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="fileTypeVersionLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="KLineEdit" name="fileVersion">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string comment="@info:tooltip">The version of the XML accessor file type.&lt;nl/&gt;The PublicTransport data engine currently only accepts 1.0 as version</string>
+           </property>
+           <property name="inputMask">
+            <string/>
+           </property>
+           <property name="maxLength">
+            <number>64</number>
+           </property>
+           <property name="showClearButton" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblFileVersionWarning">
+           <property name="text">
+            <string notr="true">&lt;warning if not the only supported &quot;1.0&quot;&gt;</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lblType">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Accessor &amp;Type:</string>
+         </property>
+         <property name="buddy">
+          <cstring>type</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="KComboBox" name="type">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string comment="@info:tooltip">TimetableMate currently only supports HTML accessors.</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>HTML</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>XML</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="KSeparator" name="kseparator_2"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="lblDefaultVehicleType">
+         <property name="text">
+          <string>Default &amp;Vehicle Type:</string>
+         </property>
+         <property name="buddy">
+          <cstring>defaultVehicleType</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="KComboBox" name="defaultVehicleType">
+         <property name="toolTip">
+          <string comment="@info:tooltip">The vehicle type to be used if it couldn't be determined from the parsed document.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="lblRawStopSuggestionsUrl_2">
+         <property name="text">
+          <string>Min. Fetch &amp;Wait:</string>
+         </property>
+         <property name="buddy">
+          <cstring>minFetchWait</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QSpinBox" name="minFetchWait">
+         <property name="toolTip">
+          <string comment="@info:tooltip">The minimum time in minutes to wait between fetches of the same URL.
+&lt;note&gt;Should only be set higher than two minutes if the service provider demands it. The data engine tries to estimate the best time to wait to always have actual data without wasting traffic.&lt;/note&gt;</string>
+         </property>
+         <property name="wrapping">
+          <bool>false</bool>
+         </property>
+         <property name="buttonSymbols">
+          <enum>QAbstractSpinBox::UpDownArrows</enum>
+         </property>
+         <property name="accelerated">
+          <bool>true</bool>
+         </property>
+         <property name="suffix">
+          <string> Minutes</string>
+         </property>
+         <property name="minimum">
+          <number>2</number>
+         </property>
+         <property name="maximum">
+          <number>300</number>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="2">
+        <widget class="KSeparator" name="kseparator"/>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="lblUseCityValue">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>&amp;Use City Value:</string>
+         </property>
+         <property name="buddy">
+          <cstring>useCityValue</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QCheckBox" name="useCityValue">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string comment="@info:tooltip">Automatically checked, if the raw departure URL contains a placeholder for the city.</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0" colspan="2">
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Predefined &amp;Cities</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout_5">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblOnlyAllowPredefinedCities">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string>Only &amp;Allow Predefined Cities:</string>
+            </property>
+            <property name="buddy">
+             <cstring>useCityValue</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="onlyAllowPredefinedCities">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="2">
+           <widget class="KEditListBox" name="predefinedCities">
+            <property name="whatsThis">
+             <string comment="@info:whatsthis">&lt;subtitle&gt;Use Predefined Cities&lt;/subtitle&gt;
+&lt;para&gt;If the service provider only accepts a (small) set of cities or if the city values to be passed to the service provider are not suitable to be displayed to the user, add all supported cities here.&lt;/para&gt;
+&lt;para&gt;Each city can have a replacement value, the city name is then used for displaying and the replacement value is used as city value for the service provider.&lt;/para&gt;</string>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabChangelog">
+      <attribute name="title">
+       <string comment="@title:tab">&amp;Changelog</string>
+      </attribute>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>KEditListBox</class>
+   <extends>QGroupBox</extends>
+   <header>keditlistbox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>KRichTextEdit</class>
+   <extends>KTextEdit</extends>
+   <header>krichtextedit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>KLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>klineedit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>KComboBox</class>
+   <extends>QComboBox</extends>
+   <header>kcombobox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>KLanguageButton</class>
+   <extends>QWidget</extends>
+   <header>klanguagebutton.h</header>
+  </customwidget>
+  <customwidget>
+   <class>KSeparator</class>
+   <extends>QFrame</extends>
+   <header>kseparator.h</header>
+  </customwidget>
+  <customwidget>
+   <class>KTextEdit</class>
+   <extends>QTextEdit</extends>
+   <header>ktextedit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>KRichTextWidget</class>
+   <extends>KRichTextEdit</extends>
+   <header>krichtextwidget.h</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>name</tabstop>
+  <tabstop>currentLanguage</tabstop>
+  <tabstop>description</tabstop>
+  <tabstop>version</tabstop>
+  <tabstop>scriptFile</tabstop>
+  <tabstop>btnCreateScriptFile</tabstop>
+  <tabstop>btnDetachScriptFile</tabstop>
+  <tabstop>btnBrowseForScriptFile</tabstop>
+  <tabstop>author</tabstop>
+  <tabstop>email</tabstop>
+  <tabstop>url</tabstop>
+  <tabstop>btnUrlOpen</tabstop>
+  <tabstop>shortUrl</tabstop>
+  <tabstop>rawDepartureUrl</tabstop>
+  <tabstop>btnDepartureUrlInsertPlaceHolder</tabstop>
+  <tabstop>btnDepartureUrlOpen</tabstop>
+  <tabstop>rawJourneyUrl</tabstop>
+  <tabstop>btnJourneyUrlInsertPlaceHolder</tabstop>
+  <tabstop>btnJourneyUrlOpen</tabstop>
+  <tabstop>rawStopSuggestionsUrl</tabstop>
+  <tabstop>btnStopUrlInsertPlaceHolder</tabstop>
+  <tabstop>btnStopUrlOpen</tabstop>
+  <tabstop>fileVersion</tabstop>
+  <tabstop>type</tabstop>
+  <tabstop>defaultVehicleType</tabstop>
+  <tabstop>minFetchWait</tabstop>
+  <tabstop>useCityValue</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>

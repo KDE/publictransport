@@ -1,0 +1,8 @@
+[Domain]
+Name=TimetableMate
+Icon=public-transport-stop
+
+[org.kde.timetablemate.install]
+Name=Install timetable accessor globally
+Description=Authentication is required to install the timetable accessor files globally
+Policy=auth_admin

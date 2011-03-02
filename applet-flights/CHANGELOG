@@ -1,0 +1,5 @@
+
+Changelog of plasma-applet-flights
+
+0.10 - Beta 3
+- A new applet only for flights. It always uses international_flightstats as service provider and has a very simple interface.

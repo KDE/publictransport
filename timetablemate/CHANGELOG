@@ -1,0 +1,32 @@
+
+Changelog of timetablemate
+
+0.2.2:
+- Updated syntax completion/checking to new features in the data engine (version 0.10).
+- After a test run of the script debug output from the script is shown (using helper.error() from the script).
+- Added a GUI for changelogs (using AbstractDynamicWidgetContainer from the publictransporthelper library).
+- More crash fixes with bad/empty javascript code.
+
+0.2.1
+- Fixed crashes in the javascript parser when parsing incorrect files and hitting an unexpected EOF at some points.
+- Added possibility to start the app with url arguments to be opened.
+
+0.2
+- New parser for java script, gives some error messages with line numbers and columns, like "unclosed string", "function definition missing", "timetable info string is invalid".
+- Errors from the new parser are highlighted in the document (KTextEditor::MarkInterface).
+- Errors from the new parser are used for the "Check" action.
+- Added tooltips for global parser functions, timetable info strings and some function calls in the script source tab, using KTextEditor::TextHintInterface and the java script parser.
+- The script tab is now disabled on startup when no accessor is loaded and no script is specified in the accessor tab.
+- The "Show Plasma Preview" button in the preview tab is now correctly embedded into the graphics scene (and centered).
+- Creating a new script for the current accessor now doesn't try to save to ".js" if the accessor wasn't opened before (only saved).
+- The accessor source tab is now synced with the accessor tab on startup (previously is was empty on startup).
+- Now using KAuth to install accessors globally.
+- Now showing the current line and column in the script tab.
+- Localization of the name and description fields is now possible using TimetableMate.
+- The "Use City Value" field now gets automatically set/unset if the raw departure or journey URL contains a placeholder for the city.
+- Added support for city name replacements and "onlyUsePredefinedCities".
+- The plasma previewer now automatically opens the configuration dialog of the applet with the currently opened accessor selected.
+
+0.1
+- Initial version of TimetableMate
+- A little IDE to create/edit/check timetable accessors, ie. scripted publictransport data engine plugins. If you want to add support for a new service provider it's a handy tool. It's KParts based and uses the KatePart for editing scripts, with syntax completion for functions/objects specific to the data engine (with documentation, the parser functions have templates). It can also fetch data from the service provider and run the script for testing, with output about errors/suggestions. URLs can be checked (and script output verified) with the integrated KWebKitPart. A Plasma previewer is also integrated to see how the accessor works in "real life".

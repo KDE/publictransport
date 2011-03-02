@@ -1,0 +1,12 @@
+
+Changelog of plasma-applet-graphicaltimetableline
+
+0.10 - Beta 4
+- The departure column in the mini timetable is now automatically sized to it's widest entry (just like the transport line column)
+- Fixed train SVGs to correctly cut the train icons in the circles.
+
+0.10 - Beta 3
+- A new applet with a graphical presentation of departures, showing a street with the positions of the next departing vehicles.
+- It can also show a little timetable, at the position of the stop.
+- Vehicles are painted using an SVG, transport line strings are drawn if possible for local public transport.
+- Completely animated (moving vehicles, departing animation).
