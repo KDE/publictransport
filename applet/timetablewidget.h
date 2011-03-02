@@ -83,12 +83,27 @@ public:
 	qreal expandStep() const { return m_expandStep; };
 	void setExpandStep( qreal expandStep ) { m_expandStep = expandStep; updateGeometry(); };
 	
-	inline qreal padding() const { return 5.0; };
+	inline qreal padding() const;
 	void capturePixmap();
 	
 	virtual qreal expandSize() const = 0;
 	virtual void paintExpanded( QPainter* painter, const QStyleOptionGraphicsItem* option, 
 								const QRectF &rect ) = 0;
+	
+	virtual inline QColor textColor() const {
+		#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+			return Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor);
+		#else
+			return Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
+		#endif
+	};
+	virtual inline QColor backgroundColor() const {
+		#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+			return Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor);
+		#else
+			return Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor);
+		#endif
+	};
 	
 protected slots:
 	void resizeAnimationFinished();
@@ -128,7 +143,7 @@ class DepartureGraphicsItem : public PublicTransportGraphicsItem {
 public:
 	DepartureGraphicsItem( QGraphicsItem* parent = 0 );
 	
-	void updateData( DepartureItem* item, const QModelIndex &index, bool update = false );
+	void updateData( DepartureItem* item, bool update = false );
 	inline DepartureItem *departureItem() const { return qobject_cast<DepartureItem*>(m_item); };
 	
 	virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
@@ -209,7 +224,7 @@ public:
 	Plasma::Svg *svg() const { return m_svg; };
 	
     void setIconSize( qreal iconSize ) { m_iconSize = iconSize; updateItemLayouts(); };
-	qreal iconSize() const { return m_maxLineCount == 1 ? m_iconSize * m_zoomFactor  * 0.7
+	qreal iconSize() const { return m_maxLineCount == 1 ? m_iconSize * m_zoomFactor * 0.75
 			: m_iconSize * m_zoomFactor; };
 	
 	void setZoomFactor( qreal zoomFactor = 1.0 ) { m_zoomFactor = zoomFactor; };
@@ -236,6 +251,7 @@ protected slots:
     virtual void rowsRemoved( const QModelIndex &parent, int first, int last );
     virtual void modelReset();
     virtual void layoutChanged();
+    virtual void dataChanged( const QModelIndex &topLeft, const QModelIndex &bottomRight ) = 0;
 	
 protected:
     virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint ) const;

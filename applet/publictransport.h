@@ -92,7 +92,7 @@ private:
  * in a thread using @ref DepartureProcessor, which also applies filters and alarms.
  *
  * @ref TitleWidget is used as title. The departures/arrivals/journeys are shown in
- * Plasma::TreeView widgets, using @ref HtmlDelegate for theming.
+ * TimetableWidget/JourneyTimetableWidget.
  **/
 class PublicTransport : public Plasma::PopupApplet {
 	Q_PROPERTY( int DepartureCount READ departureCount )

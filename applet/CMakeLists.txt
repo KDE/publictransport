@@ -14,15 +14,14 @@ include_directories(
 set( publictransport_SRCS
     publictransport.cpp
     titlewidget.cpp
-    journeysearchsuggestionwidget.cpp
     departureprocessor.cpp
     departuremodel.cpp
+    journeysearchsuggestionwidget.cpp
     journeysearchparser.cpp
     journeysearchlineedit.cpp
     overlaywidget.cpp
     global.cpp
     filter.cpp
-    htmldelegate.cpp
     departureinfo.cpp
     settings.cpp
     filterwidget.cpp

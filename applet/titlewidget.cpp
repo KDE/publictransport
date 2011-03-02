@@ -475,6 +475,7 @@ void TitleWidget::settingsChanged()
 void TitleWidget::resizeEvent(QGraphicsSceneResizeEvent* event)
 {
     QGraphicsWidget::resizeEvent( event );
+	m_filterWidget->setVisible( m_filterWidget->size().width() < size().width() / 2.2 );
 	updateTitle();
 }
 
@@ -484,47 +485,9 @@ void TitleWidget::updateTitle()
 	qreal maxStopNameWidth = contentsRect().width() - m_icon->boundingRect().right()
 			- m_filterWidget->boundingRect().width() - 10;
 	
-// 	QStringList words = m_titleText.split( ' ', QString::SkipEmptyParts );
-// 	if ( words.count() <= 1 ) {
 	if ( !m_titleText.contains(QRegExp("<\\/?[^>]+>")) ) {
 		m_title->setText( fm.elidedText(m_titleText, Qt::ElideRight, maxStopNameWidth * 2.0) );
 	} else {
 		m_title->setText( m_titleText );
 	}
-// 	} else if ( m_titleText.contains("<br/>") ) {
-// 		QStringList lines = m_titleText.split( "<br/>" );
-// 		kDebug() << lines << "lines" << maxStopNameWidth;
-// 		
-// 		QRegExp rx( "(<\\/?[^>]+>)" );
-// 		for ( int i = 0; i < lines.count(); ++i ) {
-// 			QString line = lines[i];
-// 			rx.setMinimal( true );
-// 			QString lineTags;
-// 			int index = 0;
-// 			while ( (index = rx.indexIn(line, index)) != -1 ) {
-// 				lineTags.append( rx.cap(1) );
-// 				index += rx.matchedLength();
-// 			}
-// 			int tagWidth = fm.width( lineTags );
-// 			
-// 			lines[i] = fm.elidedText( lines[i], Qt::ElideRight, maxStopNameWidth + tagWidth );
-// 		}
-// 		m_title->setText( lines.join("<br/>") );
-// 	} else {
-// 		QStringList words1;
-// 		foreach ( const QString &word, words ) {
-// 			if ( fm.width(words1.join(" ") + ' ' + word) >= maxStopNameWidth ) {
-// 				break;
-// 			}
-// 			words1 << word;
-// 		}
-// 		
-// 		QString part2 = ( (QStringList)words.mid(words1.count()) ).join(" ");
-// 		if ( part2.isEmpty() ) {
-// 			m_title->setText( m_titleText );
-// 		} else {
-// 			m_title->setText( words1.join(" ") + ' ' +
-// 					fm.elidedText(part2, Qt::ElideRight, maxStopNameWidth) );
-// 		}
-// 	}
 }
