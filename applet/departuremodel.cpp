@@ -1415,8 +1415,8 @@ void JourneyModel::sort( int column, Qt::SortOrder order )
 		sorted_children << item;
 
 		for ( int c = 0; c < columnCount(); ++c ) {
-			changedPersistentIndexesFrom.append( createIndex( r, c ) );
-			changedPersistentIndexesTo.append( createIndex( i, c ) );
+			changedPersistentIndexesFrom.append( createIndex(r, c) );
+			changedPersistentIndexesTo.append( createIndex(i, c) );
 		}
 	}
 

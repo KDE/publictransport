@@ -160,27 +160,31 @@ public:
 	/** Gets the text of this child item. */
 	inline QString text() const {
 		return m_data.value( Qt::DisplayRole ).toString(); };
-	/** Sets the text of this child item to @p text.
-	* The @ref HtmlDelegate ignores this unformatted text if a formatted
-	* text is set.
-	* @see setFormattedText */
+	/** 
+	 * @brief Sets the text of this child item to @p text.
+	 * 
+	 * Views can ignore this unformatted text if a formatted text is set.
+	 * @see setFormattedText */
 	inline void setText( const QString &text ) {
 		setData( text, Qt::DisplayRole ); };
 
-	/** Gets the formatted text of this child item. */
+	/** @brief Gets the formatted text of this child item. */
 	inline QString formattedText() const {
 		return m_data.value( FormattedTextRole ).toString(); };
-	/** Sets the formatted text of this child item to @p text.
-	* @p text can contain HTML tags. The @ref HtmlDelegate ignores the
-	* unformatted text (stored in Qt::DisplayRole) if a formatted text is set.
-	* @see setText */
+	/**
+	 * @brief Sets the formatted text of this child item to @p text.
+	 * 
+	 * @p text can contain HTML tags. Views can ignores the unformatted text (stored in 
+	 * Qt::DisplayRole) if a formatted text is set.
+	 * 
+	 * @see setText */
 	inline void setFormattedText( const QString &text ) {
 		setData( text, FormattedTextRole ); };
 
-	/** Gets the icon of this child item. */
+	/** @brief Gets the icon of this child item. */
 	virtual inline QIcon icon() const {
 		return m_data.value( Qt::DecorationRole ).value< QIcon >(); };
-	/** Sets the icon of this child item to @p icon. */
+	/** @brief Sets the icon of this child item to @p icon. */
 	inline void setIcon( const QIcon &icon ) {
 		setData( icon, Qt::DecorationRole ); };
 
@@ -199,30 +203,38 @@ public:
 
 	virtual void setData( Columns column, const QVariant &data, int role = Qt::UserRole );
 
-	/** Gets the text of the given @p column. */
+	/** @brief Gets the text of the given @p column. */
 	inline QString text( Columns column = ColumnLineString ) const {
 		return m_columnData.value( column )[ Qt::DisplayRole ].toString(); };
-	/** Sets the text of the given @p column to @p text.
-	* The @ref HtmlDelegate ignores this unformatted text if a formatted
-	* text is set.
-	* @see setFormattedText */
+	
+	/**
+	 * @brief Sets the text of the given @p column to @p text.
+	 * 
+	 * Views can ignore this unformatted text if a formatted text is set.
+	 * 
+	 * @see setFormattedText */
 	inline void setText( Columns column, const QString &text ) {
 		setData( column, text, Qt::DisplayRole ); };
 
-	/** Gets the formatted text of the given @p column. */
+	/** @brief Gets the formatted text of the given @p column. */
 	inline QString formattedText( Columns column = ColumnLineString ) const {
 		return m_columnData.value( column )[ FormattedTextRole ].toString(); };
-	/** Sets the formatted text of the given @p column to @p text.
-	* @p text can contain HTML tags. The @ref HtmlDelegate ignores the
-	* unformatted text (stored in Qt::DisplayRole) if a formatted text is set.
-	* @see setText */
+		
+	/**
+	 * @brief Sets the formatted text of the given @p column to @p text.
+	 * 
+	 * @p text can contain HTML tags. The @ref HtmlDelegate ignores the
+	 * unformatted text (stored in Qt::DisplayRole) if a formatted text is set.
+	 * 
+	 * @see setText */
 	inline void setFormattedText( Columns column, const QString &text ) {
 	    setData( column, text, FormattedTextRole ); };
 
-	/** Gets the icon of the given @p column. */
+	/** @brief Gets the icon of the given @p column. */
 	inline QIcon icon( Columns column = ColumnLineString ) const {
 		return m_columnData.value( column )[ Qt::DecorationRole ].value< QIcon >(); };
-	/** Sets the icon of the given @p column to @p icon. */
+	
+	/** @brief Sets the icon of the given @p column to @p icon. */
 	inline void setIcon( Columns column, const QIcon &icon ) {
 	    setData( column, icon, Qt::DecorationRole ); };
 
@@ -241,54 +253,69 @@ class JourneyItem : public TopLevelItem {
 public:
 	JourneyItem( const JourneyInfo &journeyInfo, const Info *info );
 
-	/** The row of this journey item in the model. */
+	/** @brief The row of this journey item in the model. */
 	virtual int row() const;
+	
 	/** @returns the information that this item currently shows. */
 	const JourneyInfo *journeyInfo() const { return &m_journeyInfo; };
+	
 	/** @returns a hash with child items by their type. */
 	QHash< ItemType, ChildItem* > typedChildren() const;
 
 	virtual QVariant data( int role = Qt::DisplayRole, int column = 0 ) const;
 
-	/** Updates remaining time values in the departure/arrival column. */
+	/** @brief Updates remaining time values in the departure/arrival column. */
 	virtual void updateTimeValues();
-	/** Updates this item and all it's child items according to the
-	* inforamtion in @p journeyInfo. */
+	
+	/** @brief Updates this item and all it's child items according to the inforamtion 
+	 * in @p journeyInfo. */
 	void setJourneyInfo( const JourneyInfo &journeyInfo );
 
 protected:
-	/** Updates this item. */
+	/** @brief Updates this item. */
 	void updateValues();
-	/** Creates and adds all children for the current data. */
+	
+	/** @brief Creates and adds all children for the current data. */
 	void createChildren();
-	/** Updates all child items, add/removes children if necessary. */
+	
+	/** @brief Updates all child items, add/removes children if necessary. */
 	void updateChildren();
-	/** Adds a new child item of the given @p itemType. */
+	
+	/** @brief Adds a new child item of the given @p itemType. */
 	ChildItem *appendNewChild( ItemType itemType );
-	/** Updates the given @p child item which is of type @p itemType. */
+	
+	/** @brief Updates the given @p child item which is of type @p itemType. */
 	void updateChild( ItemType itemType, ChildItem *child );
+	
 	/** @returns true, if there's data to be shown for the given @p itemType. */
 	bool hasDataForChildType( ItemType itemType );
-	/** @param itemType The child item type to get the display text for.
-	* @param linesPerRow The number of lines for the new item is put here,
-	* if it's not NULL.
-	* @returns the text to be displayed for the given @p itemType. */
+	
+	/** 
+	 * @param itemType The child item type to get the display text for.
+	 * 
+	 * @param linesPerRow The number of lines for the new item is put here, if it's not NULL.
+	 * 
+	 * @returns the text to be displayed for the given @p itemType. */
 	QString childItemText( ItemType itemType, int *linesPerRow = NULL );
-	/** Creates a route item with one child item for each route stop. */
+	
+	/** @brief Creates a route item with one child item for each route stop. */
 	ChildItem *createRouteItem();
+	
 	/** A rating value between 0 (best) and 1 (worst). Journeys are rated
-	* by their duration and the needed changes relative to the global
-	* maximal/minimal duration/changes of the model. */
+	 * by their duration and the needed changes relative to the global
+	 * maximal/minimal duration/changes of the model. */
 	qreal rating() const;
 
 	JourneyInfo m_journeyInfo;
 };
 
 /**
-* To update this item and it's child items call @ref setDepartureInfo. To only update remaining
-* time values, call @ref updateTimeValues.
-* @brief An item which automatically creates/updates child items according to the information in @ref departureInfo.
-* @ingroup models */
+ * @brief An item which automatically creates/updates child items according to the information in @ref departureInfo.
+ * 
+ * To update this item and it's child items call @ref setDepartureInfo. To only update remaining
+ * time values, call @ref updateTimeValues.
+ * 
+ * @ingroup models */
 class DepartureItem : public TopLevelItem {
 	Q_OBJECT
 	Q_PROPERTY( qreal alarmColorIntensity READ alarmColorIntensity WRITE setAlarmColorIntensity )
@@ -296,10 +323,12 @@ class DepartureItem : public TopLevelItem {
 public:
 	DepartureItem( const DepartureInfo &departureInfo, const Info *info );
 
-	/** The row of this departure item in the model. */
+	/** @brief The row of this departure item in the model. */
 	virtual int row() const;
+	
 	/** @returns the information that this item currently shows. */
 	const DepartureInfo *departureInfo() const { return &m_departureInfo; };
+	
 	/** @returns a hash with child items by their type. */
 	QHash< ItemType, ChildItem* > typedChildren() const;
 
@@ -308,50 +337,66 @@ public:
 	/** @returns the current alarm states.
 	* @see AlarmStates */
 	AlarmStates alarmStates() const { return m_alarm; };
-	/** Sets the alarm states. */
+	
+	/** @brief Sets the alarm states. */
 	void setAlarmStates( AlarmStates alarmStates );
-	/** Sets an alarm for this departure. */
+	
+	/** @brief Sets an alarm for this departure. */
 	void setAlarm();
-	/** Removes a possibly set alarm. */
+	
+	/** @brief Removes a possibly set alarm. */
 	void removeAlarm();
-	/** Whether or not this departure has an alarm (pending or fired). */
+	
+	/** @brief Whether or not this departure has an alarm (pending or fired). */
 	bool hasAlarm() const { return m_alarm.testFlag(AlarmPending) || m_alarm.testFlag(AlarmFired); };
-	/** Whether or not this departure has a pending alarm. */
+	
+	/** @brief Whether or not this departure has a pending alarm. */
 	virtual bool hasPendingAlarm() const { return m_alarm.testFlag(AlarmPending); };
 
-	/** Gets the date and time at which an alarm for this departure should be fired. */
+	/** @brief Gets the date and time at which an alarm for this departure should be fired. */
 	QDateTime alarmTime() const {
 		return m_departureInfo.predictedDeparture().addSecs(
 				-m_info->alarmMinsBeforeDeparture * 60 );
 	};
+	
 	qreal alarmColorIntensity() const { return m_alarmColorIntensity; };
 	void setAlarmColorIntensity( qreal alarmColorIntensity );
 
-	/** Updates remaining time values in the departure column. */
+	/** @brief Updates remaining time values in the departure column. */
 	virtual void updateTimeValues();
-	/** Updates this item and all it's child items according to the
-	* inforamtion in @p departureInfo. */
+	
+	/** @brief Updates this item and all it's child items according to the inforamtion 
+	 * in @p departureInfo. */
 	void setDepartureInfo( const DepartureInfo &departureInfo );
 
 protected:
-	/** Updates this item. */
+	/** @brief Updates this item. */
 	void updateValues();
-	/** Creates and adds all children for the current data. */
+	
+	/** @brief Creates and adds all children for the current data. */
 	void createChildren();
-	/** Updates all child items, add/removes children if necessary. */
+	
+	/** @brief Updates all child items, add/removes children if necessary. */
 	void updateChildren();
-	/** Adds a new child item of the given @p itemType. */
+	
+	/** @brief Adds a new child item of the given @p itemType. */
 	ChildItem *appendNewChild( ItemType itemType );
-	/** Updates the given @p child item which is of type @p itemType. */
+	
+	/** @brief Updates the given @p child item which is of type @p itemType. */
 	void updateChild( ItemType itemType, ChildItem *child );
+	
 	/** @returns true, if there's data to be shown for the given @p itemType. */
 	bool hasDataForChildType( ItemType itemType );
-	/** @param itemType The child item type to get the display text for.
-	* @param linesPerRow The number of lines for the new item is put here,
-	* if it's not NULL.
-	* @returns the text to be displayed for the given @p itemType. */
+	
+	/** 
+	 * @param itemType The child item type to get the display text for.
+	 * 
+	 * @param linesPerRow The number of lines for the new item is put here, if it's not NULL.
+	 * 
+	 * @returns the text to be displayed for the given @p itemType. */
 	QString childItemText( ItemType itemType, int *linesPerRow = NULL );
-	/** Creates a route item with one child item for each route stop. */
+	
+	/** @brief Creates a route item with one child item for each route stop. */
 	ChildItem *createRouteItem();
 
 	DepartureInfo m_departureInfo;
