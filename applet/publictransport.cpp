@@ -1855,23 +1855,23 @@ bool PublicTransport::eventFilter( QObject *watched, QEvent *event )
 		switch ( event->type() ) {
 		case QEvent::KeyPress:
 			keyEvent = dynamic_cast<QKeyEvent*>( event );
-			curIndex = m_listStopSuggestions->nativeWidget()->currentIndex();
+			curIndex = m_listStopSuggestions->/*nativeWidget()->*/currentIndex();
 
 			if ( keyEvent->key() == Qt::Key_Up ) {
 				if ( !curIndex.isValid() ) {
-					curIndex = m_listStopSuggestions->nativeWidget()->model()->index( 0, 0 );
-					m_listStopSuggestions->nativeWidget()->setCurrentIndex( curIndex );
+					curIndex = m_listStopSuggestions->/*nativeWidget()->*/model()->index( 0, 0 );
+					m_listStopSuggestions->/*nativeWidget()->*/setCurrentIndex( curIndex );
 // 					possibleStopItemActivated( curIndex );
 					m_listStopSuggestions->useStopSuggestion( curIndex );
 					return true;
 				} else {
 					row = curIndex.row();
 					if ( row >= 1 ) {
-						m_listStopSuggestions->nativeWidget()->setCurrentIndex(
+						m_listStopSuggestions->/*nativeWidget()->*/setCurrentIndex(
 								m_listStopSuggestions->model()->index(row - 1,
 								curIndex.column(), curIndex.parent()) );
 						m_listStopSuggestions->useStopSuggestion(
-								m_listStopSuggestions->nativeWidget()->currentIndex() );
+								m_listStopSuggestions->/*nativeWidget()->*/currentIndex() );
 						return true;
 					} else {
 						return false;
@@ -1879,18 +1879,18 @@ bool PublicTransport::eventFilter( QObject *watched, QEvent *event )
 				}
 			} else if ( keyEvent->key() == Qt::Key_Down ) {
 				if ( !curIndex.isValid() ) {
-					curIndex = m_listStopSuggestions->nativeWidget()->model()->index( 0, 0 );
-					m_listStopSuggestions->nativeWidget()->setCurrentIndex( curIndex );
+					curIndex = m_listStopSuggestions->/*nativeWidget()->*/model()->index( 0, 0 );
+					m_listStopSuggestions->/*nativeWidget()->*/setCurrentIndex( curIndex );
 					m_listStopSuggestions->useStopSuggestion( curIndex );
 					return true;
 				} else {
 					row = curIndex.row();
 					if ( row < m_listStopSuggestions->model()->rowCount() - 1 ) {
-						m_listStopSuggestions->nativeWidget()->setCurrentIndex(
+						m_listStopSuggestions->/*nativeWidget()->*/setCurrentIndex(
 								m_listStopSuggestions->model()->index(row + 1,
 								curIndex.column(), curIndex.parent()) );
 						m_listStopSuggestions->useStopSuggestion(
-								m_listStopSuggestions->nativeWidget()->currentIndex() );
+								m_listStopSuggestions->/*nativeWidget()->*/currentIndex() );
 						return true;
 					} else {
 						return false;
@@ -2026,8 +2026,7 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType, TitleType 
 				m_titleWidget->castedWidget<Plasma::LineEdit>( TitleWidget::WidgetJourneySearchLine );
 		Q_ASSERT( journeySearch );
 
-		m_listStopSuggestions = new JourneySearchSuggestionWidget(
-				&m_settings, palette() );
+		m_listStopSuggestions = new JourneySearchSuggestionWidget( this, &m_settings, palette() );
 		m_listStopSuggestions->attachLineEdit( journeySearch );
 		connect( m_listStopSuggestions, SIGNAL(journeySearchLineChanged(QString,QDateTime,bool,bool)),
 				 this, SLOT(journeySearchLineChanged(QString,QDateTime,bool,bool)) );

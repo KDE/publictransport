@@ -20,19 +20,237 @@
 #include "journeysearchsuggestionwidget.h"
 #include "journeysearchparser.h"
 #include "settings.h"
-#include "htmldelegate.h"
+#include "timetablewidget.h"
+
+#include <KDebug>
+#include <KColorScheme>
+#include <Plasma/LineEdit>
+#include <Plasma/Animator>
+#include <Plasma/Animation>
 
 #include <QStandardItemModel>
 #include <QTreeView>
+#include <QGraphicsLinearLayout>
+#include <QTextDocument>
+#include <QGraphicsSceneHoverEvent>
 
-#include <KColorScheme>
-#include <KDebug>
-#include <Plasma/LineEdit>
-
-JourneySearchSuggestionWidget::JourneySearchSuggestionWidget( Settings *settings,
-															  const QPalette &palette )
-		: m_settings(settings), m_lineEdit(0)
+JourneySearchSuggestionItem::JourneySearchSuggestionItem(
+		JourneySearchSuggestionWidget *parent, const QModelIndex& modelIndex )
+		: QGraphicsWidget(parent), m_textDocument(0), m_parent(parent), m_model(0)
 {
+	m_initializing = true;
+	if ( !modelIndex.isValid() ) {
+		kDebug() << "INDEX IS INVALID!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
+	}
+	
+	setFlags( ItemClipsToShape | ItemIsFocusable | ItemIsSelectable );
+	m_row = -1;
+	updateData( modelIndex );
+// 	m_suggestion = suggestion;
+	kDebug() << "...end of constructor...";
+}
+
+void JourneySearchSuggestionItem::updateTextLayout()
+{
+	if ( !m_initializing && (!m_textDocument || (m_textDocument->pageSize() != size())) ) {
+		updateData( index() );
+	}
+}
+
+void JourneySearchSuggestionItem::updateData(const QModelIndex& modelIndex)
+{
+	if ( modelIndex.isValid() ) {
+		kDebug() << "Update to index" << modelIndex;
+		m_row = modelIndex.row();
+		m_model = modelIndex.model();
+		setHtml( modelIndex.data().toString() );
+		kDebug() << "Update data ready";
+	} else {
+		kDebug() << "Invalid index given!";
+	}
+}
+
+void JourneySearchSuggestionItem::setHtml(const QString& html)
+{
+// 	kDebug() << m_index.row() << "Update Text Layout, size:" << parentWidget()->contentsRect() << html << m_index;
+	kDebug() << "Set HTML" << html;
+	delete m_textDocument;
+	m_textDocument = TextDocumentHelper::createTextDocument( html, 
+			QSizeF(qMax(20.0, parentWidget()->contentsRect().width()), 100.0), QTextOption(), font() );
+	kDebug() << "UDPATE GEOMETRY";
+	updateGeometry();
+	kDebug() << "END UPDATE GEOMETRY";
+}
+
+QSizeF JourneySearchSuggestionItem::sizeHint( Qt::SizeHint which, const QSizeF& constraint ) const
+{
+	if ( m_textDocument && which == Qt::MinimumSize ) {
+		return QSizeF( qMax(30.0, TextDocumentHelper::textDocumentWidth(m_textDocument)),
+					   qMax((qreal)QFontMetrics(font()).height() + 5.0, m_textDocument->size().height()) );
+	} else if ( m_textDocument && which == Qt::MaximumSize ) {
+		return QSizeF( 999999.0, 
+				qMax((qreal)QFontMetrics(font()).height() + 5.0, m_textDocument->size().height()) );
+	} else {
+		return QGraphicsWidget::sizeHint( which, constraint );
+	}
+}
+
+void JourneySearchSuggestionItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, 
+										QWidget* widget)
+{
+	painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
+	
+	if ( option->rect.isEmpty() ) {
+		kDebug() << "Empty rect given!";
+		return;
+	}
+	
+	if ( !m_textDocument ) {
+		kDebug() << "No text document!";
+		return;
+	}
+	
+	if ( option->state.testFlag(QStyle::State_HasFocus)
+		|| option->state.testFlag(QStyle::State_Selected)
+		/*|| option->state.testFlag(QStyle::State_MouseOver)*/ ) 
+	{
+		#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+			QColor focusColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ButtonFocusColor );
+		#else
+			QColor focusColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewFocusColor );
+		#endif
+// 				KColorScheme( QPalette::Active, KColorScheme::Selection )
+// 							.background( KColorScheme::NormalBackground ).color();
+		if ( option->state.testFlag(QStyle::State_Selected) ) {
+			if ( option->state.testFlag(QStyle::State_MouseOver) ) {
+				focusColor.setAlpha( focusColor.alpha() * 0.65f );
+			} else {
+				focusColor.setAlpha( focusColor.alpha() * 0.55f );
+			}
+		} else if ( option->state.testFlag(QStyle::State_MouseOver) ) {
+			focusColor.setAlpha( focusColor.alpha() * 0.2f );
+		}
+
+		QLinearGradient bgGradient( 0, 0, 1, 0 );
+		bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+		bgGradient.setColorAt( 0, Qt::transparent );
+		bgGradient.setColorAt( 0.4, focusColor );
+		bgGradient.setColorAt( 0.6, focusColor );
+		bgGradient.setColorAt( 1, Qt::transparent );
+
+		painter->fillRect( option->rect, QBrush(bgGradient) );
+	}
+
+	bool drawHalos = true; // TODO
+	QRectF iconRect( option->rect.left(), option->rect.top() + (option->rect.height() - 16) / 2.0, 
+					 16, 16 );
+	QRectF textRect( iconRect.right() + 5.0, option->rect.top(), 
+					 option->rect.width() - iconRect.width() - 5.0, option->rect.height() );
+	
+	kDebug() << "PAINT";
+	QModelIndex modelIndex = index();
+	if ( modelIndex.isValid() ) {
+// 		if ( m_index.isValid() ) { //&& m_index.row() < m_index.model()->rowCount() ) {
+			QPixmap pixmap = modelIndex.data(Qt::DecorationRole).value<QIcon>().pixmap(16);
+			painter->drawPixmap( iconRect.toRect(), pixmap );
+// 		}
+	}
+	
+	TextDocumentHelper::drawTextDocument( painter, option, m_textDocument, 
+										  textRect.toRect(), drawHalos );
+}
+
+QModelIndex JourneySearchSuggestionWidget::indexFromItem( JourneySearchSuggestionItem *item )
+{
+	if ( !item ) {
+		kDebug() << "No item given!";
+		return QModelIndex();
+	}
+	
+	kDebug() << "TEST";
+	kDebug() << this;
+	kDebug() << m_items.count();
+	kDebug() << "Index of Item:" << m_items.indexOf(item);
+	int row = m_items.indexOf( item );
+	if ( row < 0 ) {
+		kDebug() << "delete later";
+		deleteLater();
+		return QModelIndex();
+	} else {
+		return m_model->index( row, 0 );
+	}
+}
+
+QModelIndex JourneySearchSuggestionItem::index()
+{
+	kDebug() << "Get index" << m_row;
+	// Recreate index from row and model
+	kDebug() << m_parent;
+	return m_parent->indexFromItem( this );
+// 	QModelIndex modelIndex = m_model->index( m_row, 0 );
+// 	if ( modelIndex.isValid() ) {
+// 		return modelIndex;
+// // 		return m_index;
+// 	} else {
+// 		kDebug() << "Delete later" << m_row << m_model;
+// 		deleteLater();
+// 		return QModelIndex();
+// 	}
+}
+
+void JourneySearchSuggestionItem::detachFromModel()
+{
+    disconnect( m_model, SIGNAL(rowsInserted(QModelIndex,int,int)), 
+			 this, SLOT(rowsInserted(QModelIndex,int,int)) );
+    disconnect( m_model, SIGNAL(rowsRemoved(QModelIndex,int,int)), 
+			 this, SLOT(rowsRemoved(QModelIndex,int,int)) );
+    disconnect( m_model, SIGNAL(modelReset()), this, SLOT(modelReset()) );
+    disconnect( m_model, SIGNAL(layoutChanged()), this, SLOT(layoutChanged()) );
+    disconnect( m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), 
+			 this, SLOT(dataChanged(QModelIndex,QModelIndex)) );
+	m_row = -1;
+	m_model = NULL;
+}
+
+void JourneySearchSuggestionItem::resizeEvent(QGraphicsSceneResizeEvent* event)
+{
+    QGraphicsWidget::resizeEvent(event);
+	updateTextLayout();
+}
+
+void JourneySearchSuggestionItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
+{
+    QGraphicsItem::mouseReleaseEvent(event);
+	
+	QModelIndex modelIndex = index();
+	if ( modelIndex.isValid() && event->button() == Qt::LeftButton 
+		&& (event->lastPos() - event->pos()).manhattanLength() < 5 ) 
+	{
+		emit suggestionClicked( modelIndex );
+	}
+}
+
+void JourneySearchSuggestionItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
+{
+    QGraphicsItem::mouseDoubleClickEvent(event);
+	
+	QModelIndex modelIndex = index();
+	if ( modelIndex.isValid() && event->button() == Qt::LeftButton ) {
+		emit suggestionDoubleClicked( modelIndex );
+	}
+}
+
+JourneySearchSuggestionWidget::JourneySearchSuggestionWidget( QGraphicsItem *parent,
+		Settings *settings, const QPalette &palette )
+		: Plasma::ScrollWidget(parent), m_settings(settings), m_lineEdit(0)
+{
+	kDebug() << m_items.count();
+	QGraphicsWidget *container = new QGraphicsWidget( this );
+	QGraphicsLinearLayout *l = new QGraphicsLinearLayout( Qt::Vertical, container );
+	l->setSpacing( 1.0 );
+	container->setLayout( l );
+	setWidget( container );
+	
 	m_journeySearchLastTextLength = 0;
 	m_enabledSuggestions = AllSuggestions;
 
@@ -42,25 +260,183 @@ JourneySearchSuggestionWidget::JourneySearchSuggestionWidget( Settings *settings
 	setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
 	setFont( settings->sizedFont() );
 
-	QTreeView *treeView = nativeWidget();
-	treeView->setRootIsDecorated( false );
-	treeView->setHeaderHidden( true );
-	treeView->setAlternatingRowColors( true );
-	treeView->setEditTriggers( QAbstractItemView::NoEditTriggers );
-	treeView->setAutoFillBackground( false );
-	treeView->setAttribute( Qt::WA_NoSystemBackground );
-	treeView->setItemDelegate( new PublicTransportDelegate(this) );
-	treeView->setPalette( palette );
+// 	QTreeView *treeView = nativeWidget();
+// 	treeView->setRootIsDecorated( false );
+// 	treeView->setHeaderHidden( true );
+// 	treeView->setAlternatingRowColors( true );
+// 	treeView->setEditTriggers( QAbstractItemView::NoEditTriggers );
+// 	treeView->setAutoFillBackground( false );
+// 	treeView->setAttribute( Qt::WA_NoSystemBackground );
+// 	treeView->setItemDelegate( new PublicTransportDelegate(this) );
+// 	treeView->setPalette( palette );
+	setPalette( palette );
 
-	connect( treeView, SIGNAL(clicked(QModelIndex)),
-			 this, SLOT(suggestionClicked(QModelIndex)) );
-	connect( treeView, SIGNAL(doubleClicked(QModelIndex)),
-			 this, SLOT(suggestionDoubleClicked(QModelIndex)) );
+// 	TODO
+// 	connect( treeView, SIGNAL(clicked(QModelIndex)),
+// 			 this, SLOT(suggestionClicked(QModelIndex)) );
+// 	connect( treeView, SIGNAL(doubleClicked(QModelIndex)),
+// 			 this, SLOT(suggestionDoubleClicked(QModelIndex)) );
 
 	// Add recent journey suggestions.
 	// Doesn't need attached line edit here, because it's normally empty at this time.
 	// If not, it gets updated once a line edit gets attached
 	addJourneySearchCompletions();
+}
+
+QModelIndex JourneySearchSuggestionWidget::currentIndex() const
+{
+	JourneySearchSuggestionItem *item = qgraphicsitem_cast<JourneySearchSuggestionItem*>( focusWidget() );
+	return item ? item->index() : QModelIndex();
+}
+
+void JourneySearchSuggestionWidget::setCurrentIndex(const QModelIndex& currentIndex)
+{
+	foreach ( JourneySearchSuggestionItem *item, m_items ) {
+		if ( item->index() == currentIndex ) {
+			item->setFocus();
+			return;
+		}
+	}
+	
+	kDebug() << "Didn't find an item for the given index" << currentIndex;
+}
+
+void JourneySearchSuggestionWidget::setModel(QStandardItemModel* model)
+{
+	qDeleteAll( m_items );
+	m_items.clear();
+	
+	m_model = model;
+ kDebug() << "\n\n_________________________________________________\n\n\n\n";
+    connect( m_model, SIGNAL(rowsInserted(QModelIndex,int,int)), 
+			 this, SLOT(rowsInserted(QModelIndex,int,int)) );
+    connect( m_model, SIGNAL(rowsRemoved(QModelIndex,int,int)), 
+			 this, SLOT(rowsRemoved(QModelIndex,int,int)) );
+    connect( m_model, SIGNAL(modelReset()), this, SLOT(modelReset()) );
+    connect( m_model, SIGNAL(layoutChanged()), this, SLOT(layoutChanged()) );
+    connect( m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), 
+			 this, SLOT(dataChanged(QModelIndex,QModelIndex)) );
+}
+
+void JourneySearchSuggestionWidget::layoutChanged()
+{
+	kDebug() << "LAYOUT CHANGED";
+// 	TODO
+}
+
+void JourneySearchSuggestionWidget::modelReset()
+{
+	qDeleteAll( m_items );
+	m_items.clear();
+}
+
+void JourneySearchSuggestionWidget::rowsInserted(const QModelIndex& parent, int first, int last)
+{
+	if ( parent.isValid() ) {
+		kDebug() << "Item with parent" << parent << "Inserted" << first << last;
+		return;
+	}
+	
+	QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( widget()->layout() );
+	for ( int row = first; row <= last; ++row ) {
+		JourneySearchSuggestionItem *item = new JourneySearchSuggestionItem( this,
+				m_model->index(row, 0, parent) );
+		m_items.insert( row, item );
+		item->setInitialized();
+		
+		connect( item, SIGNAL(suggestionClicked(QModelIndex)),
+				 this, SLOT(suggestionClicked(QModelIndex)) );
+		connect( item, SIGNAL(suggestionDoubleClicked(QModelIndex)),
+				 this, SLOT(suggestionDoubleClicked(QModelIndex)) );
+	
+// 		// Fade new items in
+// 		Plasma::Animation *fadeAnimation = Plasma::Animator::create(
+// 				Plasma::Animator::FadeAnimation, item );
+// 		fadeAnimation->setTargetWidget( item );
+// 		fadeAnimation->setProperty( "startOpacity", 0.0 );
+// 		fadeAnimation->setProperty( "targetOpacity", 1.0 );
+// 		fadeAnimation->start( QAbstractAnimation::DeleteWhenStopped );
+			
+		l->insertItem( row, item );
+	}
+}
+
+void JourneySearchSuggestionWidget::rowsRemoved(const QModelIndex& parent, int first, int last)
+{
+	if ( parent.isValid() ) {
+		kDebug() << "Item with parent" << parent << "Removed" << first << last;
+		return;
+	}
+	
+	if ( last >= m_items.count() ) {
+		kDebug() << "Cannot remove item, out of bounds:" << first << last;
+		last = m_items.count() - 1;
+	}
+	
+	kDebug() << "Remove" << first << last << parent;
+	
+// 	if ( first == 0 && last == m_items.count() - 1 ) {
+		// All items get removed, the shrink animations wouldn't be smooth
+		for ( int row = last; row >= first; --row ) {
+			JourneySearchSuggestionItem *item = m_items.takeAt( row );
+			kDebug() << "Removed one item, new count:" << m_items.count();
+// 			foreach ( JourneySearchSuggestionItem *item, m_items ) {
+// 				QModelIndex oldIndex = item->index();
+// 				if ( !oldIndex.isValid() ) {
+// 					kDebug() << "oldIndex is invalid" << oldIndex;
+// 					continue;
+// 				}
+// 				if ( oldIndex.row() > row ) {
+// 					int row = oldIndex.row() - 1;
+// 					QModelIndex index = m_model->index( row, 0 );
+// 					kDebug() << "Update index from" << oldIndex << "to" << index;
+// 					if ( index.isValid() ) {
+// 						item->updateData( index );
+// 					}
+// 				}
+// 			}
+			
+			item->detachFromModel();
+			delete item;
+			
+			// Fade old items out
+// 			JourneySearchSuggestionItem *item = m_items.takeAt( row );
+// 			item->detachFromModel();
+// 			Plasma::Animation *fadeAnimation = Plasma::Animator::create(
+// 					Plasma::Animator::FadeAnimation, item );
+// 			fadeAnimation->setTargetWidget( item );
+// 			fadeAnimation->setProperty( "startOpacity", 1.0 );
+// 			fadeAnimation->setProperty( "targetOpacity", 0.0 );
+// 			connect( fadeAnimation, SIGNAL(finished()), item, SLOT(deleteLater()) );
+// 			fadeAnimation->start( QAbstractAnimation::DeleteWhenStopped );
+		}
+		
+		kDebug() << "New Item Count:" << m_items.count();
+// 	} else {
+// 		// Only some items get removed, most probably they're currently departing
+// 		for ( int row = last; row >= first; --row ) {
+// 			PublicTransportGraphicsItem *item = m_items.takeAt( row );
+// 			
+// 			// Shrink departing items
+// 			QPropertyAnimation *shrinkAnimation = new QPropertyAnimation( item, "fadeOut" );
+// 			shrinkAnimation->setEasingCurve( QEasingCurve(QEasingCurve::InOutQuart) );
+// 			shrinkAnimation->setStartValue( item->fadeOut() );
+// 			shrinkAnimation->setEndValue( 0.0 );
+// 			shrinkAnimation->setDuration( 1000 );
+// 			connect( shrinkAnimation, SIGNAL(finished()), item, SLOT(deleteLater()) );
+// 			shrinkAnimation->start( QAbstractAnimation::DeleteWhenStopped );
+// 		}
+// 	}
+}
+
+void JourneySearchSuggestionWidget::dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight)
+{
+	for ( int row = topLeft.row(); row <= bottomRight.row(); ++row ) {
+		if ( row < m_model->rowCount() ) {
+			kDebug() << "Update" << row;
+			m_items[ row ]->updateData( m_model->index(row, 0) );
+		}
+	}
 }
 
 void JourneySearchSuggestionWidget::attachLineEdit(Plasma::LineEdit* lineEdit)
@@ -119,7 +495,7 @@ void JourneySearchSuggestionWidget::addJourneySearchCompletions()
 				QString stop;
 				JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(), &posStart, &len, &stop );
 				if ( recent.contains(stop) ) {
-					QStandardItem *item = new QStandardItem( KIcon( "emblem-favorite" ),
+					QStandardItem *item = new QStandardItem( KIcon("emblem-favorite"),
 							i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Recent:</emphasis> %1", recent) );
 					item->setData( "recent", Qt::UserRole + 1 );
 					item->setData( recent, Qt::UserRole + 2 );
@@ -410,14 +786,16 @@ void JourneySearchSuggestionWidget::maybeAddKeywordAddRemoveItems(const QStringL
 }
 
 void JourneySearchSuggestionWidget::journeySearchItemCompleted(const QString& newJourneySearch,
-		const QModelIndex& index, int newCursorPos)
+		const QModelIndex& modelIndex, int newCursorPos)
 {
 	if ( !m_lineEdit ) {
 		kDebug() << "You need to attach a line edit first";
 		return;
 	}
-	if ( index.isValid() ) {
-		m_model->removeRow( index.row() );
+	if ( modelIndex.isValid() ) {
+		m_model->removeRow( modelIndex.row() );
+	} else {
+		kDebug() << "Index isn't valid, can't remove row from model" << newJourneySearch;
 	}
 	m_lineEdit->setText( newJourneySearch );
 
@@ -429,27 +807,32 @@ void JourneySearchSuggestionWidget::journeySearchItemCompleted(const QString& ne
 	}
 }
 
-void JourneySearchSuggestionWidget::useStopSuggestion(const QModelIndex& index)
+void JourneySearchSuggestionWidget::useStopSuggestion(const QModelIndex& modelIndex)
 {
 	// Only start search if a stop suggestion or a recent item was activated
-	if ( !index.data(Qt::UserRole + 1).isValid()
-		|| index.data(Qt::UserRole + 1).toString() == "recent" )
+	if ( !modelIndex.data(Qt::UserRole + 1).isValid()
+		|| modelIndex.data(Qt::UserRole + 1).toString() == "recent" )
 	{
-		suggestionClicked( index );
+		suggestionClicked( modelIndex );
 	}
 }
 
-void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& index)
+void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& modelIndex)
 {
 	if ( !m_lineEdit ) {
 		kDebug() << "You need to attach a line edit first";
 		return;
 	}
+	
+	if ( !modelIndex.isValid() ) {
+		kDebug() << "Index is invalid!";
+		return;
+	}
 
-	QString type = index.data( Qt::UserRole + 1 ).toString();
+	QString type = modelIndex.data( Qt::UserRole + 1 ).toString();
 	if ( type == "recent" ) {
 		// Set recent journey search string
-		QString newText = index.data( Qt::UserRole + 2 ).toString();
+		QString newText = modelIndex.data( Qt::UserRole + 2 ).toString();
 		m_lineEdit->setText( newText );
 		removeGeneralSuggestionItems();
 		addJourneySearchCompletions();
@@ -457,38 +840,38 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& index)
 	} else if ( type == "additionalKeywordAtEnd" ) {
 		// Add keyword at the endint newCursorPos
 		QString newText = m_lineEdit->text() + ' ' +
-		index.data( Qt::UserRole + 2 ).toString();
-		journeySearchItemCompleted( newText, index );
+		modelIndex.data( Qt::UserRole + 2 ).toString();
+		journeySearchItemCompleted( newText, modelIndex );
 	} else if ( type == "additionalKeywordAlmostAtEnd" ) {
 		// Add keyword after the stop name, if any
 		int posStart, len;
-		QString newText, keyword = index.data( Qt::UserRole + 2 ).toString();
+		QString newText, keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
 		JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(), &posStart, &len );
 		if ( posStart != -1 ) {
 			newText = m_lineEdit->text().insert( posStart + len, ' ' + keyword );
-			journeySearchItemCompleted( newText, index, posStart + len + keyword.length() + 1 );
+			journeySearchItemCompleted( newText, modelIndex, posStart + len + keyword.length() + 1 );
 		} else {
 			newText = m_lineEdit->text() + ' ' + keyword;
-			journeySearchItemCompleted( newText, index );
+			journeySearchItemCompleted( newText, modelIndex );
 		}
 	} else if ( type == "additionalKeywordAtBegin" ) {
 		// Add keyword to the beginning
-		QString keyword = index.data( Qt::UserRole + 2 ).toString();
+		QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
 		QString newText = keyword + ' ' + m_lineEdit->text();
-		journeySearchItemCompleted( newText, index, keyword.length() + 1 );
+		journeySearchItemCompleted( newText, modelIndex, keyword.length() + 1 );
 	} else if ( type == "additionalKeywordAtEndRemove"
 		|| type == "additionalKeywordAlmostAtEndRemove"
 		|| type == "replaceTimeKeyword" )
 	{
 		// Remove first keyword appearance after the stop name, if any
-		QString keyword = index.data( Qt::UserRole + 2 ).toString();
+		QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
 		if ( type == "replaceTimeKeyword" )
 			keyword = keyword.left( keyword.indexOf( ' ' ) );
 
 		QString pattern;
-		if ( index.data( Qt::UserRole + 3 ).isValid() ) {
+		if ( modelIndex.data(Qt::UserRole + 3).isValid() ) {
 			// Use "extra reg exp" to also match values for keywords, eg. "[in] 5 minutes"
-			QString extraRegExp = index.data( Qt::UserRole + 3 ).toString();
+			QString extraRegExp = modelIndex.data( Qt::UserRole + 3 ).toString();
 			pattern = QString( "(?:\"[^\"]*\".*)?(\\s%1\\s%2)" ).arg( keyword ).arg( extraRegExp );
 		} else {
 			pattern = QString( "(?:\"[^\"]*\".*)?(\\s%1)" ).arg( keyword );
@@ -502,25 +885,25 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& index)
 			// Keyword (and values) found, remove
 			newText = newText.remove( regExp.pos( 1 ), regExp.cap( 1 ).length() );
 			if ( type == "replaceTimeKeyword" ) { // Add new time keyword
-				newText = newText + ' ' + index.data( Qt::UserRole + 2 ).toString();
-				journeySearchItemCompleted( newText, index );
+				newText = newText + ' ' + modelIndex.data( Qt::UserRole + 2 ).toString();
+				journeySearchItemCompleted( newText, modelIndex );
 			} else {
-				journeySearchItemCompleted( newText, index, regExp.pos(1) );
+				journeySearchItemCompleted( newText, modelIndex, regExp.pos(1) );
 			}
 		}
 	} else if ( type == "additionalKeywordAtBeginRemove" ) {
 		// Remove keyword from the beginning
-		QString keyword = index.data( Qt::UserRole + 2 ).toString();
+		QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
 		QString newText = m_lineEdit->text().trimmed().remove(
 			QRegExp( QString( "^%1\\s" ).arg( keyword ), Qt::CaseInsensitive ) );
-		journeySearchItemCompleted( newText, index );
+		journeySearchItemCompleted( newText, modelIndex );
 	} else {
 		// Insert the clicked stop into the journey search line,
 		// don't override keywords and other text
 		int posStart, len;
 		JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(), &posStart, &len );
 
-		QString quotedStop = "\"" + index.data().toString() + "\"";
+		QString quotedStop = "\"" + modelIndex.data().toString() + "\"";
 		if ( posStart == -1 ) {
 			// No stop name found
 			m_lineEdit->setText( quotedStop );
@@ -537,11 +920,16 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& index)
 	m_lineEdit->setFocus();
 }
 
-void JourneySearchSuggestionWidget::suggestionDoubleClicked(const QModelIndex& index)
+void JourneySearchSuggestionWidget::suggestionDoubleClicked(const QModelIndex& modelIndex)
 {
+	if ( !modelIndex.isValid() ) {
+		kDebug() << "Index is invalid!";
+		return;
+	}
+	
 	// Only start search if a stop suggestion or a recent item was double clicked
-	if ( !index.data(Qt::UserRole + 1).isValid()
-		|| index.data(Qt::UserRole + 1).toString() == "recent" )
+	if ( !modelIndex.data(Qt::UserRole + 1).isValid()
+		|| modelIndex.data(Qt::UserRole + 1).toString() == "recent" )
 	{
 		emit suggestionActivated();
 	}
@@ -607,20 +995,18 @@ void JourneySearchSuggestionWidget::updateStopSuggestionItems(const QVariantHash
 
 	// Set commpletion items
 	if ( m_lineEdit && m_lettersAddedToJourneySearchLine
-		&& m_lineEdit->nativeWidget()->completionMode() !=
-		KGlobalSettings::CompletionNone )
+		&& m_lineEdit->nativeWidget()->completionMode() != KGlobalSettings::CompletionNone )
 	{
 		int posStart, len;
 		QString stopName;
 		KLineEdit *lineEdit = m_lineEdit->nativeWidget();
-		JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(),
-											&posStart, &len, &stopName );
+		JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(), 
+											   &posStart, &len, &stopName );
 		int selStart = lineEdit->selectionStart();
 		if ( selStart == -1 ) {
 			selStart = lineEdit->cursorPosition();
 		}
-		bool stopNameChanged = selStart > posStart
-		&& selStart + lineEdit->selectedText().length()
+		bool stopNameChanged = selStart > posStart && selStart + lineEdit->selectedText().length()
 				<= posStart + len;
 		if ( stopNameChanged ) {
 			KCompletion *comp = lineEdit->completionObject( false );

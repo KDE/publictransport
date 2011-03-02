@@ -24,14 +24,19 @@
 #ifndef JOURNEYSEARCHSUGGESTIONWIDGET_H
 #define JOURNEYSEARCHSUGGESTIONWIDGET_H
 
-#include <Plasma/TreeView>
+// #include <Plasma/TreeView>
+#include <Plasma/ScrollWidget>
+
+#include <QGraphicsWidget>
 #include <QModelIndex>
 
+class QGraphicsSceneMouseEvent;
 namespace Plasma {
 	class LineEdit;
 }
 class Settings;
 class QStandardItemModel;
+class JourneySearchSuggestionItem;
 
 /**
  * @brief Represents the widget used to display journey search suggestions.
@@ -46,9 +51,10 @@ class QStandardItemModel;
  *
  * @since 0.9.1
  **/
-class JourneySearchSuggestionWidget : public Plasma::TreeView
+class JourneySearchSuggestionWidget : public Plasma::ScrollWidget // public Plasma::TreeView
 {
 	Q_OBJECT
+	friend class JourneySearchSuggestionItem;
 
 public:
 	/**
@@ -69,11 +75,19 @@ public:
 	/**
 	 * @brief Creates a new journey search suggestion widget.
 	 *
+	 * @param parent The parent item.
 	 * @param settings A pointer to the settings object of the applet.
 	 * @param palette The palette to use. Defaults to QPalette().
 	 **/
-	explicit JourneySearchSuggestionWidget( Settings *settings, const QPalette &palette = QPalette() );
+	explicit JourneySearchSuggestionWidget( QGraphicsItem *parent, Settings *settings, 
+											const QPalette &palette = QPalette() );
+	
+	QModelIndex currentIndex() const;
+	void setCurrentIndex( const QModelIndex &currentIndex );
 
+	QStandardItemModel *model() const { return m_model; };
+	void setModel( QStandardItemModel *model );
+	
 	/**
 	 * @brief Attaches the given @p lineEdit with this widget. All changes made to the text in
 	 *   @p lineEdit are handled to generate suggestions.
@@ -131,6 +145,12 @@ public slots:
 	void updateStopSuggestionItems( const QVariantHash &stopSuggestionData );
 
 protected slots:
+    virtual void rowsInserted( const QModelIndex &parent, int first, int last );
+    virtual void rowsRemoved( const QModelIndex &parent, int first, int last );
+    virtual void modelReset();
+    virtual void layoutChanged();
+    virtual void dataChanged( const QModelIndex &topLeft, const QModelIndex &bottomRight );
+	
 	/**
 	 * @brief A suggestion item was clicked.
 	 *
@@ -149,8 +169,10 @@ protected slots:
 	 * @param newText The new text.
 	 **/
     void journeySearchLineEdited( const QString &newText );
-
+	
 protected:
+	QModelIndex indexFromItem( JourneySearchSuggestionItem *item );
+	
 	/** @brief Removes all general suggestion items, ie. no stop suggestion items. */
 	void removeGeneralSuggestionItems();
 	/** @brief Add general completions, eg. "in X minutes". */
@@ -167,6 +189,7 @@ protected:
 
 private:
 	QStandardItemModel *m_model;
+	QList<JourneySearchSuggestionItem*> m_items;
 	Settings *m_settings;
 	Plasma::LineEdit *m_lineEdit;
 	Suggestions m_enabledSuggestions;
@@ -177,5 +200,45 @@ private:
 			* journey search line added letters o(r not. Used for auto completion. */
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(JourneySearchSuggestionWidget::Suggestions)
+
+class JourneySearchSuggestionItem : public QGraphicsWidget
+{
+	Q_OBJECT
+	friend class JourneySearchSuggestionWidget;
+	
+public:
+    JourneySearchSuggestionItem( JourneySearchSuggestionWidget *parent,
+								 const QModelIndex& index );
+	
+	void updateTextLayout();
+	void updateData( const QModelIndex& index );
+	void setHtml( const QString &html );
+	QModelIndex index();
+	void detachFromModel();
+	
+	void setInitialized() { m_initializing = false; };
+	
+    virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option, 
+						QWidget* widget = 0 );
+	
+signals:
+	void suggestionClicked( const QModelIndex &index );
+	void suggestionDoubleClicked( const QModelIndex &index );
+	
+protected:
+    virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
+    virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
+    virtual void mouseReleaseEvent( QGraphicsSceneMouseEvent* event );
+    virtual void mouseDoubleClickEvent( QGraphicsSceneMouseEvent* event );
+	
+private:
+	JourneySearchSuggestionWidget::Suggestion m_suggestion;
+	QTextDocument *m_textDocument;
+// 	QModelIndex m_index;
+	JourneySearchSuggestionWidget *m_parent;
+	const QAbstractItemModel *m_model;
+	int m_row;
+	bool m_initializing;
+};
 
 #endif // JOURNEYSEARCHSUGGESTIONWIDGET_H
