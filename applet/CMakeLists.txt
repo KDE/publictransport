@@ -40,15 +40,12 @@ kde4_add_ui_files( publictransport_SRCS
 # Now make sure all files get to the right place
 kde4_add_plugin( plasma_applet_publictransport ${publictransport_SRCS} )
 
-# Add the publictransporthelper library
-add_subdirectory( publictransporthelper )
-
 target_link_libraries( plasma_applet_publictransport
     ${KDE4_PLASMA_LIBS}
     ${KDE4_KDEUI_LIBS}
     ${KDE4_KIO_LIBS}
     ${KDE4_KNEWSTUFF3_LIBS}
-    publictransporthelper # in sub_directory publictransporthelper
+    publictransporthelper # found in ../publictransporthelper
 )
 
 install( TARGETS plasma_applet_publictransport
