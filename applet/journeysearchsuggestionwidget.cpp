@@ -39,15 +39,12 @@ JourneySearchSuggestionItem::JourneySearchSuggestionItem(
 		: QGraphicsWidget(parent), m_textDocument(0), m_parent(parent), m_model(0)
 {
 	m_initializing = true;
-	if ( !modelIndex.isValid() ) {
-		kDebug() << "INDEX IS INVALID!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
-	}
+	Q_ASSERT_X( modelIndex.isValid(), "JourneySearchSuggestionItem", 
+				"Invalid QModelIndex given in JourneySearchSuggestionItem constructor!" );
 	
 	setFlags( ItemClipsToShape | ItemIsFocusable | ItemIsSelectable );
 	m_row = -1;
 	updateData( modelIndex );
-// 	m_suggestion = suggestion;
-	kDebug() << "...end of constructor...";
 }
 
 void JourneySearchSuggestionItem::updateTextLayout()
@@ -60,11 +57,9 @@ void JourneySearchSuggestionItem::updateTextLayout()
 void JourneySearchSuggestionItem::updateData(const QModelIndex& modelIndex)
 {
 	if ( modelIndex.isValid() ) {
-		kDebug() << "Update to index" << modelIndex;
 		m_row = modelIndex.row();
 		m_model = modelIndex.model();
 		setHtml( modelIndex.data().toString() );
-		kDebug() << "Update data ready";
 	} else {
 		kDebug() << "Invalid index given!";
 	}
@@ -72,14 +67,10 @@ void JourneySearchSuggestionItem::updateData(const QModelIndex& modelIndex)
 
 void JourneySearchSuggestionItem::setHtml(const QString& html)
 {
-// 	kDebug() << m_index.row() << "Update Text Layout, size:" << parentWidget()->contentsRect() << html << m_index;
-	kDebug() << "Set HTML" << html;
 	delete m_textDocument;
 	m_textDocument = TextDocumentHelper::createTextDocument( html, 
 			QSizeF(qMax(20.0, parentWidget()->contentsRect().width()), 100.0), QTextOption(), font() );
-	kDebug() << "UDPATE GEOMETRY";
 	updateGeometry();
-	kDebug() << "END UPDATE GEOMETRY";
 }
 
 QSizeF JourneySearchSuggestionItem::sizeHint( Qt::SizeHint which, const QSizeF& constraint ) const
@@ -147,13 +138,10 @@ void JourneySearchSuggestionItem::paint(QPainter* painter, const QStyleOptionGra
 	QRectF textRect( iconRect.right() + 5.0, option->rect.top(), 
 					 option->rect.width() - iconRect.width() - 5.0, option->rect.height() );
 	
-	kDebug() << "PAINT";
 	QModelIndex modelIndex = index();
 	if ( modelIndex.isValid() ) {
-// 		if ( m_index.isValid() ) { //&& m_index.row() < m_index.model()->rowCount() ) {
-			QPixmap pixmap = modelIndex.data(Qt::DecorationRole).value<QIcon>().pixmap(16);
-			painter->drawPixmap( iconRect.toRect(), pixmap );
-// 		}
+		QPixmap pixmap = modelIndex.data(Qt::DecorationRole).value<QIcon>().pixmap(16);
+		painter->drawPixmap( iconRect.toRect(), pixmap );
 	}
 	
 	TextDocumentHelper::drawTextDocument( painter, option, m_textDocument, 
@@ -167,10 +155,6 @@ QModelIndex JourneySearchSuggestionWidget::indexFromItem( JourneySearchSuggestio
 		return QModelIndex();
 	}
 	
-	kDebug() << "TEST";
-	kDebug() << this;
-	kDebug() << m_items.count();
-	kDebug() << "Index of Item:" << m_items.indexOf(item);
 	int row = m_items.indexOf( item );
 	if ( row < 0 ) {
 		kDebug() << "delete later";
@@ -183,19 +167,7 @@ QModelIndex JourneySearchSuggestionWidget::indexFromItem( JourneySearchSuggestio
 
 QModelIndex JourneySearchSuggestionItem::index()
 {
-	kDebug() << "Get index" << m_row;
-	// Recreate index from row and model
-	kDebug() << m_parent;
 	return m_parent->indexFromItem( this );
-// 	QModelIndex modelIndex = m_model->index( m_row, 0 );
-// 	if ( modelIndex.isValid() ) {
-// 		return modelIndex;
-// // 		return m_index;
-// 	} else {
-// 		kDebug() << "Delete later" << m_row << m_model;
-// 		deleteLater();
-// 		return QModelIndex();
-// 	}
 }
 
 void JourneySearchSuggestionItem::detachFromModel()
@@ -244,7 +216,6 @@ JourneySearchSuggestionWidget::JourneySearchSuggestionWidget( QGraphicsItem *par
 		Settings *settings, const QPalette &palette )
 		: Plasma::ScrollWidget(parent), m_settings(settings), m_lineEdit(0)
 {
-	kDebug() << m_items.count();
 	QGraphicsWidget *container = new QGraphicsWidget( this );
 	QGraphicsLinearLayout *l = new QGraphicsLinearLayout( Qt::Vertical, container );
 	l->setSpacing( 1.0 );
@@ -307,7 +278,7 @@ void JourneySearchSuggestionWidget::setModel(QStandardItemModel* model)
 	m_items.clear();
 	
 	m_model = model;
- kDebug() << "\n\n_________________________________________________\n\n\n\n";
+	
     connect( m_model, SIGNAL(rowsInserted(QModelIndex,int,int)), 
 			 this, SLOT(rowsInserted(QModelIndex,int,int)) );
     connect( m_model, SIGNAL(rowsRemoved(QModelIndex,int,int)), 
@@ -373,67 +344,18 @@ void JourneySearchSuggestionWidget::rowsRemoved(const QModelIndex& parent, int f
 		last = m_items.count() - 1;
 	}
 	
-	kDebug() << "Remove" << first << last << parent;
-	
-// 	if ( first == 0 && last == m_items.count() - 1 ) {
-		// All items get removed, the shrink animations wouldn't be smooth
-		for ( int row = last; row >= first; --row ) {
-			JourneySearchSuggestionItem *item = m_items.takeAt( row );
-			kDebug() << "Removed one item, new count:" << m_items.count();
-// 			foreach ( JourneySearchSuggestionItem *item, m_items ) {
-// 				QModelIndex oldIndex = item->index();
-// 				if ( !oldIndex.isValid() ) {
-// 					kDebug() << "oldIndex is invalid" << oldIndex;
-// 					continue;
-// 				}
-// 				if ( oldIndex.row() > row ) {
-// 					int row = oldIndex.row() - 1;
-// 					QModelIndex index = m_model->index( row, 0 );
-// 					kDebug() << "Update index from" << oldIndex << "to" << index;
-// 					if ( index.isValid() ) {
-// 						item->updateData( index );
-// 					}
-// 				}
-// 			}
-			
-			item->detachFromModel();
-			delete item;
-			
-			// Fade old items out
-// 			JourneySearchSuggestionItem *item = m_items.takeAt( row );
-// 			item->detachFromModel();
-// 			Plasma::Animation *fadeAnimation = Plasma::Animator::create(
-// 					Plasma::Animator::FadeAnimation, item );
-// 			fadeAnimation->setTargetWidget( item );
-// 			fadeAnimation->setProperty( "startOpacity", 1.0 );
-// 			fadeAnimation->setProperty( "targetOpacity", 0.0 );
-// 			connect( fadeAnimation, SIGNAL(finished()), item, SLOT(deleteLater()) );
-// 			fadeAnimation->start( QAbstractAnimation::DeleteWhenStopped );
-		}
-		
-		kDebug() << "New Item Count:" << m_items.count();
-// 	} else {
-// 		// Only some items get removed, most probably they're currently departing
-// 		for ( int row = last; row >= first; --row ) {
-// 			PublicTransportGraphicsItem *item = m_items.takeAt( row );
-// 			
-// 			// Shrink departing items
-// 			QPropertyAnimation *shrinkAnimation = new QPropertyAnimation( item, "fadeOut" );
-// 			shrinkAnimation->setEasingCurve( QEasingCurve(QEasingCurve::InOutQuart) );
-// 			shrinkAnimation->setStartValue( item->fadeOut() );
-// 			shrinkAnimation->setEndValue( 0.0 );
-// 			shrinkAnimation->setDuration( 1000 );
-// 			connect( shrinkAnimation, SIGNAL(finished()), item, SLOT(deleteLater()) );
-// 			shrinkAnimation->start( QAbstractAnimation::DeleteWhenStopped );
-// 		}
-// 	}
+	for ( int row = last; row >= first; --row ) {
+		JourneySearchSuggestionItem *item = m_items.takeAt( row );
+// 		kDebug() << "Removed one item, new count:" << m_items.count();			
+		item->detachFromModel();
+		delete item;
+	}
 }
 
 void JourneySearchSuggestionWidget::dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight)
 {
 	for ( int row = topLeft.row(); row <= bottomRight.row(); ++row ) {
 		if ( row < m_model->rowCount() ) {
-			kDebug() << "Update" << row;
 			m_items[ row ]->updateData( m_model->index(row, 0) );
 		}
 	}
@@ -460,6 +382,8 @@ void JourneySearchSuggestionWidget::detachLineEdit()
 void JourneySearchSuggestionWidget::clear()
 {
 	m_model->clear();
+	
+	Q_ASSERT ( m_items.isEmpty() );
 }
 
 void JourneySearchSuggestionWidget::removeGeneralSuggestionItems()
@@ -862,7 +786,7 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& modelIn
 	} else if ( type == "additionalKeywordAtEndRemove"
 		|| type == "additionalKeywordAlmostAtEndRemove"
 		|| type == "replaceTimeKeyword" )
-	{
+	{		
 		// Remove first keyword appearance after the stop name, if any
 		QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
 		if ( type == "replaceTimeKeyword" )

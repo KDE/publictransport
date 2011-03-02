@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -85,7 +85,7 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
 			m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
 			setTitle( titleText() );
 
-			addWidget(m_title, WidgetTitle);
+			addWidget( m_title, WidgetTitle );
 			m_icon->show(); // TEST is this needed?
 			addWidget( m_filterWidget, WidgetFilter );
 			break;
@@ -96,8 +96,9 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
 													   "to or from the home stop" ) );
 
 // 			m_title->hide();
-			removeWidget( WidgetTitle, HideAndRemoveWidget );
-// 			m_icon->show(); // TEST is this needed?
+			removeWidget( WidgetTitle, HideAndRemoveWidget ); // TEST
+			removeWidget( WidgetFilter, HideAndRemoveWidget ); // TEST
+			
 			addJourneySearchWidgets();
 			Plasma::LineEdit *journeySearchLine = castedWidget<Plasma::LineEdit>(WidgetJourneySearchLine);
 			journeySearchLine->setEnabled( true );
@@ -111,8 +112,10 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
 			setIcon( AbortJourneySearchIcon );
 			m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys "
 													   "to or from the home stop") );
-// 			m_icon->show(); // TEST is this needed?
 
+			removeWidget( WidgetTitle, HideAndRemoveWidget ); // TEST
+			removeWidget( WidgetFilter, HideAndRemoveWidget ); // TEST
+			
 			addJourneySearchWidgets();
 
 			castedWidget<Plasma::LineEdit>(WidgetJourneySearchLine)->setEnabled( false );
@@ -125,6 +128,9 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
 					? JourneyListOkIcon : JourneyListErrorIcon );
 			m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
 
+			removeWidget( WidgetTitle, HideAndRemoveWidget ); // TEST
+			removeWidget( WidgetFilter, HideAndRemoveWidget ); // TEST
+			
 			int iconExtend = 32 * m_settings->sizeFactor;
 			Plasma::IconWidget *closeIcon = new Plasma::IconWidget;
 			closeIcon->setIcon( "window-close" );

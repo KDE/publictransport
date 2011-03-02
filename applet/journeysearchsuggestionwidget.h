@@ -232,9 +232,7 @@ protected:
     virtual void mouseDoubleClickEvent( QGraphicsSceneMouseEvent* event );
 	
 private:
-	JourneySearchSuggestionWidget::Suggestion m_suggestion;
 	QTextDocument *m_textDocument;
-// 	QModelIndex m_index;
 	JourneySearchSuggestionWidget *m_parent;
 	const QAbstractItemModel *m_model;
 	int m_row;
