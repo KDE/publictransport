@@ -150,22 +150,32 @@ class JourneyRouteStopGraphicsItem : public QGraphicsWidget {
 	
 public:
     JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent, const QPixmap &vehiclePixmap,
-								  const QString &text );
+								  const QString &text, bool isIntermediate, const QString &stopName );
 	
 	void setText( const QString &text );
 	
 	QRectF infoTextRect() const;
+	bool isIntermediate() const { return m_intermediate; };
+	QString stopName() const { return m_stopName; };
 	
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option, 
 						QWidget* widget = 0 );
 	
+signals:
+	void requestJourneys( const QString &newTargetStop, JourneyRouteStopGraphicsItem *item );
+	
 protected:
     virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
+    virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent* event );
+    virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent* event) { update(); };
 	
 private:
 	JourneyRouteGraphicsItem *m_parent;
 	QPixmap m_vehiclePixmap;
 	QTextDocument *m_infoTextDocument;
+	
+	bool m_intermediate;
+	QString m_stopName;
 };
 
 class JourneyRouteGraphicsItem : public QGraphicsWidget {
@@ -185,8 +195,11 @@ public:
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option, 
 						QWidget* widget = 0 );
 	
-// protected:
-//     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
+signals:
+	void requestJourneys( const QString &startStop, const QString &targetStop );
+	
+protected slots:
+    void processJourneyRequest( const QString &newTargetStop, JourneyRouteStopGraphicsItem *item );
 	
 private:
 	QPointer<JourneyItem> m_item;

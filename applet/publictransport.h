@@ -234,6 +234,8 @@ protected slots:
 	/** @brief An "recent journey"-action has been triggered.
 	 * @param recentJourneyAction The type of the executed action. */
 	void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction );
+	
+    void processJourneyRequest( const QString &startStop, const QString &targetStop );
 
 	/** @brief The worker thread starts processing departures/arrivals from the
 	 *   data engine.

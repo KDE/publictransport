@@ -214,7 +214,6 @@ public:
 	void updateData( const QModelIndex& index );
 	void setHtml( const QString &html );
 	QModelIndex index();
-	void detachFromModel();
 	
 	void setInitialized() { m_initializing = false; };
 	
@@ -234,8 +233,8 @@ protected:
 private:
 	QTextDocument *m_textDocument;
 	JourneySearchSuggestionWidget *m_parent;
-	const QAbstractItemModel *m_model;
-	int m_row;
+// 	const QAbstractItemModel *m_model;
+// 	int m_row;
 	bool m_initializing;
 };
 

@@ -195,6 +195,9 @@ public:
 	QRect infoRect( const QRect &rect ) const;
 	QRect extraIconRect( const QRect &rect ) const;
 	
+signals:
+	void requestJourneys( const QString &startStop, const QString &targetStop );
+	
 protected:
 	virtual void updateTextLayouts();
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
@@ -316,6 +319,9 @@ public:
 	inline JourneyModel *journeyModel() const { 
 		return qobject_cast<JourneyModel*>(m_model);
 	};
+	
+signals:
+	void requestJourneys( const QString &startStop, const QString &targetStop );
 	
 protected slots:
     virtual void rowsInserted( const QModelIndex &parent, int first, int last );

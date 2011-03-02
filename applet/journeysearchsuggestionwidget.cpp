@@ -36,14 +36,13 @@
 
 JourneySearchSuggestionItem::JourneySearchSuggestionItem(
 		JourneySearchSuggestionWidget *parent, const QModelIndex& modelIndex )
-		: QGraphicsWidget(parent), m_textDocument(0), m_parent(parent), m_model(0)
+		: QGraphicsWidget(parent), m_textDocument(0), m_parent(parent)
 {
 	m_initializing = true;
 	Q_ASSERT_X( modelIndex.isValid(), "JourneySearchSuggestionItem", 
 				"Invalid QModelIndex given in JourneySearchSuggestionItem constructor!" );
 	
 	setFlags( ItemClipsToShape | ItemIsFocusable | ItemIsSelectable );
-	m_row = -1;
 	updateData( modelIndex );
 }
 
@@ -57,11 +56,11 @@ void JourneySearchSuggestionItem::updateTextLayout()
 void JourneySearchSuggestionItem::updateData(const QModelIndex& modelIndex)
 {
 	if ( modelIndex.isValid() ) {
-		m_row = modelIndex.row();
-		m_model = modelIndex.model();
+// 		m_row = modelIndex.row();
+// 		m_model = modelIndex.model();
 		setHtml( modelIndex.data().toString() );
 	} else {
-		kDebug() << "Invalid index given!";
+		kDebug() << "Invalid index given!"/* << m_model << m_row*/;
 	}
 }
 
@@ -168,20 +167,6 @@ QModelIndex JourneySearchSuggestionWidget::indexFromItem( JourneySearchSuggestio
 QModelIndex JourneySearchSuggestionItem::index()
 {
 	return m_parent->indexFromItem( this );
-}
-
-void JourneySearchSuggestionItem::detachFromModel()
-{
-    disconnect( m_model, SIGNAL(rowsInserted(QModelIndex,int,int)), 
-			 this, SLOT(rowsInserted(QModelIndex,int,int)) );
-    disconnect( m_model, SIGNAL(rowsRemoved(QModelIndex,int,int)), 
-			 this, SLOT(rowsRemoved(QModelIndex,int,int)) );
-    disconnect( m_model, SIGNAL(modelReset()), this, SLOT(modelReset()) );
-    disconnect( m_model, SIGNAL(layoutChanged()), this, SLOT(layoutChanged()) );
-    disconnect( m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), 
-			 this, SLOT(dataChanged(QModelIndex,QModelIndex)) );
-	m_row = -1;
-	m_model = NULL;
 }
 
 void JourneySearchSuggestionItem::resizeEvent(QGraphicsSceneResizeEvent* event)
@@ -346,8 +331,6 @@ void JourneySearchSuggestionWidget::rowsRemoved(const QModelIndex& parent, int f
 	
 	for ( int row = last; row >= first; --row ) {
 		JourneySearchSuggestionItem *item = m_items.takeAt( row );
-// 		kDebug() << "Removed one item, new count:" << m_items.count();			
-		item->detachFromModel();
 		delete item;
 	}
 }

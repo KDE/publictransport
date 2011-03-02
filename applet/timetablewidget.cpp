@@ -415,6 +415,8 @@ void JourneyGraphicsItem::updateData( JourneyItem* item, bool updateLayouts )
 			m_routeItem->updateData( item );
 		} else {
 			m_routeItem = new JourneyRouteGraphicsItem( this, item, m_parent->svg() );
+			connect( m_routeItem, SIGNAL(requestJourneys(QString,QString)),
+					 this, SIGNAL(requestJourneys(QString,QString)) );
 			QRect _infoRect = infoRect( rect().toRect() );
 			m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
 			m_routeItem->resize( rect().width() - padding() - _infoRect.left(), 
@@ -1139,6 +1141,8 @@ QSizeF PublicTransportWidget::sizeHint(Qt::SizeHint which, const QSizeF& constra
 PublicTransportWidget::PublicTransportWidget( QGraphicsItem* parent ) 
 	: Plasma::ScrollWidget( parent ), m_model(0), m_svg(0)
 {
+	setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
+	
 	QGraphicsWidget *container = new QGraphicsWidget( this );
 	QGraphicsLinearLayout *l = new QGraphicsLinearLayout( Qt::Vertical, container );
 	l->setSpacing( 1.0 );
@@ -1215,7 +1219,8 @@ void PublicTransportWidget::updateItemGeometries()
 
 void PublicTransportWidget::modelReset()
 {
-	kDebug() << "RESET";
+	qDeleteAll( m_items );
+	m_items.clear();
 }
 
 void TimetableWidget::dataChanged( const QModelIndex& topLeft, const QModelIndex& bottomRight )
@@ -1253,6 +1258,8 @@ void JourneyTimetableWidget::rowsInserted(const QModelIndex& parent, int first, 
 		JourneyGraphicsItem *item = new JourneyGraphicsItem( widget() );
 		item->setPublicTransportWidget( this );
 		item->updateData( static_cast<JourneyItem*>(m_model->item(row)) );
+		connect( item, SIGNAL(requestJourneys(QString,QString)),
+				 this, SIGNAL(requestJourneys(QString,QString)) );
 		m_items.insert( row, item );
 	
 		// Fade new items in

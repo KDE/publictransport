@@ -32,6 +32,8 @@
 #include <QTextDocument>
 #include "timetablewidget.h"
 #include <QGraphicsEffect>
+#include <QGraphicsSceneHoverEvent>
+#include <QMenu>
 
 RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item )
 	: QGraphicsWidget(parent), m_item(item)
@@ -514,11 +516,14 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter, const QStyleOptionGrap
 }
 
 JourneyRouteStopGraphicsItem::JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent, 
-	const QPixmap &vehiclePixmap, const QString &text )
+	const QPixmap &vehiclePixmap, const QString &text, bool isIntermediate, const QString &stopName )
 	: QGraphicsWidget(parent), m_parent(parent), m_infoTextDocument(0)
 {
 	m_vehiclePixmap = vehiclePixmap;
+	m_intermediate = isIntermediate;
+	m_stopName = stopName;
 	setText( text );
+	setAcceptHoverEvents( true );
 }
 
 void JourneyRouteStopGraphicsItem::setText( const QString& text )
@@ -532,6 +537,24 @@ void JourneyRouteStopGraphicsItem::setText( const QString& text )
 
 	updateGeometry();
 	update();
+}
+
+void JourneyRouteStopGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
+{
+	if ( m_intermediate ) {
+		QMenu *menu = new QMenu( event->widget() );
+		// TODO newOriginStopAction with "from" instead of "to" for journeys 
+		QAction *newTargetStopAction = new QAction( KIcon("edit-find"),
+				i18n("&Search Journeys to %1", m_stopName), menu );
+		menu->addAction( newTargetStopAction );
+		
+		QAction *executedAction = menu->exec( event->screenPos() );
+		if ( executedAction == newTargetStopAction ) {
+			emit requestJourneys( m_stopName, this );
+		}
+	} else {
+		QGraphicsItem::contextMenuEvent(event);
+	}
 }
 
 QSizeF JourneyRouteStopGraphicsItem::sizeHint( Qt::SizeHint which, const QSizeF& constraint ) const
@@ -556,6 +579,24 @@ void JourneyRouteStopGraphicsItem::paint( QPainter* painter, const QStyleOptionG
 {
 	Q_UNUSED( widget );
 	
+	if ( option->state.testFlag(QStyle::State_MouseOver) ) {
+		#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+			QColor hoverColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::HighlightColor );
+		#else
+			QColor hoverColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewHoverColor );
+		#endif
+		
+		// Draw hover background
+		QLinearGradient bgGradient( 0, 0, 1, 0 );
+		bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+		bgGradient.setColorAt( 0, Qt::transparent );
+		bgGradient.setColorAt( 0.4, hoverColor );
+		bgGradient.setColorAt( 0.6, hoverColor );
+		bgGradient.setColorAt( 1, Qt::transparent );
+		
+		painter->fillRect( option->rect, QBrush(bgGradient) );
+	}
+	
 #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
 	QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
 #else
@@ -577,7 +618,6 @@ JourneyRouteGraphicsItem::JourneyRouteGraphicsItem( QGraphicsItem* parent, Journ
 
 void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
 {
-	
 	if ( rect().isEmpty() ) {
 		kDebug() << "Empty rect for the JourneyRouteGraphicsItem";
 		return;
@@ -586,7 +626,10 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
 	const JourneyInfo *info = m_item->journeyInfo();
 	
 	// First remove all old RouteStopGraphicsItems
-	qDeleteAll( m_routeItems );
+// 	qDeleteAll( m_routeItems );
+	foreach ( JourneyRouteStopGraphicsItem *item, m_routeItems ) {
+		item->deleteLater();
+	}
 	m_routeItems.clear();
 	
 	QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( layout() );
@@ -663,12 +706,33 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
 			
 			
 			JourneyRouteStopGraphicsItem *routeItem = new JourneyRouteStopGraphicsItem( 
-					this, QPixmap(32, 32), text );
+					this, QPixmap(32, 32), text, i >= 1 && i < info->routeStops().count() - 1, 
+					info->routeStops()[i] );
 			routeItem->setFont( *font );
+			connect( routeItem, SIGNAL(requestJourneys(QString,JourneyRouteStopGraphicsItem*)),
+					 this, SLOT(processJourneyRequest(QString,JourneyRouteStopGraphicsItem*)) );
 			m_routeItems << routeItem;
 			l->addItem( routeItem );
 		}
 	}
+}
+
+void JourneyRouteGraphicsItem::processJourneyRequest( const QString& newTargetStop, 
+													  JourneyRouteStopGraphicsItem* item )
+{
+	if ( m_routeItems.isEmpty() ) {
+		kDebug() << "Requested a new journey, but no route items present in list anymore";
+		return;
+	}
+	
+	QString startStop = m_routeItems.first()->stopName();
+	if ( startStop == newTargetStop ) {
+		kDebug() << "Requested a new journey with start stop = target stop";
+		return;
+	}
+	
+	// Request journeys from the first route stop to the given new target stop
+	emit requestJourneys( startStop, newTargetStop );
 }
 
 void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option, 
@@ -676,6 +740,11 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
 {
 	Q_UNUSED( option );
 	Q_UNUSED( widget );
+	
+	if ( m_item.isNull() ) {
+		// Item already deleted
+		return;
+	}
 
 	painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 	

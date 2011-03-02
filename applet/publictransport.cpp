@@ -486,6 +486,8 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
 			return;
 		}
 		_targetStopName = m_lastSecondStopName;
+	}
+	if ( !_dateTime.isValid() ) {
 		_dateTime = m_lastJourneyDateTime;
 	}
 
@@ -2087,6 +2089,8 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType, TitleType 
 		m_journeyTimetable->setModel( m_modelJourneys );
 		m_journeyTimetable->setFont( m_settings.sizedFont() );
 		m_journeyTimetable->setSvg( &m_vehiclesSvg );
+		connect( m_journeyTimetable, SIGNAL(requestJourneys(QString,QString)),
+				 this, SLOT(processJourneyRequest(QString,QString)) );
 
 		widget = m_journeyTimetable;
 		break;
@@ -2165,6 +2169,12 @@ void PublicTransport::oldItemAnimationFinished()
 	}
 	delete m_oldItem;
 	m_oldItem = NULL;
+}
+
+void PublicTransport::processJourneyRequest( const QString& startStop, const QString& targetStop )
+{
+	clearJourneys();
+	reconnectJourneySource( targetStop, QDateTime(), true, true );
 }
 
 void PublicTransport::recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction )
