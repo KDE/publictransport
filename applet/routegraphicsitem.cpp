@@ -31,6 +31,7 @@
 #include <QGraphicsLinearLayout>
 #include <QTextDocument>
 #include "timetablewidget.h"
+#include <QGraphicsEffect>
 
 RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item )
 	: QGraphicsWidget(parent), m_item(item)
@@ -260,18 +261,26 @@ void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem
 	const QRectF routeRect = rect();
 	const qreal step = (routeRect.width() - 20 * m_zoomFactor) / count;
 	const qreal routeLineWidth = 4.0 * m_zoomFactor;
-	const qreal smallStopMarkerSize = 3.0 * m_zoomFactor;
+	const qreal smallStopMarkerSize = 3 * m_zoomFactor;
+	
+	// Draw horizontal timeline
 #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
-	painter->setBrush( Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor) );
+	QColor backgroundColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor);
 	painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor) );
 #else
-	painter->setBrush( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor) );
+	QColor backgroundColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor);
 	painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor) );
 #endif
+	QLinearGradient backgroundGradient( 0, 0, 1, 0 );
+	backgroundGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+	backgroundGradient.setColorAt( 0, backgroundColor );
+	backgroundGradient.setColorAt( 1, Qt::transparent );
+	painter->setBrush( backgroundGradient );
 	painter->drawRoundedRect( QRectF(routeRect.left(), routeRect.top() + padding(), 
 									 routeRect.width() - step, routeLineWidth), 
 							  routeLineWidth / 2.0, routeLineWidth / 2.0 );
 // 	
+	painter->setBrush( backgroundColor );
 	const QPointF startStopPos( routeRect.left() + 10 * m_zoomFactor, 
 								routeRect.top() + padding() + routeLineWidth / 2.0 );
 	for ( int i = 0; i < info->routeStops().count(); ++i ) {
@@ -280,10 +289,17 @@ void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem
 			&& i < info->routeStops().count() - 1 )
 		{
 			// Visualize intermediate stops after the last exact stop
+			KIcon stopIcon("public-transport-stop");
+// 			stopIcon.paint( painter, stopPos.x() + step * 0.333333 - smallStopMarkerSize / 2.0, 
+// 							stopPos.y() - smallStopMarkerSize / 2.0,
+// 							smallStopMarkerSize, smallStopMarkerSize );
+// 			stopIcon.paint( painter, stopPos.x() + step * 0.666666 - smallStopMarkerSize / 2.0, 
+// 							stopPos.y() - smallStopMarkerSize / 2.0,
+// 							smallStopMarkerSize, smallStopMarkerSize );
 			painter->drawEllipse( stopPos + QPointF(step * 0.333333, 0.0), 
-									smallStopMarkerSize, smallStopMarkerSize );
+								  smallStopMarkerSize, smallStopMarkerSize );
 			painter->drawEllipse( stopPos + QPointF(step * 0.666666, 0.0), 
-									smallStopMarkerSize, smallStopMarkerSize );
+								  smallStopMarkerSize, smallStopMarkerSize );
 		}
 	}
 }
@@ -303,6 +319,11 @@ RouteStopMarkerGraphicsItem::RouteStopMarkerGraphicsItem( QGraphicsItem* parent 
 				Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor) );
 #endif
 	setPalette( p );
+	
+	QGraphicsDropShadowEffect *shadowEffect = new QGraphicsDropShadowEffect;
+	shadowEffect->setBlurRadius( 8.0 );
+	shadowEffect->setOffset( 1.0 );
+	setGraphicsEffect( shadowEffect );
 }
 
 void RouteStopMarkerGraphicsItem::hoverEnterEvent(QGraphicsSceneHoverEvent* event)
@@ -352,23 +373,18 @@ void RouteStopMarkerGraphicsItem::setHoverStep( qreal hoverStep )
 	QPalette p = palette();
 	p.setColor( QPalette::Active, QPalette::Background, currentColor ); 
 	setPalette( p );
-	update();
 	
 	m_hoverStep = hoverStep;
+// 	update();
+	updateGeometry();
 }
 
 void RouteStopMarkerGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option, 
 										 QWidget* widget )
 {
 	Q_UNUSED( widget );
-	painter->setRenderHint( QPainter::Antialiasing );
-	painter->setBrush( palette().color(QPalette::Active, QPalette::Background) );
-#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
-	painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor) );
-#else
-	painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor) );
-#endif
-	painter->drawEllipse( option->rect );
+	painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
+	KIcon("public-transport-stop").paint( painter, option->rect );
 }
 
 RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font,
@@ -670,6 +686,7 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
 	timelineRect.setLeft( iconSize / 2.0 );
 	const qreal routeLineWidth = 4.0 * m_zoomFactor;
 	
+	// Draw vertical timeline
 #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
 	painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor) );
 	painter->setBrush( Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor) );
@@ -685,6 +702,7 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
 		return;
 	}
 	
+	qreal stopRadius = 5.0;
 	qreal lastY = -5.0;
 	for ( int i = 0; i < m_routeItems.count() - 1; ++i ) {
 		JourneyRouteStopGraphicsItem *routeItem = m_routeItems[i];
@@ -694,12 +712,18 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
 		QPointF stopPos( timelineRect.left() + routeLineWidth / 2.0, 
 						 lastY + (y - lastY) / 2.0 + 1.0 );
 		
+		// Draw lines to connect to the stop text
 		qreal lineWidth = iconSize / 2.0;
 		qreal lineHeight = routeItem->size().height() / 3.0;
 		painter->drawLine( stopPos.x(), stopPos.y(), stopPos.x() + lineWidth, stopPos.y() );
 		painter->drawLine( stopPos.x() + lineWidth, stopPos.y() - lineHeight, 
 						   stopPos.x() + lineWidth, stopPos.y() + lineHeight );
-		painter->drawEllipse( stopPos, 4.0, 4.0 );
+		
+		// Draw the stop
+// 		painter->drawEllipse( stopPos, 4.0, 4.0 );
+		KIcon("public-transport-stop").paint( painter, 
+											  stopPos.x() - stopRadius, stopPos.y() - stopRadius,
+											  2.0 * stopRadius, 2.0 * stopRadius );
 		lastY = y;
 		
 		if ( i < m_item->journeyInfo()->routeVehicleTypes().count() ) {
@@ -758,5 +782,8 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
 	painter->drawLine( stopPos.x(), stopPos.y(), stopPos.x() + lineWidth, stopPos.y() );
 	painter->drawLine( stopPos.x() + lineWidth, stopPos.y() - lineHeight, 
 						stopPos.x() + lineWidth, stopPos.y() + lineHeight );
-	painter->drawEllipse( stopPos, 4.0, 4.0 );
+// 	painter->drawEllipse( stopPos, 4.0, 4.0 );
+	KIcon("public-transport-stop").paint( painter, 
+										  stopPos.x() - stopRadius, stopPos.y() - stopRadius,
+										  2.0 * stopRadius, 2.0 * stopRadius );
 }

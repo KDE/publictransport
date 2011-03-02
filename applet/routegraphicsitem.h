@@ -34,7 +34,7 @@ class RouteStopMarkerGraphicsItem : public QGraphicsWidget {
 public:
     RouteStopMarkerGraphicsItem( QGraphicsItem* parent = 0 );
 	
-	static const qreal radius = 4.6;
+	qreal radius() const { return 6.0 + 2.0 * m_hoverStep; };
 	
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option, 
 						QWidget* widget = 0 );
@@ -43,12 +43,12 @@ public:
 	void setHoverStep( qreal expandStep );
 	
     virtual QRectF boundingRect() const {
-		return QRectF( -radius, -radius, 2 * radius, 2 * radius );
+		return QRectF( -radius(), -radius(), 2 * radius(), 2 * radius() );
 	};
 	
     virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const {
 		if ( which == Qt::MinimumSize || which == Qt::MaximumSize ) {
-			return QSizeF( 2 * radius, 2 * radius );
+			return QSizeF( 2 * radius(), 2 * radius() );
 		} else {
 			return QGraphicsWidget::sizeHint( which, constraint );
 		}
@@ -147,13 +147,11 @@ private:
 class JourneyRouteGraphicsItem;
 class JourneyRouteStopGraphicsItem : public QGraphicsWidget {
 	Q_OBJECT
-// 	Q_PROPERTY( qreal expandStep READ expandStep WRITE setExpandStep )
 	
 public:
     JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent, const QPixmap &vehiclePixmap,
 								  const QString &text );
 	
-// 	QString text() const { return m_text; };
 	void setText( const QString &text );
 	
 	QRectF infoTextRect() const;
