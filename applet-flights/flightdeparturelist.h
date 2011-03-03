@@ -42,7 +42,7 @@ public:
 	QString status() const { return m_status; };
 	QString airline() const { return m_airline; };
 	
-	void setDeparture( const QDateTime departure );
+	void setDeparture( const QDateTime& departure );
 	void setTarget( const QString &target );
 	void setFlightNumber( const QString &flightNumber );
 	void setStatus( const QString &status );

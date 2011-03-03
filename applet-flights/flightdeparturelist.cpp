@@ -88,7 +88,7 @@ void FlightDeparture::setTarget( const QString& target )
 	m_header->setToolTip( headerText() );
 }
 
-void FlightDeparture::setDeparture( const QDateTime departure )
+void FlightDeparture::setDeparture( const QDateTime& departure )
 {
 	m_departure = departure;
 	m_info->setText( infoText() );
