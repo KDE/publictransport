@@ -40,7 +40,7 @@ install( TARGETS timetablemate ${INSTALL_TARGETS_DEFAULT_ARGS} )
 
 
 ########### install files ###############
-install( FILES timetablemate.desktop  DESTINATION ${XDG_APPS_INSTALL_DIR} )
+install( PROGRAMS timetablemate.desktop  DESTINATION ${XDG_APPS_INSTALL_DIR} )
 install( FILES timetablemate.kcfg  DESTINATION  ${KCFG_INSTALL_DIR} )
 install( FILES timetablemateui.rc  DESTINATION  ${DATA_INSTALL_DIR}/timetablemate )
 
