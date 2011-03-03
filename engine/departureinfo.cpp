@@ -36,7 +36,7 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
 		if ( value(RouteTimes).canConvert(QVariant::List) ) {
 			QVariantList vars = value( RouteTimes ).toList();
 			foreach( const QVariant &var, vars ) {
-				if ( var.canConvert(QVariant::Time) ) {
+				if ( var.canConvert(QVariant::Time) && var.toTime().isValid() ) {
 					times << var.toTime();
 				} else if ( var.canConvert(QVariant::String) ) {
 					times << QTime::fromString( var.toString().trimmed(), "hh:mm" );
