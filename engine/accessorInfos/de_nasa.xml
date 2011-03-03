@@ -15,7 +15,7 @@
 <!-- <credit>Nahverkehrsservice Sachsen-Anhalt GmbH</credit> -->
 
 <rawUrls>
-    <departures><![CDATA[http://www.nasa.de/delfi52/stboard.exe/dn?ld=web&L=vbn&input={stop}&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxCount}&start=yes]]></departures>
+    <departures><![CDATA[http://reiseauskunft.insa.de/bin/stboard.exe/dn?ld=web&L=vbn&input={stop}&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxCount}&start=yes]]></departures>
 </rawUrls>
 
 <script>de_nasa.js</script>

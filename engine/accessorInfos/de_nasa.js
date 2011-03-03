@@ -6,61 +6,112 @@ function usedTimetableInformations() {
 
 // This function parses a given HTML document for departure/arrival data.
 function parseTimetable( html ) {
-// 	// Find result table
-// 	var pos = html.search( /<h2 class=\"ivuHeadline\">\s*Ist-Abfahrtzeiten - Übersicht/i );
-// 	if ( pos == -1 ) {
-// // 		helper.error("Result table not found!", html);
-// 		str = html;
-// 	} else {
-// 		str = html.substr( pos );
-// 	}
-	var str = html;
+	// Check for errors
+	var errorRegExp = /<div class="errorBox">\s*<h1>Error!<\/h1>\s*<p>([^<]*)<\/p>/i;
+	if ( (error = errorRegExp.exec(html)) ) {
+		helper.error( "Got an error message: " + error[1], html );
+		return;
+	}
 
+	// Find result table
+	var resultTableRegExp = /<table [^>]*?class="hafasButtons"[^>]*>[\s\S]*?<\/table>\s*<table [^>]*?class="hafasResult"[^>]*>([\s\S]*)<\/table>/i;
+	if ( (resultTable = resultTableRegExp.exec(html)) ) {
+		str = resultTable[1];
+	} else {
+		helper.error("Result table not found!", html);
+		return;
+	}
+	
 	// Initialize regular expressions
 	// TODO: This regexp is copied from the old XML, should be divided to parse each column on it's own
-	var departuresRegExp = /<tr class=[^>]*>\s*<td class=[^>]*>([0-9]{2}:[0-9]{2})<\/td>\s*<td class=[^>]*>\s*<a href="\/delfi52\/[^"]*"><img src="\/img52\/([^_]*)_pic.\w{3,4}"[^>]*>\s*([^<]*)\s*<\/a>\s*<\/td>\s*<td class=[^>]*>\s*<span class=[^>]*>\s*<a href=[^>]*>\s*([^<]*)\s*<\/a>\s*<\/span>\s*<br \/>\s*<a href=[^>]*>[\s\S]*?<\/a>[\s\S]*?<\/td>\s*(?:<td class=[^>]*>\s*([^<]*)\s*<br \/>[^<]*<\/td>\s*)?[\s\S]*?<\/tr>/ig;
-//     var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
+	var departureRegExp = /<tr class="[^"]*">([\s\S]*?)<\/tr>/ig;
+    var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
+	var typeOfVehicleRegExp = /<a[^>]*><img src="\/hafas-res\/img\/([^_]*)_pic.gif"[^>]*>/i;
+	var targetRegExp = /<span[^>]*>([\s\S]*)<\/span>/i;
+    var routeBlocksRegExp = /\r?\n\s*(-|&#8226;)\s*\r?\n/gi;
+    var routeBlockEndOfExactRouteMarkerRegExp = /&#8226;/i;
 
-//     var timeCol = 0, typeOfVehicleCol = 1, transportLineCol = 1, targetCol = 2;
+    var timeCol = 0, typeOfVehicleCol = 1, transportLineCol = 1, routeCol = 2, targetCol = 2, platformCol = 3;
 	
 	// Go through all departure blocks
-	while ( (departureRow = departuresRegExp.exec(str)) ) {
+	var departureNumber = 0;
+	while ( (departureRow = departureRegExp.exec(str)) ) {
 		// This gets the current departure row
-// 		departureRow = departureRow[1];
+		departureRow = departureRow[1];
 		
-// 		// Get column contents
-// 		var columns = new Array;
-// 		while ( (col = columnsRegExp.exec(departureRow)) ) {
-// 			columns.push( col[1] );
-// 		}
-// 		columnsRegExp.lastIndex = 0;
-// 		
-// 		if ( columns.length < 3 ) {
-// 			if ( departureRow.indexOf("<th") == -1 ) {
-// 				helper.error("Too less columns in a departure row found (" + columns.length + ") " + departureRow);
-// 			}
-// 			continue;
-// 		}
+		// Get column contents
+		var columns = new Array;
+		while ( (col = columnsRegExp.exec(departureRow)) ) {
+			columns.push( col[1] );
+		}
+		columnsRegExp.lastIndex = 0;
+		
+		if ( columns.length < 3 ) {
+			if ( departureRow.indexOf("<th") == -1 ) {
+				helper.error("Too less columns in a departure row found (" + columns.length + ") " + departureRow);
+			}
+			continue;
+		}
 	    
+		// Initialize result variables with defaults
+		var time = 0, typeOfVehicle = "", transportLine = "", targetString = "", platformString = "",
+			routeStops = new Array, routeTimes = new Array, exactRouteStops = 0;
+		
 		// Parse time column
-		time = helper.matchTime( helper.trim(helper.stripTags(departureRow[1])), "hh:mm" );
+		time = helper.matchTime( helper.trim(helper.stripTags(columns[timeCol])), "hh:mm" );
 		if ( time.length != 2 ) {
 			helper.error("Unexpected string in time column", columns[timeCol]);
 			continue;
 		}
 		
-		// Parse type of vehicle column
-		var typeOfVehicle = helper.trim( helper.stripTags(departureRow[2]) );
+		if ( (typeOfVehicle = typeOfVehicleRegExp.exec(columns[typeOfVehicleCol])) ) {
+			typeOfVehicle = typeOfVehicle[1];
+		} else {
+			helper.error("Unexpected string in type of vehicle column", columns[typeOfVehicleCol]);
+			continue;
+		}
 		
 		// Parse transport line column
-		var transportLine = helper.trim( helper.stripTags(departureRow[3]) );
+		var transportLine = helper.trim( helper.stripTags(columns[transportLineCol]) );
 		
 		// Parse target column
-		var targetString = helper.trim( helper.stripTags(departureRow[4]) );
+		if ( (targetString = targetRegExp.exec(columns[targetCol])) ) {
+			targetString = helper.trim( helper.stripTags(targetString[1]) );
+		} else {
+			helper.error("Unexpected string in target column", columns[targetCol]);
+			continue;
+		}
+		
+		// Parse route column
+		var route = columns[routeCol];
+		var posRoute = route.indexOf( "<br />" );
+		if ( posRoute != -1 ) {
+			route = route.substr( posRoute + 6 );
+			var routeBlocks = route.split( routeBlocksRegExp );
+
+			if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) ) {
+				exactRouteStops = routeBlocks.length;
+			} else {
+				while ( (splitter = routeBlocksRegExp.exec(route)) ) {
+					++exactRouteStops;
+					if ( routeBlockEndOfExactRouteMarkerRegExp.test(splitter) )
+						break;
+				}
+			}
+			
+			for ( var n = 0; n < routeBlocks.length; ++n ) {
+				var lines = helper.splitSkipEmptyParts( routeBlocks[n], "\n" );
+				if ( lines.count < 4 )
+					continue;
+
+				routeStops.push( helper.trim(helper.stripTags(lines[1])) );
+				routeTimes.push( lines[3] );
+			}
+		}
 		
 		// Parse platform column
-		var platformString = departureRow.length >= 6 && typeof(departureRow[5]) != 'undefined'
-				? helper.trim( helper.stripTags(departureRow[5]) ) : "";
+		var platformString = columns.length > platformCol && typeof(columns[platformCol]) != 'undefined'
+				? helper.trim( helper.stripTags(columns[platformCol]) ) : "";
 		
 		// Add departure to the result set
 		timetableData.clear();
@@ -70,7 +121,16 @@ function parseTimetable( html ) {
 		timetableData.set( 'TypeOfVehicle', typeOfVehicle );
 		timetableData.set( 'Platform', platformString );
 		timetableData.set( 'Target', targetString );
+		timetableData.set( 'RouteStops', routeStops );
+		timetableData.set( 'RouteTimes', routeTimes );
+		timetableData.set( 'RouteExactStops', exactRouteStops );
 		result.addData( timetableData );
+		
+		++departureNumber;
+	}
+	
+	if ( departureNumber == 0 ) {
+		helper.error( "Regexp didn't match anything", str );
 	}
 }
 
