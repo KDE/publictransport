@@ -1,0 +1,85 @@
+
+First: Thanks for packaging :)
+If there are any problems mail me at fpuelz@gmx.de or write a comment to the
+publictransport page on kde-look.org.
+Maybe you want to suggest changes in this document like new/better hints.
+
+COPYING, AUTHOR, CHANGELOG files are included for each component.
+
+This archive contains multiple Plasma applets, data engines, a library and a 
+developer tool.
+The sources for each component are stored in one of these directories:
+
+  - libpublictransporthelper-*
+      Description: A library for easy configuration dialog creation for 
+        Plasma applets/runners using the publictransport data engine.
+
+      Hint: This needs to be installed, before dependent components can be compiled.
+      Dependent: plasma-applet-publictransport, plasma-applet-graphicaltimetableline, 
+        plasma-applet-flights, plasma-runner-publictransport, timetablemate
+
+  - plasma-engine-publictransport-*
+      Description: A Plasma data engine that gets timetable information from 
+        service providers supported via scripts.
+
+	  Hint: On installation it creates relative symbolic links for default service 
+        providers of supported countries, eg. "de_default.xml" -> "de_db.xml".
+      Dependent: plasma-applet-publictransport, plasma-applet-graphicaltimetableline, 
+        plasma-applet-flights, plasma-runner-publictransport, timetablemate
+
+  - plasma-engine-openstreetmap-*
+      Description: A Plasma data engine that gets public transport stop names 
+        in a given area via OpenStreetMap.
+
+      Hint: Optional, used by libpublictransporthelper 
+        (only useful with GPS hardware)
+
+  - publictransport-icons
+      Description: Contains a public transport stop icon and several icons for 
+        vehicle types like trams, buses, trains.
+
+      Hint: Used by plasma-applet-publictransport and plasma-applet-graphicaltimetableline 
+        for filter widgets.
+        plasma-applet-publictransport and plasma-applet-graphicaltimetableline
+        also use an SVG to draw vehicle type icons in the applet. In the 
+        configuration dialogs, the icons in this directory are used.
+
+  - plasma-applet-publictransport-*
+      Description: The main public transport Plasma applet showing 
+        departures/arrivals for given stops or journeys to/from another stop.
+
+      Requires: libpublictransporthelper, plasma-engine-publictransport, 
+        publictransport-icons
+
+  - plasma-applet-graphicaltimetableline-*
+      Description: A Plasma applet with a graphical representation of the 
+        timetable for public transport at a given stop with a street 
+        on which vehicles are moving.
+
+      Requires: libpublictransporthelper, plasma-engine-publictransport, 
+        publictransport-icons
+
+  - plasma-applet-flights-*
+      Description: A simple Plasma applet showing flight departures 
+        from a given airport.
+
+      Hint: This applet only uses the international_flightstats.xml/.js files 
+        in the accessorInfos directory of plasma-engine-publictransport.
+      Requires: libpublictransporthelper, plasma-engine-publictransport, 
+        publictransport-icons
+
+  - plasma-runner-publictransport-*
+      Description: A runner that shows publictransport departures/arrivals/journeys.
+
+      Requires: libpublictransporthelper, plasma-engine-publictransport, 
+        publictransport-icons
+
+  - timetablemate-*
+      Description: A little IDE to create new scripts for the publictransport 
+        Plasma data engine that adds support for new service providers.
+
+      Hint: This can be used to create new scripts for the data engine, 
+        but isn't needed by end users, that aren't interested in that.
+        It requires KWebkitPart, for compilation the headers are also required.
+      Requires: libpublictransporthelper, plasma-engine-publictransport, 
+        publictransport-icons

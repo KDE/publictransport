@@ -1,0 +1,13 @@
+libpublictransporthelper Library
+--------------------------------
+
+You need KDE 4.5
+
+-- Build instructions --
+
+> cd libpublictransporthelper
+> mkdir build
+> cd build
+> cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` ..
+> make 
+> make install

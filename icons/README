@@ -1,6 +1,0 @@
-To install the icons needed by the plasmoid do the following:
-
-> cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` .
-> sudo make install
-
-This will install the icons in this folder to the icons-install-dir (usually /usr/share/icons/...)

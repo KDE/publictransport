@@ -1,0 +1,25 @@
+
+Changelog of libpublictransporthelper
+
+0.10 - Beta 4
+PublicTransport Library:
+- Checking if a stop name suggestion was selected in a StopLineEdit is now done case insensitively. If the selection of a suggestion was detected, the suggestion list isn't replaced by new suggestions.
+
+0.10 - Beta 3
+- Added new classes StopLineEdit and StopLineEditList, which are KLineEdits with stop name autocompletion. This is currently used by the StopSettingsDialog and for a very simple configuration dialog of the (new) flights applet.
+- Added new class VehicleTypeModel, which can be used with CheckComboBox to show a vehicle type selection widget.
+- Fixed the selection of stop name suggestions with arrow keys: If a suggestion gets selected no new suggestions are now requested, which then replaced the old suggestions.
+
+0.10 - Beta 1
+- New PublicTransportHelper library:
+- Includes classes previously inside the applet. For example the StopSettingsDialog is used by the applet (with option for extended stop selection) and the runner (with option for simple accessor selection) currently.
+- All classes now have d-pointers, the API is cleaned up, no more krazy errors, more and better documentation.
+- Offers configuration dialogs to be used with the publictransport data engine. The dialogs are now very flexible and more easy to use (eg. data engines are loaded using Plasma::DataEngineManager instead of getting them via constructor arguments, LocationModel/ServiceProviderModel are also no longer required as argument).
+- Reworked StopSettings class, now uses a QHash<StopSetting, QVariant> to store values. That way custom settings can also be stored. StopSetting is a new enumeration with all available settings, custom settings begin with StopSetting::UserSetting.
+- Added a Stop class which stores a stop name and/or a stop ID. Previously two separate QStringLists were used for the stop names and stop IDs.
+- The StopSettingsDialog can show custom widgets and the StopSettings class can store custom stop settings, values are syncronized between both. The accessor install button can be hidden and is now shown on the right of the service provider combobox (instead of in the details section).
+- A changelog is now shown in the accessor info dialog. The description and changelog are now shown in a KTextBrowser.
+- Unit tests for classes Stop, StopSettings, StopWidget, StopListWidget, StopSettingsDialog (including usage of custom widget factories).
+- Fixed installation of new accessors with scripts. The accessor XML is now parsed for a <script>-tag and the referenced script file is installed with the XML. Previously only the XML was installed.
+- Added a new option to AbstractDynamicWidgetContainer: New widgets can now be added to the bottom (default) or to the top.
+- Added the ColumnResizer by Aurelien Gateau to the StopSettingsDialog, to make all labels in the dialog the same width (details widgets, stop widgets, normal widgets). Needed one addition to be able to remove widgets from the ColumnResizer again.

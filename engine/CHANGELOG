@@ -1,0 +1,306 @@
+
+Changelog of plasma-engine-publictransport 
+
+0.10 - Beta 7
+- Fix de_nasa: New URL, rewritten parsing script, add route parsing
+- Fix route times conversion from string to QTime
+
+0.10 - Beta 5
+- Fix time values for intermediate route stops to not be removed in a wrong conversion.
+
+0.10 - Beta 4
+- Decode HTML entities in intermediate route stop names for all accessors.
+- Fix departure dates for de_db. If all departures are at the next day, today was assigned as departure date (instead of tomorrow).
+
+0.10 - Beta 3
+- Fix the helper function "trim" for scripts. It now first removes HTML space entities (&nbsp;) and then calls QString::trimmed().
+- Add "{timestamp}" placeholder to raw URLs, gets replaced by the timestamp of the request time.
+- Chang default service provider symlinks to be relative.
+- Mov some rarely used vehicle type strings from the data engine to the accessor scripts using them (fr_gares, at_oebb, ch_sbb, it_cup2000, pl_pkp).
+- Classes DepartureInfo, JourneyInfo and StopInfo which store timetable data are now derived from QHash<TimetableInformation, QVariant> instead of just using it.
+
+Accessors:
+- cz_idnes: Removed stop ID parsing, because requesting timetables with stop IDs doesn't work.
+- de_dvb: New data sources (found in a Yahoo widget thanks to Axel Hübl) with JSON content (instead of HTML). Very short data, but also little information: line, target, minutes until departure. The departure time is calculated in the script and the vehicle type is read from the line name ("S8" => InterurbanTrain, numbers <= 15 => Tram, numbers > 15 => Bus).
+- de_rmv: Added date, operator and route parsing. The route information seems to be always limited to two stops (one intermediate stop and the target stop). Also parses more journey news (less important ones like "bicycles need booking").
+
+0.10 - Beta 2
+- Forgot to add the updated accessors to the source tarball for beta 1.
+
+0.10 - Beta 1
+- Lazy script loading: Scripts are now read and executed only when needed. Their features are stored in a file (data_cache). This speeds up the start of the data engine (if there's an up-to-date data_cache). The cache is updated if the "last modified" time of a script file has changed. Previously on startup every script was executed to get it's features.
+- When multiple files in the accessor data directory are changed at once, the accessors are now reloaded only once (or maximally every 250ms). Previously the data engine could freeze plasma for a while, eg. if it's re-installed (that resulted in a running data engine to reload all accessors for every reinstalled accessor XML- and JS-file).
+- The "ServiceProvider" source can now also be used to get information about a specific accessor by it's ID (eg. "ServiceProvider de_db"), instead just for information about the default accessor for a given country code (eg. "ServiceProvider de").
+- When reading an accessor from one of the default service provider symlinks the real filename is now used, which also means that the real service provider ID is used. That way the datacache-file storing information about accessor scripts doesn't include default accessors twice, eg. "de_db" and "de_default" (symlink for de_db).
+- Corrected the "defaultAccessor" for "international" from "others_flightstats" to "international_flightstats" in the "Locations" data source.
+- Accessors can now use session keys that get parsed from some URL and stored for departure/arrival/stop suggestion requests.
+- Accessors can now also use POST as method to get a result document.
+- Accessors can now tell the data engine to first request a stop ID before requesting departures (used for se_resrobot).
+- Status information can now be added to departures if available, used by flightstats (Scheduled, Landing, ...).
+- The default vehicle type setting is now also used for scripts.
+- Vehicle types can now also be set in scripts using the integer value of the enumerable. There are now also more strings to be set as vehicle type such as "regional" for regional trains.
+- Renamed VehicleType enumerables for trains to be more generic (not specific to german train types), eg. from "TrainInterCityExpress" to "HighSpeedTrain".
+- Added Sweden to the list of supported countries, default accessor is the new se_resrobot.
+- Fixed the marker for the end of the exact route for arrivals, where it's a marker for the start of the exact route.
+- Fixed "No departures" strings for arrivals ("No arrivals").
+- Added changelog entries to accessors (read from XML, given with "ServiceProvider(s)" data source).
+- Added debug output and error logging to accessor scripts to make it easier to find bugs, eg. if websites change. Errors are logged to a file, eg. "~/.kde4/share/apps/plasma_engine_publictransport/accessors.log". Users can send me that file to fix bugs.
+- Renamed timetableaccessor_html_script.h /.cpp to timetableaccessor_script.h /.cpp, TimetableAccessorHtmlScript to TimetableAccessorScript and timetableaccessor_htmlinfo.h /.cpp to timetableaccessor_info.h / .cpp.
+- Dropped TimetableAccessorHtml, replaced by TimetableAccessorScript.
+- Dropped classes TimetableAccessorInfoRegExp and TimetableRegExpSearch, no longer needed, as now all accessors use scripts.
+- Added unit tests for the "ServiceProviders", "Locations", "Stops ..." and "Departures ..." data sources. Each accessor that is included in a new release needs to pass the tests. If it fails and cannot be fixed, it gets dropped (and maybe readded in a later release). That makes it much easier to identify failing accessors.
+
+Accessors (all accessors are now using scripts):
+- at_oebb: Wrote a script for at_oebb and updated URLs and parsing. It can now also parse route information, journey news, platform and delays.
+- at_oebb: Better stop suggestion source, faster by requiring less data to be transfered, added stop weights.
+- ch_sbb: Updated to work for journeys again. The problem was changed HTML code from the SBB service provider.
+- ch_sbb: Added new functions. Parsing of routes of journeys with departure/arrival times, types of the used vehicles, line string and platforms). Parse capacity information and add it to the journey news.
+- ch_sbb: Fixed to show all departures, not only every second.. This was a one character fix ;)
+- cz_idnes, sk_atlas: Wrote scripts for cz_idnes and sk_atlas, replacing the regular expressions in the XMLs. They can now also get stop suggestions by using an ASMX web service (with POST requests), which needs a session key. The session key is read from the service provider home page.
+- cz_idnes: Fixed, didn't show new departures after some time.
+- de_bvg: Ported to a script.
+- de_db: Date values are now correct for de_db, also if departures for a date other than today are requested.
+- de_db: The de_db accessor now also recognizes inavailable delays for requests of departures that are more than two hours in the future. This allows to less often update data, because data with available delays gets updated more often.
+- de_dvb: Added fast stop suggestions by using the URL that's also used by the website's script (returns stops as HTML formatted list).
+- de_fahrplaner: Ported to a script.
+- de_nasa: Ported to a script.
+- de_rmv: Ported the stop suggestion part to a script. Timetable documents are XML files which get parsed by a special class.
+- de_vrn: Dropped, seems like there are now only departure urls for specific lines.
+- de_vvs: Ported to a script.
+- fr_gares, dk_rejseplanen, us_septa, de_vvs: Updated to new website layouts (making them pass the unit tests).
+- pl_pkp: Ported to a script. The URL changed from .../stboard.php to .../stboard.exe.
+- se_resrobot: A new accessor for Sweden with stop suggestions. Recognizes busses, regional/highspeed trains, planes and ships. Can compute delays if the original departure time is given in the remarks section of the result website. But getting a departure document requires to ask the provider for suggestions for the given stop name first, then the "ID" of the best suggestion is used to get the departures. The "ID" is just the index of the stop suggestion, ie. 0 for the best=first suggestion. Getting departures with this service provider can take some more time (~10 seconds).
+- international_flightstats: Rewritten with a script, stop suggestions can be retrieved in XML format.
+
+0.9
+- For each country with at least one implemented service provider there is now a symlink "[countrycode]_default.xml". This marks the default service provider for that country and is used if no service provider id is given (with the selected country in KDEs settings).
+- Replace unknown vehicle types with the default vehicle type for the service provider, if any.
+- Fixed parsing of vehicle types from the line string (like "S 8" for "urban train"). It now needs whitespace after eg. the "S", so it doesn't match eg. "SX" any longer. That makes vehicle types work with flightstats (which only has airplanes).
+- For each departure/arrival these values are now added to the return value of the data engine: "vehicleIconName", "vehicleName" and "vehicleNamePlural". This way the translations have to be done only once in the data engine, not in every widget/app using it.
+
+0.8.1
+- Fixed many (all?) krazy warnings.
+
+0.8 Beta 1
+- The data engine now propagates error messages from KIO.
+- Better and safer way of storing job infos for download jobs (using a struct instead of a QVariantList).
+- Now using KJob::result() instead of KJob::finished() signal.
+- The data engine now ignores "max departure" values and tries to always get as many departures as possible. This way, the data engine doesn't need to update too often.
+
+0.7 Beta 5
+- Corrected urls for favicons for de_bvg, ch_sbb, sk_atlas, cz_idnes, be_brail. Now an icon is shown for all providers that have a favicon.
+- Corrected some provider names.
+- BugFix: Corrected the feature list for de_rmv.
+- BugFix: Stop suggestions didn't work for de_rmv, because the HTML accessor that parses stop suggestions for XML accessors was initialized with empty accessor info.
+- Code cleanups.
+
+0.7 Beta 2
+- Fixed a bug that prevented the notification of errors in the data engine (mixed up two parameters..).
+- Code cleanups.
+- Changed the names of the service providers to the companies behind.
+
+0.7 Beta 1
+- Fixed install with custom prefix for /accessorInfos.
+
+0.6.10
+- Added a new source to the data engine to get infos about the default accessor for a given country (eg. "ServiceProvider de").
+- KIO::StoredTransferJob is now used to download timetable data instead of KIO::TransferJob. The data engine previously did the things StoredTransferJob does itself.
+- Better date guessing for departures. Previously the date could be falsly set to tomorrow when switching from one displayed stop to multiple ones (under some circumstances at least).
+
+0.6.9
+- The old RegExp-Accessors (without script file) can now also parse stop weights.
+- BugFix: Stop suggestions didn't work for de_fahrplaner. It's now using another url for stop suggestions, like de_db (same system), with stop weights.
+- BugFix: sk_imhd didn't work because the web site has changed the time format from "h.mm" to "hh:mm". The time parsing is now more flexible and tries other time formats if the one specified in the script doesn't work.
+
+0.6.8
+- Even more intelligent timeouts :) Scripts can now tell, if delay information is available for the timetable data, if it can parse that somewhere from the document. If no delay infos are available (but delays are a feature of the current accessor) the timeout no longer has a maximum of 5 mins (leading to less traffic and less CPU usage by parsers). It's now used by the de_db accessor, which doesn't get delay infos for some stops (they're mostly only available for train stations).
+- BugFix: When the directory containing the accessor info xmls and parsers got changed, all cached accessors are now deleted. This way you can edit a script file and the data engine will load and use the new version (just click 'refresh timetable' in the applet). Furthermore every directory change added a new connection to the directoryChanged signal of QFileSystemWatcher, leading to very high CPU usage (loading all accessors over and over again).
+
+0.6.7
+- BugFix: Passed un-decoded HTML data to accessor scripts.
+- More intelligent update timeouts (for less traffic). The minimal wait time is one third of the time from now until the last departure time. When delay information is available, the maximal wait time is 5 mins. The "overall" min wait time is set to the one specified in the accessor info xml, if there is one.
+
+0.6.6
+New features: Two new italian accessors, fix of a longstanding and silly bug in the data engine
+
+- New accessors: Italia (Emilia-Romagna and Liguria).
+- BugFix: When using the data engine for more stops of the same service provider, the received data could get mixed up (received parts of the documents where appended to the same QByteArray), if a new request was started, before the first has stopped.
+
+0.6.5
+- Fixed memory leaks in the data engine:
+    - All received timetable data is put into data structures in the data engine which never got deleted.
+    - All loaded accessors weren't deleted (also not the ones loaded at startup to get it's properties).
+    - The XML timetable accessor didn't delete it's HTML timetable accessor, which it uses to parse stop suggestions from HTML pages.
+
+- Fixed a compile issue with KDE 4.3.
+
+0.6.4
+- Replaced some includes in the header with forward declarations.
+- Added a new tag to the accessor info xmls: <credit>, which should include a company name.
+- Fixed the de_db accessor, it didn't parse arrival timetables.
+- Fixed a bug with the sk_*, cz_* accessors. The city replacement values weren't correctly read from the xml files.
+
+0.6.3
+New features: Accessors for Belgium, Denmark, Southern Pennsylvania, France; Rewritten accessor info xml reader.
+
+- New accessors: be_brail for Belgium, dk_rejseplanen for Denmark and us_septa for USA (Southern Pennsylvania), including stop suggestions, route parsing. fr_gares for France, gares-en-mouvement.com, 168 stops, no local public transportation info.
+- Improved journey request parsing.
+- Added stop weights. Parser scripts can set stop weights
+- Changed the url for stop suggestions for de_db, which generates much less traffic, but gives more information (eg. stop weights). So stop suggestions should now work faster with de_db.
+- Added some helper methods that can be used in the scripts, to ease script development and to make the scripts shorter.
+- New tag for accessor XMLs to specify the minimum seconds to wait between data requests from the service provider (<minFetchWait>). Can be used if a service provider want's to limit the requests.
+- Added a seperate class for reading accessor info xml files (much easier to read, less code, no bugs with comments, ...).
+- Changed the XML structure a little bit (changed <javaScriptFile> to <scriptFile>; fileVersion, accessor version and accessor type are now attributes of the <accessorInfo> tag).
+- Some code cleanup / fixes.
+
+0.6.2
+- Accessors sk_atlas, sk_imdh and ch_sbb are now also scripted (incl. stop suggestions).
+- ch_sbb got new features: Route info for journeys and departures/arrivals, delay parsing (untested, no more delays found...).
+- Scripted accessors now show up as errornous, when the script couldn't be loaded correctly, eg. because of syntax errors.
+- Now using Kross for scripting instead of QScriptEngine. That means, that accessor (parser) scripts can now also be written in Ruby or Python (besides JavaScript).
+- The feature list is now correct again for scripted accessors. It's tested, if "parseJourneys" and/or "parsePossibleStops" are defined in the script. Other features are announced by a script function called "usedTimetableInformations".
+- Added parsing of cancelled trains to the departure/arrival parser for de_db.
+- New vehicle type strings added to the global vehicle type parser.
+- BugFix: Fixed a localization issue with the feature lists of service providers. The data engine now has two fields for service providers to describe it's features: "features" and "featuresLocalized". The "features" field contains a string list with untranslated strings, so that it can be used to see if some feature is supported. Previously that field contained a list of translated strings, so tests for features didn't work with localized versions.
+- BugFix: The data engine doesn't try to search for journeys any longer when the accessor doesn't support it.
+
+0.6.1
+- Data source names are no longer case sensitive.
+
+0.6:
+New features: Accessors are now scriptable (de_db and de_dvb using scripts now), route parsing for de_db (for both departures/arrivals and journeys, multiple round trips to get data, with much information for journeys).
+
+- Accessors are now scriptable. You can now choose to write an accessor by specifying some regular expressions or by specifying a script file that contains the code to parse the HTML pages of the providers (that contain the timetables). Obviously this makes the accessors much more flexible and easier to read than those long and very complex regular expressions. (Inspired by Marek Vavruša's new plasmoid for searching journeys. Combining power into one data engine is planned :)).
+- Ported the de_dvb and de_db accessors to scripted accessors (all features ported).
+- Added route parsing to the de_db-accessor. The route to the destination is shown for departures / arrivals. For journeys all stops of the route from origin to destination are shown, including departures, arrivals, delays, vehicle types, transport lines and platforms.
+- Added journey news parsing to the de_db-accessor for the journey mode.
+- Added a new "vehicle type": Feet (by feet). This is used by some providers when searching for journeys. A new icon is also added.
+- Better vehicle type parsing (added some train-abbreviations to the string-to-vehicle-type-method).
+- Added support for a multiple round trips with journey searches. One round trip can then be used to parse an url to be used for the next round trip. The de_db-accessor uses this new feature to get more results when searching for journeys. The journey results list is then filled with more and more results (currently two additional round trips).
+- Added a separate data source for stop suggestions, which is named in this pattern: "Stops de_db|stop=..." (de_db is the accessor to use, ... is a part of the stop name to get suggestions for).
+- The sorting of stop suggestions from providers is now used as is. Previously the sorting was messed up (because the stops where only stored in a QHash as keys with it's IDs as values).
+
+0.5.5:
+- Added localization to the accessor info xml files. You can now set a "lang"-attribute to the "name"- and the "description"-tags and have multiple such tags for different languages. I added localization for germany, other translations are of course welcome! I also changed the names of the accessors.
+
+0.5.4:
+Bugfix-release.
+
+Fixes:
+    - Fixed the raw url of de_db to get delays again (by adding "&rt=1" to the raw url, thanks to Boccaccio, and removing some comments in the info xml that were causing the delay parsing info not to be parsed correctly from the info xml.. the xml reading code needs to get better).
+
+0.5.3
+Bugfix-release.
+
+Fixes:
+    - Fixed vehicle type parsing for imhd.sk (and maybe others)
+    - Removed unnecessary "&showResultPopup=popup" from the raw url for ch_sbb.
+
+0.5.2
+New supported service providers: "Austria (oebb.at)", "International flights (flightstats.com)" and "Slovakia (cp.atlas.sk)"
+New vehicle types: Metro, trolley bus, ferry, plane.
+
+- Added new accessor info sk_atlas.xml (for slovakia, thanks to takanowaka, the xml is based on cz_idnes).
+- Added stop autocompletion for new sk_atlas accessor info and for cz_idnes (same regexp).
+- Added list of possible cities to cz_idnes (thanks to takanowaka).
+- Added new accessor-info at_oebb.xml (for austria), with stop autocompletion.
+- Added a new accessor-info-xml tag: <stopSuggestions>, to be put into <rawUrls>. Can be used, if the service provider has a special site for stop suggestions (currently used by rmv.de and flightstats.com).
+- Added another new accessor-info-xml tag: <defaultVehicleType>. All departures / journeys without a vehicle type get this vehicle type (used by flightstats.com to set all vehicle types to plane).
+- Removed the <country> tag from the accessor-info-xmls. The country is now determined from the xml file name, starting with the country code, followed by "_". There are two other possible values, that aren't a country code: "international", "unknown".
+- Added vehicle type "ferry" with icon and enabled ferry-data on de_db.
+- Added vehicle type "plane" with icon and added an accesor info xml for flightstats.com (with stop autocompletion, delay, journey news, ..)
+- Added vehicle type "metro" and "trolleybus" (with icons)
+
+Fixes:
+    - Fixed the stop autocompletion regexp for de_sbb (one "^" was missing..).
+    - Fixed the journey search for de_sbb (the arrival date isn't in the html table if it's the same as the departure date)..
+    - Fixed the departure regexp for de_sbb to also parse departures correctly if a delay is shown (an extra column is then shown for all departures). I will test delay parsing later, when I find a delay on sbb.ch again, or when I implement a test class that tests documents on hdd (not downloaded, I stored a document from sbb.ch with a delay).
+
+0.5.1
+- Changed the "Journeys" data source, it's name now starts with "Journeys" not "JourneysFrom" and "JourneysTo".
+- Readded the imhd accessor for Slovakia, by creating an XML file for it (and adding support for some tags needed by this accessor).
+
+Fixes:
+    - Fixed (and optimized) the regular expressions for nasa.de, dvb.de and bvg.de (I haven't removed the "extra" escapes for the regexps).
+
+0.5
+- Added APIDOX documentation
+- Now using XML files for accessor information (one XML file for each accessor). All information about the accessor and it's raw urls and regular expressions can be stored. The regExp patterns also don't need "extra-escapes" anymore ("\\s*" becomes \s* and "\"[^\"]*\"" becomes "[^"]*") so they're shorter and easier to read this way.
+- Changed the raw url placeholder syntax (%1, %2 can be contained in an encoded stop name for example). Now it's "{city}", "{stop}", "{startStop}", "{targetStop}", "{maxDeps}", "{time}", "{dataType}". This also makes the XMLs easier to read :)
+- Changed the data source names of the data engine (see documentation).
+
+Fixes:
+    - RegExps are now parsed only once, not every time it is needed.
+    - Now using QHash instead of QMap in the data engine (don't know why I used QMaps before... QHash's are faster and the data is visible in plasmaengineexplorer).
+    - Optimized the regular expressions a bit.
+
+0.4.8
+- Added a journey search mode, where you can search for journeys from or to your "home stop". The accessors in the data engine can now have a new regExp for parsing journey sites. The db.de-accessor parses departures, arrivals, used types of vehicles, needed changes and pricing. The sbb.ch-accessor also supports this new feature (sbb.ch is very similiar to db.de).
+
+Fixes:
+    - Fixed the regular expression for sbb.ch.
+    - The country of imhd is now correctly set to "slovakia" instead of "germany" as it was previously (this lead to wrong sorting in the service provider combo box).
+    - Imhd service provider is now usable for different cities in slovakia. I fixed the city and stop name encoding for providers that require a seperate city name, since I changed imhd to now require a seperate city name. Seems to work, but all stops in cities other than Bratislava that I tested had no departure data.
+
+0.4.6
+- Code cleanups.
+
+Fixes:
+    - Guessing dates of departures/arrivals by request time and departure/arrival time. This fixes sorting around 0 o'clock (not completely.. still some problems when there are long delays).
+
+0.4.5
+- Support for rozklad-pkp.pl (poland) with autocompletion
+- Parse and use stop ID when available instead of stop name (eliminates some ambiguities of stop names)
+- Added vehicle type parsing to RMV (previously all vehicle types were set to Tram..)
+
+- Fixes:
+    - Accessor names now using i18n
+    - Journey news now working for RMV (only showing one news item, not multiple)
+
+0.4.4
+- Support for jizdnirady.idnes.cz (czechia)
+- Autocompletion for nasa.de, fahrplaner.de, bvg.de
+- Implemented TypeOfVehicle parsing for imhd.sk by adding a preparsing-function
+- Delay + Platform for rmv.de
+- JourneyNews for vvs.de
+
+- Fixes:
+    - Decoding of HTML-pages using QTextCodec::codecForHtml() or QTextCodec::codecForName() with a regexp-matched charset as fallback (needed by imhd.sk)
+    - percent-encoding of stop names using a charset other than UTF-8 with my own toPercentEncoding()-method (needed by imhd.sk)
+    - Using QDateTime instead of QTime for storing when the data was last updated. Without this there were no updates after 0:00.
+    - Umlauts => Autocompletion stops at #, e.g. &#254; => fixed
+
+0.4.3   (19.06.2009)
+- Changed the data engine to only request a new HTML page from the server when the old data is too old (currently it reloads every 2 minutes)
+- Added new vehicle types for trains (icons not ready yet)
+- Added initial delay/"journey news" and platform parsing for db.de. You can see this info by double clicking on a row in the TreeView. The platform should be shown where available. The delays may show up correctly.. Need to test that (and need to find delays to test). At least it parses "on schedule"/"no info available" correctly.
+
+0.4.2   (18.06.2009)
+- Added vehicle type parsing to sbb.ch.
+- Fixed the regexp for db.de
+- Added COPYING files containing the GPL license
+
+0.4.1   (17.06.2009)
+- Autocompletion for sbb.ch and imhd.sk
+- Fixed the rawUrl of db.de so that the results include vehicle-Type "S-Bahn".
+
+0.4   (17.06.2009)
+- When a stop name is ambigous the data engine parses the possible stop names. The applet uses these for autocompletion of the stop field in the config dialog. (Currently only for db.de)
+- The data engine now emits dataUpdated immediately when it has received the data. So the applet now shows the most current data and when changing the configuration the applet is updated immediately.
+
+0.3.4   (15.06.2009)
+- The charset of read HTML pages is now also parsed and used to decode it.
+
+0.3.3   (13.06.2009)
+- Added support for sbb.ch, which should work for whole swiss.
+
+0.3.2   (13.06.2009)
+- Added support for db.de, should work for whole germany! Testet with Bremen, Osnabrück, München, Dresden.
+
+0.3.1   (13.06.2009)
+- Added support for Sachsen-Anhalt (nasa.de) and Dresden (dvb.de)
+- Put all HTML-accessors into one class, service provider specific information is now in TimetableAccessorInfo. So there are less files now and it's easier to add new accessors.
+
+0.3   (12.06.2009)
+- The plasmoid now uses a newly created data engine
+- Added support for "Rhein-Neckar"-region (by Martin Gräßlin), bvg.de (Berlin), imhd.sk (Bratislava in Slovakia)

@@ -1,0 +1,22 @@
+PublicTransport Runner
+----------------------
+
+You need KDE 4.5
+
+-- Build instructions --
+
+> cd runner
+> mkdir build
+> cd build
+> cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` ..
+> make 
+> make install
+
+Restart krunner to load the runner 
+> kquitapp krunner
+> krunner
+
+Alt-F2 to launch KRunner and in the runners list you will find your runner.
+
+You might need to run kbuildsycoca4
+in order to get the .desktop file recognized.
