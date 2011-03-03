@@ -1,33 +1,6 @@
 [Desktop Entry]
 Name=Public transport engine
-Name[de]=Öffentlicher Nahverkehr
-Name[en_GB]=Public transport engine
-Name[es]=Motor de transporte público
-Name[et]=Ühiskondliku transpordi mootor
-Name[fr]=Moteur de transport publique
-Name[hr]=Podrška za javni prijevoz
-Name[km]=ម៉ាស៊ីន​បញ្ជូន​សាធារណៈ
-Name[nds]=APNV-Karn
-Name[pa]=ਪਬਲਿਕ ਟਰਾਂਸਪੋਰਟ ਇੰਜਣ
-Name[pt]=Motor de transportes públicos
-Name[pt_BR]=Motor de transportes públicos
-Name[sv]=Kollektivtrafikgränssnitt
-Name[uk]=Рушій громадського транспорту
-Name[x-test]=xxPublic transport enginexx
 Comment=Plasma data engine for public transport
-Comment[en_GB]=Plasma data engine for public transport
-Comment[es]=Motor de datos de Plasma para transporte público
-Comment[et]=Plasma ühiskondliku transpordi andmete mootor
-Comment[fr]=Moteur de données pour Transport publique
-Comment[hr]=Plasma podrška za javni prijevoz
-Comment[km]=ម៉ាស៊ីនទិន្នន័យប្លាស្មាសម្រាប់ការបញ្ជូនសារ​ធារណៈ
-Comment[nds]=Plasma-Datenkarn för APNV
-Comment[pa]=ਪਬਲਿਕ ਟਰਾਂਸਪੋਰਟ ਲਈ ਪਲਾਜ਼ਮਾ ਡਾਟਾ ਇੰਜਣ
-Comment[pt]=Motor de dados do Plasma para os transportes públicos
-Comment[pt_BR]=Motor de dados do Plasma para os transportes públicos
-Comment[sv]=Plasma datagränssnitt för kollektivtrafik
-Comment[uk]=Рушій даних Плазми для громадського транспорту
-Comment[x-test]=xxPlasma data engine for public transportxx
 Icon=public-transport-stop
 Type=Service
 

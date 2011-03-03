@@ -1,27 +1,6 @@
 [Desktop Entry]
 Name=Public Transport
-Name[de]=Öffentlicher Nahverkehr
-Name[en_GB]=Public Transport
-Name[es]=Transporte público
-Name[et]=Ühiskondlik transport
-Name[fr]=Transport publique
-Name[hr]=Javni Prijevoz
-Name[km]=ការ​បញ្ជូន​សាធារណៈ
-Name[nds]=APNV
-Name[pa]=ਪਬਲਿਕ ਟਰਾਂਸਪੋਰਟ
-Name[pt]=Transportes Públicos
-Name[pt_BR]=Transportes Públicos
-Name[ro]=Transport public
-Name[sv]=Kollektivtrafik
-Name[uk]=Громадський транспорт
-Name[x-test]=xxPublic Transportxx
 Comment=Gives information about public transport departing from a given stop
-Comment[km]=ផ្ដល់​ព័ត៌មាន​អំពី​ការ​ដឹកជញ្ជូន​សាធារណៈ​ពី​កន្លែង​ឈប់​ដែលបានផ្ដល់​ឲ្យ
-Comment[pt]=Dá informações acerca dos transportes públicos que partem de uma dada estação
-Comment[pt_BR]=Fornece informações sobre transportes públicos que partem de um ponto determinado
-Comment[sv]=Ger information om kollektivtrafik som avgår från en angiven hållplats
-Comment[uk]=Надає дані щодо громадського транспорту, яким можна скористатися на вказаній зупинці
-Comment[x-test]=xxGives information about public transport departing from a given stopxx
 Icon=public-transport-stop
 
 X-KDE-ServiceTypes=Plasma/Runner

@@ -1,26 +1,6 @@
 [Desktop Entry]
 Name=OpenStreetMap data engine
-Name[en_GB]=OpenStreetMap data engine
-Name[es]=Motor de datos de OpenStreetMap
-Name[et]=OpenStreetMapi andmete mootor
-Name[ja]=OpenStreetMap データエンジン
-Name[km]=ម៉ាស៊ីន​ទិន្នន័យ​ OpenStreetMap
-Name[nds]=Datenkarn för OpenStreetMap
-Name[nl]=Gegevensengine voor OpenStreetMap
-Name[pt]=Motor de dados do OpenStreetMap
-Name[pt_BR]=Motor de dados do OpenStreetMap
-Name[sv]=OpenStreetMap-datagränssnitt
-Name[uk]=Рушій даних OpenStreetMap
-Name[x-test]=xxOpenStreetMap data enginexx
 Comment=The OpenStreetMap data engine can be used to query things near the user.
-Comment[en_GB]=The OpenStreetMap data engine can be used to query things near the user.
-Comment[es]=Motor de datos de OpenStreetMap para buscar cosas cercanas al usuario.
-Comment[km]=ម៉ាស៊ីន​ទិន្នន័យ​ OpenStreetMap ​អាច​ត្រូវ​បាន​ប្រើ​សម្រាប់​សួរ​អំពី​វត្ថុ​ដែល​នៅ​ជិត​អ្នក​ប្រើ ។
-Comment[pt]=O motor de dados do OpenStreetMap pode ser usado para consultar as coisas próximas do utilizador.
-Comment[pt_BR]=O mecanismo de dados OpenStreetMap pode ser usado para consultar coisas próximas ao usuário.
-Comment[sv]=OpenStreetMap-datagränssnittet kan användas för att fråga om saker i användarens närhet.
-Comment[uk]=За допомогою рушія даних OpenStreetMap можна отримувати дані щодо об’єктів, розташованих поруч з користувачем.
-Comment[x-test]=xxThe OpenStreetMap data engine can be used to query things near the user.xx
 Type=Service
 
 X-KDE-ServiceTypes=Plasma/DataEngine
