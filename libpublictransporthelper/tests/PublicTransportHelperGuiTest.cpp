@@ -19,8 +19,8 @@
 
 #include "PublicTransportHelperGuiTest.h"
 
-#include <publictransporthelper/stopsettingsdialog.h>
-#include <publictransporthelper/stopwidget.h>
+#include "../stopsettingsdialog.h"
+#include "../stopwidget.h"
 
 #include <QtTest/QTest>
 #include <QtTest/QtTestGui>

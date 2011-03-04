@@ -19,20 +19,20 @@
 
 #include "PublicTransportHelperTest.h"
 
-#include <publictransporthelper/stopsettingsdialog.h>
-#include <publictransporthelper/stopwidget.h>
+#include "../stopsettingsdialog.h"
+#include "../stopwidget.h"
+#include "../locationmodel.h"
+
+#include <Plasma/DataEngineManager>
+#include <KComboBox>
+#include <KLineEdit>
 
 #include <QtTest/QTest>
-
 #include <QToolButton>
-#include <KComboBox>
 #include <QSpinBox>
 #include <QTimeEdit>
 #include <QRadioButton>
 #include <qsignalspy.h>
-#include <publictransporthelper/locationmodel.h>
-#include <Plasma/DataEngineManager>
-#include <KLineEdit>
 
 void PublicTransportHelperTest::initTestCase()
 {

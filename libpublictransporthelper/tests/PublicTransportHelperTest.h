@@ -23,7 +23,7 @@
 #define QT_GUI_LIB
 
 #include <QtCore/QObject>
-#include <publictransporthelper/stopsettings.h>
+#include "../stopsettings.h"
 
 class PublicTransportHelperTest : public QObject
 {
