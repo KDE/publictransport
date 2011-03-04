@@ -4,13 +4,83 @@ If there are any problems mail me at fpuelz@gmx.de or write a comment to the
 publictransport page on kde-look.org.
 Maybe you want to suggest changes in this document like new/better hints.
 
-COPYING, AUTHOR, CHANGELOG files are included for each component.
+*******************************************************
+*** Get version strings *******************************
+*******************************************************
+  You can checkout different (tagged) versions from the GIT repository.
+  <VERSION> can be replaced with HEAD to get the current development version.
 
-This archive contains multiple Plasma applets, data engines, a library and a 
-developer tool.
-The sources for each component are stored in one of these directories:
+  To get a list of available versions (stable and unstable) you can use this command:
+     > git ls-remote --tags git://anongit.kde.org/publictransport | sed -e 's:^.*refs/tags/\(.*\):\1:' -e '/^.*^{}.*$/ d'
+  (the sed stuff only removes everything not neccessary, but can be left away)
 
-  - libpublictransporthelper-*
+  To get a list of available STABLE versions you can use this command:
+     > git ls-remote --tags git://anongit.kde.org/publictransport stable* | sed -e 's:^.*refs/tags/\(.*\):\1:' -e '/^.*^{}.*$/ d'
+
+  To get a list of available UNSTABLE versions you can use this command:
+     > git ls-remote --tags git://anongit.kde.org/publictransport unstable* | sed -e 's:^.*refs/tags/\(.*\):\1:' -e '/^.*^{}.*$/ d'
+
+  If you've cloned the repository, this simplifies to
+     > git tag -l
+     > git tag -l stable*
+     > git tag -l unstable*
+
+*******************************************************
+*** Download into MULTIPLE TARBALLS *******************
+*******************************************************
+  - There's a handy script "packagers.sh" for that task
+  - It will list available versions (tags) and then downloads tarballs for all 
+    components using the selected version
+  - Tarball names can include versions and the tarballs can have a root directory 
+    (configurable by editing some variables in the script)
+
+*******************************************************
+*** Download a tarball with ALL components ************
+*******************************************************
+  - To download <VERSION> you can use this command (download in a tar archive):
+     > git archive --format=tar --remote=git://anongit.kde.org/publictransport <VERSION> | gzip > publictransport_<VERSION>.tar.gz
+  - To create a tarball with a root directory you can add the "--prefix=rootdir/"
+    argument to git archive
+
+*******************************************************
+*** Download a tarball with a SINGLE component ********
+*******************************************************
+  - To only download a tarball for a single component (eg. the applet):
+     > git archive --format=tar --prefix=plasma-applet-publictransport/ --remote=git://anongit.kde.org/publictransport <VERSION>:applet/ | gzip > plasma_applet_publictransport_<VERSION>.tar.gz
+  - This gets only the applet and prefixes all files in it with 
+    "plasma-applet-publictransport/" 
+    (--prefix can be left away for no root directory in the tarball)
+
+*******************************************************
+*** Clone the GIT repository, checkout versions *******
+*******************************************************
+  - Clone ~= Download
+  - You can clone the repository and then show the list of tagged versions
+    manually and checkout the version you want:
+     > git clone git://anongit.kde.org/publictransport
+     > git tag -l (prints out tagged versions)
+     > git checkout <VERSION> (loads the version associated with the given <VERSION>, eg. "unstable-0.10-beta7")
+  - This way you can keep your local clone of the repository and checkout new 
+    tagged versions once they're available like this:
+     > git checkout master (go to master branch again)
+     > git pull (update repository)
+     > git checkout <VERSION> (like above)
+  
+*******************************************************
+*** Get noticed about new versions ********************
+*******************************************************
+  - You can use this atom feed in your news reader (eg. akregator) to get 
+    noticed about new tagged version and other news about PublicTransport: 
+    https://projects.kde.org/projects/playground/base/publictransport/news.atom?key=6741b49ec02ce7cffaeaeb19973372ac87d62eeb.
+
+*******************************************************
+*** GIT repository structure **************************
+*******************************************************
+  The GIT repository contains multiple Plasma applets, data engines, a library and a 
+  developer tool. COPYING, AUTHOR, CHANGELOG files are included for each component.
+  The sources for each component are stored in these directories:
+
+  - libpublictransporthelper
       Description: A library for easy configuration dialog creation for 
         Plasma applets/runners using the publictransport data engine.
 
@@ -18,7 +88,7 @@ The sources for each component are stored in one of these directories:
       Dependent: plasma-applet-publictransport, plasma-applet-graphicaltimetableline, 
         plasma-applet-flights, plasma-runner-publictransport, timetablemate
 
-  - plasma-engine-publictransport-*
+  - engine
       Description: A Plasma data engine that gets timetable information from 
         service providers supported via scripts.
 
@@ -27,14 +97,14 @@ The sources for each component are stored in one of these directories:
       Dependent: plasma-applet-publictransport, plasma-applet-graphicaltimetableline, 
         plasma-applet-flights, plasma-runner-publictransport, timetablemate
 
-  - plasma-engine-openstreetmap-*
+  - engine-openstreetmap
       Description: A Plasma data engine that gets public transport stop names 
         in a given area via OpenStreetMap.
 
       Hint: Optional, used by libpublictransporthelper 
         (only useful with GPS hardware)
 
-  - publictransport-icons
+  - icons
       Description: Contains a public transport stop icon and several icons for 
         vehicle types like trams, buses, trains.
 
@@ -44,14 +114,14 @@ The sources for each component are stored in one of these directories:
         also use an SVG to draw vehicle type icons in the applet. In the 
         configuration dialogs, the icons in this directory are used.
 
-  - plasma-applet-publictransport-*
+  - applet-publictransport
       Description: The main public transport Plasma applet showing 
         departures/arrivals for given stops or journeys to/from another stop.
 
       Requires: libpublictransporthelper, plasma-engine-publictransport, 
         publictransport-icons
 
-  - plasma-applet-graphicaltimetableline-*
+  - applet-graphicaltimetableline
       Description: A Plasma applet with a graphical representation of the 
         timetable for public transport at a given stop with a street 
         on which vehicles are moving.
@@ -59,7 +129,7 @@ The sources for each component are stored in one of these directories:
       Requires: libpublictransporthelper, plasma-engine-publictransport, 
         publictransport-icons
 
-  - plasma-applet-flights-*
+  - applet-flights
       Description: A simple Plasma applet showing flight departures 
         from a given airport.
 
@@ -68,13 +138,13 @@ The sources for each component are stored in one of these directories:
       Requires: libpublictransporthelper, plasma-engine-publictransport, 
         publictransport-icons
 
-  - plasma-runner-publictransport-*
+  - runner
       Description: A runner that shows publictransport departures/arrivals/journeys.
 
       Requires: libpublictransporthelper, plasma-engine-publictransport, 
         publictransport-icons
 
-  - timetablemate-*
+  - timetablemate
       Description: A little IDE to create new scripts for the publictransport 
         Plasma data engine that adds support for new service providers.
 
