@@ -283,7 +283,7 @@ protected:
 	void setAuthor( const QString &author, const QString &shortAuthor, const QString &email = QString() );
 
 	/**
-	 * @brief Sets the version of this accesor.
+	 * @brief Sets the version of this accessor.
 	 *
 	 * @param version The version of this accessor. */
 	void setVersion( const QString &version ) {
@@ -408,7 +408,7 @@ protected:
 	// A raw url that is used to get journeys
 	QString m_journeyRawUrl;
 	
-	// Keys are versions, where the change entries occured (values)
+	// Keys are versions, where the change entries occurred (values)
 	QList<ChangelogEntry> m_changelog;
 	
 	QHash<QString, QString> m_attributesForStopSuggestions;

@@ -64,7 +64,7 @@ struct GlobalTimetableInfo {
 enum ErrorType {
 	NoError = 0, /**< There were no error. */
 
-	ErrorDownloadFailed, /**< Download error occured. */
+	ErrorDownloadFailed, /**< Download error occurred. */
 	ErrorParsingFailed /**< Parsing downloaded data failed. */
 };
 

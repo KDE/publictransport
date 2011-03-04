@@ -489,7 +489,7 @@ FunctionNode* JavaScriptParser::parseFunction() {
 	    isComma = currentToken()->isChar(',');
 	    if ( argumentNameExpected ) {
 		if ( isComma ) {
-		    setErrorState( i18nc("@info/plain", "Excepted argument or ')'."),
+		    setErrorState( i18nc("@info/plain", "Expected argument or ')'."),
 				   currentToken()->line, currentToken()->posStart );
 		    break;
 		}
@@ -497,7 +497,7 @@ FunctionNode* JavaScriptParser::parseFunction() {
 		arguments << new ArgumentNode( currentToken()->text, currentToken()->line,
 					       currentToken()->posStart, currentToken()->posEnd );
 	    } else if ( !isComma ) {
-		setErrorState( i18nc("@info/plain", "Excepted ',' or ')'."),
+		setErrorState( i18nc("@info/plain", "Expected ',' or ')'."),
 			       currentToken()->line, currentToken()->posStart );
 		break;
 	    }
@@ -508,7 +508,7 @@ FunctionNode* JavaScriptParser::parseFunction() {
 	}
 
 	if ( isComma ) { // argument list ended with ','
-	    setErrorState( i18nc("@info/plain", "Excepted argument or ')'."),
+	    setErrorState( i18nc("@info/plain", "Expected argument or ')'."),
 			    m_lastToken->line, m_lastToken->posStart );
 	}
 
