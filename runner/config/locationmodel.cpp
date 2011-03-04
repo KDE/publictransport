@@ -43,8 +43,8 @@ void LocationItem::setFromCountryCode( const QString& countryCode,
 	} else if ( countryCode.compare( "errornous", Qt::CaseInsensitive ) == 0 ) {
 		m_icon = KIcon( "edit-delete" );
 		m_formattedText = QString( "<span><b>%1</b></span><br-wrap><small>%2</small>" )
-				.arg( i18ncp("@info:plain", "%1 accessor is errornous:",
-							 "%1 accessors are errornous:", accessorCount) )
+				.arg( i18ncp("@info:plain", "%1 accessor is erroneous:",
+							 "%1 accessors are erroneous:", accessorCount) )
 				.arg( description );
 		m_itemType = Errornous;
 		return;

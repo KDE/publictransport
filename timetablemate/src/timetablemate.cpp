@@ -1372,7 +1372,7 @@ void TimetableMate::toolsCheck() {
     if ( !scriptFunctions.contains("usedTimetableInformations") ) {
         inelegants << i18nc("@info", "<emphasis>You should implement the "
                             "'usedTimetableInformations' script function.</emphasis> This is used "
-                            "to get the features supported by the accesor.");
+                            "to get the features supported by the accessor.");
     }
     if ( !scriptFunctions.contains("parseTimetable") || !departuresUrlOk ) {
         errors << i18nc("@info", "<emphasis>You need to specify both a raw departure URL and a "
@@ -2165,7 +2165,7 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
         }
         
         KMessageBox::information( this, i18nc("@info", 
-				"An error occured in the script:<nl/><message>%1</message>", script.errorMessage()) );
+				"An error occurred in the script:<nl/><message>%1</message>", script.errorMessage()) );
         return false;
     }
 	
