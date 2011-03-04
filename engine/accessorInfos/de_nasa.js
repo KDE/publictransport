@@ -1,7 +1,7 @@
 
 // This function returns a list of all features supported by this script.
 function usedTimetableInformations() {
-	return [ 'Platform', 'StopID' ];
+	return [ 'Platform', 'StopID', 'RouteStops', 'RouteTimes' ];
 }
 
 // This function parses a given HTML document for departure/arrival data.

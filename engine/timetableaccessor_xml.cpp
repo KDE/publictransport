@@ -62,9 +62,9 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 		kDebug() << "XML document is empty";
 		return false;
 	}
-kDebug() << "___________________________________________";
-kDebug() << document;
-kDebug() << "___________________________________________";
+// kDebug() << "___________________________________________";
+// kDebug() << document;
+// kDebug() << "___________________________________________";
 	QString doc = QString( document );
 	QDomDocument domDoc;
 	domDoc.setContent( doc );
@@ -130,7 +130,7 @@ kDebug() << "___________________________________________";
 			}
 			journeyNews += journeyNewsNode.toElement().attributeNode("text").nodeValue();
 		}
-		kDebug() << "journeyNews" << journeyNews;
+// 		kDebug() << "journeyNews" << journeyNews;
 		departureInfo.insert( JourneyNews, journeyNews );
 		
 		// <MainStop><BasicStop><Dep> tag contains some tags with more information

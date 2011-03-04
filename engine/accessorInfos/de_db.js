@@ -24,8 +24,9 @@ function detailsResultsObject() {
 
 function usedTimetableInformations() {
     return [ 'Delay', 'DelayReason', 'Platform', 'JourneyNews', 'TypeOfVehicle',
-	     'StopID', 'Pricing', 'Changes', 'RouteStops', 'RoutePlatformsDeparture',
-	     'RoutePlatformsArrival', 'RouteTimesDeparture', 'RoutePlatformsArrival',
+	     'StopID', 'Pricing', 'Changes', 'RouteStops', 'RouteTimes', 
+		 'RoutePlatformsDeparture', 'RoutePlatformsArrival', 
+		 'RouteTimesDeparture', 'RoutePlatformsArrival',
 	     'RouteTransportLines' ];
 }
 
@@ -49,9 +50,6 @@ function parseTimetable( html ) {
 	// Dates are set from today, not the requested date. They need to be adjusted by X days,
 	// where X is the difference in days between today and the requested date.
 	returnValue.push( 'dates need adjustment' );
-	
-	var now = new Date();
-	var currentDate = [ now.getFullYear(), now.getMonth() + 1, now.getDate() ];
 
     // Find block of departures
     var str = helper.extractBlock( html, '<table class="result stboard dep">', '</table>' );
@@ -74,8 +72,12 @@ function parseTimetable( html ) {
     
 // println("DE_DB: Go through all departure blocks");
 	
-    // Go through all departure blocks
+	// Store values to get the correct date of departures
+	var now = new Date();
+	var currentDate = [ now.getFullYear(), now.getMonth() + 1, now.getDate() ];
 	var lastHour = 0;
+	
+    // Go through all departure blocks
 	var departureNumber = 0;
     while ( (departureRow = departuresRegExp.exec(str)) ) {
 		departureRow = departureRow[1];
@@ -124,9 +126,12 @@ function parseTimetable( html ) {
 		// If 0 o'clock is passed between the last departure time and the current one, increase the date by one day.
 // 		println( "Time: " + time[0] + ":" + time[1] + ", departureNumber: " + departureNumber + ", now: " + now.getHours() );
 		if ( time[0] < lastHour - 3 || (departureNumber == 1 && time[0] < now.getHours() - 3) ) {
-// 			println( currentDate[0] + "-" + currentDate[1] + "-" + currentDate[2] );
+			println( "Add one day to currentDate: " + currentDate[0] + "-" + currentDate[1] + "-" + currentDate[2] );
 			currentDate = helper.addDaysToDateArray( currentDate, 1 );
-// 			println( "+1 => " + currentDate[0] + "-" + currentDate[1] + "-" + currentDate[2] );
+			println( "+1 => " + currentDate[0] + "-" + currentDate[1] + "-" + currentDate[2]
+				+ ", because of A: " + (time[0] < (lastHour - 3 + 24) % 24)
+				+ ", B: " + (departureNumber == 1 && time[0] < now.getHours() - 3)
+				+ ", time is: " + time[0] + ":" + time[1]);
 		}
 		lastHour = time[0];
 		
