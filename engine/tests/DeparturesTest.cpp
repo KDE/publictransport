@@ -124,7 +124,7 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
 // Helper function to test departure times.
 // Allows a maximum time difference in minutes (maxDifference) before the given testTime.
 void testDepartureTimes( const TestVisualization &testVisualization, const QDateTime &testDateTime, 
-						 int maxDifference = 30 ) {
+						 int maxDifference = 120 ) {
 	// Test time values
 	int count = testVisualization.data["count"].toInt();
 	for ( int i = 0; i < count; ++i )
@@ -167,7 +167,7 @@ void DeparturesTest::departuresTest_data()
 	QTest::newRow("fr_gares") << "fr_gares" << QString() << "frlpd"; // Only takes stop IDs
 	QTest::newRow("it_cup2000") << "it_cup2000" << QString() << "Roma - Bologna";
 	QTest::newRow("it_orario") << "it_orario" << QString() << "Genova";
-	QTest::newRow("pl_pkp") << "pl_pkp" << "Brno" << "Warszawa ZOO";
+	QTest::newRow("pl_pkp") << "pl_pkp" << QString() << "Warszawa Centralna";
 	QTest::newRow("sk_atlas") << "sk_atlas" << "bratislava" << QString::fromUtf8("Bradáčova");
 	QTest::newRow("sk_imhd") << "sk_imhd" << "bratislava" << "Nobelova";
 	QTest::newRow("us_septa") << "us_septa" << QString() << "Pennsylvania Park Av";

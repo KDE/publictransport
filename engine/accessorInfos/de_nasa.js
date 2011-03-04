@@ -23,7 +23,6 @@ function parseTimetable( html ) {
 	}
 	
 	// Initialize regular expressions
-	// TODO: This regexp is copied from the old XML, should be divided to parse each column on it's own
 	var departureRegExp = /<tr class="[^"]*">([\s\S]*?)<\/tr>/ig;
     var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
 	var typeOfVehicleRegExp = /<a[^>]*><img src="\/hafas-res\/img\/([^_]*)_pic.gif"[^>]*>/i;
@@ -48,7 +47,7 @@ function parseTimetable( html ) {
 		
 		if ( columns.length < 3 ) {
 			if ( departureRow.indexOf("<th") == -1 ) {
-				helper.error("Too less columns in a departure row found (" + columns.length + ") " + departureRow);
+				helper.error("Too less columns in a departure row found (" + columns.length + ")", departureRow);
 			}
 			continue;
 		}
