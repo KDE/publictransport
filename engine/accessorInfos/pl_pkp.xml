@@ -10,8 +10,8 @@
     <shortUrl>rozklad-pkp.pl</shortUrl>
     <script>pl_pkp.js</script>
     <rawUrls>
-        <departures><![CDATA[http://rozklad-pkp.pl/bin/stboard.exe/en?seqnr=3&input={stop}&time={time}&boardType={dataType}&start=Show]]></departures>
-        <stopSuggestions><![CDATA[http://rozklad-pkp.pl/bin/stboard.exe/en?seqnr=3&input={stop}?&start=Show]]></stopSuggestions>
+		<departures><![CDATA[http://rozklad.sitkol.pl/bin/stboard.exe/en?input={stop}&dateBegin={date:dd.MM.yy}&time={time}&boardType={dataType}&start=Show]]></departures>
+        <stopSuggestions><![CDATA[http://rozklad.sitkol.pl/bin/stboard.exe/en?input={stop}?&start=Show]]></stopSuggestions>
     </rawUrls>
 	
 	<changelog>

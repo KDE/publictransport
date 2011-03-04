@@ -1,6 +1,9 @@
 
 Changelog of plasma-engine-publictransport 
 
+0.10 - Beta 8
+- Fix pl_pkp: New URL, rewritten parsing script, add route parsing
+
 0.10 - Beta 7
 - Fix de_nasa: New URL, rewritten parsing script, add route parsing
 - Fix route times conversion from string to QTime
