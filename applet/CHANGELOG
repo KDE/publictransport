@@ -33,9 +33,6 @@ Changelog of plasma-applet-publictransport
 - Changed the X-KDE-PluginInfo-Website in the .desktop file to point to the PublicTransport UserBase page.
 
 0.10 - Beta 1
-Icons:
-- New train icons.
-
 - The filter label now also uses the selected font from the settings.
 - The title for the journey search is now correctly set to "From A to B", instead of just "Journeys".
 - Removed the flag icons, now using the ones used by the locale settings in systemsettings. This also fixes packaging conflicts with other packages that install icons with the same names.
