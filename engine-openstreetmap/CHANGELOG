@@ -1,9 +1,11 @@
 
 Changelog of plasma-engine-openstreetmap
 
+0.1.1
 - Only return data with a "name" tag for "publictransportstops" data.
 - BugFix: "<relation>"-tags where read until "</ways>" instead of "</relation>".
 
+0.1
 - Fixed a crash when the XML reader is finished, but more data arrives.
 - Less memory consumption in the XML reader (don't store all data, only the data for the current chunk).
 - Added a key to the data ("finished") which is true, once all data has been read.

@@ -1,10 +1,10 @@
 
 Changelog of plasma-runner-publictransport 
 
-0.10 - Beta 1
-- Uses the new publictransporthelper library for the service provider selection. The old redundand code is removed from the runner. You can now also install new accessors from the config dialog of the runner (becuase of the new library).
+0.1.1
+- Uses the new publictransporthelper library (0.10) for the service provider selection. The old redundand code is removed from the runner. You can now also install new accessors from the config dialog of the runner (becuase of the new library).
 
-0.9
+0.1
 - A new publicTransport runner! Uses the existing data engine (although it needs some not so nice code, because the data engine uses KIO, which isn't thread safe atm. That code is a copy of Aaron Seigo's code for the places data engine ;))
 - Search terms "Departures <stop>"/"Arrivals <stop>" searches for public transport departing from/arriving at <stop>
 - Filter vehicle types by replacing "Departure/Arrival <stop>" with eg. "Buses to/from <stop>". Other filters are "Trams", "Public Transport" (buses, trams, interurban trains, metro, trolley buses), "Trains".

@@ -2,7 +2,6 @@
 Changelog of libpublictransporthelper
 
 0.10 - Beta 4
-PublicTransport Library:
 - Checking if a stop name suggestion was selected in a StopLineEdit is now done case insensitively. If the selection of a suggestion was detected, the suggestion list isn't replaced by new suggestions.
 
 0.10 - Beta 3
@@ -11,7 +10,7 @@ PublicTransport Library:
 - Fixed the selection of stop name suggestions with arrow keys: If a suggestion gets selected no new suggestions are now requested, which then replaced the old suggestions.
 
 0.10 - Beta 1
-- New PublicTransportHelper library:
+- New PublicTransportHelper library
 - Includes classes previously inside the applet. For example the StopSettingsDialog is used by the applet (with option for extended stop selection) and the runner (with option for simple accessor selection) currently.
 - All classes now have d-pointers, the API is cleaned up, no more krazy errors, more and better documentation.
 - Offers configuration dialogs to be used with the publictransport data engine. The dialogs are now very flexible and more easy to use (eg. data engines are loaded using Plasma::DataEngineManager instead of getting them via constructor arguments, LocationModel/ServiceProviderModel are also no longer required as argument).

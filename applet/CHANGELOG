@@ -1,7 +1,7 @@
 
 Changelog of plasma-applet-publictransport 
 
-0.10 - Next
+0.10 - Beta 6
 - Port JourneySearchSuggestionWidget from a proxied QTreeView to a Plasma::ScrollWidget and add a class JourneySearchSuggestionItem, representing a single suggestion.
 - Drop unused HtmlDelegate class, JourneySearchSuggestionWidget was the last class using it.
 - Add a context menu to intermediate stops in journey route items. Currently contains one entry to search for Journeys to that stop. Can be handy to get some earlier connections to that intermediate stop, so that one has more time to change the vehicle.
