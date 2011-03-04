@@ -111,7 +111,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
 				service->createInstance<KParts::ReadOnlyPart>(m_mainTabBar, this) );
     } else {
         // TODO: The webkit part shouldn't be a requirement
-        KMessageBox::error(this, "service kwebkitpart.desktop not found");
+        KMessageBox::error(this, i18n("service kwebkitpart.desktop not found"));
         qApp->quit();
         return;
     }
