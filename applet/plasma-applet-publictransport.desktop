@@ -1,6 +1,13 @@
 [Desktop Entry]
 Name=Public Transport
+Name[cs]=Veřejná doprava
+Name[pt]=Transportes Públicos
+Name[uk]=Громадський транспорт
+Name[x-test]=xxPublic Transportxx
 Comment=Plasma Public Transport shows a departure / arrival board for public transport. It can also show journeys.
+Comment[pt]=Os Transportes Públicos do Plasma mostram uma tabela de partidas / chegadas para os transportes públicos. Também poderá mostrar as respectivas carreiras.
+Comment[uk]=Плазмоїд громадського транспорту показує таблицю відправлення/прибуття для громадського транспорту. Він також може показувати маршрути.
+Comment[x-test]=xxPlasma Public Transport shows a departure / arrival board for public transport. It can also show journeys.xx
 Icon=public-transport-stop
 Type=Service
 X-KDE-ServiceTypes=Plasma/Applet

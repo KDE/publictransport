@@ -1,6 +1,12 @@
 [Desktop Entry]
 Name=GraphicalTimetableLine
+Name[pt]=LinhaGráficaHorário
+Name[uk]=Графічний розклад авіаліній
+Name[x-test]=xxGraphicalTimetableLinexx
 Comment=Plasma GraphicalTimetableLine
+Comment[pt]=LinhaGráficaHorário do Plasma
+Comment[uk]=Графічний розклад авіаліній Плазми
+Comment[x-test]=xxPlasma GraphicalTimetableLinexx
 Type=Service
 
 X-KDE-ServiceTypes=Plasma/Applet

@@ -1,8 +1,17 @@
 [Domain]
 Name=TimetableMate
+Name[pt]=TimetableMate
+Name[uk]=TimetableMate
+Name[x-test]=xxTimetableMatexx
 Icon=public-transport-stop
 
 [org.kde.timetablemate.install]
 Name=Install timetable accessor globally
+Name[pt]=Instalar o motor de acesso global aos horários
+Name[uk]=Встановити загальне джерело даних розкладу
+Name[x-test]=xxInstall timetable accessor globallyxx
 Description=Authentication is required to install the timetable accessor files globally
+Description[pt]=É necessária a autenticação para instalar os ficheiros de acesso aos horários a nível global
+Description[uk]=Для встановлення загального джерела даних розкладу слід пройти розпізнавання
+Description[x-test]=xxAuthentication is required to install the timetable accessor files globallyxx
 Policy=auth_admin

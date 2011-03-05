@@ -1,6 +1,13 @@
 [Desktop Entry]
 Name=Public Transport
+Name[cs]=Veřejná doprava
+Name[pt]=Transportes Públicos
+Name[uk]=Громадський транспорт
+Name[x-test]=xxPublic Transportxx
 Comment=Gives information about public transport departing from a given stop
+Comment[pt]=Dá informações acerca das partidas de transportes públicos de uma dada paragem
+Comment[uk]=Надає дані щодо громадського транспорту, яким можна скористатися на вказаній зупинці
+Comment[x-test]=xxGives information about public transport departing from a given stopxx
 Icon=public-transport-stop
 
 X-KDE-ServiceTypes=Plasma/Runner

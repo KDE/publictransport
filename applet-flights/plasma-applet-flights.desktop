@@ -1,6 +1,13 @@
 [Desktop Entry]
 Name=Flights
+Name[cs]=Lety
+Name[pt]=Voos
+Name[uk]=Рейси
+Name[x-test]=xxFlightsxx
 Comment=Shows flight departures/arrivals for a given airport.
+Comment[pt]=Mostra partidas/chegadas de voos para um dado aeroporto.
+Comment[uk]=Показує графік вильотів/прильотів для вказаного аеропорту.
+Comment[x-test]=xxShows flight departures/arrivals for a given airport.xx
 Type=Service
 Icon=vehicle_type_plane
 X-KDE-ServiceTypes=Plasma/Applet

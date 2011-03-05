@@ -1,6 +1,12 @@
 [Desktop Entry]
 Name=Public Transport Runner Config
+Name[pt]=Configuração da Execução dos Transportes Públicos
+Name[uk]=Налаштування інструмента запуску «Громадського транспорту»
+Name[x-test]=xxPublic Transport Runner Configxx
 Comment=Configuration of the Public Transport Runner
+Comment[pt]=Configuração da Execução dos Transportes Públicos
+Comment[uk]=Налаштування інструменту запуску «Громадського транспорту»
+Comment[x-test]=xxConfiguration of the Public Transport Runnerxx
 Icon=public-transport-stop
 Type=Service
 X-KDE-ServiceTypes=KCModule
