@@ -125,10 +125,14 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 		QString journeyNews;
 		for ( int j = 0; j < journeyNewsCount; ++j ) {
 			QDomNode journeyNewsNode = journeyNewsNodes.at( i );
-			if ( !journeyNews.isEmpty() ) {
-				journeyNews += "<br />"; // Insert line breaks between journey news
+			QString newJourneyNews = journeyNewsNode.toElement().attributeNode("text").nodeValue();
+			
+			if ( !journeyNews.contains(newJourneyNews) ) {
+				if ( !journeyNews.isEmpty() ) {
+					journeyNews += "<br />"; // Insert line breaks between journey news
+				}
+				journeyNews += newJourneyNews;
 			}
-			journeyNews += journeyNewsNode.toElement().attributeNode("text").nodeValue();
 		}
 // 		kDebug() << "journeyNews" << journeyNews;
 		departureInfo.insert( JourneyNews, journeyNews );
@@ -203,14 +207,16 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 				// Read less important journey news
 				QString info = attribute.firstChildElement("AttributeVariant")
 										.firstChildElement("Text").text().trimmed();
-				QString journeyNews;
-				if ( departureInfo.contains(JourneyNews) 
-						&& !departureInfo[JourneyNews].toString().isEmpty() ) 
-				{
-					journeyNews = departureInfo[JourneyNews].toString().append("<br />");
+				if ( !departureInfo[JourneyNews].toString().contains(info) ) {
+					QString journeyNews;
+					if ( departureInfo.contains(JourneyNews) 
+							&& !departureInfo[JourneyNews].toString().isEmpty() ) 
+					{
+						journeyNews = departureInfo[JourneyNews].toString().append("<br />");
+					}
+					journeyNews.append( info );
+					departureInfo.insert( JourneyNews, journeyNews );
 				}
-				journeyNews.append( info );
-				departureInfo.insert( JourneyNews, journeyNews );
 			} /*else {*/
 // 				kDebug() << "Unhandled attribute type" << attribute.attributeNode("type").nodeValue()
 // 						 << "with text (tags stripped)" << attribute.text();
