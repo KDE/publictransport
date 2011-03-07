@@ -1,6 +1,8 @@
 [Desktop Entry]
 Name=TimetableMate
 Name[pt]=TimetableMate
+Name[pt_BR]=TimetableMate
+Name[sv]=Tidtabellkompanjon
 Name[uk]=TimetableMate
 Name[x-test]=xxTimetableMatexx
 Exec=timetablemate %i -caption "%c"
@@ -9,6 +11,8 @@ Type=Application
 X-DocPath=timetablemate/index.html
 GenericName=A helper application to add providers to PublicTransport
 GenericName[pt]=Uma aplicação auxiliar que adiciona fornecedores aos Transportes Públicos
+GenericName[pt_BR]=Um aplicativo auxiliar que adiciona fornecedores aos Transportes Públicos
+GenericName[sv]=Ett hjälpprogram för att lägga till operatörer i kollektivtrafik
 GenericName[uk]=Допоміжна програм для додавання записів джерел даних системи розкладу громадського транспорту
 GenericName[x-test]=xxA helper application to add providers to PublicTransportxx
 Terminal=false

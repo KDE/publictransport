@@ -2,10 +2,14 @@
 Name=Flights
 Name[cs]=Lety
 Name[pt]=Voos
+Name[pt_BR]=Voos
+Name[sv]=Flyg
 Name[uk]=Рейси
 Name[x-test]=xxFlightsxx
 Comment=Shows flight departures/arrivals for a given airport.
 Comment[pt]=Mostra partidas/chegadas de voos para um dado aeroporto.
+Comment[pt_BR]=Mostra partidas/chegadas de voos de um determinado aeroporto.
+Comment[sv]=Visa flygavgångar och ankomster för en given flygplats.
 Comment[uk]=Показує графік вильотів/прильотів для вказаного аеропорту.
 Comment[x-test]=xxShows flight departures/arrivals for a given airport.xx
 Type=Service

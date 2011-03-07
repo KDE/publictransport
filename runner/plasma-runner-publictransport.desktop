@@ -2,10 +2,14 @@
 Name=Public Transport
 Name[cs]=Veřejná doprava
 Name[pt]=Transportes Públicos
+Name[pt_BR]=Transportes Públicos
+Name[sv]=Kollektivtrafik
 Name[uk]=Громадський транспорт
 Name[x-test]=xxPublic Transportxx
 Comment=Gives information about public transport departing from a given stop
 Comment[pt]=Dá informações acerca das partidas de transportes públicos de uma dada paragem
+Comment[pt_BR]=Fornece informações sobre transportes públicos que partem de um ponto determinado
+Comment[sv]=Ger information om kollektivtrafik som avgår från en viss hållplats
 Comment[uk]=Надає дані щодо громадського транспорту, яким можна скористатися на вказаній зупинці
 Comment[x-test]=xxGives information about public transport departing from a given stopxx
 Icon=public-transport-stop
