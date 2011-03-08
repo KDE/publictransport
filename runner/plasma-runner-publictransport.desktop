@@ -1,12 +1,14 @@
 [Desktop Entry]
 Name=Public Transport
 Name[cs]=Veřejná doprava
+Name[et]=Ühiskondlik transport
 Name[pt]=Transportes Públicos
 Name[pt_BR]=Transportes Públicos
 Name[sv]=Kollektivtrafik
 Name[uk]=Громадський транспорт
 Name[x-test]=xxPublic Transportxx
 Comment=Gives information about public transport departing from a given stop
+Comment[et]=Teave ühiskondliku transpordi väljumiste kohta määratud peatusest
 Comment[pt]=Dá informações acerca das partidas de transportes públicos de uma dada paragem
 Comment[pt_BR]=Fornece informações sobre transportes públicos que partem de um ponto determinado
 Comment[sv]=Ger information om kollektivtrafik som avgår från en viss hållplats

@@ -1,11 +1,13 @@
 [Desktop Entry]
 Name=OpenStreetMap data engine
+Name[et]=OpenStreetMapi andmete mootor
 Name[pt]=Motor de dados do OpenStreetMap
 Name[pt_BR]=Mecanismo de dados do OpenStreetMap
 Name[sv]=Datagränssnitt för Open Street Map
 Name[uk]=Рушій даних OpenStreetMap
 Name[x-test]=xxOpenStreetMap data enginexx
 Comment=The OpenStreetMap data engine can be used to query things near the user.
+Comment[et]=OpenStreetMapi andmete mootorit saab kasutada teabe hankimiseks kasutaja lähedal asuvate objektide kohta.
 Comment[pt]=O motor de dados do OpenStreetMap pode ser usado para pesquisar itens perto do utilizador.
 Comment[pt_BR]=O mecanismo de dados OpenStreetMap pode ser usado para pesquisar itens próximos do usuário.
 Comment[sv]=Datagränssnittet för Open Street Map kan användas för att fråga om saker nära användaren.

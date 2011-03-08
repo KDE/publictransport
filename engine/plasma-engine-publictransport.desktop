@@ -1,11 +1,13 @@
 [Desktop Entry]
 Name=Public transport engine
+Name[et]=Ühiskondliku transpordi mootor
 Name[pt]=Motor de transportes públicos
 Name[pt_BR]=Mecanismo de transportes públicos
 Name[sv]=Gränssnitt för kollektivtrafik
 Name[uk]=Рушій громадського транспорту
 Name[x-test]=xxPublic transport enginexx
 Comment=Plasma data engine for public transport
+Comment[et]=Plasma ühiskondliku transpordi andmete mootor
 Comment[pt]=Motor de dados do Plasma para transportes públicos
 Comment[pt_BR]=Mecanismo de dados do Plasma para os transportes públicos
 Comment[sv]=Plasma datagränssnitt för kollektivtrafik

@@ -1,12 +1,14 @@
 [Desktop Entry]
 Name=Public Transport
 Name[cs]=Veřejná doprava
+Name[et]=Ühiskondlik transport
 Name[pt]=Transportes Públicos
 Name[pt_BR]=Transportes Públicos
 Name[sv]=Kollektivtrafik
 Name[uk]=Громадський транспорт
 Name[x-test]=xxPublic Transportxx
 Comment=Plasma Public Transport shows a departure / arrival board for public transport. It can also show journeys.
+Comment[et]=Plasma ühiskondliku transpordi vidin näitab liiklusvahendite saabumis- ja lahkumisaegu, samuti teekondi.
 Comment[pt]=Os Transportes Públicos do Plasma mostram uma tabela de partidas / chegadas para os transportes públicos. Também poderá mostrar as respectivas carreiras.
 Comment[pt_BR]=Os Transportes Públicos do Plasma mostram os horários de partidas / chegadas dos transportes públicos. Ele também poderá mostrar os trajetos.
 Comment[sv]=Plasma kollektivtrafik visar en tavla med avgångar och ankomster för kollektivtrafik. Den kan också visa resor.
