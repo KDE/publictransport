@@ -1,10 +1,16 @@
 [Desktop Entry]
 Name=GraphicalTimetableLine
+Name[et]=Graafiline sõiduplaan
 Name[pt]=LinhaGráficaHorário
+Name[pt_BR]=LinhaGráficaHorário
+Name[sv]=Grafisk tidtabellrad
 Name[uk]=Графічний розклад авіаліній
 Name[x-test]=xxGraphicalTimetableLinexx
 Comment=Plasma GraphicalTimetableLine
+Comment[et]=Plasma graafiline sõiduplaan
 Comment[pt]=LinhaGráficaHorário do Plasma
+Comment[pt_BR]=LinhaGráficaHorário do Plasma
+Comment[sv]=Plasma grafisk tidtabellrad
 Comment[uk]=Графічний розклад авіаліній Плазми
 Comment[x-test]=xxPlasma GraphicalTimetableLinexx
 Type=Service

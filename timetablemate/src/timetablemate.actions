@@ -1,17 +1,26 @@
 [Domain]
 Name=TimetableMate
+Name[et]=Sõiduplaanimeister
 Name[pt]=TimetableMate
+Name[pt_BR]=TimetableMate
+Name[sv]=Tidtabellkompanjon
 Name[uk]=TimetableMate
 Name[x-test]=xxTimetableMatexx
 Icon=public-transport-stop
 
 [org.kde.timetablemate.install]
 Name=Install timetable accessor globally
+Name[et]=Sõiduplaani aksessori globaalne paigaldamine
 Name[pt]=Instalar o motor de acesso global aos horários
+Name[pt_BR]=Instalar o mecanismo de acesso global aos horários
+Name[sv]=Installera åtkomst till tidtabeller globalt
 Name[uk]=Встановити загальне джерело даних розкладу
 Name[x-test]=xxInstall timetable accessor globallyxx
 Description=Authentication is required to install the timetable accessor files globally
+Description[et]=Sõiduplaani aksessori globaalseks paigaldamiseks on vajalik autentimine
 Description[pt]=É necessária a autenticação para instalar os ficheiros de acesso aos horários a nível global
+Description[pt_BR]=É necessária autenticação para instalar os arquivos de acesso aos horários globalmente
+Description[sv]=Behörighet krävs för att installera filer för tidtabellåtkomst globalt
 Description[uk]=Для встановлення загального джерела даних розкладу слід пройти розпізнавання
 Description[x-test]=xxAuthentication is required to install the timetable accessor files globallyxx
 Policy=auth_admin
