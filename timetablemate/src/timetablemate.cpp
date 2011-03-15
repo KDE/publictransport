@@ -962,7 +962,7 @@ void TimetableMate::fileSaveAs() {
     if ( !scriptFile.isEmpty() ) {
         QString scriptFilePath = m_openedPath + '/' + scriptFile;
         if ( !m_scriptDocument->saveAs(scriptFilePath) ) {
-            KMessageBox::information( this, i18nc("@info", "Couldn't write the script file to"
+            KMessageBox::information( this, i18nc("@info", "Could not write the script file to "
                                                   "<filename>%1</filename>.", scriptFilePath) );
         }
     }
