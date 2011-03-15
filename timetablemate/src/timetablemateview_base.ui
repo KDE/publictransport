@@ -367,7 +367,7 @@
        <item row="1" column="1">
         <widget class="KLineEdit" name="shortUrl">
          <property name="toolTip">
-          <string comment="@info:tooltip">Short version of the home page URL, ie. don't include &quot;www.&quot; here.&lt;nl/&gt;This is only used as display string for links.</string>
+          <string comment="@info:tooltip">Short version of the home page URL, i.e. do not include &quot;www.&quot; here.&lt;nl/&gt;This is only used as display string for links.</string>
          </property>
          <property name="inputMask">
           <string/>
@@ -716,7 +716,7 @@
        <item row="3" column="1">
         <widget class="KComboBox" name="defaultVehicleType">
          <property name="toolTip">
-          <string comment="@info:tooltip">The vehicle type to be used if it couldn't be determined from the parsed document.</string>
+          <string comment="@info:tooltip">The vehicle type to be used if it could not be determined from the parsed document.</string>
          </property>
         </widget>
        </item>

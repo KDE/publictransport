@@ -380,7 +380,7 @@ void JavaScriptCompletionModel::initHelperCompletion() {
 		    "Extracts the first block in the given string, that begins with "
 		    "<placeholder>begin</placeholder> and ends with <placeholder>end"
 		    "</placeholder>. Returns the found block or an empty string if the "
-		    "block couldn't be found."),
+		    "block could not be found."),
 	    "extractBlock( ${string}, ${begin}, ${end} );", true, "string" ));
     m_completionsHelper.insert( "call:stripTags()", CompletionItem( Function, "stripTags( string )",
 	    i18nc("@info The description for the 'stripTags' function",
@@ -591,7 +591,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
     m_completionsTimetableInfo.insert( "str:RouteExactStops", CompletionItem( Const, "RouteExactStops",
             i18nc("@info The description for the 'RouteExactStops' info",
                   "The number of exact route stops.<nl/>The route stop list in <emphasis>"
-                  "RouteStops</emphasis> isn't complete from the last exact route stop."),
+                  "RouteStops</emphasis> is not complete from the last exact route stop."),
             "RouteExactStops" ));
     m_completionsTimetableInfo.insert( "str:RouteTypesOfVehicles",
 	    CompletionItem( Const, "RouteTypesOfVehicles",
