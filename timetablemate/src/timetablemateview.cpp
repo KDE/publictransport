@@ -486,7 +486,7 @@ void TimetableMateView::createScriptFile() {
     // Create the file    
     if ( !file.open(QIODevice::WriteOnly) ) {
 		KMessageBox::information( this, i18nc("@info/plain", "A new script file "
-			"with the name <filename>%1</filename> couldn't be created.",
+			"with the name <filename>%1</filename> could not be created.",
 			fullScriptFile) );
 		return;
     }

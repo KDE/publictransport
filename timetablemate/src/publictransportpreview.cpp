@@ -71,7 +71,7 @@ bool PublicTransportPreview::loadPlasmaPreview() {
     // Add the desktop containment
     m_containment = m_corona.addContainment( "desktop" );
     if ( !m_containment ) {
-	KMessageBox::information( this, i18nc("@info", "The plasma desktop containment couldn't "
+	KMessageBox::information( this, i18nc("@info", "The plasma desktop containment could not "
 					      "be added. Ensure that you have plasma installed.") );
 	return false;
     }
@@ -85,7 +85,7 @@ bool PublicTransportPreview::loadPlasmaPreview() {
     if ( !m_applet ) {
 	delete m_containment;
 	m_containment = NULL;
-	KMessageBox::information( this, i18nc("@info", "The PublicTransport applet couldn't be "
+	KMessageBox::information( this, i18nc("@info", "The PublicTransport applet could not be "
 					      "added. Ensure that you have it installed.") );
 	return false;
     }

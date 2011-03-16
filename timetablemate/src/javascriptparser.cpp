@@ -328,7 +328,7 @@ void JavaScriptParser::checkFunctionCall( const QString &object, const QString &
 					<< "StopWeight";
 
 					if ( !timetableInfoStrings.contains(string->content()) ) {
-						setErrorState( i18nc("@info/plain", "'%1' isn't a valid info name.",
+						setErrorState( i18nc("@info/plain", "'%1' is not a valid info name.",
 											string->content()), string->line(), string->column() );
 					}
 				}

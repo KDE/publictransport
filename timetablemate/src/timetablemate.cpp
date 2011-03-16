@@ -203,7 +203,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
 
         accessorSourceWidget->setWhatsThis( i18nc("@info:whatsthis",
                                             "<subtitle>Accessor Source</subtitle>"
-                                            "<para>This shows the XML source of the accessor settings. Normally you won't need "
+                                            "<para>This shows the XML source of the accessor settings. Normally you will not need "
                                             "this, because you can setup everything in the <interface>Accessor</interface> "
                                             "settings.</para>"
                                             "<para><note>Changes to <interface>Accessor</interface> and "
@@ -962,7 +962,7 @@ void TimetableMate::fileSaveAs() {
     if ( !scriptFile.isEmpty() ) {
         QString scriptFilePath = m_openedPath + '/' + scriptFile;
         if ( !m_scriptDocument->saveAs(scriptFilePath) ) {
-            KMessageBox::information( this, i18nc("@info", "Couldn't write the script file to"
+            KMessageBox::information( this, i18nc("@info", "Could not write the script file to "
                                                   "<filename>%1</filename>.", scriptFilePath) );
         }
     }
@@ -987,7 +987,7 @@ void TimetableMate::install() {
         statusBar()->showMessage( i18nc("@info:status",
                                         "Accessor successfully installed locally"), 5000 );
     } else {
-        KMessageBox::error( this, i18nc("@info", "Accessor couldn't be installed locally. Tried "
+        KMessageBox::error( this, i18nc("@info", "Accessor could not be installed locally. Tried "
                                         "to save these files:<nl/>  %1<nl/>  %2",
                                         urlXml.prettyUrl(), urlScript.prettyUrl()) );
     }
@@ -1018,7 +1018,7 @@ void TimetableMate::installGlobal() {
         kDebug() << reply.type() << reply.data();
         kDebug() << reply.errorCode() << reply.errorDescription();
         if ( reply.type() == KAuth::ActionReply::HelperError ) {
-            KMessageBox::error( this, i18nc("@info", "Accessor couldn't be installed globally: "
+            KMessageBox::error( this, i18nc("@info", "Accessor could nt be installed globally: "
                                             "%1 <message>%2</message>", reply.errorCode(), reply.errorDescription()) );
         } else {
             switch ( reply.errorCode() ) {
@@ -1031,9 +1031,9 @@ void TimetableMate::installGlobal() {
                 break;
 
             case KAuth::ActionReply::NoSuchAction:
-                KMessageBox::error( this, i18nc("@info", "Couldn't find the authentication "
+                KMessageBox::error( this, i18nc("@info", "Could not find the authentication "
                                                 "action. If you just installed TimetableMate, you might need to "
-                                                "restart DBus.") );
+                                                "restart D-Bus.") );
                 break;
 
             case KAuth::ActionReply::HelperBusy:
@@ -1087,7 +1087,7 @@ bool TimetableMate::loadTemplate( const QString &fileName ) {
     QString error;
     if ( !setAccessorValues(&ba, &error) ) {
         KMessageBox::information( this, i18nc("@info", "The XML file <filename>"
-                                              "%1</filename> couldn't be read: <message>%2</message>",
+                                              "%1</filename> could not be read: <message>%2</message>",
                                               _fileName, error) );
         return false;
     }
@@ -1127,7 +1127,7 @@ bool TimetableMate::loadAccessor( const QString &fileName ) {
     KUrl url( fileName );
     if ( !QFile::exists(fileName) ) {
         KMessageBox::information( this, i18nc("@info", "The XML file <filename>"
-                                              "%1</filename> couldn't be found.", fileName) );
+                                              "%1</filename> could not be found.", fileName) );
         return false;
     }
     if ( !m_accessorDocument->openUrl(url) )
@@ -1141,7 +1141,7 @@ bool TimetableMate::loadAccessor( const QString &fileName ) {
     QByteArray ba = codec->fromUnicode( m_accessorDocument->text() );
     if ( !setAccessorValues(&ba, &error, fileName) ) {
         KMessageBox::information( this, i18nc("@info", "The XML file <filename>"
-                                              "%1</filename> couldn't be read: <message>%2</message>",
+                                              "%1</filename> could not be read: <message>%2</message>",
                                               fileName, error) );
         return false;
     }
@@ -1208,7 +1208,7 @@ bool TimetableMate::loadScriptForCurrentAccessor( const QString &path, bool open
         if ( openFile ) {
             if ( !QFile::exists(scriptFile) ) {
                 KMessageBox::information( this, i18nc("@info", "The script file <filename>"
-                                                      "%1</filename> couldn't be found.", scriptFile) );
+                                                      "%1</filename> could not be found.", scriptFile) );
                 m_mainTabBar->setTabEnabled( ScriptTab, false ); // Disable script tab
                 return false;
             }
@@ -1300,7 +1300,7 @@ void TimetableMate::toolsCheck() {
     }
     if ( !emailOk ) {
         inelegants << i18nc("@info", "<emphasis>You should give your email address.</emphasis> "
-                            "You may create a new address if you don't want to use your private "
+                            "You may create a new address if you do not want to use your private "
                             "one. Without an email address, no one can contact you if something "
                             "is wrong with your accessor.");
     }
@@ -2106,7 +2106,7 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
     // Check if the function is implemented by the script
     if ( !script.functionNames().contains(functionToRun) ) {
         KMessageBox::information( this, i18nc("@info/plain",
-				"The script doesn't implement <emphasis>%1</emphasis>.", functionToRun) );
+				"The script does not implement <emphasis>%1</emphasis>.", functionToRun) );
         return false;
     }
 
@@ -2137,7 +2137,7 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
     QString tempFileName;
     if ( !KIO::NetAccess::download(url, tempFileName,  this) ) {
         KMessageBox::information( this, i18nc("@info/plain",
-				"Couldn't download from URL <emphasis>%1</emphasis>.", url.prettyUrl()) );
+				"Could not download from URL <emphasis>%1</emphasis>.", url.prettyUrl()) );
         return false;
     }
 
