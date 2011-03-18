@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Flights
 Name[cs]=Lety
+Name[de]=Flüge
 Name[et]=Lennud
 Name[nds]=Flaag
 Name[nl]=Vluchten
@@ -10,6 +11,7 @@ Name[sv]=Flyg
 Name[uk]=Рейси
 Name[x-test]=xxFlightsxx
 Comment=Shows flight departures/arrivals for a given airport.
+Comment[de]=Zeigt Abflüge/Ankünfte von Flügen auf einem angegebenen Flughafen an.
 Comment[et]=Määratud lennujaama saabuvate/väljuvate lendude näitamine.
 Comment[nl]=Vertrektijden/aankomsten van vluchten tonen voor een gegeven luchthaven.
 Comment[pt]=Mostra partidas/chegadas de voos para um dado aeroporto.
