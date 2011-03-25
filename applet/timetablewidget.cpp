@@ -295,13 +295,28 @@ void PublicTransportGraphicsItem::mouseReleaseEvent( QGraphicsSceneMouseEvent* e
 
 DepartureGraphicsItem::DepartureGraphicsItem( QGraphicsItem* parent ) 
 	: PublicTransportGraphicsItem( parent ), 
-	m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0)
+	m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0), m_leavingAnimation(0)
 {
+	m_leavingStep = 0.0;
+}
+
+DepartureGraphicsItem::~DepartureGraphicsItem()
+{
+	if ( m_leavingAnimation ) {
+		m_leavingAnimation->stop();
+	}
 }
 
 JourneyGraphicsItem::JourneyGraphicsItem( QGraphicsItem* parent ) 
 	: PublicTransportGraphicsItem( parent ), m_infoTextDocument(0), m_routeItem(0)
 {
+}
+
+void DepartureGraphicsItem::setLeavingStep( qreal leavingStep )
+{
+	m_leavingStep = leavingStep;
+	setOpacity( 1.0 - leavingStep );
+	update();
 }
 
 void DepartureGraphicsItem::updateTextLayouts()
@@ -456,6 +471,18 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
 	} else if ( m_routeItem ) {
 		delete m_routeItem;
 		m_routeItem = NULL;
+	}
+	
+	kDebug() << "is leaving soon?" << item->isLeavingSoon();
+	if ( item->isLeavingSoon() && !m_leavingAnimation ) {
+		m_leavingAnimation = new QPropertyAnimation( this, "leavingStep", this );
+		m_leavingAnimation->setStartValue( 0.0 );
+		m_leavingAnimation->setKeyValueAt( 0.5, 0.5 );
+		m_leavingAnimation->setEndValue( 0.0 );
+		m_leavingAnimation->setDuration( 1000 );
+		m_leavingAnimation->setEasingCurve( QEasingCurve(QEasingCurve::InOutCubic) );
+		m_leavingAnimation->setLoopCount( -1 );
+		m_leavingAnimation->start( QAbstractAnimation::DeleteWhenStopped );
 	}
 	
 	update();
@@ -1179,6 +1206,17 @@ void PublicTransportWidget::setModel( PublicTransportModel* model )
     connect( m_model, SIGNAL(layoutChanged()), this, SLOT(layoutChanged()) );
     connect( m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), 
 			 this, SLOT(dataChanged(QModelIndex,QModelIndex)) );
+}
+
+PublicTransportGraphicsItem* PublicTransportWidget::item( const QModelIndex& index )
+{
+	foreach ( PublicTransportGraphicsItem *item, m_items ) {
+		if ( item->index() == index ) {
+			return item;
+		}
+	}
+	
+	return NULL;
 }
 
 void PublicTransportWidget::contextMenuEvent( QGraphicsSceneContextMenuEvent* event )

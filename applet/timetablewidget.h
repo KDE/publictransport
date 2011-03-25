@@ -138,10 +138,12 @@ public:
  **/
 class DepartureGraphicsItem : public PublicTransportGraphicsItem {
 	Q_OBJECT
+	Q_PROPERTY( qreal leavingStep READ leavingStep WRITE setLeavingStep )
 	friend class TimetableWidget;
 	
 public:
 	DepartureGraphicsItem( QGraphicsItem* parent = 0 );
+    virtual ~DepartureGraphicsItem();
 	
 	void updateData( DepartureItem* item, bool update = false );
 	inline DepartureItem *departureItem() const { return qobject_cast<DepartureItem*>(m_item); };
@@ -159,6 +161,9 @@ public:
 	QRect extraIconRect( const QRect &rect, qreal timeColumnWidth ) const;
 	QRect timeRect( const QRect &rect ) const;
 	
+	qreal leavingStep() const { return m_leavingStep; };
+	void setLeavingStep( qreal leavingStep );
+	
 protected:
 	virtual void updateTextLayouts();
 	qreal timeColumnWidth() const;
@@ -168,6 +173,9 @@ private:
 	QTextDocument *m_infoTextDocument;
 	QTextDocument *m_timeTextDocument;
 	RouteGraphicsItem *m_routeItem;
+	
+	QPropertyAnimation *m_leavingAnimation;
+	qreal m_leavingStep;
 };
 
 /** 
@@ -222,6 +230,7 @@ public:
 	PublicTransportModel *model() const { return m_model; };
 	void setModel( PublicTransportModel *model );
 	PublicTransportGraphicsItem *item( int row ) { return m_items[row]; };
+	PublicTransportGraphicsItem *item( const QModelIndex &index );
 	
 	void setSvg( Plasma::Svg *svg ) { m_svg = svg; };
 	Plasma::Svg *svg() const { return m_svg; };
@@ -290,6 +299,9 @@ public:
 	inline DepartureGraphicsItem *departureItem( int row ) { 
 		return qobject_cast<DepartureGraphicsItem*>(item(row));
 	};
+	inline DepartureGraphicsItem *departureItem( const QModelIndex &index ) { 
+		return qobject_cast<DepartureGraphicsItem*>(item(index));
+	};
 	inline DepartureModel *departureModel() const { 
 		return qobject_cast<DepartureModel*>(m_model);
 	};
@@ -315,6 +327,9 @@ public:
 	
 	inline JourneyGraphicsItem *journeyItem( int row ) { 
 		return qobject_cast<JourneyGraphicsItem*>(item(row));
+	};
+	inline JourneyGraphicsItem *journeyItem( const QModelIndex &index ) { 
+		return qobject_cast<JourneyGraphicsItem*>(item(index));
 	};
 	inline JourneyModel *journeyModel() const { 
 		return qobject_cast<JourneyModel*>(m_model);

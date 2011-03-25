@@ -334,6 +334,9 @@ public:
 
 	virtual QVariant data( int role = Qt::DisplayRole, int column = 0 ) const;
 
+	bool isLeavingSoon() const { return m_leavingSoon; };
+    void setLeavingSoon( bool leavingSoon = true );
+	
 	/** @returns the current alarm states.
 	* @see AlarmStates */
 	AlarmStates alarmStates() const { return m_alarm; };
@@ -402,6 +405,7 @@ protected:
 	DepartureInfo m_departureInfo;
 	AlarmStates m_alarm;
 	qreal m_alarmColorIntensity;
+	bool m_leavingSoon;
 };
 
 /** @brief Base class for DepartureModel and JourneyModel.
@@ -503,6 +507,7 @@ signals:
 
 protected slots:
 	void startUpdateTimer();
+	
 	/** @brief Called each full minute. */
 	virtual void update() = 0;
 
@@ -606,9 +611,11 @@ protected slots:
 	/** @brief Called each full minute. Updates time values, checks for alarms and sorts out
 	 * old departures */
 	virtual void update();
+	
 	void alarmItemDestroyed( QObject *item );
 
 private:
+	void removeLeavingDepartures();
 	virtual DepartureItem *findNextItem( bool sortedByDepartureAscending = false ) const;
 	void fireAlarm( const QDateTime& dateTime, DepartureItem* item );
 

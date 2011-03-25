@@ -323,6 +323,9 @@ QString GlobalApplet::durationString( int seconds )
 	} else if ( minutes > 0 ) {
 		return i18ncp( "@info/plain Duration string with zero hours, %1 is minutes",
 					   "%1 minute", "%1 minutes", minutes );
+	} else if ( minutes < 0 ) {
+		return i18nc( "@info/plain Used as 'duration' string if the departure time has already passed",
+					  "left" );
 	} else {
 		return i18nc( "@info/plain Used as duration string if the duration is less than a minute",
 					  "now" );

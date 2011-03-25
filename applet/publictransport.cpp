@@ -1070,10 +1070,12 @@ QPixmap PublicTransport::createDeparturesPixmap( const QList<DepartureItem*> &de
 	QDateTime currentTime = QDateTime::currentDateTime();
 	int minsToDeparture = qCeil( currentTime.secsTo(time) / 60.0 );
 	QString text;
-	if ( minsToDeparture < 0 ) {
-		text.append( i18n("leaving") );
+	if ( minsToDeparture < -1 ) {
+		text.append( i18nc("Indicating the departure time of an already left vehicle", "left") );
+	} else if ( minsToDeparture < 0 ) {
+		text.append( i18nc("Indicating the departure time of a currently leaving vehicle", "leaving") );
 	} else if ( minsToDeparture == 0 ) {
-		text.append( i18n("now") );
+		text.append( i18nc("Indicating the departure time of a vehicle, that will leave now", "now") );
 	} else if ( minsToDeparture >= 60 * 24 ) {
 		text.append( i18np("1 day", "%1 days", qRound(minsToDeparture / (6 * 24)) / 10.0) );
 	} else if ( minsToDeparture >= 60 ) {
@@ -2173,6 +2175,7 @@ void PublicTransport::oldItemAnimationFinished()
 
 void PublicTransport::processJourneyRequest( const QString& startStop, const QString& targetStop )
 {
+	Q_UNUSED( startStop );
 	clearJourneys();
 	reconnectJourneySource( targetStop, QDateTime(), true, true );
 }

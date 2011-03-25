@@ -232,6 +232,15 @@ TopLevelItem::TopLevelItem( const Info* info ) : QObject(0), ItemBase( info )
 {
 }
 
+void DepartureItem::setLeavingSoon( bool leavingSoon )
+{
+	kDebug() << "SET LEAVING SOON:" << leavingSoon << m_model;
+	m_leavingSoon = leavingSoon;
+	if ( m_model ) {
+		m_model->itemChanged( this, 0, 0 );
+	}
+}
+
 void TopLevelItem::setData( Columns column, const QVariant& data, int role )
 {
 	m_columnData[ column ][ role ] = data;
@@ -740,6 +749,7 @@ ChildItem* JourneyItem::createRouteItem()
 DepartureItem::DepartureItem( const DepartureInfo &departureInfo, const Info *info )
 		: TopLevelItem( info )
 {
+	m_leavingSoon = false;
 	m_alarm = NoAlarm;
 	m_alarmColorIntensity = 0.0;
 	setDepartureInfo( departureInfo );
@@ -1055,6 +1065,8 @@ QVariant DepartureItem::data( int role, int column ) const
 
 	if ( column < m_columnData.count() && m_columnData[column].contains( role ) ) {
 		return m_columnData[column].value( role );
+	} else if ( role == IsLeavingSoonRole ) {
+		return m_leavingSoon;
 	} else if ( role == DrawAlarmBackgroundRole ) {
 		return m_alarm.testFlag( AlarmPending ) || !qFuzzyIsNull( m_alarmColorIntensity );
 	} else if ( role == AlarmColorIntensityRole ) {
@@ -1131,17 +1143,19 @@ void DepartureItem::setAlarmStates( AlarmStates alarmStates )
 
 PublicTransportModel::PublicTransportModel( QObject* parent )
 		: QAbstractItemModel( parent ), m_nextItem( 0 ),
-		m_updateTimer( new QTimer( this ) )
+		m_updateTimer( new QTimer(this) )
 {
 	m_updateTimer->setInterval( 60000 );
-	connect( m_updateTimer, SIGNAL( timeout() ), this, SLOT( update() ) );
+	connect( m_updateTimer, SIGNAL(timeout()), this, SLOT(update()) );
 
-	callAtNextFullMinute( SLOT( startUpdateTimer() ) );
+	callAtNextFullMinute( SLOT(startUpdateTimer()) );
 }
 
 void PublicTransportModel::startUpdateTimer()
-{
+{	
 	update();
+	
+	kDebug() << "start update timer" << QTime::currentTime();
 	m_updateTimer->start();
 }
 
@@ -1150,8 +1164,8 @@ void PublicTransportModel::callAtNextFullMinute( const char* member )
 	QTime time = QTime::currentTime();
 	QTime nextMinute( time.hour(), time.minute() );
 	nextMinute = nextMinute.addSecs( 60 );
-	int secs = time.secsTo( nextMinute ) * 1000;
-	QTimer::singleShot( qMin( 60000, secs ), this, member );
+	int msecs = time.secsTo( nextMinute ) * 1000;
+	QTimer::singleShot( qMin(60000, msecs), this, member );
 }
 
 void PublicTransportModel::setLinesPerRow( int linesPerRow )
@@ -1160,7 +1174,7 @@ void PublicTransportModel::setLinesPerRow( int linesPerRow )
 		return;
 	}
 	m_info.linesPerRow = linesPerRow;
-	emit dataChanged( index( 0, 0 ), index( rowCount(), 0 ) );
+	emit dataChanged( index(0, 0), index(rowCount(), 0) );
 }
 
 void PublicTransportModel::setSizeFactor( float sizeFactor )
@@ -1518,6 +1532,8 @@ DepartureModel::DepartureModel( QObject* parent ) : PublicTransportModel( parent
 
 void DepartureModel::update()
 {
+	kDebug() << "UPDATE" << m_items.count();
+	
 	// Check for alarms that should now be fired
 	if ( !m_alarms.isEmpty() ) {
 		QDateTime nextAlarm = m_alarms.keys().first();
@@ -1530,25 +1546,55 @@ void DepartureModel::update()
 		}
 	}
 
-	// Sort out departures in the past
+	// Sort out departures in the past 
 	QList<DepartureInfo> leaving;
-	while ( m_nextItem
-		&& static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture() 
-			< QDateTime::currentDateTime() )
-	{
+	int row = 0;
+	m_nextItem = m_items.isEmpty() ? NULL : static_cast<DepartureItem*>( m_items[row] );
+	QDateTime nextDeparture = m_nextItem 
+			? static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture()
+			: QDateTime();
+	nextDeparture.setTime( QTime(nextDeparture.time().hour(), nextDeparture.time().minute()) ); // Set second to 0
+	while ( m_nextItem && nextDeparture < QDateTime::currentDateTime() ) {
 		kDebug() << "Remove old departure at" << m_nextItem->row()
 				 << static_cast<DepartureItem*>( m_nextItem )->departureInfo();
-		leaving << *static_cast<DepartureItem*>(m_nextItem)->departureInfo();
+		DepartureItem *leavingItem = static_cast<DepartureItem*>( m_nextItem );
+		leaving << *leavingItem->departureInfo();
+		leavingItem->setLeavingSoon( true );
 		
-		removeRows( m_nextItem->row(), 1 );
-		m_nextItem = findNextItem();
+// 		removeRows( m_nextItem->row(), 1 );
+// 		m_nextItem = findNextItem();
+		++row;
+		if ( row >= m_items.count() ) {
+			break;
+		}
+		m_nextItem = static_cast<DepartureItem*>( m_items[row] );
+		nextDeparture = static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture();
+		nextDeparture.setTime( QTime(nextDeparture.time().hour(), nextDeparture.time().minute()) ); // Set second to 0
 	}
 	emit departuresLeft( leaving );
+	
+	// Wait 10 seconds before removing the departure.
+	// By having called setLeavingSoon(true) the items to be removed will animate to indicate that
+	// they are leaving soon.
+	QTimer::singleShot( 10000, this, SLOT(removeLeavingDepartures()) );
 
 	// Update departure column if necessary (remaining minutes)
 	if ( m_info.showRemainingMinutes ) {
 		foreach( ItemBase *item, m_items ) {
 			item->updateTimeValues();
+		}
+	}
+}
+
+void DepartureModel::removeLeavingDepartures()
+{
+	for ( int row = 0; row < m_items.count(); ++row ) {
+		DepartureItem *item = static_cast<DepartureItem*>( m_items[row] );
+		if ( item->isLeavingSoon() ) {
+			removeRows( row, 1 );
+			--row;
+		} else {
+			break;
 		}
 	}
 }
@@ -1567,7 +1613,7 @@ void DepartureModel::setAlarmSettings( const AlarmSettingsList& alarmSettings )
 	// Remove old alarms
 	QMultiMap< QDateTime, DepartureItem* >::iterator it;
 	for ( it = m_alarms.begin(); it != m_alarms.end(); ++it ) {
-		disconnect( *it, SIGNAL( destroyed( QObject* ) ), this, SLOT( alarmItemDestroyed( QObject* ) ) );
+		disconnect( *it, SIGNAL(destroyed(QObject*)), this, SLOT(alarmItemDestroyed(QObject*)) );
 		(*it)->setAlarmStates( NoAlarm );
 
 		it = m_alarms.erase( it );
@@ -1842,7 +1888,7 @@ void DepartureModel::addAlarm( DepartureItem* item )
 	if ( QDateTime::currentDateTime() > alarmTime ) {
 		fireAlarm( alarmTime, item );
 	} else {
-		connect( item, SIGNAL( destroyed( QObject* ) ), this, SLOT( alarmItemDestroyed( QObject* ) ) );
+		connect( item, SIGNAL(destroyed(QObject*)), this, SLOT(alarmItemDestroyed(QObject*)) );
 		m_alarms.insert( alarmTime, item );
 		item->setAlarmStates(( item->alarmStates() & ~AlarmFired ) | AlarmPending );
 	}
@@ -1857,7 +1903,7 @@ void DepartureModel::removeAlarm( DepartureItem* item )
 	}
 	int removed = m_alarms.remove( m_alarms.keys().at( index ), item );
 	if ( removed > 0 ) {
-		disconnect( item, SIGNAL( destroyed( QObject* ) ), this, SLOT( alarmItemDestroyed( QObject* ) ) );
+		disconnect( item, SIGNAL(destroyed(QObject*)), this, SLOT(alarmItemDestroyed(QObject*)) );
 		item->setAlarmStates( NoAlarm );
 	}
 }
