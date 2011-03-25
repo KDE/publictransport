@@ -467,6 +467,7 @@ void PublicTransportHelperTest::stopSettingsDialogExtendedStopTest()
 void PublicTransportHelperTest::stopSettingsDialogCustomStopTest()
 {
 	StopSettingsDialog dlg( 0, m_stopSettings, 
+			StopSettingsDialog::ShowServiceProviderConfig | 
 			StopSettingsDialog::ShowStopInputField | StopSettingsDialog::ShowAlarmTimeConfig, 
 			AccessorInfoDialog::DefaultOptions, m_filterConfigurations,
 			QList<int>() << AlarmTimeSetting );
