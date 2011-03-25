@@ -1,7 +1,8 @@
 
 Changelog of plasma-engine-publictransport 
 
-0.10 - Beta 8
+0.10 - NEXT
+- Only add new journey news lines if they aren't already in the journey news string for de_rmv
 - Fix pl_pkp: New URL, rewritten parsing script, add route parsing
 
 0.10 - Beta 7

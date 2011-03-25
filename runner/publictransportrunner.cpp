@@ -372,8 +372,8 @@ PublicTransportRunnerHelper::PublicTransportRunnerHelper( PublicTransportRunner*
 	// The helper needs to be in the main thread of the data engine
 	Q_ASSERT( QThread::currentThread() == QCoreApplication::instance()->thread() );
 
-	connect( runner, SIGNAL( doMatch( PublicTransportRunner*, Plasma::DataEngine*, Plasma::RunnerContext* ) ),
-			 this, SLOT( match( PublicTransportRunner*, Plasma::DataEngine*, Plasma::RunnerContext* ) ),
+	connect( runner, SIGNAL(doMatch(PublicTransportRunner*,Plasma::DataEngine*,Plasma::RunnerContext*)),
+			 this, SLOT(match(PublicTransportRunner*,Plasma::DataEngine*,Plasma::RunnerContext*)),
 			 Qt::BlockingQueuedConnection );
 }
 

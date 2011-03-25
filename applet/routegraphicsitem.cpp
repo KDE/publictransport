@@ -153,6 +153,7 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
 	m_textItems.clear();
 	m_markerItems.clear();
 	
+	// Add route stops if there are at least two stops given from the data engine
 	if ( info->routeStops().count() >= 2 ) {
 		int count = info->routeStops().count();
 		QFont routeFont = KGlobalSettings::smallestReadableFont();
@@ -632,9 +633,9 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
 	}
 	m_routeItems.clear();
 	
+	// Add route stops if there are at least two stops given from the data engine
 	QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( layout() );
 	if ( info->routeStops().count() >= 2 ) {
-// 		int count = info->routeStops().count();
 		QFont routeFont = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
 		routeFont.setPointSizeF( routeFont.pointSizeF() * m_zoomFactor );
 		QFont boldRouteFont = routeFont;
@@ -644,6 +645,7 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
 		const QRectF routeRect = rect();
 // 		const qreal routeLineWidth = 4.0 * m_zoomFactor;
 		
+		// Add the route stop items (JourneyRouteStopGraphicsItem)
 		for ( int i = 0; i < info->routeStops().count(); ++i ) {
 			QFontMetrics *fontMetrics;
 			QFont *font;
@@ -720,6 +722,8 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
 void JourneyRouteGraphicsItem::processJourneyRequest( const QString& newTargetStop, 
 													  JourneyRouteStopGraphicsItem* item )
 {
+	Q_UNUSED( item );
+	
 	if ( m_routeItems.isEmpty() ) {
 		kDebug() << "Requested a new journey, but no route items present in list anymore";
 		return;

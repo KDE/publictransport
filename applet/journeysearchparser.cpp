@@ -598,7 +598,7 @@ bool JourneySearchParser::parseDate( const QString& sDate, QDate* date )
 
 bool JourneySearchParser::parseTime( const QString& sTime, QTime* time )
 {
-	if ( sTime == i18nc( "@info/plain", "now" ) ) {
+	if ( sTime == i18nc("@info/plain", "now") ) {
 		*time = QTime::currentTime();
 		return true;
 	}

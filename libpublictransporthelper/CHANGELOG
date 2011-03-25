@@ -1,6 +1,9 @@
 
 Changelog of libpublictransporthelper
 
+0.10 - NEXT
+- Automatically load the message catalog of the library, by using KCatalogLoader
+
 0.10 - Beta 4
 - Checking if a stop name suggestion was selected in a StopLineEdit is now done case insensitively. If the selection of a suggestion was detected, the suggestion list isn't replaced by new suggestions.
 
