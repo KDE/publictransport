@@ -88,6 +88,7 @@ QSizeF JourneySearchSuggestionItem::sizeHint( Qt::SizeHint which, const QSizeF& 
 void JourneySearchSuggestionItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, 
 										QWidget* widget)
 {
+	Q_UNUSED( widget );
 	painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 	
 	if ( option->rect.isEmpty() ) {
@@ -105,7 +106,7 @@ void JourneySearchSuggestionItem::paint(QPainter* painter, const QStyleOptionGra
 		/*|| option->state.testFlag(QStyle::State_MouseOver)*/ ) 
 	{
 		#if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
-			QColor focusColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ButtonFocusColor );
+			QColor focusColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::HighlightColor );
 		#else
 			QColor focusColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewFocusColor );
 		#endif
