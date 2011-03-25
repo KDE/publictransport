@@ -149,6 +149,7 @@ protected slots:
 
 	/** @brief Settings have changed. */
 	void configChanged();
+	
 	/** @brief Settings that require a new data request have been changed. */
 	void serviceProviderSettingsChanged();
 
@@ -156,37 +157,52 @@ protected slots:
 	 * @ingroup models */
 	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
-	/** This will stop if the maximum departure count is reached
-	* or if all @p departures have been added.
-	* @brief Fills the departure/arrival data model with the given departure/arrival list without
-	*   removing departures that were already in the model.
-	* @ingroup models */
+	/**
+	 * @brief Fills the departure/arrival data model with the given departure/arrival list without
+	 *   removing departures that were already in the model.
+	 *
+	 * This will stop if the maximum departure count is reached
+	 * or if all @p departures have been added.
+	 * 
+	 * @ingroup models */
 	void fillModel( const QList<DepartureInfo> &departures );
-	/** This will stop if all @p journeys have been added.
-	* @brief Fills the journey data model with the given journey list without removing departures
-	*   that were already in the model.
-	* @ingroup models */
+	
+	/**
+	 * @brief Fills the journey data model with the given journey list without removing departures
+	 *   that were already in the model.
+	 * 
+	 * This will stop if all @p journeys have been added.
+	 * 
+	 * @ingroup models */
 	void fillModelJourney( const QList<JourneyInfo> &journeys );
 
-	/** @brief The context menu has been requested by the tree view. */
+	/** @brief The context menu has been requested by the departure view. */
 	void showDepartureContextMenu( const QPoint &position );
+	
 	void departureContextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
-	/** @brief The context menu has been requested by the tree view header. */
+	
+	/** DEPRECATED
+	 * @brief The context menu has been requested by the tree view header. */
 	void showHeaderContextMenu( const QPoint &position );
-	/** @brief An item in the tree view has been double clicked. */
+	
+	/** @brief An item in the departure view has been double clicked. */
 	void doubleClickedItem( const QModelIndex &modelIndex );
+	
 	void noItemsTextClicked();
 
 	/** @brief The icon widget was clicked. */
 	void iconClicked();
+	
 	/** @brief The icon widget to close the journey view was clicked. */
 	void iconCloseClicked();
+	
 	/** @brief The filter icon widget was clicked. */
 	void filterIconClicked();
 
 	/** @brief Finished editing the journey search line (return pressed, start search
 	 * button clicked or stop suggestion double clicked). */
 	void journeySearchInputFinished();
+	
 	/** @brief The journey search line has been changed and parsed.
 	 *
 	 * This slot gets called by JourneySearchSuggestionWidget.
@@ -202,32 +218,42 @@ protected slots:
 
 	/** @brief Called from PublicTransportSettings to indicate the need to clear the
 	 * departure list. */
+	
 	void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
 
 	/** @brief The action to update the data source has been triggered. */
 	void updateDataSource();
+	
 	/** @brief The action to set an alarm for the selected departure/arrival has been triggered. */
 	void setAlarmForDeparture();
+	
 	/** @brief The action to remove an alarm from the selected departure/arrival has been triggered. */
 	void removeAlarmForDeparture();
 
 	/** @brief The action to switch to the journey search mode has been triggered. */
 	void showJourneySearch();
+	
 	/** @brief The action to go back to the departure/arrival view has been triggered. */
 	void goBackToDepartures();
+	
 	/** @brief The action to show the action button overlay has been triggered. */
 	void showActionButtons();
 
 	/** @brief The action to expand / collapse of the selected departure/arrival has been triggered. */
 	void toggleExpanded();
+	
 	/** @brief The action to hide the header of the tree view has been triggered. */
 	void hideHeader();
+	
 	/** @brief The action to show the header of the tree view has been triggered. */
 	void showHeader();
+	
 	/** @brief The action to hide the direction column of the tree view header has been triggered. */
 	void hideColumnTarget();
+	
 	/** @brief The action to show the direction column of the tree view header has been triggered. */
 	void showColumnTarget();
+	
 	/** @brief The plasma theme has been changed. */
 	void themeChanged() { useCurrentPlasmaTheme(); };
 
@@ -244,6 +270,7 @@ protected slots:
 	 * @see departuresProcessed
 	 * @ingroup models */
 	void beginDepartureProcessing( const QString &sourceName );
+	
 	/** @brief The worker thread has finished processing departures/arrivals.
 	 *
 	 * @param sourceName The data engine source name for the departure data.
@@ -255,6 +282,7 @@ protected slots:
 	 * @ingroup models */
 	void departuresProcessed( const QString &sourceName, const QList< DepartureInfo > &departures,
 							  const QUrl &requestUrl, const QDateTime &lastUpdate );
+	
 	/** @brief The worker thread has finished filtering departures.
 	 *
 	 * @param sourceName The data engine source name for the departure data.
@@ -269,6 +297,7 @@ protected slots:
 	void departuresFiltered( const QString &sourceName, const QList< DepartureInfo > &departures,
 							 const QList< DepartureInfo > &newlyFiltered,
 							 const QList< DepartureInfo > &newlyNotFiltered );
+	
 	/** @brief The worker thread starts processing journeys from the data engine.
 	 * @see journeysProcessed
 	 * @ingroup models */
@@ -303,19 +332,23 @@ protected slots:
 	/** @brief Write new settings with @ref Settings::departureArrivalListType set
 	 *   to @p DepartureList. This also updates the departure tree view on @ref configChanged. */
 	void setShowDepartures();
+	
 	/** @brief Write new settings with @ref Settings::departureArrivalListType set
 	 *   to @p ArrivalList. This also updates the departure tree view on @ref configChanged. */
 	void setShowArrivals();
 
 	/** @brief Switch the currently active filter configuration to @p newFilterConfiguration. */
 	void switchFilterConfiguration( const QString &newFilterConfiguration );
+	
 	/** @brief An action to change the currently active filter configuration has been triggered. */
 	void switchFilterConfiguration( QAction *action );
+	
 	/** @brief Changes the filters enabled state to @p enable. */
 	void setFiltersEnabled( bool enable );
 
 	/** @brief An alarm has been fired for the given @p item. */
 	void alarmFired( DepartureItem *item );
+	
 	void removeAlarms( const AlarmSettingsList &newAlarmSettings, const QList<int> &removedAlarms );
 	
 	void departuresAboutToBeRemoved( const QList<ItemBase*> &departures );
@@ -328,10 +361,12 @@ protected:
 
 	/** @brief Gets a list of actions for the context menu. */
 	virtual QList<QAction*> contextualActions();
+	
 	/** @brief The popup gets shown or hidden. */
 	virtual void popupEvent( bool show );
 
 	virtual bool sceneEventFilter( QGraphicsItem* watched, QEvent* event );
+	
 	/** @brief Watching for up/down key presses in m_journeySearch to select stop suggestions. */
 	virtual bool eventFilter( QObject* watched, QEvent* event );
 
@@ -341,10 +376,12 @@ protected:
 	 * @returns True, if the state is set. False, otherwise.*/
 	bool testState( AppletState state ) const {
 		return m_appletStates.testFlag( state ); };
+		
 	/** @brief Adds the given state. Operations are processed to set the new applet state.
 	 *
 	 * @param state The state to add. */
 	void addState( AppletState state );
+	
 	/** @brief Removes the given state. Operations are processed to unset the new applet state.
 	 *
 	 * @param state The state to remove. */
@@ -352,6 +389,7 @@ protected:
 
 	/** @brief Creates all used QAction's. */
 	void setupActions();
+	
 	/** @brief Gets an action with string and icon updated to the current settings.
 	 *
 	 * @param actionName The name of the action to return updated.
@@ -360,6 +398,7 @@ protected:
 
 	/** @brief Generates tooltip data and registers this applet at plasma's TooltipManager. */
 	void createTooltip();
+	
 	/** @brief Creates the popup icon with information about the next departure / alarm. */
 	void createPopupIcon();
 	
@@ -373,6 +412,7 @@ protected:
 	/** @brief Gets the text to be displayed on right of the treeview as additional
 	 * information (html-tags allowed). Contains courtesy information. */
 	QString infoText();
+	
 	/** @brief Gets the text to be displayed as tooltip for the info label. */
 	QString courtesyToolTip() const;
 
@@ -380,6 +420,7 @@ protected:
 	 *   connects a new source using the current configuration.
 	 * @ingroup models*/
 	void reconnectSource();
+	
 	/** @brief Disconnects a currently connected departure/arrival data source.
 	 * @ingroup models */
 	void disconnectSources();
@@ -398,6 +439,7 @@ protected:
 	/** @brief Handles errors from the publictransport data engine for @p data from source @p sourceName.
 	 * @ingroup models */
 	void handleDataError( const QString &sourceName, const Plasma::DataEngine::Data& data );
+	
 	/** @brief Read stop suggestions from the data engine.
 	 * @ingroup models */
 	void processStopSuggestions( const QString &sourceName, const Plasma::DataEngine::Data& data );
@@ -406,6 +448,7 @@ protected:
 	 *   displayed by the applet.
 	 * @ingroup models */
 	void clearDepartures();
+	
 	/** @brief Clears the journey list received from the data engine and displayed by
 	 *   the applet.
 	 * @ingroup models */
@@ -413,6 +456,7 @@ protected:
 
 	/** @brief Sets an autogenerated alarm for the given departure/arrival. */
 	void createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex );
+	
 	/** @brief Removes an autogenerated alarm from this departure/arrival if any. */
 	void removeAlarmForDeparture( int row );
 
@@ -420,6 +464,7 @@ protected:
 	void setTextColorOfHtmlItem( QStandardItem *item, const QColor &textColor );
 
 	QGraphicsWidget *widgetForType( TitleType titleType, TitleType oldTitleType );
+	
 	/** @brief Sets the type of title to be displayed. */
 	void setTitleType( TitleType titleType );
 
@@ -443,12 +488,14 @@ private:
 	};
 
 	NetworkStatus queryNetworkStatus();
+	
 	/** @brief Shows an error message when no interface is activated.
 	 * @return True, if no message is shown. False, otherwise. */
 	bool checkNetworkStatus();
 
 	/** @brief List of current departures / arrivals for the selected stop(s). */
 	QList<DepartureInfo> departureInfos() const;
+	
 	QString stripDateAndTimeValues( const QString &sourceName ) const;
 
 	/** @brief Sets values of the current plasma theme. */
@@ -469,6 +516,7 @@ private:
 
 	QVariantHash currentServiceProviderData() const {
 		return serviceProviderData( m_settings.currentStopSettings().get<QString>(ServiceProviderSetting) ); };
+		
 	QVariantHash serviceProviderData( const QString &id ) const;
 
 
@@ -490,7 +538,7 @@ private:
 	OverlayWidget *m_overlay;
 	Plasma::Svg m_vehiclesSvg; /**< An SVG containing SVG elements for vehicle types. */
 
-	DepartureModel *m_model; /**< The model for the tree view containing the departure/arrival board. */
+	DepartureModel *m_model; /**< The model containing the departures/arrivals. */
 	QHash< QString, QList<DepartureInfo> > m_departureInfos; /**< List of current
 			* departures/arrivals for each stop. */
 	int m_startPopupIconDepartureIndex;
@@ -517,7 +565,7 @@ private:
 	QStringList m_currentServiceProviderFeatures;
 	bool m_stopNameValid; /**< Whether or not the current stop name (m_stop) is valid. */
 
-	QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in the tree view
+	QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in departure view
 			* for the context menu actions. */
 
 	QActionGroup *m_filtersGroup; /**< An action group to toggle between filter configurations. */
