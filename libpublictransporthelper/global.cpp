@@ -29,6 +29,11 @@
 #include <qmath.h>
 #include <QPainter>
 
+// KCatalogLoader gets fixed in KDE 4.6.2, before there're linker errors
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,6,2)
+static const KCatalogLoader loader("libpublictransporthelper");
+#endif
+
 namespace Timetable {
 
 GeneralVehicleType Global::generalVehicleType( VehicleType vehicleType )
