@@ -287,10 +287,10 @@ private:
 The public transport data engine provides timetable data for public transport, trains, ships,
 ferries and planes. It can get departure/arrival lists or journey lists.
 There are different accessors used to download and parse documents from
-different service providers. Currently there are three classes of accessors, one
-to parse html pages (by giving some regular expressions), one to parse documents using scripts 
-and one to parse xml files. All are using information from TimetableAccessorInfo, which reads 
-information data from xml files to support different service providers.
+different service providers. Currently there are two classes of accessors, one
+to parse documents using scripts and one to parse xml files. All are using information 
+from TimetableAccessorInfo, which reads information data from xml files to support different 
+service providers.
 
 <br />
 @section install_sec Installation
@@ -679,7 +679,6 @@ void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &dat
 	@li @ref examples
 	@li @ref examples_xml_script
 	@li @ref examples_script
-	@li @ref examples_xml_regexp
 <br />
 
 @section accessor_infos_xml XML file structure
@@ -775,42 +774,6 @@ The email address of the author of this accessor info xml.</td></tr>
 <td>\<accessorInfo\></td> <td>Required, if no regExps are set</td>
 <td>Contains the filename of the script to be used to parse timetable documents. The script must be in the same directory as the XML file. Always use HTML as type when using a script, you can also parse XML files in the script.</td></tr>
 
-<tr style="border-top: 3px double black;"><td style="color:#0000bb;"><b>\<regExps\></b></td>
-<td>\<accessorInfo\></td> <td>Required, if no script is used (Optional for XML)</td>
-<td>Contains regular expressions used to parse the documents from the service provider.</td></tr>
-
-<tr><td style="color:#000077;"><b>\<departures\></b></td>
-<td style="color:#0000bb;">\<regExps\></td> <td>Required (Optional for XML)</td>
-<td>Contains a regular expression used to parse documents with departure / arrival lists.</td></tr>
-
-<tr><td style="color:#000077;"><b>\<journeys\></b></td>
-<td style="color:#0000bb;">\<regExps\></td> <td>(Optional)</td>
-<td>Contains a regular expression used to parse documents with journey lists.</td></tr>
-
-<tr><td style="color:#000077;"><b>\<journeyNews\></b></td>
-<td style="color:#0000bb;">\<regExps\></td> <td>(Optional)</td>
-<td>Contains a list of regular expression used to parse strings matched with the \<info\> "JourneyNews".</td></tr>
-
-<tr><td style="color:#000077;"><b>\<possibleStops\></b></td>
-<td style="color:#0000bb;">\<regExps\></td> <td>(Optional)</td>
-<td>Contains a list of regular expression used to parse documents with stop suggestions. This is used if there's a special raw url for stop suggestions or if no departures / arrivals / journeys could be found in a document.</td></tr>
-
-<tr><td style="color:#000033;"><b>\<regExp\></b></td>
-<td style="color:#000077;">\<departures\>, \<journeys\>, \<item\></td> <td>Required</td>
-<td>A regular expression (in a CDATA tag).</td></tr>
-
-<tr><td style="color:#000033;"><b>\<infos\></b></td>
-<td style="color:#000077;">\<departures\>, \<journeys\>, \<item\></td> <td>Required</td>
-<td>A list of \<info\>-tags. For each string matched by the regular expression there must be an \<info\>-tag with the meaning of that match.</td></tr>
-
-<tr><td><b>\<info\></b></td>
-<td style="color:#000033;">\<infos\></td> <td>Required</td>
-<td>Information about a match of a regular expression. Allowed values are: Nothing, DepartureDate, DepartureHour, DepartureMinute, TypeOfVehicle, TransportLine, FlightNumber, Target, Platform, Delay, DelayReason, JourneyNews, JourneyNewsOther, JourneyNewsLink, DepartureHourPrognosis, DepartureMinutePrognosis, Operator, DepartureAMorPM, DepartureAMorPMPrognosis, ArrivalAMorPM, Status, Duration, StartStopName, StartStopID, TargetStopName, TargetStopID, ArrivalDate, ArrivalHour, ArrivalMinute, Changes, TypesOfVehicleInJourney, Pricing, NoMatchOnSchedule, StopName, StopID.</td></tr>
-
-<tr><td style="color:#000033;"><b>\<item\></b></td>
-<td style="color:#000077;">\<jorneyNews\>, \<possibleStops\></td> <td>Required</td>
-<td>Contains \<regExp\> and \<infos\> tags. There can be more than one \<item\> tag to use different regular expressions.</td></tr>
-
 <tr style="border-top: 3px double black;"><td style="color:#00bb00;"><b>\<changelog\></b></td>
 <td>\<accessorInfo\></td> <td>(Optional)</td>
 <td>Contains changelog entries for this accessor.</td></tr>
@@ -866,7 +829,7 @@ There are functions with special names that get called by the data engine when n
 @n @n
 @section examples Accessor Examples
 @n
-@subsection examples_xml_script A Simple Accessor Using a Script
+@subsection examples_xml_script A Simple Accessor
 Here is an example of a simple accessor info xml of an accessor which uses a script to parse data from the service provider:
 @verbinclude fr_gares.xml
 
@@ -874,13 +837,6 @@ Here is an example of a simple accessor info xml of an accessor which uses a scr
 @subsection examples_script A Simple Parsing-Script
 This is an example of a script used to parse data from the service provider (actually the one used by the XML from the last section).
 @verbinclude fr_gares.js
-
-@n
-@subsection examples_xml_regexp A Simple Accessor Using Regular Expressions
-Here is an example of a simple accessor info xml of an accessor which uses regular expressions to parse the data from the service provider (de_bvg.xml).
-@note Parsing the data with regular expressions defined in the xml file is deprecated. New accessors should use a script file to do the parsing.
-
-@verbinclude de_bvg.xml
 */
 
 /** @page pageClassDiagram Class Diagram
@@ -955,11 +911,6 @@ digraph publicTransportDataEngine {
 	accessorInfo [
 	label="{TimetableAccessorInfo|Information about where to download the documents \land how to parse them.\l|+ name() : QString\l+ stopSuggestionsRawUrl() : QString\l+ departureRawUrl() : QString\l+ journeyRawUrl() : QString\l+ searchDepartures() : TimetableRegExpSearch\l+ searchJourneys() : TimetableRegExpSearch\l+ searchDeparturesPre() : TimetableRegExpSearch*\l+ regExpSearchPossibleStopsRanges() : QStringList\l+ searchPossibleStops() : QList\<TimetableRegExpSearch\>\l+ searchJourneyNews() : QList\<TimetableRegExpSearch\>\l+ features() : QStringList\l... }"
 	URL="\ref TimetableAccessorInfo"
-	];
-
-	regExpSearch [
-	label="{TimetableRegExpSearch|Stores a regular expression with information\labout the meanings of the matches.\l|+ isValid() : bool\l+ regExp() : QRegExp\l+ infos() : QList\<TimetableInformation\>\l}"
-	URL="\ref TimetableRegExpSearch"
 	];
      }
 
