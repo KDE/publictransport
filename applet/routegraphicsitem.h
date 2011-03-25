@@ -167,7 +167,7 @@ signals:
 protected:
     virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
     virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent* event );
-    virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent* event) { update(); };
+    virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent* /*event*/) { update(); };
 	
 private:
 	JourneyRouteGraphicsItem *m_parent;
