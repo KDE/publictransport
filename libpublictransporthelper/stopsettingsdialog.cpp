@@ -1164,9 +1164,8 @@ void StopSettingsDialog::serviceProviderChanged( int index )
 		}
 		d->uiStop.lblCity->setVisible( useSeparateCityValue );
 		d->uiStop.city->setVisible( useSeparateCityValue );
+		d->stopList->setServiceProvider( modelIndex.data(ServiceProviderIdRole).toString() );
 	}
-	
-	d->stopList->setServiceProvider( modelIndex.data(ServiceProviderIdRole).toString() );
 }
 
 void StopSettingsDialog::cityNameChanged( const QString& cityName )
