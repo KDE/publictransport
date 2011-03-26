@@ -74,7 +74,7 @@ void PublicTransportRunnerConfig::changeStopClicked()
 {
 	StopSettingsDialog *dlg = StopSettingsDialog::createSimpleAccessorSelectionDialog( this, m_stopSettings );
 	if ( dlg->exec() == QDialog::Accepted ) {
-		m_stopSettings = dlg->stopSettings();
+		m_stopSettings = dlg->stopSettings(); 
 		updateServiceProvider();
 		emit changed( true );
 	}

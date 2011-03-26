@@ -126,9 +126,10 @@ public:
 				* stop input field, only location and service provider selection. */
 		
 		ShowStopInputField = 0x0001, /**< Shows a stop input field and for some service providers
-				* also a city input field. If this flag isn't set, only a location and a 
-				* service provider may be selected. The dialog title is adjusted accordingly
-				* (from change stop(s) to change service provider). */
+				* also a city input field. If this flag isn't set, @ref ShowServiceProviderConfig
+				* should be used to show widgets to select a location and a service provider. 
+				* The dialog title is adjusted accordingly (from change stop(s) to change service 
+				* provider). */
 		ShowNearbyStopsButton = 0x0002, /**< Show a dialog button to (try to) get a list of 
 				* public transport stops near the users current position.
 				* Does nothing if @ref ShowStopInputField isn't also set. */
@@ -139,7 +140,9 @@ public:
 				
 		ShowServiceProviderConfig = 0x0010, /**< Shows comboboxes for location and service provider
 				* selection. The service provider combobox gets filtered by the country selected
-				* in the location combobox. */
+				* in the location combobox.
+				* If this flag isn't set, @ref ShowStopInputField should be used to show widget(s)
+				* to select a stop (and maybe a city). */
 				
 		ShowFilterConfigurationConfig = 0x0100, /**< Shows a combobox in a details section to 
 				* select a filter configuration. It offers all filter configurations given in the 

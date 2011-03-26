@@ -163,8 +163,18 @@ public:
 			StopSettingsDialog *q )
 			: factory(_factory), detailsWidget(0), stopFinder(0), nearStopsDialog(0), 
 			modelLocations(0), modelServiceProviders(0),
-			modelLocationServiceProviders(0), dataEngineManager(0), q_ptr(q)
+			modelLocationServiceProviders(0), stopList(0), dataEngineManager(0), q_ptr(q)
 	{
+		// Store options and given stop settings
+		options = _options;
+		settings = customSettings;
+		accessorInfoDialogOptions = _accessorInfoDialogOptions;
+		oldStopSettings = _oldStopSettings;
+		
+		// Resolve illegal option/setting combinations
+		correctOptions();
+		correctSettings();
+		
 		// Load data engines
 		dataEngineManager = Plasma::DataEngineManager::self();
 		publicTransportEngine = dataEngineManager->loadEngine("publictransport");
@@ -177,16 +187,6 @@ public:
 		modelServiceProviders = new ServiceProviderModel( q );
 		modelServiceProviders->syncWithDataEngine( publicTransportEngine,
 				dataEngineManager->loadEngine("favicons") );
-		
-		// Store options and given stop settings
-		options = _options;
-		settings = customSettings;
-		accessorInfoDialogOptions = _accessorInfoDialogOptions;
-		oldStopSettings = _oldStopSettings;
-		
-		// Resolve illegal option/setting combinations
-		correctOptions();
-		correctSettings();
 	};
 
 	~StopSettingsDialogPrivate() {
@@ -204,7 +204,8 @@ public:
 		
 		// Setup main UI
 		uiStop.setupUi( q->mainWidget() );
-		
+
+		// Automatically resize widgets to align columns of different layouts
 		resizer = new ColumnResizer(q);
 		resizer->addWidgetsFromLayout(uiStop.mainLayout, 0);
 		
@@ -304,12 +305,6 @@ public:
 			q->setWindowTitle( i18nc("@title:window", "Change Stop(s)") );
 		
 			// Create stop widgets
-// 			stopList = new DynamicLabeledLineEditList( q,
-// 					DynamicLabeledLineEditList::RemoveButtonsBesideWidgets,
-// 					DynamicLabeledLineEditList::AddButtonBesideFirstWidget,
-// 					DynamicLabeledLineEditList::NoSeparator,
-// 					DynamicLabeledLineEditList::AddWidgetsAtBottom,
-// 					QString() );
 			stopList = new StopLineEditList( q,
 					DynamicLabeledLineEditList::RemoveButtonsBesideWidgets,
 					DynamicLabeledLineEditList::AddButtonBesideFirstWidget,
@@ -350,6 +345,7 @@ public:
 			// Hide stop/city selection widgets
 			uiStop.stops->hide();
 			uiStop.city->hide();
+			uiStop.lblCity->hide();
 		}
 		
 		// Show/hide location and service provider configuration widgets
@@ -434,6 +430,13 @@ public:
 	};
 	
 	inline void correctOptions() {
+		if ( !options.testFlag(StopSettingsDialog::ShowStopInputField) &&
+			!options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) ) 
+		{
+			kDebug() << "Neither ShowStopInputField nor ShowServiceProviderConfig used for "
+					"StopSettingsDialog options. This makes the dialog useless!";
+		}
+		
 		// Don't show accessor info/install buttons, if the service provider combobox isn't shown
 		if ( !options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) && 
 			options.testFlag(StopSettingsDialog::ShowAccessorInfoButton) ) 
@@ -637,7 +640,7 @@ public:
 	};
 
 	/** Updates the service provider model by inserting service provider for the
-	* current location. */
+	 * current location. */
 	void updateServiceProviderModel( int index ) 
 	{
 		if ( !modelLocationServiceProviders ) {
@@ -771,28 +774,35 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 {
 	Q_D( StopSettingsDialog );
 	d->oldStopSettings = stopSettings;
-
+	
 	// Set location first (because it filters service providers
-	QModelIndex locationIndex = d->modelLocations->indexOfLocation(
-			stopSettings[LocationSetting].toString().isEmpty() 
-			? KGlobal::locale()->country() : stopSettings[LocationSetting].toString() );
-	if ( locationIndex.isValid() ) {
-		d->uiStop.location->setCurrentIndex( locationIndex.row() );
-	} else {
-		d->uiStop.location->setCurrentIndex( 0 );
-	}
-
-	// Get service provider index
-	QModelIndexList indices = d->uiStop.serviceProvider->model()->match(
-			d->uiStop.serviceProvider->model()->index(0, 0), ServiceProviderIdRole,
-			stopSettings[ServiceProviderSetting].toString(), 1, Qt::MatchFixedString );
 	QModelIndex serviceProviderIndex;
-	if ( !indices.isEmpty() ) {
-		serviceProviderIndex = indices.first();
-	} else {
-		kDebug() << "Service provider not found" << stopSettings.get<QString>(ServiceProviderSetting)
-				 << "maybe the wrong location is used for that service provider?";
-		serviceProviderIndex = d->uiStop.serviceProvider->model()->index( 0, 0 );
+	if ( d->options.testFlag(ShowServiceProviderConfig) ) {
+		QModelIndex locationIndex = d->modelLocations->indexOfLocation(
+				stopSettings[LocationSetting].toString().isEmpty() 
+				? KGlobal::locale()->country() : stopSettings[LocationSetting].toString() );
+		if ( locationIndex.isValid() ) {
+			d->uiStop.location->setCurrentIndex( locationIndex.row() );
+		} else {
+			kDebug() << "Location" << (stopSettings[LocationSetting].toString().isEmpty() 
+				? KGlobal::locale()->country() : stopSettings[LocationSetting].toString())
+				<< "not found! Using first location.";
+			d->uiStop.location->setCurrentIndex( 0 );
+		}
+
+		// Get service provider index
+		QModelIndexList indices = d->uiStop.serviceProvider->model()->match(
+				d->uiStop.serviceProvider->model()->index(0, 0), ServiceProviderIdRole,
+				stopSettings[ServiceProviderSetting].toString(), 1, Qt::MatchFixedString );
+		if ( !indices.isEmpty() ) {
+			serviceProviderIndex = indices.first();
+		} else if ( d->uiStop.serviceProvider->model()->rowCount() == 0 ) {
+			kDebug() << "No service providers in the model! This may not work...";
+		} else {
+			kDebug() << "Service provider not found" << stopSettings.get<QString>(ServiceProviderSetting)
+					<< "maybe the wrong location is used for that service provider?";
+			serviceProviderIndex = d->uiStop.serviceProvider->model()->index( 0, 0 );
+		}
 	}
 	
 	// Set values of settings to the settings widgets
@@ -803,28 +813,29 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 			break;
 		}
 		case ServiceProviderSetting: {
-			if ( serviceProviderIndex.isValid() ) {
+			if ( serviceProviderIndex.isValid() && d->options.testFlag(ShowServiceProviderConfig) ) {
 				d->uiStop.serviceProvider->setCurrentIndex( serviceProviderIndex.row() );
 			}
 			break;
 		} 
 		case StopNameSetting:
-			d->stopList->setLineEditTexts( stopSettings.stops() );
+			if ( d->stopList ) {
+				d->stopList->setLineEditTexts( stopSettings.stops() );
+			}
 			break;
 		case CitySetting: {
-			if ( !serviceProviderIndex.isValid() ) {
-				continue;
-			}
-			QVariantHash curServiceProviderData = d->uiStop.serviceProvider->model()->data(
-					serviceProviderIndex, ServiceProviderDataRole ).toHash();
-			if ( curServiceProviderData["useSeparateCityValue"].toBool() ) {
-				if ( curServiceProviderData["onlyUseCitiesInList"].toBool() ) {
-					d->uiStop.city->setCurrentItem( stopSettings[CitySetting].toString() );
+			if ( serviceProviderIndex.isValid() && d->options.testFlag(ShowStopInputField) ) {
+				QVariantHash curServiceProviderData = d->uiStop.serviceProvider->model()->data(
+						serviceProviderIndex, ServiceProviderDataRole ).toHash();
+				if ( curServiceProviderData["useSeparateCityValue"].toBool() ) {
+					if ( curServiceProviderData["onlyUseCitiesInList"].toBool() ) {
+						d->uiStop.city->setCurrentItem( stopSettings[CitySetting].toString() );
+					} else {
+						d->uiStop.city->setEditText( stopSettings[CitySetting].toString() );
+					}
 				} else {
-					d->uiStop.city->setEditText( stopSettings[CitySetting].toString() );
+					d->uiStop.city->setCurrentItem( QString() );
 				}
-			} else {
-				d->uiStop.city->setCurrentItem( QString() );
 			}
 			break;
 		} 

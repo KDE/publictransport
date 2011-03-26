@@ -1,6 +1,9 @@
 
 Changelog of plasma-runner-publictransport 
 
+0.1.2
+- Fixed a crash with 0.10-version of libpublictransporthelper
+
 0.1.1
 - Uses the new publictransporthelper library (0.10) for the service provider selection. The old redundand code is removed from the runner. You can now also install new accessors from the config dialog of the runner (becuase of the new library).
 
