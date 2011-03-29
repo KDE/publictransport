@@ -612,10 +612,11 @@ protected slots:
 	 * old departures */
 	virtual void update();
 	
+	void removeLeavingDepartures();
+	
 	void alarmItemDestroyed( QObject *item );
 
 private:
-	void removeLeavingDepartures();
 	virtual DepartureItem *findNextItem( bool sortedByDepartureAscending = false ) const;
 	void fireAlarm( const QDateTime& dateTime, DepartureItem* item );
 
