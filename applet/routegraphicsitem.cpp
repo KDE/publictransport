@@ -35,6 +35,7 @@
 #include <QGraphicsSceneHoverEvent>
 #include <QMenu>
 #include <QClipboard>
+#include <KMenu>
 
 RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item )
     : QGraphicsWidget(parent), m_item(item)
@@ -458,13 +459,14 @@ void RouteStopTextGraphicsItem::hoverLeaveEvent(QGraphicsSceneHoverEvent* event)
 
 void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
 {
-    QMenu *menu = new QMenu( event->widget() );
+    KMenu *menu = new KMenu( event->widget() );
     QAction *showDeparturesAction = new QAction( KIcon("public-transport-stop"),
             i18n("Show &Departures From '%1'", m_stopName), menu );
     QAction *newFilterViaStopAction = new QAction( KIcon("view-filter"),
             i18n("&Create Filter 'Via %1'", m_stopName), menu );
     QAction *copyStopToClipboardAction = new QAction( KIcon("edit-copy"),
             i18n("&Copy Stop Name"), menu );
+    menu->addTitle( KIcon("public-transport-stop"), m_stopName );
     menu->addAction( showDeparturesAction );
     menu->addAction( newFilterViaStopAction );
     menu->addAction( copyStopToClipboardAction );
