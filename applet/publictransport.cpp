@@ -332,7 +332,8 @@ void PublicTransport::setupActions()
 
     KToggleAction *actionEnableFilters = new KToggleAction(
             i18nc( "@action", "&Enable Filters" ), this );
-    connect( actionEnableFilters, SIGNAL(toggled(bool)), this, SLOT(setFiltersEnabled(bool)) );
+    connect( actionEnableFilters, SIGNAL(toggled(bool)),
+             this, SLOT(setFiltersEnabled(bool)) );
     addAction( "enableFilters", actionEnableFilters );
 
     m_filtersGroup = new QActionGroup( this );
@@ -346,7 +347,7 @@ void PublicTransport::setupActions()
     menu->addAction( actionEnableFilters );
     menu->addSeparator();
     menu->addTitle( KIcon("view-filter"), i18nc("@item:inmenu", "Used Filter Configuration") );
-    actionFilterConfiguration->setMenu( menu ); // TODO: Does this take ownership of menu?
+    actionFilterConfiguration->setMenu( menu );
     actionFilterConfiguration->setEnabled( true );
     addAction( "filterConfiguration", actionFilterConfiguration );
 
@@ -355,18 +356,7 @@ void PublicTransport::setupActions()
     connect( actionToggleExpanded, SIGNAL(triggered()), this, SLOT(toggleExpanded()) );
     addAction( "toggleExpanded", actionToggleExpanded );
 
-    // TODO: Combine actionHideHeader and actionShowHeader into one action
-    QAction *actionHideHeader = new QAction( KIcon( "edit-delete" ),
-            i18nc( "@action:inmenu", "&Hide Header" ), this );
-    connect( actionHideHeader, SIGNAL(triggered()), this, SLOT(hideHeader()) );
-    addAction( "hideHeader", actionHideHeader );
-
-    QAction *actionShowHeader = new QAction( KIcon("list-add"),
-            i18nc("@action:inmenu", "Show &Header"), this );
-    connect( actionShowHeader, SIGNAL(triggered()), this, SLOT(showHeader()) );
-    addAction( "showHeader", actionShowHeader );
-
-    // TODO: Combine actionHideColumnTarget and actionShowColumnTarget into one action
+    // TODO: Combine actionHideColumnTarget and actionShowColumnTarget into one action?
     QAction *actionHideColumnTarget = new QAction( KIcon("view-right-close"),
             i18nc("@action:inmenu", "Hide &target column"), this );
     connect( actionHideColumnTarget, SIGNAL(triggered()), this, SLOT(hideColumnTarget()) );
@@ -375,7 +365,7 @@ void PublicTransport::setupActions()
     QAction *actionShowColumnTarget = new QAction( KIcon("view-right-new"),
             i18nc("@action:inmenu", "Show &target column"), this );
     connect( actionShowColumnTarget, SIGNAL(triggered()),
-            this, SLOT(showColumnTarget()) );
+             this, SLOT(showColumnTarget()) );
     addAction( "showColumnTarget", actionShowColumnTarget );
 }
 
@@ -2267,7 +2257,7 @@ void PublicTransport::addState( AppletState state )
 
     case ShowingJourneyList:
         setTitleType( ShowJourneyListTitle );
-        setBusy( testState( WaitingForJourneyData ) && m_modelJourneys->isEmpty() );
+        setBusy( testState(WaitingForJourneyData) && m_modelJourneys->isEmpty() );
 
         setAssociatedApplicationUrls( KUrl::List() << m_urlJourneys );
         unsetStates( QList<AppletState>() << ShowingDepartureArrivalList
@@ -2429,36 +2419,6 @@ void PublicTransport::removeState( AppletState state )
     m_appletStates ^= state;
 }
 
-void PublicTransport::hideHeader()
-{
-// 	if ( !m_treeViewJourney ) {
-        kDebug() << "DEPRECATED";
-// 	}
-// 	QTreeView *treeView = /*m_treeViewJourney ?*/ m_treeViewJourney->nativeWidget() /*: m_treeView->nativeWidget()*/;
-// 	treeView->header()->setVisible( false );
-//
-// 	// Change show header setting in a copy of the settings.
-// 	// Then write the new settings.
-// 	Settings settings = m_settings;
-// 	settings.showHeader = false;
-// 	writeSettings( settings );
-}
-
-void PublicTransport::showHeader()
-{
-// 	if ( !m_treeViewJourney ) {
-        kDebug() << "DEPRECATED";
-// 	}
-// 	QTreeView *treeView = /*m_treeViewJourney ? */m_treeViewJourney->nativeWidget()/* : m_treeView->nativeWidget()*/;
-// 	treeView->header()->setVisible( true );
-//
-// 	// Change show header setting in a copy of the settings.
-// 	// Then write the new settings.
-// 	Settings settings = m_settings;
-// 	settings.showHeader = true;
-// 	writeSettings( settings );
-}
-
 void PublicTransport::hideColumnTarget()
 {
     // Change hide column target setting in a copy of the settings.
@@ -2479,32 +2439,10 @@ void PublicTransport::showColumnTarget()
 
 void PublicTransport::toggleExpanded()
 {
-    doubleClickedItem( m_clickedItemIndex );
-}
-
-void PublicTransport::doubleClickedItem( const QModelIndex &modelIndex )
-{
-// 	if ( !m_treeViewJourney ) {
-// 		kDebug() << "DEPRECATED";
-// 	}
-
     if ( m_journeyTimetable ) {
-// 		QModelIndex firstIndex;
-// 		if ( testState(ShowingDepartureArrivalList) ) {
-// 			firstIndex = m_model->index( modelIndex.row(), 0, modelIndex.parent() );
-// 		} else {
-// 			firstIndex = m_modelJourneys->index( modelIndex.row(), 0, modelIndex.parent() );
-// 		}
-//
-// 		QTreeView* treeView =  m_treeViewJourney->nativeWidget();
-// 		if ( treeView->isExpanded( firstIndex ) ) {
-// 			treeView->collapse( firstIndex );
-// 		} else {
-// 			treeView->expand( firstIndex );
-// 		}
-        m_journeyTimetable->item( modelIndex.row() )->toggleExpanded();
+        m_journeyTimetable->item( m_clickedItemIndex.row() )->toggleExpanded();
     } else {
-        m_timetable->item( modelIndex.row() )->toggleExpanded();
+        m_timetable->item( m_clickedItemIndex.row() )->toggleExpanded();
     }
 }
 
@@ -2550,30 +2488,6 @@ QAction* PublicTransport::updatedAction( const QString& actionName )
     return a;
 }
 
-void PublicTransport::showHeaderContextMenu( const QPoint& position )
-{
-    Q_UNUSED( position );
-// 	if ( !m_treeViewJourney ) {
-        kDebug() << "DEPRECATED";
-// 		return;
-// 	}
-// 	QHeaderView *header = ( /*m_treeViewJourney ?*/ m_treeViewJourney /*: m_treeView*/ )->nativeWidget()->header();
-// 	QList<QAction *> actions;
-//
-// 	if ( testState( ShowingDepartureArrivalList ) ) {
-// 		if ( header->logicalIndexAt( position ) == 1 ) {
-// 			actions.append( action( "hideColumnTarget" ) );
-// 		} else if ( header->isSectionHidden( 1 ) ) {
-// 			actions.append( action( "showColumnTarget" ) );
-// 		}
-// 	}
-// 	actions.append( action("hideHeader") );
-//
-// 	if ( actions.count() > 0 && view() ) {
-// 		QMenu::exec( actions, QCursor::pos() );
-// 	}
-}
-
 void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem* item, const QPointF& pos )
 {
     Q_UNUSED( pos );
@@ -2615,96 +2529,11 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
             actions.append( updatedAction("setAlarmForDeparture") );
     }
 
-// 	if ( !treeView->header()->isVisible() ) {
-// 		actions.append( updatedAction("separator") );
-// 		actions.append( action("showHeader") );
-// 	} else if ( treeView->header()->isSectionHidden( ColumnTarget ) ) {
-// 		if ( testState(ShowingDepartureArrivalList) ) {
-// 			actions.append( updatedAction("separator") );
-// 			actions.append( action("showColumnTarget") );
-// 		}
-// 	}
-
     if ( actions.count() > 0 && view() ) {
         QMenu::exec( actions, QCursor::pos() );
     }
 
     delete infoAction;
-}
-
-void PublicTransport::showDepartureContextMenu( const QPoint& position )
-{
-    Q_UNUSED( position );
-// 	if ( !m_treeViewJourney ) {
-        kDebug() << "DEPRECATED";
-// 		return;
-// 	}
-// 	QTreeView* treeView =  /*m_treeViewJourney ?*/ m_treeViewJourney->nativeWidget() /*: m_treeView->nativeWidget()*/;
-// 	QList<QAction *> actions;
-// 	QAction *infoAction = NULL;
-//
-// 	if ( (m_clickedItemIndex = treeView->indexAt(position)).isValid() ) {
-// 		while ( m_clickedItemIndex.parent().isValid() ) {
-// 			m_clickedItemIndex = m_clickedItemIndex.parent();
-// 		}
-//
-// 		actions.append( updatedAction("toggleExpanded") );
-//
-// 		if ( testState(ShowingDepartureArrivalList) ) {
-// 			DepartureItem *item = static_cast<DepartureItem*>( m_model->item( m_clickedItemIndex.row() ) );
-// 			if ( item->hasAlarm() ) {
-// 				if ( item->alarmStates().testFlag(AlarmIsAutoGenerated) ) {
-// 					actions.append( updatedAction("removeAlarmForDeparture") );
-// 				} else if ( item->alarmStates().testFlag(AlarmIsRecurring) ) {
-// 					kDebug() << "The 'Remove this Alarm' menu entry can only be "
-// 					"used with autogenerated alarms.";
-// 					if ( item->departureInfo()->matchedAlarms().count() == 1 ) {
-// 						infoAction = new QAction( KIcon("task-recurring"),
-// 												  i18nc("@info/plain", "(has a recurring alarm)"), this );
-// 					} else {
-// 						infoAction = new QAction( i18nc("@info/plain", "(has multiple alarms)"), this );
-// 					}
-// 				} else {
-// 					kDebug() << "The 'Remove this Alarm' menu entry can only be "
-// 					"used with autogenerated alarms.";
-// 					if ( item->departureInfo()->matchedAlarms().count() == 1 ) {
-// 						infoAction = new QAction( KIcon("task-recurring"),
-// 												  i18nc("@info/plain", "(has a custom alarm)"), this );
-// 					} else {
-// 						infoAction = new QAction( i18nc("@info/plain", "(has multiple alarms)"), this );
-// 					}
-// 				}
-// 				if ( infoAction ) {
-// 					infoAction->setDisabled( true );
-// 					actions.append( infoAction );
-// 				}
-// 			} else
-// 				actions.append( updatedAction("setAlarmForDeparture") );
-// 		}
-//
-// 		if ( !treeView->header()->isVisible() ) {
-// 			actions.append( updatedAction("separator") );
-// 			actions.append( action("showHeader") );
-// 		} else if ( treeView->header()->isSectionHidden( ColumnTarget ) ) {
-// 			if ( testState(ShowingDepartureArrivalList) ) {
-// 				actions.append( updatedAction("separator") );
-// 				actions.append( action("showColumnTarget") );
-// 			}
-// 		}
-// 	} else { // No context item
-// 		actions.append( updatedAction("searchJourneys") );
-// 		actions.append( updatedAction("separator") );
-//
-// 		if ( !treeView->header()->isVisible() ) {
-// 			actions.append( action("showHeader") );
-// 		}
-// 	}
-//
-// 	if ( actions.count() > 0 && view() ) {
-// 		QMenu::exec( actions, QCursor::pos() );
-// 	}
-//
-// 	delete infoAction;
 }
 
 void PublicTransport::requestStopAction( StopAction stopAction,

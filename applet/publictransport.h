@@ -178,19 +178,9 @@ protected slots:
     * @ingroup models */
     void fillModelJourney( const QList<JourneyInfo> &journeys );
 
-    /** @brief The context menu has been requested by the departure view. */
-    void showDepartureContextMenu( const QPoint &position );
-
     void departureContextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
     void requestStopAction( StopAction stopAction, const QString &stopName,
                             RouteStopTextGraphicsItem *item );
-
-    /** DEPRECATED
-    * @brief The context menu has been requested by the tree view header. */
-    void showHeaderContextMenu( const QPoint &position );
-
-    /** @brief An item in the departure view has been double clicked. */
-    void doubleClickedItem( const QModelIndex &modelIndex );
 
     void noItemsTextClicked();
 
@@ -245,12 +235,6 @@ protected slots:
 
     /** @brief The action to expand / collapse of the selected departure/arrival has been triggered. */
     void toggleExpanded();
-
-    /** @brief The action to hide the header of the tree view has been triggered. */
-    void hideHeader();
-
-    /** @brief The action to show the header of the tree view has been triggered. */
-    void showHeader();
 
     /** @brief The action to hide the direction column of the tree view header has been triggered. */
     void hideColumnTarget();
