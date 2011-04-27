@@ -30,6 +30,7 @@
 #include <QPainter>
 #include <QPointer>
 
+class RouteStopTextGraphicsItem;
 namespace Plasma
 {
 	class Svg;
@@ -43,7 +44,7 @@ class QPainter;
 
 class RouteGraphicsItem;
 class JourneyRouteGraphicsItem;
-class DepartureModel; // TODO
+class DepartureModel;
 class DepartureItem;
 class TimetableWidget;
 class PublicTransportWidget;
@@ -163,6 +164,10 @@ public:
 	
 	qreal leavingStep() const { return m_leavingStep; };
 	void setLeavingStep( qreal leavingStep );
+	
+signals:
+	void requestFilterCreation( const QString &stopName, RouteStopTextGraphicsItem *item );
+	void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
 	
 protected:
 	virtual void updateTextLayouts();
@@ -305,6 +310,10 @@ public:
 	inline DepartureModel *departureModel() const { 
 		return qobject_cast<DepartureModel*>(m_model);
 	};
+	
+signals:
+    void filterCreationRequested( const QString &stopName, RouteStopTextGraphicsItem *item );
+    void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
 	
 protected slots:
     virtual void rowsInserted( const QModelIndex &parent, int first, int last );

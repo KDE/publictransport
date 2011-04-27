@@ -1,8 +1,8 @@
 
 Changelog of libpublictransporthelper
 
-0.10 - NEXT
-- Automatically load the message catalog of the library, by using KCatalogLoader (needs KDE 4.6.2, otherwise translations from the library aren't available)
+0.10 - Beta 8
+- Automatically load the message catalog of the library by using KCatalogLoader (needs KDE 4.6.2, otherwise translations from the library aren't available)
 - Also hide the city label if ShowStopInputField isn't used
 - Fix a possible crash with StopSettingsDialog and SimpleAccessorSelection option (caused a crash in the runner config)
 

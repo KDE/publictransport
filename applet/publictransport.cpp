@@ -413,7 +413,9 @@ QList< QAction* > PublicTransport::contextualActions()
 	QList< QAction* > actions;
 	// Add actions: Update Timetable, Search Journeys
 	actions << action( "updateTimetable" ); //<< action("showActionButtons")
-	if ( m_currentServiceProviderFeatures.contains("JourneySearch") ) {
+	if ( m_currentServiceProviderFeatures.contains("JourneySearch")
+		&& !m_appletStates.testFlag(ShowingIntermediateDepartureList) )
+	{
 		actions << action( "searchJourneys" );
 	}
 
@@ -426,7 +428,13 @@ QList< QAction* > PublicTransport::contextualActions()
 	if ( m_currentServiceProviderFeatures.contains("Arrivals") ) {
 		actions << switchDepArr;
 	}
-	if ( m_settings.stopSettingsList.count() > 1 ) {
+	if ( m_appletStates.testFlag(ShowingIntermediateDepartureList) ) {
+		QAction *goBackAction = new QAction(KIcon("go-previous-view"),
+				i18n("&Back To Original Stop"), this );
+		connect( goBackAction, SIGNAL(triggered(bool)),
+				 this, SLOT(goBackToDepartures()) );
+		actions << goBackAction;
+	} else if ( m_settings.stopSettingsList.count() > 1 ) {
 		actions << switchStopAction( this );
 	}
 	if ( actionFilter ) {
@@ -1432,6 +1440,10 @@ void PublicTransport::iconClicked()
 		addState( ShowingDepartureArrivalList );
 		break;
 
+	case ShowIntermediateDepartureListTitle:
+		goBackToDepartures();
+		break;
+
 	case ShowJourneyListTitle:
 	case ShowDepartureArrivalListTitle:
 		showActionButtons();
@@ -1848,6 +1860,10 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
 		m_timetable->setSvg( &m_vehiclesSvg );
 		connect( m_timetable, SIGNAL(contextMenuRequested(PublicTransportGraphicsItem*,QPointF)),
 				 this, SLOT(departureContextMenuRequested(PublicTransportGraphicsItem*,QPointF)) );
+		connect( m_timetable, SIGNAL(filterCreationRequested(QString,RouteStopTextGraphicsItem*)),
+			 SLOT(filterCreationRequested(QString,RouteStopTextGraphicsItem*)) );
+		connect( m_timetable, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)),
+			 SLOT(showDepartures(QString,RouteStopTextGraphicsItem*)) );
 
 		QGraphicsLinearLayout *layout = new QGraphicsLinearLayout( Qt::Vertical );
 		layout->setContentsMargins( 0, 0, 0, 0 );
@@ -1948,10 +1964,17 @@ bool PublicTransport::eventFilter( QObject *watched, QEvent *event )
 
 void PublicTransport::createConfigurationInterface( KConfigDialog* parent )
 {
+	// Go back from intermediate departure list (which was requested by a context menu action)
+	// before showing the configuration dialog, because stop settings may be changed
+	// and the intermediate stop shouldn't be shown there nor should it be removable
+	if ( m_appletStates.testFlag(ShowingIntermediateDepartureList) ) {
+		goBackToDepartures();
+	}
+	
 	SettingsUiManager *settingsUiManager = new SettingsUiManager(
-			m_settings, dataEngine( "publictransport" ),
-			dataEngine( "openstreetmap" ), dataEngine( "favicons" ),
-			dataEngine( "geolocation" ), parent );
+			m_settings, dataEngine("publictransport"),
+			dataEngine("openstreetmap"), dataEngine("favicons"),
+			dataEngine("geolocation"), parent );
 	connect( settingsUiManager, SIGNAL(settingsAccepted(Settings)),
 			 this, SLOT(writeSettings(Settings)) );
 	connect( m_model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
@@ -2023,6 +2046,7 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType, TitleType 
 	// Delete widgets of the old view
 	switch ( oldTitleType ) {
 	case ShowDepartureArrivalListTitle:
+	case ShowIntermediateDepartureListTitle:
 		kDebug() << "Hide Departure List";
 		break;
 
@@ -2049,11 +2073,19 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType, TitleType 
 	}
 
 	QGraphicsWidget *widget;
-	m_timetable->setVisible( titleType == ShowDepartureArrivalListTitle );
+	m_timetable->setVisible( titleType == ShowDepartureArrivalListTitle
+			|| titleType == ShowIntermediateDepartureListTitle );
 
 	// New type
 	switch ( titleType ) {
 	case ShowDepartureArrivalListTitle:
+		m_labelInfo->setToolTip( courtesyToolTip() );
+		m_labelInfo->setText( infoText() );
+
+		widget = m_timetable;
+		break;
+
+	case ShowIntermediateDepartureListTitle:
 		m_labelInfo->setToolTip( courtesyToolTip() );
 		m_labelInfo->setText( infoText() );
 
@@ -2136,6 +2168,7 @@ void PublicTransport::setTitleType( TitleType titleType )
 	// Setup the new main layout
 	switch ( titleType ) {
 	case ShowDepartureArrivalListTitle:
+	case ShowIntermediateDepartureListTitle:
 		m_labelInfo->setToolTip( courtesyToolTip() );
 		m_labelInfo->setText( infoText() );
 		break;
@@ -2214,7 +2247,24 @@ void PublicTransport::addState( AppletState state )
 
 		setAssociatedApplicationUrls( KUrl::List() << m_urlDeparturesArrivals );
 		unsetStates( QList<AppletState>() << ShowingJourneyList
-		             << ShowingJourneySearch << ShowingJourneysNotSupported );
+					 << ShowingJourneySearch << ShowingJourneysNotSupported
+					 << ShowingIntermediateDepartureList );
+		break;
+
+	case ShowingIntermediateDepartureList:
+		// TODO Add a "Back" button to go back to state "ShowingDepartureArrivalList"
+		setTitleType( ShowIntermediateDepartureListTitle );
+		m_timetable->setZoomFactor( m_settings.sizeFactor );
+		m_timetable->setTargetHidden( m_settings.hideColumnTarget );
+		m_timetable->update();
+		geometryChanged();
+		setBusy( testState(WaitingForDepartureData) && m_model->isEmpty() );
+		disconnectJourneySource();
+
+		setAssociatedApplicationUrls( KUrl::List() << m_urlDeparturesArrivals );
+		unsetStates( QList<AppletState>() << ShowingJourneyList
+					 << ShowingJourneySearch << ShowingJourneysNotSupported
+					 << ShowingDepartureArrivalList );
 		break;
 
 	case ShowingJourneyList:
@@ -2245,6 +2295,8 @@ void PublicTransport::addState( AppletState state )
 	case ReceivedValidDepartureData: {
 		if ( m_titleWidget->titleType() == ShowDepartureArrivalListTitle ) {
 			m_titleWidget->setIcon( DepartureListOkIcon );
+			setBusy( false );
+		} else if ( m_titleWidget->titleType() == ShowIntermediateDepartureListTitle ) {
 			setBusy( false );
 		}
 		// TODO This is a copy of code in line ~1331
@@ -2280,6 +2332,8 @@ void PublicTransport::addState( AppletState state )
 		if ( m_titleWidget->titleType() == ShowDepartureArrivalListTitle ) {
 			m_titleWidget->setIcon( DepartureListErrorIcon );
 			setBusy( false );
+		} else if ( m_titleWidget->titleType() == ShowIntermediateDepartureListTitle ) {
+			setBusy( false );
 		}
 // 		TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
 		m_timetable->setNoItemsText( m_settings.departureArrivalListType == ArrivalList
@@ -2301,6 +2355,8 @@ void PublicTransport::addState( AppletState state )
 	case WaitingForDepartureData: {
 		if ( m_titleWidget->titleType() == ShowDepartureArrivalListTitle ) {
 			m_titleWidget->setIcon( DepartureListErrorIcon ); // TODO: Add a special icon for "waiting for data"? (waits for first data of a new data source)
+			setBusy( m_model->isEmpty() );
+		} else if ( m_titleWidget->titleType() == ShowIntermediateDepartureListTitle ) {
 			setBusy( m_model->isEmpty() );
 		}
 // 		TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
@@ -2330,17 +2386,31 @@ void PublicTransport::addState( AppletState state )
 
 void PublicTransport::removeState( AppletState state )
 {
-	if ( !m_appletStates.testFlag( state ) ) {
+	if ( !m_appletStates.testFlag(state) ) {
 		return;
 	}
 
 	switch ( state ) {
 	case ShowingJourneyList:
-		m_titleWidget->setIcon( m_appletStates.testFlag( ReceivedValidDepartureData )
+		m_titleWidget->setIcon( m_appletStates.testFlag(ReceivedValidDepartureData)
 				? DepartureListOkIcon : DepartureListErrorIcon );
 		m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
 		m_timetable->updateItemLayouts();
 		break;
+
+	case ShowingIntermediateDepartureList: {
+		m_titleWidget->setIcon( m_appletStates.testFlag(ReceivedValidDepartureData)
+				? DepartureListOkIcon : DepartureListErrorIcon );
+
+		// Remove intermediate stop settings
+		Settings settings = m_settings;
+		settings.stopSettingsList.removeIntermediateSettings();
+		settings.currentStopSettingsIndex = qBound( 0, originalStopIndex,
+				settings.stopSettingsList.count() - 1 );
+
+		writeSettings( settings );
+		break;
+	}
 
 	case Initializing:
 	case SettingsJustChanged:
@@ -2639,6 +2709,51 @@ void PublicTransport::showDepartureContextMenu( const QPoint& position )
 // 	delete infoAction;
 }
 
+void PublicTransport::filterCreationRequested( const QString& stopName, RouteStopTextGraphicsItem* item )
+{
+	Q_UNUSED( item );
+	
+	// Create and enable new filter
+	Settings settings = m_settings;
+
+	FilterSettings filterSettings;
+	Filter viaFilter;
+	viaFilter << Constraint( FilterByVia, FilterContains, stopName );
+	filterSettings.filters << viaFilter;
+
+	QString filterName = i18nc("Default name for a new filter via a given stop",
+				"Via %1", stopName);
+	settings.filterSettings.insert( filterName, filterSettings );
+	if ( !settings.filtersEnabled ) {
+		settings.filtersEnabled = true;
+	}
+	settings.currentStopSettings().set( FilterConfigurationSetting, filterName );
+
+	writeSettings( settings );
+}
+
+void PublicTransport::showDepartures( const QString& stopName, RouteStopTextGraphicsItem* item )
+{
+	Q_UNUSED( item );
+	
+	// TODO: Create an intermediate model for "stopName", add a "Back"-Buttoncd
+	originalStopIndex = m_settings.currentStopSettingsIndex;
+	
+	Settings settings = m_settings;
+	int stopSettingsIndex = settings.stopSettingsList.findStopSettings( stopName );
+	if ( stopSettingsIndex == -1 ) {
+		StopSettings stopSettings( settings.currentStopSettings() );
+		stopSettings.setStop( stopName );
+		stopSettings.set( UserSetting + 100, "-- Intermediate Stop --" );
+		settings.stopSettingsList << stopSettings;
+		stopSettingsIndex = settings.stopSettingsList.count() - 1;
+	}
+	settings.currentStopSettingsIndex = stopSettingsIndex;
+	writeSettings( settings );
+	
+	addState( ShowingIntermediateDepartureList );
+}
+
 void PublicTransport::showJourneySearch()
 {
 	addState( m_currentServiceProviderFeatures.contains( "JourneySearch" )
@@ -2647,6 +2762,7 @@ void PublicTransport::showJourneySearch()
 
 void PublicTransport::goBackToDepartures()
 {
+	removeState( ShowingIntermediateDepartureList );
 	addState( ShowingDepartureArrivalList );
 }
 

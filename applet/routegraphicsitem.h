@@ -81,10 +81,11 @@ class RouteStopTextGraphicsItem : public QGraphicsWidget {
 	
 public:
     RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font, qreal baseSize, 
-							   const QString &stopText );
+							   const QString &stopText, const QString &stopName );
 	
 	QString stopText() const { return m_stopText; };
-	void setStopText( const QString &stopText );
+	QString stopName() const { return m_stopName; };
+	void setStop( const QString &stopText, const QString &stopName );
 	
 	qreal expandStep() const { return m_expandStep; };
 	void setExpandStep( qreal expandStep );
@@ -98,6 +99,8 @@ public:
 signals:
 	void hovered( RouteStopTextGraphicsItem *item );
 	void unhovered( RouteStopTextGraphicsItem *item );
+	void requestFilterCreation( const QString &stopName, RouteStopTextGraphicsItem *item );
+	void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
 	
 public slots:
 	void hover();
@@ -106,9 +109,11 @@ public slots:
 protected:
     virtual void hoverEnterEvent( QGraphicsSceneHoverEvent* event );
     virtual void hoverLeaveEvent( QGraphicsSceneHoverEvent* event );
+    virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent* event );
 	
 private:
 	QString m_stopText;
+	QString m_stopName;
 	qreal m_expandStep;
 	qreal m_baseSize;
 };
@@ -131,6 +136,10 @@ public:
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option, 
 						QWidget* widget = 0 );
 	
+signals:
+	void requestFilterCreation( const QString &stopName, RouteStopTextGraphicsItem *item );
+	void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
+    
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
 	void arrangeStopItems();

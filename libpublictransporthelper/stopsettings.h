@@ -320,7 +320,17 @@ protected:
 	QSharedDataPointer<StopSettingsPrivate> d;
 };
 Q_DECLARE_METATYPE( StopSettings );
-typedef QList<StopSettings> StopSettingsList;
+
+class PUBLICTRANSPORTHELPER_EXPORT StopSettingsList : public QList<StopSettings> {
+public:
+    StopSettingsList() : QList<StopSettings>() {};
+
+    int findStopSettings( const QString &stopName, int startIndex = 0 );
+    int removeIntermediateSettings( int startIndex = 0,
+                                    const QString &id = "-- Intermediate Stop --",
+                                    int stopSetting = UserSetting + 100 );
+};
+// typedef QList<StopSettings> StopSettingsList;
 Q_DECLARE_METATYPE( StopSettingsList );
 
 /**

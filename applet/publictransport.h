@@ -33,6 +33,7 @@
 #include "settings.h"
 #include "titlewidget.h"
 
+class RouteStopTextGraphicsItem;
 class PublicTransportGraphicsItem;
 class DepartureGraphicsItem;
 class TimetableWidget;
@@ -180,6 +181,8 @@ protected slots:
 	void showDepartureContextMenu( const QPoint &position );
 	
 	void departureContextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
+	void filterCreationRequested( const QString &stopName, RouteStopTextGraphicsItem *item );
+	void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
 	
 	/** DEPRECATED
 	 * @brief The context menu has been requested by the tree view header. */
@@ -562,6 +565,7 @@ private:
 			* when switching from/to journey mode. */
 
 	Settings m_settings; /**< Current applet settings. */
+	int originalStopIndex; /**< Index of the stop before showing an intermediate list via context menu. */
 	QStringList m_currentServiceProviderFeatures;
 	bool m_stopNameValid; /**< Whether or not the current stop name (m_stop) is valid. */
 

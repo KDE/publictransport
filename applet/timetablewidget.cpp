@@ -467,6 +467,10 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
 			QRect _infoRect = infoRect( rect().toRect(), 0 );
 			m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
 			m_routeItem->resize( rect().width() - padding() - _infoRect.left(), ROUTE_ITEM_HEIGHT );
+			connect( m_routeItem, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)),
+				 this, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)) );
+			connect( m_routeItem, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)),
+				 this, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)) );
 		}
 	} else if ( m_routeItem ) {
 		delete m_routeItem;
@@ -903,7 +907,7 @@ void DepartureGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphics
 		
 		painter->drawPixmap( _vehicleRect.topLeft(), fadePixmap );
 	}
-		
+	
 	// Draw text
 	bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 156;
 	painter->setPen( _textColor );
@@ -1324,6 +1328,10 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
 		DepartureGraphicsItem *item = new DepartureGraphicsItem( widget() );
 		item->setPublicTransportWidget( this );
 		item->updateData( static_cast<DepartureItem*>(m_model->item(row)) );
+		connect( item, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)),
+			 this, SIGNAL(filterCreationRequested(QString,RouteStopTextGraphicsItem*)) );
+		connect( item, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)),
+			 this, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)) );
 		m_items.insert( row, item );	
 	
 		// Fade new items in

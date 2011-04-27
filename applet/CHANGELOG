@@ -1,7 +1,12 @@
 
 Changelog of plasma-applet-publictransport 
 
-0.10 - NEXT
+NEXT
+- Fix departures not being removed and flashing all the time by making DepartureModel::removeLeavingDepartures a slot
+- Added a context menu to route stop items (there are currently two entry: Create a filter for departures via that stop and show an intermediate departure list for that stop).
+- New state "showing intermediate departure list" (entered by the new context menu action)
+
+0.10 - Beta 8
 - Make leaving departures animate before being removed from the list
 
 0.10 - Beta 6

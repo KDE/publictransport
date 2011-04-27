@@ -277,6 +277,35 @@ bool StopSettings::operator==(const StopSettings& other) const {
 	return true;
 }
 
+int StopSettingsList::removeIntermediateSettings( int startIndex,
+        const QString& id, int stopSetting )
+{
+    for ( int i = startIndex; i < count(); ++i ) {
+//         QStringList stops = operator[](i).stops();
+        kDebug() << operator[](i).get<QString>(stopSetting) << "=?=" << id
+                << "| stopSetting =" << stopSetting;
+        kDebug() << operator[](i).settings();
+        if ( operator[](i).get<QString>(stopSetting).compare(id) == 0 ) {
+            kDebug() << "Found at" << i;
+            removeAt( i );
+            return i;
+        }
+    }
+
+    return -1; // Nothing got removed
+}
+
+int StopSettingsList::findStopSettings( const QString& stopName, int startIndex )
+{
+    for ( int i = startIndex; i < count(); ++i ) {
+        if ( operator[](i).stops().contains(stopName, Qt::CaseInsensitive) ) {
+            return i;
+        }
+    }
+
+    return -1; // Not found
+}
+
 StopSettingsWidgetFactory::~StopSettingsWidgetFactory()
 {
 }

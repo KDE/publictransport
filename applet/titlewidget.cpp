@@ -90,6 +90,15 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
 			addWidget( m_filterWidget, WidgetFilter );
 			break;
 
+        case ShowIntermediateDepartureListTitle:
+            setIcon( GoBackIcon );
+            m_icon->setToolTip( i18nc("@info:tooltip", "Go back to original stop") );
+            setTitle( titleText() );
+
+            addWidget( m_title, WidgetTitle );
+            addWidget( m_filterWidget, WidgetFilter );
+            break;
+
 		case ShowSearchJourneyLineEdit: {
 			setIcon( AbortJourneySearchIcon );
 			m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys "
@@ -473,7 +482,9 @@ void TitleWidget::settingsChanged()
 // 		}
 	}
 
-	if ( m_type == ShowDepartureArrivalListTitle ) {
+	if ( m_type == ShowDepartureArrivalListTitle
+        || m_type == ShowIntermediateDepartureListTitle )
+    {
 		setTitle( titleText() );
 	}
 }
