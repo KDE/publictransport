@@ -29,26 +29,26 @@ class QGraphicsBlurEffect;
 // Mostly copied from Plasma::Applet (the AppletOverlayWidget displayed when
 // calling setConfigurationRequired(true)). But with a blur effect ;)
 class OverlayWidget : public QGraphicsWidget {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	explicit OverlayWidget( QGraphicsWidget* parent = 0, QGraphicsWidget* under = 0 );
-	void destroy();
+    explicit OverlayWidget( QGraphicsWidget* parent = 0, QGraphicsWidget* under = 0 );
+    void destroy();
 
 protected:
-	virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-						QWidget* widget = 0 );
+    virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                        QWidget* widget = 0 );
 
 public slots:
-	void overlayAnimationComplete();
+    void overlayAnimationComplete();
 
 private:
-	qreal opacity;
-	QGraphicsWidget* m_under; // TODO Better name...
+    qreal opacity;
+    QGraphicsWidget* m_under; // TODO Better name...
 
-	#if QT_VERSION >= 0x040600
-	QGraphicsBlurEffect *m_blur;
-	#endif
+    #if QT_VERSION >= 0x040600
+    QGraphicsBlurEffect *m_blur;
+    #endif
 };
 
 #endif // Multiple inclusion guard

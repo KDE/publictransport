@@ -28,32 +28,32 @@
 /** Highlights journey search keywords, values and the stop name if it is double quoted. */
 class JourneySearchHighlighter : public QSyntaxHighlighter {
 public:
-	JourneySearchHighlighter( QTextDocument* parent );
+    JourneySearchHighlighter( QTextDocument* parent );
 
-	/** Format for the double quoted stop name (actually for every double quoted string). */
-	QTextCharFormat &formatStopName() { return m_formatStopName; };
-	/** Format for keywords. */
-	QTextCharFormat &formatKeyword() { return m_formatKeyword; };
-	/** Format for values of keywords. */
-	QTextCharFormat &formatValue() { return m_formatValue; };
-	/** Format for syntax errors, eg. a keyword which is already in the string
-	* but only allowed once.
-	* @note Not all syntax error are noticed currently. */
-	QTextCharFormat &formatError() { return m_formatError; };
+    /** Format for the double quoted stop name (actually for every double quoted string). */
+    QTextCharFormat &formatStopName() { return m_formatStopName; };
+    /** Format for keywords. */
+    QTextCharFormat &formatKeyword() { return m_formatKeyword; };
+    /** Format for values of keywords. */
+    QTextCharFormat &formatValue() { return m_formatValue; };
+    /** Format for syntax errors, eg. a keyword which is already in the string
+    * but only allowed once.
+    * @note Not all syntax error are noticed currently. */
+    QTextCharFormat &formatError() { return m_formatError; };
 
 protected:
-	/** @return The number of matched keywords. */
-	int highlightKeywords( const QString &text, const QStringList &keywords,
-			const QTextCharFormat &format, int maxAllowedOccurances = -1, int needsToStartAt = -1 );
-	/** @return The number of matched keyword value combinations. */
-	int highlightCombinations( const QString &text, const QStringList &keywords,
-			const QStringList &keywordValues, const QTextCharFormat &format,
-			int maxAllowedOccurances = -1, int needsToStartAt = -1 );
+    /** @return The number of matched keywords. */
+    int highlightKeywords( const QString &text, const QStringList &keywords,
+            const QTextCharFormat &format, int maxAllowedOccurances = -1, int needsToStartAt = -1 );
+    /** @return The number of matched keyword value combinations. */
+    int highlightCombinations( const QString &text, const QStringList &keywords,
+            const QStringList &keywordValues, const QTextCharFormat &format,
+            int maxAllowedOccurances = -1, int needsToStartAt = -1 );
 
-	virtual void highlightBlock( const QString& text );
+    virtual void highlightBlock( const QString& text );
 
 private:
-	QTextCharFormat m_formatStopName, m_formatKeyword, m_formatValue, m_formatError;
+    QTextCharFormat m_formatStopName, m_formatKeyword, m_formatValue, m_formatError;
 };
 
 /** A KLineEdit with syntax highlighting. It uses @ref JourneySearchHighlighter
@@ -62,39 +62,39 @@ private:
 * QTextDocument. Some things are missing, like triple click or double click
 * and mouse move to select more words (but one double click on a word works). */
 class JourneySearchLineEdit : public KLineEdit {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	JourneySearchLineEdit( QWidget* parent = 0 );
-	explicit JourneySearchLineEdit( const QString &string, QWidget* parent = 0 );
+    JourneySearchLineEdit( QWidget* parent = 0 );
+    explicit JourneySearchLineEdit( const QString &string, QWidget* parent = 0 );
 
-	~JourneySearchLineEdit() { delete m_highlighter; };
+    ~JourneySearchLineEdit() { delete m_highlighter; };
 
 protected slots:
-	/** Sets the new text to the QTextDocument and highlights it. */
-	void slotTextChanged( const QString &newText );
+    /** Sets the new text to the QTextDocument and highlights it. */
+    void slotTextChanged( const QString &newText );
 
 protected:
-	/** Reimplemented to select the correct word in the QTextDocument. */
-	virtual void mouseDoubleClickEvent( QMouseEvent *ev );
-	/** Reimplemented to set the cursor to the correct position in the QTextDocument. */
-	virtual void mousePressEvent( QMouseEvent *ev );
-	/** Reimplemented to select the correct characters in the QTextDocument. */
-	virtual void mouseMoveEvent( QMouseEvent *ev );
-	/** Reimplemented to paint the highlighted QTextDocument. */
-	virtual void paintEvent( QPaintEvent *ev );
+    /** Reimplemented to select the correct word in the QTextDocument. */
+    virtual void mouseDoubleClickEvent( QMouseEvent *ev );
+    /** Reimplemented to set the cursor to the correct position in the QTextDocument. */
+    virtual void mousePressEvent( QMouseEvent *ev );
+    /** Reimplemented to select the correct characters in the QTextDocument. */
+    virtual void mouseMoveEvent( QMouseEvent *ev );
+    /** Reimplemented to paint the highlighted QTextDocument. */
+    virtual void paintEvent( QPaintEvent *ev );
 
-	/** Does effectively almost the same as QLineEditPrivate::moveCursor(). */
-	void moveCursor( int pos, bool mark );
-	/** Gets the QRect in which the QTextDocument is drawn. */
-	QRect lineEditContents() const;
+    /** Does effectively almost the same as QLineEditPrivate::moveCursor(). */
+    void moveCursor( int pos, bool mark );
+    /** Gets the QRect in which the QTextDocument is drawn. */
+    QRect lineEditContents() const;
 
 private:
-	void init();
+    void init();
 
-	int m_hScroll, m_cursor; // contains values that are normally stored in QLineEditPrivate
-	QTextDocument m_doc; // Used to draw the highlighted text
-	JourneySearchHighlighter *m_highlighter; // The used QSyntaxHighlighter
+    int m_hScroll, m_cursor; // contains values that are normally stored in QLineEditPrivate
+    QTextDocument m_doc; // Used to draw the highlighted text
+    JourneySearchHighlighter *m_highlighter; // The used QSyntaxHighlighter
 };
 
 #endif // Multiple inclusion guard

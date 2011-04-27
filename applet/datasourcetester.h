@@ -28,60 +28,60 @@
 * is emitted when the test is complete.
 * @brief Tests data sources with the "publictransport"-data engine. */
 class DataSourceTester : public QObject {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	/** Results of a data source test. */
-	enum TestResult {
-		Error, /**< The used data source name is errornous or the data couldn't be parsed correctly.
-			* TODO: It's also possible, that there just weren't any departures / arrivals.
-			* In such a case JourneyListReceived should be used (or a new EmptyJourneyListReceived?). */
-		JourneyListReceived, /**< The tested data source name gets a list
-			* of departures / arrivals or journeys. */
-		PossibleStopsReceived /**< The tested data source name gets a list of stop suggestions.
-			* If you requested a journey list this means that the stop name is ambiguous.
-			* You can try to use stop IDs, if the ambiguity can't be removed. */
-	};
+    /** Results of a data source test. */
+    enum TestResult {
+        Error, /**< The used data source name is errornous or the data couldn't be parsed correctly.
+            * TODO: It's also possible, that there just weren't any departures / arrivals.
+            * In such a case JourneyListReceived should be used (or a new EmptyJourneyListReceived?). */
+        JourneyListReceived, /**< The tested data source name gets a list
+            * of departures / arrivals or journeys. */
+        PossibleStopsReceived /**< The tested data source name gets a list of stop suggestions.
+            * If you requested a journey list this means that the stop name is ambiguous.
+            * You can try to use stop IDs, if the ambiguity can't be removed. */
+    };
 
-	DataSourceTester( const QString &testSource, Plasma::DataEngine *publicTransportEngine,
-					  QObject* parent = 0 )
-			: QObject(parent), m_testSource(testSource),
-			  m_publicTransportEngine(publicTransportEngine) {
-	};
+    DataSourceTester( const QString &testSource, Plasma::DataEngine *publicTransportEngine,
+                    QObject* parent = 0 )
+            : QObject(parent), m_testSource(testSource),
+            m_publicTransportEngine(publicTransportEngine) {
+    };
 
-	~DataSourceTester() {
-		disconnectTestSource();
-	}
+    ~DataSourceTester() {
+        disconnectTestSource();
+    }
 
-	void processTestSourcePossibleStopList( const Plasma::DataEngine::Data& data );
+    void processTestSourcePossibleStopList( const Plasma::DataEngine::Data& data );
 
-	/** Source name to be tested. */
-	QString testSource() { return m_testSource; };
+    /** Source name to be tested. */
+    QString testSource() { return m_testSource; };
 
-	/** Sets the source name to be tested and connects it to the data engine. */
-	void setTestSource( const QString &sourceName );
+    /** Sets the source name to be tested and connects it to the data engine. */
+    void setTestSource( const QString &sourceName );
 
-	QString stopToStopID( const QString &stopName );
-	void clearStopToStopIdMap();
+    QString stopToStopID( const QString &stopName );
+    void clearStopToStopIdMap();
 
 signals:
-	void testResult( DataSourceTester::TestResult testResult,
-			 const QVariant &data, const QVariant &data2, const QVariant &data3 );
+    void testResult( DataSourceTester::TestResult testResult,
+            const QVariant &data, const QVariant &data2, const QVariant &data3 );
 
 public slots:
-	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
+    void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
 private:
-	/** Disconnects the test data source. */
-	void disconnectTestSource();
+    /** Disconnects the test data source. */
+    void disconnectTestSource();
 
-	/** Connects the test data source. */
-	void connectTestSource();
+    /** Connects the test data source. */
+    void connectTestSource();
 
-	QString m_testSource; /**< Source name for testing configurations. */
-	QHash< QString, QVariant > m_mapStopToStopID; /**< A hash with stop names as keys
-			* and the corresponding stop IDs as values. */
-	Plasma::DataEngine *m_publicTransportEngine;
+    QString m_testSource; /**< Source name for testing configurations. */
+    QHash< QString, QVariant > m_mapStopToStopID; /**< A hash with stop names as keys
+            * and the corresponding stop IDs as values. */
+    Plasma::DataEngine *m_publicTransportEngine;
 };
 
 #endif // DATASOURCETESTER_HEADER
