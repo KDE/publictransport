@@ -467,10 +467,6 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
             QRect _infoRect = infoRect( rect().toRect(), 0 );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(), ROUTE_ITEM_HEIGHT );
-//             connect( m_routeItem, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)),
-//                 this, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)) );
-//             connect( m_routeItem, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)),
-//                 this, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)) );
             connect( m_routeItem, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)),
                      this, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)) );
         }
@@ -479,7 +475,6 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
         m_routeItem = NULL;
     }
 
-    kDebug() << "is leaving soon?" << item->isLeavingSoon();
     if ( item->isLeavingSoon() && !m_leavingAnimation ) {
         m_leavingAnimation = new QPropertyAnimation( this, "leavingStep", this );
         m_leavingAnimation->setStartValue( 0.0 );

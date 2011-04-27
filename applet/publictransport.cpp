@@ -124,17 +124,18 @@ void PublicTransport::init()
     // Create and connect the worker thread
     m_departureProcessor = new DepartureProcessor( this );
     connect( m_departureProcessor, SIGNAL(beginDepartureProcessing(QString)),
-            this, SLOT(beginDepartureProcessing(QString)) );
+             this, SLOT(beginDepartureProcessing(QString)) );
     connect( m_departureProcessor,
-            SIGNAL(departuresProcessed(QString, QList<DepartureInfo>, QUrl, QDateTime)),
-            this, SLOT(departuresProcessed(QString, QList<DepartureInfo>, QUrl, QDateTime)) );
+             SIGNAL(departuresProcessed(QString, QList<DepartureInfo>, QUrl, QDateTime)),
+             this, SLOT(departuresProcessed(QString, QList<DepartureInfo>, QUrl, QDateTime)) );
     connect( m_departureProcessor, SIGNAL(beginJourneyProcessing(QString)),
-            this, SLOT(beginJourneyProcessing(QString)) );
+             this, SLOT(beginJourneyProcessing(QString)) );
     connect( m_departureProcessor,
-            SIGNAL(journeysProcessed(QString, QList<JourneyInfo>, QUrl, QDateTime)),
-            this, SLOT(journeysProcessed(QString, QList<JourneyInfo>, QUrl, QDateTime)) );
-    connect( m_departureProcessor, SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>, QList<DepartureInfo>)),
-            this, SLOT(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)) );
+             SIGNAL(journeysProcessed(QString, QList<JourneyInfo>, QUrl, QDateTime)),
+             this, SLOT(journeysProcessed(QString, QList<JourneyInfo>, QUrl, QDateTime)) );
+    connect( m_departureProcessor,
+             SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>, QList<DepartureInfo>)),
+             this, SLOT(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)) );
 
     // Load vehicle type SVG
     m_vehiclesSvg.setImagePath( KGlobal::dirs()->findResource("data",
@@ -244,16 +245,16 @@ bool PublicTransport::checkNetworkStatus()
     NetworkStatus status = queryNetworkStatus();
     if ( status == StatusUnavailable ) {
         m_currentMessage = MessageError;
-        m_timetable->setNoItemsText( i18nc( "@info", "No network connection." ) );
+        m_timetable->setNoItemsText( i18nc("@info", "No network connection.") );
         return false;
     } else if ( status == StatusConfiguring ) {
         m_currentMessage = MessageError;
-        m_timetable->setNoItemsText( i18nc( "@info", "Network gets configured. Please wait..." ) );
+        m_timetable->setNoItemsText( i18nc("@info", "Network gets configured. Please wait...") );
         return false;
     } else if ( status == StatusActivated
                 && m_currentMessage == MessageError ) {
         m_currentMessage = MessageErrorResolved;
-        m_timetable->setNoItemsText( i18nc( "@info", "Network connection established" ) );
+        m_timetable->setNoItemsText( i18nc("@info", "Network connection established") );
         return false;
     } else {
         kDebug() << "Unknown network status or no error message was shown" << status;
@@ -577,6 +578,8 @@ void PublicTransport::reconnectSource()
         m_stopIndexToSourceName[ i ] = currentSource;
         sources << currentSource;
     }
+    
+    addState( WaitingForDepartureData );
 
     foreach( const QString &currentSource, sources ) {
         kDebug() << "Connect data source" << currentSource
@@ -590,8 +593,6 @@ void PublicTransport::reconnectSource()
             dataEngine( "publictransport" )->connectSource( currentSource, this );
         }
     }
-
-    addState( WaitingForDepartureData );
 }
 
 void PublicTransport::departuresFiltered( const QString& sourceName,
@@ -1364,8 +1365,11 @@ void PublicTransport::configChanged()
     m_labelInfo->setText( infoText() );
 
     // Update text in the departure/arrival view, if no items are in the model
-    // TODO this is a copy of code in line ~2199
-    if ( m_settings.departureArrivalListType == ArrivalList ) {
+    // TODO this is a copy of code in line ~2293
+    if ( testState(WaitingForDepartureData) ) {
+        m_timetable->setNoItemsText(
+                i18nc("@info/plain", "Waiting for data...") );
+    } else if ( m_settings.departureArrivalListType == ArrivalList ) {
         m_timetable->setNoItemsText( m_settings.filtersEnabled
                 ? i18nc("@info/plain", "No unfiltered arrivals.<nl/>You can disable filters "
                         "to see all arrivals.")
@@ -1401,7 +1405,7 @@ void PublicTransport::configChanged()
     // Limit model item count to the maximal number of departures setting
     if ( m_model->rowCount() > m_settings.maximalNumberOfDepartures ) {
         m_model->removeRows( m_settings.maximalNumberOfDepartures,
-                            m_model->rowCount() - m_settings.maximalNumberOfDepartures );
+                             m_model->rowCount() - m_settings.maximalNumberOfDepartures );
     }
 
     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
@@ -2240,7 +2244,6 @@ void PublicTransport::addState( AppletState state )
         break;
 
     case ShowingIntermediateDepartureList:
-        // TODO Add a "Back" button to go back to state "ShowingDepartureArrivalList"
         setTitleType( ShowIntermediateDepartureListTitle );
         m_timetable->setZoomFactor( m_settings.sizeFactor );
         m_timetable->setTargetHidden( m_settings.hideColumnTarget );
@@ -2287,8 +2290,7 @@ void PublicTransport::addState( AppletState state )
         } else if ( m_titleWidget->titleType() == ShowIntermediateDepartureListTitle ) {
             setBusy( false );
         }
-        // TODO This is a copy of code in line ~1331
-// 		TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
+        // TODO This is a copy of code in line ~1368
         if ( m_settings.departureArrivalListType == ArrivalList ) {
             m_timetable->setNoItemsText( m_settings.filtersEnabled
                     ? i18nc("@info/plain", "No unfiltered arrivals.<nl/>You can disable filters "
@@ -2310,7 +2312,6 @@ void PublicTransport::addState( AppletState state )
         if ( m_titleWidget->titleType() == ShowJourneyListTitle ) {
             m_titleWidget->setIcon( JourneyListOkIcon );
             setBusy( false );
-// 			TreeView *treeView = qobject_cast<TreeView*>( m_treeViewJourney->nativeWidget() );
             m_journeyTimetable->setNoItemsText( i18nc("@info/plain", "No journeys.") );
         }
         unsetStates( QList<AppletState>() << WaitingForJourneyData << ReceivedErroneousJourneyData );
@@ -2323,7 +2324,6 @@ void PublicTransport::addState( AppletState state )
         } else if ( m_titleWidget->titleType() == ShowIntermediateDepartureListTitle ) {
             setBusy( false );
         }
-// 		TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
         m_timetable->setNoItemsText( m_settings.departureArrivalListType == ArrivalList
                 ? i18nc("@info/plain", "No arrivals due to an error.")
                 : i18nc("@info/plain", "No departures due to an error.") );
@@ -2334,8 +2334,7 @@ void PublicTransport::addState( AppletState state )
         if ( m_titleWidget->titleType() == ShowJourneyListTitle ) {
             m_titleWidget->setIcon( JourneyListErrorIcon );
             setBusy( false );
-// 			TreeView *treeView = qobject_cast<TreeView*>( m_treeViewJourney->nativeWidget() );
-            m_journeyTimetable->setNoItemsText( i18nc( "@info/plain", "No journeys due to an error." ) );
+            m_journeyTimetable->setNoItemsText( i18nc("@info/plain", "No journeys due to an error.") );
         }
         unsetStates( QList<AppletState>() << WaitingForJourneyData << ReceivedValidJourneyData );
         break;
@@ -2347,8 +2346,7 @@ void PublicTransport::addState( AppletState state )
         } else if ( m_titleWidget->titleType() == ShowIntermediateDepartureListTitle ) {
             setBusy( m_model->isEmpty() );
         }
-// 		TreeView *treeView = qobject_cast<TreeView*>( m_treeView->nativeWidget() );
-        m_timetable->setNoItemsText( i18nc( "@info/plain", "Waiting for depatures..." ) );
+        m_timetable->setNoItemsText( i18nc("@info/plain", "Waiting for depatures...") );
         unsetStates( QList<AppletState>() << ReceivedValidDepartureData << ReceivedErroneousDepartureData );
         break;
     }
@@ -2356,7 +2354,6 @@ void PublicTransport::addState( AppletState state )
         if ( m_titleWidget->titleType() == ShowJourneyListTitle ) {
             m_titleWidget->setIcon( JourneyListErrorIcon );
             setBusy( m_modelJourneys->isEmpty() );
-// 			TreeView *treeView = qobject_cast<TreeView*>( m_treeViewJourney->nativeWidget() );
             m_journeyTimetable->setNoItemsText( i18nc( "@info/plain", "Waiting for journeys..." ) );
         }
         unsetStates( QList<AppletState>() << ReceivedValidJourneyData << ReceivedErroneousJourneyData );
@@ -2393,7 +2390,7 @@ void PublicTransport::removeState( AppletState state )
         // Remove intermediate stop settings
         Settings settings = m_settings;
         settings.stopSettingsList.removeIntermediateSettings();
-        settings.currentStopSettingsIndex = qBound( 0, originalStopIndex,
+        settings.currentStopSettingsIndex = qBound( 0, m_originalStopIndex,
                 settings.stopSettingsList.count() - 1 );
 
         writeSettings( settings );
@@ -2560,8 +2557,16 @@ void PublicTransport::requestStopAction( StopAction stopAction,
 
         writeSettings( settings );
     } else if ( stopAction == ShowDeparturesForStop ) {
-        originalStopIndex = m_settings.currentStopSettingsIndex;
+        // Save original stop index from where sub requests were made
+        // (using the context menu). Only if the departure list wasn't requested
+        // already from a sub departure list.
+        if ( !testState(ShowingIntermediateDepartureList) ) {
+            m_originalStopIndex = m_settings.currentStopSettingsIndex;
+        }
 
+        // Search for a stop setting with the given stop name in it.
+        // Create an intermediate stop item if there is no such stop setting
+        // in the configuration (automatically deleted).
         int stopSettingsIndex = settings.stopSettingsList.findStopSettings( stopName );
         if ( stopSettingsIndex == -1 ) {
             StopSettings stopSettings( settings.currentStopSettings() );

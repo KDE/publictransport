@@ -550,7 +550,7 @@ private:
             * when switching from/to journey mode. */
 
     Settings m_settings; /**< Current applet settings. */
-    int originalStopIndex; /**< Index of the stop before showing an intermediate list via context menu. */
+    int m_originalStopIndex; /**< Index of the stop before showing an intermediate list via context menu. */
     QStringList m_currentServiceProviderFeatures;
     bool m_stopNameValid; /**< Whether or not the current stop name (m_stop) is valid. */
 
