@@ -233,17 +233,19 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             m_textItems << textItem;
 
             connect( markerItem, SIGNAL(hovered(RouteStopMarkerGraphicsItem*)),
-                    textItem, SLOT(hover()) );
+                     textItem, SLOT(hover()) );
             connect( markerItem, SIGNAL(unhovered(RouteStopMarkerGraphicsItem*)),
-                    textItem, SLOT(unhover()) );
+                     textItem, SLOT(unhover()) );
             connect( textItem, SIGNAL(hovered(RouteStopTextGraphicsItem*)),
-                    markerItem, SLOT(hover()) );
+                     markerItem, SLOT(hover()) );
             connect( textItem, SIGNAL(unhovered(RouteStopTextGraphicsItem*)),
-                    markerItem, SLOT(unhover()) );
-            connect( textItem, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)),
-                    this, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)) );
-            connect( textItem, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)),
-                    this, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)) );
+                     markerItem, SLOT(unhover()) );
+//             connect( textItem, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)),
+//                     this, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)) );
+//             connect( textItem, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)),
+//                     this, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)) );
+            connect( textItem, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)),
+                     this, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)) );
         }
     }
 }
@@ -469,9 +471,11 @@ void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent*
 
     QAction *executedAction = menu->exec( event->screenPos() );
     if ( executedAction == newFilterViaStopAction ) {
-        emit requestFilterCreation( m_stopName, this );
+//         emit requestFilterCreation( m_stopName, this );
+        emit requestStopAction( CreateFilterForStop, m_stopName, this );
     } else if ( executedAction == showDeparturesAction ) {
-        emit showDepartures( m_stopName, this );
+//         emit showDepartures( m_stopName, this );
+        emit requestStopAction( ShowDeparturesForStop, m_stopName, this );
     } else if ( executedAction == copyStopToClipboardAction ) {
         QApplication::clipboard()->setText( m_stopName );
     }

@@ -23,6 +23,7 @@
 #include <QGraphicsWidget>
 #include <QPointer>
 #include <Plasma/Svg>
+#include "global.h"
 
 class JourneyItem;
 class DepartureItem;
@@ -74,6 +75,9 @@ private:
 * @brief A QGraphicsWidget showing the a single route stop of a public transport vehicle.
 *
 * On hover it expands too show all of the given stop text (if it is too long).
+*
+* @note To make all context menu entries work, connect to the slots
+* requestFilterCreation and showDepartures.
 **/
 class RouteStopTextGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
@@ -99,8 +103,10 @@ public:
 signals:
     void hovered( RouteStopTextGraphicsItem *item );
     void unhovered( RouteStopTextGraphicsItem *item );
-    void requestFilterCreation( const QString &stopName, RouteStopTextGraphicsItem *item );
-    void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
+//     void requestFilterCreation( const QString &stopName, RouteStopTextGraphicsItem *item );
+//     void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
+    void requestStopAction( StopAction stopAction, const QString &stopName,
+                            RouteStopTextGraphicsItem *item );
 
 public slots:
     void hover();
@@ -137,8 +143,10 @@ public:
                         QWidget* widget = 0 );
 
 signals:
-    void requestFilterCreation( const QString &stopName, RouteStopTextGraphicsItem *item );
-    void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
+//     void requestFilterCreation( const QString &stopName, RouteStopTextGraphicsItem *item );
+//     void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
+    void requestStopAction( StopAction stopAction, const QString &stopName,
+                            RouteStopTextGraphicsItem *item );
 
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );

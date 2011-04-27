@@ -72,7 +72,8 @@ enum AppletState {
 
     ShowingIntermediateDepartureList    = 0x000002, /**< The applet is currently
                                                      * showing an intermediate departure list,
-                                                     * requested by context menu */
+                                                     * requested by context menu 
+                                                     * @since 0.10 beta9 */
 
     ShowingDepartureArrivalList         = 0x000010, /**< The applet is currently
                                                      * showing a departure / arrival list */
@@ -106,6 +107,13 @@ enum AppletState {
 };
 Q_DECLARE_FLAGS( AppletStates, AppletState )
 Q_DECLARE_OPERATORS_FOR_FLAGS( AppletStates )
+
+/** @brief Actions for intermediate stops, shown in RouteGraphicsItems. */
+enum StopAction {
+    ShowDeparturesForStop,  /** Show a departure list for the associated stop. */
+    CreateFilterForStop,    /** Create a filter via the associated stop. */
+    CopyStopNameToClipboard /** Copy the name of the associated stop to the clipboard. */
+};
 
 /** @brief Different states of alarm. */
 enum AlarmState {

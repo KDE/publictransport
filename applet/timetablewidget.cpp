@@ -467,10 +467,12 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
             QRect _infoRect = infoRect( rect().toRect(), 0 );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(), ROUTE_ITEM_HEIGHT );
-            connect( m_routeItem, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)),
-                this, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)) );
-            connect( m_routeItem, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)),
-                this, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)) );
+//             connect( m_routeItem, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)),
+//                 this, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)) );
+//             connect( m_routeItem, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)),
+//                 this, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)) );
+            connect( m_routeItem, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)),
+                     this, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)) );
         }
     } else if ( m_routeItem ) {
         delete m_routeItem;
@@ -1301,7 +1303,7 @@ void JourneyTimetableWidget::rowsInserted(const QModelIndex& parent, int first, 
         item->setPublicTransportWidget( this );
         item->updateData( static_cast<JourneyItem*>(m_model->item(row)) );
         connect( item, SIGNAL(requestJourneys(QString,QString)),
-                this, SIGNAL(requestJourneys(QString,QString)) );
+                 this, SIGNAL(requestJourneys(QString,QString)) );
         m_items.insert( row, item );
 
         // Fade new items in
@@ -1328,10 +1330,8 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
         DepartureGraphicsItem *item = new DepartureGraphicsItem( widget() );
         item->setPublicTransportWidget( this );
         item->updateData( static_cast<DepartureItem*>(m_model->item(row)) );
-        connect( item, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)),
-            this, SIGNAL(filterCreationRequested(QString,RouteStopTextGraphicsItem*)) );
-        connect( item, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)),
-            this, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)) );
+        connect( item, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)),
+                 this, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)) );
         m_items.insert( row, item );
 
         // Fade new items in

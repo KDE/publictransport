@@ -1860,10 +1860,8 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
         m_timetable->setSvg( &m_vehiclesSvg );
         connect( m_timetable, SIGNAL(contextMenuRequested(PublicTransportGraphicsItem*,QPointF)),
                 this, SLOT(departureContextMenuRequested(PublicTransportGraphicsItem*,QPointF)) );
-        connect( m_timetable, SIGNAL(filterCreationRequested(QString,RouteStopTextGraphicsItem*)),
-            SLOT(filterCreationRequested(QString,RouteStopTextGraphicsItem*)) );
-        connect( m_timetable, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)),
-            SLOT(showDepartures(QString,RouteStopTextGraphicsItem*)) );
+        connect( m_timetable, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)),
+                 this, SLOT(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)) );
 
         QGraphicsLinearLayout *layout = new QGraphicsLinearLayout( Qt::Vertical );
         layout->setContentsMargins( 0, 0, 0, 0 );
@@ -2709,49 +2707,45 @@ void PublicTransport::showDepartureContextMenu( const QPoint& position )
 // 	delete infoAction;
 }
 
-void PublicTransport::filterCreationRequested( const QString& stopName, RouteStopTextGraphicsItem* item )
+void PublicTransport::requestStopAction( StopAction stopAction,
+        const QString& stopName, RouteStopTextGraphicsItem* item )
 {
     Q_UNUSED( item );
 
     // Create and enable new filter
     Settings settings = m_settings;
 
-    FilterSettings filterSettings;
-    Filter viaFilter;
-    viaFilter << Constraint( FilterByVia, FilterContains, stopName );
-    filterSettings.filters << viaFilter;
+    if ( stopAction == CreateFilterForStop ) {
+        FilterSettings filterSettings;
+        Filter viaFilter;
+        viaFilter << Constraint( FilterByVia, FilterContains, stopName );
+        filterSettings.filters << viaFilter;
 
-    QString filterName = i18nc("Default name for a new filter via a given stop",
-                "Via %1", stopName);
-    settings.filterSettings.insert( filterName, filterSettings );
-    if ( !settings.filtersEnabled ) {
-        settings.filtersEnabled = true;
+        QString filterName = i18nc("Default name for a new filter via a given stop",
+                    "Via %1", stopName);
+        settings.filterSettings.insert( filterName, filterSettings );
+        if ( !settings.filtersEnabled ) {
+            settings.filtersEnabled = true;
+        }
+        settings.currentStopSettings().set( FilterConfigurationSetting, filterName );
+
+        writeSettings( settings );
+    } else if ( stopAction == ShowDeparturesForStop ) {
+        originalStopIndex = m_settings.currentStopSettingsIndex;
+
+        int stopSettingsIndex = settings.stopSettingsList.findStopSettings( stopName );
+        if ( stopSettingsIndex == -1 ) {
+            StopSettings stopSettings( settings.currentStopSettings() );
+            stopSettings.setStop( stopName );
+            stopSettings.set( UserSetting + 100, "-- Intermediate Stop --" );
+            settings.stopSettingsList << stopSettings;
+            stopSettingsIndex = settings.stopSettingsList.count() - 1;
+        }
+        settings.currentStopSettingsIndex = stopSettingsIndex;
+        writeSettings( settings );
+
+        addState( ShowingIntermediateDepartureList );
     }
-    settings.currentStopSettings().set( FilterConfigurationSetting, filterName );
-
-    writeSettings( settings );
-}
-
-void PublicTransport::showDepartures( const QString& stopName, RouteStopTextGraphicsItem* item )
-{
-    Q_UNUSED( item );
-
-    // TODO: Create an intermediate model for "stopName", add a "Back"-Buttoncd
-    originalStopIndex = m_settings.currentStopSettingsIndex;
-
-    Settings settings = m_settings;
-    int stopSettingsIndex = settings.stopSettingsList.findStopSettings( stopName );
-    if ( stopSettingsIndex == -1 ) {
-        StopSettings stopSettings( settings.currentStopSettings() );
-        stopSettings.setStop( stopName );
-        stopSettings.set( UserSetting + 100, "-- Intermediate Stop --" );
-        settings.stopSettingsList << stopSettings;
-        stopSettingsIndex = settings.stopSettingsList.count() - 1;
-    }
-    settings.currentStopSettingsIndex = stopSettingsIndex;
-    writeSettings( settings );
-
-    addState( ShowingIntermediateDepartureList );
 }
 
 void PublicTransport::showJourneySearch()

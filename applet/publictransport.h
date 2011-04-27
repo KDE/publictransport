@@ -32,6 +32,7 @@
 #include "departureinfo.h"
 #include "settings.h"
 #include "titlewidget.h"
+#include "timetablewidget.h"
 
 class RouteStopTextGraphicsItem;
 class PublicTransportGraphicsItem;
@@ -181,8 +182,8 @@ protected slots:
     void showDepartureContextMenu( const QPoint &position );
 
     void departureContextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
-    void filterCreationRequested( const QString &stopName, RouteStopTextGraphicsItem *item );
-    void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
+    void requestStopAction( StopAction stopAction, const QString &stopName,
+                            RouteStopTextGraphicsItem *item );
 
     /** DEPRECATED
     * @brief The context menu has been requested by the tree view header. */
