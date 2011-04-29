@@ -427,6 +427,7 @@ public:
     * @return The QModelIndex of the item at @p row and @p column.
     **/
     virtual QModelIndex index( int row, int column, const QModelIndex& parent = QModelIndex() ) const;
+    
     /** @brief Gets the QModelIndex of the given @p item.
     *
     * @param item The item to get the index for.
@@ -442,19 +443,24 @@ public:
     * @return The number of rows for the given @p parent in this model.
     **/
     virtual int rowCount( const QModelIndex& parent = QModelIndex() ) const;
+    
     /** @brief Gets the index of the parent item for the given @p child index.
     *
     * @param child The index of a child item of the parent to be returned
     * @return The QModelIndex of the parent of the given @p child.
     **/
     virtual QModelIndex parent( const QModelIndex& child ) const;
+    
     virtual QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const;
 
     /** @brief Gets the toplevel item at @p row.
     * @returns a pointer to the toplevel item at the given @p row. */
     ItemBase *item( int row ) const { return m_items.at(row); };
+    
     ItemBase *itemFromIndex( const QModelIndex &index ) const;
+    
     QModelIndex indexFromItem( ItemBase *item, int column = 0 ) const;
+    
     /** @brief Gets the row of the given toplevel item.
     *
     * @param item The item which row should be returned.
@@ -467,6 +473,7 @@ public:
     * @return The list of toplevel items.
     **/
     QList< ItemBase* > items() const { return m_items; };
+    
     /** @brief Removes the given @p item from the model.
     *
     * @param item The item to be removed.
@@ -475,17 +482,23 @@ public:
     **/
     virtual bool removeItem( ItemBase *item ) {
         return removeRows( item->row(), 1 ); };
+        
     /** @brief Removes all items from the model, but doesn't clear header data. */
     virtual void clear();
+    
     /** @brief Checks whether or not this model is empty.
     * @returns True, if this model has no items, ie. is empty. False, otherwise. */
     inline bool isEmpty() const { return rowCount() == 0; };
 
     Info info() const { return m_info; };
+    
     void setAlarmMinsBeforeDeparture( int alarmMinsBeforeDeparture = 5 ) {
         m_info.alarmMinsBeforeDeparture = alarmMinsBeforeDeparture; };
+        
     void setLinesPerRow( int linesPerRow );
+    
     void setSizeFactor( float sizeFactor );
+    
     void setDepartureColumnSettings( bool displayTimeBold = true,
         bool showRemainingMinutes = true, bool showDepartureTime = true );
 
@@ -496,6 +509,7 @@ public:
     * @param columnRight The last changed column Defaults to 0.
     **/
     void itemChanged( ItemBase *item, int columnLeft = 0, int columnRight = 0 );
+    
     /** @brief Notifies the model about changes in children of the given @p parentItem.
     *
     * @param parentItem The item, which children were changed.
@@ -503,6 +517,12 @@ public:
     void childrenChanged( ItemBase *parentItem );
 
 signals:
+    /**
+    * @brief The @p items will get removed after this signal was emitted.
+    *
+    * @param items Can be a list of DepartureItems or JourneyItems, that will
+    *   get removed after this signal was emitted.
+    **/
     void journeysAboutToBeRemoved( const QList<ItemBase*> &items );
 
 protected slots:

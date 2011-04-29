@@ -37,6 +37,7 @@
 #include <Plasma/Theme>
 #include <Plasma/DataEngine>
 
+class PublicTransport;
 class LocationModel;
 class ServiceProviderModel;
 /** Different types of alarms. */
@@ -72,9 +73,9 @@ class KConfigDialog;
 class QStandardItemModel;
 class StopListWidget;
 class FilterListWidget;
-// class DataSourceTester;
 class Settings;
-/** Manages the settings dialog. */
+
+/** @brief Manages the settings dialog. */
 class SettingsUiManager : public QObject {
     Q_OBJECT
 
@@ -233,16 +234,12 @@ public:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( SettingsIO::ChangedFlags );
 
-/** Contains all settings. */
+/** @brief Contains all settings. */
 struct Settings {
-    Settings() {
-        currentStopSettingsIndex = 0;
-        filtersEnabled = false;
-    };
+public:
+    Settings();
 
-    Settings( const Settings &other ) {
-        *this = other;
-    };
+    Settings( const Settings &other );
 
     bool autoUpdate; /**< Whether or not timetable data should be updated automatically. */
     bool showRemainingMinutes; /**< Whether or not remaining minutes until

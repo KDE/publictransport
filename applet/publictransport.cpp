@@ -88,7 +88,8 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
         : Plasma::PopupApplet( parent, args ),
         m_graphicsWidget(0), m_mainGraphicsWidget(0), m_oldItem(0), m_titleWidget(0),
         m_labelInfo(0), m_timetable(0), m_journeyTimetable(0), m_listStopSuggestions(0),
-        m_overlay(0), m_model(0), m_popupIconTransitionAnimation(0), m_modelJourneys(0), m_departureProcessor(0)
+        m_overlay(0), m_model(0), m_popupIconTransitionAnimation(0),
+        m_modelJourneys(0), m_departureProcessor(0)
 {
     m_currentMessage = MessageNone;
     m_appletStates = Initializing;
@@ -172,11 +173,11 @@ void PublicTransport::init()
     m_model = new DepartureModel( this );
     connect( m_model, SIGNAL(alarmFired(DepartureItem*)), this, SLOT(alarmFired(DepartureItem*)) );
     connect( m_model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
-            this, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
+             this, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
     connect( m_model, SIGNAL(journeysAboutToBeRemoved(QList<ItemBase*>)),
-            this, SLOT(departuresAboutToBeRemoved(QList<ItemBase*>)) );
+             this, SLOT(departuresAboutToBeRemoved(QList<ItemBase*>)) );
     connect( m_model, SIGNAL(departuresLeft(QList<DepartureInfo>)),
-            this, SLOT(departuresLeft(QList<DepartureInfo>)) );
+             this, SLOT(departuresLeft(QList<DepartureInfo>)) );
     m_modelJourneys = new JourneyModel( this );
 
     graphicsWidget();
@@ -192,7 +193,7 @@ void PublicTransport::init()
     connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
     connect( Plasma::Theme::defaultTheme(), SIGNAL(themeChanged()),
-            this, SLOT(themeChanged()) );
+             this, SLOT(themeChanged()) );
     emit settingsChanged();
 
     setupActions();
@@ -288,7 +289,7 @@ void PublicTransport::setupActions()
             ? i18nc("@action:inmenu", "Set &Alarm for This Departure")
             : i18nc("@action:inmenu", "Set &Alarm for This Arrival"), this );
     connect( actionSetAlarmForDeparture, SIGNAL(triggered()),
-            this, SLOT(setAlarmForDeparture()) );
+             this, SLOT(setAlarmForDeparture()) );
     addAction( "setAlarmForDeparture", actionSetAlarmForDeparture );
 
     QAction *actionRemoveAlarmForDeparture = new QAction(
@@ -297,13 +298,13 @@ void PublicTransport::setupActions()
             ? i18nc("@action:inmenu", "Remove &Alarm for This Departure")
             : i18nc("@action:inmenu", "Remove &Alarm for This Arrival"), this );
     connect( actionRemoveAlarmForDeparture, SIGNAL(triggered()),
-            this, SLOT(removeAlarmForDeparture()) );
+             this, SLOT(removeAlarmForDeparture()) );
     addAction( "removeAlarmForDeparture", actionRemoveAlarmForDeparture );
 
     QAction *actionSearchJourneys = new QAction( KIcon( "edit-find" ),
             i18nc("@action", "Search for &Journeys..."), this );
     connect( actionSearchJourneys, SIGNAL( triggered() ),
-            this, SLOT( showJourneySearch() ) );
+             this, SLOT( showJourneySearch() ) );
     addAction( "searchJourneys", actionSearchJourneys );
 
     int iconExtend = 32;
@@ -313,7 +314,7 @@ void PublicTransport::setupActions()
                 QSize(iconExtend / 2, iconExtend / 2), iconExtend ),
             i18nc("@action", "Show &Departures"), this );
     connect( actionShowDepartures, SIGNAL( triggered() ),
-            this, SLOT( setShowDepartures() ) );
+             this, SLOT( showDepartures() ) );
     addAction( "showDepartures", actionShowDepartures );
 
     QAction *actionShowArrivals = new QAction(
@@ -322,13 +323,13 @@ void PublicTransport::setupActions()
                 QSize( iconExtend / 2, iconExtend / 2 ), iconExtend ),
             i18nc("@action", "Show &Arrivals"), this );
     connect( actionShowArrivals, SIGNAL( triggered() ),
-            this, SLOT( setShowArrivals() ) );
+             this, SLOT( showArrivals() ) );
     addAction( "showArrivals", actionShowArrivals );
 
     QAction *actionBackToDepartures = new QAction( KIcon( "go-previous" ),
             i18nc( "@action", "Back to &Departure List" ), this );
     connect( actionBackToDepartures, SIGNAL(triggered()),
-            this, SLOT(goBackToDepartures()) );
+             this, SLOT(showDepartureList()) );
     addAction( "backToDepartures", actionBackToDepartures );
 
     KToggleAction *actionEnableFilters = new KToggleAction(
@@ -340,7 +341,8 @@ void PublicTransport::setupActions()
     m_filtersGroup = new QActionGroup( this );
     m_filtersGroup->setExclusive( true );
     connect( m_filtersGroup, SIGNAL(triggered(QAction*)),
-            this, SLOT(switchFilterConfiguration(QAction*)) );
+             this, SLOT(switchFilterConfiguration(QAction*)) );
+//              this, SLOT(switchFilterConfiguration(QAction*)) );
 
     KAction *actionFilterConfiguration = new KSelectAction( KIcon("view-filter"),
             i18nc("@action", "Filter"), this );
@@ -423,7 +425,7 @@ QList< QAction* > PublicTransport::contextualActions()
         QAction *goBackAction = new QAction(KIcon("go-previous-view"),
                 i18n("&Back To Original Stop"), this );
         connect( goBackAction, SIGNAL(triggered(bool)),
-                this, SLOT(goBackToDepartures()) );
+                 this, SLOT(showDepartureList()) );
         actions << goBackAction;
     } else if ( m_settings.stopSettingsList.count() > 1 ) {
         actions << switchStopAction( this );
@@ -1428,20 +1430,20 @@ void PublicTransport::serviceProviderSettingsChanged()
 
 void PublicTransport::iconClicked()
 {
-    switch ( m_titleWidget->titleType() ) {
-    case ShowSearchJourneyLineEdit:
-    case ShowSearchJourneyLineEditDisabled:
-        addState( ShowingDepartureArrivalList );
-        break;
-
-    case ShowIntermediateDepartureListTitle:
-        goBackToDepartures();
-        break;
-
-    case ShowJourneyListTitle:
-    case ShowDepartureArrivalListTitle:
+    // Do an action depending on the current state
+    if ( m_appletStates.testFlag(ShowingJourneySearch) ||
+         m_appletStates.testFlag(ShowingJourneysNotSupported) ||
+         m_appletStates.testFlag(ShowingIntermediateDepartureList) ) {
+//     switch ( m_titleWidget->titleType() ) {
+//     case ShowSearchJourneyLineEdit:
+//     case ShowSearchJourneyLineEditDisabled:
+//     case ShowIntermediateDepartureListTitle:
+        showDepartureList();
+    } else if ( m_appletStates.testFlag(ShowingJourneyList) ||
+         m_appletStates.testFlag(ShowingDepartureArrivalList) ) {
+//     case ShowJourneyListTitle:
+//     case ShowDepartureArrivalListTitle:
         showActionButtons();
-        break;
     }
 }
 
@@ -1640,7 +1642,7 @@ void PublicTransport::setCurrentStopIndex( QAction* action )
     writeSettings( settings );
 }
 
-void PublicTransport::setShowDepartures()
+void PublicTransport::showDepartures()
 {
     // Change departure arrival list type in a copy of the settings.
     // Then write the new settings.
@@ -1649,7 +1651,7 @@ void PublicTransport::setShowDepartures()
     writeSettings( settings );
 }
 
-void PublicTransport::setShowArrivals()
+void PublicTransport::showArrivals()
 {
     // Change departure arrival list type in a copy of the settings.
     // Then write the new settings.
@@ -1660,7 +1662,7 @@ void PublicTransport::setShowArrivals()
 
 void PublicTransport::switchFilterConfiguration( QAction* action )
 {
-    switchFilterConfiguration( KGlobal::locale()->removeAcceleratorMarker( action->text() ) );
+    switchFilterConfiguration( KGlobal::locale()->removeAcceleratorMarker(action->text()) );
 }
 
 void PublicTransport::switchFilterConfiguration( const QString& newFilterConfiguration )
@@ -1668,7 +1670,7 @@ void PublicTransport::switchFilterConfiguration( const QString& newFilterConfigu
     QString filterConfig = GlobalApplet::untranslateFilterKey( newFilterConfiguration );
     kDebug() << "Switch filter configuration to" << filterConfig
             << m_settings.currentStopSettingsIndex;
-    if ( !m_settings.filterSettings.contains( filterConfig ) ) {
+    if ( !m_settings.filterSettings.contains(filterConfig) ) {
         kDebug() << "Filter" << filterConfig << "not found!";
         return;
     }
@@ -1690,9 +1692,10 @@ void PublicTransport::setFiltersEnabled( bool enable )
     writeSettings( settings );
 }
 
-void PublicTransport::iconCloseClicked()
+void PublicTransport::showDepartureList()
 {
     // Go back to the departure/arrival board
+    removeState( ShowingIntermediateDepartureList );
     addState( ShowingDepartureArrivalList );
 }
 
@@ -1735,7 +1738,7 @@ void PublicTransport::journeySearchLineChanged(const QString& stopName, const QD
 }
 
 // TODO: Move to TitleWidget?
-void PublicTransport::filterIconClicked()
+void PublicTransport::showFilterMenu()
 {
     // TODO make a new function for this (updateFilterMenu())
     // because of redundancy in PublicTransport::contextualActions().
@@ -1836,8 +1839,8 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
 // 		connect( m_titleWidget, SIGNAL(journeySearchInputEdited(QString)),
 // 				 this, SLOT(journeySearchInputEdited(QString)) );
         connect( m_titleWidget, SIGNAL(iconClicked()), this, SLOT(iconClicked()) );
-        connect( m_titleWidget, SIGNAL(closeIconClicked()), this, SLOT(iconCloseClicked()) );
-        connect( m_titleWidget, SIGNAL(filterIconClicked()), this, SLOT(filterIconClicked()) );
+        connect( m_titleWidget, SIGNAL(closeIconClicked()), this, SLOT(showDepartureList()) );
+        connect( m_titleWidget, SIGNAL(filterIconClicked()), this, SLOT(showFilterMenu()) );
 
         m_labelInfo = new Plasma::Label;
         m_labelInfo->setAlignment( Qt::AlignVCenter | Qt::AlignRight );
@@ -1956,11 +1959,12 @@ bool PublicTransport::eventFilter( QObject *watched, QEvent *event )
 
 void PublicTransport::createConfigurationInterface( KConfigDialog* parent )
 {
-    // Go back from intermediate departure list (which was requested by a context menu action)
-    // before showing the configuration dialog, because stop settings may be changed
-    // and the intermediate stop shouldn't be shown there nor should it be removable
+    // Go back from intermediate departure list (which may be requested by a
+    // context menu action) before showing the configuration dialog,
+    // because stop settings may be changed and the intermediate stop
+    // shouldn't be shown there.
     if ( m_appletStates.testFlag(ShowingIntermediateDepartureList) ) {
-        goBackToDepartures();
+        showDepartureList();
     }
 
     SettingsUiManager *settingsUiManager = new SettingsUiManager(
@@ -1968,9 +1972,9 @@ void PublicTransport::createConfigurationInterface( KConfigDialog* parent )
             dataEngine("openstreetmap"), dataEngine("favicons"),
             dataEngine("geolocation"), parent );
     connect( settingsUiManager, SIGNAL(settingsAccepted(Settings)),
-            this, SLOT(writeSettings(Settings)) );
+             this, SLOT(writeSettings(Settings)) );
     connect( m_model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
-            settingsUiManager, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
+             settingsUiManager, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
 }
 
 void PublicTransport::writeSettings( const Settings& settings )
@@ -1995,8 +1999,8 @@ void PublicTransport::writeSettings( const Settings& settings )
         // If stop settings have changed the whole model gets cleared and refilled.
         // Therefore the other change flags can be in 'else' parts
         if ( changed.testFlag(SettingsIO::ChangedStopSettings) ||
-            changed.testFlag(SettingsIO::ChangedCurrentStop) ||
-            changed.testFlag(SettingsIO::ChangedServiceProvider) )
+             changed.testFlag(SettingsIO::ChangedCurrentStop) ||
+             changed.testFlag(SettingsIO::ChangedServiceProvider) )
         {
             clearDepartures();
             reconnectSource();
@@ -2013,8 +2017,9 @@ void PublicTransport::writeSettings( const Settings& settings )
         }
 
         if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
-                    changed.testFlag(SettingsIO::ChangedStopSettings) ||
-                    changed.testFlag(SettingsIO::ChangedFilterSettings) ) {
+             changed.testFlag(SettingsIO::ChangedStopSettings) ||
+             changed.testFlag(SettingsIO::ChangedFilterSettings) )
+        {
             m_titleWidget->updateFilterWidget();
         }
     } else {
@@ -2028,33 +2033,42 @@ void PublicTransport::setDepartureArrivalListType( DepartureArrivalListType depa
     m_timetable->updateItemLayouts();
 }
 
-QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType, TitleType oldTitleType )
+void PublicTransport::showWidgetsForTitleType( TitleType titleType, TitleType oldTitleType )
 {
+//     AppletState oldState, newState;
+
     // Setup new main layout
-    QGraphicsLinearLayout *layoutMainNew = new QGraphicsLinearLayout( Qt::Vertical, m_mainGraphicsWidget );
+    QGraphicsLinearLayout *layoutMainNew = new QGraphicsLinearLayout(
+            Qt::Vertical, m_mainGraphicsWidget );
     layoutMainNew->setContentsMargins( 0, 0, 0, 0 );
     layoutMainNew->setSpacing( 0 );
 
     // Delete widgets of the old view
     switch ( oldTitleType ) {
+//     switch ( oldState ) {
+//     case ShowingDepartureArrivalList:
+//     case ShowingIntermediateDepartureList:
     case ShowDepartureArrivalListTitle:
     case ShowIntermediateDepartureListTitle:
         kDebug() << "Hide Departure List";
         break;
 
     case ShowSearchJourneyLineEdit:
+//     case ShowingJourneySearch:
         kDebug() << "Delete Stop Suggestion List";
         m_listStopSuggestions->deleteLater();
         m_listStopSuggestions = NULL;
         break;
 
     case ShowSearchJourneyLineEditDisabled:
+//     case ShowingJourneysNotSupported:
         kDebug() << "Delete Info Label";
         m_labelJourneysNotSupported->deleteLater();
         m_labelJourneysNotSupported = NULL;
         break;
 
     case ShowJourneyListTitle:
+//     case ShowingJourneyList:
         kDebug() << "Delete Journey List";
         m_journeyTimetable->deleteLater();
         m_journeyTimetable = NULL;
@@ -2071,12 +2085,6 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType, TitleType 
     // New type
     switch ( titleType ) {
     case ShowDepartureArrivalListTitle:
-        m_labelInfo->setToolTip( courtesyToolTip() );
-        m_labelInfo->setText( infoText() );
-
-        widget = m_timetable;
-        break;
-
     case ShowIntermediateDepartureListTitle:
         m_labelInfo->setToolTip( courtesyToolTip() );
         m_labelInfo->setText( infoText() );
@@ -2128,7 +2136,6 @@ QGraphicsWidget* PublicTransport::widgetForType( TitleType titleType, TitleType 
     layoutMainNew->addItem( widget );
     layoutMainNew->addItem( m_labelInfo );
     layoutMainNew->setAlignment( m_labelInfo, Qt::AlignRight | Qt::AlignVCenter );
-    return m_mainGraphicsWidget;
 }
 
 void PublicTransport::setTitleType( TitleType titleType )
@@ -2148,14 +2155,13 @@ void PublicTransport::setTitleType( TitleType titleType )
                     .boundingRect().toRect();
             QRectF rect( QPointF( 0, 0 ), m_mainGraphicsWidget->size() );
             m_titleWidget->scene()->render( &p, rect, sourceRect );
-// 			scene()->render( &p, rect, sourceRect );
             p.end();
         }
     }
 
     TitleType oldTitleType = m_titleWidget->titleType();
     m_titleWidget->setTitleType( titleType, m_appletStates );
-    m_mainGraphicsWidget = widgetForType( titleType, oldTitleType );
+    showWidgetsForTitleType( titleType, oldTitleType );
 
     // Setup the new main layout
     switch ( titleType ) {
@@ -2489,10 +2495,12 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
 {
     Q_UNUSED( pos );
 
+    // Save the index of the clicked item
     m_clickedItemIndex = item->index();
-    QList<QAction *> actions;
-    QAction *infoAction = NULL;
 
+    // List actions for the context menu
+    QAction *infoAction = NULL;
+    QList<QAction *> actions;
     actions.append( updatedAction("toggleExpanded") );
     if ( testState(ShowingDepartureArrivalList) ) {
         DepartureItem *item = static_cast<DepartureItem*>( m_model->item(m_clickedItemIndex.row()) );
@@ -2500,20 +2508,20 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
             if ( item->alarmStates().testFlag(AlarmIsAutoGenerated) ) {
                 actions.append( updatedAction("removeAlarmForDeparture") );
             } else if ( item->alarmStates().testFlag(AlarmIsRecurring) ) {
-                kDebug() << "The 'Remove this Alarm' menu entry can only be "
-                "used with autogenerated alarms.";
+                // The 'Remove this Alarm' menu entry can only be
+                // used with autogenerated alarms
                 if ( item->departureInfo()->matchedAlarms().count() == 1 ) {
                     infoAction = new QAction( KIcon("task-recurring"),
-                                                i18nc("@info/plain", "(has a recurring alarm)"), this );
+                            i18nc("@info/plain", "(has a recurring alarm)"), this );
                 } else {
                     infoAction = new QAction( i18nc("@info/plain", "(has multiple alarms)"), this );
                 }
             } else {
-                kDebug() << "The 'Remove this Alarm' menu entry can only be "
-                "used with autogenerated alarms.";
+                // The 'Remove this Alarm' menu entry can only be
+                // used with autogenerated alarms
                 if ( item->departureInfo()->matchedAlarms().count() == 1 ) {
                     infoAction = new QAction( KIcon("task-recurring"),
-                                                i18nc("@info/plain", "(has a custom alarm)"), this );
+                            i18nc("@info/plain", "(has a custom alarm)"), this );
                 } else {
                     infoAction = new QAction( i18nc("@info/plain", "(has multiple alarms)"), this );
                 }
@@ -2522,10 +2530,12 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
                 infoAction->setDisabled( true );
                 actions.append( infoAction );
             }
-        } else
+        } else {
             actions.append( updatedAction("setAlarmForDeparture") );
+        }
     }
 
+    // Show the menu if it's not empty
     if ( actions.count() > 0 && view() ) {
         QMenu::exec( actions, QCursor::pos() );
     }
@@ -2586,12 +2596,6 @@ void PublicTransport::showJourneySearch()
 {
     addState( m_currentServiceProviderFeatures.contains( "JourneySearch" )
             ? ShowingJourneySearch : ShowingJourneysNotSupported );
-}
-
-void PublicTransport::goBackToDepartures()
-{
-    removeState( ShowingIntermediateDepartureList );
-    addState( ShowingDepartureArrivalList );
 }
 
 void PublicTransport::removeAlarmForDeparture( int row )

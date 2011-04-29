@@ -86,43 +86,71 @@ private:
     QPixmap m_pixmap;
 };
 
-/** @class PublicTransport
-* @brief Shows departure/arrival times for public transport.
-*
-* It uses the "publictransport"-data engine and stores the data using @ref DepartureModel for
-* departures/arrivals and @ref JourneyModel for journeys. The data from the data engine is read
-* in a thread using @ref DepartureProcessor, which also applies filters and alarms.
-*
-* @ref TitleWidget is used as title. The departures/arrivals/journeys are shown in
-* TimetableWidget/JourneyTimetableWidget.
-**/
+/**
+ * @class PublicTransport
+ * @brief Shows departure/arrival times for public transport.
+ *
+ * It uses the "publictransport"-data engine and stores the data using
+ * @ref DepartureModel for departures/arrivals and @ref JourneyModel for
+ * journeys. The data from the data engine is read in a thread using
+ * @ref DepartureProcessor, which also applies filters and alarms.
+ *
+ * @ref TitleWidget is used as title. The departures/arrivals/journeys are shown
+ * in TimetableWidget/JourneyTimetableWidget.
+ **/
 class PublicTransport : public Plasma::PopupApplet {
+    /** @brief The number of currently shown departures/arrivals. */
     Q_PROPERTY( int DepartureCount READ departureCount )
+
+    /** @brief The current index of the departure shown in the popup icon.
+     *
+     * @note It's a qreal because transitions are stored for animation.
+     **/
     Q_PROPERTY( qreal PopupIconDepartureIndex READ popupIconDepartureIndex WRITE setPopupIconDepartureIndex )
+
     Q_OBJECT
 
 public:
     /** @brief Basic create. */
     PublicTransport( QObject *parent, const QVariantList &args );
+
     /** @brief Destructor. Saves the state of the header. */
     ~PublicTransport();
 
-    /** @brief Maximum number of recent journey searches.
-    *
-    * When more journey searches get added, the oldest gets removed. */
+    /**
+     * @brief Maximum number of recent journey searches.
+     *
+     * When more journey searches get added, the oldest gets removed.
+     **/
     static const int MAX_RECENT_JOURNEY_SEARCHES = 10;
 
-    /** @brief The maximum number of departure groups (at the same time) to cycle through in the
-    *   popup icon. */
+    /**
+     * @brief The maximum number of departure groups (at the same time) to
+     *   cycle through in the popup icon.
+     **/
     static const int POPUP_ICON_DEPARTURE_GROUP_COUNT = 10;
 
     /** @brief Returns the widget with the contents of the applet. */
     virtual QGraphicsWidget* graphicsWidget();
 
-    /** @returns the number of shown departures/arrivals. */
+    /** @returns the number of currently shown departures/arrivals. */
     int departureCount() const { return m_departureInfos.count(); };
 
+    /**
+     * @brief The current index of the departure shown in the popup icon.
+     *
+     * @note It's a qreal because transitions are stored for animation.
+     **/
     qreal popupIconDepartureIndex() const { return m_popupIconDepartureIndex; };
+
+    /**
+     * @brief Sets the current index of the departure shown in the popup icon.
+     *
+     * @param popupIconDepartureIndex The index of the new departure to be shown
+     *   in the popup icon.
+     *
+     * @note It's a qreal because transitions are stored for animation.
+     **/
     void setPopupIconDepartureIndex( qreal popupIconDepartureIndex ) {
         m_popupIconDepartureIndex = popupIconDepartureIndex;
         createPopupIcon();
@@ -137,13 +165,20 @@ public slots:
     virtual void init();
 
     /**
-    * @brief Clears the current list of stop settings and adds a new one with the given @p stopName
-    *   and the given @p serviceProviderID.
-    *
-    * @param serviceProviderID The ID of the service provider to use for the new stop settings.
-    * @param stopName The stop name to use for the new stop settings.
-    **/
+     * @brief Clears the current list of stop settings and adds a new one with
+     *   the given @p stopName and the given @p serviceProviderID.
+     *
+     * @param serviceProviderID The ID of the service provider to use for the new stop settings.
+     * @param stopName The stop name to use for the new stop settings.
+     **/
     void setSettings( const QString &serviceProviderID, const QString &stopName );
+
+    /**
+     * @brief Writes the given @p settings and updates the applet accordingly.
+     *
+     * @param settings The settings to write.
+     **/
+    void writeSettings( const Settings &settings );
 
 protected slots:
     /** @brief The geometry of the applet has changed. */
@@ -155,30 +190,43 @@ protected slots:
     /** @brief Settings that require a new data request have been changed. */
     void serviceProviderSettingsChanged();
 
-    /** @brief New @p data arrived from the data engine for the source with the name @p sourceName.
-    * @ingroup models */
+    /**
+     * @brief New @p data arrived from the data engine for the source with the name @p sourceName.
+     * @ingroup models
+     **/
     void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
     /**
-    * @brief Fills the departure/arrival data model with the given departure/arrival list without
-    *   removing departures that were already in the model.
-    *
-    * This will stop if the maximum departure count is reached
-    * or if all @p departures have been added.
-    *
-    * @ingroup models */
+     * @brief Fills the departure data model with the given departure list.
+     *
+     * This will stop if the maximum departure count is reached or if all
+     * @p departures have been added.
+     *
+     * @ingroup models
+     **/
     void fillModel( const QList<DepartureInfo> &departures );
 
     /**
-    * @brief Fills the journey data model with the given journey list without removing departures
-    *   that were already in the model.
-    *
-    * This will stop if all @p journeys have been added.
-    *
-    * @ingroup models */
+     * @brief Fills the journey data model with the given journey list.
+     *
+     * This will stop if all @p journeys have been added.
+     *
+     * @ingroup models
+     **/
     void fillModelJourney( const QList<JourneyInfo> &journeys );
 
-    void departureContextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
+    void departureContextMenuRequested( PublicTransportGraphicsItem *item,
+                                        const QPointF &pos );
+
+    /**
+     * @brief Gets called by the context menu of route stops.
+     *
+     * Performs the given @p stopAction.
+     *
+     * @param stopAction The action that is requested to be performed.
+     * @param stopName The stop name to perform @p stopAction on.
+     * @param item The route stop item which requested the @p stopAction.
+     **/
     void requestStopAction( StopAction stopAction, const QString &stopName,
                             RouteStopTextGraphicsItem *item );
 
@@ -187,32 +235,86 @@ protected slots:
     /** @brief The icon widget was clicked. */
     void iconClicked();
 
-    /** @brief The icon widget to close the journey view was clicked. */
-    void iconCloseClicked();
+    /**
+     * @brief Shows the departure list.
+     *
+     * Can be used eg. if the journey view is currently shown to go back
+     * to the departure view.
+     *
+     * This gets connected to the clicked signal of the close icon widget
+     * in the journey view.
+     **/
+    void showDepartureList();
 
-    /** @brief The filter icon widget was clicked. */
-    void filterIconClicked();
+    /**
+     * @brief Shows departures in the departure list (not arrivals).
+     *
+     * Writes new settings with @ref Settings::departureArrivalListType set
+     * to @p DepartureList. This also updates the departure view on @ref configChanged.
+     *
+     * @note This doesn't switch to the departure list automatically.
+     *   To do this also use @ref showDepartureList.
+     **/
+    void showDepartures();
 
-    /** @brief Finished editing the journey search line (return pressed, start search
-    * button clicked or stop suggestion double clicked). */
+    /**
+     * @brief Shows arrivals in the departure list.
+     *
+     * Writes new settings with @ref Settings::departureArrivalListType set
+     * to @p ArrivalList. This also updates the departure view on @ref configChanged.
+     * 
+     * @note This doesn't switch to the departure list automatically.
+     *   To do this also use @ref showDepartureList.
+     **/
+    void showArrivals();
+    
+    /**
+     * @brief Show the journey search.
+     *
+     * Switches to journey search mode. To go back to the departure list use
+     * @ref showDepartureList. If a journey search string is set the user can
+     * go to the journey mode from the search mode.
+     **/
+    void showJourneySearch();
+
+    /**
+     * @brief Show the action button overlay.
+     *
+     * Blurs the applet and shows some buttons to perform actions like searching
+     * for a journey or toggling between departure and arrival view.
+     **/
+    void showActionButtons();
+
+    /** @brief Shows the filter menu. */
+    void showFilterMenu();
+
+    /**
+     * @brief Finished editing the journey search line (return pressed,
+     *   start search button clicked or stop suggestion double clicked).
+     **/
     void journeySearchInputFinished();
 
-    /** @brief The journey search line has been changed and parsed.
-    *
-    * This slot gets called by JourneySearchSuggestionWidget.
-    * @param stopName The parsed stop name.
-    * @param departure The parsed departure date and time.
-    * @param stopIsTarget Whether or not the parsed stop should be treated as target (true)
-    *   or as origin stop (false).
-    * @param timeIsDeparture Whether or not the parsed time should be treated as departure (true)
-    *   or as arrival time (false).
-    **/
+    /**
+     * @brief The journey search line has been changed and parsed.
+     *
+     * This slot gets called by JourneySearchSuggestionWidget.
+     * @param stopName The parsed stop name.
+     *
+     * @param departure The parsed departure date and time.
+     *
+     * @param stopIsTarget Whether or not the parsed stop should be treated as target (true)
+     *   or as origin stop (false).
+     * 
+     * @param timeIsDeparture Whether or not the parsed time should be treated as departure (true)
+     *   or as arrival time (false).
+     **/
     void journeySearchLineChanged( const QString &stopName, const QDateTime &departure,
-                                bool stopIsTarget, bool timeIsDeparture );
+                                   bool stopIsTarget, bool timeIsDeparture );
 
-    /** @brief Called from PublicTransportSettings to indicate the need to clear the
-    * departure list. */
-
+    /**
+     * @brief Called from PublicTransportSettings to indicate the need to clear 
+     *   the departure list.
+     **/
     void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
 
     /** @brief The action to update the data source has been triggered. */
@@ -223,15 +325,6 @@ protected slots:
 
     /** @brief The action to remove an alarm from the selected departure/arrival has been triggered. */
     void removeAlarmForDeparture();
-
-    /** @brief The action to switch to the journey search mode has been triggered. */
-    void showJourneySearch();
-
-    /** @brief The action to go back to the departure/arrival view has been triggered. */
-    void goBackToDepartures();
-
-    /** @brief The action to show the action button overlay has been triggered. */
-    void showActionButtons();
 
     /** @brief The action to expand / collapse of the selected departure/arrival has been triggered. */
     void toggleExpanded();
@@ -245,66 +338,95 @@ protected slots:
     /** @brief The plasma theme has been changed. */
     void themeChanged() { useCurrentPlasmaTheme(); };
 
-    /** @brief An "recent journey"-action has been triggered.
-    * @param recentJourneyAction The type of the executed action. */
+    /**
+     * @brief An "recent journey"-action has been triggered.
+     * 
+     * @param recentJourneyAction The type of the executed action.
+     **/
     void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction );
 
     void processJourneyRequest( const QString &startStop, const QString &targetStop );
 
-    /** @brief The worker thread starts processing departures/arrivals from the
-    *   data engine.
-    *
-    * @param sourceName The data engine source name for the departure data.
-    * @see departuresProcessed
-    * @ingroup models */
+    /**
+     * @brief The worker thread starts processing departures/arrivals from the
+     *   data engine.
+     *
+     * @param sourceName The data engine source name for the departure data.
+     * @see departuresProcessed
+     * @ingroup models
+     **/
     void beginDepartureProcessing( const QString &sourceName );
 
-    /** @brief The worker thread has finished processing departures/arrivals.
-    *
-    * @param sourceName The data engine source name for the departure data.
-    * @param departures A list of departures that were read by the worker thread.
-    * @param requestUrl The url that was used to download the departure data.
-    * @param lastUpdate The date and time of the last update of the data.
-    * @see DepartureInfo
-    * @see beginDepartureProcessing
-    * @ingroup models */
+    /**
+     * @brief The worker thread has finished processing departures/arrivals.
+     *
+     * @param sourceName The data engine source name for the departure data.
+     *
+     * @param departures A list of departures that were read by the worker thread.
+     *
+     * @param requestUrl The url that was used to download the departure data.
+     *
+     * @param lastUpdate The date and time of the last update of the data.
+     *
+     * @see DepartureInfo
+     * @see beginDepartureProcessing
+     * @ingroup models
+     **/
     void departuresProcessed( const QString &sourceName, const QList< DepartureInfo > &departures,
                             const QUrl &requestUrl, const QDateTime &lastUpdate );
 
-    /** @brief The worker thread has finished filtering departures.
-    *
-    * @param sourceName The data engine source name for the departure data.
-    * @param departures The list of departures that were filtered. Each
-    *   departure now returns the correct value with isFilteredOut() according
-    *   to the filter settings given to the worker thread.
-    * @param newlyFiltered A list of departures that should be made visible
-    *   to match the current filter settings.
-    * @param newlyNotFiltered A list of departures that should be made
-    *   invisible to match the current filter settings.
-    * @ingroup models */
+    /**
+     * @brief The worker thread has finished filtering departures.
+     *
+     * @param sourceName The data engine source name for the departure data.
+     *
+     * @param departures The list of departures that were filtered. Each
+     *   departure now returns the correct value with isFilteredOut() according
+     *   to the filter settings given to the worker thread.
+     *
+     * @param newlyFiltered A list of departures that should be made visible
+     *   to match the current filter settings.
+     *
+     * @param newlyNotFiltered A list of departures that should be made
+     *   invisible to match the current filter settings.
+     *
+     * @ingroup models
+     **/
     void departuresFiltered( const QString &sourceName, const QList< DepartureInfo > &departures,
                             const QList< DepartureInfo > &newlyFiltered,
                             const QList< DepartureInfo > &newlyNotFiltered );
 
-    /** @brief The worker thread starts processing journeys from the data engine.
-    * @see journeysProcessed
-    * @ingroup models */
+    /**
+     * @brief The worker thread starts processing journeys from the data engine.
+     * 
+     * @see journeysProcessed
+     * @ingroup models
+     **/
     void beginJourneyProcessing( const QString &sourceName );
-    /** @brief The worker thread has finished processing journeys.
-    *
-    * @param sourceName The data engine source name for the journey data.
-    * @param journeys A list of journeys that were read by the worker thread.
-    * @param requestUrl The url that was used to download the journey data.
-    * @param lastUpdate The date and time of the last update of the data.
-    * @see JourneyInfo
-    * @see beginJourneyProcessing
-    * @ingroup models */
+
+    /**
+     * @brief The worker thread has finished processing journeys.
+     *
+     * @param sourceName The data engine source name for the journey data.
+     *
+     * @param journeys A list of journeys that were read by the worker thread.
+     *
+     * @param requestUrl The url that was used to download the journey data.
+     *
+     * @param lastUpdate The date and time of the last update of the data.
+     *
+     * @see JourneyInfo
+     * @see beginJourneyProcessing
+     * @ingroup models
+     **/
     void journeysProcessed( const QString &sourceName, const QList< JourneyInfo > &journeys,
                             const QUrl &requestUrl, const QDateTime &lastUpdate );
 
     /** @brief The animation fading out a pixmap of the old applet appearance has finished. */
     void oldItemAnimationFinished();
 
+    /** @brief The transition animation between two departure groups in the 
+     * popup icon has finished. */
     void popupIconTransitionAnimationFinished();
 
     /** @brief Deletes the overlay item used when showing action buttons over the plasmoid. */
@@ -313,22 +435,14 @@ protected slots:
     /** @brief An action to change the currently shown stop has been triggered. */
     void setCurrentStopIndex( QAction *action );
 
-    /** @brief Writes the given @p settings and updates the applet accordingly.
-    * @param settings The settings to write. */
-    void writeSettings( const Settings &settings );
-
-    /** @brief Write new settings with @ref Settings::departureArrivalListType set
-    *   to @p DepartureList. This also updates the departure tree view on @ref configChanged. */
-    void setShowDepartures();
-
-    /** @brief Write new settings with @ref Settings::departureArrivalListType set
-    *   to @p ArrivalList. This also updates the departure tree view on @ref configChanged. */
-    void setShowArrivals();
-
     /** @brief Switch the currently active filter configuration to @p newFilterConfiguration. */
     void switchFilterConfiguration( const QString &newFilterConfiguration );
 
-    /** @brief An action to change the currently active filter configuration has been triggered. */
+    /**
+     * @brief An action to change the currently active filter configuration has been triggered.
+     *
+     * This calls @ref switchFilterConfiguration with the name of the @p action.
+     **/
     void switchFilterConfiguration( QAction *action );
 
     /** @brief Changes the filters enabled state to @p enable. */
@@ -337,14 +451,32 @@ protected slots:
     /** @brief An alarm has been fired for the given @p item. */
     void alarmFired( DepartureItem *item );
 
-    void removeAlarms( const AlarmSettingsList &newAlarmSettings, const QList<int> &removedAlarms );
+    void removeAlarms( const AlarmSettingsList &newAlarmSettings,
+                       const QList<int> &removedAlarms );
 
+    /**
+     * @brief The @p departures will get removed after this slot was called.
+     *
+     * @param items A list of DepartureItems, that will get removed
+     *   after this slot was called.
+     *
+     * @note This slot is connected to the journeysAboutToBeRemoved signal
+     *   of the departure/arrival model.
+     **/
     void departuresAboutToBeRemoved( const QList<ItemBase*> &departures );
+
+    /**
+     * @brief The @p departures have just left.
+     *
+     * The DepartureItems for the given @p departures were deleted before this
+     * slot gets called.
+     **/
     void departuresLeft( const QList<DepartureInfo> &departures );
 
 protected:
     /** @brief Create the configuration dialog contents.
-    * @param parent The config dialog in which the config interface should be created. */
+     * @param parent The config dialog in which the config interface should be created.
+     **/
     void createConfigurationInterface( KConfigDialog *parent );
 
     /** @brief Gets a list of actions for the context menu. */
@@ -359,9 +491,11 @@ protected:
     virtual bool eventFilter( QObject* watched, QEvent* event );
 
     /** @brief Tests the given state.
-    *
-    * @param state The state to test.
-    * @returns True, if the state is set. False, otherwise.*/
+     *
+     * @param state The state to test.
+     *
+     * @returns True, if the state is set. False, otherwise.
+     **/
     bool testState( AppletState state ) const {
         return m_appletStates.testFlag( state ); };
 
@@ -371,17 +505,20 @@ protected:
     void addState( AppletState state );
 
     /** @brief Removes the given state. Operations are processed to unset the new applet state.
-    *
-    * @param state The state to remove. */
+     *
+     * @param state The state to remove.
+     **/
     void removeState( AppletState state );
 
     /** @brief Creates all used QAction's. */
     void setupActions();
 
     /** @brief Gets an action with string and icon updated to the current settings.
-    *
-    * @param actionName The name of the action to return updated.
-    * @return The updated action.*/
+     *
+     * @param actionName The name of the action to return updated.
+     *
+     * @return The updated action.
+     **/
     QAction* updatedAction( const QString &actionName );
 
     /** @brief Generates tooltip data and registers this applet at plasma's TooltipManager. */
@@ -390,56 +527,84 @@ protected:
     /** @brief Creates the popup icon with information about the next departure / alarm. */
     void createPopupIcon();
 
+    /**
+     * @brief Creates a pixmap for the given @p departure with an alarm.
+     *
+     * This pixmap is used for the popup icon for departures for which an alarm
+     * is set.
+     **/
     QPixmap createAlarmPixmap( DepartureItem *departure );
+
+
+    /**
+     * @brief Creates a pixmap for the given @p departures.
+     *
+     * This pixmap is used for the popup icon for departures. Multiple
+     * departures may be drawn side by side, eg. if they depart at the same
+     * time.
+     **/
     QPixmap createDeparturesPixmap( const QList<DepartureItem*> &departures );
+
+    /**
+     * @brief Creates a new list for the first departures that are shown in the
+     *   popup icon.
+     *
+     * Each group can contain multiple departures if they depart at the same
+     * time. The number of departure groups that can be shown in the popup icon
+     * is limited to @ref POPUP_ICON_DEPARTURE_GROUP_COUNT.
+     **/
     void createDepartureGroups();
 
     /** @brief Mouse wheel rotated on popup icon. */
     virtual void wheelEvent( QGraphicsSceneWheelEvent* event );
 
     /** @brief Gets the text to be displayed on right of the treeview as additional
-    * information (html-tags allowed). Contains courtesy information. */
+     * information (html-tags allowed). Contains courtesy information.
+     **/
     QString infoText();
 
     /** @brief Gets the text to be displayed as tooltip for the info label. */
     QString courtesyToolTip() const;
 
     /** @brief Disconnects a currently connected departure/arrival data source and
-    *   connects a new source using the current configuration.
-    * @ingroup models*/
+     *   connects a new source using the current configuration.
+     * @ingroup models
+     **/
     void reconnectSource();
 
     /** @brief Disconnects a currently connected departure/arrival data source.
-    * @ingroup models */
+     * @ingroup models
+     **/
     void disconnectSources();
 
     /** @brief Disconnects a currently connected journey data source and connects
-    *   a new source using the current configuration.
-    * @ingroup models */
+     *   a new source using the current configuration.
+     * @ingroup models
+     **/
     void reconnectJourneySource( const QString &targetStopName = QString(),
                                 const QDateTime &dateTime = QDateTime::currentDateTime(),
                                 bool stopIsTarget = true, bool timeIsDeparture = true,
                                 bool requestStopSuggestions = false );
     /** @brief Disconnects a currently connected journey data source.
-    * @ingroup models */
+     * @ingroup models */
     void disconnectJourneySource();
 
     /** @brief Handles errors from the publictransport data engine for @p data from source @p sourceName.
-    * @ingroup models */
+     * @ingroup models */
     void handleDataError( const QString &sourceName, const Plasma::DataEngine::Data& data );
 
     /** @brief Read stop suggestions from the data engine.
-    * @ingroup models */
+     * @ingroup models */
     void processStopSuggestions( const QString &sourceName, const Plasma::DataEngine::Data& data );
 
     /** @brief Clears the departure / arrival list received from the data engine and
-    *   displayed by the applet.
-    * @ingroup models */
+     *   displayed by the applet.
+     * @ingroup models */
     void clearDepartures();
 
     /** @brief Clears the journey list received from the data engine and displayed by
-    *   the applet.
-    * @ingroup models */
+     *   the applet.
+     * @ingroup models */
     void clearJourneys();
 
     /** @brief Sets an autogenerated alarm for the given departure/arrival. */
@@ -451,13 +616,23 @@ protected:
     /** @brief Helper function to set the text color of an html item with a surrounding span-tag. */
     void setTextColorOfHtmlItem( QStandardItem *item, const QColor &textColor );
 
-    QGraphicsWidget *widgetForType( TitleType titleType, TitleType oldTitleType );
+    /** @brief Shows the associated widgets for the given @p titleType.
+     *
+     * @param titleType The new title type to show widgets for.
+     *
+     * @param oldTitleType The old title type. Used to hide old widgets
+     *   that were shown for that old title type.
+     */
+    void showWidgetsForTitleType( TitleType titleType, TitleType oldTitleType );
 
     /** @brief Sets the type of title to be displayed. */
     void setTitleType( TitleType titleType );
 
-    /** @brief Unsets the given states. No other operations are processed.
-    * @param states A list of states to unset. */
+    /**
+     * @brief Unsets the given states. No other operations are processed.
+     *
+     * @param states A list of states to unset.
+     **/
     virtual void unsetStates( QList<AppletState> states );
 
 private:
@@ -467,6 +642,7 @@ private:
         MessageError, /**< An error message. */
         MessageErrorResolved /**< A message about a resolved error. */
     };
+
     /** @brief Statuses of the network */
     enum NetworkStatus {
         StatusUnknown = 0, /**< Network status is unknown. */
@@ -478,7 +654,7 @@ private:
     NetworkStatus queryNetworkStatus();
 
     /** @brief Shows an error message when no interface is activated.
-    * @return True, if no message is shown. False, otherwise. */
+     * @return True, if no message is shown. False, otherwise. */
     bool checkNetworkStatus();
 
     /** @brief List of current departures / arrivals for the selected stop(s). */
@@ -490,17 +666,21 @@ private:
     void useCurrentPlasmaTheme();
 
     void paintVehicle( QPainter *painter, VehicleType vehicle, const QRectF &rect,
-                    const QString &transportLine = QString() );
+                       const QString &transportLine = QString() );
 
-    /** @brief Creates a menu action, which lists all stops in the settings
-    * for switching between them.
-    *
-    * @param parent The parent of the menu action and it's sub-actions.
-    * @param destroyOverlayOnTrigger True, if the overlay widget should be
-    * destroyed when triggered. Defaults to false.
-    * @return KSelectAction* The created menu action.
-    **/
-    KSelectAction *switchStopAction( QObject *parent, bool destroyOverlayOnTrigger = false ) const;
+    /**
+     * @brief Creates a menu action, which lists all stops in the settings
+     *   for switching between them.
+     *
+     * @param parent The parent of the menu action and it's sub-actions.
+     *
+     * @param destroyOverlayOnTrigger True, if the overlay widget should be
+     *   destroyed when triggered. Defaults to false.
+     *
+     * @return KSelectAction* The created menu action.
+     **/
+    KSelectAction *switchStopAction( QObject *parent,
+                                     bool destroyOverlayOnTrigger = false ) const;
 
     QVariantHash currentServiceProviderData() const {
         return serviceProviderData( m_settings.currentStopSettings().get<QString>(ServiceProviderSetting) ); };
@@ -515,9 +695,7 @@ private:
     TitleWidget *m_titleWidget; /**< A widget used as the title of the applet. */
     Plasma::Label *m_labelInfo; /**< A label used to display additional information. */
 
-// 	Plasma::TreeView *m_treeView; /**< A treeview displaying the departure board. */
     TimetableWidget *m_timetable; /**< The graphics widget showing the departure/arrival board. */
-// 	Plasma::TreeView *m_treeViewJourney; /**< A treeview displaying journeys. */
     JourneyTimetableWidget *m_journeyTimetable; /**< The graphics widget showing journeys. */
 
     Plasma::Label *m_labelJourneysNotSupported; /**< A label used to display an info about

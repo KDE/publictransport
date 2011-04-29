@@ -55,6 +55,17 @@
 #include <KLineEdit>
 #include <KCategorizedSortFilterProxyModel>
 
+Settings::Settings()
+{
+    currentStopSettingsIndex = 0;
+    filtersEnabled = false;
+}
+
+Settings::Settings( const Settings& other )
+{
+    *this = other;
+}
+
 SettingsUiManager::SettingsUiManager( const Settings &settings,
         Plasma::DataEngine* publicTransportEngine, Plasma::DataEngine* osmEngine,
         Plasma::DataEngine* favIconEngine, Plasma::DataEngine* geolocationEngine,
@@ -1050,7 +1061,7 @@ void SettingsUiManager::importFilterSettings()
 }
 
 Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
-                                Plasma::DataEngine *publictransportEngine )
+                                   Plasma::DataEngine *publictransportEngine )
 {
     Settings settings;
     settings.autoUpdate = cg.readEntry( "autoUpdate", true );
