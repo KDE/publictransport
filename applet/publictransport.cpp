@@ -133,17 +133,6 @@ void PublicTransport::init()
             "plasma_applet_publictransport/vehicles.svg") );
     m_vehiclesSvg.setContainsMultipleImages( true );
 
-    // DEPRECATED Load stops/filters from non-global settings 
-    // (they're stored in the global config since version 0.7 beta 4)
-    if ( m_settings.stopSettingsList.isEmpty() ) {
-        kDebug() << "No global stop settings, storing non-global stop settings globally.";
-        Settings newSettings = SettingsIO::readSettings( config(), config() );
-
-        // Store stops/filters into the global settings
-        SettingsIO::writeSettings( newSettings, m_settings, config(), globalConfig() );
-        m_settings = newSettings;
-    }
-
     if ( !m_settings.stopSettingsList.isEmpty() ) {
         m_currentServiceProviderFeatures =
             currentServiceProviderData()["features"].toStringList();
