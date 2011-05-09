@@ -228,6 +228,7 @@ private:
 class PublicTransportWidget : public Plasma::ScrollWidget
 {
     Q_OBJECT
+    Q_PROPERTY( QString noItemsText READ noItemsText WRITE setNoItemsText )
     friend class PublicTransportGraphicsItem;
     friend class DepartureItem;
 

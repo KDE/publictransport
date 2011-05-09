@@ -30,9 +30,9 @@
 // Own includes
 #include "global.h"
 #include "departureinfo.h"
-#include "settings.h"
 #include "titlewidget.h"
-#include "timetablewidget.h"
+
+#define QSTATEMACHINE_DEBUG
 
 class RouteStopTextGraphicsItem;
 class PublicTransportGraphicsItem;
@@ -49,11 +49,8 @@ class DepartureItem;
 class DepartureProcessor;
 class PublicTransportSettings;
 class OverlayWidget;
-class QSizeF;
-class QGraphicsLayout;
-class QStandardItemModel;
-class QStandardItem;
 class KSelectAction;
+class QStateMachine;
 
 namespace Plasma {
     class IconWidget;
@@ -99,16 +96,19 @@ private:
  * in TimetableWidget/JourneyTimetableWidget.
  **/
 class PublicTransport : public Plasma::PopupApplet {
+    Q_OBJECT
     /** @brief The number of currently shown departures/arrivals. */
     Q_PROPERTY( int DepartureCount READ departureCount )
 
     /** @brief The current index of the departure shown in the popup icon.
      *
-     * @note It's a qreal because transitions are stored for animation.
-     **/
+     * @note It's a qreal because transitions are stored for animation. */
     Q_PROPERTY( qreal PopupIconDepartureIndex READ popupIconDepartureIndex WRITE setPopupIconDepartureIndex )
 
-    Q_OBJECT
+    /** @brief The journey search state or the journey unsupported state.
+     *
+     * Depends on the features of the current service provider. */
+    Q_PROPERTY( QVariant supportedJourneySearchState READ supportedJourneySearchState )
 
 public:
     /** @brief Basic create. */
@@ -117,6 +117,16 @@ public:
     /** @brief Destructor. Saves the state of the header. */
     ~PublicTransport();
 
+    /** @brief Gets a pointer to either the journey search state or the journeys
+     * unsupported state. */
+    QVariant supportedJourneySearchState() const {
+        QObject *object = qobject_cast<QObject*>(
+                m_currentServiceProviderFeatures.contains("JourneySearch")
+                ? m_states["journeySearch"] : m_states["journeysUnsupportedView"] );
+        return qVariantFromValue( object );
+    };
+
+public:
     /**
      * @brief Maximum number of recent journey searches.
      *
@@ -156,9 +166,38 @@ public:
         createPopupIcon();
     };
 
+    bool isStateActive( const QString &stateName ) const;
+
 signals:
     /** @brief Emitted when the settings have changed. */
     void settingsChanged();
+
+    /** @brief Emitted when an intermediate departure list is requested for
+     * the given @p stopName. */
+    void intermediateDepartureListRequested( const QString &stopName );
+
+    /** @brief Emitted when the departure/arrival list should be shown again. */
+    void goBackToDepartureList();
+
+    /** @brief Emitted when the journey search is finished.
+     *
+     * This triggers a transition to the journey view state. */
+    void journeySearchFinished();
+
+    /** @brief Emitted when the action buttons state was cancelled. */
+    void cancelActionButtons();
+
+    void networkConnectionLost();
+    void networkIsConfiguring();
+    void networkIsActivated();
+
+    void requestedNewDepartureData();
+    void validDepartureDataReceived();
+    void invalidDepartureDataReceived();
+
+    void requestedNewJourneyData();
+    void validJourneyDataReceived();
+    void invalidJourneyDataReceived();
 
 public slots:
     /** @brief Initializes the applet. */
@@ -196,6 +235,21 @@ protected slots:
      **/
     void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
+    void setAssociatedApplicationUrlForDepartures() {
+        setAssociatedApplicationUrls( KUrl::List() << m_urlDeparturesArrivals );
+    };
+    void setAssociatedApplicationUrlForJourneys() {
+        setAssociatedApplicationUrls( KUrl::List() << m_urlJourneys );
+    };
+
+    void departureDataWaitingStateEntered();
+    void departureDataInvalidStateEntered();
+    void departureDataValidStateEntered();
+
+    void journeyDataWaitingStateEntered();
+    void journeyDataInvalidStateEntered();
+    void journeyDataValidStateEntered();
+
     /**
      * @brief Fills the departure data model with the given departure list.
      *
@@ -232,8 +286,7 @@ protected slots:
 
     void noItemsTextClicked();
 
-    /** @brief The icon widget was clicked. */
-    void iconClicked();
+    void updateInfoText();
 
     /**
      * @brief Shows the departure list.
@@ -241,10 +294,31 @@ protected slots:
      * Can be used eg. if the journey view is currently shown to go back
      * to the departure view.
      *
-     * This gets connected to the clicked signal of the close icon widget
-     * in the journey view.
+     * This gets called when the departure view state is entered.
      **/
     void showDepartureList();
+
+    /**
+     * @brief Shows the journey list.
+     *
+     * This gets called when the journey view state is entered, eg. because
+     * a journey search was finished.
+     **/
+    void showJourneyList();
+
+    /**
+     * @brief Shows an intermediate departure list.
+     *
+     * Shows a departure list for another stop, with the option to go back to
+     * the original stop again.
+     * This uses a special StopSettings item in the list of stored stop
+     * settings, which will get deleted automatically when the intermediate
+     * departure list is closed again.
+     *
+     * This gets called when the intermediate departure view state is entered,
+     * eg. because it was requested by the context menu of a route stop item.
+     **/
+    void showIntermediateDepartureList();
 
     /**
      * @brief Shows departures in the departure list (not arrivals).
@@ -267,15 +341,23 @@ protected slots:
      *   To do this also use @ref showDepartureList.
      **/
     void showArrivals();
-    
+
     /**
-     * @brief Show the journey search.
+     * @brief Shows the journey search view.
      *
      * Switches to journey search mode. To go back to the departure list use
      * @ref showDepartureList. If a journey search string is set the user can
      * go to the journey mode from the search mode.
      **/
     void showJourneySearch();
+
+    /**
+     * @brief Show a message about unsupported journeys.
+     *
+     * This gets called if the journey search state should be entered, but
+     * journeys aren't supported by the current service provider.
+     **/
+    void showJourneysUnsupportedView();
 
     /**
      * @brief Show the action button overlay.
@@ -285,8 +367,17 @@ protected slots:
      **/
     void showActionButtons();
 
+    void showMainWidget( QGraphicsWidget *mainWidget );
+
     /** @brief Shows the filter menu. */
     void showFilterMenu();
+
+    void updateDepartureListIcon();
+    void removeIntermediateStopSettings();
+
+    /** @brief Disconnects a currently connected journey data source.
+     * @ingroup models */
+    void disconnectJourneySource();
 
     /**
      * @brief Finished editing the journey search line (return pressed,
@@ -373,7 +464,7 @@ protected slots:
      * @ingroup models
      **/
     void departuresProcessed( const QString &sourceName, const QList< DepartureInfo > &departures,
-                            const QUrl &requestUrl, const QDateTime &lastUpdate );
+                              const QUrl &requestUrl, const QDateTime &lastUpdate );
 
     /**
      * @brief The worker thread has finished filtering departures.
@@ -393,8 +484,8 @@ protected slots:
      * @ingroup models
      **/
     void departuresFiltered( const QString &sourceName, const QList< DepartureInfo > &departures,
-                            const QList< DepartureInfo > &newlyFiltered,
-                            const QList< DepartureInfo > &newlyNotFiltered );
+                             const QList< DepartureInfo > &newlyFiltered,
+                             const QList< DepartureInfo > &newlyNotFiltered );
 
     /**
      * @brief The worker thread starts processing journeys from the data engine.
@@ -490,26 +581,6 @@ protected:
     /** @brief Watching for up/down key presses in m_journeySearch to select stop suggestions. */
     virtual bool eventFilter( QObject* watched, QEvent* event );
 
-    /** @brief Tests the given state.
-     *
-     * @param state The state to test.
-     *
-     * @returns True, if the state is set. False, otherwise.
-     **/
-    bool testState( AppletState state ) const {
-        return m_appletStates.testFlag( state ); };
-
-    /** @brief Adds the given state. Operations are processed to set the new applet state.
-    *
-    * @param state The state to add. */
-    void addState( AppletState state );
-
-    /** @brief Removes the given state. Operations are processed to unset the new applet state.
-     *
-     * @param state The state to remove.
-     **/
-    void removeState( AppletState state );
-
     /** @brief Creates all used QAction's. */
     void setupActions();
 
@@ -585,9 +656,6 @@ protected:
                                 const QDateTime &dateTime = QDateTime::currentDateTime(),
                                 bool stopIsTarget = true, bool timeIsDeparture = true,
                                 bool requestStopSuggestions = false );
-    /** @brief Disconnects a currently connected journey data source.
-     * @ingroup models */
-    void disconnectJourneySource();
 
     /** @brief Handles errors from the publictransport data engine for @p data from source @p sourceName.
      * @ingroup models */
@@ -613,36 +681,7 @@ protected:
     /** @brief Removes an autogenerated alarm from this departure/arrival if any. */
     void removeAlarmForDeparture( int row );
 
-    /** @brief Helper function to set the text color of an html item with a surrounding span-tag. */
-    void setTextColorOfHtmlItem( QStandardItem *item, const QColor &textColor );
-
-    /** @brief Shows the associated widgets for the given @p titleType.
-     *
-     * @param titleType The new title type to show widgets for.
-     *
-     * @param oldTitleType The old title type. Used to hide old widgets
-     *   that were shown for that old title type.
-     */
-    void showWidgetsForTitleType( TitleType titleType, TitleType oldTitleType );
-
-    /** @brief Sets the type of title to be displayed. */
-    void setTitleType( TitleType titleType );
-
-    /**
-     * @brief Unsets the given states. No other operations are processed.
-     *
-     * @param states A list of states to unset.
-     **/
-    virtual void unsetStates( QList<AppletState> states );
-
 private:
-    /** @brief Types of messages. */
-    enum MessageType {
-        MessageNone = 0, /**< No message. */
-        MessageError, /**< An error message. */
-        MessageErrorResolved /**< A message about a resolved error. */
-    };
-
     /** @brief Statuses of the network */
     enum NetworkStatus {
         StatusUnknown = 0, /**< Network status is unknown. */
@@ -684,11 +723,11 @@ private:
 
     QVariantHash currentServiceProviderData() const {
         return serviceProviderData( m_settings.currentStopSettings().get<QString>(ServiceProviderSetting) ); };
-
     QVariantHash serviceProviderData( const QString &id ) const;
 
+    void setupStateMachine();
+    Plasma::Animation *fadeOutOldAppearance();
 
-    AppletStates m_appletStates; /**< The current states of this applet */
 
     QGraphicsWidget *m_graphicsWidget, *m_mainGraphicsWidget;
     GraphicsPixmapWidget *m_oldItem;
@@ -730,15 +769,21 @@ private:
     Settings m_settings; /**< Current applet settings. */
     int m_originalStopIndex; /**< Index of the stop before showing an intermediate list via context menu. */
     QStringList m_currentServiceProviderFeatures;
-    bool m_stopNameValid; /**< Whether or not the current stop name (m_stop) is valid. */
 
     QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in departure view
             * for the context menu actions. */
 
     QActionGroup *m_filtersGroup; /**< An action group to toggle between filter configurations. */
 
-    MessageType m_currentMessage;
     DepartureProcessor *m_departureProcessor;
+
+    // State machine and states
+    QStateMachine *m_stateMachine;
+    QHash< QString, QState* > m_states;
+
+    QAbstractTransition *m_journeySearchTransition1;
+    QAbstractTransition *m_journeySearchTransition2;
+    QAbstractTransition *m_journeySearchTransition3;
 };
 
 #ifndef NO_EXPORT_PLASMA_APPLET // Needed for settings.cpp to include publictransport.h

@@ -132,9 +132,11 @@ public:
     * @brief Sets the type of this title widget to @p titleType.
     *
     * @param titleType The new title type.
-    * @param appletStates The current states of the applet.
+    * @param validDepartureData Whether or not valid departure data has been received.
+    * @param validJourneyData Whether or not valid journey data has been received.
     **/
-    void setTitleType( TitleType titleType, AppletStates appletStates );
+    void setTitleType( TitleType titleType, bool validDepartureData = false,
+                       bool validJourneyData = false );
 
     /**
     * @brief Sets the title.

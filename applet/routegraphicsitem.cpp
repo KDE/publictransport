@@ -473,11 +473,9 @@ void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent*
 
     QAction *executedAction = menu->exec( event->screenPos() );
     if ( executedAction == newFilterViaStopAction ) {
-//         emit requestFilterCreation( m_stopName, this );
-        emit requestStopAction( CreateFilterForStop, m_stopName, this );
+        emit requestStopAction( CreateFilterForStop, QString(m_stopName), this );
     } else if ( executedAction == showDeparturesAction ) {
-//         emit showDepartures( m_stopName, this );
-        emit requestStopAction( ShowDeparturesForStop, m_stopName, this );
+        emit requestStopAction( ShowDeparturesForStop, QString(m_stopName), this );
     } else if ( executedAction == copyStopToClipboardAction ) {
         QApplication::clipboard()->setText( m_stopName );
     }

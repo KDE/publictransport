@@ -204,7 +204,7 @@ public:
         ChangedServiceProvider = 0x0002, /**< Service provider settings have
                 * been changed (stop name, service provider, ...). */
         ChangedDepartureArrivalListType = 0x0004, /**< Changed from showing
-                * departures to arrivals and vice versa. */
+                * departures to arrivals or vice versa. */
         ChangedStopSettings = 0x0008, /**< Stop settings have been changed. */
         ChangedFilterSettings = 0x0010, /**< Filter settings have been changed. */
         ChangedLinesPerRow = 0x0020, /**< The lines per row setting has been changed. */

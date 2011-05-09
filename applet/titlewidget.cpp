@@ -69,10 +69,9 @@ Plasma::Label* TitleWidget::titleWidget() const
     return m_title;
 }
 
-void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
+void TitleWidget::setTitleType(TitleType titleType,
+                               bool validDepartureData, bool validJourneyData)
 {
-    kDebug() << titleType << appletStates;
-
     // Remove old additional widgets
     clearWidgets();
 
@@ -80,8 +79,7 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
     m_type = titleType;
     switch ( titleType ) {
         case ShowDepartureArrivalListTitle:
-            setIcon( appletStates.testFlag(ReceivedValidDepartureData)
-                    ? DepartureListOkIcon : DepartureListErrorIcon );
+            setIcon( validDepartureData ? DepartureListOkIcon : DepartureListErrorIcon );
             m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
             setTitle( titleText() );
 
@@ -133,8 +131,7 @@ void TitleWidget::setTitleType(TitleType titleType, AppletStates appletStates)
             break;
 
         case ShowJourneyListTitle: {
-            setIcon( appletStates.testFlag(ReceivedValidJourneyData)
-                    ? JourneyListOkIcon : JourneyListErrorIcon );
+            setIcon( validJourneyData ? JourneyListOkIcon : JourneyListErrorIcon );
             m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
 
             removeWidget( WidgetTitle, HideAndRemoveWidget ); // TEST
@@ -189,14 +186,15 @@ void TitleWidget::addJourneySearchWidgets()
     #if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
         journeySearchLineEdit->setNativeWidget( new JourneySearchLineEdit );
     #endif
-    journeySearchLineEdit->setToolTip( i18nc("@info:tooltip This should match the localized keywords.",
-                                    "<para>Type a <emphasis strong='1'>target stop</emphasis> or "
-                                    "<emphasis strong='1'>journey request</emphasis>.</para>"
-                                    "<para><emphasis strong='1'>Samples:</emphasis><list>"
-                                    "<item><emphasis>To target in 15 mins</emphasis></item>"
-                                    "<item><emphasis>From origin arriving tomorrow at 18:00</emphasis></item>"
-                                    "<item><emphasis>Target at 6:00 2010-03-07</emphasis></item>"
-                                    "</list></para>") );
+    journeySearchLineEdit->setToolTip(
+            i18nc("@info:tooltip This should match the localized keywords.",
+            "<para>Type a <emphasis strong='1'>target stop</emphasis> or "
+            "<emphasis strong='1'>journey request</emphasis>.</para>"
+            "<para><emphasis strong='1'>Samples:</emphasis><list>"
+            "<item><emphasis>To target in 15 mins</emphasis></item>"
+            "<item><emphasis>From origin arriving tomorrow at 18:00</emphasis></item>"
+            "<item><emphasis>Target at 6:00 2010-03-07</emphasis></item>"
+            "</list></para>") );
     journeySearchLineEdit->installEventFilter( this ); // Handle up/down keys (selecting stop suggestions)
     journeySearchLineEdit->setClearButtonShown( true );
     journeySearchLineEdit->nativeWidget()->setCompletionMode( KGlobalSettings::CompletionAuto );
@@ -393,8 +391,6 @@ bool TitleWidget::removeWidget(TitleWidget::WidgetType widgetType, RemoveWidgetO
 
 void TitleWidget::clearWidgets()
 {
-// 	for ( QHash<WidgetType, QGraphicsWidget*>::const_iterator it = m_widgets.constBegin();
-// 			it != m_widgets.constEnd(); ++it )
     while ( !m_widgets.isEmpty() ) {
         removeWidget( m_widgets.keys().first() );
     }
@@ -402,9 +398,6 @@ void TitleWidget::clearWidgets()
 
 void TitleWidget::updateFilterWidget()
 {
-// 	Plasma::Label *filterLabel = qgraphicsitem_cast<Plasma::Label*>(
-// 			m_filterWidget->layout()->itemAt(1)->graphicsItem() );
-// 	Q_ASSERT( filterLabel );
     if ( m_settings->filtersEnabled ) {
         m_filterWidget->setOpacity( 1 );
         QFontMetrics fm( m_filterWidget->font() );
@@ -475,11 +468,7 @@ void TitleWidget::settingsChanged()
     m_title->setFont( boldFont );
 
     if ( m_filterWidget ) {
-// 		Plasma::Label *filterLabel = qgraphicsitem_cast<Plasma::Label*>(
-// 			m_filterWidget->layout()->itemAt(1)->graphicsItem() );
-// 		if ( filterLabel ) {
-            m_filterWidget->setFont( font );
-// 		}
+        m_filterWidget->setFont( font );
     }
 
     if ( m_type == ShowDepartureArrivalListTitle
@@ -492,7 +481,25 @@ void TitleWidget::settingsChanged()
 void TitleWidget::resizeEvent(QGraphicsSceneResizeEvent* event)
 {
     QGraphicsWidget::resizeEvent( event );
-    m_filterWidget->setVisible( m_filterWidget->size().width() < size().width() / 2.2 );
+
+    kDebug() << size().width() << "-" << m_filterWidget->size().width()
+             << "-" << m_icon->size().width() << "-" << m_title->size().width()
+             << "Result=" << (size().width() - m_filterWidget->size().width() -
+                m_icon->size().width() - m_title->size().width() - 4);
+    if ( size().width() / 2.2 < 3 * m_filterWidget->size().height() ||
+         size().width() - m_filterWidget->size().width() -
+         m_icon->size().width() - m_title->size().width() - 4 <= 0
+    ) {
+        m_filterWidget->nativeWidget()->setToolButtonStyle(
+                Qt::ToolButtonIconOnly );
+        m_filterWidget->setMaximumWidth( m_filterWidget->size().height() );
+    } else {
+        m_filterWidget->nativeWidget()->setToolButtonStyle(
+                Qt::ToolButtonTextBesideIcon );
+        m_filterWidget->setMaximumWidth( -1 );
+    }
+//     setVisible( m_filterWidget->size().width() < size().width() / 2.2 );
+
     updateTitle();
 }
 

@@ -29,12 +29,12 @@
 #include <QGraphicsScene>
 
 #if QT_VERSION >= 0x040600
-#include <QParallelAnimationGroup>
-#include <QPropertyAnimation>
-#include <QGraphicsEffect>
+    #include <QParallelAnimationGroup>
+    #include <QPropertyAnimation>
+    #include <QGraphicsEffect>
 #endif
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-#include <Plasma/Animation>
+    #include <Plasma/Animation>
 #endif
 
 OverlayWidget::OverlayWidget( QGraphicsWidget* parent, QGraphicsWidget* under )

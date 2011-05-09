@@ -29,6 +29,11 @@
 #include <KIcon>
 #include "kdeversion.h"
 #include <publictransporthelper/enums.h>
+#include <QEvent>
+#include <QAbstractTransition>
+#include <qstate.h>
+#include <QSignalTransition>
+#include <QVariant>
 
 /** @brief Icons to be displayed by the Plasma::IconWidget in the applet's top left corner. */
 enum MainIconDisplay {
@@ -64,49 +69,44 @@ enum TitleType {
     ShowIntermediateDepartureListTitle = 4, /**< Shows a back icon, the stop name and additional information */
 };
 
-/** @brief Global states of the applet. */
-enum AppletState {
-    NoState                             = 0x000000, /**< No state. */
+class ToPropertyTransition : public QSignalTransition
+{
+public:
+    ToPropertyTransition( QObject *sender, const char *signal, QState *source,
+                          QObject *propertyObject, const char *targetStateProperty )
+        : QSignalTransition(sender, signal, source),
+          m_propertyObject(propertyObject),
+          m_property(targetStateProperty)
+    {
+        qRegisterMetaType<QState*>("QState*");
+    };
 
-    Initializing                        = 0x000001, /**< The applet is currently inizializing. */
+    const QObject *propertyObject() const { return m_propertyObject; };
+    const char *targetStateProperty() const { return m_property; };
+    QState *currentTargetState() const {
+        return qobject_cast<QState*>( qvariant_cast<QObject*>(m_propertyObject->property(m_property)) );
+    };
+    void setTargetStateProperty( const QObject *propertyObject, const char *property ) {
+        m_propertyObject = propertyObject;
+        m_property = property;
+    };
 
-    ShowingIntermediateDepartureList    = 0x000002, /**< The applet is currently
-                                                     * showing an intermediate departure list,
-                                                     * requested by context menu 
-                                                     * @since 0.10 beta9 */
+protected:
+    virtual bool eventTest( QEvent *event )
+    {
+        if ( !QSignalTransition::eventTest(event) ) {
+            return false;
+        }
 
-    ShowingDepartureArrivalList         = 0x000010, /**< The applet is currently
-                                                     * showing a departure / arrival list */
-    ShowingJourneyList                  = 0x000020, /**< The applet is currently
-                                                     * showing a journey list */
-    ShowingJourneySearch                = 0x000040, /**< The applet is currently
-                                                     * showing the journey search interface */
-    ShowingJourneysNotSupported         = 0x000080, /**< The applet is currently showing
-                                                     * an info, that journey searches aren't
-                                                     * supported by the current service provider. */
+        setTargetState( currentTargetState() );
+//         qDebug() << targetState();
+        return true;
+    };
 
-    WaitingForDepartureData             = 0x000100, /**< The applet is waiting for
-                                                     * departure data from the data engine */
-    ReceivedValidDepartureData          = 0x000200, /**< The applet received valid departure
-                                                     * data from the data engine */
-    ReceivedErroneousDepartureData      = 0x000400, /**< The applet received erroneous
-                                                     * departure data from the data engine */
-
-    WaitingForJourneyData               = 0x001000, /**< The applet is waiting for journey
-                                                     * data from the data engine */
-    ReceivedValidJourneyData            = 0x002000, /**< The applet received valid journey
-                                                     * data from the data engine */
-    ReceivedErroneousJourneyData        = 0x004000, /**< The applet received erroneous
-                                                     * journey data from the data engine */
-
-    SettingsJustChanged                 = 0x010000, /**< The settings have just changed
-                                                     * and dataUpdated() hasn't been called
-                                                     * since that */
-    ServiceProviderSettingsJustChanged  = 0x020000 /**< Settings were just changed that
-                                                     * require a new data request */
+private:
+    const QObject *m_propertyObject;
+    const char *m_property;
 };
-Q_DECLARE_FLAGS( AppletStates, AppletState )
-Q_DECLARE_OPERATORS_FOR_FLAGS( AppletStates )
 
 /** @brief Actions for intermediate stops, shown in RouteGraphicsItems. */
 enum StopAction {
