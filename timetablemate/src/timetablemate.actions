@@ -2,6 +2,7 @@
 Name=TimetableMate
 Name[de]=TimetableMate
 Name[et]=Sõiduplaanimeister
+Name[km]=TimetableMate
 Name[nds]=TimetableMate
 Name[pt]=TimetableMate
 Name[pt_BR]=TimetableMate
@@ -13,6 +14,7 @@ Icon=public-transport-stop
 [org.kde.timetablemate.install]
 Name=Install timetable accessor globally
 Name[et]=Sõiduplaani aksessori globaalne paigaldamine
+Name[km]=ដំឡើង​កាលវិភាគ​​កម្មវិធី​ចូល​ដំណើរការ​លកល
 Name[pt]=Instalar o motor de acesso global aos horários
 Name[pt_BR]=Instalar o mecanismo de acesso global aos horários
 Name[sv]=Installera åtkomst till tidtabeller globalt
@@ -20,6 +22,7 @@ Name[uk]=Встановити загальне джерело даних роз�
 Name[x-test]=xxInstall timetable accessor globallyxx
 Description=Authentication is required to install the timetable accessor files globally
 Description[et]=Sõiduplaani aksessori globaalseks paigaldamiseks on vajalik autentimine
+Description[km]=ទាមទារ​ការ​ផ្ទៀងផ្ទាត់​ភាព​ត្រឹមត្រូវ​ដើម្បី​ដំឡើង​កម្មវិធី​កាលវិភាគ​ឯកសារ​សកល
 Description[pt]=É necessária a autenticação para instalar os ficheiros de acesso aos horários a nível global
 Description[pt_BR]=É necessária autenticação para instalar os arquivos de acesso aos horários globalmente
 Description[sv]=Behörighet krävs för att installera filer för tidtabellåtkomst globalt
