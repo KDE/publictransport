@@ -13,6 +13,7 @@ Name[x-test]=xxOpenStreetMap data enginexx
 Comment=The OpenStreetMap data engine can be used to query things near the user.
 Comment[et]=OpenStreetMapi andmete mootorit saab kasutada teabe hankimiseks kasutaja lähedal asuvate objektide kohta.
 Comment[km]=ម៉ាស៊ីន​ទិន្នន័យ OpenStreetMap អាច​ត្រូវ​បាន​ប្រើ​ដើម្បី​សួររក​វត្ថុ​នៅ​ជិត​អ្នក​ប្រើ ។
+Comment[nl]=De gegevensengine OpenStreetMap kan worden gebruikt om zaken in de buurt van de gebruiker op te vragen.
 Comment[pt]=O motor de dados do OpenStreetMap pode ser usado para pesquisar itens perto do utilizador.
 Comment[pt_BR]=O mecanismo de dados OpenStreetMap pode ser usado para pesquisar itens próximos do usuário.
 Comment[sv]=Datagränssnittet för Open Street Map kan användas för att fråga om saker nära användaren.

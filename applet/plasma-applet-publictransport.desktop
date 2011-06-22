@@ -15,6 +15,7 @@ Name[x-test]=xxPublic Transportxx
 Comment=Plasma Public Transport shows a departure / arrival board for public transport. It can also show journeys.
 Comment[et]=Plasma ühiskondliku transpordi vidin näitab liiklusvahendite saabumis- ja lahkumisaegu, samuti teekondi.
 Comment[km]=ការ​ដឹកជញ្ជូន​សាធារណៈ​បង្ហាញ​ក្ដារ​ចេញដំណើរ/មកដល់​សម្រាប់​ការ​ដឹកជញ្ជូន​សាធារណៈ ។ វា​ក៏​អាច​បង្ហាញ​ការ​ធ្វើ​ដំណើរ​បាន​​ផងដែរ ។
+Comment[nl]=Plasma Openbaar vervoer toont een vertrek / aankomstbord voor openbaar vervoer. Het kan ook reizen tonen.
 Comment[pt]=Os Transportes Públicos do Plasma mostram uma tabela de partidas / chegadas para os transportes públicos. Também poderá mostrar as respectivas carreiras.
 Comment[pt_BR]=Os Transportes Públicos do Plasma mostram os horários de partidas / chegadas dos transportes públicos. Ele também poderá mostrar os trajetos.
 Comment[sv]=Plasma kollektivtrafik visar en tavla med avgångar och ankomster för kollektivtrafik. Den kan också visa resor.
