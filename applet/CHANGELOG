@@ -2,9 +2,15 @@
 Changelog of plasma-applet-publictransport 
 
 NEXT
+- Replace state flags with a QStateMachine (states for views like departures, journeys, journey search, ...; states for data status like waiting, valid, invalid; states for the network status).
+
 - Fix departures not being removed and flashing all the time by making DepartureModel::removeLeavingDepartures a slot
-- Added a context menu to route stop items (there are currently two entry: Create a filter for departures via that stop and show an intermediate departure list for that stop).
+- Add a context menu to route stop items (there are currently two entry: Create a filter for departures via that stop and show an intermediate departure list for that stop).
 - New state "showing intermediate departure list" (entered by the new context menu action)
+
+- Don't display too many route stop items (omit some if there's not enough space)
+- Add context menu entry in route stop items to highlight a stop (also highlights departures/arrivals via that stop)
+- Elide too long filter names when shown in the filter button
 
 0.10 - Beta 8
 - Make leaving departures animate before being removed from the list

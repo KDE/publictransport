@@ -91,13 +91,7 @@ public:
     virtual void paintExpanded( QPainter* painter, const QStyleOptionGraphicsItem* option,
                                 const QRectF &rect ) = 0;
 
-    virtual inline QColor textColor() const {
-        #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
-            return Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor);
-        #else
-            return Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
-        #endif
-    };
+    virtual QColor textColor() const;
     virtual inline QColor backgroundColor() const {
         #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
             return Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor);
@@ -166,8 +160,6 @@ public:
     void setLeavingStep( qreal leavingStep );
 
 signals:
-//     void requestFilterCreation( const QString &stopName, RouteStopTextGraphicsItem *item );
-//     void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
     void requestStopAction( StopAction stopAction, const QString &stopName,
                             RouteStopTextGraphicsItem *item );
 

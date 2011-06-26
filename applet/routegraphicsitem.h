@@ -33,9 +33,20 @@ class RouteStopMarkerGraphicsItem : public QGraphicsWidget {
     Q_PROPERTY( qreal hoverStep READ hoverStep WRITE setHoverStep )
 
 public:
-    RouteStopMarkerGraphicsItem( QGraphicsItem* parent = 0 );
+    /**
+     * @brief The type of a RouteStopMarkerGraphicsItem.
+     **/
+    enum MarkerType {
+        DefaultStopMarker = 0, /**< A default route stop marker. */
+        IntermediateStopMarker = 1 /**< A route stop marker for intermediate
+                * stops that are omitted / not displayed. */
+    };
+
+    RouteStopMarkerGraphicsItem( QGraphicsItem* parent = 0,
+                                 MarkerType markerType = DefaultStopMarker );
 
     qreal radius() const { return 6.0 + 2.0 * m_hoverStep; };
+    MarkerType markerType() const { return m_markerType; };
 
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
@@ -69,6 +80,7 @@ protected:
 
 private:
     qreal m_hoverStep;
+    MarkerType m_markerType;
 };
 
 /**
@@ -85,7 +97,7 @@ class RouteStopTextGraphicsItem : public QGraphicsWidget {
 
 public:
     RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font, qreal baseSize,
-                            const QString &stopText, const QString &stopName );
+                               const QString &stopText, const QString &stopName );
 
     QString stopText() const { return m_stopText; };
     QString stopName() const { return m_stopName; };
@@ -126,6 +138,10 @@ private:
 
 /**
 * @brief A QGraphicsWidget showing the route of a public transport vehicle.
+*
+* The route is shown as a thick white line with stop markers on it. For each
+* stop marker the associated stop name is shown with it's departure time.
+* This widget automatically shows/hides stops on size changes.
 **/
 class RouteGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
@@ -142,11 +158,14 @@ public:
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
 
+    QPointer<DepartureItem> item() const { return m_item; };
+
 signals:
-//     void requestFilterCreation( const QString &stopName, RouteStopTextGraphicsItem *item );
-//     void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
     void requestStopAction( StopAction stopAction, const QString &stopName,
                             RouteStopTextGraphicsItem *item );
+
+// public slots:
+//     void dataChanged();
 
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );

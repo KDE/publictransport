@@ -34,7 +34,6 @@
 #include <QGraphicsEffect>
 #include <QGraphicsSceneHoverEvent>
 #include <QMenu>
-#include <QClipboard>
 #include <KMenu>
 
 RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item )
@@ -70,9 +69,20 @@ void RouteGraphicsItem::arrangeStopItems()
         QFontMetrics fm( routeFont );
         QFontMetrics fmBold( boldRouteFont );
         const QRectF routeRect = rect();
-        const qreal step = (routeRect.width() - 20 * m_zoomFactor) / count;
+        const qreal routeStopAreaWidth = routeRect.width() - 20 * m_zoomFactor;
+
+        // Width of the route line (on which the stop items are displayed)
         const qreal routeLineWidth = 4.0 * m_zoomFactor;
-        const QPointF startStopPos( 10 * m_zoomFactor, padding() + routeLineWidth / 2.0 );
+
+        // The position of the first stop item
+        const QPointF startStopPos( 2 * padding() * m_zoomFactor,
+                                    padding() * m_zoomFactor + routeLineWidth / 2.0 );
+
+        // Distance between two stop items
+        if ( (routeRect.width() - 4 * padding() * m_zoomFactor) / count < 2 * fm.height() ) {
+            count = qFloor( routeRect.width() / (2 * fm.height()) );
+        }
+        const qreal step = routeStopAreaWidth / count;
 
         // Compute minimal text angle between 15 and 90 degrees,
         // so that the stop names don't overlap
@@ -84,15 +94,15 @@ void RouteGraphicsItem::arrangeStopItems()
                 - qCos(m_textAngle * 3.14159 / 180.0) * fm.height())
                 / qSin(m_textAngle * 3.14159 / 180.0);
 
-        for ( int i = 0; i < info->routeStops().count(); ++i ) {
+        for ( int i = 0; i < count; ++i ) {
             QPointF stopMarkerPos( startStopPos.x() + i * step, startStopPos.y() );
             QPointF stopTextPos( stopMarkerPos.x() - 4 * m_zoomFactor,
-                                stopMarkerPos.y() + 6.0 * m_zoomFactor );
+                                 stopMarkerPos.y() + 6.0 * m_zoomFactor );
             QString stopName = info->routeStops()[i];
             QString stopText = stopName;
             QFontMetrics *fontMetrics;
             QFont *font;
-            if ( i == 0 || i == info->routeStops().count() - 1 ) {
+            if ( i == 0 || i == count - 1 ) {
                 font = &boldRouteFont;
                 fontMetrics = &fmBold;
             } else {
@@ -107,19 +117,14 @@ void RouteGraphicsItem::arrangeStopItems()
             }
 
             // Elide long stop names
-// 			QString shortStop;
             qreal baseSize;
-            if ( i >= info->routeStops().count() - 2 ) {
-// 				// The last stop names may not fit horizontally (correct the last two here)
-// 				shortStop = fontMetrics->elidedText( stop, Qt::ElideRight, qMin(m_maxTextWidth,
-// 						(routeRect.right() - stopPos.x() - padding() /*- 2 * fontMetrics->height()*/)
-// 						/ qCos(m_textAngle * 3.14159 / 180.0)) );
+            if ( i >= count - 2 ) {
+                // The last stop names may not fit horizontally (correct the last two here)
                 baseSize = qMin( m_maxTextWidth,
                         (routeRect.width() - stopTextPos.x() /*- 2 * fontMetrics->height()*/)
                         / qCos(m_textAngle * 3.14159 / 180.0) );
             } else {
                 baseSize = m_maxTextWidth;
-// 				shortStop = fontMetrics->elidedText( stop, Qt::ElideRight, m_maxTextWidth );
             }
 
             RouteStopMarkerGraphicsItem *markerItem = m_markerItems[ i ];
@@ -135,8 +140,6 @@ void RouteGraphicsItem::arrangeStopItems()
             textItem->setBaseSize( baseSize );
             textItem->resize( baseSize + 10, fontMetrics->height() );
             textItem->rotate( m_textAngle );
-// 			kDebug() << "Add stop at" << stopPos;
-// 			m_textItems << routeStopItem;
         }
     }
 }
@@ -158,7 +161,6 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
 
     // Add route stops if there are at least two stops given from the data engine
     if ( info->routeStops().count() >= 2 ) {
-        int count = info->routeStops().count();
         QFont routeFont = KGlobalSettings::smallestReadableFont();
         routeFont.setPointSizeF( routeFont.pointSizeF() * m_zoomFactor );
         QFont boldRouteFont = routeFont;
@@ -166,11 +168,20 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
         QFontMetrics fm( routeFont );
         QFontMetrics fmBold( boldRouteFont );
         const QRectF routeRect = rect();
-        const qreal step = (routeRect.width() - 20 * m_zoomFactor) / count;
         const qreal routeLineWidth = 4.0 * m_zoomFactor;
-// 		const qreal stopMarkerSize = 5.0 * m_zoomFactor;
-// 		const qreal smallStopMarkerSize = 3.0 * m_zoomFactor;
         const QPointF startStopPos( (10 /*- 4*/) * m_zoomFactor,  padding() + routeLineWidth / 2.0 );
+        const qreal routeStopAreaWidth = routeRect.width() - 20 * m_zoomFactor;
+        const qreal minStep = fm.height() * 3.0;
+
+        // Compute number of route stop items 
+        // without using more space than routeStopAreaWidth
+        int count = info->routeStops().count();
+        if ( minStep * count > routeStopAreaWidth ) {
+            count = qFloor( routeStopAreaWidth / minStep );
+        }
+
+        // Compute distance between two route stop items
+        const qreal step = routeStopAreaWidth / count;
 
         // Compute minimal text angle between 15 and 90 degrees,
         // so that the stop names don't overlap
@@ -182,15 +193,90 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                 - qCos(m_textAngle * 3.14159 / 180.0) * fm.height())
                 / qSin(m_textAngle * 3.14159 / 180.0);
 
-        for ( int i = 0; i < info->routeStops().count(); ++i ) {
-            QPointF stopMarkerPos( startStopPos.x() + i * step, startStopPos.y() );
-            QPointF stopTextPos( stopMarkerPos.x() - 4 * m_zoomFactor,
-                                stopMarkerPos.y() + 6.0 * m_zoomFactor );
-            QString stopName = info->routeStops()[i];
+        // TODO: Ensure the highlighted stop name gets shown (not omitted)
+        int omitCount = info->routeStops().count() - count;
+        int omitIndex = omitCount == 0 ? -1 : qFloor(count / 2.0);
+
+        DepartureModel *model = qobject_cast<DepartureModel*>( m_item->model() );
+        QPalette highlightedPalette = palette();
+        QPalette defaultPalette = palette();
+        if ( !model->highlightedStop().isEmpty() ) {
+            QColor highlightColor = KColorUtils::mix(
+                    Plasma::Theme::defaultTheme()->color(Plasma::Theme::HighlightColor),
+                    palette().color(QPalette::Active, QPalette::Text), 0.3 );
+            highlightedPalette.setColor( QPalette::Active, QPalette::Text,
+                                         highlightColor );
+            highlightedPalette.setColor( QPalette::Active, QPalette::ButtonText,
+                                         highlightColor );
+        } else {
+            #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+                defaultPalette.setColor( QPalette::Active, QPalette::ButtonText,
+                                         Plasma::Theme::TextColor );
+            #else
+                defaultPalette.setColor( QPalette::Active, QPalette::ButtonText,
+                                         Plasma::Theme::ViewTextColor );
+            #endif
+        }
+
+        for ( int positionIndex = 0; positionIndex < count; ++positionIndex ) {
+            const QPointF stopMarkerPos( startStopPos.x() + positionIndex * step, startStopPos.y() );
+            int index;
+            if ( positionIndex == omitIndex ) { // Currently at first omitted stop
+                // Create intermediate marker item
+                RouteStopMarkerGraphicsItem *markerItem = new RouteStopMarkerGraphicsItem(
+                        this, RouteStopMarkerGraphicsItem::IntermediateStopMarker );
+                markerItem->setPos( stopMarkerPos );
+                m_markerItems << markerItem;
+
+                // Create a list with all omitted stops (and times if available)
+                // to be used for the tooltip of the intermediate marker item
+                QStringList omittedStopList;
+                for ( int omittedIndex = omitIndex;
+                      omittedIndex < omitIndex + omitCount; ++omittedIndex )
+                {
+                    QString stopText = info->routeStops()[omittedIndex];
+
+                    // Prepend departure time at the current stop, if a time is given
+                    if ( info->routeTimes()[omittedIndex].isValid() ) {
+                        stopText = stopText.prepend( QString("%1: ")
+                                .arg(KGlobal::locale()->formatTime(info->routeTimes()[omittedIndex])) );
+                    }
+
+                    // TODO FIXME
+                    bool manuallyHighlighted =
+                            model->routeItemFlags(stopText).testFlag(RouteItemHighlighted);
+                    omittedStopList << (manuallyHighlighted
+                            ? QString("<emphasis strong='1'>%1</emphasis>").arg(stopText)
+                            : stopText);
+                }
+                markerItem->setToolTip( i18nc("@info:tooltip This is the title for "
+                        "tooltips of stop marker items for omitted route stops. "
+                        "The names (and times if available) of the omitted stops "
+                        "get placed at '%1'.",
+                        "<emphasis strong='1'>Intermediate stops:</emphasis><nl/>%1",
+                        omittedStopList.join(",<nl/>")) );
+                continue;
+            } else if ( positionIndex > omitIndex ) {
+                // Currently after the omitted stops, compute index in stop list 
+                // by adding omitted count to positional index
+                index = positionIndex + omitCount;
+            } else {
+                // Currently before the omitted stops, index in stop list equals
+                // positional index
+                index = positionIndex;
+            }
+
+            const QPointF stopTextPos( stopMarkerPos.x() - 4 * m_zoomFactor,
+                                       stopMarkerPos.y() + 6.0 * m_zoomFactor );
+            QString stopName = info->routeStops()[index];
             QString stopText = stopName;
             QFontMetrics *fontMetrics;
             QFont *font;
-            if ( i == 0 || i == info->routeStops().count() - 1 ) {
+
+            bool manuallyHighlighted = model->routeItemFlags(stopName).testFlag(RouteItemHighlighted);
+            if ( index == 0 || index == info->routeStops().count() - 1 // first and last item
+                 || manuallyHighlighted )
+            {
                 font = &boldRouteFont;
                 fontMetrics = &fmBold;
             } else {
@@ -199,40 +285,41 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             }
 
             // Prepend departure time at the current stop, if a time is given
-            if ( i < info->routeTimes().count() && info->routeTimes()[i].isValid() ) {
+            if ( index < info->routeTimes().count() && info->routeTimes()[index].isValid() ) {
                 stopText = stopText.prepend( QString("%1: ")
-                        .arg(KGlobal::locale()->formatTime(info->routeTimes()[i])) );
+                        .arg(KGlobal::locale()->formatTime(info->routeTimes()[index])) );
             }
 
-            // Elide long stop names
-// 			QString shortStop;
+            // Get max text width
             qreal baseSize;
-            if ( i >= info->routeStops().count() - 2 ) {
-// 				// The last stop names may not fit horizontally (correct the last two here)
-// 				shortStop = fontMetrics->elidedText( stop, Qt::ElideRight, qMin(m_maxTextWidth,
-// 						(routeRect.right() - stopPos.x() - padding() /*- 2 * fontMetrics->height()*/)
-// 						/ qCos(m_textAngle * 3.14159 / 180.0)) );
+            if ( index >= info->routeStops().count() - 2 ) {
+                // The last stop names may not fit horizontally (correct the last two here)
                 baseSize = qMin( m_maxTextWidth,
                         (routeRect.width() - stopTextPos.x() /*- 2 * fontMetrics->height()*/)
                         / qCos(m_textAngle * 3.14159 / 180.0) );
             } else {
                 baseSize = m_maxTextWidth;
-// 				shortStop = fontMetrics->elidedText( stop, Qt::ElideRight, m_maxTextWidth );
             }
+
+            // Create marker item
             RouteStopMarkerGraphicsItem *markerItem = new RouteStopMarkerGraphicsItem( this );
             markerItem->setPos( stopMarkerPos );
             m_markerItems << markerItem;
 
-            // Create sub item, that displays a single stop name
-            // and automatically elides it and stretches it on hover to show hidden text
+            // Create text item, that displays a single stop name
+            // and automatically elides and stretches it on hover to show hidden text
             RouteStopTextGraphicsItem *textItem = new RouteStopTextGraphicsItem(
                     this, *font, baseSize, stopText, stopName );
             textItem->setPos( stopTextPos );
-// 			textItem->setBaseSize( baseSize );
             textItem->resize( baseSize + 10, fontMetrics->height() );
             textItem->rotate( m_textAngle );
+            if ( manuallyHighlighted ) {
+                textItem->setPalette( manuallyHighlighted
+                        ? highlightedPalette : defaultPalette );
+            }
             m_textItems << textItem;
 
+            // Connect (un)hovered signals and (un)hover slots of text and marker items
             connect( markerItem, SIGNAL(hovered(RouteStopMarkerGraphicsItem*)),
                      textItem, SLOT(hover()) );
             connect( markerItem, SIGNAL(unhovered(RouteStopMarkerGraphicsItem*)),
@@ -241,10 +328,8 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                      markerItem, SLOT(hover()) );
             connect( textItem, SIGNAL(unhovered(RouteStopTextGraphicsItem*)),
                      markerItem, SLOT(unhover()) );
-//             connect( textItem, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)),
-//                     this, SIGNAL(requestFilterCreation(QString,RouteStopTextGraphicsItem*)) );
-//             connect( textItem, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)),
-//                     this, SIGNAL(showDepartures(QString,RouteStopTextGraphicsItem*)) );
+
+            // Connect "stop action" signals, triggered by the context menu
             connect( textItem, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)),
                      this, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)) );
         }
@@ -291,7 +376,7 @@ void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem
     painter->setBrush( backgroundGradient );
     painter->drawRoundedRect( QRectF(routeRect.left(), routeRect.top() + padding(),
                                     routeRect.width() - step, routeLineWidth),
-                            routeLineWidth / 2.0, routeLineWidth / 2.0 );
+                              routeLineWidth / 2.0, routeLineWidth / 2.0 );
 //
     painter->setBrush( backgroundColor );
     const QPointF startStopPos( routeRect.left() + 10 * m_zoomFactor,
@@ -317,10 +402,12 @@ void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem
     }
 }
 
-RouteStopMarkerGraphicsItem::RouteStopMarkerGraphicsItem( QGraphicsItem* parent )
+RouteStopMarkerGraphicsItem::RouteStopMarkerGraphicsItem( QGraphicsItem* parent,
+                                                          MarkerType markerType )
     : QGraphicsWidget(parent)
 {
     m_hoverStep = 0.0;
+    m_markerType = markerType;
     setAcceptHoverEvents( true );
 
     QPalette p = palette();
@@ -393,11 +480,21 @@ void RouteStopMarkerGraphicsItem::setHoverStep( qreal hoverStep )
 }
 
 void RouteStopMarkerGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                                        QWidget* widget )
+                                         QWidget* widget )
 {
     Q_UNUSED( widget );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
-    KIcon("public-transport-stop").paint( painter, option->rect );
+
+    KIcon stopIcon( markerType() == DefaultStopMarker
+            ? "public-transport-stop" : "public-transport-intermediate-stops" );
+//     if ( markerType() == DefaultStopMarker ) {
+        stopIcon.paint( painter, option->rect );
+//     } else {
+//         stopIcon.paint( painter, option->rect, Qt::AlignLeft );
+//         stopIcon.paint( painter, option->rect, Qt::AlignRight );
+//         stopIcon.paint( painter, option->rect.left(), option->rect.top(),
+//                         2 * radius(), 2 * radius() );
+//     }
 }
 
 RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font,
@@ -460,25 +557,37 @@ void RouteStopTextGraphicsItem::hoverLeaveEvent(QGraphicsSceneHoverEvent* event)
 void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
 {
     KMenu *menu = new KMenu( event->widget() );
+    RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
+    DepartureModel *model = !routeItem ? NULL :
+            qobject_cast<DepartureModel*>( routeItem->item()->model() );
+    
     QAction *showDeparturesAction = new QAction( KIcon("public-transport-stop"),
             i18n("Show &Departures From '%1'", m_stopName), menu );
+    QAction *highlightStopAction = new QAction( KIcon("edit-select"),
+            (!model || !model->routeItemFlags(m_stopName).testFlag(RouteItemHighlighted))
+            ? i18n("&Highlight Stop '%1'", m_stopName) : i18n("&Unhighlight Stop"), menu );
     QAction *newFilterViaStopAction = new QAction( KIcon("view-filter"),
             i18n("&Create Filter 'Via %1'", m_stopName), menu );
     QAction *copyStopToClipboardAction = new QAction( KIcon("edit-copy"),
             i18n("&Copy Stop Name"), menu );
     menu->addTitle( KIcon("public-transport-stop"), m_stopName );
     menu->addAction( showDeparturesAction );
+    menu->addAction( highlightStopAction );
     menu->addAction( newFilterViaStopAction );
     menu->addAction( copyStopToClipboardAction );
 
     QAction *executedAction = menu->exec( event->screenPos() );
+    StopAction stopAction;
     if ( executedAction == newFilterViaStopAction ) {
-        emit requestStopAction( CreateFilterForStop, QString(m_stopName), this );
+        stopAction = CreateFilterForStop;
     } else if ( executedAction == showDeparturesAction ) {
-        emit requestStopAction( ShowDeparturesForStop, QString(m_stopName), this );
+        stopAction = ShowDeparturesForStop;
     } else if ( executedAction == copyStopToClipboardAction ) {
-        QApplication::clipboard()->setText( m_stopName );
+        stopAction = CopyStopNameToClipboard;
+    } else if ( executedAction == highlightStopAction ) {
+        stopAction = HighlightStop;
     }
+    emit requestStopAction( stopAction, QString(m_stopName), this );
 }
 
 void RouteStopTextGraphicsItem::setExpandStep( qreal expandStep )
@@ -488,11 +597,10 @@ void RouteStopTextGraphicsItem::setExpandStep( qreal expandStep )
         resize( m_baseSize + (maxSize - m_baseSize) * expandStep, size().height() );
     }
 
+    QColor normalColor = palette().color( QPalette::Active, QPalette::ButtonText );
 #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
-    QColor normalColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
     QColor hoverColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::HighlightColor );
 #else
-    QColor normalColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewTextColor );
     QColor hoverColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewHoverColor );
 #endif
     QColor currentColor = KColorUtils::mix( normalColor, hoverColor, expandStep / 2.0 );
@@ -508,12 +616,12 @@ void RouteStopTextGraphicsItem::setBaseSize( qreal baseSize )
     m_baseSize = baseSize + 10;
 }
 
-void RouteStopTextGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                                    QWidget* widget )
+void RouteStopTextGraphicsItem::paint( QPainter* painter,
+        const QStyleOptionGraphicsItem* option, QWidget* widget )
 {
     Q_UNUSED( widget );
     QColor textColor = palette().color( QPalette::Active, QPalette::Text );
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 156;
+    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 192;
 
     QFontMetrics fm( font() );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
@@ -531,7 +639,7 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter, const QStyleOptionGrap
     p.setPen( Qt::NoPen ); // No text outline
     if ( drawHalos ) {
         Plasma::PaintUtils::drawHalo( &p, QRectF(rect.left(), rect.top(),//-fm.ascent(), TODO Move f.ascent to setPos()?
-                                    fm.width(stopText), fm.height()) );
+                                      fm.width(stopText), fm.height()) );
     }
 
     // Use a QPainterPath to draw the text, because it's better antialiased then
@@ -638,7 +746,7 @@ void JourneyRouteStopGraphicsItem::paint( QPainter* painter, const QStyleOptionG
 #else
     QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewTextColor );
 #endif
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 156;
+    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 192;
     QRectF textRect = infoTextRect();
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
                                         textRect.toRect(), drawHalos );
@@ -747,7 +855,7 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                     info->routeStops()[i] );
             routeItem->setFont( *font );
             connect( routeItem, SIGNAL(requestJourneys(QString,JourneyRouteStopGraphicsItem*)),
-                    this, SLOT(processJourneyRequest(QString,JourneyRouteStopGraphicsItem*)) );
+                     this, SLOT(processJourneyRequest(QString,JourneyRouteStopGraphicsItem*)) );
             m_routeItems << routeItem;
             l->addItem( routeItem );
         }

@@ -34,6 +34,7 @@
 
 #define QSTATEMACHINE_DEBUG
 
+class DeparturePainter;
 class RouteStopTextGraphicsItem;
 class PublicTransportGraphicsItem;
 class DepartureGraphicsItem;
@@ -53,7 +54,6 @@ class KSelectAction;
 class QStateMachine;
 
 namespace Plasma {
-    class IconWidget;
     class TreeView;
     class LineEdit;
     class ToolButton;
@@ -373,6 +373,9 @@ protected slots:
     void showFilterMenu();
 
     void updateDepartureListIcon();
+
+    /** @brief Removes stop settings, that were inserted for an intermediate
+     * departure list. */
     void removeIntermediateStopSettings();
 
     /** @brief Disconnects a currently connected journey data source.
@@ -599,24 +602,6 @@ protected:
     void createPopupIcon();
 
     /**
-     * @brief Creates a pixmap for the given @p departure with an alarm.
-     *
-     * This pixmap is used for the popup icon for departures for which an alarm
-     * is set.
-     **/
-    QPixmap createAlarmPixmap( DepartureItem *departure );
-
-
-    /**
-     * @brief Creates a pixmap for the given @p departures.
-     *
-     * This pixmap is used for the popup icon for departures. Multiple
-     * departures may be drawn side by side, eg. if they depart at the same
-     * time.
-     **/
-    QPixmap createDeparturesPixmap( const QList<DepartureItem*> &departures );
-
-    /**
      * @brief Creates a new list for the first departures that are shown in the
      *   popup icon.
      *
@@ -682,15 +667,7 @@ protected:
     void removeAlarmForDeparture( int row );
 
 private:
-    /** @brief Statuses of the network */
-    enum NetworkStatus {
-        StatusUnknown = 0, /**< Network status is unknown. */
-        StatusUnavailable, /**< Network is unavailable. */
-        StatusConfiguring, /**< Network is being configured. */
-        StatusActivated /**< Network is activated. */
-    };
-
-    NetworkStatus queryNetworkStatus();
+    QString queryNetworkStatus();
 
     /** @brief Shows an error message when no interface is activated.
      * @return True, if no message is shown. False, otherwise. */
@@ -703,9 +680,6 @@ private:
 
     /** @brief Sets values of the current plasma theme. */
     void useCurrentPlasmaTheme();
-
-    void paintVehicle( QPainter *painter, VehicleType vehicle, const QRectF &rect,
-                       const QString &transportLine = QString() );
 
     /**
      * @brief Creates a menu action, which lists all stops in the settings
@@ -776,11 +750,11 @@ private:
     QActionGroup *m_filtersGroup; /**< An action group to toggle between filter configurations. */
 
     DepartureProcessor *m_departureProcessor;
+    DeparturePainter *m_departurePainter;
 
-    // State machine and states
+    // State machine, states and dynamic transitions
     QStateMachine *m_stateMachine;
     QHash< QString, QState* > m_states;
-
     QAbstractTransition *m_journeySearchTransition1;
     QAbstractTransition *m_journeySearchTransition2;
     QAbstractTransition *m_journeySearchTransition3;

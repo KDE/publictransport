@@ -658,8 +658,8 @@ ChildItem* JourneyItem::createRouteItem()
         if ( row == m_journeyInfo.routeExactStops() && row > 0 ) {
             ChildItem *separatorItem = new ChildItem(
                 OtherItem, i18nc( "@info/plain Marker for the first place in a list of "
-                                "intermediate stops, where at least one stop has been omitted",
-                                "  - End of exact route -  " ), m_info );
+                                  "intermediate stops, where at least one stop has been omitted",
+                                  "  - End of exact route -  " ), m_info );
             routeItem->appendChild( separatorItem );
         }
 
@@ -684,12 +684,12 @@ ChildItem* JourneyItem::createRouteItem()
         if ( m_journeyInfo.routePlatformsDeparture().count() > row
                     && !m_journeyInfo.routePlatformsDeparture()[row].isEmpty() ) {
             stopDep = i18nc( "@info/plain", "Platform %1", m_journeyInfo.routePlatformsDeparture()[row] )
-                        + " - " + stopDep;
+                    + " - " + stopDep;
         }
         if ( m_journeyInfo.routePlatformsArrival().count() > row
                     && !m_journeyInfo.routePlatformsArrival()[row].isEmpty() ) {
             stopArr = i18nc( "@info/plain", "Platform %1", m_journeyInfo.routePlatformsArrival()[row] )
-                        + " - " + stopArr;
+                    + " - " + stopArr;
         }
 
         QString sTimeDep = m_journeyInfo.routeTimesDeparture()[row].toString( "hh:mm" );
@@ -700,7 +700,7 @@ ChildItem* JourneyItem::createRouteItem()
                             .arg( delay ).arg( GlobalApplet::textColorDelayed().name() );
             } else if ( delay == 0 ) {
                 sTimeDep = sTimeDep.prepend( QString( "<span style='color:%1;'>" )
-                                            .arg( GlobalApplet::textColorOnSchedule().name() ) )
+                                             .arg( GlobalApplet::textColorOnSchedule().name() ) )
                                 .append( "</span>" );
             }
         }
@@ -713,7 +713,7 @@ ChildItem* JourneyItem::createRouteItem()
                             .arg( delay ).arg( GlobalApplet::textColorDelayed().name() );
             } else if ( delay == 0 ) {
                 sTimeArr = sTimeArr.prepend( QString( "<span style='color:%1;'>" )
-                                            .arg( GlobalApplet::textColorOnSchedule().name() ) )
+                                             .arg( GlobalApplet::textColorOnSchedule().name() ) )
                                 .append( "</span>" );
             }
         }
@@ -722,23 +722,23 @@ ChildItem* JourneyItem::createRouteItem()
         if ( sTransportLine.isEmpty() ) {
             routeStopItem = new ChildItem( OtherItem,
                     i18nc("@info/plain %1 is the departure time, %2 the origin stop name, "
-                        "%3 the arrival time, %4 the target stop name.",
-                        "dep: %1 - %2<nl/>arr: %3 - %4",
-                        sTimeDep, stopDep, sTimeArr, stopArr),
+                          "%3 the arrival time, %4 the target stop name.",
+                          "dep: %1 - %2<nl/>arr: %3 - %4",
+                          sTimeDep, stopDep, sTimeArr, stopArr),
                     icon, m_info );
             routeStopItem->setData( 2, LinesPerRowRole );
         } else {
             routeStopItem = new ChildItem( OtherItem,
                     i18nc("@info/plain %1 is the departure time, %2 the origin stop name, "
-                        "%3 the arrival time, %4 the target stop name, %5 the transport line.",
-                        "<emphasis strong='1'>%5</emphasis><nl/>dep: %1 - %2<nl/>arr: %3 - %4",
-                        sTimeDep, stopDep, sTimeArr, stopArr, sTransportLine),
+                          "%3 the arrival time, %4 the target stop name, %5 the transport line.",
+                          "<emphasis strong='1'>%5</emphasis><nl/>dep: %1 - %2<nl/>arr: %3 - %4",
+                          sTimeDep, stopDep, sTimeArr, stopArr, sTransportLine),
                     icon, m_info );
             routeStopItem->setData( 3, LinesPerRowRole );
         }
 
         int iconExtend = 16 * m_info->sizeFactor;
-        routeStopItem->setData( QSize( iconExtend, iconExtend ), IconSizeRole );
+        routeStopItem->setData( QSize(iconExtend, iconExtend), IconSizeRole );
 
         routeItem->appendChild( routeStopItem );
     }
@@ -758,7 +758,7 @@ DepartureItem::DepartureItem( const DepartureInfo &departureInfo, const Info *in
 int DepartureItem::row() const
 {
     if ( m_model ) {
-        return m_model->rowFromItem( const_cast<DepartureItem*>( this ) );
+        return m_model->rowFromItem( const_cast<DepartureItem*>(this) );
     } else {
         return -1;
     }
@@ -874,7 +874,8 @@ ChildItem* DepartureItem::appendNewChild( ItemType itemType )
         child = createRouteItem();
     } else {
         int linesPerRow;
-        child = new ChildItem( itemType, childItemText(itemType, &linesPerRow), KIcon(), m_info );
+        child = new ChildItem( itemType, childItemText(itemType, &linesPerRow),
+                               KIcon(), m_info );
         if ( itemType == JourneyNewsItem || itemType == DelayItem ) {
             child->setData( linesPerRow, LinesPerRowRole );
         }
@@ -1018,7 +1019,7 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow )
 
 ChildItem* DepartureItem::createRouteItem()
 {
-    ChildItem *routeItem = new ChildItem( RouteItem, childItemText( RouteItem ), m_info );
+    ChildItem *routeItem = new ChildItem( RouteItem, childItemText(RouteItem), m_info );
 
     // Add route stops as child rows
     for ( int row = 0; row < m_departureInfo.routeStops().count(); ++row ) {
@@ -1963,10 +1964,25 @@ void DepartureModel::fireAlarm( const QDateTime& dateTime, DepartureItem* item )
 #endif
     }
     kDebug() << "ALARMS TO BE REMOVED" << alarmsToRemove << item->departureInfo()->lineString()
-    << item->departureInfo()->target() << item->departureInfo()->departure();
+             << item->departureInfo()->target() << item->departureInfo()->departure();
     if ( !alarmsToRemove.isEmpty() ) {
         foreach( int i, alarmsToRemove )  // stored in descending order...
         m_info.alarmSettings.removeAt( i ); // ...so removing is ok
         emit updateAlarms( m_info.alarmSettings, alarmsToRemove );
+    }
+}
+
+RouteItemFlags DepartureModel::routeItemFlags( const QString& stopName ) const
+{
+    return m_highlightedStopName.compare( stopName, Qt::CaseInsensitive ) == 0
+            ? RouteItemHighlighted : RouteItemDefault;
+}
+
+void DepartureModel::setHighlightedStop( const QString& stopName )
+{
+    m_highlightedStopName = stopName;
+
+    if ( !m_items.isEmpty() ) {
+        emit dataChanged( m_items.first()->index(), m_items.last()->index() );
     }
 }

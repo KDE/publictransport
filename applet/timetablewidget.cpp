@@ -556,32 +556,6 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
                             option->rect.bottomRight() - QPoint(0, 1)),
                     QBrush(borderGradient) );
 
-// 	if ( option->state.testFlag(QStyle::State_HasFocus)
-// 		|| option->state.testFlag(QStyle::State_Selected)
-// 		|| option->state.testFlag(QStyle::State_MouseOver) )
-// 	{
-// 		QColor focusColor = KColorScheme( QPalette::Active, KColorScheme::Selection )
-// 							.background( KColorScheme::NormalBackground ).color();
-// 		if ( option->state.testFlag(QStyle::State_Selected) ) {
-// 			if ( option->state.testFlag(QStyle::State_MouseOver) ) {
-// 				focusColor.setAlpha( focusColor.alpha() * 0.65f );
-// 			} else {
-// 				focusColor.setAlpha( focusColor.alpha() * 0.55f );
-// 			}
-// 		} else if ( option->state.testFlag( QStyle::State_MouseOver ) ) {
-// 			focusColor.setAlpha( focusColor.alpha() * 0.2f );
-// 		}
-//
-// 		QLinearGradient bgGradient( 0, 0, 1, 0 );
-// 		bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-// 		bgGradient.setColorAt( 0, Qt::transparent );
-// 		bgGradient.setColorAt( 0.4, focusColor );
-// 		bgGradient.setColorAt( 0.6, focusColor );
-// 		bgGradient.setColorAt( 1, Qt::transparent );
-//
-// 		painter->fillRect( option->rect, QBrush(bgGradient) );
-// 	}
-
     // Draw journey rating background:
     //   green for relatively short duration, less changes;
     //   red for relatively long duration, more changes (controlled by the model).
@@ -750,8 +724,29 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
     }
 }
 
-void DepartureGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                        QWidget* widget )
+QColor PublicTransportGraphicsItem::textColor() const
+{
+    DepartureModel *model = qobject_cast<DepartureModel*>( m_item->model() );
+    DepartureItem *item = qobject_cast<DepartureItem*>( m_item.data() );
+    bool manuallyHighlighted = item->departureInfo()->routeStops()
+            .contains( model->highlightedStop(), Qt::CaseInsensitive );
+
+    if ( manuallyHighlighted ) {
+        QColor highlightColor = KColorUtils::mix(
+                Plasma::Theme::defaultTheme()->color(Plasma::Theme::HighlightColor),
+                palette().color(QPalette::Active, QPalette::Text), 0.5 );
+        return highlightColor;
+    } else {
+        #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+            return Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor);
+        #else
+            return Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
+        #endif
+    }
+}
+
+void DepartureGraphicsItem::paint( QPainter* painter,
+        const QStyleOptionGraphicsItem* option, QWidget* widget )
 {
     Q_UNUSED( widget );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
@@ -795,32 +790,6 @@ void DepartureGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphics
     painter->fillRect( QRect(option->rect.bottomLeft() + QPoint(0, 1),
                             option->rect.bottomRight() - QPoint(0, 1)),
                     QBrush(borderGradient) );
-
-// 	if ( option->state.testFlag(QStyle::State_HasFocus)
-// 		|| option->state.testFlag(QStyle::State_Selected)
-// 		|| option->state.testFlag(QStyle::State_MouseOver) )
-// 	{
-// 		QColor focusColor = KColorScheme( QPalette::Active, KColorScheme::Selection )
-// 							.background( KColorScheme::NormalBackground ).color();
-// 		if ( option->state.testFlag(QStyle::State_Selected) ) {
-// 			if ( option->state.testFlag(QStyle::State_MouseOver) ) {
-// 				focusColor.setAlpha( focusColor.alpha() * 0.65f );
-// 			} else {
-// 				focusColor.setAlpha( focusColor.alpha() * 0.55f );
-// 			}
-// 		} else if ( option->state.testFlag( QStyle::State_MouseOver ) ) {
-// 			focusColor.setAlpha( focusColor.alpha() * 0.2f );
-// 		}
-//
-// 		QLinearGradient bgGradient( 0, 0, 1, 0 );
-// 		bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-// 		bgGradient.setColorAt( 0, Qt::transparent );
-// 		bgGradient.setColorAt( 0.4, focusColor );
-// 		bgGradient.setColorAt( 0.6, focusColor );
-// 		bgGradient.setColorAt( 1, Qt::transparent );
-//
-// 		painter->fillRect( option->rect, QBrush(bgGradient) );
-// 	}
 
     // Draw special background for departures with an alarm
     if ( index().data(DrawAlarmBackgroundRole).toBool() ) {

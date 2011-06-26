@@ -25,9 +25,10 @@ set( publictransport_SRCS
     departureinfo.cpp
     settings.cpp
     filterwidget.cpp
+    departurepainter.cpp
     datasourcetester.cpp
-	timetablewidget.cpp
-	routegraphicsitem.cpp )
+    timetablewidget.cpp
+    routegraphicsitem.cpp )
 
 kde4_add_ui_files( publictransport_SRCS
     publicTransportConfig.ui

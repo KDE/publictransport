@@ -403,11 +403,12 @@ void TitleWidget::updateFilterWidget()
         QFontMetrics fm( m_filterWidget->font() );
         m_filterWidget->setText( fm.elidedText(GlobalApplet::translateFilterKey(
                 m_settings->currentStopSettings().get<QString>(FilterConfigurationSetting)),
-                Qt::ElideRight, m_filterWidget->maximumWidth() * 1.8) );
+                Qt::ElideRight, boundingRect().width() * 0.45) );
     } else {
         m_filterWidget->setOpacity( 0.6 );
-        m_filterWidget->setText( i18nc("@info/plain Shown in the applet to indicate that no filters are "
-                                    "currently active", "(No active filter)") );
+        m_filterWidget->setText( i18nc("@info/plain Shown in the applet to "
+                "indicate that no filters are currently active",
+                "(No active filter)") );
     }
 }
 
@@ -500,6 +501,7 @@ void TitleWidget::resizeEvent(QGraphicsSceneResizeEvent* event)
     }
 //     setVisible( m_filterWidget->size().width() < size().width() / 2.2 );
 
+    updateFilterWidget();
     updateTitle();
 }
 

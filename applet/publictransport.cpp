@@ -21,6 +21,7 @@
 #include "publictransport.h"
 #include "departureprocessor.h"
 #include "departuremodel.h"
+#include "departurepainter.h"
 #include "overlaywidget.h"
 #include "journeysearchparser.h"
 #include "journeysearchlineedit.h"
@@ -34,24 +35,18 @@
 // KDE includes
 #include <KDebug>
 #include <KLocale>
-#include <KIconEffect>
 #include <KNotification>
-#include <KConfigDialog>
 #include <KToolInvocation>
 #include <KColorScheme>
 #include <KSelectAction>
 #include <KToggleAction>
 #include <KLineEdit>
-#include <KCompletion>
-#include <KSqueezedTextLabel>
-#include <KPushButton>
 #include <KMenu>
 #include <KMimeTypeTrader>
 #include <KColorUtils>
 #include <KStandardDirs>
 
 // Plasma includes
-#include <Plasma/IconWidget>
 #include <Plasma/Label>
 #include <Plasma/ToolButton>
 #include <Plasma/LineEdit>
@@ -65,22 +60,10 @@
 // Qt includes
 #include <QPainter>
 #include <QGraphicsView>
-#include <QFontMetrics>
-#include <QSizeF>
 #include <QGraphicsLinearLayout>
-#include <QGraphicsGridLayout>
-#include <QGraphicsScene>
-#include <QListWidget>
-#include <QMenu>
-#include <QTreeView>
-#include <QStandardItemModel>
-#include <QStringListModel>
-#include <QStyle>
-#include <QScrollBar>
-#include <QTimer>
 #include <QStateMachine>
 #include <QHistoryState>
-#include <QSignalTransition>
+#include <QClipboard>
 #include <qmath.h>
 #include <qgraphicssceneevent.h>
 
@@ -132,6 +115,9 @@ void PublicTransport::init()
     m_vehiclesSvg.setImagePath( KGlobal::dirs()->findResource("data",
             "plasma_applet_publictransport/vehicles.svg") );
     m_vehiclesSvg.setContainsMultipleImages( true );
+
+    m_departurePainter = new DeparturePainter( this );
+    m_departurePainter->setSvg( &m_vehiclesSvg );
 
     if ( !m_settings.stopSettingsList.isEmpty() ) {
         m_currentServiceProviderFeatures =
@@ -401,14 +387,14 @@ void PublicTransport::setupStateMachine()
 
 bool PublicTransport::checkNetworkStatus()
 {
-    NetworkStatus status = queryNetworkStatus();
-    if ( status == StatusUnavailable ) {
+    QString status = queryNetworkStatus();
+    if ( status == "unavailable" ) {
         emit networkConnectionLost();
         return false;
-    } else if ( status == StatusConfiguring ) {
+    } else if ( status == "configuring" ) {
         emit networkIsConfiguring();
         return false;
-    } else if ( status == StatusActivated /*&& m_currentMessage == MessageError TODO*/ ) {
+    } else if ( status == "activated" /*&& m_currentMessage == MessageError TODO*/ ) {
         emit networkIsActivated();
         return false;
     } else {
@@ -418,12 +404,12 @@ bool PublicTransport::checkNetworkStatus()
 }
 
 
-PublicTransport::NetworkStatus PublicTransport::queryNetworkStatus()
+QString PublicTransport::queryNetworkStatus()
 {
-    NetworkStatus status = StatusUnavailable;
+    QString status = "unavailable";
     const QStringList interfaces = dataEngine( "network" )->sources();
     if ( interfaces.isEmpty() ) {
-        return StatusUnknown;
+        return "unknown";
     }
 
     // Check if there is an activated interface or at least one that's
@@ -431,14 +417,14 @@ PublicTransport::NetworkStatus PublicTransport::queryNetworkStatus()
     foreach( const QString &iface, interfaces ) {
         QString sStatus = dataEngine( "network" )->query( iface )["ConnectionStatus"].toString();
         if ( sStatus.isEmpty() ) {
-            return StatusUnknown;
+            return "unknown";
         }
 
         if ( sStatus == "Activated" ) {
-            status = StatusActivated;
+            status = "activated";
             break;
         } else if ( sStatus == "Configuring" ) {
-            status = StatusConfiguring;
+            status = "configuring";
         }
     }
 
@@ -707,7 +693,7 @@ void PublicTransport::reconnectJourneySource( const QString& targetStopName,
         }
     }
 
-    if ( !m_settings.currentStopSettings().get<QString>(CitySetting).isEmpty() ) { // TODO CHECK useSeparateCityValue )
+    if ( !m_settings.currentStopSettings().get<QString>(CitySetting).isEmpty() ) {
         m_currentJourneySource += QString( "|city=%1" ).arg(
                 m_settings.currentStopSettings().get<QString>(CitySetting) );
     }
@@ -1163,191 +1149,18 @@ void PublicTransport::createDepartureGroups()
     }
 }
 
-QPixmap PublicTransport::createDeparturesPixmap( const QList<DepartureItem*> &departures )
-{
-    QPixmap pixmap( 128, 128 );
-    pixmap.fill( Qt::transparent );
-    QPainter p( &pixmap );
-    QRectF vehicleRect( 0, 0, pixmap.width(), pixmap.height() );
-
-    // Calculate values for arranging vehicle type icons
-    const int vehiclesPerRow = qCeil( qSqrt(departures.count()) );
-    const int rows = qCeil( (qreal)departures.count() / (qreal)vehiclesPerRow );
-    const qreal vehicleSize = vehiclesPerRow == 1 ? vehicleRect.width()
-            : vehicleRect.width() / ( 0.8 * vehiclesPerRow );
-    const qreal vehicleOffsetX = vehiclesPerRow == 1 ? 0.0
-            : (vehicleRect.width() - vehicleSize) / (vehiclesPerRow - 1);
-    qreal vehicleOffsetY = rows == 1 ? 0.0
-            : (vehicleRect.height() - vehicleSize) / (rows - 1);
-    int vehiclesInCurrentRow = 0;
-    QDateTime time;
-    int i = 0;
-    qreal x = 0.0;
-    qreal y = 0.0;
-    if ( rows < vehiclesPerRow && rows > 1 ) {
-// 		vehicleOffsetY -= y / departures.count();
-        y = (vehicleRect.height() - vehicleSize + (rows - 1) * vehicleOffsetY) / 2.0;
-    }
-    foreach ( const DepartureItem *item, departures ) {
-        if ( !item ) {
-            continue;
-        }
-        if ( vehiclesInCurrentRow == vehiclesPerRow ) {
-            vehiclesInCurrentRow = 0;
-            if ( departures.count() - i < vehiclesPerRow ) {
-                x = vehicleOffsetX / 2.0;
-            } else {
-                x = 0;
-            }
-            y += vehicleOffsetY;
-        }
-
-        const DepartureInfo *data = item->departureInfo();
-        paintVehicle( &p, data->vehicleType(), QRectF(x, y, vehicleSize, vehicleSize),
-                    data->lineString() );
-
-        // Move to next vehicle type svg position
-// 		vehicleRect.translate( translation, translation );
-
-        if ( !time.isValid() ) {
-            time = item->departureInfo()->predictedDeparture();
-        }
-
-        ++vehiclesInCurrentRow;
-        x += vehicleOffsetX;
-        ++i;
-    }
-
-    QDateTime currentTime = QDateTime::currentDateTime();
-    int minsToDeparture = qCeil( currentTime.secsTo(time) / 60.0 );
-    QString text;
-    if ( minsToDeparture < -1 ) {
-        text.append( i18nc("Indicating the departure time of an already left vehicle", "left") );
-    } else if ( minsToDeparture < 0 ) {
-        text.append( i18nc("Indicating the departure time of a currently leaving vehicle", "leaving") );
-    } else if ( minsToDeparture == 0 ) {
-        text.append( i18nc("Indicating the departure time of a vehicle, that will leave now", "now") );
-    } else if ( minsToDeparture >= 60 * 24 ) {
-        text.append( i18np("1 day", "%1 days", qRound(minsToDeparture / (6 * 24)) / 10.0) );
-    } else if ( minsToDeparture >= 60 ) {
-        text.append( i18np("1 hour", "%1 hours", qRound(minsToDeparture / 6) / 10.0) );
-    } else {
-        text.append( i18np("1 min.", "%1 min.", minsToDeparture) );
-    }
-
-    QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
-    font.setPixelSize( pixmap.width() / 4 );
-    font.setBold( true );
-    p.setFont( font );
-    QFontMetrics fm( font );
-    int textWidth = fm.width( text );
-    QRectF textRect( 0, 0, pixmap.width(), pixmap.height() );
-    QRectF haloRect( textRect.left() + (textRect.width() - textWidth) / 2,
-                    textRect.bottom() - fm.height(), textWidth, fm.height() );
-    haloRect = haloRect.intersected( textRect ).adjusted( 3, 3, -3, -3 );
-    QTextOption option(Qt::AlignHCenter | Qt::AlignBottom);
-    option.setWrapMode( QTextOption::NoWrap );
-
-    Plasma::PaintUtils::drawHalo( &p, haloRect );
-    p.drawText( textRect, fm.elidedText(text, Qt::ElideRight, pixmap.width()), option );
-
-    p.end();
-    return pixmap;
-}
-
-QPixmap PublicTransport::createAlarmPixmap( DepartureItem* departure )
-{
-    QPixmap pixmap = createDeparturesPixmap( QList<DepartureItem*>() << departure );
-    int iconSize = pixmap.width() / 2;
-    QPixmap pixmapAlarmIcon = KIcon( "task-reminder" ).pixmap( iconSize );
-    QPainter p( &pixmap );
-    // Draw alarm icon in the top-right corner.
-    Plasma::PaintUtils::drawHalo( &p, QRectF(pixmap.width() - iconSize * 0.85 - 1, 1, iconSize * 0.7, iconSize) );
-    p.drawPixmap( pixmap.width() - iconSize - 1, 1, pixmapAlarmIcon );
-    p.end();
-
-    return pixmap;
-}
-
 void PublicTransport::createPopupIcon()
 {
-    if ( m_model->isEmpty() ) {
+    if ( m_model->isEmpty() || m_departureGroups.isEmpty() ) {
         setPopupIcon( "public-transport-stop" );
     } else {
-        if ( m_departureGroups.isEmpty() ) {
-            setPopupIcon( "public-transport-stop" );
-        } else {
-            QPixmap pixmap;
-            if ( qFuzzyCompare((qreal)qFloor(m_popupIconDepartureIndex), m_popupIconDepartureIndex) ) {
-                // If m_popupIconDepartureIndex is an integer draw without transition
-                int popupIconDepartureIndex = qBound( m_model->hasAlarms() ? -1 : 0,
-                        qFloor(m_popupIconDepartureIndex), m_departureGroups.count() - 1 );
+        QPixmap pixmap = m_departurePainter->createPopupIcon(
+                m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
+                m_popupIconDepartureIndex, m_model, m_departureGroups );
 
-                if ( popupIconDepartureIndex < 0 ) {
-                    pixmap = createAlarmPixmap( m_model->nextAlarmDeparture() );
-                } else {
-                    QDateTime time = m_departureGroups.keys()[ popupIconDepartureIndex ];
-                    pixmap = createDeparturesPixmap( m_departureGroups[time] );
-                }
-            } else {
-                // Draw transition
-                int startPopupIconDepartureIndex = qBound( m_model->hasAlarms() ? -1 : 0,
-                        m_startPopupIconDepartureIndex, m_departureGroups.count() - 1 );
-                int endPopupIconDepartureIndex = qBound( m_model->hasAlarms() ? -1 : 0,
-                        m_endPopupIconDepartureIndex, m_departureGroups.count() - 1 );
-                QPixmap startPixmap = startPopupIconDepartureIndex < 0
-                        ? createAlarmPixmap(m_model->nextAlarmDeparture())
-                        : createDeparturesPixmap(
-                        m_departureGroups[m_departureGroups.keys()[startPopupIconDepartureIndex]] );
-                QPixmap endPixmap = endPopupIconDepartureIndex < 0
-                        ? createAlarmPixmap(m_model->nextAlarmDeparture())
-                        : createDeparturesPixmap(
-                        m_departureGroups[m_departureGroups.keys()[endPopupIconDepartureIndex]] );
-
-                pixmap = QPixmap( 128, 128 );
-                pixmap.fill( Qt::transparent );
-                QPainter p( &pixmap );
-                p.setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
-
-                qreal transition, startSize, endSize;
-                if ( endPopupIconDepartureIndex > startPopupIconDepartureIndex  ) {
-                    // Move forward to next departure
-                    transition = qBound( 0.0, (m_popupIconDepartureIndex - startPopupIconDepartureIndex)
-                            / (endPopupIconDepartureIndex - startPopupIconDepartureIndex), 1.0 );
-                } else {
-                    // Mave backward to previous departure
-                    transition = 1.0 - qBound( 0.0, (startPopupIconDepartureIndex - m_popupIconDepartureIndex)
-                            / (startPopupIconDepartureIndex - endPopupIconDepartureIndex), 1.0 );
-                    qSwap( startPixmap, endPixmap );
-                }
-                startSize = (1.0 + 0.25 * transition) * pixmap.width();
-                endSize = transition * pixmap.width();
-
-                p.drawPixmap( (pixmap.width() - endSize) / 2 + pixmap.width() * (1.0 - transition) / 2.0,
-                            (pixmap.height() - endSize) / 2,
-                            endSize, endSize, endPixmap );
-
-                QPixmap startTransitionPixmap( pixmap.size() );
-                startTransitionPixmap.fill( Qt::transparent );
-                QPainter p2( &startTransitionPixmap );
-                p2.drawPixmap( 0, 0, pixmap.width(), pixmap.height(), startPixmap );
-
-                // Make startTransitionPixmap more transparent (for fading)
-                p2.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-                p2.fillRect( startTransitionPixmap.rect(), QColor(0, 0, 0, 255 * (1.0 - transition * transition)) );
-                p2.end();
-
-                p.setTransform( QTransform().rotate(transition * 90, Qt::YAxis) );
-                p.drawPixmap( (pixmap.width() - startSize) / 2 - pixmap.width() * transition / 5.0,
-                            (pixmap.height() - startSize) / 2,
-                            startSize, startSize, startTransitionPixmap );
-                p.end();
-            }
-
-            KIcon icon;
-            icon.addPixmap( pixmap );
-            setPopupIcon( icon );
-        }
+        KIcon icon;
+        icon.addPixmap( pixmap );
+        setPopupIcon( icon );
     }
 }
 
@@ -1406,78 +1219,6 @@ void PublicTransport::createTooltip()
     Plasma::ToolTipManager::self()->setContent( this, data );
 }
 
-void PublicTransport::paintVehicle( QPainter* painter, VehicleType vehicle,
-                                    const QRectF& rect, const QString &transportLine )
-{
-    // Draw transport line string onto the vehicle type svg
-    // only if activated in the settings and a supported vehicle type
-    // (currently only local public transport)
-    const bool m_drawTransportLine = true; // TODO Make configurable?
-    bool drawTransportLine = m_drawTransportLine && !transportLine.isEmpty()
-            && Timetable::Global::generalVehicleType(vehicle) == LocalPublicTransport;
-
-    QString vehicleKey;
-    switch ( vehicle ) {
-        case Tram: vehicleKey = "tram"; break;
-        case Bus: vehicleKey = "bus"; break;
-        case TrolleyBus: vehicleKey = "trolleybus"; break;
-        case Subway: vehicleKey = "subway"; break;
-        case Metro: vehicleKey = "metro"; break;
-        case InterurbanTrain: vehicleKey = "interurbantrain"; break;
-        case RegionalTrain: vehicleKey = "regionaltrain"; break;
-        case RegionalExpressTrain: vehicleKey = "regionalexpresstrain"; break;
-        case InterregionalTrain: vehicleKey = "interregionaltrain"; break;
-        case IntercityTrain: vehicleKey = "intercitytrain"; break;
-        case HighSpeedTrain: vehicleKey = "highspeedtrain"; break;
-        case Feet: vehicleKey = "feet"; break;
-        case Ship: vehicleKey = "ship"; break;
-        case Plane: vehicleKey = "plane"; break;
-        default:
-            kDebug() << "Unknown vehicle type" << vehicle;
-            return; // TODO: draw a simple circle or something.. or an unknown vehicle type icon
-    }
-    if ( drawTransportLine ) {
-        vehicleKey.append( "_empty" );
-    }
-    if ( !m_vehiclesSvg.hasElement(vehicleKey) ) {
-        kDebug() << "SVG element" << vehicleKey << "not found";
-        return;
-    }
-
-    int shadowWidth = 4;
-    m_vehiclesSvg.resize( rect.width() - 2 * shadowWidth, rect.height() - 2 * shadowWidth );
-
-    QPixmap pixmap( (int)rect.width(), (int)rect.height() );
-    pixmap.fill( Qt::transparent );
-    QPainter p( &pixmap );
-    m_vehiclesSvg.paint( &p, shadowWidth, shadowWidth, vehicleKey );
-
-    // Draw transport line string (only for local public transport)
-    if ( drawTransportLine ) {
-        QString text = transportLine;
-        text.replace(' ', "");
-
-        QFont f = font();
-        f.setBold( true );
-        if ( text.length() > 2 ) {
-            f.setPixelSize( qMax(8, qCeil(1.2 * rect.width() / text.length())) );
-        } else {
-            f.setPixelSize( rect.width() * 0.55 );
-        }
-        p.setFont( f );
-        p.setPen( Qt::white );
-
-        QRect textRect( shadowWidth, shadowWidth,
-                        rect.width() - 2 * shadowWidth, rect.height() - 2 * shadowWidth );
-        p.drawText( textRect, text, QTextOption(Qt::AlignCenter) );
-    }
-
-    QImage shadow = pixmap.toImage();
-    Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
-    painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );
-    painter->drawPixmap( rect.topLeft(), pixmap );
-}
-
 void PublicTransport::configChanged()
 {
     disconnect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
@@ -1516,19 +1257,19 @@ void PublicTransport::configChanged()
     m_labelInfo->setText( infoText() );
 
     // Update text in the departure/arrival view, if no items are in the model
-    // TODO this is a copy of code in line ~2293
+    // TODO this is a copy of code in line ~2311
     if ( !m_stateMachine || isStateActive("departureDataWaiting") ) {
         m_timetable->setNoItemsText(
                 i18nc("@info/plain", "Waiting for data...") );
     } else if ( m_settings.departureArrivalListType == ArrivalList ) {
         m_timetable->setNoItemsText( m_settings.filtersEnabled
-                ? i18nc("@info/plain", "No unfiltered arrivals.<nl/>You can disable filters "
-                        "to see all arrivals.")
+                ? i18nc("@info/plain", "No unfiltered arrivals.<nl/>You can "
+                        "disable filters to see all arrivals.")
                 : i18nc("@info/plain", "No arrivals.") );
     } else {
         m_timetable->setNoItemsText( m_settings.filtersEnabled
-                ? i18nc("@info/plain", "No unfiltered departures.<nl/>You can disable filters "
-                        "to see all departures.")
+                ? i18nc("@info/plain", "No unfiltered departures.<nl/>You can "
+                        "disable filters to see all departures.")
                 : i18nc("@info/plain", "No departures.") );
     }
 
@@ -2307,7 +2048,7 @@ void PublicTransport::departureDataValidStateEntered()
     updateDepartureListIcon();
     setBusy( false );
 
-    // TODO This is a copy of code in line ~1368
+    // TODO This is a copy of code in line ~1520
     if ( m_settings.departureArrivalListType == ArrivalList ) {
         m_timetable->setNoItemsText( m_settings.filtersEnabled
                 ? i18nc("@info/plain", "No unfiltered arrivals.<nl/>"
@@ -2479,60 +2220,68 @@ void PublicTransport::requestStopAction( StopAction stopAction,
     // Create and enable new filter
     Settings settings = m_settings;
 
-    if ( stopAction == CreateFilterForStop ) {
-        FilterSettings filterSettings;
-        Filter viaFilter;
-        viaFilter << Constraint( FilterByVia, FilterContains, stopName );
-        filterSettings.filters << viaFilter;
+    switch ( stopAction ) {
+        case CreateFilterForStop: {
+            FilterSettings filterSettings;
+            Filter viaFilter;
+            viaFilter << Constraint( FilterByVia, FilterContains, stopName );
+            filterSettings.filters << viaFilter;
 
-        QString filterName = i18nc("Default name for a new filter via a given stop",
-                    "Via %1", stopName);
-        settings.filterSettings.insert( filterName, filterSettings );
-        if ( !settings.filtersEnabled ) {
-            settings.filtersEnabled = true;
+            QString filterName = i18nc("Default name for a new filter via a given stop",
+                        "Via %1", stopName);
+            settings.filterSettings.insert( filterName, filterSettings );
+            if ( !settings.filtersEnabled ) {
+                settings.filtersEnabled = true;
+            }
+            settings.currentStopSettings().set( FilterConfigurationSetting, filterName );
+
+            writeSettings( settings );
+        } case ShowDeparturesForStop: {
+            // Save original stop index from where sub requests were made
+            // (using the context menu). Only if the departure list wasn't requested
+            // already from a sub departure list.
+            if ( !isStateActive("intermediateDepartureViewState") ) {
+                m_originalStopIndex = m_settings.currentStopSettingsIndex;
+            }
+
+            // Search for a stop setting with the given stop name in it.
+            // Create an intermediate stop item if there is no such stop setting
+            // in the configuration (automatically deleted).
+            int stopSettingsIndex = settings.stopSettingsList.findStopSettings( stopName );
+            if ( stopSettingsIndex == -1 ) {
+                StopSettings stopSettings( settings.currentStopSettings() );
+                stopSettings.setStop( stopName );
+                stopSettings.set( UserSetting + 100, "-- Intermediate Stop --" );
+                settings.stopSettingsList << stopSettings;
+                stopSettingsIndex = settings.stopSettingsList.count() - 1;
+            }
+            settings.currentStopSettingsIndex = stopSettingsIndex;
+            writeSettings( settings );
+
+            emit intermediateDepartureListRequested( stopName );
+        } case HighlightStop: {
+            m_model->setHighlightedStop(
+                    m_model->highlightedStop().compare(stopName, Qt::CaseInsensitive) == 0
+                    ? QString() : stopName );
+        } case CopyStopNameToClipboard: {
+            QApplication::clipboard()->setText( stopName );
         }
-        settings.currentStopSettings().set( FilterConfigurationSetting, filterName );
-
-        writeSettings( settings );
-    } else if ( stopAction == ShowDeparturesForStop ) {
-        // Save original stop index from where sub requests were made
-        // (using the context menu). Only if the departure list wasn't requested
-        // already from a sub departure list.
-        if ( !isStateActive("intermediateDepartureViewState") ) {
-            m_originalStopIndex = m_settings.currentStopSettingsIndex;
-        }
-
-        // Search for a stop setting with the given stop name in it.
-        // Create an intermediate stop item if there is no such stop setting
-        // in the configuration (automatically deleted).
-        int stopSettingsIndex = settings.stopSettingsList.findStopSettings( stopName );
-        if ( stopSettingsIndex == -1 ) {
-            StopSettings stopSettings( settings.currentStopSettings() );
-            stopSettings.setStop( stopName );
-            stopSettings.set( UserSetting + 100, "-- Intermediate Stop --" );
-            settings.stopSettingsList << stopSettings;
-            stopSettingsIndex = settings.stopSettingsList.count() - 1;
-        }
-        settings.currentStopSettingsIndex = stopSettingsIndex;
-        writeSettings( settings );
-
-        emit intermediateDepartureListRequested( stopName );
     }
 }
 
 void PublicTransport::removeAlarmForDeparture( int row )
 {
-    DepartureItem *item = static_cast<DepartureItem*>( m_model->item( row ) );
-    Q_ASSERT_X( item->alarmStates().testFlag( AlarmIsAutoGenerated ),
+    DepartureItem *item = static_cast<DepartureItem*>( m_model->item(row) );
+    Q_ASSERT_X( item->alarmStates().testFlag(AlarmIsAutoGenerated),
                 "PublicTransport::removeAlarmForDeparture",
-                "Only auto generated alarms can be removed" );
+                "Only auto generated alarms can be removed automatically" );
 
     // Find a matching autogenerated alarm
     int matchingAlarmSettings = -1;
     for ( int i = 0; i < m_settings.alarmSettings.count(); ++i ) {
         AlarmSettings alarmSettings = m_settings.alarmSettings[ i ];
         if ( alarmSettings.autoGenerated && alarmSettings.enabled
-                    && alarmSettings.filter.match( *item->departureInfo() ) ) {
+                    && alarmSettings.filter.match(*item->departureInfo()) ) {
             matchingAlarmSettings = i;
             break;
         }
@@ -2565,7 +2314,7 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
         return;
     }
 
-    DepartureItem *item = static_cast<DepartureItem*>( m_model->itemFromIndex( modelIndex ) );
+    DepartureItem *item = static_cast<DepartureItem*>( m_model->itemFromIndex(modelIndex) );
     DepartureInfo info = *item->departureInfo();
     QString departureTime = KGlobal::locale()->formatTime( info.departure().time() );
 
@@ -2576,11 +2325,11 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
                         "At %1 to %2", departureTime, info.target() );
     alarm.autoGenerated = true;
     alarm.affectedStops << m_settings.currentStopSettingsIndex;
-    alarm.filter.append( Constraint( FilterByDeparture, FilterEquals, info.departure() ) );
-    alarm.filter.append( Constraint( FilterByTransportLine, FilterEquals, info.lineString() ) );
-    alarm.filter.append( Constraint( FilterByVehicleType, FilterIsOneOf,
-                                    QVariantList() << info.vehicleType() ) );
-    alarm.filter.append( Constraint( FilterByTarget, FilterEquals, info.target() ) );
+    alarm.filter.append( Constraint(FilterByDeparture, FilterEquals, info.departure()) );
+    alarm.filter.append( Constraint(FilterByTransportLine, FilterEquals, info.lineString()) );
+    alarm.filter.append( Constraint(FilterByVehicleType, FilterIsOneOf,
+                                    QVariantList() << info.vehicleType()) );
+    alarm.filter.append( Constraint(FilterByTarget, FilterEquals, info.target()) );
 
     // Append new alarm in a copy of the settings. Then write the new settings.
     Settings settings = m_settings;
@@ -2607,7 +2356,7 @@ void PublicTransport::setAlarmForDeparture()
         m_popupIconTransitionAnimation = new QPropertyAnimation( this, "PopupIconDepartureIndex", this );
         m_popupIconTransitionAnimation->setStartValue( m_startPopupIconDepartureIndex );
         connect( m_popupIconTransitionAnimation, SIGNAL(finished()),
-                this, SLOT(popupIconTransitionAnimationFinished()) );
+                 this, SLOT(popupIconTransitionAnimationFinished()) );
     }
 
     m_popupIconTransitionAnimation->setEndValue( -1 );
@@ -2628,55 +2377,55 @@ void PublicTransport::alarmFired( DepartureItem* item )
         if ( departureInfo->vehicleType() == Unknown ) {
             // Vehicle type is unknown
             message = i18ncp( "@info/plain", "Line %2 to '%3' departs in %1 minute at %4",
-                            "Line %2 to '%3' departs in %1 minutes at %4",
-                            minsToDeparture, sLine, sTarget, predictedDeparture.toString( "hh:mm" ) );
+                              "Line %2 to '%3' departs in %1 minutes at %4",
+                              minsToDeparture, sLine, sTarget, predictedDeparture.toString("hh:mm") );
         } else {
             // Vehicle type is known
             message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle "
-                            "type name (e.g. tram, subway)",
-                            "The %4 %2 to '%3' departs in %1 minute at %5",
-                            "The %4 %2 to '%3' departs in %1 minutes at %5",
-                            minsToDeparture, sLine, sTarget,
-                            GlobalApplet::vehicleTypeToString(departureInfo->vehicleType()),
-                            predictedDeparture.toString("hh:mm") );
+                              "type name (e.g. tram, subway)",
+                              "The %4 %2 to '%3' departs in %1 minute at %5",
+                              "The %4 %2 to '%3' departs in %1 minutes at %5",
+                              minsToDeparture, sLine, sTarget,
+                              GlobalApplet::vehicleTypeToString(departureInfo->vehicleType()),
+                              predictedDeparture.toString("hh:mm") );
         }
     } else if ( minsToDeparture < 0 ) {
         // Has already departed
         if ( departureInfo->vehicleType() == Unknown ) {
             // Vehicle type is unknown
             message = i18ncp( "@info/plain", "Line %2 to '%3' has departed %1 minute ago at %4",
-                            "Line %2 to '%3' has departed %1 minutes ago at %4",
-                            -minsToDeparture, sLine, sTarget,
-                            predictedDeparture.toString("hh:mm") );
+                              "Line %2 to '%3' has departed %1 minutes ago at %4",
+                              -minsToDeparture, sLine, sTarget,
+                              predictedDeparture.toString("hh:mm") );
         } else {
             // Vehicle type is known
             message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle "
-                            "type name (e.g. tram, subway)",
-                            "The %4 %2 to '%3' has departed %1 minute ago at %5",
-                            "The %4 %2 to %3 has departed %1 minutes ago at %5",
-                            -minsToDeparture, sLine, sTarget,
-                            GlobalApplet::vehicleTypeToString(departureInfo->vehicleType()),
-                            predictedDeparture.toString("hh:mm") );
+                              "type name (e.g. tram, subway)",
+                              "The %4 %2 to '%3' has departed %1 minute ago at %5",
+                              "The %4 %2 to %3 has departed %1 minutes ago at %5",
+                              -minsToDeparture, sLine, sTarget,
+                              GlobalApplet::vehicleTypeToString(departureInfo->vehicleType()),
+                              predictedDeparture.toString("hh:mm") );
         }
     } else {
         // Departs now
         if ( departureInfo->vehicleType() == Unknown ) {
             // Vehicle type is unknown
             message = i18nc( "@info/plain", "Line %1 to '%2' departs now at %3",
-                            sLine, sTarget, predictedDeparture.toString( "hh:mm" ) );
+                              sLine, sTarget, predictedDeparture.toString( "hh:mm" ) );
         } else {
             // Vehicle type is known
             message = i18nc( "@info/plain %1: Line string (e.g. 'U3'), %3: Vehicle "
-                            "type name (e.g. tram, subway)",
-                            "The %3 %1 to '%2' departs now at %4", sLine, sTarget,
-                            GlobalApplet::vehicleTypeToString(departureInfo->vehicleType()),
-                            predictedDeparture.toString("hh:mm") );
+                              "type name (e.g. tram, subway)",
+                              "The %3 %1 to '%2' departs now at %4", sLine, sTarget,
+                              GlobalApplet::vehicleTypeToString(departureInfo->vehicleType()),
+                              predictedDeparture.toString("hh:mm") );
         }
     }
 
     KNotification::event( KNotification::Warning, message,
-                        KIcon("public-transport-stop").pixmap(16), 0L,
-                        KNotification::Persistent );
+                          KIcon("public-transport-stop").pixmap(16), 0L,
+                          KNotification::Persistent );
 }
 
 void PublicTransport::removeAlarms( const AlarmSettingsList &newAlarmSettings,
@@ -2695,8 +2444,8 @@ QString PublicTransport::infoText()
     QString url = data[ "url" ].toString();
     QString sLastUpdate = m_lastSourceUpdate.toString( "hh:mm" );
     if ( sLastUpdate.isEmpty() ) {
-        sLastUpdate = i18nc( "@info/plain This is used as 'last data update' text when there "
-                            "hasn't been any updates yet.", "none" );
+        sLastUpdate = i18nc( "@info/plain This is used as 'last data update' "
+                             "text when there hasn't been any updates yet.", "none" );
     }
 
     // HACK: This breaks the text at one position if needed
