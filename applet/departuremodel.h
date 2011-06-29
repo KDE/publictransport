@@ -25,8 +25,8 @@
 #define DEPARTUREMODEL_HEADER
 
 #include <QAbstractItemModel>
-#include "departureinfo.h"
 #include "settings.h" // TODO Only used for AlarmSettings. Removed here?
+#include <publictransporthelper/departureinfo.h>
 #include <QSortFilterProxyModel>
 
 /** @brief Holds information about settings from the applet. */

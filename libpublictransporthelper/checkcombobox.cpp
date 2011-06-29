@@ -300,6 +300,23 @@ void CheckCombobox::setCheckedRows( const QList< int > &rows )
 	setCheckedItems( indices );
 }
 
+void CheckCombobox::setCheckedTexts( const QStringList& texts )
+{
+    QModelIndexList indices;
+    QAbstractItemModel *model = view()->model();
+    foreach( const QString text, texts ) {
+        QModelIndexList matchedIndices = model->match(
+                model->index(0, modelColumn()), Qt::DisplayRole, text, 1,
+                Qt::MatchFixedString | Qt::MatchCaseSensitive );
+        if ( !matchedIndices.isEmpty() ) {
+            indices << matchedIndices.first();
+        } else {
+            kDebug() << "Didn't find an item with the given text" << text;
+        }
+    }
+    setCheckedItems( indices );
+}
+
 QSize CheckCombobox::sizeHint() const
 {
 	Q_D( const CheckCombobox );
@@ -367,4 +384,14 @@ QList< int > CheckCombobox::checkedRows() const
 		rows << index.row();
 	}
 	return rows;
+}
+
+QStringList CheckCombobox::checkedTexts() const
+{
+    QModelIndexList indices = checkedItems();
+    QStringList texts;
+    foreach( const QModelIndex &index, indices ) {
+        texts << index.data().toString();
+    }
+    return texts;
 }

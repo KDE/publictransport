@@ -12,6 +12,15 @@ NEXT
 - Add context menu entry in route stop items to highlight a stop (also highlights departures/arrivals via that stop)
 - Elide too long filter names when shown in the filter button
 
+- Fix alarm settings writing (the number of alarms was stored per applet, but alarm settings globally)
+- Move departureinfo.h/.cpp, filter.h/.cpp, filterwidget.h/.cpp and some parts of global.h/.cpp from the applet to libpublictransporthelper
+- Ask for a name for new filter configurations
+- Possible to choose multiple filter configurations per stop (AND combined)
+- Remove "Enable Filters" setting, to disable filters, disable all filter configurations
+- Connections between filters and stops get now stored with the filter settings (a list of stops affected by the filter, previously the name of the filter was stored with the stop settings)
+- Filters get now stored in config groups named "filterConfig_X", not "filterConfig_[NAME]" (the names get now stored inside the filter config groups)
+- New filter configuration UI with better space usage
+
 0.10 - Beta 8
 - Make leaving departures animate before being removed from the list
 

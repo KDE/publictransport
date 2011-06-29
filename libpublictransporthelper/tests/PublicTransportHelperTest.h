@@ -24,6 +24,7 @@
 
 #include <QtCore/QObject>
 #include "../stopsettings.h"
+#include "../filter.h"
 
 class PublicTransportHelperTest : public QObject
 {
@@ -69,7 +70,7 @@ private slots:
 	
 private:
 	StopSettings m_stopSettings;
-	QStringList m_filterConfigurations;
+	FilterSettingsList m_filterConfigurations;
 };
 
 #endif // PublicTransportHelperTest_H

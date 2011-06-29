@@ -18,8 +18,8 @@
  */
 
 #include "stopsettings.h"
+#include "checkcombobox.h"
 
-#include <KComboBox>
 #include <KLocale>
 #include <KGlobal>
 #include <KDebug>
@@ -314,7 +314,7 @@ QString StopSettingsWidgetFactory::textForSetting( int setting ) const
 {
 	switch ( setting ) {
 		case FilterConfigurationSetting:
-			return i18nc("@label:listbox", "&Filter Configuration:");
+			return i18nc("@label:listbox", "&Filter Configurations:");
 		case AlarmTimeSetting:
 			return i18nc("@label:spinbox", "A&larm Time:");
 		case FirstDepartureConfigModeSetting:
@@ -385,7 +385,7 @@ QVariant StopSettingsWidgetFactory::valueOfSetting(const QWidget* widget, int se
 {
 	switch ( setting ) {
 		case FilterConfigurationSetting: {
-			return qobject_cast< const KComboBox* >( widget )->currentText();
+			return qobject_cast< const CheckCombobox* >( widget )->checkedTexts();
 		}
 		case AlarmTimeSetting:
 		case TimeOffsetOfFirstDepartureSetting: {
@@ -419,7 +419,7 @@ void StopSettingsWidgetFactory::setValueOfSetting(QWidget* widget, int setting,
 {
 	switch ( setting ) {
 		case FilterConfigurationSetting:
-			qobject_cast< KComboBox* >( widget )->setCurrentItem( value.toString() );
+			qobject_cast< CheckCombobox* >( widget )->setCheckedTexts( value.toStringList() );
 			break;
 			
 		case AlarmTimeSetting:
@@ -460,12 +460,12 @@ QWidget* StopSettingsWidgetFactory::widgetForSetting( int setting, QWidget *pare
 	QWidget *widget = 0;
 	switch ( setting ) {
 		case FilterConfigurationSetting: {
-			KComboBox *filterConfiguration = new KComboBox( parent );
+			CheckCombobox *filterConfiguration = new CheckCombobox( parent );
 			filterConfiguration->setToolTip( i18nc("@info:tooltip", 
-					"The filter configuration to be used with this stop(s)"));
+					"The filter configuration(s) to be used with this stop(s)"));
 			filterConfiguration->setWhatsThis( i18nc("@info:whatsthis", 
-					"<para>Each stop can use a different filter configuration. Choose one of the "
-					"available filter configurations here.\n"
+					"<para>Each stop can use a different set of filter configurations. "
+                    "Choose these filter configurations here.\n"
 					"<note>To create/edit/remove filter configurations use the filter page "
 					"in the settings dialog.</note></para>") );
 			widget = filterConfiguration;

@@ -29,10 +29,9 @@
 
 // Own includes
 #include "global.h"
-#include "departureinfo.h"
 #include "titlewidget.h"
-
-#define QSTATEMACHINE_DEBUG
+#include "settings.h" // Only for ColorGroupSettingsList, remove here, move the function to GlobalApplet?
+#include <publictransporthelper/departureinfo.h>
 
 class DeparturePainter;
 class RouteStopTextGraphicsItem;
@@ -126,7 +125,6 @@ public:
         return qVariantFromValue( object );
     };
 
-public:
     /**
      * @brief Maximum number of recent journey searches.
      *
@@ -167,7 +165,10 @@ public:
     };
 
     bool isStateActive( const QString &stateName ) const;
-
+    
+    static ColorGroupSettingsList generateColorGroupSettingsFrom(
+            const QList< DepartureInfo >& infos );
+    
 signals:
     /** @brief Emitted when the settings have changed. */
     void settingsChanged();
@@ -529,8 +530,8 @@ protected slots:
     /** @brief An action to change the currently shown stop has been triggered. */
     void setCurrentStopIndex( QAction *action );
 
-    /** @brief Switch the currently active filter configuration to @p newFilterConfiguration. */
-    void switchFilterConfiguration( const QString &newFilterConfiguration );
+    /** @brief Enables @p filterConfiguration for the currently active stop settings. */
+    void enableFilterConfiguration( const QString &filterConfiguration, bool enable = true );
 
     /**
      * @brief An action to change the currently active filter configuration has been triggered.
@@ -538,9 +539,10 @@ protected slots:
      * This calls @ref switchFilterConfiguration with the name of the @p action.
      **/
     void switchFilterConfiguration( QAction *action );
-
-    /** @brief Changes the filters enabled state to @p enable. */
-    void setFiltersEnabled( bool enable );
+    
+    // TODO REMOVE:
+//     /** @brief Changes the filters enabled state to @p enable. */
+//     void setFiltersEnabled( bool enable );
 
     /** @brief An alarm has been fired for the given @p item. */
     void alarmFired( DepartureItem *item );

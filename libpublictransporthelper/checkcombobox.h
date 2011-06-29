@@ -93,12 +93,17 @@ public:
 	QModelIndexList checkedItems() const;
 	/** Returns a list of rows of the model that are currently checked. */
 	QList<int> checkedRows() const;
+    /** Returns a list of texts of the model that are currently checked. */
+    QStringList checkedTexts() const;
 	/** Sets all items for the given @p indices checked. All other items get
 	* unchecked. */
 	void setCheckedItems( const QModelIndexList &indices );
 	/** Sets all items at the given @p rows checked. All other items get
 	* unchecked. */
 	void setCheckedRows( const QList<int> &rows );
+    /** Sets all items with the given @p texts checked. All other items get
+    * unchecked. */
+    void setCheckedTexts( const QStringList &texts );
 	/** Sets the check state of the given @p index to @p checkState. */
 	void setItemCheckState( const QModelIndex &index, Qt::CheckState checkState );
 	/** Checks if the model has at least @p count checked items. */

@@ -28,6 +28,7 @@
 
 #include <qmath.h>
 #include <QPainter>
+#include <KColorUtils>
 
 // KCatalogLoader gets fixed in KDE 4.6.2, before there're linker errors
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,6,2)
@@ -288,6 +289,18 @@ QString Global::durationString( int seconds )
 	}
 }
 
+QColor Global::textColorOnSchedule()
+{
+    QColor color = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+    return KColorUtils::tint( color, Qt::green, 0.5 );
+}
+
+QColor Global::textColorDelayed()
+{
+    QColor color = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+    return KColorUtils::tint( color, Qt::red, 0.5 );
+}
+
 QString Global::translateFilterKey(const QString& key)
 {
 	if ( key == "Default" ) {
@@ -304,6 +317,24 @@ QString Global::untranslateFilterKey(const QString& translatedKey)
 	} else {
 		return translatedKey;
 	}
+}
+
+QStringList Global::translateFilterKeys(const QStringList& keys)
+{
+    QStringList ret;
+    foreach ( const QString &key, keys ) {
+        ret << translateFilterKey( key );
+    }
+    return ret;
+}
+
+QStringList Global::untranslateFilterKeys(const QStringList& translatedKeys)
+{
+    QStringList ret;
+    foreach ( const QString &translatedKey, translatedKeys ) {
+        ret << untranslateFilterKey( translatedKey );
+    }
+    return ret;
 }
 
 }; // namespace Timetable

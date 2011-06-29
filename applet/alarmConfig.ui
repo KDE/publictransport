@@ -163,7 +163,7 @@
             <x>0</x>
             <y>0</y>
             <width>457</width>
-            <height>60</height>
+            <height>69</height>
            </rect>
           </property>
           <layout class="QFormLayout" name="formLayout_2">
@@ -216,7 +216,7 @@
   <customwidget>
    <class>FilterWidget</class>
    <extends>QWidget</extends>
-   <header>filterwidget.h</header>
+   <header location="global">publictransporthelper/filterwidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -230,7 +230,6 @@
   <tabstop>addAlarm</tabstop>
   <tabstop>removeAlarm</tabstop>
   <tabstop>alarmType</tabstop>
-  <tabstop>affectedStops</tabstop>
   <tabstop>alarmArea</tabstop>
  </tabstops>
  <resources/>

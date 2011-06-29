@@ -31,7 +31,6 @@ DepartureProcessor::DepartureProcessor( QObject* parent ) : QThread( parent )
     m_quit = false;
     m_abortCurrentJob = false;
     m_requeueCurrentJob = false;
-    m_filtersEnabled = false;
     qRegisterMetaType< QList<DepartureInfo> >( "QList<DepartureInfo>" );
     qRegisterMetaType< QList<JourneyInfo> >( "QList<JourneyInfo>" );
 }
@@ -67,11 +66,10 @@ void DepartureProcessor::abortJobs( DepartureProcessor::JobTypes jobTypes )
     }
 }
 
-void DepartureProcessor::setFilterSettings( const FilterSettings &filterSettings, bool filtersEnabled )
+void DepartureProcessor::setFilterSettings( const FilterSettingsList &filterSettings )
 {
     QMutexLocker locker( &m_mutex );
     m_filterSettings = filterSettings;
-    m_filtersEnabled = filtersEnabled;
 
     if ( m_currentJob == ProcessDepartures && !m_jobQueue.isEmpty() ) {
         m_requeueCurrentJob = true;
@@ -83,6 +81,7 @@ void DepartureProcessor::setFirstDepartureSettings(
         const QTime& timeOfFirstDepartureCustom,
         int timeOffsetOfFirstDeparture )
 {
+    QMutexLocker locker( &m_mutex );
     m_firstDepartureConfigMode = firstDepartureConfigMode;
     m_timeOfFirstDepartureCustom = timeOfFirstDepartureCustom;
     m_timeOffsetOfFirstDeparture = timeOffsetOfFirstDeparture;
@@ -90,6 +89,7 @@ void DepartureProcessor::setFirstDepartureSettings(
 
 void DepartureProcessor::setAlarmSettings( const AlarmSettingsList& alarmSettings )
 {
+    QMutexLocker locker( &m_mutex );
     m_alarmSettings = alarmSettings;
 
     if ( m_currentJob == ProcessDepartures && !m_jobQueue.isEmpty() ) {
@@ -204,11 +204,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     QVariantHash data = departureJob->data;
 
     m_mutex.lock();
-    bool filtersEnabled = m_filtersEnabled;
-    FilterSettings filterSettings;
-    if ( filtersEnabled ) {
-        filterSettings = m_filterSettings;
-    }
+    FilterSettingsList filterSettings = m_filterSettings;
     AlarmSettingsList alarmSettingsList = m_alarmSettings;
 
     FirstDepartureConfigMode firstDepartureConfigMode = m_firstDepartureConfigMode;
@@ -264,8 +260,8 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
         // Mark departures/arrivals as filtered out that are either filtered out
         // or shouldn't be shown because of the first departure settings
         if ( !isTimeShown(departureInfo.predictedDeparture(), firstDepartureConfigMode,
-                        timeOfFirstDepartureCustom, timeOffsetOfFirstDeparture)
-                || (filtersEnabled && filterSettings.filterOut(departureInfo)) ) {
+                          timeOfFirstDepartureCustom, timeOffsetOfFirstDeparture)
+             || filterSettings.filterOut(departureInfo) ) {
 // 			kDebug() << "Filter out" << filterSettings.filterOut(departureInfo)
 // 				<< Global::vehicleTypeToString(departureInfo.vehicleType()) << departureInfo.lineString()
 // 				<< departureInfo.target();
@@ -401,11 +397,7 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
     QList< DepartureInfo > newlyFiltered, newlyNotFiltered;
 
     m_mutex.lock();
-    bool filtersEnabled = m_filtersEnabled;
-    FilterSettings filterSettings;
-    if ( filtersEnabled ) {
-        filterSettings = m_filterSettings;
-    }
+    FilterSettingsList filterSettings = m_filterSettings;
 
     FirstDepartureConfigMode firstDepartureConfigMode = m_firstDepartureConfigMode;
     const QTime &timeOfFirstDepartureCustom = m_timeOfFirstDepartureCustom;
@@ -415,7 +407,7 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
     emit beginFiltering( filterJob->sourceName );
     kDebug() << "  - " << departures.count() << "departures to be filtered";
     for ( int i = 0; i < departures.count(); ++i ) {
-        const bool filterOut = filtersEnabled && filterSettings.filterOut( departures[i] );
+        const bool filterOut = filterSettings.filterOut( departures[i] );
         DepartureInfo &departureInfo = departures[ i ];
 
         // Newly filtered departures are now filtered out and were shown.

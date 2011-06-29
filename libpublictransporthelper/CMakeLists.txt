@@ -26,6 +26,9 @@ set( publictransporthelper_LIB_SRCS
 	htmldelegate.cpp
 	global.cpp
 	columnresizer.cpp
+	filter.cpp
+	filterwidget.cpp
+	departureinfo.cpp
 )
 
 kde4_add_ui_files( publictransporthelper_LIB_SRCS
@@ -46,6 +49,7 @@ set( publictransporthelper_LIB_HDRS
 	checkcombobox.h
 	stopwidget.h
 	stoplineedit.h
+	filterwidget.h
 	
 	# Dialogs
 	accessorinfodialog.h
@@ -56,6 +60,8 @@ set( publictransporthelper_LIB_HDRS
 	enums.h
 	stopsettings.h
 	stopfinder.h
+	filter.h
+	departureinfo.h
 # 	htmldelegate.h
 )
 

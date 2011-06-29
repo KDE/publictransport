@@ -28,14 +28,17 @@
 #include <QString>
 #include <QTime>
 #include <QRegExp>
+#include <QSet>
 #include <QVariant>
+#include <QDebug>
 
 // KDE includes
 #include <KLocalizedString>
 
 // Own includes
 #include "global.h"
-#include "settings.h"
+
+using namespace Timetable;
 
 Q_DECLARE_FLAGS( LineServices, LineService )
 
@@ -45,7 +48,7 @@ Q_DECLARE_FLAGS( LineServices, LineService )
 * departure/arrival/journey.
 * @ingroup models
 **/
-class PublicTransportInfo {
+class PUBLICTRANSPORTHELPER_EXPORT PublicTransportInfo {
 public:
     PublicTransportInfo() { };
 
@@ -69,7 +72,7 @@ protected:
 /** @class JourneyInfo
 * @brief Stores information about journeys.
 * @ingroup models */
-class JourneyInfo : public PublicTransportInfo {
+class PUBLICTRANSPORTHELPER_EXPORT JourneyInfo : public PublicTransportInfo {
 public:
     JourneyInfo() : PublicTransportInfo() {
         m_duration = -1;
@@ -188,12 +191,12 @@ private:
     QList<int> m_routeTimesDepartureDelay, m_routeTimesArrivalDelay;
 };
 
-bool operator <( const JourneyInfo &ji1, const JourneyInfo &ji2 );
+bool PUBLICTRANSPORTHELPER_EXPORT operator <( const JourneyInfo &ji1, const JourneyInfo &ji2 );
 
 /** @class DepartureInfo
 * @brief Stores information about departures / arrivals.
 * @ingroup models */
-class DepartureInfo : public PublicTransportInfo {
+class PUBLICTRANSPORTHELPER_EXPORT DepartureInfo : public PublicTransportInfo {
 public:
     /** Creates an invalid DepartureInfo object. */
     DepartureInfo() : PublicTransportInfo() {
@@ -350,9 +353,28 @@ private:
 };
 Q_DECLARE_METATYPE( DepartureInfo );
 
-uint qHash( const DepartureInfo &departureInfo );
-bool operator <( const DepartureInfo &di1, const DepartureInfo &di2 );
-QDebug &operator <<( QDebug debug, const DepartureInfo &departureInfo );
-QDebug &operator <<( QDebug debug, const JourneyInfo &journeyInfo );
+uint PUBLICTRANSPORTHELPER_EXPORT qHash( const DepartureInfo &departureInfo );
+bool PUBLICTRANSPORTHELPER_EXPORT operator <( const DepartureInfo &di1, const DepartureInfo &di2 );
+
+// QDebug &operator <<( QDebug debug, const DepartureInfo &departureInfo );
+// QDebug &operator <<( QDebug debug, const JourneyInfo &journeyInfo );
+
+inline QDebug& operator<<( QDebug debug, const DepartureInfo& departureInfo )
+{
+    return debug << QString( "(%1 %2 at %3)" )
+            .arg( departureInfo.lineString() )
+            .arg( departureInfo.target() )
+            .arg( departureInfo.predictedDeparture().toString() );
+}
+
+inline QDebug& operator<<( QDebug debug, const JourneyInfo& journeyInfo )
+{
+    return debug << QString( "(from %1 to %2, %3, %4 changes at %5)" )
+            .arg( journeyInfo.startStopName() )
+            .arg( journeyInfo.targetStopName() )
+            .arg( journeyInfo.durationToDepartureString() )
+            .arg( journeyInfo.changes() )
+            .arg( journeyInfo.departure().toString() );
+}
 
 #endif // DEPARTUREINFO_HEADER

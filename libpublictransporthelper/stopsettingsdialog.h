@@ -31,6 +31,7 @@
 #include "stopfinder.h"
 #include "accessorinfodialog.h"
 #include "stopsettings.h"
+#include "filter.h"
 
 #include <KDialog>
 #include <Plasma/DataEngine> // For Plasma::DataEngine::Data
@@ -144,9 +145,9 @@ public:
 				* If this flag isn't set, @ref ShowStopInputField should be used to show widget(s)
 				* to select a stop (and maybe a city). */
 				
-		ShowFilterConfigurationConfig = 0x0100, /**< Shows a combobox in a details section to 
-				* select a filter configuration. It offers all filter configurations given in the 
-				* constructor. */
+		ShowFilterConfigurationConfig = 0x0100, /**< Shows a combobox in a details section to
+				* select filter configurations (with checkboxes). It offers all filter 
+                * configurations given in the constructor. */
 		ShowAlarmTimeConfig = 0x0200, /**< Shows an input field in a details section to edit the
 				* time in minutes before the actual departure/arrival at which alarms should be 
 				* triggered. */
@@ -262,7 +263,7 @@ public:
 			const StopSettings &stopSettings = StopSettings(), 
 			StopSettingsDialog::Options options = DefaultOptions,
 			AccessorInfoDialog::Options accessorInfoDialogOptions = AccessorInfoDialog::DefaultOptions,
-			const QStringList &filterConfigurations = QStringList(),
+			const FilterSettingsList &filterConfigurations = FilterSettingsList(),
 			const QList<int> &customSettings = QList<int>(),
 			StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
 	
@@ -358,7 +359,7 @@ public:
 	 **/
 	static StopSettingsDialog *createExtendedStopSelectionDialog(
 			QWidget *parent = 0, const StopSettings &stopSettings = StopSettings(),
-			const QStringList &filterConfigurations = QStringList(),
+			const FilterSettingsList &filterConfigurations = FilterSettingsList(),
 			StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
 
 	/** 

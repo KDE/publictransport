@@ -398,17 +398,25 @@ void TitleWidget::clearWidgets()
 
 void TitleWidget::updateFilterWidget()
 {
-    if ( m_settings->filtersEnabled ) {
-        m_filterWidget->setOpacity( 1 );
-        QFontMetrics fm( m_filterWidget->font() );
-        m_filterWidget->setText( fm.elidedText(GlobalApplet::translateFilterKey(
-                m_settings->currentStopSettings().get<QString>(FilterConfigurationSetting)),
-                Qt::ElideRight, boundingRect().width() * 0.45) );
-    } else {
+    // TODO: Check if "No Filter" is activated or not
+    FilterSettingsList filterSettings = m_settings->currentFilterSettings();
+    if ( filterSettings.isEmpty() ) {
         m_filterWidget->setOpacity( 0.6 );
         m_filterWidget->setText( i18nc("@info/plain Shown in the applet to "
                 "indicate that no filters are currently active",
                 "(No active filter)") );
+    } else {
+        m_filterWidget->setOpacity( 1 );
+        QFontMetrics fm( m_filterWidget->font() );
+        if ( filterSettings.count() == 1 ) {
+            m_filterWidget->setText( fm.elidedText(
+                    GlobalApplet::translateFilterKey(filterSettings.first().name),
+                    Qt::ElideRight, boundingRect().width() * 0.45) );
+        } else {
+            m_filterWidget->setText( fm.elidedText(
+                    QString("%1 active filters").arg(filterSettings.count()),
+                    Qt::ElideRight, boundingRect().width() * 0.45) );
+        }
     }
 }
 

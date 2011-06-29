@@ -18,9 +18,9 @@
 */
 
 #include "routegraphicsitem.h"
-#include "departureinfo.h"
 #include "departuremodel.h"
 #include "timetablewidget.h"
+#include <publictransporthelper/departureinfo.h>
 
 #include <Plasma/PaintUtils>
 #include <KColorUtils>

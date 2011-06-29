@@ -18,8 +18,8 @@
  */
 
 #include "departurepainter.h"
-#include "departureinfo.h"
 #include "departuremodel.h"
+#include <publictransporthelper/departureinfo.h>
 #include <publictransporthelper/global.h>
 
 #include <Plasma/Theme>

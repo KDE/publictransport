@@ -30,6 +30,7 @@
 #include "accessorinfodialog.h"
 #include "columnresizer.h"
 #include "stoplineedit.h"
+#include "checkcombobox.h"
 
 #include <Plasma/Theme>
 #include <Plasma/DataEngineManager>
@@ -198,7 +199,7 @@ public:
 		}
 	};
 	
-	void init( const StopSettings &_oldStopSettings, const QStringList &filterConfigurations ) 
+	void init( const StopSettings &_oldStopSettings, const FilterSettingsList &filterConfigurations )
 	{
 		Q_Q( StopSettingsDialog );
 		
@@ -249,8 +250,10 @@ public:
 			}
 			
 			if ( settings.contains(FilterConfigurationSetting) ) {
-				KComboBox *filterConfiguration = settingWidget<KComboBox>( FilterConfigurationSetting );
-				filterConfiguration->addItems( filterConfigurations );
+				CheckCombobox *filterConfiguration =
+                        settingWidget<CheckCombobox>( FilterConfigurationSetting );
+				filterConfiguration->addItems(
+                        Global::translateFilterKeys(filterConfigurations.names()) );
 			}
 			
 			// Add to column resizer
@@ -574,7 +577,7 @@ public:
 	};
 	
 	// data is currently only used for StopSettings::FilterConfigurationSetting, should be a
-	// QStringList with the names of the available filter configurations
+	// FilterSettingsList
 	QWidget *addSettingWidget( int setting, const QVariant &defaultValue, const QVariant &data ) 
 	{
 		if ( settings.contains(setting) ) {
@@ -591,14 +594,16 @@ public:
 		
 		// Use the data argument
 		if ( setting == FilterConfigurationSetting ) {
-			if ( data.canConvert(QVariant::StringList) ) {
-				KComboBox *filterConfiguration = qobject_cast<KComboBox*>( widget );
-				filterConfiguration->addItems( data.toStringList() );
-			} else {
-				kDebug() << "StopSettings::FilterConfigurationSetting needs a QStringList as data "
-							"argument to addSettingWidget(), containing the names of the "
-							"available filter configurations.";
-			}
+            FilterSettingsList filterSettings = data.value<FilterSettingsList>();
+//             TODO TEST
+// 			if ( data.canConvert(QVariant::StringList) ) {
+				CheckCombobox *filterConfiguration = qobject_cast<CheckCombobox*>( widget );
+				filterConfiguration->addItems( Global::translateFilterKeys(filterSettings.names()) ); //data.toStringList() );
+// 			} else {
+// 				kDebug() << "StopSettings::FilterConfigurationSetting needs a QStringList as data "
+// 							"argument to addSettingWidget(), containing the names of the "
+// 							"available filter configurations.";
+// 			}
 		}
 		
 		// Set the widgets value 
@@ -703,7 +708,7 @@ protected:
 
 StopSettingsDialog::StopSettingsDialog( QWidget *parent, const StopSettings &stopSettings, 
 		StopSettingsDialog::Options options, AccessorInfoDialog::Options accessorInfoDialogOptions,
-		const QStringList &filterConfigurations, const QList<int> &customSettings, 
+		const FilterSettingsList &filterConfigurations, const QList<int> &customSettings,
 		StopSettingsWidgetFactory::Pointer factory ) 
 		: KDialog(parent),
 		d_ptr(new StopSettingsDialogPrivate(stopSettings, 
@@ -722,18 +727,18 @@ StopSettingsDialog *StopSettingsDialog::createSimpleAccessorSelectionDialog(
 	QWidget* parent, const StopSettings& stopSettings, StopSettingsWidgetFactory::Pointer factory )
 {
 	return new StopSettingsDialog( parent, stopSettings, SimpleAccessorSelection,
-			AccessorInfoDialog::DefaultOptions, QStringList(), QList<int>(), factory );
+			AccessorInfoDialog::DefaultOptions, FilterSettingsList(), QList<int>(), factory );
 }
 
 StopSettingsDialog* StopSettingsDialog::createSimpleStopSelectionDialog(
 	QWidget* parent, const StopSettings& stopSettings, StopSettingsWidgetFactory::Pointer factory )
 {
 	return new StopSettingsDialog( parent, stopSettings, SimpleStopSelection,
-			AccessorInfoDialog::DefaultOptions, QStringList(), QList<int>(), factory );
+			AccessorInfoDialog::DefaultOptions, FilterSettingsList(), QList<int>(), factory );
 }
 
 StopSettingsDialog* StopSettingsDialog::createExtendedStopSelectionDialog(
-	QWidget* parent, const StopSettings& stopSettings,  const QStringList &filterConfigurations,
+	QWidget* parent, const StopSettings& stopSettings,  const FilterSettingsList &filterConfigurations,
 	StopSettingsWidgetFactory::Pointer factory )
 {
 	return new StopSettingsDialog( parent, stopSettings, ExtendedStopSelection,
@@ -848,14 +853,17 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 					d->oldStopSettings[FirstDepartureConfigModeSetting] );
 			break;
 		case FilterConfigurationSetting: {
-			QString trFilterConfiguration = Global::translateFilterKey(
-				stopSettings[FilterConfigurationSetting].toString() );
-		
-			KComboBox *filterConfiguration = d->settingWidget<KComboBox>( 
-					FilterConfigurationSetting );
-			if ( filterConfiguration->contains(trFilterConfiguration) ) {
-				filterConfiguration->setCurrentItem( trFilterConfiguration );
-			}
+            kDebug() << "DEPRECATED!"; // DEPRECATED
+// 			QStringList trFilterConfigurations = Global::translateFilterKeys(
+//                     stopSettings[FilterConfigurationSetting].toStringList() );
+// 		
+// 			CheckCombobox *filterConfiguration = d->settingWidget<CheckCombobox>(
+// 					FilterConfigurationSetting );
+//             filterConfiguration->setCheckedTexts( trFilterConfigurations );
+//             TODO REMOVE:
+// 			if ( filterConfiguration->contains(trFilterConfiguration) ) {
+// 				filterConfiguration->setCurrentItem( trFilterConfiguration );
+// 			}
 			break;
 		} 
 		default:
@@ -897,17 +905,18 @@ StopSettings StopSettingsDialog::stopSettings() const
 			stopSettings.setIdOfStop( stop, d->oldStopSettings.stop(index).id );
 		}
 	}
-	
+
+	// NOTE FilterConfigurationSetting won't get written to the config file.
+    // The stops affected by a filter are written with the filter settings.
 	if ( d->options.testFlag(ShowFilterConfigurationConfig) ) {
-		KComboBox *filterConfiguration = d->settingWidget<KComboBox>( 
+        CheckCombobox *filterConfiguration = d->settingWidget<CheckCombobox>(
 				FilterConfigurationSetting );
 		Q_ASSERT_X( filterConfiguration, "StopSettingsDialogPrivate::init", 
-					"No KComboBox with name \"filterConfiguration\" found." );
-		stopSettings.set( FilterConfigurationSetting,
-				Global::untranslateFilterKey(filterConfiguration->currentText()) );
+					"No CheckCombobox with name \"filterConfiguration\" found." );
+		stopSettings.set( FilterConfigurationSetting, filterConfiguration->checkedTexts() );
 	} else if ( d->oldStopSettings.hasSetting(FilterConfigurationSetting) ) {
 		stopSettings.set( FilterConfigurationSetting,
-				d->oldStopSettings[FilterConfigurationSetting].toString() );
+                          d->oldStopSettings[FilterConfigurationSetting].toStringList() );
 	}
 	
 	if ( d->options.testFlag(ShowFirstDepartureConfig) ) {

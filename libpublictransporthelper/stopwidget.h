@@ -30,17 +30,18 @@
 #include "stopsettings.h"
 #include "dynamicwidget.h"
 #include "stopsettingsdialog.h"
+#include "filter.h"
 
 #include <QStringList>
 
 class StopListWidgetPrivate;
 class StopWidgetPrivate;
-namespace Plasma {
-    class DataEngine;
-}
 class DynamicWidget;
 class ServiceProviderModel;
 class LocationModel;
+namespace Plasma {
+    class DataEngine;
+}
 
 /**
  * @brief Shows settings for one stop (stop name, service provider ID, location, etc.).
@@ -80,7 +81,7 @@ public:
 			const StopSettings &stopSettings = StopSettings(), 
 			StopSettingsDialog::Options stopSettingsDialogOptions = StopSettingsDialog::DefaultOptions, 
 			AccessorInfoDialog::Options accessorInfoDialogOptions = AccessorInfoDialog::DefaultOptions,
-			const QStringList &filterConfigurations = QStringList(),
+			const FilterSettingsList &filterConfigurations = FilterSettingsList(),
 			QList<int> settings = QList<int>() 
 				<< FilterConfigurationSetting << AlarmTimeSetting << FirstDepartureConfigModeSetting,
 			StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
@@ -92,8 +93,8 @@ public:
 	/** @brief Sets the stop settings of this StopWidget to @p stopSettings. */
 	void setStopSettings( const StopSettings &stopSettings );
 
-	QStringList filterConfigurations() const;
-	void setFilterConfigurations( const QStringList &filterConfigurations );
+	FilterSettingsList filterConfigurations() const;
+	void setFilterConfigurations( const FilterSettingsList &filterConfigurations );
 
 	/** @brief Adds the given @p button. */
 	void addButton( QToolButton *button );
@@ -172,7 +173,7 @@ public:
 			const StopSettingsList &stopSettingsList = StopSettingsList(),
 			StopSettingsDialog::Options stopSettingsDialogOptions = StopSettingsDialog::DefaultOptions, 
 			AccessorInfoDialog::Options accessorInfoDialogOptions = AccessorInfoDialog::DefaultOptions,
-			const QStringList &filterConfigurations = QStringList(), 
+			const FilterSettingsList &filterConfigurations = FilterSettingsList(),
 			QList<int> settings = QList<int>() 
 				<< FilterConfigurationSetting << AlarmTimeSetting << FirstDepartureConfigModeSetting,
 			StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
@@ -201,7 +202,7 @@ public:
 	 * @brief Gets the list of configured filter configurations to choose from
 	 *   for @ref StopSettigns::FilterConfigurationSetting.
 	 **/
-	QStringList filterConfigurations() const;
+	FilterSettingsList filterConfigurations() const;
 	
 	/**
 	 * @brief Sets the list of configured filter configurations to choose from
@@ -209,7 +210,7 @@ public:
 	 * 
 	 * @param filterConfigurations The new list of configured filter configurations.
 	 **/
-	void setFilterConfigurations( const QStringList &filterConfigurations );
+	void setFilterConfigurations( const FilterSettingsList &filterConfigurations );
 	
 	/**
 	 * @brief Gets the behaviour of the dialog when a new empty stop setting is added.

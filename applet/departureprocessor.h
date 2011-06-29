@@ -29,8 +29,8 @@
 #include <QWaitCondition>
 #include <QQueue>
 
-#include "departureinfo.h"
-#include "filter.h"
+#include <publictransporthelper/departureinfo.h>
+#include <publictransporthelper/filter.h>
 #include "settings.h"
 
 /** @brief A worker thread that puts data from the publicTransport data engine into
@@ -82,13 +82,15 @@ public:
     **/
     static const int JOURNEY_BATCH_SIZE;
 
-    /** @brief Sets the filter settings to be used.
-    * @param filterSettings The filter settings to be used. Only used if
-    * @p filtersEnabled is true.
-    * @param filtersEnabled Whether or not filter are enabled. */
-    void setFilterSettings( const FilterSettings &filterSettings, bool filtersEnabled );
+    /**
+     * @brief Sets the filter settings to be used.
+     *
+     * @param filterSettings A list of filter settings to be used. */
+    void setFilterSettings( const FilterSettingsList &filterSettings );
+    
     /** @brief Sets the list of @p alarmSettings to be used. */
     void setAlarmSettings( const AlarmSettingsList &alarmSettings );
+    
     /** @brief Sets the first departure settings to be used.
     * @param firstDepartureConfigMode The first departure time can be relative
     * to the current time (@ref RelativeToCurrentTime) or a custom time (@ref AtCustomTime).
@@ -217,8 +219,7 @@ private:
     QQueue< JobInfo* > m_jobQueue;
     JobType m_currentJob;
 
-    FilterSettings m_filterSettings;
-    bool m_filtersEnabled;
+    FilterSettingsList m_filterSettings;
     AlarmSettingsList m_alarmSettings;
     FirstDepartureConfigMode m_firstDepartureConfigMode;
     QTime m_timeOfFirstDepartureCustom;

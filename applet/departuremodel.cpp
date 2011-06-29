@@ -697,10 +697,10 @@ ChildItem* JourneyItem::createRouteItem()
             int delay = m_journeyInfo.routeTimesDepartureDelay()[ row ];
             if ( delay > 0 ) {
                 sTimeDep += QString( " <span style='color:%2;'>+%1</span>" )
-                            .arg( delay ).arg( GlobalApplet::textColorDelayed().name() );
+                            .arg( delay ).arg( Global::textColorDelayed().name() );
             } else if ( delay == 0 ) {
                 sTimeDep = sTimeDep.prepend( QString( "<span style='color:%1;'>" )
-                                             .arg( GlobalApplet::textColorOnSchedule().name() ) )
+                                             .arg( Global::textColorOnSchedule().name() ) )
                                 .append( "</span>" );
             }
         }
@@ -710,10 +710,10 @@ ChildItem* JourneyItem::createRouteItem()
             int delay = m_journeyInfo.routeTimesArrivalDelay()[ row ];
             if ( delay > 0 ) {
                 sTimeArr += QString( " <span style='color:%2;'>+%1</span>" )
-                            .arg( delay ).arg( GlobalApplet::textColorDelayed().name() );
+                            .arg( delay ).arg( Global::textColorDelayed().name() );
             } else if ( delay == 0 ) {
                 sTimeArr = sTimeArr.prepend( QString( "<span style='color:%1;'>" )
-                                             .arg( GlobalApplet::textColorOnSchedule().name() ) )
+                                             .arg( Global::textColorOnSchedule().name() ) )
                                 .append( "</span>" );
             }
         }

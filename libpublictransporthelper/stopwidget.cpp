@@ -23,6 +23,7 @@
 #include "stopsettingsdialog.h"
 #include "locationmodel.h"
 #include "serviceprovidermodel.h"
+#include "filter.h"
 
 #include <Plasma/DataEngineManager>
 #include <KLineEdit>
@@ -41,7 +42,7 @@ class StopWidgetPrivate
 	
 public:
 	StopWidgetPrivate( StopWidget *q,
-		const StopSettings& _stopSettings, const QStringList& _filterConfigurations,
+		const StopSettings& _stopSettings, const FilterSettingsList& _filterConfigurations,
 		StopSettingsDialog::Options _stopSettingsDialogOptions, 
 		AccessorInfoDialog::Options _accessorInfoDialogOptions,
 		QList<int> _settings, 
@@ -100,7 +101,7 @@ public:
 	
 	bool newlyAdded;
 	StopSettings stopSettings;
-	QStringList filterConfigurations;
+	FilterSettingsList filterConfigurations;
 	QLabel *stop;
 	QLabel *provider;
 	ServiceProviderModel *modelServiceProviders; // Model of service providers
@@ -123,7 +124,7 @@ StopWidget::StopWidget( QWidget* parent,
 		const StopSettings& stopSettings,
 		StopSettingsDialog::Options stopSettingsDialogOptions, 
 		AccessorInfoDialog::Options accessorInfoDialogOptions,
-		 const QStringList& filterConfigurations, QList<int> settings, 
+		const FilterSettingsList& filterConfigurations, QList<int> settings,
 		StopSettingsWidgetFactory::Pointer factory )
 		: QWidget(parent), d_ptr(new StopWidgetPrivate(this, stopSettings, filterConfigurations,
 			stopSettingsDialogOptions, accessorInfoDialogOptions, settings, factory))
@@ -218,13 +219,13 @@ StopSettings StopWidget::stopSettings() const {
     return d->stopSettings;
 }
 
-QStringList StopWidget::filterConfigurations() const
+FilterSettingsList StopWidget::filterConfigurations() const
 {
 	Q_D( const StopWidget );
     return d->filterConfigurations;
 }
 
-void StopWidget::setFilterConfigurations(const QStringList& filterConfigurations) {
+void StopWidget::setFilterConfigurations(const FilterSettingsList& filterConfigurations) {
 	Q_D( StopWidget );
     d->filterConfigurations = filterConfigurations;
 }
@@ -235,7 +236,7 @@ class StopListWidgetPrivate
 	
 public:
 	StopListWidgetPrivate( StopListWidget *q,
-		const QStringList& _filterConfigurations,
+		const FilterSettingsList& _filterConfigurations,
 		StopSettingsDialog::Options _stopSettingsDialogOptions, 
 		AccessorInfoDialog::Options _accessorInfoDialogOptions,
 		QList<int> _settings, 
@@ -254,7 +255,7 @@ public:
 		Plasma::DataEngineManager::self()->unloadEngine("favicons");
 	};
 	
-	QStringList filterConfigurations;
+	FilterSettingsList filterConfigurations;
 	int currentStopIndex;
 	StopSettingsDialog::Options stopSettingsDialogOptions;
 	AccessorInfoDialog::Options accessorInfoDialogOptions;
@@ -269,7 +270,7 @@ protected:
 StopListWidget::StopListWidget( QWidget* parent, const StopSettingsList& stopSettingsList,
 		StopSettingsDialog::Options stopSettingsDialogOptions, 
 		AccessorInfoDialog::Options accessorInfoDialogOptions,
-		const QStringList& filterConfigurations, QList<int> settings, 
+		const FilterSettingsList& filterConfigurations, QList<int> settings,
 		StopSettingsWidgetFactory::Pointer factory )
 		: AbstractDynamicWidgetContainer(parent, RemoveButtonsBesideWidgets,
 		                                 AddButtonAfterLastWidget, ShowSeparators),
@@ -319,13 +320,13 @@ void StopListWidget::setCurrentStopSettingIndex( int currentStopIndex )
 	}
 }
 
-QStringList StopListWidget::filterConfigurations() const
+FilterSettingsList StopListWidget::filterConfigurations() const
 {
 	Q_D( const StopListWidget );
 	return d->filterConfigurations;
 }
 
-void StopListWidget::setFilterConfigurations( const QStringList& filterConfigurations )
+void StopListWidget::setFilterConfigurations( const FilterSettingsList& filterConfigurations )
 {
 	Q_D( StopListWidget );
 	d->filterConfigurations = filterConfigurations;
@@ -407,8 +408,7 @@ QWidget* StopListWidget::createNewWidget( const StopSettings &stopSettings )
 	Q_D( StopListWidget );
 	StopWidget *stopWidget = new StopWidget( this, stopSettings,
 			d->stopSettingsDialogOptions, d->accessorInfoDialogOptions,
-			d->filterConfigurations, d->settings
-, d->factory );
+			d->filterConfigurations, d->settings, d->factory );
 	connect( stopWidget, SIGNAL(remove()), this, SLOT(removeLastWidget()) );
 	connect( stopWidget, SIGNAL(changed(StopSettings)), this, SLOT(changed(StopSettings)) );
 	return stopWidget;

@@ -242,69 +242,69 @@ KIcon GlobalApplet::iconFromVehicleTypeList( const QList< VehicleType >& vehicle
 }
 
 // Gets the name of the given type of vehicle
-QString GlobalApplet::vehicleTypeToString( const VehicleType &vehicleType, bool plural )
-{
-    switch ( vehicleType ) {
-    case Tram:
-        return plural ? i18nc( "@info/plain", "trams" )
-            : i18nc( "@info/plain", "tram" );
-    case Bus:
-        return plural ? i18nc( "@info/plain", "buses" )
-            : i18nc( "@info/plain", "bus" );
-    case Subway:
-        return plural ? i18nc( "@info/plain", "subways" )
-            : i18nc( "@info/plain", "subway" );
-    case TrainInterurban:
-        return plural ? i18nc( "@info/plain", "interurban trains" )
-            : i18nc( "@info/plain", "interurban train" );
-    case Metro:
-        return plural ? i18nc( "@info/plain", "metros" )
-            : i18nc( "@info/plain", "metro" );
-    case TrolleyBus:
-        return plural ? i18nc( "@info/plain A trolleybus (also known as trolley bus, trolley "
-                            "coach, trackless trolley, trackless tram or trolley) is an "
-                            "electric bus that draws its electricity from overhead wires "
-                            "(generally suspended from roadside posts) using spring-loaded "
-                            "trolley poles.", "trolley buses" )
-            : i18nc( "@info/plain A trolleybus (also known as trolley bus, trolley coach, "
-                        "trackless trolley, trackless tram or trolley) is an electric bus that "
-                        "draws its electricity from overhead wires (generally suspended from "
-                        "roadside posts) using spring-loaded trolley poles.", "trolley bus" );
-
-    case TrainRegional:
-        return plural ? i18nc( "@info/plain", "regional trains" )
-            : i18nc( "@info/plain", "regional train" );
-    case TrainRegionalExpress:
-        return plural ? i18nc( "@info/plain", "regional express trains" )
-            : i18nc( "@info/plain", "regional express train" );
-    case TrainInterregio:
-        return plural ? i18nc( "@info/plain", "interregional trains" )
-            : i18nc( "@info/plain", "interregional train" );
-    case TrainIntercityEurocity:
-        return plural ? i18nc( "@info/plain", "intercity / eurocity trains" )
-            : i18nc( "@info/plain", "intercity / eurocity train" );
-    case TrainIntercityExpress:
-        return plural ? i18nc( "@info/plain", "intercity express trains" )
-            : i18nc( "@info/plain", "intercity express train" );
-
-    case Feet:
-        return i18nc( "@info/plain", "Footway" );
-
-    case Ferry:
-        return plural ? i18nc( "@info/plain", "ferries" )
-            : i18nc( "@info/plain", "ferry" );
-    case Ship:
-        return plural ? i18nc( "@info/plain", "ships" )
-            : i18nc( "@info/plain", "ship" );
-    case Plane:
-        return plural ? i18nc( "@info/plain airplanes", "planes" )
-            : i18nc( "@info/plain an airplane", "plane" );
-
-    case Unknown:
-    default:
-        return i18nc( "@info/plain", "Unknown type of vehicle", "Unknown" );
-    }
-}
+// QString GlobalApplet::vehicleTypeToString( const VehicleType &vehicleType, bool plural )
+// {
+//     switch ( vehicleType ) {
+//     case Tram:
+//         return plural ? i18nc( "@info/plain", "trams" )
+//             : i18nc( "@info/plain", "tram" );
+//     case Bus:
+//         return plural ? i18nc( "@info/plain", "buses" )
+//             : i18nc( "@info/plain", "bus" );
+//     case Subway:
+//         return plural ? i18nc( "@info/plain", "subways" )
+//             : i18nc( "@info/plain", "subway" );
+//     case TrainInterurban:
+//         return plural ? i18nc( "@info/plain", "interurban trains" )
+//             : i18nc( "@info/plain", "interurban train" );
+//     case Metro:
+//         return plural ? i18nc( "@info/plain", "metros" )
+//             : i18nc( "@info/plain", "metro" );
+//     case TrolleyBus:
+//         return plural ? i18nc( "@info/plain A trolleybus (also known as trolley bus, trolley "
+//                             "coach, trackless trolley, trackless tram or trolley) is an "
+//                             "electric bus that draws its electricity from overhead wires "
+//                             "(generally suspended from roadside posts) using spring-loaded "
+//                             "trolley poles.", "trolley buses" )
+//             : i18nc( "@info/plain A trolleybus (also known as trolley bus, trolley coach, "
+//                         "trackless trolley, trackless tram or trolley) is an electric bus that "
+//                         "draws its electricity from overhead wires (generally suspended from "
+//                         "roadside posts) using spring-loaded trolley poles.", "trolley bus" );
+// 
+//     case TrainRegional:
+//         return plural ? i18nc( "@info/plain", "regional trains" )
+//             : i18nc( "@info/plain", "regional train" );
+//     case TrainRegionalExpress:
+//         return plural ? i18nc( "@info/plain", "regional express trains" )
+//             : i18nc( "@info/plain", "regional express train" );
+//     case TrainInterregio:
+//         return plural ? i18nc( "@info/plain", "interregional trains" )
+//             : i18nc( "@info/plain", "interregional train" );
+//     case TrainIntercityEurocity:
+//         return plural ? i18nc( "@info/plain", "intercity / eurocity trains" )
+//             : i18nc( "@info/plain", "intercity / eurocity train" );
+//     case TrainIntercityExpress:
+//         return plural ? i18nc( "@info/plain", "intercity express trains" )
+//             : i18nc( "@info/plain", "intercity express train" );
+// 
+//     case Feet:
+//         return i18nc( "@info/plain", "Footway" );
+// 
+//     case Ferry:
+//         return plural ? i18nc( "@info/plain", "ferries" )
+//             : i18nc( "@info/plain", "ferry" );
+//     case Ship:
+//         return plural ? i18nc( "@info/plain", "ships" )
+//             : i18nc( "@info/plain", "ship" );
+//     case Plane:
+//         return plural ? i18nc( "@info/plain airplanes", "planes" )
+//             : i18nc( "@info/plain an airplane", "plane" );
+// 
+//     case Unknown:
+//     default:
+//         return i18nc( "@info/plain", "Unknown type of vehicle", "Unknown" );
+//     }
+// }
 
 QString GlobalApplet::durationString( int seconds )
 {
@@ -331,7 +331,7 @@ QString GlobalApplet::durationString( int seconds )
                     "now" );
     }
 }
-
+/*
 QColor GlobalApplet::textColorOnSchedule()
 {
     QColor color = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
@@ -342,7 +342,7 @@ QColor GlobalApplet::textColorDelayed()
 {
     QColor color = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
     return KColorUtils::tint( color, Qt::red, 0.5 );
-}
+}*/
 
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
 void GlobalApplet::startFadeAnimation( QGraphicsWidget* w, qreal targetOpacity )
@@ -373,6 +373,8 @@ QString GlobalApplet::translateFilterKey(const QString& key)
 {
     if ( key == "Default" ) {
         return i18nc("@info/plain The name of the default filter configuration", "Default");
+    } else if ( key == "No Filter" ) {
+        return i18nc("@info/plain The name of the filter configuration that filters nothing", "Default");
     } else {
         return key;
     }
@@ -382,7 +384,28 @@ QString GlobalApplet::untranslateFilterKey(const QString& translatedKey)
 {
     if ( translatedKey == i18nc("@info/plain The name of the default filter configuration", "Default") ) {
         return "Default";
+    } else if ( translatedKey == i18nc("@info/plain The name of the filter configuration that filters nothing", "No Filter") ) {
+        return "No Filter";
     } else {
         return translatedKey;
     }
 }
+
+QStringList GlobalApplet::translateFilterKeys(const QStringList& keys)
+{
+    QStringList ret;
+    foreach ( const QString &key, keys ) {
+        ret << translateFilterKey( key );
+    }
+    return ret;
+}
+
+QStringList GlobalApplet::untranslateFilterKeys(const QStringList& translatedKeys)
+{
+    QStringList ret;
+    foreach ( const QString &translatedKey, translatedKeys ) {
+        ret << untranslateFilterKey( translatedKey );
+    }
+    return ret;
+}
+

@@ -1,6 +1,9 @@
 
 Changelog of libpublictransporthelper
 
+0.10 - Beta 9
+- Move departureinfo.h/.cpp, filter.h/.cpp, filterwidget.h/.cpp and some parts of global.h/.cpp from the applet to libpublictransporthelper
+
 0.10 - Beta 8
 - Automatically load the message catalog of the library by using KCatalogLoader (needs KDE 4.6.2, otherwise translations from the library aren't available)
 - Also hide the city label if ShowStopInputField isn't used

@@ -96,7 +96,10 @@ enum PUBLICTRANSPORTHELPER_EXPORT ModelDataRoles {
 			* 0 for the journey with the biggest duration, 1 for the smallest duration. */
 	LinesPerRowRole = Qt::UserRole + 505, /**< Used to change the number of lines for a row. */
 	IconSizeRole = Qt::UserRole + 506, /**< Used to set a specific icon size for an element. */
-	IsLeavingSoonRole = Qt::UserRole + 507 /**< Whether or not a departure/arrival is leaving soon. */
+        IsLeavingSoonRole = Qt::UserRole + 507, /**< Whether or not a departure/arrival is leaving soon. */
+        GroupColorRoler = Qt::UserRole + 508 /**< Departures can be grouped,
+                        * visualized by colors. These group colors can be stored
+                        * in this role. */
 };
 
 /** @brief The position of the decoration. */

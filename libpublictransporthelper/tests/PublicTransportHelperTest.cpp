@@ -48,8 +48,11 @@ void PublicTransportHelperTest::initTestCase()
 	
 	m_stopSettings.set( LocationSetting, QLatin1String("de") );
 	QCOMPARE( m_stopSettings[LocationSetting].toString(), QLatin1String("de") );
-	
-	m_filterConfigurations << "Filter configuration 1" << "Filter configuration 2";
+
+    FilterSettings filterSettings1, filterSettings2;
+    filterSettings1.name = "Filter configuration 1";
+    filterSettings2.name = "Filter configuration 2";
+    m_filterConfigurations << filterSettings1 << filterSettings2;
 }
 
 void PublicTransportHelperTest::init()
@@ -225,11 +228,10 @@ void PublicTransportHelperTest::stopSettingsDialogSimpleAccessorSelectionTest()
 	QCOMPARE( stopSettings2[CitySetting].toString(), stopSettings[CitySetting].toString() );
 	QCOMPARE( stopSettings2.stops(), stopSettings.stops() );
 	QCOMPARE( stopSettings2.stopList(), stopSettings.stopList() );
-// 	QCOMPARE( stopSettings2[ServiceProviderSetting].toString(), 
-// 			  stopSettings[ServiceProviderSetting].toString() );
-// 	QCOMPARE( stopSettings2[LocationSetting].toString(), 
-// 			  stopSettings[LocationSetting].toString() );
-	dlg->exec();
+	QCOMPARE( stopSettings2[ServiceProviderSetting].toString(), 
+			  stopSettings[ServiceProviderSetting].toString() );
+	QCOMPARE( stopSettings2[LocationSetting].toString(), 
+			  stopSettings[LocationSetting].toString() );
 	
 	// The download accessor button should be visible (to the dialog, which is currently invisible)
 	QToolButton *downloadServiceProviders = dlg->findChild< QToolButton* >( "downloadServiceProviders" );
@@ -440,7 +442,7 @@ void PublicTransportHelperTest::stopSettingsDialogExtendedStopTest()
 	// Test some extended settings
 	m_stopSettings = dlg->stopSettings();
 	m_stopSettings.set( FilterConfigurationSetting, 
-						m_filterConfigurations.first() );
+						m_filterConfigurations.first().name ); // TODO TEST
 	m_stopSettings.set( AlarmTimeSetting, 10 );
 	m_stopSettings.set( FirstDepartureConfigModeSetting,
 						static_cast<int>(firstDepartureConfigMode = AtCustomTime) );
@@ -450,7 +452,7 @@ void PublicTransportHelperTest::stopSettingsDialogExtendedStopTest()
 	QCOMPARE( dlg->stopSettings(), m_stopSettings );
 	
 	// Test if widget values have been changed correctly
-	QCOMPARE( cmbFilterConfiguration->currentText(), m_filterConfigurations.first() );
+	QCOMPARE( cmbFilterConfiguration->currentText(), m_filterConfigurations.first().name );
 	QCOMPARE( spinAlarmTime->value(), 10 );
 	QCOMPARE( spinTimeOffset->value(), 8 );
 	QCOMPARE( timeEditCustom->time(), QTime(14, 30) );
@@ -719,7 +721,9 @@ void PublicTransportHelperTest::stopWidgetTest()
 	
 	// Test (set) filterConfigurations
 	QCOMPARE( stopWidget.filterConfigurations(), m_filterConfigurations );
-	m_filterConfigurations << "New filter configuration";
+    FilterSettings newFilterSettings;
+    newFilterSettings.name = "New filter configuration";
+	m_filterConfigurations << newFilterSettings;
 	stopWidget.setFilterConfigurations( m_filterConfigurations );
 	QCOMPARE( stopWidget.filterConfigurations(), m_filterConfigurations );
 	
@@ -766,7 +770,9 @@ void PublicTransportHelperTest::stopListWidgetTest()
 	
 	// Test (set) filterConfigurations
 	QCOMPARE( stopListWidget.filterConfigurations(), m_filterConfigurations );
-	m_filterConfigurations << "New filter configuration 2";
+    FilterSettings newFilterSettings2;
+    newFilterSettings2.name = "New filter configuration 2";
+    m_filterConfigurations << newFilterSettings2;
 	stopListWidget.setFilterConfigurations( m_filterConfigurations );
 	QCOMPARE( stopListWidget.filterConfigurations(), m_filterConfigurations );
 	

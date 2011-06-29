@@ -142,64 +142,6 @@ enum AlarmState {
 Q_DECLARE_FLAGS( AlarmStates, AlarmState )
 Q_DECLARE_OPERATORS_FOR_FLAGS( AlarmStates )
 
-/** @brief The type of services for a public transport line. */
-enum LineService {
-    NoLineService = 0, /**< The public transport line has no special services */
-
-    NightLine = 1, /**< The public transport line is a night line */
-    ExpressLine = 2 /**< The public transport line is an express line */
-};
-
-/** @brief Types of filters, ie. what to filter.
- * @ingroup filterSystem */
-enum FilterType {
-    InvalidFilter = 0, /**< An invalid filter. */
-
-    FilterByVehicleType, /**< Filter by vehicle type. */
-    FilterByTransportLine, /**< Filter by transport line string. */
-    FilterByTransportLineNumber, /**< Filter by transport line number. */
-    FilterByTarget, /**< Filter by target/origin. */
-    FilterByDelay, /**< Filter by delay. */
-    FilterByVia, /**< Filter by intermediate stops. */
-    FilterByDeparture, /**< Filter by departure/arrival time. */
-    FilterByDayOfWeek /**< Filter by the day of week of the departure date. */
-};
-
-/** @brief Variants of filters, eg. equals / doesn't equal.
- * @ingroup filterSystem */
-enum FilterVariant {
-    FilterNoVariant = 0, /**< Used for parameters, eg. as initial variant to use
-            * the first available filter variant. */
-
-    FilterContains = 1,
-    FilterDoesntContain = 2,
-    FilterEquals = 3,
-    FilterDoesntEqual = 4,
-    FilterMatchesRegExp = 5,
-    FilterDoesntMatchRegExp = 6,
-
-    FilterIsOneOf = 7,
-    FilterIsntOneOf = 8,
-
-    FilterGreaterThan = 9,
-    FilterLessThan = 10
-};
-
-/** @brief The action to be executed for filters, ie. show or hide matching items.
- * @ingroup filterSystem */
-enum FilterAction {
-    // ShowAll = 0, /**< Show all targets / origins */ TODO Remove this, filters are globally enabled/disabled
-    ShowMatching = 0, /**< Show only targets / origins that are in the list of filter targets / origins */
-    HideMatching = 1 /**< Hide targets / origins that are in the list of filter targets / origins */
-};
-
-/** @brief The type of the delay of a departure / arrival. */
-enum DelayType {
-    DelayUnknown = 0, /**< No information about delay available */
-    OnSchedule = 1, /**< Vehicle will depart / arrive on schedule */
-    Delayed = 2 /**< Vehicle will depart / arrive with delay */
-};
-
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
 namespace Plasma {
     class Animator;
@@ -216,9 +158,9 @@ public:
     static Plasma::Animation *fadeAnimation( QGraphicsWidget *w, qreal targetOpacity );
     static void startFadeAnimation( QGraphicsWidget *w, qreal targetOpacity );
 #endif
-
+/*
     static QColor textColorOnSchedule();
-    static QColor textColorDelayed();
+    static QColor textColorDelayed();*/
 
     static KIcon putIconIntoBiggerSizeIcon( const KIcon &icon,
                                             const QSize &iconSize, const QSize &resultingSize = QSize(32, 32) );
@@ -245,14 +187,17 @@ public:
     /** Gets an icon containing the icons of all vehicle types in the given list. */
     static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes, int extend = 32 );
 
-    /** Gets the name of the given type of vehicle. */
-    static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );
+//     TODO TEST is in libpublictransporthelper
+//     /** Gets the name of the given type of vehicle. */
+//     static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );
 
     /** Gets a string like "25 minutes". */
     static QString durationString( int seconds );
 
     static QString translateFilterKey( const QString &key );
     static QString untranslateFilterKey( const QString &translatedKey );
+    static QStringList translateFilterKeys( const QStringList &keys );
+    static QStringList untranslateFilterKeys( const QStringList &translatedKeys );
 };
 
 #endif // Multiple inclusion guard

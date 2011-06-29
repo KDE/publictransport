@@ -360,5 +360,21 @@ bool operator==( const Constraint& l, const Constraint& r )
 
 bool operator==( const FilterSettings& l, const FilterSettings& r )
 {
-    return l.filterAction == r.filterAction && l.filters == r.filters;
+    return l.filterAction == r.filterAction && l.filters == r.filters
+            && l.name == r.name && l.affectedStops == r.affectedStops;
+}
+
+bool operator==(const FilterSettingsList& l, const FilterSettingsList& r)
+{
+    if ( l.count() != r.count() ) {
+        return false;
+    }
+
+    for ( int i = 0; i < l.count(); ++i ) {
+        if ( !(l[i] == r[i]) ) {
+            return false;
+        }
+    }
+
+    return true;
 }

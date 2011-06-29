@@ -145,8 +145,8 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
                 << TrainIntercityEurocity << TrainIntercityExpress << Ferry << Plane;
         foreach( VehicleType vehicleType, filterVehicleTypes ) {
             values << ConstraintListWidget::ListItem(
-                    GlobalApplet::vehicleTypeToString(vehicleType), static_cast<int>(vehicleType),
-                    GlobalApplet::vehicleTypeToIcon(vehicleType) );
+                    Global::vehicleTypeToString(vehicleType), static_cast<int>(vehicleType),
+                    Global::vehicleTypeToIcon(vehicleType) );
         }
         return new ConstraintListWidget( type, variant, values, value.toList(), parent );
     }

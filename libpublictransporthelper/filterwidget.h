@@ -48,7 +48,7 @@ class KComboBox;
 * @brief Base class for widgets allowing to edit a single constraint.
 * @ingroup filterSystem
 **/
-class ConstraintWidget : public QWidget {
+class PUBLICTRANSPORTHELPER_EXPORT ConstraintWidget : public QWidget {
     Q_OBJECT
 
 public:
@@ -116,7 +116,7 @@ private:
 * @brief A widget allowing to edit a single constraint where the user can select a list of values.
 * @ingroup filterSystem
 **/
-class ConstraintListWidget : public ConstraintWidget {
+class PUBLICTRANSPORTHELPER_EXPORT ConstraintListWidget : public ConstraintWidget {
     Q_OBJECT
 
 public:
@@ -174,7 +174,7 @@ private:
 * @brief A widget allowing to edit a single constraint where the user can enter a string value.
 * @ingroup filterSystem
 **/
-class ConstraintStringWidget : public ConstraintWidget {
+class PUBLICTRANSPORTHELPER_EXPORT ConstraintStringWidget : public ConstraintWidget {
     Q_OBJECT
 
 public:
@@ -213,7 +213,7 @@ private:
 * @brief A widget allowing to edit a single constraint where the user can enter an integer value.
 * @ingroup filterSystem
 **/
-class ConstraintIntWidget : public ConstraintWidget {
+class PUBLICTRANSPORTHELPER_EXPORT ConstraintIntWidget : public ConstraintWidget {
     Q_OBJECT
 
 public:
@@ -252,7 +252,7 @@ private:
 * @brief A widget allowing to edit a single constraint where the user can enter a time value.
 * @ingroup filterSystem
 **/
-class ConstraintTimeWidget : public ConstraintWidget {
+class PUBLICTRANSPORTHELPER_EXPORT ConstraintTimeWidget : public ConstraintWidget {
     Q_OBJECT
 
 public:
@@ -290,7 +290,7 @@ private:
 * Constraints can be dynamically added / removed, buttons are added for that task.
 * @ingroup filterSystem
 **/
-class FilterWidget : public AbstractDynamicLabeledWidgetContainer {
+class PUBLICTRANSPORTHELPER_EXPORT FilterWidget : public AbstractDynamicLabeledWidgetContainer {
     Q_OBJECT
     Q_PROPERTY( QString separatorText READ separatorText WRITE setSeparatorText )
 
@@ -398,7 +398,7 @@ private:
 * Filters can be dynamically added / removed, buttons are added for that task.
 * @ingroup filterSystem
 **/
-class FilterListWidget : public AbstractDynamicWidgetContainer {
+class PUBLICTRANSPORTHELPER_EXPORT FilterListWidget : public AbstractDynamicWidgetContainer {
     Q_OBJECT
 
 public:

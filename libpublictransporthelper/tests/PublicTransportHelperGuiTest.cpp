@@ -44,8 +44,11 @@ void PublicTransportHelperGuiTest::initTestCase()
 	
 	m_stopSettings.set( LocationSetting, QLatin1String("de") );
 	QCOMPARE( m_stopSettings[LocationSetting].toString(), QLatin1String("de") );
-	
-	m_filterConfigurations << "Filter configuration 1" << "Filter configuration 2";
+
+    FilterSettings filterSettings1, filterSettings2;
+    filterSettings1.name = "Filter configuration 1";
+    filterSettings2.name = "Filter configuration 2";
+	m_filterConfigurations << filterSettings1 << filterSettings2;
 }
 
 void PublicTransportHelperGuiTest::init()
