@@ -1297,7 +1297,8 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
         // Delete old filter configs
         foreach( const QString &group, cgGlobal.groupList() ) {
             if ( !filterConfigurationList.contains(
-                        group.mid( QString( "filterConfig_" ).length() ) ) ) {
+                 group.mid(QString("filterConfig_").length())) )
+            {
                 kDebug() << "Delete old group" << group;
                 cgGlobal.deleteGroup( group );
             }
@@ -1483,48 +1484,44 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
         changed |= IsChanged | ChangedServiceProvider | ChangedDepartureArrivalListType;
     }
 
-    // Write filter settings
-// TODO REMOVE: (DEPRECATED since 0.10 Beta 9)
-//     if ( settings.filterSettingsList.names() != oldSettings.filterSettingsList.names() ) {
-//         cgGlobal.writeEntry( "filterConfigurationList", settings.filterSettingsList.names() );
-//         changed |= IsChanged | ChangedFilterSettings;
-//     }
-
     // ***************** DEPRECATED BEGIN *****************************************************
     // *** Used for migration of filter settings from versions prior to version 0.10 Beta 9 ***
     if ( cgGlobal.hasKey("filterConfigurationList") ) {
         cgGlobal.deleteEntry( "filterConfigurationList" );
+        cgGlobal.sync();
+        kDebug() << "Deleted deprecated entry \"filterConfigurationList\"";
     }
     // ***************** DEPRECATED END *******************************************************
 
+    // Write filter settings
     if ( settings.filterSettingsList != oldSettings.filterSettingsList ) {
-//         QHash< QString, FilterSettings >::const_iterator it;
-//         TODO
-//         for ( it = settings.filterSettings.constBegin();
-//                 it != settings.filterSettings.constEnd(); ++it ) {
         cgGlobal.writeEntry( "filterCount", settings.filterSettingsList.count() );
         int i = 1;
         foreach ( const FilterSettings &filterSettings, settings.filterSettingsList ) {
-//             QString currentFilterConfig = it.key();
             if ( filterSettings.name.isEmpty() ) {
                 kDebug() << "Empty filter config name, can't write settings";
                 continue;
             }
 
             if ( oldSettings.filterSettingsList.hasName(filterSettings.name) ) {
-                if ( SettingsIO::writeFilterConfig(filterSettings,
-                     oldSettings.filterSettingsList.byName(filterSettings.name),
-                     cgGlobal.group("filterConfig_" + QString::number(i))) )
-                {
-                    changed |= IsChanged | ChangedFilterSettings;
-                }
+                SettingsIO::writeFilterConfig( filterSettings,
+                        oldSettings.filterSettingsList.byName(filterSettings.name),
+                        cgGlobal.group("filterConfig_" + QString::number(i)) );
             } else {
                 SettingsIO::writeFilterConfig( filterSettings,
                         cgGlobal.group("filterConfig_" + QString::number(i)) );
-                changed |= IsChanged | ChangedFilterSettings;
             }
             ++i;
         }
+
+        // Delete old filter settings groups
+        while ( i <= oldSettings.filterSettingsList.count() ) {
+            cgGlobal.deleteGroup( "filterConfig_" + QString::number(i) );
+            cgGlobal.sync();
+            ++i;
+        }
+
+        changed |= IsChanged | ChangedFilterSettings;
     }
 
     // Write alarm settings
