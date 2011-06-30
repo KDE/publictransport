@@ -102,16 +102,16 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 
     // Setup tab widget of the stop settings page
     KTabWidget *tabMain = new KTabWidget;
-    tabMain->addTab( widgetStop, i18nc( "@title:tab", "&Stop selection" ) );
-    tabMain->addTab( widgetAdvanced, i18nc( "@title:tab Advanced settings tab label", "&Advanced" ) );
+    tabMain->addTab( widgetStop, i18nc("@title:tab", "&Stop selection") );
+    tabMain->addTab( widgetAdvanced, i18nc("@title:tab Advanced settings tab label", "&Advanced") );
 
     // Add settings pages
-    m_configDialog->addPage( tabMain, i18nc( "@title:group General settings page name", "General" ),
+    m_configDialog->addPage( tabMain, i18nc("@title:group General settings page name", "General"),
                             "public-transport-stop" );
-    m_configDialog->addPage( widgetAppearance, i18nc( "@title:group", "Appearance" ),
+    m_configDialog->addPage( widgetAppearance, i18nc("@title:group", "Appearance"),
                             "package_settings_looknfeel" );
-    m_configDialog->addPage( widgetFilter, i18nc( "@title:group", "Filter" ), "view-filter" );
-    m_configDialog->addPage( widgetAlarms, i18nc( "@title:group", "Alarms" ), "task-reminder" );
+    m_configDialog->addPage( widgetFilter, i18nc("@title:group", "Filter"), "view-filter" );
+    m_configDialog->addPage( widgetAlarms, i18nc("@title:group", "Alarms"), "task-reminder" );
 
     // Setup model for the service provider combobox
     m_modelServiceProvider = new ServiceProviderModel( this );
@@ -129,7 +129,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
             "<subtitle>This shows the stop settings you have set.</subtitle>"
             "<para>The applet shows results for one of them at a time. To switch the "
             "currently used stop setting use the context menu of the applet.</para>"
-            "<para>For each stop setting another filter configuration can be used. "
+            "<para>For each stop setting another set of filter configurations can be used. "
             "To edit filter configurations use the <interface>Filter</interface> "
             "section in the settings dialog. You can define a list of stops for "
             "each stop setting that are then displayed combined (eg. stops near "
@@ -138,7 +138,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     connect( m_stopListWidget, SIGNAL(changed(int,StopSettings)), this, SLOT(stopSettingsChanged()) );
     connect( m_stopListWidget, SIGNAL(added(QWidget*)), this, SLOT(stopSettingsAdded()) );
     connect( m_stopListWidget, SIGNAL(removed(QWidget*,int)),
-            this, SLOT(stopSettingsRemoved(QWidget*,int)) );
+             this, SLOT(stopSettingsRemoved(QWidget*,int)) );
     stopSettingsChanged();
 
     // Add stop list widget
@@ -149,12 +149,15 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     // Setup filter widgets
     m_uiFilter.filters->setWhatsThis( i18nc("@info:whatsthis",
             "<subtitle>This shows the filters of the selected filter configuration.</subtitle>"
-            "<para>Each filter configuration consists of a filter action and a list "
-            "of filters. Each filter contains a list of constraints.</para>"
-            "<para>A filter matches, if all it's constraints match while a filter "
-            "configuration matches, if one of it's filters match.</para>"
-            "<para>To use a filter configuration select it in the <interface>Filter Uses</interface> tab. "
-            "Each stop settings can use another filter configuration.</para>"
+            "<para>Each filter configuration consists of a name, a list of stops using the filter "
+            "configuration, a filter action and a list of filters. Each filter contains a list of "
+            "constraints.</para>"
+            "<para>A filter matches, if all it's constraints match (logical AND) while a filter "
+            "configuration matches, if one of it's filters match (logical OR).</para>"
+            "<para>For each filter configuration a list of stops can be set, that use that filter. "
+            "Check each stop you want to use the selected filter configuration in the "
+            "<interface>Used With</interface> combobox. You can also select the filters to be used "
+            "by a specific stop in the stop settings or in the applet itself.</para>"
             "<para><emphasis strong='1'>Filter Types</emphasis><list>"
             "<item><emphasis>Vehicle:</emphasis> Filters by vehicle types.</item>"
             "<item><emphasis>Line String:</emphasis> Filters by transport line strings.</item>"

@@ -449,8 +449,8 @@ FilterListWidget::FilterListWidget( QWidget* parent ) : AbstractDynamicWidgetCon
 {
     setWidgetCountRange( 1, 10, false );
     addButton()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-    addButton()->setText( i18nc( "@action:button", "&Add Filter" ) );
-    addButton()->setToolTip( i18nc( "@info:tooltip", "Add another filter" ) );
+    addButton()->setText( i18nc("@action:button", "&Add Filter") );
+    addButton()->setToolTip( i18nc("@info:tooltip", "Add another filter (logical OR)") );
 }
 
 void ConstraintWidget::variantChanged( int index )
@@ -503,7 +503,7 @@ DynamicWidget* FilterWidget::addWidget( QWidget* labelWidget, QWidget* widget )
         }
         if ( dynamicWidget->addButton() ) {
             dynamicWidget->addButton()->setToolTip(
-                    i18nc( "@info:tooltip", "Add another criterion to this filter" ) );
+                    i18nc( "@info:tooltip", "Add another criterion to this filter (logical AND)" ) );
         }
 
         emit changed();

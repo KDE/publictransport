@@ -48,6 +48,13 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="toolTip">
+          <string>A list of available filter configurations</string>
+         </property>
+         <property name="whatsThis">
+          <string>&lt;para&gt;A list of all available filter configurations. Filter configurations can be added/removed/renamed using the buttons on the right of this combobox. &lt;/para&gt;
+&lt;para&gt;Each filter configuration consists of a name, a list of stops using the filter configuration, a filter action and a list of filters. Each filter contains a list of constraints.&lt;/para&gt;</string>
+         </property>
         </widget>
        </item>
        <item>
@@ -106,6 +113,9 @@
          <height>0</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>The stops that use the selected filter configuration</string>
+       </property>
       </widget>
      </item>
      <item row="2" column="0">
@@ -120,6 +130,9 @@
      </item>
      <item row="2" column="1">
       <widget class="KComboBox" name="filterAction">
+       <property name="toolTip">
+        <string>The action to take on matching departures/arrivals</string>
+       </property>
        <item>
         <property name="text">
          <string>Show Matching</string>
