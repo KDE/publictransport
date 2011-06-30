@@ -381,10 +381,9 @@ ConstraintStringWidget::ConstraintStringWidget( FilterType type, FilterVariant i
 {
     m_string = new KLineEdit( this );
     m_string->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
-    m_string->setMinimumWidth( 50 );
     m_string->setClearButtonShown( true );
     m_string->setText( filterText );
-    m_string->setMinimumWidth( 60 );
+    m_string->setMinimumWidth( 100 );
     addWidget( m_string );
 
     connect( m_string, SIGNAL( textChanged( QString ) ), this, SLOT( stringChanged( QString ) ) );
