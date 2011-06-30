@@ -398,7 +398,6 @@ void TitleWidget::clearWidgets()
 
 void TitleWidget::updateFilterWidget()
 {
-    // TODO: Check if "No Filter" is activated or not
     FilterSettingsList filterSettings = m_settings->currentFilterSettings();
     if ( filterSettings.isEmpty() ) {
         m_filterWidget->setOpacity( 0.6 );

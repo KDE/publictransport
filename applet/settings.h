@@ -155,9 +155,6 @@ protected slots:
     void filterActionChanged( int index );
     void setFilterConfigurationChanged( bool changed = true );
 
-//     TODO REMOVE: 
-    void updateFilterInfoLabel();
-
     void exportFilterSettings();
     void importFilterSettings();
 
@@ -341,8 +338,6 @@ public:
         return currentStopSettingsIndex >= 0 &&
                 currentStopSettingsIndex < stopSettingsList.count();
     };
-
-// TODO REMOVE:     bool filtersEnabled; /** Whether or not filters are enabled. */
     
     FilterSettingsList filterSettingsList; /** @brief A list of all filter settings. */
 
@@ -353,7 +348,7 @@ public:
      * stop settings.
      **/
     FilterSettingsList currentFilterSettings() const {
-        // TODO Construct filter settings per stop (constructed of multiple filter configs)
+        // Construct filter settings per stop (constructed of multiple filter configs)
         FilterSettingsList activeFilterSettings;
         foreach ( const FilterSettings &filterSettings, filterSettingsList ) {
             if ( filterSettings.affectedStops.contains(currentStopSettingsIndex) ) {

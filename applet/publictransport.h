@@ -539,10 +539,6 @@ protected slots:
      * This calls @ref switchFilterConfiguration with the name of the @p action.
      **/
     void switchFilterConfiguration( QAction *action );
-    
-    // TODO REMOVE:
-//     /** @brief Changes the filters enabled state to @p enable. */
-//     void setFiltersEnabled( bool enable );
 
     /** @brief An alarm has been fired for the given @p item. */
     void alarmFired( DepartureItem *item );

@@ -510,13 +510,6 @@ void PublicTransport::setupActions()
             i18nc("@action", "Back to &Departure List"), this );
     addAction( "backToDepartures", actionBackToDepartures );
 
-//     TODO REMOVE:
-//     KToggleAction *actionEnableFilters = new KToggleAction(
-//             i18nc("@action", "&Enable Filters"), this );
-//     connect( actionEnableFilters, SIGNAL(toggled(bool)),
-//              this, SLOT(setFiltersEnabled(bool)) );
-//     addAction( "enableFilters", actionEnableFilters );
-
     m_filtersGroup = new QActionGroup( this );
     m_filtersGroup->setExclusive( false );
     connect( m_filtersGroup, SIGNAL(triggered(QAction*)),
@@ -525,10 +518,7 @@ void PublicTransport::setupActions()
     KAction *actionFilterConfiguration = new KSelectAction( KIcon("view-filter"),
             i18nc("@action", "Filter"), this );
     KMenu *menu = new KMenu;
-//     TODO REMOVE:
-//     menu->addAction( actionEnableFilters );
-//     menu->addSeparator();
-    menu->addTitle( KIcon("view-filter"), i18nc("@item:inmenu", "Used Filter Configuration") );
+    menu->addTitle( KIcon("view-filter"), i18nc("@item:inmenu", "Used Filter Configurations") );
     actionFilterConfiguration->setMenu( menu );
     actionFilterConfiguration->setEnabled( true );
     addAction( "filterConfiguration", actionFilterConfiguration );
@@ -563,7 +553,6 @@ QList< QAction* > PublicTransport::contextualActions()
     }
     if ( !filterConfigurationList.isEmpty() ) {
         actionFilter = qobject_cast< KAction* >( action( "filterConfiguration" ) );
-//         action( "enableFilters" )->setChecked( m_settings.filtersEnabled ); // TODO change checked state when filtersEnabled changes?
         QList< QAction* > oldActions = m_filtersGroup->actions();
         foreach( QAction *oldAction, oldActions ) {
             m_filtersGroup->removeAction( oldAction );
@@ -582,7 +571,6 @@ QList< QAction* > PublicTransport::contextualActions()
                 action->setChecked( true );
             }
         }
-// TODO REMOVE:         m_filtersGroup->setEnabled( m_settings.filtersEnabled );
     }
 
     QList< QAction* > actions;
@@ -1266,20 +1254,17 @@ void PublicTransport::configChanged()
     if ( !m_stateMachine || isStateActive("departureDataWaiting") ) {
         m_timetable->setNoItemsText(
                 i18nc("@info/plain", "Waiting for data...") );
-    }
-// TODO TODO TODO TODO TODO TODO
-// TODO Add a Settings::currentFilterSettings function and check if the "No Filter" config is selected TODO
-    /*else if ( m_settings.departureArrivalListType == ArrivalList ) {
-        m_timetable->setNoItemsText( m_settings.filtersEnabled
+    } else if ( m_settings.departureArrivalListType == ArrivalList ) {
+        m_timetable->setNoItemsText( !m_settings.currentFilterSettings().isEmpty()
                 ? i18nc("@info/plain", "No unfiltered arrivals.<nl/>You can "
                         "disable filters to see all arrivals.")
                 : i18nc("@info/plain", "No arrivals.") );
     } else {
-        m_timetable->setNoItemsText( m_settings.filtersEnabled
+        m_timetable->setNoItemsText( !m_settings.currentFilterSettings().isEmpty()
                 ? i18nc("@info/plain", "No unfiltered departures.<nl/>You can "
                         "disable filters to see all departures.")
                 : i18nc("@info/plain", "No departures.") );
-    }*/
+    }
 
     // Apply filter, first departure and alarm settings to the worker thread
     m_departureProcessor->setFilterSettings( m_settings.currentFilterSettings() );
@@ -1527,16 +1512,6 @@ void PublicTransport::enableFilterConfiguration( const QString& filterConfigurat
     writeSettings( settings );
 }
 
-// TODO REMOVE:
-// void PublicTransport::setFiltersEnabled( bool enable )
-// {
-//     // Change filters enabled in a copy of the settings.
-//     // Then write the new settings.
-//     Settings settings = m_settings;
-// //     settings.filtersEnabled = enable;
-//     writeSettings( settings );
-// }
-
 void PublicTransport::showDepartureList()
 {
     fadeOutOldAppearance();
@@ -1686,19 +1661,14 @@ void PublicTransport::showFilterMenu()
     // TODO make a new function for this (updateFilterMenu())
     // because of redundancy in PublicTransport::contextualActions().
     KAction *actionFilter = NULL;
-//     QStringList filterConfigurationList;// = m_settings.filterSettings.keys();
-//     foreach ( const FilterSettings &filterSettings, m_settings.filterSettingsList ) {
-//         filterConfigurationList << filterSettings.name;
-//     }
     if ( !m_settings.filterSettingsList.isEmpty() ) {
         actionFilter = qobject_cast< KAction* >( action("filterConfiguration") );
-//         action( "enableFilters" )->setChecked( m_settings.filtersEnabled ); TODO REMOVE:
         QList< QAction* > oldActions = m_filtersGroup->actions();
         foreach( QAction *oldAction, oldActions ) {
             m_filtersGroup->removeAction( oldAction );
             delete oldAction;
         }
-//
+
         QMenu *menu = actionFilter->menu();
         QString currentFilterConfig = m_settings.currentStopSettings().get<QString>(
                 FilterConfigurationSetting );
@@ -1711,7 +1681,6 @@ void PublicTransport::showFilterMenu()
                 action->setChecked( true );
             }
         }
-//  TODO REMOVE:       m_filtersGroup->setEnabled( m_settings.filtersEnabled );
     }
 
     // Show the filters menu under the filter icon
@@ -2088,15 +2057,14 @@ void PublicTransport::departureDataValidStateEntered()
     updateDepartureListIcon();
     setBusy( false );
 
-    //     TODO filtersenabled == filterconfig "No Filter"
     // TODO This is a copy of code in line ~1520
     if ( m_settings.departureArrivalListType == ArrivalList ) {
-        m_timetable->setNoItemsText( /*m_settings.filtersEnabled*/ false
+        m_timetable->setNoItemsText( !m_settings.currentFilterSettings().isEmpty()
                 ? i18nc("@info/plain", "No unfiltered arrivals.<nl/>"
                         "You can disable filters to see all arrivals.")
                 : i18nc("@info/plain", "No arrivals.") );
     } else {
-        m_timetable->setNoItemsText( /*m_settings.filtersEnabled*/ false
+        m_timetable->setNoItemsText( !m_settings.currentFilterSettings().isEmpty()
                 ? i18nc("@info/plain", "No unfiltered departures.<nl/>"
                         "You can disable filters to see all departures.")
                 : i18nc("@info/plain", "No departures.") );
@@ -2272,13 +2240,9 @@ void PublicTransport::requestStopAction( StopAction stopAction,
             filterSettings.name = filterName;
             filterSettings.affectedStops << settings.currentStopSettingsIndex;
 
-//             settings.filterSettingsList.insert( filterName, filterSettings );
-// TODO REMOVE:            if ( !settings.filtersEnabled ) {
-//                 settings.filtersEnabled = true;
-//             }
-//             settings.currentStopSettings().set( FilterConfigurationSetting, filterName );
-
+            settings.filterSettingsList << filterSettings;
             writeSettings( settings );
+            break;
         } case ShowDeparturesForStop: {
             // Save original stop index from where sub requests were made
             // (using the context menu). Only if the departure list wasn't requested
@@ -2302,12 +2266,15 @@ void PublicTransport::requestStopAction( StopAction stopAction,
             writeSettings( settings );
 
             emit intermediateDepartureListRequested( stopName );
+            break;
         } case HighlightStop: {
             m_model->setHighlightedStop(
                     m_model->highlightedStop().compare(stopName, Qt::CaseInsensitive) == 0
                     ? QString() : stopName );
+            break;
         } case CopyStopNameToClipboard: {
             QApplication::clipboard()->setText( stopName );
+            break;
         }
     }
 }

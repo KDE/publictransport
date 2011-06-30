@@ -64,7 +64,7 @@ public:
 
     static const qreal ROUTE_ITEM_HEIGHT = 60.0;
 
-    PublicTransportWidget *publicTransportWidget() const { return m_parent; }; // TODO
+    PublicTransportWidget *publicTransportWidget() const { return m_parent; };
     void setPublicTransportWidget( PublicTransportWidget* publicTransportWidget ) {
         m_parent = publicTransportWidget;
     };

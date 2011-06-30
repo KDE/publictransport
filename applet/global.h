@@ -158,10 +158,7 @@ public:
     static Plasma::Animation *fadeAnimation( QGraphicsWidget *w, qreal targetOpacity );
     static void startFadeAnimation( QGraphicsWidget *w, qreal targetOpacity );
 #endif
-/*
-    static QColor textColorOnSchedule();
-    static QColor textColorDelayed();*/
-
+    
     static KIcon putIconIntoBiggerSizeIcon( const KIcon &icon,
                                             const QSize &iconSize, const QSize &resultingSize = QSize(32, 32) );
 
@@ -186,10 +183,6 @@ public:
 
     /** Gets an icon containing the icons of all vehicle types in the given list. */
     static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes, int extend = 32 );
-
-//     TODO TEST is in libpublictransporthelper
-//     /** Gets the name of the given type of vehicle. */
-//     static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );
 
     /** Gets a string like "25 minutes". */
     static QString durationString( int seconds );
