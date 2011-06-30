@@ -27,7 +27,7 @@
 #include "ui_publicTransportConfig.h"
 #include "ui_publicTransportConfigAdvanced.h"
 #include "ui_publicTransportFilterConfig.h"
-#include "ui_colorGroupConfig.h"
+// #include "ui_colorGroupConfig.h" // TODO REMOVE
 #include "ui_publicTransportAppearanceConfig.h"
 #include "ui_alarmConfig.h"
 
@@ -81,7 +81,8 @@ struct ColorGroupSettings {
      * coor of this ColorGroupSettings. */
     FilterList filters;
 
-    QColor color; /**< The color of this color group. */
+    /**< @brief The color of this color group. */
+    QColor color;
 
     ColorGroupSettings( const QColor &color = Qt::transparent ) {
         this->color = color;
@@ -90,6 +91,7 @@ struct ColorGroupSettings {
     /** @brief Applies the filters of this color group configuration 
       * on the given @p departureInfo. */
     bool matches( const DepartureInfo& departureInfo ) const {
+        // TODO: Via Filter at first stop after current stop (not any stop of the complete route)
         return filters.match( departureInfo );
     };
 };
@@ -153,6 +155,7 @@ protected slots:
     void renameFilterConfiguration();
     /** The action of the current filter has been changed. */
     void filterActionChanged( int index );
+
     void setFilterConfigurationChanged( bool changed = true );
 
     void exportFilterSettings();
@@ -217,11 +220,14 @@ private:
 
     int m_currentStopSettingsIndex;
     QStringList m_recentJourneySearches;
-    bool m_showHeader, m_hideColumnTarget;
+    bool m_showHeader;
+    bool m_hideColumnTarget;
 
     FilterSettingsList m_filterSettings;
     QString m_lastFilterConfiguration; // The last set filter configuration
     bool m_filterConfigChanged; // Whether or not the filter configuration has changed from that defined in the filter configuration with the name [m_lastFilterConfiguration]
+
+    QList<ColorGroupSettingsList> m_colorGroupSettings;
 
     AlarmSettingsList m_alarmSettings;
     int m_lastAlarm;
@@ -247,8 +253,9 @@ public:
         ChangedLinesPerRow = 0x0020, /**< The lines per row setting has been changed. */
         ChangedAlarmSettings = 0x0040, /**< Alarm settings have been changed. */
         ChangedCurrentStop = 0x0080, /**< The current stop has been changed. */
-        ChangedRecentJourneySearches = 0x0100 /**< The list of recent journey
+        ChangedRecentJourneySearches = 0x0100, /**< The list of recent journey
                 * searches has been changed. */
+        ChangedColorization = 0x0200 /**< Colorization of departures has been toggled. */
     };
     Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag );
 
@@ -291,14 +298,15 @@ public:
             * (size + 3) * 0.2. */
     int maximalNumberOfDepartures; /**< The maximal number of displayed departures. */
     DepartureArrivalListType departureArrivalListType;
-    bool drawShadows; /** Whether or not shadows should be drawn for departure items. */
-    bool showHeader; /** Whether or not the header of the departure view should
+    bool drawShadows; /**< Whether or not shadows should be drawn for departure items. */
+    bool showHeader; /**< Whether or not the header of the departure view should
             * be shown. */
-    bool hideColumnTarget; /** Whether or not the target/origin column should be
+    bool hideColumnTarget; /**< Whether or not the target/origin column should be
             * shown in the departure view. */
     bool useDefaultFont; /**< Whether or not the default plasma theme's font is used. */
     QFont font; /**< The font to be used. */
-    bool displayTimeBold; /** Whether or not the time should be displayed bold. */
+    bool displayTimeBold; /**< Whether or not the time should be displayed bold. */
+    bool colorize; /**< Whether or not departures should be colorized by groups. */
 
     QFont sizedFont() const {
         QFont f = font;
@@ -338,7 +346,10 @@ public:
         return currentStopSettingsIndex >= 0 &&
                 currentStopSettingsIndex < stopSettingsList.count();
     };
-    
+
+    /** @brief A list of all color group settings lists (one list for each stop). */
+    QList<ColorGroupSettingsList> colorGroupSettingsList;
+
     FilterSettingsList filterSettingsList; /** @brief A list of all filter settings. */
 
     /**

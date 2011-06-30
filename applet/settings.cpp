@@ -420,6 +420,9 @@ void SettingsUiManager::stopSettingsAdded()
     m_uiFilter.affectedStops->addItem( text );
     m_uiAlarms.affectedStops->addItem( text );
 
+    // Adjust color group settings list
+    m_colorGroupSettings << ColorGroupSettingsList();
+
     stopSettingsChanged();
 }
 
@@ -429,7 +432,7 @@ void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex )
     if ( m_alarmsChanged && m_uiAlarms.alarmList->currentRow() != -1 ) {
         m_alarmSettings[ m_uiAlarms.alarmList->currentRow()] = currentAlarmSettings();
     }
-    
+
     // Adjust stop indices in alarm settings
     for ( int i = m_alarmSettings.count() - 1; i >= 0; --i ) {
         AlarmSettings &alarmSettings = m_alarmSettings[ i ];
@@ -441,7 +444,7 @@ void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex )
             }
         }
     }
-    
+
     // Adjust stop indices in filter settings
     for ( int i = m_filterSettings.count() - 1; i >= 0; --i ) {
         FilterSettings &filterSettings = m_filterSettings[ i ];
@@ -453,6 +456,9 @@ void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex )
             }
         }
     }
+
+    // Adjust color group settings list
+    m_colorGroupSettings.removeAt( widgetIndex );
 
     // Get a string for each stop setting
     QStringList stopLabels;
@@ -568,6 +574,7 @@ void SettingsUiManager::setValuesOfAppearanceConfig( const Settings &settings )
     m_uiAppearance.radioUseDefaultFont->setChecked( settings.useDefaultFont );
     m_uiAppearance.radioUseOtherFont->setChecked( !settings.useDefaultFont );
     m_uiAppearance.font->setCurrentFont( settings.font );
+    m_uiAppearance.colorize->setChecked( settings.colorize );
 }
 
 void SettingsUiManager::setValuesOfAlarmConfig()
@@ -709,6 +716,7 @@ Settings SettingsUiManager::settings()
     }
 
     // Set stored "no-Gui" settings
+    ret.colorGroupSettingsList = m_colorGroupSettings;
     ret.recentJourneySearches = m_recentJourneySearches;
     ret.currentStopSettingsIndex = m_currentStopSettingsIndex;
     if ( ret.currentStopSettingsIndex >= ret.stopSettingsList.count() ) {
@@ -723,7 +731,7 @@ Settings SettingsUiManager::settings()
     ret.filterSettingsList = m_filterSettings;
 
     if ( m_alarmsChanged && m_uiAlarms.alarmList->currentRow() != -1 ) {
-        m_alarmSettings[ m_uiAlarms.alarmList->currentRow()] = currentAlarmSettings();
+        m_alarmSettings[ m_uiAlarms.alarmList->currentRow() ] = currentAlarmSettings();
     }
     ret.alarmSettings = m_alarmSettings;
 
@@ -748,6 +756,7 @@ Settings SettingsUiManager::settings()
     } else {
         ret.font.setFamily( m_uiAppearance.font->currentFont().family() );
     }
+    ret.colorize = m_uiAppearance.colorize->checkState() == Qt::Checked;
 
     return ret;
 }
@@ -841,7 +850,7 @@ void SettingsUiManager::addFilterConfiguration()
     do {
         newFilterConfig = KInputDialog::getText( i18nc("@title:window", "Choose a Name"),
                 i18nc("@label:textbox", "Name of the new Filter Configuration:"), newFilterConfig,
-                &ok, m_configDialog, new QRegExpValidator(QRegExp("[^\\*]*"), this) );
+                &ok, m_configDialog, new QRegExpValidator(QRegExp("[^\\*&]*"), this) );
         if ( !ok || newFilterConfig.isNull() ) {
             return; // Canceled
         }
@@ -912,7 +921,7 @@ void SettingsUiManager::renameFilterConfiguration()
     bool ok;
     QString newFilterConfig = KInputDialog::getText( i18nc("@title:window", "Choose a Name"),
             i18nc("@label:textbox", "New Name of the Filter Configuration:"), trFilterConfiguration,
-            &ok, m_configDialog, new QRegExpValidator(QRegExp("[^\\*]*"), this) );
+            &ok, m_configDialog, new QRegExpValidator(QRegExp("[^\\*&]*"), this) );
     if ( !ok || newFilterConfig.isNull() ) {
         return; // Canceled
     }
@@ -1141,6 +1150,8 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
         settings.font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
     }
 
+    settings.colorize = cg.readEntry( "colorize", true );
+
     // ***************** DEPRECATED BEGIN *****************************************************
     // *** Used for migration of filter settings from versions prior to version 0.10 Beta 9 ***
     if ( cgGlobal.hasKey("filterConfigurationList") ) {
@@ -1152,10 +1163,6 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
                 filterConfigurationList.removeAt( i );
             }
         }
-
-        // Make sure, "Default" is the first
-//         filterConfigurationList.removeOne( "Default" );
-//         filterConfigurationList.prepend( "Default" );
 
         kDebug() << "Config group list" << cgGlobal.groupList();
         kDebug() << "Filter config list:" << filterConfigurationList;
@@ -1332,10 +1339,15 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
     }
 
     if ( settings.useDefaultFont != oldSettings.useDefaultFont
-            || ( !settings.useDefaultFont && settings.font != oldSettings.font ) ) {
+            || (!settings.useDefaultFont && settings.font != oldSettings.font) ) {
         cg.writeEntry( "fontFamily", settings.useDefaultFont
                     ? QString() : settings.font.family() );
         changed |= IsChanged;
+    }
+
+    if ( settings.colorize != oldSettings.colorize ) {
+        cg.writeEntry( "colorize", settings.colorize );
+        changed |= IsChanged | ChangedColorization;
     }
 
     if ( settings.departureArrivalListType != oldSettings.departureArrivalListType ) {

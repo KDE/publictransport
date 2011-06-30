@@ -234,7 +234,6 @@ TopLevelItem::TopLevelItem( const Info* info ) : QObject(0), ItemBase( info )
 
 void DepartureItem::setLeavingSoon( bool leavingSoon )
 {
-    kDebug() << "SET LEAVING SOON:" << leavingSoon << m_model;
     m_leavingSoon = leavingSoon;
     if ( m_model ) {
         m_model->itemChanged( this, 0, 0 );
@@ -1048,7 +1047,7 @@ ChildItem* DepartureItem::createRouteItem()
 
         // Add the current route stop ("departure - stop name")
         QString text = QString( "%1 - %2" )
-                        .arg( m_departureInfo.routeTimes()[row].toString( "hh:mm" ) )
+                        .arg( m_departureInfo.routeTimes()[row].toString("hh:mm") )
                         .arg( m_departureInfo.routeStops()[row] );
         ChildItem *routeStopItem = new ChildItem(
                 OtherItem, text, KIcon( "public-transport-stop" ), m_info );
@@ -1064,7 +1063,7 @@ QVariant DepartureItem::data( int role, int column ) const
         return QVariant();
     }
 
-    if ( column < m_columnData.count() && m_columnData[column].contains( role ) ) {
+    if ( column < m_columnData.count() && m_columnData[column].contains(role) ) {
         return m_columnData[column].value( role );
     } else if ( role == IsLeavingSoonRole ) {
         return m_leavingSoon;
@@ -1087,6 +1086,17 @@ QVariant DepartureItem::data( int role, int column ) const
             if ( column < m_columnData.count() ) {
                 return m_columnData[column].value( Qt::DisplayRole );
             }
+            break;
+
+        case Qt::BackgroundColorRole: {
+            ColorGroupSettingsList colorGroups = static_cast<DepartureModel*>( model() )->colorGroups();
+            foreach ( const ColorGroupSettings &colorGroup, colorGroups ) {
+                if ( colorGroup.matches(m_departureInfo) ) {
+                    return colorGroup.color;
+                }
+            }
+            return Qt::transparent;
+        }
 
         default:
             return QVariant();
@@ -1533,8 +1543,6 @@ DepartureModel::DepartureModel( QObject* parent ) : PublicTransportModel( parent
 
 void DepartureModel::update()
 {
-    kDebug() << "UPDATE" << m_items.count();
-
     // Check for alarms that should now be fired
     if ( !m_alarms.isEmpty() ) {
         QDateTime nextAlarm = m_alarms.keys().first();
@@ -1556,8 +1564,6 @@ void DepartureModel::update()
             : QDateTime();
     nextDeparture.setTime( QTime(nextDeparture.time().hour(), nextDeparture.time().minute()) ); // Set second to 0
     while ( m_nextItem && nextDeparture < QDateTime::currentDateTime() ) {
-        kDebug() << "Remove old departure at" << m_nextItem->row()
-                << static_cast<DepartureItem*>( m_nextItem )->departureInfo();
         DepartureItem *leavingItem = static_cast<DepartureItem*>( m_nextItem );
         leaving << *leavingItem->departureInfo();
         leavingItem->setLeavingSoon( true );
@@ -1688,6 +1694,15 @@ QList< uint > DepartureModel::itemHashes() const
         hashes << static_cast<DepartureItem*>( item )->departureInfo()->hash();
     }
     return hashes;
+}
+
+QList< DepartureInfo > DepartureModel::departureInfos() const
+{
+    QList< DepartureInfo > infos;
+    foreach( ItemBase *item, m_items ) {
+        infos << *static_cast<DepartureItem*>( item )->departureInfo();
+    }
+    return infos;
 }
 
 void DepartureModel::sort( int column, Qt::SortOrder order )
@@ -1982,6 +1997,15 @@ void DepartureModel::setHighlightedStop( const QString& stopName )
 {
     m_highlightedStopName = stopName;
 
+    if ( !m_items.isEmpty() ) {
+        emit dataChanged( m_items.first()->index(), m_items.last()->index() );
+    }
+}
+
+void DepartureModel::setColorGroups( const ColorGroupSettingsList& colorGroups )
+{
+    m_colorGroups = colorGroups;
+    
     if ( !m_items.isEmpty() ) {
         emit dataChanged( m_items.first()->index(), m_items.last()->index() );
     }

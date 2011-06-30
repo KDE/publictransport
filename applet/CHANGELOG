@@ -21,6 +21,8 @@ NEXT
 - New filter configuration UI with better space usage
 - Fix alarm settings writing (the number of alarms was stored per applet, but alarm settings globally)
 
+- Add new appearance setting: colorize by direction groups automatically (groups are determined by counting how many departures go over each stop, only the first stop after the selected home stop gets counted)
+
 0.10 - Beta 8
 - Make leaving departures animate before being removed from the list
 

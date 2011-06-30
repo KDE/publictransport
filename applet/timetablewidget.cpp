@@ -116,7 +116,7 @@ qreal PublicTransportGraphicsItem::unexpandedHeight() const
 bool PublicTransportGraphicsItem::hasExtraIcon() const
 {
     if ( !m_item ) {
-        kDebug() << "No Item!";
+        // Item was already deleted
         return false;
     }
 
@@ -322,7 +322,7 @@ void DepartureGraphicsItem::setLeavingStep( qreal leavingStep )
 void DepartureGraphicsItem::updateTextLayouts()
 {
     if ( !m_item ) {
-        kDebug() << "DepartureItem already destroyed";
+        // Item already destroyed
         return;
     }
 
@@ -791,6 +791,19 @@ void DepartureGraphicsItem::paint( QPainter* painter,
                             option->rect.bottomRight() - QPoint(0, 1)),
                     QBrush(borderGradient) );
 
+    // Draw special background for departures in color groups
+    QColor bgColor = index().data(Qt::BackgroundColorRole).value<QColor>();
+    if ( bgColor != Qt::transparent ) {
+        QLinearGradient bgGradient( 0, 0, 1, 0 );
+        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+        bgGradient.setColorAt( 0, Qt::transparent );
+        bgGradient.setColorAt( 0.4, bgColor );
+        bgGradient.setColorAt( 0.6, bgColor );
+        bgGradient.setColorAt( 1, Qt::transparent );
+
+        painter->fillRect( option->rect, QBrush(bgGradient) );
+    }
+    
     // Draw special background for departures with an alarm
     if ( index().data(DrawAlarmBackgroundRole).toBool() ) {
 // 		qreal bias = index().data( AlarmColorIntensityRole ).toReal();

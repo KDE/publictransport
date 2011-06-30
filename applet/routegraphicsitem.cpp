@@ -337,13 +337,14 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
 }
 
 void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                            QWidget* widget )
+                               QWidget* widget )
 {
     Q_UNUSED( option );
     Q_UNUSED( widget );
 
     if ( !m_item ) {
-        kDebug() << "No Info Object!";
+        // Item was already deleted
+        // TODO: Paint to a pixmap before deletion and just paint that pixmap here?
         return;
     }
 

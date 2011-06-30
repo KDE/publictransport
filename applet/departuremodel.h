@@ -350,7 +350,8 @@ protected:
 };
 
 /**
- * @brief An item which automatically creates/updates child items according to the information in @ref departureInfo.
+ * @brief An item which automatically creates/updates child items according
+ *   to the information in @ref departureInfo.
  *
  * To update this item and it's child items call @ref setDepartureInfo. To only update remaining
  * time values, call @ref updateTimeValues.
@@ -663,6 +664,9 @@ public:
      * Hashes can be retrieved using qHash or @ref DepartureInfo::hash.
      **/
     QList< uint > itemHashes() const;
+
+    QList< DepartureInfo > departureInfos() const;
+    
     virtual DepartureItem *addItem( const DepartureInfo &departureInfo,
                 Columns sortColumn = ColumnDeparture,
                 Qt::SortOrder sortOrder = Qt::AscendingOrder );
@@ -728,6 +732,9 @@ public:
       * if no stop is currently highlighted. */
     QString highlightedStop() const { return m_highlightedStopName; };
 
+    void setColorGroups( const ColorGroupSettingsList &colorGroups );
+    ColorGroupSettingsList colorGroups() const { return m_colorGroups; };
+
 signals:
     /** @brief The alarm for @p item has been fired. */
     void alarmFired( DepartureItem *item );
@@ -758,6 +765,7 @@ private:
 
     QMultiMap< QDateTime, DepartureItem* > m_alarms;
     QString m_highlightedStopName;
+    ColorGroupSettingsList m_colorGroups; // A list of color groups for the current stop
 };
 
 /**

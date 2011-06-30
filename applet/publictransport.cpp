@@ -859,6 +859,18 @@ void PublicTransport::departuresProcessed( const QString& sourceName,
 
     // Fill the model with the received departures
     fillModel( departures );
+
+    if ( m_settings.colorize ) {
+        adjustColorGroupSettingsCount();
+        ColorGroupSettingsList colorGroups =
+                m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ];
+        if ( colorGroups.isEmpty() ) {
+            kDebug() << "Generate new color group settings for" << departures.count() << "departures";
+            colorGroups = generateColorGroupSettingsFrom( departures );
+            m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ] = colorGroups;
+            m_model->setColorGroups( colorGroups );
+        }
+    }
 }
 
 QString PublicTransport::stripDateAndTimeValues( const QString& sourceName ) const
@@ -1926,6 +1938,7 @@ void PublicTransport::writeSettings( const Settings& settings )
              changed.testFlag(SettingsIO::ChangedCurrentStop) ||
              changed.testFlag(SettingsIO::ChangedServiceProvider) )
         {
+            adjustColorGroupSettingsCount();
             clearDepartures();
             reconnectSource();
         } else if ( changed.testFlag(SettingsIO::ChangedFilterSettings) ) {
@@ -1945,6 +1958,35 @@ void PublicTransport::writeSettings( const Settings& settings )
              changed.testFlag(SettingsIO::ChangedFilterSettings) )
         {
             m_titleWidget->updateFilterWidget();
+        }
+
+        // (De)Colorize if colorization setting has been toggled
+        if ( changed.testFlag(SettingsIO::ChangedColorization) ||
+             changed.testFlag(SettingsIO::ChangedCurrentStop) ||
+             changed.testFlag(SettingsIO::ChangedStopSettings) ||
+             changed.testFlag(SettingsIO::ChangedFilterSettings) )
+        {
+            if ( m_settings.colorize && 
+                 !(changed.testFlag(SettingsIO::ChangedCurrentStop) ||
+                   changed.testFlag(SettingsIO::ChangedStopSettings) ||
+                   changed.testFlag(SettingsIO::ChangedFilterSettings)) )
+            {
+                // Generate color groups from existing departure data
+                adjustColorGroupSettingsCount();
+                ColorGroupSettingsList colorGroups =
+                        m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ];
+                if ( colorGroups.isEmpty() ) {
+                    QList<DepartureInfo> departures = m_model->departureInfos();
+                    kDebug() << "Generate new color group settings for" << departures.count() << "departures";
+                    colorGroups = generateColorGroupSettingsFrom( departures );
+                    m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ] = colorGroups;
+                    m_model->setColorGroups( colorGroups );
+                }
+            } else {
+                // Remove color groups if colorization was toggled off
+                // or if stop/filter settings were changed (update color groups after data arrived)
+                m_model->setColorGroups( ColorGroupSettingsList() );
+            }
         }
     } else {
         kDebug() << "No changes made in the settings";
@@ -2554,6 +2596,16 @@ public:
     };
 };
 
+void PublicTransport::adjustColorGroupSettingsCount()
+{
+    while ( m_settings.colorGroupSettingsList.count() < m_settings.stopSettingsList.count() ) {
+        m_settings.colorGroupSettingsList << ColorGroupSettingsList();
+    }
+    while ( m_settings.colorGroupSettingsList.count() > m_settings.stopSettingsList.count() ) {
+        m_settings.colorGroupSettingsList.removeLast();
+    }
+}
+
 ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
         const QList< DepartureInfo >& infos )
 {
@@ -2563,7 +2615,14 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
     // Maximal number of groups
     const int maxGroupCount = 5;
 
-    const QColor colors[5] = { Qt::red, Qt::blue, Qt::green, Qt::cyan, Qt::magenta };
+    const int opacity = 40;
+    const QColor colors[5] = {
+        QColor(0, 230, 0, opacity), // green
+        QColor(0, 0, 255, opacity), // blue
+        QColor(200, 125, 20, opacity), // brown
+        QColor(50, 225, 225, opacity), // cyan
+        QColor(255, 255, 0, opacity) // yellow
+    };
 
     // TODO Compare routes (how many stops are equal from beginning?)
 
