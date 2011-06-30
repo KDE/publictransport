@@ -141,7 +141,6 @@ public:
 QDataStream& operator<<( QDataStream &out, const FilterList &filterList );
 QDataStream& operator>>( QDataStream &in, FilterList &filterList );
 
-// TODO Move to settings.h?
 /**
  * @brief Contains information about a filter configuration, ie. the settings of a filter.
  * 
@@ -155,82 +154,50 @@ struct PUBLICTRANSPORTHELPER_EXPORT FilterSettings {
      * Filters are OR combined while constraints are AND combined. */
     FilterList filters;
 
-    FilterSettings() {
+    /** @brief A list of stop settings indices for which this filter should be applied. */
+    QList< int > affectedStops;
+
+    /** @brief The Name of this filter settings. */
+    QString name;
+    
+    /** @brief Create a new FilterSettings object with the given @p name. */
+    FilterSettings( const QString &name = "<unnamed>" ) {
         filterAction = ShowMatching;
+        this->name = name;
     };
 
     /** @brief Applies this filter configuration on the given @p departureInfo. */
     bool filterOut( const DepartureInfo& departureInfo ) const;
-
-    QList< int > affectedStops; /**< A list of stop settings indices for which
-            * this filter should be applied. */
-    QString name; /**< The Name of this filter settings. */ // TODO
 };
 bool PUBLICTRANSPORTHELPER_EXPORT operator ==( const FilterSettings &l, const FilterSettings &r );
 
-// typedef QList< FilterSettings > FilterSettingsList;
-/** @brief A QList of FilterSettings with filterOut, names, byName, set, hasName methods for convenience. */
+/** @brief A QList of FilterSettings with some convenience methods.
+ *
+ * @ingroup filterSystem */
 class PUBLICTRANSPORTHELPER_EXPORT FilterSettingsList : public QList< FilterSettings > {
 public:
     /** @brief Applies all filter configurations in this list on the given @p departureInfo. */
-    bool filterOut( const DepartureInfo& departureInfo ) const {
-        foreach ( const FilterSettings &filterSettings, *this ) {
-            if ( filterSettings.filterOut(departureInfo) ) {
-                return true;
-            }
-        }
-        return false; // No filter settings filtered the departureInfo out
-    };
+    bool filterOut( const DepartureInfo& departureInfo ) const;
 
-    QStringList names() const {
-        QStringList ret;
-        foreach ( const FilterSettings &filterSettings, *this ) {
-            ret << filterSettings.name;
-        }
-        return ret;
-    };
+    /** @brief Get a list of the names of all filter settings in this list. */
+    QStringList names() const;
 
-    bool hasName( const QString &name ) const {
-        foreach ( const FilterSettings &filterSettings, *this ) {
-            if ( filterSettings.name == name ) {
-                return true;
-            }
-        }
-        return false; // No filter with the given name found
-    };
-    
-    FilterSettings byName( const QString &name ) const {
-        foreach ( const FilterSettings &filterSettings, *this ) {
-            if ( filterSettings.name == name ) {
-                return filterSettings;
-            }
-        }
-        return FilterSettings(); // No filter with the given name found
-    };
+    /** @brief Checks if there is a filter settings object with the given @p name in this list. */
+    bool hasName( const QString &name ) const;
 
-    void removeByName( const QString &name ) {
-        for ( int i = 0; i < count(); ++i ) {
-            if ( operator[](i).name == name ) {
-                removeAt( i );
-                return;
-            }
-        }
+    /** @brief Gets the filter settings object with the given @p name from this list.
+     *
+     * If there is no such filter settings object, a default constructed FilterSettings object
+     * gets returned.
+     **/
+    FilterSettings byName( const QString &name ) const;
 
-        kDebug() << "No filter configuration with the given name found:" << name;
-        kDebug() << "Available names are:" << names();
-    };
+    /** @brief Removes the filter settings object with the given @p name from this list. */
+    void removeByName( const QString &name );
 
-    void set( const FilterSettings &newFilterSettings ) {
-        for ( int i = 0; i < count(); ++i ) {
-            if ( operator[](i).name == newFilterSettings.name ) {
-                operator[]( i ) = newFilterSettings;
-                return;
-            }
-        }
-
-        // No filter with the given name found, add newFilterSettings to this list
-        *this << newFilterSettings;
-    };
+    /** @brief Adds the given @p newFilterSettings to this list or changes an existing one with
+     * the same name, if there is already one in this list. */
+    void set( const FilterSettings &newFilterSettings );
 };
 bool PUBLICTRANSPORTHELPER_EXPORT operator ==( const FilterSettingsList &l, const FilterSettingsList &r );
 

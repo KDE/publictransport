@@ -378,3 +378,62 @@ bool operator==(const FilterSettingsList& l, const FilterSettingsList& r)
 
     return true;
 }
+
+bool FilterSettingsList::filterOut(const DepartureInfo& departureInfo) const {
+    foreach ( const FilterSettings &filterSettings, *this ) {
+        if ( filterSettings.filterOut(departureInfo) ) {
+            return true;
+        }
+    }
+    return false; // No filter settings filtered the departureInfo out
+}
+
+QStringList FilterSettingsList::names() const {
+    QStringList ret;
+    foreach ( const FilterSettings &filterSettings, *this ) {
+        ret << filterSettings.name;
+    }
+    return ret;
+}
+
+bool FilterSettingsList::hasName(const QString& name) const {
+    foreach ( const FilterSettings &filterSettings, *this ) {
+        if ( filterSettings.name == name ) {
+            return true;
+        }
+    }
+    return false; // No filter with the given name found
+}
+
+FilterSettings FilterSettingsList::byName(const QString& name) const {
+    foreach ( const FilterSettings &filterSettings, *this ) {
+        if ( filterSettings.name == name ) {
+            return filterSettings;
+        }
+    }
+    return FilterSettings(); // No filter with the given name found
+}
+
+void FilterSettingsList::removeByName(const QString& name) {
+    for ( int i = 0; i < count(); ++i ) {
+        if ( operator[](i).name == name ) {
+            removeAt( i );
+            return;
+        }
+    }
+
+    kDebug() << "No filter configuration with the given name found:" << name;
+    kDebug() << "Available names are:" << names();
+}
+
+void FilterSettingsList::set(const FilterSettings& newFilterSettings) {
+    for ( int i = 0; i < count(); ++i ) {
+        if ( operator[](i).name == newFilterSettings.name ) {
+            operator[]( i ) = newFilterSettings;
+            return;
+        }
+    }
+
+    // No filter with the given name found, add newFilterSettings to this list
+    *this << newFilterSettings;
+}

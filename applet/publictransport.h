@@ -837,8 +837,8 @@ constraint which should match the departures/arrivals to be shown/hidden. One st
 in the hierarchy comes the class @ref Filter, which is a list of constraints (combined using
 logical AND). Another step higher comes @ref FilterList, which is a list of filters (combined
 using logical OR). A @ref FilterList is wrapped by an object of type @ref FilterSettings together
-with the @ref FilterAction for that filter configuration (show or hide matching
-departures/arrivals).
+with the @ref FilterAction (show or hide matching departures/arrivals), name and affected stops
+for that filter configuration.
 
 Each @ref Constraint has a @ref FilterType, ie. what to filter with this constraint. For example
 a constraint can filter departures/arrivals by the used vehicle type using @ref FilterByVehicleType.
