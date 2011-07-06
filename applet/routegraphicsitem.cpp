@@ -587,6 +587,8 @@ void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent*
         stopAction = CopyStopNameToClipboard;
     } else if ( executedAction == highlightStopAction ) {
         stopAction = HighlightStop;
+    } else {
+        return; // No action selected
     }
     emit requestStopAction( stopAction, QString(m_stopName), this );
 }
