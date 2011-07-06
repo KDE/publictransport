@@ -25,6 +25,7 @@
 #include <Plasma/Svg>
 #include "global.h"
 
+class KMenu;
 class JourneyItem;
 class DepartureItem;
 
@@ -98,6 +99,7 @@ class RouteStopTextGraphicsItem : public QGraphicsWidget {
 public:
     RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font, qreal baseSize,
                                const QString &stopText, const QString &stopName );
+    ~RouteStopTextGraphicsItem();
 
     QString stopText() const { return m_stopText; };
     QString stopName() const { return m_stopName; };
@@ -111,12 +113,9 @@ public:
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
 
-//     virtual QRectF boundingRect() const;
 signals:
     void hovered( RouteStopTextGraphicsItem *item );
     void unhovered( RouteStopTextGraphicsItem *item );
-//     void requestFilterCreation( const QString &stopName, RouteStopTextGraphicsItem *item );
-//     void showDepartures( const QString &stopName, RouteStopTextGraphicsItem *item );
     void requestStopAction( StopAction stopAction, const QString &stopName,
                             RouteStopTextGraphicsItem *item );
 
@@ -134,6 +133,7 @@ private:
     QString m_stopName;
     qreal m_expandStep;
     qreal m_baseSize;
+    KMenu *m_contextMenu;
 };
 
 /**
@@ -186,7 +186,8 @@ class JourneyRouteStopGraphicsItem : public QGraphicsWidget {
 
 public:
     JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent, const QPixmap &vehiclePixmap,
-                                const QString &text, bool isIntermediate, const QString &stopName );
+                                  const QString &text, bool isIntermediate, const QString &stopName );
+    ~JourneyRouteStopGraphicsItem();
 
     void setText( const QString &text );
 
@@ -212,6 +213,7 @@ private:
 
     bool m_intermediate;
     QString m_stopName;
+    KMenu* m_contextMenu;
 };
 
 class JourneyRouteGraphicsItem : public QGraphicsWidget {

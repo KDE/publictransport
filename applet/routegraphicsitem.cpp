@@ -499,14 +499,19 @@ void RouteStopMarkerGraphicsItem::paint( QPainter* painter, const QStyleOptionGr
 }
 
 RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font,
-                                                    qreal baseSize, const QString& stopText, const QString &stopName )
-    : QGraphicsWidget(parent)
+        qreal baseSize, const QString& stopText, const QString &stopName )
+        : QGraphicsWidget(parent), m_contextMenu(0)
 {
     m_expandStep = 0.0;
     m_baseSize = baseSize;
     setFont( font );
     setStop( stopText, stopName );
     setAcceptHoverEvents( true );
+}
+
+RouteStopTextGraphicsItem::~RouteStopTextGraphicsItem()
+{
+    delete m_contextMenu;
 }
 
 void RouteStopTextGraphicsItem::setStop( const QString& stopText, const QString &stopName )
@@ -557,27 +562,30 @@ void RouteStopTextGraphicsItem::hoverLeaveEvent(QGraphicsSceneHoverEvent* event)
 
 void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
 {
-    KMenu *menu = new KMenu( event->widget() );
+    m_contextMenu = new KMenu( event->widget() );
     RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
     DepartureModel *model = !routeItem ? NULL :
             qobject_cast<DepartureModel*>( routeItem->item()->model() );
     
     QAction *showDeparturesAction = new QAction( KIcon("public-transport-stop"),
-            i18n("Show &Departures From '%1'", m_stopName), menu );
+            i18n("Show &Departures From This Stop"), m_contextMenu );
     QAction *highlightStopAction = new QAction( KIcon("edit-select"),
             (!model || !model->routeItemFlags(m_stopName).testFlag(RouteItemHighlighted))
-            ? i18n("&Highlight Stop '%1'", m_stopName) : i18n("&Unhighlight Stop"), menu );
+            ? i18n("&Highlight This Stop") : i18n("&Unhighlight This Stop"), m_contextMenu );
     QAction *newFilterViaStopAction = new QAction( KIcon("view-filter"),
-            i18n("&Create Filter 'Via %1'", m_stopName), menu );
+            i18n("&Create Filter 'Via This Stop'"), m_contextMenu );
     QAction *copyStopToClipboardAction = new QAction( KIcon("edit-copy"),
-            i18n("&Copy Stop Name"), menu );
-    menu->addTitle( KIcon("public-transport-stop"), m_stopName );
-    menu->addAction( showDeparturesAction );
-    menu->addAction( highlightStopAction );
-    menu->addAction( newFilterViaStopAction );
-    menu->addAction( copyStopToClipboardAction );
+            i18n("&Copy Stop Name"), m_contextMenu );
+    m_contextMenu->addTitle( KIcon("public-transport-stop"), m_stopName );
+    m_contextMenu->addAction( showDeparturesAction );
+    m_contextMenu->addAction( highlightStopAction );
+    m_contextMenu->addAction( newFilterViaStopAction );
+    m_contextMenu->addAction( copyStopToClipboardAction );
 
-    QAction *executedAction = menu->exec( event->screenPos() );
+    QAction *executedAction = m_contextMenu->exec( event->screenPos() );
+    delete m_contextMenu;
+    m_contextMenu = NULL;
+
     StopAction stopAction;
     if ( executedAction == newFilterViaStopAction ) {
         stopAction = CreateFilterForStop;
@@ -664,13 +672,18 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter,
 
 JourneyRouteStopGraphicsItem::JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent,
     const QPixmap &vehiclePixmap, const QString &text, bool isIntermediate, const QString &stopName )
-    : QGraphicsWidget(parent), m_parent(parent), m_infoTextDocument(0)
+    : QGraphicsWidget(parent), m_parent(parent), m_infoTextDocument(0), m_contextMenu(0)
 {
     m_vehiclePixmap = vehiclePixmap;
     m_intermediate = isIntermediate;
     m_stopName = stopName;
     setText( text );
     setAcceptHoverEvents( true );
+}
+
+JourneyRouteStopGraphicsItem::~JourneyRouteStopGraphicsItem()
+{
+    delete m_contextMenu;
 }
 
 void JourneyRouteStopGraphicsItem::setText( const QString& text )
@@ -689,13 +702,15 @@ void JourneyRouteStopGraphicsItem::setText( const QString& text )
 void JourneyRouteStopGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
 {
     if ( m_intermediate ) {
-        QMenu *menu = new QMenu( event->widget() );
+        m_contextMenu = new KMenu( event->widget() );
         // TODO newOriginStopAction with "from" instead of "to" for journeys
         QAction *newTargetStopAction = new QAction( KIcon("edit-find"),
-                i18n("&Search Journeys to %1", m_stopName), menu );
-        menu->addAction( newTargetStopAction );
+                i18n("&Search Journeys to %1", m_stopName), m_contextMenu );
+        m_contextMenu->addAction( newTargetStopAction );
 
-        QAction *executedAction = menu->exec( event->screenPos() );
+        QAction *executedAction = m_contextMenu->exec( event->screenPos() );
+        delete m_contextMenu;
+        m_contextMenu = NULL;
         if ( executedAction == newTargetStopAction ) {
             emit requestJourneys( m_stopName, this );
         }
