@@ -1,7 +1,7 @@
 
 Changelog of plasma-applet-publictransport 
 
-NEXT
+0.10 - Beta 9 (NEXT)
 - Replace state flags with a QStateMachine (states for views like departures, journeys, journey search, ...; states for data status like waiting, valid, invalid; states for the network status).
 
 - Fix departures not being removed and flashing all the time by making DepartureModel::removeLeavingDepartures a slot
@@ -22,6 +22,7 @@ NEXT
 - Fix alarm settings writing (the number of alarms was stored per applet, but alarm settings globally)
 
 - Add new appearance setting: colorize by direction groups automatically (groups are determined by counting how many departures go over each stop, only the first stop after the selected home stop gets counted)
+- Fix crashes with context menus of deleted route stop items
 
 0.10 - Beta 8
 - Make leaving departures animate before being removed from the list

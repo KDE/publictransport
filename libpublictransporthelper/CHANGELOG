@@ -1,8 +1,10 @@
 
 Changelog of libpublictransporthelper
 
-0.10 - Beta 9
+0.10 - Beta 9 (NEXT)
 - Move departureinfo.h/.cpp, filter.h/.cpp, filterwidget.h/.cpp and some parts of global.h/.cpp from the applet to libpublictransporthelper
+- Make it possible to use new FilterSettings with multiple selections to be correctly displayed and editable in StopSettingsDialogs (doesn't store used filter configurations per stop as string, but as complete FilterSettings object)
+- Add new filter type "Next Stop", like "Via" but only for the next stop (used for color groups, added to filter and alarm configuration)
 
 0.10 - Beta 8
 - Automatically load the message catalog of the library by using KCatalogLoader (needs KDE 4.6.2, otherwise translations from the library aren't available)
