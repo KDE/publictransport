@@ -515,7 +515,7 @@ qreal DepartureGraphicsItem::timeColumnWidth() const
 }
 
 void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                                QWidget* widget )
+                                 QWidget* widget )
 {
     Q_UNUSED( widget );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
@@ -726,9 +726,13 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
 QColor PublicTransportGraphicsItem::textColor() const
 {
     DepartureModel *model = qobject_cast<DepartureModel*>( m_item->model() );
-    DepartureItem *item = qobject_cast<DepartureItem*>( m_item.data() );
-    bool manuallyHighlighted = item->departureInfo()->routeStops()
-            .contains( model->highlightedStop(), Qt::CaseInsensitive );
+    bool manuallyHighlighted = false;
+    if ( model ) {
+        // Only proceed with highlighted stops, if the model is a DepartureModel (not a JourneyModel)
+        DepartureItem *item = qobject_cast<DepartureItem*>( m_item.data() );
+        manuallyHighlighted = item->departureInfo()->routeStops()
+                .contains( model->highlightedStop(), Qt::CaseInsensitive );
+    }
 
     if ( manuallyHighlighted ) {
         QColor highlightColor = KColorUtils::mix(
@@ -763,7 +767,7 @@ void DepartureGraphicsItem::paint( QPainter* painter,
     QColor _backgroundColor = backgroundColor();
     QColor alternateBackgroundColor = KColorScheme( QPalette::Active, KColorScheme::View )
             .background( KColorScheme::AlternateBackground ).color();
-    alternateBackgroundColor.setAlphaF( 0.3 );
+    alternateBackgroundColor.setAlphaF( 0.4 );
     QColor borderColor = _textColor;
     borderColor.setAlphaF( 0.5 );
 
