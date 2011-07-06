@@ -21,10 +21,7 @@ set( publictransport_SRCS
     journeysearchlineedit.cpp
     overlaywidget.cpp
     global.cpp
-#     filter.cpp
-#     departureinfo.cpp
     settings.cpp
-#     filterwidget.cpp
     departurepainter.cpp
     datasourcetester.cpp
     timetablewidget.cpp
@@ -35,8 +32,7 @@ kde4_add_ui_files( publictransport_SRCS
     publicTransportConfigAdvanced.ui
     publicTransportAppearanceConfig.ui
     publicTransportFilterConfig.ui
-    alarmConfig.ui
-    colorGroupConfig.ui )
+    alarmConfig.ui )
 
 # Now make sure all files get to the right place
 kde4_add_plugin( plasma_applet_publictransport ${publictransport_SRCS} )
