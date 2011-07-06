@@ -178,7 +178,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     m_uiAlarms.alarmFilter->removeAllWidgets();
     m_uiAlarms.alarmFilter->setAllowedFilterTypes( QList<FilterType>()
             << FilterByDeparture << FilterByDayOfWeek << FilterByVehicleType
-            << FilterByTarget << FilterByVia << FilterByTransportLine
+            << FilterByTarget << FilterByVia << FilterByNextStop << FilterByTransportLine
             << FilterByTransportLineNumber << FilterByDelay );
     m_uiAlarms.alarmFilter->setWidgetCountRange( 1 );
     m_uiAlarms.affectedStops->setMultipleSelectionOptions( CheckCombobox::ShowStringList );

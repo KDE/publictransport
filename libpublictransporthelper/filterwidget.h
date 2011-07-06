@@ -344,8 +344,8 @@ public:
 
     static FilterWidget *create( const Filter &filter, QWidget *parent = 0 ) {
         FilterWidget *filterWidget = new FilterWidget( QList<FilterType>()
-                << FilterByVehicleType << FilterByTarget << FilterByVia << FilterByTransportLine
-                << FilterByTransportLineNumber << FilterByDelay, parent );
+                << FilterByVehicleType << FilterByTarget << FilterByVia << FilterByNextStop
+                << FilterByTransportLine << FilterByTransportLineNumber << FilterByDelay, parent );
         filterWidget->setFilter( filter );
         return filterWidget;
     };

@@ -61,7 +61,10 @@ enum FilterType {
     FilterByTransportLineNumber, /**< Filter by transport line number. */
     FilterByTarget, /**< Filter by target/origin. */
     FilterByDelay, /**< Filter by delay. */
-    FilterByVia, /**< Filter by intermediate stops. */
+    FilterByVia, /**< Filter by intermediate stops.
+            * (Like FilterByNextStop, but for all intermediate stops, not only the first). */
+    FilterByNextStop, /**< Filter by next intermediate stop.
+            * (Like FilterByVia, but only for the first intermediate stop). */
     FilterByDeparture, /**< Filter by departure/arrival time. */
     FilterByDayOfWeek /**< Filter by the day of week of the departure date. */
 };

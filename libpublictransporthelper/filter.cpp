@@ -47,7 +47,6 @@ bool FilterList::match( const DepartureInfo& departureInfo ) const
 
 bool Filter::match( const DepartureInfo& departureInfo ) const
 {
-    bool viaMatched;
     foreach( const Constraint &constraint, *this ) {
         switch ( constraint.type ) {
         case FilterByTarget:
@@ -56,10 +55,10 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
                 return false;
             }
             break;
-        case FilterByVia:
-            viaMatched = false;
+        case FilterByVia: {
+            bool viaMatched = false;
             foreach( const QString &via, departureInfo.routeStops() ) {
-                if ( matchString( constraint.variant, constraint.value.toString(), via ) ) {
+                if ( matchString(constraint.variant, constraint.value.toString(), via) ) {
                     viaMatched = true;
                     break;
                 }
@@ -67,9 +66,18 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
             if ( !viaMatched )
                 return false;
             break;
+        }
+        case FilterByNextStop:
+            if ( departureInfo.routeStops().count() < 2 ||
+                 departureInfo.routeExactStops() < 2 ||
+                 !matchString(constraint.variant, constraint.value.toString(),
+                              departureInfo.routeStops()[1]) ) {
+                return false;
+            }
+            break;
         case FilterByTransportLine:
             if ( !matchString(constraint.variant, constraint.value.toString(),
-                            departureInfo.lineString()) ) {
+                              departureInfo.lineString()) ) {
                 return false;
             }
             break;
@@ -79,7 +87,7 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
                 // Invalid line numbers only match with variant DoesntEqual
                 return constraint.variant == FilterDoesntEqual;
             } else if ( !matchInt(constraint.variant, constraint.value.toInt(),
-                                departureInfo.lineNumber()) ) {
+                                  departureInfo.lineNumber()) ) {
                 return false;
             }
             break;
@@ -88,7 +96,7 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
                 // Invalid delays only match with variant DoesntEqual
                 return constraint.variant == FilterDoesntEqual;
             } else if ( !matchInt(constraint.variant, constraint.value.toInt(),
-                                departureInfo.delay()) ) {
+                                  departureInfo.delay()) ) {
                 return false;
             }
             break;
@@ -273,6 +281,7 @@ QDataStream& operator<<( QDataStream& out, const Filter &filter )
 
         case FilterByTarget:
         case FilterByVia:
+        case FilterByNextStop:
         case FilterByTransportLine:
             out << constraint.value.toString();
             break;
@@ -325,6 +334,7 @@ QDataStream& operator>>( QDataStream& in, Filter &filter )
 
         case FilterByTarget:
         case FilterByVia:
+        case FilterByNextStop:
         case FilterByTransportLine:
             in >> s;
             constraint.value = s;

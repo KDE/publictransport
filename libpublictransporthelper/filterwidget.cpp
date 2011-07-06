@@ -32,7 +32,7 @@ FilterWidget::FilterWidget( QWidget* parent,
         : AbstractDynamicLabeledWidgetContainer( parent, RemoveButtonsBesideWidgets,
         AddButtonBesideFirstWidget, seperatorOptions, AddWidgetsAtBottom, QString() )
 {
-    m_allowedFilterTypes << FilterByVehicleType << FilterByTarget << FilterByVia
+    m_allowedFilterTypes << FilterByVehicleType << FilterByTarget << FilterByVia << FilterByNextStop
             << FilterByTransportLine << FilterByTransportLineNumber << FilterByDelay;
     setWidgetCountRange( 1, 10, false );
     setAutoRaiseButtons( true );
@@ -46,7 +46,8 @@ FilterWidget::FilterWidget( const QList<FilterType> &allowedFilterTypes, QWidget
 {
     if ( allowedFilterTypes.isEmpty() ) {
         m_allowedFilterTypes << FilterByVehicleType << FilterByTarget << FilterByVia
-        << FilterByTransportLine << FilterByTransportLineNumber << FilterByDelay;
+                << FilterByNextStop << FilterByTransportLine << FilterByTransportLineNumber
+                << FilterByDelay;
     } else {
         m_allowedFilterTypes = allowedFilterTypes;
     }
@@ -154,6 +155,7 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
     case FilterByTransportLine:
     case FilterByTarget:
     case FilterByVia:
+    case FilterByNextStop:
         return new ConstraintStringWidget( type, variant, value.toString(), parent );
 
     case FilterByTransportLineNumber:
@@ -204,6 +206,7 @@ ConstraintWidget* FilterWidget::createConstraint( FilterType type )
     case FilterByTransportLine:
     case FilterByTarget:
     case FilterByVia:
+    case FilterByNextStop:
         return ConstraintWidget::create( type, FilterContains, QString(), this );
 
     case FilterByTransportLineNumber:
@@ -214,7 +217,7 @@ ConstraintWidget* FilterWidget::createConstraint( FilterType type )
         return ConstraintWidget::create( type, FilterEquals, QTime::currentTime(), this );
     case FilterByDayOfWeek:
         return ConstraintWidget::create( type, FilterIsOneOf,
-                                        QVariantList() << 1 << 2 << 3 << 4 << 5 << 6 << 7, this );
+                                         QVariantList() << 1 << 2 << 3 << 4 << 5 << 6 << 7, this );
 
     default:
         kDebug() << "Unknown filter type" << type;
@@ -236,6 +239,8 @@ QString FilterWidget::filterName( FilterType filter ) const
         return i18nc( "@item:inlistbox Name of the filter for targets/origins", "Target" );
     case FilterByVia:
         return i18nc( "@item:inlistbox Name of the filter for intermediate stops", "Via" );
+    case FilterByNextStop:
+        return i18nc( "@item:inlistbox Name of the filter for the first intermediate stop", "Next Stop" );
     case FilterByDelay:
         return i18nc( "@item:inlistbox Name of the filter for delays", "Delay" );
     case FilterByDeparture:

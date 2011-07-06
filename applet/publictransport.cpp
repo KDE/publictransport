@@ -2658,7 +2658,7 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
         RoutePartCount routeCount = routePartCount[i];
         ColorGroupSettings group;
         Filter groupFilter;
-        groupFilter << Constraint( FilterByVia, FilterContains, routeCount.latestCommonStop );
+        groupFilter << Constraint( FilterByNextStop, FilterEquals, routeCount.latestCommonStop );
         group.filters << groupFilter;
         group.color = colors[i];
         colorGroups << group;
