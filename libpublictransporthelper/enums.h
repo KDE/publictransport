@@ -84,7 +84,8 @@ enum PUBLICTRANSPORTHELPER_EXPORT ModelDataRoles {
 			* (country code or other) in the location model. */
 	TimetableItemHashRole = Qt::UserRole + 13, /**< Used to store a hash for the current
 			* timetable item in the model. */
-	ServiceProviderIdRole = Qt::UserRole + 14, /** Used to store the service provider ID. */
+	ServiceProviderIdRole = Qt::UserRole + 14, /**< Used to store the service provider ID. */
+    FilterSettingsRole = Qt::UserRole + 15, /**< Used to store FilterSettings objects. */
 
 	// Additional data roles used by DepartureModel / JourneyModel.
 	FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text.
@@ -96,10 +97,9 @@ enum PUBLICTRANSPORTHELPER_EXPORT ModelDataRoles {
 			* 0 for the journey with the biggest duration, 1 for the smallest duration. */
 	LinesPerRowRole = Qt::UserRole + 505, /**< Used to change the number of lines for a row. */
 	IconSizeRole = Qt::UserRole + 506, /**< Used to set a specific icon size for an element. */
-        IsLeavingSoonRole = Qt::UserRole + 507, /**< Whether or not a departure/arrival is leaving soon. */
-        GroupColorRoler = Qt::UserRole + 508 /**< Departures can be grouped,
-                        * visualized by colors. These group colors can be stored
-                        * in this role. */
+    IsLeavingSoonRole = Qt::UserRole + 507, /**< Whether or not a departure/arrival is leaving soon. */
+    GroupColorRole = Qt::UserRole + 508 /**< Departures can be grouped, visualized by colors.
+            * These group colors can be stored in this role. */
 };
 
 /** @brief The position of the decoration. */

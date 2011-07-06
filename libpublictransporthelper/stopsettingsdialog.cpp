@@ -161,6 +161,7 @@ public:
 			AccessorInfoDialog::Options _accessorInfoDialogOptions,
 			QList<int> customSettings, 
 			StopSettingsWidgetFactory::Pointer _factory,
+            int _stopIndex,
 			StopSettingsDialog *q )
 			: factory(_factory), detailsWidget(0), stopFinder(0), nearStopsDialog(0), 
 			modelLocations(0), modelServiceProviders(0),
@@ -171,6 +172,7 @@ public:
 		settings = customSettings;
 		accessorInfoDialogOptions = _accessorInfoDialogOptions;
 		oldStopSettings = _oldStopSettings;
+        stopIndex = _stopIndex;
 		
 		// Resolve illegal option/setting combinations
 		correctOptions();
@@ -198,8 +200,9 @@ public:
 			dataEngineManager->unloadEngine("favicons");
 		}
 	};
-	
-	void init( const StopSettings &_oldStopSettings, const FilterSettingsList &filterConfigurations )
+
+	void init( const StopSettings &_oldStopSettings,
+               const FilterSettingsList &filterConfigurations )
 	{
 		Q_Q( StopSettingsDialog );
 		
@@ -212,7 +215,7 @@ public:
 		
 		// Initialize button flags, later User1 and/or Details are added and setButtons() is called
 		KDialog::ButtonCodes buttonFlags = KDialog::Ok | KDialog::Cancel;
-		
+
 		// Create details widget only if there are detailed settings in d->settings
 		if ( !settings.isEmpty() ) {
 			// Add widgets for settings
@@ -222,7 +225,7 @@ public:
 					// Default settings are created in uiStop.setupUi()
 					continue;
 				}
-				
+
 				// Create the widget in the factory and get it's label text
 				QWidget *widget = factory->widgetWithNameForSetting( setting, 
 						factory->isDetailsSetting(setting) ? detailsWidget : q->mainWidget() );
@@ -233,44 +236,45 @@ public:
 					if ( !detailsLayout ) {
 						// Create details widget and layout for the first details setting
 						detailsLayout = createDetailsWidget();
-						
+
 						// Add a details button to toggle the details section
 						buttonFlags |= KDialog::Details;
 					}
-					
+
 					// Add setting widget to the details section
 					detailsLayout->addRow( text, widget );
 				} else {
 					// Add in default layout
 					dynamic_cast<QFormLayout*>( q->mainWidget()->layout() )->addRow( text, widget );
 				}
-				
+
 				// Insert newly added widget into the hash
 				settingsWidgets.insert( setting, widget );
 			}
-			
-			if ( settings.contains(FilterConfigurationSetting) ) {
-				CheckCombobox *filterConfiguration =
-                        settingWidget<CheckCombobox>( FilterConfigurationSetting );
-				filterConfiguration->addItems(
-                        Global::translateFilterKeys(filterConfigurations.names()) );
-			}
-			
+
+			// TODO: in FilterConfigurationSetting?
+// 			if ( settings.contains(FilterConfigurationSetting) ) {
+// 				CheckCombobox *filterConfiguration =
+//                         settingWidget<CheckCombobox>( FilterConfigurationSetting );
+// 				filterConfiguration->addItems(
+//                         Global::translateFilterKeys(filterConfigurations.names()) );
+// 			}
+
 			// Add to column resizer
 			if ( detailsLayout ) {
 				resizer->addWidgetsFromLayout(detailsLayout, 0);
 			}
 		}
-		
+
 		// Add nearby stops button
 		if ( options.testFlag(StopSettingsDialog::ShowNearbyStopsButton) ) {
 			buttonFlags |= KDialog::User1;
 			q->connect( q, SIGNAL(user1Clicked()), q, SLOT(geolocateClicked()) );
 		}
-		
+
 		// Set dialog buttons (Ok, Cancel + maybe Details and/or User1)
 		q->setButtons( buttonFlags );
-		
+
 		// Setup options of the nearby stops button (needs to be called after q->setButtons())
 		if ( options.testFlag(StopSettingsDialog::ShowNearbyStopsButton) ) {
 			q->setButtonIcon( KDialog::User1, KIcon("tools-wizard") );
@@ -420,8 +424,12 @@ public:
 						q, SLOT(cityNameChanged(QString)) );
 		}
 
+        // Add filter configuration list to the StopSettings object
+        StopSettings filterStopSettings = _oldStopSettings;
+        filterStopSettings.set( FilterConfigurationSetting, QVariant::fromValue(filterConfigurations) );
+
 		// Set values of setting widgets
-		q->setStopSettings( _oldStopSettings );
+		q->setStopSettings( filterStopSettings );
 		
 		// Set focus to the first stop name if shown.
 		// Otherwise set focus to the service provider widget.
@@ -596,14 +604,20 @@ public:
 		if ( setting == FilterConfigurationSetting ) {
             FilterSettingsList filterSettings = data.value<FilterSettingsList>();
 //             TODO TEST
-// 			if ( data.canConvert(QVariant::StringList) ) {
-				CheckCombobox *filterConfiguration = qobject_cast<CheckCombobox*>( widget );
-				filterConfiguration->addItems( Global::translateFilterKeys(filterSettings.names()) ); //data.toStringList() );
-// 			} else {
-// 				kDebug() << "StopSettings::FilterConfigurationSetting needs a QStringList as data "
-// 							"argument to addSettingWidget(), containing the names of the "
-// 							"available filter configurations.";
-// 			}
+//             Same as in StopSettingsDialog::setStopSettings
+            CheckCombobox *filterConfiguration = qobject_cast<CheckCombobox*>( widget );
+            filterConfiguration->clear();
+            QAbstractItemModel *model = filterConfiguration->model();
+            int row = 0;
+            foreach ( const FilterSettings &filter, filterSettings ) {
+                model->insertRow( row );
+                QModelIndex index = model->index( row, 0 );
+                model->setData( index, Global::translateFilterKey(filter.name), Qt::DisplayRole );
+                model->setData( index, filter.affectedStops.contains(stopIndex)
+                                       ? Qt::Checked : Qt::Unchecked, Qt::CheckStateRole );
+                model->setData( index, QVariant::fromValue(filter), FilterSettingsRole );
+                ++row;
+            }
 		}
 		
 		// Set the widgets value 
@@ -635,7 +649,7 @@ public:
 	
 	QVariant valueFromWidget( int setting ) const 
 	{
-		return factory->valueOfSetting( settingWidget<QWidget>(setting), setting );
+		return factory->valueOfSetting( settingWidget<QWidget>(setting), setting, stopIndex );
 	};
 	
 	void setValueToWidget( int setting ) 
@@ -672,7 +686,6 @@ public:
 	};
 	
 	Ui::publicTransportStopConfig uiStop;
-// 	Ui::stopConfigDetails uiStopDetails; // setupUi gets only called, if a details widget is shown
 	
 	StopSettingsDialog::Options options;
 	AccessorInfoDialog::Options accessorInfoDialogOptions;
@@ -699,8 +712,9 @@ public:
 	Plasma::DataEngine *osmEngine;
 	Plasma::DataEngine *geolocationEngine;
 
-	QHash< QString, QVariant > stopToStopID; /**< A hash with stop names as
- 				* keys and the corresponding stop IDs as values. */
+    int stopIndex; // The index of the edited stop settings, if in a StopSettingsList
+	QHash< QString, QVariant > stopToStopID; // A hash with stop names as keys and the 
+                                             // corresponding stop IDs as values.
 
 protected:
 	StopSettingsDialog* const q_ptr;
@@ -708,11 +722,11 @@ protected:
 
 StopSettingsDialog::StopSettingsDialog( QWidget *parent, const StopSettings &stopSettings, 
 		StopSettingsDialog::Options options, AccessorInfoDialog::Options accessorInfoDialogOptions,
-		const FilterSettingsList &filterConfigurations, const QList<int> &customSettings,
-		StopSettingsWidgetFactory::Pointer factory ) 
+		const FilterSettingsList &filterConfigurations, int stopIndex,
+        const QList<int> &customSettings, StopSettingsWidgetFactory::Pointer factory )
 		: KDialog(parent),
 		d_ptr(new StopSettingsDialogPrivate(stopSettings, 
-			options, accessorInfoDialogOptions, customSettings, factory, this))
+			options, accessorInfoDialogOptions, customSettings, factory, stopIndex, this))
 {
 	Q_D( StopSettingsDialog );
 	d->init( stopSettings, filterConfigurations );
@@ -727,22 +741,23 @@ StopSettingsDialog *StopSettingsDialog::createSimpleAccessorSelectionDialog(
 	QWidget* parent, const StopSettings& stopSettings, StopSettingsWidgetFactory::Pointer factory )
 {
 	return new StopSettingsDialog( parent, stopSettings, SimpleAccessorSelection,
-			AccessorInfoDialog::DefaultOptions, FilterSettingsList(), QList<int>(), factory );
+			AccessorInfoDialog::DefaultOptions, FilterSettingsList(), -1, QList<int>(), factory );
 }
 
 StopSettingsDialog* StopSettingsDialog::createSimpleStopSelectionDialog(
 	QWidget* parent, const StopSettings& stopSettings, StopSettingsWidgetFactory::Pointer factory )
 {
 	return new StopSettingsDialog( parent, stopSettings, SimpleStopSelection,
-			AccessorInfoDialog::DefaultOptions, FilterSettingsList(), QList<int>(), factory );
+			AccessorInfoDialog::DefaultOptions, FilterSettingsList(), -1, QList<int>(), factory );
 }
 
 StopSettingsDialog* StopSettingsDialog::createExtendedStopSelectionDialog(
-	QWidget* parent, const StopSettings& stopSettings,  const FilterSettingsList &filterConfigurations,
-	StopSettingsWidgetFactory::Pointer factory )
+	QWidget* parent, const StopSettings& stopSettings, const FilterSettingsList &filterConfigurations,
+    int stopIndex, StopSettingsWidgetFactory::Pointer factory )
 {
 	return new StopSettingsDialog( parent, stopSettings, ExtendedStopSelection,
-			AccessorInfoDialog::DefaultOptions, filterConfigurations, QList<int>(), factory );
+			AccessorInfoDialog::DefaultOptions, filterConfigurations, stopIndex,
+            QList<int>(), factory );
 }
 
 QWidget* StopSettingsDialog::addSettingWidget( int setting, 
@@ -780,7 +795,7 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 	Q_D( StopSettingsDialog );
 	d->oldStopSettings = stopSettings;
 	
-	// Set location first (because it filters service providers
+	// Set location first (because it filters service providers)
 	QModelIndex serviceProviderIndex;
 	if ( d->options.testFlag(ShowServiceProviderConfig) ) {
 		QModelIndex locationIndex = d->modelLocations->indexOfLocation(
@@ -853,17 +868,25 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 					d->oldStopSettings[FirstDepartureConfigModeSetting] );
 			break;
 		case FilterConfigurationSetting: {
-            kDebug() << "DEPRECATED!"; // DEPRECATED
-// 			QStringList trFilterConfigurations = Global::translateFilterKeys(
-//                     stopSettings[FilterConfigurationSetting].toStringList() );
-// 		
-// 			CheckCombobox *filterConfiguration = d->settingWidget<CheckCombobox>(
-// 					FilterConfigurationSetting );
-//             filterConfiguration->setCheckedTexts( trFilterConfigurations );
-//             TODO REMOVE:
-// 			if ( filterConfiguration->contains(trFilterConfiguration) ) {
-// 				filterConfiguration->setCurrentItem( trFilterConfiguration );
-// 			}
+            CheckCombobox *filterConfiguration = d->settingWidget<CheckCombobox>(
+                    FilterConfigurationSetting );
+            FilterSettingsList filterSettings = stopSettings[FilterConfigurationSetting]
+                    .value<FilterSettingsList>();
+            kDebug() << "Got a filterSettingsList:" << filterSettings.count() << "stopIndex:" << d->stopIndex;
+//             TODO TEST
+//             Same as in StopSettingsDialogPrivate::addSettingWidget
+            filterConfiguration->clear();
+            QAbstractItemModel *model = filterConfiguration->model();
+            int row = 0;
+            foreach ( const FilterSettings &filter, filterSettings ) {
+                model->insertRow( row );
+                QModelIndex index = model->index( row, 0 );
+                model->setData( index, Global::translateFilterKey(filter.name), Qt::DisplayRole );
+                model->setData( index, filter.affectedStops.contains(d->stopIndex)
+                                       ? Qt::Checked : Qt::Unchecked, Qt::CheckStateRole );
+                model->setData( index, QVariant::fromValue(filter), FilterSettingsRole );
+                ++row;
+            }
 			break;
 		} 
 		default:
@@ -908,15 +931,11 @@ StopSettings StopSettingsDialog::stopSettings() const
 
 	// NOTE FilterConfigurationSetting won't get written to the config file.
     // The stops affected by a filter are written with the filter settings.
-	if ( d->options.testFlag(ShowFilterConfigurationConfig) ) {
-        CheckCombobox *filterConfiguration = d->settingWidget<CheckCombobox>(
-				FilterConfigurationSetting );
-		Q_ASSERT_X( filterConfiguration, "StopSettingsDialogPrivate::init", 
-					"No CheckCombobox with name \"filterConfiguration\" found." );
-		stopSettings.set( FilterConfigurationSetting, filterConfiguration->checkedTexts() );
-	} else if ( d->oldStopSettings.hasSetting(FilterConfigurationSetting) ) {
+	if ( !d->options.testFlag(ShowFilterConfigurationConfig)
+         && d->oldStopSettings.hasSetting(FilterConfigurationSetting) )
+    {
 		stopSettings.set( FilterConfigurationSetting,
-                          d->oldStopSettings[FilterConfigurationSetting].toStringList() );
+                          d->oldStopSettings[FilterConfigurationSetting] );
 	}
 	
 	if ( d->options.testFlag(ShowFirstDepartureConfig) ) {
@@ -953,11 +972,11 @@ StopSettings StopSettingsDialog::stopSettings() const
 	
 	// Add settings of other settings widgets
 	for ( QHash<int, QWidget*>::const_iterator it = d->settingsWidgets.constBegin();
-		 it != d->settingsWidgets.constEnd(); ++it )
+		  it != d->settingsWidgets.constEnd(); ++it )
 	{
-// 		kDebug() << "Extended widget setting" << it.key() 
-// 				 << d->factory->valueOfSetting(it.value(), it.key()) << it.value();
-		stopSettings.set( it.key(), d->factory->valueOfSetting(it.value(), it.key()) );
+		kDebug() << "Extended widget setting" << it.key()
+				 << d->factory->valueOfSetting(it.value(), it.key(), d->stopIndex) << it.value();
+		stopSettings.set( it.key(), d->factory->valueOfSetting(it.value(), it.key(), d->stopIndex) );
 	}
 
 	return stopSettings;

@@ -84,6 +84,7 @@ public:
 			const FilterSettingsList &filterConfigurations = FilterSettingsList(),
 			QList<int> settings = QList<int>() 
 				<< FilterConfigurationSetting << AlarmTimeSetting << FirstDepartureConfigModeSetting,
+            int stopIndex = -1,
 			StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
 	
     virtual ~StopWidget();
@@ -95,6 +96,9 @@ public:
 
 	FilterSettingsList filterConfigurations() const;
 	void setFilterConfigurations( const FilterSettingsList &filterConfigurations );
+
+    int stopIndex() const;
+    void setStopIndex( int stopIndex );
 
 	/** @brief Adds the given @p button. */
 	void addButton( QToolButton *button );
@@ -197,7 +201,10 @@ public:
 	
 	/** @brief Gets the StopWidget at the given @p index. */
 	StopWidget *stopWidget( int index ) const;
-	
+
+    /** @brief Gets the index of the given @p stopWidget. */
+    int indexOf( StopWidget *stopWidget ) const;
+
 	/**
 	 * @brief Gets the list of configured filter configurations to choose from
 	 *   for @ref StopSettigns::FilterConfigurationSetting.

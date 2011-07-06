@@ -234,7 +234,11 @@ public:
 	 * 
 	 * @param filterConfigurations A list of configured filter configurations to choose from
 	 *   for @ref StopSettigns::FilterConfigurationSetting.
-	 * 
+     *
+     * @param stopIndex The index of the stop settings to be edited, if in a StopSettingsList.
+     *   This is used to check the correct filter configurations, based on 
+     *   FilterSettings::affectedStops.
+	 *
 	 * @param customSettings A list of @ref StopSetting to create widgets for.
 	 *   You can also add custom widgets later using @ref addSettingWidget (but you need to give 
 	 *   your custom @p factory in the constructor).
@@ -264,7 +268,7 @@ public:
 			StopSettingsDialog::Options options = DefaultOptions,
 			AccessorInfoDialog::Options accessorInfoDialogOptions = AccessorInfoDialog::DefaultOptions,
 			const FilterSettingsList &filterConfigurations = FilterSettingsList(),
-			const QList<int> &customSettings = QList<int>(),
+            int stopIndex = -1, const QList<int> &customSettings = QList<int>(),
 			StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
 	
 	/**
@@ -345,6 +349,10 @@ public:
 	 * 
 	 * @param filterConfigurations A list of configured filter configurations to choose from
 	 *   for @ref StopSettigns::FilterConfigurationSetting.
+     *
+     * @param stopIndex The index of the stop settings to be edited, if in a StopSettingsList.
+     *   This is used to check the correct filter configurations, based on 
+     *   FilterSettings::affectedStops.
 	 * 
 	 * @param factory A pointer (QSharedPointer) to an object derived from 
 	 *   @ref StopSettingsWidgetFactory, which can create widgets for (custom) settings by calling 
@@ -360,6 +368,7 @@ public:
 	static StopSettingsDialog *createExtendedStopSelectionDialog(
 			QWidget *parent = 0, const StopSettings &stopSettings = StopSettings(),
 			const FilterSettingsList &filterConfigurations = FilterSettingsList(),
+            int stopIndex = -1, 
 			StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
 
 	/** 

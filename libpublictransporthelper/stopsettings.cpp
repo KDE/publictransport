@@ -19,6 +19,7 @@
 
 #include "stopsettings.h"
 #include "checkcombobox.h"
+#include "filter.h"
 
 #include <KLocale>
 #include <KGlobal>
@@ -260,13 +261,20 @@ bool StopSettings::operator==(const StopSettings& other) const {
 	for ( QHash<int, QVariant>::const_iterator it = d->settings.constBegin(); 
 		 it != d->settings.constEnd(); ++it )
 	{
+        // StopNameSetting and FilterConfigurationSetting need special handling, because they 
+        // use a custom type (StopList, FilterSettingsList).
+        // QVariant doesn't compare values of custom types, but addresses instead.
 		if ( it.key() == StopNameSetting ) {
-			// StopNameSetting needs special handling, beacuse it uses a custom type (StopList).
-			// QVariant doesn't compare values of custom types, but addresses instead.
-			if ( it.value().value<StopList>() != other.d->settings[it.key()].value<StopList>() ) {
-				return false;
-			}
-		} else if ( it.key() >= UserSetting ) {
+            if ( it.value().value<StopList>() != other.d->settings[it.key()].value<StopList>() ) {
+                return false;
+            }
+        } else if ( it.key() == FilterConfigurationSetting ) {
+            if ( it.value().value<FilterSettingsList>()
+                 != other.d->settings[it.key()].value<FilterSettingsList>() )
+            {
+                return false;
+            }
+        } else if ( it.key() >= UserSetting ) {
 			continue; // Can't compare custom QVariant types, addresses would get compared
 		} else if ( it.value() != other.d->settings[it.key()] ) {
 			return false;
@@ -381,11 +389,32 @@ bool StopSettingsWidgetFactory::isDetailsSetting( int setting ) const
 	}
 }
 
-QVariant StopSettingsWidgetFactory::valueOfSetting(const QWidget* widget, int setting) const
+QVariant StopSettingsWidgetFactory::valueOfSetting( const QWidget* widget, int setting,
+                                                    int stopIndex ) const
 {
 	switch ( setting ) {
 		case FilterConfigurationSetting: {
-			return qobject_cast< const CheckCombobox* >( widget )->checkedTexts();
+            // Get filter configuration list and adjust affectedStops list
+            FilterSettingsList filterSettings;
+            const CheckCombobox *filterConfiguration = qobject_cast< const CheckCombobox* >( widget );
+            QAbstractItemModel *model = filterConfiguration->model();
+            QList<int> checkedFilterConfigurations = filterConfiguration->checkedRows();
+            for ( int row = 0; row < model->rowCount(); ++row ) {
+                FilterSettings filter = model->data( model->index(row, 0), FilterSettingsRole )
+                        .value<FilterSettings>();
+
+                if ( stopIndex != -1 ) {
+                    if ( checkedFilterConfigurations.contains(row) ) {
+                        filter.affectedStops << stopIndex;
+                    } else if ( filter.affectedStops.contains(stopIndex) ) {
+                        filter.affectedStops.remove( stopIndex );
+                    }
+                }
+
+                filterSettings << filter;
+            }
+
+            return QVariant::fromValue( filterSettings );
 		}
 		case AlarmTimeSetting:
 		case TimeOffsetOfFirstDepartureSetting: {
@@ -418,10 +447,22 @@ void StopSettingsWidgetFactory::setValueOfSetting(QWidget* widget, int setting,
 												  const QVariant& value) const
 {
 	switch ( setting ) {
-		case FilterConfigurationSetting:
-			qobject_cast< CheckCombobox* >( widget )->setCheckedTexts( value.toStringList() );
+		case FilterConfigurationSetting: {
+//             TODO: Not used currently?
+            FilterSettingsList filterSettings = value.value<FilterSettingsList>();
+            const CheckCombobox *filterConfiguration = qobject_cast<CheckCombobox*>( widget );
+            QAbstractItemModel *model = filterConfiguration->model();
+            int row = 0;
+            foreach ( const FilterSettings &filter, filterSettings ) {
+                model->insertRow( row );
+                QModelIndex index = model->index( row, 0 );
+                model->setData( index, Global::translateFilterKey(filter.name), Qt::DisplayRole );
+                model->setData( index, QVariant::fromValue(filter), FilterSettingsRole );
+                ++row;
+            }
+//             filterConfiguration->setCheckedTexts(  ); // TODO
 			break;
-			
+        }
 		case AlarmTimeSetting:
 		case TimeOffsetOfFirstDepartureSetting:
 			qobject_cast< QSpinBox* >( widget )->setValue( value.toInt() );
@@ -461,6 +502,7 @@ QWidget* StopSettingsWidgetFactory::widgetForSetting( int setting, QWidget *pare
 	switch ( setting ) {
 		case FilterConfigurationSetting: {
 			CheckCombobox *filterConfiguration = new CheckCombobox( parent );
+            filterConfiguration->setMultipleSelectionOptions( CheckCombobox::ShowStringList );
 			filterConfiguration->setToolTip( i18nc("@info:tooltip", 
 					"The filter configuration(s) to be used with this stop(s)"));
 			filterConfiguration->setWhatsThis( i18nc("@info:whatsthis", 

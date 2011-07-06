@@ -124,7 +124,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     // Setup stop widgets
     m_stopListWidget = new StopListWidget( m_ui.stopList, settings.stopSettingsList,
             StopSettingsDialog::ExtendedStopSelection, AccessorInfoDialog::DefaultOptions,
-            settings.filterSettingsList ); //trFilterConfigurationList );
+            settings.filterSettingsList );
     m_stopListWidget->setWhatsThis( i18nc("@info:whatsthis",
             "<subtitle>This shows the stop settings you have set.</subtitle>"
             "<para>The applet shows results for one of them at a time. To switch the "
@@ -501,6 +501,7 @@ void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex )
 void SettingsUiManager::stopSettingsChanged()
 {
     StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
+    m_filterSettings = m_stopListWidget->filterConfigurations();
 
     // Update affected stops comboboxes in the filter and alarm page
     for ( int i = 0; i < stopSettingsList.count(); ++i ) {

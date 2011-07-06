@@ -494,12 +494,16 @@ public:
 	 * @param widget The widget associated with the given @p setting.
 	 * 
 	 * @param setting The @ref StopSetting to get the value for.
+     *
+     * @param stopIndex The index of the stop the setting is for or -1 if not in a list of
+     *   stop settings. Currently used for FilterConfigurationSetting, to get a list of activated
+     *   filter configurations for the stop from a list of affected stops per filter configuration.
 	 * 
 	 * @return The value for the given @p setting.
 	 * 
 	 * @see StopSetting
 	 **/
-	virtual QVariant valueOfSetting( const QWidget *widget, int setting ) const;
+	virtual QVariant valueOfSetting( const QWidget *widget, int setting, int stopIndex = -1 ) const;
 	
 	/**
 	 * @brief Sets the value of the @p widget associated with the given @p setting

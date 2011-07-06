@@ -45,14 +45,14 @@ public:
 		const StopSettings& _stopSettings, const FilterSettingsList& _filterConfigurations,
 		StopSettingsDialog::Options _stopSettingsDialogOptions, 
 		AccessorInfoDialog::Options _accessorInfoDialogOptions,
-		QList<int> _settings, 
-		StopSettingsWidgetFactory::Pointer _factory ) 
+		QList<int> _settings, int _stopIndex,
+		StopSettingsWidgetFactory::Pointer _factory )
 		: newlyAdded(_stopSettings.stops().isEmpty()),
 		stopSettings(_stopSettings), filterConfigurations(_filterConfigurations),
 		stop(0), provider(0),
 		stopSettingsDialogOptions(_stopSettingsDialogOptions), 
 		accessorInfoDialogOptions(_accessorInfoDialogOptions), 
-		settings(_settings), factory(_factory), q_ptr(q) 
+		settings(_settings), stopIndex(_stopIndex), factory(_factory), q_ptr(q)
 	{
 		// Load data engines
 		dataEngineManager = Plasma::DataEngineManager::self();
@@ -114,20 +114,20 @@ public:
 	StopSettingsDialog::Options stopSettingsDialogOptions;
 	AccessorInfoDialog::Options accessorInfoDialogOptions;
 	QList<int> settings;
+    int stopIndex;
 	StopSettingsWidgetFactory::Pointer factory;
 	
 protected:
 	StopWidget *q_ptr;
 };
 
-StopWidget::StopWidget( QWidget* parent,
-		const StopSettings& stopSettings,
+StopWidget::StopWidget( QWidget* parent, const StopSettings& stopSettings,
 		StopSettingsDialog::Options stopSettingsDialogOptions, 
 		AccessorInfoDialog::Options accessorInfoDialogOptions,
-		const FilterSettingsList& filterConfigurations, QList<int> settings,
+		const FilterSettingsList& filterConfigurations, QList<int> settings, int stopIndex,
 		StopSettingsWidgetFactory::Pointer factory )
 		: QWidget(parent), d_ptr(new StopWidgetPrivate(this, stopSettings, filterConfigurations,
-			stopSettingsDialogOptions, accessorInfoDialogOptions, settings, factory))
+			stopSettingsDialogOptions, accessorInfoDialogOptions, settings, stopIndex, factory))
 {
 	setStopSettings( stopSettings ); // TODO move setStopSettings to private class
 }
@@ -135,6 +135,31 @@ StopWidget::StopWidget( QWidget* parent,
 StopWidget::~StopWidget()
 {
 	delete d_ptr;
+}
+
+int StopWidget::stopIndex() const
+{
+    Q_D( const StopWidget );
+
+    if ( d->stopIndex != -1 ) {
+        return d->stopIndex;
+    } else if ( parentWidget() && parentWidget()->parentWidget() ) {
+        StopListWidget *stopListWidget = qobject_cast< StopListWidget* >(
+                parentWidget()->parentWidget()->parentWidget() );
+        if ( !stopListWidget ) {
+            kDebug() << "Parent widget isn't a StopListWidget";
+            return -1;
+        }
+        return stopListWidget->indexOf( const_cast<StopWidget*>(this) );
+    } else {
+        return -1;
+    }
+}
+
+void StopWidget::setStopIndex( int stopIndex )
+{
+    Q_D( StopWidget );
+    d->stopIndex = stopIndex;
 }
 
 void StopWidget::setStopSettings( const StopSettings& stopSettings )
@@ -156,6 +181,15 @@ void StopWidget::setStopSettings( const StopSettings& stopSettings )
 	} else {
 		d->provider->setText( index.data().toString() );
 	}
+kDebug() << "SETTINGS:" << stopSettings.settings();
+	// Copy filter configurations from StopSettings
+	if ( stopSettings.hasSetting(FilterConfigurationSetting) ) {
+        d->filterConfigurations = stopSettings.get<FilterSettingsList>( FilterConfigurationSetting );
+        kDebug() << "Got new filter config for a StopWidget" << d->filterConfigurations.count();
+        foreach ( FilterSettings f, d->filterConfigurations ) {
+            kDebug() << "  Filter" << f.name << "| affectedStops:" << f.affectedStops;
+        }
+    }
 
 	d->stopSettings = stopSettings;
 	d->newlyAdded = false;
@@ -190,9 +224,10 @@ void StopWidget::setHighlighted( bool highlighted )
 StopSettingsDialog* StopWidget::createStopSettingsDialog()
 {
 	Q_D( StopWidget );
+
 	return new StopSettingsDialog( this, d->stopSettings, 
 			d->stopSettingsDialogOptions, d->accessorInfoDialogOptions,
-			d->filterConfigurations, d->settings, d->factory );
+			d->filterConfigurations, stopIndex(), d->settings, d->factory );
 }
 
 void StopWidget::editSettings()
@@ -203,6 +238,7 @@ void StopWidget::editSettings()
 	if ( result == KDialog::Accepted ) {
 		setStopSettings( dlg->stopSettings() );
 		delete dlg;
+
 		d->newlyAdded = false;
 		emit changed( d->stopSettings );
 	} else {
@@ -239,12 +275,11 @@ public:
 		const FilterSettingsList& _filterConfigurations,
 		StopSettingsDialog::Options _stopSettingsDialogOptions, 
 		AccessorInfoDialog::Options _accessorInfoDialogOptions,
-		QList<int> _settings, 
-		StopSettingsWidgetFactory::Pointer _factory ) 
+		QList<int> _settings, StopSettingsWidgetFactory::Pointer _factory )
 		: filterConfigurations(_filterConfigurations),
 		stopSettingsDialogOptions(_stopSettingsDialogOptions),
 		accessorInfoDialogOptions(_accessorInfoDialogOptions),
-		settings(_settings), factory(_factory), q_ptr(q) 
+		settings(_settings), factory(_factory), q_ptr(q)
 	{
 		currentStopIndex = -1;
 		newStopSettingsBehaviour = StopListWidget::OpenDialogIfNoStopsGiven;
@@ -353,7 +388,8 @@ void StopListWidget::setStopSettingsList( const StopSettingsList& stopSettingsLi
 	setWidgetCountRange();
 	removeAllWidgets();
 
-	for ( int i = 0; i < qMin(stopSettingsList.count(), 5); ++i ) {
+    // TODO The "qMin(..., 5)" part removed all settings other than the first 5 once the config dialog was opened!
+	for ( int i = 0; i < /*qMin(*/stopSettingsList.count()/*, 5)*/; ++i ) {
 		QWidget *widget = createNewWidget();
 		StopWidget *stopWidget = qobject_cast< StopWidget* >( widget );
 		stopWidget->setStopSettings( stopSettingsList[i] );
@@ -372,29 +408,45 @@ StopSettingsList StopListWidget::stopSettingsList() const
 	return list;
 }
 
-StopSettings StopListWidget::stopSettings(int index) const
+StopSettings StopListWidget::stopSettings( int index ) const
 {
 	Q_ASSERT( index >= 0 && index < widgetCount() );
 	return widgets<StopWidget*>().at( index )->stopSettings();
 }
 
-void StopListWidget::setStopSettings(int index, const StopSettings& stopSettings)
+void StopListWidget::setStopSettings( int index, const StopSettings& stopSettings )
 {
 	Q_ASSERT( index >= 0 && index < widgetCount() );
 	return widgets<StopWidget*>().at( index )->setStopSettings( stopSettings );
 }
 
-StopWidget* StopListWidget::stopWidget(int index) const
+StopWidget* StopListWidget::stopWidget( int index ) const
 {
 	Q_ASSERT( index >= 0 && index < widgetCount() );
 	return widgets<StopWidget*>().at( index );
 }
 
+int StopListWidget::indexOf( StopWidget* stopWidget ) const
+{
+    Q_ASSERT( stopWidget );
+    return AbstractDynamicWidgetContainer::indexOf( stopWidget );
+}
+
 void StopListWidget::changed( const StopSettings& stopSettings )
 {
+    Q_D( StopListWidget );
 	StopWidget *stopWidget = qobject_cast< StopWidget* >( sender() );
 	Q_ASSERT_X( stopWidget, "StopListWidget::changed", "Sender isn't a StopWidget" );
-	int index = indexOf( stopWidget );
+
+    // Update filter configurations
+    if ( stopSettings.hasSetting(FilterConfigurationSetting) ) {
+        d->filterConfigurations = stopSettings.get<FilterSettingsList>( FilterConfigurationSetting );
+        foreach ( StopWidget *currentStopWidget, widgets<StopWidget*>() ) {
+            currentStopWidget->setFilterConfigurations( d->filterConfigurations );
+        }
+    }
+
+    int index = indexOf( stopWidget );
 	emit changed( index, stopSettings );
 }
 
@@ -408,7 +460,7 @@ QWidget* StopListWidget::createNewWidget( const StopSettings &stopSettings )
 	Q_D( StopListWidget );
 	StopWidget *stopWidget = new StopWidget( this, stopSettings,
 			d->stopSettingsDialogOptions, d->accessorInfoDialogOptions,
-			d->filterConfigurations, d->settings, d->factory );
+			d->filterConfigurations, d->settings, -1, d->factory );
 	connect( stopWidget, SIGNAL(remove()), this, SLOT(removeLastWidget()) );
 	connect( stopWidget, SIGNAL(changed(StopSettings)), this, SLOT(changed(StopSettings)) );
 	return stopWidget;
