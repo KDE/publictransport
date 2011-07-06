@@ -160,8 +160,8 @@ public:
     void setLeavingStep( qreal leavingStep );
 
 signals:
-    void requestStopAction( StopAction stopAction, const QString &stopName,
-                            RouteStopTextGraphicsItem *item );
+    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
+                            QGraphicsWidget *item );
 
 protected:
     virtual void updateTextLayouts();
@@ -203,7 +203,8 @@ public:
     QRect extraIconRect( const QRect &rect ) const;
 
 signals:
-    void requestJourneys( const QString &startStop, const QString &targetStop );
+    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
+                            QGraphicsWidget *routeStopItem );
 
 protected:
     virtual void updateTextLayouts();
@@ -256,8 +257,8 @@ public:
 
 signals:
     void contextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
-    void requestStopAction( StopAction stopAction, const QString &stopName,
-                            RouteStopTextGraphicsItem *item );
+    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
+                            QGraphicsWidget *item );
 
 protected slots:
     void journeysAboutToBeRemoved( const QList<ItemBase*> &journeys );
@@ -336,9 +337,6 @@ public:
     inline JourneyModel *journeyModel() const {
         return qobject_cast<JourneyModel*>(m_model);
     };
-
-signals:
-    void requestJourneys( const QString &startStop, const QString &targetStop );
 
 protected slots:
     virtual void rowsInserted( const QModelIndex &parent, int first, int last );

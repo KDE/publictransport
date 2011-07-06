@@ -1559,8 +1559,8 @@ void PublicTransport::showJourneyList()
     m_journeyTimetable->setModel( m_modelJourneys );
     m_journeyTimetable->setFont( m_settings.sizedFont() );
     m_journeyTimetable->setSvg( &m_vehiclesSvg );
-    connect( m_journeyTimetable, SIGNAL(requestJourneys(QString,QString)),
-             this, SLOT(processJourneyRequest(QString,QString)) );
+    connect( m_journeyTimetable, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
+             this, SLOT(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
     connect( m_states["journeyView"], SIGNAL(exited()),
              m_journeyTimetable, SLOT(deleteLater()) );
     m_journeyTimetable->setZoomFactor( m_settings.sizeFactor );
@@ -1770,8 +1770,8 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
         m_timetable->setSvg( &m_vehiclesSvg );
         connect( m_timetable, SIGNAL(contextMenuRequested(PublicTransportGraphicsItem*,QPointF)),
                  this, SLOT(departureContextMenuRequested(PublicTransportGraphicsItem*,QPointF)) );
-        connect( m_timetable, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)),
-                 this, SLOT(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)) );
+        connect( m_timetable, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
+                 this, SLOT(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
 
         QGraphicsLinearLayout *layout = new QGraphicsLinearLayout( Qt::Vertical );
         layout->setContentsMargins( 0, 0, 0, 0 );
@@ -2029,11 +2029,10 @@ void PublicTransport::oldItemAnimationFinished()
     m_oldItem = NULL;
 }
 
-void PublicTransport::processJourneyRequest( const QString& startStop, const QString& targetStop )
+void PublicTransport::processJourneyRequest( const QString& stop, bool stopIsTarget )
 {
-    Q_UNUSED( startStop );
     clearJourneys();
-    reconnectJourneySource( targetStop, QDateTime(), true, true );
+    reconnectJourneySource( stop, QDateTime(), stopIsTarget, true );
 }
 
 void PublicTransport::recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction )
@@ -2233,7 +2232,7 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
 }
 
 void PublicTransport::requestStopAction( StopAction stopAction,
-        const QString& stopName, RouteStopTextGraphicsItem* item )
+        const QString& stopName, const QVariant &data, QGraphicsWidget* item )
 {
     Q_UNUSED( item );
 
@@ -2241,6 +2240,16 @@ void PublicTransport::requestStopAction( StopAction stopAction,
     Settings settings = m_settings;
 
     switch ( stopAction ) {
+        case RequestJourneysToStop:
+            // data contains the target stop, if it's null use the current stop name as target.
+            // The origin is the stop name associated with this stop action
+            processJourneyRequest( stopName, true );
+            break;
+        case RequestJourneysFromStop:
+            // data contains the origin stop, if it's null use the current stop name as origin.
+            // The target is the stop name associated with this stop action
+            processJourneyRequest( stopName,false );
+            break;
         case CreateFilterForStop: {
             QString filterName = i18nc("Default name for a new filter via a given stop",
                                        "Via %1", stopName);

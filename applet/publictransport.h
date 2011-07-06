@@ -291,10 +291,11 @@ protected slots:
      *
      * @param stopAction The action that is requested to be performed.
      * @param stopName The stop name to perform @p stopAction on.
-     * @param item The route stop item which requested the @p stopAction.
+     * @param data Additional data for the stop action.
+     * @param item The QGraphicsWidget (eg. a route stop item) which requested the @p stopAction.
      **/
-    void requestStopAction( StopAction stopAction, const QString &stopName,
-                            RouteStopTextGraphicsItem *item );
+    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
+                            QGraphicsWidget *item );
 
     void noItemsTextClicked();
 
@@ -451,7 +452,7 @@ protected slots:
      **/
     void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction );
 
-    void processJourneyRequest( const QString &startStop, const QString &targetStop );
+    void processJourneyRequest( const QString &stop, bool stopIsTarget );
 
     /**
      * @brief The worker thread starts processing departures/arrivals from the

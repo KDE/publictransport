@@ -330,8 +330,8 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                      markerItem, SLOT(unhover()) );
 
             // Connect "stop action" signals, triggered by the context menu
-            connect( textItem, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)),
-                     this, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)) );
+            connect( textItem, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
+                     this, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
         }
     }
 }
@@ -598,7 +598,7 @@ void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent*
     } else {
         return; // No action selected
     }
-    emit requestStopAction( stopAction, QString(m_stopName), this );
+    emit requestStopAction( stopAction, QString(m_stopName), QVariant(), this );
 }
 
 void RouteStopTextGraphicsItem::setExpandStep( qreal expandStep )
@@ -701,22 +701,35 @@ void JourneyRouteStopGraphicsItem::setText( const QString& text )
 
 void JourneyRouteStopGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
 {
-    if ( m_intermediate ) {
-        m_contextMenu = new KMenu( event->widget() );
-        // TODO newOriginStopAction with "from" instead of "to" for journeys
-        QAction *newTargetStopAction = new QAction( KIcon("edit-find"),
-                i18n("&Search Journeys to %1", m_stopName), m_contextMenu );
-        m_contextMenu->addAction( newTargetStopAction );
+    m_contextMenu = new KMenu( event->widget() );
 
-        QAction *executedAction = m_contextMenu->exec( event->screenPos() );
-        delete m_contextMenu;
-        m_contextMenu = NULL;
-        if ( executedAction == newTargetStopAction ) {
-            emit requestJourneys( m_stopName, this );
-        }
-    } else {
-        QGraphicsItem::contextMenuEvent(event);
+    QAction *requestJourneysToAction = NULL;
+    QAction *requestJourneysFromAction = NULL;
+    QAction *copyStopToClipboardAction = new QAction( KIcon("edit-copy"),
+            i18n("&Copy Stop Name"), m_contextMenu );
+    m_contextMenu->addTitle( KIcon("public-transport-stop"), m_stopName );
+    if ( m_intermediate ) {
+        requestJourneysToAction = new QAction( KIcon("edit-find"),
+                i18n("&Search Journeys to This Stop"), m_contextMenu );
+        requestJourneysFromAction = new QAction( KIcon("edit-find"),
+                i18n("&Search Journeys From This Stop"), m_contextMenu );
+        m_contextMenu->addAction( requestJourneysToAction );
+        m_contextMenu->addAction( requestJourneysFromAction );
     }
+    m_contextMenu->addAction( copyStopToClipboardAction );
+
+    QAction *executedAction = m_contextMenu->exec( event->screenPos() );
+    delete m_contextMenu;
+    m_contextMenu = NULL;
+    if ( executedAction == requestJourneysToAction && executedAction != NULL ) {
+        emit requestStopAction( RequestJourneysToStop, QString(m_stopName), QVariant(), this );
+    } else if ( executedAction == requestJourneysFromAction && executedAction != NULL ) {
+        emit requestStopAction( RequestJourneysFromStop, QString(m_stopName), QVariant(), this );
+    } else if ( executedAction == copyStopToClipboardAction ) {
+        emit requestStopAction( CopyStopNameToClipboard, QString(m_stopName), QVariant(), this );
+    }
+    
+//     QGraphicsItem::contextMenuEvent(event);
 }
 
 QSizeF JourneyRouteStopGraphicsItem::sizeHint( Qt::SizeHint which, const QSizeF& constraint ) const
@@ -872,32 +885,39 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                     this, QPixmap(32, 32), text, i >= 1 && i < info->routeStops().count() - 1,
                     info->routeStops()[i] );
             routeItem->setFont( *font );
-            connect( routeItem, SIGNAL(requestJourneys(QString,JourneyRouteStopGraphicsItem*)),
-                     this, SLOT(processJourneyRequest(QString,JourneyRouteStopGraphicsItem*)) );
+            connect( routeItem, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
+                     this, SLOT(processStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
             m_routeItems << routeItem;
             l->addItem( routeItem );
         }
     }
 }
 
-void JourneyRouteGraphicsItem::processJourneyRequest( const QString& newTargetStop,
-                                                    JourneyRouteStopGraphicsItem* item )
+void JourneyRouteGraphicsItem::processStopAction( StopAction stopAction, const QString& stopName,
+        const QVariant& data, QGraphicsWidget* routeStopItem )
 {
-    Q_UNUSED( item );
+    Q_UNUSED( routeStopItem );
 
-    if ( m_routeItems.isEmpty() ) {
-        kDebug() << "Requested a new journey, but no route items present in list anymore";
-        return;
-    }
+    QVariant newData = data;
+    if ( stopAction == RequestJourneysToStop || stopAction == RequestJourneysFromStop ) {
+        if ( m_routeItems.isEmpty() ) {
+            kDebug() << "Requested a new journey, but no route items present in list anymore";
+            return;
+        }
 
-    QString startStop = m_routeItems.first()->stopName();
-    if ( startStop == newTargetStop ) {
-        kDebug() << "Requested a new journey with start stop = target stop";
-        return;
+        QString otherStop = m_routeItems.first()->stopName();
+        if ( otherStop == data.toString() ) {
+            kDebug() << "Requested a new journey with start stop = target stop";
+            return;
+        }
+
+        if ( data.isNull() ) {
+            newData = otherStop;
+        }
     }
 
     // Request journeys from the first route stop to the given new target stop
-    emit requestJourneys( startStop, newTargetStop );
+    emit requestStopAction( stopAction, stopName, newData, routeStopItem );
 }
 
 void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,

@@ -113,9 +113,13 @@ enum StopAction {
     ShowDeparturesForStop,   /** Show a departure list for the associated stop. */
     CreateFilterForStop,     /** Create a filter via the associated stop. */
     CopyStopNameToClipboard, /** Copy the name of the associated stop to the clipboard. */
-    HighlightStop            /** Highlight the associated stop in all route items.
+    HighlightStop,           /** Highlight the associated stop in all route items.
                                * If the stop was already highlighted, it should
                                * be unhighlighted. */
+    RequestJourneysToStop,   /** Request journeys to the associated stop. The origin stop
+                               * can be given as QVariant data argument to stop action requests. */
+    RequestJourneysFromStop  /** Request journeys from the associated stop. The target stop
+                               * can be given as QVariant data argument to stop action requests. */
 };
 
 /** @brief A set of flags for RouteStopMarkerGraphicsItem/RouteStopTextGraphicsItem. */

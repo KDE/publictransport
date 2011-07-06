@@ -116,8 +116,8 @@ public:
 signals:
     void hovered( RouteStopTextGraphicsItem *item );
     void unhovered( RouteStopTextGraphicsItem *item );
-    void requestStopAction( StopAction stopAction, const QString &stopName,
-                            RouteStopTextGraphicsItem *item );
+    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
+                            QGraphicsWidget *item );
 
 public slots:
     void hover();
@@ -133,7 +133,7 @@ private:
     QString m_stopName;
     qreal m_expandStep;
     qreal m_baseSize;
-    KMenu *m_contextMenu;
+    QPointer<KMenu> m_contextMenu;
 };
 
 /**
@@ -161,8 +161,8 @@ public:
     QPointer<DepartureItem> item() const { return m_item; };
 
 signals:
-    void requestStopAction( StopAction stopAction, const QString &stopName,
-                            RouteStopTextGraphicsItem *item );
+    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
+                            QGraphicsWidget *item );
 
 // public slots:
 //     void dataChanged();
@@ -199,7 +199,8 @@ public:
                         QWidget* widget = 0 );
 
 signals:
-    void requestJourneys( const QString &newTargetStop, JourneyRouteStopGraphicsItem *item );
+    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
+                            QGraphicsWidget *routeStopItem );
 
 protected:
     virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
@@ -213,7 +214,7 @@ private:
 
     bool m_intermediate;
     QString m_stopName;
-    KMenu* m_contextMenu;
+    QPointer<KMenu> m_contextMenu;
 };
 
 class JourneyRouteGraphicsItem : public QGraphicsWidget {
@@ -234,10 +235,12 @@ public:
                         QWidget* widget = 0 );
 
 signals:
-    void requestJourneys( const QString &startStop, const QString &targetStop );
+    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
+                            QGraphicsWidget *routeStopItem );
 
 protected slots:
-    void processJourneyRequest( const QString &newTargetStop, JourneyRouteStopGraphicsItem *item );
+    void processStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
+                            QGraphicsWidget *routeStopItem );
 
 private:
     QPointer<JourneyItem> m_item;

@@ -107,9 +107,9 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 
     // Add settings pages
     m_configDialog->addPage( tabMain, i18nc("@title:group General settings page name", "General"),
-                            "public-transport-stop" );
+                             "public-transport-stop" );
     m_configDialog->addPage( widgetAppearance, i18nc("@title:group", "Appearance"),
-                            "package_settings_looknfeel" );
+                             "video-display" );
     m_configDialog->addPage( widgetFilter, i18nc("@title:group", "Filter"), "view-filter" );
     m_configDialog->addPage( widgetAlarms, i18nc("@title:group", "Alarms"), "task-reminder" );
 
@@ -164,6 +164,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
             "<item><emphasis>Line number:</emphasis> Filters by transport line numbers.</item>"
             "<item><emphasis>Target:</emphasis> Filters by target/origin.</item>"
             "<item><emphasis>Via:</emphasis> Filters by intermediate stops.</item>"
+            "<item><emphasis>Next Stop:</emphasis> Filters by the next intermediate stop.</item>"
             "<item><emphasis>Delay:</emphasis> Filters by delay.</item>"
             "</list></para>") );
     m_uiFilter.affectedStops->setMultipleSelectionOptions( CheckCombobox::ShowStringList );

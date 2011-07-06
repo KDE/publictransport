@@ -24,6 +24,8 @@ Changelog of plasma-applet-publictransport
 - Add new appearance setting: colorize by direction groups automatically (groups are determined by counting how many departures go over each stop, only the first stop after the selected home stop gets counted)
 - Fix crashes with context menus of deleted route stop items
 
+- New context menu entries for journey route stops
+
 0.10 - Beta 8
 - Make leaving departures animate before being removed from the list
 

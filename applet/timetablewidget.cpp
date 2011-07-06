@@ -429,8 +429,8 @@ void JourneyGraphicsItem::updateData( JourneyItem* item, bool updateLayouts )
             m_routeItem->updateData( item );
         } else {
             m_routeItem = new JourneyRouteGraphicsItem( this, item, m_parent->svg() );
-            connect( m_routeItem, SIGNAL(requestJourneys(QString,QString)),
-                    this, SIGNAL(requestJourneys(QString,QString)) );
+            connect( m_routeItem, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
+                     this, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
             QRect _infoRect = infoRect( rect().toRect() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
@@ -466,8 +466,8 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
             QRect _infoRect = infoRect( rect().toRect(), 0 );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(), ROUTE_ITEM_HEIGHT );
-            connect( m_routeItem, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)),
-                     this, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)) );
+            connect( m_routeItem, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
+                     this, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
         }
     } else if ( m_routeItem ) {
         delete m_routeItem;
@@ -1274,8 +1274,8 @@ void JourneyTimetableWidget::rowsInserted(const QModelIndex& parent, int first, 
         JourneyGraphicsItem *item = new JourneyGraphicsItem( widget() );
         item->setPublicTransportWidget( this );
         item->updateData( static_cast<JourneyItem*>(m_model->item(row)) );
-        connect( item, SIGNAL(requestJourneys(QString,QString)),
-                 this, SIGNAL(requestJourneys(QString,QString)) );
+        connect( item, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
+                 this, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
         m_items.insert( row, item );
 
         // Fade new items in
@@ -1302,8 +1302,8 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
         DepartureGraphicsItem *item = new DepartureGraphicsItem( widget() );
         item->setPublicTransportWidget( this );
         item->updateData( static_cast<DepartureItem*>(m_model->item(row)) );
-        connect( item, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)),
-                 this, SIGNAL(requestStopAction(StopAction,QString,RouteStopTextGraphicsItem*)) );
+        connect( item, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
+                 this, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
         m_items.insert( row, item );
 
         // Fade new items in
