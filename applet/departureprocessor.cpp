@@ -274,7 +274,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
             if ( m_abortCurrentJob ) {
                 break;
             } else {
-                emit departuresProcessed( sourceName, departureInfos, url, updated );
+                emit departuresProcessed( sourceName, departureInfos, url, updated, count - i - 1 );
                 departureInfos.clear();
 // 				alarmDepartures.clear();
             }
@@ -290,7 +290,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     // Emit remaining departures
     m_mutex.lock();
     if ( !m_abortCurrentJob && !departureInfos.isEmpty() ) {
-        emit departuresProcessed( sourceName, departureInfos, url, updated );
+        emit departuresProcessed( sourceName, departureInfos, url, updated, 0 );
     }
     m_mutex.unlock();
 }

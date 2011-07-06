@@ -474,12 +474,16 @@ protected slots:
      *
      * @param lastUpdate The date and time of the last update of the data.
      *
+     * @param departuresToGo The number of departures to still be processed. If this isn't 0
+     *   this slot gets called again after the next batch of departures has been processed.
+     *
      * @see DepartureInfo
      * @see beginDepartureProcessing
      * @ingroup models
      **/
     void departuresProcessed( const QString &sourceName, const QList< DepartureInfo > &departures,
-                              const QUrl &requestUrl, const QDateTime &lastUpdate );
+                              const QUrl &requestUrl, const QDateTime &lastUpdate,
+                              int departuresToGo );
 
     /**
      * @brief The worker thread has finished filtering departures.
