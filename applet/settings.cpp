@@ -448,13 +448,19 @@ void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex )
     // Adjust stop indices in filter settings
     for ( int i = m_filterSettings.count() - 1; i >= 0; --i ) {
         FilterSettings &filterSettings = m_filterSettings[ i ];
-        for ( int n = filterSettings.affectedStops.count() - 1; n >= 0; --n ) {
-            if ( filterSettings.affectedStops[n] == widgetIndex ) {
-                filterSettings.affectedStops.removeAt( n );
-            } else if ( filterSettings.affectedStops[n] > widgetIndex ) {
-                --filterSettings.affectedStops[n];
+        QSet<int> changedIndices;
+        for ( QSet<int>::iterator it = filterSettings.affectedStops.begin();
+              it != filterSettings.affectedStops.end(); ++it )
+        {
+            int stopIndex = *it;
+            if ( stopIndex == widgetIndex ) {
+                it = filterSettings.affectedStops.erase( it );
+            } else if ( stopIndex > widgetIndex ) {
+                changedIndices << --stopIndex;
+                it = filterSettings.affectedStops.erase( it );
             }
         }
+        filterSettings.affectedStops.unite( changedIndices );
     }
 
     // Adjust color group settings list
@@ -484,7 +490,7 @@ void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex )
         }
     }
     if ( index != -1 ) {
-        m_uiFilter.affectedStops->setCheckedRows( m_filterSettings[index].affectedStops );
+        m_uiFilter.affectedStops->setCheckedRows( m_filterSettings[index].affectedStops.toList() );
     }
 
     // Update stop list in the alarm settings page
@@ -627,15 +633,7 @@ void SettingsUiManager::setValuesOfFilterConfig()
     }
 
     // Build list of filter configuration names
-    QStringList filterConfigs;
-//     filterConfigs << i18n("No Filter");
-//     for ( QHash<QString, FilterSettings>::const_iterator it = m_filterSettings.constBegin();
-//           it != m_filterSettings.constEnd(); ++it )
-//     {
-//      filterConfigs << GlobalApplet::translateFilterKey( it.key() );
-    foreach ( const FilterSettings &filterSettings, m_filterSettings ) {
-        filterConfigs << GlobalApplet::translateFilterKey( filterSettings.name );
-    }
+    QStringList filterConfigs = GlobalApplet::translateFilterKeys( m_filterSettings.names() );
 
     // Store selected filter configuration
     QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
@@ -656,8 +654,8 @@ void SettingsUiManager::setValuesOfFilterConfig()
              this, SLOT(loadFilterConfiguration(QString)) );
 
     if ( trFilterConfiguration.isEmpty() ) {
-        kDebug() << "No Item Selected";
         trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+        kDebug() << "No Item Selected" << trFilterConfiguration;
     }
 
     stopSettingsChanged();
@@ -687,7 +685,7 @@ void SettingsUiManager::setValuesOfFilterConfig()
                 static_cast<int>( filterSettings.filterAction ) );
         filterActionChanged( m_uiFilter.filterAction->currentIndex() );
 
-        m_uiFilter.affectedStops->setCheckedRows( filterSettings.affectedStops );
+        m_uiFilter.affectedStops->setCheckedRows( filterSettings.affectedStops.toList() );
 
         // Clear old filter widgets
         int minWidgetCount = m_uiFilter.filters->minimumWidgetCount();
@@ -766,7 +764,7 @@ FilterSettings SettingsUiManager::currentFilterSettings() const
 {
     FilterSettings filterSettings;
     filterSettings.filterAction = static_cast< FilterAction >( m_uiFilter.filterAction->currentIndex() );
-    filterSettings.affectedStops = m_uiFilter.affectedStops->checkedRows();
+    filterSettings.affectedStops = m_uiFilter.affectedStops->checkedRows().toSet();
     filterSettings.filters = m_uiFilter.filters->filters();
     filterSettings.name = m_uiFilter.filterConfigurations->currentText();
     return filterSettings;
@@ -1439,7 +1437,7 @@ FilterSettings SettingsIO::readFilterConfig( const KConfigGroup &cgGlobal )
     filterSettings.name = cgGlobal.readEntry( "Name", QString() );
     filterSettings.filterAction = static_cast< FilterAction >(
             cgGlobal.readEntry("FilterAction", static_cast<int>(ShowMatching)) );
-    filterSettings.affectedStops = cgGlobal.readEntry( "AffectedStops", QList<int>() );
+    filterSettings.affectedStops = cgGlobal.readEntry( "AffectedStops", QList<int>() ).toSet();
 
     QByteArray baFilters = cgGlobal.readEntry( "Filters", QByteArray() );
     filterSettings.filters.fromData( baFilters );
@@ -1467,7 +1465,7 @@ bool SettingsIO::writeFilterConfig( const FilterSettings &filterSettings,
     }
 
     if ( filterSettings.affectedStops != oldFilterSettings.affectedStops ) {
-        cgGlobal.writeEntry( "AffectedStops", filterSettings.affectedStops );
+        cgGlobal.writeEntry( "AffectedStops", filterSettings.affectedStops.toList() );
         changed = true;
     }
 
@@ -1480,7 +1478,7 @@ void SettingsIO::writeFilterConfig( const FilterSettings& filterSettings,
     cgGlobal.writeEntry( "Name", filterSettings.name );
     cgGlobal.writeEntry( "Filters", filterSettings.filters.toData() );
     cgGlobal.writeEntry( "FilterAction", static_cast<int>( filterSettings.filterAction ) );
-    cgGlobal.writeEntry( "AffectedStops", filterSettings.affectedStops );
+    cgGlobal.writeEntry( "AffectedStops", filterSettings.affectedStops.toList() );
 }
 
 bool operator ==( const AlarmSettings &l, const AlarmSettings &r )

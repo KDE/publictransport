@@ -176,7 +176,10 @@ public:
 
     /** @brief Ensures that there is one color group settings list for each stop setting. */
     void adjustColorGroupSettingsCount();
-    
+
+    /** @brief Updates the color groups to the currently shown departures. */
+    void updateColorGroupSettings();
+
 signals:
     /** @brief Emitted when the settings have changed. */
     void settingsChanged();

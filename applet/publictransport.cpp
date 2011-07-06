@@ -403,7 +403,6 @@ bool PublicTransport::checkNetworkStatus()
     }
 }
 
-
 QString PublicTransport::queryNetworkStatus()
 {
     QString status = "unavailable";
@@ -859,18 +858,6 @@ void PublicTransport::departuresProcessed( const QString& sourceName,
 
     // Fill the model with the received departures
     fillModel( departures );
-
-    if ( m_settings.colorize ) {
-        adjustColorGroupSettingsCount();
-        ColorGroupSettingsList colorGroups =
-                m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ];
-        if ( colorGroups.isEmpty() ) {
-            kDebug() << "Generate new color group settings for" << departures.count() << "departures";
-            colorGroups = generateColorGroupSettingsFrom( departures );
-            m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ] = colorGroups;
-            m_model->setColorGroups( colorGroups );
-        }
-    }
 }
 
 QString PublicTransport::stripDateAndTimeValues( const QString& sourceName ) const
@@ -1489,7 +1476,7 @@ void PublicTransport::switchFilterConfiguration( QAction* action )
         if ( filterSettings.name == filterConfig ) {
             // Switch filter configuration for current stop settings
             if ( filterSettings.affectedStops.contains(settings.currentStopSettingsIndex) ) {
-                settings.filterSettingsList[i].affectedStops.removeOne( settings.currentStopSettingsIndex );
+                settings.filterSettingsList[i].affectedStops.remove( settings.currentStopSettingsIndex );
             } else if ( !filterSettings.affectedStops.contains(settings.currentStopSettingsIndex) ) {
                 settings.filterSettingsList[i].affectedStops << settings.currentStopSettingsIndex;
             }
@@ -1501,26 +1488,20 @@ void PublicTransport::switchFilterConfiguration( QAction* action )
 void PublicTransport::enableFilterConfiguration( const QString& filterConfiguration, bool enable )
 {
     const QString filterConfig = GlobalApplet::untranslateFilterKey( filterConfiguration );
-//     Q_ASSERT_X( m_settings.filterSettings.contains(filterConfig),
-//                 "PublicTransport::switchFilterConfiguration",
-//                 QString("Filter '%1' not found!").arg(filterConfig).toLatin1().data() );
+    Q_ASSERT_X( m_settings.filterSettingsList.hasName(filterConfig),
+                "PublicTransport::switchFilterConfiguration",
+                QString("Filter '%1' not found!").arg(filterConfig).toLatin1().data() );
 
     // Change filter configuration of the current stop in a copy of the settings.
     // Then write the new settings.
     Settings settings = m_settings;
-//     settings.stopSettingsList[ settings.currentStopSettingsIndex ].set(
-//             FilterConfigurationSetting, filterConfig );
-    for ( int i = 0; i < settings.filterSettingsList.count(); ++i ) {
-        const FilterSettings filterSettings = settings.filterSettingsList[i];
-        if ( filterSettings.name == filterConfig ) {
-            // Enable (add stop settings index) or disable (remove stop settings index) filter configuration
-            if ( enable && !filterSettings.affectedStops.contains(settings.currentStopSettingsIndex) ) {
-                settings.filterSettingsList[i].affectedStops << settings.currentStopSettingsIndex;
-            } else if ( !enable && filterSettings.affectedStops.contains(settings.currentStopSettingsIndex) ) {
-                settings.filterSettingsList[i].affectedStops.removeOne( settings.currentStopSettingsIndex );
-            }
-        }
+    FilterSettings filterSettings = settings.filterSettingsList.byName( filterConfig );
+    if ( enable && !filterSettings.affectedStops.contains(settings.currentStopSettingsIndex) ) {
+        filterSettings.affectedStops << settings.currentStopSettingsIndex;
+    } else if ( !enable && filterSettings.affectedStops.contains(settings.currentStopSettingsIndex) ) {
+        filterSettings.affectedStops.remove( settings.currentStopSettingsIndex );
     }
+    settings.filterSettingsList.set( filterSettings );
     writeSettings( settings );
 }
 
@@ -1966,27 +1947,7 @@ void PublicTransport::writeSettings( const Settings& settings )
              changed.testFlag(SettingsIO::ChangedStopSettings) ||
              changed.testFlag(SettingsIO::ChangedFilterSettings) )
         {
-            if ( m_settings.colorize && 
-                 !(changed.testFlag(SettingsIO::ChangedCurrentStop) ||
-                   changed.testFlag(SettingsIO::ChangedStopSettings) ||
-                   changed.testFlag(SettingsIO::ChangedFilterSettings)) )
-            {
-                // Generate color groups from existing departure data
-                adjustColorGroupSettingsCount();
-                ColorGroupSettingsList colorGroups =
-                        m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ];
-                if ( colorGroups.isEmpty() ) {
-                    QList<DepartureInfo> departures = m_model->departureInfos();
-                    kDebug() << "Generate new color group settings for" << departures.count() << "departures";
-                    colorGroups = generateColorGroupSettingsFrom( departures );
-                    m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ] = colorGroups;
-                    m_model->setColorGroups( colorGroups );
-                }
-            } else {
-                // Remove color groups if colorization was toggled off
-                // or if stop/filter settings were changed (update color groups after data arrived)
-                m_model->setColorGroups( ColorGroupSettingsList() );
-            }
+            updateColorGroupSettings();
         }
     } else {
         kDebug() << "No changes made in the settings";
@@ -2553,23 +2514,25 @@ void PublicTransport::fillModel( const QList<DepartureInfo> &departures )
         if ( !index.isValid() ) {
             // Departure wasn't in the model
             if ( !modelFilled && !departureInfo.isFilteredOut() ) {
+                // Departure doesn't get filtered out and the model isn't full => Add departure
                 m_model->addItem( departureInfo );
                 modelFilled = m_model->rowCount() >= m_settings.maximalNumberOfDepartures;
             }
         } else if ( departureInfo.isFilteredOut() ) {
-            // Departure has been marked as "filtered out" in the DepartureProcessor
+            // Departure has been marked as "filtered out" in the DepartureProcessor => Remove departure
             m_model->removeItem( m_model->itemFromInfo(departureInfo) );
         } else {
-            // Departure isn't filtered out
+            // Departure isn't filtered out => Update associated item in the model
             DepartureItem *item = dynamic_cast<DepartureItem*>( m_model->itemFromIndex(index) );
             m_model->updateItem( item, departureInfo );
         }
-
-        // Update groups
-        createDepartureGroups();
-        createPopupIcon();
-        createTooltip();
     }
+
+    // Update everything that might have changed
+    createDepartureGroups();
+    createPopupIcon();
+    createTooltip();
+    updateColorGroupSettings();
 }
 
 void GraphicsPixmapWidget::paint( QPainter* painter,
@@ -2606,16 +2569,37 @@ void PublicTransport::adjustColorGroupSettingsCount()
     }
 }
 
+void PublicTransport::updateColorGroupSettings()
+{
+    if ( m_settings.colorize ) {
+        // Generate color groups from existing departure data
+        adjustColorGroupSettingsCount();
+        ColorGroupSettingsList colorGroups =
+                m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ];
+        kDebug() << "Generate new color group settings for" << m_model->departureInfos().count()
+                 << "departures, maximal 30";
+        colorGroups = generateColorGroupSettingsFrom( m_model->departureInfos().mid(0, 30) );
+        m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ] = colorGroups;
+        m_model->setColorGroups( colorGroups );
+    } else {
+        // Remove color groups if colorization was toggled off
+        // or if stop/filter settings were changed (update color groups after data arrived)
+        m_model->setColorGroups( ColorGroupSettingsList() );
+    }
+}
+
 ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
         const QList< DepartureInfo >& infos )
 {
+    kDebug() << "Generate new color group settings for" << infos.count() << "departures";
+
     // Only test routes of up to 1 stops (the first 1 of the actual route)
     const int maxTestRouteLength = 1;
 
     // Maximal number of groups
     const int maxGroupCount = 5;
 
-    const int opacity = 40;
+    const int opacity = 75;
     const QColor colors[5] = {
         QColor(0, 230, 0, opacity), // green
         QColor(0, 0, 255, opacity), // blue
@@ -2660,6 +2644,8 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
             routeCount.latestCommonStop = it.key().last();
             routeCount.usedCount = it.value().count();
             routePartCount << routeCount;
+        } else {
+            qDebug() << "UsedCount <= 1 for stop" << it.key().last() << it.value().count();
         }
     }
 
