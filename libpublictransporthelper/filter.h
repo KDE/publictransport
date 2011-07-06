@@ -155,7 +155,7 @@ struct PUBLICTRANSPORTHELPER_EXPORT FilterSettings {
     FilterList filters;
 
     /** @brief A list of stop settings indices for which this filter should be applied. */
-    QList< int > affectedStops;
+    QSet< int > affectedStops;
 
     /** @brief The Name of this filter settings. */
     QString name;
@@ -170,6 +170,9 @@ struct PUBLICTRANSPORTHELPER_EXPORT FilterSettings {
     bool filterOut( const DepartureInfo& departureInfo ) const;
 };
 bool PUBLICTRANSPORTHELPER_EXPORT operator ==( const FilterSettings &l, const FilterSettings &r );
+inline bool PUBLICTRANSPORTHELPER_EXPORT operator !=( const FilterSettings &l, const FilterSettings &r ) {
+    return !(l == r);
+};
 
 /** @brief A QList of FilterSettings with some convenience methods.
  *
@@ -205,5 +208,10 @@ Q_DECLARE_METATYPE( Constraint );
 Q_DECLARE_METATYPE( Filter );
 Q_DECLARE_METATYPE( FilterSettings );
 Q_DECLARE_METATYPE( FilterSettingsList );
+
+QDebug &operator <<(QDebug debug, const Constraint &constraint);
+QDebug &operator <<(QDebug debug, const Filter &filter);
+QDebug &operator <<(QDebug debug, const FilterSettings &filterSettings);
+QDebug &operator <<(QDebug debug, const FilterSettingsList &filterSettingsList);
 
 #endif // Multiple inclusion guard
