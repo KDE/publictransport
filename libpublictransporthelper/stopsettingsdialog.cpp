@@ -929,11 +929,10 @@ StopSettings StopSettingsDialog::stopSettings() const
 		}
 	}
 
-	// NOTE FilterConfigurationSetting won't get written to the config file.
-    // The stops affected by a filter are written with the filter settings.
 	if ( !d->options.testFlag(ShowFilterConfigurationConfig)
          && d->oldStopSettings.hasSetting(FilterConfigurationSetting) )
     {
+        // Copy old FilterConfigurationSetting to new StopSettings
 		stopSettings.set( FilterConfigurationSetting,
                           d->oldStopSettings[FilterConfigurationSetting] );
 	}

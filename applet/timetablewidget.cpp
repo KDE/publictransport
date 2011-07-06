@@ -369,7 +369,6 @@ void DepartureGraphicsItem::updateTextLayouts()
 void JourneyGraphicsItem::updateTextLayouts()
 {
     if ( !m_item ) {
-        kDebug() << "JourneyItem already destroyed";
         return;
     }
 
@@ -1031,11 +1030,7 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
 
 qreal JourneyGraphicsItem::expandSize() const
 {
-    if ( !m_item ) {
-        kDebug() << "JourneyItem already destroyed";
-        return 0.0;
-    }
-    if ( qFuzzyIsNull(m_expandStep) ) {
+    if ( !m_item || qFuzzyIsNull(m_expandStep) ) {
         return 0.0;
     }
 
@@ -1075,11 +1070,7 @@ qreal JourneyGraphicsItem::expandSize() const
 
 qreal DepartureGraphicsItem::expandSize() const
 {
-    if ( !m_item ) {
-        kDebug() << "DepartureItem already destroyed";
-        return 0.0;
-    }
-    if ( qFuzzyIsNull(m_expandStep) ) {
+    if ( !m_item || qFuzzyIsNull(m_expandStep) ) {
         return 0.0;
     }
 

@@ -159,10 +159,10 @@ struct PUBLICTRANSPORTHELPER_EXPORT FilterSettings {
 
     /** @brief The Name of this filter settings. */
     QString name;
-    
+
     /** @brief Create a new FilterSettings object with the given @p name. */
     FilterSettings( const QString &name = "<unnamed>" ) {
-        filterAction = ShowMatching;
+        this->filterAction = ShowMatching;
         this->name = name;
     };
 
