@@ -860,9 +860,12 @@ void PublicTransport::departuresProcessed( const QString& sourceName,
     // Fill the model with the received departures
     fillModel( departures );
 
-    // Update color group settings when all departure data is there
+    // Update everything that might have changed when all departure data is there
     if ( departuresToGo == 0 ) {
         updateColorGroupSettings();
+        createDepartureGroups();
+        createPopupIcon();
+        createTooltip();
     }
 }
 
@@ -2532,11 +2535,6 @@ void PublicTransport::fillModel( const QList<DepartureInfo> &departures )
             m_model->updateItem( item, departureInfo );
         }
     }
-
-    // Update everything that might have changed
-    createDepartureGroups();
-    createPopupIcon();
-    createTooltip();
 }
 
 void GraphicsPixmapWidget::paint( QPainter* painter,
