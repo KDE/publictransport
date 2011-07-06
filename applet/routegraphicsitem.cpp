@@ -671,11 +671,11 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter,
 }
 
 JourneyRouteStopGraphicsItem::JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent,
-    const QPixmap &vehiclePixmap, const QString &text, bool isIntermediate, const QString &stopName )
+    const QPixmap &vehiclePixmap, const QString &text, RouteStopFlags routeStopFlags, const QString &stopName )
     : QGraphicsWidget(parent), m_parent(parent), m_infoTextDocument(0), m_contextMenu(0)
 {
     m_vehiclePixmap = vehiclePixmap;
-    m_intermediate = isIntermediate;
+    m_stopFlags = routeStopFlags;
     m_stopName = stopName;
     setText( text );
     setAcceptHoverEvents( true );
@@ -708,13 +708,17 @@ void JourneyRouteStopGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEve
     QAction *copyStopToClipboardAction = new QAction( KIcon("edit-copy"),
             i18n("&Copy Stop Name"), m_contextMenu );
     m_contextMenu->addTitle( KIcon("public-transport-stop"), m_stopName );
-    if ( m_intermediate ) {
-        requestJourneysToAction = new QAction( KIcon("edit-find"),
-                i18n("&Search Journeys to This Stop"), m_contextMenu );
-        requestJourneysFromAction = new QAction( KIcon("edit-find"),
-                i18n("&Search Journeys From This Stop"), m_contextMenu );
-        m_contextMenu->addAction( requestJourneysToAction );
-        m_contextMenu->addAction( requestJourneysFromAction );
+    if ( !m_stopFlags.testFlag(RouteStopIsHomeStop) ) {
+        if ( !m_stopFlags.testFlag(RouteStopIsTarget) ) {
+            requestJourneysToAction = new QAction( KIcon("edit-find"),
+                    i18n("&Search Journeys to This Stop"), m_contextMenu );
+            m_contextMenu->addAction( requestJourneysToAction );
+        }
+        if ( !m_stopFlags.testFlag(RouteStopIsOrigin) ) {
+            requestJourneysFromAction = new QAction( KIcon("edit-find"),
+                    i18n("&Search Journeys From This Stop"), m_contextMenu );
+            m_contextMenu->addAction( requestJourneysFromAction );
+        }
     }
     m_contextMenu->addAction( copyStopToClipboardAction );
 
@@ -831,7 +835,8 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                 fontMetrics = &fm;
             }
 
-            QString text = QString( "<b>%1</b>" ).arg( info->routeStops()[i] );
+            const QString stopName = info->routeStops()[i];
+            QString text = QString( "<b>%1</b>" ).arg( stopName );
 
             // Prepend departure time at the current stop, if a time is given
             if ( i - 1 >= 0 && i - 1 < info->routeTimesArrival().count()
@@ -880,10 +885,20 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                 }
             }
 
-
+            RouteStopFlags routeStopFlags;
+            if ( i == 0 ) {
+                routeStopFlags |= RouteStopIsOrigin;
+            } else if ( i == info->routeStops().count() - 1 ) {
+                routeStopFlags |= RouteStopIsTarget;
+            } else {
+                routeStopFlags |= RouteStopIsIntermediate;
+            }
+            JourneyModel *model = qobject_cast<JourneyModel*>( m_item->model() ); // data( HomeStopRole )
+            if ( model->info().homeStop == stopName ) {
+                routeStopFlags |= RouteStopIsHomeStop;
+            }
             JourneyRouteStopGraphicsItem *routeItem = new JourneyRouteStopGraphicsItem(
-                    this, QPixmap(32, 32), text, i >= 1 && i < info->routeStops().count() - 1,
-                    info->routeStops()[i] );
+                    this, QPixmap(32, 32), text, routeStopFlags, info->routeStops()[i] );
             routeItem->setFont( *font );
             connect( routeItem, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
                      this, SLOT(processStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );

@@ -45,6 +45,7 @@ struct Info {
     int linesPerRow, alarmMinsBeforeDeparture;
     bool displayTimeBold, showRemainingMinutes, showDepartureTime;
     float sizeFactor;
+    QString homeStop;
 };
 
 /**
@@ -566,6 +567,10 @@ public:
 
     void setDepartureColumnSettings( bool displayTimeBold = true,
         bool showRemainingMinutes = true, bool showDepartureTime = true );
+
+    void setHomeStop( const QString &homeStop ) {
+        m_info.homeStop = homeStop;
+    };
 
     /**
      * @brief Notifies the model about changes in the given @p item.

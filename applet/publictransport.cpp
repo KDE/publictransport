@@ -136,6 +136,7 @@ void PublicTransport::init()
 
     // Create models
     m_model = new DepartureModel( this );
+    m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
     connect( m_model, SIGNAL(alarmFired(DepartureItem*)), this, SLOT(alarmFired(DepartureItem*)) );
     connect( m_model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
              this, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
@@ -144,7 +145,7 @@ void PublicTransport::init()
     connect( m_model, SIGNAL(departuresLeft(QList<DepartureInfo>)),
              this, SLOT(departuresLeft(QList<DepartureInfo>)) );
     m_modelJourneys = new JourneyModel( this );
-    m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
+    m_modelJourneys->setHomeStop( m_settings.currentStopSettings().stop(0).name );
 
     // Create widgets
     graphicsWidget();
@@ -1294,6 +1295,8 @@ void PublicTransport::configChanged()
     m_model->setAlarmMinsBeforeDeparture(
             m_settings.currentStopSettings().get<int>(AlarmTimeSetting) );
 
+    m_modelJourneys->setHomeStop( m_settings.currentStopSettings().stop(0).name );
+
     // Limit model item count to the maximal number of departures setting
     if ( m_model->rowCount() > m_settings.maximalNumberOfDepartures ) {
         m_model->removeRows( m_settings.maximalNumberOfDepartures,
@@ -1943,6 +1946,13 @@ void PublicTransport::writeSettings( const Settings& settings )
             fillModel( departureInfos() );
         }
 
+        if ( m_modelJourneys &&
+             (changed.testFlag(SettingsIO::ChangedCurrentStop) ||
+              changed.testFlag(SettingsIO::ChangedStopSettings)) )
+        {
+            m_modelJourneys->setHomeStop( m_settings.currentStopSettings().stop(0).name );
+        }
+
         if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
              changed.testFlag(SettingsIO::ChangedStopSettings) ||
              changed.testFlag(SettingsIO::ChangedFilterSettings) )
@@ -2248,7 +2258,7 @@ void PublicTransport::requestStopAction( StopAction stopAction,
         case RequestJourneysFromStop:
             // data contains the origin stop, if it's null use the current stop name as origin.
             // The target is the stop name associated with this stop action
-            processJourneyRequest( stopName,false );
+            processJourneyRequest( stopName, false );
             break;
         case CreateFilterForStop: {
             QString filterName = i18nc("Default name for a new filter via a given stop",

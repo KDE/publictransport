@@ -110,16 +110,16 @@ private:
 
 /** @brief Actions for intermediate stops, shown in RouteGraphicsItems. */
 enum StopAction {
-    ShowDeparturesForStop,   /** Show a departure list for the associated stop. */
-    CreateFilterForStop,     /** Create a filter via the associated stop. */
-    CopyStopNameToClipboard, /** Copy the name of the associated stop to the clipboard. */
-    HighlightStop,           /** Highlight the associated stop in all route items.
-                               * If the stop was already highlighted, it should
-                               * be unhighlighted. */
-    RequestJourneysToStop,   /** Request journeys to the associated stop. The origin stop
-                               * can be given as QVariant data argument to stop action requests. */
-    RequestJourneysFromStop  /** Request journeys from the associated stop. The target stop
-                               * can be given as QVariant data argument to stop action requests. */
+    ShowDeparturesForStop,   /**< Show a departure list for the associated stop. */
+    CreateFilterForStop,     /**< Create a filter via the associated stop. */
+    CopyStopNameToClipboard, /**< Copy the name of the associated stop to the clipboard. */
+    HighlightStop,           /**< Highlight the associated stop in all route items.
+                              * If the stop was already highlighted, it should
+                              * be unhighlighted. */
+    RequestJourneysToStop,   /**< Request journeys to the associated stop. The origin stop
+                              * can be given as QVariant data argument to stop action requests. */
+    RequestJourneysFromStop  /**< Request journeys from the associated stop. The target stop
+                              * can be given as QVariant data argument to stop action requests. */
 };
 
 /** @brief A set of flags for RouteStopMarkerGraphicsItem/RouteStopTextGraphicsItem. */
@@ -129,6 +129,20 @@ enum RouteItemFlag {
 };
 Q_DECLARE_FLAGS( RouteItemFlags, RouteItemFlag );
 Q_DECLARE_OPERATORS_FOR_FLAGS( RouteItemFlags );
+
+/** @brief A set of flags for stops in a route. */
+enum RouteStopFlag {
+    RouteStopIsIntermediate = 0x0001, /**< The route stop is an intermediate one (not the first
+                                       * and not the last). Can't be used together with
+                                       * RouteStopIsOrigin or RouteStopIsTarget. */
+    RouteStopIsOrigin       = 0x0002, /**< The route stop is the origin of the route. Can't be used
+                                       * together with RouteStopIsIntermediate or RouteStopIsTarget. */
+    RouteStopIsTarget       = 0x0004, /**< The route stop is the target of the route. Can't be used
+                                       * together with RouteStopIsIntermediate or RouteStopIsOrigin. */
+    RouteStopIsHomeStop     = 0x0008  /**< The route stop is the currently selected home stop. */
+};
+Q_DECLARE_FLAGS( RouteStopFlags, RouteStopFlag );
+Q_DECLARE_OPERATORS_FOR_FLAGS( RouteStopFlags );
 
 /** @brief Different states of alarm. */
 enum AlarmState {

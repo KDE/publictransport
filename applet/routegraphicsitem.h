@@ -186,13 +186,14 @@ class JourneyRouteStopGraphicsItem : public QGraphicsWidget {
 
 public:
     JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent, const QPixmap &vehiclePixmap,
-                                  const QString &text, bool isIntermediate, const QString &stopName );
+                                  const QString &text, RouteStopFlags routeStopFlags,
+                                  const QString &stopName );
     ~JourneyRouteStopGraphicsItem();
 
     void setText( const QString &text );
 
     QRectF infoTextRect() const;
-    bool isIntermediate() const { return m_intermediate; };
+    RouteStopFlags routeStopFlags() const { return m_stopFlags; };
     QString stopName() const { return m_stopName; };
 
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -212,7 +213,7 @@ private:
     QPixmap m_vehiclePixmap;
     QTextDocument *m_infoTextDocument;
 
-    bool m_intermediate;
+    RouteStopFlags m_stopFlags;
     QString m_stopName;
     QPointer<KMenu> m_contextMenu;
 };
