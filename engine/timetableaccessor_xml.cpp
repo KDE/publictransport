@@ -62,10 +62,8 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 		kDebug() << "XML document is empty";
 		return false;
 	}
-// kDebug() << "___________________________________________";
-// kDebug() << document;
-// kDebug() << "___________________________________________";
-	QString doc = QString( document );
+	
+    QString doc = TimetableAccessorScript::decodeHtml( document, m_info->fallbackCharset() );
 	QDomDocument domDoc;
 	domDoc.setContent( doc );
 	QDomElement docElement = domDoc.documentElement();
@@ -77,6 +75,8 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 		QString errCode = errElement.attributeNode("code").nodeValue();
 		QString errMessage = errElement.attributeNode("text").nodeValue();
 		QString errLevel = errElement.attributeNode("level").nodeValue();
+        // Error codes:
+        // - H890: No trains in result (fatal)
 		kDebug() << "Received an error:" << errCode << errMessage << "level" << errLevel
 				 << (errLevel.toLower() == "e" ? "Error is fatal" : "Error isn't fatal");
 		if ( errLevel.toLower() == "e" ) {

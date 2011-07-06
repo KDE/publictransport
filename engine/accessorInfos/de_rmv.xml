@@ -13,11 +13,12 @@
 	<url>http://www.rmv.de/</url>
 	<shortUrl>www.rmv.de</shortUrl>
 	<!-- <credit>Rhein-Main-Verkehrsverbund GmbH</credit> -->
+    <fallbackCharset>utf8</fallbackCharset>
 
 	<rawUrls>
-		<departures><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxCount}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=xml&start=yes]]></departures>
+		<departures><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}!&maxJourneys={maxCount}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=xml&start=yes]]></departures>
 
-		<stopSuggestions><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&selectDate=today&time={time}&input={stop}&maxJourneys={maxCount}&boardType={dataType}&productsFilter=1111111111100000&maxStops=1&output=html&start=yes]]></stopSuggestions>
+		<stopSuggestions><![CDATA[http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq&input={stop}&output=html&start=yes]]></stopSuggestions>
 	</rawUrls>
 
 	<script>de_rmv.js</script>
