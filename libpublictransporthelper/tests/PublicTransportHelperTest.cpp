@@ -22,6 +22,7 @@
 #include "../stopsettingsdialog.h"
 #include "../stopwidget.h"
 #include "../locationmodel.h"
+#include "../checkcombobox.h"
 
 #include <Plasma/DataEngineManager>
 #include <KComboBox>
@@ -391,7 +392,7 @@ void PublicTransportHelperTest::stopSettingsDialogExtendedStopTest()
 	QVERIFY( factory );
 	
 	// Ensure the filter configuration widget was created
-	KComboBox *cmbFilterConfiguration = dlg->findChild<KComboBox*>(
+	CheckCombobox *cmbFilterConfiguration = dlg->findChild<CheckCombobox*>(
 			factory->nameForSetting(FilterConfigurationSetting) );
 	QVERIFY( cmbFilterConfiguration );
 	// Test filter configuration widget content
@@ -407,7 +408,7 @@ void PublicTransportHelperTest::stopSettingsDialogExtendedStopTest()
 	
 	// Ensure the container widget for first departure time settings was created
 	QVERIFY( dlg->findChild<QWidget*>(
-			factory->nameForSetting(FirstDepartureConfigModeSetting)) );
+			 factory->nameForSetting(FirstDepartureConfigModeSetting)) );
 	
 	// Ensure the first departure time offset widget was created
 	QSpinBox *spinTimeOffset = dlg->findChild<QSpinBox*>( 
@@ -442,7 +443,7 @@ void PublicTransportHelperTest::stopSettingsDialogExtendedStopTest()
 	// Test some extended settings
 	m_stopSettings = dlg->stopSettings();
 	m_stopSettings.set( FilterConfigurationSetting, 
-						m_filterConfigurations.first().name ); // TODO TEST
+						QVariant::fromValue(m_filterConfigurations.first()) );
 	m_stopSettings.set( AlarmTimeSetting, 10 );
 	m_stopSettings.set( FirstDepartureConfigModeSetting,
 						static_cast<int>(firstDepartureConfigMode = AtCustomTime) );
@@ -452,7 +453,14 @@ void PublicTransportHelperTest::stopSettingsDialogExtendedStopTest()
 	QCOMPARE( dlg->stopSettings(), m_stopSettings );
 	
 	// Test if widget values have been changed correctly
-	QCOMPARE( cmbFilterConfiguration->currentText(), m_filterConfigurations.first().name );
+    QAbstractItemModel *model = cmbFilterConfiguration->model();
+    for ( int row = 0; row < model->rowCount() && row < m_filterConfigurations.count(); ++row ) {
+        QCOMPARE( model->data(model->index(row, 0)).toString(),
+                  Global::translateFilterKey(m_filterConfigurations[row].name) );
+        // All filter configurations are currently NOT checked for all stops
+        QVERIFY( model->data(model->index(row, 0), Qt::CheckStateRole) == Qt::Unchecked );
+    }
+    // TODO: Check different sets of affected stops for the filters
 	QCOMPARE( spinAlarmTime->value(), 10 );
 	QCOMPARE( spinTimeOffset->value(), 8 );
 	QCOMPARE( timeEditCustom->time(), QTime(14, 30) );
@@ -472,7 +480,7 @@ void PublicTransportHelperTest::stopSettingsDialogCustomStopTest()
 	StopSettingsDialog dlg( 0, m_stopSettings, 
 			StopSettingsDialog::ShowServiceProviderConfig | 
 			StopSettingsDialog::ShowStopInputField | StopSettingsDialog::ShowAlarmTimeConfig, 
-			AccessorInfoDialog::DefaultOptions, m_filterConfigurations,
+			AccessorInfoDialog::DefaultOptions, m_filterConfigurations, -1,
 			QList<int>() << AlarmTimeSetting );
 
 	// Test stopSettings() for standard settings
@@ -581,11 +589,11 @@ public:
 			return StopSettingsWidgetFactory::widgetForSetting( extendedSetting, parent );
 		}
 	};
-    virtual QVariant valueOfSetting(const QWidget* widget, int extendedSetting) const {
+    virtual QVariant valueOfSetting(const QWidget* widget, int extendedSetting, int stopIndex = -1) const {
 		if ( extendedSetting == UserSetting ) {
 			return qobject_cast< const QDateEdit* >( widget )->date();
 		} else {
-			return StopSettingsWidgetFactory::valueOfSetting( widget, extendedSetting );
+			return StopSettingsWidgetFactory::valueOfSetting( widget, extendedSetting, stopIndex );
 		}
 	};
     virtual void setValueOfSetting(QWidget* widget, int extendedSetting, const QVariant& value) const {
@@ -605,7 +613,7 @@ void PublicTransportHelperTest::stopSettingsDialogCustomFactoryTest()
 	m_stopSettings.set( UserSetting, QDate(2011, 1, 4) );
 	StopSettingsDialog dlg( 0, m_stopSettings,
 			StopSettingsDialog::ShowStopInputField | StopSettingsDialog::ShowAlarmTimeConfig, 
-			AccessorInfoDialog::DefaultOptions,  m_filterConfigurations,
+			AccessorInfoDialog::DefaultOptions, m_filterConfigurations, -1,
 			QList<int>() << AlarmTimeSetting << UserSetting,
 			CustomFactory::Pointer::create() );
 	
@@ -652,7 +660,7 @@ void PublicTransportHelperTest::stopSettingsDialogAddWidgetsLaterCustomFactoryTe
 	
 	StopSettingsDialog dlg( 0, m_stopSettings, 
 			StopSettingsDialog::ShowStopInputField, AccessorInfoDialog::DefaultOptions,
-			m_filterConfigurations, QList<int>(), CustomFactory::Pointer::create() );
+			m_filterConfigurations, -1, QList<int>(), CustomFactory::Pointer::create() );
 	m_stopSettings = dlg.stopSettings();
 	
 	QVERIFY( !dlg.stopSettings().hasSetting(AlarmTimeSetting) );
