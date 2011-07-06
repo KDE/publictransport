@@ -1,5 +1,5 @@
 /** Accessor for RMV (Rhein-Main), germany.
-  * © 2010, Friedrich Pülz */
+  * © 2011, Friedrich Pülz */
 
 // function usedTimetableInformations() {
 //     return [ 'StopID' ];

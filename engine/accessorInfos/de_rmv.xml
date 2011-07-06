@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo fileVersion="1.0" version="1.2" type="XML">
+<accessorInfo fileVersion="1.0" version="1.3" type="XML">
 	<name lang="en">Rhein-Main-Verkehrsverbund GmbH</name>
 	<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
 	<cities>
@@ -24,7 +24,9 @@
 	<script>de_rmv.js</script>
 
 	<changelog>
-		<entry since="1.2" releasedWith="0.10">Ported the stop suggestion part to a script.</entry>
+        <entry since="1.3" releasedWith="0.10">Fix stop suggestions (changed HTML).</entry>
+        <entry since="1.3" releasedWith="0.10">Fix departures/arrivals (also without stop ID, decoding).</entry>
+        <entry since="1.2" releasedWith="0.10">Ported the stop suggestion part to a script.</entry>
 		<entry since="1.1" releasedWith="0.7">Corrected the feature list.</entry>
 		<entry since="1.1" releasedWith="0.7">Stop suggestions didn't work, because the HTML accessor that parses stop suggestions for XML accessors was initialized with empty accessor info.</entry>
 	</changelog>

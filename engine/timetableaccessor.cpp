@@ -641,7 +641,7 @@ void TimetableAccessor::result( KJob* job )
 	ParseDocumentMode parseDocumentMode = jobInfo.parseDocumentMode;
 	GlobalTimetableInfo globalInfo;
 	globalInfo.requestDate = jobInfo.dateTime.date();
-	kDebug() << "Finished:" << parseDocumentMode << jobInfo.sourceName;
+	kDebug() << "Finished:" << parseDocumentMode << jobInfo.sourceName << jobInfo.url;
 
 	if ( storedJob->error() != 0 ) {
 		kDebug() << "Error in job:" << storedJob->error() << storedJob->errorString();

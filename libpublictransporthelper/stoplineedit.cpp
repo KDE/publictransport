@@ -122,11 +122,11 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
 	
 	// Stop suggestions data
 	if ( data.value("error").toBool() ) {
-		kDebug() << "Stop suggestions error";
+		kDebug() << "Stop suggestions error" << sourceName;
 		// TODO: Handle error somehow?
 		return;
 	} else if ( !data.value("receivedPossibleStopList").toBool() ) {
-		kDebug() << "No stop suggestions received";
+		kDebug() << "No stop suggestions received" << sourceName;
 		return;
 	}
 	
