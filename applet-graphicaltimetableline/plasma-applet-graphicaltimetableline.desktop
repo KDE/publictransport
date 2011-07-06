@@ -2,6 +2,7 @@
 Name=GraphicalTimetableLine
 Name[et]=Graafiline sõiduplaan
 Name[km]=GraphicalTimetableLine
+Name[pl]=Graficzny rozkład jazdy linii
 Name[pt]=LinhaGráficaHorário
 Name[pt_BR]=LinhaGráficaHorário
 Name[sv]=Grafisk tidtabellrad
@@ -10,6 +11,7 @@ Name[x-test]=xxGraphicalTimetableLinexx
 Comment=Plasma GraphicalTimetableLine
 Comment[et]=Plasma graafiline sõiduplaan
 Comment[km]=បន្ទាត់​កាលវិភាគ​ក្រាហ្វិក​ប្លាស្មា
+Comment[pl]=Graficzny rozkład jazdy linii dla Plazmy
 Comment[pt]=LinhaGráficaHorário do Plasma
 Comment[pt_BR]=LinhaGráficaHorário do Plasma
 Comment[sv]=Plasma grafisk tidtabellrad
