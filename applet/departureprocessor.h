@@ -146,18 +146,22 @@ signals:
     /** @brief A departure/arrival processing job now gets started.
     * @param sourceName The data engine source name for the departure data. */
     void beginDepartureProcessing( const QString &sourceName );
-    /** @brief A departure/arrival processing job is finished.
+    
+    /** @brief A departure/arrival processing job is finished (or a batch of departures/arrivals).
     * @param sourceName The data engine source name for the departure data.
     * @param departures A list of departures that were read.
     * @param requestUrl The url that was used to download the departure data.
-    * @param lastUpdate The date and time of the last update of the data. */
+    * @param lastUpdate The date and time of the last update of the data.
+    * @param departuresToGo The number of departures to still be processed. If this isn't 0
+    *   this signal gets emitted again after the next batch of departures has been processed. */
     void departuresProcessed( const QString &sourceName, const QList< DepartureInfo > &departures,
-            const QUrl &requestUrl, const QDateTime &lastUpdate );
+            const QUrl &requestUrl, const QDateTime &lastUpdate, int departuresToGo = 0 );
 
     /** @brief A journey processing job now gets started.
     * @param sourceName The data engine source name for the journey data. */
     void beginJourneyProcessing( const QString &sourceName );
-    /** @brief A journey processing job is finished.
+
+    /** @brief A journey processing job is finished (or a batch of journeys).
     * @param sourceName The data engine source name for the journey data.
     * @param journeys A list of journeys that were read.
     * @param requestUrl The url that was used to download the journey data.
@@ -168,6 +172,7 @@ signals:
     /** @brief A filter departures job now gets started.
     * @param sourceName The data engine source name for the departure data. */
     void beginFiltering( const QString &sourceName );
+
     /** @brief A filter departures job is finished.
     * @param sourceName The data engine source name for the departure data.
     * @param departures The list of departures that were filtered. Each

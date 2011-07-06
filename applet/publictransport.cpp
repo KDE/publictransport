@@ -102,12 +102,12 @@ void PublicTransport::init()
     m_departureProcessor = new DepartureProcessor( this );
     connect( m_departureProcessor, SIGNAL(beginDepartureProcessing(QString)),
              this, SLOT(beginDepartureProcessing(QString)) );
-    connect( m_departureProcessor, SIGNAL(departuresProcessed(QString, QList<DepartureInfo>, QUrl, QDateTime)),
-             this, SLOT(departuresProcessed(QString, QList<DepartureInfo>, QUrl, QDateTime)) );
+    connect( m_departureProcessor, SIGNAL(departuresProcessed(QString,QList<DepartureInfo>,QUrl,QDateTime,int)),
+             this, SLOT(departuresProcessed(QString,QList<DepartureInfo>,QUrl,QDateTime,int)) );
     connect( m_departureProcessor, SIGNAL(beginJourneyProcessing(QString)),
              this, SLOT(beginJourneyProcessing(QString)) );
-    connect( m_departureProcessor, SIGNAL(journeysProcessed(QString, QList<JourneyInfo>, QUrl, QDateTime)),
-             this, SLOT(journeysProcessed(QString, QList<JourneyInfo>, QUrl, QDateTime)) );
+    connect( m_departureProcessor, SIGNAL(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)),
+             this, SLOT(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)) );
     connect( m_departureProcessor, SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>, QList<DepartureInfo>)),
              this, SLOT(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)) );
 
@@ -800,6 +800,7 @@ void PublicTransport::departuresFiltered( const QString& sourceName,
     createDepartureGroups();
     createPopupIcon();
     createTooltip();
+    updateColorGroupSettings();
 }
 
 void PublicTransport::beginJourneyProcessing( const QString &/*sourceName*/ )
@@ -833,7 +834,7 @@ void PublicTransport::beginDepartureProcessing( const QString& sourceName )
 
 void PublicTransport::departuresProcessed( const QString& sourceName,
         const QList< DepartureInfo > &departures, const QUrl &requestUrl,
-        const QDateTime &lastUpdate )
+        const QDateTime &lastUpdate, int departuresToGo )
 {
     // Set associated app url
     m_urlDeparturesArrivals = requestUrl;
@@ -858,6 +859,11 @@ void PublicTransport::departuresProcessed( const QString& sourceName,
 
     // Fill the model with the received departures
     fillModel( departures );
+
+    // Update color group settings when all departure data is there
+    if ( departuresToGo == 0 ) {
+        updateColorGroupSettings();
+    }
 }
 
 QString PublicTransport::stripDateAndTimeValues( const QString& sourceName ) const
@@ -1944,8 +1950,7 @@ void PublicTransport::writeSettings( const Settings& settings )
         // (De)Colorize if colorization setting has been toggled
         if ( changed.testFlag(SettingsIO::ChangedColorization) ||
              changed.testFlag(SettingsIO::ChangedCurrentStop) ||
-             changed.testFlag(SettingsIO::ChangedStopSettings) ||
-             changed.testFlag(SettingsIO::ChangedFilterSettings) )
+             changed.testFlag(SettingsIO::ChangedStopSettings) )
         {
             updateColorGroupSettings();
         }
@@ -2532,7 +2537,6 @@ void PublicTransport::fillModel( const QList<DepartureInfo> &departures )
     createDepartureGroups();
     createPopupIcon();
     createTooltip();
-    updateColorGroupSettings();
 }
 
 void GraphicsPixmapWidget::paint( QPainter* painter,
@@ -2607,8 +2611,6 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
         QColor(50, 225, 225, opacity), // cyan
         QColor(255, 255, 0, opacity) // yellow
     };
-
-    // TODO Compare routes (how many stops are equal from beginning?)
 
     // Map route parts to lists of concatenated strings,
     // ie. transport line and target
