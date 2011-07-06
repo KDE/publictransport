@@ -2617,6 +2617,10 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
         foreach ( const DepartureInfo &info, infos ) {
             QString transportLineAndTarget = info.lineString().toLower() + info.target().toLower();
             QStringList routePart = info.routeStops().mid( 1, stopCount );
+            if ( routePart.isEmpty() ) {
+                kDebug() << "Route part is empty" << transportLineAndTarget;
+                continue;
+            }
 
             // Check if the route part was already counted
             if ( routePartsToLines.contains(routePart) ) {
