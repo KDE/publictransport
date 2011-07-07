@@ -562,6 +562,7 @@ void RouteStopTextGraphicsItem::hoverLeaveEvent(QGraphicsSceneHoverEvent* event)
 
 void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
 {
+    delete m_contextMenu;
     m_contextMenu = new KMenu( event->widget() );
     RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
     DepartureModel *model = !routeItem ? NULL :
@@ -701,6 +702,7 @@ void JourneyRouteStopGraphicsItem::setText( const QString& text )
 
 void JourneyRouteStopGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
 {
+    delete m_contextMenu;
     m_contextMenu = new KMenu( event->widget() );
 
     QAction *requestJourneysToAction = NULL;
@@ -893,7 +895,7 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
             } else {
                 routeStopFlags |= RouteStopIsIntermediate;
             }
-            JourneyModel *model = qobject_cast<JourneyModel*>( m_item->model() ); // data( HomeStopRole )
+            JourneyModel *model = qobject_cast<JourneyModel*>( m_item->model() );
             if ( model->info().homeStop == stopName ) {
                 routeStopFlags |= RouteStopIsHomeStop;
             }

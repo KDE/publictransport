@@ -38,6 +38,7 @@
 #include <QGraphicsScene>
 #include <QPropertyAnimation>
 #include <qmath.h>
+#include <KMenu>
 
 PublicTransportGraphicsItem::PublicTransportGraphicsItem( QGraphicsItem* parent ) : QGraphicsWidget(parent),
     m_item(0), m_parent(0), m_resizeAnimation(0), m_pixmap(0)
@@ -273,6 +274,32 @@ void JourneyGraphicsItem::resizeEvent(QGraphicsSceneResizeEvent* event)
     }
 }
 
+void JourneyGraphicsItem::contextMenuEvent( QGraphicsSceneContextMenuEvent* event )
+{
+    delete m_contextMenu;
+    m_contextMenu = new KMenu( event->widget() );
+    QAction *addAlarmAction = new QAction( KIcon("task-reminder"),
+            i18n("Add &Alarm For This Journey"), m_contextMenu );
+    m_contextMenu->addAction( addAlarmAction );
+
+    QAction *executedAction = m_contextMenu->exec( event->screenPos() );
+    delete m_contextMenu;
+    m_contextMenu = NULL;
+
+    if ( executedAction == addAlarmAction ) {
+        const JourneyInfo *info = journeyItem()->journeyInfo();
+
+        QString lineString = info->routeTransportLines().isEmpty()
+                ? QString() : info->routeTransportLines().first();
+        VehicleType vehicleType = info->routeVehicleTypes().isEmpty()
+                ? Unknown : info->routeVehicleTypes().first();
+        QString target = info->routeStops().count() < 2 ? QString() : info->routeStops()[1];
+        emit requestAlarmCreation( info->departure(), lineString, vehicleType, target, this );
+    } else {
+        return; // No action selected
+    }
+}
+
 void PublicTransportGraphicsItem::mousePressEvent( QGraphicsSceneMouseEvent* event )
 {
     QGraphicsItem::mousePressEvent( event );
@@ -308,8 +335,13 @@ DepartureGraphicsItem::~DepartureGraphicsItem()
 }
 
 JourneyGraphicsItem::JourneyGraphicsItem( QGraphicsItem* parent )
-    : PublicTransportGraphicsItem( parent ), m_infoTextDocument(0), m_routeItem(0)
+    : PublicTransportGraphicsItem( parent ), m_infoTextDocument(0), m_routeItem(0), m_contextMenu(0)
 {
+}
+
+JourneyGraphicsItem::~JourneyGraphicsItem()
+{
+    delete m_contextMenu;
 }
 
 void DepartureGraphicsItem::setLeavingStep( qreal leavingStep )
@@ -1276,6 +1308,8 @@ void JourneyTimetableWidget::rowsInserted(const QModelIndex& parent, int first, 
         item->updateData( static_cast<JourneyItem*>(m_model->item(row)) );
         connect( item, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
                  this, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
+        connect( item, SIGNAL(requestAlarmCreation(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)),
+                 this, SIGNAL(requestAlarmCreation(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)) );
         m_items.insert( row, item );
 
         // Fade new items in

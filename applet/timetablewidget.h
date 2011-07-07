@@ -30,11 +30,11 @@
 #include <QPainter>
 #include <QPointer>
 
-class RouteStopTextGraphicsItem;
 namespace Plasma
 {
     class Svg;
 }
+class KMenu;
 
 class QPropertyAnimation;
 class QWidget;
@@ -43,6 +43,7 @@ class QStyleOptionGraphicsItem;
 class QPainter;
 
 class RouteGraphicsItem;
+class RouteStopTextGraphicsItem;
 class JourneyRouteGraphicsItem;
 class DepartureModel;
 class DepartureItem;
@@ -186,6 +187,7 @@ class JourneyGraphicsItem : public PublicTransportGraphicsItem {
 
 public:
     JourneyGraphicsItem( QGraphicsItem* parent = 0 );
+    virtual ~JourneyGraphicsItem();
 
     void updateData( JourneyItem* item, bool update = false );
     inline JourneyItem *journeyItem() const { return qobject_cast<JourneyItem*>(m_item); };
@@ -205,14 +207,19 @@ public:
 signals:
     void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
                             QGraphicsWidget *routeStopItem );
+    void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
+                               VehicleType vehicleType, const QString &target,
+                               QGraphicsWidget *item );
 
 protected:
-    virtual void updateTextLayouts();
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
+    virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent* event );
+    virtual void updateTextLayouts();
 
 private:
     QTextDocument *m_infoTextDocument;
     JourneyRouteGraphicsItem *m_routeItem;
+    QPointer<KMenu> m_contextMenu;
 };
 
 /**
@@ -259,6 +266,9 @@ signals:
     void contextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
     void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
                             QGraphicsWidget *item );
+    void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
+                               VehicleType vehicleType, const QString &target,
+                               QGraphicsWidget *item );
 
 protected slots:
     void journeysAboutToBeRemoved( const QList<ItemBase*> &journeys );

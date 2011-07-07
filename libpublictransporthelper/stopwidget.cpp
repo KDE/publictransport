@@ -181,14 +181,10 @@ void StopWidget::setStopSettings( const StopSettings& stopSettings )
 	} else {
 		d->provider->setText( index.data().toString() );
 	}
-kDebug() << "SETTINGS:" << stopSettings.settings();
+	
 	// Copy filter configurations from StopSettings
 	if ( stopSettings.hasSetting(FilterConfigurationSetting) ) {
         d->filterConfigurations = stopSettings.get<FilterSettingsList>( FilterConfigurationSetting );
-        kDebug() << "Got new filter config for a StopWidget" << d->filterConfigurations.count();
-        foreach ( FilterSettings f, d->filterConfigurations ) {
-            kDebug() << "  Filter" << f.name << "| affectedStops:" << f.affectedStops;
-        }
     }
 
 	d->stopSettings = stopSettings;

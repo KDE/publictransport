@@ -562,6 +562,10 @@ protected slots:
     void removeAlarms( const AlarmSettingsList &newAlarmSettings,
                        const QList<int> &removedAlarms );
 
+    void processAlarmCreationRequest( const QDateTime &departure, const QString &lineString,
+                                      VehicleType vehicleType, const QString &target,
+                                      QGraphicsWidget *item );
+
     /**
      * @brief The @p departures will get removed after this slot was called.
      *
