@@ -293,8 +293,10 @@ void JourneyGraphicsItem::contextMenuEvent( QGraphicsSceneContextMenuEvent* even
                 ? QString() : info->routeTransportLines().first();
         VehicleType vehicleType = info->routeVehicleTypes().isEmpty()
                 ? Unknown : info->routeVehicleTypes().first();
-        QString target = info->routeStops().count() < 2 ? QString() : info->routeStops()[1];
-        emit requestAlarmCreation( info->departure(), lineString, vehicleType, target, this );
+        // NOTE This isn't the target, but an intermediate stop 
+        // (should route data be required here? .. to use the "via"-filter)
+//         QString target = info->routeStops().count() < 2 ? QString() : info->routeStops()[1];
+        emit requestAlarmCreation( info->departure(), lineString, vehicleType, QString(), this );
     } else {
         return; // No action selected
     }
