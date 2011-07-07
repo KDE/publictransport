@@ -111,9 +111,11 @@ void RouteGraphicsItem::arrangeStopItems()
             }
 
             // Prepend departure time at the current stop, if a time is given
+            QTime time;
+            int minsFromFirstRouteStop = -1;
             if ( i < info->routeTimes().count() && info->routeTimes()[i].isValid() ) {
-                stopText = stopText.prepend( QString("%1 - ")
-                        .arg(KGlobal::locale()->formatTime(info->routeTimes()[i])) );
+                time = info->routeTimes()[i];
+                minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60 );
             }
 
             // Elide long stop names
@@ -134,7 +136,7 @@ void RouteGraphicsItem::arrangeStopItems()
             // and automatically elides it and stretches it on hover to show hidden text
             RouteStopTextGraphicsItem *textItem = m_textItems[ i ];
             textItem->resetTransform();
-            textItem->setStop( stopText, stopName );
+            textItem->setStop( time, stopName, minsFromFirstRouteStop );
             textItem->setFont( *font );
             textItem->setPos( stopTextPos );
             textItem->setBaseSize( baseSize );
@@ -242,7 +244,6 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                                 .arg(KGlobal::locale()->formatTime(info->routeTimes()[omittedIndex])) );
                     }
 
-                    // TODO FIXME
                     bool manuallyHighlighted =
                             model->routeItemFlags(stopText).testFlag(RouteItemHighlighted);
                     omittedStopList << (manuallyHighlighted
@@ -308,8 +309,14 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
 
             // Create text item, that displays a single stop name
             // and automatically elides and stretches it on hover to show hidden text
+            QTime time;
+            int minsFromFirstRouteStop = -1;
+            if ( index < info->routeTimes().count() && info->routeTimes()[index].isValid() ) {
+                time = info->routeTimes()[index];
+                minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60 );
+            }
             RouteStopTextGraphicsItem *textItem = new RouteStopTextGraphicsItem(
-                    this, *font, baseSize, stopText, stopName );
+                    this, *font, baseSize, time, stopName, minsFromFirstRouteStop );
             textItem->setPos( stopTextPos );
             textItem->resize( baseSize + 10, fontMetrics->height() );
             textItem->rotate( m_textAngle );
@@ -499,13 +506,13 @@ void RouteStopMarkerGraphicsItem::paint( QPainter* painter, const QStyleOptionGr
 }
 
 RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font,
-        qreal baseSize, const QString& stopText, const QString &stopName )
+        qreal baseSize, const QTime &time, const QString &stopName, int minsFromFirstRouteStop )
         : QGraphicsWidget(parent), m_contextMenu(0)
 {
     m_expandStep = 0.0;
     m_baseSize = baseSize;
     setFont( font );
-    setStop( stopText, stopName );
+    setStop( time, stopName, minsFromFirstRouteStop );
     setAcceptHoverEvents( true );
 }
 
@@ -514,13 +521,21 @@ RouteStopTextGraphicsItem::~RouteStopTextGraphicsItem()
     delete m_contextMenu;
 }
 
-void RouteStopTextGraphicsItem::setStop( const QString& stopText, const QString &stopName )
+void RouteStopTextGraphicsItem::setStop( const QTime &time, const QString &stopName,
+                                         int minsFromFirstRouteStop )
 {
-    m_stopText = stopText;
     m_stopName = stopName;
+    m_stopText = minsFromFirstRouteStop < 0
+            ? stopName : QString("%1: %2").arg(minsFromFirstRouteStop).arg(stopName);
+
     qreal maxSize = QFontMetrics( font() ).width( m_stopText ) + 5;
     if ( maxSize > m_baseSize ) {
-        setToolTip( stopText );
+        if ( time.isValid() ) {
+            setToolTip( QString("%1: %2").arg(KGlobal::locale()->formatTime(time))
+                                         .arg(stopName) );
+        } else {
+            setToolTip( stopName );
+        }
     } else {
         setToolTip( QString() );
     }

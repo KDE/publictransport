@@ -97,13 +97,32 @@ class RouteStopTextGraphicsItem : public QGraphicsWidget {
     Q_PROPERTY( qreal expandStep READ expandStep WRITE setExpandStep )
 
 public:
+    /**
+     * @brief Create a new route stop text item.
+     *
+     * This class visualizes the text shown for a stop in a route.
+     * RouteStopMarkerGraphicsItem is responsible for showing a stop icon on a "route line".
+     * 
+     * RouteGraphicsItem normally is the parent of both classes (this and
+     * RouteStopMarkerGraphicsItem). RouteGraphicsItem creates these items for each route stop
+     * to be shown.
+     *
+     * @param parent The parent item.
+     * @param font The font to use.
+     * @param baseSize A zooming factor.
+     * @param time The time at which the vehicle is at this route stop.
+     * @param stopName The name of the stop this RouteStopTextGraphicsItem visualizes.
+     * @param minsFromFirstRouteStop The time in minutes the vehicle needs from the first stop of
+     *   the route until this route stop.
+     **/
     RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font, qreal baseSize,
-                               const QString &stopText, const QString &stopName );
+                               const QTime &time, const QString &stopName,
+                               int minsFromFirstRouteStop );
     ~RouteStopTextGraphicsItem();
 
     QString stopText() const { return m_stopText; };
     QString stopName() const { return m_stopName; };
-    void setStop( const QString &stopText, const QString &stopName );
+    void setStop( const QTime &time, const QString &stopName, int minsFromFirstRouteStop );
 
     qreal expandStep() const { return m_expandStep; };
     void setExpandStep( qreal expandStep );
