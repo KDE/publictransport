@@ -26,7 +26,8 @@ Changelog of plasma-applet-publictransport
 
 - New context menu entries for journey route stops
 
-- TODO: in route stops: show time in mins from first stop (and the time in the tooltip)
+- Show time in minutes from the first stop in route stops (and the actual time in it's tooltip)
+- Show alarms in journey view (matching the first journey part)
 
 0.10 - Beta 8
 - Make leaving departures animate before being removed from the list

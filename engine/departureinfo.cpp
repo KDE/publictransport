@@ -68,9 +68,9 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
 		QString sTransportLine = value(TransportLine).toString();
 
 		// Try to get operator from transport line string if no operator is given
-		if ( !contains(Operator)
-				|| (value(Operator).canConvert(QVariant::String)
-					 && value(Operator).toString().isEmpty()) ) {
+		if ( !contains(Operator) || (value(Operator).canConvert(QVariant::String)
+             && value(Operator).toString().isEmpty()) )
+        {
 			QRegExp rx( "^[abcdefghijklmnopqrstuvwxyz]+", Qt::CaseInsensitive );
 			if ( rx.indexIn(sTransportLine) != -1 ) {
 				QString sOperator = operatorFromVehicleTypeString( rx.cap() );
@@ -139,7 +139,7 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
 JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
 		: PublicTransportInfo( data )
 {
-	if ( contains( TypesOfVehicleInJourney ) ) {
+	if ( contains(TypesOfVehicleInJourney) ) {
 		QVariantList vehicleTypes;
 
 		if ( value(TypesOfVehicleInJourney).canConvert(QVariant::StringList) ) {
@@ -184,6 +184,16 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
 
 		insert( RouteTypesOfVehicles, vehicleTypes );
 	}
+
+	if ( contains(RouteTransportLines) ) {
+        QStringList transportLines = value( RouteTransportLines ).toStringList();
+        for ( int i = 0; i < transportLines.count(); ++i ) {
+            transportLines[i] = transportLines[i].trimmed()
+                    .remove( QRegExp("^(bus|tro|tram|str)", Qt::CaseInsensitive) )
+                    .replace( QRegExp("\\s{2,}"), " " ).trimmed();
+        }
+        insert( RouteTransportLines, transportLines );
+    }
 
 	if ( contains(ArrivalDate) && (!value(ArrivalDate).canConvert(QVariant::Date)
 				|| !value(ArrivalDate).toDate().isValid()) ) {

@@ -309,6 +309,14 @@ public:
     * in @p journeyInfo. */
     void setJourneyInfo( const JourneyInfo &journeyInfo );
 
+    /**
+     * @returns the current alarm states.
+     * @see AlarmStates */
+    AlarmStates alarmStates() const { return m_alarm; };
+
+    /** @brief Sets the alarm states. */
+    void setAlarmStates( AlarmStates alarmStates );
+
 protected:
     /** @brief Updates this item. */
     void updateValues();
@@ -348,6 +356,7 @@ protected:
     qreal rating() const;
 
     JourneyInfo m_journeyInfo;
+    AlarmStates m_alarm;
 };
 
 /**
