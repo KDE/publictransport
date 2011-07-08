@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -34,6 +34,7 @@
 #include <qstate.h>
 #include <QSignalTransition>
 #include <QVariant>
+#include <QAction>
 
 /** @brief Icons to be displayed by the Plasma::IconWidget in the applet's top left corner. */
 enum MainIconDisplay {
@@ -108,20 +109,6 @@ private:
     const char *m_property;
 };
 
-/** @brief Actions for intermediate stops, shown in RouteGraphicsItems. */
-enum StopAction {
-    ShowDeparturesForStop,   /**< Show a departure list for the associated stop. */
-    CreateFilterForStop,     /**< Create a filter via the associated stop. */
-    CopyStopNameToClipboard, /**< Copy the name of the associated stop to the clipboard. */
-    HighlightStop,           /**< Highlight the associated stop in all route items.
-                              * If the stop was already highlighted, it should
-                              * be unhighlighted. */
-    RequestJourneysToStop,   /**< Request journeys to the associated stop. The origin stop
-                              * can be given as QVariant data argument to stop action requests. */
-    RequestJourneysFromStop  /**< Request journeys from the associated stop. The target stop
-                              * can be given as QVariant data argument to stop action requests. */
-};
-
 /** @brief A set of flags for RouteStopMarkerGraphicsItem/RouteStopTextGraphicsItem. */
 enum RouteItemFlag {
     RouteItemDefault        = 0x0000, /**< Use default settings. */
@@ -159,6 +146,50 @@ enum AlarmState {
 };
 Q_DECLARE_FLAGS( AlarmStates, AlarmState )
 Q_DECLARE_OPERATORS_FOR_FLAGS( AlarmStates )
+
+class StopAction : public QAction
+{
+    Q_OBJECT
+public:
+    /** @brief Actions for intermediate stops, shown in RouteGraphicsItems. */
+    enum Type {
+        ShowDeparturesForStop,   /**< Show a departure list for the associated stop. */
+        CreateFilterForStop,     /**< Create a filter via the associated stop. */
+        CopyStopNameToClipboard, /**< Copy the name of the associated stop to the clipboard. */
+        HighlightStop,           /**< Highlight the associated stop in all route items.
+                                  * If the stop was already highlighted, it should
+                                  * be unhighlighted. */
+        RequestJourneysToStop,   /**< Request journeys to the associated stop. The origin stop
+                                  * can be given as QVariant data argument to stop action requests. */
+        RequestJourneysFromStop  /**< Request journeys from the associated stop. The target stop
+                                  * can be given as QVariant data argument to stop action requests. */
+    };
+
+    StopAction( Type type, QObject* parent );
+
+    Type type() const { return m_type; };
+
+    QString stopName() const { return m_stopName; };
+    void setStopName( const QString &stopName ) { m_stopName = stopName; };
+
+signals:
+    /**
+     * @brief This signal gets fired when this QAction signals triggered(), but with more arguments.
+     *
+     * @param type The type of the triggered stop action.
+     * @param stopName The name of the stop associated with the action.
+     **/
+    void stopActionTriggered( StopAction::Type type, const QString &stopName );
+
+protected slots:
+    void slotTriggered();
+
+private:
+    Q_DISABLE_COPY(StopAction)
+
+    const Type m_type;
+    QString m_stopName;
+};
 
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
 namespace Plasma {

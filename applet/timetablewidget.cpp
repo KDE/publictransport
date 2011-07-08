@@ -40,8 +40,10 @@
 #include <qmath.h>
 #include <KMenu>
 
-PublicTransportGraphicsItem::PublicTransportGraphicsItem( QGraphicsItem* parent ) : QGraphicsWidget(parent),
-    m_item(0), m_parent(0), m_resizeAnimation(0), m_pixmap(0)
+PublicTransportGraphicsItem::PublicTransportGraphicsItem( QGraphicsItem* parent,
+        StopAction *copyStopToClipboardAction ) : QGraphicsWidget(parent),
+        m_item(0), m_parent(0), m_resizeAnimation(0), m_pixmap(0),
+        m_copyStopToClipboardAction(copyStopToClipboardAction)
 {
     setFlag( ItemClipsToShape );
     setFlag( ItemClipsChildrenToShape );
@@ -244,7 +246,6 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
     painter->drawPixmap( textRect.topLeft(), pixmap );
 }
 
-
 void PublicTransportGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event )
 {
     QGraphicsWidget::resizeEvent( event );
@@ -276,15 +277,12 @@ void JourneyGraphicsItem::resizeEvent(QGraphicsSceneResizeEvent* event)
 
 void JourneyGraphicsItem::contextMenuEvent( QGraphicsSceneContextMenuEvent* event )
 {
-    delete m_contextMenu;
-    m_contextMenu = new KMenu( event->widget() );
+    KMenu contextMenu;
     QAction *addAlarmAction = new QAction( KIcon("task-reminder"),
-            i18n("Add &Alarm For This Journey"), m_contextMenu );
-    m_contextMenu->addAction( addAlarmAction );
+            i18n("Add &Alarm For This Journey"), &contextMenu );
+    contextMenu.addAction( addAlarmAction );
 
-    QAction *executedAction = m_contextMenu->exec( event->screenPos() );
-    delete m_contextMenu;
-    m_contextMenu = NULL;
+    QAction *executedAction = contextMenu.exec( event->screenPos() );
 
     if ( executedAction == addAlarmAction ) {
         const JourneyInfo *info = journeyItem()->journeyInfo();
@@ -322,9 +320,13 @@ void PublicTransportGraphicsItem::mouseReleaseEvent( QGraphicsSceneMouseEvent* e
     }
 }
 
-DepartureGraphicsItem::DepartureGraphicsItem( QGraphicsItem* parent )
-    : PublicTransportGraphicsItem( parent ),
-    m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0), m_leavingAnimation(0)
+DepartureGraphicsItem::DepartureGraphicsItem( QGraphicsItem* parent,
+        StopAction *copyStopToClipboardAction, StopAction *showDeparturesAction,
+        StopAction *highlightStopAction, StopAction *newFilterViaStopAction )
+        : PublicTransportGraphicsItem( parent, copyStopToClipboardAction ),
+        m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0), m_leavingAnimation(0),
+        m_showDeparturesAction(showDeparturesAction), m_highlightStopAction(highlightStopAction),
+        m_newFilterViaStopAction(newFilterViaStopAction)
 {
     m_leavingStep = 0.0;
 }
@@ -336,14 +338,13 @@ DepartureGraphicsItem::~DepartureGraphicsItem()
     }
 }
 
-JourneyGraphicsItem::JourneyGraphicsItem( QGraphicsItem* parent )
-    : PublicTransportGraphicsItem( parent ), m_infoTextDocument(0), m_routeItem(0), m_contextMenu(0)
+JourneyGraphicsItem::JourneyGraphicsItem( QGraphicsItem* parent,
+        StopAction *copyStopToClipboardAction, StopAction *requestJourneyToStopAction,
+        StopAction *requestJourneyFromStopAction )
+        : PublicTransportGraphicsItem( parent, copyStopToClipboardAction ), m_infoTextDocument(0),
+        m_routeItem(0), m_requestJourneyToStopAction(requestJourneyToStopAction),
+        m_requestJourneyFromStopAction(requestJourneyFromStopAction)
 {
-}
-
-JourneyGraphicsItem::~JourneyGraphicsItem()
-{
-    delete m_contextMenu;
 }
 
 void DepartureGraphicsItem::setLeavingStep( qreal leavingStep )
@@ -462,9 +463,11 @@ void JourneyGraphicsItem::updateData( JourneyItem* item, bool updateLayouts )
         if ( m_routeItem ) {
             m_routeItem->updateData( item );
         } else {
-            m_routeItem = new JourneyRouteGraphicsItem( this, item, m_parent->svg() );
-            connect( m_routeItem, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
-                     this, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
+            m_routeItem = new JourneyRouteGraphicsItem( this, item, m_parent->svg(),
+                    m_copyStopToClipboardAction, m_requestJourneyToStopAction,
+                    m_requestJourneyFromStopAction );
+            connect( m_routeItem, SIGNAL(requestStopAction(StopAction::Type,QString)),
+                     this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
             QRect _infoRect = infoRect( rect().toRect() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
@@ -496,12 +499,13 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
         if ( m_routeItem ) {
             m_routeItem->updateData( item );
         } else {
-            m_routeItem = new RouteGraphicsItem( this, item );
+            m_routeItem = new RouteGraphicsItem( this, item, m_copyStopToClipboardAction,
+                    m_showDeparturesAction, m_highlightStopAction, m_newFilterViaStopAction );
             QRect _infoRect = infoRect( rect().toRect(), 0 );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(), ROUTE_ITEM_HEIGHT );
-            connect( m_routeItem, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
-                     this, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
+            connect( m_routeItem, SIGNAL(requestStopAction(StopAction::Type,QString)),
+                     this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
         }
     } else if ( m_routeItem ) {
         delete m_routeItem;
@@ -1178,9 +1182,10 @@ QSizeF PublicTransportWidget::sizeHint(Qt::SizeHint which, const QSizeF& constra
 }
 
 PublicTransportWidget::PublicTransportWidget( QGraphicsItem* parent )
-    : Plasma::ScrollWidget( parent ), m_model(0), m_svg(0)
+    : Plasma::ScrollWidget( parent ), m_model(0), m_svg(0), m_copyStopToClipboardAction(0)
 {
     setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
+    setupActions();
 
     QGraphicsWidget *container = new QGraphicsWidget( this );
     QGraphicsLinearLayout *l = new QGraphicsLinearLayout( Qt::Vertical, container );
@@ -1193,15 +1198,52 @@ PublicTransportWidget::PublicTransportWidget( QGraphicsItem* parent )
     m_zoomFactor = 1.0;
 }
 
-JourneyTimetableWidget::JourneyTimetableWidget( QGraphicsItem* parent )
-    : PublicTransportWidget(parent)
+void PublicTransportWidget::setupActions()
 {
+    m_copyStopToClipboardAction = new StopAction( StopAction::CopyStopNameToClipboard, this );
+    connect( m_copyStopToClipboardAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
+}
+
+JourneyTimetableWidget::JourneyTimetableWidget( QGraphicsItem* parent )
+    : PublicTransportWidget(parent), m_requestJourneyToStopAction(0), m_requestJourneyFromStopAction(0)
+{
+    setupActions();
 }
 
 TimetableWidget::TimetableWidget( QGraphicsItem* parent )
-    : PublicTransportWidget(parent)
+    : PublicTransportWidget(parent), m_showDeparturesAction(0), m_highlightStopAction(0),
+      m_newFilterViaStopAction(0)
 {
     m_targetHidden = false;
+    setupActions();
+}
+
+void TimetableWidget::setupActions()
+{
+    PublicTransportWidget::setupActions();
+
+    m_showDeparturesAction = new StopAction( StopAction::ShowDeparturesForStop, this );
+    m_highlightStopAction= new StopAction( StopAction::HighlightStop, this );
+    m_newFilterViaStopAction = new StopAction( StopAction::CreateFilterForStop, this );
+    connect( m_showDeparturesAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
+    connect( m_highlightStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
+    connect( m_newFilterViaStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
+}
+
+void JourneyTimetableWidget::setupActions()
+{
+    PublicTransportWidget::setupActions();
+
+    m_requestJourneyToStopAction = new StopAction( StopAction::RequestJourneysToStop, this );
+    m_requestJourneyFromStopAction = new StopAction( StopAction::RequestJourneysFromStop, this );
+    connect( m_requestJourneyToStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
+    connect( m_requestJourneyFromStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
 }
 
 void PublicTransportWidget::setModel( PublicTransportModel* model )
@@ -1305,11 +1347,12 @@ void JourneyTimetableWidget::rowsInserted(const QModelIndex& parent, int first, 
 
     QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( widget()->layout() );
     for ( int row = first; row <= last; ++row ) {
-        JourneyGraphicsItem *item = new JourneyGraphicsItem( widget() );
+        JourneyGraphicsItem *item = new JourneyGraphicsItem( widget(), m_copyStopToClipboardAction,
+                m_requestJourneyToStopAction, m_requestJourneyFromStopAction );
         item->setPublicTransportWidget( this );
         item->updateData( static_cast<JourneyItem*>(m_model->item(row)) );
-        connect( item, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
-                 this, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
+        connect( item, SIGNAL(requestStopAction(StopAction::Type,QString)),
+                 this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
         connect( item, SIGNAL(requestAlarmCreation(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)),
                  this, SIGNAL(requestAlarmCreation(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)) );
         m_items.insert( row, item );
@@ -1335,11 +1378,13 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
 
     QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( widget()->layout() );
     for ( int row = first; row <= last; ++row ) {
-        DepartureGraphicsItem *item = new DepartureGraphicsItem( widget() );
+        DepartureGraphicsItem *item = new DepartureGraphicsItem( widget(),
+                m_copyStopToClipboardAction, m_showDeparturesAction, m_highlightStopAction,
+                m_newFilterViaStopAction );
         item->setPublicTransportWidget( this );
         item->updateData( static_cast<DepartureItem*>(m_model->item(row)) );
-        connect( item, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
-                 this, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
+        connect( item, SIGNAL(requestStopAction(StopAction::Type,QString)),
+                 this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
         m_items.insert( row, item );
 
         // Fade new items in

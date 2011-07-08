@@ -1562,8 +1562,8 @@ void PublicTransport::showJourneyList()
     m_journeyTimetable->setModel( m_modelJourneys );
     m_journeyTimetable->setFont( m_settings.sizedFont() );
     m_journeyTimetable->setSvg( &m_vehiclesSvg );
-    connect( m_journeyTimetable, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
-             this, SLOT(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
+    connect( m_journeyTimetable, SIGNAL(requestStopAction(StopAction::Type,QString)),
+             this, SLOT(requestStopAction(StopAction::Type,QString)) );
     connect( m_journeyTimetable, SIGNAL(requestAlarmCreation(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)),
              this, SLOT(processAlarmCreationRequest(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)) );
     connect( m_states["journeyView"], SIGNAL(exited()),
@@ -1775,8 +1775,8 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
         m_timetable->setSvg( &m_vehiclesSvg );
         connect( m_timetable, SIGNAL(contextMenuRequested(PublicTransportGraphicsItem*,QPointF)),
                  this, SLOT(departureContextMenuRequested(PublicTransportGraphicsItem*,QPointF)) );
-        connect( m_timetable, SIGNAL(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)),
-                 this, SLOT(requestStopAction(StopAction,QString,QVariant,QGraphicsWidget*)) );
+        connect( m_timetable, SIGNAL(requestStopAction(StopAction::Type,QString)),
+                 this, SLOT(requestStopAction(StopAction::Type,QString)) );
 
         QGraphicsLinearLayout *layout = new QGraphicsLinearLayout( Qt::Vertical );
         layout->setContentsMargins( 0, 0, 0, 0 );
@@ -2275,26 +2275,23 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
     delete infoAction;
 }
 
-void PublicTransport::requestStopAction( StopAction stopAction,
-        const QString& stopName, const QVariant &data, QGraphicsWidget* item )
+void PublicTransport::requestStopAction( StopAction::Type stopAction, const QString& stopName )
 {
-    Q_UNUSED( item );
-
     // Create and enable new filter
     Settings settings = m_settings;
 
     switch ( stopAction ) {
-        case RequestJourneysToStop:
+        case StopAction::RequestJourneysToStop:
             // data contains the target stop, if it's null use the current stop name as target.
             // The origin is the stop name associated with this stop action
             processJourneyRequest( stopName, true );
             break;
-        case RequestJourneysFromStop:
+        case StopAction::RequestJourneysFromStop:
             // data contains the origin stop, if it's null use the current stop name as origin.
             // The target is the stop name associated with this stop action
             processJourneyRequest( stopName, false );
             break;
-        case CreateFilterForStop: {
+        case StopAction::CreateFilterForStop: {
             QString filterName = i18nc("Default name for a new filter via a given stop",
                                        "Via %1", stopName);
             Filter viaFilter;
@@ -2307,7 +2304,7 @@ void PublicTransport::requestStopAction( StopAction stopAction,
             settings.filterSettingsList << filterSettings;
             writeSettings( settings );
             break;
-        } case ShowDeparturesForStop: {
+        } case StopAction::ShowDeparturesForStop: {
             // Save original stop index from where sub requests were made
             // (using the context menu). Only if the departure list wasn't requested
             // already from a sub departure list.
@@ -2331,12 +2328,12 @@ void PublicTransport::requestStopAction( StopAction stopAction,
 
             emit intermediateDepartureListRequested( stopName );
             break;
-        } case HighlightStop: {
+        } case StopAction::HighlightStop: {
             m_model->setHighlightedStop(
                     m_model->highlightedStop().compare(stopName, Qt::CaseInsensitive) == 0
                     ? QString() : stopName );
             break;
-        } case CopyStopNameToClipboard: {
+        } case StopAction::CopyStopNameToClipboard: {
             QApplication::clipboard()->setText( stopName );
             break;
         }
@@ -2385,6 +2382,8 @@ void PublicTransport::processAlarmCreationRequest( const QDateTime& departure,
         const QString& lineString, VehicleType vehicleType, const QString& target,
         QGraphicsWidget *item )
 {
+    Q_UNUSED( item );
+
     // Autogenerate an alarm that only matches the given departure
     AlarmSettings alarm;
     alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "

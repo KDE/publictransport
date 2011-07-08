@@ -60,7 +60,8 @@ class PublicTransportGraphicsItem : public QGraphicsWidget {
     friend class PublicTransportWidget;
 
 public:
-    PublicTransportGraphicsItem( QGraphicsItem* parent = 0 );
+    PublicTransportGraphicsItem( QGraphicsItem* parent = 0,
+                                 StopAction *copyStopToClipboardAction = 0 );
     virtual ~PublicTransportGraphicsItem();
 
     static const qreal ROUTE_ITEM_HEIGHT = 60.0;
@@ -118,6 +119,7 @@ protected:
     qreal m_fadeOut;
     QPropertyAnimation *m_resizeAnimation;
     QPixmap *m_pixmap;
+    StopAction *m_copyStopToClipboardAction;
 };
 
 class TextDocumentHelper {
@@ -138,7 +140,9 @@ class DepartureGraphicsItem : public PublicTransportGraphicsItem {
     friend class TimetableWidget;
 
 public:
-    DepartureGraphicsItem( QGraphicsItem* parent = 0 );
+    DepartureGraphicsItem( QGraphicsItem* parent = 0, StopAction *copyStopToClipboardAction = 0,
+                           StopAction *showDeparturesAction = 0, StopAction *highlightStopAction = 0,
+                           StopAction *newFilterViaStopAction = 0 );
     virtual ~DepartureGraphicsItem();
 
     void updateData( DepartureItem* item, bool update = false );
@@ -161,8 +165,7 @@ public:
     void setLeavingStep( qreal leavingStep );
 
 signals:
-    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
-                            QGraphicsWidget *item );
+    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
 
 protected:
     virtual void updateTextLayouts();
@@ -176,6 +179,10 @@ private:
 
     QPropertyAnimation *m_leavingAnimation;
     qreal m_leavingStep;
+
+    StopAction *m_showDeparturesAction;
+    StopAction *m_highlightStopAction;
+    StopAction *m_newFilterViaStopAction;
 };
 
 /**
@@ -186,8 +193,9 @@ class JourneyGraphicsItem : public PublicTransportGraphicsItem {
     friend class TimetableWidget;
 
 public:
-    JourneyGraphicsItem( QGraphicsItem* parent = 0 );
-    virtual ~JourneyGraphicsItem();
+    JourneyGraphicsItem( QGraphicsItem* parent = 0, StopAction *copyStopToClipboardAction = 0,
+                         StopAction *requestJourneyToStopAction = 0,
+                         StopAction *requestJourneyFromStopAction = 0 );
 
     void updateData( JourneyItem* item, bool update = false );
     inline JourneyItem *journeyItem() const { return qobject_cast<JourneyItem*>(m_item); };
@@ -205,8 +213,7 @@ public:
     QRect extraIconRect( const QRect &rect ) const;
 
 signals:
-    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
-                            QGraphicsWidget *routeStopItem );
+    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
     void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
                                VehicleType vehicleType, const QString &target,
                                QGraphicsWidget *item );
@@ -219,7 +226,8 @@ protected:
 private:
     QTextDocument *m_infoTextDocument;
     JourneyRouteGraphicsItem *m_routeItem;
-    QPointer<KMenu> m_contextMenu;
+    StopAction *m_requestJourneyToStopAction;
+    StopAction *m_requestJourneyFromStopAction;
 };
 
 /**
@@ -264,8 +272,7 @@ public:
 
 signals:
     void contextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
-    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
-                            QGraphicsWidget *item );
+    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
     void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
                                VehicleType vehicleType, const QString &target,
                                QGraphicsWidget *item );
@@ -284,6 +291,7 @@ protected:
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
     void updateItemGeometries();
+    virtual void setupActions();
 
     PublicTransportModel *m_model;
     QList<PublicTransportGraphicsItem*> m_items;
@@ -292,6 +300,7 @@ protected:
     qreal m_zoomFactor;
     int m_maxLineCount;
     QString m_noItemsText;
+    StopAction *m_copyStopToClipboardAction;
 };
 
 /**
@@ -323,8 +332,14 @@ protected slots:
     virtual void rowsInserted( const QModelIndex &parent, int first, int last );
     virtual void dataChanged( const QModelIndex &topLeft, const QModelIndex &bottomRight );
 
+protected:
+    virtual void setupActions();
+
 private:
     bool m_targetHidden;
+    StopAction *m_showDeparturesAction;
+    StopAction *m_highlightStopAction;
+    StopAction *m_newFilterViaStopAction;
 };
 
 /**
@@ -351,6 +366,13 @@ public:
 protected slots:
     virtual void rowsInserted( const QModelIndex &parent, int first, int last );
     virtual void dataChanged( const QModelIndex &topLeft, const QModelIndex &bottomRight );
+
+protected:
+    virtual void setupActions();
+
+private:
+    StopAction *m_requestJourneyToStopAction;
+    StopAction *m_requestJourneyFromStopAction;
 };
 
 #endif // TIMETABLEWIDGET_H

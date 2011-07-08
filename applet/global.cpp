@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -33,6 +33,44 @@
 #include <Plasma/Animator>
 #include <Plasma/Animation>
 #endif
+
+StopAction::StopAction( StopAction::Type type, QObject* parent ) : QAction(parent), m_type(type)
+{
+    switch ( type ) {
+    case ShowDeparturesForStop:
+        setIcon( KIcon("public-transport-stop") );
+        setText( i18n("Show &Departures From This Stop") );
+        break;
+    case HighlightStop:
+        setIcon( KIcon("edit-select") );
+        setText( i18n("&Highlight This Stop") );
+        break;
+    case CreateFilterForStop:
+        setIcon( KIcon("view-filter") );
+        setText( i18n("&Create Filter 'Via This Stop'") );
+        break;
+    case CopyStopNameToClipboard:
+        setIcon( KIcon("edit-copy") );
+        setText( i18n("&Copy Stop Name") );
+        break;
+    case RequestJourneysFromStop:
+        setIcon( KIcon("edit-find") );
+        setText( i18n("&Search Journeys From This Stop") );
+        break;
+    case RequestJourneysToStop:
+        setIcon( KIcon("edit-find") );
+        setText( i18n("&Search Journeys to This Stop") );
+        break;
+    }
+
+    connect( this, SIGNAL(triggered()), this, SLOT(slotTriggered()) );
+}
+
+void StopAction::slotTriggered()
+{
+    kDebug() << "Triggered!" << m_type << m_stopName;
+    emit stopActionTriggered( m_type, m_stopName );
+}
 
 KIcon GlobalApplet::internationalIcon()
 {

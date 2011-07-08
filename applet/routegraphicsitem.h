@@ -89,8 +89,7 @@ private:
 *
 * On hover it expands too show all of the given stop text (if it is too long).
 *
-* @note To make all context menu entries work, connect to the slots
-* requestFilterCreation and showDepartures.
+* @note To make all context menu entries work, connect to the requestStopAction signal.
 **/
 class RouteStopTextGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
@@ -118,7 +117,6 @@ public:
     RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font, qreal baseSize,
                                const QTime &time, const QString &stopName,
                                int minsFromFirstRouteStop );
-    ~RouteStopTextGraphicsItem();
 
     QString stopText() const { return m_stopText; };
     QString stopName() const { return m_stopName; };
@@ -135,8 +133,7 @@ public:
 signals:
     void hovered( RouteStopTextGraphicsItem *item );
     void unhovered( RouteStopTextGraphicsItem *item );
-    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
-                            QGraphicsWidget *item );
+    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
 
 public slots:
     void hover();
@@ -152,7 +149,6 @@ private:
     QString m_stopName;
     qreal m_expandStep;
     qreal m_baseSize;
-    QPointer<KMenu> m_contextMenu;
 };
 
 /**
@@ -166,7 +162,9 @@ class RouteGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
 
 public:
-    RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item );
+    RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item,
+                       StopAction *copyStopToClipboardAction = 0, StopAction *showDeparturesAction = 0,
+                       StopAction *highlightStopAction = 0, StopAction *newFilterViaStopAction = 0 );
 
     void updateData( DepartureItem *item );
 
@@ -180,8 +178,7 @@ public:
     QPointer<DepartureItem> item() const { return m_item; };
 
 signals:
-    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
-                            QGraphicsWidget *item );
+    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
 
 // public slots:
 //     void dataChanged();
@@ -197,6 +194,10 @@ private:
     qreal m_zoomFactor;
     qreal m_textAngle;
     qreal m_maxTextWidth;
+    StopAction *m_copyStopToClipboardAction;
+    StopAction *m_showDeparturesAction;
+    StopAction *m_highlightStopAction;
+    StopAction *m_newFilterViaStopAction;
 };
 
 class JourneyRouteGraphicsItem;
@@ -207,7 +208,6 @@ public:
     JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent, const QPixmap &vehiclePixmap,
                                   const QString &text, RouteStopFlags routeStopFlags,
                                   const QString &stopName );
-    ~JourneyRouteStopGraphicsItem();
 
     void setText( const QString &text );
 
@@ -219,13 +219,12 @@ public:
                         QWidget* widget = 0 );
 
 signals:
-    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
-                            QGraphicsWidget *routeStopItem );
+    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
 
 protected:
     virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
     virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent* event );
-    virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent* /*event*/) { update(); };
+    virtual void hoverLeaveEvent( QGraphicsSceneHoverEvent* /*event*/ ) { update(); };
 
 private:
     JourneyRouteGraphicsItem *m_parent;
@@ -234,14 +233,16 @@ private:
 
     RouteStopFlags m_stopFlags;
     QString m_stopName;
-    QPointer<KMenu> m_contextMenu;
 };
 
 class JourneyRouteGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
 
 public:
-    JourneyRouteGraphicsItem( QGraphicsItem *parent, JourneyItem *item, Plasma::Svg *svg );
+    JourneyRouteGraphicsItem( QGraphicsItem *parent, JourneyItem *item, Plasma::Svg *svg,
+                              StopAction *copyStopToClipboardAction = 0,
+                              StopAction *requestJourneyToStopAction = 0,
+                              StopAction *requestJourneyFromStopAction = 0 );
 
     void updateData( JourneyItem *item );
 
@@ -255,18 +256,16 @@ public:
                         QWidget* widget = 0 );
 
 signals:
-    void requestStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
-                            QGraphicsWidget *routeStopItem );
-
-protected slots:
-    void processStopAction( StopAction stopAction, const QString &stopName, const QVariant &data,
-                            QGraphicsWidget *routeStopItem );
+    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
 
 private:
     QPointer<JourneyItem> m_item;
     Plasma::Svg *m_svg;
     qreal m_zoomFactor;
     QList<JourneyRouteStopGraphicsItem*> m_routeItems;
+    StopAction *m_copyStopToClipboardAction;
+    StopAction *m_requestJourneyToStopAction;
+    StopAction *m_requestJourneyFromStopAction;
 };
 
 #endif // Multiple inclusion guard
