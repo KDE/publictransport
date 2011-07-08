@@ -581,6 +581,10 @@ void RouteStopTextGraphicsItem::hoverLeaveEvent(QGraphicsSceneHoverEvent* event)
 void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
 {
     QList<QAction*> actionList = actions();
+    if ( actionList.isEmpty() ) {
+        return; // Don't show an empty menu if there are no actions to show
+    }
+
     for ( int i = 0; i < actionList.count(); ++i ) {
         StopAction *action = qobject_cast<StopAction*>( actionList[i] );
         action->setStopName( m_stopName );
@@ -699,6 +703,9 @@ void JourneyRouteStopGraphicsItem::setText( const QString& text )
 void JourneyRouteStopGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
 {
     QList<QAction*> actionList = actions();
+    if ( actionList.isEmpty() ) {
+        return; // Don't show an empty menu if there are no actions to show
+    }
     for ( int i = 0; i < actionList.count(); ++i ) {
         StopAction *action = qobject_cast<StopAction*>( actionList[i] );
         action->setStopName( m_stopName );

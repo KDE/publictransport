@@ -68,7 +68,6 @@ StopAction::StopAction( StopAction::Type type, QObject* parent ) : QAction(paren
 
 void StopAction::slotTriggered()
 {
-    kDebug() << "Triggered!" << m_type << m_stopName;
     emit stopActionTriggered( m_type, m_stopName );
 }
 

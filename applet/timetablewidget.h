@@ -61,7 +61,8 @@ class PublicTransportGraphicsItem : public QGraphicsWidget {
 
 public:
     PublicTransportGraphicsItem( QGraphicsItem* parent = 0,
-                                 StopAction *copyStopToClipboardAction = 0 );
+                                 StopAction *copyStopToClipboardAction = 0/*,
+                                 QAction *toggleAlarmAction = 0*/ );
     virtual ~PublicTransportGraphicsItem();
 
     static const qreal ROUTE_ITEM_HEIGHT = 60.0;
@@ -102,6 +103,15 @@ public:
         #endif
     };
 
+signals:
+    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
+    void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
+                               VehicleType vehicleType, const QString &target,
+                               QGraphicsWidget *item );
+    void requestAlarmDeletion( const QDateTime &departure, const QString &lineString,
+                               VehicleType vehicleType, const QString &target,
+                               QGraphicsWidget *item );
+
 protected slots:
     void resizeAnimationFinished();
 
@@ -120,6 +130,7 @@ protected:
     QPropertyAnimation *m_resizeAnimation;
     QPixmap *m_pixmap;
     StopAction *m_copyStopToClipboardAction;
+//     QAction *m_toggleAlarmAction;
 };
 
 class TextDocumentHelper {
@@ -142,7 +153,7 @@ class DepartureGraphicsItem : public PublicTransportGraphicsItem {
 public:
     DepartureGraphicsItem( QGraphicsItem* parent = 0, StopAction *copyStopToClipboardAction = 0,
                            StopAction *showDeparturesAction = 0, StopAction *highlightStopAction = 0,
-                           StopAction *newFilterViaStopAction = 0 );
+                           StopAction *newFilterViaStopAction = 0/*, QAction *toggleAlarmAction = 0*/ );
     virtual ~DepartureGraphicsItem();
 
     void updateData( DepartureItem* item, bool update = false );
@@ -163,9 +174,6 @@ public:
 
     qreal leavingStep() const { return m_leavingStep; };
     void setLeavingStep( qreal leavingStep );
-
-signals:
-    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
 
 protected:
     virtual void updateTextLayouts();
@@ -195,7 +203,8 @@ class JourneyGraphicsItem : public PublicTransportGraphicsItem {
 public:
     JourneyGraphicsItem( QGraphicsItem* parent = 0, StopAction *copyStopToClipboardAction = 0,
                          StopAction *requestJourneyToStopAction = 0,
-                         StopAction *requestJourneyFromStopAction = 0 );
+                         StopAction *requestJourneyFromStopAction = 0/*,
+                         QAction *toggleAlarmAction = 0*/ );
 
     void updateData( JourneyItem* item, bool update = false );
     inline JourneyItem *journeyItem() const { return qobject_cast<JourneyItem*>(m_item); };
@@ -211,12 +220,6 @@ public:
     QRect vehicleRect( const QRect &rect ) const;
     QRect infoRect( const QRect &rect ) const;
     QRect extraIconRect( const QRect &rect ) const;
-
-signals:
-    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
-    void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
-                               VehicleType vehicleType, const QString &target,
-                               QGraphicsWidget *item );
 
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
@@ -276,6 +279,9 @@ signals:
     void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
                                VehicleType vehicleType, const QString &target,
                                QGraphicsWidget *item );
+    void requestAlarmDeletion( const QDateTime &departure, const QString &lineString,
+                               VehicleType vehicleType, const QString &target,
+                               QGraphicsWidget *item );
 
 protected slots:
     void journeysAboutToBeRemoved( const QList<ItemBase*> &journeys );
@@ -301,6 +307,7 @@ protected:
     int m_maxLineCount;
     QString m_noItemsText;
     StopAction *m_copyStopToClipboardAction;
+//     QAction *m_toggleAlarmAction;
 };
 
 /**

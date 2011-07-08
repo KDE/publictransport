@@ -38,11 +38,12 @@ struct Info {
         showDepartureTime = false;
         sizeFactor = 1.0f;
         alarmMinsBeforeDeparture = 5;
+        currentStopSettingsIndex = -1;
     };
 
     AlarmSettingsList alarmSettings;
     DepartureArrivalListType departureArrivalListType;
-    int linesPerRow, alarmMinsBeforeDeparture;
+    int linesPerRow, alarmMinsBeforeDeparture, currentStopSettingsIndex;
     bool displayTimeBold, showRemainingMinutes, showDepartureTime;
     float sizeFactor;
     QString homeStop;
@@ -273,8 +274,23 @@ public:
     inline void setIcon( Columns column, const QIcon &icon ) {
         setData( column, icon, Qt::DecorationRole ); };
 
+    /**
+     * @returns the current alarm states.
+     * @see AlarmStates */
+    AlarmStates alarmStates() const { return m_alarm; };
+
+    /** @brief Whether or not this departure/journey has an alarm (pending or fired). */
+    bool hasAlarm() const { return m_alarm.testFlag(AlarmPending) || m_alarm.testFlag(AlarmFired); };
+
+    /** @brief Whether or not this departure/journey has a pending alarm. */
+    virtual bool hasPendingAlarm() const { return m_alarm.testFlag(AlarmPending); };
+
+    /** @brief Gets the date and time at which an alarm for this departure/journey should be fired. */
+    virtual QDateTime alarmTime() const = 0;
+
 protected:
     QHash< int, QHash<int, QVariant> > m_columnData;
+    AlarmStates m_alarm;
 };
 
 /**
@@ -309,13 +325,14 @@ public:
     * in @p journeyInfo. */
     void setJourneyInfo( const JourneyInfo &journeyInfo );
 
-    /**
-     * @returns the current alarm states.
-     * @see AlarmStates */
-    AlarmStates alarmStates() const { return m_alarm; };
-
     /** @brief Sets the alarm states. */
     void setAlarmStates( AlarmStates alarmStates );
+    
+    /** @brief Gets the date and time at which an alarm for this journey should be fired. */
+    virtual QDateTime alarmTime() const {
+        return m_journeyInfo.departure().addSecs( // TODO predictedDeparture() with delay
+                -m_info->alarmMinsBeforeDeparture * 60 );
+    };
 
 protected:
     /** @brief Updates this item. */
@@ -356,7 +373,6 @@ protected:
     qreal rating() const;
 
     JourneyInfo m_journeyInfo;
-    AlarmStates m_alarm;
 };
 
 /**
@@ -388,31 +404,20 @@ public:
     bool isLeavingSoon() const { return m_leavingSoon; };
     void setLeavingSoon( bool leavingSoon = true );
 
-    /**
-     * @returns the current alarm states.
-     * @see AlarmStates */
-    AlarmStates alarmStates() const { return m_alarm; };
-
     /** @brief Sets the alarm states. */
     void setAlarmStates( AlarmStates alarmStates );
+
+    /** @brief Gets the date and time at which an alarm for this departure should be fired. */
+    virtual QDateTime alarmTime() const {
+        return m_departureInfo.predictedDeparture().addSecs(
+                -m_info->alarmMinsBeforeDeparture * 60 );
+    };
 
     /** @brief Sets an alarm for this departure. */
     void setAlarm();
 
     /** @brief Removes a possibly set alarm. */
     void removeAlarm();
-
-    /** @brief Whether or not this departure has an alarm (pending or fired). */
-    bool hasAlarm() const { return m_alarm.testFlag(AlarmPending) || m_alarm.testFlag(AlarmFired); };
-
-    /** @brief Whether or not this departure has a pending alarm. */
-    virtual bool hasPendingAlarm() const { return m_alarm.testFlag(AlarmPending); };
-
-    /** @brief Gets the date and time at which an alarm for this departure should be fired. */
-    QDateTime alarmTime() const {
-        return m_departureInfo.predictedDeparture().addSecs(
-                -m_info->alarmMinsBeforeDeparture * 60 );
-    };
 
     qreal alarmColorIntensity() const { return m_alarmColorIntensity; };
     void setAlarmColorIntensity( qreal alarmColorIntensity );
@@ -456,7 +461,6 @@ protected:
     ChildItem *createRouteItem();
 
     DepartureInfo m_departureInfo;
-    AlarmStates m_alarm;
     qreal m_alarmColorIntensity;
     bool m_leavingSoon;
 };
@@ -724,11 +728,11 @@ public:
     void removeAlarm( DepartureItem *item );
     
     /**
-     * @brief Gets the flags for route stop items for the given @p stopName.
+     * @brief Gets the flags for route stop item with the given @p stopName.
      *
      * @param stopName The stop name which is associated with the route stop
-     *   items to get flags for.
-     * @returns The flags for route stop items, which are associated with the
+     *   item to get flags for.
+     * @returns The flags for the route stop item, which is associated with the
      *   given @p stopName.
      **/
     RouteItemFlags routeItemFlags( const QString &stopName ) const;
@@ -820,6 +824,8 @@ public:
 
     Info info() const { return m_info; };
     void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
+    void setCurrentStopIndex( int currentStopSettingsIndex );
+    void setAlarmSettings( const AlarmSettingsList &alarmSettings );
 
     /**
      * @brief Gets the smallest duration in minutes of a journey in this model.
@@ -848,6 +854,7 @@ protected slots:
 
 private:
     virtual JourneyItem *findNextItem( bool sortedByDepartureAscending = false ) const;
+    void updateItemAlarm( JourneyItem *journeyItem );
 
     int m_smallestDuration, m_biggestDuration;
     int m_smallestChanges, m_biggestChanges;
