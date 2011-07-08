@@ -86,16 +86,16 @@ private:
  * @class PublicTransport
  * @brief Shows departure/arrival times for public transport.
  *
- * It uses the "publictransport"-data engine and stores the data using
- * @ref DepartureModel for departures/arrivals and @ref JourneyModel for
- * journeys. The data from the data engine is read in a thread using
- * @ref DepartureProcessor, which also applies filters and alarms.
+ * It uses the "publictransport"-data engine and stores the data using @ref DepartureModel for
+ * departures/arrivals and @ref JourneyModel for journeys. The data from the data engine is read
+ * in a thread using @ref DepartureProcessor, which also applies filters and alarms.
  *
  * @ref TitleWidget is used as title. The departures/arrivals/journeys are shown
  * in TimetableWidget/JourneyTimetableWidget.
  **/
 class PublicTransport : public Plasma::PopupApplet {
     Q_OBJECT
+
     /** @brief The number of currently shown departures/arrivals. */
     Q_PROPERTY( int DepartureCount READ departureCount )
 
@@ -164,6 +164,7 @@ public:
         createPopupIcon();
     };
 
+    /** @brief Checks if the state with the given @p stateName is currently active. */
     bool isStateActive( const QString &stateName ) const;
 
     /**
@@ -265,8 +266,8 @@ protected slots:
     /**
      * @brief Fills the departure data model with the given departure list.
      *
-     * This will stop if the maximum departure count is reached or if all
-     * @p departures have been added.
+     * This will stop if the maximum departure count is reached or if all @p departures
+     * have been added.
      *
      * @ingroup models
      **/
@@ -443,12 +444,19 @@ protected slots:
     void themeChanged() { useCurrentPlasmaTheme(); };
 
     /**
-     * @brief An "recent journey"-action has been triggered.
+     * @brief A "recent journey"-action has been triggered.
      * 
      * @param recentJourneyAction The type of the executed action.
      **/
     void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction );
 
+    /**
+     * @brief Processes a journey search request.
+     *
+     * @param stop The target/origin stop of the journey to search.
+     * @param stopIsTarget Whether @p stop is the target or the origin. The other stop is the
+     *   current home stop.
+     **/
     void processJourneyRequest( const QString &stop, bool stopIsTarget );
 
     /**

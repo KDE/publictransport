@@ -29,6 +29,9 @@ class KMenu;
 class JourneyItem;
 class DepartureItem;
 
+/**
+ * @brief A QGraphicsWidget showing an icon for a single route stop of a public transport vehicle.
+ **/
 class RouteStopMarkerGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
     Q_PROPERTY( qreal hoverStep READ hoverStep WRITE setHoverStep )
@@ -85,12 +88,12 @@ private:
 };
 
 /**
-* @brief A QGraphicsWidget showing the a single route stop of a public transport vehicle.
-*
-* On hover it expands too show all of the given stop text (if it is too long).
-*
-* @note To make all context menu entries work, connect to the requestStopAction signal.
-**/
+ * @brief A QGraphicsWidget showing the stop name a single route stop of a public transport vehicle.
+ *
+ * On hover it expands too show all of the given stop text (if it is too long).
+ *
+ * @note To make all context menu entries work, connect to the requestStopAction signal.
+ **/
 class RouteStopTextGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
     Q_PROPERTY( qreal expandStep READ expandStep WRITE setExpandStep )
@@ -107,10 +110,15 @@ public:
      * to be shown.
      *
      * @param parent The parent item.
+     * 
      * @param font The font to use.
+     * 
      * @param baseSize A zooming factor.
+     * 
      * @param time The time at which the vehicle is at this route stop.
+     * 
      * @param stopName The name of the stop this RouteStopTextGraphicsItem visualizes.
+     * 
      * @param minsFromFirstRouteStop The time in minutes the vehicle needs from the first stop of
      *   the route until this route stop.
      **/
@@ -152,12 +160,12 @@ private:
 };
 
 /**
-* @brief A QGraphicsWidget showing the route of a public transport vehicle.
-*
-* The route is shown as a thick white line with stop markers on it. For each
-* stop marker the associated stop name is shown with it's departure time.
-* This widget automatically shows/hides stops on size changes.
-**/
+ * @brief A QGraphicsWidget showing the route of a public transport vehicle.
+ *
+ * The route is shown as a thick white line with stop markers on it. For each
+ * stop marker the associated stop name is shown with it's departure time.
+ * This widget automatically shows/hides stops on size changes.
+ **/
 class RouteGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
 
@@ -201,6 +209,9 @@ private:
 };
 
 class JourneyRouteGraphicsItem;
+/**
+ * @brief A QGraphicsWidget showing a single route stop of a journey.
+ **/
 class JourneyRouteStopGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
 
@@ -235,6 +246,9 @@ private:
     QString m_stopName;
 };
 
+/**
+ * @brief A QGraphicsWidget showing the route of a journey.
+ **/
 class JourneyRouteGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
 

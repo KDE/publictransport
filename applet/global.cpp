@@ -155,16 +155,13 @@ KIcon GlobalApplet::makeOverlayIcon( const KIcon& icon, const QList<KIcon> &over
         kDebug() << "pixmap is Null";
         return icon;
     }
-//     QPixmap pixmapOverlayBottomLeft = overlayIconBottomLeft.pixmap(overlaySize);
-//     QPixmap pixmapOverlayBottomRight = overlayIconBottomRight.pixmap(overlaySize);
+
     QPainter p( &pixmap );
     int x = 0, xStep = iconExtend / overlayIconsBottom.count();
     foreach( const KIcon &overlayIcon, overlayIconsBottom ) {
         p.drawPixmap( QPoint( x, iconExtend - overlaySize.height() ), overlayIcon.pixmap( overlaySize ) );
         x += xStep;
     }
-//     p.drawPixmap(QPoint(0, iconExtend - overlaySize.height()), pixmapOverlayBottomLeft);
-//     p.drawPixmap(QPoint(iconExtend - overlaySize.width(), iconExtend - overlaySize.height()), pixmapOverlayBottomRight);
     p.end();
     KIcon resultIcon = KIcon();
     resultIcon.addPixmap( pixmap, QIcon::Normal );

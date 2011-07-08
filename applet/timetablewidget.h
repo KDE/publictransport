@@ -73,7 +73,6 @@ public:
     };
     QModelIndex index() const { return m_item->index(); };
     bool hasExtraIcon( Columns column = ColumnTarget ) const;
-
     int extraIconSize() const;
 
     qreal fadeOut() const { return m_fadeOut; };
@@ -90,6 +89,7 @@ public:
     inline qreal padding() const;
     void capturePixmap();
 
+    virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
     virtual qreal expandSize() const = 0;
     virtual void paintExpanded( QPainter* painter, const QStyleOptionGraphicsItem* option,
                                 const QRectF &rect ) = 0;
@@ -104,7 +104,14 @@ public:
     };
 
 signals:
+    /**
+     * @brief Emitted, if a stop action was triggered from a route stop's context menu.
+     *
+     * @param stopAction The action to execute.
+     * @param stopName The stop name for which the action should be executed.
+     **/
     void requestStopAction( StopAction::Type stopAction, const QString &stopName );
+    
     void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
                                VehicleType vehicleType, const QString &target,
                                QGraphicsWidget *item );
@@ -159,7 +166,6 @@ public:
     void updateData( DepartureItem* item, bool update = false );
     inline DepartureItem *departureItem() const { return qobject_cast<DepartureItem*>(m_item); };
 
-    virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
     virtual qreal expandSize() const;
 
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -208,8 +214,7 @@ public:
 
     void updateData( JourneyItem* item, bool update = false );
     inline JourneyItem *journeyItem() const { return qobject_cast<JourneyItem*>(m_item); };
-
-    virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
+    
     virtual qreal expandSize() const;
 
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -270,12 +275,21 @@ public:
     void setMaxLineCount( int maxLineCount ) { m_maxLineCount = maxLineCount; updateItemGeometries(); };
     int maxLineCount() const { return m_maxLineCount; };
 
-    /** Call this eg. when the DepartureArrivalListType changes in the model (only header data gets changed...). */
+    /** Call this eg. when the DepartureArrivalListType changes in the model
+     * (only header data gets changed...). */
     void updateItemLayouts();
 
 signals:
     void contextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
+
+    /**
+     * @brief Emitted, if a stop action was triggered from a route stop's context menu.
+     *
+     * @param stopAction The action to execute.
+     * @param stopName The stop name for which the action should be executed.
+     **/
     void requestStopAction( StopAction::Type stopAction, const QString &stopName );
+    
     void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
                                VehicleType vehicleType, const QString &target,
                                QGraphicsWidget *item );
@@ -285,7 +299,6 @@ signals:
 
 protected slots:
     void journeysAboutToBeRemoved( const QList<ItemBase*> &journeys );
-//     virtual void rowsInserted( const QModelIndex &parent, int first, int last );
     virtual void rowsRemoved( const QModelIndex &parent, int first, int last );
     virtual void modelReset();
     virtual void layoutChanged();

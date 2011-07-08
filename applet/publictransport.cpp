@@ -1143,7 +1143,9 @@ void PublicTransport::createDepartureGroups()
         const DepartureInfo *info = item->departureInfo();
 
         QDateTime time = info->predictedDeparture();
-        if ( m_departureGroups.count() == POPUP_ICON_DEPARTURE_GROUP_COUNT && !m_departureGroups.contains(time) ) {
+        if ( m_departureGroups.count() == POPUP_ICON_DEPARTURE_GROUP_COUNT
+             && !m_departureGroups.contains(time) )
+        {
             // Maximum group count reached and all groups filled
             break;
         } else {
@@ -1479,7 +1481,6 @@ void PublicTransport::showArrivals()
 
 void PublicTransport::switchFilterConfiguration( QAction* action )
 {
-//     switchFilterConfiguration( KGlobal::locale()->removeAcceleratorMarker(action->text()) );
     const QString filterConfig = GlobalApplet::untranslateFilterKey(
             KGlobal::locale()->removeAcceleratorMarker(action->text()) );
 
@@ -2772,10 +2773,8 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
         if ( count > 1 ) {
             RoutePartCount routeCount;
             routeCount.latestCommonStop = it.key().last();
-            routeCount.usedCount = it.value().count();
+            routeCount.usedCount = count;
             routePartCount << routeCount;
-        } else {
-            qDebug() << "UsedCount <= 1 for stop" << it.key().last() << it.value().count();
         }
     }
 

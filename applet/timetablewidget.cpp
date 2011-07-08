@@ -247,6 +247,27 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
     painter->drawPixmap( textRect.topLeft(), pixmap );
 }
 
+qreal TextDocumentHelper::textDocumentWidth( QTextDocument* document )
+{
+    if ( !document ) {
+        return 0.0;
+    }
+
+    qreal maxWidth = 0.0;
+    int blockCount = document->blockCount();
+    for ( int b = 0; b < blockCount; ++b ) {
+        QTextLayout *textLayout = document->findBlockByNumber( b ).layout();
+        int lines = textLayout->lineCount();
+        for ( int l = 0; l < lines; ++l ) {
+            QTextLine textLine = textLayout->lineAt( l );
+            if ( textLine.naturalTextWidth() > maxWidth ) {
+                maxWidth = textLine.naturalTextWidth();
+            }
+        }
+    }
+    return maxWidth;
+}
+
 void PublicTransportGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event )
 {
     QGraphicsWidget::resizeEvent( event );
@@ -335,8 +356,6 @@ void JourneyGraphicsItem::contextMenuEvent( QGraphicsSceneContextMenuEvent* even
             emit requestAlarmDeletion( info->departure(), lineString, vehicleType, QString(), this );
         }
     }
-
-    return; // No action selected
 }
 
 void PublicTransportGraphicsItem::mousePressEvent( QGraphicsSceneMouseEvent* event )
@@ -456,7 +475,6 @@ void JourneyGraphicsItem::updateTextLayouts()
     // Create layout for the main column showing information about the departure
     const QRect _infoRect = infoRect( rect.toRect()/*, departureTimeWidth, arrivalTimeWidth*/ );
     if ( !m_infoTextDocument || (m_infoTextDocument->pageSize() != _infoRect.size()) ) {
-// 		kDebug() << "UPDATE INFO LAYOUT" << font().pointSize() << font().pointSizeF();
         delete m_infoTextDocument;
         textOption.setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
         QString html;
@@ -483,14 +501,13 @@ void JourneyGraphicsItem::updateTextLayouts()
                         KGlobal::locale()->formatDateTime(info->arrival(), KLocale::FancyShortDate));
         }
         m_infoTextDocument = TextDocumentHelper::createTextDocument( html, _infoRect.size(),
-                                                                    textOption, font() );
+                                                                     textOption, font() );
     }
 }
 
 void JourneyGraphicsItem::updateData( JourneyItem* item, bool updateLayouts )
 {
     m_item = item;
-// 	setFlags( QGraphicsItem::ItemIsFocusable/* | QGraphicsItem::ItemIsSelectable*/ );
     setAcceptHoverEvents( true );
     updateGeometry();
 
@@ -565,27 +582,6 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
     }
 
     update();
-}
-
-qreal TextDocumentHelper::textDocumentWidth( QTextDocument* document )
-{
-    if ( !document ) {
-        return 0.0;
-    }
-
-    qreal maxWidth = 0.0;
-    int blockCount = document->blockCount();
-    for ( int b = 0; b < blockCount; ++b ) {
-        QTextLayout *textLayout = document->findBlockByNumber( b ).layout();
-        int lines = textLayout->lineCount();
-        for ( int l = 0; l < lines; ++l ) {
-            QTextLine textLine = textLayout->lineAt( l );
-            if ( textLine.naturalTextWidth() > maxWidth ) {
-                maxWidth = textLine.naturalTextWidth();
-            }
-        }
-    }
-    return maxWidth;
 }
 
 qreal DepartureGraphicsItem::timeColumnWidth() const
@@ -782,10 +778,8 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
     bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 156;
     painter->setPen( _textColor );
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument, _infoRect, drawHalos );
-// 	TextDocumentHelper::drawTextDocument( painter, option, m_departureTimeTextDocument, _departureTimeRect, drawHalos );
-// 	TextDocumentHelper::drawTextDocument( painter, option, m_arrivalTimeTextDocument, _arrivalTimeRect, drawHalos );
 
-    // Draw an extra icon if there is one (in the target column)
+    // Draw extra icon(s)
     QRect _extraIconRect;
     if ( hasExtraIcon() ) {
         QModelIndex modelIndex = index().model()->index( index().row(), ColumnTarget );
@@ -988,7 +982,7 @@ void DepartureGraphicsItem::paint( QPainter* painter,
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument, _infoRect, drawHalos );
     TextDocumentHelper::drawTextDocument( painter, option, m_timeTextDocument, _timeRect, drawHalos );
 
-    // Draw an extra icon if there is one (in the target column)
+    // Draw extra icon(s)
     QRect _extraIconRect;
     if ( hasExtraIcon() ) {
         QModelIndex modelIndex = index().model()->index( index().row(), ColumnTarget );
@@ -1213,21 +1207,7 @@ qreal DepartureGraphicsItem::expandSize() const
     return height * m_expandStep;
 }
 
-// TODO move to publictransportitem
-QSizeF JourneyGraphicsItem::sizeHint( Qt::SizeHint which, const QSizeF& constraint ) const
-{
-    if ( which == Qt::MinimumSize ) {
-        return QSizeF( 100, (m_expanded || !qFuzzyIsNull(m_expandStep)
-                ? (unexpandedHeight() + expandSize()) : unexpandedHeight()) * m_fadeOut );
-    } else if ( which == Qt::MaximumSize ) {
-        return QSizeF( 100000, (m_expanded || !qFuzzyIsNull(m_expandStep)
-                ? (unexpandedHeight() + expandSize()) : unexpandedHeight()) * m_fadeOut );
-    } else {
-        return QGraphicsWidget::sizeHint( which, constraint );
-    }
-}
-
-QSizeF DepartureGraphicsItem::sizeHint( Qt::SizeHint which, const QSizeF& constraint ) const
+QSizeF PublicTransportGraphicsItem::sizeHint(Qt::SizeHint which, const QSizeF& constraint) const
 {
     if ( which == Qt::MinimumSize ) {
         return QSizeF( 100, (m_expanded || !qFuzzyIsNull(m_expandStep)
