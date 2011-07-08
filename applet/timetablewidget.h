@@ -72,7 +72,7 @@ public:
         m_parent = publicTransportWidget;
     };
     QModelIndex index() const { return m_item->index(); };
-    bool hasExtraIcon() const;
+    bool hasExtraIcon( Columns column = ColumnTarget ) const;
 
     int extraIconSize() const;
 

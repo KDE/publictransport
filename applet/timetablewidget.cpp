@@ -117,14 +117,14 @@ qreal PublicTransportGraphicsItem::unexpandedHeight() const
                 (qreal)QFontMetrics(font()).ascent() * m_parent->maxLineCount() + padding() );
 }
 
-bool PublicTransportGraphicsItem::hasExtraIcon() const
+bool PublicTransportGraphicsItem::hasExtraIcon( Columns column ) const
 {
     if ( !m_item ) {
         // Item was already deleted
         return false;
     }
 
-    QModelIndex modelIndex = index().model()->index( index().row(), ColumnTarget );
+    QModelIndex modelIndex = index().model()->index( index().row(), column );
     return modelIndex.data( Qt::DecorationRole ).isValid()
             && !modelIndex.data( Qt::DecorationRole ).value<QIcon>().isNull();
 }
@@ -786,11 +786,24 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
 // 	TextDocumentHelper::drawTextDocument( painter, option, m_arrivalTimeTextDocument, _arrivalTimeRect, drawHalos );
 
     // Draw an extra icon if there is one (in the target column)
+    QRect _extraIconRect;
     if ( hasExtraIcon() ) {
         QModelIndex modelIndex = index().model()->index( index().row(), ColumnTarget );
         QIcon icon = modelIndex.data( Qt::DecorationRole ).value<QIcon>();
-        painter->drawPixmap( extraIconRect(option->rect/*, departureTimeWidth, arrivalTimeWidth*/),
-                            icon.pixmap(extraIconSize()) );
+        _extraIconRect = extraIconRect(option->rect/*, departureTimeWidth, arrivalTimeWidth*/);
+        painter->drawPixmap( _extraIconRect, icon.pixmap(extraIconSize()) );
+    }
+    if ( hasExtraIcon(ColumnDeparture) ) {
+        if ( _extraIconRect.isValid() ) {
+            // Move icon rect to the left
+            _extraIconRect.moveRight( _extraIconRect.left() - 4 );
+        } else {
+            _extraIconRect = extraIconRect(option->rect/*, departureTimeWidth, arrivalTimeWidth*/);
+        }
+
+        QModelIndex modelIndex = index().model()->index( index().row(), ColumnDeparture );
+        QIcon icon = modelIndex.data( Qt::DecorationRole ).value<QIcon>();
+        painter->drawPixmap( _extraIconRect, icon.pixmap(extraIconSize()) );
     }
 
     // Draw expanded items if this TimetableItem isn't currently completely unexpanded
@@ -870,8 +883,8 @@ void DepartureGraphicsItem::paint( QPainter* painter,
     borderGradient.setColorAt( 0.6, borderColor );
     borderGradient.setColorAt( 1, Qt::transparent );
     painter->fillRect( QRect(option->rect.bottomLeft() + QPoint(0, 1),
-                            option->rect.bottomRight() - QPoint(0, 1)),
-                    QBrush(borderGradient) );
+                             option->rect.bottomRight() - QPoint(0, 1)),
+                       QBrush(borderGradient) );
 
     // Draw special background for departures in color groups
     QColor bgColor = index().data(Qt::BackgroundColorRole).value<QColor>();
@@ -976,10 +989,24 @@ void DepartureGraphicsItem::paint( QPainter* painter,
     TextDocumentHelper::drawTextDocument( painter, option, m_timeTextDocument, _timeRect, drawHalos );
 
     // Draw an extra icon if there is one (in the target column)
+    QRect _extraIconRect;
     if ( hasExtraIcon() ) {
         QModelIndex modelIndex = index().model()->index( index().row(), ColumnTarget );
         QIcon icon = modelIndex.data( Qt::DecorationRole ).value<QIcon>();
-        painter->drawPixmap( extraIconRect(option->rect, timeWidth), icon.pixmap(extraIconSize()) );
+        _extraIconRect = extraIconRect(option->rect, timeWidth);
+        painter->drawPixmap( _extraIconRect, icon.pixmap(extraIconSize()) );
+    }
+    if ( hasExtraIcon(ColumnDeparture) ) {
+        if ( _extraIconRect.isValid() ) {
+            // Move icon rect to the left
+            _extraIconRect.moveRight( _extraIconRect.left() - 4 );
+        } else {
+            _extraIconRect = extraIconRect(option->rect, timeWidth);
+        }
+
+        QModelIndex modelIndex = index().model()->index( index().row(), ColumnDeparture );
+        QIcon icon = modelIndex.data( Qt::DecorationRole ).value<QIcon>();
+        painter->drawPixmap( _extraIconRect, icon.pixmap(extraIconSize()) );
     }
 
     // Draw expanded items if this TimetableItem isn't currently completely unexpanded
