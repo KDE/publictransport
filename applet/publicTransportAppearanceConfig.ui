@@ -32,7 +32,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Timetable</string>
+      <string comment="@title">Timetable</string>
      </property>
     </widget>
    </item>
@@ -67,7 +67,7 @@
      <item>
       <widget class="QSlider" name="size">
        <property name="toolTip">
-        <string comment="@item:tooltip">Sets the size of the applet contents. Make it big if you want to use the applet fullscreen.</string>
+        <string comment="@info:tooltip">Sets the size of the applet contents. Make it big if you want to use the applet fullscreen.</string>
        </property>
        <property name="minimum">
         <number>0</number>
@@ -138,7 +138,7 @@
       <number>5</number>
      </property>
      <property name="suffix">
-      <string> lines</string>
+      <string comment="@info Suffix for the 'Lines Per Row' spinbox"> lines</string>
      </property>
      <property name="specialValueText">
       <string/>
@@ -164,7 +164,7 @@
    <item row="3" column="1">
     <widget class="QRadioButton" name="radioUseDefaultFont">
      <property name="text">
-      <string>Use &amp;default workspace theme font</string>
+      <string comment="@option:radio">Use &amp;default workspace theme font</string>
      </property>
      <property name="checked">
       <bool>true</bool>
@@ -174,7 +174,7 @@
    <item row="4" column="1">
     <widget class="QRadioButton" name="radioUseOtherFont">
      <property name="text">
-      <string comment="Text of the radio button to use a custom font">Other:</string>
+      <string comment="@option:radio Text of the radio button to use a custom font">Other:</string>
      </property>
     </widget>
    </item>
@@ -262,7 +262,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Departure / Arrival Column</string>
+      <string comment="@title">Departure / Arrival Column</string>
      </property>
     </widget>
    </item>
@@ -286,17 +286,17 @@
      </property>
      <item>
       <property name="text">
-       <string>Show time and remaining time</string>
+       <string comment="@item:inlistbox">Show time and remaining time</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Show time only</string>
+       <string comment="@item:inlistbox">Show time only</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Show remaining time only</string>
+       <string comment="@item:inlistbox">Show remaining time only</string>
       </property>
      </item>
     </widget>
@@ -358,7 +358,7 @@
       <string comment="@info:tooltip">Whether or not departures should be colorized by direction.</string>
      </property>
      <property name="whatsThis">
-      <string>If enabled, departures get grouped by direction automatically. A color gets assigned to each group and is used as background color for departures in the group.</string>
+      <string comment="@info:whatsthis">If enabled, departures get grouped by direction automatically. A color gets assigned to each group and is used as background color for departures in the group.</string>
      </property>
      <property name="text">
       <string/>

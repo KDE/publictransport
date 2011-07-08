@@ -60,9 +60,9 @@ class PublicTransportGraphicsItem : public QGraphicsWidget {
     friend class PublicTransportWidget;
 
 public:
-    PublicTransportGraphicsItem( QGraphicsItem* parent = 0,
-                                 StopAction *copyStopToClipboardAction = 0/*,
-                                 QAction *toggleAlarmAction = 0*/ );
+    explicit PublicTransportGraphicsItem( QGraphicsItem* parent = 0,
+                                          StopAction *copyStopToClipboardAction = 0/*,
+                                          QAction *toggleAlarmAction = 0*/ );
     virtual ~PublicTransportGraphicsItem();
 
     static const qreal ROUTE_ITEM_HEIGHT = 60.0;
@@ -158,9 +158,12 @@ class DepartureGraphicsItem : public PublicTransportGraphicsItem {
     friend class TimetableWidget;
 
 public:
-    DepartureGraphicsItem( QGraphicsItem* parent = 0, StopAction *copyStopToClipboardAction = 0,
-                           StopAction *showDeparturesAction = 0, StopAction *highlightStopAction = 0,
-                           StopAction *newFilterViaStopAction = 0/*, QAction *toggleAlarmAction = 0*/ );
+    explicit DepartureGraphicsItem( QGraphicsItem* parent = 0,
+                                    StopAction *copyStopToClipboardAction = 0,
+                                    StopAction *showDeparturesAction = 0,
+                                    StopAction *highlightStopAction = 0,
+                                    StopAction *newFilterViaStopAction = 0/*,
+                                    QAction *toggleAlarmAction = 0*/ );
     virtual ~DepartureGraphicsItem();
 
     void updateData( DepartureItem* item, bool update = false );
@@ -207,10 +210,11 @@ class JourneyGraphicsItem : public PublicTransportGraphicsItem {
     friend class TimetableWidget;
 
 public:
-    JourneyGraphicsItem( QGraphicsItem* parent = 0, StopAction *copyStopToClipboardAction = 0,
-                         StopAction *requestJourneyToStopAction = 0,
-                         StopAction *requestJourneyFromStopAction = 0/*,
-                         QAction *toggleAlarmAction = 0*/ );
+    explicit JourneyGraphicsItem( QGraphicsItem* parent = 0,
+                                  StopAction *copyStopToClipboardAction = 0,
+                                  StopAction *requestJourneyToStopAction = 0,
+                                  StopAction *requestJourneyFromStopAction = 0/*,
+                                  QAction *toggleAlarmAction = 0*/ );
 
     void updateData( JourneyItem* item, bool update = false );
     inline JourneyItem *journeyItem() const { return qobject_cast<JourneyItem*>(m_item); };

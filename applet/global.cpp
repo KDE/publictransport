@@ -39,27 +39,27 @@ StopAction::StopAction( StopAction::Type type, QObject* parent ) : QAction(paren
     switch ( type ) {
     case ShowDeparturesForStop:
         setIcon( KIcon("public-transport-stop") );
-        setText( i18n("Show &Departures From This Stop") );
+        setText( i18nc("@action:inmenu", "Show &Departures From This Stop") );
         break;
     case HighlightStop:
         setIcon( KIcon("edit-select") );
-        setText( i18n("&Highlight This Stop") );
+	setText( i18nc("@action:inmenu", "&Highlight This Stop") );
         break;
     case CreateFilterForStop:
         setIcon( KIcon("view-filter") );
-        setText( i18n("&Create Filter 'Via This Stop'") );
+	setText( i18nc("@action:inmenu", "&Create Filter 'Via This Stop'") );
         break;
     case CopyStopNameToClipboard:
         setIcon( KIcon("edit-copy") );
-        setText( i18n("&Copy Stop Name") );
+	setText( i18nc("@action:inmenu", "&Copy Stop Name") );
         break;
     case RequestJourneysFromStop:
         setIcon( KIcon("edit-find") );
-        setText( i18n("&Search Journeys From This Stop") );
+	setText( i18nc("@action:inmenu", "&Search Journeys From This Stop") );
         break;
     case RequestJourneysToStop:
         setIcon( KIcon("edit-find") );
-        setText( i18n("&Search Journeys to This Stop") );
+	setText( i18nc("@action:inmenu", "&Search Journeys to This Stop") );
         break;
     }
 
@@ -365,4 +365,3 @@ QStringList GlobalApplet::untranslateFilterKeys(const QStringList& translatedKey
     }
     return ret;
 }
-

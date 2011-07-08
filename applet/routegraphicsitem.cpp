@@ -582,7 +582,8 @@ void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent*
                     qobject_cast<DepartureModel*>( routeItem->item()->model() );
             QString highlightStopActionText =
                     (!model || !model->routeItemFlags(m_stopName).testFlag(RouteItemHighlighted))
-                    ? i18n("&Highlight This Stop") : i18n("&Unhighlight This Stop");
+		    ? i18nc("@action:inmenu", "&Highlight This Stop")
+		    : i18nc("@action:inmenu", "&Unhighlight This Stop");
             action->setText( highlightStopActionText );
         }
     }

@@ -68,14 +68,14 @@ void JourneySearchSuggestionItem::setHtml(const QString& html)
 {
     delete m_textDocument;
     m_textDocument = TextDocumentHelper::createTextDocument( html,
-            QSizeF(qMax(20.0, parentWidget()->contentsRect().width()), 100.0), QTextOption(), font() );
+            QSizeF(qMax(qreal(20.0), qreal(parentWidget()->contentsRect().width())), 100.0), QTextOption(), font() );
     updateGeometry();
 }
 
 QSizeF JourneySearchSuggestionItem::sizeHint( Qt::SizeHint which, const QSizeF& constraint ) const
 {
     if ( m_textDocument && which == Qt::MinimumSize ) {
-        return QSizeF( qMax(30.0, TextDocumentHelper::textDocumentWidth(m_textDocument)),
+        return QSizeF( qMax(qreal(30.0), TextDocumentHelper::textDocumentWidth(m_textDocument)),
                     qMax((qreal)QFontMetrics(font()).height() + 5.0, m_textDocument->size().height()) );
     } else if ( m_textDocument && which == Qt::MaximumSize ) {
         return QSizeF( 999999.0,

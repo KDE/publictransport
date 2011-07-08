@@ -1810,11 +1810,11 @@ QList< uint > DepartureModel::itemHashes() const
 
 QList< DepartureInfo > DepartureModel::departureInfos() const
 {
-    QList< DepartureInfo > infos;
+    QList< DepartureInfo > infoList;
     foreach( ItemBase *item, m_items ) {
-        infos << *static_cast<DepartureItem*>( item )->departureInfo();
+	infoList << *static_cast<DepartureItem*>( item )->departureInfo();
     }
-    return infos;
+    return infoList;
 }
 
 void DepartureModel::sort( int column, Qt::SortOrder order )

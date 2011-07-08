@@ -595,7 +595,7 @@ QList< QAction* > PublicTransport::contextualActions()
     }
     if ( isStateActive("intermediateDepartureView") ) {
         QAction *goBackAction = action("backToDepartures");
-        goBackAction->setText( i18n("&Back To Original Stop") );
+	goBackAction->setText( i18nc("@action:inmenu", "&Back To Original Stop") );
         actions << goBackAction;
     } else if ( m_settings.stopSettingsList.count() > 1 ) {
         actions << switchStopAction( this );
@@ -2273,7 +2273,7 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
             processJourneyRequest( stopName, false );
             break;
         case StopAction::CreateFilterForStop: {
-            QString filterName = i18nc("Default name for a new filter via a given stop",
+            QString filterName = i18nc("@info Default name for a new filter via a given stop",
                                        "Via %1", stopName);
             Filter viaFilter;
             viaFilter << Constraint( FilterByVia, FilterContains, stopName );
@@ -2718,9 +2718,9 @@ void PublicTransport::updateColorGroupSettings()
 }
 
 ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
-        const QList< DepartureInfo >& infos )
+  const QList< DepartureInfo >& infoList )
 {
-    kDebug() << "Generate new color group settings for" << infos.count() << "departures";
+    kDebug() << "Generate new color group settings for" << infoList.count() << "departures";
 
     // Only test routes of up to 1 stops (the first 1 of the actual route)
     const int maxTestRouteLength = 1;
@@ -2741,7 +2741,7 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
     // ie. transport line and target
     QHash< QStringList, QStringList > routePartsToLines;
     for ( int stopCount = 1; stopCount <= maxTestRouteLength; ++stopCount ) {
-        foreach ( const DepartureInfo &info, infos ) {
+        foreach ( const DepartureInfo &info, infoList ) {
             QString transportLineAndTarget = info.lineString().toLower() + info.target().toLower();
             QStringList routePart = info.routeStops().mid( 1, stopCount );
             if ( routePart.isEmpty() ) {

@@ -77,7 +77,7 @@ void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
     // Draw transport line string (only for local public transport)
     if ( drawTransportLine ) {
         QString text = transportLine;
-        text.replace(' ', "");
+        text.replace(' ', QString());
 
         QFont f = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont ); // TODO //font();
         f.setBold( true );

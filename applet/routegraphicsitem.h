@@ -46,8 +46,8 @@ public:
                 * stops that are omitted / not displayed. */
     };
 
-    RouteStopMarkerGraphicsItem( QGraphicsItem* parent = 0,
-                                 MarkerType markerType = DefaultStopMarker );
+    explicit RouteStopMarkerGraphicsItem( QGraphicsItem* parent = 0,
+                                          MarkerType markerType = DefaultStopMarker );
 
     qreal radius() const { return 6.0 + 2.0 * m_hoverStep; };
     MarkerType markerType() const { return m_markerType; };

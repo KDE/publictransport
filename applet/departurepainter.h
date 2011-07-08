@@ -17,6 +17,9 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#ifndef DEPARTUREPAINTER_HEADER
+#define DEPARTUREPAINTER_HEADER
+
 #include <publictransporthelper/enums.h>
 #include <QPainter>
 
@@ -35,6 +38,8 @@ class DepartureItem;
 class QPixmap;
 
 class DeparturePainter : public QObject {
+    Q_OBJECT
+    
 public:
     DeparturePainter( QObject *parent = 0 ) : QObject(parent) {};
 
@@ -68,3 +73,5 @@ public:
 private:
     Plasma::Svg *m_svg;
 };
+
+#endif // DEPARTUREPAINTER_HEADER

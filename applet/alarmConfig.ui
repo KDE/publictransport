@@ -51,14 +51,14 @@
          <item row="1" column="0">
           <widget class="KPushButton" name="addAlarm">
            <property name="text">
-            <string>&amp;Add Alarm</string>
+            <string comment="@action:button">&amp;Add Alarm</string>
            </property>
           </widget>
          </item>
          <item row="1" column="1">
           <widget class="KPushButton" name="removeAlarm">
            <property name="text">
-            <string>&amp;Remove Alarm</string>
+            <string comment="@action:button">&amp;Remove Alarm</string>
            </property>
           </widget>
          </item>
@@ -75,7 +75,7 @@
          <item row="0" column="0">
           <widget class="QLabel" name="lblAlarmType">
            <property name="text">
-            <string>Alarm &amp;Type:</string>
+            <string comment="@label:listbox">Alarm &amp;Type:</string>
            </property>
            <property name="buddy">
             <cstring>alarmType</cstring>
@@ -86,12 +86,12 @@
           <widget class="KComboBox" name="alarmType">
            <item>
             <property name="text">
-             <string>Remove After First Match</string>
+             <string comment="@item:inlistbox">Remove After First Match</string>
             </property>
            </item>
            <item>
             <property name="text">
-             <string>Apply to New Departures</string>
+             <string comment="@item:inlistbox">Apply to New Departures</string>
             </property>
            </item>
           </widget>
@@ -99,7 +99,7 @@
          <item row="1" column="0">
           <widget class="QLabel" name="lblAffectedStops">
            <property name="text">
-            <string>For These &amp;Stops:</string>
+            <string comment="@label:listbox">For These &amp;Stops:</string>
            </property>
            <property name="buddy">
             <cstring>affectedStops</cstring>
@@ -134,7 +134,7 @@
        </sizepolicy>
       </property>
       <property name="title">
-       <string>Set &amp;Alarm For Matching Departures</string>
+       <string comment="@title:group">Set &amp;Alarm For Matching Departures</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
@@ -188,7 +188,7 @@
               <number>1</number>
              </property>
              <property name="separatorText" stdset="0">
-              <string>and</string>
+              <string comment="@info Separator for alarm filters, which are logically combined using AND">and</string>
              </property>
             </widget>
            </item>

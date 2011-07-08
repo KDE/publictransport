@@ -49,10 +49,10 @@
           </sizepolicy>
          </property>
          <property name="toolTip">
-          <string>A list of available filter configurations</string>
+          <string comment="@info:tooltip">A list of available filter configurations</string>
          </property>
          <property name="whatsThis">
-          <string>&lt;para&gt;A list of all available filter configurations. Filter configurations can be added/removed/renamed using the buttons on the right of this combobox. &lt;/para&gt;
+          <string comment="@info:whatsthis">&lt;para&gt;A list of all available filter configurations. Filter configurations can be added/removed/renamed using the buttons on the right of this combobox. &lt;/para&gt;
 &lt;para&gt;Each filter configuration consists of a name, a list of stops using the filter configuration, a filter action and a list of filters. Each filter contains a list of constraints.&lt;/para&gt;</string>
          </property>
         </widget>
@@ -60,7 +60,7 @@
        <item>
         <widget class="QToolButton" name="addFilterConfiguration">
          <property name="toolTip">
-          <string>Add a new filter configuration</string>
+          <string comment="@info:tooltip">Add a new filter configuration</string>
          </property>
          <property name="text">
           <string notr="true">...</string>
@@ -70,7 +70,7 @@
        <item>
         <widget class="QToolButton" name="removeFilterConfiguration">
          <property name="toolTip">
-          <string>Delete the selected filter configuration</string>
+          <string comment="@info:tooltip">Delete the selected filter configuration</string>
          </property>
          <property name="text">
           <string notr="true">...</string>
@@ -80,7 +80,7 @@
        <item>
         <widget class="QToolButton" name="renameFilterConfiguration">
          <property name="toolTip">
-          <string>Rename the selected filter configuration</string>
+          <string comment="@info:tooltip">Rename the selected filter configuration</string>
          </property>
          <property name="text">
           <string notr="true">...</string>
@@ -114,7 +114,7 @@
         </size>
        </property>
        <property name="toolTip">
-        <string>The stops that use the selected filter configuration</string>
+        <string comment="@info:tooltip">The stops that use the selected filter configuration</string>
        </property>
       </widget>
      </item>
@@ -131,16 +131,16 @@
      <item row="2" column="1">
       <widget class="KComboBox" name="filterAction">
        <property name="toolTip">
-        <string>The action to take on matching departures/arrivals</string>
+        <string comment="@info:tooltip">The action to take on matching departures/arrivals</string>
        </property>
        <item>
         <property name="text">
-         <string>Show Matching</string>
+         <string comment="@item:inlistbox">Show Matching</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Hide Matching</string>
+         <string comment="@item:inlistbox">Hide Matching</string>
         </property>
        </item>
       </widget>
@@ -156,7 +156,7 @@
       </sizepolicy>
      </property>
      <property name="title">
-      <string>Filter Criteria</string>
+      <string comment="@title:group">Filter Criteria</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>

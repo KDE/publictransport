@@ -168,12 +168,12 @@ public:
     bool isStateActive( const QString &stateName ) const;
 
     /**
-     * @brief Generates a list of color group settings from the given departure @p infos. 
+     * @brief Generates a list of color group settings from the given departure @p infoList. 
      * 
-     * The given departure @p infos get grouped by direction. Each group gets a color assigned.
+     * The given departure @p infoList get grouped by direction. Each group gets a color assigned.
      **/
     static ColorGroupSettingsList generateColorGroupSettingsFrom(
-            const QList< DepartureInfo >& infos );
+            const QList< DepartureInfo >& infoList );
 
     /** @brief Ensures that there is one color group settings list for each stop setting. */
     void adjustColorGroupSettingsCount();
