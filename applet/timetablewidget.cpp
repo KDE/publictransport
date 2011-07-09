@@ -1237,11 +1237,11 @@ QSizeF PublicTransportGraphicsItem::sizeHint(Qt::SizeHint which, const QSizeF& c
     if ( which == Qt::MinimumSize ) {
         return QSizeF( 100, m_fadeOut *
                 (m_expanded || !qFuzzyIsNull(m_expandStep)
-                ? (unexpandedHeight() + expandAreaHeight()) : unexpandedHeight()) );
+                ? qFloor(unexpandedHeight() + expandAreaHeight()) : qFloor(unexpandedHeight())) );
     } else if ( which == Qt::MaximumSize ) {
         return QSizeF( 100000, m_fadeOut *
                 (m_expanded || !qFuzzyIsNull(m_expandStep)
-                ? (unexpandedHeight() + expandAreaHeight()) : unexpandedHeight()) );
+                ? qFloor(unexpandedHeight() + expandAreaHeight()) : qFloor(unexpandedHeight())) );
     } else {
         return QGraphicsWidget::sizeHint( which, constraint );
     }
