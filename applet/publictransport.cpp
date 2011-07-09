@@ -2273,7 +2273,7 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
             processJourneyRequest( stopName, false );
             break;
         case StopAction::CreateFilterForStop: {
-            QString filterName = i18nc("@info Default name for a new filter via a given stop",
+            QString filterName = i18nc("@info/plain Default name for a new filter via a given stop",
                                        "Via %1", stopName);
             Filter viaFilter;
             viaFilter << Constraint( FilterByVia, FilterContains, stopName );

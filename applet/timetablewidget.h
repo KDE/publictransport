@@ -264,14 +264,6 @@ public:
     };
 
 signals:
-    /**
-     * @brief Emitted, if a stop action was triggered from a route stop's context menu.
-     *
-     * @param stopAction The action to execute.
-     * @param stopName The stop name for which the action should be executed.
-     **/
-    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
-    
     void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
                                VehicleType vehicleType, const QString &target,
                                QGraphicsWidget *item );

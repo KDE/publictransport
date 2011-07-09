@@ -561,8 +561,6 @@ void JourneyGraphicsItem::updateData( JourneyItem* item, bool updateLayouts )
             m_routeItem = new JourneyRouteGraphicsItem( this, item, m_parent->svg(),
                     m_copyStopToClipboardAction, m_requestJourneyToStopAction,
                     m_requestJourneyFromStopAction );
-            connect( m_routeItem, SIGNAL(requestStopAction(StopAction::Type,QString)),
-                     this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
             QRectF _infoRect = infoRect( rect() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
@@ -599,8 +597,6 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
             QRectF _infoRect = infoRect( rect(), 0 );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(), ROUTE_ITEM_HEIGHT );
-            connect( m_routeItem, SIGNAL(requestStopAction(StopAction::Type,QString)),
-                     this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
         }
     } else if ( m_routeItem ) {
         delete m_routeItem;
@@ -1428,8 +1424,6 @@ void JourneyTimetableWidget::rowsInserted(const QModelIndex& parent, int first, 
         JourneyGraphicsItem *item = new JourneyGraphicsItem( this, widget(), m_copyStopToClipboardAction,
                 m_requestJourneyToStopAction, m_requestJourneyFromStopAction );
         item->updateData( static_cast<JourneyItem*>(m_model->item(row)) );
-        connect( item, SIGNAL(requestStopAction(StopAction::Type,QString)),
-                 this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
         connect( item, SIGNAL(requestAlarmCreation(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)),
                  this, SIGNAL(requestAlarmCreation(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)) );
         connect( item, SIGNAL(requestAlarmDeletion(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)),
@@ -1461,8 +1455,6 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
                 m_copyStopToClipboardAction, m_showDeparturesAction, m_highlightStopAction,
                 m_newFilterViaStopAction );
         item->updateData( static_cast<DepartureItem*>(m_model->item(row)) );
-        connect( item, SIGNAL(requestStopAction(StopAction::Type,QString)),
-                 this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
         m_items.insert( row, item );
 
         // Fade new items in

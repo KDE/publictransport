@@ -343,10 +343,6 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                      markerItem, SLOT(hover()) );
             connect( textItem, SIGNAL(unhovered(RouteStopTextGraphicsItem*)),
                      markerItem, SLOT(unhover()) );
-
-            // Connect "stop action" signals, triggered by the context menu
-            connect( textItem, SIGNAL(requestStopAction(StopAction::Type,QString)),
-                     this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
         }
     }
 }
@@ -884,8 +880,6 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
             actionList << m_copyStopToClipboardAction;
             routeItem->addActions( actionList );
 
-            connect( routeItem, SIGNAL(requestStopAction(StopAction::Type,QString)),
-                     this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
             m_routeItems << routeItem;
             l->addItem( routeItem );
         }

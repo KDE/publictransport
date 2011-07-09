@@ -94,8 +94,6 @@ private:
  * @brief A QGraphicsWidget showing the stop name a single route stop of a public transport vehicle.
  *
  * On hover it expands too show all of the given stop text (if it is too long).
- *
- * @note To make all context menu entries work, connect to the requestStopAction signal.
  **/
 class RouteStopTextGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
@@ -158,7 +156,6 @@ public:
 signals:
     void hovered( RouteStopTextGraphicsItem *item );
     void unhovered( RouteStopTextGraphicsItem *item );
-    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
 
 public slots:
     void hover();
@@ -202,9 +199,6 @@ public:
 
     QPointer<DepartureItem> item() const { return m_item; };
 
-signals:
-    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
-
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
     void arrangeStopItems();
@@ -243,9 +237,6 @@ public:
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
 
-signals:
-    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
-
 protected:
     virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
     virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent* event );
@@ -282,9 +273,6 @@ public:
 
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
-
-signals:
-    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
 
 private:
     QPointer<JourneyItem> m_item;
