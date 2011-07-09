@@ -47,13 +47,16 @@ public:
     };
 
     explicit RouteStopMarkerGraphicsItem( QGraphicsItem* parent = 0,
-                                          MarkerType markerType = DefaultStopMarker );
+                                          MarkerType markerType = DefaultStopMarker,
+                                          RouteStopFlags stopFlags = RouteStopIsIntermediate );
 
     /** @brief Gets the radius of the marker circle. */
-    qreal radius() const { return 6.0 + 2.0 * m_hoverStep; };
+    qreal radius() const;
 
     /** @brief Gets the marker type of this item. */
     MarkerType markerType() const { return m_markerType; };
+
+    RouteStopFlags routeStopFlags() const { return m_stopFlags; };
 
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
@@ -88,6 +91,7 @@ protected:
 private:
     qreal m_hoverStep;
     MarkerType m_markerType;
+    RouteStopFlags m_stopFlags;
 };
 
 /**

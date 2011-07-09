@@ -308,7 +308,20 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             }
 
             // Create marker item
-            RouteStopMarkerGraphicsItem *markerItem = new RouteStopMarkerGraphicsItem( this );
+            RouteStopFlags routeStopFlags;
+            if ( positionIndex == 0 ) {
+                routeStopFlags |= RouteStopIsOrigin;
+            } else if ( positionIndex == info->routeStops().count() - 1 ) {
+                routeStopFlags |= RouteStopIsTarget;
+            } else {
+                routeStopFlags |= RouteStopIsIntermediate;
+            }
+            DepartureModel *model = qobject_cast<DepartureModel*>( m_item->model() );
+            if ( model->info().homeStop == stopName ) {
+                routeStopFlags |= RouteStopIsHomeStop;
+            }
+            RouteStopMarkerGraphicsItem *markerItem = new RouteStopMarkerGraphicsItem( this,
+                    RouteStopMarkerGraphicsItem::DefaultStopMarker, routeStopFlags );
             markerItem->setPos( stopMarkerPos );
             m_markerItems << markerItem;
 
@@ -409,11 +422,12 @@ void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem
 }
 
 RouteStopMarkerGraphicsItem::RouteStopMarkerGraphicsItem( QGraphicsItem* parent,
-                                                          MarkerType markerType )
-    : QGraphicsWidget(parent)
+        MarkerType markerType, RouteStopFlags stopFlags )
+        : QGraphicsWidget(parent)
 {
     m_hoverStep = 0.0;
     m_markerType = markerType;
+    m_stopFlags = stopFlags;
     setAcceptHoverEvents( true );
 
     QPalette p = palette();
@@ -484,14 +498,28 @@ void RouteStopMarkerGraphicsItem::setHoverStep( qreal hoverStep )
     updateGeometry();
 }
 
+qreal RouteStopMarkerGraphicsItem::radius() const
+{
+    if ( m_markerType == IntermediateStopMarker ) {
+        return 12.0 + 2.0 * m_hoverStep;
+    } else {
+        if ( m_stopFlags.testFlag(RouteStopIsHomeStop) ) {
+            return 7.5 + 2.0 * m_hoverStep;
+        } else {
+            return 6.0 + 2.0 * m_hoverStep;
+        }
+    }
+}
+
 void RouteStopMarkerGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                                          QWidget* widget )
 {
     Q_UNUSED( widget );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 
-    KIcon stopIcon( markerType() == DefaultStopMarker
-            ? "public-transport-stop" : "public-transport-intermediate-stops" );
+    KIcon stopIcon( m_markerType == DefaultStopMarker
+            ? (m_stopFlags.testFlag(RouteStopIsHomeStop) ? "go-home" : "public-transport-stop")
+            : "public-transport-intermediate-stops" );
     stopIcon.paint( painter, option->rect );
 }
 

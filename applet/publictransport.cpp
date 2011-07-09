@@ -137,6 +137,7 @@ void PublicTransport::init()
     // Create models
     m_model = new DepartureModel( this );
     m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
+    m_model->setHomeStop( m_settings.currentStopSettings().stop(0).name );
     connect( m_model, SIGNAL(alarmFired(DepartureItem*)), this, SLOT(alarmFired(DepartureItem*)) );
     connect( m_model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
              this, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
@@ -1954,12 +1955,15 @@ void PublicTransport::writeSettings( const Settings& settings )
             fillModel( departureInfos() );
         }
 
-        if ( m_modelJourneys &&
-             (changed.testFlag(SettingsIO::ChangedCurrentStop) ||
-              changed.testFlag(SettingsIO::ChangedStopSettings)) )
+        if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
+             changed.testFlag(SettingsIO::ChangedStopSettings) )
         {
-            m_modelJourneys->setHomeStop( m_settings.currentStopSettings().stop(0).name );
-            m_modelJourneys->setCurrentStopIndex( m_settings.currentStopSettingsIndex );
+            m_model->setHomeStop( m_settings.currentStopSettings().stop(0).name );
+
+            if ( m_modelJourneys ) {
+                m_modelJourneys->setHomeStop( m_settings.currentStopSettings().stop(0).name );
+                m_modelJourneys->setCurrentStopIndex( m_settings.currentStopSettingsIndex );
+            }
         }
 
         if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
@@ -2263,13 +2267,11 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
 
     switch ( stopAction ) {
         case StopAction::RequestJourneysToStop:
-            // data contains the target stop, if it's null use the current stop name as target.
-            // The origin is the stop name associated with this stop action
+            // stopName is the target stop, the origin is the current home stop
             processJourneyRequest( stopName, true );
             break;
         case StopAction::RequestJourneysFromStop:
-            // data contains the origin stop, if it's null use the current stop name as origin.
-            // The target is the stop name associated with this stop action
+            // stopName is the origin stop,, the target is the current home stop
             processJourneyRequest( stopName, false );
             break;
         case StopAction::CreateFilterForStop: {
