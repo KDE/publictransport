@@ -237,6 +237,7 @@ class TopLevelItem : public QObject, public ItemBase {
 public:
     TopLevelItem( const Info *info );
 
+    /** @brief Set the data in @p column to @p data for the given @p role. */
     virtual void setData( Columns column, const QVariant &data, int role = Qt::UserRole );
 
     /** @brief Gets the text of the given @p column. */
@@ -316,6 +317,7 @@ public:
     /** @returns a hash with child items by their type. */
     QHash< ItemType, ChildItem* > typedChildren() const;
 
+    /** @brief Gets the data for the given @p role in @p column. */
     virtual QVariant data( int role = Qt::DisplayRole, int column = 0 ) const;
 
     /** @brief Updates remaining time values in the departure/arrival column. */
@@ -399,6 +401,7 @@ public:
     /** @returns a hash with child items by their type. */
     QHash< ItemType, ChildItem* > typedChildren() const;
 
+    /** @brief Gets the data for the given @p role in @p column. */
     virtual QVariant data( int role = Qt::DisplayRole, int column = 0 ) const;
 
     bool isLeavingSoon() const { return m_leavingSoon; };
@@ -520,6 +523,7 @@ public:
      **/
     virtual QModelIndex parent( const QModelIndex& child ) const;
 
+    /** @brief Gets the data for the given @p role in @p column. */
     virtual QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const;
 
     /**
@@ -529,6 +533,11 @@ public:
      **/
     ItemBase *item( int row ) const { return m_items.at(row); };
 
+    /**
+     * @brief Gets the toplevel item at the given @p index.
+     *
+     * @returns a pointer to the toplevel item at the given @p index.
+     **/
     ItemBase *itemFromIndex( const QModelIndex &index ) const;
 
     QModelIndex indexFromItem( ItemBase *item, int column = 0 ) const;
@@ -569,6 +578,7 @@ public:
      **/
     inline bool isEmpty() const { return rowCount() == 0; };
 
+    /** @brief Gets a structure containing some settings. */
     Info info() const { return m_info; };
 
     void setAlarmMinsBeforeDeparture( int alarmMinsBeforeDeparture = 5 ) {
@@ -699,7 +709,9 @@ public:
     /** @brief Removes all departures from the model, but doesn't clear header data. */
     virtual void clear();
 
+    /** @brief Gets a structure containing some settings. */
     Info info() const { return m_info; };
+    
     void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
     void setAlarmSettings( const AlarmSettingsList &alarmSettings );
 
@@ -822,7 +834,9 @@ public:
     virtual void updateItem( JourneyItem *journeyItem, const JourneyInfo &newJourneyInfo ) {
         journeyItem->setJourneyInfo( newJourneyInfo ); };
 
+    /** @brief Gets a structure containing some settings. */
     Info info() const { return m_info; };
+    
     void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
     void setCurrentStopIndex( int currentStopSettingsIndex );
     void setAlarmSettings( const AlarmSettingsList &alarmSettings );

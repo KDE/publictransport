@@ -49,7 +49,10 @@ public:
     explicit RouteStopMarkerGraphicsItem( QGraphicsItem* parent = 0,
                                           MarkerType markerType = DefaultStopMarker );
 
+    /** @brief Gets the radius of the marker circle. */
     qreal radius() const { return 6.0 + 2.0 * m_hoverStep; };
+
+    /** @brief Gets the marker type of this item. */
     MarkerType markerType() const { return m_markerType; };
 
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -126,8 +129,22 @@ public:
                                const QTime &time, const QString &stopName,
                                int minsFromFirstRouteStop );
 
+    /** @brief Gets the stop text (stop name including time information). */
     QString stopText() const { return m_stopText; };
+
+    /** @brief Gets the name of the associated stop. */
     QString stopName() const { return m_stopName; };
+
+    /**
+     * @brief Sets information about the new associated stop.
+     *
+     * @param time The time when the vehicle is at the associated stop.
+     *
+     * @param stopName The name of the associated stop.
+     *
+     * @param minsFromFirstRouteStop The time when the vehicle is at the associated stop,
+     *   relative to the first stop. At the first stop this is 0.
+     **/
     void setStop( const QTime &time, const QString &stopName, int minsFromFirstRouteStop );
 
     qreal expandStep() const { return m_expandStep; };
@@ -187,9 +204,6 @@ public:
 
 signals:
     void requestStopAction( StopAction::Type stopAction, const QString &stopName );
-
-// public slots:
-//     void dataChanged();
 
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );

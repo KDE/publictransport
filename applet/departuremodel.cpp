@@ -1896,8 +1896,8 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
     if ( sortOrder == Qt::AscendingOrder ) {
         DepartureModelGreaterThan gt( static_cast<Columns>( sortColumn ) );
         for ( int i = 0; i < count; ++i ) {
-            DepartureItem *item = static_cast<DepartureItem*>( m_items.at( i ) );
-            if ( gt.operator()( item->departureInfo(), &departureInfo ) ) {
+            DepartureItem *item = static_cast<DepartureItem*>( m_items.at(i) );
+            if ( gt.operator()(item->departureInfo(), &departureInfo) ) {
                 insertBefore = i;
                 break;
             }
@@ -1905,8 +1905,8 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
     } else {
         DepartureModelLessThan lt( static_cast<Columns>( sortColumn ) );
         for ( int i = 0; i < count; ++i ) {
-            DepartureItem *item = static_cast<DepartureItem*>( m_items.at( i ) );
-            if ( lt.operator()( item->departureInfo(), &departureInfo ) ) {
+            DepartureItem *item = static_cast<DepartureItem*>( m_items.at(i) );
+            if ( lt.operator()(item->departureInfo(), &departureInfo) ) {
                 insertBefore = i;
                 break;
             }
@@ -1922,7 +1922,8 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
 
     if ( m_nextItem ) {
         if ( newItem->departureInfo()->predictedDeparture() <
-                static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture() ) {
+             static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture() )
+        {
             m_nextItem = newItem;
         }
     } else {
