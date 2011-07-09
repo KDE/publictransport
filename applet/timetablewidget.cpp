@@ -39,11 +39,13 @@
 #include <QPropertyAnimation>
 #include <qmath.h>
 #include <KMenu>
+#include <QStyleOption>
 
-PublicTransportGraphicsItem::PublicTransportGraphicsItem( QGraphicsItem* parent,
+PublicTransportGraphicsItem::PublicTransportGraphicsItem(
+        PublicTransportWidget* publicTransportWidget, QGraphicsItem* parent,
         StopAction *copyStopToClipboardAction/*, QAction *toggleAlarmAction*/ )
-        : QGraphicsWidget(parent), m_item(0), m_parent(0), m_resizeAnimation(0), m_pixmap(0),
-        m_copyStopToClipboardAction(copyStopToClipboardAction)/*,
+        : QGraphicsWidget(parent), m_item(0), m_parent(publicTransportWidget),
+        m_resizeAnimation(0), m_pixmap(0), m_copyStopToClipboardAction(copyStopToClipboardAction)/*,
         m_toggleAlarmAction(toggleAlarmAction)*/
 {
     setFlag( ItemClipsToShape );
@@ -56,11 +58,6 @@ PublicTransportGraphicsItem::PublicTransportGraphicsItem( QGraphicsItem* parent,
 PublicTransportGraphicsItem::~PublicTransportGraphicsItem()
 {
     delete m_pixmap;
-}
-
-void PublicTransportGraphicsItem::toggleExpanded()
-{
-    setExpanded( !m_expanded );
 }
 
 void PublicTransportGraphicsItem::setExpanded( bool expand )
@@ -92,6 +89,42 @@ void PublicTransportGraphicsItem::updateGeometry()
     QGraphicsWidget::updateGeometry();
 }
 
+void PublicTransportGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                                         QWidget* widget )
+{
+    Q_UNUSED( widget );
+    painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
+    if ( !m_item || !isValid() ) {
+        if ( m_pixmap ) {
+            // Draw captured pixmap, the item in the model is already deleted
+            // but still needs to be drawn here while animating
+            QRectF sourceRect = boundingRect();
+            sourceRect.moveTopLeft( QPointF(0, 0) );
+            painter->drawPixmap( boundingRect(), *m_pixmap, sourceRect );
+        }
+
+        return;
+    }
+
+    // Paint background on whole item (including expand area)
+    QRectF rect = boundingRect();
+    paintBackground( painter, option, rect );
+
+    // Paint item (excluding expand area)
+    QRectF rectItem = rect;
+    rectItem.setHeight( unexpandedHeight() );
+    paintItem( painter, option, rectItem );
+
+    // Draw expand area if this item isn't currently completely unexpanded
+    if ( m_expanded || !qFuzzyIsNull(m_expandStep) ) {
+        qreal pad = padding();
+        qreal indentation = expandAreaIndentation();
+        QRectF rectExpanded( rectItem.left() + indentation, rectItem.bottom() + 2 * pad,
+                             rectItem.width() - indentation - pad, expandAreaHeight() - 2 * pad );
+        paintExpanded( painter, option, rectExpanded );
+    }
+}
+
 void PublicTransportGraphicsItem::capturePixmap()
 {
     delete m_pixmap;
@@ -114,7 +147,7 @@ qreal PublicTransportGraphicsItem::padding() const
 qreal PublicTransportGraphicsItem::unexpandedHeight() const
 {
     return qMax( m_parent->iconSize() * 1.1,
-                (qreal)QFontMetrics(font()).ascent() * m_parent->maxLineCount() + padding() );
+                 (qreal)QFontMetrics(font()).ascent() * m_parent->maxLineCount() + padding() );
 }
 
 bool PublicTransportGraphicsItem::hasExtraIcon( Columns column ) const
@@ -274,23 +307,23 @@ void PublicTransportGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event 
     updateTextLayouts();
 }
 
-void DepartureGraphicsItem::resizeEvent(QGraphicsSceneResizeEvent* event)
+void DepartureGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event )
 {
     PublicTransportGraphicsItem::resizeEvent(event);
 
     if ( m_routeItem ) {
-        QRect _infoRect = infoRect( rect().toRect(), 0 );
+        QRectF _infoRect = infoRect( rect(), 0 );
         m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
         m_routeItem->resize( rect().width() - padding() - _infoRect.left(), ROUTE_ITEM_HEIGHT );
     }
 }
 
-void JourneyGraphicsItem::resizeEvent(QGraphicsSceneResizeEvent* event)
+void JourneyGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event )
 {
     PublicTransportGraphicsItem::resizeEvent(event);
 
     if ( m_routeItem ) {
-        QRect _infoRect = infoRect( rect().toRect() );
+        QRectF _infoRect = infoRect( rect() );
         m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
         m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
                             m_routeItem->size().height() );
@@ -378,11 +411,13 @@ void PublicTransportGraphicsItem::mouseReleaseEvent( QGraphicsSceneMouseEvent* e
     }
 }
 
-DepartureGraphicsItem::DepartureGraphicsItem( QGraphicsItem* parent,
+DepartureGraphicsItem::DepartureGraphicsItem( PublicTransportWidget* publicTransportWidget,
+        QGraphicsItem* parent,
         StopAction *copyStopToClipboardAction, StopAction *showDeparturesAction,
         StopAction *highlightStopAction, StopAction *newFilterViaStopAction/*,
         QAction *toggleAlarmAction*/ )
-        : PublicTransportGraphicsItem( parent, copyStopToClipboardAction/*, toggleAlarmAction*/ ),
+        : PublicTransportGraphicsItem( publicTransportWidget, parent, copyStopToClipboardAction
+        /*, toggleAlarmAction*/ ),
         m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0), m_leavingAnimation(0),
         m_showDeparturesAction(showDeparturesAction), m_highlightStopAction(highlightStopAction),
         m_newFilterViaStopAction(newFilterViaStopAction)
@@ -397,10 +432,12 @@ DepartureGraphicsItem::~DepartureGraphicsItem()
     }
 }
 
-JourneyGraphicsItem::JourneyGraphicsItem( QGraphicsItem* parent,
+JourneyGraphicsItem::JourneyGraphicsItem( PublicTransportWidget* publicTransportWidget,
+        QGraphicsItem* parent,
         StopAction *copyStopToClipboardAction, StopAction *requestJourneyToStopAction,
         StopAction *requestJourneyFromStopAction/*, QAction *toggleAlarmAction*/ )
-        : PublicTransportGraphicsItem( parent, copyStopToClipboardAction/*, toggleAlarmAction*/ ),
+        : PublicTransportGraphicsItem( publicTransportWidget, parent, copyStopToClipboardAction
+        /*, toggleAlarmAction*/ ),
         m_infoTextDocument(0), m_routeItem(0),
         m_requestJourneyToStopAction(requestJourneyToStopAction),
         m_requestJourneyFromStopAction(requestJourneyFromStopAction)
@@ -422,7 +459,7 @@ void DepartureGraphicsItem::updateTextLayouts()
     }
 
     QRectF rect = contentsRect();
-    const QRect _timeRect = timeRect( rect.toRect() );
+    const QRectF _timeRect = timeRect( rect );
     QTextOption textOption( Qt::AlignVCenter | Qt::AlignLeft );
     textOption.setWrapMode( m_parent->maxLineCount() == 1
             ? QTextOption::NoWrap : QTextOption::WordWrap );
@@ -437,7 +474,7 @@ void DepartureGraphicsItem::updateTextLayouts()
     }
 
     const qreal timeWidth = timeColumnWidth();
-    const QRect _infoRect = infoRect( rect.toRect(), timeWidth );
+    const QRectF _infoRect = infoRect( rect, timeWidth );
 
     // Create layout for the main column showing information about the departure
     if ( !m_infoTextDocument || (m_infoTextDocument->pageSize() != _infoRect.size()) ) {
@@ -457,7 +494,7 @@ void DepartureGraphicsItem::updateTextLayouts()
                         info->lineString(), info->target());
         }
         m_infoTextDocument = TextDocumentHelper::createTextDocument( html, _infoRect.size(),
-                                                                    textOption, font() );
+                                                                     textOption, font() );
     }
 }
 
@@ -473,7 +510,7 @@ void JourneyGraphicsItem::updateTextLayouts()
             ? QTextOption::NoWrap : QTextOption::ManualWrap );
 
     // Create layout for the main column showing information about the departure
-    const QRect _infoRect = infoRect( rect.toRect()/*, departureTimeWidth, arrivalTimeWidth*/ );
+    const QRectF _infoRect = infoRect( rect/*, departureTimeWidth, arrivalTimeWidth*/ );
     if ( !m_infoTextDocument || (m_infoTextDocument->pageSize() != _infoRect.size()) ) {
         delete m_infoTextDocument;
         textOption.setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
@@ -526,7 +563,7 @@ void JourneyGraphicsItem::updateData( JourneyItem* item, bool updateLayouts )
                     m_requestJourneyFromStopAction );
             connect( m_routeItem, SIGNAL(requestStopAction(StopAction::Type,QString)),
                      this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
-            QRect _infoRect = infoRect( rect().toRect() );
+            QRectF _infoRect = infoRect( rect() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
                                 m_routeItem->size().height() );
@@ -559,7 +596,7 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
         } else {
             m_routeItem = new RouteGraphicsItem( this, item, m_copyStopToClipboardAction,
                     m_showDeparturesAction, m_highlightStopAction, m_newFilterViaStopAction );
-            QRect _infoRect = infoRect( rect().toRect(), 0 );
+            QRectF _infoRect = infoRect( rect(), 0 );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(), ROUTE_ITEM_HEIGHT );
             connect( m_routeItem, SIGNAL(requestStopAction(StopAction::Type,QString)),
@@ -589,19 +626,10 @@ qreal DepartureGraphicsItem::timeColumnWidth() const
     return TextDocumentHelper::textDocumentWidth( m_timeTextDocument );
 }
 
-void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                                 QWidget* widget )
+void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                                           const QRectF& rect )
 {
-    Q_UNUSED( widget );
-    painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
-    if ( !m_item || !m_infoTextDocument ) {
-        if ( m_pixmap ) {
-            painter->drawPixmap( option->rect, *m_pixmap );
-        }
-
-        return;
-    }
-
+    Q_UNUSED( option );
     QColor alternateBackgroundColor = KColorScheme( QPalette::Active, KColorScheme::View )
             .background( KColorScheme::AlternateBackground ).color();
     alternateBackgroundColor.setAlphaF( 0.3 );
@@ -616,7 +644,7 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
         bgGradient.setColorAt( 0.6, alternateBackgroundColor );
         bgGradient.setColorAt( 1, Qt::transparent );
 
-        painter->fillRect( option->rect, QBrush(bgGradient) );
+        painter->fillRect( rect, QBrush(bgGradient) );
     }
 
     // Draw a line at the bottom of this TimetableItem
@@ -626,9 +654,10 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
     borderGradient.setColorAt( 0.4, borderColor );
     borderGradient.setColorAt( 0.6, borderColor );
     borderGradient.setColorAt( 1, Qt::transparent );
-    painter->fillRect( QRect(option->rect.bottomLeft() + QPoint(0, 1),
-                            option->rect.bottomRight() - QPoint(0, 1)),
-                    QBrush(borderGradient) );
+//     painter->fillRect( QRectF(rect.topLeft() + QPointF(0, 1), rect.topRight()),
+//                        QBrush(borderGradient) );
+    painter->fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()),
+                       QBrush(borderGradient) );
 
     // Draw journey rating background:
     //   green for relatively short duration, less changes;
@@ -657,13 +686,13 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
             bgGradient.setColorAt( 0.1, ratingColor );
             bgGradient.setColorAt( 0.9, ratingColor );
             bgGradient.setColorAt( 1, Qt::transparent );
-            painter->fillRect( option->rect, QBrush( bgGradient ) );
+            painter->fillRect( rect, QBrush(bgGradient) );
         }
     }
 
     // Draw special background for departures with an alarm
     if ( index().data(DrawAlarmBackgroundRole).toBool() ) {
-// 		qreal bias = index().data( AlarmColorIntensityRole ).toReal();
+//      qreal bias = index().data( AlarmColorIntensityRole ).toReal();
         QColor alarmColor( 180, 0, 0, 128 );
 
         QLinearGradient bgGradient( 0, 0, 1, 0 );
@@ -673,12 +702,16 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
         bgGradient.setColorAt( 0.6, alarmColor );
         bgGradient.setColorAt( 1, Qt::transparent );
 
-        painter->fillRect( option->rect, QBrush(bgGradient) );
+        painter->fillRect( rect, QBrush(bgGradient) );
     }
+}
 
+void JourneyGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                                     const QRectF &rect )
+{
     QFontMetrics fm( font() );
-    const QRect _vehicleRect = vehicleRect( option->rect );
-    const QRect _infoRect = infoRect( option->rect );
+    const QRectF _vehicleRect = vehicleRect( rect );
+    const QRectF _infoRect = infoRect( rect );
 
     const int shadowWidth = 4;
     QPixmap pixmap( (int)_vehicleRect.width(), (int)_vehicleRect.height() );
@@ -777,35 +810,28 @@ void JourneyGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsIt
     QColor _textColor = textColor();
     bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 156;
     painter->setPen( _textColor );
-    TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument, _infoRect, drawHalos );
+    TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
+                                          _infoRect.toRect(), drawHalos );
 
     // Draw extra icon(s)
-    QRect _extraIconRect;
+    QRectF _extraIconRect;
     if ( hasExtraIcon() ) {
         QModelIndex modelIndex = index().model()->index( index().row(), ColumnTarget );
         QIcon icon = modelIndex.data( Qt::DecorationRole ).value<QIcon>();
-        _extraIconRect = extraIconRect(option->rect/*, departureTimeWidth, arrivalTimeWidth*/);
-        painter->drawPixmap( _extraIconRect, icon.pixmap(extraIconSize()) );
+        _extraIconRect = extraIconRect(rect/*, departureTimeWidth, arrivalTimeWidth*/);
+        painter->drawPixmap( _extraIconRect.toRect(), icon.pixmap(extraIconSize()) );
     }
     if ( hasExtraIcon(ColumnDeparture) ) {
         if ( _extraIconRect.isValid() ) {
             // Move icon rect to the left
             _extraIconRect.moveRight( _extraIconRect.left() - 4 );
         } else {
-            _extraIconRect = extraIconRect(option->rect/*, departureTimeWidth, arrivalTimeWidth*/);
+            _extraIconRect = extraIconRect(rect/*, departureTimeWidth, arrivalTimeWidth*/);
         }
 
         QModelIndex modelIndex = index().model()->index( index().row(), ColumnDeparture );
         QIcon icon = modelIndex.data( Qt::DecorationRole ).value<QIcon>();
-        painter->drawPixmap( _extraIconRect, icon.pixmap(extraIconSize()) );
-    }
-
-    // Draw expanded items if this TimetableItem isn't currently completely unexpanded
-    if ( m_expanded || !qFuzzyIsNull(m_expandStep) ) {
-        paintExpanded( painter, option,
-                    QRectF(_infoRect.left(), option->rect.top() + unexpandedHeight() + padding(),
-                            option->rect.right() - _infoRect.left() - padding(),
-                            option->rect.height() - unexpandedHeight() - 2 * padding()) );
+        painter->drawPixmap( _extraIconRect.toRect(), icon.pixmap(extraIconSize()) );
     }
 }
 
@@ -834,27 +860,15 @@ QColor PublicTransportGraphicsItem::textColor() const
     }
 }
 
-void DepartureGraphicsItem::paint( QPainter* painter,
-        const QStyleOptionGraphicsItem* option, QWidget* widget )
+void DepartureGraphicsItem::paintBackground( QPainter* painter,
+        const QStyleOptionGraphicsItem* option, const QRectF& rect )
 {
-    Q_UNUSED( widget );
-    painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
-    if ( !m_item || !m_timeTextDocument || !m_infoTextDocument ) {
-        if ( m_pixmap ) {
-            // Draw captured pixmap, the item in the model is already deleted
-            // but still needs to be drawn here while animating
-            painter->drawPixmap( option->rect, *m_pixmap );
-        }
-
-        return;
-    }
-
-    QColor _textColor = textColor();
+    Q_UNUSED( option );
     QColor _backgroundColor = backgroundColor();
     QColor alternateBackgroundColor = KColorScheme( QPalette::Active, KColorScheme::View )
             .background( KColorScheme::AlternateBackground ).color();
     alternateBackgroundColor.setAlphaF( 0.4 );
-    QColor borderColor = _textColor;
+    QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
 
     if ( index().row() % 2 == 1 ) {
@@ -866,7 +880,7 @@ void DepartureGraphicsItem::paint( QPainter* painter,
         bgGradient.setColorAt( 0.6, alternateBackgroundColor );
         bgGradient.setColorAt( 1, Qt::transparent );
 
-        painter->fillRect( option->rect, QBrush(bgGradient) );
+        painter->fillRect( rect, QBrush(bgGradient) );
     }
 
     // Draw a line at the bottom of this TimetableItem
@@ -876,8 +890,9 @@ void DepartureGraphicsItem::paint( QPainter* painter,
     borderGradient.setColorAt( 0.4, borderColor );
     borderGradient.setColorAt( 0.6, borderColor );
     borderGradient.setColorAt( 1, Qt::transparent );
-    painter->fillRect( QRect(option->rect.bottomLeft() + QPoint(0, 1),
-                             option->rect.bottomRight() - QPoint(0, 1)),
+//     painter->fillRect( QRectF(rect.topLeft() + QPointF(0, 1), rect.topRight()),
+//                        QBrush(borderGradient) );
+    painter->fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()),
                        QBrush(borderGradient) );
 
     // Draw special background for departures in color groups
@@ -890,12 +905,12 @@ void DepartureGraphicsItem::paint( QPainter* painter,
         bgGradient.setColorAt( 0.6, bgColor );
         bgGradient.setColorAt( 1, Qt::transparent );
 
-        painter->fillRect( option->rect, QBrush(bgGradient) );
+        painter->fillRect( rect, QBrush(bgGradient) );
     }
-    
+
     // Draw special background for departures with an alarm
     if ( index().data(DrawAlarmBackgroundRole).toBool() ) {
-// 		qreal bias = index().data( AlarmColorIntensityRole ).toReal();
+//      qreal bias = index().data( AlarmColorIntensityRole ).toReal();
         QColor alarmColor( 180, 0, 0, 128 );
 
         QLinearGradient bgGradient( 0, 0, 1, 0 );
@@ -905,14 +920,20 @@ void DepartureGraphicsItem::paint( QPainter* painter,
         bgGradient.setColorAt( 0.6, alarmColor );
         bgGradient.setColorAt( 1, Qt::transparent );
 
-        painter->fillRect( option->rect, QBrush(bgGradient) );
+        painter->fillRect( rect, QBrush(bgGradient) );
     }
+}
 
+void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                                       const QRectF &rect )
+{
+    QColor _backgroundColor = backgroundColor(); // TODO: store these colors in option->palette?
+    QColor _textColor = textColor();
     QFontMetrics fm( font() );
     const qreal timeWidth = timeColumnWidth();
-    const QRect _vehicleRect = vehicleRect( option->rect );
-    const QRect _infoRect = infoRect( option->rect, timeWidth );
-    const QRect _timeRect = timeRect( option->rect );
+    const QRectF _vehicleRect = vehicleRect( rect );
+    const QRectF _infoRect = infoRect( rect, timeWidth );
+    const QRectF _timeRect = timeRect( rect );
 
     int shadowWidth = 4;
     QSizeF iconSize( _vehicleRect.width() - 2 * shadowWidth, _vehicleRect.height() - 2 * shadowWidth );
@@ -979,41 +1000,35 @@ void DepartureGraphicsItem::paint( QPainter* painter,
     // Draw text
     bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 156;
     painter->setPen( _textColor );
-    TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument, _infoRect, drawHalos );
-    TextDocumentHelper::drawTextDocument( painter, option, m_timeTextDocument, _timeRect, drawHalos );
+    TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
+                                          _infoRect.toRect(), drawHalos );
+    TextDocumentHelper::drawTextDocument( painter, option, m_timeTextDocument,
+                                          _timeRect.toRect(), drawHalos );
 
     // Draw extra icon(s)
-    QRect _extraIconRect;
+    QRectF _extraIconRect;
     if ( hasExtraIcon() ) {
         QModelIndex modelIndex = index().model()->index( index().row(), ColumnTarget );
         QIcon icon = modelIndex.data( Qt::DecorationRole ).value<QIcon>();
-        _extraIconRect = extraIconRect(option->rect, timeWidth);
-        painter->drawPixmap( _extraIconRect, icon.pixmap(extraIconSize()) );
+        _extraIconRect = extraIconRect( rect, timeWidth );
+        painter->drawPixmap( _extraIconRect.toRect(), icon.pixmap(extraIconSize()) );
     }
     if ( hasExtraIcon(ColumnDeparture) ) {
         if ( _extraIconRect.isValid() ) {
             // Move icon rect to the left
             _extraIconRect.moveRight( _extraIconRect.left() - 4 );
         } else {
-            _extraIconRect = extraIconRect(option->rect, timeWidth);
+            _extraIconRect = extraIconRect(rect, timeWidth);
         }
 
         QModelIndex modelIndex = index().model()->index( index().row(), ColumnDeparture );
         QIcon icon = modelIndex.data( Qt::DecorationRole ).value<QIcon>();
-        painter->drawPixmap( _extraIconRect, icon.pixmap(extraIconSize()) );
-    }
-
-    // Draw expanded items if this TimetableItem isn't currently completely unexpanded
-    if ( m_expanded || !qFuzzyIsNull(m_expandStep) ) {
-        paintExpanded( painter, option,
-                    QRectF(_infoRect.left(), option->rect.top() + unexpandedHeight() + padding(),
-                            option->rect.right() - _infoRect.left() - padding(),
-                            option->rect.height() - unexpandedHeight() - 2 * padding()) );
+        painter->drawPixmap( _extraIconRect.toRect(), icon.pixmap(extraIconSize()) );
     }
 }
 
 void JourneyGraphicsItem::paintExpanded( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                                        const QRectF& rect )
+                                         const QRectF& rect )
 {
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
     QColor _textColor = textColor();
@@ -1067,14 +1082,14 @@ void JourneyGraphicsItem::paintExpanded( QPainter* painter, const QStyleOptionGr
 
         painter->setPen( _textColor );
         TextDocumentHelper::drawTextDocument( painter, option, &additionalInformationTextDocument,
-                                            htmlRect.toRect(), drawHalos );
+                                              htmlRect.toRect(), drawHalos );
 
 // 		y += htmlRect.height() + padding;
     }
 }
 
 void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                                        const QRectF& rect )
+                                           const QRectF& rect )
 {
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
     QColor _textColor = textColor();
@@ -1126,13 +1141,13 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
 
         painter->setPen( _textColor );
         TextDocumentHelper::drawTextDocument( painter, option, &additionalInformationTextDocument,
-                                            htmlRect.toRect(), drawHalos );
+                                              htmlRect.toRect(), drawHalos );
 
 // 		y += htmlRect.height() + padding;
     }
 }
 
-qreal JourneyGraphicsItem::expandSize() const
+qreal JourneyGraphicsItem::expandAreaHeight() const
 {
     if ( !m_item || qFuzzyIsNull(m_expandStep) ) {
         return 0.0;
@@ -1172,7 +1187,7 @@ qreal JourneyGraphicsItem::expandSize() const
     return height * m_expandStep;
 }
 
-qreal DepartureGraphicsItem::expandSize() const
+qreal DepartureGraphicsItem::expandAreaHeight() const
 {
     if ( !m_item || qFuzzyIsNull(m_expandStep) ) {
         return 0.0;
@@ -1207,14 +1222,26 @@ qreal DepartureGraphicsItem::expandSize() const
     return height * m_expandStep;
 }
 
+qreal DepartureGraphicsItem::expandAreaIndentation() const
+{
+    return m_parent->iconSize() * 0.65 + padding();
+}
+
+qreal JourneyGraphicsItem::expandAreaIndentation() const
+{
+    return m_parent->iconSize() * 0.65 + padding();
+}
+
 QSizeF PublicTransportGraphicsItem::sizeHint(Qt::SizeHint which, const QSizeF& constraint) const
 {
     if ( which == Qt::MinimumSize ) {
-        return QSizeF( 100, (m_expanded || !qFuzzyIsNull(m_expandStep)
-                ? (unexpandedHeight() + expandSize()) : unexpandedHeight()) * m_fadeOut );
+        return QSizeF( 100, m_fadeOut *
+                (m_expanded || !qFuzzyIsNull(m_expandStep)
+                ? (unexpandedHeight() + expandAreaHeight()) : unexpandedHeight()) );
     } else if ( which == Qt::MaximumSize ) {
-        return QSizeF( 100000, (m_expanded || !qFuzzyIsNull(m_expandStep)
-                ? (unexpandedHeight() + expandSize()) : unexpandedHeight()) * m_fadeOut );
+        return QSizeF( 100000, m_fadeOut *
+                (m_expanded || !qFuzzyIsNull(m_expandStep)
+                ? (unexpandedHeight() + expandAreaHeight()) : unexpandedHeight()) );
     } else {
         return QGraphicsWidget::sizeHint( which, constraint );
     }
@@ -1238,7 +1265,7 @@ PublicTransportWidget::PublicTransportWidget( QGraphicsItem* parent )
 
     QGraphicsWidget *container = new QGraphicsWidget( this );
     QGraphicsLinearLayout *l = new QGraphicsLinearLayout( Qt::Vertical, container );
-    l->setSpacing( 1.0 );
+    l->setSpacing( 0.0 );
     container->setLayout( l );
     setWidget( container );
 
@@ -1337,12 +1364,12 @@ void PublicTransportWidget::contextMenuEvent( QGraphicsSceneContextMenuEvent* ev
 }
 
 void PublicTransportWidget::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                                QWidget* widget )
+                                   QWidget* widget )
 {
     QGraphicsWidget::paint(painter, option, widget);
 
     if ( m_items.isEmpty() && !m_noItemsText.isEmpty() ) {
-        painter->drawText( option->rect, m_noItemsText, QTextOption(Qt::AlignCenter) );
+        painter->drawText( boundingRect(), m_noItemsText, QTextOption(Qt::AlignCenter) );
     }
 }
 
@@ -1398,9 +1425,8 @@ void JourneyTimetableWidget::rowsInserted(const QModelIndex& parent, int first, 
 
     QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( widget()->layout() );
     for ( int row = first; row <= last; ++row ) {
-        JourneyGraphicsItem *item = new JourneyGraphicsItem( widget(), m_copyStopToClipboardAction,
+        JourneyGraphicsItem *item = new JourneyGraphicsItem( this, widget(), m_copyStopToClipboardAction,
                 m_requestJourneyToStopAction, m_requestJourneyFromStopAction );
-        item->setPublicTransportWidget( this );
         item->updateData( static_cast<JourneyItem*>(m_model->item(row)) );
         connect( item, SIGNAL(requestStopAction(StopAction::Type,QString)),
                  this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
@@ -1431,10 +1457,9 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
 
     QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( widget()->layout() );
     for ( int row = first; row <= last; ++row ) {
-        DepartureGraphicsItem *item = new DepartureGraphicsItem( widget(),
+        DepartureGraphicsItem *item = new DepartureGraphicsItem( this, widget(),
                 m_copyStopToClipboardAction, m_showDeparturesAction, m_highlightStopAction,
                 m_newFilterViaStopAction );
-        item->setPublicTransportWidget( this );
         item->updateData( static_cast<DepartureItem*>(m_model->item(row)) );
         connect( item, SIGNAL(requestStopAction(StopAction::Type,QString)),
                  this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
@@ -1510,49 +1535,51 @@ void PublicTransportWidget::rowsRemoved( const QModelIndex& parent, int first, i
     }
 }
 
-QRect JourneyGraphicsItem::vehicleRect(const QRect& rect) const
+QRectF JourneyGraphicsItem::vehicleRect(const QRectF& rect) const
 {
-    return QRect( rect.left(), rect.top() + (unexpandedHeight() - m_parent->iconSize()) / 2,
-                m_parent->iconSize(), m_parent->iconSize() );
+    return QRectF( rect.left(), rect.top() + (unexpandedHeight() - m_parent->iconSize()) / 2,
+                   m_parent->iconSize(), m_parent->iconSize() );
 }
 
-QRect JourneyGraphicsItem::infoRect( const QRect& rect ) const
+QRectF JourneyGraphicsItem::infoRect( const QRectF& rect ) const
 {
-    return QRect( rect.left() + m_parent->iconSize() * 0.65 + padding(), rect.top(),
-                rect.width() - m_parent->iconSize() * 0.65 - 2 * padding()
-                - (hasExtraIcon() ? m_parent->iconSize() + padding() : 0),
-                unexpandedHeight() );
+    qreal indentation = expandAreaIndentation();
+    return QRectF( rect.left() + indentation, rect.top(),
+                   rect.width() - indentation - padding()
+                   - (hasExtraIcon() ? m_parent->iconSize() + padding() : 0),
+                   unexpandedHeight() );
 }
 
-QRect JourneyGraphicsItem::extraIconRect( const QRect& rect ) const
+QRectF JourneyGraphicsItem::extraIconRect( const QRectF& rect ) const
 {
-    return QRect( rect.right() - extraIconSize() - 2 * padding(),
-                rect.top() + (unexpandedHeight() - extraIconSize()) / 2,
-                extraIconSize(), extraIconSize() );
+    return QRectF( rect.right() - extraIconSize() - 2 * padding(),
+                   rect.top() + (unexpandedHeight() - extraIconSize()) / 2,
+                   extraIconSize(), extraIconSize() );
 }
 
-QRect DepartureGraphicsItem::vehicleRect(const QRect& rect) const {
-    return QRect( rect.left(), rect.top() + (unexpandedHeight() - m_parent->iconSize()) / 2,
-                m_parent->iconSize(), m_parent->iconSize() );
+QRectF DepartureGraphicsItem::vehicleRect(const QRectF& rect) const {
+    return QRectF( rect.left(), rect.top() + (unexpandedHeight() - m_parent->iconSize()) / 2,
+                   m_parent->iconSize(), m_parent->iconSize() );
 }
 
-QRect DepartureGraphicsItem::infoRect(const QRect& rect, qreal timeColumnWidth) const {
-    return QRect( rect.left() + m_parent->iconSize() * 0.65 + padding(), rect.top(),
-                rect.width() - m_parent->iconSize() * 0.65 - 2 * padding() - timeColumnWidth
-                - (hasExtraIcon() ? m_parent->iconSize() + padding() : 0),
-                unexpandedHeight() );
+QRectF DepartureGraphicsItem::infoRect(const QRectF& rect, qreal timeColumnWidth) const {
+    qreal indentation = expandAreaIndentation();
+    return QRectF( rect.left() + indentation, rect.top(),
+                   rect.width() - indentation - padding() - timeColumnWidth
+                   - (hasExtraIcon() ? m_parent->iconSize() + padding() : 0),
+                   unexpandedHeight() );
 }
 
-QRect DepartureGraphicsItem::extraIconRect(const QRect& rect, qreal timeColumnWidth) const {
-    return QRect( rect.right() - timeColumnWidth - extraIconSize() - 2 * padding(),
-                rect.top() + (unexpandedHeight() - extraIconSize()) / 2,
-                extraIconSize(), extraIconSize() );
+QRectF DepartureGraphicsItem::extraIconRect(const QRectF& rect, qreal timeColumnWidth) const {
+    return QRectF( rect.right() - timeColumnWidth - extraIconSize() - 2 * padding(),
+                   rect.top() + (unexpandedHeight() - extraIconSize()) / 2,
+                   extraIconSize(), extraIconSize() );
 }
 
-QRect DepartureGraphicsItem::timeRect(const QRect& rect) const {
+QRectF DepartureGraphicsItem::timeRect(const QRectF& rect) const {
     if ( qobject_cast<TimetableWidget*>(m_parent)->isTargetHidden() ) {
-        return QRect( rect.width() / 4, rect.top(), rect.width() * 3 / 4 - padding(), unexpandedHeight() );
+        return QRectF( rect.width() / 4, rect.top(), rect.width() * 3 / 4 - padding(), unexpandedHeight() );
     } else {
-        return QRect( rect.width() / 2, rect.top(), rect.width() / 2 - padding(), unexpandedHeight() );
+        return QRectF( rect.width() / 2, rect.top(), rect.width() / 2 - padding(), unexpandedHeight() );
     }
 }

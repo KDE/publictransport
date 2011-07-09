@@ -51,8 +51,13 @@ class TimetableWidget;
 class PublicTransportWidget;
 
 /**
-* @brief Base class for DepartureGraphicsItem and JourneyGraphicsItem.
-**/
+ * @brief Abstract base class for DepartureGraphicsItem and JourneyGraphicsItem.
+ *
+ * For this QGraphicsWidget an expanded state can be toggled by clicking it. The area only visible
+ * when expanded gets painted in @ref paintExpanded, the size of that area can be given by
+ * overwriting @ref expandSize. To programatically change the expanded state use @ref toggleExpanded
+ * or @ref setExpanded, get the state using @ref isExpanded.
+ **/
 class PublicTransportGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
     Q_PROPERTY( qreal expandStep READ expandStep WRITE setExpandStep )
@@ -60,41 +65,157 @@ class PublicTransportGraphicsItem : public QGraphicsWidget {
     friend class PublicTransportWidget;
 
 public:
-    explicit PublicTransportGraphicsItem( QGraphicsItem* parent = 0,
+    explicit PublicTransportGraphicsItem( PublicTransportWidget* publicTransportWidget,
+                                          QGraphicsItem* parent = 0,
                                           StopAction *copyStopToClipboardAction = 0/*,
                                           QAction *toggleAlarmAction = 0*/ );
     virtual ~PublicTransportGraphicsItem();
 
+    /** @brief The height of route items. */
     static const qreal ROUTE_ITEM_HEIGHT = 60.0;
 
     PublicTransportWidget *publicTransportWidget() const { return m_parent; };
-    void setPublicTransportWidget( PublicTransportWidget* publicTransportWidget ) {
-        m_parent = publicTransportWidget;
-    };
     QModelIndex index() const { return m_item->index(); };
-    bool hasExtraIcon( Columns column = ColumnTarget ) const;
+
+    virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
+
+    /**
+     * @brief Gets the size of the always shown part (without the expand area).
+     *
+     * The default implementation uses the PublicTransportWidget given in the constructor to
+     * calculate a size, using @ref PublicTransportWidget::iconSize and
+     * @ref PublicTransportWidget::maxLineCount.
+     *
+     * If you overwrite this method you should remember to add @ref padding.
+     **/
+    virtual qreal unexpandedHeight() const;
+
+    /** @brief Overwrite to calculate the height of the expand area. */
+    virtual qreal expandAreaHeight() const = 0;
+
+    /**
+     * @brief Overwrite to calculate the indentation of the expand area.
+     *
+     * The default implementation returns 0.0, ie. no indentation.
+     **/
+    virtual qreal expandAreaIndentation() const { return 0.0; };
+
+    /**
+     * @brief The extend of additional icons, eg. an alarm icons or journey news hint icons.
+     *
+     * The default implementation uses half of @ref PublicTransportWidget::iconSize, making
+     * additional icons half as big as the vehicle type icons.
+     **/
     int extraIconSize() const;
+
+    /**
+     * @brief The padding to the borders of this widget
+     *
+     * The default implementation scales with @ref PublicTransportWidget::zoomFactor.
+     **/
+    inline qreal padding() const;
+
+    /**
+     * @brief Checks whether or not there is a extra icon in the model in the given @p column.
+     *
+     * @param column The column to check for an icon. Default is ColumnTarget.
+     * 
+     * @return True, if there is an icon in the given @p column, ie. there is a QIcon stored in
+     *   the model for the @ref Qt::DecorationRole.
+     **/
+    bool hasExtraIcon( Columns column = ColumnTarget ) const;
 
     qreal fadeOut() const { return m_fadeOut; };
     void setFadeOut( qreal fadeOut ) { m_fadeOut = fadeOut; updateGeometry(); };
 
+    /** @brief Whether or not this item is valid, ie. it has data for painting. */
+    virtual bool isValid() const { return true; };
+
+    /** @brief Whether or not the expand area is currently shown or not. */
     bool isExpanded() const { return m_expanded; };
-    void toggleExpanded();
+
+    /** @brief Toggles the expanded state, ie. showing/hiding the expand area. */
+    inline void toggleExpanded() { setExpanded(!m_expanded); };
+
+    /**
+     * @brief Sets the expanded state to @p expand.
+     *
+     * @param expand Whether or not the expand area should be shown. Default is true.
+     **/
     void setExpanded( bool expand = true );
 
-    virtual qreal unexpandedHeight() const;
     qreal expandStep() const { return m_expandStep; };
     void setExpandStep( qreal expandStep ) { m_expandStep = expandStep; updateGeometry(); };
 
-    inline qreal padding() const;
+    /**
+     * @brief Paints this item to an internal cache.
+     *
+     * The cached pixmap can later be used for drawing, if the model data is already deleted.
+     * So it's a good idea to call this method directly before the model data gets deleted, eg.
+     * by connecting to @ref PublicTransportModel::departuresAboutToBeRemoved or
+     * @ref PublicTransportModel::journeysAboutToBeRemoved.
+     **/
     void capturePixmap();
 
-    virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
-    virtual qreal expandSize() const = 0;
+    /**
+     * @brief Calls @ref paintItem and @ref paintExpanded, if expanded.
+     *
+     * To draw the item (without the expand area) @ref paintItem gets called always from here.
+     * If this item is currently expanded (ie. @ref isExpanded returns true) or partly expanded
+     * (@ref expandStep > 0) @ref paintExpanded gets called to draw to the expand area.
+     *
+     * @note You should not need to overwrite this method, but more likely @ref paintItem
+     *   and @ref paintExpanded.
+     *
+     * @param painter The painter to use for painting.
+     * @param option Style options.
+     * @param widget
+     **/
+    virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                        QWidget* widget = 0 );
+
+    /**
+     * @brief Called to paint the background of this item, including the expand area (if expanded).
+     *
+     * This gets always called on @ref paint.
+     *
+     * @param painter The painter to use for painting.
+     * @param option Style options.
+     * @param rect The rectangle in which to paint. It's heihgt changes when the expand area
+     *   gets toggled.
+     **/
+    virtual void paintBackground( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                                  const QRectF &rect ) = 0;
+
+    /**
+     * @brief Called to paint this item, without the expand area.
+     *
+     * This gets always called on @ref paint.
+     *
+     * @param painter The painter to use for painting.
+     * @param option Style options.
+     * @param rect The rectangle in which to paint.
+     **/
+    virtual void paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                            const QRectF &rect ) = 0;
+
+    /**
+     * @brief Called to paint the expand area.
+     * 
+     * This gets only called if @ref isExpanded returns true or if @ref expandStep is bigger
+     * than zero.
+     *
+     * @param painter The painter to use for painting.
+     * @param option Style options.
+     * @param rect The rectangle in which to paint.
+     **/
     virtual void paintExpanded( QPainter* painter, const QStyleOptionGraphicsItem* option,
                                 const QRectF &rect ) = 0;
 
+    /** @brief The color to be used for text. */
     virtual QColor textColor() const;
+
+    /** @brief The color to be used as background. */
     virtual inline QColor backgroundColor() const {
         #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
             return Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor);
@@ -158,7 +279,8 @@ class DepartureGraphicsItem : public PublicTransportGraphicsItem {
     friend class TimetableWidget;
 
 public:
-    explicit DepartureGraphicsItem( QGraphicsItem* parent = 0,
+    explicit DepartureGraphicsItem( PublicTransportWidget* publicTransportWidget,
+                                    QGraphicsItem* parent = 0,
                                     StopAction *copyStopToClipboardAction = 0,
                                     StopAction *showDeparturesAction = 0,
                                     StopAction *highlightStopAction = 0,
@@ -169,17 +291,26 @@ public:
     void updateData( DepartureItem* item, bool update = false );
     inline DepartureItem *departureItem() const { return qobject_cast<DepartureItem*>(m_item); };
 
-    virtual qreal expandSize() const;
+    /** @brief Whether or not this item is valid, ie. it has data for painting. */
+    virtual bool isValid() const { return m_infoTextDocument && m_timeTextDocument; };
+    
+    /** @brief The size of the expand area. */
+    virtual qreal expandAreaHeight() const;
 
-    virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                        QWidget* widget = 0 );
+    /** @brief The indentation of the expand area. */
+    virtual qreal expandAreaIndentation() const;
+
+    virtual void paintBackground( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                                  const QRectF &rect );
+    virtual void paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                            const QRectF &rect );
     virtual void paintExpanded( QPainter* painter, const QStyleOptionGraphicsItem* option,
                                 const QRectF &rect );
 
-    QRect vehicleRect( const QRect &rect ) const;
-    QRect infoRect( const QRect &rect, qreal timeColumnWidth ) const;
-    QRect extraIconRect( const QRect &rect, qreal timeColumnWidth ) const;
-    QRect timeRect( const QRect &rect ) const;
+    QRectF vehicleRect( const QRectF &rect ) const;
+    QRectF infoRect( const QRectF &rect, qreal timeColumnWidth ) const;
+    QRectF extraIconRect( const QRectF &rect, qreal timeColumnWidth ) const;
+    QRectF timeRect( const QRectF &rect ) const;
 
     qreal leavingStep() const { return m_leavingStep; };
     void setLeavingStep( qreal leavingStep );
@@ -203,14 +334,15 @@ private:
 };
 
 /**
-* @brief A QGraphicsWidget representing a journey with public transport from A to B.
-**/
+ * @brief A QGraphicsWidget representing a journey with public transport from A to B.
+ **/
 class JourneyGraphicsItem : public PublicTransportGraphicsItem {
     Q_OBJECT
     friend class TimetableWidget;
 
 public:
-    explicit JourneyGraphicsItem( QGraphicsItem* parent = 0,
+    explicit JourneyGraphicsItem( PublicTransportWidget* publicTransportWidget,
+                                  QGraphicsItem* parent = 0,
                                   StopAction *copyStopToClipboardAction = 0,
                                   StopAction *requestJourneyToStopAction = 0,
                                   StopAction *requestJourneyFromStopAction = 0/*,
@@ -218,17 +350,26 @@ public:
 
     void updateData( JourneyItem* item, bool update = false );
     inline JourneyItem *journeyItem() const { return qobject_cast<JourneyItem*>(m_item); };
-    
-    virtual qreal expandSize() const;
 
-    virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                        QWidget* widget = 0 );
+    /** @brief Whether or not this item is valid, ie. it has data for painting. */
+    virtual bool isValid() const { return m_infoTextDocument; };
+    
+    /** @brief The size of the expand area. */
+    virtual qreal expandAreaHeight() const;
+    
+    /** @brief The indentation of the expand area. */
+    virtual qreal expandAreaIndentation() const;
+
+    virtual void paintBackground( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                                  const QRectF &rect );
+    virtual void paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                            const QRectF &rect );
     virtual void paintExpanded( QPainter* painter, const QStyleOptionGraphicsItem* option,
                                 const QRectF &rect );
 
-    QRect vehicleRect( const QRect &rect ) const;
-    QRect infoRect( const QRect &rect ) const;
-    QRect extraIconRect( const QRect &rect ) const;
+    QRectF vehicleRect( const QRectF &rect ) const;
+    QRectF infoRect( const QRectF &rect ) const;
+    QRectF extraIconRect( const QRectF &rect ) const;
 
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
