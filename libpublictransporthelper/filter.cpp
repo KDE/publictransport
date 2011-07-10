@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -69,7 +69,7 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
         }
         case FilterByNextStop:
             if ( departureInfo.routeStops().count() < 2 ||
-                 departureInfo.routeExactStops() < 2 ||
+                 departureInfo.routeExactStops() == 1 ||
                  !matchString(constraint.variant, constraint.value.toString(),
                               departureInfo.routeStops()[1]) ) {
                 return false;
