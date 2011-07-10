@@ -804,7 +804,7 @@ void JourneyGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphi
 
     // Draw text
     QColor _textColor = textColor();
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 156;
+    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 128;
     painter->setPen( _textColor );
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
                                           _infoRect.toRect(), drawHalos );
@@ -849,10 +849,18 @@ QColor PublicTransportGraphicsItem::textColor() const
         return highlightColor;
     } else {
         #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
-            return Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor);
+            QColor color = Plasma::Theme::defaultTheme()->color(Plasma::Theme::TextColor);
         #else
-            return Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
+            QColor color = Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
         #endif
+
+        // Mix with group color if not highlighted
+        QColor groupColor = index().data(Qt::BackgroundColorRole).value<QColor>();
+        if ( groupColor != Qt::transparent ) {
+            color = KColorUtils::mix( color, groupColor, 0.3 );
+        }
+
+        return color;
     }
 }
 
@@ -867,30 +875,6 @@ void DepartureGraphicsItem::paintBackground( QPainter* painter,
     QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
 
-    if ( index().row() % 2 == 1 ) {
-        // Draw alternate background
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, alternateBackgroundColor );
-        bgGradient.setColorAt( 0.6, alternateBackgroundColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
-
-        painter->fillRect( rect, QBrush(bgGradient) );
-    }
-
-    // Draw a line at the bottom of this TimetableItem
-    QLinearGradient borderGradient( 0, 0, 1, 0 );
-    borderGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-    borderGradient.setColorAt( 0, Qt::transparent );
-    borderGradient.setColorAt( 0.4, borderColor );
-    borderGradient.setColorAt( 0.6, borderColor );
-    borderGradient.setColorAt( 1, Qt::transparent );
-//     painter->fillRect( QRectF(rect.topLeft() + QPointF(0, 1), rect.topRight()),
-//                        QBrush(borderGradient) );
-    painter->fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()),
-                       QBrush(borderGradient) );
-
     // Draw special background for departures in color groups
     QColor bgColor = index().data(Qt::BackgroundColorRole).value<QColor>();
     if ( bgColor != Qt::transparent ) {
@@ -899,6 +883,16 @@ void DepartureGraphicsItem::paintBackground( QPainter* painter,
         bgGradient.setColorAt( 0, Qt::transparent );
         bgGradient.setColorAt( 0.4, bgColor );
         bgGradient.setColorAt( 0.6, bgColor );
+        bgGradient.setColorAt( 1, Qt::transparent );
+
+        painter->fillRect( rect, QBrush(bgGradient) );
+    } else if ( index().row() % 2 == 1 ) {
+        // Draw alternate background
+        QLinearGradient bgGradient( 0, 0, 1, 0 );
+        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+        bgGradient.setColorAt( 0, Qt::transparent );
+        bgGradient.setColorAt( 0.4, alternateBackgroundColor );
+        bgGradient.setColorAt( 0.6, alternateBackgroundColor );
         bgGradient.setColorAt( 1, Qt::transparent );
 
         painter->fillRect( rect, QBrush(bgGradient) );
@@ -918,6 +912,18 @@ void DepartureGraphicsItem::paintBackground( QPainter* painter,
 
         painter->fillRect( rect, QBrush(bgGradient) );
     }
+
+    // Draw a line at the bottom of this TimetableItem
+    QLinearGradient borderGradient( 0, 0, 1, 0 );
+    borderGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+    borderGradient.setColorAt( 0, Qt::transparent );
+    borderGradient.setColorAt( 0.4, borderColor );
+    borderGradient.setColorAt( 0.6, borderColor );
+    borderGradient.setColorAt( 1, Qt::transparent );
+//     painter->fillRect( QRectF(rect.topLeft() + QPointF(0, 1), rect.topRight()),
+//                        QBrush(borderGradient) );
+    painter->fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()),
+                       QBrush(borderGradient) );
 }
 
 void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -994,8 +1000,25 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
     }
 
     // Draw text
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 156;
+    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 128;
     painter->setPen( _textColor );
+
+    DepartureModel *model = qobject_cast<DepartureModel*>( m_item->model() );
+    bool manuallyHighlighted = false;
+    if ( model ) {
+        // Only proceed with highlighted stops, if the model is a DepartureModel (not a JourneyModel)
+        DepartureItem *item = qobject_cast<DepartureItem*>( m_item.data() );
+        manuallyHighlighted = item->departureInfo()->routeStops()
+                .contains( model->highlightedStop(), Qt::CaseInsensitive );
+    }
+
+    QFont _font = font();
+    if ( manuallyHighlighted ) {
+        _font.setItalic( true );
+    }
+    m_infoTextDocument->setDefaultFont( _font );
+    m_timeTextDocument->setDefaultFont( _font );
+
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
                                           _infoRect.toRect(), drawHalos );
     TextDocumentHelper::drawTextDocument( painter, option, m_timeTextDocument,
@@ -1028,7 +1051,7 @@ void JourneyGraphicsItem::paintExpanded( QPainter* painter, const QStyleOptionGr
 {
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
     QColor _textColor = textColor();
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 156;
+    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 128;
 
     qreal y = rect.top() - padding();
     if ( m_routeItem ) {
@@ -1089,7 +1112,7 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
 {
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
     QColor _textColor = textColor();
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 156;
+    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 128;
 
     qreal y = rect.top() - padding();
     if ( m_routeItem ) {
