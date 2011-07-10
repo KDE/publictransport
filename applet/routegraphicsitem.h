@@ -149,9 +149,11 @@ public:
      * @param stopName The name of the associated stop.
      *
      * @param minsFromFirstRouteStop The time when the vehicle is at the associated stop,
-     *   relative to the first stop. At the first stop this is 0.
+     *   relative to the first stop. At the first stop this is 0. Use the default value
+     *   (999999) if the times isn't known.
      **/
-    void setStop( const QTime &time, const QString &stopName, int minsFromFirstRouteStop );
+    void setStop( const QTime &time, const QString &stopName,
+                  int minsFromFirstRouteStop = 999999 );
 
     qreal expandStep() const { return m_expandStep; };
     void setExpandStep( qreal expandStep );

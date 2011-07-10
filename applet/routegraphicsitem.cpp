@@ -115,7 +115,7 @@ void RouteGraphicsItem::arrangeStopItems()
                 fontMetrics = &fm;
             }
 
-            // Prepend departure time at the current stop, if a time is given
+            // Get time information
             QTime time;
             int minsFromFirstRouteStop = -1;
             if ( i < info->routeTimes().count() && info->routeTimes()[i].isValid() ) {
@@ -123,7 +123,6 @@ void RouteGraphicsItem::arrangeStopItems()
                 minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60 );
             }
 
-            // Elide long stop names
             qreal baseSize;
             if ( i >= count - 2 ) {
                 // The last stop names may not fit horizontally (correct the last two here)
@@ -570,7 +569,7 @@ void RouteStopTextGraphicsItem::setStop( const QTime &time, const QString &stopN
                                          int minsFromFirstRouteStop )
 {
     m_stopName = stopName;
-    m_stopText = minsFromFirstRouteStop < 0
+    m_stopText = minsFromFirstRouteStop == 999999 || !time.isValid()
             ? stopName : QString("%1: %2").arg(minsFromFirstRouteStop).arg(stopName);
 
     qreal maxSize = QFontMetrics( font() ).width( m_stopText ) + 5;
