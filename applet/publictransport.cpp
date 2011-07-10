@@ -76,6 +76,7 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
         m_journeySearchTransition1(0), m_journeySearchTransition2(0),
         m_journeySearchTransition3(0)
 {
+    m_originalStopIndex = -1;
     m_popupIconDepartureIndex = 0;
     m_startPopupIconDepartureIndex = 0;
     m_endPopupIconDepartureIndex = 0;
@@ -2142,8 +2143,13 @@ void PublicTransport::removeIntermediateStopSettings()
     // Remove intermediate stop settings
     Settings settings = m_settings;
     settings.stopSettingsList.removeIntermediateSettings();
-    settings.currentStopSettingsIndex = qBound( 0, m_originalStopIndex,
-            settings.stopSettingsList.count() - 1 );
+
+    if ( m_originalStopIndex != -1 ) {
+        settings.currentStopSettingsIndex = qBound( 0, m_originalStopIndex,
+                settings.stopSettingsList.count() - 1 );
+    }
+    m_originalStopIndex = -1;
+
     writeSettings( settings );
 }
 
@@ -2288,12 +2294,19 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
             writeSettings( settings );
             break;
         } case StopAction::ShowDeparturesForStop: {
+            // Remove intermediate stop settings
+            settings.stopSettingsList.removeIntermediateSettings();
+
+            if ( m_originalStopIndex != -1 ) {
+                kDebug() << "Set current stop index to" << m_originalStopIndex;
+                settings.currentStopSettingsIndex = qBound( 0, m_originalStopIndex,
+                        settings.stopSettingsList.count() - 1 );
+            }
+    
             // Save original stop index from where sub requests were made
             // (using the context menu). Only if the departure list wasn't requested
             // already from a sub departure list.
-            if ( !isStateActive("intermediateDepartureViewState") ) {
-                m_originalStopIndex = m_settings.currentStopSettingsIndex;
-            }
+            m_originalStopIndex = settings.currentStopSettingsIndex;
 
             // Search for a stop setting with the given stop name in it.
             // Create an intermediate stop item if there is no such stop setting
@@ -2732,7 +2745,7 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
 
     const int opacity = 75;
     const int colors = 82;
-    const QColor oxygenColors[colors] = {
+    static const QColor oxygenColors[colors] = {
         QColor(56,   37,   9, opacity), //wood brown6
 //         QColor(87,   64,  30, opacity), // wood brown5
         QColor(117,  81,  26, opacity), // wood brown4
@@ -2907,9 +2920,6 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
     // Sort by used count
     qStableSort( routePartCount.begin(), routePartCount.end(), RoutePartCountGreaterThan() );
 
-    // Take the first few directions
-    routePartCount = routePartCount.mid( 0, maxGroupCount );
-
     // Create the color groups
     ColorGroupSettingsList colorGroups;
     for ( int i = 0; i < maxGroupCount && i < routePartCount.count(); ++i ) {
@@ -2918,26 +2928,14 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
         Filter groupFilter;
         groupFilter << Constraint( FilterByNextStop, FilterEquals, routeCount.latestCommonStop );
         group.filters << groupFilter;
-//         group.color = colors[i];
         while ( routeCount.latestCommonStop.length() < 3 ) {
             routeCount.latestCommonStop += "z";
         }
         int color = qHash(routeCount.latestCommonStop) % colors;
         group.color = oxygenColors[color];
-//         int length = qFloor( routeCount.latestCommonStop.length() / 3 );
-//         qreal red = ( qHash(routeCount.latestCommonStop.midRef(0, length)) % 100 ) / 100.0;
-//         qreal green = ( qHash(routeCount.latestCommonStop.midRef(length, length)) % 100) / 100.0;
-//         qreal blue = ( qHash(routeCount.latestCommonStop.midRef(2 * length)) % 100) / 100.0;
-//         kDebug() << "hash:" << qHash( routeCount.latestCommonStop );
-        kDebug() << "hash -> int:" << (qHash( routeCount.latestCommonStop ) % colors);
-//         kDebug() << "hash -> int2:" << (qHash(routeCount.latestCommonStop) / 1000) % 126;
-//         kDebug() << "red hash:" << qHash( routeCount.latestCommonStop.midRef(0, length) ) << "0..1:" << red;
-//         kDebug() << "green hash:" << qHash( routeCount.latestCommonStop.midRef(length, length) ) << "0..1:" << green;
-//         kDebug() << "blue hash:" << qHash( routeCount.latestCommonStop.midRef(2 * length) ) << "0..1:" << blue;
-//         group.color = QColor::fromRgbF( red, green, blue, opacity / 255.0 );
         colorGroups << group;
 
-        kDebug() << "Colorgroup" << i << "created" << routeCount.latestCommonStop << routeCount.usedCount;
+//         kDebug() << "Colorgroup" << i << "created" << routeCount.latestCommonStop << routeCount.usedCount;
     }
 
     // TODO: Enable color groups toggling in the filters menu
