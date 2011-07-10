@@ -394,31 +394,29 @@ void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem
     QColor backgroundColor = Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor);
     painter->setPen( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor) );
 #endif
+    QColor backgroundFadeColor = backgroundColor;
+    backgroundFadeColor.setAlphaF( 0.5 );
     QLinearGradient backgroundGradient( 0, 0, 1, 0 );
     backgroundGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
     backgroundGradient.setColorAt( 0, backgroundColor );
-    backgroundGradient.setColorAt( 1, Qt::transparent );
+    backgroundGradient.setColorAt( 1,  backgroundFadeColor );
     painter->setBrush( backgroundGradient );
-    painter->drawRoundedRect( QRectF(routeRect.left(), routeRect.top() + padding(),
-                                    routeRect.width() - step, routeLineWidth),
-                              routeLineWidth / 2.0, routeLineWidth / 2.0 );
-
-    painter->setBrush( backgroundColor );
-    const QPointF startStopPos( routeRect.left() + 10 * m_zoomFactor,
-                                routeRect.top() + padding() + routeLineWidth / 2.0 );
-    for ( int i = 0; i < info->routeStops().count(); ++i ) {
-        QPointF stopPos( startStopPos.x() + i * step, startStopPos.y() );
-        if ( info->routeExactStops() > 1 && i >= info->routeExactStops() - 1
-            && i < info->routeStops().count() - 1 )
-        {
-            // Visualize intermediate stops after the last exact stop
-            KIcon stopIcon("public-transport-stop");
-            painter->drawEllipse( stopPos + QPointF(step * 0.333333, 0.0),
-                                  smallStopMarkerSize, smallStopMarkerSize );
-            painter->drawEllipse( stopPos + QPointF(step * 0.666666, 0.0),
-                                  smallStopMarkerSize, smallStopMarkerSize );
-        }
-    }
+    const qreal arrowWidth = routeLineWidth * 2.5;
+    const qreal arrowHeight = routeLineWidth * 1.0;
+    const qreal timelineTop = routeRect.top() + padding();
+    const qreal timelineBottom = timelineTop + routeLineWidth;
+    const qreal timelineLeft = routeRect.left() + routeLineWidth * 3.0;
+    const qreal timelineRight = (m_markerItems.isEmpty() ? routeRect.right()
+            : m_markerItems.last()->pos().x() - m_markerItems.last()->size().width() / 2.0) - arrowWidth;
+    const QPointF points[7] = {
+            QPointF(timelineLeft, timelineBottom),
+            QPointF(timelineLeft, timelineTop),
+            QPointF(timelineRight, timelineTop),
+            QPointF(timelineRight, timelineTop - arrowHeight),
+            QPointF(timelineRight + arrowWidth, timelineTop + routeLineWidth / 2.0),
+            QPointF(timelineRight, timelineBottom + arrowHeight),
+            QPointF(timelineRight, timelineBottom) };
+    painter->drawConvexPolygon( points, 7 );
 }
 
 RouteStopMarkerGraphicsItem::RouteStopMarkerGraphicsItem( QGraphicsItem* parent,
