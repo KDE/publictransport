@@ -231,7 +231,7 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             if ( positionIndex == omitIndex ) { // Currently at first omitted stop
                 // Create intermediate marker item
                 RouteStopMarkerGraphicsItem *markerItem = new RouteStopMarkerGraphicsItem(
-                        this, RouteStopMarkerGraphicsItem::IntermediateStopMarker );
+                        this, 0, RouteStopMarkerGraphicsItem::IntermediateStopMarker );
                 markerItem->setPos( stopMarkerPos );
                 m_markerItems << markerItem;
 
@@ -307,32 +307,30 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                 baseSize = m_maxTextWidth;
             }
 
-            // Create marker item
-            RouteStopFlags routeStopFlags;
-            if ( positionIndex == 0 ) {
-                routeStopFlags |= RouteStopIsOrigin;
-            } else if ( positionIndex == info->routeStops().count() - 1 ) {
-                routeStopFlags |= RouteStopIsTarget;
-            } else {
-                routeStopFlags |= RouteStopIsIntermediate;
-            }
-            DepartureModel *model = qobject_cast<DepartureModel*>( m_item->model() );
-            if ( model->info().homeStop == stopName ) {
-                routeStopFlags |= RouteStopIsHomeStop;
-            }
-            RouteStopMarkerGraphicsItem *markerItem = new RouteStopMarkerGraphicsItem( this,
-                    RouteStopMarkerGraphicsItem::DefaultStopMarker, routeStopFlags );
-            markerItem->setPos( stopMarkerPos );
-            m_markerItems << markerItem;
-
-            // Create text item, that displays a single stop name
-            // and automatically elides and stretches it on hover to show hidden text
+            // Get time information
             QTime time;
             int minsFromFirstRouteStop = -1;
             if ( index < info->routeTimes().count() && info->routeTimes()[index].isValid() ) {
                 time = info->routeTimes()[index];
                 minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60 );
             }
+
+            // Get flags for the current stop
+            RouteStopFlags routeStopFlags;
+            if ( positionIndex == 0 ) {
+                routeStopFlags |= RouteStopIsOrigin;
+            } else if ( positionIndex == count - 1 ) {
+                routeStopFlags |= RouteStopIsTarget;
+            } else {
+                routeStopFlags |= RouteStopIsIntermediate;
+            }
+            DepartureModel *model = qobject_cast<DepartureModel*>( m_item->model() );
+            if ( model->info().homeStop == stopName || minsFromFirstRouteStop == 0 ) {
+                routeStopFlags |= RouteStopIsHomeStop;
+            }
+
+            // Create text item, that displays a single stop name
+            // and automatically elides and stretches it on hover to show hidden text
             RouteStopTextGraphicsItem *textItem = new RouteStopTextGraphicsItem(
                     this, *font, baseSize, time, stopName, minsFromFirstRouteStop );
             textItem->setPos( stopTextPos );
@@ -346,6 +344,12 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                         ? highlightedPalette : defaultPalette );
             }
             m_textItems << textItem;
+
+            // Create marker item
+            RouteStopMarkerGraphicsItem *markerItem = new RouteStopMarkerGraphicsItem( this,
+                    textItem, RouteStopMarkerGraphicsItem::DefaultStopMarker, routeStopFlags );
+            markerItem->setPos( stopMarkerPos );
+            m_markerItems << markerItem;
 
             // Connect (un)hovered signals and (un)hover slots of text and marker items
             connect( markerItem, SIGNAL(hovered(RouteStopMarkerGraphicsItem*)),
@@ -382,9 +386,7 @@ void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 
     const QRectF routeRect = rect();
-    const qreal step = (routeRect.width() - 20 * m_zoomFactor) / count;
     const qreal routeLineWidth = 4.0 * m_zoomFactor;
-    const qreal smallStopMarkerSize = 3 * m_zoomFactor;
 
     // Draw horizontal timeline
 #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
@@ -420,8 +422,8 @@ void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem
 }
 
 RouteStopMarkerGraphicsItem::RouteStopMarkerGraphicsItem( QGraphicsItem* parent,
-        MarkerType markerType, RouteStopFlags stopFlags )
-        : QGraphicsWidget(parent)
+        RouteStopTextGraphicsItem *textItem, MarkerType markerType, RouteStopFlags stopFlags )
+        : QGraphicsWidget(parent), m_textItem(textItem)
 {
     m_hoverStep = 0.0;
     m_markerType = markerType;
@@ -501,7 +503,19 @@ qreal RouteStopMarkerGraphicsItem::radius() const
     if ( m_markerType == IntermediateStopMarker ) {
         return 12.0 + 2.0 * m_hoverStep;
     } else {
-        if ( m_stopFlags.testFlag(RouteStopIsHomeStop) ) {
+        RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
+        DepartureModel *model = !routeItem || !routeItem->item() ? NULL :
+                qobject_cast<DepartureModel*>( routeItem->item()->model() );
+        bool isHighlightedStop = model && model->routeItemFlags(m_textItem->stopName())
+                .testFlag(RouteItemHighlighted);
+
+        if ( isHighlightedStop ) {
+            return 7.5 + 2.0 * m_hoverStep;
+        } else if ( m_stopFlags.testFlag(RouteStopIsHomeStop) ) {
+            return 7.5 + 2.0 * m_hoverStep;
+        } else if ( m_stopFlags.testFlag(RouteStopIsOrigin) ) {
+            return 7.5 + 2.0 * m_hoverStep;
+        } else if ( m_stopFlags.testFlag(RouteStopIsTarget) ) {
             return 7.5 + 2.0 * m_hoverStep;
         } else {
             return 6.0 + 2.0 * m_hoverStep;
@@ -515,9 +529,29 @@ void RouteStopMarkerGraphicsItem::paint( QPainter* painter, const QStyleOptionGr
     Q_UNUSED( widget );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 
-    KIcon stopIcon( m_markerType == DefaultStopMarker
-            ? (m_stopFlags.testFlag(RouteStopIsHomeStop) ? "go-home" : "public-transport-stop")
-            : "public-transport-intermediate-stops" );
+    QString iconName;
+    if ( m_markerType == IntermediateStopMarker ) {
+        iconName = "public-transport-intermediate-stops";
+    } else {
+        RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
+        DepartureModel *model = !routeItem || !routeItem->item() ? NULL :
+                qobject_cast<DepartureModel*>( routeItem->item()->model() );
+        bool isHighlightedStop = model && model->routeItemFlags(m_textItem->stopName())
+                .testFlag(RouteItemHighlighted);
+
+        if ( isHighlightedStop ) {
+            iconName = "flag-blue";
+        } else if ( m_stopFlags.testFlag(RouteStopIsHomeStop) ) {
+            iconName = "go-home";
+        } else if ( m_stopFlags.testFlag(RouteStopIsOrigin) ) {
+            iconName = "flag-red";
+        } else if ( m_stopFlags.testFlag(RouteStopIsTarget) ) {
+            iconName = "flag-green";
+        } else {
+            iconName = "public-transport-stop";
+        }
+    }
+    KIcon stopIcon( iconName );
     stopIcon.paint( painter, option->rect );
 }
 
@@ -600,12 +634,12 @@ void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent*
         if ( action->type() == StopAction::HighlightStop ) {
             // Update text of the highlight stop action
             RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
-            DepartureModel *model = !routeItem ? NULL :
+            DepartureModel *model = !routeItem || !routeItem->item() ? NULL :
                     qobject_cast<DepartureModel*>( routeItem->item()->model() );
             QString highlightStopActionText =
                     (!model || !model->routeItemFlags(m_stopName).testFlag(RouteItemHighlighted))
-		    ? i18nc("@action:inmenu", "&Highlight This Stop")
-		    : i18nc("@action:inmenu", "&Unhighlight This Stop");
+                    ? i18nc("@action:inmenu", "&Highlight This Stop")
+                    : i18nc("@action:inmenu", "&Unhighlight This Stop");
             action->setText( highlightStopActionText );
         }
     }
@@ -878,6 +912,14 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                 }
             }
 
+            // Get time information
+            int minsFromFirstRouteStop = -1;
+            if ( i < info->routeTimesDeparture().count() && info->routeTimesDeparture()[i].isValid() ) {
+                QTime time = info->routeTimesDeparture()[i];
+                minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60 );
+            }
+
+            // Get route stop flags
             RouteStopFlags routeStopFlags;
             if ( i == 0 ) {
                 routeStopFlags |= RouteStopIsOrigin;
@@ -887,7 +929,7 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                 routeStopFlags |= RouteStopIsIntermediate;
             }
             JourneyModel *model = qobject_cast<JourneyModel*>( m_item->model() );
-            if ( model->info().homeStop == stopName ) {
+            if ( model->info().homeStop == stopName || minsFromFirstRouteStop == 0 ) {
                 routeStopFlags |= RouteStopIsHomeStop;
             }
             JourneyRouteStopGraphicsItem *routeItem = new JourneyRouteStopGraphicsItem(

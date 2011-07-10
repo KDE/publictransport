@@ -28,7 +28,7 @@
 class KMenu;
 class JourneyItem;
 class DepartureItem;
-
+class RouteStopTextGraphicsItem;
 /**
  * @brief A QGraphicsWidget showing an icon for a single route stop of a public transport vehicle.
  **/
@@ -47,6 +47,7 @@ public:
     };
 
     explicit RouteStopMarkerGraphicsItem( QGraphicsItem* parent = 0,
+                                          RouteStopTextGraphicsItem *textItem = 0,
                                           MarkerType markerType = DefaultStopMarker,
                                           RouteStopFlags stopFlags = RouteStopIsIntermediate );
 
@@ -57,6 +58,8 @@ public:
     MarkerType markerType() const { return m_markerType; };
 
     RouteStopFlags routeStopFlags() const { return m_stopFlags; };
+
+    RouteStopTextGraphicsItem *textItem() const { return m_textItem; };
 
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
@@ -92,6 +95,7 @@ private:
     qreal m_hoverStep;
     MarkerType m_markerType;
     RouteStopFlags m_stopFlags;
+    RouteStopTextGraphicsItem *m_textItem;
 };
 
 /**
