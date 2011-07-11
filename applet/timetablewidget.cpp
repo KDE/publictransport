@@ -647,29 +647,6 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
     alternateBackgroundColor.setAlphaF( 0.3 );
     QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
-    if ( index().row() % 2 == 1 ) {
-        // Draw alternate background
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, alternateBackgroundColor );
-        bgGradient.setColorAt( 0.6, alternateBackgroundColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
-
-        painter->fillRect( rect, QBrush(bgGradient) );
-    }
-
-    // Draw a line at the bottom of this TimetableItem
-    QLinearGradient borderGradient( 0, 0, 1, 0 );
-    borderGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-    borderGradient.setColorAt( 0, Qt::transparent );
-    borderGradient.setColorAt( 0.4, borderColor );
-    borderGradient.setColorAt( 0.6, borderColor );
-    borderGradient.setColorAt( 1, Qt::transparent );
-//     painter->fillRect( QRectF(rect.topLeft() + QPointF(0, 1), rect.topRight()),
-//                        QBrush(borderGradient) );
-    painter->fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()),
-                       QBrush(borderGradient) );
 
     // Draw journey rating background:
     //   green for relatively short duration, less changes;
@@ -700,6 +677,16 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
             bgGradient.setColorAt( 1, Qt::transparent );
             painter->fillRect( rect, QBrush(bgGradient) );
         }
+    } else if ( index().row() % 2 == 1 ) {
+        // Draw alternate background (if journey ratings aren't available)
+        QLinearGradient bgGradient( 0, 0, 1, 0 );
+        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+        bgGradient.setColorAt( 0, Qt::transparent );
+        bgGradient.setColorAt( 0.4, alternateBackgroundColor );
+        bgGradient.setColorAt( 0.6, alternateBackgroundColor );
+        bgGradient.setColorAt( 1, Qt::transparent );
+
+        painter->fillRect( rect, QBrush(bgGradient) );
     }
 
     // Draw special background for departures with an alarm
@@ -716,6 +703,16 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
 
         painter->fillRect( rect, QBrush(bgGradient) );
     }
+    
+    // Draw a line at the bottom of this TimetableItem
+    QLinearGradient borderGradient( 0, 0, 1, 0 );
+    borderGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+    borderGradient.setColorAt( 0, Qt::transparent );
+    borderGradient.setColorAt( 0.4, borderColor );
+    borderGradient.setColorAt( 0.6, borderColor );
+    borderGradient.setColorAt( 1, Qt::transparent );
+    painter->fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()),
+                       QBrush(borderGradient) );
 }
 
 void JourneyGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -903,7 +900,7 @@ void DepartureGraphicsItem::paintBackground( QPainter* painter,
 
         painter->fillRect( rect, QBrush(bgGradient) );
     } else if ( index().row() % 2 == 1 ) {
-        // Draw alternate background
+        // Draw alternate background (if departure groups are disabled)
         QLinearGradient bgGradient( 0, 0, 1, 0 );
         bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
         bgGradient.setColorAt( 0, Qt::transparent );
