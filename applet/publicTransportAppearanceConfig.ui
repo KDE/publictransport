@@ -23,20 +23,7 @@
    <property name="formAlignment">
     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
    </property>
-   <item row="0" column="0" colspan="2">
-    <widget class="QLabel" name="lblTimetable">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string comment="@title">Timetable</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
+   <item row="0" column="0">
     <widget class="QLabel" name="lblSize">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -55,7 +42,7 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
+   <item row="0" column="1">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QLabel" name="label">
@@ -101,7 +88,7 @@
      </item>
     </layout>
    </item>
-   <item row="2" column="0">
+   <item row="1" column="0">
     <widget class="QLabel" name="lblLinesPerRow">
      <property name="text">
       <string comment="@label:spinbox">&amp;Lines per Row:</string>
@@ -114,7 +101,7 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
+   <item row="1" column="1">
     <widget class="KIntNumInput" name="linesPerRow">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -138,7 +125,7 @@
       <number>5</number>
      </property>
      <property name="suffix">
-      <string comment="@info Suffix for the 'Lines Per Row' spinbox"> lines</string>
+      <string comment="@info/plain Suffix for the 'Lines Per Row' spinbox"> lines</string>
      </property>
      <property name="specialValueText">
       <string/>
@@ -148,7 +135,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="0">
+   <item row="2" column="0">
     <widget class="QLabel" name="lblFont">
      <property name="text">
       <string comment="@label">&amp;Font:</string>
@@ -161,7 +148,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="1">
+   <item row="2" column="1">
     <widget class="QRadioButton" name="radioUseDefaultFont">
      <property name="text">
       <string comment="@option:radio">Use &amp;default workspace theme font</string>
@@ -171,14 +158,14 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="1">
+   <item row="3" column="1">
     <widget class="QRadioButton" name="radioUseOtherFont">
      <property name="text">
       <string comment="@option:radio Text of the radio button to use a custom font">Other:</string>
      </property>
     </widget>
    </item>
-   <item row="5" column="1">
+   <item row="4" column="1">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <spacer name="horizontalSpacer">
@@ -205,7 +192,7 @@
      </item>
     </layout>
    </item>
-   <item row="6" column="0">
+   <item row="5" column="0">
     <widget class="QLabel" name="lblFont_2">
      <property name="text">
       <string comment="@label">S&amp;hadow:</string>
@@ -218,7 +205,7 @@
      </property>
     </widget>
    </item>
-   <item row="6" column="1">
+   <item row="5" column="1">
     <widget class="QCheckBox" name="shadow">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -237,7 +224,42 @@
      </property>
     </widget>
    </item>
-   <item row="8" column="0" colspan="2">
+   <item row="6" column="0">
+    <widget class="QLabel" name="lblFont_3">
+     <property name="text">
+      <string comment="@label">&amp;Colorized Departure Groups:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>colorize</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QCheckBox" name="colorize">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string comment="@info:tooltip">Whether or not departures should be grouped by direction.</string>
+     </property>
+     <property name="whatsThis">
+      <string comment="@info:whatsthis">If enabled, departures get grouped by direction automatically. A color gets assigned to each group and is used as background color for departures in the group.&lt;nl/&gt;Each group can be hidden easily using the filter menu.</string>
+     </property>
+     <property name="text">
+      <string comment="@option:check">Enabled</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0" colspan="2">
     <spacer name="verticalSpacer_4">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -253,7 +275,7 @@
      </property>
     </spacer>
    </item>
-   <item row="9" column="0" colspan="2">
+   <item row="8" column="0" colspan="2">
     <widget class="QLabel" name="lblTimetable_2">
      <property name="font">
       <font>
@@ -266,7 +288,7 @@
      </property>
     </widget>
    </item>
-   <item row="10" column="0">
+   <item row="9" column="0">
     <widget class="QLabel" name="lblcmbDepartureColumnInfos">
      <property name="text">
       <string comment="@label:listbox">&amp;Information Shown:</string>
@@ -279,7 +301,7 @@
      </property>
     </widget>
    </item>
-   <item row="10" column="1">
+   <item row="9" column="1">
     <widget class="KComboBox" name="cmbDepartureColumnInfos">
      <property name="autoCompletion">
       <bool>false</bool>
@@ -301,7 +323,7 @@
      </item>
     </widget>
    </item>
-   <item row="11" column="0">
+   <item row="10" column="0">
     <widget class="QLabel" name="lblDisplayTimeBold">
      <property name="text">
       <string comment="@label">Display Time &amp;Bold:</string>
@@ -314,7 +336,7 @@
      </property>
     </widget>
    </item>
-   <item row="11" column="1">
+   <item row="10" column="1">
     <widget class="QCheckBox" name="displayTimeBold">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -324,41 +346,6 @@
      </property>
      <property name="toolTip">
       <string comment="@info:tooltip">Whether or not departure / arrival times should be bold.</string>
-     </property>
-     <property name="text">
-      <string comment="@option:check">Enabled</string>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0">
-    <widget class="QLabel" name="lblFont_3">
-     <property name="text">
-      <string comment="@label">&amp;Colorized Departure Groups:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-     <property name="buddy">
-      <cstring>colorize</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="1">
-    <widget class="QCheckBox" name="colorize">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string comment="@info:tooltip">Whether or not departures should be grouped by direction.</string>
-     </property>
-     <property name="whatsThis">
-      <string comment="@info:whatsthis">If enabled, departures get grouped by direction automatically. A color gets assigned to each group and is used as background color for departures in the group.&lt;nl/&gt;Each group can be hidden easily using the filter menu.</string>
      </property>
      <property name="text">
       <string comment="@option:check">Enabled</string>

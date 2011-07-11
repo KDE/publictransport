@@ -131,7 +131,7 @@
       <string/>
      </property>
      <property name="suffix">
-      <string comment="@info Suffix for the 'Maximum Departures' spinbox"> departures</string>
+      <string comment="@info/plain Suffix for the 'Maximum Departures' spinbox"> departures</string>
      </property>
      <property name="prefix">
       <string/>
