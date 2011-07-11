@@ -200,7 +200,7 @@ public:
 
     void updateData( DepartureItem *item );
 
-    void setZoomFactor( qreal zoomFactor = 1.0 ) { m_zoomFactor = zoomFactor; };
+    void setZoomFactor( qreal zoomFactor = 1.0 );
     qreal zoomFactor() const { return m_zoomFactor; };
     inline qreal padding() const { return 5.0; };
 
@@ -243,6 +243,9 @@ public:
     QRectF infoTextRect() const;
     RouteStopFlags routeStopFlags() const { return m_stopFlags; };
     QString stopName() const { return m_stopName; };
+    
+    void setZoomFactor( qreal zoomFactor = 1.0 );
+    qreal zoomFactor() const { return m_zoomFactor; };
 
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
@@ -259,6 +262,7 @@ private:
 
     RouteStopFlags m_stopFlags;
     QString m_stopName;
+    qreal m_zoomFactor;
 };
 
 /**

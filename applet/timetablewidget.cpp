@@ -60,6 +60,18 @@ PublicTransportGraphicsItem::~PublicTransportGraphicsItem()
     delete m_pixmap;
 }
 
+void DepartureGraphicsItem::updateSettings()
+{
+    m_routeItem->setZoomFactor( m_parent->zoomFactor() );
+    update();
+}
+
+void JourneyGraphicsItem::updateSettings()
+{
+    m_routeItem->setZoomFactor( m_parent->zoomFactor() );
+    update();
+}
+
 void PublicTransportGraphicsItem::setExpanded( bool expand )
 {
     m_expanded = expand;
@@ -314,7 +326,8 @@ void DepartureGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event )
     if ( m_routeItem ) {
         QRectF _infoRect = infoRect( rect(), 0 );
         m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
-        m_routeItem->resize( rect().width() - padding() - _infoRect.left(), ROUTE_ITEM_HEIGHT );
+        m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
+                             ROUTE_ITEM_HEIGHT * m_parent->zoomFactor() );
     }
 }
 
@@ -562,6 +575,7 @@ void JourneyGraphicsItem::updateData( JourneyItem* item, bool updateLayouts )
                     m_copyStopToClipboardAction, m_requestJourneyToStopAction,
                     m_requestJourneyFromStopAction );
             QRectF _infoRect = infoRect( rect() );
+            m_routeItem->setZoomFactor( m_parent->zoomFactor() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
                                 m_routeItem->size().height() );
@@ -595,8 +609,10 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
             m_routeItem = new RouteGraphicsItem( this, item, m_copyStopToClipboardAction,
                     m_showDeparturesAction, m_highlightStopAction, m_newFilterViaStopAction );
             QRectF _infoRect = infoRect( rect(), 0 );
+            m_routeItem->setZoomFactor( m_parent->zoomFactor() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
-            m_routeItem->resize( rect().width() - padding() - _infoRect.left(), ROUTE_ITEM_HEIGHT );
+            m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
+                                 ROUTE_ITEM_HEIGHT * m_parent->zoomFactor() );
         }
     } else if ( m_routeItem ) {
         delete m_routeItem;
@@ -1368,6 +1384,17 @@ PublicTransportGraphicsItem* PublicTransportWidget::item( const QModelIndex& ind
     }
 
     return NULL;
+}
+
+void PublicTransportWidget::setZoomFactor( qreal zoomFactor )
+{
+    m_zoomFactor = zoomFactor;
+
+    for ( int i = 0; i < m_items.count(); ++i ) {
+        // Notify childs about changed settings
+        m_items[i]->updateSettings();
+    }
+    update();
 }
 
 void PublicTransportWidget::contextMenuEvent( QGraphicsSceneContextMenuEvent* event )

@@ -29,6 +29,7 @@
 #include <Plasma/LineEdit>
 #include <Plasma/ToolButton>
 #include <QMenu>
+#include <qmath.h>
 
 TitleWidget::TitleWidget(TitleType titleType, Settings *settings, QGraphicsItem* parent)
         : QGraphicsWidget(parent), m_icon(0), m_filterWidget(0),
@@ -488,7 +489,7 @@ void TitleWidget::slotJourneySearchInputChanged(const QString& text)
 
 void TitleWidget::settingsChanged()
 {
-    int mainIconExtend = 32 * m_settings->sizeFactor;
+    int mainIconExtend = qCeil(32 * m_settings->sizeFactor);
     m_icon->setMinimumSize( mainIconExtend, mainIconExtend );
     m_icon->setMaximumSize( mainIconExtend, mainIconExtend );
 

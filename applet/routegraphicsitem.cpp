@@ -56,6 +56,19 @@ void RouteGraphicsItem::resizeEvent(QGraphicsSceneResizeEvent* event)
     arrangeStopItems();
 }
 
+void RouteGraphicsItem::setZoomFactor( qreal zoomFactor )
+{
+    m_zoomFactor = zoomFactor;
+    arrangeStopItems();
+    update();
+}
+
+void JourneyRouteStopGraphicsItem::setZoomFactor( qreal zoomFactor )
+{
+    m_zoomFactor = zoomFactor;
+    update();
+}
+
 void RouteGraphicsItem::arrangeStopItems()
 {
     if ( !m_item ) {
@@ -95,9 +108,12 @@ void RouteGraphicsItem::arrangeStopItems()
 
         // Compute maximal text width for the computed angle,
         // so that the stop name won't go outside of routeRect
-        m_maxTextWidth = (routeRect.height() - startStopPos.y() /*- 10*/ - 6.0 * m_zoomFactor
-                - qCos(m_textAngle * 3.14159 / 180.0) * fm.height())
-                / qSin(m_textAngle * 3.14159 / 180.0);
+//         m_maxTextWidth = (routeRect.height() - startStopPos.y() /*- 10*/ - 6.0 * m_zoomFactor
+//                 - qCos(m_textAngle * 3.14159 / 180.0) * fm.height())
+//                 / qSin(m_textAngle * 3.14159 / 180.0);
+        const qreal height = routeRect.height() - startStopPos.y();
+        const qreal angle = m_textAngle * 3.14159 / 180.0;
+        m_maxTextWidth = height / qSin(angle) - fm.height() / qTan(angle);
 
         for ( int i = 0; i < count; ++i ) {
             QPointF stopMarkerPos( startStopPos.x() + i * step, startStopPos.y() );
@@ -499,25 +515,26 @@ void RouteStopMarkerGraphicsItem::setHoverStep( qreal hoverStep )
 
 qreal RouteStopMarkerGraphicsItem::radius() const
 {
+    RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
+    qreal zoomFactor = routeItem->zoomFactor();
     if ( m_markerType == IntermediateStopMarker ) {
-        return 12.0 + 2.0 * m_hoverStep;
+        return (12.0 + 2.0 * m_hoverStep) * zoomFactor;
     } else {
-        RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
         DepartureModel *model = !routeItem || !routeItem->item() ? NULL :
                 qobject_cast<DepartureModel*>( routeItem->item()->model() );
         bool isHighlightedStop = model && model->routeItemFlags(m_textItem->stopName())
                 .testFlag(RouteItemHighlighted);
 
         if ( isHighlightedStop ) {
-            return 7.5 + 2.0 * m_hoverStep;
+            return (7.5 + 2.0 * m_hoverStep) * zoomFactor;
         } else if ( m_stopFlags.testFlag(RouteStopIsHomeStop) ) {
-            return 7.5 + 2.0 * m_hoverStep;
+            return (7.5 + 2.0 * m_hoverStep) * zoomFactor;
         } else if ( m_stopFlags.testFlag(RouteStopIsOrigin) ) {
-            return 7.5 + 2.0 * m_hoverStep;
+            return (7.5 + 2.0 * m_hoverStep) * zoomFactor;
         } else if ( m_stopFlags.testFlag(RouteStopIsTarget) ) {
-            return 7.5 + 2.0 * m_hoverStep;
+            return (7.5 + 2.0 * m_hoverStep) * zoomFactor;
         } else {
-            return 6.0 + 2.0 * m_hoverStep;
+            return (6.0 + 2.0 * m_hoverStep) * zoomFactor;
         }
     }
 }
@@ -764,7 +781,7 @@ QSizeF JourneyRouteStopGraphicsItem::sizeHint( Qt::SizeHint which, const QSizeF&
     if ( which == Qt::MinimumSize || which == Qt::MaximumSize ) {
         const qreal marginLeft = 32.0; // TODO
         return QSizeF( marginLeft + TextDocumentHelper::textDocumentWidth(m_infoTextDocument),
-                    m_infoTextDocument->size().height() + 5 );
+                       m_infoTextDocument->size().height() + 5 );
     } else {
         return QGraphicsWidget::sizeHint(which, constraint);
     }

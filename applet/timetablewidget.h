@@ -88,6 +88,13 @@ public:
     /** @brief The QModelIndex to the data for this item. */
     QModelIndex index() const { return m_item->index(); };
 
+    /**
+     * @brief Notifies this item about changed settings in the parent PublicTransportWidget.
+     *
+     * The default implementation does nothing.
+     **/
+    virtual void updateSettings() {};
+
     virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
 
     /**
@@ -330,6 +337,9 @@ public:
      **/
     void updateData( DepartureItem* item, bool update = false );
 
+    /** @brief Notifies this item about changed settings in the parent PublicTransportWidget. */
+    virtual void updateSettings();
+
     /** @brief The DepartureItem representing this item in the model. */
     inline DepartureItem *departureItem() const { return qobject_cast<DepartureItem*>(m_item); };
 
@@ -465,6 +475,9 @@ public:
      **/
     void updateData( JourneyItem* item, bool update = false );
 
+    /** @brief Notifies this item about changed settings in the parent PublicTransportWidget. */
+    virtual void updateSettings();
+
     /** @brief The JourneyItem representing this item in the model. */
     inline JourneyItem *journeyItem() const { return qobject_cast<JourneyItem*>(m_item); };
 
@@ -582,7 +595,7 @@ public:
     qreal iconSize() const { return m_maxLineCount == 1 ? m_iconSize * m_zoomFactor * 0.75
             : m_iconSize * m_zoomFactor; };
 
-    void setZoomFactor( qreal zoomFactor = 1.0 ) { m_zoomFactor = zoomFactor; };
+    void setZoomFactor( qreal zoomFactor = 1.0 );
     qreal zoomFactor() const { return m_zoomFactor; };
 
     /** @brief Sets the text shown when this item contains no item (ie. is empty) to @p noItemsText. */
