@@ -821,7 +821,6 @@ void SettingsUiManager::updateFilterConfigurationLists()
     m_stopListWidget->setFilterConfigurations( m_filterSettings );
 
     // TODO Not needed any longer?
-    // Rebuild "Filter Uses" tab in filter page with the new filter configuration names
     stopSettingsChanged();
 }
 
@@ -889,6 +888,9 @@ void SettingsUiManager::removeFilterConfiguration()
     QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
     m_filterSettings.removeByName( filterConfiguration );
 
+    // Update widgets containing a list of filter configuration names
+    updateFilterConfigurationLists();
+
     // Remove filter configuration from the UI filter list
     m_uiFilter.filterConfigurations->removeItem( index );
 
@@ -902,8 +904,6 @@ void SettingsUiManager::removeFilterConfiguration()
         setValuesOfFilterConfig();
     }
 
-    // Update widgets containing a list of filter configuration names
-    updateFilterConfigurationLists();
     setFilterConfigurationChanged();
 }
 
@@ -1003,6 +1003,8 @@ void SettingsUiManager::setFilterConfigurationChanged( bool changed )
     m_uiFilter.filterConfigurations->setDisabled( noFilter );
     m_uiFilter.removeFilterConfiguration->setDisabled( noFilter );
     m_uiFilter.renameFilterConfiguration->setDisabled( noFilter );
+
+    m_stopListWidget->setFilterConfigurations( m_filterSettings );
 
     m_filterConfigChanged = changed;
 }
