@@ -739,6 +739,7 @@ JourneyRouteStopGraphicsItem::JourneyRouteStopGraphicsItem( JourneyRouteGraphics
     const QPixmap &vehiclePixmap, const QString &text, RouteStopFlags routeStopFlags, const QString &stopName )
     : QGraphicsWidget(parent), m_parent(parent), m_infoTextDocument(0)
 {
+    m_zoomFactor = 1.0;
     m_vehiclePixmap = vehiclePixmap;
     m_stopFlags = routeStopFlags;
     m_stopName = stopName;
@@ -779,9 +780,9 @@ void JourneyRouteStopGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEve
 QSizeF JourneyRouteStopGraphicsItem::sizeHint( Qt::SizeHint which, const QSizeF& constraint ) const
 {
     if ( which == Qt::MinimumSize || which == Qt::MaximumSize ) {
-        const qreal marginLeft = 32.0; // TODO
+        const qreal marginLeft = 32.0 * m_zoomFactor;
         return QSizeF( marginLeft + TextDocumentHelper::textDocumentWidth(m_infoTextDocument),
-                       m_infoTextDocument->size().height() + 5 );
+                       m_infoTextDocument->size().height() + 5 * m_zoomFactor );
     } else {
         return QGraphicsWidget::sizeHint(which, constraint);
     }
@@ -789,12 +790,12 @@ QSizeF JourneyRouteStopGraphicsItem::sizeHint( Qt::SizeHint which, const QSizeF&
 
 QRectF JourneyRouteStopGraphicsItem::infoTextRect() const
 {
-    const qreal marginLeft = 32.0; // TODO
+    const qreal marginLeft = 32.0 * m_zoomFactor;
     return contentsRect().adjusted( marginLeft, 0.0, 0.0, 0.0 );
 }
 
 void JourneyRouteStopGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                                        QWidget* widget )
+                                          QWidget* widget )
 {
     Q_UNUSED( widget );
 
@@ -824,7 +825,7 @@ void JourneyRouteStopGraphicsItem::paint( QPainter* painter, const QStyleOptionG
     bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 192;
     QRectF textRect = infoTextRect();
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
-                                        textRect.toRect(), drawHalos );
+                                          textRect.toRect(), drawHalos );
 }
 
 JourneyRouteGraphicsItem::JourneyRouteGraphicsItem( QGraphicsItem* parent, JourneyItem* item,
@@ -950,6 +951,7 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
             }
             JourneyRouteStopGraphicsItem *routeItem = new JourneyRouteStopGraphicsItem(
                     this, QPixmap(32, 32), text, routeStopFlags, info->routeStops()[i] );
+            routeItem->setZoomFactor( m_zoomFactor );
             routeItem->setFont( *font );
 
             QList<QAction*> actionList;
@@ -983,10 +985,10 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
 
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 
-    const qreal marginLeft = 32.0; // TODO
-    const qreal iconSize = 32.0;
+    const qreal marginLeft = 32.0 * m_zoomFactor; // TODO
+    const qreal iconSize = 32.0 * m_zoomFactor;
     QRectF timelineRect = contentsRect();
-    timelineRect.setWidth( marginLeft - 6 );
+    timelineRect.setWidth( marginLeft - 6 * m_zoomFactor );
     timelineRect.setLeft( iconSize / 2.0 );
     const qreal routeLineWidth = 4.0 * m_zoomFactor;
 
@@ -999,29 +1001,29 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
     painter->setBrush( Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor) );
 #endif
     painter->drawRoundedRect( QRectF(timelineRect.left(), timelineRect.top() + padding(),
-                                    routeLineWidth, timelineRect.height() - 2 * padding()),
-                            routeLineWidth / 2.0, routeLineWidth / 2.0 );
+                                     routeLineWidth, timelineRect.height() - 2 * padding()),
+                              routeLineWidth / 2.0, routeLineWidth / 2.0 );
 
     if ( m_routeItems.isEmpty() ) {
         return;
     }
 
-    qreal stopRadius = 5.0;
-    qreal lastY = -5.0;
+    qreal stopRadius = 5.0 * m_zoomFactor;
+    qreal lastY = -stopRadius;
     for ( int i = 0; i < m_routeItems.count() - 1; ++i ) {
         JourneyRouteStopGraphicsItem *routeItem = m_routeItems[i];
         qreal y = routeItem->pos().y() + routeItem->size().height();
         QRectF iconRect( timelineRect.left() + (routeLineWidth - iconSize) / 2.0,
-                        y - iconSize / 2.0, iconSize, iconSize );
+                         y - iconSize / 2.0, iconSize, iconSize );
         QPointF stopPos( timelineRect.left() + routeLineWidth / 2.0,
-                        lastY + (y - lastY) / 2.0 + 1.0 );
+                         lastY + (y - lastY) / 2.0 + 1.0 );
 
         // Draw lines to connect to the stop text
         qreal lineWidth = iconSize / 2.0;
         qreal lineHeight = routeItem->size().height() / 3.0;
         painter->drawLine( stopPos.x(), stopPos.y(), stopPos.x() + lineWidth, stopPos.y() );
         painter->drawLine( stopPos.x() + lineWidth, stopPos.y() - lineHeight,
-                        stopPos.x() + lineWidth, stopPos.y() + lineHeight );
+                           stopPos.x() + lineWidth, stopPos.y() + lineHeight );
 
         // Draw the stop
         KIcon("public-transport-stop").paint( painter,
@@ -1079,13 +1081,13 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
     // Draw last stop marker
     JourneyRouteStopGraphicsItem *routeItem = m_routeItems.last();
     QPointF stopPos( timelineRect.left() + routeLineWidth / 2.0,
-                    lastY + (timelineRect.bottom() - lastY) / 2.0 + 1.0 );
+                     lastY + (timelineRect.bottom() - lastY) / 2.0 + 1.0 );
     qreal lineWidth = iconSize / 2.0;
     qreal lineHeight = routeItem->size().height() / 3.0;
     painter->drawLine( stopPos.x(), stopPos.y(), stopPos.x() + lineWidth, stopPos.y() );
     painter->drawLine( stopPos.x() + lineWidth, stopPos.y() - lineHeight,
-                        stopPos.x() + lineWidth, stopPos.y() + lineHeight );
+                       stopPos.x() + lineWidth, stopPos.y() + lineHeight );
     KIcon("public-transport-stop").paint( painter,
-                                        stopPos.x() - stopRadius, stopPos.y() - stopRadius,
-                                        2.0 * stopRadius, 2.0 * stopRadius );
+                                          stopPos.x() - stopRadius, stopPos.y() - stopRadius,
+                                          2.0 * stopRadius, 2.0 * stopRadius );
 }
