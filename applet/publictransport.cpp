@@ -139,6 +139,7 @@ void PublicTransport::init()
     m_model = new DepartureModel( this );
     m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
     m_model->setHomeStop( m_settings.currentStopSettings().stop(0).name );
+    m_model->setCurrentStopIndex( m_settings.currentStopSettingsIndex );
     connect( m_model, SIGNAL(alarmFired(DepartureItem*)), this, SLOT(alarmFired(DepartureItem*)) );
     connect( m_model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
              this, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
@@ -519,10 +520,14 @@ void PublicTransport::setupActions()
     connect( m_filtersGroup, SIGNAL(triggered(QAction*)),
              this, SLOT(switchFilterConfiguration(QAction*)) );
 
+    m_filterByGroupColorGroup = new QActionGroup( this );
+    m_filterByGroupColorGroup->setExclusive( false );
+    connect( m_filterByGroupColorGroup, SIGNAL(triggered(QAction*)),
+             this, SLOT(switchFilterByGroupColor(QAction*)) );
+
     KAction *actionFilterConfiguration = new KSelectAction( KIcon("view-filter"),
             i18nc("@action", "Filter"), this );
     KMenu *menu = new KMenu;
-    menu->addTitle( KIcon("view-filter"), i18nc("@item:inmenu", "Used Filter Configurations") );
     actionFilterConfiguration->setMenu( menu );
     actionFilterConfiguration->setEnabled( true );
     addAction( "filterConfiguration", actionFilterConfiguration );
@@ -551,30 +556,9 @@ QList< QAction* > PublicTransport::contextualActions()
             ? action( "showArrivals" ) : action( "showDepartures" );
 
     KAction *actionFilter = NULL;
-    QStringList filterConfigurationList;// = m_settings.filterSettings.keys();
-    foreach ( const FilterSettings &filterSettings, m_settings.filterSettingsList ) {
-        filterConfigurationList << filterSettings.name;
-    }
-    if ( !filterConfigurationList.isEmpty() ) {
-        actionFilter = qobject_cast< KAction* >( action( "filterConfiguration" ) );
-        QList< QAction* > oldActions = m_filtersGroup->actions();
-        foreach( QAction *oldAction, oldActions ) {
-            m_filtersGroup->removeAction( oldAction );
-            delete oldAction;
-        }
-
-        QMenu *menu = actionFilter->menu();
-        QString currentFilterConfig = m_settings.currentStopSettings().get<QString>(
-                FilterConfigurationSetting );
-        foreach( const QString &filterConfig, filterConfigurationList ) {
-            QAction *action = new QAction(
-                    GlobalApplet::translateFilterKey(filterConfig), m_filtersGroup );
-            action->setCheckable( true );
-            menu->addAction( action );
-            if ( filterConfig == currentFilterConfig ) {
-                action->setChecked( true );
-            }
-        }
+    if ( !m_settings.filterSettingsList.isEmpty() ) {
+        actionFilter = qobject_cast< KAction* >( action("filterConfiguration") );
+        updateFilterMenu();
     }
 
     QList< QAction* > actions;
@@ -883,16 +867,16 @@ QString PublicTransport::stripDateAndTimeValues( const QString& sourceName ) con
     return ret;
 }
 
-QList< DepartureInfo > PublicTransport::departureInfos() const
+QList< DepartureInfo > PublicTransport::departureInfos( bool includeFiltered, int max ) const
 {
     QList< DepartureInfo > ret;
 
     for ( int n = m_stopIndexToSourceName.count() - 1; n >= 0; --n ) {
         QString sourceName = stripDateAndTimeValues( m_stopIndexToSourceName[n] );
-        if ( m_departureInfos.contains( sourceName ) ) {
+        if ( m_departureInfos.contains(sourceName) ) {
             foreach( const DepartureInfo &departureInfo, m_departureInfos[sourceName] ) {
                 // Only add not filtered items
-                if ( !departureInfo.isFilteredOut() ) {
+                if ( !departureInfo.isFilteredOut() || includeFiltered ) {
                     ret << departureInfo;
                 }
             }
@@ -900,7 +884,8 @@ QList< DepartureInfo > PublicTransport::departureInfos() const
     }
 
     qSort( ret.begin(), ret.end() );
-    return ret.mid( 0, m_settings.maximalNumberOfDepartures );
+    return max == -1 ? ret.mid( 0, m_settings.maximalNumberOfDepartures )
+                     : ret.mid( 0, max );
 }
 
 void PublicTransport::clearDepartures()
@@ -1283,6 +1268,7 @@ void PublicTransport::configChanged()
 
     // Apply filter, first departure and alarm settings to the worker thread
     m_departureProcessor->setFilterSettings( m_settings.currentFilterSettings() );
+    m_departureProcessor->setColorGroupSettings( m_settings.currentColorGroupSettings() );
     StopSettings stopSettings = m_settings.currentStopSettings();
     m_departureProcessor->setFirstDepartureSettings(
             static_cast<FirstDepartureConfigMode>(stopSettings.get<int>(
@@ -1503,6 +1489,18 @@ void PublicTransport::switchFilterConfiguration( QAction* action )
     writeSettings( settings );
 }
 
+void PublicTransport::switchFilterByGroupColor( QAction* action )
+{
+    const QColor color = action->data().value<QColor>();
+    const bool enable = action->isChecked();
+
+    // Change filter configuration of the current stop in a copy of the settings.
+    // Then write the new settings.
+    Settings settings = m_settings;
+    settings.colorGroupSettingsList[settings.currentStopSettingsIndex].enableColorGroup( color, enable );
+    writeSettings( settings );
+}
+
 void PublicTransport::enableFilterConfiguration( const QString& filterConfiguration, bool enable )
 {
     const QString filterConfig = GlobalApplet::untranslateFilterKey( filterConfiguration );
@@ -1670,36 +1668,85 @@ void PublicTransport::journeySearchLineChanged( const QString& stopName,
     reconnectJourneySource( stopName, departure, stopIsTarget, timeIsDeparture, true );
 }
 
-// TODO: Move to TitleWidget?
-void PublicTransport::showFilterMenu()
+KMenu *PublicTransport::updateFilterMenu()
 {
-    // TODO make a new function for this (updateFilterMenu())
-    // because of redundancy in PublicTransport::contextualActions().
-    KAction *actionFilter = NULL;
-    if ( !m_settings.filterSettingsList.isEmpty() ) {
-        actionFilter = qobject_cast< KAction* >( action("filterConfiguration") );
-        QList< QAction* > oldActions = m_filtersGroup->actions();
-        foreach( QAction *oldAction, oldActions ) {
-            m_filtersGroup->removeAction( oldAction );
-            delete oldAction;
-        }
+    KAction *actionFilter = qobject_cast< KAction* >( action("filterConfiguration") );
+    QList< QAction* > oldActions = m_filtersGroup->actions();
+    foreach( QAction *oldAction, oldActions ) {
+        m_filtersGroup->removeAction( oldAction );
+        delete oldAction;
+    }
+    
+    KMenu *menu = qobject_cast<KMenu*>( actionFilter->menu() );
+    menu->clear();
+    bool showColorGrous = m_settings.colorize && !m_settings.colorGroupSettingsList.isEmpty();
+    if ( m_settings.filterSettingsList.isEmpty() && !showColorGrous ) {
+        return menu; // Nothing to show in the filter menu
+    }
 
-        QMenu *menu = actionFilter->menu();
-        QString currentFilterConfig = m_settings.currentStopSettings().get<QString>(
-                FilterConfigurationSetting );
+    if ( !m_settings.filterSettingsList.isEmpty() ) {
+        menu->addTitle( KIcon("view-filter"), i18nc("@title This is a menu title",
+                                                    "Enabled Filters (reducing)") );
         foreach( const FilterSettings &filterSettings, m_settings.filterSettingsList ) {
             QAction *action = new QAction(
                     GlobalApplet::translateFilterKey(filterSettings.name), m_filtersGroup );
             action->setCheckable( true );
-            menu->addAction( action );
             if ( filterSettings.affectedStops.contains(m_settings.currentStopSettingsIndex) ) {
                 action->setChecked( true );
             }
+
+            menu->addAction( action );
         }
     }
 
+    if ( showColorGrous ) {
+        if ( m_settings.departureArrivalListType == ArrivalList ) {
+            menu->addTitle( KIcon("object-group"), i18nc("@title This is a menu title",
+                                                         "Enabled Arrival Groups (extending)") );
+        } else {
+            menu->addTitle( KIcon("object-group"), i18nc("@title This is a menu title",
+                                                         "Enabled Departure Groups (extending)") );
+        }
+        foreach( const ColorGroupSettings &colorGroupSettings,
+                 m_settings.currentColorGroupSettings() )
+        {
+            QAction *action = new QAction( colorGroupSettings.lastCommonStopName,
+                                           m_filterByGroupColorGroup );
+            action->setCheckable( true );
+            if ( !colorGroupSettings.filterOut ) {
+                action->setChecked( true );
+            }
+            action->setData( QVariant::fromValue(colorGroupSettings.color) );
+
+            QPixmap pixmap( QSize(16, 16) );
+            pixmap.fill( Qt::transparent );
+            QPainter p( &pixmap );
+            p.setRenderHints( QPainter::Antialiasing );
+            p.setBrush( colorGroupSettings.color );
+            QColor borderColor = KColorScheme(QPalette::Active).foreground().color();
+            borderColor.setAlphaF( 0.5 );
+            p.setPen( borderColor );
+            p.drawRoundedRect( QRect(QPoint(1,1), pixmap.size() - QSize(2, 2)), 4, 4 );
+            p.end();
+
+            KIcon colorIcon;
+            colorIcon.addPixmap( pixmap );
+            action->setIcon( colorIcon );
+
+            menu->addAction( action );
+        }
+    }
+    
+    return menu;
+}
+
+// TODO: Move to TitleWidget?
+void PublicTransport::showFilterMenu()
+{
+    KMenu *menu = updateFilterMenu();
+
     // Show the filters menu under the filter icon
-    actionFilter->menu()->exec( QCursor::pos() );
+    menu->exec( QCursor::pos() );
 //   view()->mapToGlobal(
 // 		view()->mapFromScene(m_filterIcon->mapToScene(0,
 // 				m_filterIcon->boundingRect().height()))) );
@@ -1909,6 +1956,7 @@ void PublicTransport::writeSettings( const Settings& settings )
 
     if ( changed.testFlag(SettingsIO::IsChanged) ) {
         m_settings = settings;
+
         m_currentServiceProviderFeatures = currentServiceProviderData()["features"].toStringList();
         emit configNeedsSaving();
         emit settingsChanged();
@@ -1944,7 +1992,9 @@ void PublicTransport::writeSettings( const Settings& settings )
             adjustColorGroupSettingsCount();
             clearDepartures();
             reconnectSource();
-        } else if ( changed.testFlag(SettingsIO::ChangedFilterSettings) ) {
+        } else if ( changed.testFlag(SettingsIO::ChangedFilterSettings)
+                 || changed.testFlag(SettingsIO::ChangedColorGroupSettings) )
+        {
             for ( int n = 0; n < m_stopIndexToSourceName.count(); ++n ) {
                 QString sourceName = stripDateAndTimeValues( m_stopIndexToSourceName[n] );
                 m_departureProcessor->filterDepartures( sourceName,
@@ -1960,6 +2010,7 @@ void PublicTransport::writeSettings( const Settings& settings )
              changed.testFlag(SettingsIO::ChangedStopSettings) )
         {
             m_model->setHomeStop( m_settings.currentStopSettings().stop(0).name );
+            m_model->setCurrentStopIndex( m_settings.currentStopSettingsIndex );
 
             if ( m_modelJourneys ) {
                 m_modelJourneys->setHomeStop( m_settings.currentStopSettings().stop(0).name );
@@ -1969,18 +2020,10 @@ void PublicTransport::writeSettings( const Settings& settings )
 
         if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
              changed.testFlag(SettingsIO::ChangedStopSettings) ||
-             changed.testFlag(SettingsIO::ChangedFilterSettings) )
+             changed.testFlag(SettingsIO::ChangedFilterSettings) ||
+             changed.testFlag(SettingsIO::ChangedColorGroupSettings) )
         {
             m_titleWidget->updateFilterWidget();
-        }
-
-        // (De)Colorize if colorization setting has been toggled
-        // or update colorization if stop settings have been changed
-        if ( changed.testFlag(SettingsIO::ChangedColorization) ||
-             changed.testFlag(SettingsIO::ChangedCurrentStop) ||
-             changed.testFlag(SettingsIO::ChangedStopSettings) )
-        {
-            updateColorGroupSettings(); // TODO needed? after filtering it gets called, after it gets new departures, too...
         }
 
         m_model->setAlarmSettings( m_settings.alarmSettings );
@@ -2689,7 +2732,7 @@ void GraphicsPixmapWidget::paint( QPainter* painter,
 }
 
 struct RoutePartCount {
-    QString latestCommonStop;
+    QString lastCommonStop;
     int usedCount; // used by X transport lines (each line and target counts as one)
 };
 
@@ -2718,22 +2761,36 @@ void PublicTransport::updateColorGroupSettings()
     if ( m_settings.colorize ) {
         // Generate color groups from existing departure data
         adjustColorGroupSettingsCount();
-        ColorGroupSettingsList colorGroups =
-                m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ];
-        kDebug() << "Generate new color group settings for" << m_model->departureInfos().count()
-                 << "departures, maximal 30";
-        colorGroups = generateColorGroupSettingsFrom( m_model->departureInfos().mid(0, 30) );
-        m_settings.colorGroupSettingsList[ m_settings.currentStopSettingsIndex ] = colorGroups;
-        m_model->setColorGroups( colorGroups );
+        ColorGroupSettingsList colorGroups = m_settings.currentColorGroupSettings();
+        ColorGroupSettingsList newColorGroups =
+                generateColorGroupSettingsFrom( departureInfos(true, 40) );
+
+        // Copy filterOut value from old color group settings
+        for ( int i = 0; i < newColorGroups.count(); ++i ) {
+            ColorGroupSettings &newColorGroup = newColorGroups[i];
+            if ( colorGroups.hasColor(newColorGroup.color) ) {
+                ColorGroupSettings colorGroup = colorGroups.byColor( newColorGroup.color );
+                newColorGroup.filterOut = colorGroup.filterOut;
+            }
+        }
+        m_model->setColorGroups( newColorGroups );
+        m_departureProcessor->setColorGroupSettings( newColorGroups );
+
+        // Change color group settings in a copy of the Settings object
+        // Then write the changed settings
+        Settings settings = m_settings;
+        settings.colorGroupSettingsList[ settings.currentStopSettingsIndex ] = newColorGroups;
+        writeSettings( settings );
     } else {
         // Remove color groups if colorization was toggled off
         // or if stop/filter settings were changed (update color groups after data arrived)
         m_model->setColorGroups( ColorGroupSettingsList() );
+        m_departureProcessor->setColorGroupSettings( ColorGroupSettingsList() );
     }
 }
 
 ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
-  const QList< DepartureInfo >& infoList )
+        const QList< DepartureInfo >& infoList )
 {
     kDebug() << "Generate new color group settings for" << infoList.count() << "departures";
 
@@ -2879,7 +2936,6 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
     QHash< QStringList, int > routePartsToLines;
     for ( int stopCount = 1; stopCount <= maxTestRouteLength; ++stopCount ) {
         foreach ( const DepartureInfo &info, infoList ) {
-//             QString transportLineAndTarget = info.lineString().toLower() + info.target().toLower();
             QStringList routePart = info.routeStops().mid( 1, stopCount );
             if ( routePart.isEmpty() ) {
                 kDebug() << "Route part is empty";// << transportLineAndTarget;
@@ -2888,12 +2944,8 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
 
             // Check if the route part was already counted
             if ( routePartsToLines.contains(routePart) ) {
-                // Check if the transportLineAndTarget string was already counted for the route part
-//           TODO      if ( !routePartsToLines[routePart].contains(transportLineAndTarget) ) {
-                    // Add new transportLineAndTarget string for the route part, 
-                    // ie. increment the count of the routepart by one
-                    ++routePartsToLines[routePart];
-//                 }
+                // Increment the count of the route part by one
+                ++routePartsToLines[routePart];
             } else {
                 // Add new route part with the transportLineAndTarget string counted
                 routePartsToLines.insert( routePart, 1 );
@@ -2906,12 +2958,11 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
     for ( QHash< QStringList, int >::const_iterator it = routePartsToLines.constBegin();
           it != routePartsToLines.constEnd(); ++it )
     {
-        // it.value() contains a TODO QStringList with all transportLineAndTarget strings for the
-        // lines using the current route part
+        // it.value() contains the number of departures with the same route part (in it.key())
         int count = it.value();
         if ( count > 0 ) {
             RoutePartCount routeCount;
-            routeCount.latestCommonStop = it.key().last();
+            routeCount.lastCommonStop = it.key().last();
             routeCount.usedCount = count;
             routePartCount << routeCount;
         }
@@ -2924,21 +2975,24 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
     ColorGroupSettingsList colorGroups;
     for ( int i = 0; i < maxGroupCount && i < routePartCount.count(); ++i ) {
         RoutePartCount routeCount = routePartCount[i];
-        ColorGroupSettings group;
-        Filter groupFilter;
-        groupFilter << Constraint( FilterByNextStop, FilterEquals, routeCount.latestCommonStop );
-        group.filters << groupFilter;
-        while ( routeCount.latestCommonStop.length() < 3 ) {
-            routeCount.latestCommonStop += "z";
+        QString hashString = routeCount.lastCommonStop;
+        while ( hashString.length() < 3 ) {
+            hashString += "z";
         }
-        int color = qHash(routeCount.latestCommonStop) % colors;
+        int color = qHash(hashString) % colors;
+
+        // Create filter for the new color group
+        Filter groupFilter;
+        groupFilter << Constraint( FilterByNextStop, FilterEquals, routeCount.lastCommonStop );
+
+        // Create the new color group
+        ColorGroupSettings group;
+        group.filters << groupFilter;
         group.color = oxygenColors[color];
+        group.lastCommonStopName = routeCount.lastCommonStop;
+
         colorGroups << group;
-
-//         kDebug() << "Colorgroup" << i << "created" << routeCount.latestCommonStop << routeCount.usedCount;
     }
-
-    // TODO: Enable color groups toggling in the filters menu
 
     return colorGroups;
 }

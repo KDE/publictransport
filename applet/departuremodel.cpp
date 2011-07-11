@@ -1322,11 +1322,19 @@ void PublicTransportModel::itemChanged( ItemBase* item, int columnLeft, int colu
 {
     if ( columnLeft == columnRight ) {
         QModelIndex index = indexFromItem( item, columnLeft );
-        emit dataChanged( index, index );
+        if ( !index.isValid() ) {
+            kDebug() << "The given item is not in the model";
+        } else {
+            emit dataChanged( index, index );
+        }
     } else {
         QModelIndex indexLeft = indexFromItem( item, columnLeft );
         QModelIndex indexRight = indexFromItem( item, columnRight );
-        emit dataChanged( indexLeft, indexRight );
+        if ( !indexLeft.isValid() ) {
+            kDebug() << "The given item is not in the model";
+        } else {
+            emit dataChanged( indexLeft, indexRight );
+        }
     }
 }
 
@@ -1775,6 +1783,11 @@ void DepartureModel::setDepartureArrivalListType( DepartureArrivalListType depar
     emit headerDataChanged( Qt::Horizontal, 1, 2 );
 }
 
+void DepartureModel::setCurrentStopIndex(int currentStopSettingsIndex)
+{
+    m_info.currentStopSettingsIndex = currentStopSettingsIndex;
+}
+
 QVariant DepartureModel::headerData( int section, Qt::Orientation orientation,
                                     int role ) const
 {
@@ -1812,9 +1825,21 @@ QList< DepartureInfo > DepartureModel::departureInfos() const
 {
     QList< DepartureInfo > infoList;
     foreach( ItemBase *item, m_items ) {
-	infoList << *static_cast<DepartureItem*>( item )->departureInfo();
+        infoList << *static_cast<DepartureItem*>( item )->departureInfo();
     }
     return infoList;
+}
+
+QStringList DepartureModel::allStopNames( int maxDepartureCount ) const
+{
+    QStringList stopNames;
+    for ( int i = 0; i < m_items.count() && (maxDepartureCount == -1 || i <= maxDepartureCount); ++i ) {
+        const DepartureInfo *info = static_cast<DepartureItem*>( m_items[i] )->departureInfo();
+        stopNames << info->target();
+        stopNames << info->routeStops();
+    }
+    stopNames.removeDuplicates();
+    return stopNames;
 }
 
 void DepartureModel::sort( int column, Qt::SortOrder order )
@@ -2117,9 +2142,16 @@ void DepartureModel::setHighlightedStop( const QString& stopName )
 
 void DepartureModel::setColorGroups( const ColorGroupSettingsList& colorGroups )
 {
+    if ( m_colorGroups == colorGroups ) {
+        return; // Unchanged
+    }
     m_colorGroups = colorGroups;
-    
+
     if ( !m_items.isEmpty() ) {
-        emit dataChanged( m_items.first()->index(), m_items.last()->index() );
+        QModelIndex topLeft = m_items.first()->index();
+        QModelIndex bottomRight = m_items.last()->index();
+        if ( topLeft.isValid() && bottomRight.isValid() ) {
+            emit dataChanged( topLeft, bottomRight );
+        }
     }
 }

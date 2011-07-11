@@ -27,7 +27,6 @@
 #include "ui_publicTransportConfig.h"
 #include "ui_publicTransportConfigAdvanced.h"
 #include "ui_publicTransportFilterConfig.h"
-// #include "ui_colorGroupConfig.h" // TODO REMOVE
 #include "ui_publicTransportAppearanceConfig.h"
 #include "ui_alarmConfig.h"
 
@@ -95,8 +94,14 @@ struct ColorGroupSettings {
     /**< @brief The color of this color group. */
     QColor color;
 
+    /**< @brief Whether or not departures in this color group should be filtered out. */
+    bool filterOut;
+
+    QString lastCommonStopName;
+
     ColorGroupSettings( const QColor &color = Qt::transparent ) {
         this->color = color;
+        this->filterOut = false;
     };
 
     /** @brief Applies the filters of this color group configuration 
@@ -105,8 +110,77 @@ struct ColorGroupSettings {
         return filters.match( departureInfo );
     };
 };
-typedef QList< ColorGroupSettings > ColorGroupSettingsList;
 bool operator ==( const ColorGroupSettings &l, const ColorGroupSettings &r );
+
+class ColorGroupSettingsList : public QList< ColorGroupSettings > {
+public:
+    ColorGroupSettings byColor( const QColor &color ) {
+        foreach ( const ColorGroupSettings colorSettings, *this ) {
+            if ( colorSettings.color == color ) {
+                return colorSettings;
+            }
+        }
+
+        // No color group with the given color found, return an "empty" object
+        return ColorGroupSettings();
+    };
+
+    void set( const ColorGroupSettings& newColorGroupSettings ) {
+        for ( int i = 0; i < count(); ++i ) {
+            if ( operator[](i).color == newColorGroupSettings.color ) {
+                operator[]( i ) = newColorGroupSettings;
+                return;
+            }
+        }
+
+        // No color group with the given color found, add newColorGroupSettings to this list
+        *this << newColorGroupSettings;
+    }
+
+    /** @brief Checks if there is a color group settings object with the given @p color in this list. */
+    bool hasColor( const QColor &color ) const {
+        for ( int i = 0; i < count(); ++i ) {
+            if ( operator[](i).color == color ) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    /** @brief Removes the color group settings object with the given @p color from this list. */
+    bool removeColor( const QColor &color ) {
+        for ( int i = 0; i < count(); ++i ) {
+            if ( operator[](i).color == color ) {
+                removeAt( i );
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    void enableColorGroup ( const QColor color, bool enable = true ) {
+        for ( int i = 0; i < count(); ++i ) {
+            if ( operator[](i).color == color ) {
+                operator[](i).filterOut = !enable;
+                return;
+            }
+        }
+    };
+
+    /** @brief Applies the filters of color group configurations with filterOut set to true
+      * on the given @p departureInfo. */
+    bool filterOut( const DepartureInfo& departureInfo ) const {
+        foreach( const ColorGroupSettings colorSettings, *this ) {
+            if ( colorSettings.filterOut && colorSettings.matches(departureInfo) ) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+};
 
 inline uint qHash( const QStringList &key )
 {
@@ -147,7 +221,7 @@ signals:
 
 public slots:
     void removeAlarms( const AlarmSettingsList &newAlarmSettings,
-                    const QList<int> &removedAlarms );
+                       const QList<int> &removedAlarms );
 
 protected slots:
     /** @brief The config dialog has been closed. */
@@ -279,7 +353,8 @@ public:
         ChangedCurrentStop = 0x0080, /**< The current stop has been changed. */
         ChangedRecentJourneySearches = 0x0100, /**< The list of recent journey
                 * searches has been changed. */
-        ChangedColorization = 0x0200 /**< Colorization of departures has been toggled. */
+        ChangedColorization = 0x0200, /**< Colorization of departures has been toggled. */
+        ChangedColorGroupSettings = 0x0400 /**< Color group settings have been changed. */
     };
     Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag );
 
@@ -397,6 +472,21 @@ public:
             }
         }
         return activeFilterSettings;
+    };
+    
+    /**
+     * @brief Gets a list of all currently active color group settings.
+     *
+     * Color group settings are "active", if their associated stop is currently selected.
+     **/
+    ColorGroupSettingsList currentColorGroupSettings() const {
+        if ( currentStopSettingsIndex < 0
+             || currentStopSettingsIndex >= colorGroupSettingsList.count() )
+        {
+            return ColorGroupSettingsList();
+        } else {
+            return colorGroupSettingsList[ currentStopSettingsIndex ];
+        }
     };
 
     bool checkConfig() {

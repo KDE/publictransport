@@ -87,6 +87,12 @@ public:
      *
      * @param filterSettings A list of filter settings to be used. */
     void setFilterSettings( const FilterSettingsList &filterSettings );
+
+    /**
+     * @brief Sets the color group settings to be used.
+     *
+     * @param colorGroupSettings A list of color group settings to be used. */
+    void setColorGroupSettings( const ColorGroupSettingsList &colorGroupSettings );
     
     /** @brief Sets the list of @p alarmSettings to be used. */
     void setAlarmSettings( const AlarmSettingsList &alarmSettings );
@@ -225,6 +231,7 @@ private:
     JobType m_currentJob;
 
     FilterSettingsList m_filterSettings;
+    ColorGroupSettingsList m_colorGroupSettings;
     AlarmSettingsList m_alarmSettings;
     FirstDepartureConfigMode m_firstDepartureConfigMode;
     QTime m_timeOfFirstDepartureCustom;

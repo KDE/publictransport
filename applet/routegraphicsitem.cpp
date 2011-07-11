@@ -153,7 +153,7 @@ void RouteGraphicsItem::arrangeStopItems()
 void RouteGraphicsItem::updateData( DepartureItem *item )
 {
     if ( rect().isEmpty() ) {
-        kDebug() << "Empty rect for the RouteGraphicsItem";
+//         kDebug() << "Empty rect for the RouteGraphicsItem";
         return;
     }
     m_item = item;

@@ -694,7 +694,18 @@ public:
     QList< uint > itemHashes() const;
 
     QList< DepartureInfo > departureInfos() const;
-    
+
+    /**
+     * @brief Gets all stop names found in the current data of this model.
+     *
+     * If available, route stop names are also added to the returned string list.
+     *
+     * @param maxDepartureCount -1 to add all stop names found in all departures in this model.
+     *   >= 0 to stop adding stop names of departures after the departure with the index
+     * @p maxDepartureCount.
+     **/
+    QStringList allStopNames( int maxDepartureCount = -1 ) const;
+
     virtual DepartureItem *addItem( const DepartureInfo &departureInfo,
                 Columns sortColumn = ColumnDeparture,
                 Qt::SortOrder sortOrder = Qt::AscendingOrder );
@@ -713,6 +724,7 @@ public:
     Info info() const { return m_info; };
     
     void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
+    void setCurrentStopIndex( int currentStopSettingsIndex );
     void setAlarmSettings( const AlarmSettingsList &alarmSettings );
 
     /** @brief Whether or not there are pending alarms. */

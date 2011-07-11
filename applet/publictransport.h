@@ -33,6 +33,7 @@
 #include "settings.h" // Only for ColorGroupSettingsList, remove here, move the function to GlobalApplet?
 #include <publictransporthelper/departureinfo.h>
 
+class KMenu;
 class DeparturePainter;
 class RouteStopTextGraphicsItem;
 class PublicTransportGraphicsItem;
@@ -383,6 +384,9 @@ protected slots:
     /** @brief Shows the filter menu. */
     void showFilterMenu();
 
+    /** @brief Updates the filter menu of the filter action. */
+    KMenu *updateFilterMenu();
+
     void updateDepartureListIcon();
 
     /** @brief Removes stop settings, that were inserted for an intermediate
@@ -555,11 +559,18 @@ protected slots:
     void enableFilterConfiguration( const QString &filterConfiguration, bool enable = true );
 
     /**
-     * @brief An action to change the currently active filter configuration has been triggered.
+     * @brief An action to toggle a filter configuration has been triggered.
      *
-     * This calls @ref switchFilterConfiguration with the name of the @p action.
+     * This uses the text of @p action to know which filter configuration to toggle.
      **/
     void switchFilterConfiguration( QAction *action );
+
+    /**
+     * @brief An action to a filter by group color has been triggered.
+     *
+     * This uses the data in @p action (QAction::data()) to know which color group to toggle.
+     **/
+    void switchFilterByGroupColor( QAction *action );
 
     /** @brief An alarm has been fired for the given @p item. */
     void alarmFired( DepartureItem *item );
@@ -699,8 +710,15 @@ private:
      * @return True, if no message is shown. False, otherwise. */
     bool checkNetworkStatus();
 
-    /** @brief List of current departures / arrivals for the selected stop(s). */
-    QList<DepartureInfo> departureInfos() const;
+    /**
+     * @brief Gets a list of current departures/arrivals for the selected stop(s).
+     *
+     * @param includeFiltered Whether or not to include filtered departures in the returned list.
+     *
+     * @param max -1 to use the maximum departure count from the current settings. Otherwise this
+     *   gets used as the maximal number of departures for the returned list.
+     **/
+    QList<DepartureInfo> departureInfos( bool includeFiltered = false, int max = -1 ) const;
 
     QString stripDateAndTimeValues( const QString &sourceName ) const;
 
@@ -773,7 +791,8 @@ private:
     QPersistentModelIndex m_clickedItemIndex; /**< Index of the clicked item in departure view
             * for the context menu actions. */
 
-    QActionGroup *m_filtersGroup; /**< An action group to toggle between filter configurations. */
+    QActionGroup *m_filtersGroup; /**< An action group to toggle filter configurations. */
+    QActionGroup *m_filterByGroupColorGroup; /**< An action group to toggle color groups. */
 
     DepartureProcessor *m_departureProcessor;
     DeparturePainter *m_departurePainter;

@@ -230,7 +230,7 @@
       <string comment="@info:tooltip">Whether or not shadows should be drawn behind text.</string>
      </property>
      <property name="text">
-      <string/>
+      <string comment="@option:check">Enabled</string>
      </property>
      <property name="checked">
       <bool>true</bool>
@@ -326,7 +326,7 @@
       <string comment="@info:tooltip">Whether or not departure / arrival times should be bold.</string>
      </property>
      <property name="text">
-      <string/>
+      <string comment="@option:check">Enabled</string>
      </property>
      <property name="checked">
       <bool>true</bool>
@@ -336,7 +336,7 @@
    <item row="7" column="0">
     <widget class="QLabel" name="lblFont_3">
      <property name="text">
-      <string comment="@label">&amp;Colorize Departures:</string>
+      <string comment="@label">&amp;Colorized Departure Groups:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -355,13 +355,13 @@
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string comment="@info:tooltip">Whether or not departures should be colorized by direction.</string>
+      <string comment="@info:tooltip">Whether or not departures should be grouped by direction.</string>
      </property>
      <property name="whatsThis">
-      <string comment="@info:whatsthis">If enabled, departures get grouped by direction automatically. A color gets assigned to each group and is used as background color for departures in the group.</string>
+      <string comment="@info:whatsthis">If enabled, departures get grouped by direction automatically. A color gets assigned to each group and is used as background color for departures in the group.&lt;nl/&gt;Each group can be hidden easily using the filter menu.</string>
      </property>
      <property name="text">
-      <string/>
+      <string comment="@option:check">Enabled</string>
      </property>
      <property name="checked">
       <bool>true</bool>

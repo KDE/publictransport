@@ -857,7 +857,7 @@ QColor PublicTransportGraphicsItem::textColor() const
         // Mix with group color if not highlighted
         QColor groupColor = index().data(Qt::BackgroundColorRole).value<QColor>();
         if ( groupColor != Qt::transparent ) {
-            color = KColorUtils::mix( color, groupColor, 0.3 );
+            color = KColorUtils::mix( color, groupColor, 0.2 );
         }
 
         return color;
@@ -1414,19 +1414,15 @@ void PublicTransportWidget::modelReset()
 
 void TimetableWidget::dataChanged( const QModelIndex& topLeft, const QModelIndex& bottomRight )
 {
-    for ( int row = topLeft.row(); row <= bottomRight.row(); ++row ) {
-        if ( row < m_model->rowCount() ) {
-            departureItem( row )->updateData( static_cast<DepartureItem*>(m_model->item(row)), true );
-        }
+    for ( int row = topLeft.row(); row <= bottomRight.row() && row < m_model->rowCount(); ++row ) {
+        departureItem( row )->updateData( static_cast<DepartureItem*>(m_model->item(row)), true );
     }
 }
 
 void JourneyTimetableWidget::dataChanged( const QModelIndex& topLeft, const QModelIndex& bottomRight )
 {
-    for ( int row = topLeft.row(); row <= bottomRight.row(); ++row ) {
-        if ( row < m_model->rowCount() ) {
-            journeyItem( row )->updateData( static_cast<JourneyItem*>(m_model->item(row)), true );
-        }
+    for ( int row = topLeft.row(); row <= bottomRight.row() && row < m_model->rowCount(); ++row ) {
+        journeyItem( row )->updateData( static_cast<JourneyItem*>(m_model->item(row)), true );
     }
 }
 

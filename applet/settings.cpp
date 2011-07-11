@@ -84,6 +84,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 
     m_filterSettings = settings.filterSettingsList;
     m_filterConfigChanged = false;
+    m_colorGroupSettings = settings.colorGroupSettingsList;
 
     m_alarmSettings = settings.alarmSettings;
     m_lastAlarm = -1;
@@ -729,6 +730,7 @@ Settings SettingsUiManager::settings()
         m_filterSettings.set( currentFilterSettings() );
     }
     ret.filterSettingsList = m_filterSettings;
+    ret.colorGroupSettingsList = m_colorGroupSettings;
 
     if ( m_alarmsChanged && m_uiAlarms.alarmList->currentRow() != -1 ) {
         m_alarmSettings[ m_uiAlarms.alarmList->currentRow() ] = currentAlarmSettings();
@@ -1384,6 +1386,11 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
         changed |= IsChanged | ChangedFilterSettings;
     }
 
+    // Compare (don't write) color group settings
+    if ( settings.colorGroupSettingsList != oldSettings.colorGroupSettingsList ) {
+        changed |= IsChanged | ChangedColorGroupSettings;
+    }
+
     // Write alarm settings
     if ( settings.alarmSettings != oldSettings.alarmSettings ) {
         changed |= IsChanged | ChangedAlarmSettings;
@@ -1497,5 +1504,6 @@ bool operator ==( const AlarmSettings &l, const AlarmSettings &r )
 
 bool operator==( const ColorGroupSettings &l, const ColorGroupSettings &r )
 {
-    return l.color == r.color && l.filters == r.filters;
+    return l.color == r.color && l.filters == r.filters && l.filterOut == r.filterOut
+        && l.lastCommonStopName == r.lastCommonStopName;
 }

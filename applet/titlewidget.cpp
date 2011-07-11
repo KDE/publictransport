@@ -399,23 +399,45 @@ void TitleWidget::clearWidgets()
 void TitleWidget::updateFilterWidget()
 {
     FilterSettingsList filterSettings = m_settings->currentFilterSettings();
-    if ( filterSettings.isEmpty() ) {
-        m_filterWidget->setOpacity( 0.6 );
-        m_filterWidget->setText( i18nc("@info/plain Shown in the applet to "
-                "indicate that no filters are currently active",
-                "(No active filter)") );
-    } else {
-        m_filterWidget->setOpacity( 1 );
-        QFontMetrics fm( m_filterWidget->font() );
-        if ( filterSettings.count() == 1 ) {
-            m_filterWidget->setText( fm.elidedText(
-                    GlobalApplet::translateFilterKey(filterSettings.first().name),
-                    Qt::ElideRight, boundingRect().width() * 0.45) );
-        } else {
-            m_filterWidget->setText( fm.elidedText(
-                    QString("%1 active filters").arg(filterSettings.count()),
-                    Qt::ElideRight, boundingRect().width() * 0.45) );
+    ColorGroupSettingsList colorGroups = m_settings->currentColorGroupSettings();
+    ColorGroupSettingsList disabledColorGroups;
+    foreach ( const ColorGroupSettings &colorGroup, colorGroups ) {
+        if ( colorGroup.filterOut ) {
+            disabledColorGroups << colorGroup;
         }
+    }
+    if ( filterSettings.isEmpty() && disabledColorGroups.isEmpty() ) {
+        m_filterWidget->setOpacity( 0.6 );
+        m_filterWidget->setText( i18nc("@info/plain Shown in the applet to indicate that no "
+                "filters are currently active", "(No active filter)") );
+        m_filterWidget->setIcon( KIcon("view-filter") );
+    } else {
+        QFontMetrics fm( m_filterWidget->font() );
+        QString text;
+        if ( filterSettings.count() == 1 && disabledColorGroups.isEmpty() ) {
+            text = fm.elidedText( GlobalApplet::translateFilterKey(filterSettings.first().name),
+                                  Qt::ElideRight, boundingRect().width() * 0.45 );
+            m_filterWidget->setIcon( KIcon("view-filter") );
+        } else if ( filterSettings.count() > 1 && disabledColorGroups.isEmpty() ) {
+            text = fm.elidedText( i18ncp("@info/plain", "%1 active filter", "%1 active filters",
+                                         filterSettings.count()),
+                                  Qt::ElideRight, boundingRect().width() * 0.45 );
+            m_filterWidget->setIcon( KIcon("object-group") );
+        } else if ( filterSettings.isEmpty() && disabledColorGroups.count() >= 1 ) {
+            text = fm.elidedText( i18ncp("@info/plain", "%1 disabled color group",
+                                         "%1 disabled color groups", disabledColorGroups.count()),
+                                  Qt::ElideRight, boundingRect().width() * 0.45 );
+            m_filterWidget->setIcon( KIcon("object-group") );
+        } else {
+            text = fm.elidedText( i18ncp("@info/plain", "%1 active (color) filter",
+                                         "%1 active (color) filters",
+                                         filterSettings.count() + disabledColorGroups.count()),
+                                  Qt::ElideRight, boundingRect().width() * 0.45 );
+            m_filterWidget->setIcon( KIcon("view-filter") );
+        }
+
+        m_filterWidget->setOpacity( 1 );
+        m_filterWidget->setText( text );
     }
 }
 

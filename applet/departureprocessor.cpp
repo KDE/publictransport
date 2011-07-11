@@ -76,6 +76,16 @@ void DepartureProcessor::setFilterSettings( const FilterSettingsList &filterSett
     }
 }
 
+void DepartureProcessor::setColorGroupSettings( const ColorGroupSettingsList& colorGroupSettings )
+{
+    QMutexLocker locker( &m_mutex );
+    m_colorGroupSettings = colorGroupSettings;
+
+    if ( m_currentJob == ProcessDepartures && !m_jobQueue.isEmpty() ) {
+        m_requeueCurrentJob = true;
+    }
+}
+
 void DepartureProcessor::setFirstDepartureSettings(
         FirstDepartureConfigMode firstDepartureConfigMode,
         const QTime& timeOfFirstDepartureCustom,
@@ -205,6 +215,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
 
     m_mutex.lock();
     FilterSettingsList filterSettings = m_filterSettings;
+    ColorGroupSettingsList colorGroupSettings = m_colorGroupSettings;
     AlarmSettingsList alarmSettingsList = m_alarmSettings;
 
     FirstDepartureConfigMode firstDepartureConfigMode = m_firstDepartureConfigMode;
@@ -213,6 +224,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     m_mutex.unlock();
 
     emit beginDepartureProcessing( sourceName );
+    
     QUrl url;
     QDateTime updated;
     QList< DepartureInfo > departureInfos/*, alarmDepartures*/;
@@ -261,11 +273,13 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
         // or shouldn't be shown because of the first departure settings
         if ( !isTimeShown(departureInfo.predictedDeparture(), firstDepartureConfigMode,
                           timeOfFirstDepartureCustom, timeOffsetOfFirstDeparture)
-             || filterSettings.filterOut(departureInfo) ) {
-// 			kDebug() << "Filter out" << filterSettings.filterOut(departureInfo)
-// 				<< Global::vehicleTypeToString(departureInfo.vehicleType()) << departureInfo.lineString()
-// 				<< departureInfo.target();
+             || filterSettings.filterOut(departureInfo)
+             || colorGroupSettings.filterOut(departureInfo) )
+        {
             departureInfo.setFilteredOut( true );
+//          kDebug() << "Filter out" << filterSettings.filterOut(departureInfo)
+//              << Global::vehicleTypeToString(departureInfo.vehicleType()) << departureInfo.lineString()
+//              << departureInfo.target();
         }
         departureInfos << departureInfo;
 
@@ -299,6 +313,10 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
 {
     const QString sourceName = journeyJob->sourceName;
     QVariantHash data = journeyJob->data;
+
+    m_mutex.lock();
+    AlarmSettingsList alarmSettingsList = m_alarmSettings;
+    m_mutex.unlock();
 
     emit beginJourneyProcessing( sourceName );
 
@@ -365,6 +383,23 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
                 dataMap["routeVehicleTypes"].toList(), routeTimesDeparture, routeTimesArrival,
                 routeTimesDepartureDelay, routeTimesArrivalDelay );
 
+        // TODO Use a dummy DepartureInfo that "mimics" the first journey part of the current journey
+//         QString lineString = journeyInfo.routeTransportLines().isEmpty()
+//                 ? QString() : journeyInfo.routeTransportLines().first();
+//         VehicleType vehicleType = journeyInfo.routeVehicleTypes().isEmpty()
+//                 ? Unknown : journeyInfo.routeVehicleTypes().first();
+//         DepartureInfo departureInfo( QString(), lineString, QString(), journeyInfo.departure(),
+//                                      vehicleType );
+//         journeyInfo.matchedAlarms().clear();
+//         for ( int a = 0; a < alarmSettingsList.count(); ++a ) {
+//             AlarmSettings alarmSettings = alarmSettingsList.at( a );
+//             if ( alarmSettings.enabled && alarmSettings.filter.match(departureInfo) ) {
+//                 journeyInfo.matchedAlarms() << a;
+// //          if ( !alarmDepartures.contains(departureInfo) )
+// //              alarmDepartures << departureInfo;
+//             }
+//         }
+
         journeyInfos << journeyInfo;
         if ( journeyInfos.count() == JOURNEY_BATCH_SIZE ) {
             QMutexLocker locker( &m_mutex );
@@ -398,6 +433,7 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
 
     m_mutex.lock();
     FilterSettingsList filterSettings = m_filterSettings;
+    ColorGroupSettingsList colorGroupSettings = m_colorGroupSettings;
 
     FirstDepartureConfigMode firstDepartureConfigMode = m_firstDepartureConfigMode;
     const QTime &timeOfFirstDepartureCustom = m_timeOfFirstDepartureCustom;
@@ -407,15 +443,16 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
     emit beginFiltering( filterJob->sourceName );
     kDebug() << "  - " << departures.count() << "departures to be filtered";
     for ( int i = 0; i < departures.count(); ++i ) {
-        const bool filterOut = filterSettings.filterOut( departures[i] );
         DepartureInfo &departureInfo = departures[ i ];
+        const bool filterOut = filterSettings.filterOut( departureInfo )
+                || colorGroupSettings.filterOut( departureInfo );
 
         // Newly filtered departures are now filtered out and were shown.
         // They may be newly filtered if they weren't filtered out, but
         // they may haven't been shown nevertheless, because the maximum
         // departure count was exceeded.
         if ( filterOut && !departureInfo.isFilteredOut()
-                    && filterJob->shownDepartures.contains( departureInfo.hash() ) ) {
+                    && filterJob->shownDepartures.contains(departureInfo.hash()) ) {
             newlyFiltered << departureInfo;
 
             // Newly not filtered departures are now not filtered out and
@@ -424,7 +461,7 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
             // first departure settings
         } else if ( !filterOut
                     && ( departureInfo.isFilteredOut()
-                        || !filterJob->shownDepartures.contains( departureInfo.hash() ) )
+                        || !filterJob->shownDepartures.contains(departureInfo.hash()) )
                     && isTimeShown(departureInfo.predictedDeparture(),
                                 firstDepartureConfigMode, timeOfFirstDepartureCustom,
                                 timeOffsetOfFirstDeparture) ) {
