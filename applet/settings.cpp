@@ -511,6 +511,9 @@ void SettingsUiManager::stopSettingsChanged()
     StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
     m_filterSettings = m_stopListWidget->filterConfigurations();
 
+    m_uiFilter.affectedStops->clear();
+    m_uiAlarms.affectedStops->clear();
+    
     // Update affected stops comboboxes in the filter and alarm page
     for ( int i = 0; i < stopSettingsList.count(); ++i ) {
         const StopSettings &stopSettings = stopSettingsList[ i ];
@@ -520,18 +523,18 @@ void SettingsUiManager::stopSettingsChanged()
         }
 
         // Update for filters
-        if ( i < m_uiFilter.affectedStops->count() ) {
-            m_uiFilter.affectedStops->setItemText( i, text );
-        } else {
+//         if ( i < m_uiFilter.affectedStops->count() ) {
+//             m_uiFilter.affectedStops->setItemText( i, text );
+//         } else {
             m_uiFilter.affectedStops->addItem( text );
-        }
+//         }
 
         // Update for alarms
-        if ( i < m_uiAlarms.affectedStops->count() ) {
-            m_uiAlarms.affectedStops->setItemText( i, text );
-        } else {
+//         if ( i < m_uiAlarms.affectedStops->count() ) {
+//             m_uiAlarms.affectedStops->setItemText( i, text );
+//         } else {
             m_uiAlarms.affectedStops->addItem( text );
-        }
+//         }
     }
 }
 
@@ -631,6 +634,7 @@ void SettingsUiManager::setValuesOfAlarmConfig()
 void SettingsUiManager::setValuesOfFilterConfig()
 {
     if ( m_uiFilter.filterConfigurations->currentIndex() == -1 ) {
+        kDebug() << "No filter configuration selected, select first one now";
         m_uiFilter.filterConfigurations->setCurrentIndex( 0 );
     }
 
@@ -807,6 +811,7 @@ void SettingsUiManager::loadFilterConfiguration( const QString& filterConfig )
         // Store to previously selected filter configuration
         FilterSettings filterSettings = currentFilterSettings();
         filterSettings.name = m_lastFilterConfiguration;
+
         m_filterSettings.set( filterSettings );
     }
 
@@ -859,11 +864,11 @@ void SettingsUiManager::addFilterConfiguration()
     FilterSettings filterSettings;
     filterSettings.name = GlobalApplet::untranslateFilterKey( newFilterConfig );
     m_filterSettings << filterSettings;
-    m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true,
-            m_uiFilter.filterConfigurations->count() );
 
     // Update widgets containing a list of filter configuration names
     updateFilterConfigurationLists();
+
+    m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true );
 }
 
 void SettingsUiManager::removeFilterConfiguration()
@@ -878,8 +883,10 @@ void SettingsUiManager::removeFilterConfiguration()
     QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
     if ( KMessageBox::warningContinueCancel(m_configDialog,
          i18nc("@info", "<warning>This will permanently delete the selected filter "
-               "configuration <resource>%1</resource>.</warning>",
-               trFilterConfiguration)) != KMessageBox::Continue )
+               "configuration <resource>%1</resource>.</warning>", trFilterConfiguration),
+               QString(), KStandardGuiItem::cont(), KStandardGuiItem::cancel(),
+               "deleteFilterSettings")
+         != KMessageBox::Continue )
     {
         return; // Cancel clicked
     }
@@ -888,11 +895,16 @@ void SettingsUiManager::removeFilterConfiguration()
     QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
     m_filterSettings.removeByName( filterConfiguration );
 
-    // Update widgets containing a list of filter configuration names
+    // Update widgets containing a list of filter configurations
     updateFilterConfigurationLists();
 
     // Remove filter configuration from the UI filter list
+    // but without calling loadFilterConfiguration here, therefore the disconnect
+    disconnect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+                this, SLOT(loadFilterConfiguration(QString)) );
     m_uiFilter.filterConfigurations->removeItem( index );
+    connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+             this, SLOT(loadFilterConfiguration(QString)) );
 
     // Select default filter configuration
     if ( index >= m_uiFilter.filterConfigurations->count() ) {
@@ -925,7 +937,7 @@ void SettingsUiManager::renameFilterConfiguration()
     }
 
     // Check if the new name is valid.
-    // '*' is also not allowed in the name but that's already validated by a QRegExpValidator.
+    // '*' or '&' is also not allowed in the name but that's already validated by a QRegExpValidator.
     if ( newFilterConfig.isEmpty() ) {
         KMessageBox::information( m_configDialog, i18nc( "@info", "Empty names are not allowed." ) );
         return;
