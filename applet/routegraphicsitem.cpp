@@ -33,7 +33,6 @@
 #include <QTextDocument>
 #include <QGraphicsEffect>
 #include <QGraphicsSceneHoverEvent>
-#include <QMenu>
 #include <KMenu>
 
 RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item,
@@ -347,13 +346,17 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             // Create text item, that displays a single stop name
             // and automatically elides and stretches it on hover to show hidden text
             RouteStopTextGraphicsItem *textItem = new RouteStopTextGraphicsItem(
-                    this, *font, baseSize, time, stopName, minsFromFirstRouteStop );
+                    this, *font, baseSize, time, stopName, minsFromFirstRouteStop, routeStopFlags );
             textItem->setPos( stopTextPos );
             textItem->resize( baseSize + 10, fontMetrics->height() );
             textItem->rotate( m_textAngle );
-            textItem->addActions( QList<QAction*>() << m_showDeparturesAction
-                    << m_highlightStopAction << m_newFilterViaStopAction
-                    << m_copyStopToClipboardAction );
+            if ( routeStopFlags.testFlag(RouteStopIsHomeStop) ) {
+                textItem->addActions( QList<QAction*>() << m_copyStopToClipboardAction );
+            } else {
+                textItem->addActions( QList<QAction*>() << m_showDeparturesAction
+                        << m_highlightStopAction << m_newFilterViaStopAction
+                        << m_copyStopToClipboardAction );
+            }
             if ( manuallyHighlighted ) {
                 textItem->setPalette( manuallyHighlighted
                         ? highlightedPalette : defaultPalette );
@@ -572,11 +575,13 @@ void RouteStopMarkerGraphicsItem::paint( QPainter* painter, const QStyleOptionGr
 }
 
 RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font,
-        qreal baseSize, const QTime &time, const QString &stopName, int minsFromFirstRouteStop )
+        qreal baseSize, const QTime &time, const QString &stopName, int minsFromFirstRouteStop,
+        RouteStopFlags routeStopFlags )
         : QGraphicsWidget(parent)
 {
     m_expandStep = 0.0;
     m_baseSize = baseSize;
+    m_stopFlags = routeStopFlags;
     setFont( font );
     setStop( time, stopName, minsFromFirstRouteStop );
     setAcceptHoverEvents( true );

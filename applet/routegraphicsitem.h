@@ -130,10 +130,13 @@ public:
      * 
      * @param minsFromFirstRouteStop The time in minutes the vehicle needs from the first stop of
      *   the route until this route stop.
+     *
+     * @param stopFlags Flags of this route stop, eg. whether or not this is the current home stop.
      **/
     RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font, qreal baseSize,
                                const QTime &time, const QString &stopName,
-                               int minsFromFirstRouteStop );
+                               int minsFromFirstRouteStop,
+                               RouteStopFlags stopFlags = RouteStopIsIntermediate );
 
     /** @brief Gets the stop text (stop name including time information). */
     QString stopText() const { return m_stopText; };
@@ -141,6 +144,8 @@ public:
     /** @brief Gets the name of the associated stop. */
     QString stopName() const { return m_stopName; };
 
+    RouteStopFlags routeStopFlags() const { return m_stopFlags; };
+    
     /**
      * @brief Sets information about the new associated stop.
      *
@@ -181,6 +186,7 @@ private:
     QString m_stopName;
     qreal m_expandStep;
     qreal m_baseSize;
+    RouteStopFlags m_stopFlags;
 };
 
 /**
