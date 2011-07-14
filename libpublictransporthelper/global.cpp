@@ -301,40 +301,4 @@ QColor Global::textColorDelayed()
     return KColorUtils::tint( color, Qt::red, 0.5 );
 }
 
-QString Global::translateFilterKey(const QString& key)
-{
-	if ( key == "Default" ) {
-		return i18nc("@info/plain The name of the default filter configuration", "Default");
-	} else {
-		return key;
-	}
-}
-
-QString Global::untranslateFilterKey(const QString& translatedKey)
-{
-	if ( translatedKey == i18nc("@info/plain The name of the default filter configuration", "Default") ) {
-		return "Default";
-	} else {
-		return translatedKey;
-	}
-}
-
-QStringList Global::translateFilterKeys(const QStringList& keys)
-{
-    QStringList ret;
-    foreach ( const QString &key, keys ) {
-        ret << translateFilterKey( key );
-    }
-    return ret;
-}
-
-QStringList Global::untranslateFilterKeys(const QStringList& translatedKeys)
-{
-    QStringList ret;
-    foreach ( const QString &translatedKey, translatedKeys ) {
-        ret << untranslateFilterKey( translatedKey );
-    }
-    return ret;
-}
-
 }; // namespace Timetable

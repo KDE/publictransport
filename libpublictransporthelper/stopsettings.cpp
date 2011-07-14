@@ -450,7 +450,7 @@ void StopSettingsWidgetFactory::setValueOfSetting(QWidget* widget, int setting,
             foreach ( const FilterSettings &filter, filterSettings ) {
                 model->insertRow( row );
                 QModelIndex index = model->index( row, 0 );
-                model->setData( index, Global::translateFilterKey(filter.name), Qt::DisplayRole );
+                model->setData( index, filter.name, Qt::DisplayRole );
                 model->setData( index, QVariant::fromValue(filter), FilterSettingsRole );
                 ++row;
             }

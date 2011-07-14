@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -42,7 +42,7 @@ class StopWidgetPrivate
 	
 public:
 	StopWidgetPrivate( StopWidget *q,
-		const StopSettings& _stopSettings, const FilterSettingsList& _filterConfigurations,
+		const StopSettings& _stopSettings, FilterSettingsList *_filterConfigurations,
 		StopSettingsDialog::Options _stopSettingsDialogOptions, 
 		AccessorInfoDialog::Options _accessorInfoDialogOptions,
 		QList<int> _settings, int _stopIndex,
@@ -101,7 +101,7 @@ public:
 	
 	bool newlyAdded;
 	StopSettings stopSettings;
-	FilterSettingsList filterConfigurations;
+	FilterSettingsList *filterConfigurations;
 	QLabel *stop;
 	QLabel *provider;
 	ServiceProviderModel *modelServiceProviders; // Model of service providers
@@ -124,7 +124,7 @@ protected:
 StopWidget::StopWidget( QWidget* parent, const StopSettings& stopSettings,
 		StopSettingsDialog::Options stopSettingsDialogOptions, 
 		AccessorInfoDialog::Options accessorInfoDialogOptions,
-		const FilterSettingsList& filterConfigurations, QList<int> settings, int stopIndex,
+		FilterSettingsList *filterConfigurations, QList<int> settings, int stopIndex,
 		StopSettingsWidgetFactory::Pointer factory )
 		: QWidget(parent), d_ptr(new StopWidgetPrivate(this, stopSettings, filterConfigurations,
 			stopSettingsDialogOptions, accessorInfoDialogOptions, settings, stopIndex, factory))
@@ -184,7 +184,7 @@ void StopWidget::setStopSettings( const StopSettings& stopSettings )
 	
 	// Copy filter configurations from StopSettings
 	if ( stopSettings.hasSetting(FilterConfigurationSetting) ) {
-        d->filterConfigurations = stopSettings.get<FilterSettingsList>( FilterConfigurationSetting );
+        *d->filterConfigurations = stopSettings.get<FilterSettingsList>( FilterConfigurationSetting );
     }
 
 	d->stopSettings = stopSettings;
@@ -251,13 +251,13 @@ StopSettings StopWidget::stopSettings() const {
     return d->stopSettings;
 }
 
-FilterSettingsList StopWidget::filterConfigurations() const
+FilterSettingsList *StopWidget::filterConfigurations() const
 {
 	Q_D( const StopWidget );
     return d->filterConfigurations;
 }
 
-void StopWidget::setFilterConfigurations(const FilterSettingsList& filterConfigurations) {
+void StopWidget::setFilterConfigurations( FilterSettingsList *filterConfigurations ) {
 	Q_D( StopWidget );
     d->filterConfigurations = filterConfigurations;
 }
@@ -268,7 +268,7 @@ class StopListWidgetPrivate
 	
 public:
 	StopListWidgetPrivate( StopListWidget *q,
-		const FilterSettingsList& _filterConfigurations,
+		FilterSettingsList *_filterConfigurations,
 		StopSettingsDialog::Options _stopSettingsDialogOptions, 
 		AccessorInfoDialog::Options _accessorInfoDialogOptions,
 		QList<int> _settings, StopSettingsWidgetFactory::Pointer _factory )
@@ -286,7 +286,7 @@ public:
 		Plasma::DataEngineManager::self()->unloadEngine("favicons");
 	};
 	
-	FilterSettingsList filterConfigurations;
+	FilterSettingsList *filterConfigurations;
 	int currentStopIndex;
 	StopSettingsDialog::Options stopSettingsDialogOptions;
 	AccessorInfoDialog::Options accessorInfoDialogOptions;
@@ -301,7 +301,7 @@ protected:
 StopListWidget::StopListWidget( QWidget* parent, const StopSettingsList& stopSettingsList,
 		StopSettingsDialog::Options stopSettingsDialogOptions, 
 		AccessorInfoDialog::Options accessorInfoDialogOptions,
-		const FilterSettingsList& filterConfigurations, QList<int> settings,
+		FilterSettingsList *filterConfigurations, QList<int> settings,
 		StopSettingsWidgetFactory::Pointer factory )
 		: AbstractDynamicWidgetContainer(parent, RemoveButtonsBesideWidgets,
 		                                 AddButtonAfterLastWidget, ShowSeparators),
@@ -351,19 +351,21 @@ void StopListWidget::setCurrentStopSettingIndex( int currentStopIndex )
 	}
 }
 
-FilterSettingsList StopListWidget::filterConfigurations() const
+FilterSettingsList *StopListWidget::filterConfigurations() const
 {
 	Q_D( const StopListWidget );
 	return d->filterConfigurations;
 }
 
-void StopListWidget::setFilterConfigurations( const FilterSettingsList& filterConfigurations )
+void StopListWidget::setFilterConfigurations( FilterSettingsList *filterConfigurations )
 {
 	Q_D( StopListWidget );
-	d->filterConfigurations = filterConfigurations;
-	foreach( StopWidget *stopWidget, widgets<StopWidget*>() ) {
-		stopWidget->setFilterConfigurations( filterConfigurations );
-	}
+    if ( filterConfigurations ) {
+        d->filterConfigurations = filterConfigurations;
+        foreach( StopWidget *stopWidget, widgets<StopWidget*>() ) {
+            stopWidget->setFilterConfigurations( filterConfigurations );
+        }
+    }
 }
 
 StopListWidget::NewStopSettingsBehaviour StopListWidget::newStopSettingsBehaviour() const
@@ -435,8 +437,8 @@ void StopListWidget::changed( const StopSettings& stopSettings )
 	Q_ASSERT_X( stopWidget, "StopListWidget::changed", "Sender isn't a StopWidget" );
 
     // Update filter configurations
-    if ( stopSettings.hasSetting(FilterConfigurationSetting) ) {
-        d->filterConfigurations = stopSettings.get<FilterSettingsList>( FilterConfigurationSetting );
+    if ( stopSettings.hasSetting(FilterConfigurationSetting) && d->filterConfigurations ) {
+        *d->filterConfigurations = stopSettings.get<FilterSettingsList>( FilterConfigurationSetting );
         foreach ( StopWidget *currentStopWidget, widgets<StopWidget*>() ) {
             currentStopWidget->setFilterConfigurations( d->filterConfigurations );
         }

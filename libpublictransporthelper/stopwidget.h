@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -81,7 +81,7 @@ public:
 			const StopSettings &stopSettings = StopSettings(), 
 			StopSettingsDialog::Options stopSettingsDialogOptions = StopSettingsDialog::DefaultOptions, 
 			AccessorInfoDialog::Options accessorInfoDialogOptions = AccessorInfoDialog::DefaultOptions,
-			const FilterSettingsList &filterConfigurations = FilterSettingsList(),
+			FilterSettingsList *filterConfigurations = 0,
 			QList<int> settings = QList<int>() 
 				<< FilterConfigurationSetting << AlarmTimeSetting << FirstDepartureConfigModeSetting,
             int stopIndex = -1,
@@ -94,8 +94,8 @@ public:
 	/** @brief Sets the stop settings of this StopWidget to @p stopSettings. */
 	void setStopSettings( const StopSettings &stopSettings );
 
-	FilterSettingsList filterConfigurations() const;
-	void setFilterConfigurations( const FilterSettingsList &filterConfigurations );
+	FilterSettingsList *filterConfigurations() const;
+	void setFilterConfigurations( FilterSettingsList *filterConfigurations );
 
     int stopIndex() const;
     void setStopIndex( int stopIndex );
@@ -177,7 +177,7 @@ public:
 			const StopSettingsList &stopSettingsList = StopSettingsList(),
 			StopSettingsDialog::Options stopSettingsDialogOptions = StopSettingsDialog::DefaultOptions, 
 			AccessorInfoDialog::Options accessorInfoDialogOptions = AccessorInfoDialog::DefaultOptions,
-			const FilterSettingsList &filterConfigurations = FilterSettingsList(),
+			FilterSettingsList *filterConfigurations = 0,
 			QList<int> settings = QList<int>() 
 				<< FilterConfigurationSetting << AlarmTimeSetting << FirstDepartureConfigModeSetting,
 			StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
@@ -209,7 +209,7 @@ public:
 	 * @brief Gets the list of configured filter configurations to choose from
 	 *   for @ref StopSettigns::FilterConfigurationSetting.
 	 **/
-	FilterSettingsList filterConfigurations() const;
+	FilterSettingsList *filterConfigurations() const;
 	
 	/**
 	 * @brief Sets the list of configured filter configurations to choose from
@@ -217,7 +217,7 @@ public:
 	 * 
 	 * @param filterConfigurations The new list of configured filter configurations.
 	 **/
-	void setFilterConfigurations( const FilterSettingsList &filterConfigurations );
+	void setFilterConfigurations( FilterSettingsList *filterConfigurations );
 	
 	/**
 	 * @brief Gets the behaviour of the dialog when a new empty stop setting is added.

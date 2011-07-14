@@ -416,7 +416,7 @@ void TitleWidget::updateFilterWidget()
         QFontMetrics fm( m_filterWidget->font() );
         QString text;
         if ( filterSettings.count() == 1 && disabledColorGroups.isEmpty() ) {
-            text = fm.elidedText( GlobalApplet::translateFilterKey(filterSettings.first().name),
+            text = fm.elidedText( filterSettings.first().name,
                                   Qt::ElideRight, boundingRect().width() * 0.45 );
             m_filterWidget->setIcon( KIcon("view-filter") );
         } else if ( filterSettings.count() > 1 && disabledColorGroups.isEmpty() ) {

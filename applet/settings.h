@@ -245,6 +245,10 @@ protected slots:
     /** @brief The action of the current filter has been changed. */
     void filterActionChanged( int index );
 
+    /** @brief The list of affected stops of a filter configuration has been changed. */
+    void affectedStopsFilterChanged();
+
+    void filtersChanged();
     void setFilterConfigurationChanged( bool changed = true );
 
     void exportFilterSettings();
@@ -266,7 +270,7 @@ protected slots:
     void currentAlarmTypeChanged( int index );
 
     /** @brief The list of affected stops of this alarm has been changed. */
-    void affectedStopsChanged();
+    void affectedStopsAlarmChanged();
 
     /** @brief An alarm item has been changed, eg. it's text or checked state. */
     void alarmChanged( QListWidgetItem *item );
@@ -295,7 +299,7 @@ private:
     AlarmSettings currentAlarmSettings( const QString &name = QString() ) const;
     int filterConfigurationIndex( const QString &filterConfig );
     void setAlarmTextColor( QListWidgetItem *item, bool hasAffectedStops = true ) const;
-    void updateFilterConfigurationLists();
+    void updateStopNamesInWidgets();
 
     DeletionPolicy m_deletionPolicy;
 // 	DataSourceTester *m_dataSourceTester; // Tests data sources

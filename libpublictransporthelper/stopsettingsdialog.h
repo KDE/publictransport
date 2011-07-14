@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -267,7 +267,7 @@ public:
 			const StopSettings &stopSettings = StopSettings(), 
 			StopSettingsDialog::Options options = DefaultOptions,
 			AccessorInfoDialog::Options accessorInfoDialogOptions = AccessorInfoDialog::DefaultOptions,
-			const FilterSettingsList &filterConfigurations = FilterSettingsList(),
+			FilterSettingsList *filterConfigurations = 0,
             int stopIndex = -1, const QList<int> &customSettings = QList<int>(),
 			StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
 	
@@ -367,8 +367,7 @@ public:
 	 **/
 	static StopSettingsDialog *createExtendedStopSelectionDialog(
 			QWidget *parent = 0, const StopSettings &stopSettings = StopSettings(),
-			const FilterSettingsList &filterConfigurations = FilterSettingsList(),
-            int stopIndex = -1, 
+			FilterSettingsList *filterConfigurations = 0, int stopIndex = -1,
 			StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
 
 	/** 

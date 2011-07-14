@@ -125,7 +125,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     // Setup stop widgets
     m_stopListWidget = new StopListWidget( m_ui.stopList, settings.stopSettingsList,
             StopSettingsDialog::ExtendedStopSelection, AccessorInfoDialog::DefaultOptions,
-            settings.filterSettingsList );
+            &m_filterSettings );
     m_stopListWidget->setWhatsThis( i18nc("@info:whatsthis",
             "<subtitle>This shows the stop settings you have set.</subtitle>"
             "<para>The applet shows results for one of them at a time. To switch the "
@@ -169,9 +169,9 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
             "<item><emphasis>Delay:</emphasis> Filters by delay.</item>"
             "</list></para>") );
     m_uiFilter.affectedStops->setMultipleSelectionOptions( CheckCombobox::ShowStringList );
-    connect( m_uiFilter.filters, SIGNAL(changed()), this, SLOT(setFilterConfigurationChanged()) );
+    connect( m_uiFilter.filters, SIGNAL(changed()), this, SLOT(filtersChanged()) );
     connect( m_uiFilter.affectedStops, SIGNAL(checkedItemsChanged()),
-             this, SLOT(setFilterConfigurationChanged()) );
+             this, SLOT(affectedStopsFilterChanged()) );
 
     // Setup alarm widgets
 //     m_uiAlarms.alarmFilter->setSeparatorOptions( AbstractDynamicWidgetContainer::ShowSeparators );
@@ -196,7 +196,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     connect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)),
              this, SLOT(currentAlarmTypeChanged(int)) );
     connect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()),
-             this, SLOT(affectedStopsChanged()) );
+             this, SLOT(affectedStopsAlarmChanged()) );
 
     // Set values of the given settings for each page
     setValuesOfAdvancedConfig( settings );
@@ -241,7 +241,7 @@ void SettingsUiManager::configAccepted()
 }
 
 void SettingsUiManager::removeAlarms( const AlarmSettingsList& /*newAlarmSettings*/,
-                                    const QList<int> &/*removedAlarms*/ )
+                                      const QList<int> &/*removedAlarms*/ )
 {
 //     TODO
 //     foreach ( int alarmIndex, removedAlarms ) {
@@ -290,12 +290,12 @@ void SettingsUiManager::currentAlarmChanged( int row )
         disconnect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)),
                     this, SLOT(currentAlarmTypeChanged(int)) );
         disconnect( m_uiAlarms.affectedStops, SIGNAL( checkedItemsChanged() ),
-                    this, SLOT(affectedStopsChanged()) );
+                    this, SLOT(affectedStopsAlarmChanged()) );
         setValuesOfAlarmConfig();
         connect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)),
                 this, SLOT(currentAlarmTypeChanged(int)) );
         connect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()),
-                this, SLOT(affectedStopsChanged()) );
+                this, SLOT(affectedStopsAlarmChanged()) );
 
         setAlarmTextColor( m_uiAlarms.alarmList->currentItem(),
                         m_uiAlarms.affectedStops->hasCheckedItems() );
@@ -388,7 +388,15 @@ void SettingsUiManager::currentAlarmTypeChanged( int index )
     alarmChanged();
 }
 
-void SettingsUiManager::affectedStopsChanged()
+void SettingsUiManager::affectedStopsFilterChanged()
+{
+    kDebug() << "Affected stops changed!";
+    setFilterConfigurationChanged();
+    m_filterSettings.set( currentFilterSettings() );
+    setFilterConfigurationChanged( false );
+}
+
+void SettingsUiManager::affectedStopsAlarmChanged()
 {
     QListWidgetItem *item = m_uiAlarms.alarmList->currentItem();
     setAlarmTextColor( item, m_uiAlarms.affectedStops->hasCheckedItems() );
@@ -425,7 +433,7 @@ void SettingsUiManager::stopSettingsAdded()
     // Adjust color group settings list
     m_colorGroupSettings << ColorGroupSettingsList();
 
-    stopSettingsChanged();
+    updateStopNamesInWidgets();
 }
 
 void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex )
@@ -461,6 +469,10 @@ void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex )
                 changedIndices << --stopIndex;
                 it = filterSettings.affectedStops.erase( it );
             }
+
+            if ( it == filterSettings.affectedStops.end() ) {
+                break; // TODO Make a do or while loop here?
+            }
         }
         filterSettings.affectedStops.unite( changedIndices );
     }
@@ -468,9 +480,52 @@ void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex )
     // Adjust color group settings list
     m_colorGroupSettings.removeAt( widgetIndex );
 
+    updateStopNamesInWidgets();
+}
+
+void SettingsUiManager::stopSettingsChanged()
+{
+    // NOT NEEDED ANY LONGER, SINCE StopListWidget NOW STORES A POINTER TO m_filterSettings
+//     m_filterSettings = m_stopListWidget->filterConfigurations();
+
+//     m_uiFilter.affectedStops->clear();
+//     m_uiAlarms.affectedStops->clear();
+//     TODO filling the affectedStops widgets is done in multiple places: here, filterSettingsRemoved, ...?
+
+    updateStopNamesInWidgets();
+}
+
+void SettingsUiManager::updateStopNamesInWidgets()
+{
+    StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
+
+//     // Update affected stops comboboxes in the filter and alarm page
+//     for ( int i = 0; i < stopSettingsList.count(); ++i ) {
+//         const StopSettings &stopSettings = stopSettingsList[ i ];
+//         QString text = stopSettings.stops().join( ", " );
+//         if ( !stopSettings.get<QString>(CitySetting).isEmpty() ) {
+//             text += " in " + stopSettings.get<QString>(CitySetting);
+//         }
+// 
+//         // Update for filters
+//         if ( i < m_uiFilter.affectedStops->count() ) {
+//             m_uiFilter.affectedStops->setItemText( i, text );
+//         } else {
+//             m_uiFilter.affectedStops->addItem( text );
+//         }
+// 
+//         // Update for alarms
+//         if ( i < m_uiAlarms.affectedStops->count() ) {
+//             m_uiAlarms.affectedStops->setItemText( i, text );
+//         } else {
+//             m_uiAlarms.affectedStops->addItem( text );
+//         }
+//     }
+
+    kDebug() << "Start";
     // Get a string for each stop setting
     QStringList stopLabels;
-    foreach( const StopSettings &stopSettings, m_stopListWidget->stopSettingsList() ) {
+    foreach( const StopSettings &stopSettings, stopSettingsList ) {
         QString text = stopSettings.stops().join( ", " );
         if ( !stopSettings.get<QString>(CitySetting).isEmpty() ) {
             text += " in " + stopSettings.get<QString>(CitySetting);
@@ -479,63 +534,43 @@ void SettingsUiManager::stopSettingsRemoved( QWidget*, int widgetIndex )
     }
 
     // Update stop list in the filter settings page
+    disconnect( m_uiFilter.affectedStops, SIGNAL(checkedItemsChanged()),
+                this, SLOT(affectedStopsFilterChanged()) );
     m_uiFilter.affectedStops->clear();
     m_uiFilter.affectedStops->addItems( stopLabels );
+
     // Get index of filter settings
     int index = -1;
+    QString filterConfiguration = m_uiFilter.filterConfigurations->currentText();
     for ( int i = 0; i < m_filterSettings.count(); ++i ) {
-        if ( m_filterSettings[i].name ==
-             GlobalApplet::untranslateFilterKey(m_uiFilter.filterConfigurations->currentText()) )
-        {
+        if ( m_filterSettings[i].name == filterConfiguration ) {
             index = i;
+            kDebug() << "Filter configuration found at" << index << filterConfiguration;
             break;
         }
     }
     if ( index != -1 ) {
+        kDebug() << "Update affected stops in GUI of" << index << m_filterSettings[index].name
+                 << m_filterSettings[index].affectedStops;
+        kDebug() << "From (old GUI settings)" << m_uiFilter.affectedStops->checkedRows();
+
         m_uiFilter.affectedStops->setCheckedRows( m_filterSettings[index].affectedStops.toList() );
     }
+    connect( m_uiFilter.affectedStops, SIGNAL(checkedItemsChanged()),
+                this, SLOT(affectedStopsFilterChanged()) );
 
     // Update stop list in the alarm settings page
+    disconnect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()),
+                this, SLOT(affectedStopsAlarmChanged()) );
     m_uiAlarms.affectedStops->clear();
     m_uiAlarms.affectedStops->addItems( stopLabels );
     if ( m_uiAlarms.alarmList->currentRow() != -1 ) {
         m_uiAlarms.affectedStops->setCheckedRows(
                 m_alarmSettings[m_uiAlarms.alarmList->currentRow()].affectedStops );
     }
-
-    stopSettingsChanged();
-}
-
-void SettingsUiManager::stopSettingsChanged()
-{
-    StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
-    m_filterSettings = m_stopListWidget->filterConfigurations();
-
-    m_uiFilter.affectedStops->clear();
-    m_uiAlarms.affectedStops->clear();
-    
-    // Update affected stops comboboxes in the filter and alarm page
-    for ( int i = 0; i < stopSettingsList.count(); ++i ) {
-        const StopSettings &stopSettings = stopSettingsList[ i ];
-        QString text = stopSettings.stops().join( ", " );
-        if ( !stopSettings.get<QString>(CitySetting).isEmpty() ) {
-            text += " in " + stopSettings.get<QString>(CitySetting);
-        }
-
-        // Update for filters
-//         if ( i < m_uiFilter.affectedStops->count() ) {
-//             m_uiFilter.affectedStops->setItemText( i, text );
-//         } else {
-            m_uiFilter.affectedStops->addItem( text );
-//         }
-
-        // Update for alarms
-//         if ( i < m_uiAlarms.affectedStops->count() ) {
-//             m_uiAlarms.affectedStops->setItemText( i, text );
-//         } else {
-            m_uiAlarms.affectedStops->addItem( text );
-//         }
-    }
+    connect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()),
+             this, SLOT(affectedStopsAlarmChanged()) );
+    kDebug() << "End";
 }
 
 void SettingsUiManager::usedFilterConfigChanged( QWidget* widget )
@@ -550,15 +585,15 @@ void SettingsUiManager::usedFilterConfigChanged( QWidget* widget )
     StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
     if ( stopSettingsList.count() > index ) {
         stopSettingsList[ index ].set( FilterConfigurationSetting,
-                GlobalApplet::untranslateFilterKey(qobject_cast<KComboBox*>(widget)->currentText()) );
+                qobject_cast<KComboBox*>(widget)->currentText() );
         m_stopListWidget->setStopSettingsList( stopSettingsList );
     }
 
     connect( m_stopListWidget, SIGNAL(changed(int,StopSettings)),
-            this, SLOT(stopSettingsChanged()) );
+             this, SLOT(stopSettingsChanged()) );
     connect( m_stopListWidget, SIGNAL(added(QWidget*)), this, SLOT(stopSettingsAdded()) );
     connect( m_stopListWidget, SIGNAL(removed(QWidget*, int)),
-            this, SLOT(stopSettingsRemoved(QWidget*,int)) );
+             this, SLOT(stopSettingsRemoved(QWidget*,int)) );
 }
 
 void SettingsUiManager::setValuesOfAdvancedConfig( const Settings &settings )
@@ -621,9 +656,21 @@ void SettingsUiManager::setValuesOfAlarmConfig()
     // Load currently selected alarm, if any
     if ( row < m_alarmSettings.count() && row != -1 ) {
         const AlarmSettings alarmSettings = m_alarmSettings.at( row );
+        disconnect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)),
+                    this, SLOT(currentAlarmTypeChanged(int)) );
         m_uiAlarms.alarmType->setCurrentIndex( static_cast<int>( alarmSettings.type ) );
+        connect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)),
+                 this, SLOT(currentAlarmTypeChanged(int)) );
+
+        disconnect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()),
+                    this, SLOT(affectedStopsAlarmChanged()) );
         m_uiAlarms.affectedStops->setCheckedRows( alarmSettings.affectedStops );
+        connect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()),
+                 this, SLOT(affectedStopsAlarmChanged()) );
+
+        disconnect( m_uiAlarms.alarmFilter, SIGNAL(changed()), this, SLOT(alarmChanged()) );
         m_uiAlarms.alarmFilter->setFilter( alarmSettings.filter );
+        connect( m_uiAlarms.alarmFilter, SIGNAL(changed()), this, SLOT(alarmChanged()) );
     }
     m_uiAlarms.removeAlarm->setDisabled( m_alarmSettings.isEmpty() );
 
@@ -633,16 +680,17 @@ void SettingsUiManager::setValuesOfAlarmConfig()
 
 void SettingsUiManager::setValuesOfFilterConfig()
 {
+    kDebug() << "Set GUI Values";
     if ( m_uiFilter.filterConfigurations->currentIndex() == -1 ) {
         kDebug() << "No filter configuration selected, select first one now";
         m_uiFilter.filterConfigurations->setCurrentIndex( 0 );
     }
 
     // Build list of filter configuration names
-    QStringList filterConfigs = GlobalApplet::translateFilterKeys( m_filterSettings.names() );
+    QStringList filterConfigs = m_filterSettings.names();
 
     // Store selected filter configuration
-    QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+    QString currentFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
 
     // Clear the list of filter configurations and add the new ones.
     // The currentIndexChanged signal is disconnected meanwhile,
@@ -651,20 +699,19 @@ void SettingsUiManager::setValuesOfFilterConfig()
                 this, SLOT(loadFilterConfiguration(QString)) );
     m_uiFilter.filterConfigurations->clear();
     m_uiFilter.filterConfigurations->addItems( filterConfigs );
-    if ( trFilterConfiguration.isEmpty() ) {
+    if ( currentFilterConfiguration.isEmpty() ) {
         m_uiFilter.filterConfigurations->setCurrentIndex( 0 );
     } else {
-        m_uiFilter.filterConfigurations->setCurrentItem( trFilterConfiguration );
+        m_uiFilter.filterConfigurations->setCurrentItem( currentFilterConfiguration );
     }
     connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
              this, SLOT(loadFilterConfiguration(QString)) );
 
-    if ( trFilterConfiguration.isEmpty() ) {
-        trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
-        kDebug() << "No Item Selected" << trFilterConfiguration;
+    if ( currentFilterConfiguration.isEmpty() ) {
+        currentFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+        kDebug() << "No Item Selected" << currentFilterConfiguration;
     }
-
-    stopSettingsChanged();
+    kDebug() << "Filter configuration selected" << currentFilterConfiguration;
 
     if ( m_uiFilter.filterConfigurations->count() == 0 ) {
         m_uiFilter.lblAffectedStops->setDisabled( true );
@@ -685,13 +732,17 @@ void SettingsUiManager::setValuesOfFilterConfig()
         m_uiFilter.removeFilterConfiguration->setEnabled( true );
         m_uiFilter.renameFilterConfiguration->setEnabled( true );
 
-        QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
+        QString filterConfiguration = currentFilterConfiguration;
         FilterSettings filterSettings = m_filterSettings.byName( filterConfiguration );
         m_uiFilter.filterAction->setCurrentIndex(
-                static_cast<int>( filterSettings.filterAction ) );
-        filterActionChanged( m_uiFilter.filterAction->currentIndex() );
+                static_cast<int>(filterSettings.filterAction) );
+//         filterActionChanged( m_uiFilter.filterAction->currentIndex() );
 
+        disconnect( m_uiFilter.affectedStops, SIGNAL(checkedItemsChanged()),
+                    this, SLOT(affectedStopsFilterChanged()) );
         m_uiFilter.affectedStops->setCheckedRows( filterSettings.affectedStops.toList() );
+        connect( m_uiFilter.affectedStops, SIGNAL(checkedItemsChanged()),
+                 this, SLOT(affectedStopsFilterChanged()) );
 
         // Clear old filter widgets
         int minWidgetCount = m_uiFilter.filters->minimumWidgetCount();
@@ -713,14 +764,10 @@ Settings SettingsUiManager::settings()
 {
     Settings ret;
 
+    // Set stop settings list (general settings page)
     ret.stopSettingsList = m_stopListWidget->stopSettingsList();
-    for ( int i = 0; i < ret.stopSettingsList.count(); ++i ) {
-        StopSettings stopSettings = ret.stopSettingsList.at( i );
-        stopSettings.set( FilterConfigurationSetting,
-                GlobalApplet::untranslateFilterKey(stopSettings.get<QString>(FilterConfigurationSetting)) );
-    }
 
-    // Set stored "no-Gui" settings
+    // Set stored "no-Gui" settings (without widgets in the configuration dialog)
     ret.colorGroupSettingsList = m_colorGroupSettings;
     ret.recentJourneySearches = m_recentJourneySearches;
     ret.currentStopSettingsIndex = m_currentStopSettingsIndex;
@@ -730,17 +777,19 @@ Settings SettingsUiManager::settings()
     ret.showHeader = m_showHeader;
     ret.hideColumnTarget = m_hideColumnTarget;
 
+    // Set filter settings list and update stored settings if there are changes in the GUI widgets
     if ( m_filterConfigChanged ) {
         m_filterSettings.set( currentFilterSettings() );
     }
     ret.filterSettingsList = m_filterSettings;
-    ret.colorGroupSettingsList = m_colorGroupSettings;
 
+    // Set alarm settings list and update stored settings if there are changes in the GUI widgets
     if ( m_alarmsChanged && m_uiAlarms.alarmList->currentRow() != -1 ) {
         m_alarmSettings[ m_uiAlarms.alarmList->currentRow() ] = currentAlarmSettings();
     }
     ret.alarmSettings = m_alarmSettings;
 
+    // Set advanced settings
     if ( m_uiAdvanced.showArrivals->isChecked() ) {
         ret.departureArrivalListType = ArrivalList;
     } else {
@@ -749,6 +798,7 @@ Settings SettingsUiManager::settings()
     ret.autoUpdate = m_uiAdvanced.updateAutomatically->isChecked();
     ret.maximalNumberOfDepartures = m_uiAdvanced.maximalNumberOfDepartures->value();
 
+    // Set appearance settings
     ret.showRemainingMinutes = m_uiAppearance.cmbDepartureColumnInfos->currentIndex() != 1;
     ret.showDepartureTime = m_uiAppearance.cmbDepartureColumnInfos->currentIndex() <= 1;
     ret.displayTimeBold = m_uiAppearance.displayTimeBold->checkState() == Qt::Checked;
@@ -802,31 +852,24 @@ void SettingsUiManager::loadFilterConfiguration( const QString& filterConfig )
         return;
     }
 
-    QString untrFilterConfig = GlobalApplet::untranslateFilterKey( filterConfig );
-    if ( untrFilterConfig == m_lastFilterConfiguration ) {
+    if ( filterConfig == m_lastFilterConfiguration ) {
         return; // Selected the same filter configuration again
     }
 
     if ( m_filterConfigChanged && !m_lastFilterConfiguration.isEmpty() ) {
         // Store to previously selected filter configuration
         FilterSettings filterSettings = currentFilterSettings();
+        kDebug() << "(real name?)" << filterSettings.name;
         filterSettings.name = m_lastFilterConfiguration;
 
+        kDebug() << "Store to previously selected filter configuration" << filterSettings.name;
         m_filterSettings.set( filterSettings );
     }
 
-    m_lastFilterConfiguration = untrFilterConfig;
-
-    setFilterConfigurationChanged( false );
+    kDebug() << "Loaded" << filterConfig << "last was" << m_lastFilterConfiguration;
+    m_lastFilterConfiguration = filterConfig;
     setValuesOfFilterConfig();
-}
-
-void SettingsUiManager::updateFilterConfigurationLists()
-{
-    m_stopListWidget->setFilterConfigurations( m_filterSettings );
-
-    // TODO Not needed any longer?
-    stopSettingsChanged();
+    setFilterConfigurationChanged( false );
 }
 
 void SettingsUiManager::addFilterConfiguration()
@@ -862,28 +905,27 @@ void SettingsUiManager::addFilterConfiguration()
 
     // Append new filter settings
     FilterSettings filterSettings;
-    filterSettings.name = GlobalApplet::untranslateFilterKey( newFilterConfig );
+    filterSettings.name = newFilterConfig;
     m_filterSettings << filterSettings;
-
-    // Update widgets containing a list of filter configuration names
-    updateFilterConfigurationLists();
+    kDebug() << "Appended filter settings at" << (m_filterSettings.count() - 1) << filterSettings.name;
 
     m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true );
+    setFilterConfigurationChanged();
 }
 
 void SettingsUiManager::removeFilterConfiguration()
 {
     int index = m_uiFilter.filterConfigurations->currentIndex();
     if ( index == -1 ) {
-        kDebug() << "No selection";
+        kDebug() << "No selection, nothing to delete";
         return;
     }
 
     // Show a warning
-    QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+    QString currentFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
     if ( KMessageBox::warningContinueCancel(m_configDialog,
          i18nc("@info", "<warning>This will permanently delete the selected filter "
-               "configuration <resource>%1</resource>.</warning>", trFilterConfiguration),
+               "configuration <resource>%1</resource>.</warning>", currentFilterConfiguration),
                QString(), KStandardGuiItem::cont(), KStandardGuiItem::cancel(),
                "deleteFilterSettings")
          != KMessageBox::Continue )
@@ -892,11 +934,12 @@ void SettingsUiManager::removeFilterConfiguration()
     }
 
     // Remove filter configuration from the filter settings list
-    QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
-    m_filterSettings.removeByName( filterConfiguration );
+    m_filterSettings.removeByName( currentFilterConfiguration );
+    kDebug() << "Removed" << currentFilterConfiguration << "from settings";
 
-    // Update widgets containing a list of filter configurations
-    updateFilterConfigurationLists();
+    // Update widgets containing a list of filter configurations?
+    // NOTE StopWidget(List) and StopSettingsDialog now use pointers to m_filterSettings
+//     updateFilterConfigurationLists();
 
     // Remove filter configuration from the UI filter list
     // but without calling loadFilterConfiguration here, therefore the disconnect
@@ -905,48 +948,49 @@ void SettingsUiManager::removeFilterConfiguration()
     m_uiFilter.filterConfigurations->removeItem( index );
     connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
              this, SLOT(loadFilterConfiguration(QString)) );
+    kDebug() << "Removed" << currentFilterConfiguration << "from combobox";
 
     // Select default filter configuration
     if ( index >= m_uiFilter.filterConfigurations->count() ) {
         index = m_uiFilter.filterConfigurations->count() - 1;
     }
     if ( index != -1 ) {
+        kDebug() << "Select filter at" << index;
         m_uiFilter.filterConfigurations->setCurrentIndex( index );
     } else {
+        kDebug() << "Call setValuesOfFilterConfig";
         setValuesOfFilterConfig();
     }
 
-    setFilterConfigurationChanged();
+//     setFilterConfigurationChanged();
 }
 
 void SettingsUiManager::renameFilterConfiguration()
 {
-    QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+    QString currentFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
     bool ok;
     QString newFilterConfig = KInputDialog::getText( i18nc("@title:window", "Choose a Name"),
-            i18nc("@label:textbox", "New Name of the Filter Configuration:"), trFilterConfiguration,
+            i18nc("@label:textbox", "New Name of the Filter Configuration:"), currentFilterConfiguration,
             &ok, m_configDialog, new QRegExpValidator(QRegExp("[^\\*&]*"), this) );
     if ( !ok || newFilterConfig.isNull() ) {
         return; // Canceled
     }
 
     // Get key name of the current filter configuration
-    QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
-    if ( newFilterConfig == trFilterConfiguration ) {
+    if ( newFilterConfig == currentFilterConfiguration ) {
         return; // Not changed, but the old name was accepted
     }
 
     // Check if the new name is valid.
     // '*' or '&' is also not allowed in the name but that's already validated by a QRegExpValidator.
     if ( newFilterConfig.isEmpty() ) {
-        KMessageBox::information( m_configDialog, i18nc( "@info", "Empty names are not allowed." ) );
+        KMessageBox::information( m_configDialog, i18nc("@info", "Empty names are not allowed.") );
         return;
     }
 
     // Check if the new name is already used and ask if it should be overwritten
-    QString untrNewFilterConfig = GlobalApplet::untranslateFilterKey( newFilterConfig );
-    if ( m_filterSettings.hasName(untrNewFilterConfig)
-        && KMessageBox::warningYesNo(m_configDialog,
+    if ( m_filterSettings.hasName(newFilterConfig)
+         && KMessageBox::warningYesNo(m_configDialog,
             i18nc("@info", "<warning>There is already a filter configuration with the name "
                   "<resource>%1</resource>.</warning><nl/>Do you want to overwrite it?",
                   newFilterConfig))
@@ -957,9 +1001,9 @@ void SettingsUiManager::renameFilterConfiguration()
 
     // Remove the filter configuration from the old key name
     // and add it with the new key name
-    FilterSettings filterSettings = m_filterSettings.byName( filterConfiguration );
-    m_filterSettings.removeByName( filterConfiguration );
-    filterSettings.name = untrNewFilterConfig;
+    FilterSettings filterSettings = m_filterSettings.byName( currentFilterConfiguration );
+    m_filterSettings.removeByName( currentFilterConfiguration );
+    filterSettings.name = newFilterConfig;
     m_filterSettings.set( filterSettings );
 
     // Remove old name from the list of filter configurations and add the new one.
@@ -969,26 +1013,27 @@ void SettingsUiManager::renameFilterConfiguration()
                 this, SLOT(loadFilterConfiguration(QString)) );
     int index = m_uiFilter.filterConfigurations->currentIndex();
     if ( index == -1 ) {
-        kDebug() << "Removed filter config not found in list" << trFilterConfiguration;
+        kDebug() << "Removed filter config not found in list" << currentFilterConfiguration;
     } else {
         m_uiFilter.filterConfigurations->removeItem( index );
     }
     m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true );
-    m_lastFilterConfiguration = untrNewFilterConfig;
+    m_lastFilterConfiguration = newFilterConfig;
     connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
             this, SLOT(loadFilterConfiguration(QString)) );
 
     // Update filter configuration name in stop settings
     StopSettingsList stopSettingsList = m_stopListWidget->stopSettingsList();
     for ( int i = 0; i < stopSettingsList.count(); ++i ) {
-        if ( stopSettingsList[i].get<QString>(FilterConfigurationSetting) == filterConfiguration ) {
-            stopSettingsList[i].set( FilterConfigurationSetting, untrNewFilterConfig );
+        if ( stopSettingsList[i].get<QString>(FilterConfigurationSetting) == currentFilterConfiguration ) {
+            stopSettingsList[i].set( FilterConfigurationSetting, newFilterConfig );
         }
     }
     m_stopListWidget->setStopSettingsList( stopSettingsList );
 
     // Update widgets containing a list of filter configuration names
-    updateFilterConfigurationLists();
+    // NOTE not needed any longer (because of pointers to m_filterSettings
+//     updateFilterConfigurationLists();
 }
 
 void SettingsUiManager::filterActionChanged( int index )
@@ -996,13 +1041,19 @@ void SettingsUiManager::filterActionChanged( int index )
     FilterAction filterAction = static_cast< FilterAction >( index );
 
     // Store to last edited filter settings
-    QString trFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
-    QString filterConfiguration = GlobalApplet::untranslateFilterKey( trFilterConfiguration );
-    FilterSettings filterSettings = m_filterSettings.byName( filterConfiguration );
+    QString currentFilterConfiguration = m_uiFilter.filterConfigurations->currentText();
+    FilterSettings filterSettings = m_filterSettings.byName( currentFilterConfiguration );
     filterSettings.filterAction = filterAction;
     m_filterSettings.set( filterSettings );
 
-    setFilterConfigurationChanged();
+    kDebug() << "Filter configuration changed to" << filterAction;
+//     setFilterConfigurationChanged();
+}
+
+void SettingsUiManager::filtersChanged()
+{
+    kDebug() << "Filters changed, directly write them to m_filterSettings";
+    m_filterSettings.set( currentFilterSettings() );
 }
 
 void SettingsUiManager::setFilterConfigurationChanged( bool changed )
@@ -1016,8 +1067,11 @@ void SettingsUiManager::setFilterConfigurationChanged( bool changed )
     m_uiFilter.removeFilterConfiguration->setDisabled( noFilter );
     m_uiFilter.renameFilterConfiguration->setDisabled( noFilter );
 
-    m_stopListWidget->setFilterConfigurations( m_filterSettings );
-
+//     kDebug() << "Stored current filter settings" << filterSettings.name
+//                 << "affectedStops:" << filterSettings.affectedStops;
+//     kDebug() << "Filter configurations updated in stop list widget, changed:" << changed;
+    kDebug() << "Changed:" << changed;
+//     m_stopListWidget->setFilterConfigurations( &m_filterSettings );
     m_filterConfigChanged = changed;
 }
 
@@ -1159,6 +1213,8 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
     // ***************** DEPRECATED BEGIN *****************************************************
     // *** Used for migration of filter settings from versions prior to version 0.10 Beta 9 ***
     if ( cgGlobal.hasKey("filterConfigurationList") ) {
+        kDebug() << "DEPRECATED Filter settings will be restructured for new version";
+
         QStringList filterConfigurationList =
                 cgGlobal.readEntry( "filterConfigurationList", QStringList() );
         for ( int i = filterConfigurationList.count() - 1; i >= 0; --i ) {

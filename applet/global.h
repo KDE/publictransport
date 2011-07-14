@@ -235,11 +235,6 @@ public:
 
     /** Gets a string like "25 minutes". */
     static QString durationString( int seconds );
-
-    static QString translateFilterKey( const QString &key );
-    static QString untranslateFilterKey( const QString &translatedKey );
-    static QStringList translateFilterKeys( const QStringList &keys );
-    static QStringList untranslateFilterKeys( const QStringList &translatedKeys );
 };
 
 #endif // Multiple inclusion guard

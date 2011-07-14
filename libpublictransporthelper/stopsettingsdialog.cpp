@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -202,7 +202,7 @@ public:
 	};
 
 	void init( const StopSettings &_oldStopSettings,
-               const FilterSettingsList &filterConfigurations )
+               FilterSettingsList *filterConfigurations )
 	{
 		Q_Q( StopSettingsDialog );
 		
@@ -256,8 +256,7 @@ public:
 // 			if ( settings.contains(FilterConfigurationSetting) ) {
 // 				CheckCombobox *filterConfiguration =
 //                         settingWidget<CheckCombobox>( FilterConfigurationSetting );
-// 				filterConfiguration->addItems(
-//                         Global::translateFilterKeys(filterConfigurations.names()) );
+// 				filterConfiguration->addItems( filterConfigurations.names() );
 // 			}
 
 			// Add to column resizer
@@ -426,7 +425,7 @@ public:
 
         // Add filter configuration list to the StopSettings object
         StopSettings filterStopSettings = _oldStopSettings;
-        filterStopSettings.set( FilterConfigurationSetting, QVariant::fromValue(filterConfigurations) );
+        filterStopSettings.set( FilterConfigurationSetting, QVariant::fromValue(*filterConfigurations) );
 
 		// Set values of setting widgets
 		q->setStopSettings( filterStopSettings );
@@ -612,7 +611,7 @@ public:
             foreach ( const FilterSettings &filter, filterSettings ) {
                 model->insertRow( row );
                 QModelIndex index = model->index( row, 0 );
-                model->setData( index, Global::translateFilterKey(filter.name), Qt::DisplayRole );
+                model->setData( index, filter.name, Qt::DisplayRole );
                 model->setData( index, filter.affectedStops.contains(stopIndex)
                                        ? Qt::Checked : Qt::Unchecked, Qt::CheckStateRole );
                 model->setData( index, QVariant::fromValue(filter), FilterSettingsRole );
@@ -722,7 +721,7 @@ protected:
 
 StopSettingsDialog::StopSettingsDialog( QWidget *parent, const StopSettings &stopSettings, 
 		StopSettingsDialog::Options options, AccessorInfoDialog::Options accessorInfoDialogOptions,
-		const FilterSettingsList &filterConfigurations, int stopIndex,
+		FilterSettingsList *filterConfigurations, int stopIndex,
         const QList<int> &customSettings, StopSettingsWidgetFactory::Pointer factory )
 		: KDialog(parent),
 		d_ptr(new StopSettingsDialogPrivate(stopSettings, 
@@ -741,18 +740,18 @@ StopSettingsDialog *StopSettingsDialog::createSimpleAccessorSelectionDialog(
 	QWidget* parent, const StopSettings& stopSettings, StopSettingsWidgetFactory::Pointer factory )
 {
 	return new StopSettingsDialog( parent, stopSettings, SimpleAccessorSelection,
-			AccessorInfoDialog::DefaultOptions, FilterSettingsList(), -1, QList<int>(), factory );
+			AccessorInfoDialog::DefaultOptions, 0, -1, QList<int>(), factory );
 }
 
 StopSettingsDialog* StopSettingsDialog::createSimpleStopSelectionDialog(
 	QWidget* parent, const StopSettings& stopSettings, StopSettingsWidgetFactory::Pointer factory )
 {
 	return new StopSettingsDialog( parent, stopSettings, SimpleStopSelection,
-			AccessorInfoDialog::DefaultOptions, FilterSettingsList(), -1, QList<int>(), factory );
+			AccessorInfoDialog::DefaultOptions, 0, -1, QList<int>(), factory );
 }
 
 StopSettingsDialog* StopSettingsDialog::createExtendedStopSelectionDialog(
-	QWidget* parent, const StopSettings& stopSettings, const FilterSettingsList &filterConfigurations,
+	QWidget* parent, const StopSettings& stopSettings, FilterSettingsList *filterConfigurations,
     int stopIndex, StopSettingsWidgetFactory::Pointer factory )
 {
 	return new StopSettingsDialog( parent, stopSettings, ExtendedStopSelection,
@@ -881,7 +880,7 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
             foreach ( const FilterSettings &filter, filterSettings ) {
                 model->insertRow( row );
                 QModelIndex index = model->index( row, 0 );
-                model->setData( index, Global::translateFilterKey(filter.name), Qt::DisplayRole );
+                model->setData( index, filter.name, Qt::DisplayRole );
                 model->setData( index, filter.affectedStops.contains(d->stopIndex)
                                        ? Qt::Checked : Qt::Unchecked, Qt::CheckStateRole );
                 model->setData( index, QVariant::fromValue(filter), FilterSettingsRole );
