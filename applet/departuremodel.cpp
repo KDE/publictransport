@@ -2125,15 +2125,21 @@ void DepartureModel::fireAlarm( const QDateTime& dateTime, DepartureItem* item )
     }
 }
 
-RouteItemFlags DepartureModel::routeItemFlags( const QString& stopName ) const
+RouteItemFlags PublicTransportModel::routeItemFlags( const QString& stopName ) const
 {
-    return m_highlightedStopName.compare( stopName, Qt::CaseInsensitive ) == 0
-            ? RouteItemHighlighted : RouteItemDefault;
+    RouteItemFlags flags = RouteItemDefault;
+    if ( m_info.highlightedStop.compare(stopName, Qt::CaseInsensitive) == 0 ) {
+        flags |= RouteItemHighlighted;
+    }
+    if ( m_info.homeStop.compare(stopName, Qt::CaseInsensitive) == 0 ) {
+        flags |= RouteItemHomeStop;
+    }
+    return flags;
 }
 
-void DepartureModel::setHighlightedStop( const QString& stopName )
+void PublicTransportModel::setHighlightedStop( const QString& stopName )
 {
-    m_highlightedStopName = stopName;
+    m_info.highlightedStop = stopName;
 
     if ( !m_items.isEmpty() ) {
         emit dataChanged( m_items.first()->index(), m_items.last()->index() );

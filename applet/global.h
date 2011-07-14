@@ -109,16 +109,18 @@ private:
     const char *m_property;
 };
 
-/** @brief A set of flags for RouteStopMarkerGraphicsItem/RouteStopTextGraphicsItem. */
+/** @brief A set of flags for route stops in the DepartureModel/JourneyModel. */
 enum RouteItemFlag {
-    RouteItemDefault        = 0x0000, /**< Use default settings. */
-    RouteItemHighlighted    = 0x0001  /**< Draw the stop item highlighted. */
+    RouteItemDefault        = 0x0000, /**< Default route stop settings. */
+    RouteItemHighlighted    = 0x0001, /**< The stop item is currently highlighted. */
+    RouteItemHomeStop       = 0x0002  /**< The stop item is the currently selected home stop. */
 };
 Q_DECLARE_FLAGS( RouteItemFlags, RouteItemFlag );
 Q_DECLARE_OPERATORS_FOR_FLAGS( RouteItemFlags );
 
 /** @brief A set of flags for stops in a route. */
 enum RouteStopFlag {
+    RouteStopDefault        = 0x0000, /**< The route stop has no special settings. */
     RouteStopIsIntermediate = 0x0001, /**< The route stop is an intermediate one (not the first
                                        * and not the last). Can't be used together with
                                        * RouteStopIsOrigin or RouteStopIsTarget. */
@@ -126,7 +128,8 @@ enum RouteStopFlag {
                                        * together with RouteStopIsIntermediate or RouteStopIsTarget. */
     RouteStopIsTarget       = 0x0004, /**< The route stop is the target of the route. Can't be used
                                        * together with RouteStopIsIntermediate or RouteStopIsOrigin. */
-    RouteStopIsHomeStop     = 0x0008  /**< The route stop is the currently selected home stop. */
+    RouteStopIsHomeStop     = 0x0008, /**< The route stop is the currently selected home stop. */
+    RouteStopIsHighlighted  = 0x0010  /**< The route stop is the currently highlighted stop. */
 };
 Q_DECLARE_FLAGS( RouteStopFlags, RouteStopFlag );
 Q_DECLARE_OPERATORS_FOR_FLAGS( RouteStopFlags );
@@ -207,6 +210,8 @@ public:
     static Plasma::Animation *fadeAnimation( QGraphicsWidget *w, qreal targetOpacity );
     static void startFadeAnimation( QGraphicsWidget *w, qreal targetOpacity );
 #endif
+
+    static KIcon stopIcon( RouteStopFlags routeStopFlags );
     
     static KIcon putIconIntoBiggerSizeIcon( const KIcon &icon,
                                             const QSize &iconSize, const QSize &resultingSize = QSize(32, 32) );

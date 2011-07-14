@@ -47,6 +47,7 @@ struct Info {
     bool displayTimeBold, showRemainingMinutes, showDepartureTime;
     float sizeFactor;
     QString homeStop;
+    QString highlightedStop;
 };
 
 /**
@@ -596,6 +597,29 @@ public:
     };
 
     /**
+     * @brief Sets the route stop item to be highlighted.
+     *
+     * @param stopName The stop name associated with the route stop item
+     *   to highlight. If this is empty (default), the currently highlighted
+     *   stop gets unhighlighted.
+     **/
+    void setHighlightedStop( const QString &stopName = QString() );
+
+    /** @brief Returns the currently highlighted stop or an empty string,
+      * if no stop is currently highlighted. */
+    QString highlightedStop() const { return m_info.highlightedStop; };
+    
+    /**
+     * @brief Gets the flags for route stop item with the given @p stopName.
+     *
+     * @param stopName The stop name which is associated with the route stop
+     *   item to get flags for.
+     * @returns The flags for the route stop item, which is associated with the
+     *   given @p stopName.
+     **/
+    RouteItemFlags routeItemFlags( const QString &stopName ) const;
+
+    /**
      * @brief Notifies the model about changes in the given @p item.
      *
      * @param item The item which data has changed.
@@ -750,29 +774,6 @@ public:
 
     /** @brief Removes an alarm from the given @p item. */
     void removeAlarm( DepartureItem *item );
-    
-    /**
-     * @brief Gets the flags for route stop item with the given @p stopName.
-     *
-     * @param stopName The stop name which is associated with the route stop
-     *   item to get flags for.
-     * @returns The flags for the route stop item, which is associated with the
-     *   given @p stopName.
-     **/
-    RouteItemFlags routeItemFlags( const QString &stopName ) const;
-
-    /**
-     * @brief Sets the route stop item to be highlighted.
-     *
-     * @param stopName The stop name associated with the route stop item
-     *   to highlight. If this is empty (default), the currently highlighted
-     *   stop gets unhighlighted.
-     **/
-    void setHighlightedStop( const QString &stopName = QString() );
-
-    /** @brief Returns the currently highlighted stop or an empty string, 
-      * if no stop is currently highlighted. */
-    QString highlightedStop() const { return m_highlightedStopName; };
 
     void setColorGroups( const ColorGroupSettingsList &colorGroups );
     ColorGroupSettingsList colorGroups() const { return m_colorGroups; };
@@ -806,7 +807,6 @@ private:
     void fireAlarm( const QDateTime& dateTime, DepartureItem* item );
 
     QMultiMap< QDateTime, DepartureItem* > m_alarms;
-    QString m_highlightedStopName;
     ColorGroupSettingsList m_colorGroups; // A list of color groups for the current stop
 };
 

@@ -57,7 +57,13 @@ public:
     /** @brief Gets the marker type of this item. */
     MarkerType markerType() const { return m_markerType; };
 
-    RouteStopFlags routeStopFlags() const { return m_stopFlags; };
+    /**
+     * @brief Gets flags for the associated stop.
+     *
+     * This method also checks the model for the currently highlighted stop / home stop and sets
+     * RouteStopIsHighlighted / RouteStopIsHomeStop in the return value if neccessary.
+     **/
+    RouteStopFlags routeStopFlags() const;
 
     RouteStopTextGraphicsItem *textItem() const { return m_textItem; };
 
@@ -144,7 +150,13 @@ public:
     /** @brief Gets the name of the associated stop. */
     QString stopName() const { return m_stopName; };
 
-    RouteStopFlags routeStopFlags() const { return m_stopFlags; };
+    /**
+     * @brief Gets flags for the associated stop.
+     *
+     * This method also checks the model for the currently highlighted stop / home stop and sets
+     * RouteStopIsHighlighted / RouteStopIsHomeStop in the return value if neccessary.
+     **/
+    RouteStopFlags routeStopFlags() const;
     
     /**
      * @brief Sets information about the new associated stop.
@@ -247,7 +259,15 @@ public:
     void setText( const QString &text );
 
     QRectF infoTextRect() const;
-    RouteStopFlags routeStopFlags() const { return m_stopFlags; };
+    
+    /**
+     * @brief Gets flags for the associated stop.
+     *
+     * This method also checks the model for the currently highlighted stop / home stop and sets
+     * RouteStopIsHighlighted / RouteStopIsHomeStop in the return value if neccessary.
+     **/
+    RouteStopFlags routeStopFlags() const;
+    
     QString stopName() const { return m_stopName; };
     
     void setZoomFactor( qreal zoomFactor = 1.0 );

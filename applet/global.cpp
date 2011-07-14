@@ -103,8 +103,23 @@ KIcon GlobalApplet::internationalIcon()
     return resultIcon;
 }
 
+KIcon GlobalApplet::stopIcon( RouteStopFlags routeStopFlags )
+{
+    if ( routeStopFlags.testFlag(RouteStopIsHighlighted) ) {
+        return KIcon("flag-blue");
+    } else if ( routeStopFlags.testFlag(RouteStopIsHomeStop) ) {
+        return KIcon("go-home");
+    } else if ( routeStopFlags.testFlag(RouteStopIsOrigin) ) {
+        return KIcon("flag-red");
+    } else if ( routeStopFlags.testFlag(RouteStopIsTarget) ) {
+        return KIcon("flag-green");
+    } else {
+        return KIcon("public-transport-stop");
+    }
+}
+
 KIcon GlobalApplet::putIconIntoBiggerSizeIcon( const KIcon &icon, const QSize &iconSize,
-                                        const QSize &resultingSize )
+                                               const QSize &resultingSize )
 {
     QPixmap pixmap = QPixmap( resultingSize );
     pixmap.fill( Qt::transparent );
@@ -122,7 +137,7 @@ KIcon GlobalApplet::putIconIntoBiggerSizeIcon( const KIcon &icon, const QSize &i
 }
 
 KIcon GlobalApplet::makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon,
-                            const QSize &overlaySize, int iconExtend )
+                                     const QSize &overlaySize, int iconExtend )
 {
     QPixmap pixmap = icon.pixmap( iconExtend ), pixmapOverlay = overlayIcon.pixmap( overlaySize );
     QPainter p( &pixmap );
@@ -140,13 +155,13 @@ KIcon GlobalApplet::makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon
 }
 
 KIcon GlobalApplet::makeOverlayIcon( const KIcon &icon, const QString &overlayIconName,
-                            const QSize &overlaySize, int iconExtend )
+                                     const QSize &overlaySize, int iconExtend )
 {
     return makeOverlayIcon( icon, KIcon( overlayIconName ), overlaySize, iconExtend );
 }
 
 KIcon GlobalApplet::makeOverlayIcon( const KIcon& icon, const QList<KIcon> &overlayIconsBottom,
-                            const QSize& overlaySize, int iconExtend )
+                                     const QSize& overlaySize, int iconExtend )
 {
     Q_ASSERT( !icon.isNull() );
 

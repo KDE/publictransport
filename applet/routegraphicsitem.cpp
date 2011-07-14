@@ -523,18 +523,14 @@ qreal RouteStopMarkerGraphicsItem::radius() const
     if ( m_markerType == IntermediateStopMarker ) {
         return (12.0 + 2.0 * m_hoverStep) * zoomFactor;
     } else {
-        DepartureModel *model = !routeItem || !routeItem->item() ? NULL :
-                qobject_cast<DepartureModel*>( routeItem->item()->model() );
-        bool isHighlightedStop = model && model->routeItemFlags(m_textItem->stopName())
-                .testFlag(RouteItemHighlighted);
-
-        if ( isHighlightedStop ) {
+        RouteStopFlags stopFlags = routeStopFlags();
+        if ( stopFlags.testFlag(RouteStopIsHighlighted) ) {
             return (7.5 + 2.0 * m_hoverStep) * zoomFactor;
-        } else if ( m_stopFlags.testFlag(RouteStopIsHomeStop) ) {
+        } else if ( stopFlags.testFlag(RouteStopIsHomeStop) ) {
             return (7.5 + 2.0 * m_hoverStep) * zoomFactor;
-        } else if ( m_stopFlags.testFlag(RouteStopIsOrigin) ) {
+        } else if ( stopFlags.testFlag(RouteStopIsOrigin) ) {
             return (7.5 + 2.0 * m_hoverStep) * zoomFactor;
-        } else if ( m_stopFlags.testFlag(RouteStopIsTarget) ) {
+        } else if ( stopFlags.testFlag(RouteStopIsTarget) ) {
             return (7.5 + 2.0 * m_hoverStep) * zoomFactor;
         } else {
             return (6.0 + 2.0 * m_hoverStep) * zoomFactor;
@@ -548,30 +544,50 @@ void RouteStopMarkerGraphicsItem::paint( QPainter* painter, const QStyleOptionGr
     Q_UNUSED( widget );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 
-    QString iconName;
+    KIcon stopIcon;
     if ( m_markerType == IntermediateStopMarker ) {
-        iconName = "public-transport-intermediate-stops";
+        stopIcon = KIcon( "public-transport-intermediate-stops" );
     } else {
-        RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
-        DepartureModel *model = !routeItem || !routeItem->item() ? NULL :
-                qobject_cast<DepartureModel*>( routeItem->item()->model() );
-        bool isHighlightedStop = model && model->routeItemFlags(m_textItem->stopName())
-                .testFlag(RouteItemHighlighted);
-
-        if ( isHighlightedStop ) {
-            iconName = "flag-blue";
-        } else if ( m_stopFlags.testFlag(RouteStopIsHomeStop) ) {
-            iconName = "go-home";
-        } else if ( m_stopFlags.testFlag(RouteStopIsOrigin) ) {
-            iconName = "flag-red";
-        } else if ( m_stopFlags.testFlag(RouteStopIsTarget) ) {
-            iconName = "flag-green";
-        } else {
-            iconName = "public-transport-stop";
-        }
+        stopIcon = GlobalApplet::stopIcon( routeStopFlags() );
     }
-    KIcon stopIcon( iconName );
     stopIcon.paint( painter, option->rect );
+}
+
+RouteStopFlags RouteStopMarkerGraphicsItem::routeStopFlags() const
+{
+    return m_textItem->routeStopFlags();
+}
+
+RouteStopFlags RouteStopTextGraphicsItem::routeStopFlags() const
+{
+    RouteStopFlags stopFlags = m_stopFlags;
+    RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
+    DepartureModel *model = !routeItem || !routeItem->item() ? NULL :
+            qobject_cast<DepartureModel*>( routeItem->item()->model() );
+    RouteItemFlags itemFlags = model ? model->routeItemFlags(m_stopName) : RouteItemDefault;
+    if ( itemFlags.testFlag(RouteItemHighlighted) && !stopFlags.testFlag(RouteStopIsHighlighted) ) {
+        stopFlags |= RouteStopIsHighlighted;
+    }
+    if ( itemFlags.testFlag(RouteItemHomeStop) && !stopFlags.testFlag(RouteStopIsHomeStop) ) {
+        stopFlags |= RouteStopIsHomeStop;
+    }
+    return stopFlags;
+}
+
+RouteStopFlags JourneyRouteStopGraphicsItem::routeStopFlags() const
+{
+    RouteStopFlags stopFlags = m_stopFlags;
+    RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
+    JourneyModel *model = !routeItem || !routeItem->item() ? NULL :
+            qobject_cast<JourneyModel*>( routeItem->item()->model() );
+    RouteItemFlags itemFlags = model ? model->routeItemFlags(m_stopName) : RouteItemDefault;
+    if ( itemFlags.testFlag(RouteItemHighlighted) ) {
+        stopFlags |= RouteStopIsHighlighted;
+    }
+    if ( itemFlags.testFlag(RouteItemHomeStop) ) {
+        stopFlags |= RouteStopIsHomeStop;
+    }
+    return stopFlags;
 }
 
 RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font,
@@ -666,7 +682,7 @@ void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent*
     }
 
     KMenu contextMenu;
-    contextMenu.addTitle( KIcon("public-transport-stop"), m_stopName );
+    contextMenu.addTitle( GlobalApplet::stopIcon(routeStopFlags()), m_stopName );
     contextMenu.addActions( actionList );
     contextMenu.exec( event->screenPos() );
 }
@@ -777,7 +793,7 @@ void JourneyRouteStopGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEve
     }
 
     KMenu contextMenu;
-    contextMenu.addTitle( KIcon("public-transport-stop"), m_stopName );
+    contextMenu.addTitle( GlobalApplet::stopIcon(routeStopFlags()), m_stopName );
     contextMenu.addActions( actionList );
     contextMenu.exec( event->screenPos() );
 }
@@ -1013,7 +1029,7 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
         return;
     }
 
-    qreal stopRadius = 5.0 * m_zoomFactor;
+    qreal stopRadius = 8.0 * m_zoomFactor;
     qreal lastY = -stopRadius;
     for ( int i = 0; i < m_routeItems.count() - 1; ++i ) {
         JourneyRouteStopGraphicsItem *routeItem = m_routeItems[i];
@@ -1031,9 +1047,9 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
                            stopPos.x() + lineWidth, stopPos.y() + lineHeight );
 
         // Draw the stop
-        KIcon("public-transport-stop").paint( painter,
-                                              stopPos.x() - stopRadius, stopPos.y() - stopRadius,
-                                              2.0 * stopRadius, 2.0 * stopRadius );
+        KIcon stopIcon = GlobalApplet::stopIcon( routeItem->routeStopFlags() );
+        stopIcon.paint( painter, stopPos.x() - stopRadius, stopPos.y() - stopRadius,
+                        2.0 * stopRadius, 2.0 * stopRadius );
         lastY = y;
 
         if ( i < m_item->journeyInfo()->routeVehicleTypes().count() ) {
@@ -1092,7 +1108,7 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
     painter->drawLine( stopPos.x(), stopPos.y(), stopPos.x() + lineWidth, stopPos.y() );
     painter->drawLine( stopPos.x() + lineWidth, stopPos.y() - lineHeight,
                        stopPos.x() + lineWidth, stopPos.y() + lineHeight );
-    KIcon("public-transport-stop").paint( painter,
-                                          stopPos.x() - stopRadius, stopPos.y() - stopRadius,
-                                          2.0 * stopRadius, 2.0 * stopRadius );
+    KIcon stopIcon = GlobalApplet::stopIcon( routeItem->routeStopFlags() );
+    stopIcon.paint( painter, stopPos.x() - stopRadius, stopPos.y() - stopRadius,
+                    2.0 * stopRadius, 2.0 * stopRadius );
 }
