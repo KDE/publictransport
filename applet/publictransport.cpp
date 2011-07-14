@@ -42,6 +42,7 @@
 #include <KToggleAction>
 #include <KLineEdit>
 #include <KMenu>
+#include <KPushButton>
 #include <KMimeTypeTrader>
 #include <KColorUtils>
 #include <KStandardDirs>
