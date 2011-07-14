@@ -121,8 +121,9 @@ void PublicTransport::init()
     m_departurePainter->setSvg( &m_vehiclesSvg );
 
     if ( !m_settings.stopSettingsList.isEmpty() ) {
-        m_currentServiceProviderFeatures =
-            currentServiceProviderData()["features"].toStringList();
+        QVariantHash serviceProviderData = currentServiceProviderData();
+        m_currentServiceProviderFeatures = serviceProviderData.isEmpty()
+                ? QStringList() : serviceProviderData["features"].toStringList();
     }
 
     // Set icon and text of the default "run associated application" action
@@ -136,9 +137,10 @@ void PublicTransport::init()
     }
 
     // Create models
+    StopSettings stopSettings = m_settings.currentStopSettings();
     m_model = new DepartureModel( this );
     m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
-    m_model->setHomeStop( m_settings.currentStopSettings().stop(0).name );
+    m_model->setHomeStop( stopSettings.stopList().isEmpty() ? QString() : stopSettings.stop(0).name );
     m_model->setCurrentStopIndex( m_settings.currentStopSettingsIndex );
     connect( m_model, SIGNAL(alarmFired(DepartureItem*)), this, SLOT(alarmFired(DepartureItem*)) );
     connect( m_model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
@@ -148,7 +150,8 @@ void PublicTransport::init()
     connect( m_model, SIGNAL(departuresLeft(QList<DepartureInfo>)),
              this, SLOT(departuresLeft(QList<DepartureInfo>)) );
     m_modelJourneys = new JourneyModel( this );
-    m_modelJourneys->setHomeStop( m_settings.currentStopSettings().stop(0).name );
+    m_modelJourneys->setHomeStop( stopSettings.stopList().isEmpty()
+                                  ? QString() : stopSettings.stop(0).name );
     m_modelJourneys->setCurrentStopIndex( m_settings.currentStopSettingsIndex );
     m_modelJourneys->setAlarmSettings( m_settings.alarmSettings );
 
@@ -704,6 +707,10 @@ void PublicTransport::reconnectSource()
     QStringList stops = curStopSettings.stops();
     QStringList stopIDs = curStopSettings.stopIDs();
     if ( stopIDs.isEmpty() ) {
+        if ( stops.isEmpty() ) {
+            // Currently no stops configured
+            return;
+        }
         stopIDs = stops;
     }
 
@@ -1469,8 +1476,7 @@ void PublicTransport::showArrivals()
 
 void PublicTransport::switchFilterConfiguration( QAction* action )
 {
-    const QString filterConfig = GlobalApplet::untranslateFilterKey(
-            KGlobal::locale()->removeAcceleratorMarker(action->text()) );
+    const QString filterConfig = KGlobal::locale()->removeAcceleratorMarker( action->text() );
 
     // Change filter configuration of the current stop in a copy of the settings.
     // Then write the new settings.
@@ -1503,7 +1509,7 @@ void PublicTransport::switchFilterByGroupColor( QAction* action )
 
 void PublicTransport::enableFilterConfiguration( const QString& filterConfiguration, bool enable )
 {
-    const QString filterConfig = GlobalApplet::untranslateFilterKey( filterConfiguration );
+    const QString filterConfig = filterConfiguration;
     Q_ASSERT_X( m_settings.filterSettingsList.hasName(filterConfig),
                 "PublicTransport::switchFilterConfiguration",
                 QString("Filter '%1' not found!").arg(filterConfig).toLatin1().data() );
@@ -1688,8 +1694,7 @@ KMenu *PublicTransport::updateFilterMenu()
         menu->addTitle( KIcon("view-filter"), i18nc("@title This is a menu title",
                                                     "Enabled Filters (reducing)") );
         foreach( const FilterSettings &filterSettings, m_settings.filterSettingsList ) {
-            QAction *action = new QAction(
-                    GlobalApplet::translateFilterKey(filterSettings.name), m_filtersGroup );
+            QAction *action = new QAction( filterSettings.name, m_filtersGroup );
             action->setCheckable( true );
             if ( filterSettings.affectedStops.contains(m_settings.currentStopSettingsIndex) ) {
                 action->setChecked( true );
@@ -1724,7 +1729,7 @@ KMenu *PublicTransport::updateFilterMenu()
             p.setRenderHints( QPainter::Antialiasing );
             p.setBrush( colorGroupSettings.color );
             QColor borderColor = KColorScheme(QPalette::Active).foreground().color();
-            borderColor.setAlphaF( 0.5 );
+            borderColor.setAlphaF( 0.75 );
             p.setPen( borderColor );
             p.drawRoundedRect( QRect(QPoint(1,1), pixmap.size() - QSize(2, 2)), 4, 4 );
             p.end();
@@ -1957,7 +1962,9 @@ void PublicTransport::writeSettings( const Settings& settings )
     if ( changed.testFlag(SettingsIO::IsChanged) ) {
         m_settings = settings;
 
-        m_currentServiceProviderFeatures = currentServiceProviderData()["features"].toStringList();
+        QVariantHash serviceProviderData = currentServiceProviderData();
+        m_currentServiceProviderFeatures = serviceProviderData.isEmpty()
+                ? QStringList() : serviceProviderData["features"].toStringList();
         emit configNeedsSaving();
         emit settingsChanged();
 
@@ -2646,8 +2653,8 @@ void PublicTransport::removeAlarms( const AlarmSettingsList &newAlarmSettings,
 QString PublicTransport::infoText()
 {
     QVariantHash data = currentServiceProviderData();
-    QString shortUrl = data[ "shortUrl" ].toString();
-    QString url = data[ "url" ].toString();
+    QString shortUrl = data.isEmpty() ? "-" : data["shortUrl"].toString();
+    QString url = data.isEmpty() ? "-" : data["url"].toString();
     QString sLastUpdate = m_lastSourceUpdate.toString( "hh:mm" );
     if ( sLastUpdate.isEmpty() ) {
         sLastUpdate = i18nc( "@info/plain This is used as 'last data update' "
@@ -2678,11 +2685,15 @@ QString PublicTransport::infoText()
 QString PublicTransport::courtesyToolTip() const
 {
     QVariantHash data = currentServiceProviderData();
-    QString credit = data["credit"].toString();
-    if ( credit.isEmpty() ) {
+    QString credit, url;
+    if ( !data.isEmpty() ) {
+        credit = data["credit"].toString();
+        url = data["url"].toString();
+    }
+    if ( credit.isEmpty() || url.isEmpty() ) {
         return QString();
     } else {
-        return i18nc( "@info/plain", "By courtesy of %1 (%2)", credit, data["url"].toString() );
+        return i18nc( "@info/plain", "By courtesy of %1 (%2)", credit, url );
     }
 }
 
@@ -2792,15 +2803,13 @@ void PublicTransport::updateColorGroupSettings()
 ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
         const QList< DepartureInfo >& infoList )
 {
-    kDebug() << "Generate new color group settings for" << infoList.count() << "departures";
-
     // Only test routes of up to 1 stops (the first 1 of the actual route)
     const int maxTestRouteLength = 1;
 
     // Maximal number of groups
     const int maxGroupCount = 8;
 
-    const int opacity = 75;
+    const int opacity = 128;
     const int colors = 82;
     static const QColor oxygenColors[colors] = {
         QColor(56,   37,   9, opacity), //wood brown6
