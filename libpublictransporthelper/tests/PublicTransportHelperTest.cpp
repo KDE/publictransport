@@ -293,7 +293,7 @@ void PublicTransportHelperTest::stopSettingsDialogSimpleAccessorSelectionTest()
 void PublicTransportHelperTest::stopSettingsDialogSimpleStopTest()
 {
 	StopSettingsDialog dlg( 0, m_stopSettings, StopSettingsDialog::SimpleStopSelection, 
-							AccessorInfoDialog::DefaultOptions, m_filterConfigurations );
+							AccessorInfoDialog::DefaultOptions, &m_filterConfigurations );
 	StopSettings stopSettings = dlg.stopSettings();
 	QCOMPARE( stopSettings[CitySetting].toString(), m_stopSettings[CitySetting].toString() );
 	QCOMPARE( stopSettings.stops(), m_stopSettings.stops() );
@@ -352,7 +352,7 @@ void PublicTransportHelperTest::stopSettingsDialogSimpleStopTest()
 void PublicTransportHelperTest::stopSettingsDialogExtendedStopTest()
 {
 	StopSettingsDialog *dlg = StopSettingsDialog::createExtendedStopSelectionDialog( 
-			0, m_stopSettings, m_filterConfigurations );
+			0, m_stopSettings, &m_filterConfigurations );
 
 	// Test stopSettings() for standard settings
 	StopSettings stopSettings = dlg->stopSettings();
@@ -456,7 +456,7 @@ void PublicTransportHelperTest::stopSettingsDialogExtendedStopTest()
     QAbstractItemModel *model = cmbFilterConfiguration->model();
     for ( int row = 0; row < model->rowCount() && row < m_filterConfigurations.count(); ++row ) {
         QCOMPARE( model->data(model->index(row, 0)).toString(),
-                  Global::translateFilterKey(m_filterConfigurations[row].name) );
+                  m_filterConfigurations[row].name );
         // All filter configurations are currently NOT checked for all stops
         QVERIFY( model->data(model->index(row, 0), Qt::CheckStateRole) == Qt::Unchecked );
     }
@@ -480,7 +480,7 @@ void PublicTransportHelperTest::stopSettingsDialogCustomStopTest()
 	StopSettingsDialog dlg( 0, m_stopSettings, 
 			StopSettingsDialog::ShowServiceProviderConfig | 
 			StopSettingsDialog::ShowStopInputField | StopSettingsDialog::ShowAlarmTimeConfig, 
-			AccessorInfoDialog::DefaultOptions, m_filterConfigurations, -1,
+			AccessorInfoDialog::DefaultOptions, &m_filterConfigurations, -1,
 			QList<int>() << AlarmTimeSetting );
 
 	// Test stopSettings() for standard settings
@@ -613,7 +613,7 @@ void PublicTransportHelperTest::stopSettingsDialogCustomFactoryTest()
 	m_stopSettings.set( UserSetting, QDate(2011, 1, 4) );
 	StopSettingsDialog dlg( 0, m_stopSettings,
 			StopSettingsDialog::ShowStopInputField | StopSettingsDialog::ShowAlarmTimeConfig, 
-			AccessorInfoDialog::DefaultOptions, m_filterConfigurations, -1,
+			AccessorInfoDialog::DefaultOptions, &m_filterConfigurations, -1,
 			QList<int>() << AlarmTimeSetting << UserSetting,
 			CustomFactory::Pointer::create() );
 	
@@ -660,7 +660,7 @@ void PublicTransportHelperTest::stopSettingsDialogAddWidgetsLaterCustomFactoryTe
 	
 	StopSettingsDialog dlg( 0, m_stopSettings, 
 			StopSettingsDialog::ShowStopInputField, AccessorInfoDialog::DefaultOptions,
-			m_filterConfigurations, -1, QList<int>(), CustomFactory::Pointer::create() );
+			&m_filterConfigurations, -1, QList<int>(), CustomFactory::Pointer::create() );
 	m_stopSettings = dlg.stopSettings();
 	
 	QVERIFY( !dlg.stopSettings().hasSetting(AlarmTimeSetting) );
@@ -708,7 +708,7 @@ void PublicTransportHelperTest::stopSettingsDialogAddWidgetsLaterCustomFactoryTe
 void PublicTransportHelperTest::stopWidgetTest()
 {
 	StopWidget stopWidget( 0, m_stopSettings, StopSettingsDialog::DefaultOptions, 
-						   AccessorInfoDialog::DefaultOptions, m_filterConfigurations );
+						   AccessorInfoDialog::DefaultOptions, &m_filterConfigurations );
 
 // 	QSignalSpy changedSpy( &stopWidget, SIGNAL(changed(StopSettings)) );
 // 	QSignalSpy removeSpy( &stopWidget, SIGNAL(remove()) ); TODO
@@ -728,12 +728,12 @@ void PublicTransportHelperTest::stopWidgetTest()
 	QCOMPARE( stopWidget.stopSettings(), m_stopSettings );
 	
 	// Test (set) filterConfigurations
-	QCOMPARE( stopWidget.filterConfigurations(), m_filterConfigurations );
+	QCOMPARE( *stopWidget.filterConfigurations(), m_filterConfigurations );
     FilterSettings newFilterSettings;
     newFilterSettings.name = "New filter configuration";
 	m_filterConfigurations << newFilterSettings;
-	stopWidget.setFilterConfigurations( m_filterConfigurations );
-	QCOMPARE( stopWidget.filterConfigurations(), m_filterConfigurations );
+	stopWidget.setFilterConfigurations( &m_filterConfigurations );
+	QCOMPARE( *stopWidget.filterConfigurations(), m_filterConfigurations );
 	
 	// Test createStopSettingsDialog
 	StopSettingsDialog *dlg = stopWidget.createStopSettingsDialog();
@@ -754,7 +754,7 @@ void PublicTransportHelperTest::stopListWidgetTest()
 	StopSettingsList list;
 	list << m_stopSettings;
 	StopListWidget stopListWidget( 0, list, StopSettingsDialog::DefaultOptions, 
-								   AccessorInfoDialog::DefaultOptions, m_filterConfigurations );
+								   AccessorInfoDialog::DefaultOptions, &m_filterConfigurations );
 	
 	QSignalSpy addedSpy( &stopListWidget, SIGNAL(added(QWidget*)) );
 	QSignalSpy removedSpy( &stopListWidget, SIGNAL(removed(QWidget*,int)) );
@@ -777,12 +777,12 @@ void PublicTransportHelperTest::stopListWidgetTest()
 	addedSpy.clear();
 	
 	// Test (set) filterConfigurations
-	QCOMPARE( stopListWidget.filterConfigurations(), m_filterConfigurations );
+	QCOMPARE( *stopListWidget.filterConfigurations(), m_filterConfigurations );
     FilterSettings newFilterSettings2;
     newFilterSettings2.name = "New filter configuration 2";
     m_filterConfigurations << newFilterSettings2;
-	stopListWidget.setFilterConfigurations( m_filterConfigurations );
-	QCOMPARE( stopListWidget.filterConfigurations(), m_filterConfigurations );
+	stopListWidget.setFilterConfigurations( &m_filterConfigurations );
+	QCOMPARE( *stopListWidget.filterConfigurations(), m_filterConfigurations );
 	
 	// Test setWidgetCountRange / minimumWidgetCount / maximumWidgetCount
 	stopListWidget.setWidgetCountRange( 1, 3 );

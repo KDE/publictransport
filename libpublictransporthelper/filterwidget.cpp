@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -567,5 +567,6 @@ void ConstraintListWidget::checkedItemsChanged()
     foreach( const QModelIndex &index, m_list->checkedItems() ) {
         m_values << index.data( Qt::UserRole );
     }
+
     emit changed();
 }

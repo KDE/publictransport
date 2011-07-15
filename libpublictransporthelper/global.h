@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -32,6 +32,7 @@
 #include <KIcon>
 #include "kdeversion.h"
 #include <QTime>
+#include <QDebug>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace Timetable {
@@ -121,6 +122,64 @@ public:
 
     static QColor textColorOnSchedule();
     static QColor textColorDelayed();
+};
+
+inline QDebug& operator<<( QDebug debug, FilterType filterType )
+{
+    switch ( filterType ) {
+        case InvalidFilter:
+            return debug << "InvalidFilter";
+        case FilterByVehicleType:
+            return debug << "FilterByVehicleType";
+        case FilterByTransportLine:
+            return debug << "FilterByTransportLine";
+        case FilterByTransportLineNumber:
+            return debug << "FilterByTransportLineNumber";
+        case FilterByTarget:
+            return debug << "FilterByTarget";
+        case FilterByDelay:
+            return debug << "FilterByDelay";
+        case FilterByVia:
+            return debug << "FilterByVia";
+        case FilterByNextStop:
+            return debug << "FilterByNextStop";
+        case FilterByDeparture:
+            return debug << "FilterByDeparture";
+        case FilterByDayOfWeek:
+            return debug << "FilterByDayOfWeek";
+        default:
+            return debug << "Unknown filter type: " << filterType;
+    }
+};
+
+inline QDebug& operator<<( QDebug debug, FilterVariant filterVariant )
+{
+    switch ( filterVariant ) {
+        case FilterNoVariant:
+            return debug << "FilterNoVariant";
+        case FilterContains:
+            return debug << "FilterContains";
+        case FilterDoesntContain:
+            return debug << "FilterDoesntContain";
+        case FilterEquals:
+            return debug << "FilterEquals";
+        case FilterDoesntEqual:
+            return debug << "FilterDoesntEqual";
+        case FilterMatchesRegExp:
+            return debug << "FilterMatchesRegExp";
+        case FilterDoesntMatchRegExp:
+            return debug << "FilterDoesntMatchRegExp";
+        case FilterIsOneOf:
+            return debug << "FilterIsOneOf";
+        case FilterIsntOneOf:
+            return debug << "FilterIsntOneOf";
+        case FilterGreaterThan:
+            return debug << "FilterGreaterThan";
+        case FilterLessThan:
+            return debug << "FilterLessThan";
+        default:
+            return debug << "Unknown filter variant: " << filterVariant;
+    }
 };
 
 }; // namespace Timetable

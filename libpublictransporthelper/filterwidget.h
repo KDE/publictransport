@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -146,10 +146,17 @@ public:
     * @param parent The parent object. Defaults to 0.
     **/
     ConstraintListWidget( FilterType type, FilterVariant initialVariant,
-                        const QList< ListItem > &values, const QVariantList& initialValues,
-                        QWidget* parent = 0 );
+                          const QList< ListItem > &values, const QVariantList& initialValues,
+                          QWidget* parent = 0 );
 
-    /** @returns the @ref CheckCombobox which is used by this ConstraintListWidget. */
+    /**
+     * @returns the @ref CheckCombobox which is used by this ConstraintListWidget.
+     *
+     * @note Don't use @ref CheckCombobox::checkedRows to get a list of checked values (can get 
+     *   confused if the values are also of type integer). Use @ref value instead
+     *   (ie. value().toList()). The values are stored in the model of the combobox for role
+     *   Qt::UserRole.
+     **/
     CheckCombobox *list() const { return m_list; };
 
     /** @returns a @ref QVariantList with the currently selected values. */

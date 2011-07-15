@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -26,20 +26,24 @@
 #include "../stopsettings.h"
 #include "../filter.h"
 
+class KConfigDialog;
 class PublicTransportHelperGuiTest : public QObject
 {
-	Q_OBJECT
-	
+    Q_OBJECT
+
 private slots:
 	void initTestCase();
 	void init();
 	void cleanup();
 	void cleanupTestCase();
 	
-	// Tests mouse/key clicks in a StopSettingsDialog (adding/removing stops, getting stop suggestions)
+	// Tests visibility of widgets, mouse/key clicks in a StopSettingsDialog (adding/removing 
+    // stops, getting stop suggestions)
 	// TODO When run using "make test" this fails (the script crashes on regexp.exec()).
 	//      When run using "ctest" or when the test executable is run directly this succeeds.
-	void stopSettingsDialogGuiTest();
+    void stopSettingsDialogGuiTest();
+    
+    void stopSettingsDialogFilterSettingsTest();
 	
 private:
 	StopSettings m_stopSettings;

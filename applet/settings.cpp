@@ -103,6 +103,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 
     // Setup tab widget of the stop settings page
     KTabWidget *tabMain = new KTabWidget;
+    tabMain->setObjectName( "generalTabWidget" );
     tabMain->addTab( widgetStop, i18nc("@title:tab", "&Stop selection") );
     tabMain->addTab( widgetAdvanced, i18nc("@title:tab Advanced settings tab label", "&Advanced") );
 

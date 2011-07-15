@@ -78,6 +78,9 @@ class DepartureInfo;
  * @ingroup filterSystem */
 class PUBLICTRANSPORTHELPER_EXPORT Filter : public QList< Constraint > {
 public:
+    Filter() : QList<Constraint>() {};
+    Filter( const QList<Constraint> other ) : QList<Constraint>(other) {};
+
     /** @brief Returns true, if all constraints of this filter match. */
     bool match( const DepartureInfo &departureInfo ) const;
 
@@ -118,6 +121,9 @@ QDataStream& operator>>( QDataStream &in, Filter &filter );
  * @ingroup filterSystem */
 class PUBLICTRANSPORTHELPER_EXPORT FilterList : public QList< Filter > {
 public:
+    FilterList() : QList<Filter>() {};
+    FilterList( const QList<Filter> other ) : QList<Filter>(other) {};
+
     /**
      * @brief Returns true, if one of the filters in this FilterList matches.
      * 
@@ -161,7 +167,7 @@ struct PUBLICTRANSPORTHELPER_EXPORT FilterSettings {
     QString name;
 
     /** @brief Create a new FilterSettings object with the given @p name. */
-    FilterSettings( const QString &name = "<unnamed>" ) {
+    explicit FilterSettings( const QString &name = "<unnamed>" ) {
         this->filterAction = ShowMatching;
         this->name = name;
     };
@@ -209,9 +215,40 @@ Q_DECLARE_METATYPE( Filter );
 Q_DECLARE_METATYPE( FilterSettings );
 Q_DECLARE_METATYPE( FilterSettingsList );
 
-QDebug &operator <<(QDebug debug, const Constraint &constraint);
-QDebug &operator <<(QDebug debug, const Filter &filter);
-QDebug &operator <<(QDebug debug, const FilterSettings &filterSettings);
-QDebug &operator <<(QDebug debug, const FilterSettingsList &filterSettingsList);
+inline QDebug& operator<<(QDebug debug, const Constraint& constraint)
+{
+    return debug << "Constraint, type " << constraint.type << ", variant " << constraint.variant;
+//                  << ", value " << constraint.value;
+};
+
+inline QDebug& operator<<(QDebug debug, const Filter& filter)
+{
+    debug << "Filter, " << filter.count() << " constraints:";
+    for ( int i = 0; i < filter.count() - 1; ++i ) {
+        debug << ' ' << filter[i];
+    }
+    return debug << ' ' << filter.last();
+};
+
+inline QDebug& operator<<(QDebug debug, const FilterSettings& filterSettings)
+{
+    debug << "FilterSettings " << filterSettings.name
+          << " affectedStops: " << filterSettings.affectedStops
+          << " filterAction: " << filterSettings.filterAction
+          << ' ' << filterSettings.filters.count() << " filters:\n";
+    for ( int i = 0; i < filterSettings.filters.count() - 1; ++i ) {
+        debug << ' ' << filterSettings.filters[i] << ", ";
+    }
+    return debug << ' ' << filterSettings.filters.count() << filterSettings.filters.last();
+};
+
+inline QDebug& operator<<(QDebug debug, const FilterSettingsList& filterSettingsList)
+{
+    debug << "FilterSettingsList, " << filterSettingsList.count() << "filter settings:\n";
+    for ( int i = 0; i < filterSettingsList.count() - 1; ++i ) {
+        debug << ' ' << filterSettingsList[i];
+    }
+    return debug << ' ' << filterSettingsList.last();
+};
 
 #endif // Multiple inclusion guard

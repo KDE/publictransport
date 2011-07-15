@@ -453,6 +453,17 @@ void PublicTransport::setSettings( const QString& serviceProviderID, const QStri
     writeSettings( settings );
 }
 
+void PublicTransport::setSettings( const StopSettingsList& stopSettingsList,
+                                   const FilterSettingsList& filterSettings )
+{
+    // Set settings in a copy of the current settings.
+    // Then write the new settings.
+    Settings settings = m_settings;
+    settings.stopSettingsList = stopSettingsList;
+    settings.filterSettingsList = filterSettings;
+    writeSettings( settings );
+}
+
 bool PublicTransport::isStateActive( const QString& stateName ) const
 {
     return m_states.contains(stateName)

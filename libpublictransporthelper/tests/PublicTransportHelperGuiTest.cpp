@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -21,6 +21,7 @@
 
 #include "../stopsettingsdialog.h"
 #include "../stopwidget.h"
+#include "../checkcombobox.h"
 
 #include <QtTest/QTest>
 #include <QtTest/QtTestGui>
@@ -47,7 +48,14 @@ void PublicTransportHelperGuiTest::initTestCase()
 
     FilterSettings filterSettings1, filterSettings2;
     filterSettings1.name = "Filter configuration 1";
+    Filter filter1 = Filter() << Constraint( FilterByTarget, FilterContains, "TestTarget" );
+    filterSettings1.filters << filter1;
+    filterSettings1.affectedStops << 0;
+
     filterSettings2.name = "Filter configuration 2";
+    Filter filter2 = Filter() << Constraint( FilterByTarget, FilterContains, "TestTarget2" );
+    filterSettings2.filters << filter2;
+
 	m_filterConfigurations << filterSettings1 << filterSettings2;
 }
 
@@ -60,6 +68,41 @@ void PublicTransportHelperGuiTest::cleanup()
 void PublicTransportHelperGuiTest::cleanupTestCase()
 {}
 
+void PublicTransportHelperGuiTest::stopSettingsDialogFilterSettingsTest()
+{
+    // Set a valid service provider ID and a single stop
+    m_stopSettings.set( LocationSetting, "de" );
+    m_stopSettings.set( ServiceProviderSetting, "de_db" );
+    m_stopSettings.setStop( QString() );
+
+    int stopIndex = 0;
+    StopSettingsDialog *dlg = StopSettingsDialog::createExtendedStopSelectionDialog( 0,
+            m_stopSettings, &m_filterConfigurations, stopIndex );
+
+    // Test factory
+    StopSettingsWidgetFactory::Pointer factory = dlg->factory();
+    QVERIFY( factory );
+
+    // Ensure the filter configuration widget was created
+    CheckCombobox *cmbFilterConfiguration = dlg->findChild<CheckCombobox*>(
+            factory->nameForSetting(FilterConfigurationSetting) );
+    QVERIFY( cmbFilterConfiguration );
+    // Test filter configuration widget content
+    QCOMPARE( cmbFilterConfiguration->count(), m_filterConfigurations.count() );
+
+    QSet<int> selectedFilterConfigurationsInGui = cmbFilterConfiguration->checkedRows().toSet();
+    QSet<int> selectedFilterConfigurations;
+    foreach ( int filterIndex, selectedFilterConfigurationsInGui ) {
+        bool currentFilterSelectedByStop =
+                m_filterConfigurations[ filterIndex ].affectedStops.contains( stopIndex );
+        if ( currentFilterSelectedByStop ) {
+            QVERIFY( selectedFilterConfigurationsInGui.contains(filterIndex) );
+        } else {
+            QVERIFY( !selectedFilterConfigurationsInGui.contains(filterIndex) );
+        }
+    }
+}
+
 void PublicTransportHelperGuiTest::stopSettingsDialogGuiTest()
 {
 	// Set a valid service provider ID and a single stop
@@ -67,7 +110,7 @@ void PublicTransportHelperGuiTest::stopSettingsDialogGuiTest()
 	m_stopSettings.set( ServiceProviderSetting, "de_db" );
 	m_stopSettings.setStop( QString() );
 	StopSettingsDialog *dlg = StopSettingsDialog::createExtendedStopSelectionDialog( 0,
-			m_stopSettings, m_filterConfigurations );
+			m_stopSettings, &m_filterConfigurations );
 	
 	// Test stops container widget for visibility
 	QWidget *stops = dlg->findChild< QWidget* >( "stops" );

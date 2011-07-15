@@ -225,6 +225,9 @@ public slots:
      * @param stopName The stop name to use for the new stop settings.
      **/
     void setSettings( const QString &serviceProviderID, const QString &stopName );
+    
+    void setSettings( const StopSettingsList &stopSettingsList,
+                      const FilterSettingsList &filterSettings );
 
     /**
      * @brief Writes the given @p settings and updates the applet accordingly.

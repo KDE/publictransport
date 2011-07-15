@@ -447,38 +447,3 @@ void FilterSettingsList::set(const FilterSettings& newFilterSettings) {
     // No filter with the given name found, add newFilterSettings to this list
     *this << newFilterSettings;
 }
-
-QDebug& operator<<(QDebug debug, const Constraint& constraint)
-{
-    return debug << "Constraint" << constraint.type << constraint.variant;// << constraint.value;
-}
-
-QDebug& operator<<(QDebug debug, const Filter& filter)
-{
-    debug << "Filter" << filter.count() << "constraints:";
-    for ( int i = 0; i < filter.count() - 1; ++i ) {
-        debug << "   " << (i+1) << filter[i];
-    }
-    return debug << "   " << filter.count() << filter.last();
-}
-
-QDebug& operator<<(QDebug debug, const FilterSettings& filterSettings)
-{
-    debug << "FilterSettings" << filterSettings.name
-          << "affectedStops:" << filterSettings.affectedStops
-          << "filterAction:" << filterSettings.filterAction
-          << filterSettings.filters.count() << "filters:\n";
-    for ( int i = 0; i < filterSettings.filters.count() - 1; ++i ) {
-        debug << "   " << (i+1) << filterSettings.filters[i];
-    }
-    return debug << "   " << filterSettings.filters.count() << filterSettings.filters.last();
-}
-
-QDebug& operator<<(QDebug debug, const FilterSettingsList& filterSettingsList)
-{
-    debug << "FilterSettingsList" << filterSettingsList.count() << "filter settings:\n";
-    for ( int i = 0; i < filterSettingsList.count() - 1; ++i ) {
-        debug << "   " << (i+1) << filterSettingsList[i];
-    }
-    return debug << "   " << filterSettingsList.count() << filterSettingsList.last();
-}
