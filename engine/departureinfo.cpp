@@ -227,15 +227,15 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
 		}
 	}
 
-	if ( contains(Duration) && value(Duration).toInt() <= 0 ) {
-		if ( value(Duration).canConvert(QVariant::String) ) {
-			QString duration = value( Duration ).toString();
-			QTime timeDuration = QTime::fromString( duration, "hh:mm" );
-			if ( timeDuration.isValid() ) {
-				int minsDuration = QTime( 0, 0 ).secsTo( timeDuration ) / 60;
-				insert( Duration, minsDuration );
-			}
-		}
+	if ( contains(Duration) && value(Duration).toInt() <= 0
+         && value(Duration).canConvert(QVariant::String) )
+    {
+        QString duration = value( Duration ).toString();
+        QTime timeDuration = QTime::fromString( duration, "hh:mm" );
+        if ( timeDuration.isValid() ) {
+            int minsDuration = QTime( 0, 0 ).secsTo( timeDuration ) / 60;
+            insert( Duration, minsDuration );
+        }
 	}
 	if ( value(Duration).toInt() <= 0
 			&& contains(DepartureDate)
@@ -249,7 +249,13 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
 						   QTime( value(ArrivalHour).toInt(),
 								  value(ArrivalMinute).toInt() ) );
 		int minsDuration = departure.secsTo( arrival ) / 60;
-		insert( Duration, minsDuration );
+        if ( minsDuration < 0 ) {
+            kDebug() << "Calculated duration is negative" << minsDuration
+                     << "departure" << departure << "arrival" << arrival;
+            insert( Duration, -1 );
+        } else {
+            insert( Duration, minsDuration );
+        }
 	}
 
 	if ( contains(RouteTimesDeparture) ) {
