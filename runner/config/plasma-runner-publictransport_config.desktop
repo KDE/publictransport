@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Public Transport Runner Config
 Name[et]=Ühiskondliku transpordi käivitaja seadistused
+Name[fr]=Configuration du lanceur de l'application Transports publics
 Name[km]=ការ​កំណត់​រចនាសម្ព័ន្ធ​អ្នក​ដំណើរការ​ដឹកជញ្ជូន​សាធារណៈ
 Name[pl]=Konfiguracja programu uruchamiającego komunikacji publicznej
 Name[pt]=Configuração da Execução dos Transportes Públicos
@@ -10,6 +11,7 @@ Name[uk]=Налаштування інструмента запуску «Гро
 Name[x-test]=xxPublic Transport Runner Configxx
 Comment=Configuration of the Public Transport Runner
 Comment[et]=Ühiskondliku transpordi käivitaja seadistused
+Comment[fr]=Configuration du lanceur de l'application Transports publics
 Comment[km]=ការ​កំណត់​រចនាសម្ព័ន្ធ​អ្នក​ដំណើរការ​ដឹកជញ្ជូន​សាធារណៈ
 Comment[pl]=Konfiguracja programu uruchomieniowego komunikacji publicznej
 Comment[pt]=Configuração da Execução dos Transportes Públicos

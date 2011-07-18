@@ -2,6 +2,7 @@
 Name=TimetableMate
 Name[de]=TimetableMate
 Name[et]=Sõiduplaanimeister
+Name[fr]=TimetableMate
 Name[km]=TimetableMate
 Name[nds]=TimetableMate
 Name[pl]=Pomocnik rozkładu jazdy
@@ -15,6 +16,7 @@ Icon=public-transport-stop
 [org.kde.timetablemate.install]
 Name=Install timetable accessor globally
 Name[et]=Sõiduplaani aksessori globaalne paigaldamine
+Name[fr]=Installation d'un accesseur à un horaire à l'échelle mondiale
 Name[km]=ដំឡើង​កាលវិភាគ​​កម្មវិធី​ចូល​ដំណើរការ​លកល
 Name[pl]=Zainstaluj globalnego akcesora rozkładu jazdy
 Name[pt]=Instalar o motor de acesso global aos horários
@@ -24,6 +26,7 @@ Name[uk]=Встановити загальне джерело даних роз�
 Name[x-test]=xxInstall timetable accessor globallyxx
 Description=Authentication is required to install the timetable accessor files globally
 Description[et]=Sõiduplaani aksessori globaalseks paigaldamiseks on vajalik autentimine
+Description[fr]=Une authentification est requise pour installer les fichiers d'accès aux horaires à l'échelle mondiale
 Description[km]=ទាមទារ​ការ​ផ្ទៀងផ្ទាត់​ភាព​ត្រឹមត្រូវ​ដើម្បី​ដំឡើង​កម្មវិធី​កាលវិភាគ​ឯកសារ​សកល
 Description[pl]=Wymagane uwierzytelnienie, aby zainstalować globalnie pliki akcesora rozkładu jazdy
 Description[pt]=É necessária a autenticação para instalar os ficheiros de acesso aos horários a nível global
