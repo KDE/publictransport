@@ -24,10 +24,10 @@
 #ifndef DEPARTUREMODEL_HEADER
 #define DEPARTUREMODEL_HEADER
 
-#include <QAbstractItemModel>
 #include "settings.h" // TODO Only used for AlarmSettings. Removed here?
 #include <publictransporthelper/departureinfo.h>
 #include <QSortFilterProxyModel>
+#include <QAbstractItemModel>
 
 /** @brief Holds information about settings from the applet. */
 struct Info {
@@ -596,15 +596,6 @@ public:
         m_info.homeStop = homeStop;
     };
 
-    /**
-     * @brief Sets the route stop item to be highlighted.
-     *
-     * @param stopName The stop name associated with the route stop item
-     *   to highlight. If this is empty (default), the currently highlighted
-     *   stop gets unhighlighted.
-     **/
-    void setHighlightedStop( const QString &stopName = QString() );
-
     /** @brief Returns the currently highlighted stop or an empty string,
       * if no stop is currently highlighted. */
     QString highlightedStop() const { return m_info.highlightedStop; };
@@ -645,6 +636,16 @@ signals:
      *   get removed after this signal was emitted.
      **/
     void journeysAboutToBeRemoved( const QList<ItemBase*> &items );
+
+public slots:
+    /**
+     * @brief Sets the route stop item to be highlighted.
+     *
+     * @param stopName The stop name associated with the route stop item
+     *   to highlight. If this is empty (default), the currently highlighted
+     *   stop gets unhighlighted.
+     **/
+    void setHighlightedStop( const QString &stopName = QString() );
 
 protected slots:
     void startUpdateTimer();
