@@ -74,8 +74,9 @@ public:
     void setHoverStep( qreal expandStep );
 
     virtual QRectF boundingRect() const {
-        return QRectF( -radius(), -radius(), 2 * radius(), 2 * radius() );
+        return QRectF( -radius() * 1.5, -radius() * 1.5, 2 * radius() * 1.5, 2 * radius() * 1.5 );
     };
+    virtual QPainterPath shape() const { QPainterPath p; p.addEllipse(boundingRect()); return p; };
 
     virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const {
         if ( which == Qt::MinimumSize || which == Qt::MaximumSize ) {
@@ -213,8 +214,9 @@ class RouteGraphicsItem : public QGraphicsWidget {
 
 public:
     RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item,
-                       StopAction *copyStopToClipboardAction = 0, StopAction *showDeparturesAction = 0,
-                       StopAction *highlightStopAction = 0, StopAction *newFilterViaStopAction = 0 );
+                       StopAction *copyStopToClipboardAction = 0, StopAction *showInMapAction = 0,
+                       StopAction *showDeparturesAction = 0, StopAction *highlightStopAction = 0,
+                       StopAction *newFilterViaStopAction = 0 );
 
     void updateData( DepartureItem *item );
 
@@ -239,6 +241,7 @@ private:
     qreal m_textAngle;
     qreal m_maxTextWidth;
     StopAction *m_copyStopToClipboardAction;
+    StopAction *m_showInMapAction;
     StopAction *m_showDeparturesAction;
     StopAction *m_highlightStopAction;
     StopAction *m_newFilterViaStopAction;
@@ -300,6 +303,7 @@ class JourneyRouteGraphicsItem : public QGraphicsWidget {
 public:
     JourneyRouteGraphicsItem( QGraphicsItem *parent, JourneyItem *item, Plasma::Svg *svg,
                               StopAction *copyStopToClipboardAction = 0,
+                              StopAction *showInMapAction = 0,
                               StopAction *requestJourneyToStopAction = 0,
                               StopAction *requestJourneyFromStopAction = 0 );
 
@@ -320,6 +324,7 @@ private:
     qreal m_zoomFactor;
     QList<JourneyRouteStopGraphicsItem*> m_routeItems;
     StopAction *m_copyStopToClipboardAction;
+    StopAction *m_showInMapAction;
     StopAction *m_requestJourneyToStopAction;
     StopAction *m_requestJourneyFromStopAction;
 };

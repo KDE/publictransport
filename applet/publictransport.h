@@ -24,8 +24,9 @@
 #ifndef PUBLICTRANSPORT_HEADER
 #define PUBLICTRANSPORT_HEADER
 
-// Plasma includes
+// KDE includes
 #include <Plasma/PopupApplet>
+#include <KProcess>
 
 // Own includes
 #include "global.h"
@@ -450,6 +451,17 @@ protected slots:
     /** @brief The plasma theme has been changed. */
     void themeChanged() { useCurrentPlasmaTheme(); };
 
+    void showStopInMarble( qreal lon = -1.0, qreal lat = -1.0 );
+
+    /** @brief The 'marble' process has been started. */
+    void marbleHasStarted();
+
+    /** @brief The 'marble' process has finished. */
+    void marbleFinished( int exitCode );
+
+    /** @brief There was an error in the 'marble' process. */
+    void errorMarble( QProcess::ProcessError processError );
+
     /**
      * @brief A "recent journey"-action has been triggered.
      * 
@@ -689,6 +701,9 @@ protected:
     /** @brief Read stop suggestions from the data engine.
      * @ingroup models */
     void processStopSuggestions( const QString &sourceName, const Plasma::DataEngine::Data& data );
+    
+    /** @brief Read stop suggestions from the data engine. */
+    void processOsmData( const QString &sourceName, const Plasma::DataEngine::Data& data );
 
     /** @brief Clears the departure / arrival list received from the data engine and
      *   displayed by the applet.
@@ -806,6 +821,9 @@ private:
     QAbstractTransition *m_journeySearchTransition1;
     QAbstractTransition *m_journeySearchTransition2;
     QAbstractTransition *m_journeySearchTransition3;
+
+    KProcess *m_marble;
+    qreal m_longitude, m_latitude; // Coordinates from openstreetmap for a given stop
 };
 
 #ifndef NO_EXPORT_PLASMA_APPLET // Needed for settings.cpp to include publictransport.h
@@ -995,6 +1013,7 @@ digraph publicTransportDataEngine {
     ];
     };
 
+#include <KProcess>
     edge [ dir=back, arrowhead="none", arrowtail="empty", style="solid" ];
     appletState -> applet;
 

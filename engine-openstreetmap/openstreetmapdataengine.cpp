@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -28,7 +28,7 @@ OpenStreetMapEngine::OpenStreetMapEngine( QObject *parent, const QVariantList &a
 	    : Plasma::DataEngine(parent, args) {
     // Update maximally every 5 mins, openstreetmap data doesn't change too much
     setMinimumPollingInterval( 300000 );
-		
+    
     // Fill list of 'short filters'.
     // TODO: Maybe plurals are better here?
     m_shortFilter.insert( "bank", Filter(Node, "amenity=bank") );
@@ -59,8 +59,8 @@ OpenStreetMapEngine::OpenStreetMapEngine( QObject *parent, const QVariantList &a
     m_shortFilter.insert( "forest", Filter(Node, "natural=forest") );
     m_shortFilter.insert( "park", Filter(Node, "natural=park") );
     
-    m_shortFilter.insert( "publictransportstops",
-			  Filter(Relation, "public_transport=stop_area") );
+//     m_shortFilter.insert( "publictransportstops", Filter(Relation, "public_transport=stop_area") );
+    m_shortFilter.insert( "publictransportstops", Filter(Node, "public_transport=*") ); //stop_position|platform
 }
 
 bool OpenStreetMapEngine::sourceRequestEvent( const QString& source ) {
@@ -71,90 +71,133 @@ bool OpenStreetMapEngine::sourceRequestEvent( const QString& source ) {
 
 bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
     foreach ( JobInfo jobInfo, m_jobInfos ) {
-	if ( jobInfo.sourceName == source ) {
-	    kDebug() << "Source gets already updated" << source;
-	    return true;
-	}
+        if ( jobInfo.sourceName == source ) {
+            kDebug() << "Source gets already updated" << source;
+            return true;
+        }
     }
     kDebug() << "Update" << source;
-    
+
     // Parse the source name
     // "[longitude],[latitude] ([mapArea]) ([element] [filter]|[short-filter])"
     // mapArea should be < 0.5, otherwise parsing could take some time.
     int pos = source.indexOf( " " );
     int pos2 = source.indexOf( " ", pos + 1 );
-    if ( pos == -1 )
-	return false;
-
-    // First comes latitude,longitute
-    QStringList values = source.left( pos ).split( "," );
-    if ( values.count() != 2 )
-	return false;
-    double latitude = values[0].toDouble(); // Latitude first
-    double longitude = values[1].toDouble();
-    double mapBoxSize; // Size of the area, in which to search
-
-    // Then the size of the area to search in
-    // or the elements to filter, which can be "node", "way" or "relation".
-    // Can also be a 'short filter', see below (search area and element omitted)
-    QString maybeElement = source.mid( pos + 1, pos2 - pos - 1 ).toLower();
-    bool ok;
-    mapBoxSize = maybeElement.toDouble( &ok );
-    
-    QString element;
-    if ( ok ) {
-	// Area given, use next word as element or 'short filter'
-	int pos3 = source.indexOf( " ", pos2 + 1 );
-	maybeElement = pos3 == -1 ? source.mid( pos2 + 1 ).toLower()
-		       : source.mid( pos2 + 1, pos3 - pos2 - 1 ).toLower();
-	pos2 = pos3;
-
-	// Prevent too big areas
-	if ( mapBoxSize > maxAreaSize )
-	    mapBoxSize = maxAreaSize;
-    } else {
-	// Use default area size
-	mapBoxSize = defautAreaSize;
+    if ( pos == -1 ) {
+        return false;
     }
 
-    QString sFilter;
+    QString osmUrl;
     OsmReader::ResultFlags resultFlags = OsmReader::AllResults;
-    if ( m_shortFilter.contains(maybeElement) ) {
-	// Replace 'short filters', like "hospital" -> "amenity=hospital" (with element="node")
-	Filter filter = m_shortFilter[ maybeElement ];
-	element = elementToString( filter.element );
-	sFilter = filter.filter;
 
-	if ( maybeElement == "publictransportstops" )
-	    resultFlags |= OsmReader::OnlyResultsWithNameAttribute;
+    // Special source to get the coordinates of something
+    // "getCoords publictransportstops Pappelstraße"
+    if ( source.startsWith("getCoords ", Qt::CaseInsensitive) ) {
+        QString maybeElement = source.mid( pos + 1, pos2 - pos - 1 ).toLower();
+        QString element, search, sFilter;
+        int pos3 = source.indexOf( " ", pos2 + 1 );
+        if ( m_shortFilter.contains(maybeElement) ) {
+            // Replace 'short filters', like "hospital" -> "amenity=hospital" (with element="node")
+            Filter filter = m_shortFilter[ maybeElement ];
+            element = elementToString( filter.element );
+            sFilter = filter.filter;
+
+            search = source.mid( pos2 + 1 ).trimmed();
+        } else {
+            // A custom filter
+            element = maybeElement;
+            if ( pos3 == -1 ) {
+                kDebug() << "No search string given";
+                return false;
+            } else {
+                sFilter = source.mid( pos2 + 1, pos3 - pos2 ).trimmed();
+                search = source.mid( pos3 + 1 ).trimmed();
+            }
+        }
+
+        if ( search.isEmpty() ) {
+            kDebug() << "No search string given";
+            return false;
+        }
+
+        // Build url
+        osmUrl = QString( "%1%2[%3][name=%4]" )
+                .arg( baseUrl(), element, sFilter, search );
+        kDebug() << "URL:" << osmUrl;
+//         "http://jxapi.openstreetmap.org/xapi/api/0.6/node[public_transport=stop_position][name=Huckelriede]"
     } else {
-	// A custom filter
-	element = maybeElement;
-	sFilter = source.mid( pos2 + 1 ).trimmed();
+        // First comes latitude,longitute
+        QStringList values = source.left( pos ).split( "," );
+        if ( values.count() != 2 ) {
+            return false;
+        }
+        double latitude = values[0].toDouble(); // Latitude first
+        double longitude = values[1].toDouble();
+        double mapBoxSize; // Size of the area, in which to search
+
+        // Then the size of the area to search in
+        // or the elements to filter, which can be "node", "way" or "relation".
+        // Can also be a 'short filter', see below (search area and element omitted)
+        QString maybeElement = source.mid( pos + 1, pos2 - pos - 1 ).toLower();
+        bool ok;
+        mapBoxSize = maybeElement.toDouble( &ok );
+
+        QString element;
+        if ( ok ) {
+            // Area given, use next word as element or 'short filter'
+            int pos3 = source.indexOf( " ", pos2 + 1 );
+            maybeElement = pos3 == -1 ? source.mid( pos2 + 1 ).toLower()
+                    : source.mid( pos2 + 1, pos3 - pos2 - 1 ).toLower();
+            pos2 = pos3;
+
+            // Prevent too big areas
+            if ( mapBoxSize > maxAreaSize ) {
+                mapBoxSize = maxAreaSize;
+            }
+        } else {
+            // Use default area size
+            mapBoxSize = defautAreaSize;
+        }
+
+        QString sFilter;
+        if ( m_shortFilter.contains(maybeElement) ) {
+            // Replace 'short filters', like "hospital" -> "amenity=hospital" (with element="node")
+            Filter filter = m_shortFilter[ maybeElement ];
+            element = elementToString( filter.element );
+            sFilter = filter.filter;
+
+            if ( maybeElement == "publictransportstops" ) {
+                resultFlags |= OsmReader::OnlyResultsWithNameAttribute;
+            }
+        } else {
+            // A custom filter
+            element = maybeElement;
+            sFilter = source.mid( pos2 + 1 ).trimmed();
+        }
+
+        // Build url
+        osmUrl = QString( "%1%2[%3][bbox=%4,%5,%6,%7]" )
+                .arg( baseUrl(), element, sFilter )
+                .arg( longitude - mapBoxSize/2 ).arg( latitude - mapBoxSize/2 )
+                .arg( longitude + mapBoxSize/2 ).arg( latitude + mapBoxSize/2 );
+        kDebug() << "URL:" << osmUrl;
     }
 
     // Tell visualizations that not all data has been read
     setData( source, "finished", false );
-    
-    // Build url
-    QString osmUrl = QString( "%1%2[%3][bbox=%4,%5,%6,%7]" )
-	    .arg( baseUrl(), element, sFilter )
-	    .arg( longitude - mapBoxSize/2 ).arg( latitude - mapBoxSize/2 )
-	    .arg( longitude + mapBoxSize/2 ).arg( latitude + mapBoxSize/2 );
-    kDebug() << "URL:" << osmUrl;
 
     // Start download
     KIO::TransferJob *job = KIO::get( osmUrl, KIO::NoReload, KIO::HideProgressInfo );
     connect( job, SIGNAL(data(KIO::Job*,QByteArray)),
-	     this, SLOT(data(KIO::Job*,QByteArray)) );
+             this, SLOT(data(KIO::Job*,QByteArray)) );
     connect( job, SIGNAL(result(KJob*)), this, SLOT(finished(KJob*)) );
 
     // Store source name and reader associated with the job
-    OsmReader *osmReader = new OsmReader( source, resultFlags );
-    connect( osmReader, SIGNAL(chunkRead(OsmReader*,Plasma::DataEngine::Data)),
-	     this, SLOT(osmChunkRead(OsmReader*,Plasma::DataEngine::Data)) );
-    connect( osmReader, SIGNAL(finishedReading(OsmReader*,Plasma::DataEngine::Data)),
-	     this, SLOT(osmFinishedReading(OsmReader*,Plasma::DataEngine::Data)) );
+    QPointer<OsmReader> osmReader = new OsmReader( source, osmUrl, resultFlags );
+    connect( osmReader, SIGNAL(chunkRead(QPointer<OsmReader>,Plasma::DataEngine::Data)),
+             this, SLOT(osmChunkRead(QPointer<OsmReader>,Plasma::DataEngine::Data)) );
+    connect( osmReader, SIGNAL(finishedReading(QPointer<OsmReader>,Plasma::DataEngine::Data)),
+             this, SLOT(osmFinishedReading(QPointer<OsmReader>,Plasma::DataEngine::Data)) );
     m_jobInfos.insert( job, JobInfo(source, osmReader) );
     return true;
 }
@@ -162,14 +205,15 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
 void OpenStreetMapEngine::data( KIO::Job* job, const QByteArray& ba ) {
     JobInfo &jobInfo = m_jobInfos[ job ]; // Get associated information
 
+    kDebug() << "Got some data" << ba;
     jobInfo.osmReader->addData( ba );
     if ( jobInfo.readStarted ) {
-	// Continue reading
-	jobInfo.osmReader->resumeReading(); 
+        // Continue reading
+        jobInfo.osmReader->resumeReading(); 
     } else {
-	// Start reading if not already started
-	jobInfo.readStarted = true;
-	jobInfo.osmReader->read();
+        // Start reading if not already started
+        jobInfo.readStarted = true;
+        jobInfo.osmReader->read();
     }
 }
 
@@ -178,31 +222,59 @@ void OpenStreetMapEngine::finished( KJob* job ) {
     m_jobInfos.remove( job );
 }
 
-void OpenStreetMapEngine::osmChunkRead( OsmReader *osmReader,
-					const Plasma::DataEngine::Data &data ) {
+void OpenStreetMapEngine::osmChunkRead( QPointer<OsmReader> osmReader,
+                                        const Plasma::DataEngine::Data &data ) {
     // Update data
-    if ( !data.isEmpty() )
-	setData( osmReader->associatedSourceName(), data );
+    if ( !data.isEmpty() ) {
+        setData( osmReader->associatedSourceName(), data );
+    }
 }
 
-void OpenStreetMapEngine::osmFinishedReading( OsmReader* osmReader,
-					      const Plasma::DataEngine::Data& data ) {
+void OpenStreetMapEngine::osmFinishedReading( QPointer<OsmReader> osmReader,
+                                              const Plasma::DataEngine::Data& data ) {
     // Update data
-    if ( !data.isEmpty() )
-	setData( osmReader->associatedSourceName(), data );
-    
+    bool finished = true;
+    if ( !data.isEmpty() ) {
+        setData( osmReader->associatedSourceName(), data );
+    } else if ( osmReader->sourceUrl().contains(QLatin1String("public_transport=*")) ) {
+        QString newUrl = osmReader->sourceUrl().replace(
+                QLatin1String("public_transport=*"),
+                QLatin1String("railway=tram_stop") );
+        kDebug() << "NEW URL:" << newUrl;
+
+        // Start download
+        KIO::TransferJob *job = KIO::get( newUrl, KIO::NoReload, KIO::HideProgressInfo );
+        connect( job, SIGNAL(data(KIO::Job*,QByteArray)),
+                 this, SLOT(data(KIO::Job*,QByteArray)) );
+        connect( job, SIGNAL(result(KJob*)), this, SLOT(finished(KJob*)) );
+
+        // Store source name and reader associated with the job
+        QPointer<OsmReader> newOsmReader = new OsmReader( osmReader->associatedSourceName(), newUrl );
+        connect( newOsmReader, SIGNAL(chunkRead(QPointer<OsmReader>,Plasma::DataEngine::Data)),
+                 this, SLOT(osmChunkRead(QPointer<OsmReader>,Plasma::DataEngine::Data)) );
+        connect( newOsmReader, SIGNAL(finishedReading(QPointer<OsmReader>,Plasma::DataEngine::Data)),
+                 this, SLOT(osmFinishedReading(QPointer<OsmReader>,Plasma::DataEngine::Data)) );
+        m_jobInfos.insert( job, JobInfo(osmReader->associatedSourceName(), newOsmReader) );
+
+        finished = false;
+    }
+
     // Tell visualizations that all data has been read
-    setData( osmReader->associatedSourceName(), "finished", true );
+    if ( finished ) {
+        setData( osmReader->associatedSourceName(), "finished", true );
+    }
 
     // Kill still running jobs (probably receiving a NULL string)
-    QHash< KJob*, JobInfo >::const_iterator it;
-    for( it = m_jobInfos.constBegin(); it != m_jobInfos.constEnd(); ++it ) {
-	if ( it.value().osmReader == osmReader ) {
-	    // Don't get more data, when the XML reader has completed reading
-	    // otherwise the data engine crashes (because osmReader gets deleted here)
-	    it.key()->kill( KJob::EmitResult );
-	    break;
-	}
+    // AND If no results have been found in the first OSM-URL try another one
+    for( QHash< KJob*, JobInfo >::const_iterator it = m_jobInfos.constBegin();
+         it != m_jobInfos.constEnd(); ++it )
+    {
+        if ( it.value().osmReader == osmReader ) {
+            // Don't get more data, when the XML reader has completed reading
+            // otherwise the data engine crashes (because osmReader gets deleted here)
+            it.key()->kill( KJob::EmitResult );
+            break;
+        }
     }
 
     // Delete the finished reader
@@ -211,9 +283,9 @@ void OpenStreetMapEngine::osmFinishedReading( OsmReader* osmReader,
 
 QString OpenStreetMapEngine::elementToString( OpenStreetMapEngine::Element element ) const {
     switch ( element ) {
-	case Node: 	return "node";
+	case Node: 	    return "node";
 	case Relation: 	return "relation";
-	case Way: 	return "way";
+	case Way: 	    return "way";
 
 	default:
 	    kDebug() << "Element unknown";

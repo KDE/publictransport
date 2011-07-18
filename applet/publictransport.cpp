@@ -46,6 +46,8 @@
 #include <KMimeTypeTrader>
 #include <KColorUtils>
 #include <KStandardDirs>
+#include <KProcess>
+#include <KMessageBox>
 
 // Plasma includes
 #include <Plasma/Label>
@@ -67,6 +69,9 @@
 #include <QClipboard>
 #include <qmath.h>
 #include <qgraphicssceneevent.h>
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QTimer>
 
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
         : Plasma::PopupApplet( parent, args ),
@@ -75,7 +80,7 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
         m_overlay(0), m_model(0), m_popupIconTransitionAnimation(0),
         m_modelJourneys(0), m_departureProcessor(0), m_stateMachine(0),
         m_journeySearchTransition1(0), m_journeySearchTransition2(0),
-        m_journeySearchTransition3(0)
+        m_journeySearchTransition3(0), m_marble(0)
 {
     m_originalStopIndex = -1;
     m_popupIconDepartureIndex = 0;
@@ -979,9 +984,81 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
     }
 }
 
+void PublicTransport::processOsmData( const QString& sourceName,
+                                      const Plasma::DataEngine::Data& data )
+{
+    qreal longitude = -1.0, latitude = -1.0;
+    QString name;
+    for ( Plasma::DataEngine::Data::const_iterator it = data.constBegin();
+        it != data.constEnd(); ++it )
+    {
+        QHash< QString, QVariant > item = it.value().toHash();
+        if ( item.contains("longitude") && item.contains("latitude") ) {
+            longitude = item[ "longitude" ].toReal();
+            latitude = item[ "latitude" ].toReal();
+            if ( item.contains("name") ) {
+                name = item[ "name" ].toString();
+            }
+            break; // Only use the first coordinates found TODO offer more coordinates if they aren't too equal
+        }
+    }
+
+    if ( !qFuzzyCompare(longitude, -1.0) && !qFuzzyCompare(latitude, -1.0) ) {
+        kDebug() << "Coords:" << longitude << latitude << data["finished"].toBool() << name;
+        m_longitude = longitude;
+        m_latitude = latitude;
+
+        // Start marble
+        if ( m_marble ) {
+            // Marble already started
+            QString destination = QString("org.kde.marble-%1").arg(m_marble->pid());
+
+            // Set new window title
+            QDBusMessage m1 = QDBusMessage::createMethodCall(destination,
+                    "/marble/MainWindow_1", "org.kde.marble.KMainWindow", "setPlainCaption");
+            m1 << i18nc("@title:window Caption for marble windows started to show a stops "
+                    "position in a map. %1 is the stop name.", "\"PublicTransport: %1\"",
+                    name);
+            if ( !QDBusConnection::sessionBus().send(m1) ) {
+                kDebug() << "Couldn't set marble title with dbus" << m1.errorMessage();
+            }
+
+            showStopInMarble( m_longitude, m_latitude );
+        } else {
+            QString command = "marble --caption " + i18nc("@title:window Caption for "
+                    "marble windows started to show a stops position in a map. %1 is the "
+                    "stop name.", "\"PublicTransport: %1\"", name);
+            kDebug() << "Use this command to start marble:" << command;
+            m_marble = new KProcess( this );
+            m_marble->setProgram( "marble", QStringList() << "--caption"
+                    << i18nc("@title:window Caption for "
+                    "marble windows started to show a stops position in a map. %1 is the "
+                    "stop name.", "\"PublicTransport: %1\"", name) );
+            connect( m_marble, SIGNAL(error(QProcess::ProcessError)),
+                    this, SLOT(errorMarble(QProcess::ProcessError)) );
+            connect( m_marble, SIGNAL(started()), this, SLOT(marbleHasStarted()) );
+            connect( m_marble, SIGNAL(finished(int)), this, SLOT(marbleFinished(int)) );
+            m_marble->start();
+        }
+        dataEngine("openstreetmap")->disconnectSource( sourceName, this );
+    } else if ( data.contains("finished") && data["finished"].toBool() ) {
+        kDebug() << "Couldn't find coordinates for the stop.";
+        showMessage( KIcon("dialog-warning"),
+                        i18nc("@info", "Couldn't find coordinates for the stop."),
+                        Plasma::ButtonOk );
+
+        dataEngine("openstreetmap")->disconnectSource( sourceName, this );
+    }
+}
+
 void PublicTransport::dataUpdated( const QString& sourceName,
                                    const Plasma::DataEngine::Data& data )
 {
+    if ( sourceName.startsWith("getCoords", Qt::CaseInsensitive) ) {
+        processOsmData( sourceName, data );
+        return;
+    }
+
     if ( data.isEmpty() || (!m_currentSources.contains(sourceName)
                             && sourceName != m_currentJourneySource) ) {
         // Source isn't used anymore
@@ -2355,6 +2432,19 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
             settings.filterSettingsList << filterSettings;
             writeSettings( settings );
             break;
+        } case StopAction::ShowStopInMap: {
+            // Request coordinates from openstreetmap data engine
+            QString osmStopName = stopName;
+            int pos = osmStopName.lastIndexOf(',');
+            if ( pos != -1 ) {
+                osmStopName = osmStopName.left( pos );
+            }
+
+            osmStopName.remove( QRegExp("\\([^\\)]*\\)$") );
+            
+            QString sourceName = QString( "getCoords publictransportstops %1" ).arg( osmStopName );
+            dataEngine("openstreetmap")->connectSource( sourceName, this );
+            break;
         } case StopAction::ShowDeparturesForStop: {
             // Remove intermediate stop settings
             settings.stopSettingsList.removeIntermediateSettings();
@@ -2395,6 +2485,99 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
             QApplication::clipboard()->setText( stopName );
             break;
         }
+    }
+}
+
+void PublicTransport::errorMarble( QProcess::ProcessError processError )
+{
+    if ( processError == QProcess::FailedToStart ) {
+        // TODO correct KUIT
+        int result = KMessageBox::questionYesNo( 0, i18nc("@info", "The map application "
+                "'marble' couldn't be started, error message: <message>%1</message>.<nl/>"
+                "Do you want to install 'marble' now?", m_marble->errorString()) );
+        if ( result == KMessageBox::Yes ) {
+            // Start KPackageKit to install marble
+//             kDebug() << "Start installation" <<
+            KProcess *kPackageKit = new KProcess( this );
+            kPackageKit->setProgram( "kpackagekit --install-package-name marble" );
+            kPackageKit->start();
+        }
+    } else if ( processError == QProcess::Crashed ) {
+        showMessage( KIcon("dialog-information"),
+                     i18nc("@info", "The map application 'marble' crashed"), Plasma::ButtonOk );
+    }
+    m_marble = NULL;
+}
+
+void PublicTransport::marbleHasStarted()
+{
+    kDebug() << "Marble has started" << m_marble->pid();
+
+    // Wait for output from marble
+    for ( int i = 0; i < 10; ++i ) {
+        if ( m_marble->waitForReadyRead(50) ) {
+            break;
+        }
+    }
+    
+    showStopInMarble( m_longitude, m_latitude );
+//     QTimer::singleShot( 500, this, SLOT(showStopInMarble()) );
+}
+
+void PublicTransport::marbleFinished( int /*exitCode*/ )
+{
+    kDebug() << "Marble finished";
+    m_marble = NULL;
+}
+
+void PublicTransport::showStopInMarble( qreal lon, qreal lat )
+{
+    if ( !m_marble ) {
+        kDebug() << "No marble process?";
+        return;
+    }
+
+    if ( lon < 0 || lat < 0 ) {
+        lon = m_longitude;
+        lat = m_latitude;
+    }
+
+    kDebug() << lon << lat;
+    QString destination = QString("org.kde.marble-%1").arg(m_marble->pid());
+
+    // Load OpenStreetMap
+    QDBusMessage m1 = QDBusMessage::createMethodCall(destination,
+            "/MarbleMap", "org.kde.MarbleMap", "setMapThemeId");
+    m1 << "earth/openstreetmap/openstreetmap.dgml";
+    if ( !QDBusConnection::sessionBus().send(m1) ) {
+        showMessage( KIcon("marble"), i18nc("@info", "Couldn't interact with 'marble' "
+                "(DBus: %1).", m1.errorMessage()), Plasma::ButtonOk );
+    }
+
+    // Center on the stops coordinates
+    QDBusMessage m2 = QDBusMessage::createMethodCall(destination,
+            "/MarbleMap", "org.kde.MarbleMap", "centerOn"); // centerOn( lon, lat )
+    m2 << lon << lat;
+    if ( !QDBusConnection::sessionBus().send(m2) ) {
+        showMessage( KIcon("marble"), i18nc("@info", "Couldn't interact with 'marble' "
+                "(DBus: %1).", m2.errorMessage()), Plasma::ButtonOk );
+    }
+
+    // Set zoom factor
+    QDBusMessage m3 = QDBusMessage::createMethodCall(destination,
+            "/MarbleMap", "org.kde.MarbleMap", "zoomView");
+    m3 << 3080;
+    if ( !QDBusConnection::sessionBus().send(m3) ) {
+        showMessage( KIcon("marble"), i18nc("@info", "Couldn't interact with 'marble' "
+                "(DBus: %1).", m3.errorMessage()), Plasma::ButtonOk );
+    }
+
+    // Update map
+    QDBusMessage m4 = QDBusMessage::createMethodCall(destination,
+            "/MarbleMap", "org.kde.MarbleMap", "reload");
+    if ( !QDBusConnection::sessionBus().send(m4) ) {
+        showMessage( KIcon("marble"), i18nc("@info", "Couldn't interact with 'marble' "
+                "(DBus: %1).", m4.errorMessage()), Plasma::ButtonOk );
     }
 }
 

@@ -75,7 +75,8 @@ class PublicTransportGraphicsItem : public QGraphicsWidget {
 public:
     explicit PublicTransportGraphicsItem( PublicTransportWidget* publicTransportWidget,
                                           QGraphicsItem* parent = 0,
-                                          StopAction *copyStopToClipboardAction = 0/*,
+                                          StopAction *copyStopToClipboardAction = 0,
+                                          StopAction *showInMapAction = 0/*,
                                           QAction *toggleAlarmAction = 0*/ );
     virtual ~PublicTransportGraphicsItem();
 
@@ -296,6 +297,7 @@ protected:
     QPropertyAnimation *m_resizeAnimation;
     QPixmap *m_pixmap;
     StopAction *m_copyStopToClipboardAction;
+    StopAction *m_showInMapAction;
 //     QAction *m_toggleAlarmAction;
 };
 
@@ -323,6 +325,7 @@ public:
     explicit DepartureGraphicsItem( PublicTransportWidget* publicTransportWidget,
                                     QGraphicsItem* parent = 0,
                                     StopAction *copyStopToClipboardAction = 0,
+                                    StopAction *showInMapAction = 0,
                                     StopAction *showDeparturesAction = 0,
                                     StopAction *highlightStopAction = 0,
                                     StopAction *newFilterViaStopAction = 0/*,
@@ -463,6 +466,7 @@ public:
     explicit JourneyGraphicsItem( PublicTransportWidget* publicTransportWidget,
                                   QGraphicsItem* parent = 0,
                                   StopAction *copyStopToClipboardAction = 0,
+                                  StopAction *showInMapAction = 0,
                                   StopAction *requestJourneyToStopAction = 0,
                                   StopAction *requestJourneyFromStopAction = 0/*,
                                   QAction *toggleAlarmAction = 0*/ );
@@ -654,7 +658,9 @@ protected:
     qreal m_zoomFactor;
     int m_maxLineCount;
     QString m_noItemsText;
+    bool m_enableOpenStreetMap; // Enable actions using the openstreetmap data engine
     StopAction *m_copyStopToClipboardAction;
+    StopAction *m_showInMapAction;
 //     QAction *m_toggleAlarmAction;
 };
 

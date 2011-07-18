@@ -164,8 +164,9 @@ public:
                                   * be unhighlighted. */
         RequestJourneysToStop,   /**< Request journeys to the associated stop. The origin stop
                                   * can be given as QVariant data argument to stop action requests. */
-        RequestJourneysFromStop  /**< Request journeys from the associated stop. The target stop
+        RequestJourneysFromStop, /**< Request journeys from the associated stop. The target stop
                                   * can be given as QVariant data argument to stop action requests. */
+        ShowStopInMap            /**< Show a map with the stop, eg. in a web browser. */
     };
 
     StopAction( Type type, QObject* parent );

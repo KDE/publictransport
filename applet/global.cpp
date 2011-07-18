@@ -41,6 +41,10 @@ StopAction::StopAction( StopAction::Type type, QObject* parent ) : QAction(paren
         setIcon( KIcon("public-transport-stop") );
         setText( i18nc("@action:inmenu", "Show &Departures From This Stop") );
         break;
+    case ShowStopInMap:
+        setIcon( KIcon("marble") );
+        setText( i18nc("@action:inmenu", "Show This Stop in a Map") );
+        break;
     case HighlightStop:
         setIcon( KIcon("edit-select") );
 	setText( i18nc("@action:inmenu", "&Highlight This Stop") );

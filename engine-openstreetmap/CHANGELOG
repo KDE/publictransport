@@ -1,6 +1,10 @@
 
 Changelog of plasma-engine-openstreetmap
 
+0.1.2
+- Fix openstreepmap source URL, now use jxapi, the xapi.openstreetmap.org-server is overloaded/dead?
+- New data source: "getCoords [element] [name]" searches for osm nodes with the given name, element can be eg. "publictransportstops".
+
 0.1.1
 - Only return data with a "name" tag for "publictransportstops" data.
 - BugFix: "<relation>"-tags where read until "</ways>" instead of "</relation>".

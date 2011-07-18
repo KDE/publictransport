@@ -40,12 +40,14 @@
 #include <qmath.h>
 #include <KMenu>
 #include <QStyleOption>
+#include <Plasma/DataEngineManager>
 
 PublicTransportGraphicsItem::PublicTransportGraphicsItem(
         PublicTransportWidget* publicTransportWidget, QGraphicsItem* parent,
-        StopAction *copyStopToClipboardAction/*, QAction *toggleAlarmAction*/ )
+        StopAction *copyStopToClipboardAction, StopAction *showInMapAction/*, QAction *toggleAlarmAction*/ )
         : QGraphicsWidget(parent), m_item(0), m_parent(publicTransportWidget),
-        m_resizeAnimation(0), m_pixmap(0), m_copyStopToClipboardAction(copyStopToClipboardAction)/*,
+        m_resizeAnimation(0), m_pixmap(0), m_copyStopToClipboardAction(copyStopToClipboardAction),
+        m_showInMapAction(showInMapAction)/*,
         m_toggleAlarmAction(toggleAlarmAction)*/
 {
     setFlag( ItemClipsToShape );
@@ -426,11 +428,12 @@ void PublicTransportGraphicsItem::mouseReleaseEvent( QGraphicsSceneMouseEvent* e
 
 DepartureGraphicsItem::DepartureGraphicsItem( PublicTransportWidget* publicTransportWidget,
         QGraphicsItem* parent,
-        StopAction *copyStopToClipboardAction, StopAction *showDeparturesAction,
-        StopAction *highlightStopAction, StopAction *newFilterViaStopAction/*,
+        StopAction *copyStopToClipboardAction, StopAction *showInMapAction,
+        StopAction *showDeparturesAction, StopAction *highlightStopAction,
+        StopAction *newFilterViaStopAction/*,
         QAction *toggleAlarmAction*/ )
-        : PublicTransportGraphicsItem( publicTransportWidget, parent, copyStopToClipboardAction
-        /*, toggleAlarmAction*/ ),
+        : PublicTransportGraphicsItem( publicTransportWidget, parent, copyStopToClipboardAction,
+                                       showInMapAction ),
         m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0), m_leavingAnimation(0),
         m_showDeparturesAction(showDeparturesAction), m_highlightStopAction(highlightStopAction),
         m_newFilterViaStopAction(newFilterViaStopAction)
@@ -447,9 +450,10 @@ DepartureGraphicsItem::~DepartureGraphicsItem()
 
 JourneyGraphicsItem::JourneyGraphicsItem( PublicTransportWidget* publicTransportWidget,
         QGraphicsItem* parent,
-        StopAction *copyStopToClipboardAction, StopAction *requestJourneyToStopAction,
-        StopAction *requestJourneyFromStopAction/*, QAction *toggleAlarmAction*/ )
-        : PublicTransportGraphicsItem( publicTransportWidget, parent, copyStopToClipboardAction
+        StopAction *copyStopToClipboardAction, StopAction *showInMapAction,
+        StopAction *requestJourneyToStopAction, StopAction *requestJourneyFromStopAction )
+        : PublicTransportGraphicsItem( publicTransportWidget, parent, copyStopToClipboardAction,
+                                       showInMapAction
         /*, toggleAlarmAction*/ ),
         m_infoTextDocument(0), m_routeItem(0),
         m_requestJourneyToStopAction(requestJourneyToStopAction),
@@ -497,14 +501,13 @@ void DepartureGraphicsItem::updateTextLayouts()
         const DepartureInfo *info = departureItem()->departureInfo();
         TimetableWidget *timetableWidget = qobject_cast<TimetableWidget*>( m_parent );
         if ( timetableWidget->isTargetHidden() ) {
-            html = i18nc("@info", "<emphasis strong='1'>%1</emphasis>",
-                        info->lineString());
+            html = i18nc("@info", "<emphasis strong='1'>%1</emphasis>", info->lineString());
         } else if ( departureItem()->model()->info().departureArrivalListType == ArrivalList ) {
             html = i18nc("@info", "<emphasis strong='1'>%1</emphasis> from %2",
-                        info->lineString(), info->target());
+                         info->lineString(), info->target());
         } else { // if ( departureItem()->model()->info().departureArrivalListType == DepartureList ) {
             html = i18nc("@info", "<emphasis strong='1'>%1</emphasis> to %2",
-                        info->lineString(), info->target());
+                         info->lineString(), info->target());
         }
         m_infoTextDocument = TextDocumentHelper::createTextDocument( html, _infoRect.size(),
                                                                      textOption, font() );
@@ -532,23 +535,23 @@ void JourneyGraphicsItem::updateTextLayouts()
         if ( m_parent->maxLineCount() == 1 ) {
             // Single line string
             html = i18nc("@info", "<emphasis strong='1'>Duration:</emphasis> %1, "
-                        "<emphasis strong='1'>Changes:</emphasis> %2",
-                        KGlobal::locale()->formatDuration(info->duration()*60*1000),
-                        ((info->changes() == 0
-                        ? i18nc("@info No vehicle changes in a journey", "none")
-                        : QString::number(info->changes()))));
+                         "<emphasis strong='1'>Changes:</emphasis> %2",
+                         KGlobal::locale()->formatDuration(info->duration()*60*1000),
+                         ((info->changes() == 0
+                         ? i18nc("@info No vehicle changes in a journey", "none")
+                         : QString::number(info->changes()))));
         } else {
             // Two (or more) line string
             html = i18nc("@info", "<emphasis strong='1'>Duration:</emphasis> %1, "
-                        "<emphasis strong='1'>Changes:</emphasis> %2<nl />"
-                        "<emphasis strong='1'>Departing:</emphasis> %3, "
-                        "<emphasis strong='1'>Arriving:</emphasis> %4",
-                        KGlobal::locale()->formatDuration(info->duration()*60*1000),
-                        (info->changes() == 0
-                        ? i18nc("@info No vehicle changes in a journey", "none")
-                        : QString::number(info->changes())),
-                        KGlobal::locale()->formatDateTime(info->departure(), KLocale::FancyShortDate),
-                        KGlobal::locale()->formatDateTime(info->arrival(), KLocale::FancyShortDate));
+                         "<emphasis strong='1'>Changes:</emphasis> %2<nl />"
+                         "<emphasis strong='1'>Departing:</emphasis> %3, "
+                         "<emphasis strong='1'>Arriving:</emphasis> %4",
+                          KGlobal::locale()->formatDuration(info->duration()*60*1000),
+                         (info->changes() == 0
+                         ? i18nc("@info No vehicle changes in a journey", "none")
+                         : QString::number(info->changes())),
+                         KGlobal::locale()->formatDateTime(info->departure(), KLocale::FancyShortDate),
+                         KGlobal::locale()->formatDateTime(info->arrival(), KLocale::FancyShortDate));
         }
         m_infoTextDocument = TextDocumentHelper::createTextDocument( html, _infoRect.size(),
                                                                      textOption, font() );
@@ -572,7 +575,7 @@ void JourneyGraphicsItem::updateData( JourneyItem* item, bool updateLayouts )
             m_routeItem->updateData( item );
         } else {
             m_routeItem = new JourneyRouteGraphicsItem( this, item, m_parent->svg(),
-                    m_copyStopToClipboardAction, m_requestJourneyToStopAction,
+                    m_copyStopToClipboardAction, m_showInMapAction, m_requestJourneyToStopAction,
                     m_requestJourneyFromStopAction );
             QRectF _infoRect = infoRect( rect() );
             m_routeItem->setZoomFactor( m_parent->zoomFactor() );
@@ -607,7 +610,8 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
             m_routeItem->updateData( item );
         } else {
             m_routeItem = new RouteGraphicsItem( this, item, m_copyStopToClipboardAction,
-                    m_showDeparturesAction, m_highlightStopAction, m_newFilterViaStopAction );
+                    m_showInMapAction, m_showDeparturesAction, m_highlightStopAction,
+                    m_newFilterViaStopAction );
             QRectF _infoRect = infoRect( rect(), 0 );
             m_routeItem->setZoomFactor( m_parent->zoomFactor() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
@@ -1289,7 +1293,8 @@ QSizeF PublicTransportWidget::sizeHint(Qt::SizeHint which, const QSizeF& constra
 }
 
 PublicTransportWidget::PublicTransportWidget( QGraphicsItem* parent )
-    : Plasma::ScrollWidget( parent ), m_model(0), m_svg(0), m_copyStopToClipboardAction(0)/*,
+    : Plasma::ScrollWidget( parent ), m_model(0), m_svg(0), m_copyStopToClipboardAction(0),
+      m_showInMapAction(0)/*,
       m_toggleAlarmAction(0)*/
 {
     setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
@@ -1311,6 +1316,15 @@ void PublicTransportWidget::setupActions()
     m_copyStopToClipboardAction = new StopAction( StopAction::CopyStopNameToClipboard, this );
     connect( m_copyStopToClipboardAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
              this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
+
+    if ( Plasma::DataEngineManager::listAllEngines().contains("openstreetmap") ) {
+        m_showInMapAction = new StopAction( StopAction::ShowStopInMap, this );
+        connect( m_showInMapAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
+                 this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
+    } else {
+        kDebug() << "Not using 'Show Stop in Map' action, because the 'openstreetmap' "
+                    "data engine isn't installed!";
+    }
 }
 
 JourneyTimetableWidget::JourneyTimetableWidget( QGraphicsItem* parent )
@@ -1464,7 +1478,8 @@ void JourneyTimetableWidget::rowsInserted(const QModelIndex& parent, int first, 
 
     QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( widget()->layout() );
     for ( int row = first; row <= last; ++row ) {
-        JourneyGraphicsItem *item = new JourneyGraphicsItem( this, widget(), m_copyStopToClipboardAction,
+        JourneyGraphicsItem *item = new JourneyGraphicsItem( this, widget(),
+                m_copyStopToClipboardAction, m_showInMapAction,
                 m_requestJourneyToStopAction, m_requestJourneyFromStopAction );
         item->updateData( static_cast<JourneyItem*>(m_model->item(row)) );
         connect( item, SIGNAL(requestAlarmCreation(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)),
@@ -1495,8 +1510,8 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
     QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( widget()->layout() );
     for ( int row = first; row <= last; ++row ) {
         DepartureGraphicsItem *item = new DepartureGraphicsItem( this, widget(),
-                m_copyStopToClipboardAction, m_showDeparturesAction, m_highlightStopAction,
-                m_newFilterViaStopAction );
+                m_copyStopToClipboardAction, m_showInMapAction, m_showDeparturesAction,
+                m_highlightStopAction, m_newFilterViaStopAction );
         item->updateData( static_cast<DepartureItem*>(m_model->item(row)) );
         m_items.insert( row, item );
 

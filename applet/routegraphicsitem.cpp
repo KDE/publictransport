@@ -36,13 +36,15 @@
 #include <KMenu>
 
 RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item,
-        StopAction *copyStopToClipboardAction, StopAction *showDeparturesAction,
-        StopAction *highlightStopAction, StopAction *newFilterViaStopAction )
+        StopAction *copyStopToClipboardAction, StopAction *showInMapAction,
+        StopAction *showDeparturesAction, StopAction *highlightStopAction,
+        StopAction *newFilterViaStopAction )
         : QGraphicsWidget(parent), m_item(item),
-        m_copyStopToClipboardAction(copyStopToClipboardAction),
+        m_copyStopToClipboardAction(copyStopToClipboardAction), m_showInMapAction(showInMapAction),
         m_showDeparturesAction(showDeparturesAction), m_highlightStopAction(highlightStopAction),
         m_newFilterViaStopAction(newFilterViaStopAction)
 {
+    setFlag( ItemClipsToShape );
     m_zoomFactor = 1.0;
     m_textAngle = 15.0;
     m_maxTextWidth = 100.0;
@@ -350,13 +352,21 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             textItem->setPos( stopTextPos );
             textItem->resize( baseSize + 10, fontMetrics->height() );
             textItem->rotate( m_textAngle );
+            QList<QAction*> actions;
             if ( routeStopFlags.testFlag(RouteStopIsHomeStop) ) {
-                textItem->addActions( QList<QAction*>() << m_copyStopToClipboardAction );
+                if ( m_showInMapAction ) {
+                    actions << m_showInMapAction;
+                }
+                actions << m_copyStopToClipboardAction;
             } else {
-                textItem->addActions( QList<QAction*>() << m_showDeparturesAction
-                        << m_highlightStopAction << m_newFilterViaStopAction
-                        << m_copyStopToClipboardAction );
+                actions << m_showDeparturesAction;
+                if ( m_showInMapAction ) {
+                    actions << m_showInMapAction;
+                }
+                actions << m_highlightStopAction << m_newFilterViaStopAction
+                        << m_copyStopToClipboardAction;
             }
+            textItem->addActions( actions );
             if ( manuallyHighlighted ) {
                 textItem->setPalette( manuallyHighlighted
                         ? highlightedPalette : defaultPalette );
@@ -443,6 +453,7 @@ RouteStopMarkerGraphicsItem::RouteStopMarkerGraphicsItem( QGraphicsItem* parent,
         RouteStopTextGraphicsItem *textItem, MarkerType markerType, RouteStopFlags stopFlags )
         : QGraphicsWidget(parent), m_textItem(textItem)
 {
+    setFlag( ItemClipsToShape );
     m_hoverStep = 0.0;
     m_markerType = markerType;
     m_stopFlags = stopFlags;
@@ -550,7 +561,7 @@ void RouteStopMarkerGraphicsItem::paint( QPainter* painter, const QStyleOptionGr
     } else {
         stopIcon = GlobalApplet::stopIcon( routeStopFlags() );
     }
-    stopIcon.paint( painter, option->rect );
+    stopIcon.paint( painter, QRect(-radius(), -radius(), 2 * radius(), 2 * radius()) );
 }
 
 RouteStopFlags RouteStopMarkerGraphicsItem::routeStopFlags() const
@@ -850,13 +861,15 @@ void JourneyRouteStopGraphicsItem::paint( QPainter* painter, const QStyleOptionG
 }
 
 JourneyRouteGraphicsItem::JourneyRouteGraphicsItem( QGraphicsItem* parent, JourneyItem* item,
-        Plasma::Svg* svg, StopAction *copyStopToClipboardAction,
+        Plasma::Svg* svg, StopAction *copyStopToClipboardAction, StopAction *showInMapAction,
         StopAction *requestJourneyToStopAction, StopAction *requestJourneyFromStopAction )
         : QGraphicsWidget(parent), m_item(item), m_svg(svg),
           m_copyStopToClipboardAction(copyStopToClipboardAction),
+          m_showInMapAction(showInMapAction),
           m_requestJourneyToStopAction(requestJourneyToStopAction),
           m_requestJourneyFromStopAction(requestJourneyFromStopAction)
 {
+    setFlag( ItemClipsChildrenToShape );
     m_zoomFactor = 1.0;
     new QGraphicsLinearLayout( Qt::Vertical, this );
     updateData( item );
@@ -984,7 +997,11 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                     routeItem->addAction( m_requestJourneyFromStopAction );
                 }
             }
-            actionList << m_copyStopToClipboardAction;
+
+            if ( m_showInMapAction ) {
+                actionList << m_showInMapAction;
+            }
+            actionList << m_copyStopToClipboardAction;;
             routeItem->addActions( actionList );
 
             m_routeItems << routeItem;

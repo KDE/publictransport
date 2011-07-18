@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -24,14 +24,14 @@ void OsmReader::read() {
     m_data.clear();
 
     while ( !atEnd() || waitOnRecoverableError() ) {
-	readNext();
-	
-	if ( isStartElement() ) {
-	    if ( name().compare("osm", Qt::CaseInsensitive) == 0 ) {
-		readOsm();
-		break;
-	    }
-	}
+        readNext();
+
+        if ( isStartElement() ) {
+            if ( name().compare("osm", Qt::CaseInsensitive) == 0 ) {
+                readOsm();
+                break;
+            }
+        }
     }
 
     kDebug() << "Read complete:" << (hasError() ? "No error." : errorString() );
@@ -40,13 +40,14 @@ void OsmReader::read() {
 
 bool OsmReader::waitOnRecoverableError() {
     if ( error() == PrematureEndOfDocumentError ) {
-	if ( !m_data.isEmpty() )
-	    emit chunkRead( this, m_data );
-	m_data.clear(); // Clear old data
-	m_loop.exec(); // Wait for more data
-	return true;
+        if ( !m_data.isEmpty() ) {
+            emit chunkRead( this, m_data );
+        }
+        m_data.clear(); // Clear old data
+        m_loop.exec(); // Wait for more data
+        return true;
     } else {
-	return false;
+        return false;
     }
 }
 
@@ -54,35 +55,38 @@ void OsmReader::readUnknownElement() {
     Q_ASSERT( isStartElement() );
     
     while ( !atEnd() || waitOnRecoverableError() ) {
-	readNext();
-	
-	if ( isEndElement() )
-	    break;
-	
-	if ( isStartElement() )
-	    readUnknownElement();
+        readNext();
+
+        if ( isEndElement() ) {
+            break;
+        }
+
+        if ( isStartElement() ) {
+            readUnknownElement();
+        }
     }
 }
 
 void OsmReader::readOsm() {
     while ( !atEnd() || waitOnRecoverableError() ) {
-	readNext();
-	
-	if ( isEndElement() && name().compare("osm", Qt::CaseInsensitive) == 0 ) {
-	    kDebug() << "Closing </osm> tag read";
-	    break;
-	}
+        readNext();
 
-	if ( isStartElement() ) {
-	    if ( name().compare("node", Qt::CaseInsensitive) == 0 ) {
-		readNode();
-	    } else if ( name().compare("way", Qt::CaseInsensitive) == 0 ) {
-		readWay();
-	    } else if ( name().compare("relation", Qt::CaseInsensitive) == 0 ) {
-		readRelation();
-	    } else
-		readUnknownElement();
-	}
+        if ( isEndElement() && name().compare("osm", Qt::CaseInsensitive) == 0 ) {
+            kDebug() << "Closing </osm> tag read";
+            break;
+        }
+
+        if ( isStartElement() ) {
+            if ( name().compare("node", Qt::CaseInsensitive) == 0 ) {
+                readNode();
+            } else if ( name().compare("way", Qt::CaseInsensitive) == 0 ) {
+                readWay();
+            } else if ( name().compare("relation", Qt::CaseInsensitive) == 0 ) {
+                readRelation();
+            } else {
+                readUnknownElement();
+            }
+        }
     }
 
     kDebug() << "Finished reading the <osm> tag";
@@ -90,7 +94,7 @@ void OsmReader::readOsm() {
 
 bool OsmReader::isResultValid( const QVariantHash& data ) const {
     return !m_resultFlags.testFlag(OnlyResultsWithNameAttribute)
-	   || data.contains("name");
+        || data.contains("name");
 }
 
 void OsmReader::readNode() {
@@ -105,21 +109,24 @@ void OsmReader::readNode() {
     nodeData.insert( "type", "node" );
     
     while ( !atEnd() || waitOnRecoverableError() ) {
-	readNext();
-	
-	if ( isEndElement() && name().compare("node", Qt::CaseInsensitive) == 0 )
-	    break;
-	
-	if ( isStartElement() ) {
-	    if ( name().compare("tag", Qt::CaseInsensitive) == 0 ) {
-		readTag( &nodeData );
-	    } else
-		readUnknownElement();
-	}
+        readNext();
+
+        if ( isEndElement() && name().compare("node", Qt::CaseInsensitive) == 0 ) {
+            break;
+        }
+
+        if ( isStartElement() ) {
+            if ( name().compare("tag", Qt::CaseInsensitive) == 0 ) {
+                readTag( &nodeData );
+            } else {
+                readUnknownElement();
+            }
+        }
     }
 
-    if ( isResultValid(nodeData) )
-	m_data.insert( id, nodeData );
+    if ( isResultValid(nodeData) ) {
+        m_data.insert( id, nodeData );
+    }
 }
 
 void OsmReader::readWay() {
@@ -130,27 +137,30 @@ void OsmReader::readWay() {
     nodeData.insert( "type", "way" );
     
     while ( !atEnd() || waitOnRecoverableError() ) {
-	readNext();
-	
-	if ( isEndElement() && name().compare("way", Qt::CaseInsensitive) == 0 )
-	    break;
-	
-	if ( isStartElement() ) {
-	    if ( name().compare("tag", Qt::CaseInsensitive) == 0 ) {
-		readTag( &nodeData );
-	    } else if ( name().compare("nd", Qt::CaseInsensitive) == 0 ) {
-		QString node = attributes().value( "ref" ).toString();
-		if ( !node.isEmpty() )
-		    nodes << node;
-	    } else
-		readUnknownElement();
-	}
+        readNext();
+
+        if ( isEndElement() && name().compare("way", Qt::CaseInsensitive) == 0 )
+            break;
+
+        if ( isStartElement() ) {
+            if ( name().compare("tag", Qt::CaseInsensitive) == 0 ) {
+                readTag( &nodeData );
+            } else if ( name().compare("nd", Qt::CaseInsensitive) == 0 ) {
+                QString node = attributes().value( "ref" ).toString();
+                if ( !node.isEmpty() ) {
+                    nodes << node;
+                }
+            } else {
+                readUnknownElement();
+            }
+        }
     }
     
     if ( isResultValid(nodeData) ) {
-	if ( !nodes.isEmpty() )
-	    nodeData.insert( "nodes", nodes ); // IDs of associated nodes
-	m_data.insert( id, nodeData );
+        if ( !nodes.isEmpty() ) {
+            nodeData.insert( "nodes", nodes ); // IDs of associated nodes
+        }
+        m_data.insert( id, nodeData );
     }
 }
 
@@ -162,46 +172,51 @@ void OsmReader::readRelation() {
     nodeData.insert( "type", "relation" );
     
     while ( !atEnd() || waitOnRecoverableError() ) {
-	readNext();
-	
-	if ( isEndElement() && name().compare("relation", Qt::CaseInsensitive) == 0 )
-	    break;
-	
-	if ( isStartElement() ) {
-	    if ( name().compare("tag", Qt::CaseInsensitive) == 0 ) {
-		readTag( &nodeData );
-	    } else if ( name().compare("member", Qt::CaseInsensitive) == 0 ) {
-		QString nodeOrWay = attributes().value( "ref" ).toString();
-		if ( !nodeOrWay.isEmpty() ) {
-		    QString type = attributes().value( "type" ).toString();
-		    if ( type == "node" )
-			nodes << nodeOrWay;
-		    else if ( type == "way" )
-			ways << nodeOrWay;
-		    else
-			kDebug() << "Unknown member type" << type
-				 << "of relation" << id;
-		}
-	    } else
-		readUnknownElement();
-	}
+        readNext();
+
+        if ( isEndElement() && name().compare("relation", Qt::CaseInsensitive) == 0 ) {
+            break;
+        }
+
+        if ( isStartElement() ) {
+            if ( name().compare("tag", Qt::CaseInsensitive) == 0 ) {
+                readTag( &nodeData );
+            } else if ( name().compare("member", Qt::CaseInsensitive) == 0 ) {
+                QString nodeOrWay = attributes().value( "ref" ).toString();
+                if ( !nodeOrWay.isEmpty() ) {
+                    QString type = attributes().value( "type" ).toString();
+                    if ( type == "node" ) {
+                        nodes << nodeOrWay;
+                    } else if ( type == "way" ) {
+                        ways << nodeOrWay;
+                    } else {
+                        kDebug() << "Unknown member type" << type
+                                 << "of relation" << id;
+                    }
+                }
+            } else {
+                readUnknownElement();
+            }
+        }
     }
 
     if ( isResultValid(nodeData) ) {
-	if ( !nodes.isEmpty() )
-	    nodeData.insert( "nodes", nodes ); // IDs of associated nodes
-	if ( !ways.isEmpty() )
-	    nodeData.insert( "ways", ways ); // IDs of associated ways
-	m_data.insert( id, nodeData );
+        if ( !nodes.isEmpty() ) {
+            nodeData.insert( "nodes", nodes ); // IDs of associated nodes
+        }
+        if ( !ways.isEmpty() ) {
+            nodeData.insert( "ways", ways ); // IDs of associated ways
+        }
+        m_data.insert( id, nodeData );
     }
 }
 
 void OsmReader::readTag( QVariantHash *nodeData ) {
-    if ( !attributes().hasAttribute("k") || !attributes().hasAttribute("v") )
-	kDebug() << "Key or value attribute not found for <tag>";
+    if ( !attributes().hasAttribute("k") || !attributes().hasAttribute("v") ) {
+        kDebug() << "Key or value attribute not found for <tag>";
+    }
 
     // Simply use the keys from OpenStreetMap. Maybe it's better to translate
-    // them ("addr:street" => "street", then maybe combined with "addr:housenumber).
-    nodeData->insert( attributes().value("k").toString(),
-		      attributes().value("v").toString() );
+    // them ("addr:street" => "street", then maybe combined with "addr:housenumber").
+    nodeData->insert( attributes().value("k").toString(), attributes().value("v").toString() );
 }
