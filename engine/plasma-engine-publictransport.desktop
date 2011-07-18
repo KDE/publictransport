@@ -2,6 +2,7 @@
 Name=Public transport engine
 Name[de]=Module für Öffentlichen Nahverkehr
 Name[et]=Ühiskondliku transpordi mootor
+Name[fr]=Moteur de l'application Transports publics
 Name[km]=ម៉ាស៊ីន​ដឹកជញ្ជូន​សាធារណៈ
 Name[nds]=APNV-Karn
 Name[nl]=Engine voor openbaar vervoer
@@ -13,6 +14,7 @@ Name[uk]=Рушій громадського транспорту
 Name[x-test]=xxPublic transport enginexx
 Comment=Plasma data engine for public transport
 Comment[et]=Plasma ühiskondliku transpordi andmete mootor
+Comment[fr]=Moteur de données Plasma pour le transports publics
 Comment[km]=ម៉ាស៊ីន​ទិន្នន័យ​ប្លាស្មា​​សម្រាប់​ការ​ដឹកជញ្ជូន​សាធារណៈ
 Comment[nds]=Plasma-Datenkarn för APNV
 Comment[nl]=Plasma gegevensengine voor openbaar vervoer

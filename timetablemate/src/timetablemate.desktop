@@ -2,6 +2,7 @@
 Name=TimetableMate
 Name[de]=TimetableMate
 Name[et]=Sõiduplaanimeister
+Name[fr]=TimetableMate
 Name[km]=TimetableMate
 Name[nds]=TimetableMate
 Name[pl]=Pomocnik rozkładu jazdy
@@ -16,6 +17,7 @@ Type=Application
 X-DocPath=timetablemate/index.html
 GenericName=A helper application to add providers to PublicTransport
 GenericName[et]=Abirakendus pakkujate lisamiseks ühiskondlikule transpordile
+GenericName[fr]=Une application d'aide pour ajouter des prestataires à l'application Transports publics
 GenericName[km]=កម្មវិធី​ជំនួយ​ដើម្បី​បន្ថែម​កម្មវិធី​ផ្ដល់​ទៅកាន់​ PublicTransport
 GenericName[pl]=Program pomocniczy do dodawania dostawców środków komunikacji publicznej
 GenericName[pt]=Uma aplicação auxiliar que adiciona fornecedores aos Transportes Públicos

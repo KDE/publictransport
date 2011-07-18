@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=GraphicalTimetableLine
 Name[et]=Graafiline sõiduplaan
+Name[fr]=GraphicalTimetableLine
 Name[km]=GraphicalTimetableLine
 Name[pl]=Graficzny rozkład jazdy linii
 Name[pt]=LinhaGráficaHorário
@@ -10,6 +11,7 @@ Name[uk]=Графічний розклад авіаліній
 Name[x-test]=xxGraphicalTimetableLinexx
 Comment=Plasma GraphicalTimetableLine
 Comment[et]=Plasma graafiline sõiduplaan
+Comment[fr]=GraphicalTimetableLine pour Plasma
 Comment[km]=បន្ទាត់​កាលវិភាគ​ក្រាហ្វិក​ប្លាស្មា
 Comment[pl]=Graficzny rozkład jazdy linii dla Plazmy
 Comment[pt]=LinhaGráficaHorário do Plasma
