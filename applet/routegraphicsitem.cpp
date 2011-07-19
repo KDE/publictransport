@@ -330,6 +330,9 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                 time = info->routeTimes()[index];
                 minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60 );
             }
+            while ( minsFromFirstRouteStop < 0 ) {
+                minsFromFirstRouteStop += 60 * 24;
+            }
 
             // Get flags for the current stop
             RouteStopFlags routeStopFlags;
@@ -920,9 +923,22 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
             if ( i - 1 >= 0 && i - 1 < info->routeTimesArrival().count()
                 && info->routeTimesArrival()[i - 1].isValid() )
             {
-                text = text.append( i18nc("@info Info string for a stop in a journey shown in "
-                        "the route item", "<nl/>Arr.: <emphasis strong='1'>%1</emphasis>",
-                        KGlobal::locale()->formatTime(info->routeTimesArrival()[i - 1])) );
+                QString timeString = KGlobal::locale()->formatTime(info->routeTimesArrival()[i - 1]);
+                QString timeText( "<span style='font-weight:bold;'>" + timeString + "</span>" );
+                if ( i < info->routeTimesArrivalDelay().count() ) {
+                    int delay = info->routeTimesArrivalDelay()[i];
+                    if ( delay == 0 ) {
+                        timeText.prepend( QString("<span style='color:%1;'>")
+                                    .arg(Global::textColorOnSchedule().name()) )
+                                .append( QLatin1String("</span>") );
+                    } else if ( delay > 0 ) {
+                        timeText += ' ' + i18ncp( "@info/plain", "+%1 minute", "+%1 minutes", delay );
+                        timeText.replace( QRegExp( "(+?\\s*\\d+)" ),
+                                QString( "%1 <span style='color:%2;'>+&nbsp;\\1</span>" )
+                                .arg(timeString).arg(Global::textColorDelayed().name()) );
+                    }
+                }
+                text.append( "<br/>" + i18nc("@info", "Arrival:") + ' ' + timeText );
 
                 if ( i - 1 < info->routePlatformsArrival().count()
                     && !info->routePlatformsArrival()[i - 1].isEmpty() )
@@ -931,15 +947,25 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                             "the route item after the arrival time",
                             " at platform <emphasis strong='1'>%1</emphasis>",
                             info->routePlatformsArrival()[i - 1]) );
-                    // TODO Delay
                 }
             }
             if ( i < info->routeTimesDeparture().count() && info->routeTimesDeparture()[i].isValid() ) {
-                // TODO Delay
-
-                text = text.append( i18nc("@info Info string for a stop in a journey shown in "
-                        "the route item", "<nl/>Dep.: <emphasis strong='1'>%1</emphasis>",
-                        KGlobal::locale()->formatTime(info->routeTimesDeparture()[i])) );
+                QString timeString = KGlobal::locale()->formatTime(info->routeTimesDeparture()[i]);
+                QString timeText( "<span style='font-weight:bold;'>" + timeString + "</span>" );
+                if ( i < info->routeTimesDepartureDelay().count() ) {
+                    int delay = info->routeTimesDepartureDelay()[i];
+                    if ( delay == 0 ) {
+                        timeText.prepend( QString("<span style='color:%1;'>")
+                                    .arg(Global::textColorOnSchedule().name()) )
+                                .append( QLatin1String("</span>") );
+                    } else if ( delay > 0 ) {
+                        timeText += ' ' + i18ncp( "@info/plain", "+%1 minute", "+%1 minutes", delay );
+                        timeText.replace( QRegExp( "(+?\\s*\\d+)" ),
+                                QString( " <span style='color:%1;'>+&nbsp;\\1</span>" )
+                                .arg(Global::textColorDelayed().name()) );
+                    }
+                }
+                text.append( "<br/>" + i18nc("@info", "Departure:") + ' ' + timeText );
 
                 if ( i < info->routePlatformsDeparture().count()
                     && !info->routePlatformsDeparture()[i].isEmpty() )
@@ -948,7 +974,6 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                             "the route item after the departure time",
                             " from platform <emphasis strong='1'>%1</emphasis>",
                             info->routePlatformsDeparture()[i]) );
-                    // TODO Delay
                 }
 
                 if ( i < info->routeTransportLines().count()
@@ -956,10 +981,11 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                 {
                     text = text.append( i18nc("@info Info string for a stop in a journey shown in "
                             "the route item after the departure time. %1 is one of the transport "
-                            "lines used in the journey.",
-                            " using <emphasis strong='1'>%1</emphasis>",
-                            info->routeTransportLines()[i]) );
-                    // TODO Delay
+                            "lines used in the journey, %2 is the name of the used vehicle if "
+                            "available.", " using <emphasis strong='1'>%1%2</emphasis>",
+                            info->routeTransportLines()[i], i < info->routeVehicleTypes().count()
+                            ? QString(" (%1)").arg(Global::vehicleTypeToString(info->routeVehicleTypes()[i]))
+                            : QString()) );
                 }
             }
 
@@ -968,6 +994,9 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
             if ( i < info->routeTimesDeparture().count() && info->routeTimesDeparture()[i].isValid() ) {
                 QTime time = info->routeTimesDeparture()[i];
                 minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60 );
+                while ( minsFromFirstRouteStop < 0 ) {
+                    minsFromFirstRouteStop += 60 * 24;
+                }
             }
 
             // Get route stop flags
