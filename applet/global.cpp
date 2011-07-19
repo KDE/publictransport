@@ -34,36 +34,108 @@
 #include <Plasma/Animation>
 #endif
 
-StopAction::StopAction( StopAction::Type type, QObject* parent ) : QAction(parent), m_type(type)
+StopAction::StopAction( StopAction::Type type, QObject* parent, StopAction::TitleType titleType,
+                        const QString &stopName )
+        : QAction(parent), m_type(type), m_titleType(titleType), m_stopName(stopName)
 {
     switch ( type ) {
     case ShowDeparturesForStop:
         setIcon( KIcon("public-transport-stop") );
-        setText( i18nc("@action:inmenu", "Show &Departures From This Stop") );
+        switch ( titleType ) {
+        case ShowActionNameOnly:
+            setText( i18nc("@action:inmenu", "Show &Departures From This Stop") );
+            break;
+        case ShowStopNameOnly:
+            setText( i18nc("@action:inmenu", "Show &Departures From '%1'", m_stopName) );
+            break;
+        case ShowActionNameAndStopName:
+            setText( m_stopName );
+            break;
+        }
         break;
     case ShowStopInMap:
         setIcon( KIcon("marble") );
-        setText( i18nc("@action:inmenu", "Show This Stop in a Map") );
+        switch ( titleType ) {
+        case ShowActionNameOnly:
+            setText( i18nc("@action:inmenu", "Show This Stop in a Map") );
+            break;
+        case ShowStopNameOnly:
+            setText( i18nc("@action:inmenu", "Show '%1' in a Map", m_stopName) );
+            break;
+        case ShowActionNameAndStopName:
+            setText( m_stopName );
+            break;
+        }
         break;
     case HighlightStop:
         setIcon( KIcon("edit-select") );
-	setText( i18nc("@action:inmenu", "&Highlight This Stop") );
+        switch ( titleType ) {
+        case ShowActionNameOnly: // TODO "Unhighlight" if the stop is already highlighted
+            setText( i18nc("@action:inmenu", "&Highlight This Stop") );
+            break;
+        case ShowStopNameOnly:
+            setText( i18nc("@action:inmenu", "&Highlight '%1'", m_stopName) );
+            break;
+        case ShowActionNameAndStopName:
+            setText( m_stopName );
+            break;
+        }
         break;
     case CreateFilterForStop:
         setIcon( KIcon("view-filter") );
-	setText( i18nc("@action:inmenu", "&Create Filter 'Via This Stop'") );
+        switch ( titleType ) {
+        case ShowActionNameOnly:
+            setText( i18nc("@action:inmenu", "&Create Filter 'Via This Stop'") );
+            break;
+        case ShowStopNameOnly:
+            setText( i18nc("@action:inmenu", "&Create Filter 'Via %1'", m_stopName) );
+            break;
+        case ShowActionNameAndStopName:
+            setText( m_stopName );
+            break;
+        }
         break;
     case CopyStopNameToClipboard:
         setIcon( KIcon("edit-copy") );
-	setText( i18nc("@action:inmenu", "&Copy Stop Name") );
+        switch ( titleType ) {
+        case ShowActionNameOnly:
+            setText( i18nc("@action:inmenu", "&Copy Stop Name") );
+            break;
+        case ShowStopNameOnly:
+            setText( i18nc("@action:inmenu", "&Copy '%1'", m_stopName) );
+            break;
+        case ShowActionNameAndStopName:
+            setText( m_stopName );
+            break;
+        }
         break;
     case RequestJourneysFromStop:
         setIcon( KIcon("edit-find") );
-	setText( i18nc("@action:inmenu", "&Search Journeys From This Stop") );
+        switch ( titleType ) {
+        case ShowActionNameOnly:
+            setText( i18nc("@action:inmenu", "&Search Journeys From This Stop") );
+            break;
+        case ShowStopNameOnly:
+            setText( i18nc("@action:inmenu", "&Search Journeys From '%1'", m_stopName) );
+            break;
+        case ShowActionNameAndStopName:
+            setText( m_stopName );
+            break;
+        }
         break;
     case RequestJourneysToStop:
         setIcon( KIcon("edit-find") );
-	setText( i18nc("@action:inmenu", "&Search Journeys to This Stop") );
+        switch ( titleType ) {
+        case ShowActionNameOnly:
+            setText( i18nc("@action:inmenu", "&Search Journeys to This Stop") );
+            break;
+        case ShowStopNameOnly:
+            setText( i18nc("@action:inmenu", "&Search Journeys to '%1'", m_stopName) );
+            break;
+        case ShowActionNameAndStopName:
+            setText( m_stopName );
+            break;
+        }
         break;
     }
 

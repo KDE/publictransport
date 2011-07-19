@@ -23,10 +23,12 @@
 #include <KIconEffect>
 #include <KIconLoader>
 #include <KDebug>
-#include <QTimer>
-#include <QPropertyAnimation>
 #include <Plasma/Animator>
 #include <Plasma/Animation>
+
+#include <QTimer>
+#include <QPropertyAnimation>
+#include <qmath.h>
 
 class DepartureModelLessThan
 {
@@ -2160,4 +2162,89 @@ void DepartureModel::setColorGroups( const ColorGroupSettingsList& colorGroups )
             emit dataChanged( topLeft, bottomRight );
         }
     }
+}
+
+RouteStopFlags DepartureItem::routeStopFlags( int routeStopIndex, int *minsFromFirstRouteStop )
+{
+    RouteStopFlags routeStopFlags;
+
+    const QString stopName = m_departureInfo.routeStops()[ routeStopIndex ];
+    if ( routeStopIndex == 0 ) {
+        routeStopFlags |= RouteStopIsOrigin;
+    } else if ( routeStopIndex == m_departureInfo.routeStops().count() - 1 ) {
+        routeStopFlags |= RouteStopIsTarget;
+    } else {
+        routeStopFlags |= RouteStopIsIntermediate;
+    }
+
+    // Get time information
+    int _minsFromFirstRouteStop = -1;
+    if ( routeStopIndex < m_departureInfo.routeTimes().count()
+        && m_departureInfo.routeTimes()[routeStopIndex].isValid() )
+    {
+        const QTime time = m_departureInfo.routeTimes()[routeStopIndex];
+        _minsFromFirstRouteStop = qCeil( m_departureInfo.departure().time().secsTo(time) / 60 );
+        while ( _minsFromFirstRouteStop < 0 ) {
+            _minsFromFirstRouteStop += 60 * 24;
+        }
+    }
+    if ( m_model->info().homeStop == stopName || _minsFromFirstRouteStop == 0 ) {
+        routeStopFlags |= RouteStopIsHomeStop;
+    }
+    if ( m_model->info().highlightedStop == stopName ) {
+        routeStopFlags |= RouteStopIsHighlighted;
+    }
+
+    if ( minsFromFirstRouteStop ) {
+        *minsFromFirstRouteStop = _minsFromFirstRouteStop;
+    }
+    return routeStopFlags;
+}
+
+RouteStopFlags JourneyItem::departureRouteStopFlags( int routeStopIndex, int* minsFromFirstRouteStop )
+{
+    return routeStopFlags( routeStopIndex, minsFromFirstRouteStop, m_journeyInfo.routeTimesDeparture() );
+}
+
+RouteStopFlags JourneyItem::arrivalRouteStopFlags( int routeStopIndex, int* minsFromFirstRouteStop )
+{
+    return routeStopFlags( routeStopIndex, minsFromFirstRouteStop, m_journeyInfo.routeTimesArrival() );
+}
+
+RouteStopFlags JourneyItem::routeStopFlags( int routeStopIndex, int* minsFromFirstRouteStop,
+                                            const QList< QTime >& times )
+{
+    RouteStopFlags routeStopFlags;
+
+    if ( routeStopIndex == 0 ) {
+        routeStopFlags |= RouteStopIsOrigin;
+    } else if ( routeStopIndex == m_journeyInfo.routeStops().count() - 1 ) {
+        routeStopFlags |= RouteStopIsTarget;
+    } else {
+        routeStopFlags |= RouteStopIsIntermediate;
+    }
+
+    // Get time information
+    int _minsFromFirstRouteStop = -1;
+    if ( routeStopIndex < times.count() && times[routeStopIndex].isValid() ) {
+        QTime time = times[routeStopIndex];
+        _minsFromFirstRouteStop = qCeil( m_journeyInfo.departure().time().secsTo(time) / 60 );
+        while ( _minsFromFirstRouteStop < 0 ) {
+            _minsFromFirstRouteStop += 60 * 24;
+        }
+    }
+
+    const QString stopName = m_journeyInfo.routeStops()[ routeStopIndex ];
+    PublicTransportModel *model = qobject_cast<PublicTransportModel*>( m_model );
+    if ( model->info().homeStop == stopName || _minsFromFirstRouteStop == 0 ) {
+        routeStopFlags |= RouteStopIsHomeStop;
+    }
+    if ( model->info().highlightedStop == stopName ) {
+        routeStopFlags |= RouteStopIsHighlighted;
+    }
+
+    if ( minsFromFirstRouteStop ) {
+        *minsFromFirstRouteStop = _minsFromFirstRouteStop;
+    }
+    return routeStopFlags;
 }

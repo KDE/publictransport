@@ -255,7 +255,7 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                 // to be used for the tooltip of the intermediate marker item
                 QStringList omittedStopList;
                 for ( int omittedIndex = omitIndex;
-                      omittedIndex < omitIndex + omitCount; ++omittedIndex )
+                      omittedIndex <= omitIndex + omitCount; ++omittedIndex )
                 {
                     QString stopText = info->routeStops()[omittedIndex];
 
@@ -323,29 +323,14 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                 baseSize = m_maxTextWidth;
             }
 
+            // Get route flags
+            int minsFromFirstRouteStop = -1;
+            RouteStopFlags routeStopFlags = item->routeStopFlags( index, &minsFromFirstRouteStop );
+
             // Get time information
             QTime time;
-            int minsFromFirstRouteStop = -1;
             if ( index < info->routeTimes().count() && info->routeTimes()[index].isValid() ) {
                 time = info->routeTimes()[index];
-                minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60 );
-            }
-            while ( minsFromFirstRouteStop < 0 ) {
-                minsFromFirstRouteStop += 60 * 24;
-            }
-
-            // Get flags for the current stop
-            RouteStopFlags routeStopFlags;
-            if ( positionIndex == 0 ) {
-                routeStopFlags |= RouteStopIsOrigin;
-            } else if ( positionIndex == count - 1 ) {
-                routeStopFlags |= RouteStopIsTarget;
-            } else {
-                routeStopFlags |= RouteStopIsIntermediate;
-            }
-            DepartureModel *model = qobject_cast<DepartureModel*>( m_item->model() );
-            if ( model->info().homeStop == stopName || minsFromFirstRouteStop == 0 ) {
-                routeStopFlags |= RouteStopIsHomeStop;
             }
 
             // Create text item, that displays a single stop name
@@ -989,29 +974,7 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                 }
             }
 
-            // Get time information
-            int minsFromFirstRouteStop = -1;
-            if ( i < info->routeTimesDeparture().count() && info->routeTimesDeparture()[i].isValid() ) {
-                QTime time = info->routeTimesDeparture()[i];
-                minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60 );
-                while ( minsFromFirstRouteStop < 0 ) {
-                    minsFromFirstRouteStop += 60 * 24;
-                }
-            }
-
-            // Get route stop flags
-            RouteStopFlags routeStopFlags;
-            if ( i == 0 ) {
-                routeStopFlags |= RouteStopIsOrigin;
-            } else if ( i == info->routeStops().count() - 1 ) {
-                routeStopFlags |= RouteStopIsTarget;
-            } else {
-                routeStopFlags |= RouteStopIsIntermediate;
-            }
-            JourneyModel *model = qobject_cast<JourneyModel*>( m_item->model() );
-            if ( model->info().homeStop == stopName || minsFromFirstRouteStop == 0 ) {
-                routeStopFlags |= RouteStopIsHomeStop;
-            }
+            RouteStopFlags routeStopFlags = item->departureRouteStopFlags( i );
             JourneyRouteStopGraphicsItem *routeItem = new JourneyRouteStopGraphicsItem(
                     this, QPixmap(32, 32), text, routeStopFlags, info->routeStops()[i] );
             routeItem->setZoomFactor( m_zoomFactor );

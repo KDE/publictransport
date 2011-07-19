@@ -2411,7 +2411,6 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
             actions.append( action("unhighlightStop") );
         }
 
-// TODO correct KUIT, deletion of objects
         if ( !item->departureInfo()->routeStops().isEmpty() ) {
             KMenu *menu = new KMenu();
             objectsToBeDeleted << menu;
@@ -2423,32 +2422,13 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
             for ( int index = 0; index < count; ++index ) {
                 QString stopName = info->routeStops()[index];
 
-                // Get time information
+                // Get time information and route flags
                 QTime time;
                 int minsFromFirstRouteStop = 0;
                 if ( index < info->routeTimes().count() && info->routeTimes()[index].isValid() ) {
                     time = info->routeTimes()[index];
-                    minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60 );
-                    while ( minsFromFirstRouteStop < 0 ) {
-                        minsFromFirstRouteStop += 60 * 24;
-                    }
                 }
-
-                // Get flags for the current stop
-                RouteStopFlags routeStopFlags;
-                if ( index == 0 ) {
-                    routeStopFlags |= RouteStopIsOrigin;
-                } else if ( index == count - 1 ) {
-                    routeStopFlags |= RouteStopIsTarget;
-                } else {
-                    routeStopFlags |= RouteStopIsIntermediate;
-                }
-                if ( m_model->info().homeStop == stopName || minsFromFirstRouteStop == 0 ) {
-                    routeStopFlags |= RouteStopIsHomeStop;
-                }
-                if ( m_model->info().highlightedStop == stopName ) {
-                    routeStopFlags |= RouteStopIsHighlighted;
-                }
+                RouteStopFlags routeStopFlags = item->routeStopFlags( index, &minsFromFirstRouteStop );
 
                 KMenu *stopMenu = new KMenu( menu );
                 QString stopText;
@@ -2636,8 +2616,8 @@ void PublicTransport::marbleHasStarted()
         }
     }
     
-    showStopInMarble( m_longitude, m_latitude );
-//     QTimer::singleShot( 500, this, SLOT(showStopInMarble()) );
+//     showStopInMarble( m_longitude, m_latitude );
+    QTimer::singleShot( 250, this, SLOT(showStopInMarble()) );
 }
 
 void PublicTransport::marbleFinished( int /*exitCode*/ )
@@ -2783,16 +2763,7 @@ void PublicTransport::processAlarmCreationRequest( const QDateTime& departure,
     settings.alarmSettings << alarm;
     writeSettings( settings );
 
-    // Add the new alarm to the list of alarms that match the given departure
-//     TODO Find a matching departure?!?
-//     JourneyGraphicsItem *journeyItem = static_cast<JourneyGraphicsItem*>( item );
-//     JourneyInfo info = *journeyItem->journeyItem()->journeyInfo();
-//     QString departureTime = KGlobal::locale()->formatTime( info.departure().time() );
-//     int index = settings.alarmSettings.count() - 1;
-//     info.matchedAlarms() << index;
-//     item->setDepartureInfo( info );
-
-    createPopupIcon();
+    createPopupIcon(); // TEST needed or already done in writeSettings?
 }
 
 void PublicTransport::processAlarmDeletionRequest( const QDateTime& departure,

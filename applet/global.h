@@ -169,9 +169,17 @@ public:
         ShowStopInMap            /**< Show a map with the stop, eg. in a web browser. */
     };
 
-    StopAction( Type type, QObject* parent );
+    enum TitleType {
+        ShowActionNameOnly,
+        ShowStopNameOnly,
+        ShowActionNameAndStopName
+    };
+
+    StopAction( Type type, QObject* parent, TitleType titleType = ShowActionNameOnly,
+                const QString &stopName = QString() );
 
     Type type() const { return m_type; };
+    TitleType titleType() const { return m_titleType; };
 
     QString stopName() const { return m_stopName; };
     void setStopName( const QString &stopName ) { m_stopName = stopName; };
@@ -192,6 +200,7 @@ private:
     Q_DISABLE_COPY(StopAction)
 
     const Type m_type;
+    const TitleType m_titleType;
     QString m_stopName;
 };
 

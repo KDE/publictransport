@@ -315,6 +315,9 @@ public:
     /** @returns the information that this item currently shows. */
     const JourneyInfo *journeyInfo() const { return &m_journeyInfo; };
 
+    RouteStopFlags departureRouteStopFlags( int routeStopIndex = 0, int *minsFromFirstRouteStop = 0 );
+    RouteStopFlags arrivalRouteStopFlags( int routeStopIndex = 0, int *minsFromFirstRouteStop = 0 );
+    
     /** @returns a hash with child items by their type. */
     QHash< ItemType, ChildItem* > typedChildren() const;
 
@@ -374,6 +377,9 @@ protected:
      * to the global maximal/minimal duration/changes of the model.
      **/
     qreal rating() const;
+    
+    RouteStopFlags routeStopFlags( int routeStopIndex, int *minsFromFirstRouteStop,
+                                   const QList<QTime> &times );
 
     JourneyInfo m_journeyInfo;
 };
@@ -399,6 +405,8 @@ public:
     /** @returns the information that this item currently shows. */
     const DepartureInfo *departureInfo() const { return &m_departureInfo; };
 
+    RouteStopFlags routeStopFlags( int routeStopIndex = 0, int *minsFromFirstRouteStop = 0 );
+    
     /** @returns a hash with child items by their type. */
     QHash< ItemType, ChildItem* > typedChildren() const;
 
