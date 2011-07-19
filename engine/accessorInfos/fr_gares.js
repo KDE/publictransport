@@ -1,5 +1,5 @@
 /** Accessor for gares-en-mouvement.com (france).
-* © 2010, Friedrich Pülz */
+* © 2011, Friedrich Pülz */
 
 function usedTimetableInformations() {
     return [ 'TypeOfVehicle', 'Operator', 'Platform', 'Delay', 'StopID' ];
@@ -7,7 +7,7 @@ function usedTimetableInformations() {
 
 function parseTimetable( html ) {
     // Find block of departures
-    var pos = html.search( /<div id="tvs">/i );
+    var pos = html.search( /<table [^>]*?class="tab_horaires_tps_reel"[^>]*>/i );
     if ( pos == -1 ) {
 		helper.error("Result table not found!", html);
 		return;
@@ -21,7 +21,7 @@ function parseTimetable( html ) {
     var departuresRegExp = /<tr class="[^"]*?">([\s\S]*?)<\/tr>/ig;
     var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
     var typeOfVehicleRegExp = /<img src="[^"]*"\s+alt="([^"]+)"\s*\/>/i;
-    var timeRegExp = /(\d{2})<abbr title="Time">h<\/abbr>(\d{2})/i;
+    var timeRegExp = /(\d{2})<abbr title="(?:Time|heure)">h<\/abbr>(\d{2})/i;
     var delayRegExp = /Delay\s*:\s*(\d+)/i;
     
     // Go through all departure blocks
@@ -100,7 +100,7 @@ function parsePossibleStops( html ) {
     var str = html.substr( pos );
 	
     // Initialize regular expressions (compile them only once)
-    var stopRegExp = /<li>\s*<a href="gare.php\?gare=([^"]+)">([^<]+)<\/a>\s*<\/li>/ig;
+    var stopRegExp = /<li>\s*<a href="[^"]*?\/fr\/([^"]+)\/accueil[^"]*">([^<]+)<\/a>\s*<\/li>/ig;
     
     // Go through all stop options
     while ( (stop = stopRegExp.exec(str)) ) {

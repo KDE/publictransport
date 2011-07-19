@@ -26,7 +26,7 @@
 void Helper::error( const QString& message, const QString &failedParseText )
 {
 	// Output debug message and a maximum count of 200 characters of the text where the parsing failed
-	QString shortParseText = failedParseText.trimmed().left(200);
+	QString shortParseText = failedParseText.trimmed().left(350);
 	int diff = failedParseText.length() - shortParseText.length();
 	if ( diff > 0 ) {
 		shortParseText.append(QString("... <%1 more chars>").arg(diff));

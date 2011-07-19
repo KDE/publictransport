@@ -1,6 +1,8 @@
+/** Accessor for www.fahrplaner.de (germany).
+ * © 2011, Friedrich Pülz */
 
 function usedTimetableInformations() {
-    return [ 'StopID', 'StopWeight' ];
+    return [ 'StopID', 'StopWeight', 'Platform' ];
 }
 
 // This function parses a given HTML document for departure/arrival data.
@@ -10,9 +12,8 @@ function parseTimetable( html ) {
 	var str = html;
 	
 	// Initialize regular expressions
-// 	var departuresRegExp = /<tr>([\s\S]*?)<\/tr>/ig;
-	var departuresRegExp = /<td class="nowrap">\s*<span style="[^"]*">\s*(Str|Bus|RE|IC|ICE|RB|)\s*([^<]*)\s*<\/span>\s*<\/td>\s*<td class="nowrap">\s*<span style="[^"]*">\s*([^<]*)\s*(?:<br \/>\s*<img .+ \/>&nbsp;\s*<span class="him">\s*<span class="bold">.*<\/span>.*<\/span>\s*)?<\/span>\s*<\/td>\s*<td>\s*<span style="[^"]*">&nbsp;([0-9]{2}:[0-9]{2})&nbsp;<\/span><\/td>\s*<\/tr>/ig;
-	
+	var departuresRegExp = /<td class="nowrap">\s*(Str|Bus|RE|IC|ICE|RB)\s*([^<]*)\s*<\/td>\s*<td class="nowrap">\s*([^<]*)\s*<\/td>\s*<td>\s*[^<]*([0-9]{2}:[0-9]{2})[^<]*<\/td>\s*(?:<td class="nowrap">\s*([^<]*)\s*<br[^>]*>\s*<\/td>\s*)?<\/tr>/ig;
+
 	// Go through all departure blocks
 	while ( (departureRow = departuresRegExp.exec(str)) ) {
 		// Parse time column
@@ -31,6 +32,11 @@ function parseTimetable( html ) {
 		// Parse target column
 		var targetString = helper.trim( helper.stripTags(departureRow[3]) );
 		
+		var platform = "";
+		if ( departureRow.length >=5 ) {
+		  platform = helper.trim( helper.stripTags(departureRow[4]) );
+		}
+		
 		// Add departure to the result set
 		timetableData.clear();
 		timetableData.set( 'DepartureHour', time[0] );
@@ -38,6 +44,7 @@ function parseTimetable( html ) {
 		timetableData.set( 'TransportLine', transportLine );
 		timetableData.set( 'TypeOfVehicle', typeOfVehicle );
 		timetableData.set( 'Target', targetString );
+        timetableData.set( 'Platform', platform );
 		result.addData( timetableData );
 	}
 }

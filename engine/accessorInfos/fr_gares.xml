@@ -17,7 +17,8 @@
 
 <rawUrls>
 <!--     <departures><![CDATA[http://www.gares-en-mouvement.com/infostempsreel-depart-en-1-{stop}-0.html]]></departures> -->
-    <departures><![CDATA[http://www.gares-en-mouvement.com/infos_temps_reel.php?gare={stop}&tab=dep&langue=en]]></departures>
+<!--     <departures><![CDATA[http://www.gares-en-mouvement.com/infos_temps_reel.php?gare={stop}&tab=dep&langue=en]]></departures> -->
+    <departures><![CDATA[http://www.gares-en-mouvement.com/en/{stop}/horaires-temps-reel/dep/]]></departures>
     
 <!--     <stopSuggestions><![CDATA[http://www.gares-en-mouvement.com/include/completion.php?q={stop}&limit=10]]></stopSuggestions> -->
 <!--     <stopSuggestions><![CDATA[http://www.gares-en-mouvement.com/accueil-en-1.html]]></stopSuggestions> -->
@@ -27,7 +28,7 @@
 <script>fr_gares.js</script>
 
 <changelog>
-	<entry since="1.1" releasedWith="0.10">Updated to new website layout, making it pass the unit test.</entry>
+    <entry since="1.1" releasedWith="0.10">Updated to new website layout, making it pass the unit test.</entry>
 	<entry since="1.0" releasedWith="0.6.3">Initial version.</entry>
 </changelog>
 

@@ -93,7 +93,7 @@ public Q_SLOTS:
 	 **/
 	QString trim( const QString &str ) {
 		QString s = str;
-		return s.replace( QRegExp("^(&nbsp;)+|(&nbsp;)+$", Qt::CaseInsensitive), "" ).trimmed();
+		return s.trimmed().replace( QRegExp("^(&nbsp;)+|(&nbsp;)+$", Qt::CaseInsensitive), "" ).trimmed();
 	};
 
 	/**

@@ -18,7 +18,7 @@ function parseTimetable( html ) {
     // Initialize regular expressions (compile them only once)
     var departuresRegExp = /<tr[^>]*>([\s\S]*?)<\/tr>/ig;
     var columnsRegExp = /<td[^>]*>([\s\S]*?)<\/td>/ig;
-	var flightNumberRegExp = /onclick="populateDynDropmenuFlight\('\d*','([^']+)','(\d+)',/i;
+    var flightNumberRegExp = /<a [^>]*?href='[^>]*?&airline=([^&]+)&flightNumber=(\d+)/i; // matches airline code and flight number
 	var linkRegExp = /<a href="([^"]+)"/i
 	
 	var targetCol = 0, flightNumberCol = 1, airlineCol = 3, departureCol = 4, statusCol = 7;

@@ -94,26 +94,26 @@
 <shortUrl>jizdnirady.idnes.cz</shortUrl>
 <!-- <credit>CHAPS spol. s r.o.</credit> -->
 
-<sessionKey> 
-	<url>http://jizdnirady.idnes.cz</url> 
-	<putInto data="idoskey">CustomHeader</putInto>
+<sessionKey>
+    <url>http://jizdnirady.idnes.cz</url>
+    <putInto data="idoskey">CustomHeader</putInto>
 </sessionKey>
 
 <rawUrls>
     <departures><![CDATA[http://jizdnirady.idnes.cz/{city}/odjezdy/?f={stop}&submit=true&lng=E&Date={date:dd.M.yyyy}&Time={time}&isDepTime=true]]></departures>
 
-	<stopSuggestions method="post" charset="utf-8" contenttype="application/json; charset=utf-8" accept="application/json, text/javascript, */*" data='{"prefixText":"{stop}","count":"20","selectedTT":"BMCz","bindElementValue":"","iLang":"ENGLISH","bCoor":"false"}'><![CDATA[http://jizdnirady.idnes.cz/AJAXService.asmx/SearchTimetableObjects]]></stopSuggestions>
+    <stopSuggestions method="post" charset="utf-8" contenttype="application/json; charset=utf-8" accept="application/json, text/javascript, */*" data='{"prefixText":"{stop}","count":"20","selectedTT":"BMCz","bindElementValue":"","iLang":"ENGLISH","bCoor":"false"}'><![CDATA[http://jizdnirady.idnes.cz/AJAXService.asmx/SearchTimetableObjects]]></stopSuggestions>
 </rawUrls>
 
 <script>cz_idnes.js</script>
 
 <changelog>
-	<entry since="1.3" releasedWith="0.10">Removed stop ID parsing, because requesting timetables with stop IDs doesn't work.</entry>
-	<entry since="1.2" releasedWith="0.10 Beta">Wrote a script, replacing the regular expressions in the XML. Can now also get stop suggestions by using an ASMX web service (with POST requests), which needs a session key. The session key is read from the service provider home page.</entry>
-	<entry since="1.2" releasedWith="0.10">Fixed, didn't show new departures after some time.</entry>
-	<entry since="1.1.1" releasedWith="0.7">Corrected the url for favicons.</entry>
-	<entry since="1.1" releasedWith="0.5.2">Added stop suggestions.</entry>
-	<entry since="1.1" releasedWith="0.5.2">Added list of possible cities (thanks to takanowaka).</entry>
+    <entry since="1.3" releasedWith="0.10">Removed stop ID parsing, because requesting timetables with stop IDs doesn't work.</entry>
+    <entry since="1.2" releasedWith="0.10 Beta">Wrote a script, replacing the regular expressions in the XML. Can now also get stop suggestions by using an ASMX web service (with POST requests), which needs a session key. The session key is read from the service provider home page.</entry>
+    <entry since="1.2" releasedWith="0.10">Fixed, didn't show new departures after some time.</entry>
+    <entry since="1.1.1" releasedWith="0.7">Corrected the url for favicons.</entry>
+    <entry since="1.1" releasedWith="0.5.2">Added stop suggestions.</entry>
+    <entry since="1.1" releasedWith="0.5.2">Added list of possible cities (thanks to takanowaka).</entry>
 </changelog>
 
 </accessorInfo>

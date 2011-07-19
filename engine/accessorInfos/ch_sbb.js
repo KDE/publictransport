@@ -1,5 +1,5 @@
-/** Accessor for www.sbb.ch (swiss).
- * © 2010, Friedrich Pülz */
+/** Accessor for www.sbb.ch (switzerland).
+ * © 2011, Friedrich Pülz */
 
 Array.prototype.contains = function( element ) {
 	for ( var i = 0; i < this.length; i++ ) {
@@ -24,12 +24,12 @@ function detailsResultsObject() {
 }
 
 function usedTimetableInformations() {
-	return [ 'Delay', 'Platform', 'JourneyNews', 'TypeOfVehicle',
-			'StopID', 'Changes', 'RouteStops',
-			'RoutePlatformsDeparture', 'RoutePlatformsArrival',
-			'RouteTimesDeparture', 'RouteTimesArrival',
-			'RouteTransportLines', 'StopID'/*,
-			'TypesOfVehicleInJourney', 'RouteTransportLines'*/
+	return [ 'Delay', 'DelayReason', 'Platform', 'JourneyNews', 'TypeOfVehicle',
+			 'StopID', 'Changes', 'RouteStops',
+			 'RoutePlatformsDeparture', 'RoutePlatformsArrival',
+			 'RouteTimesDeparture', 'RouteTimesArrival',
+			 'RouteTransportLines', 'StopID'/*,
+			 'TypesOfVehicleInJourney', 'RouteTransportLines'*/
 	];
 }
 
@@ -59,10 +59,14 @@ function parseTimetable( html ) {
 	// where X is the difference in days between today and the requested date.
 	returnValue.push( 'dates need adjustment' );
 	
-	// Find block of departures
-	var str = helper.extractBlock( html,
-			'<table cellspacing="0" class="hafas-content hafas-sq-content">', '</table>' );
-
+    // Find block of departures
+    var str = /<table [^>]*class="hfs_stboard"[^>]*>([\s\S]*?)<\/table>/i.exec(html);
+    if ( str == null ) {
+        helper.error( "The table containing departures wasn't found!", html );
+        return;
+    }
+    str = str[1];
+    
 	// Initialize regular expressions (only used once)
 	var meaningsRegExp = /<tr>[\s\S]*?(<th[\s\S]*?)<\/tr>/i;
 	var columnMeaningsRegExp = /<th[^>]*?>([\s\S]*?)<\/th>/ig;
@@ -84,7 +88,6 @@ function parseTimetable( html ) {
 			delayCol = i;
 		} else if ( colMeaning == "Fahrt" ) {
 			typeOfVehicleCol = i;
-			++i; // colspan="2" for this column
 		} else if ( colMeaning == "In Richtung" ) {
 			targetCol = i;
 		} else if ( colMeaning == "Gleis/Haltestelle" ) {
@@ -100,22 +103,46 @@ function parseTimetable( html ) {
 		return;
 	}
 
+// <div class="text">
+//      <span class="bold">
+//          &nbsp;
+//          (Brig - Romanshorn)
+//          &nbsp;Fahrzeugst&#246;rung: IC 827
+//      </span>
+//      <span class="him">
+//          IC 827 von Brig ab 12:49 &#252;ber Visp 12:57 - Spiez 13:25 - Thun 13:36 - Bern 14:02 - Z&#252;rich HB 15:07 - Z&#252;rich Flughafen 15:18 - Winterthur 15:35 - Weinfelden 16:00 - Amriswil 16:11 nach Romanshorn an 16:18 f&#228;llt zwischen Z&#252;rich HB und Romanshorn aus.
+//      </span>
+//      <a href="http://sbb-him.hafas.de/bin/help.exe/dn?tpl=showmap_external&messageID=612920&OK#hfsShm" target="_blank">Weitere Informationen</a>
+// </div>
 	// Initialize regular expressions (compile them only once)
-	var departuresRegExp = /<tr class="zebra-row-\d">([\s\S]*?)<\/tr>/ig;
+//     var test = /<tr class="zebra-row-\d">([\s\S]*?)<\/tr>\s*<tr class="zebra-row-\d">[\s\S]*?<div [^>]*?class="messageHolder"[^>]*>[\s\S]*?<div [^>]*?class="text"[^>]*>\s*<span [^>]*?class="bold">([\s\S]*?)<\/span>[\s\S]*?<span [^>]*?class="him">([\s\S]*?)<\/span>[\s\S]*?<\/tr>/ig;
+//     println("B");
+//     t = test.exec(str);
+//     println("B2");
+//     if ( t ) {
+//         println("C");
+//         println("matched 1 " + t.length);
+//         println("RESULTS: " + ", " + t[2] + ", " + t[3]);
+//     } else {
+//         println("NOT matched 1");
+//     }
+//     println("D");
+    
+	var departuresRegExp = /<tr class="zebra-row-\d">([\s\S]*?)<\/tr>(?:\s*<tr class="zebra-row-\d">[\s\S]*?<div [^>]*?class="messageHolder"[^>]*>[\s\S]*?<div [^>]*?class="text"[^>]*>\s*<span [^>]*?class="bold">([\s\S]*?)<\/span>[\s\S]*?<span [^>]*?class="him">([\s\S]*?)<\/span>[\s\S]*?<\/tr>)?/ig;
 	var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
-	var typeOfVehicleRegExp = /<img src="[^"]*?\/products\/([^_]*?)\d?_pic\.\w{3,4}"/i;
-	var transportLineRegExp = /<a href="http:\/\/fahrplan.sbb.ch\/bin\/traininfo.exe[^>]*?>([^<]*?)<\/a>/i;
+	var typeOfVehicleRegExp = /<img [^>]*src="[^"]*?\/products\/([^_]*?)\d?_pic\.\w{3,4}"/i;
+	var transportLineRegExp = /<a href="http:\/\/fahrplan.sbb.ch\/bin\/traininfo.exe[^>]*?>\s*(?:<img[^>]*>\s*)?(?:<span[^>]*>\s*)?([^<]*?)(?:<\/span>\s*)?<\/a>/i;
 	var targetRegExp = /<a href="http:\/\/fahrplan.sbb.ch[^>]*?>([^<]*?)<\/a>\s*<\/span>[\s\S]*?<br>/i;
 	var platformRegExp = /<strong>([^<]*?)<\/strong>/i;
-	var delayRegExp = /ca.&nbsp;\+(\d)&nbsp;Min\./i;
+    var delayRegExp = /ca.&nbsp;\+(\d+)&nbsp;Min\./i;
 
 	var routeBlocksRegExp = /\r?\n\s*(-|&#149;)\s*\r?\n/ig;
 	var routeBlockEndOfExactRouteMarkerRegExp = /&#149;/;
 	var routeStopRegExp = /<a href="[^"]*?">([^<]*?)<\/a>&nbsp;(\d{2}:\d{2})/i;
 
 	// Go through all departure blocks
-	while ( (departure = departuresRegExp.exec(str)) ) {
-		departure = departure[1];
+	while ( (departureArr = departuresRegExp.exec(str)) ) {
+		departure = departureArr[1];
 
 		// Get column contents
 		var columns = new Array;
@@ -129,7 +156,8 @@ function parseTimetable( html ) {
 		}
 
 		// Parse time column
-		var time = helper.matchTime( columns[timeCol], "hh:mm" );
+		var timeString = helper.trim( helper.stripTags(columns[timeCol]) );
+		var time = helper.matchTime( timeString, "hh:mm" );
 		if ( time.length != 2 ) {
 			helper.error("Unexpected string in time column!", columns[timeCol]);
 			continue;
@@ -153,7 +181,7 @@ function parseTimetable( html ) {
 		}
 
 		// Parse transport line column
-		var transportLine = transportLineRegExp.exec( columns[typeOfVehicleCol + 1] );
+		var transportLine = transportLineRegExp.exec( columns[typeOfVehicleCol] );
 		if ( transportLine == null ) {
 			helper.error("Unexpected string in transport line column!", columns[typeOfVehicleCol]);
 			continue;
@@ -175,12 +203,48 @@ function parseTimetable( html ) {
 		}
 
 		// Parse delay column
+		var journeyNews = "";
 		var delay = -1;
 		if ( delayCol != -1 ) {
-			var delayResult = delayRegExp.exec( columns[delayCol] );
-			if ( delayResult != null )
-				delay = parseInt( delayResult[1] );
+            var delayString = helper.trim( helper.stripTags(columns[delayCol]) );
+            if ( delayString.length != 0 ) {
+                if ( (delayArr = delayRegExp.exec(delayString)) ) {
+                    delay = parseInt( delayArr[1] );
+                    println("parsed delay: " + delay + " minutes");
+                } else {
+                    var prognosisTime = helper.matchTime( delayString, "hh:mm" );
+                    if ( prognosisTime.length == 2 ) {
+                        // Prognosis time found
+                        var delayResult = helper.duration( timeString,
+                                helper.formatTime(prognosisTime[0], prognosisTime[1], "hh:mm"),
+                                "hh:mm" );
+                        if ( delayResult < 0 ) {
+                            helper.error("Unexpected string in prognosis column!", columns[delayCol]);
+                        } else {
+                            println("parsed delay: " + delayResult + " minutes");
+                            delay = delayResult;
+                        }
+                    } else {
+                        journeyNews = delayString;
+                    }
+                }
+            } else {
+                journeyNews = delayString;
+            }
 		}
+
+        var delayReason = "";
+		if ( departureArr.length >= 4 && departureArr[2] && departureArr[3] ) {
+            delayReason = helper.trim( departureArr[2].replace("&nbsp;", ' ') );
+            var _journeyNews = helper.trim( departureArr[3].replace("&nbsp;", ' ') );
+            println("Additional information: " + delayReason + ", " + _journeyNews);
+            if ( _journeyNews.length > 0 ) {
+                if ( journeyNews.length > 0 ) {
+                    journeyNews += "<br/>";
+                }
+                journeyNews += _journeyNews;
+            }
+        }
 
 		// Parse route from target column
 		var routeStops = new Array;
@@ -206,7 +270,7 @@ function parseTimetable( html ) {
 				continue; // Unexcepted string in route block
 			}
 
-				routeStops.push( helper.trim(routeStopArr[1]) );
+            routeStops.push( helper.trim(routeStopArr[1]) );
 			routeTimes.push( helper.trim(routeStopArr[2]) );
 		}
 
@@ -218,11 +282,13 @@ function parseTimetable( html ) {
 		timetableData.set( 'DepartureHour', time[0] );
 		timetableData.set( 'DepartureMinute', time[1] );
 		timetableData.set( 'Platform', platformString );
-		timetableData.set( 'Delay', delay );
+        timetableData.set( 'Delay', delay );
+        timetableData.set( 'DelayReason', delayReason );
+        timetableData.set( 'JourneyNews', journeyNews );
 		timetableData.set( 'RouteStops', routeStops );
 		timetableData.set( 'RouteTimes', routeTimes );
 		timetableData.set( 'RouteExactStops', exactRouteStops );
-		result.addData( timetableData );
+        result.addData( timetableData );
 	}
     return returnValue;
 }
@@ -653,8 +719,13 @@ function parsePossibleStops( html ) {
 
 function parsePossibleStops_1( html ) {
 	// Find block of stops
-	var str = helper.extractBlock( html, '<select name="input">', '</select>' );
-
+    var pos = html.search( /<select [^>]*name="input"[^>]*?>/i );
+    if ( pos == -1 ) {
+        return;
+    }
+    var end = html.indexOf( '</select>', pos + 1 );
+    var str = html.substr( pos, end - pos );
+    
 	// Initialize regular expressions (compile them only once)
 	var stopRegExp = /<option value="[^"]+?#([0-9]+)">([^<]*?)<\/option>/ig;
 
@@ -675,7 +746,7 @@ function parsePossibleStops_1( html ) {
 
 function parsePossibleStops_2( html ) {
 	// Find block of stops
-	var pos = html.search( /<select name="REQ0JourneyStopsZ0K"[^>]*?>/i );
+	var pos = html.search( /<select [^>]*name="REQ0JourneyStopsZ0K"[^>]*?>/i );
 	if ( pos == -1 ) {
 		return;
 	}

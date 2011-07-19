@@ -1,7 +1,9 @@
+/** Accessor for rozklad.sitkol.pl (poland).
+ * © 2011, Friedrich Pülz */
 
 // This function returns a list of all features supported by this script.
 function usedTimetableInformations() {
-	return [ 'Platform', 'StopID', 'RouteStops', 'RouteTimes' ];
+	return [ 'Platform', 'StopID', 'Delay', 'RouteStops', 'RouteTimes' ];
 }
 
 // This function parses a given HTML document for departure/arrival data.
@@ -15,17 +17,55 @@ function parseTimetable( html ) {
 		return true;
 	}
 
-	// Initialize regula<span class="bold">r expressions
+	// Initialize regular expressions
 	var departureRegExp = /<tr class="depboard-(?:dark|light)">([\s\S]*?)<\/tr>/ig;
     var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
 	var transportLineRegExp = /<a[^>]*>([\s\S]*?)<\/a>/i;
-	var typeOfVehicleRegExp = /<img src="\/hafas-res\/img\/([^_]*)_pic.gif"[^>]*>/i;
-	var targetRegExp = /<span[^>]*>([\s\S]*)<\/span>/i;
+	var typeOfVehicleRegExp = /<img [^>]*src="\/hafas-res\/img\/([^_]*)_pic.gif"[^>]*>/i;
+	var targetRegExp = /<span[^>]*>([\s\S]*?)<\/span>/i;
     var routeBlocksRegExp = /\r?\n\s*(-|&#8226;)\s*\r?\n/gi;
     var routeBlockEndOfExactRouteMarkerRegExp = /&#8226;/i;
+    var meaningsRegExp = /<table [^>]*class="[^"]*hafasResult(?:\s+[^"]*)?"[^>]*>[\s\S]*?<tr>[\s\S]*?(<th[\s\S]*?)<\/tr>/i;
+    var columnMeaningsRegExp = /<th[^>]*?>([\s\S]*?)<\/th>/ig;
 
-    var timeCol = 0, typeOfVehicleCol = 1, transportLineCol = 1, routeCol = 2, targetCol = 2, platformCol = 3;
-	
+    if ( (meanings = meaningsRegExp.exec(html)) == null ) {
+        helper.error( "Couldn't find result table header!", html );
+        return;
+    }
+    meanings = meanings[1];
+    
+    var timeCol = -1, delayCol = -1, typeOfVehicleCol = -1, transportLineCol = -1,
+        targetCol = -1, routeCol = -1, platformCol = -1;
+    var i = 0;
+    while ( (colMeaning = columnMeaningsRegExp.exec(meanings)) ) {
+        colMeaning = helper.trim( colMeaning[1] );
+
+        if ( colMeaning == "Time" ) {
+            timeCol = i;
+        } else if ( colMeaning == "Prognosis" ) {
+            delayCol = i; // TODO Use delay
+        } else if ( colMeaning == "Train" ) {
+            typeOfVehicleCol = transportLineCol = i;
+        } else if ( colMeaning == "Timetable" ) {
+            targetCol = routeCol = i;
+        } else if ( colMeaning == "Platform" ) {
+            platformCol = i;
+        } else {
+            helper.error( "Unknown column meaning: " + colMeaning, meanings );
+        }
+
+        ++i;
+    }
+
+    if ( timeCol == -1 || typeOfVehicleCol == -1 || targetCol == -1 || routeCol == -1
+        || transportLineCol == -1 )
+    {
+        helper.error( "Didn't find all required columns in the header! (time: " + timeCol
+                      + ", type of vehicle: " + typeOfVehicleCol + ", target: " + targetCol
+                      + ", transport line: " + transportLineCol, meanings );
+        return;
+    }
+
 	// Go through all departure blocks
 	var departureNumber = 0;
 	while ( (departureRow = departureRegExp.exec(html)) ) {
@@ -120,7 +160,32 @@ function parseTimetable( html ) {
 		// Parse platform column
 		var platformString = columns.length > platformCol && typeof(columns[platformCol]) != 'undefined'
 				? helper.trim( helper.stripTags(columns[platformCol]) ) : "";
-		
+
+        // Parse delay column
+        var delay = -1;
+        if ( delayCol != -1 ) {
+            var delayString = helper.trim( helper.stripTags(columns[delayCol]) );
+            if ( delayString.length != 0 ) {
+                if ( delayString.indexOf("/hafas-res/img/rt_on_time.gif") != -1 ) {
+                    delay = 0;
+                } else {
+                    var prognosisTime = helper.matchTime( delayString, "hh:mm" );
+                    if ( prognosisTime.length == 2 ) {
+                        // Prognosis time found
+                        var delayResult = helper.duration( timeString,
+                                helper.formatTime(prognosisTime[0], prognosisTime[1], "hh:mm"),
+                                "hh:mm" );
+                        if ( delayResult < 0 ) {
+                            helper.error("Unexpected string in prognosis column!", columns[delayCol]);
+                        } else {
+                            println("parsed delay: " + delayResult + " minutes");
+                            delay = delayResult;
+                        }
+                    }
+                }
+            }
+        }
+        
 		// Add departure to the result set
 		timetableData.clear();
 		timetableData.set( 'DepartureHour', time[0] );
@@ -128,7 +193,8 @@ function parseTimetable( html ) {
 		timetableData.set( 'TransportLine', transportLine );
 		timetableData.set( 'TypeOfVehicle', typeOfVehicle );
 		timetableData.set( 'Platform', platformString );
-		timetableData.set( 'Target', targetString );
+        timetableData.set( 'Target', targetString );
+        timetableData.set( 'Delay', delay );
 		timetableData.set( 'RouteStops', routeStops );
 		timetableData.set( 'RouteTimes', routeTimes );
 		timetableData.set( 'RouteExactStops', exactRouteStops );
@@ -170,4 +236,3 @@ function parsePossibleStops( html ) {
 
     return result.hasData();
 }
-

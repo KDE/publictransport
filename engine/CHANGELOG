@@ -5,6 +5,14 @@ Changelog of plasma-engine-publictransport
 - de_rmv: Fix stop suggestions for changed HTML layout
 - de_rmv: Fix results to get shown not only with a stop ID
 - de_rmv: Fix decoding of received XML documents
+- ch_sbb: Fix departures and stop suggestions for changed HTML layout
+- ch_sbb: Better/more journey news parsing
+- de_fahrplaner: Fix departures for changed HTML layout
+- de_fahrplaner: Added platform parsing
+- pl_pkp: Fix departures for changed HTML layout
+- pl_pkp: Add delay parsing
+- international_flightstats: Fix departures for changed HTML layout
+- fr_gares: Fix departure URL, updated to changed HTML layout
 
 0.10 - Beta 8
 - Only add new journey news lines if they aren't already in the journey news string for de_rmv

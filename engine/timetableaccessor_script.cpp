@@ -238,7 +238,7 @@ bool TimetableAccessorScript::parseDocument( const QByteArray &document,
 	// Call script using Kross
 	m_resultObject->clear();
 	QVariant result = m_script->callFunction( functionName, QVariantList() << doc );
-	
+
 	if ( result.isValid() && result.canConvert(QVariant::StringList) ) {
 		QStringList globalInfos = result.toStringList();
 		if ( globalInfos.contains(QLatin1String("no delays"), Qt::CaseInsensitive) ) {

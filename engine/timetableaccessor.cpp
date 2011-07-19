@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -541,6 +541,7 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString
 			QString sData = m_info->attributesForStopSuggestions()[QLatin1String("data")];
 			sData.replace( QLatin1String("{city}"), city );
 			sData.replace( QLatin1String("{stop}"), stop );
+            sData.replace( "{timestamp}", QString::number(dateTime.toTime_t()) );
 			
 			job =  KIO::storedHttpPost( QByteArray(), url, KIO::HideProgressInfo );
 			if ( m_info->attributesForStopSuggestions().contains(QLatin1String("contenttype")) ) {
@@ -563,6 +564,8 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString
 				} else {
 					job->setData( codec->fromUnicode(sData) );
 				}
+
+				kDebug() << "Post this data" << sData;
 			} else {
 				// No codec specified, use UTF8
 				job->setData( sData.toUtf8() );

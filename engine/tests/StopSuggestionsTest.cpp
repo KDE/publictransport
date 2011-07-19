@@ -54,7 +54,7 @@ void StopSuggestionsTest::stopSuggestionTest_data()
 	QTest::newRow("at_oebb") << "at_oebb" << QString() << "Wien" << true << true;
 	QTest::newRow("be_brail") << "be_brail" << QString() << "Brüssel" << true << false;
 	QTest::newRow("ch_sbb") << "ch_sbb" << QString() << "Bern" << true << false;
-	QTest::newRow("cz_idnes") << "cz_idnes" << "Brno" << "Technolog" << true << false;
+	QTest::newRow("cz_idnes") << "cz_idnes" << "Brno" << "Technolog" << false << false;
 	QTest::newRow("de_bvg") << "de_bvg" << QString() << "Alexander" << false << false;
 	QTest::newRow("de_db") << "de_db" << QString() << "Bremen Hbf" << true << true;
 	QTest::newRow("de_dvb") << "de_dvb" << QString() << "Hauptbahnhof" << false << false;

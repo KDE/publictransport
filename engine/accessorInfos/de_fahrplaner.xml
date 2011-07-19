@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo fileVersion="1.0" version="1.2" type="HTML">
+<accessorInfo fileVersion="1.0" version="1.3" type="HTML">
 
 <name>Weser-Ems Busverkehr GmbH</name>
 <author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
@@ -24,7 +24,8 @@
 <script>de_fahrplaner.js</script>
 
 <changelog>
-	<entry since="1.2" releasedWith="0.10">Ported to a script.</entry>
+    <entry since="1.3" releasedWith="0.10">Updated to changed website layout, added platform parsing.</entry>
+    <entry since="1.2" releasedWith="0.10">Ported to a script.</entry>
 	<entry since="1.1" releasedWith="0.6.9">Stop suggestions didn't work. It's now using another url for stop suggestions, like de_db (same system), with stop weights.</entry>
 </changelog>
 
