@@ -40,7 +40,7 @@
 
 #include "global.h"
 #include "filter.h"
-#include <publictransporthelper/dynamicwidget.h>
+#include "dynamicwidget.h"
 
 class CheckCombobox;
 class KComboBox;
