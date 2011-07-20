@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -34,6 +34,9 @@
 #include <QFormLayout>
 #include <QVBoxLayout>
 #include <QRadioButton>
+
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
 
 Stop::Stop()
 {
@@ -638,3 +641,5 @@ QDebug& operator<<( QDebug debug, StopSetting setting )
 			}
 	}
 }
+
+}; // namespace Timetable

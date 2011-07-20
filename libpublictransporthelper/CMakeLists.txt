@@ -31,10 +31,6 @@ set( publictransporthelper_LIB_SRCS
 	departureinfo.cpp
 )
 
-kde4_add_ui_files( publictransporthelper_LIB_SRCS
-	accessorInfo.ui
-	stopConfig.ui )
-
 set( publictransporthelper_LIB_HDRS
 	publictransporthelper_export.h
 	
@@ -64,6 +60,10 @@ set( publictransporthelper_LIB_HDRS
 	departureinfo.h
 # 	htmldelegate.h
 )
+
+kde4_add_ui_files( publictransporthelper_LIB_SRCS
+    accessorInfo.ui
+    stopConfig.ui )
 
 kde4_add_library( publictransporthelper SHARED ${publictransporthelper_LIB_SRCS} )
 

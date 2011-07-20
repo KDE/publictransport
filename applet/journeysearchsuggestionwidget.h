@@ -1,25 +1,25 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 /** @file
-* @brief This file contains the widget that is used to display journey search suggestions.
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief This file contains the widget that is used to display journey search suggestions.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef JOURNEYSEARCHSUGGESTIONWIDGET_H
 #define JOURNEYSEARCHSUGGESTIONWIDGET_H
@@ -33,33 +33,33 @@
 class QGraphicsSceneMouseEvent;
 namespace Plasma {
     class LineEdit;
-}
+};
 class Settings;
 class QStandardItemModel;
 class JourneySearchSuggestionItem;
 
 /**
-* @brief Represents the widget used to display journey search suggestions.
-*
-* Derived from Plasma::TreeView, shows suggestions (only one column). Suggestions are
-* automatically added when the attached line edit widget is edited. To attach a line edit widget
-* use @ref attachLineEdit. Completions are also automatically set on the attached line edit and
-* it's text is updated when a suggestion is applied.
-*
-* By default all available suggestions are shown. To disable suggestions by type use
-* @ref setEnabledSuggestions.
-*
-* @since 0.9.1
-**/
-class JourneySearchSuggestionWidget : public Plasma::ScrollWidget // public Plasma::TreeView
+ * @brief Represents the widget used to display journey search suggestions.
+ *
+ * Derived from Plasma::ScrollWidget, shows suggestions. Suggestions are automatically added when
+ * the attached line edit widget is edited. To attach a line edit widget use @ref attachLineEdit.
+ * Completions are also automatically set on the attached line edit and it's text is updated when
+ * a suggestion is applied.
+ *
+ * By default all available suggestions are shown. To disable suggestions by type use
+ * @ref setEnabledSuggestions.
+ *
+ * @since 0.9.1
+ **/
+class JourneySearchSuggestionWidget : public Plasma::ScrollWidget
 {
     Q_OBJECT
     friend class JourneySearchSuggestionItem;
 
 public:
     /**
-    * @brief Types of suggestions displayed by this widget.
-    **/
+     * @brief Types of suggestions displayed by this widget.
+     **/
     enum Suggestion {
         NoSuggestions = 0x0000, /**< No suggestions. */
 
@@ -73,14 +73,14 @@ public:
     Q_DECLARE_FLAGS(Suggestions, Suggestion);
 
     /**
-    * @brief Creates a new journey search suggestion widget.
-    *
-    * @param parent The parent item.
-    *
-    * @param settings A pointer to the settings object of the applet.
-    *
-    * @param palette The palette to use. Defaults to QPalette().
-    **/
+     * @brief Creates a new journey search suggestion widget.
+     *
+     * @param parent The parent item.
+     *
+     * @param settings A pointer to the settings object of the applet.
+     *
+     * @param palette The palette to use. Defaults to QPalette().
+     **/
     explicit JourneySearchSuggestionWidget( QGraphicsItem *parent, Settings *settings,
                                             const QPalette &palette = QPalette() );
 
@@ -91,20 +91,20 @@ public:
     void setModel( QStandardItemModel *model );
 
     /**
-    * @brief Attaches the given @p lineEdit with this widget. All changes made to the text in
-    *   @p lineEdit are handled to generate suggestions.
-    *
-    * @param lineEdit A pointer to the Plasma::LineEdit to attach with.
-    *
-    * @see detachLineEdit
-    **/
+     * @brief Attaches the given @p lineEdit with this widget. All changes made to the text in
+     *   @p lineEdit are handled to generate suggestions.
+     *
+     * @param lineEdit A pointer to the Plasma::LineEdit to attach with.
+     *
+     * @see detachLineEdit
+     **/
     void attachLineEdit( Plasma::LineEdit *lineEdit );
 
     /**
-    * @brief Detaches a previously attached line edit widget.
-    *
-    * @see attachLineEdit
-    **/
+     * @brief Detaches a previously attached line edit widget.
+     *
+     * @see attachLineEdit
+     **/
     void detachLineEdit();
 
     /** @brief Clears the suggestion model. */
@@ -122,36 +122,36 @@ signals:
     void suggestionActivated();
 
     /**
-    * @brief Emitted after the attached line edit has been edited and it's content has been parsed.
-    *
-    * @param stopName The parsed stop name.
-    *
-    * @param departure The parsed departure date and time.
-    *
-    * @param stopIsTarget Whether or not the parsed stop should be treated as target (true)
-    *   or as origin stop (false).
-    *
-    * @param timeIsDeparture Whether or not the parsed time should be treated as departure (true)
-    *   or as arrival time (false).
-    **/
+     * @brief Emitted after the attached line edit has been edited and it's content has been parsed.
+     *
+     * @param stopName The parsed stop name.
+     *
+     * @param departure The parsed departure date and time.
+     *
+     * @param stopIsTarget Whether or not the parsed stop should be treated as target (true)
+     *   or as origin stop (false).
+     *
+     * @param timeIsDeparture Whether or not the parsed time should be treated as departure (true)
+     *   or as arrival time (false).
+     **/
     void journeySearchLineChanged( const QString &stopName, const QDateTime &departure,
                                 bool stopIsTarget, bool timeIsDeparture );
 
 public slots:
     /**
-    * @brief Uses the stop suggestion at the given @p index.
-    *
-    * It is handled as if the stop suggestion was clicked.
-    * Only if the item at the given @p index is a stop suggestion or a recent journey search.
-    *
-    * @param index The QModelIndex of the stop suggestion to use.
-    **/
+     * @brief Uses the stop suggestion at the given @p index.
+     *
+     * It is handled as if the stop suggestion was clicked.
+     * Only if the item at the given @p index is a stop suggestion or a recent journey search.
+     *
+     * @param index The QModelIndex of the stop suggestion to use.
+     **/
     void useStopSuggestion( const QModelIndex &index );
 
     /** @brief Updates the stop suggestions with stop suggestions in @p stopSuggestionData.
-    *
-    * @param stopSuggestionData Data with stop suggestions from the PublicTransport data engine.
-    **/
+     *
+     * @param stopSuggestionData Data with stop suggestions from the PublicTransport data engine.
+     **/
     void updateStopSuggestionItems( const QVariantHash &stopSuggestionData );
 
 protected slots:
@@ -162,24 +162,24 @@ protected slots:
     virtual void dataChanged( const QModelIndex &topLeft, const QModelIndex &bottomRight );
 
     /**
-    * @brief A suggestion item was clicked.
-    *
-    * @param index The QModelIndex of the clicked item.
-    **/
+     * @brief A suggestion item was clicked.
+     *
+     * @param index The QModelIndex of the clicked item.
+     **/
     void suggestionClicked( const QModelIndex &index );
 
     /**
-    * @brief A suggestion item was doubleclicked.
-    *
-    * @param index The QModelIndex of the clicked item.
-    **/
+     * @brief A suggestion item was doubleclicked.
+     *
+     * @param index The QModelIndex of the clicked item.
+     **/
     void suggestionDoubleClicked( const QModelIndex &index );
 
     /**
-    * @brief The journey search line edit has been edited.
-    *
-    * @param newText The new text.
-    **/
+     * @brief The journey search line edit has been edited.
+     *
+     * @param newText The new text.
+     **/
     void journeySearchLineEdited( const QString &newText );
 
 protected:
@@ -217,11 +217,11 @@ private:
 Q_DECLARE_OPERATORS_FOR_FLAGS(JourneySearchSuggestionWidget::Suggestions)
 
 /**
-* @brief A QGraphicsWidget representing a single suggestion in a JourneySearchSuggestionWidget.
-*
-* It draws the icon stored in role Qt::DecorationRole and HTML code in Qt::DisplayRole gets
-* drawn using a QTextDocument.
-*/
+ * @brief A QGraphicsWidget representing a single suggestion in a JourneySearchSuggestionWidget.
+ *
+ * It draws the icon stored in role Qt::DecorationRole and HTML code in Qt::DisplayRole gets
+ * drawn using a QTextDocument.
+ */
 class JourneySearchSuggestionItem : public QGraphicsWidget
 {
     Q_OBJECT

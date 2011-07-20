@@ -1,21 +1,21 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fieti1983@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fieti1983@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */ 
 
 #include "javascriptcompletionmodel.h"
 
@@ -83,7 +83,7 @@ QVariant JavaScriptCompletionModel::data( const QModelIndex& index, int role ) c
 
 void JavaScriptCompletionModel::executeCompletionItem( KTextEditor::Document* document,
 					    const KTextEditor::Range& word, int row ) const {
-    kDebug() << "COMPLETION" << word << row;
+    kDebug() << "Completion" << word << row;
     CompletionItem completion = m_completions.at( row );
     if ( completion.isTemplate ) {
         KTextEditor::TemplateInterface *templateInterface =
@@ -116,7 +116,7 @@ void JavaScriptCompletionModel::completionInvoked( KTextEditor::View* view,
     } else { // at root level or inside function
         QString word = view->document()->text( range );
 
-        kDebug() << "COMPLETION WORD" << word;
+        kDebug() << "Completion word" << word;
         QString text, textUntilWhiteSpace, textUntilLineBegin;
         int col = range.start().column();
         QString line = view->document()->line( range.end().line() );
@@ -155,24 +155,25 @@ void JavaScriptCompletionModel::completionInvoked( KTextEditor::View* view,
                 m_completions << m_completionsCalls["call:result.addData"];
             } else {
                 m_completions << CompletionItem( Class | GlobalScope, "helper",
-			i18nc("@info The description for the 'helper' object",
-			    "The <emphasis>helper</emphasis> object contains some "
-			    "useful functions."),
-			"helper.", false, "object" );
+                        i18nc("@info The description for the 'helper' object",
+                              "The <emphasis>helper</emphasis> object contains some useful "
+                              "functions."),
+                        "helper.", false, "object" );
                 m_completions << CompletionItem( Class | GlobalScope, "timetableData",
-			i18nc("@info The description for the 'timetableData' object",
-			    "The <emphasis>timetableData</emphasis> object is used to "
-			    "put parsed timetable data into it.<nl/>"
-			    "<note>Once all data is stored inside <emphasis>"
-			    "timetableData</emphasis> you can call <emphasis>result" ".addData()</emphasis>.</note>"),
-			"timetableData.", false, "object" );
+                        i18nc("@info The description for the 'timetableData' object",
+                              "The <emphasis>timetableData</emphasis> object is used to put parsed "
+                              "timetable data into it.<nl/>"
+                              "<note>Once all data is stored inside <emphasis>timetableData"
+                              "</emphasis> you can call <emphasis>result.addData()</emphasis>."
+                              "</note>"),
+                        "timetableData.", false, "object" );
                 m_completions << CompletionItem(  Class | GlobalScope, "result",
-			i18nc("@info The description for the 'result' object",
-			    "The result object is used to store all parsed "
-			    "departure/arrival/journey items. Call <emphasis>"
-			    "result.addData( timetableData )</emphasis> to add the "
-			    "current item to the result set."),
-			"result.", false, "object" );
+                        i18nc("@info The description for the 'result' object",
+                              "The result object is used to store all parsed "
+                              "departure/arrival/journey items. Call <emphasis>"
+                              "result.addData( timetableData )</emphasis> to add the current item "
+                              "to the result set."),
+                        "result.", false, "object" );
             }
         }
     }
@@ -190,16 +191,19 @@ QString JavaScriptCompletionModel::stripComments( const QString& text ) const {
 
 CompletionItem JavaScriptCompletionModel::completionItemFromId( const QString id ) {
     CompletionItem item = m_completionsGlobalFunctions.value( id );
-    if ( item.isValid() )
-	return item;
+    if ( item.isValid() ) {
+        return item;
+    }
 
     item = m_completionsTimetableInfo.value( id );
-    if ( item.isValid() )
-	return item;
+    if ( item.isValid() ) {
+        return item;
+    }
 
     item = m_completionsCalls.value( id );
-    if ( item.isValid() )
-	return item;
+    if ( item.isValid() ) {
+        return item;
+    }
 
     QString simpleID = id;
     QRegExp rxBraces( "\\([^\\)]*\\)" );
@@ -558,7 +562,8 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "elements. And elements with equal indices should be associated (the "
                   "times at which the vehicle is at the stops).<nl/>"
                   "<note>For journeys <emphasis>RouteTimesDeparture</emphasis> and "
-                  "<emphasis>RouteTimesArrival</emphasis> should be used instead of " "<emphasis>RouteTimes</emphasis>.</note>"),
+                  "<emphasis>RouteTimesArrival</emphasis> should be used instead of "
+                  "<emphasis>RouteTimes</emphasis>.</note>"),
             "RouteStops" ));
     m_completionsTimetableInfo.insert( "str:RouteTimes", CompletionItem( Const, "RouteTimes",
             i18nc("@info The description for the 'RouteTimes' info",

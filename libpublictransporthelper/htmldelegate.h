@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -21,9 +21,9 @@
 #define HTMLDELEGATE_HEADER
 
 /** @file
-* @brief Contains the HtmlDelegate.
-* 
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief Contains the HtmlDelegate.
+ * 
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include <QItemDelegate>
 
@@ -76,6 +76,7 @@ public:
 	 * @return The current options of the delegate.
 	 **/
 	Options options() const;
+
 	/**
 	 * @brief Enables/disables the given @p option.
 	 *
@@ -84,6 +85,7 @@ public:
 	 * @param enable True, to enable @p option. False, to disable it.
 	 **/
 	void setOption( Option option, bool enable );
+
 	/**
 	 * @brief Sets the options of the delegate to @p options.
 	 *
@@ -95,9 +97,11 @@ protected:
 	/** @brief Reimplemented from QItemDelegate. */
 	virtual void paint( QPainter* painter, const QStyleOptionViewItem& option,
 						const QModelIndex& index ) const;
+
 	/** @brief Reimplemented from QItemDelegate. */
 	virtual void drawDecoration( QPainter* painter, const QStyleOptionViewItem& option,
 								 const QRect& rect, const QPixmap& pixmap ) const;
+
 	/** @brief Reimplemented from QItemDelegate. */
     virtual void drawDisplay( QPainter* painter, const QStyleOptionViewItem& option, 
 							  const QRect& rect, const QString& text ) const;

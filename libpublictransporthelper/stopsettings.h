@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -40,6 +40,10 @@ template<class Key, class T >
 class QHash;
 
 class QWidget;
+
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
+
 class StopSettingsPrivate;
 
 /**
@@ -130,9 +134,7 @@ public:
 	 **/
 	QString id;
 };
-Q_DECLARE_METATYPE( Stop );
 typedef QList<Stop> StopList;
-Q_DECLARE_METATYPE( StopList );
 
 /** 
  * @brief Stores settings for one stop/station.
@@ -179,11 +181,13 @@ public:
 	 * This is the same as @code get<StopList>(StopNameSetting) @endcode
 	 **/
 	const StopList stopList() const;
+    
 	/** @brief Returns the selected stop at the given @p index as @ref Stop object. */
 	const Stop stop( int index ) const;
 	
 	/** @brief Gets a QStringList of the selected stop names. IDs are used where available. */
 	QStringList stops( StopIdUsage stopIdUsage = UseStopName ) const;
+
 	/** @brief The IDs of the currently selected stops, can contain empty strings 
 	 * if the ID isn't available. */
 	QStringList stopIDs() const;
@@ -319,7 +323,6 @@ public:
 protected:
 	QSharedDataPointer<StopSettingsPrivate> d;
 };
-Q_DECLARE_METATYPE( StopSettings );
 
 class PUBLICTRANSPORTHELPER_EXPORT StopSettingsList : public QList<StopSettings> {
 public:
@@ -330,8 +333,6 @@ public:
                                      const QString &id = "-- Intermediate Stop --",
                                      int stopSetting = UserSetting + 100 );
 };
-// typedef QList<StopSettings> StopSettingsList;
-Q_DECLARE_METATYPE( StopSettingsList );
 
 /**
  * @brief A widget factory that creates widgets for given @ref StopSetting.
@@ -547,5 +548,12 @@ protected:
 QDebug &operator <<(QDebug debug, Stop stop);
 QDebug &operator <<(QDebug debug, StopList stopList);
 QDebug &operator <<(QDebug debug, StopSetting setting);
+
+}; // namespace Timetable
+
+Q_DECLARE_METATYPE( Timetable::Stop );
+Q_DECLARE_METATYPE( Timetable::StopList );
+Q_DECLARE_METATYPE( Timetable::StopSettings );
+Q_DECLARE_METATYPE( Timetable::StopSettingsList );
 
 #endif // Multiple inclusion guard

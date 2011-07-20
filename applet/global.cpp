@@ -1,183 +1,34 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 #include "global.h"
 
 #include <KDebug>
-#include <qmath.h>
-#include <QPainter>
 #include <KIconEffect>
 #include <KIconLoader>
-#include <KGlobal>
-#include <KLocale>
-#include <Plasma/Theme>
-#include <KColorUtils>
+#include <QPainter>
+#include <qmath.h>
 
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-#include <Plasma/Animator>
-#include <Plasma/Animation>
+    #include <Plasma/Animator>
+    #include <Plasma/Animation>
 #endif
-
-StopAction::StopAction( StopAction::Type type, QObject* parent, StopAction::TitleType titleType,
-                        const QString &stopName )
-        : QAction(parent), m_type(type), m_titleType(titleType), m_stopName(stopName)
-{
-    switch ( type ) {
-    case ShowDeparturesForStop:
-        setIcon( KIcon("public-transport-stop") );
-        switch ( titleType ) {
-        case ShowActionNameOnly:
-            setText( i18nc("@action:inmenu", "Show &Departures From This Stop") );
-            break;
-        case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "Show &Departures From '%1'", m_stopName) );
-            break;
-        case ShowActionNameAndStopName:
-            setText( m_stopName );
-            break;
-        }
-        break;
-    case ShowStopInMap:
-        setIcon( KIcon("marble") );
-        switch ( titleType ) {
-        case ShowActionNameOnly:
-            setText( i18nc("@action:inmenu", "Show This Stop in a Map") );
-            break;
-        case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "Show '%1' in a Map", m_stopName) );
-            break;
-        case ShowActionNameAndStopName:
-            setText( m_stopName );
-            break;
-        }
-        break;
-    case HighlightStop:
-        setIcon( KIcon("edit-select") );
-        switch ( titleType ) {
-        case ShowActionNameOnly: // TODO "Unhighlight" if the stop is already highlighted
-            setText( i18nc("@action:inmenu", "&Highlight This Stop") );
-            break;
-        case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "&Highlight '%1'", m_stopName) );
-            break;
-        case ShowActionNameAndStopName:
-            setText( m_stopName );
-            break;
-        }
-        break;
-    case CreateFilterForStop:
-        setIcon( KIcon("view-filter") );
-        switch ( titleType ) {
-        case ShowActionNameOnly:
-            setText( i18nc("@action:inmenu", "&Create Filter 'Via This Stop'") );
-            break;
-        case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "&Create Filter 'Via %1'", m_stopName) );
-            break;
-        case ShowActionNameAndStopName:
-            setText( m_stopName );
-            break;
-        }
-        break;
-    case CopyStopNameToClipboard:
-        setIcon( KIcon("edit-copy") );
-        switch ( titleType ) {
-        case ShowActionNameOnly:
-            setText( i18nc("@action:inmenu", "&Copy Stop Name") );
-            break;
-        case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "&Copy '%1'", m_stopName) );
-            break;
-        case ShowActionNameAndStopName:
-            setText( m_stopName );
-            break;
-        }
-        break;
-    case RequestJourneysFromStop:
-        setIcon( KIcon("edit-find") );
-        switch ( titleType ) {
-        case ShowActionNameOnly:
-            setText( i18nc("@action:inmenu", "&Search Journeys From This Stop") );
-            break;
-        case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "&Search Journeys From '%1'", m_stopName) );
-            break;
-        case ShowActionNameAndStopName:
-            setText( m_stopName );
-            break;
-        }
-        break;
-    case RequestJourneysToStop:
-        setIcon( KIcon("edit-find") );
-        switch ( titleType ) {
-        case ShowActionNameOnly:
-            setText( i18nc("@action:inmenu", "&Search Journeys to This Stop") );
-            break;
-        case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "&Search Journeys to '%1'", m_stopName) );
-            break;
-        case ShowActionNameAndStopName:
-            setText( m_stopName );
-            break;
-        }
-        break;
-    }
-
-    connect( this, SIGNAL(triggered()), this, SLOT(slotTriggered()) );
-}
-
-void StopAction::slotTriggered()
-{
-    emit stopActionTriggered( m_type, m_stopName );
-}
-
-KIcon GlobalApplet::internationalIcon()
-{
-    // Size of the flag icons is 22x16 => 16x11.64
-    QPixmap pixmap = QPixmap( 32, 32 );
-    pixmap.fill( Qt::transparent );
-    QPainter p( &pixmap );
-
-    QStringList icons = QStringList() << "gb" << "de" << "es" << "jp";
-    int yOffset = 12;
-    int i = 0, x, y = 4;
-    foreach( const QString &sIcon, icons ) {
-        if ( i % 2 == 0 ) { // icon on the left
-            x = 0;
-        } else { // icon on the right
-            x = 16;
-        }
-
-        QPixmap pixmapFlag = KIcon( sIcon ).pixmap( 16 );
-        p.drawPixmap( x, y, 16, 12, pixmapFlag );
-
-        if ( i % 2 != 0 ) {
-            y += yOffset;
-        }
-        ++i;
-    }
-    p.end();
-
-    KIcon resultIcon = KIcon();
-    resultIcon.addPixmap( pixmap, QIcon::Normal );
-    return resultIcon;
-}
 
 KIcon GlobalApplet::stopIcon( RouteStopFlags routeStopFlags )
 {
@@ -192,24 +43,6 @@ KIcon GlobalApplet::stopIcon( RouteStopFlags routeStopFlags )
     } else {
         return KIcon("public-transport-stop");
     }
-}
-
-KIcon GlobalApplet::putIconIntoBiggerSizeIcon( const KIcon &icon, const QSize &iconSize,
-                                               const QSize &resultingSize )
-{
-    QPixmap pixmap = QPixmap( resultingSize );
-    pixmap.fill( Qt::transparent );
-    QPainter p( &pixmap );
-
-    QPixmap pixmapIcon = icon.pixmap( resultingSize );//iconSize );
-    p.drawPixmap(( resultingSize.width() - iconSize.width() ) / 2,
-                ( resultingSize.height() - iconSize.height() ) / 2,
-                iconSize.width(), iconSize.height(), pixmapIcon );
-    p.end();
-
-    KIcon resultIcon = KIcon();
-    resultIcon.addPixmap( pixmap, QIcon::Normal );
-    return resultIcon;
 }
 
 KIcon GlobalApplet::makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon,
@@ -263,133 +96,6 @@ KIcon GlobalApplet::makeOverlayIcon( const KIcon& icon, const QList<KIcon> &over
     resultIcon.addPixmap( pixmap, QIcon::Active );
 
     return resultIcon;
-}
-
-KIcon GlobalApplet::vehicleTypeToIcon( const VehicleType &vehicleType, const QString &overlayIcon )
-{
-    KIcon icon;
-    switch ( vehicleType ) {
-    case Tram:
-        icon = KIcon( "vehicle_type_tram" );
-        break;
-    case Bus:
-        icon = KIcon( "vehicle_type_bus" );
-        break;
-    case Subway:
-        icon = KIcon( "vehicle_type_subway" );
-        break;
-    case Metro:
-        icon = KIcon( "vehicle_type_metro" );
-        break;
-    case TrolleyBus:
-        icon = KIcon( "vehicle_type_trolleybus" );
-        break;
-    case Feet:
-        icon = KIcon( "vehicle_type_feet" );
-        break;
-
-    case TrainInterurban:
-        icon = KIcon( "vehicle_type_train_interurban" );
-        break;
-    case TrainRegional: // Icon not done yet, using this for now
-    case TrainRegionalExpress:
-        icon = KIcon( "vehicle_type_train_regional" );
-        break;
-    case TrainInterregio:
-        icon = KIcon( "vehicle_type_train_interregional" );
-        break;
-    case TrainIntercityEurocity:
-        icon = KIcon( "vehicle_type_train_intercity" );
-        break;
-    case TrainIntercityExpress:
-        icon = KIcon( "vehicle_type_train_highspeed" );
-        break;
-
-    case Ferry:
-    case Ship:
-        icon = KIcon( "vehicle_type_ferry" );
-        break;
-    case Plane:
-        icon = KIcon( "vehicle_type_plane" );
-        break;
-
-    case Unknown:
-    default:
-        icon = KIcon( "status_unknown" );
-    }
-
-    if ( !overlayIcon.isEmpty() ) {
-        icon = makeOverlayIcon( icon, overlayIcon );
-    }
-
-    return icon;
-}
-
-KIcon GlobalApplet::iconFromVehicleTypeList( const QList< VehicleType >& vehicleTypes, int extend )
-{
-    QPixmap pixmap = QPixmap( extend, extend );
-    int halfExtend = extend / 2;
-    pixmap.fill( Qt::transparent );
-    QPainter p( &pixmap );
-
-    int rows = qCeil(( float )vehicleTypes.count() / 2.0f ); // Two vehicle types per row
-    int yOffset = rows <= 1 ? 0 : halfExtend / ( rows - 1 );
-    int x, y, i = 0;
-    if ( rows == 1 ) {
-        y = halfExtend / 2;
-    } else {
-        y = 0;
-    }
-    foreach( VehicleType vehicleType, vehicleTypes ) {
-        if ( i % 2 == 0 ) { // icon on the left
-            if ( i == vehicleTypes.count() - 1 ) { // align last vehicle type to the center
-                x = halfExtend / 2;
-            } else {
-                x = 0;
-            }
-        } else { // icon on the right
-            x = halfExtend;
-        }
-
-        QPixmap pixmapVehicleType = vehicleTypeToIcon( vehicleType ).pixmap( halfExtend );
-        p.drawPixmap( x, y, pixmapVehicleType );
-
-        if ( i % 2 != 0 ) {
-            y += yOffset;
-        }
-        ++i;
-    }
-    p.end();
-
-    KIcon resultIcon = KIcon();
-    resultIcon.addPixmap( pixmap, QIcon::Normal );
-    return resultIcon;
-}
-
-QString GlobalApplet::durationString( int seconds )
-{
-    int minutes = ( seconds / 60 ) % 60;
-    int hours = seconds / 3600;
-
-    if ( hours > 0 ) {
-        if ( minutes > 0 ) {
-            return i18nc( "@info/plain Duration string, %1 is hours, %2 minutes with leading zero",
-                        "%1:%2 hours", hours,
-                        QString("%1").arg(minutes, 2, 10, QLatin1Char('0')) );
-        } else {
-            return i18ncp( "@info/plain Duration string with zero minutes, %1 is hours",
-                        "%1 hour", "%1 hours", hours );
-        }
-    } else if ( minutes > 0 ) {
-        return i18ncp( "@info/plain Duration string with zero hours, %1 is minutes",
-                    "%1 minute", "%1 minutes", minutes );
-    } else if ( minutes < 0 ) {
-        return i18nc( "@info/plain Used as 'duration' string if the departure time has already passed",
-                    "left" );
-    } else {
-        return i18nc( "@info/plain Used as duration string if the duration is less than a minute",
-                    "now" );
-    }
 }
 
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)

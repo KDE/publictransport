@@ -1,21 +1,21 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 #include "departureinfo.h"
 
@@ -27,20 +27,23 @@
 #include <Plasma/Theme>
 #include <KColorUtils>
 
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
+
 JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList &vehicleTypesVariant,
-                        const QDateTime &departure, const QDateTime &arrival,
-                        const QString& pricing, const QString& startStopName,
-                        const QString& targetStopName, int duration, int changes,
-                        const QString &journeyNews, const QStringList &routeStops,
-                        const QStringList &routeTransportLines,
-                        const QStringList &routePlatformsDeparture,
-                        const QStringList &routePlatformsArrival,
-                        const QVariantList &routeVehicleTypesVariant,
-                        const QList<QTime> &routeTimesDeparture,
-                        const QList<QTime> &routeTimesArrival,
-                        const QList<int> &routeTimesDepartureDelay,
-                        const QList<int> &routeTimesArrivalDelay,
-                        int routeExactStops ) : PublicTransportInfo()
+                          const QDateTime &departure, const QDateTime &arrival,
+                          const QString& pricing, const QString& startStopName,
+                          const QString& targetStopName, int duration, int changes,
+                          const QString &journeyNews, const QStringList &routeStops,
+                          const QStringList &routeTransportLines,
+                          const QStringList &routePlatformsDeparture,
+                          const QStringList &routePlatformsArrival,
+                          const QVariantList &routeVehicleTypesVariant,
+                          const QList<QTime> &routeTimesDeparture,
+                          const QList<QTime> &routeTimesArrival,
+                          const QList<int> &routeTimesDepartureDelay,
+                          const QList<int> &routeTimesArrivalDelay,
+                          int routeExactStops ) : PublicTransportInfo()
 {
     QSet<VehicleType> vehicleTypes;
     foreach( const QVariant &vehicleTypeVariant, vehicleTypesVariant ) {
@@ -54,11 +57,10 @@ JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList &vehic
     foreach( const QVariant &routeVehicleType, routeVehicleTypesVariant )
     routeVehicleTypes.append( static_cast<VehicleType>( routeVehicleType.toInt() ) );
 
-    init( operatorName, vehicleTypes, departure, arrival, pricing, startStopName,
-        targetStopName, duration, changes, journeyNews, routeStops,
-        routeTransportLines, routePlatformsDeparture, routePlatformsArrival,
-        routeVehicleTypes, routeTimesDeparture, routeTimesArrival,
-        routeTimesDepartureDelay, routeTimesArrivalDelay, routeExactStops );
+    init( operatorName, vehicleTypes, departure, arrival, pricing, startStopName, targetStopName,
+          duration, changes, journeyNews, routeStops, routeTransportLines, routePlatformsDeparture,
+          routePlatformsArrival, routeVehicleTypes, routeTimesDeparture, routeTimesArrival,
+          routeTimesDepartureDelay, routeTimesArrivalDelay, routeExactStops );
 }
 
 void JourneyInfo::init( const QString &operatorName, const QSet< VehicleType > &vehicleTypes,
@@ -159,8 +161,8 @@ QString JourneyInfo::arrivalText( bool /*htmlFormatted*/, bool displayTimeBold,
     if ( showDepartureTime && showRemainingMinutes ) {
         QString sText = durationToDepartureString( true );
         sText = sText.replace( QRegExp( "\\+(?:\\s*|&nbsp;)(\\d+)" ),
-                            QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
-                            .arg( Global::textColorDelayed().name() ) );
+                               QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
+                               .arg( Global::textColorDelayed().name() ) );
 
         if ( linesPerRow > 1 ) {
             sTime = QString( "%1<br>(%2)" ).arg( sArrival ).arg( sText );
@@ -172,8 +174,8 @@ QString JourneyInfo::arrivalText( bool /*htmlFormatted*/, bool displayTimeBold,
     } else if ( showRemainingMinutes ) {
         sTime = durationToDepartureString( true );
         sTime = sTime.replace( QRegExp( "\\+(?:\\s*|&nbsp;)(\\d+)" ),
-                            QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
-                            .arg( Global::textColorDelayed().name() ) );
+                               QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
+                               .arg( Global::textColorDelayed().name() ) );
     } else {
         sTime.clear();
     }
@@ -193,7 +195,7 @@ QList< QVariant > JourneyInfo::vehicleTypesVariant() const
 QString JourneyInfo::durationToDepartureString( bool toArrival ) const
 {
     int totalSeconds = QDateTime::currentDateTime().secsTo( toArrival ? m_arrival : m_departure );
-    int totalMinutes = qCeil(( qreal )totalSeconds / 60.0 );
+    int totalMinutes = qCeil( (qreal)totalSeconds / 60.0 );
     if ( totalMinutes < 0 ) {
         return i18nc( "@info/plain", "already left" );
     } else {
@@ -201,15 +203,31 @@ QString JourneyInfo::durationToDepartureString( bool toArrival ) const
     }
 }
 
-QString DepartureInfo::delayString() const
+QString DepartureInfo::delayString( bool htmlFormatted ) const
 {
-    return delayType() == Delayed ? QString( " (+%1)" ).arg( m_delay ) : QString();
+    if ( htmlFormatted ) {
+        QString text;
+        DelayType type = delayType();
+        if ( type == OnSchedule ) {
+            text = i18nc( "@info/plain A public transport vehicle departs on schedule", "On schedule" );
+            text = text.prepend( QString( "<span style='color:%1;'>" )
+                                 .arg( Global::textColorOnSchedule().name() ) ).append( "</span>" );
+        } else if ( type == Delayed ) {
+            text = i18ncp( "@info/plain", "+%1 minute", "+%1 minutes", delay() );
+            text = text.replace( QRegExp( "(+?\\s*\\d+)" ),
+                                 QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
+                                 .arg( Global::textColorDelayed().name() ) );
+        }
+        return text;
+    } else {
+        return delayType() == Delayed ? QString( " (+%1)" ).arg( m_delay ) : QString();
+    }
 }
 
 QString DepartureInfo::durationString( bool showDelay ) const
 {
     int totalSeconds = QDateTime::currentDateTime().secsTo( predictedDeparture() );
-    int totalMinutes = qCeil(( qreal )totalSeconds / 60.0 );
+    int totalMinutes = qCeil( (qreal)totalSeconds / 60.0 );
     if ( totalMinutes < 0 ) {
         return i18nc( "@info/plain", "already left" );
     }
@@ -225,12 +243,12 @@ QString DepartureInfo::durationString( bool showDelay ) const
 }
 
 void DepartureInfo::init( const QString &operatorName, const QString &line,
-                        const QString &target, const QDateTime &departure,
-                        VehicleType lineType, LineServices lineServices,
-                        const QString &platform, int delay,
-                        const QString &delayReason, const QString &journeyNews,
-                        const QStringList &routeStops, const QList<QTime> &routeTimes,
-                        int routeExactStops )
+                          const QString &target, const QDateTime &departure,
+                          VehicleType lineType, LineServices lineServices,
+                          const QString &platform, int delay,
+                          const QString &delayReason, const QString &journeyNews,
+                          const QStringList &routeStops, const QList<QTime> &routeTimes,
+                          int routeExactStops )
 {
     m_filteredOut = false;
 
@@ -321,12 +339,12 @@ QString DepartureInfo::delayText() const
     if ( type == OnSchedule ) {
         sText = i18nc( "@info/plain A public transport vehicle departs on schedule", "On schedule" );
         sText = sText.prepend( QString( "<span style='color:%1;'>" )
-                                .arg( Global::textColorOnSchedule().name() ) ).append( "</span>" );
+                               .arg( Global::textColorOnSchedule().name() ) ).append( "</span>" );
     } else if ( type == Delayed ) {
         sText = i18ncp( "@info/plain", "+%1 minute", "+%1 minutes", delay() );
         sText = sText.replace( QRegExp( "(+?\\s*\\d+)" ),
-                                QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
-                                .arg( Global::textColorDelayed().name() ) );
+                               QString( "<span style='color:%1;'>+&nbsp;\\1</span>" )
+                               .arg( Global::textColorDelayed().name() ) );
 
         if ( !delayReason().isEmpty() ) {
             sText += ", " + delayReason();
@@ -424,21 +442,5 @@ bool operator <( const DepartureInfo &di1, const DepartureInfo &di2 )
 {
     return di1.predictedDeparture() < di2.predictedDeparture();
 }
-/*
-QDebug& operator<<( QDebug debug, const DepartureInfo& departureInfo )
-{
-    return debug << QString( "(%1 %2 at %3)" )
-            .arg( departureInfo.lineString() )
-            .arg( departureInfo.target() )
-            .arg( departureInfo.predictedDeparture().toString() );
-}
 
-QDebug& operator<<( QDebug debug, const JourneyInfo& journeyInfo )
-{
-    return debug << QString( "(from %1 to %2, %3, %4 changes at %5)" )
-            .arg( journeyInfo.startStopName() )
-            .arg( journeyInfo.targetStopName() )
-            .arg( journeyInfo.durationToDepartureString() )
-            .arg( journeyInfo.changes() )
-            .arg( journeyInfo.departure().toString() );
-}*/
+}; // namespace Timetable

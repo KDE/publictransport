@@ -1,21 +1,21 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 /** @file
  * @brief Contains widgets where the user can dynamically add/remove widgets.
@@ -46,7 +46,8 @@ class DynamicWidgetPrivate;
  * @note You cannot create DynamicWidgets yourself and mostly don't need to use
  *   it at all, that's up to @ref AbstractDynamicWidgetContainer.
  * 
- * @see AbstractDynamicWidgetContainer */
+ * @see AbstractDynamicWidgetContainer
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT DynamicWidget : public QWidget {
 	Q_OBJECT
 	Q_ENUMS( ButtonType )
@@ -65,66 +66,80 @@ public:
 
 	/** @brief Gets the content widget of this dynamic widget. */
 	QWidget *contentWidget() const;
+
 	/** @brief Gets the content widget of this dynamic widget casted to WidgetType. */
 	template< class WidgetType >
 	WidgetType contentWidget() const {
 		return qobject_cast< WidgetType >( contentWidget() );
 	};
+    
 	/**
 	 * @brief Replaces the current content widget with @p contentWidget.
 	 *
-	 * The old content widget gets deleted. */
+	 * The old content widget gets deleted.
+     **/
 	void replaceContentWidget( QWidget *contentWidget );
 
 	/**
 	 * @brief Adds a button of type @p buttonType.
 	 *
 	 * @return A pointer to the added button or NULL if no button was added.
-	 * For example @ref ButtonSpacer adds a spacer but returns NULL. */
+	 *   For example @ref ButtonSpacer adds a spacer but returns NULL.
+     **/
 	QToolButton *addButton( AbstractDynamicWidgetContainer *container, ButtonType buttonType );
 
 	/** @brief Returns a pointer to the remove button if any. */
 	QToolButton *removeButton() const;
+
 	/** @brief Returns a pointer to the add button if any. */
 	QToolButton *addButton() const;
 
 	/**
 	 * @brief Takes the remove button out of the DynamicWidget's layout if there is
-	 * a remove button for this DynamicWidget.
+	 *   a remove button for this DynamicWidget.
 	 *
 	 * It can then be put into another widget, without disconnecting it's clicked signal.
 	 * @ref removeButton will still return a pointer to the remove button, you can also still
 	 * use @ref setRemoveButtonIcon. It can also be deleted.
 	 * @return The remove button or NULL, if there is no remove button for
-	 * this DynamicWidget or the remove button has already been taken. */
+	 * this DynamicWidget or the remove button has already been taken.
+     **/
 	QToolButton *takeRemoveButton();
 
-	/** @brief Takes the add button out of the DynamicWidget's layout if there is
-	 * an add button for this DynamicWidget.
+	/**
+     * @brief Takes the add button out of the DynamicWidget's layout if there is
+	 *   an add button for this DynamicWidget.
 	 *
 	 * It can then be put into another widget, without disconnecting it's clicked signal.
 	 * @ref addButton will still return a pointer to the remove button, you can also still
 	 * use @ref setAddButtonIcon. It can also be deleted.
 	 * @return The add button or NULL, if there is no add button for this
-	 * DynamicWidget or the add button has already been taken. */
+	 * DynamicWidget or the add button has already been taken.
+     **/
 	QToolButton *takeAddButton();
 
 	/** @brief Sets the spacing between buttons. */
 	void setButtonSpacing( int spacing = 1 );
+
 	/** @brief Sets the alignment of the buttons. */
 	void setButtonAlignment( Qt::Alignment alignment = Qt::AlignRight | Qt::AlignTop );
+
 	/** @brief Sets auto-raising of the buttons to @p autoRaiseButtons. */
 	void setAutoRaiseButtons( bool autoRaiseButtons = true );
+
 	/** @brief Sets the icon of the remove button to @p removeButtonIcon if any. */
 	void setRemoveButtonIcon( const QString &removeButtonIcon = "list-remove" );
+
 	/** @brief Sets the icon of the add button to @p addButtonIcon if any. */
 	void setAddButtonIcon( const QString &addButtonIcon = "list-add" );
 
 Q_SIGNALS:
 	/** @brief The content widget was replaced by @p newContentWidget. */
 	void widgetReplaced( QWidget *newContentWidget );
+
 	/** @brief The remove button was clicked. */
 	void removeClicked();
+
 	/** @brief The add button was clicked. */
 	void addClicked();
 
@@ -132,7 +147,8 @@ protected Q_SLOTS:
 	/**
 	 * @brief Used if the add and/or remove buttons are taken out of the layout
 	 * using @ref takeRemoveButton / @ref takeAddButton to be notified if the
-	 * buttons get deleted. */
+	 * buttons get deleted.
+     **/
 	void buttonDestroyed( QObject *object );
 
 protected:
@@ -147,7 +163,8 @@ protected:
 	 * @param buttonTypes A list of buttons to be created.
 	 * 
 	 * @see ButtonType
-	 * @see AbstractDynamicWidgetContainer */
+	 * @see AbstractDynamicWidgetContainer
+     **/
 	DynamicWidget( QWidget *contentWidget, AbstractDynamicWidgetContainer *container,
 				   QList<ButtonType> buttonTypes = QList<ButtonType>() << RemoveButton );
 
@@ -540,7 +557,8 @@ private:
 class QFormLayout;
 class AbstractDynamicLabeledWidgetContainerPrivate;
 
-/** @brief A widget containing a dynamic list of widgets with labels.
+/**
+ * @brief A widget containing a dynamic list of widgets with labels.
  *
  * This widget contains a dynamic list of widgets with a label for each widget.
  * The label texts can contain their position in the list. @ref setLabelTexts can
@@ -549,7 +567,8 @@ class AbstractDynamicLabeledWidgetContainerPrivate;
  * to create new a QWidget instance that should be added when the add button is
  * clicked. You an also override @ref createNewLabelWidget to create a new QWidget
  * instance that should be added as label when the add button is clicked. The default
- * implementation creates a QLabel. */
+ * implementation creates a QLabel.
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT AbstractDynamicLabeledWidgetContainer 
 	: public AbstractDynamicWidgetContainer 
 {
@@ -575,25 +594,28 @@ public:
 	/**
 	 * @brief Gets the default label text. "%1" gets replaced by the widget number.
 	 *
-	 * @see specialLabelTexts */
+	 * @see specialLabelTexts
+     **/
 	QString labelText() const;
 	
 	/**
 	 * @brief Gets special label texts for widgets beginning with the first one.
 	 *
-	 * @see labelText */
+	 * @see labelText
+     **/
 	QStringList specialLabelTexts() const;
 	
 	/**
 	 * @brief Sets the texts of labels. The first labels get a string from @p specialLabelTexts
-	 * if any, the others get @p labelText with "%1" replaced by the widget number.
+	 *   if any, the others get @p labelText with "%1" replaced by the widget number.
 	 *
 	 * @param labelText The default text, used for labels without a special text.
 	 * 
 	 * @param specialLabelTexts A list of special label texts.
 	 * 
 	 * @param labelNumberOptions Whether or not widgets with special labels
-	 *   should be included in the numbering of widgets without special labels. */
+	 *   should be included in the numbering of widgets without special labels.
+     **/
 	void setLabelTexts( const QString &labelText,
 			const QStringList &specialLabelTexts = QStringList(),
 			LabelNumberOptions labelNumberOptions = DontIncludeSpecialLabelsInWidgetNumbering  );
@@ -611,7 +633,8 @@ protected:
 	 * This also creates and adds a default label widget using @ref createNewLabelWidget. The new 
 	 * widget is also focused.
 	 * 
-	 * @return The new DynamicWidget or NULL, if the maximum widget count is already reached. */
+	 * @return The new DynamicWidget or NULL, if the maximum widget count is already reached.
+     **/
 	virtual DynamicWidget *addWidget( QWidget *widget );
 	
 	/**
@@ -620,7 +643,8 @@ protected:
 	 *
 	 * The new widget is also focused.
 	 * 
-	 * @return The new DynamicWidget or NULL, if the maximum widget count is already reached. */
+	 * @return The new DynamicWidget or NULL, if the maximum widget count is already reached.
+     **/
 	virtual DynamicWidget *addWidget( QWidget *labelWidget, QWidget *widget );
 	
 	/**
@@ -628,7 +652,8 @@ protected:
 	 *
 	 * This also removes separators if needed.
 	 * 
-	 * @return The index of the widget or -1, if the minimum widget count is already reached. */
+	 * @return The index of the widget or -1, if the minimum widget count is already reached.
+     **/
 	virtual int removeWidget( QWidget *widget );
 	
 	/**
@@ -636,14 +661,16 @@ protected:
 	 *   add button is clicked.
 	 *
 	 * The default implementation creates a QLabel with the labelText given in the constructor
-	 * or by @ref setLabelTexts. */
+	 * or by @ref setLabelTexts.
+     **/
 	virtual QWidget *createNewLabelWidget( int widgetIndex );
 	
 	/**
 	 * @brief Override to update the label widget to it's new widget index, eg. update the text 
 	 *   of a QLabel.
 	 *
-	 * The default implementation updates the QLabel with the labelText given in the constructor. */
+	 * The default implementation updates the QLabel with the labelText given in the constructor.
+     **/
 	virtual void updateLabelWidget( QWidget *labelWidget, int widgetIndex );
 	
 	/** @brief Gets the label widget used for @p widget. */
@@ -692,7 +719,8 @@ public:
 	 * If @p lineEditTexts contains more strings than the maximum number of line edits, the 
 	 * remaining strings are unused. If @p lineEditTexts contains less strings than the minimum 
 	 * number of line edits, the texts of the remaining line edits stay unchanged.
-	 * @see maximumWidgetCount */
+	 * @see maximumWidgetCount
+     **/
 	void setLineEditTexts( const QStringList &lineEditTexts );
 
 	/**
@@ -700,7 +728,8 @@ public:
 	 *
 	 * @note This leaves at least the minimum widget count of line edits.
 	 * 
-	 * @return The number of removed line edits. */
+	 * @return The number of removed line edits.
+     **/
 	inline int removeEmptyLineEdits() { return removeLineEditsByText( QString() ); };
 	
 	/**
@@ -708,9 +737,10 @@ public:
 	 *
 	 * @note This leaves at least the minimum widget count of line edits.
 	 * 
-	 * @return The number of removed line edits. */
-	int removeLineEditsByText( const QString &text, 
-			Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive);
+	 * @return The number of removed line edits.
+     **/
+	int removeLineEditsByText( const QString &text,
+                               Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive);
 
 	/** @brief Gets a list of all contained line edit widgets. */
 	QList< KLineEdit* > lineEditWidgets() const;
@@ -725,13 +755,15 @@ Q_SIGNALS:
 	/**
 	 * @brief This signal is emitted whenever a contained line edit widget emits textEdited.
 	 *
-	 * @p lineEditIndex is the index of the line edit widget that has emitted the signal. */
+	 * @p lineEditIndex is the index of the line edit widget that has emitted the signal.
+     **/
 	void textEdited( const QString &text, int lineEditIndex );
 	
 	/**
 	 * @brief This signal is emitted whenever a contained line edit widget emits textChanged.
 	 *
-	 * @p lineEditIndex is the index of the line edit widget that has emitted the signal. */
+	 * @p lineEditIndex is the index of the line edit widget that has emitted the signal.
+     **/
 	void textChanged( const QString &text, int lineEditIndex );
 
 protected Q_SLOTS:
@@ -748,7 +780,8 @@ protected:
 	 *
 	 * This also removes separators if needed.
 	 * 
-	 * @return The index of the widget or -1, if the minimum widget count is already reached. */
+	 * @return The index of the widget or -1, if the minimum widget count is already reached.
+     **/
 	virtual int removeWidget( QWidget* widget );
 
 private:

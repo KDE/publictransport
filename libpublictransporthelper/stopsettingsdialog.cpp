@@ -1,21 +1,21 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 #include "stopsettingsdialog.h"
 
@@ -68,7 +68,8 @@
 	#include <QGraphicsEffect>
 #endif
 
-using namespace Timetable;
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
 
 // Private dialog to show a list of stops near the users current position
 class NearStopsDialog : public KDialog
@@ -773,6 +774,12 @@ QWidget* StopSettingsDialog::addSettingWidget( int setting,
 	return d->addSettingWidget( setting, label, widget );
 }
 
+QWidget* StopSettingsDialog::settingWidget( int setting ) const
+{
+    Q_D( const StopSettingsDialog );
+    return d->settingWidget<QWidget>( setting );
+}
+
 StopSettingsWidgetFactory::Pointer StopSettingsDialog::factory() const
 {
 	Q_D( const StopSettingsDialog );
@@ -978,6 +985,12 @@ StopSettings StopSettingsDialog::stopSettings() const
 	}
 
 	return stopSettings;
+}
+
+int StopSettingsDialog::stopIndex() const
+{
+    Q_D( const StopSettingsDialog );
+    return d->stopIndex;
 }
 
 void StopSettingsDialog::geolocateClicked()
@@ -1460,3 +1473,5 @@ QDebug& operator<<( QDebug debug, StopSettingsDialog::Option option )
 			return debug << "Option unknown" << option;
 	}
 }
+
+}; // namespace Timetable

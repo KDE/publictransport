@@ -41,13 +41,12 @@
 #include <KSelectAction>
 #include <KToggleAction>
 #include <KLineEdit>
-#include <KMenu>
 #include <KPushButton>
+#include <KMenu>
 #include <KMimeTypeTrader>
-#include <KColorUtils>
 #include <KStandardDirs>
 #include <KProcess>
-#include <KMessageBox>
+#include <KMessageBox> // Currently only used to ask if marble should be installed (TODO should be done using Plasma::Applet::showMessage())
 
 // Plasma includes
 #include <Plasma/Label>
@@ -62,16 +61,56 @@
 
 // Qt includes
 #include <QPainter>
-#include <QGraphicsView>
+#include <QClipboard>
+#include <QGraphicsScene>
 #include <QGraphicsLinearLayout>
 #include <QStateMachine>
 #include <QHistoryState>
-#include <QClipboard>
-#include <qmath.h>
-#include <qgraphicssceneevent.h>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QTimer>
+#include <QSignalTransition>
+#include <qmath.h>
+#include <qgraphicssceneevent.h>
+
+class ToPropertyTransition : public QSignalTransition
+{
+public:
+    ToPropertyTransition( QObject *sender, const char *signal, QState *source,
+                          QObject *propertyObject, const char *targetStateProperty )
+        : QSignalTransition(sender, signal, source),
+          m_propertyObject(propertyObject),
+          m_property(targetStateProperty)
+    {
+        qRegisterMetaType<QState*>("QState*");
+    };
+
+    const QObject *propertyObject() const { return m_propertyObject; };
+    const char *targetStateProperty() const { return m_property; };
+    QState *currentTargetState() const {
+        return qobject_cast<QState*>( qvariant_cast<QObject*>(m_propertyObject->property(m_property)) );
+    };
+    void setTargetStateProperty( const QObject *propertyObject, const char *property ) {
+        m_propertyObject = propertyObject;
+        m_property = property;
+    };
+
+protected:
+    virtual bool eventTest( QEvent *event )
+    {
+        if ( !QSignalTransition::eventTest(event) ) {
+            return false;
+        }
+
+        setTargetState( currentTargetState() );
+//          << targetState();
+        return true;
+    };
+
+private:
+    const QObject *m_propertyObject;
+    const char *m_property;
+};
 
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
         : Plasma::PopupApplet( parent, args ),
@@ -606,7 +645,7 @@ QList< QAction* > PublicTransport::contextualActions()
     }
     if ( isStateActive("intermediateDepartureView") ) {
         QAction *goBackAction = action("backToDepartures");
-	goBackAction->setText( i18nc("@action:inmenu", "&Back To Original Stop") );
+    goBackAction->setText( i18nc("@action:inmenu", "&Back To Original Stop") );
         actions << goBackAction;
     } else if ( m_settings.stopSettingsList.count() > 1 ) {
         actions << switchStopAction( this );
@@ -1847,8 +1886,8 @@ void PublicTransport::showFilterMenu()
     // Show the filters menu under the filter icon
     menu->exec( QCursor::pos() );
 //   view()->mapToGlobal(
-// 		view()->mapFromScene(m_filterIcon->mapToScene(0,
-// 				m_filterIcon->boundingRect().height()))) );
+//         view()->mapFromScene(m_filterIcon->mapToScene(0,
+//                 m_filterIcon->boundingRect().height()))) );
 }
 
 void PublicTransport::useCurrentPlasmaTheme()
@@ -1982,7 +2021,7 @@ bool PublicTransport::eventFilter( QObject *watched, QEvent *event )
                 if ( !curIndex.isValid() ) {
                     curIndex = m_listStopSuggestions->model()->index( 0, 0 );
                     m_listStopSuggestions->setCurrentIndex( curIndex );
-// 					possibleStopItemActivated( curIndex );
+//                     possibleStopItemActivated( curIndex );
                     m_listStopSuggestions->useStopSuggestion( curIndex );
                     return true;
                 } else {
@@ -3286,6 +3325,14 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
     }
 
     return colorGroups;
+}
+
+QVariant PublicTransport::supportedJourneySearchState() const
+{
+    QObject *object = qobject_cast<QObject*>(
+            m_currentServiceProviderFeatures.contains("JourneySearch")
+            ? m_states["journeySearch"] : m_states["journeysUnsupportedView"] );
+    return qVariantFromValue( object );
 }
 
 #include "publictransport.moc"

@@ -1,25 +1,25 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 /** @file
-* @brief This file contains widgets to edit filters for departures/arrivals/journeys.
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief This file contains widgets to edit filters for departures/arrivals/journeys.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef FILTERWIDGET_HEADER
 #define FILTERWIDGET_HEADER
@@ -44,39 +44,55 @@
 
 class CheckCombobox;
 class KComboBox;
+
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
+
 /**
-* @brief Base class for widgets allowing to edit a single constraint.
-* @ingroup filterSystem
-**/
+ * @brief Base class for widgets allowing to edit a single constraint.
+ * 
+ * @ingroup filterSystem
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT ConstraintWidget : public QWidget {
     Q_OBJECT
 
 public:
     /**
-    * @brief Creates a new constraint widget to edit a single constraint.
-    * @note Use one of the derived classes to create a constraint widget. This class can be
-    * used to create new types of constraint widgets by deriving from it.
-    *
-    * @param type The type of this constraint, ie. what to filter.
-    * @param availableVariants A list of available variants for this constraint.
-    * Defaults to QList<FilterVariant>().
-    * @param initialVariant The initially set variant for this constraint.
-    * Defaults to FilterNoVariant.
-    * @param parent The parent object. Defaults to 0.
-    **/
+     * @brief Creates a new constraint widget to edit a single constraint.
+     * 
+     * @note Use one of the derived classes to create a constraint widget. This class can be
+     *   used to create new types of constraint widgets by deriving from it.
+     *
+     * @param type The type of this constraint, ie. what to filter.
+     * 
+     * @param availableVariants A list of available variants for this constraint.
+     *   Defaults to QList<FilterVariant>().
+     * 
+     * @param initialVariant The initially set variant for this constraint.
+     *   Defaults to FilterNoVariant.
+     * 
+     * @param parent The parent object. Defaults to 0.
+     **/
     explicit ConstraintWidget( FilterType type,
             QList<FilterVariant> availableVariants = QList<FilterVariant>(),
             FilterVariant initialVariant = FilterNoVariant, QWidget* parent = 0 );
 
     /** @return The type of this constraint. */
     FilterType type() const { return m_constraint.type; };
+
     /** @return The variant of this constraint, like contains / equals, etc. */
     FilterVariant variant() const { return m_constraint.variant; };
+
     /** @return The value of this constraint. */
     virtual QVariant value() const = 0;
-    /** Set the value of this constraint to @p value.
-    * @param value The new value for this constraint. */
+
+    /**
+     * @brief Set the value of this constraint to @p value.
+     *
+     * @param value The new value for this constraint.
+     **/
     virtual void setValue( const QVariant &value ) = 0;
+
     /** @return The Constraint-object for this widget. */
     Constraint constraint() {
         m_constraint.value = value();
@@ -99,7 +115,7 @@ public:
                                     const QVariant &value = QVariant(), QWidget *parent = 0 );
 
 signals:
-    /** Emitted when the value of this constraint has changed. */
+    /** @brief Emitted when the value of this constraint has changed. */
     void changed();
 
 protected slots:
@@ -113,16 +129,17 @@ private:
 };
 
 /**
-* @brief A widget allowing to edit a single constraint where the user can select a list of values.
-* @ingroup filterSystem
-**/
+ * @brief A widget allowing to edit a single constraint where the user can select a list of values.
+ * 
+ * @ingroup filterSystem
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT ConstraintListWidget : public ConstraintWidget {
     Q_OBJECT
 
 public:
     /**
-    * @brief Helper structure to hold information about one selectable value in the list.
-    **/
+     * @brief Helper structure to hold information about one selectable value in the list.
+     **/
     struct ListItem {
         QString text; /**< The text of this item. */
         QVariant value; /**< The value represented by this item. */
@@ -137,14 +154,18 @@ public:
     };
 
     /**
-    * @brief Creates a new constraint widget where the user can select a list of values.
-    *
-    * @param type The type of this constraint, ie. what to filter.
-    * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
-    * @param values A list of selectable values for this constraint.
-    * @param initialValues The initially selected values for this constraint.
-    * @param parent The parent object. Defaults to 0.
-    **/
+     * @brief Creates a new constraint widget where the user can select a list of values.
+     *
+     * @param type The type of this constraint, ie. what to filter.
+     * 
+     * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
+     * 
+     * @param values A list of selectable values for this constraint.
+     * 
+     * @param initialValues The initially selected values for this constraint.
+     * 
+     * @param parent The parent object. Defaults to 0.
+     **/
     ConstraintListWidget( FilterType type, FilterVariant initialVariant,
                           const QList< ListItem > &values, const QVariantList& initialValues,
                           QWidget* parent = 0 );
@@ -161,10 +182,12 @@ public:
 
     /** @returns a @ref QVariantList with the currently selected values. */
     virtual QVariant value() const { return m_values; };
+
     /**
-    * @brief Sets the list of selected values.
-    * @param value A @ref QVariantList with the values to be selected.
-    **/
+     * @brief Sets the list of selected values.
+     * 
+     * @param value A @ref QVariantList with the values to be selected.
+     **/
     virtual void setValue( const QVariant &value );
 
     QModelIndex indexFromValue( const QVariant &value );
@@ -178,30 +201,36 @@ private:
 };
 
 /**
-* @brief A widget allowing to edit a single constraint where the user can enter a string value.
-* @ingroup filterSystem
-**/
+ * @brief A widget allowing to edit a single constraint where the user can enter a string value.
+ * 
+ * @ingroup filterSystem
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT ConstraintStringWidget : public ConstraintWidget {
     Q_OBJECT
 
 public:
     /**
-    * @brief Creates a new constraint widget where the user can enter a string value.
-    *
-    * @param type The type of this constraint, ie. what to filter.
-    * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
-    * @param filterText The value of this constraint. Defaults to QString().
-    * @param parent The parent object. Defaults to 0.
-    **/
+     * @brief Creates a new constraint widget where the user can enter a string value.
+     *
+     * @param type The type of this constraint, ie. what to filter.
+     * 
+     * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
+     * 
+     * @param filterText The value of this constraint. Defaults to QString().
+     * 
+     * @param parent The parent object. Defaults to 0.
+     **/
     ConstraintStringWidget( FilterType type, FilterVariant initialVariant,
                             const QString &filterText = QString(), QWidget* parent = 0 );
 
     /** @returns a @ref QString with the current value of this constraint. */
     virtual QVariant value() const { return m_string->text(); };
+
     /**
-    * @brief Sets the string value of this constraint.
-    * @param value A @ref QString with the string to be set for this constraint.
-    **/
+     * @brief Sets the string value of this constraint.
+     *
+     * @param value A @ref QString with the string to be set for this constraint.
+     **/
     virtual void setValue( const QVariant &value ) {
         m_string->setText(value.toString());
     };
@@ -217,32 +246,40 @@ private:
 };
 
 /**
-* @brief A widget allowing to edit a single constraint where the user can enter an integer value.
-* @ingroup filterSystem
-**/
+ * @brief A widget allowing to edit a single constraint where the user can enter an integer value.
+ * 
+ * @ingroup filterSystem
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT ConstraintIntWidget : public ConstraintWidget {
     Q_OBJECT
 
 public:
     /**
-    * @brief Creates a new constraint widget where the user can enter an integer value.
-    *
-    * @param type The type of this constraint, ie. what to filter.
-    * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
-    * @param value The value of this constraint. Defaults to 0.
-    * @param min Minimal allowed value for this constraint. Defaults to 0.
-    * @param max Maximal allowed value for this constraint. Defaults to 10000.
-    * @param parent The parent object. Defaults to 0.
-    **/
+     * @brief Creates a new constraint widget where the user can enter an integer value.
+     *
+     * @param type The type of this constraint, ie. what to filter.
+     * 
+     * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
+     * 
+     * @param value The value of this constraint. Defaults to 0.
+     * 
+     * @param min Minimal allowed value for this constraint. Defaults to 0.
+     * 
+     * @param max Maximal allowed value for this constraint. Defaults to 10000.
+     * 
+     * @param parent The parent object. Defaults to 0.
+     **/
     ConstraintIntWidget( FilterType type, FilterVariant initialVariant,
-                        int value = 0, int min = 0, int max = 10000, QWidget* parent = 0 );
+                         int value = 0, int min = 0, int max = 10000, QWidget* parent = 0 );
 
     /** @returns an integer with the current value of this constraint. */
     virtual QVariant value() const { return m_num->value(); };
+
     /**
-    * @brief Sets the integer value of this constraint.
-    * @param value An integer with the value to be set for this constraint.
-    **/
+     * @brief Sets the integer value of this constraint.
+     * 
+     * @param value An integer with the value to be set for this constraint.
+     **/
     virtual void setValue( const QVariant &value ) { m_num->setValue(value.toInt()); };
 
 protected slots:
@@ -256,30 +293,36 @@ private:
 };
 
 /**
-* @brief A widget allowing to edit a single constraint where the user can enter a time value.
-* @ingroup filterSystem
-**/
+ * @brief A widget allowing to edit a single constraint where the user can enter a time value.
+ * 
+ * @ingroup filterSystem
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT ConstraintTimeWidget : public ConstraintWidget {
     Q_OBJECT
 
 public:
     /**
-    * @brief Creates a new constraint widget where the user can enter a time value.
-    *
-    * @param type The type of this constraint, ie. what to filter.
-    * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
-    * @param value The value of this constraint. Defaults to QTime::currentTime().
-    * @param parent The parent object. Defaults to 0.
-    **/
+     * @brief Creates a new constraint widget where the user can enter a time value.
+     *
+     * @param type The type of this constraint, ie. what to filter.
+     * 
+     * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
+     * 
+     * @param value The value of this constraint. Defaults to QTime::currentTime().
+     * 
+     * @param parent The parent object. Defaults to 0.
+     **/
     ConstraintTimeWidget( FilterType type, FilterVariant initialVariant,
                         QTime value = QTime::currentTime(), QWidget* parent = 0 );
 
     /** @returns a @ref QTime with the current time value of this constraint. */
     virtual QVariant value() const { return m_time->time(); };
+
     /**
-    * @brief Sets the time value of this constraint.
-    * @param value A @ref QTime with the time value to be set for this constraint.
-    **/
+     * @brief Sets the time value of this constraint.
+     * 
+     * @param value A @ref QTime with the time value to be set for this constraint.
+     **/
     virtual void setValue( const QVariant &value ) { m_time->setTime(value.toTime()); };
 
 protected slots:
@@ -293,10 +336,12 @@ private:
 };
 
 /**
-* @brief A widget allowing to edit a filter, which is a list of constraints.
-* Constraints can be dynamically added / removed, buttons are added for that task.
-* @ingroup filterSystem
-**/
+ * @brief A widget allowing to edit a filter, which is a list of constraints.
+ * 
+ * Constraints can be dynamically added / removed, buttons are added for that task.
+ * 
+ * @ingroup filterSystem
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT FilterWidget : public AbstractDynamicLabeledWidgetContainer {
     Q_OBJECT
     Q_PROPERTY( QString separatorText READ separatorText WRITE setSeparatorText )
@@ -310,7 +355,7 @@ public:
                         AbstractDynamicWidgetContainer::SeparatorOptions seperatorOptions
                         = AbstractDynamicLabeledWidgetContainer::NoSeparator );
 
-    /** Returns a list of all contained constraint widgets. */
+    /** @brief Returns a list of all contained constraint widgets. */
     QList< ConstraintWidget* > constraintWidgets() const {
         QList< ConstraintWidget* > list;
         foreach ( DynamicWidget *dynamicWidget, dynamicWidgets() ) {
@@ -319,17 +364,16 @@ public:
         return list;
     };
 
-    /** Set a list of @ref FilterType which are allowed to be added to this FilterWidget. */
+    /** @brief Set a list of @ref FilterType which are allowed to be added to this FilterWidget. */
     void setAllowedFilterTypes( const QList<FilterType> &allowedFilterTypes );
 
-    /** Set the text to be shown between constraints. It's only used for new separators. */
-    void setSeparatorText( const QString &separatorText ) {
-        m_separatorText = separatorText;
-    };
+    /** @brief Set the text to be shown between constraints. It's only used for new separators. */
+    void setSeparatorText( const QString &separatorText ) { m_separatorText = separatorText; };
+
     /** @return The text that is shown between constraints of this FilterWidget. */
     QString separatorText() const { return m_separatorText; };
 
-    /** Returns a Filter object with all constraints of this FilterWidget. */
+    /** @brief Returns a Filter object with all constraints of this FilterWidget. */
     Filter filter() const {
         Filter f;
         foreach ( ConstraintWidget *constraint, constraintWidgets() ) {
@@ -337,7 +381,8 @@ public:
         }
         return f;
     };
-    /** Sets all constraints in @p filter to this FilterWidget. */
+
+    /** @brief Sets all constraints in @p filter to this FilterWidget. */
     void setFilter( const Filter &filter );
 
     inline void addConstraint( FilterType filterType ) {
@@ -347,6 +392,7 @@ public:
         addConstraint( ConstraintWidget::create(constraint, this) );
     };
     void addConstraint( ConstraintWidget *constraint );
+    
     virtual int removeWidget( QWidget* widget );
 
     static FilterWidget *create( const Filter &filter, QWidget *parent = 0 ) {
@@ -358,19 +404,22 @@ public:
     };
 
 signals:
-    /** Emitted, when this FilterWidget has changed, ie. a constraint value has changed
-    * or a constraint was added or removed. */
+    /** @brief Emitted, when this FilterWidget has changed, ie. a constraint value has changed
+     * or a constraint was added or removed. */
     void changed();
-    /** Emitted, after the new constraint @p constraintWidget was added. */
+
+    /** @brief Emitted, after the new constraint @p constraintWidget was added. */
     void constraintAdded( ConstraintWidget *constraintWidget );
-    /** Emitted, after @p constraint was removed. */
+
+    /** @brief Emitted, after @p constraint was removed. */
     void constraintRemoved( const Constraint &constraint );
 
 public slots:
     inline void addConstraint() {
         addConstraint( qobject_cast<ConstraintWidget*>(createNewWidget()) );
     };
-    /** Removes the given @p widget from the list of constraints. */
+
+    /** @brief Removes the given @p widget from the list of constraints. */
     void removeConstraint( ConstraintWidget *widget );
 
 protected slots:
@@ -401,10 +450,12 @@ private:
 };
 
 /**
-* @brief A widget allowing to edit a list of filters, which are lists of constraints.
-* Filters can be dynamically added / removed, buttons are added for that task.
-* @ingroup filterSystem
-**/
+ * @brief A widget allowing to edit a list of filters, which are lists of constraints.
+ * 
+ * Filters can be dynamically added / removed, buttons are added for that task.
+ * 
+ * @ingroup filterSystem
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT FilterListWidget : public AbstractDynamicWidgetContainer {
     Q_OBJECT
 
@@ -438,7 +489,7 @@ public:
     };
 
 signals:
-    /** Emitted when the value of a constraint of a filter changes. */
+    /** @brief Emitted when the value of a constraint of a filter changes. */
     void changed();
 
 protected:
@@ -458,5 +509,7 @@ protected:
 
     virtual QWidget *createSeparator( const QString &separatorText = QString() );
 };
+
+}; // namespace Timetable
 
 #endif // Multiple inclusion guard

@@ -15,8 +15,7 @@ include_directories(
 # The runner #############
 ##########################
 set(krunner_publictransport_SRCS
-    publictransportrunner.cpp
-    global.cpp )
+    publictransportrunner.cpp )
 kde4_add_plugin(krunner_publictransport ${krunner_publictransport_SRCS})
 target_link_libraries(krunner_publictransport
 	${KDE4_PLASMA_LIBS} 
@@ -27,7 +26,6 @@ target_link_libraries(krunner_publictransport
 # The runner config ######
 ##########################
 set(kcm_krunner_publictransport_SRCS
-    global.cpp
     config/publictransportrunner_config.cpp )
 kde4_add_ui_files( kcm_krunner_publictransport_SRCS
     config/publicTransportRunnerConfig.ui )

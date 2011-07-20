@@ -4,12 +4,10 @@ Changelog of plasma-applet-publictransport
 0.10 - Beta 9 (NEXT)
 Highlights: New filter/alarm UI, Context menus for journey/departure route stops, highlight stops, show intermediate departure list, alarms in journey view, colorized departure groups, quick&easy filtering by color groups, show stops in marble using OpenStreetMap, use of QStateMachine
 
-TODO: Make journey alarms more flexible, to match all journey pars (not only the first one)?
-TODO: Add to departure context menus: A submenu with context menus of all route stops?
-
 - Replace state flags with a QStateMachine (states for views like departures, journeys, journey search, ...; states for data status like waiting, valid, invalid; states for the network status).
 - Add a context menu to route stop items. There are currently four entries: Create a filter for departures via that stop, show an intermediate departure list for that stop, highlight a stop (also highlights departures/arrivals via that stop) and copy stop name to clipboard.
 - New context menu entries for journey route stops (copy stop name to clipboard, add/remove an alarm for the journey, ie. the first sub-journey)
+- New context menu entries for departure items: "Route Stops", with entries for each route stop (and sub entries which are the same as shown in context menus of route stop items) and "Unhighlight All Stops" (only shown if a stop is currently highighted)
 - New filter configuration UI with better space usage
 - New alarm configuration UI (almost the same as the filter UI)
 - Possible to choose multiple filter configurations per stop (AND combined)
@@ -30,6 +28,7 @@ TODO: Add to departure context menus: A submenu with context menus of all route 
 
 - New unit tests for the applet
 - Don't display too many route stop items (omit some if there's not enough space)
+- Show delay information for journeys again (was missing since the porting to QGraphicsWidget)
 - Elide too long filter names when shown in the filter button
 - Fix departures not being removed and flashing all the time by making DepartureModel::removeLeavingDepartures a slot
 - Fix alarm settings writing (the number of alarms was stored per applet, but the alarm settings globally)

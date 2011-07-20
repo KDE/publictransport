@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -21,6 +21,9 @@
 #include "ui_accessorInfo.h"
 #include <KToolInvocation>
 #include <KMessageBox>
+
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
 
 class AccessorInfoDialogPrivate {
 public:
@@ -133,3 +136,5 @@ void AccessorInfoDialog::openInTimetableMate()
 				"TimetableMate couldn't be started, error message was: '%1'", error) );
 	}
 }
+
+}; // namespace Timetable

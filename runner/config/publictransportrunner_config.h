@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -30,9 +30,11 @@
 
 namespace Plasma {
     class DataEngineManager;
-}
-class LocationModel;
-class ServiceProviderModel;
+};
+namespace Timetable {
+    class LocationModel;
+    class ServiceProviderModel;
+};
 
 //Names of config-entries
 // static const char CONFIG_TRIGGERWORD[] = "triggerWord";
@@ -50,31 +52,31 @@ static const char CONFIG_RESULT_COUNT[] = "resultCount";
  * TODO: Share this somehow with the publicTransport applet?
  **/
 class PublicTransportRunnerConfig : public KCModule {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	explicit PublicTransportRunnerConfig(QWidget* parent = 0, const QVariantList& args = QVariantList());
-	virtual ~PublicTransportRunnerConfig();
+    explicit PublicTransportRunnerConfig(QWidget* parent = 0, const QVariantList& args = QVariantList());
+    virtual ~PublicTransportRunnerConfig();
 
 public slots:
-	void save();
-	void load();
-	void defaults();
+    void save();
+    void load();
+    void defaults();
 
 protected slots:
-	void changeStopClicked();
+    void changeStopClicked();
 
 private:
-	void updateServiceProvider();
+    void updateServiceProvider();
 
-	Ui::publicTransportRunnerConfig m_ui;
-	Plasma::DataEngineManager *m_manager; // For loading data engines
-	StopSettings m_stopSettings;
+    Ui::publicTransportRunnerConfig m_ui;
+    Plasma::DataEngineManager *m_manager; // For loading data engines
+    Timetable::StopSettings m_stopSettings;
 
-	Plasma::DataEngine *m_publicTransportEngine;
-	Plasma::DataEngine *m_favIconEngine;
-	LocationModel *m_modelLocations;
-	ServiceProviderModel *m_modelServiceProviders;
+    Plasma::DataEngine *m_publicTransportEngine;
+    Plasma::DataEngine *m_favIconEngine;
+    Timetable::LocationModel *m_modelLocations;
+    Timetable::ServiceProviderModel *m_modelServiceProviders;
 };
 
 #endif

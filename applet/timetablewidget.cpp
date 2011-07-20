@@ -881,6 +881,15 @@ QColor PublicTransportGraphicsItem::textColor() const
     }
 }
 
+QColor PublicTransportGraphicsItem::backgroundColor() const
+{
+    #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
+        return Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor);
+    #else
+        return Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor);
+    #endif
+}
+
 void DepartureGraphicsItem::paintBackground( QPainter* painter,
         const QStyleOptionGraphicsItem* option, const QRectF& rect )
 {

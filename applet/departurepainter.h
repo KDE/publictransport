@@ -37,9 +37,11 @@ class DepartureModel;
 class DepartureItem;
 class QPixmap;
 
+using namespace Timetable;
+
 class DeparturePainter : public QObject {
     Q_OBJECT
-    
+
 public:
     DeparturePainter( QObject *parent = 0 ) : QObject(parent) {};
 

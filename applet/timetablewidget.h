@@ -1,26 +1,27 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 #ifndef TIMETABLEWIDGET_H
 #define TIMETABLEWIDGET_H
 
 #include "departuremodel.h"
+#include "stopaction.h" // for StopAction::Type
 
 #include <Plasma/ScrollWidget>
 #include <KDebug>
@@ -68,6 +69,7 @@ class PublicTransportWidget;
  **/
 class PublicTransportGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
+#include <QAction>
     Q_PROPERTY( qreal expandStep READ expandStep WRITE setExpandStep )
     Q_PROPERTY( qreal fadeOut READ fadeOut WRITE setFadeOut )
     friend class PublicTransportWidget;
@@ -263,13 +265,7 @@ public:
     virtual QColor textColor() const;
 
     /** @brief The color to be used as background. */
-    virtual inline QColor backgroundColor() const {
-        #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
-            return Plasma::Theme::defaultTheme()->color(Plasma::Theme::BackgroundColor);
-        #else
-            return Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewBackgroundColor);
-        #endif
-    };
+    virtual QColor backgroundColor() const;
 
 signals:
     void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
@@ -348,7 +344,7 @@ public:
 
     /** @brief Whether or not this item is valid, ie. it has data for painting. */
     virtual bool isValid() const { return m_infoTextDocument && m_timeTextDocument; };
-    
+
     /** @brief The size of the expand area. */
     virtual qreal expandAreaHeight() const;
 
@@ -487,10 +483,10 @@ public:
 
     /** @brief Whether or not this item is valid, ie. it has data for painting. */
     virtual bool isValid() const { return m_infoTextDocument; };
-    
+
     /** @brief The size of the expand area. */
     virtual qreal expandAreaHeight() const;
-    
+
     /** @brief The indentation of the expand area. */
     virtual qreal expandAreaIndentation() const;
 
@@ -506,7 +502,7 @@ public:
      **/
     virtual void paintBackground( QPainter* painter, const QStyleOptionGraphicsItem* option,
                                   const QRectF &rect );
-    
+
     /**
      * @brief Paint this item, without the expand area.
      *
@@ -538,7 +534,7 @@ public:
      * @param rect The rect of the item (without the expand area).
      **/
     QRectF vehicleRect( const QRectF &rect ) const;
-    
+
     /**
      * @brief Calculates the bounding rect for the info text (departure, arrival, changes, duration).
      *
@@ -546,7 +542,7 @@ public:
      * @param timeColumnWidth The width of the time column.
      **/
     QRectF infoRect( const QRectF &rect ) const;
-    
+
     /**
      * @brief Calculates the bounding rect for an additional icon.
      *
@@ -588,7 +584,7 @@ public:
 
     /** @brief Gets the item at the given @p row. */
     PublicTransportGraphicsItem *item( int row ) { return m_items[row]; };
-    
+
     /** @brief Gets the item with the given @p index. */
     PublicTransportGraphicsItem *item( const QModelIndex &index );
 
@@ -607,14 +603,14 @@ public:
         m_noItemsText = noItemsText;
         update();
     };
-    
+
     /** @brief Gets the text shown when this item contains no item, ie. is empty. */
     QString noItemsText() const { return m_noItemsText; };
 
     void setMaxLineCount( int maxLineCount ) { m_maxLineCount = maxLineCount; updateItemGeometries(); };
     int maxLineCount() const { return m_maxLineCount; };
 
-    /** Call this eg. when the DepartureArrivalListType changes in the model
+    /** @brief Call this eg. when the DepartureArrivalListType changes in the model
      * (only header data gets changed...). */
     void updateItemLayouts();
 
@@ -628,7 +624,7 @@ signals:
      * @param stopName The stop name for which the action should be executed.
      **/
     void requestStopAction( StopAction::Type stopAction, const QString &stopName );
-    
+
     void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
                                VehicleType vehicleType, const QString &target,
                                QGraphicsWidget *item );
@@ -665,8 +661,8 @@ protected:
 };
 
 /**
-* @brief A Plasma::ScrollWidget containing DepartureGraphicsItems.
-**/
+ * @brief A Plasma::ScrollWidget containing DepartureGraphicsItems.
+ **/
 class TimetableWidget : public PublicTransportWidget
 {
     Q_OBJECT
@@ -709,8 +705,8 @@ private:
 };
 
 /**
-* @brief A Plasma::ScrollWidget containing JourneyGraphicsItems.
-**/
+ * @brief A Plasma::ScrollWidget containing JourneyGraphicsItems.
+ **/
 class JourneyTimetableWidget : public PublicTransportWidget
 {
     Q_OBJECT

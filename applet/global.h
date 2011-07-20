@@ -21,20 +21,19 @@
 #define GLOBAL_HEADER
 
 /** @file
-* This file contains enumerations and Global used by the public transport applet.
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * This file contains enumerations and Global used by the public transport applet.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#include <qnamespace.h>
-#include <QTime>
 #include <KIcon>
 #include "kdeversion.h"
-#include <publictransporthelper/enums.h>
-#include <QEvent>
-#include <QAbstractTransition>
-#include <qstate.h>
-#include <QSignalTransition>
-#include <QVariant>
-#include <QAction>
+
+#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+namespace Plasma {
+    class Animator;
+    class Animation;
+}
+class QGraphicsWidget;
+#endif
 
 /** @brief Icons to be displayed by the Plasma::IconWidget in the applet's top left corner. */
 enum MainIconDisplay {
@@ -51,8 +50,11 @@ enum MainIconDisplay {
     JourneyListOkIcon
 };
 
-/** The values of the enumerators shouldn't be changed because they are saved to the config file.
-* @brief Types of departure / arrival lists. */
+/**
+ * @brief Types of departure / arrival lists.
+ *
+ * The values of the enumerators shouldn't be changed because they are saved to the config file.
+ **/
 enum DepartureArrivalListType {
     _UseCurrentDepartureArrivalListType = 999, /**< Only for use as default parameter
             * to use the settings from PublicTransportSettings */
@@ -68,45 +70,6 @@ enum TitleType {
     ShowSearchJourneyLineEditDisabled = 2, /**< Shows a disabled line edit for journey search requests */
     ShowJourneyListTitle = 3, /**< Shows an icon, a title and additional information */
     ShowIntermediateDepartureListTitle = 4, /**< Shows a back icon, the stop name and additional information */
-};
-
-class ToPropertyTransition : public QSignalTransition
-{
-public:
-    ToPropertyTransition( QObject *sender, const char *signal, QState *source,
-                          QObject *propertyObject, const char *targetStateProperty )
-        : QSignalTransition(sender, signal, source),
-          m_propertyObject(propertyObject),
-          m_property(targetStateProperty)
-    {
-        qRegisterMetaType<QState*>("QState*");
-    };
-
-    const QObject *propertyObject() const { return m_propertyObject; };
-    const char *targetStateProperty() const { return m_property; };
-    QState *currentTargetState() const {
-        return qobject_cast<QState*>( qvariant_cast<QObject*>(m_propertyObject->property(m_property)) );
-    };
-    void setTargetStateProperty( const QObject *propertyObject, const char *property ) {
-        m_propertyObject = propertyObject;
-        m_property = property;
-    };
-
-protected:
-    virtual bool eventTest( QEvent *event )
-    {
-        if ( !QSignalTransition::eventTest(event) ) {
-            return false;
-        }
-
-        setTargetState( currentTargetState() );
-//         qDebug() << targetState();
-        return true;
-    };
-
-private:
-    const QObject *m_propertyObject;
-    const char *m_property;
 };
 
 /** @brief A set of flags for route stops in the DepartureModel/JourneyModel. */
@@ -150,70 +113,8 @@ enum AlarmState {
 Q_DECLARE_FLAGS( AlarmStates, AlarmState )
 Q_DECLARE_OPERATORS_FOR_FLAGS( AlarmStates )
 
-class StopAction : public QAction
-{
-    Q_OBJECT
-public:
-    /** @brief Actions for intermediate stops, shown in RouteGraphicsItems. */
-    enum Type {
-        ShowDeparturesForStop,   /**< Show a departure list for the associated stop. */
-        CreateFilterForStop,     /**< Create a filter via the associated stop. */
-        CopyStopNameToClipboard, /**< Copy the name of the associated stop to the clipboard. */
-        HighlightStop,           /**< Highlight the associated stop in all route items.
-                                  * If the stop was already highlighted, it should
-                                  * be unhighlighted. */
-        RequestJourneysToStop,   /**< Request journeys to the associated stop. The origin stop
-                                  * can be given as QVariant data argument to stop action requests. */
-        RequestJourneysFromStop, /**< Request journeys from the associated stop. The target stop
-                                  * can be given as QVariant data argument to stop action requests. */
-        ShowStopInMap            /**< Show a map with the stop, eg. in a web browser. */
-    };
-
-    enum TitleType {
-        ShowActionNameOnly,
-        ShowStopNameOnly,
-        ShowActionNameAndStopName
-    };
-
-    StopAction( Type type, QObject* parent, TitleType titleType = ShowActionNameOnly,
-                const QString &stopName = QString() );
-
-    Type type() const { return m_type; };
-    TitleType titleType() const { return m_titleType; };
-
-    QString stopName() const { return m_stopName; };
-    void setStopName( const QString &stopName ) { m_stopName = stopName; };
-
-signals:
-    /**
-     * @brief This signal gets fired when this QAction signals triggered(), but with more arguments.
-     *
-     * @param type The type of the triggered stop action.
-     * @param stopName The name of the stop associated with the action.
-     **/
-    void stopActionTriggered( StopAction::Type type, const QString &stopName );
-
-protected slots:
-    void slotTriggered();
-
-private:
-    Q_DISABLE_COPY(StopAction)
-
-    const Type m_type;
-    const TitleType m_titleType;
-    QString m_stopName;
-};
-
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-namespace Plasma {
-    class Animator;
-    class Animation;
-}
-class QGraphicsWidget;
-#endif
-
-/** @class Global
-  * @brief Contains global static methods. */
+/** @class GlobalApplet
+ * @brief Contains global static methods. */
 class GlobalApplet {
 public:
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
@@ -222,34 +123,18 @@ public:
 #endif
 
     static KIcon stopIcon( RouteStopFlags routeStopFlags );
-    
-    static KIcon putIconIntoBiggerSizeIcon( const KIcon &icon,
-                                            const QSize &iconSize, const QSize &resultingSize = QSize(32, 32) );
 
-    /** Create an "international" icon with some flag icons */
-    static KIcon internationalIcon();
-
-    /** Creates an icon that has another icon as overlay on the bottom right. */
+    /** @brief Creates an icon that has another icon as overlay on the bottom right. */
     static KIcon makeOverlayIcon( const KIcon &icon, const KIcon &overlayIcon,
                                   const QSize &overlaySize = QSize(10, 10), int iconExtend = 16 );
 
-    /** Creates an icon that has another icon as overlay on the bottom right. */
+    /** @brief Creates an icon that has another icon as overlay on the bottom right. */
     static KIcon makeOverlayIcon( const KIcon &icon, const QString &overlayIconName,
                                   const QSize &overlaySize = QSize(10, 10), int iconExtend = 16 );
 
-    /** Creates an icon that has other icons as overlay on the bottom. */
+    /** @brief Creates an icon that has other icons as overlay on the bottom. */
     static KIcon makeOverlayIcon( const KIcon &icon, const QList<KIcon> &overlayIconsBottom,
                                   const QSize &overlaySize = QSize(10, 10), int iconExtend = 16 );
-
-    /** Gets an icon for the given type of vehicle. */
-    static KIcon vehicleTypeToIcon( const VehicleType &vehicleType,
-                                    const QString &overlayIcon = QString() );
-
-    /** Gets an icon containing the icons of all vehicle types in the given list. */
-    static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes, int extend = 32 );
-
-    /** Gets a string like "25 minutes". */
-    static QString durationString( int seconds );
 };
 
 #endif // Multiple inclusion guard

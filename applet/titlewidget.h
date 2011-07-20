@@ -1,25 +1,25 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 /** @file
-* @brief This file contains the widget that is used for the title of the public transport applet.
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief This file contains the widget that is used for the title of the public transport applet.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef TITLEWIDGET_H
 #define TITLEWIDGET_H
@@ -207,10 +207,10 @@ signals:
 public slots:
     /** @brief Updates the filter widget based on the current applet settings. */
     void updateFilterWidget();
-    
+
     /** @brief Updates the recent journeys menu based on the current applet settigns. */
     void updateRecentJourneysMenu();
-    
+
     /** @brief Call this when the applet settings have changed. */
     void settingsChanged();
 
@@ -228,10 +228,10 @@ protected:
 
     /** @brief Adds widgets used for the journey search title type. */
     void addJourneySearchWidgets();
-    
+
     /** @brief Remove widgets used for the journey search title type. */
     void removeJourneySearchWidgets();
-    
+
     /** @brief Gets a new title string based on the current applet settings. */
     QString titleText() const;
 

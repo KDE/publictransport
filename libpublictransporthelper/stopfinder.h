@@ -1,21 +1,21 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 #ifndef STOPFINDER_HEADER
 #define STOPFINDER_HEADER
@@ -25,6 +25,9 @@
 #include <QObject>
 #include <QQueue>
 #include <Plasma/DataEngine>
+
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
 
 class StopFinderPrivate;
 class StopSuggesterPrivate;
@@ -53,7 +56,7 @@ Q_SIGNALS:
 								  const QHash< QString, int > &stopToStopWeight );
 
 protected Q_SLOTS:
-	/** The data from the data engine was updated. */
+	/** @brief The data from the data engine was updated. */
 	void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
 protected:
@@ -101,6 +104,7 @@ public:
     virtual ~StopFinder();
 
 	Mode mode() const;
+
 	/**
 	 * @brief Start to determine a list of stops near the users current position.
 	 * 
@@ -117,6 +121,7 @@ public:
 
 Q_SIGNALS:
 	void finished();
+
 	/**
 	 * @brief An @p error occurred.
 	 *
@@ -125,6 +130,7 @@ Q_SIGNALS:
 	 * @param errorMessage An error message.
 	 **/
 	void error( StopFinder::Error error, const QString &errorMessage );
+
 	/**
 	 * @brief A list of @p stops has been found.
 	 *
@@ -137,6 +143,7 @@ Q_SIGNALS:
 	 **/
 	void stopsFound( const QStringList &stops, const QStringList &stopIDs,
 					 const QString &serviceProviderID );
+
 	void geolocationData( const QString &countryCode, const QString &city,
 						  qreal latitude, qreal longitude, int accuracy );
 
@@ -151,5 +158,7 @@ private:
 	Q_DECLARE_PRIVATE( StopFinder )
 	Q_DISABLE_COPY( StopFinder )
 };
+
+}; // namespace Timetable
 
 #endif // Multiple inclusion guard

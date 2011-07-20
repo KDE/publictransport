@@ -1,21 +1,21 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 #include "departuremodel.h"
 #include "settings.h"
@@ -415,22 +415,22 @@ void JourneyItem::setJourneyInfo( const JourneyInfo& journeyInfo )
 
 void JourneyItem::updateValues()
 {
-    setIcon( ColumnLineString, GlobalApplet::iconFromVehicleTypeList(
-            m_journeyInfo.vehicleTypes().toList(), 32 * m_info->sizeFactor ) );
+    setIcon( ColumnLineString, Global::iconFromVehicleTypeList(
+             m_journeyInfo.vehicleTypes().toList(), 32 * m_info->sizeFactor ) );
 
     QString sDuration = KGlobal::locale()->prettyFormatDuration(
                 m_journeyInfo.duration() * 60 * 1000 );
     QString text = i18ncp("@info Text of journey items in an 'info' column",
-                        "<emphasis strong='1'>Duration:</emphasis> %2, "
-                        "<nobr><emphasis strong='1'>%1</emphasis> change</nobr>",
-                        "<emphasis strong='1'>Duration:</emphasis> %2, "
-                        "<nobr><emphasis strong='1'>%1</emphasis> changes</nobr>",
-                        m_journeyInfo.changes(), sDuration);
+                          "<emphasis strong='1'>Duration:</emphasis> %2, "
+                          "<nobr><emphasis strong='1'>%1</emphasis> change</nobr>",
+                          "<emphasis strong='1'>Duration:</emphasis> %2, "
+                          "<nobr><emphasis strong='1'>%1</emphasis> changes</nobr>",
+                          m_journeyInfo.changes(), sDuration);
     setFormattedText( ColumnJourneyInfo, text );
 //     setText( s.replace(QRegExp("<[^>]*>"), "") );
     if ( !m_journeyInfo.journeyNews().isEmpty() ) {
         setIcon( ColumnJourneyInfo, GlobalApplet::makeOverlayIcon(
-                    KIcon( "view-pim-news" ), "arrow-down", QSize( 12, 12 ) ) );
+                 KIcon( "view-pim-news" ), "arrow-down", QSize( 12, 12 ) ) );
     }
 
     updateTimeValues();
@@ -615,7 +615,7 @@ QString JourneyItem::childItemText( ItemType itemType, int* linesPerRow )
         } else {
             text = QString( "<b>%1</b> %2" )
                     .arg( i18nc( "@info/plain The duration of a journey", "Duration:" ) )
-                    .arg( GlobalApplet::durationString( m_journeyInfo.duration() * 60 ) );
+                    .arg( Global::durationString( m_journeyInfo.duration() * 60 ) );
         }
         break;
     case ChangesItem:
@@ -673,7 +673,7 @@ ChildItem* JourneyItem::createRouteItem()
         QString sTransportLine;
         if ( row < m_journeyInfo.routeVehicleTypes().count()
                     && m_journeyInfo.routeVehicleTypes()[row] != Unknown ) {
-            icon = GlobalApplet::vehicleTypeToIcon( m_journeyInfo.routeVehicleTypes()[row] );
+            icon = Global::vehicleTypeToIcon( m_journeyInfo.routeVehicleTypes()[row] );
         }
         if ( m_journeyInfo.routeVehicleTypes()[row] == Feet ) {
             sTransportLine = i18nc( "@info/plain", "Footway" );
@@ -813,14 +813,14 @@ void DepartureItem::updateValues()
 {
     setText( ColumnLineString, m_departureInfo.lineString() );
     setFormattedText( ColumnLineString, QString("<span style='font-weight:bold;'>%1</span>")
-                    .arg(m_departureInfo.lineString()) );
+                      .arg(m_departureInfo.lineString()) );
     // if ( departureInfo.vehicleType() != Unknown )
-    setIcon( ColumnLineString, GlobalApplet::vehicleTypeToIcon(m_departureInfo.vehicleType()) );
+    setIcon( ColumnLineString, Global::vehicleTypeToIcon(m_departureInfo.vehicleType()) );
 
     setText( ColumnTarget, m_departureInfo.target() );
     if ( !m_departureInfo.journeyNews().isEmpty() ) {
         setIcon( ColumnTarget, GlobalApplet::makeOverlayIcon(KIcon("view-pim-news"),
-                "arrow-down", QSize(12, 12)) );
+                 "arrow-down", QSize(12, 12)) );
     }
 
     updateTimeValues();

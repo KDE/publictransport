@@ -62,6 +62,7 @@ void PublicTransportAppletTest::initTestCase()
     m_pageAlarmsWidget = NULL;
     m_pageWidget = NULL;
     m_pageModel = NULL;
+    m_stopsWidget = NULL;
     m_filterConfigurationsWidget = NULL;
     m_filterAction = NULL;
     m_affectedStops = NULL;
@@ -158,6 +159,10 @@ void PublicTransportAppletTest::init()
     QVERIFY2( m_pageFilter, "Filter page wasn't found in the configuration dialog of the applet." );
     QVERIFY2( m_pageAlarms, "Alarms page wasn't found in the configuration dialog of the applet." );
 
+    // Find stop list widgets
+    m_stopsWidget = m_pageGeneralWidget->findChild<StopListWidget*>();
+    QVERIFY2( m_stopsWidget, "The StopListWidget showing the list of stops wasn't found." );
+
     // Find filter widgets
     m_filterConfigurationsWidget = m_pageFilterWidget->findChild<KComboBox*>( "filterConfigurations" );
     QVERIFY2( m_filterConfigurationsWidget, "The KCombobox showing the filter configurations wasn't found (widget with name 'filterConfigurations')." );
@@ -185,6 +190,7 @@ void PublicTransportAppletTest::cleanup()
     m_pageAlarmsWidget = NULL;
     m_pageWidget = NULL;
     m_pageModel = NULL;
+    m_stopsWidget = NULL;
     m_filterConfigurationsWidget = NULL;
     m_filterAction = NULL;
     m_affectedStops = NULL;
@@ -205,6 +211,7 @@ void PublicTransportAppletTest::simulateAddFilterConfiguration() {
     // call dialogDone later to automatically accept the dialog without blocking here
     QTimer::singleShot( 50, this, SLOT(acceptSubDialog()) );
     QTest::mouseClick( m_addFilterConfiguration, Qt::LeftButton ); // Blocks here until the dialogDone() timer signals
+    UpdateGUI();
 }
 
 void PublicTransportAppletTest::simulateRemoveFilterConfiguration() {
@@ -212,6 +219,7 @@ void PublicTransportAppletTest::simulateRemoveFilterConfiguration() {
     // call dialogDone later to automatically accept the dialog without blocking here
     QTimer::singleShot( 50, this, SLOT(acceptSubDialog()) );
     QTest::mouseClick( m_removeFilterConfiguration, Qt::LeftButton ); // Blocks here until the dialogDone() timer signals
+    UpdateGUI();
 }
 
 QList<int> vehicleTypesToRows( const QVariantList &vehicleTypes,
@@ -238,6 +246,7 @@ void PublicTransportAppletTest::appletTest()
     QCOMPARE( m_filterConfigurationsWidget->count(), m_filterConfigurations.count() );
     for ( int i = 0; i < m_filterConfigurationsWidget->count(); ++i ) {
         QCOMPARE( m_filterConfigurationsWidget->itemText(i), m_filterConfigurations[i].name );
+        QCOMPARE( (*m_stopsWidget->filterConfigurations())[i].name, m_filterConfigurations[i].name );
     }
 
     // Compare values in the filter widgets with the values in the configuration object
@@ -252,7 +261,6 @@ void PublicTransportAppletTest::appletTest()
 
     // Add a filter configuration by clicking the add button
     simulateAddFilterConfiguration();
-    UpdateGUI();
 
     // Check if all filter configuration names are still listed in the combobox
     QCOMPARE( m_filterConfigurationsWidget->count(), m_filterConfigurations.count() + 1 ); // There should be one more filter configuration now
@@ -261,6 +269,7 @@ void PublicTransportAppletTest::appletTest()
     for ( int i = 0; i < m_filterConfigurations.count(); ++i ) {
         // The first values shouldn't be changed when adding another filter configuration
         QCOMPARE( m_filterConfigurationsWidget->itemText(i), m_filterConfigurations[i].name );
+        QCOMPARE( (*m_stopsWidget->filterConfigurations())[i].name, m_filterConfigurations[i].name );
     }
 
     // Change filter of the newly added filter configuration
@@ -283,7 +292,7 @@ void PublicTransportAppletTest::appletTest()
     newFilterSettings.filters << newFilter;
     QCOMPARE( m_filtersWidget->filters(), newFilterSettings.filters );
 
-    // Select all except the newly added filter configuration and test values
+    // Select all except the newly added filter configuration and test values of widgets
     for ( int i = 0; i < m_filterConfigurations.count(); ++i ) {
         m_filterConfigurationsWidget->setCurrentIndex( i );
         QCoreApplication::processEvents(); // Wait for filter widgets to get updated
@@ -301,7 +310,7 @@ void PublicTransportAppletTest::appletTest()
 
     // Select newly added (and changed) filter configuration
     m_filterConfigurationsWidget->setCurrentIndex( 2 );
-    QCoreApplication::processEvents(); // Wait for filters widgets to get updated
+    QCoreApplication::processEvents(); // Wait for filter widgets to get updated
     UpdateGUI();
 
     // Check filter widget values
@@ -316,22 +325,55 @@ void PublicTransportAppletTest::appletTest()
             m_filtersWidget->filterWidgets().first()->constraintWidgets().first() );
     vehicleConstraintList = vehicleConstraint->list();
     QCOMPARE( vehicleConstraint->value().toList(), checkedVehicles );
+
+    // Check values in a StopSettingsDialog, which gets opened from StopListWidget
+    m_dialog->setCurrentPage( m_pageGeneral );
+
+    QTimer::singleShot( 50, this, SLOT(checkAndCloseStopSettingsDialog()) );
+    m_stopsWidget->stopWidget(0)->editSettings();
+
+//     TODO add more stop settings in init()
+//     QTimer::singleShot( 50, this, SLOT(checkAndCloseStopSettingsDialog()) );
+//     m_stopsWidget->stopWidget(1)->editSettings();
+}
+
+void PublicTransportAppletTest::checkAndCloseStopSettingsDialog()
+{
+    QVERIFY2( m_dialog, "No config dialog created?" );
+
+    QPointer<StopSettingsDialog> stopSettingsDialog = NULL;
+    stopSettingsDialog = m_dialog->findChild<StopSettingsDialog*>();
+    QVERIFY2( stopSettingsDialog, "No stop settings dialog found" );
+
+    CheckCombobox *filterConfigurationsOfStopWidget = qobject_cast<CheckCombobox*>(
+            stopSettingsDialog->settingWidget(FilterConfigurationSetting) );
+    QVERIFY2( filterConfigurationsOfStopWidget, "No filter configuration setting found in the StopSettingsDialog" );
+
+    QSet<int> filterConfigurationsOfStop = filterConfigurationsOfStopWidget->checkedRows().toSet();
+    int stopIndex = stopSettingsDialog->stopIndex();
+    for ( int index = 0; index < m_filterConfigurations.count(); ++index ) {
+        const FilterSettings &filterConfiguration = m_filterConfigurations[index];
+        if ( filterConfiguration.affectedStops.contains(stopIndex) ) {
+            QVERIFY2( filterConfigurationsOfStop.contains(index), "If a filter configuration is "
+                    "checked for the stop in the StopSettingsDialog, the filter configuration "
+                    "should have that stop in it's list of affected stops" );
+        }
+    }
+
+    kDebug() << "Close opened sub dialog" << stopSettingsDialog->windowTitle() << stopSettingsDialog;
+    QTest::mouseClick( stopSettingsDialog->button(KDialog::Cancel), Qt::LeftButton );
 }
 
 void PublicTransportAppletTest::acceptSubDialog()
 {
-    if ( !m_dialog ) {
-        kDebug() << "No config dialog opened?";
-        return;
-    }
+    QVERIFY2( m_dialog, "No config dialog created?" );
 
     QPointer<KDialog> subDialog = NULL;
     subDialog = m_dialog->findChild<KDialog*>(); // KInputDialogHelper
+    QVERIFY2( subDialog, "No sub dialog found" );
 
     kDebug() << "Close opened sub dialog" << subDialog->windowTitle() << subDialog;
-    if ( subDialog ) {
-        QTest::mouseClick( subDialog->button(KDialog::Ok), Qt::LeftButton );
-    }
+    QTest::mouseClick( subDialog->button(KDialog::Ok), Qt::LeftButton );
 }
 
 QTEST_MAIN(PublicTransportAppletTest)

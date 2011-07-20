@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -21,12 +21,77 @@
 #define ENUMS_HEADER
 
 /** @file
-* @brief This file contains enumerations used by the public transport helper library.
-* 
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief This file contains enumerations used by the public transport helper library.
+ * 
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include "publictransporthelper_export.h"
+#include <QDebug>
 #include <qnamespace.h>
+
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
+
+/** @brief The type of services for a public transport line. */
+enum LineService {
+    NoLineService = 0, /**< The public transport line has no special services */
+
+    NightLine = 1, /**< The public transport line is a night line */
+    ExpressLine = 2 /**< The public transport line is an express line */
+};
+
+/** @brief The type of the delay of a departure / arrival. */
+enum DelayType {
+    DelayUnknown = 0, /**< No information about delay available */
+    OnSchedule = 1, /**< Vehicle will depart / arrive on schedule */
+    Delayed = 2 /**< Vehicle will depart / arrive with delay */
+};
+
+/** @brief Types of filters, ie. what to filter.
+ * @ingroup filterSystem */
+enum FilterType {
+    InvalidFilter = 0, /**< An invalid filter. */
+
+    FilterByVehicleType, /**< Filter by vehicle type. */
+    FilterByTransportLine, /**< Filter by transport line string. */
+    FilterByTransportLineNumber, /**< Filter by transport line number. */
+    FilterByTarget, /**< Filter by target/origin. */
+    FilterByDelay, /**< Filter by delay. */
+    FilterByVia, /**< Filter by intermediate stops.
+            * (Like FilterByNextStop, but for all intermediate stops, not only the first). */
+    FilterByNextStop, /**< Filter by next intermediate stop.
+            * (Like FilterByVia, but only for the first intermediate stop). */
+    FilterByDeparture, /**< Filter by departure/arrival time. */
+    FilterByDayOfWeek /**< Filter by the day of week of the departure date. */
+};
+
+/** @brief Variants of filters, eg. equals / doesn't equal.
+ * @ingroup filterSystem */
+enum FilterVariant {
+    FilterNoVariant = 0, /**< Used for parameters, eg. as initial variant to use
+            * the first available filter variant. */
+
+    FilterContains = 1,
+    FilterDoesntContain = 2,
+    FilterEquals = 3,
+    FilterDoesntEqual = 4,
+    FilterMatchesRegExp = 5,
+    FilterDoesntMatchRegExp = 6,
+
+    FilterIsOneOf = 7,
+    FilterIsntOneOf = 8,
+
+    FilterGreaterThan = 9,
+    FilterLessThan = 10
+};
+
+/** @brief The action to be executed for filters, ie. show or hide matching items.
+ * @ingroup filterSystem */
+enum FilterAction {
+    // ShowAll = 0, /**< Show all targets / origins */ TODO Remove this, filters are globally enabled/disabled
+    ShowMatching = 0, /**< Show only targets / origins that are in the list of filter targets / origins */
+    HideMatching = 1 /**< Hide targets / origins that are in the list of filter targets / origins */
+};
 
 /**
  * @brief Contains keys for different stop settings.
@@ -47,7 +112,7 @@
  * from the documentation for the enumerable <em>TimeOfFirstDepartureSetting</em> (At the end
  * in parantheses).
  **/
-enum StopSetting {
+enum PUBLICTRANSPORTHELPER_EXPORT StopSetting {
 	NoSetting = 0, /**< Don't use any setting. */
 	
 	LocationSetting = 1, /**< The location of the stop, eg. a country (QString). */
@@ -65,7 +130,7 @@ enum StopSetting {
 	TimeOfFirstDepartureSetting = 14, /**< A custom time for the first departure (QTime). */
 	
 	UserSetting = 100 /**< The first index to be used for custom data (QVariant). Widgets
-			* to edit custom settings can be created for the @ref StopSettingsDialog 
+			* to edit custom settings can be created for the @ref StopSettingsDialog
 			* using a @ref StopSettingsWidgetFactory. */
 };
 
@@ -133,7 +198,6 @@ enum PUBLICTRANSPORTHELPER_EXPORT VehicleType {
 	Tram = 1, /**< A tram / streetcar. */
 	Bus = 2, /**< A bus. */
 	Subway = 3, /**< A subway. */
-	TrainInterurban = 4, /**< An interurban train. @deprecated Use InterurbanTrain instead. */
 	InterurbanTrain = 4, /**< An interurban train. */
 	Metro = 5, /**< A metro. */
 	TrolleyBus = 6, /**< A trolleybus (also known as trolley bus, trolley coach,
@@ -141,20 +205,14 @@ enum PUBLICTRANSPORTHELPER_EXPORT VehicleType {
 			* electricity from overhead wires (generally suspended from roadside posts)
 			* using spring-loaded trolley poles. */
 
-	TrainRegional = 10, /**< A regional train. @deprecated Use RegionalTrain instead. */
-	TrainRegionalExpress = 11, /**< A regional express train. @deprecated Use RegionalExpressTrain instead. */
-	TrainInterregio = 12, /**< An inter-regional train. @deprecated Use InterregionalTrain instead. */
-	TrainIntercityEurocity = 13, /**< An intercity / eurocity train. @deprecated Use IntercityTrain instead. */
-	TrainIntercityExpress = 14, /**< An intercity express. @deprecated Use HighSpeedTrain instead. */
-	
-	RegionalTrain = 10, /**< A regional train. Stops at many small stations, slow. */
-	RegionalExpressTrain = 11, /**< A regional express train. Stops at less small stations than 
-			* RegionalTrain but it faster. */
-	InterregionalTrain = 12, /**< An inter-regional train. Higher distances and faster than 
-			* RegionalTrain and RegionalExpressTrain. */
-	IntercityTrain = 13, /**< An intercity / eurocity train. Connects cities. */
-	HighSpeedTrain = 14, /**< A highspeed train, eg. an intercity express (ICE). 
-			* Trains at > 250 km/h, high distances. */
+    RegionalTrain = 10, /**< A regional train. Stops at many small stations, slow. */
+    RegionalExpressTrain = 11, /**< A regional express train. Stops at less small stations than
+            * RegionalTrain but it faster. */
+    InterregionalTrain = 12, /**< An inter-regional train. Higher distances and faster than
+            * RegionalTrain and RegionalExpressTrain. */
+    IntercityTrain = 13, /**< An intercity / eurocity train. Connects cities. */
+    HighSpeedTrain = 14, /**< A highspeed train, eg. an intercity express (ICE).
+            * Trains at > 250 km/h, high distances. */
 
 	Feet = 50, /**< By feet, ie. no vehicle. Used for journeys, eg. from platform A to
 			* platform B when changing the vehicle. */
@@ -165,6 +223,73 @@ enum PUBLICTRANSPORTHELPER_EXPORT VehicleType {
 	Plane = 200, /**< An aeroplane. */
 
 	Spacecraft = 300, /**< A spacecraft. */
+
+    TrainInterurban = InterurbanTrain, /**< An interurban train. @deprecated Use InterurbanTrain instead. */
+    TrainRegional = RegionalTrain, /**< A regional train. @deprecated Use RegionalTrain instead. */
+    TrainRegionalExpress = RegionalExpressTrain, /**< A regional express train. @deprecated Use RegionalExpressTrain instead. */
+    TrainInterregio = InterregionalTrain, /**< An inter-regional train. @deprecated Use InterregionalTrain instead. */
+    TrainIntercityEurocity = IntercityTrain, /**< An intercity / eurocity train. @deprecated Use IntercityTrain instead. */
+    TrainIntercityExpress = HighSpeedTrain /**< An intercity express. @deprecated Use HighSpeedTrain instead. */
 };
+
+inline QDebug& operator<<( QDebug debug, FilterType filterType )
+{
+    switch ( filterType ) {
+        case InvalidFilter:
+            return debug << "InvalidFilter";
+        case FilterByVehicleType:
+            return debug << "FilterByVehicleType";
+        case FilterByTransportLine:
+            return debug << "FilterByTransportLine";
+        case FilterByTransportLineNumber:
+            return debug << "FilterByTransportLineNumber";
+        case FilterByTarget:
+            return debug << "FilterByTarget";
+        case FilterByDelay:
+            return debug << "FilterByDelay";
+        case FilterByVia:
+            return debug << "FilterByVia";
+        case FilterByNextStop:
+            return debug << "FilterByNextStop";
+        case FilterByDeparture:
+            return debug << "FilterByDeparture";
+        case FilterByDayOfWeek:
+            return debug << "FilterByDayOfWeek";
+        default:
+            return debug << "Unknown filter type: " << filterType;
+    }
+};
+
+inline QDebug& operator<<( QDebug debug, FilterVariant filterVariant )
+{
+    switch ( filterVariant ) {
+        case FilterNoVariant:
+            return debug << "FilterNoVariant";
+        case FilterContains:
+            return debug << "FilterContains";
+        case FilterDoesntContain:
+            return debug << "FilterDoesntContain";
+        case FilterEquals:
+            return debug << "FilterEquals";
+        case FilterDoesntEqual:
+            return debug << "FilterDoesntEqual";
+        case FilterMatchesRegExp:
+            return debug << "FilterMatchesRegExp";
+        case FilterDoesntMatchRegExp:
+            return debug << "FilterDoesntMatchRegExp";
+        case FilterIsOneOf:
+            return debug << "FilterIsOneOf";
+        case FilterIsntOneOf:
+            return debug << "FilterIsntOneOf";
+        case FilterGreaterThan:
+            return debug << "FilterGreaterThan";
+        case FilterLessThan:
+            return debug << "FilterLessThan";
+        default:
+            return debug << "Unknown filter variant: " << filterVariant;
+    }
+};
+
+}; // namespace Timetable
 
 #endif // Multiple inclusion guard

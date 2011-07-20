@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fieti1983@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fieti1983@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -22,24 +22,24 @@
 
 #include <QtCore/qnamespace.h>
 
-/** Different types of code nodes. */
+/** @brief Different types of code nodes. */
 enum NodeType {
-    NoNodeType 		= 0x0000, /**< For example an empty line in global space,
-				     * not associated with any node. */
+    NoNodeType      = 0x0000, /**< For example an empty line in global space,
+                                 * not associated with any node. */
 
-    Block		= 0x0001, /**< A code block, enclosed by '{' and '}'. */
-    Function		= 0x0002, /**< A function definition. */
-    Argument		= 0x0004, /**< An argument of a function definition. */
-    Statement		= 0x0008, /**< An unknown statement. */
-    Comment		= 0x0010, /**< A comment (single or multiline). */
-    String		= 0x0020, /**< A string (' or ") or regular expression. */
-    FunctionCall	= 0x0040, /**< A function call. */
-    Bracketed		= 0x0080, /**< A node containing a list of child nodes that have been read 
-				     * inside a pair of brackets ('(' or '[').. */
-    Unknown		= 0x0100, /**< An unknown node. */
+    Block           = 0x0001, /**< A code block, enclosed by '{' and '}'. */
+    Function        = 0x0002, /**< A function definition. */
+    Argument        = 0x0004, /**< An argument of a function definition. */
+    Statement       = 0x0008, /**< An unknown statement. */
+    Comment         = 0x0010, /**< A comment (single or multiline). */
+    String          = 0x0020, /**< A string (' or ") or regular expression. */
+    FunctionCall    = 0x0040, /**< A function call. */
+    Bracketed       = 0x0080, /**< A node containing a list of child nodes that have been read
+                                 * inside a pair of brackets ('(' or '[').. */
+    Unknown         = 0x0100, /**< An unknown node. */
 
-    AllNodeTypes	= Block | Function | Argument | Statement | Comment | String |
-			  FunctionCall | Bracketed | Unknown
+    AllNodeTypes    = Block | Function | Argument | Statement | Comment | String |
+                      FunctionCall | Bracketed | Unknown
 };
 Q_DECLARE_FLAGS( NodeTypes, NodeType );
 Q_DECLARE_OPERATORS_FOR_FLAGS( NodeTypes );

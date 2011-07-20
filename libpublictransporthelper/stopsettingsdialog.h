@@ -1,29 +1,29 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 #ifndef STOPSETTINGSDIALOG_HEADER
 #define STOPSETTINGSDIALOG_HEADER
 
 /** @file
-* @brief Contains the StopSettingsDialog.
-* 
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief Contains the StopSettingsDialog.
+ * 
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include "publictransporthelper_export.h"
 
@@ -40,13 +40,17 @@
 // #define USE_KCATEGORYVIEW // Remove the comment to use KCategoryView for the service provider combobox
 #endif
 
+class KLineEdit;
+class DynamicLabeledLineEditList;
+class HtmlDelegate;
+
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
+
 class StopSettings;
 class StopSettingsDialogPrivate;
 class LocationModel;
 class ServiceProviderModel;
-class DynamicLabeledLineEditList;
-class HtmlDelegate;
-class KLineEdit;
 class NearStopsDialog;
 
 /**
@@ -408,10 +412,20 @@ public:
 	 * @param setting The setting to create a widget for.
 	 */
 	QWidget *addSettingWidget( int setting, const QString &label, QWidget *widget );
-	
+
+    /** @brief Gets the widget for the given @p setting if any. */
+    QWidget *settingWidget( int setting ) const;
+    
 	/** @returns the current stop settings of the dialog. */
 	StopSettings stopSettings() const;
-	
+
+    /**
+     * @brief The index of the stop settings to be edited, if in a StopSettingsList.
+     *   This is used to check the correct filter configurations, based on
+     *   FilterSettings::affectedStops.
+     */
+    int stopIndex() const;
+    
 	/** @brief Sets the values of the widgets according to @p stopSettings. */
 	void setStopSettings( const StopSettings &stopSettings );
 	
@@ -444,42 +458,68 @@ public:
 	StopSettingsWidgetFactory::Pointer factory() const;
 
 protected Q_SLOTS:
-	/** @brief Another service provider has been selected.
+	/**
+     * @brief Another service provider has been selected.
 	 * 
-	 * @param index The index of the newly selected service provider. */
+	 * @param index The index of the newly selected service provider.
+     **/
 	void serviceProviderChanged( int index );
-	/** @brief The city name has been changed. 
+
+	/**
+     * @brief The city name has been changed. 
 	 * 
-	 * @param cityName The new city name. */
+	 * @param cityName The new city name.
+     **/
 	void cityNameChanged( const QString &cityName );
-	/** @brief Another location has been selected.
+
+	/**
+     * @brief Another location has been selected.
 	 * 
-	 * @param index The index of the newly selected location. */
+	 * @param index The index of the newly selected location.
+     **/
 	void locationChanged( int index );
-	/** @brief The info button has been clicked. This shows information about the
-	 * currently selected service provider in a dialog. */
+
+	/**
+     * @brief The info button has been clicked. This shows information about the currently
+     *   selected service provider in a dialog.
+     **/
 	void clickedServiceProviderInfo();
+
 	/** @brief The nearby stops button was clicked. */
 	void geolocateClicked();
-	/** @brief The dialog showing stops near the user was closed
-	 *   (after clicking the nearby stops button). */
+
+	/** @brief The dialog showing stops near the user was closed (after clicking the nearby
+     *  stops button). */
 	void nearStopsDialogFinished( int result );
-	/** @brief Another combined stop has been added (eg. by clicking the add button.
+
+	/**
+     * @brief Another combined stop has been added (eg. by clicking the add button).
 	 *
-	 * @param lineEdit The line edit widget that was added. */
+	 * @param lineEdit The line edit widget that was added.
+     **/
 	void stopAdded( QWidget *lineEdit );
+
+    /**
+     * @brief A combined stop has been removed (eg. by clicking the remove button).
+     *
+     * @param lineEdit The line edit widget that was removed.
+     *
+     * @param index The old index of the removed stop widget in the list of stop widgets.
+     **/
 	void stopRemoved( QWidget *lineEdit, int index );
+
 	/** @brief The menu item to use GHNS to download new service providers was clicked. */
 	void downloadServiceProvidersClicked();
+
 	/** @brief The menu item to install a local accessor info XML was clicked. */
 	void installServiceProviderClicked();
 
 	void stopFinderGeolocationData( const QString &countryCode, const QString &city,
-			      qreal latitude, qreal longitude, int accuracy );
+                                    qreal latitude, qreal longitude, int accuracy );
 	void stopFinderError( StopFinder::Error error, const QString &errorMessage );
 	void stopFinderFinished();
 	void stopFinderFoundStops( const QStringList &stops, const QStringList &stopIDs,
-				   const QString &serviceProviderID );
+                               const QString &serviceProviderID );
 
 protected:
 	virtual void accept();
@@ -492,6 +532,8 @@ private:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(StopSettingsDialog::Options);
 
-QDebug &operator <<(QDebug debug, StopSettingsDialog::Option option);
+QDebug &operator <<( QDebug debug, StopSettingsDialog::Option option );
+
+}; // namespace Timetable
 
 #endif // Multiple inclusion guard

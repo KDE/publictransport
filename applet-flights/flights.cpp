@@ -1,43 +1,43 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 #include "flights.h"
-
-#include <QPainter>
-#include <QFontMetrics>
-#include <QSizeF>
-#include <KLocale>
-
-// #include <plasma/svg.h>
-#include <plasma/theme.h>
-#include <KConfigDialog>
+#include "flightdeparturelist.h"
 
 #include <publictransporthelper/stopwidget.h>
 #include <publictransporthelper/stoplineedit.h>
 #include <publictransporthelper/stopsettings.h>
-#include <QFormLayout>
-#include "flightdeparturelist.h"
-#include <QGraphicsLinearLayout>
 #include <publictransporthelper/global.h>
-#include <qmath.h>
-#include <Plasma/Label>
 
+#include <KLocale>
+#include <KConfigDialog>
+#include <Plasma/Label>
+#include <plasma/theme.h>
+
+#include <QPainter>
+#include <QFontMetrics>
+#include <QSizeF>
+#include <QFormLayout>
+#include <QGraphicsLinearLayout>
+#include <qmath.h>
+
+using namespace Timetable;
 
 Flights::Flights(QObject *parent, const QVariantList &args)
     : Plasma::PopupApplet(parent, args), m_stopLineEdit(0), m_flightDepartureList(0), m_header(0),

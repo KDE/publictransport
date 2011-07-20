@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -31,7 +31,6 @@
 #include <KIcon>
 #include <KDebug>
 #include <KLineEdit>
-
 
 class DynamicWidgetPrivate
 {
@@ -308,7 +307,8 @@ public:
 	void init( AbstractDynamicWidgetContainer::RemoveButtonOptions removeButtonOptions,
 	           AbstractDynamicWidgetContainer::AddButtonOptions addButtonOptions,
 	           AbstractDynamicWidgetContainer::SeparatorOptions separatorOptions,
-			   AbstractDynamicWidgetContainer::NewWidgetPosition newWidgetPosition ) {
+			   AbstractDynamicWidgetContainer::NewWidgetPosition newWidgetPosition )
+    {
 		showRemoveButtons = removeButtonOptions ==
 				AbstractDynamicWidgetContainer::RemoveButtonsBesideWidgets;
 		showAddButton = addButtonOptions ==
@@ -378,7 +378,7 @@ AbstractDynamicWidgetContainer::~AbstractDynamicWidgetContainer()
 	delete d_ptr;
 }
 
-DynamicWidget* AbstractDynamicWidgetContainer::dynamicWidget(int index) const
+DynamicWidget* AbstractDynamicWidgetContainer::dynamicWidget( int index ) const
 {
 	Q_D( const AbstractDynamicWidgetContainer );
 	return d->dynamicWidgets[ index ];
@@ -414,12 +414,12 @@ void AbstractDynamicWidgetContainer::setCustomAddButton( QToolButton* addButton 
 {
 	Q_D( AbstractDynamicWidgetContainer );
 	if ( d->addButton ) {
-		disconnect( d->addButton, SIGNAL( clicked() ), this, SLOT( createAndAddWidget() ) );
+		disconnect( d->addButton, SIGNAL(clicked()), this, SLOT(createAndAddWidget()) );
 	}
 
 	d->addButton = addButton;
 	d->updateButtonStates();
-	connect( d->addButton, SIGNAL( clicked() ), this, SLOT( createAndAddWidget() ) );
+	connect( d->addButton, SIGNAL(clicked()), this, SLOT(createAndAddWidget()) );
 }
 
 void AbstractDynamicWidgetContainer::setButtonSpacing( int spacing )
@@ -599,17 +599,16 @@ int AbstractDynamicWidgetContainer::removeWidget( QWidget *contentWidget )
 
 	int index = d->contentWidget->layout()->indexOf( dynamicWidget );
 	if ( index > 0 ) {
-		removeSeparator( d->contentWidget->layout()->itemAt( index - 1 ) );
+		removeSeparator( d->contentWidget->layout()->itemAt(index - 1) );
 	} else if ( d->dynamicWidgets.count() > 1 ) {
-		removeSeparator( d->contentWidget->layout()->itemAt( index + 1 ) );
+		removeSeparator( d->contentWidget->layout()->itemAt(index + 1) );
 	}
 
 	// When the first widget gets removed move it's add button to the next widget
 	if ( index == 0 && dynamicWidget->addButton() ) {
 		if ( d->dynamicWidgets.count() >= 2 ) {
-			d->addButton = d->dynamicWidgets[ 1 ]->addButton(
-			                   this, DynamicWidget::AddButton );
-			connect( d->addButton, SIGNAL( clicked() ), this, SLOT( createAndAddWidget() ) );
+			d->addButton = d->dynamicWidgets[ 1 ]->addButton( this, DynamicWidget::AddButton );
+			connect( d->addButton, SIGNAL(clicked()), this, SLOT(createAndAddWidget()) );
 			delete d->dynamicWidgets[ 1 ]->takeRemoveButton();
 		} else {
 			d->addButton = NULL;
@@ -815,11 +814,12 @@ public:
 };
 
 AbstractDynamicLabeledWidgetContainer::AbstractDynamicLabeledWidgetContainer( QWidget* parent,
-	RemoveButtonOptions removeButtonOptions, AddButtonOptions addButtonOptions,
-	SeparatorOptions separatorOptions, NewWidgetPosition newWidgetPosition, const QString &labelText  )
-		: AbstractDynamicWidgetContainer( parent,
-			*new AbstractDynamicLabeledWidgetContainerPrivate(this),
-			removeButtonOptions, addButtonOptions, newWidgetPosition )
+    RemoveButtonOptions removeButtonOptions, AddButtonOptions addButtonOptions,
+    SeparatorOptions separatorOptions, NewWidgetPosition newWidgetPosition,
+    const QString &labelText  )
+        : AbstractDynamicWidgetContainer( parent,
+          *new AbstractDynamicLabeledWidgetContainerPrivate(this),
+          removeButtonOptions, addButtonOptions, newWidgetPosition )
 {
 	Q_D( AbstractDynamicLabeledWidgetContainer );
 	d->init( removeButtonOptions, addButtonOptions, separatorOptions, newWidgetPosition );

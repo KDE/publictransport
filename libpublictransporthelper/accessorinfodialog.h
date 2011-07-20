@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -21,13 +21,16 @@
 #define ACCESSORINFODIALOG_H
 
 /** @file
-* @brief Contains the AccessorInfoDialog.
-* 
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief Contains the AccessorInfoDialog.
+ *
+ * @author Friedrich Pülz <fpuelz@gmx.de>
+ **/
 
 #include "publictransporthelper_export.h"
-
 #include <KDialog>
+
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
 
 class AccessorInfoDialogPrivate;
 /**
@@ -73,9 +76,10 @@ public:
     virtual ~AccessorInfoDialog();
 	
 protected Q_SLOTS:
-	/** 
+	/**
 	 * @brief The button to open the service provider in TimetableMate was clicked
-	 * in the service provider info dialog. */
+	 * in the service provider info dialog.
+     **/
 	void openInTimetableMate();
 	
 protected:
@@ -86,5 +90,7 @@ private:
 	Q_DISABLE_COPY( AccessorInfoDialog )
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(AccessorInfoDialog::Options);
+
+}; // namespace Timetable
 
 #endif // ACCESSORINFODIALOG_H

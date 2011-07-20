@@ -1,21 +1,21 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 /** @file
  * @brief Contains a model for locations, to be filled by the public transport data engine.
@@ -30,11 +30,15 @@
 #include <QModelIndex>
 #include <KIcon>
 
+namespace Plasma {
+    class DataEngine;
+}
+
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
+
 class LocationModelPrivate;
 class LocationItemPrivate;
-namespace Plasma {
-	class DataEngine;
-}
 
 /**
  * @brief An item of a LocationModel.
@@ -44,8 +48,8 @@ namespace Plasma {
 class LocationItem {
 public:
 	/**
-	* @brief The available location item types. The values are also used for sorting.
-	**/
+	 * @brief The available location item types. The values are also used for sorting.
+	 **/
 	enum ItemType {
 		Total = 0, /**< Displays the number of total accessors. */
 		Country = 1, /**< Displays a country. */
@@ -80,12 +84,16 @@ public:
 	 * 
 	 * Otherwise "unknown", "international", "showAll" or "errornous" is returned. */
 	QString countryCode() const;
+
 	/** @brief Gets the (unformatted) text to be displayed for this item. */
 	QString text() const;
+
 	/** @brief Gets formatted text to be displayed. This is used by the @ref HtmlDelegate. */
 	QString formattedText() const;
+
 	/** @brief Gets the icon for this item, eg. a flag for items of type @ref Country. */
 	KIcon icon() const;
+
 	/** @brief Gets the type of this item. */
 	ItemType itemType() const;
 
@@ -127,6 +135,7 @@ public:
 	 * @brief Gets the data for the given @p index and @p role.
 	 **/
 	virtual QVariant data( const QModelIndex& index, int role = Qt::DisplayRole ) const;
+
 	/**
 	 * @brief Gets the number of rows in this model.
 	 *
@@ -135,10 +144,12 @@ public:
 	 * @return The number of rows in this model.
 	 **/
 	virtual int rowCount( const QModelIndex& parent = QModelIndex() ) const;
+
 	/**
 	 * @brief Gets an index for the given @p row and @p column. @p parent isn't used.
 	 **/
 	virtual QModelIndex index( int row, int column, const QModelIndex& parent = QModelIndex() ) const;
+
 	/**
 	 * @brief Gets flags for the given @p index.
 	 * It's used to mark items of type Errornous as non-selectable.
@@ -154,6 +165,7 @@ public:
 	 * @param publicTransportEngine A pointer to the "publictransport" data engine.
 	 **/
 	void syncWithDataEngine( Plasma::DataEngine *publicTransportEngine );
+
 	/** @brief Gets QModelIndex of the item with the given @p countryCode. */
 	QModelIndex indexOfLocation( const QString &countryCode );
 
@@ -165,5 +177,7 @@ private:
 	Q_DECLARE_PRIVATE( LocationModel )
 	Q_DISABLE_COPY( LocationModel )
 };
+
+}; // namespace Timetable
 
 #endif // LOCATIONMODEL_H

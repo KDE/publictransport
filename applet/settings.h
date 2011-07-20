@@ -1,25 +1,25 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 /** @file
-* @brief This file contains classes for managing settings of the PublicTransport applet.
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief This file contains classes for managing settings of the PublicTransport applet.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef SETTINGS_HEADER
 #define SETTINGS_HEADER
@@ -34,12 +34,20 @@
 #include <publictransporthelper/filter.h>
 #include <publictransporthelper/stopsettings.h>
 
-#include <Plasma/Theme>
 #include <Plasma/DataEngine>
 
-class PublicTransport;
-class LocationModel;
-class ServiceProviderModel;
+class KConfigDialog;
+class QStandardItemModel;
+class Settings;
+
+namespace Timetable {
+    class LocationModel;
+    class ServiceProviderModel;
+    class StopListWidget;
+    class FilterListWidget;
+};
+using namespace Timetable;
+
 /** @brief Different types of alarms. */
 enum AlarmType {
     AlarmRemoveAfterFirstMatch = 0, /**< The alarm will get removed once fired. */
@@ -88,7 +96,8 @@ public:
     /** @brief Checks if there is an alarm settings object with the given @p name in this list. */
     bool hasName( const QString &name ) const;
 
-    /** @brief Gets the alarm settings object with the given @p name from this list.
+    /**
+     * @brief Gets the alarm settings object with the given @p name from this list.
      *
      * If there is no such alarm settings object, a default constructed AlarmSettings object
      * gets returned.
@@ -111,7 +120,8 @@ struct ColorGroupSettings {
      * 
      * Filters are OR combined while constraints are AND combined.
      * Departures/arrivals that match these filters are colored using the
-     * coor of this ColorGroupSettings. */
+     * coor of this ColorGroupSettings.
+     **/
     FilterList filters;
 
     /**< @brief The color of this color group. */
@@ -213,12 +223,6 @@ inline uint qHash( const QStringList &key )
     }
     return result;
 }
-
-class KConfigDialog;
-class QStandardItemModel;
-class StopListWidget;
-class FilterListWidget;
-class Settings;
 
 /** @brief Manages the settings dialog. */
 class SettingsUiManager : public QObject {

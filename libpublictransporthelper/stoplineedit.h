@@ -1,21 +1,21 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 #ifndef STOPLINEEDIT_H
 #define STOPLINEEDIT_H
@@ -24,6 +24,9 @@
 #include <KLineEdit>
 #include <Plasma/DataEngine>
 
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
+    
 class StopLineEditPrivate;
 
 /**
@@ -91,7 +94,7 @@ public:
 					  const QString& labelText = "Item %1:" );
 	
     virtual KLineEdit* createLineEdit();
-	
+
 	/**
 	 * @brief Sets the service provider to be used for stop name suggestions 
 	 *   in all StopLineEdit widgets.
@@ -99,7 +102,7 @@ public:
 	 * @param serviceProvider The new service provider ID to be used for stop name suggestions.
 	 **/
 	void setServiceProvider( const QString &serviceProvider );
-	
+
 	/**
 	 * @brief Sets the city to be used for stop name suggestions in all StopLineEdit widgets.
 	 *
@@ -107,5 +110,7 @@ public:
 	 **/
 	void setCity( const QString &city );
 };
+
+}; // namespace Timetable
 
 #endif // STOPLINEEDIT_H

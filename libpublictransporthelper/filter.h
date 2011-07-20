@@ -1,25 +1,25 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 /** @file
-* @brief This file contains classes used to filter departures/arrivals/journeys.
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief This file contains classes used to filter departures/arrivals/journeys.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef FILTER_HEADER
 #define FILTER_HEADER
@@ -29,14 +29,17 @@
 #include <QVariant>
 #include <KDebug>
 
-using namespace Timetable;
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
 
 /**
  * @brief A single constraint.
  * 
  * @note You can create a widget to show/edit this constraint with
  * @ref ConstraintWidget::create.
- * @ingroup filterSystem */
+ * 
+ * @ingroup filterSystem
+ **/
 struct PUBLICTRANSPORTHELPER_EXPORT Constraint {
     FilterType type; /**< The type of this constraint, ie. what to filter. */
     FilterVariant variant; /**< The variant of this constraint, eg. equals/doesn't equal. */
@@ -75,7 +78,9 @@ class DepartureInfo;
  * The constraints are logically combined using AND.
  * 
  * @note You can create a widget to show/edit this filter with @ref FilterWidget::create.
- * @ingroup filterSystem */
+ * 
+ * @ingroup filterSystem
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT Filter : public QList< Constraint > {
 public:
     Filter() : QList<Constraint>() {};
@@ -85,17 +90,17 @@ public:
     bool match( const DepartureInfo &departureInfo ) const;
 
     /**
-    * @brief Serializes this filter to a @ref QByteArray
-    * 
-    * @returns the serialized filter as a @ref QByteArray
-    **/
+     * @brief Serializes this filter to a @ref QByteArray
+     * 
+     * @returns the serialized filter as a @ref QByteArray
+     **/
     QByteArray toData() const;
 
     /**
-    * @brief Reads the data for this filter from the given @ref QByteArray
-    * 
-    * @param ba The @ref QByteArray to read the data for this filter from.
-    **/
+     * @brief Reads the data for this filter from the given @ref QByteArray
+     * 
+     * @param ba The @ref QByteArray to read the data for this filter from.
+     **/
     void fromData( const QByteArray &ba );
 
 private:
@@ -118,7 +123,9 @@ QDataStream& operator>>( QDataStream &in, Filter &filter );
  * 
  * @Note You can create a widget to show/edit this filter list with
  * @ref FilterListWidget::create.
- * @ingroup filterSystem */
+ * 
+ * @ingroup filterSystem
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT FilterList : public QList< Filter > {
 public:
     FilterList() : QList<Filter>() {};
@@ -150,14 +157,17 @@ QDataStream& operator>>( QDataStream &in, FilterList &filterList );
 /**
  * @brief Contains information about a filter configuration, ie. the settings of a filter.
  * 
- * @ingroup filterSystem */
+ * @ingroup filterSystem
+ **/
 struct PUBLICTRANSPORTHELPER_EXPORT FilterSettings {
     /** @brief The action to take on matching items. */
     FilterAction filterAction;
 
-    /** @brief A list of filters for this filter configuration.
+    /**
+     * @brief A list of filters for this filter configuration.
      *
-     * Filters are OR combined while constraints are AND combined. */
+     * Filters are OR combined while constraints are AND combined.
+     **/
     FilterList filters;
 
     /** @brief A list of stop settings indices for which this filter should be applied. */
@@ -180,9 +190,11 @@ inline bool PUBLICTRANSPORTHELPER_EXPORT operator !=( const FilterSettings &l, c
     return !(l == r);
 };
 
-/** @brief A QList of FilterSettings with some convenience methods.
+/**
+ * @brief A QList of FilterSettings with some convenience methods.
  *
- * @ingroup filterSystem */
+ * @ingroup filterSystem
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT FilterSettingsList : public QList< FilterSettings > {
 public:
     /** @brief Applies all filter configurations in this list on the given @p departureInfo. */
@@ -194,7 +206,8 @@ public:
     /** @brief Checks if there is a filter settings object with the given @p name in this list. */
     bool hasName( const QString &name ) const;
 
-    /** @brief Gets the filter settings object with the given @p name from this list.
+    /**
+     * @brief Gets the filter settings object with the given @p name from this list.
      *
      * If there is no such filter settings object, a default constructed FilterSettings object
      * gets returned.
@@ -204,16 +217,12 @@ public:
     /** @brief Removes the filter settings object with the given @p name from this list. */
     void removeByName( const QString &name );
 
-    /** @brief Adds the given @p newFilterSettings to this list or changes an existing one with
-     * the same name, if there is already one in this list. */
+    /**
+     * @brief Adds the given @p newFilterSettings to this list or changes an existing one with
+     *   the same name, if there is already one in this list. */
     void set( const FilterSettings &newFilterSettings );
 };
 bool PUBLICTRANSPORTHELPER_EXPORT operator ==( const FilterSettingsList &l, const FilterSettingsList &r );
-
-Q_DECLARE_METATYPE( Constraint );
-Q_DECLARE_METATYPE( Filter );
-Q_DECLARE_METATYPE( FilterSettings );
-Q_DECLARE_METATYPE( FilterSettingsList );
 
 inline QDebug& operator<<(QDebug debug, const Constraint& constraint)
 {
@@ -250,5 +259,12 @@ inline QDebug& operator<<(QDebug debug, const FilterSettingsList& filterSettings
     }
     return debug << ' ' << filterSettingsList.last();
 };
+
+}; // namespace Timetable
+
+Q_DECLARE_METATYPE( Timetable::Constraint );
+Q_DECLARE_METATYPE( Timetable::Filter );
+Q_DECLARE_METATYPE( Timetable::FilterSettings );
+Q_DECLARE_METATYPE( Timetable::FilterSettingsList );
 
 #endif // Multiple inclusion guard

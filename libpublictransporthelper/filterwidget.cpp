@@ -1,21 +1,21 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 #include "filterwidget.h"
 
@@ -26,6 +26,9 @@
 #include <QLabel>
 #include <KGlobal>
 #include <KLocale>
+
+/** @brief Namespace for the publictransport helper library. */
+namespace Timetable {
 
 FilterWidget::FilterWidget( QWidget* parent,
                             AbstractDynamicWidgetContainer::SeparatorOptions seperatorOptions )
@@ -99,13 +102,14 @@ void FilterWidget::setFilter( const Filter& filter )
         }
     }
 }
+
 void FilterWidget::addConstraint( ConstraintWidget* filter )
 {
-    KComboBox *cmbFilterType = qobject_cast< KComboBox* >( createNewLabelWidget( 0 ) );
+    KComboBox *cmbFilterType = qobject_cast< KComboBox* >( createNewLabelWidget(0) );
     Q_ASSERT( cmbFilterType );
     DynamicWidget *dynamicWidget = addWidget( cmbFilterType, filter );
     if ( !dynamicWidget ) {
-        kDebug() << "COULDN'T ADD CONSTRAINT";
+        kDebug() << "Couldn't add constraint widget" << filter;
     }
 }
 
@@ -234,7 +238,7 @@ QString FilterWidget::filterName( FilterType filter ) const
         return i18nc( "@item:inlistbox Name of the filter for transport line strings", "Line string" );
     case FilterByTransportLineNumber:
         return i18nc( "@item:inlistbox Name of the filter for transport line numers, "
-                    "eg. 6 when the transport line string is 'N6'", "Line number" );
+                      "eg. 6 when the transport line string is 'N6'", "Line number" );
     case FilterByTarget:
         return i18nc( "@item:inlistbox Name of the filter for targets/origins", "Target" );
     case FilterByVia:
@@ -280,38 +284,38 @@ QString ConstraintWidget::filterVariantName( FilterVariant filterVariant ) const
     switch ( filterVariant ) {
     case FilterContains:
         return i18nc( "@item:inlistbox Name of the filter variant that matches "
-                    "the filter word is contained", "Contains" );
+                      "the filter word is contained", "Contains" );
     case FilterDoesntContain:
         return i18nc( "@item:inlistbox Name of the filter variant that matches if "
-                    "the filter word is not contained", "Does not Contain" );
+                      "the filter word is not contained", "Does not Contain" );
     case FilterEquals:
         return i18nc( "@item:inlistbox Name of the filter variant that matches if "
-                    "the filter word is found as complete text (not only contained) or "
-                    "if the filter value is equal for non-string-filters", "Equals" );
+                      "the filter word is found as complete text (not only contained) or "
+                      "if the filter value is equal for non-string-filters", "Equals" );
     case FilterDoesntEqual:
         return i18nc( "@item:inlistbox Name of the filter variant that matches if "
-                    "the filter word is not found as complete text (or only contained) or "
-                    "if the filter value is not equal for non-string-filters", "Does not Equal" );
+                      "the filter word is not found as complete text (or only contained) or "
+                      "if the filter value is not equal for non-string-filters", "Does not Equal" );
     case FilterMatchesRegExp:
         return i18nc( "@item:inlistbox Name of the filter variant that matches if "
-                    "a regular expression matches", "Matches Regular Expr." );
+                      "a regular expression matches", "Matches Regular Expr." );
     case FilterDoesntMatchRegExp:
         return i18nc( "@item:inlistbox Name of the filter variant that matches if "
-                    "a regular expression doesn't match", "Doesn't Match Reg. Expr." );
+                      "a regular expression doesn't match", "Doesn't Match Reg. Expr." );
 
     case FilterIsOneOf:
         return i18nc( "@item:inlistbox Name of the filter variant that matches if "
-                    "a value is contained in a list of values, eg. strings.", "One of" );
+                      "a value is contained in a list of values, eg. strings.", "One of" );
     case FilterIsntOneOf:
         return i18nc( "@item:inlistbox Name of the filter variant that matches if "
-                    "a value is not contained in a list of values, eg. strings.", "None of" );
+                      "a value is not contained in a list of values, eg. strings.", "None of" );
 
     case FilterGreaterThan:
         return i18nc( "@item:inlistbox Name of the filter variant that matches if "
-                    "a value is greater than the filter value.", "Greater Than" );
+                      "a value is greater than the filter value.", "Greater Than" );
     case FilterLessThan:
         return i18nc( "@item:inlistbox Name of the filter variant that matches if "
-                    "a value is less than the filter value.", "Less Than" );
+                      "a value is less than the filter value.", "Less Than" );
 
     default:
         kDebug() << "Filter variant unknown" << filterVariant;
@@ -325,7 +329,6 @@ ConstraintWidget::ConstraintWidget( FilterType type, QList< FilterVariant > avai
 {
     m_constraint.type = type;
     setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
-//     QHBoxLayout *layout = new QHBoxLayout( this );
     QFormLayout *layout = new QFormLayout( this );
     layout->setContentsMargins( 0, 0, 0, 0 );
     layout->setRowWrapPolicy( QFormLayout::WrapLongRows );
@@ -333,9 +336,10 @@ ConstraintWidget::ConstraintWidget( FilterType type, QList< FilterVariant > avai
 
     if ( !availableVariants.isEmpty() ) {
         if ( !availableVariants.contains( initialVariant ) ) {
-            kDebug() << "Initial variant" << initialVariant
-            << "not found in" << availableVariants << "for type" << type;
             initialVariant = availableVariants.first();
+            kDebug() << "Initial variant" << initialVariant
+                     << "not found in" << availableVariants << "for type" << type;
+            kDebug() << "Using first available variant as initial variant:" << initialVariant;
         }
 
         m_variantsCmb = new KComboBox( this );
@@ -391,7 +395,7 @@ ConstraintStringWidget::ConstraintStringWidget( FilterType type, FilterVariant i
     m_string->setMinimumWidth( 100 );
     addWidget( m_string );
 
-    connect( m_string, SIGNAL( textChanged( QString ) ), this, SLOT( stringChanged( QString ) ) );
+    connect( m_string, SIGNAL(textChanged(QString) ), this, SLOT(stringChanged(QString)) );
 }
 
 ConstraintIntWidget::ConstraintIntWidget( FilterType type, FilterVariant initialVariant,
@@ -405,7 +409,7 @@ ConstraintIntWidget::ConstraintIntWidget( FilterType type, FilterVariant initial
     m_num->setValue( value );
     addWidget( m_num );
 
-    connect( m_num, SIGNAL( valueChanged( int ) ), this, SLOT( intChanged( int ) ) );
+    connect( m_num, SIGNAL(valueChanged(int)), this, SLOT(intChanged(int)) );
 }
 
 ConstraintTimeWidget::ConstraintTimeWidget( FilterType type,
@@ -419,7 +423,7 @@ ConstraintTimeWidget::ConstraintTimeWidget( FilterType type,
     m_time->setTime( value );
     addWidget( m_time );
 
-    connect( m_time, SIGNAL( timeChanged( QTime ) ), this, SLOT( timeChanged( QTime ) ) );
+    connect( m_time, SIGNAL(timeChanged(QTime)), this, SLOT(timeChanged(QTime)) );
 }
 
 void ConstraintListWidget::setValue( const QVariant& value )
@@ -489,7 +493,7 @@ DynamicWidget* FilterWidget::addWidget( QWidget* labelWidget, QWidget* widget )
     Q_ASSERT_X( cmbFilterType, "FilterWidget::addWidget",
                 "Wrong label widget type or NULL label widget" );
     DynamicWidget *dynamicWidget =
-        AbstractDynamicLabeledWidgetContainer::addWidget( labelWidget, widget );
+            AbstractDynamicLabeledWidgetContainer::addWidget( labelWidget, widget );
     if ( dynamicWidget ) {
         m_filterTypes << cmbFilterType;
 
@@ -498,9 +502,9 @@ DynamicWidget* FilterWidget::addWidget( QWidget* labelWidget, QWidget* widget )
         cmbFilterType->setCurrentIndex( cmbFilterType->findData(
                                             static_cast<int>( constraintWidget->type() ) ) );
 
-        connect( cmbFilterType, SIGNAL( currentIndexChanged( int ) ),
-                this, SLOT( filterTypeChanged( int ) ) );
-        connect( constraintWidget, SIGNAL( changed() ), this, SIGNAL( changed() ) );
+        connect( cmbFilterType, SIGNAL(currentIndexChanged(int)),
+                this, SLOT(filterTypeChanged(int)) );
+        connect( constraintWidget, SIGNAL(changed()), this, SIGNAL(changed()) );
 
         if ( dynamicWidget->removeButton() ) {
             dynamicWidget->removeButton()->setToolTip(
@@ -540,7 +544,7 @@ DynamicWidget* FilterListWidget::createDynamicWidget( QWidget* widget )
 QWidget* FilterListWidget::createSeparator( const QString& separatorText )
 {
     return AbstractDynamicWidgetContainer::createSeparator(
-            separatorText.isEmpty() ? i18nc( "@info/plain", "or" ) : separatorText );
+            separatorText.isEmpty() ? i18nc("@info/plain", "or") : separatorText );
 }
 
 QList< FilterWidget* > FilterListWidget::filterWidgets() const
@@ -570,3 +574,5 @@ void ConstraintListWidget::checkedItemsChanged()
 
     emit changed();
 }
+
+}; // namespace Timetable

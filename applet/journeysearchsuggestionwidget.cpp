@@ -1,21 +1,21 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
-*
-*   This program is free software; you can redistribute it and/or modify
-*   it under the terms of the GNU Library General Public License as
-*   published by the Free Software Foundation; either version 2 or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details
-*
-*   You should have received a copy of the GNU Library General Public
-*   License along with this program; if not, write to the
-*   Free Software Foundation, Inc.,
-*   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the
+ *   Free Software Foundation, Inc.,
+ *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 
 #include "journeysearchsuggestionwidget.h"
 #include "journeysearchparser.h"
@@ -27,9 +27,9 @@
 #include <Plasma/LineEdit>
 #include <Plasma/Animator>
 #include <Plasma/Animation>
+#include <Plasma/Theme>
 
 #include <QStandardItemModel>
-#include <QTreeView>
 #include <QGraphicsLinearLayout>
 #include <QTextDocument>
 #include <QGraphicsSceneHoverEvent>
@@ -56,8 +56,8 @@ void JourneySearchSuggestionItem::updateTextLayout()
 void JourneySearchSuggestionItem::updateData(const QModelIndex& modelIndex)
 {
     if ( modelIndex.isValid() ) {
-// 		m_row = modelIndex.row();
-// 		m_model = modelIndex.model();
+//         m_row = modelIndex.row();
+//         m_model = modelIndex.model();
         setHtml( modelIndex.data().toString() );
     } else {
         kDebug() << "Invalid index given!"/* << m_model << m_row*/;
@@ -76,7 +76,7 @@ QSizeF JourneySearchSuggestionItem::sizeHint( Qt::SizeHint which, const QSizeF& 
 {
     if ( m_textDocument && which == Qt::MinimumSize ) {
         return QSizeF( qMax(qreal(30.0), TextDocumentHelper::textDocumentWidth(m_textDocument)),
-                    qMax((qreal)QFontMetrics(font()).height() + 5.0, m_textDocument->size().height()) );
+                       qMax((qreal)QFontMetrics(font()).height() + 5.0, m_textDocument->size().height()) );
     } else if ( m_textDocument && which == Qt::MaximumSize ) {
         return QSizeF( 999999.0,
                 qMax((qreal)QFontMetrics(font()).height() + 5.0, m_textDocument->size().height()) );
@@ -110,8 +110,8 @@ void JourneySearchSuggestionItem::paint(QPainter* painter, const QStyleOptionGra
         #else
             QColor focusColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewFocusColor );
         #endif
-// 				KColorScheme( QPalette::Active, KColorScheme::Selection )
-// 							.background( KColorScheme::NormalBackground ).color();
+//                 KColorScheme( QPalette::Active, KColorScheme::Selection )
+//                             .background( KColorScheme::NormalBackground ).color();
         if ( option->state.testFlag(QStyle::State_Selected) ) {
             if ( option->state.testFlag(QStyle::State_MouseOver) ) {
                 focusColor.setAlpha( focusColor.alpha() * 0.65f );
@@ -216,23 +216,7 @@ JourneySearchSuggestionWidget::JourneySearchSuggestionWidget( QGraphicsItem *par
 
     setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
     setFont( settings->sizedFont() );
-
-// 	QTreeView *treeView = nativeWidget();
-// 	treeView->setRootIsDecorated( false );
-// 	treeView->setHeaderHidden( true );
-// 	treeView->setAlternatingRowColors( true );
-// 	treeView->setEditTriggers( QAbstractItemView::NoEditTriggers );
-// 	treeView->setAutoFillBackground( false );
-// 	treeView->setAttribute( Qt::WA_NoSystemBackground );
-// 	treeView->setItemDelegate( new PublicTransportDelegate(this) );
-// 	treeView->setPalette( palette );
     setPalette( palette );
-
-// 	TODO
-// 	connect( treeView, SIGNAL(clicked(QModelIndex)),
-// 			 this, SLOT(suggestionClicked(QModelIndex)) );
-// 	connect( treeView, SIGNAL(doubleClicked(QModelIndex)),
-// 			 this, SLOT(suggestionDoubleClicked(QModelIndex)) );
 
     // Add recent journey suggestions.
     // Doesn't need attached line edit here, because it's normally empty at this time.
@@ -266,19 +250,19 @@ void JourneySearchSuggestionWidget::setModel(QStandardItemModel* model)
     m_model = model;
 
     connect( m_model, SIGNAL(rowsInserted(QModelIndex,int,int)),
-            this, SLOT(rowsInserted(QModelIndex,int,int)) );
+             this, SLOT(rowsInserted(QModelIndex,int,int)) );
     connect( m_model, SIGNAL(rowsRemoved(QModelIndex,int,int)),
-            this, SLOT(rowsRemoved(QModelIndex,int,int)) );
+             this, SLOT(rowsRemoved(QModelIndex,int,int)) );
     connect( m_model, SIGNAL(modelReset()), this, SLOT(modelReset()) );
     connect( m_model, SIGNAL(layoutChanged()), this, SLOT(layoutChanged()) );
     connect( m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
-            this, SLOT(dataChanged(QModelIndex,QModelIndex)) );
+             this, SLOT(dataChanged(QModelIndex,QModelIndex)) );
 }
 
 void JourneySearchSuggestionWidget::layoutChanged()
 {
     kDebug() << "LAYOUT CHANGED";
-// 	TODO
+//     TODO
 }
 
 void JourneySearchSuggestionWidget::modelReset()
@@ -306,13 +290,13 @@ void JourneySearchSuggestionWidget::rowsInserted(const QModelIndex& parent, int 
         connect( item, SIGNAL(suggestionDoubleClicked(QModelIndex)),
                 this, SLOT(suggestionDoubleClicked(QModelIndex)) );
 
-// 		// Fade new items in
-// 		Plasma::Animation *fadeAnimation = Plasma::Animator::create(
-// 				Plasma::Animator::FadeAnimation, item );
-// 		fadeAnimation->setTargetWidget( item );
-// 		fadeAnimation->setProperty( "startOpacity", 0.0 );
-// 		fadeAnimation->setProperty( "targetOpacity", 1.0 );
-// 		fadeAnimation->start( QAbstractAnimation::DeleteWhenStopped );
+//         // Fade new items in
+//         Plasma::Animation *fadeAnimation = Plasma::Animator::create(
+//                 Plasma::Animator::FadeAnimation, item );
+//         fadeAnimation->setTargetWidget( item );
+//         fadeAnimation->setProperty( "startOpacity", 0.0 );
+//         fadeAnimation->setProperty( "targetOpacity", 1.0 );
+//         fadeAnimation->start( QAbstractAnimation::DeleteWhenStopped );
 
         l->insertItem( row, item );
     }
@@ -386,10 +370,10 @@ void JourneySearchSuggestionWidget::removeGeneralSuggestionItems()
 
 void JourneySearchSuggestionWidget::addJourneySearchCompletions()
 {
-// 	if ( !m_lineEdit ) {
-// 		kDebug() << "You need to attach a line edit before calling addJourneySearchCompletions";
-// 		return;
-// 	}
+//     if ( !m_lineEdit ) {
+//         kDebug() << "You need to attach a line edit before calling addJourneySearchCompletions";
+//         return;
+//     }
 
     // Insert journey search completions to the top of the list
     int row = 0;
@@ -708,7 +692,7 @@ void JourneySearchSuggestionWidget::journeySearchItemCompleted(const QString& ne
     m_lineEdit->setText( newJourneySearch );
 
     // For autocompletion and to update suggestions
-// 	journeySearchInputEdited( journeySearch->text() ); TEST should be called automatically
+//     journeySearchInputEdited( journeySearch->text() ); TEST should be called automatically
 
     if ( newCursorPos != -1 ) {
         m_lineEdit->nativeWidget()->setCursorPosition( newCursorPos );
@@ -862,7 +846,7 @@ void JourneySearchSuggestionWidget::journeySearchLineEdited(const QString& newTe
     m_journeySearchLastTextLength = m_lineEdit->text().length()
             - m_lineEdit->nativeWidget()->selectedText().length();
 
-// 	reconnectJourneySource( stop, departure, stopIsTarget, timeIsDeparture, true );
+//     reconnectJourneySource( stop, departure, stopIsTarget, timeIsDeparture, true );
     emit journeySearchLineChanged( stop, departure, stopIsTarget, timeIsDeparture );
 }
 

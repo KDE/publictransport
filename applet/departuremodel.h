@@ -18,8 +18,8 @@
 */
 
 /** @file
-* @brief This file contains a models which hold information about public transport journeys/departures/arrivals.
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief This file contains a models which hold information about public transport journeys/departures/arrivals.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef DEPARTUREMODEL_HEADER
 #define DEPARTUREMODEL_HEADER
@@ -99,11 +99,11 @@ public:
     virtual ~ItemBase();
 
     /** @returns the parent item of this item, or NULL if this item is a
-    * toplevel item. */
+     * toplevel item. */
     ItemBase *parent() const { return m_parent; };
 
     /** @returns the toplevel parent item of this item, or a pointer to this
-    * item if it is a toplevel item itself. Never returns NULL. */
+     * item if it is a toplevel item itself. Never returns NULL. */
     ItemBase *topLevelParent() const;
 
     const Info *info() const { return m_info; };
@@ -250,7 +250,8 @@ public:
      *
      * Views can ignore this unformatted text if a formatted text is set.
      *
-     * @see setFormattedText */
+     * @see setFormattedText
+     **/
     inline void setText( Columns column, const QString &text ) {
         setData( column, text, Qt::DisplayRole ); };
 
@@ -264,7 +265,8 @@ public:
      * @param text can contain HTML tags. The @ref HtmlDelegate ignores the
      * unformatted text (stored in Qt::DisplayRole) if a formatted text is set.
      *
-     * @see setText */
+     * @see setText
+     **/
     inline void setFormattedText( Columns column, const QString &text ) {
         setData( column, text, FormattedTextRole ); };
 
@@ -278,7 +280,9 @@ public:
 
     /**
      * @returns the current alarm states.
-     * @see AlarmStates */
+     * 
+     * @see AlarmStates
+     **/
     AlarmStates alarmStates() const { return m_alarm; };
 
     /** @brief Whether or not this departure/journey has an alarm (pending or fired). */
@@ -317,7 +321,7 @@ public:
 
     RouteStopFlags departureRouteStopFlags( int routeStopIndex = 0, int *minsFromFirstRouteStop = 0 );
     RouteStopFlags arrivalRouteStopFlags( int routeStopIndex = 0, int *minsFromFirstRouteStop = 0 );
-    
+
     /** @returns a hash with child items by their type. */
     QHash< ItemType, ChildItem* > typedChildren() const;
 
@@ -328,12 +332,12 @@ public:
     virtual void updateTimeValues();
 
     /** @brief Updates this item and all it's child items according to the inforamtion
-    * in @p journeyInfo. */
+     * in @p journeyInfo. */
     void setJourneyInfo( const JourneyInfo &journeyInfo );
 
     /** @brief Sets the alarm states. */
     void setAlarmStates( AlarmStates alarmStates );
-    
+
     /** @brief Gets the date and time at which an alarm for this journey should be fired. */
     virtual QDateTime alarmTime() const {
         return m_journeyInfo.departure().addSecs( // TODO predictedDeparture() with delay
@@ -364,7 +368,8 @@ protected:
      *
      * @param linesPerRow The number of lines for the new item is put here, if it's not NULL.
      *
-     * @returns the text to be displayed for the given @p itemType. */
+     * @returns the text to be displayed for the given @p itemType.
+     **/
     QString childItemText( ItemType itemType, int *linesPerRow = NULL );
 
     /** @brief Creates a route item with one child item for each route stop. */
@@ -377,7 +382,7 @@ protected:
      * to the global maximal/minimal duration/changes of the model.
      **/
     qreal rating() const;
-    
+
     RouteStopFlags routeStopFlags( int routeStopIndex, int *minsFromFirstRouteStop,
                                    const QList<QTime> &times );
 
@@ -391,7 +396,8 @@ protected:
  * To update this item and it's child items call @ref setDepartureInfo. To only update remaining
  * time values, call @ref updateTimeValues.
  *
- * @ingroup models */
+ * @ingroup models
+ **/
 class DepartureItem : public TopLevelItem {
     Q_OBJECT
     Q_PROPERTY( qreal alarmColorIntensity READ alarmColorIntensity WRITE setAlarmColorIntensity )
@@ -437,8 +443,8 @@ public:
     /** @brief Updates remaining time values in the departure column. */
     virtual void updateTimeValues();
 
-    /** @brief Updates this item and all it's child items according to the
-     * inforamtion in @p departureInfo. */
+    /** @brief Updates this item and all it's child items according to the inforamtion
+     * in @p departureInfo. */
     void setDepartureInfo( const DepartureInfo &departureInfo );
 
 protected:
@@ -480,7 +486,8 @@ protected:
 /**
  * @brief Base class for DepartureModel and JourneyModel.
  *
- * @ingroup models */
+ * @ingroup models
+ **/
 class PublicTransportModel : public QAbstractItemModel {
     Q_OBJECT
     friend class ItemBase;
@@ -571,7 +578,7 @@ public:
      * @brief Removes the given @p item from the model.
      *
      * @param item The item to be removed.
-     * 
+     *
      * @return True, if the item was successfully removed. False, otherwise.
      *   Removing may fail, eg. if it isn't inside the model.
      **/
@@ -583,6 +590,7 @@ public:
 
     /**
      * @brief Checks whether or not this model is empty.
+     *
      * @returns True, if this model has no items, ie. is empty. False, otherwise.
      **/
     inline bool isEmpty() const { return rowCount() == 0; };
@@ -604,15 +612,18 @@ public:
         m_info.homeStop = homeStop;
     };
 
-    /** @brief Returns the currently highlighted stop or an empty string,
-      * if no stop is currently highlighted. */
+    /**
+     * @brief Returns the currently highlighted stop or an empty string, if no stop is
+     *   currently highlighted.
+     **/
     QString highlightedStop() const { return m_info.highlightedStop; };
-    
+
     /**
      * @brief Gets the flags for route stop item with the given @p stopName.
      *
      * @param stopName The stop name which is associated with the route stop
      *   item to get flags for.
+     *
      * @returns The flags for the route stop item, which is associated with the
      *   given @p stopName.
      **/
