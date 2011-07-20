@@ -21,7 +21,7 @@
 
 #include "filter.h"
 #include "departureinfo.h"
-#include "heckcombobox.h"
+#include "checkcombobox.h"
 
 #include <QLabel>
 #include <KGlobal>
