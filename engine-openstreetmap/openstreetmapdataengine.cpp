@@ -114,10 +114,15 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
                 search = source.mid( pos3 + 1 ).trimmed();
             }
         }
-
+        
         if ( search.isEmpty() ) {
             kDebug() << "No search string given";
             return false;
+        } else if ( search.contains(QLatin1String("Hauptbahnhof"), Qt::CaseInsensitive) ) {
+            QString alternativeSearch = search;
+            alternativeSearch.replace( QLatin1String("Hauptbahnhof"), QLatin1String("Hbf"),
+                                       Qt::CaseInsensitive );
+            search += '|' + alternativeSearch;
         }
 
         // Build url
@@ -236,10 +241,15 @@ void OpenStreetMapEngine::osmFinishedReading( QPointer<OsmReader> osmReader,
     bool finished = true;
     if ( !data.isEmpty() ) {
         setData( osmReader->associatedSourceName(), data );
-    } else if ( osmReader->sourceUrl().contains(QLatin1String("public_transport=*")) ) {
+    } else if ( osmReader->sourceUrl().contains(QLatin1String("public_transport=*"))
+        || osmReader->sourceUrl().contains(QLatin1String("railway=tram_stop")) )
+    {
         QString newUrl = osmReader->sourceUrl().replace(
-                QLatin1String("public_transport=*"),
-                QLatin1String("railway=tram_stop") );
+                    QLatin1String("railway=tram_stop"),
+                    QLatin1String("highway=bus_stop") )
+                .replace(
+                    QLatin1String("public_transport=*"),
+                    QLatin1String("railway=tram_stop") );
         kDebug() << "NEW URL:" << newUrl;
 
         // Start download
