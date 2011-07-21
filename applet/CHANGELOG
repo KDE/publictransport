@@ -1,7 +1,7 @@
 
 Changelog of plasma-applet-publictransport 
 
-0.10 - Beta 9 (NEXT)
+0.10 - RC 1
 Highlights: New filter/alarm UI, Context menus for journey/departure route stops, highlight stops, show intermediate departure list, alarms in journey view, colorized departure groups, quick&easy filtering by color groups, show stops in marble using OpenStreetMap, use of QStateMachine
 
 - Replace state flags with a QStateMachine (states for views like departures, journeys, journey search, ...; states for data status like waiting, valid, invalid; states for the network status).
@@ -25,7 +25,6 @@ Highlights: New filter/alarm UI, Context menus for journey/departure route stops
 - Draw an arrow at the end of the route line in route items
 - Ask for a name for new filter configurations
 - Move departureinfo.h/.cpp, filter.h/.cpp, filterwidget.h/.cpp and some parts of global.h/.cpp from the applet to libpublictransporthelper (because class FilterSettings gets now use in StopSettingsWidget/StopSettingsDialog, instead of only a QString with the name of the filter configuration)
-
 - New unit tests for the applet
 - Don't display too many route stop items (omit some if there's not enough space)
 - Show delay information for journeys again (was missing since the porting to QGraphicsWidget)

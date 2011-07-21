@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -27,7 +27,7 @@ static const char description[] =
     I18N_NOOP("A helper application to add support for new service providers to "
 	      "the plasma data engine 'PublicTransport'");
 
-static const char version[] = "0.2.2";
+static const char version[] = "0.2.3";
 
 int main(int argc, char **argv)
 {
