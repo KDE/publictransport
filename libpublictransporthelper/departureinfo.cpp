@@ -357,13 +357,15 @@ QString DepartureInfo::delayText() const
 }
 
 QString DepartureInfo::departureText( bool htmlFormatted, bool displayTimeBold,
-                                    bool showRemainingMinutes,
-                                    bool showDepartureTime, int linesPerRow ) const
+                                      bool showRemainingMinutes, bool showDepartureTime,
+                                      int linesPerRow ) const
 {
     QDateTime predictedDep = predictedDeparture();
-    QString sTime, sDeparture = predictedDep.toString( "hh:mm" );
-    QString sColor;
-    if ( htmlFormatted ) {
+    QString sDeparture = predictedDep.toString( "hh:mm" );
+
+    // Add style elements if htmlFormatted is set
+    if ( htmlFormatted && (delayType() != DelayUnknown || displayTimeBold) ) {
+        QString sColor;
         if ( delayType() == OnSchedule ) {
             sColor = QString( "color:%1;" ).arg( Global::textColorOnSchedule().name() );
         } else if ( delayType() == Delayed ) {
@@ -376,19 +378,23 @@ QString DepartureInfo::departureText( bool htmlFormatted, bool displayTimeBold,
         }
 
         sDeparture = sDeparture.prepend( QString("<span style='%1%2'>").arg(sColor).arg(sBold) )
-                            .append( "</span>" );
+                               .append( "</span>" );
     }
+
+    // Add date if it's not today
     if ( predictedDeparture().date() != QDate::currentDate() ) {
         sDeparture += ", " + formatDateFancyFuture( predictedDep.date() );
     }
 
+    // Build the resulting "departure text" depending on arguments
+    QString sTime;
     if ( showDepartureTime && showRemainingMinutes ) {
         QString sText = durationString( false );
         sDeparture += delayString(); // Show delay after time
         if ( htmlFormatted ) {
-            sDeparture = sDeparture.replace( QRegExp( "(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)" ),
-                                            QString( "<span style='color:%1;'>\\1</span>" )
-                                            .arg( Global::textColorDelayed().name() ) );
+            sDeparture = sDeparture.replace( QRegExp("(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)"),
+                    QString("<span style='color:%1;'>\\1</span>")
+                    .arg(Global::textColorDelayed().name()) );
             sTime = QString( linesPerRow > 1 ? "%1<br>(%2)" : "%1 (%2)" )
                     .arg( sDeparture ).arg( sText );
         } else {
@@ -397,9 +403,9 @@ QString DepartureInfo::departureText( bool htmlFormatted, bool displayTimeBold,
         }
     } else if ( showDepartureTime ) {
         if ( htmlFormatted ) {
-            sDeparture += delayString().replace( QRegExp( "(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)" ),
-                            QString( "<span style='color:%1;'>\\1</span>" )
-                            .arg( Global::textColorDelayed().name() ) ); // Show delay after time
+            sDeparture += delayString().replace( QRegExp("(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)"),
+                    QString("<span style='color:%1;'>\\1</span>")
+                    .arg(Global::textColorDelayed().name()) ); // Show delay after time
         } else {
             sDeparture += delayString();
         }
@@ -412,17 +418,15 @@ QString DepartureInfo::departureText( bool htmlFormatted, bool displayTimeBold,
             }
             DelayType type = delayType();
             if ( type == Delayed ) {
-                sTime = sTime.replace( QRegExp( "(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)" ),
-                                    QString( "<span style='color:%1;'>\\1</span>" )
-                                    .arg( Global::textColorDelayed().name() ) );
+                sTime = sTime.replace( QRegExp("(\\(?\\+(?:\\s|&nbsp;)*\\d+\\)?)"),
+                        QString("<span style='color:%1;'>\\1</span>")
+                        .arg(Global::textColorDelayed().name()) );
             } else if ( type == OnSchedule ) {
-                sTime = sTime.prepend( QString( "<span style='color:%1;'>" )
-                                    .arg( Global::textColorOnSchedule().name() ) )
-                        .append( "</span>" );
+                sTime = sTime.prepend( QString("<span style='color:%1;'>")
+                                       .arg(Global::textColorOnSchedule().name()) )
+                             .append( "</span>" );
             }
         }
-    } else {
-        sTime.clear();
     }
 
     return sTime;
