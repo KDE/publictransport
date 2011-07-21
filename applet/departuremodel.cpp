@@ -251,7 +251,7 @@ void TopLevelItem::setData( Columns column, const QVariant& data, int role )
 }
 
 ChildItem::ChildItem( ItemType itemType, const QString& formattedText,
-                    const QIcon& icon, const Info *info )
+                      const QIcon& icon, const Info *info )
         : ItemBase( info )
 {
     m_type = itemType;
@@ -510,22 +510,9 @@ void JourneyItem::updateTimeValues()
     if ( oldTextFormatted != depTextFormatted ) {
         setFormattedText( ColumnDeparture, depTextFormatted );
 
-        QString longestLine;
         QString depText = m_journeyInfo.departureText( false,
                 m_info->displayTimeBold, true, true, m_info->linesPerRow );
-        if ( m_info->linesPerRow > 1 ) {
-            // Get longest line for auto column sizing
-            QStringList lines = depText.split( '\n', QString::SkipEmptyParts,
-                                            Qt::CaseInsensitive );
-            foreach( const QString &sCurrent, lines ) {
-                if ( sCurrent.length() > longestLine.length() ) {
-                    longestLine = sCurrent;
-                }
-            }
-        } else {
-            longestLine = depText;
-        }
-        setText( ColumnDeparture, longestLine ); // This is just used for auto column sizing
+        setText( ColumnDeparture, depText );
     }
 
     QString arrTextFormatted = m_journeyInfo.arrivalText( true,
@@ -534,22 +521,9 @@ void JourneyItem::updateTimeValues()
     if ( oldTextFormatted != arrTextFormatted ) {
         setFormattedText( ColumnArrival, arrTextFormatted );
 
-        QString longestLine;
-        QString depText = m_journeyInfo.departureText( false,
-                        m_info->displayTimeBold, true, true, m_info->linesPerRow );
-        if ( m_info->linesPerRow > 1 ) {
-            // Get longest line for auto column sizing
-            QStringList lines = depText.split( '\n', QString::SkipEmptyParts,
-                                            Qt::CaseInsensitive );
-            foreach( const QString &sCurrent, lines ) {
-                if ( sCurrent.length() > longestLine.length() ) {
-                    longestLine = sCurrent;
-                }
-            }
-        } else {
-            longestLine = depText;
-        }
-        setText( ColumnDeparture, longestLine ); // This is just used for auto column sizing
+        QString arrText = m_journeyInfo.departureText( false,
+                m_info->displayTimeBold, true, true, m_info->linesPerRow );
+        setText( ColumnDeparture, arrText );
     }
 
     if ( m_model ) {
@@ -900,22 +874,10 @@ void DepartureItem::updateTimeValues()
     if ( oldTextFormatted != depTextFormatted ) {
         setFormattedText( ColumnDeparture, depTextFormatted );
 
-        QString longestLine;
         QString depText = m_departureInfo.departureText( false,
                 m_info->displayTimeBold, m_info->showRemainingMinutes,
                 m_info->showDepartureTime, m_info->linesPerRow );
-        if ( m_info->linesPerRow > 1 ) {
-            // Get longest line for auto column sizing
-            QStringList lines = depText.split( '\n', QString::SkipEmptyParts,
-                                            Qt::CaseInsensitive );
-            foreach( const QString &sCurrent, lines ) {
-                if ( sCurrent.length() > longestLine.length() ) {
-                    longestLine = sCurrent;
-                }
-            }
-        } else
-            longestLine = depText;
-        setText( ColumnDeparture, longestLine ); // This is just used for auto column sizing
+        setText( ColumnDeparture, depText );
     }
 
     if ( m_model ) {
@@ -976,9 +938,10 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow )
         }
         break;
     case DelayItem:
-        text = QString( "<b>%1</b> %2" ).arg( i18nc( "@info/plain Information about delays "
-                                            "of a journey with public transport", "Delay:" ) )
-            .arg( m_departureInfo.delayText() );
+        text = QString( "<b>%1</b> %2" )
+                .arg( i18nc("@info/plain Information about delays "
+                            "of a journey with public transport", "Delay:") )
+                .arg( m_departureInfo.delayText() );
         if ( m_departureInfo.delayType() == Delayed ) {
             text += "<br><b>" + ( m_info->departureArrivalListType == ArrivalList
                                 ? i18nc( "@info/plain", "Original arrival time:" )
@@ -1213,9 +1176,9 @@ void PublicTransportModel::startUpdateTimer()
 void PublicTransportModel::callAtNextFullMinute( const char* member )
 {
     QTime time = QTime::currentTime();
-    QTime nextMinute( time.hour(), time.minute() );
+    QTime nextMinute( time.hour(), time.minute() ); // nextMinute = time with secs,msecs=0
     nextMinute = nextMinute.addSecs( 60 );
-    int msecs = time.secsTo( nextMinute ) * 1000;
+    int msecs = time.msecsTo( nextMinute );
     QTimer::singleShot( qMin(60000, msecs), this, member );
 }
 
@@ -1365,15 +1328,13 @@ QVariant PublicTransportModel::data( const QModelIndex& index, int role ) const
 
 void PublicTransportModel::clear()
 {
-    emit journeysAboutToBeRemoved( m_items );
+    emit itemsAboutToBeRemoved( m_items );
 
     beginRemoveRows( QModelIndex(), 0, m_items.count() );
-
     m_infoToItem.clear();
     qDeleteAll( m_items );
     m_items.clear();
     m_nextItem = NULL;
-
     endRemoveRows();
 }
 
@@ -1483,9 +1444,10 @@ bool JourneyModel::removeRows( int row, int count, const QModelIndex& parent )
         ItemBase *item = itemFromIndex( parent );
         item->removeChildren( row, count );
     } else {
+        emit itemsAboutToBeRemoved( m_items.mid(row, count) );
+
         for ( int i = 0; i < count; ++i ) {
             JourneyItem *item = static_cast<JourneyItem*>( m_items[row] );
-            emit journeysAboutToBeRemoved( QList<ItemBase*>() << item );
 
             m_items.removeAt( row );
             m_infoToItem.remove( item->journeyInfo()->hash() );
@@ -1678,7 +1640,6 @@ void DepartureModel::update()
     }
 
     // Sort out departures in the past
-    QList<DepartureInfo> leaving;
     int row = 0;
     m_nextItem = m_items.isEmpty() ? NULL : static_cast<DepartureItem*>( m_items[row] );
     QDateTime nextDeparture = m_nextItem
@@ -1687,7 +1648,6 @@ void DepartureModel::update()
     nextDeparture.setTime( QTime(nextDeparture.time().hour(), nextDeparture.time().minute()) ); // Set second to 0
     while ( m_nextItem && nextDeparture < QDateTime::currentDateTime() ) {
         DepartureItem *leavingItem = static_cast<DepartureItem*>( m_nextItem );
-        leaving << *leavingItem->departureInfo();
         leavingItem->setLeavingSoon( true );
 
 // 		removeRows( m_nextItem->row(), 1 );
@@ -1700,7 +1660,6 @@ void DepartureModel::update()
         nextDeparture = static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture();
         nextDeparture.setTime( QTime(nextDeparture.time().hour(), nextDeparture.time().minute()) ); // Set second to 0
     }
-    emit departuresLeft( leaving );
 
     // Wait 10 seconds before removing the departure.
     // By having called setLeavingSoon(true) the items to be removed will animate to indicate that
@@ -1717,14 +1676,21 @@ void DepartureModel::update()
 
 void DepartureModel::removeLeavingDepartures()
 {
+    QList<DepartureInfo> leaving;
+
     for ( int row = 0; row < m_items.count(); ++row ) {
         DepartureItem *item = static_cast<DepartureItem*>( m_items[row] );
         if ( item->isLeavingSoon() ) {
+            leaving << *item->departureInfo();
             removeRows( row, 1 );
             --row;
         } else {
             break;
         }
+    }
+
+    if ( !leaving.isEmpty() ) {
+        emit departuresLeft( leaving );
     }
 }
 
@@ -1908,9 +1874,9 @@ DepartureItem* DepartureModel::findNextItem( bool sortedByDepartureAscending ) c
 }
 
 DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
-                                        Columns sortColumn,
-                                        Qt::SortOrder sortOrder )
+                                        Columns sortColumn, Qt::SortOrder sortOrder )
 {
+    // Check if the item has already been added to this model (using DepartureInfo::hash())
     ItemBase *existingItem = m_infoToItem.value( departureInfo.hash(), NULL );
     if ( existingItem ) {
         kDebug() << "Departure already added to the model at index" << departureInfo;
@@ -1940,6 +1906,7 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
         }
     }
 
+    // Create and insert the new DepartureItem
     beginInsertRows( QModelIndex(), insertBefore, insertBefore );
     DepartureItem *newItem = new DepartureItem( departureInfo, &m_info );
     m_infoToItem.insert( departureInfo.hash(), newItem );
@@ -1947,6 +1914,7 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
     newItem->setModel( this );
     endInsertRows();
 
+    // Ensure m_nextItem points to the next departure in the list
     if ( m_nextItem ) {
         if ( newItem->departureInfo()->predictedDeparture() <
              static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture() )
@@ -2002,9 +1970,10 @@ bool DepartureModel::removeRows( int row, int count, const QModelIndex& parent )
         ItemBase *item = itemFromIndex( parent );
         item->removeChildren( row, count );
     } else {
+        emit itemsAboutToBeRemoved( m_items.mid(row, count) );
+
         for ( int i = 0; i < count; ++i ) {
             DepartureItem *item = static_cast<DepartureItem*>( m_items[row] );
-            emit journeysAboutToBeRemoved( QList<ItemBase*>() << item );
 
             m_items.removeAt( row );
             item->removeChildren( 0, item->childCount() ); // Needed?
@@ -2183,7 +2152,7 @@ RouteStopFlags DepartureItem::routeStopFlags( int routeStopIndex, int *minsFromF
         && m_departureInfo.routeTimes()[routeStopIndex].isValid() )
     {
         const QTime time = m_departureInfo.routeTimes()[routeStopIndex];
-        _minsFromFirstRouteStop = qCeil( m_departureInfo.departure().time().secsTo(time) / 60 );
+        _minsFromFirstRouteStop = qCeil( m_departureInfo.departure().time().secsTo(time) / 60.0 );
         while ( _minsFromFirstRouteStop < 0 ) {
             _minsFromFirstRouteStop += 60 * 24;
         }

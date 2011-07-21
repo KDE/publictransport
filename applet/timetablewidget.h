@@ -201,8 +201,7 @@ public:
      *
      * The cached pixmap can later be used for drawing, if the model data is already deleted.
      * So it's a good idea to call this method directly before the model data gets deleted, eg.
-     * by connecting to @ref PublicTransportModel::departuresAboutToBeRemoved or
-     * @ref PublicTransportModel::journeysAboutToBeRemoved.
+     * by connecting to @ref PublicTransportModel::itemsAboutToBeRemoved.
      **/
     void capturePixmap();
 
@@ -633,7 +632,7 @@ signals:
                                QGraphicsWidget *item );
 
 protected slots:
-    void journeysAboutToBeRemoved( const QList<ItemBase*> &journeys );
+    void itemsAboutToBeRemoved( const QList<ItemBase*> &journeys );
     virtual void rowsRemoved( const QModelIndex &parent, int first, int last );
     virtual void modelReset();
     virtual void layoutChanged();

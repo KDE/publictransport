@@ -137,7 +137,7 @@ void RouteGraphicsItem::arrangeStopItems()
             int minsFromFirstRouteStop = -1;
             if ( i < info->routeTimes().count() && info->routeTimes()[i].isValid() ) {
                 time = info->routeTimes()[i];
-                minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60 );
+                minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60.0 );
             }
 
             qreal baseSize;

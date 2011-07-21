@@ -1384,15 +1384,15 @@ void PublicTransportWidget::setModel( PublicTransportModel* model )
     m_model = model;
 
     connect( m_model, SIGNAL(rowsInserted(QModelIndex,int,int)),
-            this, SLOT(rowsInserted(QModelIndex,int,int)) );
-    connect( m_model, SIGNAL(journeysAboutToBeRemoved(QList<ItemBase*>)),
-            this, SLOT(journeysAboutToBeRemoved(QList<ItemBase*>)) );
+             this, SLOT(rowsInserted(QModelIndex,int,int)) );
+    connect( m_model, SIGNAL(itemsAboutToBeRemoved(QList<ItemBase*>)),
+             this, SLOT(itemsAboutToBeRemoved(QList<ItemBase*>)) );
     connect( m_model, SIGNAL(rowsRemoved(QModelIndex,int,int)),
-            this, SLOT(rowsRemoved(QModelIndex,int,int)) );
+             this, SLOT(rowsRemoved(QModelIndex,int,int)) );
     connect( m_model, SIGNAL(modelReset()), this, SLOT(modelReset()) );
     connect( m_model, SIGNAL(layoutChanged()), this, SLOT(layoutChanged()) );
     connect( m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
-            this, SLOT(dataChanged(QModelIndex,QModelIndex)) );
+             this, SLOT(dataChanged(QModelIndex,QModelIndex)) );
 }
 
 PublicTransportGraphicsItem* PublicTransportWidget::item( const QModelIndex& index )
@@ -1536,11 +1536,11 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
     }
 }
 
-void PublicTransportWidget::journeysAboutToBeRemoved( const QList< ItemBase* >& journeys )
+void PublicTransportWidget::itemsAboutToBeRemoved( const QList< ItemBase* >& items )
 {
     // Capture pixmaps for departures that will get removed
     // to be able to animate it's disappearance
-    foreach ( const ItemBase *item, journeys ) {
+    foreach ( const ItemBase *item, items ) {
         if ( item->row() >= m_items.count() ) {
             kDebug() << "Index out of bounds!";
             continue;

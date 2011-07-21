@@ -142,7 +142,7 @@ QPixmap DeparturePainter::createDeparturesPixmap(const QList< DepartureItem* >& 
 
         const DepartureInfo *data = item->departureInfo();
         paintVehicle( &p, data->vehicleType(),
-                QRectF(x, y, vehicleSize, vehicleSize), data->lineString() );
+                      QRectF(x, y, vehicleSize, vehicleSize), data->lineString() );
 
         // Move to next vehicle type svg position
 //      vehicleRect.translate( translation, translation );
@@ -156,8 +156,7 @@ QPixmap DeparturePainter::createDeparturesPixmap(const QList< DepartureItem* >& 
         ++i;
     }
 
-    QDateTime currentTime = QDateTime::currentDateTime();
-    int minsToDeparture = qCeil( currentTime.secsTo(time) / 60.0 );
+    int minsToDeparture = qCeil( QDateTime::currentDateTime().secsTo(time) / 60.0 );
     QString text;
     if ( minsToDeparture < -1 ) {
         text.append( i18nc("Indicating the departure time of an already left vehicle", "left") );

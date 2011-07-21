@@ -190,7 +190,7 @@ void PublicTransport::init()
     connect( m_model, SIGNAL(alarmFired(DepartureItem*)), this, SLOT(alarmFired(DepartureItem*)) );
     connect( m_model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
              this, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
-    connect( m_model, SIGNAL(journeysAboutToBeRemoved(QList<ItemBase*>)),
+    connect( m_model, SIGNAL(itemsAboutToBeRemoved(QList<ItemBase*>)),
              this, SLOT(departuresAboutToBeRemoved(QList<ItemBase*>)) );
     connect( m_model, SIGNAL(departuresLeft(QList<DepartureInfo>)),
              this, SLOT(departuresLeft(QList<DepartureInfo>)) );
@@ -1227,6 +1227,7 @@ void PublicTransport::wheelEvent( QGraphicsSceneWheelEvent* event )
 
 void PublicTransport::departuresAboutToBeRemoved( const QList<ItemBase*>& departures )
 {
+    // Update departure groups
     QMap< QDateTime, QList<DepartureItem*> >::iterator it = m_departureGroups.begin();
     while ( it != m_departureGroups.end() ) {
         // Remove all departures in the current group
@@ -1247,6 +1248,9 @@ void PublicTransport::departuresAboutToBeRemoved( const QList<ItemBase*>& depart
             ++it;
         }
     }
+
+    createPopupIcon();
+    createTooltip();
 }
 
 void PublicTransport::departuresLeft( const QList< DepartureInfo > &departures )
@@ -1264,7 +1268,7 @@ void PublicTransport::createDepartureGroups()
 {
     m_departureGroups.clear();
 
-    // Create departure groups (maximally 5 groups)
+    // Create departure groups (maximally POPUP_ICON_DEPARTURE_GROUP_COUNT groups)
     for ( int row = 0; row < m_model->rowCount(); ++row ) {
         DepartureItem *item = dynamic_cast<DepartureItem*>( m_model->item(row) );
         const DepartureInfo *info = item->departureInfo();
@@ -1299,52 +1303,49 @@ void PublicTransport::createPopupIcon()
 
 void PublicTransport::createTooltip()
 {
-    if ( isPopupShowing() || (formFactor() != Plasma::Horizontal
-                        && formFactor() != Plasma::Vertical) ) {
+    if ( formFactor() != Plasma::Horizontal && formFactor() != Plasma::Vertical ) {
+        // Create the tooltip only when in a panel
+        Plasma::ToolTipManager::self()->clearContent( this );
         return;
     }
 
     Plasma::ToolTipContent data;
     data.setMainText( i18nc("@info", "Public Transport") );
-    if ( m_model->isEmpty() ) {
+    if ( m_departureGroups.isEmpty() ) {
         data.setSubText( i18nc("@info", "View departure times for public transport") );
     } else {
-        QList<DepartureInfo> depInfos = departureInfos();
-        if ( !depInfos.isEmpty() ) {
-            DepartureInfo nextDeparture = depInfos.first();
+        const QList<DepartureItem*> nextDepartures = m_departureGroups.constBegin().value();
+        const QString groupDurationString = nextDepartures.first()->departureInfo()->durationString();
+        QStringList infoStrings;
 
-            if ( m_settings.departureArrivalListType ==  DepartureList ) {
-                // Showing a departure list
-                if ( m_settings.currentStopSettings().stops().count() == 1 ) {
-                    // Only one stop (not combined with others)
-                    data.setSubText( i18nc("@info %4 is the translated duration text, e.g. in 3 minutes",
-                            "Next departure from '%1': line %2 (%3) %4",
-                            m_settings.currentStopSettings().stops().first(),
-                            nextDeparture.lineString(), nextDeparture.target(),
-                            nextDeparture.durationString()) );
-                } else {
-                    // Results for multiple combined stops are shown
-                    data.setSubText( i18nc("@info %3 is the translated duration text, e.g. in 3 minutes",
-                            "Next departure from your home stop: line %1 (%2) %3",
-                            nextDeparture.lineString(), nextDeparture.target(),
-                            nextDeparture.durationString()) );
-                }
-            } else {
-                // Showing an arrival list
-                if ( m_settings.currentStopSettings().stops().count() == 1 ) {
-                    // Only one stop (not combined with others)
-                    data.setSubText( i18nc("@info %4 is the translated duration text, e.g. in 3 minutes",
-                            "Next arrival at '%1': line %2 (%3) %4",
-                            m_settings.currentStopSettings().stops().first(), nextDeparture.lineString(),
-                            nextDeparture.target(), nextDeparture.durationString()) );
-                } else {
-                    // Results for multiple combined stops are shown
-                    data.setSubText( i18nc("@info %3 is the translated duration text, e.g. in 3 minutes",
-                            "Next arrival at your home stop: line %1 (%2) %3",
-                            nextDeparture.lineString(), nextDeparture.target(),
-                            nextDeparture.durationString()) );
-                }
+        if ( m_settings.departureArrivalListType ==  DepartureList ) {
+            // Showing a departure list
+            foreach ( const DepartureItem *item, nextDepartures ) {
+                infoStrings << i18nc("@info Text for one departure for the tooltip (%1: line string, "
+                                     "%2: target)",
+                                     "Line <emphasis strong='1'>%1<emphasis> "
+                                     "to <emphasis strong='1'>%2<emphasis>",
+                                     item->departureInfo()->lineString(),
+                                     item->departureInfo()->target());
             }
+            data.setSubText( i18nc("@info %1 is the translated duration text, e.g. in 3 minutes",
+                    "Next departure(s) (%1) from '%2':<nl/>%3",
+                    groupDurationString, m_settings.currentStopSettings().stops().join(", "),
+                    infoStrings.join(",<nl/>")) );
+        } else {
+            // Showing an arrival list
+            foreach ( const DepartureItem *item, nextDepartures ) {
+                infoStrings << i18nc("@info Text for one arrival for the tooltip (%1: line string, "
+                                     "%2: origin)",
+                                     "Line <emphasis strong='1'>%1<emphasis> "
+                                     "from <emphasis strong='1'>%2<emphasis>",
+                                     item->departureInfo()->lineString(),
+                                     item->departureInfo()->target());
+            }
+            data.setSubText( i18nc("@info %1 is the translated duration text, e.g. in 3 minutes",
+                    "Next arrival(s) (%1) at '%2':<nl/>%4",
+                    groupDurationString, m_settings.currentStopSettings().stops().join(", "),
+                    infoStrings.join(",<nl/>")) );
         }
     }
 
@@ -1825,7 +1826,7 @@ KMenu *PublicTransport::updateFilterMenu()
 
     if ( !m_settings.filterSettingsList.isEmpty() ) {
         menu->addTitle( KIcon("view-filter"), i18nc("@title This is a menu title",
-                                                    "Enabled Filters (reducing)") );
+                                                    "Filters (reducing)") );
         foreach( const FilterSettings &filterSettings, m_settings.filterSettingsList ) {
             QAction *action = new QAction( filterSettings.name, m_filtersGroup );
             action->setCheckable( true );
@@ -1840,10 +1841,10 @@ KMenu *PublicTransport::updateFilterMenu()
     if ( showColorGrous ) {
         if ( m_settings.departureArrivalListType == ArrivalList ) {
             menu->addTitle( KIcon("object-group"), i18nc("@title This is a menu title",
-                                                         "Enabled Arrival Groups (extending)") );
+                                                         "Arrival Groups (extending)") );
         } else {
             menu->addTitle( KIcon("object-group"), i18nc("@title This is a menu title",
-                                                         "Enabled Departure Groups (extending)") );
+                                                         "Departure Groups (extending)") );
         }
         foreach( const ColorGroupSettings &colorGroupSettings,
                  m_settings.currentColorGroupSettings() )
@@ -2903,7 +2904,7 @@ void PublicTransport::alarmFired( DepartureItem* item )
     QString sLine = departureInfo->lineString();
     QString sTarget = departureInfo->target();
     QDateTime predictedDeparture = departureInfo->predictedDeparture();
-    int minsToDeparture = qCeil( (float)QDateTime::currentDateTime().secsTo(predictedDeparture) / 60.0f );
+    int minsToDeparture = qCeil( QDateTime::currentDateTime().secsTo(predictedDeparture) / 60.0 );
 
     QString message;
     if ( minsToDeparture > 0 ) {

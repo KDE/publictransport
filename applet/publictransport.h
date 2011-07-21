@@ -610,7 +610,7 @@ protected slots:
      * @param items A list of DepartureItems, that will get removed
      *   after this slot was called.
      *
-     * @note This slot is connected to the journeysAboutToBeRemoved signal
+     * @note This slot is connected to the itemsAboutToBeRemoved signal
      *   of the departure/arrival model.
      **/
     void departuresAboutToBeRemoved( const QList<ItemBase*> &departures );

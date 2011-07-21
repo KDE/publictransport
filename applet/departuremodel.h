@@ -654,7 +654,7 @@ signals:
      * @param items Can be a list of DepartureItems or JourneyItems, that will
      *   get removed after this signal was emitted.
      **/
-    void journeysAboutToBeRemoved( const QList<ItemBase*> &items );
+    void itemsAboutToBeRemoved( const QList<ItemBase*> &items );
 
 public slots:
     /**
