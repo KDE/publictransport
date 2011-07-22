@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=TimetableMate
+Name[ca]=TimetableMate
 Name[de]=TimetableMate
 Name[et]=Sõiduplaanimeister
 Name[fr]=TimetableMate
@@ -16,6 +17,7 @@ Icon=timetablemate
 Type=Application
 X-DocPath=timetablemate/index.html
 GenericName=A helper application to add providers to PublicTransport
+GenericName[ca]=Una aplicació d'ajuda per afegir proveïdors a PublicTransport
 GenericName[et]=Abirakendus pakkujate lisamiseks ühiskondlikule transpordile
 GenericName[fr]=Une application d'aide pour ajouter des prestataires à l'application Transports publics
 GenericName[km]=កម្មវិធី​ជំនួយ​ដើម្បី​បន្ថែម​កម្មវិធី​ផ្ដល់​ទៅកាន់​ PublicTransport

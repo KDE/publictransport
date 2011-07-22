@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=OpenStreetMap data engine
+Name[ca]=Motor de dades OpenStreetMap
 Name[de]=OpenStreetMap-Datenmodul
 Name[es]=Motor de datos de OpenStreetMap
 Name[et]=OpenStreetMapi andmete mootor
@@ -13,6 +14,7 @@ Name[sv]=Datagränssnitt för Open Street Map
 Name[uk]=Рушій даних OpenStreetMap
 Name[x-test]=xxOpenStreetMap data enginexx
 Comment=The OpenStreetMap data engine can be used to query things near the user.
+Comment[ca]=El motor de dades OpenStreetMap es pot utilitzar per consultar coses a prop de l'usuari.
 Comment[et]=OpenStreetMapi andmete mootorit saab kasutada teabe hankimiseks kasutaja lähedal asuvate objektide kohta.
 Comment[fr]=Le moteur de données OpenStreetMap peut être utilisé pour faire une recherche dans le voisinage de l'utilisateur.
 Comment[km]=ម៉ាស៊ីន​ទិន្នន័យ OpenStreetMap អាច​ត្រូវ​បាន​ប្រើ​ដើម្បី​សួររក​វត្ថុ​នៅ​ជិត​អ្នក​ប្រើ ។

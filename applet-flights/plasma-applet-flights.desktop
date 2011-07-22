@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Flights
+Name[ca]=Flights
 Name[cs]=Lety
 Name[de]=Flüge
 Name[es]=Vuelos
@@ -15,6 +16,7 @@ Name[sv]=Flyg
 Name[uk]=Рейси
 Name[x-test]=xxFlightsxx
 Comment=Shows flight departures/arrivals for a given airport.
+Comment[ca]=Mostra les sortides/arribades dels vols per a un aeroport indicat.
 Comment[de]=Zeigt Abflüge/Ankünfte von Flügen auf einem angegebenen Flughafen an.
 Comment[es]=Muestra las salidas/llegadas de vuelos a un aeropuerto dado.
 Comment[et]=Määratud lennujaama saabuvate/väljuvate lendude näitamine.

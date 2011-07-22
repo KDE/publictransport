@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Public Transport
+Name[ca]=Transport públic
 Name[cs]=Veřejná doprava
 Name[de]=Öffentlicher Nahverkehr
 Name[es]=Transporte público
@@ -15,6 +16,7 @@ Name[sv]=Kollektivtrafik
 Name[uk]=Громадський транспорт
 Name[x-test]=xxPublic Transportxx
 Comment=Gives information about public transport departing from a given stop
+Comment[ca]=Proporciona informació sobre sortides de transport públic des d'una parada indicada
 Comment[et]=Teave ühiskondliku transpordi väljumiste kohta määratud peatusest
 Comment[fr]=Fournit des informations sur les transports publics partant d'un arrêt donné
 Comment[km]=ផ្ដល់​ព័ត៌មាន​អំពី​ការ​​​ដឹកជញ្ជូន​សាធារណៈ​​ដោយ​ចេញ​ដំណើរ​ពី​កន្លែង​ឈប់​ដែល​បាន​ផ្ដល់​ឲ្យ

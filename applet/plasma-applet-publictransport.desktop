@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Public Transport
+Name[ca]=Transport públic
 Name[cs]=Veřejná doprava
 Name[de]=Öffentlicher Nahverkehr
 Name[es]=Transporte público
@@ -15,6 +16,7 @@ Name[sv]=Kollektivtrafik
 Name[uk]=Громадський транспорт
 Name[x-test]=xxPublic Transportxx
 Comment=Plasma Public Transport shows a departure / arrival board for public transport. It can also show journeys.
+Comment[ca]=Transport públic de Plasma mostra un tauler d'arribades / sortides pel transport públic. També pot mostrar els viatges.
 Comment[et]=Plasma ühiskondliku transpordi vidin näitab liiklusvahendite saabumis- ja lahkumisaegu, samuti teekondi.
 Comment[fr]=L'application Transports publics pour Plasma affiche un panneau des départs / arrivées des transports publics, ainsi que des itinéraires.
 Comment[km]=ការ​ដឹកជញ្ជូន​សាធារណៈ​បង្ហាញ​ក្ដារ​ចេញដំណើរ/មកដល់​សម្រាប់​ការ​ដឹកជញ្ជូន​សាធារណៈ ។ វា​ក៏​អាច​បង្ហាញ​ការ​ធ្វើ​ដំណើរ​បាន​​ផងដែរ ។
