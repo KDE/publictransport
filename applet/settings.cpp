@@ -1199,7 +1199,7 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
                           cgGlobal.readEntry("serviceProvider" + suffix, "de_db") );
         stopSettings.set( CitySetting, cgGlobal.readEntry("city" + suffix, QString()) );
         stopSettings.setStops( cgGlobal.readEntry("stop" + suffix, QStringList()),
-                              cgGlobal.readEntry("stopID" + suffix, QStringList()) );
+                               cgGlobal.readEntry("stopID" + suffix, QStringList()) );
         stopSettings.set( TimeOffsetOfFirstDepartureSetting,
                           cgGlobal.readEntry("timeOffsetOfFirstDeparture" + suffix, 0) );
         stopSettings.set( TimeOfFirstDepartureSetting,
@@ -1276,10 +1276,9 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
     settings.colorize = cg.readEntry( "colorize", true );
 
     // ***************** DEPRECATED BEGIN *****************************************************
-    // *** Used for migration of filter settings from versions prior to version 0.10 Beta 9 ***
+    // *** Used for migration of filter settings from versions prior to version 0.10 RC1 ******
     if ( cgGlobal.hasKey("filterConfigurationList") ) {
         kDebug() << "DEPRECATED Filter settings will be restructured for new version";
-
         QStringList filterConfigurationList =
                 cgGlobal.readEntry( "filterConfigurationList", QStringList() );
         for ( int i = filterConfigurationList.count() - 1; i >= 0; --i ) {
@@ -1291,16 +1290,8 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
 
         kDebug() << "Config group list" << cgGlobal.groupList();
         kDebug() << "Filter config list:" << filterConfigurationList;
-        // Delete old filter configs
-        foreach( const QString &group, cgGlobal.groupList() ) {
-            if ( !filterConfigurationList.contains(
-                 group.mid(QString("filterConfig_").length())) )
-            {
-                kDebug() << "Delete old group" << group;
-                cgGlobal.deleteGroup( group );
-            }
-        }
 
+        // Read old filter settings
         settings.filterSettingsList.clear();
         foreach( const QString &filterConfiguration, filterConfigurationList ) {
             FilterSettings filterSettings =
@@ -1484,10 +1475,44 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
     // ***************** DEPRECATED BEGIN *****************************************************
     // *** Used for migration of filter settings from versions prior to version 0.10 Beta 9 ***
     if ( cgGlobal.hasKey("filterConfigurationList") ) {
+        // Read deprecated filter configuration names
+        QStringList filterConfigurationList =
+                cgGlobal.readEntry( "filterConfigurationList", QStringList() );
+        for ( int i = filterConfigurationList.count() - 1; i >= 0; --i ) {
+            const QString &filterConfiguration = filterConfigurationList[ i ];
+            if ( filterConfiguration.isEmpty() ) {
+                filterConfigurationList.removeAt( i );
+            }
+        }
+
+        kDebug() << "Delete deprecated entry \"filterConfigurationList\"";
         cgGlobal.deleteEntry( "filterConfigurationList" );
+
+        // Delete deprecated filter settings
+        foreach( const QString &group, cgGlobal.groupList() ) {
+            if ( !filterConfigurationList.contains(
+                    group.mid(QString("filterConfig_").length())) )
+            {
+                kDebug() << "Delete deprecated group" << group;
+                cgGlobal.deleteGroup( group );
+            }
+        }
+
+        // Delete filter configuration names in stop settings
+        const QString filterConfigurationKey = "filterConfiguration";
+        QString currentFilterConfigurationKey = filterConfigurationKey;
+        int i = 2;
+        while ( cgGlobal.hasKey(currentFilterConfigurationKey) ) {
+            kDebug() << "Delete deprecated filter using entry" << currentFilterConfigurationKey;
+            cgGlobal.deleteEntry( currentFilterConfigurationKey );
+
+            currentFilterConfigurationKey = filterConfigurationKey + '_' + QString::number(i);
+            ++i;
+        }
+
         cgGlobal.sync();
-        kDebug() << "Deleted deprecated entry \"filterConfigurationList\"";
     }
+
     // ***************** DEPRECATED END *******************************************************
 
     // Write filter settings
