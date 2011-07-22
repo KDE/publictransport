@@ -5,6 +5,30 @@ publictransport page on kde-look.org.
 Maybe you want to suggest changes in this document like new/better hints.
 
 *******************************************************
+*** Release branches **********************************
+*******************************************************
+  For the new 0.10rc1 version, I created a release branch "0.10" with a tag "unstable-0.10-rc1".
+  To download a release branch from remote go to your cloned repository and type
+     > git pull origin ${version_branch}
+  This downloads the specified branch, eg. "git pull origin 0.10" for the 0.10 release branch.
+
+  You can switch to the branch using
+     > git branch ${version_branch}
+
+  A future 0.11 or 1.0 release will get it's own release branch.
+  The master branch should always be stable now, development happens in feature branches,
+  which get merged to an integration branch and after testing into the master branch.
+  More details at http://community.kde.org/KDE_Core/Platform_11/Git_Workflow.
+
+  This way snapshots of the master branch should always be usable and stable and may of course
+  contain some more features than the last release.
+  Bugfixes will get backported to release branches where possible.
+
+  NOTE: If some of the commands below don't work any longer, please make sure, you downloaded
+        and switched to the release branch you want. I need to figure out, how it works ;)
+        Maybe the "unstable-0.10-rc1" tag for example is only visible if in the "0.10" branch.
+
+*******************************************************
 *** Get version strings *******************************
 *******************************************************
   You can checkout different (tagged) versions from the GIT repository.
@@ -58,14 +82,21 @@ Maybe you want to suggest changes in this document like new/better hints.
   - You can clone the repository and then show the list of tagged versions
     manually and checkout the version you want:
      > git clone git://anongit.kde.org/publictransport
-     > git tag -l (prints out tagged versions)
-     > git checkout <VERSION> (loads the version associated with the given <VERSION>, eg. "unstable-0.10-beta7")
+     > git branch -r              (lists all remote branches, eg. release and feature branches)
+     > git pull origin <RELEASE>  (replace <RELEASE> with the release version to download, eg. "0.10")
+     > git branch <RELEASE>       (go to that release branch)
+     > git tag -l                 (prints out tagged versions)
+     > git checkout <VERSION>     (loads the version associated with the given <VERSION>, eg. "unstable-0.10-rc1")
+
   - This way you can keep your local clone of the repository and checkout new 
     tagged versions once they're available like this:
-     > git checkout master (go to master branch again)
-     > git pull (update repository)
+     > git branch <RELEASE> (go to a release branch, eg. "0.10")
+     > git pull origin <RELEASE> (update the branch)
      > git checkout <VERSION> (like above)
-  
+
+  - To get a completely new release (not a patched version of the current release, eg. 0.10.2)
+    repeat the steps above to download the new release branch, eg. "0.11".
+
 *******************************************************
 *** Get noticed about new versions ********************
 *******************************************************
@@ -92,17 +123,19 @@ Maybe you want to suggest changes in this document like new/better hints.
       Description: A Plasma data engine that gets timetable information from 
         service providers supported via scripts.
 
-	  Hint: On installation it creates relative symbolic links for default service 
+      Hint: On installation it creates relative symbolic links for default service 
         providers of supported countries, eg. "de_default.xml" -> "de_db.xml".
       Dependent: plasma-applet-publictransport, plasma-applet-graphicaltimetableline, 
         plasma-applet-flights, plasma-runner-publictransport, timetablemate
 
   - engine-openstreetmap
       Description: A Plasma data engine that gets public transport stop names 
-        in a given area via OpenStreetMap.
+        in a given area via OpenStreetMap or coordinates of a stop given by it's name.
 
-      Hint: Optional, used by libpublictransporthelper 
-        (only useful with GPS hardware)
+      Hint: This engine is optional, but needed for actions "Show This Stop in a Map"
+        (using marble). If this engine isn't installed, these actions are simply not shown.
+        If there is GPS hardware, this engine can also be used to find stops near the users
+        current position (used by libpublictransporthelper).
 
   - icons
       Description: Contains a public transport stop icon and several icons for 
