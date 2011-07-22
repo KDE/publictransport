@@ -1343,7 +1343,7 @@ void PublicTransport::createTooltip()
                                      item->departureInfo()->target());
             }
             data.setSubText( i18nc("@info %1 is the translated duration text, e.g. in 3 minutes",
-                    "Next arrival(s) (%1) at '%2':<nl/>%4",
+                    "Next arrival(s) (%1) at '%2':<nl/>%3",
                     groupDurationString, m_settings.currentStopSettings().stops().join(", "),
                     infoStrings.join(",<nl/>")) );
         }
