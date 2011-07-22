@@ -12,17 +12,6 @@ include_directories(
    )
 
 ##########################
-# The runner #############
-##########################
-set(krunner_publictransport_SRCS
-    publictransportrunner.cpp )
-kde4_add_plugin(krunner_publictransport ${krunner_publictransport_SRCS})
-target_link_libraries(krunner_publictransport
-	${KDE4_PLASMA_LIBS} 
-	${KDE4_KDEUI_LIBS}
-)
-
-##########################
 # The runner config ######
 ##########################
 set(kcm_krunner_publictransport_SRCS
@@ -41,6 +30,17 @@ target_link_libraries( kcm_krunner_publictransport
 )
 # Add the publictransporthelper library sub directory (extern)
 # add_subdirectory( publictransporthelper )
+
+##########################
+# The runner #############
+##########################
+set(krunner_publictransport_SRCS
+    publictransportrunner.cpp )
+kde4_add_plugin(krunner_publictransport ${krunner_publictransport_SRCS})
+target_link_libraries(krunner_publictransport
+	${KDE4_PLASMA_LIBS} 
+	${KDE4_KDEUI_LIBS}
+)
 
 ##########################
 # Install both ###########
