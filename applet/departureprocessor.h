@@ -113,10 +113,13 @@ public:
      *
      * @param timeOffsetOfFirstDeparture The offset in minutes of the first result departure/arrival.
      *
+     * @param arrival The departures to be processed are actually arrivals.
+     *
      * @see FirstDepartureConfigMode
      **/
     void setFirstDepartureSettings( FirstDepartureConfigMode firstDepartureConfigMode,
-            const QTime &timeOfFirstDepartureCustom, int timeOffsetOfFirstDeparture );
+            const QTime &timeOfFirstDepartureCustom, int timeOffsetOfFirstDeparture,
+            bool arrival );
 
     /**
      * @brief Enqueues a job of type @ref ProcessDepartures to the job queue.
@@ -300,6 +303,7 @@ private:
     FirstDepartureConfigMode m_firstDepartureConfigMode;
     QTime m_timeOfFirstDepartureCustom;
     int m_timeOffsetOfFirstDeparture;
+    bool m_isArrival;
 
     bool m_quit, m_abortCurrentJob, m_requeueCurrentJob;
     QMutex m_mutex;

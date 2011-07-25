@@ -175,7 +175,8 @@ public:
      * The given departure @p infoList get grouped by direction. Each group gets a color assigned.
      **/
     static ColorGroupSettingsList generateColorGroupSettingsFrom(
-            const QList< DepartureInfo >& infoList );
+            const QList< DepartureInfo >& infoList,
+            DepartureArrivalListType departureArrivalListType );
 
     /** @brief Ensures that there is one color group settings list for each stop setting. */
     void adjustColorGroupSettingsCount();

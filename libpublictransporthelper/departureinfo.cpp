@@ -248,7 +248,7 @@ void DepartureInfo::init( const QString &operatorName, const QString &line,
                           const QString &platform, int delay,
                           const QString &delayReason, const QString &journeyNews,
                           const QStringList &routeStops, const QList<QTime> &routeTimes,
-                          int routeExactStops )
+                          int routeExactStops, bool arrival )
 {
     m_filteredOut = false;
 
@@ -274,6 +274,8 @@ void DepartureInfo::init( const QString &operatorName, const QString &line,
     m_routeStops = routeStops;
     m_routeTimes = routeTimes;
     m_routeExactStops = routeExactStops;
+
+    m_arrival = arrival;
 
     generateHash();
 }

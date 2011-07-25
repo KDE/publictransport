@@ -87,14 +87,14 @@ void DepartureProcessor::setColorGroupSettings( const ColorGroupSettingsList& co
 }
 
 void DepartureProcessor::setFirstDepartureSettings(
-        FirstDepartureConfigMode firstDepartureConfigMode,
-        const QTime& timeOfFirstDepartureCustom,
-        int timeOffsetOfFirstDeparture )
+        FirstDepartureConfigMode firstDepartureConfigMode, const QTime& timeOfFirstDepartureCustom,
+        int timeOffsetOfFirstDeparture, bool arrival )
 {
     QMutexLocker locker( &m_mutex );
     m_firstDepartureConfigMode = firstDepartureConfigMode;
     m_timeOfFirstDepartureCustom = timeOfFirstDepartureCustom;
     m_timeOffsetOfFirstDeparture = timeOffsetOfFirstDeparture;
+    m_isArrival = arrival;
 }
 
 void DepartureProcessor::setAlarmSettings( const AlarmSettingsList& alarmSettings )
@@ -221,6 +221,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     FirstDepartureConfigMode firstDepartureConfigMode = m_firstDepartureConfigMode;
     const QTime &timeOfFirstDepartureCustom = m_timeOfFirstDepartureCustom;
     int timeOffsetOfFirstDeparture = m_timeOffsetOfFirstDeparture;
+    bool isArrival = m_isArrival;
     m_mutex.unlock();
 
     emit beginDepartureProcessing( sourceName );
@@ -256,7 +257,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
                 dataMap["platform"].toString(), dataMap["delay"].toInt(),
                 dataMap["delayReason"].toString(), dataMap["journeyNews"].toString(),
                 dataMap["routeStops"].toStringList(), routeTimes,
-                dataMap["routeExactStops"].toInt() );
+                dataMap["routeExactStops"].toInt(), isArrival );
 
         // Update the list of alarms that match the current departure
         departureInfo.matchedAlarms().clear();

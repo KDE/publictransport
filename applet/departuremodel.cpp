@@ -2153,9 +2153,9 @@ RouteStopFlags DepartureItem::routeStopFlags( int routeStopIndex, int *minsFromF
     {
         const QTime time = m_departureInfo.routeTimes()[routeStopIndex];
         _minsFromFirstRouteStop = qCeil( m_departureInfo.departure().time().secsTo(time) / 60.0 );
-        while ( _minsFromFirstRouteStop < 0 ) {
-            _minsFromFirstRouteStop += 60 * 24;
-        }
+//         while ( _minsFromFirstRouteStop < 0 ) {
+//             _minsFromFirstRouteStop += 60 * 24;
+//         }
     }
     if ( m_model->info().homeStop == stopName || _minsFromFirstRouteStop == 0 ) {
         routeStopFlags |= RouteStopIsHomeStop;

@@ -70,15 +70,18 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
                 return false;
             break;
         }
-        case FilterByNextStop:
-            if ( departureInfo.routeStops().count() < 2 ||
-                 departureInfo.routeExactStops() == 1 ||
-                 !matchString(constraint.variant, constraint.value.toString(),
-                              departureInfo.routeStops()[1]) ) {
+        case FilterByNextStop: {
+            if ( departureInfo.routeStops().count() < 2 || departureInfo.routeExactStops() == 1 ) {
+                return false;
+            }
+
+            QString nextStop = !departureInfo.isArrival() ? departureInfo.routeStops()[ 1 ]
+                    : departureInfo.routeStops()[ departureInfo.routeStops().count() - 2 ];
+            if ( !matchString(constraint.variant, constraint.value.toString(), nextStop) ) {
                 return false;
             }
             break;
-        case FilterByTransportLine:
+        } case FilterByTransportLine:
             if ( !matchString(constraint.variant, constraint.value.toString(),
                               departureInfo.lineString()) ) {
                 return false;

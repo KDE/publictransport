@@ -1415,7 +1415,8 @@ void PublicTransport::configChanged()
             static_cast<FirstDepartureConfigMode>(stopSettings.get<int>(
                 FirstDepartureConfigModeSetting)),
             stopSettings.get<QTime>(TimeOfFirstDepartureSetting),
-            stopSettings.get<int>(TimeOffsetOfFirstDepartureSetting) );
+            stopSettings.get<int>(TimeOffsetOfFirstDepartureSetting),
+            m_settings.departureArrivalListType == ArrivalList );
     m_departureProcessor->setAlarmSettings( m_settings.alarmSettings );
 
     // Apply other settings to the model
@@ -3096,7 +3097,8 @@ void PublicTransport::updateColorGroupSettings()
         adjustColorGroupSettingsCount();
         ColorGroupSettingsList colorGroups = m_settings.currentColorGroupSettings();
         ColorGroupSettingsList newColorGroups =
-                generateColorGroupSettingsFrom( departureInfos(true, 40) );
+                generateColorGroupSettingsFrom( departureInfos(true, 40),
+                                                m_settings.departureArrivalListType );
 
         // Copy filterOut values from old color group settings
         for ( int i = 0; i < newColorGroups.count(); ++i ) {
@@ -3123,7 +3125,7 @@ void PublicTransport::updateColorGroupSettings()
 }
 
 ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
-        const QList< DepartureInfo >& infoList )
+        const QList< DepartureInfo >& infoList, DepartureArrivalListType departureArrivalListType )
 {
     // Only test routes of up to 1 stops (the first 1 of the actual route)
     const int maxTestRouteLength = 1;
@@ -3267,9 +3269,15 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
     QHash< QStringList, int > routePartsToLines;
     for ( int stopCount = 1; stopCount <= maxTestRouteLength; ++stopCount ) {
         foreach ( const DepartureInfo &info, infoList ) {
-            QStringList routePart = info.routeStops().mid( 1, stopCount );
+            int startIndex = departureArrivalListType == ArrivalList
+                    ? info.routeStops().count() - stopCount - 1 : 1;
+            if ( startIndex < 0 ) {
+                kDebug() << "Start index is invalid" << startIndex;
+                continue; // Invalid start index, too less route stops
+            }
+            QStringList routePart = info.routeStops().mid( startIndex, stopCount );
             if ( routePart.isEmpty() ) {
-                kDebug() << "Route part is empty";// << transportLineAndTarget;
+                kDebug() << "Route part is empty";
                 continue;
             }
 
@@ -3278,7 +3286,7 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
                 // Increment the count of the route part by one
                 ++routePartsToLines[routePart];
             } else {
-                // Add new route part with the transportLineAndTarget string counted
+                // Add new route part with count 1
                 routePartsToLines.insert( routePart, 1 );
             }
         }
