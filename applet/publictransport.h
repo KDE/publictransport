@@ -34,6 +34,7 @@
 #include "settings.h" // Only for ColorGroupSettingsList, remove here, move the function to GlobalApplet?
 #include <publictransporthelper/departureinfo.h>
 
+class JourneySearchAnalyzer;
 class PublicTransportSettings;
 class OverlayWidget;
 class PublicTransportGraphicsItem;
@@ -821,6 +822,7 @@ private:
     QList<JourneyInfo> m_journeyInfos; // List of current journeys.
     QString m_currentJourneySource; // Current source name for journeys at the publictransport data engine.
     QString m_journeyTitleText;
+    JourneySearchAnalyzer *m_journeySearchAnalyzer;
 
     QString m_lastSecondStopName; // The last used second stop name for journey search.
     QDateTime m_lastJourneyDateTime; // The last used date and time for journey search.
@@ -853,11 +855,8 @@ private:
     qreal m_longitude, m_latitude; // Coordinates from openstreetmap for a given stop
 };
 
-#ifndef NO_EXPORT_PLASMA_APPLET // Needed for settings.cpp to include publictransport.h
 // This is the command that links the applet to the .desktop file
 K_EXPORT_PLASMA_APPLET( publictransport, PublicTransport )
-#endif
-
 
 /** @mainpage Public Transport Applet
 @section intro_applet_sec Introduction

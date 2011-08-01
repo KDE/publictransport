@@ -117,7 +117,7 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
         m_graphicsWidget(0), m_mainGraphicsWidget(0), m_oldItem(0), m_titleWidget(0),
         m_labelInfo(0), m_timetable(0), m_journeyTimetable(0), m_listStopSuggestions(0),
         m_overlay(0), m_model(0), m_popupIconTransitionAnimation(0),
-        m_modelJourneys(0), m_departureProcessor(0), m_stateMachine(0),
+        m_modelJourneys(0), m_journeySearchAnalyzer(0), m_departureProcessor(0), m_stateMachine(0),
         m_journeySearchTransition1(0), m_journeySearchTransition2(0),
         m_journeySearchTransition3(0), m_marble(0)
 {
@@ -137,6 +137,7 @@ PublicTransport::~PublicTransport()
     if ( hasFailedToLaunch() ) {
         // Do some cleanup here
     } else {
+        delete m_journeySearchAnalyzer;
     }
 }
 
@@ -402,8 +403,8 @@ void PublicTransport::setupStateMachine()
     connect( arrivalState, SIGNAL(entered()), this, SLOT(showArrivals()) );
     connect( departureState, SIGNAL(entered()), this, SLOT(showDepartures()) );
 
-    connect( journeySearchState, SIGNAL(entered()),
-             this, SLOT(showJourneySearch()) );
+    connect( journeySearchState, SIGNAL(entered()), this, SLOT(showJourneySearch()) );
+    connect( journeySearchState, SIGNAL(exited()), this, SLOT(journeySearchFinished()) );
     connect( journeysUnsupportedViewState, SIGNAL(entered()),
              this, SLOT(showJourneysUnsupportedView()) );
     connect( journeyViewState, SIGNAL(entered()),
@@ -1735,6 +1736,7 @@ void PublicTransport::showJourneySearch()
                                  isStateActive("departureDataValid"),
                                  isStateActive("journeyDataValid") );
 
+    m_journeySearchAnalyzer = new JourneySearchAnalyzer();
     Plasma::LineEdit *journeySearch =
             m_titleWidget->castedWidget<Plasma::LineEdit>( TitleWidget::WidgetJourneySearchLine );
     Q_ASSERT( journeySearch );
@@ -1792,14 +1794,20 @@ void PublicTransport::journeySearchInputFinished()
     writeSettings( settings );
 
     m_journeyTitleText.clear();
-    QString stop;
-    QDateTime departure;
-    bool stopIsTarget, timeIsDeparture;
-    JourneySearchParser::parseJourneySearch( journeySearch->nativeWidget(),
-            journeySearch->text(), &stop, &departure,
-            &stopIsTarget, &timeIsDeparture );
+//     QString stop;
+//     QDateTime departure;
+//     bool stopIsTarget, timeIsDeparture;
+//     JourneySearchParser::parseJourneySearch( journeySearch->nativeWidget(),
+//             journeySearch->text(), &stop, &departure,
+//             &stopIsTarget, &timeIsDeparture );
 
-    reconnectJourneySource( stop, departure, stopIsTarget, timeIsDeparture );
+    JourneySearchAnalyzer::Results results = m_journeySearchAnalyzer->analyze( journeySearch->text() );
+    reconnectJourneySource( results.stopName, results.time,
+                            results.stopIsTarget, results.timeIsDeparture );
+
+    delete m_journeySearchAnalyzer;
+    m_journeySearchAnalyzer = NULL;
+//     reconnectJourneySource( stop, departure, stopIsTarget, timeIsDeparture );
     emit journeySearchFinished();
 }
 

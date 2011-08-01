@@ -29,7 +29,7 @@
 #include <KDebug>
 
 JourneySearchHighlighter::JourneySearchHighlighter( QTextDocument* parent )
-        : QSyntaxHighlighter( parent )
+        : QSyntaxHighlighter(parent), m_keywords(new JourneySearchKeywords)
 {
     m_formatStopName.setFontWeight( QFont::Bold );
     m_formatStopName.setForeground( Qt::darkMagenta );
@@ -38,6 +38,11 @@ JourneySearchHighlighter::JourneySearchHighlighter( QTextDocument* parent )
     m_formatValue.setForeground( Qt::blue );
     m_formatError.setFontItalic( true );
     m_formatError.setForeground( Qt::red );
+}
+
+JourneySearchHighlighter::~JourneySearchHighlighter()
+{
+    delete m_keywords;
 }
 
 int JourneySearchHighlighter::highlightKeywords( const QString& text,
@@ -90,15 +95,15 @@ int JourneySearchHighlighter::highlightCombinations( const QString& text,
 void JourneySearchHighlighter::highlightBlock( const QString& text )
 {
     // Highlight keywords
-    highlightKeywords( text, QStringList() << JourneySearchParser::toKeywords()
-                    << JourneySearchParser::fromKeywords(), m_formatKeyword, 1, 0 );
-    highlightKeywords( text, QStringList() << JourneySearchParser::arrivalKeywords()
-                    << JourneySearchParser::departureKeywords(), m_formatKeyword, 1 );
-    highlightKeywords( text, JourneySearchParser::timeKeywordsTomorrow(), m_formatKeyword, 1 );
+    highlightKeywords( text, QStringList() << m_keywords->toKeywords()
+            << m_keywords->fromKeywords(), m_formatKeyword, 1, 0 );
+    highlightKeywords( text, QStringList() << m_keywords->arrivalKeywords()
+            << m_keywords->departureKeywords(), m_formatKeyword, 1 );
+    highlightKeywords( text, m_keywords->timeKeywordsTomorrow(), m_formatKeyword, 1 );
 
     // Highlight date/time keys and values
     // ("[time]" or "[date]" or "[time], [date]" or "[date], [time]")
-    int matched = highlightCombinations( text, JourneySearchParser::timeKeywordsAt(),
+    int matched = highlightCombinations( text, m_keywords->timeKeywordsAt(),
             QStringList() << "\\d{2}:\\d{2}(, \\d{2}\\.\\d{2}\\.(\\d{2,4})?)?"
                 << "\\d{2}:\\d{2}(, \\d{2}-\\d{2}(-\\d{2,4})?)?"
                 << "\\d{2}:\\d{2}(, (\\d{2,4}-)?\\d{2}-\\d{2})?"
@@ -108,8 +113,8 @@ void JourneySearchHighlighter::highlightBlock( const QString& text )
             m_formatValue, 1 );
 
     // Highlight relative time keys and values
-    highlightCombinations( text, JourneySearchParser::timeKeywordsIn(),
-                        QStringList() << JourneySearchParser::relativeTimeString( "\\d{1,}" ),
+    highlightCombinations( text, m_keywords->timeKeywordsIn(),
+                        QStringList() << m_keywords->relativeTimeString("\\d{1,}"),
                         m_formatValue, matched == 0 ? 1 : 0 );
 
     // Highlight stop name if it is inside double quotes

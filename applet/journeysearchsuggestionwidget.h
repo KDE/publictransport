@@ -30,6 +30,9 @@
 #include <QGraphicsWidget>
 #include <QModelIndex>
 
+class JourneySearchKeywords;
+class JourneySearchAnalyzer;
+class JourneySearchAnalyzer;
 class QGraphicsSceneMouseEvent;
 namespace Plasma {
     class LineEdit;
@@ -83,6 +86,7 @@ public:
      **/
     explicit JourneySearchSuggestionWidget( QGraphicsItem *parent, Settings *settings,
                                             const QPalette &palette = QPalette() );
+    virtual ~JourneySearchSuggestionWidget();
 
     QModelIndex currentIndex() const;
     void setCurrentIndex( const QModelIndex &currentIndex );
@@ -208,6 +212,8 @@ private:
     Settings *m_settings;
     Plasma::LineEdit *m_lineEdit;
     Suggestions m_enabledSuggestions;
+    JourneySearchAnalyzer *m_journeySearchAnalyzer;
+    JourneySearchKeywords *m_journeySearchKeywords;
 
     int m_journeySearchLastTextLength; /**< The last number of unselected characters in the
             * journey search input field. */

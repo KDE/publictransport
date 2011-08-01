@@ -25,10 +25,12 @@
 #include <QSyntaxHighlighter>
 #include <QTextDocument>
 
+class JourneySearchKeywords;
 /** @brief Highlights journey search keywords, values and the stop name if it is double quoted. */
 class JourneySearchHighlighter : public QSyntaxHighlighter {
 public:
     JourneySearchHighlighter( QTextDocument* parent );
+    virtual ~JourneySearchHighlighter();
 
     /** @brief Format for the double quoted stop name (actually for every double quoted string). */
     QTextCharFormat &formatStopName() { return m_formatStopName; };
@@ -61,6 +63,7 @@ protected:
 
 private:
     QTextCharFormat m_formatStopName, m_formatKeyword, m_formatValue, m_formatError;
+    JourneySearchKeywords *m_keywords;
 };
 
 /**
