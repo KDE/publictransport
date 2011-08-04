@@ -51,11 +51,12 @@ public:
 	 * @brief The available location item types. The values are also used for sorting.
 	 **/
 	enum ItemType {
-		Total = 0, /**< Displays the number of total accessors. */
-		Country = 1, /**< Displays a country. */
-		International = 2, /**< Special type for accessors that support countries all over the world. */
-		Unknown = 3, /**< For accessors with unknown country. */
-		Errornous = 4 /**< Displays errornous accessors. */
+        Invalid = 0, /**< An invalid item, that is not completely initialized. */
+		Total = 1, /**< Displays the number of total accessors. */
+		Country = 2, /**< Displays a country. */
+		International = 3, /**< Special type for accessors that support countries all over the world. */
+		Unknown = 4, /**< For accessors with unknown country. */
+		Errornous = 5 /**< Displays errornous accessors. */
 	};
 	
 	/**

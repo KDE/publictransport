@@ -43,7 +43,7 @@ class DeparturePainter : public QObject {
     Q_OBJECT
 
 public:
-    DeparturePainter( QObject *parent = 0 ) : QObject(parent) {};
+    DeparturePainter( QObject *parent = 0 ) : QObject(parent), m_svg(0) {};
 
     void setSvg( Plasma::Svg *svg ) { m_svg = svg; };
     Plasma::Svg *svg() const { return m_svg; };

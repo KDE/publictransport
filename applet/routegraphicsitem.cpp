@@ -892,16 +892,8 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
 
         // Add the route stop items (JourneyRouteStopGraphicsItem)
         for ( int i = 0; i < info->routeStops().count(); ++i ) {
-            QFontMetrics *fontMetrics;
-            QFont *font;
-            if ( i == 0 || i == info->routeStops().count() - 1 ) {
-                font = &boldRouteFont;
-                fontMetrics = &fmBold;
-            } else {
-                font = &routeFont;
-                fontMetrics = &fm;
-            }
-
+            QFont *font = i == 0 || i == info->routeStops().count() - 1
+                    ? &boldRouteFont : &routeFont;
             const QString stopName = info->routeStops()[i];
             QString text = QString( "<b>%1</b>" ).arg( stopName );
 
