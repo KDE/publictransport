@@ -137,8 +137,20 @@ enum ErrorSeverity {
             * in @ref Analyzer::setErrorHandling. */
 };
 
+/** @brief Options for how to construct an output string from a list of syntax items. */
+enum OutputStringFlag {
+    DefaultOutputString = 0x0000, /**< Don't include errornous parts. This shouldn't be used if
+            * the output string is currently typed in by the user, because correct strings
+            * (almost) can't be typed with a single keystroke. */
+    ErrornousOutputString = 0x0001, /** Include errornous parts. This flag should be used if
+            * the output string gets typed in interactively. */
+};
+Q_DECLARE_FLAGS( OutputStringFlags, OutputStringFlag );
+
 /**
  * @brief Base class for lexical/syntactical/contextual analyzers.
+ *
+ * An LR(1)-Parser, for an RL(1)-Parser, see @ref AnalyzerRL.
  **/
 template <typename Container>
 class Analyzer {
@@ -192,10 +204,15 @@ public:
                            ErrorSeverity minAcceptWithErrorsSeverity = ErrorSevere );
 
     int cursorOffset() const { return m_cursorOffset; };
-    void setCursorOffset( int cursorOffset = 0 ) { m_cursorOffset = cursorOffset; };
+    int selectionLength() const { return m_selectionLength; };
+    void setCursorValues( int cursorOffset = 0, int selectionLength = 0 ) {
+        m_cursorOffset = cursorOffset;
+        m_selectionLength = selectionLength;
+    };
     void setCursorPositionInInputString( int cursorPositionInInputString = -1 ) {
         m_cursorPositionInInputString = cursorPositionInInputString;
         m_cursorOffset = 0;
+        m_selectionLength = 0;
     };
 
 protected:
@@ -206,7 +223,8 @@ protected:
      * isn't already @ref Rejected, the result value is set to @ref AcceptedWithErrors.
      **/
     virtual inline void readItem() {
-        ++m_inputIterator;
+        m_inputIterator = m_inputIteratorLookahead;
+        ++m_inputIteratorLookahead;
         if ( isItemErrornous() && m_result != Rejected ) {
             m_result = AcceptedWithErrors;
         }
@@ -223,7 +241,7 @@ protected:
     /**
      * @brief Checks wether or not the input interator points to the last item of the input.
      **/
-    virtual inline bool isAtEnd() const { return m_inputIterator == m_input.end() - 1; };
+    virtual inline bool isAtEnd() const { return m_inputIteratorLookahead == m_input.constEnd(); };
 
     virtual void setError( ErrorSeverity severity, const QString& errornousText,
                            const QString& errorMessage, int position, int index = -1 );
@@ -235,8 +253,10 @@ protected:
     ErrorSeverity m_minAcceptWithErrorsSeverity;
     Container m_input;
     typename Container::ConstIterator m_inputIterator;
+    typename Container::ConstIterator m_inputIteratorLookahead; // Lookahead iterator, always the next item of m_inputIterator
     int m_cursorPositionInInputString; // In the input string of the first analyzer pass
     int m_cursorOffset;
+    int m_selectionLength;
 };
 
 /**
@@ -262,15 +282,19 @@ protected:
     AnalyzerReadDirection direction() const { return m_direction; };
 
     /**
-     * @brief Increases the input iterator and checks for errors.
+     * @brief Increases/Decreases the input iterator and checks for errors.
      *
-     * Decreses if direction is RightToLeft. Error checking is done by using @ref isItemErrornous.
+     * Increases if direction is @ref LeftToRight, decreses if direction is @ref RightToLeft. 
+     * Error checking is done by using @ref isItemErrornous.
      * If there is an error and the input isn't already @ref Rejected, the result value is set to
      * @ref AcceptedWithErrors.
      **/
     virtual inline void readItem() {
-        this->m_inputIterator += m_direction == RightToLeft ? -1 : 1;
-        if ( this->isItemErrornous() && this->m_result != Rejected ) {
+        this->m_inputIterator = this->m_inputIteratorLookahead;
+        this->m_inputIteratorLookahead += m_direction == RightToLeft ? -1 : 1;
+        if ( this->m_inputIterator != this->m_input.constEnd() && this->isItemErrornous() &&
+             this->m_result != Rejected )
+        {
             this->m_result = AcceptedWithErrors;
         }
     };
@@ -281,8 +305,8 @@ protected:
      * If direction is @ref RightToLeft the last item is actually the first.
      **/
     virtual inline bool isAtEnd() const {
-        return m_direction == RightToLeft ? this->m_inputIterator == this->m_input.begin()
-                                          : this->m_inputIterator == this->m_input.end() - 1;
+        return m_direction == RightToLeft ? this->m_inputIterator == this->m_input.constBegin()
+                                          : this->m_inputIteratorLookahead == this->m_input.constEnd();
     };
 
     AnalyzerReadDirection m_direction;
@@ -307,7 +331,7 @@ public:
      * @brief Types of lexems.
      **/
     enum Type {
-        Error, /**< An illegal string/character in the input string. */
+        Error = 0, /**< An illegal string/character in the input string. */
         Number, /**< A string of digits. */
         QuotationMark, /**< A single quotation mark ("). */
         Colon, /**< A colon (:). */
@@ -343,6 +367,9 @@ public:
     /** @brief Wether or not there are any errors in the input string for this lexem. */
     inline bool isErrornous() const { return m_type == Error; };
 
+    /** @brief Wether or not there is a space character after this lexem in the input string. */
+    inline bool isFollowedBySpace() const { return m_followedBySpace; };
+
     /**
      * @brief Wether or not this is a valid lexem, that has been read from the input string.
      *
@@ -369,15 +396,21 @@ protected:
      * @brief Constructs a new Lexem object.
      *
      * @param type The type of the Lexem.
+     *
      * @param text The text in the input string for which this Lexem is created.
+     *
      * @param pos The position in the input string of the Lexem.
+     *
+     * @param followedBySpace Whether or not there is a space character after this lexem in the
+     *   input string.
      **/
-    Lexem( Type type, const QString &text, int pos );
+    Lexem( Type type, const QString &text, int pos, bool followedBySpace = true );
 
 private:
     Type m_type;
     QString m_text;
     int m_pos;
+    bool m_followedBySpace;
 };
 inline bool operator <( const Lexem &lexem1, const Lexem &lexem2 ) {
     return lexem1.position() < lexem2.position();
@@ -414,7 +447,8 @@ public:
 protected:
     Symbol symbolOf( const QChar &c ) const;
 
-    void endCurrentWord();
+    void endCurrentWord( bool followedBySpace = false );
+    bool isSpaceFollowing();
     virtual inline void readItem() { ++m_inputIterator; ++m_pos; };
     virtual inline bool isAtEnd() const { return m_pos >= m_input.length(); };
 
@@ -439,9 +473,11 @@ private:
  **/
 class SyntaxItem {
 public:
-    // Friend classes are allowed to call the protected constructor
+    // Friends for calling the protected constructor
     friend class SyntacticalAnalyzer;
     friend class ContextualAnalyzer;
+    friend class JourneySearchAnalyzer;
+    friend class Results;
 
     /**
      * @brief Types of syntax items.
@@ -592,7 +628,11 @@ inline bool operator <( const SyntaxItem &syntaxItem1, const SyntaxItem &syntaxI
  * @brief Analyzes a given list of @ref Lexem objects and constructs a list of @ref SyntaxItem objects.
  *
  * Depending on the @ref correctionLevel, the input string may be corrected, resulting in syntax
- * items in the output that aren't completely/correctly read from the input.
+ * items in the output that aren't completely/correctly read from the input. Inserted correction
+ * items have the flag @ref SyntaxItem::CorrectedSyntaxItem set.
+ *
+ * This class has multiple matchX() functions, which return a boolean: true, if they have matched;
+ * false, otherwise. If they have matched, the input iterator is set to the next item.
  **/
 class SyntacticalAnalyzer : public AnalyzerRL< QLinkedList<Lexem> > {
 public:
@@ -607,35 +647,68 @@ public:
     QLinkedList<SyntaxItem> output() const { return m_output; };
 
 protected:
+//     enum MatchResult {
+//         MatchedNothing = 0,
+//         MatchedCompletely = 1,
+//         MatchedPartially = 2
+//     };
+
     virtual inline bool isItemErrornous() { return m_inputIterator->isErrornous(); };
     virtual void setError( ErrorSeverity severity, const QString& errornousText,
                            const QString& errorMessage, int position, int index = -1 );
 
-    /** @brief Inserts syntaxItem into the output, sorted by SyntaxItem::position(). */
-    void addOutputItem( const SyntaxItem &syntaxItem );
+    inline void readItemAndSkipSpaces() {
+        AnalyzerRL::readItem();
+        readSpaceItems();
+    };
+
+    void readSpaceItems() {
+        while ( m_inputIterator != m_input.constEnd() && m_inputIterator->type() == Lexem::Space ) {
+            addOutputItem( SyntaxItem(SyntaxItem::Error, " ", m_inputIterator->position(),
+                                      "Double space character") );
+            readItem();
+        }
+    };
+
+    /**
+     * @brief Inserts @p syntaxItem into the output, sorted by SyntaxItem::position().
+     *
+     * @returns An iterator pointing at the inserted item.
+     **/
+    QLinkedList<SyntaxItem>::iterator addOutputItem( const SyntaxItem &syntaxItem );
 
     JourneySearchKeywords *keywords() const { return m_keywords; };
 
-    // Recursive descent
+    // Recursive descent (keywords can have multiple translations)
+    //  [JourneySearch] := [Prefix][StopName][Suffix]
+    //         [Prefix] := To|From|<nothing>
+    //         [Suffix] := [ArriveOrDepart][Tomorrow][TimeAt]|<nothing>
+    // [ArriveOrDepart] := arrival|departure|<nothing>
+    //         [TimeAt] := at (digit)(digit):(digit)(digit)|<nothing>
+    //         [TimeIn] := in (digit)+ minutes|<nothing>
+    //       [Tomorrow] := tomorrow|<nothing>
+    //       [StopName] := (letter|other|digit)*
     bool parseJourneySearch();
-    bool parsePrefix(); // Parse from left
-    bool parseSuffix(); // Parse from right
-    bool parseStopName(); // needs to be called AFTER parsePrefix AND parseSuffix
+    bool matchPrefix(); // Parse from left
+    bool matchSuffix(); // Parse from right
+    bool matchStopName(); // needs to be called AFTER parsePrefix AND parseSuffix
 
     // Match functions check at the current position for a rule/string
     // They only change the current position/input if they do match (and return true)
     bool matchTimeAt();
     bool matchTimeIn();
     bool matchMinutesString();
-    bool matchKeywordInList( SyntaxItem::Type type, const QStringList &keywordList );
+    bool matchKeywordInList( SyntaxItem::Type type, const QStringList &keywordList,
+                             QLinkedList<SyntaxItem>::iterator *match = 0 );
     inline bool matchKeyword( SyntaxItem::Type type, const QString &keyword ) {
         return matchKeywordInList( type, QStringList() << keyword );
     };
+    bool matchNumber( int *number, int min = -1, int max = 9999999, int *removedDigits = 0 );
 
 private:
     QLinkedList<SyntaxItem> m_output;
-    QLinkedList<Lexem>::ConstIterator m_stopNameBegin;
-    QLinkedList<Lexem>::ConstIterator m_stopNameEnd;
+    QLinkedList<Lexem>::ConstIterator m_stopNameBegin; // Pointing to the first stop name lexem
+    QLinkedList<Lexem>::ConstIterator m_stopNameEnd; // Pointing the the lexem after the last stop name lexem
     JourneySearchKeywords *m_keywords;
     bool m_ownKeywordsObject;
 };
@@ -664,6 +737,158 @@ protected:
     virtual inline bool isItemErrornous() { return m_inputIterator->isErrornous(); };
 };
 
+// TODO namespace JourneySearchParser
+
+/**
+ * @brief Contains results of analyzation.
+ **/
+class Results {
+public:
+    friend class JourneySearchAnalyzer;
+
+    /**
+     * @brief The name of the (origin/target) stop of the searched journey.
+     *
+     * If @ref Results::stopIsTarget is true, this is the name of the target stop of the
+     * searched journey. If it's false, this is the name of the origin stop.
+     *
+     * @see Results::timeIsDeparture
+     **/
+    QString stopName() const { return m_stopName; };
+
+//         void setStopName( const QString &stopName );
+
+    /**
+     * @brief The (departure/arrival) time of the searched journey.
+     *
+     * If @ref Results::timeIsDeparture is true, this is the departure time of the searched
+     * journey. If it's false, this is the arrival time.
+     *
+     * @see Results::timeIsDeparture
+     **/
+    QDateTime time() const { return m_time; };
+
+    /**
+     * @brief Wether the stopName is the name of the target stop or the origin stop.
+     *
+     * True, if @ref Results::stopName is the name of the target stop of the searched journey.
+     * False, if it's the name of the origin stop.
+     **/
+    bool stopIsTarget() const { return m_stopIsTarget; };
+
+    /**
+     * @brief Wether the time is the departure or the arrival.
+     *
+     * True, if @ref Results::time is the departure of the searched journey.
+     * False, if it's the arrival.
+     **/
+    bool timeIsDeparture() const { return m_timeIsDeparture; };
+
+    /** @brief Wether or not there are errors in the input string. */
+    bool hasErrors() const { return m_hasErrors; };
+
+    /** @brief The input string, from which the list of syntax items got constructed. */
+    QString inputString() const { return m_inputString; };
+
+    /**
+     * @brief The output string, constructed from the syntax items in syntaxItems.
+     *
+     * @note This method is fast, because the output strings are already generated.
+     **/
+    QString outputString( OutputStringFlags flags = DefaultOutputString ) const;
+
+    /**
+     * @brief Same as @ref outputString, but with an updated stop name.
+     *
+     * @note This method needs to TODO
+     **/
+    QString updatedOutputString( const QHash< SyntaxItem::Type, QVariant > &updateItemValues,
+            const QList<SyntaxItem::Type> &removeItems = QList<SyntaxItem::Type>(),
+            OutputStringFlags flags = DefaultOutputString,
+            JourneySearchKeywords *keywords = 0 ) const;
+
+    /**
+     * @brief All syntax items ordered by position in the input string.
+     *
+     * This list also contains error items.
+     **/
+    QLinkedList<SyntaxItem> allItems() const { return m_allItems; };
+
+    /**
+     * @brief All syntax items that are no error items.
+     *
+     * All syntax items in this hash are pointers to items in @ref Results::allItems.
+     **/
+    QHash< SyntaxItem::Type, const SyntaxItem* > syntaxItems() const { return m_syntaxItems; };
+
+    /**
+     * @brief The syntax item with the given @p type.
+     *
+     * @note Use @ref SyntaxItem::isValid to check if the returned syntax item is valid, ie.
+     *   if it was found in the input string. If @ref hasSyntaxItem returns false for @p type,
+     *   this method will return an invalid syntax item.
+     **/
+    const SyntaxItem *syntaxItem( SyntaxItem::Type type ) const { return m_syntaxItems[type]; };
+
+    /**
+     * @brief Wether or not the given @p type is contained in the list of syntax items.
+     *
+     * @note If this method returns false, @ref syntaxItem will return an invalid syntax item
+     *   for @p type.
+     **/
+    bool hasSyntaxItem( SyntaxItem::Type type ) const { return m_syntaxItems.contains(type); };
+
+    /**
+     * @brief All error syntax items.
+     *
+     * All syntax items in this list are pointers to items in @ref Results::allItems.
+     **/
+    QList< const SyntaxItem* > errorItems() const { return m_errorItems; };
+
+    int cursorOffset() const { return m_cursorOffset; };
+    int selectionLength() const { return m_selectionLength; };
+
+    /**
+     * @brief Wether or not this Results object is valid.
+     *
+     * Invalid results can be returned by @ref JourneySearchAnalyzer::results, if no
+     * analyzation has happened before using @ref JourneySearchAnalyzer::analyze.
+     **/
+    bool isValid() const { return m_time.isValid(); };
+
+    /** @brief Returns the result value of the analyzers, ie. Accepted or Rejected. */
+    AnalyzerResult analyzerResult() const { return m_result; };
+
+protected:
+    /**
+     * @brief Constructs a new invalid Results object.
+     **/
+    Results() { init(); };
+
+    /**
+     * @brief (Re-)Initializes this Results object.
+     *
+     * Afterwards @ref Results::isValid will return false until new data is set.
+     **/
+    void init();
+
+private:
+    AnalyzerResult m_result;
+    QDateTime m_time;
+    QString m_stopName;
+    QString m_outputStringWithErrors;
+    QString m_outputString;
+    QString m_inputString;
+    bool m_hasErrors;
+    bool m_timeIsDeparture;
+    bool m_stopIsTarget;
+    int m_cursorOffset;
+    int m_selectionLength;
+    QLinkedList<SyntaxItem> m_allItems;
+    QHash< SyntaxItem::Type, const SyntaxItem* > m_syntaxItems;
+    QList< const SyntaxItem* > m_errorItems;
+};
+
 /**
  * @brief Analyzes a journey search string and constructs a @ref JourneySearchAnalyzer::Results object.
  *
@@ -681,94 +906,6 @@ protected:
 class JourneySearchAnalyzer {
 public:
     /**
-     * @brief Contains results of analyzation.
-     **/
-    struct Results {
-        friend class JourneySearchAnalyzer;
-
-        /**
-         * @brief The name of the (origin/target) stop of the searched journey.
-         *
-         * If @ref Results::stopIsTarget is true, this is the name of the target stop of the
-         * searched journey. If it's false, this is the name of the origin stop.
-         *
-         * @see Results::timeIsDeparture
-         **/
-        QString stopName;
-
-        /**
-         * @brief The (departure/arrival) time of the searched journey.
-         *
-         * If @ref Results::timeIsDeparture is true, this is the departure time of the searched
-         * journey. If it's false, this is the arrival time.
-         *
-         * @see Results::timeIsDeparture
-         **/
-        QDateTime time;
-
-        /**
-         * @brief Wether the stopName is the name of the target stop or the origin stop.
-         *
-         * True, if @ref Results::stopName is the name of the target stop of the searched journey.
-         * False, if it's the name of the origin stop.
-         **/
-        bool stopIsTarget;
-
-        /**
-         * @brief Wether the time is the departure or the arrival.
-         *
-         * True, if @ref Results::time is the departure of the searched journey.
-         * False, if it's the arrival.
-         **/
-        bool timeIsDeparture;
-
-        /** @brief Wether or not there are errors in the input string. */
-        bool hasErrors;
-
-        /** @brief The output string, constructed from the syntax items in syntaxItems. */
-        QString outputString;
-
-        /** @brief The output string containing errornous strings from the input string. */
-        QString outputStringWithErrors;
-
-        /**
-         * @brief All syntax items ordered by position in the input string.
-         *
-         * This list also contains error items.
-         **/
-        QLinkedList<SyntaxItem> allItems;
-
-        /** @brief All syntax items that are no error items. */
-        QHash< SyntaxItem::Type, SyntaxItem > syntaxItems;
-
-        /** @brief All error syntax items. */
-        QList< SyntaxItem > errorItems;
-
-        int cursorOffset;
-
-        /**
-         * @brief Wether or not this Results object is valid.
-         *
-         * Invalid results can be returned by @ref JourneySearchAnalyzer::results, if no
-         * analyzation has happened before using @ref JourneySearchAnalyzer::analyze.
-         **/
-        bool isValid() const { return time.isValid(); };
-
-    protected:
-        /**
-         * @brief Constructs a new invalid Results object.
-         **/
-        Results() { init(); };
-
-        /**
-         * @brief (Re-)Initializes this Results object.
-         *
-         * Afterwards @ref Results::isValid will return false until new data is set.
-         **/
-        void init();
-    };
-
-    /**
      * @brief Creates a new JourneySearchAnalyzer object.
      *
      * @param keywords The JourneySearchKeywords object to use. If this is 0 a new object gets
@@ -785,11 +922,13 @@ public:
     /**
      * @brief Analyzes the input string and returns the results.
      *
+     * The (last) results object is also returned by @ref JourneySearchAnalyzer::results.
+     *
      * @note Analyzation is done using @ref LexicalAnalyzer::analyze,
      *   @ref SyntacticalAnalyzer::analyze and @ref ContextualAnalyzer::analyze.
      **/
-    Results analyze( const QString &input,
-                     AnalyzerCorrectionLevel correctionLevel = CorrectEverything );
+    const Results analyze( const QString &input,
+                           AnalyzerCorrectionLevel correctionLevel = CorrectEverything );
 
     /**
      * @brief Returns the results of the last analyzation.
@@ -797,10 +936,13 @@ public:
      * Before calling this method @ref analyze should be called. Otherwise an invalid Results
      * object is returned.
      **/
-    Results results() const { return m_results; };
+    const Results results() const { return m_results; };
 
     static Results resultsFromSyntaxItemList( const QLinkedList<SyntaxItem> &itemList,
-                                              JourneySearchKeywords *keywords = 0 );
+                                              JourneySearchKeywords *keywords );
+    Results resultsFromSyntaxItemList( const QLinkedList<SyntaxItem> &itemList ) {
+        return resultsFromSyntaxItemList( itemList, m_keywords );
+    };
 
     void completeStopName( KLineEdit *lineEdit, const QString &completion );
 

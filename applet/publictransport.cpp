@@ -1801,9 +1801,11 @@ void PublicTransport::journeySearchInputFinished()
 //             journeySearch->text(), &stop, &departure,
 //             &stopIsTarget, &timeIsDeparture );
 
-    JourneySearchAnalyzer::Results results = m_journeySearchAnalyzer->analyze( journeySearch->text() );
-    reconnectJourneySource( results.stopName, results.time,
-                            results.stopIsTarget, results.timeIsDeparture );
+    Results results = m_listStopSuggestions->results();
+//     TODO remove m_journeySearchAnalyzer, not needed here
+//     m_journeySearchAnalyzer->analyze( journeySearch->text() );
+    reconnectJourneySource( results.stopName(), results.time(),
+                            results.stopIsTarget(), results.timeIsDeparture() );
 
     delete m_journeySearchAnalyzer;
     m_journeySearchAnalyzer = NULL;
@@ -1825,7 +1827,7 @@ KMenu *PublicTransport::updateFilterMenu()
         m_filtersGroup->removeAction( oldAction );
         delete oldAction;
     }
-    
+
     KMenu *menu = qobject_cast<KMenu*>( actionFilter->menu() );
     menu->clear();
     bool showColorGrous = m_settings.colorize && !m_settings.colorGroupSettingsList.isEmpty();

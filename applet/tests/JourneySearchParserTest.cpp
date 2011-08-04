@@ -134,9 +134,9 @@ void JourneySearchParserTest::journeySearchParserTest()
 //     QStringList syntaxString2; foreach ( const SyntaxItem &syntaxItem, correctedSyntaxItems ) {
 //             syntaxString2 << syntaxItem.text(); }
 //     qDebug() << "Context List:" << syntaxString2.join(", ") << context.result();
-    JourneySearchAnalyzer::Results results =
-            JourneySearchAnalyzer::resultsFromSyntaxItemList( correctedSyntaxItems );
-    qDebug() << "Output string" << results.outputString;
+    Results results =
+            JourneySearchAnalyzer::resultsFromSyntaxItemList( correctedSyntaxItems, m_keywords );
+    qDebug() << "Output string" <<  results.outputString();
     QCOMPARE( context.result(), expectedContextualState );
 }
 

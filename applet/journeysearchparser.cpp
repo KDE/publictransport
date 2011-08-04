@@ -53,8 +53,8 @@ JourneySearchAnalyzer::~JourneySearchAnalyzer()
     delete m_contextual;
 }
 
-JourneySearchAnalyzer::Results JourneySearchAnalyzer::resultsFromSyntaxItemList(
-            const QLinkedList< SyntaxItem >& itemList, JourneySearchKeywords *keywords )
+Results JourneySearchAnalyzer::resultsFromSyntaxItemList(
+            const QLinkedList< SyntaxItem > &itemList, JourneySearchKeywords *keywords )
 {
     bool ownKeywords = !keywords;
     if ( ownKeywords ) {
@@ -62,59 +62,59 @@ JourneySearchAnalyzer::Results JourneySearchAnalyzer::resultsFromSyntaxItemList(
     }
 
     Results results;
-    results.allItems = itemList;
+    results.m_allItems = itemList;
 
     bool tomorrow = false;
     QStringList output, outputWithErrors;
     QString itemText;
-    for ( QLinkedList<SyntaxItem>::ConstIterator it = itemList.begin();
-          it != itemList.end(); ++it )
+    for ( QLinkedList<SyntaxItem>::ConstIterator it = results.m_allItems.constBegin();
+          it != results.m_allItems.constEnd(); ++it )
     {
         switch ( it->type() ) {
         case SyntaxItem::Error:
-            results.hasErrors = true;
-            results.errorItems << *it;
+            results.m_hasErrors = true;
+            results.m_errorItems << &*it;
             itemText = it->text();
             break;
         case SyntaxItem::StopName:
-            results.stopName = it->text();
-            results.syntaxItems.insert( SyntaxItem::StopName, *it );
-            itemText = QString("\"%1\"").arg(results.stopName);
+            results.m_stopName = it->text();
+            results.m_syntaxItems.insert( SyntaxItem::StopName, &*it );
+            itemText = QString("\"%1\"").arg(results.m_stopName);
             break;
         case SyntaxItem::KeywordTo:
-            results.stopIsTarget = true;
-            results.syntaxItems.insert( SyntaxItem::KeywordTo, *it );
+            results.m_stopIsTarget = true;
+            results.m_syntaxItems.insert( SyntaxItem::KeywordTo, &*it );
             itemText = it->text();
             break;
         case SyntaxItem::KeywordFrom:
-            results.stopIsTarget = false;
-            results.syntaxItems.insert( SyntaxItem::KeywordFrom, *it );
+            results.m_stopIsTarget = false;
+            results.m_syntaxItems.insert( SyntaxItem::KeywordFrom, &*it );
             itemText = it->text();
             break;
         case SyntaxItem::KeywordTimeIn:
-            results.time = QDateTime::currentDateTime().addSecs( 60 * it->value().toInt() );
-            results.syntaxItems.insert( SyntaxItem::KeywordTimeIn, *it );
+            results.m_time = QDateTime::currentDateTime().addSecs( 60 * it->value().toInt() );
+            results.m_syntaxItems.insert( SyntaxItem::KeywordTimeIn, &*it );
             itemText = QString("%1 %2").arg(it->text())
                     .arg(keywords->relativeTimeString(it->value().toInt()));
             break;
         case SyntaxItem::KeywordTimeAt:
-            results.time = QDateTime( QDate::currentDate(), it->value().toTime() );
-            results.syntaxItems.insert( SyntaxItem::KeywordTimeAt, *it );
-            itemText = QString("%1 %2").arg(it->text()).arg(results.time.toString("hh:mm"));
+            results.m_time = QDateTime( QDate::currentDate(), it->value().toTime() );
+            results.m_syntaxItems.insert( SyntaxItem::KeywordTimeAt, &*it );
+            itemText = QString("%1 %2").arg(it->text()).arg(results.m_time.toString("hh:mm"));
             break;
         case SyntaxItem::KeywordTomorrow:
             tomorrow = true;
-            results.syntaxItems.insert( SyntaxItem::KeywordTomorrow, *it );
+            results.m_syntaxItems.insert( SyntaxItem::KeywordTomorrow, &*it );
             itemText = it->text();
             break;
         case SyntaxItem::KeywordDeparture:
-            results.timeIsDeparture = true;
-            results.syntaxItems.insert( SyntaxItem::KeywordDeparture, *it );
+            results.m_timeIsDeparture = true;
+            results.m_syntaxItems.insert( SyntaxItem::KeywordDeparture, &*it );
             itemText = it->text();
             break;
         case SyntaxItem::KeywordArrival:
-            results.timeIsDeparture = false;
-            results.syntaxItems.insert( SyntaxItem::KeywordArrival, *it );
+            results.m_timeIsDeparture = false;
+            results.m_syntaxItems.insert( SyntaxItem::KeywordArrival, &*it );
             itemText =  it->text();
             break;
         }
@@ -124,15 +124,15 @@ JourneySearchAnalyzer::Results JourneySearchAnalyzer::resultsFromSyntaxItemList(
         }
         outputWithErrors << itemText;
     }
-    if ( !results.time.isValid() ) {
+    if ( !results.m_time.isValid() ) {
         // No time given in input string
-        results.time = QDateTime::currentDateTime();
+        results.m_time = QDateTime::currentDateTime();
     }
     if ( tomorrow ) {
-        results.time = results.time.addDays( 1 );
+        results.m_time = results.m_time.addDays( 1 );
     }
-    results.outputString = output.join( " " );
-    results.outputStringWithErrors = outputWithErrors.join( " " );
+    results.m_outputString = output.join( " " );
+    results.m_outputStringWithErrors = outputWithErrors.join( " " );
     if ( ownKeywords ) {
         delete keywords;
     }
@@ -140,34 +140,174 @@ JourneySearchAnalyzer::Results JourneySearchAnalyzer::resultsFromSyntaxItemList(
     return results;
 }
 
-JourneySearchAnalyzer::Results JourneySearchAnalyzer::analyze(
+QString Results::updatedOutputString(
+        const QHash< SyntaxItem::Type, QVariant > &updateItemValues,
+        const QList< SyntaxItem::Type > &removeItems,
+        OutputStringFlags flags, JourneySearchKeywords *keywords ) const
+{
+    bool ownKeywords = !keywords;
+    if ( ownKeywords ) {
+        keywords = new JourneySearchKeywords();
+    }
+
+    // Insert dummy syntax items for updated item values without an associated syntax item
+    // in m_allItems
+    QLinkedList< SyntaxItem > itemList = m_allItems;
+    for ( QHash<SyntaxItem::Type, QVariant>::ConstIterator itUpdate = updateItemValues.constBegin();
+          itUpdate != updateItemValues.constEnd(); ++itUpdate )
+    {
+        if ( !m_syntaxItems.contains(itUpdate.key()) ) {
+            // Current updated item not in m_allItems, insert a dummy syntax item
+            switch ( itUpdate.key() ) {
+            case SyntaxItem::StopName:
+                // Insert after KeywordTo/KeywordFrom or prepend
+                if ( itemList.isEmpty() ) {
+                    // No items in the list, just prepend a dummy stop name item
+                    itemList.prepend( SyntaxItem(SyntaxItem::StopName, QString(), -1) );
+                    break;
+                }
+
+                for ( QLinkedList<SyntaxItem>::Iterator it = itemList.begin();
+                      it != itemList.end(); ++it )
+                {
+                    if ( it->type() != SyntaxItem::KeywordTo ||
+                         it->type() != SyntaxItem::KeywordFrom )
+                    {
+                        // First non-prefix item found, insert dummy stop name item before
+                        it = itemList.insert( it, SyntaxItem(SyntaxItem::StopName, QString(), -1) );
+                        break;
+                    }
+                }
+                break;
+            case SyntaxItem::KeywordTo:
+            case SyntaxItem::KeywordFrom:
+                itemList.prepend( SyntaxItem(itUpdate.key(), QString(), -1) );
+                break;
+            case SyntaxItem::KeywordTomorrow:
+            case SyntaxItem::KeywordDeparture:
+            case SyntaxItem::KeywordArrival:
+            case SyntaxItem::KeywordTimeIn:
+            case SyntaxItem::KeywordTimeAt:
+                itemList.append( SyntaxItem(itUpdate.key(), QString(), -1) );
+                break;
+            case SyntaxItem::Error:
+                kDebug() << "Won't insert/update error items";
+                break;
+            }
+        }
+    }
+
+    QStringList output;
+    QString itemText;
+    for ( QLinkedList<SyntaxItem>::ConstIterator it = itemList.constBegin();
+          it != itemList.constEnd(); ++it )
+    {
+        switch ( it->type() ) {
+        case SyntaxItem::Error:
+            if ( !flags.testFlag(ErrornousOutputString) ) {
+                continue;
+            }
+            itemText = it->text();
+            break;
+        case SyntaxItem::StopName:
+            if ( !removeItems.contains(it->type()) ) {
+                if ( updateItemValues.contains(it->type()) ) {
+                    itemText = QString("\"%1\"").arg( updateItemValues[it->type()].toString() );
+                } else {
+                    itemText = QString("\"%1\"").arg( it->text() );
+                }
+            }
+            break;
+        case SyntaxItem::KeywordTo:
+        case SyntaxItem::KeywordFrom:
+        case SyntaxItem::KeywordTomorrow:
+        case SyntaxItem::KeywordDeparture:
+        case SyntaxItem::KeywordArrival:
+            if ( !removeItems.contains(it->type()) ) {
+                if ( updateItemValues.contains(it->type()) ) {
+                    // This replaces the keywords with other keyword translations or other strings
+                    itemText = updateItemValues[it->type()].toString();
+                } else {
+                    itemText = it->text();
+                }
+            }
+            break;
+        case SyntaxItem::KeywordTimeIn:
+            if ( !removeItems.contains(it->type()) ) {
+                if ( updateItemValues.contains(it->type()) ) {
+                    // This replaces the keyword values with new ones (the keyword "in" itself remains unchanged)
+                    itemText = QString("%1 %2").arg(it->text())
+                            .arg( keywords->relativeTimeString(updateItemValues[it->type()].toInt()) );
+                } else {
+                    itemText = QString("%1 %2").arg(it->text())
+                            .arg( keywords->relativeTimeString(it->value().toInt()) );
+                }
+            }
+            break;
+        case SyntaxItem::KeywordTimeAt:
+            if ( !removeItems.contains(it->type()) ) {
+                if ( updateItemValues.contains(it->type()) ) {
+                    // This replaces the keyword values with new ones (the keyword "at" itself remains unchanged)
+                    itemText = QString("%1 %2").arg(it->text())
+                            .arg( updateItemValues[it->type()].toTime().toString("hh:mm") );
+                } else {
+                    itemText = QString("%1 %2").arg(it->text())
+                            .arg( it->value().toTime().toString("hh:mm") );
+                }
+            }
+            break;
+        }
+
+        output << itemText;
+    }
+    if ( ownKeywords ) {
+        delete keywords;
+    }
+
+    return output.join( " " );
+}
+
+const Results JourneySearchAnalyzer::analyze(
         const QString& input, AnalyzerCorrectionLevel correctionLevel )
 {
     m_lexical->setCorrectionLevel( correctionLevel );
     m_syntactical->setCorrectionLevel( correctionLevel );
     m_contextual->setCorrectionLevel( correctionLevel );
 
+//     TODO calculate cursor offset at end by summing up lengths of corrected items before the old cursor position
     QLinkedList<Lexem> lexems = m_lexical->analyze( input );
-    m_syntactical->setCursorOffset( m_lexical->cursorOffset() );
+    m_syntactical->setCursorValues( m_lexical->cursorOffset(), m_lexical->selectionLength() );
     QLinkedList<SyntaxItem> syntaxItems = m_syntactical->analyze( lexems );
-    m_contextual->setCursorOffset( m_syntactical->cursorOffset() );
-    Results results = resultsFromSyntaxItemList( m_contextual->analyze(syntaxItems), m_keywords );
-    results.cursorOffset = m_contextual->cursorOffset();
-    return results;
+    m_contextual->setCursorValues( m_syntactical->cursorOffset(), m_syntactical->selectionLength() );
+    m_results = resultsFromSyntaxItemList( m_contextual->analyze(syntaxItems) );
+    m_results.m_cursorOffset = m_contextual->cursorOffset();
+    m_results.m_selectionLength = m_contextual->selectionLength();
+    m_results.m_inputString = input;
+    m_results.m_result = m_contextual->result();
+    return m_results;
 //     return resultsFromSyntaxItemList(
 //             m_contextual->analyze(m_syntactical->analyze(m_lexical->analyze(input))),
 //             m_keywords );
 }
 
-void JourneySearchAnalyzer::Results::init()
+void Results::init()
 {
-    stopName.clear();
-    time = QDateTime();
-    stopIsTarget = true;
-    timeIsDeparture = true;
-    hasErrors = false;
-    syntaxItems.clear();
-    cursorOffset = 0;
+    m_stopName.clear();
+    m_time = QDateTime();
+    m_stopIsTarget = true;
+    m_timeIsDeparture = true;
+    m_hasErrors = false;
+    m_syntaxItems.clear();
+    m_cursorOffset = 0;
+}
+
+QString Results::outputString( OutputStringFlags flags ) const
+{
+    if ( flags.testFlag(ErrornousOutputString) ) {
+        return m_outputStringWithErrors;
+    } else {
+        return m_outputString;
+    }
 }
 
 template <typename Container>
@@ -175,6 +315,7 @@ Analyzer<Container>::Analyzer( AnalyzerCorrectionLevel correctionLevel,
                                int cursorPositionInInputString, int cursorOffset )
 {
     m_state = NotStarted;
+    m_result = Accepted;
     m_correctionLevel = correctionLevel;
     m_minRejectSeverity = ErrorFatal;
     m_minAcceptWithErrorsSeverity = ErrorSevere;
@@ -222,13 +363,15 @@ Lexem::Lexem()
 {
     m_type = Error;
     m_pos = -1;
+    m_followedBySpace = true;
 }
 
-Lexem::Lexem( Lexem::Type type, const QString& text, int pos )
+Lexem::Lexem( Lexem::Type type, const QString& text, int pos, bool followedBySpace )
 {
     m_type = type;
     m_text = text;
     m_pos = pos;
+    m_followedBySpace = followedBySpace;
 }
 
 LexicalAnalyzer::LexicalAnalyzer( AnalyzerCorrectionLevel correction,
@@ -236,15 +379,25 @@ LexicalAnalyzer::LexicalAnalyzer( AnalyzerCorrectionLevel correction,
         : Analyzer(correction, cursorPositionInInputString, cursorOffset)
 {
     m_pos = -1;
+    m_wordStartPos = -1;
+    m_firstWordSymbol = Invalid;
 }
 
-void LexicalAnalyzer::endCurrentWord()
+bool LexicalAnalyzer::isSpaceFollowing()
+{
+    if ( isAtEnd() ) {
+        return false; // Nothing is following
+    }
+    return *m_inputIteratorLookahead == ' ';
+}
+
+void LexicalAnalyzer::endCurrentWord( bool followedBySpace )
 {
     if ( !m_currentWord.isEmpty() ) {
         if ( m_firstWordSymbol == Digit ) {
-            m_output << Lexem( Lexem::Number, m_currentWord, m_wordStartPos );
+            m_output << Lexem( Lexem::Number, m_currentWord, m_wordStartPos, followedBySpace );
         } else if ( m_firstWordSymbol == Letter ||  m_firstWordSymbol == OtherSymbol ) {
-            m_output << Lexem( Lexem::String, m_currentWord, m_wordStartPos );
+            m_output << Lexem( Lexem::String, m_currentWord, m_wordStartPos, followedBySpace );
         } else {
             m_result = AcceptedWithErrors;
             kDebug() << "Internal error with word" << m_currentWord << m_firstWordSymbol;
@@ -277,6 +430,7 @@ QLinkedList<Lexem> LexicalAnalyzer::analyze( const QString& input )
 {
     m_input = input;
     m_inputIterator = m_input.begin();
+    m_inputIteratorLookahead = m_inputIterator + 1;
     m_state = Running;
     m_result = Accepted;
     m_output.clear();
@@ -289,17 +443,25 @@ QLinkedList<Lexem> LexicalAnalyzer::analyze( const QString& input )
         switch ( symbol ) {
         case QuotationMark:
             endCurrentWord();
-            m_output << Lexem( Lexem::QuotationMark, "\"", m_pos );
+            m_output << Lexem( Lexem::QuotationMark, "\"", m_pos, isSpaceFollowing() );
             inQuotationMarks = !inQuotationMarks;
             break;
         case Colon:
             endCurrentWord();
-            m_output << Lexem( Lexem::Colon, ":", m_pos );
+            m_output << Lexem( Lexem::Colon, ":", m_pos, isSpaceFollowing() );
             break;
         case Space:
-            endCurrentWord();
-            if ( m_pos == m_input.length() - 1 ) { // TODO Also add a space lexem at the specified cursor position (also TODO)
-                m_output << Lexem( Lexem::Space, " ", m_pos );
+            if ( m_inputIteratorLookahead != m_input.constEnd() &&
+                 symbolOf(*(m_inputIteratorLookahead)) == Space )
+            {
+                // Don't allow two consecutive space characters
+                // Skip this one, ie. read the next one
+                readItem();
+            }
+
+            endCurrentWord( true );
+            if ( m_pos == m_input.length() - 1 || m_pos == m_cursorPositionInInputString - 1 ) {
+                m_output << Lexem( Lexem::Space, " ", m_pos, isSpaceFollowing() );
             }
             break;
         case Letter:
@@ -320,7 +482,7 @@ QLinkedList<Lexem> LexicalAnalyzer::analyze( const QString& input )
             break;
         case Invalid:
             endCurrentWord();
-            m_output << Lexem( Lexem::Error, *m_inputIterator, m_pos ); // Not allowed character
+            m_output << Lexem( Lexem::Error, *m_inputIterator, m_pos, isSpaceFollowing() ); // Not allowed character
             m_result = Rejected;
             m_state = Finished;
             return m_output;
@@ -405,15 +567,17 @@ SyntacticalAnalyzer::~SyntacticalAnalyzer()
 QLinkedList< SyntaxItem > SyntacticalAnalyzer::analyze( const QLinkedList<Lexem> &input )
 {
     QStringList lexemString; foreach ( const Lexem &lexem, input ) {
-            lexemString << QString("%1 (pos: %2, type: %3)").arg(lexem.text())
-                .arg(lexem.position()).arg(lexem.type()); }
+            lexemString << QString("%1 (pos: %2, type: %3, space?: %4)").arg(lexem.text())
+                .arg(lexem.position()).arg(lexem.type()).arg(lexem.isFollowedBySpace() ? "JA" : "nein"); }
     qDebug() << "Lexem List:" << lexemString.join(", ");
 
     m_output.clear();
     m_input = input;
-    m_inputIterator = m_input.begin();
     m_state = Running;
     m_result = Accepted;
+    m_inputIterator = m_input.begin();
+    m_inputIteratorLookahead = m_inputIterator + 1;
+    readSpaceItems();
 
     parseJourneySearch();
 
@@ -426,17 +590,18 @@ QLinkedList< SyntaxItem > SyntacticalAnalyzer::analyze( const QLinkedList<Lexem>
     return m_output;
 }
 
-void SyntacticalAnalyzer::addOutputItem( const SyntaxItem& syntaxItem )
+QLinkedList<SyntaxItem>::iterator SyntacticalAnalyzer::addOutputItem( const SyntaxItem& syntaxItem )
 {
     // Sort the new syntaxItem into the output list, sorted by position
     if ( m_output.isEmpty() || m_output.last().position() < syntaxItem.position() ) {
-        m_output << syntaxItem;
+        // Append the new item
+        return m_output.insert( m_output.end(), syntaxItem );
     } else {
         QLinkedList<SyntaxItem>::iterator it = m_output.begin();
         while ( it->position() < syntaxItem.position() ) {
             ++it;
         }
-        m_output.insert( it, syntaxItem );
+        return m_output.insert( it, syntaxItem );
     }
 }
 
@@ -447,67 +612,70 @@ bool SyntacticalAnalyzer::parseJourneySearch()
         return false;
     }
 
-    if ( !parsePrefix() ) {
-        return false;
-    }
+    matchPrefix();
+    matchSuffix();
+    bool matched = matchStopName();
 
-    if ( !parseSuffix() ) {
-        return false;
-    }
-
-    if ( !parseStopName() ) {
-        return false;
-    }
-
-    return true;
+    return matched;
 }
 
-bool SyntacticalAnalyzer::parsePrefix()
+bool SyntacticalAnalyzer::matchPrefix()
 {
     // Match keywords at the beginning of the input
     // Also match, if only the beginning of a keyword is found (for interactive typing)
     // Otherwise the first typed character would get matched as stop name and get quotation
     // marks around it, making it hard to type the journey search string.
     m_inputIterator = m_input.begin();
-    if ( m_inputIterator->type() == Lexem::String ) {
-        const QString text = m_inputIterator->text();
-        if ( m_keywords->toKeywords().contains(text, Qt::CaseInsensitive) ) {
-            addOutputItem( SyntaxItem(SyntaxItem::KeywordTo, text, m_inputIterator->position()) );
-            m_stopNameBegin = m_inputIterator + 1;
-        } else if ( m_keywords->fromKeywords().contains(text, Qt::CaseInsensitive) ) {
-            addOutputItem( SyntaxItem(SyntaxItem::KeywordFrom, text, m_inputIterator->position()) );
-            m_stopNameBegin = m_inputIterator + 1;
-        } else if ( m_correctionLevel > CorrectNothing ) {
-//             TODO only if there are no words following?
-            // Test if the beginning of a keyword is matched
-            foreach ( const QString &keyword, m_keywords->toKeywords() ) {
-                if ( keyword.startsWith(text, Qt::CaseInsensitive) ) {
-                    // Found a keyword that starts with the input string
-                    addOutputItem( SyntaxItem(SyntaxItem::KeywordTo, text,
-                                              m_inputIterator->position()) );
-                    m_stopNameBegin = m_inputIterator + 1;
-                    return true;
-                }
-            }
-            foreach ( const QString &keyword, m_keywords->fromKeywords() ) {
-                if ( keyword.startsWith(text, Qt::CaseInsensitive) ) {
-                    // Found a keyword that starts with the input string
-                    addOutputItem( SyntaxItem(SyntaxItem::KeywordFrom, text,
-                                              m_inputIterator->position()) );
-                    m_stopNameBegin = m_inputIterator + 1;
-                    return true;
-                }
-            }
+    m_inputIteratorLookahead = m_inputIterator + 1;
+    readSpaceItems();
+    if ( m_inputIterator != m_input.constEnd() && m_inputIterator->type() == Lexem::String ) {
+//         const QString text = m_inputIterator->text();
 
-            // No keyword beginning matched
-            m_stopNameBegin = m_inputIterator;
-        } else {
-            // No complete keyword matched
-            m_stopNameBegin = m_inputIterator;
-        }
+        bool matched = false;
+        matched = matched || matchKeywordInList( SyntaxItem::KeywordTo, m_keywords->toKeywords() );
+        matched = matched || matchKeywordInList( SyntaxItem::KeywordFrom, m_keywords->fromKeywords() );
+        m_stopNameBegin = m_inputIterator;
+        return matched;
     } else {
         m_stopNameBegin = m_inputIterator;
+        return false;
     }
+}
+
+bool SyntacticalAnalyzer::matchNumber( int *number, int min, int max, int* removedDigits )
+{
+    // Match number
+    QString numberString = m_inputIterator->text();
+    if ( removedDigits ) {
+        *removedDigits = 0; // Initialize
+    }
+    bool ok;
+    if ( m_correctionLevel > CorrectNothing ) {
+        if ( numberString.length() > 2 ) {
+            if ( removedDigits ) {
+                *removedDigits = numberString.length() - 2;
+            }
+            // TODO This only works with strings not longer than two characters
+            if ( m_cursorPositionInInputString == m_inputIterator->position() + 1 ) {
+                // Cursor is here (|): "X|XX:XX", overwrite second digit
+                numberString.remove( 1, 1 );
+            }
+            numberString = numberString.left( 2 );
+        }
+
+        // Put the number into the given range [min, max]
+        *number = qBound( min, numberString.toInt(&ok), max );
+        if ( !ok ) {
+            return false; // Number invalid (shouldn't happen, since hoursString only contains digits)
+        }
+    } else {
+        *number = numberString.toInt( &ok );
+        if ( !ok || *number < min || *number > max ) {
+            return false; // Number out of range or invalid
+        }
+    }
+
+    readItemAndSkipSpaces();
     return true;
 }
 
@@ -524,10 +692,13 @@ bool SyntacticalAnalyzer::matchTimeAt()
             addOutputItem( SyntaxItem(SyntaxItem::KeywordTimeAt,
                     m_inputIterator->text(), m_inputIterator->position(),
                     QDateTime::currentDateTime(), SyntaxItem::CorrectedSyntaxItem) );
-            ++m_cursorOffset; // Move one character to the beginning of the inserted time "XX:XX"
-            if ( !isAtEnd() ) {
-                readItem();
-            }
+
+            // Move one character to the beginning of the inserted time
+            // and select the first digit => "at [X]X:XX"
+            ++m_cursorOffset;
+            m_selectionLength = 1;
+
+            readItemAndSkipSpaces();
             return true;
         } else {
             return false;
@@ -537,15 +708,14 @@ bool SyntacticalAnalyzer::matchTimeAt()
         return false; // Only a number was read
     }
 
-    // Parse number (minutes)
-    bool ok;
-    int minutes = m_inputIterator->text().toInt( &ok );
-    if ( !ok || minutes < 0 || minutes >= 60 ) {
-        ++m_inputIterator; // Restore position
-        return false; // Number out of range
+    QLinkedList<Lexem>::ConstIterator oldIterator = m_inputIterator;
+
+    // Match number (minutes)
+    int minutes;
+    if ( !matchNumber(&minutes, 0, 59) ) {
+        return false; // returned false => m_inputIterator unchanged/restored
     }
 
-    readItem(); // isAtEnd was checked above, before parsing the number
     if ( m_inputIterator->type() != Lexem::Colon ) {
         // Wrong ending.. But if the "at" keyword gets read here (with only a number following)
         // it may be corrected by using the number as hours value and adding the minutes
@@ -557,56 +727,73 @@ bool SyntacticalAnalyzer::matchTimeAt()
                     m_inputIterator->text(), m_inputIterator->position(),
                     QDateTime(QDate::currentDate(), QTime(minutes, 0)),
                     SyntaxItem::CorrectedSyntaxItem) );
-            if ( !isAtEnd() ) {
-                readItem();
-            }
+            readItemAndSkipSpaces();
             return true;
         } else {
-            ++m_inputIterator; // Restore position
+            m_inputIterator = oldIterator;
+            m_inputIteratorLookahead = m_inputIterator + (m_direction == LeftToRight ? 1 : -1);
             return false; // TimeAt-rule not matched
         }
     }
     if ( isAtEnd() ) {
+        m_inputIterator = oldIterator;
+        m_inputIteratorLookahead = m_inputIterator + (m_direction == LeftToRight ? 1 : -1);
         return false; // Only a number and a colon were read
     }
+    int colonPosition = m_inputIterator->position();
+    readItemAndSkipSpaces();
 
-    readItem();
-    if ( /*m_pos < 2 ||*/ m_inputIterator->type() != Lexem::Number ) {
-        m_inputIterator += 2; // Restore position
+    if ( isAtEnd() || m_inputIterator->type() != Lexem::Number ) {
+        m_inputIterator = oldIterator;
+        m_inputIteratorLookahead = m_inputIterator + (m_direction == LeftToRight ? 1 : -1);
         return false; // The TimeAt-rule can't be reduced here
     }
-    if ( isAtEnd() ) {
-        return false; // Only the time value was read (Number, Colon, Number)
+
+    // Match number (hours)
+//     QString hoursString = m_inputIterator->text();
+    int hours;
+    int deletedDigits;
+    if ( !matchNumber(&hours, 0, 23, &deletedDigits) ) {
+        m_inputIterator = oldIterator;
+        m_inputIteratorLookahead = m_inputIterator + (m_direction == LeftToRight ? 1 : -1);
+        return false;
     }
 
-    // Parse number (hours)
-    int hours = m_inputIterator->text().toInt( &ok );
-    if ( !ok || hours < 0 || hours >= 24 ) {
-        return false; // Number out of range
-    }
-
-    // Read keyword "at", isAtEnd was checked above, before parsing the number
-    readItem();
     if ( m_inputIterator->type() != Lexem::String ) {
-        m_inputIterator += 3; // Restore position
+        m_inputIterator = oldIterator;
+        m_inputIteratorLookahead = m_inputIterator + (m_direction == LeftToRight ? 1 : -1);
         return false; // Keyword not found
     }
-    if ( !m_keywords->timeKeywordsAt().contains(m_inputIterator->text(), Qt::CaseInsensitive) ) {
-        m_inputIterator += 3; // Restore position
+    QLinkedList<SyntaxItem>::iterator match;
+    if ( !matchKeywordInList(SyntaxItem::KeywordTimeAt, m_keywords->timeKeywordsAt(), &match) ) {
+//     if ( !m_keywords->timeKeywordsAt().contains(m_inputIterator->text(), Qt::CaseInsensitive) ) {
+        m_inputIterator = oldIterator;
+        m_inputIteratorLookahead = m_inputIterator + (m_direction == LeftToRight ? 1 : -1);
         return false; // Keyword not found
     }
 
-    addOutputItem( SyntaxItem(SyntaxItem::KeywordTimeAt,
-                              m_inputIterator->text(), m_inputIterator->position(),
-                              QDateTime(QDate::currentDate(), QTime(hours, minutes))) );
-    if ( !isAtEnd() ) {
-        readItem();
+    // Set value of the matched at keyword
+    match->m_value = QDateTime( QDate::currentDate(), QTime(hours, minutes) );
+    colonPosition -= deletedDigits; // Add offset from corrections (more than two digits for the hour)
+//     addOutputItem( SyntaxItem(SyntaxItem::KeywordTimeAt,
+//                               m_inputIterator->text(), m_inputIterator->position(),
+//                               QDateTime(QDate::currentDate(), QTime(hours, minutes))) );
+    if ( m_cursorPositionInInputString == colonPosition ) {
+        // Cursor before the colon, move cursor over the colon while typing
+        m_cursorOffset = colonPosition + 1 - m_cursorPositionInInputString;
     }
+    if ( m_cursorPositionInInputString <= colonPosition + 2 ) {
+        // Cursor not after the second minute digit, select the digit in front of the cursor
+        m_selectionLength = 1;
+    }
+
     return true;
 }
 
 bool SyntacticalAnalyzer::matchTimeIn()
 {
+    QLinkedList<Lexem>::ConstIterator oldIterator = m_inputIterator;
+
     // "in X minutes" from back => starting with "minutes"
     // AND needs at least 2 more symbols => m_pos >= 1
     if ( /*m_pos < 1 ||*/ !matchMinutesString() ) {
@@ -614,33 +801,37 @@ bool SyntacticalAnalyzer::matchTimeIn()
     }
 
     // Don't need to check isAtEnd() here, because m_pos >= 1 was checked above
-    readItem();
+    readItemAndSkipSpaces();
     if ( m_inputIterator->type() != Lexem::Number ) {
-        ++m_inputIterator; // Restore position
+        m_inputIterator = oldIterator;
+        m_inputIteratorLookahead = m_inputIterator + (m_direction == LeftToRight ? 1 : -1);
         return false; // TimeIn-rule not matched
     }
     // Parse number
     bool ok;
     int minutes = m_inputIterator->text().toInt( &ok );
     if ( !ok || minutes < 0 || minutes >= 1440 ) { // max. 1 day
-        ++m_inputIterator; // Restore position
+        m_inputIterator = oldIterator;
+        m_inputIteratorLookahead = m_inputIterator + (m_direction == LeftToRight ? 1 : -1);
         return false; // Number out of range
     }
 
     // Read keyword "in"
-    readItem();
+    readItemAndSkipSpaces();
     if ( m_inputIterator->type() != Lexem::String ) {
-        m_inputIterator += 2; // Restore position
+        m_inputIterator = oldIterator;
+        m_inputIteratorLookahead = m_inputIterator + (m_direction == LeftToRight ? 1 : -1);
         return false; // Keyword not found
     }
     const QString text = m_inputIterator->text();
     if ( !m_keywords->timeKeywordsIn().contains(text, Qt::CaseInsensitive) ) {
-        m_inputIterator += 2; // Restore position
+        m_inputIterator = oldIterator;
+        m_inputIteratorLookahead = m_inputIterator + (m_direction == LeftToRight ? 1 : -1);
         return false; // Keyword not found
     }
 
     addOutputItem( SyntaxItem(SyntaxItem::KeywordTimeIn, text, m_inputIterator->position(), minutes) );
-    readItem();
+    readItemAndSkipSpaces();
     return true;
 }
 
@@ -655,17 +846,23 @@ bool SyntacticalAnalyzer::matchMinutesString()
     }
 }
 
-bool SyntacticalAnalyzer::matchKeywordInList( SyntaxItem::Type type, const QStringList& keywordList )
+bool SyntacticalAnalyzer::matchKeywordInList( SyntaxItem::Type type, const QStringList& keywordList,
+                                              QLinkedList<SyntaxItem>::iterator *match )
 {
     Q_ASSERT( !keywordList.isEmpty() );
 
+    int startPosition = m_inputIterator->position();
+    if ( match ) {
+        *match = m_output.end(); // Initialize
+    }
     foreach ( const QString &keyword, keywordList ) {
         // Keywords themselves may consist of multiple words (ie. contain whitespaces)
         const QStringList words = keyword.split( QLatin1Char(' '), QString::SkipEmptyParts );
         const int wordCount = words.count();
         int word = 0;
-        forever {
-            const int index = m_direction == RightToLeft ? wordCount - 1 - word : word;
+        int index;
+        do {
+            index = m_direction == RightToLeft ? wordCount - 1 - word : word;
             if ( m_inputIterator->type() != Lexem::String
                 || words[index].compare(m_inputIterator->text(), Qt::CaseInsensitive) != 0 )
             {
@@ -678,42 +875,84 @@ bool SyntacticalAnalyzer::matchKeywordInList( SyntaxItem::Type type, const QStri
             {
                 break; // End of word list reached
             }
-            readItem();
-        }
+            readItemAndSkipSpaces();
+        } while ( m_inputIterator != m_input.constEnd() );
 
         if ( word == wordCount ) {
             // All words of the keyword matched
-            addOutputItem( SyntaxItem(type, m_inputIterator->text(), m_inputIterator->position()) );
-            readItem();
+            QLinkedList<SyntaxItem>::iterator it =
+                    addOutputItem( SyntaxItem(type, keyword, startPosition) );
+            if ( match ) {
+                *match = it;
+            }
+            readItemAndSkipSpaces();
             return true;
-        } else if ( word > 0 ) {
-            // Not all words of the keyword matched (but at least one)
-            // Restore position
-            m_inputIterator -= m_direction == RightToLeft ? -word : word;
+        } else {
+            // Test if the beginning of a keyword matches.
+            // If a cursor position is given, only complete the keyword, if the cursor is at the 
+            // end of the so far typed keyword.
+            // This needs to also match with one single character for matchPrefix, because
+            // otherwise eg. a single typed "t" would get matched as stop name and get quotation
+            // marks around it, making it hard to type "to"..
+            if ( m_inputIterator != m_input.constEnd() && m_correctionLevel > CorrectNothing &&
+                 (m_cursorPositionInInputString == -1 ||
+                  m_cursorPositionInInputString == m_inputIterator->position() + m_inputIterator->text().length()) &&
+                 (word > 0 || words[index].startsWith(m_inputIterator->text(), Qt::CaseInsensitive)) )
+            {
+                // Add output item for the partially read keyword
+                QLinkedList<SyntaxItem>::iterator it =
+                        addOutputItem( SyntaxItem(type, keyword, startPosition) );
+                if ( match ) {
+                    *match = it;
+                }
+                m_selectionLength = keyword.length() - m_inputIterator->text().length() -
+                        QStringList(words.mid(0, index)).join(" ").length(); // TEST
+                readItemAndSkipSpaces();
+                return true;
+            }
+
+            if ( word > 0 ) {
+                // Not all words of the keyword matched (but at least one)
+                // Restore position
+                m_inputIterator -= m_direction == RightToLeft ? -word : word;
+                m_inputIteratorLookahead = m_inputIterator + (m_direction == LeftToRight ? 1 : -1);
+            }
         }
     }
 
     return false; // No keyword matched
 }
 
-bool SyntacticalAnalyzer::parseSuffix()
+bool SyntacticalAnalyzer::matchSuffix()
 {
 //     TODO Parse dates, other time formats?
-    m_inputIterator = m_input.end();
-    m_stopNameEnd = m_inputIterator;
+    if ( m_stopNameBegin == m_input.constEnd() ) {
+        // Complete input read as prefix
+        m_stopNameEnd = m_stopNameBegin;
+        return false;
+    }
+
+    m_inputIterator = m_input.constEnd();
+    m_inputIteratorLookahead = m_inputIterator - 1;
+    readSpaceItems();
     m_direction = RightToLeft;
+    m_stopNameEnd = m_inputIterator;
+    int matches = 0;
     bool matched = false;
-    while ( !isAtEnd() ) {
+    while ( !isAtEnd() && m_inputIteratorLookahead != m_stopNameBegin ) {
         if ( !matched ) {
-            readItem();
-        } else {
-            m_stopNameEnd = m_inputIterator + 1;
+            readItemAndSkipSpaces();
         }
         matched = false;
 
         if ( m_inputIterator->type() == Lexem::QuotationMark ) {
             // Stop if a quotation mark is read (end of the stop name)
             break;
+        } else if ( m_inputIterator->type() == Lexem::Space ) {
+            // Add spaces to the output as error items
+            setError( ErrorMinor, m_inputIterator->text(),
+                      "Space character at the end of the input", m_inputIterator->position() );
+            continue;
         }
         matched = matchTimeAt();
         matched = matched || matchTimeIn();
@@ -723,14 +962,30 @@ bool SyntacticalAnalyzer::parseSuffix()
                                                  m_keywords->departureKeywords() );
         matched = matched || matchKeywordInList( SyntaxItem::KeywordArrival,
                                                  m_keywords->arrivalKeywords() );
+        if ( matched ) {
+            ++matches;
+        }
     }
+
     m_direction = LeftToRight;
-    return true;
+    m_inputIteratorLookahead = m_inputIterator + 1; // Update lookahead iterator to left-to-right
+    if ( matches > 0 ) {
+        // Move to previous item (right-to-left mode)
+        // eg. "[StopName] tomorrow" => "StopName [tomorrow]"
+        m_stopNameEnd = m_inputIteratorLookahead;
+        kDebug() << (m_stopNameEnd == m_input.constEnd() ? "stop name end: END" : ("stop name end: " + m_stopNameEnd->text()));
+        return true;
+    } else {
+        kDebug() << "Suffix didn't match";
+        return false;
+    }
 }
 
-bool SyntacticalAnalyzer::parseStopName()
+bool SyntacticalAnalyzer::matchStopName()
 {
     m_inputIterator = m_stopNameBegin;
+    m_inputIteratorLookahead = m_inputIterator + 1;
+    readSpaceItems();
     if ( m_inputIterator == m_stopNameEnd ) {
         setError( ErrorFatal, QString(), "No stop name", m_inputIterator->position() );
         return false;
@@ -738,69 +993,60 @@ bool SyntacticalAnalyzer::parseStopName()
 
     QStringList stopNameWords;
     int firstWordPos = -1;
-    int quotationMarks = 0;
 
     if ( m_inputIterator->type() == Lexem::QuotationMark ) {
-        // This loop ends when a quotation mark is found, or if there is no more input to read
+        // The while loop ends when a quotation mark is found, or if there is no more input to read
         firstWordPos = m_inputIterator->position() + 1;
-        ++quotationMarks;
-        if ( m_inputIterator != m_stopNameEnd ) {
-            readItem();
-            while ( m_inputIterator != m_stopNameEnd ) {
-                if ( m_inputIterator->type() == Lexem::QuotationMark ) {
-                    ++quotationMarks;
-                    break; // Closing quotation mark
-                } else {
-                    stopNameWords << m_inputIterator->text();
-                }
-                readItem();
+        readItem(); // m_inputIterator isn't at m_stopNameEnd, tested above
+        while ( m_inputIterator != m_stopNameEnd ) {
+            if ( m_inputIterator->type() == Lexem::QuotationMark ) {
+                break; // Closing quotation mark
+            } else {
+                stopNameWords << m_inputIterator->text();
             }
+            readItem();
         }
 
-        if ( m_inputIterator->type() != Lexem::QuotationMark ) {
+        if ( m_inputIterator == m_stopNameEnd || m_inputIterator->type() != Lexem::QuotationMark ) {
             setError( ErrorSevere, QString(), "No closing quotation mark",
                       m_inputIterator->position() );
-//             TODO Error handling: Add a closing quotation mark?
+//             TODO Error handling: Add a closing quotation mark
         } else {
-            ++m_inputIterator;
-        }
-    } else {
-        if ( m_inputIterator->type() == Lexem::Space ) {
+//             ++m_inputIterator;
             readItem();
         }
+    } else {
+        firstWordPos = m_inputIterator->position();  // m_inputIterator isn't at m_stopNameEnd, tested above
+        do {
+            stopNameWords << m_inputIterator->text();
+            readItem();
+        } while ( m_inputIterator != m_stopNameEnd );
 
-        if ( m_inputIterator != m_stopNameEnd ) {
-            firstWordPos = m_inputIterator->position();
-            do {
-                stopNameWords << m_inputIterator->text();
-                readItem();
-            } while ( m_inputIterator != m_stopNameEnd );
-
-            if ( m_cursorPositionInInputString >= firstWordPos &&
-                 m_correctionLevel > CorrectNothing )
-            {
-                ++m_cursorOffset; // Add an offset for the quotation marks that get inserted
-            }
-        } else {
-            firstWordPos = m_inputIterator->position() + 1;
+        if ( m_cursorPositionInInputString >= firstWordPos && m_correctionLevel > CorrectNothing ) {
+            ++m_cursorOffset; // Add an offset for the quotation marks that get inserted
         }
     }
 
     if ( stopNameWords.isEmpty() ) {
-        setError( ErrorFatal, QString(), "No stop name (but empty quotation marks)",
-                  firstWordPos + 1 );
+        setError( ErrorFatal, QString(), "No stop name", firstWordPos + 1 );
         return false;
     } else {
         addOutputItem( SyntaxItem(SyntaxItem::StopName, stopNameWords.join(" "), firstWordPos) );
 
-        if ( m_inputIterator != m_stopNameEnd ) {
+        if ( m_inputIterator != m_stopNameEnd && m_inputIterator != m_input.constEnd() ) {
             // Remaining lexems in m_input
+            // Put their texts into an error item (eg. a Lexem::Space)
             int position = m_inputIterator->position();
-            QStringList errornousText;
+            QString errornousText;
             for ( ; m_inputIterator != m_stopNameEnd; ++m_inputIterator ) {
-                errornousText << m_inputIterator->text();
+                if ( m_inputIterator->isFollowedBySpace() ) {
+                    errornousText.append( ' ' + m_inputIterator->text() );
+                } else {
+                    errornousText.append( m_inputIterator->text() );
+                }
             }
-            setError( ErrorSevere, errornousText.join(" "), "Unknown elements remain unparsed",
+            m_inputIteratorLookahead = m_inputIterator + 1;
+            setError( ErrorSevere, errornousText.trimmed(), "Unknown elements remain unparsed",
                       position );
         }
     }
@@ -818,6 +1064,7 @@ QLinkedList< SyntaxItem > ContextualAnalyzer::analyze( const QLinkedList< Syntax
 {
     m_input = input;
     m_inputIterator = m_input.begin();
+    m_inputIteratorLookahead = m_inputIterator + 1;
     m_state = Running;
     m_result = Accepted;
     QList< QSet<SyntaxItem::Type> > disjointKeywords;
@@ -1142,9 +1389,9 @@ void JourneySearchAnalyzer::completeStopName( KLineEdit *lineEdit, const QString
     }
     kDebug() << "MATCH" << completion;
 
-    JourneySearchAnalyzer::Results results = analyze( lineEdit->text() );
-    int stopNamePosStart = results.syntaxItems[ SyntaxItem::StopName ].position();
-    int stopNameLen = results.stopName.length(); // TODO may be wrong if the input contains double spaces "  "
+    Results results = analyze( lineEdit->text() );
+    int stopNamePosStart = results.syntaxItem( SyntaxItem::StopName )->position();
+    int stopNameLen = results.stopName().length(); // TODO may be wrong if the input contains double spaces "  "
     kDebug() << "STOPNAME =" << lineEdit->text().mid( stopNamePosStart, stopNameLen );
 
     int selStart = lineEdit->selectionStart();

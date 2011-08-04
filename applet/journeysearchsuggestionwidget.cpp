@@ -24,6 +24,7 @@
 
 #include <KDebug>
 #include <KColorScheme>
+#include <KLineEdit>
 #include <Plasma/LineEdit>
 #include <Plasma/Animator>
 #include <Plasma/Animation>
@@ -44,6 +45,12 @@ JourneySearchSuggestionItem::JourneySearchSuggestionItem(
 
     setFlags( ItemClipsToShape | ItemIsFocusable | ItemIsSelectable );
     updateData( modelIndex );
+}
+
+const Results JourneySearchSuggestionWidget::results() const
+{
+    return m_journeySearchAnalyzer->analyze( m_lineEdit ? m_lineEdit->text() : QString(),
+                                             CorrectNothing );
 }
 
 void JourneySearchSuggestionItem::updateTextLayout()
@@ -341,6 +348,8 @@ void JourneySearchSuggestionWidget::attachLineEdit(Plasma::LineEdit* lineEdit)
 {
     m_lineEdit = lineEdit;
     connect( lineEdit, SIGNAL(textEdited(QString)), this, SLOT(journeySearchLineEdited(QString)) );
+    connect( lineEdit->nativeWidget(), SIGNAL(cursorPositionChanged(int,int)), this, SLOT(journeySearchLineCursorPositionChanged()) );
+    connect( lineEdit->nativeWidget(), SIGNAL(selectionChanged()), this, SLOT(journeySearchLineSelectionChanged()) );
 
     if ( !lineEdit->text().isEmpty() ) {
         // TODO
@@ -387,18 +396,12 @@ void JourneySearchSuggestionWidget::addJourneySearchCompletions()
     int row = 0;
 
     // Add recent journey searches
-    int recentCount = 0;
+    Results results = m_journeySearchAnalyzer->results();
     if ( m_enabledSuggestions.testFlag(RecentJourneySearchSuggestion) ) {
-        if ( m_lineEdit ) {
+        int recentCount = 0;
+        if ( m_lineEdit && !results.stopName().isEmpty() ) {
             foreach( const QString &recent, m_settings->recentJourneySearches ) {
-//                 int posStart, len;
-//                 QString stop;
-
-                JourneySearchAnalyzer::Results results = m_journeySearchAnalyzer->analyze(
-                        m_lineEdit->nativeWidget()->text() );
-//                 JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(), &posStart, &len, &stop );
-                if ( recent.contains(results.stopName) ) {
-//                 if ( recent.contains(stop) ) {
+                if ( recent.contains(results.stopName()) ) {
                     QStandardItem *item = new QStandardItem( KIcon("emblem-favorite"),
                             i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Recent:</emphasis> %1", recent) );
                     item->setData( "recent", Qt::UserRole + 1 );
@@ -453,30 +456,26 @@ void JourneySearchSuggestionWidget::addJourneySearchCompletions()
             if ( hasTimeKeyword ) {
                 type = "replaceTimeKeyword";
 
-                JourneySearchAnalyzer::Results results =
-                        m_journeySearchAnalyzer->analyze( m_lineEdit->text() );
-//                 QHash<JourneySearchParser::Keyword, QVariant> keywordValues =
-//                         JourneySearchParser::( m_lineEdit->text() );
-                if ( results.syntaxItems.contains(SyntaxItem::KeywordTimeAt) ) { // keywordValues.contains( JourneySearchParser::KeywordTimeAt ) ) {
+                if ( results.syntaxItems().contains(SyntaxItem::KeywordTimeAt) ) { // keywordValues.contains( JourneySearchParser::KeywordTimeAt ) ) {
 //                     QDateTime dateTime = keywordValues[ JourneySearchParser::KeywordTimeAt ].toDateTime();
                     extraRegExp = "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))";
 
                     // Add "30 minutes later"
                     suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes later", 30 );
                     suggestionValues << QString( "%1 %2" ).arg( timeKeywordAt )
-                            .arg( KGlobal::locale()->formatTime( results.time.addSecs(30 * 60).time() ) );
+                            .arg( KGlobal::locale()->formatTime( results.time().addSecs(30 * 60).time() ) );
 
                     // Add "60 minutes later"
                     suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes later", 60 );
                     suggestionValues << QString( "%1 %2" ).arg( timeKeywordAt )
-                            .arg( KGlobal::locale()->formatTime( results.time.addSecs(60 * 60).time() ) );
+                            .arg( KGlobal::locale()->formatTime( results.time().addSecs(60 * 60).time() ) );
 
                     // Add "30 minutes earlier"
                     suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes earlier", 30 );
                     suggestionValues << QString( "%1 %2" ).arg( timeKeywordAt )
-                            .arg( KGlobal::locale()->formatTime( results.time.addSecs(-30 * 60).time() ) );
-                } else if ( results.syntaxItems.contains(SyntaxItem::KeywordTimeIn) ) { //keywordValues.contains( JourneySearchParser::KeywordTimeIn ) ) {
-                    int minutes = results.syntaxItems[SyntaxItem::KeywordTimeIn].value().toInt(); // keywordValues[ JourneySearchParser::KeywordTimeIn ].toInt();
+                            .arg( KGlobal::locale()->formatTime( results.time().addSecs(-30 * 60).time() ) );
+                } else if ( results.syntaxItems().contains(SyntaxItem::KeywordTimeIn) ) { //keywordValues.contains( JourneySearchParser::KeywordTimeIn ) ) {
+                    int minutes = results.syntaxItems()[SyntaxItem::KeywordTimeIn]->value().toInt(); // keywordValues[ JourneySearchParser::KeywordTimeIn ].toInt();
                     extraRegExp = m_journeySearchKeywords->relativeTimeString( "\\d{1,}" );
 
                     // Add "30 minutes later"
@@ -705,13 +704,12 @@ void JourneySearchSuggestionWidget::journeySearchItemCompleted(const QString& ne
         kDebug() << "Index isn't valid, can't remove row from model" << newJourneySearch;
     }
     m_lineEdit->setText( newJourneySearch );
-
-    // For autocompletion and to update suggestions
-//     journeySearchInputEdited( journeySearch->text() ); TEST should be called automatically
-
     if ( newCursorPos != -1 ) {
         m_lineEdit->nativeWidget()->setCursorPosition( newCursorPos );
     }
+
+    // For autocompletion and to update suggestions
+    journeySearchLineEdited( newJourneySearch );
 }
 
 void JourneySearchSuggestionWidget::useStopSuggestion(const QModelIndex& modelIndex)
@@ -745,17 +743,16 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& modelIn
         addJourneySearchCompletions();
         addAllKeywordAddRemoveItems();
     } else if ( type == "additionalKeywordAtEnd" ) {
-        // Add keyword at the endint newCursorPos
-        QString newText = m_lineEdit->text() + ' ' +
-        modelIndex.data( Qt::UserRole + 2 ).toString();
+        // Add keyword at the end
+        QString newText = m_lineEdit->text() + ' ' + modelIndex.data( Qt::UserRole + 2 ).toString();
         journeySearchItemCompleted( newText, modelIndex );
     } else if ( type == "additionalKeywordAlmostAtEnd" ) {
         // Add keyword after the stop name, if any
         QString newText, keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
-        JourneySearchAnalyzer::Results results =
-                m_journeySearchAnalyzer->analyze( m_lineEdit->nativeWidget()->text() );
-        int posStart = results.syntaxItems[SyntaxItem::StopName].position();
-        int len = results.stopName.length();
+        Results results = m_journeySearchAnalyzer->results();
+//                 m_journeySearchAnalyzer->analyze( m_lineEdit->nativeWidget()->text() );
+        int posStart = results.syntaxItems()[SyntaxItem::StopName]->position();
+        int len = results.stopName().length();
 //         JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(), &posStart, &len );
         if ( posStart != -1 ) {
             newText = m_lineEdit->text().insert( posStart + len, ' ' + keyword );
@@ -810,21 +807,19 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& modelIn
     } else {
         // Insert the clicked stop into the journey search line,
         // don't override keywords and other text
-//         int posStart, len;
-        JourneySearchAnalyzer::Results results =
-                m_journeySearchAnalyzer->analyze( m_lineEdit->nativeWidget()->text() );
-//         JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(), &posStart, &len );
+        Results results = m_journeySearchAnalyzer->results();
+        const QString newStopName = modelIndex.data().toString();
+        int position = results.syntaxItems().contains(SyntaxItem::StopName)
+                ? results.syntaxItems()[SyntaxItem::StopName]->position() : 1; // 1 => after the quotation mark
+        QHash< SyntaxItem::Type, QVariant > updateItemValues;
+        updateItemValues.insert( SyntaxItem::StopName, newStopName );
+        QString updatedSearch = results.updatedOutputString(
+                updateItemValues, QList<SyntaxItem::Type>(),
+                ErrornousOutputString, m_journeySearchKeywords );
+        m_lineEdit->setText( updatedSearch );
 
-        QString quotedStop = "\"" + modelIndex.data().toString() + "\"";
-        if ( results.stopName.isEmpty() ) {
-            // No stop name found
-            m_lineEdit->setText( quotedStop );
-        } else {
-            int position = results.syntaxItems[SyntaxItem::StopName].position();
-            m_lineEdit->setText( m_lineEdit->text().replace(position,
-                        results.stopName.length(), quotedStop) );
-            m_lineEdit->nativeWidget()->setCursorPosition( position + quotedStop.length() );
-        }
+        // Set cursor position to the end of the inserted stop name
+        m_lineEdit->nativeWidget()->setCursorPosition( position + newStopName.length() );
 
         // Update suggestions
         removeGeneralSuggestionItems();
@@ -849,38 +844,55 @@ void JourneySearchSuggestionWidget::suggestionDoubleClicked(const QModelIndex& m
     }
 }
 
-void JourneySearchSuggestionWidget::journeySearchLineEdited(const QString& newText)
+void JourneySearchSuggestionWidget::journeySearchLineCursorPositionChanged()
 {
-    removeGeneralSuggestionItems();
-    addJourneySearchCompletions();
-    addAllKeywordAddRemoveItems();
+    QString d1 = m_lineEdit->nativeWidget()->text();
+    qDebug() << d1.insert(m_lineEdit->nativeWidget()->cursorPosition(), '|');
+}
 
+void JourneySearchSuggestionWidget::journeySearchLineSelectionChanged()
+{
+    QString d2 = m_lineEdit->nativeWidget()->text();
+    qDebug() << d2.insert(m_lineEdit->nativeWidget()->selectionStart(), '[')
+                  .insert(m_lineEdit->nativeWidget()->selectionStart() + m_lineEdit->nativeWidget()->selectedText().length() + 1, ']')
+             << "   " << m_lineEdit->nativeWidget()->selectedText();
+}
+
+void JourneySearchSuggestionWidget::journeySearchLineEdited( const QString& newText )
+{
+    QString d1 = newText;
+    QString d2 = newText;
+    qDebug() << d1.insert(m_lineEdit->nativeWidget()->cursorPosition(), '|');
+    qDebug() << d2.insert(m_lineEdit->nativeWidget()->selectionStart(), '[')
+                  .insert(m_lineEdit->nativeWidget()->selectionStart() + m_lineEdit->nativeWidget()->selectedText().length() + 1, ']')
+             << "   " << m_lineEdit->nativeWidget()->selectedText();
     // Only correct the input string if letters were added (eg. not after pressing backspace).
     m_lettersAddedToJourneySearchLine = newText.length() > m_journeySearchLastTextLength;
 
     int cursorPos = m_lineEdit->nativeWidget()->cursorPosition();
     m_journeySearchAnalyzer->setCursorPositionInInputString( cursorPos );
-    JourneySearchAnalyzer::Results results =
-            m_journeySearchAnalyzer->analyze( m_lineEdit->nativeWidget()->text(),
+    Results results = m_journeySearchAnalyzer->analyze( newText,
                 m_lettersAddedToJourneySearchLine ? CorrectEverything : CorrectNothing );
 
-    if ( m_lettersAddedToJourneySearchLine ) {
-        m_lineEdit->setText( results.outputStringWithErrors );
-        m_lineEdit->nativeWidget()->setCursorPosition( cursorPos + results.cursorOffset ); // TODO use maybe shifted cursor position (if there are syntax items with flag CorrectedSyntaxItem
-    }
-//     JourneySearchParser::parseJourneySearch( m_lineEdit->nativeWidget(),
-//                                             newText, &stop, &departure, &stopIsTarget, &timeIsDeparture,
-//                                             0, 0, m_lettersAddedToJourneySearchLine );
-    m_journeySearchLastTextLength = m_lineEdit->text().length()
-            - m_lineEdit->nativeWidget()->selectedText().length();
+    removeGeneralSuggestionItems();
+    addJourneySearchCompletions();
+    addAllKeywordAddRemoveItems();
 
-//     reconnectJourneySource( results.stopName, results.time,
-//                             results.stopIsTarget, results.timeIsDeparture, true );
-    emit journeySearchLineChanged( results.stopName, results.time,
-                                   results.stopIsTarget, results.timeIsDeparture );
+    kDebug() << "Letters added" << m_lettersAddedToJourneySearchLine;
+    if ( m_lettersAddedToJourneySearchLine ) {
+        m_lineEdit->setText( results.outputString(ErrornousOutputString) );
+        m_lineEdit->nativeWidget()->setSelection( cursorPos + results.cursorOffset(),
+                                                  results.selectionLength() );
+        // TODO use maybe shifted cursor position (if there are syntax items with flag CorrectedSyntaxItem
+    }
+
+    m_journeySearchLastTextLength = m_lineEdit->text().length();
+//             - m_lineEdit->nativeWidget()->selectedText().length();
+    emit journeySearchLineChanged( results.stopName(), results.time(),
+                                   results.stopIsTarget(), results.timeIsDeparture() );
 }
 
-void JourneySearchSuggestionWidget::updateStopSuggestionItems(const QVariantHash& stopSuggestionData)
+void JourneySearchSuggestionWidget::updateStopSuggestionItems( const QVariantHash& stopSuggestionData )
 {
     // First read the data from stopSuggestionData
     QVariantHash stopToStopID;
@@ -915,24 +927,26 @@ void JourneySearchSuggestionWidget::updateStopSuggestionItems(const QVariantHash
         stopToStopWeight.insert( sStopName, stopWeight );
     }
 
-    // Set commpletion items
+    // Set completion items
     if ( m_lineEdit && m_lettersAddedToJourneySearchLine
         && m_lineEdit->nativeWidget()->completionMode() != KGlobalSettings::CompletionNone )
     {
 //         QString stopName;
         KLineEdit *lineEdit = m_lineEdit->nativeWidget();
 
-        JourneySearchAnalyzer::Results results = m_journeySearchAnalyzer->analyze( lineEdit->text() );
-        int posStart = results.syntaxItems[SyntaxItem::StopName].position();
-        int len = results.stopName.length();
+//         Results results = m_journeySearchAnalyzer->analyze( lineEdit->text() );
+        const SyntaxItem *stopNameItem = m_journeySearchAnalyzer->results().syntaxItems()[SyntaxItem::StopName];
+        const QString stopName = stopNameItem ? stopNameItem->text() : QString();
+        const int posStart = stopNameItem ? stopNameItem->position() : 0;
+        const int len = stopName.length();
 
 //         JourneySearchParser::stopNamePosition( lineEdit, &posStart, &len, &stopName );
         int selStart = lineEdit->selectionStart();
         if ( selStart == -1 ) {
             selStart = lineEdit->cursorPosition();
         }
-        bool stopNameChanged = selStart > posStart && selStart + lineEdit->selectedText().length()
-                <= posStart + len;
+        const bool stopNameChanged = selStart > posStart &&
+                selStart + lineEdit->selectedText().length() <= posStart + len;
         if ( stopNameChanged ) {
             KCompletion *comp = lineEdit->completionObject( false );
             comp->setIgnoreCase( true );
@@ -942,9 +956,9 @@ void JourneySearchSuggestionWidget::updateStopSuggestionItems(const QVariantHash
             } else {
                 comp->setItems( stopSuggestions );
             }
-            QString completion = comp->makeCompletion( results.stopName );
 
-            if ( completion != results.stopName ) {
+            const QString completion = comp->makeCompletion( stopName );
+            if ( completion != stopName ) {
                 m_journeySearchAnalyzer->completeStopName( lineEdit, completion );
             }
         }

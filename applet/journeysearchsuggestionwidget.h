@@ -24,7 +24,8 @@
 #ifndef JOURNEYSEARCHSUGGESTIONWIDGET_H
 #define JOURNEYSEARCHSUGGESTIONWIDGET_H
 
-// #include <Plasma/TreeView>
+#include "journeysearchparser.h"
+
 #include <Plasma/ScrollWidget>
 
 #include <QGraphicsWidget>
@@ -32,7 +33,7 @@
 
 class JourneySearchKeywords;
 class JourneySearchAnalyzer;
-class JourneySearchAnalyzer;
+class Results;
 class QGraphicsSceneMouseEvent;
 namespace Plasma {
     class LineEdit;
@@ -121,6 +122,8 @@ public:
     /** @brief Gets the types of suggestions to show. */
     Suggestions enabledSuggestions() const { return m_enabledSuggestions; };
 
+    const Results results() const;
+
 signals:
     /** @brief A suggestion has been activated, eg. by a double click. */
     void suggestionActivated();
@@ -185,6 +188,9 @@ protected slots:
      * @param newText The new text.
      **/
     void journeySearchLineEdited( const QString &newText );
+
+    void journeySearchLineSelectionChanged();
+    void journeySearchLineCursorPositionChanged();
 
 protected:
     QModelIndex indexFromItem( JourneySearchSuggestionItem *item );
