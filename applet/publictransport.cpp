@@ -117,7 +117,7 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
         m_graphicsWidget(0), m_mainGraphicsWidget(0), m_oldItem(0), m_titleWidget(0),
         m_labelInfo(0), m_timetable(0), m_journeyTimetable(0), m_listStopSuggestions(0),
         m_overlay(0), m_model(0), m_popupIconTransitionAnimation(0),
-        m_modelJourneys(0), m_journeySearchAnalyzer(0), m_departureProcessor(0), m_stateMachine(0),
+        m_modelJourneys(0), m_departureProcessor(0), m_stateMachine(0),
         m_journeySearchTransition1(0), m_journeySearchTransition2(0),
         m_journeySearchTransition3(0), m_marble(0)
 {
@@ -137,7 +137,6 @@ PublicTransport::~PublicTransport()
     if ( hasFailedToLaunch() ) {
         // Do some cleanup here
     } else {
-        delete m_journeySearchAnalyzer;
     }
 }
 
@@ -1736,10 +1735,14 @@ void PublicTransport::showJourneySearch()
                                  isStateActive("departureDataValid"),
                                  isStateActive("journeyDataValid") );
 
-    m_journeySearchAnalyzer = new JourneySearchAnalyzer();
     Plasma::LineEdit *journeySearch =
             m_titleWidget->castedWidget<Plasma::LineEdit>( TitleWidget::WidgetJourneySearchLine );
     Q_ASSERT( journeySearch );
+    Plasma::ToolButton *searchButton =
+            m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetJourneySearchButton );
+    Q_ASSERT( searchButton );
+    searchButton->setEnabled( false );
+    searchButton->setToolTip( i18nc("@info:tooltip", "Type in a correct journey search") );
 
     m_listStopSuggestions = new JourneySearchSuggestionWidget(
             this, &m_settings, palette() );
@@ -1792,30 +1795,30 @@ void PublicTransport::journeySearchInputFinished()
         settings.recentJourneySearches.takeLast();
     }
     writeSettings( settings );
-
     m_journeyTitleText.clear();
-//     QString stop;
-//     QDateTime departure;
-//     bool stopIsTarget, timeIsDeparture;
-//     JourneySearchParser::parseJourneySearch( journeySearch->nativeWidget(),
-//             journeySearch->text(), &stop, &departure,
-//             &stopIsTarget, &timeIsDeparture );
 
     Results results = m_listStopSuggestions->results();
-//     TODO remove m_journeySearchAnalyzer, not needed here
-//     m_journeySearchAnalyzer->analyze( journeySearch->text() );
     reconnectJourneySource( results.stopName(), results.time(),
                             results.stopIsTarget(), results.timeIsDeparture() );
 
-    delete m_journeySearchAnalyzer;
-    m_journeySearchAnalyzer = NULL;
-//     reconnectJourneySource( stop, departure, stopIsTarget, timeIsDeparture );
     emit journeySearchFinished();
 }
 
 void PublicTransport::journeySearchLineChanged( const QString& stopName,
         const QDateTime& departure, bool stopIsTarget, bool timeIsDeparture )
 {
+    Plasma::ToolButton *searchButton =
+            m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetJourneySearchButton );
+    Q_ASSERT( searchButton );
+
+    if ( m_listStopSuggestions->results().analyzerResult() != Rejected ) {
+        searchButton->setEnabled( true );
+        searchButton->setToolTip( i18nc("@info:tooltip", "Click to start the journey search") );
+    } else {
+        searchButton->setEnabled( false );
+        searchButton->setToolTip( i18nc("@info:tooltip", "Type in a correct journey search") );
+    }
+
     reconnectJourneySource( stopName, departure, stopIsTarget, timeIsDeparture, true );
 }
 

@@ -105,11 +105,13 @@ enum AnalyzerReadDirection {
 
 /**
  * @brief The result of an analyzer pass.
+ *
+ * @note Bigger values mean "more acception", 100 means fully accepted, 0 means rejected.
  **/
 enum AnalyzerResult {
-    Accepted, /**< The input was accepted. */
-    AcceptedWithErrors, /**< The input was accepted, but there were some errors. */
-    Rejected /**< The input was rejected. */
+    Rejected = 0, /**< The input was rejected. */
+    AcceptedWithErrors = 50, /**< The input was accepted, but there were some errors. */
+    Accepted = 100 /**< The input was accepted. */
 };
 
 /**
@@ -928,7 +930,9 @@ public:
      *   @ref SyntacticalAnalyzer::analyze and @ref ContextualAnalyzer::analyze.
      **/
     const Results analyze( const QString &input,
-                           AnalyzerCorrectionLevel correctionLevel = CorrectEverything );
+                           AnalyzerCorrectionLevel correctionLevel = CorrectEverything,
+                           ErrorSeverity minRejectSeverity = ErrorFatal,
+                           ErrorSeverity minAcceptWithErrorsSeverity = ErrorSevere );
 
     /**
      * @brief Returns the results of the last analyzation.

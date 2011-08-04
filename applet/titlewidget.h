@@ -216,7 +216,7 @@ public slots:
 
 protected slots:
     void slotRecentJourneyActionTriggered( QAction *action );
-    void slotJourneySearchInputChanged( const QString &text );
+//     void slotJourneySearchInputChanged( const QString &text );
 
 protected:
     /**

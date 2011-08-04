@@ -49,8 +49,9 @@ JourneySearchSuggestionItem::JourneySearchSuggestionItem(
 
 const Results JourneySearchSuggestionWidget::results() const
 {
-    return m_journeySearchAnalyzer->analyze( m_lineEdit ? m_lineEdit->text() : QString(),
-                                             CorrectNothing );
+    return m_journeySearchAnalyzer->analyze(
+            m_lineEdit ? m_lineEdit->text() : QString(), CorrectNothing,
+            ErrorSevere, ErrorMinor );
 }
 
 void JourneySearchSuggestionItem::updateTextLayout()

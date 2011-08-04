@@ -34,7 +34,6 @@
 #include "settings.h" // Only for ColorGroupSettingsList, remove here, move the function to GlobalApplet?
 #include <publictransporthelper/departureinfo.h>
 
-class JourneySearchAnalyzer;
 class PublicTransportSettings;
 class OverlayWidget;
 class PublicTransportGraphicsItem;
@@ -822,7 +821,6 @@ private:
     QList<JourneyInfo> m_journeyInfos; // List of current journeys.
     QString m_currentJourneySource; // Current source name for journeys at the publictransport data engine.
     QString m_journeyTitleText;
-    JourneySearchAnalyzer *m_journeySearchAnalyzer;
 
     QString m_lastSecondStopName; // The last used second stop name for journey search.
     QDateTime m_lastJourneyDateTime; // The last used date and time for journey search.

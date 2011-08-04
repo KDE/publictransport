@@ -268,11 +268,15 @@ QString Results::updatedOutputString(
 }
 
 const Results JourneySearchAnalyzer::analyze(
-        const QString& input, AnalyzerCorrectionLevel correctionLevel )
+        const QString& input, AnalyzerCorrectionLevel correctionLevel,
+        ErrorSeverity minRejectSeverity, ErrorSeverity minAcceptWithErrorsSeverity )
 {
     m_lexical->setCorrectionLevel( correctionLevel );
     m_syntactical->setCorrectionLevel( correctionLevel );
     m_contextual->setCorrectionLevel( correctionLevel );
+    m_lexical->setErrorHandling( minRejectSeverity, minAcceptWithErrorsSeverity );
+    m_syntactical->setErrorHandling( minRejectSeverity, minAcceptWithErrorsSeverity );
+    m_contextual->setErrorHandling( minRejectSeverity, minAcceptWithErrorsSeverity );
 
 //     TODO calculate cursor offset at end by summing up lengths of corrected items before the old cursor position
     QLinkedList<Lexem> lexems = m_lexical->analyze( input );
@@ -283,7 +287,8 @@ const Results JourneySearchAnalyzer::analyze(
     m_results.m_cursorOffset = m_contextual->cursorOffset();
     m_results.m_selectionLength = m_contextual->selectionLength();
     m_results.m_inputString = input;
-    m_results.m_result = m_contextual->result();
+    m_results.m_result = qMin( m_contextual->result(),
+                               qMin(m_syntactical->result(), m_lexical->result()) );
     return m_results;
 //     return resultsFromSyntaxItemList(
 //             m_contextual->analyze(m_syntactical->analyze(m_lexical->analyze(input))),
@@ -299,6 +304,7 @@ void Results::init()
     m_hasErrors = false;
     m_syntaxItems.clear();
     m_cursorOffset = 0;
+    m_result = Rejected;
 }
 
 QString Results::outputString( OutputStringFlags flags ) const
@@ -577,10 +583,11 @@ QLinkedList< SyntaxItem > SyntacticalAnalyzer::analyze( const QLinkedList<Lexem>
     m_result = Accepted;
     m_inputIterator = m_input.begin();
     m_inputIteratorLookahead = m_inputIterator + 1;
-    readSpaceItems();
 
+    readSpaceItems();
     parseJourneySearch();
 
+    // Only for debugging:
     QStringList syntaxString; foreach ( const SyntaxItem &syntaxItem, m_output ) {
             syntaxString << QString("%1 (pos: %2, type: %3, value: %4)").arg(syntaxItem.text())
                 .arg(syntaxItem.position()).arg(syntaxItem.type()).arg(syntaxItem.value().toString()); }
@@ -607,8 +614,8 @@ QLinkedList<SyntaxItem>::iterator SyntacticalAnalyzer::addOutputItem( const Synt
 
 bool SyntacticalAnalyzer::parseJourneySearch()
 {
-    if ( m_inputIterator == m_input.end() ) {
-        setError( ErrorInformational, QString(), "No input", m_inputIterator->position() );
+    if ( m_inputIterator == m_input.constEnd() ) {
+        setError( ErrorSevere, QString(), "No input", m_inputIterator->position() );
         return false;
     }
 
@@ -986,7 +993,7 @@ bool SyntacticalAnalyzer::matchStopName()
     m_inputIterator = m_stopNameBegin;
     m_inputIteratorLookahead = m_inputIterator + 1;
     readSpaceItems();
-    if ( m_inputIterator == m_stopNameEnd ) {
+    if ( m_inputIterator == m_stopNameEnd || m_inputIterator == m_input.constEnd() ) {
         setError( ErrorFatal, QString(), "No stop name", m_inputIterator->position() );
         return false;
     }
@@ -1020,7 +1027,7 @@ bool SyntacticalAnalyzer::matchStopName()
         do {
             stopNameWords << m_inputIterator->text();
             readItem();
-        } while ( m_inputIterator != m_stopNameEnd );
+        } while ( m_inputIterator != m_stopNameEnd && m_inputIterator != m_input.constEnd() );
 
         if ( m_cursorPositionInInputString >= firstWordPos && m_correctionLevel > CorrectNothing ) {
             ++m_cursorOffset; // Add an offset for the quotation marks that get inserted
@@ -1040,14 +1047,17 @@ bool SyntacticalAnalyzer::matchStopName()
             QString errornousText;
             for ( ; m_inputIterator != m_stopNameEnd; ++m_inputIterator ) {
                 if ( m_inputIterator->isFollowedBySpace() ) {
-                    errornousText.append( ' ' + m_inputIterator->text() );
+                    errornousText.append( m_inputIterator->text() + ' ' );
                 } else {
                     errornousText.append( m_inputIterator->text() );
                 }
             }
             m_inputIteratorLookahead = m_inputIterator + 1;
-            setError( ErrorSevere, errornousText.trimmed(), "Unknown elements remain unparsed",
-                      position );
+
+            // If the unparsed text only contains spaces, the error is a minor one.
+            // Otherwise it's severe, eg. unrecognized keywords/values.
+            setError( errornousText.trimmed().isEmpty() ? ErrorMinor : ErrorSevere,
+                      errornousText, "Unknown elements remain unparsed", position );
         }
     }
 

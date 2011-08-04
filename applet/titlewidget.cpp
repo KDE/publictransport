@@ -205,7 +205,7 @@ void TitleWidget::addJourneySearchWidgets()
             KGlobalSettings::CompletionPopupAuto );
     journeySearchLineEdit->nativeWidget()->setCompletionModeDisabled(
             KGlobalSettings::CompletionShell );
-    journeySearchLineEdit->setEnabled( true );
+    journeySearchLineEdit->setEnabled( false );
 
     KLineEdit *journeySearch = journeySearchLineEdit->nativeWidget();
     journeySearch->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
@@ -217,8 +217,8 @@ void TitleWidget::addJourneySearchWidgets()
             this, SIGNAL(journeySearchInputFinished()) );
     connect( journeySearchLineEdit, SIGNAL(textEdited(QString)),
             this, SIGNAL(journeySearchInputEdited(QString)) );
-    connect( journeySearchLineEdit, SIGNAL(textChanged(QString)),
-            this, SLOT(slotJourneySearchInputChanged(QString)) );
+//     connect( journeySearchLineEdit, SIGNAL(textChanged(QString)),
+//             this, SLOT(slotJourneySearchInputChanged(QString)) );
 
     // Add widgets
     addWidget( journeySearchLineEdit, WidgetJourneySearchLine );
@@ -479,11 +479,11 @@ void TitleWidget::slotRecentJourneyActionTriggered(QAction* action)
     journeySearchLine->setFocus();
 }
 
-void TitleWidget::slotJourneySearchInputChanged(const QString& text)
-{
+// void TitleWidget::slotJourneySearchInputChanged(const QString& text)
+// {
     // Disable start search button if the journey search line is empty
-    castedWidget<Plasma::ToolButton>(WidgetJourneySearchButton)->setEnabled( !text.isEmpty() );
-}
+//     castedWidget<Plasma::ToolButton>(WidgetJourneySearchButton)->setEnabled( !text.isEmpty() );
+// }
 
 void TitleWidget::settingsChanged()
 {
