@@ -284,6 +284,7 @@ protected:
     virtual void updateGeometry();
     virtual void updateTextLayouts() = 0;
     virtual QGraphicsWidget *routeItem() const = 0;
+    virtual void fadeOutLeftAndRight( QPainter *painter, const QRect &rect, int fadeWidth = 40 );
 
     QPointer<TopLevelItem> m_item;
     PublicTransportWidget *m_parent;

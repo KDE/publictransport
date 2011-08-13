@@ -658,14 +658,18 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
     QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
 
+    QRect pixmapRect( 0, 0, rect.width(), rect.height() );
+    QPixmap pixmap( pixmapRect.size());
+    pixmap.fill( Qt::transparent );
+    QPainter p( &pixmap );
+
     // Draw journey rating background:
     //   green for relatively short duration, less changes;
     //   red for relatively long duration, more changes (controlled by the model).
     QVariant vr = index().data( JourneyRatingRole );
     if ( vr.isValid() ) {
         qreal rating = vr.toReal();
-        QColor ratingColor;
-        ratingColor = KColorUtils::mix(
+        QColor ratingColor = KColorUtils::mix(
                 KColorScheme(QPalette::Active).background( KColorScheme::PositiveBackground ).color(),
                 KColorScheme(QPalette::Active).background( KColorScheme::NegativeBackground ).color(),
                 rating );
@@ -679,50 +683,29 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
         }
 
         if ( drawRatingBackground ) {
-            QLinearGradient bgGradient( 0, 0, 1, 0 );
-            bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-            bgGradient.setColorAt( 0, Qt::transparent );
-            bgGradient.setColorAt( 0.1, ratingColor );
-            bgGradient.setColorAt( 0.9, ratingColor );
-            bgGradient.setColorAt( 1, Qt::transparent );
-            painter->fillRect( rect, QBrush(bgGradient) );
+            p.fillRect( pixmapRect, ratingColor );
         }
     } else if ( index().row() % 2 == 1 ) {
         // Draw alternate background (if journey ratings aren't available)
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, alternateBackgroundColor );
-        bgGradient.setColorAt( 0.6, alternateBackgroundColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
-
-        painter->fillRect( rect, QBrush(bgGradient) );
+        p.fillRect( pixmapRect, alternateBackgroundColor );
     }
 
     // Draw special background for departures with an alarm
     if ( index().data(DrawAlarmBackgroundRole).toBool() ) {
 //      qreal bias = index().data( AlarmColorIntensityRole ).toReal();
         QColor alarmColor( 180, 0, 0, 128 );
-
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, alarmColor );
-        bgGradient.setColorAt( 0.6, alarmColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
-
-        painter->fillRect( rect, QBrush(bgGradient) );
+        p.fillRect( pixmapRect, alarmColor );
     }
-    
+
     // Draw a line at the bottom of this TimetableItem
-    QLinearGradient borderGradient( 0, 0, 1, 0 );
-    borderGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-    borderGradient.setColorAt( 0, Qt::transparent );
-    borderGradient.setColorAt( 0.4, borderColor );
-    borderGradient.setColorAt( 0.6, borderColor );
-    borderGradient.setColorAt( 1, Qt::transparent );
-    painter->fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()),
-                       QBrush(borderGradient) );
+    p.setPen( borderColor );
+    p.drawLine( pixmapRect.bottomLeft(), pixmapRect.bottomRight() );
+
+    // Fade out to the left and right
+    fadeOutLeftAndRight( &p, pixmapRect );
+    p.end();
+
+    painter->drawPixmap( rect.toRect(), pixmap );
 }
 
 void JourneyGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -907,43 +890,55 @@ void DepartureGraphicsItem::paintBackground( QPainter* painter,
     QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
 
-    QPixmap pixmap( rect.size().toSize());
+    QRect pixmapRect( 0, 0, rect.width(), rect.height() );
+    QPixmap pixmap( pixmapRect.size() );
     pixmap.fill( Qt::transparent );
     QPainter p( &pixmap );
 
     // Draw special background for departures in color groups
     QColor bgColor = index().data(Qt::BackgroundColorRole).value<QColor>();
     if ( bgColor != Qt::transparent ) {
-        p.fillRect( rect, bgColor );
+        p.fillRect( pixmapRect, bgColor );
     } else if ( index().row() % 2 == 1 ) {
-        p.fillRect( rect, alternateBackgroundColor );
+        p.fillRect( pixmapRect, alternateBackgroundColor );
     }
 
     // Draw special background for departures with an alarm
     if ( index().data(DrawAlarmBackgroundRole).toBool() ) {
 //      qreal bias = index().data( AlarmColorIntensityRole ).toReal();
         QColor alarmColor( 180, 0, 0, 128 );
-        p.fillRect( rect, alarmColor );
+        p.fillRect( pixmapRect, alarmColor );
     }
 
     // Draw a line at the bottom of this TimetableItem
-    p.fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()), borderColor );
+//     p.fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()), borderColor );
+    p.setPen( borderColor );
+    p.drawLine( pixmapRect.bottomLeft(), pixmapRect.bottomRight() );
 
     // Fade out to the left and right
-    const int fadeoutSize = 30;
-    p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+    fadeOutLeftAndRight( &p, pixmapRect );
+    p.end();
+
+    painter->drawPixmap( rect.toRect(), pixmap );
+}
+
+void PublicTransportGraphicsItem::fadeOutLeftAndRight( QPainter* painter, const QRect& rect,
+                                                       int fadeWidth )
+{
+    painter->setCompositionMode( QPainter::CompositionMode_DestinationIn );
     QLinearGradient alphaGradient( 0, 0, 1, 0 );
     alphaGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
     alphaGradient.setColorAt( 0, Qt::transparent );
     alphaGradient.setColorAt( 1, Qt::black );
-    p.fillRect( QRectF(rect.left(), rect.top(), fadeoutSize, rect.height()), alphaGradient );
+    // Fade out on the left
+    painter->fillRect( QRect(rect.left(), rect.top(), fadeWidth, rect.height()), alphaGradient );
 
     alphaGradient.setColorAt( 0, Qt::black );
     alphaGradient.setColorAt( 1, Qt::transparent );
-    p.fillRect( QRectF(rect.right() - fadeoutSize, rect.top(), fadeoutSize, rect.height()), alphaGradient );
-    p.end();
-
-    painter->drawPixmap( rect.toRect(), pixmap );
+    // Fade out on the right (the +1 is to be sure, to not have a 1 pixel line on the right, which
+    // isn't made transparent at all)
+    painter->fillRect( QRect(rect.right() - fadeWidth, rect.top(), fadeWidth + 1, rect.height()),
+                       alphaGradient );
 }
 
 void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
