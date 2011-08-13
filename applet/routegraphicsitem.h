@@ -25,6 +25,7 @@
 #include <Plasma/Svg>
 #include "global.h"
 
+class DepartureModel;
 class KMenu;
 class JourneyItem;
 class DepartureItem;
@@ -128,22 +129,18 @@ public:
      * to be shown.
      *
      * @param parent The parent item.
-     * 
+     * @param model The model which includes the route stop item this RouteStopTextGraphicsItem
+     *   visualizes.
      * @param font The font to use.
-     * 
      * @param baseSize A zooming factor.
-     * 
      * @param time The time at which the vehicle is at this route stop.
-     * 
      * @param stopName The name of the stop this RouteStopTextGraphicsItem visualizes.
-     * 
      * @param minsFromFirstRouteStop The time in minutes the vehicle needs from the first stop of
      *   the route until this route stop.
-     *
      * @param stopFlags Flags of this route stop, eg. whether or not this is the current home stop.
      **/
-    RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font, qreal baseSize,
-                               const QTime &time, const QString &stopName,
+    RouteStopTextGraphicsItem( QGraphicsItem* parent, DepartureModel *model, const QFont &font,
+                               qreal baseSize, const QTime &time, const QString &stopName,
                                int minsFromFirstRouteStop,
                                RouteStopFlags stopFlags = RouteStopIsIntermediate );
 
@@ -160,7 +157,7 @@ public:
      * RouteStopIsHighlighted / RouteStopIsHomeStop in the return value if neccessary.
      **/
     RouteStopFlags routeStopFlags() const;
-    
+
     /**
      * @brief Sets information about the new associated stop.
      *
@@ -183,6 +180,8 @@ public:
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
 
+    DepartureModel *model() const;
+
 signals:
     void hovered( RouteStopTextGraphicsItem *item );
     void unhovered( RouteStopTextGraphicsItem *item );
@@ -202,6 +201,7 @@ private:
     qreal m_expandStep;
     qreal m_baseSize;
     RouteStopFlags m_stopFlags;
+    DepartureModel *m_model;
 };
 
 /**
@@ -229,7 +229,7 @@ public:
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
 
-    QPointer<DepartureItem> item() const { return m_item; };
+    const DepartureItem *item() const { return m_item.data(); };
 
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );

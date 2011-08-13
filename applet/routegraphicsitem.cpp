@@ -336,7 +336,8 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             // Create text item, that displays a single stop name
             // and automatically elides and stretches it on hover to show hidden text
             RouteStopTextGraphicsItem *textItem = new RouteStopTextGraphicsItem(
-                    this, *font, baseSize, time, stopName, minsFromFirstRouteStop, routeStopFlags );
+                    this, model, *font, baseSize, time, stopName, minsFromFirstRouteStop,
+                    routeStopFlags );
             textItem->setPos( stopTextPos );
             textItem->resize( baseSize + 10, fontMetrics->height() );
             textItem->rotate( m_textAngle );
@@ -561,14 +562,15 @@ RouteStopFlags RouteStopMarkerGraphicsItem::routeStopFlags() const
 RouteStopFlags RouteStopTextGraphicsItem::routeStopFlags() const
 {
     RouteStopFlags stopFlags = m_stopFlags;
-    RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
-    DepartureModel *model = !routeItem || !routeItem->item() ? NULL :
-            qobject_cast<DepartureModel*>( routeItem->item()->model() );
-    RouteItemFlags itemFlags = model ? model->routeItemFlags(m_stopName) : RouteItemDefault;
-    if ( itemFlags.testFlag(RouteItemHighlighted) && !stopFlags.testFlag(RouteStopIsHighlighted) ) {
+    if ( !m_model ) {
+        return stopFlags;
+    }
+
+    const RouteItemFlags itemFlags = m_model->routeItemFlags( m_stopName );
+    if ( itemFlags.testFlag(RouteItemHighlighted) ) {
         stopFlags |= RouteStopIsHighlighted;
     }
-    if ( itemFlags.testFlag(RouteItemHomeStop) && !stopFlags.testFlag(RouteStopIsHomeStop) ) {
+    if ( itemFlags.testFlag(RouteItemHomeStop) ) {
         stopFlags |= RouteStopIsHomeStop;
     }
     return stopFlags;
@@ -590,10 +592,10 @@ RouteStopFlags JourneyRouteStopGraphicsItem::routeStopFlags() const
     return stopFlags;
 }
 
-RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font,
-        qreal baseSize, const QTime &time, const QString &stopName, int minsFromFirstRouteStop,
-        RouteStopFlags routeStopFlags )
-        : QGraphicsWidget(parent)
+RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, DepartureModel *model,
+        const QFont &font, qreal baseSize, const QTime &time, const QString &stopName,
+        int minsFromFirstRouteStop, RouteStopFlags routeStopFlags )
+        : QGraphicsWidget(parent), m_model(model)
 {
     m_expandStep = 0.0;
     m_baseSize = baseSize;

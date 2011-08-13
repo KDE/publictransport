@@ -77,6 +77,9 @@ void JourneyGraphicsItem::updateSettings()
 void PublicTransportGraphicsItem::setExpanded( bool expand )
 {
     m_expanded = expand;
+    if ( expand ) {
+        routeItem()->setVisible( true );
+    }
 
     if ( m_resizeAnimation ) {
         m_resizeAnimation->stop();
@@ -94,6 +97,7 @@ void PublicTransportGraphicsItem::setExpanded( bool expand )
 
 void PublicTransportGraphicsItem::resizeAnimationFinished()
 {
+    routeItem()->setVisible( m_expanded );
     delete m_resizeAnimation;
     m_resizeAnimation = NULL;
 }
@@ -612,6 +616,8 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
             m_routeItem = new RouteGraphicsItem( this, item, m_copyStopToClipboardAction,
                     m_showInMapAction, m_showDeparturesAction, m_highlightStopAction,
                     m_newFilterViaStopAction );
+            m_routeItem->setVisible( false );
+
             QRectF _infoRect = infoRect( rect(), 0 );
             m_routeItem->setZoomFactor( m_parent->zoomFactor() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
@@ -901,55 +907,43 @@ void DepartureGraphicsItem::paintBackground( QPainter* painter,
     QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
 
+    QPixmap pixmap( rect.size().toSize());
+    pixmap.fill( Qt::transparent );
+    QPainter p( &pixmap );
+
     // Draw special background for departures in color groups
     QColor bgColor = index().data(Qt::BackgroundColorRole).value<QColor>();
     if ( bgColor != Qt::transparent ) {
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, bgColor );
-        bgGradient.setColorAt( 0.6, bgColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
-
-        painter->fillRect( rect, QBrush(bgGradient) );
+        p.fillRect( rect, bgColor );
     } else if ( index().row() % 2 == 1 ) {
-        // Draw alternate background (if departure groups are disabled)
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, alternateBackgroundColor );
-        bgGradient.setColorAt( 0.6, alternateBackgroundColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
-
-        painter->fillRect( rect, QBrush(bgGradient) );
+        p.fillRect( rect, alternateBackgroundColor );
     }
 
     // Draw special background for departures with an alarm
     if ( index().data(DrawAlarmBackgroundRole).toBool() ) {
 //      qreal bias = index().data( AlarmColorIntensityRole ).toReal();
         QColor alarmColor( 180, 0, 0, 128 );
-
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, alarmColor );
-        bgGradient.setColorAt( 0.6, alarmColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
-
-        painter->fillRect( rect, QBrush(bgGradient) );
+        p.fillRect( rect, alarmColor );
     }
 
     // Draw a line at the bottom of this TimetableItem
-    QLinearGradient borderGradient( 0, 0, 1, 0 );
-    borderGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-    borderGradient.setColorAt( 0, Qt::transparent );
-    borderGradient.setColorAt( 0.4, borderColor );
-    borderGradient.setColorAt( 0.6, borderColor );
-    borderGradient.setColorAt( 1, Qt::transparent );
-//     painter->fillRect( QRectF(rect.topLeft() + QPointF(0, 1), rect.topRight()),
-//                        QBrush(borderGradient) );
-    painter->fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()),
-                       QBrush(borderGradient) );
+    p.fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()), borderColor );
+
+    // Fade out to the left and right
+    const int fadeoutSize = 30;
+    p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+    QLinearGradient alphaGradient( 0, 0, 1, 0 );
+    alphaGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+    alphaGradient.setColorAt( 0, Qt::transparent );
+    alphaGradient.setColorAt( 1, Qt::black );
+    p.fillRect( QRectF(rect.left(), rect.top(), fadeoutSize, rect.height()), alphaGradient );
+
+    alphaGradient.setColorAt( 0, Qt::black );
+    alphaGradient.setColorAt( 1, Qt::transparent );
+    p.fillRect( QRectF(rect.right() - fadeoutSize, rect.top(), fadeoutSize, rect.height()), alphaGradient );
+    p.end();
+
+    painter->drawPixmap( rect.toRect(), pixmap );
 }
 
 void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -1641,4 +1635,14 @@ QRectF DepartureGraphicsItem::timeRect(const QRectF& rect) const {
     } else {
         return QRectF( rect.width() / 2, rect.top(), rect.width() / 2 - padding(), unexpandedHeight() );
     }
+}
+
+QGraphicsWidget* DepartureGraphicsItem::routeItem() const
+{
+    return m_routeItem;
+}
+
+QGraphicsWidget* JourneyGraphicsItem::routeItem() const
+{
+    return m_routeItem;
 }

@@ -283,6 +283,7 @@ protected:
     virtual void mouseReleaseEvent( QGraphicsSceneMouseEvent* event );
     virtual void updateGeometry();
     virtual void updateTextLayouts() = 0;
+    virtual QGraphicsWidget *routeItem() const = 0;
 
     QPointer<TopLevelItem> m_item;
     PublicTransportWidget *m_parent;
@@ -433,6 +434,7 @@ protected:
     virtual void updateTextLayouts();
     qreal timeColumnWidth() const;
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
+    virtual QGraphicsWidget *routeItem() const;
 
 private:
     QTextDocument *m_infoTextDocument;
@@ -554,6 +556,7 @@ protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
     virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent* event );
     virtual void updateTextLayouts();
+    virtual QGraphicsWidget *routeItem() const;
 
 private:
     QTextDocument *m_infoTextDocument;
