@@ -284,7 +284,8 @@ protected:
     virtual void updateGeometry();
     virtual void updateTextLayouts() = 0;
     virtual QGraphicsWidget *routeItem() const = 0;
-    virtual void fadeOutLeftAndRight( QPainter *painter, const QRect &rect, int fadeWidth = 40 );
+    virtual void drawFadeOutLeftAndRight( QPainter *painter, const QRect &rect, int fadeWidth = 40 );
+    virtual void drawAlarmBackground( QPainter *painter, const QRect &rect );
 
     QPointer<TopLevelItem> m_item;
     PublicTransportWidget *m_parent;
@@ -441,6 +442,7 @@ private:
     QTextDocument *m_infoTextDocument;
     QTextDocument *m_timeTextDocument;
     RouteGraphicsItem *m_routeItem;
+    bool m_highlighted;
 
     QPropertyAnimation *m_leavingAnimation;
     qreal m_leavingStep;

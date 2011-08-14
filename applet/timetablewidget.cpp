@@ -438,9 +438,9 @@ DepartureGraphicsItem::DepartureGraphicsItem( PublicTransportWidget* publicTrans
         QAction *toggleAlarmAction*/ )
         : PublicTransportGraphicsItem( publicTransportWidget, parent, copyStopToClipboardAction,
                                        showInMapAction ),
-        m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0), m_leavingAnimation(0),
-        m_showDeparturesAction(showDeparturesAction), m_highlightStopAction(highlightStopAction),
-        m_newFilterViaStopAction(newFilterViaStopAction)
+        m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0), m_highlighted(false),
+        m_leavingAnimation(0), m_showDeparturesAction(showDeparturesAction),
+        m_highlightStopAction(highlightStopAction), m_newFilterViaStopAction(newFilterViaStopAction)
 {
     m_leavingStep = 0.0;
 }
@@ -660,10 +660,9 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
 
     QRect pixmapRect( 0, 0, rect.width(), rect.height() );
     QPixmap pixmap( pixmapRect.size());
-    pixmap.fill( Qt::transparent );
-    QPainter p( &pixmap );
+    QColor backgroundColor = Qt::transparent;
 
-    // Draw journey rating background:
+    // Use journey rating background:
     //   green for relatively short duration, less changes;
     //   red for relatively long duration, more changes (controlled by the model).
     QVariant vr = index().data( JourneyRatingRole );
@@ -683,18 +682,20 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
         }
 
         if ( drawRatingBackground ) {
-            p.fillRect( pixmapRect, ratingColor );
+            backgroundColor = ratingColor;
         }
     } else if ( index().row() % 2 == 1 ) {
-        // Draw alternate background (if journey ratings aren't available)
-        p.fillRect( pixmapRect, alternateBackgroundColor );
+        // Use alternate background (if journey ratings aren't available)
+        backgroundColor = alternateBackgroundColor;
     }
 
+    // Fill the pixmap with the mixed background color
+    pixmap.fill( backgroundColor );
+
     // Draw special background for departures with an alarm
+    QPainter p( &pixmap );
     if ( index().data(DrawAlarmBackgroundRole).toBool() ) {
-//      qreal bias = index().data( AlarmColorIntensityRole ).toReal();
-        QColor alarmColor( 180, 0, 0, 128 );
-        p.fillRect( pixmapRect, alarmColor );
+        drawAlarmBackground( &p, pixmapRect );
     }
 
     // Draw a line at the bottom of this TimetableItem
@@ -702,7 +703,7 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
     p.drawLine( pixmapRect.bottomLeft(), pixmapRect.bottomRight() );
 
     // Fade out to the left and right
-    fadeOutLeftAndRight( &p, pixmapRect );
+    drawFadeOutLeftAndRight( &p, pixmapRect );
     p.end();
 
     painter->drawPixmap( rect.toRect(), pixmap );
@@ -883,47 +884,64 @@ void DepartureGraphicsItem::paintBackground( QPainter* painter,
         const QStyleOptionGraphicsItem* option, const QRectF& rect )
 {
     Q_UNUSED( option );
-    QColor _backgroundColor = backgroundColor();
-    QColor alternateBackgroundColor = KColorScheme( QPalette::Active, KColorScheme::View )
-            .background( KColorScheme::AlternateBackground ).color();
-    alternateBackgroundColor.setAlphaF( 0.4 );
     QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
 
     QRect pixmapRect( 0, 0, rect.width(), rect.height() );
     QPixmap pixmap( pixmapRect.size() );
-    pixmap.fill( Qt::transparent );
-    QPainter p( &pixmap );
 
-    // Draw special background for departures in color groups
-    QColor bgColor = index().data(Qt::BackgroundColorRole).value<QColor>();
-    if ( bgColor != Qt::transparent ) {
-        p.fillRect( pixmapRect, bgColor );
-    } else if ( index().row() % 2 == 1 ) {
-        p.fillRect( pixmapRect, alternateBackgroundColor );
+    // Get the background color for departures in color groups / alternative background colors
+    QColor backgroundColor = index().data( Qt::BackgroundColorRole ).value<QColor>();
+    if ( backgroundColor == Qt::transparent && index().row() % 2 == 1 ) {
+        QColor alternateBackgroundColor = KColorScheme( QPalette::Active, KColorScheme::View )
+                .background( KColorScheme::AlternateBackground ).color();
+        backgroundColor =  KColorUtils::mix( backgroundColor, alternateBackgroundColor, 0.4 );
     }
 
+    // Fill the pixmap with the mixed background color
+    pixmap.fill( backgroundColor );
+
     // Draw special background for departures with an alarm
+    QPainter p( &pixmap );
     if ( index().data(DrawAlarmBackgroundRole).toBool() ) {
 //      qreal bias = index().data( AlarmColorIntensityRole ).toReal();
-        QColor alarmColor( 180, 0, 0, 128 );
-        p.fillRect( pixmapRect, alarmColor );
+        drawAlarmBackground( &p, pixmapRect );
     }
 
     // Draw a line at the bottom of this TimetableItem
-//     p.fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()), borderColor );
     p.setPen( borderColor );
     p.drawLine( pixmapRect.bottomLeft(), pixmapRect.bottomRight() );
 
     // Fade out to the left and right
-    fadeOutLeftAndRight( &p, pixmapRect );
+    drawFadeOutLeftAndRight( &p, pixmapRect );
     p.end();
 
     painter->drawPixmap( rect.toRect(), pixmap );
 }
 
-void PublicTransportGraphicsItem::fadeOutLeftAndRight( QPainter* painter, const QRect& rect,
-                                                       int fadeWidth )
+void PublicTransportGraphicsItem::drawAlarmBackground( QPainter *painter, const QRect &rect )
+{
+    // alarmColor is oxygen color "brick red5", with an alpha value added
+    const QColor alarmColor( 191, 3, 3, 180 );
+    // Draw the alarm gradients over the first and last third vertically
+    const int alarmHeight = unexpandedHeight() / 3;
+
+    // Draw the gradient at the top
+    QLinearGradient alarmGradientTop( 0, 0, 0, alarmHeight );
+    alarmGradientTop.setColorAt( 0, alarmColor );
+    alarmGradientTop.setColorAt( 1, Qt::transparent );
+    painter->fillRect( QRect(0, 0, rect.width(), alarmHeight), alarmGradientTop );
+
+    // Draw the gradient at the bottom
+    QLinearGradient alarmGradientBottom( 0, rect.height() - alarmHeight, 0, rect.height() );
+    alarmGradientBottom.setColorAt( 0, Qt::transparent );
+    alarmGradientBottom.setColorAt( 1, alarmColor );
+    painter->fillRect( QRect(0, rect.height() - alarmHeight, rect.width(), alarmHeight),
+                       alarmGradientBottom );
+}
+
+void PublicTransportGraphicsItem::drawFadeOutLeftAndRight( QPainter* painter, const QRect& rect,
+                                                           int fadeWidth )
 {
     painter->setCompositionMode( QPainter::CompositionMode_DestinationIn );
     QLinearGradient alphaGradient( 0, 0, 1, 0 );
@@ -1027,12 +1045,15 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
                 .contains( model->highlightedStop(), Qt::CaseInsensitive );
     }
 
-    QFont _font = font();
-    if ( manuallyHighlighted ) {
-        _font.setItalic( true );
+    if ( m_highlighted != manuallyHighlighted ) {
+        QFont _font = font();
+        if ( manuallyHighlighted ) {
+            _font.setItalic( true );
+        }
+        m_infoTextDocument->setDefaultFont( _font );
+        m_timeTextDocument->setDefaultFont( _font );
+        m_highlighted = manuallyHighlighted;
     }
-    m_infoTextDocument->setDefaultFont( _font );
-    m_timeTextDocument->setDefaultFont( _font );
 
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
                                           _infoRect.toRect(), drawHalos );
