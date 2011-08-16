@@ -186,7 +186,7 @@ void StopWidget::setStopSettings( const StopSettings& stopSettings )
 	}
 	
 	// Copy filter configurations from StopSettings
-	if ( stopSettings.hasSetting(FilterConfigurationSetting) ) {
+	if ( stopSettings.hasSetting(FilterConfigurationSetting) && d->filterConfigurations ) {
         *d->filterConfigurations = stopSettings.get<FilterSettingsList>( FilterConfigurationSetting );
     }
 
