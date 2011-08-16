@@ -58,7 +58,7 @@ public:
      * departures may be drawn side by side, eg. if they depart at the same
      * time.
      **/
-    QPixmap createDeparturesPixmap( const QList<DepartureItem*> &departures );
+    QPixmap createDeparturesPixmap( const QList<DepartureItem*> &departures, const QSize &size );
 
     /**
      * @brief Creates a pixmap for the given @p departure with an alarm.
@@ -66,11 +66,11 @@ public:
      * This pixmap is used for the popup icon for departures for which an alarm
      * is set.
      **/
-    QPixmap createAlarmPixmap( DepartureItem *departure );
+    QPixmap createAlarmPixmap( DepartureItem *departure, const QSize &size );
 
     QPixmap createPopupIcon( int startDepartureIndex, int endDepartureIndex,
             qreal departureIndex, DepartureModel *model,
-            const QMap< QDateTime, QList<DepartureItem*> > &departureGroups );
+            const QMap< QDateTime, QList<DepartureItem*> > &departureGroups, const QSize &size );
 
 private:
     Plasma::Svg *m_svg;

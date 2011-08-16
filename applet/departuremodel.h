@@ -800,7 +800,7 @@ public:
 
 signals:
     /** @brief The alarm for @p item has been fired. */
-    void alarmFired( DepartureItem *item );
+    void alarmFired( DepartureItem *item, const AlarmSettings &alarmSettings );
 
     void updateAlarms( const AlarmSettingsList &newAlarmSettings, const QList<int> &removedAlarms );
 

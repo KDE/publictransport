@@ -100,10 +100,10 @@ void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
     painter->drawPixmap( rect.topLeft(), pixmap );
 }
 
-QPixmap DeparturePainter::createDeparturesPixmap(const QList< DepartureItem* >& departures)
+QPixmap DeparturePainter::createDeparturesPixmap( const QList< DepartureItem* >& departures,
+                                                  const QSize &size )
 {
-
-    QPixmap pixmap( 128, 128 );
+    QPixmap pixmap( size );
     pixmap.fill( Qt::transparent );
     QPainter p( &pixmap );
     QRectF vehicleRect( 0, 0, pixmap.width(), pixmap.height() );
@@ -117,9 +117,9 @@ QPixmap DeparturePainter::createDeparturesPixmap(const QList< DepartureItem* >& 
             : (vehicleRect.width() - vehicleSize) / (vehiclesPerRow - 1);
     qreal vehicleOffsetY = rows == 1 ? 0.0
             : (vehicleRect.height() - vehicleSize) / (rows - 1);
-    int vehiclesInCurrentRow = 0;
     QDateTime time;
-    int i = 0;
+//     int i = 0;
+    int vehiclesInCurrentRow = 0;
     qreal x = 0.0;
     qreal y = 0.0;
     if ( rows < vehiclesPerRow && rows > 1 ) {
@@ -132,7 +132,7 @@ QPixmap DeparturePainter::createDeparturesPixmap(const QList< DepartureItem* >& 
         }
         if ( vehiclesInCurrentRow == vehiclesPerRow ) {
             vehiclesInCurrentRow = 0;
-            if ( departures.count() - i < vehiclesPerRow ) {
+            if ( departures.count() - vehiclesInCurrentRow < vehiclesPerRow ) {
                 x = vehicleOffsetX / 2.0;
             } else {
                 x = 0;
@@ -151,9 +151,9 @@ QPixmap DeparturePainter::createDeparturesPixmap(const QList< DepartureItem* >& 
             time = item->departureInfo()->predictedDeparture();
         }
 
-        ++vehiclesInCurrentRow;
         x += vehicleOffsetX;
-        ++i;
+        ++vehiclesInCurrentRow;
+//         ++i;
     }
 
     int minsToDeparture = qCeil( QDateTime::currentDateTime().secsTo(time) / 60.0 );
@@ -173,14 +173,17 @@ QPixmap DeparturePainter::createDeparturesPixmap(const QList< DepartureItem* >& 
     }
 
     QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
-    font.setPixelSize( pixmap.width() / 4 );
-    font.setBold( true );
+    kDebug() << pixmap.size() << qBound(24, int(pixmap.width() * 0.4), 32);
+    font.setPixelSize( qBound(24, int(pixmap.width() * 0.4), 32) );
+    if ( font.pixelSize() >= 28 ) {
+        font.setBold( true );
+    }
     p.setFont( font );
     QFontMetrics fm( font );
     int textWidth = fm.width( text );
     QRectF textRect( 0, 0, pixmap.width(), pixmap.height() );
     QRectF haloRect( textRect.left() + (textRect.width() - textWidth) / 2,
-                    textRect.bottom() - fm.height(), textWidth, fm.height() );
+                     textRect.bottom() - fm.height(), textWidth, fm.height() );
     haloRect = haloRect.intersected( textRect ).adjusted( 3, 3, -3, -3 );
     QTextOption option(Qt::AlignHCenter | Qt::AlignBottom);
     option.setWrapMode( QTextOption::NoWrap );
@@ -192,14 +195,15 @@ QPixmap DeparturePainter::createDeparturesPixmap(const QList< DepartureItem* >& 
     return pixmap;
 }
 
-QPixmap DeparturePainter::createAlarmPixmap( DepartureItem* departure )
+QPixmap DeparturePainter::createAlarmPixmap( DepartureItem* departure, const QSize &size )
 {
-    QPixmap pixmap = createDeparturesPixmap( QList<DepartureItem*>() << departure );
+    QPixmap pixmap = createDeparturesPixmap( QList<DepartureItem*>() << departure, size );
     int iconSize = pixmap.width() / 2;
     QPixmap pixmapAlarmIcon = KIcon( "task-reminder" ).pixmap( iconSize );
     QPainter p( &pixmap );
     // Draw alarm icon in the top-right corner.
-    Plasma::PaintUtils::drawHalo( &p, QRectF(pixmap.width() - iconSize * 0.85 - 1, 1, iconSize * 0.7, iconSize) );
+    Plasma::PaintUtils::drawHalo( &p, QRectF(pixmap.width() - iconSize * 0.85 - 1, 1,
+                                             iconSize * 0.7, iconSize) );
     p.drawPixmap( pixmap.width() - iconSize - 1, 1, pixmapAlarmIcon );
     p.end();
 
@@ -208,7 +212,7 @@ QPixmap DeparturePainter::createAlarmPixmap( DepartureItem* departure )
 
 QPixmap DeparturePainter::createPopupIcon( int startDepartureIndex,
         int endDepartureIndex, qreal departureIndex, DepartureModel* model,
-        const QMap< QDateTime, QList< DepartureItem* > >& departureGroups )
+        const QMap< QDateTime, QList< DepartureItem* > >& departureGroups, const QSize &size )
 {
     QPixmap pixmap;
     if ( qFuzzyCompare((qreal)qFloor(departureIndex), departureIndex) ) {
@@ -217,10 +221,10 @@ QPixmap DeparturePainter::createPopupIcon( int startDepartureIndex,
                 qFloor(departureIndex), departureGroups.count() - 1 );
 
         if ( departureIndex < 0 ) {
-            pixmap = createAlarmPixmap( model->nextAlarmDeparture() );
+            pixmap = createAlarmPixmap( model->nextAlarmDeparture(), size );
         } else {
             QDateTime time = departureGroups.keys()[ departureIndex ];
-            pixmap = createDeparturesPixmap( departureGroups[time] );
+            pixmap = createDeparturesPixmap( departureGroups[time], size );
         }
     } else {
         // Draw transition
@@ -229,13 +233,13 @@ QPixmap DeparturePainter::createPopupIcon( int startDepartureIndex,
         endDepartureIndex = qBound( model->hasAlarms() ? -1 : 0,
                 endDepartureIndex, departureGroups.count() - 1 );
         QPixmap startPixmap = startDepartureIndex < 0
-                ? createAlarmPixmap(model->nextAlarmDeparture())
+                ? createAlarmPixmap(model->nextAlarmDeparture(), size)
                 : createDeparturesPixmap(
-                departureGroups[departureGroups.keys()[startDepartureIndex]] );
+                departureGroups[departureGroups.keys()[startDepartureIndex]], size );
         QPixmap endPixmap = endDepartureIndex < 0
-                ? createAlarmPixmap(model->nextAlarmDeparture())
+                ? createAlarmPixmap(model->nextAlarmDeparture(), size)
                 : createDeparturesPixmap(
-                departureGroups[departureGroups.keys()[endDepartureIndex]] );
+                departureGroups[departureGroups.keys()[endDepartureIndex]], size );
 
         pixmap = QPixmap( 128, 128 );
         pixmap.fill( Qt::transparent );

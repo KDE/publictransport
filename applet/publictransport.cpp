@@ -187,7 +187,8 @@ void PublicTransport::init()
     m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
     m_model->setHomeStop( stopSettings.stopList().isEmpty() ? QString() : stopSettings.stop(0).name );
     m_model->setCurrentStopIndex( m_settings.currentStopSettingsIndex );
-    connect( m_model, SIGNAL(alarmFired(DepartureItem*)), this, SLOT(alarmFired(DepartureItem*)) );
+    connect( m_model, SIGNAL(alarmFired(DepartureItem*,AlarmSettings)),
+             this, SLOT(alarmFired(DepartureItem*,AlarmSettings)) );
     connect( m_model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
              this, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
     connect( m_model, SIGNAL(itemsAboutToBeRemoved(QList<ItemBase*>)),
@@ -459,7 +460,6 @@ bool PublicTransport::checkNetworkStatus()
 
 QString PublicTransport::queryNetworkStatus()
 {
-    QString status = "unavailable";
     const QStringList interfaces = dataEngine( "network" )->sources();
     if ( interfaces.isEmpty() ) {
         return "unknown";
@@ -467,6 +467,7 @@ QString PublicTransport::queryNetworkStatus()
 
     // Check if there is an activated interface or at least one that's
     // currently being configured
+    QString status = "unavailable";
     foreach( const QString &iface, interfaces ) {
         QString sStatus = dataEngine( "network" )->query( iface )["ConnectionStatus"].toString();
         if ( sStatus.isEmpty() ) {
@@ -533,14 +534,21 @@ void PublicTransport::setupActions()
             i18nc("@action", "&Quick Actions"), this );
     addAction( "showActionButtons", showActionButtons );
 
-    QAction *actionSetAlarmForDeparture = new QAction(
+    QAction *actionCreateAlarmForDeparture = new QAction(
             GlobalApplet::makeOverlayIcon( KIcon("task-reminder"), "list-add" ),
             m_settings.departureArrivalListType == DepartureList
             ? i18nc("@action:inmenu", "Set &Alarm for This Departure")
             : i18nc("@action:inmenu", "Set &Alarm for This Arrival"), this );
-    connect( actionSetAlarmForDeparture, SIGNAL(triggered()),
-             this, SLOT(setAlarmForDeparture()) );
-    addAction( "setAlarmForDeparture", actionSetAlarmForDeparture );
+    connect( actionCreateAlarmForDeparture, SIGNAL(triggered()),
+             this, SLOT(createAlarmForDeparture()) );
+    addAction( "createAlarmForDeparture", actionCreateAlarmForDeparture );
+
+    QAction *actionCreateAlarmForDepartureCurrentWeekDay = new QAction(
+            GlobalApplet::makeOverlayIcon( KIcon("task-reminder"), "list-add" ),
+            i18nc("@action:inmenu", "Set &Alarm for Current Weekday"), this );
+    connect( actionCreateAlarmForDepartureCurrentWeekDay, SIGNAL(triggered()),
+             this, SLOT(createAlarmForDepartureCurrentWeekDay()) );
+    addAction( "createAlarmForDepartureCurrentWeekDay", actionCreateAlarmForDepartureCurrentWeekDay );
 
     QAction *actionRemoveAlarmForDeparture = new QAction(
             GlobalApplet::makeOverlayIcon( KIcon("task-reminder"), "list-remove" ),
@@ -1291,12 +1299,30 @@ void PublicTransport::createPopupIcon()
     if ( m_model->isEmpty() || m_departureGroups.isEmpty() ) {
         setPopupIcon( "public-transport-stop" );
     } else {
-        QPixmap pixmap = m_departurePainter->createPopupIcon(
-                m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
-                m_popupIconDepartureIndex, m_model, m_departureGroups );
-
         KIcon icon;
-        icon.addPixmap( pixmap );
+
+        if ( size().width() > 32 && size().height() > 32 ) {
+            QPixmap pixmap128 = m_departurePainter->createPopupIcon(
+                    m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
+                    m_popupIconDepartureIndex, m_model, m_departureGroups, QSize(128, 128) );
+            icon.addPixmap( pixmap128 );
+        }
+
+        QPixmap pixmap32 = m_departurePainter->createPopupIcon(
+                m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
+                m_popupIconDepartureIndex, m_model, m_departureGroups, QSize(32, 32) );
+        icon.addPixmap( pixmap32 );
+
+//         QPixmap pixmap24 = m_departurePainter->createPopupIcon(
+//                 m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
+//                 m_popupIconDepartureIndex, m_model, m_departureGroups, QSize(24, 24) );
+//         icon.addPixmap( pixmap24 );
+
+//         QPixmap pixmap16 = m_departurePainter->createPopupIcon(
+//                 m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
+//                 m_popupIconDepartureIndex, m_model, m_departureGroups, QSize(16, 16) );
+//         icon.addPixmap( pixmap16 );
+
         setPopupIcon( icon );
     }
 }
@@ -2115,7 +2141,7 @@ void PublicTransport::writeSettings( const Settings& settings )
                     m_settings.departureArrivalListType == DepartureList
                     ? i18nc("@action", "Remove &Alarm for This Departure")
                     : i18nc("@action", "Remove &Alarm for This Arrival") );
-            action("setAlarmForDeparture")->setText(
+            action("createAlarmForDeparture")->setText(
                     m_settings.departureArrivalListType == DepartureList
                     ? i18nc("@action", "Set &Alarm for This Departure")
                     : i18nc("@action", "Set &Alarm for This Arrival") );
@@ -2444,7 +2470,8 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
                     objectsToBeDeleted << infoAction;
                 }
             } else {
-                actions.append( action("setAlarmForDeparture") );
+                actions.append( action("createAlarmForDeparture") );
+                actions.append( action("createAlarmForDepartureCurrentWeekDay") );
             }
         }
 
@@ -2766,26 +2793,10 @@ void PublicTransport::processAlarmCreationRequest( const QDateTime& departure,
     AlarmSettings alarm;
     alarm.autoGenerated = true;
     alarm.affectedStops << m_settings.currentStopSettingsIndex;
-    if ( departure.isValid() && !target.isEmpty() ) {
-        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
-                            "%1 is the departure time, %2 is the target.",
-                            "At %1 to %2", departure.toString(), target );
-    } else if ( departure.isValid() && target.isEmpty() ) {
-        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
-                            "%1 is the departure time, %2 is the name of the used vehicle "
-                            "(eg. tram).",
-                            "At %1 using %2", departure.toString(),
-                            Global::vehicleTypeToString(vehicleType) );
-    } else if ( !departure.isValid() && !target.isEmpty() ) {
-        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
-                            "%1 is the target, %2 is the name of the used vehicle (eg. tram).",
-                            "To %1 using %2", target, Global::vehicleTypeToString(vehicleType) );
-    } else {
-        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
-                            "%1 is the name of the used vehicle (eg. tram), %2 is the line "
-                            "string (eg. 'N1').",
-                            "Using %1, %2", Global::vehicleTypeToString(vehicleType), lineString );
-    }
+    alarm.name = i18nc( "@info/plain Name for a new alarm, eg. requested using the context menu. "
+                        "%1 is the departure time or the name of the used vehicle.",
+                        "One-Time Alarm (%1)", departure.isValid() ? departure.toString()
+                                               : Global::vehicleTypeToString(vehicleType) );
 
     // Add alarm filters
     if ( !departure.isNull() ) {
@@ -2804,7 +2815,7 @@ void PublicTransport::processAlarmCreationRequest( const QDateTime& departure,
     settings.alarmSettings << alarm;
     writeSettings( settings );
 
-    createPopupIcon(); // TEST needed or already done in writeSettings?
+    alarmCreated();
 }
 
 void PublicTransport::processAlarmDeletionRequest( const QDateTime& departure,
@@ -2843,7 +2854,8 @@ void PublicTransport::processAlarmDeletionRequest( const QDateTime& departure,
     createPopupIcon();
 }
 
-void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex )
+void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex,
+                                                       bool onlyForCurrentWeekday )
 {
     if ( !modelIndex.isValid() ) {
         kDebug() << "!modelIndex.isValid()";
@@ -2856,9 +2868,6 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
 
     // Autogenerate an alarm that only matches the given departure
     AlarmSettings alarm;
-    alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
-                        "%1 is the departure time, %2 is the target.",
-                        "At %1 to %2", departureTime, info.target() );
     alarm.autoGenerated = true;
     alarm.affectedStops << m_settings.currentStopSettingsIndex;
     alarm.filter.append( Constraint(FilterByDeparture, FilterEquals, info.departure()) );
@@ -2866,6 +2875,18 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
     alarm.filter.append( Constraint(FilterByVehicleType, FilterIsOneOf,
                                     QVariantList() << info.vehicleType()) );
     alarm.filter.append( Constraint(FilterByTarget, FilterEquals, info.target()) );
+    if ( onlyForCurrentWeekday ) {
+        alarm.filter.append( Constraint(FilterByDayOfWeek, FilterIsOneOf,
+                                        QVariantList() << QDate::currentDate().dayOfWeek()) );
+        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
+                            "%1 is the departure time, %2 is a day of the week.",
+                            "One-Time Alarm (%1, every %2)", departureTime,
+                            QDate::longDayName(QDate::currentDate().dayOfWeek()) );
+    } else {
+        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
+                            "%1 is the departure time, %2 is the target.",
+                            "One-Time Alarm (%1 to %2)", departureTime, info.target() );
+    }
 
     // Append new alarm in a copy of the settings. Then write the new settings.
     Settings settings = m_settings;
@@ -2876,13 +2897,23 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
     int index = settings.alarmSettings.count() - 1;
     info.matchedAlarms() << index;
     item->setDepartureInfo( info );
-
-    createPopupIcon();
 }
 
-void PublicTransport::setAlarmForDeparture()
+void PublicTransport::createAlarmForDeparture()
 {
-    createAlarmSettingsForDeparture( m_model->index(m_clickedItemIndex.row(), 2) );
+    createAlarmSettingsForDeparture( m_clickedItemIndex );
+    alarmCreated();
+}
+
+void PublicTransport::createAlarmForDepartureCurrentWeekDay()
+{
+    createAlarmSettingsForDeparture( m_clickedItemIndex, true );
+    alarmCreated();
+}
+
+void PublicTransport::alarmCreated()
+{
+    createPopupIcon(); // TEST needed or already done in writeSettings?
 
     // Animate popup icon to show the alarm departure (at index -1)
     if ( m_popupIconTransitionAnimation ) {
@@ -2899,7 +2930,7 @@ void PublicTransport::setAlarmForDeparture()
     m_popupIconTransitionAnimation->start();
 }
 
-void PublicTransport::alarmFired( DepartureItem* item )
+void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alarmSettings )
 {
     const DepartureInfo *departureInfo = item->departureInfo();
     QString sLine = departureInfo->lineString();
@@ -2912,50 +2943,55 @@ void PublicTransport::alarmFired( DepartureItem* item )
         // Departure is in the future
         if ( departureInfo->vehicleType() == Unknown ) {
             // Vehicle type is unknown
-            message = i18ncp( "@info/plain", "Line %2 to '%3' departs in %1 minute at %4",
-                              "Line %2 to '%3' departs in %1 minutes at %4",
-                              minsToDeparture, sLine, sTarget, predictedDeparture.toString("hh:mm") );
+            message = i18ncp( "@info/plain %5: Name of the Alarm",
+                              "%5: Line %2 to '%3' departs in %1 minute at %4",
+                              "%5: Line %2 to '%3' departs in %1 minutes at %4",
+                              minsToDeparture, sLine, sTarget,
+                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
         } else {
             // Vehicle type is known
-            message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle "
-                              "type name (e.g. tram, subway)",
-                              "The %4 %2 to '%3' departs in %1 minute at %5",
-                              "The %4 %2 to '%3' departs in %1 minutes at %5",
+            message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle type name "
+                              "(e.g. tram, subway), %6: Name of the Alarm",
+                              "%6: The %4 %2 to '%3' departs in %1 minute at %5",
+                              "%6: The %4 %2 to '%3' departs in %1 minutes at %5",
                               minsToDeparture, sLine, sTarget,
                               Global::vehicleTypeToString(departureInfo->vehicleType()),
-                              predictedDeparture.toString("hh:mm") );
+                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
         }
     } else if ( minsToDeparture < 0 ) {
         // Has already departed
         if ( departureInfo->vehicleType() == Unknown ) {
             // Vehicle type is unknown
-            message = i18ncp( "@info/plain", "Line %2 to '%3' has departed %1 minute ago at %4",
-                              "Line %2 to '%3' has departed %1 minutes ago at %4",
+            message = i18ncp( "@info/plain %5: Name of the Alarm",
+                              "%5: Line %2 to '%3' has departed %1 minute ago at %4",
+                              "%5: Line %2 to '%3' has departed %1 minutes ago at %4",
                               -minsToDeparture, sLine, sTarget,
-                              predictedDeparture.toString("hh:mm") );
+                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
         } else {
             // Vehicle type is known
-            message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle "
-                              "type name (e.g. tram, subway)",
-                              "The %4 %2 to '%3' has departed %1 minute ago at %5",
-                              "The %4 %2 to %3 has departed %1 minutes ago at %5",
+            message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle type name "
+                              "(e.g. tram, subway), %6: Name of the Alarm",
+                              "%6: The %4 %2 to '%3' has departed %1 minute ago at %5",
+                              "%6: The %4 %2 to %3 has departed %1 minutes ago at %5",
                               -minsToDeparture, sLine, sTarget,
                               Global::vehicleTypeToString(departureInfo->vehicleType()),
-                              predictedDeparture.toString("hh:mm") );
+                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
         }
     } else {
         // Departs now
         if ( departureInfo->vehicleType() == Unknown ) {
             // Vehicle type is unknown
-            message = i18nc( "@info/plain", "Line %1 to '%2' departs now at %3",
-                              sLine, sTarget, predictedDeparture.toString( "hh:mm" ) );
+            message = i18nc( "@info/plain %4: Name of the Alarm",
+                             "%4: Line %1 to '%2' departs now at %3",
+                             sLine, sTarget, predictedDeparture.toString("hh:mm"),
+                             alarmSettings.name );
         } else {
             // Vehicle type is known
-            message = i18nc( "@info/plain %1: Line string (e.g. 'U3'), %3: Vehicle "
-                              "type name (e.g. tram, subway)",
-                              "The %3 %1 to '%2' departs now at %4", sLine, sTarget,
-                              Global::vehicleTypeToString(departureInfo->vehicleType()),
-                              predictedDeparture.toString("hh:mm") );
+            message = i18nc( "@info/plain %1: Line string (e.g. 'U3'), %3: Vehicle type name "
+                             "(e.g. tram, subway), %5: Name of the Alarm",
+                             "%5: The %3 %1 to '%2' departs now at %4", sLine, sTarget,
+                             Global::vehicleTypeToString(departureInfo->vehicleType()),
+                             predictedDeparture.toString("hh:mm"), alarmSettings.name );
         }
     }
 
