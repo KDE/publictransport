@@ -72,6 +72,7 @@
 #include <QSignalTransition>
 #include <qmath.h>
 #include <qgraphicssceneevent.h>
+#include <QParallelAnimationGroup>
 
 class ToPropertyTransition : public QSignalTransition
 {
@@ -116,7 +117,7 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
         : Plasma::PopupApplet( parent, args ),
         m_graphicsWidget(0), m_mainGraphicsWidget(0), m_oldItem(0), m_titleWidget(0),
         m_labelInfo(0), m_timetable(0), m_journeyTimetable(0), m_listStopSuggestions(0),
-        m_overlay(0), m_model(0), m_popupIconTransitionAnimation(0),
+        m_overlay(0), m_model(0), m_popupIconTransitionAnimation(0), m_titleToggleAnimation(0),
         m_modelJourneys(0), m_departureProcessor(0), m_stateMachine(0),
         m_journeySearchTransition1(0), m_journeySearchTransition2(0),
         m_journeySearchTransition3(0), m_marble(0)
@@ -1269,7 +1270,14 @@ void PublicTransport::departuresLeft( const QList< DepartureInfo > &departures )
 void PublicTransport::popupIconTransitionAnimationFinished()
 {
     delete m_popupIconTransitionAnimation;
-    m_popupIconTransitionAnimation = NULL;
+    m_popupIconTransitionAnimation = 0;
+}
+
+void PublicTransport::titleToggleAnimationFinished()
+{
+    kDebug() << "Finished";
+    delete m_titleToggleAnimation;
+    m_titleToggleAnimation = 0;
 }
 
 void PublicTransport::createDepartureGroups()
@@ -1297,33 +1305,103 @@ void PublicTransport::createDepartureGroups()
 void PublicTransport::createPopupIcon()
 {
     if ( m_model->isEmpty() || m_departureGroups.isEmpty() ) {
-        setPopupIcon( "public-transport-stop" );
-    } else {
+//         setPopupIcon( "public-transport-stop" );
+        int iconSize = qMin( 128, int(size().width()) );
+        QPixmap pixmap = m_departurePainter->createMainIconPixmap( QSize(iconSize, iconSize) );
         KIcon icon;
+        icon.addPixmap( pixmap );
+        setPopupIcon( icon );
+    } else {
+        int iconSize = qMin( 128, int(size().width()) );
+        QPixmap pixmap = m_departurePainter->createPopupIcon(
+                m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
+                m_popupIconDepartureIndex, m_model, m_departureGroups,
+                QSize(iconSize, iconSize) );
 
-        if ( size().width() > 32 && size().height() > 32 ) {
-            QPixmap pixmap128 = m_departurePainter->createPopupIcon(
-                    m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
-                    m_popupIconDepartureIndex, m_model, m_departureGroups, QSize(128, 128) );
-            icon.addPixmap( pixmap128 );
+        KIcon icon;
+        icon.addPixmap( pixmap );
+        setPopupIcon( icon );
+    }
+}
+
+void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
+{
+    Plasma::Applet::resizeEvent( event );
+
+    if ( m_titleWidget ) {
+        // Update popup icon to new size
+        createPopupIcon();
+
+        // Show/hide title widget
+        const qreal minHeightWithTitle = 200.0;
+        const qreal maxHeightWithoutTitle = 225.0;
+        if ( event->newSize().height() <= minHeightWithTitle && !m_titleToggleAnimation
+             && !(!m_titleToggleAnimation && m_titleWidget->maximumHeight() <= 0.1) )
+        {
+            if ( m_titleToggleAnimation ) {
+                delete m_titleToggleAnimation;
+            }
+            m_titleToggleAnimation = new QParallelAnimationGroup( this );
+            Plasma::Animation *fadeAnimation = Plasma::Animator::create(
+                    Plasma::Animator::FadeAnimation, m_titleToggleAnimation );
+            fadeAnimation->setTargetWidget( m_titleWidget );
+            fadeAnimation->setProperty( "startOpacity", m_titleWidget->opacity() );
+            fadeAnimation->setProperty( "targetOpacity", 0.0 );
+
+            QPropertyAnimation *shrinkAnimation = new QPropertyAnimation(
+                    m_titleWidget, "maximumSize", m_titleToggleAnimation );
+            shrinkAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
+                                                   m_titleWidget->layout()->preferredHeight()) );
+            shrinkAnimation->setEndValue( QSizeF(m_titleWidget->maximumWidth(), 0) );
+
+            connect( m_titleToggleAnimation, SIGNAL(finished()),
+                     this, SLOT(titleToggleAnimationFinished()) );
+            m_titleToggleAnimation->addAnimation( fadeAnimation );
+            m_titleToggleAnimation->addAnimation( shrinkAnimation );
+            m_titleToggleAnimation->start();
+        } else if ( event->newSize().height() >= maxHeightWithoutTitle && !m_titleToggleAnimation
+             && !(!m_titleToggleAnimation &&
+             m_titleWidget->maximumHeight() >= m_titleWidget->layout()->preferredHeight()) )
+        {
+            if ( m_titleToggleAnimation ) {
+                delete m_titleToggleAnimation;
+            }
+            m_titleToggleAnimation = new QParallelAnimationGroup( this );
+
+            Plasma::Animation *fadeAnimation = Plasma::Animator::create(
+                    Plasma::Animator::FadeAnimation, m_titleToggleAnimation );
+            fadeAnimation->setTargetWidget( m_titleWidget );
+            fadeAnimation->setProperty( "startOpacity", m_titleWidget->opacity() );
+            fadeAnimation->setProperty( "targetOpacity", 1.0 );
+
+            QPropertyAnimation *growAnimation = new QPropertyAnimation(
+                    m_titleWidget, "maximumSize", m_titleToggleAnimation );
+            growAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
+                                                 m_titleWidget->maximumHeight()) );
+            growAnimation->setEndValue( QSizeF(m_titleWidget->maximumWidth(),
+                                               m_titleWidget->layout()->preferredHeight()) );
+
+            connect( m_titleToggleAnimation, SIGNAL(finished()),
+                     this, SLOT(titleToggleAnimationFinished()) );
+            m_titleToggleAnimation->addAnimation( fadeAnimation );
+            m_titleToggleAnimation->addAnimation( growAnimation );
+            m_titleToggleAnimation->start();
         }
 
-        QPixmap pixmap32 = m_departurePainter->createPopupIcon(
-                m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
-                m_popupIconDepartureIndex, m_model, m_departureGroups, QSize(32, 32) );
-        icon.addPixmap( pixmap32 );
-
-//         QPixmap pixmap24 = m_departurePainter->createPopupIcon(
-//                 m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
-//                 m_popupIconDepartureIndex, m_model, m_departureGroups, QSize(24, 24) );
-//         icon.addPixmap( pixmap24 );
-
-//         QPixmap pixmap16 = m_departurePainter->createPopupIcon(
-//                 m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
-//                 m_popupIconDepartureIndex, m_model, m_departureGroups, QSize(16, 16) );
-//         icon.addPixmap( pixmap16 );
-
-        setPopupIcon( icon );
+        Plasma::ToolButton *filterWidget =
+                m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetFilter );
+        if ( m_titleWidget->layout()->preferredWidth() > contentsRect().width() ) {
+            // Show only an icon on the filter toolbutton, if there is not enough space
+            filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonIconOnly );
+            filterWidget->setMaximumWidth( filterWidget->size().height() );
+        } else if ( filterWidget->nativeWidget()->toolButtonStyle() == Qt::ToolButtonIconOnly
+            && contentsRect().width() > m_titleWidget->layout()->minimumWidth() +
+            QFontMetrics(filterWidget->font()).width(filterWidget->text()) + 60 )
+        {
+            // Show the icon with text beside if there is enough space again
+            filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
+            filterWidget->setMaximumWidth( -1 );
+        }
     }
 }
 
@@ -1959,7 +2037,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
 {
     if ( !m_graphicsWidget ) {
         m_graphicsWidget = new QGraphicsWidget( this );
-        m_graphicsWidget->setMinimumSize( 150, 150 );
+        m_graphicsWidget->setMinimumSize( 150, 150 ); // TODO allow smaller sizes, if zoom factor is small
         m_graphicsWidget->setPreferredSize( 400, 300 );
 
         // Create a child graphics widget, eg. to apply a blur effect to it

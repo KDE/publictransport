@@ -36,8 +36,9 @@ TitleWidget::TitleWidget(TitleType titleType, Settings *settings, QGraphicsItem*
             m_layout(new QGraphicsLinearLayout(Qt::Horizontal, this)), m_settings(settings)
 {
     m_type = titleType;
+    m_layout->setContentsMargins( 1, 1, 0, 0 );
 
-    int iconExtend = 32 * settings->sizeFactor;
+    int iconExtend = 26 * settings->sizeFactor;
     Plasma::IconWidget *icon = new Plasma::IconWidget;
     icon->setIcon( "public-transport-stop" );
     icon->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
@@ -137,7 +138,7 @@ void TitleWidget::setTitleType(TitleType titleType,
             removeWidget( WidgetTitle, HideAndRemoveWidget ); // TEST
             removeWidget( WidgetFilter, HideAndRemoveWidget ); // TEST
 
-            int iconExtend = 32 * m_settings->sizeFactor;
+            int iconExtend = 26 * m_settings->sizeFactor;
             Plasma::IconWidget *closeIcon = new Plasma::IconWidget;
             closeIcon->setIcon( "window-close" );
             closeIcon->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
@@ -487,7 +488,7 @@ void TitleWidget::slotJourneySearchInputChanged(const QString& text)
 
 void TitleWidget::settingsChanged()
 {
-    int mainIconExtend = qCeil(32 * m_settings->sizeFactor);
+    int mainIconExtend = qCeil(26 * m_settings->sizeFactor);
     m_icon->setMinimumSize( mainIconExtend, mainIconExtend );
     m_icon->setMaximumSize( mainIconExtend, mainIconExtend );
 
@@ -507,29 +508,9 @@ void TitleWidget::settingsChanged()
     }
 }
 
-void TitleWidget::resizeEvent(QGraphicsSceneResizeEvent* event)
+void TitleWidget::resizeEvent( QGraphicsSceneResizeEvent *event )
 {
     QGraphicsWidget::resizeEvent( event );
-
-    kDebug() << size().width() << "-" << m_filterWidget->size().width()
-             << "-" << m_icon->size().width() << "-" << m_title->size().width()
-             << "Result=" << (size().width() - m_filterWidget->size().width() -
-                m_icon->size().width() - m_title->size().width() - 4);
-    if ( size().width() / 2.2 < 3 * m_filterWidget->size().height() ||
-         size().width() - m_filterWidget->size().width() -
-         m_icon->size().width() - m_title->size().width() - 4 <= 0
-    ) {
-        m_filterWidget->nativeWidget()->setToolButtonStyle(
-                Qt::ToolButtonIconOnly );
-        m_filterWidget->setMaximumWidth( m_filterWidget->size().height() );
-    } else {
-        m_filterWidget->nativeWidget()->setToolButtonStyle(
-                Qt::ToolButtonTextBesideIcon );
-        m_filterWidget->setMaximumWidth( -1 );
-    }
-//     setVisible( m_filterWidget->size().width() < size().width() / 2.2 );
-
-    updateFilterWidget();
     updateTitle();
 }
 

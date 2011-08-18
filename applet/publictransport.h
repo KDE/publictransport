@@ -34,6 +34,7 @@
 #include "settings.h" // Only for ColorGroupSettingsList, remove here, move the function to GlobalApplet?
 #include <publictransporthelper/departureinfo.h>
 
+class QParallelAnimationGroup;
 class PublicTransportSettings;
 class OverlayWidget;
 class PublicTransportGraphicsItem;
@@ -250,6 +251,8 @@ protected slots:
 
     /** @brief Settings that require a new data request have been changed. */
     void serviceProviderSettingsChanged();
+
+    virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
 
     /**
      * @brief New @p data arrived from the data engine for the source with the name @p sourceName.
@@ -572,6 +575,9 @@ protected slots:
      * popup icon has finished. */
     void popupIconTransitionAnimationFinished();
 
+    /** @brief The animation to toggle the display of the title has finished. */
+    void titleToggleAnimationFinished();
+
     /** @brief Deletes the overlay item used when showing action buttons over the plasmoid. */
     void destroyOverlay();
 
@@ -820,7 +826,8 @@ private:
     int m_endPopupIconDepartureIndex;
     qreal m_popupIconDepartureIndex;
     QMap< QDateTime, QList<DepartureItem*> > m_departureGroups; // Groups the first few departures by departure time.
-    QPropertyAnimation *m_popupIconTransitionAnimation;
+    QPropertyAnimation *m_popupIconTransitionAnimation; // Animating between departures in the popup icon
+    QParallelAnimationGroup *m_titleToggleAnimation; // Hiding/Showing the title on resizing
     QHash< int, QString > m_stopIndexToSourceName; // A hash from the stop index to the source name.
     QStringList m_currentSources; // Current source names at the publictransport data engine.
 
