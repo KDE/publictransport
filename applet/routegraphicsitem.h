@@ -234,6 +234,7 @@ public:
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
     void arrangeStopItems();
+    virtual inline void showEvent( QShowEvent* ) { arrangeStopItems(); };
 
 private:
     QPointer<DepartureItem> m_item;

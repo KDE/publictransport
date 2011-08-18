@@ -54,6 +54,10 @@ RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item
 void RouteGraphicsItem::resizeEvent(QGraphicsSceneResizeEvent* event)
 {
     QGraphicsWidget::resizeEvent(event);
+    if ( !isVisible() ) {
+        // Don't rearrange if the route item isn't visible (TODO rearrange if shown?)
+        return;
+    }
     arrangeStopItems();
 }
 
@@ -890,7 +894,6 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
         boldRouteFont.setBold( true );
         QFontMetrics fm( routeFont );
         QFontMetrics fmBold( boldRouteFont );
-        const QRectF routeRect = rect();
 
         // Add the route stop items (JourneyRouteStopGraphicsItem)
         for ( int i = 0; i < info->routeStops().count(); ++i ) {
