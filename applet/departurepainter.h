@@ -51,6 +51,8 @@ public:
     void paintVehicle( QPainter* painter, VehicleType vehicle,
                        const QRectF& rect, const QString &transportLine );
 
+    QPixmap createMainIconPixmap( const QSize &size ) const;
+
     /**
      * @brief Creates a pixmap for the given @p departures.
      *

@@ -58,46 +58,79 @@ void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
             kDebug() << "Unknown vehicle type" << vehicle;
             return; // TODO: draw a simple circle or something.. or an unknown vehicle type icon
     }
+
+    // Use monochrome (mostly white) icons
+    vehicleKey.append( "_white" );
+
     if ( drawTransportLine ) {
         vehicleKey.append( "_empty" );
     }
-    if ( !m_svg->hasElement(vehicleKey) ) {
-        kDebug() << "SVG element" << vehicleKey << "not found";
-        return;
-    }
 
-    int shadowWidth = 4;
-    m_svg->resize( rect.width() - 2 * shadowWidth, rect.height() - 2 * shadowWidth );
+    int shadowWidth = qBound( 2, int(rect.width() / 20), 4 );
+    m_svg->resize( rect.width() - shadowWidth, rect.height() - shadowWidth );
 
-    QPixmap pixmap( (int)rect.width(), (int)rect.height() );
+    QPixmap pixmap( int(rect.width()), int(rect.height()) );
     pixmap.fill( Qt::transparent );
     QPainter p( &pixmap );
-    m_svg->paint( &p, shadowWidth, shadowWidth, vehicleKey );
+    p.setRenderHint( QPainter::Antialiasing );
+    m_svg->paint( &p, shadowWidth / 2, shadowWidth / 2, vehicleKey );
 
     // Draw transport line string (only for local public transport)
     if ( drawTransportLine ) {
         QString text = transportLine;
         text.replace(' ', QString());
 
-        QFont f = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont ); // TODO //font();
-        f.setBold( true );
+        QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont ); // TODO //font();
+        font.setBold( true );
         if ( text.length() > 2 ) {
-            f.setPixelSize( qMax(8, qCeil(1.2 * rect.width() / text.length())) );
+            font.setPixelSize( qMax(8, qCeil(1.18 * rect.width() / text.length())) );
         } else {
-            f.setPixelSize( rect.width() * 0.55 );
+            font.setPixelSize( rect.width() * 0.55 );
         }
-        p.setFont( f );
-        p.setPen( Qt::white );
+        QFontMetrics fm( font );
+        QRect textRect( shadowWidth / 2, shadowWidth / 2,
+                        rect.width() - shadowWidth, rect.height() - shadowWidth );
+        QPen textOutlinePen( QColor(0, 0, 0, 100) );
+        textOutlinePen.setWidthF( qMin(10.0, font.pixelSize() / 3.0) );
+        textOutlinePen.setCapStyle( Qt::RoundCap );
+        textOutlinePen.setJoinStyle( Qt::RoundJoin );
+        QPainterPath textPath;
+        textPath.addText( textRect.left() + (textRect.width() - fm.width(text)) / 2,
+                          textRect.bottom() - (textRect.height() - fm.ascent()) / 2 - 2, font, text );
+        p.setPen( textOutlinePen );
+        p.drawPath( textPath );
+        p.fillPath( textPath, Qt::white );
 
-        QRect textRect( shadowWidth, shadowWidth, rect.width() - 2 * shadowWidth,
-                        rect.height() - 2 * shadowWidth );
-        p.drawText( textRect, text, QTextOption(Qt::AlignCenter) );
+//         p.setFont( f );
+//         p.setPen( Qt::white );
+//         p.drawText( textRect, text, QTextOption(Qt::AlignCenter) );
     }
 
-    QImage shadow = pixmap.toImage();
-    Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
-    painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );
+//     if ( !drawMonochromeIcons ) {
+//         QImage shadow = pixmap.toImage();
+//         Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
+//         painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );
+//     }
     painter->drawPixmap( rect.topLeft(), pixmap );
+}
+
+QPixmap DeparturePainter::createMainIconPixmap( const QSize &size ) const
+{
+    QPixmap pixmap( size );
+    pixmap.fill( Qt::transparent );
+
+    const QString mainIconKey = "stop_white";
+    if ( !m_svg->hasElement(mainIconKey) ) {
+        kDebug() << "SVG element" << mainIconKey << "not found";
+        return pixmap;
+    }
+
+    QPainter painter( &pixmap );
+    m_svg->resize( size );
+    m_svg->paint( &painter, 0, 0, mainIconKey );
+    painter.end();
+
+    return pixmap;
 }
 
 QPixmap DeparturePainter::createDeparturesPixmap( const QList< DepartureItem* >& departures,
@@ -106,19 +139,21 @@ QPixmap DeparturePainter::createDeparturesPixmap( const QList< DepartureItem* >&
     QPixmap pixmap( size );
     pixmap.fill( Qt::transparent );
     QPainter p( &pixmap );
+    p.setRenderHints( QPainter::Antialiasing | QPainter::TextAntialiasing
+                    | QPainter::SmoothPixmapTransform );
     QRectF vehicleRect( 0, 0, pixmap.width(), pixmap.height() );
 
     // Calculate values for arranging vehicle type icons
     const int vehiclesPerRow = qCeil( qSqrt(departures.count()) );
     const int rows = qCeil( (qreal)departures.count() / (qreal)vehiclesPerRow );
     const qreal vehicleSize = vehiclesPerRow == 1 ? vehicleRect.width()
-            : vehicleRect.width() / ( 0.8 * vehiclesPerRow );
+            : vehicleRect.width() / (0.8 * vehiclesPerRow);
     const qreal vehicleOffsetX = vehiclesPerRow == 1 ? 0.0
             : (vehicleRect.width() - vehicleSize) / (vehiclesPerRow - 1);
     qreal vehicleOffsetY = rows == 1 ? 0.0
             : (vehicleRect.height() - vehicleSize) / (rows - 1);
     QDateTime time;
-//     int i = 0;
+    int i = 0;
     int vehiclesInCurrentRow = 0;
     qreal x = 0.0;
     qreal y = 0.0;
@@ -131,12 +166,12 @@ QPixmap DeparturePainter::createDeparturesPixmap( const QList< DepartureItem* >&
             continue;
         }
         if ( vehiclesInCurrentRow == vehiclesPerRow ) {
-            vehiclesInCurrentRow = 0;
-            if ( departures.count() - vehiclesInCurrentRow < vehiclesPerRow ) {
+            if ( departures.count() - i < vehiclesPerRow ) {
                 x = vehicleOffsetX / 2.0;
             } else {
                 x = 0;
             }
+            vehiclesInCurrentRow = 0;
             y += vehicleOffsetY;
         }
 
@@ -153,7 +188,7 @@ QPixmap DeparturePainter::createDeparturesPixmap( const QList< DepartureItem* >&
 
         x += vehicleOffsetX;
         ++vehiclesInCurrentRow;
-//         ++i;
+        ++i;
     }
 
     int minsToDeparture = qCeil( QDateTime::currentDateTime().secsTo(time) / 60.0 );
@@ -173,23 +208,38 @@ QPixmap DeparturePainter::createDeparturesPixmap( const QList< DepartureItem* >&
     }
 
     QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
-    kDebug() << pixmap.size() << qBound(24, int(pixmap.width() * 0.4), 32);
-    font.setPixelSize( qBound(24, int(pixmap.width() * 0.4), 32) );
-    if ( font.pixelSize() >= 28 ) {
+    font.setPixelSize( qBound(8, int(pixmap.width() * 0.27), 36) );
+//     if ( font.pixelSize() >= 22 ) {
         font.setBold( true );
-    }
-    p.setFont( font );
+//     }
     QFontMetrics fm( font );
-    int textWidth = fm.width( text );
     QRectF textRect( 0, 0, pixmap.width(), pixmap.height() );
-    QRectF haloRect( textRect.left() + (textRect.width() - textWidth) / 2,
-                     textRect.bottom() - fm.height(), textWidth, fm.height() );
-    haloRect = haloRect.intersected( textRect ).adjusted( 3, 3, -3, -3 );
-    QTextOption option(Qt::AlignHCenter | Qt::AlignBottom);
-    option.setWrapMode( QTextOption::NoWrap );
+//     QRectF haloRect( textRect.left() + (textRect.width() - textWidth) / 2,
+//                      textRect.bottom() - fm.height(), textWidth, fm.height() );
+//     haloRect = haloRect.intersected( textRect ).adjusted( 3, 3, -3, -3 );
+//     Plasma::PaintUtils::drawHalo( &p, haloRect );
 
-    Plasma::PaintUtils::drawHalo( &p, haloRect );
-    p.drawText( textRect, fm.elidedText(text, Qt::ElideRight, pixmap.width()), option );
+    text = fm.elidedText( text, Qt::ElideRight, textRect.width() * 1.05 );
+    int textWidth = fm.width( text );
+    QPen textOutlinePen( QColor(0, 0, 0, 150) );
+    textOutlinePen.setWidthF( qMin(6.0, font.pixelSize() / 3.0) );
+    textOutlinePen.setCapStyle( Qt::RoundCap );
+    textOutlinePen.setJoinStyle( Qt::RoundJoin );
+    QPen textOutlineFinePen( QColor(0, 0, 0, 225) );
+    textOutlineFinePen.setCosmetic( true );
+    QPainterPath textPath;
+    textPath.addText( textRect.left() + (textRect.width() - textWidth) / 2.5,
+                      textRect.bottom() - textOutlinePen.width(), font, text );
+    p.setPen( textOutlinePen );
+    p.drawPath( textPath );
+    p.setPen( textOutlineFinePen );
+    p.drawPath( textPath );
+    p.fillPath( textPath, Qt::white );
+
+//     p.setFont( font );
+//     QTextOption option(Qt::AlignHCenter | Qt::AlignBottom);
+//     option.setWrapMode( QTextOption::NoWrap );
+//     p.drawText( textRect, text, option );
 
     p.end();
     return pixmap;
@@ -241,7 +291,7 @@ QPixmap DeparturePainter::createPopupIcon( int startDepartureIndex,
                 : createDeparturesPixmap(
                 departureGroups[departureGroups.keys()[endDepartureIndex]], size );
 
-        pixmap = QPixmap( 128, 128 );
+        pixmap = QPixmap( size );
         pixmap.fill( Qt::transparent );
         QPainter p( &pixmap );
         p.setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
