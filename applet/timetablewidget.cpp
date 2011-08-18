@@ -21,12 +21,15 @@
 #include "routegraphicsitem.h"
 #include "departuremodel.h"
 
-#include <KColorScheme>
-#include <KColorUtils>
 #include <Plasma/PaintUtils>
 #include <Plasma/Svg>
 #include <Plasma/Animator>
 #include <Plasma/Animation>
+#include <Plasma/DataEngineManager>
+
+#include <KColorScheme>
+#include <KColorUtils>
+#include <KMenu>
 
 #include <QGraphicsLinearLayout>
 #include <QModelIndex>
@@ -38,9 +41,8 @@
 #include <QGraphicsScene>
 #include <QPropertyAnimation>
 #include <qmath.h>
-#include <KMenu>
 #include <QStyleOption>
-#include <Plasma/DataEngineManager>
+#include <KPixmapCache>
 
 PublicTransportGraphicsItem::PublicTransportGraphicsItem(
         PublicTransportWidget* publicTransportWidget, QGraphicsItem* parent,
@@ -186,7 +188,7 @@ int PublicTransportGraphicsItem::extraIconSize() const
 }
 
 QTextDocument* TextDocumentHelper::createTextDocument(const QString& html, const QSizeF& size,
-    const QTextOption &textOption, const QFont &font )
+    const QTextOption &textOption, const QFont &font  )
 {
     QTextDocument *textDocument = new QTextDocument;
     textDocument->setDefaultFont( font );
@@ -238,6 +240,9 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
 
             if ( drawHalos ) {
                 QSize textSize = textLine.naturalTextRect().size().toSize();
+                if ( textSize.width() > textRect.width() ) {
+                    textSize.setWidth( textRect.width() );
+                }
                 QRect haloRect = QStyle::visualRect( textLayout->textOption().textDirection(),
                         textRect, QRect((textLine.position() + position).toPoint() +
                         (document->defaultTextOption().alignment().testFlag(Qt::AlignRight)
@@ -331,9 +336,9 @@ void DepartureGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event )
 
     if ( m_routeItem ) {
         QRectF _infoRect = infoRect( rect(), 0 );
-        m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
-        m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
-                             ROUTE_ITEM_HEIGHT * m_parent->zoomFactor() );
+        m_routeItem->setGeometry( _infoRect.left(), rect().top() + unexpandedHeight() + padding(),
+                                  rect().width() - padding() - _infoRect.left(),
+                                  ROUTE_ITEM_HEIGHT * m_parent->zoomFactor() );
     }
 }
 
@@ -434,13 +439,13 @@ DepartureGraphicsItem::DepartureGraphicsItem( PublicTransportWidget* publicTrans
         QGraphicsItem* parent,
         StopAction *copyStopToClipboardAction, StopAction *showInMapAction,
         StopAction *showDeparturesAction, StopAction *highlightStopAction,
-        StopAction *newFilterViaStopAction/*,
-        QAction *toggleAlarmAction*/ )
+        StopAction *newFilterViaStopAction, KPixmapCache *pixmapCache )
         : PublicTransportGraphicsItem( publicTransportWidget, parent, copyStopToClipboardAction,
                                        showInMapAction ),
         m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0), m_highlighted(false),
         m_leavingAnimation(0), m_showDeparturesAction(showDeparturesAction),
-        m_highlightStopAction(highlightStopAction), m_newFilterViaStopAction(newFilterViaStopAction)
+        m_highlightStopAction(highlightStopAction), m_newFilterViaStopAction(newFilterViaStopAction),
+        m_pixmapCache(pixmapCache)
 {
     m_leavingStep = 0.0;
 }
@@ -645,7 +650,18 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
 
 qreal DepartureGraphicsItem::timeColumnWidth() const
 {
-    return TextDocumentHelper::textDocumentWidth( m_timeTextDocument );
+    qreal width = TextDocumentHelper::textDocumentWidth( m_timeTextDocument );
+
+    QRectF rect = contentsRect();
+    if ( qobject_cast<TimetableWidget*>(m_parent)->isTargetHidden() ) {
+        if ( width > rect.width() * 3 / 4 - padding() ) {
+            width = rect.width() * 3 / 4 - padding();
+        }
+    } else if ( width > rect.width() / 2 - padding() ) {
+        width = rect.width() / 2 - padding();
+    }
+
+    return width;
 }
 
 void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -965,10 +981,10 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
     QColor _backgroundColor = backgroundColor(); // TODO: store these colors in option->palette?
     QColor _textColor = textColor();
     QFontMetrics fm( font() );
-    const qreal timeWidth = timeColumnWidth();
     const QRectF _vehicleRect = vehicleRect( rect );
-    const QRectF _infoRect = infoRect( rect, timeWidth );
     const QRectF _timeRect = timeRect( rect );
+    const qreal timeWidth = timeColumnWidth();
+    const QRectF _infoRect = infoRect( rect, timeWidth );
 
     int shadowWidth = 4;
     QSizeF iconSize( _vehicleRect.width() - 2 * shadowWidth, _vehicleRect.height() - 2 * shadowWidth );
@@ -1001,35 +1017,43 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
 // 		vehicleKey.append( "_empty" );
 // 	}
 
-    if ( !m_parent->svg()->hasElement(vehicleKey) ) {
-        kDebug() << "SVG element" << vehicleKey << "not found";
-    } else {
-        // Draw SVG vehicle element into pixmap
-        QPixmap pixmap( (int)_vehicleRect.width(), (int)_vehicleRect.height() );
-        pixmap.fill( Qt::transparent );
-        QPainter p( &pixmap );
-        m_parent->svg()->resize( iconSize );
-        m_parent->svg()->paint( &p, shadowWidth, shadowWidth, vehicleKey );
+    QPixmap vehiclePixmap;
+    if ( !m_pixmapCache || !m_pixmapCache->find(vehicleKey, vehiclePixmap) ) {
+        if ( !m_parent->svg()->hasElement(vehicleKey) ) {
+            kDebug() << "SVG element" << vehicleKey << "not found";
+        } else {
+            // Draw SVG vehicle element into pixmap
+            QPixmap pixmap( (int)_vehicleRect.width(), (int)_vehicleRect.height() );
+            pixmap.fill( Qt::transparent );
+            QPainter p( &pixmap );
+            m_parent->svg()->resize( iconSize );
+            m_parent->svg()->paint( &p, shadowWidth, shadowWidth, vehicleKey );
 
-        QPixmap fadePixmap( pixmap.size() );
-        fadePixmap.fill( Qt::transparent );
-        QPainter p2( &fadePixmap );
+            vehiclePixmap = QPixmap( pixmap.size() );
+            vehiclePixmap.fill( Qt::transparent );
+            QPainter p2( &vehiclePixmap );
 
-        // Create shadow for the SVG element and draw the SVG and it's shadow.
-        QImage shadow = pixmap.toImage();
-        Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
-        p2.drawImage( QPoint(1, 2), shadow );
-        p2.drawPixmap( QPoint(0, 0), pixmap );
+            // Create shadow for the SVG element and draw the SVG and it's shadow.
+            QImage shadow = pixmap.toImage();
+            Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
+            p2.drawImage( QPoint(1, 2), shadow );
+            p2.drawPixmap( QPoint(0, 0), pixmap );
 
-        // Make startTransitionPixmap more transparent (for fading)
-        p2.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-        QLinearGradient gradient( pixmap.width() / 4, 0, pixmap.width(), 0 );
-        gradient.setColorAt( 0.0, Qt::black );
-        gradient.setColorAt( 1.0, Qt::transparent );
-        p2.fillRect( fadePixmap.rect(), QBrush(gradient) );
-        p2.end();
+            // Make startTransitionPixmap more transparent (for fading)
+            p2.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+            QLinearGradient gradient( pixmap.width() / 4, 0, pixmap.width(), 0 );
+            gradient.setColorAt( 0.0, Qt::black );
+            gradient.setColorAt( 1.0, Qt::transparent );
+            p2.fillRect( vehiclePixmap.rect(), QBrush(gradient) );
+            p2.end();
 
-        painter->drawPixmap( _vehicleRect.topLeft(), fadePixmap );
+            if ( m_pixmapCache ) {
+                m_pixmapCache->insert( vehicleKey, vehiclePixmap );
+            }
+        }
+    }
+    if ( !vehicleKey.isEmpty() ) {
+        painter->drawPixmap( _vehicleRect.topLeft(), vehiclePixmap );
     }
 
     // Draw text
@@ -1046,6 +1070,7 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
     }
 
     if ( m_highlighted != manuallyHighlighted ) {
+        kDebug() << "Highlighting changed from" << m_highlighted << "to" << manuallyHighlighted;
         QFont _font = font();
         if ( manuallyHighlighted ) {
             _font.setItalic( true );
@@ -1056,11 +1081,11 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
     }
 
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
-                                          _infoRect.toRect(), drawHalos );
+            _infoRect.toRect(), drawHalos );
     TextDocumentHelper::drawTextDocument( painter, option, m_timeTextDocument,
-                                          _timeRect.toRect(), drawHalos );
+            _timeRect.toRect(), drawHalos );
 
-    // Draw extra icon(s)
+    // Draw extra icon(s), eg. an alarm icon or an indicator for additional news for a journey
     QRectF _extraIconRect;
     if ( hasExtraIcon() ) {
         QModelIndex modelIndex = index().model()->index( index().row(), ColumnTarget );
@@ -1354,7 +1379,7 @@ JourneyTimetableWidget::JourneyTimetableWidget( QGraphicsItem* parent )
 
 TimetableWidget::TimetableWidget( QGraphicsItem* parent )
     : PublicTransportWidget(parent), m_showDeparturesAction(0), m_highlightStopAction(0),
-      m_newFilterViaStopAction(0)
+      m_newFilterViaStopAction(0), m_pixmapCache(new KPixmapCache("PublicTransportVehicleIcons"))
 {
     m_targetHidden = false;
     setupActions();
@@ -1471,6 +1496,9 @@ void PublicTransportWidget::modelReset()
 
 void TimetableWidget::dataChanged( const QModelIndex& topLeft, const QModelIndex& bottomRight )
 {
+    if ( !topLeft.isValid() || !bottomRight.isValid() ) {
+        return;
+    }
     for ( int row = topLeft.row(); row <= bottomRight.row() && row < m_model->rowCount(); ++row ) {
         departureItem( row )->updateData( static_cast<DepartureItem*>(m_model->item(row)), true );
     }
@@ -1478,6 +1506,9 @@ void TimetableWidget::dataChanged( const QModelIndex& topLeft, const QModelIndex
 
 void JourneyTimetableWidget::dataChanged( const QModelIndex& topLeft, const QModelIndex& bottomRight )
 {
+    if ( !topLeft.isValid() || !bottomRight.isValid() ) {
+        return;
+    }
     for ( int row = topLeft.row(); row <= bottomRight.row() && row < m_model->rowCount(); ++row ) {
         journeyItem( row )->updateData( static_cast<JourneyItem*>(m_model->item(row)), true );
     }
@@ -1488,7 +1519,7 @@ void PublicTransportWidget::layoutChanged()
 
 }
 
-void JourneyTimetableWidget::rowsInserted(const QModelIndex& parent, int first, int last)
+void JourneyTimetableWidget::rowsInserted( const QModelIndex& parent, int first, int last )
 {
     if ( parent.isValid() ) {
         kDebug() << "Item with parent" << parent << "Inserted" << first << last;
@@ -1530,7 +1561,7 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
     for ( int row = first; row <= last; ++row ) {
         DepartureGraphicsItem *item = new DepartureGraphicsItem( this, widget(),
                 m_copyStopToClipboardAction, m_showInMapAction, m_showDeparturesAction,
-                m_highlightStopAction, m_newFilterViaStopAction );
+                m_highlightStopAction, m_newFilterViaStopAction, m_pixmapCache );
         item->updateData( static_cast<DepartureItem*>(m_model->item(row)) );
         m_items.insert( row, item );
 
@@ -1647,9 +1678,11 @@ QRectF DepartureGraphicsItem::extraIconRect(const QRectF& rect, qreal timeColumn
 
 QRectF DepartureGraphicsItem::timeRect(const QRectF& rect) const {
     if ( qobject_cast<TimetableWidget*>(m_parent)->isTargetHidden() ) {
-        return QRectF( rect.width() / 4, rect.top(), rect.width() * 3 / 4 - padding(), unexpandedHeight() );
+        return QRectF( rect.width() / 4, rect.top(),
+                       rect.width() * 3 / 4 - padding(), unexpandedHeight() );
     } else {
-        return QRectF( rect.width() / 2, rect.top(), rect.width() / 2 - padding(), unexpandedHeight() );
+        return QRectF( rect.width() / 2, rect.top(),
+                       rect.width() / 2 - padding(), unexpandedHeight() );
     }
 }
 

@@ -31,6 +31,7 @@
 #include <QPainter>
 #include <QPointer>
 
+class KPixmapCache;
 namespace Plasma
 {
     class Svg;
@@ -304,7 +305,7 @@ public:
     static QTextDocument *createTextDocument( const QString &html, const QSizeF &size,
             const QTextOption &textOption, const QFont &font );
     static void drawTextDocument( QPainter *painter, const QStyleOptionGraphicsItem* option,
-                                QTextDocument *document, const QRect &textRect, bool drawHalos );
+            QTextDocument *document, const QRect &textRect, bool drawHalos );
     static qreal textDocumentWidth( QTextDocument *document );
 };
 
@@ -326,8 +327,8 @@ public:
                                     StopAction *showInMapAction = 0,
                                     StopAction *showDeparturesAction = 0,
                                     StopAction *highlightStopAction = 0,
-                                    StopAction *newFilterViaStopAction = 0/*,
-                                    QAction *toggleAlarmAction = 0*/ );
+                                    StopAction *newFilterViaStopAction = 0,
+                                    KPixmapCache *pixmapCache = 0 );
     virtual ~DepartureGraphicsItem();
 
     /**
@@ -450,6 +451,8 @@ private:
     StopAction *m_showDeparturesAction;
     StopAction *m_highlightStopAction;
     StopAction *m_newFilterViaStopAction;
+
+    KPixmapCache *m_pixmapCache;
 };
 
 /**
@@ -707,6 +710,7 @@ private:
     StopAction *m_showDeparturesAction;
     StopAction *m_highlightStopAction;
     StopAction *m_newFilterViaStopAction;
+    KPixmapCache *m_pixmapCache;
 };
 
 /**
