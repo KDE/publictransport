@@ -36,16 +36,13 @@ namespace Plasma
 {
     class Svg;
 }
-class KMenu;
 
 class QPropertyAnimation;
 class QWidget;
-class QTextLayout;
 class QStyleOptionGraphicsItem;
 class QPainter;
 
 class RouteGraphicsItem;
-class RouteStopTextGraphicsItem;
 class JourneyRouteGraphicsItem;
 class DepartureModel;
 class DepartureItem;
