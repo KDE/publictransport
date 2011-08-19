@@ -280,7 +280,7 @@ void SettingsUiManager::currentAlarmChanged( int row )
 
         disconnect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)),
                     this, SLOT(currentAlarmTypeChanged(int)) );
-        disconnect( m_uiAlarms.affectedStops, SIGNAL( checkedItemsChanged() ),
+        disconnect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()),
                     this, SLOT(affectedStopsAlarmChanged()) );
         setValuesOfAlarmConfig();
         connect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)),
@@ -652,7 +652,7 @@ void SettingsUiManager::usedFilterConfigChanged( QWidget* widget )
     connect( m_stopListWidget, SIGNAL(changed(int,StopSettings)),
              this, SLOT(stopSettingsChanged()) );
     connect( m_stopListWidget, SIGNAL(added(QWidget*)), this, SLOT(stopSettingsAdded()) );
-    connect( m_stopListWidget, SIGNAL(removed(QWidget*, int)),
+    connect( m_stopListWidget, SIGNAL(removed(QWidget*,int)),
              this, SLOT(stopSettingsRemoved(QWidget*,int)) );
 }
 

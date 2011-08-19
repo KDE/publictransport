@@ -155,7 +155,7 @@ void PublicTransport::init()
              this, SLOT(beginJourneyProcessing(QString)) );
     connect( m_departureProcessor, SIGNAL(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)),
              this, SLOT(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)) );
-    connect( m_departureProcessor, SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>, QList<DepartureInfo>)),
+    connect( m_departureProcessor, SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)),
              this, SLOT(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)) );
 
     // Load vehicle type SVG
