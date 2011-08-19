@@ -56,13 +56,13 @@ PublicTransportRunnerConfig::PublicTransportRunnerConfig( QWidget* parent, const
     m_modelServiceProviders = new ServiceProviderModel( this );
     m_modelServiceProviders->syncWithDataEngine( m_publicTransportEngine, m_favIconEngine );
 
-    connect( m_ui.btnChangeStop, SIGNAL( clicked() ),
-             this, SLOT( changeStopClicked() ) );
-    connect( m_ui.departureKeyword, SIGNAL( editingFinished() ), this, SLOT( changed() ) );
-    connect( m_ui.arrivalKeyword, SIGNAL( editingFinished() ), this, SLOT( changed() ) );
-    connect( m_ui.journeyKeyword, SIGNAL( editingFinished() ), this, SLOT( changed() ) );
-    connect( m_ui.stopsKeyword, SIGNAL( editingFinished() ), this, SLOT( changed() ) );
-    connect( m_ui.resultCount, SIGNAL( valueChanged( int ) ), this, SLOT( changed() ) );
+    connect( m_ui.btnChangeStop, SIGNAL(clicked()),
+             this, SLOT(changeStopClicked()) );
+    connect( m_ui.departureKeyword, SIGNAL(editingFinished()), this, SLOT(changed()) );
+    connect( m_ui.arrivalKeyword, SIGNAL(editingFinished()), this, SLOT(changed()) );
+    connect( m_ui.journeyKeyword, SIGNAL(editingFinished()), this, SLOT(changed()) );
+    connect( m_ui.stopsKeyword, SIGNAL(editingFinished()), this, SLOT(changed()) );
+    connect( m_ui.resultCount, SIGNAL(valueChanged(int)), this, SLOT(changed()) );
 }
 
 PublicTransportRunnerConfig::~PublicTransportRunnerConfig()
