@@ -34,6 +34,7 @@
 #include "settings.h" // Only for ColorGroupSettingsList, remove here, move the function to GlobalApplet?
 #include <publictransporthelper/departureinfo.h>
 
+class PopupIcon;
 class QParallelAnimationGroup;
 class PublicTransportSettings;
 class OverlayWidget;
@@ -105,13 +106,6 @@ class PublicTransport : public Plasma::PopupApplet {
     Q_PROPERTY( int DepartureCount READ departureCount )
 
     /**
-     * @brief The current index of the departure shown in the popup icon.
-     *
-     * @note It's a qreal because transitions are stored for animation.
-     **/
-    Q_PROPERTY( qreal PopupIconDepartureIndex READ popupIconDepartureIndex WRITE setPopupIconDepartureIndex )
-
-    /**
      * @brief The journey search state or the journey unsupported state.
      *
      * Depends on the features of the current service provider.
@@ -135,37 +129,11 @@ public:
      **/
     static const int MAX_RECENT_JOURNEY_SEARCHES = 10;
 
-    /**
-     * @brief The maximum number of departure groups (at the same time) to
-     *   cycle through in the popup icon.
-     **/
-    static const int POPUP_ICON_DEPARTURE_GROUP_COUNT = 10;
-
     /** @brief Returns the widget with the contents of the applet. */
     virtual QGraphicsWidget* graphicsWidget();
 
     /** @returns the number of currently shown departures/arrivals. */
     int departureCount() const { return m_departureInfos.count(); };
-
-    /**
-     * @brief The current index of the departure shown in the popup icon.
-     *
-     * @note It's a qreal because transitions are stored for animation.
-     **/
-    qreal popupIconDepartureIndex() const { return m_popupIconDepartureIndex; };
-
-    /**
-     * @brief Sets the current index of the departure shown in the popup icon.
-     *
-     * @param popupIconDepartureIndex The index of the new departure to be shown
-     *   in the popup icon.
-     *
-     * @note It's a qreal because transitions are stored for animation.
-     **/
-    void setPopupIconDepartureIndex( qreal popupIconDepartureIndex ) {
-        m_popupIconDepartureIndex = popupIconDepartureIndex;
-        createPopupIcon();
-    };
 
     /** @brief Checks if the state with the given @p stateName is currently active. */
     bool isStateActive( const QString &stateName ) const;
@@ -571,10 +539,6 @@ protected slots:
     /** @brief The animation fading out a pixmap of the old applet appearance has finished. */
     void oldItemAnimationFinished();
 
-    /** @brief The transition animation between two departure groups in the 
-     * popup icon has finished. */
-    void popupIconTransitionAnimationFinished();
-
     /** @brief The animation to toggle the display of the title has finished. */
     void titleToggleAnimationFinished();
 
@@ -633,6 +597,9 @@ protected slots:
      **/
     void departuresLeft( const QList<DepartureInfo> &departures );
 
+    /** @brief Updates the popup icon with information about the next departure / alarm. */
+    void updatePopupIcon();
+
 protected:
     /**
      * @brief Create the configuration dialog contents.
@@ -669,19 +636,6 @@ protected:
 
     /** @brief Generates tooltip data and registers this applet at plasma's TooltipManager. */
     void createTooltip();
-
-    /** @brief Creates the popup icon with information about the next departure / alarm. */
-    void createPopupIcon();
-
-    /**
-     * @brief Creates a new list for the first departures that are shown in the
-     *   popup icon.
-     *
-     * Each group can contain multiple departures if they depart at the same
-     * time. The number of departure groups that can be shown in the popup icon
-     * is limited to @ref POPUP_ICON_DEPARTURE_GROUP_COUNT.
-     **/
-    void createDepartureGroups();
 
     /** @brief Mouse wheel rotated on popup icon. */
     virtual void wheelEvent( QGraphicsSceneWheelEvent* event );
@@ -806,7 +760,6 @@ private:
     void setupStateMachine();
     Plasma::Animation *fadeOutOldAppearance();
 
-
     QGraphicsWidget *m_graphicsWidget, *m_mainGraphicsWidget;
     GraphicsPixmapWidget *m_oldItem;
     TitleWidget *m_titleWidget; // A widget used as the title of the applet.
@@ -822,11 +775,7 @@ private:
 
     DepartureModel *m_model; // The model containing the departures/arrivals.
     QHash< QString, QList<DepartureInfo> > m_departureInfos; // List of current departures/arrivals for each stop.
-    int m_startPopupIconDepartureIndex;
-    int m_endPopupIconDepartureIndex;
-    qreal m_popupIconDepartureIndex;
-    QMap< QDateTime, QList<DepartureItem*> > m_departureGroups; // Groups the first few departures by departure time.
-    QPropertyAnimation *m_popupIconTransitionAnimation; // Animating between departures in the popup icon
+    PopupIcon *m_popupIcon;
     QParallelAnimationGroup *m_titleToggleAnimation; // Hiding/Showing the title on resizing
     QHash< int, QString > m_stopIndexToSourceName; // A hash from the stop index to the source name.
     QStringList m_currentSources; // Current source names at the publictransport data engine.

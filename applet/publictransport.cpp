@@ -28,6 +28,7 @@
 #include "journeysearchsuggestionwidget.h"
 #include "settings.h"
 #include "timetablewidget.h"
+#include "popupicon.h"
 
 // Helper library includes
 #include <publictransporthelper/global.h>
@@ -117,15 +118,12 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
         : Plasma::PopupApplet( parent, args ),
         m_graphicsWidget(0), m_mainGraphicsWidget(0), m_oldItem(0), m_titleWidget(0),
         m_labelInfo(0), m_timetable(0), m_journeyTimetable(0), m_listStopSuggestions(0),
-        m_overlay(0), m_model(0), m_popupIconTransitionAnimation(0), m_titleToggleAnimation(0),
-        m_modelJourneys(0), m_departureProcessor(0), m_stateMachine(0),
+        m_overlay(0), m_model(0), m_popupIcon(0),
+        m_titleToggleAnimation(0), m_modelJourneys(0), m_departureProcessor(0), m_stateMachine(0),
         m_journeySearchTransition1(0), m_journeySearchTransition2(0),
         m_journeySearchTransition3(0), m_marble(0)
 {
     m_originalStopIndex = -1;
-    m_popupIconDepartureIndex = 0;
-    m_startPopupIconDepartureIndex = 0;
-    m_endPopupIconDepartureIndex = 0;
 
     setBackgroundHints( StandardBackground );
     setAspectRatioMode( Plasma::IgnoreAspectRatio );
@@ -166,6 +164,12 @@ void PublicTransport::init()
     m_departurePainter = new DeparturePainter( this );
     m_departurePainter->setSvg( &m_vehiclesSvg );
 
+    m_popupIcon = new PopupIcon( m_departurePainter, this );
+    connect( m_popupIcon, SIGNAL(currentDepartureGroupIndexChanged(qreal)),
+             this, SLOT(updatePopupIcon()) );
+    connect( m_popupIcon, SIGNAL(currentDepartureIndexChanged(qreal)),
+             this, SLOT(updatePopupIcon()) );
+
     if ( !m_settings.stopSettingsList.isEmpty() ) {
         QVariantHash serviceProviderData = currentServiceProviderData();
         m_currentServiceProviderFeatures = serviceProviderData.isEmpty()
@@ -201,6 +205,7 @@ void PublicTransport::init()
                                   ? QString() : stopSettings.stop(0).name );
     m_modelJourneys->setCurrentStopIndex( m_settings.currentStopSettingsIndex );
     m_modelJourneys->setAlarmSettings( m_settings.alarmSettings );
+    m_popupIcon->setModel( m_model );
 
     // Create widgets
     graphicsWidget();
@@ -212,7 +217,7 @@ void PublicTransport::init()
     // Check for network connectivity and create tooltip / popup icon
     checkNetworkStatus();
     createTooltip();
-    createPopupIcon();
+    updatePopupIcon();
 
     connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
@@ -863,8 +868,8 @@ void PublicTransport::departuresFiltered( const QString& sourceName,
         m_model->removeRows( m_settings.maximalNumberOfDepartures, delta );
     }
 
-    createDepartureGroups();
-    createPopupIcon();
+    m_popupIcon->createDepartureGroups();
+    updatePopupIcon();
     createTooltip();
     updateColorGroupSettings();
 }
@@ -929,8 +934,8 @@ void PublicTransport::departuresProcessed( const QString& sourceName,
     // Update everything that might have changed when all departure data is there
     if ( departuresToGo == 0 ) {
         updateColorGroupSettings();
-        createDepartureGroups();
-        createPopupIcon();
+        m_popupIcon->createDepartureGroups();
+        updatePopupIcon();
         createTooltip();
     }
 }
@@ -1155,122 +1160,29 @@ void PublicTransport::wheelEvent( QGraphicsSceneWheelEvent* event )
 {
     QGraphicsItem::wheelEvent( event );
 
-    int oldDepartureSpan = qAbs( m_endPopupIconDepartureIndex - m_startPopupIconDepartureIndex );
-    int oldEndPopupIconDepartureIndex = m_endPopupIconDepartureIndex;
-
     // Compute start and end indices of the departure groups to animate between
     if ( event->delta() > 0 ) {
         // Wheel rotated forward
-        if ( m_endPopupIconDepartureIndex < POPUP_ICON_DEPARTURE_GROUP_COUNT - 1 ) {
-            if ( m_popupIconTransitionAnimation ) {
-                // Already animating
-                if ( m_endPopupIconDepartureIndex < m_startPopupIconDepartureIndex ) {
-                    // Direction was reversed
-                    m_startPopupIconDepartureIndex = m_endPopupIconDepartureIndex;
-                }
-
-                // Increase index of the departure group where the animation should end
-                ++m_endPopupIconDepartureIndex;
-            } else {
-                m_startPopupIconDepartureIndex = qFloor( m_popupIconDepartureIndex );
-                m_endPopupIconDepartureIndex = m_startPopupIconDepartureIndex + 1;
-            }
-        } else {
-            // Max departure already reached
-            return;
-        }
+        m_popupIcon->animateToNextGroup();
     } else if ( event->delta() < 0 ) {
         // Wheel rotated backward
-        int minIndex = m_model->hasAlarms() ? -1 : 0; // Show alarm at index -1
-        if ( m_endPopupIconDepartureIndex > minIndex ) {
-            if ( m_popupIconTransitionAnimation ) {
-                // Already animating
-                if ( m_endPopupIconDepartureIndex > m_startPopupIconDepartureIndex ) {
-                    // Direction was reversed
-                    m_startPopupIconDepartureIndex = m_endPopupIconDepartureIndex;
-                }
-
-                // Decrease index of the departure group where the animation should end
-                --m_endPopupIconDepartureIndex;
-            } else {
-                m_startPopupIconDepartureIndex = qFloor( m_popupIconDepartureIndex );
-                m_endPopupIconDepartureIndex = m_startPopupIconDepartureIndex - 1;
-            }
-        } else {
-            // Min departure or alarm departure already reached
-            return;
-        }
+        m_popupIcon->animateToPreviousGroup();
     } else {
         // Wheel not rotated?
         return;
     }
-
-    if ( m_popupIconTransitionAnimation ) {
-        // Compute new starting index from m_popupIconDepartureIndex
-        int newDepartureSpan = qAbs( m_endPopupIconDepartureIndex - m_startPopupIconDepartureIndex );
-        qreal animationPartDone = qAbs(m_popupIconDepartureIndex - m_startPopupIconDepartureIndex)
-                / oldDepartureSpan;
-        if ( animationPartDone > 0.5 ) {
-            // Running animation visually almost finished (the easing curve slows the animation down at the end)
-            m_startPopupIconDepartureIndex = oldEndPopupIconDepartureIndex;
-            m_popupIconTransitionAnimation->stop();
-            m_popupIconTransitionAnimation->setStartValue( m_startPopupIconDepartureIndex );
-        } else {
-            qreal startIconDepartureIndex = m_startPopupIconDepartureIndex + animationPartDone * newDepartureSpan;
-            m_popupIconTransitionAnimation->stop();
-            m_popupIconTransitionAnimation->setStartValue( startIconDepartureIndex );
-        }
-    } else {
-        // Create animation
-        m_popupIconTransitionAnimation = new QPropertyAnimation( this, "PopupIconDepartureIndex", this );
-        m_popupIconTransitionAnimation->setEasingCurve( QEasingCurve(QEasingCurve::OutQuart) );
-        m_popupIconTransitionAnimation->setDuration( 500 );
-        m_popupIconTransitionAnimation->setStartValue( m_startPopupIconDepartureIndex );
-        connect( m_popupIconTransitionAnimation, SIGNAL(finished()),
-                this, SLOT(popupIconTransitionAnimationFinished()) );
-    }
-
-    m_popupIconTransitionAnimation->setEndValue( m_endPopupIconDepartureIndex );
-    m_popupIconTransitionAnimation->start();
 }
 
 void PublicTransport::departuresAboutToBeRemoved( const QList<ItemBase*>& departures )
 {
-    // Update departure groups
-    QMap< QDateTime, QList<DepartureItem*> >::iterator it = m_departureGroups.begin();
-    while ( it != m_departureGroups.end() ) {
-        // Remove all departures in the current group
-        // that are inside the given list of departures to be removed
-        QList<DepartureItem*>::iterator sub_it = it.value().begin();
-        while ( sub_it != it.value().end() ) {
-            if ( departures.contains(*sub_it) ) {
-                sub_it = it.value().erase( sub_it );
-            } else {
-                ++sub_it;
-            }
-        }
-
-        // Remove the group if all it's departures have been removed
-        if ( it.value().isEmpty() ) {
-            it = m_departureGroups.erase( it );
-        } else {
-            ++it;
-        }
-    }
-
-    createPopupIcon();
+    m_popupIcon->departuresAboutToBeRemoved( departures );
+    updatePopupIcon();
     createTooltip();
 }
 
 void PublicTransport::departuresLeft( const QList< DepartureInfo > &departures )
 {
     Q_UNUSED( departures );
-}
-
-void PublicTransport::popupIconTransitionAnimationFinished()
-{
-    delete m_popupIconTransitionAnimation;
-    m_popupIconTransitionAnimation = 0;
 }
 
 void PublicTransport::titleToggleAnimationFinished()
@@ -1280,48 +1192,10 @@ void PublicTransport::titleToggleAnimationFinished()
     m_titleToggleAnimation = 0;
 }
 
-void PublicTransport::createDepartureGroups()
+void PublicTransport::updatePopupIcon()
 {
-    m_departureGroups.clear();
-
-    // Create departure groups (maximally POPUP_ICON_DEPARTURE_GROUP_COUNT groups)
-    for ( int row = 0; row < m_model->rowCount(); ++row ) {
-        DepartureItem *item = dynamic_cast<DepartureItem*>( m_model->item(row) );
-        const DepartureInfo *info = item->departureInfo();
-
-        QDateTime time = info->predictedDeparture();
-        if ( m_departureGroups.count() == POPUP_ICON_DEPARTURE_GROUP_COUNT
-             && !m_departureGroups.contains(time) )
-        {
-            // Maximum group count reached and all groups filled
-            break;
-        } else {
-            // Insert item into the corresponding departure group
-            m_departureGroups[ time ] << item;
-        }
-    }
-}
-
-void PublicTransport::createPopupIcon()
-{
-    if ( m_model->isEmpty() || m_departureGroups.isEmpty() ) {
-//         setPopupIcon( "public-transport-stop" );
-        int iconSize = qMin( 128, int(size().width()) );
-        QPixmap pixmap = m_departurePainter->createMainIconPixmap( QSize(iconSize, iconSize) );
-        KIcon icon;
-        icon.addPixmap( pixmap );
-        setPopupIcon( icon );
-    } else {
-        int iconSize = qMin( 128, int(size().width()) );
-        QPixmap pixmap = m_departurePainter->createPopupIcon(
-                m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
-                m_popupIconDepartureIndex, m_model, m_departureGroups,
-                QSize(iconSize, iconSize) );
-
-        KIcon icon;
-        icon.addPixmap( pixmap );
-        setPopupIcon( icon );
-    }
+    int iconSize = qMin( 128, int(size().width()) );
+    setPopupIcon( m_popupIcon->createPopupIcon(QSize(iconSize, iconSize)) );
 }
 
 void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
@@ -1330,7 +1204,7 @@ void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
 
     if ( m_titleWidget ) {
         // Update popup icon to new size
-        createPopupIcon();
+        updatePopupIcon();
 
         // Show/hide title widget
         const qreal minHeightWithTitle = 200.0;
@@ -1415,16 +1289,17 @@ void PublicTransport::createTooltip()
 
     Plasma::ToolTipContent data;
     data.setMainText( i18nc("@info", "Public Transport") );
-    if ( m_departureGroups.isEmpty() ) {
+    if ( m_popupIcon->departureGroups()->isEmpty() ) {
         data.setSubText( i18nc("@info", "View departure times for public transport") );
     } else {
-        const QList<DepartureItem*> nextDepartures = m_departureGroups.constBegin().value();
-        const QString groupDurationString = nextDepartures.first()->departureInfo()->durationString();
+        const DepartureGroup nextGroup = m_popupIcon->departureGroups()->isEmpty()
+                ? DepartureGroup() : m_popupIcon->departureGroups()->first();
+        const QString groupDurationString = nextGroup.first()->departureInfo()->durationString();
         QStringList infoStrings;
 
         if ( m_settings.departureArrivalListType ==  DepartureList ) {
             // Showing a departure list
-            foreach ( const DepartureItem *item, nextDepartures ) {
+            foreach ( const DepartureItem *item, nextGroup ) {
                 infoStrings << i18nc("@info Text for one departure for the tooltip (%1: line string, "
                                      "%2: target)",
                                      "Line <emphasis strong='1'>%1<emphasis> "
@@ -1438,7 +1313,7 @@ void PublicTransport::createTooltip()
                     infoStrings.join(",<nl/>")) );
         } else {
             // Showing an arrival list
-            foreach ( const DepartureItem *item, nextDepartures ) {
+            foreach ( const DepartureItem *item, nextGroup ) {
                 infoStrings << i18nc("@info Text for one arrival for the tooltip (%1: line string, "
                                      "%2: origin)",
                                      "Line <emphasis strong='1'>%1<emphasis> "
@@ -2272,9 +2147,11 @@ void PublicTransport::writeSettings( const Settings& settings )
             m_titleWidget->updateFilterWidget();
         }
 
-        m_model->setAlarmSettings( m_settings.alarmSettings );
-        if ( m_modelJourneys && changed.testFlag(SettingsIO::ChangedAlarmSettings) ) {
-            m_modelJourneys->setAlarmSettings( m_settings.alarmSettings );
+        if ( changed.testFlag(SettingsIO::ChangedAlarmSettings) ) {
+            m_model->setAlarmSettings( m_settings.alarmSettings );
+            if ( m_modelJourneys ) {
+                m_modelJourneys->setAlarmSettings( m_settings.alarmSettings );
+            }
         }
     } else {
         kDebug() << "No changes made in the settings";
@@ -2761,7 +2638,7 @@ void PublicTransport::marbleHasStarted()
             break;
         }
     }
-    
+
 //     showStopInMarble( m_longitude, m_latitude );
     QTimer::singleShot( 250, this, SLOT(showStopInMarble()) );
 }
@@ -2852,7 +2729,7 @@ void PublicTransport::removeAlarmForDeparture( int row )
     removeAlarms( newAlarmSettings, QList<int>() << matchingAlarmSettings );
 
     if ( m_clickedItemIndex.isValid() ) {
-        createPopupIcon();
+        updatePopupIcon();
     }
 }
 
@@ -2929,7 +2806,7 @@ void PublicTransport::processAlarmDeletionRequest( const QDateTime& departure,
     }
     writeSettings( settings );
 
-    createPopupIcon();
+    updatePopupIcon();
 }
 
 void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex,
@@ -2991,21 +2868,10 @@ void PublicTransport::createAlarmForDepartureCurrentWeekDay()
 
 void PublicTransport::alarmCreated()
 {
-    createPopupIcon(); // TEST needed or already done in writeSettings?
+    updatePopupIcon(); // TEST needed or already done in writeSettings?
 
     // Animate popup icon to show the alarm departure (at index -1)
-    if ( m_popupIconTransitionAnimation ) {
-        m_popupIconTransitionAnimation->stop();
-        m_popupIconTransitionAnimation->setStartValue( m_popupIconDepartureIndex );
-    } else {
-        m_popupIconTransitionAnimation = new QPropertyAnimation( this, "PopupIconDepartureIndex", this );
-        m_popupIconTransitionAnimation->setStartValue( m_startPopupIconDepartureIndex );
-        connect( m_popupIconTransitionAnimation, SIGNAL(finished()),
-                 this, SLOT(popupIconTransitionAnimationFinished()) );
-    }
-
-    m_popupIconTransitionAnimation->setEndValue( -1 );
-    m_popupIconTransitionAnimation->start();
+    m_popupIcon->animateToAlarm();
 }
 
 void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alarmSettings )

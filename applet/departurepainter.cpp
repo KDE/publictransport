@@ -19,6 +19,7 @@
 
 #include "departurepainter.h"
 #include "departuremodel.h"
+#include "popupicon.h"
 #include <publictransporthelper/departureinfo.h>
 #include <publictransporthelper/global.h>
 
@@ -27,17 +28,8 @@
 #include <Plasma/PaintUtils>
 #include <qmath.h>
 
-void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
-        const QRectF& rect, const QString& transportLine )
+QString DeparturePainter::iconKey( VehicleType vehicle, DeparturePainter::VehicleIconFlags flags )
 {
-
-    // Draw transport line string onto the vehicle type svg
-    // only if activated in the settings and a supported vehicle type
-    // (currently only local public transport)
-    const bool m_drawTransportLine = true; // TODO Make configurable?
-    bool drawTransportLine = m_drawTransportLine && !transportLine.isEmpty()
-            && Timetable::Global::generalVehicleType(vehicle) == LocalPublicTransport;
-
     QString vehicleKey;
     switch ( vehicle ) {
         case Tram: vehicleKey = "tram"; break;
@@ -56,22 +48,55 @@ void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
         case Plane: vehicleKey = "plane"; break;
         default:
             kDebug() << "Unknown vehicle type" << vehicle;
-            return; // TODO: draw a simple circle or something.. or an unknown vehicle type icon
+            return QString();
     }
 
     // Use monochrome (mostly white) icons
-    vehicleKey.append( "_white" );
-
-    if ( drawTransportLine ) {
+    if ( flags.testFlag(MonochromeIcon) ) {
+        vehicleKey.append( "_white" );
+    }
+    if ( flags.testFlag(EmptyIcon) ) {
         vehicleKey.append( "_empty" );
     }
 
+    return vehicleKey;
+}
+
+DeparturePainter::VehicleIconFlags DeparturePainter::iconFlagsFromIconDrawFlags(
+        DeparturePainter::VehicleIconDrawFlags flags )
+{
+    VehicleIconFlags iconFlags = ColoredIcon;
+    if ( flags.testFlag(DrawMonochromeIcon) ) {
+        iconFlags |= MonochromeIcon;
+    }
+    if ( flags.testFlag(DrawTransportLine) ) {
+        iconFlags |= EmptyIcon;
+    }
+    return iconFlags;
+}
+
+void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
+        const QRectF& rect, const QString& transportLine, int minutesUntilDeparture,
+        VehicleIconDrawFlags iconDrawFlags )
+{
+    bool drawTransportLine = iconDrawFlags.testFlag(DrawTransportLine) && !transportLine.isEmpty()
+            && Timetable::Global::generalVehicleType(vehicle) == LocalPublicTransport;
+    if ( !drawTransportLine ) {
+        // Remove possibly set flag, if the transport line cannot be drawn
+        iconDrawFlags &= ~DrawTransportLine;
+    }
+    VehicleIconFlags iconFlags = iconFlagsFromIconDrawFlags( iconDrawFlags );
+    QString vehicleKey = iconKey( vehicle, iconFlags );
+
+    // Resize SVG
     int shadowWidth = qBound( 2, int(rect.width() / 20), 4 );
     m_svg->resize( rect.width() - shadowWidth, rect.height() - shadowWidth );
 
     QPixmap pixmap( int(rect.width()), int(rect.height()) );
     pixmap.fill( Qt::transparent );
     QPainter p( &pixmap );
+
+    // Draw SVG vehicle type icon
     p.setRenderHint( QPainter::Antialiasing );
     m_svg->paint( &p, shadowWidth / 2, shadowWidth / 2, vehicleKey );
 
@@ -80,37 +105,95 @@ void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
         QString text = transportLine;
         text.replace(' ', QString());
 
-        QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont ); // TODO //font();
+        QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
         font.setBold( true );
         if ( text.length() > 2 ) {
             font.setPixelSize( qMax(8, qCeil(1.18 * rect.width() / text.length())) );
         } else {
-            font.setPixelSize( rect.width() * 0.55 );
+            font.setPixelSize( rect.width() * 0.5 );
         }
+        p.setFont( font );
         QFontMetrics fm( font );
-        QRect textRect( shadowWidth / 2, shadowWidth / 2,
-                        rect.width() - shadowWidth, rect.height() - shadowWidth );
-        QPen textOutlinePen( QColor(0, 0, 0, 100) );
-        textOutlinePen.setWidthF( qMin(10.0, font.pixelSize() / 3.0) );
-        textOutlinePen.setCapStyle( Qt::RoundCap );
-        textOutlinePen.setJoinStyle( Qt::RoundJoin );
-        QPainterPath textPath;
-        textPath.addText( textRect.left() + (textRect.width() - fm.width(text)) / 2,
-                          textRect.bottom() - (textRect.height() - fm.ascent()) / 2 - 2, font, text );
-        p.setPen( textOutlinePen );
-        p.drawPath( textPath );
-        p.fillPath( textPath, Qt::white );
-
-//         p.setFont( f );
-//         p.setPen( Qt::white );
-//         p.drawText( textRect, text, QTextOption(Qt::AlignCenter) );
+        if ( iconDrawFlags.testFlag(DrawMonochromeIcon) ) {
+            // For monochrome icons, draw white text with a dark gray outline
+            QPen textOutlinePen( QColor(0, 0, 0, 100) );
+            textOutlinePen.setWidthF( qMin(10.0, font.pixelSize() / 5.0) );
+            textOutlinePen.setCapStyle( Qt::RoundCap );
+            textOutlinePen.setJoinStyle( Qt::RoundJoin );
+            QPainterPath textPath;
+            textPath.addText( rect.left() + (rect.width() - fm.width(text)) / 2.0,
+                            rect.bottom() - (rect.height() - fm.ascent() + fm.descent()) / 2.0,
+                            font, text );
+            p.setPen( textOutlinePen );
+            p.drawPath( textPath );
+            p.fillPath( textPath, Qt::white );
+        } else {
+            // For colored icons simply draw white text
+            p.setPen( Qt::white );
+            p.drawText( rect, text, QTextOption(Qt::AlignCenter) );
+        }
     }
 
-//     if ( !drawMonochromeIcons ) {
-//         QImage shadow = pixmap.toImage();
-//         Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
-//         painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );
-//     }
+    // Draw icon again, but only partially, dependend on minsToDeparture
+    if ( iconDrawFlags.testFlag(DrawTimeGraphics) ) {
+        // Draw graphical indication for the time until departure/arrival
+        p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+        if ( minutesUntilDeparture >= MAX_MINUTES_UNTIL_DEPARTURE ) {
+            // Make the SVG in pixmap 70% transparent
+            p.fillRect( pixmap.rect(), QColor(0, 0, 0, 77) );
+        } else if ( minutesUntilDeparture > 0 ) {
+            // Construct a polygon for the transparency effect visualizing minsToDeparture
+            QPolygon polygon;
+
+            // All parts begin with these two points
+            const qreal half = pixmap.width() / 2.0;
+            const qreal a = (8.0 * minutesUntilDeparture) / MAX_MINUTES_UNTIL_DEPARTURE;
+            polygon.append( QPoint(half, half) ); // middle
+            polygon.append( QPoint(half, 0) ); // top middle
+            if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE / 8 ) {
+                // Paint at least 1/8 black (add point at the top left edge)
+                polygon.append( QPoint(0, 0) ); // top left
+                if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE * 3 / 8 ) {
+                    // Paint at least 3/8 black (add point at the bottom left edge)
+                    polygon.append( QPoint(0, pixmap.height()) ); // bottom left
+                    if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE * 5 / 8 ) {
+                        // Paint at least 5/8 black (add point at the bottom right edge)
+                        polygon.append( QPoint(pixmap.width(), pixmap.height()) );
+                        if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE * 7 / 8 ) {
+                            // Paint [7/8, 8/8] black (add point on the right half of the top side)
+                            polygon.append( QPoint(pixmap.width(), 0) ); // top right
+                            polygon.append( QPoint(half * (9.0 - a), 0) );
+                        } else {
+                            // Paint [6/8, 7/8[ black (add point on the right side)
+                            polygon.append( QPoint(pixmap.width(), half * (7.0 - a)) );
+                        }
+                    } else {
+                        // Paint [3/8, 5/8[ black (add point on the bottom side)
+                        polygon.append( QPoint(half * (a - 3.0), pixmap.height()) );
+                    }
+                } else { // if ( minsToDeparture > maxMinsToDeparture / 8 ) {
+                    // Paint [1/8, 3/8[ black (add point on the left side)
+                    polygon.append( QPoint(0, half * (a - 1.0)) );
+                }
+            } else {
+                // Paint [0/8, 1/8[ black (add point on the left half of the top side)
+                polygon.append( QPoint(half * (1.0 - a), 0) );
+            }
+
+            // Draw 70% transparent parts
+            p.setPen( Qt::black );
+            p.setBrush( QColor(0, 0, 0, 77) );
+            p.drawPolygon( polygon );
+            p.end();
+        }
+    }
+
+    if ( !iconDrawFlags.testFlag(DrawMonochromeIcon) ) {
+        // Draw a shadow, but not if a monochrome icon is used
+        QImage shadow = pixmap.toImage();
+        Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
+        painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );
+    }
     painter->drawPixmap( rect.topLeft(), pixmap );
 }
 
@@ -133,113 +216,79 @@ QPixmap DeparturePainter::createMainIconPixmap( const QSize &size ) const
     return pixmap;
 }
 
-QPixmap DeparturePainter::createDeparturesPixmap( const QList< DepartureItem* >& departures,
-                                                  const QSize &size )
+QPixmap DeparturePainter::createDeparturesPixmap( DepartureItem *departure,
+        const QSize &size, VehicleIconDrawFlags iconDrawFlags )
 {
     QPixmap pixmap( size );
     pixmap.fill( Qt::transparent );
     QPainter p( &pixmap );
     p.setRenderHints( QPainter::Antialiasing | QPainter::TextAntialiasing
                     | QPainter::SmoothPixmapTransform );
-    QRectF vehicleRect( 0, 0, pixmap.width(), pixmap.height() );
+    const DepartureInfo *data = departure->departureInfo();
+    int minsToDeparture = qCeil( QDateTime::currentDateTime().secsTo(
+            data->predictedDeparture()) / 60.0 );
 
-    // Calculate values for arranging vehicle type icons
-    const int vehiclesPerRow = qCeil( qSqrt(departures.count()) );
-    const int rows = qCeil( (qreal)departures.count() / (qreal)vehiclesPerRow );
-    const qreal vehicleSize = vehiclesPerRow == 1 ? vehicleRect.width()
-            : vehicleRect.width() / (0.8 * vehiclesPerRow);
-    const qreal vehicleOffsetX = vehiclesPerRow == 1 ? 0.0
-            : (vehicleRect.width() - vehicleSize) / (vehiclesPerRow - 1);
-    qreal vehicleOffsetY = rows == 1 ? 0.0
-            : (vehicleRect.height() - vehicleSize) / (rows - 1);
-    QDateTime time;
-    int i = 0;
-    int vehiclesInCurrentRow = 0;
-    qreal x = 0.0;
-    qreal y = 0.0;
-    if ( rows < vehiclesPerRow && rows > 1 ) {
-//      vehicleOffsetY -= y / departures.count();
-        y = (vehicleRect.height() - vehicleSize + (rows - 1) * vehicleOffsetY) / 2.0;
-    }
-    foreach ( const DepartureItem *item, departures ) {
-        if ( !item ) {
-            continue;
-        }
-        if ( vehiclesInCurrentRow == vehiclesPerRow ) {
-            if ( departures.count() - i < vehiclesPerRow ) {
-                x = vehicleOffsetX / 2.0;
-            } else {
-                x = 0;
-            }
-            vehiclesInCurrentRow = 0;
-            y += vehicleOffsetY;
+    paintVehicle( &p, data->vehicleType(), pixmap.rect(), data->lineString(),
+                  minsToDeparture, iconDrawFlags );
+
+    if ( iconDrawFlags.testFlag(DrawTimeText) ) {
+        QString text;
+        if ( minsToDeparture < -1 ) {
+            text.append( i18nc("Indicating the departure time of an already left vehicle", "left") );
+        } else if ( minsToDeparture < 0 ) {
+            text.append( i18nc("Indicating the departure time of a currently leaving vehicle", "leaving") );
+        } else if ( minsToDeparture == 0 ) {
+            text.append( i18nc("Indicating the departure time of a vehicle, that will leave now", "now") );
+        } else if ( minsToDeparture >= 60 * 24 ) {
+            text.append( i18np("1 day", "%1 days", qRound(minsToDeparture / (6 * 24)) / 10.0) );
+        } else if ( minsToDeparture >= 60 ) {
+            text.append( i18np("1 hour", "%1 hours", qRound(minsToDeparture / 6) / 10.0) );
+        } else {
+            text.append( i18np("1 min.", "%1 min.", minsToDeparture) );
         }
 
-        const DepartureInfo *data = item->departureInfo();
-        paintVehicle( &p, data->vehicleType(),
-                      QRectF(x, y, vehicleSize, vehicleSize), data->lineString() );
-
-        // Move to next vehicle type svg position
-//      vehicleRect.translate( translation, translation );
-
-        if ( !time.isValid() ) {
-            time = item->departureInfo()->predictedDeparture();
-        }
-
-        x += vehicleOffsetX;
-        ++vehiclesInCurrentRow;
-        ++i;
-    }
-
-    int minsToDeparture = qCeil( QDateTime::currentDateTime().secsTo(time) / 60.0 );
-    QString text;
-    if ( minsToDeparture < -1 ) {
-        text.append( i18nc("Indicating the departure time of an already left vehicle", "left") );
-    } else if ( minsToDeparture < 0 ) {
-        text.append( i18nc("Indicating the departure time of a currently leaving vehicle", "leaving") );
-    } else if ( minsToDeparture == 0 ) {
-        text.append( i18nc("Indicating the departure time of a vehicle, that will leave now", "now") );
-    } else if ( minsToDeparture >= 60 * 24 ) {
-        text.append( i18np("1 day", "%1 days", qRound(minsToDeparture / (6 * 24)) / 10.0) );
-    } else if ( minsToDeparture >= 60 ) {
-        text.append( i18np("1 hour", "%1 hours", qRound(minsToDeparture / 6) / 10.0) );
-    } else {
-        text.append( i18np("1 min.", "%1 min.", minsToDeparture) );
-    }
-
-    QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
-    font.setPixelSize( qBound(8, int(pixmap.width() * 0.27), 36) );
-//     if ( font.pixelSize() >= 22 ) {
+        QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
+        font.setPixelSize( qBound(KGlobalSettings::smallestReadableFont().pixelSize(),
+                                  int(pixmap.width() * 0.3), 36) );
         font.setBold( true );
-//     }
-    QFontMetrics fm( font );
-    QRectF textRect( 0, 0, pixmap.width(), pixmap.height() );
-//     QRectF haloRect( textRect.left() + (textRect.width() - textWidth) / 2,
-//                      textRect.bottom() - fm.height(), textWidth, fm.height() );
-//     haloRect = haloRect.intersected( textRect ).adjusted( 3, 3, -3, -3 );
-//     Plasma::PaintUtils::drawHalo( &p, haloRect );
+        p.setFont( font );
+        QFontMetrics fm( font );
+        QRectF textRect( 0, 0, pixmap.width(), pixmap.height() );
 
-    text = fm.elidedText( text, Qt::ElideRight, textRect.width() * 1.05 );
-    int textWidth = fm.width( text );
-    QPen textOutlinePen( QColor(0, 0, 0, 150) );
-    textOutlinePen.setWidthF( qMin(6.0, font.pixelSize() / 3.0) );
-    textOutlinePen.setCapStyle( Qt::RoundCap );
-    textOutlinePen.setJoinStyle( Qt::RoundJoin );
-    QPen textOutlineFinePen( QColor(0, 0, 0, 225) );
-    textOutlineFinePen.setCosmetic( true );
-    QPainterPath textPath;
-    textPath.addText( textRect.left() + (textRect.width() - textWidth) / 2.5,
-                      textRect.bottom() - textOutlinePen.width(), font, text );
-    p.setPen( textOutlinePen );
-    p.drawPath( textPath );
-    p.setPen( textOutlineFinePen );
-    p.drawPath( textPath );
-    p.fillPath( textPath, Qt::white );
+        int textWidth = fm.width( text );
+        if ( textWidth > textRect.width() ) {
+            // Show only the number of minutes, if the whole text doesn't fit
+            text = QString::number( minsToDeparture );
+            textWidth = fm.width( text );
+        }
 
-//     p.setFont( font );
-//     QTextOption option(Qt::AlignHCenter | Qt::AlignBottom);
-//     option.setWrapMode( QTextOption::NoWrap );
-//     p.drawText( textRect, text, option );
+        text = fm.elidedText( text, Qt::ElideRight, textRect.width() * 1.05 );
+        if ( iconDrawFlags.testFlag(DrawMonochromeIcon) ) {
+            QPen textOutlinePen( QColor(0, 0, 0, 150) );
+            textOutlinePen.setWidthF( qMin(6.0, font.pixelSize() / 3.0) );
+            textOutlinePen.setCapStyle( Qt::RoundCap );
+            textOutlinePen.setJoinStyle( Qt::RoundJoin );
+            QPen textOutlineFinePen( QColor(0, 0, 0, 225) );
+            textOutlineFinePen.setCosmetic( true );
+            QPainterPath textPath;
+            textPath.addText( textRect.left() + (textRect.width() - textWidth) / 2.5,
+                            textRect.bottom() - textOutlinePen.width(), font, text );
+            p.setPen( textOutlinePen );
+            p.drawPath( textPath );
+            p.setPen( textOutlineFinePen );
+            p.drawPath( textPath );
+            p.fillPath( textPath, Qt::white );
+        } else {
+            QRectF haloRect( textRect.left() + (textRect.width() - textWidth) / 2,
+                             textRect.bottom() - fm.height(), textWidth, fm.height() );
+            haloRect = haloRect.intersected( textRect ).adjusted( 3, 3, -3, -3 );
+            Plasma::PaintUtils::drawHalo( &p, haloRect );
+
+            QTextOption option( Qt::AlignHCenter | Qt::AlignBottom );
+            option.setWrapMode( QTextOption::NoWrap );
+            p.drawText( textRect, text, option );
+        }
+    }
 
     p.end();
     return pixmap;
@@ -247,72 +296,109 @@ QPixmap DeparturePainter::createDeparturesPixmap( const QList< DepartureItem* >&
 
 QPixmap DeparturePainter::createAlarmPixmap( DepartureItem* departure, const QSize &size )
 {
-    QPixmap pixmap = createDeparturesPixmap( QList<DepartureItem*>() << departure, size );
+    QPixmap pixmap = createDeparturesPixmap( departure, size );
     int iconSize = pixmap.width() / 2;
     QPixmap pixmapAlarmIcon = KIcon( "task-reminder" ).pixmap( iconSize );
     QPainter p( &pixmap );
     // Draw alarm icon in the top-right corner.
-    Plasma::PaintUtils::drawHalo( &p, QRectF(pixmap.width() - iconSize * 0.85 - 1, 1,
-                                             iconSize * 0.7, iconSize) );
     p.drawPixmap( pixmap.width() - iconSize - 1, 1, pixmapAlarmIcon );
     p.end();
 
     return pixmap;
 }
 
-QPixmap DeparturePainter::createPopupIcon( int startDepartureIndex,
-        int endDepartureIndex, qreal departureIndex, DepartureModel* model,
-        const QMap< QDateTime, QList< DepartureItem* > >& departureGroups, const QSize &size )
+QPixmap DeparturePainter::createPopupIcon( PopupIcon *popupIconData, DepartureModel* model,
+                                           const QSize &size )
 {
+    int startDepartureGroupIndex = popupIconData->startDepartureGroupIndex();
+    int endDepartureGroupIndex = popupIconData->endDepartureGroupIndex();
+    qreal departureGroupIndex = popupIconData->departureGroupIndex();
+    qreal departureIndex = popupIconData->departureIndex();
     QPixmap pixmap;
-    if ( qFuzzyCompare((qreal)qFloor(departureIndex), departureIndex) ) {
+    if ( qFuzzyCompare((qreal)qFloor(departureGroupIndex), departureGroupIndex) ) {
         // If departureIndex is an integer draw without transition
-        departureIndex = qBound( model->hasAlarms() ? -1 : 0,
-                qFloor(departureIndex), departureGroups.count() - 1 );
+        departureGroupIndex = qBound( model->hasAlarms() ? -1 : 0,
+                qFloor(departureGroupIndex), popupIconData->departureGroups()->count() - 1 );
 
-        if ( departureIndex < 0 ) {
+        if ( departureGroupIndex < 0 ) {
             pixmap = createAlarmPixmap( model->nextAlarmDeparture(), size );
         } else {
-            QDateTime time = departureGroups.keys()[ departureIndex ];
-            pixmap = createDeparturesPixmap( departureGroups[time], size );
+            QList<DepartureItem*> group = popupIconData->currentDepartureGroup();
+            if ( group.isEmpty() ) {
+                return pixmap;
+            }
+            if ( qFuzzyCompare((qreal)qFloor(departureIndex), departureIndex) ) {
+                pixmap = createDeparturesPixmap( group[qFloor(departureIndex) % group.count()], size );
+            } else {
+                int startDepartureIndex = qFloor( departureIndex ) % group.count();
+                int endDepartureIndex = startDepartureIndex + 1;
+                qreal transition = qBound( 0.0, (departureIndex - startDepartureIndex)
+                        / (endDepartureIndex - startDepartureIndex), 1.0 );
+                endDepartureIndex %= group.count();
+                QPixmap startPixmap = createDeparturesPixmap( group[startDepartureIndex], size );
+                QPixmap endPixmap = createDeparturesPixmap( group[endDepartureIndex], size );
+
+                QColor alpha( 0, 0, 0, 255 * transition * transition );
+                QPainter pEnd( &endPixmap );
+                pEnd.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+                pEnd.fillRect( startPixmap.rect(), alpha );
+                pEnd.end();
+
+                pixmap = QPixmap( size );
+                pixmap.fill( Qt::transparent );
+                QPainter p( &pixmap );
+                p.drawPixmap( pixmap.rect(), startPixmap );
+                p.setCompositionMode( QPainter::CompositionMode_DestinationOut );
+                p.fillRect( pixmap.rect(), alpha );
+                p.setCompositionMode( QPainter::CompositionMode_Plus );
+                p.drawPixmap( pixmap.rect(), endPixmap );
+                p.end();
+            }
         }
     } else {
-        // Draw transition
-        startDepartureIndex = qBound( model->hasAlarms() ? -1 : 0,
-                startDepartureIndex, departureGroups.count() - 1 );
-        endDepartureIndex = qBound( model->hasAlarms() ? -1 : 0,
-                endDepartureIndex, departureGroups.count() - 1 );
-        QPixmap startPixmap = startDepartureIndex < 0
-                ? createAlarmPixmap(model->nextAlarmDeparture(), size)
-                : createDeparturesPixmap(
-                departureGroups[departureGroups.keys()[startDepartureIndex]], size );
-        QPixmap endPixmap = endDepartureIndex < 0
-                ? createAlarmPixmap(model->nextAlarmDeparture(), size)
-                : createDeparturesPixmap(
-                departureGroups[departureGroups.keys()[endDepartureIndex]], size );
+        // Draw transition between departure groups
+        const DepartureGroupList *departureGroups = popupIconData->departureGroups();
+        startDepartureGroupIndex = qBound( model->hasAlarms() ? -1 : 0,
+                startDepartureGroupIndex, departureGroups->count() - 1 );
+        endDepartureGroupIndex = qBound( model->hasAlarms() ? -1 : 0,
+                endDepartureGroupIndex, departureGroups->count() - 1 );
+        const QList<DepartureItem*> startGroup = startDepartureGroupIndex < 0
+                ? QList<DepartureItem*>()
+                : departureGroups->at( startDepartureGroupIndex );
+        const QList<DepartureItem*> endGroup = endDepartureGroupIndex < 0
+                ? QList<DepartureItem*>()
+                : departureGroups->at( endDepartureGroupIndex );
 
+//         qDebug() << "Animate from" << startDepartureGroupIndex << "to" << endDepartureGroupIndex << "|" << departureGroupIndex;
+//         qDebug() << "  or from" << departureGroups->keys()[startDepartureGroupIndex]
+//                  << "to" << departureGroups->keys()[endDepartureGroupIndex];
+        QPixmap startPixmap = startDepartureGroupIndex < 0
+                ? createAlarmPixmap(model->nextAlarmDeparture(), size)
+                : createDeparturesPixmap(startGroup[qFloor(departureIndex) % startGroup.count()], size);
+        QPixmap endPixmap = endDepartureGroupIndex < 0
+                ? createAlarmPixmap(model->nextAlarmDeparture(), size)
+                : createDeparturesPixmap(endGroup.first(), size);
         pixmap = QPixmap( size );
         pixmap.fill( Qt::transparent );
         QPainter p( &pixmap );
         p.setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 
         qreal transition, startSize, endSize;
-        if ( endDepartureIndex > startDepartureIndex  ) {
+        if ( endDepartureGroupIndex > startDepartureGroupIndex  ) {
             // Move forward to next departure
-            transition = qBound( 0.0, (departureIndex - startDepartureIndex)
-                    / (endDepartureIndex - startDepartureIndex), 1.0 );
+            transition = qBound( 0.0, (departureGroupIndex - startDepartureGroupIndex)
+                    / (endDepartureGroupIndex - startDepartureGroupIndex), 1.0 );
         } else {
             // Mave backward to previous departure
-            transition = 1.0 - qBound( 0.0, (startDepartureIndex - departureIndex)
-                    / (startDepartureIndex - endDepartureIndex), 1.0 );
+            transition = 1.0 - qBound( 0.0, (startDepartureGroupIndex - departureGroupIndex)
+                    / (startDepartureGroupIndex - endDepartureGroupIndex), 1.0 );
             qSwap( startPixmap, endPixmap );
         }
         startSize = (1.0 + 0.25 * transition) * pixmap.width();
         endSize = transition * pixmap.width();
 
         p.drawPixmap( (pixmap.width() - endSize) / 2 + pixmap.width() * (1.0 - transition) / 2.0,
-                    (pixmap.height() - endSize) / 2,
-                    endSize, endSize, endPixmap );
+                      (pixmap.height() - endSize) / 2, endSize, endSize, endPixmap );
 
         QPixmap startTransitionPixmap( pixmap.size() );
         startTransitionPixmap.fill( Qt::transparent );
