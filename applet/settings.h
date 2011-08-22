@@ -37,14 +37,12 @@
 #include <Plasma/DataEngine>
 
 class KConfigDialog;
-class QStandardItemModel;
 class Settings;
 
 namespace Timetable {
     class LocationModel;
     class ServiceProviderModel;
     class StopListWidget;
-    class FilterListWidget;
 };
 using namespace Timetable;
 

@@ -29,7 +29,6 @@
 
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
 namespace Plasma {
-    class Animator;
     class Animation;
 }
 class QGraphicsWidget;

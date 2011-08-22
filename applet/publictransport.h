@@ -60,14 +60,10 @@ class QPropertyAnimation;
 class QGraphicsSceneWheelEvent;
 
 namespace Plasma {
-    class LineEdit;
-    class ToolButton;
     class Label;
-    class PushButton;
 };
 
 #if QT_VERSION >= 0x040600
-    class QGraphicsBlurEffect;
 #endif
 
 /** @brief Simple pixmap graphics widgets (QGraphicsPixmapItem isn't a QGraphicsWidget). */

@@ -26,7 +26,6 @@
 #include "global.h"
 
 class DepartureModel;
-class KMenu;
 class JourneyItem;
 class DepartureItem;
 class RouteStopTextGraphicsItem;

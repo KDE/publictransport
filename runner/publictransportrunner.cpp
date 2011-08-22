@@ -365,7 +365,7 @@ void AsyncDataEngineUpdater::query( Plasma::DataEngine *engine,
     engine->connectSource( m_sourceName, this );
 
     // Start a timeout
-    QTimer::singleShot( 15000, this, SLOT( abort() ) );
+    QTimer::singleShot( 15000, this, SLOT(abort()) );
 }
 
 PublicTransportRunnerHelper::PublicTransportRunnerHelper( PublicTransportRunner* runner ) : QObject()

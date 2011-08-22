@@ -73,7 +73,7 @@ void OverlayWidget::destroy()
         Plasma::Animation *fadeAnim = GlobalApplet::fadeAnimation( this, 0 );
 
         QParallelAnimationGroup *parGroup = new QParallelAnimationGroup;
-        connect( parGroup, SIGNAL( finished() ), this, SLOT( overlayAnimationComplete() ) );
+        connect( parGroup, SIGNAL(finished()), this, SLOT(overlayAnimationComplete()) );
         if ( fadeAnim ) {
             parGroup->addAnimation( fadeAnim );
         }
