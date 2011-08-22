@@ -1017,8 +1017,10 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
 // 		vehicleKey.append( "_empty" );
 // 	}
 
+    const QString vehicleCacheKey
+            = vehicleKey + QString("%1%2").arg( iconSize.width() ).arg( iconSize.height() );
     QPixmap vehiclePixmap;
-    if ( !m_pixmapCache || !m_pixmapCache->find(vehicleKey, vehiclePixmap) ) {
+    if ( !m_pixmapCache || !m_pixmapCache->find(vehicleCacheKey, vehiclePixmap) ) {
         if ( !m_parent->svg()->hasElement(vehicleKey) ) {
             kDebug() << "SVG element" << vehicleKey << "not found";
         } else {
@@ -1048,7 +1050,7 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
             p2.end();
 
             if ( m_pixmapCache ) {
-                m_pixmapCache->insert( vehicleKey, vehiclePixmap );
+                m_pixmapCache->insert( vehicleCacheKey, vehiclePixmap );
             }
         }
     }
