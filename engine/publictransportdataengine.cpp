@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -766,7 +766,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 		data.insert( "journeyNews", journeyInfo->journeyNews() );
 		data.insert( "startStopName", journeyInfo->startStopName() );
 		data.insert( "targetStopName", journeyInfo->targetStopName() );
-		data.insert( "Operator", journeyInfo->operatorName() );
+		data.insert( "operator", journeyInfo->operatorName() );
 		data.insert( "routeStops", journeyInfo->routeStops() );
 		data.insert( "routeTimesDeparture", journeyInfo->routeTimesDepartureVariant() );
 		data.insert( "routeTimesArrival", journeyInfo->routeTimesArrivalVariant() );

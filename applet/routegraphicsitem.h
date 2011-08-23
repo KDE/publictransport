@@ -122,7 +122,7 @@ public:
      *
      * This class visualizes the text shown for a stop in a route.
      * RouteStopMarkerGraphicsItem is responsible for showing a stop icon on a "route line".
-     * 
+     *
      * RouteGraphicsItem normally is the parent of both classes (this and
      * RouteStopMarkerGraphicsItem). RouteGraphicsItem creates these items for each route stop
      * to be shown.

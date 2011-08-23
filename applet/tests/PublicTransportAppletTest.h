@@ -66,7 +66,7 @@ private slots:
 	void cleanup();
 
 	void cleanupTestCase();
-	
+    
     void appletTest();
 	
 private:

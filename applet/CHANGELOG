@@ -1,5 +1,5 @@
 
-Changelog of plasma-applet-publictransport 
+Changelog of plasma-applet-publictransport
 
 0.10 - RC 2
 - Add the possibility to put the applet into the notification area (systemtray).
@@ -11,6 +11,9 @@ Changelog of plasma-applet-publictransport
   - Hide route items if the containing departure/journey item isn't expanded
   - Store a pointer to the DepartureModel in RouteStopTextGraphicsItem, to get it's RouteStopFlags (used for drawing)
 - Don't rearrange route stop items if the route item isn't visible (not expanded)
+
+TODO: Show alarm names everywhere
+TODO: Only enable journey search button if the search string gets Accepted by the analyzers
 
 0.10 - RC 1
 Highlights: New filter/alarm UI, Context menus for journey/departure route stops, highlight stops, show intermediate departure list, alarms in journey view, colorized departure groups, quick&easy filtering by color groups, show stops in marble using OpenStreetMap, use of QStateMachine

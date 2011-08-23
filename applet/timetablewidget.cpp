@@ -964,6 +964,7 @@ void PublicTransportGraphicsItem::drawFadeOutLeftAndRight( QPainter* painter, co
     alphaGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
     alphaGradient.setColorAt( 0, Qt::transparent );
     alphaGradient.setColorAt( 1, Qt::black );
+
     // Fade out on the left
     painter->fillRect( QRect(rect.left(), rect.top(), fadeWidth, rect.height()), alphaGradient );
 
