@@ -18,7 +18,7 @@
  */
 
 /** @file
- * @brief This file contains a QThread-derived class to process data from the public transport data engine.
+ * @brief This file contains the QThread-derived class DepartureProcessor to process data from the public transport data engine.
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef DEPARTUREPROCESSOR_HEADER

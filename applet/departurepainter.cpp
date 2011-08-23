@@ -307,23 +307,23 @@ QPixmap DeparturePainter::createAlarmPixmap( DepartureItem* departure, const QSi
     return pixmap;
 }
 
-QPixmap DeparturePainter::createPopupIcon( PopupIcon *popupIconData, DepartureModel* model,
+QPixmap DeparturePainter::createPopupIcon( PopupIcon *popupIcon, DepartureModel* model,
                                            const QSize &size )
 {
-    int startDepartureGroupIndex = popupIconData->startDepartureGroupIndex();
-    int endDepartureGroupIndex = popupIconData->endDepartureGroupIndex();
-    qreal departureGroupIndex = popupIconData->departureGroupIndex();
-    qreal departureIndex = popupIconData->departureIndex();
+    int startDepartureGroupIndex = popupIcon->startDepartureGroupIndex();
+    int endDepartureGroupIndex = popupIcon->endDepartureGroupIndex();
+    qreal departureGroupIndex = popupIcon->departureGroupIndex();
+    qreal departureIndex = popupIcon->departureIndex();
     QPixmap pixmap;
     if ( qFuzzyCompare((qreal)qFloor(departureGroupIndex), departureGroupIndex) ) {
         // If departureGroupIndex is an integer draw without transition between groups
         departureGroupIndex = qBound( model->hasAlarms() ? -1 : 0,
-                qFloor(departureGroupIndex), popupIconData->departureGroups()->count() - 1 );
+                qFloor(departureGroupIndex), popupIcon->departureGroups()->count() - 1 );
 
         if ( departureGroupIndex < 0 ) {
             pixmap = createAlarmPixmap( model->nextAlarmDeparture(), size );
         } else {
-            QList<DepartureItem*> group = popupIconData->currentDepartureGroup();
+            QList<DepartureItem*> group = popupIcon->currentDepartureGroup();
             if ( group.isEmpty() ) {
                 return pixmap;
             }
@@ -363,7 +363,7 @@ QPixmap DeparturePainter::createPopupIcon( PopupIcon *popupIconData, DepartureMo
         }
     } else {
         // Draw transition between two departure groups
-        const DepartureGroupList *departureGroups = popupIconData->departureGroups();
+        const DepartureGroupList *departureGroups = popupIcon->departureGroups();
         startDepartureGroupIndex = qBound( model->hasAlarms() ? -1 : 0,
                 startDepartureGroupIndex, departureGroups->count() - 1 );
         endDepartureGroupIndex = qBound( model->hasAlarms() ? -1 : 0,

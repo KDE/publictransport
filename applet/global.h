@@ -21,7 +21,7 @@
 #define GLOBAL_HEADER
 
 /** @file
- * This file contains enumerations and Global used by the public transport applet.
+ * @brief This file contains enumerations and the GlobalApplet class.
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include <KIcon>

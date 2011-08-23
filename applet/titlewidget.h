@@ -18,7 +18,7 @@
  */
 
 /** @file
- * @brief This file contains the widget that is used for the title of the public transport applet.
+ * @brief This file contains the TitleWidget class that is used for the title of the public transport applet.
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef TITLEWIDGET_H

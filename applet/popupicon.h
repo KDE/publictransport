@@ -20,6 +20,10 @@
 #ifndef POPUPICON_HEADER
 #define POPUPICON_HEADER
 
+/** @file
+ * @brief This file contains the PopupIcon class.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #include <QObject> // Base class
 #include <KIcon> // For PopupIcon::createPopupIcon, ie. it's return value
 

@@ -20,6 +20,10 @@
 #ifndef DEPARTUREPAINTER_HEADER
 #define DEPARTUREPAINTER_HEADER
 
+/** @file
+ * @brief This file contains the DeparturePainter class.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #include <publictransporthelper/enums.h>
 #include <QPainter>
 
@@ -40,6 +44,9 @@ class QPixmap;
 
 using namespace Timetable;
 
+/**
+ * @brief Draws icons for departures and associated stuff.
+ **/
 class DeparturePainter : public QObject {
     Q_OBJECT
 
@@ -110,12 +117,17 @@ public:
     /**
      * @brief Creates a pixmap for the given @p departure with an alarm.
      *
-     * This pixmap is used for the popup icon for departures for which an alarm
-     * is set.
+     * This pixmap is used for the popup icon for departures for which an alarm is set.
      **/
     QPixmap createAlarmPixmap( DepartureItem *departure, const QSize &size );
 
-    QPixmap createPopupIcon( PopupIcon *popupIconData, DepartureModel *model, const QSize &size );
+    /**
+     * @brief Creates a pixmap for the given @p popupIcon.
+     *
+     * This pixmap is used for the popup icon, it draws the icon using the current state of
+     * @p popupIcon.
+     **/
+    QPixmap createPopupIcon( PopupIcon *popupIcon, DepartureModel *model, const QSize &size );
 
 private:
     Plasma::Svg *m_svg;

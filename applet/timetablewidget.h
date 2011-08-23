@@ -31,6 +31,10 @@
 #include <QPainter>
 #include <QPointer>
 
+/** @file
+ * @brief This file contains the TimetableWidget / JourneyTimetableWidget and it's item classes.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 class KPixmapCache;
 namespace Plasma
 {

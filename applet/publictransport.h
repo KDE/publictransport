@@ -829,8 +829,8 @@ K_EXPORT_PLASMA_APPLET( publictransport, PublicTransport )
 /** @mainpage Public Transport Applet
 @section intro_applet_sec Introduction
 This applet shows a departure / arrival board for public transport, trains, ferries and planes.
-Journeys can also be searched for. It uses the public transport data engine.
-It has some advanced configuration possibilities like filters, alarms and a flexible appearance.
+Journeys can also be searched for. It uses the public transport data engine and has some advanced
+configuration possibilities like filters, alarms and a flexible appearance.
 
 @see models for more information about how the applet interacts with the PublicTransport data engine and how the data is stored in models.
 @see filterSystem for more information about how the filters work.
@@ -857,40 +857,79 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
 * @defgroup models Models
 @brief Data is retrieved from data engines (like the publictransport data engine), processed in a thread and stored in models.
 
-The models used for storing public transport data are: @ref DepartureModel for departures/arrivals and @ref JourneyModel for journeys. They are both based on @ref PublicTransportModel.
+The models used for storing public transport data are: @ref DepartureModel for departures/arrivals
+and @ref JourneyModel for journeys. They are both based on @ref PublicTransportModel.
 
-The applet uses five data engines: <em>publictransport</em>, <em>geolocation</em>, <em>openstreetmap</em> (to get stops near the user), <em>favicons</em> (to get favicons from the service providers) and <em>network </em>(to check the network status).
-The publictransport data engine expects data source names in a specific format, which is explained in detail in it's documentation. Here are some examples of what source names the applet generates (based on the settings):
+The applet uses five data engines: <em>publictransport</em>, <em>geolocation</em>,
+<em>openstreetmap</em> (to get stops near the user), <em>favicons</em> (to get favicons from the
+service providers) and <em>network</em> (to check the network status).
+The publictransport data engine expects data source names in a specific format, which is explained
+in detail in it's documentation. Here are some examples of what source names the applet generates
+(based on the settings):
 @par
-<em>"Departures de_db|stop=Leipzig|timeOffset=5"</em> for departures from the service provider with the ID "de_db", a stop named "Leipzig" and an offset (from now) in minutes for the first departure of 5.
+<em>"Departures de_db|stop=Leipzig|timeOffset=5"</em> for departures from the service provider with
+the ID "de_db", a stop named "Leipzig" and an offset (from now) in minutes for the first departure
+of 5.
 @par
-<em>"Journeys de_db|originStop=Leipzig|targetStop=Bremen"</em> for journeys from the service provider with the ID "de_db", an origin stop named "Leipzig" and a target stop named "Bremen".
+<em>"Journeys de_db|originStop=Leipzig|targetStop=Bremen"</em> for journeys from the service
+provider with the ID "de_db", an origin stop named "Leipzig" and a target stop named "Bremen".
 
-@note The service provider ID <em>"de_db"</em> can be left away to use a default service provider for the users country (from KDE's global settings).
+@note The service provider ID <em>"de_db"</em> can be left away to use a default service provider
+for the users country (from KDE's global settings).
 
-The format of the data structure returned from the data engine is again explained in detail in the data engine's documentation (@ref pageUsage). It arrives in the slot @ref PublicTransport::dataUpdated. From there one of the following functions is called, based on the data returned by the data engine:
+The format of the data structure returned from the data engine is again explained in detail in the
+data engine's documentation (@ref pageUsage). It arrives in the slot
+@ref PublicTransport::dataUpdated. From there one of the following functions is called, based on
+the data returned by the data engine:
 @par
-@ref PublicTransport::handleDataError, if the "error" key of the data structure is true, ie. there was an error while running the query in the data engine (eg. server not reachable or an error in the accessor while trying to parse the document from the server),
+@ref PublicTransport::handleDataError, if the "error" key of the data structure is true, ie. there
+was an error while running the query in the data engine (eg. server not reachable or an error in
+the accessor while trying to parse the document from the server),
 @par
-@ref PublicTransport::processStopSuggestions, if the "receivedPossibleStopList" key of the data structure is true, which can also happen if eg. "Departures" were queried for, but the stop name is ambigous,
+@ref PublicTransport::processStopSuggestions, if the "receivedPossibleStopList" key of the data
+structure is true, which can also happen if eg. "Departures" were queried for, but the stop name
+is ambigous,
 @par
-@ref DepartureProcessor::processJourneys, @ref DepartureProcessor::processDepartures if there's no error and no stoplist, but "parseMode" is "journeys" or "departures" (also for arrivals). A job is added at the background thread.
+@ref DepartureProcessor::processJourneys, @ref DepartureProcessor::processDepartures if there's
+no error and no stoplist, but "parseMode" is "journeys" or "departures" (also for arrivals). A new
+job is added to the background thread. The thread then reads the data and creates data structures
+of type @ref DepartureInfo for departures/arrivals or @ref JourneyInfo for journeys. It also checks
+for alarms and applies filters. That way complex filters and or many alarms applied to many
+departures/arrivals won't freeze the applet.
 
-The thread then reads the data and creates data structures of type @ref DepartureInfo for departures/arrivals or @ref JourneyInfo for journeys. It also checks for alarms and applies filters. That way complex filters and or many alarms applied to many departures/arrivals won't freeze the applet.
+Before beginning a new departure/arrival/journey job the thread emits a signal that is connected
+to @ref PublicTransport::beginDepartureProcessing / @ref PublicTransport::beginJourneyProcessing.
+Once a chunk of departures/arrivals is ready @ref PublicTransport::departuresProcessed gets called
+through a signal/slot connection. In that function the processed departures are cached based on
+the source name (but with date and time values stripped) and then the departure/arrival model gets
+filled with them in @ref PublicTransport::fillModel. If journeys are ready
+@ref PublicTransport::journeysProcessed gets called by the thread, which calls
+@ref PublicTransport::fillModelJourney. If filter settings are changed the thread is used again to
+run filters on the current data. Once the filter job is ready it calls
+@ref PublicTransport::departuresFiltered.
 
-Before beginning a new departure/arrival/journey job the thread emits a signal that is connected to @ref PublicTransport::beginDepartureProcessing / @ref PublicTransport::beginJourneyProcessing. Once a chunk of departures/arrivals is ready @ref PublicTransport::departuresProcessed gets called through a signal/slot connection. In that function the processed departures are cached based on the source name (but with date and time values stripped) and then the departure/arrival model gets filled with them in @ref PublicTransport::fillModel. If journeys are ready @ref PublicTransport::journeysProcessed gets called by the thread, which calls @ref PublicTransport::fillModelJourney. If filter settings are changed the thread is used again to run filters on the current data. Once the filter job is ready it calls @ref PublicTransport::departuresFiltered.
-
-The @ref PublicTransport::fillModel and @ref PublicTransport::fillModelJourney functions add, update and/or remove items in the models. Both the departure/arrival and the journey model have functions called @ref DepartureModel::indexFromInfo / @ref JourneyModel::indexFromInfo, which use a hash generated from the data items (@ref DepartureInfo / @ref JourneyInfo) to quickly check, if there already is an item in the model for a given data item. Hashes are generated automatically in the constructors and can be retrieved using @ref PublicTransportInfo::hash. Two data items don't have to be exactly equal to generade an equal hash. That is important to also find departures/arrivals/journeys which data has changed since the last update, eg. departures with a changed delay.
+The @ref PublicTransport::fillModel and @ref PublicTransport::fillModelJourney functions add,
+update and/or remove items in the models. Both the departure/arrival and the journey model have
+functions called @ref DepartureModel::indexFromInfo / @ref JourneyModel::indexFromInfo, which use
+a hash generated from the data items (@ref DepartureInfo / @ref JourneyInfo) to quickly check, if
+there already is an item in the model for a given data item. Hashes are generated automatically in
+the constructors and can be retrieved using @ref PublicTransportInfo::hash. Two data items don't
+have to be exactly equal to generade an equal hash. That is important to also find
+departures/arrivals/journeys which data has changed since the last update, eg. departures with a
+changed delay.
 
 @see filterSystem
 */
 
 /**
 * @defgroup filterSystem Filter System
-@brief The applet has the possibility to filter departures/arrivals based on various constraints. Those constraints are combined to filters using logical AND. Filters on the other hand can be combined to filter lists using logical OR. The filter system is also used to match alarms.
+@brief The applet has the possibility to filter departures/arrivals based on various constraints.
 
-The filtering is performed in classes described under @ref filter_classes_sec,
-while those filters can be setup using widgets described under @ref filter_widgets_sec.
+Those constraints are combined to filters using logical AND. Filters on the other hand can be
+combined to filter lists using logical OR. The filter system is also used to match alarms.
+
+The filtering is performed in classes described under @ref filter_classes_sec, while those filters
+can be setup using widgets described under @ref filter_widgets_sec.
 
 @n
 @section filter_classes_sec Classes That Perform Filtering
@@ -954,71 +993,145 @@ digraph publicTransportDataEngine {
     fillcolor="#eeeeee"
     ];
 
-    appletState [
-    label="{AppletWithState|This is just a Plasma::PopupApplet with some methods for \lstate checking / setting.\l|+ testState(state) : bool\l+ addState(state) : void\l+ removeState(state) : void\l+ unsetStates(states) : void\l}"
-    URL="\ref AppletWithState"
-    style=filled
-    ];
-
     applet [
     fillcolor="#ffdddd"
-    label="{PublicTransportApplet|Shows a departure / arrival list or a list of journeys.\l|+ dataUpdated( QString, Data ) : void\l# createTooltip() : void\l# createPopupIcon() : void\l# processData( Data ) : void\l# processDepartureList( Data ) : void\l# processJourneyList( Data ) : void\l# appendDeparture( DepartureInfo ) : void\l# appendJourney( JourneyInfo ) : void\l# updateDeparture( DepartureInfo ) : void\l# updateJourney( JourneyInfo ) : void\l}"
+    label="{PublicTransportApplet|Shows a departure / arrival list or a list of journeys.\l|+ dataUpdated( QString, Data ) : void\l# createTooltip() : void\l# updatePopupIcon() : void\l# processData( Data ) : void\l}"
     URL="\ref PublicTransport"
     ];
 
-    htmlDelegate [
-    label="{HtmlDelegate|Paints items of the departure board.\l}"
-    URL="\ref HtmlDelegate"
-    ];
+    subgraph clusterWidgets {
+        label="Widgets";
+        style="rounded, filled";
+        color="#cceeee";
+        node [ fillcolor="#ccffff" ];
+
+        timetableWidget [
+        label="{TimetableWidget|Represents the departure/arrial board.\l}"
+        URL="\ref TimetableWidget"
+        ];
+
+        departureGraphicsItem [
+        label="{DepartureGraphicsItem|Represents one item in the departure/arrial board.\l}"
+        URL="\ref DepartureGraphicsItem"
+        ];
+
+        journeyTimetableWidget [
+        label="{JourneyTimetableWidget|Represents the journey board.\l}"
+        URL="\ref JourneyTimetableWidget"
+        ];
+
+        journeyGraphicsItem [
+        label="{JourneyGraphicsItem|Represents one item in the journey board.\l}"
+        URL="\ref JourneyGraphicsItem"
+        ];
+
+        titleWidget [
+        label="{TitleWidget|Represents the title of the applet.\l}"
+        URL="\ref TitleWidget"
+        ];
+
+        routeGraphicsItem [
+        label="{RouteGraphicsItem|Represents the route item in a departure/arrival item.\l}"
+        URL="\ref RouteGraphicsItem"
+        ];
+
+        journeyRouteGraphicsItem [
+        label="{JourneyRouteGraphicsItem|Represents the route item in a journey item.\l}"
+        URL="\ref JourneyRouteGraphicsItem"
+        ];
+    };
+
+    subgraph thread {
+        label="Background Thread";
+        style="rounded, filled";
+        color="#ffcccc";
+        node [ fillcolor="#ffdfdf" ];
+
+        departureProcessor [
+        label="{DepartureProcessor|Processes data from the data engine and applies filters/alarms.\l}"
+        URL="\ref DepartureProcessor"
+        ];
+    };
 
     subgraph clusterSettings {
-    label="Settings";
-    style="rounded, filled";
-    color="#ccccff";
-    node [ fillcolor="#dfdfff" ];
+        label="Settings";
+        style="rounded, filled";
+        color="#ccccff";
+        node [ fillcolor="#dfdfff" ];
 
-    settings [
-        label="{PublicTransportSettings|Manages the settings of the applet.\l}"
-        URL="\ref PublicTransportSettings"
-        ];
+        settings [
+            label="{PublicTransportSettings|Manages the settings of the applet.\l}"
+            URL="\ref PublicTransportSettings"
+            ];
 
-    dataSourceTester [
-    label="{DataSourceTester|Tests a departure / arrival or journey data source \lat the public transport data engine.\l|+ setTestSource( QString ) : void\l+ testResult( TestResult, QVariant ) : void [signal] }"
-        URL="\ref DataSourceTester"
-        ];
+        dataSourceTester [
+            label="{DataSourceTester|Tests a departure / arrival or journey data source \lat the public transport data engine.\l|+ setTestSource( QString ) : void\l+ testResult( TestResult, QVariant ) : void [signal] }"
+            URL="\ref DataSourceTester"
+            ];
     };
 
-    subgraph clusterDataTypes {
-    label="Data Types";
-    style="rounded, filled";
-    color="#ccffcc";
-    node [ fillcolor="#dfffdf" ];
-    rank="sink";
+    subgraph clusterModels {
+        label="Models";
+        style="rounded, filled";
+        color="#ccffcc";
+        node [ fillcolor="#dfffdf" ];
+        rank="sink";
 
+        departureModel [
+            label="{DepartureModel|Stores information about a departures / arrivals.\l}"
+            URL="\ref DepartureModel"
+            ];
 
-    departureInfo [ rank=min
-    label="{DepartureInfo|Stores information about a departure / arrival.\l}"
-    URL="\ref DepartureInfo"
-    ];
+        journeyModel [
+            label="{JourneyModel|Stores information about a journeys.\l}"
+            URL="\ref JourneyModel"
+            ];
 
-    journeyInfo [ rank=max
-    label="{JourneyInfo|Stores information about a journey.\l}"
-    URL="\ref JourneyInfo"
-    ];
+        departureItem [
+            label="{DepartureItem|Wraps DepartureInfo objects for DepartureModel.\l}"
+            URL="\ref DepartureItem"
+            ];
+
+        journeyItem [
+            label="{JourneyItem|Wraps JourneyInfo objects for JourneyModel.\l}"
+            URL="\ref JourneyItem"
+            ];
+
+        departureInfo [
+            label="{DepartureInfo|Stores information about a single departure / arrival.\l}"
+            URL="\ref DepartureInfo"
+            ];
+
+        journeyInfo [
+            label="{JourneyInfo|Stores information about a single journey.\l}"
+            URL="\ref JourneyInfo"
+            ];
     };
 
-    edge [ dir=back, arrowhead="none", arrowtail="empty", style="solid" ];
-    appletState -> applet;
+    edge [ dir=back, arrowhead="normal", arrowtail="none", style="dashed", fontcolor="darkgray",
+           taillabel="", headlabel="0..*" ];
+    timetableWidget -> departureGraphicsItem [ label="uses" ];
+    journeyTimetableWidget -> journeyGraphicsItem [ label="uses" ];
+    departureModel -> departureItem [ label="uses" ];
+    journeyModel -> journeyItem [ label="uses" ];
 
-    edge [ dir=forward, arrowhead="none", arrowtail="normal", style="dashed", fontcolor="gray", headlabel="", taillabel="0..*" ];
+    edge [ dir=forward, arrowhead="none", arrowtail="normal", style="dashed", fontcolor="darkgray",
+           taillabel="1", headlabel="" ];
+    departureProcessor -> applet [ label="m_departureProcessor" ];
+    settings -> applet [ label="m_settings" ];
     dataSourceTester -> settings [ label="m_dataSourceTester" ];
-    appletState -> settings [ label="m_applet" ];
 
-    edge [ dir=back, arrowhead="normal", arrowtail="none", style="dashed", fontcolor="gray", taillabel="", headlabel="0..*" ];
-    applet -> settings [ label="m_settings" ];
-    applet -> htmlDelegate [ label="uses", minlen=3 ];
-    applet -> departureInfo [ label="uses", minlen=2 ];
-    applet -> journeyInfo [ label="uses", minlen=2 ];
+    edge [ dir=back, arrowhead="normal", arrowtail="none", style="dashed", fontcolor="darkgray",
+           taillabel="", headlabel="1" ];
+    applet -> timetableWidget [ label="m_timetable" ];
+    applet -> journeyTimetableWidget [ label="m_journeyTimetable" ];
+    applet -> titleWidget [ label="m_titleWidget" ];
+    applet -> departureModel [ label="m_model" ];
+    applet -> journeyModel [ label="m_modelJourneys" ];
+    departureItem -> departureInfo [ label="uses" ];
+    journeyItem -> journeyInfo [ label="uses" ];
+    departureGraphicsItem -> routeGraphicsItem [ label="uses" ];
+    journeyGraphicsItem -> journeyRouteGraphicsItem [ label="uses" ];
 }
 @enddot
 */
