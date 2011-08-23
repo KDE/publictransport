@@ -21,9 +21,14 @@
 
 #include <QtTest/QTest>
 #include <KDebug>
-#include <journeysearchparser.h>
 #include <KLineEdit>
 
+#define MATCH_SEQUENCE_CONCATENATION_OPERATOR +
+
+#include "journeysearchparser.h"
+#include "matchitem.h"
+
+using namespace Parser;
 Q_DECLARE_METATYPE( AnalyzerResult );
 
 void JourneySearchParserTest::init()
@@ -114,30 +119,84 @@ void JourneySearchParserTest::journeySearchParserTest()
     QLinkedList<Lexem> lexems = lex.analyze( search );
 //     QStringList lexemString; foreach ( const Lexem &lexem, lexems ) { lexemString << lexem.text(); }
 //     qDebug() << "Lexem List:" << lexemString.join(", ") << lex.result();
-    QCOMPARE( lex.result(), expectedLexicalState );
+    QCOMPARE( static_cast<int>(lex.result()), static_cast<int>(expectedLexicalState) );
     if ( lex.result() == Rejected ) {
         return;
     }
 
     SyntacticalAnalyzer syntax( m_keywords );
-    QLinkedList<SyntaxItem> syntaxItems = syntax.analyze( lexems );
-    QStringList syntaxString; foreach ( const SyntaxItem &syntaxItem, syntaxItems ) {
-            syntaxString << syntaxItem.text(); }
-    qDebug() << "Syntax List:" << syntaxString.join(", ") << syntax.result();
-    QCOMPARE( syntax.result(), expectedSyntacticalState );
+    QLinkedList<MatchItem> matchItems = syntax.analyze( lexems );
+    QStringList matchString; foreach ( const MatchItem &matchItem, matchItems ) {
+            matchString << matchItem.input(); }
+    qDebug() << "Match List:" << matchString.join(", ") << syntax.result();
+    QCOMPARE( static_cast<int>(syntax.result()), static_cast<int>(expectedSyntacticalState) );
     if ( syntax.result() == Rejected ) {
         return;
     }
 
     ContextualAnalyzer context;
-    QLinkedList<SyntaxItem> correctedSyntaxItems = context.analyze( syntaxItems );
+    QLinkedList<MatchItem> correctedMatchItems = context.analyze( matchItems );
 //     QStringList syntaxString2; foreach ( const SyntaxItem &syntaxItem, correctedSyntaxItems ) {
 //             syntaxString2 << syntaxItem.text(); }
 //     qDebug() << "Context List:" << syntaxString2.join(", ") << context.result();
     Results results =
-            JourneySearchAnalyzer::resultsFromSyntaxItemList( correctedSyntaxItems, m_keywords );
+            JourneySearchAnalyzer::resultsFromSyntaxItemList( correctedMatchItems, m_keywords );
     qDebug() << "Output string" <<  results.outputString();
-    QCOMPARE( context.result(), expectedContextualState );
+    QCOMPARE( static_cast<int>(context.result()), static_cast<int>(expectedContextualState) );
+}
+
+typedef Syntax M;
+void JourneySearchParserTest::abstractMatchTest()
+{
+//     TODO Macro "parser generator"
+    QString search( "fr \"Bremen Hbf\" taassdc departing at 33:45, 39.08." );
+//     QString search( "to xyz \"Bremen Hbf\" departing at 13:45, 09.08." );
+//     QString search( "to \"Bremen Hbf\" departing tomorrow at 13:45" );
+    LexicalAnalyzer lex;
+    QLinkedList<Lexem> lexems = lex.analyze( search );
+    if ( lex.isRejected() ) {
+        kDebug() << "The lexical analyzer rejected the input";
+        return;
+    }
+
+    SyntaxItemPointer journeySearchSyntaxItem = Syntax::journeySearchSyntaxItem();
+//     qDebug() << '\n' << journeySearchSyntaxItem->toString();
+    SyntacticalAnalyzer syntax( m_keywords );
+//     QBENCHMARK {
+//         bool result = syntax.matchItem( lexems, journeySearchSyntaxItem );
+//     }
+//     delete journeySearchSyntaxItem;
+//     return;
+
+//     QCOMPARE( static_cast<int>(lex.result()), static_cast<int>(Accepted) );
+//     SyntaxItems syntaxItems; // TODO replace QList<MatchItemPointer> with MatchSequencePointer?
+//     syntaxItems << M::keyword(KeywordTo)->kleenePlus();
+//     syntaxItems << (M::character('"') + M::words()->outputTo(StopNameValue) + M::character('"'));
+//     syntaxItems << M::keyword( KeywordTimeAt,
+//             (M::number(0, 23) + M::character(':')->optional() + M::number(0, 59)->optional())
+//             )->outputTo(DateAndTimeValue)->optional();
+//     qDeleteAll( syntaxItems );
+
+//     SyntaxItemPointer journeySearchSyntaxItem = Match::journeySearchSyntaxItem();
+//     SyntacticalAnalyzer syntax( m_keywords );
+    bool result = syntax.matchItem( lexems, journeySearchSyntaxItem );
+
+    qDebug() << "\nSYNTAX:" << journeySearchSyntaxItem->toString();
+
+//     bool result = syntax.matchItems( lexems, matchItems );
+    QLinkedList<MatchItem> matchItems = syntax.output();
+    QStringList matchStrings;
+    foreach ( const MatchItem &matchItem, matchItems ) {
+        matchStrings << matchItem.toString();
+//         QString("'%1' (type: %2, val: %3)")
+//                 .arg(matchItem.input()).arg(matchItem.type()).arg(matchItem.value().toString());
+    }
+    qDebug() << "\nMATCHES:" << matchStrings.join(", ") << result << syntax.result();
+
+    qDebug() << "INPUT:" << matchItems.first().input();
+    qDebug() << "CORRECTED:" << matchItems.first().text();
+
+    delete journeySearchSyntaxItem;
 }
 
 void JourneySearchParserTest::benchmarkLexicalTest()
@@ -159,7 +218,7 @@ void JourneySearchParserTest::benchmarkSyntacticalTest()
     ContextualAnalyzer context;
     QLinkedList<Lexem> lexems = lex.analyze( search );
     QBENCHMARK {
-        QLinkedList<SyntaxItem> syntaxItems = syntax.analyze( lexems );
+        QLinkedList<MatchItem> matchItems = syntax.analyze( lexems );
     }
 }
 
@@ -170,9 +229,9 @@ void JourneySearchParserTest::benchmarkContextualTest()
     SyntacticalAnalyzer syntax( m_keywords );
     ContextualAnalyzer context;
     QLinkedList<Lexem> lexems = lex.analyze( search );
-    QLinkedList<SyntaxItem> syntaxItems = syntax.analyze( lexems );
+    QLinkedList<MatchItem> matchItems = syntax.analyze( lexems );
     QBENCHMARK {
-        QLinkedList<SyntaxItem> correctedSyntaxItems = context.analyze( syntaxItems );
+        QLinkedList<MatchItem> correctedMatchItems = context.analyze( matchItems );
     }
 }
 
@@ -200,8 +259,8 @@ void JourneySearchParserTest::benchmarkTest()
     ContextualAnalyzer context;
     QBENCHMARK {
         QLinkedList<Lexem> lexems = lex.analyze( search );
-        QLinkedList<SyntaxItem> syntaxItems = syntax.analyze( lexems );
-        QLinkedList<SyntaxItem> correctedSyntaxItems = context.analyze( syntaxItems );
+        QLinkedList<MatchItem> matchItems = syntax.analyze( lexems );
+        QLinkedList<MatchItem> correctedSyntaxItems = context.analyze( matchItems );
     }
 }
 

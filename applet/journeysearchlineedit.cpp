@@ -29,7 +29,7 @@
 #include <KDebug>
 
 JourneySearchHighlighter::JourneySearchHighlighter( QTextDocument* parent )
-        : QSyntaxHighlighter(parent), m_keywords(new JourneySearchKeywords)
+        : QSyntaxHighlighter(parent), m_keywords(new Parser::JourneySearchKeywords)
 {
     m_formatStopName.setFontWeight( QFont::Bold );
     m_formatStopName.setForeground( Qt::darkMagenta );
@@ -54,8 +54,7 @@ int JourneySearchHighlighter::highlightKeywords( const QString& text,
     int index = text.indexOf( expression );
     int count = 0;
     while ( index >= 0 ) {
-        if (( needsToStartAt != -1 && index != needsToStartAt )
-                    || count == maxAllowedOccurances ) {
+        if ( (needsToStartAt != -1 && index != needsToStartAt) || count == maxAllowedOccurances ) {
             // The keyword doesn't start at needsToStartAt, if given
             curFormat = m_formatError;
             curKeywordFormat = m_formatError;

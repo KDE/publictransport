@@ -31,16 +31,18 @@
 #include <QGraphicsWidget>
 #include <QModelIndex>
 
-class JourneySearchKeywords;
-class JourneySearchAnalyzer;
-class Results;
-class QGraphicsSceneMouseEvent;
+class Settings;
+class JourneySearchSuggestionItem;
+namespace Parser {
+    class JourneySearchKeywords;
+    class JourneySearchAnalyzer;
+    class Results;
+};
 namespace Plasma {
     class LineEdit;
 };
-class Settings;
 class QStandardItemModel;
-class JourneySearchSuggestionItem;
+class QGraphicsSceneMouseEvent;
 
 /**
  * @brief Represents the widget used to display journey search suggestions.
@@ -122,7 +124,7 @@ public:
     /** @brief Gets the types of suggestions to show. */
     Suggestions enabledSuggestions() const { return m_enabledSuggestions; };
 
-    const Results results() const;
+    const Parser::Results results() const;
 
 signals:
     /** @brief A suggestion has been activated, eg. by a double click. */
@@ -218,8 +220,8 @@ private:
     Settings *m_settings;
     Plasma::LineEdit *m_lineEdit;
     Suggestions m_enabledSuggestions;
-    JourneySearchAnalyzer *m_journeySearchAnalyzer;
-    JourneySearchKeywords *m_journeySearchKeywords;
+    Parser::JourneySearchAnalyzer *m_journeySearchAnalyzer;
+    Parser::JourneySearchKeywords *m_journeySearchKeywords;
 
     int m_journeySearchLastTextLength; /**< The last number of unselected characters in the
             * journey search input field. */

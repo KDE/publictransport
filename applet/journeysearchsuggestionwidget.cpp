@@ -35,6 +35,8 @@
 #include <QTextDocument>
 #include <QGraphicsSceneHoverEvent>
 
+using namespace Parser;
+
 JourneySearchSuggestionItem::JourneySearchSuggestionItem(
         JourneySearchSuggestionWidget *parent, const QModelIndex& modelIndex )
         : QGraphicsWidget(parent), m_textDocument(0), m_parent(parent)
@@ -457,7 +459,7 @@ void JourneySearchSuggestionWidget::addJourneySearchCompletions()
             if ( hasTimeKeyword ) {
                 type = "replaceTimeKeyword";
 
-                if ( results.syntaxItems().contains(SyntaxItem::KeywordTimeAt) ) { // keywordValues.contains( JourneySearchParser::KeywordTimeAt ) ) {
+                if ( results.syntaxItems().contains(MatchItem::Keyword /*TimeAt*/) ) { // keywordValues.contains( JourneySearchParser::KeywordTimeAt ) ) {
 //                     QDateTime dateTime = keywordValues[ JourneySearchParser::KeywordTimeAt ].toDateTime();
                     extraRegExp = "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))";
 
@@ -475,8 +477,8 @@ void JourneySearchSuggestionWidget::addJourneySearchCompletions()
                     suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes earlier", 30 );
                     suggestionValues << QString( "%1 %2" ).arg( timeKeywordAt )
                             .arg( KGlobal::locale()->formatTime( results.time().addSecs(-30 * 60).time() ) );
-                } else if ( results.syntaxItems().contains(SyntaxItem::KeywordTimeIn) ) { //keywordValues.contains( JourneySearchParser::KeywordTimeIn ) ) {
-                    int minutes = results.syntaxItems()[SyntaxItem::KeywordTimeIn]->value().toInt(); // keywordValues[ JourneySearchParser::KeywordTimeIn ].toInt();
+                } else if ( results.syntaxItems().contains(MatchItem::Keyword/*TimeIn*/) ) { //keywordValues.contains( JourneySearchParser::KeywordTimeIn ) ) {
+                    int minutes = results.syntaxItems()[MatchItem::Keyword/*TimeIn*/]->value().toInt(); // keywordValues[ JourneySearchParser::KeywordTimeIn ].toInt();
                     extraRegExp = m_journeySearchKeywords->relativeTimeString( "\\d{1,}" );
 
                     // Add "30 minutes later"
@@ -752,7 +754,8 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& modelIn
         QString newText, keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
         Results results = m_journeySearchAnalyzer->results();
 //                 m_journeySearchAnalyzer->analyze( m_lineEdit->nativeWidget()->text() );
-        int posStart = results.syntaxItems()[SyntaxItem::StopName]->position();
+        int posStart = -1; // TODO FIXME Get the position of the stop name out of the new output.. syntaxItemRoot or something  
+//         results.syntaxItems()[StopName]->position();
         int len = results.stopName().length();
 //         JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(), &posStart, &len );
         if ( posStart != -1 ) {
@@ -810,12 +813,13 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& modelIn
         // don't override keywords and other text
         Results results = m_journeySearchAnalyzer->results();
         const QString newStopName = modelIndex.data().toString();
-        int position = results.syntaxItems().contains(SyntaxItem::StopName)
-                ? results.syntaxItems()[SyntaxItem::StopName]->position() : 1; // 1 => after the quotation mark
-        QHash< SyntaxItem::Type, QVariant > updateItemValues;
-        updateItemValues.insert( SyntaxItem::StopName, newStopName );
+//         int position = results.syntaxItems().contains(StopName)
+//                 ? results.syntaxItems()[StopName]->position() : 1; // 1 => after the quotation mark
+        int position = -1; // TODO FIXME Get the position of the stop name out of the new output.. syntaxItemRoot or something
+        QHash< JourneySearchValueType, QVariant > updateItemValues;
+        updateItemValues.insert( StopNameValue, newStopName );
         QString updatedSearch = results.updatedOutputString(
-                updateItemValues, QList<SyntaxItem::Type>(),
+                updateItemValues, QList<MatchItem::Type>(),
                 ErrornousOutputString, m_journeySearchKeywords );
         m_lineEdit->setText( updatedSearch );
 
@@ -932,37 +936,40 @@ void JourneySearchSuggestionWidget::updateStopSuggestionItems( const QVariantHas
     if ( m_lineEdit && m_lettersAddedToJourneySearchLine
         && m_lineEdit->nativeWidget()->completionMode() != KGlobalSettings::CompletionNone )
     {
+        // TODO FIXME Get the position of the stop name out of the new output.. syntaxItemRoot or something
 //         QString stopName;
-        KLineEdit *lineEdit = m_lineEdit->nativeWidget();
+//         KLineEdit *lineEdit = m_lineEdit->nativeWidget();
 
-//         Results results = m_journeySearchAnalyzer->analyze( lineEdit->text() );
-        const SyntaxItem *stopNameItem = m_journeySearchAnalyzer->results().syntaxItems()[SyntaxItem::StopName];
-        const QString stopName = stopNameItem ? stopNameItem->text() : QString();
-        const int posStart = stopNameItem ? stopNameItem->position() : 0;
-        const int len = stopName.length();
+// //         Results results = m_journeySearchAnalyzer->analyze( lineEdit->text() );
 
-//         JourneySearchParser::stopNamePosition( lineEdit, &posStart, &len, &stopName );
-        int selStart = lineEdit->selectionStart();
-        if ( selStart == -1 ) {
-            selStart = lineEdit->cursorPosition();
-        }
-        const bool stopNameChanged = selStart > posStart &&
-                selStart + lineEdit->selectedText().length() <= posStart + len;
-        if ( stopNameChanged ) {
-            KCompletion *comp = lineEdit->completionObject( false );
-            comp->setIgnoreCase( true );
-            if ( hasAtLeastOneWeight ) {
-                comp->setOrder( KCompletion::Weighted );
-                comp->setItems( weightedStops );
-            } else {
-                comp->setItems( stopSuggestions );
-            }
-
-            const QString completion = comp->makeCompletion( stopName );
-            if ( completion != stopName ) {
-                m_journeySearchAnalyzer->completeStopName( lineEdit, completion );
-            }
-        }
+        // TODO FIXME Get the position of the stop name out of the new output.. syntaxItemRoot or something
+//         const SyntaxItem *stopNameItem = m_journeySearchAnalyzer->results().syntaxItems()[StopName];
+//         const QString stopName = stopNameItem ? stopNameItem->text() : QString();
+//         const int posStart = stopNameItem ? stopNameItem->position() : 0;
+//         const int len = stopName.length();
+// 
+// //         JourneySearchParser::stopNamePosition( lineEdit, &posStart, &len, &stopName );
+//         int selStart = lineEdit->selectionStart();
+//         if ( selStart == -1 ) {
+//             selStart = lineEdit->cursorPosition();
+//         }
+//         const bool stopNameChanged = selStart > posStart &&
+//                 selStart + lineEdit->selectedText().length() <= posStart + len;
+//         if ( stopNameChanged ) {
+//             KCompletion *comp = lineEdit->completionObject( false );
+//             comp->setIgnoreCase( true );
+//             if ( hasAtLeastOneWeight ) {
+//                 comp->setOrder( KCompletion::Weighted );
+//                 comp->setItems( weightedStops );
+//             } else {
+//                 comp->setItems( stopSuggestions );
+//             }
+// 
+//             const QString completion = comp->makeCompletion( stopName );
+//             if ( completion != stopName ) {
+//                 m_journeySearchAnalyzer->completeStopName( lineEdit, completion );
+//             }
+//         }
     }
 
     // Update model

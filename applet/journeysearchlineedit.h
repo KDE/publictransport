@@ -25,7 +25,10 @@
 #include <QSyntaxHighlighter>
 #include <QTextDocument>
 
-class JourneySearchKeywords;
+namespace Parser {
+    class JourneySearchKeywords;
+};
+
 /** @brief Highlights journey search keywords, values and the stop name if it is double quoted. */
 class JourneySearchHighlighter : public QSyntaxHighlighter {
 public:
@@ -63,7 +66,7 @@ protected:
 
 private:
     QTextCharFormat m_formatStopName, m_formatKeyword, m_formatValue, m_formatError;
-    JourneySearchKeywords *m_keywords;
+    Parser::JourneySearchKeywords *m_keywords;
 };
 
 /**

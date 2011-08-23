@@ -24,7 +24,9 @@
 
 #include <QtCore/QObject>
 
-class JourneySearchKeywords;
+namespace Parser {
+    class JourneySearchKeywords;
+};
 class JourneySearchParserTest : public QObject
 {
     Q_OBJECT
@@ -38,6 +40,8 @@ private slots:
     void journeySearchParserTest_data();
     void journeySearchParserTest();
 
+    void abstractMatchTest();
+
     void benchmarkLexicalTest();
     void benchmarkSyntacticalTest();
     void benchmarkContextualTest();
@@ -45,7 +49,7 @@ private slots:
 //     void benchmarkTestOld();
 
 private:
-    JourneySearchKeywords *m_keywords;
+    Parser::JourneySearchKeywords *m_keywords;
 };
 
 #endif // Multiple inclusion guard

@@ -1797,7 +1797,7 @@ void PublicTransport::journeySearchInputFinished()
     writeSettings( settings );
     m_journeyTitleText.clear();
 
-    Results results = m_listStopSuggestions->results();
+    Parser::Results results = m_listStopSuggestions->results();
     reconnectJourneySource( results.stopName(), results.time(),
                             results.stopIsTarget(), results.timeIsDeparture() );
 
@@ -1811,7 +1811,7 @@ void PublicTransport::journeySearchLineChanged( const QString& stopName,
             m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetJourneySearchButton );
     Q_ASSERT( searchButton );
 
-    if ( m_listStopSuggestions->results().analyzerResult() != Rejected ) {
+    if ( m_listStopSuggestions->results().analyzerResult() != Parser::Rejected ) {
         searchButton->setEnabled( true );
         searchButton->setToolTip( i18nc("@info:tooltip", "Click to start the journey search") );
     } else {
