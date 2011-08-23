@@ -316,7 +316,7 @@ QPixmap DeparturePainter::createPopupIcon( PopupIcon *popupIconData, DepartureMo
     qreal departureIndex = popupIconData->departureIndex();
     QPixmap pixmap;
     if ( qFuzzyCompare((qreal)qFloor(departureGroupIndex), departureGroupIndex) ) {
-        // If departureIndex is an integer draw without transition
+        // If departureGroupIndex is an integer draw without transition between groups
         departureGroupIndex = qBound( model->hasAlarms() ? -1 : 0,
                 qFloor(departureGroupIndex), popupIconData->departureGroups()->count() - 1 );
 
@@ -328,22 +328,28 @@ QPixmap DeparturePainter::createPopupIcon( PopupIcon *popupIconData, DepartureMo
                 return pixmap;
             }
             if ( qFuzzyCompare((qreal)qFloor(departureIndex), departureIndex) ) {
+                // If departureIndex is an integer draw without transition between departures
+                // in the current group
                 pixmap = createDeparturesPixmap( group[qFloor(departureIndex) % group.count()], size );
             } else {
+                // Draw transition between two departures in the current group
                 int startDepartureIndex = qFloor( departureIndex ) % group.count();
                 int endDepartureIndex = startDepartureIndex + 1;
-                qreal transition = qBound( 0.0, (departureIndex - startDepartureIndex)
+                const qreal transition = qBound( 0.0, (departureIndex - startDepartureIndex)
                         / (endDepartureIndex - startDepartureIndex), 1.0 );
                 endDepartureIndex %= group.count();
                 QPixmap startPixmap = createDeparturesPixmap( group[startDepartureIndex], size );
                 QPixmap endPixmap = createDeparturesPixmap( group[endDepartureIndex], size );
 
-                QColor alpha( 0, 0, 0, 255 * transition * transition );
+                // Make end pixmap transparent
+                QColor alpha( 0, 0, 0 );
+                alpha.setAlphaF( transition * transition );
                 QPainter pEnd( &endPixmap );
                 pEnd.setCompositionMode( QPainter::CompositionMode_DestinationIn );
                 pEnd.fillRect( startPixmap.rect(), alpha );
                 pEnd.end();
 
+                // Mix transparent start and end pixmaps
                 pixmap = QPixmap( size );
                 pixmap.fill( Qt::transparent );
                 QPainter p( &pixmap );
@@ -356,18 +362,16 @@ QPixmap DeparturePainter::createPopupIcon( PopupIcon *popupIconData, DepartureMo
             }
         }
     } else {
-        // Draw transition between departure groups
+        // Draw transition between two departure groups
         const DepartureGroupList *departureGroups = popupIconData->departureGroups();
         startDepartureGroupIndex = qBound( model->hasAlarms() ? -1 : 0,
                 startDepartureGroupIndex, departureGroups->count() - 1 );
         endDepartureGroupIndex = qBound( model->hasAlarms() ? -1 : 0,
                 endDepartureGroupIndex, departureGroups->count() - 1 );
         const QList<DepartureItem*> startGroup = startDepartureGroupIndex < 0
-                ? QList<DepartureItem*>()
-                : departureGroups->at( startDepartureGroupIndex );
+                ? QList<DepartureItem*>() : departureGroups->at( startDepartureGroupIndex );
         const QList<DepartureItem*> endGroup = endDepartureGroupIndex < 0
-                ? QList<DepartureItem*>()
-                : departureGroups->at( endDepartureGroupIndex );
+                ? QList<DepartureItem*>() : departureGroups->at( endDepartureGroupIndex );
 
 //         qDebug() << "Animate from" << startDepartureGroupIndex << "to" << endDepartureGroupIndex << "|" << departureGroupIndex;
 //         qDebug() << "  or from" << departureGroups->keys()[startDepartureGroupIndex]

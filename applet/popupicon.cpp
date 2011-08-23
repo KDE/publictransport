@@ -35,9 +35,12 @@ PopupIcon::PopupIcon( DeparturePainter *departurePainter, QObject* parent )
     m_startGroupIndex = 0;
     m_endGroupIndex = 0;
 
+    // Create and connect timer, that calls fadeToNextDepartureInGroup periodically.
+    // This timer gets started/stopped depending on wether the current group has more than one
+    // departure or not.
     m_fadeBetweenDeparturesInGroupTimer = new QTimer( this );
-    m_fadeBetweenDeparturesInGroupTimer->setInterval( ANIMATION_DEPARTURE_TRANSITION_DURATION +
-                                                      ANIMATION_DEPARTURE_TRANSITION_PAUSE );
+    m_fadeBetweenDeparturesInGroupTimer->setInterval(
+            ANIMATION_DEPARTURE_TRANSITION_DURATION + ANIMATION_DEPARTURE_TRANSITION_PAUSE );
     connect( m_fadeBetweenDeparturesInGroupTimer, SIGNAL(timeout()),
              this, SLOT(fadeToNextDepartureInGroup()) );
 }
@@ -47,8 +50,10 @@ KIcon PopupIcon::createPopupIcon( const QSize &size )
     KIcon icon;
     QPixmap pixmap;
     if ( m_model->isEmpty() || m_departureGroups.isEmpty() ) {
+        // No departures to show, draw the main icon
         pixmap = m_departurePainter->createMainIconPixmap( size );
     } else {
+        // Draw current state of the popup icon (animations)
         pixmap = m_departurePainter->createPopupIcon( this, m_model, size );
     }
     icon.addPixmap( pixmap );
@@ -86,7 +91,6 @@ void PopupIcon::createDepartureGroups()
         }
     }
 
-    qDebug() << "Created" << m_departureGroups.count() << "new departure groups";
     applyDepartureIndexLimit();
     startFadeTimerIfMultipleDepartures();
 }
@@ -158,6 +162,8 @@ DepartureGroup PopupIcon::currentDepartureGroup() const
 
 DepartureItem* PopupIcon::currentDeparture() const
 {
+    // Get the current departure of the current group
+    // or the target departure of a running fade animation (which always increasing the index)
     return currentDepartureGroup()[ qCeil(m_currentDepartureIndexStep) ];
 }
 
@@ -165,9 +171,13 @@ void PopupIcon::startFadeTimerIfMultipleDepartures()
 {
     if ( currentDepartureGroup().count() > 1 ) {
         if ( !m_fadeBetweenDeparturesInGroupTimer->isActive() ) {
+            // There are more than one departures in the current group 
+            // and the fade animation timer is not running
             m_fadeBetweenDeparturesInGroupTimer->start();
         }
     } else if ( m_fadeBetweenDeparturesInGroupTimer->isActive() ) {
+        // There is only one departure in the current group
+        // and the fade animation timer is running
         m_fadeBetweenDeparturesInGroupTimer->stop();
     }
 }
@@ -188,6 +198,9 @@ void PopupIcon::fadeToNextDepartureInGroup()
         connect( m_fadeAnimation, SIGNAL(finished()), this, SLOT(fadeAnimationFinished()) );
     }
 
+    // Set start/end values to animate to the next departure.
+    // If the current departure is the last one of the current group, animate to the 
+    // first departure again (modulo).
     m_fadeAnimation->setStartValue( m_currentDepartureIndexStep );
     m_fadeAnimation->setEndValue( (qCeil(m_currentDepartureIndexStep) + 1)
                                   % currentDepartureGroup().count() );
@@ -205,7 +218,7 @@ void PopupIcon::fadeAnimationFinished()
 {
     delete m_fadeAnimation;
     m_fadeAnimation = 0;
-    DepartureGroup group = currentDepartureGroup();
+    const DepartureGroup group = currentDepartureGroup();
     if ( !group.isEmpty() ) {
         m_currentDepartureIndexStep = qMax( minimalDepartureGroupIndex(),
                                             qCeil(m_currentDepartureIndexStep) % group.count() );
@@ -333,9 +346,10 @@ void PopupIcon::departureGroupRemoved( int index )
 void PopupIcon::animateToAlarm()
 {
     if ( !hasAlarms() ) {
-        return;
+        return; // No pending alarms
     }
 
+    // Create and connect or stop and update animation
     if ( m_transitionAnimation ) {
         m_transitionAnimation->stop();
         m_transitionAnimation->setStartValue( m_currentDepartureGroupIndexStep );
@@ -346,6 +360,8 @@ void PopupIcon::animateToAlarm()
                  this, SLOT(transitionAnimationFinished()) );
     }
 
+    // Set -1 as end value and start the animation. This index has a special meaning,
+    // it is showing the latest pending alarm.
     m_transitionAnimation->setEndValue( -1 );
     m_transitionAnimation->start();
 }

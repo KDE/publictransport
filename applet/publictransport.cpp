@@ -105,7 +105,6 @@ protected:
         }
 
         setTargetState( currentTargetState() );
-//          << targetState();
         return true;
     };
 
@@ -466,6 +465,8 @@ bool PublicTransport::checkNetworkStatus()
 
 QString PublicTransport::queryNetworkStatus()
 {
+    return "unknown"; // TODO this is only for openSuse 12.1 Milestone 3, dataEngine("network") always crashes
+
     const QStringList interfaces = dataEngine( "network" )->sources();
     if ( interfaces.isEmpty() ) {
         return "unknown";
@@ -1187,7 +1188,6 @@ void PublicTransport::departuresLeft( const QList< DepartureInfo > &departures )
 
 void PublicTransport::titleToggleAnimationFinished()
 {
-    kDebug() << "Finished";
     delete m_titleToggleAnimation;
     m_titleToggleAnimation = 0;
 }
@@ -1206,12 +1206,13 @@ void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
         // Update popup icon to new size
         updatePopupIcon();
 
-        // Show/hide title widget
+        // Show/hide title widget, but do not allow hiding the title if the applet is iconified
         const qreal minHeightWithTitle = 200.0;
         const qreal maxHeightWithoutTitle = 225.0;
         if ( event->newSize().height() <= minHeightWithTitle && !m_titleToggleAnimation
              && !(!m_titleToggleAnimation && m_titleWidget->maximumHeight() <= 0.1) )
         {
+            // The applet is not iconified and it's size is too small to show the title
             if ( m_titleToggleAnimation ) {
                 delete m_titleToggleAnimation;
             }
@@ -1237,6 +1238,7 @@ void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
              && !(!m_titleToggleAnimation &&
              m_titleWidget->maximumHeight() >= m_titleWidget->layout()->preferredHeight()) )
         {
+            // The applet is iconified or it's size is big enough to show the title
             if ( m_titleToggleAnimation ) {
                 delete m_titleToggleAnimation;
             }
@@ -1262,6 +1264,7 @@ void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
             m_titleToggleAnimation->start();
         }
 
+        // Update filter widget (show icon or icon with text)
         Plasma::ToolButton *filterWidget =
                 m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetFilter );
         if ( m_titleWidget->layout()->preferredWidth() > contentsRect().width() ) {
@@ -1819,6 +1822,7 @@ KMenu *PublicTransport::updateFilterMenu()
     }
 
     if ( showColorGrous ) {
+        // Add checkbox entries to toggle color groups
         if ( m_settings.departureArrivalListType == ArrivalList ) {
             menu->addTitle( KIcon("object-group"), i18nc("@title This is a menu title",
                                                          "Arrival Groups (extending)") );
@@ -1829,6 +1833,7 @@ KMenu *PublicTransport::updateFilterMenu()
         foreach( const ColorGroupSettings &colorGroupSettings,
                  m_settings.currentColorGroupSettings() )
         {
+            // Create action for current color group
             QAction *action = new QAction( colorGroupSettings.lastCommonStopName,
                                            m_filterByGroupColorGroup );
             action->setCheckable( true );
@@ -1837,6 +1842,7 @@ KMenu *PublicTransport::updateFilterMenu()
             }
             action->setData( QVariant::fromValue(colorGroupSettings.color) );
 
+            // Draw a color patch with the color of the color group
             QPixmap pixmap( QSize(16, 16) );
             pixmap.fill( Qt::transparent );
             QPainter p( &pixmap );
@@ -1848,6 +1854,7 @@ KMenu *PublicTransport::updateFilterMenu()
             p.drawRoundedRect( QRect(QPoint(1,1), pixmap.size() - QSize(2, 2)), 4, 4 );
             p.end();
 
+            // Put the pixmap into a KIcon
             KIcon colorIcon;
             colorIcon.addPixmap( pixmap );
             action->setIcon( colorIcon );
@@ -2127,6 +2134,7 @@ void PublicTransport::writeSettings( const Settings& settings )
             fillModel( departureInfos() );
         }
 
+        // Update current stop settings / current home stop in the models
         if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
              changed.testFlag(SettingsIO::ChangedStopSettings) )
         {
@@ -2139,6 +2147,7 @@ void PublicTransport::writeSettings( const Settings& settings )
             }
         }
 
+        // Update the filter widget
         if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
              changed.testFlag(SettingsIO::ChangedStopSettings) ||
              changed.testFlag(SettingsIO::ChangedFilterSettings) ||
@@ -2147,6 +2156,7 @@ void PublicTransport::writeSettings( const Settings& settings )
             m_titleWidget->updateFilterWidget();
         }
 
+        // Update alarm settings
         if ( changed.testFlag(SettingsIO::ChangedAlarmSettings) ) {
             m_model->setAlarmSettings( m_settings.alarmSettings );
             if ( m_modelJourneys ) {
@@ -2615,7 +2625,6 @@ void PublicTransport::errorMarble( QProcess::ProcessError processError )
                 "Do you want to install 'marble' now?", m_marble->errorString()) );
         if ( result == KMessageBox::Yes ) {
             // Start KPackageKit to install marble
-//             kDebug() << "Start installation" <<
             KProcess *kPackageKit = new KProcess( this );
             kPackageKit->setProgram( "kpackagekit",
                                      QStringList() << "--install-package-name" << "marble" );
@@ -2639,7 +2648,6 @@ void PublicTransport::marbleHasStarted()
         }
     }
 
-//     showStopInMarble( m_longitude, m_latitude );
     QTimer::singleShot( 250, this, SLOT(showStopInMarble()) );
 }
 
@@ -2955,6 +2963,7 @@ void PublicTransport::removeAlarms( const AlarmSettingsList &newAlarmSettings,
 
 QString PublicTransport::infoText()
 {
+    // Get information about the current service provider from the data engine
     QVariantHash data = currentServiceProviderData();
     QString shortUrl = data.isEmpty() ? "-" : data["shortUrl"].toString();
     QString url = data.isEmpty() ? "-" : data["url"].toString();
@@ -2987,13 +2996,16 @@ QString PublicTransport::infoText()
 
 QString PublicTransport::courtesyToolTip() const
 {
+    // Get courtesy information for the current service provider from the data engine
     QVariantHash data = currentServiceProviderData();
     QString credit, url;
     if ( !data.isEmpty() ) {
         credit = data["credit"].toString();
         url = data["url"].toString();
     }
+
     if ( credit.isEmpty() || url.isEmpty() ) {
+        // No courtesy information given by the data engine
         return QString();
     } else {
         return i18nc( "@info/plain", "By courtesy of %1 (%2)", credit, url );
@@ -3005,8 +3017,10 @@ void PublicTransport::fillModelJourney( const QList< JourneyInfo > &journeys )
     foreach( const JourneyInfo &journeyInfo, journeys ) {
         int row = m_modelJourneys->indexFromInfo( journeyInfo ).row();
         if ( row == -1 ) {
+            // Journey wasn't in the model
             m_modelJourneys->addItem( journeyInfo );
         } else {
+            // Update associated item in the model
             JourneyItem *item = static_cast<JourneyItem*>( m_modelJourneys->itemFromInfo( journeyInfo ) );
             m_modelJourneys->updateItem( item, journeyInfo );
         }
@@ -3047,7 +3061,7 @@ void GraphicsPixmapWidget::paint( QPainter* painter,
 
 struct RoutePartCount {
     QString lastCommonStop;
-    int usedCount; // used by X transport lines (each line and target counts as one)
+    int usedCount; // used by [usedCount] transport lines (each line and target counts as one)
 };
 
 class RoutePartCountGreaterThan
