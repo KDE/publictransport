@@ -219,6 +219,14 @@ protected slots:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
 
     /**
+     * @brief Gets connected to the geometryChanged signal of m_graphicsWidget.
+     *
+     * This is used, because resizeEvent doesn't get called if the applet is iconified and
+     * m_graphicsWidget gets resized (only if the popup applet gets resized).
+     **/
+    void resized();
+
+    /**
      * @brief New @p data arrived from the data engine for the source with the name @p sourceName.
      *
      * @ingroup models

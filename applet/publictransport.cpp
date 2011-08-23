@@ -1194,23 +1194,23 @@ void PublicTransport::titleToggleAnimationFinished()
 
 void PublicTransport::updatePopupIcon()
 {
-    int iconSize = qMin( 128, int(size().width()) );
-    setPopupIcon( m_popupIcon->createPopupIcon(QSize(iconSize, iconSize)) );
+    if ( isIconified() ) {
+        int iconSize = qMin( 128, int(size().width()) );
+        setPopupIcon( m_popupIcon->createPopupIcon(QSize(iconSize, iconSize)) );
+    }
 }
 
-void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
+void PublicTransport::resized()
 {
-    Plasma::Applet::resizeEvent( event );
+    // Get the size of the applet/popup (not the size of the popup icon if iconified)
+    QSizeF size = m_graphicsWidget->size();
 
     if ( m_titleWidget ) {
-        // Update popup icon to new size
-        updatePopupIcon();
-
         // Show/hide title widget, but do not allow hiding the title if the applet is iconified
         const qreal minHeightWithTitle = 200.0;
         const qreal maxHeightWithoutTitle = 225.0;
-        if ( event->newSize().height() <= minHeightWithTitle && !m_titleToggleAnimation
-             && !(!m_titleToggleAnimation && m_titleWidget->maximumHeight() <= 0.1) )
+        if ( size.height() <= minHeightWithTitle && !m_titleToggleAnimation
+            && !(!m_titleToggleAnimation && m_titleWidget->maximumHeight() <= 0.1) )
         {
             // The applet is not iconified and it's size is too small to show the title
             if ( m_titleToggleAnimation ) {
@@ -1226,17 +1226,17 @@ void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
             QPropertyAnimation *shrinkAnimation = new QPropertyAnimation(
                     m_titleWidget, "maximumSize", m_titleToggleAnimation );
             shrinkAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
-                                                   m_titleWidget->layout()->preferredHeight()) );
+                                                    m_titleWidget->layout()->preferredHeight()) );
             shrinkAnimation->setEndValue( QSizeF(m_titleWidget->maximumWidth(), 0) );
 
             connect( m_titleToggleAnimation, SIGNAL(finished()),
-                     this, SLOT(titleToggleAnimationFinished()) );
+                        this, SLOT(titleToggleAnimationFinished()) );
             m_titleToggleAnimation->addAnimation( fadeAnimation );
             m_titleToggleAnimation->addAnimation( shrinkAnimation );
             m_titleToggleAnimation->start();
-        } else if ( event->newSize().height() >= maxHeightWithoutTitle && !m_titleToggleAnimation
-             && !(!m_titleToggleAnimation &&
-             m_titleWidget->maximumHeight() >= m_titleWidget->layout()->preferredHeight()) )
+        } else if ( size.height() >= maxHeightWithoutTitle
+                && !m_titleToggleAnimation && !(!m_titleToggleAnimation
+                && m_titleWidget->maximumHeight() >= m_titleWidget->layout()->preferredHeight()) )
         {
             // The applet is iconified or it's size is big enough to show the title
             if ( m_titleToggleAnimation ) {
@@ -1253,12 +1253,12 @@ void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
             QPropertyAnimation *growAnimation = new QPropertyAnimation(
                     m_titleWidget, "maximumSize", m_titleToggleAnimation );
             growAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
-                                                 m_titleWidget->maximumHeight()) );
+                                                    m_titleWidget->maximumHeight()) );
             growAnimation->setEndValue( QSizeF(m_titleWidget->maximumWidth(),
-                                               m_titleWidget->layout()->preferredHeight()) );
+                                                m_titleWidget->layout()->preferredHeight()) );
 
             connect( m_titleToggleAnimation, SIGNAL(finished()),
-                     this, SLOT(titleToggleAnimationFinished()) );
+                        this, SLOT(titleToggleAnimationFinished()) );
             m_titleToggleAnimation->addAnimation( fadeAnimation );
             m_titleToggleAnimation->addAnimation( growAnimation );
             m_titleToggleAnimation->start();
@@ -1267,12 +1267,12 @@ void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
         // Update filter widget (show icon or icon with text)
         Plasma::ToolButton *filterWidget =
                 m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetFilter );
-        if ( m_titleWidget->layout()->preferredWidth() > contentsRect().width() ) {
+        if ( m_titleWidget->layout()->preferredWidth() > size.width() ) {
             // Show only an icon on the filter toolbutton, if there is not enough space
             filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonIconOnly );
             filterWidget->setMaximumWidth( filterWidget->size().height() );
         } else if ( filterWidget->nativeWidget()->toolButtonStyle() == Qt::ToolButtonIconOnly
-            && contentsRect().width() > m_titleWidget->layout()->minimumWidth() +
+            && size.width() > m_titleWidget->layout()->minimumWidth() +
             QFontMetrics(filterWidget->font()).width(filterWidget->text()) + 60 )
         {
             // Show the icon with text beside if there is enough space again
@@ -1280,6 +1280,17 @@ void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
             filterWidget->setMaximumWidth( -1 );
         }
     }
+
+    // Update line breaking of the courtesy label
+    updateInfoText();
+}
+
+void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
+{
+    Plasma::Applet::resizeEvent( event );
+
+    // Update popup icon to new size
+    updatePopupIcon();
 }
 
 void PublicTransport::createTooltip()
@@ -1921,6 +1932,7 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
         m_graphicsWidget = new QGraphicsWidget( this );
         m_graphicsWidget->setMinimumSize( 150, 150 ); // TODO allow smaller sizes, if zoom factor is small
         m_graphicsWidget->setPreferredSize( 400, 300 );
+        connect( m_graphicsWidget, SIGNAL(geometryChanged()), this, SLOT(resized()) );
 
         // Create a child graphics widget, eg. to apply a blur effect to it
         // but not to an overlay widget (which then gets a child of m_graphicsWidget).
@@ -2983,14 +2995,16 @@ QString PublicTransport::infoText()
     int width2 = fm.width( textNoHtml2 );
     int width = width1 + fm.width( ", " ) + width2;
     if ( width > m_graphicsWidget->size().width() ) {
-        m_graphicsWidget->setMinimumWidth( /*qMax(150,*/ qMax(width1, width2)/*)*/ );
+        // Break info text into two lines
+        m_graphicsWidget->setMinimumWidth( qMax(width1, width2) );
         return QString( "<nobr>%1: %2<br>%3: <a href='%4'>%5</a><nobr>" )
-            .arg( i18nc( "@info/plain", "last update" ), sLastUpdate,
-                    i18nc( "@info/plain", "data by" ), url, shortUrl );
+            .arg( i18nc("@info/plain", "last update"), sLastUpdate,
+                  i18nc("@info/plain", "data by"), url, shortUrl );
     } else {
+        // Use a single line for the info text
         return QString( "<nobr>%1: %2, %3: <a href='%4'>%5</a><nobr>" )
-            .arg( i18nc( "@info/plain", "last update" ), sLastUpdate,
-                    i18nc( "@info/plain", "data by" ), url, shortUrl );
+            .arg( i18nc("@info/plain", "last update"), sLastUpdate,
+                  i18nc("@info/plain", "data by"), url, shortUrl );
     }
 }
 
