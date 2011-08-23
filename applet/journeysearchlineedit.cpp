@@ -155,7 +155,7 @@ void JourneySearchLineEdit::init()
     m_highlighter->formatError().setForeground(
             KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText) );
 
-    connect( this, SIGNAL( textChanged( QString ) ), this, SLOT( slotTextChanged( QString ) ) );
+    connect( this, SIGNAL(textChanged(QString)), this, SLOT(slotTextChanged(QString)) );
 }
 
 void JourneySearchLineEdit::slotTextChanged( const QString& )

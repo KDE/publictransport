@@ -20,14 +20,23 @@
 #ifndef OVERLAYWIDGET_HEADER
 #define OVERLAYWIDGET_HEADER
 
+/** @file
+ * @brief This file contains the OverlayWidget class.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #include <QGraphicsWidget>
 
 #if QT_VERSION >= 0x040600
 class QGraphicsBlurEffect;
 #endif
 
-// Mostly copied from Plasma::Applet (the AppletOverlayWidget displayed when
-// calling setConfigurationRequired(true)). But with a blur effect ;)
+/**
+ * @brief A widget which gets laid over the whole applet.
+ *
+ * Used for the action button view.
+ * Mostly copied from Plasma::Applet (the AppletOverlayWidget displayed when calling
+ * Plasma::Applet::setConfigurationRequired(true)). But with a blur effect ;)
+ **/
 class OverlayWidget : public QGraphicsWidget {
     Q_OBJECT
 

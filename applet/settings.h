@@ -37,14 +37,12 @@
 #include <Plasma/DataEngine>
 
 class KConfigDialog;
-class QStandardItemModel;
 class Settings;
 
 namespace Timetable {
     class LocationModel;
     class ServiceProviderModel;
     class StopListWidget;
-    class FilterListWidget;
 };
 using namespace Timetable;
 
@@ -148,7 +146,7 @@ bool operator ==( const ColorGroupSettings &l, const ColorGroupSettings &r );
 class ColorGroupSettingsList : public QList< ColorGroupSettings > {
 public:
     ColorGroupSettings byColor( const QColor &color ) {
-        foreach ( const ColorGroupSettings colorSettings, *this ) {
+        foreach ( const ColorGroupSettings &colorSettings, *this ) {
             if ( colorSettings.color == color ) {
                 return colorSettings;
             }
@@ -205,7 +203,7 @@ public:
     /** @brief Applies the filters of color group configurations with filterOut set to true
       * on the given @p departureInfo. */
     bool filterOut( const DepartureInfo& departureInfo ) const {
-        foreach( const ColorGroupSettings colorSettings, *this ) {
+        foreach( const ColorGroupSettings &colorSettings, *this ) {
             if ( colorSettings.filterOut && colorSettings.matches(departureInfo) ) {
                 return true;
             }

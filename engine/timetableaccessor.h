@@ -435,7 +435,12 @@ private:
 	static QString gethex( ushort decimal );
 
 	struct JobInfos {
+        // Mainly for QHash
 	    JobInfos() {
+            this->parseDocumentMode = ParseInvalid;
+            this->maxCount = -1;
+            this->usedDifferentUrl = false;
+            this->roundTrips = 0;
 		};
 
 	    JobInfos( ParseDocumentMode parseDocumentMode, const QString &sourceName,

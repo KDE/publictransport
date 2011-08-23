@@ -148,8 +148,9 @@ enum TimetableInformation {
 	StopCountryCode = 204 /**< The country code of the country in which the stop is. */
 };
 
-/** Different modes for parsing documents. */
+/** @brief Different modes for parsing documents. */
 enum ParseDocumentMode {
+    ParseInvalid = 0, /**< Invalid value, only used to mark as invalid. */
 	ParseForDeparturesArrivals = 1, /**< Parsing for departures or arrivals. */
 	ParseForJourneys, /**< Parsing for journeys. */
 	ParseForStopSuggestions, /**< Parsing for stop suggestions. */
@@ -158,14 +159,14 @@ enum ParseDocumentMode {
 	ParseForStopIdThenDepartures /**< Parsing for a stop ID, to be used to get departures/arrivals. */
 };
 
-/** The type of an accessor. */
+/** @brief The type of an accessor. */
 enum AccessorType {
 	NoAccessor, /**< @internal Invalid value */
 	HTML, /**< The accessor is used to parse HTML documents. */
 	XML /**< The accessor is used to parse XML documents. */
 };
 
-/** The type of the vehicle used for a public transport line. */
+/** @brief The type of the vehicle used for a public transport line. */
 enum VehicleType {
 	Unknown = 0, /**< The type of the vehicle is unknown. */
 
@@ -206,7 +207,7 @@ enum VehicleType {
 	Spacecraft = 300, /**< A spacecraft. */ // TODO: add to applet
 };
 
-/** The type of services for a public transport line. */
+/** @brief The type of services for a public transport line. */
 enum LineService {
 	NoLineService = 0x00, /**< The public transport line has no special services. */
 
@@ -215,7 +216,7 @@ enum LineService {
 };
 // Q_DECLARE_FLAGS( LineServices, LineService ); // Gives a compiler error here.. but not in departureinfo.h
 
-/** What calculation should be done to get a missing value. */
+/** @brief What calculation should be done to get a missing value. */
 enum CalculateMissingValue {
 	CalculateDelayFromDepartureAndPrognosis,
 	CalculateDepartureDate,

@@ -166,7 +166,8 @@ public:
 			StopSettingsDialog *q )
 			: factory(_factory), detailsWidget(0), stopFinder(0), nearStopsDialog(0), 
 			modelLocations(0), modelServiceProviders(0),
-			modelLocationServiceProviders(0), stopList(0), dataEngineManager(0), q_ptr(q)
+			modelLocationServiceProviders(0), stopList(0), htmlDelegate(0), resizer(0),
+			dataEngineManager(0), q_ptr(q)
 	{
 		// Store options and given stop settings
 		options = _options;
@@ -252,13 +253,6 @@ public:
 				// Insert newly added widget into the hash
 				settingsWidgets.insert( setting, widget );
 			}
-
-			// TODO: in FilterConfigurationSetting?
-// 			if ( settings.contains(FilterConfigurationSetting) ) {
-// 				CheckCombobox *filterConfiguration =
-//                         settingWidget<CheckCombobox>( FilterConfigurationSetting );
-// 				filterConfiguration->addItems( filterConfigurations.names() );
-// 			}
 
 			// Add to column resizer
 			if ( detailsLayout ) {
@@ -703,9 +697,9 @@ public:
 	LocationModel *modelLocations; // Model of locations
 	ServiceProviderModel *modelServiceProviders; // Model of service providers
 	QSortFilterProxyModel *modelLocationServiceProviders; // Model of service providers for the current location
+    StopLineEditList *stopList;
 	HtmlDelegate *htmlDelegate;
-	StopLineEditList *stopList;
-	ColumnResizer* resizer;
+	ColumnResizer *resizer;
 
 	Plasma::DataEngineManager *dataEngineManager;
 	Plasma::DataEngine *publicTransportEngine;

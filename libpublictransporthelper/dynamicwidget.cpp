@@ -253,6 +253,10 @@ public:
 		autoRaiseButtons = false;
 		minWidgetCount = 0;
 		maxWidgetCount = -1; // unlimited
+		buttonSpacing = 0;
+        showRemoveButtons = true;
+        showAddButton = true;
+        showSeparators = true;
 	};
 
 	virtual ~AbstractDynamicWidgetContainerPrivate() {

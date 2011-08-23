@@ -10,7 +10,7 @@ qt4_automoc( ${PublicTransportHelperTest_SRCS} )
 add_executable( PublicTransportHelperTest ${PublicTransportHelperTest_SRCS} )
 add_test( PublicTransportHelperTest PublicTransportHelperTest )
 target_link_libraries( PublicTransportHelperTest
-  ${KDE4_KDECORE_LIBS} ${QT_QTTEST_LIBRARY} ${KDE4_KDEUI_LIBS} publictransporthelper
+	${KDE4_KDECORE_LIBS} ${QT_QTTEST_LIBRARY} ${KDE4_KDEUI_LIBS} ${KDE4_PLASMA_LIBS} publictransporthelper
 )
 
 set( PublicTransportHelperGuiTest_SRCS PublicTransportHelperGuiTest.cpp )

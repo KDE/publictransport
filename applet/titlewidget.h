@@ -18,7 +18,7 @@
  */
 
 /** @file
- * @brief This file contains the widget that is used for the title of the public transport applet.
+ * @brief This file contains the TitleWidget class that is used for the title of the public transport applet.
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef TITLEWIDGET_H
@@ -60,8 +60,7 @@ public:
      **/
     enum WidgetType {
         WidgetTitle = 0x0001, /**< The title widget, a Plasma::Label. */
-        WidgetFilter = 0x0002, /**< The filter widget, a QGraphicsWidget, that contains
-                * a Plasma::IconWidget and a Plasma::Label. */
+        WidgetFilter = 0x0002, /**< The filter widget, a QGraphicsWidget, a Plasma::ToolButton. */
         WidgetJourneySearchLine = 0x0010, /**< The journey search edit box, a Plasma::LineEdit. */
         WidgetRecentJourneysButton = 0x0020, /**< The button to show actions for recent journeys,
                 * a Plasma::ToolButton. @see RecentJourneyAction */

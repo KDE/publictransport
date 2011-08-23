@@ -59,10 +59,13 @@ enum FilterType {
     FilterByDelay, /**< Filter by delay. */
     FilterByVia, /**< Filter by intermediate stops.
             * (Like FilterByNextStop, but for all intermediate stops, not only the first). */
-    FilterByNextStop, /**< Filter by next intermediate stop.
-            * (Like FilterByVia, but only for the first intermediate stop). */
+    FilterByNextStop, /**< Filter by next intermediate stop after the home stop (previous before
+            * the home stop for arrivals). Like FilterByVia, but only for the second (last)
+            * intermediate stop. */
     FilterByDeparture, /**< Filter by departure/arrival time. */
-    FilterByDayOfWeek /**< Filter by the day of week of the departure date. */
+    FilterByDayOfWeek /**< Filter by the day of week of the departure date.
+            * Values are expected to be of type QVariantList with integers like the ones returned
+            * by QDate::dayOfWeek(). Can be used with FilterIsOneOf and FilterIsNotOneOf. */
 };
 
 /** @brief Variants of filters, eg. equals / doesn't equal.
@@ -72,14 +75,18 @@ enum FilterVariant {
             * the first available filter variant. */
 
     FilterContains = 1,
-    FilterDoesntContain = 2,
+    FilterDoesNotContain = 2,
+    FilterDoesntContain = FilterDoesNotContain, // DEPRECATED
     FilterEquals = 3,
-    FilterDoesntEqual = 4,
+    FilterDoesNotEqual = 4,
+    FilterDoesntEqual = FilterDoesNotEqual, // DEPRECATED
     FilterMatchesRegExp = 5,
-    FilterDoesntMatchRegExp = 6,
+    FilterDoesNotMatchRegExp = 6,
+    FilterDoesntMatchRegExp = FilterDoesNotMatchRegExp, // DEPRECATED
 
     FilterIsOneOf = 7,
-    FilterIsntOneOf = 8,
+    FilterIsNotOneOf = 8,
+    FilterIsntOneOf = FilterIsNotOneOf, // DEPRECATED
 
     FilterGreaterThan = 9,
     FilterLessThan = 10

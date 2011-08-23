@@ -31,20 +31,22 @@
 #include <QPainter>
 #include <QPointer>
 
+/** @file
+ * @brief This file contains the TimetableWidget / JourneyTimetableWidget and it's item classes.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
+class KPixmapCache;
 namespace Plasma
 {
     class Svg;
 }
-class KMenu;
 
 class QPropertyAnimation;
 class QWidget;
-class QTextLayout;
 class QStyleOptionGraphicsItem;
 class QPainter;
 
 class RouteGraphicsItem;
-class RouteStopTextGraphicsItem;
 class JourneyRouteGraphicsItem;
 class DepartureModel;
 class DepartureItem;
@@ -283,6 +285,9 @@ protected:
     virtual void mouseReleaseEvent( QGraphicsSceneMouseEvent* event );
     virtual void updateGeometry();
     virtual void updateTextLayouts() = 0;
+    virtual QGraphicsWidget *routeItem() const = 0;
+    virtual void drawFadeOutLeftAndRight( QPainter *painter, const QRect &rect, int fadeWidth = 40 );
+    virtual void drawAlarmBackground( QPainter *painter, const QRect &rect );
 
     QPointer<TopLevelItem> m_item;
     PublicTransportWidget *m_parent;
@@ -301,7 +306,7 @@ public:
     static QTextDocument *createTextDocument( const QString &html, const QSizeF &size,
             const QTextOption &textOption, const QFont &font );
     static void drawTextDocument( QPainter *painter, const QStyleOptionGraphicsItem* option,
-                                QTextDocument *document, const QRect &textRect, bool drawHalos );
+            QTextDocument *document, const QRect &textRect, bool drawHalos );
     static qreal textDocumentWidth( QTextDocument *document );
 };
 
@@ -323,8 +328,8 @@ public:
                                     StopAction *showInMapAction = 0,
                                     StopAction *showDeparturesAction = 0,
                                     StopAction *highlightStopAction = 0,
-                                    StopAction *newFilterViaStopAction = 0/*,
-                                    QAction *toggleAlarmAction = 0*/ );
+                                    StopAction *newFilterViaStopAction = 0,
+                                    KPixmapCache *pixmapCache = 0 );
     virtual ~DepartureGraphicsItem();
 
     /**
@@ -433,11 +438,13 @@ protected:
     virtual void updateTextLayouts();
     qreal timeColumnWidth() const;
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
+    virtual QGraphicsWidget *routeItem() const;
 
 private:
     QTextDocument *m_infoTextDocument;
     QTextDocument *m_timeTextDocument;
     RouteGraphicsItem *m_routeItem;
+    bool m_highlighted;
 
     QPropertyAnimation *m_leavingAnimation;
     qreal m_leavingStep;
@@ -445,6 +452,8 @@ private:
     StopAction *m_showDeparturesAction;
     StopAction *m_highlightStopAction;
     StopAction *m_newFilterViaStopAction;
+
+    KPixmapCache *m_pixmapCache;
 };
 
 /**
@@ -554,6 +563,7 @@ protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
     virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent* event );
     virtual void updateTextLayouts();
+    virtual QGraphicsWidget *routeItem() const;
 
 private:
     QTextDocument *m_infoTextDocument;
@@ -701,6 +711,7 @@ private:
     StopAction *m_showDeparturesAction;
     StopAction *m_highlightStopAction;
     StopAction *m_newFilterViaStopAction;
+    KPixmapCache *m_pixmapCache;
 };
 
 /**

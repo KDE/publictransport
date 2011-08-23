@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -20,13 +20,19 @@
 #ifndef DATASOURCETESTER_HEADER
 #define DATASOURCETESTER_HEADER
 
+/** @file
+ * @brief This file contains the DataSourceTester class.
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
+
 #include <Plasma/DataEngine>
 #include <Plasma/Applet>
 
 /** @class DataSourceTester
-* The source with a given source name can be tested. The signal @a testResult
-* is emitted when the test is complete.
-* @brief Tests data sources with the "publictransport"-data engine. */
+ * @brief Tests data sources with the "publictransport"-data engine.
+ *
+ * The source with a given source name can be tested. The signal @a testResult is emitted when
+ * the test is complete.
+ **/
 class DataSourceTester : public QObject {
     Q_OBJECT
 

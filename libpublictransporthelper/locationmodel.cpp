@@ -29,7 +29,7 @@ namespace Timetable {
 class LocationItemPrivate
 {
 public:
-	LocationItemPrivate() {};
+	LocationItemPrivate() { itemType = LocationItem::Invalid; };
 
 	void setFromCountryCode( const QString &countryCode, int accessorCount = -1,
 							 const QString &description = QString() ) {

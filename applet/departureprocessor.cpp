@@ -31,6 +31,8 @@ DepartureProcessor::DepartureProcessor( QObject* parent ) : QThread( parent )
     m_quit = false;
     m_abortCurrentJob = false;
     m_requeueCurrentJob = false;
+    m_timeOffsetOfFirstDeparture = 0;
+    m_isArrival = false;
     qRegisterMetaType< QList<DepartureInfo> >( "QList<DepartureInfo>" );
     qRegisterMetaType< QList<JourneyInfo> >( "QList<JourneyInfo>" );
 }

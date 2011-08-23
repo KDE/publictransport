@@ -54,6 +54,10 @@ RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item
 void RouteGraphicsItem::resizeEvent(QGraphicsSceneResizeEvent* event)
 {
     QGraphicsWidget::resizeEvent(event);
+    if ( !isVisible() ) {
+        // Don't rearrange if the route item isn't visible (TODO rearrange if shown?)
+        return;
+    }
     arrangeStopItems();
 }
 
@@ -336,7 +340,8 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             // Create text item, that displays a single stop name
             // and automatically elides and stretches it on hover to show hidden text
             RouteStopTextGraphicsItem *textItem = new RouteStopTextGraphicsItem(
-                    this, *font, baseSize, time, stopName, minsFromFirstRouteStop, routeStopFlags );
+                    this, model, *font, baseSize, time, stopName, minsFromFirstRouteStop,
+                    routeStopFlags );
             textItem->setPos( stopTextPos );
             textItem->resize( baseSize + 10, fontMetrics->height() );
             textItem->rotate( m_textAngle );
@@ -561,14 +566,15 @@ RouteStopFlags RouteStopMarkerGraphicsItem::routeStopFlags() const
 RouteStopFlags RouteStopTextGraphicsItem::routeStopFlags() const
 {
     RouteStopFlags stopFlags = m_stopFlags;
-    RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
-    DepartureModel *model = !routeItem || !routeItem->item() ? NULL :
-            qobject_cast<DepartureModel*>( routeItem->item()->model() );
-    RouteItemFlags itemFlags = model ? model->routeItemFlags(m_stopName) : RouteItemDefault;
-    if ( itemFlags.testFlag(RouteItemHighlighted) && !stopFlags.testFlag(RouteStopIsHighlighted) ) {
+    if ( !m_model ) {
+        return stopFlags;
+    }
+
+    const RouteItemFlags itemFlags = m_model->routeItemFlags( m_stopName );
+    if ( itemFlags.testFlag(RouteItemHighlighted) ) {
         stopFlags |= RouteStopIsHighlighted;
     }
-    if ( itemFlags.testFlag(RouteItemHomeStop) && !stopFlags.testFlag(RouteStopIsHomeStop) ) {
+    if ( itemFlags.testFlag(RouteItemHomeStop) ) {
         stopFlags |= RouteStopIsHomeStop;
     }
     return stopFlags;
@@ -590,10 +596,10 @@ RouteStopFlags JourneyRouteStopGraphicsItem::routeStopFlags() const
     return stopFlags;
 }
 
-RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, const QFont &font,
-        qreal baseSize, const QTime &time, const QString &stopName, int minsFromFirstRouteStop,
-        RouteStopFlags routeStopFlags )
-        : QGraphicsWidget(parent)
+RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, DepartureModel *model,
+        const QFont &font, qreal baseSize, const QTime &time, const QString &stopName,
+        int minsFromFirstRouteStop, RouteStopFlags routeStopFlags )
+        : QGraphicsWidget(parent), m_model(model)
 {
     m_expandStep = 0.0;
     m_baseSize = baseSize;
@@ -888,20 +894,11 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
         boldRouteFont.setBold( true );
         QFontMetrics fm( routeFont );
         QFontMetrics fmBold( boldRouteFont );
-        const QRectF routeRect = rect();
 
         // Add the route stop items (JourneyRouteStopGraphicsItem)
         for ( int i = 0; i < info->routeStops().count(); ++i ) {
-            QFontMetrics *fontMetrics;
-            QFont *font;
-            if ( i == 0 || i == info->routeStops().count() - 1 ) {
-                font = &boldRouteFont;
-                fontMetrics = &fmBold;
-            } else {
-                font = &routeFont;
-                fontMetrics = &fm;
-            }
-
+            QFont *font = i == 0 || i == info->routeStops().count() - 1
+                    ? &boldRouteFont : &routeFont;
             const QString stopName = info->routeStops()[i];
             QString text = QString( "<b>%1</b>" ).arg( stopName );
 

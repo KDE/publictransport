@@ -28,6 +28,7 @@
 #include "journeysearchsuggestionwidget.h"
 #include "settings.h"
 #include "timetablewidget.h"
+#include "popupicon.h"
 
 // Helper library includes
 #include <publictransporthelper/global.h>
@@ -72,6 +73,7 @@
 #include <QSignalTransition>
 #include <qmath.h>
 #include <qgraphicssceneevent.h>
+#include <QParallelAnimationGroup>
 
 class ToPropertyTransition : public QSignalTransition
 {
@@ -103,7 +105,6 @@ protected:
         }
 
         setTargetState( currentTargetState() );
-//          << targetState();
         return true;
     };
 
@@ -116,15 +117,12 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
         : Plasma::PopupApplet( parent, args ),
         m_graphicsWidget(0), m_mainGraphicsWidget(0), m_oldItem(0), m_titleWidget(0),
         m_labelInfo(0), m_timetable(0), m_journeyTimetable(0), m_listStopSuggestions(0),
-        m_overlay(0), m_model(0), m_popupIconTransitionAnimation(0),
-        m_modelJourneys(0), m_departureProcessor(0), m_stateMachine(0),
+        m_overlay(0), m_model(0), m_popupIcon(0),
+        m_titleToggleAnimation(0), m_modelJourneys(0), m_departureProcessor(0), m_stateMachine(0),
         m_journeySearchTransition1(0), m_journeySearchTransition2(0),
         m_journeySearchTransition3(0), m_marble(0)
 {
     m_originalStopIndex = -1;
-    m_popupIconDepartureIndex = 0;
-    m_startPopupIconDepartureIndex = 0;
-    m_endPopupIconDepartureIndex = 0;
 
     setBackgroundHints( StandardBackground );
     setAspectRatioMode( Plasma::IgnoreAspectRatio );
@@ -154,7 +152,7 @@ void PublicTransport::init()
              this, SLOT(beginJourneyProcessing(QString)) );
     connect( m_departureProcessor, SIGNAL(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)),
              this, SLOT(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)) );
-    connect( m_departureProcessor, SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>, QList<DepartureInfo>)),
+    connect( m_departureProcessor, SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)),
              this, SLOT(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)) );
 
     // Load vehicle type SVG
@@ -164,6 +162,12 @@ void PublicTransport::init()
 
     m_departurePainter = new DeparturePainter( this );
     m_departurePainter->setSvg( &m_vehiclesSvg );
+
+    m_popupIcon = new PopupIcon( m_departurePainter, this );
+    connect( m_popupIcon, SIGNAL(currentDepartureGroupIndexChanged(qreal)),
+             this, SLOT(updatePopupIcon()) );
+    connect( m_popupIcon, SIGNAL(currentDepartureIndexChanged(qreal)),
+             this, SLOT(updatePopupIcon()) );
 
     if ( !m_settings.stopSettingsList.isEmpty() ) {
         QVariantHash serviceProviderData = currentServiceProviderData();
@@ -187,7 +191,8 @@ void PublicTransport::init()
     m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
     m_model->setHomeStop( stopSettings.stopList().isEmpty() ? QString() : stopSettings.stop(0).name );
     m_model->setCurrentStopIndex( m_settings.currentStopSettingsIndex );
-    connect( m_model, SIGNAL(alarmFired(DepartureItem*)), this, SLOT(alarmFired(DepartureItem*)) );
+    connect( m_model, SIGNAL(alarmFired(DepartureItem*,AlarmSettings)),
+             this, SLOT(alarmFired(DepartureItem*,AlarmSettings)) );
     connect( m_model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
              this, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
     connect( m_model, SIGNAL(itemsAboutToBeRemoved(QList<ItemBase*>)),
@@ -199,6 +204,7 @@ void PublicTransport::init()
                                   ? QString() : stopSettings.stop(0).name );
     m_modelJourneys->setCurrentStopIndex( m_settings.currentStopSettingsIndex );
     m_modelJourneys->setAlarmSettings( m_settings.alarmSettings );
+    m_popupIcon->setModel( m_model );
 
     // Create widgets
     graphicsWidget();
@@ -210,7 +216,7 @@ void PublicTransport::init()
     // Check for network connectivity and create tooltip / popup icon
     checkNetworkStatus();
     createTooltip();
-    createPopupIcon();
+    updatePopupIcon();
 
     connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
@@ -459,7 +465,8 @@ bool PublicTransport::checkNetworkStatus()
 
 QString PublicTransport::queryNetworkStatus()
 {
-    QString status = "unavailable";
+    return "unknown"; // TODO this is only for openSuse 12.1 Milestone 3, dataEngine("network") always crashes
+
     const QStringList interfaces = dataEngine( "network" )->sources();
     if ( interfaces.isEmpty() ) {
         return "unknown";
@@ -467,6 +474,7 @@ QString PublicTransport::queryNetworkStatus()
 
     // Check if there is an activated interface or at least one that's
     // currently being configured
+    QString status = "unavailable";
     foreach( const QString &iface, interfaces ) {
         QString sStatus = dataEngine( "network" )->query( iface )["ConnectionStatus"].toString();
         if ( sStatus.isEmpty() ) {
@@ -533,14 +541,21 @@ void PublicTransport::setupActions()
             i18nc("@action", "&Quick Actions"), this );
     addAction( "showActionButtons", showActionButtons );
 
-    QAction *actionSetAlarmForDeparture = new QAction(
+    QAction *actionCreateAlarmForDeparture = new QAction(
             GlobalApplet::makeOverlayIcon( KIcon("task-reminder"), "list-add" ),
             m_settings.departureArrivalListType == DepartureList
             ? i18nc("@action:inmenu", "Set &Alarm for This Departure")
             : i18nc("@action:inmenu", "Set &Alarm for This Arrival"), this );
-    connect( actionSetAlarmForDeparture, SIGNAL(triggered()),
-             this, SLOT(setAlarmForDeparture()) );
-    addAction( "setAlarmForDeparture", actionSetAlarmForDeparture );
+    connect( actionCreateAlarmForDeparture, SIGNAL(triggered()),
+             this, SLOT(createAlarmForDeparture()) );
+    addAction( "createAlarmForDeparture", actionCreateAlarmForDeparture );
+
+    QAction *actionCreateAlarmForDepartureCurrentWeekDay = new QAction(
+            GlobalApplet::makeOverlayIcon( KIcon("task-reminder"), "list-add" ),
+            i18nc("@action:inmenu", "Set &Alarm for Current Weekday"), this );
+    connect( actionCreateAlarmForDepartureCurrentWeekDay, SIGNAL(triggered()),
+             this, SLOT(createAlarmForDepartureCurrentWeekDay()) );
+    addAction( "createAlarmForDepartureCurrentWeekDay", actionCreateAlarmForDepartureCurrentWeekDay );
 
     QAction *actionRemoveAlarmForDeparture = new QAction(
             GlobalApplet::makeOverlayIcon( KIcon("task-reminder"), "list-remove" ),
@@ -854,8 +869,8 @@ void PublicTransport::departuresFiltered( const QString& sourceName,
         m_model->removeRows( m_settings.maximalNumberOfDepartures, delta );
     }
 
-    createDepartureGroups();
-    createPopupIcon();
+    m_popupIcon->createDepartureGroups();
+    updatePopupIcon();
     createTooltip();
     updateColorGroupSettings();
 }
@@ -920,8 +935,8 @@ void PublicTransport::departuresProcessed( const QString& sourceName,
     // Update everything that might have changed when all departure data is there
     if ( departuresToGo == 0 ) {
         updateColorGroupSettings();
-        createDepartureGroups();
-        createPopupIcon();
+        m_popupIcon->createDepartureGroups();
+        updatePopupIcon();
         createTooltip();
     }
 }
@@ -1146,110 +1161,23 @@ void PublicTransport::wheelEvent( QGraphicsSceneWheelEvent* event )
 {
     QGraphicsItem::wheelEvent( event );
 
-    int oldDepartureSpan = qAbs( m_endPopupIconDepartureIndex - m_startPopupIconDepartureIndex );
-    int oldEndPopupIconDepartureIndex = m_endPopupIconDepartureIndex;
-
     // Compute start and end indices of the departure groups to animate between
     if ( event->delta() > 0 ) {
         // Wheel rotated forward
-        if ( m_endPopupIconDepartureIndex < POPUP_ICON_DEPARTURE_GROUP_COUNT - 1 ) {
-            if ( m_popupIconTransitionAnimation ) {
-                // Already animating
-                if ( m_endPopupIconDepartureIndex < m_startPopupIconDepartureIndex ) {
-                    // Direction was reversed
-                    m_startPopupIconDepartureIndex = m_endPopupIconDepartureIndex;
-                }
-
-                // Increase index of the departure group where the animation should end
-                ++m_endPopupIconDepartureIndex;
-            } else {
-                m_startPopupIconDepartureIndex = qFloor( m_popupIconDepartureIndex );
-                m_endPopupIconDepartureIndex = m_startPopupIconDepartureIndex + 1;
-            }
-        } else {
-            // Max departure already reached
-            return;
-        }
+        m_popupIcon->animateToNextGroup();
     } else if ( event->delta() < 0 ) {
         // Wheel rotated backward
-        int minIndex = m_model->hasAlarms() ? -1 : 0; // Show alarm at index -1
-        if ( m_endPopupIconDepartureIndex > minIndex ) {
-            if ( m_popupIconTransitionAnimation ) {
-                // Already animating
-                if ( m_endPopupIconDepartureIndex > m_startPopupIconDepartureIndex ) {
-                    // Direction was reversed
-                    m_startPopupIconDepartureIndex = m_endPopupIconDepartureIndex;
-                }
-
-                // Decrease index of the departure group where the animation should end
-                --m_endPopupIconDepartureIndex;
-            } else {
-                m_startPopupIconDepartureIndex = qFloor( m_popupIconDepartureIndex );
-                m_endPopupIconDepartureIndex = m_startPopupIconDepartureIndex - 1;
-            }
-        } else {
-            // Min departure or alarm departure already reached
-            return;
-        }
+        m_popupIcon->animateToPreviousGroup();
     } else {
         // Wheel not rotated?
         return;
     }
-
-    if ( m_popupIconTransitionAnimation ) {
-        // Compute new starting index from m_popupIconDepartureIndex
-        int newDepartureSpan = qAbs( m_endPopupIconDepartureIndex - m_startPopupIconDepartureIndex );
-        qreal animationPartDone = qAbs(m_popupIconDepartureIndex - m_startPopupIconDepartureIndex)
-                / oldDepartureSpan;
-        if ( animationPartDone > 0.5 ) {
-            // Running animation visually almost finished (the easing curve slows the animation down at the end)
-            m_startPopupIconDepartureIndex = oldEndPopupIconDepartureIndex;
-            m_popupIconTransitionAnimation->stop();
-            m_popupIconTransitionAnimation->setStartValue( m_startPopupIconDepartureIndex );
-        } else {
-            qreal startIconDepartureIndex = m_startPopupIconDepartureIndex + animationPartDone * newDepartureSpan;
-            m_popupIconTransitionAnimation->stop();
-            m_popupIconTransitionAnimation->setStartValue( startIconDepartureIndex );
-        }
-    } else {
-        // Create animation
-        m_popupIconTransitionAnimation = new QPropertyAnimation( this, "PopupIconDepartureIndex", this );
-        m_popupIconTransitionAnimation->setEasingCurve( QEasingCurve(QEasingCurve::OutQuart) );
-        m_popupIconTransitionAnimation->setDuration( 500 );
-        m_popupIconTransitionAnimation->setStartValue( m_startPopupIconDepartureIndex );
-        connect( m_popupIconTransitionAnimation, SIGNAL(finished()),
-                this, SLOT(popupIconTransitionAnimationFinished()) );
-    }
-
-    m_popupIconTransitionAnimation->setEndValue( m_endPopupIconDepartureIndex );
-    m_popupIconTransitionAnimation->start();
 }
 
 void PublicTransport::departuresAboutToBeRemoved( const QList<ItemBase*>& departures )
 {
-    // Update departure groups
-    QMap< QDateTime, QList<DepartureItem*> >::iterator it = m_departureGroups.begin();
-    while ( it != m_departureGroups.end() ) {
-        // Remove all departures in the current group
-        // that are inside the given list of departures to be removed
-        QList<DepartureItem*>::iterator sub_it = it.value().begin();
-        while ( sub_it != it.value().end() ) {
-            if ( departures.contains(*sub_it) ) {
-                sub_it = it.value().erase( sub_it );
-            } else {
-                ++sub_it;
-            }
-        }
-
-        // Remove the group if all it's departures have been removed
-        if ( it.value().isEmpty() ) {
-            it = m_departureGroups.erase( it );
-        } else {
-            ++it;
-        }
-    }
-
-    createPopupIcon();
+    m_popupIcon->departuresAboutToBeRemoved( departures );
+    updatePopupIcon();
     createTooltip();
 }
 
@@ -1258,47 +1186,111 @@ void PublicTransport::departuresLeft( const QList< DepartureInfo > &departures )
     Q_UNUSED( departures );
 }
 
-void PublicTransport::popupIconTransitionAnimationFinished()
+void PublicTransport::titleToggleAnimationFinished()
 {
-    delete m_popupIconTransitionAnimation;
-    m_popupIconTransitionAnimation = NULL;
+    delete m_titleToggleAnimation;
+    m_titleToggleAnimation = 0;
 }
 
-void PublicTransport::createDepartureGroups()
+void PublicTransport::updatePopupIcon()
 {
-    m_departureGroups.clear();
+    if ( isIconified() ) {
+        int iconSize = qMin( 128, int(size().width()) );
+        setPopupIcon( m_popupIcon->createPopupIcon(QSize(iconSize, iconSize)) );
+    }
+}
 
-    // Create departure groups (maximally POPUP_ICON_DEPARTURE_GROUP_COUNT groups)
-    for ( int row = 0; row < m_model->rowCount(); ++row ) {
-        DepartureItem *item = dynamic_cast<DepartureItem*>( m_model->item(row) );
-        const DepartureInfo *info = item->departureInfo();
+void PublicTransport::resized()
+{
+    // Get the size of the applet/popup (not the size of the popup icon if iconified)
+    QSizeF size = m_graphicsWidget->size();
 
-        QDateTime time = info->predictedDeparture();
-        if ( m_departureGroups.count() == POPUP_ICON_DEPARTURE_GROUP_COUNT
-             && !m_departureGroups.contains(time) )
+    if ( m_titleWidget ) {
+        // Show/hide title widget, but do not allow hiding the title if the applet is iconified
+        const qreal minHeightWithTitle = 200.0;
+        const qreal maxHeightWithoutTitle = 225.0;
+        if ( size.height() <= minHeightWithTitle && !m_titleToggleAnimation
+            && !(!m_titleToggleAnimation && m_titleWidget->maximumHeight() <= 0.1) )
         {
-            // Maximum group count reached and all groups filled
-            break;
-        } else {
-            // Insert item into the corresponding departure group
-            m_departureGroups[ time ] << item;
+            // The applet is not iconified and it's size is too small to show the title
+            if ( m_titleToggleAnimation ) {
+                delete m_titleToggleAnimation;
+            }
+            m_titleToggleAnimation = new QParallelAnimationGroup( this );
+            Plasma::Animation *fadeAnimation = Plasma::Animator::create(
+                    Plasma::Animator::FadeAnimation, m_titleToggleAnimation );
+            fadeAnimation->setTargetWidget( m_titleWidget );
+            fadeAnimation->setProperty( "startOpacity", m_titleWidget->opacity() );
+            fadeAnimation->setProperty( "targetOpacity", 0.0 );
+
+            QPropertyAnimation *shrinkAnimation = new QPropertyAnimation(
+                    m_titleWidget, "maximumSize", m_titleToggleAnimation );
+            shrinkAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
+                                                    m_titleWidget->layout()->preferredHeight()) );
+            shrinkAnimation->setEndValue( QSizeF(m_titleWidget->maximumWidth(), 0) );
+
+            connect( m_titleToggleAnimation, SIGNAL(finished()),
+                        this, SLOT(titleToggleAnimationFinished()) );
+            m_titleToggleAnimation->addAnimation( fadeAnimation );
+            m_titleToggleAnimation->addAnimation( shrinkAnimation );
+            m_titleToggleAnimation->start();
+        } else if ( size.height() >= maxHeightWithoutTitle
+                && !m_titleToggleAnimation && !(!m_titleToggleAnimation
+                && m_titleWidget->maximumHeight() >= m_titleWidget->layout()->preferredHeight()) )
+        {
+            // The applet is iconified or it's size is big enough to show the title
+            if ( m_titleToggleAnimation ) {
+                delete m_titleToggleAnimation;
+            }
+            m_titleToggleAnimation = new QParallelAnimationGroup( this );
+
+            Plasma::Animation *fadeAnimation = Plasma::Animator::create(
+                    Plasma::Animator::FadeAnimation, m_titleToggleAnimation );
+            fadeAnimation->setTargetWidget( m_titleWidget );
+            fadeAnimation->setProperty( "startOpacity", m_titleWidget->opacity() );
+            fadeAnimation->setProperty( "targetOpacity", 1.0 );
+
+            QPropertyAnimation *growAnimation = new QPropertyAnimation(
+                    m_titleWidget, "maximumSize", m_titleToggleAnimation );
+            growAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
+                                                    m_titleWidget->maximumHeight()) );
+            growAnimation->setEndValue( QSizeF(m_titleWidget->maximumWidth(),
+                                                m_titleWidget->layout()->preferredHeight()) );
+
+            connect( m_titleToggleAnimation, SIGNAL(finished()),
+                        this, SLOT(titleToggleAnimationFinished()) );
+            m_titleToggleAnimation->addAnimation( fadeAnimation );
+            m_titleToggleAnimation->addAnimation( growAnimation );
+            m_titleToggleAnimation->start();
+        }
+
+        // Update filter widget (show icon or icon with text)
+        Plasma::ToolButton *filterWidget =
+                m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetFilter );
+        if ( m_titleWidget->layout()->preferredWidth() > size.width() ) {
+            // Show only an icon on the filter toolbutton, if there is not enough space
+            filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonIconOnly );
+            filterWidget->setMaximumWidth( filterWidget->size().height() );
+        } else if ( filterWidget->nativeWidget()->toolButtonStyle() == Qt::ToolButtonIconOnly
+            && size.width() > m_titleWidget->layout()->minimumWidth() +
+            QFontMetrics(filterWidget->font()).width(filterWidget->text()) + 60 )
+        {
+            // Show the icon with text beside if there is enough space again
+            filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
+            filterWidget->setMaximumWidth( -1 );
         }
     }
+
+    // Update line breaking of the courtesy label
+    updateInfoText();
 }
 
-void PublicTransport::createPopupIcon()
+void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
 {
-    if ( m_model->isEmpty() || m_departureGroups.isEmpty() ) {
-        setPopupIcon( "public-transport-stop" );
-    } else {
-        QPixmap pixmap = m_departurePainter->createPopupIcon(
-                m_startPopupIconDepartureIndex, m_endPopupIconDepartureIndex,
-                m_popupIconDepartureIndex, m_model, m_departureGroups );
+    Plasma::Applet::resizeEvent( event );
 
-        KIcon icon;
-        icon.addPixmap( pixmap );
-        setPopupIcon( icon );
-    }
+    // Update popup icon to new size
+    updatePopupIcon();
 }
 
 void PublicTransport::createTooltip()
@@ -1311,16 +1303,17 @@ void PublicTransport::createTooltip()
 
     Plasma::ToolTipContent data;
     data.setMainText( i18nc("@info", "Public Transport") );
-    if ( m_departureGroups.isEmpty() ) {
+    if ( m_popupIcon->departureGroups()->isEmpty() ) {
         data.setSubText( i18nc("@info", "View departure times for public transport") );
     } else {
-        const QList<DepartureItem*> nextDepartures = m_departureGroups.constBegin().value();
-        const QString groupDurationString = nextDepartures.first()->departureInfo()->durationString();
+        const DepartureGroup nextGroup = m_popupIcon->departureGroups()->isEmpty()
+                ? DepartureGroup() : m_popupIcon->departureGroups()->first();
+        const QString groupDurationString = nextGroup.first()->departureInfo()->durationString();
         QStringList infoStrings;
 
         if ( m_settings.departureArrivalListType ==  DepartureList ) {
             // Showing a departure list
-            foreach ( const DepartureItem *item, nextDepartures ) {
+            foreach ( const DepartureItem *item, nextGroup ) {
                 infoStrings << i18nc("@info Text for one departure for the tooltip (%1: line string, "
                                      "%2: target)",
                                      "Line <emphasis strong='1'>%1<emphasis> "
@@ -1334,7 +1327,7 @@ void PublicTransport::createTooltip()
                     infoStrings.join(",<nl/>")) );
         } else {
             // Showing an arrival list
-            foreach ( const DepartureItem *item, nextDepartures ) {
+            foreach ( const DepartureItem *item, nextGroup ) {
                 infoStrings << i18nc("@info Text for one arrival for the tooltip (%1: line string, "
                                      "%2: origin)",
                                      "Line <emphasis strong='1'>%1<emphasis> "
@@ -1853,6 +1846,7 @@ KMenu *PublicTransport::updateFilterMenu()
     }
 
     if ( showColorGrous ) {
+        // Add checkbox entries to toggle color groups
         if ( m_settings.departureArrivalListType == ArrivalList ) {
             menu->addTitle( KIcon("object-group"), i18nc("@title This is a menu title",
                                                          "Arrival Groups (extending)") );
@@ -1863,6 +1857,7 @@ KMenu *PublicTransport::updateFilterMenu()
         foreach( const ColorGroupSettings &colorGroupSettings,
                  m_settings.currentColorGroupSettings() )
         {
+            // Create action for current color group
             QAction *action = new QAction( colorGroupSettings.lastCommonStopName,
                                            m_filterByGroupColorGroup );
             action->setCheckable( true );
@@ -1871,6 +1866,7 @@ KMenu *PublicTransport::updateFilterMenu()
             }
             action->setData( QVariant::fromValue(colorGroupSettings.color) );
 
+            // Draw a color patch with the color of the color group
             QPixmap pixmap( QSize(16, 16) );
             pixmap.fill( Qt::transparent );
             QPainter p( &pixmap );
@@ -1882,6 +1878,7 @@ KMenu *PublicTransport::updateFilterMenu()
             p.drawRoundedRect( QRect(QPoint(1,1), pixmap.size() - QSize(2, 2)), 4, 4 );
             p.end();
 
+            // Put the pixmap into a KIcon
             KIcon colorIcon;
             colorIcon.addPixmap( pixmap );
             action->setIcon( colorIcon );
@@ -1946,8 +1943,9 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
 {
     if ( !m_graphicsWidget ) {
         m_graphicsWidget = new QGraphicsWidget( this );
-        m_graphicsWidget->setMinimumSize( 150, 150 );
+        m_graphicsWidget->setMinimumSize( 150, 150 ); // TODO allow smaller sizes, if zoom factor is small
         m_graphicsWidget->setPreferredSize( 400, 300 );
+        connect( m_graphicsWidget, SIGNAL(geometryChanged()), this, SLOT(resized()) );
 
         // Create a child graphics widget, eg. to apply a blur effect to it
         // but not to an overlay widget (which then gets a child of m_graphicsWidget).
@@ -2128,7 +2126,7 @@ void PublicTransport::writeSettings( const Settings& settings )
                     m_settings.departureArrivalListType == DepartureList
                     ? i18nc("@action", "Remove &Alarm for This Departure")
                     : i18nc("@action", "Remove &Alarm for This Arrival") );
-            action("setAlarmForDeparture")->setText(
+            action("createAlarmForDeparture")->setText(
                     m_settings.departureArrivalListType == DepartureList
                     ? i18nc("@action", "Set &Alarm for This Departure")
                     : i18nc("@action", "Set &Alarm for This Arrival") );
@@ -2161,6 +2159,7 @@ void PublicTransport::writeSettings( const Settings& settings )
             fillModel( departureInfos() );
         }
 
+        // Update current stop settings / current home stop in the models
         if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
              changed.testFlag(SettingsIO::ChangedStopSettings) )
         {
@@ -2173,6 +2172,7 @@ void PublicTransport::writeSettings( const Settings& settings )
             }
         }
 
+        // Update the filter widget
         if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
              changed.testFlag(SettingsIO::ChangedStopSettings) ||
              changed.testFlag(SettingsIO::ChangedFilterSettings) ||
@@ -2181,9 +2181,12 @@ void PublicTransport::writeSettings( const Settings& settings )
             m_titleWidget->updateFilterWidget();
         }
 
-        m_model->setAlarmSettings( m_settings.alarmSettings );
-        if ( m_modelJourneys && changed.testFlag(SettingsIO::ChangedAlarmSettings) ) {
-            m_modelJourneys->setAlarmSettings( m_settings.alarmSettings );
+        // Update alarm settings
+        if ( changed.testFlag(SettingsIO::ChangedAlarmSettings) ) {
+            m_model->setAlarmSettings( m_settings.alarmSettings );
+            if ( m_modelJourneys ) {
+                m_modelJourneys->setAlarmSettings( m_settings.alarmSettings );
+            }
         }
     } else {
         kDebug() << "No changes made in the settings";
@@ -2457,7 +2460,8 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
                     objectsToBeDeleted << infoAction;
                 }
             } else {
-                actions.append( action("setAlarmForDeparture") );
+                actions.append( action("createAlarmForDeparture") );
+                actions.append( action("createAlarmForDepartureCurrentWeekDay") );
             }
         }
 
@@ -2646,7 +2650,6 @@ void PublicTransport::errorMarble( QProcess::ProcessError processError )
                 "Do you want to install 'marble' now?", m_marble->errorString()) );
         if ( result == KMessageBox::Yes ) {
             // Start KPackageKit to install marble
-//             kDebug() << "Start installation" <<
             KProcess *kPackageKit = new KProcess( this );
             kPackageKit->setProgram( "kpackagekit",
                                      QStringList() << "--install-package-name" << "marble" );
@@ -2669,8 +2672,7 @@ void PublicTransport::marbleHasStarted()
             break;
         }
     }
-    
-//     showStopInMarble( m_longitude, m_latitude );
+
     QTimer::singleShot( 250, this, SLOT(showStopInMarble()) );
 }
 
@@ -2760,7 +2762,7 @@ void PublicTransport::removeAlarmForDeparture( int row )
     removeAlarms( newAlarmSettings, QList<int>() << matchingAlarmSettings );
 
     if ( m_clickedItemIndex.isValid() ) {
-        createPopupIcon();
+        updatePopupIcon();
     }
 }
 
@@ -2779,26 +2781,10 @@ void PublicTransport::processAlarmCreationRequest( const QDateTime& departure,
     AlarmSettings alarm;
     alarm.autoGenerated = true;
     alarm.affectedStops << m_settings.currentStopSettingsIndex;
-    if ( departure.isValid() && !target.isEmpty() ) {
-        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
-                            "%1 is the departure time, %2 is the target.",
-                            "At %1 to %2", departure.toString(), target );
-    } else if ( departure.isValid() && target.isEmpty() ) {
-        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
-                            "%1 is the departure time, %2 is the name of the used vehicle "
-                            "(eg. tram).",
-                            "At %1 using %2", departure.toString(),
-                            Global::vehicleTypeToString(vehicleType) );
-    } else if ( !departure.isValid() && !target.isEmpty() ) {
-        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
-                            "%1 is the target, %2 is the name of the used vehicle (eg. tram).",
-                            "To %1 using %2", target, Global::vehicleTypeToString(vehicleType) );
-    } else {
-        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
-                            "%1 is the name of the used vehicle (eg. tram), %2 is the line "
-                            "string (eg. 'N1').",
-                            "Using %1, %2", Global::vehicleTypeToString(vehicleType), lineString );
-    }
+    alarm.name = i18nc( "@info/plain Name for a new alarm, eg. requested using the context menu. "
+                        "%1 is the departure time or the name of the used vehicle.",
+                        "One-Time Alarm (%1)", departure.isValid() ? departure.toString()
+                                               : Global::vehicleTypeToString(vehicleType) );
 
     // Add alarm filters
     if ( !departure.isNull() ) {
@@ -2817,7 +2803,7 @@ void PublicTransport::processAlarmCreationRequest( const QDateTime& departure,
     settings.alarmSettings << alarm;
     writeSettings( settings );
 
-    createPopupIcon(); // TEST needed or already done in writeSettings?
+    alarmCreated();
 }
 
 void PublicTransport::processAlarmDeletionRequest( const QDateTime& departure,
@@ -2853,10 +2839,11 @@ void PublicTransport::processAlarmDeletionRequest( const QDateTime& departure,
     }
     writeSettings( settings );
 
-    createPopupIcon();
+    updatePopupIcon();
 }
 
-void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex )
+void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex,
+                                                       bool onlyForCurrentWeekday )
 {
     if ( !modelIndex.isValid() ) {
         kDebug() << "!modelIndex.isValid()";
@@ -2869,9 +2856,6 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
 
     // Autogenerate an alarm that only matches the given departure
     AlarmSettings alarm;
-    alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
-                        "%1 is the departure time, %2 is the target.",
-                        "At %1 to %2", departureTime, info.target() );
     alarm.autoGenerated = true;
     alarm.affectedStops << m_settings.currentStopSettingsIndex;
     alarm.filter.append( Constraint(FilterByDeparture, FilterEquals, info.departure()) );
@@ -2879,6 +2863,18 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
     alarm.filter.append( Constraint(FilterByVehicleType, FilterIsOneOf,
                                     QVariantList() << info.vehicleType()) );
     alarm.filter.append( Constraint(FilterByTarget, FilterEquals, info.target()) );
+    if ( onlyForCurrentWeekday ) {
+        alarm.filter.append( Constraint(FilterByDayOfWeek, FilterIsOneOf,
+                                        QVariantList() << QDate::currentDate().dayOfWeek()) );
+        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
+                            "%1 is the departure time, %2 is a day of the week.",
+                            "One-Time Alarm (%1, every %2)", departureTime,
+                            QDate::longDayName(QDate::currentDate().dayOfWeek()) );
+    } else {
+        alarm.name = i18nc( "@info/plain Name of new automatically generated alarm filters. "
+                            "%1 is the departure time, %2 is the target.",
+                            "One-Time Alarm (%1 to %2)", departureTime, info.target() );
+    }
 
     // Append new alarm in a copy of the settings. Then write the new settings.
     Settings settings = m_settings;
@@ -2889,30 +2885,29 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
     int index = settings.alarmSettings.count() - 1;
     info.matchedAlarms() << index;
     item->setDepartureInfo( info );
-
-    createPopupIcon();
 }
 
-void PublicTransport::setAlarmForDeparture()
+void PublicTransport::createAlarmForDeparture()
 {
-    createAlarmSettingsForDeparture( m_model->index(m_clickedItemIndex.row(), 2) );
+    createAlarmSettingsForDeparture( m_clickedItemIndex );
+    alarmCreated();
+}
+
+void PublicTransport::createAlarmForDepartureCurrentWeekDay()
+{
+    createAlarmSettingsForDeparture( m_clickedItemIndex, true );
+    alarmCreated();
+}
+
+void PublicTransport::alarmCreated()
+{
+    updatePopupIcon(); // TEST needed or already done in writeSettings?
 
     // Animate popup icon to show the alarm departure (at index -1)
-    if ( m_popupIconTransitionAnimation ) {
-        m_popupIconTransitionAnimation->stop();
-        m_popupIconTransitionAnimation->setStartValue( m_popupIconDepartureIndex );
-    } else {
-        m_popupIconTransitionAnimation = new QPropertyAnimation( this, "PopupIconDepartureIndex", this );
-        m_popupIconTransitionAnimation->setStartValue( m_startPopupIconDepartureIndex );
-        connect( m_popupIconTransitionAnimation, SIGNAL(finished()),
-                 this, SLOT(popupIconTransitionAnimationFinished()) );
-    }
-
-    m_popupIconTransitionAnimation->setEndValue( -1 );
-    m_popupIconTransitionAnimation->start();
+    m_popupIcon->animateToAlarm();
 }
 
-void PublicTransport::alarmFired( DepartureItem* item )
+void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alarmSettings )
 {
     const DepartureInfo *departureInfo = item->departureInfo();
     QString sLine = departureInfo->lineString();
@@ -2925,50 +2920,55 @@ void PublicTransport::alarmFired( DepartureItem* item )
         // Departure is in the future
         if ( departureInfo->vehicleType() == Unknown ) {
             // Vehicle type is unknown
-            message = i18ncp( "@info/plain", "Line %2 to '%3' departs in %1 minute at %4",
-                              "Line %2 to '%3' departs in %1 minutes at %4",
-                              minsToDeparture, sLine, sTarget, predictedDeparture.toString("hh:mm") );
+            message = i18ncp( "@info/plain %5: Name of the Alarm",
+                              "%5: Line %2 to '%3' departs in %1 minute at %4",
+                              "%5: Line %2 to '%3' departs in %1 minutes at %4",
+                              minsToDeparture, sLine, sTarget,
+                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
         } else {
             // Vehicle type is known
-            message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle "
-                              "type name (e.g. tram, subway)",
-                              "The %4 %2 to '%3' departs in %1 minute at %5",
-                              "The %4 %2 to '%3' departs in %1 minutes at %5",
+            message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle type name "
+                              "(e.g. tram, subway), %6: Name of the Alarm",
+                              "%6: The %4 %2 to '%3' departs in %1 minute at %5",
+                              "%6: The %4 %2 to '%3' departs in %1 minutes at %5",
                               minsToDeparture, sLine, sTarget,
                               Global::vehicleTypeToString(departureInfo->vehicleType()),
-                              predictedDeparture.toString("hh:mm") );
+                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
         }
     } else if ( minsToDeparture < 0 ) {
         // Has already departed
         if ( departureInfo->vehicleType() == Unknown ) {
             // Vehicle type is unknown
-            message = i18ncp( "@info/plain", "Line %2 to '%3' has departed %1 minute ago at %4",
-                              "Line %2 to '%3' has departed %1 minutes ago at %4",
+            message = i18ncp( "@info/plain %5: Name of the Alarm",
+                              "%5: Line %2 to '%3' has departed %1 minute ago at %4",
+                              "%5: Line %2 to '%3' has departed %1 minutes ago at %4",
                               -minsToDeparture, sLine, sTarget,
-                              predictedDeparture.toString("hh:mm") );
+                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
         } else {
             // Vehicle type is known
-            message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle "
-                              "type name (e.g. tram, subway)",
-                              "The %4 %2 to '%3' has departed %1 minute ago at %5",
-                              "The %4 %2 to %3 has departed %1 minutes ago at %5",
+            message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle type name "
+                              "(e.g. tram, subway), %6: Name of the Alarm",
+                              "%6: The %4 %2 to '%3' has departed %1 minute ago at %5",
+                              "%6: The %4 %2 to %3 has departed %1 minutes ago at %5",
                               -minsToDeparture, sLine, sTarget,
                               Global::vehicleTypeToString(departureInfo->vehicleType()),
-                              predictedDeparture.toString("hh:mm") );
+                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
         }
     } else {
         // Departs now
         if ( departureInfo->vehicleType() == Unknown ) {
             // Vehicle type is unknown
-            message = i18nc( "@info/plain", "Line %1 to '%2' departs now at %3",
-                              sLine, sTarget, predictedDeparture.toString( "hh:mm" ) );
+            message = i18nc( "@info/plain %4: Name of the Alarm",
+                             "%4: Line %1 to '%2' departs now at %3",
+                             sLine, sTarget, predictedDeparture.toString("hh:mm"),
+                             alarmSettings.name );
         } else {
             // Vehicle type is known
-            message = i18nc( "@info/plain %1: Line string (e.g. 'U3'), %3: Vehicle "
-                              "type name (e.g. tram, subway)",
-                              "The %3 %1 to '%2' departs now at %4", sLine, sTarget,
-                              Global::vehicleTypeToString(departureInfo->vehicleType()),
-                              predictedDeparture.toString("hh:mm") );
+            message = i18nc( "@info/plain %1: Line string (e.g. 'U3'), %3: Vehicle type name "
+                             "(e.g. tram, subway), %5: Name of the Alarm",
+                             "%5: The %3 %1 to '%2' departs now at %4", sLine, sTarget,
+                             Global::vehicleTypeToString(departureInfo->vehicleType()),
+                             predictedDeparture.toString("hh:mm"), alarmSettings.name );
         }
     }
 
@@ -2988,6 +2988,7 @@ void PublicTransport::removeAlarms( const AlarmSettingsList &newAlarmSettings,
 
 QString PublicTransport::infoText()
 {
+    // Get information about the current service provider from the data engine
     QVariantHash data = currentServiceProviderData();
     QString shortUrl = data.isEmpty() ? "-" : data["shortUrl"].toString();
     QString url = data.isEmpty() ? "-" : data["url"].toString();
@@ -3007,26 +3008,31 @@ QString PublicTransport::infoText()
     int width2 = fm.width( textNoHtml2 );
     int width = width1 + fm.width( ", " ) + width2;
     if ( width > m_graphicsWidget->size().width() ) {
-        m_graphicsWidget->setMinimumWidth( /*qMax(150,*/ qMax(width1, width2)/*)*/ );
+        // Break info text into two lines
+        m_graphicsWidget->setMinimumWidth( qMax(width1, width2) );
         return QString( "<nobr>%1: %2<br>%3: <a href='%4'>%5</a><nobr>" )
-            .arg( i18nc( "@info/plain", "last update" ), sLastUpdate,
-                    i18nc( "@info/plain", "data by" ), url, shortUrl );
+            .arg( i18nc("@info/plain", "last update"), sLastUpdate,
+                  i18nc("@info/plain", "data by"), url, shortUrl );
     } else {
+        // Use a single line for the info text
         return QString( "<nobr>%1: %2, %3: <a href='%4'>%5</a><nobr>" )
-            .arg( i18nc( "@info/plain", "last update" ), sLastUpdate,
-                    i18nc( "@info/plain", "data by" ), url, shortUrl );
+            .arg( i18nc("@info/plain", "last update"), sLastUpdate,
+                  i18nc("@info/plain", "data by"), url, shortUrl );
     }
 }
 
 QString PublicTransport::courtesyToolTip() const
 {
+    // Get courtesy information for the current service provider from the data engine
     QVariantHash data = currentServiceProviderData();
     QString credit, url;
     if ( !data.isEmpty() ) {
         credit = data["credit"].toString();
         url = data["url"].toString();
     }
+
     if ( credit.isEmpty() || url.isEmpty() ) {
+        // No courtesy information given by the data engine
         return QString();
     } else {
         return i18nc( "@info/plain", "By courtesy of %1 (%2)", credit, url );
@@ -3038,8 +3044,10 @@ void PublicTransport::fillModelJourney( const QList< JourneyInfo > &journeys )
     foreach( const JourneyInfo &journeyInfo, journeys ) {
         int row = m_modelJourneys->indexFromInfo( journeyInfo ).row();
         if ( row == -1 ) {
+            // Journey wasn't in the model
             m_modelJourneys->addItem( journeyInfo );
         } else {
+            // Update associated item in the model
             JourneyItem *item = static_cast<JourneyItem*>( m_modelJourneys->itemFromInfo( journeyInfo ) );
             m_modelJourneys->updateItem( item, journeyInfo );
         }
@@ -3080,7 +3088,7 @@ void GraphicsPixmapWidget::paint( QPainter* painter,
 
 struct RoutePartCount {
     QString lastCommonStop;
-    int usedCount; // used by X transport lines (each line and target counts as one)
+    int usedCount; // used by [usedCount] transport lines (each line and target counts as one)
 };
 
 class RoutePartCountGreaterThan

@@ -18,7 +18,7 @@
 */
 
 /** @file
- * @brief This file contains a models which hold information about public transport journeys/departures/arrivals.
+ * @brief This file contains models which hold information about public transport journeys/departures/arrivals.
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef DEPARTUREMODEL_HEADER
@@ -800,7 +800,7 @@ public:
 
 signals:
     /** @brief The alarm for @p item has been fired. */
-    void alarmFired( DepartureItem *item );
+    void alarmFired( DepartureItem *item, const AlarmSettings &alarmSettings );
 
     void updateAlarms( const AlarmSettingsList &newAlarmSettings, const QList<int> &removedAlarms );
 

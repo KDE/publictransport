@@ -14,15 +14,16 @@ include_directories(
 set( publictransport_SRCS
     publictransport.cpp
     titlewidget.cpp
+    popupicon.cpp
     departureprocessor.cpp
     departuremodel.cpp
+    departurepainter.cpp
     journeysearchsuggestionwidget.cpp
     journeysearchparser.cpp
     journeysearchlineedit.cpp
     overlaywidget.cpp
     global.cpp
     settings.cpp
-    departurepainter.cpp
     datasourcetester.cpp
     timetablewidget.cpp
     routegraphicsitem.cpp

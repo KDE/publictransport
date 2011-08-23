@@ -119,6 +119,7 @@ public:
 	{
 		osmFinished = false;
 		resultLimit = _resultLimit;
+        accuracy = 0;
 	};
 
 	bool validateNextStop() {

@@ -21,12 +21,15 @@
 #include "routegraphicsitem.h"
 #include "departuremodel.h"
 
-#include <KColorScheme>
-#include <KColorUtils>
 #include <Plasma/PaintUtils>
 #include <Plasma/Svg>
 #include <Plasma/Animator>
 #include <Plasma/Animation>
+#include <Plasma/DataEngineManager>
+
+#include <KColorScheme>
+#include <KColorUtils>
+#include <KMenu>
 
 #include <QGraphicsLinearLayout>
 #include <QModelIndex>
@@ -38,9 +41,8 @@
 #include <QGraphicsScene>
 #include <QPropertyAnimation>
 #include <qmath.h>
-#include <KMenu>
 #include <QStyleOption>
-#include <Plasma/DataEngineManager>
+#include <KPixmapCache>
 
 PublicTransportGraphicsItem::PublicTransportGraphicsItem(
         PublicTransportWidget* publicTransportWidget, QGraphicsItem* parent,
@@ -77,6 +79,9 @@ void JourneyGraphicsItem::updateSettings()
 void PublicTransportGraphicsItem::setExpanded( bool expand )
 {
     m_expanded = expand;
+    if ( expand ) {
+        routeItem()->setVisible( true );
+    }
 
     if ( m_resizeAnimation ) {
         m_resizeAnimation->stop();
@@ -94,6 +99,7 @@ void PublicTransportGraphicsItem::setExpanded( bool expand )
 
 void PublicTransportGraphicsItem::resizeAnimationFinished()
 {
+    routeItem()->setVisible( m_expanded );
     delete m_resizeAnimation;
     m_resizeAnimation = NULL;
 }
@@ -182,7 +188,7 @@ int PublicTransportGraphicsItem::extraIconSize() const
 }
 
 QTextDocument* TextDocumentHelper::createTextDocument(const QString& html, const QSizeF& size,
-    const QTextOption &textOption, const QFont &font )
+    const QTextOption &textOption, const QFont &font  )
 {
     QTextDocument *textDocument = new QTextDocument;
     textDocument->setDefaultFont( font );
@@ -234,6 +240,9 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
 
             if ( drawHalos ) {
                 QSize textSize = textLine.naturalTextRect().size().toSize();
+                if ( textSize.width() > textRect.width() ) {
+                    textSize.setWidth( textRect.width() );
+                }
                 QRect haloRect = QStyle::visualRect( textLayout->textOption().textDirection(),
                         textRect, QRect((textLine.position() + position).toPoint() +
                         (document->defaultTextOption().alignment().testFlag(Qt::AlignRight)
@@ -327,9 +336,9 @@ void DepartureGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event )
 
     if ( m_routeItem ) {
         QRectF _infoRect = infoRect( rect(), 0 );
-        m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
-        m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
-                             ROUTE_ITEM_HEIGHT * m_parent->zoomFactor() );
+        m_routeItem->setGeometry( _infoRect.left(), rect().top() + unexpandedHeight() + padding(),
+                                  rect().width() - padding() - _infoRect.left(),
+                                  ROUTE_ITEM_HEIGHT * m_parent->zoomFactor() );
     }
 }
 
@@ -430,13 +439,13 @@ DepartureGraphicsItem::DepartureGraphicsItem( PublicTransportWidget* publicTrans
         QGraphicsItem* parent,
         StopAction *copyStopToClipboardAction, StopAction *showInMapAction,
         StopAction *showDeparturesAction, StopAction *highlightStopAction,
-        StopAction *newFilterViaStopAction/*,
-        QAction *toggleAlarmAction*/ )
+        StopAction *newFilterViaStopAction, KPixmapCache *pixmapCache )
         : PublicTransportGraphicsItem( publicTransportWidget, parent, copyStopToClipboardAction,
                                        showInMapAction ),
-        m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0), m_leavingAnimation(0),
-        m_showDeparturesAction(showDeparturesAction), m_highlightStopAction(highlightStopAction),
-        m_newFilterViaStopAction(newFilterViaStopAction)
+        m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0), m_highlighted(false),
+        m_leavingAnimation(0), m_showDeparturesAction(showDeparturesAction),
+        m_highlightStopAction(highlightStopAction), m_newFilterViaStopAction(newFilterViaStopAction),
+        m_pixmapCache(pixmapCache)
 {
     m_leavingStep = 0.0;
 }
@@ -612,6 +621,8 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
             m_routeItem = new RouteGraphicsItem( this, item, m_copyStopToClipboardAction,
                     m_showInMapAction, m_showDeparturesAction, m_highlightStopAction,
                     m_newFilterViaStopAction );
+            m_routeItem->setVisible( false );
+
             QRectF _infoRect = infoRect( rect(), 0 );
             m_routeItem->setZoomFactor( m_parent->zoomFactor() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
@@ -639,7 +650,18 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
 
 qreal DepartureGraphicsItem::timeColumnWidth() const
 {
-    return TextDocumentHelper::textDocumentWidth( m_timeTextDocument );
+    qreal width = TextDocumentHelper::textDocumentWidth( m_timeTextDocument );
+
+    QRectF rect = contentsRect();
+    if ( qobject_cast<TimetableWidget*>(m_parent)->isTargetHidden() ) {
+        if ( width > rect.width() * 3 / 4 - padding() ) {
+            width = rect.width() * 3 / 4 - padding();
+        }
+    } else if ( width > rect.width() / 2 - padding() ) {
+        width = rect.width() / 2 - padding();
+    }
+
+    return width;
 }
 
 void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -652,14 +674,17 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
     QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
 
-    // Draw journey rating background:
+    QRect pixmapRect( 0, 0, rect.width(), rect.height() );
+    QPixmap pixmap( pixmapRect.size());
+    QColor backgroundColor = Qt::transparent;
+
+    // Use journey rating background:
     //   green for relatively short duration, less changes;
     //   red for relatively long duration, more changes (controlled by the model).
     QVariant vr = index().data( JourneyRatingRole );
     if ( vr.isValid() ) {
         qreal rating = vr.toReal();
-        QColor ratingColor;
-        ratingColor = KColorUtils::mix(
+        QColor ratingColor = KColorUtils::mix(
                 KColorScheme(QPalette::Active).background( KColorScheme::PositiveBackground ).color(),
                 KColorScheme(QPalette::Active).background( KColorScheme::NegativeBackground ).color(),
                 rating );
@@ -673,50 +698,31 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
         }
 
         if ( drawRatingBackground ) {
-            QLinearGradient bgGradient( 0, 0, 1, 0 );
-            bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-            bgGradient.setColorAt( 0, Qt::transparent );
-            bgGradient.setColorAt( 0.1, ratingColor );
-            bgGradient.setColorAt( 0.9, ratingColor );
-            bgGradient.setColorAt( 1, Qt::transparent );
-            painter->fillRect( rect, QBrush(bgGradient) );
+            backgroundColor = ratingColor;
         }
     } else if ( index().row() % 2 == 1 ) {
-        // Draw alternate background (if journey ratings aren't available)
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, alternateBackgroundColor );
-        bgGradient.setColorAt( 0.6, alternateBackgroundColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
-
-        painter->fillRect( rect, QBrush(bgGradient) );
+        // Use alternate background (if journey ratings aren't available)
+        backgroundColor = alternateBackgroundColor;
     }
+
+    // Fill the pixmap with the mixed background color
+    pixmap.fill( backgroundColor );
 
     // Draw special background for departures with an alarm
+    QPainter p( &pixmap );
     if ( index().data(DrawAlarmBackgroundRole).toBool() ) {
-//      qreal bias = index().data( AlarmColorIntensityRole ).toReal();
-        QColor alarmColor( 180, 0, 0, 128 );
-
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, alarmColor );
-        bgGradient.setColorAt( 0.6, alarmColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
-
-        painter->fillRect( rect, QBrush(bgGradient) );
+        drawAlarmBackground( &p, pixmapRect );
     }
-    
+
     // Draw a line at the bottom of this TimetableItem
-    QLinearGradient borderGradient( 0, 0, 1, 0 );
-    borderGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-    borderGradient.setColorAt( 0, Qt::transparent );
-    borderGradient.setColorAt( 0.4, borderColor );
-    borderGradient.setColorAt( 0.6, borderColor );
-    borderGradient.setColorAt( 1, Qt::transparent );
-    painter->fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()),
-                       QBrush(borderGradient) );
+    p.setPen( borderColor );
+    p.drawLine( pixmapRect.bottomLeft(), pixmapRect.bottomRight() );
+
+    // Fade out to the left and right
+    drawFadeOutLeftAndRight( &p, pixmapRect );
+    p.end();
+
+    painter->drawPixmap( rect.toRect(), pixmap );
 }
 
 void JourneyGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -894,62 +900,79 @@ void DepartureGraphicsItem::paintBackground( QPainter* painter,
         const QStyleOptionGraphicsItem* option, const QRectF& rect )
 {
     Q_UNUSED( option );
-    QColor _backgroundColor = backgroundColor();
-    QColor alternateBackgroundColor = KColorScheme( QPalette::Active, KColorScheme::View )
-            .background( KColorScheme::AlternateBackground ).color();
-    alternateBackgroundColor.setAlphaF( 0.4 );
     QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
 
-    // Draw special background for departures in color groups
-    QColor bgColor = index().data(Qt::BackgroundColorRole).value<QColor>();
-    if ( bgColor != Qt::transparent ) {
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, bgColor );
-        bgGradient.setColorAt( 0.6, bgColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
+    QRect pixmapRect( 0, 0, rect.width(), rect.height() );
+    QPixmap pixmap( pixmapRect.size() );
 
-        painter->fillRect( rect, QBrush(bgGradient) );
-    } else if ( index().row() % 2 == 1 ) {
-        // Draw alternate background (if departure groups are disabled)
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, alternateBackgroundColor );
-        bgGradient.setColorAt( 0.6, alternateBackgroundColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
-
-        painter->fillRect( rect, QBrush(bgGradient) );
+    // Get the background color for departures in color groups / alternative background colors
+    QColor backgroundColor = index().data( Qt::BackgroundColorRole ).value<QColor>();
+    if ( backgroundColor == Qt::transparent && index().row() % 2 == 1 ) {
+        QColor alternateBackgroundColor = KColorScheme( QPalette::Active, KColorScheme::View )
+                .background( KColorScheme::AlternateBackground ).color();
+        backgroundColor =  KColorUtils::mix( backgroundColor, alternateBackgroundColor, 0.4 );
     }
 
+    // Fill the pixmap with the mixed background color
+    pixmap.fill( backgroundColor );
+
     // Draw special background for departures with an alarm
+    QPainter p( &pixmap );
     if ( index().data(DrawAlarmBackgroundRole).toBool() ) {
 //      qreal bias = index().data( AlarmColorIntensityRole ).toReal();
-        QColor alarmColor( 180, 0, 0, 128 );
-
-        QLinearGradient bgGradient( 0, 0, 1, 0 );
-        bgGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-        bgGradient.setColorAt( 0, Qt::transparent );
-        bgGradient.setColorAt( 0.4, alarmColor );
-        bgGradient.setColorAt( 0.6, alarmColor );
-        bgGradient.setColorAt( 1, Qt::transparent );
-
-        painter->fillRect( rect, QBrush(bgGradient) );
+        drawAlarmBackground( &p, pixmapRect );
     }
 
     // Draw a line at the bottom of this TimetableItem
-    QLinearGradient borderGradient( 0, 0, 1, 0 );
-    borderGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
-    borderGradient.setColorAt( 0, Qt::transparent );
-    borderGradient.setColorAt( 0.4, borderColor );
-    borderGradient.setColorAt( 0.6, borderColor );
-    borderGradient.setColorAt( 1, Qt::transparent );
-//     painter->fillRect( QRectF(rect.topLeft() + QPointF(0, 1), rect.topRight()),
-//                        QBrush(borderGradient) );
-    painter->fillRect( QRectF(rect.bottomLeft() - QPointF(0, 1), rect.bottomRight()),
-                       QBrush(borderGradient) );
+    p.setPen( borderColor );
+    p.drawLine( pixmapRect.bottomLeft(), pixmapRect.bottomRight() );
+
+    // Fade out to the left and right
+    drawFadeOutLeftAndRight( &p, pixmapRect );
+    p.end();
+
+    painter->drawPixmap( rect.toRect(), pixmap );
+}
+
+void PublicTransportGraphicsItem::drawAlarmBackground( QPainter *painter, const QRect &rect )
+{
+    // alarmColor is oxygen color "brick red5", with an alpha value added
+    const QColor alarmColor( 191, 3, 3, 180 );
+    // Draw the alarm gradients over the first and last third vertically
+    const int alarmHeight = unexpandedHeight() / 3;
+
+    // Draw the gradient at the top
+    QLinearGradient alarmGradientTop( 0, 0, 0, alarmHeight );
+    alarmGradientTop.setColorAt( 0, alarmColor );
+    alarmGradientTop.setColorAt( 1, Qt::transparent );
+    painter->fillRect( QRect(0, 0, rect.width(), alarmHeight), alarmGradientTop );
+
+    // Draw the gradient at the bottom
+    QLinearGradient alarmGradientBottom( 0, rect.height() - alarmHeight, 0, rect.height() );
+    alarmGradientBottom.setColorAt( 0, Qt::transparent );
+    alarmGradientBottom.setColorAt( 1, alarmColor );
+    painter->fillRect( QRect(0, rect.height() - alarmHeight, rect.width(), alarmHeight),
+                       alarmGradientBottom );
+}
+
+void PublicTransportGraphicsItem::drawFadeOutLeftAndRight( QPainter* painter, const QRect& rect,
+                                                           int fadeWidth )
+{
+    painter->setCompositionMode( QPainter::CompositionMode_DestinationIn );
+    QLinearGradient alphaGradient( 0, 0, 1, 0 );
+    alphaGradient.setCoordinateMode( QGradient::ObjectBoundingMode );
+    alphaGradient.setColorAt( 0, Qt::transparent );
+    alphaGradient.setColorAt( 1, Qt::black );
+    // Fade out on the left
+    painter->fillRect( QRect(rect.left(), rect.top(), fadeWidth, rect.height()), alphaGradient );
+
+    alphaGradient.setColorAt( 0, Qt::black );
+    alphaGradient.setColorAt( 1, Qt::transparent );
+    // Fade out on the right (the +1 is to be sure, to not have a 1 pixel line on the right, which
+    // isn't made transparent at all)
+    painter->fillRect( QRect(rect.right() - fadeWidth, rect.top(), fadeWidth + 1, rect.height()),
+                       alphaGradient );
 }
 
 void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -958,10 +981,10 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
     QColor _backgroundColor = backgroundColor(); // TODO: store these colors in option->palette?
     QColor _textColor = textColor();
     QFontMetrics fm( font() );
-    const qreal timeWidth = timeColumnWidth();
     const QRectF _vehicleRect = vehicleRect( rect );
-    const QRectF _infoRect = infoRect( rect, timeWidth );
     const QRectF _timeRect = timeRect( rect );
+    const qreal timeWidth = timeColumnWidth();
+    const QRectF _infoRect = infoRect( rect, timeWidth );
 
     int shadowWidth = 4;
     QSizeF iconSize( _vehicleRect.width() - 2 * shadowWidth, _vehicleRect.height() - 2 * shadowWidth );
@@ -994,35 +1017,45 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
 // 		vehicleKey.append( "_empty" );
 // 	}
 
-    if ( !m_parent->svg()->hasElement(vehicleKey) ) {
-        kDebug() << "SVG element" << vehicleKey << "not found";
-    } else {
-        // Draw SVG vehicle element into pixmap
-        QPixmap pixmap( (int)_vehicleRect.width(), (int)_vehicleRect.height() );
-        pixmap.fill( Qt::transparent );
-        QPainter p( &pixmap );
-        m_parent->svg()->resize( iconSize );
-        m_parent->svg()->paint( &p, shadowWidth, shadowWidth, vehicleKey );
+    const QString vehicleCacheKey
+            = vehicleKey + QString("%1%2").arg( iconSize.width() ).arg( iconSize.height() );
+    QPixmap vehiclePixmap;
+    if ( !m_pixmapCache || !m_pixmapCache->find(vehicleCacheKey, vehiclePixmap) ) {
+        if ( !m_parent->svg()->hasElement(vehicleKey) ) {
+            kDebug() << "SVG element" << vehicleKey << "not found";
+        } else {
+            // Draw SVG vehicle element into pixmap
+            QPixmap pixmap( (int)_vehicleRect.width(), (int)_vehicleRect.height() );
+            pixmap.fill( Qt::transparent );
+            QPainter p( &pixmap );
+            m_parent->svg()->resize( iconSize );
+            m_parent->svg()->paint( &p, shadowWidth, shadowWidth, vehicleKey );
 
-        QPixmap fadePixmap( pixmap.size() );
-        fadePixmap.fill( Qt::transparent );
-        QPainter p2( &fadePixmap );
+            vehiclePixmap = QPixmap( pixmap.size() );
+            vehiclePixmap.fill( Qt::transparent );
+            QPainter p2( &vehiclePixmap );
 
-        // Create shadow for the SVG element and draw the SVG and it's shadow.
-        QImage shadow = pixmap.toImage();
-        Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
-        p2.drawImage( QPoint(1, 2), shadow );
-        p2.drawPixmap( QPoint(0, 0), pixmap );
+            // Create shadow for the SVG element and draw the SVG and it's shadow.
+            QImage shadow = pixmap.toImage();
+            Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
+            p2.drawImage( QPoint(1, 2), shadow );
+            p2.drawPixmap( QPoint(0, 0), pixmap );
 
-        // Make startTransitionPixmap more transparent (for fading)
-        p2.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-        QLinearGradient gradient( pixmap.width() / 4, 0, pixmap.width(), 0 );
-        gradient.setColorAt( 0.0, Qt::black );
-        gradient.setColorAt( 1.0, Qt::transparent );
-        p2.fillRect( fadePixmap.rect(), QBrush(gradient) );
-        p2.end();
+            // Make startTransitionPixmap more transparent (for fading)
+            p2.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+            QLinearGradient gradient( pixmap.width() / 4, 0, pixmap.width(), 0 );
+            gradient.setColorAt( 0.0, Qt::black );
+            gradient.setColorAt( 1.0, Qt::transparent );
+            p2.fillRect( vehiclePixmap.rect(), QBrush(gradient) );
+            p2.end();
 
-        painter->drawPixmap( _vehicleRect.topLeft(), fadePixmap );
+            if ( m_pixmapCache ) {
+                m_pixmapCache->insert( vehicleCacheKey, vehiclePixmap );
+            }
+        }
+    }
+    if ( !vehicleKey.isEmpty() ) {
+        painter->drawPixmap( _vehicleRect.topLeft(), vehiclePixmap );
     }
 
     // Draw text
@@ -1038,19 +1071,23 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
                 .contains( model->highlightedStop(), Qt::CaseInsensitive );
     }
 
-    QFont _font = font();
-    if ( manuallyHighlighted ) {
-        _font.setItalic( true );
+    if ( m_highlighted != manuallyHighlighted ) {
+        kDebug() << "Highlighting changed from" << m_highlighted << "to" << manuallyHighlighted;
+        QFont _font = font();
+        if ( manuallyHighlighted ) {
+            _font.setItalic( true );
+        }
+        m_infoTextDocument->setDefaultFont( _font );
+        m_timeTextDocument->setDefaultFont( _font );
+        m_highlighted = manuallyHighlighted;
     }
-    m_infoTextDocument->setDefaultFont( _font );
-    m_timeTextDocument->setDefaultFont( _font );
 
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
-                                          _infoRect.toRect(), drawHalos );
+            _infoRect.toRect(), drawHalos );
     TextDocumentHelper::drawTextDocument( painter, option, m_timeTextDocument,
-                                          _timeRect.toRect(), drawHalos );
+            _timeRect.toRect(), drawHalos );
 
-    // Draw extra icon(s)
+    // Draw extra icon(s), eg. an alarm icon or an indicator for additional news for a journey
     QRectF _extraIconRect;
     if ( hasExtraIcon() ) {
         QModelIndex modelIndex = index().model()->index( index().row(), ColumnTarget );
@@ -1344,7 +1381,7 @@ JourneyTimetableWidget::JourneyTimetableWidget( QGraphicsItem* parent )
 
 TimetableWidget::TimetableWidget( QGraphicsItem* parent )
     : PublicTransportWidget(parent), m_showDeparturesAction(0), m_highlightStopAction(0),
-      m_newFilterViaStopAction(0)
+      m_newFilterViaStopAction(0), m_pixmapCache(new KPixmapCache("PublicTransportVehicleIcons"))
 {
     m_targetHidden = false;
     setupActions();
@@ -1461,6 +1498,9 @@ void PublicTransportWidget::modelReset()
 
 void TimetableWidget::dataChanged( const QModelIndex& topLeft, const QModelIndex& bottomRight )
 {
+    if ( !topLeft.isValid() || !bottomRight.isValid() ) {
+        return;
+    }
     for ( int row = topLeft.row(); row <= bottomRight.row() && row < m_model->rowCount(); ++row ) {
         departureItem( row )->updateData( static_cast<DepartureItem*>(m_model->item(row)), true );
     }
@@ -1468,6 +1508,9 @@ void TimetableWidget::dataChanged( const QModelIndex& topLeft, const QModelIndex
 
 void JourneyTimetableWidget::dataChanged( const QModelIndex& topLeft, const QModelIndex& bottomRight )
 {
+    if ( !topLeft.isValid() || !bottomRight.isValid() ) {
+        return;
+    }
     for ( int row = topLeft.row(); row <= bottomRight.row() && row < m_model->rowCount(); ++row ) {
         journeyItem( row )->updateData( static_cast<JourneyItem*>(m_model->item(row)), true );
     }
@@ -1478,7 +1521,7 @@ void PublicTransportWidget::layoutChanged()
 
 }
 
-void JourneyTimetableWidget::rowsInserted(const QModelIndex& parent, int first, int last)
+void JourneyTimetableWidget::rowsInserted( const QModelIndex& parent, int first, int last )
 {
     if ( parent.isValid() ) {
         kDebug() << "Item with parent" << parent << "Inserted" << first << last;
@@ -1520,7 +1563,7 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
     for ( int row = first; row <= last; ++row ) {
         DepartureGraphicsItem *item = new DepartureGraphicsItem( this, widget(),
                 m_copyStopToClipboardAction, m_showInMapAction, m_showDeparturesAction,
-                m_highlightStopAction, m_newFilterViaStopAction );
+                m_highlightStopAction, m_newFilterViaStopAction, m_pixmapCache );
         item->updateData( static_cast<DepartureItem*>(m_model->item(row)) );
         m_items.insert( row, item );
 
@@ -1637,8 +1680,20 @@ QRectF DepartureGraphicsItem::extraIconRect(const QRectF& rect, qreal timeColumn
 
 QRectF DepartureGraphicsItem::timeRect(const QRectF& rect) const {
     if ( qobject_cast<TimetableWidget*>(m_parent)->isTargetHidden() ) {
-        return QRectF( rect.width() / 4, rect.top(), rect.width() * 3 / 4 - padding(), unexpandedHeight() );
+        return QRectF( rect.width() / 4, rect.top(),
+                       rect.width() * 3 / 4 - padding(), unexpandedHeight() );
     } else {
-        return QRectF( rect.width() / 2, rect.top(), rect.width() / 2 - padding(), unexpandedHeight() );
+        return QRectF( rect.width() / 2, rect.top(),
+                       rect.width() / 2 - padding(), unexpandedHeight() );
     }
+}
+
+QGraphicsWidget* DepartureGraphicsItem::routeItem() const
+{
+    return m_routeItem;
+}
+
+QGraphicsWidget* JourneyGraphicsItem::routeItem() const
+{
+    return m_routeItem;
 }
