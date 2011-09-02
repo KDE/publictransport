@@ -52,65 +52,83 @@ void JourneySearchParserTest::cleanup()
 void JourneySearchParserTest::journeySearchParserTest_data()
 {
     QTest::addColumn<QString>("search");
+    QTest::addColumn<QString>("corrected");
+    QTest::addColumn<QString>("stopName");
     QTest::addColumn<AnalyzerResult>("expectedLexicalState");
     QTest::addColumn<AnalyzerResult>("expectedSyntacticalState");
     QTest::addColumn<AnalyzerResult>("expectedContextualState");
 
     // Input strings that should be accepted
     QTest::newRow("Stop name only")
-            << "Bremen Hbf"
+            << "Bremen Hbf" << "Bremen Hbf" << "Bremen Hbf"
             << Accepted << Accepted << Accepted;
     QTest::newRow("Stop name only (single word)")
-            << "Bremen"
+            << "Bremen" << "Bremen" << "Bremen"
             << Accepted << Accepted << Accepted;
     QTest::newRow("Stop name only in quotation marks")
-            << "\"Bremen Hbf\""
+            << "\"Bremen Hbf\"" << "\"Bremen Hbf\"" << "Bremen Hbf"
             << Accepted << Accepted << Accepted;
     QTest::newRow("Stop name, keyword 'at'")
-            << "To Bremen Hbf at 15:20"
+            << "To Bremen Hbf at 15:20" << "To Bremen Hbf at 15:20" << "Bremen Hbf"
             << Accepted << Accepted << Accepted;
     QTest::newRow("Stop name, keyword 'in'")
-            << "To Bremen Hbf in 37 minutes"
+            << "To Bremen Hbf in 37 minutes" << "To Bremen Hbf in 37 minutes" << "Bremen Hbf"
             << Accepted << Accepted << Accepted;
-    QTest::newRow("Stop name, keywords 'to, 'departing', 'tomorrow', 'at'")
+    QTest::newRow("Stop name, keywords 'to', 'departing', 'tomorrow', 'at'")
             << "To \"Bremen Hbf\" departing tomorrow at 18:00"
+            << "To \"Bremen Hbf\" departing tomorrow at 18:00" << "Bremen Hbf"
             << Accepted << Accepted << Accepted;
 
     // Input strings with errors
     QTest::newRow("Stop name, keyword 'at' and 'in'")
-            << "To Bremen Hbf at 17:45 in 37 minutes"
-            << Accepted << Accepted << AcceptedWithErrors;
+            << "To Bremen Hbf at 17:45 in 37 minutes" << "To Bremen Hbf at 17:45" << "Bremen Hbf"
+            << Accepted << AcceptedWithErrors << Accepted;
     QTest::newRow("Keyword 'at' used two times")
-            << "To Bremen Hbf at 17:45 at 19:45"
-            << Accepted << Accepted << AcceptedWithErrors;
+            << "To Bremen Hbf at 17:45 at 19:45" << "To Bremen Hbf at 17:45" << "Bremen Hbf"
+            << Accepted << AcceptedWithErrors << Accepted;
     QTest::newRow("Illegal characters")
-            << "To Bremen}§"
-            << Rejected << Rejected << Rejected;
+            << QString::fromUtf8("To Bremen}§") << "To Bremen" << "Bremen"
+            << AcceptedWithErrors << AcceptedWithErrors << Accepted;
     QTest::newRow("Missing closing quotation mark")
-            << "To \"Bremen Hbf"
-            << AcceptedWithErrors << AcceptedWithErrors << AcceptedWithErrors;
+            << "To \"Bremen Hbf" << "To Bremen Hbf" << "Bremen Hbf"
+            << AcceptedWithErrors << AcceptedWithErrors << Accepted;
     QTest::newRow("Illegal keyword order")
-            << "To \"Bremen Hbf\" tomorrow at 18:00 arriving"
-            << Accepted << Accepted << AcceptedWithErrors;
+            << "To \"Bremen Hbf\" tomorrow at 18:00 arriving" << "To \"Bremen Hbf\" arriving"
+             << "Bremen Hbf"
+            << Accepted << AcceptedWithErrors << Accepted;
     QTest::newRow("Illegal text after stop name")
-            << "To \"Bremen Hbf\" unknown_keyword"
-            << Accepted << AcceptedWithErrors << AcceptedWithErrors;
+            << "To \"Bremen Hbf\" unknown_keyword" << "To \"Bremen Hbf\"" << "Bremen Hbf"
+            << Accepted << AcceptedWithErrors << Accepted;
     QTest::newRow("Incomplete keyword")
-            << "Bremen Hbf at 15:"
-            << Accepted << Accepted << Accepted;
+            << "Bremen Hbf at 15:"<< "Bremen Hbf at 15" << "Bremen Hbf"
+            << Accepted << AcceptedWithErrors << Accepted;
 
     // Input strings with errors that should be corrected
     QTest::newRow("Stop name, correctable keyword 'at'")
-            << "To Bremen Hbf at"
+            << "To Bremen Hbf at" << "To Bremen Hbf" << "Bremen Hbf"
             << Accepted << Accepted << Accepted;
     QTest::newRow("Stop name, correctable keyword 'at' 2")
-            << "To Bremen Hbf at 18"
+            << "To Bremen Hbf at 18" << "To Bremen Hbf at 18" << "Bremen Hbf"
             << Accepted << Accepted << Accepted;
+
+    // Incomplete input strings
+    QTest::newRow("Empty input") << "" << "" << ""
+            << Accepted << Rejected << Rejected;
+    QTest::newRow("Incomplete 1") << "Fr" << "Fr" << "Fr"
+            << Accepted << Accepted << Accepted;
+    QTest::newRow("Incomplete 2") << "Fr Teststop" << "From Teststop" << "Teststop"
+            << Accepted << Accepted << Accepted;
+    QTest::newRow("Incomplete 3") << "Fr \"Teststop" << "From Teststop" << "Teststop"
+            << AcceptedWithErrors << AcceptedWithErrors << Accepted;
+    QTest::newRow("Incomplete 4") << "Fr \"Teststop depa" << "From Teststop departing" << "Teststop"
+            << AcceptedWithErrors << AcceptedWithErrors << Accepted;
 }
 
 void JourneySearchParserTest::journeySearchParserTest()
 {
     QFETCH(QString, search);
+    QFETCH(QString, corrected);
+    QFETCH(QString, stopName);
     QFETCH(AnalyzerResult, expectedLexicalState);
     QFETCH(AnalyzerResult, expectedSyntacticalState);
     QFETCH(AnalyzerResult, expectedContextualState);
@@ -124,32 +142,37 @@ void JourneySearchParserTest::journeySearchParserTest()
         return;
     }
 
-    SyntacticalAnalyzer syntax( m_keywords );
-    QLinkedList<MatchItem> matchItems = syntax.analyze( lexems );
-    QStringList matchString; foreach ( const MatchItem &matchItem, matchItems ) {
-            matchString << matchItem.input(); }
-    qDebug() << "Match List:" << matchString.join(", ") << syntax.result();
+    SyntacticalAnalyzer syntax( Syntax::journeySearchSyntaxItem(), m_keywords );
+    MatchItem matchItem = syntax.analyze( lexems );
+    qDebug() << "INPUT:" << matchItem.input();
+    qDebug() << "CORRECTED:" << matchItem.text();
+
     QCOMPARE( static_cast<int>(syntax.result()), static_cast<int>(expectedSyntacticalState) );
     if ( syntax.result() == Rejected ) {
         return;
     }
+    QCOMPARE( matchItem.text(), corrected );
 
     ContextualAnalyzer context;
-    QLinkedList<MatchItem> correctedMatchItems = context.analyze( matchItems );
+    QLinkedList<MatchItem> correctedMatchItems = context.analyze( QLinkedList<MatchItem>() << matchItem );
 //     QStringList syntaxString2; foreach ( const SyntaxItem &syntaxItem, correctedSyntaxItems ) {
 //             syntaxString2 << syntaxItem.text(); }
 //     qDebug() << "Context List:" << syntaxString2.join(", ") << context.result();
     Results results =
-            JourneySearchAnalyzer::resultsFromSyntaxItemList( correctedMatchItems, m_keywords );
-    qDebug() << "Output string" <<  results.outputString();
+            JourneySearchAnalyzer::resultsFromMatchItem( correctedMatchItems.first(), m_keywords );
+    qDebug() << "Output string" << results.outputString();
     QCOMPARE( static_cast<int>(context.result()), static_cast<int>(expectedContextualState) );
+    QCOMPARE( results.outputString(), corrected );
+    QCOMPARE( results.stopName(), stopName );
 }
 
-typedef Syntax M;
+// typedef Syntax S;
 void JourneySearchParserTest::abstractMatchTest()
 {
 //     TODO Macro "parser generator"
-    QString search( "fr \"Bremen Hbf\" taassdc departing at 33:45, 39.08." );
+//     QString search( "fr \"Bremen Hbf\" taassdc at 33:45, 39.08." );
+    QString search( QString::fromUtf8("To Bremen Hbf at pü 17:45 in 37 minutes p") );
+//     QString search( "Bremen Hbf" );
 //     QString search( "to xyz \"Bremen Hbf\" departing at 13:45, 09.08." );
 //     QString search( "to \"Bremen Hbf\" departing tomorrow at 13:45" );
     LexicalAnalyzer lex;
@@ -159,9 +182,9 @@ void JourneySearchParserTest::abstractMatchTest()
         return;
     }
 
-    SyntaxItemPointer journeySearchSyntaxItem = Syntax::journeySearchSyntaxItem();
 //     qDebug() << '\n' << journeySearchSyntaxItem->toString();
-    SyntacticalAnalyzer syntax( m_keywords );
+    SyntaxItemPointer syntaxItem = Syntax::journeySearchSyntaxItem();
+    SyntacticalAnalyzer syntax( syntaxItem, m_keywords );
 //     QBENCHMARK {
 //         bool result = syntax.matchItem( lexems, journeySearchSyntaxItem );
 //     }
@@ -179,32 +202,31 @@ void JourneySearchParserTest::abstractMatchTest()
 
 //     SyntaxItemPointer journeySearchSyntaxItem = Match::journeySearchSyntaxItem();
 //     SyntacticalAnalyzer syntax( m_keywords );
-    bool result = syntax.matchItem( lexems, journeySearchSyntaxItem );
 
-    qDebug() << "\nSYNTAX:" << journeySearchSyntaxItem->toString();
+    MatchItem matchItem = syntax.analyze( lexems );
+    qDebug() << "\nMATCHES:" << matchItem.toString() << syntax.result();
+    qDebug() << "INPUT:" << matchItem.input();
+    qDebug() << "CORRECTED:" << matchItem.text();
 
-//     bool result = syntax.matchItems( lexems, matchItems );
-    QLinkedList<MatchItem> matchItems = syntax.output();
-    QStringList matchStrings;
-    foreach ( const MatchItem &matchItem, matchItems ) {
-        matchStrings << matchItem.toString();
-//         QString("'%1' (type: %2, val: %3)")
-//                 .arg(matchItem.input()).arg(matchItem.type()).arg(matchItem.value().toString());
-    }
-    qDebug() << "\nMATCHES:" << matchStrings.join(", ") << result << syntax.result();
+    Results results = JourneySearchAnalyzer::resultsFromMatchItem( matchItem, m_keywords );
+    qDebug() << "CORRECTED2:" << results.stopName() << results.outputString();
 
-    qDebug() << "INPUT:" << matchItems.first().input();
-    qDebug() << "CORRECTED:" << matchItems.first().text();
+    syntaxItem->findKeywordChild( KeywordTo )->setFlag( SyntaxItem::RemoveFromInput );
+    qDebug() << "REMOVED TO KEYWORD:" << results.updateOutputString(syntaxItem, CorrectEverything, m_keywords);
 
-    delete journeySearchSyntaxItem;
+    syntaxItem->removeChangeFlags();
+    syntaxItem->findKeywordChild( KeywordTimeAt )->setFlag( SyntaxItem::RemoveFromInput );
+    qDebug() << "REMOVED AT KEYWORD:" << results.updateOutputString(syntaxItem, CorrectEverything, m_keywords);
+
+    syntaxItem->removeChangeFlags();
+    syntaxItem->findKeywordChild( KeywordTomorrow )->setFlag( SyntaxItem::AddToInput );
+    qDebug() << "ADDED TOMORROW KEYWORD:" << results.updateOutputString(syntaxItem, CorrectEverything, m_keywords);
 }
 
 void JourneySearchParserTest::benchmarkLexicalTest()
 {
     QString search = "To \"Bremen Hbf\" departing tomorrow at 18:00";
     LexicalAnalyzer lex;
-    SyntacticalAnalyzer syntax( m_keywords );
-    ContextualAnalyzer context;
     QBENCHMARK {
         QLinkedList<Lexem> lexems = lex.analyze( search );
     }
@@ -214,11 +236,10 @@ void JourneySearchParserTest::benchmarkSyntacticalTest()
 {
     QString search = "To \"Bremen Hbf\" departing tomorrow at 18:00";
     LexicalAnalyzer lex;
-    SyntacticalAnalyzer syntax( m_keywords );
-    ContextualAnalyzer context;
+    SyntacticalAnalyzer syntax( Syntax::journeySearchSyntaxItem(), m_keywords );
     QLinkedList<Lexem> lexems = lex.analyze( search );
     QBENCHMARK {
-        QLinkedList<MatchItem> matchItems = syntax.analyze( lexems );
+        MatchItem matchItem = syntax.analyze( lexems );
     }
 }
 
@@ -226,12 +247,12 @@ void JourneySearchParserTest::benchmarkContextualTest()
 {
     QString search = "To \"Bremen Hbf\" departing tomorrow at 18:00";
     LexicalAnalyzer lex;
-    SyntacticalAnalyzer syntax( m_keywords );
+    SyntacticalAnalyzer syntax( Syntax::journeySearchSyntaxItem(), m_keywords );
     ContextualAnalyzer context;
     QLinkedList<Lexem> lexems = lex.analyze( search );
-    QLinkedList<MatchItem> matchItems = syntax.analyze( lexems );
+    MatchItem matchItem = syntax.analyze( lexems );
     QBENCHMARK {
-        QLinkedList<MatchItem> correctedMatchItems = context.analyze( matchItems );
+        QLinkedList<MatchItem> correctedMatchItems = context.analyze( QLinkedList<MatchItem>() << matchItem );
     }
 }
 
@@ -255,12 +276,12 @@ void JourneySearchParserTest::benchmarkTest()
     QString search = "To \"Bremen Hbf\" departing tomorrow at 18:00";
 
     LexicalAnalyzer lex;
-    SyntacticalAnalyzer syntax( m_keywords );
+    SyntacticalAnalyzer syntax( Syntax::journeySearchSyntaxItem(), m_keywords );
     ContextualAnalyzer context;
     QBENCHMARK {
         QLinkedList<Lexem> lexems = lex.analyze( search );
-        QLinkedList<MatchItem> matchItems = syntax.analyze( lexems );
-        QLinkedList<MatchItem> correctedSyntaxItems = context.analyze( matchItems );
+        MatchItem matchItem = syntax.analyze( lexems );
+        QLinkedList<MatchItem> correctedSyntaxItems = context.analyze( QLinkedList<MatchItem>() << matchItem );
     }
 }
 

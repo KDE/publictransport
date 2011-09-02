@@ -991,7 +991,7 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
 
         // Set associated application url
         m_urlJourneys = data["requestUrl"].toUrl();
-        kDebug() << "Errorneous journey url" << m_urlJourneys;
+        kDebug() << "Erroneous journey url" << m_urlJourneys;
         if ( isStateActive("journeyView") ) {
             setAssociatedApplicationUrlForJourneys();
         }
@@ -1000,7 +1000,7 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
 
         // Set associated application url
         m_urlDeparturesArrivals = data["requestUrl"].toUrl();
-        kDebug() << "Errorneous departure/arrival url" << m_urlDeparturesArrivals;
+        kDebug() << "Erroneous departure/arrival url" << m_urlDeparturesArrivals;
         if ( isStateActive("departureView") || isStateActive("journeySearch") ||
              isStateActive("journeysUnsupportedView") )
         {

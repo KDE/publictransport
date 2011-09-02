@@ -92,7 +92,7 @@ public:
     int position() const;
 
     /** @brief Wether or not there are any errors in the input string for this lexem. */
-    bool isErrornous() const;
+    bool isErroneous() const;
 
     /** @brief Wether or not there is a space character after this lexem in the input string. */
     bool isFollowedBySpace() const;

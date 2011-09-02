@@ -34,31 +34,28 @@
 
 namespace Parser {
 
-typedef Syntax M; // A bit shorter syntax definition
+typedef Syntax S; // A bit shorter syntax definition
 SyntaxItemPointer Syntax::journeySearchSyntaxItem()
 {
     // Define longer match parts here for better readability
-    SyntaxSequencePointer matchDate = (M::number(1, 31)->outputTo(DateDayValue) + M::character('.') +
-             M::number(1, 12)->outputTo(DateMonthValue) + M::character('.') +
-             M::number(1970, 2999)->outputTo(DateYearValue)->optional())->outputTo(DateValue); // FIXME MemLeak: new SyntaxNumberItem
-    SyntaxSequencePointer matchTimeAt = M::keyword( KeywordTimeAt,
-           ( M::number(0, 23)->outputTo(TimeHourValue) +
-            (M::character(':') + M::number(0, 59)->outputTo(TimeMinuteValue))->optional() +
-            (M::character(',')->optional() + matchDate)->optional() )->outputTo(DateAndTimeValue) );
+    SyntaxSequencePointer matchDate = (S::number(1, 31)->outputTo(DateDayValue) + S::character('.') +
+             S::number(1, 12)->outputTo(DateMonthValue) + S::character('.') +
+             S::number(1970, 2999)->outputTo(DateYearValue)->optional())->outputTo(DateValue);
+    SyntaxSequencePointer matchTimeAt = S::keyword( KeywordTimeAt,
+           ( S::number(0, 23)->outputTo(TimeHourValue) +
+            (S::character(':') + S::number(0, 59)->outputTo(TimeMinuteValue))->optional() +
+            (S::character(',')->optional() + matchDate)->optional() )->outputTo(DateAndTimeValue) );
     SyntaxSequencePointer matchTimeIn =
-             M::keyword( KeywordTimeIn, M::number(1, 1339)->outputTo(RelativeTimeValue) ); // FIXED MemLeak: new SyntaxNumberItem
+             S::keyword( KeywordTimeIn, S::number(1, 1339)->outputTo(RelativeTimeValue) ) +
+             S::keyword( KeywordTimeInMinutes )->optional();
 
     // Define the journey search syntax
-    return (M::keywordTo() | M::keywordFrom())->optional() +
-           (M::character('"') + M::words()->outputTo(StopNameValue) + M::character('"')) +
-           (M::keywordDeparture() | M::keywordArrival())->optional() +
-            M::keywordTomorrow()->optional() +
-           (matchTimeAt | matchTimeIn)->optional(); // FIXED MemLeak: SyntaxSequenceItem | SyntaxItem (new SyntaxOptionItem)
-
-// FIXME This causes a crash:
-//     SyntaxSequencePointer matchTimeIn =
-//              M::keyword( KeywordTimeIn, M::number(1, 1339)->outputTo(RelativeTimeValue) ); // FIXED MemLeak: new SyntaxNumberItem
-//     return matchTimeIn;
+    return (S::keywordTo() | S::keywordFrom())->optional() +
+           ((S::character('"') + S::word()->plus()->outputTo(StopNameValue) + S::character('"'))
+            | S::word()->plus()->outputTo(StopNameValue)) +
+           (S::keywordDeparture() | S::keywordArrival())->optional() +
+            S::keywordTomorrow()->optional() +
+           (matchTimeAt | matchTimeIn)->optional();
 }
 
 SyntaxItem::SyntaxItem( SyntaxItem::Type type, SyntaxItem::Flags flags,
@@ -78,15 +75,62 @@ SyntaxItem::~SyntaxItem()
     #endif
 }
 
+SyntaxItems SyntaxItem::findChildren( Type type ) const
+{
+    SyntaxItems itemList;
+
+    // Add all children of the given type to itemList
+    SyntaxItems childItems = children();
+    foreach ( const SyntaxItemPointer &childItem, childItems ) {
+        if ( childItem->type() == type ) {
+            itemList << childItem;
+        }
+        itemList << childItem->findChildren( type );
+    }
+
+    return itemList;
+}
+
+SyntaxKeywordPointer SyntaxItem::findKeywordChild( KeywordType keywordType ) const
+{
+    SyntaxItems childItems = children();
+    foreach ( const SyntaxItemPointer &childItem, childItems ) {
+        if ( childItem->type() == MatchKeyword ) {
+            // Test if the found keyword child item is of the given keyword type
+            SyntaxKeywordPointer keyword = qobject_cast< SyntaxKeywordItem* >( childItem.data() );
+            if ( keyword->keyword() == keywordType ) {
+                return keyword; // Keyword of the given type found
+            }
+        }
+
+        // Search for a keyword item of the given type in the child item
+        SyntaxKeywordPointer keyword = childItem->findKeywordChild( keywordType );
+        if ( keyword ) {
+            return keyword; // Keyword of the given type found in the child item
+        }
+    }
+
+    return 0; // Not found
+}
+
+void SyntaxItem::removeChangeFlags()
+{
+    unsetFlag( ChangingFlags );
+    foreach ( const SyntaxItemPointer &syntaxItem, children() ) {
+        syntaxItem->removeChangeFlags();
+    }
+}
+
 #ifdef USE_MATCHES_IN_SYNTAXITEM
-void SyntaxItem::addMatch( const Parser::MatchItem& matchedItem )
+void SyntaxItem::addMatch( const MatchItem& matchedItem )
 {
     addMatch( matchedItem.position(), matchedItem.input(), matchedItem.value() );
 }
 #endif
 
-QString SyntaxItem::toString( int ) const
+QString SyntaxItem::toString( int level, DescriptionType descriptionType ) const
 {
+    Q_UNUSED( descriptionType );
     #ifdef USE_MATCHES_IN_SYNTAXITEM
         QStringList matchStrings;
         foreach ( const MatchData &match, matches() ) {
@@ -94,7 +138,8 @@ QString SyntaxItem::toString( int ) const
         }
     #endif
 
-    return QString("%1 (%6, %2%3%4%5)")
+    QString s; int l = level; while ( l > 0 ) { s += "  "; --l; }
+    return QString("%1%2 (%7, %3%4%5%6)").arg(s)
             .arg( metaObject()->className() )
             .arg( FLAGS_STRING(SyntaxItem, Flag, m_flags) )
             .arg( m_valueType == Parser::NoValue ? QString()
@@ -110,10 +155,10 @@ QString SyntaxItem::toString( int ) const
             #else
                 .arg( QString() )
             #endif
-            .arg(ENUM_STRING(SyntaxItem, Type, m_type));
+            .arg( ENUM_STRING(SyntaxItem, Type, m_type) );
 }
 
-QString SyntaxSequenceItem::toString( int level ) const
+QString SyntaxSequenceItem::toString( int level, DescriptionType descriptionType ) const
 {
     #ifdef USE_MATCHES_IN_SYNTAXITEM
         QStringList matchStrings;
@@ -124,8 +169,7 @@ QString SyntaxSequenceItem::toString( int level ) const
 
     QString s; int l = level; while ( l > 0 ) { s += "  "; --l; }
     QString string;// = SyntaxItem::toString(level);
-    string += QString("\n%1Sequence (%2%3%4%5) {")
-            .arg(s)
+    string += QString("%1Sequence (%6 items, %2%3%4%5)").arg(s)
             .arg(FLAGS_STRING(SyntaxItem, Flag, flags()))
             .arg( valueType() == Parser::NoValue ? QString()
                   : QString(", output -> %1").arg(ENUM_STRING(Parser, JourneySearchValueType, valueType())) )
@@ -140,16 +184,20 @@ QString SyntaxSequenceItem::toString( int level ) const
             #else
                 .arg( QString() )
             #endif
-            ;
-    int i = 1;
-    foreach ( SyntaxItemPointer item, m_items ) {
-        string += QString("\n%1  Sequence Item %2: %3").arg(s).arg( i++ ).arg( item->toString(level + 1) );
+            .arg( m_items.count() );
+    if ( descriptionType == FullDescription ) {
+        string += " {";
+        int i = 1;
+        foreach ( SyntaxItemPointer item, m_items ) {
+            string += QString("\n%1  Sequence Item %2: %3").arg(s).arg( i++ )
+                      .arg( item->toString(level + 1, descriptionType) );
+        }
+        string += QString("\n%1}").arg(s);
     }
-    string += QString("\n%1}").arg(s);
     return string;
 }
 
-QString SyntaxOptionItem::toString( int level ) const
+QString SyntaxOptionItem::toString( int level, DescriptionType descriptionType ) const
 {
     #ifdef USE_MATCHES_IN_SYNTAXITEM
         QStringList matchStrings;
@@ -160,8 +208,7 @@ QString SyntaxOptionItem::toString( int level ) const
 
     QString s; int l = level; while ( l > 0 ) { s += "  "; --l; }
     QString string;// = SyntaxItem::toString(level);
-    string += QString("\n%1Option (%2%3%4%5) {")
-            .arg( s )
+    string += QString("%1Option (%6 items, %2%3%4%5)").arg(s)
             .arg( FLAGS_STRING(SyntaxItem, Flag, flags()) )
             .arg( valueType() == Parser::NoValue ? QString()
                   : QString(", output -> %1").arg(ENUM_STRING(Parser, JourneySearchValueType, valueType())) )
@@ -176,16 +223,20 @@ QString SyntaxOptionItem::toString( int level ) const
             #else
                 .arg( QString() )
             #endif
-            ;
-    int i = 1;
-    foreach ( SyntaxItemPointer item, m_options ) {
-        string += QString("\n%1  Option %2: %3").arg(s).arg( i++ ).arg( item->toString(level + 1) );
+            .arg( m_options.count() );
+    if ( descriptionType == FullDescription ) {
+        string += " {";
+        int i = 1;
+        foreach ( SyntaxItemPointer item, m_options ) {
+            string += QString("\n%1  Option %2: %3").arg(s).arg( i++ )
+                      .arg( item->toString(level + 1, descriptionType) );
+        }
+        string += QString("\n%1}").arg(s);
     }
-    string += QString("\n%1}").arg(s);
     return string;
 }
 
-QString SyntaxKeywordItem::toString( int level ) const
+QString SyntaxKeywordItem::toString( int level, DescriptionType descriptionType ) const
 {
     #ifdef USE_MATCHES_IN_SYNTAXITEM
         QStringList matchStrings;
@@ -197,7 +248,7 @@ QString SyntaxKeywordItem::toString( int level ) const
     QString s; int l = level; while ( l > 0 ) { s += "  "; --l; }
     QString string;// = SyntaxItem::toString(level);
     if ( !m_valueSequence ) {
-        string += QString("Keyword (%1, %2%3%4)")
+        string += QString("%1Keyword (%2, %3%4%5)").arg(s)
                 .arg(ENUM_STRING(Parser, KeywordType, m_keyword))
                 .arg(FLAGS_STRING(SyntaxItem, Flag, flags()))
                 #ifdef USE_MATCHES_IN_SYNTAXITEM
@@ -213,7 +264,7 @@ QString SyntaxKeywordItem::toString( int level ) const
                 #endif
                 ;
     } else {
-        string += QString("\n%1Keyword (%2, %4, value type: %3%5%6) {").arg(s)
+        string += QString("%1Keyword (%2, %4, value type: %3%5%6) { ").arg(s)
                 .arg(ENUM_STRING(Parser, KeywordType, m_keyword)).arg(valueType())
                 .arg(FLAGS_STRING(SyntaxItem, Flag, flags()))
                 #ifdef USE_MATCHES_IN_SYNTAXITEM
@@ -228,26 +279,15 @@ QString SyntaxKeywordItem::toString( int level ) const
                     .arg( QString() )
                 #endif
                 ;
-//         int i = 1;
-        string += m_valueSequence->toString( level + 1 );
-//         foreach ( SyntaxItemPointer item, *m_valueSequence->items() ) {
-//             if ( item->hasValue() ) {
-//                 string += QString("\n%1  Value %2%3: %4").arg(s)
-//                         .arg(i++).arg( valueType() == Parser::NoValue ? ""
-//                                 : QString(" (output -> %1)").arg(ENUM_STRING(Parser, JourneySearchValueType, valueType())) )
-//                         .arg(item->toString(level + 1));
-//             } else {
-//                 string += QString("\n%1  Value %2 (no output):     %3").arg(s).arg(i++)
-//                         .arg(item->toString(level + 1));
-//             }
-//         }
-        string += QString("\n%1}").arg(s);
+        string += m_valueSequence->toString( level + 1, descriptionType );
+        string += " }";
     }
     return string;
 }
 
-QString SyntaxNumberItem::toString( int ) const
+QString SyntaxNumberItem::toString( int level, DescriptionType descriptionType ) const
 {
+    Q_UNUSED( descriptionType );
     #ifdef USE_MATCHES_IN_SYNTAXITEM
         QStringList matchStrings;
         foreach ( const MatchData &match, matches() ) {
@@ -255,7 +295,8 @@ QString SyntaxNumberItem::toString( int ) const
         }
     #endif
 
-    return QString("Number (range: %1-%2, %3%4%5%6)")
+    QString s; int l = level; while ( l > 0 ) { s += "  "; --l; }
+    return QString("%1Number (range: %2-%3, %4%5%6%7)").arg(s)
             .arg(m_min).arg(m_max)
             .arg(FLAGS_STRING(SyntaxItem, Flag, flags()))
             .arg(valueType() == Parser::NoValue ? QString()
@@ -274,8 +315,9 @@ QString SyntaxNumberItem::toString( int ) const
             ;
 }
 
-QString SyntaxWordsItem::toString( int ) const
+QString SyntaxWordItem::toString( int level, DescriptionType descriptionType ) const
 {
+    Q_UNUSED( descriptionType );
     #ifdef USE_MATCHES_IN_SYNTAXITEM
         QStringList matchStrings;
         foreach ( const MatchData &match, matches() ) {
@@ -283,11 +325,12 @@ QString SyntaxWordsItem::toString( int ) const
         }
     #endif
 
-    return /*SyntaxItem::toString(level) + */QString("Words (words: %1, types: %2, %3%4%5%6)")
-            .arg(m_wordCount).arg(m_wordTypes.count())
+    QString s; int l = level; while ( l > 0 ) { s += "  "; --l; }
+    return QString("%1Words (types: %2, %3%4%5%6)").arg(s)
+            .arg(m_wordTypes.count())
             .arg(FLAGS_STRING(SyntaxItem, Flag, flags()))
             .arg(valueType() == Parser::NoValue ? ""
-                 : QString(", output -> %1,").arg(ENUM_STRING(Parser, JourneySearchValueType, valueType())))
+                 : QString(", output -> %1").arg(ENUM_STRING(Parser, JourneySearchValueType, valueType())))
             #ifdef USE_MATCHES_IN_SYNTAXITEM
                 .arg( QString(", matches (%1): %2").arg(matchCount()).arg(matchStrings.join(", ")) )
             #else
@@ -301,51 +344,6 @@ QString SyntaxWordsItem::toString( int ) const
             #endif
             ;
 }
-
-/*
-QDebug& operator<<( QDebug debug, SyntaxItem::Type type )
-{
-    switch ( type ) {
-    case SyntaxItem::MatchNothing:
-        return debug << "SyntaxItem::MatchNothing";
-    case SyntaxItem::MatchSequence:
-        return debug << "SyntaxItem::MatchSequence";
-    case SyntaxItem::MatchOption:
-        return debug << "SyntaxItem::MatchOption";
-    case SyntaxItem::MatchQuotationMark:
-        return debug << "SyntaxItem::MatchQuotationMark";
-    case SyntaxItem::MatchColon:
-        return debug << "SyntaxItem::MatchColon";
-    case SyntaxItem::MatchNumber:
-        return debug << "SyntaxItem::MatchNumber";
-    case SyntaxItem::MatchString:
-        return debug << "SyntaxItem::MatchString";
-    case SyntaxItem::MatchKeyword:
-        return debug << "SyntaxItem::MatchKeyword";
-    case SyntaxItem::MatchWords:
-        return debug << "SyntaxItem::MatchWords";
-    default:
-        return debug << static_cast<int>(type);
-    }
-}
-
-QDebug& operator<<( QDebug debug, SyntaxItem::Flag flag )
-{
-    switch ( flag ) {
-    case SyntaxItem::DefaultMatch:
-        return debug << "SyntaxItem::DefaultMatch";
-    case SyntaxItem::MatchIsOptional:
-        return debug << "SyntaxItem::MatchIsOptional";
-    case SyntaxItem::MatchGreedy:
-        return debug << "SyntaxItem::MatchGreedy";
-    case SyntaxItem::KleenePlus:
-        return debug << "SyntaxItem::KleenePlus";
-    case SyntaxItem::KleeneStar:
-        return debug << "SyntaxItem::KleeneStar";
-    default:
-        return debug << static_cast<int>(flag);
-    }
-}*/
 
 #include "syntaxitem.moc"
 

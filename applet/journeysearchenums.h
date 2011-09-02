@@ -76,13 +76,15 @@ enum AnalyzerResult {
  **/
 enum AnalyzerCorrection {
     CorrectNothing              = 0x0000, /**< Do not correct anything. */
-    SkipUnexpectedTokens        = 0x0001,
-    InsertMissingRequiredTokens = 0x0002,
-    CorrectNumberRanges         = 0x0004,
-    CompleteKeywords            = 0x0008,
+    RemoveInvalidCharacters     = 0x0001, // in lexical analyzer
+    SkipUnexpectedTokens        = 0x0002,
+    InsertMissingRequiredTokens = 0x0004, // Not implemented
+    CorrectNumberRanges         = 0x0008,
+    CompleteKeywords            = 0x0010,
 
-    CorrectEverything = SkipUnexpectedTokens | InsertMissingRequiredTokens | CorrectNumberRanges
-            | CompleteKeywords /**< Correct whenever it is possible. */
+    CorrectEverything = RemoveInvalidCharacters | SkipUnexpectedTokens
+            | InsertMissingRequiredTokens | CorrectNumberRanges | CompleteKeywords
+            /**< Correct whenever it is possible. */
 };
 Q_DECLARE_FLAGS( AnalyzerCorrections, AnalyzerCorrection );
 
@@ -101,16 +103,6 @@ enum ErrorSeverity {
             * in @ref Analyzer::setErrorHandling. */
 };
 
-/** @brief Options for how to construct an output string from a list of syntax items. */
-enum OutputStringFlag {
-    DefaultOutputString = 0x0000, /**< Don't include errornous parts. This shouldn't be used if
-            * the output string is currently typed in by the user, because correct strings
-            * (almost) can't be typed with a single keystroke. */
-    ErrornousOutputString = 0x0001, /** Include errornous parts. This flag should be used if
-            * the output string gets typed in interactively. */
-};
-Q_DECLARE_FLAGS( OutputStringFlags, OutputStringFlag );
-
 enum KeywordType {
     KeywordTo = 0, /**< The used keyword translation is returned by @ref text. TODO UPDATE DOCU */
     KeywordFrom, /**< A "from" keyword, saying that the stop name is the origin stop.
@@ -118,6 +110,7 @@ enum KeywordType {
     KeywordTimeIn, /**< An "in" keyword, saying when the searched journeys should depart/arrive.
             * The used keyword translation is returned by @ref text. The time in minutes from
             * now can be got using @ref value (it's an integer). */
+    KeywordTimeInMinutes, /**< Can follow @ref KeywordTimeIn. */
     KeywordTimeAt, /**< An "at" keyword, saying when the searched journeys should depart/arrive.
             * The used keyword translation is returned by @ref text. The time can be got using
             * @ref value (it's a QTime). */
@@ -134,7 +127,7 @@ enum JourneySearchValueType {
     ErrorMessageValue, /**< TODO Value contains the error message. */
     ErrorCorrectionValue, /**< TODO Value contains the Correction used to correct the error. */
 
-    StopNameValue, /**< The stop name as string list with the"Unexpected string, skipped" words of the stop name. */
+    StopNameValue, /**< The stop name as string list with the words of the stop name. */
 
     DateAndTimeValue, /**< TODO A date and time value, eg. "hh:mm, yyyy-MM-dd". */
     RelativeTimeValue, /**< TODO A relative time value in minutes (1-1339, ie. max. 1 day). */
@@ -158,6 +151,8 @@ inline QDebug &operator <<( QDebug debug, KeywordType keywordType ) {
         return debug << "KeywordFrom";
     case KeywordTimeIn:
         return debug << "KeywordTimeIn";
+    case KeywordTimeInMinutes:
+        return debug << "KeywordTimeInMinutes";
     case KeywordTimeAt:
         return debug << "KeywordTimeAt";
     case KeywordTomorrow:

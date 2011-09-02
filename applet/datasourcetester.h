@@ -39,7 +39,7 @@ class DataSourceTester : public QObject {
 public:
     /** Results of a data source test. */
     enum TestResult {
-        Error, /**< The used data source name is errornous or the data couldn't be parsed correctly.
+        Error, /**< The used data source name is erroneous or the data couldn't be parsed correctly.
             * TODO: It's also possible, that there just weren't any departures / arrivals.
             * In such a case JourneyListReceived should be used (or a new EmptyJourneyListReceived?). */
         JourneyListReceived, /**< The tested data source name gets a list

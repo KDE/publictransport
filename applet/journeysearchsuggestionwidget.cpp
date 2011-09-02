@@ -459,7 +459,7 @@ void JourneySearchSuggestionWidget::addJourneySearchCompletions()
             if ( hasTimeKeyword ) {
                 type = "replaceTimeKeyword";
 
-                if ( results.syntaxItems().contains(MatchItem::Keyword /*TimeAt*/) ) { // keywordValues.contains( JourneySearchParser::KeywordTimeAt ) ) {
+                if ( results.hasKeyword(KeywordTimeAt) ) { // keywordValues.contains( JourneySearchParser::KeywordTimeAt ) ) {
 //                     QDateTime dateTime = keywordValues[ JourneySearchParser::KeywordTimeAt ].toDateTime();
                     extraRegExp = "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))";
 
@@ -477,8 +477,8 @@ void JourneySearchSuggestionWidget::addJourneySearchCompletions()
                     suggestions << i18nc( "@item:inlistbox/rich", "%1 minutes earlier", 30 );
                     suggestionValues << QString( "%1 %2" ).arg( timeKeywordAt )
                             .arg( KGlobal::locale()->formatTime( results.time().addSecs(-30 * 60).time() ) );
-                } else if ( results.syntaxItems().contains(MatchItem::Keyword/*TimeIn*/) ) { //keywordValues.contains( JourneySearchParser::KeywordTimeIn ) ) {
-                    int minutes = results.syntaxItems()[MatchItem::Keyword/*TimeIn*/]->value().toInt(); // keywordValues[ JourneySearchParser::KeywordTimeIn ].toInt();
+                } else if ( results.hasKeyword(KeywordTimeIn) ) { //keywordValues.contains( JourneySearchParser::KeywordTimeIn ) ) {
+                    int minutes = results.keyword(KeywordTimeIn)->keywordValue().toInt(); // keywordValues[ JourneySearchParser::KeywordTimeIn ].toInt();
                     extraRegExp = m_journeySearchKeywords->relativeTimeString( "\\d{1,}" );
 
                     // Add "30 minutes later"
@@ -609,27 +609,27 @@ void JourneySearchSuggestionWidget::addAllKeywordAddRemoveItems()
             QStringList() << toKeyword << fromKeyword,
             "additionalKeywordAtBegin",
             QStringList() << i18nc("@info Description for the 'to' keyword",
-                                "Get journeys to the given stop")
-                        << i18nc("@info Description for the 'from' keyword",
-                                "Get journeys from the given stop") );
+                                   "Get journeys to the given stop")
+                          << i18nc("@info Description for the 'from' keyword",
+                                   "Get journeys from the given stop") );
     maybeAddKeywordAddRemoveItems( words,
             QStringList() << arrivalKeyword << departureKeyword,
             "additionalKeywordAlmostAtEnd",
             QStringList() << i18nc("@info Description for the 'departing' keyword",
-                                "Get journeys departing at the given date/time")
-                        << i18nc("@info Description for the 'arriving' keyword",
-                                "Get journeys arriving at the given date/time") );
+                                   "Get journeys departing at the given date/time")
+                          << i18nc("@info Description for the 'arriving' keyword",
+                                   "Get journeys arriving at the given date/time") );
     maybeAddKeywordAddRemoveItems( words,
             QStringList() << timeKeywordAt << timeKeywordIn,
             "additionalKeywordAtEnd",
             QStringList() << i18nc("@info Description for the 'at' keyword",
-                                "Specify the departure/arrival time, eg. "
-                                "\"%1 12:00, 20.04.2010\"", timeKeywordAt)
-                        << i18nc("@info Description for the 'in' keyword",
-                                "Specify the departure/arrival time, eg. \"%1 %2\"",
-                                timeKeywordIn, m_journeySearchKeywords->relativeTimeString()),
+                                   "Specify the departure/arrival time, eg. "
+                                   "\"%1 12:00, 20.04.2010\"", timeKeywordAt)
+                          << i18nc("@info Description for the 'in' keyword",
+                                   "Specify the departure/arrival time, eg. \"%1 %2\"",
+                                   timeKeywordIn, m_journeySearchKeywords->relativeTimeString()),
             QStringList() << "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))"
-                        << m_journeySearchKeywords->relativeTimeString("\\d{1,}") );
+                          << m_journeySearchKeywords->relativeTimeString("\\d{1,}") );
 }
 
 void JourneySearchSuggestionWidget::maybeAddKeywordAddRemoveItems(const QStringList& words,
@@ -818,9 +818,9 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& modelIn
         int position = -1; // TODO FIXME Get the position of the stop name out of the new output.. syntaxItemRoot or something
         QHash< JourneySearchValueType, QVariant > updateItemValues;
         updateItemValues.insert( StopNameValue, newStopName );
-        QString updatedSearch = results.updatedOutputString(
+        QString updatedSearch = /*results.updatedOutputString(
                 updateItemValues, QList<MatchItem::Type>(),
-                ErrornousOutputString, m_journeySearchKeywords );
+                ErroneousOutputString, m_journeySearchKeywords )*/""; // TODO
         m_lineEdit->setText( updatedSearch );
 
         // Set cursor position to the end of the inserted stop name
@@ -885,7 +885,7 @@ void JourneySearchSuggestionWidget::journeySearchLineEdited( const QString& newT
 
     kDebug() << "Letters added" << m_lettersAddedToJourneySearchLine;
     if ( m_lettersAddedToJourneySearchLine ) {
-        m_lineEdit->setText( results.outputString(ErrornousOutputString) );
+        m_lineEdit->setText( results.outputString(CorrectNothing) );
         m_lineEdit->nativeWidget()->setSelection( cursorPos + results.cursorOffset(),
                                                   results.selectionLength() );
         // TODO use maybe shifted cursor position (if there are syntax items with flag CorrectedSyntaxItem
@@ -934,42 +934,41 @@ void JourneySearchSuggestionWidget::updateStopSuggestionItems( const QVariantHas
 
     // Set completion items
     if ( m_lineEdit && m_lettersAddedToJourneySearchLine
-        && m_lineEdit->nativeWidget()->completionMode() != KGlobalSettings::CompletionNone )
+         && m_lineEdit->nativeWidget()->completionMode() != KGlobalSettings::CompletionNone )
     {
         // TODO FIXME Get the position of the stop name out of the new output.. syntaxItemRoot or something
 //         QString stopName;
-//         KLineEdit *lineEdit = m_lineEdit->nativeWidget();
+        KLineEdit *lineEdit = m_lineEdit->nativeWidget();
 
-// //         Results results = m_journeySearchAnalyzer->analyze( lineEdit->text() );
+        Results results = m_journeySearchAnalyzer->analyze( lineEdit->text() );
 
         // TODO FIXME Get the position of the stop name out of the new output.. syntaxItemRoot or something
-//         const SyntaxItem *stopNameItem = m_journeySearchAnalyzer->results().syntaxItems()[StopName];
-//         const QString stopName = stopNameItem ? stopNameItem->text() : QString();
-//         const int posStart = stopNameItem ? stopNameItem->position() : 0;
-//         const int len = stopName.length();
-// 
-// //         JourneySearchParser::stopNamePosition( lineEdit, &posStart, &len, &stopName );
-//         int selStart = lineEdit->selectionStart();
-//         if ( selStart == -1 ) {
-//             selStart = lineEdit->cursorPosition();
-//         }
-//         const bool stopNameChanged = selStart > posStart &&
-//                 selStart + lineEdit->selectedText().length() <= posStart + len;
-//         if ( stopNameChanged ) {
-//             KCompletion *comp = lineEdit->completionObject( false );
-//             comp->setIgnoreCase( true );
-//             if ( hasAtLeastOneWeight ) {
-//                 comp->setOrder( KCompletion::Weighted );
-//                 comp->setItems( weightedStops );
-//             } else {
-//                 comp->setItems( stopSuggestions );
-//             }
-// 
-//             const QString completion = comp->makeCompletion( stopName );
-//             if ( completion != stopName ) {
-//                 m_journeySearchAnalyzer->completeStopName( lineEdit, completion );
-//             }
-//         }
+        const MatchItemPointers stopNameItems = results.stopNameItems();
+//         const QString stopName = results.stopName();
+        const int posStart = stopNameItems.isEmpty() ? 0 : stopNameItems.first()->position();
+        const int len = results.stopName().length();
+
+        int selStart = lineEdit->selectionStart();
+        if ( selStart == -1 ) {
+            selStart = lineEdit->cursorPosition();
+        }
+        const bool stopNameChanged = selStart > posStart &&
+                selStart + lineEdit->selectedText().length() <= posStart + len;
+        if ( stopNameChanged ) {
+            KCompletion *comp = lineEdit->completionObject( false );
+            comp->setIgnoreCase( true );
+            if ( hasAtLeastOneWeight ) {
+                comp->setOrder( KCompletion::Weighted );
+                comp->setItems( weightedStops );
+            } else {
+                comp->setItems( stopSuggestions );
+            }
+
+            const QString completion = comp->makeCompletion( results.stopName() );
+            if ( completion != results.stopName() ) {
+                m_journeySearchAnalyzer->completeStopName( lineEdit, completion );
+            }
+        }
     }
 
     // Update model

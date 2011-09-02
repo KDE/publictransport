@@ -88,7 +88,7 @@ int Lexem::position() const
     return d->position;
 }
 
-bool Lexem::isErrornous() const
+bool Lexem::isErroneous() const
 {
     return d->type == Error;
 }

@@ -31,15 +31,45 @@
 #include "lexem.h"
 #include "matchitem.h"
 
-// Uncomment to print debug messages while parsing
-#define DEBUG_PARSING
+// Uncomment to have the SyntaxItem::matches() & co. functions work.
+// If defined, USE_MATCHES_IN_SYNTAXITEM should also be defined in syntaxitem.h:
+// #define FILL_MATCHES_IN_SYNTAXITEM
 
-// Uncomment to have the MatchItem::matches() & co. functions work
-// If defined, USE_MATCHES_IN_MATCHITEM should also be defined in matchitem.h
-// #define FILL_MATCHES_IN_MATCHITEM
-
-// Uncomment to allow keywords with spaces, ie. made out of multiple words
+// Uncomment to allow keywords with spaces, ie. made out of multiple words:
 // #define ALLOW_MULTIWORD_KEYWORDS
+
+// Uncomment to print all debug messages while parsing:
+#define DEBUG_PARSING_ALL
+
+// Uncomment to print debug messages for calls to functions for parsing
+// (also enabled, if DEBUG_PARSING_ALL is defined):
+// #define DEBUG_PARSING_FUNCTION_CALLS
+
+// Uncomment to print informational debug messages while parsing
+// (also enabled, if DEBUG_PARSING_ALL is defined):
+// #define DEBUG_PARSING_INFO
+
+// Uncomment to print debug messages when new input lexems get read
+// (also enabled, if DEBUG_PARSING_ALL is defined):
+// #define DEBUG_PARSING_INPUT
+
+// Uncomment to print debug messages when new output is generated while parsing
+// (also enabled, if DEBUG_PARSING_ALL is defined).
+// This is similiar to DEBUG_PARSING_MATCH, but also prints messages for erroneous output
+// (eg. an unexpected and skipped lexem):
+// #define DEBUG_PARSING_OUTPUT
+
+// Uncomment to print debug messages for each match while parsing
+// (also enabled, if DEBUG_PARSING_ALL is defined).
+// This is similiar to DEBUG_PARSING_OUTPUT, but it only prints messages for correctly matched input:
+// #define DEBUG_PARSING_MATCH
+
+// Uncomment to print debug messages for each error found in the input while parsing
+// (also enabled, if DEBUG_PARSING_ALL is defined):
+#define DEBUG_PARSING_ERROR
+
+// Indentation of debug output for different syntax item levels
+#define DEBUG_PARSING_INDENTATION "  "
 
 class QString;
 class QStringList;
@@ -50,11 +80,93 @@ class KLineEdit;
 
 namespace Parser {
 
+#ifdef DEBUG_PARSING_ALL
+    // Enable all debug output
+    #define DEBUG_PARSING_FUNCTION_CALLS
+    #define DEBUG_PARSING_INFO
+    #define DEBUG_PARSING_INPUT
+    #define DEBUG_PARSING_OUTPUT
+    #define DEBUG_PARSING_MATCH
+    #define DEBUG_PARSING_ERROR
+#endif
+
+#if (defined(DEBUG_PARSING_FUNCTION_CALLS) || defined(DEBUG_PARSING_INPUT) \
+     || defined(DEBUG_PARSING_OUTPUT) || defined(DEBUG_PARSING_INFO) \
+     || defined(DEBUG_PARSING_MATCH) || defined(DEBUG_PARSING_ERROR))
+    // Define DEBUG_PARSING if at least one debug output class is enabled
+    #define DEBUG_PARSING
+#endif
+
+#ifdef DEBUG_PARSING
+    // This function makes the level in the syntax items better identifiable, to which a debug
+    // message belongs (for example items in a sequence are one level deeper than the sequence
+    // item itself, see DEBUG_PARSING_INDENTATION).
+    // "void *matchData" is actually of type "SyntacticalAnalyzer::MatchData*", but nested classes
+    // can not be forward declared.
+    QByteArray __DEBUG_PARSING_LEVEL( void *matchData );
+#endif
+
+// The following macros do some magic for the debug messages to work easily and produce
+// pretty output using __DEBUG_PARSING_LEVEL for indentation (the ".data()" is to avoid having
+// quotation marks around strings to qDebug()).
+#ifdef DEBUG_PARSING_FUNCTION_CALLS
+    #define DO_DEBUG_PARSING_FUNCTION_CALL(function, output) \
+        qDebug() << __DEBUG_PARSING_LEVEL(matchData).data() \
+                 << QString("%1()").arg(#function).toLatin1().data() << output
+    #define DO_DEBUG_PARSING_FUNCTION_CALL2(function) \
+        qDebug() << __DEBUG_PARSING_LEVEL(matchData).data() \
+                 << QString("%1()").arg(#function).toLatin1().data()
+#else
+    #define DO_DEBUG_PARSING_FUNCTION_CALL(function, output)
+    #define DO_DEBUG_PARSING_FUNCTION_CALL2(function) 
+#endif
+
+#ifdef DEBUG_PARSING_INFO
+    #define DO_DEBUG_PARSING_INFO(output) \
+        qDebug() << __DEBUG_PARSING_LEVEL(matchData).data() << output
+#else
+    #define DO_DEBUG_PARSING_INFO(output)
+#endif
+
+#ifdef DEBUG_PARSING_INPUT
+    #define DO_DEBUG_PARSING_INPUT() \
+        if ( m_inputIterator != m_input.constEnd() ) { \
+            qDebug() << __DEBUG_PARSING_LEVEL(matchData).data() \
+                     << "< Input:" <<  m_inputIterator->input(); \
+        } else { \
+            qDebug() << __DEBUG_PARSING_LEVEL(matchData).data() << "< Input: <END>"; \
+        }
+#else
+    #define DO_DEBUG_PARSING_INPUT()
+#endif
+
+#ifdef DEBUG_PARSING_OUTPUT
+    #define DO_DEBUG_PARSING_OUTPUT(output) \
+        qDebug() << __DEBUG_PARSING_LEVEL(matchData).data() << "> Output:" << output
+#else
+    #define DO_DEBUG_PARSING_OUTPUT(output)
+#endif
+
+#ifdef DEBUG_PARSING_MATCH
+    #define DO_DEBUG_PARSING_MATCH(what, output) \
+        qDebug() << __DEBUG_PARSING_LEVEL(matchData).data() << "MATCH ("#what"):" << output
+#else
+    #define DO_DEBUG_PARSING_MATCH(what, output)
+#endif
+
+#ifdef DEBUG_PARSING_ERROR
+    #define DO_DEBUG_PARSING_ERROR(level, position, errorMessage, erroneousText) \
+        qDebug() << QString("Error (%2) at %1 (\"%4\"): \"%3\"") \
+                .arg(position).arg(#level).arg(errorMessage).arg(erroneousText).toLatin1().data()
+#else
+    #define DO_DEBUG_PARSING_ERROR(level, position, errorMessage, erroneousText)
+#endif
+
 /**
  * @brief Base class for lexical/syntactical/contextual analyzers.
  *
- * An LR(1)-Parser, for an RL(1)-Parser, see @ref AnalyzerRL.
- * No parser generation, 
+ * An LR(1)-Parser.
+ * No parser generation, TODO
  **/
 template <typename Container, typename Item>
 class Analyzer {
@@ -125,12 +237,12 @@ protected:
     /**
      * @brief Increases the input iterator and checks for errors.
      *
-     * Error checking is done by using @ref isItemErrornous. If there is an error and the input
+     * Error checking is done by using @ref isItemErroneous. If there is an error and the input
      * isn't already @ref Rejected, the result value is set to @ref AcceptedWithErrors.
      **/
     virtual inline void readItem() {
         moveToNextToken();
-        if ( m_result != Rejected && !isAtImaginaryIteratorEnd() && isItemErrornous() ) {
+        if ( m_result != Rejected && !isAtImaginaryIteratorEnd() && isItemErroneous() ) {
             m_result = AcceptedWithErrors;
         }
     };
@@ -139,8 +251,6 @@ protected:
             ++m_inputIteratorLookahead;
         }
     };
-    virtual inline void incrementLookahead() { ++m_inputIteratorLookahead; };
-    virtual inline void decrementLookahead() { --m_inputIteratorLookahead; };
 
     /**
      * @brief Checks for errors in the current item.
@@ -148,16 +258,15 @@ protected:
      * The default implementation always returns false. Can be overwritten to set an error when
      * reading an error item generated by a previous analyzer pass.
      **/
-    virtual inline bool isItemErrornous() { return false; };
+    virtual inline bool isItemErroneous() { return false; };
 
     /**
      * @brief Checks wether or not the input interator points to the last item of the input.
      **/
     virtual inline bool isAtEnd() const { return m_inputIteratorLookahead == m_input.constEnd(); };
 
-    virtual void setError( ErrorSeverity severity, const QString& errornousText,
-                           const QString& errorMessage, int position,
-                           MatchItem *parent = 0, int index = -1 );
+    virtual void setError( ErrorSeverity severity, const QString &erroneousText,
+                           const QString &errorMessage, int position, MatchItem *parent = 0 );
 
     inline Item currentInputToken() const { return *m_inputIterator; };
     inline Item nextInputToken() const { return *m_inputIteratorLookahead; };
@@ -182,8 +291,6 @@ protected:
     inline void moveToNextToken() {
         m_inputIterator = m_inputIteratorLookahead;
         updateLookahead();
-//         qDebug() << "| Current Lexem:" << (isAtImaginaryIteratorEnd() ? "END" : m_inputIterator->text())
-//                  << ", Next Lexem:" <<  (isNextAtImaginaryIteratorEnd() ? "END" : m_inputIteratorLookahead->text());
     };
 
     AnalyzerState m_state;
@@ -201,76 +308,6 @@ protected:
 };
 
 /**
- * @brief Base class for lexical/syntactical/contextual analyzers, that also parse from right to left.
- *
- * This class can be used for both parsing directions, left-to-right and right-to-left. The
- * direction of parsing can be changed by setting m_direction to the new direction. It can also
- * be changed while parsing, ie. start with parsing from left, then from right and see what items
- * remain in the  middle (eg. some free text).
- * The current direction impacts @ref readItem (going to the left/right) and @ref isAtEnd (if
- * @ref RightToLeft, the "end" is actually the beginning of the input, ie. the last readable item
- * in the current direction).
- **/
-template <typename Container, typename Item>
-class AnalyzerRL : public Analyzer<Container, Item> {
-public:
-    AnalyzerRL( AnalyzerCorrections corrections = CorrectEverything,
-                int cursorPositionInInputString = -1, int cursorOffset = 0 );
-
-    virtual void moveToBeginning();
-    virtual void moveToEnd();
-
-protected:
-    /** @brief The current parsing direction. */
-    AnalyzerReadDirection direction() const { return m_direction; };
-
-    /**
-     * @brief Increases/Decreases the input iterator and checks for errors.
-     *
-     * Increases if direction is @ref LeftToRight, decreses if direction is @ref RightToLeft. 
-     * Error checking is done by using @ref isItemErrornous.
-     * If there is an error and the input isn't already @ref Rejected, the result value is set to
-     * @ref AcceptedWithErrors.
-     **/
-    virtual inline void readItem() {
-        this->moveToNextToken();
-        #ifdef DEBUG_PARSING
-            qDebug() << "readItem()" << (this->isAtImaginaryIteratorEnd()
-                    ? "END!" : this->currentInputToken().input());
-            qDebug() << "   > Lookahead:" << (this->isNextAtImaginaryIteratorEnd()
-                    ? "END!" : this->nextInputToken().input());
-        #endif
-
-        if ( !this->isAtImaginaryIteratorEnd() && this->isItemErrornous() &&
-             this->m_result != Rejected )
-        {
-            this->m_result = AcceptedWithErrors;
-        }
-    };
-    virtual inline void updateLookahead() {
-        if ( m_direction == RightToLeft ) {
-            if ( this->isNextAtImaginaryIteratorEnd() ) {// constEnd() same as constBegin()-1 ?    OLD CODE: this->m_inputIteratorLookahead != this->m_input.constBegin() - 1 ) {
-                this->decrementLookahead();
-            }
-        } else {
-            Analyzer<Container, Item>::updateLookahead();
-        }
-    };
-
-    /**
-     * @brief Checks wether or not the input interator points to the last item of the input.
-     *
-     * If direction is @ref RightToLeft the last item is actually the first.
-     **/
-    virtual inline bool isAtEnd() const {
-        return m_direction == RightToLeft ? this->isAtImaginaryIteratorEnd()
-                                          : this->isNextAtImaginaryIteratorEnd();
-    };
-
-    AnalyzerReadDirection m_direction;
-};
-
-/**
  * @brief Analyzes a given input string and constructs a list of @ref Lexem objects.
  **/
 class LexicalAnalyzer : public Analyzer<QString, QChar> {
@@ -283,7 +320,6 @@ public:
         Digit, /**< A digit. Gets combined with adjacent digits to a @ref Lexem::Number. */
         Letter, /**< A letter. Gets combined with adjacent letters/other symbols to a
                 * @ref Lexem::String. */
-//         Character, /**< A special character, eg. a quotation mark, colon or point. */
         Space, /**< A space character at the end of the input or at the specified cursor position. */
         OtherSymbol /**< Another valid symbol from @ref ALLOWED_OTHER_CHARACTERS. Gets combined
                 * with adjacent letters/other symbols to a @ref Lexem::String. */
@@ -338,6 +374,8 @@ class JourneySearchKeywords {
 public:
     JourneySearchKeywords();
 
+    bool hasValue( KeywordType type ) const;
+
     const QStringList keywords( KeywordType type ) const;
 
     /** @brief A list of keywords which may be at the beginning of the journey
@@ -364,6 +402,9 @@ public:
      * eg. "in 5 minutes" (with "in" being the keyword). */
     inline const QStringList timeKeywordsIn() const { return m_timeKeywordsIn; };
 
+    /** @brief A list of keywords which can follow @ref KeywordTimeIn. */
+    inline const QStringList timeKeywordsInMinutes() const { return m_timeKeywordsInMinutes; };
+
     /** @brief A list of keywords to be used instead of writing the date string for tomorrow. */
     inline const QStringList timeKeywordsTomorrow() const { return m_timeKeywordsTomorrow; };
 
@@ -377,6 +418,7 @@ private:
     const QStringList m_arrivalKeywords;
     const QStringList m_timeKeywordsAt;
     const QStringList m_timeKeywordsIn;
+    const QStringList m_timeKeywordsInMinutes;
     const QStringList m_timeKeywordsTomorrow;
     const QString m_relativeTimeStringPattern;
 };
@@ -396,7 +438,7 @@ public:
     friend class MatchItem;
     friend class SyntaxItem;
 
-    SyntacticalAnalyzer( JourneySearchKeywords *keywords = 0,
+    SyntacticalAnalyzer( SyntaxItemPointer syntaxItem = 0, JourneySearchKeywords *keywords = 0,
                          AnalyzerCorrections corrections = CorrectEverything,
                          int cursorPositionInInputString = -1, int cursorOffset = 0 );
     ~SyntacticalAnalyzer();
@@ -406,32 +448,45 @@ public:
      *
      * @param input The input list to analyze.
      *
-     * @return A list of SyntaxItem objects, that have been recognized in @p input.
+     * @return The root of the MatchItem objects, that have been recognized in @p input.
      **/
-    QLinkedList<MatchItem> analyze( const QLinkedList<Lexem> &input );
+    MatchItem analyze( const QLinkedList<Lexem> &input );
 
-    /** @brief Returns the output of the last call to @ref analyze. */
-    QLinkedList<MatchItem> output() const { return m_output; };
+    /** @brief Returns the root output item of the last call to @ref analyze. */
+    MatchItem output() const { return m_outputRoot; };
 
     /** @brief Returns a pointer to the used JourneySearchKeywords object. */
     JourneySearchKeywords *keywords() const { return m_keywords; };
 
-    /**
-     * @brief Matches @p input using @p item.
-     *
-     * @param input The input that should be matched.
-     * @param item The item to be used for matching.
-     *
-     * @return True, if @p item matches @p input. False otherwise
-     **/
-    bool matchItem( const QLinkedList<Lexem> &input, SyntaxItemPointer item );
+#ifndef DEBUG_PARSING
+protected:
+#endif
+    struct MatchData {
+        MatchData( SyntaxItems _items, MatchItem *parentMatchItem = 0, MatchData *parent = 0,
+                   bool onlyTesting = false )
+                : items(_items), item(items.constBegin()), parentMatchItem(parentMatchItem),
+                  parent(parent), onlyTesting(onlyTesting)
+        {
+        };
+
+        /** A list of match items, representing a sequence of rules. */
+        SyntaxItems items;
+
+        /** The current match item in @p items. This is an iterator to be able to test if the next
+         * item matches, which is needed for non-greedy Kleene star/plus items. */
+        SyntaxItems::ConstIterator item;
+
+        /** The parent MatchItem object, used to add output to. */
+        MatchItem *parentMatchItem;
+
+        /** The parent MatchData object, used to find following items after the last SyntaxItem
+         * in MatchData::items. */
+        MatchData *parent;
+
+        bool onlyTesting;
+    };
 
 protected:
-//     enum MatchResult {
-//         MatchedNothing = 0,
-//         MatchedCompletely = 1,
-//         MatchedPartially = 2
-//     };
     struct ErrorInformation {
         AnalyzerCorrection correction;
         int position;
@@ -444,21 +499,21 @@ protected:
         };
     };
 
-    virtual inline bool isItemErrornous() { return currentInputToken().isErrornous(); };
-    virtual void setError2( ErrorSeverity severity, const QString& errornousText,
-                            const QString& errorMessage, int position,
-                            const LexemList &lexems = LexemList(),
-                            MatchItem *parent = 0, int index = -1 );
-    virtual void setError2( ErrorSeverity severity, const QString& errornousText,
-                            AnalyzerCorrection errorCorrection, int position,
-                            const LexemList &lexems = LexemList(),
-                            MatchItem *parent = 0, int index = -1 );
 
-    inline void readItemAndSkipSpaces( MatchItem *parentItem = 0 ) {
+    virtual inline bool isItemErroneous() { return currentInputToken().isErroneous(); };
+    virtual void setError2( MatchData *matchData, ErrorSeverity severity,
+                            const QString &erroneousText, const QString& errorMessage,
+                            int position, const LexemList &lexems = LexemList() );
+    virtual void setError2( MatchData *matchData, ErrorSeverity severity,
+                            const QString &erroneousText, AnalyzerCorrection errorCorrection,
+                            int position, const LexemList &lexems = LexemList() );
+
+    inline void readItemAndSkipSpaces( MatchData *matchData ) {
+        DO_DEBUG_PARSING_INPUT();
         Analyzer::readItem();
-        readSpaceItems( parentItem );
+        readSpaceItems( matchData );
     };
-    void readSpaceItems( MatchItem *parentItem = 0 );
+    void readSpaceItems( MatchData *matchData );
 
     QVariant readValueFromChildren( JourneySearchValueType valueType, MatchItem *syntaxItem ) const;
     QTime timeValue( const QHash< JourneySearchValueType, QVariant > &values ) const;
@@ -467,182 +522,157 @@ protected:
     /**
      * @brief Inserts @p syntaxItem into the output, sorted by SyntaxItem::position().
      *
-     * TODO parentItem documentation
+     * @param matchData Contains the parent MatchItem (MatchData::parentMatchItem), where output
+     *   gets added to (can also be NULL, in this case output gets set to m_outputRoot). If
+     *   MatchData::onlyTesting is true, nothing gets added to the output.
+     * @param matchItem The MatchItem object to add to the output.
      **/
-    void addOutputItem( const MatchItem &syntaxItem, MatchItem *parentItem = 0 );
+    void addOutputItem( MatchData *matchData, const MatchItem &matchItem );
 
     /**
-     * @brief Parses the given input for a journey search.
+     * @brief Matches input using the current item in @p matchData, applying Kleene star/plus.
      *
-     * Uses recursive descent, ie. one match function for each derivation rule.
-     * These are the underlying derivation rules:
-     * @verbatim
-     *  [JourneySearch] := [Prefix][StopName][Suffix]
-     *         [Prefix] := To|From|<nothing>
-     *         [Suffix] := [ArriveOrDepart][Tomorrow][TimeAt]|<nothing>
-     * [ArriveOrDepart] := arrival|departure|<nothing>
-     *         [TimeAt] := at [Number:0-23]:[Number:0-59]|<nothing>
-     *         [TimeIn] := in [Number:1-1339]+ minutes|<nothing>
-     *       [Tomorrow] := tomorrow|<nothing>
-     *       [StopName] := (letter|other|digit)*
-     * @endverbatim
-     *
-     * ArriveOrDepart, Tomorrow, To and From are matched using @ref matchKeywordInList
-     * (keywords can have multiple translations).
-     *
-     * Match functions check at the current position for a rule/string.
-     * They only change the current position/input if they do match (and return true).
-     *
-     * @return bool True if a journey search was matched, ie. at least a stop name was found.
-     *   False, otherwise.
-     **/
-    bool parseJourneySearch();
-
-    bool matchPrefix(); // Parse left-to-right
-    bool matchSuffix(); // Parse right-to-left
-    bool matchStopName(); // Needs to be called AFTER parsePrefix AND parseSuffix
-    bool matchTimeAt();
-    bool matchTimeIn();
-    bool matchKeywordInList( KeywordType type, MatchItem *match, MatchItem *parent = 0 );
-    bool matchNumber( int *number, int min = -1, int max = 9999999, MatchItem *parent = 0,
-                      bool *corrected = 0, int *removedDigits = 0 );
-
-    bool matchCharacter( char character, QString *text = 0, MatchItem *parent = 0 );
-
-    /// @p wordCount == -1 to match all found words (string/number/other)
-    bool matchWords( int wordCount = 1, QStringList *matchedWords = 0, QString *matchedText = 0,
-                     LexemList *matchedLexems = 0, const QList<Lexem::Type> &wordTypes =
-                       QList<Lexem::Type>() << Lexem::String << Lexem::Number << Lexem::Space,
-                     MatchItem *parent = 0 );
-
-    bool matchString( const QStringList &strings, QString *matchedString = 0, MatchItem *parent = 0 );
-    inline bool matchString( const QString &string ) {
-        return matchString( QStringList() << string );
-    };
-    bool matchMinutesString();
-
-    /**
-     * @brief Matches input using @p items, applying the Kleene star/plus if used by an item.
-     *
-     * This function checks the flags of @p item for KleeneStar / KleenePlus and calls
+     * This function checks the flags of MatchData::item for KleeneStar / KleenePlus and uses
      * @ref matchKleeneStar if one of these flags is set. Otherwise @ref matchItemKleeneUnaware
-     * gets called.
+     * is used.
      *
-     * @param items A list of match items, representing a sequence of rules.
-     * @param item The current match item in @p items. This is an iterator to be able to test if
-     *   the next item matches, which is needed for non-greedy Kleene star/plus items.
-     * @param matchedItem A SyntaxItem object with information about a match, if @p item matches.
-     * @param parent The parent SyntaxItem for new output. If this is 0, output gets added to the
-     *   global output list (@ref SyntacticalAnalyzer::output). Sequence and option items use
-     *   themselves as parent in calls to @ref matchItem. Default is 0.
+     * @param matchData Contains information about the items to be matched (MatchData::items) and
+     *   the next item to be matched (MatchData::item). Also contains a parent MatchData object
+     *   (MatchData::parent), which is needed to test following items, and a parent MatchItem
+     *   (MatchData::parentMatchItem), where output gets added to. Sequence and option items use
+     *   themselves as parent.
+     * @param matchedItem A MatchItem object, which gets filled with information about a match,
+     *   if the current item in @p matchData matches.
      *
-     * @return True, if @p item has matched. False otherwise.
+     * @return True, if the current item in @p matchData matches. False otherwise.
      **/
-    bool matchItem( SyntaxItems *items, SyntaxItems::ConstIterator *item, MatchItem *matchedItem,
-                    MatchItem *parent = 0 );
+    bool matchItem( MatchData *matchData, MatchItems *matchedItems );
 
     /**
-     * @brief Matches input using @p items, applying the Kleene star, ie. match them multiple times.
+     * @brief Matches input using the current item in @p matchData, applying the Kleene star.
      *
-     * Matches input using the rules associated with the given @p items, starting with @p item.
-     * Matching is done greedy if @p item has the @ref MatchItem::MatchGreedy flag set. Otherwise
-     * it's done non-greedy.
+     * Matches input using the rules associated with the given items in @p matchData, starting
+     * with MatchData::item. Matching is done greedy if MatchData::item has the
+     * @ref MatchItem::MatchGreedy flag set. Otherwise it's done non-greedy.
      *
-     * This iterator @p item may be incremented, if it's MatchItem matches non-greedy (has the
-     * @ref MatchItem::MatchGreedy flag not set) and the following item in @p items matches. The
-     * following item gets tested before each recursion in a Kleene star. If it matches, the Kleene
-     * star is finished. The other termination condition is the end of input items (lexems).
+     * The iterator MatchData::item may be incremented, if it matches non-greedy (has the
+     * @ref MatchItem::MatchGreedy flag not set) and the following item in MatchData::items matches.
+     * The following item gets tested before each recursion in a Kleene star. If it matches, the
+     * Kleene star is finished. The other termination condition is the end of input items (lexems).
      *
-     * @note @p item must have the @ref MatchItem::KleeneStar or @ref MathItem::KleenePlus flag set.
+     * @note Greedy matching is more performant, because non-greedy matching requires testing
+     *   following items for a match to stop the Kleene star.
+     * @note MatchData::item must have the @ref MatchItem::KleeneStar or @ref MathItem::KleenePlus
+     *   flag set. This function does not handle Kleene plus, to do so use @ref matchItem.
      *
-     * @param items A list of match items, representing a sequence of rules.
-     * @param item The current match item in @p items. This is an iterator to be able to test if
-     *   the next item matches, which is needed for non-greedy Kleene star/plus items.
+     * @param matchData Contains information about the items to be matched (MatchData::items) and
+     *   the next item to be matched (MatchData::item). Also contains a parent MatchData object
+     *   (MatchData::parent), which is needed to test following items, and a parent MatchItem
+     *   (MatchData::parentMatchItem), where output gets added to. Sequence and option items use
+     *   themselves as parent.
      * @param matchedItem A SyntaxItem object with information about the last matched item, if
      *   there were at least one match.
-     * @param parent The parent SyntaxItem for new output. If this is 0, output gets added to the
-     *   global output list (@ref SyntacticalAnalyzer::output). Sequence and option items use
-     *   themselves as parent in calls to @ref matchItem. Default is 0.
      *
-     * @returns The number of matches of @p item.
+     * @returns The number of matches of MatchData::item.
      **/
-    int matchKleeneStar( SyntaxItems *items, SyntaxItems::ConstIterator *item,
-                         MatchItem *matchedItem, MatchItem *parent = 0 );
+    int matchKleeneStar( MatchData *matchData, MatchItems *matchedItems );
 
     /**
-     * @brief Matches input using a @p sequence item, ie. it's child items.
+     * @brief Matches input using the current item in @p matchData, unaware of Kleene star/plus.
      *
-     * The sequence matches, if all items in the sequence match one after the other.
-     * Optional items always match, Kleene star objects are optional Kleene plus objects.
+     * Does not handle KleenePlus and KleeneStar. To do so use @ref matchItem.
+     * This function calls a suitable method which performs the actual matching of the current
+     * item, based on it's type. It matches terminal symbols, but not only.
+     * If matching fails, error handling is performed according to @p enabledCorrections, eg.
+     * skipping unexpected lexems.
      *
-     * @note This doesn't handle KleeneStar or KleenePlus flags of @p sequence.
-     *   To do so use @ref SyntacticalAnalyzer::matchItem.
-     *
-     * @param sequence A pointer to the @ref MatchItemSequence object containing the items in the
-     *   sequence to match.
-     * @param matchedItem Gets set to the @ref SyntaxItem object generated for a match of the
-     *   sequence, if it has matched. Default is 0.
-     * @param parent The parent SyntaxItem for new output. If this is 0, output gets added to the
-     *   global output list (@ref SyntacticalAnalyzer::output). Sequence and option items use
-     *   themselves as parent in calls to @ref matchItem. Default is 0.
-     *
-     * @return True, if the sequence has matched. False otherwise.
-     **/
-    bool matchSequence( const SyntaxSequencePointer &sequence, MatchItem *matchedItem = 0,
-                        MatchItem *parent = 0 );
-
-    /**
-     * @brief Matches input using an @p option item, ie. it's child items.
-     *
-     * The option matches, if one it's items matches.
-     * Optional items always match, Kleene star objects are optional Kleene plus objects.
-     *
-     * @note This doesn't handle KleeneStar or KleenePlus flags of @p sequence.
-     *   To do so use @ref SyntacticalAnalyzer::matchItem.
-     *
-     * @param option A pointer to the @ref MatchItemOption object containing the items in the
-     *   option to match.
-     * @param matchedItem Gets set to the @ref SyntaxItem object generated for a match of the
-     *   option, if it has matched. Default is 0.
-     * @param parent The parent SyntaxItem for new output. If this is 0, output gets added to the
-     *   global output list (@ref SyntacticalAnalyzer::output). Sequence and option items use
-     *   themselves as parent in calls to @ref matchItem. Default is 0.
-     *
-     * @return True, if the option has matched. False otherwise.
-     **/ // TODO replace argument type with SyntaxOptionPointer?
-    bool matchOption( SyntaxOptionItem *option, MatchItem *matchedItem = 0,
-                      MatchItem *parent = 0 );
-
-    bool matchKeyword( SyntaxKeywordItem* keyword, MatchItem *matchedItem = 0,
-                       MatchItem *parent = 0 );
-
-    /**
-     * @brief TODO.
-     *
-     * Doesn't handle KleenePlusItem and KleeneStarItem, but OptionalMatchItem.
-     * This function matches terminal symbols, but not only.
-     *
-     * @param items A list of match items, representing a sequence of rules.
-     * @param item The current match item in @p items. This is an iterator to be able to test if
-     *   the next item matches, which is needed for non-greedy Kleene star/plus items.
+     * @param matchData Contains information about the items to be matched (MatchData::items) and
+     *   the next item to be matched (MatchData::item). Also contains a parent MatchData object
+     *   (MatchData::parent), which is needed to test following items, and a parent MatchItem
+     *   (MatchData::parentMatchItem), where output gets added to. Sequence and option items use
+     *   themselves as parent.
      * @param matchedItem A SyntaxItem object with information about the last matched item, if
      *   there were at least one match.
-     * @param parent The parent SyntaxItem for new output. If this is 0, output gets added to the
-     *   global output list (@ref SyntacticalAnalyzer::output). Sequence and option items use
-     *   themselves as parent in calls to @ref matchItem. Default is 0.
+     * @param enabledCorrections Corrections to perform if needed.
      *
-     * @return True, if @p item has matched. False otherwise.
+     * @return True, if @p item matches. False otherwise.
      **/
-    bool matchItemKleeneUnaware( SyntaxItems *items, SyntaxItems::ConstIterator *item,
-                                 MatchItem *matchedItem, MatchItem *parent = 0,
+    bool matchItemKleeneUnaware( MatchData *matchData, MatchItems *matchedItems,
                                  AnalyzerCorrections enabledCorrections = CorrectEverything );
+
+    /**
+     * @brief Matches the current sequence item in @p matchData, ie. the sequence of it's child items.
+     *
+     * The sequence matches, if all items in the sequence match one after the other. Optional items
+     * may be skipped, but the sequence does not match if all items are optional and do not match.
+     *
+     * @note This does not handle KleeneStar or KleenePlus flags. To do so use @ref matchItem.
+     * @note This expects MatchData::item to be of type SyntaxItemSequence.
+     *
+     * @param matchData Contains information about the items to be matched (MatchData::items) and
+     *   the next item to be matched (MatchData::item). Also contains a parent MatchData object
+     *   (MatchData::parent), which is needed to test following items, and a parent MatchItem
+     *   (MatchData::parentMatchItem), where output gets added to. Sequence and option items use
+     *   themselves as parent.
+     * @param matchedItem Gets set to the @ref MatchItem object generated for a match of the
+     *   sequence, if it matches. Default is 0.
+     *
+     * @return True, if the sequence matches, ie. at least one of it's items match. False otherwise.
+     **/
+    bool matchSequence( MatchData *matchData, MatchItems *matchedItems );
+
+    /**
+     * @brief Matches the current option item in @p matchData, ie. one of it's child items.
+     *
+     * The option matches, if one it's items match.
+     *
+     * @note This doesn't handle KleeneStar or KleenePlus flags. To do so use @ref matchItem.
+     * @note This expects MatchData::item to be of type SyntaxItemOption.
+     *
+     * @param matchData Contains information about the items to be matched (MatchData::items) and
+     *   the next item to be matched (MatchData::item). Also contains a parent MatchData object
+     *   (MatchData::parent), which is needed to test following items, and a parent MatchItem
+     *   (MatchData::parentMatchItem), where output gets added to. Sequence and option items use
+     *   themselves as parent.
+     * @param matchedItem Gets set to the @ref MatchItem object generated for a match of the
+     *   option, if it matches. Default is 0.
+     *
+     * @return True, if the option matches. False otherwise.
+     **/
+    bool matchOption( MatchData *matchData, MatchItems *matchedItems );
+
+    /**
+     * @brief Matches the current keyword item in @p matchData.
+     *
+     * The keyword matches, if the keyword itself and it's value sequence match. A keyword item
+     * can also have no value sequence.
+     *
+     * @note This doesn't handle KleeneStar or KleenePlus flags. To do so use @ref matchItem.
+     * @note This expects MatchData::item to be of type SyntaxItemKeyword.
+     *
+     * @param matchData Contains information about the items to be matched (MatchData::items) and
+     *   the next item to be matched (MatchData::item). Also contains a parent MatchData object
+     *   (MatchData::parent), which is needed to test following items, and a parent MatchItem
+     *   (MatchData::parentMatchItem), where output gets added to. Sequence and option items use
+     *   themselves as parent.
+     * @param matchedItem Gets set to the @ref MatchItem object generated for a match of the
+     *   keyword, if it matches. Default is 0.
+     *
+     * @return True, if the keyword matches. False otherwise.
+     **/
+    bool matchKeyword( MatchData *matchData, MatchItems *matchedItems );
+
+    bool matchKeywordInList( MatchData *matchData, KeywordType type, MatchItem *matchedItem );
+    bool matchNumber( MatchData *matchData, MatchItems *matchedItems );
+    bool matchCharacter( MatchData *matchData, MatchItems *matchedItems );
+    bool matchWord( MatchData *matchData, MatchItems *matchedItems );
+    bool matchString( MatchData *matchData, MatchItems *matchedItems );
 
 //     bool stringsSimilar( const QString &string1, const QString &string2 );
 
 private:
-    QLinkedList<MatchItem> m_output;
-    QLinkedList<Lexem>::ConstIterator m_stopNameBegin; // Pointing to the first stop name lexem
-    QLinkedList<Lexem>::ConstIterator m_stopNameEnd; // Pointing the the lexem after the last stop name lexem
+    MatchItem m_outputRoot;
+    SyntaxItemPointer m_syntaxItem;
     JourneySearchKeywords *m_keywords;
     bool m_ownKeywordsObject;
 };
@@ -675,10 +705,9 @@ public:
     QLinkedList<MatchItem> output() const { return m_input; };
 
 protected:
-    virtual void setError( ErrorSeverity severity, const QString& errornousText,
-                           const QString& errorMessage, int position,
-                           MatchItem *parent = 0, int index = -1 );
-    virtual inline bool isItemErrornous() { return currentInputToken().isErrornous(); };
+    virtual void setError( ErrorSeverity severity, const QString &erroneousText,
+                           const QString &errorMessage, int position, MatchItem *parent = 0 );
+    virtual inline bool isItemErroneous() { return currentInputToken().isErroneous(); };
 };
 
 // TODO namespace JourneySearchParser
@@ -699,6 +728,8 @@ public:
      * @see Results::timeIsDeparture
      **/
     QString stopName() const { return m_stopName; };
+
+    MatchItemPointers stopNameItems() const { return m_stopNameItems; };
 
 //         void setStopName( const QString &stopName );
 
@@ -735,59 +766,72 @@ public:
     QString inputString() const { return m_inputString; };
 
     /**
-     * @brief The output string, constructed from the syntax items in syntaxItems.
+     * @brief The output string, constructed from the match items.
      *
-     * @note This method is fast, because the output strings are already generated.
+     * This is equal to calling @coderootItem().text(appliedCorrections)@endcode.
+     * TODO => (docu) @note This method is fast, because the output strings are already generated.
      **/
-    QString outputString( OutputStringFlags flags = DefaultOutputString ) const;
+    QString outputString( AnalyzerCorrections appliedCorrections = CorrectEverything ) const {
+        return m_rootItem.text( appliedCorrections ); };
 
     /**
      * @brief Same as @ref outputString, but with an updated stop name.
      *
      * @note This method needs to TODO
      **/
-    QString updatedOutputString( const QHash< JourneySearchValueType, QVariant > &updateItemValues,
-            const QList<MatchItem::Type> &removeItems = QList<MatchItem::Type>(),
-            OutputStringFlags flags = DefaultOutputString,
+    QString updatedOutputString( const QString &updatedStopName,
+            const QHash<KeywordType, QString> &updateKeywordValues,
+            const MatchItemTypes &removeItems = MatchItemTypes(),
+            AnalyzerCorrections appliedCorrections = CorrectEverything,
             JourneySearchKeywords *keywords = 0 ) const;
 
-    /**
-     * @brief All syntax items ordered by position in the input string.
-     *
-     * This list also contains error items.
-     **/
-    QLinkedList<MatchItem> allItems() const { return m_allItems; };
+    QString updateOutputString( SyntaxItemPointer syntaxItem,
+                                AnalyzerCorrections appliedCorrections = CorrectEverything,
+                                JourneySearchKeywords *keywords = 0 );
+
+//     /**
+//      * @brief All match items ordered by position in the input string.
+//      *
+//      * This list also contains error items.
+//      **/
+    inline MatchItem rootItem() const { return m_rootItem; };
 
     /**
-     * @brief All syntax items that are no error items.
+     * @brief All match items that are no error items.
      *
-     * All syntax items in this hash are pointers to items in @ref Results::allItems.
+     * All match items in this hash are pointers to (child) items in @ref Results::rootItem.
      **/
-    QHash< MatchItem::Type, const MatchItem* > syntaxItems() const { return m_syntaxItems; };
+    inline QHash< MatchItem::Type, MatchItemPointers > matchItems() const {
+        return m_matchItems; };
 
     /**
-     * @brief The syntax item with the given @p type.
-     *
-     * @note Use @ref SyntaxItem::isValid to check if the returned syntax item is valid, ie.
-     *   if it was found in the input string. If @ref hasSyntaxItem returns false for @p type,
-     *   this method will return an invalid syntax item.
+     * @brief The match item(s) with the given @p type.
      **/
-    const MatchItem *syntaxItem( MatchItem::Type type ) const { return m_syntaxItems[type]; };
+// TODO
+//     * @note Use @ref MatchItem::isValid to check if the returned match item is valid, ie.
+//     *   if it was found in the input string. If @ref hasMatchItem returns false for @p type,
+//     *   this method will return an invalid match item.
+    inline MatchItemPointers matchItem( MatchItem::Type type ) const {
+        return m_matchItems[ type ]; };
 
     /**
-     * @brief Wether or not the given @p type is contained in the list of syntax items.
+     * @brief Wether or not the given @p type is contained in the list of match items.
      *
-     * @note If this method returns false, @ref syntaxItem will return an invalid syntax item
-     *   for @p type.
+     * @note If this method returns false, @ref matchItem will return an empty list for @p type.
      **/
-    bool hasSyntaxItem( MatchItem::Type type ) const { return m_syntaxItems.contains(type); };
+    inline bool hasMatchItem( MatchItem::Type type ) const { return m_matchItems.contains(type); };
+
+    inline bool hasKeyword( KeywordType keyword ) const { return m_keywords.contains(keyword); };
+
+    /** TODO To get the value of the keyword item use MatchItem::keywordValue(). */
+    inline const MatchItem *keyword( KeywordType keyword ) const { return m_keywords[keyword]; };
 
     /**
      * @brief All error syntax items.
      *
      * All syntax items in this list are pointers to items in @ref Results::allItems.
      **/
-    QList< const MatchItem* > errorItems() const { return m_errorItems; };
+    MatchItemPointers errorItems() const { return m_errorItems; };
 
     int cursorOffset() const { return m_cursorOffset; };
     int selectionLength() const { return m_selectionLength; };
@@ -817,20 +861,29 @@ protected:
     void init();
 
 private:
+    QString updateOutputString( SyntaxItemPointer syntaxItem, const MatchItem *matchItem,
+            AnalyzerCorrections appliedCorrections, JourneySearchKeywords *keywords );
+    QString updateOutputStringChildren( SyntaxItemPointer syntaxItem, const MatchItem *matchItem,
+            AnalyzerCorrections appliedCorrections, JourneySearchKeywords *keywords );
+    QString updatedOutputStringSkipErrorItems( const MatchItems &matchItems,
+            MatchItems::ConstIterator *iterator, AnalyzerCorrections appliedCorrections );
+
     AnalyzerResult m_result;
     QDateTime m_time;
     QString m_stopName;
-    QString m_outputStringWithErrors;
-    QString m_outputString;
     QString m_inputString;
     bool m_hasErrors;
     bool m_timeIsDeparture;
     bool m_stopIsTarget;
     int m_cursorOffset;
     int m_selectionLength;
-    QLinkedList<MatchItem> m_allItems;
-    QHash< MatchItem::Type, const MatchItem* > m_syntaxItems;
-    QList< const MatchItem* > m_errorItems;
+    MatchItem m_rootItem;
+
+    // TODO No need for MatchItemPointers, because of explicit sharing?
+    MatchItemPointers m_stopNameItems;
+    QHash< MatchItem::Type, MatchItemPointers > m_matchItems;
+    QHash< KeywordType, const MatchItem* > m_keywords;
+    MatchItemPointers m_errorItems;
 };
 
 /**
@@ -855,10 +908,11 @@ public:
      * @param keywords The JourneySearchKeywords object to use. If this is 0 a new object gets
      *   created and deleted in the destructor. If an object is given, it won't get deleted.
      *   Default is 0.
+     * TODO
      **/
-    JourneySearchAnalyzer( JourneySearchKeywords *keywords = 0,
+    JourneySearchAnalyzer( SyntaxItemPointer syntaxItem = 0, JourneySearchKeywords *keywords = 0,
                            AnalyzerCorrections corrections = CorrectEverything,
-                           int cursorPositionInInputString = -1  );
+                           int cursorPositionInInputString = -1 );
 
     /** @brief Destructor. */
     ~JourneySearchAnalyzer();
@@ -884,10 +938,10 @@ public:
      **/
     const Results results() const { return m_results; };
 
-    static Results resultsFromSyntaxItemList( const QLinkedList<MatchItem> &itemList,
-                                              JourneySearchKeywords *keywords );
-    Results resultsFromSyntaxItemList( const QLinkedList<MatchItem> &itemList ) {
-        return resultsFromSyntaxItemList( itemList, m_keywords );
+    static Results resultsFromMatchItem( const MatchItem &matchItem,
+                                         JourneySearchKeywords *keywords );
+    Results resultsFromMatchItem( const MatchItem &matchItem ) {
+        return resultsFromMatchItem( matchItem, m_keywords );
     };
 
     void completeStopName( KLineEdit *lineEdit, const QString &completion );

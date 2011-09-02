@@ -75,7 +75,8 @@ private:
  * It uses @ref JourneySearchHighlighter but it could be replaced by any other QSyntaxHighlighter.
  * Mouse events are reimplemented, to get correct positions in the highlighted
  * QTextDocument. Some things are missing, like triple click or double click
- * and mouse move to select more words (but one double click on a word works). */
+ * and mouse move to select more words (but one double click on a word works).
+ **/
 class JourneySearchLineEdit : public KLineEdit {
     Q_OBJECT
 

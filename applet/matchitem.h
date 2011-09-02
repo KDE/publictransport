@@ -25,7 +25,7 @@
 #include <QExplicitlySharedDataPointer>
 
 #include "journeysearchenums.h"
-#include "lexem.h"
+#include "syntaxitem.h"
 
 namespace Parser {
 
@@ -33,6 +33,7 @@ class Lexem;
 class MatchItemPrivate;
 class MatchItem;
 typedef QList<MatchItem> MatchItems;
+typedef QList<const MatchItem*> MatchItemPointers;
 
 /**
  * @brief Represents a terminal match item or a tree of matches tree, eg. with sequences/options.
@@ -43,7 +44,7 @@ typedef QList<MatchItem> MatchItems;
  * There are different types of match items (@ref MatchItem::Type), some of which have an
  * associated value (@ref MatchItem::value). To get the position in the input string use
  * @ref MatchItem::position. The matched part of the input string can be retrieved using
- * @ref MatchItem::input. To get a corrected input string, use @ref MatchItem::text. TODO
+ * @ref MatchItem::input. To get a corrected input string, use @ref MatchItem::text.
  *
  * Match items can have children, but terminal items don't have any children (@ref isTerminal).
  * That means that match items form a syntax tree (derived from the structure of the match item
@@ -61,7 +62,7 @@ typedef QList<MatchItem> MatchItems;
  *   MatchItems are used to analyze the matches for a specific input string.
  *
  * The data of MatchItem objects is explicitly shared, so copying is fast and changes to the data
- * affect all associated match items.
+ * affect all associated match items. To copy a MatchItem use @ref MatchItem::copy.
  *
  * @see SyntaxItem
  * @see SyntacticalAnalyzer
@@ -97,7 +98,7 @@ public:
         Number,
         Character,
         String,
-        Words
+        Word
     };
 
     /**
@@ -121,6 +122,8 @@ public:
     virtual ~MatchItem();
     MatchItem &operator=( const MatchItem &other );
 
+    MatchItem copy() const;
+
     /**
      * @brief The type of this match item.
      *
@@ -137,6 +140,8 @@ public:
      **/
     Flags flags() const;
 
+    int matchedSyntaxItemIndex() const;
+
     /**
      * @brief The original text of this match item in the input string.
      *
@@ -145,11 +150,13 @@ public:
      * string. To get the value use @ref value, eg. to construct an output string again.
      * If @ref type returns @ref StopName, this method returns the stop name, without quotation
      * marks, if there are any in the input string.
-     * For error items (@ref Error), this contains the original errornous string.
+     * For error items (@ref Error), this contains the original erroneous string.
      **/
     QString input() const;
 
-    QString text( AnalyzerCorrections appliedCorrections = CorrectEverything ) const;
+    QString text( AnalyzerCorrections appliedCorrections = CorrectEverything, bool trim = true ) const;
+
+    bool combineStopNameItems();
 
     /**
      * @brief The value of this match item, if there is any.
@@ -163,13 +170,21 @@ public:
 
     JourneySearchValueType valueType() const;
 
+    /**
+     * @brief The value of the value sequence for this keyword match item, if there is any.
+     *
+     * If this MatchItem is not of type Keyword, this returns an invalid QVariant.
+     * This is equal to calling @codechildren().first().value()@endcode.
+     **/
+    QVariant keywordValue() const;
+
     bool isTerminal() const;
 
     /** @brief The position of this match item in the input string. */
     int position() const;
 
     /** @brief Wether or not there are any errors in the input string for this match item. */
-    bool isErrornous() const;
+    bool isErroneous() const;
 
     /**
      * @brief Wether or not this is a valid match item, that has been read from the input string.
@@ -186,6 +201,8 @@ public:
     static QString keywordId( KeywordType keywordType );
 
     const LexemList lexems() const;
+    const MatchItems children() const;
+    const MatchItems allChildren() const;
 
     QString toString( int level = 0 ) const;
 
@@ -207,33 +224,35 @@ protected:
      **/
     MatchItem( Type type, const LexemList &lexems = LexemList(), // TODO docu
                JourneySearchValueType valueType = NoValue, const QVariant &value = QVariant(),
-               Flags flags = DefaultMatchItem );
+               Flags flags = DefaultMatchItem, int matchedSyntaxItemIndex = 0 /*TODO*/ );
 
     MatchItem( const LexemList &lexems, KeywordType keyword, const QString &completedKeyword,
-               Flags flags = DefaultMatchItem );
+               Flags flags = DefaultMatchItem, int matchedSyntaxItemIndex = 0 /*TODO*/ );
+
+    MatchItem( const QExplicitlySharedDataPointer<MatchItemPrivate> &dd );
 
     void addChild( const MatchItem &matchItem );
     void addChildren( const MatchItems &matchItems );
-    const MatchItems children() const;
     MatchItems &children();
-    const MatchItems allChildren() const;
 
-    void setValue( const QVariant &value ) const;
+    void setValue( const QVariant &value );
     const Lexem firstLexem() const;
+    void setMatchedSyntaxItemIndex( int matchedSyntaxItemIndex );
 
 private:
     QExplicitlySharedDataPointer<MatchItemPrivate> d;
 };
 
+typedef QList<MatchItem::Type> MatchItemTypes;
+
 inline bool operator <( const MatchItem &matchItem1, const MatchItem &matchItem2 ) {
     return matchItem1.position() < matchItem2.position() ||
            matchItem1.type() == MatchItem::Error;
 };
+bool operator ==( const MatchItem &l, const MatchItem &r );
 
 QDebug &operator <<( QDebug debug, MatchItem::Type type );
 
-bool operator ==( const MatchItem &l, const MatchItem &r );
-
-} // namespace
+} // namespace Parser
 
 #endif // MATCHITEM_HEADER

@@ -20,7 +20,6 @@
 #ifndef SYNTAXITEM_HEADER
 #define SYNTAXITEM_HEADER
 
-#define QT_SHAREDPOINTER_TRACK_POINTERS
 #include <QPointer>
 #include <QStringList>
 #include <QLinkedList>
@@ -188,11 +187,14 @@ public:
  *
  * @note If a SyntaxItem has no parent in a constructor or a sequence/option operator, it's parent
  *   gets set to the new parent SyntaxItem. For example each option item in a SyntaxOptionItem
- *   get's the SytnaxOptionItem as parent (if the item didn't already have a parent). That way
+ *   gets the SytnaxOptionItem as parent (if the item didn't already have a parent). That way
  *   all SyntaxItem trees constructed with the sequence/option operators can be easily deleted
  *   by deleting the root item.
  *   If a SyntaxItem gets stored in a variable to be used at multiple places in another SyntaxItem,
  *   the parent of these items is set the item where they were first added.
+ * @note A tree of syntax items should not contain a keyword item of a certain type multiple times.
+ *   While this works for matching, it can cause problems when altering the input using the
+ *   @ref findKeywordChild method (it then finds the first occurence of the keyword type).
  **/
 class SyntaxItem : public QObject {
     Q_OBJECT
@@ -221,10 +223,9 @@ public:
         MatchNumber, /**< Match a number. Limits for the number can be defined.
                 * Currently only positive numbers are supported (SyntaxNumberItem). */
         MatchString, /**< Match a specific string. (SyntaxStringItem). */
-        MatchWords /**< Match one or more arbitrary words. The lexem types to be used can be
-                * defined. By default strings, numbers and spaces are read as words. If a lexem is
-                * read which type isn't in the list or if the given maximum word count is reached,
-                * the word matching stops (SyntaxWordsItem). */
+        MatchWord /**< Match one arbitrary word. The lexem types to be used can be defined.
+                * By default strings, numbers and spaces are read as words. If a lexem is read
+                * which type isn't in the list, this does not match (SyntaxWordItem). */
     };
 
     /**
@@ -232,18 +233,43 @@ public:
      **/
     enum Flag {
         DefaultMatch     = 0x0000, /**< A match is required (non-optional) and non-greedy.
-                                     * Non-greedy means, that matching stops,
-                                     * if the next SyntaxItem matches. */
+                * Non-greedy means, that matching stops, if the next SyntaxItem matches. */
         MatchIsOptional  = 0x0001, /**< A match isn't required, ie. it is optional. */
-        MatchGreedy      = 0x0002, /**< Match greedy, ie. until a lexem doesn't match. */
+        MatchGreedy      = 0x0002, /**< Match greedy, ie. until a lexem doesn't match. Default is
+                * non-greedy matching. */
         KleenePlus       = 0x0004, /**< Match multiple times, but at least once. */
         KleeneStar       = KleenePlus | MatchIsOptional, /**< Match multiple times or don't match.
-                                     * This is an optional KleenePlus. */
-        MatchIsErrornous = 0x0008  /**< The match is errornous. Errornous match items can be used
-                                     * to make the syntax more flexible, and know if the match went
-                                     * over an errornous syntax item. */ // TODO
+                * This is an optional KleenePlus. */
+//         MatchIsErroneous = 0x0008, /**< The match is erroneous. Erroneous match items can be used
+//                 * to make the syntax more flexible, and know if the match went over an erroneous 
+//                 * syntax item. TODO: Not used/implemented. */
+
+        AddToInput       = 0x0010, /**< Mark this item to be added into a matched input string
+                * using @ref Results::updateOutputString. Only terminal syntax items and keyword
+                * items can be added. See eg. @ref SyntaxKeywordItem::setAddToInputValue or
+                * @ref SyntaxWordItem::setAddToInputWords for setting the value of the syntax item
+                * to be added, if needed. To remove this and the other @ref ChangingFlags from a
+                * syntax item tree again, use @ref removeChangeFlags. */
+        RemoveFromInput  = 0x0020, /**< Mark this item to be removed from a matched input string
+                * using @ref Results::updateOutputString. To remove this and the other
+                * @ref ChangingFlags from a syntax item tree again, use @ref removeChangeFlags. */
+        ChangeInput      = 0x0040, /**< Mark this item to be changed in a matched input string
+                * using @ref Results::updateOutputString. Only terminal syntax items and keyword
+                * items can be changed. The syntax item needs to have a match in the input string
+                * to be changed. See eg. @ref SyntaxKeywordItem::setAddToInputValue or
+                * @ref SyntaxWordItem::setAddToInputWords for setting the new value of the syntax
+                * item to be changed. To remove this and the other @ref ChangingFlags from a syntax
+                * item tree again, use @ref removeChangeFlags. */
+        ChangingFlags    = AddToInput | RemoveFromInput | ChangeInput /** Flags that can be used
+                * to change a matched input string, ie. add, remove or change items. To remove
+                * these flags from a syntax item tree again, use @ref removeChangeFlags. */
     };
     Q_DECLARE_FLAGS( Flags, Flag );
+
+    enum DescriptionType {
+        FullDescription,
+        ShortDescription
+    };
 
     #ifdef USE_MATCHES_IN_SYNTAXITEM
         /** @brief Contains information about one match of a SyntaxItem in an input string. */
@@ -333,12 +359,11 @@ public:
      **/
     inline SyntaxItemPointer required() { return unsetFlag(MatchIsOptional); };
 
-    /** @brief Sets the @ref MatchIsErrornous flag and returns a pointer to this SyntaxItem. */
-    inline SyntaxItemPointer error() { return setFlag(MatchIsErrornous); };
-
-    /** @brief Unsets the @ref MatchIsErrornous flag and returns a pointer to this SyntaxItem. */
-    inline SyntaxItemPointer ok() { return unsetFlag(MatchIsErrornous); };
-
+//     /** @brief Sets the @ref MatchIsErroneous flag and returns a pointer to this SyntaxItem. */
+//     inline SyntaxItemPointer error() { return setFlag(MatchIsErroneous); };
+// 
+//     /** @brief Unsets the @ref MatchIsErroneous flag and returns a pointer to this SyntaxItem. */
+//     inline SyntaxItemPointer ok() { return unsetFlag(MatchIsErroneous); };
 
     /** @brief Associates the value of this SyntaxItem with @p valueType and returns a pointer
      *  to this MatchItem. */
@@ -347,6 +372,35 @@ public:
 
     /** TODO @brief Makes this SyntaxItem not use any value and returns a pointer to this SyntaxItem. */
     inline SyntaxItemPointer noOutput() { return outputTo(NoValue); };
+
+    /** @brief Gets a list of the direct children of this syntax item. */
+    virtual SyntaxItems children() const { return SyntaxItems(); };
+
+    /** @brief Gets a list of all direct or indirect children of the given @p type. */
+    SyntaxItems findChildren( Type type ) const;
+
+    /**
+     * @brief Gets the child keyword item of the given @p keywordType.
+     *
+     * If there is no such keyword item a null pointer is returned.
+     *
+     * This method can be used to mark an item with @ref ChangingFlags, ie. flags to add, remove
+     * or change a syntax item in a matched input string. To update a matched input string
+     * according to changing flags in the syntax item tree, use @ref Results::updateOutputString.
+     * To remove all changing flags from a syntax item tree again, use @ref removeChangeFlags.
+     *
+     * @note If there are multiple keywords of the given @p keywordType, the first occurence
+     *   is returned.
+     **/
+    SyntaxKeywordPointer findKeywordChild( KeywordType keywordType ) const;
+
+    /**
+     * @brief Removes all changing flags from this item and all it's children.
+     *
+     * Removes the flags @ref AddToInput, @ref RemoveFromInput and @ref ChangeInput,
+     * ie. @ref ChangingFlags.
+     **/
+    void removeChangeFlags();
 
     #ifdef USE_MATCHES_IN_SYNTAXITEM
     /**
@@ -377,7 +431,7 @@ public:
     virtual void clearResults() { m_matches.clear(); };
     #endif
 
-    virtual QString toString( int level = 0 ) const;
+    virtual QString toString( int level = 0, DescriptionType descriptionType = ShortDescription ) const;
 
     /** @brief The decrement operator is a shortcut for @ref optional. */
     inline SyntaxItemPointer operator --() { return optional(); };
@@ -408,7 +462,7 @@ protected:
         m_matches << MatchData( position, input, value );
     };
 
-    void addMatch( const SyntaxItem &matchedItem );
+    void addMatch( const MatchItem &matchedItem );
     #endif
 
 private:
@@ -438,20 +492,17 @@ public:
             }
         }
     };
-//     SyntaxSequenceItem( SyntaxItemPointer item )
-//             : SyntaxItem(MatchSequence), m_items(SyntaxItems() << item)
-//     {
-//         if ( !item->parent() ) {
-//             item->setParent( this );
-//         }
-//     };
+
     SyntaxSequenceItem( SyntaxSequencePointer pointer )
             : SyntaxItem(MatchSequence, pointer->flags(), pointer->valueType()),
               m_items(*pointer->items())
     {};
-    virtual ~SyntaxSequenceItem() { /*qDeleteAll(m_items);*/ };
 
-    SyntaxItems *items() { return &m_items; };
+    // TODO remove in favor of children()?
+    const SyntaxItems *items() const { return &m_items; };
+
+    /** @brief Gets a list of the direct children of this syntax item. */
+    virtual SyntaxItems children() const { return m_items; };
 
     inline SyntaxSequenceItem *operator MATCH_SEQUENCE_CONCATENATION_OPERATOR( const SyntaxItemPointer &item );
     inline operator SyntaxItem*() { return this; };
@@ -466,7 +517,7 @@ public:
     };
     #endif
 
-    virtual QString toString( int level = 0 ) const;
+    virtual QString toString( int level = 0, DescriptionType descriptionType = ShortDescription ) const;
 
 private:
     SyntaxItems m_items; // TODO rename to SyntaxItemPointers?
@@ -497,9 +548,12 @@ public:
             item->setParent( this );
         }
     };
-    virtual ~SyntaxOptionItem() { /*qDeleteAll(m_options);*/ };
 
-    SyntaxItems *options() { return &m_options; };
+    // TODO remove in favor of children()?
+    const SyntaxItems *options() const { return &m_options; };
+
+    /** @brief Gets a list of the direct children of this syntax item. */
+    virtual SyntaxItems children() const { return m_options; };
 
     inline SyntaxOptionItem *operator |( const SyntaxItemPointer &item );
     inline operator SyntaxItem*() { return this; };
@@ -514,14 +568,14 @@ public:
     };
     #endif
 
-    virtual QString toString( int level = 0 ) const;
+    virtual QString toString( int level = 0, DescriptionType descriptionType = ShortDescription ) const;
 
 private:
     SyntaxItems m_options;
 };
 
 /**
- * @brief Matches a special character.
+ * @brief Matches a specific character.
  **/
 class SyntaxCharacterItem : public SyntaxItem {
     Q_OBJECT
@@ -538,7 +592,7 @@ private:
 };
 
 /**
- * @brief Matches one or more specific words.
+ * @brief Matches a specific string.
  **/
 class SyntaxStringItem : public SyntaxItem {
     Q_OBJECT
@@ -559,27 +613,31 @@ private:
 };
 
 /**
- * @brief Matches words.
+ * @brief Matches any word.
  **/
-class SyntaxWordsItem : public SyntaxItem {
+class SyntaxWordItem : public SyntaxItem {
     Q_OBJECT
 public:
-    SyntaxWordsItem( Flags flags = DefaultMatch, JourneySearchValueType valueType = NoValue,
-                     int wordCount = -1, const QList<Lexem::Type> &wordTypes =
+    SyntaxWordItem( Flags flags = DefaultMatch, JourneySearchValueType valueType = NoValue,
+                    const QList<Lexem::Type> &wordTypes =
                         QList<Lexem::Type>() << Lexem::String << Lexem::Number << Lexem::Space,
-                     QObject *parent = 0 )
-            : SyntaxItem(MatchWords, flags, valueType, parent),
-              m_wordCount(wordCount), m_wordTypes(wordTypes)
+                    QObject *parent = 0 )
+            : SyntaxItem(MatchWord, flags, valueType, parent), m_wordTypes(wordTypes)
     {};
 
-    int wordCount() const { return m_wordCount; };
     const QList<Lexem::Type> wordTypes() const { return m_wordTypes; };
 
-    virtual QString toString( int level = 0 ) const;
+    QStringList addToInputWords() const { return m_addToInputWords; }; // TODO
+
+    // TODO Multiple words only with KleenePlus flag
+    void setAddToInputWords( const QStringList &addToInputWords ) {
+            m_addToInputWords = addToInputWords; };
+
+    virtual QString toString( int level = 0, DescriptionType descriptionType = ShortDescription ) const;
 
 private:
-    const int m_wordCount;
     const QList<Lexem::Type> m_wordTypes;
+    QStringList m_addToInputWords;
 };
 
 /**
@@ -597,16 +655,24 @@ public:
             valueSequence->setParent( this );
         }
     };
-    virtual ~SyntaxKeywordItem() { /*delete m_valueSequence;*/ };
 
     KeywordType keyword() const { return m_keyword; };
     SyntaxSequencePointer valueSequence() const { return m_valueSequence; };
 
-    virtual QString toString( int level = 0 ) const;
+    /** @brief Gets a list of the direct children of this syntax item. */
+    virtual SyntaxItems children() const {
+            return m_valueSequence ? SyntaxItems() << m_valueSequence : SyntaxItems(); };
+
+    QVariant addToInputValue() const { return m_addToInputValue; }; // TODO
+    void setAddToInputValue( const QVariant &addToInputValue ) {
+            m_addToInputValue = addToInputValue; };
+
+    virtual QString toString( int level = 0, DescriptionType descriptionType = ShortDescription ) const;
 
 private:
     const KeywordType m_keyword;
     SyntaxSequencePointer m_valueSequence;
+    QVariant m_addToInputValue;
 };
 
 /**
@@ -623,7 +689,7 @@ public:
     int min() const { return m_min; };
     int max() const { return m_max; };
 
-    virtual QString toString( int level = 0 ) const;
+    virtual QString toString( int level = 0, DescriptionType descriptionType = ShortDescription ) const;
 
 private:
     const int m_min;
@@ -645,11 +711,11 @@ private:
  * of this method.
  *
  * A regular expression @verbatim\d+:?\d*@endverbatim can be written like this (with
- * @verbatim\d@endverbatim being replaced by whole numbers, since it operates of lexem lists,
+ * @verbatim\d@endverbatim being replaced by whole numbers, since it operates on lists of lexems,
  * not strings):
  * TODO Update this code segment: TODO
  * @code
- *   MatchNumber().kleenePlus() & MatchColon()->optional() & MatchNumber()->kleeneStar()
+ *   Syntax::number()->kleenePlus() & Syntax::character(':')->optional() & Syntax::number()->kleeneStar()
  * @endcode
  *
  * The @verbatim+@endverbatim operator concatenates two SyntaxItems into a new SyntaxSequenceItem.
@@ -688,18 +754,11 @@ public:
 
     static SyntaxItemPointer character( char ch )
         { return new SyntaxCharacterItem(ch); };
-//     static MatchItemPointer colon()
-//         { return new MatchItemColon; };
-//     static MatchItemPointer quotationMark()
-//         { return new MatchItemQuotationMark; };
     static SyntaxItemPointer number( int min = 1, int max = 9999999, JourneySearchValueType valueType = NoValue )
         { return new SyntaxNumberItem(min, max, SyntaxItem::DefaultMatch, valueType); };
-    static SyntaxItemPointer words( int wordCount = -1, JourneySearchValueType valueType = NoValue,
+    static SyntaxItemPointer word( JourneySearchValueType valueType = NoValue,
             const LexemTypes &wordTypes = LexemTypes() << Lexem::String << Lexem::Number << Lexem::Space )
-        { return new SyntaxWordsItem( SyntaxItem::DefaultMatch, valueType, wordCount, wordTypes ); };
-    static SyntaxItemPointer oneWord(  JourneySearchValueType valueType = NoValue,
-            const LexemTypes &wordTypes = LexemTypes() << Lexem::String << Lexem::Number << Lexem::Space )
-        { return new SyntaxWordsItem( SyntaxItem::DefaultMatch, valueType, 1, wordTypes ); };
+        { return new SyntaxWordItem( SyntaxItem::DefaultMatch, valueType, wordTypes ); };
 };
 
 template <typename SyntaxItemType>
@@ -767,8 +826,8 @@ inline SyntaxSequenceItem* SyntaxSequenceItem::operator MATCH_SEQUENCE_CONCATENA
             qDebug() << "MatchItemSequence: Concat a sequence with another sequence";
         #endif
         SyntaxSequenceItem *sequenceItem = qobject_cast<SyntaxSequenceItem*>( item.data() );
-        for ( SyntaxItems::Iterator it = sequenceItem->items()->begin();
-              it != sequenceItem->items()->end(); ++it )
+        for ( SyntaxItems::Iterator it = sequenceItem->m_items.begin();
+              it != sequenceItem->m_items.end(); ++it )
         {
             if ( !(*it)->parent() ) {
                 (*it)->setParent( this );
@@ -805,8 +864,8 @@ inline SyntaxOptionItem* SyntaxOptionItem::operator|( const Parser::SyntaxItemPo
             qDebug() << "MatchItemOption: Concat an option with another option";
         #endif
         SyntaxOptionItem *optionItem = qobject_cast<SyntaxOptionItem*>( item.data() );
-        for ( SyntaxItems::Iterator it = optionItem->options()->begin();
-              it != optionItem->options()->end(); ++it )
+        for ( SyntaxItems::Iterator it = optionItem->m_options.begin();
+              it != optionItem->m_options.end(); ++it )
         {
             if ( !(*it)->parent() ) {
                 (*it)->setParent( this );
@@ -865,8 +924,8 @@ inline QDebug& operator<<( QDebug debug, SyntaxItem::Type type )
         return debug << "MatchItem::MatchString";
     case SyntaxItem::MatchKeyword:
         return debug << "MatchItem::MatchKeyword";
-    case SyntaxItem::MatchWords:
-        return debug << "MatchItem::MatchWords";
+    case SyntaxItem::MatchWord:
+        return debug << "MatchItem::MatchWord";
     default:
         return debug << static_cast<int>(type);
     }

@@ -31,15 +31,33 @@
 
 namespace Parser {
 
+#ifdef DEBUG_PARSING
+    QByteArray __DEBUG_PARSING_LEVEL( void *data ) {
+        SyntacticalAnalyzer::MatchData *matchData =
+                reinterpret_cast<SyntacticalAnalyzer::MatchData*>(data);
+        QByteArray s;
+        SyntacticalAnalyzer::MatchData *level = matchData;
+        while ( level->parent ) {
+            s += DEBUG_PARSING_INDENTATION;
+            level = level->parent;
+        }
+        if ( matchData->onlyTesting ) {
+            s += "[TEST] ";
+        }
+        return s;
+    };
+#endif
+
 const QString LexicalAnalyzer::ALLOWED_OTHER_CHARACTERS = ":,.´`'!?&()_\"'";
 
-JourneySearchAnalyzer::JourneySearchAnalyzer( JourneySearchKeywords *keywords,
+JourneySearchAnalyzer::JourneySearchAnalyzer( SyntaxItemPointer syntaxItem,
+                                              JourneySearchKeywords *keywords,
                                               AnalyzerCorrections corrections,
                                               int cursorPositionInInputString ) :
         m_keywords(keywords ? keywords : new JourneySearchKeywords()),
         m_ownKeywordsObject(!keywords),
         m_lexical(new LexicalAnalyzer(corrections, cursorPositionInInputString)),
-        m_syntactical(new SyntacticalAnalyzer(m_keywords, corrections, cursorPositionInInputString)),
+        m_syntactical(new SyntacticalAnalyzer(syntaxItem, m_keywords, corrections, cursorPositionInInputString)),
         m_contextual(new ContextualAnalyzer(corrections, cursorPositionInInputString))
 {
 }
@@ -54,44 +72,48 @@ JourneySearchAnalyzer::~JourneySearchAnalyzer()
     delete m_contextual;
 }
 
-Results JourneySearchAnalyzer::resultsFromSyntaxItemList(
-            const QLinkedList< MatchItem > &itemList, JourneySearchKeywords *keywords )
+Results JourneySearchAnalyzer::resultsFromMatchItem( const MatchItem &matchItem,
+                                                     JourneySearchKeywords *keywords )
 {
-    bool ownKeywords = !keywords;
+    const bool ownKeywords = !keywords;
     if ( ownKeywords ) {
         keywords = new JourneySearchKeywords();
     }
 
     Results results;
-    results.m_allItems = itemList;
+    results.m_rootItem = matchItem;
+    const MatchItems allItems = matchItem.allChildren();
 
     bool tomorrow = false;
-    QStringList output, outputWithErrors;
-    QString itemText;
-    for ( QLinkedList<MatchItem>::ConstIterator it = results.m_allItems.constBegin();
-          it != results.m_allItems.constEnd(); ++it )
-    {
-        switch ( it->type() ) {
-        case MatchItem::Invalid:
-            kDebug() << "Got an invalid SyntaxItem! The SyntaxItem::Invalid flag should only be "
-                        "used as argument to functions.";
-            continue;
-        case MatchItem::Error:
+    for ( MatchItems::ConstIterator it = allItems.constBegin(); it != allItems.constEnd(); ++it ) {
+        if ( it->type() == MatchItem::Error ) {
             results.m_hasErrors = true;
             results.m_errorItems << &*it;
-            itemText = it->input();
-            break;
-        case MatchItem::Sequence:
-            kDebug() << "TODO"; // TODO
-            break;
-        case MatchItem::Option:
-            kDebug() << "TODO"; // TODO
-            break;
-        case MatchItem::Keyword:
-        case MatchItem::Words:
-        case MatchItem::Number:
-        case MatchItem::Character:
-        case MatchItem::String:
+        } else { //if ( it->valueType() != NoValue ) {
+            results.m_matchItems[ it->type() ] << &*it;
+        }
+
+//         switch ( it->type() ) {
+//         case MatchItem::Invalid:
+//             kDebug() << "Got an invalid MatchItem! The MatchItem::Invalid flag should only be "
+//                         "used as argument to functions.";
+//             continue;
+//         case MatchItem::Error:
+//             results.m_hasErrors = true;
+//             results.m_errorItems << &*it;
+//             itemText = it->input();
+//             break;
+//         case MatchItem::Sequence:
+//             kDebug() << "TODO"; // TODO
+//             break;
+//         case MatchItem::Option:
+//             kDebug() << "TODO"; // TODO
+//             break;
+//         case MatchItem::Keyword:
+//         case MatchItem::Words:
+//         case MatchItem::Number:
+//         case MatchItem::Character:
+//         case MatchItem::String:
 //         case StopName:
 //             results.m_stopName = it->text();
 //             results.m_syntaxItems.insert( StopName, &*it );
@@ -133,14 +155,63 @@ Results JourneySearchAnalyzer::resultsFromSyntaxItemList(
 //             results.m_syntaxItems.insert( KeywordArrival, &*it );
 //             itemText =  it->text();
 //             break;
-            break;
-        }
+//             break;
+//         }
 
-        if ( it->type() != MatchItem::Error ) {
-            output << itemText;
-        }
-        outputWithErrors << itemText;
+//         if ( it->type() != MatchItem::Error ) {
+//             output << itemText;
+//         }
+//         outputWithErrors << itemText;
     }
+
+    if ( !results.hasMatchItem(MatchItem::Word) ) {
+        results.m_hasErrors = true;
+    } else {
+        QStringList stopNameWords;
+        foreach ( const MatchItem *matchItem, results.m_matchItems[MatchItem::Word] ) {
+            if ( matchItem->valueType() == StopNameValue ) {
+                stopNameWords << matchItem->text();
+                results.m_stopNameItems << matchItem;
+            }
+        }
+        results.m_stopName += stopNameWords.join(" ");
+    }
+
+    if ( results.hasMatchItem(MatchItem::Keyword) ) {
+        foreach ( const MatchItem *matchItem, results.m_matchItems[MatchItem::Keyword] ) {
+            KeywordType keyword = static_cast<KeywordType>( matchItem->value().toInt() );
+            switch ( keyword ) {
+            case KeywordTo:
+                results.m_stopIsTarget = true;
+                break;
+            case KeywordFrom:
+                results.m_stopIsTarget = false;
+                break;
+            case KeywordTomorrow:
+                tomorrow = true;
+                break;
+            case KeywordDeparture:
+                results.m_timeIsDeparture = true;
+                break;
+            case KeywordArrival:
+                results.m_timeIsDeparture = false;
+                break;
+            case KeywordTimeIn:
+                results.m_time = QDateTime::currentDateTime().addSecs(
+                        60 * matchItem->keywordValue().toInt() );
+                break;
+            case KeywordTimeAt:
+                results.m_time = matchItem->keywordValue().toDateTime();
+                break;
+            default:
+                kDebug() << "Unknown keyword" << static_cast<int>(keyword);
+                break;
+            }
+
+            results.m_keywords.insert( keyword, matchItem );
+        }
+    }
+
     if ( !results.m_time.isValid() ) {
         // No time given in input string
         results.m_time = QDateTime::currentDateTime();
@@ -148,8 +219,8 @@ Results JourneySearchAnalyzer::resultsFromSyntaxItemList(
     if ( tomorrow ) {
         results.m_time = results.m_time.addDays( 1 );
     }
-    results.m_outputString = output.join( " " );
-    results.m_outputStringWithErrors = outputWithErrors.join( " " );
+//     results.m_outputString = output.join( " " );
+//     results.m_outputStringWithErrors = outputWithErrors.join( " " );
     if ( ownKeywords ) {
         delete keywords;
     }
@@ -157,20 +228,211 @@ Results JourneySearchAnalyzer::resultsFromSyntaxItemList(
     return results;
 }
 
-QString Results::updatedOutputString(
-        const QHash< JourneySearchValueType, QVariant > &updateItemValues,
-        const QList< MatchItem::Type > &removeItems,
-        OutputStringFlags flags, JourneySearchKeywords *keywords ) const
+QString Results::updateOutputString( SyntaxItemPointer syntaxItem,
+                                     AnalyzerCorrections appliedCorrections,
+                                     JourneySearchKeywords *keywords )
 {
     bool ownKeywords = !keywords;
     if ( ownKeywords ) {
         keywords = new JourneySearchKeywords();
     }
 
-    // Insert dummy syntax items for updated item values without an associated syntax item
-    // in m_allItems
+    QString output = updateOutputString( syntaxItem, &m_rootItem, appliedCorrections, keywords );
+    if ( ownKeywords ) {
+        delete keywords;
+    }
+    return output.trimmed();
+}
+
+QString Results::updateOutputString( SyntaxItemPointer syntaxItem, const MatchItem *matchItem,
+                                     AnalyzerCorrections corrections,
+                                     JourneySearchKeywords *keywords )
+{
+    if ( syntaxItem->flags().testFlag(SyntaxItem::RemoveFromInput) ) {
+        return QString(); // Remove syntax item by returning an empty string
+    }
+
+    QString output;
+    switch ( syntaxItem->type() ) {
+    case SyntaxItem::MatchSequence:
+        Q_ASSERT( matchItem );
+        if ( matchItem->type() == MatchItem::Sequence ) {
+            output += updateOutputStringChildren( syntaxItem, matchItem, corrections, keywords );
+        } else {
+            // May be a one-item sequence (with the sequence item left out)
+            SyntaxItems syntaxChildren = syntaxItem->children();
+            SyntaxItems::ConstIterator syntaxChild = syntaxChildren.constBegin();
+            if ( matchItem->matchedSyntaxItemIndex() == 0 ) {
+                // There was a match for the current syntax item
+                output += updateOutputString( *syntaxChild, matchItem, corrections, keywords );
+            } else if ( (*syntaxChild)->flags().testFlag(SyntaxItem::AddToInput) ) {
+                // There was no match for the current syntax item, add it
+                output += updateOutputString( *syntaxChild, 0, corrections, keywords );
+            }
+        }
+        break;
+    case SyntaxItem::MatchOption:
+        Q_ASSERT( matchItem );
+        if ( matchItem->type() == MatchItem::Option ) {
+            output += updateOutputStringChildren( syntaxItem, matchItem, corrections, keywords );
+        }
+        break;
+    case SyntaxItem::MatchKeyword:
+        if ( matchItem && matchItem->type() == MatchItem::Keyword ) {
+            SyntaxKeywordItem *keywordItem = qobject_cast<SyntaxKeywordItem*>( syntaxItem );
+            if ( keywordItem->keyword() == static_cast<KeywordType>(matchItem->value().toInt()) ) {
+                // There is a matching MatchItem for the current keyword syntax item
+                if ( keywordItem->flags().testFlag(Parser::SyntaxItem::ChangeInput)
+                     && keywordItem->addToInputValue().isValid() )
+                {
+                    // Change the value of the keyword item
+                    output += matchItem->lexems().first().input();
+                    output += ' ' + keywordItem->addToInputValue().toString(); // TODO
+                } else {
+                    // Add output of the keyword item
+                    output += matchItem->text( corrections, false );
+                }
+            }
+        } else if ( !matchItem && syntaxItem->flags().testFlag(SyntaxItem::AddToInput) ) {
+            // No match for the current keyword syntax item, but it should be added
+            SyntaxKeywordItem *keywordItem = qobject_cast<SyntaxKeywordItem*>( syntaxItem );
+
+            if ( !keywords->hasValue(keywordItem->keyword()) ) {
+                // Keyword without a value
+                output += keywords->keywords( keywordItem->keyword() ).first() + ' ';
+            } else if ( keywordItem->addToInputValue().isValid() ) {
+                // The keyword needs a value and it was found in the keyword syntax item
+                output += keywords->keywords( keywordItem->keyword() ).first() + ' ';
+                output += keywordItem->addToInputValue().toString() + ' ';
+            } else {
+                // The keyword needs a value, but none was given
+                kDebug() << "Can not add keyword syntax item, because no value has been set using "
+                            "SyntaxItem::setAddToInputValue()";
+            }
+        }
+        break;
+    default:
+        if ( matchItem ) {
+            // There is a matching MatchItem for the current syntax item
+            output += matchItem->text( corrections, false );
+        } else if ( syntaxItem->flags().testFlag(SyntaxItem::AddToInput) ) {
+            // There was no match for the current syntax item, but it should be added
+            kDebug() << "Can not add syntax items of type" << syntaxItem->type()
+                     << "(not implemented)";
+//             if ( syntaxItem->addToInputValue().isValid() ) {
+//                 output += syntaxItem->addToInputValue().toString(); // TODO
+//             } else {
+//                 kDebug() << "Can not add syntax item, because no value has been set using "
+//                             "SyntaxItem::setAddToInputValue()";
+//             }
+        }
+        break;
+    }
+
+    return output;
+}
+
+QString Results::updateOutputStringChildren( SyntaxItemPointer syntaxItem,
+        const Parser::MatchItem* matchItem, AnalyzerCorrections corrections,
+        JourneySearchKeywords* keywords )
+{
+    Q_ASSERT_X( !syntaxItem->flags().testFlag(SyntaxItem::AddToInput),
+                "Results::updateOutputStringChildren()",
+                "Can not add non-terminal items to the input (SyntaxItem::AddToInput), "
+                "set this flag only to terminal items, ie. leafs of syntax item trees "
+                "(except for keyword items)." );
+    QString output;
+
+    // Initialize syntax and match item iterators
+    SyntaxItems syntaxChildren = syntaxItem->children();
+    SyntaxItems::ConstIterator syntaxChild = syntaxChildren.constBegin();
+    MatchItems matchChildren = matchItem->children();
+    MatchItems::ConstIterator matchChild = matchChildren.constBegin();
+
+    // Iterate through the syntax item children while having the current index present
+    for ( int i = 0; i < syntaxChildren.count(); ++i, ++syntaxChild ) {
+        // Add erroneous output (based on corrections)
+        output += updatedOutputStringSkipErrorItems( matchChildren, &matchChild, corrections );
+
+        // Test if the next MatchItem is a match of the current SyntaxItem
+        if ( matchChild != matchChildren.constEnd() && matchChild->matchedSyntaxItemIndex() == i ) {
+            // There was a match for the current syntax item
+            do {
+                // Add output of the matched child item
+                output += updateOutputString( *syntaxChild, &*matchChild, corrections, keywords );
+                if ( matchChild == matchChildren.constEnd() ) {
+                    break; // No more match item children
+                } else {
+                    // Go to next match item child and add possible new erroneous output
+                    ++matchChild;
+                    output += updatedOutputStringSkipErrorItems( matchChildren, &matchChild,
+                                                                 corrections );
+                }
+            } while( matchChild != matchChildren.constEnd()
+                     && matchChild->matchedSyntaxItemIndex() == i );
+        } else if ( (*syntaxChild)->flags().testFlag(SyntaxItem::AddToInput) ) {
+            // There was no match for the current syntax item, but output should be added
+            output += updateOutputString( *syntaxChild, 0, corrections, keywords );
+        }
+    }
+
+    return output;
+}
+
+QString Results::updatedOutputStringSkipErrorItems( const MatchItems &matchItems,
+        QList< MatchItem >::ConstIterator *iterator, AnalyzerCorrections appliedCorrections )
+{
+    QString output;
+    while ( *iterator != matchItems.constEnd() && (*iterator)->type() == MatchItem::Error ) {
+        output += (*iterator)->text( appliedCorrections );
+        ++(*iterator);
+    }
+    return output;
+}
+
+QString Results::updatedOutputString( const QString &updatedStopName,
+        const QHash<KeywordType, QString> &updateKeywordValues,
+        const MatchItemTypes &removeItems, AnalyzerCorrections appliedCorrections,
+        JourneySearchKeywords *keywords ) const
+{
+    bool ownKeywords = !keywords;
+    if ( ownKeywords ) {
+        keywords = new JourneySearchKeywords();
+    }
+
+    // Insert dummy match items for updated item values without an associated match item
         // TODO FIXME Get the position of the stop name out of the new output.. syntaxItemRoot or something
-//     QLinkedList< SyntaxItem > itemList = m_allItems;
+//     MatchItem item = m_rootItem.copy();
+//     item.combineStopNameItems();
+    QString output = m_rootItem.input();
+//     if ( m_stopNameItems.isEmpty() ) {
+//         if ( !updatedStopName.isEmpty() ) {
+//             int stopNamePos = 0;
+//             if ( hasKeyword(KeywordTo) | hasKeyword(KeywordFrom) ) {
+//                 const MatchItem *keyword = hasKeyword(KeywordTo)
+//                         ? keyword(KeywordTo) : keyword(KeywordFrom);
+//                 stopNamePos = keyword->position() + keyword->input().length() + 1;
+//             }
+//             output.insert( stopNamePos, updatedStopName + ' ' );
+//         }
+//     } else {
+//         output.replace( m_stopNameItems.first()->position(), m_stopName.length(), updatedStopName );
+//     }
+/*
+    for ( QHash<KeywordType, QString>::ConstIterator itUpdate = updateKeywordValues.constBegin();
+          itUpdate != updateKeywordValues.constEnd(); ++itUpdate )
+    {
+        if ( hasKeyword(itUpdate.key()) ) {
+            const MatchItem *keyword = keyword( itUpdate.key() );
+            if ( itUpdate.value().isEmpty() ) {
+                output.remove( keyword->position(), keyword->input().length() );
+            } else {
+                output.replace( keyword->position(), keyword->input().length(), itUpdate.value() );
+            }
+        } else {
+        }
+    }*/
+
 //     for ( QHash<JourneySearchValueType, QVariant>::ConstIterator itUpdate = updateItemValues.constBegin();
 //           itUpdate != updateItemValues.constEnd(); ++itUpdate )
 //     {
@@ -248,7 +510,7 @@ QString Results::updatedOutputString(
 //                         "used as argument to functions.";
 //             break;
 //         case Error:
-//             if ( !flags.testFlag(ErrornousOutputString) ) {
+//             if ( !flags.testFlag(ErroneousOutputString) ) {
 //                 continue;
 //             }
 //             itemText = it->text();
@@ -343,9 +605,9 @@ const Results JourneySearchAnalyzer::analyze(
 //     TODO calculate cursor offset at end by summing up lengths of corrected items before the old cursor position
     QLinkedList<Lexem> lexems = m_lexical->analyze( input );
     m_syntactical->setCursorValues( m_lexical->cursorOffset(), m_lexical->selectionLength() );
-    QLinkedList<MatchItem> syntaxItems = m_syntactical->analyze( lexems );
+    MatchItem matchItem = m_syntactical->analyze( lexems );
     m_contextual->setCursorValues( m_syntactical->cursorOffset(), m_syntactical->selectionLength() );
-    m_results = resultsFromSyntaxItemList( m_contextual->analyze(syntaxItems) );
+    m_results = resultsFromMatchItem( m_contextual->analyze(QLinkedList<MatchItem>() << matchItem).first() ); // TODO No QLinkedList
     m_results.m_cursorOffset = m_contextual->cursorOffset();
     m_results.m_selectionLength = m_contextual->selectionLength();
     m_results.m_inputString = input;
@@ -364,18 +626,11 @@ void Results::init()
     m_stopIsTarget = true;
     m_timeIsDeparture = true;
     m_hasErrors = false;
-    m_syntaxItems.clear();
+    m_stopNameItems.clear();
+    m_matchItems.clear();
+    m_keywords.clear();
     m_cursorOffset = 0;
     m_result = Rejected;
-}
-
-QString Results::outputString( OutputStringFlags flags ) const
-{
-    if ( flags.testFlag(ErrornousOutputString) ) {
-        return m_outputStringWithErrors;
-    } else {
-        return m_outputString;
-    }
 }
 
 template <typename Container, typename Item>
@@ -401,22 +656,20 @@ void Analyzer<Container, Item>::setErrorHandling( ErrorSeverity minRejectSeverit
 }
 
 template <typename Container, typename Item>
-void Analyzer<Container, Item>::setError( ErrorSeverity severity, const QString& errornousText,
-                                          const QString& errorMessage, int position,
-                                          MatchItem *parent, int index )
+void Analyzer<Container, Item>::setError( ErrorSeverity severity, const QString& erroneousText,
+        const QString& errorMessage, int position, MatchItem *parent )
 {
-    Q_UNUSED( errornousText );
     Q_UNUSED( parent );
     if ( severity >= m_minRejectSeverity ) {
         m_result = Rejected;
-        qDebug() << "Inacceptable error:" << errorMessage << position << index;
+        DO_DEBUG_PARSING_ERROR( Rejected, position, errorMessage, erroneousText );
     } else if ( severity >= m_minAcceptWithErrorsSeverity ) {
-        qDebug() << "Acceptable error:" << errorMessage << position << index;
         if ( m_result > AcceptedWithErrors ) {
             m_result = AcceptedWithErrors;
         }
+        DO_DEBUG_PARSING_ERROR( AcceptedWithErrors, position, errorMessage, erroneousText );
     } else {
-        qDebug() << "Error without consequences:" << errorMessage << position << index;
+        DO_DEBUG_PARSING_ERROR( Accepted, position, errorMessage, erroneousText );
     }
 }
 
@@ -436,70 +689,40 @@ void Analyzer<Container, Item>::moveToEnd()
     updateLookahead();
 }
 
-template <typename Container, typename Item>
-AnalyzerRL<Container, Item>::AnalyzerRL( AnalyzerCorrections corrections,
-                                         int cursorPositionInInputString, int cursorOffset )
-            : Analyzer<Container, Item>(corrections, cursorPositionInInputString, cursorOffset),
-            m_direction(LeftToRight)
-{
-
-}
-
-template <typename Container, typename Item>
-void AnalyzerRL<Container, Item>::moveToBeginning()
-{
-    if ( m_direction == LeftToRight ) {
-        Analyzer<Container, Item>::moveToBeginning();
-    } else {
-        Analyzer<Container, Item>::moveToEnd();
-    }
-}
-
-template <typename Container, typename Item>
-void AnalyzerRL<Container, Item>::moveToEnd()
-{
-    if ( m_direction == LeftToRight ) {
-        Analyzer<Container, Item>::moveToEnd();
-    } else {
-        Analyzer<Container, Item>::moveToBeginning();
-    }
-}
-
 void LexicalAnalyzer::moveToBeginning()
 {
     Analyzer< QString, QChar >::moveToBeginning();
     m_pos = 0;
 }
 
-void SyntacticalAnalyzer::setError2( ErrorSeverity severity, const QString& errornousText,
-                                     const QString& errorMessage, int position,
-                                     const LexemList &lexems, MatchItem *parent,
-                                     int index )
+void SyntacticalAnalyzer::setError2( MatchData *matchData, ErrorSeverity severity,
+        const QString &erroneousText, const QString &errorMessage, int position,
+        const LexemList &lexems )
 {
-    Analyzer::setError( severity, errornousText, errorMessage, position, parent, index );
-    addOutputItem( MatchItem(MatchItem::Error, lexems.isEmpty()
-                              ? LexemList() << Lexem(Parser::Lexem::Error, QString(), position) : lexems,
-                              ErrorMessageValue, errorMessage), parent );
+    Analyzer::setError( severity, erroneousText, errorMessage, position,
+                        matchData->parentMatchItem );
+    addOutputItem( matchData, MatchItem(MatchItem::Error, lexems.isEmpty()
+            ? LexemList() << Lexem(Parser::Lexem::Error, QString(), position) : lexems,
+            ErrorMessageValue, errorMessage, MatchItem::DefaultMatchItem, -1) );
 }
 
-void SyntacticalAnalyzer::setError2( ErrorSeverity severity, const QString& errornousText,
-                                     AnalyzerCorrection errorCorrection, int position,
-                                     const LexemList &lexems, MatchItem *parent,
-                                     int index )
+void SyntacticalAnalyzer::setError2( MatchData *matchData, ErrorSeverity severity,
+        const QString &erroneousText, AnalyzerCorrection errorCorrection, int position,
+        const LexemList &lexems )
 {
-    Analyzer::setError( severity, errornousText, QString("Error correction: %1").arg(errorCorrection),
-                        position, parent, index );
-    addOutputItem( MatchItem(MatchItem::Error, lexems.isEmpty()
-                              ? LexemList() << Lexem(Parser::Lexem::Error, QString(), position) : lexems,
-                              ErrorCorrectionValue, errorCorrection), parent );
+    Analyzer::setError( severity, erroneousText, QString("Error correction: %1").arg(errorCorrection),
+                        position, matchData->parentMatchItem );
+    addOutputItem( matchData, MatchItem(MatchItem::Error, lexems.isEmpty()
+            ? LexemList() << Lexem(Parser::Lexem::Error, QString(), position) : lexems,
+            ErrorCorrectionValue, errorCorrection, MatchItem::DefaultMatchItem, -1) );
 }
 
-void ContextualAnalyzer::setError( ErrorSeverity severity, const QString& errornousText,
-                                   const QString& errorMessage, int position,
-                                   MatchItem *parent, int index )
+void ContextualAnalyzer::setError( ErrorSeverity severity, const QString &erroneousText,
+        const QString &errorMessage, int position, MatchItem *parent )
 {
-    Analyzer::setError( severity, errornousText, errorMessage, position, parent, index );
-    MatchItem errorItem( MatchItem::Error, LexemList(), ErrorMessageValue, errorMessage );
+    Analyzer::setError( severity, erroneousText, errorMessage, position, parent );
+    MatchItem errorItem( MatchItem::Error, LexemList(), ErrorMessageValue, errorMessage,
+                         MatchItem::DefaultMatchItem, -1 );
     if ( !parent ) {
         m_input << errorItem;
     } else {
@@ -532,7 +755,9 @@ void LexicalAnalyzer::endCurrentWord( bool followedBySpace )
         } else if ( m_firstWordSymbol == Letter ||  m_firstWordSymbol == OtherSymbol ) {
             m_output << Lexem( Lexem::String, m_currentWord, m_wordStartPos, followedBySpace );
         } else {
-            m_result = AcceptedWithErrors;
+            if ( m_result > AcceptedWithErrors ) {
+                m_result = AcceptedWithErrors;
+            }
             kDebug() << "Internal error with word" << m_currentWord << m_firstWordSymbol;
         }
         m_currentWord.clear();
@@ -553,6 +778,7 @@ LexicalAnalyzer::Symbol LexicalAnalyzer::symbolOf( const QChar& c ) const
     } else if ( ALLOWED_OTHER_CHARACTERS.contains(c) ) {
         return OtherSymbol;
     } else {
+        qDebug() << "Invalid:" << QString("%1").arg(c.unicode(), 0, 16);
         return Invalid;
     }
 }
@@ -570,17 +796,6 @@ QLinkedList<Lexem> LexicalAnalyzer::analyze( const QString& input )
     while ( !isAtEnd() ) {
         Symbol symbol = symbolOf( *m_inputIterator );
         switch ( symbol ) {
-//         case QuotationMark:
-//         case Colon:
-//         case OtherSymbol:
-//             endCurrentWord();
-//             m_output << Lexem( Lexem::Character, "\"", m_pos, isSpaceFollowing() );
-//             inQuotationMarks = !inQuotationMarks;
-//             break;
-//         case Colon:
-//             endCurrentWord();
-//             m_output << Lexem( Lexem::Character, ":", m_pos, isSpaceFollowing() );
-//             break;
         case Space:
             if ( !isNextAtImaginaryIteratorEnd() && symbolOf(*(m_inputIteratorLookahead)) == Space ) {
                 // Don't allow two consecutive space characters
@@ -618,10 +833,18 @@ QLinkedList<Lexem> LexicalAnalyzer::analyze( const QString& input )
         case Invalid:
             endCurrentWord();
             m_output << Lexem( Lexem::Error, *m_inputIterator, m_pos, isSpaceFollowing() ); // Not allowed character
-            m_result = Rejected;
-            m_state = Finished;
-            return m_output;
+            if ( m_corrections.testFlag(RemoveInvalidCharacters) ) {
+                if ( m_result > AcceptedWithErrors ) {
+                    m_result = AcceptedWithErrors;
+                }
+            } else {
+                m_result = Rejected;
+                m_state = Finished;
+                return m_output;
+            }
+            break;
         }
+
         readItem();
     }
 
@@ -636,10 +859,13 @@ QLinkedList<Lexem> LexicalAnalyzer::analyze( const QString& input )
     return m_output;
 }
 
-SyntacticalAnalyzer::SyntacticalAnalyzer( JourneySearchKeywords *keywords,
+SyntacticalAnalyzer::SyntacticalAnalyzer( SyntaxItemPointer syntaxItem,
+                                          JourneySearchKeywords *keywords,
                                           AnalyzerCorrections corrections,
                                           int cursorPositionInInputString, int cursorOffset )
-        : Analyzer(corrections, cursorPositionInInputString, cursorOffset), m_keywords(keywords)
+        : Analyzer(corrections, cursorPositionInInputString, cursorOffset),
+          m_syntaxItem(syntaxItem ? syntaxItem : Syntax::journeySearchSyntaxItem()),
+          m_keywords(keywords)
 {
     if ( !m_keywords ) {
         m_ownKeywordsObject = true;
@@ -654,114 +880,83 @@ SyntacticalAnalyzer::~SyntacticalAnalyzer()
     if ( m_ownKeywordsObject ) {
         delete m_keywords;
     }
+    delete m_syntaxItem;
 }
 
-QLinkedList< MatchItem > SyntacticalAnalyzer::analyze( const QLinkedList<Lexem> &input )
+MatchItem SyntacticalAnalyzer::analyze( const QLinkedList<Lexem> &input )
 {
-    QStringList lexemString; foreach ( const Lexem &lexem, input ) {
-            lexemString << QString("%1 (pos: %2, type: %3, space?: %4)").arg(lexem.input())
-                .arg(lexem.position()).arg(lexem.type()).arg(lexem.isFollowedBySpace() ? "YES" : "no"); }
-    qDebug() << "Lexem List:" << lexemString.join(", ");
-
-    m_output.clear();
+    // Initialize
     m_input = input;
     m_state = Running;
     m_result = Accepted;
     moveToBeginning();
 
-    readSpaceItems();
-    parseJourneySearch();
+    // Match the used syntax item
+    MatchData matchData( SyntaxItems() << m_syntaxItem );
+    MatchItems firstMatchedItems;
+    if ( !matchItem(&matchData, &firstMatchedItems) ) {
+        m_result = Rejected;
+    }
 
-    // Only for debugging:
-    QStringList syntaxString; foreach ( const MatchItem &syntaxItem, m_output ) {
-            syntaxString << QString("%1 (pos: %2, type: %3, value: %4)").arg(syntaxItem.input())
-                .arg(syntaxItem.position()).arg(syntaxItem.type()).arg(syntaxItem.value().toString()); }
-    qDebug() << "Syntax List:" << syntaxString.join(", ") << m_result;
-
-    m_state = Finished;
-    return m_output;
-}
-
-void SyntacticalAnalyzer::addOutputItem( const MatchItem& syntaxItem, MatchItem *parentItem )
-{
-    if ( parentItem ) {
-        #ifdef DEBUG_PARSING
-            qDebug() << "Output for parentItem" << syntaxItem.input();
-        #endif
-        // Sort the new syntaxItem into the child list of the parent item, sorted by position
-        parentItem->addChild( syntaxItem );
-    } else {
-        #ifdef DEBUG_PARSING
-            qDebug() << "Output for m_output" << syntaxItem.input();
-        #endif
-        // Sort the new syntaxItem into the output list, sorted by position
-        if ( m_output.isEmpty() || m_output.last().position() < syntaxItem.position() ) {
-            // Append the new item
-            m_output.insert( m_output.end(), syntaxItem );
-        } else {
-            QLinkedList<MatchItem>::iterator it = m_output.begin();
-            while ( it->position() < syntaxItem.position() ) {
-                ++it;
-            }
-            m_output.insert( it, syntaxItem );
+    // Check for additional input
+    if ( !isAtImaginaryIteratorEnd() ) {
+        if ( m_result > AcceptedWithErrors ) {
+            m_result = AcceptedWithErrors;
+        }
+        matchData.parentMatchItem = &m_outputRoot; // Add remaining input items to the one match item
+        while ( !isAtImaginaryIteratorEnd() ) {
+            // No more SyntaxItems to match, but more input
+            setError2( &matchData, ErrorSevere, m_inputIterator->input(), SkipUnexpectedTokens,
+                       m_inputIterator->position(), LexemList() << *m_inputIterator );
+            readItemAndSkipSpaces( &matchData );
         }
     }
+
+    m_state = Finished;
+    return m_outputRoot;
 }
 
-bool SyntacticalAnalyzer::parseJourneySearch()
+void SyntacticalAnalyzer::addOutputItem( MatchData *matchData, const MatchItem &matchItem )
 {
-    if ( isAtImaginaryIteratorEnd() ) {
-        setError2( ErrorSevere, QString(), "No input", m_inputIterator->position() );
-        return false;
+    if ( matchData->onlyTesting ) {
+        return;
     }
 
-    matchPrefix();
-    matchSuffix();
-    bool matched = matchStopName();
-
-    return matched;
-}
-
-bool SyntacticalAnalyzer::matchPrefix()
-{
-    // Match keywords at the beginning of the input
-    // Also match, if only the beginning of a keyword is found (for interactive typing)
-    // Otherwise the first typed character would get matched as stop name and get quotation
-    // marks around it, making it hard to type the journey search string.
-    moveToBeginning();
-    readSpaceItems();
-    if ( !isAtImaginaryIteratorEnd() && m_inputIterator->type() == Lexem::String ) {
-//         const QString text = m_inputIterator->text();
-
-        bool matched = false;
-        // NOTE This doesn't work any longer, because the keywordItem doesn't get added to
-        // the output using addOutputItem (for keywords with values matched with MatchItems).
-        MatchItem keywordItem;
-        matched = matched || matchKeywordInList( KeywordTo, &keywordItem );
-        matched = matched || matchKeywordInList( KeywordFrom, &keywordItem );
-        m_stopNameBegin = m_inputIterator;
-        return matched;
+    DO_DEBUG_PARSING_OUTPUT( matchItem.input() );
+    if ( matchData->parentMatchItem ) {
+        // Sort the new syntaxItem into the child list of the parent item, sorted by position
+        matchData->parentMatchItem->addChild( matchItem );
     } else {
-        m_stopNameBegin = m_inputIterator;
-        return false;
+        m_outputRoot = matchItem;
+//         // Sort the new syntaxItem into the output list, sorted by position
+//         if ( m_output.isEmpty() || m_output.last().position() < matchItem.position() ) {
+//             // Append the new item
+//             m_output.insert( m_output.end(), matchItem );
+//         } else {
+//             QLinkedList<MatchItem>::iterator it = m_output.begin();
+//             while ( it->position() < matchItem.position() ) {
+//                 ++it;
+//             }
+//             m_output.insert( it, matchItem );
+//         }
     }
 }
 
-bool SyntacticalAnalyzer::matchNumber( int *number, int min, int max, MatchItem *parent,
-                                       bool *corrected, int *removedDigits )
+bool SyntacticalAnalyzer::matchNumber( MatchData *matchData, MatchItems *matchedItems )
 {
-    // Match number
+    DO_DEBUG_PARSING_FUNCTION_CALL( matchNumber,
+            (*matchData->item)->toString(SyntaxItem::ShortDescription) );
+    const SyntaxNumberItem *numberItem = qobject_cast< const SyntaxNumberItem* >( matchData->item->data() );
+
+    // Initialize
     QString numberString( m_inputIterator->input() );
-    if ( removedDigits ) {
-        *removedDigits = 0; // Initialize
-    }
+//     int removedDigits = 0;
     bool ok;
+    int number;
     if ( m_corrections.testFlag(CorrectNumberRanges) ) {
         if ( numberString.length() > 2 ) {
-            if ( removedDigits ) {
-                *removedDigits = numberString.length() - 2;
-            }
-            // TODO This only works with strings not longer than three characters
+//             removedDigits = numberString.length() - 2;
+            // TODO This only works with number strings not longer than three characters
             if ( m_cursorPositionInInputString == m_inputIterator->position() + 1 ) {
                 // Cursor is here (|): "X|XX:XX", overwrite second digit
                 numberString.remove( 1, 1 );
@@ -769,329 +964,189 @@ bool SyntacticalAnalyzer::matchNumber( int *number, int min, int max, MatchItem 
             numberString = numberString.left( 2 );
         }
 
-        int readNumber = numberString.toInt( &ok );
+        number = numberString.toInt( &ok );
         if ( !ok ) {
-            return false; // Number invalid (shouldn't happen, since hoursString only contains digits)
+            return false; // Number invalid
         }
 
         // Put the number into the given range [min, max]
-        *number = qBound( min, readNumber, max );
-        if ( corrected ) {
-            *corrected = readNumber != *number;
+        number = qBound( numberItem->min(), number, numberItem->max() );
+        if ( number != number && m_result > AcceptedWithErrors ) {
+            m_result = AcceptedWithErrors;
         }
     } else {
-        *number = numberString.toInt( &ok );
-        if ( !ok || *number < min || *number > max ) {
+        number = numberString.toInt( &ok );
+        if ( !ok || number < numberItem->min() || number > numberItem->max() ) {
             return false; // Number out of range or invalid
         }
-        if ( corrected ) {
-            *corrected = false; // Correction disabled
-        }
     }
 
-    readItemAndSkipSpaces( parent );
+    #ifdef FILL_MATCHES_IN_SYNTAXITEM
+        numberItem->addMatch( m_inputIterator->position(), m_inputIterator->input(), number );
+    #endif
+    *matchedItems << MatchItem( MatchItem::Number, LexemList() << *m_inputIterator,
+                                numberItem->valueType(), number );
+    addOutputItem( matchData, matchedItems->last() );
+    readItemAndSkipSpaces( matchData );
+    DO_DEBUG_PARSING_MATCH( Number, numberString );
     return true;
 }
 
-bool SyntacticalAnalyzer::matchTimeAt()
+int SyntacticalAnalyzer::matchKleeneStar( MatchData *matchData, MatchItems *matchedItems )
 {
-    // Match "at 00:00" from back (RightToLeft) => starting with a number
-    if ( m_inputIterator->type() != Lexem::Number ) {
-        // Wrong ending.. But if the "at" keyword gets read here (with wrong following items)
-        // it may be corrected by adding the time values (use current time)
-        if ( m_corrections.testFlag(CorrectEverything) /* TODO */ && m_inputIterator->type() == Lexem::String &&
-             m_keywords->timeKeywordsAt().contains(m_inputIterator->input(), Qt::CaseInsensitive) )
-        {
-            // Add output item for the read "at" keyword with corrected time value
-            addOutputItem( MatchItem(MatchItem::Keyword, //TimeAt,
-                    LexemList() << *m_inputIterator, NoValue, static_cast<int>(KeywordTimeAt),
-                    // QDateTime::currentDateTime() Value gets now stored in the value sequence item for the keyword item,
-                    MatchItem::CorrectedMatchItem) );
+    DO_DEBUG_PARSING_FUNCTION_CALL( matchKleeneStar,
+            (*matchData->item)->toString(SyntaxItem::ShortDescription) );
+    Q_ASSERT_X( (*matchData->item)->flags().testFlag(Parser::SyntaxItem::KleenePlus),
+                "SyntacticalAnalyzer::matchKleeneStar",
+                "The current item should have a Kleene flag set (KleenePlus or KleeneStar)" );
 
-            // Move one character to the beginning of the inserted time
-            // and select the first digit => "at [X]X:XX"
-            ++m_cursorOffset;
-            m_selectionLength = 1;
-
-            readItemAndSkipSpaces();
-            return true;
-        } else {
-            return false;
-        }
-    }
-    if ( isAtEnd() ) {
-        return false; // Only a number was read
-    }
-
-    QLinkedList<Lexem>::ConstIterator oldIterator = m_inputIterator;
-
-    // Match number (minutes)
-    int minutes;
-    if ( !matchNumber(&minutes, 0, 59) ) {
-        return false; // returned false => m_inputIterator unchanged/restored
-    }
-
-    if ( m_inputIterator->type() != Lexem::Character || !m_inputIterator->textIsCharacter(':') ) {
-        // Wrong ending.. But if the "at" keyword gets read here (with only a number following)
-        // it may be corrected by using the number as hours value and adding the minutes
-        if ( m_corrections.testFlag(CorrectEverything) /* TODO */ && m_inputIterator->type() == Lexem::String &&
-             m_keywords->timeKeywordsAt().contains(m_inputIterator->input(), Qt::CaseInsensitive) )
-        {
-            // Add output item for the "at" keyword with corrected time value (minutes => hours)
-            addOutputItem( MatchItem(MatchItem::Keyword, //TimeAt,
-                    LexemList() << *m_inputIterator, NoValue, static_cast<int>(KeywordTimeAt),
-//                     QDateTime(QDate::currentDate(), QTime(minutes, 0)), Value gets now stored in the value sequence item for the keyword item,
-                    MatchItem::CorrectedMatchItem) );
-            readItemAndSkipSpaces();
-            return true;
-        } else {
-            m_inputIterator = oldIterator;
-            m_inputIteratorLookahead = m_inputIterator;
-            updateLookahead();
-            return false; // TimeAt-rule not matched
-        }
-    }
-    if ( isAtEnd() ) {
-        m_inputIterator = oldIterator;
-        m_inputIteratorLookahead = m_inputIterator;
-        updateLookahead();
-        return false; // Only a number and a colon were read
-    }
-    int colonPosition = m_inputIterator->position();
-    readItemAndSkipSpaces();
-
-    if ( isAtEnd() || m_inputIterator->type() != Lexem::Number ) {
-        m_inputIterator = oldIterator;
-        m_inputIteratorLookahead = m_inputIterator;
-        updateLookahead();
-        return false; // The TimeAt-rule can't be reduced here
-    }
-
-    // Match number (hours)
-//     QString hoursString = m_inputIterator->text();
-    int hours;
-    int deletedDigits;
-    if ( !matchNumber(&hours, 0, 23, NULL, NULL, &deletedDigits) ) {
-        m_inputIterator = oldIterator;
-        m_inputIteratorLookahead = m_inputIterator;
-        updateLookahead();
-        return false;
-    }
-
-    if ( m_inputIterator->type() != Lexem::String ) {
-        m_inputIterator = oldIterator;
-        m_inputIteratorLookahead = m_inputIterator;
-        updateLookahead();
-        return false; // Keyword not found
-    }
-    MatchItem match;
-    if ( !matchKeywordInList(KeywordTimeAt, &match) ) {
-//     if ( !m_keywords->timeKeywordsAt().contains(m_inputIterator->text(), Qt::CaseInsensitive) ) {
-        m_inputIterator = oldIterator;
-        m_inputIteratorLookahead = m_inputIterator;
-        updateLookahead();
-        return false; // Keyword not found
-    }
-
-    // Set value of the matched at keyword
-    match.setValue( QDateTime(QDate::currentDate(), QTime(hours, minutes)) );
-    colonPosition -= deletedDigits; // Add offset from corrections (more than two digits for the hour)
-//     addOutputItem( SyntaxItem(SyntaxItem::KeywordTimeAt,
-//                               m_inputIterator->text(), m_inputIterator->position(),
-//                               QDateTime(QDate::currentDate(), QTime(hours, minutes))) );
-    if ( m_cursorPositionInInputString == colonPosition ) {
-        // Cursor before the colon, move cursor over the colon while typing
-        m_cursorOffset = colonPosition + 1 - m_cursorPositionInInputString;
-    }
-    if ( m_cursorPositionInInputString <= colonPosition + 2 ) {
-        // Cursor not after the second minute digit, select the digit in front of the cursor
-        m_selectionLength = 1;
-    }
-
-    return true;
-}
-
-bool SyntacticalAnalyzer::matchTimeIn()
-{
-    QLinkedList<Lexem>::ConstIterator oldIterator = m_inputIterator;
-
-    // "in X minutes" from back => starting with "minutes"
-    if ( !matchMinutesString() ) {
-        return false; // The TimeIn-rule can't be reduced here, wrong ending lexem
-    }
-
-    readItemAndSkipSpaces();
-    if ( m_inputIterator->type() != Lexem::Number ) {
-        m_inputIterator = oldIterator;
-        m_inputIteratorLookahead = m_inputIterator;
-        updateLookahead();
-        return false; // TimeIn-rule not matched
-    }
-    // Parse number, maximally one minute less than one day (1339). Should use "tomorrow" for
-    // "in one day".
-    int minutes;
-    if ( !matchNumber(&minutes, 1, 1339) ) {
-        m_inputIterator = oldIterator;
-        m_inputIteratorLookahead = m_inputIterator;
-        updateLookahead();
-        return false; // Number out of range
-    }
-
-    // Read keyword "in"
-    readItemAndSkipSpaces();
-    if ( m_inputIterator->type() != Lexem::String ) {
-        m_inputIterator = oldIterator;
-        m_inputIteratorLookahead = m_inputIterator;
-        updateLookahead();
-        return false; // Keyword not found
-    }
-    if ( !m_keywords->timeKeywordsIn().contains(m_inputIterator->input(), Qt::CaseInsensitive) ) {
-        m_inputIterator = oldIterator;
-        m_inputIteratorLookahead = m_inputIterator;
-        updateLookahead();
-        return false; // Keyword not found
-    }
-
-    addOutputItem( MatchItem(MatchItem::Keyword, LexemList() << *m_inputIterator, RelativeTimeValue, minutes) );
-    readItemAndSkipSpaces();
-
-// int minutes;
-// matchValue( QList<const MatchItem>() , &minutes );
-
-    return true;
-}
-
-int SyntacticalAnalyzer::matchKleeneStar( SyntaxItems *items, SyntaxItems::ConstIterator* item,
-        MatchItem* matchedItem, MatchItem *parent )
-{
-    // The current item should have a Kleene flag set (KleenePlus or KleeneStar)
-    Q_ASSERT( (**item)->flags().testFlag(Parser::SyntaxItem::KleenePlus) );
-
-    int matches = 0;
-    MatchItem subMatchedItem;
-    if ( (**item)->flags().testFlag(SyntaxItem::MatchGreedy) ) {
+    int matches = 0; // Counts matches of the Kleene star item (matchData->item)
+    if ( (*matchData->item)->flags().testFlag(SyntaxItem::MatchGreedy) ) {
         // Greedy matching, ie. stop when this item doesn't match any longer
-        while ( !isAtImaginaryIteratorEnd()
-                && matchItemKleeneUnaware(items, item, matchedItem, parent) )
-        {
-            ++matches; // This item matched (again), proceed with greedy Kleene star
+        DO_DEBUG_PARSING_INFO( "Match item using Kleene star (greedy):" << (*matchData->item)->type() );
+        while ( !isAtImaginaryIteratorEnd() && matchItemKleeneUnaware(matchData, matchedItems) ) {
+            ++matches; // The item matched, proceed with greedy Kleene star
         }
     } else {
         // Non-greedy matching, ie. stop when the next item matches
+        DO_DEBUG_PARSING_INFO( "Match item using Kleene star (non-greedy):" << (*matchData->item)->type() );
         while ( !isAtImaginaryIteratorEnd() ) {
-            // First check if the next item matches (non-greedy), then check this item (again)
-            ++*item;
-            if ( *item != items->constEnd() && matchItem(items, item, &subMatchedItem, parent) ) {
-                break; // Next item matches, don't proceed with Kleene star
-            }
-            --*item; // Go back to the Kleene star item
+            MatchData checkMatchData = *matchData; // Copy MatchData
+            bool hasFollowingItem;
+            bool followingMatches;
+            do {
+                // Find a MatchData object (maybe a parent) with a following item
+                hasFollowingItem = true;
+                while ( checkMatchData.item + 1 == checkMatchData.items.constEnd() ) {
+                    // No following items in the current MatchData object
+                    if ( checkMatchData.parent ) {
+                        // Use parent MatchData object to test for a following item
+                        checkMatchData = *checkMatchData.parent;
+                    } else {
+                        // No following item and no parent with possible following items
+                        hasFollowingItem = false;
+                        break;
+                    }
+                }
 
-            if ( !matchItemKleeneUnaware(items, item, matchedItem, parent) ) {
-                break; // Didn't match in Kleene star, proceed matching the next item
+                // Test if the following item matches (without skipping unexpected items)
+                followingMatches = false;
+                if ( hasFollowingItem ) {
+                    ++checkMatchData.item; // Go to the next item
+                    checkMatchData.onlyTesting = true; // Do not skip unexpected items
+                    QLinkedList<Lexem>::ConstIterator oldIterator = m_inputIterator;
+                    MatchItems subMatchedItems;
+                    DO_DEBUG_PARSING_INFO( "Test following item for non-greedy Kleene star:"
+                                           << (*checkMatchData.item)->type() );
+                    if ( matchItem(&checkMatchData, &subMatchedItems) ) {
+                        DO_DEBUG_PARSING_INFO( "The following item matches, do not proceed "
+                                "with Kleene star and go back to old input position" );
+                        followingMatches = true;
+                        m_inputIterator = oldIterator;
+                        m_inputIteratorLookahead = m_inputIterator;
+                        updateLookahead();
+                        break; // The following item matches, don't proceed with Kleene star
+                    }
+                } else {
+                    break; // No following items, do not proceed with Kleene star
+                }
+            // Test next following item, if the current one did not match but is optional
+            } while( (*checkMatchData.item)->isOptional() );
+
+            // Match Kleene star item if the following item did not match
+            if ( followingMatches || !matchItemKleeneUnaware(matchData, matchedItems) ) {
+                // Stop with Kleene star:
+                // The following item matched or the Kleene star item did not match
+                break;
             } else {
-                ++matches; // This item matched (again), proceed with non-greedy Kleene star
+                ++matches; // This item matched (maybe again), proceed with non-greedy Kleene star
             }
         }
     }
-    return matches; // Kleene star always matches, return match count here
+
+    return matches; // Return match count
 }
 
-bool SyntacticalAnalyzer::matchItem( SyntaxItems *items, SyntaxItems::ConstIterator* item,
-        MatchItem* matchedItem, MatchItem *parent )
+bool SyntacticalAnalyzer::matchItem( MatchData *matchData, MatchItems *matchedItems )
 {
-    if ( *item == items->constEnd() ) {
-        return true; // Not an item, return true ("matched")
+    if ( matchData->item == matchData->items.constEnd() ) {
+        return false; // Not an item, return false ("not matched")
     }
-    #ifdef DEBUG_PARSING
-        kDebug() << "matchItem" << (**item)->type();
-    #endif
 
-    int matched = 0;
-    MatchItem subMatchedItem;
-    SyntaxItem::Flags flags = (**item)->flags();
-
-    // A KleeneStar is an optional KleenePlus. 
+    // A KleeneStar is an optional KleenePlus.
     // That means, that the first test for KleenePlus also matches KleeneStar.
+    int matches = 0; // Counts matches of the item (matchData->item)
+    const SyntaxItem::Flags flags = (*matchData->item)->flags();
     if ( flags.testFlag(SyntaxItem::KleenePlus) ) {
         if ( flags.testFlag(SyntaxItem::KleeneStar) ) {
             // Match any number of times
-            matched += matchKleeneStar( items, item, matchedItem, parent );
+            DO_DEBUG_PARSING_FUNCTION_CALL( matchItem, "Kleene star" << (*matchData->item)->type() );
+            matches += matchKleeneStar( matchData, matchedItems );
         } else {
             // Match at least once
-            if ( matchItemKleeneUnaware(items, item, matchedItem, parent) ) {
-                // Count the first matched item
-                ++matched;
+            DO_DEBUG_PARSING_FUNCTION_CALL( matchItem, "Kleene plus" << (*matchData->item)->type() );
+            if ( matchItemKleeneUnaware(matchData, matchedItems) ) {
+                ++matches; // Count the first matched item
 
                 // Then match any additional number of times
-                matched += matchKleeneStar( items, item, matchedItem, parent );
+                matches += matchKleeneStar( matchData, matchedItems );
             }
         }
-    } else if ( matchItemKleeneUnaware(items, item, matchedItem, parent) ) {
-        // No Kleene star or plus, only one match (but it may be optional and have matched nothing)
-        ++matched;
+    } else if ( matchItemKleeneUnaware(matchData, matchedItems) ) {
+        ++matches; // No Kleene star or plus, only one match
     }
 
-    // Matches with at least one match. The KleeneStar always matches
-    return matched > 0 || flags.testFlag(SyntaxItem::KleeneStar);
+    // Matched at least one time
+    return matches > 0;
 }
 
-bool SyntacticalAnalyzer::matchSequence( const SyntaxSequencePointer &sequence,
-                                         MatchItem *matchedItem, MatchItem *parent )
+bool SyntacticalAnalyzer::matchSequence( MatchData *matchData, MatchItems *matchedItems )
 {
-    #ifdef DEBUG_PARSING
-        qDebug() << "matchSequence" << sequence->items()->count();
-    #endif
-
-    MatchItem sequenceItem( MatchItem::Sequence );
+    const SyntaxSequenceItem *sequence = qobject_cast< const SyntaxSequenceItem* >( *matchData->item );
+    Q_ASSERT( sequence );
+    DO_DEBUG_PARSING_FUNCTION_CALL( matchSequence, sequence->toString(SyntaxItem::ShortDescription) );
 
     // Don't add the sequence item to the output if there is only one child item
     const bool addSequenceItem = sequence->items()->count() != 1;
-    MatchItem *childItemParent = addSequenceItem ? &sequenceItem : parent;
 
-    MatchItem matchedSequenceItem;
-    for ( SyntaxItems::ConstIterator it = sequence->items()->constBegin();
-          it != sequence->items()->constEnd(); ++it )
-    {
-        bool matched = false;
-//         TODO Remove here, skipping is done in matchItemKleeneUnaware
-//         if ( m_corrections.testFlag(SkipUnexpectedTokens) ) {
-//             // If a sequence item doesn't match, skip it and try to match the next one
-//             QList<ErrorInformation> errors;
-//             while ( !(matched = matchItem(sequence->items(), &it, &matchedSequenceItem, childItemParent)) ) {
-//                 #ifdef DEBUG_PARSING
-//                     qDebug() << "Skipping" << m_inputIterator->position() << m_inputIterator->input();
-//                 #endif
-//                 setError2( ErrorSevere, m_inputIterator->input(), SkipUnexpectedTokens,
-//                            m_inputIterator->position(), LexemList() << *m_inputIterator, parent );
-//                 readItemAndSkipSpaces( parent );
-//             }
-//         } else {
-            matched = matchItem( sequence->items(), &it, &matchedSequenceItem, childItemParent );
-//         }
+    MatchItem sequenceItem( MatchItem::Sequence );
+    MatchItems matchedSequenceItems;
+    bool hasMatch = false;
+    MatchData sequenceMatchData( *sequence->items(),
+            addSequenceItem ? &sequenceItem : matchData->parentMatchItem, matchData,
+            matchData->onlyTesting );
+    int i = 0;
+    for ( ; sequenceMatchData.item != sequenceMatchData.items.constEnd(); ++sequenceMatchData.item ) {
+        matchedSequenceItems.clear();
+        const bool matched = matchItem( &sequenceMatchData, &matchedSequenceItems );
+        hasMatch = hasMatch || matched;
 
-        if ( matched ) {
+        // Optional items in the sequence do not need to match
+        if ( matched || (*sequenceMatchData.item)->isOptional() ) {
+            if ( matched ) {
+                for ( int n = 0; n < matchedSequenceItems.count(); ++n ) {
+                    matchedSequenceItems[n].setMatchedSyntaxItemIndex( i );
+                }
+            }
             if ( isAtImaginaryIteratorEnd() ) {
-                ++it; // Move after the last matched sequence item
                 // No more input after the last matched item of the sequence
-                for ( ; it != sequence->items()->constEnd(); ++it ) {
-                    if ( !(*it)->isOptional() ) {
-                        // There is a non-optional MatchItem in the list (but no input)
-                        #ifdef DEBUG_PARSING
-                            qDebug() << " X - More MatchItems in sequence, no more input, non-optional item"
-                                     << (*it)->toString();
-                        #endif
-                        return false;
+                ++sequenceMatchData.item; // Move to the sequence item after the last matched one
+                for ( ; sequenceMatchData.item != sequence->items()->constEnd(); ++sequenceMatchData.item ) {
+                    if ( !(*sequenceMatchData.item)->isOptional() ) {
+                        DO_DEBUG_PARSING_INFO( "More non-optional SyntaxItems in a sequence, "
+                                "but no more input" << (*sequenceMatchData.item)->toString() );
+                        return false; // There is a non-optional SyntaxItems in the list (but no input)
                     }
                 }
-                // All other MatchItems are optional
-                #ifdef DEBUG_PARSING
-                    qDebug() << "OK - More MatchItems in sequence, no more input, but all are optional";
-                #endif
+                // All following SyntaxItems are optional
+                DO_DEBUG_PARSING_INFO( "No more input, but all following SyntaxItems "
+                        "in the sequence are optional" );
                 break;
             }
         } else {
-            return false;
+            return false; // A non-optional item in the sequence did not match
         }
+        ++i;
     }
 
     if ( addSequenceItem ) {
@@ -1100,309 +1155,219 @@ bool SyntacticalAnalyzer::matchSequence( const SyntaxSequencePointer &sequence,
             sequenceItem.setValue( readValueFromChildren(sequence->valueType(), &sequenceItem) );
         }
 
-        addOutputItem( sequenceItem, parent );
-        #ifdef FILL_MATCHES_IN_MATCHITEM
+        addOutputItem( matchData, sequenceItem );
+        #ifdef FILL_MATCHES_IN_SYNTAXITEM
             sequence->addMatch( sequenceItem );
         #endif
-        if ( matchedItem ) {
-            *matchedItem = sequenceItem;
-        }
+        *matchedItems << sequenceItem;
     } else {
         // Don't add a sequence item to the output, there is only one item in the sequence,
-        // which has already been added to parent (instead of the sequence item)
-        #ifdef FILL_MATCHES_IN_MATCHITEM
+        // which has already been added to the parent (instead of the sequence item)
+        #ifdef FILL_MATCHES_IN_SYNTAXITEM
             sequence->addMatch( matchedSequenceItem.position(), matchedSequenceItem.input(), QVariant() );
         #endif
-        if ( matchedItem ) {
-            *matchedItem = matchedSequenceItem;
-        }
+        *matchedItems << matchedSequenceItems;
     }
-    return true;
+
+    #ifdef DEBUG_PARSING_MATCH
+        if ( hasMatch ) {
+            DO_DEBUG_PARSING_MATCH( Sequence, sequence->toString(0, SyntaxItem::ShortDescription) );
+        }
+    #endif
+    return hasMatch;
 }
 
-bool SyntacticalAnalyzer::matchOption( SyntaxOptionItem* option, MatchItem* matchedItem,
-                                       MatchItem* parent )
+bool SyntacticalAnalyzer::matchOption( MatchData *matchData, MatchItems *matchedItems )
 {
-    #ifdef DEBUG_PARSING
-        qDebug() << "matchOption" << option->options()->count();
-    #endif
+    const SyntaxOptionItem *option = qobject_cast< const SyntaxOptionItem* >( *matchData->item );
+    Q_ASSERT( option );
+    DO_DEBUG_PARSING_FUNCTION_CALL( matchOption, option->toString(SyntaxItem::ShortDescription) );
 
     MatchItem optionItem( MatchItem::Option );
-    MatchItem matchedOptionItem;
+    MatchItems matchedOptionItems;
+    int i = 0;
     for ( SyntaxItems::ConstIterator it = option->options()->constBegin();
           it != option->options()->constEnd(); ++it )
     {
-        if ( matchItem(option->options(), &it, &matchedOptionItem, &optionItem) ) {
+        MatchData optionMatchData( *option->options(), &optionItem, matchData,
+                                    matchData->onlyTesting );
+        optionMatchData.item = it;
+
+        bool matched = matchItem( &optionMatchData, &matchedOptionItems );
+        if ( matched ) {
+            for ( int n = 0; n < matchedOptionItems.count(); ++n ) {
+                matchedOptionItems[n].setMatchedSyntaxItemIndex( i );
+            }
             if ( (*it)->isOptional() ) {
                 kDebug() << "An option item shouldn't have optional child items.\n"
                         "Because an optional item always matches, items after an optional child\n"
                         "are never used. Make the option item optional instead.";
             }
-            addOutputItem( optionItem, parent );
-            #ifdef FILL_MATCHES_IN_MATCHITEM
+            addOutputItem( matchData, optionItem );
+            #ifdef FILL_MATCHES_IN_SYNTAXITEM
                 option->addMatch( optionItem.position(), optionItem.input(), optionItem.value() );
             #endif
-            if ( matchedItem ) {
-                *matchedItem = optionItem;
-            }
+            *matchedItems << optionItem;
+            DO_DEBUG_PARSING_MATCH( Option, option->toString(0, SyntaxItem::ShortDescription) );
             return true;
         }
+        ++i;
     }
 
-    if ( option->isOptional() ) {
+    DO_DEBUG_PARSING_INFO( "No item of a non-optional option list matched" );
+    return false;
+}
+
+bool SyntacticalAnalyzer::matchKeyword( MatchData *matchData, MatchItems *matchedItems )
+{
+    const SyntaxKeywordItem *keyword = qobject_cast< const SyntaxKeywordItem* >( *matchData->item );
+    Q_ASSERT( keyword );
+    DO_DEBUG_PARSING_FUNCTION_CALL( matchKeyword, keyword->toString(SyntaxItem::ShortDescription) );
+
+    MatchItem match;
+    bool matched = matchKeywordInList( matchData, keyword->keyword(), &match );
+    if ( matched ) {
+        *matchedItems << match;
+
+        if ( keyword->valueSequence() ) {
+            // Match value sequence for the keyword
+            MatchItems valueSequenceItems;
+            MatchData valueMatchData( SyntaxItems() << keyword->valueSequence(), &match, matchData );
+            matched = matchSequence( &valueMatchData, &valueSequenceItems );
+        }
+
+        if ( matched ) {
+            addOutputItem( matchData, match );
+            #ifdef FILL_MATCHES_IN_SYNTAXITEM
+                keyword->addMatch( match.position(), match.input(), match.value() );
+            #endif
+        }
+
+        DO_DEBUG_PARSING_MATCH( Keyword, keyword->keyword() );
         return true;
     } else {
-        #ifdef DEBUG_PARSING
-            qDebug() << "   X - no item of a non-optional option list matched";
-        #endif
+        // NOTE [match] is uninitialized, if matched is false
+//         if ( !keyword->isOptional() ) {
+            // TODO Error handling: Add SyntaxItem::Error item with default value text
+            // (eg. minimum for MatchItemNumber)
+//         }
         return false;
     }
 }
 
-bool SyntacticalAnalyzer::matchKeyword( SyntaxKeywordItem* keyword, MatchItem* matchedItem,
-                                        MatchItem* parent )
+bool SyntacticalAnalyzer::matchItemKleeneUnaware( MatchData *matchData, MatchItems *matchedItems,
+                                                  AnalyzerCorrections enabledCorrections )
 {
-    // Match a single keyword without any associated value   **TODO > UPDATE DOCU < TODO**
-    MatchItem match;
-    bool matched = matchKeywordInList( keyword->keyword(), &match, parent );
+    DO_DEBUG_PARSING_FUNCTION_CALL( matchItemKleeneUnaware,
+            (*matchData->item)->toString(SyntaxItem::ShortDescription) );
 
-    if ( matched ) {
-        #ifdef DEBUG_PARSING
-            qDebug() << "  OK - keyword matched:" << keyword->keyword();
-        #endif
-        *matchedItem = match;
-    } else {
-        // NOTE Match is uninitialized, if matched is false
-        #ifdef DEBUG_PARSING
-            if ( keyword->isOptional() ) {
-                qDebug() << "  OK - keyword not matched, but optional:" << keyword->keyword();
-            } else {
-                qDebug() << "   X - non-optional keyword not matched:" << keyword->keyword();
-                // TODO Error handling: Add SyntaxItem::Error item with default value text (eg. minimum for MatchItemNumber)
-            }
-        #endif
-        return keyword->isOptional();
+    if ( isAtImaginaryIteratorEnd() ) {
+        return false; // TODO
     }
-
-    if ( keyword->valueSequence() ) {
-        // Match value sequence for the keyword
-        MatchItem valueSequence;
-        matched = matchSequence( keyword->valueSequence(), &valueSequence, &match );
-    }
-
-    if ( matched ) {
-        addOutputItem( match, parent );
-        #ifdef FILL_MATCHES_IN_MATCHITEM
-            keyword->addMatch( match.position(), match.input(), match.value() );
-        #endif
-    }
-
-    return true;
-}
-
-// if this returns false, the contents of @p matchedItem are undefined
-bool SyntacticalAnalyzer::matchItemKleeneUnaware( SyntaxItems *items,
-        SyntaxItems::ConstIterator *item, MatchItem *matchedItem, MatchItem *parent,
-        AnalyzerCorrections enabledCorrections )
-{
-    Q_UNUSED( items );
-    #ifdef DEBUG_PARSING
-        qDebug() << "matchItemKleeneUnaware" << (**item)->type() << (**item);
-    #endif
 
     QLinkedList<Lexem>::ConstIterator oldIterator = m_inputIterator;
-    SyntaxItem::Type type = (**item)->type();
-    switch ( type ) {
-    case SyntaxItem::MatchSequence: {
-        SyntaxSequenceItem *sequenceItem = qobject_cast<SyntaxSequenceItem*>( (*item)->data() );
-        if ( matchSequence(sequenceItem, matchedItem, parent) || sequenceItem->isOptional() ) {
-            return true;
-        }
+    bool matched;
+    switch ( (*matchData->item)->type() ) {
+    case SyntaxItem::MatchSequence:
+        matched = matchSequence( matchData, matchedItems );
         break;
-    } case SyntaxItem::MatchOption: {
-        SyntaxOptionItem *optionItem = qobject_cast<SyntaxOptionItem*>( (*item)->data() );
-        if ( matchOption(optionItem, matchedItem, parent) || optionItem->isOptional() ) {
-            return true;
-        }
+    case SyntaxItem::MatchOption:
+        matched = matchOption( matchData, matchedItems );
         break;
-    } case SyntaxItem::MatchKeyword: {
-        SyntaxKeywordItem *keywordItem = qobject_cast<SyntaxKeywordItem*>( (*item)->data() );
-        if ( matchKeyword(keywordItem, matchedItem, parent) || keywordItem->isOptional() ) {
-            return true;
-        }
+    case SyntaxItem::MatchKeyword:
+        matched = matchKeyword( matchData, matchedItems );
         break;
-    } case SyntaxItem::MatchNumber: {
-        Lexem numberLexem = *m_inputIterator;
-        int matchedNumber;
-        SyntaxNumberItem *numberItem = qobject_cast<SyntaxNumberItem*>( (*item)->data() );
-        if ( matchNumber(&matchedNumber, numberItem->min(), numberItem->max(), parent) // TODO removedDigits
-             || (**item)->isOptional() )
-        {
-            #ifdef FILL_MATCHES_IN_MATCHITEM
-                numberItem->addMatch( numberLexem.position(), numberLexem.input(), matchedNumber );
-            #endif
-            *matchedItem = MatchItem( MatchItem::Number, LexemList() << numberLexem,
-                                      (**item)->valueType(), matchedNumber );
-//             if ( (**item)->hasValue() ) { TODO
-                addOutputItem( *matchedItem, parent );
-//             }
-            #ifdef DEBUG_PARSING
-                qDebug() << "  OK - Matched number" << numberLexem.input();
-            #endif
-            return true;
-        }
+    case SyntaxItem::MatchNumber:
+        matched = matchNumber( matchData, matchedItems );
         break;
-    } case SyntaxItem::MatchString: {
-        Lexem stringLexem = *m_inputIterator;
-        QString matchedString;
-        SyntaxStringItem *stringItem = qobject_cast<SyntaxStringItem*>( (*item)->data() );
-        if ( matchString(stringItem->strings(), &matchedString, parent) || (**item)->isOptional() ) {
-            #ifdef FILL_MATCHES_IN_MATCHITEM
-                stringItem->addMatch( stringLexem.position(), matchedString, matchedString );
-            #endif
-            *matchedItem = MatchItem( MatchItem::String, LexemList() << stringLexem,
-                                       (**item)->valueType(), matchedString );
-//             if ( (**item)->isUsingOutput() ) {
-                addOutputItem( *matchedItem, parent );
-//             }
-            #ifdef DEBUG_PARSING
-                qDebug() << "  OK - Matched string" << matchedString;
-            #endif
-            return true;
-        }
+    case SyntaxItem::MatchString:
+        matched = matchString( matchData, matchedItems );
         break;
-    } case SyntaxItem::MatchWords: {
-        LexemList wordLexems;
-        QStringList matchedWords;
-        QString matchedText;
-        SyntaxWordsItem *wordsItem = qobject_cast<SyntaxWordsItem*>( (*item)->data() );
-        if ( matchWords(wordsItem->wordCount(), &matchedWords, &matchedText, &wordLexems,
-                        wordsItem->wordTypes(), parent) || (**item)->isOptional() )
-        {
-            #ifdef FILL_MATCHES_IN_MATCHITEM
-                wordsItem->addMatch( matchedItem->position(), matchedText, matchedWords );
-            #endif
-            *matchedItem = MatchItem( MatchItem::Words, wordLexems, (**item)->valueType(), matchedWords );
-//             if ( (**item)->isUsingOutput() ) {
-                addOutputItem( *matchedItem, parent );
-//             }
-            #ifdef DEBUG_PARSING
-                qDebug() << "  OK - Matched words" << matchedWords;
-            #endif
-            return true;
-        }
+    case SyntaxItem::MatchWord:
+        matched = matchWord( matchData, matchedItems );
         break;
-    }
-//     case MatchItem::MatchQuotationMark:
-//     case MatchItem::MatchColon:
-    case SyntaxItem::MatchCharacter: {
-        Lexem symbolLexem = *m_inputIterator;
-        QString text;
-        SyntaxCharacterItem *characterItem = qobject_cast<SyntaxCharacterItem*>( (*item)->data() );
-        if ( matchCharacter(characterItem->character(), &text, parent) || (**item)->isOptional() ) {
-            #ifdef FILL_MATCHES_IN_MATCHITEM
-                characterItem->addMatch( symbolLexem.position(), text, text);
-            #endif
-            *matchedItem = MatchItem( MatchItem::Character, LexemList() << symbolLexem,
-                                       (**item)->valueType(), text );
-//             if ( (**item)->isUsingOutput() ) {
-                addOutputItem( *matchedItem, parent );
-//             }
-            #ifdef DEBUG_PARSING
-                qDebug() << "  OK - Matched character" << text;
-            #endif
-            return true;
-        }
+    case SyntaxItem::MatchCharacter:
+        matched = matchCharacter( matchData, matchedItems );
         break;
-    } case SyntaxItem::MatchNothing:
-        #ifdef DEBUG_PARSING
-            qDebug() << "  OK - Matched nothing";
-        #endif
+    case SyntaxItem::MatchNothing:
+        DO_DEBUG_PARSING_MATCH( Nothing, "" );
         return true; // Nothing to do
-    } // End of switch
-
-    // No match, try enabled corrections
-    // First try to insert a missing required token, if it is similar to the input
-    if ( enabledCorrections.testFlag(InsertMissingRequiredTokens)
-         && m_corrections.testFlag(InsertMissingRequiredTokens) && !(**item)->isOptional() )
-    {
-        // TODO This should maybe be done in a new function matchSimilarItemKleeneUnaware
-//         switch ( type ) {
-//         case SyntaxItem::MatchString:
-//             if ( m_inputIterator->type() == Lexem::String &&
-//                  stringsSimilar(m_inputIterator->input(),
-//                                 qobject_cast<SyntaxStringItem*>(**item)->strings().first()) )
-//             {
-//                 addOutputItem( MatchItem(MatchItem::String, LexemList() << *m_inputIterator,
-//                                          (**item)->valueType()), parent );
-//                 return true;
-//             }
-//             break;
-// //         case SyntaxItem::MatchKeyword:
-// //             break;
-//         default:
-//             break;
-//         }
     }
 
-    // Skip the not matching item and try to match the next one
-    if ( enabledCorrections.testFlag(SkipUnexpectedTokens)
-         && m_corrections.testFlag(SkipUnexpectedTokens) )
-    {
-        const int MAX_SKIP_UNEXPECTED = 3;
-        QList<ErrorInformation> skipErrorItems;
-        do {
-            #ifdef DEBUG_PARSING
-                qDebug() << "Skipping" << m_inputIterator->position() << m_inputIterator->input();
-            #endif
-//             setError2( ErrorSevere, m_inputIterator->input(), SkipUnexpectedTokens,
-//                        m_inputIterator->position(), LexemList() << *m_inputIterator, parent );
-            skipErrorItems << ErrorInformation( SkipUnexpectedTokens, m_inputIterator->position(),
-                                                *m_inputIterator );
-            readItemAndSkipSpaces( parent );
-            if ( matchItemKleeneUnaware(items, item, matchedItem, parent, CorrectNothing) ) {
-                #ifdef DEBUG_PARSING
-                    qDebug() << "Match after" << skipErrorItems.count() << "skipped lexems";
-                #endif
-                // Add the error items
-                foreach ( const ErrorInformation &error, skipErrorItems ) {
-                    setError2( ErrorSevere, error.lexem.input(), error.correction,
-                               error.position, LexemList() << error.lexem, parent );
+    if ( matched ) {
+        return true;
+    }
+
+    if ( !isAtImaginaryIteratorEnd() ) {
+        // No match, try enabled corrections
+        // First try to insert a missing required token, if it is similar to the input
+        if ( enabledCorrections.testFlag(InsertMissingRequiredTokens)
+             && m_corrections.testFlag(InsertMissingRequiredTokens)
+             && !(*matchData->item)->isOptional() )
+        {
+            // TODO This should maybe be done in a new function matchSimilarItemKleeneUnaware
+    //         switch ( type ) {
+    //         case SyntaxItem::MatchString:
+    //             if ( m_inputIterator->type() == Lexem::String &&
+    //                  stringsSimilar(m_inputIterator->input(),
+    //                                 qobject_cast<SyntaxStringItem*>(**item)->strings().first()) )
+    //             {
+    //                 addOutputItem( MatchItem(MatchItem::String, LexemList() << *m_inputIterator,
+    //                                          (**item)->valueType()), parent );
+    //                 return true;
+    //             }
+    //             break;
+    // //         case SyntaxItem::MatchKeyword:
+    // //             break;
+    //         default:
+    //             break;
+    //         }
+        }
+
+        // Skip the not matching item and try to match the next one
+        if ( !matchData->onlyTesting && enabledCorrections.testFlag(SkipUnexpectedTokens)
+             && m_corrections.testFlag(SkipUnexpectedTokens) )
+        {
+            const int MAX_SKIP_UNEXPECTED = 3;
+            QList<ErrorInformation> skipErrorItems;
+            do {
+                DO_DEBUG_PARSING_INFO( "Skipping"
+                        << m_inputIterator->position() << m_inputIterator->input() );
+    //             setError2( ErrorSevere, m_inputIterator->input(), SkipUnexpectedTokens,
+    //                        m_inputIterator->position(), LexemList() << *m_inputIterator, parent );
+                skipErrorItems << ErrorInformation( SkipUnexpectedTokens, m_inputIterator->position(),
+                                                    *m_inputIterator );
+                readItemAndSkipSpaces( matchData );
+                if ( !isAtImaginaryIteratorEnd() &&
+                     matchItemKleeneUnaware(matchData, matchedItems, CorrectNothing) )
+                {
+                    DO_DEBUG_PARSING_INFO( "Match after" << skipErrorItems.count()
+                                           << "skipped lexem(s)" );
+                    // Add the error items
+                    foreach ( const ErrorInformation &error, skipErrorItems ) {
+                        setError2( matchData, ErrorSevere, error.lexem.input(), error.correction,
+                                   error.position, LexemList() << error.lexem );
+                    }
+                    if ( m_result > AcceptedWithErrors ) {
+                        m_result = AcceptedWithErrors;
+                    }
+                    return true;
                 }
-                return true;
-            }
-        } while ( skipErrorItems.count() < MAX_SKIP_UNEXPECTED && !isAtImaginaryIteratorEnd() );
+            } while ( skipErrorItems.count() < MAX_SKIP_UNEXPECTED && !isAtImaginaryIteratorEnd() );
 
-        #ifdef DEBUG_PARSING
-            qDebug() << "Skipping didn't help matching the input";
-        #endif
-        // m_inputIterator is not where it was before this if, it gets restored below
+            DO_DEBUG_PARSING_INFO( "Skipping lexems did not help matching the input" );
+            // m_inputIterator is not where it was before this if, it gets restored below
+        }
     }
 
-    #ifdef DEBUG_PARSING
-        qDebug() << "   X - Failed" << type << '\n' << (**item)->toString() << "\nat input:"
-                 << (isAtImaginaryIteratorEnd() ? "END" : m_inputIterator->input());
-    #endif
+    DO_DEBUG_PARSING_INFO( "Failed" << (*matchData->item)->toString() << "at input:"
+                 << (isAtImaginaryIteratorEnd() ? "END" : m_inputIterator->input()) );
     m_inputIterator = oldIterator;
     m_inputIteratorLookahead = m_inputIterator;
     updateLookahead();
+
     return false;
 };
-
-bool SyntacticalAnalyzer::matchItem( const QLinkedList<Lexem> &input, SyntaxItemPointer item )
-{
-    // Initialize input
-    m_input = input;
-    moveToBeginning();
-
-    // Create a list with only item in it and use it for matchNextItem
-    SyntaxItems items = SyntaxItems() << item;
-    SyntaxItems::ConstIterator iterator = items.constBegin();
-
-    MatchItem firstMatchedItem;
-    return matchItem( &items, &iterator, &firstMatchedItem );
-//     return matchNextItem( &items, &iterator, &firstMatchedItem );
-}
 
 QTime SyntacticalAnalyzer::timeValue( const QHash< JourneySearchValueType, QVariant >& values ) const
 {
@@ -1460,114 +1425,106 @@ QVariant SyntacticalAnalyzer::readValueFromChildren( JourneySearchValueType valu
     return QVariant(); // Couldn't find matching child items for the given value type
 }
 
-void SyntacticalAnalyzer::readSpaceItems( MatchItem *parent )
+void SyntacticalAnalyzer::readSpaceItems( MatchData *matchData )
 {
-    #ifdef DEBUG_PARSING
-        qDebug() << "readSpaceItems" << (isAtImaginaryIteratorEnd());
-        if ( !isAtImaginaryIteratorEnd() ) {
-            qDebug() << "Not at input end";
-        }
-    #endif
+    DO_DEBUG_PARSING_FUNCTION_CALL2( readSpaceItems );
+
     while ( !isAtImaginaryIteratorEnd() && m_inputIterator->type() == Lexem::Space ) {
-        addOutputItem( MatchItem(MatchItem::Error, LexemList() << *m_inputIterator, ErrorMessageValue,
-                                  "Double space character"), parent );
+        if ( !matchData->onlyTesting ) {
+            addOutputItem( matchData,
+                           MatchItem(MatchItem::Error, LexemList() << *m_inputIterator,
+                                     ErrorMessageValue, "Double space character") );
+        }
         readItem();
     }
 }
 
-bool SyntacticalAnalyzer::matchCharacter( char character, QString *text, MatchItem *parentItem )
+bool SyntacticalAnalyzer::matchCharacter( MatchData *matchData, MatchItems *matchedItems )
 {
-    #ifdef DEBUG_PARSING
-        qDebug() << "matchCharacter" << character;
-    #endif
+    const SyntaxCharacterItem *characterItem =
+            qobject_cast< const SyntaxCharacterItem* >( matchData->item->data() );
+    Q_ASSERT( characterItem );
+    DO_DEBUG_PARSING_FUNCTION_CALL( matchCharacter, QChar(characterItem->character()) );
 
-    if ( m_inputIterator->type() == Lexem::Character && m_inputIterator->textIsCharacter(character) ) {
-        if ( text ) {
-            *text = m_inputIterator->input();
-        }
-        readItemAndSkipSpaces( parentItem );
+    if ( m_inputIterator->type() == Lexem::Character &&
+         m_inputIterator->textIsCharacter(characterItem->character()) )
+    {
+        const QString text = m_inputIterator->input();
+        #ifdef FILL_MATCHES_IN_SYNTAXITEM
+            characterItem->addMatch( m_inputIterator->position(), text, text );
+        #endif
+        *matchedItems << MatchItem( MatchItem::Character, LexemList() << *m_inputIterator,
+                                    characterItem->valueType(), text );
+        addOutputItem( matchData, matchedItems->last() );
+        readItemAndSkipSpaces( matchData );
+        DO_DEBUG_PARSING_MATCH( Number, QChar(characterItem->character()) );
         return true;
     } else {
         return false;
     }
 }
 
-bool SyntacticalAnalyzer::matchWords( int wordCount, QStringList *matchedWords, QString *matchedText,
-                                      LexemList *wordsLexems, const QList<Lexem::Type> &wordTypes,
-                                      MatchItem *parentItem )
+bool SyntacticalAnalyzer::matchWord( MatchData *matchData, MatchItems *matchedItems )
 {
-//     TODO do the addOutputItem work here?
-    #ifdef DEBUG_PARSING
-        qDebug() << "matchWordsNextItem" << wordCount << wordTypes;
-    #endif
+    const SyntaxWordItem *wordItem =
+            qobject_cast< const SyntaxWordItem* >( matchData->item->data() );
+    Q_ASSERT( wordItem );
+    DO_DEBUG_PARSING_FUNCTION_CALL( matchWord, wordItem->wordTypes() );
 
-    QLinkedList<Lexem>::ConstIterator oldIterator = m_inputIterator;
-    QStringList words;
-    QString text;
-    bool result = true;
-    for ( ; wordCount != 0 && !isAtImaginaryIteratorEnd(); --wordCount ) {
-        if ( wordTypes.contains(m_inputIterator->type()) ) {
-            *wordsLexems << *m_inputIterator;
-            words << m_inputIterator->input();
-            text += m_inputIterator->input();
-            if ( m_inputIterator->isFollowedBySpace() ) {
-                text += ' ';
-            }
-            readItemAndSkipSpaces( parentItem );
-        } else if ( wordCount < 0 ) {
-            result = true;
-            break;
-        } else {
-            m_inputIterator = oldIterator;
-            m_inputIteratorLookahead = m_inputIterator;
-            updateLookahead();
-            result = false;
-            break;
-        }
-    }
-
-    if ( matchedWords ) {
-        *matchedWords << words;
-    }
-    if ( matchedText ) {
-        *matchedText = text;
-    }
-    return result;
-}
-
-bool SyntacticalAnalyzer::matchString( const QStringList& stringList, QString *matchedString,
-                                       MatchItem *parentItem )
-{
-    if ( m_inputIterator->type() == Lexem::String ) {
-        foreach ( const QString &string, stringList ) {
-            if ( m_inputIterator->input().compare(string, Qt::CaseInsensitive) == 0 ) {
-                if ( matchedString ) {
-                    *matchedString = m_inputIterator->input();
-                }
-                readItemAndSkipSpaces( parentItem );
-                return true;
-            }
-        }
-        return false; // No string in stringList matched
+    if ( !isAtImaginaryIteratorEnd() && wordItem->wordTypes().contains(m_inputIterator->type()) ) {
+        const QString matchedWord = m_inputIterator->input();
+        #ifdef FILL_MATCHES_IN_SYNTAXITEM
+            wordsItem->addMatch( m_inputIterator->position(), matchedWord, matchedWord );
+        #endif
+        *matchedItems << MatchItem( MatchItem::Word, LexemList() << *m_inputIterator,
+                                    wordItem->valueType(), matchedWord );
+        addOutputItem( matchData, matchedItems->last() );
+        readItemAndSkipSpaces( matchData );
+        DO_DEBUG_PARSING_MATCH( Word, matchedWord );
+        return true;
     } else {
         return false;
     }
 }
 
-bool SyntacticalAnalyzer::matchMinutesString()
+bool SyntacticalAnalyzer::matchString( MatchData *matchData, MatchItems *matchedItems )
 {
-//     TODO: i18n
-    return matchString( QStringList() << "mins" << "minutes" );
+    const SyntaxStringItem *stringItem
+            = qobject_cast< const SyntaxStringItem* >( matchData->item->data() );
+    Q_ASSERT( stringItem );
+    DO_DEBUG_PARSING_FUNCTION_CALL( matchString, stringItem->strings() );
+
+    if ( m_inputIterator->type() == Lexem::String ) {
+        foreach ( const QString &string, stringItem->strings() ) {
+            if ( m_inputIterator->input().compare(string, Qt::CaseInsensitive) == 0 ) {
+                const QString matchedString = m_inputIterator->input();
+                #ifdef FILL_MATCHES_IN_SYNTAXITEM
+                    stringItem->addMatch( m_inputIterator->position(), matchedString, matchedString );
+                #endif
+                *matchedItems << MatchItem( MatchItem::String, LexemList() << *m_inputIterator,
+                                            (*matchData->item)->valueType(), matchedString );
+                addOutputItem( matchData, matchedItems->last() );
+                readItemAndSkipSpaces( matchData );
+                DO_DEBUG_PARSING_MATCH( String, matchedString );
+                return true;
+            }
+        }
+        return false; // No string matched
+    } else {
+        return false; // Not a string at current input position
+    }
 }
 
-bool SyntacticalAnalyzer::matchKeywordInList( KeywordType type, MatchItem *match,
-                                              MatchItem *parent )
+bool SyntacticalAnalyzer::matchKeywordInList( MatchData *matchData, KeywordType type,
+                                              MatchItem *matchedItem )
 {
+    DO_DEBUG_PARSING_FUNCTION_CALL( matchKeywordInList, type );
+
     const QStringList& keywordList = m_keywords->keywords( type );
     Q_ASSERT( !keywordList.isEmpty() );
 
-//     QStringList matchedTexts;
 #ifdef ALLOW_MULTIWORD_KEYWORDS
+    // TODO TEST this
     LexemList lexems;
     foreach ( const QString &keyword, keywordList ) {
         // Keywords themselves may consist of multiple words (ie. contain whitespaces)
@@ -1591,15 +1548,15 @@ bool SyntacticalAnalyzer::matchKeywordInList( KeywordType type, MatchItem *match
             {
                 break; // End of word list reached
             }
-            readItemAndSkipSpaces( parent );
+            readItemAndSkipSpaces( matchData );
         } while ( !isAtImaginaryIteratorEnd() );
 
         if ( word == wordCount ) {
             // All words of the keyword matched
 //             SyntaxItem item( type, lexems, keyword );
 //             addOutputItem( item, parent );
-            *match = SyntaxItem( SyntaxItem::Keyword, lexems, NoValue, static_cast<int>(type) );
-            readItemAndSkipSpaces( parent );
+            *matchedItem = MatchItem( MatchItem::Keyword, lexems, NoValue, static_cast<int>(type) ); // TODO
+            readItemAndSkipSpaces( matchData );
             return true;
         } else {
             // Test if the beginning of a keyword matches.
@@ -1618,10 +1575,10 @@ bool SyntacticalAnalyzer::matchKeywordInList( KeywordType type, MatchItem *match
                 lexems << *m_inputIterator;
 //                 SyntaxItem item = SyntaxItem( type, lexems, keyword );
 //                 addOutputItem( item, parent );
-                *match = SyntaxItem( SyntaxItem::Keyword, lexems, NoValue, static_cast<int>(type) );
+                *matchedItem = MatchItem( MatchItem::Keyword, lexems, NoValue, static_cast<int>(type) ); // TODO
                 m_selectionLength = keyword.length() - m_inputIterator->input().length() -
                         QStringList(words.mid(0, index)).join(" ").length();
-                readItemAndSkipSpaces( parent );
+                readItemAndSkipSpaces( matchData );
                 return true;
             }
 
@@ -1635,7 +1592,6 @@ bool SyntacticalAnalyzer::matchKeywordInList( KeywordType type, MatchItem *match
         }
     }
 #else
-// TODO Two runs, first check for complete keywords and then try to find beginnings
     foreach ( const QString &keyword, keywordList ) {
         if ( m_inputIterator->type() != Lexem::String
              || keyword.compare(m_inputIterator->input(), Qt::CaseInsensitive) != 0 )
@@ -1652,181 +1608,25 @@ bool SyntacticalAnalyzer::matchKeywordInList( KeywordType type, MatchItem *match
                   m_cursorPositionInInputString == m_inputIterator->position() + m_inputIterator->input().length()) &&
                  keyword.startsWith(m_inputIterator->input(), Qt::CaseInsensitive) )
             {
-                // Add output item for the partially read keyword
-//                 SyntaxItem item = SyntaxItem( type, lexems, keyword );
-//                 addOutputItem( item, parent );
-//                 *match = MatchItem( MatchItem::Keyword, LexemList() << *m_inputIterator,
-//                                     NoValue, QVariantList() << static_cast<int>(type) << keyword,
-//                                     MatchItem::CorrectedMatchItem );
-                *match = MatchItem( LexemList() << *m_inputIterator, type, keyword,
-                                    MatchItem::CorrectedMatchItem );
+                // Add output item for the partially read keyword (with capitalization of the input)
+                *matchedItem = MatchItem( LexemList() << *m_inputIterator, type,
+                        m_inputIterator->input() + keyword.mid(m_inputIterator->input().length()),
+                        MatchItem::CorrectedMatchItem );
                 m_selectionLength = keyword.length() - m_inputIterator->input().length();
-                readItemAndSkipSpaces( parent );
+                readItemAndSkipSpaces( matchData );
                 return true;
             }
             continue;
-//             return false;
         }
 
         // The keyword was matched
-//         matchedTexts << m_inputIterator->input();
-//         *match = MatchItem( MatchItem::Keyword, LexemList() << *m_inputIterator,
-//                              NoValue, static_cast<int>(type) );
-        *match = MatchItem( LexemList() << *m_inputIterator, type, keyword );
-        readItemAndSkipSpaces( parent );
+        *matchedItem = MatchItem( LexemList() << *m_inputIterator, type, keyword );
+        readItemAndSkipSpaces( matchData );
         return true;
     }
 #endif
 
     return false; // No keyword matched
-}
-
-bool SyntacticalAnalyzer::matchSuffix()
-{
-//     TODO Parse dates, other time formats?
-    if ( m_stopNameBegin == m_input.constEnd() ) {
-        // Complete input read as prefix
-        m_stopNameEnd = m_stopNameBegin;
-        return false;
-    }
-
-//     m_direction = RightToLeft; TODO
-    m_inputIterator = m_input.constEnd();
-    m_inputIteratorLookahead = m_inputIterator;
-    updateLookahead();
-    readSpaceItems();
-    m_stopNameEnd = m_inputIterator;
-    int matches = 0;
-    bool matched = false;
-    while ( !isAtEnd() && m_inputIteratorLookahead != m_stopNameBegin ) {
-        if ( !matched ) {
-            readItemAndSkipSpaces();
-        }
-        matched = false;
-
-        if ( m_inputIterator->type() == Lexem::Character && m_inputIterator->textIsCharacter('"') ) {
-            // Stop if a quotation mark is read (end of the stop name)
-            break;
-        } else if ( m_inputIterator->type() == Lexem::Space ) {
-            // Add spaces to the output as error items
-            setError2( ErrorMinor, m_inputIterator->input(),
-                      "Space character at the end of the input", m_inputIterator->position() );
-            continue;
-        }
-        matched = matchTimeAt();
-        matched = matched || matchTimeIn();
-
-        // NOTE This doesn't work any longer, because the keywordItem doesn't get added to
-        // the output using addOutputItem (for keywords with values matched with MatchItems).
-        MatchItem keywordItem;
-        matched = matched || matchKeywordInList( KeywordTomorrow, &keywordItem );
-        matched = matched || matchKeywordInList( KeywordDeparture, &keywordItem );
-        matched = matched || matchKeywordInList( KeywordArrival, &keywordItem );
-        if ( matched ) {
-            ++matches;
-        }
-    }
-
-//     m_direction = LeftToRight; TODO
-    m_inputIteratorLookahead = m_inputIterator;
-    updateLookahead();
-//     m_inputIteratorLookahead = m_inputIterator + 1; // Update lookahead iterator to left-to-right
-    if ( matches > 0 ) {
-        // Move to previous item (right-to-left mode)
-        // eg. "[StopName] tomorrow" => "StopName [tomorrow]"
-        m_stopNameEnd = m_inputIteratorLookahead;
-        #ifdef DEBUG_PARSING
-            qDebug() << (m_stopNameEnd == m_input.constEnd() ? "stop name end: END"
-                            : ("stop name end: " + m_stopNameEnd->input()));
-        #endif
-        return true;
-    } else {
-        kDebug() << "Suffix didn't match";
-        return false;
-    }
-}
-
-bool SyntacticalAnalyzer::matchStopName()
-{
-    m_inputIterator = m_stopNameBegin;
-    m_inputIteratorLookahead = m_inputIterator;
-    updateLookahead();
-    readSpaceItems();
-    if ( m_inputIterator == m_stopNameEnd || isAtImaginaryIteratorEnd() ) {
-        setError2( ErrorFatal, QString(), "No stop name", m_inputIterator->position() );
-        return false;
-    }
-
-    QStringList stopNameWords;
-    LexemList lexems;
-    int firstWordPos = -1;
-
-    if ( m_inputIterator->type() == Lexem::Character && m_inputIterator->textIsCharacter('"') ) {
-        // The while loop ends when a quotation mark is found, or if there is no more input to read
-        firstWordPos = m_inputIterator->position() + 1;
-        readItem(); // m_inputIterator isn't at m_stopNameEnd, tested above
-        while ( m_inputIterator != m_stopNameEnd ) {
-            if ( m_inputIterator->type() == Lexem::Character && m_inputIterator->textIsCharacter('"') ) {
-                break; // Closing quotation mark
-            } else {
-                lexems << *m_inputIterator;
-                stopNameWords << m_inputIterator->input();
-            }
-            readItem();
-        }
-
-        if ( m_inputIterator == m_stopNameEnd || m_inputIterator->type() != Lexem::Character ||
-             m_inputIterator->textIsCharacter('"') )
-        {
-            setError2( ErrorSevere, QString(), "No closing quotation mark",
-                       m_inputIterator->position() );
-//             TODO Error handling: Add a closing quotation mark
-        } else {
-//             ++m_inputIterator;
-            readItem();
-        }
-    } else {
-        firstWordPos = m_inputIterator->position();  // m_inputIterator isn't at m_stopNameEnd, tested above
-        do {
-            lexems << *m_inputIterator;
-            stopNameWords << m_inputIterator->input();
-            readItem();
-        } while ( m_inputIterator != m_stopNameEnd && !isAtImaginaryIteratorEnd() );
-
-        if ( m_cursorPositionInInputString >= firstWordPos /*&& m_correctionLevel > CorrectNothing TODO*/ ) {
-            ++m_cursorOffset; // Add an offset for the quotation marks that get inserted
-        }
-    }
-
-    if ( stopNameWords.isEmpty() ) {
-        setError2( ErrorFatal, QString(), "No stop name", firstWordPos + 1 );
-        return false;
-    } else {
-        addOutputItem( MatchItem(MatchItem::Words, lexems, StopNameValue, stopNameWords) );
-
-        if ( m_inputIterator != m_stopNameEnd && !isAtImaginaryIteratorEnd() ) {
-            // Remaining lexems in m_input
-            // Put their texts into an error item (eg. a Lexem::Space)
-            int position = m_inputIterator->position();
-            QString errornousText;
-            for ( ; m_inputIterator != m_stopNameEnd; ++m_inputIterator ) {
-                if ( m_inputIterator->isFollowedBySpace() ) {
-                    errornousText.append( m_inputIterator->input() + ' ' );
-                } else {
-                    errornousText.append( m_inputIterator->input() );
-                }
-            }
-            m_inputIteratorLookahead = m_inputIterator;
-            updateLookahead();
-
-            // If the unparsed text only contains spaces, the error is a minor one.
-            // Otherwise it's severe, eg. unrecognized keywords/values.
-            setError2( errornousText.trimmed().isEmpty() ? ErrorMinor : ErrorSevere,
-                       errornousText, "Unknown elements remain unparsed", position );
-        }
-    }
-
-    return true;
 }
 
 ContextualAnalyzer::ContextualAnalyzer( AnalyzerCorrections corrections,
@@ -1942,19 +1742,43 @@ JourneySearchKeywords::JourneySearchKeywords() :
         m_timeKeywordsIn(i18nc("@info/plain A comma separated list of keywords for the "
             "journey search field, indicating that a relative time string follows.\nNote: Keywords "
             "should be unique for each meaning.", "in").split(',', QString::SkipEmptyParts)),
+        m_timeKeywordsInMinutes(i18nc("@info/plain A comma separated list of keywords which can "
+            "follow after a relative time keyword.\nNote: Keywords should be unique for each "
+            "meaning.", "minutes").split(',', QString::SkipEmptyParts)),
         m_timeKeywordsTomorrow(i18nc("@info/plain A comma separated list of keywords for the "
             "journey search field, as replacement for tomorrows date.\nNote: Keywords should be "
             "unique for each meaning.", "tomorrow").split(',', QString::SkipEmptyParts)),
         m_relativeTimeStringPattern(i18nc("@info/plain This is a regular expression used to match "
-                "a string after the 'in' keyword in the journey search line. The english version "
-                "matches 'strings like '5 mins.', '1 minute', ... '\\d+' stands for at least "
-                "'one digit, '\\.' is just a point, a '?' after a character means that it's "
-                "optional (eg. the 's' in 'mins?' is optional to match singular and plural forms). "
-                "Normally you will only have to translate 'mins?' and 'minutes?'. The regexp must "
-                "include one pair of matching 'parantheses, that match an int (the number of "
-                "minutes from now). Note: '(?:...)' are non-matching parantheses.",
-                "(\\d+)\\s+(?:mins?\\.?|minutes?)"))
+            "a string after the 'in' keyword in the journey search line. The english version "
+            "matches 'strings like '5 mins.', '1 minute', ... '\\d+' stands for at least "
+            "'one digit, '\\.' is just a point, a '?' after a character means that it's "
+            "optional (eg. the 's' in 'mins?' is optional to match singular and plural forms). "
+            "Normally you will only have to translate 'mins?' and 'minutes?'. The regexp must "
+            "include one pair of matching 'parantheses, that match an int (the number of "
+            "minutes from now). Note: '(?:...)' are non-matching parantheses.",
+            "(\\d+)\\s+(?:mins?\\.?|minutes?)"))
 {
+}
+
+bool JourneySearchKeywords::hasValue( KeywordType type ) const
+{
+    switch ( type ) {
+    case KeywordTimeIn:
+    case KeywordTimeAt:
+        return true; // The keywords listed above need a value
+
+    case KeywordTo:
+    case KeywordFrom:
+    case KeywordTomorrow:
+    case KeywordDeparture:
+    case KeywordArrival:
+    case KeywordTimeInMinutes: // This is special, because it can be part of the value sequence of KeywordTimeIn
+        return false; // No value for the keywords listed above
+
+    default:
+        kDebug() << "Unknown keyword" << type;
+        return false;
+    }
 }
 
 const QStringList JourneySearchKeywords::keywords( KeywordType type ) const
@@ -1962,6 +1786,8 @@ const QStringList JourneySearchKeywords::keywords( KeywordType type ) const
     switch ( type ) {
     case KeywordTimeIn:
         return timeKeywordsIn();
+    case KeywordTimeInMinutes:
+        return timeKeywordsInMinutes();
     case KeywordTimeAt:
         return timeKeywordsAt();
     case KeywordTo:

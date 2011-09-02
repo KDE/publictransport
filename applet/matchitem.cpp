@@ -38,8 +38,9 @@ public:
     };
     MatchItemPrivate( MatchItem::Type type, const LexemList &lexems,
                       JourneySearchValueType valueType, const QVariant& value,
-                      MatchItem::Flags flags )
-            : QSharedData(), type(type), flags(flags), lexems(lexems),
+                      MatchItem::Flags flags, int matchedSyntaxItemIndex = 0 )
+            : QSharedData(), type(type), flags(flags),
+              matchedSyntaxItemIndex(matchedSyntaxItemIndex), lexems(lexems),
               valueType(valueType), value(value)
     {
         updatePosition();
@@ -64,7 +65,7 @@ public:
         return ret;
     };
 
-    inline void addChild( const Parser::MatchItem& matchItem ) {
+    inline void addChild( const MatchItem& matchItem ) {
         bool prepended = false;
 
         // Sort the new matchItem into the output list, sorted by position
@@ -89,27 +90,38 @@ public:
 
     virtual QString correctedText() const {
         switch ( type ) {
-        case MatchItem::Number: {
+        case MatchItem::String: {
             QString output = value.toString();
-            if ( !lexems.isEmpty() ) { // Number items should always have one associated lexem
-                // Add leading zeros, if the input string has leading zeros
-                int i = 0;
-                QString input = lexems.first().input();
-                while ( i < input.length() && input[i] == '0' ) {
-                    output.prepend('0');
-                    ++i;
+            if ( !lexems.isEmpty() ) { // String items should always have (exactly) one associated lexem
+                if ( lexems.first().isFollowedBySpace() ) {
+                    output.append(' ');
                 }
             }
             return output;
-        }
-        case MatchItem::String:
-            return value.toString();
-        default:
+        } case MatchItem::Number: {
+            QString output = value.toString();
+            if ( !lexems.isEmpty() ) { // Number items should always have (exactly) one associated lexem
+                // Add leading zeros, if the input string has leading zeros
+                const QString input = lexems.first().input();
+                const int maxZeros = input.length() - output.length();
+                int i = 0;
+                while ( i < maxZeros && input[i] == '0' ) {
+                    output.prepend('0');
+                    ++i;
+                }
+
+                if ( lexems.first().isFollowedBySpace() ) {
+                    output.append(' ');
+                }
+            }
+            return output;
+        } default:
             return input();
         }
     };
 
-    inline QString text( AnalyzerCorrections appliedCorrections ) const {
+    inline QString text( AnalyzerCorrections appliedCorrections ) const
+    {
         if ( appliedCorrections.testFlag(SkipUnexpectedTokens) && valueType == ErrorCorrectionValue
              && static_cast<AnalyzerCorrection>(value.toInt()) == SkipUnexpectedTokens )
         {
@@ -117,23 +129,31 @@ public:
             // instead of the unexpected lexems (in d->lexems and in d->children)
             return QString();
         }
-        if ( appliedCorrections.testFlag(CompleteKeywords) && type == MatchItem::Keyword
-             && flags.testFlag(Parser::MatchItem::CorrectedMatchItem)
-             && valueType == NoValue ) // TODO Add a value type for the keyword type?
-        {
-            // Apply correction CompleteKeywords by returning the completed keyword string
-            // The value consists of a QVariantList with two items, the KeywordType
-            // and the completed keyword
-            return correctedText() + ' '; // TODO space afterwards?
-        }
+
+//         if ( appliedCorrections.testFlag(CompleteKeywords) && type == MatchItem::Keyword
+//              && flags.testFlag(Parser::MatchItem::CorrectedMatchItem)
+//              /*&& valueType == NoValue*/ ) // TODO Add a value type for the keyword type?
+//         {
+//             // Apply correction CompleteKeywords by returning the completed keyword string
+//             return correctedText() + ' '; // TODO space afterwards?
+//         }
+/*
+        if ( updateValues.contains(valueType) ) {
+            
+        }*/
 
         QString string;
         switch ( type ) {
         case MatchItem::String:
-            string += correctedText(); // TODO space afterwards?
+            string += correctedText();
             break;
         case MatchItem::Number:
-            string += correctedText(); // TODO space afterwards?
+            string += appliedCorrections.testFlag(CorrectNumberRanges)
+                    ? correctedText() : input();
+            break;
+        case MatchItem::Keyword:
+            string += appliedCorrections.testFlag(CompleteKeywords)
+                    ? correctedText() : input(); // uses MatchItemPrivateKeyword::correctedText()
             break;
         default:
             foreach ( const Lexem &lexem, lexems ) {
@@ -144,8 +164,11 @@ public:
             }
             break;
         }
+
+        // Add text of child items.
         foreach ( const MatchItem &item, children ) {
-            string += item.text( appliedCorrections );
+            // Use d-pointer directly, because MatchItem::text() trims the resulting string.
+            string += item.d->text( appliedCorrections );
         }
         return string;
     };
@@ -165,9 +188,32 @@ public:
         return string;
     };
 
+    inline bool combineStopNameItems() {
+        for ( int i = 0; i < children.count(); ++ i ) {
+            if ( children[i].valueType() == StopNameValue ) {
+                while ( i < children.count() - 1 && children[i + 1].valueType() == StopNameValue ) {
+                    // Combine children
+                    children[i].d->lexems << children[i + 1].d->lexems;
+                    children[i].d->children << children[i + 1].d->children;
+                    children[i].d->value = children[i].value().toString() + ' ' +
+                                           children[i + 1].value().toString();
+
+                    // Remove second child
+                    children.removeAt( i + 1 );
+                }
+                return true;
+            } else if ( children[i].combineStopNameItems() ) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
 private:
     MatchItem::Type type;
     MatchItem::Flags flags;
+    int matchedSyntaxItemIndex;
 
     LexemList lexems; // Matched Lexems
     int position; // Stores d->lexems.position()
@@ -183,14 +229,16 @@ public:
     friend class MatchItem;
 
     MatchItemPrivateKeyword( const LexemList &lexems, KeywordType keyword,
-                      const QString &completedKeyword, MatchItem::Flags flags)
-            : MatchItemPrivate(MatchItem::Keyword, lexems, NoValue, static_cast<int>(keyword), flags),
+                             const QString &completedKeyword, MatchItem::Flags flags,
+                             int matchedSyntaxItemIndex )
+            : MatchItemPrivate(MatchItem::Keyword, lexems, NoValue, static_cast<int>(keyword),
+                               flags, matchedSyntaxItemIndex),
               completedKeyword(completedKeyword)
     {
     };
     virtual ~MatchItemPrivateKeyword() {};
 
-    virtual QString correctedText() const { return completedKeyword; };
+    virtual QString correctedText() const { return completedKeyword + ' '; };
 
 private:
     QString completedKeyword;
@@ -206,16 +254,23 @@ MatchItem::MatchItem( const Parser::MatchItem& other ) : d(other.d)
 
 MatchItem::MatchItem( MatchItem::Type type, const LexemList &lexems,
                       JourneySearchValueType valueType, const QVariant& value,
-                      MatchItem::Flags flags )
-        : d(new MatchItemPrivate(type, lexems, valueType, value, flags))
+                      MatchItem::Flags flags, int matchedSyntaxItemIndex )
+        : d(new MatchItemPrivate(type, lexems, valueType, value, flags, matchedSyntaxItemIndex))
 {
 }
 
 MatchItem::MatchItem( const LexemList &lexems, KeywordType keyword,
-                      const QString &completedKeyword, MatchItem::Flags flags )
-        : d(new MatchItemPrivateKeyword( lexems, keyword, completedKeyword, flags))
+                      const QString &completedKeyword, MatchItem::Flags flags,
+                      int matchedSyntaxItemIndex )
+        : d(new MatchItemPrivateKeyword(lexems, keyword, completedKeyword, flags,
+                                        matchedSyntaxItemIndex))
 {
 
+}
+
+MatchItem::MatchItem( const QExplicitlySharedDataPointer<MatchItemPrivate> &dd ) : d(dd)
+{
+    d.detach();
 }
 
 MatchItem::~MatchItem()
@@ -226,6 +281,11 @@ MatchItem& MatchItem::operator=( const Parser::MatchItem &other )
 {
     d = other.d;
     return *this;
+}
+
+MatchItem MatchItem::copy() const
+{
+    return MatchItem( d );
 }
 
 const Parser::Lexem MatchItem::firstLexem() const
@@ -243,6 +303,11 @@ MatchItem::Flags MatchItem::flags() const
     return d->flags;
 }
 
+int MatchItem::matchedSyntaxItemIndex() const
+{
+    return d->matchedSyntaxItemIndex;
+}
+
 int MatchItem::position() const
 {
     return d->position;
@@ -258,9 +323,24 @@ QVariant MatchItem::value() const
     return d->value;
 }
 
-void MatchItem::setValue( const QVariant& value ) const
+void MatchItem::setValue( const QVariant& value )
 {
     d->value = value;
+}
+
+void MatchItem::setMatchedSyntaxItemIndex( int matchedSyntaxItemIndex )
+{
+    d->matchedSyntaxItemIndex = matchedSyntaxItemIndex;
+}
+
+QVariant MatchItem::keywordValue() const
+{
+    return d->type == Keyword ? d->children.first().value() : QVariant();
+}
+
+bool MatchItem::combineStopNameItems()
+{
+    return d->combineStopNameItems();
 }
 
 bool MatchItem::isTerminal() const
@@ -268,7 +348,7 @@ bool MatchItem::isTerminal() const
     return d->children.isEmpty();
 }
 
-bool MatchItem::isErrornous() const
+bool MatchItem::isErroneous() const
 {
     return d->type == Error;
 }
@@ -278,7 +358,7 @@ bool MatchItem::isValid() const
     return position() >= 0 || d->type == Error;
 }
 
-void MatchItem::addChild( const Parser::MatchItem& matchItem )
+void MatchItem::addChild( const MatchItem& matchItem )
 {
     d->addChild( matchItem );
 }
@@ -306,9 +386,9 @@ QString MatchItem::input() const
     return d->input();
 }
 
-QString MatchItem::text( AnalyzerCorrections appliedCorrections ) const
+QString MatchItem::text( AnalyzerCorrections appliedCorrections, bool trim ) const
 {
-    return d->text( appliedCorrections );
+    return trim ? d->text( appliedCorrections ).trimmed() : d->text( appliedCorrections );
 }
 
 const LexemList MatchItem::lexems() const
@@ -336,11 +416,12 @@ QString MatchItem::toString( int level ) const
     QString s; int l = level; while ( l > 0 ) { s += "  "; --l; }
     QString string;
     MatchItemPrivateKeyword *privateKeyword = dynamic_cast<MatchItemPrivateKeyword*>( d.data() );
-    string += QString("\n%1%2 (flags: %3, pos: %4, value: %5, text: %6%7) {").arg(s)
+    string += QString("\n%1%2 (matchPos: %8, flags: %3, pos: %4, value: %5, text: %6%7) {").arg(s)
             .arg(ENUM_STRING(MatchItem, Type, d->type))
             .arg(FLAGS_STRING(MatchItem, Flag, d->flags))
             .arg(position()).arg(d->value.toString()).arg(input())
-            .arg(privateKeyword ? QString(", corrected: %1").arg(privateKeyword->correctedText()) : QString());
+            .arg(privateKeyword ? QString(", corrected: %1").arg(privateKeyword->correctedText()) : QString())
+            .arg(d->matchedSyntaxItemIndex);
     if ( d->children.isEmpty() ) {
         return string + "}";
     }
@@ -361,6 +442,8 @@ QString MatchItem::keywordId( KeywordType keywordType )
         return "from";
     case KeywordTimeIn:
         return "in";
+    case KeywordTimeInMinutes:
+        return "minutes";
     case KeywordTimeAt:
         return "at";
     case KeywordTomorrow:
@@ -393,7 +476,7 @@ QDebug &operator <<( QDebug debug, MatchItem::Type type )
         return debug << "MatchItem::Character";
     case MatchItem::String:
         return debug << "MatchItem::String";
-    case MatchItem::Words:
+    case MatchItem::Word:
         return debug << "MatchItem::Words";
     default:
         return debug << static_cast<int>(type);
