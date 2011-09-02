@@ -63,9 +63,6 @@ namespace Plasma {
     class Label;
 };
 
-#if QT_VERSION >= 0x040600
-#endif
-
 /** @brief Simple pixmap graphics widgets (QGraphicsPixmapItem isn't a QGraphicsWidget). */
 class GraphicsPixmapWidget : public QGraphicsWidget {
 public:
