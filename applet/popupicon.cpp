@@ -157,7 +157,8 @@ DepartureGroup PopupIcon::currentDepartureGroup() const
     } else {
         groupIndex = qFloor( m_currentDepartureGroupIndexStep );
     }
-    return groupIndex < 0 ? DepartureGroup() : m_departureGroups[ groupIndex ];
+    return m_departureGroups.isEmpty() ? DepartureGroup()
+            : m_departureGroups[ qBound(0, groupIndex, m_departureGroups.count() - 1) ];
 }
 
 DepartureItem* PopupIcon::currentDeparture() const

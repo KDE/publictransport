@@ -26,7 +26,18 @@
 #include <Plasma/Theme>
 #include <Plasma/Svg>
 #include <Plasma/PaintUtils>
+#include <KPixmapCache>
 #include <qmath.h>
+
+DeparturePainter::DeparturePainter( QObject *parent )
+        : QObject(parent), m_pixmapCache(new KPixmapCache("DeparturePainter")), m_svg(0)
+{
+}
+
+DeparturePainter::~DeparturePainter()
+{
+    delete m_pixmapCache;
+}
 
 QString DeparturePainter::iconKey( VehicleType vehicle, DeparturePainter::VehicleIconFlags flags )
 {
@@ -79,122 +90,153 @@ void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
         const QRectF& rect, const QString& transportLine, int minutesUntilDeparture,
         VehicleIconDrawFlags iconDrawFlags )
 {
-    bool drawTransportLine = iconDrawFlags.testFlag(DrawTransportLine) && !transportLine.isEmpty()
+    const bool drawTransportLine = iconDrawFlags.testFlag(DrawTransportLine)
+            && !transportLine.isEmpty()
             && Timetable::Global::generalVehicleType(vehicle) == LocalPublicTransport;
     if ( !drawTransportLine ) {
         // Remove possibly set flag, if the transport line cannot be drawn
         iconDrawFlags &= ~DrawTransportLine;
     }
-    VehicleIconFlags iconFlags = iconFlagsFromIconDrawFlags( iconDrawFlags );
-    QString vehicleKey = iconKey( vehicle, iconFlags );
+    const VehicleIconFlags iconFlags = iconFlagsFromIconDrawFlags( iconDrawFlags );
+    const QString vehicleKey = iconKey( vehicle, iconFlags );
+    const QString vehicleCacheKey = vehicleKey + QString("%1%2%3%4")
+            .arg( static_cast<int>(iconDrawFlags) ).arg( drawTransportLine ? transportLine : "" )
+            .arg( int(rect.width()) ).arg( int(rect.height()) );
+    const int shadowWidth = qBound( 2, int(rect.width() / 20), 4 );
 
-    // Resize SVG
-    int shadowWidth = qBound( 2, int(rect.width() / 20), 4 );
-    m_svg->resize( rect.width() - shadowWidth, rect.height() - shadowWidth );
+    QPixmap vehiclePixmap;
+    if ( !m_pixmapCache->find(vehicleCacheKey, vehiclePixmap) ) {
+        vehiclePixmap = QPixmap( int(rect.width()), int(rect.height()) );
+        vehiclePixmap.fill( Qt::transparent );
+        QPainter p( &vehiclePixmap );
+        p.setRenderHint( QPainter::Antialiasing );
 
-    QPixmap pixmap( int(rect.width()), int(rect.height()) );
-    pixmap.fill( Qt::transparent );
-    QPainter p( &pixmap );
+        // Resize vehicle type icon SVG and draw it
+        m_svg->resize( rect.width() - shadowWidth, rect.height() - shadowWidth );
+        m_svg->paint( &p, shadowWidth / 2, shadowWidth / 2, vehicleKey );
 
-    // Draw SVG vehicle type icon
-    p.setRenderHint( QPainter::Antialiasing );
-    m_svg->paint( &p, shadowWidth / 2, shadowWidth / 2, vehicleKey );
+        // Draw transport line string (only for local public transport)
+        if ( drawTransportLine ) {
+            QString text = transportLine;
+            text.replace(' ', QString());
 
-    // Draw transport line string (only for local public transport)
-    if ( drawTransportLine ) {
-        QString text = transportLine;
-        text.replace(' ', QString());
-
-        QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
-        font.setBold( true );
-        if ( text.length() > 2 ) {
-            font.setPixelSize( qMax(8, qCeil(1.18 * rect.width() / text.length())) );
-        } else {
-            font.setPixelSize( rect.width() * 0.5 );
+            QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
+            font.setBold( true );
+            if ( text.length() > 2 ) {
+                font.setPixelSize( qMax(8, qCeil(1.18 * rect.width() / text.length())) );
+            } else {
+                font.setPixelSize( rect.width() * 0.5 );
+            }
+            p.setFont( font );
+            QFontMetrics fm( font );
+            if ( iconDrawFlags.testFlag(DrawMonochromeIcon) ) {
+                // For monochrome icons, draw white text with a dark gray outline
+                QPen textOutlinePen( QColor(0, 0, 0, 100) );
+                textOutlinePen.setWidthF( qMin(10.0, font.pixelSize() / 5.0) );
+                textOutlinePen.setCapStyle( Qt::RoundCap );
+                textOutlinePen.setJoinStyle( Qt::RoundJoin );
+                QPainterPath textPath;
+                textPath.addText( rect.left() + (rect.width() - fm.width(text)) / 2.0,
+                                rect.bottom() - (rect.height() - fm.ascent() + fm.descent()) / 2.0,
+                                font, text );
+                p.setPen( textOutlinePen );
+                p.drawPath( textPath ); // Takes much time
+                p.fillPath( textPath, Qt::white );
+            } else {
+                // For colored icons simply draw white text
+                p.setPen( Qt::white );
+                p.drawText( rect, text, QTextOption(Qt::AlignCenter) );
+            }
         }
-        p.setFont( font );
-        QFontMetrics fm( font );
-        if ( iconDrawFlags.testFlag(DrawMonochromeIcon) ) {
-            // For monochrome icons, draw white text with a dark gray outline
-            QPen textOutlinePen( QColor(0, 0, 0, 100) );
-            textOutlinePen.setWidthF( qMin(10.0, font.pixelSize() / 5.0) );
-            textOutlinePen.setCapStyle( Qt::RoundCap );
-            textOutlinePen.setJoinStyle( Qt::RoundJoin );
-            QPainterPath textPath;
-            textPath.addText( rect.left() + (rect.width() - fm.width(text)) / 2.0,
-                            rect.bottom() - (rect.height() - fm.ascent() + fm.descent()) / 2.0,
-                            font, text );
-            p.setPen( textOutlinePen );
-            p.drawPath( textPath );
-            p.fillPath( textPath, Qt::white );
-        } else {
-            // For colored icons simply draw white text
-            p.setPen( Qt::white );
-            p.drawText( rect, text, QTextOption(Qt::AlignCenter) );
-        }
+        p.end();
+
+        // Insert rendered vehicle icon into the pixmap cache
+        m_pixmapCache->insert( vehicleCacheKey, vehiclePixmap );
     }
 
-    // Draw icon again, but only partially, dependend on minsToDeparture
-    if ( iconDrawFlags.testFlag(DrawTimeGraphics) ) {
+    // Make a part 70% transparent, dependend on minsToDeparture
+    if ( iconDrawFlags.testFlag(DrawTimeGraphics) && minutesUntilDeparture > 0 ) {
         // Draw graphical indication for the time until departure/arrival
-        p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-        if ( minutesUntilDeparture >= MAX_MINUTES_UNTIL_DEPARTURE ) {
-            // Make the SVG in pixmap 70% transparent
-            p.fillRect( pixmap.rect(), QColor(0, 0, 0, 77) );
-        } else if ( minutesUntilDeparture > 0 ) {
-            // Construct a polygon for the transparency effect visualizing minsToDeparture
-            QPolygon polygon;
+        QPixmap polygonPixmap( vehiclePixmap.width(), vehiclePixmap.height() );
+        const QString polygonCacheKey = QString("polygon%1%2%3")
+                .arg( qMin(minutesUntilDeparture, int(MAX_MINUTES_UNTIL_DEPARTURE)) )
+                .arg( vehiclePixmap.width() ).arg( vehiclePixmap.height() );
 
-            // All parts begin with these two points
-            const qreal half = pixmap.width() / 2.0;
-            const qreal a = (8.0 * minutesUntilDeparture) / MAX_MINUTES_UNTIL_DEPARTURE;
-            polygon.append( QPoint(half, half) ); // middle
-            polygon.append( QPoint(half, 0) ); // top middle
-            if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE / 8 ) {
-                // Paint at least 1/8 black (add point at the top left edge)
-                polygon.append( QPoint(0, 0) ); // top left
-                if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE * 3 / 8 ) {
-                    // Paint at least 3/8 black (add point at the bottom left edge)
-                    polygon.append( QPoint(0, pixmap.height()) ); // bottom left
-                    if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE * 5 / 8 ) {
-                        // Paint at least 5/8 black (add point at the bottom right edge)
-                        polygon.append( QPoint(pixmap.width(), pixmap.height()) );
-                        if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE * 7 / 8 ) {
-                            // Paint [7/8, 8/8] black (add point on the right half of the top side)
-                            polygon.append( QPoint(pixmap.width(), 0) ); // top right
-                            polygon.append( QPoint(half * (9.0 - a), 0) );
-                        } else {
-                            // Paint [6/8, 7/8[ black (add point on the right side)
-                            polygon.append( QPoint(pixmap.width(), half * (7.0 - a)) );
-                        }
-                    } else {
-                        // Paint [3/8, 5/8[ black (add point on the bottom side)
-                        polygon.append( QPoint(half * (a - 3.0), pixmap.height()) );
-                    }
-                } else { // if ( minsToDeparture > maxMinsToDeparture / 8 ) {
-                    // Paint [1/8, 3/8[ black (add point on the left side)
-                    polygon.append( QPoint(0, half * (a - 1.0)) );
-                }
+        if ( !m_pixmapCache->find(polygonCacheKey, polygonPixmap) ) {
+            if ( minutesUntilDeparture >= MAX_MINUTES_UNTIL_DEPARTURE ) {
+                // Make the SVG in pixmap 70% transparent
+                QPainter polygonPainter( &polygonPixmap );
+                polygonPainter.fillRect( polygonPixmap.rect(), QColor(0, 0, 0, 77) );
+                polygonPainter.end();
             } else {
-                // Paint [0/8, 1/8[ black (add point on the left half of the top side)
-                polygon.append( QPoint(half * (1.0 - a), 0) );
+                // Construct a polygon for the transparency effect visualizing minsToDeparture
+                QPolygon polygon;
+
+                // All parts begin with these two points
+                const qreal half = polygonPixmap.width() / 2.0;
+                const qreal a = (8.0 * minutesUntilDeparture) / MAX_MINUTES_UNTIL_DEPARTURE;
+                polygon.append( QPoint(half, half) ); // middle
+                polygon.append( QPoint(half, 0) ); // top middle
+                if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE / 8 ) {
+                    // Paint at least 1/8 black (add point at the top left edge)
+                    polygon.append( QPoint(0, 0) ); // top left
+                    if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE * 3 / 8 ) {
+                        // Paint at least 3/8 black (add point at the bottom left edge)
+                        polygon.append( QPoint(0, polygonPixmap.height()) ); // bottom left
+                        if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE * 5 / 8 ) {
+                            // Paint at least 5/8 black (add point at the bottom right edge)
+                            polygon.append( QPoint(polygonPixmap.width(), polygonPixmap.height()) );
+                            if ( minutesUntilDeparture > MAX_MINUTES_UNTIL_DEPARTURE * 7 / 8 ) {
+                                // Paint [7/8, 8/8] black (add point on the right half of the top side)
+                                polygon.append( QPoint(polygonPixmap.width(), 0) ); // top right
+                                polygon.append( QPoint(half * (9.0 - a), 0) );
+                            } else {
+                                // Paint [6/8, 7/8[ black (add point on the right side)
+                                polygon.append( QPoint(polygonPixmap.width(), half * (7.0 - a)) );
+                            }
+                        } else {
+                            // Paint [3/8, 5/8[ black (add point on the bottom side)
+                            polygon.append( QPoint(half * (a - 3.0), polygonPixmap.height()) );
+                        }
+                    } else { // if ( minsToDeparture > maxMinsToDeparture / 8 ) {
+                        // Paint [1/8, 3/8[ black (add point on the left side)
+                        polygon.append( QPoint(0, half * (a - 1.0)) );
+                    }
+                } else {
+                    // Paint [0/8, 1/8[ black (add point on the left half of the top side)
+                    polygon.append( QPoint(half * (1.0 - a), 0) );
+                }
+
+                // Draw 70% transparent parts
+                polygonPixmap.fill( Qt::white );
+                QPainter polygonPainter( &polygonPixmap );
+                polygonPainter.setCompositionMode( QPainter::CompositionMode_Source );
+                polygonPainter.setPen( Qt::black );
+                polygonPainter.setBrush( QColor(0, 0, 0, 77) );
+                polygonPainter.drawPolygon( polygon );
+                polygonPainter.end();
             }
 
-            // Draw 70% transparent parts
-            p.setPen( Qt::black );
-            p.setBrush( QColor(0, 0, 0, 77) );
-            p.drawPolygon( polygon );
-            p.end();
+            // Insert rendered polygon pixmap into the pixmap cache
+            m_pixmapCache->insert( polygonCacheKey, polygonPixmap );
         }
+
+        // Draw the polygon
+        QPainter p( &vehiclePixmap );
+        p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+        p.drawPixmap( 0, 0, polygonPixmap );
+        p.end();
     }
 
     if ( !iconDrawFlags.testFlag(DrawMonochromeIcon) ) {
         // Draw a shadow, but not if a monochrome icon is used
-        QImage shadow = pixmap.toImage();
+        QImage shadow = vehiclePixmap.toImage();
         Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
         painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );
     }
-    painter->drawPixmap( rect.topLeft(), pixmap );
+
+    // Draw the resulting pixmap
+    painter->drawPixmap( rect.topLeft(), vehiclePixmap );
 }
 
 QPixmap DeparturePainter::createMainIconPixmap( const QSize &size ) const
@@ -332,33 +374,55 @@ QPixmap DeparturePainter::createPopupIcon( PopupIcon *popupIcon, DepartureModel*
                 // in the current group
                 pixmap = createDeparturesPixmap( group[qFloor(departureIndex) % group.count()], size );
             } else {
-                // Draw transition between two departures in the current group
-                int startDepartureIndex = qFloor( departureIndex ) % group.count();
+                const int startDepartureIndex = qFloor( departureIndex ) % group.count();
                 int endDepartureIndex = startDepartureIndex + 1;
                 const qreal transition = qBound( 0.0, (departureIndex - startDepartureIndex)
                         / (endDepartureIndex - startDepartureIndex), 1.0 );
                 endDepartureIndex %= group.count();
-                QPixmap startPixmap = createDeparturesPixmap( group[startDepartureIndex], size );
-                QPixmap endPixmap = createDeparturesPixmap( group[endDepartureIndex], size );
+                DepartureItem *startDeparture = group[ startDepartureIndex ];
+                DepartureItem *endDeparture = group[ endDepartureIndex ];
 
-                // Make end pixmap transparent
-                QColor alpha( 0, 0, 0 );
-                alpha.setAlphaF( transition * transition );
-                QPainter pEnd( &endPixmap );
-                pEnd.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-                pEnd.fillRect( startPixmap.rect(), alpha );
-                pEnd.end();
+                // Cache transition pixmaps. This creates lots of pixmaps (max. 100 per transition)
+                // but it also lowers CPU usage a lot.
+                // The animation uses QEasingCurve::OutQuad, therefore transition^2 is used for
+                // the cache key here. This should produce more different keys for values near 1,
+                // where the animation slows down (and therefore needs more different pixmaps).
+                // The pixmaps are normally only needed for one minute.
+                const QString fadeCacheKey = QString("%1%2-%3-%4-%5%6%7")
+                        .arg( static_cast<int>(startDeparture->departureInfo()->vehicleType()) )
+                        .arg( static_cast<int>(endDeparture->departureInfo()->vehicleType()) )
+                        .arg( transition * transition, 0, 'f', 2 )
+                        .arg( qMin(qCeil(QDateTime::currentDateTime().secsTo(
+                              startDeparture->departureInfo()->predictedDeparture()) / 60.0),
+                              int(MAX_MINUTES_UNTIL_DEPARTURE)) )
+                        .arg( size.width() ).arg( size.height() )
+                        .arg( static_cast<int>(DefaultVehicleIconDrawFlags) );
+                if ( !m_pixmapCache->find(fadeCacheKey, pixmap) ) {
+                    // Draw transition between two departures in the current group
+                    QPixmap startPixmap = createDeparturesPixmap( startDeparture, size );
+                    QPixmap endPixmap = createDeparturesPixmap( endDeparture, size );
 
-                // Mix transparent start and end pixmaps
-                pixmap = QPixmap( size );
-                pixmap.fill( Qt::transparent );
-                QPainter p( &pixmap );
-                p.drawPixmap( pixmap.rect(), startPixmap );
-                p.setCompositionMode( QPainter::CompositionMode_DestinationOut );
-                p.fillRect( pixmap.rect(), alpha );
-                p.setCompositionMode( QPainter::CompositionMode_Plus );
-                p.drawPixmap( pixmap.rect(), endPixmap );
-                p.end();
+                    // Make end pixmap transparent
+                    QColor alpha( 0, 0, 0 );
+                    alpha.setAlphaF( transition * transition );
+                    QPainter pEnd( &endPixmap );
+                    pEnd.setCompositionMode( QPainter::CompositionMode_DestinationIn );
+                    pEnd.fillRect( startPixmap.rect(), alpha );
+                    pEnd.end();
+
+                    // Mix transparent start and end pixmaps
+                    pixmap = QPixmap( size );
+                    pixmap.fill( Qt::transparent );
+                    QPainter p( &pixmap );
+                    p.drawPixmap( pixmap.rect(), startPixmap );
+                    p.setCompositionMode( QPainter::CompositionMode_DestinationOut );
+                    p.fillRect( pixmap.rect(), alpha );
+                    p.setCompositionMode( QPainter::CompositionMode_Plus );
+                    p.drawPixmap( pixmap.rect(), endPixmap );
+                    p.end();
+
+                    m_pixmapCache->insert( fadeCacheKey, pixmap );
+                }
             }
         }
     } else {

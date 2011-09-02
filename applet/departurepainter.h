@@ -27,6 +27,7 @@
 #include <publictransporthelper/enums.h>
 #include <QPainter>
 
+class KPixmapCache;
 template<class QDateTime, class QList>
 class QMap;
 
@@ -51,8 +52,6 @@ class DeparturePainter : public QObject {
     Q_OBJECT
 
 public:
-    DeparturePainter( QObject *parent = 0 ) : QObject(parent), m_svg(0) {};
-
     /**
      * @brief Flags for vehicle icons.
      *
@@ -76,8 +75,13 @@ public:
         DrawTimeText        = 0x04, /**< Draw the time until departure/arrival as text. */
         DrawTimeGraphics    = 0x08, /**< Draw the time until departure/arrival indicated
                 * using a graphical representation. */
+
+        DefaultVehicleIconDrawFlags = DrawMonochromeIcon | DrawTransportLine | DrawTimeGraphics
     };
     Q_DECLARE_FLAGS( VehicleIconDrawFlags, VehicleIconDrawFlag );
+
+    DeparturePainter( QObject *parent = 0 );
+    virtual ~DeparturePainter();
 
     /**
      * @brief The maximum number of minutes until departure that has a distinct visualization.
@@ -98,8 +102,7 @@ public:
     void paintVehicle( QPainter* painter, VehicleType vehicle,
                        const QRectF& rect, const QString &transportLine = QString(),
                        int minsToDeparture = 0,
-                       VehicleIconDrawFlags iconDrawFlags =
-                       VehicleIconDrawFlag(DrawMonochromeIcon | DrawTransportLine | DrawTimeGraphics) );
+                       VehicleIconDrawFlags iconDrawFlags = DefaultVehicleIconDrawFlags );
 
     QPixmap createMainIconPixmap( const QSize &size ) const;
 
@@ -111,8 +114,7 @@ public:
      * time.
      **/
     QPixmap createDeparturesPixmap( DepartureItem *departure, const QSize &size,
-            VehicleIconDrawFlags iconDrawFlags =
-            VehicleIconDrawFlags(DrawMonochromeIcon | DrawTransportLine | DrawTimeGraphics) );
+            VehicleIconDrawFlags iconDrawFlags = DefaultVehicleIconDrawFlags );
 
     /**
      * @brief Creates a pixmap for the given @p departure with an alarm.
@@ -130,6 +132,7 @@ public:
     QPixmap createPopupIcon( PopupIcon *popupIcon, DepartureModel *model, const QSize &size );
 
 private:
+    KPixmapCache *m_pixmapCache;
     Plasma::Svg *m_svg;
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( DeparturePainter::VehicleIconFlags );

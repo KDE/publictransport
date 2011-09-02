@@ -87,10 +87,10 @@ public:
     static const uint ANIMATION_DEPARTURE_GROUP_TRANSITION_DURATION = 500;
 
     /** @brief Duration of the animation which does the transition between departures in one group. */
-    static const uint ANIMATION_DEPARTURE_TRANSITION_DURATION = 2000;
+    static const uint ANIMATION_DEPARTURE_TRANSITION_DURATION = 750;
 
     /** @brief Pause between animations which do the transition between departures in one group. */
-    static const uint ANIMATION_DEPARTURE_TRANSITION_PAUSE = 250;
+    static const uint ANIMATION_DEPARTURE_TRANSITION_PAUSE = 1500;
 
     /** @brief Creates the popup icon with information about the next departure / alarm. */
     KIcon createPopupIcon( const QSize &size );
