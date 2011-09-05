@@ -1206,17 +1206,28 @@ void PublicTransport::resized()
     QSizeF size = m_graphicsWidget->size();
 
     if ( m_titleWidget ) {
-        // Show/hide title widget, but do not allow hiding the title if the applet is iconified
+        updatePopupIcon();
+
+        // Show/hide title widget
         const qreal minHeightWithTitle = 200.0;
         const qreal maxHeightWithoutTitle = 225.0;
-        if ( size.height() <= minHeightWithTitle && !m_titleToggleAnimation
-            && !(!m_titleToggleAnimation && m_titleWidget->maximumHeight() <= 0.1) )
+        if ( size.height() <= minHeightWithTitle // too small?
+             && ((!m_titleToggleAnimation // title not already hidden?
+                  && m_titleWidget->maximumHeight() > 0.1)
+              || (m_titleToggleAnimation // title not currently animated to be hidden?
+                  && m_titleToggleAnimation->direction() != QAbstractAnimation::Forward)) )
         {
-            // The applet is not iconified and it's size is too small to show the title
+            // Hide title: The applets vertical size is too small to show it
+            //             and the title is not already hidden or currently being faded out
             if ( m_titleToggleAnimation ) {
                 delete m_titleToggleAnimation;
             }
+
+            // Create toggle animation with direction forward
+            // to indicate that the title gets hidden
             m_titleToggleAnimation = new QParallelAnimationGroup( this );
+            m_titleToggleAnimation->setDirection( QAbstractAnimation::Forward );
+
             Plasma::Animation *fadeAnimation = Plasma::Animator::create(
                     Plasma::Animator::FadeAnimation, m_titleToggleAnimation );
             fadeAnimation->setTargetWidget( m_titleWidget );
@@ -1226,36 +1237,44 @@ void PublicTransport::resized()
             QPropertyAnimation *shrinkAnimation = new QPropertyAnimation(
                     m_titleWidget, "maximumSize", m_titleToggleAnimation );
             shrinkAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
-                                                    m_titleWidget->layout()->preferredHeight()) );
+                                                   m_titleWidget->layout()->preferredHeight()) );
             shrinkAnimation->setEndValue( QSizeF(m_titleWidget->maximumWidth(), 0) );
 
             connect( m_titleToggleAnimation, SIGNAL(finished()),
-                        this, SLOT(titleToggleAnimationFinished()) );
+                     this, SLOT(titleToggleAnimationFinished()) );
             m_titleToggleAnimation->addAnimation( fadeAnimation );
             m_titleToggleAnimation->addAnimation( shrinkAnimation );
             m_titleToggleAnimation->start();
-        } else if ( size.height() >= maxHeightWithoutTitle
-                && !m_titleToggleAnimation && !(!m_titleToggleAnimation
-                && m_titleWidget->maximumHeight() >= m_titleWidget->layout()->preferredHeight()) )
+        } else if ( size.height() >= maxHeightWithoutTitle // big enough?
+            && ((!m_titleToggleAnimation // title not already shown?
+                 && m_titleWidget->maximumHeight() < m_titleWidget->layout()->preferredHeight())
+             || (m_titleToggleAnimation // title not currently animated to be shown?
+                 && m_titleToggleAnimation->direction() != QAbstractAnimation::Backward)) )
         {
-            // The applet is iconified or it's size is big enough to show the title
+            // Show title: The applets vertical size is big enough to show it
+            //             and the title is not already shown or currently beging faded in
             if ( m_titleToggleAnimation ) {
                 delete m_titleToggleAnimation;
             }
+
+            // Create toggle animation with direction backward
+            // to indicate that the title gets shown again.
+            // The child animations use reversed start/end values.
             m_titleToggleAnimation = new QParallelAnimationGroup( this );
+            m_titleToggleAnimation->setDirection( QAbstractAnimation::Backward );
 
             Plasma::Animation *fadeAnimation = Plasma::Animator::create(
                     Plasma::Animator::FadeAnimation, m_titleToggleAnimation );
             fadeAnimation->setTargetWidget( m_titleWidget );
-            fadeAnimation->setProperty( "startOpacity", m_titleWidget->opacity() );
-            fadeAnimation->setProperty( "targetOpacity", 1.0 );
+            fadeAnimation->setProperty( "targetOpacity", m_titleWidget->opacity() );
+            fadeAnimation->setProperty( "startOpacity", 1.0 );
 
             QPropertyAnimation *growAnimation = new QPropertyAnimation(
                     m_titleWidget, "maximumSize", m_titleToggleAnimation );
-            growAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
-                                                    m_titleWidget->maximumHeight()) );
             growAnimation->setEndValue( QSizeF(m_titleWidget->maximumWidth(),
-                                                m_titleWidget->layout()->preferredHeight()) );
+                                               m_titleWidget->maximumHeight()) );
+            growAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
+                                                 m_titleWidget->layout()->preferredHeight()) );
 
             connect( m_titleToggleAnimation, SIGNAL(finished()),
                         this, SLOT(titleToggleAnimationFinished()) );
@@ -1268,14 +1287,14 @@ void PublicTransport::resized()
         Plasma::ToolButton *filterWidget =
                 m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetFilter );
         if ( m_titleWidget->layout()->preferredWidth() > size.width() ) {
-            // Show only an icon on the filter toolbutton, if there is not enough space
+            // Show only an icon on the filter toolbutton, if there is not enough horizontal space
             filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonIconOnly );
             filterWidget->setMaximumWidth( filterWidget->size().height() );
         } else if ( filterWidget->nativeWidget()->toolButtonStyle() == Qt::ToolButtonIconOnly
             && size.width() > m_titleWidget->layout()->minimumWidth() +
             QFontMetrics(filterWidget->font()).width(filterWidget->text()) + 60 )
         {
-            // Show the icon with text beside if there is enough space again
+            // Show the icon with text beside if there is enough horizontal space again
             filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
             filterWidget->setMaximumWidth( -1 );
         }
