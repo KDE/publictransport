@@ -143,22 +143,35 @@ void PopupIcon::departuresAboutToBeRemoved( QList< ItemBase* > departures )
     }
 }
 
-DepartureGroup PopupIcon::currentDepartureGroup() const
+int PopupIcon::currentDepartureGroupIndex() const
 {
-    int groupIndex;
     if ( m_transitionAnimation ) {
         if ( qFloor(m_currentDepartureGroupIndexStep) == m_startGroupIndex ) {
             // Animation has just started, use start group
-            groupIndex = m_startGroupIndex;
+            return m_startGroupIndex;
         } else {
             // Animation is running, use end group
-            groupIndex = m_endGroupIndex;
+            return m_endGroupIndex;
         }
     } else {
-        groupIndex = qFloor( m_currentDepartureGroupIndexStep );
+        return qFloor( m_currentDepartureGroupIndexStep );
     }
-    return m_departureGroups.isEmpty() ? DepartureGroup()
-            : m_departureGroups[ qBound(0, groupIndex, m_departureGroups.count() - 1) ];
+}
+
+DepartureGroup PopupIcon::currentDepartureGroup() const
+{
+    if ( m_departureGroups.isEmpty() ) {
+        return DepartureGroup();
+    } else {
+        int groupIndex = currentDepartureGroupIndex();
+        return groupIndex < 0 ? (DepartureGroup() << m_model->nextAlarmDeparture())
+                : m_departureGroups[ qMin(groupIndex, m_departureGroups.count() - 1) ];
+    }
+}
+
+bool PopupIcon::currentGroupIsAlarmGroup() const
+{
+    return currentDepartureGroupIndex() < 0;
 }
 
 DepartureItem* PopupIcon::currentDeparture() const

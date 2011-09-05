@@ -164,6 +164,8 @@ void PublicTransport::init()
     m_departurePainter->setSvg( &m_vehiclesSvg );
 
     m_popupIcon = new PopupIcon( m_departurePainter, this );
+    connect( m_popupIcon, SIGNAL(currentDepartureGroupChanged(int)),
+             this, SLOT(updateTooltip()) );
     connect( m_popupIcon, SIGNAL(currentDepartureGroupIndexChanged(qreal)),
              this, SLOT(updatePopupIcon()) );
     connect( m_popupIcon, SIGNAL(currentDepartureIndexChanged(qreal)),
@@ -1324,15 +1326,15 @@ void PublicTransport::createTooltip()
     data.setMainText( i18nc("@info", "Public Transport") );
     if ( m_popupIcon->departureGroups()->isEmpty() ) {
         data.setSubText( i18nc("@info", "View departure times for public transport") );
-    } else {
-        const DepartureGroup nextGroup = m_popupIcon->departureGroups()->isEmpty()
-                ? DepartureGroup() : m_popupIcon->departureGroups()->first();
-        const QString groupDurationString = nextGroup.first()->departureInfo()->durationString();
+    } else if ( !m_popupIcon->departureGroups()->isEmpty() ) {
+        const DepartureGroup currentGroup = m_popupIcon->currentDepartureGroup();
+        const bool isAlarmGroup = m_popupIcon->currentGroupIsAlarmGroup();
+        const QString groupDurationString = currentGroup.first()->departureInfo()->durationString();
         QStringList infoStrings;
 
         if ( m_settings.departureArrivalListType ==  DepartureList ) {
             // Showing a departure list
-            foreach ( const DepartureItem *item, nextGroup ) {
+            foreach ( const DepartureItem *item, currentGroup ) {
                 infoStrings << i18nc("@info Text for one departure for the tooltip (%1: line string, "
                                      "%2: target)",
                                      "Line <emphasis strong='1'>%1<emphasis> "
@@ -1340,13 +1342,26 @@ void PublicTransport::createTooltip()
                                      item->departureInfo()->lineString(),
                                      item->departureInfo()->target());
             }
-            data.setSubText( i18nc("@info %1 is the translated duration text, e.g. in 3 minutes",
-                    "Next departure(s) (%1) from '%2':<nl/>%3",
-                    groupDurationString, m_settings.currentStopSettings().stops().join(", "),
-                    infoStrings.join(",<nl/>")) );
+            if ( isAlarmGroup ) {
+                data.setSubText( i18ncp("@info %2 is the translated duration text (e.g. in 3 minutes), "
+                                        "%4 contains texts for a list of departures",
+                        "Alarm (%2) for a departure from '%3':<nl/>%4",
+                        "%1 Alarms (%2) for departures from '%3':<nl/>%4",
+                        currentGroup.count(),
+                        groupDurationString, m_settings.currentStopSettings().stops().join(", "),
+                        infoStrings.join(",<nl/>")) );
+            } else {
+                data.setSubText( i18ncp("@info %2 is the translated duration text (e.g. in 3 minutes), "
+                                        "%4 contains texts for a list of departures",
+                        "Departure (%2) from '%3':<nl/>%4",
+                        "%1 Departures (%2) from '%3':<nl/>%4",
+                        currentGroup.count(),
+                        groupDurationString, m_settings.currentStopSettings().stops().join(", "),
+                        infoStrings.join(",<nl/>")) );
+            }
         } else {
             // Showing an arrival list
-            foreach ( const DepartureItem *item, nextGroup ) {
+            foreach ( const DepartureItem *item, currentGroup ) {
                 infoStrings << i18nc("@info Text for one arrival for the tooltip (%1: line string, "
                                      "%2: origin)",
                                      "Line <emphasis strong='1'>%1<emphasis> "
@@ -1354,10 +1369,23 @@ void PublicTransport::createTooltip()
                                      item->departureInfo()->lineString(),
                                      item->departureInfo()->target());
             }
-            data.setSubText( i18nc("@info %1 is the translated duration text, e.g. in 3 minutes",
-                    "Next arrival(s) (%1) at '%2':<nl/>%3",
-                    groupDurationString, m_settings.currentStopSettings().stops().join(", "),
-                    infoStrings.join(",<nl/>")) );
+            if ( isAlarmGroup ) {
+                data.setSubText( i18ncp("@info %2 is the translated duration text (e.g. in 3 minutes), "
+                                        "%4 contains texts for a list of arrivals",
+                        "Alarm (%2) for an arrival at '%3':<nl/>%4",
+                        "%1 Alarms (%2) for arrivals at '%3':<nl/>%4",
+                        currentGroup.count(),
+                        groupDurationString, m_settings.currentStopSettings().stops().join(", "),
+                        infoStrings.join(",<nl/>")) );
+            } else {
+                data.setSubText( i18ncp("@info %2 is the translated duration text (e.g. in 3 minutes), "
+                                        "%4 contains texts for a list of arrivals",
+                        "Arrival (%2) at '%3':<nl/>%4",
+                        "%1 Arrivals (%2) at '%3':<nl/>%4",
+                        currentGroup.count(),
+                        groupDurationString, m_settings.currentStopSettings().stops().join(", "),
+                        infoStrings.join(",<nl/>")) );
+            }
         }
     }
 
