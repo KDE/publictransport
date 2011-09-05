@@ -388,9 +388,11 @@ QPixmap DeparturePainter::createPopupIcon( PopupIcon *popupIcon, DepartureModel*
                 // the cache key here. This should produce more different keys for values near 1,
                 // where the animation slows down (and therefore needs more different pixmaps).
                 // The pixmaps are normally only needed for one minute.
-                const QString fadeCacheKey = QString("%1%2-%3-%4-%5%6%7")
+                const QString fadeCacheKey = QString("%1-%2,%3-%4,%5,%6,%7x%8,%9")
                         .arg( static_cast<int>(startDeparture->departureInfo()->vehicleType()) )
                         .arg( static_cast<int>(endDeparture->departureInfo()->vehicleType()) )
+                        .arg( startDeparture->departureInfo()->lineString() )
+                        .arg( endDeparture->departureInfo()->lineString() )
                         .arg( transition * transition, 0, 'f', 2 )
                         .arg( qMin(qCeil(QDateTime::currentDateTime().secsTo(
                               startDeparture->departureInfo()->predictedDeparture()) / 60.0),

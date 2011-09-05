@@ -203,8 +203,7 @@ void PopupIcon::fadeToNextDepartureInGroup()
     // If the current departure is the last one of the current group, animate to the 
     // first departure again (modulo).
     m_fadeAnimation->setStartValue( m_currentDepartureIndexStep );
-    m_fadeAnimation->setEndValue( (qCeil(m_currentDepartureIndexStep) + 1)
-                                  % currentDepartureGroup().count() );
+    m_fadeAnimation->setEndValue( (qCeil(m_currentDepartureIndexStep) + 1) );
     m_fadeAnimation->start();
 }
 
