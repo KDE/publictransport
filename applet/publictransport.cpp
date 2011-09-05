@@ -1285,6 +1285,15 @@ void PublicTransport::resized()
             m_titleToggleAnimation->start();
         }
 
+        // Show/hide vertical scrollbar
+        const qreal minWidthWithScrollBar = 250.0;
+        const qreal maxWidthWithoutScrollBar = 275.0;
+        if ( size.width() <= minWidthWithScrollBar ) {
+            m_timetable->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
+        } else if ( size.width() >= maxWidthWithoutScrollBar ) {
+            m_timetable->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
+        }
+
         // Update filter widget (show icon or icon with text)
         Plasma::ToolButton *filterWidget =
                 m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetFilter );
@@ -3023,35 +3032,43 @@ void PublicTransport::removeAlarms( const AlarmSettingsList &newAlarmSettings,
 QString PublicTransport::infoText()
 {
     // Get information about the current service provider from the data engine
-    QVariantHash data = currentServiceProviderData();
-    QString shortUrl = data.isEmpty() ? "-" : data["shortUrl"].toString();
-    QString url = data.isEmpty() ? "-" : data["url"].toString();
+    const QVariantHash data = currentServiceProviderData();
+    const QString shortUrl = data.isEmpty() ? "-" : data["shortUrl"].toString();
+    const QString url = data.isEmpty() ? "-" : data["url"].toString();
     QString sLastUpdate = m_lastSourceUpdate.toString( "hh:mm" );
     if ( sLastUpdate.isEmpty() ) {
         sLastUpdate = i18nc( "@info/plain This is used as 'last data update' "
                              "text when there hasn't been any updates yet.", "none" );
     }
 
-    // HACK: This breaks the text at one position if needed
-    // Plasma::Label doesn't work well will HTML formatted text and word wrap:
-    // It sets the height as if the label shows the HTML source.
-    QString textNoHtml1 = QString( "%1: %2" ).arg( i18nc("@info/plain", "last update"), sLastUpdate );
-    QString textNoHtml2 = QString( "%1: %2" ).arg( i18nc("@info/plain", "data by"), shortUrl );
+    // Plasma::Label sets it's height as if the label would show the HTML source.
+    // Therefore the <nobr>'s are inserted to prevent using multiple lines unnecessarily
+    const qreal minHeightForTwoLines = 250.0;
+    const QString dataByTextLocalized = i18nc("@info/plain", "data by");
+    const QString textNoHtml1 = QString( "%1: %2" )
+            .arg( i18nc("@info/plain", "last update"), sLastUpdate );
+    const QString dataByLinkHtml = QString( "<a href='%1'>%2</a>" ).arg( url, shortUrl );
+    const QString textHtml2 = dataByTextLocalized + ": " + dataByLinkHtml;
     QFontMetrics fm( m_labelInfo->font() );
-    int width1 = fm.width( textNoHtml1 );
-    int width2 = fm.width( textNoHtml2 );
-    int width = width1 + fm.width( ", " ) + width2;
-    if ( width > m_graphicsWidget->size().width() ) {
-        // Break info text into two lines
-        m_graphicsWidget->setMinimumWidth( qMax(width1, width2) );
-        return QString( "<nobr>%1: %2<br>%3: <a href='%4'>%5</a><nobr>" )
-            .arg( i18nc("@info/plain", "last update"), sLastUpdate,
-                  i18nc("@info/plain", "data by"), url, shortUrl );
+    const int widthLine1 = fm.width( textNoHtml1 );
+    const int widthLine2 = fm.width( dataByTextLocalized + ": " + shortUrl );
+    const int width = widthLine1 + fm.width( ", " ) + widthLine2;
+    QSizeF size = m_graphicsWidget->size();
+    if ( size.width() >= width ) {
+        // Enough horizontal space to show the complete info text in one line
+        return "<nobr>" + textNoHtml1 + ", " + textHtml2 + "</nobr>";
+    } else if ( size.height() >= minHeightForTwoLines &&
+                size.width() >= widthLine1 && size.width() >= widthLine2 )
+    {
+        // Not enough horizontal space to show the complete info text in one line,
+        // but enough vertical space to break it into two lines, which both fit horizontally
+        return "<nobr>" + textNoHtml1 + ",<br />" + textHtml2 + "</nobr>";
+    } else if ( size.width() >= widthLine2 ) {
+        // Do not show "last update" text, but credits info
+        return "<nobr>" + textHtml2 + "</nobr>";
     } else {
-        // Use a single line for the info text
-        return QString( "<nobr>%1: %2, %3: <a href='%4'>%5</a><nobr>" )
-            .arg( i18nc("@info/plain", "last update"), sLastUpdate,
-                  i18nc("@info/plain", "data by"), url, shortUrl );
+        // Do not show "last update" text, but credits info, without "data by:" label
+        return "<nobr>" + dataByLinkHtml + "</nobr>";
     }
 }
 
