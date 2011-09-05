@@ -439,9 +439,6 @@ QPixmap DeparturePainter::createPopupIcon( PopupIcon *popupIcon, DepartureModel*
         const QList<DepartureItem*> endGroup = endDepartureGroupIndex < 0
                 ? QList<DepartureItem*>() : departureGroups->at( endDepartureGroupIndex );
 
-//         qDebug() << "Animate from" << startDepartureGroupIndex << "to" << endDepartureGroupIndex << "|" << departureGroupIndex;
-//         qDebug() << "  or from" << departureGroups->keys()[startDepartureGroupIndex]
-//                  << "to" << departureGroups->keys()[endDepartureGroupIndex];
         QPixmap startPixmap = startDepartureGroupIndex < 0
                 ? createAlarmPixmap(model->nextAlarmDeparture(), size)
                 : createDeparturesPixmap(startGroup[qFloor(departureIndex) % startGroup.count()], size);
