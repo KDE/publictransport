@@ -1810,7 +1810,7 @@ KMenu *PublicTransport::updateFilterMenu()
         m_filtersGroup->removeAction( oldAction );
         delete oldAction;
     }
-    
+
     KMenu *menu = qobject_cast<KMenu*>( actionFilter->menu() );
     menu->clear();
     bool showColorGrous = m_settings.colorize && !m_settings.colorGroupSettingsList.isEmpty();
@@ -3272,6 +3272,8 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
 //         QColor(238, 238, 238, opacity)  // gray1
     };
 
+    bool groupByRoute = true;
+
     // Map route parts to lists of concatenated strings,
     // ie. transport line and target
     QHash< QStringList, int > routePartsToLines;
@@ -3283,7 +3285,11 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
                 kDebug() << "Start index is invalid" << startIndex;
                 continue; // Invalid start index, too less route stops
             }
-            QStringList routePart = info.routeStops().mid( startIndex, stopCount );
+            if ( groupByRoute && info.routeStops().isEmpty() ) {
+                groupByRoute = false;
+            }
+            QStringList routePart = groupByRoute ? info.routeStops().mid(startIndex, stopCount)
+                                                 : QStringList() << info.target();
             if ( routePart.isEmpty() ) {
                 kDebug() << "Route part is empty";
                 continue;
@@ -3330,7 +3336,14 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
 
         // Create filter for the new color group
         Filter groupFilter;
-        groupFilter << Constraint( FilterByNextStop, FilterEquals, routeCount.lastCommonStop );
+        if ( groupByRoute ) {
+            // All departures came with route information from the data engine
+            groupFilter << Constraint( FilterByNextStop, FilterEquals, routeCount.lastCommonStop );
+        } else {
+            // At elast one departure came without route information from the data engine,
+            // group departures by target instead
+            groupFilter << Constraint( FilterByTarget, FilterEquals, routeCount.lastCommonStop );
+        }
 
         // Create the new color group
         ColorGroupSettings group;
