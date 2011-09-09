@@ -261,6 +261,7 @@ QPixmap DeparturePainter::createMainIconPixmap( const QSize &size ) const
 QPixmap DeparturePainter::createDeparturesPixmap( DepartureItem *departure,
         const QSize &size, VehicleIconDrawFlags iconDrawFlags )
 {
+    Q_ASSERT( departure );
     QPixmap pixmap( size );
     pixmap.fill( Qt::transparent );
     QPainter p( &pixmap );
@@ -274,6 +275,7 @@ QPixmap DeparturePainter::createDeparturesPixmap( DepartureItem *departure,
                   minsToDeparture, iconDrawFlags );
 
     if ( iconDrawFlags.testFlag(DrawTimeText) ) {
+        // Add text to visualize the time until the departure (an alternative is DrawTimeGraphics)
         QString text;
         if ( minsToDeparture < -1 ) {
             text.append( i18nc("Indicating the departure time of an already left vehicle", "left") );

@@ -263,8 +263,10 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                 {
                     QString stopText = info->routeStops()[omittedIndex];
 
-                    // Prepend departure time at the current stop, if a time is given
-                    if ( info->routeTimes()[omittedIndex].isValid() ) {
+                    // Prepend departure time at the current stop, if a time is given and valid
+                    if ( omittedIndex < info->routeTimes().count() &&
+                         info->routeTimes()[omittedIndex].isValid() )
+                    {
                         stopText = stopText.prepend( QString("%1: ")
                                 .arg(KGlobal::locale()->formatTime(info->routeTimes()[omittedIndex])) );
                     }

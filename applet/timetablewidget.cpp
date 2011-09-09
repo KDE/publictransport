@@ -66,13 +66,17 @@ PublicTransportGraphicsItem::~PublicTransportGraphicsItem()
 
 void DepartureGraphicsItem::updateSettings()
 {
-    m_routeItem->setZoomFactor( m_parent->zoomFactor() );
+    if ( m_routeItem ) {
+        m_routeItem->setZoomFactor( m_parent->zoomFactor() );
+    }
     update();
 }
 
 void JourneyGraphicsItem::updateSettings()
 {
-    m_routeItem->setZoomFactor( m_parent->zoomFactor() );
+    if ( m_routeItem ) {
+        m_routeItem->setZoomFactor( m_parent->zoomFactor() );
+    }
     update();
 }
 
@@ -80,7 +84,10 @@ void PublicTransportGraphicsItem::setExpanded( bool expand )
 {
     m_expanded = expand;
     if ( expand ) {
-        routeItem()->setVisible( true );
+        QGraphicsWidget *route = routeItem();
+        if ( route ) {
+            route->setVisible( true );
+        }
     }
 
     if ( m_resizeAnimation ) {
@@ -99,7 +106,10 @@ void PublicTransportGraphicsItem::setExpanded( bool expand )
 
 void PublicTransportGraphicsItem::resizeAnimationFinished()
 {
-    routeItem()->setVisible( m_expanded );
+    QGraphicsWidget *route = routeItem();
+    if ( route ) {
+        route->setVisible( m_expanded );
+    }
     delete m_resizeAnimation;
     m_resizeAnimation = NULL;
 }
