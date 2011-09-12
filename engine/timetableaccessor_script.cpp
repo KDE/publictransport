@@ -31,9 +31,8 @@
 #include <KStandardDirs>
 
 TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info )
-		: TimetableAccessor(), m_script(0), m_resultObject(0)
+		: TimetableAccessor(info), m_script(0), m_resultObject(0)
 {
-	m_info = info;
 	m_scriptState = WaitingForScriptUsage;
 	m_scriptFeatures = readScriptFeatures();
 // 	kDebug() << "Script accessor created witout initializing script for" << m_info->serviceProvider();
@@ -270,8 +269,7 @@ bool TimetableAccessorScript::parseDocument( const QByteArray &document,
 		}
 
 		QDate date = timetableData.value( DepartureDate ).toDate();
-		QTime departureTime = QTime( timetableData.value( DepartureHour ).toInt(),
-		                             timetableData.value( DepartureMinute ).toInt() );
+		QTime departureTime = timetableData.value( DepartureTime ).toTime();
 		if ( !date.isValid() ) {
 			if ( curDate.isNull() ) {
 				// First departure

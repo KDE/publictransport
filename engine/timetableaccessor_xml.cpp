@@ -27,11 +27,10 @@
 
 
 TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfo *info )
+        : TimetableAccessor(info)
 {
-	m_info = info;
-	
 	// Create a script accessor object to parse stop suggestions if a script filename is given
-	if ( !m_info->scriptFileName().isEmpty() ) {
+	if ( !info->scriptFileName().isEmpty() ) {
 		m_accessorScript = new TimetableAccessorScript( info );
 	} else {
 		m_accessorScript = NULL;
@@ -141,11 +140,10 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 		// about the departing stop
 		QDomElement stop = node.firstChildElement("MainStop")
 							   .firstChildElement("BasicStop").firstChildElement("Dep");
-							   
+
 		// <Time> tag contains the departure time
 		QTime time = QTime::fromString( stop.firstChildElement("Time").text(), "hh:mm" );
-		departureInfo.insert( DepartureHour, time.hour() );
-		departureInfo.insert( DepartureMinute, time.minute() );
+		departureInfo.insert( DepartureTime, time );
 		
 		// <Delay> tag contains delay
 		QString sDelay = stop.firstChildElement("Delay").text(); 

@@ -31,7 +31,7 @@
 #include <KLocale>
 #include <KDebug>
 
-TimetableAccessor::TimetableAccessor() : m_info(0)
+TimetableAccessor::TimetableAccessor( TimetableAccessorInfo *info ) : m_info(info)
 {
 	m_idAlreadyRequested = false;
 }
@@ -99,10 +99,12 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 AccessorType TimetableAccessor::accessorTypeFromString( const QString &sAccessorType )
 {
 	QString s = sAccessorType.toLower();
-	if ( s == "html" ) {
-		return HTML;
+	if ( s == "script" || s == "html" ) {
+		return ScriptedAccessor;
+    } else if ( s == "gtfs" ) {
+        return GtfsAccessor;
 	} else if ( s == "xml" ) {
-		return XML;
+		return XmlAccessor;
 	} else {
 		return NoAccessor;
 	}
@@ -156,8 +158,10 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
 		return Nothing;
 	} else if ( sInfo == "departuredate" ) {
 		return DepartureDate;
-	} else if ( sInfo == "departurehour" ) {
-		return DepartureHour;
+    } else if ( sInfo == "departuretime" ) {
+        return DepartureTime;
+    } else if ( sInfo == "departurehour" ) {
+        return DepartureHour;
 	} else if ( sInfo == "departureminute" ) {
 		return DepartureMinute;
 	} else if ( sInfo == "typeofvehicle" ) {
@@ -230,6 +234,8 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
 		return TargetStopID;
 	} else if ( sInfo == "arrivaldate" ) {
 		return ArrivalDate;
+    } else if ( sInfo == "arrivaltime" ) {
+        return ArrivalTime;
 	} else if ( sInfo == "arrivalhour" ) {
 		return ArrivalHour;
 	} else if ( sInfo == "arrivalminute" ) {
@@ -377,7 +383,7 @@ QStringList TimetableAccessor::featuresLocalized() const
 	return featuresl10n;
 }
 
-KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sourceName,
+void TimetableAccessor::requestDepartures( const QString &sourceName,
 		const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime, 
 		const QString &dataType, bool usedDifferentUrl )
 {
@@ -387,7 +393,7 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 		kDebug() << "Request a session key";
 		requestSessionKey( ParseForSessionKeyThenDepartures, m_info->sessionKeyUrl(), sourceName, 
 						   city, stop, maxCount, dateTime, dataType, usedDifferentUrl );
-		return NULL;
+		return;
 	}
 	
 	if ( !m_idAlreadyRequested &&
@@ -398,7 +404,7 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 		m_idAlreadyRequested = true;
 		requestStopSuggestions( sourceName, city, stop, ParseForStopIdThenDepartures, maxCount, 
 								dateTime, dataType, usedDifferentUrl );
-		return NULL;
+		return;
 	}
 	m_idAlreadyRequested = false;
 	
@@ -475,7 +481,7 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 	} else {
 		kDebug() << "No \"data\" attribute given in the <departures>-tag in" 
 				 << m_info->fileName() << "but method is \"post\".";
-		return NULL;
+		return;
 	}
 	
 	// Add the session key
@@ -497,10 +503,9 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 									 dataType, maxCount, dateTime, usedDifferentUrl) );
 
 	connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
-	return job;
 }
 
-KIO::StoredTransferJob* TimetableAccessor::requestSessionKey( ParseDocumentMode parseMode,
+void TimetableAccessor::requestSessionKey( ParseDocumentMode parseMode,
 		const KUrl &url, const QString &sourceName, const QString &city, const QString &stop, 
 		int maxCount, const QDateTime &dateTime, const QString &dataType, bool usedDifferentUrl )
 {
@@ -508,7 +513,6 @@ KIO::StoredTransferJob* TimetableAccessor::requestSessionKey( ParseDocumentMode 
 	m_jobInfos.insert( job, JobInfos(parseMode, sourceName, city, stop, 
 									 url, dataType, maxCount, dateTime, usedDifferentUrl) );
 	connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
-	return job;
 }
 
 void TimetableAccessor::clearSessionKey()
@@ -516,7 +520,7 @@ void TimetableAccessor::clearSessionKey()
 	m_sessionKey.clear();
 }
 
-KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString &sourceName, 
+void TimetableAccessor::requestStopSuggestions( const QString &sourceName,
 	const QString &city, const QString &stop, ParseDocumentMode parseMode, int maxCount, 
 	const QDateTime &dateTime, const QString &dataType, bool usedDifferentUrl )
 {
@@ -526,7 +530,7 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString
 		kDebug() << "Request a session key";
 		requestSessionKey( ParseForSessionKeyThenStopSuggestions, m_info->sessionKeyUrl(), 
 						   sourceName, city, stop );
-		return NULL;
+		return;
 	}
 	
 	if ( hasSpecialUrlForStopSuggestions() ) {
@@ -576,7 +580,7 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString
 		} else {
 			kDebug() << "No \"data\" attribute given in the <stopSuggestions>-tag in" 
 					 << m_info->fileName() << "but method is \"post\".";
-			return NULL;
+			return;
 		}
 		if ( parseMode == ParseForStopIdThenDepartures ) {
 			m_jobInfos.insert( job, JobInfos(parseMode, sourceName, city, stop, url,
@@ -599,38 +603,33 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString
 		}
 		
 		connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
-
-		return job;
 	} else {
-		return requestDepartures( sourceName, city, stop, -1, QDateTime::currentDateTime() );
+		requestDepartures( sourceName, city, stop, -1, QDateTime::currentDateTime() );
 	}
 }
 
-KIO::StoredTransferJob *TimetableAccessor::requestJourneys( const QString &sourceName,
+void TimetableAccessor::requestJourneys( const QString &sourceName,
         const QString &city, const QString &startStopName,
         const QString &targetStopName, int maxCount,
         const QDateTime &dateTime, const QString &dataType,
-        bool usedDifferentUrl )
+        bool usedDifferentUrl, const QString &urlToUse, int roundTrips )
 {
 	// Creating a kioslave
-	KUrl url = getJourneyUrl( city, startStopName, targetStopName, maxCount,
-	                          dateTime, dataType, usedDifferentUrl );
-	KIO::StoredTransferJob *job = requestJourneys( url );
+	KUrl url = !urlToUse.isEmpty() ? KUrl(urlToUse)
+            : getJourneyUrl( city, startStopName, targetStopName, maxCount,
+	                         dateTime, dataType, usedDifferentUrl );
+    KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
+    connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
 	m_jobInfos.insert( job, JobInfos(ParseForJourneys, sourceName, city, startStopName, url,
-									 dataType, maxCount, dateTime, usedDifferentUrl, targetStopName) );
-
-	return job;
+									 dataType, maxCount, dateTime, usedDifferentUrl,
+                                     targetStopName, roundTrips) );
 }
 
-KIO::StoredTransferJob* TimetableAccessor::requestJourneys( const KUrl& url )
-{
-//     kDebug() << url;
-
-	KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-	connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
-
-	return job;
-}
+// void TimetableAccessor::requestJourneys( const KUrl& url )
+// {
+// 	KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
+// 	connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
+// }
 
 void TimetableAccessor::result( KJob* job )
 {
@@ -778,12 +777,10 @@ void TimetableAccessor::result( KJob* job )
 			if ( !sNextUrl.isNull() && !sNextUrl.isEmpty() ) {
 				kDebug() << "Request parsed url:" << sNextUrl;
 				++jobInfo.roundTrips;
-				KIO::StoredTransferJob *job = requestJourneys( KUrl( sNextUrl ) );
-				m_jobInfos.insert( job, JobInfos(ParseForJourneys, jobInfo.sourceName,
-								jobInfo.city, jobInfo.stop, jobInfo.url, jobInfo.dataType,
-								jobInfo.maxCount, jobInfo.dateTime, jobInfo.usedDifferentUrl,
-								jobInfo.targetStop, jobInfo.roundTrips) );
-// 		return;
+                requestJourneys( jobInfo.sourceName, jobInfo.city, jobInfo.stop,
+                                 jobInfo.targetStop, jobInfo.maxCount, jobInfo.dateTime,
+                                 jobInfo.dataType, jobInfo.usedDifferentUrl,
+                                 sNextUrl, jobInfo.roundTrips );
 			}
 		}
 		// Used a different url for requesting data, the data contains stop suggestions

@@ -69,13 +69,9 @@ public:
 	 * @brief Gets the date and time of the departure or arrival. */
 	QDateTime departure() const {
 	    if ( contains(DepartureDate) ) {
-			return QDateTime( value(DepartureDate).toDate(),
-							  QTime(value(DepartureHour).toInt(),
-									value(DepartureMinute).toInt()) );
+			return QDateTime( value(DepartureDate).toDate(), value(DepartureTime).toTime() );
 	    } else {
-			return QDateTime( QDate::currentDate(),
-							  QTime(value(DepartureHour).toInt(),
-									value(DepartureMinute).toInt()) );
+			return QDateTime( QDate::currentDate(), value(DepartureTime).toTime() );
 		}
 	};
 
@@ -155,13 +151,9 @@ public:
 	/** @brief Gets the date and time of the arrival at the journey target */
 	QDateTime arrival() const {
 		if ( contains(ArrivalDate) ) {
-			return QDateTime( value(ArrivalDate).toDate(),
-							  QTime(value(ArrivalHour).toInt(),
-									value(ArrivalMinute).toInt()) );
-	    } else if ( contains(ArrivalHour) && contains(ArrivalMinute) ) {
-			return QDateTime( QDate::currentDate(),
-							  QTime(value(ArrivalHour).toInt(),
-									value(ArrivalMinute).toInt()) );
+			return QDateTime( value(ArrivalDate).toDate(), value(ArrivalTime).toTime() );
+	    } else if ( contains(ArrivalTime) ) {
+			return QDateTime( QDate::currentDate(), value(ArrivalTime).toTime() );
 		} else {
 			return QDateTime();
 		}

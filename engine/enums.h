@@ -90,22 +90,24 @@ enum TimetableInformation {
 	Nothing = 0, /**< No usable information. */
 
 	// Departures / arrival / journey information
-	DepartureDate = 1, /**< The date of the departure. */
-	DepartureHour = 2, /**< The hour of the departure. */
-	DepartureMinute = 3, /**< The minute of the departure. */
-	TypeOfVehicle = 4, /**< The type of vehicle. */
-	TransportLine = 5, /**< The name of the public transport line, e.g. "4", "6S", "S 5", "RB 24122". */
+	DepartureDate = 1, /**< The date of the departure/arrival/journey. */
+    DepartureTime = 2, /**< The time of the departure/arrival/journey, can include seconds. TODO */
+	DepartureHour = 3, /**< The hour of the departure/arrival/journey. */
+	DepartureMinute = 4, /**< The minute of the departure/arrival/journey. */
+
+	TypeOfVehicle = 5, /**< The type of vehicle. */
+	TransportLine = 6, /**< The name of the public transport line, e.g. "4", "6S", "S 5", "RB 24122". */
 	FlightNumber = TransportLine, /**< Same as TransportLine, used for flights. */
-	Target = 6, /**< The target of a journey / of a public transport line. */
-	Platform = 7, /**< The platform at which the vehicle departs / arrives. */
-	Delay = 8, /**< The delay of a public transport vehicle. */
-	DelayReason = 9, /**< The reason of a delay. */
-	JourneyNews = 10,  /**< Can contain delay / delay reason / other news */
-	JourneyNewsOther = 11,  /**< Other news (not delay / delay reason) */
-	JourneyNewsLink = 12,  /**< Contains a link to an html page with journey news. The url of the accessor is prepended, if a relative path has been matched (starting with "/"). */
-	DepartureHourPrognosis = 13, /**< The prognosis for the departure hour, which is the departure hour plus the delay. */
-	DepartureMinutePrognosis = 14, /**< The prognosis for the departure minute, which is the departure minute plus the delay. */
-	Operator = 16, /**< The company that is responsible for the journey. */
+	Target = 7, /**< The target of a journey / of a public transport line. */
+	Platform = 8, /**< The platform at which the vehicle departs / arrives. */
+	Delay = 9, /**< The delay of a public transport vehicle. */
+	DelayReason = 10, /**< The reason of a delay. */
+	JourneyNews = 11,  /**< Can contain delay / delay reason / other news */
+	JourneyNewsOther = 12,  /**< Other news (not delay / delay reason) */
+	JourneyNewsLink = 13,  /**< Contains a link to an html page with journey news. The url of the accessor is prepended, if a relative path has been matched (starting with "/"). */
+	DepartureHourPrognosis = 14, /**< The prognosis for the departure hour, which is the departure hour plus the delay. */
+	DepartureMinutePrognosis = 15, /**< The prognosis for the departure minute, which is the departure minute plus the delay. */
+	Operator = 16, /**< The company that is responsible for the journey (in GTFS this is called the 'agency'). */
 	DepartureAMorPM = 17, /**< Used to match the string "am" or "pm" for the departure time. */
 	DepartureAMorPMPrognosis = 18, /**< Used to match the string "am" or "pm" for the prognosis departure time. */
 	ArrivalAMorPM = 19, /**< Used to match the string "am" or "pm" for the arrival time. */
@@ -130,17 +132,18 @@ enum TimetableInformation {
 	TargetStopName = 53, /**< The name of the target stop of a journey. */
 	TargetStopID = 54, /**< The ID of the target stop of a journey. */
 	ArrivalDate = 55, /**< The date of the arrival. */
-	ArrivalHour = 56, /**<The hour of the arrival. */
-	ArrivalMinute = 57, /**< The minute of the arrival. */
-	Changes = 58, /**< The number of changes between different vehicles in a journey. */
-	TypesOfVehicleInJourney = 59, /**< A list of vehicle types used in a journey. */
-	Pricing = 60, /**< Information about the pricing of a journey. */
+    ArrivalTime = 56, /**< The time of the arrival, can include seconds. */
+    ArrivalHour = 57, /**<The hour of the arrival. */
+	ArrivalMinute = 58, /**< The minute of the arrival. */
+	Changes = 59, /**< The number of changes between different vehicles in a journey. */
+	TypesOfVehicleInJourney = 60, /**< A list of vehicle types used in a journey. */
+	Pricing = 61, /**< Information about the pricing of a journey. */
 
 	// Special information
 	NoMatchOnSchedule = 100, /**< Vehicle is expected to depart on schedule, no regexp-matched string is needed for this info */
 	IsNightLine = 101, /**< The transport line is a nightline. TODO Use this info in the data engine */
 
-	// Possible stop information
+	// Stop suggestion information
 	StopName = 200, /**< The name of a stop/station. */
 	StopID = 201, /**< The ID of a stop/station. */
 	StopWeight = 202, /**< The weight of a stop suggestion. */
@@ -162,8 +165,9 @@ enum ParseDocumentMode {
 /** @brief The type of an accessor. */
 enum AccessorType {
 	NoAccessor, /**< @internal Invalid value */
-	HTML, /**< The accessor is used to parse HTML documents. */
-	XML /**< The accessor is used to parse XML documents. */
+	ScriptedAccessor, /**< The accessor parses documents using a script. */
+	XmlAccessor, /**< The accessor parses XML documents. */
+    GtfsAccessor /**< The accessor uses a DB filled with GTFS data. */
 };
 
 /** @brief The type of the vehicle used for a public transport line. */
@@ -267,6 +271,8 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
 		return debug << "Nothing";
 	case DepartureDate:
 		return debug << "DepartureDate";
+    case DepartureTime:
+        return debug << "DepartureTime";
 	case DepartureHour:
 		return debug << "DepartureHour";
 	case DepartureMinute:
@@ -323,6 +329,8 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
 		return debug << "TargetStopID";
 	case ArrivalDate:
 		return debug << "ArrivalDate";
+    case ArrivalTime:
+        return debug << "ArrivalTime";
 	case ArrivalHour:
 		return debug << "ArrivalHour";
 	case ArrivalMinute:

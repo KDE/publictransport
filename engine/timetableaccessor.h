@@ -50,7 +50,7 @@ public:
 	/** 
 	 * @brief Constructs a new TimetableAccessor object. You should use getSpecificAccessor()
 	 *   to get an accessor that can download and parse documents from the given service provider. */
-	explicit TimetableAccessor();
+	explicit TimetableAccessor( TimetableAccessorInfo *info = new TimetableAccessorInfo() );
 	virtual ~TimetableAccessor();
 
 	/** 
@@ -98,7 +98,7 @@ public:
 
 	/** @brief Requests a list of departures/arrivals. When the departure/arrival list
 	 *   is completely received @ref departureListReceived is emitted. */
-	KIO::StoredTransferJob *requestDepartures( const QString &sourceName,
+	virtual void requestDepartures( const QString &sourceName,
 			const QString &city, const QString &stop,
 			int maxCount, const QDateTime &dateTime, const QString &dataType = "departures",
 			bool useDifferentUrl = false );
@@ -134,10 +134,8 @@ public:
 	 * 
 	 * @param usedDifferentUrl After the session key has been parsed, @ref requestDepartures is 
 	 *   called with @p usedDifferentUrl. Default is false.
-	 * 
-	 * @return The KIO-job that handles the download of the session key document. Can be NULL.
 	 **/
-	KIO::StoredTransferJob *requestSessionKey( ParseDocumentMode parseMode, const KUrl &url, 
+	virtual void requestSessionKey( ParseDocumentMode parseMode, const KUrl &url,
 			const QString &sourceName, const QString &city, const QString &stop, int maxCount = 99, 
 			const QDateTime &dateTime = QDateTime::currentDateTime(), 
 			const QString &dataType = QString(), bool usedDifferentUrl = false );
@@ -173,11 +171,8 @@ public:
 	 * @param usedDifferentUrl Only used if @p parseMode is ParseForStopIdThenDepartures. After stop 
 	 *   suggestions are retrieved, @ref requestDepartures is called with @p usedDifferentUrl. 
 	 *   Default is false.
-	 * 
-	 * @return The KIO-job that handles the download of the stop suggestion document. Can be NULL
-	 *   if eg. a session key document has to be downloaded first.
 	 **/
-	KIO::StoredTransferJob *requestStopSuggestions( const QString &sourceName,
+	virtual void requestStopSuggestions( const QString &sourceName,
 			const QString &city, const QString &stop, 
 			ParseDocumentMode parseMode = ParseForStopSuggestions, int maxCount = 1, 
 			const QDateTime &dateTime = QDateTime::currentDateTime(), 
@@ -185,12 +180,11 @@ public:
 
 	/** @brief Requests a list of journeys. When the journey list is completely received
 	 * journeyListReceived() is emitted. */
-	KIO::StoredTransferJob *requestJourneys( const QString &sourceName,
+	virtual void requestJourneys( const QString &sourceName,
 			const QString &city, const QString &startStopName, const QString &targetStopName,
 			int maxCount, const QDateTime &dateTime,
-			const QString &dataType = "journeys", bool useDifferentUrl = false );
-
-	KIO::StoredTransferJob *requestJourneys( const KUrl &url );
+			const QString &dataType = "journeys", bool useDifferentUrl = false,
+            const QString &urlToUse = QString(), int roundTrips = 0 );
 
 	/** @brief Gets the information object used by this accessor. */
 	const TimetableAccessorInfo &timetableAccessorInfo() const { return *m_info; };
@@ -231,17 +225,22 @@ public:
 	static QString toPercentEncoding( const QString &str, const QByteArray &charset );
 
 protected:
-	/** 
-	 * @brief Parses the contents of a document that was requested using requestJourneys()
-	 *   and puts the results into @p journeys..
-	 * 
+	/**
+	 * @brief Parses the contents of a document and puts the results into @p journeys.
+     *
+     * This function is used by the default implementations of @ref requestDepartures,
+     * @ref requestJourneys, etc.
+     * The default implementation does nothing and returns false.
+	 *
 	 * @param journeys A pointer to a list of departure/arrival or journey information.
 	 *   The results of parsing the document is stored in @p journeys.
 	 * @param parseDocumentMode The mode of parsing, e.g. parse for
 	 *   departures/arrivals or journeys.
 	 * @return true, if there were no errors and the data in @p journeys is valid.
 	 * @return false, if there were an error parsing the document.
-	 * @see parseDocumentPossibleStops() */
+     *
+	 * @see parseDocumentPossibleStops()
+     **/
 	virtual bool parseDocument( const QByteArray &document,
 			QList<PublicTransportInfo*> *journeys, GlobalTimetableInfo *globalInfo,
 			ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
@@ -250,7 +249,8 @@ protected:
 	 * @brief Override this method to parse the contents of a received document for
 	 *   an url to a document containing later journeys. The default implementation
 	 *   returns a null string.
-	 * @return The parsed url. */
+	 * @return The parsed url.
+     **/
 	virtual QString parseDocumentForLaterJourneysUrl( const QByteArray &document ) {
 		Q_UNUSED( document );
 		return QString();
@@ -260,7 +260,8 @@ protected:
 	 * @brief Override this method to parse the contents of a received document for
 	 *   an url to a document containing detailed journey information. The default
 	 *   implementation returns a null string.
-	 * @return The parsed url. */
+	 * @return The parsed url.
+     **/
 	virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document ) {
 		Q_UNUSED( document );
 		return QString();
@@ -282,7 +283,9 @@ protected:
 	 * @param stops A pointer to a list of @ref StopInfo objects.
 	 * @return true, if there were no errors.
 	 * @return false, if there were an error parsing the document.
-	 * @see parseDocument() */
+     *
+	 * @see parseDocument()
+     **/
 	virtual bool parseDocumentPossibleStops( const QByteArray &document, QList<StopInfo*> *stops );
 
 	/** 
