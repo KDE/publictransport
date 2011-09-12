@@ -58,11 +58,8 @@ public:
      * @brief Reads an accessor info xml from @p device.
      *
      * @param device The QIODevice to read the xml data from.
-     *
      * @param serviceProvider The service provider ID for the accessor to read.
-     *
      * @param fileName The filename of the xml file.
-     *
      * @param country The country the accessor is designed for.
      *
      * @return A TimetableAccessor object or NULL on error.

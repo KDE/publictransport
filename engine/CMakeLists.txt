@@ -22,6 +22,8 @@ set( publictransport_engine_SRCS
     timetableaccessor_info.cpp 
     timetableaccessor_xml.cpp
     timetableaccessor_script.cpp
+    timetableaccessor_generaltransitfeed.cpp
+    generaltransitfeed_importer.cpp
     scripting.cpp
     enums.cpp )
 
@@ -29,7 +31,8 @@ set( publictransport_engine_SRCS
 kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} )
 
 target_link_libraries( plasma_engine_publictransport
-    ${KDE4_PLASMA_LIBS} ${KDE4_KROSSCORE_LIBS} ${KDE4_KIO_LIBS} QtXml )
+    ${KDE4_PLASMA_LIBS} ${KDE4_KROSSCORE_LIBS} ${KDE4_KIO_LIBS}
+    ${QT_QTXML_LIBRARY} ${QT_QTSQL_LIBRARY} )
 
 install( TARGETS plasma_engine_publictransport
          DESTINATION ${PLUGIN_INSTALL_DIR} )

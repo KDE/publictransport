@@ -22,6 +22,7 @@
 #include "timetableaccessor.h"
 #include "timetableaccessor_script.h"
 #include "timetableaccessor_xml.h"
+#include "timetableaccessor_generaltransitfeed.h"
 
 #include <KLocalizedString>
 #include <KLocale>
@@ -106,14 +107,15 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 			delete accessorInfo;
 // 			kDebug() << "The type" << attributes().value("type").toString()
 // 					 << "is invalid. Currently there are two values allowed: HTML and XML.";
-			raiseError( QString("The accessor type %1 is invalid. Currently there are two "
-								"values allowed: HTML and XML.")
+			raiseError( QString("The accessor type %1 is invalid. Currently there are three "
+								"values allowed: \"Scripted\", \"XML\" and \"GTFS\". Deprecated "
+                                "but still usable is \"HTML\", interpreted as \"Scripted\".")
 						.arg(attributes().value("type").toString()) );
 			return NULL;
 		}
 	} else {
 		// Type not specified, use default
-		accessorInfo->setType( HTML );
+		accessorInfo->setType( ScriptedAccessor );
 	}
 
 	while ( !atEnd() ) {
@@ -178,6 +180,8 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 				accessorInfo->setAttributesForStopSuggestions( attributesForStopSuggestions );
 				accessorInfo->setJourneyRawUrl( rawUrlJourneys );
 				accessorInfo->setAttributesForJourneys( attributesForJourneys );
+            } else if ( name().compare("feedUrl", Qt::CaseInsensitive) == 0 ) {
+                accessorInfo->setDepartureRawUrl( readElementText() );
 			} else if ( name().compare("sessionKey", Qt::CaseInsensitive) == 0 ) {
 				QString sessionKeyUrl, sessionKeyData;
 				SessionKeyPlace sessionKeyPlace;
@@ -211,18 +215,27 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 		raiseError( "No <url> tag in accessor info XML" );
 		return NULL;
 	}
-	if ( accessorInfo->accessorType() == HTML && accessorInfo->departureRawUrl().isEmpty() ) {
-		delete accessorInfo;
-		raiseError( "No raw url for departures in accessor info XML, mandatory for HTML types" );
-		return NULL;
-	}
+    if ( accessorInfo->accessorType() == ScriptedAccessor
+         && accessorInfo->departureRawUrl().isEmpty() )
+    {
+        delete accessorInfo;
+        raiseError( "No raw url for departures in accessor info XML, mandatory for "
+                    "\"Scripted\" types" );
+        return NULL;
+    } else if ( accessorInfo->accessorType() == GtfsAccessor
+                && accessorInfo->feedUrl().isEmpty() )
+    {
+        delete accessorInfo;
+        raiseError( "No GTFS feed url in accessor info XML, mandatory for \"GTFS\" types" );
+        return NULL;
+    }
 	
 	accessorInfo->setName( nameLocal.isEmpty() ? nameEn : nameLocal );
 	accessorInfo->setDescription( descriptionLocal.isEmpty() ? descriptionEn : descriptionLocal );
 	accessorInfo->finish();
 
 	// Create the accessor
-	if ( accessorInfo->accessorType() == HTML ) {
+	if ( accessorInfo->accessorType() == ScriptedAccessor ) {
 		// Ensure a script is specified
 		if ( accessorInfo->scriptFileName().isEmpty() ) {
 			delete accessorInfo;
@@ -239,7 +252,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 			raiseError( "Couldn't correctly load the script (bad script)" );
 			return NULL;
 		}
-	} else if ( accessorInfo->accessorType() == XML ) {
+	} else if ( accessorInfo->accessorType() == XmlAccessor ) {
 		// Warn if no script is specified
 		if ( accessorInfo->scriptFileName().isEmpty() ) {
 			kDebug() << "XML accessors currently use a script to parse stop suggestions, "
@@ -257,7 +270,10 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 		} else {
 			return xmlAccessor;
 		}
-	}
+	} else if ( accessorInfo->accessorType() == GtfsAccessor ) {
+        // Create the accessor and check for script errors
+        return new TimetableAccessorGeneralTransitFeed( accessorInfo );
+    }
 	
 	delete accessorInfo;
 	raiseError( QString("Accessor type %1 not supported").arg(accessorInfo->accessorType()) );

@@ -99,9 +99,11 @@ public:
 	QString url() const { return m_url; };
 	/** @brief A short version of the url without protocol or "www" to be displayed in links. */
 	QString shortUrl() const { return m_shortUrl; };
-	
-	/** @brief A raw url that is used to get departures. */
-	QString departureRawUrl() const { return m_departureRawUrl; };
+
+    /** @brief A raw url that is used to get departures. */
+    QString departureRawUrl() const { return m_departureRawUrl; };
+    /** @brief An url that is used to download a (GTFS) feed. TODO */
+    QString feedUrl() const { return m_departureRawUrl; };
 	/** @brief A raw url that is used to get journeys. */
 	QString journeyRawUrl() const { return m_journeyRawUrl; };
 	/** @brief Raw url to an xml file for xml accessors */
@@ -325,6 +327,9 @@ protected:
 	void setDepartureRawUrl( const QString &departureRawUrl ) {
 		m_departureRawUrl = departureRawUrl; };
 
+    /** @brief Sets the url to a (GTFS) feed. TODO  */
+    void setFeedUrl( const QString &feedUrl ) { setDepartureRawUrl(feedUrl); };
+
 	/**
 	 * @brief Sets the raw url for journey lists to an html file containing journey lists. */
 	void setJourneyRawUrl( const QString &journeyRawUrl ) {
@@ -415,7 +420,7 @@ protected:
 	QHash<QString, QString> m_attributesForDepatures;
 	QHash<QString, QString> m_attributesForJourneys;
 	
-	// Type of the accessor (HTML, XML)
+	// Type of the accessor (ScriptedAccessor, XmlAccessor, GtfsAccessor)
 	AccessorType m_accessorType;
 	VehicleType m_defaultVehicleType;
 	int m_minFetchWait;
