@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<accessorInfo fileVersion="1.0" version="1.0" type="GTFS">
+
+<!-- TODO -->
+<name lang="en">USA TriMet</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>Accessor for the TriMet GTFS feed.</description>
+
+<url>http://www.trimet.org/index.htm</url>
+<shortUrl>www.trimet.org</shortUrl>
+<feedUrl>http://developer.trimet.org/schedule/gtfs.zip</feedUrl>
+
+<!-- This string needs to be shown, see: -->
+<!-- http://developer.trimet.org/terms_of_use.shtml, "5. WEB SERVICES API" -->
+<credit>Route and arrival data provided by permission of TriMet</credit>
+
+</accessorInfo>
