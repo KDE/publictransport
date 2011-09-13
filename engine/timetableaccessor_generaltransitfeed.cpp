@@ -384,12 +384,16 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
             "FROM stops INNER JOIN stop_times AS times USING (stop_id) "
                        "INNER JOIN trips USING (trip_id) "
                        "INNER JOIN routes USING (route_id) "
-//                        "LEFT JOIN calendar USING (service_id) "
-//                        "LEFT JOIN calendar_dates USING (service_id) "
+                       "LEFT JOIN calendar USING (service_id) "
+                       "LEFT JOIN calendar_dates ON (trips.service_id=calendar_dates.service_id "
+                                                    "AND strftime('%Y%m%d')=calendar_dates.date) "
             "WHERE stop_id=%1 AND departure_time>%3 "
-//              "AND (NOT EXISTS (SELECT * FROM calendar_dates) OR calendar_dates.exception_type!=2) "
-//             Test calendar table with another feed (one which actually uses that table, not TriMet)
-//              "AND (NOT EXISTS (SELECT * FROM calendar) OR calendar.weekdays & strftime('%w') > 0) " // TODO CASE strftime('%w') WHEN 0 THEN calendar.sunday WHEN 1 THEN ... END
+                  "AND (calendar_dates.date IS NULL " // No matching record in calendar_dates table for today
+                       "OR NOT (calendar_dates.exception_type=2)) " // Journey is not removed today
+                  "AND (calendar.weekdays IS NULL " // No matching record in calendar table => always available
+                       "OR (strftime('%Y%m%d') >= calendar.start_date " // Current date is in the range...
+                           "AND strftime('%Y%m%d') <= calendar.end_date " // ...where the service is available...
+                           "AND substr(calendar.weekdays, strftime('%w') + 1, 1)='1')) " // ...and it's available at the current weekday
             "ORDER BY departure_time "
             "LIMIT %4" )
             .arg( stopId )

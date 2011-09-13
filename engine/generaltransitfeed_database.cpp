@@ -178,8 +178,8 @@ bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText )
                    "shape_dist_traveled TINYINT, " // (optional) If used, positions a stop as a distance from the first shape point (same unit as in shapes.txt)
                    "FOREIGN KEY(trip_id) REFERENCES trips(trip_id), "
                    "FOREIGN KEY(stop_id) REFERENCES stops(stop_id), "
-                   "PRIMARY KEY(stop_id, departure_time, trip_id)" //, stop_id)" // makes inserts slow..
-                   ");" ); // CREATE INDEX id ON stop_times(stop_id, departure_time);" );
+                   "PRIMARY KEY(stop_id, departure_time, trip_id)" // makes inserts slow..
+                   ");" );
     if( !query.exec() ) {
         kDebug() << "Error creating 'stop_times' table:" << query.lastError();
         *errorText = "Error creating 'stop_times' table: " + query.lastError().text();
@@ -209,9 +209,10 @@ bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText )
 
     // Create table for "calendar_dates.txt"
     query.prepare( "CREATE TABLE IF NOT EXISTS calendar_dates ("
-                   "service_id INTEGER PRIMARY KEY NOT NULL, " // (required) Uiquely identifies a set of dates when a service exception is available for one or more routes, Each (service_id, date) pair can only appear once in "calendar_dates", if the a service_id value appears in both "calendar" and "calendar_dates", the information in "calendar_dates" modifies the service information specified in "calendar", referenced by "trips"
+                   "service_id INTEGER NOT NULL, " // (required) Uiquely identifies a set of dates when a service exception is available for one or more routes, Each (service_id, date) pair can only appear once in "calendar_dates", if the a service_id value appears in both "calendar" and "calendar_dates", the information in "calendar_dates" modifies the service information specified in "calendar", referenced by "trips"
                    "date VARCHAR(8) NOT NULL, " // (required) Specifies a particular date when service availability is different than the norm, in yyyyMMdd format
-                   "exception_type TINYINT  NOT NULL" // (required) Indicates whether service is available on the date specified in the date field (1: The service has been added for the date, 2: The service has been removed)
+                   "exception_type TINYINT  NOT NULL, " // (required) Indicates whether service is available on the date specified in the date field (1: The service has been added for the date, 2: The service has been removed)
+                   "PRIMARY KEY(service_id, date)"
                    ")" );
     if( !query.exec() ) {
         kDebug() << "Error creating 'calendar_dates' table:" << query.lastError();
