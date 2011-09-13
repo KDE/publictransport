@@ -28,3 +28,13 @@ qt4_automoc( ${DeparturesTest_SRCS} )
 add_executable( DeparturesTest ${DeparturesTest_SRCS} )
 add_test( DeparturesTest DeparturesTest )
 target_link_libraries( DeparturesTest ${QT_QTTEST_LIBRARY} ${KDE4_PLASMA_LIBS} )
+
+set( GeneralTransitTest_SRCS GeneralTransitTest.cpp
+    ../generaltransitfeed_importer.cpp
+    ../generaltransitfeed_database.cpp
+)
+qt4_automoc( ${GeneralTransitTest_SRCS} )
+add_executable( GeneralTransitTest ${GeneralTransitTest_SRCS} )
+add_test( GeneralTransitTest GeneralTransitTest )
+target_link_libraries( GeneralTransitTest ${QT_QTTEST_LIBRARY} ${KDE4_CORE_LIBS} ${KDE4_KUTILS_LIBS}
+                       ${QT_QTCORE_LIBRARY} ${QT_QTSQL_LIBRARY} )

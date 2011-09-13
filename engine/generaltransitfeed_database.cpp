@@ -185,11 +185,6 @@ bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText )
         *errorText = "Error creating 'stop_times' table: " + query.lastError().text();
         return false;
     }
-//     query.prepare( "CREATE INDEX stop_times_trip_id ON stop_times(trip_id, stop_id, departure_time);" );
-//     if( !query.exec() ) {
-//         kDebug() << "Error creating index for 'trip_id' in 'stop_times' table:" << query.lastError();
-//         return false;
-//     }
     // Create an index to quickly access trip information sorted by stop_sequence,
     // eg. for route stop lists for departures
     query.prepare( "CREATE INDEX IF NOT EXISTS stop_times_trip ON stop_times(trip_id, stop_sequence, stop_id);" );
@@ -198,25 +193,13 @@ bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText )
         *errorText = "Error creating index for 'trip_id' in 'stop_times' table: " + query.lastError().text();
         return false;
     }
-//     query.prepare( "CREATE INDEX stop_times_trip_id3 ON stop_times(departure_time, trip_id, stop_id);" );
-//     if( !query.exec() ) {
-//         kDebug() << "Error creating index for 'trip_id' in 'stop_times' table:" << query.lastError();
-//         return false;
-//     }
 
     // Create table for "calendar.txt" (exceptions in "calendar_dates.txt")
     query.prepare( "CREATE TABLE IF NOT EXISTS calendar ("
                    "service_id INTEGER UNIQUE PRIMARY KEY NOT NULL, " // (required) Uiquely identifies a set of dates when service is available for one or more routes
-                   "weekdays VARCHAR(7) NOT NULL, "
-//                    "monday TINYINT  NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Mondays (1: available on Mondays, 0: not available)
-//                    "tuesday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Tuesdays
-//                    "wednesday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Wednesdays
-//                    "thursday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Thursdays
-//                    "friday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Fridays
-//                    "saturday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Saturdays
-//                    "sunday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Sundays
-                   "start_date VARCHAR(8) NOT NULL, " // (required) Contains the start date for the service, in YYYYMMDD format
-                   "end_date VARCHAR(8) NOT NULL" // (required) Contains the end date for the service, in YYYYMMDD format
+                   "weekdays VARCHAR(7) NOT NULL, " // (required) Combines GTFS fields monday-sunday into a string of '1' (available at that weekday) and '0' (not available)
+                   "start_date VARCHAR(8) NOT NULL, " // (required) Contains the start date for the service, in yyyyMMdd format
+                   "end_date VARCHAR(8) NOT NULL" // (required) Contains the end date for the service, in yyyyMMdd format
                    ")" );
     if( !query.exec() ) {
         kDebug() << "Error creating 'calendar' table:" << query.lastError();
@@ -227,7 +210,7 @@ bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText )
     // Create table for "calendar_dates.txt"
     query.prepare( "CREATE TABLE IF NOT EXISTS calendar_dates ("
                    "service_id INTEGER PRIMARY KEY NOT NULL, " // (required) Uiquely identifies a set of dates when a service exception is available for one or more routes, Each (service_id, date) pair can only appear once in "calendar_dates", if the a service_id value appears in both "calendar" and "calendar_dates", the information in "calendar_dates" modifies the service information specified in "calendar", referenced by "trips"
-                   "date VARCHAR(8) NOT NULL, " // (required) Specifies a particular date when service availability is different than the norm, in YYYYMMDD format
+                   "date VARCHAR(8) NOT NULL, " // (required) Specifies a particular date when service availability is different than the norm, in yyyyMMdd format
                    "exception_type TINYINT  NOT NULL" // (required) Indicates whether service is available on the date specified in the date field (1: The service has been added for the date, 2: The service has been removed)
                    ")" );
     if( !query.exec() ) {
@@ -316,7 +299,7 @@ QVariant GeneralTransitFeedDatabase::convertFieldValue( const QString &fieldValu
         return timeString.left(2).toInt() * 60 * 60 + timeString.mid(3, 2).toInt() * 60
                 + timeString.right(2).toInt();
     } case Date:
-        return QDate::fromString( fieldValue, "yyyyMMdd" );
+        return /*QDate::fromString(*/ fieldValue/*, "yyyyMMdd" )*/;
     case Double:
         return fieldValue.toDouble();
     case Url:
@@ -335,9 +318,7 @@ GeneralTransitFeedDatabase::FieldType GeneralTransitFeedDatabase::typeOfField(
     if ( fieldName == "min_transfer_time" || fieldName == "transfer_type" ||
          fieldName == "headway_secs" || fieldName == "transfer_duration" ||
          fieldName == "transfers" || fieldName == "payment_method" ||
-         fieldName == "exception_type" || fieldName == "monday" || fieldName == "tuesday" ||
-         fieldName == "thursday" || fieldName == "friday" || fieldName == "saturday" ||
-         fieldName == "sunday" || fieldName == "shape_dist_traveled" ||
+         fieldName == "exception_type" || fieldName == "shape_dist_traveled" ||
          fieldName == "drop_off_type" || fieldName == "pickup_type" ||
          fieldName == "stop_sequence" || fieldName == "shape_pt_sequence" ||
          fieldName == "parent_station" || fieldName == "location_type" ||

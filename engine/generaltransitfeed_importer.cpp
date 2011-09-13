@@ -127,7 +127,8 @@ void GeneralTransitFeedImporter::run()
         return;
     }
 
-    const QString tmpGtfsDir = KGlobal::dirs()->saveLocation( "tmp", fileName + '/' );
+    const QString tmpGtfsDir = KGlobal::dirs()->saveLocation( "tmp",
+            QFileInfo(fileName).fileName() + '/' );
     KZip gtfsZipFile( fileName );
     if ( !gtfsZipFile.open(QIODevice::ReadOnly) ) {
         setError( FatalError, "Can not open file " + fileName + ": " +
@@ -140,6 +141,7 @@ void GeneralTransitFeedImporter::run()
     QFileInfoList fileInfos = QDir( tmpGtfsDir ).entryInfoList( QDir::Files | QDir::NoDotAndDotDot );
     if ( fileInfos.isEmpty() ) {
         setError( FatalError, "Empty GTFS feed: " + fileName );
+        kDebug() << "Extracted to" << tmpGtfsDir;
         return;
     }
 
@@ -277,7 +279,11 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
     QStringList unavailableFieldNames; // Field names not used in the database
     QList<int> unavailableFieldIndices;
     for ( int i = fieldNames.count() - 1; i >= 0; --i ) {
-        if ( !table.contains(fieldNames[i]) ) {
+        const QString fieldName = fieldNames[i];
+        if ( !table.contains(fieldName) && fieldName != "monday" && fieldName != "tuesday" &&
+             fieldName != "wednesday" && fieldName != "thursday" && fieldName != "friday" &&
+             fieldName != "saturday" && fieldName != "sunday" )
+        {
             // The current field name is not available in the database, skip it's value in each row
             unavailableFieldNames << fieldNames[i];
             unavailableFieldIndices << i;
@@ -328,7 +334,7 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
         QVariantList fieldValues;
         if ( readFields(line, &fieldValues, fieldTypes, fieldNames.count()) ) {
             // Remove values for fields that do not exist in the database
-            for ( int i = unavailableFieldIndices.count() - 1; i >= 0; --i ) {
+            for ( int i = 0; i < unavailableFieldIndices.count(); ++i ) {
                 fieldValues.removeAt( unavailableFieldIndices[i] );
             }
 
@@ -336,26 +342,29 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
             if ( tableName == "calendar" ) {
                 QString weekdays = "0000000";
                 for ( int i = 0; i < fieldNames.count(); ++i ) {
+                    const QString fieldName = fieldNames[i];
                     if ( fieldValues[i].toInt() > 0 ) {
-                        const QString fieldName = fieldNames[i];
-                        if ( fieldName == "monday" ) {
+                        if ( fieldName == "sunday" ) {
                             weekdays[0] = '1';
-                        } else if ( fieldName == "tuesday" ) {
+                        } else if ( fieldName == "monday" ) {
                             weekdays[1] = '1';
-                        } else if ( fieldName == "wednesday" ) {
+                        } else if ( fieldName == "tuesday" ) {
                             weekdays[2] = '1';
-                        } else if ( fieldName == "thursday" ) {
+                        } else if ( fieldName == "wednesday" ) {
                             weekdays[3] = '1';
-                        } else if ( fieldName == "friday" ) {
+                        } else if ( fieldName == "thursday" ) {
                             weekdays[4] = '1';
-                        } else if ( fieldName == "saturday" ) {
+                        } else if ( fieldName == "friday" ) {
                             weekdays[5] = '1';
-                        } else if ( fieldName == "sunday" ) {
+                        } else if ( fieldName == "saturday" ) {
                             weekdays[6] = '1';
                         } else {
                             query.addBindValue( fieldValues[i] );
                         }
-                    } else {
+                    } else if ( fieldName != "monday" && fieldName != "tuesday" &&
+                        fieldName != "wednesday" && fieldName != "thursday" &&
+                        fieldName != "friday" && fieldName != "saturday" && fieldName != "sunday" )
+                    {
                         query.addBindValue( fieldValues[i] );
                     }
                 }
@@ -520,7 +529,7 @@ bool GeneralTransitFeedImporter::readFields( const QString& line, QVariantList *
         kDebug() << "Header contains" << expectedFieldCount << "fields, but a line was read with only"
                  << fieldValues->count() << "field values. Using empty/default values:";
         kDebug() << "Values: " << *fieldValues;
-        if ( fieldValues->count() < expectedFieldCount ) {
+        while ( fieldValues->count() < expectedFieldCount ) {
             fieldValues->append( QVariant() );
         }
 //         return false; Error is non-fatal
