@@ -127,14 +127,14 @@ void GeneralTransitFeedImporter::run()
         return;
     }
 
-    const QString tmpGtfsDir = KGlobal::dirs()->saveLocation( "tmp",
-            QFileInfo(fileName).fileName() + '/' );
     KZip gtfsZipFile( fileName );
     if ( !gtfsZipFile.open(QIODevice::ReadOnly) ) {
         setError( FatalError, "Can not open file " + fileName + ": " +
                               gtfsZipFile.device()->errorString() );
         return;
     }
+    const QString tmpGtfsDir = KGlobal::dirs()->saveLocation( "tmp",
+            QFileInfo(fileName).fileName() + "_dir/" );
     gtfsZipFile.directory()->copyTo( tmpGtfsDir );
     gtfsZipFile.close();
 
