@@ -367,7 +367,7 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
     // Sorting by 'arrival_time' may be a bit slower because is has no index in the database,
     // but if arrival_time values do not differ too much from the deaprture_time values, they
     // are also already sorted.
-    // TODO Use 'calendar' and 'calendar_dates' tables, merge weekday fields in calendar into one...
+    // The tables 'calendar' and 'calendar_dates' are also fully implemented by the query below.
     const QTime time = dateTime.time();
     const QString queryString = QString(
             "SELECT times.departure_time, times.arrival_time, times.stop_headsign, "
@@ -391,9 +391,11 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
                   "AND (calendar_dates.date IS NULL " // No matching record in calendar_dates table for today
                        "OR NOT (calendar_dates.exception_type=2)) " // Journey is not removed today
                   "AND (calendar.weekdays IS NULL " // No matching record in calendar table => always available
-                       "OR (strftime('%Y%m%d') >= calendar.start_date " // Current date is in the range...
-                           "AND strftime('%Y%m%d') <= calendar.end_date " // ...where the service is available...
-                           "AND substr(calendar.weekdays, strftime('%w') + 1, 1)='1')) " // ...and it's available at the current weekday
+                       "OR (strftime('%Y%m%d') BETWEEN calendar.start_date " // Current date is in the range...
+                                              "AND calendar.end_date " // ...where the service is available...
+                           "AND substr(calendar.weekdays, strftime('%w') + 1, 1)='1') " // ...and it's available at the current weekday
+                       "OR (calendar_dates.date IS NOT NULL " // Or there is a matching record in calendar_dates for today...
+                           "AND calendar_dates.exception_type=1)) " // ...and this record adds availability of the service for today
             "ORDER BY departure_time "
             "LIMIT %4" )
             .arg( stopId )
