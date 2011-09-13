@@ -247,6 +247,11 @@ public slots:
 			const QString &sourceName, const QString &city, const QString &stop,
 			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
+    void progress( TimetableAccessor *accessor, qreal progress, const QString &jobDescription,
+            const QUrl &requestUrl, const QString &serviceProvider,
+            const QString &sourceName, const QString &city, const QString &stop,
+            const QString &dataType, ParseDocumentMode parseDocumentMode );
+
 	/** @brief A directory with accessor info xmls was changed. */
 	void accessorInfoDirChanged( const QString &path );
 

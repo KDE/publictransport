@@ -182,6 +182,8 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 				accessorInfo->setAttributesForJourneys( attributesForJourneys );
             } else if ( name().compare("feedUrl", Qt::CaseInsensitive) == 0 ) {
                 accessorInfo->setDepartureRawUrl( readElementText() );
+            } else if ( name().compare("timeZone", Qt::CaseInsensitive) == 0 ) {
+                accessorInfo->setTimeZone( readElementText() );
 			} else if ( name().compare("sessionKey", Qt::CaseInsensitive) == 0 ) {
 				QString sessionKeyUrl, sessionKeyData;
 				SessionKeyPlace sessionKeyPlace;

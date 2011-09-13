@@ -468,6 +468,9 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 			connect( accessor,
 					 SIGNAL(errorParsing(TimetableAccessor*,ErrorType,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)),
 					 this, SLOT(errorParsing(TimetableAccessor*,ErrorType,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)) );
+            connect( accessor,
+                     SIGNAL(progress(TimetableAccessor*,qreal,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)),
+                     this, SLOT(progress(TimetableAccessor*,qreal,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)) );
 		}
 
 		if ( parseDocumentMode == ParseForDeparturesArrivals ) {
@@ -932,6 +935,30 @@ void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
 	setData( sourceName, "errorCode", errorType );
 	setData( sourceName, "errorString", errorString );
 	setData( sourceName, "updated", QDateTime::currentDateTime() );
+}
+
+void PublicTransportEngine::progress( TimetableAccessor *accessor, qreal progress,
+        const QString &jobDescription, const QUrl &requestUrl, const QString &serviceProvider,
+        const QString &sourceName, const QString &city, const QString &stop, const QString &dataType,
+        ParseDocumentMode parseDocumentMode )
+{
+    setData( sourceName, "serviceProvider", serviceProvider );
+    setData( sourceName, "count", 0 );
+    setData( sourceName, "progress", progress );
+    setData( sourceName, "jobDescription", jobDescription );
+    setData( sourceName, "requestUrl", requestUrl );
+    if ( parseDocumentMode == ParseForDeparturesArrivals ) {
+        setData( sourceName, "parseMode", "departures" );
+    } else if ( parseDocumentMode == ParseForJourneys ) {
+        setData( sourceName, "parseMode", "journeys" );
+    } else if ( parseDocumentMode == ParseForStopSuggestions ) {
+        setData( sourceName, "parseMode", "stopSuggestions" );
+    }
+    setData( sourceName, "receivedData", "nothing" );
+//     setData( sourceName, "error", true );
+//     setData( sourceName, "errorCode", errorType );
+//     setData( sourceName, "errorString", errorString );
+    setData( sourceName, "updated", QDateTime::currentDateTime() );
 }
 
 bool PublicTransportEngine::isSourceUpToDate( const QString& name )

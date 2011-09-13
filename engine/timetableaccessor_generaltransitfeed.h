@@ -25,9 +25,10 @@
 #define TIMETABLEACCESSOR_GOOGLETRANSIT_HEADER
 
 #include "timetableaccessor.h"
+#include "generaltransitfeed_importer.h"
 
 class KTimeZone;
-/** @class TimetableAccessorXml
+/** @class TimetableAccessorGeneralTransitFeed
 * @brief This class uses a database similiar to the GTFS structure to access public transport data.
 *
 * To fill the database with data from a GeneralTransitFeedSpecification feed (zip file) use
@@ -63,11 +64,15 @@ public:
             TimetableAccessorInfo *info = new TimetableAccessorInfo() );
     virtual ~TimetableAccessorGeneralTransitFeed();
 
-//     /** @brief Gets a list of features that this accessor supports. */
-//     virtual QStringList features() const;
+    /** @brief Gets a list of features that this accessor supports. */
+    virtual QStringList features() const;
 
 protected slots:
+    void downloadProgress( KJob *job, ulong percent );
     void feedReceived( KJob *job );
+
+    void importerProgress( qreal progress );
+    void importerFinished( GeneralTransitFeedImporter::State state, const QString &errorText );
 
 protected:
     virtual void requestDepartures( const QString &sourceName, const QString &city,
@@ -80,6 +85,9 @@ protected:
             const QString &dataType = QString(), bool usedDifferentUrl = false );
 
     void downloadFeed();
+    bool checkState( const QString &sourceName,
+            const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime,
+            const QString &dataType, bool useDifferentUrl, ParseDocumentMode parseMode );
 
 private:
     enum State {
@@ -89,7 +97,8 @@ private:
         Ready,
 
         ErrorDownloadingFeed = 10,
-        ErrorReadingFeed
+        ErrorReadingFeed,
+        ErrorInDatabase
     };
 
     /**
@@ -105,6 +114,10 @@ private:
 
     State m_state;
     AgencyInformations m_agencyCache; // Cache contents of the "agency" DB table, usally small, eg. only one agency
+
+    // Stores information about currently running download jobs
+    QHash<QString, JobInfos> m_jobInfos;
+    GeneralTransitFeedImporter *m_importer;
 };
 
 #endif // Multiple inclusion guard

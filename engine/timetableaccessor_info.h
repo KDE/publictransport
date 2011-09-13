@@ -108,6 +108,9 @@ public:
 	QString journeyRawUrl() const { return m_journeyRawUrl; };
 	/** @brief Raw url to an xml file for xml accessors */
 	QString stopSuggestionsRawUrl() const { return m_stopSuggestionsRawUrl; };
+
+    QString timeZone() const { return m_timeZone; };
+    void setTimeZone( const QString &timeZone ) { m_timeZone = timeZone; };
 	
 	QHash<QString, QString> attributesForStopSuggestions() const { return m_attributesForStopSuggestions; };
 	QHash<QString, QString> attributesForDepatures() const { return m_attributesForDepatures; };
@@ -431,6 +434,7 @@ protected:
 	bool m_useSeparateCityValue;
 	bool m_onlyUseCitiesInList;
 	QHash<QString, QString> m_hashCityNameToValue; // The city value is used for the url (e.g. "ba" for city name "bratislava").
+    QString m_timeZone;
 };
 
 #endif // TIMETABLEACCESSOR_INFO_HEADER

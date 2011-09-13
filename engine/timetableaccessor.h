@@ -420,6 +420,18 @@ signals:
 			const QString &sourceName, const QString &city, const QString &stop,
 			const QString &dataType, ParseDocumentMode parseDocumentMode );
 
+    /**
+     * @brief Reports progress of the accessor in performing an action.
+     *
+     * TODO
+     *
+     * @param progress A value between 0 (just started) and 1 (completed) indicating progress.
+     **/
+    void progress( TimetableAccessor *accessor, qreal progress, const QString &jobDescription,
+            const QUrl &requestUrl, const QString &serviceProvider,
+            const QString &sourceName, const QString &city, const QString &stop,
+            const QString &dataType, ParseDocumentMode parseDocumentMode );
+
 protected slots:
 	/** @brief All data of a journey list has been received. */
 	void result( KJob* job );
@@ -433,9 +445,6 @@ protected:
 	// Stores a session key, if it's needed by the accessor
 	QString m_sessionKey;
 	QTime m_sessionKeyGetTime;
-	
-private:
-	static QString gethex( ushort decimal );
 
 	struct JobInfos {
         // Mainly for QHash
@@ -477,10 +486,14 @@ private:
 	    int roundTrips;
 	};
 
-	// Stores information about currently running download jobs
-	QHash< KJob*, JobInfos > m_jobInfos;
-	
+
+private:
+    static QString gethex( ushort decimal );
+
 	bool m_idAlreadyRequested;
+
+    // Stores information about currently running download jobs
+    QHash< KJob*, JobInfos > m_jobInfos;
 };
 
 #endif // TIMETABLEACCESSOR_HEADER

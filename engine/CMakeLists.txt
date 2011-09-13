@@ -24,6 +24,7 @@ set( publictransport_engine_SRCS
     timetableaccessor_script.cpp
     timetableaccessor_generaltransitfeed.cpp
     generaltransitfeed_importer.cpp
+    generaltransitfeed_database.cpp
     scripting.cpp
     enums.cpp )
 

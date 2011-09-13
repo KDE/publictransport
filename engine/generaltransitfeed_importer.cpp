@@ -18,34 +18,68 @@
  */
 
 #include "generaltransitfeed_importer.h"
+#include "generaltransitfeed_database.h"
 
 #include <KZip>
 #include <KStandardDirs>
 #include <KDebug>
 
 #include <QDir>
-#include <QUrl>
-#include <QColor>
-
+#include <QVariant>
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
-#include <QSqlField>
 #include <QSqlRecord>
 #include <QSqlDriver>
 
 GeneralTransitFeedImporter::GeneralTransitFeedImporter( const QString &providerName )
+        : m_state(Initializing), m_quit(false)
 {
-    initDatabase( providerName );
-    if ( !createDatabaseTables() ) {
-        kDebug() << "Error initializing tables in the database!";
+    // Register state enum to be able to use it in queued connections
+    qRegisterMetaType< GeneralTransitFeedImporter::State >( "GeneralTransitFeedImporter::State" );
+
+    QMutexLocker locker( &m_mutex );
+    if ( !GeneralTransitFeedDatabase::initDatabase(providerName, &m_errorString) ) {
+        m_state = FatalError;
+        kDebug() << m_errorString;
     }
 }
 
-QString GeneralTransitFeedImporter::databasePath( const QString &providerName )
+GeneralTransitFeedImporter::~GeneralTransitFeedImporter()
 {
-    const QString dir = KGlobal::dirs()->saveLocation("data", "plasma_engine_publictransport/gtfs/");
-    return dir + providerName + ".sqlite";
+    QMutexLocker locker( &m_mutex );
+    m_quit = true;
+}
+
+void GeneralTransitFeedImporter::quit()
+{
+    if ( isRunning() ) {
+        QMutexLocker locker( &m_mutex );
+        m_quit = true;
+    }
+}
+
+void GeneralTransitFeedImporter::startImport( const QString &fileName )
+{
+    m_mutex.lock();
+    m_fileName = fileName;
+    m_mutex.unlock();
+
+    start();
+}
+
+void GeneralTransitFeedImporter::setError( GeneralTransitFeedImporter::State errorState,
+                                           const QString &errorText )
+{
+    m_mutex.lock();
+    m_state = errorState;
+    m_errorString = errorText;
+    kDebug() << errorText;
+    m_mutex.unlock();
+
+    if ( errorState == FatalError ) {
+        emit finished( errorState, errorText );
+    }
 }
 
 // The GTFS (GeneralTransitFeedSpecification) specification defines the following files:
@@ -78,35 +112,71 @@ QString GeneralTransitFeedImporter::databasePath( const QString &providerName )
 //          points between routes.
 //
 // (see http://code.google.com/intl/de-DE/transit/spec/transit_feed_specification.html#transitFeedFiles)
-bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileName )
+// bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileName )
+// {
+void GeneralTransitFeedImporter::run()
 {
+    m_mutex.lock();
+    m_state = Importing;
+    const QString fileName = m_fileName;
+    m_mutex.unlock();
+
+    QString errorText;
+    if ( !GeneralTransitFeedDatabase::createDatabaseTables(&errorText) ) {
+        setError( FatalError, "Error initializing tables in the database: " + errorText );
+        return;
+    }
+
     const QString tmpGtfsDir = KGlobal::dirs()->saveLocation( "tmp", fileName + '/' );
     KZip gtfsZipFile( fileName );
     if ( !gtfsZipFile.open(QIODevice::ReadOnly) ) {
-        kDebug() << "Can not open file" << fileName << gtfsZipFile.device()->errorString();
-        return false;
+        setError( FatalError, "Can not open file " + fileName + ": " +
+                              gtfsZipFile.device()->errorString() );
+        return;
     }
     gtfsZipFile.directory()->copyTo( tmpGtfsDir );
     gtfsZipFile.close();
 
-    bool errors = false;
     QFileInfoList fileInfos = QDir( tmpGtfsDir ).entryInfoList( QDir::Files | QDir::NoDotAndDotDot );
     if ( fileInfos.isEmpty() ) {
-        kDebug() << "Empty GTFS feed" << fileName << "extracted to" << tmpGtfsDir;
+        setError( FatalError, "Empty GTFS feed: " + fileName );
+        return;
     }
+
+    // Check required files in the feed and calculate total file size (for progress calculations)
+    QStringList requiredFiles;
+    requiredFiles << "agency.txt" << "stops.txt" << "routes.txt" << "trips.txt" << "stop_times.txt";
+    qint64 totalFileSize = 0;
+    foreach ( const QFileInfo &fileInfo, fileInfos ) {
+        requiredFiles.removeOne( fileInfo.fileName() );
+        totalFileSize += fileInfo.size();
+    }
+    if ( !requiredFiles.isEmpty() ) {
+        setError( FatalError, "Required file(s) missing in GTFS feed: " + requiredFiles.join(", ") );
+        return;
+    }
+
+    bool errors = false;
+    qint64 totalFilePosition = 0;
     foreach ( const QFileInfo &fileInfo, fileInfos ) {
         QStringList requiredFields;
+        int minimalRecordCount = 0;
         if ( fileInfo.fileName() == "agency.txt" ) {
             requiredFields << "agency_name" << "agency_url" << "agency_timezone";
+            minimalRecordCount = 1;
         } else if ( fileInfo.fileName() == "stops.txt" ) {
             requiredFields << "stop_id" << "stop_name" << "stop_lat" << "stop_lon";
+            minimalRecordCount = 1;
         } else if ( fileInfo.fileName() == "routes.txt" ) {
             requiredFields << "route_id" << "route_short_name" << "route_long_name" << "route_type";
+            minimalRecordCount = 1;
         } else if ( fileInfo.fileName() == "trips.txt" ) {
             requiredFields << "trip_id" << "route_id" << "service_id";
+            minimalRecordCount = 1;
         } else if ( fileInfo.fileName() == "stop_times.txt" ) {
             requiredFields << "trip_id" << "arrival_time" << "departure_time" << "stop_id"
                            << "stop_sequence";
+            minimalRecordCount = 1;
         } else if ( fileInfo.fileName() == "calendar.txt" ) {
             requiredFields << "service_id" << "monday" << "tuesday" << "wednesday" << "thursday"
                            << "friday" << "saturday" << "sunday" << "start_date" << "end_date";
@@ -120,6 +190,7 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
         } else if ( fileInfo.fileName() == "shapes.txt" ) {
             kDebug() << "Skipping 'shapes.txt', data is unused";
 //             requiredFields << "shape_id" << "shape_pt_lat" << "shape_pt_lon" << "shape_pt_sequence";
+            totalFilePosition += fileInfo.size();
             continue;
         } else if ( fileInfo.fileName() == "frequencies.txt" ) {
             requiredFields << "trip_id" << "start_time" << "end_time" << "headway_secs";
@@ -127,25 +198,44 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
             requiredFields << "from_stop_id" << "to_stop_id" << "transfer_type";
         } else {
             kDebug() << "Filename unexpected:" << fileInfo.fileName();
+            totalFilePosition += fileInfo.size();
             continue;
         }
 
-        if ( !writeGtfsDataToDatabase(fileInfo.filePath(), requiredFields) ) {
+        if ( !writeGtfsDataToDatabase(fileInfo.filePath(), requiredFields, minimalRecordCount,
+                                      totalFilePosition, totalFileSize) )
+        {
             errors = true;
-            continue;
         }
-    }
+        totalFilePosition += fileInfo.size();
+        emit progress( qreal(totalFilePosition) / qreal(totalFileSize) );
 
-    return !errors;
+        m_mutex.lock();
+        if ( m_quit ) {
+            m_mutex.unlock();
+            setError( FatalError, "Importing was cancelled" );
+            return;
+        }
+        m_mutex.unlock();
+    }
+// TODO Test required files...
+
+    m_mutex.lock();
+    m_state = errors ? FinishedWithErrors : FinishedSuccessfully;
+    emit finished( m_state );
+    m_mutex.unlock();
+    kDebug() << "Importer finished";
+    return;
 }
 
 bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileName,
-                                                          const QStringList &requiredFields )
+        const QStringList &requiredFields, int minimalRecordCount,
+        qint64 totalFilePosition, qint64 totalFileSize )
 {
     // Open the file
     QFile file( fileName );
     if ( !file.open(QIODevice::ReadOnly) ) {
-        kDebug() << "Cannot open file" << fileName;
+        setError( FatalError, "Cannot open file " + fileName );
         return false;
     }
 
@@ -153,13 +243,18 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
     QTextStream stream( &file );
     if ( stream.atEnd() ) {
         kDebug() << "Empty file" << fileName;
-        return false;
+        if ( minimalRecordCount == 0 ) {
+            return true;
+        } else {
+            setError( FatalError, "Empty file " + fileName );
+            return false;
+        }
     }
 
     // Open the database
     QSqlDatabase db = QSqlDatabase::database();
     if ( !db.isValid() ) {
-        kDebug() << "Can not open database";
+        setError( FatalError, "Can not open database" );
         return false;
     }
 
@@ -172,9 +267,9 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
         return false; // Error in header
     }
     // Get types of the fields
-    QList<QVariant::Type> fieldTypes;
+    QList<GeneralTransitFeedDatabase::FieldType> fieldTypes;
     foreach ( const QString &fieldName, fieldNames ) {
-        fieldTypes << typeOfField( fieldName );
+        fieldTypes << GeneralTransitFeedDatabase::typeOfField( fieldName );
     }
 
     QStringList availableFields;
@@ -237,9 +332,6 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
                 fieldValues.removeAt( unavailableFieldIndices[i] );
             }
 
-//             if ( counter < 10 ) // Print out the first 10 rows
-//                 qDebug() << fieldValues;
-
             // Add current field values to the prepared query and execute it
             if ( tableName == "calendar" ) {
                 QString weekdays = "0000000";
@@ -282,7 +374,7 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
             // New row has been inserted into the DB successfully
             ++counter;
             if ( counter > 0 && counter % 50000 == 0 ) {
-                // Start a new transaction after 10000 INSERTs
+                // Start a new transaction after 50000 INSERTs
                 if ( !db.driver()->commitTransaction() ) {
                     qDebug() << db.lastError();
                 }
@@ -290,7 +382,17 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
                     qDebug() << db.lastError();
                 }
 
-                qDebug() << "Done:" << (qreal(100 * file.pos()) / qreal(file.size())) << '%';
+                // Report progress TODO
+//                 emit progress( qreal(file.pos()) / qreal(file.size()) );
+                emit progress( qreal(totalFilePosition + file.pos()) / qreal(totalFileSize) );
+
+                // Check if the job should be cancelled
+                m_mutex.lock();
+                if ( m_quit ) {
+                    setError( FatalError, "Importer was cancelled" );
+                    return false;
+                }
+                m_mutex.unlock();
             }
         } else {
             continue;
@@ -307,23 +409,30 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
     }
 
     // Return true (success) if at least one stop has been read
-    return counter > 0;
+    if ( counter >= minimalRecordCount ) {
+        return true;
+    } else {
+        setError( FatalError, "Not enough records found in " + tableName );
+        kDebug() << "Minimal record count is" << minimalRecordCount << "but only" << counter
+                 << "records were added";
+        return false;
+    }
 }
 
 bool GeneralTransitFeedImporter::readHeader( const QString &header, QStringList *fieldNames,
-                                                 const QStringList &requiredFields )
+                                             const QStringList &requiredFields )
 {
     *fieldNames = header.split(',');
 
     if ( fieldNames->isEmpty() ) {
-        kDebug() << "No field names found in header:" << header;
+        setError( FatalError, "No field names found in header: " + header );
         return false;
     }
 
     // Only allow alphanumerical characters as field names (and prevent SQL injection).
     foreach ( const QString &fieldName, *fieldNames ) {
         if ( fieldName.contains(QRegExp("[^A-Z0-9_]", Qt::CaseInsensitive)) ) {
-            kDebug() << "Field name contains disallowed characters:" << fieldName;
+            setError( FatalError, "Field name contains disallowed characters: " + fieldName );
             return false;
         }
     }
@@ -332,8 +441,14 @@ bool GeneralTransitFeedImporter::readHeader( const QString &header, QStringList 
     foreach ( const QString &requiredField, requiredFields ) {
         if ( !fieldNames->contains(requiredField) ) {
             kDebug() << "Required field missing:" << requiredField;
-            kDebug() << "in this header line:" << header;
-            return false;
+            if ( requiredField == "agency_timezone" ) {
+                kDebug() << "Will use default timezone";
+                fieldNames->append( "agency_timezone" );
+            } else {
+                setError( FatalError, "Required field missing: " + requiredField );
+                kDebug() << "in this header line:" << header;
+                return false;
+            }
         }
     }
 
@@ -341,11 +456,10 @@ bool GeneralTransitFeedImporter::readHeader( const QString &header, QStringList 
 }
 
 bool GeneralTransitFeedImporter::readFields( const QString& line, QVariantList *fieldValues,
-                                             const QList<QVariant::Type> &fieldTypes,
-                                             int expectedFieldCount )
+        const QList<GeneralTransitFeedDatabase::FieldType> &fieldTypes, int expectedFieldCount )
 {
     int pos = 0;
-    QList<QVariant::Type>::ConstIterator fieldType = fieldTypes.constBegin();
+    QList<GeneralTransitFeedDatabase::FieldType>::ConstIterator fieldType = fieldTypes.constBegin();
     while ( pos < line.length() && fieldType != fieldTypes.constEnd() ) {
         int endPos = pos;
         QString newField;
@@ -366,6 +480,7 @@ bool GeneralTransitFeedImporter::readFields( const QString& line, QVariantList *
                 ++endPos;
             }
             if ( endPos >= line.length() || line[endPos] != '"' ) {
+                kDebug() << "Didn't find field end, wrong file format";
                 return false; // Didn't find field end, wrong file format
             }
 
@@ -377,6 +492,7 @@ bool GeneralTransitFeedImporter::readFields( const QString& line, QVariantList *
         } else if ( line[pos] == ',' ) {
             // Empty field, newField stays empty
             ++pos;
+
         } else {
             // Field without quotation marks, read until the next ','
             endPos = line.indexOf( ',', pos );
@@ -390,328 +506,27 @@ bool GeneralTransitFeedImporter::readFields( const QString& line, QVariantList *
         }
 
         // Append the new field value
-        fieldValues->append( convertFieldValue(newField, *fieldType) );
+        fieldValues->append( GeneralTransitFeedDatabase::convertFieldValue(newField, *fieldType) );
         ++fieldType;
+
+        if ( pos == line.length() && line[pos - 1] == ',' ) {
+            // The current line ends after a ','. Add another empty field:
+            fieldValues->append( GeneralTransitFeedDatabase::convertFieldValue(QString(), *fieldType) );
+            ++fieldType;
+        }
     }
 
     if ( fieldValues->count() < expectedFieldCount ) {
         kDebug() << "Header contains" << expectedFieldCount << "fields, but a line was read with only"
-                 << fieldValues->count() << "field values, skipping:";
+                 << fieldValues->count() << "field values. Using empty/default values:";
         kDebug() << "Values: " << *fieldValues;
-        return false;
+        if ( fieldValues->count() < expectedFieldCount ) {
+            fieldValues->append( QVariant() );
+        }
+//         return false; Error is non-fatal
     }
 
     return true;
 }
 
-bool GeneralTransitFeedImporter::initDatabase( const QString &providerName )
-{
-    QSqlDatabase db = QSqlDatabase::addDatabase( "QSQLITE" );
-    if ( !db.isValid() ) {
-        kDebug() << "Error adding a QSQLITE database" << db.lastError();
-        return false;
-    }
-
-    db.setDatabaseName( databasePath(providerName) );
-    if ( !db.open() ) {
-        kDebug() << "Error opening the database connection" << db.lastError();
-        return false;
-    }
-
-    return true;
-}
-
-bool GeneralTransitFeedImporter::createDatabaseTables()
-{
-    QSqlQuery query;
-    kDebug() << "Create tables";
-
-    // Create table for "agency.txt" TODO agency_id only referenced from routes => merge tables?
-    query.prepare( "CREATE TABLE IF NOT EXISTS agency ("
-                   "agency_id INTEGER UNIQUE PRIMARY KEY, " // (optional for gtfs with a single agency)
-                   "agency_name VARCHAR(256) NOT NULL, " // (required) The name of the agency
-                   "agency_url VARCHAR(512) NOT NULL, " // (required) URL of the transit agency
-                   "agency_timezone VARCHAR(256) NOT NULL, " // (required) Timezone name, see http://en.wikipedia.org/wiki/List_of_tz_zones
-                   "agency_lang VARCHAR(2), " // (optional) A two-letter ISO 639-1 code for the primary language used by this transit agency
-                   "agency_phone VARCHAR(64)" // (optional) A single voice telephone number for the agency (can contain punctuation marks)
-//                    "agency_fare_url VARCHAR(512)" // (optional) URL of a website about fares of the transit agency (found in TriMet's GTFS data)
-                   ")" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating 'agency' table:" << query.lastError();
-        return false;
-    }
-
-    // Create table for "routes.txt"
-    // Values for the "route_type" field:
-    //     0 - Tram, Streetcar, Light rail. Any light rail or street level system within a metropolitan area.
-    //     1 - Subway, Metro. Any underground rail system within a metropolitan area.
-    //     2 - Rail. Used for intercity or long-distance travel.
-    //     3 - Bus. Used for short- and long-distance bus routes.
-    //     4 - Ferry. Used for short- and long-distance boat service.
-    //     5 - Cable car. Used for street-level cable cars where the cable runs beneath the car.
-    //     6 - Gondola, Suspended cable car. Typically used for aerial cable cars where the car is suspended from the cable.
-    //     7 - Funicular. Any rail system designed for steep inclines.
-    query.prepare( "CREATE TABLE IF NOT EXISTS routes ("
-                   "route_id INTEGER UNIQUE PRIMARY KEY NOT NULL, " // (required)
-                   "agency_id INTEGER, " // (optional) Defines an agency for the route
-                   "route_short_name VARCHAR(128), " // (required) The short name of a route (can be an empty (NULL in DB) string, then route_long_name is used)
-                   "route_long_name VARCHAR(256), " // (required) The long name of a route (can be an empty (NULL in DB) string, then route_short_name is used)
-                   "route_desc VARCHAR(256), " // (optional) Additional information
-                   "route_type INTEGER NOT NULL, " // (required) The type of transportation used on a route (see above)
-                   "route_url VARCHAR(512), " // (optional) URL of a web page about a particular route
-                   "route_color VARCHAR(6), " // (optional) The (background) color for a route as a six-character hexadecimal number, eg. 00FFFF, default is white
-                   "route_text_color VARCHAR(6), " // (optional) The text color for a route as a six-character hexadecimal number, eg. 00FFFF, default is black
-                   "FOREIGN KEY(agency_id) REFERENCES agency(agency_id)"
-                   ")" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating 'routes' table:" << query.lastError();
-        return false;
-    }
-
-    // Create table for "stops.txt"
-    query.prepare( "CREATE TABLE IF NOT EXISTS stops ("
-                   "stop_id INTEGER UNIQUE PRIMARY KEY NOT NULL, " // (required)
-                   "stop_code VARCHAR(30), " // (optional) Makes stops uniquely identifyable by passengers
-                   "stop_name VARCHAR(256) NOT NULL, " // (required) The name of the stop
-                   "stop_desc VARCHAR(256), " // (optional) Additional information
-                   "stop_lat REAL NOT NULL, " // (required) The WGS 84 latitude of the stop
-                   "stop_lon REAL NOT NULL, " // (required) The WGS 84 longitude of the stop from -180 to 180
-                   "zone_id INTEGER, " // (optional) The fare zone ID for a stop => fare_rules.txt
-                   "stop_url VARCHAR(512), " // (optional) URL of a web page about a particular stop
-                   "location_type TINYINT, " // (optional) "1": Station (with one or more stops), "0" or NULL: Stop
-                   "direction VARCHAR(30), " // (optional)
-                   "position VARCHAR(30), "
-                   "parent_station INTEGER" // (optional) stop_id of a parent station (with location_type == 1)
-                   ");" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating 'stops' table:" << query.lastError();
-        return false;
-    }
-    query.prepare( "CREATE INDEX stops_stop_name_id ON stops(stop_id, stop_name);" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating index for 'stop_name' in 'stops' table:" << query.lastError();
-        return false;
-    }
-
-// Not used
-//     // Create table for "shapes.txt"
-//     query.prepare( "CREATE TABLE IF NOT EXISTS shapes ("
-//                    "shape_id INTEGER UNIQUE PRIMARY KEY NOT NULL, " // (required)
-//                    "shape_pt_lat REAL NOT NULL, " // (required) The WGS 84 latitude of a point in a shape
-//                    "shape_pt_lon REAL NOT NULL, " // (required) The WGS 84 longitude of a point in a shape from -180 to 180
-//                    "shape_pt_sequence INTEGER NOT NULL, " // (required) Associates the latitude and longitude of a shape point with its sequence order along the shape
-//                    "shape_dist_traveled REAL" // (optional) If used, positions a shape point as a distance traveled along a shape from the first shape point
-//                    ")" );
-//     if( !query.exec() ) {
-//         qDebug() << "Error creating 'shapes' table:" << query.lastError();
-//         return false;
-//     }
-
-    // Create table for "trips.txt"
-    query.prepare( "CREATE TABLE IF NOT EXISTS trips ("
-                   "trip_id INTEGER UNIQUE PRIMARY KEY NOT NULL, " // (required) TODO trip_id only referenced from (small) frequencies and (big) stop_times => merge?
-                   "route_id INTEGER NOT NULL, " // (required) Uniquely identifies a route (routes.txt)
-                   "service_id INTEGER NOT NULL, " // (required) Uniquely identifies a set of dates when service is available for one or more routes (in "calendar" or "calendar_dates")
-                   "trip_headsign VARCHAR(256), " // (optional) The text that appears on a sign that identifies the trip's destination to passengers
-                   "trip_short_name VARCHAR(256), " // (optional) The text that appears in schedules and sign boards to identify the trip to passengers
-                   "direction_id TINYINT, " // (optional) A binary value to distinguish between bi-directional trips with the same route_id
-                   "block_id INTEGER, " // (optional) Identifies the block to which the trip belongs. A block consists of two or more sequential trips made using the same vehicle, where a passenger can transfer from one trip to the next just by staying in the vehicle.
-                   "shape_id INTEGER, " // (optional) Uniquely identifies a shape (shapes.txt)
-                   "FOREIGN KEY(route_id) REFERENCES routes(route_id), "
-                   "FOREIGN KEY(shape_id) REFERENCES shapes(shape_id)"
-                   ")" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating 'trips' table:" << query.lastError();
-        return false;
-    }
-
-    // Create table for "stop_times.txt"
-    query.prepare( "CREATE TABLE IF NOT EXISTS stop_times ("
-                   "trip_id INTEGER NOT NULL, " // (required) Uniquely identifies a trip (trips.txt)
-                   "arrival_time INTEGER NOT NULL, " // (required) Specifies the arrival time at a specific stop for a specific trip on a route, HH:MM:SS or H:MM:SS, can be > 23:59:59 for times on the next day, eg. for trips that span with multiple dates
-                   "departure_time INTEGER NOT NULL, " // (required) Specifies the departure time from a specific stop for a specific trip on a route, HH:MM:SS or H:MM:SS, can be > 23:59:59 for times on the next day, eg. for trips that span with multiple dates
-                   "stop_id INTEGER NOT NULL, " // (required) Uniquely identifies a stop (with location_type == 0, if used)
-                   "stop_sequence INTEGER NOT NULL, " // (required) Identifies the order of the stops for a particular trip
-                   "stop_headsign VARCHAR(256), " // (optional) The text that appears on a sign that identifies the trip's destination to passengers. Used to override the default trip_headsign when the headsign changes between stops.
-                   "pickup_type TINYINT, " // (optional) Indicates whether passengers are picked up at a stop as part of the normal schedule or whether a pickup at the stop is not available, 0: Regularly scheduled pickup, 1: No pickup available, 2: Must phone agency to arrange pickup, 3: Must coordinate with driver to arrange pickup, default is 0
-                   "drop_off_type TINYINT, " // (optional) Indicates whether passengers are dropped off at a stop as part of the normal schedule or whether a drop off at the stop is not available, 0: Regularly scheduled drop off, 1: No drop off available, 2: Must phone agency to arrange drop off, 3: Must coordinate with driver to arrange drop off, default is 0
-                   "shape_dist_traveled TINYINT, " // (optional) If used, positions a stop as a distance from the first shape point (same unit as in shapes.txt)
-                   "FOREIGN KEY(trip_id) REFERENCES trips(trip_id), "
-                   "FOREIGN KEY(stop_id) REFERENCES stops(stop_id), "
-                   "PRIMARY KEY(stop_id, departure_time, trip_id)" //, stop_id)" // makes inserts slow..
-                   ");" ); // CREATE INDEX id ON stop_times(stop_id, departure_time);" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating 'stop_times' table:" << query.lastError();
-        return false;
-    }
-//     query.prepare( "CREATE INDEX stop_times_trip_id ON stop_times(trip_id, stop_id, departure_time);" );
-//     if( !query.exec() ) {
-//         qDebug() << "Error creating index for 'trip_id' in 'stop_times' table:" << query.lastError();
-//         return false;
-//     }
-    // Create an index to quickly access trip information sorted by stop_sequence,
-    // eg. for route stop lists for departures
-    query.prepare( "CREATE INDEX stop_times_trip ON stop_times(trip_id, stop_sequence, stop_id);" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating index for 'trip_id' in 'stop_times' table:" << query.lastError();
-        return false;
-    }
-//     query.prepare( "CREATE INDEX stop_times_trip_id3 ON stop_times(departure_time, trip_id, stop_id);" );
-//     if( !query.exec() ) {
-//         qDebug() << "Error creating index for 'trip_id' in 'stop_times' table:" << query.lastError();
-//         return false;
-//     }
-
-    // Create table for "calendar.txt" (exceptions in "calendar_dates.txt")
-    query.prepare( "CREATE TABLE IF NOT EXISTS calendar ("
-                   "service_id INTEGER UNIQUE PRIMARY KEY NOT NULL, " // (required) Uiquely identifies a set of dates when service is available for one or more routes
-                   "weekdays VARCHAR(7) NOT NULL, "
-//                    "monday TINYINT  NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Mondays (1: available on Mondays, 0: not available)
-//                    "tuesday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Tuesdays
-//                    "wednesday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Wednesdays
-//                    "thursday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Thursdays
-//                    "friday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Fridays
-//                    "saturday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Saturdays
-//                    "sunday TINYINT NOT NULL, " // (required) A binary value that indicates whether the service is valid for all Sundays
-                   "start_date VARCHAR(8) NOT NULL, " // (required) Contains the start date for the service, in YYYYMMDD format
-                   "end_date VARCHAR(8) NOT NULL" // (required) Contains the end date for the service, in YYYYMMDD format
-                   ")" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating 'calendar' table:" << query.lastError();
-        return false;
-    }
-
-    // Create table for "calendar_dates.txt"
-    query.prepare( "CREATE TABLE IF NOT EXISTS calendar_dates ("
-                   "service_id INTEGER PRIMARY KEY NOT NULL, " // (required) Uiquely identifies a set of dates when a service exception is available for one or more routes, Each (service_id, date) pair can only appear once in "calendar_dates", if the a service_id value appears in both "calendar" and "calendar_dates", the information in "calendar_dates" modifies the service information specified in "calendar", referenced by "trips"
-                   "date VARCHAR(8) NOT NULL, " // (required) Specifies a particular date when service availability is different than the norm, in YYYYMMDD format
-                   "exception_type TINYINT  NOT NULL" // (required) Indicates whether service is available on the date specified in the date field (1: The service has been added for the date, 2: The service has been removed)
-                   ")" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating 'calendar_dates' table:" << query.lastError();
-        return false;
-    }
-
-    // Create table for "fare_attributes.txt"
-    query.prepare( "CREATE TABLE IF NOT EXISTS fare_attributes ("
-                   "fare_id INTEGER UNIQUE PRIMARY KEY NOT NULL, " // (required) Uniquely identifies a fare class
-                   "price DECIMAL(5,2) NOT NULL, " // (required) The fare price, in the unit specified by currency_type
-                   "currency_type VARCHAR(3) NOT NULL, " // (required) Defines the currency used to pay the fare, ISO 4217 alphabetical currency code, see http://www.iso.org/iso/en/prods-services/popstds/currencycodeslist.html
-                   "payment_method TINYINT NOT NULL, " // (required) Indicates when the fare must be paid (0: paid on board, 1: must be paid before boarding)
-                   "transfers TINYINT, " // (required in fare_attributes.txt, but may be empty => use NULL here) Specifies the number of transfers permitted on this fare (0: no transfers permitted on this fare, 1: passenger may transfer once, 2: passenger may transfer twice, (empty): Unlimited transfers are permitted)
-                   "transfer_duration INTEGER" // (optional) Specifies the length of time in seconds before a transfer expires
-                   ")" );
-    if( !query.exec() ) {
-        qDebug() << query.lastError();
-        return false;
-    }
-
-    // Create table for "fare_rules.txt"
-    query.prepare( "CREATE TABLE IF NOT EXISTS fare_rules ("
-                   "fare_id INTEGER NOT NULL, " // (required) Uniquely identifies a fare class
-                   "route_id INTEGER, " // (optional) Associates the fare ID with a route
-                   "origin_id INTEGER, " // (optional) Associates the fare ID with an origin zone ID
-                   "destination_id INTEGER, " // (optional) Associates the fare ID with a destination zone ID
-                   "contains_id INTEGER, " // (optional) Associates the fare ID with a zone ID (intermediate zone)
-                   "FOREIGN KEY(fare_id) REFERENCES fare_attributes(fare_id), "
-                   "FOREIGN KEY(route_id) REFERENCES routes(route_id), "
-                   "FOREIGN KEY(origin_id) REFERENCES stops(stop_id), "
-                   "FOREIGN KEY(destination_id) REFERENCES stops(stop_id), "
-                   "FOREIGN KEY(contains_id) REFERENCES stops(stop_id)"
-                   ")" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating 'fare_rules' table:" << query.lastError();
-        return false;
-    }
-
-    // Create table for "frequencies.txt"
-    query.prepare( "CREATE TABLE IF NOT EXISTS frequencies ("
-                   "trip_id INTEGER PRIMARY KEY NOT NULL, " // (required) Identifies a trip on which the specified frequency of service applies
-                   "start_time INTEGER NOT NULL, " // (required) Specifies the time at which service begins with the specified frequency, HH:MM:SS or H:MM:SS, can be > 23:59:59 for times on the next day, eg. for trips that span with multiple dates
-                   "end_time INTEGER NOT NULL, " // (required) Indicates the time at which service changes to a different frequency (or ceases) at the first stop in the trip, HH:MM:SS or H:MM:SS, can be > 23:59:59 for times on the next day, eg. for trips that span with multiple dates
-                   "headway_secs INTEGER NOT NULL, " // (required) Indicates the time between departures from the same stop (headway) for this trip type, during the time interval specified by start_time and end_time, in seconds
-                   "FOREIGN KEY(trip_id) REFERENCES trips(trip_id)"
-                   ")" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating 'frequencies' table:" << query.lastError();
-        return false;
-    }
-
-    // Create table for "transfers.txt"
-    query.prepare( "CREATE TABLE IF NOT EXISTS transfers ("
-                   "from_stop_id INTEGER NOT NULL, " // (required) Identifies a stop or station where a connection between routes begins
-                   "to_stop_id INTEGER NOT NULL, " // (required) Identifies a stop or station where a connection between routes ends
-                   "transfer_type INTEGER NOT NULL, " // (required) Specifies the type of connection for the specified (from_stop_id, to_stop_id) pair (0 or empty: This is a recommended transfer point between two routes, 1: This is a timed transfer point between two routes. The departing vehicle is expected to wait for the arriving one, with sufficient time for a passenger to transfer between routes, 2: This transfer requires a minimum amount of time between arrival and departure to ensure a connection. The time required to transfer is specified by min_transfer_time, 3: Transfers are not possible between routes at this location)
-                   "min_transfer_time INTEGER, " // (optional) When a connection between routes requires an amount of time between arrival and departure (transfer_type=2), the min_transfer_time field defines the amount of time that must be available in an itinerary to permit a transfer between routes at these stops. The min_transfer_time must be sufficient to permit a typical rider to move between the two stops, including buffer time to allow for schedule variance on each route, in seconds
-                   "FOREIGN KEY(from_stop_id) REFERENCES stops(stop_id), "
-                   "FOREIGN KEY(to_stop_id) REFERENCES stops(stop_id)"
-                   ")" );
-    if( !query.exec() ) {
-        qDebug() << "Error creating 'transfers' table:" << query.lastError();
-        return false;
-    }
-
-    return true;
-}
-
-//  TODO Replace QVariant::Type with an own Enum
-QVariant GeneralTransitFeedImporter::convertFieldValue( const QString &fieldValue,
-                                                        QVariant::Type type )
-{
-    switch ( type ) {
-    case QVariant::UInt:
-        return qHash( fieldValue ); // Use the hash to convert string IDs
-    case QVariant::Int:
-        return fieldValue.toInt();
-    case QVariant::Time: {
-        // May contain hour values >= 24 (for times the next day), which is no valid QTime
-        // Convert valid time format 'h:mm:ss' to 'hh:mm:ss'
-        const QString timeString = fieldValue.length() == 7 ? '0' + fieldValue : fieldValue;
-        return timeString.left(2).toInt() * 60 * 60 + timeString.mid(3, 2).toInt() * 60
-                + timeString.right(2).toInt();
-    } case QVariant::Date:
-        return QDate::fromString( fieldValue, "yyyyMMdd" );
-    case QVariant::Double:
-        return fieldValue.toDouble();
-    case QVariant::Url:
-        return QUrl( fieldValue );
-    case QVariant::Color:
-        return QColor( '#' + fieldValue );
-    case QVariant::String:
-    default:
-        return fieldValue;
-    }
-}
-
-QVariant::Type GeneralTransitFeedImporter::typeOfField( const QString &fieldName )
-{
-    if ( fieldName == "min_transfer_time" || fieldName == "transfer_type" ||
-         fieldName == "headway_secs" || fieldName == "transfer_duration" ||
-         fieldName == "transfers" || fieldName == "payment_method" ||
-         fieldName == "exception_type" || fieldName == "monday" || fieldName == "tuesday" ||
-         fieldName == "thursday" || fieldName == "friday" || fieldName == "saturday" ||
-         fieldName == "sunday" || fieldName == "shape_dist_traveled" ||
-         fieldName == "drop_off_type" || fieldName == "pickup_type" ||
-         fieldName == "stop_sequence" || fieldName == "shape_pt_sequence" ||
-         fieldName == "parent_station" || fieldName == "location_type" ||
-         fieldName == "route_type" )
-    {
-        return QVariant::Int;
-    } else if ( fieldName.endsWith("_id") ) {
-        return QVariant::UInt;
-    } else if ( fieldName == "start_time" || fieldName == "end_time" ||
-         fieldName == "arrival_time" || fieldName == "departure_time" )
-    {
-        return QVariant::Time; // A time stored as INTEGER
-    } else if ( fieldName == "date" || fieldName == "startDate" || fieldName == "endDate" ) {
-        return QVariant::Date;
-    } else if ( fieldName.endsWith("_lat") || fieldName.endsWith("_lon") || fieldName == "price" ) {
-        return QVariant::Double;
-    } else if ( fieldName.endsWith("_url") ) {
-        return QVariant::Url;
-    } else if ( fieldName.endsWith("_color") ) {
-        return QVariant::Color;
-    } else {
-        return QVariant::String;
-    }
-}
+#include "generaltransitfeed_importer.moc"
