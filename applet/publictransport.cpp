@@ -678,18 +678,7 @@ QList< QAction* > PublicTransport::contextualActions()
 
 QVariantHash PublicTransport::serviceProviderData( const QString& id ) const
 {
-    Plasma::DataEngine::Data serviceProviderData =
-            dataEngine( "publictransport" )->query( "ServiceProviders" );
-    for ( Plasma::DataEngine::Data::const_iterator it = serviceProviderData.constBegin();
-                it != serviceProviderData.constEnd(); ++it ) {
-        QVariantHash data = serviceProviderData.value( it.key() ).toHash();
-        if ( data["id"] == id ) {
-            return data;
-        }
-    }
-
-    kDebug() << "Service provider data for" << id << "not found";
-    return QVariantHash();
+    return dataEngine( "publictransport" )->query( "ServiceProvider " + id );
 }
 
 void PublicTransport::updateDataSource()
@@ -1019,9 +1008,15 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
                 }
             }
         } else if ( checkNetworkStatus() ) {
-            m_timetable->setNoItemsText( i18nc("@info/plain",
-                    "There was an error:<nl/><message>%1</message><nl/><nl/>"
-                    "The server may be temporarily unavailable.", error) );
+            if ( currentServiceProviderData()["type"] == "GTFS" ) {
+                m_timetable->setNoItemsText( i18nc("@info/plain",
+                        "There was an error:<nl/><message>%1</message><nl/><nl/>"
+                        "The GTFS feed database may need to be updated. Please wait.", error) );
+            } else {
+                m_timetable->setNoItemsText( i18nc("@info/plain",
+                        "There was an error:<nl/><message>%1</message><nl/><nl/>"
+                        "The server may be temporarily unavailable.", error) );
+            }
         }
     }
 }
@@ -2976,9 +2971,11 @@ void PublicTransport::removeAlarms( const AlarmSettingsList &newAlarmSettings,
 QString PublicTransport::infoText()
 {
     // Get information about the current service provider from the data engine
-    QVariantHash data = currentServiceProviderData();
-    QString shortUrl = data.isEmpty() ? "-" : data["shortUrl"].toString();
-    QString url = data.isEmpty() ? "-" : data["url"].toString();
+    const QVariantHash data = currentServiceProviderData();
+    const QString shortUrl = data.isEmpty() ? "-" : data["shortUrl"].toString();
+    const QString url = data.isEmpty() ? "-" : data["url"].toString();
+    const QString credit = data.isEmpty() ? i18nc("@info/plain", "data by")
+                                          : data["credit"].toString();
     QString sLastUpdate = m_lastSourceUpdate.toString( "hh:mm" );
     if ( sLastUpdate.isEmpty() ) {
         sLastUpdate = i18nc( "@info/plain This is used as 'last data update' "
@@ -2988,23 +2985,24 @@ QString PublicTransport::infoText()
     // HACK: This breaks the text at one position if needed
     // Plasma::Label doesn't work well will HTML formatted text and word wrap:
     // It sets the height as if the label shows the HTML source.
-    QString textNoHtml1 = QString( "%1: %2" ).arg( i18nc("@info/plain", "last update"), sLastUpdate );
-    QString textNoHtml2 = QString( "%1: %2" ).arg( i18nc("@info/plain", "data by"), shortUrl );
-    QFontMetrics fm( m_labelInfo->font() );
-    int width1 = fm.width( textNoHtml1 );
-    int width2 = fm.width( textNoHtml2 );
-    int width = width1 + fm.width( ", " ) + width2;
+    const QString textNoHtml1 = QString( "%1: %2" ).arg( i18nc("@info/plain", "last update"),
+                                                         sLastUpdate );
+    const QString textNoHtml2 = QString( "%1: %2" ).arg( credit, shortUrl );
+    const QFontMetrics fm( m_labelInfo->font() );
+    const int width1 = fm.width( textNoHtml1 );
+    const int width2 = fm.width( textNoHtml2 );
+    const int width = width1 + fm.width( ", " ) + width2;
     if ( width > m_graphicsWidget->size().width() ) {
         // Break info text into two lines
         m_graphicsWidget->setMinimumWidth( qMax(width1, width2) );
         return QString( "<nobr>%1: %2<br>%3: <a href='%4'>%5</a><nobr>" )
             .arg( i18nc("@info/plain", "last update"), sLastUpdate,
-                  i18nc("@info/plain", "data by"), url, shortUrl );
+                  credit, url, shortUrl );
     } else {
         // Use a single line for the info text
         return QString( "<nobr>%1: %2, %3: <a href='%4'>%5</a><nobr>" )
             .arg( i18nc("@info/plain", "last update"), sLastUpdate,
-                  i18nc("@info/plain", "data by"), url, shortUrl );
+                  credit, url, shortUrl );
     }
 }
 

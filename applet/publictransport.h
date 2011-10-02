@@ -231,10 +231,18 @@ protected slots:
     void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
     void setAssociatedApplicationUrlForDepartures() {
-        setAssociatedApplicationUrls( KUrl::List() << m_urlDeparturesArrivals );
+        if ( m_urlDeparturesArrivals.isValid() ) {
+            setAssociatedApplicationUrls( KUrl::List() << m_urlDeparturesArrivals );
+        } else {
+            setAssociatedApplicationUrls( KUrl::List() );
+        }
     };
     void setAssociatedApplicationUrlForJourneys() {
-        setAssociatedApplicationUrls( KUrl::List() << m_urlJourneys );
+        if ( m_urlJourneys.isValid() ) {
+            setAssociatedApplicationUrls( KUrl::List() << m_urlJourneys );
+        } else {
+            setAssociatedApplicationUrls( KUrl::List() );
+        }
     };
 
     void departureDataWaitingStateEntered();
