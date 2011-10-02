@@ -36,9 +36,49 @@ class QSqlRecord;
 /**
  * @brief Imports data from GTFS feeds in a separate thread.
  *
- * Use @p startImport to import a GTFS feed with a given filename. The progress is reported by
- * emitting @p progress. If importing is finished @p finished gets emitted, also if it was not
- * succesful.
+ * Use @ref startImport to import a GTFS feed (zip file) with a given filename.
+ * The progress is reported by emitting @ref progress. If importing is finished the @ref finished
+ * signal gets emitted, also if it was not succesful. Use @ref hasError to see whether importing
+ * was successful or not. @ref lastError returns a string explaining the error, @ref state
+ * has more differentiation for errors, ie. @ref FatalError or @ref FinishedWithErrors.
+ *
+ * GTFS (General Transit Feed Specification) defines the following files:
+ * @li @em cre.txt (Required): This file contains information about one or more transit
+ *     agencies that provide the data in this feed.
+ * @li @em stops.txt (Required): This file contains information about individual locations where
+ *     vehicles pick up or drop off passengers.
+ * @li @em routes.txt (Required): This file contains information about a transit organization's
+ *     routes. A route is a group of trips that are displayed to riders as a single service.
+ * @li @em trips.txt (Required): This file lists all trips and their routes. A trip is a sequence
+ *     of two or more stops that occurs at specific time.
+ * @li @em stop_times.txt (Required): This file lists the times that a vehicle arrives at and
+ *     departs from individual stops for each trip.
+ * @li @em calendar.txt (Required): This file defines dates for service IDs using a weekly
+ *     schedule. Specify when service starts and ends, as well as days of the week where service
+ *     is available.
+ * @li @em calendar_dates.txt (Optional): This file lists exceptions for the service IDs defined
+ *     in the calendar.txt file. If calendar_dates.txt includes ALL dates of service, this file
+ *     may be specified instead of calendar.txt.
+ * @li @em fare_attributes.txt (Optional): This file defines fare information for a transit
+ *     organization's routes.
+ * @li @em fare_rules.txt (Optional): This file defines the rules for applying fare information
+ *     for a transit organization's routes.
+ * @li @em shapes.txt (Optional): This file defines the rules for drawing lines on a map to
+ *     represent a transit organization's routes.
+ * @li @em frequencies.txt (Optional): This file defines the headway (time between trips) for
+ *     routes with variable frequency of service.
+ * @li @em transfers.txt (Optional): This file defines the rules for making connections at
+ *     transfer points between routes.
+ *
+ * @see http://code.google.com/intl/de-DE/transit/spec/transit_feed_specification.html#transitFeedFiles
+ *
+ * All files are imported into a database with one table for each file. Most fields in the
+ * database are also the same as in the source files (in CSV format). Instead of string IDs, which
+ * are allowed in GTFS, hash values of these string IDs are used for performance reasons.
+ * The fields "monday", "tuesday", ..., "sunday" in @em calendar.txt are combines into one field
+ * "weekdays", which gets stored as a string of 7 characters, each '0' or '1'. The values get
+ * concatenated beginning with sunday.
+ * The @em shapes.txt file currently is not imported.
  **/
 class GeneralTransitFeedImporter : public QThread
 {
@@ -81,16 +121,19 @@ public:
      *
      * This is the argument given to @p startImport.
      **/
-    QString sourceFileName() const { return m_fileName; };
+    QString sourceFileName() {
+        QMutexLocker locker(&m_mutex);
+        return m_fileName; };
 
     /** @brief The current state of the importer. */
-    State state() const { return m_state; };
-
-    /** @brief Whether or not the importer is currently running. */
-    inline bool isRunning() const { return m_state == Importing; };
+    State state() {
+        QMutexLocker locker(&m_mutex);
+        return m_state; };
 
     /** @brief Whether or not there was an error. */
-    inline bool hasError() const { return m_state == FinishedWithErrors || m_state == FatalError; };
+    inline bool hasError() {
+        QMutexLocker locker(&m_mutex);
+        return m_state == FinishedWithErrors || m_state == FatalError; };
 
     /** @brief A string explaining the last error. */
     QString lastError() const { return m_errorString; };
@@ -124,9 +167,9 @@ protected:
     virtual void run();
 
 private:
-    bool writeGtfsDataToDatabase( const QString &fileName, const QStringList &requiredFields,
-                                  int minimalRecordCount, qint64 totalFilePosition,
-                                  qint64 totalFileSize );
+    bool writeGtfsDataToDatabase( QSqlDatabase database, const QString &fileName,
+                                  const QStringList &requiredFields, int minimalRecordCount,
+                                  qint64 totalFilePosition, qint64 totalFileSize );
 
     bool readHeader( const QString &header, QStringList *fieldNames,
                      const QStringList &requiredFields );
@@ -137,6 +180,7 @@ private:
     void setError( State errorState, const QString &errorText );
 
     State m_state;
+    QString m_providerName;
     QString m_fileName;
     QString m_errorString;
     bool m_quit;

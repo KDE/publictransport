@@ -109,6 +109,9 @@ public:
 	/** @brief Raw url to an xml file for xml accessors */
 	QString stopSuggestionsRawUrl() const { return m_stopSuggestionsRawUrl; };
 
+    QString realtimeTripUpdateUrl() const { return m_realtimeTripUpdateUrl; };
+    QString realtimeAlertsUrl() const { return m_realtimeAlertsUrl; };
+
     QString timeZone() const { return m_timeZone; };
     void setTimeZone( const QString &timeZone ) { m_timeZone = timeZone; };
 	
@@ -333,6 +336,11 @@ protected:
     /** @brief Sets the url to a (GTFS) feed. TODO  */
     void setFeedUrl( const QString &feedUrl ) { setDepartureRawUrl(feedUrl); };
 
+    void setRealtimeTripUpdateUrl( const QString &realtimeTripUpdateUrl ) {
+            m_realtimeTripUpdateUrl = realtimeTripUpdateUrl; };
+    void setRealtimeAlertsUrl( const QString &realtimeAlertsUrl ) {
+            m_realtimeAlertsUrl = realtimeAlertsUrl; };
+
 	/**
 	 * @brief Sets the raw url for journey lists to an html file containing journey lists. */
 	void setJourneyRawUrl( const QString &journeyRawUrl ) {
@@ -415,6 +423,9 @@ protected:
 	QString m_departureRawUrl;
 	// A raw url that is used to get journeys
 	QString m_journeyRawUrl;
+
+    QString m_realtimeTripUpdateUrl;
+    QString m_realtimeAlertsUrl;
 	
 	// Keys are versions, where the change entries occurred (values)
 	QList<ChangelogEntry> m_changelog;

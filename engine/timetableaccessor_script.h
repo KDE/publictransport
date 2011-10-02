@@ -62,6 +62,8 @@ public:
 	/** @brief Destructor. */
 	virtual ~TimetableAccessorScript();
 
+    virtual AccessorType type() const { return ScriptedAccessor; };
+
 	/** @brief Whether or not the script has been successfully loaded. */
 	bool isScriptLoaded() const { return m_scriptState == ScriptLoaded; };
 	

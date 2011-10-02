@@ -43,9 +43,10 @@ ServiceProviderItem::ServiceProviderItem( const QString &name, const QVariantHas
 {
 	d_ptr->name = name;
 	d_ptr->data = data;
-	d_ptr->formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
-			.arg( name )
-			.arg( data["featuresLocalized"].toStringList().join( ", " ) );
+	d_ptr->formattedText = QString( "<b>%1</b><br-wrap>"
+                                    "<small><b>Type:</b> %2</b></small>" )
+			.arg( name ).arg( data["type"].toString() );
+// 			.arg( data["featuresLocalized"].toStringList().join( ", " ) );
 
 	QString location = countryCode();
 	if ( location == "international" ) {

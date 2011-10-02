@@ -99,6 +99,10 @@ public:
 	int routeExactStops() const { 
 			return contains(RouteExactStops) ? value(RouteExactStops).toInt() : 0; };
 
+    /** @brief Gets information about the pricing of the departure/arrival/journey. */
+    QString pricing() const {
+            return contains(Pricing) ? value(Pricing).toString() : QString(); };
+
 	/**
 	 * @brief Parses the given string for a vehicle type.
 	 *
@@ -136,9 +140,6 @@ public:
 	 *   TimetableInformations (TransportLine, Target, DepartureHour, DepartureMinute). */
 	explicit JourneyInfo( const QHash<TimetableInformation, QVariant> &data );
 
-	/** @brief Gets information about the pricing of the journey. */
-	QString pricing() const { 
-			return contains(Pricing) ? value(Pricing).toString() : QString(); };
 	/** @brief Gets news for the journey, such as "platform changed". */
 	QString journeyNews() const { 
 			return contains(JourneyNews) ? value(JourneyNews).toString() : QString(); };

@@ -20,6 +20,9 @@
 // Own includes
 #include "timetableaccessor.h"
 #include "accessorinfoxmlreader.h"
+#include "timetableaccessor_generaltransitfeed.h"
+#include "timetableaccessor_script.h"
+#include "timetableaccessor_xml.h"
 
 // Qt includes
 #include <QTextCodec>
@@ -41,7 +44,58 @@ TimetableAccessor::~TimetableAccessor()
 	delete m_info;
 }
 
-TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &serviceProvider )
+TimetableAccessor* TimetableAccessor::createAccessor( const QString &serviceProvider )
+{
+    // Read the XML file for the service provider
+    TimetableAccessorInfo *accessorInfo = readAccessorInfo( serviceProvider );
+
+    // Create the accessor
+    if ( accessorInfo->accessorType() == ScriptedAccessor ) {
+        // Ensure a script is specified
+        if ( accessorInfo->scriptFileName().isEmpty() ) {
+            delete accessorInfo;
+            kDebug() << "HTML accessors need a script for parsing";
+            return 0;
+        }
+
+        // Create the accessor and check for script errors
+        TimetableAccessorScript *scriptAccessor = new TimetableAccessorScript( accessorInfo );
+        if ( !scriptAccessor->hasScriptErrors() ) {
+            return scriptAccessor;
+        } else {
+            delete scriptAccessor;
+            kDebug() << "Couldn't correctly load the script (bad script)";
+            return 0;
+        }
+    } else if ( accessorInfo->accessorType() == XmlAccessor ) {
+        // Warn if no script is specified
+        if ( accessorInfo->scriptFileName().isEmpty() ) {
+            kDebug() << "XML accessors currently use a script to parse stop suggestions, "
+                        "but no script file was specified";
+        }
+
+        // Create the accessor and check for script errors
+        TimetableAccessorXml *xmlAccessor = new TimetableAccessorXml( accessorInfo );
+        if ( xmlAccessor->stopSuggestionAccessor() &&
+             xmlAccessor->stopSuggestionAccessor()->hasScriptErrors() )
+        {
+            delete xmlAccessor;
+            kDebug() << "Couldn't correctly load the script (bad script)";
+            return 0;
+        } else {
+            return xmlAccessor;
+        }
+    } else if ( accessorInfo->accessorType() == GtfsAccessor ) {
+        // Create the accessor and check for script errors
+        return new TimetableAccessorGeneralTransitFeed( accessorInfo );
+    }
+
+    delete accessorInfo;
+    kDebug() << QString("Accessor type %1 not supported").arg(accessorInfo->accessorType());
+    return 0;
+}
+
+TimetableAccessorInfo* TimetableAccessor::readAccessorInfo( const QString &serviceProvider )
 {
 	QString filePath;
 	QString country = "international";
@@ -89,25 +143,49 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 
 	QFile file( filePath );
 	AccessorInfoXmlReader reader;
-	TimetableAccessor *ret = reader.read( &file, sp, filePath, country );
-	if ( !ret ) {
-		kDebug() << "Error while reading accessor info xml" << filePath << reader.lineNumber() << reader.errorString();
-	}
-	return ret;
+	TimetableAccessorInfo *ret = reader.read( &file, sp, filePath, country );
+
+    if ( !ret ) {
+        kDebug() << "Error while reading accessor info xml" << filePath
+                 << reader.lineNumber() << reader.errorString();
+    }
+    return ret;
 }
 
-AccessorType TimetableAccessor::accessorTypeFromString( const QString &sAccessorType )
+QString TimetableAccessor::accessorCacheFileName()
 {
-	QString s = sAccessorType.toLower();
-	if ( s == "script" || s == "html" ) {
-		return ScriptedAccessor;
+    return KGlobal::dirs()->saveLocation("data", "plasma_engine_publictransport/")
+            .append( QLatin1String("datacache") );
+}
+
+AccessorType TimetableAccessor::accessorTypeFromString( const QString &accessorType )
+{
+    QString s = accessorType.toLower();
+    if ( s == "script" || s == "html" ) {
+        return ScriptedAccessor;
     } else if ( s == "gtfs" ) {
         return GtfsAccessor;
-	} else if ( s == "xml" ) {
-		return XmlAccessor;
-	} else {
-		return NoAccessor;
-	}
+    } else if ( s == "xml" ) {
+        return XmlAccessor;
+    } else {
+        return NoAccessor;
+    }
+}
+
+QString TimetableAccessor::accessorTypeName( AccessorType accessorType )
+{
+    switch ( accessorType ) {
+        case ScriptedAccessor:
+            return i18nc("@info/plain Name of an accessor type", "Scripted");
+        case XmlAccessor:
+            return i18nc("@info/plain Name of an accessor type", "XML");
+        case GtfsAccessor:
+            return i18nc("@info/plain Name of an accessor type", "GTFS");
+
+        case NoAccessor:
+        default:
+            return i18nc("@info/plain Name of an accessor type", "Invalid");
+    }
 }
 
 VehicleType TimetableAccessor::vehicleTypeFromString( QString sVehicleType )
@@ -737,16 +815,18 @@ void TimetableAccessor::result( KJob* job )
 		if ( parseDocument(document, &dataList, &globalInfo, parseDocumentMode) ) {
 			if ( parseDocumentMode == ParseForDeparturesArrivals ) {
 				QList<DepartureInfo*> departures;
-				foreach( PublicTransportInfo *info, dataList )
-				departures << dynamic_cast< DepartureInfo* >( info );
+				foreach( PublicTransportInfo *info, dataList ) {
+                    departures << dynamic_cast< DepartureInfo* >( info );
+                }
 				emit departureListReceived( this, jobInfo.url, departures, globalInfo,
 											serviceProvider(), jobInfo.sourceName,
 											jobInfo.city, jobInfo.stop, jobInfo.dataType,
 											parseDocumentMode );
 			} else if ( parseDocumentMode == ParseForJourneys ) {
 				QList<JourneyInfo*> journeys;
-				foreach( PublicTransportInfo *info, dataList )
-				journeys << dynamic_cast< JourneyInfo* >( info );
+				foreach( PublicTransportInfo *info, dataList ) {
+                    journeys << dynamic_cast< JourneyInfo* >( info );
+                }
 				emit journeyListReceived( this, jobInfo.url, journeys, globalInfo,
 										  serviceProvider(), jobInfo.sourceName,
 										  jobInfo.city, jobInfo.stop, jobInfo.dataType,

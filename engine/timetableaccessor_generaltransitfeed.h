@@ -18,16 +18,20 @@
  */
 
 /** @file
-* @brief This file contains a class to access data from Google Transit using libgtfs.
+* @brief This file contains a class to access data from GTFS feeds.
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#ifndef TIMETABLEACCESSOR_GOOGLETRANSIT_HEADER
-#define TIMETABLEACCESSOR_GOOGLETRANSIT_HEADER
+#ifndef TIMETABLEACCESSOR_GENERALRANSITFEED_HEADER
+#define TIMETABLEACCESSOR_GENERALRANSITFEED_HEADER
 
 #include "timetableaccessor.h"
 #include "generaltransitfeed_importer.h"
+#include "generaltransitfeed_realtime.h"
 
+class PublicTransportService;
+class QNetworkReply;
 class KTimeZone;
+
 /** @class TimetableAccessorGeneralTransitFeed
 * @brief This class uses a database similiar to the GTFS structure to access public transport data.
 *
@@ -64,15 +68,21 @@ public:
             TimetableAccessorInfo *info = new TimetableAccessorInfo() );
     virtual ~TimetableAccessorGeneralTransitFeed();
 
+    virtual AccessorType type() const { return GtfsAccessor; };
+
+    bool hasErrors() const { return m_state >= 10; }
+
     /** @brief Gets a list of features that this accessor supports. */
     virtual QStringList features() const;
 
-protected slots:
-    void downloadProgress( KJob *job, ulong percent );
-    void feedReceived( KJob *job );
+    bool isRealtimeDataAvailable() const;
 
-    void importerProgress( qreal progress );
-    void importerFinished( GeneralTransitFeedImporter::State state, const QString &errorText );
+protected slots:
+    void realtimeTripUpdatesReceived( KJob *job );
+    void realtimeAlertsReceived( KJob *job );
+
+    void importFinished( KJob *job );
+    void importProgress( KJob *job, ulong percent );
 
 protected:
     virtual void requestDepartures( const QString &sourceName, const QString &city,
@@ -84,22 +94,31 @@ protected:
             int maxCount = 1, const QDateTime& dateTime = QDateTime::currentDateTime(),
             const QString &dataType = QString(), bool usedDifferentUrl = false );
 
-    void downloadFeed();
+    void updateGtfsData();
+    void updateRealtimeData();
+
+    bool isGtfsFeedImportFinished();
+
     bool checkState( const QString &sourceName,
+            const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime,
+            const QString &dataType, bool useDifferentUrl, ParseDocumentMode parseMode );
+    bool checkForDiskIoErrorInDatabase( const QSqlError &error, const QString &sourceName,
             const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime,
             const QString &dataType, bool useDifferentUrl, ParseDocumentMode parseMode );
 
 private:
     enum State {
         Initializing = 0,
-        DownloadingFeed,
-        ReadingFeed,
+        UpdatingGtfsFeed,
         Ready,
 
         ErrorDownloadingFeed = 10,
         ErrorReadingFeed,
         ErrorInDatabase
     };
+
+    /** A value between 0.0 and 1.0 indicating the amount of the total progress for downloading. */
+    static const qreal PROGRESS_PART_FOR_FEED_DOWNLOAD = 0.1;
 
     /**
      * @brief Converts a GTFS route_type value to a matching VehicleType.
@@ -112,12 +131,13 @@ private:
 
     void loadAgencyInformation();
 
-    State m_state;
+    State m_state; // Current state
     AgencyInformations m_agencyCache; // Cache contents of the "agency" DB table, usally small, eg. only one agency
-
-    // Stores information about currently running download jobs
-    QHash<QString, JobInfos> m_jobInfos;
-    GeneralTransitFeedImporter *m_importer;
+    GtfsRealtimeTripUpdates *m_tripUpdates;
+    GtfsRealtimeAlerts *m_alerts;
+    QHash< QString, JobInfos > m_waitingSources; // Sources waiting for import to finish
+    PublicTransportService *m_service;
+    qreal m_progress;
 };
 
 #endif // Multiple inclusion guard

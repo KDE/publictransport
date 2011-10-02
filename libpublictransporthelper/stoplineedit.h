@@ -24,9 +24,11 @@
 #include <KLineEdit>
 #include <Plasma/DataEngine>
 
+class KJob;
+
 /** @brief Namespace for the publictransport helper library. */
 namespace Timetable {
-    
+
 class StopLineEditPrivate;
 
 /**
@@ -71,9 +73,14 @@ protected Q_SLOTS:
 
 	/** @brief The stop name was edited. */
 	void edited( const QString &newText );
+
+    void importFinished( KJob *job );
+    void importProgress( KJob *job, ulong percent );
 	
 protected:
 	StopLineEditPrivate* const d_ptr;
+
+    virtual void paintEvent(QPaintEvent* ev);
 
 private:
 	Q_DECLARE_PRIVATE( StopLineEdit )

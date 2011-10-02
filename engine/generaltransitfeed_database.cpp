@@ -39,26 +39,29 @@ QString GeneralTransitFeedDatabase::databasePath( const QString &providerName )
 
 bool GeneralTransitFeedDatabase::initDatabase( const QString &providerName, QString *errorText )
 {
-    QSqlDatabase db = QSqlDatabase::addDatabase( "QSQLITE" );
+    QSqlDatabase db = QSqlDatabase::database( providerName );
     if ( !db.isValid() ) {
-        kDebug() << "Error adding a QSQLITE database" << db.lastError();
-        *errorText = "Error adding a QSQLITE database " + db.lastError().text();
-        return false;
-    }
+        db = QSqlDatabase::addDatabase( "QSQLITE", providerName );
+        if ( !db.isValid() ) {
+            kDebug() << "Error adding a QSQLITE database" << db.lastError();
+            *errorText = "Error adding a QSQLITE database " + db.lastError().text();
+            return false;
+        }
 
-    db.setDatabaseName( databasePath(providerName) );
-    if ( !db.open() ) {
-        kDebug() << "Error opening the database connection" << db.lastError();
-        *errorText = "Error opening the database connection " + db.lastError().text();
-        return false;
+        db.setDatabaseName( databasePath(providerName) );
+        if ( !db.open() ) {
+            kDebug() << "Error opening the database connection" << db.lastError();
+            *errorText = "Error opening the database connection " + db.lastError().text();
+            return false;
+        }
     }
 
     return true;
 }
 
-bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText )
+bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText, QSqlDatabase database )
 {
-    QSqlQuery query;
+    QSqlQuery query( database );
     kDebug() << "Create tables";
 
     // Create table for "agency.txt" TODO agency_id only referenced from routes => merge tables?
@@ -117,8 +120,10 @@ bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText )
                    "stop_url VARCHAR(512), " // (optional) URL of a web page about a particular stop
                    "location_type TINYINT, " // (optional) "1": Station (with one or more stops), "0" or NULL: Stop
                    "direction VARCHAR(30), " // (optional)
-                   "position VARCHAR(30), "
-                   "parent_station INTEGER" // (optional) stop_id of a parent station (with location_type == 1)
+                   "position VARCHAR(30), " // TODO
+                   "parent_station INTEGER, " // (optional) stop_id of a parent station (with location_type == 1)
+                   "min_fare_id INTEGER, " // TODO
+                   "max_fare_id INTEGER"
                    ");" );
     if( !query.exec() ) {
         kDebug() << "Error creating 'stops' table:" << query.lastError() << query.lastQuery();
@@ -244,9 +249,9 @@ bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText )
                    "contains_id INTEGER, " // (optional) Associates the fare ID with a zone ID (intermediate zone)
                    "FOREIGN KEY(fare_id) REFERENCES fare_attributes(fare_id), "
                    "FOREIGN KEY(route_id) REFERENCES routes(route_id), "
-                   "FOREIGN KEY(origin_id) REFERENCES stops(stop_id), "
-                   "FOREIGN KEY(destination_id) REFERENCES stops(stop_id), "
-                   "FOREIGN KEY(contains_id) REFERENCES stops(stop_id)"
+                   "FOREIGN KEY(origin_id) REFERENCES stops(zone_id), "
+                   "FOREIGN KEY(destination_id) REFERENCES stops(zone_id), "
+                   "FOREIGN KEY(contains_id) REFERENCES stops(zone_id)"
                    ")" );
     if( !query.exec() ) {
         kDebug() << "Error creating 'fare_rules' table:" << query.lastError();
@@ -288,6 +293,10 @@ bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText )
 
 QVariant GeneralTransitFeedDatabase::convertFieldValue( const QString &fieldValue, FieldType type )
 {
+    if ( fieldValue.isEmpty() ) {
+        return QVariant();
+    }
+
     switch ( type ) {
     case HashId:
         return qHash( fieldValue ); // Use the hash to convert string IDs
@@ -305,10 +314,12 @@ QVariant GeneralTransitFeedDatabase::convertFieldValue( const QString &fieldValu
         return fieldValue.toDouble();
     case Url:
         return QUrl( fieldValue );
-    case Color:
-        return fieldValue.isEmpty() ? Qt::transparent :  QColor( '#' + fieldValue );
-    case String:
+    case Color: {
+        return fieldValue.trimmed().isEmpty() ? Qt::transparent
+                                              : QColor( '#' + fieldValue.trimmed() );
+    } case String:
     default:
+        // TODO Make camel case if everything is upper case?
         return fieldValue;
     }
 }

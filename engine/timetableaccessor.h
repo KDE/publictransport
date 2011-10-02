@@ -48,7 +48,7 @@ class TimetableAccessor : public QObject {
 	Q_OBJECT
 public:
 	/** 
-	 * @brief Constructs a new TimetableAccessor object. You should use getSpecificAccessor()
+	 * @brief Constructs a new TimetableAccessor object. You should use createAccessor()
 	 *   to get an accessor that can download and parse documents from the given service provider. */
 	explicit TimetableAccessor( TimetableAccessorInfo *info = new TimetableAccessorInfo() );
 	virtual ~TimetableAccessor();
@@ -60,16 +60,49 @@ public:
 	 *   The ID starts with a country code, followed by an underscore and it's name.
 	 *   If it's empty, the default service provider for the users country will
 	 *   be used, if there is any. */
-	static TimetableAccessor *getSpecificAccessor( const QString &serviceProvider = QString() );
+	static TimetableAccessor *createAccessor( const QString &serviceProvider = QString() );
+
+    /**
+     * @brief Reads the XML file for the given @p serviceProvider.
+     * 
+     * @param serviceProvider The ID of the service provider which XML file should be read.
+     *   The ID starts with a country code, followed by an underscore and it's name.
+     *   If it's empty, the default service provider for the users country will
+     *   be used, if there is any. */
+    static TimetableAccessorInfo *readAccessorInfo( const QString &serviceProvider = QString() );
 
 	/** @brief Gets the AccessorType enumerable for the given string. */
-	static AccessorType accessorTypeFromString( const QString &sAccessorType );
+	static AccessorType accessorTypeFromString( const QString &accessorType );
+
+    /** @brief Gets the name for the given AccessorType enumerable. */
+    static QString accessorTypeName( AccessorType accessorType );
 
 	/** @brief Gets the TimetableInformation enumerable for the given string. */
 	static TimetableInformation timetableInformationFromString( const QString &sTimetableInformation );
 
 	/** @brief Gets the VehicleType enumerable for the given string. */
 	static VehicleType vehicleTypeFromString( QString sVehicleType );
+
+    /**
+     * @brief Gets the name of the cache file for accessor infomation.
+     *
+     * The cache file can be used by accessors to store information about themselves that might
+     * take some time to get if not stored. For example a network request might be needed to get
+     * the information.
+     * The cache file can also be used to store other information for the accessor, eg. the last
+     * modified time of a file that gets only downloaded again, if it's last modified time is
+     * higher.
+     * KConfig is used to read from / write to the file.
+     **/
+    static QString accessorCacheFileName();
+
+    /**
+     * @brief Gets the AccessorType of this accessor.
+     *
+     * The default implementation returns @ref NoAccessor. Derived classes should overwrite this
+     * to return the appropriate type.
+     **/
+    virtual AccessorType type() const { return NoAccessor; };
 
 	/** @brief Gets the service provider ID the accessor is designed for. */
 	virtual QString serviceProvider() const { return m_info->serviceProvider(); };
@@ -486,7 +519,6 @@ protected:
 	    int roundTrips;
 	};
 
-
 private:
     static QString gethex( ushort decimal );
 
@@ -494,6 +526,8 @@ private:
 
     // Stores information about currently running download jobs
     QHash< KJob*, JobInfos > m_jobInfos;
+
+//     qint64 m_lastUsed; TODO
 };
 
 #endif // TIMETABLEACCESSOR_HEADER

@@ -51,6 +51,8 @@ public:
 	 *  to parse stop suggestion documents in HTML format. */
 	virtual ~TimetableAccessorXml();
 
+    virtual AccessorType type() const { return XmlAccessor; };
+
 	/** @brief Gets a list of features that this accessor supports. */
 	virtual QStringList features() const;
 	

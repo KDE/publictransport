@@ -23,6 +23,8 @@
 
 #ifndef GENERALTRANSITFEEDDATABASE_HEADER
 #define GENERALTRANSITFEEDDATABASE_HEADER
+#include <qsql.h>
+#include <QSqlDatabase>
 
 class QString;
 class QVariant;
@@ -72,7 +74,7 @@ public:
      *
      * @returns True, if the database tables could be created successfully. False, otherwise.
      **/
-    static bool createDatabaseTables( QString *errorText );
+    static bool createDatabaseTables( QString *errorText, QSqlDatabase database = QSqlDatabase() );
 
     /**
      * @brief Gets the full path to the SQLite database file for the given @p providerName.

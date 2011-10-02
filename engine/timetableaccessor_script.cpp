@@ -76,9 +76,8 @@ bool TimetableAccessorScript::lazyLoadScript()
 QStringList TimetableAccessorScript::readScriptFeatures()
 {
 	// Try to load script features from a cache file
-	QString fileName = KGlobal::dirs()->saveLocation("data", 
-			"plasma_engine_publictransport/accessorInfos/").append( QLatin1String("datacache"));
-	bool cacheExists = QFile::exists( fileName );
+    const QString fileName = accessorCacheFileName();
+	const bool cacheExists = QFile::exists( fileName );
 	KConfig cfg( fileName, KConfig::SimpleConfig );
 	KConfigGroup grp = cfg.group( m_info->serviceProvider() );
 
@@ -258,6 +257,7 @@ bool TimetableAccessorScript::parseDocument( const QByteArray &document,
 	if ( dayAdjustment != 0 ) {
 		kDebug() << "Dates get adjusted by" << dayAdjustment << "days";
 	}
+	
 	for ( int i = 0; i < data.count(); ++ i ) {
 		TimetableData timetableData = data.at( i );
 		

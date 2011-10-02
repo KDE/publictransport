@@ -17,10 +17,21 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Own includes
 #include "stoplineedit.h"
 #include "stopsettings.h"
 
+// Plasma/KDE includes
 #include <Plasma/DataEngineManager>
+#include <Plasma/ServiceJob>
+#include <KColorScheme>
+#include <KIcon>
+
+// Qt includes
+#include <QEvent>
+#include <QPainter>
+#include <QStyle>
+#include <QStyleOption>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace Timetable {
@@ -29,9 +40,19 @@ namespace Timetable {
 class StopLineEditPrivate
 {
 	Q_DECLARE_PUBLIC( StopLineEdit )
-	
+
 public:
+    enum State {
+        Ready,
+        WaitingForDataEngineProgress,
+        WaitingForStopSuggestions,
+        Error
+    };
+
 	StopLineEditPrivate( const QString &serviceProvider, StopLineEdit *q ) : q_ptr( q ) {
+        state = Ready;
+        progress = 0.0;
+
 		// Load data engine
 		dataEngineManager = Plasma::DataEngineManager::self();
 		publicTransportEngine = dataEngineManager->loadEngine("publictransport");
@@ -50,6 +71,10 @@ public:
 	StopList stops;
 	QString city;
 	QString serviceProvider;
+    State state;
+    qreal progress; // Progress of the data engine in processing a task (0.0 .. 1.0)
+    QString sourceName; // Source name used to request stop suggestions at the data engine
+    QString errorString;
 	
 protected:
 	StopLineEdit* const q_ptr;
@@ -72,6 +97,15 @@ void StopLineEdit::setServiceProvider( const QString& serviceProvider )
 {
 	Q_D( StopLineEdit );
 	d->serviceProvider = serviceProvider;
+    d->state = StopLineEditPrivate::Ready;
+    if ( !d->sourceName.isEmpty() ) {
+        d->publicTransportEngine->disconnectSource( d->sourceName, this );
+    }
+    setEnabled( true );
+    setClearButtonShown( true ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
+    setReadOnly( false );
+    completionObject()->clear();
+    edited( text() );
 }
 
 QString StopLineEdit::serviceProvider() const
@@ -84,6 +118,15 @@ void StopLineEdit::setCity( const QString& city )
 {
 	Q_D( StopLineEdit );
 	d->city = city;
+    d->state = StopLineEditPrivate::Ready;
+    if ( !d->sourceName.isEmpty() ) {
+        d->publicTransportEngine->disconnectSource( d->sourceName, this );
+    }
+    setEnabled( true );
+    setClearButtonShown( true ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
+    setReadOnly( false );
+    completionObject()->clear();
+    edited( text() );
 }
 
 QString StopLineEdit::city() const
@@ -95,43 +138,178 @@ QString StopLineEdit::city() const
 void StopLineEdit::edited( const QString& newText )
 {
 	Q_D( StopLineEdit );
+
+    // Do not connect new sources, if the data engine indicated that it is currently processing
+    // a task (ie. download a GTFS feed or import it into the database)
+    if ( d->state == StopLineEditPrivate::WaitingForDataEngineProgress ) {
+        return;
+    }
 	
-	// Don't request new suggestions if newText is one of the suggestions, ie. most likely a 
-	// suggestion was selected. To allow choosing another suggestion with arrow keys the old 
+	// Don't request new suggestions if newText is one of the suggestions, ie. most likely a
+	// suggestion was selected. To allow choosing another suggestion with arrow keys the old
 	// suggestions shouldn't be removed in this case and no update is needed.
-// 	bool suggestionSelected = false;
 	foreach ( const Stop &stop, d->stops ) {
 		if ( stop.name.compare(newText, Qt::CaseInsensitive) == 0 ) {
 			return; // Don't update suggestions
 		}
 	}
-	
+
+    if ( !d->sourceName.isEmpty() ) {
+        d->publicTransportEngine->disconnectSource( d->sourceName, this );
+    }
+
+    d->state = StopLineEditPrivate::WaitingForStopSuggestions;
+    d->sourceName = QString("Stops %1|stop=%2").arg( d->serviceProvider, newText.isEmpty() ? " " : newText ); // TODO
 	if ( !d->city.isEmpty() ) { // m_useSeparateCityValue ) {
-		d->publicTransportEngine->connectSource( QString("Stops %1|stop=%2|city=%3")
-				.arg(d->serviceProvider, newText, d->city), this );
-	} else {
-		d->publicTransportEngine->connectSource( QString("Stops %1|stop=%2")
-				.arg(d->serviceProvider, newText), this );
+		d->sourceName += QString("|city=%3").arg( d->city );
 	}
+	d->publicTransportEngine->connectSource( d->sourceName, this );
+}
+
+void StopLineEdit::paintEvent( QPaintEvent *ev )
+{
+    Q_D( StopLineEdit );
+
+    if ( d->state == StopLineEditPrivate::WaitingForDataEngineProgress && paintEngine() ) {
+        if ( paintEngine() ) {
+            QSize cancelButtonSize = clearButtonUsedSize();
+            QRect cancelButtonRect( QPoint(contentsRect().right() - cancelButtonSize.width() - 1,
+                                        (contentsRect().height() - cancelButtonSize.height()) / 2.0),
+                                    cancelButtonSize );
+
+            // Draw a progress bar while waiting for the data engine to complete a task
+            QStyleOptionProgressBar option;
+            option.initFrom( this );
+            option.minimum = 0;
+            option.maximum = 100;
+            option.progress = d->progress * 100;
+            option.text = i18nc( "@info/plain", "Loading GTFS feed... %1 %", d->progress * 100 );
+            option.textAlignment = Qt::AlignCenter;
+            option.textVisible = true;
+            option.rect.setWidth( option.rect.width() - cancelButtonSize.width() - 1 );
+
+            QPainter painter( this );
+            style()->drawControl( QStyle::CE_ProgressBar, &option, &painter );
+            painter.drawPixmap( cancelButtonRect, KIcon("dialog-cancel").pixmap(cancelButtonSize) );
+        } else { kDebug() << "no paint engine"; }
+    } else if ( d->state == StopLineEditPrivate::Error && paintEngine() ) {
+        if ( paintEngine() ) {
+            const QColor errorColor = KColorScheme( QPalette::Normal, KColorScheme::View )
+                    .foreground( KColorScheme::NegativeText ).color();
+            QStyleOptionFrameV3 option;
+            option.initFrom( this );
+            option.frameShape = QFrame::StyledPanel;
+            option.state = QStyle::State_Sunken;
+            option.features = QStyleOptionFrameV2::None;
+            option.lineWidth = 1;
+            option.midLineWidth = 1;
+
+            QPainter painter( this );
+            style()->drawControl( QStyle::CE_ShapedFrame, &option, &painter );
+            painter.setPen( errorColor );
+
+            const QString errorText = d->errorString.isEmpty()
+                    ? i18nc("@info/plain", "Error loading the Service Provider") : d->errorString;
+            painter.drawText( contentsRect(), Qt::AlignCenter,
+                    fontMetrics().elidedText(errorText, Qt::ElideMiddle, option.rect.width() - 4) );
+        } else { kDebug() << "no paint engine"; }
+    } else {
+        KLineEdit::paintEvent( ev );
+    }
+}
+
+void StopLineEdit::importProgress( KJob *job, ulong percent )
+{
+    Q_D( StopLineEdit );
+    d->progress = percent / 100.0;
+    setToolTip( i18nc("@info/plain", "Importing the GTFS feed for stop suggestions. Please wait.") );
+}
+
+void StopLineEdit::importFinished( KJob *job )
+{
+    Q_D( StopLineEdit );
+
+    const bool hasError = job->error() < 0;
+    setEnabled( !hasError );
+    setClearButtonShown( !hasError ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
+    setReadOnly( hasError );
+    d->state = hasError ? StopLineEditPrivate::Error : StopLineEditPrivate::Ready;
+    d->errorString = job->errorString(); // TODO needed?
+    setToolTip( job->errorString() );
 }
 
 void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data )
 {
 	Q_D( StopLineEdit );
 	
-	if ( !sourceName.startsWith(QLatin1String("Stops")) ) {
+	if ( !sourceName.startsWith(QLatin1String("Stops")) || d->sourceName != sourceName ) {
+        kDebug() << "Wrong (old) source" << sourceName;
 		return;
 	}
+
+	kDebug() << "Updated Data For Source" << sourceName;
 	
 	// Stop suggestions data
-	if ( data.value("error").toBool() ) {
+//     kDebug() << data["type"];
+	if ( data["type"].toString().compare("GTFS", Qt::CaseInsensitive) == 0 && // TODO
+         data["error"].toBool() )
+    {
+        d->state = StopLineEditPrivate::WaitingForDataEngineProgress;
+        setEnabled( false );
+        setClearButtonShown( false ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
+        setReadOnly( true );
+
+        kDebug() << "GTFS accessor with an error, use service to update using the GTFS feed";
+        Plasma::Service *service = d->publicTransportEngine->serviceForSource( QString() );
+        KConfigGroup op = service->operationDescription("updateGtfsFeed");
+        op.writeEntry( "serviceProviderId", d->serviceProvider );
+        Plasma::ServiceJob *job = service->startOperationCall( op );
+        connect( job, SIGNAL(finished(KJob*)), this, SLOT(importFinished(KJob*)) );
+        connect( job, SIGNAL(percent(KJob*,ulong)), this, SLOT(importProgress(KJob*,ulong)) );
+        return;
+    }
+
+	d->progress = data.contains("progress") ? data.value("progress").toReal() : -1.0;
+    if ( d->progress >= 0.0 && d->progress < 1.0 ) {
+        if ( d->state != StopLineEditPrivate::WaitingForDataEngineProgress ) {
+            d->state = StopLineEditPrivate::WaitingForDataEngineProgress;
+            setEnabled( false );
+            setClearButtonShown( false ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
+            setReadOnly( true );
+        }
+
+        // Update the progress bar
+        update();
+        return;
+    } else if ( qFuzzyCompare(d->progress, 1.0) || !isEnabled() ||
+                d->state == StopLineEditPrivate::WaitingForDataEngineProgress )
+    {
+        // The data engine just completed a task
+        d->progress = 0.0;
+    }
+
+    if ( !d->sourceName.isEmpty() ) {
+        d->publicTransportEngine->disconnectSource( d->sourceName, this );
+        d->sourceName.clear();
+    }
+
+    if ( data.value("error").toBool() ) {
 		kDebug() << "Stop suggestions error" << sourceName;
-		// TODO: Handle error somehow?
-		return;
+        d->state = StopLineEditPrivate::Error;
 	} else if ( !data.value("receivedPossibleStopList").toBool() ) {
 		kDebug() << "No stop suggestions received" << sourceName;
-		return;
-	}
+        d->state = StopLineEditPrivate::Error;
+	} else {
+        d->state = StopLineEditPrivate::Ready;
+    }
+
+    // Enable if no error / disable otherwise
+    setEnabled( d->state != StopLineEditPrivate::Error );
+    setClearButtonShown( isEnabled() ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
+    setReadOnly( !isEnabled() );
+    if ( d->state == StopLineEditPrivate::Error ) {
+        return;
+    }
 	
 	d->stops.clear();
 	
@@ -139,17 +317,17 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
 	QHash<Stop, QVariant> stopToStopWeight;
 	int count = data["count"].toInt();
 	for ( int i = 0; i < count; ++i ) {
-		QVariant stopData = data.value( QString("stopName %1").arg(i) );
+		const QVariant stopData = data.value( QString("stopName %1").arg(i) );
 		if ( !stopData.isValid() ) {
 			continue;
 		}
 
-		QHash<QString, QVariant> dataMap = stopData.toHash();
-		QString sStopName = dataMap["stopName"].toString();
-		QString sStopID = dataMap["stopID"].toString();
-		int stopWeight = dataMap["stopWeight"].toInt();
+		const QHash<QString, QVariant> dataMap = stopData.toHash();
+		const QString stopName = dataMap["stopName"].toString();
+		const QString stopID = dataMap["stopID"].toString();
+		const int stopWeight = dataMap["stopWeight"].toInt();
 		
-		Stop stop( sStopName, sStopID );
+		const Stop stop( stopName, stopID );
 		stopToStopWeight.insert( stop, stopWeight );
 		d->stops << stop;
 	}
@@ -167,7 +345,7 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
 		weightedStops << QString( "%1:%2" ).arg( stop ).arg( stopWeight );
 	}
 
-// 	KLineEdit *stop = stopList->focusedLineEdit();
+	// Only add stop suggestions, if the line edit still has focus
 	if ( hasFocus() ) {
 		kDebug() << "Prepare completion object";
 		KCompletion *comp = completionObject();

@@ -24,11 +24,13 @@
 #ifndef ACCESSORINFOXMLREADER_HEADER
 #define ACCESSORINFOXMLREADER_HEADER
 
-#include <QXmlStreamReader>
-#include <QHash>
 #include "enums.h"
 
+#include <QXmlStreamReader>
+#include <QHash>
+
 class TimetableAccessor;
+class TimetableAccessorInfo;
 
 /**
  * @brief Stores information about a single changelog entry.
@@ -62,14 +64,17 @@ public:
      * @param fileName The filename of the xml file.
      * @param country The country the accessor is designed for.
      *
-     * @return A TimetableAccessor object or NULL on error.
+     * @return A TimetableAccessorInfo object or 0 on error.
      **/
-    TimetableAccessor* read( QIODevice *device, const QString &serviceProvider,
+//     TimetableAccessor* readAndCreate( QIODevice *device, const QString &serviceProvider,
+//                              const QString &fileName, const QString &country  );
+
+    TimetableAccessorInfo* read( QIODevice *device, const QString &serviceProvider,
                              const QString &fileName, const QString &country  );
 
 private:
     void readUnknownElement();
-    TimetableAccessor* readAccessorInfo( const QString &serviceProvider,
+    TimetableAccessorInfo* readAccessorInfo( const QString &serviceProvider,
                                          const QString &fileName, const QString &country  );
     QString readLocalizedTextElement( QString *lang );
     bool readBooleanElement();

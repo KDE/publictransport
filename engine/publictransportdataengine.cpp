@@ -19,19 +19,28 @@
 
 // Own includes
 #include "publictransportdataengine.h"
+#include "publictransportservice.h"
 #include "timetableaccessor.h"
+#include "generaltransitfeed_importer.h"
+
+// KDE includes
+#include <KStandardDirs>
 
 // Qt includes
 #include <QFileSystemWatcher>
-
-// KDE includes
-#include <Plasma/DataContainer>
-#include <KStandardDirs>
 #include <QFileInfo>
+#include "timetableaccessor_generaltransitfeed.h"
 
 const int PublicTransportEngine::MIN_UPDATE_TIMEOUT = 120; // in seconds
 const int PublicTransportEngine::MAX_UPDATE_TIMEOUT_DELAY = 5 * 60; // if delays are available
 const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
+
+Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
+{
+    PublicTransportService *service = new PublicTransportService( name, this );
+    service->setDestination( name );
+    return service;
+}
 
 PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantList& args )
 		: Plasma::DataEngine( parent, args ),
@@ -62,32 +71,61 @@ PublicTransportEngine::~PublicTransportEngine()
 }
 
 QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
-    const TimetableAccessor *&accessor )
+        const TimetableAccessor *&accessor )
 {
-	Q_ASSERT( accessor != NULL );
+    return serviceProviderInfo( *accessor->info(), accessor );
+}
 
+QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
+    const TimetableAccessorInfo &accessorInfo, const TimetableAccessor *accessor )
+{
 	QVariantHash dataServiceProvider;
-	dataServiceProvider.insert( "id", accessor->serviceProvider() );
-	dataServiceProvider.insert( "fileName", accessor->timetableAccessorInfo().fileName() );
-	dataServiceProvider.insert( "scriptFileName", accessor->timetableAccessorInfo().scriptFileName() );
-	dataServiceProvider.insert( "name", accessor->timetableAccessorInfo().name() );
-	dataServiceProvider.insert( "url", accessor->timetableAccessorInfo().url() );
-	dataServiceProvider.insert( "shortUrl", accessor->timetableAccessorInfo().shortUrl() );
-	dataServiceProvider.insert( "country", accessor->country() );
-	dataServiceProvider.insert( "cities", accessor->cities() );
-	dataServiceProvider.insert( "credit", accessor->credit() );
-	dataServiceProvider.insert( "useSeparateCityValue", accessor->useSeparateCityValue() );
-	dataServiceProvider.insert( "onlyUseCitiesInList", accessor->onlyUseCitiesInList() );
-	dataServiceProvider.insert( "features", accessor->features() );
-	dataServiceProvider.insert( "featuresLocalized", accessor->featuresLocalized() );
-	dataServiceProvider.insert( "author", accessor->timetableAccessorInfo().author() );
-	dataServiceProvider.insert( "shortAuthor", accessor->timetableAccessorInfo().shortAuthor() );
-	dataServiceProvider.insert( "email", accessor->timetableAccessorInfo().email() );
-	dataServiceProvider.insert( "description", accessor->timetableAccessorInfo().description() );
-	dataServiceProvider.insert( "version", accessor->timetableAccessorInfo().version() );
+	dataServiceProvider.insert( "id", accessorInfo.serviceProvider() );
+    dataServiceProvider.insert( "type", TimetableAccessor::accessorTypeName(accessorInfo.accessorType()) );
+	dataServiceProvider.insert( "fileName", accessorInfo.fileName() );
+	dataServiceProvider.insert( "name", accessorInfo.name() );
+	dataServiceProvider.insert( "url", accessorInfo.url() );
+	dataServiceProvider.insert( "shortUrl", accessorInfo.shortUrl() );
+    if ( accessorInfo.accessorType() == GtfsAccessor ) {
+        dataServiceProvider.insert( "feedUrl", accessorInfo.feedUrl() );
+    } else {
+        dataServiceProvider.insert( "scriptFileName", accessorInfo.scriptFileName() );
+    }
+	dataServiceProvider.insert( "country", accessorInfo.country() );
+	dataServiceProvider.insert( "cities", accessorInfo.cities() );
+	dataServiceProvider.insert( "credit", accessorInfo.credit() );
+	dataServiceProvider.insert( "useSeparateCityValue", accessorInfo.useSeparateCityValue() );
+	dataServiceProvider.insert( "onlyUseCitiesInList", accessorInfo.onlyUseCitiesInList() );
+	dataServiceProvider.insert( "author", accessorInfo.author() );
+	dataServiceProvider.insert( "shortAuthor", accessorInfo.shortAuthor() );
+	dataServiceProvider.insert( "email", accessorInfo.email() );
+	dataServiceProvider.insert( "description", accessorInfo.description() );
+	dataServiceProvider.insert( "version", accessorInfo.version() );
+
+    if ( accessor ) {
+        kDebug() << "Use given accessor to get feature info";
+        dataServiceProvider.insert( "features", accessor->features() );
+        dataServiceProvider.insert( "featuresLocalized", accessor->featuresLocalized() );
+    } else {
+        TimetableAccessor *_accessor = getSpecificAccessor( accessorInfo.serviceProvider() );
+//         TimetableAccessor *_accessor;
+        if ( m_accessors.contains(accessorInfo.serviceProvider()) ) {
+            // Use cached accessor
+            kDebug() << "Use cached accessor to get feature info" << accessorInfo.serviceProvider();
+//             _accessor = m_accessors[ accessorInfo.serviceProvider() ];
+        } else {
+            // Create accessor
+            kDebug() << "Create accessor to get feature info" << accessorInfo.serviceProvider();
+//             _accessor = TimetableAccessor::createAccessor( accessorInfo.serviceProvider() );
+//             m_accessors.insert( accessorInfo.serviceProvider(), _accessor );
+            // TODO Delete accessor after X seconds?
+        }
+        dataServiceProvider.insert( "features", _accessor->features() );
+        dataServiceProvider.insert( "featuresLocalized", _accessor->featuresLocalized() );
+    }
 	
 	QStringList changelog;
-	foreach ( const ChangelogEntry &entry, accessor->timetableAccessorInfo().changelog() ) {
+	foreach ( const ChangelogEntry &entry, accessorInfo.changelog() ) {
 		changelog << QString( "%2 (%1): %3" ).arg( entry.since_version ).arg( entry.author ).arg( entry.description );
 	}
 	dataServiceProvider.insert( "changelog", changelog );
@@ -129,11 +167,29 @@ QHash< QString, QVariant > PublicTransportEngine::locations()
 	locationHash.insert( "defaultAccessor", "be_brail" );
 	ret.insert( name, locationHash );
 
-	locationHash.clear();
-	locationHash.insert( "name", name = "dk" );
-	locationHash.insert( "description", i18n( "Support for some cities in Denmark." ) );
-	locationHash.insert( "defaultAccessor", "dk_rejseplanen" );
-	ret.insert( name, locationHash );
+    locationHash.clear();
+    locationHash.insert( "name", name = "dk" );
+    locationHash.insert( "description", i18n( "Support for some cities in Denmark." ) );
+    locationHash.insert( "defaultAccessor", "dk_rejseplanen" );
+    ret.insert( name, locationHash );
+
+    locationHash.clear();
+    locationHash.insert( "name", name = "es" );
+    locationHash.insert( "description", i18n( "Support for some cities in Spain (GTFS)." ) );
+    locationHash.insert( "defaultAccessor", "es_vitoria" );
+    ret.insert( name, locationHash );
+
+    locationHash.clear();
+    locationHash.insert( "name", name = "hu" );
+    locationHash.insert( "description", i18n( "Support for some cities in Hungary (GTFS)." ) );
+    locationHash.insert( "defaultAccessor", "hu_szeget" );
+    ret.insert( name, locationHash );
+
+    locationHash.clear();
+    locationHash.insert( "name", name = "nz" );
+    locationHash.insert( "description", i18n( "Support for some cities in New Zealand (GTFS)." ) );
+    locationHash.insert( "defaultAccessor", "nz_metlink" );
+    ret.insert( name, locationHash );
 
 	locationHash.clear();
 	locationHash.insert( "name", name = "se" );
@@ -141,11 +197,23 @@ QHash< QString, QVariant > PublicTransportEngine::locations()
 	locationHash.insert( "defaultAccessor", "se_resrobot" );
 	ret.insert( name, locationHash );
 
-	locationHash.clear();
-	locationHash.insert( "name", name = "us" );
-	locationHash.insert( "description", i18n( "Support for Southeastern Pennsylvania." ) );
-	locationHash.insert( "defaultAccessor", "us_septa" );
-	ret.insert( name, locationHash );
+    locationHash.clear();
+    locationHash.insert( "name", name = "us" );
+    locationHash.insert( "description", i18n( "Support for many cities in the USA." ) );
+    locationHash.insert( "defaultAccessor", "us_amtrak" );
+    ret.insert( name, locationHash );
+
+    locationHash.clear();
+    locationHash.insert( "name", name = "ua" );
+    locationHash.insert( "description", i18n( "Support for Ukraine." ) );
+    locationHash.insert( "defaultAccessor", "ua_lviv" );
+    ret.insert( name, locationHash );
+
+    locationHash.clear();
+    locationHash.insert( "name", name = "gb" );
+    locationHash.insert( "description", i18n( "Support for Great Britain." ) );
+    locationHash.insert( "defaultAccessor", "gb_datagm" );
+    ret.insert( name, locationHash );
 
 	locationHash.clear();
 	locationHash.insert( "name", name = "ch" );
@@ -153,11 +221,17 @@ QHash< QString, QVariant > PublicTransportEngine::locations()
 	locationHash.insert( "defaultAccessor", "ch_sbb" );
 	ret.insert( name, locationHash );
 
-	locationHash.clear();
-	locationHash.insert( "name", name = "at" );
-	locationHash.insert( "description", i18n( "Support for all cities in Austria." ) );
-	locationHash.insert( "defaultAccessor", "at_oebb" );
-	ret.insert( name, locationHash );
+    locationHash.clear();
+    locationHash.insert( "name", name = "au" );
+    locationHash.insert( "description", i18n( "Support for Australia." ) );
+    locationHash.insert( "defaultAccessor", "au_winnipeg" );
+    ret.insert( name, locationHash );
+
+    locationHash.clear();
+    locationHash.insert( "name", name = "at" );
+    locationHash.insert( "description", i18n( "Support for all cities in Austria." ) );
+    locationHash.insert( "defaultAccessor", "at_oebb" );
+    ret.insert( name, locationHash );
 
 	locationHash.clear();
 	locationHash.insert( "name", name = "pl" );
@@ -221,11 +295,13 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
 		accessorId = defaultAccessor;
 	}
 	
-	kDebug() << "Check accessor" << accessorId;
-	const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( accessorId );
-	if ( accessor ) {
-		setData( name, serviceProviderInfo(accessor) );
-		delete accessor;
+    // Try to get the specific accessor
+//     kDebug() << "Check accessor" << accessorId;
+// TODO Cache result for this data source
+    const TimetableAccessorInfo *accessorInfo = getSpecificAccessorInfo( accessorId );
+	if ( accessorInfo ) {
+		setData( name, serviceProviderInfo(*accessorInfo) );
+		delete accessorInfo;
 	} else {
 		if ( !m_errornousAccessors.contains(accessorId) ) {
 			m_errornousAccessors << accessorId;
@@ -266,16 +342,19 @@ bool PublicTransportEngine::updateServiceProviderSource()
 				// Don't use symlinks to default service providers
 				continue;
 			}
-			
-			QString s = KUrl( fileName ).fileName().remove( QRegExp( "\\..*$" ) ); // Remove file extension
-			const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( s );
+
+			// Remove file extension
+			QString serviceProvider = KUrl( fileName ).fileName().remove( QRegExp( "\\..*$" ) );
+
+            // Try to get the specific accessor
+            const TimetableAccessor *accessor = getSpecificAccessor( serviceProvider );
 			if ( accessor ) {
 				dataSource.insert( accessor->timetableAccessorInfo().name(),
 				                   serviceProviderInfo(accessor) );
-				loadedAccessors << s;
-				delete accessor;
+				loadedAccessors << serviceProvider;
+// 				delete accessor; TODO Delete after not used for X seconds
 			} else {
-				m_errornousAccessors << s;
+				m_errornousAccessors << serviceProvider;
 			}
 		}
 
@@ -426,52 +505,24 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 			}
 		}
 
-		// Try to get the specific accessor from m_accessors (if it's not in there it is created)
-		bool newlyCreated = false;
-		TimetableAccessor *accessor;
-		if ( !m_accessors.contains(serviceProvider) ) {
-			accessor = TimetableAccessor::getSpecificAccessor( serviceProvider );
-			m_accessors.insert( serviceProvider, accessor );
-			newlyCreated = true;
-		} else {
-			accessor = m_accessors.value( serviceProvider );
-		}
+        // Try to get the specific accessor
+        TimetableAccessor *accessor = getSpecificAccessor( serviceProvider );
+        if ( !accessor ) {
+            return false;
+        }
 
-		if ( accessor == NULL ) {
-			kDebug() << QString( "Accessor %1 couldn't be created" ).arg( serviceProvider );
-			return false; // accessor couldn't be created
-		} else if ( accessor->useSeparateCityValue() && city.isEmpty() ) {
-			kDebug() << QString( "Accessor %1 needs a separate city value. Add to "
-								 "source name '|city=X', where X stands for the city "
-								 "name." ).arg( serviceProvider );
-			return false; // accessor needs a separate city value
-		} else if ( parseDocumentMode == ParseForJourneys
-					&& !accessor->features().contains( "JourneySearch" ) ) {
-			kDebug() << QString( "Accessor %1 doesn't support journey searches." )
-						.arg( serviceProvider );
-			return false; // accessor doesn't support journey searches
-		}
-
-		if ( newlyCreated ) {
-			// 		if ( parseDocumentMode == ParseForDeparturesArrivals ) {
-			connect( accessor,
-					 SIGNAL(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)),
-					 this, SLOT(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)) );
-			// 		} else { // if ( parseDocumentMode == ParseForJourneys )
-			connect( accessor,
-					 SIGNAL(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)),
-					 this, SLOT(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)) );
-			// 		}
-			connect( accessor,
-					 SIGNAL(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,QString,QString,QString,QString,QString,ParseDocumentMode)),
-					 this, SLOT(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,QString,QString,QString,QString,QString,ParseDocumentMode)) );
-			connect( accessor,
-					 SIGNAL(errorParsing(TimetableAccessor*,ErrorType,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)),
-					 this, SLOT(errorParsing(TimetableAccessor*,ErrorType,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)) );
-            connect( accessor,
-                     SIGNAL(progress(TimetableAccessor*,qreal,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)),
-                     this, SLOT(progress(TimetableAccessor*,qreal,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)) );
-		}
+        if ( accessor->useSeparateCityValue() && city.isEmpty() ) {
+            kDebug() << QString( "Accessor %1 needs a separate city value. Add to "
+                                 "source name '|city=X', where X stands for the city "
+                                 "name." ).arg( serviceProvider );
+            return false; // accessor needs a separate city value
+        } else if ( parseDocumentMode == ParseForJourneys
+                    && !accessor->features().contains("JourneySearch") )
+        {
+            kDebug() << QString( "Accessor %1 doesn't support journey searches." )
+                        .arg( serviceProvider );
+            return false; // accessor doesn't support journey searches
+        }
 
 		if ( parseDocumentMode == ParseForDeparturesArrivals ) {
 			accessor->requestDepartures( name, city, stop, maxCount, dateTime, dataType );
@@ -484,6 +535,53 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 	}
 
 	return true;
+}
+
+TimetableAccessorInfo* PublicTransportEngine::getSpecificAccessorInfo(
+        const QString &serviceProvider )
+{
+    return TimetableAccessor::readAccessorInfo( serviceProvider );
+}
+
+TimetableAccessor* PublicTransportEngine::getSpecificAccessor( const QString &serviceProvider )
+{
+    // Try to get the specific accessor from m_accessors
+    bool newlyCreated = false;
+    TimetableAccessor *accessor;
+    if ( !m_accessors.contains(serviceProvider) ) {
+        // Accessor not already created, do it now
+        accessor = TimetableAccessor::createAccessor( serviceProvider );
+        m_accessors.insert( serviceProvider, accessor );
+        newlyCreated = true;
+    } else {
+        // Use already created accessor
+        accessor = m_accessors.value( serviceProvider );
+    }
+
+    if ( !accessor ) {
+        kDebug() << QString( "Accessor %1 couldn't be created" ).arg( serviceProvider );
+        return 0; // accessor could not be created
+    }
+
+    if ( newlyCreated ) {
+        connect( accessor,
+                 SIGNAL(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)),
+                 this, SLOT(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)) );
+        connect( accessor,
+                 SIGNAL(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)),
+                 this, SLOT(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)) );
+        connect( accessor,
+                 SIGNAL(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,QString,QString,QString,QString,QString,ParseDocumentMode)),
+                 this, SLOT(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,QString,QString,QString,QString,QString,ParseDocumentMode)) );
+        connect( accessor,
+                 SIGNAL(errorParsing(TimetableAccessor*,ErrorType,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)),
+                 this, SLOT(errorParsing(TimetableAccessor*,ErrorType,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)) );
+        connect( accessor,
+                 SIGNAL(progress(TimetableAccessor*,qreal,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)),
+                 this, SLOT(progress(TimetableAccessor*,qreal,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)) );
+    }
+
+    return accessor;
 }
 
 QString PublicTransportEngine::stripDateAndTimeValues( const QString& sourceName )
@@ -512,7 +610,7 @@ void PublicTransportEngine::accessorInfoDirChanged( const QString &path )
 
 void PublicTransportEngine::reloadAllAccessors()
 {
-	kDebug() << "Reload accessors (the accessor dir changed)";
+	kDebug() << "Reload accessors (the contents of the accessor directory changed)";
 
 	delete m_timer;
 	m_timer = NULL;
@@ -675,6 +773,7 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 		data.insert( "routeStops", departureInfo->routeStops() );
 		data.insert( "routeTimes", departureInfo->routeTimesVariant() );
 		data.insert( "routeExactStops", departureInfo->routeExactStops() );
+        data.insert( "pricing", departureInfo->pricing() );
 
 		QString sKey = QString( "%1" ).arg( i );
 		setData( sourceName, sKey, data );
@@ -968,37 +1067,50 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
 	}
 
 	// Data source stays up to date for max(UPDATE_TIMEOUT, minFetchWait) seconds
-	QVariantHash dataSource = m_dataSources[ name ].toHash();
+	const QVariantHash dataSource = m_dataSources[ name ].toHash();
 
-	TimetableAccessor *accessor;
-	QString serviceProvider = dataSource[ "serviceProvider" ].toString();
-	if ( !m_accessors.contains(serviceProvider) ) {
-		accessor = TimetableAccessor::getSpecificAccessor( serviceProvider );
-		m_accessors.insert( serviceProvider, accessor );
-	} else {
-		accessor = m_accessors.value( serviceProvider );
-	}
+	const QString serviceProvider = dataSource[ "serviceProvider" ].toString();
+    TimetableAccessor *accessor = getSpecificAccessor( serviceProvider );
+// 	if ( !m_accessors.contains(serviceProvider) ) {
+// 		accessor = TimetableAccessor::createAccessor( serviceProvider );
+// 		m_accessors.insert( serviceProvider, accessor );
+// 	} else {
+// 		accessor = m_accessors.value( serviceProvider );
+// 	}
 
 	QDateTime downloadTime = m_nextDownloadTimeProposals[ stripDateAndTimeValues( name )];
 	int minForSufficientChanges = downloadTime.isValid()
 			? QDateTime::currentDateTime().secsTo( downloadTime ) : 0;
 	int minFetchWait;
+    const int secsSinceLastUpdate = dataSource["updated"].toDateTime().secsTo(
+                                    QDateTime::currentDateTime() );
+    if ( accessor->type() == GtfsAccessor ) {
+        // Update GTFS accessors once a week
+        // TODO: Check for an updated GTFS feed every X seconds, eg. once an hour
+        TimetableAccessorGeneralTransitFeed *gtfsAccessor =
+                qobject_cast<TimetableAccessorGeneralTransitFeed*>( accessor );
+        kDebug() << "Wait time until next update from GTFS accessor:"
+                 << KGlobal::locale()->prettyFormatDuration(1000 *
+                    (gtfsAccessor->isRealtimeDataAvailable()
+                     ? 60 - secsSinceLastUpdate : 60 * 60 * 24 - secsSinceLastUpdate));
+        return gtfsAccessor->isRealtimeDataAvailable()
+                ? secsSinceLastUpdate < 60 // Update maximally once a minute if realtime data is available
+                : secsSinceLastUpdate < 60 * 60 * 24; // Update GTFS feed once a day without realtime data
+    } else {
+        // If delays are available set maximum fetch wait
+        if ( accessor->features().contains("Delay") && dataSource["delayInfoAvailable"].toBool() ) {
+            minFetchWait = qBound((int)MIN_UPDATE_TIMEOUT, minForSufficientChanges,
+                                (int)MAX_UPDATE_TIMEOUT_DELAY );
+        } else {
+            minFetchWait = qMax( minForSufficientChanges, MIN_UPDATE_TIMEOUT );
+        }
 
-	// If delays are available set maximum fetch wait
-	if ( accessor->features().contains("Delay") && dataSource["delayInfoAvailable"].toBool() ) {
-		minFetchWait = qBound((int)MIN_UPDATE_TIMEOUT, minForSufficientChanges,
-							  (int)MAX_UPDATE_TIMEOUT_DELAY );
-	} else {
-		minFetchWait = qMax( minForSufficientChanges, MIN_UPDATE_TIMEOUT );
-	}
+        minFetchWait = qMax( minFetchWait, accessor->minFetchWait() );
+        kDebug() << "Wait time until next download:"
+                 << ((minFetchWait - secsSinceLastUpdate) / 60) << "min";
 
-	minFetchWait = qMax( minFetchWait, accessor->minFetchWait() );
-	kDebug() << "Wait time until next download:"
-			 << ((minFetchWait - dataSource["updated"].toDateTime().secsTo(
-				 QDateTime::currentDateTime())) / 60 ) << "min";
-
-	return dataSource["updated"].toDateTime().secsTo(
-			QDateTime::currentDateTime() ) < minFetchWait;
+        return secsSinceLastUpdate < minFetchWait;
+    }
 }
 
 // This does the magic that allows Plasma to load

@@ -14,8 +14,9 @@ add_subdirectory( accessorInfos )
 add_subdirectory( tests )
 
 # Source files
-set( publictransport_engine_SRCS 
-    publictransportdataengine.cpp 
+set( publictransport_engine_SRCS
+    publictransportdataengine.cpp
+    publictransportservice.cpp
     departureinfo.cpp
     accessorinfoxmlreader.cpp
     timetableaccessor.cpp
@@ -25,6 +26,8 @@ set( publictransport_engine_SRCS
     timetableaccessor_generaltransitfeed.cpp
     generaltransitfeed_importer.cpp
     generaltransitfeed_database.cpp
+    generaltransitfeed_realtime.cpp
+    gtfs-realtime.pb.cc
     scripting.cpp
     enums.cpp )
 
@@ -33,10 +36,13 @@ kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} )
 
 target_link_libraries( plasma_engine_publictransport
     ${KDE4_PLASMA_LIBS} ${KDE4_KROSSCORE_LIBS} ${KDE4_KIO_LIBS}
-    ${QT_QTXML_LIBRARY} ${QT_QTSQL_LIBRARY} )
+    ${QT_QTXML_LIBRARY} ${QT_QTSQL_LIBRARY} protobuf )
 
 install( TARGETS plasma_engine_publictransport
          DESTINATION ${PLUGIN_INSTALL_DIR} )
 
 install( FILES plasma-engine-publictransport.desktop
          DESTINATION ${SERVICES_INSTALL_DIR} )
+
+install( FILES publictransport.operations
+         DESTINATION ${DATA_INSTALL_DIR}/plasma/services)

@@ -30,12 +30,13 @@
 // Plasma includes
 #include <Plasma/DataEngine>
 
-class QTimer;
-class QFileSystemWatcher;
 class TimetableAccessor;
+class TimetableAccessorInfo;
 class DepartureInfo;
 class JourneyInfo;
 class StopInfo;
+class QTimer;
+class QFileSystemWatcher;
 
 /** @class PublicTransportEngine
  * @brief This engine provides departure/arrival times and journeys for public transport.
@@ -102,13 +103,13 @@ protected:
 	/** @brief This virtual function is called when a new source is requested.
 	 * 
 	 * @param name The name of the requested data source. */
-	bool sourceRequestEvent( const QString& name );
+	bool sourceRequestEvent( const QString &name );
 
 	/** @brief This virtual function is called when an automatic update is triggered for an 
 	 * existing source (ie: when a valid update interval is set when requesting a source).
 	 * 
 	 * @param name The name of the data source to be updated. */
-	bool updateSourceEvent( const QString& name );
+	bool updateSourceEvent( const QString &name );
 
 	bool updateServiceProviderForCountrySource( const QString &name );
 	bool updateServiceProviderSource();
@@ -119,7 +120,9 @@ protected:
 	/** @brief Returns wheather or not the given source is up to date.
 	 * 
 	 * @param name The name of the source to be checked. */
-	bool isSourceUpToDate( const QString& name );
+	bool isSourceUpToDate( const QString &name );
+
+    virtual Plasma::Service* serviceForSource( const QString &name );
 
 public slots:
 	/** @brief A list of departures / arrivals was received.
@@ -258,11 +261,20 @@ public slots:
 	void reloadAllAccessors();
 
 private:
-	/** @brief Gets a map with information about an accessor.
+	/**
+     * @brief Gets a map with information about an accessor.
 	 * 
-	* @param accessor The accessor to get information about. */
-	QHash< QString, QVariant > serviceProviderInfo( const TimetableAccessor *&accessor );
+	 * @param accessor The accessor to get information about. 
+     **/
+    QHash< QString, QVariant > serviceProviderInfo( const TimetableAccessor *&accessor );
+
+	QHash< QString, QVariant > serviceProviderInfo( const TimetableAccessorInfo &accessorInfo,
+                                                    const TimetableAccessor *accessor = 0 );
+
 	QHash< QString, QVariant > locations();
+
+    TimetableAccessor *getSpecificAccessor( const QString &serviceProviderId );
+    TimetableAccessorInfo *getSpecificAccessorInfo( const QString &serviceProviderId );
 
 	QString stripDateAndTimeValues( const QString &sourceName );
 

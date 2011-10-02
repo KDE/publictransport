@@ -33,7 +33,7 @@
 #include <QSqlDriver>
 
 GeneralTransitFeedImporter::GeneralTransitFeedImporter( const QString &providerName )
-        : m_state(Initializing), m_quit(false)
+        : m_state(Initializing), m_providerName(providerName), m_quit(false)
 {
     // Register state enum to be able to use it in queued connections
     qRegisterMetaType< GeneralTransitFeedImporter::State >( "GeneralTransitFeedImporter::State" );
@@ -42,6 +42,8 @@ GeneralTransitFeedImporter::GeneralTransitFeedImporter( const QString &providerN
     if ( !GeneralTransitFeedDatabase::initDatabase(providerName, &m_errorString) ) {
         m_state = FatalError;
         kDebug() << m_errorString;
+    } else {
+        m_state = Initialized;
     }
 }
 
@@ -53,10 +55,11 @@ GeneralTransitFeedImporter::~GeneralTransitFeedImporter()
 
 void GeneralTransitFeedImporter::quit()
 {
-    if ( isRunning() ) {
-        QMutexLocker locker( &m_mutex );
-        m_quit = true;
+    QMutexLocker locker( &m_mutex );
+    if ( m_state == Importing ) {
+        kDebug() << "Quits at next checkpoint";
     }
+    m_quit = true;
 }
 
 void GeneralTransitFeedImporter::startImport( const QString &fileName )
@@ -65,7 +68,7 @@ void GeneralTransitFeedImporter::startImport( const QString &fileName )
     m_fileName = fileName;
     m_mutex.unlock();
 
-    start();
+    start( LowPriority );
 }
 
 void GeneralTransitFeedImporter::setError( GeneralTransitFeedImporter::State errorState,
@@ -74,58 +77,24 @@ void GeneralTransitFeedImporter::setError( GeneralTransitFeedImporter::State err
     m_mutex.lock();
     m_state = errorState;
     m_errorString = errorText;
-    kDebug() << errorText;
     m_mutex.unlock();
 
+    kDebug() << errorText;
     if ( errorState == FatalError ) {
         emit finished( errorState, errorText );
     }
 }
 
-// The GTFS (GeneralTransitFeedSpecification) specification defines the following files:
-//-----------------------------------------------------------------------------------------------
-// agency.txt - Required. This file contains information about one or more transit agencies that
-//          provide the data in this feed.
-// stops.txt - Required. This file contains information about individual locations where vehicles
-//          pick up or drop off passengers.
-// routes.txt - Required. This file contains information about a transit organization's routes.
-//          A route is a group of trips that are displayed to riders as a single service.
-// trips.txt - Required. This file lists all trips and their routes. A trip is a sequence of two
-//          or more stops that occurs at specific time.
-// stop_times.txt - Required. This file lists the times that a vehicle arrives at and departs
-//          from individual stops for each trip.
-// calendar.txt - Required. This file defines dates for service IDs using a weekly schedule.
-//          Specify when service starts and ends, as well as days of the week where service
-//          is available.
-// calendar_dates.txt - Optional. This file lists exceptions for the service IDs defined in the
-//          calendar.txt file. If calendar_dates.txt includes ALL dates of service, this file may
-//          be specified instead of calendar.txt.
-// fare_attributes.txt - Optional. This file defines fare information for a transit
-//          organization's routes.
-// fare_rules.txt - Optional. This file defines the rules for applying fare information for a
-//          transit organization's routes.
-// shapes.txt - Optional. This file defines the rules for drawing lines on a map to represent
-//          a transit organization's routes.
-// frequencies.txt - Optional. This file defines the headway (time between trips) for routes with
-//          variable frequency of service.
-// transfers.txt - Optional. This file defines the rules for making connections at transfer
-//          points between routes.
-//
-// (see http://code.google.com/intl/de-DE/transit/spec/transit_feed_specification.html#transitFeedFiles)
-// bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileName )
-// {
 void GeneralTransitFeedImporter::run()
 {
     m_mutex.lock();
     m_state = Importing;
     const QString fileName = m_fileName;
+    QSqlDatabase database = QSqlDatabase::database( m_providerName );
     m_mutex.unlock();
 
-    QString errorText;
-    if ( !GeneralTransitFeedDatabase::createDatabaseTables(&errorText) ) {
-        setError( FatalError, "Error initializing tables in the database: " + errorText );
-        return;
-    }
+    QStringList requiredFiles;
+    requiredFiles << "agency.txt" << "stops.txt" << "routes.txt" << "trips.txt" << "stop_times.txt";
 
     KZip gtfsZipFile( fileName );
     if ( !gtfsZipFile.open(QIODevice::ReadOnly) ) {
@@ -135,26 +104,66 @@ void GeneralTransitFeedImporter::run()
     }
     const QString tmpGtfsDir = KGlobal::dirs()->saveLocation( "tmp",
             QFileInfo(fileName).fileName() + "_dir/" );
-    gtfsZipFile.directory()->copyTo( tmpGtfsDir );
-    gtfsZipFile.close();
 
-    QFileInfoList fileInfos = QDir( tmpGtfsDir ).entryInfoList( QDir::Files | QDir::NoDotAndDotDot );
-    if ( fileInfos.isEmpty() ) {
-        setError( FatalError, "Empty GTFS feed: " + fileName );
-        kDebug() << "Extracted to" << tmpGtfsDir;
+    // Cast away constness, to be able to set directory to another directory (but not changing it)
+    KArchiveDirectory *directory = const_cast<KArchiveDirectory*>( gtfsZipFile.directory() );
+    QStringList directoryEntries = directory->entries();
+    QStringList missingFiles;
+    bool feedSubDirectoryFound = false;
+    forever {
+        QStringList currentMissingFiles = requiredFiles;
+        qint64 currentTotalFileSize = 0;
+        foreach ( const QString &directoryEntry, directoryEntries ) {
+            currentMissingFiles.removeOne( directoryEntry );
+        }
+
+        feedSubDirectoryFound = currentMissingFiles.isEmpty();
+        if ( feedSubDirectoryFound ) {
+            // Required files found or no more directories to look into
+            missingFiles = currentMissingFiles;
+            break;
+        } else {
+            // Use first sub directory in current directory for new directory
+            bool subDirectoryFound = false;
+            foreach ( const QString &directoryEntry, directoryEntries ) {
+                const KArchiveEntry *entry = directory->entry( directoryEntry );
+                if ( entry->isDirectory() ) {
+                    kDebug() << "Going into subdirectory of the zip file:" << entry->name();
+                    directory = const_cast<KArchiveDirectory*>(
+                            dynamic_cast<const KArchiveDirectory*>(entry) );
+                    directoryEntries = directory->entries();
+                    subDirectoryFound = true;
+                    break;
+                }
+            }
+
+            if ( !subDirectoryFound ) {
+                // Required files not found, also not in (first) sub directories
+                kDebug() << "Required files not found, also not in (first) sub directories";
+                break;
+            }
+        }
+    }
+
+    if ( !missingFiles.isEmpty() || !feedSubDirectoryFound ) {
+        kDebug() << "Required file(s) missing in GTFS feed: " << missingFiles.join(", ");
+        setError( FatalError, "Required file(s) missing in GTFS feed: " + missingFiles.join(", ") ); // TODO i18nc
         return;
     }
 
-    // Check required files in the feed and calculate total file size (for progress calculations)
-    QStringList requiredFiles;
-    requiredFiles << "agency.txt" << "stops.txt" << "routes.txt" << "trips.txt" << "stop_times.txt";
+    directory->copyTo( tmpGtfsDir );
+    gtfsZipFile.close();
+
+    // Calculate total file size (for progress calculations)
+    QFileInfoList fileInfos = QDir( tmpGtfsDir ).entryInfoList( QDir::Files | QDir::NoDotAndDotDot );
     qint64 totalFileSize = 0;
     foreach ( const QFileInfo &fileInfo, fileInfos ) {
-        requiredFiles.removeOne( fileInfo.fileName() );
         totalFileSize += fileInfo.size();
     }
-    if ( !requiredFiles.isEmpty() ) {
-        setError( FatalError, "Required file(s) missing in GTFS feed: " + requiredFiles.join(", ") );
+
+    QString errorText;
+    if ( !GeneralTransitFeedDatabase::createDatabaseTables(&errorText, database) ) {
+        setError( FatalError, "Error initializing tables in the database: " + errorText );
         return;
     }
 
@@ -165,7 +174,7 @@ void GeneralTransitFeedImporter::run()
         int minimalRecordCount = 0;
         if ( fileInfo.fileName() == "agency.txt" ) {
             requiredFields << "agency_name" << "agency_url" << "agency_timezone";
-            minimalRecordCount = 1;
+//             minimalRecordCount = 1;
         } else if ( fileInfo.fileName() == "stops.txt" ) {
             requiredFields << "stop_id" << "stop_name" << "stop_lat" << "stop_lon";
             minimalRecordCount = 1;
@@ -204,8 +213,8 @@ void GeneralTransitFeedImporter::run()
             continue;
         }
 
-        if ( !writeGtfsDataToDatabase(fileInfo.filePath(), requiredFields, minimalRecordCount,
-                                      totalFilePosition, totalFileSize) )
+        if ( !writeGtfsDataToDatabase(database, fileInfo.filePath(), requiredFields,
+                                      minimalRecordCount, totalFilePosition, totalFileSize) )
         {
             errors = true;
         }
@@ -220,18 +229,20 @@ void GeneralTransitFeedImporter::run()
         }
         m_mutex.unlock();
     }
+
 // TODO Test required files...
 
     m_mutex.lock();
     m_state = errors ? FinishedWithErrors : FinishedSuccessfully;
-    emit finished( m_state );
+    kDebug() << "Importer finished" << m_providerName;
     m_mutex.unlock();
-    kDebug() << "Importer finished";
+
+    emit finished( errors ? FinishedWithErrors : FinishedSuccessfully );
     return;
 }
 
-bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileName,
-        const QStringList &requiredFields, int minimalRecordCount,
+bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
+        const QString &fileName, const QStringList &requiredFields, int minimalRecordCount,
         qint64 totalFilePosition, qint64 totalFileSize )
 {
     // Open the file
@@ -254,14 +265,13 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
     }
 
     // Open the database
-    QSqlDatabase db = QSqlDatabase::database();
-    if ( !db.isValid() ) {
+    if ( !database.isValid() || !database.isOpen() ) {
         setError( FatalError, "Can not open database" );
         return false;
     }
 
     const QString tableName = QFileInfo(file).baseName();
-    kDebug() << "Read GTFS data for table" << tableName;
+    kDebug() << "Read GTFS data for table" << tableName << database.connectionName();
 
     // Read first line from file (header with used field names)
     QStringList fieldNames;
@@ -275,7 +285,7 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
     }
 
     QStringList availableFields;
-    QSqlRecord table = db.record( tableName );
+    QSqlRecord table = database.record( tableName );
     QStringList unavailableFieldNames; // Field names not used in the database
     QList<int> unavailableFieldIndices;
     for ( int i = fieldNames.count() - 1; i >= 0; --i ) {
@@ -291,11 +301,12 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
         }
     }
     if ( !unavailableFieldNames.isEmpty() ) {
-        kDebug() << "Not all used fields are available in the database:" << unavailableFieldNames;
+        kDebug() << "Not all used fields are available in the database:" << unavailableFieldNames
+                 << "table:" << tableName;
     }
 
     // Performance optimization
-    QSqlQuery query;
+    QSqlQuery query( database );
     if( !query.exec("PRAGMA synchronous=OFF;") ) {
         qDebug() << query.lastError();
     }
@@ -304,8 +315,8 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
     }
 
     // Begin transaction
-    if ( !db.driver()->beginTransaction() ) {
-        qDebug() << db.lastError();
+    if ( !database.driver()->beginTransaction() ) {
+        qDebug() << database.lastError();
     }
 
     QStringList dbFieldNames = fieldNames;
@@ -329,6 +340,7 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
                    .arg(tableName, dbFieldNames.join(","), placeholder) );
 
     int counter = 0;
+    kDebug() << "fieldNames:" << fieldNames;
     while ( !stream.atEnd() ) {
         QString line = stream.readLine();
         QVariantList fieldValues;
@@ -369,6 +381,58 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
                     }
                 }
                 query.addBindValue( weekdays );
+            } else if ( tableName == "stop_times" ) {
+                // If only one of "departure_time" and "arrival_time" is set,
+                // copy the value to both fields
+                int departureTime = -1;
+                int arrivalTime = -1;
+                int departureTimeIndex = -1;
+                int arrivalTimeIndex = -1;
+                for ( int i = 0; i < fieldNames.count(); ++i ) {
+                    if ( fieldNames[i] == "departure_time" ) {
+                        departureTime = fieldValues[i].toInt();
+                        departureTimeIndex = i;
+                    } else if ( fieldNames[i] == "arrival_time" ) {
+                        arrivalTime = fieldValues[i].toInt();
+                        arrivalTimeIndex = i;
+                    }
+                }
+                if ( departureTimeIndex >= 0 ) {
+                    arrivalTime = departureTime;
+                    fieldValues[ arrivalTimeIndex ] = departureTime;
+                } else if ( departureTime < 0 ) {
+                    departureTime = arrivalTime;
+                    fieldValues[ departureTimeIndex ] = arrivalTime;
+                }
+                foreach ( const QVariant &fieldValue, fieldValues ) {
+                    query.addBindValue( fieldValue );
+                }
+//             } else if ( tableName == "agency" && fieldValues.isEmpty() ) {
+// //                    "agency_id INTEGER UNIQUE PRIMARY KEY, " // (optional for gtfs with a single agency)
+// //                    "agency_name VARCHAR(256) NOT NULL, " // (required) The name of the agency
+// //                    "agency_url VARCHAR(512) NOT NULL, " // (required) URL of the transit agency
+// //                    "agency_timezone VARCHAR(256), " // (required, if NULL, the default timezone from the accesor XML is used, from <timeZone>-tag) Timezone name, see http://en.wikipedia.org/wiki/List_of_tz_zones
+// //                    "agency_lang VARCHAR(2), " // (optional) A two-letter ISO 639-1 code for the primary language used by this transit agency
+// //                    "agency_phone
+// 
+//                 for ( int i = 0; i < fieldNames.count(); ++i ) {
+//                     const QString fieldName = fieldNames[i];
+//                     if ( fieldName == "agency_id" ) {
+//                         query.addBindValue( 0 );
+//                     } else if ( fieldName == "agency_name" ) {
+//                         query.addBindValue(  );
+//                     } else if ( fieldName == "agency_url" ) {
+//                         weekdays[2] = '1';
+//                     } else if ( fieldName == "agency_timezone" ) {
+//                         weekdays[3] = '1';
+//                     } else if ( fieldName == "agency_lang" ) {
+//                         weekdays[4] = '1';
+//                     } else if ( fieldName == "agency_phone" ) {
+//                         weekdays[5] = '1';
+//                     } else {
+//                         kDebug() << "Unknown field for agency table: " << fieldName;
+//                     }
+//                 }
             } else {
                 foreach ( const QVariant &fieldValue, fieldValues ) {
                     query.addBindValue( fieldValue );
@@ -382,36 +446,37 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( const QString &fileNam
 
             // New row has been inserted into the DB successfully
             ++counter;
-            if ( counter > 0 && counter % 50000 == 0 ) {
-                // Start a new transaction after 50000 INSERTs
-                if ( !db.driver()->commitTransaction() ) {
-                    qDebug() << db.lastError();
-                }
-                if ( !db.driver()->beginTransaction() ) {
-                    qDebug() << db.lastError();
-                }
 
-                // Report progress TODO
-//                 emit progress( qreal(file.pos()) / qreal(file.size()) );
+            // Start a new transaction after 50000 INSERTs
+            if ( counter > 0 && counter % 50000 == 0 ) {
+                if ( !database.driver()->commitTransaction() ) {
+                    qDebug() << database.lastError();
+                }
+                if ( !database.driver()->beginTransaction() ) {
+                    qDebug() << database.lastError();
+                }
+            }
+
+            // Report progress and check for quit after each 500 INSERTs
+            if ( counter > 0 && counter % 500 == 0 ) {
                 emit progress( qreal(totalFilePosition + file.pos()) / qreal(totalFileSize) );
 
                 // Check if the job should be cancelled
                 m_mutex.lock();
                 if ( m_quit ) {
+                    m_mutex.unlock();
                     setError( FatalError, "Importer was cancelled" );
                     return false;
                 }
                 m_mutex.unlock();
             }
-        } else {
-            continue;
         }
     }
     file.close();
 
     // End transaction, restore synchronous=FULL
-    if ( !db.driver()->commitTransaction() ) {
-        qDebug() << db.lastError();
+    if ( !database.driver()->commitTransaction() ) {
+        qDebug() << database.lastError();
     }
     if( !query.exec("PRAGMA synchronous=FULL;") ) {
         qDebug() << query.lastError();
@@ -525,7 +590,9 @@ bool GeneralTransitFeedImporter::readFields( const QString& line, QVariantList *
         }
     }
 
-    if ( fieldValues->count() < expectedFieldCount ) {
+    if ( fieldValues->isEmpty() ) {
+        return false;
+    } else if ( fieldValues->count() < expectedFieldCount ) {
         kDebug() << "Header contains" << expectedFieldCount << "fields, but a line was read with only"
                  << fieldValues->count() << "field values. Using empty/default values:";
         kDebug() << "Values: " << *fieldValues;

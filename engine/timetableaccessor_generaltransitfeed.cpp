@@ -21,25 +21,33 @@
 
 #include "generaltransitfeed_importer.h"
 #include "generaltransitfeed_database.h"
+#include "generaltransitfeed_realtime.h"
 
 #include <KTimeZone>
 #include <KStandardDirs>
 #include <KDebug>
 #include <KTemporaryFile>
+#include <KLocalizedString>
+#include <KLocale>
+#include <KCurrencyCode>
+#include <KConfigGroup>
 
-#include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSqlRecord>
 #include <QFileInfo>
-#include <KLocalizedString>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <Plasma/Service>
+#include "publictransportservice.h"
+#include <kdatetime.h>
 
 TimetableAccessorGeneralTransitFeed::TimetableAccessorGeneralTransitFeed(
-        TimetableAccessorInfo *info ) : TimetableAccessor(info), m_importer(0)
+        TimetableAccessorInfo *info ) : TimetableAccessor(info),
+        m_tripUpdates(0), m_alerts(0), m_service(0)
 {
     m_state = Initializing;
-//     TODO Use another class for database management...
-//     GeneralTransitFeedImporter importer( info->serviceProvider() );
 
     QString errorText;
     if ( !GeneralTransitFeedDatabase::initDatabase(info->serviceProvider(), &errorText) ) {
@@ -48,19 +56,30 @@ TimetableAccessorGeneralTransitFeed::TimetableAccessorGeneralTransitFeed(
         return;
     }
 
+    // Read accessor information cache
+    const QString fileName = accessorCacheFileName();
+    bool cacheExists = QFile::exists( fileName );
+    KConfig cfg( fileName, KConfig::SimpleConfig );
+    KConfigGroup grp = cfg.group( m_info->serviceProvider() );
+    bool importFinished = grp.readEntry( "feedImportFinished", false );
+
     QFileInfo fi( GeneralTransitFeedDatabase::databasePath(info->serviceProvider()) );
-    if ( !fi.exists() || fi.size() < 50000 ) {
-        // If the database does not exist or is too small, (re)create it
-        if ( !GeneralTransitFeedDatabase::createDatabaseTables(&errorText) ) {
-            kDebug() << "Error initializing the database" << errorText;
-            m_state = ErrorInDatabase;
-            return;
-        }
-        downloadFeed();
-    } else {
+    if ( importFinished && fi.exists() && fi.size() > 30000 ) {
+        // Load agency information from database and request GTFS-realtime data 
         loadAgencyInformation();
+        updateRealtimeData();
         m_state = Ready;
     }
+
+    // Update database to the current version of the GTFS feed or import it for the first time
+    updateGtfsData();
+//     } else {
+        // If the database does not exist, is too small or was not imported completely,
+        // get information about the GTFS feed, download it, create the database and
+        // import the feed into it
+//         statFeed();
+//         kDebug() << "Import not finished..."; // TODO stay at error state?
+//     }
 }
 
 TimetableAccessorGeneralTransitFeed::~TimetableAccessorGeneralTransitFeed()
@@ -68,141 +87,169 @@ TimetableAccessorGeneralTransitFeed::~TimetableAccessorGeneralTransitFeed()
     // Free all agency objects
     qDeleteAll( m_agencyCache );
 
-    if ( m_importer ) {
-        m_importer->quit();
-        m_importer->wait();
-        delete m_importer;
-    }
+    delete m_tripUpdates;
+    delete m_alerts;
 }
 
-void TimetableAccessorGeneralTransitFeed::downloadFeed()
+void TimetableAccessorGeneralTransitFeed::updateGtfsData()
 {
-    KTemporaryFile tmpFile;
-    if ( tmpFile.open() ) {
-        kDebug() << "Downloading GTFS feed from" << m_info->feedUrl() << "to" << tmpFile.fileName();
-        m_state = DownloadingFeed;
-        tmpFile.setAutoRemove( false ); // Do not remove the target file while downloading
-        KIO::FileCopyJob *job = KIO::file_copy( m_info->feedUrl(), KUrl(tmpFile.fileName()), -1,
-                                                KIO::Overwrite | KIO::HideProgressInfo );
-        connect( job, SIGNAL(result(KJob*)), this, SLOT(feedReceived(KJob*)) );
-        connect( job, SIGNAL(percent(KJob*,ulong)), this, SLOT(downloadProgress(KJob*,ulong)) );
+    if ( m_service ) {
+        kDebug() << "Is already updating, please wait";
+        return;
+    }
+    kDebug() << "Updating GTFS data" << m_info->feedUrl();
+
+    // Set state to UpdateGtfsFeed, if state was Ready, ie. if the database was already imported
+    // and only gets updated now
+    if ( m_state != Ready ) {
+        m_state = UpdatingGtfsFeed;
+        kDebug() << "Updating GTFS database, please wait";
     } else {
-        kDebug() << "Could not create a temporary file to download the GTFS feed";
-//         TODO emit error...
+        kDebug() << "Stays ready, updates GTFS database in background";
     }
+    m_progress = 0.0;
+    m_service = new PublicTransportService( QString(), this );
+    KConfigGroup op = m_service->operationDescription("updateGtfsFeed");
+    op.writeEntry( "serviceProviderId", m_info->serviceProvider() );
+    Plasma::ServiceJob *job = m_service->startOperationCall( op );
+    connect( job, SIGNAL(finished(KJob*)), this, SLOT(importFinished(KJob*)) );
+    connect( job, SIGNAL(percent(KJob*,ulong)), this, SLOT(importProgress(KJob*,ulong)) );
 }
 
-void TimetableAccessorGeneralTransitFeed::downloadProgress( KJob *job, ulong percent )
+void TimetableAccessorGeneralTransitFeed::importProgress( KJob *job, ulong percent )
 {
-    qreal currentProgress = qreal(percent) / 100.0;
-    for ( QHash<QString, JobInfos>::ConstIterator it = m_jobInfos.constBegin();
-          it != m_jobInfos.constEnd(); ++it )
+    kDebug() << percent << m_info->serviceProvider() << m_state;
+    m_progress = percent / 100.0;
+    for ( QHash<QString,JobInfos>::ConstIterator it = m_waitingSources.constBegin();
+          it != m_waitingSources.constEnd(); ++it )
     {
-        emit progress( this, currentProgress, i18nc("@info/plain TODO",
-                       "Downloading feed from <resource>%1</resource>", m_info->feedUrl()),
-                       m_info->feedUrl(), m_info->serviceProvider(),
-                       it->sourceName, it->city, it->stop, it->dataType,
-                       it->parseDocumentMode );
+        emit progress( this, m_progress, i18nc("@info/plain TODO", "Importing GTFS feed"),
+                m_info->feedUrl(), m_info->serviceProvider(),
+                it->sourceName, it->city, it->stop, it->dataType, it->parseDocumentMode );
     }
 }
 
-void TimetableAccessorGeneralTransitFeed::feedReceived( KJob *job )
+void TimetableAccessorGeneralTransitFeed::importFinished( KJob *job )
 {
-    KIO::FileCopyJob *fileCopyJob = qobject_cast<KIO::FileCopyJob*>( job );
-    QString tmpFilePath = fileCopyJob->destUrl().path();
-
+    m_progress = 1.0;
     if ( job->error() != 0 ) {
-        kDebug() << "Error downloading GTFS feed:" << job->errorString();
-        m_state = ErrorDownloadingFeed;
-        if ( !QFile::remove(tmpFilePath) ) {
-            kDebug() << "Could not remove the temporary GTFS feed file";
-        }
-
-        for ( QHash<QString, JobInfos>::ConstIterator it = m_jobInfos.constBegin();
-              it != m_jobInfos.constEnd(); ++it )
+        // Error while importing
+        kDebug() << "ERROR" << m_info->serviceProvider() << job->errorString();
+        m_state = ErrorReadingFeed;
+        for ( QHash<QString,JobInfos>::ConstIterator it = m_waitingSources.constBegin();
+            it != m_waitingSources.constEnd(); ++it )
         {
             emit errorParsing( this, ErrorDownloadFailed, i18nc("@info/plain TODO",
-                    "Failed to download GTFS feed from <resource>%1</resource>: <message>%2</message>",
+                    "Failed to import GTFS feed from <resource>%1</resource>: <message>%2</message>",
                     m_info->feedUrl(), job->errorString()),
                     m_info->feedUrl(), m_info->serviceProvider(),
                     it->sourceName, it->city, it->stop, it->dataType, it->parseDocumentMode );
         }
+    } else {
+        // Succesfully updated GTFS database
+        kDebug() << "GTFS feed updated successfully" << m_info->serviceProvider();
+        m_state = Ready;
+        for ( QHash<QString,JobInfos>::ConstIterator it = m_waitingSources.constBegin();
+            it != m_waitingSources.constEnd(); ++it )
+        {
+            if ( it->parseDocumentMode == ParseForDeparturesArrivals ) {
+                requestDepartures( it.key(), it->city, it->stop, it->maxCount, it->dateTime,
+                                   it->dataType, it->usedDifferentUrl );
+            } else if ( it->parseDocumentMode == ParseForStopSuggestions ) {
+                requestStopSuggestions( it.key(), it->city, it->stop, ParseForStopSuggestions,
+                                        it->maxCount, it->dateTime, it->dataType,
+                                        it->usedDifferentUrl );
+            } else {
+                kDebug() << "Finished updating GTFS database, but unknown parse mode in a "
+                            "waiting source" << it->parseDocumentMode;
+            }
+        }
+    }
+
+    m_waitingSources.clear();
+    m_service->deleteLater();
+    m_service = 0;
+}
+
+bool TimetableAccessorGeneralTransitFeed::isRealtimeDataAvailable() const
+{
+    return !m_info->realtimeTripUpdateUrl().isEmpty() || !m_info->realtimeAlertsUrl().isEmpty();
+}
+
+void TimetableAccessorGeneralTransitFeed::updateRealtimeData()
+{
+//         m_state = DownloadingFeed;
+    if ( !m_info->realtimeTripUpdateUrl().isEmpty() ) {
+        KIO::StoredTransferJob *tripUpdatesJob = KIO::storedGet( m_info->realtimeTripUpdateUrl(),
+                KIO::Reload, KIO::Overwrite | KIO::HideProgressInfo );
+        connect( tripUpdatesJob, SIGNAL(result(KJob*)), this, SLOT(realtimeTripUpdatesReceived(KJob*)) );
+        kDebug() << "Updating GTFS-realtime trip update data" << m_info->realtimeTripUpdateUrl();
+    }
+
+    if ( !m_info->realtimeAlertsUrl().isEmpty() ) {
+        KIO::StoredTransferJob *alertsJob = KIO::storedGet( m_info->realtimeAlertsUrl(),
+                KIO::Reload, KIO::Overwrite | KIO::HideProgressInfo );
+        connect( alertsJob, SIGNAL(result(KJob*)), this, SLOT(realtimeAlertsReceived(KJob*)) );
+        kDebug() << "Updating GTFS-realtime alerts data" << m_info->realtimeAlertsUrl();
+    }
+
+    if ( m_info->realtimeTripUpdateUrl().isEmpty() && m_info->realtimeAlertsUrl().isEmpty() ) {
+        m_state = Ready;
+    }
+}
+
+void TimetableAccessorGeneralTransitFeed::realtimeTripUpdatesReceived( KJob *job )
+{
+    KIO::StoredTransferJob *transferJob = qobject_cast<KIO::StoredTransferJob*>( job );
+    if ( job->error() != 0 ) {
+        kDebug() << "Error downloading GTFS-realtime trip updates:" << job->errorString();
+//         m_state = ErrorDownloadingFeed;
+
+//         for ( QHash<QString, JobInfos>::ConstIterator it = m_jobInfos.constBegin();
+//               it != m_jobInfos.constEnd(); ++it )
+//         {
+//             emit errorParsing( this, ErrorDownloadFailed, i18nc("@info/plain TODO",
+//                     "Failed to download GTFS feed from <resource>%1</resource>: <message>%2</message>",
+//                     m_info->feedUrl(), job->errorString()),
+//                     m_info->feedUrl(), m_info->serviceProvider(),
+//                     it->sourceName, it->city, it->stop, it->dataType, it->parseDocumentMode );
+//         }
         return;
     }
-    kDebug() << "GTFS feed received at" << tmpFilePath;
 
-    // Read feed and write data into the DB
-    m_state = ReadingFeed;
-    m_importer = new GeneralTransitFeedImporter( serviceProvider() );
-    connect( m_importer, SIGNAL(progress(qreal)), this, SLOT(importerProgress(qreal)) );
-    connect( m_importer, SIGNAL(finished(GeneralTransitFeedImporter::State,QString)),
-             this, SLOT(importerFinished(GeneralTransitFeedImporter::State,QString)) );
-    m_importer->startImport( tmpFilePath );
-//         loadAgencyInformation();
-//         m_state = Ready;
-//     } else {
-//         kDebug() << "There was an error writing the GTFS data to the database";
-//         m_state = ErrorReadingFeed;
-//     }
-}
+    delete m_tripUpdates;
+    m_tripUpdates = GtfsRealtimeTripUpdate::fromProtocolBuffer( transferJob->data() );
 
-void TimetableAccessorGeneralTransitFeed::importerProgress( qreal importerProgress )
-{
-    for ( QHash<QString, JobInfos>::ConstIterator it = m_jobInfos.constBegin();
-          it != m_jobInfos.constEnd(); ++it )
-    {
-        emit progress( this, importerProgress, i18nc("@info/plain TODO",
-                       "Importing GTFS feed from <resource>%1</resource>", m_info->feedUrl()),
-                       m_info->feedUrl(), m_info->serviceProvider(),
-                       it->sourceName, it->city, it->stop, it->dataType,
-                       it->parseDocumentMode );
-    }
-}
-
-void TimetableAccessorGeneralTransitFeed::importerFinished(
-        GeneralTransitFeedImporter::State state, const QString &errorText )
-{
-    // Remove temporary file
-    if ( !QFile::remove(m_importer->sourceFileName()) ) {
-        kDebug() << "Could not remove the temporary GTFS feed file";
-    }
-
-    // Ignore GeneralTransitFeedImporter::FinishedWithErrors
-    if ( state == GeneralTransitFeedImporter::FatalError ) {
-        m_state = ErrorReadingFeed;
-        kDebug() << "There was an error importing the GTFS feed into the database" << errorText;
-    } else {
+    if ( m_alerts || m_info->realtimeAlertsUrl().isEmpty() ) {
         m_state = Ready;
-        loadAgencyInformation();
+    }
+}
+
+void TimetableAccessorGeneralTransitFeed::realtimeAlertsReceived( KJob *job )
+{
+    KIO::StoredTransferJob *transferJob = qobject_cast<KIO::StoredTransferJob*>( job );
+    if ( job->error() != 0 ) {
+        kDebug() << "Error downloading GTFS-realtime alerts:" << job->errorString();
+//         m_state = ErrorDownloadingFeed;
+
+//         for ( QHash<QString, JobInfos>::ConstIterator it = m_jobInfos.constBegin();
+//               it != m_jobInfos.constEnd(); ++it )
+//         {
+//             emit errorParsing( this, ErrorDownloadFailed, i18nc("@info/plain TODO",
+//                     "Failed to download GTFS feed from <resource>%1</resource>: <message>%2</message>",
+//                     m_info->feedUrl(), job->errorString()),
+//                     m_info->feedUrl(), m_info->serviceProvider(),
+//                     it->sourceName, it->city, it->stop, it->dataType, it->parseDocumentMode );
+//         }
+        return;
     }
 
-    if ( m_importer ) {
-        m_importer->quit();
-        m_importer->wait();
-        delete m_importer;
-        m_importer = 0;
-    }
+    delete m_alerts;
+    m_alerts = GtfsRealtimeAlert::fromProtocolBuffer( transferJob->data() );
 
-    if ( m_state == Ready ) {
-        for ( QHash<QString, JobInfos>::ConstIterator it = m_jobInfos.constBegin();
-            it != m_jobInfos.constEnd(); ++it )
-        {
-            requestDepartures( it->sourceName, it->city, it->stop, it->maxCount, it->dateTime,
-                               it->dataType, it->usedDifferentUrl );
-        }
-    } else {
-        for ( QHash<QString, JobInfos>::ConstIterator it = m_jobInfos.constBegin();
-            it != m_jobInfos.constEnd(); ++it )
-        {
-            emit errorParsing( this, ErrorParsingFailed, i18nc("@info/plain TODO",
-                    "Failed to import GTFS feed from <resource>%1</resource>: <message>%2</message>",
-                    m_info->feedUrl(), errorText),
-                    m_info->feedUrl(), m_info->serviceProvider(),
-                    it->sourceName, it->city, it->stop, it->dataType, it->parseDocumentMode );
-        }
+    if ( m_tripUpdates || m_info->realtimeTripUpdateUrl().isEmpty() ) {
+        m_state = Ready;
     }
-
-    m_jobInfos.clear();
 }
 
 void TimetableAccessorGeneralTransitFeed::loadAgencyInformation()
@@ -211,9 +258,9 @@ void TimetableAccessorGeneralTransitFeed::loadAgencyInformation()
         return;
     }
 
-    QSqlQuery query;
+    QSqlQuery query( QSqlDatabase::database(serviceProvider()) );
     if ( !query.exec("SELECT * FROM agency") ) {
-        kDebug() << "Could not load agency information from DB:" << query.lastError();
+        kDebug() << "Could not load agency information from database:" << query.lastError();
         return;
     }
 
@@ -258,7 +305,13 @@ QStringList TimetableAccessorGeneralTransitFeed::features() const
 {
     QStringList list;
     list << "Autocompletion" << "TypeOfVehicle" << "Operator" << "StopID" << "RouteStops"
-         << "RouteTimes";
+         << "RouteTimes" << "Arrivals";
+    if ( !m_info->realtimeAlertsUrl().isEmpty() ) {
+        list << "JourneyNews";
+    }
+    if ( !m_info->realtimeTripUpdateUrl().isEmpty() ) {
+        list << "Delay";
+    }
     return list;
 }
 
@@ -275,6 +328,87 @@ QTime TimetableAccessorGeneralTransitFeed::timeFromSecondsSinceMidnight(
     return QTime( secondsSinceMidnight / (60 * 60),
                   (secondsSinceMidnight / 60) % 60,
                   secondsSinceMidnight % 60 );
+}
+
+bool TimetableAccessorGeneralTransitFeed::isGtfsFeedImportFinished()
+{
+    // Try to load accessor information from a cache file
+    const QString fileName = accessorCacheFileName();
+    const bool cacheExists = QFile::exists( fileName );
+    KConfig cfg( fileName, KConfig::SimpleConfig );
+    KConfigGroup grp = cfg.group( m_info->serviceProvider() );
+// TODO
+    kDebug() << "NOT YET IMPLEMENTED";
+    if ( cacheExists ) {
+        // Check if the GTFS feed file was modified since the cache was last updated
+//         KDateTime gtfsModifiedTime = KDateTime::fromString( grp.readEntry("feedLastModified", QString()) );
+// //         QDateTime gtfsModifiedTime = grp.readEntry("feedLastModified", QDateTime());
+//         if ( QFileInfo(m_info->feedUrl()).lastModified() /*TODO*/ == gtfsModifiedTime ) {
+//             // Return feature list stored in the cache
+//             return grp.readEntry("feedImportFinished", false);
+//         }
+    }
+
+    // No actual cached information about the service provider
+    kDebug() << "No up-to-date cache information for service provider" << m_info->serviceProvider();
+//     QStringList features;
+//     bool ok = lazyLoadScript();
+//     if ( ok ) {
+//         QStringList functions = m_script->functionNames();
+// 
+//         if ( functions.contains("parsePossibleStops") ) {
+//             features << "Autocompletion";
+//         }
+//         if ( functions.contains("parseJourneys") ) {
+//             features << "JourneySearch";
+//         }
+// 
+//         if ( !m_script->functionNames().contains("usedTimetableInformations") ) {
+//             kDebug() << "The script has no 'usedTimetableInformations' function";
+//             kDebug() << "Functions in the script:" << m_script->functionNames();
+//             ok = false;
+//         }
+// 
+//         if ( ok ) {
+//             QStringList usedTimetableInformations = m_script->callFunction(
+//                     "usedTimetableInformations" ).toStringList();
+// 
+//             if ( usedTimetableInformations.contains("Delay", Qt::CaseInsensitive) ) {
+//                 features << "Delay";
+//             }
+//             if ( usedTimetableInformations.contains("DelayReason", Qt::CaseInsensitive) ) {
+//                 features << "DelayReason";
+//             }
+//             if ( usedTimetableInformations.contains("Platform", Qt::CaseInsensitive) ) {
+//                 features << "Platform";
+//             }
+//             if ( usedTimetableInformations.contains("JourneyNews", Qt::CaseInsensitive)
+//                 || usedTimetableInformations.contains("JourneyNewsOther", Qt::CaseInsensitive)
+//                 || usedTimetableInformations.contains("JourneyNewsLink", Qt::CaseInsensitive) )
+//             {
+//                 features << "JourneyNews";
+//             }
+//             if ( usedTimetableInformations.contains("TypeOfVehicle", Qt::CaseInsensitive) ) {
+//                 features << "TypeOfVehicle";
+//             }
+//             if ( usedTimetableInformations.contains("Status", Qt::CaseInsensitive) ) {
+//                 features << "Status";
+//             }
+//             if ( usedTimetableInformations.contains("Operator", Qt::CaseInsensitive) ) {
+//                 features << "Operator";
+//             }
+//             if ( usedTimetableInformations.contains("StopID", Qt::CaseInsensitive) ) {
+//                 features << "StopID";
+//             }
+//         }
+//     }
+
+    // Store script features in a cache file
+//     grp.writeEntry( "scriptModifiedTime", QFileInfo(m_info->scriptFileName()).lastModified() );
+//     grp.writeEntry( "hasErrors", !ok );
+//     grp.writeEntry( "features", features );
+
+    return false;
 }
 
 bool TimetableAccessorGeneralTransitFeed::checkState( const QString &sourceName,
@@ -297,22 +431,44 @@ bool TimetableAccessorGeneralTransitFeed::checkState( const QString &sourceName,
                     m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
                     sourceName, city, stop, dataType, parseMode );
             break;
-        case DownloadingFeed:
-        case ReadingFeed:
+        case Initializing:
+//             emit errorParsing( this, ErrorParsingFailed, i18nc("@info/plain TODO",
+//                     "Currently initializing the database and downloading realtime data.",
+//                     m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
+//                     sourceName, city, stop, dataType, parseMode );
+            emit progress( this, 0.0, i18nc("@info/plain TODO",
+                    "Initializing GTFS feed database.",
+                    m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
+                    sourceName, city, stop, dataType, parseMode );
+            break;
+        case UpdatingGtfsFeed:
+            emit progress( this, m_progress, i18nc("@info/plain TODO",
+                    "Updating GTFS feed database.",
+                    m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
+                    sourceName, city, stop, dataType, parseMode );
+            break;
         default:
             emit errorParsing( this, ErrorParsingFailed, i18nc("@info/plain TODO",
-                    "Currently downloading and importing GTFS feed into database, please wait.",
+                    "Busy, please wait.",
                     m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
                     sourceName, city, stop, dataType, parseMode );
             break;
         }
 
+        kDebug() << "Error" << m_state;
+        if ( m_state == ErrorDownloadingFeed || m_state == ErrorReadingFeed ) {
+            // Update database to the current version of the GTFS feed or import it for the first time
+            kDebug() << "Restart UPDATE";
+            updateGtfsData();
+        }
+
         // Store information about the request to report import progress to
-        if ( !m_jobInfos.contains(sourceName) ) {
+        if ( !m_waitingSources.contains(sourceName) ) {
             JobInfos jobInfos( parseMode, sourceName, city, stop,
                                m_info->feedUrl(), dataType, maxCount, dateTime, useDifferentUrl );
-            m_jobInfos[ sourceName ] = jobInfos;
+            m_waitingSources[ sourceName ] = jobInfos;
         }
+        kDebug() << "Wait for GTFS feed download and import to complete";
         return false;
     }
 }
@@ -327,7 +483,8 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
         return;
     }
 
-    QSqlQuery query;
+    QSqlQuery query( QSqlDatabase::database(serviceProvider()) );
+    query.setForwardOnly( true ); // Don't cache records
 
     // TODO If it is known that [stop] contains a stop ID testing for it's ID in stop_times is not necessary!
     // Try to get the ID for the given stop (fails, if it already is a stop ID). Only select
@@ -338,8 +495,14 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
     QString stopValue = stop;
     stopValue.replace( '\'', "\'\'" );
     if ( !query.exec("SELECT stops.stop_id FROM stops "
-                     "WHERE stop_name='" + stopValue + "' AND location_type=0") )
+                     "WHERE stop_name='" + stopValue + "' "
+                     "AND (location_type IS NULL OR location_type=0)") )
     {
+        // Check of the error is a "disk I/O error", ie. the database file may have been deleted
+        checkForDiskIoErrorInDatabase( query.lastError(), sourceName, city, stop, maxCount,
+                                       dateTime, dataType, useDifferentUrl,
+                                       ParseForDeparturesArrivals );
+
         kDebug() << query.lastError();
         kDebug() << query.executedQuery();
         return;
@@ -361,6 +524,17 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
         }
     }
 
+// This creates a temporary table to calculate min/max fares for departures.
+// These values should be added into the db while importing, doing it here takes too long
+//     const QString createJoinedFareTable = "CREATE TEMPORARY TABLE IF NOT EXISTS tmp_fares AS "
+//             "SELECT * FROM fare_rules JOIN fare_attributes USING (fare_id);";
+//     if ( !query.prepare(createJoinedFareTable) || !query.exec() ) {
+//         kDebug() << "Error while creating a temporary table fore min/max fare calculation:"
+//                  << query.lastError();
+//         kDebug() << query.executedQuery();
+//         return;
+//     }
+
     // Query the needed departure info from the database.
     // It's fast, because all JOINs are done using INTEGER PRIMARY KEYs and
     // because 'stop_id' and 'departure_time' are part of a compound index in the database.
@@ -368,26 +542,33 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
     // but if arrival_time values do not differ too much from the deaprture_time values, they
     // are also already sorted.
     // The tables 'calendar' and 'calendar_dates' are also fully implemented by the query below.
+    // TODO: Create a new (temporary) table for each connected departure/arrival source and use
+    //       that (much smaller) table here for performance reasons
+    const QString routeSeparator = "||";
     const QTime time = dateTime.time();
     const QString queryString = QString(
             "SELECT times.departure_time, times.arrival_time, times.stop_headsign, "
                    "routes.route_type, routes.route_short_name, routes.route_long_name, "
-                   "trips.trip_headsign, routes.agency_id, "
-                   "( SELECT group_concat(route_stop.stop_name) AS route_stops "
+                   "trips.trip_headsign, routes.agency_id, stops.stop_id, trips.trip_id, "
+                   "routes.route_id, times.stop_sequence, "
+                   "( SELECT group_concat(route_stop.stop_name, '%5') AS route_stops "
                      "FROM stop_times AS route_times INNER JOIN stops AS route_stop USING (stop_id) "
-                     "WHERE route_times.trip_id=times.trip_id AND route_times.stop_sequence >= times.stop_sequence "
+                     "WHERE route_times.trip_id=times.trip_id AND route_times.stop_sequence %4= times.stop_sequence "
                      "ORDER BY departure_time ) AS route_stops, "
-                   "( SELECT group_concat(route_times.departure_time) AS route_times "
+                   "( SELECT group_concat(route_times.departure_time, '%5') AS route_times "
                      "FROM stop_times AS route_times "
-                     "WHERE route_times.trip_id=times.trip_id AND route_times.stop_sequence >= times.stop_sequence "
+                     "WHERE route_times.trip_id=times.trip_id AND route_times.stop_sequence %4= times.stop_sequence "
                      "ORDER BY departure_time ) AS route_times "
+//                    "( SELECT min(price) FROM tmp_fares WHERE origin_id=stops.zone_id AND price>0 ) AS min_price, "
+//                    "( SELECT max(price) FROM tmp_fares WHERE origin_id=stops.zone_id ) AS max_price, "
+//                    "( SELECT currency_type FROM tmp_fares WHERE origin_id=stops.zone_id LIMIT 1 ) AS currency_type "
             "FROM stops INNER JOIN stop_times AS times USING (stop_id) "
                        "INNER JOIN trips USING (trip_id) "
                        "INNER JOIN routes USING (route_id) "
                        "LEFT JOIN calendar USING (service_id) "
                        "LEFT JOIN calendar_dates ON (trips.service_id=calendar_dates.service_id "
                                                     "AND strftime('%Y%m%d')=calendar_dates.date) "
-            "WHERE stop_id=%1 AND departure_time>%3 "
+            "WHERE stop_id=%1 AND departure_time>%2 "
                   "AND (calendar_dates.date IS NULL " // No matching record in calendar_dates table for today
                        "OR NOT (calendar_dates.exception_type=2)) " // Journey is not removed today
                   "AND (calendar.weekdays IS NULL " // No matching record in calendar table => always available
@@ -397,11 +578,12 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
                        "OR (calendar_dates.date IS NOT NULL " // Or there is a matching record in calendar_dates for today...
                            "AND calendar_dates.exception_type=1)) " // ...and this record adds availability of the service for today
             "ORDER BY departure_time "
-            "LIMIT %4" )
+            "LIMIT %3" )
             .arg( stopId )
             .arg( time.hour() * 60 * 60 + time.minute() * 60 + time.second() )
-            .arg( maxCount );
-    query.setForwardOnly( true ); // Don't cache records
+            .arg( maxCount )
+            .arg( dataType == "arrivals" ? '<' : '>' ) // For arrivals route_stops/route_times need stops before the home stop
+            .arg( routeSeparator );
     if ( !query.prepare(queryString) || !query.exec() ) {
         kDebug() << "Error while querying for departures:" << query.lastError();
         kDebug() << query.executedQuery();
@@ -416,15 +598,22 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
 
     QSqlRecord record = query.record();
     const int agencyIdColumn = record.indexOf( "agency_id" );
+    const int tripIdColumn = record.indexOf( "trip_id" );
+    const int routeIdColumn = record.indexOf( "route_id" );
+    const int stopIdColumn = record.indexOf( "stop_id" );
     const int arrivalTimeColumn = record.indexOf( "arrival_time" );
     const int departureTimeColumn = record.indexOf( "departure_time" );
     const int routeShortNameColumn = record.indexOf( "route_short_name" );
     const int routeLongNameColumn = record.indexOf( "route_long_name" );
     const int routeTypeColumn = record.indexOf( "route_type" );
     const int tripHeadsignColumn = record.indexOf( "trip_headsign" );
+    const int stopSequenceColumn = record.indexOf( "stop_sequence" );
     const int stopHeadsignColumn = record.indexOf( "stop_headsign" );
     const int routeStopsColumn = record.indexOf( "route_stops" );
     const int routeTimesColumn = record.indexOf( "route_times" );
+    const int fareMinPriceColumn = record.indexOf( "min_price" );
+    const int fareMaxPriceColumn = record.indexOf( "max_price" );
+    const int fareCurrencyColumn  = record.indexOf( "currency_type" );
 
     // Prepare agency information, if only one is given, it is used for all records
     AgencyInformation *agency = 0;
@@ -479,41 +668,100 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
         data[ Target ] = !tripHeadsign.isEmpty() ? tripHeadsign
                          : query.value(stopHeadsignColumn).toString();
 
-        const QStringList routeStops = query.value(routeStopsColumn).toString().split( ',' );
+        const QStringList routeStops = query.value(routeStopsColumn).toString().split( routeSeparator );
+        if ( routeStops.isEmpty() ) {
+            // This happens, if the current departure is actually no departure, but an arrival at 
+            // the target station and vice versa for arrivals.
+            continue;
+        }
         data[ RouteStops ] = routeStops;
         data[ RouteExactStops ] = routeStops.count();
 
-        const QStringList routeTimeValues = query.value(routeTimesColumn).toString().split( ',' );
+        const QStringList routeTimeValues = query.value(routeTimesColumn).toString().split( routeSeparator );
         QVariantList routeTimes;
         foreach ( const QString routeTimeValue, routeTimeValues ) {
             routeTimes << timeFromSecondsSinceMidnight( routeTimeValue.toInt(), &arrivalDate );
         }
         data[ RouteTimes ] = routeTimes;
 
+        const QString symbol = KCurrencyCode( query.value(fareCurrencyColumn).toString() ).defaultSymbol();
+        data[ Pricing ] = KGlobal::locale()->formatMoney(
+                query.value(fareMinPriceColumn).toDouble(), symbol ) + " - " + 
+                KGlobal::locale()->formatMoney( query.value(fareMaxPriceColumn).toDouble(), symbol );
+
+        if ( m_alerts ) {
+            QStringList journeyNews;
+            QString journeyNewsLink;
+            foreach ( const GtfsRealtimeAlert &alert, *m_alerts ) {
+                if ( alert.isActiveAt(QDateTime::currentDateTime()) ) {
+                    journeyNews << alert.description;
+                    journeyNewsLink = alert.url;
+                }
+            }
+            if ( !journeyNews.isEmpty() ) {
+                data[ JourneyNews ] = journeyNews.join( ", " );
+                data[ JourneyNewsLink ] = journeyNewsLink;
+            }
+        }
+
+        if ( m_tripUpdates ) {
+            uint tripId = query.value(tripIdColumn).toUInt();
+            uint routeId = query.value(routeIdColumn).toUInt();
+            uint stopId = query.value(stopIdColumn).toUInt();
+            uint stopSequence = query.value(stopSequenceColumn).toUInt();
+            foreach ( const GtfsRealtimeTripUpdate &tripUpdate, *m_tripUpdates ) {
+                if ( (tripUpdate.tripId > 0 && tripId == tripUpdate.tripId) ||
+                     (tripUpdate.routeId > 0 && routeId == tripUpdate.routeId) ||
+                     (tripUpdate.tripId <= 0 && tripUpdate.routeId <= 0) )
+                {
+                    kDebug() << "tripId or routeId matched or not queried!";
+                    foreach ( const GtfsRealtimeStopTimeUpdate &stopTimeUpdate,
+                              tripUpdate.stopTimeUpdates )
+                    {
+                        if ( (stopTimeUpdate.stopId > 0 && stopId == stopTimeUpdate.stopId) ||
+                             (stopTimeUpdate.stopSequence > 0 &&
+                              stopSequence == stopTimeUpdate.stopSequence) ||
+                             (stopTimeUpdate.stopId <= 0 && stopTimeUpdate.stopSequence <= 0) )
+                        {
+                            kDebug() << "stopId matched or stopsequence matched or not queried!";
+                            // Found a matching stop time update
+                            kDebug() << "Delays:" << stopTimeUpdate.arrivalDelay << stopTimeUpdate.departureDelay;
+                        }
+                    }
+                }
+            }
+        }
+
         departures << new DepartureInfo( data );
     }
 
+    // TODO Do not use a list of pointers here, maybe use data sharing for PublicTransportInfo/StopInfo?
+    // The objects in departures are deleted in a connected slot in the data engine...
     emit departureListReceived( this, QUrl(), departures, GlobalTimetableInfo(), serviceProvider(),
                                 sourceName, city, stop, dataType, ParseForDeparturesArrivals );
 }
 
 void TimetableAccessorGeneralTransitFeed::requestStopSuggestions( const QString &sourceName,
         const QString &city, const QString &stop, ParseDocumentMode parseMode, int maxCount,
-        const QDateTime &dateTime, const QString &dataType, bool usedDifferentUrl )
+        const QDateTime &dateTime, const QString &dataType, bool useDifferentUrl )
 {
-    if ( !checkState(sourceName, city, stop, maxCount, dateTime, dataType, usedDifferentUrl,
+    if ( !checkState(sourceName, city, stop, maxCount, dateTime, dataType, useDifferentUrl,
                      ParseForStopSuggestions) )
     {
         return;
     }
 
-    QSqlQuery query;
+    QSqlQuery query( QSqlDatabase::database(serviceProvider()) );
+    query.setForwardOnly( true );
     QString stopValue = stop;
     stopValue.replace( '\'', "\'\'" );
     if ( !query.prepare(QString("SELECT * FROM stops WHERE stop_name LIKE '%%1%' LIMIT %2")
                         .arg(stopValue).arg(STOP_SUGGESTION_LIMIT))
          || !query.exec() )
     {
+        // Check of the error is a "disk I/O error", ie. the database file may have been deleted
+        checkForDiskIoErrorInDatabase( query.lastError(), sourceName, city, stop, maxCount,
+                                       dateTime, dataType, useDifferentUrl, parseMode );
         kDebug() << query.lastError();
         kDebug() << query.executedQuery();
         return;
@@ -556,8 +804,56 @@ void TimetableAccessorGeneralTransitFeed::requestStopSuggestions( const QString 
         stops << new StopInfo( stopName, query.value(stopIdColumn).toString(), weight, city );
     }
 
+    if ( stops.isEmpty() ) {
+        kDebug() << "No stop names found";
+    }
     emit stopListReceived( this, QUrl(), stops, serviceProvider(), sourceName, city, stop,
                            dataType, parseMode );
+
+    // Cleanup
+    foreach ( StopInfo *stop, stops ) {
+        delete stop;
+    }
+}
+
+bool TimetableAccessorGeneralTransitFeed::checkForDiskIoErrorInDatabase( const QSqlError &error,
+        const QString &sourceName, const QString &city, const QString &stop, int maxCount,
+        const QDateTime &dateTime, const QString &dataType, bool useDifferentUrl,
+        ParseDocumentMode parseMode )
+{
+    // Check of the error is a "disk I/O error", ie. the database file may have been deleted
+    // The error number (10) is database dependend and works with SQLITE
+    if ( error.number() == 10 ) {
+        kDebug() << "Disk I/O error reported from database, recreate the database";
+
+        // Store information about the request to report import progress to
+//         if ( !m_jobInfos.contains(sourceName) ) {
+//             JobInfos jobInfos( parseMode, sourceName, city, stop, m_info->feedUrl(),
+//                                dataType, maxCount, dateTime, useDifferentUrl );
+//             m_jobInfos[ sourceName ] = jobInfos;
+//         }
+
+        m_state = Initializing;
+        QString errorText;
+        if ( !GeneralTransitFeedDatabase::initDatabase(m_info->serviceProvider(), &errorText) ) {
+            kDebug() << "Error initializing the database" << errorText;
+            m_state = ErrorInDatabase;
+            return true;
+        }
+
+        QFileInfo fi( GeneralTransitFeedDatabase::databasePath(m_info->serviceProvider()) );
+        if ( !fi.exists() || fi.size() < 50000 ) {
+            // If the database does not exist or is too small, get information about the GTFS feed,
+            // download it, create the database and import the feed into it
+//             statFeed();
+        } else {
+            loadAgencyInformation();
+            updateRealtimeData();
+        }
+        return true;
+    } else {
+        return false;
+    }
 }
 
 VehicleType TimetableAccessorGeneralTransitFeed::vehicleTypeFromGtfsRouteType(
