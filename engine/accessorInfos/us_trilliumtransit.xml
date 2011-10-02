@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<accessorInfo fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">Humboldt County, California (Humboldt Transit Authority)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>Accessor for Humboldt County, California, using the GTFS feed of these agencies: Redwood Transit System, Eureka Transit Service and Arcata and Mad River Transit System. No GTFS-realtime data available.</description>
+<credit>Route and arrival data provided by permission of Humboldt Transit Authority</credit>
+
+<url>http://trilliumtransit.com</url>
+<shortUrl>trilliumtransit.com</shortUrl>
+<feedUrl>http://trilliumtransit.com/transit_feeds/humboldtcounty-ca-us/google_transit.zip</feedUrl>
+
+</accessorInfo>

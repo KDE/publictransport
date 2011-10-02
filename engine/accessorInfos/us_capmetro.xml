@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<accessorInfo fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">Austin, Texas (Capital Metro)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>Accessor for Austin, Texas, using the GTFS feed of Capital Metro. No GTFS-realtime data available.</description>
+<credit>Route and arrival data provided by permission of Capital Metro</credit>
+
+<url>http://www.capmetro.org</url>
+<shortUrl>www.capmetro.org</shortUrl>
+<feedUrl>http://www.capmetro.org/gisdata/google_transit.zip</feedUrl>
+
+</accessorInfo>

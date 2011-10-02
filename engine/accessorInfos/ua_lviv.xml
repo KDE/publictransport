@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<accessorInfo fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">Lviv (Lviv Elektrotrans)</name>
+<name lang="ua">Львів (ЛКП Львівелектротранс)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>Accessor for Lviv, using the GTFS feed of Lviv Elektrotrans. No GTFS-realtime data available.</description>
+<credit>Route and arrival data provided by permission of LvivElektrotrans</credit>
+
+<url>http://www.city-adm.lviv.ua/adm/comunale-enterprise/lvivelektrotrans-</url>
+<shortUrl>www.city-adm.lviv.ua</shortUrl>
+<feedUrl>http://www.gtfs-data-exchange.com/agency//latest.zip</feedUrl>
+
+</accessorInfo>

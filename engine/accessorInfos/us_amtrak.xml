@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<accessorInfo fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">USA (Amtrak)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>Accessor for trains in the USA, using the GTFS feed of Amtrak. No GTFS-realtime data available.</description>
+<credit>Route and arrival data provided by permission of Amtrak</credit>
+
+<url>http://www.amtrak.com</url>
+<shortUrl>www.amtrak.com</shortUrl>
+<feedUrl>http://www.gtfs-data-exchange.com/agency/amtrak/latest.zip</feedUrl>
+
+</accessorInfo>
