@@ -164,6 +164,8 @@ void PublicTransport::init()
     m_departurePainter->setSvg( &m_vehiclesSvg );
 
     m_popupIcon = new PopupIcon( m_departurePainter, this );
+    connect( m_popupIcon, SIGNAL(currentDepartureGroupChanged(int)),
+             this, SLOT(updateTooltip()) );
     connect( m_popupIcon, SIGNAL(currentDepartureGroupIndexChanged(qreal)),
              this, SLOT(updatePopupIcon()) );
     connect( m_popupIcon, SIGNAL(currentDepartureIndexChanged(qreal)),
@@ -1201,17 +1203,28 @@ void PublicTransport::resized()
     QSizeF size = m_graphicsWidget->size();
 
     if ( m_titleWidget ) {
-        // Show/hide title widget, but do not allow hiding the title if the applet is iconified
+        updatePopupIcon();
+
+        // Show/hide title widget
         const qreal minHeightWithTitle = 200.0;
         const qreal maxHeightWithoutTitle = 225.0;
-        if ( size.height() <= minHeightWithTitle && !m_titleToggleAnimation
-            && !(!m_titleToggleAnimation && m_titleWidget->maximumHeight() <= 0.1) )
+        if ( size.height() <= minHeightWithTitle // too small?
+             && ((!m_titleToggleAnimation // title not already hidden?
+                  && m_titleWidget->maximumHeight() > 0.1)
+              || (m_titleToggleAnimation // title not currently animated to be hidden?
+                  && m_titleToggleAnimation->direction() != QAbstractAnimation::Forward)) )
         {
-            // The applet is not iconified and it's size is too small to show the title
+            // Hide title: The applets vertical size is too small to show it
+            //             and the title is not already hidden or currently being faded out
             if ( m_titleToggleAnimation ) {
                 delete m_titleToggleAnimation;
             }
+
+            // Create toggle animation with direction forward
+            // to indicate that the title gets hidden
             m_titleToggleAnimation = new QParallelAnimationGroup( this );
+            m_titleToggleAnimation->setDirection( QAbstractAnimation::Forward );
+
             Plasma::Animation *fadeAnimation = Plasma::Animator::create(
                     Plasma::Animator::FadeAnimation, m_titleToggleAnimation );
             fadeAnimation->setTargetWidget( m_titleWidget );
@@ -1221,36 +1234,44 @@ void PublicTransport::resized()
             QPropertyAnimation *shrinkAnimation = new QPropertyAnimation(
                     m_titleWidget, "maximumSize", m_titleToggleAnimation );
             shrinkAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
-                                                    m_titleWidget->layout()->preferredHeight()) );
+                                                   m_titleWidget->layout()->preferredHeight()) );
             shrinkAnimation->setEndValue( QSizeF(m_titleWidget->maximumWidth(), 0) );
 
             connect( m_titleToggleAnimation, SIGNAL(finished()),
-                        this, SLOT(titleToggleAnimationFinished()) );
+                     this, SLOT(titleToggleAnimationFinished()) );
             m_titleToggleAnimation->addAnimation( fadeAnimation );
             m_titleToggleAnimation->addAnimation( shrinkAnimation );
             m_titleToggleAnimation->start();
-        } else if ( size.height() >= maxHeightWithoutTitle
-                && !m_titleToggleAnimation && !(!m_titleToggleAnimation
-                && m_titleWidget->maximumHeight() >= m_titleWidget->layout()->preferredHeight()) )
+        } else if ( size.height() >= maxHeightWithoutTitle // big enough?
+            && ((!m_titleToggleAnimation // title not already shown?
+                 && m_titleWidget->maximumHeight() < m_titleWidget->layout()->preferredHeight())
+             || (m_titleToggleAnimation // title not currently animated to be shown?
+                 && m_titleToggleAnimation->direction() != QAbstractAnimation::Backward)) )
         {
-            // The applet is iconified or it's size is big enough to show the title
+            // Show title: The applets vertical size is big enough to show it
+            //             and the title is not already shown or currently beging faded in
             if ( m_titleToggleAnimation ) {
                 delete m_titleToggleAnimation;
             }
+
+            // Create toggle animation with direction backward
+            // to indicate that the title gets shown again.
+            // The child animations use reversed start/end values.
             m_titleToggleAnimation = new QParallelAnimationGroup( this );
+            m_titleToggleAnimation->setDirection( QAbstractAnimation::Backward );
 
             Plasma::Animation *fadeAnimation = Plasma::Animator::create(
                     Plasma::Animator::FadeAnimation, m_titleToggleAnimation );
             fadeAnimation->setTargetWidget( m_titleWidget );
-            fadeAnimation->setProperty( "startOpacity", m_titleWidget->opacity() );
-            fadeAnimation->setProperty( "targetOpacity", 1.0 );
+            fadeAnimation->setProperty( "targetOpacity", m_titleWidget->opacity() );
+            fadeAnimation->setProperty( "startOpacity", 1.0 );
 
             QPropertyAnimation *growAnimation = new QPropertyAnimation(
                     m_titleWidget, "maximumSize", m_titleToggleAnimation );
-            growAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
-                                                    m_titleWidget->maximumHeight()) );
             growAnimation->setEndValue( QSizeF(m_titleWidget->maximumWidth(),
-                                                m_titleWidget->layout()->preferredHeight()) );
+                                               m_titleWidget->maximumHeight()) );
+            growAnimation->setStartValue( QSizeF(m_titleWidget->maximumWidth(),
+                                                 m_titleWidget->layout()->preferredHeight()) );
 
             connect( m_titleToggleAnimation, SIGNAL(finished()),
                         this, SLOT(titleToggleAnimationFinished()) );
@@ -1259,18 +1280,27 @@ void PublicTransport::resized()
             m_titleToggleAnimation->start();
         }
 
+        // Show/hide vertical scrollbar
+        const qreal minWidthWithScrollBar = 250.0;
+        const qreal maxWidthWithoutScrollBar = 275.0;
+        if ( size.width() <= minWidthWithScrollBar ) {
+            m_timetable->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
+        } else if ( size.width() >= maxWidthWithoutScrollBar ) {
+            m_timetable->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
+        }
+
         // Update filter widget (show icon or icon with text)
         Plasma::ToolButton *filterWidget =
                 m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetFilter );
         if ( m_titleWidget->layout()->preferredWidth() > size.width() ) {
-            // Show only an icon on the filter toolbutton, if there is not enough space
+            // Show only an icon on the filter toolbutton, if there is not enough horizontal space
             filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonIconOnly );
             filterWidget->setMaximumWidth( filterWidget->size().height() );
         } else if ( filterWidget->nativeWidget()->toolButtonStyle() == Qt::ToolButtonIconOnly
             && size.width() > m_titleWidget->layout()->minimumWidth() +
             QFontMetrics(filterWidget->font()).width(filterWidget->text()) + 60 )
         {
-            // Show the icon with text beside if there is enough space again
+            // Show the icon with text beside if there is enough horizontal space again
             filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
             filterWidget->setMaximumWidth( -1 );
         }
@@ -1300,15 +1330,15 @@ void PublicTransport::createTooltip()
     data.setMainText( i18nc("@info", "Public Transport") );
     if ( m_popupIcon->departureGroups()->isEmpty() ) {
         data.setSubText( i18nc("@info", "View departure times for public transport") );
-    } else {
-        const DepartureGroup nextGroup = m_popupIcon->departureGroups()->isEmpty()
-                ? DepartureGroup() : m_popupIcon->departureGroups()->first();
-        const QString groupDurationString = nextGroup.first()->departureInfo()->durationString();
+    } else if ( !m_popupIcon->departureGroups()->isEmpty() ) {
+        const DepartureGroup currentGroup = m_popupIcon->currentDepartureGroup();
+        const bool isAlarmGroup = m_popupIcon->currentGroupIsAlarmGroup();
+        const QString groupDurationString = currentGroup.first()->departureInfo()->durationString();
         QStringList infoStrings;
 
         if ( m_settings.departureArrivalListType ==  DepartureList ) {
             // Showing a departure list
-            foreach ( const DepartureItem *item, nextGroup ) {
+            foreach ( const DepartureItem *item, currentGroup ) {
                 infoStrings << i18nc("@info Text for one departure for the tooltip (%1: line string, "
                                      "%2: target)",
                                      "Line <emphasis strong='1'>%1<emphasis> "
@@ -1316,13 +1346,26 @@ void PublicTransport::createTooltip()
                                      item->departureInfo()->lineString(),
                                      item->departureInfo()->target());
             }
-            data.setSubText( i18nc("@info %1 is the translated duration text, e.g. in 3 minutes",
-                    "Next departure(s) (%1) from '%2':<nl/>%3",
-                    groupDurationString, m_settings.currentStopSettings().stops().join(", "),
-                    infoStrings.join(",<nl/>")) );
+            if ( isAlarmGroup ) {
+                data.setSubText( i18ncp("@info %2 is the translated duration text (e.g. in 3 minutes), "
+                                        "%4 contains texts for a list of departures",
+                        "Alarm (%2) for a departure from '%3':<nl/>%4",
+                        "%1 Alarms (%2) for departures from '%3':<nl/>%4",
+                        currentGroup.count(),
+                        groupDurationString, m_settings.currentStopSettings().stops().join(", "),
+                        infoStrings.join(",<nl/>")) );
+            } else {
+                data.setSubText( i18ncp("@info %2 is the translated duration text (e.g. in 3 minutes), "
+                                        "%4 contains texts for a list of departures",
+                        "Departure (%2) from '%3':<nl/>%4",
+                        "%1 Departures (%2) from '%3':<nl/>%4",
+                        currentGroup.count(),
+                        groupDurationString, m_settings.currentStopSettings().stops().join(", "),
+                        infoStrings.join(",<nl/>")) );
+            }
         } else {
             // Showing an arrival list
-            foreach ( const DepartureItem *item, nextGroup ) {
+            foreach ( const DepartureItem *item, currentGroup ) {
                 infoStrings << i18nc("@info Text for one arrival for the tooltip (%1: line string, "
                                      "%2: origin)",
                                      "Line <emphasis strong='1'>%1<emphasis> "
@@ -1330,10 +1373,23 @@ void PublicTransport::createTooltip()
                                      item->departureInfo()->lineString(),
                                      item->departureInfo()->target());
             }
-            data.setSubText( i18nc("@info %1 is the translated duration text, e.g. in 3 minutes",
-                    "Next arrival(s) (%1) at '%2':<nl/>%3",
-                    groupDurationString, m_settings.currentStopSettings().stops().join(", "),
-                    infoStrings.join(",<nl/>")) );
+            if ( isAlarmGroup ) {
+                data.setSubText( i18ncp("@info %2 is the translated duration text (e.g. in 3 minutes), "
+                                        "%4 contains texts for a list of arrivals",
+                        "Alarm (%2) for an arrival at '%3':<nl/>%4",
+                        "%1 Alarms (%2) for arrivals at '%3':<nl/>%4",
+                        currentGroup.count(),
+                        groupDurationString, m_settings.currentStopSettings().stops().join(", "),
+                        infoStrings.join(",<nl/>")) );
+            } else {
+                data.setSubText( i18ncp("@info %2 is the translated duration text (e.g. in 3 minutes), "
+                                        "%4 contains texts for a list of arrivals",
+                        "Arrival (%2) at '%3':<nl/>%4",
+                        "%1 Arrivals (%2) at '%3':<nl/>%4",
+                        currentGroup.count(),
+                        groupDurationString, m_settings.currentStopSettings().stops().join(", "),
+                        infoStrings.join(",<nl/>")) );
+            }
         }
     }
 
@@ -2982,27 +3038,59 @@ QString PublicTransport::infoText()
                              "text when there hasn't been any updates yet.", "none" );
     }
 
-    // HACK: This breaks the text at one position if needed
-    // Plasma::Label doesn't work well will HTML formatted text and word wrap:
-    // It sets the height as if the label shows the HTML source.
-    const QString textNoHtml1 = QString( "%1: %2" ).arg( i18nc("@info/plain", "last update"),
-                                                         sLastUpdate );
-    const QString textNoHtml2 = QString( "%1: %2" ).arg( credit, shortUrl );
-    const QFontMetrics fm( m_labelInfo->font() );
-    const int width1 = fm.width( textNoHtml1 );
-    const int width2 = fm.width( textNoHtml2 );
-    const int width = width1 + fm.width( ", " ) + width2;
-    if ( width > m_graphicsWidget->size().width() ) {
-        // Break info text into two lines
-        m_graphicsWidget->setMinimumWidth( qMax(width1, width2) );
-        return QString( "<nobr>%1: %2<br>%3: <a href='%4'>%5</a><nobr>" )
-            .arg( i18nc("@info/plain", "last update"), sLastUpdate,
-                  credit, url, shortUrl );
+    // Plasma::Label sets it's height as if the label would show the HTML source.
+    // Therefore the <nobr>'s are inserted to prevent using multiple lines unnecessarily
+    const qreal minHeightForTwoLines = 250.0;
+    const QString dataByTextLocalized = credit.isEmpty() ? i18nc("@info/plain", "data by")
+                                                         : credit;
+    const QString textNoHtml1 = QString( "%1: %2" )
+            .arg( i18nc("@info/plain", "last update"), sLastUpdate );
+    const QString dataByLinkHtml = QString( "<a href='%1'>%2</a>" ).arg( url, shortUrl );
+    const QString textHtml2 = dataByTextLocalized + ": " + dataByLinkHtml;
+    QFontMetrics fm( m_labelInfo->font() );
+    const int widthLine1 = fm.width( textNoHtml1 );
+    const int widthLine2 = fm.width( dataByTextLocalized + ": " + shortUrl );
+    const int width = widthLine1 + fm.width( ", " ) + widthLine2;
+    QSizeF size = m_graphicsWidget->size();
+    if ( size.width() >= width ) {
+        // Enough horizontal space to show the complete info text in one line
+        return "<nobr>" + textNoHtml1 + ", " + textHtml2 + "</nobr>";
+    } else if ( size.height() >= minHeightForTwoLines &&
+                size.width() >= widthLine1 && size.width() >= widthLine2 )
+    {
+        // Not enough horizontal space to show the complete info text in one line,
+        // but enough vertical space to break it into two lines, which both fit horizontally
+        return "<nobr>" + textNoHtml1 + ",<br />" + textHtml2 + "</nobr>";
+    } else if ( size.width() >= widthLine2 ) {
+        // Do not show "last update" text, but credits info
+        return "<nobr>" + textHtml2 + "</nobr>";
+    } else if ( !credit.isEmpty() ) {
+        // Need to show credit string for the service provider,
+        // show it as link to the service providers home page, without "data by:" label
+        const int widthCredit = fm.width( credit );
+        if ( size.width() >= widthCredit ) {
+            // The whole credit string fits into one line
+            return QString("<nobr><a href='%1'>%2</a></nobr>").arg(url, credit);
+        }
+
+        const int creditBreakPos = credit.lastIndexOf( ' ', credit.length() / 2 );
+        if ( creditBreakPos == -1 ) {
+            // The credit string does not fit into one line, but even the first word is too long.
+            // Elide the credit string to fit into one line
+            return "<nobr>" + fm.elidedText(credit, Qt::ElideRight, size.width()) + "</nobr>";
+        }
+
+        // Break the credit string at the found position and elide the second line if it is too
+        // long. Elide the second line left, because the credit string most often ends with the
+        // public transport agencys name, which should always be shown
+        const QString creditLine1 = credit.left( creditBreakPos );
+        const QString creditLine2 = fm.elidedText( credit.mid(creditBreakPos + 1),
+                                                   Qt::ElideLeft, size.width() - 4);
+        return QString("<nobr><a href='%1'>%2<br />%3</a></nobr>")
+                .arg(url, creditLine1, creditLine2);
     } else {
-        // Use a single line for the info text
-        return QString( "<nobr>%1: %2, %3: <a href='%4'>%5</a><nobr>" )
-            .arg( i18nc("@info/plain", "last update"), sLastUpdate,
-                  credit, url, shortUrl );
+        // Do not show "last update" text, but credits info, without "data by:" label
+        return "<nobr>" + dataByLinkHtml + "</nobr>";
     }
 }
 
@@ -3020,7 +3108,7 @@ QString PublicTransport::courtesyToolTip() const
         // No courtesy information given by the data engine
         return QString();
     } else {
-        return i18nc( "@info/plain", "By courtesy of %1 (%2)", credit, url );
+        return QString("%1 (%2)").arg( credit, url );
     }
 }
 

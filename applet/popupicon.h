@@ -33,6 +33,7 @@ class DepartureItem;
 class ItemBase;
 class QTimer;
 class QPropertyAnimation;
+
 typedef QList< DepartureItem* > DepartureGroup;
 typedef QList< DepartureGroup > DepartureGroupList;
 
@@ -127,8 +128,14 @@ public:
      *   between departure groups.
      **/
     void setDepartureGroupIndex( qreal departureGroupIndex ) {
+        const int groupIndexBefore = currentDepartureGroupIndex();
         m_currentDepartureGroupIndexStep = departureGroupIndex;
+        const int groupIndexAfter = currentDepartureGroupIndex();
+
         emit currentDepartureGroupIndexChanged( departureGroupIndex );
+        if ( groupIndexBefore != groupIndexAfter ) {
+            emit currentDepartureGroupChanged( groupIndexAfter );
+        }
     };
 
     /**
@@ -180,6 +187,8 @@ public:
     /** @brief Checks if there is a pending alarm. */
     bool hasAlarms() const;
 
+    bool currentGroupIsAlarmGroup() const;
+
     /**
      * @brief Gets a pointer to the current list of departure groups.
      *
@@ -204,9 +213,12 @@ public:
 
 signals:
     /** @brief Gets emitted if the current departure group has changed. */
+    void currentDepartureGroupChanged( int departureGroupIndex );
+
+    /** @brief Gets emitted if the current departure group index has changed. */
     void currentDepartureGroupIndexChanged( qreal departureGroupIndex );
 
-    /** @brief Gets emitted if the current departure in the current group has changed. */
+    /** @brief Gets emitted if the current departure index in the current group has changed. */
     void currentDepartureIndexChanged( qreal departureIndex );
 
 public slots:
@@ -233,6 +245,7 @@ private:
     void applyDepartureIndexLimit(); // Limit departure index to correct values in the current group
     void stopDepartureFadeAnimation(); // Stop running fade animation between two departures
     void departureGroupRemoved( int index ); // The group with the given index has been removed
+    int currentDepartureGroupIndex() const; // The integer index of the current group (not qreal)
 
     DepartureModel *m_model;
     DeparturePainter *m_departurePainter;

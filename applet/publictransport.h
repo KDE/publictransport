@@ -609,6 +609,9 @@ protected slots:
     /** @brief Updates the popup icon with information about the next departure / alarm. */
     void updatePopupIcon();
 
+    /** @brief Updates the tooltip. */
+    void updateTooltip() { createTooltip(); };
+
 protected:
     /**
      * @brief Create the configuration dialog contents.
