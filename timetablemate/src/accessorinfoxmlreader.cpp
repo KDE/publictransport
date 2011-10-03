@@ -40,7 +40,7 @@ bool AccessorInfoXmlWriter::write( QIODevice* device, const TimetableAccessor& a
     writeStartElement( "accessorInfo" );
     writeAttribute( "fileVersion", accessor.fileVersion );
     writeAttribute( "version", accessor.version );
-    writeAttribute( "type", accessor.type == XML ? "XML" : "HTML" );
+    writeAttribute( "type", accessor.type == XmlAccessor ? "XML" : "HTML" );
 
     bool enUsed = false;
     for ( QHash<QString, QString>::const_iterator it = accessor.name.constBegin();
@@ -232,7 +232,7 @@ TimetableAccessor AccessorInfoXmlReader::readAccessorInfo() {
 
     if ( attributes().hasAttribute("type") ) {
 		ret.type = attributes().value("type").toString()
-				.compare("XML", Qt::CaseInsensitive) == 0 ? XML : HTML;
+				.compare("XML", Qt::CaseInsensitive) == 0 ? XmlAccessor : ScriptedAccessor;
 		if ( ret.type == InvalidAccessor ) { // TODO
 			kDebug() << "The type" << attributes().value("type").toString()
 				<< "is invalid. Currently there are two values allowed: "
@@ -240,7 +240,7 @@ TimetableAccessor AccessorInfoXmlReader::readAccessorInfo() {
 			return ret;
 		}
     } else {
-		ret.type = HTML;
+		ret.type = ScriptedAccessor;
 	}
 
     while ( !atEnd() ) {

@@ -40,7 +40,7 @@ struct ChangelogEntry {
 
 enum AccessorType {
     InvalidAccessor = 0,
-    HTML, XML
+    ScriptedAccessor, XmlAccessor
 };
 
 struct TimetableAccessor {

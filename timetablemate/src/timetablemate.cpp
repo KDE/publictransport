@@ -1552,8 +1552,21 @@ void TimetableMate::scriptRunParseTimetable() {
     for ( int i = 0; i < data.count(); ++ i ) {
         TimetableData timetableData = data.at( i );
         QDate date = timetableData.value( "departuredate" ).toDate();
-        QTime departureTime = QTime( timetableData.value("departurehour").toInt(),
-                                     timetableData.value("departureminute").toInt() );
+        QTime departureTime;
+        if ( timetableData.values().contains("departuretime") ) {
+            QVariant timeValue = timetableData.value("departuretime");
+            if ( timeValue.canConvert(QVariant::Time) ) {
+                departureTime = timeValue.toTime();
+            } else {
+                departureTime = QTime::fromString( timeValue.toString(), "hh:mm:ss" );
+                if ( !departureTime.isValid() ) {
+                    departureTime = QTime::fromString( timeValue.toString(), "hh:mm" );
+                }
+            }
+        } else {
+            departureTime = QTime( timetableData.value("departurehour").toInt(),
+                                   timetableData.value("departureminute").toInt() );
+        }
         if ( !date.isValid() ) {
             if ( curDate.isNull() ) {
                 // First departure
