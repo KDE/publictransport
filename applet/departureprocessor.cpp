@@ -234,7 +234,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     url = data["requestUrl"].toUrl();
     updated = data["updated"].toDateTime();
     int count = data["count"].toInt();
-    Q_ASSERT( departureJob->alreadyProcessed < count );
+//     Q_ASSERT( departureJob->alreadyProcessed <= count );
     kDebug() << "  - " << count << "departures to be processed";
     for ( int i = departureJob->alreadyProcessed; i < count; ++i ) {
         QVariant departureData = data.value( QString::number( i ) );
@@ -246,7 +246,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
 
         QVariantHash dataMap = departureData.toHash();
         QList< QTime > routeTimes;
-        if ( dataMap.contains( "routeTimes" ) ) {
+        if ( dataMap.contains("routeTimes") ) {
             QVariantList times = dataMap[ "routeTimes" ].toList();
             foreach( const QVariant &time, times ) {
                 routeTimes << time.toTime();
