@@ -123,7 +123,7 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
         dataServiceProvider.insert( "features", _accessor->features() );
         dataServiceProvider.insert( "featuresLocalized", _accessor->featuresLocalized() );
     }
-	
+
 	QStringList changelog;
 	foreach ( const ChangelogEntry &entry, accessorInfo.changelog() ) {
 		changelog << QString( "%2 (%1): %3" ).arg( entry.since_version ).arg( entry.author ).arg( entry.description );
@@ -291,10 +291,10 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
 		if ( defaultAccessor.isEmpty() ) {
 			return false;
 		}
-		
+
 		accessorId = defaultAccessor;
 	}
-	
+
     // Try to get the specific accessor
 //     kDebug() << "Check accessor" << accessorId;
 // TODO Cache result for this data source
@@ -574,8 +574,8 @@ TimetableAccessor* PublicTransportEngine::getSpecificAccessor( const QString &se
                  SIGNAL(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,QString,QString,QString,QString,QString,ParseDocumentMode)),
                  this, SLOT(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,QString,QString,QString,QString,QString,ParseDocumentMode)) );
         connect( accessor,
-                 SIGNAL(errorParsing(TimetableAccessor*,ErrorType,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)),
-                 this, SLOT(errorParsing(TimetableAccessor*,ErrorType,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)) );
+                 SIGNAL(errorParsing(TimetableAccessor*,ErrorCode,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)),
+                 this, SLOT(errorParsing(TimetableAccessor*,ErrorCode,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)) );
         connect( accessor,
                  SIGNAL(progress(TimetableAccessor*,qreal,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)),
                  this, SLOT(progress(TimetableAccessor*,qreal,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)) );
@@ -673,7 +673,7 @@ PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
 		return ServiceProvider;
 	} else if ( sourceName.compare(sourceTypeKeyword(ServiceProviders), Qt::CaseInsensitive) == 0 ) {
 		return ServiceProviders;
-	} else if ( sourceName.compare(sourceTypeKeyword(ErrornousServiceProviders), 
+	} else if ( sourceName.compare(sourceTypeKeyword(ErrornousServiceProviders),
 								   Qt::CaseInsensitive) == 0 ) {
 		return ErrornousServiceProviders;
 	} else if ( sourceName.compare(sourceTypeKeyword(Locations), Qt::CaseInsensitive) == 0 ) {
@@ -954,24 +954,24 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 	foreach( const StopInfo *stopInfo, stops ) {
 		QVariantHash data;
 		data.insert( "stopName", stopInfo->name() );
-		
+
 // 		kDebug() << stopInfo->name() << stopInfo->id() << stopInfo->city() << stopInfo->countryCode();
-		
-		if ( stopInfo->contains(StopID) && 
-			(!accessor->info()->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) || 
-			accessor->info()->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "false") ) 
+
+		if ( stopInfo->contains(StopID) &&
+			(!accessor->info()->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) ||
+			accessor->info()->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "false") )
 		{
 			data.insert( "stopID", stopInfo->id() );
 		}
-		
+
 		if ( stopInfo->contains(StopWeight) ) {
 			data.insert( "stopWeight", stopInfo->weight() );
 		}
-		
+
 		if ( stopInfo->contains(StopCity) ) {
 			data.insert( "stopCity", stopInfo->city() );
 		}
-		
+
 		if ( stopInfo->contains(StopCountryCode) ) {
 			data.insert( "stopCountryCode", stopInfo->countryCode() );
 		}
@@ -1005,7 +1005,7 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 }
 
 void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
-		ErrorType errorType, const QString &errorString,
+		ErrorCode errorCode, const QString &errorString,
 		const QUrl &requestUrl, const QString &serviceProvider,
 		const QString &sourceName, const QString &city, const QString &stop,
 		const QString &dataType, ParseDocumentMode parseDocumentMode )
@@ -1017,7 +1017,7 @@ void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
 	Q_UNUSED( dataType );
 	kDebug() << "Error while parsing" << requestUrl << serviceProvider
 			 << "\n  sourceName =" << sourceName << dataType << parseDocumentMode;
-	kDebug() << errorType << errorString;
+	kDebug() << errorCode << errorString;
 
 	setData( sourceName, "serviceProvider", serviceProvider );
 	setData( sourceName, "count", 0 );
@@ -1031,7 +1031,7 @@ void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
 	}
 	setData( sourceName, "receivedData", "nothing" );
 	setData( sourceName, "error", true );
-	setData( sourceName, "errorCode", errorType );
+	setData( sourceName, "errorCode", errorCode );
 	setData( sourceName, "errorString", errorString );
 	setData( sourceName, "updated", QDateTime::currentDateTime() );
 }
@@ -1055,7 +1055,7 @@ void PublicTransportEngine::progress( TimetableAccessor *accessor, qreal progres
     }
     setData( sourceName, "receivedData", "nothing" );
 //     setData( sourceName, "error", true );
-//     setData( sourceName, "errorCode", errorType );
+//     setData( sourceName, "errorCode", errorCode );
 //     setData( sourceName, "errorString", errorString );
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 }

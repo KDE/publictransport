@@ -114,7 +114,8 @@ private:
 
         ErrorDownloadingFeed = 10,
         ErrorReadingFeed,
-        ErrorInDatabase
+        ErrorInDatabase,
+        ErrorNeedsFeedImport
     };
 
     /** A value between 0.0 and 1.0 indicating the amount of the total progress for downloading. */

@@ -19,11 +19,12 @@
 
 #include "timetableaccessor_generaltransitfeed.h"
 
-#include "generaltransitfeed_importer.h"
-#include "generaltransitfeed_database.h"
+#include "publictransportservice.h"
 #include "generaltransitfeed_realtime.h"
 
+#include <Plasma/Service>
 #include <KTimeZone>
+#include <KDateTime>
 #include <KStandardDirs>
 #include <KDebug>
 #include <KTemporaryFile>
@@ -36,12 +37,6 @@
 #include <QSqlError>
 #include <QSqlRecord>
 #include <QFileInfo>
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
-#include <Plasma/Service>
-#include "publictransportservice.h"
-#include <kdatetime.h>
 
 TimetableAccessorGeneralTransitFeed::TimetableAccessorGeneralTransitFeed(
         TimetableAccessorInfo *info ) : TimetableAccessor(info),
@@ -65,21 +60,14 @@ TimetableAccessorGeneralTransitFeed::TimetableAccessorGeneralTransitFeed(
 
     QFileInfo fi( GeneralTransitFeedDatabase::databasePath(info->serviceProvider()) );
     if ( importFinished && fi.exists() && fi.size() > 30000 ) {
-        // Load agency information from database and request GTFS-realtime data 
+        // Load agency information from database and request GTFS-realtime data
         loadAgencyInformation();
         updateRealtimeData();
         m_state = Ready;
     }
 
-    // Update database to the current version of the GTFS feed or import it for the first time
+    // Update database to the current version of the GTFS feed
     updateGtfsData();
-//     } else {
-        // If the database does not exist, is too small or was not imported completely,
-        // get information about the GTFS feed, download it, create the database and
-        // import the feed into it
-//         statFeed();
-//         kDebug() << "Import not finished..."; // TODO stay at error state?
-//     }
 }
 
 TimetableAccessorGeneralTransitFeed::~TimetableAccessorGeneralTransitFeed()
@@ -97,13 +85,12 @@ void TimetableAccessorGeneralTransitFeed::updateGtfsData()
         kDebug() << "Is already updating, please wait";
         return;
     }
-    kDebug() << "Updating GTFS data" << m_info->feedUrl();
 
     // Set state to UpdateGtfsFeed, if state was Ready, ie. if the database was already imported
     // and only gets updated now
     if ( m_state != Ready ) {
         m_state = UpdatingGtfsFeed;
-        kDebug() << "Updating GTFS database, please wait";
+        kDebug() << "Updating GTFS database for" << m_info->serviceProvider() << " please wait";
     } else {
         kDebug() << "Stays ready, updates GTFS database in background";
     }
@@ -112,7 +99,7 @@ void TimetableAccessorGeneralTransitFeed::updateGtfsData()
     KConfigGroup op = m_service->operationDescription("updateGtfsFeed");
     op.writeEntry( "serviceProviderId", m_info->serviceProvider() );
     Plasma::ServiceJob *job = m_service->startOperationCall( op );
-    connect( job, SIGNAL(finished(KJob*)), this, SLOT(importFinished(KJob*)) );
+    connect( job, SIGNAL(result(KJob*)), this, SLOT(importFinished(KJob*)) );
     connect( job, SIGNAL(percent(KJob*,ulong)), this, SLOT(importProgress(KJob*,ulong)) );
 }
 
@@ -135,13 +122,15 @@ void TimetableAccessorGeneralTransitFeed::importFinished( KJob *job )
     if ( job->error() != 0 ) {
         // Error while importing
         kDebug() << "ERROR" << m_info->serviceProvider() << job->errorString();
-        m_state = ErrorReadingFeed;
+        ErrorCode errorCode = job->error() == -7 ? ErrorNeedsImport : ErrorDownloadFailed;
+        m_state = job->error() == -7 ? ErrorNeedsFeedImport : ErrorReadingFeed;
         for ( QHash<QString,JobInfos>::ConstIterator it = m_waitingSources.constBegin();
-            it != m_waitingSources.constEnd(); ++it )
+              it != m_waitingSources.constEnd(); ++it )
         {
-            emit errorParsing( this, ErrorDownloadFailed, i18nc("@info/plain TODO",
+            // TODO Less arguments to errorParsing and similiar functions...
+            emit errorParsing( this, errorCode, /*i18nc("@info/plain TODO",
                     "Failed to import GTFS feed from <resource>%1</resource>: <message>%2</message>",
-                    m_info->feedUrl(), job->errorString()),
+                    m_info->feedUrl(), */job->errorString()/*)*/,
                     m_info->feedUrl(), m_info->serviceProvider(),
                     it->sourceName, it->city, it->stop, it->dataType, it->parseDocumentMode );
         }
@@ -355,24 +344,24 @@ bool TimetableAccessorGeneralTransitFeed::isGtfsFeedImportFinished()
 //     bool ok = lazyLoadScript();
 //     if ( ok ) {
 //         QStringList functions = m_script->functionNames();
-// 
+//
 //         if ( functions.contains("parsePossibleStops") ) {
 //             features << "Autocompletion";
 //         }
 //         if ( functions.contains("parseJourneys") ) {
 //             features << "JourneySearch";
 //         }
-// 
+//
 //         if ( !m_script->functionNames().contains("usedTimetableInformations") ) {
 //             kDebug() << "The script has no 'usedTimetableInformations' function";
 //             kDebug() << "Functions in the script:" << m_script->functionNames();
 //             ok = false;
 //         }
-// 
+//
 //         if ( ok ) {
 //             QStringList usedTimetableInformations = m_script->callFunction(
 //                     "usedTimetableInformations" ).toStringList();
-// 
+//
 //             if ( usedTimetableInformations.contains("Delay", Qt::CaseInsensitive) ) {
 //                 features << "Delay";
 //             }
@@ -420,45 +409,46 @@ bool TimetableAccessorGeneralTransitFeed::checkState( const QString &sourceName,
     } else {
         switch ( m_state ) {
         case ErrorDownloadingFeed:
-            emit errorParsing( this, ErrorDownloadFailed, i18nc("@info/plain TODO",
+            emit errorParsing( this, ErrorDownloadFailed, i18nc("@info/plain",
                     "Failed to download the GTFS feed from <resource>%1</resource>",
                     m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
                     sourceName, city, stop, dataType, parseMode );
             break;
         case ErrorReadingFeed:
-            emit errorParsing( this, ErrorParsingFailed, i18nc("@info/plain TODO",
+            emit errorParsing( this, ErrorParsingFailed, i18nc("@info/plain",
                     "Failed to read the GTFS feed from <resource>%1</resource>",
                     m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
                     sourceName, city, stop, dataType, parseMode );
             break;
+        case ErrorNeedsFeedImport:
+            emit errorParsing( this, ErrorNeedsImport, i18nc("@info/plain",
+                    "GTFS feed not imported from <resource>%1</resource>",
+                    m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
+                    sourceName, city, stop, dataType, parseMode );
+            break;
         case Initializing:
-//             emit errorParsing( this, ErrorParsingFailed, i18nc("@info/plain TODO",
-//                     "Currently initializing the database and downloading realtime data.",
-//                     m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
-//                     sourceName, city, stop, dataType, parseMode );
-            emit progress( this, 0.0, i18nc("@info/plain TODO",
+            emit progress( this, 0.0, i18nc("@info/plain",
                     "Initializing GTFS feed database.",
                     m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
                     sourceName, city, stop, dataType, parseMode );
             break;
         case UpdatingGtfsFeed:
-            emit progress( this, m_progress, i18nc("@info/plain TODO",
+            emit progress( this, m_progress, i18nc("@info/plain",
                     "Updating GTFS feed database.",
                     m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
                     sourceName, city, stop, dataType, parseMode );
             break;
         default:
-            emit errorParsing( this, ErrorParsingFailed, i18nc("@info/plain TODO",
-                    "Busy, please wait.",
+            emit errorParsing( this, ErrorParsingFailed, i18nc("@info/plain", "Busy, please wait.",
                     m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
                     sourceName, city, stop, dataType, parseMode );
             break;
         }
 
-        kDebug() << "Error" << m_state;
+        kDebug() << "State" << m_state;
         if ( m_state == ErrorDownloadingFeed || m_state == ErrorReadingFeed ) {
             // Update database to the current version of the GTFS feed or import it for the first time
-            kDebug() << "Restart UPDATE";
+            kDebug() << "Restart update";
             updateGtfsData();
         }
 
@@ -670,7 +660,7 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
 
         const QStringList routeStops = query.value(routeStopsColumn).toString().split( routeSeparator );
         if ( routeStops.isEmpty() ) {
-            // This happens, if the current departure is actually no departure, but an arrival at 
+            // This happens, if the current departure is actually no departure, but an arrival at
             // the target station and vice versa for arrivals.
             continue;
         }
@@ -686,7 +676,7 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
 
         const QString symbol = KCurrencyCode( query.value(fareCurrencyColumn).toString() ).defaultSymbol();
         data[ Pricing ] = KGlobal::locale()->formatMoney(
-                query.value(fareMinPriceColumn).toDouble(), symbol ) + " - " + 
+                query.value(fareMinPriceColumn).toDouble(), symbol ) + " - " +
                 KGlobal::locale()->formatMoney( query.value(fareMaxPriceColumn).toDouble(), symbol );
 
         if ( m_alerts ) {
@@ -791,12 +781,12 @@ void TimetableAccessorGeneralTransitFeed::requestStopSuggestions( const QString 
         }
         if ( weight < 100 ) {
             // Test if the search string is the start of a new word in stopName
-            // Start at 2, because startsWith is already tested above and at least a space must 
+            // Start at 2, because startsWith is already tested above and at least a space must
             // follow to start a new word
             int pos = stopName.indexOf( stop, 2, Qt::CaseInsensitive );
 
             if ( pos != -1 && stopName[pos - 1].isSpace() ) {
-                // 10 weight points bonus if a word in the found stop name 
+                // 10 weight points bonus if a word in the found stop name
                 // starts with the search string
                 weight = qMin( 100, weight + 10 );
             }

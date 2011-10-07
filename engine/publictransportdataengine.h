@@ -245,7 +245,7 @@ public slots:
 	 * @param parseDocumentMode What has been parsed from the document.
 	 * 
 	 * @see TimetableAccessor::useSeparateCityValue() */
-	void errorParsing( TimetableAccessor *accessor, ErrorType errorType, const QString &errorString,
+	void errorParsing( TimetableAccessor *accessor, ErrorCode errorType, const QString &errorString,
 			const QUrl &requestUrl, const QString &serviceProvider,
 			const QString &sourceName, const QString &city, const QString &stop,
 			const QString &dataType, ParseDocumentMode parseDocumentMode );

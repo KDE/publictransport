@@ -38,20 +38,20 @@ struct GlobalTimetableInfo {
 
 	/**
 	 * @brief Whether or not delay information is available.
-	 * 
+	 *
 	 *   True, if there may be delay information available. False, if no
 	 *   delay information is/will be available for the given stop.
 	 **/
 	bool delayInfoAvailable;
-	
+
 	/**
 	 * @brief Whether or not dates are set from today instead of the requested date.
-	 * 
-	 * If this is true, all dates need to be adjusted by X days, where X is the difference in days 
+	 *
+	 * If this is true, all dates need to be adjusted by X days, where X is the difference in days
 	 * between today and the requested date.
 	 **/
     bool datesNeedAdjustment;
-	
+
 	/**
 	 * @brief The requested date of the first departure/arrival/journey.
 	 **/
@@ -59,13 +59,16 @@ struct GlobalTimetableInfo {
 };
 
 /**
- * @brief Error types.
+ * @brief Error codes.
  **/
-enum ErrorType {
+enum ErrorCode {
 	NoError = 0, /**< There were no error. */
 
-	ErrorDownloadFailed, /**< Download error occurred. */
-	ErrorParsingFailed /**< Parsing downloaded data failed. */
+	ErrorDownloadFailed = 1, /**< Download error occurred. */
+	ErrorParsingFailed = 2, /**< Parsing downloaded data failed. */
+    ErrorNeedsImport = 3 /**< An import step needs to be performed, before using the accessor.
+            * This is currently only used for GTFS accessors, which need to import the GTFS feed
+            * before being usable. */
 };
 
 /**
@@ -77,9 +80,9 @@ enum SessionKeyPlace {
 			* as session key <em>data</em>. */
 };
 
-/** 
+/**
  * @brief Different types of timetable information.
- * 
+ *
  * In scripts the enumerable names can be used as strings, eg.:
  * @code
  * timetableData.set("TypeOfVehicle", "Bus"); // Set the type of vehicle
@@ -190,14 +193,14 @@ enum VehicleType {
 	TrainInterregio = 12, /**< An inter-regional train. @deprecated Use InterregionalTrain instead. */
 	TrainIntercityEurocity = 13, /**< An intercity / eurocity train. @deprecated Use IntercityTrain instead. */
 	TrainIntercityExpress = 14, /**< An intercity express. @deprecated Use HighSpeedTrain instead. */
-	
+
 	RegionalTrain = 10, /**< A regional train. Stops at many small stations, slow. */
-	RegionalExpressTrain = 11, /**< A regional express train. Stops at less small stations than 
+	RegionalExpressTrain = 11, /**< A regional express train. Stops at less small stations than
 			* RegionalTrain but it faster. */
-	InterregionalTrain = 12, /**< An inter-regional train. Higher distances and faster than 
+	InterregionalTrain = 12, /**< An inter-regional train. Higher distances and faster than
 			* RegionalTrain and RegionalExpressTrain. */
 	IntercityTrain = 13, /**< An intercity / eurocity train. Connects cities. */
-	HighSpeedTrain = 14, /**< A highspeed train, eg. an intercity express (ICE). 
+	HighSpeedTrain = 14, /**< A highspeed train, eg. an intercity express (ICE).
 			* Trains at > 250 km/h, high distances. */
 
 	Feet = 50, /**< By feet, ie. no vehicle. Used for journeys, eg. from platform A to
