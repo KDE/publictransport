@@ -49,6 +49,8 @@ public:
 
     virtual void start();
 
+    inline const TimetableAccessorInfo *info() const { return m_info; };
+
 protected slots:
     void statFeedFinished( QNetworkReply *reply );
     void downloadProgress( KJob *job, ulong percent );
@@ -59,10 +61,13 @@ protected slots:
     void importerProgress( qreal progress );
     void importerFinished( GeneralTransitFeedImporter::State state, const QString &errorText );
 
-
 protected:
     void statFeed();
     void downloadFeed();
+
+    virtual bool doKill();
+    virtual bool doSuspend();
+    virtual bool doResume();
 
 private:
     enum State {
@@ -70,6 +75,8 @@ private:
         StatingFeed,
         DownloadingFeed,
         ReadingFeed,
+        KillingJob,
+
         Ready,
 
         ErrorDownloadingFeed = 10,
@@ -86,6 +93,16 @@ private:
     TimetableAccessorInfo *m_info;
     GeneralTransitFeedImporter *m_importer;
     QString m_lastRedirectUrl;
+};
+
+class UpdateGtfsToDatabaseJob : public ImportGtfsToDatabaseJob {
+    Q_OBJECT
+
+public:
+    UpdateGtfsToDatabaseJob( const QString &destination, const QString &operation,
+                             const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
+
+    virtual void start();
 };
 
 class PublicTransportService : public Plasma::Service {

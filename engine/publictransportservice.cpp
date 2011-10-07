@@ -31,22 +31,28 @@
 #include <QNetworkReply>
 
 ImportGtfsToDatabaseJob::ImportGtfsToDatabaseJob( const QString &destination,
-        const QString &operation, const QMap< QString, QVariant > &parameters,
-        QObject *parent )
+        const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
         : ServiceJob(destination, operation, parameters, parent), m_info(0), m_importer(0)
 {
     m_info = TimetableAccessor::readAccessorInfo( parameters["serviceProviderId"].toString() );
     if ( !m_info ) {
         setError( -1 );
-        setErrorText( i18nc("@info/plain", "Error while reading Accessor XML.") ); // TODO
+        setErrorText( i18nc("@info/plain", "Error while reading Accessor XML.") );
         return;
     }
 
-    if ( m_info->accessorType() != GtfsAccessor ) { // TODO move accessorType() to TimetableAccessorInfo
+    if ( m_info->accessorType() != GtfsAccessor ) {
         setError( -2 );
-        setErrorText( i18nc("@info/plain", "Not a GTFS accessor") ); // TODO
+        setErrorText( i18nc("@info/plain", "Not a GTFS accessor") );
     }
     kDebug() << "Import job created" << m_info->serviceProvider();
+}
+
+UpdateGtfsToDatabaseJob::UpdateGtfsToDatabaseJob( const QString& destination,
+        const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
+        : ImportGtfsToDatabaseJob(destination, operation, parameters, parent)
+{
+    kDebug() << "  > It is actually an update job";
 }
 
 ImportGtfsToDatabaseJob::~ImportGtfsToDatabaseJob()
@@ -61,8 +67,48 @@ ImportGtfsToDatabaseJob::~ImportGtfsToDatabaseJob()
 
 void ImportGtfsToDatabaseJob::start()
 {
+    kDebug() << "Start import";
 //     downloadFeed(); // TODO Check datacache?
     statFeed();
+}
+
+void UpdateGtfsToDatabaseJob::start()
+{
+    KConfig cfg( TimetableAccessor::accessorCacheFileName(), KConfig::SimpleConfig );
+    KConfigGroup grp = cfg.group( info()->serviceProvider() );
+    bool importFinished = grp.readEntry( "feedImportFinished", false );
+    if ( !importFinished ) {
+        setError( -7 );
+        setErrorText( i18nc("@info/plain", "GTFS feed not imported. Please import it explicitly first.") );
+        emitResult();
+    } else {
+        ImportGtfsToDatabaseJob::start();
+    }
+}
+
+bool ImportGtfsToDatabaseJob::doKill()
+{
+    if ( m_state == ReadingFeed ) {
+        m_importer->quit();
+    }
+    m_state = KillingJob;
+    return true;
+}
+
+bool ImportGtfsToDatabaseJob::doSuspend()
+{
+    if ( m_state == ReadingFeed ) {
+        m_importer->suspend();
+    }
+    return true;
+}
+
+bool ImportGtfsToDatabaseJob::doResume()
+{
+    if ( m_state == ReadingFeed ) {
+        m_importer->resume();
+    }
+    return true;
 }
 
 void ImportGtfsToDatabaseJob::statFeed()
@@ -78,7 +124,7 @@ void ImportGtfsToDatabaseJob::statFeed()
         return;
     }
 
-    kDebug() << "************************************ STARTING STAT FOR *****" << m_info->serviceProvider() << "*********";
+    kDebug() << "************* STARTING STAT FOR *****" << m_info->serviceProvider() << "*********";
     m_state = StatingFeed;
     QNetworkAccessManager *manager = new QNetworkAccessManager( this );
     connect( manager, SIGNAL(finished(QNetworkReply*)),
@@ -89,6 +135,10 @@ void ImportGtfsToDatabaseJob::statFeed()
 
 void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
 {
+    if ( m_state == KillingJob || isSuspended() ) {
+        return;
+    }
+
     // Check if there is a valid redirection
     QString redirectUrl = reply->attribute( QNetworkRequest::RedirectionTargetAttribute ).toString();
     if ( reply->error() != QNetworkReply::NoError &&
@@ -172,21 +222,10 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
         }
     } else {
         kDebug() << "GTFS feed not available: " << m_info->feedUrl() << reply->errorString();
-//         kDebug() << "Try to download it anyway" << reply->header( QNetworkRequest::LastModifiedHeader ).toDateTime();
-//         kDebug() << reply->header( QNetworkRequest::LocationHeader );
-//         m_state = Initializing;
-//         downloadFeed();
         m_state = ErrorDownloadingFeed;
         setError( -4 );
         setErrorText( reply->errorString() ); // TODO
         emitResult();
-
-        // Try to get the "file" (size==0), might be a redirection?
-//         QNetworkAccessManager *manager = new QNetworkAccessManager( this );
-//         connect( manager, SIGNAL(finished(QNetworkReply*)),
-//                 this, SLOT(statFeedFinished(QNetworkReply*)) );
-//         QNetworkRequest request( m_info->feedUrl() );
-//         manager->get( request );
     }
 
     reply->manager()->deleteLater();
@@ -197,6 +236,9 @@ void ImportGtfsToDatabaseJob::downloadFeed()
 {
     if ( m_state == DownloadingFeed || m_state == ReadingFeed || m_state == StatingFeed ) {
         kDebug() << "Feed already gets downloaded / was downloaded and gets imported / gets stated";
+        return;
+    }
+    if ( m_state == KillingJob || isSuspended() ) {
         return;
     }
 
@@ -246,15 +288,15 @@ void ImportGtfsToDatabaseJob::totalSize( KJob* job, qulonglong size )
 {
     KConfig cfg( TimetableAccessor::accessorCacheFileName(), KConfig::SimpleConfig );
     KConfigGroup grp = cfg.group( m_info->serviceProvider() );
-    qulonglong sizeInBytes = grp.readEntry( "feedSizeInBytes", qulonglong(-1) );
-    if ( size == sizeInBytes ) {
-        // The file that is currently downloaded by job did not change in size
-        kDebug() << "Size of the GTFS feed did not change, don't update";
-        job->kill();
-        emitResult();
-    } else {
+//     qulonglong sizeInBytes = grp.readEntry( "feedSizeInBytes", qulonglong(-1) );
+//     if ( size == sizeInBytes ) {
+//         // The file that is currently downloaded by job did not change in size
+//         kDebug() << "Size of the GTFS feed did not change, don't update";
+//         job->kill();
+//         emitResult();
+//     } else {
         grp.writeEntry( "feedSizeInBytes", size );
-    }
+//     }
 }
 
 void ImportGtfsToDatabaseJob::downloadProgress( KJob *job, ulong percent )
@@ -265,6 +307,10 @@ void ImportGtfsToDatabaseJob::downloadProgress( KJob *job, ulong percent )
 
 void ImportGtfsToDatabaseJob::feedReceived( KJob *job )
 {
+    if ( m_state == KillingJob || isSuspended() ) {
+        return;
+    }
+
     // Emit progress for finished download
     m_progress = PROGRESS_PART_FOR_FEED_DOWNLOAD;
     emitPercent( 1000 * PROGRESS_PART_FOR_FEED_DOWNLOAD, 1000 );
@@ -283,12 +329,6 @@ void ImportGtfsToDatabaseJob::feedReceived( KJob *job )
         emitResult();
         return;
     }
-
-//         QVariant redirectValue = job->metaData().value( QNetworkRequest::RedirectionTargetAttribute );
-//         KIO::FileCopyJob *job = KIO::file_copy( m_info->feedUrl(), KUrl(tmpFile.fileName()), -1,
-//                                                 KIO::Overwrite | KIO::HideProgressInfo );
-//         connect( job, SIGNAL(result(KJob*)), this, SLOT(feedReceived(KJob*)) );
-//         connect( job, SIGNAL(percent(KJob*,ulong)), this, SLOT(downloadProgress(KJob*,ulong)) );
 
     kDebug() << "GTFS feed received at" << tmpFilePath;
 
@@ -325,8 +365,6 @@ void ImportGtfsToDatabaseJob::importerFinished(
         m_state = ErrorReadingFeed;
         kDebug() << "There was an error importing the GTFS feed into the database" << errorText;
     } else {
-//         loadAgencyInformation();
-//         updateRealtimeData();
         m_state = Ready;
     }
 
@@ -338,19 +376,6 @@ void ImportGtfsToDatabaseJob::importerFinished(
     }
 
     if ( m_state == Ready ) {
-//         for ( QHash<QString, JobInfos>::ConstIterator it = m_jobInfos.constBegin();
-//             it != m_jobInfos.constEnd(); ++it )
-//         {
-//             if ( it->parseDocumentMode == ParseForDeparturesArrivals ) {
-//                 requestDepartures( it->sourceName, it->city, it->stop, it->maxCount, it->dateTime,
-//                                    it->dataType, it->usedDifferentUrl );
-//             } else {
-//                 requestStopSuggestions( it->sourceName, it->city, it->stop, ParseForStopSuggestions,
-//                                         it->maxCount, it->dateTime, it->dataType,
-//                                         it->usedDifferentUrl );
-//             }
-//         }
-
         // Update accessor information cache
 //         const bool cacheExists = QFile::exists( fileName );
         KConfig cfg( TimetableAccessor::accessorCacheFileName(), KConfig::SimpleConfig );
@@ -374,5 +399,12 @@ PublicTransportService::PublicTransportService( const QString &name, QObject *pa
 Plasma::ServiceJob* PublicTransportService::createJob(
         const QString &operation, QMap< QString, QVariant > &parameters )
 {
-    return new ImportGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
+    if ( operation == "updateGtfsFeed" ) {
+        return new UpdateGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
+    } else if ( operation == "importGtfsFeed" ) {
+        return new ImportGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
+    } else {
+        kWarning() << "Operation" << operation << "not supported";
+        return 0;
+    }
 }
