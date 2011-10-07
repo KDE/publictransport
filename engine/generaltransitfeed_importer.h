@@ -92,6 +92,7 @@ public:
         Initializing = 0, /**< Currently initializing the database. */
         Initialized, /**< Initialized and waiting for a call to @p startImport. */
         Importing, /**< Currently importing a GTFS feed. */
+        ImportingSuspended, /**< Current import is suspended. */
 
         FinishedSuccessfully = 10, /**< Finished importing a GTFS feed successfully. */
         FinishedWithErrors, /**< Finished importing a GTFS feed with non-fatal error(s). */
@@ -158,10 +159,14 @@ signals:
     void progress( qreal completed );
 
 public slots:
-    /**
-     * @brief Cancel a running import process.
-     **/
+    /** @brief Cancel a running import process. */
     void quit();
+
+    /** @brief Suspend a running import process. */
+    void suspend();
+
+    /** @brief Resume a suspended import process. */
+    void resume();
 
 protected:
     virtual void run();

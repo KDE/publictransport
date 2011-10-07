@@ -62,6 +62,23 @@ void GeneralTransitFeedImporter::quit()
     m_quit = true;
 }
 
+void GeneralTransitFeedImporter::suspend()
+{
+    QMutexLocker locker( &m_mutex );
+    if ( m_state == Importing ) {
+        m_state = ImportingSuspended;
+        kDebug() << "Suspend";
+    }
+}
+
+void GeneralTransitFeedImporter::resume()
+{
+    QMutexLocker locker( &m_mutex );
+    if ( m_state == ImportingSuspended ) {
+        m_state = Importing;
+    }
+}
+
 void GeneralTransitFeedImporter::startImport( const QString &fileName )
 {
     m_mutex.lock();
@@ -414,7 +431,7 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
 // //                    "agency_timezone VARCHAR(256), " // (required, if NULL, the default timezone from the accesor XML is used, from <timeZone>-tag) Timezone name, see http://en.wikipedia.org/wiki/List_of_tz_zones
 // //                    "agency_lang VARCHAR(2), " // (optional) A two-letter ISO 639-1 code for the primary language used by this transit agency
 // //                    "agency_phone
-// 
+//
 //                 for ( int i = 0; i < fieldNames.count(); ++i ) {
 //                     const QString fieldName = fieldNames[i];
 //                     if ( fieldName == "agency_id" ) {
@@ -445,10 +462,10 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
             }
 
             // New row has been inserted into the DB successfully
-            ++counter;
+            ++counter; // counter is now >= 1
 
             // Start a new transaction after 50000 INSERTs
-            if ( counter > 0 && counter % 50000 == 0 ) {
+            if ( counter % 50000 == 0 ) {
                 if ( !database.driver()->commitTransaction() ) {
                     qDebug() << database.lastError();
                 }
@@ -457,8 +474,9 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
                 }
             }
 
-            // Report progress and check for quit after each 500 INSERTs
-            if ( counter > 0 && counter % 500 == 0 ) {
+            // Report progress and check for quit/suspend after each 500 INSERTs
+            if ( counter % 500 == 0 ) {
+                // Report progress
                 emit progress( qreal(totalFilePosition + file.pos()) / qreal(totalFileSize) );
 
                 // Check if the job should be cancelled
@@ -468,6 +486,33 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
                     setError( FatalError, "Importer was cancelled" );
                     return false;
                 }
+
+                // Check if the job should be suspended
+                if ( m_state == ImportingSuspended ) {
+                    // Commit before going to sleep for suspension
+                    if ( !database.driver()->commitTransaction() ) {
+                        qDebug() << database.lastError();
+                    }
+
+                    do {
+                        // Do not lock while sleeping, otherwise ::resume() results in a deadlock
+                        m_mutex.unlock();
+
+                        // Suspend import for one second
+                        sleep( 1 );
+
+                        // Lock mutex again, to check if m_state is still ImportingSuspended
+                        m_mutex.lock();
+                        kDebug() << "Next check for suspended state" << m_state;
+                    } while ( m_state == ImportingSuspended );
+
+                    // Start a new transaction
+                    if ( !database.driver()->beginTransaction() ) {
+                        qDebug() << database.lastError();
+                    }
+                }
+
+                // Unlock mutex again
                 m_mutex.unlock();
             }
         }
