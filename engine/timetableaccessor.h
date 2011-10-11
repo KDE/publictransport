@@ -146,26 +146,18 @@ public:
 	 *   @ref requestStopSuggestions after the session key has been retrieved) or
 	 *   ParseForSessionKeyThenDepartures (calls @ref requestDepartures after the session key has
 	 *   been retrieved).
-	 *
 	 * @param url The url to a document which contains the session key.
-	 *
 	 * @param sourceName The source name in the data engine.
-	 *
 	 * @param city After the session key has been parsed, @ref requestDepartures is called
 	 *   with @p city.
-	 *
 	 * @param stop After the session key has been parsed, @ref requestDepartures is called
 	 *   with @p stop.
-	 *
 	 * @param maxCount After the session key has been parsed, @ref requestDepartures is called
 	 *   with @p maxCount. Default is 99.
-	 *
 	 * @param dateTime After the session key has been parsed, @ref requestDepartures is called
 	 *   with @p dateTime. Default is QDateTime::currentDateTime().
-	 *
 	 * @param dataType After the session key has been parsed, @ref requestDepartures is called
 	 *   with @p dataType. Default is QString().
-	 *
 	 * @param usedDifferentUrl After the session key has been parsed, @ref requestDepartures is
 	 *   called with @p usedDifferentUrl. Default is false.
 	 **/
@@ -179,29 +171,22 @@ public:
 	 *   @ref stopListReceived is emitted.
 	 *
 	 * @param sourceName The source name in the data engine.
-	 *
 	 * @param city The city to get stop suggestions for (only needed if @ref useSeparateCityValue
 	 *   returns true).
-	 *
 	 * @param stop The stop name (or a part of it) to get suggestions for.
-	 *
 	 * @param parseMode Can be ParseForStopSuggestions or ParseForStopIdThenDepartures (then the
 	 *   arguments @p maxCount, @p dateTime, @p dataType, @p usedDifferentUrl are also needed and
 	 *   used for the departure request once a stop suggestion has arrived).
 	 *   Default is ParseForStopSuggestions.
-	 *
 	 * @param maxCount Only used if @p parseMode is ParseForStopIdThenDepartures. After stop
 	 *   suggestions are retrieved, @ref requestDepartures is called with @p maxCount. Default is 1,
 	 *   because only the best suggestion is used.
-	 *
 	 * @param dateTime Only used if @p parseMode is ParseForStopIdThenDepartures. After stop
 	 *   suggestions are retrieved, @ref requestDepartures is called with @p dateTime. Default is
 	 *   QDateTime::currentDateTime().
-	 *
 	 * @param dataType Only used if @p parseMode is ParseForStopIdThenDepartures. After stop
 	 *   suggestions are retrieved, @ref requestDepartures is called with @p dataType. Default is
 	 *   QString().
-	 *
 	 * @param usedDifferentUrl Only used if @p parseMode is ParseForStopIdThenDepartures. After stop
 	 *   suggestions are retrieved, @ref requestDepartures is called with @p usedDifferentUrl.
 	 *   Default is false.

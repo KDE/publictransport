@@ -39,6 +39,16 @@ namespace KIO {
 class TimetableAccessorInfo;
 class QNetworkReply;
 
+/**
+ * @brief Imports a GTFS feed into a database.
+ *
+ * This is also the base class of @ref UpdateGtfsToDatabaseJob, which does produce an error if it
+ * gets used without an initial import of the GTFS feed.
+ *
+ * Depending on the size of the GTFS feed, reading and importing it into the database can take some
+ * time. Progress gets reported using the Plasma::ServiceJob API, just like this job supports
+ * suspend/resume and kill.
+ **/
 class ImportGtfsToDatabaseJob : public Plasma::ServiceJob {
     Q_OBJECT
 
@@ -47,6 +57,7 @@ public:
                              const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
     virtual ~ImportGtfsToDatabaseJob();
 
+    /** @brief Starts the GTFS feed download and import. */
     virtual void start();
 
     inline const TimetableAccessorInfo *info() const { return m_info; };
@@ -95,6 +106,16 @@ private:
     QString m_lastRedirectUrl;
 };
 
+/**
+ * @brief Updates an already imported GTFS feed if there is a new version.
+ *
+ * The base class of this class is @ref ImportGtfsToDatabaseJob. This class changes it's behaviour
+ * by producing an error if it gets used without an initial import of the GTFS feed.
+ *
+ * Depending on the size of the GTFS feed, reading and importing it into the database can take some
+ * time. Progress gets reported using the Plasma::ServiceJob API, just like this job supports
+ * suspend/resume and kill.
+ **/
 class UpdateGtfsToDatabaseJob : public ImportGtfsToDatabaseJob {
     Q_OBJECT
 
@@ -102,9 +123,42 @@ public:
     UpdateGtfsToDatabaseJob( const QString &destination, const QString &operation,
                              const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
 
+    /**
+     * @brief Starts the GTFS feed update or produces an error if there was no initial import.
+     *
+     * The error that gets produced, if the GTFS feed was never completely imported, has the error
+     * coed -7.
+     **/
     virtual void start();
 };
 
+/**
+ * @brief A service for the Public Transport data engine, which can import/update GTFS feeds.
+ *
+ * This service has an operation "UpdateGtfsFeed", which only updates already imported GTFS feeds
+ * if there is a new version. This operation gets called by the GTFS accessor
+ * @ref TimetableAccessorGeneralTransitFeed to make sure the GTFS data is up to date. To import
+ * a new GTFS feed for the first time the operation "ImportGtfsFeed" should be used. That
+ * operation does @em not get called by the GTFS accessor. This is because importing GTFS feeds
+ * can require quite a lot disk space and importing can take some time.
+ *
+ * If there is no imported data every request to the accessor (using the data engine) results in
+ * an error with the error code -7 (see the field "errorCode" in the data returned from the data
+ * engine). The user should then be asked to import a new GTFS feed and then the "ImportGtfsFeed"
+ * operation should be called.
+ *
+ * To call the "ImportGtfsFeed" operation from a Plasma::Applet, code like this can be used:
+ * @code
+    Plasma::Service *service = engine("publictransport")->serviceForSource( QString() );
+    KConfigGroup op = service->operationDescription("importGtfsFeed");
+    op.writeEntry( "serviceProviderId", "us_trimet" );
+    Plasma::ServiceJob *importJob = service->startOperationCall( op );
+    connect( importJob, SIGNAL(finished(KJob*)), this, SLOT(importFinished(KJob*)) );
+    connect( importJob, SIGNAL(percent(KJob*,ulong)), this, SLOT(importProgress(KJob*,ulong)) );
+   @endcode
+ *
+ * Replace @em us_trimet with the ID of the service provider, which GTFS feed should be imported.
+ **/
 class PublicTransportService : public Plasma::Service {
     Q_OBJECT
 
@@ -112,6 +166,14 @@ public:
     explicit PublicTransportService( const QString &name, QObject *parent = 0 );
 
 protected:
+    /**
+     * @brief Creates a new job for the given @p operation with the given @p parameters.
+     *
+     * @param operation The operation to create a job for. Currently supported are "UpdateGtfsFeed"
+     *   and "ImportGtfsFeed".
+     * @param parameters Parameters for the operation.
+     * @return A pointer to the newly created job or 0 if the @p operation is unsupported.
+     **/
     virtual Plasma::ServiceJob* createJob( const QString &operation,
                                            QMap< QString, QVariant > &parameters );
 
