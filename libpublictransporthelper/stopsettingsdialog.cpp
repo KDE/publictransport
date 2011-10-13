@@ -154,17 +154,17 @@ private:
 class StopSettingsDialogPrivate
 {
 	Q_DECLARE_PUBLIC( StopSettingsDialog )
-	
+
 public:
 	// Constructor with given LocationModel and ServiceProviderModel
 	StopSettingsDialogPrivate( const StopSettings &_oldStopSettings,
 			StopSettingsDialog::Options _options,
 			AccessorInfoDialog::Options _accessorInfoDialogOptions,
-			QList<int> customSettings, 
+			QList<int> customSettings,
 			StopSettingsWidgetFactory::Pointer _factory,
             int _stopIndex,
 			StopSettingsDialog *q )
-			: factory(_factory), detailsWidget(0), stopFinder(0), nearStopsDialog(0), 
+			: factory(_factory), detailsWidget(0), stopFinder(0), nearStopsDialog(0),
 			modelLocations(0), modelServiceProviders(0),
 			modelLocationServiceProviders(0), stopList(0), htmlDelegate(0), resizer(0),
 			dataEngineManager(0), q_ptr(q)
@@ -175,17 +175,17 @@ public:
 		accessorInfoDialogOptions = _accessorInfoDialogOptions;
 		oldStopSettings = _oldStopSettings;
         stopIndex = _stopIndex;
-		
+
 		// Resolve illegal option/setting combinations
 		correctOptions();
 		correctSettings();
-		
+
 		// Load data engines
 		dataEngineManager = Plasma::DataEngineManager::self();
 		publicTransportEngine = dataEngineManager->loadEngine("publictransport");
 		geolocationEngine = dataEngineManager->loadEngine("geolocation");
 		osmEngine = dataEngineManager->loadEngine("openstreetmap");
-		
+
 		// Create location and service provider models
 		modelLocations = new LocationModel( q );
 		modelLocations->syncWithDataEngine( publicTransportEngine );
@@ -207,14 +207,14 @@ public:
                FilterSettingsList *filterConfigurations )
 	{
 		Q_Q( StopSettingsDialog );
-		
+
 		// Setup main UI
 		uiStop.setupUi( q->mainWidget() );
 
 		// Automatically resize widgets to align columns of different layouts
 		resizer = new ColumnResizer(q);
 		resizer->addWidgetsFromLayout(uiStop.mainLayout, 0);
-		
+
 		// Initialize button flags, later User1 and/or Details are added and setButtons() is called
 		KDialog::ButtonCodes buttonFlags = KDialog::Ok | KDialog::Cancel;
 
@@ -229,10 +229,10 @@ public:
 				}
 
 				// Create the widget in the factory and get it's label text
-				QWidget *widget = factory->widgetWithNameForSetting( setting, 
+				QWidget *widget = factory->widgetWithNameForSetting( setting,
 						factory->isDetailsSetting(setting) ? detailsWidget : q->mainWidget() );
 				QString text = factory->textForSetting( setting );
-				
+
 				// Check in the factory if the current setting should be added to a details widget
 				if ( factory->isDetailsSetting(setting) ) {
 					if ( !detailsLayout ) {
@@ -288,7 +288,7 @@ public:
 		// Show/hide install accessor button
 		if ( options.testFlag(StopSettingsDialog::ShowInstallAccessorButton) ) {
 			QMenu *menu = new QMenu( q );
-			menu->addAction( KIcon("get-hot-new-stuff"), 
+			menu->addAction( KIcon("get-hot-new-stuff"),
 							 i18nc("@action:inmenu", "Get new service providers..."),
 							 q, SLOT(downloadServiceProvidersClicked()) );
 			menu->addAction( KIcon("text-xml"),
@@ -304,7 +304,7 @@ public:
 		if ( options.testFlag(StopSettingsDialog::ShowStopInputField) ) {
 			// Set dialog title for a dialog with stop name input
 			q->setWindowTitle( i18nc("@title:window", "Change Stop(s)") );
-		
+
 			// Create stop widgets
 			stopList = new StopLineEditList( q,
 					DynamicLabeledLineEditList::RemoveButtonsBesideWidgets,
@@ -316,10 +316,10 @@ public:
 			stopList->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
 			q->connect( stopList, SIGNAL(added(QWidget*)), q, SLOT(stopAdded(QWidget*)) );
 			q->connect( stopList, SIGNAL(removed(QWidget*,int)), q, SLOT(stopRemoved(QWidget*,int)) );
-			
+
 			stopList->setLabelTexts( i18nc("@info/plain Label for the read only text labels containing "
 					"additional stop names, which are combined with other defined stops (showing "
-					"departures/arrivals of all combined stops)", "Combined Stop") + 
+					"departures/arrivals of all combined stops)", "Combined Stop") +
 					" %1:", QStringList() << "Stop:" );
 			stopList->setWidgetCountRange( 1, 3 );
 			if ( stopList->addButton() ) {
@@ -336,19 +336,19 @@ public:
 			QVBoxLayout *l = new QVBoxLayout( uiStop.stops );
 			l->setContentsMargins( 0, 0, 0, 0 );
 			l->addWidget( stopList );
-			
+
 			// Add to column resizer
 			resizer->addWidgetsFromLayout(stopList->layout(), 0);
 		} else { // if ( !options.testFlag(StopSettingsDialog::ShowStopInputField) )
 			// Set dialog title for a dialog without stop name input
 			q->setWindowTitle( i18nc("@title:window", "Change Service Provider") );
-			
+
 			// Hide stop/city selection widgets
 			uiStop.stops->hide();
 			uiStop.city->hide();
 			uiStop.lblCity->hide();
 		}
-		
+
 		// Show/hide location and service provider configuration widgets
 		// and create models if needed
 		if ( !options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) ) {
@@ -381,7 +381,7 @@ public:
 				serviceProviderView->setModel( modelCategorized );
 				serviceProviderView->setWordWrap( true );
 				serviceProviderView->setSelectionMode( QAbstractItemView::SingleSelection );
-				
+
 				// If ScrollPerItem is used the view can't be scrolled in QListView::ListMode.
 				serviceProviderView->setVerticalScrollMode( QAbstractItemView::ScrollPerPixel );
 
@@ -393,8 +393,8 @@ public:
 			uiStop.location->setModel( modelLocations );
 
 			// Set html delegate
-			if ( options.testFlag(StopSettingsDialog::UseHtmlForLocationConfig) || 
-				options.testFlag(StopSettingsDialog::UseHtmlForServiceProviderConfig) ) 
+			if ( options.testFlag(StopSettingsDialog::UseHtmlForLocationConfig) ||
+				 options.testFlag(StopSettingsDialog::UseHtmlForServiceProviderConfig) )
 			{
 				htmlDelegate = new HtmlDelegate( HtmlDelegate::AlignTextToDecoration, q );
 				if ( options.testFlag(StopSettingsDialog::UseHtmlForLocationConfig) ) {
@@ -411,7 +411,7 @@ public:
 			q->connect( uiStop.serviceProvider, SIGNAL(currentIndexChanged(int)),
 						q, SLOT(serviceProviderChanged(int)) );
 		}
-		
+
 		// Watch city/stop name(s) for changes
 		if ( options.testFlag(StopSettingsDialog::ShowStopInputField) ) {
 			q->connect( uiStop.city, SIGNAL(currentIndexChanged(QString)),
@@ -424,7 +424,7 @@ public:
 
 		// Set values of setting widgets
 		q->setStopSettings( filterStopSettings );
-		
+
 		// Set focus to the first stop name if shown.
 		// Otherwise set focus to the service provider widget.
 		if ( options.testFlag(StopSettingsDialog::ShowStopInputField) ) {
@@ -433,40 +433,40 @@ public:
 			uiStop.serviceProvider->setFocus();
 		}
 	};
-	
+
 	inline void correctOptions() {
 		if ( !options.testFlag(StopSettingsDialog::ShowStopInputField) &&
-			!options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) ) 
+			!options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) )
 		{
 			kDebug() << "Neither ShowStopInputField nor ShowServiceProviderConfig used for "
 					"StopSettingsDialog options. This makes the dialog useless!";
 		}
-		
+
 		// Don't show accessor info/install buttons, if the service provider combobox isn't shown
-		if ( !options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) && 
-			options.testFlag(StopSettingsDialog::ShowAccessorInfoButton) ) 
+		if ( !options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) &&
+			options.testFlag(StopSettingsDialog::ShowAccessorInfoButton) )
 		{
 			options ^= StopSettingsDialog::ShowAccessorInfoButton;
 		}
-		if ( !options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) && 
-			options.testFlag(StopSettingsDialog::ShowInstallAccessorButton) ) 
+		if ( !options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) &&
+			options.testFlag(StopSettingsDialog::ShowInstallAccessorButton) )
 		{
 			options ^= StopSettingsDialog::ShowInstallAccessorButton;
 		}
-		
+
 		// Don't show nearby stops button, if the stop input field isn't shown
-		if ( !options.testFlag(StopSettingsDialog::ShowStopInputField) && 
-			options.testFlag(StopSettingsDialog::ShowNearbyStopsButton) ) 
+		if ( !options.testFlag(StopSettingsDialog::ShowStopInputField) &&
+			options.testFlag(StopSettingsDialog::ShowNearbyStopsButton) )
 		{
 			options ^= StopSettingsDialog::ShowNearbyStopsButton;
 		}
 	};
-	
+
 	enum SettingsRule {
 		RequiredBy, // The setting is required by the option
 		IfAndOnlyIf // The setting should set if the option is set, otherwise the setting should also not be set
 	};
-	
+
 	// Correct the settings list, ie. add/remove flags to/from settings,
 	// if an associated StopSettingsDialog::Option was/wasn't used
 	inline void correctSettings() {
@@ -482,9 +482,9 @@ public:
 		applyRule( AlarmTimeSetting, IfAndOnlyIf, StopSettingsDialog::ShowAlarmTimeConfig );
 		applyRule( FirstDepartureConfigModeSetting, IfAndOnlyIf, StopSettingsDialog::ShowFirstDepartureConfig );
 	};
-	
+
 	// This function ensures a SettingRule
-	void applyRule( StopSetting setting, SettingsRule rule, StopSettingsDialog::Option option ) 
+	void applyRule( StopSetting setting, SettingsRule rule, StopSettingsDialog::Option option )
 	{
 		if ( options.testFlag(option) ) {
 			// Ensure associated setting widgets are in the settings list
@@ -494,20 +494,20 @@ public:
 			}
 		} else if ( settings.contains(setting) && rule == IfAndOnlyIf ) {
 // 			kDebug() << setting << "is in the list of settings, but option" << option << "isn't set";
-			
+
 			// Ensure associated setting widgets are NOT in the settings list
 			settings.removeOne( setting );
 		}
 	};
-	
+
 	template< class WidgetType >
-	WidgetType *settingWidget( int setting ) const 
+	WidgetType *settingWidget( int setting ) const
 	{
 		// Custom widgets created without use of StopSettingsWidgetFactory
 		if ( settingsWidgets.contains(setting) ) {
 			return qobject_cast<WidgetType*>( settingsWidgets[setting] );
 		}
-		
+
 		// Default widgets created by uiStop
 		switch ( setting ) {
 			case LocationSetting:
@@ -518,44 +518,44 @@ public:
 				return qobject_cast<WidgetType*>( uiStop.city );
 			case StopNameSetting:
 				return qobject_cast<WidgetType*>( stopList );
-				
+
 			default:
 				break; // Do nothing
 		}
-		
+
 		if ( !factory->isDetailsSetting(setting) ) {
-			WidgetType *widget = detailsWidget->findChild< WidgetType* >( 
+			WidgetType *widget = detailsWidget->findChild< WidgetType* >(
 					factory->nameForSetting(setting) );
 			if ( !widget ) {
 				kDebug() << "No main widget found for" << static_cast<StopSetting>(setting);
 			}
 			return widget;
 		}
-		
+
 		// A widget was requested, which is in the detailsWidget
 		if ( !detailsWidget ) {
-			kDebug() << "Details widget not created yet, no custom settings. Requested" 
+			kDebug() << "Details widget not created yet, no custom settings. Requested"
 					 << static_cast<StopSetting>(setting);
 			return NULL;
 		}
-		
+
 		// Normal widgets created by StopSettingsWidgetFactory
-		WidgetType *widget = detailsWidget->findChild< WidgetType* >( 
+		WidgetType *widget = detailsWidget->findChild< WidgetType* >(
 				factory->nameForSetting(setting) );
 		if ( widget ) {
 			return widget;
 		}
-		
+
 		// Sub radio widgets created by StopSettingsWidgetFactory
-		widget = detailsWidget->findChild< WidgetType* >( 
+		widget = detailsWidget->findChild< WidgetType* >(
 				QLatin1String("radio_") + factory->nameForSetting(setting) );
-		
+
 		if ( !widget ) {
 			kDebug() << "No widget found for" << static_cast<StopSetting>(setting);
 		}
 		return widget;
 	};
-	
+
 	// Creates the details widget if it's not already created and returns it's layout
 	QFormLayout *createDetailsWidget() {
 		Q_Q( StopSettingsDialog );
@@ -566,34 +566,34 @@ public:
 			detailsWidget = new QWidget( q );
 			detailsLayout = new QFormLayout( detailsWidget );
 			detailsLayout->setContentsMargins( 0, 0, 0, 0 );
-			
+
 			// Add a line to separate details widgets from other dialog widgets
 			QFrame *line = new QFrame( detailsWidget );
 			line->setFrameShape( QFrame::HLine );
 			line->setFrameShadow( QFrame::Sunken );
 			detailsLayout->addRow( line );
-			
+
 			q->setDetailsWidget( detailsWidget );
 		}
 		return detailsLayout;
 	};
-	
+
 	// data is currently only used for StopSettings::FilterConfigurationSetting, should be a
 	// FilterSettingsList
-	QWidget *addSettingWidget( int setting, const QVariant &defaultValue, const QVariant &data ) 
+	QWidget *addSettingWidget( int setting, const QVariant &defaultValue, const QVariant &data )
 	{
 		if ( settings.contains(setting) ) {
-			kDebug() << "The setting" << static_cast<StopSetting>(setting) 
+			kDebug() << "The setting" << static_cast<StopSetting>(setting)
 					 << "has already been added";
 			return settingWidget<QWidget>( setting );
 		}
-		
+
 		// Ensure that the details widget is created
 		createDetailsWidget();
-		
+
 		// Create the widget in the factory
 		QWidget *widget = factory->widgetWithNameForSetting( setting, detailsWidget );
-		
+
 		// Use the data argument
 		if ( setting == FilterConfigurationSetting ) {
             FilterSettingsList filterSettings = data.value<FilterSettingsList>();
@@ -613,53 +613,53 @@ public:
                 ++row;
             }
 		}
-		
-		// Set the widgets value 
+
+		// Set the widgets value
 		// (to the value stored in the StopSettings object or to the default value).
 		QVariant _value = oldStopSettings.hasSetting(setting)
 				? oldStopSettings[setting] : defaultValue;
 		factory->setValueOfSetting( widget, setting, _value );
-		
+
 		return addSettingWidget( setting, factory->textForSetting(setting), widget );
 	};
-	
+
 	// Without use of StopSettingsWidgetFactory
-	QWidget *addSettingWidget( int setting, const QString &label, QWidget *widget ) 
+	QWidget *addSettingWidget( int setting, const QString &label, QWidget *widget )
 	{
 		if ( settings.contains(setting) ) {
-			kDebug() << "The setting" << static_cast<StopSetting>(setting) 
+			kDebug() << "The setting" << static_cast<StopSetting>(setting)
 					 << "has already been added";
 			widget->hide();
 			return settingWidget<QWidget>( setting );
 		}
-		
+
 		QFormLayout *detailsLayout = createDetailsWidget();
 		detailsLayout->addRow( label, widget );
-		
+
 		settingsWidgets.insert( setting, widget );
 		settings << setting;
 		return widget;
 	};
-	
-	QVariant valueFromWidget( int setting ) const 
+
+	QVariant valueFromWidget( int setting ) const
 	{
 		return factory->valueOfSetting( settingWidget<QWidget>(setting), setting, stopIndex );
 	};
-	
-	void setValueToWidget( int setting ) 
+
+	void setValueToWidget( int setting )
 	{
-		factory->setValueOfSetting( settingWidget<QWidget>(setting), 
+		factory->setValueOfSetting( settingWidget<QWidget>(setting),
 									setting, oldStopSettings[setting] );
 	};
 
 	/** Updates the service provider model by inserting service provider for the
 	 * current location. */
-	void updateServiceProviderModel( int index ) 
+	void updateServiceProviderModel( int index )
 	{
 		if ( !modelLocationServiceProviders ) {
 			return; // ShowServiceProviderConfig not set in constructor
 		}
-		
+
 		// Filter service providers for the given locationText
 		QString locationCode = uiStop.location->itemData( index, LocationCodeRole ).toString();
 		if ( locationCode == "showAll" ) {
@@ -669,8 +669,8 @@ public:
 				QString( "%1|international|unknown" ).arg( locationCode ) );
 		}
 	};
-	
-	QString currentCityValue() const 
+
+	QString currentCityValue() const
 	{
 		if ( uiStop.city->isEditable() ) {
 			return uiStop.city->lineEdit()->text();
@@ -678,9 +678,9 @@ public:
 			return uiStop.city->currentText();
 		}
 	};
-	
+
 	Ui::publicTransportStopConfig uiStop;
-	
+
 	StopSettingsDialog::Options options;
 	AccessorInfoDialog::Options accessorInfoDialogOptions;
 	QList<int> settings;
@@ -692,7 +692,7 @@ public:
 	NearStopsDialog *nearStopsDialog;
 	QString stopFinderServiceProviderID;
 
-	StopSettings oldStopSettings; // The last given StopSettings object (used to get settings 
+	StopSettings oldStopSettings; // The last given StopSettings object (used to get settings
 								  // values for widgets that aren't shown)
 	LocationModel *modelLocations; // Model of locations
 	ServiceProviderModel *modelServiceProviders; // Model of service providers
@@ -707,19 +707,19 @@ public:
 	Plasma::DataEngine *geolocationEngine;
 
     int stopIndex; // The index of the edited stop settings, if in a StopSettingsList
-	QHash< QString, QVariant > stopToStopID; // A hash with stop names as keys and the 
+	QHash< QString, QVariant > stopToStopID; // A hash with stop names as keys and the
                                              // corresponding stop IDs as values.
 
 protected:
 	StopSettingsDialog* const q_ptr;
 };
 
-StopSettingsDialog::StopSettingsDialog( QWidget *parent, const StopSettings &stopSettings, 
+StopSettingsDialog::StopSettingsDialog( QWidget *parent, const StopSettings &stopSettings,
 		StopSettingsDialog::Options options, AccessorInfoDialog::Options accessorInfoDialogOptions,
 		FilterSettingsList *filterConfigurations, int stopIndex,
         const QList<int> &customSettings, StopSettingsWidgetFactory::Pointer factory )
 		: KDialog(parent),
-		d_ptr(new StopSettingsDialogPrivate(stopSettings, 
+		d_ptr(new StopSettingsDialogPrivate(stopSettings,
 			options, accessorInfoDialogOptions, customSettings, factory, stopIndex, this))
 {
 	Q_D( StopSettingsDialog );
@@ -754,14 +754,14 @@ StopSettingsDialog* StopSettingsDialog::createExtendedStopSelectionDialog(
             QList<int>(), factory );
 }
 
-QWidget* StopSettingsDialog::addSettingWidget( int setting, 
+QWidget* StopSettingsDialog::addSettingWidget( int setting,
 		const QVariant& defaultValue, const QVariant& data )
 {
 	Q_D( StopSettingsDialog );
 	return d->addSettingWidget( setting, defaultValue, data );
 }
 
-QWidget* StopSettingsDialog::addSettingWidget( int setting, 
+QWidget* StopSettingsDialog::addSettingWidget( int setting,
 		const QString& label, QWidget* widget )
 {
 	Q_D( StopSettingsDialog );
@@ -794,17 +794,17 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 {
 	Q_D( StopSettingsDialog );
 	d->oldStopSettings = stopSettings;
-	
+
 	// Set location first (because it filters service providers)
 	QModelIndex serviceProviderIndex;
 	if ( d->options.testFlag(ShowServiceProviderConfig) ) {
 		QModelIndex locationIndex = d->modelLocations->indexOfLocation(
-				stopSettings[LocationSetting].toString().isEmpty() 
+				stopSettings[LocationSetting].toString().isEmpty()
 				? KGlobal::locale()->country() : stopSettings[LocationSetting].toString() );
 		if ( locationIndex.isValid() ) {
 			d->uiStop.location->setCurrentIndex( locationIndex.row() );
 		} else {
-			kDebug() << "Location" << (stopSettings[LocationSetting].toString().isEmpty() 
+			kDebug() << "Location" << (stopSettings[LocationSetting].toString().isEmpty()
 				? KGlobal::locale()->country() : stopSettings[LocationSetting].toString())
 				<< "not found! Using first location.";
 			d->uiStop.location->setCurrentIndex( 0 );
@@ -824,7 +824,7 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 			serviceProviderIndex = d->uiStop.serviceProvider->model()->index( 0, 0 );
 		}
 	}
-	
+
 	// Set values of settings to the settings widgets
 	foreach ( int setting, d->settings ) {
 		switch ( setting ) {
@@ -837,7 +837,7 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 				d->uiStop.serviceProvider->setCurrentIndex( serviceProviderIndex.row() );
 			}
 			break;
-		} 
+		}
 		case StopNameSetting:
 			if ( d->stopList ) {
 				d->stopList->setLineEditTexts( stopSettings.stops() );
@@ -858,11 +858,11 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 				}
 			}
 			break;
-		} 
+		}
 		case FirstDepartureConfigModeSetting:
 			d->setValueToWidget( TimeOffsetOfFirstDepartureSetting );
 			d->setValueToWidget( TimeOfFirstDepartureSetting );
-			
+
 			d->factory->setValueOfSetting( d->settingWidget<QWidget>(
 					FirstDepartureConfigModeSetting), FirstDepartureConfigModeSetting,
 					d->oldStopSettings[FirstDepartureConfigModeSetting] );
@@ -888,7 +888,7 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
                 ++row;
             }
 			break;
-		} 
+		}
 		default:
 			// Set the value of a custom setting
 			d->setValueToWidget( setting );
@@ -900,7 +900,7 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 StopSettings StopSettingsDialog::stopSettings() const
 {
 	Q_D( const StopSettingsDialog );
-	
+
 	StopSettings stopSettings;
 	QVariantHash serviceProviderData = d->uiStop.serviceProvider->itemData(
 			d->uiStop.serviceProvider->currentIndex(), ServiceProviderDataRole ).toHash();
@@ -910,7 +910,7 @@ StopSettings StopSettingsDialog::stopSettings() const
 
 	if ( d->options.testFlag(ShowStopInputField) ) {
 		stopSettings.setStops( d->stopList->lineEditTexts() );
-		
+
 		if ( serviceProviderData["useSeparateCityValue"].toBool() ) {
 			stopSettings.set( CitySetting, d->currentCityValue() );
 		}
@@ -918,7 +918,7 @@ StopSettings StopSettingsDialog::stopSettings() const
 		stopSettings.setStops( d->oldStopSettings.stopList() );
 		stopSettings.set( CitySetting, d->oldStopSettings[CitySetting] );
 	}
-	
+
 	QStringList stopIDs;
 	foreach( const QString &stop, stopSettings.stops() ) {
 		if ( d->stopToStopID.contains(stop) ) {
@@ -936,7 +936,7 @@ StopSettings StopSettingsDialog::stopSettings() const
 		stopSettings.set( FilterConfigurationSetting,
                           d->oldStopSettings[FilterConfigurationSetting] );
 	}
-	
+
 	if ( d->options.testFlag(ShowFirstDepartureConfig) ) {
 		stopSettings.set( TimeOffsetOfFirstDepartureSetting,
 				d->valueFromWidget(TimeOffsetOfFirstDepartureSetting) );
@@ -954,21 +954,21 @@ StopSettings StopSettingsDialog::stopSettings() const
 					d->oldStopSettings[TimeOfFirstDepartureSetting].toTime() );
 		}
 		if ( d->oldStopSettings.hasSetting(FirstDepartureConfigModeSetting) ) {
-			stopSettings.set( FirstDepartureConfigModeSetting, 
+			stopSettings.set( FirstDepartureConfigModeSetting,
 					d->oldStopSettings[FirstDepartureConfigModeSetting].toInt() );
 		}
 	}
-	
+
 	if ( d->options.testFlag(ShowAlarmTimeConfig) ) {
 		QSpinBox *alarmTime = d->settingWidget<QSpinBox>( AlarmTimeSetting );
-		Q_ASSERT_X( alarmTime, "StopSettingsDialogPrivate::init", 
+		Q_ASSERT_X( alarmTime, "StopSettingsDialogPrivate::init",
 					"No QSpinBox for AlarmTimeSetting found." );
 		stopSettings.set( AlarmTimeSetting, alarmTime->value() );
 	} else if ( d->oldStopSettings.hasSetting(AlarmTimeSetting) ) {
 		stopSettings.set( AlarmTimeSetting,
 				d->oldStopSettings[AlarmTimeSetting].toInt() );
 	}
-	
+
 	// Add settings of other settings widgets
 	for ( QHash<int, QWidget*>::const_iterator it = d->settingsWidgets.constBegin();
 		  it != d->settingsWidgets.constEnd(); ++it )
@@ -1128,11 +1128,11 @@ void StopSettingsDialog::accept()
 void StopSettingsDialog::stopAdded( QWidget *lineEdit )
 {
 	Q_D( StopSettingsDialog );
-	
+
 	// Enable completer for new line edits
 	KLineEdit *edit = qobject_cast< KLineEdit* >( lineEdit );
 	edit->setCompletionMode( KGlobalSettings::CompletionPopup );
-	
+
 	// Add to column resizer
 	d->resizer->addWidget( d->stopList->labelFor(qobject_cast<KLineEdit*>(lineEdit)) );
 }
@@ -1149,7 +1149,7 @@ void StopSettingsDialog::stopRemoved( QWidget* lineEdit, int index )
 void StopSettingsDialog::locationChanged( int index )
 {
 	Q_D( StopSettingsDialog );
-	
+
 	d->updateServiceProviderModel( index );
 
 	// Select default accessor of the selected location
@@ -1225,13 +1225,15 @@ void StopSettingsDialog::clickedServiceProviderInfo()
 	                                       d->uiStop.serviceProvider->currentIndex(), 0 )
 	                                   .data( ServiceProviderDataRole ).toHash();
 	AccessorInfoDialog *infoDialog = new AccessorInfoDialog( serviceProviderData,
-			d->uiStop.serviceProvider->itemIcon(d->uiStop.serviceProvider->currentIndex()), 
-			d->accessorInfoDialogOptions, this );
+			d->uiStop.serviceProvider->itemIcon(d->uiStop.serviceProvider->currentIndex()),
+            d->publicTransportEngine, d->accessorInfoDialogOptions, this );
+    connect( infoDialog, SIGNAL(gtfsDatabaseDeleted()),
+             d->stopList, SLOT(updateToDataEngineState()) );
 	infoDialog->show();
 }
 
 void StopSettingsDialog::downloadServiceProvidersClicked( )
-{	
+{
 	if ( KMessageBox::warningContinueCancel( this,
 				i18nc( "@info", "The downloading may currently not work as expected, sorry." ) )
 				== KMessageBox::Cancel ) {
@@ -1253,7 +1255,7 @@ void StopSettingsDialog::downloadServiceProvidersClicked( )
 	delete dialog;
 #else
 	Q_D( StopSettingsDialog );
-	
+
 	KNS::Engine engine( this );
 	if ( engine.init( "publictransport2.knsrc" ) ) {
 		KNS::Entry::List entries = engine.downloadDialogModal( this );
@@ -1299,9 +1301,9 @@ public:
 	Handler() {
 		m_isInScriptTag = false;
 	};
-	
+
 	QString scriptFile() const { return m_scriptFile; };
-	
+
     virtual bool startDocument() { return true; };
     virtual bool endDocument() { return true; };
     virtual bool characters( const QString& ch ) {
@@ -1311,8 +1313,8 @@ public:
 		}
 		return true;
 	};
-	
-    virtual bool startElement( const QString& namespaceURI, const QString& localName, 
+
+    virtual bool startElement( const QString& namespaceURI, const QString& localName,
 							   const QString& qName, const QXmlAttributes& atts ) {
 		Q_UNUSED( namespaceURI )
 		Q_UNUSED( localName )
@@ -1322,8 +1324,8 @@ public:
 		}
 		return true;
 	};
-	
-    virtual bool endElement( const QString& namespaceURI, const QString& localName, 
+
+    virtual bool endElement( const QString& namespaceURI, const QString& localName,
 							 const QString& qName ) {
 		Q_UNUSED( namespaceURI )
 		Q_UNUSED( localName )
@@ -1332,7 +1334,7 @@ public:
 		}
 		return true;
 	};
-	
+
     virtual QString errorString() const { return QString(); };
     virtual bool startPrefixMapping( const QString&, const QString& ) { return true; };
     virtual bool endPrefixMapping( const QString& ) { return true; };
@@ -1340,7 +1342,7 @@ public:
     virtual bool processingInstruction( const QString&, const QString& ) { return true; };
     virtual void setDocumentLocator( QXmlLocator* ) {};
     virtual bool skippedEntity( const QString& ) { return true; };
-	
+
 private:
 	bool m_isInScriptTag;
 	QString m_scriptFile;
@@ -1361,16 +1363,16 @@ void StopSettingsDialog::installServiceProviderClicked()
 		QString sourceDir = fi.dir().path() + '/';
 		QString targetDir = dirs[0]; // First is a local path in ~/.kde4/share/...
 		QString targetFileName = targetDir + fi.fileName();
-		
+
 		// Read XML file for a script file
 		QXmlSimpleReader reader;
 		QXmlInputSource *source = new QXmlInputSource( &file );
-		
+
 		Handler *handler = new Handler;
 		reader.setContentHandler( handler );
 		bool ok = reader.parse( source );
 		if ( !ok || handler->scriptFile().isEmpty() ) {
-			int result = KMessageBox::warningContinueCancel( this, i18nc("@info", 
+			int result = KMessageBox::warningContinueCancel( this, i18nc("@info",
 					"The XML file couldn't be read to look for an associated script file "
 					"or the script-tag is empty (wrong XML file). "
 					"If the accessor uses a script file for parsing it may not work.") );
@@ -1379,10 +1381,10 @@ void StopSettingsDialog::installServiceProviderClicked()
 				return;
 			}
 		} else if ( !QFile::exists(sourceDir + handler->scriptFile()) ) {
-			int result = KMessageBox::warningContinueCancel( this, i18nc("@info", 
+			int result = KMessageBox::warningContinueCancel( this, i18nc("@info",
 					"The script file referenced in the XML file couldn't be found: "
 					"<filename>%1</filename>. "
-					"If the accessor uses a script file for parsing it may not work.", 
+					"If the accessor uses a script file for parsing it may not work.",
 					sourceDir + handler->scriptFile()) );
 			if ( result == KMessageBox::Cancel ) {
 				delete handler;
@@ -1396,24 +1398,24 @@ void StopSettingsDialog::installServiceProviderClicked()
 						i18nc("@info", "The file <filename>%1</filename> already exists. "
 									   "Do you want to overwrite it?", targetScriptFileName),
 						i18nc("@title:window", "Overwrite") );
-				
+
 				if ( result == KMessageBox::Yes ) {
 					// "Overwrite" file by first removing it here and copying the new file over it
 					QFile::remove( targetScriptFileName );
 				}
 			}
-			
+
 			QFile::copy( sourceDir + scriptFileName, targetScriptFileName );
 		}
-		
+
 		delete handler;
-		
+
 		if ( QFile::exists(targetFileName) ) {
 			int result = KMessageBox::warningYesNoCancel( this,
 					i18nc("@info", "The file <filename>%1</filename> already exists. "
 								   "Do you want to overwrite it?", targetFileName),
 					i18nc("@title:window", "Overwrite") );
-			
+
 			if ( result == KMessageBox::Cancel ) {
 				return;
 			} else if ( result == KMessageBox::Yes ) {
@@ -1421,7 +1423,7 @@ void StopSettingsDialog::installServiceProviderClicked()
 				QFile::remove( targetFileName );
 			}
 		}
-		
+
 		kDebug() << "PublicTransportSettings::installServiceProviderClicked"
 				 << "Install file" << fileName << "to" << targetDir;
 		file.copy( targetFileName );
@@ -1462,7 +1464,7 @@ QDebug& operator<<( QDebug debug, StopSettingsDialog::Option option )
 			return debug << "SimpleStopSelection";
 		case StopSettingsDialog::ExtendedStopSelection:
 			return debug << "ExtendedStopSelection";
-				
+
 		default:
 			return debug << "Option unknown" << option;
 	}

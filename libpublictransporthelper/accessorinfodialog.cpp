@@ -19,28 +19,40 @@
 
 #include "accessorinfodialog.h"
 #include "ui_accessorInfo.h"
+
 #include <KToolInvocation>
 #include <KMessageBox>
+#include <KDebug>
+
+#include <Plasma/Service>
+#include <Plasma/ServiceJob>
+#include <Plasma/DataEngine>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace Timetable {
 
 class AccessorInfoDialogPrivate {
 public:
-	AccessorInfoDialogPrivate( const QVariantHash &_serviceProviderData, 
-							   AccessorInfoDialog::Options _options ) {
+	AccessorInfoDialogPrivate( const QVariantHash &_serviceProviderData,
+            Plasma::DataEngine *publicTransportEngine, AccessorInfoDialog::Options _options )
+            : publicTransportEngine(publicTransportEngine), service(0)
+    {
 		serviceProviderData = _serviceProviderData;
 		options = _options;
 	};
-	
+
 	Ui::accessorInfo uiAccessorInfo;
 	QVariantHash serviceProviderData;
 	AccessorInfoDialog::Options options;
+    Plasma::DataEngine *publicTransportEngine;
+    Plasma::Service *service;
 };
 
 AccessorInfoDialog::AccessorInfoDialog( const QVariantHash &serviceProviderData, const QIcon &icon,
-		AccessorInfoDialog::Options options, QWidget* parent ) 
-		: KDialog(parent), d_ptr(new AccessorInfoDialogPrivate(serviceProviderData, options))
+        Plasma::DataEngine *publicTransportEngine, AccessorInfoDialog::Options options,
+        QWidget* parent )
+		: KDialog(parent), d_ptr(new AccessorInfoDialogPrivate(serviceProviderData,
+                                                               publicTransportEngine, options))
 {
 
 	QWidget *widget = new QWidget;
@@ -49,8 +61,52 @@ AccessorInfoDialog::AccessorInfoDialog( const QVariantHash &serviceProviderData,
 	setModal( true );
 	setButtons( KDialog::Ok );
 	setMainWidget( widget );
-	setWindowTitle( i18nc( "@title:window", "Service Provider Information" ) );
-	setWindowIcon( KIcon( "help-about" ) );
+	setWindowTitle( i18nc("@title:window", "Service Provider Information") );
+	setWindowIcon( KIcon("help-about") );
+
+    KDialog::ButtonCodes buttonCodes = KDialog::Ok;
+    if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
+        buttonCodes |= KDialog::User1; // Add "Open in TimetableMate..." button
+    }
+    QString feedUrl = serviceProviderData["feedUrl"].toString();
+    qint64 feedSizeInBytes = 0;
+    if ( feedUrl.isEmpty() ) {
+        d_ptr->uiAccessorInfo.lblGtfsFeed->hide();
+        d_ptr->uiAccessorInfo.gtfsFeed->hide();
+    } else {
+        // Is a GTFS accessor
+        feedSizeInBytes = serviceProviderData["gtfsDatabaseSize"].toInt();
+        d_ptr->uiAccessorInfo.lblGtfsFeed->show();
+        d_ptr->uiAccessorInfo.gtfsFeed->show();
+        if ( feedSizeInBytes <= 0 ) {
+            d_ptr->uiAccessorInfo.gtfsFeed->setText( i18nc("@info:label",
+                    "<a href='%1'>%1</a>,<nl/>not imported", feedUrl) );
+        } else {
+            d_ptr->uiAccessorInfo.gtfsFeed->setText( i18nc("@info:label",
+                    "<a href='%1'>%1</a>,<nl/>%2 disk space used",
+                    feedUrl, KGlobal::locale()->formatByteSize(feedSizeInBytes)) );
+            buttonCodes |= KDialog::User2; // Add "Delete GTFS database" button
+        }
+    }
+
+    setButtons( buttonCodes );
+
+    if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
+        setButtonIcon( KDialog::User1, KIcon("document-open") );
+        setButtonText( KDialog::User1, i18nc("@action:button", "Open in TimetableMate...") );
+    }
+
+    if ( feedSizeInBytes > 0 ) {
+        setButtonIcon( KDialog::User2, KIcon("edit-delete") );
+        setButtonText( KDialog::User2, i18nc("@action:button", "Delete GTFS Database") );
+        setButtonToolTip( KDialog::User2, i18nc("@info:tooltip",
+                "<title>Delete GTFS Database</title>"
+                "<para>The GTFS database contains all data imported from the GTFS feed. "
+                "If you delete the database now the GTFS feed needs to be imported again to make "
+                "this service provider usable again.</para>"
+                "<para>By deleting the database %1 disk space get freed.</para>",
+                KGlobal::locale()->formatByteSize(feedSizeInBytes) ) );
+    }
 
 	d_ptr->uiAccessorInfo.icon->setPixmap( icon.pixmap( 32 ) );
 	d_ptr->uiAccessorInfo.serviceProviderName->setText(serviceProviderData["name"].toString() );
@@ -64,17 +120,17 @@ AccessorInfoDialog::AccessorInfoDialog( const QVariantHash &serviceProviderData,
 	d_ptr->uiAccessorInfo.fileName->setText( QString("<a href='%1'>%1</a>").arg(
 			serviceProviderData["fileName"].toString()) );
 
-	QString scriptFileName = serviceProviderData["scriptFileName"].toString();
-	if ( scriptFileName.isEmpty() ) {
-		d_ptr->uiAccessorInfo.lblScriptFileName->setVisible( false );
-		d_ptr->uiAccessorInfo.scriptFileName->setVisible( false );
-	} else {
-		d_ptr->uiAccessorInfo.lblScriptFileName->setVisible( true );
-		d_ptr->uiAccessorInfo.scriptFileName->setVisible( true );
-		d_ptr->uiAccessorInfo.scriptFileName->setUrl( scriptFileName );
-		d_ptr->uiAccessorInfo.scriptFileName->setText( QString("<a href='%1'>%1</a>")
-				.arg(scriptFileName) );
-	}
+    QString scriptFileName = serviceProviderData["scriptFileName"].toString();
+    if ( scriptFileName.isEmpty() ) {
+        d_ptr->uiAccessorInfo.lblScriptFileName->hide();
+        d_ptr->uiAccessorInfo.scriptFileName->hide();
+    } else {
+        d_ptr->uiAccessorInfo.lblScriptFileName->show();
+        d_ptr->uiAccessorInfo.scriptFileName->show();
+        d_ptr->uiAccessorInfo.scriptFileName->setUrl( scriptFileName );
+        d_ptr->uiAccessorInfo.scriptFileName->setText( QString("<a href='%1'>%1</a>")
+                .arg(scriptFileName) );
+    }
 
 	if ( serviceProviderData["email"].toString().isEmpty() ) {
 		d_ptr->uiAccessorInfo.author->setText( serviceProviderData["author"].toString() );
@@ -111,18 +167,26 @@ AccessorInfoDialog::AccessorInfoDialog( const QVariantHash &serviceProviderData,
 		changelog.append( QLatin1String("</ul>") );
 		d_ptr->uiAccessorInfo.changelog->setHtml( changelog );
 	}
-	
-	if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
-		connect( d_ptr->uiAccessorInfo.btnOpenInTimetableMate, SIGNAL(clicked()),
-				this, SLOT(openInTimetableMate()) );
-	} else {
-		d_ptr->uiAccessorInfo.btnOpenInTimetableMate->hide();
-	}
 }
 
 AccessorInfoDialog::~AccessorInfoDialog()
 {
 	delete d_ptr;
+}
+
+void AccessorInfoDialog::slotButtonClicked( int button )
+{
+    switch ( button ) {
+    case KDialog::User1:
+        openInTimetableMate();
+        break;
+    case KDialog::User2:
+        deleteGtfsDatabase();
+        break;
+    default:
+        KDialog::slotButtonClicked( button );
+        break;
+    }
 }
 
 void AccessorInfoDialog::openInTimetableMate()
@@ -135,6 +199,42 @@ void AccessorInfoDialog::openInTimetableMate()
 		KMessageBox::error( this, i18nc("@info",
 				"TimetableMate couldn't be started, error message was: '%1'", error) );
 	}
+}
+
+void AccessorInfoDialog::deleteGtfsDatabase()
+{
+    Q_D( AccessorInfoDialog );
+
+    qint64 feedSizeInBytes = d->serviceProviderData["gtfsDatabaseSize"].toInt();
+    if ( KMessageBox::warningContinueCancel(this, i18nc("@info",
+            "<title>Delete GTFS database</title>"
+            "<para>Do you really want to delete the GTFS database? You will need to import the "
+            "GTFS feed again to use this service provider again.</para>"
+            "<para>By deleting the database %1 disk space get freed.</para>",
+            KGlobal::locale()->formatByteSize(feedSizeInBytes))) == KMessageBox::Continue )
+    {
+        if ( !d->service ) {
+            d->service = d->publicTransportEngine->serviceForSource( QString() );
+            d->service->setParent( this );
+        }
+        KConfigGroup op = d->service->operationDescription("deleteGtfsDatabase");
+        op.writeEntry( "serviceProviderId", d->serviceProviderData["id"] );
+        Plasma::ServiceJob *deleteJob = d->service->startOperationCall( op );
+        connect( deleteJob, SIGNAL(result(KJob*)), this, SLOT(deletionFinished(KJob*)) );
+    }
+}
+
+void AccessorInfoDialog::deletionFinished( KJob *job )
+{
+    if ( job->error() != 0 ) {
+        KMessageBox::information( this, i18nc("@info", "Deleting the GTFS database failed") );
+    } else {
+        // Finished successfully
+        emit gtfsDatabaseDeleted();
+    }
+
+    // Disable "Delete GTFS database" button
+    enableButton( KDialog::User2, false );
 }
 
 }; // namespace Timetable

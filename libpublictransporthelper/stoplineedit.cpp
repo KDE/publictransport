@@ -248,6 +248,13 @@ StopLineEdit::~StopLineEdit()
     delete d_ptr;
 }
 
+void StopLineEdit::updateToDataEngineState()
+{
+    Q_D( StopLineEdit );
+    // Resets the state to Ready and checks the data engines state for the current service provider
+    setServiceProvider( d->serviceProvider );
+}
+
 void StopLineEdit::setServiceProvider( const QString& serviceProvider )
 {
     Q_D( StopLineEdit );
@@ -495,8 +502,8 @@ void StopLineEdit::mouseReleaseEvent( QMouseEvent *ev )
                 // Start the import
                 importGtfsFeed();
                 return;
-            } else if ( (d->state == StopLineEditPrivate::WaitingForImport ||
-                         d->state == StopLineEditPrivate::Pause) &&
+            } else if ( d->importJob && (d->state == StopLineEditPrivate::WaitingForImport ||
+                        d->state == StopLineEditPrivate::Pause) &&
                         button->type == StopLineEditPrivate::StopButton )
             {
                 // Cancel button released, cancel the import
@@ -517,8 +524,8 @@ void StopLineEdit::mouseReleaseEvent( QMouseEvent *ev )
                 // Go back to AskingToImportGtfsFeed state after showing the error for 5 seconds
                 QTimer::singleShot( 5000, this, SLOT(askToImportTimetableData()) );
                 return;
-            } else if ( (d->state == StopLineEditPrivate::WaitingForImport ||
-                         d->state == StopLineEditPrivate::Pause) &&
+            } else if ( d->importJob && (d->state == StopLineEditPrivate::WaitingForImport ||
+                        d->state == StopLineEditPrivate::Pause) &&
                         button->type == StopLineEditPrivate::PauseButton )
             {
                 // Pause button released in importing or pause state. In pause state the button
@@ -703,7 +710,7 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
     } else if ( qFuzzyCompare(d->progress, 1.0) || !isEnabled() ||
                 d->state == StopLineEditPrivate::WaitingForImport )
     {
-        // The data engine just completed a task
+        // The service just completed an import job
         d->progress = 0.0;
     }
 
@@ -814,6 +821,13 @@ void StopLineEditList::setServiceProvider(const QString& serviceProvider)
 {
     foreach ( DynamicWidget *dynamicWidget, dynamicWidgets() ) {
         dynamicWidget->contentWidget<StopLineEdit*>()->setServiceProvider( serviceProvider );
+    }
+}
+
+void StopLineEditList::updateToDataEngineState()
+{
+    foreach ( DynamicWidget *dynamicWidget, dynamicWidgets() ) {
+        dynamicWidget->contentWidget<StopLineEdit*>()->updateToDataEngineState();
     }
 }
 
