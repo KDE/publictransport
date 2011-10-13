@@ -38,19 +38,19 @@ public:
 				return false;
 			}
 		}
-		
+
 		if ( lVersionParts.count() > rVersionParts.count() ) {
 			return true;
 		} else if ( lVersionParts.count() < rVersionParts.count() ) {
 			return false;
 		}
-		
+
 		return l.author.compare( r.author, Qt::CaseInsensitive ) < 0;
 	};
 };
 
 TimetableAccessorInfo::TimetableAccessorInfo( const QString& name,
-        const QString& shortUrl, const QString &author, const QString &shortAuthor, 
+        const QString& shortUrl, const QString &author, const QString &shortAuthor,
 		const QString &email, const QString &version, const QString& serviceProviderID,
         const AccessorType& accessorType )
 {
@@ -77,7 +77,7 @@ void TimetableAccessorInfo::finish()
 	if ( m_shortUrl.isEmpty() ) {
 		m_shortUrl = m_url;
 	}
-	
+
 	// Generate a short name if none is given ("<first letter of prename><family name>")
 	if ( m_shortAuthor.isEmpty() && !m_author.isEmpty() ) {
 		int pos = m_author.indexOf(' ');
@@ -87,7 +87,7 @@ void TimetableAccessorInfo::finish()
 			m_shortAuthor = m_author[0].toLower() + m_author.mid(pos + 1).toLower();
 		}
 	}
-	
+
 	// Use script author as author of the change entry if no one else was set
 	for ( int i = 0; i < m_changelog.count(); ++i ) {
 		if ( m_changelog[i].author.isEmpty() ) {
@@ -97,7 +97,7 @@ void TimetableAccessorInfo::finish()
 	qSort( m_changelog.begin(), m_changelog.end(), ChangelogEntryGreaterThan() );
 }
 
-void TimetableAccessorInfo::setAuthor( const QString& author, const QString &shortAuthor, 
+void TimetableAccessorInfo::setAuthor( const QString& author, const QString &shortAuthor,
 									   const QString &email )
 {
 	m_author = author;
