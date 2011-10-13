@@ -127,9 +127,28 @@ public:
      * @brief Starts the GTFS feed update or produces an error if there was no initial import.
      *
      * The error that gets produced, if the GTFS feed was never completely imported, has the error
-     * coed -7.
+     * code -7.
      **/
     virtual void start();
+};
+
+/**
+ * @brief Deletes a GTFS database for a specific service provider.
+ **/
+class DeleteGtfsDatabaseJob : public Plasma::ServiceJob {
+    Q_OBJECT
+
+public:
+    DeleteGtfsDatabaseJob( const QString &destination, const QString &operation,
+                           const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
+
+    /**
+     * @brief Starts the GTFS database deletion or produces an error if there was no database.
+     **/
+    virtual void start();
+
+private:
+    QString m_serviceProviderId;
 };
 
 /**
@@ -169,8 +188,8 @@ protected:
     /**
      * @brief Creates a new job for the given @p operation with the given @p parameters.
      *
-     * @param operation The operation to create a job for. Currently supported are "UpdateGtfsFeed"
-     *   and "ImportGtfsFeed".
+     * @param operation The operation to create a job for. Currently supported are
+     *   "UpdateGtfsFeed", "ImportGtfsFeed" and "DeleteGtfsDatabase".
      * @param parameters Parameters for the operation.
      * @return A pointer to the newly created job or 0 if the @p operation is unsupported.
      **/

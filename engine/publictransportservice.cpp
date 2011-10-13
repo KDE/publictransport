@@ -45,14 +45,12 @@ ImportGtfsToDatabaseJob::ImportGtfsToDatabaseJob( const QString &destination,
         setError( -2 );
         setErrorText( i18nc("@info/plain", "Not a GTFS accessor") );
     }
-    kDebug() << "Import job created" << m_info->serviceProvider();
 }
 
 UpdateGtfsToDatabaseJob::UpdateGtfsToDatabaseJob( const QString& destination,
         const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
         : ImportGtfsToDatabaseJob(destination, operation, parameters, parent)
 {
-    kDebug() << "  > It is actually an update job";
 }
 
 ImportGtfsToDatabaseJob::~ImportGtfsToDatabaseJob()
@@ -65,9 +63,16 @@ ImportGtfsToDatabaseJob::~ImportGtfsToDatabaseJob()
     }
 }
 
+DeleteGtfsDatabaseJob::DeleteGtfsDatabaseJob( const QString &destination,
+        const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
+        : ServiceJob(destination, operation, parameters, parent)
+{
+    m_serviceProviderId = parameters["serviceProviderId"].toString();
+}
+
 void ImportGtfsToDatabaseJob::start()
 {
-    kDebug() << "Start import";
+    kDebug() << "Start import for" << m_info->serviceProvider();
 //     downloadFeed(); // TODO Check datacache?
     statFeed();
 }
@@ -84,6 +89,24 @@ void UpdateGtfsToDatabaseJob::start()
     } else {
         ImportGtfsToDatabaseJob::start();
     }
+}
+
+void DeleteGtfsDatabaseJob::start()
+{
+    const QString databasePath = GeneralTransitFeedDatabase::databasePath( m_serviceProviderId );
+    if ( !QFile::remove(databasePath) ) {
+        setError( -1 );
+        setErrorText( i18nc("@info/plain", "The GTFS database could not be deleted.") );
+        kDebug() << "Failed to delete GTFS database";
+    }
+    kDebug() << "Finished deleting GTFS database";
+
+    // Update the accessor cache file to indicate that the GTFS feed needs to be imported again
+    KConfig cfg( TimetableAccessor::accessorCacheFileName(), KConfig::SimpleConfig );
+    KConfigGroup grp = cfg.group( m_serviceProviderId );
+    grp.writeEntry( "feedImportFinished", false );
+
+    emitResult();
 }
 
 bool ImportGtfsToDatabaseJob::doKill()
@@ -403,6 +426,8 @@ Plasma::ServiceJob* PublicTransportService::createJob(
         return new UpdateGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
     } else if ( operation == "importGtfsFeed" ) {
         return new ImportGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
+    } else if ( operation == "deleteGtfsDatabase" ) {
+        return new DeleteGtfsDatabaseJob( "PublicTransport", operation, parameters, this );
     } else {
         kWarning() << "Operation" << operation << "not supported";
         return 0;

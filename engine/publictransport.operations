@@ -12,4 +12,9 @@
             <label>The ID of the service provider, which GTFS feed should be imported, eg. "us_trimet".</label>
         </entry>
     </group>
+    <group name="deleteGtfsDatabase">
+        <entry name="serviceProviderId" type="String">
+            <label>The ID of the service provider, which GTFS database should be deleted, eg. "us_trimet".</label>
+        </entry>
+    </group>
 </kcfg>
