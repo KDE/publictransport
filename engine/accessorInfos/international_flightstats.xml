@@ -8,8 +8,7 @@
 <defaultVehicleType>Plane</defaultVehicleType>
 <description>This accessor gets flight departures and arrivals for airports around the world.</description>
 
-<url>http://www.flightstats.com/</url>
-<shortUrl>www.flightstats.com</shortUrl>
+<url>http://www.flightstats.com</url>
 <!-- <credit>Conducive Technology Corp.</credit> -->
 
 <rawUrls>

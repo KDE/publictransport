@@ -10,8 +10,7 @@
 	<useSeperateCityValue>false</useSeperateCityValue>
 	<description>Provides departure information for 'Rhine-Main' in Germany. It uses an XML source for departure information and HTML for stop autocompletion.</description>
 
-	<url>http://www.rmv.de/</url>
-	<shortUrl>www.rmv.de</shortUrl>
+	<url>http://www.rmv.de</url>
 	<!-- <credit>Rhein-Main-Verkehrsverbund GmbH</credit> -->
     <fallbackCharset>utf8</fallbackCharset>
 

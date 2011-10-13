@@ -13,7 +13,6 @@
 <useSeperateCityValue>false</useSeperateCityValue>
 
 <url>http://www.orariotrasporti.regione.liguria.it</url>
-<shortUrl>www.orariotrasporti.regione.liguria.it</shortUrl>
 <!-- <credit>Regione Liguria, Datasiel s.p.a., IVU Traffic Technologies AG </credit> -->
 <!-- <minFetchWait>300</minFetchWait> -->
 <!-- <fallbackCharset>latin1</fallbackCharset> -->

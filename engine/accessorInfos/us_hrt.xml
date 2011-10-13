@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<accessorInfo fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">Virginia, Hampton Roads (HRT)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<description>Accessor for Virginia, Hampton Roads, using the GTFS feed of Hampton Roads Transit (HRT). No GTFS-realtime data available.</description>
+<credit>Timetable data provided by permission of HRT</credit>
+<url>http://www.gohrt.com</url>
+<feedUrl>http://googletf.gohrt.com/google_transit.zip</feedUrl>
+
+</accessorInfo>

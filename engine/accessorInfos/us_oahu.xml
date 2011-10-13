@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<accessorInfo fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">Hawaii, Honolulu (Oahu Transit Services)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<description>Accessor for Hawaii, Honolulu, using the GTFS feed of Hampton Roads Transit, Inc. No GTFS-realtime data available.</description>
+<credit>Timetable data provided by permission of Oahu Transit Services</credit>
+<url>http://www.gohrt.com/</url>
+<feedUrl>http://googletf.gohrt.com/google_transit.zip</feedUrl>
+
+</accessorInfo>

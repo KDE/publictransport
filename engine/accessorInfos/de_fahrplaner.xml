@@ -10,8 +10,7 @@
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>This service provider works for cities in 'Lower Saxony, Bremen' in Germany and also for many other cities in Germany. These other cities only include trains.</description>
 
-<url>http://www.fahrplaner.de/</url>
-<shortUrl>www.fahrplaner.de</shortUrl>
+<url>http://www.fahrplaner.de</url>
 <!-- <credit>Weser-Ems Busverkehr GmbH</credit> -->
 <fallbackCharset>latin1</fallbackCharset>
 

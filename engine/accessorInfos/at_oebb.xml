@@ -9,8 +9,7 @@
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>This service provider works for cities in Austria and also for many cities in Europe. Cities in Austria include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>
 
-<url>http://www.oebb.at/</url>
-<shortUrl>www.oebb.at</shortUrl>
+<url>http://www.oebb.at</url>
 <fallbackCharset>latin1</fallbackCharset>
 <!-- <credit>ÖBB-Konzern</credit> -->
 
@@ -21,7 +20,7 @@
 	</departures>-->
 <!-- TODO sqView=2 for departures, sqView=?=3 for arrivals? -->
 	<departures><![CDATA[http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&sqView=2&start=Abfahrtstafel&boardType={dataType}&time={time}&maxJourneys={maxCount}&dateBegin=&dateEnd=&selectDate=&productsFilter=0&editStation=yes&dirInput=&input={stop}]]></departures>
-	
+
     <stopSuggestions><![CDATA[http://fahrplan.oebb.at/bin/ajax-getstop.exe/dn?REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G={stop}?]]></stopSuggestions>
 <!--     <journeys><![CDATA[http://fahrplan.oebb.ch/bin/query.exe/dn?S=%1&Z=%2&time=%3&maxJourneys=%4&start=yes]]></journeys> -->
 </rawUrls>

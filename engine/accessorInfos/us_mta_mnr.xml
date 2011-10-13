@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<accessorInfo fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">New York, Metro North Railroad (MTA)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<description>Accessor for New York, using the GTFS feed of the Metropolitan Transportation Authority (MTA) for Metro North Railroad. No GTFS-realtime data available.</description>
+<credit>Route and arrival data provided by permission of MTA</credit>
+<url>http://www.mta.info</url>
+<feedUrl>http://httqa.mta.info/developers/data/mnr/google_transit.zip</feedUrl>
+
+</accessorInfo>

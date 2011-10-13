@@ -12,7 +12,6 @@
 <useSeperateCityValue>false</useSeperateCityValue>
 
 <url>http://www.rejseplanen.dk</url>
-<shortUrl>www.rejseplanen.dk</shortUrl>
 <!-- <credit>Rejseplanen A/S (co-owners and suppliers: Arriva, BAT, Fynbus, Sydtrafik, http://www.Midttrafik.dk, North Jut land’s Transport Company, Movia, Ørestadsselskabet, Abildskou Busser, see website)</credit> -->
 <!-- <minFetchWait>300</minFetchWait> -->
 <fallbackCharset>latin1</fallbackCharset>
@@ -21,7 +20,7 @@
 
 <rawUrls>
     <departures><![CDATA[http://www.rejseplanen.dk/bin/stboard.exe/en?rt=1&input={stop}!&boardType={dataType}&date={date:dd.MM.yy}&time={time}&disableEquivs=no&maxJourneys={maxCount}&start=yes&productsFilter=111111111]]></departures>
-    
+
     <stopSuggestions><![CDATA[http://rejseplanen.dk/bin/ajax-getstop.exe/dn?REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G={stop}]]></stopSuggestions>
 
 <!--     <journeys><![CDATA[http://hafas.bene-system.com/bin/query.exe/dn?...]]></journeys> -->

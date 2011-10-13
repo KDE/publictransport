@@ -3,13 +3,10 @@
 
 <name lang="en">Rennes (Keolis)</name>
 <author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<useSeperateCityValue>false</useSeperateCityValue>
 <description>Accessor for Rennes, Bretagne, using the GTFS feed of Keolis Rennes. No GTFS-realtime data available.</description>
 <cities><city>Rennes</city></cities>
 <credit>Route and arrival data provided by permission of EMT</credit>
-
 <url>http://data.keolis-rennes.com</url>
-<shortUrl>data.keolis-rennes.com</shortUrl>
 <feedUrl>http://www.gtfs-data-exchange.com/agency/keolis-rennes/latest.zip</feedUrl>
 
 </accessorInfo>

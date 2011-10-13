@@ -11,8 +11,7 @@
 <!-- <cities><city></city></cities> -->
 <useSeperateCityValue>false</useSeperateCityValue>
 
-<url>http://www.septa.org/</url>
-<shortUrl>www.septa.org</shortUrl>
+<url>http://www.septa.org</url>
 <!-- <credit>Southeastern Pennsylvania Transportation Authority ("SEPTA")</credit> -->
 <!-- <minFetchWait>300</minFetchWait> -->
 

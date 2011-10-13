@@ -10,8 +10,7 @@
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>Provides departure information for 'Saxony-Anhalt' in Germany.</description>
 
-<url>http://www.nasa.de/</url>
-<shortUrl>www.nasa.de</shortUrl>
+<url>http://www.nasa.de</url>
 <!-- <credit>Nahverkehrsservice Sachsen-Anhalt GmbH</credit> -->
 
 <rawUrls>

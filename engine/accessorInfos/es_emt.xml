@@ -3,13 +3,10 @@
 
 <name lang="en">Madrid (EMT)</name>
 <author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<useSeperateCityValue>false</useSeperateCityValue>
 <description>Accessor for Madrid, using the GTFS feed of Empresa Municipal de Transportes (EMT). No GTFS-realtime data available.</description>
 <cities><city>Madrid</city></cities>
 <credit>Route and arrival data provided by permission of EMT</credit>
-
 <url>http://www.emtmadrid.es</url>
-<shortUrl>www.emtmadrid.es</shortUrl>
 <feedUrl>http://www.gtfs-data-exchange.com/agency/madrid-empresa-municipal-de-transportes/latest.zip</feedUrl>
 
 </accessorInfo>

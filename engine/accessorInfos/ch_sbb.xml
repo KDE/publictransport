@@ -9,7 +9,6 @@
 <description>This service provider works for cities in Switzerland and also for many cities in Europe. Cities in Switzerland include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>
 
 <url>http://www.sbb.ch</url>
-<shortUrl>www.sbb.ch</shortUrl>
 <!-- <credit>Schweizerische Bundesbahnen SBB</credit> -->
 
 <rawUrls>

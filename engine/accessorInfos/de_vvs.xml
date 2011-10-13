@@ -8,8 +8,7 @@
     </author>
     <useSeperateCityValue>true</useSeperateCityValue>
     <onlyUseCitiesInList>false</onlyUseCitiesInList>
-    <url>http://www.vvs.de/</url>
-    <shortUrl>www.vvs.de</shortUrl>
+    <url>http://www.vvs.de</url>
     <script>de_vvs.js</script>
     <cities>
         <city>Stuttgart</city>

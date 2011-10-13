@@ -8,8 +8,7 @@
 <useSeperateCityValue>false</useSeperateCityValue>
 <description>Provides departure information for Dresden in Germany.</description>
 
-<url>http://www.dvb.de/</url>
-<shortUrl>www.dvb.de</shortUrl>
+<url>http://www.dvb.de</url>
     <fallbackCharset>latin1</fallbackCharset>
 <!-- <credit>Dresdner Verkehrsbetriebe AG</credit> -->
 
