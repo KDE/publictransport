@@ -88,6 +88,9 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
 	dataServiceProvider.insert( "shortUrl", accessorInfo.shortUrl() );
     if ( accessorInfo.accessorType() == GtfsAccessor ) {
         dataServiceProvider.insert( "feedUrl", accessorInfo.feedUrl() );
+        dataServiceProvider.insert( "gtfsDatabaseSize",
+                QFileInfo(GeneralTransitFeedDatabase::databasePath(accessorInfo.serviceProvider()))
+                .size() );
     } else {
         dataServiceProvider.insert( "scriptFileName", accessorInfo.scriptFileName() );
     }
@@ -183,6 +186,18 @@ QHash< QString, QVariant > PublicTransportEngine::locations()
     locationHash.insert( "name", name = "hu" );
     locationHash.insert( "description", i18n( "Support for some cities in Hungary (GTFS)." ) );
     locationHash.insert( "defaultAccessor", "hu_szeget" );
+    ret.insert( name, locationHash );
+
+    locationHash.clear();
+    locationHash.insert( "name", name = "in" );
+    locationHash.insert( "description", i18n( "Support for some cities in India (GTFS)." ) );
+    locationHash.insert( "defaultAccessor", "in_bmtc" );
+    ret.insert( name, locationHash );
+
+    locationHash.clear();
+    locationHash.insert( "name", name = "jp" );
+    locationHash.insert( "description", i18n( "Support for some cities in Japan (GTFS)." ) );
+    locationHash.insert( "defaultAccessor", "jp_kyoto" );
     ret.insert( name, locationHash );
 
     locationHash.clear();
