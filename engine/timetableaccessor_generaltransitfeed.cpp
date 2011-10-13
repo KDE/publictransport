@@ -59,11 +59,17 @@ TimetableAccessorGeneralTransitFeed::TimetableAccessorGeneralTransitFeed(
     bool importFinished = grp.readEntry( "feedImportFinished", false );
 
     QFileInfo fi( GeneralTransitFeedDatabase::databasePath(info->serviceProvider()) );
-    if ( importFinished && fi.exists() && fi.size() > 30000 ) {
-        // Load agency information from database and request GTFS-realtime data
-        loadAgencyInformation();
-        updateRealtimeData();
-        m_state = Ready;
+    if ( importFinished ) {
+        if ( fi.exists() && fi.size() > 10000 ) {
+            // Load agency information from database and request GTFS-realtime data
+            loadAgencyInformation();
+            updateRealtimeData();
+            m_state = Ready;
+        } else {
+            // Accessor cache says the import has been finished, but the database file does not
+            // exist or is empty
+            grp.writeEntry( "feedImportFinished", false );
+        }
     }
 
     // Update database to the current version of the GTFS feed
@@ -285,6 +291,12 @@ int TimetableAccessorGeneralTransitFeed::AgencyInformation::timeZoneOffset() con
     return timezone && timezone->isValid() ? timezone->currentOffset( Qt::LocalTime ) : 0;
 }
 
+qint64 TimetableAccessorGeneralTransitFeed::databaseSize() const
+{
+    QFileInfo fi( GeneralTransitFeedDatabase::databasePath(m_info->serviceProvider()) );
+    return fi.size();
+}
+
 TimetableAccessorGeneralTransitFeed::AgencyInformation::~AgencyInformation()
 {
     delete timezone;
@@ -420,12 +432,30 @@ bool TimetableAccessorGeneralTransitFeed::checkState( const QString &sourceName,
                     m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
                     sourceName, city, stop, dataType, parseMode );
             break;
-        case ErrorNeedsFeedImport:
-            emit errorParsing( this, ErrorNeedsImport, i18nc("@info/plain",
-                    "GTFS feed not imported from <resource>%1</resource>",
-                    m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
-                    sourceName, city, stop, dataType, parseMode );
+        case ErrorNeedsFeedImport: {
+            // Check, if the feed is imported now
+            // Read accessor information cache
+            // TODO function for this (also used in constructor)
+            const QString fileName = accessorCacheFileName();
+            bool cacheExists = QFile::exists( fileName );
+            KConfig cfg( fileName, KConfig::SimpleConfig );
+            KConfigGroup grp = cfg.group( m_info->serviceProvider() );
+            bool importFinished = grp.readEntry( "feedImportFinished", false );
+            QFileInfo fi( GeneralTransitFeedDatabase::databasePath(m_info->serviceProvider()) );
+            if ( importFinished && fi.exists() && fi.size() > 30000 ) {
+                // Load agency information from database and request GTFS-realtime data
+                loadAgencyInformation();
+                updateRealtimeData();
+                m_state = Ready;
+                return true;
+            } else {
+                emit errorParsing( this, ErrorNeedsImport, i18nc("@info/plain",
+                        "GTFS feed not imported from <resource>%1</resource>",
+                        m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
+                        sourceName, city, stop, dataType, parseMode );
+            }
             break;
+        }
         case Initializing:
             emit progress( this, 0.0, i18nc("@info/plain",
                     "Initializing GTFS feed database.",
@@ -601,9 +631,9 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
     const int stopHeadsignColumn = record.indexOf( "stop_headsign" );
     const int routeStopsColumn = record.indexOf( "route_stops" );
     const int routeTimesColumn = record.indexOf( "route_times" );
-    const int fareMinPriceColumn = record.indexOf( "min_price" );
-    const int fareMaxPriceColumn = record.indexOf( "max_price" );
-    const int fareCurrencyColumn  = record.indexOf( "currency_type" );
+//     const int fareMinPriceColumn = record.indexOf( "min_price" );
+//     const int fareMaxPriceColumn = record.indexOf( "max_price" );
+//     const int fareCurrencyColumn  = record.indexOf( "currency_type" );
 
     // Prepare agency information, if only one is given, it is used for all records
     AgencyInformation *agency = 0;
@@ -611,6 +641,7 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
         agency = m_agencyCache.values().first();
     }
 
+    // Create a list of DepartureInfo objects from the query result
     QList<DepartureInfo*> departures;
     while ( query.next() ) {
         QDate arrivalDate = dateTime.date();
@@ -674,10 +705,10 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
         }
         data[ RouteTimes ] = routeTimes;
 
-        const QString symbol = KCurrencyCode( query.value(fareCurrencyColumn).toString() ).defaultSymbol();
-        data[ Pricing ] = KGlobal::locale()->formatMoney(
-                query.value(fareMinPriceColumn).toDouble(), symbol ) + " - " +
-                KGlobal::locale()->formatMoney( query.value(fareMaxPriceColumn).toDouble(), symbol );
+//         const QString symbol = KCurrencyCode( query.value(fareCurrencyColumn).toString() ).defaultSymbol();
+//         data[ Pricing ] = KGlobal::locale()->formatMoney(
+//                 query.value(fareMinPriceColumn).toDouble(), symbol ) + " - " +
+//                 KGlobal::locale()->formatMoney( query.value(fareMaxPriceColumn).toDouble(), symbol );
 
         if ( m_alerts ) {
             QStringList journeyNews;
@@ -811,9 +842,10 @@ bool TimetableAccessorGeneralTransitFeed::checkForDiskIoErrorInDatabase( const Q
         const QDateTime &dateTime, const QString &dataType, bool useDifferentUrl,
         ParseDocumentMode parseMode )
 {
-    // Check of the error is a "disk I/O error", ie. the database file may have been deleted
-    // The error number (10) is database dependend and works with SQLITE
-    if ( error.number() == 10 ) {
+    // Check of the error is a "disk I/O" error or a "no such table" error, ie. the database file
+    // may have been deleted.
+    // The error numbers (1, 10) is database dependend and works with SQLITE
+    if ( error.number() == 10 || error.number() == 1 ) {
         kDebug() << "Disk I/O error reported from database, recreate the database";
 
         // Store information about the request to report import progress to

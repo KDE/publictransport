@@ -93,6 +93,9 @@ public:
     /** @brief Returns true, if there is a GTFS-realtime source available. */
     bool isRealtimeDataAvailable() const;
 
+    /** @brief Gets the size in bytes of the database containing the GTFS data. */
+    qint64 databaseSize() const;
+
 protected slots:
     /**
      * @brief GTFS-realtime TripUpdates data received.
