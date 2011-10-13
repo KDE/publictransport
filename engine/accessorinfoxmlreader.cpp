@@ -93,7 +93,7 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo( const QString &s
 	accessorInfo->setServiceProvider( serviceProvider );
 	accessorInfo->setFileName( fileName );
 	accessorInfo->setCountry( country );
-	
+
 	if ( attributes().hasAttribute("version") ) {
 		accessorInfo->setVersion( attributes().value("version").toString() );
 	} else {
@@ -101,7 +101,7 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo( const QString &s
 	}
 
 	if ( attributes().hasAttribute("type") ) {
-		accessorInfo->setType( TimetableAccessor::accessorTypeFromString( 
+		accessorInfo->setType( TimetableAccessor::accessorTypeFromString(
 				attributes().value("type").toString()) );
 		if ( accessorInfo->accessorType() == NoAccessor ) {
 			delete accessorInfo;
@@ -181,7 +181,7 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo( const QString &s
                 accessorInfo->setJourneyRawUrl( rawUrlJourneys );
                 accessorInfo->setAttributesForJourneys( attributesForJourneys );
             } else if ( name().compare("feedUrl", Qt::CaseInsensitive) == 0 ) {
-                accessorInfo->setDepartureRawUrl( readElementText() );
+                accessorInfo->setFeedUrl( readElementText() );
             } else if ( name().compare("realtimeTripUpdateUrl", Qt::CaseInsensitive) == 0 ) {
                 accessorInfo->setRealtimeTripUpdateUrl( readElementText() );
             } else if ( name().compare("realtimeAlertsUrl", Qt::CaseInsensitive) == 0 ) {
@@ -220,9 +220,8 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo( const QString &s
         delete accessorInfo;
         raiseError( "No <url> tag in accessor info XML" );
         return 0;
-    }
-    if ( accessorInfo->accessorType() == ScriptedAccessor
-         && accessorInfo->departureRawUrl().isEmpty() )
+    } else if ( accessorInfo->accessorType() == ScriptedAccessor
+                && accessorInfo->departureRawUrl().isEmpty() )
     {
         delete accessorInfo;
         raiseError( "No raw url for departures in accessor info XML, mandatory for "
@@ -235,7 +234,14 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo( const QString &s
         raiseError( "No GTFS feed url in accessor info XML, mandatory for \"GTFS\" types" );
         return 0;
     }
-	
+
+    if ( accessorInfo->shortUrl().isEmpty() ) {
+        // No short version of the URL given, construct it
+        QString shortUrl = accessorInfo->url();
+        shortUrl.remove( QRegExp("^https?://") ); // Remove protocol
+        accessorInfo->setShortUrl( shortUrl );
+    }
+
 	accessorInfo->setName( nameLocal.isEmpty() ? nameEn : nameLocal );
 	accessorInfo->setDescription( descriptionLocal.isEmpty() ? descriptionEn : descriptionLocal );
 	accessorInfo->finish();
@@ -270,7 +276,7 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo( const QString &s
 		// Create the accessor and check for script errors
 // 		TimetableAccessorXml *xmlAccessor = new TimetableAccessorXml( accessorInfo );
 // 		if ( xmlAccessor->stopSuggestionAccessor() &&
-// 			 xmlAccessor->stopSuggestionAccessor()->hasScriptErrors() ) 
+// 			 xmlAccessor->stopSuggestionAccessor()->hasScriptErrors() )
 // 		{
 // 			delete xmlAccessor;
 // 			raiseError( "Couldn't correctly load the script (bad script)" );
@@ -283,7 +289,7 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo( const QString &s
         return accessorInfo;
 //         return new TimetableAccessorGeneralTransitFeed( accessorInfo );
     }
-	
+
 	delete accessorInfo;
 	raiseError( QString("Accessor type %1 not supported").arg(accessorInfo->accessorType()) );
 	return 0;
@@ -362,9 +368,9 @@ void AccessorInfoXmlReader::readCities( QStringList *cities,
 }
 
 void AccessorInfoXmlReader::readRawUrls( QString* rawUrlDepartures, QString* rawUrlStopSuggestions,
-										 QString* rawUrlJourneys, 
-										 QHash<QString, QString> *attributesForDepartures, 
-										 QHash<QString, QString> *attributesForStopSuggestions, 
+										 QString* rawUrlJourneys,
+										 QHash<QString, QString> *attributesForDepartures,
+										 QHash<QString, QString> *attributesForStopSuggestions,
 										 QHash<QString, QString> *attributesForJourneys )
 {
 	while ( !atEnd() ) {
@@ -377,10 +383,10 @@ void AccessorInfoXmlReader::readRawUrls( QString* rawUrlDepartures, QString* raw
 		if ( isStartElement() ) {
 			if ( name().compare("departures", Qt::CaseInsensitive) == 0 ) {
 				foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
-					attributesForDepartures->insert( attribute.name().toString(), 
+					attributesForDepartures->insert( attribute.name().toString(),
 													 attribute.value().toString() );
 				}
-				
+
 				while ( !atEnd() ) {
 					if ( isStartElement() ) {
 						if ( name().compare("url", Qt::CaseInsensitive) == 0 ) {
@@ -394,7 +400,7 @@ void AccessorInfoXmlReader::readRawUrls( QString* rawUrlDepartures, QString* raw
 						// End of <departures> tag
 						break;
 					}
-					
+
 					if ( atEnd() ) {
 						break;
 					}
@@ -402,13 +408,13 @@ void AccessorInfoXmlReader::readRawUrls( QString* rawUrlDepartures, QString* raw
 				}
 			} else if ( name().compare("stopSuggestions", Qt::CaseInsensitive) == 0 ) {
 				foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
-					attributesForStopSuggestions->insert( attribute.name().toString(), 
+					attributesForStopSuggestions->insert( attribute.name().toString(),
 														  attribute.value().toString() );
 				}
 				*rawUrlStopSuggestions = readElementText();
 			} else if ( name().compare("journeys", Qt::CaseInsensitive) == 0 ) {
 				foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
-					attributesForJourneys->insert( attribute.name().toString(), 
+					attributesForJourneys->insert( attribute.name().toString(),
 												   attribute.value().toString() );
 				}
 				*rawUrlJourneys = readElementText();
@@ -436,7 +442,7 @@ void AccessorInfoXmlReader::readSessionKey(QString* sessionKeyUrl, SessionKeyPla
 				if ( attributes().hasAttribute(QLatin1String("data")) ) {
 					*data = attributes().value( QLatin1String("data") ).toString();
 				}
-				
+
 				QString putInto = readElementText();
 				if ( putInto.compare(QLatin1String("CustomHeader"), Qt::CaseInsensitive) == 0 ) {
 					*sessionKeyPlace = PutIntoCustomHeader;
