@@ -57,7 +57,7 @@
 
 #include <KParts/PartManager>
 #include <KParts/MainWindow>
-#include <KWebKitPart>
+#include <KWebView>
 #include <KTextEditor/Document>
 #include <KTextEditor/View>
 #include <KTextEditor/CodeCompletionModel>
@@ -105,41 +105,32 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     connect( m_preview, SIGNAL(plasmaPreviewLoaded()), this, SLOT(plasmaPreviewLoaded()) );
 
     // Create web view widget
-    KService::Ptr service = KService::serviceByDesktopPath( "kwebkitpart.desktop" );
-    if ( service ) {
-        m_webview = static_cast<KWebKitPart*>(
-				service->createInstance<KParts::ReadOnlyPart>(m_mainTabBar, this) );
-    } else {
-        // TODO: The webkit part shouldn't be a requirement
-        KMessageBox::error(this, i18n("service kwebkitpart.desktop not found"));
-        qApp->quit();
-        return;
-    }
-    m_webview->view()->settings()->setAttribute( QWebSettings::DeveloperExtrasEnabled, true );
-    m_webview->view()->pageAction( QWebPage::OpenLinkInNewWindow )->setVisible( false );
-    m_webview->view()->pageAction( QWebPage::OpenFrameInNewWindow )->setVisible( false );
-    m_webview->view()->pageAction( QWebPage::OpenImageInNewWindow )->setVisible( false );
-    m_webview->view()->setMinimumHeight( 150 );
-    m_webview->view()->setWhatsThis( i18nc("@info:whatsthis", "<subtitle>Web View</subtitle>"
-                                           "<para>This is the web view. You can use it to check the URLs you have defined "
-                                           "in the <interface>Accessor</interface> settings or to get information about the "
-                                           "structure of the documents that get parsed by the script.</para>"
-                                           "<para><note>You can select a web element in the <emphasis>inspector</emphasis> "
-                                           "using the context menu.</note></para>") );
+    m_webview = new KWebView( this );
+    m_webview->settings()->setAttribute( QWebSettings::DeveloperExtrasEnabled, true );
+    m_webview->pageAction( QWebPage::OpenLinkInNewWindow )->setVisible( false );
+    m_webview->pageAction( QWebPage::OpenFrameInNewWindow )->setVisible( false );
+    m_webview->pageAction( QWebPage::OpenImageInNewWindow )->setVisible( false );
+    m_webview->setMinimumHeight( 150 );
+    m_webview->setWhatsThis( i18nc("@info:whatsthis", "<subtitle>Web View</subtitle>"
+                                   "<para>This is the web view. You can use it to check the URLs you have defined "
+                                   "in the <interface>Accessor</interface> settings or to get information about the "
+                                   "structure of the documents that get parsed by the script.</para>"
+                                   "<para><note>You can select a web element in the <emphasis>inspector</emphasis> "
+                                   "using the context menu.</note></para>") );
 
     // Create a web inspector
     QWebInspector *inspector = new QWebInspector( this );
-    inspector->setPage( m_webview->view()->page() );
+    inspector->setPage( m_webview->page() );
     inspector->setMinimumHeight( 150 );
 
     QSplitter *webSplitter = new QSplitter( this );
     webSplitter->setOrientation( Qt::Vertical );
-    webSplitter->addWidget( m_webview->widget() );
+    webSplitter->addWidget( m_webview );
     webSplitter->addWidget( inspector );
 
     m_urlBar = new KUrlComboBox( KUrlComboBox::Both, true, this );
-    connect( m_webview, SIGNAL(setStatusBarText(QString)), this, SLOT(slotSetStatusBarText(QString)) );
-    connect( m_webview->view(), SIGNAL(urlChanged(QUrl)), this, SLOT(webUrlChanged(QUrl)) );
+    connect( m_webview, SIGNAL(statusBarMessage(QString)), this, SLOT(slotSetStatusBarText(QString)) );
+    connect( m_webview, SIGNAL(urlChanged(QUrl)), this, SLOT(webUrlChanged(QUrl)) );
     connect( m_urlBar, SIGNAL(returnPressed(QString)), this, SLOT(urlBarReturn(QString)) );
 
     QWidget *webWidget = new QWidget( this );
@@ -176,7 +167,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     // Query the .desktop file to load the requested Part
     QWidget *accessorSourceWidget = 0, *scriptWidget = 0;
     JavaScriptCompletionModel *completionModel = NULL;
-    service = KService::serviceByDesktopPath( "katepart.desktop" );
+    KService::Ptr service = KService::serviceByDesktopPath( "katepart.desktop" );
     if ( service ) {
         m_accessorDocument = static_cast<KTextEditor::Document*>(
                                  service->createInstance<KParts::ReadWritePart>(m_mainTabBar) );
@@ -257,7 +248,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     // Add parts
     m_partManager->addPart( m_accessorDocument, false );
     m_partManager->addPart( m_scriptDocument, false );
-    m_partManager->addPart( m_webview, false );
+//     m_partManager->addPart( m_webview, false );
 
     // Create script widgets/models
     m_functions = new KComboBox( this );
@@ -603,7 +594,7 @@ void TimetableMate::showWebTab( const QString &url, RawUrl rawUrl ) {
         if ( kurl.isEmpty() )
             return;
 
-        m_webview->openUrl( kurl );
+        m_webview->setUrl( kurl );
     }
     m_mainTabBar->setCurrentIndex( WebTab ); // go to web tab
 }
@@ -641,7 +632,7 @@ void TimetableMate::currentTabChanged( int index ) {
         m_partManager->setActivePart( m_scriptDocument, m_mainTabBar );
         m_scriptDocument->activeView()->setFocus();
     } else if ( index == WebTab ) { // go to web tab
-        m_partManager->setActivePart( m_webview, m_mainTabBar );
+//         m_partManager->setActivePart( m_webview, m_mainTabBar );
         m_urlBar->setFocus();
     } else {
         m_partManager->setActivePart( 0 );
@@ -709,19 +700,19 @@ void TimetableMate::setupActions() {
 //     installGlobal->setEnabled( false ); // TODO Enable only if a valid xml with script is opened
     connect( installGlobal, SIGNAL(triggered(bool)), this, SLOT(installGlobal()) );
 
-    QAction *webBack = m_webview->view()->pageAction( QWebPage::Back );
+    QAction *webBack = m_webview->pageAction( QWebPage::Back );
     webBack->setVisible( false );
     actionCollection()->addAction( QLatin1String("web_back"), webBack );
 
-    QAction *webForward = m_webview->view()->pageAction( QWebPage::Forward );
+    QAction *webForward = m_webview->pageAction( QWebPage::Forward );
     webForward->setVisible( false );
     actionCollection()->addAction( QLatin1String("web_forward"), webForward );
 
-    QAction *webStop = m_webview->view()->pageAction( QWebPage::Stop );
+    QAction *webStop = m_webview->pageAction( QWebPage::Stop );
     webStop->setVisible( false );
     actionCollection()->addAction( QLatin1String("web_stop"), webStop );
 
-    QAction *webReload = m_webview->view()->pageAction( QWebPage::Reload );
+    QAction *webReload = m_webview->pageAction( QWebPage::Reload );
     webReload->setVisible( false );
     actionCollection()->addAction( QLatin1String("web_reload"), webReload );
 
@@ -1469,7 +1460,7 @@ void TimetableMate::scriptPreviousFunction() {
 }
 
 void TimetableMate::urlBarReturn( const QString &text ) {
-    m_webview->openUrl( QUrl::fromUserInput(text) );
+    m_webview->setUrl( QUrl::fromUserInput(text) );
 }
 
 void TimetableMate::webUrlChanged( const QUrl& url ) {
@@ -1484,7 +1475,7 @@ void TimetableMate::webLoadHomePage() {
         return;
 
     // Open URL
-    m_webview->openUrl( accessor.url );
+    m_webview->setUrl( accessor.url );
 
     // Go to web tab
     m_mainTabBar->setCurrentIndex( WebTab );
@@ -1497,7 +1488,7 @@ void TimetableMate::webLoadDepartures() {
 
     // Open URL
     KUrl url = getDepartureUrl();
-    m_webview->openUrl( url );
+    m_webview->setUrl( url );
 
     // Go to web tab
     m_mainTabBar->setCurrentIndex( WebTab );
@@ -1510,7 +1501,7 @@ void TimetableMate::webLoadStopSuggestions() {
 
     // Open URL
     KUrl url = getStopSuggestionUrl();
-    m_webview->openUrl( url );
+    m_webview->setUrl( url );
 
     // Go to web tab
     m_mainTabBar->setCurrentIndex( WebTab );
@@ -1523,7 +1514,7 @@ void TimetableMate::webLoadJourneys() {
 
     // Open URL
     KUrl url = getJourneyUrl();
-    m_webview->openUrl( url );
+    m_webview->setUrl( url );
 
     // Go to web tab
     m_mainTabBar->setCurrentIndex( WebTab );
@@ -1650,15 +1641,15 @@ void TimetableMate::scriptRunParseTimetable() {
         resultItems += "<br/>" + i18nc("@info", "Got the information from the script that there "
                                        "is no delay information available for the given stop.");
     }
-    
+
     QString resultText = i18nc("@info", "No syntax errors.") + "<br/>" + resultItems;
-	
+
 	// Add departures
 	if ( !departures.isEmpty() ) {
 		resultText += i18nc("@info", "<para>Departures:<list>%1</list></para>",
 							departures.join(QString()));
 	}
-	
+
     // Add debug messages
 	if ( debugMessages.isEmpty() ) {
 		resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
@@ -1672,7 +1663,7 @@ void TimetableMate::scriptRunParseTimetable() {
 		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
 							debugMessagesString);
 	}
-	
+
     if ( !unknownTimetableInformations.isEmpty() ) {
         resultText += i18nc("@info", "<para>There were unknown strings used for "
                             "<icode>timetableData.set( '<placeholder>unknown string</placeholder>', "
@@ -1759,11 +1750,11 @@ void TimetableMate::scriptRunParseStopSuggestions() {
         resultItems += "<br/>" + i18ncp("@info", "<warning>%1 stop suggestion is invalid</warning>",
                                         "<warning>%1 stop suggestions are invalid</warning>", countInvalid);
     }
-    
+
     QString resultText = i18nc("@info", "No syntax errors.") + "<br/>" + resultItems;
     resultText += i18nc("@info", "<para>Stop suggestions:<list>%1</list></para>",
                         stopInfo.join(QString()));
-	
+
     // Add debug messages
 	if ( debugMessages.isEmpty() ) {
 		resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
@@ -1777,7 +1768,7 @@ void TimetableMate::scriptRunParseStopSuggestions() {
 		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
 							debugMessagesString);
 	}
-	
+
     if ( !unknownTimetableInformations.isEmpty() ) {
         resultText += i18nc("@info", "<para>There were unknown strings used for "
                             "<icode>timetableData.set( '<placeholder>unknown string</placeholder>', "
@@ -1984,7 +1975,7 @@ void TimetableMate::scriptRunParseJourneys() {
     QString resultText = i18nc("@info", "No syntax errors.") + "<br/>" + resultItems;
     resultText += i18nc("@info", "<para>Journeys:<list>%1</list></para>",
                         journeys.join(QString()));
-	
+
     // Add debug messages
 	if ( debugMessages.isEmpty() ) {
 		resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
@@ -1998,7 +1989,7 @@ void TimetableMate::scriptRunParseJourneys() {
 		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
 							debugMessagesString);
 	}
-	
+
     if ( !unknownTimetableInformations.isEmpty() ) {
         resultText += i18nc("@info", "<para>There were unknown strings used for "
                             "<icode>timetableData.set( '<placeholder>unknown string</placeholder>', "
@@ -2050,7 +2041,7 @@ bool TimetableMate::hasRawJourneyURL( const TimetableAccessor &accessor ) {
 }
 
 bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *timetableData,
-                               ResultObject *resultObject, QVariant *result, 
+                               ResultObject *resultObject, QVariant *result,
 			       DebugMessageList *debugMessageList ) {
     // Create the Kross::Action instance
     Kross::Action script( this, "TimetableParser" );
@@ -2065,8 +2056,8 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
     } else  {
         kDebug() << "Unknown funtion to run:" << functionToRun;
     }
-    
-    // NOTE Update documentation in scripting.h if the names change here, 
+
+    // NOTE Update documentation in scripting.h if the names change here,
     // eg. update the name in the documentation of the Helper class if the name "helper" changes.
     Helper *helper = new Helper(&script);
     script.addQObject( helper, "helper" );
@@ -2098,7 +2089,7 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
             m_scriptDocument->activeView()->setCursorPosition(
                 KTextEditor::Cursor(script.errorLineNo(), 0) );
         }
-        KMessageBox::information( this, i18nc("@info", 
+        KMessageBox::information( this, i18nc("@info",
 				"Error in script:<nl/><message>%1</message>", script.errorMessage()) );
         return false;
     }
@@ -2163,12 +2154,12 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
             m_scriptDocument->activeView()->setCursorPosition(
                 KTextEditor::Cursor(script.errorLineNo(), 0) );
         }
-        
-        KMessageBox::information( this, i18nc("@info", 
+
+        KMessageBox::information( this, i18nc("@info",
 				"An error occurred in the script:<nl/><message>%1</message>", script.errorMessage()) );
         return false;
     }
-	
+
     if ( debugMessageList ) {
 		debugMessageList->append( helper->debugMessages );
     }

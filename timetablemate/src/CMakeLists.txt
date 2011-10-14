@@ -23,18 +23,11 @@ kde4_add_kcfg_files( timetablemate_SRCS settings.kcfgc )
 
 kde4_add_executable( timetablemate ${timetablemate_SRCS} )
 
-if ( KDE4_KDEWEBKIT_LIBRARY )
-	target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS} ${KDE4_KPARTS_LIBS} 
-		${KDE4_PLASMA_LIBS} ${KDE4_KTEXTEDITOR_LIBS} ${KDE4_KROSSCORE_LIBS} ${KDE4_WEBKIT_LIBS}
-		publictransporthelper
-	)
-else ( KDE4_KDEWEBKIT_LIBRARY )
-	# KWebKit not found
-	target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS} ${KDE4_KPARTS_LIBS} 
-		${KDE4_PLASMA_LIBS} ${KDE4_KTEXTEDITOR_LIBS} ${KDE4_KROSSCORE_LIBS}
-		publictransporthelper
-	)
-endif ( KDE4_KDEWEBKIT_LIBRARY )
+target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS} ${KDE4_KPARTS_LIBS}
+    ${KDE4_PLASMA_LIBS} ${KDE4_KTEXTEDITOR_LIBS} ${KDE4_KROSSCORE_LIBS}
+    ${QT_QTWEBKIT_LIBRARY} ${KDE4_KDEWEBKIT_LIBS}
+    publictransporthelper
+)
 
 install( TARGETS timetablemate ${INSTALL_TARGETS_DEFAULT_ARGS} )
 
