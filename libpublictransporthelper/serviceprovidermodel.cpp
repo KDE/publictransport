@@ -61,12 +61,12 @@ ServiceProviderItem::ServiceProviderItem( const QString &name, const QVariantHas
 		d_ptr->category = KGlobal::locale()->countryCodeToName( location );
 
 		// TODO Add a flag to the accessor XML files, maybe <countryWide />
-		bool isCountryWide = name.contains( location, Qt::CaseInsensitive );
+		bool isCountryWide = data["type"] == "GTFS" ? false
+                : name.contains( location, Qt::CaseInsensitive );
 		d_ptr->sortString = isCountryWide
 				? "WWWWW" + d_ptr->category + "11111" + name
 				: "WWWWW" + d_ptr->category + name;
 	}
-
 }
 
 ServiceProviderItem::~ServiceProviderItem()
@@ -131,7 +131,7 @@ public:
 	Plasma::DataEngine* favIconEngine;
 };
 
-ServiceProviderModel::ServiceProviderModel( QObject* parent ) 
+ServiceProviderModel::ServiceProviderModel( QObject* parent )
 		: QAbstractListModel( parent ), d_ptr(new ServiceProviderModelPrivate())
 {
 }
@@ -144,7 +144,7 @@ ServiceProviderModel::~ServiceProviderModel()
 QModelIndex ServiceProviderModel::index( int row, int column, const QModelIndex& parent ) const
 {
 	Q_D( const ServiceProviderModel );
-	
+
 	if ( parent.isValid() || !hasIndex( row, column, QModelIndex() ) ) {
 		return QModelIndex();
 	} else {
@@ -217,7 +217,7 @@ void ServiceProviderModel::syncWithDataEngine( Plasma::DataEngine* publicTranspo
         Plasma::DataEngine* favIconEngine )
 {
 	Q_D( ServiceProviderModel );
-	
+
 	// Store pointer to favicons data engine to be able to disconnect sources from it later
 	d->favIconEngine = favIconEngine;
 
@@ -241,7 +241,7 @@ void ServiceProviderModel::syncWithDataEngine( Plasma::DataEngine* publicTranspo
 void ServiceProviderModel::dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data )
 {
 	Q_D( const ServiceProviderModel );
-	
+
 	if ( sourceName.contains(QRegExp("^http")) ) {
 		// Favicon of a service provider arrived
 		QPixmap favicon( QPixmap::fromImage( data["Icon"].value<QImage>() ) );
