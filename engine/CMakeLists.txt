@@ -13,6 +13,16 @@ include_directories(
 add_subdirectory( accessorInfos )
 add_subdirectory( tests )
 
+# Generate gtfs-realtime protocol buffer sources
+add_custom_command(
+    OUTPUT gtfs-realtime.pb.h gtfs-realtime.pb.cc
+    COMMAND protoc gtfs-realtime.proto --cpp_out=${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS gtfs-realtime.proto
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+# Mark the files as generated
+set_source_files_properties( gtfs-realtime.pb.h gtfs-realtime.pb.cc
+                             PROPERTIES GENERATED TRUE )
+
 # Source files
 set( publictransport_engine_SRCS
     publictransportdataengine.cpp
