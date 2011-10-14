@@ -424,32 +424,6 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
                 foreach ( const QVariant &fieldValue, fieldValues ) {
                     query.addBindValue( fieldValue );
                 }
-//             } else if ( tableName == "agency" && fieldValues.isEmpty() ) {
-// //                    "agency_id INTEGER UNIQUE PRIMARY KEY, " // (optional for gtfs with a single agency)
-// //                    "agency_name VARCHAR(256) NOT NULL, " // (required) The name of the agency
-// //                    "agency_url VARCHAR(512) NOT NULL, " // (required) URL of the transit agency
-// //                    "agency_timezone VARCHAR(256), " // (required, if NULL, the default timezone from the accesor XML is used, from <timeZone>-tag) Timezone name, see http://en.wikipedia.org/wiki/List_of_tz_zones
-// //                    "agency_lang VARCHAR(2), " // (optional) A two-letter ISO 639-1 code for the primary language used by this transit agency
-// //                    "agency_phone
-//
-//                 for ( int i = 0; i < fieldNames.count(); ++i ) {
-//                     const QString fieldName = fieldNames[i];
-//                     if ( fieldName == "agency_id" ) {
-//                         query.addBindValue( 0 );
-//                     } else if ( fieldName == "agency_name" ) {
-//                         query.addBindValue(  );
-//                     } else if ( fieldName == "agency_url" ) {
-//                         weekdays[2] = '1';
-//                     } else if ( fieldName == "agency_timezone" ) {
-//                         weekdays[3] = '1';
-//                     } else if ( fieldName == "agency_lang" ) {
-//                         weekdays[4] = '1';
-//                     } else if ( fieldName == "agency_phone" ) {
-//                         weekdays[5] = '1';
-//                     } else {
-//                         kDebug() << "Unknown field for agency table: " << fieldName;
-//                     }
-//                 }
             } else {
                 foreach ( const QVariant &fieldValue, fieldValues ) {
                     query.addBindValue( fieldValue );
@@ -551,7 +525,8 @@ bool GeneralTransitFeedImporter::readHeader( const QString &header, QStringList 
     // Only allow alphanumerical characters as field names (and prevent SQL injection).
     foreach ( const QString &fieldName, *fieldNames ) {
         if ( fieldName.contains(QRegExp("[^A-Z0-9_]", Qt::CaseInsensitive)) ) {
-            setError( FatalError, "Field name contains disallowed characters: " + fieldName );
+            setError( FatalError, "Field name contains disallowed characters: " + fieldName
+                      + " at " + fieldName.indexOf(QRegExp("[^A-Z0-9_]", Qt::CaseInsensitive)) );
             return false;
         }
     }
