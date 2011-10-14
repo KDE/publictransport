@@ -35,7 +35,7 @@ class TimetableData;
 class ResultObject;
 struct TimetableAccessor;
 
-class KWebKitPart;
+class KWebView;
 class KUrlComboBox;
 class KToggleAction;
 class KRecentFilesAction;
@@ -72,7 +72,7 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 	    PlasmaPreviewTab,
 	    WebTab
 	};
-	
+
 	/** Default Constructor */
 	TimetableMate();
 
@@ -98,7 +98,7 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 	void currentTabChanged( int index );
 	void activePartChanged( KParts::Part *part );
 	void informationMessage( KTextEditor::View*, const QString &message );
-	
+
 	void accessorDocumentChanged( KTextEditor::Document *document );
 	void scriptDocumentChanged( KTextEditor::Document *document );
 	void accessorWidgetsChanged();
@@ -124,7 +124,7 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 
 	void scriptNextFunction();
 	void scriptPreviousFunction();
-	
+
 	/** Return pressed in the url bar. */
 	void urlBarReturn( const QString &text );
 	void webUrlChanged( const QUrl &url );
@@ -143,12 +143,12 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 	bool setAccessorValues( QByteArray *text, QString *error = 0,
 				const QString &fileName = QString() );
 	bool loadScriptForCurrentAccessor( const QString &path, bool openFile = true );
-	
+
 	void setChanged( bool changed = true );
 	void syncAccessor();
 
 	bool scriptRun( const QString &functionToRun, TimetableData *timetableData,
-			ResultObject *resultObject, QVariant *result, 
+			ResultObject *resultObject, QVariant *result,
 			DebugMessageList *debugMessageList = 0 );
 
 	bool hasHomePageURL( const TimetableAccessor &accessor );
@@ -181,18 +181,18 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 	static QString toPercentEncoding( const QString &str, const QByteArray &charset );
 
 	static QString gethex( ushort decimal );
-	
+
     private:
 	Ui::prefs_base ui_prefs_base;
-	
+
 	KTabWidget *m_mainTabBar;
 	KParts::PartManager *m_partManager;
 	TimetableMateView *m_view;
 	KTextEditor::Document *m_accessorDocument;
 	KTextEditor::Document *m_scriptDocument;
 	PublicTransportPreview *m_preview;
-	KWebKitPart *m_webview;
-	
+	KWebView *m_webview;
+
 	KUrlComboBox *m_urlBar;
 	KComboBox *m_functions;
 	JavaScriptModel *m_javaScriptModel;
@@ -202,7 +202,7 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 	KToggleAction *m_toolbarAction;
 	KToggleAction *m_statusbarAction;
 	KRecentFilesAction *m_recentFilesAction;
-	
+
 	QString m_currentServiceProviderID;
 	QString m_openedPath;
 
