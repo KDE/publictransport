@@ -121,6 +121,9 @@ protected Q_SLOTS:
     /** @brief The GTFS feed import has progressed. */
     void importProgress( KJob *job, ulong percent );
 
+    /** @brief Info message from the GTFS feed import job. */
+    void importInfoMessage( KJob *job, const QString &plain, const QString &rich = QString() );
+
     /** @brief Ask if timetable data import should be started, show a start button. */
     void askToImportTimetableData();
 

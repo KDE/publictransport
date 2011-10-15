@@ -226,6 +226,7 @@ public:
     QString errorString;
     QString question;
     QString questionToolTip;
+    QString infoMessage;
     QList<Button> buttons;
     Plasma::ServiceJob *importJob; // A currently running import job or 0 if no import is running
 
@@ -310,6 +311,7 @@ void StopLineEdit::importGtfsFeed()
     d->addButtons( StopLineEditPrivate::StopButton | StopLineEditPrivate::PauseButton );
     d->updateButtonRects( contentsRect() );
     d->progress = 0.0;
+    d->infoMessage.clear();
     setEnabled( true );
     setClearButtonShown( false ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
     setReadOnly( true );
@@ -320,6 +322,15 @@ void StopLineEdit::importGtfsFeed()
     d->importJob = service->startOperationCall( op );
     connect( d->importJob, SIGNAL(finished(KJob*)), this, SLOT(importFinished(KJob*)) );
     connect( d->importJob, SIGNAL(percent(KJob*,ulong)), this, SLOT(importProgress(KJob*,ulong)) );
+    connect( d->importJob, SIGNAL(infoMessage(KJob*,QString,QString)),
+             this, SLOT(importInfoMessage(KJob*,QString,QString)) );
+}
+
+void StopLineEdit::importInfoMessage( KJob *job, const QString &plain, const QString &rich )
+{
+    Q_D( StopLineEdit );
+    d->infoMessage = plain;
+    update();
 }
 
 bool StopLineEdit::cancelImport()
@@ -383,7 +394,9 @@ void StopLineEdit::paintEvent( QPaintEvent *ev )
         option.minimum = 0;
         option.maximum = 100;
         option.progress = d->progress * 100;
-        option.text = i18nc( "@info/plain", "Loading GTFS feed... %1 %", d->progress * 100 );
+        option.text = d->infoMessage.isEmpty()
+                ? i18nc("@info/plain", "Loading GTFS feed... %1 %", d->progress * 100)
+                : QString("%1... %2 %").arg(d->infoMessage).arg(uint(d->progress * 100));
         option.textAlignment = Qt::AlignCenter;
         option.textVisible = true;
         option.rect.setWidth( option.rect.width() - buttonsWidth );
