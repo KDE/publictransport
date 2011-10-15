@@ -3,13 +3,9 @@
 
 <name lang="en">California, Orange County (OCTA)</name>
 <author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<description>Accessor for California, Orange County, using the GTFS feed of Orange County Transportation Authority (OCTA) for SRTD. No GTFS-realtime data available.</description>
+<description>Accessor for California, Orange County, using the GTFS feed of Orange County Transportation Authority (OCTA). No GTFS-realtime data available.</description>
 <credit>Route and arrival data provided by permission of OCTA</credit>
 <url>http://www.octa.net</url>
-<feedUrl>http://iportal.sacrt.com/gtfs/SRTD/google_transit.zip</feedUrl>
-<!--     <feedUrl>http://iportal.sacrt.com/gtfs/Unitrans/google_transit.zip</feedUrl> -->
-<!--     <feedUrl>http://iportal.sacrt.com/gtfs/Yolobus/google_transit.zip</feedUrl> -->
-<!--     <feedUrl>http://iportal.sacrt.com/gtfs/Yuba/google_transit.zip</feedUrl> -->
-<!--     <feedUrl>http://iportal.sacrt.com/gtfs/Roseville/google_transit.zip</feedUrl> -->
+<feedUrl>http://www.octa.net/current/google_transit.zip</feedUrl>
 
 </accessorInfo>
