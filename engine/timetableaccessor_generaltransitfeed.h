@@ -127,9 +127,7 @@ protected:
      * @param dataType This should be left as "departures".
      * @param usedDifferentUrl Is not used by this class. Default is false.
      **/
-    virtual void requestDepartures( const QString &sourceName, const QString &city,
-            const QString &stop, int maxCount, const QDateTime &dateTime,
-            const QString &dataType = "departures", bool useDifferentUrl = false );
+    virtual void requestDepartures( const DepartureRequestInfo &requestInfo );
 
     /**
      * @brief Requests a list of stops from the GTFS database.
@@ -146,10 +144,7 @@ protected:
      * @param dataType This should be left empty
      * @param usedDifferentUrl Is not used by this class. Default is false.
      **/
-    virtual void requestStopSuggestions( const QString &sourceName, const QString &city,
-            const QString &stop, ParseDocumentMode parseMode = ParseForStopSuggestions,
-            int maxCount = 1, const QDateTime& dateTime = QDateTime::currentDateTime(),
-            const QString &dataType = QString(), bool usedDifferentUrl = false );
+    virtual void requestStopSuggestions( const StopSuggestionRequestInfo &requestInfo );
 
     /** @brief Updates the GTFS feed data using @ref PublicTransportService. */
     void updateGtfsData();
@@ -166,12 +161,8 @@ protected:
      **/
     bool isGtfsFeedImportFinished();
 
-    bool checkState( const QString &sourceName,
-            const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime,
-            const QString &dataType, bool useDifferentUrl, ParseDocumentMode parseMode );
-    bool checkForDiskIoErrorInDatabase( const QSqlError &error, const QString &sourceName,
-            const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime,
-            const QString &dataType, bool useDifferentUrl, ParseDocumentMode parseMode );
+    bool checkState( const RequestInfo *requestInfo );
+    bool checkForDiskIoErrorInDatabase( const QSqlError &error, const RequestInfo *requestInfo );
 
 private:
     enum State {
@@ -203,7 +194,7 @@ private:
     AgencyInformations m_agencyCache; // Cache contents of the "agency" DB table, usally small, eg. only one agency
     GtfsRealtimeTripUpdates *m_tripUpdates;
     GtfsRealtimeAlerts *m_alerts;
-    QHash< QString, JobInfos > m_waitingSources; // Sources waiting for import to finish
+    QHash< QString, RequestInfo* > m_waitingRequests; // Sources waiting for import to finish
     PublicTransportService *m_service;
     qreal m_progress;
 };

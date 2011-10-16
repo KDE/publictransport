@@ -53,7 +53,6 @@ TimetableAccessorGeneralTransitFeed::TimetableAccessorGeneralTransitFeed(
 
     // Read accessor information cache
     const QString fileName = accessorCacheFileName();
-    bool cacheExists = QFile::exists( fileName );
     KConfig cfg( fileName, KConfig::SimpleConfig );
     KConfigGroup grp = cfg.group( m_info->serviceProvider() );
     bool importFinished = grp.readEntry( "feedImportFinished", false );
@@ -80,6 +79,14 @@ TimetableAccessorGeneralTransitFeed::~TimetableAccessorGeneralTransitFeed()
 {
     // Free all agency objects
     qDeleteAll( m_agencyCache );
+
+    // Free waiting request objects
+    for ( QHash<QString,RequestInfo*>::ConstIterator it = m_waitingRequests.constBegin();
+            it != m_waitingRequests.constEnd(); ++it )
+    {
+        delete *it;
+    }
+    m_waitingRequests.clear();
 
     delete m_tripUpdates;
     delete m_alerts;
@@ -111,14 +118,14 @@ void TimetableAccessorGeneralTransitFeed::updateGtfsData()
 
 void TimetableAccessorGeneralTransitFeed::importProgress( KJob *job, ulong percent )
 {
+    Q_UNUSED( job );
     kDebug() << percent << m_info->serviceProvider() << m_state;
     m_progress = percent / 100.0;
-    for ( QHash<QString,JobInfos>::ConstIterator it = m_waitingSources.constBegin();
-          it != m_waitingSources.constEnd(); ++it )
+    for ( QHash<QString,RequestInfo*>::ConstIterator it = m_waitingRequests.constBegin();
+          it != m_waitingRequests.constEnd(); ++it )
     {
         emit progress( this, m_progress, i18nc("@info/plain TODO", "Importing GTFS feed"),
-                m_info->feedUrl(), m_info->serviceProvider(),
-                it->sourceName, it->city, it->stop, it->dataType, it->parseDocumentMode );
+                       m_info->feedUrl(), *it );
     }
 }
 
@@ -130,38 +137,47 @@ void TimetableAccessorGeneralTransitFeed::importFinished( KJob *job )
         kDebug() << "ERROR" << m_info->serviceProvider() << job->errorString();
         ErrorCode errorCode = job->error() == -7 ? ErrorNeedsImport : ErrorDownloadFailed;
         m_state = job->error() == -7 ? ErrorNeedsFeedImport : ErrorReadingFeed;
-        for ( QHash<QString,JobInfos>::ConstIterator it = m_waitingSources.constBegin();
-              it != m_waitingSources.constEnd(); ++it )
+        for ( QHash<QString,RequestInfo*>::ConstIterator it = m_waitingRequests.constBegin();
+              it != m_waitingRequests.constEnd(); ++it )
         {
             // TODO Less arguments to errorParsing and similiar functions...
             emit errorParsing( this, errorCode, /*i18nc("@info/plain TODO",
                     "Failed to import GTFS feed from <resource>%1</resource>: <message>%2</message>",
                     m_info->feedUrl(), */job->errorString()/*)*/,
-                    m_info->feedUrl(), m_info->serviceProvider(),
-                    it->sourceName, it->city, it->stop, it->dataType, it->parseDocumentMode );
+                    m_info->feedUrl(), *it );
+            delete *it;
         }
     } else {
         // Succesfully updated GTFS database
         kDebug() << "GTFS feed updated successfully" << m_info->serviceProvider();
         m_state = Ready;
-        for ( QHash<QString,JobInfos>::ConstIterator it = m_waitingSources.constBegin();
-            it != m_waitingSources.constEnd(); ++it )
+        for ( QHash<QString,RequestInfo*>::ConstIterator it = m_waitingRequests.constBegin();
+              it != m_waitingRequests.constEnd(); ++it )
         {
-            if ( it->parseDocumentMode == ParseForDeparturesArrivals ) {
-                requestDepartures( it.key(), it->city, it->stop, it->maxCount, it->dateTime,
-                                   it->dataType, it->usedDifferentUrl );
-            } else if ( it->parseDocumentMode == ParseForStopSuggestions ) {
-                requestStopSuggestions( it.key(), it->city, it->stop, ParseForStopSuggestions,
-                                        it->maxCount, it->dateTime, it->dataType,
-                                        it->usedDifferentUrl );
+            if ( (*it)->parseMode == ParseForDeparturesArrivals ) {
+                DepartureRequestInfo *requestInfo = static_cast<DepartureRequestInfo*>( *it );
+                Q_ASSERT( requestInfo );
+                requestDepartures( *requestInfo );
+//                             DepartureRequestInfo(it.key(), (*it)->stop, (*it)->maxCount,
+//                                    requestInfo->dateTime, (*it)->dataType, (*it)->useDifferentUrl,
+//                                    (*it)->city) );
+            } else if ( (*it)->parseMode == ParseForStopSuggestions ) {
+                StopSuggestionRequestInfo *requestInfo =
+                        static_cast<StopSuggestionRequestInfo*>( *it );
+                Q_ASSERT( requestInfo );
+                requestStopSuggestions( *requestInfo );
+//                 requestStopSuggestions( it.key(), (*it)->city, (*it)->stop, ParseForStopSuggestions,
+//                                         (*it)->maxCount, QDateTime()/* TODO (*it)->dateTime*/, (*it)->dataType,
+//                                         (*it)->useDifferentUrl );
             } else {
                 kDebug() << "Finished updating GTFS database, but unknown parse mode in a "
-                            "waiting source" << it->parseDocumentMode;
+                            "waiting source" << (*it)->parseMode;
             }
+            delete *it;
         }
     }
 
-    m_waitingSources.clear();
+    m_waitingRequests.clear();
     m_service->deleteLater();
     m_service = 0;
 }
@@ -352,69 +368,11 @@ bool TimetableAccessorGeneralTransitFeed::isGtfsFeedImportFinished()
 
     // No actual cached information about the service provider
     kDebug() << "No up-to-date cache information for service provider" << m_info->serviceProvider();
-//     QStringList features;
-//     bool ok = lazyLoadScript();
-//     if ( ok ) {
-//         QStringList functions = m_script->functionNames();
-//
-//         if ( functions.contains("parsePossibleStops") ) {
-//             features << "Autocompletion";
-//         }
-//         if ( functions.contains("parseJourneys") ) {
-//             features << "JourneySearch";
-//         }
-//
-//         if ( !m_script->functionNames().contains("usedTimetableInformations") ) {
-//             kDebug() << "The script has no 'usedTimetableInformations' function";
-//             kDebug() << "Functions in the script:" << m_script->functionNames();
-//             ok = false;
-//         }
-//
-//         if ( ok ) {
-//             QStringList usedTimetableInformations = m_script->callFunction(
-//                     "usedTimetableInformations" ).toStringList();
-//
-//             if ( usedTimetableInformations.contains("Delay", Qt::CaseInsensitive) ) {
-//                 features << "Delay";
-//             }
-//             if ( usedTimetableInformations.contains("DelayReason", Qt::CaseInsensitive) ) {
-//                 features << "DelayReason";
-//             }
-//             if ( usedTimetableInformations.contains("Platform", Qt::CaseInsensitive) ) {
-//                 features << "Platform";
-//             }
-//             if ( usedTimetableInformations.contains("JourneyNews", Qt::CaseInsensitive)
-//                 || usedTimetableInformations.contains("JourneyNewsOther", Qt::CaseInsensitive)
-//                 || usedTimetableInformations.contains("JourneyNewsLink", Qt::CaseInsensitive) )
-//             {
-//                 features << "JourneyNews";
-//             }
-//             if ( usedTimetableInformations.contains("TypeOfVehicle", Qt::CaseInsensitive) ) {
-//                 features << "TypeOfVehicle";
-//             }
-//             if ( usedTimetableInformations.contains("Status", Qt::CaseInsensitive) ) {
-//                 features << "Status";
-//             }
-//             if ( usedTimetableInformations.contains("Operator", Qt::CaseInsensitive) ) {
-//                 features << "Operator";
-//             }
-//             if ( usedTimetableInformations.contains("StopID", Qt::CaseInsensitive) ) {
-//                 features << "StopID";
-//             }
-//         }
-//     }
-
-    // Store script features in a cache file
-//     grp.writeEntry( "scriptModifiedTime", QFileInfo(m_info->scriptFileName()).lastModified() );
-//     grp.writeEntry( "hasErrors", !ok );
-//     grp.writeEntry( "features", features );
 
     return false;
 }
 
-bool TimetableAccessorGeneralTransitFeed::checkState( const QString &sourceName,
-        const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime,
-        const QString &dataType, bool useDifferentUrl, ParseDocumentMode parseMode )
+bool TimetableAccessorGeneralTransitFeed::checkState( const RequestInfo *requestInfo )
 {
     if ( m_state == Ready ) {
         return true;
@@ -423,21 +381,18 @@ bool TimetableAccessorGeneralTransitFeed::checkState( const QString &sourceName,
         case ErrorDownloadingFeed:
             emit errorParsing( this, ErrorDownloadFailed, i18nc("@info/plain",
                     "Failed to download the GTFS feed from <resource>%1</resource>",
-                    m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
-                    sourceName, city, stop, dataType, parseMode );
+                    m_info->feedUrl()), m_info->feedUrl(), requestInfo );
             break;
         case ErrorReadingFeed:
             emit errorParsing( this, ErrorParsingFailed, i18nc("@info/plain",
                     "Failed to read the GTFS feed from <resource>%1</resource>",
-                    m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
-                    sourceName, city, stop, dataType, parseMode );
+                    m_info->feedUrl()), m_info->feedUrl(), requestInfo );
             break;
         case ErrorNeedsFeedImport: {
             // Check, if the feed is imported now
             // Read accessor information cache
             // TODO function for this (also used in constructor)
             const QString fileName = accessorCacheFileName();
-            bool cacheExists = QFile::exists( fileName );
             KConfig cfg( fileName, KConfig::SimpleConfig );
             KConfigGroup grp = cfg.group( m_info->serviceProvider() );
             bool importFinished = grp.readEntry( "feedImportFinished", false );
@@ -451,27 +406,23 @@ bool TimetableAccessorGeneralTransitFeed::checkState( const QString &sourceName,
             } else {
                 emit errorParsing( this, ErrorNeedsImport, i18nc("@info/plain",
                         "GTFS feed not imported from <resource>%1</resource>",
-                        m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
-                        sourceName, city, stop, dataType, parseMode );
+                        m_info->feedUrl()), m_info->feedUrl(), requestInfo );
             }
             break;
         }
         case Initializing:
             emit progress( this, 0.0, i18nc("@info/plain",
                     "Initializing GTFS feed database.",
-                    m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
-                    sourceName, city, stop, dataType, parseMode );
+                    m_info->feedUrl()), m_info->feedUrl(), requestInfo );
             break;
         case UpdatingGtfsFeed:
             emit progress( this, m_progress, i18nc("@info/plain",
                     "Updating GTFS feed database.",
-                    m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
-                    sourceName, city, stop, dataType, parseMode );
+                    m_info->feedUrl()), m_info->feedUrl(), requestInfo );
             break;
         default:
             emit errorParsing( this, ErrorParsingFailed, i18nc("@info/plain", "Busy, please wait.",
-                    m_info->feedUrl()), m_info->feedUrl(), m_info->serviceProvider(),
-                    sourceName, city, stop, dataType, parseMode );
+                    m_info->feedUrl()), m_info->feedUrl(), requestInfo );
             break;
         }
 
@@ -483,23 +434,17 @@ bool TimetableAccessorGeneralTransitFeed::checkState( const QString &sourceName,
         }
 
         // Store information about the request to report import progress to
-        if ( !m_waitingSources.contains(sourceName) ) {
-            JobInfos jobInfos( parseMode, sourceName, city, stop,
-                               m_info->feedUrl(), dataType, maxCount, dateTime, useDifferentUrl );
-            m_waitingSources[ sourceName ] = jobInfos;
+        if ( !m_waitingRequests.contains(requestInfo->sourceName) ) {
+            m_waitingRequests[ requestInfo->sourceName ] = requestInfo->clone();
         }
-        kDebug() << "Wait for GTFS feed download and import to complete";
+        kDebug() << "Wait for GTFS feed download and import";
         return false;
     }
 }
 
-void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sourceName,
-        const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime,
-        const QString &dataType, bool useDifferentUrl )
+void TimetableAccessorGeneralTransitFeed::requestDepartures( const DepartureRequestInfo &requestInfo )
 {
-    if ( !checkState(sourceName, city, stop, maxCount, dateTime, dataType, useDifferentUrl,
-                     ParseForDeparturesArrivals) )
-    {
+    if ( !checkState(&requestInfo) ) {
         return;
     }
 
@@ -512,16 +457,14 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
     // location_type 1 is for stations.
     // It's fast, because 'stop_name' is part of a compound index in the database.
     uint stopId;
-    QString stopValue = stop;
+    QString stopValue = requestInfo.stop;
     stopValue.replace( '\'', "\'\'" );
     if ( !query.exec("SELECT stops.stop_id FROM stops "
                      "WHERE stop_name='" + stopValue + "' "
                      "AND (location_type IS NULL OR location_type=0)") )
     {
         // Check of the error is a "disk I/O error", ie. the database file may have been deleted
-        checkForDiskIoErrorInDatabase( query.lastError(), sourceName, city, stop, maxCount,
-                                       dateTime, dataType, useDifferentUrl,
-                                       ParseForDeparturesArrivals );
+        checkForDiskIoErrorInDatabase( query.lastError(), &requestInfo );
 
         kDebug() << query.lastError();
         kDebug() << query.executedQuery();
@@ -533,13 +476,14 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
         stopId = query.value( query.record().indexOf("stop_id") ).toUInt();
     } else {
         bool ok;
-        stopId = stop.toUInt( &ok );
+        stopId = requestInfo.stop.toUInt( &ok );
         if ( !ok ) {
-            kDebug() << "No stop with the given name or id found (needs the exact name):" << stop;
+            kDebug() << "No stop with the given name or id found (needs the exact name):"
+                     << requestInfo.stop;
             emit errorParsing( this, ErrorParsingFailed /*TODO*/,
-                    "No stop with the given name or id found (needs the exact name): " + stop,
-                    QUrl(), serviceProvider(), sourceName, city, stop, dataType,
-                    ParseForDeparturesArrivals );
+                    "No stop with the given name or id found (needs the exact name): "
+                    + requestInfo.stop,
+                    QUrl(), &requestInfo );
             return;
         }
     }
@@ -565,7 +509,7 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
     // TODO: Create a new (temporary) table for each connected departure/arrival source and use
     //       that (much smaller) table here for performance reasons
     const QString routeSeparator = "||";
-    const QTime time = dateTime.time();
+    const QTime time = requestInfo.dateTime.time();
     const QString queryString = QString(
             "SELECT times.departure_time, times.arrival_time, times.stop_headsign, "
                    "routes.route_type, routes.route_short_name, routes.route_long_name, "
@@ -601,8 +545,8 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
             "LIMIT %3" )
             .arg( stopId )
             .arg( time.hour() * 60 * 60 + time.minute() * 60 + time.second() )
-            .arg( maxCount )
-            .arg( dataType == "arrivals" ? '<' : '>' ) // For arrivals route_stops/route_times need stops before the home stop
+            .arg( requestInfo.maxCount )
+            .arg( requestInfo.dataType == "arrivals" ? '<' : '>' ) // For arrivals route_stops/route_times need stops before the home stop
             .arg( routeSeparator );
     if ( !query.prepare(queryString) || !query.exec() ) {
         kDebug() << "Error while querying for departures:" << query.lastError();
@@ -644,8 +588,8 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
     // Create a list of DepartureInfo objects from the query result
     QList<DepartureInfo*> departures;
     while ( query.next() ) {
-        QDate arrivalDate = dateTime.date();
-        QDate departureDate = dateTime.date();
+        QDate arrivalDate = requestInfo.dateTime.date();
+        QDate departureDate = requestInfo.dateTime.date();
 
         // Load agency information from cache
         const QVariant agencyIdValue = query.value( agencyIdColumn );
@@ -671,7 +615,7 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
         }
 
         QHash<TimetableInformation, QVariant> data;
-        if ( dataType == "arrivals" ) {
+        if ( requestInfo.dataType == "arrivals" ) {
             data[ DepartureDate ] = arrivalTime.date();
             data[ DepartureTime ] = arrivalTime.time();
         } else {
@@ -758,31 +702,26 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const QString &sour
 
     // TODO Do not use a list of pointers here, maybe use data sharing for PublicTransportInfo/StopInfo?
     // The objects in departures are deleted in a connected slot in the data engine...
-    emit departureListReceived( this, QUrl(), departures, GlobalTimetableInfo(), serviceProvider(),
-                                sourceName, city, stop, dataType, ParseForDeparturesArrivals );
+    emit departureListReceived( this, QUrl(), departures, GlobalTimetableInfo(), &requestInfo );
 }
 
-void TimetableAccessorGeneralTransitFeed::requestStopSuggestions( const QString &sourceName,
-        const QString &city, const QString &stop, ParseDocumentMode parseMode, int maxCount,
-        const QDateTime &dateTime, const QString &dataType, bool useDifferentUrl )
+void TimetableAccessorGeneralTransitFeed::requestStopSuggestions(
+        const StopSuggestionRequestInfo &requestInfo )
 {
-    if ( !checkState(sourceName, city, stop, maxCount, dateTime, dataType, useDifferentUrl,
-                     ParseForStopSuggestions) )
-    {
+    if ( !checkState(&requestInfo) ) {
         return;
     }
 
     QSqlQuery query( QSqlDatabase::database(serviceProvider()) );
     query.setForwardOnly( true );
-    QString stopValue = stop;
+    QString stopValue = requestInfo.stop;
     stopValue.replace( '\'', "\'\'" );
     if ( !query.prepare(QString("SELECT * FROM stops WHERE stop_name LIKE '%%1%' LIMIT %2")
                         .arg(stopValue).arg(STOP_SUGGESTION_LIMIT))
          || !query.exec() )
     {
         // Check of the error is a "disk I/O error", ie. the database file may have been deleted
-        checkForDiskIoErrorInDatabase( query.lastError(), sourceName, city, stop, maxCount,
-                                       dateTime, dataType, useDifferentUrl, parseMode );
+        checkForDiskIoErrorInDatabase( query.lastError(), &requestInfo );
         kDebug() << query.lastError();
         kDebug() << query.executedQuery();
         return;
@@ -803,10 +742,10 @@ void TimetableAccessorGeneralTransitFeed::requestStopSuggestions( const QString 
         // it's weight gets. If the found name equals the search string, the weight becomes 100.
         // Use 84 as maximal starting weight value (if stopName doesn't equal the search string),
         // because maximally 15 bonus points are added which makes 99, less than total equality 100.
-        int weight = stopName == stop ? 100
-                : 84 - qMin( 84, qAbs(stopName.length() - stop.length()) );
+        int weight = stopName == requestInfo.stop ? 100
+                : 84 - qMin( 84, qAbs(stopName.length() - requestInfo.stop.length()) );
 
-        if ( weight < 100 && stopName.startsWith(stop) ) {
+        if ( weight < 100 && stopName.startsWith(requestInfo.stop) ) {
             // 15 weight points bonus if the found stop name starts with the search string
             weight = qMin( 100, weight + 15 );
         }
@@ -814,7 +753,7 @@ void TimetableAccessorGeneralTransitFeed::requestStopSuggestions( const QString 
             // Test if the search string is the start of a new word in stopName
             // Start at 2, because startsWith is already tested above and at least a space must
             // follow to start a new word
-            int pos = stopName.indexOf( stop, 2, Qt::CaseInsensitive );
+            int pos = stopName.indexOf( requestInfo.stop, 2, Qt::CaseInsensitive );
 
             if ( pos != -1 && stopName[pos - 1].isSpace() ) {
                 // 10 weight points bonus if a word in the found stop name
@@ -822,14 +761,14 @@ void TimetableAccessorGeneralTransitFeed::requestStopSuggestions( const QString 
                 weight = qMin( 100, weight + 10 );
             }
         }
-        stops << new StopInfo( stopName, query.value(stopIdColumn).toString(), weight, city );
+        stops << new StopInfo( stopName, query.value(stopIdColumn).toString(), weight,
+                               requestInfo.city );
     }
 
     if ( stops.isEmpty() ) {
         kDebug() << "No stop names found";
     }
-    emit stopListReceived( this, QUrl(), stops, serviceProvider(), sourceName, city, stop,
-                           dataType, parseMode );
+    emit stopListReceived( this, QUrl(), stops, &requestInfo );
 
     // Cleanup
     foreach ( StopInfo *stop, stops ) {
@@ -838,22 +777,13 @@ void TimetableAccessorGeneralTransitFeed::requestStopSuggestions( const QString 
 }
 
 bool TimetableAccessorGeneralTransitFeed::checkForDiskIoErrorInDatabase( const QSqlError &error,
-        const QString &sourceName, const QString &city, const QString &stop, int maxCount,
-        const QDateTime &dateTime, const QString &dataType, bool useDifferentUrl,
-        ParseDocumentMode parseMode )
+        const RequestInfo *requestInfo )
 {
     // Check of the error is a "disk I/O" error or a "no such table" error, ie. the database file
     // may have been deleted.
     // The error numbers (1, 10) is database dependend and works with SQLITE
     if ( error.number() == 10 || error.number() == 1 ) {
         kDebug() << "Disk I/O error reported from database, recreate the database";
-
-        // Store information about the request to report import progress to
-//         if ( !m_jobInfos.contains(sourceName) ) {
-//             JobInfos jobInfos( parseMode, sourceName, city, stop, m_info->feedUrl(),
-//                                dataType, maxCount, dateTime, useDifferentUrl );
-//             m_jobInfos[ sourceName ] = jobInfos;
-//         }
 
         m_state = Initializing;
         QString errorText;
