@@ -583,8 +583,8 @@ TimetableAccessor* PublicTransportEngine::getSpecificAccessor( const QString &se
     if ( newlyCreated ) {
         connect( accessor, SIGNAL(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,const RequestInfo*)),
                  this, SLOT(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,const RequestInfo*)) );
-        connect( accessor, SIGNAL(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)),
-                 this, SLOT(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)) );
+        connect( accessor, SIGNAL(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,const RequestInfo*)),
+                 this, SLOT(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,const RequestInfo*)) );
         connect( accessor, SIGNAL(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,const RequestInfo*)),
                  this, SLOT(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,const RequestInfo*)) );
         connect( accessor, SIGNAL(errorParsing(TimetableAccessor*,ErrorCode,QString,QUrl,const RequestInfo*)),

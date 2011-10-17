@@ -21,7 +21,7 @@
 #include <KDebug>
 
 PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVariant >& data )
-	: QHash<TimetableInformation, QVariant>(data) 
+	: QHash<TimetableInformation, QVariant>(data)
 {
 	m_isValid = false;
 
@@ -262,7 +262,7 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
          && value(Duration).canConvert(QVariant::String) )
     {
         QString duration = value( Duration ).toString();
-        QTime timeDuration = QTime::fromString( duration, "hh:mm" );
+        QTime timeDuration = QTime::fromString( duration, "h:mm" );
         if ( timeDuration.isValid() ) {
             int minsDuration = QTime( 0, 0 ).secsTo( timeDuration ) / 60;
             insert( Duration, minsDuration );
@@ -332,7 +332,7 @@ StopInfo::StopInfo(const QHash< TimetableInformation, QVariant >& data)
 	m_isValid = contains( StopName );
 }
 
-StopInfo::StopInfo(const QString& name, const QString& id, int weight, const QString& city, 
+StopInfo::StopInfo(const QString& name, const QString& id, int weight, const QString& city,
 				   const QString& countryCode)
 {
 	insert( StopName, name );
@@ -447,7 +447,7 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 			sLineTypeLower == "en" || // EuroNight
 			sLineTypeLower == "nz" || // "Nachtzug"
 			sLineTypeLower == "icn" || // national long-distance train with tilting technology
-			sLineTypeLower.toInt() == static_cast<int>(IntercityTrain) ) { 
+			sLineTypeLower.toInt() == static_cast<int>(IntercityTrain) ) {
 		return IntercityTrain;
 	} else if ( sLineTypeLower == "ice" || // germany
 			sLineTypeLower == "tgv" ||  // france
@@ -456,7 +456,7 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 			sLineTypeLower == "est" || // eurostar
 			sLineTypeLower == "es" || // eurostar, High-speed, tilting trains for long-distance services
 			sLineTypeLower == "highspeed train" ||
-			sLineTypeLower.toInt() == static_cast<int>(HighSpeedTrain) ) { 
+			sLineTypeLower.toInt() == static_cast<int>(HighSpeedTrain) ) {
 		return HighSpeedTrain;
 	} else if ( sLineTypeLower == "feet" ||
 			sLineTypeLower == "by feet" ||
