@@ -200,7 +200,7 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
         const qreal routeStopAreaWidth = routeRect.width() - 20 * m_zoomFactor;
         const qreal minStep = fm.height() * 3.0;
 
-        // Compute number of route stop items 
+        // Compute number of route stop items
         // without using more space than routeStopAreaWidth
         int count = info->routeStops().count();
         if ( minStep * count > routeStopAreaWidth ) {
@@ -283,7 +283,7 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                         omittedStopList.join(",<nl/>")) );
                 continue;
             } else if ( positionIndex > omitIndex ) {
-                // Currently after the omitted stops, compute index in stop list 
+                // Currently after the omitted stops, compute index in stop list
                 // by adding omitted count to positional index
                 index = positionIndex + omitCount;
             } else {
@@ -772,6 +772,11 @@ JourneyRouteStopGraphicsItem::JourneyRouteStopGraphicsItem( JourneyRouteGraphics
     m_stopName = stopName;
     setText( text );
     setAcceptHoverEvents( true );
+}
+
+JourneyRouteStopGraphicsItem::~JourneyRouteStopGraphicsItem()
+{
+    delete m_infoTextDocument;
 }
 
 void JourneyRouteStopGraphicsItem::setText( const QString& text )

@@ -455,6 +455,9 @@ DepartureGraphicsItem::~DepartureGraphicsItem()
     if ( m_leavingAnimation ) {
         m_leavingAnimation->stop();
     }
+
+    delete m_infoTextDocument;
+    delete m_timeTextDocument;
 }
 
 JourneyGraphicsItem::JourneyGraphicsItem( PublicTransportWidget* publicTransportWidget,
@@ -468,6 +471,11 @@ JourneyGraphicsItem::JourneyGraphicsItem( PublicTransportWidget* publicTransport
         m_requestJourneyToStopAction(requestJourneyToStopAction),
         m_requestJourneyFromStopAction(requestJourneyFromStopAction)
 {
+}
+
+JourneyGraphicsItem::~JourneyGraphicsItem()
+{
+    delete m_infoTextDocument;
 }
 
 void DepartureGraphicsItem::setLeavingStep( qreal leavingStep )

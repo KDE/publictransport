@@ -230,6 +230,7 @@ class JourneySearchSuggestionItem : public QGraphicsWidget
 public:
     JourneySearchSuggestionItem( JourneySearchSuggestionWidget *parent,
                                 const QModelIndex& index );
+    ~JourneySearchSuggestionItem();
 
     void updateTextLayout();
     void updateData( const QModelIndex& index );
