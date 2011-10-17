@@ -466,6 +466,11 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
             i18nc("@info The description for the 'DepartureDate' info",
                   "The date of the departure."),
             "DepartureDate" ));
+    m_completionsTimetableInfo.insert( "str:DepartureTime", CompletionItem( Const, "DepartureTime",
+            i18nc("@info The description for the 'DepartureTime' info",
+                  "The time of the departure. Can be used instead of DepartureHour and "
+                  "DepartureMinute, can include seconds for more precision."),
+            "DepartureTime" ));
     m_completionsTimetableInfo.insert( "str:TypeOfVehicle", CompletionItem( Const, "TypeOfVehicle",
             i18nc("@info The description for the 'TypeOfVehicle' info", "The type of vehicle."),
             "TypeOfVehicle" ));

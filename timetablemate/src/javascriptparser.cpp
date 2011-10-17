@@ -329,7 +329,8 @@ void JavaScriptParser::checkFunctionCall( const QString &object, const QString &
                             "must be a string."), line, column );
                 } else {
                     QStringList timetableInfoStrings;
-                    timetableInfoStrings << "DepartureDate" << "DepartureHour" << "DepartureMinute"
+                    timetableInfoStrings << "DepartureDate" << "DepartureTime"
+                            << "DepartureHour" << "DepartureMinute"
                             << "TypeOfVehicle" << "TransportLine" << "FlightNumber" << "Target"
                             << "Platform" << "Delay" << "DelayReason" << "JourneyNews"
                             << "JourneyNewsOther" << "JourneyNewsLink" << "DepartureHourPrognosis"

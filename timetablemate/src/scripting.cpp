@@ -21,14 +21,14 @@
 
 void TimetableData::set( const QString &info, const QVariant& value ) {
     static QStringList validDepartureStrings = QStringList()
-		<< "departuredate" << "departurehour" << "departureminute" << "typeofvehicle"
+		<< "departuredate" << "departuretime" << "departurehour" << "departureminute" << "typeofvehicle"
 		<< "transportline" << "flightnumber" << "target" << "platform" << "delay" << "delayreason"
 		<< "journeynews" << "journeynewsother" << "journeynewslink" << "departurehourprognosis"
 		<< "departureminuteprognosis" << "operator" << "departureamorpm"
 		<< "departureamorpmprognosis" << "status" << "departureyear" << "routestops"
 		<< "routetimes" << "routeexactstops" << "isnightline";
     static QStringList validJourneyStrings = QStringList()
-		<< "departuredate" << "departurehour" << "departureminute" 
+		<< "departuredate" << "departuretime" << "departurehour" << "departureminute" 
 		<< "duration" << "startstopname" << "startstopid" << "targetstopname" << "targetstopid"
 		<< "arrivaldate" << "arrivalhour" << "arrivalminute" << "changes"
 		<< "typesofvehicleinjourney" << "pricing" << "routetransportlines" << "routetypesofvehicles"
