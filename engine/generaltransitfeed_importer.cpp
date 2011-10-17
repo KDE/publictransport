@@ -129,7 +129,6 @@ void GeneralTransitFeedImporter::run()
     bool feedSubDirectoryFound = false;
     forever {
         QStringList currentMissingFiles = requiredFiles;
-        qint64 currentTotalFileSize = 0;
         foreach ( const QString &directoryEntry, directoryEntries ) {
             currentMissingFiles.removeOne( directoryEntry );
         }

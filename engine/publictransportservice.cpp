@@ -33,7 +33,8 @@
 
 ImportGtfsToDatabaseJob::ImportGtfsToDatabaseJob( const QString &destination,
         const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
-        : ServiceJob(destination, operation, parameters, parent), m_info(0), m_importer(0)
+        : ServiceJob(destination, operation, parameters, parent),
+          m_state(Initializing), m_info(0), m_importer(0)
 {
     setCapabilities( Suspendable | Killable );
 

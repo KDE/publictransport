@@ -66,6 +66,7 @@ TimetableAccessorInfo::TimetableAccessorInfo( const QString& name,
 	m_onlyUseCitiesInList = false;
 	m_defaultVehicleType = Unknown;
 	m_minFetchWait = 0;
+    m_sessionKeyPlace = PutNowhere;
 }
 
 TimetableAccessorInfo::~TimetableAccessorInfo()
