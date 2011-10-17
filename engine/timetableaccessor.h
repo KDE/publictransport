@@ -40,7 +40,10 @@
  * All values other than @p sourceName are derived (parsed) from it or represent the current state
  * of the request.
  **/
-struct RequestInfo {
+class RequestInfo : public QObject {
+    Q_OBJECT
+
+public:
     /**
      * @brief The requesting source name.
      *
@@ -72,7 +75,7 @@ struct RequestInfo {
     /** @brief Describes what should be retrieved with the request, eg. departures or a a stop ID. */
     ParseDocumentMode parseMode;
 
-    RequestInfo()
+    RequestInfo( QObject *parent = 0 ) : QObject( parent )
     {
         this->parseMode = ParseInvalid;
         this->maxCount = -1;
@@ -82,13 +85,14 @@ struct RequestInfo {
     RequestInfo( const QString &sourceName, const QString &stop, const QDateTime &dateTime,
             int maxCount, const QString &dataType = "departures", bool useDifferentUrl = false,
             const QString &city = QString(),
-            ParseDocumentMode parseMode = ParseForDeparturesArrivals )
-            : sourceName(sourceName), dateTime(dateTime), stop(stop), maxCount(maxCount),
-              dataType(dataType), useDifferentUrl(useDifferentUrl), city(city), parseMode(parseMode)
+            ParseDocumentMode parseMode = ParseForDeparturesArrivals, QObject *parent = 0 )
+            : QObject(parent), sourceName(sourceName), dateTime(dateTime), stop(stop),
+              maxCount(maxCount), dataType(dataType), useDifferentUrl(useDifferentUrl),
+              city(city), parseMode(parseMode)
     {
     };
 
-    RequestInfo( const RequestInfo &info )
+    RequestInfo( const RequestInfo &info, QObject *parent = 0 ) : QObject(parent)
     {
         sourceName = info.sourceName;
         dateTime = info.dateTime;
@@ -99,8 +103,6 @@ struct RequestInfo {
         city = info.city;
         parseMode = info.parseMode;
     };
-
-    virtual ~RequestInfo() {};
 
     virtual RequestInfo *clone() const
     {
@@ -119,7 +121,10 @@ typedef RequestInfo DepartureRequestInfo;
  * of the request, eg. @p roundTrips stores the number of requests sent to a server to get
  * enough data (each round trip adds some data).
  **/
-struct JourneyRequestInfo : public RequestInfo {
+class JourneyRequestInfo : public RequestInfo {
+    Q_OBJECT
+
+public:
     /** @brief The target stop name of the request. */
     QString targetStop;
 
@@ -519,20 +524,22 @@ protected:
 
 	struct JobInfos {
         // Mainly for QHash
-	    JobInfos() : requestInfo(0) {
+	    JobInfos() : requestInfo(0)
+        {
 		};
 
-        JobInfos( const KUrl &url, RequestInfo *requestInfo ) : requestInfo(requestInfo) {
+        JobInfos( const KUrl &url, RequestInfo *requestInfo )
+                : requestInfo(requestInfo)
+        {
 			this->url = url;
 	    };
 
         ~JobInfos()
         {
-            delete requestInfo;
         };
 
         KUrl url;
-        RequestInfo *requestInfo;
+        QSharedPointer<RequestInfo> requestInfo;
 	};
 
 private:

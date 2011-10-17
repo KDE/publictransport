@@ -716,19 +716,19 @@ void TimetableAccessor::result( KJob* job )
 	if ( storedJob->error() != 0 ) {
 		kDebug() << "Error in job:" << storedJob->error() << storedJob->errorString();
 		emit errorParsing( this, ErrorDownloadFailed, storedJob->errorString(), jobInfo.url,
-                           jobInfo.requestInfo );
+                           jobInfo.requestInfo.data() );
 	}
 
 	if ( parseDocumentMode == ParseForStopSuggestions ) {
 		// A stop suggestion request has finished
 		if ( parseDocumentPossibleStops(document, &stopList) ) {
 			emit stopListReceived( this, jobInfo.url, stopList,
-								   jobInfo.requestInfo );
+								   jobInfo.requestInfo.data() );
 		} else {
 			kDebug() << "Error parsing for stop suggestions" << jobInfo.requestInfo->sourceName;
 			emit errorParsing( this, ErrorParsingFailed,
 							   i18n("Error while parsing the timetable document."),
-							   jobInfo.url, jobInfo.requestInfo );
+							   jobInfo.url, jobInfo.requestInfo.data() );
 		}
 
 		return;
@@ -743,11 +743,11 @@ void TimetableAccessor::result( KJob* job )
 					kDebug() << "No stop ID found for the given stop name, "
                                 "now requesting departures using the stop name";
                     DepartureRequestInfo *newRequestInfo =
-                            static_cast<DepartureRequestInfo*>( jobInfo.requestInfo );
+                            static_cast<DepartureRequestInfo*>( jobInfo.requestInfo.data() );
 					requestDepartures( *newRequestInfo );
 				} else {
                     DepartureRequestInfo *newRequestInfo =
-                            static_cast<DepartureRequestInfo*>( jobInfo.requestInfo );
+                            static_cast<DepartureRequestInfo*>( jobInfo.requestInfo.data() );
                     newRequestInfo->stop = stopList.first()->id();
 					requestDepartures( *newRequestInfo );
 				}
@@ -758,7 +758,7 @@ void TimetableAccessor::result( KJob* job )
                      << jobInfo.requestInfo->sourceName;
 			emit errorParsing( this, ErrorParsingFailed,
 							   i18n("Error while parsing the timetable document."),
-							   jobInfo.url, jobInfo.requestInfo );
+							   jobInfo.url, jobInfo.requestInfo.data() );
 		}
 	} else if ( parseDocumentMode == ParseForSessionKeyThenStopSuggestions ||
 				parseDocumentMode == ParseForSessionKeyThenDepartures )
@@ -769,9 +769,9 @@ void TimetableAccessor::result( KJob* job )
 			if ( !m_sessionKey.isEmpty() ) {
 				// Now request stop suggestions using the session key
 				if ( parseDocumentMode == ParseForSessionKeyThenStopSuggestions ) {
-					requestStopSuggestions( *jobInfo.requestInfo );
+					requestStopSuggestions( *jobInfo.requestInfo.data() );
 				} else if ( parseDocumentMode == ParseForSessionKeyThenDepartures ) {
-					requestDepartures( *jobInfo.requestInfo );
+					requestDepartures( *jobInfo.requestInfo.data() );
 				}
 				m_sessionKeyGetTime.start();
 
@@ -790,7 +790,7 @@ void TimetableAccessor::result( KJob* job )
 		QString sNextUrl;
 		if ( parseDocumentMode == ParseForJourneys ) {
             const JourneyRequestInfo *journeyRequestInfo =
-                    static_cast<JourneyRequestInfo*>( jobInfo.requestInfo );
+                    static_cast<JourneyRequestInfo*>( jobInfo.requestInfo.data() );
 			if ( journeyRequestInfo->roundTrips < 2 ) {
 				sNextUrl = parseDocumentForLaterJourneysUrl( document );
 			} else if ( journeyRequestInfo->roundTrips == 2 ) {
@@ -807,38 +807,38 @@ void TimetableAccessor::result( KJob* job )
                     departures << dynamic_cast< DepartureInfo* >( info );
                 }
 				emit departureListReceived( this, jobInfo.url, departures, globalInfo,
-											jobInfo.requestInfo );
+											jobInfo.requestInfo.data() );
 			} else if ( parseDocumentMode == ParseForJourneys ) {
 				QList<JourneyInfo*> journeys;
 				foreach( PublicTransportInfo *info, dataList ) {
                     journeys << dynamic_cast< JourneyInfo* >( info );
                 }
 				emit journeyListReceived( this, jobInfo.url, journeys, globalInfo,
-                                          jobInfo.requestInfo );
+                                          jobInfo.requestInfo.data() );
 			}
 			// Parsing has failed, try to parse stop suggestions.
 			// First request departures using a different url if that is a special
 			// url for stop suggestions.
 		} else if ( hasSpecialUrlForStopSuggestions() ) {
             DepartureRequestInfo *newRequestInfo =
-                    static_cast<DepartureRequestInfo*>( jobInfo.requestInfo );
+                    static_cast<DepartureRequestInfo*>( jobInfo.requestInfo.data() );
             newRequestInfo->city = m_curCity;
             newRequestInfo->useDifferentUrl = true;
 			requestDepartures( *newRequestInfo );
 			// Parse for stop suggestions
 		} else if ( parseDocumentPossibleStops(document, &stopList) ) {
 			kDebug() << "Stop suggestion list received" << parseDocumentMode;
-			emit stopListReceived( this, jobInfo.url, stopList, jobInfo.requestInfo );
+			emit stopListReceived( this, jobInfo.url, stopList, jobInfo.requestInfo.data() );
 		} else { // All parsing has failed
 			emit errorParsing( this, ErrorParsingFailed, i18n("Error while parsing."),
-							   jobInfo.url, jobInfo.requestInfo );
+							   jobInfo.url, jobInfo.requestInfo.data() );
 		}
 
 		if ( parseDocumentMode == ParseForJourneys ) {
 			if ( !sNextUrl.isNull() && !sNextUrl.isEmpty() ) {
 				kDebug() << "Request parsed url:" << sNextUrl;
                 JourneyRequestInfo *newRequestInfo =
-                        static_cast<JourneyRequestInfo*>( jobInfo.requestInfo );
+                        static_cast<JourneyRequestInfo*>( jobInfo.requestInfo.data() );
 				++newRequestInfo->roundTrips;
                 newRequestInfo->urlToUse = sNextUrl;
                 requestJourneys( *newRequestInfo );
@@ -846,12 +846,12 @@ void TimetableAccessor::result( KJob* job )
 		}
 		// Used a different url for requesting data, the data contains stop suggestions
 	} else if ( parseDocumentPossibleStops(document, &stopList) ) {
-		emit stopListReceived( this, jobInfo.url, stopList, jobInfo.requestInfo );
+		emit stopListReceived( this, jobInfo.url, stopList, jobInfo.requestInfo.data() );
 	} else {
 		kDebug() << "Error parsing for stop suggestions from different url" << jobInfo.requestInfo->sourceName;
 		emit errorParsing( this, ErrorParsingFailed,
 						   i18n("Error while parsing the stop suggestions document."),
-						   jobInfo.url, jobInfo.requestInfo );
+						   jobInfo.url, jobInfo.requestInfo.data() );
 	}
 }
 
