@@ -46,6 +46,11 @@ JourneySearchSuggestionItem::JourneySearchSuggestionItem(
     updateData( modelIndex );
 }
 
+JourneySearchSuggestionItem::~JourneySearchSuggestionItem()
+{
+    delete m_textDocument;
+}
+
 void JourneySearchSuggestionItem::updateTextLayout()
 {
     if ( !m_initializing && (!m_textDocument || (m_textDocument->pageSize() != size())) ) {

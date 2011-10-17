@@ -65,7 +65,7 @@ class PublicTransportWidget;
  * The height of the item without the expand area can be given by overwriting @ref unexpandedHeight,
  * overwrite @ref expandAreaHeight to give the height of the expand area. The expand area can be
  * indented by overwriting @ref expandAreaIndentation, by default no indentation is used.
- * 
+ *
  * To programatically change the expanded state use @ref toggleExpanded or @ref setExpanded, get
  * the state using @ref isExpanded.
  **/
@@ -142,7 +142,7 @@ public:
      * @brief Checks whether or not there is a extra icon in the model in the given @p column.
      *
      * @param column The column to check for an icon. Default is ColumnTarget.
-     * 
+     *
      * @return True, if there is an icon in the given @p column, ie. there is a QIcon stored in
      *   the model for the @ref Qt::DecorationRole.
      **/
@@ -251,7 +251,7 @@ public:
 
     /**
      * @brief Called to paint the expand area.
-     * 
+     *
      * This gets only called if @ref isExpanded returns true or if @ref expandStep is bigger
      * than zero.
      *
@@ -312,7 +312,7 @@ public:
 
 /**
  * @brief A QGraphicsWidget representing a departure/arrival with public transport.
- * 
+ *
  * It gets normally added into @ref TimetableWidget and can include other items like
  * @ref RouteGraphicsItem.
  **/
@@ -474,6 +474,7 @@ public:
                                   StopAction *requestJourneyToStopAction = 0,
                                   StopAction *requestJourneyFromStopAction = 0/*,
                                   QAction *toggleAlarmAction = 0*/ );
+    virtual ~JourneyGraphicsItem();
 
     /**
      * @brief Updates this graphics item to visualize the given @p item.
