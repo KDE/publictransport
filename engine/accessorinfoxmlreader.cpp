@@ -27,6 +27,7 @@
 #include <KLocalizedString>
 #include <KLocale>
 #include <KDebug>
+
 #include <QFile>
 #include <QFileInfo>
 
@@ -47,13 +48,13 @@ TimetableAccessorInfo* AccessorInfoXmlReader::read( QIODevice *device,
         readNext();
 
         if ( isStartElement() ) {
-            if ( name().compare( "accessorInfo", Qt::CaseInsensitive ) == 0
-                        && attributes().value( "fileVersion" ) == "1.0" ) {
+            if ( name().compare("accessorInfo", Qt::CaseInsensitive) == 0 &&
+                 attributes().value("fileVersion") == "1.0" )
+            {
                 ret = readAccessorInfo( serviceProvider, fileName, country );
                 break;
             } else {
-                raiseError( "The file is not a public transport accessor info "
-                            "version 1.0 file." );
+                raiseError( "The file is not a public transport accessor info version 1.0 file." );
             }
         }
     }
@@ -82,8 +83,8 @@ void AccessorInfoXmlReader::readUnknownElement()
 	}
 }
 
-TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo( const QString &serviceProvider,
-		const QString &fileName, const QString &country )
+TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo(
+        const QString &serviceProvider, const QString &fileName, const QString &country )
 {
 	QString lang = KGlobal::locale()->country();
 	QString langRead;
@@ -246,7 +247,6 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo( const QString &s
 	accessorInfo->setDescription( descriptionLocal.isEmpty() ? descriptionEn : descriptionLocal );
 	accessorInfo->finish();
 
-// 	// Create the accessor
 	if ( accessorInfo->accessorType() == ScriptedAccessor ) {
 		// Ensure a script is specified
 		if ( accessorInfo->scriptFileName().isEmpty() ) {
@@ -256,15 +256,6 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo( const QString &s
 		}
 
 		return accessorInfo;
-		// Create the accessor and check for script errors
-// 		TimetableAccessorScript *scriptAccessor = new TimetableAccessorScript( accessorInfo );
-// 		if ( !scriptAccessor->hasScriptErrors() ) {
-// 			return scriptAccessor;
-// 		} else {
-// 			delete scriptAccessor;
-// 			raiseError( "Couldn't correctly load the script (bad script)" );
-// 			return 0;
-// 		}
 	} else if ( accessorInfo->accessorType() == XmlAccessor ) {
 		// Warn if no script is specified
 		if ( accessorInfo->scriptFileName().isEmpty() ) {
@@ -273,26 +264,13 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo( const QString &s
 		}
 
         return accessorInfo;
-		// Create the accessor and check for script errors
-// 		TimetableAccessorXml *xmlAccessor = new TimetableAccessorXml( accessorInfo );
-// 		if ( xmlAccessor->stopSuggestionAccessor() &&
-// 			 xmlAccessor->stopSuggestionAccessor()->hasScriptErrors() )
-// 		{
-// 			delete xmlAccessor;
-// 			raiseError( "Couldn't correctly load the script (bad script)" );
-// 			return 0;
-// 		} else {
-// 			return xmlAccessor;
-// 		}
 	} else if ( accessorInfo->accessorType() == GtfsAccessor ) {
-        // Create the accessor and check for script errors
         return accessorInfo;
-//         return new TimetableAccessorGeneralTransitFeed( accessorInfo );
+    } else {
+        delete accessorInfo;
+        raiseError( QString("Accessor type %1 not supported").arg(accessorInfo->accessorType()) );
+        return 0;
     }
-
-	delete accessorInfo;
-	raiseError( QString("Accessor type %1 not supported").arg(accessorInfo->accessorType()) );
-	return 0;
 }
 
 QString AccessorInfoXmlReader::readLocalizedTextElement( QString *lang )

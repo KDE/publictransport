@@ -66,16 +66,13 @@ public:
      *
      * @return A TimetableAccessorInfo object or 0 on error.
      **/
-//     TimetableAccessor* readAndCreate( QIODevice *device, const QString &serviceProvider,
-//                              const QString &fileName, const QString &country  );
-
     TimetableAccessorInfo* read( QIODevice *device, const QString &serviceProvider,
-                             const QString &fileName, const QString &country  );
+                                        const QString &fileName, const QString &country  );
 
 private:
     void readUnknownElement();
     TimetableAccessorInfo* readAccessorInfo( const QString &serviceProvider,
-                                         const QString &fileName, const QString &country  );
+            const QString &fileName, const QString &country  );
     QString readLocalizedTextElement( QString *lang );
     bool readBooleanElement();
     void readAuthor( QString *fullname, QString *shortName, QString *email );
