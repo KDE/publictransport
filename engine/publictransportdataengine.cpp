@@ -51,7 +51,7 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
 	// Add service provider source, so when using
 	// dataEngine("publictransport").sources() in an applet it at least returns this
 // 	setData( sourceTypeKeyword(ServiceProviders), DataEngine::Data() );
-// 	setData( sourceTypeKeyword(ErrornousServiceProviders), DataEngine::Data() );
+// 	setData( sourceTypeKeyword(ErroneousServiceProviders), DataEngine::Data() );
 // 	setData( sourceTypeKeyword(Locations), DataEngine::Data() );
 }
 
@@ -103,7 +103,7 @@ QHash< QString, QVariant > PublicTransportEngine::locations()
     const QStringList dirs = KGlobal::dirs()->findDirs( "data",
             "plasma_engine_publictransport/accessorInfos" );
 
-    // Update ServiceProviders source to fill m_errornousAccessors
+    // Update ServiceProviders source to fill m_erroneousAccessors
     updateServiceProviderSource();
 
     foreach( const QString &accessor, accessors ) {
@@ -115,7 +115,7 @@ QHash< QString, QVariant > PublicTransportEngine::locations()
         const QString accessorFileName = QFileInfo( accessor ).fileName();
         const QString accessorId =
                 TimetableAccessor::serviceProviderIdFromFileName( accessorFileName );
-        if ( m_errornousAccessors.contains(accessorId) ) {
+        if ( m_erroneousAccessors.contains(accessorId) ) {
             // Accessor is erroneous
             continue;
         }
@@ -201,8 +201,8 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
 		setData( name, serviceProviderInfo(accessor) );
 		delete accessor;
 	} else {
-		if ( !m_errornousAccessors.contains(accessorId) ) {
-			m_errornousAccessors << accessorId;
+		if ( !m_erroneousAccessors.contains(accessorId) ) {
+			m_erroneousAccessors << accessorId;
 		}
 		return false;
 	}
@@ -234,7 +234,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
 		}
 
 		QStringList loadedAccessors;
-		m_errornousAccessors.clear();
+		m_erroneousAccessors.clear();
 		foreach( const QString &fileName, fileNames ) {
 			if ( QFileInfo(fileName).isSymLink() && fileName.endsWith(QLatin1String("_default.xml")) ) {
 				// Don't use symlinks to default service providers
@@ -249,13 +249,13 @@ bool PublicTransportEngine::updateServiceProviderSource()
 				loadedAccessors << s;
 				delete accessor;
 			} else {
-				m_errornousAccessors << s;
+				m_erroneousAccessors << s;
 			}
 		}
 
 		kDebug() << "Loaded" << loadedAccessors.count() << "accessors";
-		if ( !m_errornousAccessors.isEmpty() ) {
-			kDebug() << "Errornous accessor info XMLs, that couldn't be loaded:" << m_errornousAccessors;
+		if ( !m_erroneousAccessors.isEmpty() ) {
+			kDebug() << "Erroneous accessor info XMLs, that couldn't be loaded:" << m_erroneousAccessors;
 		}
 
 		m_dataSources.insert( name, dataSource );
@@ -268,9 +268,9 @@ bool PublicTransportEngine::updateServiceProviderSource()
 	return true;
 }
 
-void PublicTransportEngine::updateErrornousServiceProviderSource( const QString &name )
+void PublicTransportEngine::updateErroneousServiceProviderSource( const QString &name )
 {
-	setData( name, "names", m_errornousAccessors );
+	setData( name, "names", m_erroneousAccessors );
 }
 
 bool PublicTransportEngine::updateLocationSource()
@@ -517,8 +517,8 @@ const QString PublicTransportEngine::sourceTypeKeyword( SourceType sourceType )
 		return "ServiceProvider";
 	case ServiceProviders:
 		return "ServiceProviders";
-	case ErrornousServiceProviders:
-		return "ErrornousServiceProviders";
+	case ErroneousServiceProviders:
+		return "ErroneousServiceProviders";
 	case Locations:
 		return "Locations";
 	case Departures:
@@ -546,9 +546,9 @@ PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
 		return ServiceProvider;
 	} else if ( sourceName.compare(sourceTypeKeyword(ServiceProviders), Qt::CaseInsensitive) == 0 ) {
 		return ServiceProviders;
-	} else if ( sourceName.compare(sourceTypeKeyword(ErrornousServiceProviders),
+	} else if ( sourceName.compare(sourceTypeKeyword(ErroneousServiceProviders),
 								   Qt::CaseInsensitive) == 0 ) {
-		return ErrornousServiceProviders;
+		return ErroneousServiceProviders;
 	} else if ( sourceName.compare(sourceTypeKeyword(Locations), Qt::CaseInsensitive) == 0 ) {
 		return Locations;
 	} else if ( sourceName.startsWith(sourceTypeKeyword(Departures), Qt::CaseInsensitive) ) {
@@ -579,8 +579,8 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name )
 	case ServiceProviders:
 		ret = updateServiceProviderSource();
 		break;
-	case ErrornousServiceProviders:
-		updateErrornousServiceProviderSource( name );
+	case ErroneousServiceProviders:
+		updateErroneousServiceProviderSource( name );
 		break;
 	case Locations:
 		ret = updateLocationSource();

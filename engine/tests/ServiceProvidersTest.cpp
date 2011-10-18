@@ -100,7 +100,7 @@ void ServiceProvidersTest::serviceProviderTest()
 		QString countryCode = regExpServiceProviderId.cap( 1 );
 		QVERIFY2( KGlobal::locale()->allCountriesList().contains(countryCode)
 			|| countryCode == QLatin1String("international") || countryCode == QLatin1String("unknown")
-			|| countryCode == QLatin1String("errornous"),
+			|| countryCode == QLatin1String("erroneous"),
 			QString("Invalid country code \"%1\"").arg(countryCode).toLatin1().data() );
 		
 		// Ensure the country key contains the same country code as the id

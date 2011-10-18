@@ -74,7 +74,7 @@ void LocationsTest::locationTest()
 		QString name = locationData["name"].toString();
 		QVERIFY2( KGlobal::locale()->allCountriesList().contains(name)
 			|| name == QLatin1String("international") || name == QLatin1String("unknown")
-			|| name == QLatin1String("errornous"),
+			|| name == QLatin1String("erroneous"),
 			QString("Invalid country code \"%1\"").arg(name).toLatin1().data() );
 		
 		// Ensure that the default accessor starts with the country code (given in "name")

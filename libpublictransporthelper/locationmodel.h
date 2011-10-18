@@ -56,7 +56,7 @@ public:
 		Country = 2, /**< Displays a country. */
 		International = 3, /**< Special type for accessors that support countries all over the world. */
 		Unknown = 4, /**< For accessors with unknown country. */
-		Errornous = 5 /**< Displays errornous accessors. */
+		Erroneous = 5 /**< Displays erroneous accessors. */
 	};
 	
 	/**
@@ -83,7 +83,7 @@ public:
 	/** 
 	 * @brief Gets the country code of the location, if the type is @ref Country.
 	 * 
-	 * Otherwise "unknown", "international", "showAll" or "errornous" is returned. */
+	 * Otherwise "unknown", "international", "showAll" or "erroneous" is returned. */
 	QString countryCode() const;
 
 	/** @brief Gets the (unformatted) text to be displayed for this item. */
@@ -153,7 +153,7 @@ public:
 
 	/**
 	 * @brief Gets flags for the given @p index.
-	 * It's used to mark items of type Errornous as non-selectable.
+	 * It's used to mark items of type Erroneous as non-selectable.
 	 *
 	 * @param index The index of the item to get flags for.
 	 * @return The flags of the given @p index.
