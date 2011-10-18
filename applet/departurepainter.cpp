@@ -117,8 +117,30 @@ void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
 
         // Draw transport line string (only for local public transport)
         if ( drawTransportLine ) {
-            QString text = transportLine;
-            text.replace(' ', QString());
+            QString text;
+            if ( transportLine.length() > 8 ) {
+                // The transport line string is too long to be drawn inside a vehicle icon
+                const QStringList words = transportLine.split( QRegExp("[ \\-_\\+&/\\\\]"),
+                                                               QString::SkipEmptyParts );
+                if ( words.count() == 1 ) {
+                    // No spaces in the transport line string, remove all lower case letters
+                    text = words[0];
+                    text.remove( QRegExp("[a-z]+") );
+                    if ( text.length() > 8 ) {
+                        // Still more than eight characters, cut the string
+                        text = text.left( 8 );
+                    }
+                } else {
+                    // Multiple words in the transport line string,
+                    // create an abbreviation by only using the first letter of each word
+                    foreach ( const QString &word, words ) {
+                        text += word[0]; // Empty parts are skipped, therefore word is not empty
+                    }
+                }
+            } else {
+                text = transportLine;
+                text.replace(' ', QString());
+            }
 
             QFont font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
             font.setBold( true );
@@ -157,17 +179,16 @@ void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
     // Make a part 70% transparent, dependend on minsToDeparture
     if ( iconDrawFlags.testFlag(DrawTimeGraphics) && minutesUntilDeparture > 0 ) {
         // Draw graphical indication for the time until departure/arrival
-        QPixmap polygonPixmap( vehiclePixmap.width(), vehiclePixmap.height() );
+        QPixmap polygonPixmap;
         const QString polygonCacheKey = QString("polygon%1%2%3")
                 .arg( qMin(minutesUntilDeparture, int(MAX_MINUTES_UNTIL_DEPARTURE)) )
                 .arg( vehiclePixmap.width() ).arg( vehiclePixmap.height() );
 
         if ( !m_pixmapCache->find(polygonCacheKey, polygonPixmap) ) {
+            polygonPixmap = QPixmap( vehiclePixmap.width(), vehiclePixmap.height() );
             if ( minutesUntilDeparture >= MAX_MINUTES_UNTIL_DEPARTURE ) {
-                // Make the SVG in pixmap 70% transparent
-                QPainter polygonPainter( &polygonPixmap );
-                polygonPainter.fillRect( polygonPixmap.rect(), QColor(0, 0, 0, 77) );
-                polygonPainter.end();
+                // Make the whole SVG in pixmap 70% transparent
+                polygonPixmap.fill( QColor(0, 0, 0, 77) );
             } else {
                 // Construct a polygon for the transparency effect visualizing minsToDeparture
                 QPolygon polygon;
