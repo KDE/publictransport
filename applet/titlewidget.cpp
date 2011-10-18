@@ -58,7 +58,7 @@ TitleWidget::TitleWidget(TitleType titleType, Settings *settings, QGraphicsItem*
 template <typename T>
 T* TitleWidget::castedWidget(WidgetType widgetType) const
 {
-    return qobject_cast<T*>( m_widgets[widgetType] );
+    return qgraphicsitem_cast<T*>( m_widgets[widgetType] );
 }
 
 QString TitleWidget::title() const
