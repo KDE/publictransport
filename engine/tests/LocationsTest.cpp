@@ -26,8 +26,8 @@
 
 void LocationsTest::initTestCase()
 {
-	Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
-	m_publicTransportEngine = manager->loadEngine( "publictransport" );
+    Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
+    m_publicTransportEngine = manager->loadEngine( "publictransport" );
 }
 
 void LocationsTest::init()
@@ -38,54 +38,54 @@ void LocationsTest::cleanup()
 
 void LocationsTest::cleanupTestCase()
 {
-	Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
-	manager->unloadEngine( "publictransport" );
+    Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
+    manager->unloadEngine( "publictransport" );
 }
 
 void LocationsTest::locationTest()
 {
-	// Connect source and wait until the dataUpdated slot gets called in testVisualization
-	QString sourceName = "Locations";
-	QEventLoop loop;
-	TestVisualization testVisualization;
-	loop.connect( &testVisualization, SIGNAL(completed()), SLOT(quit()) );
-	m_publicTransportEngine->connectSource( sourceName, &testVisualization );
-	QTimer::singleShot( 5000, &loop, SLOT(quit()) ); // timeout after 5 seconds
-	loop.exec();
-	
-	foreach ( const QString &country, testVisualization.data.keys() )
-	{
-		QVariantHash locationData = testVisualization.data[country].toHash();
-		
-		// Each location object should contain some elements
-		QVERIFY( !locationData.isEmpty() );
-		
-		// Ensure that these keys are in the hash
-		QVERIFY( locationData.contains("name") );
-		QVERIFY( locationData.contains("description") );
-		QVERIFY( locationData.contains("defaultAccessor") );
-		
-		// Test data types
-		QVERIFY( locationData["name"].canConvert(QVariant::String) );
-		QVERIFY( locationData["description"].canConvert(QVariant::String) );
-		QVERIFY( locationData["defaultAccessor"].canConvert(QVariant::String) );
-		
-		// Ensure that the used country code is known
-		QString name = locationData["name"].toString();
-		QVERIFY2( KGlobal::locale()->allCountriesList().contains(name)
-			|| name == QLatin1String("international") || name == QLatin1String("unknown")
-			|| name == QLatin1String("erroneous"),
-			QString("Invalid country code \"%1\"").arg(name).toLatin1().data() );
-		
-		// Ensure that the default accessor starts with the country code (given in "name")
-		QVERIFY2( locationData["defaultAccessor"].toString().startsWith(locationData["name"].toString()),
-			QString("Wrong defaultAccessor \"%1\" for \"%2\", should start with \"%2_\"")
-			.arg(locationData["defaultAccessor"].toString())
-			.arg(locationData["name"].toString()).toLatin1().data() );
-	}
-	m_publicTransportEngine->disconnectSource( sourceName, this );
-	QVERIFY2( !testVisualization.data.isEmpty(), "No data for source name 'Locations' in 5 seconds" );
-// 	QCOMPARE( stop.id, QString() );
+    // Connect source and wait until the dataUpdated slot gets called in testVisualization
+    QString sourceName = "Locations";
+    QEventLoop loop;
+    TestVisualization testVisualization;
+    loop.connect( &testVisualization, SIGNAL(completed()), SLOT(quit()) );
+    m_publicTransportEngine->connectSource( sourceName, &testVisualization );
+    QTimer::singleShot( 5000, &loop, SLOT(quit()) ); // timeout after 5 seconds
+    loop.exec();
+
+    foreach ( const QString &country, testVisualization.data.keys() )
+    {
+        QVariantHash locationData = testVisualization.data[country].toHash();
+
+        // Each location object should contain some elements
+        QVERIFY( !locationData.isEmpty() );
+
+        // Ensure that these keys are in the hash
+        QVERIFY( locationData.contains("name") );
+        QVERIFY( locationData.contains("description") );
+        QVERIFY( locationData.contains("defaultAccessor") );
+
+        // Test data types
+        QVERIFY( locationData["name"].canConvert(QVariant::String) );
+        QVERIFY( locationData["description"].canConvert(QVariant::String) );
+        QVERIFY( locationData["defaultAccessor"].canConvert(QVariant::String) );
+
+        // Ensure that the used country code is known
+        QString name = locationData["name"].toString();
+        QVERIFY2( KGlobal::locale()->allCountriesList().contains(name)
+            || name == QLatin1String("international") || name == QLatin1String("unknown")
+            || name == QLatin1String("erroneous"),
+            QString("Invalid country code \"%1\"").arg(name).toLatin1().data() );
+
+        // Ensure that the default accessor starts with the country code (given in "name")
+        QVERIFY2( locationData["defaultAccessor"].toString().startsWith(locationData["name"].toString()),
+            QString("Wrong defaultAccessor \"%1\" for \"%2\", should start with \"%2_\"")
+            .arg(locationData["defaultAccessor"].toString())
+            .arg(locationData["name"].toString()).toLatin1().data() );
+    }
+    m_publicTransportEngine->disconnectSource( sourceName, this );
+    QVERIFY2( !testVisualization.data.isEmpty(), "No data for source name 'Locations' in 5 seconds" );
+//     QCOMPARE( stop.id, QString() );
 }
 
 QTEST_MAIN(LocationsTest)

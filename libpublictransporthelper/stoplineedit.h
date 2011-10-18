@@ -26,58 +26,58 @@
 
 /** @brief Namespace for the publictransport helper library. */
 namespace Timetable {
-    
+
 class StopLineEditPrivate;
 
 /**
  * @brief A KLineEdit that provides stop name autocompletion.
- * 
- * Uses the publictransport data engine to get stop name suggestions. The service provider to be 
+ *
+ * Uses the publictransport data engine to get stop name suggestions. The service provider to be
  * used for suggestions must be specified in the constructor or via @ref setServiceProvider.
  * If the service provider requires a city to be set you need to also set a city name using
  * @ref setCity.
  **/
 class PUBLICTRANSPORTHELPER_EXPORT StopLineEdit : public KLineEdit
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	explicit StopLineEdit( QWidget* parent = 0, const QString &serviceProvider = QString(),
-						   KGlobalSettings::Completion completion = KGlobalSettings::CompletionPopup );
-	virtual ~StopLineEdit();
-	
-	/**
-	 * @brief Sets the ID of the service provider to be used for stop name suggestions.
-	 *
-	 * @param serviceProvider The new service provider ID to be used for stop name suggestions.
-	 **/
-	void setServiceProvider( const QString &serviceProvider );
-	
-	/** @brief Gets the ID of the service provider that is used for stop name suggestions. */
-	QString serviceProvider() const;
-	
-	/**
-	 * @brief Sets the city to be used for stop name suggestions.
-	 *
-	 * @param city The new city to be used for stop name suggestions.
-	 **/
-	void setCity( const QString &city );
-	
-	/** @brief Gets the city that is used for stop name suggestions. */
-	QString city() const;
-	
-protected Q_SLOTS:
-	/** @brief Stop suggestion data arrived from the data engine. */
-	void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
+    explicit StopLineEdit( QWidget* parent = 0, const QString &serviceProvider = QString(),
+                           KGlobalSettings::Completion completion = KGlobalSettings::CompletionPopup );
+    virtual ~StopLineEdit();
 
-	/** @brief The stop name was edited. */
-	void edited( const QString &newText );
-	
+    /**
+     * @brief Sets the ID of the service provider to be used for stop name suggestions.
+     *
+     * @param serviceProvider The new service provider ID to be used for stop name suggestions.
+     **/
+    void setServiceProvider( const QString &serviceProvider );
+
+    /** @brief Gets the ID of the service provider that is used for stop name suggestions. */
+    QString serviceProvider() const;
+
+    /**
+     * @brief Sets the city to be used for stop name suggestions.
+     *
+     * @param city The new city to be used for stop name suggestions.
+     **/
+    void setCity( const QString &city );
+
+    /** @brief Gets the city that is used for stop name suggestions. */
+    QString city() const;
+
+protected Q_SLOTS:
+    /** @brief Stop suggestion data arrived from the data engine. */
+    void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
+
+    /** @brief The stop name was edited. */
+    void edited( const QString &newText );
+
 protected:
-	StopLineEditPrivate* const d_ptr;
+    StopLineEditPrivate* const d_ptr;
 
 private:
-	Q_DECLARE_PRIVATE( StopLineEdit )
-	Q_DISABLE_COPY( StopLineEdit )
+    Q_DECLARE_PRIVATE( StopLineEdit )
+    Q_DISABLE_COPY( StopLineEdit )
 };
 
 /**
@@ -86,29 +86,29 @@ private:
 class PUBLICTRANSPORTHELPER_EXPORT StopLineEditList : public DynamicLabeledLineEditList
 {
 public:
-	StopLineEditList( QWidget* parent = 0, 
-					  RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets, 
-					  AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget, 
-					  SeparatorOptions separatorOptions = NoSeparator, 
-					  NewWidgetPosition newWidgetPosition = AddWidgetsAtBottom, 
-					  const QString& labelText = "Item %1:" );
-	
+    StopLineEditList( QWidget* parent = 0,
+                      RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
+                      AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
+                      SeparatorOptions separatorOptions = NoSeparator,
+                      NewWidgetPosition newWidgetPosition = AddWidgetsAtBottom,
+                      const QString& labelText = "Item %1:" );
+
     virtual KLineEdit* createLineEdit();
 
-	/**
-	 * @brief Sets the service provider to be used for stop name suggestions 
-	 *   in all StopLineEdit widgets.
-	 *
-	 * @param serviceProvider The new service provider ID to be used for stop name suggestions.
-	 **/
-	void setServiceProvider( const QString &serviceProvider );
+    /**
+     * @brief Sets the service provider to be used for stop name suggestions
+     *   in all StopLineEdit widgets.
+     *
+     * @param serviceProvider The new service provider ID to be used for stop name suggestions.
+     **/
+    void setServiceProvider( const QString &serviceProvider );
 
-	/**
-	 * @brief Sets the city to be used for stop name suggestions in all StopLineEdit widgets.
-	 *
-	 * @param city The new city to be used for stop name suggestions.
-	 **/
-	void setCity( const QString &city );
+    /**
+     * @brief Sets the city to be used for stop name suggestions in all StopLineEdit widgets.
+     *
+     * @param city The new city to be used for stop name suggestions.
+     **/
+    void setCity( const QString &city );
 };
 
 }; // namespace Timetable

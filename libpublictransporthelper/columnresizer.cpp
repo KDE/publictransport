@@ -122,8 +122,8 @@ void ColumnResizer::addWidget(QWidget* widget)
 
 void ColumnResizer::removeWidget(QWidget* widget)
 {
-	d->m_widgets.removeOne(widget);
-	widget->removeEventFilter(this);
+    d->m_widgets.removeOne(widget);
+    widget->removeEventFilter(this);
     d->scheduleWidthUpdate();
 }
 

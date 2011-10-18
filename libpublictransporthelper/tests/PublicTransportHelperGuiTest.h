@@ -34,22 +34,22 @@ class PublicTransportHelperGuiTest : public QObject
     Q_OBJECT
 
 private slots:
-	void initTestCase();
-	void init();
-	void cleanup();
-	void cleanupTestCase();
-	
-	// Tests visibility of widgets, mouse/key clicks in a StopSettingsDialog (adding/removing 
+    void initTestCase();
+    void init();
+    void cleanup();
+    void cleanupTestCase();
+
+    // Tests visibility of widgets, mouse/key clicks in a StopSettingsDialog (adding/removing
     // stops, getting stop suggestions)
-	// TODO When run using "make test" this fails (the script crashes on regexp.exec()).
-	//      When run using "ctest" or when the test executable is run directly this succeeds.
+    // TODO When run using "make test" this fails (the script crashes on regexp.exec()).
+    //      When run using "ctest" or when the test executable is run directly this succeeds.
     void stopSettingsDialogGuiTest();
-    
+
     void stopSettingsDialogFilterSettingsTest();
-	
+
 private:
-	StopSettings m_stopSettings;
-	FilterSettingsList m_filterConfigurations;
+    StopSettings m_stopSettings;
+    FilterSettingsList m_filterConfigurations;
 };
 
 #endif // PublicTransportHelperGuiTest_H

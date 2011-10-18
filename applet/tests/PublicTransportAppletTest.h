@@ -53,25 +53,25 @@ public slots:
     void checkAndCloseStopSettingsDialog();
     void simulateAddFilterConfiguration();
     void simulateRemoveFilterConfiguration();
-	
+
 private slots:
     // Initialize containment and applet, set settings of the applet
-	void initTestCase();
+    void initTestCase();
 
     // Create the applet's configuration dialog and find widgets (store in member variables)
     // The dialog gets created for each test (because init is called before each test)
-	void init();
+    void init();
 
     // Close and delete the configuration dialog
-	void cleanup();
+    void cleanup();
 
-	void cleanupTestCase();
-	
+    void cleanupTestCase();
+
     void appletTest();
-	
+
 private:
-	StopSettings m_stopSettings;
-	FilterSettingsList m_filterConfigurations;
+    StopSettings m_stopSettings;
+    FilterSettingsList m_filterConfigurations;
 
     Plasma::Applet *m_applet;
     Plasma::Containment *m_containment;

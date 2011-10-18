@@ -30,49 +30,49 @@ using namespace Timetable;
 
 class PublicTransportHelperTest : public QObject
 {
-	Q_OBJECT
-	
+    Q_OBJECT
+
 private slots:
-	void initTestCase();
-	void init();
-	void cleanup();
-	void cleanupTestCase();
-	
-	// Tests Stop
-	void stopTest();
-	
-	// Tests StopSettings
-	void stopSettingsTest();
-	
-	// Tests StopSettingsDialog with simple accessor selection option
-	void stopSettingsDialogSimpleAccessorSelectionTest();
-	
-	// Tests StopSettingsDialog with simple stop selection option
-	void stopSettingsDialogSimpleStopTest();
-	
-	// Tests StopSettingsDialog with extended accessor selection option
-	void stopSettingsDialogExtendedStopTest();
-	
-	// Tests StopSettingsDialog with custom options
-	void stopSettingsDialogCustomStopTest();
-	
-	// Tests StopSettingsDialog with a custom widget factory
-	void stopSettingsDialogCustomFactoryTest();
-	
-	// Tests StopSettingsDialog with later added extended settings widgets with a custom widget factory
-	void stopSettingsDialogAddWidgetsLaterCustomFactoryTest();
-	
-	// Tests StopWidget
-	void stopWidgetTest();
-	
-	// Tests StopListWidget (including added/removed signals)
-	void stopListWidgetTest();
-	
-	void locationModelTest();
-	
+    void initTestCase();
+    void init();
+    void cleanup();
+    void cleanupTestCase();
+
+    // Tests Stop
+    void stopTest();
+
+    // Tests StopSettings
+    void stopSettingsTest();
+
+    // Tests StopSettingsDialog with simple accessor selection option
+    void stopSettingsDialogSimpleAccessorSelectionTest();
+
+    // Tests StopSettingsDialog with simple stop selection option
+    void stopSettingsDialogSimpleStopTest();
+
+    // Tests StopSettingsDialog with extended accessor selection option
+    void stopSettingsDialogExtendedStopTest();
+
+    // Tests StopSettingsDialog with custom options
+    void stopSettingsDialogCustomStopTest();
+
+    // Tests StopSettingsDialog with a custom widget factory
+    void stopSettingsDialogCustomFactoryTest();
+
+    // Tests StopSettingsDialog with later added extended settings widgets with a custom widget factory
+    void stopSettingsDialogAddWidgetsLaterCustomFactoryTest();
+
+    // Tests StopWidget
+    void stopWidgetTest();
+
+    // Tests StopListWidget (including added/removed signals)
+    void stopListWidgetTest();
+
+    void locationModelTest();
+
 private:
-	StopSettings m_stopSettings;
-	FilterSettingsList m_filterConfigurations;
+    StopSettings m_stopSettings;
+    FilterSettingsList m_filterConfigurations;
 };
 
 #endif // PublicTransportHelperTest_H

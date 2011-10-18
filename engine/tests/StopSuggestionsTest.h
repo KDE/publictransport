@@ -26,42 +26,42 @@
 #include <Plasma/DataEngine>
 
 namespace Plasma {
-	class DataEngine;
+    class DataEngine;
 }
 
-class TestVisualization : public QObject 
+class TestVisualization : public QObject
 {
-	Q_OBJECT
-	
+    Q_OBJECT
+
 public slots:
-	void dataUpdated( const QString &, const Plasma::DataEngine::Data &_data ) {
-		data = _data;
-		emit completed();
-	};
-	
+    void dataUpdated( const QString &, const Plasma::DataEngine::Data &_data ) {
+        data = _data;
+        emit completed();
+    };
+
 signals:
-	void completed();
-	
+    void completed();
+
 public:
-	Plasma::DataEngine::Data data;
+    Plasma::DataEngine::Data data;
 };
 
 class StopSuggestionsTest : public QObject
 {
-	Q_OBJECT
-	
+    Q_OBJECT
+
 private slots:
-	void initTestCase();
-	void init();
-	void cleanup();
-	void cleanupTestCase();
-	
-	// Tests "Stops ..." data source
-	void stopSuggestionTest_data();
-	void stopSuggestionTest();
-	
+    void initTestCase();
+    void init();
+    void cleanup();
+    void cleanupTestCase();
+
+    // Tests "Stops ..." data source
+    void stopSuggestionTest_data();
+    void stopSuggestionTest();
+
 private:
-	Plasma::DataEngine *m_publicTransportEngine;
+    Plasma::DataEngine *m_publicTransportEngine;
 };
 
 #endif // StopSuggestionsTest_H

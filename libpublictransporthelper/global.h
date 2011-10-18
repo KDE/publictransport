@@ -22,7 +22,7 @@
 
 /** @file
  * @brief This file contains enumerations and Global used by the public transport helper library.
- * 
+ *
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include "publictransporthelper_export.h"
@@ -41,23 +41,23 @@ namespace Timetable {
  * @brief Contains global static methods. */
 class PUBLICTRANSPORTHELPER_EXPORT Global {
 public:
-	static GeneralVehicleType generalVehicleType( VehicleType vehicleType );
-	
-	/** @brief Create an "international" icon with some flag icons */
-	static KIcon internationalIcon();
+    static GeneralVehicleType generalVehicleType( VehicleType vehicleType );
 
-	/** @brief Gets an icon for the given type of vehicle. */
-	static KIcon vehicleTypeToIcon( const VehicleType &vehicleType/*,
-									const QString &overlayIcon = QString()*/ );
+    /** @brief Create an "international" icon with some flag icons */
+    static KIcon internationalIcon();
 
-	/** @brief Gets an icon containing the icons of all vehicle types in the given list. */
-	static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes, int extend = 32 );
+    /** @brief Gets an icon for the given type of vehicle. */
+    static KIcon vehicleTypeToIcon( const VehicleType &vehicleType/*,
+                                    const QString &overlayIcon = QString()*/ );
 
-	/** @brief Gets the name of the given type of vehicle. */
-	static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );
+    /** @brief Gets an icon containing the icons of all vehicle types in the given list. */
+    static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes, int extend = 32 );
 
-	/** @brief Gets a string like "25 minutes". */
-	static QString durationString( int seconds );
+    /** @brief Gets the name of the given type of vehicle. */
+    static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );
+
+    /** @brief Gets a string like "25 minutes". */
+    static QString durationString( int seconds );
 
     static QColor textColorOnSchedule();
     static QColor textColorDelayed();
@@ -66,31 +66,31 @@ public:
 }; // namespace Timetable
 
 /** @mainpage
- * 
- * The <em>publictransporthelper</em> library can be used by Plasma applets / runners for 
+ *
+ * The <em>publictransporthelper</em> library can be used by Plasma applets / runners for
  * configuration of stops to be used with the <em>publictransport</em> data engine.
  * To simply show a dialog to let the user edit @ref StopSettings the @ref StopSettingsDialog
  * can be used. That dialog can also be used to only select a service provider.
- * 
+ *
  * The @ref StopWidget shows an overview of a @ref StopSettings object and a button to change the
- * settings using a @ref StopSettingsDialog. @ref StopListWidget can be used to let the user 
+ * settings using a @ref StopSettingsDialog. @ref StopListWidget can be used to let the user
  * edit more than one stop. It shows a button to add new stops and buttons beside the stops
  * to remove them.
- * 
+ *
  * If you only want to use a location-/service provider-combobox like the one used inside
  * @ref StopSettingsDialog, you can use @ref LocationModel / @ref ServiceProviderModel for your
  * comboboxes.
- * 
+ *
  * The library also offers a @ref VehicleType enumeration exactly like the one used inside the
  * publictransport data engine. This can be used to know what the vehicle type numbers returned
  * by the data engine are used for.
- * 
+ *
  * To use the library in your applet/runner/application you need to tell the linker about it.
  * Using CMake this can look like this:
  * @code
  * target_link_libraries( YourApp publictransporthelper )
  * @endcode
- * 
+ *
  * You can then include the headers, eg. for the @ref StopSettingsDialog
  * @code
  * #include <publictransporthelper/stopsettingsdialog.h>

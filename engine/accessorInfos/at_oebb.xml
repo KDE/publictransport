@@ -15,13 +15,13 @@
 <!-- <credit>ÖBB-Konzern</credit> -->
 
 <rawUrls>
-<!--	<departures method="post" contenttype="application/x-www-form-urlencoded">
-		<data><![CDATA[sqView=2&start=Abfahrtstafel&boardType={dataType}&time={time}&maxJourneys={maxCount}&dateBegin=&dateEnd=&selectDate=&productsFilter=0&editStation=yes&dirInput=&input={stop}]]></data>
-		<url><![CDATA[http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&]]></url>
-	</departures>-->
+<!--    <departures method="post" contenttype="application/x-www-form-urlencoded">
+        <data><![CDATA[sqView=2&start=Abfahrtstafel&boardType={dataType}&time={time}&maxJourneys={maxCount}&dateBegin=&dateEnd=&selectDate=&productsFilter=0&editStation=yes&dirInput=&input={stop}]]></data>
+        <url><![CDATA[http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&]]></url>
+    </departures>-->
 <!-- TODO sqView=2 for departures, sqView=?=3 for arrivals? -->
-	<departures><![CDATA[http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&sqView=2&start=Abfahrtstafel&boardType={dataType}&time={time}&maxJourneys={maxCount}&dateBegin=&dateEnd=&selectDate=&productsFilter=0&editStation=yes&dirInput=&input={stop}]]></departures>
-	
+    <departures><![CDATA[http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&sqView=2&start=Abfahrtstafel&boardType={dataType}&time={time}&maxJourneys={maxCount}&dateBegin=&dateEnd=&selectDate=&productsFilter=0&editStation=yes&dirInput=&input={stop}]]></departures>
+
     <stopSuggestions><![CDATA[http://fahrplan.oebb.at/bin/ajax-getstop.exe/dn?REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G={stop}?]]></stopSuggestions>
 <!--     <journeys><![CDATA[http://fahrplan.oebb.ch/bin/query.exe/dn?S=%1&Z=%2&time=%3&maxJourneys=%4&start=yes]]></journeys> -->
 </rawUrls>
@@ -29,9 +29,9 @@
 <script>at_oebb.js</script>
 
 <changelog>
-	<entry since="1.2" releasedWith="0.10">Wrote a script for at_oebb and updated URLs and parsing. It can now also parse route information, journey news, platform and delays.</entry>
-	<entry since="1.1" releasedWith="0.10">Better stop suggestion support, faster by requiring less data to be transfered, added stop weights.</entry>
-	<entry since="1.0" releasedWith="0.5.2">Initial version.</entry>
+    <entry since="1.2" releasedWith="0.10">Wrote a script for at_oebb and updated URLs and parsing. It can now also parse route information, journey news, platform and delays.</entry>
+    <entry since="1.1" releasedWith="0.10">Better stop suggestion support, faster by requiring less data to be transfered, added stop weights.</entry>
+    <entry since="1.0" releasedWith="0.5.2">Initial version.</entry>
 </changelog>
 
 </accessorInfo>
