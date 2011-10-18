@@ -120,9 +120,9 @@ public:
     /**
      * @brief Returns the additional widget at @p index, which is of type T*.
      *
-     * @param index The index of the additional widget to get.
-     * @return The additional widget at @p index, casted to type T*. It uses q_objectcast,
-     *   so it returns NULL, if the widget isn't of the given type.
+     * @param widgetType The type of the additional widget to get.
+     * @return The additional widget of type @p widgetType, casted to type T*. It uses
+     *   qgraphicsitem_cast, so it returns 0, if the widget isn't of the given type.
      **/
     template <typename T>
     T* castedWidget( WidgetType widgetType ) const;
