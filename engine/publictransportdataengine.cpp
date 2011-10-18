@@ -85,7 +85,7 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
 	dataServiceProvider.insert( "email", accessor->timetableAccessorInfo().email() );
 	dataServiceProvider.insert( "description", accessor->timetableAccessorInfo().description() );
 	dataServiceProvider.insert( "version", accessor->timetableAccessorInfo().version() );
-	
+
 	QStringList changelog;
 	foreach ( const ChangelogEntry &entry, accessor->timetableAccessorInfo().changelog() ) {
 		changelog << QString( "%2 (%1): %3" ).arg( entry.since_version ).arg( entry.author ).arg( entry.description );
@@ -97,87 +97,61 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
 
 QHash< QString, QVariant > PublicTransportEngine::locations()
 {
-	QVariantHash ret, locationHash;
-	QString name;
+	QVariantHash ret;
+    const QStringList accessors = KGlobal::dirs()->findAllResources( "data",
+            "plasma_engine_publictransport/accessorInfos/*_*.xml" );
+    const QStringList dirs = KGlobal::dirs()->findDirs( "data",
+            "plasma_engine_publictransport/accessorInfos" );
 
-	locationHash.insert( "name", name = "international" );
-	locationHash.insert( "description", i18n( "Contains international providers. There is one for getting flight departures / arrivals." ) );
-	locationHash.insert( "defaultAccessor", "international_flightstats" );
-	ret.insert( name, locationHash );
+    // Update ServiceProviders source to fill m_errornousAccessors
+    updateServiceProviderSource();
 
-	locationHash.clear();
-	locationHash.insert( "name", name = "de" );
-	locationHash.insert( "description", i18n( "Support for all cities in Germany (and limited support for cities in europe). There is also support for providers specific to regions / cities." ) );
-	locationHash.insert( "defaultAccessor", "de_db" );
-	ret.insert( name, locationHash );
+    foreach( const QString &accessor, accessors ) {
+        if ( QFileInfo(accessor).isSymLink() ) {
+            // Accessor XML file is a symlink for a default accessor, skip it
+            continue;
+        }
 
-	locationHash.clear();
-	locationHash.insert( "name", name = "fr" );
-	locationHash.insert( "description", i18n( "Support for some cities in France. No local public transportation information." ) );
-	locationHash.insert( "defaultAccessor", "fr_gares" );
-	ret.insert( name, locationHash );
+        const QString accessorFileName = QFileInfo( accessor ).fileName();
+        const QString accessorId =
+                TimetableAccessor::serviceProviderIdFromFileName( accessorFileName );
+        if ( m_errornousAccessors.contains(accessorId) ) {
+            // Accessor is erroneous
+            continue;
+        }
 
-	locationHash.clear();
-	locationHash.insert( "name", name = "it" );
-	locationHash.insert( "description", i18n( "Support for some cities in Italia." ) );
-	locationHash.insert( "defaultAccessor", "it_cup2000" );
-	ret.insert( name, locationHash );
+        const int pos = accessorFileName.indexOf('_');
+        if ( pos > 0 ) {
+            // Found an underscore (not the first character)
+            // Cut location code from the accessors XML filename
+            const QString location = accessorFileName.mid( 0, pos ).toLower();
+            if ( !ret.contains(location) ) {
+                // Location is not already added to [ret]
+                // Get the filename of the default accessor for the current location
+                const QString defaultAccessorFileName =
+                        TimetableAccessor::defaultServiceProviderForLocation( location, dirs );
 
-	locationHash.clear();
-	locationHash.insert( "name", name = "be" );
-	locationHash.insert( "description", i18n( "Support for some cities in Belgium." ) );
-	locationHash.insert( "defaultAccessor", "be_brail" );
-	ret.insert( name, locationHash );
+                // Extract service provider ID from the filename
+                const QString defaultAccessorId =
+                        TimetableAccessor::serviceProviderIdFromFileName( defaultAccessorFileName );
 
-	locationHash.clear();
-	locationHash.insert( "name", name = "dk" );
-	locationHash.insert( "description", i18n( "Support for some cities in Denmark." ) );
-	locationHash.insert( "defaultAccessor", "dk_rejseplanen" );
-	ret.insert( name, locationHash );
+                // Store location values in a hash and insert it into [ret]
+                QVariantHash locationHash;
+                locationHash.insert( "name", location );
+                if ( location == "international" ) {
+                    locationHash.insert( "description", i18n("International providers. "
+                                         "There is one for getting flight departures/arrivals.") );
+                } else {
+                    locationHash.insert( "description", i18n("Service providers for %1.",
+                            KGlobal::locale()->countryCodeToName(location)) );
+                }
+                locationHash.insert( "defaultAccessor", defaultAccessorId );
+                ret.insert( location, locationHash );
+            }
+        }
+    }
 
-	locationHash.clear();
-	locationHash.insert( "name", name = "se" );
-	locationHash.insert( "description", i18n( "Support for all cities in Sweden." ) );
-	locationHash.insert( "defaultAccessor", "se_resrobot" );
-	ret.insert( name, locationHash );
-
-	locationHash.clear();
-	locationHash.insert( "name", name = "us" );
-	locationHash.insert( "description", i18n( "Support for Southeastern Pennsylvania." ) );
-	locationHash.insert( "defaultAccessor", "us_septa" );
-	ret.insert( name, locationHash );
-
-	locationHash.clear();
-	locationHash.insert( "name", name = "ch" );
-	locationHash.insert( "description", i18n( "Support for all cities in Switzerland." ) );
-	locationHash.insert( "defaultAccessor", "ch_sbb" );
-	ret.insert( name, locationHash );
-
-	locationHash.clear();
-	locationHash.insert( "name", name = "at" );
-	locationHash.insert( "description", i18n( "Support for all cities in Austria." ) );
-	locationHash.insert( "defaultAccessor", "at_oebb" );
-	ret.insert( name, locationHash );
-
-	locationHash.clear();
-	locationHash.insert( "name", name = "pl" );
-	locationHash.insert( "description", i18n( "Support for all cities in Poland." ) );
-	locationHash.insert( "defaultAccessor", "pl_pkp" );
-	ret.insert( name, locationHash );
-
-	locationHash.clear();
-	locationHash.insert( "name", name = "cz" ); //= i18n("Czechia") );
-	locationHash.insert( "description", i18n( "Support for many cities in Czechia, but with static data." ) );
-	locationHash.insert( "defaultAccessor", "cz_idnes" );
-	ret.insert( name, locationHash );
-
-	locationHash.clear();
-	locationHash.insert( "name", name = "sk" );
-	locationHash.insert( "description", i18n( "Support for many cities in Slovakia, but with static data. There is also support for bratislava with dynamic data." ) );
-	locationHash.insert( "defaultAccessor", "sk_atlas" );
-	ret.insert( name, locationHash );
-
-	return ret;
+    return ret;
 }
 
 bool PublicTransportEngine::sourceRequestEvent( const QString &name )
@@ -217,10 +191,10 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
 		if ( defaultAccessor.isEmpty() ) {
 			return false;
 		}
-		
+
 		accessorId = defaultAccessor;
 	}
-	
+
 	kDebug() << "Check accessor" << accessorId;
 	const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( accessorId );
 	if ( accessor ) {
@@ -266,7 +240,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
 				// Don't use symlinks to default service providers
 				continue;
 			}
-			
+
 			QString s = KUrl( fileName ).fileName().remove( QRegExp( "\\..*$" ) ); // Remove file extension
 			const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( s );
 			if ( accessor ) {
@@ -572,7 +546,7 @@ PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
 		return ServiceProvider;
 	} else if ( sourceName.compare(sourceTypeKeyword(ServiceProviders), Qt::CaseInsensitive) == 0 ) {
 		return ServiceProviders;
-	} else if ( sourceName.compare(sourceTypeKeyword(ErrornousServiceProviders), 
+	} else if ( sourceName.compare(sourceTypeKeyword(ErrornousServiceProviders),
 								   Qt::CaseInsensitive) == 0 ) {
 		return ErrornousServiceProviders;
 	} else if ( sourceName.compare(sourceTypeKeyword(Locations), Qt::CaseInsensitive) == 0 ) {
@@ -852,24 +826,24 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 	foreach( const StopInfo *stopInfo, stops ) {
 		QVariantHash data;
 		data.insert( "stopName", stopInfo->name() );
-		
+
 // 		kDebug() << stopInfo->name() << stopInfo->id() << stopInfo->city() << stopInfo->countryCode();
-		
-		if ( stopInfo->contains(StopID) && 
-			(!accessor->info()->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) || 
-			accessor->info()->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "false") ) 
+
+		if ( stopInfo->contains(StopID) &&
+			(!accessor->info()->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) ||
+			accessor->info()->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "false") )
 		{
 			data.insert( "stopID", stopInfo->id() );
 		}
-		
+
 		if ( stopInfo->contains(StopWeight) ) {
 			data.insert( "stopWeight", stopInfo->weight() );
 		}
-		
+
 		if ( stopInfo->contains(StopCity) ) {
 			data.insert( "stopCity", stopInfo->city() );
 		}
-		
+
 		if ( stopInfo->contains(StopCountryCode) ) {
 			data.insert( "stopCountryCode", stopInfo->countryCode() );
 		}

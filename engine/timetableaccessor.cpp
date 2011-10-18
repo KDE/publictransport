@@ -49,31 +49,20 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 	if ( sp.isEmpty() ) {
 		// No service provider ID given, use the default one for the users country
 		country = KGlobal::locale()->country();
-		QStringList dirs = KGlobal::dirs()->findDirs( "data",
-		                   "plasma_engine_publictransport/accessorInfos" );
-		QString fileName = QString( "%1_default.xml" ).arg( country );
-		foreach( const QString &dir, dirs ) {
-			if ( QFile::exists( dir + fileName ) ) {
-				filePath = dir + fileName;
-				break;
-			}
-		}
 
-		// Get the real filename the "xx_default.xml"-symlink links to
-		filePath = KGlobal::dirs()->realFilePath( filePath );
-		if ( filePath.isEmpty() ) {
-			kDebug() << "Couldn't find the default service provider information XML for country" << country;
-			return NULL;
-		}
+        // Try to find the XML filename of the default accessor for [country]
+        filePath = defaultServiceProviderForLocation( country );
+        if ( filePath.isEmpty() ) {
+            return 0;
+        }
 
-		// Extract service provider ID from real filename
-		int pos = filePath.lastIndexOf( '/' );
-		sp = filePath.mid( pos + 1, filePath.length() - pos - 5 );
+        // Extract service provider ID from filename
+        sp = serviceProviderIdFromFileName( filePath );
 		kDebug() << "No service provider ID given, using the default one for country"
 				 << country << "which is" << sp;
 	} else {
 		filePath = KGlobal::dirs()->findResource( "data",
-		           QString( "plasma_engine_publictransport/accessorInfos/%1.xml" ).arg( sp ) );
+		           QString("plasma_engine_publictransport/accessorInfos/%1.xml").arg(sp) );
 		if ( filePath.isEmpty() ) {
 			kDebug() << "Couldn't find a service provider information XML named" << sp;
 			return NULL;
@@ -81,8 +70,7 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 
 		// Get country code from filename
 		QRegExp rx( "^([^_]+)" );
-		if ( rx.indexIn( sp ) != -1
-		        && KGlobal::locale()->allCountriesList().contains( rx.cap() ) ) {
+		if ( rx.indexIn(sp) != -1 && KGlobal::locale()->allCountriesList().contains(rx.cap()) ) {
 			country = rx.cap();
 		}
 	}
@@ -94,6 +82,35 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 		kDebug() << "Error while reading accessor info xml" << filePath << reader.lineNumber() << reader.errorString();
 	}
 	return ret;
+}
+
+QString TimetableAccessor::defaultServiceProviderForLocation( const QString &location,
+                                                              const QStringList &dirs )
+{
+    // Get the filename of the default accessor for the given location
+    const QStringList _dirs = !dirs.isEmpty() ? dirs
+            : KGlobal::dirs()->findDirs( "data", "plasma_engine_publictransport/accessorInfos" );
+    QString fileName = QString( "%1_default.xml" ).arg( location );
+    foreach( const QString &dir, _dirs ) {
+        if ( QFile::exists(dir + fileName) ) {
+            fileName = dir + fileName;
+            break;
+        }
+    }
+
+    // Get the real filename the "xx_default.xml"-symlink links to
+    fileName = KGlobal::dirs()->realFilePath( fileName );
+    if ( fileName.isEmpty() ) {
+        kDebug() << "Couldn't find the default service provider for location" << location;
+    }
+    return fileName;
+}
+
+QString TimetableAccessor::serviceProviderIdFromFileName( const QString &accessorXmlFileName )
+{
+    // Cut the service provider substring from the XML filename, ie. "/path/to/xml/<id>.xml"
+    const int pos = accessorXmlFileName.lastIndexOf( '/' );
+    return accessorXmlFileName.mid( pos + 1, accessorXmlFileName.length() - pos - 5 );
 }
 
 AccessorType TimetableAccessor::accessorTypeFromString( const QString &sAccessorType )
@@ -307,7 +324,7 @@ QStringList TimetableAccessor::features() const
 // 		}
 // 	} else {
 		list << scriptFeatures();
-// 	} TODO 
+// 	} TODO
 
 	list.removeDuplicates();
 	return list;
@@ -378,41 +395,41 @@ QStringList TimetableAccessor::featuresLocalized() const
 }
 
 KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sourceName,
-		const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime, 
+		const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime,
 		const QString &dataType, bool usedDifferentUrl )
 {
-	if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty() 
-		&& m_sessionKeyGetTime.elapsed() > 500 ) 
+	if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty()
+		&& m_sessionKeyGetTime.elapsed() > 500 )
 	{
 		kDebug() << "Request a session key";
-		requestSessionKey( ParseForSessionKeyThenDepartures, m_info->sessionKeyUrl(), sourceName, 
+		requestSessionKey( ParseForSessionKeyThenDepartures, m_info->sessionKeyUrl(), sourceName,
 						   city, stop, maxCount, dateTime, dataType, usedDifferentUrl );
 		return NULL;
 	}
-	
+
 	if ( !m_idAlreadyRequested &&
 		m_info->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) &&
 		m_info->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "true" )
 	{
 		kDebug() << "Request a stop ID";
 		m_idAlreadyRequested = true;
-		requestStopSuggestions( sourceName, city, stop, ParseForStopIdThenDepartures, maxCount, 
+		requestStopSuggestions( sourceName, city, stop, ParseForStopIdThenDepartures, maxCount,
 								dateTime, dataType, usedDifferentUrl );
 		return NULL;
 	}
 	m_idAlreadyRequested = false;
-	
+
 	KUrl url = getUrl( city, stop, maxCount, dateTime, dataType, usedDifferentUrl );
 	KIO::StoredTransferJob *job; // = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
 	if ( m_info->attributesForDepatures()[QLatin1String("method")]
-			.compare(QLatin1String("post"), Qt::CaseInsensitive) != 0 ) 
+			.compare(QLatin1String("post"), Qt::CaseInsensitive) != 0 )
 	{
 		job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
 	} else if ( m_info->attributesForDepatures().contains(QLatin1String("data")) ) {
 		QString sData = m_info->attributesForDepatures()[QLatin1String("data")];
 		sData.replace( QLatin1String("{city}"), city );
 		sData.replace( QLatin1String("{stop}"), stop );
-		
+
 		QString sDataType;
 		if ( dataType == "arrivals" ) {
 			sDataType = "arr";
@@ -447,7 +464,7 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 		if ( rx.indexIn(sData) != -1 ) {
 			sData.replace( rx, dateTime.date().toString(rx.cap(1)) );
 		}
-		
+
 		job =  KIO::storedHttpPost( QByteArray(), url, KIO::HideProgressInfo );
 		if ( m_info->attributesForDepatures().contains(QLatin1String("contenttype")) ) {
 			job->addMetaData( "content-type", QString("Content-Type: %1")
@@ -468,30 +485,30 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 			// No charset specified, use UTF8
 			job->setData( sData.toUtf8() );
 		}
-		
+
 		if ( m_info->attributesForDepatures().contains(QLatin1String("accept")) ) {
 			job->addMetaData( "accept", m_info->attributesForDepatures()[QLatin1String("accept")] );
 		}
 	} else {
-		kDebug() << "No \"data\" attribute given in the <departures>-tag in" 
+		kDebug() << "No \"data\" attribute given in the <departures>-tag in"
 				 << m_info->fileName() << "but method is \"post\".";
 		return NULL;
 	}
-	
+
 	// Add the session key
 	switch ( m_info->sessionKeyPlace() ) {
 	case PutIntoCustomHeader:
 		kDebug() << "Using custom HTTP header" << QString("%1: %2").arg(m_info->sessionKeyData()).arg(m_sessionKey);
 		job->addMetaData( "customHTTPHeader", QString("%1: %2").arg(m_info->sessionKeyData()).arg(m_sessionKey) );
 		break;
-		
+
 	case PutNowhere:
 	default:
 		// Don't use a session key
 		break;
 	}
-				
-	ParseDocumentMode parseMode = maxCount == -1 
+
+	ParseDocumentMode parseMode = maxCount == -1
 			? ParseForStopSuggestions : ParseForDeparturesArrivals;
 	m_jobInfos.insert( job, JobInfos(parseMode, sourceName, city, stop, url,
 									 dataType, maxCount, dateTime, usedDifferentUrl) );
@@ -501,11 +518,11 @@ KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sou
 }
 
 KIO::StoredTransferJob* TimetableAccessor::requestSessionKey( ParseDocumentMode parseMode,
-		const KUrl &url, const QString &sourceName, const QString &city, const QString &stop, 
+		const KUrl &url, const QString &sourceName, const QString &city, const QString &stop,
 		int maxCount, const QDateTime &dateTime, const QString &dataType, bool usedDifferentUrl )
 {
 	KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-	m_jobInfos.insert( job, JobInfos(parseMode, sourceName, city, stop, 
+	m_jobInfos.insert( job, JobInfos(parseMode, sourceName, city, stop,
 									 url, dataType, maxCount, dateTime, usedDifferentUrl) );
 	connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
 	return job;
@@ -516,25 +533,25 @@ void TimetableAccessor::clearSessionKey()
 	m_sessionKey.clear();
 }
 
-KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString &sourceName, 
-	const QString &city, const QString &stop, ParseDocumentMode parseMode, int maxCount, 
+KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString &sourceName,
+	const QString &city, const QString &stop, ParseDocumentMode parseMode, int maxCount,
 	const QDateTime &dateTime, const QString &dataType, bool usedDifferentUrl )
 {
-	if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty() 
-		&& m_sessionKeyGetTime.elapsed() > 500 ) 
+	if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty()
+		&& m_sessionKeyGetTime.elapsed() > 500 )
 	{
 		kDebug() << "Request a session key";
-		requestSessionKey( ParseForSessionKeyThenStopSuggestions, m_info->sessionKeyUrl(), 
+		requestSessionKey( ParseForSessionKeyThenStopSuggestions, m_info->sessionKeyUrl(),
 						   sourceName, city, stop );
 		return NULL;
 	}
-	
+
 	if ( hasSpecialUrlForStopSuggestions() ) {
 		KUrl url = getStopSuggestionsUrl( city, stop );
 		// TODO Use post-stuff also for (departures.. done) / journeys
 		KIO::StoredTransferJob *job;
 		if ( m_info->attributesForStopSuggestions()[QLatin1String("method")]
-				.compare(QLatin1String("post"), Qt::CaseInsensitive) != 0 ) 
+				.compare(QLatin1String("post"), Qt::CaseInsensitive) != 0 )
 		{
 			job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
 		} else if ( m_info->attributesForStopSuggestions().contains(QLatin1String("data")) ) {
@@ -542,7 +559,7 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString
 			sData.replace( QLatin1String("{city}"), city );
 			sData.replace( QLatin1String("{stop}"), stop );
             sData.replace( "{timestamp}", QString::number(dateTime.toTime_t()) );
-			
+
 			job =  KIO::storedHttpPost( QByteArray(), url, KIO::HideProgressInfo );
 			if ( m_info->attributesForStopSuggestions().contains(QLatin1String("contenttype")) ) {
 				job->addMetaData( "content-type", QString("Content-Type: %1")
@@ -574,7 +591,7 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString
 				job->addMetaData( "accept", m_info->attributesForStopSuggestions()[QLatin1String("accept")] );
 			}
 		} else {
-			kDebug() << "No \"data\" attribute given in the <stopSuggestions>-tag in" 
+			kDebug() << "No \"data\" attribute given in the <stopSuggestions>-tag in"
 					 << m_info->fileName() << "but method is \"post\".";
 			return NULL;
 		}
@@ -584,20 +601,20 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString
 		} else {
 			m_jobInfos.insert( job, JobInfos(ParseForStopSuggestions, sourceName, city, stop, url) );
 		}
-		
+
 		// Add the session key
 		switch ( m_info->sessionKeyPlace() ) {
 		case PutIntoCustomHeader:
 			kDebug() << "Using custom HTTP header" << QString("%1: %2").arg(m_info->sessionKeyData()).arg(m_sessionKey);
 			job->addMetaData( "customHTTPHeader", QString("%1: %2").arg(m_info->sessionKeyData()).arg(m_sessionKey) );
 			break;
-			
+
 		case PutNowhere:
 		default:
 			// Don't use a session key
 			break;
 		}
-		
+
 		connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
 
 		return job;
@@ -678,11 +695,11 @@ void TimetableAccessor::result( KJob* job )
 				// Use the ID of the first suggested stop to get departures
 				if ( !stopList.first()->contains(StopID) ) {
 					kDebug() << "No stop ID found for the given stop name, now requesting departures using the stop name";
-					requestDepartures( jobInfo.sourceName, jobInfo.city, jobInfo.stop, 
+					requestDepartures( jobInfo.sourceName, jobInfo.city, jobInfo.stop,
 									jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,
 									jobInfo.usedDifferentUrl );
 				} else {
-					requestDepartures( jobInfo.sourceName, jobInfo.city, stopList.first()->id(), 
+					requestDepartures( jobInfo.sourceName, jobInfo.city, stopList.first()->id(),
 									jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,
 									jobInfo.usedDifferentUrl );
 				}
@@ -696,22 +713,22 @@ void TimetableAccessor::result( KJob* job )
 							   jobInfo.city, jobInfo.stop, QString(), parseDocumentMode );
 		}
 	} else if ( parseDocumentMode == ParseForSessionKeyThenStopSuggestions ||
-				parseDocumentMode == ParseForSessionKeyThenDepartures ) 
+				parseDocumentMode == ParseForSessionKeyThenDepartures )
 	{
 		if ( !(m_sessionKey = parseDocumentForSessionKey(document)).isEmpty() ) {
 			emit sessionKeyReceived( this, m_sessionKey );
-			
+
 			if ( !m_sessionKey.isEmpty() ) {
 				// Now request stop suggestions using the session key
 				if ( parseDocumentMode == ParseForSessionKeyThenStopSuggestions ) {
 					requestStopSuggestions( jobInfo.sourceName, jobInfo.city, jobInfo.stop );
-				} else if ( parseDocumentMode == ParseForSessionKeyThenDepartures ) { 
-					requestDepartures( jobInfo.sourceName, jobInfo.city, jobInfo.stop, 
+				} else if ( parseDocumentMode == ParseForSessionKeyThenDepartures ) {
+					requestDepartures( jobInfo.sourceName, jobInfo.city, jobInfo.stop,
 									   jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,
 									   jobInfo.usedDifferentUrl );
 				}
 				m_sessionKeyGetTime.start();
-				
+
 				// Clear the session key after a timeout
 				QTimer::singleShot( 5 * 60000, this, SLOT(clearSessionKey()) );
 			}
@@ -861,7 +878,7 @@ KUrl TimetableAccessor::getStopSuggestionsUrl( const QString &city, const QStrin
 		sRawUrl = sRawUrl.replace( "{city}", sCity );
 	}
 	sRawUrl = sRawUrl.replace( "{stop}", sStop );
-// 	sRawUrl = sRawUrl.replace( "{timestamp}", QString::number(QDateTime::currentDateTime().toMSecsSinceEpoch()) ); 
+// 	sRawUrl = sRawUrl.replace( "{timestamp}", QString::number(QDateTime::currentDateTime().toMSecsSinceEpoch()) );
 	return KUrl( sRawUrl );
 }
 
