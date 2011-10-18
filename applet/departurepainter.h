@@ -109,9 +109,8 @@ public:
     /**
      * @brief Creates a pixmap for the given @p departures.
      *
-     * This pixmap is used for the popup icon for departures. Multiple
-     * departures may be drawn side by side, eg. if they depart at the same
-     * time.
+     * This pixmap is used for the popup icon for departures. Multiple departures may be drawn
+     * side by side, eg. if they depart at the same time.
      **/
     QPixmap createDeparturesPixmap( DepartureItem *departure, const QSize &size,
             VehicleIconDrawFlags iconDrawFlags = DefaultVehicleIconDrawFlags );
