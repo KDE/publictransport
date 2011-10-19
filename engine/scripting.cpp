@@ -32,18 +32,18 @@ void Helper::error( const QString& message, const QString &failedParseText )
 		shortParseText.append(QString("... <%1 more chars>").arg(diff));
 	}
 	shortParseText = shortParseText.replace('\n', "\n    "); // Indent
-	
+
 	kDebug() << QString("Error in %1 (maybe the website layout changed): \"%2\"")
 				.arg(m_serviceProviderId).arg(message);
 	if ( !shortParseText.isEmpty() ) {
 		kDebug() << QString("The text of the document where parsing failed is: \"%1\"")
 					.arg(shortParseText);
 	}
-	
+
 	// Log the complete message to the log file.
 	QString logFileName = KGlobal::dirs()->saveLocation( "data", "plasma_engine_publictransport" );
 	logFileName.append( "accessors.log" );
-	
+
 	if ( !logFileName.isEmpty() ) {
 		QFile logFile(logFileName);
 		if ( logFile.size() > 1024 * 512 ) { // == 0.5 MB
@@ -53,12 +53,12 @@ void Helper::error( const QString& message, const QString &failedParseText )
 				kDebug() << "Deleted old log file, because it was getting too big.";
 			}
 		}
-		
+
 		if ( !logFile.open(QIODevice::Append | QIODevice::Text) ) {
 			kDebug() << "Couldn't open the log file in append mode" << logFileName << logFile.errorString();
 			return;
 		}
-		
+
 		logFile.write( QString("%1 (%2): \"%3\"\n   Failed while reading this text: \"%4\"\n")
 				.arg(m_serviceProviderId).arg(QDateTime::currentDateTime().toString())
 				.arg(message).arg(failedParseText.trimmed()).toUtf8() );
@@ -74,13 +74,13 @@ void TimetableData::set( TimetableInformation info, const QVariant& value )
 													 : "invalid");
 		return;
 	}
-	
+
 	if ( !value.data() ) {
 		// Can crash sometimes (reason unknown..)
 		kDebug() << "The value given by the script isn't valid for" << info;
 		return;
 	}
-	
+
 	if ( !value.isValid() || value.isNull() ) {
 		kDebug() << "Value is invalid or null for" << info;
 	} else {
@@ -94,15 +94,15 @@ void TimetableData::set( TimetableInformation info, const QVariant& value )
 		} else if ( value.canConvert(QVariant::List) && info == DepartureDate ) {
 			QVariantList date = value.toList();
 			m_values[ info ] = date.length() == 3 ? QDate(date[0].toInt(), date[1].toInt(), date[2].toInt()) : value;
-		} else if ( value.canConvert(QVariant::StringList) 
-				&& (info == RouteStops || info == RoutePlatformsDeparture 
-					|| info == RoutePlatformsArrival) ) 
+		} else if ( value.canConvert(QVariant::StringList)
+				&& (info == RouteStops || info == RoutePlatformsDeparture
+					|| info == RoutePlatformsArrival) )
 		{
 			QStringList stops = value.toStringList();
 			QStringList::iterator it = stops.begin();
 			while ( it != stops.end() ) {
 				*it = TimetableAccessorScript::decodeHtmlEntities( *it )
-						.replace( QRegExp("^(&nbsp;)+|(&nbsp;)+$", Qt::CaseInsensitive), "" )
+						.remove( QRegExp("^(&nbsp;)+|(&nbsp;)+$", Qt::CaseInsensitive) )
 						.trimmed();
 				++it;
 			}

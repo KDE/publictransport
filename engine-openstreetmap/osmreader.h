@@ -29,14 +29,14 @@ class TimetableAccessor;
 
 class OsmReader : public QObject, public QXmlStreamReader {
     Q_OBJECT;
-    
+
 public:
 	enum ResultFlag {
 	    AllResults = 0x0000,
 	    OnlyResultsWithNameAttribute = 0x0001
 	};
 	Q_DECLARE_FLAGS( ResultFlags, ResultFlag );
-	
+
 	OsmReader( const QString &associatedSourceName, const QString &sourceUrl,
                ResultFlags resultFlags = ResultFlags(AllResults) )
             : QXmlStreamReader()
@@ -48,7 +48,7 @@ public:
 
 	void read();
 	Plasma::DataEngine::Data data() const { return m_data; };
-	
+
 	void resumeReading() { m_loop.quit(); };
     QString associatedSourceName() const { return m_associatedSourceName; };
     QString sourceUrl() const { return m_sourceUrl; };
@@ -56,17 +56,17 @@ public:
 signals:
 	/**
      * @brief Reading an XML document has finished (reached the end of the document).
-     * 
+     *
 	 * @Note @p lastDataChunk only contains the last chunk of data.
      **/
 	void finishedReading( QPointer<OsmReader> reader, const Plasma::DataEngine::Data &lastDataChunk );
 
 	/** @brief A new chunk of the XML document has been read. */
 	void chunkRead( QPointer<OsmReader> reader, const Plasma::DataEngine::Data &dataChunk );
-	
+
 private:
 	bool isResultValid( const QVariantHash &data ) const;
-	
+
 	void readUnknownElement();
 	void readOsm();
 	void readNode();

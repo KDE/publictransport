@@ -40,24 +40,24 @@ public:
 
     /**
      * @returns the ID of this code node.
-     * 
+     *
      * May be used for @ref JavaScriptCompletionModel::completionItemFromId.
      **/
     virtual QString id() const { return m_text; };
 
     /**
      * @returns a list of all child nodes. The default implementation returns an empty list.
-     * 
-     * All childs get deleted automatically on destruction.
+     *
+     * All children get deleted automatically on destruction.
      **/
     virtual QList<CodeNode*> children() const { return QList<CodeNode*>(); };
 
     /**
      * @brief Finds the child node at the given @p lineNumber and @p column.
-     * 
+     *
      * @returns the found child node. If no child node was found, this node is returned if the
      *   given @p lineNumber and @p column are in it's range. Otherwise NULL is returned.
-     * 
+     *
      * @see isInRange
      **/
     CodeNode *childFromPosition( int lineNumber, int column ) const;
@@ -87,7 +87,7 @@ public:
 
     /**
      * @brief The last line of this node.
-     * 
+     *
      * The default implementation returns the same as @ref line().
      **/
     virtual int endLine() const { return m_line; };
@@ -210,7 +210,7 @@ public:
     };
 };
 
-/** @brief A node containing a list of child nodes that have been read inside a pair of brackets 
+/** @brief A node containing a list of child nodes that have been read inside a pair of brackets
  * ('(' or '['). */
 class BracketedNode : public ChildListNode {
 public:

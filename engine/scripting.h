@@ -19,7 +19,7 @@
 
 /** @file
  * @brief This file contains helper classes to be used from inside accessor scripts.
- * 
+ *
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef SCRIPTING_HEADER
@@ -36,40 +36,39 @@
 
 /**
  * @brief A helper class to be used from inside a script.
- * 
+ *
  * An instance of this class gets published to scripts as <em>"helper"</em>.
  * Scripts can use it's functions, like here:
  * @code
  * var stripped = helper.stripTags("<div>Test</div>");
  * // stripped == "Test"
- * 
+ *
  * var timeValues = helper.matchTime( "15:28" );
  * // timeValues == [15, 28]
- * 
+ *
  * var timeString = helper.formatTime( timeValues[0], timeValues[1] );
  * // timeString == "15:28"
- * 
+ *
  * var duration = helper.duration("15:20", "15:45");
  * // duration == 25
- * 
+ *
  * var time2 = helper.addMinsToTime("15:20", duration);
  * // time2 == "15:45"
- * 
+ *
  * helper.debug("Debug message, eg. something unexpected happened");
  * @endcode
  **/
 class Helper : public QObject {
-    Q_OBJECT 
-    
+    Q_OBJECT
+
 public:
 	/**
 	 * @brief Creates a new helper object.
-	 * 
+	 *
 	 * @param serviceProviderId The ID of the service provider this Helper object is created for.
-	 * 
 	 * @param parent The parent object.
 	 **/
-	Helper( const QString &serviceProviderId, QObject* parent = 0 ) : QObject( parent ) {
+	explicit Helper( const QString &serviceProviderId, QObject* parent = 0 ) : QObject( parent ) {
 		m_serviceProviderId = serviceProviderId;
 	};
 
@@ -78,17 +77,15 @@ public Q_SLOTS:
 	 * @brief Prints @p message on stdout and logs it in a file.
 	 *
 	 * @param message The error message.
-	 * 
 	 * @param failedParseText The text in the source document where parsing failed.
 	 **/
 	void error( const QString &message, const QString &failedParseText = QString() );
-	
+
 	/**
 	 * @brief Trims spaces from the beginning and the end of the given string @p str.
 	 *   The HTML entitiy <em>&nbsp;</em> is also trimmed.
 	 *
 	 * @param str The string to be trimmed.
-	 * 
 	 * @return @p str without spaces at the beginning or end.
 	 **/
 	QString trim( const QString &str ) {
@@ -100,7 +97,6 @@ public Q_SLOTS:
 	 * @brief Removes all HTML tags from str.
 	 *
 	 * @param str The string from which the HTML tags should be removed.
-	 * 
 	 * @return @p str without HTML tags.
 	 **/
 	QString stripTags( const QString &str ) {
@@ -113,7 +109,6 @@ public Q_SLOTS:
 	 * @brief Makes the first letter of each word upper case, all others lower case.
 	 *
 	 * @param str The input string.
-	 * 
 	 * @return @p str in camel case.
 	 **/
 	QString camelCase( const QString &str ) {
@@ -131,15 +126,12 @@ public Q_SLOTS:
 	};
 
 	/**
-	 * @brief Extracts a block from @p str, which begins at the first occurance of @p beginString
-	 *   in @p str and end at the first occurance of @p endString in @p str.
+	 * @brief Extracts a block from @p str, which begins at the first occurrence of @p beginString
+	 *   in @p str and end at the first occurrence of @p endString in @p str.
 	 *
 	 * @param str The input string.
-	 * 
 	 * @param beginString A string to search for in @p str and to use as start position.
-	 * 
 	 * @param endString A string to search for in @p str and to use as end position.
-	 * 
 	 * @return The text block in @p str between @p beginString and @p endString.
 	 **/
 	QString extractBlock( const QString &str,
@@ -154,15 +146,12 @@ public Q_SLOTS:
 	};
 
 	/**
-	 * @brief Gets a list with the hour and minute values parsed from @p str, 
+	 * @brief Gets a list with the hour and minute values parsed from @p str,
 	 *   which is in the given @p format.
 	 *
 	 * @param str The string containing the time to be parsed, eg. "08:15".
-	 * 
 	 * @param format The format of the time string in @p str. Default is "hh:mm".
-	 * 
 	 * @return A list of two integers: The hour and minute values parsed from @p str.
-	 * 
 	 * @see formatTime
 	 **/
 	QVariantList matchTime( const QString &str, const QString &format = "hh:mm") {
@@ -195,15 +184,12 @@ public Q_SLOTS:
 	};
 
 	/**
-	 * @brief Gets a list with the day, month and year values parsed from @p str, 
+	 * @brief Gets a list with the day, month and year values parsed from @p str,
 	 *   which is in the given @p format.
 	 *
 	 * @param str The string containing the date to be parsed, eg. "2010-12-01".
-	 * 
 	 * @param format The format of the time string in @p str. Default is "YY-MM-dd".
-	 * 
 	 * @return A list of two integers: The day, month and year values parsed from @p str.
-	 * 
 	 * @see formatDate TODO
 	 **/
 	QVariantList matchDate( const QString &str, const QString &format = "yyyy-MM-dd") {
@@ -214,7 +200,7 @@ public Q_SLOTS:
 						 .replace( "M", "\\d{1,2}" )
 						 .replace( "yyyy", "\\d{4}" )
 						 .replace( "yy", "\\d{2}" );
-			     
+
 	    QVariantList ret;
 	    QRegExp rx( pattern );
 	    if ( rx.indexIn(str) != -1 ) {
@@ -236,15 +222,12 @@ public Q_SLOTS:
 	};
 
 	/**
-	 * @brief Formats the time given by the values @p hour and @p minute 
+	 * @brief Formats the time given by the values @p hour and @p minute
 	 *   as string in the given @p format.
 	 *
 	 * @param hour The hour value of the time.
-	 * 
 	 * @param minute The minute value of the time.
-	 * 
 	 * @param format The format of the time string to return. Default is "hh:mm".
-	 * 
 	 * @return The formatted time string.
 	 * @see matchTime
 	 **/
@@ -253,33 +236,26 @@ public Q_SLOTS:
 	};
 
 	/**
-	 * @brief Formats the time given by the values @p hour and @p minute 
+	 * @brief Formats the time given by the values @p hour and @p minute
 	 *   as string in the given @p format.
 	 *
 	 * @param year The year value of the date.
-	 * 
 	 * @param month The month value of the date.
-	 * 
 	 * @param day The day value of the date.
-	 * 
 	 * @param format The format of the date string to return. Default is "yyyy-MM-dd".
-	 * 
 	 * @return The formatted date string.
 	 * @see matchTime
 	 **/
 	QString formatDate( int year, int month, int day, const QString &format = "yyyy-MM-dd") {
 		return QDate( year, month, day ).toString( format );
 	};
-	
+
 	/**
 	 * @brief Calculates the duration in minutes from the time in @p sTime1 until @p sTime2.
 	 *
 	 * @param sTime1 A string with the start time, in the given @p format.
-	 * 
 	 * @param sTime2 A string with the end time, in the given @p format.
-	 * 
 	 * @param format The format of @p sTime1 and @p sTime2. Default is "hh:mm".
-	 * 
 	 * @return The number of minutes from @p sTime1 until @p sTime2.
 	 **/
 	int duration( const QString &sTime1, const QString &sTime2,
@@ -296,11 +272,8 @@ public Q_SLOTS:
 	 * @brief Adds @p minsToAdd minutes to the time in @p sTime.
 	 *
 	 * @param sTime A string with the base time.
-	 * 
 	 * @param minsToAdd The number of minutes to add to @p sTime.
-	 * 
 	 * @param format The format of @p sTime. Default is "hh:mm".
-	 * 
 	 * @return A time string formatted in @p format with the calculated time.
 	 **/
 	QString addMinsToTime( const QString &sTime, int minsToAdd,
@@ -312,7 +285,7 @@ public Q_SLOTS:
 		}
 		return time.addSecs( minsToAdd * 60 ).toString( format );
 	};
-	
+
 	QString addDaysToDate( const QString &sDate, int daysToAdd,
 						   const QString &format = "yyyy-MM-dd" ) {
 		QDate date = QDate::fromString(sDate, format).addDays( daysToAdd );
@@ -322,39 +295,37 @@ public Q_SLOTS:
 		}
 		return date.toString( format );
 	};
-	
+
 	QVariantList addDaysToDateArray( const QVariantList &values, int daysToAdd ) {
 		if ( values.count() != 3 ) {
 			kDebug() << "The first argument needs to be a list with three values (year, month, day)";
 			return values;
 		}
-		
+
 		QDate date( values[0].toInt(), values[1].toInt(), values[2].toInt() );
 		date = date.addDays( daysToAdd );
 		return QVariantList() << date.year() << date.month() << date.day();
 	};
-	
+
 	/**
 	 * @brief Splits @p str at @p sep, but skips empty parts.
 	 *
 	 * @param str The string to split.
-	 * 
 	 * @param sep The separator.
-	 * 
 	 * @return A list of string parts.
 	 **/
 	QStringList splitSkipEmptyParts( const QString &str, const QString &sep ) {
 		return str.split( sep, QString::SkipEmptyParts );
 	};
-	
+
 private:
 	QString m_serviceProviderId;
 };
 
 /**
  * @brief This class is used by scripts to store results in.
- * 
- * An instance of this class gets published to scripts as <em>"timetableData"</em>. 
+ *
+ * An instance of this class gets published to scripts as <em>"timetableData"</em>.
  * Scripts can use it's functions, most important are @ref clear (to clear all values from the
  * TimetableData object) and @ref set (to set a timetable information to a value).
  * Once all values have been set, the script can add the current state to @p ResultObject,
@@ -367,7 +338,7 @@ private:
  * var typeOfVehicle = timetableData.value("TypeOfVehicle"); // Get the value again
  * result.addData( timetableData ); // Add to result set
  * @endcode
- * 
+ *
  * @see ResultObject
  **/
 class TimetableData : public QObject {
@@ -391,13 +362,12 @@ public Q_SLOTS:
 
 	/**
 	 * @brief Stores @p value under the key @p timetableInformation.
-	 * 
+	 *
 	 * This function uses @ref TimetableAccessor::timetableInformationFromString to get the
 	 * @ref TimetableInformation from the given @p sTimetableInformation and use it as arguemnt
 	 * for @ref set(TimetableInformation,QVariant).
 	 *
 	 * @param timetableInformation The type of the information in the given @p value.
-	 * 
 	 * @param value A value to be stored.
 	 **/
 	inline void set( const QString &sTimetableInformation, const QVariant &value ) {
@@ -406,7 +376,6 @@ public Q_SLOTS:
 	 * @brief Stores @p value under the key @p timetableInformation.
 	 *
 	 * @param timetableInformation The type of the information in the given @p value.
-	 * 
 	 * @param value A value to be stored.
 	 **/
 	void set( TimetableInformation timetableInformation, const QVariant &value );
@@ -414,7 +383,7 @@ public Q_SLOTS:
 	/**
 	 * @brief Gets all values that are currently stored.
 	 *
-	 * @return A QHash with string keys (timetable information type, like "DepartureTime"), 
+	 * @return A QHash with string keys (timetable information type, like "DepartureTime"),
 	 *   as given in @p set.
 	 **/
 	QHash<TimetableInformation, QVariant> values() const { return m_values; };
@@ -422,7 +391,6 @@ public Q_SLOTS:
 	 * @brief Gets the value for the given @p info.
 	 *
 	 * @param info The timetable information key, like in @ref TimetableInformation.
-	 * 
 	 * @return The value stored for @p info
 	 **/
 	QVariant value( TimetableInformation info ) const { return m_values[info]; };
@@ -433,15 +401,15 @@ private:
 
 /**
  * @brief This class is used by scripts to store results in.
- * 
- * An instance of this class gets published to scripts as <em>"result"</em>. 
+ *
+ * An instance of this class gets published to scripts as <em>"result"</em>.
  * Scripts can use it to add items to the result set, ie. departures/arrivals/journeys/
- * stop suggestions. An item can be added using @ref addData with the <em>"timetableData"</em> 
+ * stop suggestions. An item can be added using @ref addData with the <em>"timetableData"</em>
  * object as argument.
  * @code
  *   result.addData( timetableData ); // Add to result set
  * @endcode
- * 
+ *
  * @see TimetableData
  **/
 class ResultObject : public QObject {

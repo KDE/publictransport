@@ -171,7 +171,7 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
     // Read and cut keywords
     for ( QMap<QString, PublicTransportRunner::Keywords>::const_iterator it = keywordMap.constBegin();
             it != keywordMap.constEnd(); ++it ) {
-        if ( term.startsWith( it.key() + " ", Qt::CaseInsensitive ) ) {
+        if ( term.startsWith(it.key() + ' ', Qt::CaseInsensitive) ) {
             keywords = it.value();
 
             // Cut the keyword from the term
@@ -199,15 +199,15 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
     PublicTransportRunner::QueryData data;
     data.keywords = keywords;
 
-    QRegExp rx( i18nc( "This is a regular expression, used for the runner query string, to give "
-                       "the offset in minutes of the first result. '\\b' at the beginning and "
-                       "at the end assures, that the found string is seperated from other words "
-                       "with whitespaces. The '(\\d+)' is used to match an integer and there must "
-                       "be one such part in the regexp (there shouldn't be parenthesized "
-                       "expressions before this one, but you can use non-matching parentheses "
-                       "'(?:XX)'). 'min(?:utes)?' can match 'min' and 'minutes'. The string is "
-                       "matched case insensitive.",
-                       "\\bin\\s+(\\d+)\\s+min(?:utes)?\\b" ), Qt::CaseInsensitive );
+    QRegExp rx( i18nc("This is a regular expression, used for the runner query string, to give "
+                      "the offset in minutes of the first result. '\\b' at the beginning and "
+                      "at the end assures, that the found string is separated from other words "
+                      "with whitespaces. The '(\\d+)' is used to match an integer and there must "
+                      "be one such part in the regexp (there shouldn't be parenthesized "
+                      "expressions before this one, but you can use non-matching parentheses "
+                      "'(?:XX)'). 'min(?:utes)?' can match 'min' and 'minutes'. The string is "
+                      "matched case insensitive.",
+                      "\\bin\\s+(\\d+)\\s+min(?:utes)?\\b"), Qt::CaseInsensitive );
     if ( rx.indexIn(stop) != -1 && rx.captureCount() ) {
         data.minutesUntilFirstResult = rx.cap(1).toInt();
 
@@ -800,7 +800,6 @@ void AsyncDataEngineUpdater::processStopSuggestions( const QString& sourceName,
     // Get all stop names, IDs, weights
     QUrl url = data["requestUrl"].toUrl();
     int count = data["count"].toInt(); // The number of received stop suggestions
-    bool hasAtLeastOneWeight = false;
     qreal min = INT_MAX, max = 0;
     for ( int i = 0; i < count; ++i ) {
         if ( !data.contains( QString( "stopName %1" ).arg( i ) ) ) {
@@ -817,8 +816,6 @@ void AsyncDataEngineUpdater::processStopSuggestions( const QString& sourceName,
         int stopWeight = dataMap["stopWeight"].toInt();
         if ( stopWeight <= 0 ) {
             stopWeight = 0;
-        } else {
-            hasAtLeastOneWeight = true;
         }
 
         Result res;

@@ -39,17 +39,17 @@ class PublicTransportPreview : public QGraphicsView {
 
     signals:
 	void plasmaPreviewLoaded();
-	
+
     public slots:
 	bool loadPlasmaPreview();
 	void closePlasmaPreview();
 
     protected:
 	virtual void resizeEvent( QResizeEvent* event );
-	
+
     private:
 	void loadNoPlasmaScene();
-    
+
 	Plasma::Corona m_corona;
 	Plasma::Containment *m_containment;
 	Plasma::Applet *m_applet;

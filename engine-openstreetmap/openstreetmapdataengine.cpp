@@ -28,7 +28,7 @@ OpenStreetMapEngine::OpenStreetMapEngine( QObject *parent, const QVariantList &a
 	    : Plasma::DataEngine(parent, args) {
     // Update maximally every 5 mins, openstreetmap data doesn't change too much
     setMinimumPollingInterval( 300000 );
-    
+
     // Fill list of 'short filters'.
     // TODO: Maybe plurals are better here?
     m_shortFilter.insert( "bank", Filter(Node, "amenity=bank") );
@@ -54,11 +54,11 @@ OpenStreetMapEngine::OpenStreetMapEngine( QObject *parent, const QVariantList &a
     m_shortFilter.insert( "toilets", Filter(Node, "amenity=toilets") );
     m_shortFilter.insert( "townhall", Filter(Node, "amenity=townhall") );
     m_shortFilter.insert( "university", Filter(Node, "amenity=university") );
-    
+
     m_shortFilter.insert( "water", Filter(Node, "natural=water") );
     m_shortFilter.insert( "forest", Filter(Node, "natural=forest") );
     m_shortFilter.insert( "park", Filter(Node, "natural=park") );
-    
+
 //     m_shortFilter.insert( "publictransportstops", Filter(Relation, "public_transport=stop_area") );
     m_shortFilter.insert( "publictransportstops", Filter(Node, "public_transport=*") ); //stop_position|platform
 }
@@ -92,7 +92,7 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
 
     // Special source to get the coordinates of something
     // "getCoords publictransportstops Pappelstraße"
-    if ( source.startsWith("getCoords ", Qt::CaseInsensitive) ) {
+    if ( source.startsWith(QLatin1String("getCoords "), Qt::CaseInsensitive) ) {
         QString maybeElement = source.mid( pos + 1, pos2 - pos - 1 ).toLower();
         QString element, search, sFilter;
         int pos3 = source.indexOf( " ", pos2 + 1 );
@@ -114,7 +114,7 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
                 search = source.mid( pos3 + 1 ).trimmed();
             }
         }
-        
+
         if ( search.isEmpty() ) {
             kDebug() << "No search string given";
             return false;
@@ -132,7 +132,7 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
 //         "http://jxapi.openstreetmap.org/xapi/api/0.6/node[public_transport=stop_position][name=Huckelriede]"
     } else {
         // First comes latitude,longitute
-        QStringList values = source.left( pos ).split( "," );
+        QStringList values = source.left( pos ).split( ',' );
         if ( values.count() != 2 ) {
             return false;
         }
@@ -214,7 +214,7 @@ void OpenStreetMapEngine::data( KIO::Job* job, const QByteArray& ba ) {
     jobInfo.osmReader->addData( ba );
     if ( jobInfo.readStarted ) {
         // Continue reading
-        jobInfo.osmReader->resumeReading(); 
+        jobInfo.osmReader->resumeReading();
     } else {
         // Start reading if not already started
         jobInfo.readStarted = true;

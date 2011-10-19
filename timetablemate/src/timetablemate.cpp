@@ -324,9 +324,9 @@ void TimetableMate::closeEvent( QCloseEvent *event ) {
         int result;
         if ( m_openedPath.isEmpty() ) {
             result = KMessageBox::warningYesNoCancel( this, i18nc("@info/plain",
-                     "The current accessor is unsaved.<nl/>"
-                     "Do you want to save or discard it?",
-                     m_currentServiceProviderID, m_openedPath),
+                     "The accessor <resource>%1</resource> has been changed.<nl/>"
+                     "Do you want to save or discard the changes?",
+                     m_currentServiceProviderID),
                      i18nc("@title:window", "Close Document"),
                      KStandardGuiItem::save(), KStandardGuiItem::discard() );
         } else {
@@ -1325,11 +1325,11 @@ void TimetableMate::toolsCheck() {
 
         // Set script code and type
         TimetableAccessor accessor = m_view->accessorInfo();
-        if ( accessor.scriptFile.endsWith(".py") )
+        if ( accessor.scriptFile.endsWith(QLatin1String(".py")) )
             script.setInterpreter( "python" );
-        else if ( accessor.scriptFile.endsWith(".rb") )
+        else if ( accessor.scriptFile.endsWith(QLatin1String(".rb")) )
             script.setInterpreter( "ruby" );
-        else if ( accessor.scriptFile.endsWith(".js") )
+        else if ( accessor.scriptFile.endsWith(QLatin1String(".js")) )
             script.setInterpreter( "javascript" );
         else {
             const QString scriptType = KInputDialog::getItem(
@@ -1459,7 +1459,7 @@ void TimetableMate::scriptPreviousFunction() {
 }
 
 void TimetableMate::urlBarReturn( const QString &text ) {
-    m_webview->setUrl( QUrl::fromUserInput(text) );
+    m_webview->setUrl( KUrl::fromUserInput(text) );
 }
 
 void TimetableMate::webUrlChanged( const QUrl& url ) {
@@ -1528,7 +1528,7 @@ void TimetableMate::scriptRunParseTimetable() {
         return;
     }
 
-    // Get global infos
+    // Get global information
     QStringList globalInfos;
     if ( result.isValid() && result.canConvert(QVariant::StringList) ) {
         globalInfos = result.toStringList();
@@ -1670,7 +1670,7 @@ void TimetableMate::scriptRunParseTimetable() {
 		foreach ( const DebugMessage &debugMessage, debugMessages ) {
 			QString message = debugMessage.message;
 			debugMessagesString.append( QString("<item>%1</item>")
-					.arg(message.replace("<", "&lt;").replace(">", "&gt;")) ); //.arg(debugMessage.context.left(200)) );
+					.arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
 		}
 		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
 							debugMessagesString);
@@ -1694,7 +1694,7 @@ void TimetableMate::scriptRunParseStopSuggestions() {
     if ( !scriptRun("parsePossibleStops", &timetableData, &resultObject, &result, &debugMessages) )
         return;
 
-    // Get global infos
+    // Get global information
     QStringList globalInfos;
     if ( result.isValid() && result.canConvert(QVariant::StringList) ) {
         globalInfos = result.toStringList();
@@ -1775,7 +1775,7 @@ void TimetableMate::scriptRunParseStopSuggestions() {
 		foreach ( const DebugMessage &debugMessage, debugMessages ) {
 			QString message = debugMessage.message;
 			debugMessagesString.append( QString("<item>%1</item>")
-					.arg(message.replace("<", "&lt;").replace(">", "&gt;")) ); //.arg(debugMessage.context.left(200)) );
+					.arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
 		}
 		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
 							debugMessagesString);
@@ -1799,7 +1799,7 @@ void TimetableMate::scriptRunParseJourneys() {
     if ( !scriptRun("parseJourneys", &timetableData, &resultObject, &result, &debugMessages) )
         return;
 
-    // Get global infos
+    // Get global information
     QStringList globalInfos;
     if ( result.isValid() && result.canConvert(QVariant::StringList) ) {
         globalInfos = result.toStringList();
@@ -1996,7 +1996,7 @@ void TimetableMate::scriptRunParseJourneys() {
 		foreach ( const DebugMessage &debugMessage, debugMessages ) {
 			QString message = debugMessage.message;
 			debugMessagesString.append( QString("<item>%1</item>")
-					.arg(message.replace("<", "&lt;").replace(">", "&gt;")) ); //.arg(debugMessage.context.left(200)) );
+					.arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
 		}
 		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
 							debugMessagesString);
@@ -2066,7 +2066,7 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
     } else if ( functionToRun == "parseJourneys" ) {
         timetableData->setMode( "journeys" );
     } else  {
-        kDebug() << "Unknown funtion to run:" << functionToRun;
+        kDebug() << "Unknown function to run:" << functionToRun;
     }
 
     // NOTE Update documentation in scripting.h if the names change here,
@@ -2078,11 +2078,11 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
 
     // Set script code and type
     TimetableAccessor accessor = m_view->accessorInfo();
-    if ( accessor.scriptFile.endsWith(".py") ) {
+    if ( accessor.scriptFile.endsWith(QLatin1String(".py")) ) {
         script.setInterpreter( "python" );
-    } else if ( accessor.scriptFile.endsWith(".rb") ) {
+    } else if ( accessor.scriptFile.endsWith(QLatin1String(".rb")) ) {
         script.setInterpreter( "ruby" );
-    } else if ( accessor.scriptFile.endsWith(".js") ) {
+    } else if ( accessor.scriptFile.endsWith(QLatin1String(".js")) ) {
         script.setInterpreter( "javascript" );
     } else {
         const QString scriptType = KInputDialog::getItem(
@@ -2131,7 +2131,7 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
         }
         url = getJourneyUrl();
     } else {
-        kDebug() << "Unknown funtion to run:" << functionToRun; // Shouldn't happen
+        kDebug() << "Unknown function to run:" << functionToRun; // Shouldn't happen
     }
     if ( !url.isValid() ) {
         return false; // The url placeholder dialog was cancelled
@@ -2334,8 +2334,8 @@ KUrl TimetableMate::getDepartureUrl( const TimetableAccessor &accessor, const QS
 
     // Encode city and stop
     if ( accessor.charsetForUrlEncoding.isEmpty() ) {
-        sCity = QString::fromAscii(QUrl::toPercentEncoding(sCity));
-        sStop = QString::fromAscii(QUrl::toPercentEncoding(sStop));
+        sCity = QString::fromAscii(KUrl::toPercentEncoding(sCity));
+        sStop = QString::fromAscii(KUrl::toPercentEncoding(sStop));
     } else {
         sCity = toPercentEncoding( sCity, accessor.charsetForUrlEncoding.toUtf8() );
         sStop = toPercentEncoding( sStop, accessor.charsetForUrlEncoding.toUtf8() );
@@ -2364,8 +2364,8 @@ KUrl TimetableMate::getStopSuggestionUrl( const TimetableAccessor &accessor,
 
     // Encode stop
     if ( accessor.charsetForUrlEncoding.isEmpty() ) {
-        sCity = QString::fromAscii(QUrl::toPercentEncoding(sCity));
-        sStop = QString::fromAscii(QUrl::toPercentEncoding(sStop));
+        sCity = QString::fromAscii(KUrl::toPercentEncoding(sCity));
+        sStop = QString::fromAscii(KUrl::toPercentEncoding(sStop));
     } else {
         sCity = toPercentEncoding( sCity, accessor.charsetForUrlEncoding.toUtf8() );
         sStop = toPercentEncoding( sStop, accessor.charsetForUrlEncoding.toUtf8() );
@@ -2397,9 +2397,9 @@ KUrl TimetableMate::getJourneyUrl( const TimetableAccessor &accessor, const QStr
 
     // Encode city and stop
     if ( accessor.charsetForUrlEncoding.isEmpty() ) {
-        sCity = QString::fromAscii(QUrl::toPercentEncoding(sCity));
-        sStartStopName = QString::fromAscii( QUrl::toPercentEncoding(sStartStopName) );
-        sTargetStopName = QString::fromAscii( QUrl::toPercentEncoding(sTargetStopName) );
+        sCity = QString::fromAscii(KUrl::toPercentEncoding(sCity));
+        sStartStopName = QString::fromAscii( KUrl::toPercentEncoding(sStartStopName) );
+        sTargetStopName = QString::fromAscii( KUrl::toPercentEncoding(sTargetStopName) );
     } else {
         sCity = toPercentEncoding( sCity, accessor.charsetForUrlEncoding.toUtf8() );
         sStartStopName = toPercentEncoding( sStartStopName, accessor.charsetForUrlEncoding.toUtf8() );

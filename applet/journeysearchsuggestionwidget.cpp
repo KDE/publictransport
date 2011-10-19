@@ -73,7 +73,8 @@ void JourneySearchSuggestionItem::setHtml(const QString& html)
 {
     delete m_textDocument;
     m_textDocument = TextDocumentHelper::createTextDocument( html,
-            QSizeF(qMax(qreal(20.0), qreal(parentWidget()->contentsRect().width())), 100.0), QTextOption(), font() );
+            QSizeF(qMax(qreal(20.0), qreal(parentWidget()->contentsRect().width())), 100.0),
+            QTextOption(), font() );
     updateGeometry();
 }
 

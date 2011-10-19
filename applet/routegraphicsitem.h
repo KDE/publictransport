@@ -63,7 +63,7 @@ public:
      * @brief Gets flags for the associated stop.
      *
      * This method also checks the model for the currently highlighted stop / home stop and sets
-     * RouteStopIsHighlighted / RouteStopIsHomeStop in the return value if neccessary.
+     * RouteStopIsHighlighted / RouteStopIsHomeStop in the return value if necessary.
      **/
     RouteStopFlags routeStopFlags() const;
 
@@ -153,7 +153,7 @@ public:
      * @brief Gets flags for the associated stop.
      *
      * This method also checks the model for the currently highlighted stop / home stop and sets
-     * RouteStopIsHighlighted / RouteStopIsHomeStop in the return value if neccessary.
+     * RouteStopIsHighlighted / RouteStopIsHomeStop in the return value if necessary.
      **/
     RouteStopFlags routeStopFlags() const;
 
@@ -270,7 +270,7 @@ public:
      * @brief Gets flags for the associated stop.
      *
      * This method also checks the model for the currently highlighted stop / home stop and sets
-     * RouteStopIsHighlighted / RouteStopIsHomeStop in the return value if neccessary.
+     * RouteStopIsHighlighted / RouteStopIsHomeStop in the return value if necessary.
      **/
     RouteStopFlags routeStopFlags() const;
 

@@ -32,32 +32,32 @@ namespace Plasma
 class FlightDeparture : public QGraphicsWidget {
 public:
 	FlightDeparture( QGraphicsItem* parent = 0 );
-	
-	virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option, 
+
+	virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
 						QWidget* widget = 0 );
-	
+
 	QDateTime departure() const { return m_departure; };
 	QString target() const { return m_target; };
 	QString flightNumber() const { return m_flightNumber; };
 	QString status() const { return m_status; };
 	QString airline() const { return m_airline; };
-	
+
 	void setDeparture( const QDateTime& departure );
 	void setTarget( const QString &target );
 	void setFlightNumber( const QString &flightNumber );
 	void setStatus( const QString &status );
 	void setAirline( const QString &airline );
-	
+
 private:
 	QString headerText() const;
 	QString infoText() const;
-	
+
 	QDateTime m_departure;
 	QString m_target;
 	QString m_flightNumber;
 	QString m_status;
 	QString m_airline;
-	
+
 	Plasma::IconWidget *m_icon;
 	Plasma::Label *m_header;
 	Plasma::Label *m_info;
@@ -66,13 +66,13 @@ private:
 class FlightDepartureList : public QGraphicsWidget
 {
 public:
-	FlightDepartureList( QGraphicsItem* parent = 0, Qt::WindowFlags wFlags = 0 );
-	
+	explicit FlightDepartureList( QGraphicsItem* parent = 0, Qt::WindowFlags wFlags = 0 );
+
 	void setTimetableData( const Plasma::DataEngine::Data &timetableData );
 	void updateLayout();
-	
+
 	QList<FlightDeparture*> departures() const { return m_departures; };
-	
+
 private:
 	QList<FlightDeparture*> m_departures;
 	QGraphicsWidget *m_contentWidget;

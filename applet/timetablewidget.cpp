@@ -1466,7 +1466,7 @@ void PublicTransportWidget::setZoomFactor( qreal zoomFactor )
     m_zoomFactor = zoomFactor;
 
     for ( int i = 0; i < m_items.count(); ++i ) {
-        // Notify childs about changed settings
+        // Notify children about changed settings
         m_items[i]->updateSettings();
     }
     update();
