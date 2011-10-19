@@ -155,14 +155,15 @@ private:
  * @brief A service for the Public Transport data engine, which can import/update GTFS feeds.
  *
  * This service has an operation "UpdateGtfsFeed", which only updates already imported GTFS feeds
- * if there is a new version. This operation gets called by the GTFS accessor
- * @ref TimetableAccessorGeneralTransitFeed to make sure the GTFS data is up to date. To import
- * a new GTFS feed for the first time the operation "ImportGtfsFeed" should be used. That
- * operation does @em not get called by the GTFS accessor. This is because importing GTFS feeds
- * can require quite a lot disk space and importing can take some time.
+ * if there is a new version (job @ref UpdateGtfsToDatabaseJob). This operation gets called by
+ * the GTFS accessor @ref TimetableAccessorGeneralTransitFeed to make sure the GTFS data is up to
+ * date. To import a new GTFS feed for the first time the operation "ImportGtfsFeed" should be
+ * used (job @ref ImportGtfsToDatabaseJob). That operation does @em not get called automatically
+ * by the GTFS accessor. This is because importing GTFS feeds can require quite a lot disk space
+ * and importing can take some time.
  *
  * If there is no imported data every request to the accessor (using the data engine) results in
- * an error with the error code -7 (see the field "errorCode" in the data returned from the data
+ * an error with the error code 3 (see the field "errorCode" in the data returned from the data
  * engine). The user should then be asked to import a new GTFS feed and then the "ImportGtfsFeed"
  * operation should be called.
  *
@@ -175,8 +176,15 @@ private:
     connect( importJob, SIGNAL(finished(KJob*)), this, SLOT(importFinished(KJob*)) );
     connect( importJob, SIGNAL(percent(KJob*,ulong)), this, SLOT(importProgress(KJob*,ulong)) );
    @endcode
- *
  * Replace @em us_trimet with the ID of the service provider, which GTFS feed should be imported.
+ *
+ * To delete a GTFS database for a service provider use the "DeleteGtfsDatabase" operation (job
+ * @ref DeleteGtfsDatabaseJob). You can query the size of the GTFS database for a given service
+ * provider by using the "ServiceProvider <em>\<ID\></em>" data source of the Public Transport
+ * data engine. Replace <em>\<ID\></em> with the ID of the service provider. For GTFS accessors
+ * the returned data object contains a field "gtfsDatabaseSize" and contains the database size
+ * in bytes. The database sizes should be shown to the user, because they may be quite big, eg.
+ * ~300MB.
  **/
 class PublicTransportService : public Plasma::Service {
     Q_OBJECT

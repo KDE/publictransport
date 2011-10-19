@@ -21,7 +21,7 @@
 #include "publictransportdataengine.h"
 #include "publictransportservice.h"
 #include "timetableaccessor.h"
-#include "generaltransitfeed_importer.h"
+#include "timetableaccessor_generaltransitfeed.h"
 
 // KDE includes
 #include <KStandardDirs>
@@ -29,7 +29,6 @@
 // Qt includes
 #include <QFileSystemWatcher>
 #include <QFileInfo>
-#include "timetableaccessor_generaltransitfeed.h"
 
 const int PublicTransportEngine::MIN_UPDATE_TIMEOUT = 120; // in seconds
 const int PublicTransportEngine::MAX_UPDATE_TIMEOUT_DELAY = 5 * 60; // if delays are available

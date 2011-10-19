@@ -45,7 +45,7 @@ struct ChangelogEntry {
  * @brief Reads accessor info xml files.
  *
  * In an accessor info xml it's properties are described, like the name of the service provider,
- * a used script file, raw urls, etc. See @ref page_accessor_infos for more information about the
+ * a used script file, raw urls, etc. See @ref accessor_infos_xml for more information about the
  * XML structure.
  **/
 class AccessorInfoXmlReader : public QXmlStreamReader {

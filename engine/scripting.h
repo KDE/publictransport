@@ -365,9 +365,9 @@ public Q_SLOTS:
      *
      * This function uses @ref TimetableAccessor::timetableInformationFromString to get the
      * @ref TimetableInformation from the given @p sTimetableInformation and use it as arguemnt
-     * for @ref set(TimetableInformation,QVariant).
+     * for @ref set(TimetableInformation,const QVariant&).
      *
-     * @param timetableInformation The type of the information in the given @p value.
+     * @param sTimetableInformation The type of the information in the given @p value.
      * @param value A value to be stored.
      **/
     inline void set( const QString &sTimetableInformation, const QVariant &value ) {

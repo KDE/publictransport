@@ -282,6 +282,8 @@ public:
      *
      * When the session key has been received @ref sessionKeyReceived is emitted.
      *
+     * @param parseMode Describes what should be done when the session key is available.
+     * @param url The url to use to get the session key.
      * @param requestInfo Information about a request, that gets executed when the session key
      *   is known. If for example requestInfo has information about a departure request, after
      *   getting the session key, @p requestDepartures gets called with this requestInfo object.
@@ -353,8 +355,10 @@ protected:
      * @ref requestJourneys, etc.
      * The default implementation does nothing and returns false.
      *
+     * @param document The contents of the document that should be parsed.
      * @param journeys A pointer to a list of departure/arrival or journey information.
      *   The results of parsing the document is stored in @p journeys.
+     * @param globalInfo Information for all items get stored in this object.
      * @param parseDocumentMode The mode of parsing, e.g. parse for
      *   departures/arrivals or journeys.
      * @return true, if there were no errors and the data in @p journeys is valid.
@@ -370,6 +374,8 @@ protected:
      * @brief Override this method to parse the contents of a received document for
      *   an url to a document containing later journeys. The default implementation
      *   returns a null string.
+     *
+     * @param document The contents of the document that should be parsed.
      * @return The parsed url.
      **/
     virtual QString parseDocumentForLaterJourneysUrl( const QByteArray &document ) {
@@ -381,6 +387,8 @@ protected:
      * @brief Override this method to parse the contents of a received document for
      *   an url to a document containing detailed journey information. The default
      *   implementation returns a null string.
+     *
+     * @param document The contents of the document that should be parsed.
      * @return The parsed url.
      **/
     virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document ) {
@@ -391,6 +399,8 @@ protected:
     /**
      * @brief Override this method to parse the contents of a received document for
      *   a session key. The default implementation returns a null string.
+     *
+     * @param document The contents of the document that should be parsed.
      * @return The parsed session key. */
     virtual QString parseDocumentForSessionKey( const QByteArray &document ) {
         Q_UNUSED( document );
@@ -401,6 +411,7 @@ protected:
      * @brief Parses the contents of a received document for a list of possible stop names
      *   and puts the results into @p stops.
      *
+     * @param document The contents of the document that should be parsed.
      * @param stops A pointer to a list of @ref StopInfo objects.
      * @return true, if there were no errors.
      * @return false, if there were an error parsing the document.
@@ -429,17 +440,26 @@ protected:
 
     /**
      * @brief Constructs an url to the departure / arrival list by combining the "raw"
-     *   url with the needed information. */
+     *   url with the needed information.
+     *
+     * @param requestInfo Information about the departure/arrival request to get a source url for.
+     **/
     KUrl getUrl( const DepartureRequestInfo &requestInfo ) const;
 
     /**
      * @brief Constructs an url to a page containing stop suggestions by combining
-     *   the "raw" url with the needed information. */
+     *   the "raw" url with the needed information.
+     *
+     * @param requestInfo Information about the stop suggestions request to get a source url for.
+     **/
     KUrl getStopSuggestionsUrl( const StopSuggestionRequestInfo &requestInfo );
 
     /**
      * @brief Constructs an url to the journey list by combining the "raw" url with the
-     *   needed information. */
+     *   needed information.
+     *
+     * @param requestInfo Information about the journey request to get a source url for.
+     **/
     KUrl getJourneyUrl( const JourneyRequestInfo &requestInfo ) const;
 
     QString m_curCity; /**< @brief Stores the currently used city. */
@@ -453,6 +473,7 @@ signals:
      * @param accessor The accessor that was used to download and parse the departures/arrivals.
      * @param requestUrl The url used to request the information.
      * @param journeys A list of departures / arrivals that were received.
+     * @param globalInfo Information for all departures/arrivals.
      * @param requestInfo Information about the request for the just received departure/arrival list.
      * @see TimetableAccessor::useSeperateCityValue() */
     void departureListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
@@ -465,6 +486,7 @@ signals:
      * @param accessor The accessor that was used to download and parse the journeys.
      * @param requestUrl The url used to request the information.
      * @param journeys A list of journeys that were received.
+     * @param globalInfo Information for all journeys.
      * @param requestInfo Information about the request for the just received journey list.
      * @see TimetableAccessor::useSeperateCityValue() */
     void journeyListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
@@ -506,9 +528,10 @@ signals:
     /**
      * @brief Reports progress of the accessor in performing an action.
      *
-     * TODO
-     *
+     * @param accessor The accessor that emitted this signal.
      * @param progress A value between 0 (just started) and 1 (completed) indicating progress.
+     * @param jobDescription A description of what is currently being done.
+     * @param requestUrl The URL to the document that gets downloaded/parsed.
      * @param requestInfo Information about the request that produced the progress report.
      **/
     void progress( TimetableAccessor *accessor, qreal progress, const QString &jobDescription,

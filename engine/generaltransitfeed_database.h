@@ -42,15 +42,16 @@ public:
      **/
     enum FieldType {
         HashId, /**< The qHash value of the source value is stored in the database. Used for IDs
-                * which can be strings in GTFS feeds. For performance reasons integers are much 
+                * which can be strings in GTFS feeds. For performance reasons integers are much
                 * better in the database. */
         Integer, /**< The source value is converted to an integer before storing it in the
-                * database, using @ref QString::toInt. */
+                * database, using QString::toInt. */
         Double, /**< The source value is converted to a double before storing it in the database,
-                * using @ref QString::toDouble. */
-        SecondsSinceMidnight, /**< . */
+                * using QString::toDouble. */
+        SecondsSinceMidnight, /**< The source value is converted to the number of seconds that
+                * have passed since midnight at the given Date. */
         Date, /**< The source value is converted to a QDate before storing it in the database,
-                * using @ref QDate::fromString. */
+                * using QDate::fromString. */
         String, /**< The source value is stored as it is in the database. */
         Color, /**< The source value is converted to a QColor before storing it in the database,
                 * using the source value as named color by prepending a '#'. */
@@ -71,6 +72,7 @@ public:
      * @brief Creates all needed tables in the database, if they did not already exist.
      *
      * @param errorText Gets set to a string explaining an error, if this returns false.
+     * @param database The database to use.
      *
      * @returns True, if the database tables could be created successfully. False, otherwise.
      **/

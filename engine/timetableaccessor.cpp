@@ -605,6 +605,7 @@ void TimetableAccessor::requestDepartures( const DepartureRequestInfo &requestIn
 void TimetableAccessor::requestSessionKey( ParseDocumentMode parseMode,
         const KUrl &url, const RequestInfo *requestInfo )
 {
+    Q_UNUSED( parseMode );
     KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
     m_jobInfos.insert( job, JobInfos(url, requestInfo->clone()) );
 //     TODO

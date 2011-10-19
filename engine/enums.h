@@ -27,8 +27,7 @@
 #include <QDebug>
 #include <QDate>
 
-/** @brief Contains global information about a downloaded timetable that affects
- * all departures/arrivals/journeys. */
+/** @brief Contains global information about a downloaded timetable that affects all items. */
 struct GlobalTimetableInfo {
     GlobalTimetableInfo() {
         delayInfoAvailable = true;

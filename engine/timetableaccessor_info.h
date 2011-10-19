@@ -162,10 +162,7 @@ public:
     };
 
     /**
-     * @brief Wheather or not this accessor supports stop name autocompletion.
-     *
-     * @warning At least one regExp must have been set to initialize the RegExps
-     * object, eg. with @ref setRegExpDepartures. Otherwise this crashes. */
+     * @brief Wheather or not this accessor supports stop name autocompletion. TODO: Remove? */
     virtual bool supportsStopAutocompletion() const {
         return false; };
     /** @brief Wheather or not this accessor supports the given TimetableInformation. */

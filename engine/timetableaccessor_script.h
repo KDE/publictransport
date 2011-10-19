@@ -93,8 +93,10 @@ protected:
      *   or journeys (depending on @p parseDocumentMode) and puts the results
      *   into @p journeys.
      *
+     * @param document The contents of the document that should be parsed.
      * @param journeys A pointer to a list of departure/arrival or journey
      *   information. The results of parsing the document is stored in @p journeys.
+     * @param globalInfo Information for all items get stored in this object.
      * @param parseDocumentMode The mode of parsing, e.g. parse for
      *   departures/arrivals or journeys.
      * @return true, if there were no errors and the data in @p journeys is valid.
@@ -108,6 +110,7 @@ protected:
      *   parse the contents of a received document for an url to a document
      *   containing later journeys.
      *
+     * @param document The contents of the document that should be parsed.
      * @return The parsed url. */
     virtual QString parseDocumentForLaterJourneysUrl( const QByteArray &document );
 
@@ -116,6 +119,7 @@ protected:
      *   parse the contents of a received document for an url to a document
      *   containing detailed journey information.
      *
+     * @param document The contents of the document that should be parsed.
      * @return The parsed url. */
     virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document );
 
@@ -123,6 +127,7 @@ protected:
      * @brief Calls the 'parseSessionKey' function in the script to
      *   parse the contents of a received document for the session key.
      *
+     * @param document The contents of the document that should be parsed.
      * @return The parsed session key or QString() if none was found. */
     virtual QString parseDocumentForSessionKey( const QByteArray &document );
 
@@ -130,18 +135,14 @@ protected:
      * @brief Calls the 'parsePossibleStops' function in the script to parse the contents of the
      *   given document for a list of possible stop names and puts the results into @p stops.
      *
-     * @param document A document to be parsed.
-     *
+     * @param document The contents of the document that should be parsed.
      * @param stops A pointer to a list of @ref StopInfo objects.
-     *
      * @return true, if there were no errors.
-     *
      * @return false, if there were an error parsing the document.
      *
      * @note Can be used if you have an html document containing a stop list.
      *   TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
      *   document for stops.
-     *
      * @see parseDocumentPossibleStops(QHash<QString,QString>*) */
     virtual bool parseDocumentPossibleStops( const QByteArray &document, QList<StopInfo*> *stops );
 

@@ -116,33 +116,16 @@ protected slots:
 
 protected:
     /**
-     * @brief Requests a list of departures from the GTFS database.
+     * @brief Requests a list of departures/arrivals from the GTFS database.
      *
-     * @param sourceName The source name in the data engine.
-     * @param city The city in which the @p stop is, or an empty string if not required by the
-     *   service provider. Most providers do not require a city value.
-     * @param stop The name or ID of the stop to get departures for.
-     * @param maxCount The maximum number of departures/arrivals to get.
-     * @param dateTime The date and time of the first departure to get.
-     * @param dataType This should be left as "departures".
-     * @param usedDifferentUrl Is not used by this class. Default is false.
+     * @param requestInfo Information about the departure/arrival request.
      **/
     virtual void requestDepartures( const DepartureRequestInfo &requestInfo );
 
     /**
-     * @brief Requests a list of stops from the GTFS database.
+     * @brief Requests a list of stop suggestions from the GTFS database.
      *
-     * @param sourceName The source name in the data engine.
-     * @param city The city in which the @p stop is, or an empty string if not required by the
-     *   service provider. Most providers do not require a city value.
-     * @param stop The name or ID of the stop to get departures for.
-     * @param parseMode The parse mode can be @ref ParseForStopSuggestions or
-     *   @ref ParseForDepartureArrivals, if departures/arrivals were requested but the stop name
-     *   was ambiguous.
-     * @param maxCount The maximum number of stops to get.
-     * @param dateTime The date and time of the request.
-     * @param dataType This should be left empty
-     * @param usedDifferentUrl Is not used by this class. Default is false.
+     * @param requestInfo Information about the stop suggestion request.
      **/
     virtual void requestStopSuggestions( const StopSuggestionRequestInfo &requestInfo );
 

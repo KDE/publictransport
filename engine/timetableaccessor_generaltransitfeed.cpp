@@ -779,6 +779,8 @@ void TimetableAccessorGeneralTransitFeed::requestStopSuggestions(
 bool TimetableAccessorGeneralTransitFeed::checkForDiskIoErrorInDatabase( const QSqlError &error,
         const RequestInfo *requestInfo )
 {
+    Q_UNUSED( requestInfo );
+
     // Check of the error is a "disk I/O" error or a "no such table" error, ie. the database file
     // may have been deleted.
     // The error numbers (1, 10) is database dependend and works with SQLITE

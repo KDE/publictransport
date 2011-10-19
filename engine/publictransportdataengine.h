@@ -236,12 +236,13 @@ private:
 /** @mainpage Public Transport Data Engine
 @section intro_dataengine_sec Introduction
 The public transport data engine provides timetable data for public transport, trains, ships,
-ferries and planes. It can get departure/arrival lists or journey lists.
-There are different accessors used to download and parse documents from
-different service providers. Currently there are two classes of accessors, one
-to parse documents using scripts and one to parse xml files. All are using information
-from TimetableAccessorInfo, which reads information data from xml files to support different
-service providers.
+ferries and planes. It can get departure/arrival lists, journey lists and stop name suggestions.
+There are different accessors used to download and parse documents from different service
+providers. Currently there are three classes of accessors: One that uses a database filled with
+data from a GTFS feed, one to parse documents using scripts and one to parse XML files in a special
+format (currently only used for de_rmv).
+All accessors are using a @ref TimetableAccessorInfo object with information read from the XML
+files. The reading on the XML files itself is done by the class @ref AccessorInfoXmlReader.
 
 <br />
 @section install_sec Installation
@@ -282,15 +283,16 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
 <br />
 
 @section usage_introduction_sec Introduction
-To use this data engine in an applet you need to connect it to a data source
-of the public transport data engine. There are data sources which provide information about the
-available service providers (@ref usage_serviceproviders_sec) or supported countries. Another data
-source contains departures or arrivals (@ref usage_departures_sec) and one contains journeys
-(@ref usage_journeys_sec).<br />
+To use this data engine in an applet you need to connect it to a data source of the public
+transport data engine. There are data sources which provide information about the available
+service providers (@ref usage_serviceproviders_sec) or supported countries. Other data sources
+contain departures/arrivals (@ref usage_departures_sec), journeys (@ref usage_journeys_sec) or
+stop suggestions (@ref usage_stopList_sec).<br />
 <br />
-This enumeration can be used in your applet to ease the usage of the data engine.
-Don't change the numbers, as they need to match the ones in the data engine,
-which uses a similar enumeration.
+The following enumeration can be used in your applet if you don't want to use
+libpublictransporthelper which exports this enumaration as @ref Timetable::VehicleType.
+Don't change the numbers, as they need to match the ones in the data engine, which uses a similar
+enumeration.
 @code
 // The type of the vehicle used for a public transport line.
 // The numbers here must match the ones in the data engine!
@@ -302,7 +304,10 @@ enum VehicleType {
     Subway = 3, // The vehicle is a subway
     InterurbanTrain = 4, // The vehicle is an interurban train
     Metro = 5, // The vehicle is a metro
-    TrolleyBus = 6, // The vehicle is an electric bus
+    TrolleyBus = 6, // A trolleybus (also known as trolley bus, trolley coach, trackless trolley,
+            // trackless tram or trolley) is an electric bus that draws its electricity from
+            // overhead wires (generally suspended from roadside posts) using spring-loaded
+            // trolley poles
 
     RegionalTrain = 10, // The vehicle is a regional train
     RegionalExpressTrain = 11, // The vehicle is a region express
@@ -311,6 +316,7 @@ enum VehicleType {
     HighspeedTrain = 14, // The vehicle is an intercity express (ICE, TGV?, ...?)
 
     Ferry = 100, // The vehicle is a ferry
+    Ship = 101, // The vehicle is a ship
 
     Plane = 200 // The vehicle is an aeroplane
 };
@@ -318,15 +324,22 @@ enum VehicleType {
 
 <br />
 @section usage_serviceproviders_sec Receiving a List of Available Service Providers
-You can view this data source in the plasmaengineexplorer, it's name is <em>"ServiceProviders"</em>.
-For each available service provider it contains a key with the display name of the service provider.
-These keys point to the service provider information, stored as a QHash with the following keys:
+You can view this data source in <em>plasmaengineexplorer</em>, it's name is <em>"ServiceProviders"</em>,
+but you can also use <em>"ServiceProvider ID"</em> with the ID of a service provider to get
+information only for that service provider.
+For each available service provider the data source contains a key with the display name of the
+service provider. These keys point to the service provider information, stored as a QHash with
+the following keys:
 <br />
 <table>
 <tr><td><i>id</i></td> <td>QString</td> <td>The ID of the service provider.</td></tr>
 <tr><td><i>fileName</i></td> <td>QString</td> <td>The file name of the XML file containing the accessor information.</td> </tr>
 <tr><td><i>scriptFileName</i></td> <td>QString</td> <td>The file name of the script file used by the accessor for parsing, if any.</td> </tr>
 <tr><td><i>name</i></td> <td>QString</td> <td>The name of the accessor.</td></tr>
+<tr><td><i>type</i></td> <td>QString</td> <td>The type of the accessor, may currently be "GTFS", "Scripted", "XML" or "Invalid".</td></tr>
+<tr><td><i>feedUrl</i></td> <td>QString</td> <td><em>(only for type "GTFS")</em> The url to the (latest) GTFS feed.</td></tr>
+<tr><td><i>gtfsDatabaseSize</i></td> <td>qint64</td> <td><em>(only for type "GTFS")</em> The size in bytes of the GTFS database.</td></tr>
+<tr><td><i>scriptFileName</i></td> <td>QString</td> <td><em>(only for type "Scripted")</em> The file name of the used script.</td></tr>
 <tr><td><i>url</i></td> <td>QString</td> <td>The url to the home page of the service provider.</td></tr>
 <tr><td><i>shortUrl</i></td> <td>QString</td> <td>A short version of the url to the home page of the service provider. This can be used to display short links, while using "url" as the url of that link.</td></tr>
 <tr><td><i>country</i></td> <td>QString</td> <td>The country the service provider is (mainly) designed for.</td></tr>
@@ -439,6 +452,12 @@ class Applet : public Plasma::Applet {
 The data received from the data engine always contains these keys:<br />
 <table>
 <tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
+<tr><td><i>errorString</i></td> <td>QString</td> <td>(only if <em>error</em> is true), an error message string.</td></tr>
+<tr><td><i>errorCode</i></td> <td>int</td> <td>(only if <em>error</em> is true), an error code.
+    Error code 1 means, that there was a problem downloading a source file.
+    Error code 2 means, that parsing a source file failed.
+    Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
+    Use the @ref PublicTransportService to start and monitor the import.</td></tr>
 <tr><td><i>receivedPossibleStopList</i></td> <td>bool</td> <td>True, if the given stop name is ambiguous and
 a list of possible stops was received, see @ref usage_stopList_sec .</td></tr>
 <tr><td><i>count</i></td> <td>int</td> <td>The number of received departures / arrivals / stops or 0 if there was
@@ -448,6 +467,7 @@ there was an error.</td></tr>
 <tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was last updated.</td></tr>
 </table>
 <br />
+
 Each departure/arrival in the data received from the data engine (departureData in the code
 example) has the following keys:<br />
 <table>
@@ -473,7 +493,6 @@ departure/arrival. Can be used as argument to the KIcon constructor.</td></tr>
 <tr><td><i>routeStops</i></td> <td>QStringList</td> <td>A list of stops of the departure/arrival to it's destination stop or a list of stops of the journey from it's start to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
 <tr><td><i>routeTimes</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of times of the departure/arrival to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
 <tr><td><i>routeExactStops</i></td> <td>int</td> <td>The number of exact route stops. The route stop list isn't complete from the last exact route stop.</td></tr>
-
 </table>
 
 <br />
@@ -551,6 +570,12 @@ class Applet : public Plasma::Applet {
 The data received from the data engine always contains these keys:<br />
 <table>
 <tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
+<tr><td><i>errorString</i></td> <td>QString</td> <td>(only if <em>error</em> is true), an error message string.</td></tr>
+<tr><td><i>errorCode</i></td> <td>int</td> <td>(only if <em>error</em> is true), an error code.
+    Error code 1 means, that there was a problem downloading a source file.
+    Error code 2 means, that parsing a source file failed.
+    Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
+    Use the @ref PublicTransportService to start and monitor the import.</td></tr>
 <tr><td><i>receivedPossibleStopList</i></td> <td>bool</td> <td>True, if the given stop name is ambiguous and
 a list of possible stops was received, see @ref usage_stopList_sec .</td></tr>
 <tr><td><i>count</i></td> <td>int</td> <td>The number of received journeys / stops or 0 if there was
@@ -694,35 +719,39 @@ The email address of the author of this accessor info xml.</td></tr>
 <td>A city in the list of cities (\<cities\>). Can have an attribute "replaceWith", to replace city names with values used by the service provider.</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<description\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
+<td>\<accessorInfo\></td> <td>(Required)</td>
 <td>A description of the service provider / accessor. You don't need to list the features supported by the accessor here, the feature list is generated automatically.</td></tr>
 
 <tr style="background-color: #ffbbbb;"><td><b>\<url\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
+<td>\<accessorInfo\></td> <td>(Required)</td>
 <td>An url to the service provider home page.</td></tr>
 
-<tr style="background-color: #ffbbbb;"><td><b>\<shortUrl\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
-<td>A short version of the url, used as link text.</td></tr>
+<tr style="background-color: #00bb00;"><td><b>\<shortUrl\></b></td>
+<td>\<accessorInfo\></td> <td>(Optional)</td>
+<td>A short version of the url, used as link text. If it is not given the URL given in the \<url\> tag is made short, ie. by removing "http://" from the beginning.</td></tr>
+
+<tr><td style="color:#770000;"><b>\<feedUrl\></b></td>
+<td style="color:#bb0000;">\<accessorInfo\></td> <td>(Required only with "GTFS" type)</td>
+<td>An URL to the GTFS feed to use. Use an URL to the latest available feed.</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td style="color:#bb0000;"><b>\<rawUrls\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
+<td>\<accessorInfo\></td> <td>(Required)</td>
 <td>Contains the used "raw urls". A raw url is a string with placeholders that are replaced with values to get a real url.</td></tr>
 
 <tr><td style="color:#770000;"><b>\<departures\></b></td>
-<td style="color:#bb0000;">\<rawUrls\></td> <td>Required</td>
+<td style="color:#bb0000;">\<rawUrls\></td> <td>(Required, not used with "GTFS" type)</td>
 <td>A raw url (in a CDATA tag) to a page containing a departure / arrival list. The following substrings are replaced by current values: <b>{stop}</b> (the stop name), <b>{type}</b> (arr or dep for arrivals or departures), <b>{time}</b> (the time of the first departure / arrival), <b>{maxCount}</b> (maximal number of departures / arrivals).</td></tr>
 
 <tr><td style="color:#770000;"><b>\<journeys\></b></td>
-<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional)</td>
+<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional, not used with "GTFS" type)</td>
 <td>A raw url (in a CDATA tag) to a page containing a journey list. The following substrings are replaced by current values: <b>{startStop}</b> (the name of the stop where the journey starts), <b>{targetStop}</b> (the name of the stop where the journey ends), <b>{time}</b> (the time of the first journey), <b>{maxCount}</b> (maximal number of journeys).</td></tr>
 
 <tr><td style="color:#770000;"><b>\<stopSuggestions\></b></td>
-<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional)</td>
+<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional, not used with "GTFS" type)</td>
 <td>A raw url (in a CDATA tag) to a page containing a list of stop suggestions. Normally this tag isn't needed, because the url is the same as the url to the departure list. When the stop name is ambiguous the service provider can show a page containing a list of stop suggestions. You may want to use this tag if you want to parse XML files for departure lists and get the stop suggestions from an HTML page or if there is a special url only for stop suggestions.</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<script></b></td>
-<td>\<accessorInfo\></td> <td>Required, if no regExps are set</td>
+<td>\<accessorInfo\></td> <td>Required only with "Scripted" type</td>
 <td>Contains the filename of the script to be used to parse timetable documents. The script must be in the same directory as the XML file. Always use HTML as type when using a script, you can also parse XML files in the script.</td></tr>
 
 <tr style="border-top: 3px double black;"><td style="color:#00bb00;"><b>\<changelog\></b></td>
@@ -761,7 +790,7 @@ There are functions with special names that get called by the data engine when n
     </li>
 
     <li>
-        <b>parsePossibleStops( document ):</b> Used to parse stop suggestion documents. The content of the document is given as argument. This works similiar to <em>parseTimetable</em>. You can set these values for stop suggestions: "StopName" (required), "StopID", "StopWeight", "StopCity" and "StopCountryCode". Example: <em>timetableData.set( 'StopName', 'Testname' );</em>
+        <b>parsePossibleStops( document ):</b> Used to parse stop suggestion documents. The content of the document is given as argument. This works similar to <em>parseTimetable</em>. You can set these values for stop suggestions: "StopName" (required), "StopID", "StopWeight", "StopCity" and "StopCountryCode". Example: <em>timetableData.set( 'StopName', 'Testname' );</em>
         </li>
 
     <li>
