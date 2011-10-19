@@ -102,7 +102,7 @@ void TimetableData::set( TimetableInformation info, const QVariant& value )
             QStringList::iterator it = stops.begin();
             while ( it != stops.end() ) {
                 *it = TimetableAccessorScript::decodeHtmlEntities( *it )
-                        .replace( QRegExp("^(&nbsp;)+|(&nbsp;)+$", Qt::CaseInsensitive), "" )
+                        .remove( QRegExp("^(&nbsp;)+|(&nbsp;)+$", Qt::CaseInsensitive) )
                         .trimmed();
                 ++it;
             }

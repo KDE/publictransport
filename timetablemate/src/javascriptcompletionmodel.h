@@ -62,7 +62,7 @@ public:
 	void initHelperCompletion();
 	void initTimetableInfoCompletion();
 	void initFunctionCallCompletion();
-	
+
 	virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
 	virtual void executeCompletionItem( KTextEditor::Document* document,
 					    const KTextEditor::Range& word, int row ) const;

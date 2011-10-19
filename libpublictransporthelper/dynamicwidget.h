@@ -156,10 +156,8 @@ protected:
      * @brief Creates a new DynamicWidget with @p contentWidget.
      *
      * @param contentWidget The content widget.
-     *
      * @param container Used as parent and to get initial icons for the
      *   add/remove buttons.
-     *
      * @param buttonTypes A list of buttons to be created.
      *
      * @see ButtonType
@@ -275,7 +273,7 @@ public:
      * @param separatorOptions Options for separators. Default is NoSeparator.
      * @param newWidgetPosition The position of newly added widgets. Default is AddWidgetsAtBottom.
      **/
-    AbstractDynamicWidgetContainer( QWidget *parent = 0,
+    explicit AbstractDynamicWidgetContainer( QWidget *parent = 0,
             RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
             AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
             SeparatorOptions separatorOptions = NoSeparator,
@@ -584,7 +582,7 @@ public:
                 * for the first label without a special label text. */
     };
 
-    AbstractDynamicLabeledWidgetContainer( QWidget* parent = 0,
+    explicit AbstractDynamicLabeledWidgetContainer( QWidget* parent = 0,
         RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
         AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
         SeparatorOptions separatorOptions = NoSeparator,
@@ -693,7 +691,7 @@ class PUBLICTRANSPORTHELPER_EXPORT DynamicLabeledLineEditList
     Q_PROPERTY( bool clearButtonsShown READ clearButtonsShown WRITE setClearButtonsShown )
 
 public:
-    DynamicLabeledLineEditList( QWidget* parent = 0,
+    explicit DynamicLabeledLineEditList( QWidget* parent = 0,
             RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
             AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
             SeparatorOptions separatorOptions = NoSeparator,

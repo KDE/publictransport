@@ -183,7 +183,7 @@ BracketedNode* JavaScriptParser::parseBracketed()
     }
     Token *beginToken = currentToken();
     m_lastToken = beginToken;
-    // '{' is catched by parseBlock
+    // '{' is matched by parseBlock
     if ( !beginToken->isChar('(') && !beginToken->isChar('[') ) {
         return NULL;
     }

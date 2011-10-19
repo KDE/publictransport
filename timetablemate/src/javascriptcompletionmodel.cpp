@@ -15,7 +15,7 @@
  *   License along with this program; if not, write to the
  *   Free Software Foundation, Inc.,
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- */ 
+ */
 
 #include "javascriptcompletionmodel.h"
 
@@ -142,16 +142,17 @@ void JavaScriptCompletionModel::completionInvoked( KTextEditor::View* view,
         if ( blockLevel == 0 ) { // at root level
             m_completions << m_completionsGlobalFunctions.values();
         } else { // inside function
-            if ( text.startsWith("helper.") ) {
+            if ( text.startsWith(QLatin1String("helper.")) ) {
                 m_completions << m_completionsHelper.values();
-            } else if ( text.startsWith("timetableData.set( '")
-                        || textUntilLineBegin.startsWith("timetableData.set( '") ) {
+            } else if ( text.startsWith(QLatin1String("timetableData.set( '"))
+                     || textUntilLineBegin.startsWith(QLatin1String("timetableData.set( '")) )
+            {
                 // Add timetable info completions
                 m_completions << m_completionsTimetableInfo.values();
-            } else if ( text.startsWith("timetableData.") ) {
+            } else if ( text.startsWith(QLatin1String("timetableData.")) ) {
                 m_completions << m_completionsCalls["call:timetableData.set"];
                 m_completions << m_completionsCalls["call:timetableData.clear"];
-            } else if ( text.startsWith("result.") ) {
+            } else if ( text.startsWith(QLatin1String("result.")) ) {
                 m_completions << m_completionsCalls["call:result.addData"];
             } else {
                 m_completions << CompletionItem( Class | GlobalScope, "helper",
@@ -232,7 +233,7 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
 	    "}\n",
             true, "Implement string array", "                   ") ); // The spaces make the completion
 		    // box wider, so that the code snipped can be read
-    
+
     m_completionsGlobalFunctions.insert( "func:parseTimetable(html)",
 	    CompletionItem( Function | GlobalScope,
             "parseTimetable( html )",
@@ -716,7 +717,7 @@ void JavaScriptCompletionModel::initFunctionCallCompletion() {
 			    i18nc("@info The description for the 'timetableData.set' function",
 				  "Saves the given <placeholder>value</placeholder> under the "
 				  "given <placeholder>infoName</placeholder>."),
-			    "set( '${infoName}', ${value} );", true, "void" ) );    
+			    "set( '${infoName}', ${value} );", true, "void" ) );
     m_completionsCalls.insert( "call:timetableData.clear",
 	    CompletionItem( Function, "timetableData.clear()",
 			    i18nc("@info The description for the 'timetableData.clear' function",
@@ -725,7 +726,7 @@ void JavaScriptCompletionModel::initFunctionCallCompletion() {
 				  "<note>You should call this method before setting values "
 				  "for the next item.</note>"),
 			    "clear();", false, "void" ) );
-    
+
     m_completionsCalls.insert( "call:result.addData",
 	    CompletionItem( Function, "result.addData( timetableData )",
 			    i18nc("@info The description for the 'result.addData' function",

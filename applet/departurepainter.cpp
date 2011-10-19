@@ -154,7 +154,7 @@ void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
             if ( iconDrawFlags.testFlag(DrawMonochromeIcon) ) {
                 // For monochrome icons, draw white text with a dark gray outline
                 QPen textOutlinePen( QColor(0, 0, 0, 100) );
-                textOutlinePen.setWidthF( qMin(10.0, font.pixelSize() / 5.0) );
+                textOutlinePen.setWidthF( qMin(qreal(10.0), qreal(font.pixelSize() / 5.0)) );
                 textOutlinePen.setCapStyle( Qt::RoundCap );
                 textOutlinePen.setJoinStyle( Qt::RoundJoin );
                 QPainterPath textPath;
@@ -176,7 +176,7 @@ void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
         m_pixmapCache->insert( vehicleCacheKey, vehiclePixmap );
     }
 
-    // Make a part 70% transparent, dependend on minsToDeparture
+    // Make a part 70% transparent, dependent on minsToDeparture
     if ( iconDrawFlags.testFlag(DrawTimeGraphics) && minutesUntilDeparture > 0 ) {
         // Draw graphical indication for the time until departure/arrival
         QPixmap polygonPixmap;
@@ -328,7 +328,7 @@ QPixmap DeparturePainter::createDeparturesPixmap( DepartureItem *departure,
         text = fm.elidedText( text, Qt::ElideRight, textRect.width() * 1.05 );
         if ( iconDrawFlags.testFlag(DrawMonochromeIcon) ) {
             QPen textOutlinePen( QColor(0, 0, 0, 150) );
-            textOutlinePen.setWidthF( qMin(6.0, font.pixelSize() / 3.0) );
+            textOutlinePen.setWidthF( qMin(qreal(6.0), qreal(font.pixelSize() / 3.0)) );
             textOutlinePen.setCapStyle( Qt::RoundCap );
             textOutlinePen.setJoinStyle( Qt::RoundJoin );
             QPen textOutlineFinePen( QColor(0, 0, 0, 225) );

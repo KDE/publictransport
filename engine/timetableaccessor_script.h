@@ -23,8 +23,8 @@
 *
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#ifndef TIMETABLEACCESSOR_HTML_HEADER
-#define TIMETABLEACCESSOR_HTML_HEADER
+#ifndef TIMETABLEACCESSOR_SCRIPT_HEADER
+#define TIMETABLEACCESSOR_SCRIPT_HEADER
 
 #include "timetableaccessor.h"
 
@@ -129,11 +129,8 @@ protected:
      *   given document for a list of possible stop names and puts the results into @p stops.
      *
      * @param document A document to be parsed.
-     *
      * @param stops A pointer to a list of @ref StopInfo objects.
-     *
      * @return true, if there were no errors.
-     *
      * @return false, if there were an error parsing the document.
      *
      * @note Can be used if you have an html document containing a stop list.
@@ -151,4 +148,4 @@ private:
     ResultObject *m_resultObject; // An object used by the script to store results in
 };
 
-#endif // TIMETABLEACCESSOR_HTML_HEADER
+#endif // TIMETABLEACCESSOR_SCRIPT_HEADER

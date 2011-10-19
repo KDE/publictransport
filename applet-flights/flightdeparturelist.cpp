@@ -38,22 +38,22 @@ FlightDeparture::FlightDeparture( QGraphicsItem* parent ) : QGraphicsWidget( par
 {
 	setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
 	setMinimumSize( 125, 45 );
-	
+
 	m_icon = new Plasma::IconWidget( Timetable::Global::vehicleTypeToIcon(Timetable::Plane),
                                      QString(), this );
 	m_header = new Plasma::Label( this );
 	m_info = new Plasma::Label( this );
-	
+
 	m_icon->setMinimumSize( 32, 32 );
 	m_icon->setMaximumSize( 32, 32 );
-	
+
 	QFont headerFont = m_header->font();
 	headerFont.setBold( true );
 	m_header->setFont( headerFont );
 	m_header->setText( headerText() );
 	m_header->setToolTip( headerText() );
 	m_header->setMaximumHeight( m_header->boundingRect().height() * 0.9 );
-	
+
 	m_info->setText( infoText() );
 	m_info->setToolTip( infoText() );
 	#if KDE_VERSION >= KDE_MAKE_VERSION(4,5,0)
@@ -61,7 +61,7 @@ FlightDeparture::FlightDeparture( QGraphicsItem* parent ) : QGraphicsWidget( par
 	#endif
 	m_info->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
 	m_info->setMaximumHeight( boundingRect().height() - m_header->maximumHeight() - 5 );
-	
+
 	QGraphicsGridLayout *mainLayout = new QGraphicsGridLayout( this );
 	mainLayout->addItem( m_icon, 0, 0, 2, 1, Qt::AlignCenter );
 	mainLayout->addItem( m_header, 0, 1, 1, 1, Qt::AlignBottom );
@@ -78,13 +78,13 @@ QString FlightDeparture::headerText() const
 
 QString FlightDeparture::infoText() const
 {
-	return i18n("Departing at %1, %2, %3", 
+	return i18n("Departing at %1, %2, %3",
 			KGlobal::locale()->formatTime(m_departure.time()), m_status, m_airline);
 }
 
 void FlightDeparture::setTarget( const QString& target )
 {
-	// Set target and remove the shorthand of the airport 
+	// Set target and remove the shorthand of the airport
 	m_target = target;
 	m_target.replace( QRegExp("^[A-Z]+\\s"), QString() );
 	m_header->setText( headerText() );
@@ -119,34 +119,34 @@ void FlightDeparture::setStatus( const QString& status )
 	m_info->setToolTip( infoText() );
 }
 
-void FlightDeparture::paint( QPainter* painter, const QStyleOptionGraphicsItem* option, 
+void FlightDeparture::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
 							 QWidget* widget )
 {
 	painter->setRenderHints( QPainter::SmoothPixmapTransform | QPainter::Antialiasing );
-	
+
 	QGraphicsWidget::paint( painter, option, widget );
-	
+
 	QString headerText = i18n("Flight %1 to %2", m_flightNumber, m_target);
-	QString text = i18n("Departing at %1, %2, %3", 
+	QString text = i18n("Departing at %1, %2, %3",
 						KGlobal::locale()->formatTime(m_departure.time()), m_status, m_airline);
-	
+
 	int iconSize = qMin( qMax(qCeil(option->rect.height() / 2), 16), 64 );
 	QRectF iconRect( 0, (option->rect.height() - iconSize) / 2, iconSize, iconSize );
-	QRectF headerRect( 5 + iconSize, 0, 
+	QRectF headerRect( 5 + iconSize, 0,
 					   option->rect.width() - 5 - iconSize, option->rect.height() / 3 );
-	QRectF textRect( 5 + iconSize, headerRect.height(), 
+	QRectF textRect( 5 + iconSize, headerRect.height(),
 					 headerRect.width(), 2 * option->rect.height() / 3 );
-	
+
 // 	QColor textColor = option->palette.text().color();
 // 	bool drawHalos = qGray(textColor.rgb()) < 192;
-// 	
+//
 // 	QList< QRect > fadeRects, haloRects;
 // 	int fadeWidth = 30;
 // 	QPixmap pixmap( textRect.size() );
 // 	pixmap.fill( Qt::transparent );
 // 	QPainter p( &pixmap );
 // 	p.setPen( painter->pen() );
-	
+
     Plasma::FrameSvg svg(this);
 	QRectF backgroundRect = option->rect.adjusted( -12, -12, 12, 12 );
 	svg.setImagePath("widgets/background");
@@ -154,33 +154,33 @@ void FlightDeparture::paint( QPainter* painter, const QStyleOptionGraphicsItem* 
 	svg.paintFrame( painter, backgroundRect.topLeft() );
 // 	painter->drawRect( option->rect );
 	return;
-	
+
 	QFont normalFont = font();
 	QFont headerFont = normalFont;
 	headerFont.setBold( true );
-	
+
 	QPixmap icon = Timetable::Global::vehicleTypeToIcon( Timetable::Plane )
             .pixmap( iconRect.size().toSize() );
 	painter->drawPixmap( iconRect.topLeft(), icon );
-	
-	QRadialGradient headerGradient( 50.0, 50.0, qMax(headerRect.height(), 100.0) );
+
+	QRadialGradient headerGradient( 50.0, 50.0, qMax(headerRect.height(), qreal(100.0)) );
 	QColor color = Plasma::Theme::defaultTheme()->color(Plasma::Theme::HighlightColor);
 	color.setAlphaF( 0.4 );
 	headerGradient.setColorAt( 0, color );
 	headerGradient.setColorAt( 1, Qt::transparent );
 	painter->fillRect( headerRect, QBrush(headerGradient) );
-	
+
 	QLinearGradient gradient( headerRect.bottomLeft(), headerRect.bottomRight() );
 	gradient.setColorAt( 0, Qt::black );
 	gradient.setColorAt( 1, Qt::transparent );
 	painter->fillRect( headerRect.left(), headerRect.bottom(), headerRect.width(), 1,
 					   QBrush(gradient) );
-	
+
 	painter->setFont( headerFont );
 	QFontMetrics fmHeader( headerFont );
 	headerText = fmHeader.elidedText( headerText, Qt::ElideRight, headerRect.width() );
 	painter->drawText( headerRect, headerText, QTextOption(Qt::AlignBottom) );
-	
+
 	painter->setFont( normalFont );
 	QFontMetrics fmText( normalFont );
 	text = fmHeader.elidedText( text, Qt::ElideRight, textRect.width() * 2.1 );
@@ -191,15 +191,15 @@ FlightDepartureList::FlightDepartureList( QGraphicsItem* parent, Qt::WindowFlags
 		: QGraphicsWidget( parent, wFlags ), m_contentWidget(0)
 {
 	setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
-	
+
 	Plasma::ScrollWidget *scrollWidget = new Plasma::ScrollWidget( this );
 	m_contentWidget = new QGraphicsWidget( scrollWidget );
 	m_contentWidget->setContentsMargins( 10, 10, 10, 10 );
 	scrollWidget->setWidget( m_contentWidget );
-	
+
 	QGraphicsLinearLayout *mainLayout = new QGraphicsLinearLayout( this );
 	mainLayout->addItem( scrollWidget );
-	
+
 	QGraphicsLinearLayout *contentLayout = new QGraphicsLinearLayout( Qt::Vertical, m_contentWidget );
 	contentLayout->setSpacing( 10 );
 }
@@ -208,7 +208,7 @@ void FlightDepartureList::updateLayout()
 {
 	QGraphicsLinearLayout *contentLayout = new QGraphicsLinearLayout( Qt::Vertical, m_contentWidget );
 	contentLayout->setSpacing( 10 );
-	
+
 	int maxDepartures = qCeil( boundingRect().height() / 100 ); // Min 100 pixel per departure
 	for ( int i = 0; i < departures().count(); ++i ) {
 		FlightDeparture *departure = departures()[i];
@@ -223,10 +223,10 @@ void FlightDepartureList::setTimetableData( const Plasma::DataEngine::Data& data
 {
 	QGraphicsLinearLayout *contentLayout = new QGraphicsLinearLayout( Qt::Vertical, m_contentWidget );
 	contentLayout->setSpacing( 10 );
-	
+
 	qDeleteAll( m_departures );
 	m_departures.clear();
-	
+
 	QUrl url;
 	QDateTime updated;
 	url = data["requestUrl"].toUrl();
@@ -249,7 +249,7 @@ void FlightDepartureList::setTimetableData( const Plasma::DataEngine::Data& data
 		flightDeparture->setFlightNumber( dataMap["line"].toString() );
 		flightDeparture->setStatus( dataMap["status"].toString().replace(QRegExp("&nbsp;|\n"), QString()) );
 		m_departures << flightDeparture;
-		
+
 		contentLayout->addItem( flightDeparture );
 // 		QList< QTime > routeTimes;
 // 		if ( dataMap.contains( "routeTimes" ) ) {
@@ -267,6 +267,6 @@ void FlightDepartureList::setTimetableData( const Plasma::DataEngine::Data& data
 // 				dataMap["routeStops"].toStringList(), routeTimes,
 // 				dataMap["routeExactStops"].toInt() );
 	} // for ( int i = 0; i < count; ++i )
-	
+
 	update();
 }

@@ -357,7 +357,7 @@ void PublicTransport::setupStateMachine()
             m_titleWidget, SIGNAL(iconClicked()), lastMainState );
     intermediateDepartureViewState->addTransition(
             action("backToDepartures"), SIGNAL(triggered()), lastMainState );
-    
+
     journeySearchState->addTransition(
             m_titleWidget, SIGNAL(iconClicked()), lastMainState );
     journeySearchState->addTransition(
@@ -1115,7 +1115,7 @@ void PublicTransport::processOsmData( const QString& sourceName,
 void PublicTransport::dataUpdated( const QString& sourceName,
                                    const Plasma::DataEngine::Data& data )
 {
-    if ( sourceName.startsWith("getCoords", Qt::CaseInsensitive) ) {
+    if ( sourceName.startsWith(QLatin1String("getCoords"), Qt::CaseInsensitive) ) {
         processOsmData( sourceName, data );
         return;
     }
@@ -1929,7 +1929,7 @@ KMenu *PublicTransport::updateFilterMenu()
             menu->addAction( action );
         }
     }
-    
+
     return menu;
 }
 
@@ -2637,7 +2637,7 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
             }
 
             osmStopName.remove( QRegExp("\\([^\\)]*\\)$") );
-            
+
             QString sourceName = QString( "getCoords publictransportstops %1" ).arg( osmStopName );
             dataEngine("openstreetmap")->connectSource( sourceName, this );
             break;
@@ -2650,7 +2650,7 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
                 settings.currentStopSettingsIndex = qBound( 0, m_originalStopIndex,
                         settings.stopSettingsList.count() - 1 );
             }
-    
+
             // Save original stop index from where sub requests were made
             // (using the context menu). Only if the departure list wasn't requested
             // already from a sub departure list.
@@ -3388,7 +3388,7 @@ ColorGroupSettingsList PublicTransport::generateColorGroupSettingsFrom(
         RoutePartCount routeCount = routePartCount[i];
         QString hashString = routeCount.lastCommonStop;
         while ( hashString.length() < 3 ) {
-            hashString += "z";
+            hashString += 'z';
         }
         int color = qHash(hashString) % colors;
 

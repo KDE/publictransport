@@ -66,10 +66,9 @@ public:
      * @brief Creates a new helper object.
      *
      * @param serviceProviderId The ID of the service provider this Helper object is created for.
-     *
      * @param parent The parent object.
      **/
-    Helper( const QString &serviceProviderId, QObject* parent = 0 ) : QObject( parent ) {
+    explicit Helper( const QString &serviceProviderId, QObject* parent = 0 ) : QObject( parent ) {
         m_serviceProviderId = serviceProviderId;
     };
 
@@ -78,7 +77,6 @@ public Q_SLOTS:
      * @brief Prints @p message on stdout and logs it in a file.
      *
      * @param message The error message.
-     *
      * @param failedParseText The text in the source document where parsing failed.
      **/
     void error( const QString &message, const QString &failedParseText = QString() );
@@ -88,7 +86,6 @@ public Q_SLOTS:
      *   The HTML entitiy <em>&nbsp;</em> is also trimmed.
      *
      * @param str The string to be trimmed.
-     *
      * @return @p str without spaces at the beginning or end.
      **/
     QString trim( const QString &str ) {
@@ -100,7 +97,6 @@ public Q_SLOTS:
      * @brief Removes all HTML tags from str.
      *
      * @param str The string from which the HTML tags should be removed.
-     *
      * @return @p str without HTML tags.
      **/
     QString stripTags( const QString &str ) {
@@ -113,7 +109,6 @@ public Q_SLOTS:
      * @brief Makes the first letter of each word upper case, all others lower case.
      *
      * @param str The input string.
-     *
      * @return @p str in camel case.
      **/
     QString camelCase( const QString &str ) {
@@ -135,11 +130,8 @@ public Q_SLOTS:
      *   in @p str and end at the first occurance of @p endString in @p str.
      *
      * @param str The input string.
-     *
      * @param beginString A string to search for in @p str and to use as start position.
-     *
      * @param endString A string to search for in @p str and to use as end position.
-     *
      * @return The text block in @p str between @p beginString and @p endString.
      **/
     QString extractBlock( const QString &str,
@@ -158,11 +150,8 @@ public Q_SLOTS:
      *   which is in the given @p format.
      *
      * @param str The string containing the time to be parsed, eg. "08:15".
-     *
      * @param format The format of the time string in @p str. Default is "hh:mm".
-     *
      * @return A list of two integers: The hour and minute values parsed from @p str.
-     *
      * @see formatTime
      **/
     QVariantList matchTime( const QString &str, const QString &format = "hh:mm") {
@@ -199,11 +188,8 @@ public Q_SLOTS:
      *   which is in the given @p format.
      *
      * @param str The string containing the date to be parsed, eg. "2010-12-01".
-     *
      * @param format The format of the time string in @p str. Default is "YY-MM-dd".
-     *
      * @return A list of two integers: The day, month and year values parsed from @p str.
-     *
      * @see formatDate TODO
      **/
     QVariantList matchDate( const QString &str, const QString &format = "yyyy-MM-dd") {
@@ -240,11 +226,8 @@ public Q_SLOTS:
      *   as string in the given @p format.
      *
      * @param hour The hour value of the time.
-     *
      * @param minute The minute value of the time.
-     *
      * @param format The format of the time string to return. Default is "hh:mm".
-     *
      * @return The formatted time string.
      * @see matchTime
      **/
@@ -257,13 +240,9 @@ public Q_SLOTS:
      *   as string in the given @p format.
      *
      * @param year The year value of the date.
-     *
      * @param month The month value of the date.
-     *
      * @param day The day value of the date.
-     *
      * @param format The format of the date string to return. Default is "yyyy-MM-dd".
-     *
      * @return The formatted date string.
      * @see matchTime
      **/
@@ -275,11 +254,8 @@ public Q_SLOTS:
      * @brief Calculates the duration in minutes from the time in @p sTime1 until @p sTime2.
      *
      * @param sTime1 A string with the start time, in the given @p format.
-     *
      * @param sTime2 A string with the end time, in the given @p format.
-     *
      * @param format The format of @p sTime1 and @p sTime2. Default is "hh:mm".
-     *
      * @return The number of minutes from @p sTime1 until @p sTime2.
      **/
     int duration( const QString &sTime1, const QString &sTime2,
@@ -296,11 +272,8 @@ public Q_SLOTS:
      * @brief Adds @p minsToAdd minutes to the time in @p sTime.
      *
      * @param sTime A string with the base time.
-     *
      * @param minsToAdd The number of minutes to add to @p sTime.
-     *
      * @param format The format of @p sTime. Default is "hh:mm".
-     *
      * @return A time string formatted in @p format with the calculated time.
      **/
     QString addMinsToTime( const QString &sTime, int minsToAdd,
@@ -338,9 +311,7 @@ public Q_SLOTS:
      * @brief Splits @p str at @p sep, but skips empty parts.
      *
      * @param str The string to split.
-     *
      * @param sep The separator.
-     *
      * @return A list of string parts.
      **/
     QStringList splitSkipEmptyParts( const QString &str, const QString &sep ) {

@@ -304,7 +304,7 @@ void CheckCombobox::setCheckedTexts( const QStringList& texts )
 {
     QModelIndexList indices;
     QAbstractItemModel *model = view()->model();
-    foreach( const QString text, texts ) {
+    foreach( const QString &text, texts ) {
         QModelIndexList matchedIndices = model->match(
                 model->index(0, modelColumn()), Qt::DisplayRole, text, 1,
                 Qt::MatchFixedString | Qt::MatchCaseSensitive );
