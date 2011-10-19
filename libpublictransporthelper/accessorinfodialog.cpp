@@ -33,17 +33,17 @@ namespace Timetable {
 
 class AccessorInfoDialogPrivate {
 public:
-	AccessorInfoDialogPrivate( const QVariantHash &_serviceProviderData,
+    AccessorInfoDialogPrivate( const QVariantHash &_serviceProviderData,
             Plasma::DataEngine *publicTransportEngine, AccessorInfoDialog::Options _options )
             : publicTransportEngine(publicTransportEngine), service(0)
     {
-		serviceProviderData = _serviceProviderData;
-		options = _options;
-	};
+        serviceProviderData = _serviceProviderData;
+        options = _options;
+    };
 
-	Ui::accessorInfo uiAccessorInfo;
-	QVariantHash serviceProviderData;
-	AccessorInfoDialog::Options options;
+    Ui::accessorInfo uiAccessorInfo;
+    QVariantHash serviceProviderData;
+    AccessorInfoDialog::Options options;
     Plasma::DataEngine *publicTransportEngine;
     Plasma::Service *service;
 };
@@ -51,18 +51,18 @@ public:
 AccessorInfoDialog::AccessorInfoDialog( const QVariantHash &serviceProviderData, const QIcon &icon,
         Plasma::DataEngine *publicTransportEngine, AccessorInfoDialog::Options options,
         QWidget* parent )
-		: KDialog(parent), d_ptr(new AccessorInfoDialogPrivate(serviceProviderData,
+        : KDialog(parent), d_ptr(new AccessorInfoDialogPrivate(serviceProviderData,
                                                                publicTransportEngine, options))
 {
 
-	QWidget *widget = new QWidget;
-	d_ptr->uiAccessorInfo.setupUi( widget );
+    QWidget *widget = new QWidget;
+    d_ptr->uiAccessorInfo.setupUi( widget );
 
-	setModal( true );
-	setButtons( KDialog::Ok );
-	setMainWidget( widget );
-	setWindowTitle( i18nc("@title:window", "Service Provider Information") );
-	setWindowIcon( KIcon("help-about") );
+    setModal( true );
+    setButtons( KDialog::Ok );
+    setMainWidget( widget );
+    setWindowTitle( i18nc("@title:window", "Service Provider Information") );
+    setWindowIcon( KIcon("help-about") );
 
     KDialog::ButtonCodes buttonCodes = KDialog::Ok;
     if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
@@ -108,17 +108,17 @@ AccessorInfoDialog::AccessorInfoDialog( const QVariantHash &serviceProviderData,
                 KGlobal::locale()->formatByteSize(feedSizeInBytes) ) );
     }
 
-	d_ptr->uiAccessorInfo.icon->setPixmap( icon.pixmap( 32 ) );
-	d_ptr->uiAccessorInfo.serviceProviderName->setText(serviceProviderData["name"].toString() );
-	d_ptr->uiAccessorInfo.version->setText( i18nc("@info/plain", "Version %1",
-			serviceProviderData["version"].toString()) );
-	d_ptr->uiAccessorInfo.url->setUrl( serviceProviderData["url"].toString() );
-	d_ptr->uiAccessorInfo.url->setText( QString("<a href='%1'>%1</a>").arg(
-			serviceProviderData["url"].toString()) );
+    d_ptr->uiAccessorInfo.icon->setPixmap( icon.pixmap( 32 ) );
+    d_ptr->uiAccessorInfo.serviceProviderName->setText(serviceProviderData["name"].toString() );
+    d_ptr->uiAccessorInfo.version->setText( i18nc("@info/plain", "Version %1",
+            serviceProviderData["version"].toString()) );
+    d_ptr->uiAccessorInfo.url->setUrl( serviceProviderData["url"].toString() );
+    d_ptr->uiAccessorInfo.url->setText( QString("<a href='%1'>%1</a>").arg(
+            serviceProviderData["url"].toString()) );
 
-	d_ptr->uiAccessorInfo.fileName->setUrl( serviceProviderData["fileName"].toString() );
-	d_ptr->uiAccessorInfo.fileName->setText( QString("<a href='%1'>%1</a>").arg(
-			serviceProviderData["fileName"].toString()) );
+    d_ptr->uiAccessorInfo.fileName->setUrl( serviceProviderData["fileName"].toString() );
+    d_ptr->uiAccessorInfo.fileName->setText( QString("<a href='%1'>%1</a>").arg(
+            serviceProviderData["fileName"].toString()) );
 
     QString scriptFileName = serviceProviderData["scriptFileName"].toString();
     if ( scriptFileName.isEmpty() ) {
@@ -132,46 +132,46 @@ AccessorInfoDialog::AccessorInfoDialog( const QVariantHash &serviceProviderData,
                 .arg(scriptFileName) );
     }
 
-	if ( serviceProviderData["email"].toString().isEmpty() ) {
-		d_ptr->uiAccessorInfo.author->setText( serviceProviderData["author"].toString() );
-	} else {
-		d_ptr->uiAccessorInfo.author->setText( QString("<a href='mailto:%2'>%1</a> (%3)")
-				.arg(serviceProviderData["author"].toString())
-				.arg(serviceProviderData["email"].toString())
-				.arg(serviceProviderData["shortAuthor"].toString()) );
-		d_ptr->uiAccessorInfo.author->setToolTip( i18nc("@info",
-				"Write an email to <email address='%2'>%1</email> (%3)",
-				serviceProviderData["author"].toString(),
-				serviceProviderData["email"].toString(),
-				serviceProviderData["shortAuthor"].toString()) );
-	}
-	d_ptr->uiAccessorInfo.description->setText( serviceProviderData["description"].toString() );
-	d_ptr->uiAccessorInfo.features->setText( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
+    if ( serviceProviderData["email"].toString().isEmpty() ) {
+        d_ptr->uiAccessorInfo.author->setText( serviceProviderData["author"].toString() );
+    } else {
+        d_ptr->uiAccessorInfo.author->setText( QString("<a href='mailto:%2'>%1</a> (%3)")
+                .arg(serviceProviderData["author"].toString())
+                .arg(serviceProviderData["email"].toString())
+                .arg(serviceProviderData["shortAuthor"].toString()) );
+        d_ptr->uiAccessorInfo.author->setToolTip( i18nc("@info",
+                "Write an email to <email address='%2'>%1</email> (%3)",
+                serviceProviderData["author"].toString(),
+                serviceProviderData["email"].toString(),
+                serviceProviderData["shortAuthor"].toString()) );
+    }
+    d_ptr->uiAccessorInfo.description->setText( serviceProviderData["description"].toString() );
+    d_ptr->uiAccessorInfo.features->setText( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
 
-	QStringList changelogEntries = serviceProviderData["changelog"].toStringList();
-	if ( changelogEntries.isEmpty() ) {
-		d_ptr->uiAccessorInfo.lblChangelog->hide();
-		d_ptr->uiAccessorInfo.changelog->hide();
-	} else {
-		QString changelog("<ul style='margin-left:-20;'>");
-		foreach ( const QString &entry, changelogEntries ) {
-			int pos = entry.indexOf(':');
-			if ( pos == -1 ) {
-				changelog.append( QString("<li>%1</li>").arg(entry) );
-			} else {
-				QString e = entry;
-				changelog.append( QString("<li><span style='font-style: italic;'>%1</li>")
-						.arg(e.insert(pos + 1, QLatin1String("</span>"))) );
-			}
-		}
-		changelog.append( QLatin1String("</ul>") );
-		d_ptr->uiAccessorInfo.changelog->setHtml( changelog );
-	}
+    QStringList changelogEntries = serviceProviderData["changelog"].toStringList();
+    if ( changelogEntries.isEmpty() ) {
+        d_ptr->uiAccessorInfo.lblChangelog->hide();
+        d_ptr->uiAccessorInfo.changelog->hide();
+    } else {
+        QString changelog("<ul style='margin-left:-20;'>");
+        foreach ( const QString &entry, changelogEntries ) {
+            int pos = entry.indexOf(':');
+            if ( pos == -1 ) {
+                changelog.append( QString("<li>%1</li>").arg(entry) );
+            } else {
+                QString e = entry;
+                changelog.append( QString("<li><span style='font-style: italic;'>%1</li>")
+                        .arg(e.insert(pos + 1, QLatin1String("</span>"))) );
+            }
+        }
+        changelog.append( QLatin1String("</ul>") );
+        d_ptr->uiAccessorInfo.changelog->setHtml( changelog );
+    }
 }
 
 AccessorInfoDialog::~AccessorInfoDialog()
 {
-	delete d_ptr;
+    delete d_ptr;
 }
 
 void AccessorInfoDialog::slotButtonClicked( int button )
@@ -191,14 +191,14 @@ void AccessorInfoDialog::slotButtonClicked( int button )
 
 void AccessorInfoDialog::openInTimetableMate()
 {
-	Q_D( AccessorInfoDialog );
-	QString error;
-	int result = KToolInvocation::startServiceByDesktopName( "timetablemate",
-			d->serviceProviderData["fileName"].toString(), &error );
-	if ( result != 0 ) {
-		KMessageBox::error( this, i18nc("@info",
-				"TimetableMate couldn't be started, error message was: '%1'", error) );
-	}
+    Q_D( AccessorInfoDialog );
+    QString error;
+    int result = KToolInvocation::startServiceByDesktopName( "timetablemate",
+            d->serviceProviderData["fileName"].toString(), &error );
+    if ( result != 0 ) {
+        KMessageBox::error( this, i18nc("@info",
+                "TimetableMate couldn't be started, error message was: '%1'", error) );
+    }
 }
 
 void AccessorInfoDialog::deleteGtfsDatabase()

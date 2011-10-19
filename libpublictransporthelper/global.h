@@ -41,23 +41,23 @@ namespace Timetable {
  * @brief Contains global static methods. */
 class PUBLICTRANSPORTHELPER_EXPORT Global {
 public:
-	static GeneralVehicleType generalVehicleType( VehicleType vehicleType );
-	
-	/** @brief Create an "international" icon with some flag icons */
-	static KIcon internationalIcon();
+    static GeneralVehicleType generalVehicleType( VehicleType vehicleType );
+    
+    /** @brief Create an "international" icon with some flag icons */
+    static KIcon internationalIcon();
 
-	/** @brief Gets an icon for the given type of vehicle. */
-	static KIcon vehicleTypeToIcon( const VehicleType &vehicleType/*,
-									const QString &overlayIcon = QString()*/ );
+    /** @brief Gets an icon for the given type of vehicle. */
+    static KIcon vehicleTypeToIcon( const VehicleType &vehicleType/*,
+                                    const QString &overlayIcon = QString()*/ );
 
-	/** @brief Gets an icon containing the icons of all vehicle types in the given list. */
-	static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes, int extend = 32 );
+    /** @brief Gets an icon containing the icons of all vehicle types in the given list. */
+    static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes, int extend = 32 );
 
-	/** @brief Gets the name of the given type of vehicle. */
-	static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );
+    /** @brief Gets the name of the given type of vehicle. */
+    static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );
 
-	/** @brief Gets a string like "25 minutes". */
-	static QString durationString( int seconds );
+    /** @brief Gets a string like "25 minutes". */
+    static QString durationString( int seconds );
 
     static QColor textColorOnSchedule();
     static QColor textColorDelayed();

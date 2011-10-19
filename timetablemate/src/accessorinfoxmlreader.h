@@ -32,10 +32,10 @@
  * @brief Stores information about a single changelog entry.
  **/
 struct ChangelogEntry {
-	QString author; /**< The author who implemented the change. */
-	QString version; /**< The version where this change was applied. */
-	QString releasedWith; /**< The version of the publictransport data engine, this change was released with. */
-	QString description; /**< A description of the change. */
+    QString author; /**< The author who implemented the change. */
+    QString version; /**< The version where this change was applied. */
+    QString releasedWith; /**< The version of the publictransport data engine, this change was released with. */
+    QString description; /**< A description of the change. */
 };
 
 enum AccessorType {
@@ -45,19 +45,19 @@ enum AccessorType {
 
 struct TimetableAccessor {
     TimetableAccessor() {
-		type = InvalidAccessor;
-		useCityValue = false;
-		onlyUseCitiesInList = false;
-		fileVersion = "1.0";
-		defaultVehicleType = "";
-		minFetchWait = 2;
+        type = InvalidAccessor;
+        useCityValue = false;
+        onlyUseCitiesInList = false;
+        fileVersion = "1.0";
+        defaultVehicleType = "";
+        minFetchWait = 2;
     };
 
     bool isValid() const { return type != InvalidAccessor; };
 
     QHash<QString, QString> name; /**< Name of the service provider, for different country codes. */
     QHash<QString, QString> description; /**< A description for this accessor, 
-					    * for different country codes. */
+                        * for different country codes. */
     QString scriptFile; /**< The script file used to parse timetable documents. */
     QString version; /**< The version of this accessor. */
     QString fileVersion; /**< The version of the XML accessor file type. */
@@ -71,7 +71,7 @@ struct TimetableAccessor {
     QString shortAuthor; /**< Short name of the author of the accessor. */
     QString email; /**< E-mail of the author of the accessor. */
     QString defaultVehicleType; /**< The vehicle type to be used if it couldn't 
-	    * be read for a departure/arrival. */
+        * be read for a departure/arrival. */
     QString charsetForUrlEncoding, fallbackCharset;
     QStringList cities;
     QHash< QString, QString > cityNameReplacements;
@@ -83,37 +83,37 @@ struct TimetableAccessor {
 
 class AccessorInfoXmlReader : public QXmlStreamReader {
 public:
-	AccessorInfoXmlReader() : QXmlStreamReader() {};
+    AccessorInfoXmlReader() : QXmlStreamReader() {};
 
-	TimetableAccessor read( QIODevice *device );
+    TimetableAccessor read( QIODevice *device );
 
 private:
-	void readUnknownElement();
-	TimetableAccessor readAccessorInfo();
-	QString readLocalizedTextElement( QString *lang );
-	bool readBooleanElement();
-	void readAuthor( QString *fullname, QString *shortName, QString *email );
-	void readCities( QStringList *cities,
-			 QHash<QString, QString> *cityNameReplacements );
-	void readRawUrls( QString *rawUrlDepartures,
-			  QString *rawUrlStopSuggestions, QString *rawUrlJourneys );
-	QList<ChangelogEntry> readChangelog();
+    void readUnknownElement();
+    TimetableAccessor readAccessorInfo();
+    QString readLocalizedTextElement( QString *lang );
+    bool readBooleanElement();
+    void readAuthor( QString *fullname, QString *shortName, QString *email );
+    void readCities( QStringList *cities,
+             QHash<QString, QString> *cityNameReplacements );
+    void readRawUrls( QString *rawUrlDepartures,
+              QString *rawUrlStopSuggestions, QString *rawUrlJourneys );
+    QList<ChangelogEntry> readChangelog();
 };
 
 class AccessorInfoXmlWriter : public QXmlStreamWriter {
     public:
-	AccessorInfoXmlWriter() : QXmlStreamWriter() {};
+    AccessorInfoXmlWriter() : QXmlStreamWriter() {};
 
-	bool write( QIODevice *device, const TimetableAccessor &accessor );
-	
+    bool write( QIODevice *device, const TimetableAccessor &accessor );
+    
     private:
-	TimetableAccessor writeAccessorInfo();
-	void writeAuthor( QString *fullname, QString *email );
-	void writeCities( QStringList *cities,
-			  QHash<QString, QString> *cityNameReplacements );
-	void writeRawUrls( QString *rawUrlDepartures,
-			   QString *rawUrlStopSuggestions, QString *rawUrlJourneys );
-	void writeChangelog( const QList<ChangelogEntry> &changelog );
+    TimetableAccessor writeAccessorInfo();
+    void writeAuthor( QString *fullname, QString *email );
+    void writeCities( QStringList *cities,
+              QHash<QString, QString> *cityNameReplacements );
+    void writeRawUrls( QString *rawUrlDepartures,
+               QString *rawUrlStopSuggestions, QString *rawUrlJourneys );
+    void writeChangelog( const QList<ChangelogEntry> &changelog );
 };
 
 #endif // ACCESSORINFOXMLREADER_HEADER

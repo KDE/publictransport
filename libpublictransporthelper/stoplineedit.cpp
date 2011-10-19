@@ -238,7 +238,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( StopLineEditPrivate::ButtonStates );
 
 StopLineEdit::StopLineEdit( QWidget* parent, const QString &serviceProvider,
                             KGlobalSettings::Completion completion )
-		: KLineEdit( parent ), d_ptr( new StopLineEditPrivate(serviceProvider, this) )
+        : KLineEdit( parent ), d_ptr( new StopLineEditPrivate(serviceProvider, this) )
 {
     setCompletionMode( completion );
     connect( this, SIGNAL(textEdited(QString)), this, SLOT(edited(QString)) );
@@ -736,7 +736,7 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
         kDebug() << "Stop suggestions error" << sourceName;
         d->state = StopLineEditPrivate::Error;
     } else if ( !data.value("receivedPossibleStopList").toBool() ) {
-		kDebug() << "No stop suggestions received" << sourceName;
+        kDebug() << "No stop suggestions received" << sourceName;
         d->state = StopLineEditPrivate::Error;
     } else {
         d->state = StopLineEditPrivate::Ready;

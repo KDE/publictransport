@@ -34,31 +34,31 @@ KAuth::ActionReply TimetableMateHelper::install( const QVariantMap& map ) {
 
     QFile accessorFile( accessorFileName );
     if ( !accessorFile.open(QIODevice::WriteOnly) ) {
-	reply = ActionReply::HelperErrorReply;
-	reply.setErrorCode( accessorFile.error() );
-	reply.setErrorDescription( accessorFile.errorString() );
-	return reply;
+    reply = ActionReply::HelperErrorReply;
+    reply.setErrorCode( accessorFile.error() );
+    reply.setErrorDescription( accessorFile.errorString() );
+    return reply;
     }
     if ( accessorFile.write(accessorDocument.toUtf8()) == -1 ) {
-	reply = ActionReply::HelperErrorReply;
-	reply.setErrorCode( accessorFile.error() );
-	reply.setErrorDescription( accessorFile.errorString() );
-	return reply;
+    reply = ActionReply::HelperErrorReply;
+    reply.setErrorCode( accessorFile.error() );
+    reply.setErrorDescription( accessorFile.errorString() );
+    return reply;
     }
     accessorFile.close();
 
     QFile scriptFile( scriptFileName );
     if ( !scriptFile.open(QIODevice::WriteOnly) ) {
-	reply = ActionReply::HelperErrorReply;
-	reply.setErrorCode( scriptFile.error() );
-	reply.setErrorDescription( scriptFile.errorString() );
-	return reply;
+    reply = ActionReply::HelperErrorReply;
+    reply.setErrorCode( scriptFile.error() );
+    reply.setErrorDescription( scriptFile.errorString() );
+    return reply;
     }
     if ( scriptFile.write(scriptDocument.toUtf8()) == -1 ) {
-	reply = ActionReply::HelperErrorReply;
-	reply.setErrorCode( scriptFile.error() );
-	reply.setErrorDescription( scriptFile.errorString() );
-	return reply;
+    reply = ActionReply::HelperErrorReply;
+    reply.setErrorCode( scriptFile.error() );
+    reply.setErrorDescription( scriptFile.errorString() );
+    return reply;
     }
     scriptFile.close();
 

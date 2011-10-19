@@ -32,27 +32,27 @@ namespace Plasma {
 class PublicTransportPreview : public QGraphicsView {
     Q_OBJECT
     public:
-	PublicTransportPreview( QWidget *parent = 0 );
+    PublicTransportPreview( QWidget *parent = 0 );
 
-	bool isPlasmaPreviewShown() const { return m_applet; };
-	void setSettings( const QString &serviceProviderID, const QString &stopName );
+    bool isPlasmaPreviewShown() const { return m_applet; };
+    void setSettings( const QString &serviceProviderID, const QString &stopName );
 
     signals:
-	void plasmaPreviewLoaded();
+    void plasmaPreviewLoaded();
 
     public slots:
-	bool loadPlasmaPreview();
-	void closePlasmaPreview();
+    bool loadPlasmaPreview();
+    void closePlasmaPreview();
 
     protected:
-	virtual void resizeEvent( QResizeEvent* event );
+    virtual void resizeEvent( QResizeEvent* event );
 
     private:
-	void loadNoPlasmaScene();
+    void loadNoPlasmaScene();
 
-	Plasma::Corona m_corona;
-	Plasma::Containment *m_containment;
-	Plasma::Applet *m_applet;
+    Plasma::Corona m_corona;
+    Plasma::Containment *m_containment;
+    Plasma::Applet *m_applet;
 };
 
 #endif // Multiple inclusion guard

@@ -400,8 +400,8 @@ qreal JourneyItem::rating() const
 void JourneyItem::setJourneyInfo( const JourneyInfo& journeyInfo )
 {
     if ( m_journeyInfo.isValid() ) {
-// 	if ( m_journeyInfo == journeyInfo ) // TODO
-// 	    return; // Unchanged
+//     if ( m_journeyInfo == journeyInfo ) // TODO
+//         return; // Unchanged
 
         m_journeyInfo = journeyInfo;
         updateValues();
@@ -632,7 +632,7 @@ ChildItem* JourneyItem::createRouteItem()
 {
     ChildItem *routeItem = new ChildItem( RouteItem, childItemText( RouteItem ), m_info );
 
-    // Add route stops as child rows				TODO: -1 ?
+    // Add route stops as child rows                TODO: -1 ?
     for ( int row = 0; row < m_journeyInfo.routeStops().count() - 1; ++row ) {
         // Add a separator item, when the exact route ends
         if ( row == m_journeyInfo.routeExactStops() && row > 0 ) {
@@ -1456,9 +1456,9 @@ bool JourneyModel::removeRows( int row, int count, const QModelIndex& parent )
             if ( m_nextItem == item ) {
                 m_nextItem = findNextItem();
             }
-// 	    	if ( item->journeyInfo()->duration() == m_biggestDuration )
+//             if ( item->journeyInfo()->duration() == m_biggestDuration )
                 // TODO Find new biggest duration item
-// 	    	else if ( item->journeyInfo()->duration() == m_smallestDuration )
+//             else if ( item->journeyInfo()->duration() == m_smallestDuration )
                 // TODO Find new smallest duration item
             delete item;
         }
@@ -1652,8 +1652,8 @@ void DepartureModel::update()
         DepartureItem *leavingItem = static_cast<DepartureItem*>( m_nextItem );
         leavingItem->setLeavingSoon( true );
 
-// 		removeRows( m_nextItem->row(), 1 );
-// 		m_nextItem = findNextItem();
+//         removeRows( m_nextItem->row(), 1 );
+//         m_nextItem = findNextItem();
         ++row;
         if ( row >= m_items.count() ) {
             break;

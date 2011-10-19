@@ -27,7 +27,7 @@ using namespace KAuth;
 class TimetableMateHelper : public QObject {
     Q_OBJECT
     public slots:
-	ActionReply install( const QVariantMap &map );
+    ActionReply install( const QVariantMap &map );
 };
 
 #endif // Multiple inclusion guard

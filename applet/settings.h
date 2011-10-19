@@ -330,7 +330,7 @@ private:
     void updateStopNamesInWidgets();
 
     DeletionPolicy m_deletionPolicy;
-// 	DataSourceTester *m_dataSourceTester; // Tests data sources
+//     DataSourceTester *m_dataSourceTester; // Tests data sources
     KConfigDialog *m_configDialog; // Stored for the accessor info dialog as parent
 
     Ui::publicTransportConfig m_ui;
@@ -541,15 +541,15 @@ public:
         return true;
 
         //     if ( m_useSeparateCityValue && (m_city.isEmpty()
-        // 	    || m_stops.isEmpty() || m_stops.first().isEmpty()) )
-        // 	emit configurationRequired(true, i18n("Please set a city and a stop."));
+        //         || m_stops.isEmpty() || m_stops.first().isEmpty()) )
+        //     emit configurationRequired(true, i18n("Please set a city and a stop."));
         //     else if ( m_stops.isEmpty() || m_stops.first().isEmpty() )
-        // 	emit configurationRequired(true, i18n("Please set a stop."));
+        //     emit configurationRequired(true, i18n("Please set a stop."));
         //     else if ( m_serviceProvider == "" )
-        // 	emit configurationRequired(true, i18n("Please select a service provider."));
+        //     emit configurationRequired(true, i18n("Please select a service provider."));
         //     else {
-        // 	emit configurationRequired(false);
-        // 	return true;
+        //     emit configurationRequired(false);
+        //     return true;
         //     }
         //
         //     return false;

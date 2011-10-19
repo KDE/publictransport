@@ -25,7 +25,7 @@
 #include <QBuffer>
 
 OpenStreetMapEngine::OpenStreetMapEngine( QObject *parent, const QVariantList &args )
-	    : Plasma::DataEngine(parent, args) {
+        : Plasma::DataEngine(parent, args) {
     // Update maximally every 5 mins, openstreetmap data doesn't change too much
     setMinimumPollingInterval( 300000 );
 
@@ -293,13 +293,13 @@ void OpenStreetMapEngine::osmFinishedReading( QPointer<OsmReader> osmReader,
 
 QString OpenStreetMapEngine::elementToString( OpenStreetMapEngine::Element element ) const {
     switch ( element ) {
-	case Node: 	    return "node";
-	case Relation: 	return "relation";
-	case Way: 	    return "way";
+    case Node:         return "node";
+    case Relation:     return "relation";
+    case Way:         return "way";
 
-	default:
-	    kDebug() << "Element unknown";
-	    return "";
+    default:
+        kDebug() << "Element unknown";
+        return "";
     }
 }
 

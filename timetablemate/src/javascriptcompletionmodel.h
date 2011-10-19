@@ -28,17 +28,17 @@ struct CompletionItem {
     };
 
     CompletionItem( KTextEditor::CodeCompletionModel::CompletionProperties properties,
-		    const QString &name, const QString &description,
-		    const QString &completion, bool isTemplate = false,
-		    const QString &prefix = QString(),
-		    const QString &postfix = QString() ) {
-	this->properties = properties;
-	this->name = name;
-	this->description = description;
-	this->completion = completion;
-	this->isTemplate = isTemplate;
-	this->prefix = prefix;
-	this->postfix = postfix;
+            const QString &name, const QString &description,
+            const QString &completion, bool isTemplate = false,
+            const QString &prefix = QString(),
+            const QString &postfix = QString() ) {
+    this->properties = properties;
+    this->name = name;
+    this->description = description;
+    this->completion = completion;
+    this->isTemplate = isTemplate;
+    this->prefix = prefix;
+    this->postfix = postfix;
     };
 
     bool isValid() const { return !name.isNull(); };
@@ -56,32 +56,32 @@ struct CompletionItem {
 class JavaScriptCompletionModel : public KTextEditor::CodeCompletionModel {
     Q_OBJECT
 public:
-	JavaScriptCompletionModel( const QString &completionShortcut, QObject *parent );
+    JavaScriptCompletionModel( const QString &completionShortcut, QObject *parent );
 
-	void initGlobalFunctionCompletion();
-	void initHelperCompletion();
-	void initTimetableInfoCompletion();
-	void initFunctionCallCompletion();
+    void initGlobalFunctionCompletion();
+    void initHelperCompletion();
+    void initTimetableInfoCompletion();
+    void initFunctionCallCompletion();
 
-	virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
-	virtual void executeCompletionItem( KTextEditor::Document* document,
-					    const KTextEditor::Range& word, int row ) const;
-	virtual void completionInvoked( KTextEditor::View *view, const KTextEditor::Range &range,
-					InvocationType invocationType );
+    virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
+    virtual void executeCompletionItem( KTextEditor::Document* document,
+                        const KTextEditor::Range& word, int row ) const;
+    virtual void completionInvoked( KTextEditor::View *view, const KTextEditor::Range &range,
+                    InvocationType invocationType );
 
-	CompletionItem completionItemFromId( const QString id );
+    CompletionItem completionItemFromId( const QString id );
 
 private:
-	QString stripComments( const QString &text ) const;
+    QString stripComments( const QString &text ) const;
 
-	QString m_completionShortcut;
-	QList< CompletionItem > m_completions; // Stores the current completions
+    QString m_completionShortcut;
+    QList< CompletionItem > m_completions; // Stores the current completions
 
-	// These only store completions
-	QHash< QString, CompletionItem > m_completionsGlobalFunctions;
-	QHash< QString, CompletionItem > m_completionsTimetableInfo;
-	QHash< QString, CompletionItem > m_completionsHelper;
-	QHash< QString, CompletionItem > m_completionsCalls;
+    // These only store completions
+    QHash< QString, CompletionItem > m_completionsGlobalFunctions;
+    QHash< QString, CompletionItem > m_completionsTimetableInfo;
+    QHash< QString, CompletionItem > m_completionsHelper;
+    QHash< QString, CompletionItem > m_completionsCalls;
 };
 
 #endif // Multiple inclusion guard

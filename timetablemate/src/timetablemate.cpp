@@ -501,7 +501,7 @@ void TimetableMate::beginScriptParsing() {
             }
         }
 
-// 	m_scriptDocument->views().first()->setCursorPosition( parser.errorCursor() );
+//     m_scriptDocument->views().first()->setCursorPosition( parser.errorCursor() );
         statusBar()->showMessage( i18nc("@info:status", "Syntax error in line %1, column %2: "
                                         "<message>%3</message>",
                                         parser.errorLine(), parser.errorColumn(),
@@ -606,19 +606,19 @@ void TimetableMate::currentTabChanged( int index ) {
     // reload accessor values into the widgets in the "Accessor" tab
     syncAccessor();
 //     if ( m_currentTab == AccessorSourceTab && m_accessorDocumentChanged ) {
-// 	QTextCodec *codec = QTextCodec::codecForName( m_accessorDocument->encoding().isEmpty()
-// 		? "UTF-8" : m_accessorDocument->encoding().toLatin1() );
-// 	QByteArray ba = codec->fromUnicode( m_accessorDocument->text() );
-// 	setAccessorValues( &ba );
-// 	m_accessorDocumentChanged = false;
-// 	m_accessorWidgetsChanged = false;
+//     QTextCodec *codec = QTextCodec::codecForName( m_accessorDocument->encoding().isEmpty()
+//         ? "UTF-8" : m_accessorDocument->encoding().toLatin1() );
+//     QByteArray ba = codec->fromUnicode( m_accessorDocument->text() );
+//     setAccessorValues( &ba );
+//     m_accessorDocumentChanged = false;
+//     m_accessorWidgetsChanged = false;
 //     }
 //     // When leaving the "Accessor" tab with changes,
 //     // recreate accessor source and set it in the "Accessor Source" tab
 //     else if ( m_currentTab == AccessorTab && m_accessorWidgetsChanged ) {
-// 	m_accessorDocument->setText( m_view->writeAccessorInfoXml() );
-// 	m_accessorDocumentChanged = false;
-// 	m_accessorWidgetsChanged = false;
+//     m_accessorDocument->setText( m_view->writeAccessorInfoXml() );
+//     m_accessorDocumentChanged = false;
+//     m_accessorWidgetsChanged = false;
 //     }
 
     // Don't flicker while changing the active part
@@ -1014,10 +1014,10 @@ void TimetableMate::installGlobal() {
             switch ( reply.errorCode() ) {
             case KAuth::ActionReply::UserCancelled:
             case KAuth::ActionReply::AuthorizationDenied:
-// 		    UserCancelled is also AuthorizationDenied on X11 currently (PolicyKit limitation)
+//             UserCancelled is also AuthorizationDenied on X11 currently (PolicyKit limitation)
                 // Do nothing
-// 		    KMessageBox::error( this, i18nc("@info", "Authentication denied: "
-// 			    "<message>%1</message>", reply.errorDescription()) );
+//             KMessageBox::error( this, i18nc("@info", "Authentication denied: "
+//                 "<message>%1</message>", reply.errorDescription()) );
                 break;
 
             case KAuth::ActionReply::NoSuchAction:
@@ -1597,11 +1597,11 @@ void TimetableMate::scriptRunParseTimetable() {
                     .arg( values["departurehour"].toInt(), 2, 10, QChar('0') )
                     .arg( values["departureminute"].toInt(), 2, 10, QChar('0') );
         if ( values.contains("departuredate") && !values["departuredate"].toList().isEmpty() ) {
-			QList<QVariant> date = values["departuredate"].toList();
-			if ( date.count() >= 3 ) {
-				departure += QString(", %1").arg( QDate(date[0].toInt(), date[1].toInt(), date[2].toInt()).toString() );
-			}
-		}
+            QList<QVariant> date = values["departuredate"].toList();
+            if ( date.count() >= 3 ) {
+                departure += QString(", %1").arg( QDate(date[0].toInt(), date[1].toInt(), date[2].toInt()).toString() );
+            }
+        }
         if ( values.contains("typeofvehicle") && !values["typeofvehicle"].toString().isEmpty() )
             departure += QString(", %1").arg( values["typeofvehicle"].toString() );
         if ( values.contains("delay") && values["delay"].toInt() != -1 )
@@ -1629,7 +1629,7 @@ void TimetableMate::scriptRunParseTimetable() {
         }
 
         departures << QString("<item><emphasis strong='1'>%1.</emphasis> %2</item>")
-			.arg( i + 1 ).arg( departure );
+            .arg( i + 1 ).arg( departure );
     }
 
     QStringList unknownTimetableInformations;
@@ -1639,7 +1639,7 @@ void TimetableMate::scriptRunParseTimetable() {
             it != unknown.constEnd(); ++it )
     {
         unknownTimetableInformations << "<item>" +
-	    i18nc("@info", "'%1' with value '%2'", it.key(), it.value().toString()) + "</item>";
+        i18nc("@info", "'%1' with value '%2'", it.key(), it.value().toString()) + "</item>";
     }
 
     // Show results
@@ -1656,25 +1656,25 @@ void TimetableMate::scriptRunParseTimetable() {
 
     QString resultText = i18nc("@info", "No syntax errors.") + "<br/>" + resultItems;
 
-	// Add departures
-	if ( !departures.isEmpty() ) {
-		resultText += i18nc("@info", "<para>Departures:<list>%1</list></para>",
-							departures.join(QString()));
-	}
+    // Add departures
+    if ( !departures.isEmpty() ) {
+        resultText += i18nc("@info", "<para>Departures:<list>%1</list></para>",
+                            departures.join(QString()));
+    }
 
     // Add debug messages
-	if ( debugMessages.isEmpty() ) {
-		resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
-	} else {
-		QString debugMessagesString;
-		foreach ( const DebugMessage &debugMessage, debugMessages ) {
-			QString message = debugMessage.message;
-			debugMessagesString.append( QString("<item>%1</item>")
-					.arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
-		}
-		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
-							debugMessagesString);
-	}
+    if ( debugMessages.isEmpty() ) {
+        resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
+    } else {
+        QString debugMessagesString;
+        foreach ( const DebugMessage &debugMessage, debugMessages ) {
+            QString message = debugMessage.message;
+            debugMessagesString.append( QString("<item>%1</item>")
+                    .arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
+        }
+        resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
+                            debugMessagesString);
+    }
 
     if ( !unknownTimetableInformations.isEmpty() ) {
         resultText += i18nc("@info", "<para>There were unknown strings used for "
@@ -1768,18 +1768,18 @@ void TimetableMate::scriptRunParseStopSuggestions() {
                         stopInfo.join(QString()));
 
     // Add debug messages
-	if ( debugMessages.isEmpty() ) {
-		resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
-	} else {
-		QString debugMessagesString;
-		foreach ( const DebugMessage &debugMessage, debugMessages ) {
-			QString message = debugMessage.message;
-			debugMessagesString.append( QString("<item>%1</item>")
-					.arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
-		}
-		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
-							debugMessagesString);
-	}
+    if ( debugMessages.isEmpty() ) {
+        resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
+    } else {
+        QString debugMessagesString;
+        foreach ( const DebugMessage &debugMessage, debugMessages ) {
+            QString message = debugMessage.message;
+            debugMessagesString.append( QString("<item>%1</item>")
+                    .arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
+        }
+        resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
+                            debugMessagesString);
+    }
 
     if ( !unknownTimetableInformations.isEmpty() ) {
         resultText += i18nc("@info", "<para>There were unknown strings used for "
@@ -1989,18 +1989,18 @@ void TimetableMate::scriptRunParseJourneys() {
                         journeys.join(QString()));
 
     // Add debug messages
-	if ( debugMessages.isEmpty() ) {
-		resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
-	} else {
-		QString debugMessagesString;
-		foreach ( const DebugMessage &debugMessage, debugMessages ) {
-			QString message = debugMessage.message;
-			debugMessagesString.append( QString("<item>%1</item>")
-					.arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
-		}
-		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
-							debugMessagesString);
-	}
+    if ( debugMessages.isEmpty() ) {
+        resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
+    } else {
+        QString debugMessagesString;
+        foreach ( const DebugMessage &debugMessage, debugMessages ) {
+            QString message = debugMessage.message;
+            debugMessagesString.append( QString("<item>%1</item>")
+                    .arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
+        }
+        resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
+                            debugMessagesString);
+    }
 
     if ( !unknownTimetableInformations.isEmpty() ) {
         resultText += i18nc("@info", "<para>There were unknown strings used for "
@@ -2054,7 +2054,7 @@ bool TimetableMate::hasRawJourneyURL( const TimetableAccessor &accessor ) {
 
 bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *timetableData,
                                ResultObject *resultObject, QVariant *result,
-			       DebugMessageList *debugMessageList ) {
+                   DebugMessageList *debugMessageList ) {
     // Create the Kross::Action instance
     Kross::Action script( this, "TimetableParser" );
 
@@ -2086,9 +2086,9 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
         script.setInterpreter( "javascript" );
     } else {
         const QString scriptType = KInputDialog::getItem(
-				i18nc("@title:window", "Choose Script Type"),
-				i18nc("@info", "Script type unknown, please choose one of these:"),
-				QStringList() << "JavaScript" << "Ruby" << "Python", 0, false, 0, this );
+                i18nc("@title:window", "Choose Script Type"),
+                i18nc("@info", "Script type unknown, please choose one of these:"),
+                QStringList() << "JavaScript" << "Ruby" << "Python", 0, false, 0, this );
         script.setInterpreter( scriptType.toLower() );
     }
     script.setCode( m_scriptDocument->text().toUtf8() );
@@ -2102,14 +2102,14 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
                 KTextEditor::Cursor(script.errorLineNo(), 0) );
         }
         KMessageBox::information( this, i18nc("@info",
-				"Error in script:<nl/><message>%1</message>", script.errorMessage()) );
+                "Error in script:<nl/><message>%1</message>", script.errorMessage()) );
         return false;
     }
 
     // Check if the function is implemented by the script
     if ( !script.functionNames().contains(functionToRun) ) {
         KMessageBox::information( this, i18nc("@info/plain",
-				"The script does not implement <emphasis>%1</emphasis>.", functionToRun) );
+                "The script does not implement <emphasis>%1</emphasis>.", functionToRun) );
         return false;
     }
 
@@ -2140,7 +2140,7 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
     QString tempFileName;
     if ( !KIO::NetAccess::download(url, tempFileName,  this) ) {
         KMessageBox::information( this, i18nc("@info/plain",
-				"Could not download from URL <emphasis>%1</emphasis>.", url.prettyUrl()) );
+                "Could not download from URL <emphasis>%1</emphasis>.", url.prettyUrl()) );
         return false;
     }
 
@@ -2168,12 +2168,12 @@ bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *time
         }
 
         KMessageBox::information( this, i18nc("@info",
-				"An error occurred in the script:<nl/><message>%1</message>", script.errorMessage()) );
+                "An error occurred in the script:<nl/><message>%1</message>", script.errorMessage()) );
         return false;
     }
 
     if ( debugMessageList ) {
-		debugMessageList->append( helper->debugMessages );
+        debugMessageList->append( helper->debugMessages );
     }
 
     return true;

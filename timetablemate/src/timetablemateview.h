@@ -42,80 +42,80 @@ class KUrl;
 class TimetableMateView : public QWidget, public Ui::timetablemateview_base {
     Q_OBJECT
     public:
-	/** Default constructor */
-	TimetableMateView( QWidget *parent );
+    /** Default constructor */
+    TimetableMateView( QWidget *parent );
 
-	/** Destructor */
-	virtual ~TimetableMateView();
-	
-	bool readAccessorInfoXml( const QString &fileName, QString *error = 0 );
-	bool readAccessorInfoXml( QIODevice *device, QString *error/* = 0*/,
-				  const QString& fileName/* = QString()*/ );
-	
-	bool writeAccessorInfoXml( const QString &fileName );
-	QString writeAccessorInfoXml();
-	
-	TimetableAccessor accessorInfo() const;
-	void setScriptFile( const QString &scriptFile );
+    /** Destructor */
+    virtual ~TimetableMateView();
+    
+    bool readAccessorInfoXml( const QString &fileName, QString *error = 0 );
+    bool readAccessorInfoXml( QIODevice *device, QString *error/* = 0*/,
+                  const QString& fileName/* = QString()*/ );
+    
+    bool writeAccessorInfoXml( const QString &fileName );
+    QString writeAccessorInfoXml();
+    
+    TimetableAccessor accessorInfo() const;
+    void setScriptFile( const QString &scriptFile );
 
-	void setCurrentServiceProviderID( const QString &currentServiceProviderID ) {
-		m_currentServiceProviderID = currentServiceProviderID; };
+    void setCurrentServiceProviderID( const QString &currentServiceProviderID ) {
+        m_currentServiceProviderID = currentServiceProviderID; };
 
     signals:
-	/** Some widgets value has been changed. */
-	void changed();
-	void fileVersionchanged();
+    /** Some widgets value has been changed. */
+    void changed();
+    void fileVersionchanged();
 
-	/** A new script file has been created. */
-	void scriptAdded( const QString &scriptFile );
-	/** The used script file has changed. */
-	void scriptFileChanged( const QString &scriptFile );
-	
-	void urlShouldBeOpened( const QString &url, RawUrl rawUrl = NormalUrl );
-	
-	/** Use this signal to change the content of the statusbar */
-	void signalChangeStatusbar(const QString& text);
+    /** A new script file has been created. */
+    void scriptAdded( const QString &scriptFile );
+    /** The used script file has changed. */
+    void scriptFileChanged( const QString &scriptFile );
+    
+    void urlShouldBeOpened( const QString &url, RawUrl rawUrl = NormalUrl );
+    
+    /** Use this signal to change the content of the statusbar */
+    void signalChangeStatusbar(const QString& text);
 
-	/** Use this signal to change the content of the caption */
-	void signalChangeCaption(const QString& text);
+    /** Use this signal to change the content of the caption */
+    void signalChangeCaption(const QString& text);
 
     private slots:
-	void settingsChanged();
-	
-	void browseForScriptFile();
-	void createScriptFile();
-	void detachScriptFile();
+    void settingsChanged();
+    
+    void browseForScriptFile();
+    void createScriptFile();
+    void detachScriptFile();
 
-	void slotChanged( QWidget *changedWidget );
-	void languageActivated( const QString &languageCode );
-	
-	void departurePlaceHolder( QAction *action );
-	void journeyPlaceHolder( QAction *action );
-	void stopSuggestionsPlaceHolder( QAction *action );
+    void slotChanged( QWidget *changedWidget );
+    void languageActivated( const QString &languageCode );
+    
+    void departurePlaceHolder( QAction *action );
+    void journeyPlaceHolder( QAction *action );
+    void stopSuggestionsPlaceHolder( QAction *action );
 
-	void openUrlClicked();
-	void openDepartureUrlClicked();
-	void openStopUrlClicked();
-	void openJourneyUrlClicked();
+    void openUrlClicked();
+    void openDepartureUrlClicked();
+    void openStopUrlClicked();
+    void openJourneyUrlClicked();
 
-	void predefinedCityNameChanged( const QString &newCityName );
-	void predefinedCityReplacementChanged( const QString &newReplacement );
-	void currentPredefinedCityChanged( const QString &currentCityText );
+    void predefinedCityNameChanged( const QString &newCityName );
+    void predefinedCityReplacementChanged( const QString &newReplacement );
+    void currentPredefinedCityChanged( const QString &currentCityText );
 
     private:
-	void fillValuesFromWidgets();
-	
-	Ui::timetablemateview_base ui_accessor;
-	QString m_openedPath;
-	QString m_currentServiceProviderID;
-	TimetableAccessor m_accessor;
-	
-	KEditListBox::CustomEditor m_predefinedCitiesCustomEditor;
-	KLineEdit *m_cityName;
-	KLineEdit *m_cityReplacement;
-	ChangelogWidget *m_changelog;
+    void fillValuesFromWidgets();
+    
+    Ui::timetablemateview_base ui_accessor;
+    QString m_openedPath;
+    QString m_currentServiceProviderID;
+    TimetableAccessor m_accessor;
+    
+    KEditListBox::CustomEditor m_predefinedCitiesCustomEditor;
+    KLineEdit *m_cityName;
+    KLineEdit *m_cityReplacement;
+    ChangelogWidget *m_changelog;
 
-	QSignalMapper *m_mapper;
+    QSignalMapper *m_mapper;
 };
 
 #endif // TimetableMateVIEW_H

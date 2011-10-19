@@ -362,7 +362,7 @@ FilterSettingsList *StopListWidget::filterConfigurations() const
 
 void StopListWidget::setFilterConfigurations( FilterSettingsList *filterConfigurations )
 {
-	Q_D( StopListWidget );
+    Q_D( StopListWidget );
     if ( filterConfigurations ) {
         d->filterConfigurations = filterConfigurations;
         foreach( StopWidget *stopWidget, widgets<StopWidget*>() ) {

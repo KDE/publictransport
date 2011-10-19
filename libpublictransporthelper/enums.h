@@ -120,55 +120,55 @@ enum FilterAction {
  * in parantheses).
  **/
 enum PUBLICTRANSPORTHELPER_EXPORT StopSetting {
-	NoSetting = 0, /**< Don't use any setting. */
-	
-	LocationSetting = 1, /**< The location of the stop, eg. a country (QString). */
-	ServiceProviderSetting = 2, /**< The ID of the service provider of the stop (QString). */
-	CitySetting = 3, /**< The city of the stop, if used by the service provider (QString). */
-	StopNameSetting = 4, /**< The stop name (Stop). */
-	
-	FilterConfigurationSetting = 10, /**< The filter configuration to be used for the stop (QString). */
-	AlarmTimeSetting = 11, /** The time in minutes before the departure 
-			* at which the alarm should be fired (int). */
-	FirstDepartureConfigModeSetting = 12, /**< The config mode for the time 
-			* of the first departure (enum FirstDepartureConfigMode, int). */
-	TimeOffsetOfFirstDepartureSetting = 13, /**< The offset in minutes from the current time 
-			* until the first departure (int). */
-	TimeOfFirstDepartureSetting = 14, /**< A custom time for the first departure (QTime). */
-	
-	UserSetting = 100 /**< The first index to be used for custom data (QVariant). Widgets
-			* to edit custom settings can be created for the @ref StopSettingsDialog
-			* using a @ref StopSettingsWidgetFactory. */
+    NoSetting = 0, /**< Don't use any setting. */
+    
+    LocationSetting = 1, /**< The location of the stop, eg. a country (QString). */
+    ServiceProviderSetting = 2, /**< The ID of the service provider of the stop (QString). */
+    CitySetting = 3, /**< The city of the stop, if used by the service provider (QString). */
+    StopNameSetting = 4, /**< The stop name (Stop). */
+    
+    FilterConfigurationSetting = 10, /**< The filter configuration to be used for the stop (QString). */
+    AlarmTimeSetting = 11, /** The time in minutes before the departure 
+            * at which the alarm should be fired (int). */
+    FirstDepartureConfigModeSetting = 12, /**< The config mode for the time 
+            * of the first departure (enum FirstDepartureConfigMode, int). */
+    TimeOffsetOfFirstDepartureSetting = 13, /**< The offset in minutes from the current time 
+            * until the first departure (int). */
+    TimeOfFirstDepartureSetting = 14, /**< A custom time for the first departure (QTime). */
+    
+    UserSetting = 100 /**< The first index to be used for custom data (QVariant). Widgets
+            * to edit custom settings can be created for the @ref StopSettingsDialog
+            * using a @ref StopSettingsWidgetFactory. */
 };
 
 /** @brief Different config modes for the time of the first departure. */
 enum PUBLICTRANSPORTHELPER_EXPORT FirstDepartureConfigMode {
-	RelativeToCurrentTime = 0, /**< Uses the current date and time and adds an offset. */
-	AtCustomTime = 1 /**< Uses a custom time, but the current date. */
+    RelativeToCurrentTime = 0, /**< Uses the current date and time and adds an offset. */
+    AtCustomTime = 1 /**< Uses a custom time, but the current date. */
 };
 
 /** @brief Indicates what is saved in a model item's data. */
 enum PUBLICTRANSPORTHELPER_EXPORT ModelDataRoles {
-	SortRole = Qt::UserRole, /**< Used to store sorting data */
-	ServiceProviderDataRole = Qt::UserRole + 8, /**< For the service provider combo box */
-	DepartureInfoRole = Qt::UserRole + 10, /**< Used to store the departure */
-	LocationCodeRole = Qt::UserRole + 12, /**< Used to store the location code
-			* (country code or other) in the location model. */
-	TimetableItemHashRole = Qt::UserRole + 13, /**< Used to store a hash for the current
-			* timetable item in the model. */
-	ServiceProviderIdRole = Qt::UserRole + 14, /**< Used to store the service provider ID. */
+    SortRole = Qt::UserRole, /**< Used to store sorting data */
+    ServiceProviderDataRole = Qt::UserRole + 8, /**< For the service provider combo box */
+    DepartureInfoRole = Qt::UserRole + 10, /**< Used to store the departure */
+    LocationCodeRole = Qt::UserRole + 12, /**< Used to store the location code
+            * (country code or other) in the location model. */
+    TimetableItemHashRole = Qt::UserRole + 13, /**< Used to store a hash for the current
+            * timetable item in the model. */
+    ServiceProviderIdRole = Qt::UserRole + 14, /**< Used to store the service provider ID. */
     FilterSettingsRole = Qt::UserRole + 15, /**< Used to store FilterSettings objects. */
 
-	// Additional data roles used by DepartureModel / JourneyModel.
-	FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text.
-			* The text of an item should not contain html tags, if used in a combo box. */
-	DecorationPositionRole = Qt::UserRole + 501,
-	DrawAlarmBackgroundRole = Qt::UserRole + 502,
-	AlarmColorIntensityRole = Qt::UserRole + 503,
-	JourneyRatingRole = Qt::UserRole + 504, /**< Stores a value between 0 and 1.
-			* 0 for the journey with the biggest duration, 1 for the smallest duration. */
-	LinesPerRowRole = Qt::UserRole + 505, /**< Used to change the number of lines for a row. */
-	IconSizeRole = Qt::UserRole + 506, /**< Used to set a specific icon size for an element. */
+    // Additional data roles used by DepartureModel / JourneyModel.
+    FormattedTextRole = Qt::UserRole + 500, /**< Used to store formatted text.
+            * The text of an item should not contain html tags, if used in a combo box. */
+    DecorationPositionRole = Qt::UserRole + 501,
+    DrawAlarmBackgroundRole = Qt::UserRole + 502,
+    AlarmColorIntensityRole = Qt::UserRole + 503,
+    JourneyRatingRole = Qt::UserRole + 504, /**< Stores a value between 0 and 1.
+            * 0 for the journey with the biggest duration, 1 for the smallest duration. */
+    LinesPerRowRole = Qt::UserRole + 505, /**< Used to change the number of lines for a row. */
+    IconSizeRole = Qt::UserRole + 506, /**< Used to set a specific icon size for an element. */
     IsLeavingSoonRole = Qt::UserRole + 507, /**< Whether or not a departure/arrival is leaving soon. */
     GroupColorRole = Qt::UserRole + 508 /**< Departures can be grouped, visualized by colors.
             * These group colors can be stored in this role. */
@@ -176,8 +176,8 @@ enum PUBLICTRANSPORTHELPER_EXPORT ModelDataRoles {
 
 /** @brief The position of the decoration. */
 enum PUBLICTRANSPORTHELPER_EXPORT DecorationPosition {
-	DecorationLeft, /**< Show the decoration on the left side. */
-	DecorationRight /**< Show the decoration on the right side. */
+    DecorationLeft, /**< Show the decoration on the left side. */
+    DecorationRight /**< Show the decoration on the right side. */
 };
 
 /**
@@ -187,11 +187,11 @@ enum PUBLICTRANSPORTHELPER_EXPORT DecorationPosition {
  * where @ref GerenalVehicleType combines them into one enumerable.
  */
 enum PUBLICTRANSPORTHELPER_EXPORT GeneralVehicleType {
-	UnknownVehicle = 0,
-	LocalPublicTransport = 1,
-	Train = 2,
-	WaterVehicle = 3,
-	AirVehicle = 4
+    UnknownVehicle = 0,
+    LocalPublicTransport = 1,
+    Train = 2,
+    WaterVehicle = 3,
+    AirVehicle = 4
 };
 
 /**
@@ -200,17 +200,17 @@ enum PUBLICTRANSPORTHELPER_EXPORT GeneralVehicleType {
  * The numbers here match the ones used by the data engine.
  */
 enum PUBLICTRANSPORTHELPER_EXPORT VehicleType {
-	Unknown = 0, /**< The type of the vehicle is unknown. */
+    Unknown = 0, /**< The type of the vehicle is unknown. */
 
-	Tram = 1, /**< A tram / streetcar. */
-	Bus = 2, /**< A bus. */
-	Subway = 3, /**< A subway. */
-	InterurbanTrain = 4, /**< An interurban train. */
-	Metro = 5, /**< A metro. */
-	TrolleyBus = 6, /**< A trolleybus (also known as trolley bus, trolley coach,
-			* trackless trolley, trackless tram or trolley) is an electric bus that draws its
-			* electricity from overhead wires (generally suspended from roadside posts)
-			* using spring-loaded trolley poles. */
+    Tram = 1, /**< A tram / streetcar. */
+    Bus = 2, /**< A bus. */
+    Subway = 3, /**< A subway. */
+    InterurbanTrain = 4, /**< An interurban train. */
+    Metro = 5, /**< A metro. */
+    TrolleyBus = 6, /**< A trolleybus (also known as trolley bus, trolley coach,
+            * trackless trolley, trackless tram or trolley) is an electric bus that draws its
+            * electricity from overhead wires (generally suspended from roadside posts)
+            * using spring-loaded trolley poles. */
 
     RegionalTrain = 10, /**< A regional train. Stops at many small stations, slow. */
     RegionalExpressTrain = 11, /**< A regional express train. Stops at less small stations than
@@ -221,15 +221,15 @@ enum PUBLICTRANSPORTHELPER_EXPORT VehicleType {
     HighSpeedTrain = 14, /**< A highspeed train, eg. an intercity express (ICE).
             * Trains at > 250 km/h, high distances. */
 
-	Feet = 50, /**< By feet, ie. no vehicle. Used for journeys, eg. from platform A to
-			* platform B when changing the vehicle. */
+    Feet = 50, /**< By feet, ie. no vehicle. Used for journeys, eg. from platform A to
+            * platform B when changing the vehicle. */
 
-	Ferry = 100, /**< A ferry. */
-	Ship = 101, /**< A ship. */
+    Ferry = 100, /**< A ferry. */
+    Ship = 101, /**< A ship. */
 
-	Plane = 200, /**< An aeroplane. */
+    Plane = 200, /**< An aeroplane. */
 
-	Spacecraft = 300, /**< A spacecraft. */
+    Spacecraft = 300, /**< A spacecraft. */
 
     TrainInterurban = InterurbanTrain, /**< An interurban train. @deprecated Use InterurbanTrain instead. */
     TrainRegional = RegionalTrain, /**< A regional train. @deprecated Use RegionalTrain instead. */

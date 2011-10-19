@@ -65,35 +65,35 @@ class StopLineEditPrivate;
  **/
 class PUBLICTRANSPORTHELPER_EXPORT StopLineEdit : public KLineEdit
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
     /** @brief Creates a new StopLineEdit object, using the given @p serviceProvider. */
-	explicit StopLineEdit( QWidget* parent = 0, const QString &serviceProvider = QString(),
-						   KGlobalSettings::Completion completion = KGlobalSettings::CompletionPopup );
+    explicit StopLineEdit( QWidget* parent = 0, const QString &serviceProvider = QString(),
+                           KGlobalSettings::Completion completion = KGlobalSettings::CompletionPopup );
 
     /** @brief Simple destructor. */
-	virtual ~StopLineEdit();
+    virtual ~StopLineEdit();
 
-	/**
-	 * @brief Sets the ID of the service provider to be used for stop name suggestions.
-	 *
-	 * @param serviceProvider The new service provider ID to be used for stop name suggestions.
-	 **/
-	void setServiceProvider( const QString &serviceProvider );
+    /**
+     * @brief Sets the ID of the service provider to be used for stop name suggestions.
+     *
+     * @param serviceProvider The new service provider ID to be used for stop name suggestions.
+     **/
+    void setServiceProvider( const QString &serviceProvider );
 
-	/** @brief Gets the ID of the service provider that is used for stop name suggestions. */
-	QString serviceProvider() const;
+    /** @brief Gets the ID of the service provider that is used for stop name suggestions. */
+    QString serviceProvider() const;
 
-	/**
-	 * @brief Sets the city to be used for stop name suggestions.
-	 *
-	 * @param city The new city to be used for stop name suggestions.
-	 **/
-	void setCity( const QString &city );
+    /**
+     * @brief Sets the city to be used for stop name suggestions.
+     *
+     * @param city The new city to be used for stop name suggestions.
+     **/
+    void setCity( const QString &city );
 
-	/** @brief Gets the city that is used for stop name suggestions. */
-	QString city() const;
+    /** @brief Gets the city that is used for stop name suggestions. */
+    QString city() const;
 
 public Q_SLOTS:
     /**
@@ -172,29 +172,29 @@ class PUBLICTRANSPORTHELPER_EXPORT StopLineEditList : public DynamicLabeledLineE
     Q_OBJECT
 
 public:
-	StopLineEditList( QWidget* parent = 0,
-					  RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
-					  AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
-					  SeparatorOptions separatorOptions = NoSeparator,
-					  NewWidgetPosition newWidgetPosition = AddWidgetsAtBottom,
-					  const QString& labelText = "Item %1:" );
+    StopLineEditList( QWidget* parent = 0,
+                      RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
+                      AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
+                      SeparatorOptions separatorOptions = NoSeparator,
+                      NewWidgetPosition newWidgetPosition = AddWidgetsAtBottom,
+                      const QString& labelText = "Item %1:" );
 
     virtual KLineEdit* createLineEdit();
 
-	/**
-	 * @brief Sets the service provider to be used for stop name suggestions
-	 *   in all StopLineEdit widgets.
-	 *
-	 * @param serviceProvider The new service provider ID to be used for stop name suggestions.
-	 **/
-	void setServiceProvider( const QString &serviceProvider );
+    /**
+     * @brief Sets the service provider to be used for stop name suggestions
+     *   in all StopLineEdit widgets.
+     *
+     * @param serviceProvider The new service provider ID to be used for stop name suggestions.
+     **/
+    void setServiceProvider( const QString &serviceProvider );
 
-	/**
-	 * @brief Sets the city to be used for stop name suggestions in all StopLineEdit widgets.
-	 *
-	 * @param city The new city to be used for stop name suggestions.
-	 **/
-	void setCity( const QString &city );
+    /**
+     * @brief Sets the city to be used for stop name suggestions in all StopLineEdit widgets.
+     *
+     * @param city The new city to be used for stop name suggestions.
+     **/
+    void setCity( const QString &city );
 
 public Q_SLOTS:
     /**

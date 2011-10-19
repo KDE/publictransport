@@ -30,7 +30,7 @@
 #include <KInputDialog>
 
 PublicTransportPreview::PublicTransportPreview( QWidget* parent )
-		: QGraphicsView( parent ), m_containment(0), m_applet(0) {
+        : QGraphicsView( parent ), m_containment(0), m_applet(0) {
     setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
     setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
     loadNoPlasmaScene();
@@ -45,12 +45,12 @@ void PublicTransportPreview::loadNoPlasmaScene() {
 
     // Create a KPushButton in a proxy widget
     KPushButton *btnShowPlasmaPreview =
-	    new KPushButton( i18nc("@action:button", "Show &Plasma Preview") );
+        new KPushButton( i18nc("@action:button", "Show &Plasma Preview") );
     connect( btnShowPlasmaPreview, SIGNAL(clicked(bool)), this, SLOT(loadPlasmaPreview()) );
     
     l->addItem( newScene->addWidget(btnShowPlasmaPreview) );
 //     l->addItem( scene->addText(i18nc("@info", "<para><note>You need to install your accessor to "
-// 				     "show a preview of it.</note></para>")) );
+//                      "show a preview of it.</note></para>")) );
     newScene->addItem( item );
     newScene->setSceneRect( item->boundingRect() );
     
@@ -59,21 +59,21 @@ void PublicTransportPreview::loadNoPlasmaScene() {
     setSceneRect( item->boundingRect()  );
     
     if ( m_containment ) {
-	delete m_containment;
-	m_containment = NULL;
+    delete m_containment;
+    m_containment = NULL;
     }
 }
 
 bool PublicTransportPreview::loadPlasmaPreview() {
     if ( isPlasmaPreviewShown() )
-	return true;
+    return true;
     
     // Add the desktop containment
     m_containment = m_corona.addContainment( "desktop" );
     if ( !m_containment ) {
-	KMessageBox::information( this, i18nc("@info", "The plasma desktop containment could not "
-					      "be added. Ensure that you have plasma installed.") );
-	return false;
+    KMessageBox::information( this, i18nc("@info", "The plasma desktop containment could not "
+                          "be added. Ensure that you have plasma installed.") );
+    return false;
     }
     QGraphicsScene *oldScene = scene();
     setScene( m_containment->scene() );
@@ -83,11 +83,11 @@ bool PublicTransportPreview::loadPlasmaPreview() {
     // Add the PublicTransport applet
     m_applet = m_containment->addApplet( "publictransport" );
     if ( !m_applet ) {
-	delete m_containment;
-	m_containment = NULL;
-	KMessageBox::information( this, i18nc("@info", "The PublicTransport applet could not be "
-					      "added. Ensure that you have it installed.") );
-	return false;
+    delete m_containment;
+    m_containment = NULL;
+    KMessageBox::information( this, i18nc("@info", "The PublicTransport applet could not be "
+                          "added. Ensure that you have it installed.") );
+    return false;
     }
     m_applet->setFlag( QGraphicsItem::ItemIsMovable, false );
     setAlignment( Qt::AlignLeft | Qt::AlignTop );
@@ -98,7 +98,7 @@ bool PublicTransportPreview::loadPlasmaPreview() {
 
 void PublicTransportPreview::closePlasmaPreview() {
     if ( !isPlasmaPreviewShown() )
-	return;
+    return;
 
     // Remove applet
     m_containment->clearApplets();
@@ -114,26 +114,26 @@ void PublicTransportPreview::closePlasmaPreview() {
 }
 
 void PublicTransportPreview::setSettings( const QString& serviceProviderID,
-					  const QString& stopName ) {
+                      const QString& stopName ) {
     if ( !m_applet )
-	return;
+    return;
     
     // Set settings of the PublicTransport applet using a specific slot
     int index = m_applet->metaObject()->indexOfSlot( "setSettings(QString,QString)" );
     if ( index == -1 ) {
-	kDebug() << "Couldn't find slot with signarture setSettings(QString,QString) "
-		    "in the publicTransport applet.";
-	return;
+    kDebug() << "Couldn't find slot with signarture setSettings(QString,QString) "
+            "in the publicTransport applet.";
+    return;
     }
 
     bool success = m_applet->metaObject()->method( index ).invoke( m_applet,
-		    Q_ARG(QString, serviceProviderID), Q_ARG(QString, stopName) );
+            Q_ARG(QString, serviceProviderID), Q_ARG(QString, stopName) );
     if ( !success ) {
-	kDebug() << "A call to setSettings in the publicTransport applet wasn't successful.";
+    kDebug() << "A call to setSettings in the publicTransport applet wasn't successful.";
     }
 
     if ( stopName.isEmpty() ) {
-	m_applet->showConfigurationInterface();
+    m_applet->showConfigurationInterface();
     }
 }
 
@@ -142,10 +142,10 @@ void PublicTransportPreview::resizeEvent( QResizeEvent* event ) {
     QGraphicsView::resizeEvent( event );
 
     if ( m_containment ) {
-	m_containment->setMaximumSize( QWIDGETSIZE_MAX, QWIDGETSIZE_MAX );
-	m_containment->setMinimumSize( size() );
-	m_containment->setMaximumSize( size() );
-	m_containment->resize( size() );
+    m_containment->setMaximumSize( QWIDGETSIZE_MAX, QWIDGETSIZE_MAX );
+    m_containment->setMinimumSize( size() );
+    m_containment->setMaximumSize( size() );
+    m_containment->resize( size() );
     }
     setUpdatesEnabled( true );
 }

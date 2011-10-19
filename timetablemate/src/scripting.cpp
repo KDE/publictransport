@@ -21,50 +21,50 @@
 
 void TimetableData::set( const QString &info, const QVariant& value ) {
     static QStringList validDepartureStrings = QStringList()
-		<< "departuredate" << "departuretime" << "departurehour" << "departureminute" << "typeofvehicle"
-		<< "transportline" << "flightnumber" << "target" << "platform" << "delay" << "delayreason"
-		<< "journeynews" << "journeynewsother" << "journeynewslink" << "departurehourprognosis"
-		<< "departureminuteprognosis" << "operator" << "departureamorpm"
-		<< "departureamorpmprognosis" << "status" << "departureyear" << "routestops"
-		<< "routetimes" << "routeexactstops" << "isnightline";
+        << "departuredate" << "departuretime" << "departurehour" << "departureminute" << "typeofvehicle"
+        << "transportline" << "flightnumber" << "target" << "platform" << "delay" << "delayreason"
+        << "journeynews" << "journeynewsother" << "journeynewslink" << "departurehourprognosis"
+        << "departureminuteprognosis" << "operator" << "departureamorpm"
+        << "departureamorpmprognosis" << "status" << "departureyear" << "routestops"
+        << "routetimes" << "routeexactstops" << "isnightline";
     static QStringList validJourneyStrings = QStringList()
-		<< "departuredate" << "departuretime" << "departurehour" << "departureminute" 
-		<< "duration" << "startstopname" << "startstopid" << "targetstopname" << "targetstopid"
-		<< "arrivaldate" << "arrivalhour" << "arrivalminute" << "changes"
-		<< "typesofvehicleinjourney" << "pricing" << "routetransportlines" << "routetypesofvehicles"
-		<< "routeplatformsdeparture" << "routeplatformsarrival" << "routetimesdeparturedelay"
-		<< "routetimesarrivaldelay" << "routetimesdeparture" << "routetimesarrival"
-		<< "routestops" << "journeynews" << "journeynewsother" << "journeynewslink"
-		<< "departurehourprognosis" << "departureminuteprognosis" << "operator" << "departureamorpm"
-		<< "departureamorpmprognosis" << "arrivalamorpm";
+        << "departuredate" << "departuretime" << "departurehour" << "departureminute" 
+        << "duration" << "startstopname" << "startstopid" << "targetstopname" << "targetstopid"
+        << "arrivaldate" << "arrivalhour" << "arrivalminute" << "changes"
+        << "typesofvehicleinjourney" << "pricing" << "routetransportlines" << "routetypesofvehicles"
+        << "routeplatformsdeparture" << "routeplatformsarrival" << "routetimesdeparturedelay"
+        << "routetimesarrivaldelay" << "routetimesdeparture" << "routetimesarrival"
+        << "routestops" << "journeynews" << "journeynewsother" << "journeynewslink"
+        << "departurehourprognosis" << "departureminuteprognosis" << "operator" << "departureamorpm"
+        << "departureamorpmprognosis" << "arrivalamorpm";
     static QStringList validStopSuggestionStrings = QStringList()
-		<< "stopname" << "stopid" << "stopweight" << "stopcity" << "stopcountrycode";
+        << "stopname" << "stopid" << "stopweight" << "stopcity" << "stopcountrycode";
     
     QString s = info.toLower();
     if ( (m_mode == "departures" && !validDepartureStrings.contains(s))
       || (m_mode == "journeys" && !validJourneyStrings.contains(s))
       || (m_mode == "stopsuggestions" && !validStopSuggestionStrings.contains(s)) )
     {
-		kDebug() << "Unknown timetable information" << s
-			<< "with value" << (value.isNull() ? "NULL" : value.toString());
-		m_unknownTimetableInformationStrings.insert( info, value );
+        kDebug() << "Unknown timetable information" << s
+            << "with value" << (value.isNull() ? "NULL" : value.toString());
+        m_unknownTimetableInformationStrings.insert( info, value );
     } else if ( value.isNull() ) {
-		kDebug() << "Value is NULL for" << s;
+        kDebug() << "Value is NULL for" << s;
     } else {
-		// Valid data
-		if ( value.isValid() && value.canConvert(QVariant::String)
-			&& (s == "stopname" || s == "target"
-			|| s == "startStopName" || s == "targetstopname"
-			|| s == "operator" || s == "transportline"
-			|| s == "platform" || s == "delayreason"
-			|| s == "status" || s == "pricing") ) 
-		{
-			m_values[ s ] = /*TimetableAccessorScript::decodeHtmlEntities(*/ value.toString() /*)*/; // TODO
-		} else if ( value.isValid() && value.canConvert(QVariant::List) && s == "departuredate" ) {
-			QVariantList date = value.toList();
-			m_values[ s ] = date.length() == 3 ? QDate(date[0].toInt(), date[1].toInt(), date[2].toInt()) : value;
-		} else {
-			m_values[ s ] = value;
-		}
+        // Valid data
+        if ( value.isValid() && value.canConvert(QVariant::String)
+            && (s == "stopname" || s == "target"
+            || s == "startStopName" || s == "targetstopname"
+            || s == "operator" || s == "transportline"
+            || s == "platform" || s == "delayreason"
+            || s == "status" || s == "pricing") ) 
+        {
+            m_values[ s ] = /*TimetableAccessorScript::decodeHtmlEntities(*/ value.toString() /*)*/; // TODO
+        } else if ( value.isValid() && value.canConvert(QVariant::List) && s == "departuredate" ) {
+            QVariantList date = value.toList();
+            m_values[ s ] = date.length() == 3 ? QDate(date[0].toInt(), date[1].toInt(), date[2].toInt()) : value;
+        } else {
+            m_values[ s ] = value;
+        }
     }
 }

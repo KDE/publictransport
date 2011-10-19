@@ -48,29 +48,29 @@ using namespace Timetable;
  * @brief Data for one departure/arrival.
  **/
 struct DepartureData {
-	QDateTime time;
-	QString transportLine;
-	QString target;
-	VehicleType vehicleType;
-	bool drawTransportLine;
+    QDateTime time;
+    QString transportLine;
+    QString target;
+    VehicleType vehicleType;
+    bool drawTransportLine;
 
-	DepartureData() {
-		vehicleType = Unknown;
-	};
+    DepartureData() {
+        vehicleType = Unknown;
+    };
 
-	DepartureData( const QDateTime &time, const QString &transportLine, const QString &target,
-				   VehicleType vehicleType, bool drawTransportLine = true ) {
-		this->time = time;
-		this->transportLine = transportLine;
-		this->target = target;
-		this->vehicleType = vehicleType;
-		this->drawTransportLine = drawTransportLine;
-	};
+    DepartureData( const QDateTime &time, const QString &transportLine, const QString &target,
+                   VehicleType vehicleType, bool drawTransportLine = true ) {
+        this->time = time;
+        this->transportLine = transportLine;
+        this->target = target;
+        this->vehicleType = vehicleType;
+        this->drawTransportLine = drawTransportLine;
+    };
 
-	bool operator ==( const DepartureData &other ) const {
-		return time == other.time && transportLine == other.transportLine
-				&& target == other.target && vehicleType == other.vehicleType;
-	};
+    bool operator ==( const DepartureData &other ) const {
+        return time == other.time && transportLine == other.transportLine
+                && target == other.target && vehicleType == other.vehicleType;
+    };
 };
 
 /**
@@ -79,162 +79,162 @@ struct DepartureData {
  * One Departure can be combined with another using @ref combineWith.
  **/
 class Departure : public QGraphicsWidget {
-	Q_OBJECT
-	Q_PROPERTY( QSizeF size READ size WRITE setSize )
+    Q_OBJECT
+    Q_PROPERTY( QSizeF size READ size WRITE setSize )
 public:
     Departure( QGraphicsItem* parent, const DepartureData &data,
-			   const QPointF &pos = QPointF() );
+               const QPointF &pos = QPointF() );
     Departure( QGraphicsItem* parent, const QList<DepartureData> &dataList,
-			   const QPointF &pos = QPointF() );
+               const QPointF &pos = QPointF() );
 
-	virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-						QWidget* widget = 0 );
+    virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                        QWidget* widget = 0 );
     virtual QSizeF sizeHint(Qt::SizeHint which, const QSizeF& constraint = QSizeF()) const;
     virtual QRectF boundingRect() const;
-	QSizeF size() const { return m_size; };
-	void setSize( const QSizeF &size ) { m_size = size; updateGeometry(); update(); };
+    QSizeF size() const { return m_size; };
+    void setSize( const QSizeF &size ) { m_size = size; updateGeometry(); update(); };
 
-	/**
-	 * @brief Updates the position based on the departure time.
-	 *
-	 * This function gets called automatically when the departure time gets changed using
-	 * @ref setDateTime.
-	 *
-	 * @param animate Whether or not to animate the position change. The animation can take up to
-	 *   one minute. Default is true.
-	 **/
-	QPointF updatePosition( bool animate = true );
+    /**
+     * @brief Updates the position based on the departure time.
+     *
+     * This function gets called automatically when the departure time gets changed using
+     * @ref setDateTime.
+     *
+     * @param animate Whether or not to animate the position change. The animation can take up to
+     *   one minute. Default is true.
+     **/
+    QPointF updatePosition( bool animate = true );
 
-	void updateTooltip();
-	void updateDrawData();
+    void updateTooltip();
+    void updateDrawData();
 
-	QList<DepartureData> departureData() const { return m_departures; };
-	QDateTime dateTime() const { return m_departures.first().time; };
-	QStringList transportLines() const {
-		QStringList ret;
-		foreach ( const DepartureData &data, m_departures ) {
-			ret << data.transportLine;
-		}
-		return ret;
-	};
-	QStringList targets() const {
-		QStringList ret;
-		foreach ( const DepartureData &data, m_departures ) {
-			ret << data.target;
-		}
-		return ret;
-	};
-	QList<VehicleType> vehicleTypes() const {
-		QList<VehicleType> ret;
-		foreach ( const DepartureData &data, m_departures ) {
-			ret << data.vehicleType;
-		}
-		return ret;
-	};
+    QList<DepartureData> departureData() const { return m_departures; };
+    QDateTime dateTime() const { return m_departures.first().time; };
+    QStringList transportLines() const {
+        QStringList ret;
+        foreach ( const DepartureData &data, m_departures ) {
+            ret << data.transportLine;
+        }
+        return ret;
+    };
+    QStringList targets() const {
+        QStringList ret;
+        foreach ( const DepartureData &data, m_departures ) {
+            ret << data.target;
+        }
+        return ret;
+    };
+    QList<VehicleType> vehicleTypes() const {
+        QList<VehicleType> ret;
+        foreach ( const DepartureData &data, m_departures ) {
+            ret << data.vehicleType;
+        }
+        return ret;
+    };
 
-	bool containsDeparture( const DepartureData &other ) const {
-		foreach ( const DepartureData &data, m_departures ) {
-			if ( data == other ) {
-				return true;
-			}
-		}
+    bool containsDeparture( const DepartureData &other ) const {
+        foreach ( const DepartureData &data, m_departures ) {
+            if ( data == other ) {
+                return true;
+            }
+        }
 
-		return false; // Not found
-	};
+        return false; // Not found
+    };
 
     void combineWith( Departure *other );
-	Departure *splitAt( QGraphicsItem *parent, int index );
+    Departure *splitAt( QGraphicsItem *parent, int index );
 
 protected:
     virtual void hoverEnterEvent( QGraphicsSceneHoverEvent* event );
 
 private:
-	inline qreal departureSizeFactor() const {
-		return m_drawData.count() == 1 ? 1.0 : 1.0 / (0.75 * m_drawData.count());
-	};
-	inline qreal departureOffset( qreal vehicleSize ) const {
-		return m_drawData.count() == 1 ? 0.0
-			: (boundingRect().width() - vehicleSize) / (m_drawData.count() - 1);
-	};
+    inline qreal departureSizeFactor() const {
+        return m_drawData.count() == 1 ? 1.0 : 1.0 / (0.75 * m_drawData.count());
+    };
+    inline qreal departureOffset( qreal vehicleSize ) const {
+        return m_drawData.count() == 1 ? 0.0
+            : (boundingRect().width() - vehicleSize) / (m_drawData.count() - 1);
+    };
 
-	QList<DepartureData> m_departures; // Departures visualized by this item
-	QList<DepartureData*> m_drawData; // Departures for which an own icon gets drawn
-	QSizeF m_size;
+    QList<DepartureData> m_departures; // Departures visualized by this item
+    QList<DepartureData*> m_drawData; // Departures for which an own icon gets drawn
+    QSizeF m_size;
 };
 
 // Define our plasma Applet
 class GraphicalTimetableLine : public Plasma::Applet
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	// Basic Create/Destroy
-	GraphicalTimetableLine( QObject *parent, const QVariantList &args );
-	~GraphicalTimetableLine();
+    // Basic Create/Destroy
+    GraphicalTimetableLine( QObject *parent, const QVariantList &args );
+    ~GraphicalTimetableLine();
 
-	virtual void createConfigurationInterface( KConfigDialog* parent );
+    virtual void createConfigurationInterface( KConfigDialog* parent );
 
-	// The paintInterface procedure paints the applet to the desktop
-	void paintInterface( QPainter *painter,
-			const QStyleOptionGraphicsItem *option,
-			const QRect& contentsRect );
-	void init();
+    // The paintInterface procedure paints the applet to the desktop
+    void paintInterface( QPainter *painter,
+            const QStyleOptionGraphicsItem *option,
+            const QRect& contentsRect );
+    void init();
 
-	QPointF positionFromTime( const QDateTime &time, qreal *opacity = 0, qreal *zoom = 0,
-							  qreal *zValue = 0 ) const;
-	void paintVehicle( QPainter *painter, VehicleType vehicle, const QRectF &rect,
-					   const QString &transportLine = QString() );
+    QPointF positionFromTime( const QDateTime &time, qreal *opacity = 0, qreal *zoom = 0,
+                              qreal *zValue = 0 ) const;
+    void paintVehicle( QPainter *painter, VehicleType vehicle, const QRectF &rect,
+                       const QString &transportLine = QString() );
 
     QString courtesyText();
-	QDateTime endTime() const;
-	void createTooltip( Departure *departure = 0 );
+    QDateTime endTime() const;
+    void createTooltip( Departure *departure = 0 );
 
-	QPointF newDeparturePosition() const { return m_timelineEnd; };
+    QPointF newDeparturePosition() const { return m_timelineEnd; };
 
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event) ;
 
 public slots:
-	void configAccepted();
+    void configAccepted();
 
-	/** @brief The data from the data engine was updated. */
-	void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
+    /** @brief The data from the data engine was updated. */
+    void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
 
-	void updateItemPositions( bool animate = true );
-	void updateTitle();
+    void updateItemPositions( bool animate = true );
+    void updateTitle();
 
-	void zoomIn();
-	void zoomOut();
+    void zoomIn();
+    void zoomOut();
 
 private:
-	// Configuration widgets
-	StopWidget *m_stopWidget;
-	VehicleTypeModel *m_vehicleTypeModel;
-	QCheckBox *m_showTimetableCheckbox;
-	QCheckBox *m_drawTransportLineCheckbox;
+    // Configuration widgets
+    StopWidget *m_stopWidget;
+    VehicleTypeModel *m_vehicleTypeModel;
+    QCheckBox *m_showTimetableCheckbox;
+    QCheckBox *m_drawTransportLineCheckbox;
 
-	// Settings
-	StopSettings m_stopSettings;
-	QList<VehicleType> m_vehicleTypes; // filter
-	qreal m_timelineLength; // in minutes
-	bool m_showTimetable;
-	bool m_drawTransportLine;
+    // Settings
+    StopSettings m_stopSettings;
+    QList<VehicleType> m_vehicleTypes; // filter
+    qreal m_timelineLength; // in minutes
+    bool m_showTimetable;
+    bool m_drawTransportLine;
 
-	// Graphics items
-	Plasma::ToolButton *m_zoomInButton;
-	Plasma::ToolButton *m_zoomOutButton;
-	Plasma::Label *m_title;
-	Plasma::Label *m_courtesy;
-	QGraphicsWidget *m_departureView;
-	QList<Departure*> m_departures;
+    // Graphics items
+    Plasma::ToolButton *m_zoomInButton;
+    Plasma::ToolButton *m_zoomOutButton;
+    Plasma::Label *m_title;
+    Plasma::Label *m_courtesy;
+    QGraphicsWidget *m_departureView;
+    QList<Departure*> m_departures;
 
-	// Data source info
-	QDateTime m_lastSourceUpdate;
-	QString m_sourceName;
+    // Data source info
+    QDateTime m_lastSourceUpdate;
+    QString m_sourceName;
 
-	Plasma::Svg m_svg;
-	QPointF m_timelineStart;
-	QPointF m_timelineEnd;
-	bool m_animate;
+    Plasma::Svg m_svg;
+    QPointF m_timelineStart;
+    QPointF m_timelineEnd;
+    bool m_animate;
 };
 
 // This is the command that links your applet to the .desktop file

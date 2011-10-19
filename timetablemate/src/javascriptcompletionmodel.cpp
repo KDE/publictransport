@@ -28,8 +28,8 @@
 #include <KLocale>
 
 JavaScriptCompletionModel::JavaScriptCompletionModel( const QString& completionShortcut,
-						      QObject* parent )
-					: KTextEditor::CodeCompletionModel( parent ) {
+                              QObject* parent )
+                    : KTextEditor::CodeCompletionModel( parent ) {
     m_completionShortcut = completionShortcut;
     initGlobalFunctionCompletion();
     initTimetableInfoCompletion();
@@ -82,27 +82,28 @@ QVariant JavaScriptCompletionModel::data( const QModelIndex& index, int role ) c
 }
 
 void JavaScriptCompletionModel::executeCompletionItem( KTextEditor::Document* document,
-					    const KTextEditor::Range& word, int row ) const {
+                        const KTextEditor::Range& word, int row ) const {
     kDebug() << "Completion" << word << row;
     CompletionItem completion = m_completions.at( row );
     if ( completion.isTemplate ) {
         KTextEditor::TemplateInterface *templateInterface =
-            qobject_cast<KTextEditor::TemplateInterface*>( document->activeView() );
+                qobject_cast<KTextEditor::TemplateInterface*>( document->activeView() );
         if ( templateInterface ) {
-	    KTextEditor::Cursor cursor = word.start();
+            KTextEditor::Cursor cursor = word.start();
             document->removeText( word );
             templateInterface->insertTemplateText( cursor, completion.completion,
                                                    QMap<QString, QString>() );
-        } else
+        } else {
             kDebug() << "No template interface";
+        }
     } else {
         document->replaceText( word, completion.completion );
     }
 }
 
 void JavaScriptCompletionModel::completionInvoked( KTextEditor::View* view,
-			    const KTextEditor::Range& range,
-			    KTextEditor::CodeCompletionModel::InvocationType /*invocationType*/ ) {
+                const KTextEditor::Range& range,
+                KTextEditor::CodeCompletionModel::InvocationType /*invocationType*/ ) {
     m_completions.clear();
     setRowCount( 0 );
 
@@ -110,8 +111,7 @@ void JavaScriptCompletionModel::completionInvoked( KTextEditor::View* view,
     QString leftText = stripComments( view->document()->text(leftRange) );
     int blockLevel = leftText.count( '{' ) - leftText.count( '}' );
     if ( blockLevel < 0 ) {
-        kDebug() << "More closing '}' found than opening '{' at line"
-		 << range.start().line();
+        kDebug() << "More closing '}' found than opening '{' at line" << range.start().line();
         return;
     } else { // at root level or inside function
         QString word = view->document()->text( range );
@@ -217,25 +217,25 @@ CompletionItem JavaScriptCompletionModel::completionItemFromId( const QString id
 
 void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
     m_completionsGlobalFunctions.insert( "func:usedTimetableInformations()",
-	    CompletionItem( Function | GlobalScope,
+        CompletionItem( Function | GlobalScope,
             "usedTimetableInformations()",
             i18nc("@info The description for the 'usedTimetableInformations' function",
                   "Should be implemented to tell which features the script supports.<nl/>"
                   "This function is called by the data engine."),
             "\n// This function returns a list of all features supported by this script.\n"
-	    "function usedTimetableInformations() {\n"
-	    "\t// These strings are currently recognized as features:\n"
-	    "\t//   'Delay', 'DelayReason', 'Platform', 'JourneyNews', 'TypeOfVehicle',\n"
-	    "\t//   'StopID', 'Pricing', 'Changes', 'RouteStops', 'RoutePlatformsDeparture',\n"
-	    "\t//   'RoutePlatformsArrival', 'RouteTimesDeparture', 'RoutePlatformsArrival',\n"
-	    "\t//   'RouteTransportLines'.\n"
-	    "\treturn [ '${cursor}' ];\n"
-	    "}\n",
+        "function usedTimetableInformations() {\n"
+        "\t// These strings are currently recognized as features:\n"
+        "\t//   'Delay', 'DelayReason', 'Platform', 'JourneyNews', 'TypeOfVehicle',\n"
+        "\t//   'StopID', 'Pricing', 'Changes', 'RouteStops', 'RoutePlatformsDeparture',\n"
+        "\t//   'RoutePlatformsArrival', 'RouteTimesDeparture', 'RoutePlatformsArrival',\n"
+        "\t//   'RouteTransportLines'.\n"
+        "\treturn [ '${cursor}' ];\n"
+        "}\n",
             true, "Implement string array", "                   ") ); // The spaces make the completion
-		    // box wider, so that the code snipped can be read
+            // box wider, so that the code snipped can be read
 
     m_completionsGlobalFunctions.insert( "func:parseTimetable(html)",
-	    CompletionItem( Function | GlobalScope,
+        CompletionItem( Function | GlobalScope,
             "parseTimetable( html )",
             i18nc("@info The description for the 'parseTimetable' function",
                   "Parses departure/arrival documents.<nl/>"
@@ -260,7 +260,7 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
                   "then use a higher timeout for the next data update. When delay "
                   "information is available updates are done more often, because delays "
                   "may change.</note>"),
-// 				      "</bcode>"),
+//                       "</bcode>"),
             "\n// This function parses a given HTML document for departure/arrival data.\n"
             "function parseTimetable( html ) {\n"
             "\t// Find block of departures\n"
@@ -294,7 +294,7 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
     // box wider, so that the code snipped can be read
 
     m_completionsGlobalFunctions.insert( "func:parseJourneys(html)",
-	    CompletionItem( Function | GlobalScope,
+        CompletionItem( Function | GlobalScope,
             "parseJourneys( html )",
             i18nc("@info The description for the 'parseJourneys' function",
                   "Parses journey documents.<nl/>"
@@ -314,16 +314,16 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
                   "<icode>  timetableData.set( 'Pricing', '2,30 €' );</icode><nl/>"
                   "<icode>  // Add timetable data to the result set</icode><nl/>"
                   "<icode>  result.addData( timetableData );</icode>"),
-// 				      "</bcode>"),
+//                       "</bcode>"),
             "\n// This function parses a given HTML document for journey data.\n"
-	    "function parseJourneys( html ) {\n"
-	    "\t${cursor}\n"
-	    "}\n",
+        "function parseJourneys( html ) {\n"
+        "\t${cursor}\n"
+        "}\n",
             true, "Implement void", "                   " )); // The spaces make the completion
     // box wider, so that the code snipped can be read
 
     m_completionsGlobalFunctions.insert( "func:parsePossibleStops(html)",
-	    CompletionItem( Function | GlobalScope,
+        CompletionItem( Function | GlobalScope,
             "parsePossibleStops( html )",
             i18nc("@info The description for the 'parsePossibleStops' function",
                   "Parses stop suggestion documents.<nl/>"
@@ -336,16 +336,16 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
                   "<icode>  timetableData.set( 'StopName', 'Bremen Hbf' );</icode><nl/>"
                   "<icode>  // Add timetable data to the result set</icode><nl/>"
                   "<icode>  result.addData( timetableData );</icode>"),
-// 				      "</bcode>"),
+//                       "</bcode>"),
             "\n// This function parses a given HTML document for stop suggestions.\n"
-	    "function parsePossibleStops( html ) {\n"
-	    "\t${cursor}\n"
-	    "}\n",
+        "function parsePossibleStops( html ) {\n"
+        "\t${cursor}\n"
+        "}\n",
             true, "Implement void", "                   " )); // The spaces make the completion
     // box wider, so that the code snipped can be read
 
     m_completionsGlobalFunctions.insert( "func:getUrlForLaterJourneyResults(html)",
-	    CompletionItem( Function | GlobalScope,
+        CompletionItem( Function | GlobalScope,
             "getUrlForLaterJourneyResults( html )",
             i18nc("@info The description for the 'getUrlForLaterJourneyResults' function",
                   "Parses a journey document for a link to a journey "
@@ -354,14 +354,14 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
                   "contains the contents of the document body. The found link "
                   "can be simply returned. If no link could be found, return null."),
             "\n// This function parses a given HTML document for a link to later journeys.\n"
-	    "function getUrlForLaterJourneyResults( html ) {\n"
-	    "\treturn ${cursor};\n"
-	    "}\n",
+        "function getUrlForLaterJourneyResults( html ) {\n"
+        "\treturn ${cursor};\n"
+        "}\n",
             true, "Implement string", "                   " )); // The spaces make the completion
     // box wider, so that the code snipped can be read
 
     m_completionsGlobalFunctions.insert( "func:getUrlForDetailedJourneyResults(html)",
-	    CompletionItem( Function | GlobalScope,
+        CompletionItem( Function | GlobalScope,
             "getUrlForDetailedJourneyResults( html )",
             i18nc("@info The description for the 'getUrlForDetailedJourneyResults' function",
                   "Parses a journey document for a link to another journey "
@@ -371,85 +371,85 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
                   "The found link can be simply returned. If no link could be found, return null."),
             "\n// This function parses a given HTML document\n"
             "// for a link to a more detailed journey document.\n"
-	    "function getUrlForLaterJourneyResults( html ) {\n"
-	    "\treturn ${cursor};\n"
-	    "}\n",
+        "function getUrlForLaterJourneyResults( html ) {\n"
+        "\treturn ${cursor};\n"
+        "}\n",
             true, "Implement string", "                   " )); // The spaces make the completion
     // box wider, so that the code snipped can be read
 }
 
 void JavaScriptCompletionModel::initHelperCompletion() {
     m_completionsHelper.insert( "call:extractBlock()", CompletionItem( Function,
-	    "extractBlock( string, string begin, string end )",
-	    i18nc("@info The description for the 'extractBlock' function",
-		    "Extracts the first block in the given string, that begins with "
-		    "<placeholder>begin</placeholder> and ends with <placeholder>end"
-		    "</placeholder>. Returns the found block or an empty string if the "
-		    "block could not be found."),
-	    "extractBlock( ${string}, ${begin}, ${end} );", true, "string" ));
+        "extractBlock( string, string begin, string end )",
+        i18nc("@info The description for the 'extractBlock' function",
+            "Extracts the first block in the given string, that begins with "
+            "<placeholder>begin</placeholder> and ends with <placeholder>end"
+            "</placeholder>. Returns the found block or an empty string if the "
+            "block could not be found."),
+        "extractBlock( ${string}, ${begin}, ${end} );", true, "string" ));
     m_completionsHelper.insert( "call:stripTags()", CompletionItem( Function, "stripTags( string )",
-	    i18nc("@info The description for the 'stripTags' function",
-		    "Strips all tags from a given string and returns the result."),
-	    "stripTags( ${string} );", true, "string" ));
+        i18nc("@info The description for the 'stripTags' function",
+            "Strips all tags from a given string and returns the result."),
+        "stripTags( ${string} );", true, "string" ));
     m_completionsHelper.insert( "call:trim()", CompletionItem( Function, "trim( string )",
-	    i18nc("@info The description for the 'trim' function",
-		    "Trims a string and returns the result."),
-	    "trim( ${string} );", true, "string" ));
+        i18nc("@info The description for the 'trim' function",
+            "Trims a string and returns the result."),
+        "trim( ${string} );", true, "string" ));
     m_completionsHelper.insert( "call:matchTime()", CompletionItem( Function,
-	    "matchTime( string time, string format = 'hh:mm' )",
-	    i18nc("@info The description for the 'matchTime' function",
-		    "Searches for a time with the given <emphasis>format</emphasis> in the "
-		    "given <emphasis>time</emphasis> string. Returns an integer array with "
-		    "two integers: The first one is the hour part, the second one the "
-		    "minute part."),
-	    "matchTime( ${timeString} );", true, "int array" ));
+        "matchTime( string time, string format = 'hh:mm' )",
+        i18nc("@info The description for the 'matchTime' function",
+            "Searches for a time with the given <emphasis>format</emphasis> in the "
+            "given <emphasis>time</emphasis> string. Returns an integer array with "
+            "two integers: The first one is the hour part, the second one the "
+            "minute part."),
+        "matchTime( ${timeString} );", true, "int array" ));
     m_completionsHelper.insert( "call:matchDate()", CompletionItem( Function,
-	    "matchDate( string date, string format = 'yyyy-MM-dd' )",
-	    i18nc("@info The description for the 'matchDate' function",
-		    "Searches for a date with the given <emphasis>format</emphasis> in the "
-		    "given <emphasis>date</emphasis> string. Returns an integer array with "
-		    "three integers: The first one is the year part, the second one the "
-		    "month part and the third one the day part."),
-	    "matchDate( ${dateString} );", true, "int array" ));
+        "matchDate( string date, string format = 'yyyy-MM-dd' )",
+        i18nc("@info The description for the 'matchDate' function",
+            "Searches for a date with the given <emphasis>format</emphasis> in the "
+            "given <emphasis>date</emphasis> string. Returns an integer array with "
+            "three integers: The first one is the year part, the second one the "
+            "month part and the third one the day part."),
+        "matchDate( ${dateString} );", true, "int array" ));
     m_completionsHelper.insert( "call:formatTime()", CompletionItem( Function,
-	    "formatTime( int hour, int minute, string format = 'hh:mm' )",
-	    i18nc("@info The description for the 'formatTime' function",
-		    "Formats a time given by it's <emphasis>hour</emphasis> and <emphasis>"
-		    "minute</emphasis> using the given <emphasis>format</emphasis>."),
-	    "formatTime( ${hour}, ${minute} );", true, "string" ));
+        "formatTime( int hour, int minute, string format = 'hh:mm' )",
+        i18nc("@info The description for the 'formatTime' function",
+            "Formats a time given by it's <emphasis>hour</emphasis> and <emphasis>"
+            "minute</emphasis> using the given <emphasis>format</emphasis>."),
+        "formatTime( ${hour}, ${minute} );", true, "string" ));
     m_completionsHelper.insert( "call:duration()", CompletionItem( Function,
-	    "duration( string time1, string time2, string format = 'hh:mm' )",
-	    i18nc("@info The description for the 'duration' function",
-		    "Computes the duration in minutes between the two times, given as strings. "
-		    "The time strings are parsed using the given <emphasis>format</emphasis>."),
-	    "duration( ${timeString1}, ${timeString2} );", true, "int" ));
+        "duration( string time1, string time2, string format = 'hh:mm' )",
+        i18nc("@info The description for the 'duration' function",
+            "Computes the duration in minutes between the two times, given as strings. "
+            "The time strings are parsed using the given <emphasis>format</emphasis>."),
+        "duration( ${timeString1}, ${timeString2} );", true, "int" ));
     m_completionsHelper.insert( "call:addMinsToTime()", CompletionItem( Function,
-	    "addMinsToTime( string time, int minsToAdd, string format = 'hh:mm' )",
-	    i18nc("@info The description for the 'addMinsToTime' function",
-		    "Adds <emphasis>minsToAdd</emphasis> minutes to the <emphasis>time"
-		    "</emphasis> given as a string. The time string is parsed using the "
-		    "given <emphasis>format</emphasis>. Returns a time string formatted "
-		    "using the given <emphasis>format</emphasis>"),
-	    "addMinsToTime( ${timeString}, ${minsToAdd} );", true, "string" ));
+        "addMinsToTime( string time, int minsToAdd, string format = 'hh:mm' )",
+        i18nc("@info The description for the 'addMinsToTime' function",
+            "Adds <emphasis>minsToAdd</emphasis> minutes to the <emphasis>time"
+            "</emphasis> given as a string. The time string is parsed using the "
+            "given <emphasis>format</emphasis>. Returns a time string formatted "
+            "using the given <emphasis>format</emphasis>"),
+        "addMinsToTime( ${timeString}, ${minsToAdd} );", true, "string" ));
     m_completionsHelper.insert( "call:addDaysToDate()", CompletionItem( Function,
-	    "addDaysToDate( int[] dateArray, int daysToAdd )",
-	    i18nc("@info The description for the 'addDaysToDate' function",
-		    "Adds <emphasis>daysToAdd</emphasis> days to the <emphasis>date"
-		    "</emphasis> given as an integer array (with three integers: year, month, day). "
-		    "Returns an integer array with the new values"),
-	    "addDaysToDate( ${dateArray [year, month, day]}, ${daysToAdd} );", true, "string" ));
+        "addDaysToDate( int[] dateArray, int daysToAdd )",
+        i18nc("@info The description for the 'addDaysToDate' function",
+            "Adds <emphasis>daysToAdd</emphasis> days to the <emphasis>date"
+            "</emphasis> given as an integer array (with three integers: year, month, day). "
+            "Returns an integer array with the new values"),
+        "addDaysToDate( ${dateArray [year, month, day]}, ${daysToAdd} );", true, "string" ));
     m_completionsHelper.insert( "call:splitSkipEmptyParts()", CompletionItem( Function,
-	    "splitSkipEmptyParts( string, string separator )",
-	    i18nc("@info The description for the 'splitSkipEmptyParts' function",
-		    "Splits the given <emphasis>string</emphasis> using the given "
-		    "<emphasis>separator</emphasis>. Returns an array of strings."),
-	    "splitSkipEmptyParts( ${string}, ${separator} );", true, "string array" ));
+        "splitSkipEmptyParts( string, string separator )",
+        i18nc("@info The description for the 'splitSkipEmptyParts' function",
+            "Splits the given <emphasis>string</emphasis> using the given "
+            "<emphasis>separator</emphasis>. Returns an array of strings."),
+        "splitSkipEmptyParts( ${string}, ${separator} );", true, "string array" ));
     m_completionsHelper.insert( "call:error()", CompletionItem( Function,
-	    "error( string message, string data )",
-	    i18nc("@info The description for the 'error' function",
-		    "Logs the error message with the given data string, eg. the HTML code where parsing "
-			"failed. The message gets also send to stdout with a short version of the data."),
-	    "error( ${message}, ${data} );", true, "void" ));
+        "error( string message, string data )",
+        i18nc("@info The description for the 'error' function",
+            "Logs the error message with the given data string, eg. the HTML code where parsing "
+            "failed. The message gets also send to stdout with a short version of the data."),
+        "error( ${message}, ${data} );", true, "void" ));
 }
 
 void JavaScriptCompletionModel::initTimetableInfoCompletion() {
@@ -516,13 +516,13 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "matched (starting with '/').</note>"),
             "JourneyNewsLink" ));
     m_completionsTimetableInfo.insert( "str:DepartureHourPrognosis",
-	    CompletionItem( Const, "DepartureHourPrognosis",
+        CompletionItem( Const, "DepartureHourPrognosis",
             i18nc("@info The description for the 'DepartureHourPrognosis' info",
                   "The prognosis for the departure hour, which is the departure hour "
                   "plus the delay."),
             "DepartureHourPrognosis" ));
     m_completionsTimetableInfo.insert( "str:DepartureMinutePrognosis",
-	    CompletionItem( Const, "DepartureMinutePrognosis",
+        CompletionItem( Const, "DepartureMinutePrognosis",
             i18nc("@info The description for the 'DepartureMinutePrognosis' info",
                   "The prognosis for the departure minute, which is the departure minute "
                   "plus the delay."),
@@ -537,7 +537,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "<note>If not set, 24 hour format is assumed.</note>"),
             "DepartureAMorPM" ));
     m_completionsTimetableInfo.insert( "str:DepartureAMorPMPrognosis",
-	    CompletionItem( Const, "DepartureAMorPMPrognosis",
+        CompletionItem( Const, "DepartureAMorPMPrognosis",
             i18nc("@info The description for the 'DepartureAMorPMPrognosis' info",
                   "'am' or 'pm' for the prognosis departure time.<nl/>"
                   "<note>If not set, 24 hour format is assumed.</note>"),
@@ -557,7 +557,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
             "DepartureYear" ));
     m_completionsTimetableInfo.insert( "str:IsNightLine", CompletionItem( Const, "IsNightLine",
             i18nc("@info The description for the 'IsNightLine' info", "A boolean indicating if "
-				  "the transport line is a nightline or not."),
+                  "the transport line is a nightline or not."),
             "IsNightLine" ));
     m_completionsTimetableInfo.insert( "str:RouteStops", CompletionItem( Const, "RouteStops",
             i18nc("@info The description for the 'RouteStops' info",
@@ -582,7 +582,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
 
     // Journey information
     m_completionsTimetableInfo.insert( "str:RouteTimesDeparture",
-	    CompletionItem( Const, "RouteTimesDeparture",
+        CompletionItem( Const, "RouteTimesDeparture",
             i18nc("@info The description for the 'RouteTimesDeparture' info",
                   "A list of departure times of the journey.<nl/>If <emphasis>RouteStops"
                   "</emphasis> and <emphasis>RouteTimesDeparture</emphasis> are both set, "
@@ -591,7 +591,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "be associated (the times at which the vehicle departs from the stops)."),
             "RouteTimesDeparture" ));
     m_completionsTimetableInfo.insert( "str:RouteTimesArrival",
-	    CompletionItem( Const, "RouteTimesArrival",
+        CompletionItem( Const, "RouteTimesArrival",
             i18nc("@info The description for the 'RouteTimesArrival' info",
                   "A list of arrival times of the journey.<nl/>If <emphasis>RouteStops"
                   "</emphasis> and <emphasis>RouteTimesArrival</emphasis> are both set, "
@@ -605,17 +605,17 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "RouteStops</emphasis> is not complete from the last exact route stop."),
             "RouteExactStops" ));
     m_completionsTimetableInfo.insert( "str:RouteTypesOfVehicles",
-	    CompletionItem( Const, "RouteTypesOfVehicles",
+        CompletionItem( Const, "RouteTypesOfVehicles",
             i18nc("@info The description for the 'RouteTypesOfVehicles' info",
                   "The types of vehicles used for each 'sub-journey' of a journey."),
             "RouteTypesOfVehicles" ));
     m_completionsTimetableInfo.insert( "str:RouteTransportLines",
-	    CompletionItem( Const, "RouteTransportLines",
+        CompletionItem( Const, "RouteTransportLines",
             i18nc("@info The description for the 'RouteTransportLines' info",
                   "The transport lines used for each 'sub-journey' of a journey."),
             "RouteTransportLines" ));
     m_completionsTimetableInfo.insert( "str:RoutePlatformsDeparture",
-	    CompletionItem( Const, "RoutePlatformsDeparture",
+        CompletionItem( Const, "RoutePlatformsDeparture",
             i18nc("@info The description for the 'RoutePlatformsDeparture' info",
                   "The platforms of departures used for each 'sub-journey' of a journey.<nl/>"
                   "If <emphasis>RouteStops</emphasis> and <emphasis>RoutePlatformsDeparture"
@@ -625,7 +625,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "departs from the stops)."),
             "RoutePlatformsDeparture" ));
     m_completionsTimetableInfo.insert( "str:RoutePlatformsArrival",
-	    CompletionItem( Const, "RoutePlatformsArrival",
+        CompletionItem( Const, "RoutePlatformsArrival",
             i18nc("@info The description for the 'RoutePlatformsArrival' info",
                   "The platforms of arrivals used for each 'sub-journey' of a journey.<nl/>"
                   "If <emphasis>RouteStops</emphasis> and <emphasis>RoutePlatformsArrival"
@@ -635,14 +635,14 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "the vehicle arrives at the stops)"),
             "RoutePlatformsArrival" ));
     m_completionsTimetableInfo.insert( "str:RouteTimesDepartureDelay",
-	    CompletionItem( Const, "RouteTimesDepartureDelay",
+        CompletionItem( Const, "RouteTimesDepartureDelay",
             i18nc("@info The description for the 'RouteTimesDepartureDelay' info",
                   "A list of delays in minutes for each departure time of a route "
                   "(see <emphasis>RouteTimesDeparture</emphasis>).<nl/>If set it should contain "
                   "the same number of elements as 'RouteTimesDeparture'."),
             "RouteTimesDepartureDelay" ));
     m_completionsTimetableInfo.insert( "str:RouteTimesArrivalDelay",
-	    CompletionItem( Const, "RouteTimesArrivalDelay",
+        CompletionItem( Const, "RouteTimesArrivalDelay",
             i18nc("@info The description for the 'RouteTimesArrivalDelay' info",
                   "A list of delays in minutes for each arrival time of a route "
                   "(see <emphasis>RouteTimesArrival</emphasis>).<nl/>If set it should contain "
@@ -686,7 +686,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "The number of changes between different vehicles in a journey."),
             "Changes" ));
     m_completionsTimetableInfo.insert( "str:TypesOfVehicleInJourney",
-	    CompletionItem( Const, "TypesOfVehicleInJourney",
+        CompletionItem( Const, "TypesOfVehicleInJourney",
             i18nc("@info The description for the 'TypesOfVehicleInJourney' info",
                   "A list of vehicle types used in a journey."),
             "TypesOfVehicleInJourney" ));
@@ -713,24 +713,24 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
 
 void JavaScriptCompletionModel::initFunctionCallCompletion() {
     m_completionsCalls.insert( "call:timetableData.set",
-	    CompletionItem( Function, "timetableData.set( string infoName, variant value )",
-			    i18nc("@info The description for the 'timetableData.set' function",
-				  "Saves the given <placeholder>value</placeholder> under the "
-				  "given <placeholder>infoName</placeholder>."),
-			    "set( '${infoName}', ${value} );", true, "void" ) );
+        CompletionItem( Function, "timetableData.set( string infoName, variant value )",
+                i18nc("@info The description for the 'timetableData.set' function",
+                  "Saves the given <placeholder>value</placeholder> under the "
+                  "given <placeholder>infoName</placeholder>."),
+                "set( '${infoName}', ${value} );", true, "void" ) );
     m_completionsCalls.insert( "call:timetableData.clear",
-	    CompletionItem( Function, "timetableData.clear()",
-			    i18nc("@info The description for the 'timetableData.clear' function",
-				  "Clears the current values of the "
-				  "<emphasis>timetableData</emphasis> object.<nl/>"
-				  "<note>You should call this method before setting values "
-				  "for the next item.</note>"),
-			    "clear();", false, "void" ) );
+        CompletionItem( Function, "timetableData.clear()",
+                i18nc("@info The description for the 'timetableData.clear' function",
+                  "Clears the current values of the "
+                  "<emphasis>timetableData</emphasis> object.<nl/>"
+                  "<note>You should call this method before setting values "
+                  "for the next item.</note>"),
+                "clear();", false, "void" ) );
 
     m_completionsCalls.insert( "call:result.addData",
-	    CompletionItem( Function, "result.addData( timetableData )",
-			    i18nc("@info The description for the 'result.addData' function",
-				  "Adds the current <emphasis>timetableData</emphasis> object "
-				  "to the result set."),
-			    "addData( timetableData );", false, "void" ));
+        CompletionItem( Function, "result.addData( timetableData )",
+                i18nc("@info The description for the 'result.addData' function",
+                  "Adds the current <emphasis>timetableData</emphasis> object "
+                  "to the result set."),
+                "addData( timetableData );", false, "void" ));
 }

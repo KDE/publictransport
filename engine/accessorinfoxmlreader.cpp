@@ -68,79 +68,79 @@ TimetableAccessorInfo* AccessorInfoXmlReader::read( QIODevice *device,
 
 void AccessorInfoXmlReader::readUnknownElement()
 {
-	Q_ASSERT( isStartElement() );
+    Q_ASSERT( isStartElement() );
 
-	while ( !atEnd() ) {
-		readNext();
+    while ( !atEnd() ) {
+        readNext();
 
-		if ( isEndElement() ) {
-			break;
-		}
+        if ( isEndElement() ) {
+            break;
+        }
 
-		if ( isStartElement() ) {
-			readUnknownElement();
-		}
-	}
+        if ( isStartElement() ) {
+            readUnknownElement();
+        }
+    }
 }
 
 TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo(
         const QString &serviceProvider, const QString &fileName, const QString &country )
 {
-	QString lang = KGlobal::locale()->country();
-	QString langRead;
-	QString nameLocal, nameEn, descriptionLocal, descriptionEn;
-	TimetableAccessorInfo *accessorInfo = new TimetableAccessorInfo();
+    QString lang = KGlobal::locale()->country();
+    QString langRead;
+    QString nameLocal, nameEn, descriptionLocal, descriptionEn;
+    TimetableAccessorInfo *accessorInfo = new TimetableAccessorInfo();
 
-	accessorInfo->setServiceProvider( serviceProvider );
-	accessorInfo->setFileName( fileName );
-	accessorInfo->setCountry( country );
+    accessorInfo->setServiceProvider( serviceProvider );
+    accessorInfo->setFileName( fileName );
+    accessorInfo->setCountry( country );
 
-	if ( attributes().hasAttribute("version") ) {
-		accessorInfo->setVersion( attributes().value("version").toString() );
-	} else {
-		accessorInfo->setVersion( "1.0" );
-	}
+    if ( attributes().hasAttribute("version") ) {
+        accessorInfo->setVersion( attributes().value("version").toString() );
+    } else {
+        accessorInfo->setVersion( "1.0" );
+    }
 
-	if ( attributes().hasAttribute("type") ) {
-		accessorInfo->setType( TimetableAccessor::accessorTypeFromString(
-				attributes().value("type").toString()) );
-		if ( accessorInfo->accessorType() == NoAccessor ) {
-			delete accessorInfo;
-// 			kDebug() << "The type" << attributes().value("type").toString()
-// 					 << "is invalid. Currently there are two values allowed: HTML and XML.";
-			raiseError( QString("The accessor type %1 is invalid. Currently there are three "
-								"values allowed: \"Scripted\", \"XML\" and \"GTFS\". Deprecated "
+    if ( attributes().hasAttribute("type") ) {
+        accessorInfo->setType( TimetableAccessor::accessorTypeFromString(
+                attributes().value("type").toString()) );
+        if ( accessorInfo->accessorType() == NoAccessor ) {
+            delete accessorInfo;
+//             kDebug() << "The type" << attributes().value("type").toString()
+//                      << "is invalid. Currently there are two values allowed: HTML and XML.";
+            raiseError( QString("The accessor type %1 is invalid. Currently there are three "
+                                "values allowed: \"Scripted\", \"XML\" and \"GTFS\". Deprecated "
                                 "but still usable is \"HTML\", interpreted as \"Scripted\".")
-						.arg(attributes().value("type").toString()) );
-			return 0;
-		}
-	} else {
-		// Type not specified, use default
-		accessorInfo->setType( ScriptedAccessor );
-	}
+                        .arg(attributes().value("type").toString()) );
+            return 0;
+        }
+    } else {
+        // Type not specified, use default
+        accessorInfo->setType( ScriptedAccessor );
+    }
 
-	while ( !atEnd() ) {
-		readNext();
+    while ( !atEnd() ) {
+        readNext();
 
-		if ( isEndElement() && name().compare("accessorInfo", Qt::CaseInsensitive) == 0 ) {
-			break;
-		}
+        if ( isEndElement() && name().compare("accessorInfo", Qt::CaseInsensitive) == 0 ) {
+            break;
+        }
 
-		if ( isStartElement() ) {
-			if ( name().compare("name", Qt::CaseInsensitive) == 0 ) {
-				QString nameRead = readLocalizedTextElement( &langRead );
-				if ( langRead == lang ) {
-					nameLocal = nameRead;
-				} else {
-					nameEn = nameRead;
-				}
-			} else if ( name().compare("description", Qt::CaseInsensitive) == 0 ) {
-				QString descriptionRead = readLocalizedTextElement( &langRead );
-				if ( langRead == lang ) {
-					descriptionLocal = descriptionRead;
-				} else {
-					descriptionEn = descriptionRead;
-				}
+        if ( isStartElement() ) {
+            if ( name().compare("name", Qt::CaseInsensitive) == 0 ) {
+                QString nameRead = readLocalizedTextElement( &langRead );
+                if ( langRead == lang ) {
+                    nameLocal = nameRead;
+                } else {
+                    nameEn = nameRead;
+                }
+            } else if ( name().compare("description", Qt::CaseInsensitive) == 0 ) {
+                QString descriptionRead = readLocalizedTextElement( &langRead );
+                if ( langRead == lang ) {
+                    descriptionLocal = descriptionRead;
+                } else {
+                    descriptionEn = descriptionRead;
+                }
             } else if ( name().compare("author", Qt::CaseInsensitive) == 0 ) {
                 QString authorName, shortName, authorEmail;
                 readAuthor( &authorName, &shortName, &authorEmail );
@@ -199,9 +199,9 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo(
             } else if ( name().compare("script", Qt::CaseInsensitive) == 0 ) {
                 QString scriptFile = QFileInfo( fileName ).path() + '/' + readElementText();
                 if ( !QFile::exists(scriptFile) ) {
-// 					kDebug() << "The script file " << scriptFile << "referenced by "
-// 							 << "the service provider information XML named"
-// 							 << nameEn << "wasn't found";
+//                     kDebug() << "The script file " << scriptFile << "referenced by "
+//                              << "the service provider information XML named"
+//                              << nameEn << "wasn't found";
                     raiseError( QString("The script file %1 referenced by the service provider "
                                         "information XML named %2 wasn't found")
                                 .arg(scriptFile).arg(nameEn) );
@@ -243,28 +243,28 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo(
         accessorInfo->setShortUrl( shortUrl );
     }
 
-	accessorInfo->setName( nameLocal.isEmpty() ? nameEn : nameLocal );
-	accessorInfo->setDescription( descriptionLocal.isEmpty() ? descriptionEn : descriptionLocal );
-	accessorInfo->finish();
+    accessorInfo->setName( nameLocal.isEmpty() ? nameEn : nameLocal );
+    accessorInfo->setDescription( descriptionLocal.isEmpty() ? descriptionEn : descriptionLocal );
+    accessorInfo->finish();
 
-	if ( accessorInfo->accessorType() == ScriptedAccessor ) {
-		// Ensure a script is specified
-		if ( accessorInfo->scriptFileName().isEmpty() ) {
-			delete accessorInfo;
-			raiseError( "HTML accessors need a script for parsing" );
-			return 0;
-		}
-
-		return accessorInfo;
-	} else if ( accessorInfo->accessorType() == XmlAccessor ) {
-		// Warn if no script is specified
-		if ( accessorInfo->scriptFileName().isEmpty() ) {
-			kDebug() << "XML accessors currently use a script to parse stop suggestions, "
-                        "but no script file was specified";
-		}
+    if ( accessorInfo->accessorType() == ScriptedAccessor ) {
+        // Ensure a script is specified
+        if ( accessorInfo->scriptFileName().isEmpty() ) {
+            delete accessorInfo;
+            raiseError( "HTML accessors need a script for parsing" );
+            return 0;
+        }
 
         return accessorInfo;
-	} else if ( accessorInfo->accessorType() == GtfsAccessor ) {
+    } else if ( accessorInfo->accessorType() == XmlAccessor ) {
+        // Warn if no script is specified
+        if ( accessorInfo->scriptFileName().isEmpty() ) {
+            kDebug() << "XML accessors currently use a script to parse stop suggestions, "
+                        "but no script file was specified";
+        }
+
+        return accessorInfo;
+    } else if ( accessorInfo->accessorType() == GtfsAccessor ) {
         return accessorInfo;
     } else {
         delete accessorInfo;
@@ -275,189 +275,189 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo(
 
 QString AccessorInfoXmlReader::readLocalizedTextElement( QString *lang )
 {
-	if ( attributes().hasAttribute( "lang" ) ) {
-		*lang = attributes().value( "lang" ).toString();
-	} else {
-		*lang = "en";
-	}
+    if ( attributes().hasAttribute( "lang" ) ) {
+        *lang = attributes().value( "lang" ).toString();
+    } else {
+        *lang = "en";
+    }
 
-	return readElementText();
+    return readElementText();
 }
 
 bool AccessorInfoXmlReader::readBooleanElement()
 {
-	QString content = readElementText().trimmed();
-	if ( content.compare( "true", Qt::CaseInsensitive ) == 0 || content == "1" ) {
-		return true;
-	} else {
-		return false;
-	}
+    QString content = readElementText().trimmed();
+    if ( content.compare( "true", Qt::CaseInsensitive ) == 0 || content == "1" ) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 void AccessorInfoXmlReader::readAuthor( QString *fullname, QString *shortName, QString *email )
 {
-	while ( !atEnd() ) {
-		readNext();
+    while ( !atEnd() ) {
+        readNext();
 
-		if ( isEndElement() && name().compare( "author", Qt::CaseInsensitive ) == 0 ) {
-			break;
-		}
+        if ( isEndElement() && name().compare( "author", Qt::CaseInsensitive ) == 0 ) {
+            break;
+        }
 
-		if ( isStartElement() ) {
-			if ( name().compare( "fullName", Qt::CaseInsensitive ) == 0 ) {
-				*fullname = readElementText().trimmed();
-			} else if ( name().compare( "short", Qt::CaseInsensitive ) == 0 ) {
-				*shortName = readElementText().trimmed();
-			} else if ( name().compare( "email", Qt::CaseInsensitive ) == 0 ) {
-				*email = readElementText().trimmed();
-			} else {
-				readUnknownElement();
-			}
-		}
-	}
+        if ( isStartElement() ) {
+            if ( name().compare( "fullName", Qt::CaseInsensitive ) == 0 ) {
+                *fullname = readElementText().trimmed();
+            } else if ( name().compare( "short", Qt::CaseInsensitive ) == 0 ) {
+                *shortName = readElementText().trimmed();
+            } else if ( name().compare( "email", Qt::CaseInsensitive ) == 0 ) {
+                *email = readElementText().trimmed();
+            } else {
+                readUnknownElement();
+            }
+        }
+    }
 }
 
 void AccessorInfoXmlReader::readCities( QStringList *cities,
-										QHash< QString, QString > *cityNameReplacements )
+                                        QHash< QString, QString > *cityNameReplacements )
 {
-	while ( !atEnd() ) {
-		readNext();
+    while ( !atEnd() ) {
+        readNext();
 
-		if ( isEndElement() && name().compare( "cities", Qt::CaseInsensitive ) == 0 ) {
-			break;
-		}
+        if ( isEndElement() && name().compare( "cities", Qt::CaseInsensitive ) == 0 ) {
+            break;
+        }
 
-		if ( isStartElement() ) {
-			if ( name().compare( "city", Qt::CaseInsensitive ) == 0 ) {
-				if ( attributes().hasAttribute("replaceWith") ) {
-					QString replacement = attributes().value( "replaceWith" ).toString().toLower();
-					QString city = readElementText();
-					cityNameReplacements->insert( city.toLower(), replacement );
-					cities->append( city );
-				} else {
-					QString city = readElementText();
-					cities->append( city );
-				}
-			} else {
-				readUnknownElement();
-			}
-		}
-	}
+        if ( isStartElement() ) {
+            if ( name().compare( "city", Qt::CaseInsensitive ) == 0 ) {
+                if ( attributes().hasAttribute("replaceWith") ) {
+                    QString replacement = attributes().value( "replaceWith" ).toString().toLower();
+                    QString city = readElementText();
+                    cityNameReplacements->insert( city.toLower(), replacement );
+                    cities->append( city );
+                } else {
+                    QString city = readElementText();
+                    cities->append( city );
+                }
+            } else {
+                readUnknownElement();
+            }
+        }
+    }
 }
 
 void AccessorInfoXmlReader::readRawUrls( QString* rawUrlDepartures, QString* rawUrlStopSuggestions,
-										 QString* rawUrlJourneys,
-										 QHash<QString, QString> *attributesForDepartures,
-										 QHash<QString, QString> *attributesForStopSuggestions,
-										 QHash<QString, QString> *attributesForJourneys )
+                                         QString* rawUrlJourneys,
+                                         QHash<QString, QString> *attributesForDepartures,
+                                         QHash<QString, QString> *attributesForStopSuggestions,
+                                         QHash<QString, QString> *attributesForJourneys )
 {
-	while ( !atEnd() ) {
-		readNext();
+    while ( !atEnd() ) {
+        readNext();
 
-		if ( isEndElement() && name().compare("rawUrls", Qt::CaseInsensitive) == 0 ) {
-			break;
-		}
+        if ( isEndElement() && name().compare("rawUrls", Qt::CaseInsensitive) == 0 ) {
+            break;
+        }
 
-		if ( isStartElement() ) {
-			if ( name().compare("departures", Qt::CaseInsensitive) == 0 ) {
-				foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
-					attributesForDepartures->insert( attribute.name().toString(),
-													 attribute.value().toString() );
-				}
+        if ( isStartElement() ) {
+            if ( name().compare("departures", Qt::CaseInsensitive) == 0 ) {
+                foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
+                    attributesForDepartures->insert( attribute.name().toString(),
+                                                     attribute.value().toString() );
+                }
 
-				while ( !atEnd() ) {
-					if ( isStartElement() ) {
-						if ( name().compare("url", Qt::CaseInsensitive) == 0 ) {
-							*rawUrlDepartures = readElementText();
-						} else if ( name().compare("data", Qt::CaseInsensitive) == 0 ) {
-							attributesForDepartures->insert( "data", readElementText() );
-						}
-					} else if ( rawUrlDepartures->isEmpty() && (isCDATA() || isCharacters()) ) {
-						*rawUrlDepartures = text().toString();
-					} else if ( isEndElement() && name().compare("departures", Qt::CaseInsensitive) == 0 ) {
-						// End of <departures> tag
-						break;
-					}
+                while ( !atEnd() ) {
+                    if ( isStartElement() ) {
+                        if ( name().compare("url", Qt::CaseInsensitive) == 0 ) {
+                            *rawUrlDepartures = readElementText();
+                        } else if ( name().compare("data", Qt::CaseInsensitive) == 0 ) {
+                            attributesForDepartures->insert( "data", readElementText() );
+                        }
+                    } else if ( rawUrlDepartures->isEmpty() && (isCDATA() || isCharacters()) ) {
+                        *rawUrlDepartures = text().toString();
+                    } else if ( isEndElement() && name().compare("departures", Qt::CaseInsensitive) == 0 ) {
+                        // End of <departures> tag
+                        break;
+                    }
 
-					if ( atEnd() ) {
-						break;
-					}
-					readNext();
-				}
-			} else if ( name().compare("stopSuggestions", Qt::CaseInsensitive) == 0 ) {
-				foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
-					attributesForStopSuggestions->insert( attribute.name().toString(),
-														  attribute.value().toString() );
-				}
-				*rawUrlStopSuggestions = readElementText();
-			} else if ( name().compare("journeys", Qt::CaseInsensitive) == 0 ) {
-				foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
-					attributesForJourneys->insert( attribute.name().toString(),
-												   attribute.value().toString() );
-				}
-				*rawUrlJourneys = readElementText();
-			} else {
-				readUnknownElement();
-			}
-		}
-	}
+                    if ( atEnd() ) {
+                        break;
+                    }
+                    readNext();
+                }
+            } else if ( name().compare("stopSuggestions", Qt::CaseInsensitive) == 0 ) {
+                foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
+                    attributesForStopSuggestions->insert( attribute.name().toString(),
+                                                          attribute.value().toString() );
+                }
+                *rawUrlStopSuggestions = readElementText();
+            } else if ( name().compare("journeys", Qt::CaseInsensitive) == 0 ) {
+                foreach ( const QXmlStreamAttribute &attribute, attributes().toList() ) {
+                    attributesForJourneys->insert( attribute.name().toString(),
+                                                   attribute.value().toString() );
+                }
+                *rawUrlJourneys = readElementText();
+            } else {
+                readUnknownElement();
+            }
+        }
+    }
 }
 
 void AccessorInfoXmlReader::readSessionKey(QString* sessionKeyUrl, SessionKeyPlace* sessionKeyPlace,
-										   QString* data )
+                                           QString* data )
 {
-	while ( !atEnd() ) {
-		readNext();
+    while ( !atEnd() ) {
+        readNext();
 
-		if ( isEndElement() && name().compare("sessionKey", Qt::CaseInsensitive) == 0 ) {
-			break;
-		}
+        if ( isEndElement() && name().compare("sessionKey", Qt::CaseInsensitive) == 0 ) {
+            break;
+        }
 
-		if ( isStartElement() ) {
-			if ( name().compare("url", Qt::CaseInsensitive) == 0 ) {
-				*sessionKeyUrl = readElementText();
-			} else if ( name().compare("putInto", Qt::CaseInsensitive) == 0 ) {
-				if ( attributes().hasAttribute(QLatin1String("data")) ) {
-					*data = attributes().value( QLatin1String("data") ).toString();
-				}
+        if ( isStartElement() ) {
+            if ( name().compare("url", Qt::CaseInsensitive) == 0 ) {
+                *sessionKeyUrl = readElementText();
+            } else if ( name().compare("putInto", Qt::CaseInsensitive) == 0 ) {
+                if ( attributes().hasAttribute(QLatin1String("data")) ) {
+                    *data = attributes().value( QLatin1String("data") ).toString();
+                }
 
-				QString putInto = readElementText();
-				if ( putInto.compare(QLatin1String("CustomHeader"), Qt::CaseInsensitive) == 0 ) {
-					*sessionKeyPlace = PutIntoCustomHeader;
-				} else {
-					*sessionKeyPlace = PutNowhere;
-				}
-			} else {
-				readUnknownElement();
-			}
-		}
-	}
+                QString putInto = readElementText();
+                if ( putInto.compare(QLatin1String("CustomHeader"), Qt::CaseInsensitive) == 0 ) {
+                    *sessionKeyPlace = PutIntoCustomHeader;
+                } else {
+                    *sessionKeyPlace = PutNowhere;
+                }
+            } else {
+                readUnknownElement();
+            }
+        }
+    }
 }
 
 QList<ChangelogEntry> AccessorInfoXmlReader::readChangelog()
 {
-	QList<ChangelogEntry> changelog;
-	while ( !atEnd() ) {
-		readNext();
-		if ( isEndElement() && name().compare("changelog", Qt::CaseInsensitive) == 0 ) {
-			break;
-		}
+    QList<ChangelogEntry> changelog;
+    while ( !atEnd() ) {
+        readNext();
+        if ( isEndElement() && name().compare("changelog", Qt::CaseInsensitive) == 0 ) {
+            break;
+        }
 
-		if ( isStartElement() ) {
-			if ( name().compare("entry", Qt::CaseInsensitive) == 0 ) {
-				ChangelogEntry currentEntry;
-				if ( attributes().hasAttribute(QLatin1String("since")) ) {
-					currentEntry.since_version = attributes().value( QLatin1String("since") ).toString();
-				}
-				if ( attributes().hasAttribute(QLatin1String("author")) ) {
-					currentEntry.author = attributes().value( QLatin1String("author") ).toString();
-				}
-				currentEntry.description = readElementText();
-				changelog.append( currentEntry );
-			} else {
-				readUnknownElement();
-			}
-		}
-	}
-	return changelog;
+        if ( isStartElement() ) {
+            if ( name().compare("entry", Qt::CaseInsensitive) == 0 ) {
+                ChangelogEntry currentEntry;
+                if ( attributes().hasAttribute(QLatin1String("since")) ) {
+                    currentEntry.since_version = attributes().value( QLatin1String("since") ).toString();
+                }
+                if ( attributes().hasAttribute(QLatin1String("author")) ) {
+                    currentEntry.author = attributes().value( QLatin1String("author") ).toString();
+                }
+                currentEntry.description = readElementText();
+                changelog.append( currentEntry );
+            } else {
+                readUnknownElement();
+            }
+        }
+    }
+    return changelog;
 }

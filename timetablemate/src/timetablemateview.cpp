@@ -45,18 +45,18 @@ TimetableMateView::TimetableMateView( QWidget *parent ) : QWidget( parent ) {
     ui_accessor.btnDetachScriptFile->setIcon( KIcon("list-remove") );
     ui_accessor.btnDetachScriptFile->setVisible( false );
     connect( ui_accessor.btnBrowseForScriptFile, SIGNAL(clicked(bool)),
-	     this, SLOT(browseForScriptFile()) );
+         this, SLOT(browseForScriptFile()) );
     connect( ui_accessor.btnCreateScriptFile, SIGNAL(clicked(bool)),
-	     this, SLOT(createScriptFile()) );
+         this, SLOT(createScriptFile()) );
     connect( ui_accessor.btnDetachScriptFile, SIGNAL(clicked(bool)),
-	     this, SLOT(detachScriptFile()) );
+         this, SLOT(detachScriptFile()) );
 
     // Initialize the language button
     ui_accessor.currentLanguage->loadAllLanguages();
     ui_accessor.currentLanguage->insertLanguage( "en", QString(), 0 );
     ui_accessor.currentLanguage->insertSeparator( 1 );
     connect( ui_accessor.currentLanguage, SIGNAL(activated(QString)),
-	     this, SLOT(languageActivated(QString)) );
+         this, SLOT(languageActivated(QString)) );
 
     // Initialize the KEditListWidget for predefined cities
     QWidget *repWidget = new QWidget( this );
@@ -75,17 +75,17 @@ TimetableMateView::TimetableMateView( QWidget *parent ) : QWidget( parent ) {
     m_predefinedCitiesCustomEditor.setRepresentationWidget( repWidget );
     ui_accessor.predefinedCities->setCustomEditor( m_predefinedCitiesCustomEditor );
     connect( m_cityName, SIGNAL(textChanged(QString)),
-	     this, SLOT(predefinedCityNameChanged(QString)) );
+         this, SLOT(predefinedCityNameChanged(QString)) );
     connect( m_cityReplacement, SIGNAL(textChanged(QString)),
-	     this, SLOT(predefinedCityReplacementChanged(QString)) );
+         this, SLOT(predefinedCityReplacementChanged(QString)) );
     connect( defaultLineEdit, SIGNAL(textChanged(QString)),
-	     this, SLOT(currentPredefinedCityChanged(QString)) );
+         this, SLOT(currentPredefinedCityChanged(QString)) );
 
     // Use negative text color for the warning labels
     ui_accessor.lblFileVersionWarning->hide();
     QPalette pal = ui_accessor.lblFileVersionWarning->palette();
     KColorScheme::adjustForeground( pal, KColorScheme::NegativeText,
-				    QPalette::WindowText, KColorScheme::Window );
+                    QPalette::WindowText, KColorScheme::Window );
     ui_accessor.lblFileVersionWarning->setPalette( pal );
 
     // Set a validator for version line edits
@@ -105,13 +105,13 @@ TimetableMateView::TimetableMateView( QWidget *parent ) : QWidget( parent ) {
     ui_accessor.btnStopUrlOpen->setIcon( KIcon("document-open-remote") );
     ui_accessor.btnJourneyUrlOpen->setIcon( KIcon("document-open-remote") );
     connect( ui_accessor.btnUrlOpen, SIGNAL(clicked(bool)),
-	     this, SLOT(openUrlClicked()) );
+         this, SLOT(openUrlClicked()) );
     connect( ui_accessor.btnDepartureUrlOpen, SIGNAL(clicked(bool)),
-	     this, SLOT(openDepartureUrlClicked()) );
+         this, SLOT(openDepartureUrlClicked()) );
     connect( ui_accessor.btnStopUrlOpen, SIGNAL(clicked(bool)),
-	     this, SLOT(openStopUrlClicked()) );
+         this, SLOT(openStopUrlClicked()) );
     connect( ui_accessor.btnJourneyUrlOpen, SIGNAL(clicked(bool)),
-	     this, SLOT(openJourneyUrlClicked()) );
+         this, SLOT(openJourneyUrlClicked()) );
     
     // Set icons for "insert placeholder buttons"
     ui_accessor.btnDepartureUrlInsertPlaceHolder->setIcon( KIcon("tools-wizard") );
@@ -122,7 +122,7 @@ TimetableMateView::TimetableMateView( QWidget *parent ) : QWidget( parent ) {
     QMenu *departureMenu = new QMenu( this );
     QAction *action;
     action = new QAction( KIcon("public-transport-stop"),
-			  i18n("Add &Stop Name Placeholder"), this );
+              i18n("Add &Stop Name Placeholder"), this );
     action->setData( "{stop}" );
     departureMenu->addAction( action );
     
@@ -142,7 +142,7 @@ TimetableMateView::TimetableMateView( QWidget *parent ) : QWidget( parent ) {
     action->setData( "{dataType}" );
     departureMenu->addAction( action );
     connect( departureMenu, SIGNAL(triggered(QAction*)),
-	     this, SLOT(departurePlaceHolder(QAction*)) );
+         this, SLOT(departurePlaceHolder(QAction*)) );
     ui_accessor.btnDepartureUrlInsertPlaceHolder->setMenu( departureMenu );
     
     // Create "Add ... Placeholder" actions for the journey raw url
@@ -164,67 +164,67 @@ TimetableMateView::TimetableMateView( QWidget *parent ) : QWidget( parent ) {
     // Create "Add ... Placeholder" actions for the stop suggestions raw url
     QMenu *stopMenu = new QMenu( this );
     action = new QAction( KIcon("public-transport-stop"),
-			  i18n("Add &Stop Name Placeholder"), this );
+              i18n("Add &Stop Name Placeholder"), this );
     action->setData( "{stop}" );
     stopMenu->addAction( action );
     connect( stopMenu, SIGNAL(triggered(QAction*)),
-			 this, SLOT(stopSuggestionsPlaceHolder(QAction*)) );
+             this, SLOT(stopSuggestionsPlaceHolder(QAction*)) );
     ui_accessor.btnStopUrlInsertPlaceHolder->setMenu( stopMenu );
-	
-	// Add changelog widget into a scroll area
-	QVBoxLayout *changelogAreaLayout = new QVBoxLayout( ui_accessor.tabChangelog );
-	QScrollArea *changelogArea = new QScrollArea( ui_accessor.tabChangelog );
-	changelogArea->setFrameStyle( QFrame::NoFrame );
-	changelogArea->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
-	changelogArea->setWidgetResizable( true );
-	changelogAreaLayout->addWidget( changelogArea );
-	
-	QWidget *changelogAreaWidget = new QWidget( changelogArea );
-	changelogArea->setWidget( changelogAreaWidget );
-	QVBoxLayout *changelogLayout = new QVBoxLayout( changelogAreaWidget );
-	m_changelog = new ChangelogWidget( changelogAreaWidget );
-	m_changelog->clear();
-	changelogLayout->addWidget( m_changelog );
-	changelogLayout->addStretch();
+    
+    // Add changelog widget into a scroll area
+    QVBoxLayout *changelogAreaLayout = new QVBoxLayout( ui_accessor.tabChangelog );
+    QScrollArea *changelogArea = new QScrollArea( ui_accessor.tabChangelog );
+    changelogArea->setFrameStyle( QFrame::NoFrame );
+    changelogArea->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
+    changelogArea->setWidgetResizable( true );
+    changelogAreaLayout->addWidget( changelogArea );
+    
+    QWidget *changelogAreaWidget = new QWidget( changelogArea );
+    changelogArea->setWidget( changelogAreaWidget );
+    QVBoxLayout *changelogLayout = new QVBoxLayout( changelogAreaWidget );
+    m_changelog = new ChangelogWidget( changelogAreaWidget );
+    m_changelog->clear();
+    changelogLayout->addWidget( m_changelog );
+    changelogLayout->addStretch();
 
     // Add vehicle types with icons to the default vehicle type combo box
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("status_unknown"), i18nc("@item:listbox", "Unknown"), "Unknown" );
+        KIcon("status_unknown"), i18nc("@item:listbox", "Unknown"), "Unknown" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_tram"), i18nc("@item:listbox", "Tram"), "Tram" );
+        KIcon("vehicle_type_tram"), i18nc("@item:listbox", "Tram"), "Tram" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_bus"), i18nc("@item:listbox", "Bus"), "Bus" );
+        KIcon("vehicle_type_bus"), i18nc("@item:listbox", "Bus"), "Bus" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_subway"), i18nc("@item:listbox", "Subway"), "Subway" );
+        KIcon("vehicle_type_subway"), i18nc("@item:listbox", "Subway"), "Subway" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_train_interurban"),
-	    i18nc("@item:listbox", "Interurban Train"), "TrainInterurban" );
+        KIcon("vehicle_type_train_interurban"),
+        i18nc("@item:listbox", "Interurban Train"), "TrainInterurban" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_metro"), i18nc("@item:listbox", "Metro"), "Metro" );
+        KIcon("vehicle_type_metro"), i18nc("@item:listbox", "Metro"), "Metro" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_trolleybus"),
-	    i18nc("@item:listbox", "Trolley Bus"), "TrolleyBus" );
+        KIcon("vehicle_type_trolleybus"),
+        i18nc("@item:listbox", "Trolley Bus"), "TrolleyBus" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_train_regional"), // TODO: Currently no special icon
-		i18nc("@item:listbox", "Regional Train"), "TrainRegional" );
+        KIcon("vehicle_type_train_regional"), // TODO: Currently no special icon
+        i18nc("@item:listbox", "Regional Train"), "TrainRegional" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_train_regional"),
-	    i18nc("@item:listbox", "Regional Express Train"), "TrainRegionalExpress" );
+        KIcon("vehicle_type_train_regional"),
+        i18nc("@item:listbox", "Regional Express Train"), "TrainRegionalExpress" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_train_interregional"),
-	    i18nc("@item:listbox", "Interregional Train"), "TrainInterregio" );
+        KIcon("vehicle_type_train_interregional"),
+        i18nc("@item:listbox", "Interregional Train"), "TrainInterregio" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_train_intercity"),
-	    i18nc("@item:listbox", "Intercity/Eurocity Train"), "TrainIntercityEurocity" );
+        KIcon("vehicle_type_train_intercity"),
+        i18nc("@item:listbox", "Intercity/Eurocity Train"), "TrainIntercityEurocity" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_train_highspeed"),
-	    i18nc("@item:listbox", "Intercity Express Train"), "TrainIntercityExpress" );
+        KIcon("vehicle_type_train_highspeed"),
+        i18nc("@item:listbox", "Intercity Express Train"), "TrainIntercityExpress" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_ferry"), i18nc("@item:listbox", "Ferry"), "Ferry" );
+        KIcon("vehicle_type_ferry"), i18nc("@item:listbox", "Ferry"), "Ferry" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_ferry"), i18nc("@item:listbox", "Ship"), "Ship" );
+        KIcon("vehicle_type_ferry"), i18nc("@item:listbox", "Ship"), "Ship" );
     ui_accessor.defaultVehicleType->addItem(
-	    KIcon("vehicle_type_plane"), i18nc("@item:listbox", "Plane"), "Plane" );
+        KIcon("vehicle_type_plane"), i18nc("@item:listbox", "Plane"), "Plane" );
 
     // Connect all change signals of the widgets to the changed() signal
     m_mapper = new QSignalMapper( this );
@@ -250,7 +250,7 @@ TimetableMateView::TimetableMateView( QWidget *parent ) : QWidget( parent ) {
     connect( m_changelog, SIGNAL(added(QWidget*)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(removed(QWidget*,int)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(changed()), m_mapper, SLOT(map()) );
-	// TODO Map changes in the changelog
+    // TODO Map changes in the changelog
     m_mapper->setMapping( ui_accessor.name, ui_accessor.name );
     m_mapper->setMapping( ui_accessor.description, ui_accessor.description );
     m_mapper->setMapping( ui_accessor.version, ui_accessor.version );
@@ -282,50 +282,50 @@ TimetableMateView::~TimetableMateView() {
 
 void TimetableMateView::slotChanged( QWidget* changedWidget ) {
     if ( changedWidget == ui_accessor.scriptFile ) {
-		// Script file changed
-		const QString fileName = ui_accessor.scriptFile->text();
-		ui_accessor.btnCreateScriptFile->setVisible( fileName.isEmpty() );
-		ui_accessor.btnDetachScriptFile->setVisible( !fileName.isEmpty() );
-		emit scriptFileChanged( fileName );
+        // Script file changed
+        const QString fileName = ui_accessor.scriptFile->text();
+        ui_accessor.btnCreateScriptFile->setVisible( fileName.isEmpty() );
+        ui_accessor.btnDetachScriptFile->setVisible( !fileName.isEmpty() );
+        emit scriptFileChanged( fileName );
     } else if ( changedWidget == ui_accessor.fileVersion ) {
-		// File version changed
-		if ( ui_accessor.fileVersion->text() != "1.0" ) {
-			ui_accessor.lblFileVersionWarning->setText( i18nc("@info",
-				"The PublicTransport data engine currently only supports version '1.0'.") );
-			ui_accessor.lblFileVersionWarning->show();
-		} else {
-			ui_accessor.lblFileVersionWarning->hide();
-		}
+        // File version changed
+        if ( ui_accessor.fileVersion->text() != "1.0" ) {
+            ui_accessor.lblFileVersionWarning->setText( i18nc("@info",
+                "The PublicTransport data engine currently only supports version '1.0'.") );
+            ui_accessor.lblFileVersionWarning->show();
+        } else {
+            ui_accessor.lblFileVersionWarning->hide();
+        }
     } else if ( changedWidget == ui_accessor.url ) {
-		// Home page URL changed
-		ui_accessor.btnUrlOpen->setDisabled( ui_accessor.url->text().isEmpty() );
+        // Home page URL changed
+        ui_accessor.btnUrlOpen->setDisabled( ui_accessor.url->text().isEmpty() );
     } else if ( changedWidget == ui_accessor.rawDepartureUrl ) {
-		// Raw departure URL changed
-		QString newUrl = ui_accessor.rawDepartureUrl->text();
-		ui_accessor.btnDepartureUrlOpen->setDisabled( newUrl.isEmpty() );
+        // Raw departure URL changed
+        QString newUrl = ui_accessor.rawDepartureUrl->text();
+        ui_accessor.btnDepartureUrlOpen->setDisabled( newUrl.isEmpty() );
 
-		bool hasCityPlaceholder = newUrl.contains("{city}")
-			|| ui_accessor.rawJourneyUrl->text().contains("{city}");
-		ui_accessor.useCityValue->setChecked( hasCityPlaceholder );
-		ui_accessor.predefinedCities->setEnabled( hasCityPlaceholder );
+        bool hasCityPlaceholder = newUrl.contains("{city}")
+            || ui_accessor.rawJourneyUrl->text().contains("{city}");
+        ui_accessor.useCityValue->setChecked( hasCityPlaceholder );
+        ui_accessor.predefinedCities->setEnabled( hasCityPlaceholder );
     } else if ( changedWidget == ui_accessor.rawStopSuggestionsUrl ) {
-		// Raw stop suggestions URL changed
-		ui_accessor.btnStopUrlOpen->setDisabled( ui_accessor.rawStopSuggestionsUrl->text().isEmpty() );
+        // Raw stop suggestions URL changed
+        ui_accessor.btnStopUrlOpen->setDisabled( ui_accessor.rawStopSuggestionsUrl->text().isEmpty() );
     } else if ( changedWidget == ui_accessor.rawJourneyUrl ) {
-		// Raw journey URL changed
-		QString newUrl = ui_accessor.rawJourneyUrl->text();
-		ui_accessor.btnJourneyUrlOpen->setDisabled( newUrl.isEmpty() );
+        // Raw journey URL changed
+        QString newUrl = ui_accessor.rawJourneyUrl->text();
+        ui_accessor.btnJourneyUrlOpen->setDisabled( newUrl.isEmpty() );
 
-		bool hasCityPlaceholder = newUrl.contains("{city}")
-			|| ui_accessor.rawDepartureUrl->text().contains("{city}");
-		ui_accessor.useCityValue->setChecked( hasCityPlaceholder );
-		ui_accessor.predefinedCities->setEnabled( hasCityPlaceholder );
+        bool hasCityPlaceholder = newUrl.contains("{city}")
+            || ui_accessor.rawDepartureUrl->text().contains("{city}");
+        ui_accessor.useCityValue->setChecked( hasCityPlaceholder );
+        ui_accessor.predefinedCities->setEnabled( hasCityPlaceholder );
     } else if ( changedWidget == ui_accessor.shortAuthor ) {
-		// Short author name changed, update changed log click messages
-		QList<ChangelogEntryWidget*> entryWidgets = m_changelog->entryWidgets();
-		foreach ( const ChangelogEntryWidget *entryWidget, entryWidgets ) {
-			entryWidget->authorLineEdit()->setClickMessage( m_accessor.shortAuthor );
-		}
+        // Short author name changed, update changed log click messages
+        QList<ChangelogEntryWidget*> entryWidgets = m_changelog->entryWidgets();
+        foreach ( const ChangelogEntryWidget *entryWidget, entryWidgets ) {
+            entryWidget->authorLineEdit()->setClickMessage( m_accessor.shortAuthor );
+        }
     }
     
     fillValuesFromWidgets();
@@ -336,8 +336,8 @@ void TimetableMateView::fillValuesFromWidgets() {
     // Fill struct with current values of the widgets
     QString lang = ui_accessor.currentLanguage->current();
     if ( lang == "en_US" ) {
-		lang = "en";
-	}
+        lang = "en";
+    }
     m_accessor.name[lang] = ui_accessor.name->text();
     m_accessor.description[lang] = ui_accessor.description->toPlainText();
     m_accessor.version = ui_accessor.version->text();
@@ -355,52 +355,52 @@ void TimetableMateView::fillValuesFromWidgets() {
     m_accessor.shortAuthor = ui_accessor.shortAuthor->text();
     m_accessor.email = ui_accessor.email->text();
     m_accessor.defaultVehicleType = ui_accessor.defaultVehicleType->itemData(
-	    ui_accessor.defaultVehicleType->currentIndex() ).toString();
+        ui_accessor.defaultVehicleType->currentIndex() ).toString();
     m_accessor.fileVersion = ui_accessor.fileVersion->text();
-	m_accessor.changelog = m_changelog->changelog();
+    m_accessor.changelog = m_changelog->changelog();
 
     m_accessor.cities.clear();
     m_accessor.cityNameReplacements.clear();
     const QStringList cityReplacements = ui_accessor.predefinedCities->items();
     foreach ( const QString &cityReplacement, cityReplacements ) {
-		QStringList values = cityReplacement.split( "   ->   " );
-		if ( values.count() == 2 ) {
-			m_accessor.cities << values.at( 0 );
-			m_accessor.cityNameReplacements.insert( values.at(0).toLower(), values.at(1) );
-		} else {
-			m_accessor.cities << cityReplacement;
-		}
+        QStringList values = cityReplacement.split( "   ->   " );
+        if ( values.count() == 2 ) {
+            m_accessor.cities << values.at( 0 );
+            m_accessor.cityNameReplacements.insert( values.at(0).toLower(), values.at(1) );
+        } else {
+            m_accessor.cities << cityReplacement;
+        }
     }
 }
 
 void TimetableMateView::currentPredefinedCityChanged( const QString& currentCityText ) {
     QStringList values = currentCityText.split( "   ->   " );
     if ( values.count() == 2 ) {
-		m_cityName->blockSignals( true );
-		m_cityReplacement->blockSignals( true );
-		
-		m_cityName->setText( values.at(0) );
-		m_cityReplacement->setText( values.at(1) );
-		
-		m_cityName->blockSignals( false );
-		m_cityReplacement->blockSignals( false );
+        m_cityName->blockSignals( true );
+        m_cityReplacement->blockSignals( true );
+        
+        m_cityName->setText( values.at(0) );
+        m_cityReplacement->setText( values.at(1) );
+        
+        m_cityName->blockSignals( false );
+        m_cityReplacement->blockSignals( false );
     } else {
-		m_cityName->blockSignals( true );
-		m_cityReplacement->blockSignals( true );
-		
-		m_cityName->setText( currentCityText );
-		m_cityReplacement->setText( QString() );
-		
-		m_cityName->blockSignals( false );
-		m_cityReplacement->blockSignals( false );
+        m_cityName->blockSignals( true );
+        m_cityReplacement->blockSignals( true );
+        
+        m_cityName->setText( currentCityText );
+        m_cityReplacement->setText( QString() );
+        
+        m_cityName->blockSignals( false );
+        m_cityReplacement->blockSignals( false );
     }
 }
 
 void TimetableMateView::predefinedCityNameChanged( const QString& newCityName ) {
     QString text = newCityName;
     if ( !m_cityReplacement->text().isEmpty() ) {
-		text += "   ->   " + m_cityReplacement->text();
-	}
+        text += "   ->   " + m_cityReplacement->text();
+    }
     
     m_predefinedCitiesCustomEditor.lineEdit()->setText( text );
 }
@@ -408,8 +408,8 @@ void TimetableMateView::predefinedCityNameChanged( const QString& newCityName ) 
 void TimetableMateView::predefinedCityReplacementChanged( const QString& newReplacement ) {
     QString text = m_cityName->text();
     if ( !newReplacement.isEmpty() ) {
-		text += "   ->   " + newReplacement;
-	}
+        text += "   ->   " + newReplacement;
+    }
 
     m_predefinedCitiesCustomEditor.lineEdit()->setText( text );
 }
@@ -436,7 +436,7 @@ void TimetableMateView::openDepartureUrlClicked() {
 
 void TimetableMateView::openStopUrlClicked() {
     emit urlShouldBeOpened( ui_accessor.rawStopSuggestionsUrl->text(),
-			    RawStopSuggestionsUrl );
+                RawStopSuggestionsUrl );
 }
 
 void TimetableMateView::openJourneyUrlClicked() {
@@ -445,24 +445,24 @@ void TimetableMateView::openJourneyUrlClicked() {
 
 void TimetableMateView::createScriptFile() {
     if ( m_openedPath.isEmpty() ) {
-		KMessageBox::information( this, i18nc("@info/plain", "Please save the "
-			"XML file first. The script file needs to be in the same folder.") );
-		return;
+        KMessageBox::information( this, i18nc("@info/plain", "Please save the "
+            "XML file first. The script file needs to be in the same folder.") );
+        return;
     }
 
     // Get a name for the new script file based on the current country code 
     // and the current service provider ID
     const QString scriptType = KInputDialog::getItem(
-	    i18nc("@title:window", "Choose Script Type"), i18nc("@info", "Script Type"),
-	    QStringList() << "JavaScript" << "Ruby" << "Python", 0, false, 0, this );
+        i18nc("@title:window", "Choose Script Type"), i18nc("@info", "Script Type"),
+        QStringList() << "JavaScript" << "Ruby" << "Python", 0, false, 0, this );
     QString scriptFile = m_currentServiceProviderID;
     if ( scriptType == "JavaScript" ) {
-		scriptFile += ".js";
-	} else if ( scriptType == "Ruby" ) {
-		scriptFile += ".rb";
-	} else if ( scriptType == "Python" ) {
-		scriptFile += ".py";
-	}
+        scriptFile += ".js";
+    } else if ( scriptType == "Ruby" ) {
+        scriptFile += ".rb";
+    } else if ( scriptType == "Python" ) {
+        scriptFile += ".py";
+    }
 
     // Get fileName for the new script file
     QString fullScriptFile = KUrl(m_openedPath).directory(KUrl::AppendTrailingSlash) + scriptFile;
@@ -470,25 +470,25 @@ void TimetableMateView::createScriptFile() {
     // Check if the file already exists
     QFile file( fullScriptFile );
     if ( file.exists() ) {
-		int result = KMessageBox::questionYesNoCancel( this,
-			i18nc("@info/plain", "The script file <filename>%1</filename> already exists.<nl/>"
-				"Do you want to overwrite it or open and use it as script file?", scriptFile),
-			i18nc("@title:window", "File Already Exists"),
-			KStandardGuiItem::overwrite(), KStandardGuiItem::open() );
-		if ( result == KMessageBox::No ) { // open
-			ui_accessor.scriptFile->setText( scriptFile );
-			return;
-		} else if ( result == KMessageBox::Cancel ) {
-			return;
-		}
+        int result = KMessageBox::questionYesNoCancel( this,
+            i18nc("@info/plain", "The script file <filename>%1</filename> already exists.<nl/>"
+                "Do you want to overwrite it or open and use it as script file?", scriptFile),
+            i18nc("@title:window", "File Already Exists"),
+            KStandardGuiItem::overwrite(), KStandardGuiItem::open() );
+        if ( result == KMessageBox::No ) { // open
+            ui_accessor.scriptFile->setText( scriptFile );
+            return;
+        } else if ( result == KMessageBox::Cancel ) {
+            return;
+        }
     }
     
     // Create the file    
     if ( !file.open(QIODevice::WriteOnly) ) {
-		KMessageBox::information( this, i18nc("@info/plain", "A new script file "
-			"with the name <filename>%1</filename> could not be created.",
-			fullScriptFile) );
-		return;
+        KMessageBox::information( this, i18nc("@info/plain", "A new script file "
+            "with the name <filename>%1</filename> could not be created.",
+            fullScriptFile) );
+        return;
     }
     file.close();
     
@@ -502,9 +502,9 @@ void TimetableMateView::detachScriptFile() {
 
 void TimetableMateView::browseForScriptFile() {
     if ( m_openedPath.isEmpty() ) {
-		KMessageBox::information( this, i18nc("@info/plain", "Please save the "
-			"XML file first. The script file needs to be in the same folder.") );
-		return;
+        KMessageBox::information( this, i18nc("@info/plain", "Please save the "
+            "XML file first. The script file needs to be in the same folder.") );
+        return;
     }
     
     KUrl openedUrl( m_openedPath );
@@ -515,24 +515,24 @@ void TimetableMateView::browseForScriptFile() {
     QDir dir( openedUrl.directory() );
     QStringList fileNames = dir.entryList();
     for ( int i = 0; i < fileNames.count(); ++i ) {
-		QString fileName = fileNames.at( i );
-		KMimeType::Ptr mimeType = KMimeType::findByUrl( KUrl(fileName) );
-		if ( mimeType->is("application/javascript")
-			|| mimeType->is("application/x-ruby") || mimeType->is("text/x-python") )
-		{
-			scriptFiles << fileName;
-			if ( fileName == ui_accessor.scriptFile->text() ) {
-				current = i;
-			}
-		}
+        QString fileName = fileNames.at( i );
+        KMimeType::Ptr mimeType = KMimeType::findByUrl( KUrl(fileName) );
+        if ( mimeType->is("application/javascript")
+            || mimeType->is("application/x-ruby") || mimeType->is("text/x-python") )
+        {
+            scriptFiles << fileName;
+            if ( fileName == ui_accessor.scriptFile->text() ) {
+                current = i;
+            }
+        }
     }
 
     bool ok;
     QString selectedFile = KInputDialog::getItem( i18nc("@title:window", "Choose Script File"),
-			   i18nc("@info", "Script File for Parsing Documents"),
-			   scriptFiles, current, false, &ok, this );
+               i18nc("@info", "Script File for Parsing Documents"),
+               scriptFiles, current, false, &ok, this );
     if ( ok ) {
-		ui_accessor.scriptFile->setText( selectedFile );
+        ui_accessor.scriptFile->setText( selectedFile );
     }
 }
 
@@ -565,15 +565,15 @@ bool TimetableMateView::readAccessorInfoXml( const QString& fileName, QString *e
 }
 
 bool TimetableMateView::readAccessorInfoXml( QIODevice* device, QString *error,
-					     const QString& fileName ) {
+                         const QString& fileName ) {
     AccessorInfoXmlReader reader;
     m_accessor = reader.read( device );
     if ( !m_accessor.isValid() ) {
-		kDebug() << "Accessor is invalid" << reader.errorString() << fileName;
-		if ( error ) {
-			*error = reader.errorString();
-		}
-		return false;
+        kDebug() << "Accessor is invalid" << reader.errorString() << fileName;
+        if ( error ) {
+            *error = reader.errorString();
+        }
+        return false;
     }
 
     // Disable changed signals from widgets while setting the read values
@@ -598,22 +598,22 @@ bool TimetableMateView::readAccessorInfoXml( QIODevice* device, QString *error,
     ui_accessor.shortAuthor->setText( m_accessor.shortAuthor );
     ui_accessor.email->setText( m_accessor.email );
     int defaultVehicleTypeIndex =
-	    ui_accessor.defaultVehicleType->findData( m_accessor.defaultVehicleType );
+        ui_accessor.defaultVehicleType->findData( m_accessor.defaultVehicleType );
     ui_accessor.defaultVehicleType->setCurrentIndex(
-	    defaultVehicleTypeIndex > 0 ? defaultVehicleTypeIndex : 0 );
+        defaultVehicleTypeIndex > 0 ? defaultVehicleTypeIndex : 0 );
     ui_accessor.fileVersion->setText( m_accessor.fileVersion );
-	m_changelog->clear();
-	m_changelog->addChangelog( m_accessor.changelog, m_accessor.shortAuthor );
+    m_changelog->clear();
+    m_changelog->addChangelog( m_accessor.changelog, m_accessor.shortAuthor );
 
     ui_accessor.predefinedCities->clear();
     foreach ( const QString &city, m_accessor.cities ) {
-		QString lowerCity = city.toLower();
-		if ( m_accessor.cityNameReplacements.contains(lowerCity) ) {
-			ui_accessor.predefinedCities->insertItem( city + "   ->   " +
-				m_accessor.cityNameReplacements[lowerCity] );
-		} else {
-			ui_accessor.predefinedCities->insertItem( city );
-		}
+        QString lowerCity = city.toLower();
+        if ( m_accessor.cityNameReplacements.contains(lowerCity) ) {
+            ui_accessor.predefinedCities->insertItem( city + "   ->   " +
+                m_accessor.cityNameReplacements[lowerCity] );
+        } else {
+            ui_accessor.predefinedCities->insertItem( city );
+        }
     }
 
     // Enable changed signals from widgets again and emit changed signals once
@@ -622,8 +622,8 @@ bool TimetableMateView::readAccessorInfoXml( QIODevice* device, QString *error,
     emit scriptFileChanged( fileName );
     
     if ( error ) {
-		error->clear();
-	}
+        error->clear();
+    }
     return true;
 }
 
@@ -632,8 +632,8 @@ bool TimetableMateView::writeAccessorInfoXml( const QString& fileName ) {
     QFile file( fileName );
     bool ret = writer.write( &file, m_accessor );
     if ( ret ) {
-		m_openedPath = fileName;
-	}
+        m_openedPath = fileName;
+    }
     return ret;
 }
 
@@ -641,10 +641,10 @@ QString TimetableMateView::writeAccessorInfoXml() {
     AccessorInfoXmlWriter writer;
     QBuffer buffer;
     if ( writer.write(&buffer, m_accessor) ) {
-		return QString::fromUtf8( buffer.data() );
-	} else {
-		return QString();
-	}
+        return QString::fromUtf8( buffer.data() );
+    } else {
+        return QString();
+    }
 }
 
 void TimetableMateView::settingsChanged() {

@@ -283,10 +283,10 @@ void DepartureInfo::init( const QString &operatorName, const QString &line,
 bool DepartureInfo::operator ==( const DepartureInfo& other ) const
 {
     return m_hash == other.m_hash
-// 	These are already in m_hash
-// 	&& m_departure == other.m_departure
-// 	&& m_vehicleType == other.m_vehicleType
-// 	&& m_lineString == other.m_lineString
+//     These are already in m_hash
+//     && m_departure == other.m_departure
+//     && m_vehicleType == other.m_vehicleType
+//     && m_lineString == other.m_lineString
             && m_lineNumber == other.m_lineNumber
             && m_target == other.m_target
             && m_delay == other.m_delay

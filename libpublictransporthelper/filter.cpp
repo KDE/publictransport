@@ -139,8 +139,8 @@ bool Filter::matchList( FilterVariant variant, const QVariantList& filterValues,
                         const QVariant& testValue ) const
 {
     switch ( variant ) {
-// 	case FilterEquals:
-// 	case FilterDoesntEqual:
+//     case FilterEquals:
+//     case FilterDoesntEqual:
     case FilterIsOneOf:
         return filterValues.contains( testValue );
     case FilterIsntOneOf:

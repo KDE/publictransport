@@ -1031,9 +1031,9 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
             painter->drawText( QRectF(shadowWidth, shadowWidth, iconSize.width(), iconSize.height()),
                             "?", QTextOption(Qt::AlignCenter) );
     }
-// 	if ( drawTransportLine ) {
-// 		vehicleKey.append( "_empty" );
-// 	}
+//     if ( drawTransportLine ) {
+//         vehicleKey.append( "_empty" );
+//     }
 
     const QString vehicleCacheKey
             = vehicleKey + QString("%1%2").arg( iconSize.width() ).arg( iconSize.height() );
@@ -1184,7 +1184,7 @@ void JourneyGraphicsItem::paintExpanded( QPainter* painter, const QStyleOptionGr
         TextDocumentHelper::drawTextDocument( painter, option, &additionalInformationTextDocument,
                                               htmlRect.toRect(), drawHalos );
 
-// 		y += htmlRect.height() + padding;
+//         y += htmlRect.height() + padding;
     }
 }
 
@@ -1243,7 +1243,7 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
         TextDocumentHelper::drawTextDocument( painter, option, &additionalInformationTextDocument,
                                               htmlRect.toRect(), drawHalos );
 
-// 		y += htmlRect.height() + padding;
+//         y += htmlRect.height() + padding;
     }
 }
 

@@ -34,9 +34,9 @@
  **/
 class PUBLICTRANSPORTHELPER_EXPORT CategoryComboBox : public KComboBox {
 public:
-	CategoryComboBox( QWidget* parent = 0 ) : KComboBox( parent ) {};
+    CategoryComboBox( QWidget* parent = 0 ) : KComboBox( parent ) {};
 
-	virtual void showPopup();
+    virtual void showPopup();
 };
 
 #endif // Multiple inclusion guard

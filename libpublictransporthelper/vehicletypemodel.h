@@ -49,85 +49,85 @@ namespace Timetable {
  **/
 class PUBLICTRANSPORTHELPER_EXPORT VehicleTypeModel : public QAbstractListModel
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	/**
-	 * @brief Creates a new vehicle type model.
-	 *
-	 * @param parent The parent of this model. Defaults to 0.
-	 **/
-	explicit VehicleTypeModel(QObject* parent = 0);
-	
-	/**
-	 * @brief Destructor
-	 **/
-	virtual ~VehicleTypeModel();
+    /**
+     * @brief Creates a new vehicle type model.
+     *
+     * @param parent The parent of this model. Defaults to 0.
+     **/
+    explicit VehicleTypeModel(QObject* parent = 0);
+    
+    /**
+     * @brief Destructor
+     **/
+    virtual ~VehicleTypeModel();
 
-	/**
-	 * @brief Gets an index for the given @p row and @p column. @p parent isn't used.
-	 **/
-	virtual QModelIndex index(int row, int column = 0, const QModelIndex& parent = QModelIndex()) const;
-	
-	/**
-	 * @brief Gets the data for the given @p index and @p role.
-	 **/
-	virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
-	
-	/**
-	 * @brief Sets the data for the given @p index and @p role to @p value.
-	 **/
+    /**
+     * @brief Gets an index for the given @p row and @p column. @p parent isn't used.
+     **/
+    virtual QModelIndex index(int row, int column = 0, const QModelIndex& parent = QModelIndex()) const;
+    
+    /**
+     * @brief Gets the data for the given @p index and @p role.
+     **/
+    virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
+    
+    /**
+     * @brief Sets the data for the given @p index and @p role to @p value.
+     **/
     virtual bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole);
-	
-	/**
-	 * @brief Gets the number of rows in this model.
-	 *
-	 * @param parent Isn't used, because this model has no subitems.
-	 *   If a valid parent index is given, 0 is returned. Defaults to QModelIndex().
+    
+    /**
+     * @brief Gets the number of rows in this model.
+     *
+     * @param parent Isn't used, because this model has no subitems.
+     *   If a valid parent index is given, 0 is returned. Defaults to QModelIndex().
      * 
-	 * @return The number of rows in this model.
-	 **/
-	virtual int rowCount(const QModelIndex& parent = QModelIndex()) const;
+     * @return The number of rows in this model.
+     **/
+    virtual int rowCount(const QModelIndex& parent = QModelIndex()) const;
 
-	/** @brief Gets QModelIndex of the item with the given @p serviceProviderId. */
-	QModelIndex indexOfVehicleType( VehicleType vehicleType );
-	
-	/**
-	 * @brief Checks/unchecks all vehicle types.
-	 *
-	 * @param check Whether the vehicle types should be checked or unchecked. Default is true.
-	 **/
-	void checkAll( bool check = true );
-	
-	/**
-	 * @brief Checks/unchecks all vehicle types in the given class @p generalVehicleType.
-	 *
-	 * @param generalVehicleType The class of vehicle types to be checked/unchecked.
+    /** @brief Gets QModelIndex of the item with the given @p serviceProviderId. */
+    QModelIndex indexOfVehicleType( VehicleType vehicleType );
+    
+    /**
+     * @brief Checks/unchecks all vehicle types.
+     *
+     * @param check Whether the vehicle types should be checked or unchecked. Default is true.
+     **/
+    void checkAll( bool check = true );
+    
+    /**
+     * @brief Checks/unchecks all vehicle types in the given class @p generalVehicleType.
+     *
+     * @param generalVehicleType The class of vehicle types to be checked/unchecked.
      * 
-	 * @param check Whether the vehicle types should be checked or unchecked. Default is true.
-	 **/
-	void checkVehicleTypes( GeneralVehicleType generalVehicleType, bool check = true );
-	
-	/**
-	 * @brief Checks/unchecks all vehicle types in the given list @p vehicleTypes.
-	 *
-	 * @param vehicleTypes The vehicle types to be checked/unchecked.
+     * @param check Whether the vehicle types should be checked or unchecked. Default is true.
+     **/
+    void checkVehicleTypes( GeneralVehicleType generalVehicleType, bool check = true );
+    
+    /**
+     * @brief Checks/unchecks all vehicle types in the given list @p vehicleTypes.
+     *
+     * @param vehicleTypes The vehicle types to be checked/unchecked.
      * 
-	 * @param check Whether the vehicle types should be checked or unchecked. Default is true.
-	 **/
-	void checkVehicleTypes( const QList<VehicleType> &vehicleTypes, bool check = true );
-	
-	/**
-	 * @brief Gets a list of all checked vehicle types.
-	 **/
-	QList<VehicleType> checkedVehicleTypes() const;
+     * @param check Whether the vehicle types should be checked or unchecked. Default is true.
+     **/
+    void checkVehicleTypes( const QList<VehicleType> &vehicleTypes, bool check = true );
+    
+    /**
+     * @brief Gets a list of all checked vehicle types.
+     **/
+    QList<VehicleType> checkedVehicleTypes() const;
 
 protected:
-	VehicleTypeModelPrivate* const d_ptr;
+    VehicleTypeModelPrivate* const d_ptr;
 
 private:
-	Q_DECLARE_PRIVATE( VehicleTypeModel )
-	Q_DISABLE_COPY( VehicleTypeModel )
+    Q_DECLARE_PRIVATE( VehicleTypeModel )
+    Q_DISABLE_COPY( VehicleTypeModel )
 };
 
 }; // namespace Timetable
