@@ -53,23 +53,20 @@ void TimetableAccessorOnline::requestDepartures( const DepartureRequestInfo &req
     }
 
     // Test if a stop ID needs to be requested first
-    if ( !m_stopIdRequested
- &&
+    if ( !m_stopIdRequested &&
          m_info->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) &&
          m_info->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "true" )
     {
         // XML attribute "requestStopIdFirst" is present and it's value is "true"
         // for the <departures> tag
         kDebug() << "Request a stop ID";
-        m_stopIdRequested
- = true;
+        m_stopIdRequested = true;
         StopSuggestionRequestInfo newRequestInfo = requestInfo;
         newRequestInfo.parseMode = ParseForStopIdThenDepartures;
         requestStopSuggestions( newRequestInfo );
         return;
     }
-    m_stopIdRequested
- = false;
+    m_stopIdRequested = false;
 
     // Get a source URL for the request
     KUrl url = departureUrl( requestInfo );
@@ -187,8 +184,8 @@ void TimetableAccessorOnline::requestJourneys( const JourneyRequestInfo &request
 
 void TimetableAccessorOnline::requestStopSuggestions( const StopSuggestionRequestInfo &requestInfo )
 {
-    if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty()
-        && m_sessionKeyGetTime.elapsed() > 500 )
+    if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty() &&
+         m_sessionKeyGetTime.elapsed() > 500 )
     {
         kDebug() << "Request a session key";
         requestSessionKey( ParseForSessionKeyThenStopSuggestions, m_info->sessionKeyUrl(),

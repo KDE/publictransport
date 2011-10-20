@@ -39,7 +39,7 @@ class StopInfo;
 class QTimer;
 class QFileSystemWatcher;
 
-/** @class PublicTransportEngine
+/**
  * @brief This engine provides departure/arrival times and journeys for public transport.
  *
  * @see @ref pageUsage (how to use this data engine in an applet?)
@@ -77,6 +77,8 @@ public:
 
     /** @brief Every data engine needs a constructor with these arguments. */
     PublicTransportEngine( QObject* parent, const QVariantList& args );
+
+    /** @brief Destructor. */
     ~PublicTransportEngine();
 
     /** @returns the keyword of the given @p sourceType used in source names. */
@@ -235,14 +237,20 @@ private:
 
 /** @mainpage Public Transport Data Engine
 @section intro_dataengine_sec Introduction
-The public transport data engine provides timetable data for public transport, trains, ships,
-ferries and planes. It can get departure/arrival lists, journey lists and stop name suggestions.
+PublicTransportEngine provides timetable data for public transport, trains, ships, ferries and
+planes. It can get departure/arrival lists, journey lists and stop name suggestions.
 There are different accessors used to download and parse documents from different service
-providers. Currently there are three classes of accessors: One that uses a database filled with
-data from a GTFS feed, one to parse documents using scripts and one to parse XML files in a special
-format (currently only used for de_rmv).
-All accessors are using a @ref TimetableAccessorInfo object with information read from the XML
-files. The reading on the XML files itself is done by the class @ref AccessorInfoXmlReader.
+providers, all based on the abstract class TimetableAccessor. There is another abstract class
+TimetableAccessorOnline (derived from TimetableAccessor), that implements the request...()
+functions and offers parse...() functions to parse received documents.
+
+Currently there are three non-abstract classes of accessors:
+@li TimetableAccessorGeneralTransitFeed Uses a database filled with data from a GTFS feed
+@li TimetableAccessorScript Parses documents using scripts
+@li TimetableAccessorXml Parses XML files in a special format (currently only used for de_rmv)
+
+All accessors are using a TimetableAccessorInfo object with information read from the XML files.
+The reading on the XML files itself is done by the class AccessorInfoXmlReader.
 
 <br />
 @section install_sec Installation

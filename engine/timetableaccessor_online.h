@@ -27,15 +27,28 @@
 #include "timetableaccessor.h"
 
 /**
- * @brief Gets timetable data for public transport from different service providers.
+ * @brief Abstract base class for accessors that need to download documents and then parse them.
+ *
+ * It implements requestDepartures(), requestJourneys(), requestStopSuggestions() and
+ * requestSessionKey() and requests associated source documents from the service provider.
+ * The request...() functions do not block, ie. return immediately and wait for the requested data
+ * in the background. When a document is downloaded parseDocument() or
+ * parseDocumentForStopSuggestions() gets called with the content of the document as a QByteArray.
+ * Once the timetable data is available parseDocument(), parseDocumentForStopSuggestions() or
+ * parseDocumentForSessionKey() gets called. If the parsing function returns true (success)
+ * departureListReceived(), journeyListReceived() or stopListReceived() gets emitted.
+ * On errors errorParsing() gets emitted instead of the ...Received signal.
+ * A session key gets requested automatically by this class if needed. Once it is available the
+ * real request gets started using the session key.
+ *
+ * This class supports requests using GET and POST methods. What method gets used is specified in
+ * the accessor XML file.
  *
  * Use info() to get a pointer to a TimetableAccessorInfo object with information about the service
  * provider. The information in that object is read from an XML file.
  *
- * This class implements requestDepartures(), requestJourneys() and requestStopSuggestions() and
- * requests associated source documents from the service provider. When a document is downloaded
- * parseDocument() or parseDocumentForStopSuggestions() gets called with the content of the
- * document.
+ * @note If a derived accessor class would only be used for one service provider consider using
+ *   TimetableAccessorScript instead and only implement the parsing code in a separate script.
  **/
 class TimetableAccessorOnline : public TimetableAccessor {
     Q_OBJECT
@@ -53,7 +66,8 @@ public:
     /**
      * @brief Requests a list of departures/arrivals.
      *
-     * When the departure/arrival list is completely received @ref departureListReceived gets
+     * When the departure/arrival document is completely received parseDocument() gets called.
+     * If true gets returned by parseDocument() the signal departureListReceived() gets then
      * emitted.
      *
      * @param requestInfo Information about the departure/arrival request.
@@ -61,9 +75,33 @@ public:
     virtual void requestDepartures( const DepartureRequestInfo &requestInfo );
 
     /**
+     * @brief Requests a list of journeys.
+     *
+     * When the journey document is completely received parseDocument() gets called. If true gets
+     * returned by parseDocument() the signal journeyListReceived() gets then emitted.
+     *
+     * @param requestInfo Information about the journey request.
+     **/
+    virtual void requestJourneys( const JourneyRequestInfo &requestInfo );
+
+    /**
+     * @brief Requests a list of stop suggestions.
+     *
+     * When the stop suggestion document is completely received parseDocumentForStopSuggestions()
+     * gets called. If true gets returned by parseDocumentForStopSuggestions() the signal
+     * stopListReceived() gets then emitted.
+     *
+     * @param requestInfo Information about the stop suggestion request.
+     **/
+    virtual void requestStopSuggestions( const StopSuggestionRequestInfo &requestInfo );
+
+    /**
      * @brief Requests a session key. May be needed for some service providers to work properly.
      *
-     * When the session key has been received @ref sessionKeyReceived is emitted.
+     * When the session key document is completely received parseDocumentForSessionKey() gets
+     * called. If true gets returned by parseDocumentForStopSuggestions() the signal
+     * sessionKeyReceived() gets emitted and the real request gets started using the just
+     * received session key.
      *
      * @param parseMode Describes what should be done when the session key is available.
      * @param url The url to use to get the session key.
@@ -73,24 +111,6 @@ public:
      **/
     virtual void requestSessionKey( ParseDocumentMode parseMode, const KUrl &url,
                                     const RequestInfo *requestInfo );
-
-    /**
-     * @brief Requests a list of stop suggestions.
-     *
-     * When the stop list is completely received @ref stopListReceived gets emitted.
-     *
-     * @param requestInfo Information about the stop suggestion request.
-     **/
-    virtual void requestStopSuggestions( const StopSuggestionRequestInfo &requestInfo );
-
-    /**
-     * @brief Requests a list of journeys.
-     *
-     * When the journey list is completely received @ref journeyListReceived() gets emitted.
-     *
-     * @param requestInfo Information about the journey request.
-     **/
-    virtual void requestJourneys( const JourneyRequestInfo &requestInfo );
 
 protected slots:
     /** @brief All data of a journey list has been received. */
@@ -231,6 +251,9 @@ protected:
 
     /** @brief Stores whether or not a stop ID was requested, awaiting the result. */
     bool m_stopIdRequested;
+
+    /** @brief Stores the currently used city. */
+    QString m_curCity;
 };
 
 #endif // Multiple inclusion guard

@@ -32,21 +32,25 @@ class PublicTransportService;
 class QNetworkReply;
 class KTimeZone;
 
-/** @class TimetableAccessorGeneralTransitFeed
-* @brief This class uses a database similiar to the GTFS structure to access public transport data.
-*
-* To fill the database with data from a GeneralTransitFeedSpecification feed (zip file)
-* @ref GeneralTransitFeedImporter is used by @ref PublicTransportService. This service has an
-* operation "UpdateGtfsFeed", which gets called by this class. That operation only updates already
-* imported GTFS feeds if there is a new version. To import a new GTFS feed for the first time
-* the operation "ImportGtfsFeed" should be used. That operation does @em not get called by this
-* class. This is because importing GTFS feeds can require quite a lot disk space and importing
-* can take some time. The user should be asked to import a new GTFS feed.
-*
-* This class does not use the default functions in @ref TimetableAccessor to request data. Instead
-* these functions are overwritten to query a database for results and directly emitting a received
-* signal. Requesting data from the database is very fast even for big databases (eg. 300MB).
-*/
+/**
+ * @brief This class uses a database similiar to the GTFS structure to access public transport data.
+ *
+ * To fill the GTFS database with data from a GeneralTransitFeedSpecification feed (zip file)
+ * GeneralTransitFeedImporter is used by PublicTransportService. This service has an operation
+ * "UpdateGtfsFeed", which gets called by this class. That operation only updates already imported
+ * GTFS feeds if there is a new version. To import a new GTFS feed for the first time the operation
+ * "ImportGtfsFeed" should be used. That operation does @em not get called by this class. This is
+ * because importing GTFS feeds can require quite a lot disk space and importing can take some
+ * time. The user should be asked to import a new GTFS feed.
+ *
+ * This class immediately emits the ...Received() signal in the associated request...() functions,
+ * because making timetable data available is very fast using the GTFS database. Requesting data
+ * from the database is very fast even for big databases (eg. 300MB).
+ *
+ * To add support for a new service provider using this accessor type you need to write an accessor
+ * XML file for the service provider.
+ * See @ref pageAccessorInfos.
+ **/
 class TimetableAccessorGeneralTransitFeed : public TimetableAccessor
 {
     Q_OBJECT
@@ -77,7 +81,16 @@ public:
     /** @brief The maximum of stop suggestion to return. */
     static const int STOP_SUGGESTION_LIMIT = 100;
 
+    /**
+     * @brief Constructs a new TimetableAccessorGeneralTransitFeed object.
+     *
+     * You should use createAccessor() to get an accessor for a given service provider ID.
+     *
+     * @param info An object containing information about the service provider.
+     **/
     explicit TimetableAccessorGeneralTransitFeed( TimetableAccessorInfo *info );
+
+    /** @brief Destructor. */
     virtual ~TimetableAccessorGeneralTransitFeed();
 
     /** @brief Returns the type of this accessor, ie. GtfsAccessor. */
