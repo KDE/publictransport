@@ -18,17 +18,20 @@
  */
 
 #include "timetableaccessor_script.h"
+#include "timetableaccessor_info.h"
+#include "departureinfo.h"
 #include "scripting.h"
 
+#include <KStandardDirs>
+#include <KLocalizedString>
 #include <KDebug>
-#include <QFile>
-#include <QScriptValueIterator>
 #include <kross/core/action.h>
 #include <kross/core/manager.h>
-#include <KLocalizedString>
 #include <kconfig.h>
 #include <kconfiggroup.h>
-#include <KStandardDirs>
+
+#include <QFile>
+#include <QScriptValueIterator>
 
 TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info )
         : TimetableAccessor(info), m_script(0), m_resultObject(0)
@@ -64,7 +67,7 @@ bool TimetableAccessorScript::lazyLoadScript()
         m_script->trigger();
         m_scriptState = m_script->hadError() ? ScriptHasErrors : ScriptLoaded;
     }
-    
+
     if ( m_scriptState == ScriptHasErrors ) {
         kDebug() << "Error in the script" << m_script->errorLineNo() << m_script->errorMessage();
     }
@@ -214,7 +217,7 @@ bool TimetableAccessorScript::parseDocument( const QByteArray &document,
         ParseDocumentMode parseDocumentMode )
 {
 //     kDebug() << "Called for" << m_info->serviceProvider();
-    
+
     if ( !lazyLoadScript() ) {
         kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
         return false;
@@ -252,17 +255,17 @@ bool TimetableAccessorScript::parseDocument( const QByteArray &document,
     int count = 0;
     QDate curDate;
     QTime lastTime;
-    int dayAdjustment = globalInfo->datesNeedAdjustment 
+    int dayAdjustment = globalInfo->datesNeedAdjustment
             ? QDate::currentDate().daysTo(globalInfo->requestDate) : 0;
     if ( dayAdjustment != 0 ) {
         kDebug() << "Dates get adjusted by" << dayAdjustment << "days";
     }
-    
+
     for ( int i = 0; i < data.count(); ++ i ) {
         TimetableData timetableData = data.at( i );
-        
+
         // Set default vehicle type if none is set
-        if ( !timetableData.values().contains(TypeOfVehicle) || 
+        if ( !timetableData.values().contains(TypeOfVehicle) ||
             timetableData.value(TypeOfVehicle).toString().isEmpty() )
         {
             timetableData.set(TypeOfVehicle, static_cast<int>(m_info->defaultVehicleType()));
@@ -287,7 +290,7 @@ bool TimetableAccessorScript::parseDocument( const QByteArray &document,
                 date = curDate;
             }
         }
-        
+
         if ( dayAdjustment != 0 ) {
             date = date.addDays( dayAdjustment );
         }
@@ -322,7 +325,7 @@ bool TimetableAccessorScript::parseDocument( const QByteArray &document,
 QString TimetableAccessorScript::parseDocumentForLaterJourneysUrl( const QByteArray &document )
 {
 //     kDebug() << "Called for" << m_info->serviceProvider();
-    
+
     if ( !lazyLoadScript() ) {
         kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
         return QString();
@@ -347,11 +350,11 @@ QString TimetableAccessorScript::parseDocumentForLaterJourneysUrl( const QByteAr
     }
 }
 
-QString TimetableAccessorScript::parseDocumentForDetailedJourneysUrl( 
+QString TimetableAccessorScript::parseDocumentForDetailedJourneysUrl(
         const QByteArray &document )
 {
 //     kDebug() << "Called for" << m_info->serviceProvider();
-    
+
     if ( !lazyLoadScript() ) {
         kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
         return QString();
@@ -378,7 +381,7 @@ QString TimetableAccessorScript::parseDocumentForDetailedJourneysUrl(
 QString TimetableAccessorScript::parseDocumentForSessionKey(const QByteArray& document)
 {
 //     kDebug() << "Called for" << m_info->serviceProvider();
-    
+
     if ( !lazyLoadScript() ) {
         kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
         return QString();
@@ -401,11 +404,11 @@ QString TimetableAccessorScript::parseDocumentForSessionKey(const QByteArray& do
     }
 }
 
-bool TimetableAccessorScript::parseDocumentPossibleStops( const QByteArray &document,
+bool TimetableAccessorScript::parseDocumentForStopSuggestions( const QByteArray &document,
         QList<StopInfo*> *stops )
 {
 //     kDebug() << "Called for" << m_info->serviceProvider();
-    
+
     if ( !lazyLoadScript() ) {
         kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
         return false;
@@ -426,7 +429,7 @@ bool TimetableAccessorScript::parseDocumentPossibleStops( const QByteArray &docu
         kDebug() << "Error while running the 'parsePossibleStops' script function"
                  << m_script->errorMessage() << "at" << m_script->errorLineNo() << m_script->errorTrace();
     }
-    
+
     QList<TimetableData> data = m_resultObject->data();
     int count = 0;
     foreach( const TimetableData &timetableData, data ) {

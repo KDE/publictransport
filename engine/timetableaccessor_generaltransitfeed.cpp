@@ -18,7 +18,8 @@
  */
 
 #include "timetableaccessor_generaltransitfeed.h"
-
+#include "timetableaccessor_info.h"
+#include "departureinfo.h"
 #include "publictransportservice.h"
 #include "generaltransitfeed_realtime.h"
 
@@ -32,6 +33,7 @@
 #include <KLocale>
 #include <KCurrencyCode>
 #include <KConfigGroup>
+#include <KIO/Job>
 
 #include <QSqlQuery>
 #include <QSqlError>
@@ -269,7 +271,7 @@ void TimetableAccessorGeneralTransitFeed::loadAgencyInformation()
         return;
     }
 
-    QSqlQuery query( QSqlDatabase::database(serviceProvider()) );
+    QSqlQuery query( QSqlDatabase::database(m_info->serviceProvider()) );
     if ( !query.exec("SELECT * FROM agency") ) {
         kDebug() << "Could not load agency information from database:" << query.lastError();
         return;
@@ -448,7 +450,7 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const DepartureRequ
         return;
     }
 
-    QSqlQuery query( QSqlDatabase::database(serviceProvider()) );
+    QSqlQuery query( QSqlDatabase::database(m_info->serviceProvider()) );
     query.setForwardOnly( true ); // Don't cache records
 
     // TODO If it is known that [stop] contains a stop ID testing for it's ID in stop_times is not necessary!
@@ -712,7 +714,7 @@ void TimetableAccessorGeneralTransitFeed::requestStopSuggestions(
         return;
     }
 
-    QSqlQuery query( QSqlDatabase::database(serviceProvider()) );
+    QSqlQuery query( QSqlDatabase::database(m_info->serviceProvider()) );
     query.setForwardOnly( true );
     QString stopValue = requestInfo.stop;
     stopValue.replace( '\'', "\'\'" );

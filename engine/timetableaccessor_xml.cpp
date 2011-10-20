@@ -18,13 +18,14 @@
  */
 
 #include "timetableaccessor_xml.h"
-
-#include <QRegExp>
-#include <QDomDocument>
+#include "timetableaccessor_info.h"
+#include "departureinfo.h"
 
 #include <KLocalizedString>
 #include <KDebug>
 
+#include <QRegExp>
+#include <QDomDocument>
 
 TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfo *info )
         : TimetableAccessor(info)
@@ -61,12 +62,12 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
         kDebug() << "XML document is empty";
         return false;
     }
-    
+
     QString doc = TimetableAccessorScript::decodeHtml( document, m_info->fallbackCharset() );
     QDomDocument domDoc;
     domDoc.setContent( doc );
     QDomElement docElement = domDoc.documentElement();
-    
+
     // Errors are inside the <Err> tag
     QDomNodeList errNodes = docElement.elementsByTagName( "Err" );
     if ( !errNodes.isEmpty() ) {
@@ -84,8 +85,8 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
         }
     }
 
-    // Use date of the first departure (inside <StartT>) as date for newly parsed departures. 
-    // If a departure is more than 3 hours before the last one, it is assumed that the new 
+    // Use date of the first departure (inside <StartT>) as date for newly parsed departures.
+    // If a departure is more than 3 hours before the last one, it is assumed that the new
     // departure is one day later, eg. read departure one at 23:30, next departure is at 0:45,
     // assume it's at the next day.
     QDate currentDate;
@@ -103,7 +104,7 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
             currentDate = QDate::currentDate();
         }
     }
-    
+
     // Find all <Journey> tags, which contain information about a departure/arrival
     QDomNodeList journeyNodes = docElement.elementsByTagName("Journey");
     int count = journeyNodes.count();
@@ -117,7 +118,7 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
         QString line = node.firstChildElement("Product").attributeNode("name").nodeValue().trimmed();
         line = line.remove( "tram", Qt::CaseInsensitive ).trimmed();
         departureInfo.insert( TransportLine, line );
-        
+
         // <InfoTextList> tag contains <InfoText> tags, which contain journey news
         QDomNodeList journeyNewsNodes = node.firstChildElement("InfoTextList").elementsByTagName("InfoText");
         int journeyNewsCount = journeyNewsNodes.count();
@@ -125,7 +126,7 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
         for ( int j = 0; j < journeyNewsCount; ++j ) {
             QDomNode journeyNewsNode = journeyNewsNodes.at( i );
             QString newJourneyNews = journeyNewsNode.toElement().attributeNode("text").nodeValue();
-            
+
             if ( !journeyNews.contains(newJourneyNews) ) {
                 if ( !journeyNews.isEmpty() ) {
                     journeyNews += "<br />"; // Insert line breaks between journey news
@@ -135,7 +136,7 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
         }
 //         kDebug() << "journeyNews" << journeyNews;
         departureInfo.insert( JourneyNews, journeyNews );
-        
+
         // <MainStop><BasicStop><Dep> tag contains some tags with more information
         // about the departing stop
         QDomElement stop = node.firstChildElement("MainStop")
@@ -144,14 +145,14 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
         // <Time> tag contains the departure time
         QTime time = QTime::fromString( stop.firstChildElement("Time").text(), "hh:mm" );
         departureInfo.insert( DepartureTime, time );
-        
+
         // <Delay> tag contains delay
-        QString sDelay = stop.firstChildElement("Delay").text(); 
+        QString sDelay = stop.firstChildElement("Delay").text();
         departureInfo.insert( Delay, sDelay.isEmpty() ? -1 : sDelay.toInt() );
-        
+
         // <Platform> tag contains the platform
-        departureInfo.insert( Platform, stop.firstChildElement("Platform").text() ); 
-        
+        departureInfo.insert( Platform, stop.firstChildElement("Platform").text() );
+
         // <PassList> tag contains stops on the route of the line, inside <BasicStop> tags
         QDomNodeList routeStopList = node.firstChildElement("PassList").elementsByTagName("BasicStop");
         int routeStopCount = routeStopList.count();
@@ -159,7 +160,7 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
         QVariantList routeTimes;
         for ( int r = 0; r < routeStopCount; ++r ) {
             QDomNode routeStop = routeStopList.at( r );
-            
+
             routeStops << routeStop.firstChildElement("Location").firstChildElement("Station")
                     .firstChildElement("HafasName").firstChildElement("Text").text().trimmed();
             routeTimes << /*QTime::fromString(*/
@@ -184,7 +185,7 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
                 QDomElement category = attribute.firstChildElement( "AttributeVariant" );
                 while ( !category.isNull() ) {
                     if ( category.attributeNode("type").nodeValue() == "NORMAL" ) {
-                        departureInfo.insert( TypeOfVehicle, 
+                        departureInfo.insert( TypeOfVehicle,
                                 DepartureInfo::getVehicleTypeFromString(
                                 category.firstChildElement("Text").text().trimmed()) );
                         break;
@@ -195,8 +196,8 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
                 // Read operator
                 departureInfo.insert( Operator, attribute.firstChildElement("AttributeVariant")
                         .firstChildElement("Text").text() );
-            } else if ( !departureInfo.contains(TransportLine) 
-                    && attribute.attributeNode("type").nodeValue() == "NAME" ) 
+            } else if ( !departureInfo.contains(TransportLine)
+                    && attribute.attributeNode("type").nodeValue() == "NAME" )
             {
                 // Read line string if it wasn't read already
                 departureInfo.insert( TransportLine, attribute.firstChildElement("AttributeVariant")
@@ -207,8 +208,8 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
                                         .firstChildElement("Text").text().trimmed();
                 if ( !departureInfo[JourneyNews].toString().contains(info) ) {
                     QString journeyNews;
-                    if ( departureInfo.contains(JourneyNews) 
-                            && !departureInfo[JourneyNews].toString().isEmpty() ) 
+                    if ( departureInfo.contains(JourneyNews)
+                            && !departureInfo[JourneyNews].toString().isEmpty() )
                     {
                         journeyNews = departureInfo[JourneyNews].toString().append("<br />");
                     }
@@ -226,27 +227,27 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 
         // Parse time string
         if ( lastTime.secsTo(time) < -60 * 60 * 3 ) {
-            // Add one day to the departure date 
+            // Add one day to the departure date
             // if the last departure time is more than 3 hours before the current departure time
             currentDate = currentDate.addDays( 1 );
         }
         departureInfo.insert( DepartureDate, currentDate );
-        
+
         // Add departure to the journey list
         journeys->append( new DepartureInfo(departureInfo) );
-        
+
         lastTime = time;
     }
 
     return count > 0;
 }
 
-bool TimetableAccessorXml::parseDocumentPossibleStops( const QByteArray &document,
+bool TimetableAccessorXml::parseDocumentForStopSuggestions( const QByteArray &document,
         QList<StopInfo*> *stops )
 {
     if ( m_accessorScript ) {
         // Let the document get parsed for possible stops by the script accessor
-        return m_accessorScript->parseDocumentPossibleStops( document, stops );
+        return m_accessorScript->parseDocumentForStopSuggestions( document, stops );
     } else {
         return false;
     }

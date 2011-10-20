@@ -57,7 +57,7 @@ public:
      *
      * @note Can be used if you have a custom TimetableAccessorInfo object.
      *   TimetableAccessorXml uses this to create an HTML accessor for parsing of stop lists. */
-    TimetableAccessorScript( TimetableAccessorInfo *info = new TimetableAccessorInfo() );
+    TimetableAccessorScript( TimetableAccessorInfo *info );
 
     /** @brief Destructor. */
     virtual ~TimetableAccessorScript();
@@ -144,7 +144,7 @@ protected:
      *   TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
      *   document for stops.
      * @see parseDocumentPossibleStops(QHash<QString,QString>*) */
-    virtual bool parseDocumentPossibleStops( const QByteArray &document, QList<StopInfo*> *stops );
+    virtual bool parseDocumentForStopSuggestions( const QByteArray &document, QList<StopInfo*> *stops );
 
 private:
     ScriptState m_scriptState; // The state of the script

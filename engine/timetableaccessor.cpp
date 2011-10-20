@@ -19,20 +19,24 @@
 
 // Own includes
 #include "timetableaccessor.h"
-#include "accessorinfoxmlreader.h"
+#include "timetableaccessor_info.h"
 #include "timetableaccessor_generaltransitfeed.h"
 #include "timetableaccessor_script.h"
 #include "timetableaccessor_xml.h"
+#include "accessorinfoxmlreader.h"
+#include "departureinfo.h"
+
+// KDE includes
+#include <KIO/NetAccess>
+#include <KIO/Job>
+#include <KStandardDirs>
+#include <KLocale>
+#include <KDebug>
 
 // Qt includes
 #include <QTextCodec>
 #include <QFile>
-
-// KDE includes
-#include <KIO/NetAccess>
-#include <KStandardDirs>
-#include <KLocale>
-#include <KDebug>
+#include <QTimer>
 
 TimetableAccessor::TimetableAccessor( TimetableAccessorInfo *info ) : m_info(info)
 {
@@ -484,18 +488,23 @@ QStringList TimetableAccessor::featuresLocalized() const
 
 void TimetableAccessor::requestDepartures( const DepartureRequestInfo &requestInfo )
 {
-    if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty()
-        && m_sessionKeyGetTime.elapsed() > 500 )
+    // Test if a session key needs to be requested first
+    if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty() &&
+         m_sessionKeyGetTime.elapsed() > 500 )
     {
+        // Session key not already available and no request made in the last 500ms
         kDebug() << "Request a session key";
         requestSessionKey( ParseForSessionKeyThenDepartures, m_info->sessionKeyUrl(), &requestInfo );
         return;
     }
 
+    // Test if a stop ID needs to be requested first
     if ( !m_idAlreadyRequested &&
-        m_info->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) &&
-        m_info->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "true" )
+         m_info->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) &&
+         m_info->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "true" )
     {
+        // XML attribute "requestStopIdFirst" is present and it's value is "true"
+        // for the <departures> tag
         kDebug() << "Request a stop ID";
         m_idAlreadyRequested = true;
         StopSuggestionRequestInfo newRequestInfo = requestInfo;
@@ -505,13 +514,18 @@ void TimetableAccessor::requestDepartures( const DepartureRequestInfo &requestIn
     }
     m_idAlreadyRequested = false;
 
-    KUrl url = getUrl( requestInfo );
+    // Get a source URL for the request
+    KUrl url = departureUrl( requestInfo );
     KIO::StoredTransferJob *job; // = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
     if ( m_info->attributesForDepatures()[QLatin1String("method")]
             .compare(QLatin1String("post"), Qt::CaseInsensitive) != 0 )
     {
+        // Use GET to download the source document
         job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
     } else if ( m_info->attributesForDepatures().contains(QLatin1String("data")) ) {
+        // XML attribute "method" is present and it's value is "POST" for the <departures> tag
+        // The XML attribute "data" is also present and is used as a template string for the data
+        // to POST to the server
         QString sData = m_info->attributesForDepatures()[QLatin1String("data")];
         sData.replace( QLatin1String("{city}"), requestInfo.city );
         sData.replace( QLatin1String("{stop}"), requestInfo.stop );
@@ -527,17 +541,17 @@ void TimetableAccessor::requestDepartures( const DepartureRequestInfo &requestIn
         QString sStop = requestInfo.stop;
 
         // Encode city and stop
-        if ( charsetForUrlEncoding().isEmpty() ) {
+        if ( m_info->charsetForUrlEncoding().isEmpty() ) {
             sCity = QString::fromAscii( QUrl::toPercentEncoding(sCity) );
             sStop = QString::fromAscii( QUrl::toPercentEncoding(sStop) );
         } else {
-            sCity = toPercentEncoding( sCity, charsetForUrlEncoding() );
-            sStop = toPercentEncoding( sStop, charsetForUrlEncoding() );
+            sCity = toPercentEncoding( sCity, m_info->charsetForUrlEncoding() );
+            sStop = toPercentEncoding( sStop, m_info->charsetForUrlEncoding() );
         }
 
         // Construct the data
         QByteArray data;
-        if ( useSeparateCityValue() ) {
+        if ( m_info->useSeparateCityValue() ) {
             sData = sData.replace( "{city}", sCity );
         }
         sData = sData.replace( "{time}", requestInfo.dateTime.time().toString("hh:mm") )
@@ -551,6 +565,7 @@ void TimetableAccessor::requestDepartures( const DepartureRequestInfo &requestIn
             sData.replace( rx, requestInfo.dateTime.date().toString(rx.cap(1)) );
         }
 
+        // Start the POST job and add meta data if special attributes are given
         job =  KIO::storedHttpPost( QByteArray(), url, KIO::HideProgressInfo );
         if ( m_info->attributesForDepatures().contains(QLatin1String("contenttype")) ) {
             job->addMetaData( "content-type", QString("Content-Type: %1")
@@ -629,8 +644,8 @@ void TimetableAccessor::requestStopSuggestions( const StopSuggestionRequestInfo 
     }
 
     if ( hasSpecialUrlForStopSuggestions() ) {
-        KUrl url = getStopSuggestionsUrl( requestInfo );
-        // TODO Use post-stuff also for (departures.. done) / journeys
+        KUrl url = stopSuggestionsUrl( requestInfo );
+        // TODO Use post-stuff also for journeys
         KIO::StoredTransferJob *job;
         if ( m_info->attributesForStopSuggestions()[QLatin1String("method")]
                 .compare(QLatin1String("post"), Qt::CaseInsensitive) != 0 )
@@ -711,7 +726,7 @@ void TimetableAccessor::requestJourneys( const JourneyRequestInfo &requestInfo )
 {
     // Creating a kioslave
     KUrl url = !requestInfo.urlToUse.isEmpty() ? KUrl(requestInfo.urlToUse)
-            : getJourneyUrl(requestInfo);
+            : journeyUrl(requestInfo);
     KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
     connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
 
@@ -739,7 +754,7 @@ void TimetableAccessor::result( KJob* job )
 
     if ( parseDocumentMode == ParseForStopSuggestions ) {
         // A stop suggestion request has finished
-        if ( parseDocumentPossibleStops(document, &stopList) ) {
+        if ( parseDocumentForStopSuggestions(document, &stopList) ) {
             emit stopListReceived( this, jobInfo.url, stopList,
                                    jobInfo.requestInfo.data() );
         } else {
@@ -752,7 +767,7 @@ void TimetableAccessor::result( KJob* job )
         return;
     } else if ( parseDocumentMode == ParseForStopIdThenDepartures ) {
         kDebug() << "MODE IS CURRENTLY" << parseDocumentMode;
-        if ( parseDocumentPossibleStops(document, &stopList) ) {
+        if ( parseDocumentForStopSuggestions(document, &stopList) ) {
             if ( stopList.isEmpty() ) {
                 kDebug() << "No stop suggestions got to get an ID to use to get departures";
             } else {
@@ -844,7 +859,7 @@ void TimetableAccessor::result( KJob* job )
             newRequestInfo->useDifferentUrl = true;
             requestDepartures( *newRequestInfo );
             // Parse for stop suggestions
-        } else if ( parseDocumentPossibleStops(document, &stopList) ) {
+        } else if ( parseDocumentForStopSuggestions(document, &stopList) ) {
             kDebug() << "Stop suggestion list received" << parseDocumentMode;
             emit stopListReceived( this, jobInfo.url, stopList, jobInfo.requestInfo.data() );
         } else { // All parsing has failed
@@ -863,7 +878,7 @@ void TimetableAccessor::result( KJob* job )
             }
         }
         // Used a different url for requesting data, the data contains stop suggestions
-    } else if ( parseDocumentPossibleStops(document, &stopList) ) {
+    } else if ( parseDocumentForStopSuggestions(document, &stopList) ) {
         emit stopListReceived( this, jobInfo.url, stopList, jobInfo.requestInfo.data() );
     } else {
         kDebug() << "Error parsing for stop suggestions from different url" << jobInfo.requestInfo->sourceName;
@@ -873,9 +888,10 @@ void TimetableAccessor::result( KJob* job )
     }
 }
 
-KUrl TimetableAccessor::getUrl( const DepartureRequestInfo &requestInfo ) const
+KUrl TimetableAccessor::departureUrl ( const DepartureRequestInfo &requestInfo ) const
 {
-    QString sRawUrl = requestInfo.useDifferentUrl ? stopSuggestionsRawUrl() : departuresRawUrl();
+    QString sRawUrl = requestInfo.useDifferentUrl ? m_info->stopSuggestionsRawUrl()
+                                                  : m_info->departureRawUrl();
     QString sDataType;
     QString sCity = requestInfo.city.toLower(), sStop = requestInfo.stop.toLower();
     if ( requestInfo.dataType == "arrivals" ) {
@@ -887,16 +903,16 @@ KUrl TimetableAccessor::getUrl( const DepartureRequestInfo &requestInfo ) const
     sCity = timetableAccessorInfo().mapCityNameToValue( sCity );
 
     // Encode city and stop
-    if ( charsetForUrlEncoding().isEmpty() ) {
+    if ( m_info->charsetForUrlEncoding().isEmpty() ) {
         sCity = QString::fromAscii( QUrl::toPercentEncoding( sCity ) );
         sStop = QString::fromAscii( QUrl::toPercentEncoding( sStop ) );
     } else {
-        sCity = toPercentEncoding( sCity, charsetForUrlEncoding() );
-        sStop = toPercentEncoding( sStop, charsetForUrlEncoding() );
+        sCity = toPercentEncoding( sCity, m_info->charsetForUrlEncoding() );
+        sStop = toPercentEncoding( sStop, m_info->charsetForUrlEncoding() );
     }
 
     // Construct the url from the "raw" url by replacing values
-    if ( useSeparateCityValue() ) {
+    if ( m_info->useSeparateCityValue() ) {
         sRawUrl = sRawUrl.replace( "{city}", sCity );
     }
     sRawUrl = sRawUrl.replace( "{time}", requestInfo.dateTime.time().toString("hh:mm") )
@@ -914,21 +930,21 @@ KUrl TimetableAccessor::getUrl( const DepartureRequestInfo &requestInfo ) const
     return KUrl( sRawUrl );
 }
 
-KUrl TimetableAccessor::getStopSuggestionsUrl( const StopSuggestionRequestInfo &requestInfo )
+KUrl TimetableAccessor::stopSuggestionsUrl( const StopSuggestionRequestInfo &requestInfo )
 {
-    QString sRawUrl = stopSuggestionsRawUrl();
+    QString sRawUrl = m_info->stopSuggestionsRawUrl();
     QString sCity = requestInfo.city.toLower(), sStop = requestInfo.stop.toLower();
 
     // Encode stop
-    if ( charsetForUrlEncoding().isEmpty() ) {
+    if ( m_info->charsetForUrlEncoding().isEmpty() ) {
         sCity = QString::fromAscii( QUrl::toPercentEncoding( sCity ) );
         sStop = QString::fromAscii( QUrl::toPercentEncoding( sStop ) );
     } else {
-        sCity = toPercentEncoding( sCity, charsetForUrlEncoding() );
-        sStop = toPercentEncoding( sStop, charsetForUrlEncoding() );
+        sCity = toPercentEncoding( sCity, m_info->charsetForUrlEncoding() );
+        sStop = toPercentEncoding( sStop, m_info->charsetForUrlEncoding() );
     }
 
-    if ( useSeparateCityValue() ) {
+    if ( m_info->useSeparateCityValue() ) {
         sRawUrl = sRawUrl.replace( "{city}", sCity );
     }
     sRawUrl = sRawUrl.replace( "{stop}", sStop );
@@ -936,7 +952,7 @@ KUrl TimetableAccessor::getStopSuggestionsUrl( const StopSuggestionRequestInfo &
     return KUrl( sRawUrl );
 }
 
-KUrl TimetableAccessor::getJourneyUrl( const JourneyRequestInfo &requestInfo ) const
+KUrl TimetableAccessor::journeyUrl( const JourneyRequestInfo &requestInfo ) const
 {
     QString sRawUrl = m_info->journeyRawUrl();
     QString sTime = requestInfo.dateTime.time().toString( "hh:mm" );
@@ -952,18 +968,18 @@ KUrl TimetableAccessor::getJourneyUrl( const JourneyRequestInfo &requestInfo ) c
     sCity = timetableAccessorInfo().mapCityNameToValue( sCity );
 
     // Encode city and stop
-    if ( charsetForUrlEncoding().isEmpty() ) {
+    if ( m_info->charsetForUrlEncoding().isEmpty() ) {
         sCity = QString::fromAscii( QUrl::toPercentEncoding( sCity ) );
         sStartStopName = QString::fromAscii( QUrl::toPercentEncoding( sStartStopName ) );
         sTargetStopName = QString::fromAscii( QUrl::toPercentEncoding( sTargetStopName ) );
     } else {
-        sCity = toPercentEncoding( sCity, charsetForUrlEncoding() );
-        sStartStopName = toPercentEncoding( sStartStopName, charsetForUrlEncoding() );
-        sTargetStopName = toPercentEncoding( sTargetStopName, charsetForUrlEncoding() );
+        sCity = toPercentEncoding( sCity, m_info->charsetForUrlEncoding() );
+        sStartStopName = toPercentEncoding( sStartStopName, m_info->charsetForUrlEncoding() );
+        sTargetStopName = toPercentEncoding( sTargetStopName, m_info->charsetForUrlEncoding() );
     }
 
     // Construct the url from the "raw" url by replacing values
-    if ( useSeparateCityValue() ) {
+    if ( m_info->useSeparateCityValue() ) {
         sRawUrl = sRawUrl.replace( "{city}", sCity );
     }
 
@@ -1028,25 +1044,15 @@ bool TimetableAccessor::parseDocument( const QByteArray &document,
     return false;
 }
 
-bool TimetableAccessor::parseDocumentPossibleStops( const QByteArray &document,
-        QList<StopInfo*> *stops )
+bool TimetableAccessor::parseDocumentForStopSuggestions( const QByteArray &document,
+                                                         QList<StopInfo*> *stops )
 {
     Q_UNUSED( document );
     Q_UNUSED( stops );
     return false;
 }
 
-QString TimetableAccessor::departuresRawUrl() const
+bool TimetableAccessor::hasSpecialUrlForStopSuggestions() const
 {
-    return m_info->departureRawUrl();
-}
-
-QString TimetableAccessor::stopSuggestionsRawUrl() const
-{
-    return m_info->stopSuggestionsRawUrl();
-}
-
-QByteArray TimetableAccessor::charsetForUrlEncoding() const
-{
-    return m_info->charsetForUrlEncoding();
+    return !m_info->stopSuggestionsRawUrl().isEmpty();
 }

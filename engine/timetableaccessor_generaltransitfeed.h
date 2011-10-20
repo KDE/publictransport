@@ -77,8 +77,7 @@ public:
     /** @brief The maximum of stop suggestion to return. */
     static const int STOP_SUGGESTION_LIMIT = 100;
 
-    explicit TimetableAccessorGeneralTransitFeed(
-            TimetableAccessorInfo *info = new TimetableAccessorInfo() );
+    explicit TimetableAccessorGeneralTransitFeed( TimetableAccessorInfo *info );
     virtual ~TimetableAccessorGeneralTransitFeed();
 
     /** @brief Returns the type of this accessor, ie. GtfsAccessor. */

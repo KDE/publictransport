@@ -49,28 +49,15 @@ public:
     };
 };
 
-TimetableAccessorInfo::TimetableAccessorInfo( const QString& name,
-        const QString& shortUrl, const QString &author, const QString &shortAuthor,
-        const QString &email, const QString &version, const QString& serviceProviderID,
-        const AccessorType& accessorType )
+TimetableAccessorInfo::TimetableAccessorInfo()
 {
-    m_name = name;
-    m_shortUrl = shortUrl;
-    m_author = author;
-    m_shortAuthor = shortAuthor;
-    m_email = email;
-    m_version = version;
-    m_serviceProviderID = serviceProviderID;
-    m_accessorType = accessorType;
+    m_version = "1.0";
+    m_accessorType = NoAccessor;
+    m_defaultVehicleType = Unknown;
+    m_sessionKeyPlace = PutNowhere;
     m_useSeparateCityValue = false;
     m_onlyUseCitiesInList = false;
-    m_defaultVehicleType = Unknown;
     m_minFetchWait = 0;
-    m_sessionKeyPlace = PutNowhere;
-}
-
-TimetableAccessorInfo::~TimetableAccessorInfo()
-{
 }
 
 void TimetableAccessorInfo::finish()

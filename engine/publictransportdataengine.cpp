@@ -21,7 +21,9 @@
 #include "publictransportdataengine.h"
 #include "publictransportservice.h"
 #include "timetableaccessor.h"
+#include "timetableaccessor_info.h"
 #include "timetableaccessor_generaltransitfeed.h"
+#include "departureinfo.h"
 
 // KDE includes
 #include <KStandardDirs>
@@ -29,6 +31,7 @@
 // Qt includes
 #include <QFileSystemWatcher>
 #include <QFileInfo>
+#include <QTimer>
 
 const int PublicTransportEngine::MIN_UPDATE_TIMEOUT = 120; // in seconds
 const int PublicTransportEngine::MAX_UPDATE_TIMEOUT_DELAY = 5 * 60; // if delays are available
@@ -451,7 +454,7 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
             return false;
         }
 
-        if ( accessor->useSeparateCityValue() && city.isEmpty() ) {
+        if ( accessor->info()->useSeparateCityValue() && city.isEmpty() ) {
             kDebug() << QString( "Accessor %1 needs a separate city value. Add to "
                                  "source name '|city=X', where X stands for the city "
                                  "name." ).arg( serviceProvider );
@@ -737,7 +740,7 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
     m_nextDownloadTimeProposals[ stripDateAndTimeValues( sourceName )] = downloadTime;
 //     kDebug() << "Set next download time proposal:" << downloadTime;
 
-    setData( sourceName, "serviceProvider", accessor->serviceProvider() );
+    setData( sourceName, "serviceProvider", accessor->info()->serviceProvider() );
     setData( sourceName, "count", departureCount );
     setData( sourceName, "delayInfoAvailable", globalInfo.delayInfoAvailable );
     setData( sourceName, "requestUrl", requestUrl );
@@ -748,7 +751,7 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 
     // Store received data in the data source map
-    dataSource.insert( "serviceProvider", accessor->serviceProvider() );
+    dataSource.insert( "serviceProvider", accessor->info()->serviceProvider() );
     dataSource.insert( "count", departureCount );
     dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
     dataSource.insert( "requestUrl", requestUrl );
@@ -833,7 +836,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     QDateTime downloadTime = QDateTime::currentDateTime().addSecs( secs );
     m_nextDownloadTimeProposals[ stripDateAndTimeValues(sourceName) ] = downloadTime;
 
-    setData( sourceName, "serviceProvider", accessor->serviceProvider() );
+    setData( sourceName, "serviceProvider", accessor->info()->serviceProvider() );
     setData( sourceName, "count", journeyCount );
     setData( sourceName, "delayInfoAvailable", globalInfo.delayInfoAvailable );
     setData( sourceName, "requestUrl", requestUrl );
@@ -844,7 +847,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 
     // Store received data in the data source map
-    dataSource.insert( "serviceProvider", accessor->serviceProvider() );
+    dataSource.insert( "serviceProvider", accessor->info()->serviceProvider() );
     dataSource.insert( "count", journeyCount );
     dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
     dataSource.insert( "requestUrl", requestUrl );
@@ -900,7 +903,7 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
     }
     m_lastStopNameCount = stops.count();
 
-    setData( sourceName, "serviceProvider", accessor->serviceProvider() );
+    setData( sourceName, "serviceProvider", accessor->info()->serviceProvider() );
     setData( sourceName, "count", stops.count() );
     setData( sourceName, "requestUrl", requestUrl );
     if ( requestInfo->parseMode == ParseForDeparturesArrivals ) {
@@ -923,12 +926,12 @@ void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
         const QUrl &requestUrl, const RequestInfo *requestInfo )
 {
     const QString sourceName = requestInfo->sourceName;
-    kDebug() << "Error while parsing" << requestUrl << accessor->serviceProvider()
+    kDebug() << "Error while parsing" << requestUrl << accessor->info()->serviceProvider()
              << "\n  sourceName =" << requestInfo->sourceName << requestInfo->dataType
              << requestInfo->parseMode;
     kDebug() << errorCode << errorString;
 
-    setData( sourceName, "serviceProvider", accessor->serviceProvider() );
+    setData( sourceName, "serviceProvider", accessor->info()->serviceProvider() );
     setData( sourceName, "count", 0 );
     setData( sourceName, "requestUrl", requestUrl );
     if ( requestInfo->parseMode == ParseForDeparturesArrivals ) {
@@ -949,7 +952,7 @@ void PublicTransportEngine::progress( TimetableAccessor *accessor, qreal progres
         const QString &jobDescription, const QUrl &requestUrl, const RequestInfo *requestInfo )
 {
     const QString sourceName = requestInfo->sourceName;
-    setData( sourceName, "serviceProvider", accessor->serviceProvider() );
+    setData( sourceName, "serviceProvider", accessor->info()->serviceProvider() );
     setData( sourceName, "count", 0 );
     setData( sourceName, "progress", progress );
     setData( sourceName, "jobDescription", jobDescription );
@@ -1013,7 +1016,7 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
             minFetchWait = qMax( minForSufficientChanges, MIN_UPDATE_TIMEOUT );
         }
 
-        minFetchWait = qMax( minFetchWait, accessor->minFetchWait() );
+        minFetchWait = qMax( minFetchWait, accessor->info()->minFetchWait() );
         kDebug() << "Wait time until next download:"
                  << ((minFetchWait - secsSinceLastUpdate) / 60) << "min";
 

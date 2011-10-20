@@ -24,18 +24,21 @@
 #ifndef TIMETABLEACCESSOR_HEADER
 #define TIMETABLEACCESSOR_HEADER
 
-#include "departureinfo.h"
 #include "enums.h"
-#include "timetableaccessor_info.h"
 
 #include <KUrl>
-#include <KIO/Scheduler>
-#include <KIO/JobClasses>
-
 #include <QHash>
+#include <QStringList>
+
+class TimetableAccessorInfo;
+class PublicTransportInfo;
+class DepartureInfo;
+class JourneyInfo;
+class StopInfo;
+class KJob;
 
 /**
- * @brief Stores information about a request to the publictransport data engine.
+ * @brief Stores information about a request to the Public Transport data engine.
  *
  * All values other than @p sourceName are derived (parsed) from it or represent the current state
  * of the request.
@@ -75,6 +78,7 @@ public:
     /** @brief Describes what should be retrieved with the request, eg. departures or a a stop ID. */
     ParseDocumentMode parseMode;
 
+    /** @brief Creates an invalid RequestInfo object with the given @p parent. */
     RequestInfo( QObject *parent = 0 ) : QObject( parent )
     {
         this->parseMode = ParseInvalid;
@@ -82,6 +86,27 @@ public:
         this->useDifferentUrl = false;
     };
 
+    /**
+     * @brief Creates a RequestInfo object.
+     *
+     * @param sourceName The name of the data source for which the request was triggered.
+     * @param stop The stop name parsed from @p sourceName.
+     * @param dateTime The date and time where requested data should begin,
+     *   parsed from @p sourceName.
+     * @param maxCount The maximum count of items (eg. departures) that should be returned.
+     *   Some service providers may return some more items. For GTFS accessors this number is
+     *   never excessed.
+     * @param dataType The type of data that gets requested. Can be "departures", "arrivals",
+     *   "journeys", "journeysDep" (equals "journeys", departing from the home stop),
+     *   "journeysArr" (arriving at the home stop) or "stopSuggestions". Default is "departures".
+     * @param useDifferentUrl Whether or not a different URL should be used, eg. use the stop
+     *   suggestions URL instead of the departures URL. Default is false.
+     * @param city The city parsed from @p sourceName, if needed by the service provider.
+     *   Default is an empty string.
+     * @param parseMode What should be parsed from source documents.
+     *   Default is ParseForDeparturesArrivals.
+     * @param parent The parent QObject.
+     **/
     RequestInfo( const QString &sourceName, const QString &stop, const QDateTime &dateTime,
             int maxCount, const QString &dataType = "departures", bool useDifferentUrl = false,
             const QString &city = QString(),
@@ -92,6 +117,7 @@ public:
     {
     };
 
+    /** @brief Copy constructor. */
     RequestInfo( const RequestInfo &info, QObject *parent = 0 ) : QObject(parent)
     {
         sourceName = info.sourceName;
@@ -104,6 +130,7 @@ public:
         parseMode = info.parseMode;
     };
 
+    /** @brief Creates a new RequestInfo object, which is a clone of this one. */
     virtual RequestInfo *clone() const
     {
         return new RequestInfo( sourceName, stop, dateTime, maxCount, dataType, useDifferentUrl,
@@ -111,11 +138,14 @@ public:
     };
 };
 
+/** @brief Stores information about a request for stop suggestions to the Public Transport data engine. */
 typedef RequestInfo StopSuggestionRequestInfo;
+
+/** @brief Stores information about a request for departures/arrivals to the Public Transport data engine. */
 typedef RequestInfo DepartureRequestInfo;
 
 /**
- * @brief Stores information about a request for journeys to the publictransport data engine.
+ * @brief Stores information about a request for journeys to the Public Transport data engine.
  *
  * All values other than @p sourceName are derived (parsed) from it or represent the current state
  * of the request, eg. @p roundTrips stores the number of requests sent to a server to get
@@ -134,29 +164,34 @@ public:
     /** @brief Current number of round trips used to fulfil the journey request. */
     int roundTrips;
 
-    JourneyRequestInfo() : RequestInfo()
+    /** @brief Creates an invalid JourneyRequestInfo object. */
+    JourneyRequestInfo( QObject *parent = 0 ) : RequestInfo(parent)
     {
         this->roundTrips = 0;
     };
 
+    /** @brief Creates a JourneyRequestInfo object. */
     JourneyRequestInfo( const QString &sourceName, const QString &startStop,
             const QString &targetStop, const QDateTime &dateTime, int maxCount,
             const QString &urlToUse, const QString &dataType = "journeys",
             bool useDifferentUrl = false, const QString &city = QString(),
-            ParseDocumentMode parseMode = ParseForJourneys )
+            ParseDocumentMode parseMode = ParseForJourneys, QObject *parent = 0  )
         : RequestInfo(sourceName, startStop, dateTime, maxCount, dataType,
-                      useDifferentUrl, city, parseMode),
+                      useDifferentUrl, city, parseMode, parent),
           targetStop(targetStop), urlToUse(urlToUse), roundTrips(0)
     {
     };
 
-    JourneyRequestInfo( const JourneyRequestInfo &info ) : RequestInfo(info)
+    /** @brief Copy constructor. */
+    JourneyRequestInfo( const JourneyRequestInfo &info, QObject *parent = 0 )
+            : RequestInfo(info, parent)
     {
         targetStop = info.targetStop;
         urlToUse = info.urlToUse;
         roundTrips = info.roundTrips;
     };
 
+    /** @brief Creates a new JourneyRequestInfo object, which is a clone of this one. */
     virtual JourneyRequestInfo *clone() const
     {
         return new JourneyRequestInfo( sourceName, stop, targetStop, dateTime, maxCount, urlToUse,
@@ -164,24 +199,32 @@ public:
     };
 };
 
-/** @class TimetableAccessor
- * @brief Gets timetable information for public transport from different service providers.
+/**
+ * @brief Gets timetable data for public transport from different service providers.
  *
- * The easiest way to implement support for a new service provider is to add an XML file describing
- * the service provider and a script to parse timetable documents.
- * If that's not enough a new class can be derived from TimetableAccessor or it's derivates. These
- * functions should then be overwritten:
- *   - serviceProvider()
- *   - country(), cities()
- *   - rawUrl(), parseDocument() */
+ * Use info() to get a pointer to a TimetableAccessorInfo object with information about the service
+ * provider. The information in that object is read from an XML file.
+ *
+ * To add support for a new timetable accessor type you can derive from this class and overwrite
+ * functions, eg. requestDepartures() to start a request for departures or parseDocument() to
+ * parse a requested document.
+ **/
 class TimetableAccessor : public QObject {
     Q_OBJECT
 
 public:
     /**
-     * @brief Constructs a new TimetableAccessor object. You should use createAccessor()
-     *   to get an accessor that can download and parse documents from the given service provider. */
-    explicit TimetableAccessor( TimetableAccessorInfo *info = new TimetableAccessorInfo() );
+     * @brief Constructs a new TimetableAccessor object.
+     *
+     * You should use createAccessor() to get an accessor for a given service provider ID.
+     **/
+    explicit TimetableAccessor( TimetableAccessorInfo *info );
+
+    /**
+     * @brief Simple destructor.
+     *
+     * The TimetableAccessorInfo object given in the constructor gets deleted here.
+     **/
     virtual ~TimetableAccessor();
 
     /**
@@ -190,7 +233,8 @@ public:
      * @param serviceProvider The ID of the service provider to get an accessor for.
      *   The ID starts with a country code, followed by an underscore and it's name.
      *   If it's empty, the default service provider for the users country will
-     *   be used, if there is any. */
+     *   be used, if there is any.
+     **/
     static TimetableAccessor *createAccessor( const QString &serviceProvider = QString() );
 
     /**
@@ -199,7 +243,8 @@ public:
      * @param serviceProvider The ID of the service provider which XML file should be read.
      *   The ID starts with a country code, followed by an underscore and it's name.
      *   If it's empty, the default service provider for the users country will
-     *   be used, if there is any. */
+     *   be used, if there is any.
+     **/
     static TimetableAccessorInfo *readAccessorInfo( const QString &serviceProvider = QString() );
 
     /** @brief Gets the AccessorType enumerable for the given string. */
@@ -242,12 +287,6 @@ public:
     static QString defaultServiceProviderForLocation( const QString &location,
                                                       const QStringList &dirs = QStringList() );
 
-    /** @brief Gets the service provider ID the accessor is designed for. */
-    virtual QString serviceProvider() const { return m_info->serviceProvider(); };
-
-    /** @brief Gets the minimum seconds to wait between two data-fetches from the service provider. */
-    virtual int minFetchWait() const { return m_info->minFetchWait(); };
-
     /** @brief Gets a list of features that this accessor supports. */
     virtual QStringList features() const;
 
@@ -257,15 +296,16 @@ public:
     /** @brief Gets a list of features that this accessor supports through a script. */
     virtual QStringList scriptFeatures() const { return QStringList(); };
 
-    /** @brief The country for which the accessor returns results. */
-    virtual QString country() const { return m_info->country(); };
-
-    /** @brief A list of cities for which the accessor returns results. */
-    virtual QStringList cities() const { return m_info->cities(); };
-
-    QString credit() const { return m_info->credit(); };
-
-    const TimetableAccessorInfo *info() const { return m_info; };
+    /**
+     * @brief Gets the TimetableAccessorInfo object for this accessor.
+     *
+     * This info object contains all information read from the accessors XML file, like it's name,
+     * description, an URL to the home page of the service provider, etc.
+     *
+     * Many functions in this class simply call a function with the same name in
+     * TimetableAccessorInfo, but they might change the values.
+     **/
+    inline const TimetableAccessorInfo *info() const { return m_info; };
 
     /**
      * @brief Requests a list of departures/arrivals.
@@ -312,39 +352,23 @@ public:
     /** @brief Gets the information object used by this accessor. */
     const TimetableAccessorInfo &timetableAccessorInfo() const { return *m_info; };
 
-    /** @brief Whether or not the city should be put into the "raw" url. */
-    virtual bool useSeparateCityValue() const { return m_info->useSeparateCityValue(); };
+    /**
+     * @brief Whether or not a special URL for stop suggestions is available.
+     *
+     * If there is a stop suggestions URL it can be retrieved using
+     * TimetableAccessor::stopSuggestionsRawUrl and this function returns true. Otherwise the
+     * URL for departures/arrivals gets used directly and returns stop suggestions if the given
+     * stop name is ambiguous.
+     *
+     * @see TimetableAccessorInfo::stopSuggestionsRawUrl
+     **/
+    bool hasSpecialUrlForStopSuggestions() const;
 
     /**
-     * @brief Whether or not cities may be chosen freely.
+     * @brief Encodes the url in @p str using the charset in @p charset. Then it is percent encoded.
      *
-     * @return true if only cities in the list returned by cities()  are valid.
-     * @return false (default) if cities may be chosen freely, but may be invalid. */
-    virtual bool onlyUseCitiesInList() const { return m_info->onlyUseCitiesInList(); };
-
-    /**
-     * @brief Whether or not to use the url returned by differentRawUrl() instead of the
-     *   one returned by rawUrl().
-     * @see differentRawUrl() */
-    bool hasSpecialUrlForStopSuggestions() const {
-        return !m_info->stopSuggestionsRawUrl().isEmpty(); };
-
-    /** @brief Returns a list of changelog entries.
-     *
-     * @see ChangelogEntry */
-    QList<ChangelogEntry> changelog() const { return m_info->changelog(); };
-    /** @brief Sets the list of changelog entries.
-     *
-     * @param changelog The new list of changelog entries.
-     *
-     * @see ChangelogEntry */
-    void setChangelog( const QList<ChangelogEntry> &changelog ) {
-        m_info->setChangelog( changelog );
-    };
-
-    /** @brief Encodes the url in @p str using the charset in @p charset. Then it is percent encoded.
-     *
-     * @see charsetForUrlEncoding() */
+     * @see TimetableAccessorInfo::charsetForUrlEncoding()
+     **/
     static QString toPercentEncoding( const QString &str, const QByteArray &charset );
 
 protected:
@@ -401,7 +425,8 @@ protected:
      *   a session key. The default implementation returns a null string.
      *
      * @param document The contents of the document that should be parsed.
-     * @return The parsed session key. */
+     * @return The parsed session key.
+     **/
     virtual QString parseDocumentForSessionKey( const QByteArray &document ) {
         Q_UNUSED( document );
         return QString();
@@ -418,49 +443,38 @@ protected:
      *
      * @see parseDocument()
      **/
-    virtual bool parseDocumentPossibleStops( const QByteArray &document, QList<StopInfo*> *stops );
+    virtual bool parseDocumentForStopSuggestions( const QByteArray &document,
+                                                  QList<StopInfo*> *stops );
 
     /**
-     * @brief Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
-     *   or only for the stop ("%1") if putCityIntoUrl() returns false. */
-    virtual QString departuresRawUrl() const;
-
-    /**
-     * @brief Gets a second "raw" url with placeholders for the city ("%1") and the stop ("%2")
-     *   or only for the stop ("%1") if putCityIntoUrl() returns false. */
-    virtual QString stopSuggestionsRawUrl() const;
-
-    /**
-     * @brief Gets the charset used to encode urls before percent-encoding them. Normally
-     *   this charset is UTF-8. But that doesn't work for sites that require parameters
-     *   in the url (..&param=x) to be encoded in that specific charset.
+     * @brief Constructs an URL to a document containing a departure/arrival list
      *
-     * @see TimetableAccessor::toPercentEncoding() */
-    virtual QByteArray charsetForUrlEncoding() const;
-
-    /**
-     * @brief Constructs an url to the departure / arrival list by combining the "raw"
-     *   url with the needed information.
+     * Uses the template "raw" URL for departures and replaces placeholders with the needed
+     * information.
      *
-     * @param requestInfo Information about the departure/arrival request to get a source url for.
+     * @param requestInfo Information about the departure/arrival request to get a source URL for.
      **/
-    KUrl getUrl( const DepartureRequestInfo &requestInfo ) const;
+    KUrl departureUrl( const DepartureRequestInfo &requestInfo ) const;
 
     /**
-     * @brief Constructs an url to a page containing stop suggestions by combining
-     *   the "raw" url with the needed information.
+     * @brief Constructs an URL to a document containing a journey list.
      *
-     * @param requestInfo Information about the stop suggestions request to get a source url for.
+     * Uses the template "raw" URL for journeys and replaces placeholder with the needed
+     * information.
+     *
+     * @param requestInfo Information about the journey request to get a source URL for.
      **/
-    KUrl getStopSuggestionsUrl( const StopSuggestionRequestInfo &requestInfo );
+    KUrl journeyUrl( const JourneyRequestInfo &requestInfo ) const;
 
     /**
-     * @brief Constructs an url to the journey list by combining the "raw" url with the
-     *   needed information.
+     * @brief Constructs an URL to a document containing stop suggestions.
      *
-     * @param requestInfo Information about the journey request to get a source url for.
+     * Uses the template "raw" URL for stop suggestions and replaces placeholders with the
+     * needed information.
+     *
+     * @param requestInfo Information about the stop suggestions request to get a source URL for.
      **/
-    KUrl getJourneyUrl( const JourneyRequestInfo &requestInfo ) const;
+    KUrl stopSuggestionsUrl( const StopSuggestionRequestInfo &requestInfo );
 
     QString m_curCity; /**< @brief Stores the currently used city. */
     TimetableAccessorInfo *m_info; /**< @brief Stores service provider specific information that is
@@ -468,60 +482,82 @@ protected:
 
 signals:
     /**
-     * @brief Emitted when a new departure or arrival list has been received and parsed.
+     * @brief Emitted when a new departure or arrival list is available.
      *
-     * @param accessor The accessor that was used to download and parse the departures/arrivals.
-     * @param requestUrl The url used to request the information.
-     * @param journeys A list of departures / arrivals that were received.
+     * This signal gets emitted in response to a request started using requestDepartures.
+     * The accessor may need some time to fulfil the request, eg. scripted accessors need to
+     * download source documents and parse them to make the departure data available.
+     * GTFS accessors operate on local databases and are very fast.
+     *
+     * @param accessor The accessor that was used to make the departure/arrival data available.
+     * @param requestUrl The url used to request the departure/arrival data.
+     * @param journeys A list of departures/arrivals that were received.
      * @param globalInfo Information for all departures/arrivals.
-     * @param requestInfo Information about the request for the just received departure/arrival list.
-     * @see TimetableAccessor::useSeperateCityValue() */
+     * @param requestInfo Information about the request for the received departure/arrival list.
+     * @see TimetableAccessor::useSeperateCityValue()
+     **/
     void departureListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
             const QList<DepartureInfo*> &journeys, const GlobalTimetableInfo &globalInfo,
             const RequestInfo *requestInfo );
 
     /**
-     * @brief Emitted when a new journey list has been received and parsed.
+     * @brief Emitted when a new journey list is available.
      *
-     * @param accessor The accessor that was used to download and parse the journeys.
-     * @param requestUrl The url used to request the information.
+     * This signal gets emitted in response to a request started using requestJourneys.
+     * The accessor may need some time to fulfil the request, eg. scripted accessors need to
+     * download source documents and parse them to make the journey data available.
+     * GTFS accessors operate on local databases and are very fast.
+     *
+     * @param accessor The accessor that was used to make the journey data available.
+     * @param requestUrl The url used to request the journey data.
      * @param journeys A list of journeys that were received.
      * @param globalInfo Information for all journeys.
      * @param requestInfo Information about the request for the just received journey list.
-     * @see TimetableAccessor::useSeperateCityValue() */
+     * @see TimetableAccessor::useSeperateCityValue()
+     **/
     void journeyListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
             const QList<JourneyInfo*> &journeys, const GlobalTimetableInfo &globalInfo,
             const RequestInfo *requestInfo );
 
     /**
-     * @brief Emitted when a list of stop names has been received and parsed.
+     * @brief Emitted when a list of stop suggestions is available.
      *
-     * @param accessor The accessor that was used to download and parse the stops.
-     * @param requestUrl The url used to request the information.
+     * This signal gets emitted in response to a request started using requestStopSuggestions.
+     * May also be emitted in response to calls to requestDepartures or requestJourneys, if the
+     * given stop name was ambiguous.
+     * The accessor may need some time to fulfil the request, eg. scripted accessors need to
+     * download source documents and parse them to make the departure data available. But most
+     * scripted accessors use small JSON sources and are fast enough to make the stop suggestions
+     * available while typing in a stop name without too much delay.
+     * GTFS accessors operate on local databases and are very fast.
+     *
+     * @param accessor The accessor that was used to make the stop suggestions available.
+     * @param requestUrl The url used to request the stop suggestions.
      * @param stops A pointer to a list of @ref StopInfo objects.
      * @param requestInfo Information about the request for the just received stop list.
-     * @see TimetableAccessor::useSeperateCityValue() */
+     * @see TimetableAccessor::useSeperateCityValue()
+     **/
     void stopListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
             const QList<StopInfo*> &stops, const RequestInfo *requestInfo );
 
     /**
-     * @brief Emitted when a session key has been received and parsed.
+     * @brief Emitted when a session key is available.
      *
-     * @param accessor The accessor that was used to download and parse the session key.
-     * @param sessionKey The parsed session key. */
+     * @param accessor The accessor that was used to make the session key available.
+     * @param sessionKey The session key.
+     **/
     void sessionKeyReceived( TimetableAccessor *accessor, const QString &sessionKey );
 
     /**
      * @brief Emitted when an error occurred while parsing.
      *
-     * @param accessor The accessor that was used to download and parse information
-     *   from the service provider.
+     * @param accessor The accessor that was used to make timetable data available.
      * @param errorCode The error code or NoError if there was no error.
-     * @param errorString If @p errorCode isn't NoError this contains a
-     *   description of the error.
-     * @param requestUrl The url used to request the information.
+     * @param errorString If @p errorCode isn't NoError this contains a description of the error.
+     * @param requestUrl The url used to request the timetable data.
      * @param requestInfo Information about the request that resulted in the error.
-     * @see TimetableAccessor::useSeperateCityValue() */
+     * @see TimetableAccessor::useSeperateCityValue()
+     **/
     void errorParsing( TimetableAccessor *accessor, ErrorCode errorCode, const QString &errorString,
             const QUrl &requestUrl, const RequestInfo *requestInfo );
 
@@ -541,9 +577,11 @@ protected slots:
     /** @brief All data of a journey list has been received. */
     void result( KJob* job );
 
-    /** @brief Clears the session key. This gets called from time to time by a timer, to enforce
-     * the download of a new session key the next it's needed. This is done to prevent usage of
-     * expired session keys. */
+    /**
+     * @brief Clears the session key.
+     *
+     * This gets called from time to time by a timer, to prevent using expired session keys.
+     **/
     void clearSessionKey();
 
 protected:

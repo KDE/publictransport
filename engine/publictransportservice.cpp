@@ -19,12 +19,14 @@
 
 #include "publictransportservice.h"
 #include "timetableaccessor.h"
+#include "timetableaccessor_info.h"
 
 // KDE includes
 #include <KTemporaryFile>
 #include <KMimeType>
 #include <KDebug>
 #include <KFileItem>
+#include <KIO/Job>
 #include <kjobtrackerinterface.h>
 
 // Qt includes

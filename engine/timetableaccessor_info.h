@@ -37,134 +37,193 @@
 /** @class TimetableAccessorInfo
  * @brief Provides information about how to download and parse documents from service providers.
  *
- * This is the base class of all service provider information classes. It is used
- * by TimetableAccessor to downlaod and parse documents from different service providers. */
+ * This is the base class of all service provider information classes. It is used by
+ * TimetableAccessor.
+ *
+ * The values in this class can be read from XML files using AccessorInfoXmlReader.
+ **/
 class TimetableAccessorInfo {
     friend class AccessorInfoXmlReader; // Because AccessorInfoXmlReader needs to set values when reading xml files
 
 public:
-    /**
-     * @brief Creates a new TimetableAccessorInfo object.
-     *
-     * @todo Don't use so many parameters in the constructor. The setters
-     *   need to be called anyway.
-     *
-     * @param name The name of the accessor.
-     * @param shortUrl A short version of the url to the service provider
-     *   home page. This can be used by the visualization as displayed text of links.
-     * @param author The author of the accessor.
-     * @param shortAuthor An abbreviation of the authors name.
-     * @param email The email address of the author given in @p author.
-     * @param version The version of the accessor information.
-     * @param serviceProviderID The service provider for which this accessor
-     *   is designed for.
-     * @param accessorType The type of the accessor.
-     *
-     * @see AccessorType */
-    explicit TimetableAccessorInfo( const QString& name = QString(),
-            const QString& shortUrl = QString(),
-            const QString& author = QString(), const QString &shortAuthor = QString(),
-            const QString& email = QString(), const QString& version = QString(),
-            const QString& serviceProviderID = QString(),
-            const AccessorType& accessorType = NoAccessor );
+    /** @brief Creates a new TimetableAccessorInfo object. */
+    explicit TimetableAccessorInfo();
 
-    virtual ~TimetableAccessorInfo();
+    /** @brief Simple destructor. */
+    virtual ~TimetableAccessorInfo() {};
 
     /** @brief Gets the name of this accessor, which can be displayed by the visualization. */
-    QString name() const { return m_name; };
+    inline QString name() const { return m_name; };
+
     /** @brief A description of the service provider. */
-    QString description() const { return m_description; };
-    /** @brief Type of the accessor (HTML, XML) */
-    AccessorType accessorType() const { return m_accessorType; };
+    inline QString description() const { return m_description; };
+
+    /** @brief Type of the accessor. */
+    inline AccessorType accessorType() const { return m_accessorType; };
+
     /** @brief The version of the accessor information. */
-    QString version() const { return m_version; };
+    inline QString version() const { return m_version; };
+
     /** @brief The ID of the service provider this accessor is designed for. */
-    QString serviceProvider() const { return m_serviceProviderID; };
+    inline QString serviceProvider() const { return m_serviceProviderID; };
 
     /** @brief The author of the accessor information to be used by the accessor. */
-    QString author() const { return m_author; };
+    inline QString author() const { return m_author; };
+
     /** @brief An abbreviation of the authors name. */
-    QString shortAuthor() const { return m_shortAuthor; };
+    inline QString shortAuthor() const { return m_shortAuthor; };
+
     /** @brief The email address of the author. */
-    QString email() const { return m_email; };
+    inline QString email() const { return m_email; };
 
-    /** @brief The main/home url of the service provider. */
-    QString url() const { return m_url; };
-    /** @brief A short version of the url without protocol or "www" to be displayed in links. */
-    QString shortUrl() const { return m_shortUrl; };
+    /** @brief The main/home URL of the service provider. */
+    inline QString url() const { return m_url; };
 
-    /** @brief A raw url that is used to get departures. */
-    QString departureRawUrl() const { return m_departureRawUrl; };
-    /** @brief An url that is used to download a (GTFS) feed. TODO */
-    QString feedUrl() const { return m_departureRawUrl; };
-    /** @brief Filename of the (GTFS) database. TODO */
-    QString databaseFileName() const { return m_journeyRawUrl; };
-    /** @brief A raw url that is used to get journeys. */
-    QString journeyRawUrl() const { return m_journeyRawUrl; };
-    /** @brief Raw url to an xml file for xml accessors */
-    QString stopSuggestionsRawUrl() const { return m_stopSuggestionsRawUrl; };
-
-    QString realtimeTripUpdateUrl() const { return m_realtimeTripUpdateUrl; };
-    QString realtimeAlertsUrl() const { return m_realtimeAlertsUrl; };
-
-    QString timeZone() const { return m_timeZone; };
-    void setTimeZone( const QString &timeZone ) { m_timeZone = timeZone; };
-
-    QHash<QString, QString> attributesForStopSuggestions() const { return m_attributesForStopSuggestions; };
-    QHash<QString, QString> attributesForDepatures() const { return m_attributesForDepatures; };
-    QHash<QString, QString> attributesForJourneys() const { return m_attributesForJourneys; };
-
-    /** @brief The country for which the service provider has data. */
-    QString country() const { return m_country; };
-    /** @brief A list of cities for which the service provider has data. */
-    QStringList cities() const { return m_cities; };
-
-    QString credit() const { return m_credit; };
-    VehicleType defaultVehicleType() const { return m_defaultVehicleType; };
-    /** @brief If empty, use unicode (QUrl::toPercentEncoding()), otherwise use
-     *   own toPercentEncoding() with this charset. */
-    QByteArray charsetForUrlEncoding() const { return m_charsetForUrlEncoding; };
-    QByteArray fallbackCharset() const { return m_fallbackCharset; };
-
-    /** @brief Gets the URL to get a session key. */
-    QString sessionKeyUrl() const { return m_sessionKeyUrl; };
-    /** @brief Gets the place, where to put the session key in a request.
-     *
-     * @see SessionKeyPlace */
-    SessionKeyPlace sessionKeyPlace() const { return m_sessionKeyPlace; };
-    /** @brief Gets the data to POST with requests. */
-    QString sessionKeyData() const { return m_sessionKeyData; };
+    /** @brief A short version of the URL without protocol to be displayed in links. */
+    inline QString shortUrl() const { return m_shortUrl; };
 
     /**
-     * @brief Gets the minimum seconds to wait between two data-fetches from the service provider. */
-    int minFetchWait() const { return m_minFetchWait; };
+     * @brief Gets the template "raw" URL to a document containing a departure/arrival list.
+     *
+     * The returned string contains placeholders for data needed by the service provider, eg.
+     * the stop name gets a placeholder <em>"{stop}"</em>. If useSeparateCityValue() returns true,
+     * a city value is also needed and has <em>"{city}"</em> as placeholder. Other placeholders
+     * are <em>"{time}"</em> (the time in "hh:mm" format of the first departure/arrival),
+     * <em>{timestamp}</em> (a time_t timestamp), <em>{maxCount}</em> (maximum number of
+     * departures/arrivals to request), <em>{dataType}</em> (the type of data to request, ie.
+     * "departures" or "arrivals"), <em>{date:yyyy-MM-dd}</em> (the date in the given format of
+     * the first departure/arrival, the format string gets passed to QDate::toString()).
+     **/
+    inline QString departureRawUrl() const { return m_departureRawUrl; };
+
+    /**
+     * @brief Gets the template "raw" URL to a document containing a journey list.
+     *
+     * The returned string contains placeholders for data needed by the service provider, eg.
+     * the origin stop name gets a placeholder <em>"{startStop}"</em> and the target stop name gets
+     * a placeholder <em>"{targetStop}"</em>. If useSeparateCityValue() returns true, a city value
+     * is also needed and has <em>"{city}"</em> as placeholder. Other placeholders are
+     * <em>"{time}"</em> (the time in "hh:mm" format of the first journey), <em>{maxCount}</em>
+     * (maximum number of journeys to request), <em>{dataType}</em> (the type of data to request,
+     * ie. "journeys"), <em>{date:yyyy-MM-dd}</em> (the date in the given format of the first
+     * journey, the format string gets passed to QDate::toString()).
+     **/
+    inline QString journeyRawUrl() const { return m_journeyRawUrl; };
+
+    /**
+     * @brief Gets the template "raw" URL to a document containing stop suggestions.
+     *
+     * The returned string contains placeholders for data needed by the service provider, eg.
+     * the stop name gets a placeholder <em>"{stop}"</em>. If useSeparateCityValue() returns true,
+     * a city value is also needed and has <em>"{city}"</em> as placeholder. Another placeholder
+     * that may be needed is <em>{timestamp}</em> (a time_t timestamp).
+     **/
+    inline QString stopSuggestionsRawUrl() const { return m_stopSuggestionsRawUrl; };
+
+    /** @brief An URL that is used to download a (GTFS) feed. */
+    inline QString feedUrl() const { return m_departureRawUrl; };
+
+    /** @brief Filename of the (GTFS) database. */
+    inline QString databaseFileName() const { return m_journeyRawUrl; };
+
+    /** @brief An URL where realtime trip update data gets downloaded (for delays). */
+    inline QString realtimeTripUpdateUrl() const { return m_realtimeTripUpdateUrl; };
+
+    /** @brief An URL where realtime alerts data gets downloaded (for journey news). */
+    inline QString realtimeAlertsUrl() const { return m_realtimeAlertsUrl; };
+
+    /** @brief The timezone of the area in which the service provider operates or an empty string. */
+    inline QString timeZone() const { return m_timeZone; };
+
+    inline QHash<QString, QString> attributesForStopSuggestions() const { return m_attributesForStopSuggestions; };
+    inline QHash<QString, QString> attributesForDepatures() const { return m_attributesForDepatures; };
+    inline QHash<QString, QString> attributesForJourneys() const { return m_attributesForJourneys; };
+
+    /** @brief The country for which the service provider has data. */
+    inline QString country() const { return m_country; };
+
+    /** @brief A list of cities for which the service provider has data. */
+    inline QStringList cities() const { return m_cities; };
+
+    /**
+     * @brief A courtesy string that must be shown to the user when showing the timetable data.
+     *
+     * If this function returns a not empty string it must be shown to the user. This is because
+     * of various license agreements with service providers that require special strings to be
+     * shown.
+     *
+     * If no string is returned the service provider should nevertheless be presented to the user,
+     * but in a shorter form if needed, eg. "data by: www.link.com".
+     **/
+    inline QString credit() const { return m_credit; };
+
+    /** @brief Gets the default vehicle type to be used instead of VehicleType::Unknown. */
+    inline VehicleType defaultVehicleType() const { return m_defaultVehicleType; };
+
+    /**
+     * @brief Gets the charset used to encode urls before percent-encoding them.
+     *
+     * Normally this charset is UTF-8. But that doesn't work for sites that require parameters
+     * in the URL (..&param=x) to be encoded in that specific charset.
+     *
+     * @see TimetableAccessor::toPercentEncoding()
+     **/
+    inline QByteArray charsetForUrlEncoding() const { return m_charsetForUrlEncoding; };
+
+    inline QByteArray fallbackCharset() const { return m_fallbackCharset; };
+
+    /** @brief Gets the URL to get a session key. */
+    inline QString sessionKeyUrl() const { return m_sessionKeyUrl; };
+
+    /**
+     * @brief Gets the place, where to put the session key in a request.
+     *
+     * @see SessionKeyPlace
+     **/
+    inline SessionKeyPlace sessionKeyPlace() const { return m_sessionKeyPlace; };
+
+    /** @brief Gets the data to POST with requests. */
+    inline QString sessionKeyData() const { return m_sessionKeyData; };
+
+    /**
+     * @brief Gets the minimum seconds to wait between two data-fetches from the service provider.
+     **/
+    inline int minFetchWait() const { return m_minFetchWait; };
+
     /** @brief Wheather or not the service provider needs a separate city value. */
-    bool useSeparateCityValue() const { return m_useSeparateCityValue; };
+    inline bool useSeparateCityValue() const { return m_useSeparateCityValue; };
+
     /**
      * @brief Wheather or not cities may be chosen freely.
      *
      * @return true if only cities in the list returned by cities()  are valid.
-     * @return false (default) if cities may be chosen freely, but may be invalid. */
-    bool onlyUseCitiesInList() const { return m_onlyUseCitiesInList; };
+     * @return false (default) if cities may be chosen freely, but may be invalid.
+     **/
+    inline bool onlyUseCitiesInList() const { return m_onlyUseCitiesInList; };
+
     /**
      * @brief Gets a value for the given city that is used by the service provider.
      *
      * @returns Either the value for the given city if it exists, or @p city itself. */
     QString mapCityNameToValue( const QString &city ) const;
-    /** @brief The name of the XML file that was parsed to get this accessor information object. */
-    QString fileName() const { return m_fileName; };
-    /** @brief The file name of the script file to parse html pages. */
-    QString scriptFileName() const { return m_scriptFileName; };
 
-    QList<ChangelogEntry> changelog() const { return m_changelog; };
-    void setChangelog( const QList<ChangelogEntry> &changelog ) {
-        m_changelog = changelog;
-    };
+    /** @brief The name of the XML file that was parsed to get this accessor information object. */
+    inline QString fileName() const { return m_fileName; };
+
+    /** @brief The file name of the script file to parse HTML pages. */
+    inline QString scriptFileName() const { return m_scriptFileName; };
 
     /**
-     * @brief Wheather or not this accessor supports stop name autocompletion. TODO: Remove? */
+     * @brief Returns a list of changelog entries.
+     *
+     * @see ChangelogEntry
+     **/
+    inline QList<ChangelogEntry> changelog() const { return m_changelog; };
+
+    /** @brief Wheather or not this accessor supports stop name autocompletion. TODO: Remove? */
     virtual bool supportsStopAutocompletion() const {
         return false; };
+
     /** @brief Wheather or not this accessor supports the given TimetableInformation. */
     virtual bool supportsTimetableAccessorInfo( const TimetableInformation &info ) const {
         Q_UNUSED(info)
@@ -189,19 +248,22 @@ protected:
      *
      * @param city The name of a city to be replaced by @p value.
      *
-     * @param value The replacement value for @p city. */
-    void addCityNameToValueReplacement( const QString &city, const QString &value ) {
+     * @param value The replacement value for @p city.
+     **/
+    inline void addCityNameToValueReplacement( const QString &city, const QString &value ) {
         m_hashCityNameToValue.insert( city, value ); };
 
     /**
      * @brief Sets the hash, that replaces city names that are keys in the hash with it's
      *   values, before the city name is inserted into a raw url.
      *
-     * @param hash The new replacement hash. */
-    void setCityNameToValueReplacementHash( const QHash<QString, QString> &hash ) {
+     * @param hash The new replacement hash.
+     **/
+    inline void setCityNameToValueReplacementHash( const QHash<QString, QString> &hash ) {
         m_hashCityNameToValue = hash; };
 
-    /** @brief Sets the name of the XML file that was parsed to get this accessor information object.
+    /**
+     * @brief Sets the name of the XML file that was parsed to get this accessor information object.
      *
      * If @p fileName is a symlink the real file name gets retrieved (using
      * KStandardDirs::realFilePath, eg. for the default service providers ending with "_default.xml").
@@ -209,22 +271,23 @@ protected:
     void setFileName( const QString &fileName );
 
     /** @brief Sets the file name of the script file to parse html pages. */
-    void setScriptFile( const QString &scriptFileName ) {
+    inline void setScriptFile( const QString &scriptFileName ) {
         m_scriptFileName = scriptFileName; };
 
     /**
      * @brief Sets the name of this accessor. The name is displayed in the config dialog's
      *   service provider combobox.
      *
-     * @param name The new name of this accessor. */
-    void setName( const QString &name ) { m_name = name; };
+     * @param name The new name of this accessor.
+     **/
+    inline void setName( const QString &name ) { m_name = name; };
 
     /**
      * @brief Sets the ID of the service provider this accessor is designed for.
      *
      * @param serviceProvider The ID of the service provider.
      **/
-    void setServiceProvider( const QString &serviceProvider ) {
+    inline void setServiceProvider( const QString &serviceProvider ) {
         m_serviceProviderID = serviceProvider; };
 
     /**
@@ -232,21 +295,23 @@ protected:
      *
      * @param type The type of the accessor.
      **/
-    void setType( AccessorType type ) { m_accessorType = type; };
+    inline void setType( AccessorType type ) { m_accessorType = type; };
 
     /**
      * @brief Sets the charset used to encode documents from the service provider.
      *
-     * @param charsetForUrlEncoding The charset used for encoding. */
-    void setCharsetForUrlEncoding( const QByteArray &charsetForUrlEncoding ) {
+     * @param charsetForUrlEncoding The charset used for encoding.
+     **/
+    inline void setCharsetForUrlEncoding( const QByteArray &charsetForUrlEncoding ) {
         m_charsetForUrlEncoding = charsetForUrlEncoding; };
 
     /**
      * @brief Sets the charset used to encode documents where it couldn't be determined
      *   automatically.
      *
-     * @param fallbackCharset The charset used if it couldn't be determined. */
-    void setFallbackCharset( const QByteArray &fallbackCharset ) {
+     * @param fallbackCharset The charset used if it couldn't be determined.
+     **/
+    inline void setFallbackCharset( const QByteArray &fallbackCharset ) {
         m_fallbackCharset = fallbackCharset; };
 
     /**
@@ -258,8 +323,9 @@ protected:
      *
      * @param data Data to POST with requests.
      **/
-    void setSessionKeyData( const QString &sessionKeyUrl, SessionKeyPlace sessionKeyPlace,
-                            const QString &data ) {
+    inline void setSessionKeyData( const QString &sessionKeyUrl, SessionKeyPlace sessionKeyPlace,
+                                   const QString &data )
+    {
         m_sessionKeyUrl = sessionKeyUrl;
         m_sessionKeyPlace = sessionKeyPlace;
         m_sessionKeyData = data;
@@ -268,9 +334,9 @@ protected:
     /**
      * @brief Sets the description of this accessor.
      *
-     * @param description A description of this accessor. */
-    void setDescription( const QString &description ) {
-        m_description = description; };
+     * @param description A description of this accessor.
+     **/
+    inline void setDescription( const QString &description ) { m_description = description; };
 
     /**
      * @brief Sets the author of this accessor. You can also set the email of the author.
@@ -279,22 +345,23 @@ protected:
      *
      * @param shortAuthor An abbreviation of the authors name.
      *
-     * @param email The email address of the author. */
+     * @param email The email address of the author.
+     **/
     void setAuthor( const QString &author, const QString &shortAuthor, const QString &email = QString() );
 
     /**
      * @brief Sets the version of this accessor.
      *
-     * @param version The version of this accessor. */
-    void setVersion( const QString &version ) {
-        m_version = version; };
+     * @param version The version of this accessor.
+     **/
+    inline void setVersion( const QString &version ) { m_version = version; };
 
     /**
      * @brief Sets the url to the home page of this service provider.
      *
-     * @param url The url to the home page of the service provider. */
-    void setUrl( const QString &url ) {
-        m_url = url; };
+     * @param url The url to the home page of the service provider.
+     **/
+    inline void setUrl( const QString &url ) { m_url = url; };
 
     /**
      * @brief Sets the short version of the url to the service provider. The short url
@@ -303,78 +370,87 @@ protected:
      *
      * @param shortUrl The short url to be set.
      *
-     * @see url() @see setUrl() */
-    void setShortUrl( const QString &shortUrl ) {
-        m_shortUrl = shortUrl; };
+     * @see url() @see setUrl()
+     **/
+    inline void setShortUrl( const QString &shortUrl ) { m_shortUrl = shortUrl; };
 
-    void setMinFetchWait( int minFetchWait ) { m_minFetchWait = minFetchWait; };
+    inline void setMinFetchWait( int minFetchWait ) { m_minFetchWait = minFetchWait; };
 
-    void setDefaultVehicleType( VehicleType vehicleType ) {
+    inline void setDefaultVehicleType( VehicleType vehicleType ) {
         m_defaultVehicleType = vehicleType; };
 
-    /**
-     * @brief Sets the raw url for xml files to an xml file containing departure/arrival lists.
-     *
-     * @param stopSuggestionsRawUrl The url to an xml file containing departure/arrival lists. */
-    void setStopSuggestionsRawUrl( const QString &stopSuggestionsRawUrl ) {
-        m_stopSuggestionsRawUrl = stopSuggestionsRawUrl; };
-
-    /**
-     * @brief Sets the raw url for departure / arrival lists to an html file containing
-     *   departure/arrival lists. */
-    void setDepartureRawUrl( const QString &departureRawUrl ) {
+    /** @brief Sets the template "raw" URL to documents containing departures/arrivals. */
+    inline void setDepartureRawUrl( const QString &departureRawUrl ) {
         m_departureRawUrl = departureRawUrl; };
 
-    /** @brief Sets the url to a (GTFS) feed. TODO  */
-    void setFeedUrl( const QString &feedUrl ) { setDepartureRawUrl(feedUrl); };
-    /** @brief Sets the filename of the (GTFS) database. TODO  */
-    void setDatabaseFileName( const QString &databaseFileName ) { setJourneyRawUrl(databaseFileName); };
-
-    void setRealtimeTripUpdateUrl( const QString &realtimeTripUpdateUrl ) {
-            m_realtimeTripUpdateUrl = realtimeTripUpdateUrl; };
-    void setRealtimeAlertsUrl( const QString &realtimeAlertsUrl ) {
-            m_realtimeAlertsUrl = realtimeAlertsUrl; };
-
-    /**
-     * @brief Sets the raw url for journey lists to an html file containing journey lists. */
-    void setJourneyRawUrl( const QString &journeyRawUrl ) {
+    /** @brief Sets the template "raw" URL to documents containing journeys. */
+    inline void setJourneyRawUrl( const QString &journeyRawUrl ) {
         m_journeyRawUrl = journeyRawUrl; };
 
-    void setAttributesForStopSuggestions( const QHash<QString, QString> &attributesForStopSuggestions ) {
+    /** @brief Sets the template "raw" URL to documents containing stop suggestions. */
+    inline void setStopSuggestionsRawUrl( const QString &stopSuggestionsRawUrl ) {
+        m_stopSuggestionsRawUrl = stopSuggestionsRawUrl; };
+
+    /** @brief Sets the URL to a (GTFS) feed. TODO  */
+    inline void setFeedUrl( const QString &feedUrl ) { setDepartureRawUrl(feedUrl); };
+
+    /** @brief Sets the filename of the (GTFS) database. TODO  */
+    inline void setDatabaseFileName( const QString &databaseFileName ) {
+        setJourneyRawUrl(databaseFileName); };
+
+    inline void setRealtimeTripUpdateUrl( const QString &realtimeTripUpdateUrl ) {
+            m_realtimeTripUpdateUrl = realtimeTripUpdateUrl; };
+    inline void setRealtimeAlertsUrl( const QString &realtimeAlertsUrl ) {
+            m_realtimeAlertsUrl = realtimeAlertsUrl; };
+
+    inline void setAttributesForStopSuggestions( const QHash<QString, QString> &attributesForStopSuggestions ) {
         m_attributesForStopSuggestions = attributesForStopSuggestions; };
-    void setAttributesForDepatures( const QHash<QString, QString> &attributesForDepartures ) {
+    inline void setAttributesForDepatures( const QHash<QString, QString> &attributesForDepartures ) {
         m_attributesForDepatures = attributesForDepartures; };
-    void setAttributesForJourneys( const QHash<QString, QString> &attributesForJourneys ) {
+    inline void setAttributesForJourneys( const QHash<QString, QString> &attributesForJourneys ) {
         m_attributesForJourneys = attributesForJourneys; };
 
     /**
      * @brief Sets the country for which the service provider has data.
      *
-     * @param country The country to be set. */
-    void setCountry( const QString &country ) { m_country = country; };
+     * @param country The country to be set.
+     **/
+    inline void setCountry( const QString &country ) { m_country = country; };
 
     /**
      * @brief Sets the cities for which the service provider has data.
      *
-     * @param cities A list of cities for which the service provider has data.
-     *
-     * @see setOnlyUseCitiesInList() */
-    void setCities( const QStringList &cities ) {
-        m_cities = cities; };
+     * @see setOnlyUseCitiesInList()
+     **/
+    inline void setCities( const QStringList &cities ) { m_cities = cities; };
 
-    void setCredit( const QString &credit ) { m_credit = credit; };
+    inline void setCredit( const QString &credit ) { m_credit = credit; };
+
+    /**
+     * @brief Sets the list of changelog entries.
+     *
+     * @param changelog The new list of changelog entries.
+     * @see ChangelogEntry
+     **/
+    inline void setChangelog( const QList<ChangelogEntry> &changelog ) {
+        m_changelog = changelog;
+    };
+
+    /** @brief Sets the timezone of the area in which the service provider operates */
+    inline void setTimeZone( const QString &timeZone ) { m_timeZone = timeZone; };
 
     /**
      * @brief Sets wheather or not the service provider needs a separate city value. */
-    void setUseSeparateCityValue( bool useSeparateCityValue ) {
+    inline void setUseSeparateCityValue( bool useSeparateCityValue ) {
         m_useSeparateCityValue = useSeparateCityValue; };
 
     /**
      * @brief Sets wheather or not cities may be freely chosen.
      *
      * @param onlyUseCitiesInList true if only cities in the list returned by cities()  are valid.
-     *   false (default) if cities may be freely chosen, but may be invalid. */
-    void setOnlyUseCitiesInList( bool onlyUseCitiesInList ) {
+     *   false (default) if cities may be freely chosen, but may be invalid.
+     **/
+    inline void setOnlyUseCitiesInList( bool onlyUseCitiesInList ) {
         m_onlyUseCitiesInList = onlyUseCitiesInList; };
 
 protected:

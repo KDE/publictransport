@@ -653,6 +653,7 @@ void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &dat
     @li @ref accessor_infos_xml
     @li @ref accessor_infos_script
     @li @ref examples
+    @li @ref examples_xml_gtfs
     @li @ref examples_xml_script
     @li @ref examples_script
 <br />
@@ -675,11 +676,11 @@ tag are <span style="background-color: #ffbbbb;">highlighted</span>):
 <table>
 <tr style="background-color: #bbbbbb; font-weight: bold;"><td>Tag</td> <td>Parent Tag</td> <td>Optional?</td> <td>Description</td></tr>
 
-<tr style="background-color: #ffbbbb;"><td><b>\<accessorInfo\></b></td>
-<td>Root</td> <td>Required</td> <td>This is the root item.</td></tr>
+<tr style="background-color: #ffbbbb;"><td><b>\<accessorInfo fileVersion="1.0" version="1.0" type="GTFS"\></b></td>
+<td>Root</td> <td>Required</td> <td>This is the root item. It needs three attributes: <em>fileVersion</em> (the version of the accessor info XML structure, currently only "1.0" gets accepted), <em>version</em> (the version of this accessor info XML file, the first version should be "1.0", update after changes to the XML file) and <em>type</em> (can be "GTFS", "XML" or "Script", which equals the deprecated "HTML" type).</td></tr>
 
 <tr><td><b>\<xml_file_version type="publictransport" version="1.0" /\></b></td>
-<td>\<accessorInfo\></td> <td>Not used</td>
+<td>\<accessorInfo\></td> <td>(Not used)</td>
 <td>This is currently not used by the data engine. But to be sure that the xml is parsed correctly you should add this tag. The version is the version of the xml file structure, current version is 1.0.</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<name\></b></td>
@@ -702,14 +703,6 @@ tag are <span style="background-color: #ffbbbb;">highlighted</span>):
 <td style="color:#888800">\<author\></td> <td>(Optional)</td> <td>
 The email address of the author of this accessor info xml.</td></tr>
 
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<version\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
-<td>The version of this accessor info xml, should start with "1.0".</td></tr>
-
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<type\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
-<td>Can be either HTML or XML.</td></tr>
-
 <tr style="border-top: 3px double black;"><td style="color:#00bb00"><b>\<cities\></b></td>
 <td>\<accessorInfo\></td> <td>(Optional)</td>
 <td>A list of cities the service provider has data for (with surrounding \<city\>-tags).</td></tr>
@@ -719,39 +712,51 @@ The email address of the author of this accessor info xml.</td></tr>
 <td>A city in the list of cities (\<cities\>). Can have an attribute "replaceWith", to replace city names with values used by the service provider.</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<description\></b></td>
-<td>\<accessorInfo\></td> <td>(Required)</td>
+<td>\<accessorInfo\></td> <td>Required</td>
 <td>A description of the service provider / accessor. You don't need to list the features supported by the accessor here, the feature list is generated automatically.</td></tr>
 
 <tr style="background-color: #ffbbbb;"><td><b>\<url\></b></td>
-<td>\<accessorInfo\></td> <td>(Required)</td>
+<td>\<accessorInfo\></td> <td>Required</td>
 <td>An url to the service provider home page.</td></tr>
 
-<tr style="background-color: #00bb00;"><td><b>\<shortUrl\></b></td>
+<tr><td><b>\<shortUrl\></b></td>
 <td>\<accessorInfo\></td> <td>(Optional)</td>
 <td>A short version of the url, used as link text. If it is not given the URL given in the \<url\> tag is made short, ie. by removing "http://" from the beginning.</td></tr>
 
-<tr><td style="color:#770000;"><b>\<feedUrl\></b></td>
-<td style="color:#bb0000;">\<accessorInfo\></td> <td>(Required only with "GTFS" type)</td>
+<tr><td><b>\<credit\></b></td>
+<td>\<accessorInfo\></td> <td>(Optional)</td>
+<td>A courtesy string that is required to be shown to the user when showing the timetable data of the GTFS feed. If this tag is not given, a short default string is used, eg. "data by: www.provider.com" or only the link (depending on available space). Please check the license agreement for using the GTFS feed for such a string and include it here.</td></tr>
+
+<tr style="background-color: #ffdddd; border-top: 3px double black;"><td style="color:#0000bb;"><b>\<feedUrl\></b></td>
+<td>\<accessorInfo\></td> <td>(Required only with "GTFS" type)</td>
 <td>An URL to the GTFS feed to use. Use an URL to the latest available feed.</td></tr>
 
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td style="color:#bb0000;"><b>\<rawUrls\></b></td>
-<td>\<accessorInfo\></td> <td>(Required)</td>
+<tr><td style="color:#0000bb;"><b>\<realtimeTripUpdateUrl\></b></td>
+<td>\<accessorInfo\></td> <td>(Optional, only used with "GTFS" type)</td>
+<td>An URL to a GTFS-realtime data source with trip updates. If this tag is not present delay information will not be available.</td></tr>
+
+<tr><td style="color:#0000bb;"><b>\<realtimeAlertsUrl\></b></td>
+<td>\<accessorInfo\></td> <td>(Optional, only used with "GTFS" type)</td>
+<td>An URL to a GTFS-realtime data source with alerts. If this tag is not present journey news will not be available.</td></tr>
+
+<tr style="background-color: #ffdddd; border-top: 3px double black;"><td style="color:#bb0000;"><b>\<rawUrls\></b></td>
+<td>\<accessorInfo\></td> <td>Required, not used with "GTFS" type</td>
 <td>Contains the used "raw urls". A raw url is a string with placeholders that are replaced with values to get a real url.</td></tr>
 
 <tr><td style="color:#770000;"><b>\<departures\></b></td>
-<td style="color:#bb0000;">\<rawUrls\></td> <td>(Required, not used with "GTFS" type)</td>
-<td>A raw url (in a CDATA tag) to a page containing a departure / arrival list. The following substrings are replaced by current values: <b>{stop}</b> (the stop name), <b>{type}</b> (arr or dep for arrivals or departures), <b>{time}</b> (the time of the first departure / arrival), <b>{maxCount}</b> (maximal number of departures / arrivals).</td></tr>
+<td style="color:#bb0000;">\<rawUrls\></td> <td>Required</td>
+<td>A raw url (in a CDATA tag) to a page containing a departure / arrival list. The following substrings are replaced by current values: <b>{stop}</b> (the stop name), <b>{type}</b> (arr or dep for arrivals or departures), <b>{time}</b> (the time of the first departure / arrival), <b>{maxCount}</b> (maximal number of departures / arrivals). If data needs to be send using POST method (instead of GET), some additional attributes are needed (see @ref accessor_infos_xml_post).</td></tr>
 
 <tr><td style="color:#770000;"><b>\<journeys\></b></td>
-<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional, not used with "GTFS" type)</td>
-<td>A raw url (in a CDATA tag) to a page containing a journey list. The following substrings are replaced by current values: <b>{startStop}</b> (the name of the stop where the journey starts), <b>{targetStop}</b> (the name of the stop where the journey ends), <b>{time}</b> (the time of the first journey), <b>{maxCount}</b> (maximal number of journeys).</td></tr>
+<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional)</td>
+<td>A raw url (in a CDATA tag) to a page containing a journey list. The following substrings are replaced by current values: <b>{startStop}</b> (the name of the stop where the journey starts), <b>{targetStop}</b> (the name of the stop where the journey ends), <b>{time}</b> (the time of the first journey), <b>{maxCount}</b> (maximal number of journeys). If data needs to be send using POST method (instead of GET), some additional attributes are needed (see @ref accessor_infos_xml_post).</td></tr>
 
 <tr><td style="color:#770000;"><b>\<stopSuggestions\></b></td>
-<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional, not used with "GTFS" type)</td>
-<td>A raw url (in a CDATA tag) to a page containing a list of stop suggestions. Normally this tag isn't needed, because the url is the same as the url to the departure list. When the stop name is ambiguous the service provider can show a page containing a list of stop suggestions. You may want to use this tag if you want to parse XML files for departure lists and get the stop suggestions from an HTML page or if there is a special url only for stop suggestions.</td></tr>
+<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional)</td>
+<td>A raw url (in a CDATA tag) to a page containing a list of stop suggestions. Normally this tag isn't needed, because the url is the same as the url to the departure list. When the stop name is ambiguous the service provider can show a page containing a list of stop suggestions. You may want to use this tag if you want to parse XML files for departure lists and get the stop suggestions from an HTML page or if there is a special url only for stop suggestions. If data needs to be send using POST method (instead of GET), some additional attributes are needed (see @ref accessor_infos_xml_post).</td></tr>
 
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<script></b></td>
-<td>\<accessorInfo\></td> <td>Required only with "Scripted" type</td>
+<tr style="background-color: #ffdddd; border-top: 3px double black;"><td><b>\<script></b></td>
+<td>\<accessorInfo\></td> <td>Required only with "Script" type</td>
 <td>Contains the filename of the script to be used to parse timetable documents. The script must be in the same directory as the XML file. Always use HTML as type when using a script, you can also parse XML files in the script.</td></tr>
 
 <tr style="border-top: 3px double black;"><td style="color:#00bb00;"><b>\<changelog\></b></td>
@@ -773,8 +778,16 @@ The email address of the author of this accessor info xml.</td></tr>
 <tr><td style="color:#660066;"><b>\<putInto\></b></td>
 <td style="color:#880088;">\<sessionKey\></td> <td>(Optional)</td>
 <td>The name of a place where to put the session key in requests (currently only "CustomHeader" is supported). May contain a <em>"data"</em> attribute, which is used for "CustomHeader" as name of the custom HTTP header.</td></tr>
-
 </table>
+
+@subsection accessor_infos_xml_post Request Data Using POST Method
+If the service provider requires the POST method to be used to send data in requests (instead of GET), some additional attributes are needed for the raw URL tags. You can also use eg. POST for departures and GET for stop suggestions.
+
+To use POST for departures, add the following attributes to the \<departures\> tag (for journeys/stop suggestions use the associated rawUrls tags):@n
+  @li <em>method="post"</em> If this attribute is not found, method is "get".
+  @li <em>data='{"stopName":"{stop}"}'</em> Template for data to be POSTed to the server in requests. Can contain the same placeholders like the raw URL used for the GET method (see above). If you are unsure what data is expected by the server, you can use eg. <em>Wireshark</em> to see what data gets sent to the server when using the web site.
+  @li <em>charset="utf-8"</em> Optional, sets the "Charsets" meta data of the request, eg. "utf-8".
+  @li <em>contenttype="application/json; charset=utf-8"</em> Optional, sets the "Content-Type" meta data of the request, can also contain charset information. The value of the <em>data</em> attribute should be of the given content type, eg. "application/json".
 @n @n
 
 @section accessor_infos_script Script file structure
@@ -809,14 +822,19 @@ There are functions with special names that get called by the data engine when n
 @n @n
 @section examples Accessor Examples
 @n
+@subsection examples_xml_gtfs A Simple GTFS Accessor
+The simplest accessor info xml can be written when using a GTFS feed. This example also contains tags for GTFS-realtime support, which is optional.
+@include us_bart.xml
+
+@n
 @subsection examples_xml_script A Simple Accessor
 Here is an example of a simple accessor info xml of an accessor which uses a script to parse data from the service provider:
-@verbinclude fr_gares.xml
+@include fr_gares.xml
 
 @n
 @subsection examples_script A Simple Parsing-Script
 This is an example of a script used to parse data from the service provider (actually the one used by the XML from the last section).
-@verbinclude fr_gares.js
+@include fr_gares.js
 */
 
 /** @page pageClassDiagram Class Diagram
