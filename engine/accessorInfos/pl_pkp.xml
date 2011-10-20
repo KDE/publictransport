@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<accessorInfo fileVersion="1.0" version="1.3" type="HTML">
+<accessorInfo fileVersion="1.0" version="1.3" type="Script">
     <name lang="en">Polskie Koleje Państwowe</name>
     <description lang="en">This service provider has static data. That means, that displayed departures may actually not be valid for today. Please view the journey news, to see if a departure is valid for today (e.g. 'Mo-Fr').</description>
     <author>

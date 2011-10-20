@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<accessorInfo fileVersion="1.0" version="1.3" type="HTML">
+<accessorInfo fileVersion="1.0" version="1.3" type="Script">
     <name lang="en">Deutsche Bahn</name>
     <description lang="de">Dieser Service-Provider liefert Ergebnisse für Städte in Deutschland und auch für viele andere Städte in Europa. Für Städte in Deutschland enthalten die Ergebnisse Straßenbahnen, Busse, U-Bahnen, regionalen Zugverkehr und andere Züge, während die Städte in anderen Ländern nur Züge enthalten. Verzögerungen sind auf fünf Minuten gerundet (es gibt derzeit keine Möglichkeit Verzögerungen mit Minuten-Genauigkeit zu erhalten). Eine Verzögerung zwischen null und vier Minuten wird nicht angezeigt, fünf bis neun Minuten Verzögerung werden als fünf Minuten Verzögerung angezeigt und so weiter. </description>
     <description lang="en">This service provider works for cities in Germany and also for many other cities in Europe. Cities in Germany include trams, buses, subways, interurban trains and other trains, while cities in other countries may only include trains. Delays are rounded to five minute steps (there's currently no way to get delays with minute accuracy). A delay between zero and four minutes isn't shown, five to nine minutes delay are shown as five minutes dealy and so on.</description>

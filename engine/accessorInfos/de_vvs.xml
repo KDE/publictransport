@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<accessorInfo fileVersion="1.0" version="1.1" type="HTML">
+<accessorInfo fileVersion="1.0" version="1.1" type="Script">
     <name lang="en">Verkehrs- und Tarifverbund Stuttgart GmbH</name>
     <description lang="en">Provides departure information for Stuttgart in Germany.</description>
     <author>
