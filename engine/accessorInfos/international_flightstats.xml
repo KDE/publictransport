@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo fileVersion="1.0" version="1.2" type="HTML">
+<accessorInfo fileVersion="1.0" version="1.2" type="Script">
 <xml_file_version type="publictransport" version="1.0" />
 <name lang="en">Conducive Technology Corp. (flightstats.com)</name>
 <author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
