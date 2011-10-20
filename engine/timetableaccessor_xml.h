@@ -24,14 +24,14 @@
 #ifndef TIMETABLEACCESSOR_XML_HEADER
 #define TIMETABLEACCESSOR_XML_HEADER
 
-#include "timetableaccessor.h"
+#include "timetableaccessor_online.h"
 #include "timetableaccessor_script.h"
 
 
 /** @class TimetableAccessorXml
  * @brief This is the base class for all XML based accessors.
  **/
-class TimetableAccessorXml : public TimetableAccessor
+class TimetableAccessorXml : public TimetableAccessorOnline
 {
     // Because the XML accessor uses TimetableAccessorScript::parseDocumentPossibleStops().
     friend class TimetableAccessorScript;

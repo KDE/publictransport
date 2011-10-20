@@ -34,7 +34,7 @@
 #include <QScriptValueIterator>
 
 TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info )
-        : TimetableAccessor(info), m_script(0), m_resultObject(0)
+        : TimetableAccessorOnline(info), m_script(0), m_resultObject(0)
 {
     m_scriptState = WaitingForScriptUsage;
     m_scriptFeatures = readScriptFeatures();

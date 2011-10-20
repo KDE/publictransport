@@ -18,15 +18,15 @@
  */
 
 /** @file
-* @brief This file contains the base class for accessors using script files
-*   for parsing that are used by the public transport data engine.
-*
-* @author Friedrich Pülz <fpuelz@gmx.de> */
+ * @brief This file contains the base class for accessors using script files
+ *   for parsing that are used by the public transport data engine.
+ *
+ * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef TIMETABLEACCESSOR_SCRIPT_HEADER
 #define TIMETABLEACCESSOR_SCRIPT_HEADER
 
-#include "timetableaccessor.h"
+#include "timetableaccessor_online.h"
 
 namespace Kross {
     class Action;
@@ -34,9 +34,9 @@ namespace Kross {
 class ResultObject;
 
 /** @class TimetableAccessorScript
-* @brief The base class for all scripted accessors.
-*/
-class TimetableAccessorScript : public TimetableAccessor {
+ * @brief The base class for all scripted accessors.
+ **/
+class TimetableAccessorScript : public TimetableAccessorOnline {
     Q_OBJECT
 
     // Because the XML accessor uses TimetableAccessorScript::parseDocumentPossibleStops().

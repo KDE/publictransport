@@ -31,9 +31,10 @@ set( publictransport_engine_SRCS
     accessorinfoxmlreader.cpp
     timetableaccessor.cpp
     timetableaccessor_info.cpp
-    timetableaccessor_xml.cpp
-    timetableaccessor_script.cpp
+    timetableaccessor_online.cpp
     timetableaccessor_generaltransitfeed.cpp
+    timetableaccessor_script.cpp
+    timetableaccessor_xml.cpp
     generaltransitfeed_importer.cpp
     generaltransitfeed_database.cpp
     generaltransitfeed_realtime.cpp

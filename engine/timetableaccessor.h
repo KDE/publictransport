@@ -217,6 +217,8 @@ public:
      * @brief Constructs a new TimetableAccessor object.
      *
      * You should use createAccessor() to get an accessor for a given service provider ID.
+     *
+     * @param info An object containing information about the service provider.
      **/
     explicit TimetableAccessor( TimetableAccessorInfo *info );
 
@@ -272,20 +274,19 @@ public:
      **/
     static QString accessorCacheFileName();
 
-    /**
-     * @brief Gets the AccessorType of this accessor.
-     *
-     * The default implementation returns @ref NoAccessor. Derived classes should overwrite this
-     * to return the appropriate type.
-     **/
-    virtual AccessorType type() const { return NoAccessor; };
-
     /** @brief Gets the service provider ID for the given accessor XML file name. */
     static QString serviceProviderIdFromFileName( const QString &accessorXmlFileName );
 
     /** @brief Gets the file path of the default service provider XML for the given @p location. */
     static QString defaultServiceProviderForLocation( const QString &location,
                                                       const QStringList &dirs = QStringList() );
+
+    /**
+     * @brief Gets the type of this accessor.
+     *
+     * Derived classes need to overwrite this and return the appropriate type.
+     **/
+    virtual AccessorType type() const = 0;
 
     /** @brief Gets a list of features that this accessor supports. */
     virtual QStringList features() const;
@@ -301,9 +302,6 @@ public:
      *
      * This info object contains all information read from the accessors XML file, like it's name,
      * description, an URL to the home page of the service provider, etc.
-     *
-     * Many functions in this class simply call a function with the same name in
-     * TimetableAccessorInfo, but they might change the values.
      **/
     inline const TimetableAccessorInfo *info() const { return m_info; };
 
@@ -349,9 +347,6 @@ public:
      **/
     virtual void requestJourneys( const JourneyRequestInfo &requestInfo );
 
-    /** @brief Gets the information object used by this accessor. */
-    const TimetableAccessorInfo &timetableAccessorInfo() const { return *m_info; };
-
     /**
      * @brief Whether or not a special URL for stop suggestions is available.
      *
@@ -373,80 +368,6 @@ public:
 
 protected:
     /**
-     * @brief Parses the contents of a document and puts the results into @p journeys.
-     *
-     * This function is used by the default implementations of @ref requestDepartures,
-     * @ref requestJourneys, etc.
-     * The default implementation does nothing and returns false.
-     *
-     * @param document The contents of the document that should be parsed.
-     * @param journeys A pointer to a list of departure/arrival or journey information.
-     *   The results of parsing the document is stored in @p journeys.
-     * @param globalInfo Information for all items get stored in this object.
-     * @param parseDocumentMode The mode of parsing, e.g. parse for
-     *   departures/arrivals or journeys.
-     * @return true, if there were no errors and the data in @p journeys is valid.
-     * @return false, if there were an error parsing the document.
-     *
-     * @see parseDocumentPossibleStops()
-     **/
-    virtual bool parseDocument( const QByteArray &document,
-            QList<PublicTransportInfo*> *journeys, GlobalTimetableInfo *globalInfo,
-            ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
-
-    /**
-     * @brief Override this method to parse the contents of a received document for
-     *   an url to a document containing later journeys. The default implementation
-     *   returns a null string.
-     *
-     * @param document The contents of the document that should be parsed.
-     * @return The parsed url.
-     **/
-    virtual QString parseDocumentForLaterJourneysUrl( const QByteArray &document ) {
-        Q_UNUSED( document );
-        return QString();
-    };
-
-    /**
-     * @brief Override this method to parse the contents of a received document for
-     *   an url to a document containing detailed journey information. The default
-     *   implementation returns a null string.
-     *
-     * @param document The contents of the document that should be parsed.
-     * @return The parsed url.
-     **/
-    virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document ) {
-        Q_UNUSED( document );
-        return QString();
-    };
-
-    /**
-     * @brief Override this method to parse the contents of a received document for
-     *   a session key. The default implementation returns a null string.
-     *
-     * @param document The contents of the document that should be parsed.
-     * @return The parsed session key.
-     **/
-    virtual QString parseDocumentForSessionKey( const QByteArray &document ) {
-        Q_UNUSED( document );
-        return QString();
-    };
-
-    /**
-     * @brief Parses the contents of a received document for a list of possible stop names
-     *   and puts the results into @p stops.
-     *
-     * @param document The contents of the document that should be parsed.
-     * @param stops A pointer to a list of @ref StopInfo objects.
-     * @return true, if there were no errors.
-     * @return false, if there were an error parsing the document.
-     *
-     * @see parseDocument()
-     **/
-    virtual bool parseDocumentForStopSuggestions( const QByteArray &document,
-                                                  QList<StopInfo*> *stops );
-
-    /**
      * @brief Constructs an URL to a document containing a departure/arrival list
      *
      * Uses the template "raw" URL for departures and replaces placeholders with the needed
@@ -454,7 +375,7 @@ protected:
      *
      * @param requestInfo Information about the departure/arrival request to get a source URL for.
      **/
-    KUrl departureUrl( const DepartureRequestInfo &requestInfo ) const;
+    virtual KUrl departureUrl( const DepartureRequestInfo &requestInfo ) const;
 
     /**
      * @brief Constructs an URL to a document containing a journey list.
@@ -464,7 +385,7 @@ protected:
      *
      * @param requestInfo Information about the journey request to get a source URL for.
      **/
-    KUrl journeyUrl( const JourneyRequestInfo &requestInfo ) const;
+    virtual KUrl journeyUrl( const JourneyRequestInfo &requestInfo ) const;
 
     /**
      * @brief Constructs an URL to a document containing stop suggestions.
@@ -474,7 +395,7 @@ protected:
      *
      * @param requestInfo Information about the stop suggestions request to get a source URL for.
      **/
-    KUrl stopSuggestionsUrl( const StopSuggestionRequestInfo &requestInfo );
+    virtual KUrl stopSuggestionsUrl( const StopSuggestionRequestInfo &requestInfo );
 
     QString m_curCity; /**< @brief Stores the currently used city. */
     TimetableAccessorInfo *m_info; /**< @brief Stores service provider specific information that is
@@ -574,48 +495,15 @@ signals:
             const QUrl &requestUrl, const RequestInfo *requestInfo );
 
 protected slots:
-    /** @brief All data of a journey list has been received. */
-    void result( KJob* job );
-
     /**
      * @brief Clears the session key.
      *
      * This gets called from time to time by a timer, to prevent using expired session keys.
      **/
-    void clearSessionKey();
-
-protected:
-    // Stores a session key, if it's needed by the accessor
-    QString m_sessionKey;
-    QTime m_sessionKeyGetTime;
-
-    struct JobInfos {
-        // Mainly for QHash
-        JobInfos() : requestInfo(0)
-        {
-        };
-
-        JobInfos( const KUrl &url, RequestInfo *requestInfo )
-                : requestInfo(requestInfo)
-        {
-            this->url = url;
-        };
-
-        ~JobInfos()
-        {
-        };
-
-        KUrl url;
-        QSharedPointer<RequestInfo> requestInfo;
-    };
+    void clearSessionKey() {};
 
 private:
     static QString gethex( ushort decimal );
-
-    bool m_idAlreadyRequested;
-
-    // Stores information about currently running download jobs
-    QHash< KJob*, JobInfos > m_jobInfos;
 };
 
 #endif // TIMETABLEACCESSOR_HEADER

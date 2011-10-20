@@ -28,7 +28,7 @@
 #include <QDomDocument>
 
 TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfo *info )
-        : TimetableAccessor(info)
+        : TimetableAccessorOnline(info)
 {
     // Create a script accessor object to parse stop suggestions if a script filename is given
     if ( !info->scriptFileName().isEmpty() ) {

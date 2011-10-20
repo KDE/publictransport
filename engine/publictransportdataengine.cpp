@@ -292,7 +292,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
             // Try to get the specific accessor
             const TimetableAccessor *accessor = getSpecificAccessor( serviceProvider );
             if ( accessor ) {
-                dataSource.insert( accessor->timetableAccessorInfo().name(),
+                dataSource.insert( accessor->info()->name(),
                                    serviceProviderInfo(accessor) );
                 loadedAccessors << serviceProvider;
 //                 delete accessor; TODO Delete after not used for X seconds
