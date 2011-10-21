@@ -1303,17 +1303,19 @@ void PublicTransport::resized()
         // Update filter widget (show icon or icon with text)
         Plasma::ToolButton *filterWidget =
                 m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetFilter );
-        if ( m_titleWidget->layout()->preferredWidth() > size.width() ) {
-            // Show only an icon on the filter toolbutton, if there is not enough horizontal space
-            filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonIconOnly );
-            filterWidget->setMaximumWidth( filterWidget->size().height() );
-        } else if ( filterWidget->nativeWidget()->toolButtonStyle() == Qt::ToolButtonIconOnly
-            && size.width() > m_titleWidget->layout()->minimumWidth() +
-            QFontMetrics(filterWidget->font()).width(filterWidget->text()) + 60 )
-        {
-            // Show the icon with text beside if there is enough horizontal space again
-            filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-            filterWidget->setMaximumWidth( -1 );
+        if ( filterWidget ) {
+            if ( m_titleWidget->layout()->preferredWidth() > size.width() ) {
+                // Show only an icon on the filter toolbutton, if there is not enough horizontal space
+                filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonIconOnly );
+                filterWidget->setMaximumWidth( filterWidget->size().height() );
+            } else if ( filterWidget->nativeWidget()->toolButtonStyle() == Qt::ToolButtonIconOnly
+                && size.width() > m_titleWidget->layout()->minimumWidth() +
+                QFontMetrics(filterWidget->font()).width(filterWidget->text()) + 60 )
+            {
+                // Show the icon with text beside if there is enough horizontal space again
+                filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
+                filterWidget->setMaximumWidth( -1 );
+            }
         }
     }
 
