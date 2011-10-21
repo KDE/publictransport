@@ -218,7 +218,13 @@ void PublicTransport::init()
     // Check for network connectivity and create tooltip / popup icon
     checkNetworkStatus();
     createTooltip();
-    updatePopupIcon();
+    if ( isIconified() ) {
+        updatePopupIcon();
+    } else {
+        // Set a popup icon, because otherwise the applet collapses to an icon
+        // when shown in a desktop
+        setPopupIcon( "public-transport-stop" );
+    }
 
     connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
