@@ -33,12 +33,11 @@
 #include <QFile>
 #include <QScriptValueIterator>
 
-TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info )
-        : TimetableAccessorOnline(info), m_script(0), m_resultObject(0)
+TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info, QObject *parent )
+        : TimetableAccessorOnline(info, parent), m_script(0), m_resultObject(0)
 {
     m_scriptState = WaitingForScriptUsage;
     m_scriptFeatures = readScriptFeatures();
-//     kDebug() << "Script accessor created witout initializing script for" << m_info->serviceProvider();
 }
 
 TimetableAccessorScript::~TimetableAccessorScript()

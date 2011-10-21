@@ -27,14 +27,12 @@
 #include <QRegExp>
 #include <QDomDocument>
 
-TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfo *info )
-        : TimetableAccessorOnline(info)
+TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfo *info, QObject *parent )
+        : TimetableAccessorOnline(info, parent), m_accessorScript(0)
 {
     // Create a script accessor object to parse stop suggestions if a script filename is given
     if ( !info->scriptFileName().isEmpty() ) {
-        m_accessorScript = new TimetableAccessorScript( info );
-    } else {
-        m_accessorScript = NULL;
+        m_accessorScript = new TimetableAccessorScript( info, this );
     }
 }
 

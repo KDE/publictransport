@@ -42,10 +42,11 @@ public:
      *
      * @param info Information about how to download and parse the documents of a
      *   service provider.
+     * @param parent The parent QObject.
      *
      * @note Can be used if you have a custom TimetableAccessorInfo object.
      **/
-    TimetableAccessorXml( TimetableAccessorInfo *info );
+    TimetableAccessorXml( TimetableAccessorInfo *info, QObject *parent = 0 );
 
     /**
      * @brief Destructor, destroys the used "sub-" @ref TimetableAccessorScript, which is used

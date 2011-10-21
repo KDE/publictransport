@@ -87,8 +87,9 @@ public:
      * You should use createAccessor() to get an accessor for a given service provider ID.
      *
      * @param info An object containing information about the service provider.
+     * @param parent The parent QObject.
      **/
-    explicit TimetableAccessorGeneralTransitFeed( TimetableAccessorInfo *info );
+    explicit TimetableAccessorGeneralTransitFeed( TimetableAccessorInfo *info, QObject *parent = 0 );
 
     /** @brief Destructor. */
     virtual ~TimetableAccessorGeneralTransitFeed();

@@ -56,10 +56,10 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
 	QCOMPARE( testVisualization.data["serviceProvider"].toString(), serviceProvider );
 	QVERIFY( !testVisualization.data["requestUrl"].toString().isEmpty() );
 	QVERIFY( QUrl(testVisualization.data["requestUrl"].toString()).isValid() );
-	
+
 	int count = testVisualization.data["count"].toInt();
 	QVERIFY( count > 0 );
-	
+
 	for ( int i = 0; i < count; ++i )
 	{
 		// Ensure that the key exists
@@ -69,12 +69,12 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
 				  "for source \"Departures ...\", there should be \"count\" (ie. %2) "
 				  "departures beginning at 0")
 				  .arg(i).arg(count).toLatin1().data() );
-		
+
 		QVariantHash departureData = testVisualization.data[key].toHash();
-		
+
 		// Each stop object should contain some elements
 		QVERIFY( !departureData.isEmpty() );
-		
+
 		// Ensure that these keys are in the hash
 		QVERIFY( departureData.contains("departure") );
 		QVERIFY( departureData.contains("target") );
@@ -83,15 +83,15 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
 		QVERIFY( departureData.contains("vehicleName") );
 		QVERIFY( departureData.contains("vehicleNamePlural") );
 		QVERIFY( departureData.contains("vehicleIconName") );
-		QVERIFY( departureData.contains("journeyNews") );
-		QVERIFY( departureData.contains("platform") );
-		QVERIFY( departureData.contains("operator") );
+// 		QVERIFY( departureData.contains("journeyNews") ); // NOTE These values are only given if they are not empty
+// 		QVERIFY( departureData.contains("platform") );
+// 		QVERIFY( departureData.contains("operator") );
 		QVERIFY( departureData.contains("delay") );
-		QVERIFY( departureData.contains("delayReason") );
-		QVERIFY( departureData.contains("routeStops") );
-		QVERIFY( departureData.contains("routeTimes") );
+// 		QVERIFY( departureData.contains("delayReason") );
+// 		QVERIFY( departureData.contains("routeStops") );
+// 		QVERIFY( departureData.contains("routeTimes") );
 		QVERIFY( departureData.contains("routeExactStops") );
-		
+
 		// Test data types
 		QVERIFY( departureData["departure"].canConvert(QVariant::DateTime) );
 		QVERIFY( departureData["target"].canConvert(QVariant::String) );
@@ -100,21 +100,33 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
 		QVERIFY( departureData["vehicleName"].canConvert(QVariant::String) );
 		QVERIFY( departureData["vehicleNamePlural"].canConvert(QVariant::String) );
 		QVERIFY( departureData["vehicleIconName"].canConvert(QVariant::String) );
-		QVERIFY( departureData["journeyNews"].canConvert(QVariant::String) );
-		QVERIFY( departureData["platform"].canConvert(QVariant::String) );
-		QVERIFY( departureData["operator"].canConvert(QVariant::String) );
-		QVERIFY( departureData["delay"].canConvert(QVariant::Int) );
-		QVERIFY( departureData["delayReason"].canConvert(QVariant::String) );
-		QVERIFY( departureData["routeStops"].canConvert(QVariant::StringList) );
-		QVERIFY( departureData["routeTimes"].canConvert(QVariant::List) );
-		QVERIFY( departureData["routeExactStops"].canConvert(QVariant::Int) );
-		
+        QVERIFY( departureData["delay"].canConvert(QVariant::Int) );
+        QVERIFY( departureData["routeExactStops"].canConvert(QVariant::Int) );
+        if ( departureData.contains("journeyNews") ) {
+            QVERIFY( departureData["journeyNews"].canConvert(QVariant::String) );
+        }
+        if ( departureData.contains("platform") ) {
+            QVERIFY( departureData["platform"].canConvert(QVariant::String) );
+        }
+        if ( departureData.contains("operator") ) {
+            QVERIFY( departureData["operator"].canConvert(QVariant::String) );
+        }
+        if ( departureData.contains("delayReason") ) {
+            QVERIFY( departureData["delayReason"].canConvert(QVariant::String) );
+        }
+        if ( departureData.contains("routeStops") ) {
+            QVERIFY( departureData["routeStops"].canConvert(QVariant::StringList) );
+        }
+        if ( departureData.contains("routeTimes") ) {
+            QVERIFY( departureData["routeTimes"].canConvert(QVariant::List) );
+        }
+
 		// Check routeTimes list for data types
 		QVariantList times = departureData[ "routeTimes" ].toList();
 		foreach( const QVariant &time, times ) {
 			QVERIFY( time.canConvert(QVariant::Time) );
 		}
-		
+
 		// The first stop of the route stop list should be the departure stop
 // 		QVERIFY( departureData["routeStops"].toStringList().first().indexOf(
 // 				stopName.isNull() ? QLatin1String("Bremen") : stopName, 0, Qt::CaseInsensitive) != -1 );
@@ -131,10 +143,10 @@ void testDepartureTimes( const TestVisualization &testVisualization, const QDate
 	{
 		QString key = QString::number(i);
 		QVariantHash departureData = testVisualization.data[key].toHash();
-		
+
 		// Check routeTimes list for data types
 		QDateTime dateTimeValue = departureData[ "departure" ].toDateTime();
-	
+
 		// Get seconds from actual departure time until the testTime
 		int difference = dateTimeValue.secsTo( testDateTime );
 		QVERIFY2( difference <= maxDifference * 60, QString("A departure was returned which is %1 "
@@ -173,7 +185,7 @@ void DeparturesTest::departuresTest_data()
 	QTest::newRow("us_septa") << "us_septa" << QString() << "Pennsylvania Park Av";
 	QTest::newRow("international_flightstats") << "international_flightstats" << QString() << "BRE";
 	// 19 accessors tested, not tested:
-	//   at_oebb (needs a script instead of only regexps), 
+	//   at_oebb (needs a script instead of only regexps),
 	//   de_vrn (new departure urls are only for specific lines...)
 }
 
@@ -182,13 +194,13 @@ void DeparturesTest::departuresTest()
 	QFETCH(QString, serviceProvider);
 	QFETCH(QString, stopName);
 	QFETCH(QString, city);
-	
+
 	// Connect source and wait until the dataUpdated slot gets called in testVisualization
 	QString sourceName = QString("Departures %1|stop=%2").arg(serviceProvider).arg(stopName);
 	if ( !city.isNull() ) {
 		sourceName.append( QString("|city=%1").arg(city) );
 	}
-	
+
 	TestVisualization testVisualization;
 	QEventLoop loop;
 	loop.connect( &testVisualization, SIGNAL(completed()), SLOT(quit()) );
@@ -198,14 +210,14 @@ void DeparturesTest::departuresTest()
 	QTimer::singleShot( TIMEOUT * 1000, &loop, SLOT(quit()) ); // timeout after TIMEOUT seconds
 	loop.exec();
 	m_publicTransportEngine->disconnectSource( sourceName, &testVisualization );
-	
+
 	qDebug() << QString("Got data from %1 and parsed it in %2 seconds")
 			.arg( serviceProvider ).arg( timer.elapsed() / 1000.0 );
-	
+
 	// Test basic departure data
 	testDepartureData( testVisualization, serviceProvider );
-	
-	QVERIFY2( !testVisualization.data.isEmpty(), 
+
+	QVERIFY2( !testVisualization.data.isEmpty(),
 			  QString("No data for source name '%1' in %2 seconds").arg(sourceName).arg(TIMEOUT).toLatin1().data() );
 }
 
@@ -226,7 +238,7 @@ void DeparturesTest::departuresTimeTest()
 	QFETCH(QString, serviceProvider);
 	QFETCH(QString, stopName);
 	QFETCH(QTime, time);
-	
+
 	// Connect source and wait until the dataUpdated slot gets called in testVisualization
 	QString sourceName = QString("Departures %1|stop=%2|time=%3")
 			.arg(serviceProvider).arg(stopName).arg(time.toString("hh:mm"));
@@ -236,15 +248,15 @@ void DeparturesTest::departuresTimeTest()
 	m_publicTransportEngine->connectSource( sourceName, &testVisualization );
 	QTimer::singleShot( TIMEOUT * 1000, &loop, SLOT(quit()) ); // timeout after TIMEOUT seconds
 	loop.exec();
-	
+
 	// Test basic departure data
 	testDepartureData( testVisualization, serviceProvider );
-	
+
 	// Test time values
 	testDepartureTimes( testVisualization, QDateTime(QDate::currentDate(), time) );
-	
+
 	m_publicTransportEngine->disconnectSource( sourceName, &testVisualization );
-	QVERIFY2( !testVisualization.data.isEmpty(), 
+	QVERIFY2( !testVisualization.data.isEmpty(),
 			  QString("No data for source name '%1' in %2 seconds").arg(sourceName).arg(TIMEOUT).toLatin1().data() );
 }
 
@@ -264,7 +276,7 @@ void DeparturesTest::departuresTimeOffsetTest()
 	QFETCH(QString, serviceProvider);
 	QFETCH(QString, stopName);
 	QFETCH(int, timeOffset);
-	
+
 	// Connect source and wait until the dataUpdated slot gets called in testVisualization
 	QString sourceName = QString("Departures %1|stop=%2|timeOffset=%3")
 			.arg(serviceProvider).arg(stopName).arg(timeOffset);
@@ -274,16 +286,16 @@ void DeparturesTest::departuresTimeOffsetTest()
 	m_publicTransportEngine->connectSource( sourceName, &testVisualization );
 	QTimer::singleShot( TIMEOUT * 1000, &loop, SLOT(quit()) ); // timeout after TIMEOUT seconds
 	loop.exec();
-	
+
 	// Test basic departure data
 	testDepartureData( testVisualization, serviceProvider );
-	
+
 	// Test time values
 	testDepartureTimes( testVisualization, QDateTime(QDate::currentDate(),
 													 QTime::currentTime().addSecs(timeOffset * 60)) );
-	
+
 	m_publicTransportEngine->disconnectSource( sourceName, &testVisualization );
-	QVERIFY2( !testVisualization.data.isEmpty(), 
+	QVERIFY2( !testVisualization.data.isEmpty(),
 			  QString("No data for source name '%1' in %2 seconds").arg(sourceName).arg(TIMEOUT).toLatin1().data() );
 }
 
@@ -293,9 +305,9 @@ void DeparturesTest::departuresDateTimeTest_data()
 	QTest::addColumn<QString>("stopName");
 	QTest::addColumn<QDateTime>("dateTime");
 
-	QTest::newRow("de_db") << "de_db" << "Bremen Hbf" 
+	QTest::newRow("de_db") << "de_db" << "Bremen Hbf"
 			<< QDateTime::currentDateTime().addDays(2).addSecs(120);
-	QTest::newRow("ch_sbb") << "ch_sbb" << "Bern" 
+	QTest::newRow("ch_sbb") << "ch_sbb" << "Bern"
 			<< QDateTime::currentDateTime().addDays(3).addSecs(600);
 	QTest::newRow("it_orario") << "it_orario" << "Genova"
 			<< QDateTime::currentDateTime().addDays(2).addSecs(3600);
@@ -306,7 +318,7 @@ void DeparturesTest::departuresDateTimeTest()
 	QFETCH(QString, serviceProvider);
 	QFETCH(QString, stopName);
 	QFETCH(QDateTime, dateTime);
-	
+
 	// Connect source and wait until the dataUpdated slot gets called in testVisualization
 	QString sourceName = QString("Departures %1|stop=%2|datetime=%3")
 			.arg(serviceProvider).arg(stopName).arg(dateTime.toString());
@@ -316,15 +328,15 @@ void DeparturesTest::departuresDateTimeTest()
 	m_publicTransportEngine->connectSource( sourceName, &testVisualization );
 	QTimer::singleShot( TIMEOUT * 1000, &loop, SLOT(quit()) ); // timeout after TIMEOUT seconds
 	loop.exec();
-	
+
 	// Test basic departure data
 	testDepartureData( testVisualization, serviceProvider );
-	
+
 	// Test time values
 	testDepartureTimes( testVisualization, dateTime );
-	
+
 	m_publicTransportEngine->disconnectSource( sourceName, &testVisualization );
-	QVERIFY2( !testVisualization.data.isEmpty(), 
+	QVERIFY2( !testVisualization.data.isEmpty(),
 			  QString("No data for source name '%1' in %2 seconds").arg(sourceName).arg(TIMEOUT).toLatin1().data() );
 }
 

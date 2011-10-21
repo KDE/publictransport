@@ -60,8 +60,9 @@ public:
      * You should use createAccessor() to get an accessor for a given service provider ID.
      *
      * @param info An object containing information about the service provider.
+     * @param parent The parent QObject.
      **/
-    explicit TimetableAccessorOnline( TimetableAccessorInfo *info );
+    explicit TimetableAccessorOnline( TimetableAccessorInfo *info, QObject *parent = 0 );
 
     /**
      * @brief Requests a list of departures/arrivals.
@@ -103,14 +104,11 @@ public:
      * sessionKeyReceived() gets emitted and the real request gets started using the just
      * received session key.
      *
-     * @param parseMode Describes what should be done when the session key is available.
-     * @param url The url to use to get the session key.
      * @param requestInfo Information about a request, that gets executed when the session key
      *   is known. If for example requestInfo has information about a departure request, after
      *   getting the session key, @p requestDepartures gets called with this requestInfo object.
      **/
-    virtual void requestSessionKey( ParseDocumentMode parseMode, const KUrl &url,
-                                    const RequestInfo *requestInfo );
+    virtual void requestSessionKey( const RequestInfo *requestInfo );
 
 protected slots:
     /** @brief All data of a journey list has been received. */

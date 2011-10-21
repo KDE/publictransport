@@ -41,8 +41,8 @@
 #include <QFileInfo>
 
 TimetableAccessorGeneralTransitFeed::TimetableAccessorGeneralTransitFeed(
-        TimetableAccessorInfo *info ) : TimetableAccessor(info),
-        m_tripUpdates(0), m_alerts(0), m_service(0)
+        TimetableAccessorInfo *info, QObject *parent )
+        : TimetableAccessor(info, parent), m_tripUpdates(0), m_alerts(0), m_service(0)
 {
     m_state = Initializing;
 

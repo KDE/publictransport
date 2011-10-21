@@ -37,7 +37,7 @@
 Q_DECLARE_FLAGS( LineServices, LineService )
 
 
-/** @class PublicTransportInfo
+/**
  * @brief This is the abstract base class of all other timetable information classes.
  *
  * @see JourneyInfo
@@ -52,7 +52,8 @@ public:
      * @brief Contructs a new PublicTransportInfo object based on the information given
      *   with @p data.
      *
-     * @param data A hash that contains values for TimetableInformations. */
+     * @param data A hash that contains values for TimetableInformations.
+     **/
     explicit PublicTransportInfo( const QHash<TimetableInformation, QVariant> &data );
 
     virtual ~PublicTransportInfo() {};
@@ -61,8 +62,8 @@ public:
      * @brief Wheather or not this PublicTransportInfo object is valid.
      *
      * @return true if the PublicTransportInfo object is valid.
-     * 
-     * @return false if the PublicTransportInfo object is invalid. */
+     * @return false if the PublicTransportInfo object is invalid.
+     **/
     virtual bool isValid() const { return m_isValid; };
 
     /**
@@ -76,7 +77,7 @@ public:
     };
 
     /** @brief Get the company that is responsible for this departure / arrival. */
-    QString operatorName() const { 
+    QString operatorName() const {
             return contains(Operator) ? value(Operator).toString() : QString(); };
 
     /**
@@ -84,19 +85,21 @@ public:
      *   stop or a list of stops of the journey from it's start to it's
      *   destination stop.
      *
-     * @note: If data for both @ref RouteStops and @ref RouteTimes is set,
+     * @note If data for both @ref RouteStops and @ref RouteTimes is set,
      *   they contain the same number of elements. And elements with equal
      *   indices are associated (the times at which the vehicle is at the stops).
-     * 
+     *
      * @see routeTimes
-     * @see routeTimesVariant */
-    QStringList routeStops() const { 
+     * @see routeTimesVariant
+     **/
+    QStringList routeStops() const {
             return contains(RouteStops) ? value(RouteStops).toStringList() : QStringList(); };
 
     /**
      * @brief The number of exact route stops. The route stop list isn't complete
-     *   from the last exact route stop. */
-    int routeExactStops() const { 
+     *   from the last exact route stop.
+     **/
+    int routeExactStops() const {
             return contains(RouteExactStops) ? value(RouteExactStops).toInt() : 0; };
 
     /** @brief Gets information about the pricing of the departure/arrival/journey. */
@@ -107,27 +110,27 @@ public:
      * @brief Parses the given string for a vehicle type.
      *
      * @param sLineType The string to be parsed (e.g. "STR", "ICE", "RB", ...).
-     * 
      * @return The type of vehicle that was parsed or VehicleType::Unknown if
-     *   it couldn't be parsed. */
+     *   it couldn't be parsed.
+     **/
     static VehicleType getVehicleTypeFromString( const QString &sLineType );
 
     /**
      * @brief Gets the operator for the given vehicle type string.
      *
      * @param sLineType The string to get the operator for (e.g. "ME", "ERB", "NWB", ...).
-     * 
      * @return The operator for the given vehicle type string or QString() if
-     *   it couldn't be determined. */
+     *   it couldn't be determined.
+     **/
     static QString operatorFromVehicleTypeString( const QString &sLineType );
 
 protected:
     bool m_isValid;
 };
 
-/** @class JourneyInfo
+/**
  * @brief This class stores information about journeys with public transport.
- * 
+ *
  * @see DepartureInfo
  * @see PublicTransportInfo
  */
@@ -137,18 +140,22 @@ public:
      * @brief Contructs a new JourneyInfo object based on the information given with @p data.
      *
      * @param data A hash that contains values for at least the required
-     *   TimetableInformations (TransportLine, Target, DepartureHour, DepartureMinute). */
+     *   TimetableInformations (TransportLine, Target, DepartureHour, DepartureMinute).
+     **/
     explicit JourneyInfo( const QHash<TimetableInformation, QVariant> &data );
 
     /** @brief Gets news for the journey, such as "platform changed". */
-    QString journeyNews() const { 
+    QString journeyNews() const {
             return contains(JourneyNews) ? value(JourneyNews).toString() : QString(); };
+
     /** @brief Gets the stop name at which the journey starts */
-    QString startStopName() const { 
+    QString startStopName() const {
             return contains(StartStopName) ? value(StartStopName).toString() : QString(); };
+
     /** @brief Gets the stop name of the target of the journey */
-    QString targetStopName() const { 
+    QString targetStopName() const {
             return contains(TargetStopName) ? value(TargetStopName).toString() : QString(); };
+
     /** @brief Gets the date and time of the arrival at the journey target */
     QDateTime arrival() const {
         if ( contains(ArrivalDate) ) {
@@ -159,8 +166,10 @@ public:
             return QDateTime();
         }
     };
+
     /** @brief Gets the duration in minutes of the journey. */
     int duration() const { return contains(Duration) ? value(Duration).toInt() : -1; };
+
     /** @brief Gets the types of vehicle used in the journey. */
     QList<VehicleType> vehicleTypes() const {
         if ( contains(TypesOfVehicleInJourney) ) {
@@ -201,42 +210,44 @@ public:
 
     /**
      * @brief Gets the types of vehicle used in the journey as QVariantList to be stored
-     *   in a Plasma::DataEngine::Data object. */
-    QVariantList vehicleTypesVariant() const { 
+     *   in a Plasma::DataEngine::Data object.
+     **/
+    QVariantList vehicleTypesVariant() const {
         return contains(TypesOfVehicleInJourney)
-                ? value(TypesOfVehicleInJourney).toList() : QVariantList(); 
+                ? value(TypesOfVehicleInJourney).toList() : QVariantList();
     };
 
     /**
      * @brief Gets the types of vehicle used for each "sub-journey" in the journey as
-     *   QVariantList to be stored in a Plasma::DataEngine::Data object. */
-    QVariantList routeVehicleTypesVariant() const { 
+     *   QVariantList to be stored in a Plasma::DataEngine::Data object.
+     **/
+    QVariantList routeVehicleTypesVariant() const {
         return contains(RouteTypesOfVehicles)
-                ? value(RouteTypesOfVehicles).toList() : QVariantList(); 
+                ? value(RouteTypesOfVehicles).toList() : QVariantList();
     };
 
     /** @brief Gets the transport line used for each "sub-journey" in the journey. */
     QStringList routeTransportLines() const {
         return contains(RouteTransportLines)
-                ? value(RouteTransportLines).toStringList() : QStringList(); 
+                ? value(RouteTransportLines).toStringList() : QStringList();
     };
 
     /** @brief Gets the platform of the departure used for each stop in the journey. */
     QStringList routePlatformsDeparture() const {
         return contains(RoutePlatformsDeparture)
-                ? value(RoutePlatformsDeparture).toStringList() : QStringList(); 
+                ? value(RoutePlatformsDeparture).toStringList() : QStringList();
     };
 
     /** @brief Gets the platform of the arrival used for each stop in the journey. */
     QStringList routePlatformsArrival() const {
         return contains(RoutePlatformsArrival)
-                ? value(RoutePlatformsArrival).toStringList() : QStringList(); 
+                ? value(RoutePlatformsArrival).toStringList() : QStringList();
     };
 
     /** @brief Gets how many changes between different vehicles are needed */
     int changes() const {
         return contains(Changes)
-                ? value(Changes).toInt() : -1; 
+                ? value(Changes).toInt() : -1;
     };
 
     /**
@@ -249,10 +260,11 @@ public:
      *   departure, only an arrival time). Elements with equal indices are
      *   associated (the times at which the vehicle departs from the stops).
      * @see routeTimesDeparture
-     * @see routeStops */
+     * @see routeStops
+     **/
     QVariantList routeTimesDepartureVariant() const {
         return contains(RouteTimesDeparture)
-                ? value(RouteTimesDeparture).toList() : QVariantList(); 
+                ? value(RouteTimesDeparture).toList() : QVariantList();
     };
 
     /**
@@ -263,7 +275,8 @@ public:
      *   departure, only an arrival time). Elements with equal indices are
      *   associated (the times at which the vehicle departs from the stops).
      * @see routeTimesDepartureVariant
-     * @see routeStops */
+     * @see routeStops
+     **/
     QList<QTime> routeTimesDeparture() const {
         if ( contains(RouteTimesDeparture) ) {
             QList<QTime> ret;
@@ -287,10 +300,11 @@ public:
      *   arrival, only a departure time). Elements with equal indices should
      *   be associated (the times at which the vehicle arrives at the stops).
      * @see routeTimesArrival
-     * @see routeStops */
+     * @see routeStops
+     **/
     QVariantList routeTimesArrivalVariant() const {
         return contains(RouteTimesArrival)
-                ? value(RouteTimesArrival).toList() : QVariantList(); 
+                ? value(RouteTimesArrival).toList() : QVariantList();
     };
 
     /**
@@ -301,7 +315,8 @@ public:
      *   arrival, only a departure time). Elements with equal indices should
      *   be associated (the times at which the vehicle arrives at the stops).
      * @see routeTimesArrivalVariant
-     * @see routeStops */
+     * @see routeStops
+     **/
     QList<QTime> routeTimesArrival() const {
         if ( contains(RouteTimesArrival) ) {
             QList<QTime> ret;
@@ -334,7 +349,7 @@ public:
 private:
 };
 
-/** @class DepartureInfo
+/**
  * @brief This class stores information about departures / arrivals with public transport.
  *
  * @see JourneyInfo
@@ -349,35 +364,44 @@ public:
      * @brief Contructs a new DepartureInfo object based on the information given with @p data.
      *
      * @param data A hash that contains values for at least the required
-     *   TimetableInformations (TransportLine, Target, DepartureHour, DepartureMinute). */
+     *   TimetableInformations (TransportLine, Target, DepartureHour, DepartureMinute).
+     **/
     explicit DepartureInfo( const QHash<TimetableInformation, QVariant> &data );
 
     /** @brief Gets the target / origin of the departing / arriving vehicle. */
     QString target() const { return contains(Target)
         ? value(Target).toString() : QString(); };
+
     /** @brief Gets the line name of the departing / arriving vehicle. */
     QString line() const { return contains(TransportLine)
         ? value(TransportLine).toString() : QString(); };
+
     /** @brief Gets the type of the departing / arriving vehicle. */
     VehicleType vehicleType() const { return contains(TypeOfVehicle)
         ? static_cast<VehicleType>( value(TypeOfVehicle).toInt() ) : Unknown; };
+
     /** @brief Wheather or not the departing / arriving vehicle is a night line. */
     bool isNightLine() const { return m_lineServices.testFlag( NightLine ); };
+
     /** @brief Wheather or not the departing / arriving vehicle is an express line. */
     bool isExpressLine() const { return m_lineServices.testFlag( ExpressLine ); };
+
     /** @brief Gets the platform from/at which the vehicle departs/arrives. */
     QString platform() const { return contains(Platform)
         ? value(Platform).toString() : QString(); };
+
     /** @brief Gets the delay in minutes of the vehicle. -1 means that no delay information is available. */
     int delay() const { return contains(Delay)
         ? value(Delay).toInt() : -1; };
+
     /** @brief Gets the delay reason. */
     QString delayReason() const { return contains(DelayReason)
         ? value(DelayReason).toString() : QString(); };
+
     /** @brief Gets news for the departure/arrival, such as "platform changed". */
     QString journeyNews() const { return contains(JourneyNews)
         ? value(JourneyNews).toString() : QString(); };
-        
+
     /** @brief Gets the status of the departure/arrival, such as "departing". */
     QString status() const { return contains(Status)
         ? value(Status).toString() : QString(); };
@@ -392,7 +416,8 @@ public:
      *   they contain the same number of elements. And elements with equal
      *   indices are associated (the times at which the vehicle is at the stops).
      * @see routeTimes
-     * @see routeStops */
+     * @see routeStops
+     **/
     QVariantList routeTimesVariant() const { return contains(RouteTimes)
         ? value(RouteTimes).toList() : QVariantList(); };
 
@@ -404,7 +429,8 @@ public:
      *   indices are associated (the times at which the vehicle is at the
      *   stops).
      * @see routeTimesVariant
-     * @see routeStops */
+     * @see routeStops
+     **/
     QList<QTime> routeTimes() const {
         if ( contains(RouteTimes) ) {
             QList<QTime> ret;
@@ -424,7 +450,7 @@ private:
 
 /**
  * @brief Stores information about a stop. Used for stop suggestions.
- * 
+ *
  * @see DepartureInfo
  * @see JourneyInfo
  **/
@@ -436,42 +462,39 @@ public:
     /**
      * @brief Contructs a new StopInfo object based on the information given with @p data.
      *
-     * @param data A hash that contains values for at least the required TimetableInformations 
-     *   (StopName). */
+     * @param data A hash that contains values for at least the required TimetableInformations
+     *   (StopName).
+     **/
     StopInfo( const QHash<TimetableInformation, QVariant> &data );
 
     /**
      * @brief Constructs a new StopInfo object.
-     * 
+     *
      * @param name The name of the stop.
-     * 
      * @param id The ID for the stop @p name, if available.
-     * 
-     * @param weight The weight of this stop suggestion, if available. Higher values are set for 
+     * @param weight The weight of this stop suggestion, if available. Higher values are set for
      *   more important / better matching stops.
-     * 
      * @param city The city in which the stop is, if available.
-     * 
      * @param countryCode The code of the country in which the stop is, if available.
      */
     StopInfo( const QString &name, const QString &id = QString(), int weight = -1,
               const QString &city = QString(), const QString &countryCode = QString() );
-    
+
     /** @brief Gets the name of the stop. */
     QString name() const { return value(StopName).toString(); };
-    
+
     /** @brief Gets the ID for the stop, if available. */
     QString id() const { return value(StopID).toString(); };
-    
+
     /** @brief Gets the weight of the stop. */
     QString weight() const { return value(StopWeight).toString(); };
-    
+
     /** @brief Gets the city in which the stop is. */
     QString city() const { return value(StopCity).toString(); };
-    
+
     /** @brief Gets the code of the country in which the stop is. */
     QString countryCode() const { return value(StopCountryCode).toString(); };
-    
+
 private:
     bool m_isValid;
 };

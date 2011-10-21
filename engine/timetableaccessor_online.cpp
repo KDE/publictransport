@@ -34,8 +34,8 @@
 #include <QTextCodec>
 #include <QTimer>
 
-TimetableAccessorOnline::TimetableAccessorOnline( TimetableAccessorInfo *info )
-    : TimetableAccessor( info )
+TimetableAccessorOnline::TimetableAccessorOnline( TimetableAccessorInfo *info, QObject *parent )
+    : TimetableAccessor(info, parent)
 {
     m_stopIdRequested = false;
 }
@@ -48,7 +48,9 @@ void TimetableAccessorOnline::requestDepartures( const DepartureRequestInfo &req
     {
         // Session key not already available and no request made in the last 500ms
         kDebug() << "Request a session key";
-        requestSessionKey( ParseForSessionKeyThenDepartures, m_info->sessionKeyUrl(), &requestInfo );
+        RequestInfo *newRequestInfo = requestInfo.clone();
+        newRequestInfo->parseMode = ParseForSessionKeyThenDepartures;
+        requestSessionKey( newRequestInfo );
         return;
     }
 
@@ -70,6 +72,7 @@ void TimetableAccessorOnline::requestDepartures( const DepartureRequestInfo &req
 
     // Get a source URL for the request
     KUrl url = departureUrl( requestInfo );
+    kDebug() << "Using departure URL" << url;
     KIO::StoredTransferJob *job; // = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
     if ( m_info->attributesForDepatures()[QLatin1String("method")]
             .compare(QLatin1String("post"), Qt::CaseInsensitive) != 0 )
@@ -188,8 +191,9 @@ void TimetableAccessorOnline::requestStopSuggestions( const StopSuggestionReques
          m_sessionKeyGetTime.elapsed() > 500 )
     {
         kDebug() << "Request a session key";
-        requestSessionKey( ParseForSessionKeyThenStopSuggestions, m_info->sessionKeyUrl(),
-                           &requestInfo );
+        RequestInfo *newRequestInfo = requestInfo.clone();
+        newRequestInfo->parseMode = ParseForSessionKeyThenStopSuggestions;
+        requestSessionKey( newRequestInfo );
         return;
     }
 
@@ -272,13 +276,11 @@ void TimetableAccessorOnline::requestStopSuggestions( const StopSuggestionReques
     }
 }
 
-void TimetableAccessorOnline::requestSessionKey( ParseDocumentMode parseMode, const KUrl &url,
-                                                 const RequestInfo *requestInfo )
+void TimetableAccessorOnline::requestSessionKey( const RequestInfo *requestInfo )
 {
-    Q_UNUSED( parseMode );
+    const KUrl url = m_info->sessionKeyUrl();
     KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
     m_jobInfos.insert( job, JobInfos(url, requestInfo->clone()) );
-//     TODO
     connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
 }
 
@@ -338,11 +340,13 @@ void TimetableAccessorOnline::result( KJob* job )
                                 "now requesting departures using the stop name";
                     DepartureRequestInfo *newRequestInfo =
                             static_cast<DepartureRequestInfo*>( jobInfo.requestInfo.data() );
+                    newRequestInfo->parseMode = ParseForDeparturesArrivals;
                     requestDepartures( *newRequestInfo );
                 } else {
                     DepartureRequestInfo *newRequestInfo =
                             static_cast<DepartureRequestInfo*>( jobInfo.requestInfo.data() );
                     newRequestInfo->stop = stopList.first()->id();
+                    newRequestInfo->parseMode = ParseForDeparturesArrivals;
                     requestDepartures( *newRequestInfo );
                 }
                 return;
@@ -360,18 +364,24 @@ void TimetableAccessorOnline::result( KJob* job )
         if ( !(m_sessionKey = parseDocumentForSessionKey(document)).isEmpty() ) {
             emit sessionKeyReceived( this, m_sessionKey );
 
-            if ( !m_sessionKey.isEmpty() ) {
-                // Now request stop suggestions using the session key
-                if ( parseDocumentMode == ParseForSessionKeyThenStopSuggestions ) {
-                    requestStopSuggestions( *jobInfo.requestInfo.data() );
-                } else if ( parseDocumentMode == ParseForSessionKeyThenDepartures ) {
-                    requestDepartures( *jobInfo.requestInfo.data() );
-                }
-                m_sessionKeyGetTime.start();
-
-                // Clear the session key after a timeout
-                QTimer::singleShot( 5 * 60000, this, SLOT(clearSessionKey()) );
+            // Now request stop suggestions using the session key
+            if ( parseDocumentMode == ParseForSessionKeyThenStopSuggestions ) {
+                kDebug() << "Request stop suggestions using session key" << m_sessionKey;
+                DepartureRequestInfo *newRequestInfo =
+                        static_cast<DepartureRequestInfo*>( jobInfo.requestInfo.data() );
+                newRequestInfo->parseMode = ParseForStopSuggestions;
+                requestStopSuggestions( *newRequestInfo );
+            } else if ( parseDocumentMode == ParseForSessionKeyThenDepartures ) {
+                kDebug() << "Request departures/arrivals using session key" << m_sessionKey;
+                DepartureRequestInfo *newRequestInfo =
+                        static_cast<DepartureRequestInfo*>( jobInfo.requestInfo.data() );
+                newRequestInfo->parseMode = ParseForDeparturesArrivals;
+                requestDepartures( *newRequestInfo );
             }
+            m_sessionKeyGetTime.start();
+
+            // Clear the session key after a timeout
+            QTimer::singleShot( 5 * 60000, this, SLOT(clearSessionKey()) );
         } else {
             kDebug() << "Error getting a session key" << jobInfo.requestInfo->sourceName;
         }

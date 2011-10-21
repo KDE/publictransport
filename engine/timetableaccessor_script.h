@@ -63,10 +63,11 @@ public:
      * @brief Creates a new TimetableAccessorScript object with the given information.
      *
      * @param info Information about how to download and parse the documents of a service provider.
+     * @param parent The parent QObject.
      *
      * @note Can be used if you have a custom TimetableAccessorInfo object.
      *   TimetableAccessorXml uses this to create an HTML accessor for parsing of stop lists. */
-    TimetableAccessorScript( TimetableAccessorInfo *info );
+    TimetableAccessorScript( TimetableAccessorInfo *info, QObject *parent = 0 );
 
     /** @brief Destructor. */
     virtual ~TimetableAccessorScript();

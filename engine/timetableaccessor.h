@@ -233,8 +233,9 @@ public:
      * You should use createAccessor() to get an accessor for a given service provider ID.
      *
      * @param info An object containing information about the service provider.
+     * @param parent The parent QObject.
      **/
-    explicit TimetableAccessor( TimetableAccessorInfo *info );
+    explicit TimetableAccessor( TimetableAccessorInfo *info, QObject *parent = 0 );
 
     /**
      * @brief Simple destructor.
@@ -250,8 +251,10 @@ public:
      *   The ID starts with a country code, followed by an underscore and it's name.
      *   If it's empty, the default service provider for the users country will
      *   be used, if there is any.
+     * @param parent The parent QObject of the accessor that gets created.
      **/
-    static TimetableAccessor *createAccessor( const QString &serviceProvider = QString() );
+    static TimetableAccessor *createAccessor( const QString &serviceProvider = QString(),
+                                              QObject *parent = 0 );
 
     /**
      * @brief Reads the XML file for the given @p serviceProvider.
@@ -300,7 +303,8 @@ public:
      * @brief Gets the file path of the default service provider XML for the given @p location.
      *
      * To get the service provider ID of the default service provider for @p location, use the
-     * returned file path as argument to serviceProviderIdFromFileName.
+     * returned file path as argument to serviceProviderIdFromFileName() or use
+     * defaultServiceProviderIdForLocation() directly.
      *
      * @param location The location to get the default service provider for. Can be a two letter
      *   country code or "international".
@@ -310,8 +314,26 @@ public:
      *
      * @see serviceProviderIdFromFileName
      **/
-    static QString defaultServiceProviderForLocation( const QString &location,
-                                                      const QStringList &dirs = QStringList() );
+    static QString defaultServiceProviderXmlPathForLocation(
+            const QString &location, const QStringList &dirs = QStringList() );
+
+    /**
+     * @brief Gets the ID of the default service provider for the given @p location.
+     *
+     * Uses the value returned from defaultServiceProviderXmlPathForLocation() as argument
+     * to serviceProviderIdFromFileName() and returns the ID.
+     *
+     * @param location The location to get the default service provider for. Can be a two letter
+     *   country code or "international".
+     * @param dirs A list of directories where accessor XML files are stored. If an empty list is
+     *   given (the default), the list of directories is retrieved using
+     *   @code KStandardDirs::findDirs("data", "plasma_engine_publictransport/accessorInfos") @endcode
+     *
+     * @see defaultServiceProviderXmlPathForLocation
+     * @see serviceProviderIdFromFileName
+     **/
+    static QString defaultServiceProviderIdForLocation(
+            const QString &location, const QStringList &dirs = QStringList() );
 
     /**
      * @brief Encodes the url in @p str using the charset in @p charset. Then it is percent encoded.
@@ -319,6 +341,9 @@ public:
      * @see TimetableAccessorInfo::charsetForUrlEncoding()
      **/
     static QString toPercentEncoding( const QString &str, const QByteArray &charset );
+
+    /** @brief Gets a list of short localized strings describing the given @p features. */
+    static QStringList localizedFeatureNames( const QStringList &features );
 
     /**
      * @brief Gets the type of this accessor.
@@ -377,14 +402,11 @@ public:
      *
      * When the session key has been received @ref sessionKeyReceived is emitted.
      *
-     * @param parseMode Describes what should be done when the session key is available.
-     * @param url The url to use to get the session key.
      * @param requestInfo Information about a request, that gets executed when the session key
      *   is known. If for example requestInfo has information about a departure request, after
      *   getting the session key, @p requestDepartures gets called with this requestInfo object.
      **/
-    virtual void requestSessionKey( ParseDocumentMode parseMode, const KUrl &url,
-            const RequestInfo *requestInfo );
+    virtual void requestSessionKey( const RequestInfo *requestInfo );
 
     /**
      * @brief Whether or not a special URL for stop suggestions is available.

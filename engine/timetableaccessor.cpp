@@ -38,7 +38,8 @@
 #include <QFile>
 #include <QTimer>
 
-TimetableAccessor::TimetableAccessor( TimetableAccessorInfo *info ) : m_info(info)
+TimetableAccessor::TimetableAccessor( TimetableAccessorInfo *info, QObject *parent )
+        : QObject(parent), m_info(info)
 {
 }
 
@@ -47,7 +48,8 @@ TimetableAccessor::~TimetableAccessor()
     delete m_info;
 }
 
-TimetableAccessor* TimetableAccessor::createAccessor( const QString &serviceProvider )
+TimetableAccessor* TimetableAccessor::createAccessor( const QString &serviceProvider,
+                                                      QObject *parent )
 {
     // Read the XML file for the service provider
     TimetableAccessorInfo *accessorInfo = readAccessorInfo( serviceProvider );
@@ -65,8 +67,9 @@ TimetableAccessor* TimetableAccessor::createAccessor( const QString &serviceProv
             return 0;
         }
 
-        // Create the accessor and check for script errors
-        TimetableAccessorScript *scriptAccessor = new TimetableAccessorScript( accessorInfo );
+        // Create the script accessor and check for script errors
+        TimetableAccessorScript *scriptAccessor = new TimetableAccessorScript( accessorInfo,
+                                                                               parent );
         if ( !scriptAccessor->hasScriptErrors() ) {
             return scriptAccessor;
         } else {
@@ -81,8 +84,8 @@ TimetableAccessor* TimetableAccessor::createAccessor( const QString &serviceProv
                         "but no script file was specified";
         }
 
-        // Create the accessor and check for script errors
-        TimetableAccessorXml *xmlAccessor = new TimetableAccessorXml( accessorInfo );
+        // Create the XML accessor
+        TimetableAccessorXml *xmlAccessor = new TimetableAccessorXml( accessorInfo, parent );
         if ( xmlAccessor->stopSuggestionAccessor() &&
              xmlAccessor->stopSuggestionAccessor()->hasScriptErrors() )
         {
@@ -93,8 +96,8 @@ TimetableAccessor* TimetableAccessor::createAccessor( const QString &serviceProv
             return xmlAccessor;
         }
     } else if ( accessorInfo->accessorType() == GtfsAccessor ) {
-        // Create the accessor and check for script errors
-        return new TimetableAccessorGeneralTransitFeed( accessorInfo );
+        // Create the GTFS accessor
+        return new TimetableAccessorGeneralTransitFeed( accessorInfo, parent );
     }
 
     delete accessorInfo;
@@ -112,7 +115,7 @@ TimetableAccessorInfo* TimetableAccessor::readAccessorInfo( const QString &servi
         country = KGlobal::locale()->country();
 
         // Try to find the XML filename of the default accessor for [country]
-        filePath = defaultServiceProviderForLocation( country );
+        filePath = defaultServiceProviderXmlPathForLocation( country );
         if ( filePath.isEmpty() ) {
             return 0;
         }
@@ -126,7 +129,7 @@ TimetableAccessorInfo* TimetableAccessor::readAccessorInfo( const QString &servi
                    QString("plasma_engine_publictransport/accessorInfos/%1.xml").arg(sp) );
         if ( filePath.isEmpty() ) {
             kDebug() << "Couldn't find a service provider information XML named" << sp;
-            return NULL;
+            return 0;
         }
 
         // Get country code from filename
@@ -147,8 +150,8 @@ TimetableAccessorInfo* TimetableAccessor::readAccessorInfo( const QString &servi
     return ret;
 }
 
-QString TimetableAccessor::defaultServiceProviderForLocation( const QString &location,
-                                                              const QStringList &dirs )
+QString TimetableAccessor::defaultServiceProviderXmlPathForLocation(
+        const QString &location, const QStringList &dirs )
 {
     // Get the filename of the default accessor for the given location
     const QStringList _dirs = !dirs.isEmpty() ? dirs
@@ -167,6 +170,13 @@ QString TimetableAccessor::defaultServiceProviderForLocation( const QString &loc
         kDebug() << "Couldn't find the default service provider for location" << location;
     }
     return fileName;
+}
+
+QString TimetableAccessor::defaultServiceProviderIdForLocation(
+        const QString &location, const QStringList &dirs )
+{
+    const QString xmlFilePath = defaultServiceProviderXmlPathForLocation( location, dirs );
+    return serviceProviderIdFromFileName( xmlFilePath );
 }
 
 QString TimetableAccessor::serviceProviderIdFromFileName( const QString &accessorXmlFileName )
@@ -423,61 +433,65 @@ QStringList TimetableAccessor::features() const
 
 QStringList TimetableAccessor::featuresLocalized() const
 {
-    QStringList featuresl10n;
-    QStringList featureList = features();
+    return localizedFeatureNames( features() );
+}
 
-    if ( featureList.contains( "Arrivals" ) ) {
+QStringList TimetableAccessor::localizedFeatureNames( const QStringList &features )
+{
+    QStringList featuresl10n;
+
+    if ( features.contains("Arrivals") ) {
         featuresl10n << i18nc( "Support for getting arrivals for a stop of public "
                                "transport. This string is used in a feature list, "
                                "should be short.", "Arrivals" );
     }
-    if ( featureList.contains( "Autocompletion" ) ) {
+    if ( features.contains("Autocompletion") ) {
         featuresl10n << i18nc( "Autocompletion for names of public transport stops",
                                "Autocompletion" );
     }
-    if ( featureList.contains( "JourneySearch" ) ) {
+    if ( features.contains("JourneySearch") ) {
         featuresl10n << i18nc( "Support for getting journeys from one stop to another. "
                                "This string is used in a feature list, should be short.",
                                "Journey search" );
     }
-    if ( featureList.contains( "Delay" ) ) {
+    if ( features.contains("Delay") ) {
         featuresl10n << i18nc( "Support for getting delay information. This string is "
                                "used in a feature list, should be short.", "Delay" );
     }
-    if ( featureList.contains( "DelayReason" ) ) {
+    if ( features.contains("DelayReason") ) {
         featuresl10n << i18nc( "Support for getting the reason of a delay. This string "
                                "is used in a feature list, should be short.",
                                "Delay reason" );
     }
-    if ( featureList.contains( "Platform" ) ) {
+    if ( features.contains("Platform") ) {
         featuresl10n << i18nc( "Support for getting the information from which platform "
                                "a public transport vehicle departs / at which it "
                                "arrives. This string is used in a feature list, "
                                "should be short.", "Platform" );
     }
-    if ( featureList.contains( "JourneyNews" ) ) {
+    if ( features.contains("JourneyNews") ) {
         featuresl10n << i18nc( "Support for getting the news about a journey with public "
                                "transport, such as a platform change. This string is "
                                "used in a feature list, should be short.", "Journey news" );
     }
-    if ( featureList.contains( "TypeOfVehicle" ) ) {
+    if ( features.contains("TypeOfVehicle") ) {
         featuresl10n << i18nc( "Support for getting information about the type of "
                                "vehicle of a journey with public transport. This string "
                                "is used in a feature list, should be short.",
                                "Type of vehicle" );
     }
-    if ( featureList.contains( "Status" ) ) {
+    if ( features.contains("Status") ) {
         featuresl10n << i18nc( "Support for getting information about the status of a "
                                "journey with public transport or an aeroplane. This "
                                "string is used in a feature list, should be short.",
                                "Status" );
     }
-    if ( featureList.contains( "Operator" ) ) {
+    if ( features.contains("Operator") ) {
         featuresl10n << i18nc( "Support for getting the operator of a journey with public "
                                "transport or an aeroplane. This string is used in a "
                                "feature list, should be short.", "Operator" );
     }
-    if ( featureList.contains( "StopID" ) ) {
+    if ( features.contains("StopID") ) {
         featuresl10n << i18nc( "Support for getting the id of a stop of public transport. "
                                "This string is used in a feature list, should be short.",
                                "Stop ID" );
@@ -490,11 +504,8 @@ void TimetableAccessor::requestDepartures( const DepartureRequestInfo &requestIn
     Q_UNUSED( requestInfo );
 }
 
-void TimetableAccessor::requestSessionKey( ParseDocumentMode parseMode,
-        const KUrl &url, const RequestInfo *requestInfo )
+void TimetableAccessor::requestSessionKey( const RequestInfo *requestInfo )
 {
-    Q_UNUSED( parseMode );
-    Q_UNUSED( url );
     Q_UNUSED( requestInfo );
 }
 

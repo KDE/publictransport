@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -30,7 +30,7 @@
 // Plasma includes
 #include <Plasma/DataEngine>
 
-struct RequestInfo;
+class RequestInfo;
 class TimetableAccessor;
 class TimetableAccessorInfo;
 class DepartureInfo;
@@ -42,16 +42,19 @@ class QFileSystemWatcher;
 /**
  * @brief This engine provides departure/arrival times and journeys for public transport.
  *
- * @see @ref pageUsage (how to use this data engine in an applet?)
+ * See @ref pageUsage.
  */
 class PublicTransportEngine : public Plasma::DataEngine {
     Q_OBJECT
 
 public:
-    /** @brief The available types of sources of this data engine. They all have
-     * an associated keyword with that data source names start.
+    /**
+     * @brief The available types of sources of this data engine.
+     *
+     * Source names can be associated with these types by the first word using souceTypeFromName.
      * @see sourceTypeKeyword
-     * @see sourceTypeFromName */
+     * @see sourceTypeFromName
+     **/
     enum SourceType {
         InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName, if
                 * the source name is invalid. */
@@ -60,7 +63,7 @@ public:
                 * service providers for a given country. */
         ServiceProviders = 2, /**< The source contains information about available
                 * service providers. */
-        ErrornousServiceProviders = 3, /**< The source contains a list of errornous
+        ErroneousServiceProviders = 3, /**< The source contains a list of errornous
                 * service provider accessors. */
         Locations = 4, /**< The source contains information about locations
                 * for which accessors to service providers exist. */
@@ -81,58 +84,144 @@ public:
     /** @brief Destructor. */
     ~PublicTransportEngine();
 
-    /** @returns the keyword of the given @p sourceType used in source names. */
-    static const QString sourceTypeKeyword( SourceType sourceType );
-    /** @returns the type of the given @p sourceName. */
+    /** @brief Gets the keyword used in source names associated with the given @p sourceType. */
+    static const QLatin1String sourceTypeKeyword( SourceType sourceType );
+
+    /** @brief Gets the source type associated with the given @p sourceName. */
     SourceType sourceTypeFromName( const QString &sourceName ) const;
-    /** @returns true, if a data source of the given @p sourceType requests
-     * data from a web server. */
+
+    /** @brief Whether or not a data source of the given @p sourceType may request data from a server. */
     bool isDataRequestingSourceType( SourceType sourceType ) const {
         return static_cast< int >( sourceType ) >= 10; };
 
-    /** @brief Minimum timeout in seconds to request new data. Before the timeout
-     * is over, old stored data from previous requests is used. */
+    /**
+     * @brief Minimum timeout in seconds to request new data.
+     *
+     * Before the timeout is over, old stored data from previous requests is used.
+     **/
     static const int MIN_UPDATE_TIMEOUT;
 
-    /** @brief Maximum timeout in seconds to request new data, if delays are avaiable.
-     * Before the timeout is over, old stored data from previous requests is used. */
+    /**
+     * @brief Maximum timeout in seconds to request new data, if delays are avaiable.
+     *
+     * This timeout gets used instead of MIN_UPDATE_TIMEOUT, if delays are available for the
+     * used service provider.
+     * Before the timeout is over, old stored data from previous requests is used.
+     */
     static const int MAX_UPDATE_TIMEOUT_DELAY;
 
-    /** @brief The default time offset from now for the first departure/arrival/journey
-     * in the list. This is used if it wasn't specified in the source name. */
+    /**
+     * @brief The default time offset from now for the first departure/arrival/journey in results.
+     *
+     * This is used if it wasn't specified in the source name.
+     **/
     static const int DEFAULT_TIME_OFFSET;
 
 protected:
-    /** @brief This virtual function is called when a new source is requested.
+    /**
+     * @brief This function gets called when a new data source gets requested.
      *
-     * @param name The name of the requested data source. */
+     * @param name The name of the requested data source.
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
     bool sourceRequestEvent( const QString &name );
 
-    /** @brief This virtual function is called when an automatic update is triggered for an
-     * existing source (ie: when a valid update interval is set when requesting a source).
+    /**
+     * @brief This function gets called when a data source gets requested or needs an update.
      *
-     * @param name The name of the data source to be updated. */
+     * It checks the source type of the data source with the given @p name using sourceTypeFromName
+     * and then calls the corresponding update...() function for the source type.
+     * All departure/arrival/journey/stop suggestion data sources are updated using
+     * updateTimetableSource(). Other data sources are updated using updateServiceProviderSource(),
+     * updateServiceProviderForCountrySource(), updateErroneousServiceProviderSource(),
+     * updateLocationSource().
+     *
+     * @param name The name of the data source to be updated.
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
     bool updateSourceEvent( const QString &name );
 
-    bool updateServiceProviderForCountrySource( const QString &name );
-    bool updateServiceProviderSource();
-    void updateErrornousServiceProviderSource( const QString &name );
-    bool updateLocationSource();
-    bool updateDepartureOrJourneySource( const QString &name );
-
-    /** @brief Returns wheather or not the given source is up to date.
+    /**
+     * @brief Updates the ServiceProviders data source.
      *
-     * @param name The name of the source to be checked. */
+     * The data source contains information about all available service providers.
+     *
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
+    bool updateServiceProviderSource();
+
+    /**
+     * @brief Updates the data source for the service provider mentioned in @p name.
+     *
+     * If a service provider ID is given in @p name, information about that service provider is
+     * returned. If a location is given (ie. "international" or a two letter country code)
+     * information about the default service provider for that location is returned.
+     *
+     * @param name The name of the data source. It starts with the ServiceProvider keyword and is
+     *   followed by a service provider ID or a location, ie "ServiceProvider de" or
+     *   "ServiceProvider de_db".
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
+    bool updateServiceProviderForCountrySource( const QString &name );
+
+    /**
+     * @brief Updates the ErrornousServiceProviders data source.
+     *
+     * The data source contains information about all erroneous service providers.
+     *
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
+    bool updateErroneousServiceProviderSource();
+
+    /**
+     * @brief Updates the "Locations" data source.
+     *
+     * Locations with available service providers are determined by checking the list of valid
+     * accessors for the countries they support.
+     *
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
+    bool updateLocationSource();
+
+    /**
+     * @brief Updates the timetable data source with the given @p name.
+     *
+     * Timetable data may be one of these here: Departure, arrivals, journeys (to or from the home
+     * stop) or stop suggestions.
+     * First it checks if the data source is up to date using isSourceUpToDate. If it's not, new
+     * data gets requested using the associated accessor. The accessor gets retrieved using
+     * getSpecificAccessor, which creates a new accessor if there is no cached value.
+     *
+     * Data may arrive asynchronously depending on the used accessor.
+     *
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
+    bool updateTimetableSource( const QString &name );
+
+    /**
+     * @brief Wheather or not the data source with the given @p name is up to date.
+     *
+     * @param name The name of the source to be checked.
+     * @return True, if the data source is up to date. False, otherwise.
+     **/
     bool isSourceUpToDate( const QString &name );
 
+    /**
+     * @brief Gets the service for the data source with the given @p name.
+     *
+     * The returned service can be used to start operations on the timetable data source.
+     * For example it has an operation to import GTFS feeds into a local database or to update
+     * or delete that database.
+     *
+     * @see PublicTransportService
+     **/
     virtual Plasma::Service* serviceForSource( const QString &name );
 
 public slots:
     /**
      * @brief A list of departures / arrivals was received.
      *
-     * @param accessor The accessor that was used to download and parse the
-     *   departures/arrivals.
+     * @param accessor The accessor that was used to download and parse the departures/arrivals.
      * @param requestUrl The url used to request the information.
      * @param departures A list of departures/arrivals that were received.
      * @param globalInfo Global information that affects all departures/arrivals.
@@ -145,7 +234,7 @@ public slots:
             const GlobalTimetableInfo &globalInfo, const RequestInfo *requestInfo );
 
     /**
-     * @brief A list of journey was received.
+     * @brief A list of journeys was received.
      *
      * @param accessor The accessor that was used to download and parse the journeys.
      * @param requestUrl The url used to request the information.
@@ -160,7 +249,7 @@ public slots:
             const GlobalTimetableInfo &globalInfo, const RequestInfo *requestInfo );
 
     /**
-     * @brief A list of stops was received.
+     * @brief A list of stop suggestions was received.
      *
      * @param accessor The accessor that was used to download and parse the stops.
      * @param requestUrl The url used to request the information.
@@ -194,35 +283,58 @@ public slots:
     /** @brief A directory with accessor info xmls was changed. */
     void accessorInfoDirChanged( const QString &path );
 
+    /**
+     * @brief Deletes all active accessors and their data and let them be reloaded on demand.
+     *
+     * This slot gets called automatically when the contents of an accessor XML directory change.
+     * These directories can be retrieved using
+     * @code KStandardDirs::findDirs("data", "plasma_engine_publictransport/accessorInfos") @endcode
+     *
+     * A QFileSystemWatcher watches the accessor XML directories for changes and calls
+     * accessorInfoDirChanged(), which calls this function after a short interval. If another
+     * change in the directories was noticed within that time interval the timer gets restarted.
+     * This makes sure that the data engine won't freeze plasma when many files in the accessor
+     * XML directories change at (almost) the same time.
+     **/
     void reloadAllAccessors();
 
 private:
     /**
-     * @brief Gets a map with information about an accessor.
+     * @brief Gets information about @p accessor for a service provider data source.
      *
-     * @param accessor The accessor to get information about.
+     * If @p accessor is 0, the accessor cache file TimetableAccessor::accessorCacheFileName()
+     * gets checked. If it contains all needed information which is not available in
+     * @p accessorInfo no TimetableAccessor object needs to be created to get the QHash with the
+     * service provider information. If there are no cached values for the accessor it gets
+     * created to get and cache those values.
+     *
+     * @param accessor The accessor to get information about. May be 0, see above.
+     * @return A QHash with values keyed with strings.
      **/
-    QHash< QString, QVariant > serviceProviderInfo( const TimetableAccessor *&accessor );
-
     QHash< QString, QVariant > serviceProviderInfo( const TimetableAccessorInfo &accessorInfo,
                                                     const TimetableAccessor *accessor = 0 );
 
-    QHash< QString, QVariant > locations();
+    /**
+     * @brief Gets information about @p accessor for a service provider data source.
+     *
+     * This functions overloads serviceProviderInfo(const TimetableAccessorInfo&, const TimetableAccessor*)
+     * and uses TimetableAccessor::info() to get it's first argument.
+     *
+     * @param accessor The accessor to get information about. Must not be 0.
+     * @return A QHash with values keyed with strings.
+     **/
+    QHash< QString, QVariant > serviceProviderInfo( const TimetableAccessor *&accessor );
 
     TimetableAccessor *getSpecificAccessor( const QString &serviceProviderId );
-    TimetableAccessorInfo *getSpecificAccessorInfo( const QString &serviceProviderId );
+
+    /** @brief Gets data for the Locations data source. */
+    QHash< QString, QVariant > locations();
 
     QString stripDateAndTimeValues( const QString &sourceName );
 
-//     struct AccessorCheck {
-//         QDateTime checkTime;
-//         bool result;
-//         QString error;
-//     };
-
     QHash< QString, TimetableAccessor* > m_accessors; // List of already loaded accessors
     QHash< QString, QVariant > m_dataSources; // List of already used data sources
-    QStringList m_errornousAccessors; // List of errornous accessors
+    QStringList m_erroneousAccessors; // List of erroneous accessors
     QFileSystemWatcher *m_fileSystemWatcher; // watch the accessor directory
     int m_lastStopNameCount, m_lastJourneyCount;
 
@@ -232,7 +344,6 @@ private:
     QHash< QString, QDateTime > m_nextDownloadTimeProposals;
 
     QTimer *m_timer;
-//     QHash< QString, AccessorCheck > m_checkedAccessors;
 };
 
 /** @mainpage Public Transport Data Engine
