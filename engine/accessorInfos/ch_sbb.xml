@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 
-<accessorInfo fileVersion="1.0" version="1.3" type="Script">
+<accessorInfo fileVersion="1.0" version="1.4" type="Script">
 
 <name>Schweizerische Bundesbahnen SBB</name>
 <author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
@@ -23,6 +23,7 @@
 <script>ch_sbb.js</script>
 
 <changelog>
+    <entry since="1.4" releasedWith="0.10">Updated to new website layout for journeys.</entry>
     <entry since="1.3" releasedWith="0.10">Updated to new website layout for departures and stop suggestions.</entry>
     <entry since="1.3" releasedWith="0.10">Better/more journey news parsing.</entry>
     <entry since="1.2" releasedWith="0.10">Updated to work for journeys again. The problem was changed HTML code from the SBB service provider.</entry>

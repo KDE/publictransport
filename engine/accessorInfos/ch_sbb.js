@@ -58,7 +58,7 @@ function parseTimetable( html ) {
 	// Dates are set from today, not the requested date. They need to be adjusted by X days,
 	// where X is the difference in days between today and the requested date.
 	returnValue.push( 'dates need adjustment' );
-	
+
     // Find block of departures
     var str = /<table [^>]*class="hfs_stboard"[^>]*>([\s\S]*?)<\/table>/i.exec(html);
     if ( str == null ) {
@@ -66,7 +66,7 @@ function parseTimetable( html ) {
         return;
     }
     str = str[1];
-    
+
 	// Initialize regular expressions (only used once)
 	var meaningsRegExp = /<tr>[\s\S]*?(<th[\s\S]*?)<\/tr>/i;
 	var columnMeaningsRegExp = /<th[^>]*?>([\s\S]*?)<\/th>/ig;
@@ -103,31 +103,6 @@ function parseTimetable( html ) {
 		return;
 	}
 
-// <div class="text">
-//      <span class="bold">
-//          &nbsp;
-//          (Brig - Romanshorn)
-//          &nbsp;Fahrzeugst&#246;rung: IC 827
-//      </span>
-//      <span class="him">
-//          IC 827 von Brig ab 12:49 &#252;ber Visp 12:57 - Spiez 13:25 - Thun 13:36 - Bern 14:02 - Z&#252;rich HB 15:07 - Z&#252;rich Flughafen 15:18 - Winterthur 15:35 - Weinfelden 16:00 - Amriswil 16:11 nach Romanshorn an 16:18 f&#228;llt zwischen Z&#252;rich HB und Romanshorn aus.
-//      </span>
-//      <a href="http://sbb-him.hafas.de/bin/help.exe/dn?tpl=showmap_external&messageID=612920&OK#hfsShm" target="_blank">Weitere Informationen</a>
-// </div>
-	// Initialize regular expressions (compile them only once)
-//     var test = /<tr class="zebra-row-\d">([\s\S]*?)<\/tr>\s*<tr class="zebra-row-\d">[\s\S]*?<div [^>]*?class="messageHolder"[^>]*>[\s\S]*?<div [^>]*?class="text"[^>]*>\s*<span [^>]*?class="bold">([\s\S]*?)<\/span>[\s\S]*?<span [^>]*?class="him">([\s\S]*?)<\/span>[\s\S]*?<\/tr>/ig;
-//     println("B");
-//     t = test.exec(str);
-//     println("B2");
-//     if ( t ) {
-//         println("C");
-//         println("matched 1 " + t.length);
-//         println("RESULTS: " + ", " + t[2] + ", " + t[3]);
-//     } else {
-//         println("NOT matched 1");
-//     }
-//     println("D");
-    
 	var departuresRegExp = /<tr class="zebra-row-\d">([\s\S]*?)<\/tr>(?:\s*<tr class="zebra-row-\d">[\s\S]*?<div [^>]*?class="messageHolder"[^>]*>[\s\S]*?<div [^>]*?class="text"[^>]*>\s*<span [^>]*?class="bold">([\s\S]*?)<\/span>[\s\S]*?<span [^>]*?class="him">([\s\S]*?)<\/span>[\s\S]*?<\/tr>)?/ig;
 	var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
 	var typeOfVehicleRegExp = /<img [^>]*src="[^"]*?\/products\/([^_]*?)\d?_pic\.\w{3,4}"/i;
@@ -170,7 +145,7 @@ function parseTimetable( html ) {
 			continue;
 		}
 		typeOfVehicle = helper.trim( typeOfVehicle[1] );
-		
+
 		var vehicle = typeOfVehicle.toLowerCase();
 		if ( vehicle == "nbu" ) {
 			typeOfVehicle = "bus";
@@ -297,14 +272,16 @@ function parseJourneyDetails( details, resultObject ) {
 	// 	    var exactRouteStops = 0;
 	// Initialize regular expressions (only used once)
 	var meaningsRegExp = /<tr>[\s\S]*?(<th[\s\S]*?)<\/tr>/ig;
-	var columnMeaningsRegExp = /<th [\s\S]*?id="([^"]*?)-[^\"]*"[^>]*?>[\s\S]*?<\/th>/ig;
+	var columnMeaningsRegExp = /<th [^>]*?id="([^-]+)-[^\"]*"[^>]*?>[\s\S]*?<\/th>/ig;
 
 	if ( (meanings = meaningsRegExp.exec(details)) == null ) {
 		helper.error("Header row of details table not found !", details);
 		return;
 	}
 	meanings = meanings[1];
-	details = details.substr( meaningsRegExp.lastIndex );
+    println(" meaningsRegExp.lastIndex = " + meaningsRegExp.lastIndex);
+    println(" \n\n meanings: " + meanings + "\n\n");
+	details = details.substr( meaningsRegExp.lastIndex ); // Cut the header row
 
 	var posNews = details.indexOf( '<table cellspacing="0" class="hafas-content him-content">' );
 	var journeyNews = details.substr( posNews );
@@ -341,9 +318,8 @@ function parseJourneyDetails( details, resultObject ) {
 		helper.error("Required columns not found (time, stop name, type of vehicle)!", meanings);
 		return;
 	}
-
 	var lastStop = null, lastArrivalTime = '';
-	var detailsBlockRegExp = /<tr>([\s\S]*?)<\/tr>\s*?<tr>([\s\S]*?)<\/tr>/ig;
+	var detailsBlockRegExp = /<tr[^>]*?>([\s\S]*?)<\/tr>\s*?<tr[^>]*?>([\s\S]*?)<\/tr>/ig;
 	var columnsContentsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
 	var timeCompleteRegExp = /(\d{2}:\d{2})/i;
 
@@ -457,10 +433,15 @@ function parseJourneyDetails( details, resultObject ) {
 }
 
 function parseJourneys( html ) {
-
-	// Find block of journeys
-	var str = helper.extractBlock( html, // TODO
-								   '<table cellspacing="0" class="hafas-content hafas-tp-result-overview">', 'here Verbindungen</a>' );
+    // Find block of journeys, may fail if there are multiple tables with the class "hfs_overview".
+    // Don't extract the string until the next closing </table> tag, because the table itself
+    // contains multiple other tables. Extract until some uniquely identifyable element after
+    // the journey table (<div class="legend">).
+    var str = /<table [^>]*class="hfs_overview"[^>]*>([\s\S]*?)<div class="legend">/i.exec(html);
+    if ( str == null ) {
+        helper.error( "The table containing journeys wasn't found!", html );
+        return;
+    }
 
 	var pos = html.indexOf( '<table summary="Details - Verbindung 1' );
 	var detailsHtml = pos != -1 ? html.substr( pos ) : '';
@@ -500,12 +481,17 @@ function parseJourneys( html ) {
 			dateCol = i;
 		} else if ( colMeaning == "details" ) {
 			detailsCol = i;
-			// 	    } else if ( colMeaning == "" ) {
-				// 		delayCol = i;
 		} else if ( colMeaning == "products" ) {
 			typesOfVehicleCol = i;
 		} else if ( colMeaning == "location" ) {
-			locationCol = i;
+            if ( colspan == 2 ) {
+                // The location column has colspan=2, but the second column contains the stop name
+                locationCol = i + 1;
+            } else {
+                println( "The website layout has changed, may not work correctly any longer. " +
+                         "The 'location' column has colspan!=2, expected is colspan==2." );
+                locationCol = i;
+            }
 		} else if ( colMeaning == "changes" ) {
 			changesCol = i;
 		} else if ( colMeaning == "duration" ) {
@@ -517,14 +503,14 @@ function parseJourneys( html ) {
 		i += colspan;
 	}
 
-	if ( timeCol == -1 || typesOfVehicleCol == -1 || durationCol == -1 ) {
-		helper.error("Required columns not found (time, duration, types of vehicle)", meanings);
+	if ( timeCol == -1 || typesOfVehicleCol == -1 || durationCol == -1 || locationCol == -1 ) {
+		helper.error("Required columns not found (time, duration, types of vehicle, location)",
+                     meanings);
 		return;
 	}
 
 	// Initialize regular expressions (compile them only once)
-	//     var journeysRegExp = /<tr class="zebra-row-\d">([\s\S]*?)<\/tr>[\s\S]*?<tr class="zebra-row-\d">([\s\S]*?)<\/tr>/ig
-	var journeysRegExp = /<tr class="[^\"]*" id="trOverviewDep([^\"]*)">([\s\S]*?)<\/tr>[\s\S]*?<tr class="[^\"]*" id="trOverviewArr[^\"]*">([\s\S]*?)<\/tr>/ig
+	var journeysRegExp = /<tr [^>]*id="trOverviewDep([^\"]*)"[^>]*>([\s\S]*?)<\/tr>[\s\S]*?<tr [^>]*id="trOverviewArr[^\"]*"[^>]*>([\s\S]*?)<\/tr>/ig
 	var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
 	var dateRegExp = /([0-9]{2}\.[0-9]{2}\.[0-9]{2})/i;
 	var durationRegExp = /(\d{1,2}:\d{2})/i;
@@ -535,7 +521,7 @@ function parseJourneys( html ) {
 		journeyID = journey[1]; // Can be used to get the Details element (id="tr{journeyID}")
 		journeyRow1 = journey[2];
 		journeyRow2 = journey[3];
-		println("  >> parse journey \"" + journeyID + "\"...");
+		println( "Parse journey " + journeyID );
 
 		// Get column contents
 		var columnsRow1 = new Array;
@@ -564,7 +550,7 @@ function parseJourneys( html ) {
 		// Parse departure time column
 		var departureTime = helper.matchTime( columnsRow1[timeCol + 1], "hh:mm" );
 		if ( departureTime.length != 2 ) {
-			helper.error("Unexpected string in departure time column!", columnsRow1[timeCol]);
+			helper.error("Unexpected string in departure time column!", columnsRow1[timeCol + 1]);
 			continue; // Unexpected string in departure time column
 		}
 
@@ -603,34 +589,26 @@ function parseJourneys( html ) {
 
 		// Parse details if available
 		var detailsResults = new detailsResultsObject();
-		println( "detailsCol = " + detailsCol );
 		if ( detailsCol != -1 ) {
 			var detailsColRegExp = /<h2[^>]*>Verbindung\s+([0-9]+)<\/h2>/i;
-			//   /<a .*title=\"[^\"]*([0-9]+)/i;
-			//   println("regexp created, run on '" + columnsRow1[detailsCol] + "'");
 			var res1 = detailsColRegExp.exec( columnsRow1[detailsCol] );
-// 			println("regexp executed");
 			if ( res1 != null ) {
-				// var journeyNrStr = helper.trim( columnsRow1[detailsCol] );
-
-// 				println( res1[1] );
 				var journeyNrStr = res1[1];
-
 				var journeyNrRegExp = /([0-9]+)/i;
 				var res = journeyNrRegExp.exec( journeyNrStr );
-				// Go through all stop options
 				if ( res != null ) {
-					// 			  var journeyNr = helper.trim( helper.stripTags(columnsRow1[detailsCol]) );
 					var journeyNr = parseInt( res[1] );
-					var details = helper.extractBlock( detailsHtml,
-							'<table summary="Details - Verbindung ' + journeyNr +
-							'" cellspacing="0" width="100%" class="hac_detail">', '</table>' );
-					// 			println( "    detailsHtml = " + detailsHtml );
-					// 			var details = helper.extractBlock( detailsHtml,
-					// 				'<table summary="Details - Verbindung ' + journeyNr +
-					// 				'" cellspacing="0" width="100%" class="hac_detail">', '</table>' );
+                    var detailsRegExp = new RegExp( "<table [^>]*summary=\"Details - Verbindung " +
+                                                    journeyNr + "\"[^>]*>([\\s\\S]*?)</table>", "i" );
+                    var details = detailsRegExp.exec( detailsHtml );
+                    if ( details == null ) {
+                        helper.error( "Details for journey item " + journeyNr + " not found!",
+                                      detailsHtml );
+                        return;
+                    }
+                    details = details[1];
+
 					parseJourneyDetails( details, detailsResults );
-// 					println("TEST 2 " + detailsResults.routeStops.length);
 				}
 
 				if ( typeof(detailsResults.routeStops) != 'undefined'
@@ -644,7 +622,7 @@ function parseJourneys( html ) {
 								detailsResults.routeStops.length - 1 ];
 					}
 				}
-			} else { 
+			} else {
 				helper.error("Heading not found in details column", columnsRow1[detailsCol]);
 			}
 		}
@@ -725,7 +703,7 @@ function parsePossibleStops_1( html ) {
     }
     var end = html.indexOf( '</select>', pos + 1 );
     var str = html.substr( pos, end - pos );
-    
+
 	// Initialize regular expressions (compile them only once)
 	var stopRegExp = /<option value="[^"]+?#([0-9]+)">([^<]*?)<\/option>/ig;
 
