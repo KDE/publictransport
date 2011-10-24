@@ -1,16 +1,24 @@
 
-Changelog of plasma-applet-publictransport 
+Changelog of plasma-applet-publictransport
 
 0.10 - RC 2
+- Fix link errors
+- Fix memory leaks
+- Fix applet collapsing to popup icon in desktop
 - Add the possibility to put the applet into the notification area (systemtray).
 - Add monochrome vehicle type icons, used for the popup icon
 - The popup icon now visualizes the time until the departure of the currently shown vehicle by fading it in radially like a clock (completely half-transparent => departure in 60 or more minutes, completely opaque => departure is now, 1/2 opaque => departure in 30 minutes, etc.)
-- Use KPixmapCache for vehicle type icons in the departure view
+- Use of KPixmapCache for vehicle type icons
 - Improve drawing performance alot
   - Don't draw a complete background gradient for departure/journey items; draw solid color background(s) and then draw fade out gradients at the left/right
   - Hide route items if the containing departure/journey item isn't expanded
   - Store a pointer to the DepartureModel in RouteStopTextGraphicsItem, to get it's RouteStopFlags (used for drawing)
 - Don't rearrange route stop items if the route item isn't visible (not expanded)
+- Better layout adjustments for small sizes
+- Change applet tooltip according to current departure group in popup icon
+- Shorter alarm names, alarm names in notifications
+- Nicer alarm background
+- Fix color groups and route time display for arrivals
 
 0.10 - RC 1
 Highlights: New filter/alarm UI, Context menus for journey/departure route stops, highlight stops, show intermediate departure list, alarms in journey view, colorized departure groups, quick&easy filtering by color groups, show stops in marble using OpenStreetMap, use of QStateMachine

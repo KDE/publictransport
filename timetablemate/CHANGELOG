@@ -3,6 +3,7 @@ Changelog of timetablemate
 
 0.2.3
 - Cleanup, update to new version of libpublictransporthelper (namespace Timetable)
+- Fix for missing KWebKitPart include file, it now uses KWebView directly
 
 0.2.2
 - Updated syntax completion/checking to new features in the data engine (version 0.10).
