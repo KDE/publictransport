@@ -151,16 +151,19 @@ void PublicTransportGraphicsItem::paint( QPainter* painter, const QStyleOptionGr
 
 void PublicTransportGraphicsItem::capturePixmap()
 {
+    // Delete previous pixmap if any
     delete m_pixmap;
-    m_pixmap = NULL;
+    m_pixmap = 0;
 
-    QPixmap *pixmap = new QPixmap( size().toSize() );
-    pixmap->fill( Qt::transparent );
-    QPainter p( pixmap );
+    // Create new pixmap
+    m_pixmap = new QPixmap( size().toSize() );
+    m_pixmap->fill( Qt::transparent );
+
+    // Draw this item into the new pixmap
+    QPainter p( m_pixmap );
     QStyleOptionGraphicsItem option;
     option.rect = rect().toRect();
     paint( &p, &option );
-    m_pixmap = pixmap;
 }
 
 qreal PublicTransportGraphicsItem::padding() const
@@ -234,15 +237,18 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
     }
     int textHeight = lineCount * ( fm.lineSpacing() + 1 );
 
+    // Draw text and calculate halo/fade rects
     for ( int b = 0; b < blockCount; ++b ) {
         QTextLayout *textLayout = document->findBlockByNumber( b ).layout();
-        int lines = textLayout->lineCount();
-        QPointF position( 0, (textRect.height() - textHeight) / 2.0f );
+        const int lines = textLayout->lineCount();
+        const QPointF position( 0, (textRect.height() - textHeight) / 2.0f );
         for ( int l = 0; l < lines; ++l ) {
+            // Draw a text line
             QTextLine textLine = textLayout->lineAt( l );
             textLine.draw( &p, position );
 
             if ( drawHalos ) {
+                // Calculate halo rect
                 QSize textSize = textLine.naturalTextRect().size().toSize();
                 if ( textSize.width() > textRect.width() ) {
                     textSize.setWidth( textRect.width() );

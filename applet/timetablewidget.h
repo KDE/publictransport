@@ -20,12 +20,15 @@
 #ifndef TIMETABLEWIDGET_H
 #define TIMETABLEWIDGET_H
 
+// Own includes
 #include "departuremodel.h"
 #include "stopaction.h" // for StopAction::Type
 
+// Plasma+KDE includes
 #include <Plasma/ScrollWidget>
 #include <KDebug>
 
+// Qt includes
 #include <QGraphicsWidget>
 #include <QModelIndex>
 #include <QPainter>

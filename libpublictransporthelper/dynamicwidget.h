@@ -574,10 +574,20 @@ class PUBLICTRANSPORTHELPER_EXPORT AbstractDynamicLabeledWidgetContainer
     Q_ENUMS( LabelNumberOptions )
 
 public:
-    /** @brief Options for numbering of widget labels. */
+    /**
+     * @brief Options for numbering of widget labels.
+     *
+     * There are two types of widget labels: Default numbered labels and special text labels.
+     * If for example there is one special label text, the first label widget gets this special
+     * text (without a number). Labels following the last label with a special text get the default
+     * text with a number. Numbering can begin with 1 at the first special label or at the first
+     * non-special label.
+     **/
     enum LabelNumberOptions {
         IncludeSpecialLabelsInWidgetNumbering, /**< Begin widget numbering with 1
-                * for the first label, also if special labels are used. */
+                * for the first label, also if special labels are used. Special labels are
+                * labels with a custom text, while non-special labels are labels with a default
+                * text and a number. */
         DontIncludeSpecialLabelsInWidgetNumbering /**< Begin widget numbering with 1
                 * for the first label without a special label text. */
     };
@@ -598,6 +608,10 @@ public:
 
     /**
      * @brief Gets special label texts for widgets beginning with the first one.
+     *
+     * Special labels are labels with a custom text, while non-special labels are labels with
+     * a default text and a number. Depending on the used LabelNumberOptions, special label texts
+     * are included in counting or not.
      *
      * @see labelText
      **/

@@ -1874,7 +1874,7 @@ KMenu *PublicTransport::updateFilterMenu()
         m_filtersGroup->removeAction( oldAction );
         delete oldAction;
     }
-    
+
     KMenu *menu = qobject_cast<KMenu*>( actionFilter->menu() );
     menu->clear();
     bool showColorGrous = m_settings.colorize && !m_settings.colorGroupSettingsList.isEmpty();

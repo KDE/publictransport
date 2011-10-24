@@ -669,7 +669,7 @@ void SettingsUiManager::setValuesOfAdvancedConfig( const Settings &settings )
 void SettingsUiManager::setValuesOfAppearanceConfig( const Settings &settings )
 {
     m_uiAppearance.linesPerRow->setValue( settings.linesPerRow );
-    m_uiAppearance.size->setValue( settings.size );
+    m_uiAppearance.size->setValue( Settings::sizeFromSizeFactor(settings.sizeFactor) );
     if ( settings.showRemainingMinutes && settings.showDepartureTime ) {
         m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex( 0 );
     } else if ( settings.showRemainingMinutes ) {
@@ -871,8 +871,7 @@ Settings SettingsUiManager::settings()
     ret.displayTimeBold = m_uiAppearance.displayTimeBold->checkState() == Qt::Checked;
     ret.drawShadows = m_uiAppearance.shadow->checkState() == Qt::Checked;
     ret.linesPerRow = m_uiAppearance.linesPerRow->value();
-    ret.size = m_uiAppearance.size->value();
-    ret.sizeFactor = ( ret.size + 3 ) * 0.2f;
+    ret.sizeFactor = Settings::sizeFactorFromSize( m_uiAppearance.size->value() );
     ret.useDefaultFont = m_uiAppearance.radioUseDefaultFont->isChecked();
     if ( ret.useDefaultFont ) {
         ret.font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
@@ -1259,8 +1258,7 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
 
     settings.maximalNumberOfDepartures = cg.readEntry( "maximalNumberOfDepartures", 20 );
     settings.linesPerRow = cg.readEntry( "linesPerRow", 2 );
-    settings.size = cg.readEntry( "size", 2 );
-    settings.sizeFactor = ( settings.size + 3 ) * 0.2f;
+    settings.sizeFactor = Settings::sizeFactorFromSize( cg.readEntry("size", 2) );
     settings.departureArrivalListType = static_cast<DepartureArrivalListType>(
             cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList)) );
     settings.drawShadows = cg.readEntry( "drawShadows", true );
@@ -1451,8 +1449,8 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
         changed |= IsChanged | ChangedLinesPerRow;
     }
 
-    if ( settings.size != oldSettings.size ) {
-        cg.writeEntry( "size", settings.size );
+    if ( settings.sizeFactor != oldSettings.sizeFactor ) {
+        cg.writeEntry( "size", Settings::sizeFromSizeFactor(settings.sizeFactor) );
         changed |= IsChanged;
     }
 

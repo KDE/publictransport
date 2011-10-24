@@ -110,8 +110,7 @@ public:
     void set( const AlarmSettings &newAlarmSettings );
 };
 
-/**
- * @brief Contains information about a color group configuration, ie. it's color. */
+/** @brief Contains information about a color group configuration, ie. it's color. */
 struct ColorGroupSettings {
     /**
      * @brief A list of filters for this color group configuration.
@@ -143,8 +142,10 @@ struct ColorGroupSettings {
 };
 bool operator ==( const ColorGroupSettings &l, const ColorGroupSettings &r );
 
+/** @brief A list of ColorGroupSettings. */
 class ColorGroupSettingsList : public QList< ColorGroupSettings > {
 public:
+    /** @brief Find a ColorGroupSettings object with the given @p color in the list. */
     ColorGroupSettings byColor( const QColor &color ) {
         foreach ( const ColorGroupSettings &colorSettings, *this ) {
             if ( colorSettings.color == color ) {
@@ -191,7 +192,8 @@ public:
         return false;
     };
 
-    void enableColorGroup ( const QColor color, bool enable = true ) {
+    /** @brief Enables/disables the ColorGroupSettings object with the given @p color in the list. */
+    void enableColorGroup( const QColor color, bool enable = true ) {
         for ( int i = 0; i < count(); ++i ) {
             if ( operator[](i).color == color ) {
                 operator[](i).filterOut = !enable;
@@ -200,8 +202,13 @@ public:
         }
     };
 
-    /** @brief Applies the filters of color group configurations with filterOut set to true
-      * on the given @p departureInfo. */
+    /**
+     * @brief Applies the filters of the color group configurations in the list to @p departureInfo.
+     *
+     * @param departureInfo The departure to test.
+     * @returns True, if the given @p departureInfo matches a filtered out color group in the list.
+     *   False, otherwise.
+     **/
     bool filterOut( const DepartureInfo& departureInfo ) const {
         foreach( const ColorGroupSettings &colorSettings, *this ) {
             if ( colorSettings.filterOut && colorSettings.matches(departureInfo) ) {
@@ -222,7 +229,12 @@ inline uint qHash( const QStringList &key )
     return result;
 }
 
-/** @brief Manages the settings dialog. */
+/**
+ * @brief Manages the configuration dialog and synchronizes with Settings.
+ *
+ * Get the current settings in the dialog using settings(), changing the settings programatically
+ * is only done class intern.
+ **/
 class SettingsUiManager : public QObject {
     Q_OBJECT
 
@@ -237,7 +249,7 @@ public:
             Plasma::DataEngine *favIconEngine, Plasma::DataEngine *geolocationEngine,
             KConfigDialog *parentDialog, DeletionPolicy deletionPolicy = DeleteWhenFinished );
 
-    /** @returns a Settings object with the current settings in the dialog. */
+    /** @brief Gets a Settings object with the current settings in the dialog. */
     Settings settings();
 
 signals:
@@ -367,7 +379,8 @@ private:
 /**
  * @brief Contains static methods to read/write settings.
  *
- * Stop and filter settings are stored globally for all publicTransport applets. */
+ * Stop and filter settings are stored globally for all PublicTransport applets.
+ **/
 class SettingsIO {
 public:
     /** @brief These flags describe what settings have changed. */
@@ -415,36 +428,109 @@ public:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( SettingsIO::ChangedFlags );
 
-/** @brief Contains all settings. */
+/**
+ * @brief Contains all settings of the PublicTransport applet.
+ *
+ * Use SettingsIO to read/write settings from/to disk, use SettingsUiManager to synchronize and
+ * connect the settings in this class with the widget states in the configuration dialog.
+ **/
 struct Settings {
 public:
+    /** @brief Creates a new Settings object. */
     Settings();
 
+    /** @brief Copy constructor. */
     Settings( const Settings &other );
 
-    bool autoUpdate; /**< Whether or not timetable data should be updated automatically. */
-    bool showRemainingMinutes; /**< Whether or not remaining minutes until
-            * departure should be shown. */
-    bool showDepartureTime; /**< Whether or not departure times should be shown. */
-    int currentStopSettingsIndex; /**< The index of the current stop settings. */
-    QStringList recentJourneySearches; /**< A list of recently used journey searches. */
+    /** @brief A list of all stop settings. */
+    StopSettingsList stopSettingsList;
 
-    int linesPerRow; /**< How many lines each row in the tree view should have. */
-    int size; /**< The size of the timetable. @note Use @ref sizeFactor to size items. */
-    float sizeFactor; /**< A factor to use for item sizes, calculated like this:
-            * (size + 3) * 0.2. */
-    int maximalNumberOfDepartures; /**< The maximal number of displayed departures. */
+    /** @brief A list of all filter settings. */
+    FilterSettingsList filterSettingsList;
+
+    /** @brief A list of all alarm settings. */
+    AlarmSettingsList alarmSettings;
+
+    /**
+     * @brief A list of all color group settings lists (one list for each stop).
+     *
+     * @note If colorize is false these color groups won't be used.
+     **/
+    QList<ColorGroupSettingsList> colorGroupSettingsList;
+
+    /** @brief Whether or not departures should be colorized by groups. */
+    bool colorize;
+
+    /**
+     * @brief The index of the currently used stop settings.
+     *
+     * Use currentStopSettings() to get the StopSettings object, this index is pointing at. If
+     * isCurrentStopSettingsIndexValid() returns false, this index is not in the range of
+     * available stop settings.
+     *
+     * @see currentStopSettings
+     * @see isCurrentStopSettingsIndexValid
+     **/
+    int currentStopSettingsIndex;
+
+    /** @brief Whether or not timetable data should be updated automatically. */
+    bool autoUpdate;
+
+    /** @brief Whether or not remaining minutes until departure/arrival should be shown. */
+    bool showRemainingMinutes;
+
+    /** @brief Whether or not departure times should be shown in the default timetable view. */
+    bool showDepartureTime;
+
+    /** @brief A list of recently used journey searches. */
+    QStringList recentJourneySearches;
+
+    /** @brief How many lines each row in the departure/arrival view should have. */
+    int linesPerRow;
+
+    /** @brief The maximal number of displayed departures. */
+    int maximalNumberOfDepartures;
+
+    /**
+     * @brief A zoom factor to use for item/font sizes.
+     *
+     * This value gets stored and configured in the dialog as integer. This integer gets converted
+     * to the size factor using sizeFactorFromSize. To convert back sizeFromSizeFactor is used.
+     **/
+    float sizeFactor;
+
+    /**
+     * @brief The type of data to be shown in the default timetable view.
+     *
+     * The default timetable view can show either departures or arrivals.
+     **/
     DepartureArrivalListType departureArrivalListType;
-    bool drawShadows; /**< Whether or not shadows should be drawn for departure items. */
-    bool showHeader; /**< Whether or not the header of the departure view should
-            * be shown. */
-    bool hideColumnTarget; /**< Whether or not the target/origin column should be
-            * shown in the departure view. */
-    bool useDefaultFont; /**< Whether or not the default plasma theme's font is used. */
-    QFont font; /**< The font to be used. */
-    bool displayTimeBold; /**< Whether or not the time should be displayed bold. */
-    bool colorize; /**< Whether or not departures should be colorized by groups. */
 
+    /** @brief Whether or not shadows should be drawn in the applet. */
+    bool drawShadows;
+
+    /** @deprecated Whether or not the header of the departure view should be shown. */
+    bool showHeader;
+
+    /** @brief Whether or not the target/origin column should be shown in the departure view. */
+    bool hideColumnTarget;
+
+    /** @brief Whether or not departure/arrival times should be displayed bold in the timetable. */
+    bool displayTimeBold;
+
+    /** @brief Whether or not the default plasma theme's font is used. */
+    bool useDefaultFont;
+
+    /**
+     * @brief The font to be used in the applet.
+     *
+     * This font gets only used, if useDefaultFont is false.
+     * @note If the font size is smaller than the font size of KGlobalSettings::smallestReadableFont
+     *   that smallest readable font gets used instead to ensure best possible readability.
+     **/
+    QFont font;
+
+    /** @brief Gets font with the size zoomed by sizeFactor. */
     QFont sizedFont() const {
         QFont f = font;
         if ( f.pointSize() == -1 ) {
@@ -457,21 +543,46 @@ public:
         return f;
     };
 
-    AlarmSettingsList alarmSettings; /** A list of all alarm settings. */
+    /**
+     * @brief Gets the size factor to be used for the given @p size value.
+     *
+     * @param size An integer value, ie. configurable using a slider widget. Smallest value is null.
+     * @return The size factor associated with the given @p size value.
+     **/
+    static inline qreal sizeFactorFromSize( int size ) { return (size + 3) * 0.2; };
 
-    StopSettingsList stopSettingsList; /** A list of all stop settings. */
+    /**
+     * @brief Gets the integer size value to be used for the given @p sizeFactor.
+     *
+     * @param sizeFactor The zoom factor, to get the integer size value for.
+     * @return The size associated with the given @p sizeFactor.
+     **/
+    static inline int sizeFromSizeFactor( qreal sizeFactor ) { return qRound(sizeFactor / 0.2) - 3; };
+
+    /**
+     * @brief Gets the currently used stop settings.
+     *
+     * If the current stop settings index is invalid an empty StopSettings object gets returned.
+     * @see isCurrentStopSettingsIndexValid
+     **/
     StopSettings currentStopSettings() const {
         if ( !isCurrentStopSettingsIndexValid() ) {
             kDebug() << "Current stop index invalid" << currentStopSettingsIndex
-                    << "Stop settings count:" << stopSettingsList.count();
+                     << "Stop settings count:" << stopSettingsList.count();
             return StopSettings();
         }
         return stopSettingsList[ currentStopSettingsIndex ];
     };
 
     /**
+     * @brief Gets a reference to the currently used stop settings.
+     *
+     * The returned StopSettings object can be used to also directly change the settings
+     * in this class.
+     *
      * @warning This crashes with invalid stop settings index.
-     * @see isCurrentStopSettingsIndexValid */
+     * @see isCurrentStopSettingsIndexValid
+     **/
     StopSettings &currentStopSettings() {
         Q_ASSERT_X( isCurrentStopSettingsIndexValid(), "StopSettings::currentStopSettings",
                     QString("There's no stop settings with index %1 to get a "
@@ -479,15 +590,10 @@ public:
         return stopSettingsList[ currentStopSettingsIndex ];
     };
 
+    /** @brief Whether or not the index of the currently used stop settings is valid. */
     bool isCurrentStopSettingsIndexValid() const {
-        return currentStopSettingsIndex >= 0 &&
-                currentStopSettingsIndex < stopSettingsList.count();
+        return currentStopSettingsIndex >= 0 && currentStopSettingsIndex < stopSettingsList.count();
     };
-
-    /** @brief A list of all color group settings lists (one list for each stop). */
-    QList<ColorGroupSettingsList> colorGroupSettingsList;
-
-    FilterSettingsList filterSettingsList; /** @brief A list of all filter settings. */
 
     /**
      * @brief Gets a list of all currently active filter settings.

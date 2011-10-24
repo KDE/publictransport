@@ -35,7 +35,7 @@
 
 /**
  * @brief Worker thread for PublicTransport
- * 
+ *
  * A worker thread that puts data from the publicTransport data engine into DepartureInfo/
  * JourneyInfo instances. It also applies filters and checks if alarm filters match.
  * Filters are given as FilterSettings by @ref setFilterSettings. They contain a list of filters
@@ -46,8 +46,9 @@
  * equal to the first departure time, use @ref setFirstDepartureSettings. The thread uses a job
  * queue, jobs can be cancelled by their type using @ref abortJobs. To add a new job to the queue
  * use @ref processDepartures, @ref processJourneys or @ref filterDepartures.
- * 
- * @ingroup models */
+ *
+ * @ingroup models
+ **/
 class DepartureProcessor : public QThread {
     Q_OBJECT
 
@@ -157,7 +158,7 @@ public:
 
     /**
      * @brief Aborts all jobs of the given @p jobTypes.
-     * 
+     *
      * @param jobTypes The types of jobs to abort, by default all jobs are aborted.
      **/
     void abortJobs( DepartureProcessor::JobTypes jobTypes = AllJobs );

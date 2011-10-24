@@ -951,6 +951,8 @@ DynamicWidget *AbstractDynamicLabeledWidgetContainer::addWidget(
     QWidget* labelWidget, QWidget* widget )
 {
     Q_D( AbstractDynamicLabeledWidgetContainer );
+
+    // Check if the maximum widget count is already reached
     if ( d->dynamicWidgets.count() == d->maxWidgetCount ) {
         kDebug() << "Can't add the given widget because the maximum "
         "widget count of" << d->maxWidgetCount << "is reached";
@@ -970,7 +972,11 @@ DynamicWidget *AbstractDynamicLabeledWidgetContainer::addWidget(
         }
     }
 
+    // Add label to label widget list
     d->labelWidgets << labelWidget;
+
+    // Create a wrapping DynamicWidget for the given widget and get the layout
+    // where DynamicWidgets get added
     DynamicWidget *dynWidget = createDynamicWidget( widget );
     QFormLayout *formLayout = dynamic_cast< QFormLayout* >( d->contentWidget->layout() );
     Q_ASSERT_X( formLayout, "AbstractDynamicLabeledWidgetContainer::addWidget",
