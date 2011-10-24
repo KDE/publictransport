@@ -17,20 +17,25 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// Own includes
 #include "timetablewidget.h"
 #include "routegraphicsitem.h"
 #include "departuremodel.h"
 
+// Plasma includes
 #include <Plasma/PaintUtils>
 #include <Plasma/Svg>
 #include <Plasma/Animator>
 #include <Plasma/Animation>
 #include <Plasma/DataEngineManager>
 
+// KDE includes
 #include <KColorScheme>
 #include <KColorUtils>
 #include <KMenu>
+#include <KPixmapCache>
 
+// Qt includes
 #include <QGraphicsLinearLayout>
 #include <QModelIndex>
 #include <QPainter>
@@ -40,9 +45,8 @@
 #include <QGraphicsSceneHoverEvent>
 #include <QGraphicsScene>
 #include <QPropertyAnimation>
-#include <qmath.h>
 #include <QStyleOption>
-#include <KPixmapCache>
+#include <qmath.h>
 
 PublicTransportGraphicsItem::PublicTransportGraphicsItem(
         PublicTransportWidget* publicTransportWidget, QGraphicsItem* parent,
@@ -685,6 +689,7 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
     QRect pixmapRect( 0, 0, rect.width(), rect.height() );
     QPixmap pixmap( pixmapRect.size());
     QColor backgroundColor = Qt::transparent;
+    pixmap.fill( backgroundColor );
 
     // Use journey rating background:
     //   green for relatively short duration, less changes;
@@ -693,8 +698,8 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
     if ( vr.isValid() ) {
         qreal rating = vr.toReal();
         QColor ratingColor = KColorUtils::mix(
-                KColorScheme(QPalette::Active).background( KColorScheme::PositiveBackground ).color(),
-                KColorScheme(QPalette::Active).background( KColorScheme::NegativeBackground ).color(),
+                KColorScheme(QPalette::Active).background(KColorScheme::PositiveBackground).color(),
+                KColorScheme(QPalette::Active).background(KColorScheme::NegativeBackground).color(),
                 rating );
         bool drawRatingBackground = true;
         if ( rating >= 0 && rating <= 0.5 ) {
