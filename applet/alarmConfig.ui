@@ -228,12 +228,12 @@
   <customwidget>
    <class>CheckCombobox</class>
    <extends>QComboBox</extends>
-   <header location="global">publictransporthelper/checkcombobox.h</header>
+   <header location="global">checkcombobox.h</header>
   </customwidget>
   <customwidget>
    <class>Timetable::FilterWidget</class>
    <extends>QWidget</extends>
-   <header location="global">publictransporthelper/filterwidget.h</header>
+   <header location="global">filterwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

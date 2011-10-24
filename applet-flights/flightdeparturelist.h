@@ -20,8 +20,8 @@
 #ifndef FLIGHTDEPARTURELIST_H
 #define FLIGHTDEPARTURELIST_H
 
-#include <QGraphicsWidget>
 #include <Plasma/DataEngine>
+#include <QGraphicsWidget>
 
 namespace Plasma
 {

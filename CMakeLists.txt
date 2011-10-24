@@ -1,0 +1,87 @@
+project( plasma-publictransport )
+
+# Find the required Libaries
+find_package( KDE4 REQUIRED )
+include( KDE4Defaults )
+
+add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
+include_directories(
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_BINARY_DIR}
+   ${KDE4_INCLUDES} )
+
+# Include directory of publictransporthelper, to be used by other components using the library
+set( PUBLICTRANSPORTHELPER_INLUDES ${CMAKE_SOURCE_DIR}/libpublictransporthelper/ )
+
+# Can be used from the command line, eg. "cmake -DINSTALL_TIMETABLEMATE=ON .."
+# to configure with timetablemate (or use "cmake -i .." for interactive options)
+# Can also be set from a CMake GUI
+option( INSTALL_ENGINE_OPENSTREETMAP "Only useful if you have GPS hardware. It can then be used to get stops near your current position" ON )
+option( INSTALL_APPLET "A plasma applet showing a departure/arrival board or journeys. Departures can be filtered and alarms can be set" ON )
+option( INSTALL_APPLET_FLIGHTS "A simple applet that shows flight departures. It uses a single service provider, that's also available for the other applets/runner" OFF )
+option( INSTALL_APPLET_GRAPHICALTIMETABLELINE "Shows a street with vehicles moving on it, representing the timetable" ON )
+option( INSTALL_RUNNER "Can be used to quickly get departures/arrivals or journeys" ON )
+option( INSTALL_TIMETABLEMATE "A tool/little IDE to add support for new service providers. Offers code completion for scripts and helps when checking the correct behaviour of the script" OFF )
+option( INSTALL_ICONS "Vehicle type icons and other icons used by PublicTransport components" ON )
+option( INSTALL_ALL "Install everything (except for unit tests). This overrides other options and is OFF by default" OFF )
+option( BUILD_TESTS "Turn this option on to build unit tests" OFF )
+mark_as_advanced( BUILD_TESTS )
+
+if ( INSTALL_ALL )
+    set( INSTALL_ENGINE_OPENSTREETMAP TRUE )
+    set( INSTALL_APPLET TRUE )
+    set( INSTALL_APPLET_FLIGHTS TRUE )
+    set( INSTALL_APPLET_GRAPHICALTIMETABLELINE TRUE )
+    set( INSTALL_RUNNER TRUE )
+    set( INSTALL_TIMETABLEMATE TRUE )
+    set( INSTALL_ICONS TRUE )
+endif ( INSTALL_ALL )
+
+message( "*****************************************************" )
+message( "**** The following components are enabled.       ****" )
+message( "**** Use eg. cmake -DINSTALL_TIMETABLEMATE=ON    ****" )
+message( "**** to enable TimetableMate, see CMakeLists.txt ****" )
+
+# The library and the engine are used by all applets, the runner and TimetableMate
+message( " - PublicTransport Helper Library" )
+message( " - PublicTransport Data Engine" )
+add_subdirectory( libpublictransporthelper )
+add_subdirectory( engine )
+
+if ( INSTALL_ENGINE_OPENSTREETMAP )
+    message( " - OpenStreetMap Data Engine" )
+    add_subdirectory( engine-openstreetmap )
+endif ( INSTALL_ENGINE_OPENSTREETMAP )
+
+# Icons are are also needed everywhere, but may be turned off
+if ( INSTALL_ICONS )
+    message( " - PublicTransport Icons" )
+    add_subdirectory( icons )
+endif ( INSTALL_ICONS )
+
+if ( INSTALL_APPLET )
+    message( " - PublicTransport Applet" )
+    add_subdirectory( applet )
+endif ( INSTALL_APPLET )
+
+if ( INSTALL_APPLET_FLIGHTS )
+    message( " - Flights Applet" )
+    add_subdirectory( applet-flights )
+endif ( INSTALL_APPLET_FLIGHTS )
+
+if ( INSTALL_APPLET_GRAPHICALTIMETABLELINE )
+    message( " - GraphicalTimetableLine Applet" )
+    add_subdirectory( applet-graphicaltimetableline)
+endif ( INSTALL_APPLET_GRAPHICALTIMETABLELINE )
+
+if ( INSTALL_RUNNER )
+    message( " - PublicTransport Runner" )
+    add_subdirectory( runner )
+endif ( INSTALL_RUNNER )
+
+if ( INSTALL_TIMETABLEMATE )
+    message( " - TimetableMate" )
+    add_subdirectory( timetablemate )
+endif ( INSTALL_TIMETABLEMATE )
+
+message( "*****************************************************" )

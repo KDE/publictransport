@@ -19,11 +19,11 @@
 
 #include "graphicaltimetableline.h"
 
-// Library includes
-#include <publictransporthelper/global.h>
-#include <publictransporthelper/stopwidget.h>
-#include <publictransporthelper/checkcombobox.h>
-#include <publictransporthelper/vehicletypemodel.h>
+// libpublictransporthelper includes
+#include <global.h>
+#include <stopwidget.h>
+#include <checkcombobox.h>
+#include <vehicletypemodel.h>
 
 // KDE includes
 #include <KLocale>

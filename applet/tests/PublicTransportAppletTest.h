@@ -23,8 +23,8 @@
 #define QT_GUI_LIB
 
 #include <QtCore/QObject>
-#include <publictransporthelper/stopsettings.h>
-#include <publictransporthelper/filter.h>
+#include <stopsettings.h>
+#include <filter.h>
 
 class CheckCombobox;
 class QToolButton;

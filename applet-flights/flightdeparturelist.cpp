@@ -17,22 +17,25 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// Header
 #include "flightdeparturelist.h"
 
-#include <publictransporthelper/global.h>
-
-#include <qmath.h>
-#include <QStyleOption>
-#include <QPainter>
-#include <QGraphicsLinearLayout>
+// Plasma includes
 #include <Plasma/ScrollWidget>
 #include <Plasma/Theme>
 #include <Plasma/Svg>
 #include <Plasma/FrameSvg>
-#include <QGraphicsGridLayout>
 #include <Plasma/Label>
 #include <Plasma/IconWidget>
+
+// Qt includes
+#include <QStyleOption>
+#include <QPainter>
+#include <QGraphicsLinearLayout>
+#include <QGraphicsGridLayout>
 #include <QLabel>
+#include <qmath.h>
+#include <global.h>
 
 FlightDeparture::FlightDeparture( QGraphicsItem* parent ) : QGraphicsWidget( parent )
 {

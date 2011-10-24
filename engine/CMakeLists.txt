@@ -11,7 +11,10 @@ include_directories(
    ${KDE4_INCLUDES} )
 
 add_subdirectory( accessorInfos )
-add_subdirectory( tests )
+
+if ( BUILD_TESTS )
+    add_subdirectory( tests )
+endif ( BUILD_TESTS )
 
 # Source files
 set( publictransport_engine_SRCS 

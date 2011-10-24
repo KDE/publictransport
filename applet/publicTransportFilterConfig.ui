@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>471</width>
+    <width>470</width>
     <height>362</height>
    </rect>
   </property>
@@ -183,7 +183,7 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>449</width>
+           <width>448</width>
            <height>231</height>
           </rect>
          </property>
@@ -213,15 +213,15 @@
    <header>kcombobox.h</header>
   </customwidget>
   <customwidget>
-   <class>Timetable::FilterListWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">publictransporthelper/filterwidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>CheckCombobox</class>
    <extends>QComboBox</extends>
-   <header location="global">publictransporthelper/checkcombobox.h</header>
+   <header location="global">checkcombobox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Timetable::FilterListWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">filterwidget.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

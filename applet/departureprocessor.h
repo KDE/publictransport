@@ -29,8 +29,8 @@
 #include <QWaitCondition>
 #include <QQueue>
 
-#include <publictransporthelper/departureinfo.h>
-#include <publictransporthelper/filter.h>
+#include <departureinfo.h>
+#include <filter.h>
 #include "settings.h"
 
 /**

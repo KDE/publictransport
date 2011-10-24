@@ -21,7 +21,7 @@
 #define CHANGELOGENTRYWIDGET_HEADER
 
 #include <QWidget>
-#include <publictransporthelper/dynamicwidget.h>
+#include <dynamicwidget.h>
 #include "accessorinfoxmlreader.h"
 
 class KTextBrowser;

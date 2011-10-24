@@ -20,9 +20,11 @@
 #ifndef PUBLICTRANSPORTRUNNERCONFIG_H
 #define PUBLICTRANSPORTRUNNERCONFIG_H
 
-// Project-Includes
+// UI includes
 #include "ui_publicTransportRunnerConfig.h"
-#include <publictransporthelper/stopwidget.h>
+
+// libpublictransporthelper includes
+#include <stopwidget.h>
 
 // KDE-Includes
 #include <KCModule>

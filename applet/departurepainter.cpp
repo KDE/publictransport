@@ -20,8 +20,8 @@
 #include "departurepainter.h"
 #include "departuremodel.h"
 #include "popupicon.h"
-#include <publictransporthelper/departureinfo.h>
-#include <publictransporthelper/global.h>
+#include <departureinfo.h>
+#include <global.h>
 
 #include <Plasma/Theme>
 #include <Plasma/Svg>

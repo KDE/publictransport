@@ -21,7 +21,7 @@
 #ifndef FLIGHTS_HEADER
 #define FLIGHTS_HEADER
 
-// We need the Plasma Applet headers
+// KDE includes
 #include <Plasma/PopupApplet>
 #include <Plasma/DataEngine>
 
@@ -36,32 +36,32 @@ class FlightDepartureList;
 // Define our plasma Applet
 class Flights : public Plasma::PopupApplet
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	// Basic Create/Destroy
-	Flights(QObject *parent, const QVariantList &args);
-	~Flights();
-	
-	void init();
-	
-	virtual void createConfigurationInterface( KConfigDialog* parent );
-	virtual QGraphicsWidget* graphicsWidget();
-	virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
-	
+    // Basic Create/Destroy
+    Flights(QObject *parent, const QVariantList &args);
+    ~Flights();
+
+    void init();
+
+    virtual void createConfigurationInterface( KConfigDialog* parent );
+    virtual QGraphicsWidget* graphicsWidget();
+    virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
+
 public slots:
-	void configAccepted();
-	
-	/** @brief The data from the data engine was updated. */
-	void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
-	
+    void configAccepted();
+
+    /** @brief The data from the data engine was updated. */
+    void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
+
 private:
-	Timetable::StopLineEdit *m_stopLineEdit;
-	FlightDepartureList *m_flightDepartureList;
-	QString m_airport;
-	Plasma::Label *m_header;
-	QGraphicsWidget *m_container;
+    Timetable::StopLineEdit *m_stopLineEdit;
+    FlightDepartureList *m_flightDepartureList;
+    QString m_airport;
+    Plasma::Label *m_header;
+    QGraphicsWidget *m_container;
 };
- 
+
 // This is the command that links your applet to the .desktop file
 K_EXPORT_PLASMA_APPLET(flights, Flights)
 #endif

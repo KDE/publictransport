@@ -28,11 +28,13 @@
 #include <Plasma/PopupApplet>
 #include <KProcess> // For QProcess::ProcessError
 
+// libpublictransporthelper includes
+#include <departureinfo.h>
+
 // Own includes
 #include "titlewidget.h" // For enum(s) of TitleWidget
 #include "stopaction.h" // For StopAction::Type
 #include "settings.h" // Only for ColorGroupSettingsList, remove here, move the function to GlobalApplet?
-#include <publictransporthelper/departureinfo.h>
 
 class PopupIcon;
 class QParallelAnimationGroup;
@@ -132,8 +134,8 @@ public:
     bool isStateActive( const QString &stateName ) const;
 
     /**
-     * @brief Generates a list of color group settings from the given departure @p infoList. 
-     * 
+     * @brief Generates a list of color group settings from the given departure @p infoList.
+     *
      * The given departure @p infoList get grouped by direction. Each group gets a color assigned.
      **/
     static ColorGroupSettingsList generateColorGroupSettingsFrom(
@@ -329,7 +331,7 @@ protected slots:
      *
      * Writes new settings with @ref Settings::departureArrivalListType set
      * to @p ArrivalList. This also updates the departure view on @ref configChanged.
-     * 
+     *
      * @note This doesn't switch to the departure list automatically.
      *   To do this also use @ref showDepartureList.
      **/
@@ -394,7 +396,7 @@ protected slots:
      *
      * @param stopIsTarget Whether or not the parsed stop should be treated as target (true)
      *   or as origin stop (false).
-     * 
+     *
      * @param timeIsDeparture Whether or not the parsed time should be treated as departure (true)
      *   or as arrival time (false).
      **/
@@ -402,7 +404,7 @@ protected slots:
                                    bool stopIsTarget, bool timeIsDeparture );
 
     /**
-     * @brief Called from PublicTransportSettings to indicate the need to clear 
+     * @brief Called from PublicTransportSettings to indicate the need to clear
      *   the departure list.
      **/
     void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
@@ -444,7 +446,7 @@ protected slots:
 
     /**
      * @brief A "recent journey"-action has been triggered.
-     * 
+     *
      * @param recentJourneyAction The type of the executed action.
      **/
     void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction );
@@ -513,7 +515,7 @@ protected slots:
 
     /**
      * @brief The worker thread starts processing journeys from the data engine.
-     * 
+     *
      * @see journeysProcessed
      * @ingroup models
      **/
@@ -657,14 +659,14 @@ protected:
     /**
      * @brief Disconnects a currently connected departure/arrival data source and
      *   connects a new source using the current configuration.
-     * 
+     *
      * @ingroup models
      **/
     void reconnectSource();
 
     /**
      * @brief Disconnects a currently connected departure/arrival data source.
-     * 
+     *
      * @ingroup models
      **/
     void disconnectSources();
@@ -672,7 +674,7 @@ protected:
     /**
      * @brief Disconnects a currently connected journey data source and connects
      *   a new source using the current configuration.
-     * 
+     *
      * @ingroup models
      **/
     void reconnectJourneySource( const QString &targetStopName = QString(),
@@ -682,14 +684,14 @@ protected:
 
     /**
      * @brief Handles errors from the publictransport data engine for @p data from source @p sourceName.
-     * 
+     *
      * @ingroup models
      **/
     void handleDataError( const QString &sourceName, const Plasma::DataEngine::Data& data );
 
     /**
      * @brief Read stop suggestions from the data engine.
-     * 
+     *
      * @ingroup models
      **/
     void processStopSuggestions( const QString &sourceName, const Plasma::DataEngine::Data& data );

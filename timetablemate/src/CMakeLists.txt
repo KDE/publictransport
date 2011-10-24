@@ -23,6 +23,8 @@ kde4_add_kcfg_files( timetablemate_SRCS settings.kcfgc )
 
 kde4_add_executable( timetablemate ${timetablemate_SRCS} )
 
+add_dependencies( timetablemate publictransporthelper )
+
 target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS} ${KDE4_KPARTS_LIBS}
     ${KDE4_PLASMA_LIBS} ${KDE4_KTEXTEDITOR_LIBS} ${KDE4_KROSSCORE_LIBS}
     ${QT_QTWEBKIT_LIBRARY} ${KDE4_KDEWEBKIT_LIBS}

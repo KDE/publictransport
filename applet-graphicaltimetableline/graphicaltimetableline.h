@@ -21,10 +21,13 @@
 #ifndef GRAPHICALTIMETABLELINE_HEADER
 #define GRAPHICALTIMETABLELINE_HEADER
 
+// libpublictransporthelper includes
+#include <stopsettings.h>
+
+// KDE includes
 #include <Plasma/Applet>
-#include <publictransporthelper/stopsettings.h>
-#include <KIcon>
 #include <Plasma/DataEngine>
+#include <KIcon>
 
 #define DEPARTURE_SIZE 20
 #define MIN_DISTANCE_BETWEEN_DEPARTURES 50

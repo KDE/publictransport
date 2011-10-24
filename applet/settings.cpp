@@ -21,10 +21,12 @@
 #include "settings.h"
 #include "departuremodel.h"
 #include "departureprocessor.h"
-#include <publictransporthelper/filterwidget.h>
-#include <publictransporthelper/stopwidget.h>
-#include <publictransporthelper/locationmodel.h>
-#include <publictransporthelper/serviceprovidermodel.h>
+
+// libpublictransporthelper includes
+#include <filterwidget.h>
+#include <stopwidget.h>
+#include <locationmodel.h>
+#include <serviceprovidermodel.h>
 
 // Qt includes
 #include <QListWidget>
@@ -207,7 +209,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     m_uiAlarms.addAlarm->setIcon( KIcon("list-add") );
     m_uiAlarms.removeAlarm->setIcon( KIcon("list-remove") );
     m_uiAlarms.renameAlarm->setIcon( KIcon("edit-rename") );
-    
+
     m_uiFilter.addFilterConfiguration->setIcon( KIcon("list-add") );
     m_uiFilter.removeFilterConfiguration->setIcon( KIcon("list-remove") );
     m_uiFilter.renameFilterConfiguration->setIcon( KIcon("edit-rename") );
@@ -566,14 +568,14 @@ void SettingsUiManager::updateStopNamesInWidgets()
 //         if ( !stopSettings.get<QString>(CitySetting).isEmpty() ) {
 //             text += " in " + stopSettings.get<QString>(CitySetting);
 //         }
-// 
+//
 //         // Update for filters
 //         if ( i < m_uiFilter.affectedStops->count() ) {
 //             m_uiFilter.affectedStops->setItemText( i, text );
 //         } else {
 //             m_uiFilter.affectedStops->addItem( text );
 //         }
-// 
+//
 //         // Update for alarms
 //         if ( i < m_uiAlarms.affectedStops->count() ) {
 //             m_uiAlarms.affectedStops->setItemText( i, text );
@@ -702,7 +704,7 @@ void SettingsUiManager::setValuesOfAlarmConfig()
         QModelIndex index = model->index( i, 0 );
         model->setData( index, alarmSettings.name, Qt::DisplayRole );
         setAlarmTextColor( i, !alarmSettings.affectedStops.isEmpty() );
-        
+
 //         QListWidgetItem *item = new QListWidgetItem( alarmSettings.name );
 //         item->setFlags( item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsEditable );
 //         item->setCheckState( alarmSettings.enabled ? Qt::Checked : Qt::Unchecked );
@@ -716,7 +718,7 @@ void SettingsUiManager::setValuesOfAlarmConfig()
     } else if ( !m_alarmSettings.isEmpty() ) {
         m_uiAlarms.alarms->setCurrentIndex( row = 0 );
     }
-    
+
     // Load currently selected alarm, if any
     if ( row < m_alarmSettings.count() && row != -1 ) {
         const AlarmSettings alarmSettings = m_alarmSettings.at( row );
@@ -1604,12 +1606,12 @@ bool SettingsIO::writeFilterConfig( const FilterSettings &filterSettings,
         const FilterSettings &oldFilterSettings, KConfigGroup cgGlobal )
 {
     bool changed = false;
-    
+
     if ( filterSettings.name != oldFilterSettings.name ) {
         cgGlobal.writeEntry( "Name", filterSettings.name );
         changed = true;
     }
-    
+
     if ( filterSettings.filters != oldFilterSettings.filters ) {
         cgGlobal.writeEntry( "Filters", filterSettings.filters.toData() );
         changed = true;

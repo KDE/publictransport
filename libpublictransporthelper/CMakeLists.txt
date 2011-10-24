@@ -8,9 +8,9 @@ add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
 include_directories(
 	${CMAKE_SOURCE_DIR}
 	${CMAKE_BINARY_DIR}
-	${KDE4_INCLUDES} )   
+	${KDE4_INCLUDES} )
 
-set( publictransporthelper_LIB_SRCS 
+set( publictransporthelper_LIB_SRCS
 	locationmodel.cpp
 	serviceprovidermodel.cpp
 	vehicletypemodel.cpp
@@ -33,12 +33,12 @@ set( publictransporthelper_LIB_SRCS
 
 set( publictransporthelper_LIB_HDRS
 	publictransporthelper_export.h
-	
+
 	# Models
 	locationmodel.h
 	serviceprovidermodel.h
 	vehicletypemodel.h
-	
+
 	# Widgets
 	dynamicwidget.h
 	categorycombobox.h
@@ -46,7 +46,7 @@ set( publictransporthelper_LIB_HDRS
 	stopwidget.h
 	stoplineedit.h
 	filterwidget.h
-	
+
 	# Dialogs
 	accessorinfodialog.h
 	stopsettingsdialog.h
@@ -58,7 +58,6 @@ set( publictransporthelper_LIB_HDRS
 	stopfinder.h
 	filter.h
 	departureinfo.h
-# 	htmldelegate.h
 )
 
 kde4_add_ui_files( publictransporthelper_LIB_SRCS
@@ -67,7 +66,9 @@ kde4_add_ui_files( publictransporthelper_LIB_SRCS
 
 kde4_add_library( publictransporthelper SHARED ${publictransporthelper_LIB_SRCS} )
 
-add_subdirectory( tests )
+if ( BUILD_TESTS )
+    add_subdirectory( tests )
+endif ( BUILD_TESTS )
 
 target_link_libraries( publictransporthelper
 	${KDE4_PLASMA_LIBS}
@@ -79,14 +80,15 @@ set_target_properties( publictransporthelper
 	PROPERTIES VERSION 0 SOVERSION 10
 )
 
-install( TARGETS publictransporthelper ${INSTALL_TARGETS_DEFAULT_ARGS} )
+install( TARGETS publictransporthelper
+         ${INSTALL_TARGETS_DEFAULT_ARGS} )
 
 install( FILES ${publictransporthelper_LIB_HDRS}
-		 DESTINATION ${INCLUDE_INSTALL_DIR}/publictransporthelper
-		 COMPONENT Devel )
+         DESTINATION ${INCLUDE_INSTALL_DIR}/publictransporthelper
+         COMPONENT Devel )
 
 install( FILES publictransport.knsrc
 	     DESTINATION ${CONFIG_INSTALL_DIR} )
 
-install( FILES publictransporthelper.desktop 
+install( FILES publictransporthelper.desktop
 		 DESTINATION ${SERVICES_INSTALL_DIR} )
