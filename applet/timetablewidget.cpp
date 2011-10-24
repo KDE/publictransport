@@ -167,7 +167,7 @@ qreal PublicTransportGraphicsItem::padding() const
 qreal PublicTransportGraphicsItem::unexpandedHeight() const
 {
     return qMax( m_parent->iconSize() * 1.1,
-                 (qreal)QFontMetrics(font()).ascent() * m_parent->maxLineCount() + padding() );
+                 (qreal)QFontMetrics(font()).lineSpacing() * m_parent->maxLineCount() + padding() );
 }
 
 bool PublicTransportGraphicsItem::hasExtraIcon( Columns column ) const
@@ -348,9 +348,9 @@ void JourneyGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event )
 
     if ( m_routeItem ) {
         QRectF _infoRect = infoRect( rect() );
-        m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
-        m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
-                            m_routeItem->size().height() );
+        m_routeItem->setGeometry( _infoRect.left(), rect().top() + unexpandedHeight() + padding(),
+                                  rect().width() - padding() - _infoRect.left(),
+                                  m_routeItem->size().height() );
     }
 }
 
