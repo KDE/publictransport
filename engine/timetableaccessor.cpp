@@ -116,7 +116,7 @@ QString TimetableAccessor::serviceProviderIdFromFileName( const QString &accesso
 AccessorType TimetableAccessor::accessorTypeFromString( const QString &sAccessorType )
 {
     QString s = sAccessorType.toLower();
-    if ( s == "html" ) {
+    if ( s == "script" ||  s == "html" ) {
         return HTML;
     } else if ( s == "xml" ) {
         return XML;
