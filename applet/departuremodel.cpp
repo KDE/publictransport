@@ -30,9 +30,11 @@
 #include <QPropertyAnimation>
 #include <qmath.h>
 
+// Used to sort departures in the model
 class DepartureModelLessThan
 {
 public:
+    // Compares departures by column.
     inline DepartureModelLessThan( Columns column = ColumnDeparture ) {
         this->column = column;
     };
@@ -62,9 +64,11 @@ public:
     Columns column;
 };
 
+// Used to sort departures in the model
 class DepartureModelGreaterThan
 {
 public:
+    // Compares departures by column.
     inline DepartureModelGreaterThan( Columns column = ColumnDeparture ) {
         this->column = column;
     };
@@ -94,9 +98,11 @@ public:
     Columns column;
 };
 
+// Used to sort journeys in the model
 class JourneyModelLessThan
 {
 public:
+    // Compares journeys by column.
     inline JourneyModelLessThan( Columns column = ColumnDeparture ) {
         this->column = column;
     };
@@ -126,9 +132,11 @@ public:
     Columns column;
 };
 
+// Used to sort journeys in the model
 class JourneyModelGreaterThan
 {
 public:
+    // Compares journeys by column.
     inline JourneyModelGreaterThan( Columns column = ColumnDeparture ) {
         this->column = column;
     };
@@ -166,11 +174,13 @@ ItemBase::ItemBase( const Info *info ) : m_parent( 0 ), m_model( 0 ), m_info( in
 
 ItemBase::~ItemBase()
 {
+    // Cleanup
     qDeleteAll( m_children );
 }
 
-void ItemBase::setModel( PublicTransportModel* model )
+void ItemBase::setModel( PublicTransportModel *model )
 {
+    // Set the given model in this item and all it's children
     m_model = model;
     foreach( ChildItem *child, m_children ) {
         child->setModel( model );
@@ -179,6 +189,7 @@ void ItemBase::setModel( PublicTransportModel* model )
 
 ItemBase* ItemBase::topLevelParent() const
 {
+    // Use the parent item as long as another parent is available to get the top level parent item
     ItemBase *p = const_cast< ItemBase* >( this );
     while ( p->parent() ) {
         p = p->parent();
@@ -188,6 +199,7 @@ ItemBase* ItemBase::topLevelParent() const
 
 QModelIndex ItemBase::index()
 {
+    // The index of this item can only be retrieved if associated with a model
     if ( m_model ) {
         return m_model->index( this );
     } else {
@@ -197,21 +209,27 @@ QModelIndex ItemBase::index()
 
 ChildItem* ItemBase::childByType( ItemType itemType ) const
 {
+    // Search through all children for an item of the given type
     foreach( ChildItem *child, m_children ) {
         if ( child->type() == itemType ) {
+            // Found a child item of the given type
             return child;
         }
     }
-    return NULL;
+
+    // Did not find a child item of the given type
+    return 0;
 }
 
 void ItemBase::removeChildren( int first, int count )
 {
+    // Check arguments
     if ( first == -1 ) {
         kDebug() << "Not a child of this item";
         return;
     }
 
+    // Delete the child at position first, count times
     for ( int i = 0; i < count; ++i ) {
         ChildItem *child = m_children.takeAt( first );
         delete child;
@@ -220,11 +238,12 @@ void ItemBase::removeChildren( int first, int count )
 
 void ItemBase::removeChild( ChildItem* child )
 {
-    m_model->removeRow( m_children.indexOf( child ), index() );
+    m_model->removeRow( m_children.indexOf(child), index() );
 }
 
 void ItemBase::appendChild( ChildItem* child )
 {
+    // Add child to children list, pass the model and set the parent to this item
     m_children.append( child );
     child->m_parent = this;
     child->m_model = m_model;
@@ -238,6 +257,7 @@ void DepartureItem::setLeavingSoon( bool leavingSoon )
 {
     m_leavingSoon = leavingSoon;
     if ( m_model ) {
+        // Notify model about the change
         m_model->itemChanged( this, 0, 0 );
     }
 }
@@ -246,6 +266,7 @@ void TopLevelItem::setData( Columns column, const QVariant& data, int role )
 {
     m_columnData[ column ][ role ] = data;
     if ( m_model ) {
+        // Notify model about the change
         m_model->itemChanged( this, column, column );
     }
 }
@@ -274,14 +295,16 @@ ChildItem::ChildItem( ItemType itemType, const Info* info )
 
 QVariant ChildItem::data( int role, int ) const
 {
-    if ( m_data.contains( role ) ) {
+    if ( m_data.contains(role) ) {
         return m_data.value( role );
     } else if ( role == DrawAlarmBackgroundRole ) {
+        // The data for this role is only available at the top level parent
         ItemBase *p = topLevelParent();
         return p->data( role );
     } else if ( role == FormattedTextRole ) {
         return m_data.value( Qt::DisplayRole );
-    } else if ( role == JourneyRatingRole && dynamic_cast<JourneyModel*>( m_model ) ) {
+    } else if ( role == JourneyRatingRole && dynamic_cast<JourneyModel*>(m_model) ) {
+        // The data for this role is only available at the top level parent
         JourneyItem *topLevelJourneyItem = static_cast<JourneyItem*>( topLevelParent() );
         return topLevelJourneyItem->data( JourneyRatingRole );
     }
@@ -293,6 +316,7 @@ void ChildItem::setData( const QVariant& data, int role )
 {
     m_data[ role ] = data;
     if ( m_model ) {
+        // Notify model about the change
         m_model->itemChanged( this, 0, 0 );
     }
 }
@@ -310,12 +334,14 @@ int JourneyItem::row() const
     if ( m_model ) {
         return m_model->rowFromItem( const_cast<JourneyItem*>( this ) );
     } else {
+        // No associated model
         return -1;
     }
 }
 
 QHash< ItemType, ChildItem* > JourneyItem::typedChildren() const
 {
+    // Build a QHash with all children, sorted by their type
     QHash< ItemType, ChildItem* > children;
     foreach( ChildItem *child, m_children ) {
         if ( child->type() != OtherItem ) {
@@ -367,46 +393,60 @@ QVariant JourneyItem::data( int role, int column ) const
 qreal JourneyItem::rating() const
 {
     if ( !m_model ) {
+        // Default rating if no model is associated
         return 0.5;
     }
 
+    // The journey model keeps track of the smallest and biggest values for durations
+    // and changes. Journeys with less duration and/or changes are rated better than journeys
+    // with longer duration and/or more changes.
     JourneyModel *model = static_cast<JourneyModel*>( m_model );
     int durationSpan = model->biggestDuration() - model->smallestDuration();
     int changesSpan = model->biggestChanges() - model->smallestChanges();
 
-    if (( journeyInfo()->changes() == model->biggestChanges()
-            && changesSpan > 4 && model->biggestChanges() >  3 * model->smallestChanges() )
-            || ( journeyInfo()->duration() == model->biggestDuration() && durationSpan > 30 ) ) {
+    // Check if this journey is the worst of the journeys in the model.
+    // Also check if the spans are big enough to rate the journey as worst. For example a journey
+    // with the most changes and longest duration is not necessarily the worst journey, because
+    // all other journeys may have the same values (or very close values).
+    if ( (journeyInfo()->changes() == model->biggestChanges() && changesSpan > 4
+          && model->biggestChanges() > 3 * model->smallestChanges()) ||
+         (journeyInfo()->duration() == model->biggestDuration() && durationSpan > 30) )
+    {
+        // Rate the journey as worst journey
         return 1.0;
     }
 
+    // Rate duration and changes independently. If all journeys have the same duration/changes
+    // the durationSpan/changesSpan is 0. In this case no rating is possible for that value.
     qreal durationRating = durationSpan == 0 ? -1.0
-                        : qreal( journeyInfo()->duration() - model->smallestDuration() ) / qreal( durationSpan );
+            : qreal(journeyInfo()->duration() - model->smallestDuration()) / qreal(durationSpan);
     qreal changesRating = changesSpan == 0 ? -1.0
-                        : qreal( journeyInfo()->changes() - model->smallestChanges() ) / qreal( changesSpan );
+            : qreal(journeyInfo()->changes() - model->smallestChanges()) / qreal(changesSpan);
 
+    // If one rating is not available return the other one (which may also be -1.0)
     if ( durationRating == -1.0 ) {
         return changesRating;
     } else if ( changesRating == -1.0 ) {
         return durationRating;
     } else {
-        if ( changesRating < 0.1 || changesRating > 0.9 )
+        // Both changes and duration ratings are available
+        if ( changesRating < 0.1 || changesRating > 0.9 ) {
             return durationRating * 0.75 + changesRating * 0.25;
-        else
+        } else {
             return durationRating;
+        }
     }
 }
 
 void JourneyItem::setJourneyInfo( const JourneyInfo& journeyInfo )
 {
     if ( m_journeyInfo.isValid() ) {
-//     if ( m_journeyInfo == journeyInfo ) // TODO
-//         return; // Unchanged
-
+        // Has old data, only update children
         m_journeyInfo = journeyInfo;
         updateValues();
         updateChildren();
     } else {
+        // Has no old data, create children as needed
         m_journeyInfo = journeyInfo;
         updateValues();
         createChildren();
@@ -443,17 +483,21 @@ void JourneyItem::updateValues()
 void JourneyItem::updateChildren()
 {
     QHash< ItemType, ChildItem* > children = typedChildren();
-
     QList< ItemType > types;
     types << DurationItem << ChangesItem << PricingItem << JourneyNewsItem << RouteItem;
     foreach( ItemType type, types ) {
-        if ( hasDataForChildType( type ) ) {
-            if ( children.contains( type ) ) {
+        // Check if data is (still) available for the current item type
+        if ( hasDataForChildType(type) ) {
+            // Data is available for the current item type
+            if ( children.contains(type) ) {
+                // Child is already existent, just update it
                 updateChild( type, children[type] );
             } else {
+                // Create a new child for the current item type
                 appendNewChild( type );
             }
-        } else if ( children.contains( type ) ) {
+        } else if ( children.contains(type) ) {
+            // Data for the current item type is no longer available
             removeChild( children[type] );
         }
     }
@@ -464,7 +508,9 @@ void JourneyItem::createChildren()
     QList< ItemType > types;
     types << DurationItem << ChangesItem << PricingItem << JourneyNewsItem << RouteItem;
     foreach( ItemType type, types ) {
+        // Check if data is available for the current item type
         if ( hasDataForChildType( type ) ) {
+            // Data is available for the current item type, create a new child
             appendNewChild( type );
         }
     }
@@ -473,11 +519,13 @@ void JourneyItem::createChildren()
 void JourneyItem::updateChild( ItemType itemType, ChildItem* child )
 {
     if ( itemType == RouteItem ) {
+        // Update route items by simple removing and recreating it
         m_model->removeRows( child->row(), 1, child->parent()->index() );
         appendNewChild( RouteItem );
     } else {
+        // Update possibly changed data
         int linesPerRow;
-        child->setFormattedText( childItemText( itemType, &linesPerRow ) );
+        child->setFormattedText( childItemText(itemType, &linesPerRow) );
         if ( itemType == JourneyNewsItem || itemType == DelayItem ) {
             child->setData( linesPerRow, LinesPerRowRole );
         }
@@ -504,6 +552,7 @@ ChildItem* JourneyItem::appendNewChild( ItemType itemType )
 
 void JourneyItem::updateTimeValues()
 {
+    // Update departure string if it has changed
     QString depTextFormatted = m_journeyInfo.departureText( true,
             m_info->displayTimeBold, true, true, m_info->linesPerRow );
     QString oldTextFormatted = formattedText( ColumnDeparture );
@@ -515,6 +564,7 @@ void JourneyItem::updateTimeValues()
         setText( ColumnDeparture, depText );
     }
 
+    // Update arrival string if it has changed
     QString arrTextFormatted = m_journeyInfo.arrivalText( true,
                             m_info->displayTimeBold, true, true, m_info->linesPerRow );
     oldTextFormatted = formattedText( ColumnArrival );
@@ -527,6 +577,7 @@ void JourneyItem::updateTimeValues()
     }
 
     if ( m_model ) {
+        // Notify model about the change
         m_model->itemChanged( this, 2, 2 );
     }
 }
@@ -760,6 +811,7 @@ void DepartureItem::setAlarmColorIntensity( qreal alarmColorIntensity )
 {
     m_alarmColorIntensity = alarmColorIntensity;
     if ( m_model ) {
+        // Notify model about the change
         m_model->itemChanged( this, 0, 2 );
     }
 }
@@ -788,7 +840,6 @@ void DepartureItem::updateValues()
     setText( ColumnLineString, m_departureInfo.lineString() );
     setFormattedText( ColumnLineString, QString("<span style='font-weight:bold;'>%1</span>")
                       .arg(m_departureInfo.lineString()) );
-    // if ( departureInfo.vehicleType() != Unknown )
     setIcon( ColumnLineString, Global::vehicleTypeToIcon(m_departureInfo.vehicleType()) );
 
     setText( ColumnTarget, m_departureInfo.target() );
@@ -800,6 +851,7 @@ void DepartureItem::updateValues()
     updateTimeValues();
 
     if ( m_model ) {
+        // Notify model about the change
         m_model->itemChanged( this, 0, 2 );
     }
 }
@@ -1392,7 +1444,7 @@ void JourneyModel::updateItemAlarm( JourneyItem* journeyItem )
 {
     // Store old alarm states
     AlarmStates oldAlarmStates = journeyItem->alarmStates();
-    
+
     // Use a dummy DepartureInfo that "mimics" the first journey part of the current journey
     JourneyInfo journeyInfo = *journeyItem->journeyInfo();
     QString lineString = journeyInfo.routeTransportLines().isEmpty()
@@ -1817,14 +1869,16 @@ void DepartureModel::sort( int column, Qt::SortOrder order )
     if ( column < 0 || rowCount() == 0 ) {
         return;
     }
-
     emit layoutAboutToBeChanged();
 
+    // Create a vector of pairs of departure items and their positions in the item list
+    // to be able to update persistent model indexes
     QVector< QPair<DepartureItem*, int> > sortable;
     for ( int row = 0; row < m_items.count(); ++row ) {
         sortable.append( QPair<DepartureItem*, int>(static_cast<DepartureItem*>(m_items[row]), row) );
     }
 
+    // Sort the intermediate vector
     if ( order == Qt::AscendingOrder ) {
         DepartureModelLessThan lt( static_cast<Columns>( column ) );
         qStableSort( sortable.begin(), sortable.end(), lt );
@@ -1833,6 +1887,7 @@ void DepartureModel::sort( int column, Qt::SortOrder order )
         qStableSort( sortable.begin(), sortable.end(), gt );
     }
 
+    // Create new list of sorted items and updated persistent model indexes
     QModelIndexList changedPersistentIndexesFrom, changedPersistentIndexesTo;
     QList< ItemBase* > sorted_children;
     for ( int i = 0; i < m_items.count(); ++i ) {
@@ -1842,14 +1897,13 @@ void DepartureModel::sort( int column, Qt::SortOrder order )
 
         // Store changed persistent indices
         for ( int c = 0; c < columnCount(); ++c ) {
-            changedPersistentIndexesFrom.append( createIndex( r, c ) );
-            changedPersistentIndexesTo.append( createIndex( i, c ) );
+            changedPersistentIndexesFrom.append( createIndex(r, c) );
+            changedPersistentIndexesTo.append( createIndex(i, c) );
         }
     }
 
     m_items = sorted_children;
     changePersistentIndexList( changedPersistentIndexesFrom, changedPersistentIndexesTo );
-
     emit layoutChanged();
 }
 

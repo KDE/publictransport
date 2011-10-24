@@ -59,15 +59,17 @@ public:
     QToolButton *removeButton, *addButton;
 };
 
-DynamicWidget::DynamicWidget( QWidget* contentWidget, AbstractDynamicWidgetContainer *container,
+DynamicWidget::DynamicWidget( QWidget *contentWidget, AbstractDynamicWidgetContainer *container,
                               QList<ButtonType> buttonTypes )
         : QWidget(container), d_ptr(new DynamicWidgetPrivate(contentWidget))
 {
+    // Create a layout for the content widget and buttons
     QHBoxLayout *l = new QHBoxLayout( this );
     l->setContentsMargins( 0, 0, 0, 0 );
     l->addWidget( contentWidget );
 
     if ( !buttonTypes.isEmpty() ) {
+        // Add buttons into an own widget
         d_ptr->buttonsWidget = new QWidget( this );
         QHBoxLayout *buttonLayout = new QHBoxLayout( d_ptr->buttonsWidget );
         buttonLayout->setSpacing( 1 );
@@ -76,6 +78,7 @@ DynamicWidget::DynamicWidget( QWidget* contentWidget, AbstractDynamicWidgetConta
         l->addWidget( d_ptr->buttonsWidget );
         l->setAlignment( d_ptr->buttonsWidget, Qt::AlignRight | Qt::AlignTop );
 
+        // Add the buttons
         foreach( ButtonType buttonType, buttonTypes ) {
             addButton( container, buttonType );
         }
@@ -95,8 +98,9 @@ QToolButton* DynamicWidget::addButton( AbstractDynamicWidgetContainer *container
     QHBoxLayout *buttonLayout = dynamic_cast< QHBoxLayout* >( d->buttonsWidget->layout() );
     switch ( buttonType ) {
     case RemoveButton:
+        // Create and add a remove button
         if ( d->removeButton ) {
-            return NULL;
+            return 0;
         }
         d->removeButton = new QToolButton( this );
         d->removeButton->setIcon( KIcon(container->removeButtonIcon()) );
@@ -105,8 +109,9 @@ QToolButton* DynamicWidget::addButton( AbstractDynamicWidgetContainer *container
         return d->removeButton;
 
     case AddButton:
+        // Create and add an add button
         if ( d->addButton ) {
-            return NULL;
+            return 0;
         }
         d->addButton = new QToolButton( this );
         d->addButton->setIcon( KIcon(container->addButtonIcon()) );
@@ -115,11 +120,12 @@ QToolButton* DynamicWidget::addButton( AbstractDynamicWidgetContainer *container
         return d->addButton;
 
     case ButtonSpacer:
+        // Create and add a spacer
         buttonLayout->addItem( new QSpacerItem( d->toolButtonSpacing(), 0 ) );
-        return NULL;
+        return 0;
 
     default:
-        return NULL;
+        return 0;
     }
 }
 
@@ -169,14 +175,18 @@ void DynamicWidget::setAddButtonIcon( const QString& addButtonIcon )
 void DynamicWidget::replaceContentWidget( QWidget* contentWidget )
 {
     Q_D( DynamicWidget );
+
+    // Delete the old content widget
     QHBoxLayout *l = static_cast< QHBoxLayout* >( layout() );
     Q_ASSERT_X( l, "DynamicWidget::replaceContentWidget", "No QHBoxLayout found" );
     l->removeWidget( d->contentWidget );
     delete d->contentWidget;
 
+    // Insert the new content widget
     l->insertWidget( 0, contentWidget );
     d->contentWidget = contentWidget;
 
+    // Notify about the change
     emit widgetReplaced( contentWidget );
 }
 
@@ -203,7 +213,7 @@ QToolButton* DynamicWidget::takeRemoveButton()
     Q_D( DynamicWidget );
     if ( !d->buttonsWidget || !d->removeButton
                 || !d->buttonsWidget->children().contains( d->removeButton ) ) {
-        return NULL;
+        return 0;
     }
 
     QHBoxLayout *buttonLayout = dynamic_cast< QHBoxLayout* >( d->buttonsWidget->layout() );
@@ -219,7 +229,7 @@ QToolButton* DynamicWidget::takeAddButton()
     Q_D( DynamicWidget );
     if ( !d->buttonsWidget || !d->addButton
                 || !d->buttonsWidget->children().contains( d->addButton ) ) {
-        return NULL;
+        return 0;
     }
 
     QHBoxLayout *buttonLayout = dynamic_cast< QHBoxLayout* >( d->buttonsWidget->layout() );
@@ -234,9 +244,9 @@ void DynamicWidget::buttonDestroyed( QObject* object )
 {
     Q_D( DynamicWidget );
     if ( object == d->removeButton ) {
-        d->removeButton = NULL;
+        d->removeButton = 0;
     } else if ( object == d->addButton ) {
-        d->addButton = NULL;
+        d->addButton = 0;
     }
 }
 
@@ -247,7 +257,8 @@ class AbstractDynamicWidgetContainerPrivate
 
 public:
     AbstractDynamicWidgetContainerPrivate( AbstractDynamicWidgetContainer *q )
-                : contentWidget(q), addButton(0), removeButton(0), q_ptr(q) {
+            : contentWidget(q), addButton(0), removeButton(0), q_ptr(q)
+    {
         addButtonIcon = "list-add";
         removeButtonIcon = "list-remove";
         autoRaiseButtons = false;
@@ -259,19 +270,22 @@ public:
         showSeparators = true;
     };
 
-    virtual ~AbstractDynamicWidgetContainerPrivate() {
+    virtual ~AbstractDynamicWidgetContainerPrivate()
+    {
     };
 
-    virtual QLayout* createContentLayout( QWidget *parent ) {
+    virtual QLayout* createContentLayout( QWidget *parent )
+    {
         QVBoxLayout *vBoxLayout = new QVBoxLayout( parent );
         vBoxLayout->setSpacing( 0 );
         vBoxLayout->setContentsMargins( 0, 0, 0, 0 );
         return vBoxLayout;
     };
 
-    void createLayout(
-        AbstractDynamicWidgetContainer::RemoveButtonOptions removeButtonOptions,
-        AbstractDynamicWidgetContainer::AddButtonOptions addButtonOptions ) {
+    // Creates a layout according to the given add/remove button options.
+    void createLayout( AbstractDynamicWidgetContainer::RemoveButtonOptions removeButtonOptions,
+                       AbstractDynamicWidgetContainer::AddButtonOptions addButtonOptions )
+    {
         Q_Q( AbstractDynamicWidgetContainer );
         if ( removeButtonOptions == AbstractDynamicWidgetContainer::RemoveButtonAfterLastWidget
                 || addButtonOptions == AbstractDynamicWidgetContainer::AddButtonAfterLastWidget ) {
@@ -280,12 +294,14 @@ public:
             QHBoxLayout *buttonLayout = new QHBoxLayout;
             buttonLayout->setContentsMargins( 0, 0, 0, 0 );
             if ( addButtonOptions == AbstractDynamicWidgetContainer::AddButtonAfterLastWidget ) {
+                // An add button gets added after the last widget, ie. under contentWidget
                 addButton = new QToolButton( q );
                 addButton->setIcon( KIcon("list-add") );
                 buttonLayout->addWidget( addButton );
                 q->connect( addButton, SIGNAL(clicked()), q, SLOT(createAndAddWidget()) );
             }
             if ( removeButtonOptions == AbstractDynamicWidgetContainer::RemoveButtonAfterLastWidget ) {
+                // A remove button gets added after the last widget, ie. under contentWidget
                 removeButton = new QToolButton( q );
                 removeButton->setIcon( KIcon("list-remove") );
                 buttonLayout->addWidget( removeButton );
@@ -308,6 +324,7 @@ public:
         createContentLayout( contentWidget );
     };
 
+    // Initializes the given options in this class
     void init( AbstractDynamicWidgetContainer::RemoveButtonOptions removeButtonOptions,
                AbstractDynamicWidgetContainer::AddButtonOptions addButtonOptions,
                AbstractDynamicWidgetContainer::SeparatorOptions separatorOptions,
@@ -322,16 +339,20 @@ public:
         this->newWidgetPosition = newWidgetPosition;
     };
 
-    void updateButtonStates() {
+    // Updates the enabled states of the add/remove buttons after changes to the widget count.
+    void updateButtonStates()
+    {
         Q_Q( AbstractDynamicWidgetContainer );
         if ( addButton ) {
-            addButton->setEnabled( q->isEnabled() && ( maxWidgetCount == -1
-                                    || dynamicWidgets.count() < maxWidgetCount ) );
+            // Only enable the add button if the maximum widget count is not reached
+            addButton->setEnabled( q->isEnabled() &&
+                    (maxWidgetCount == -1 || dynamicWidgets.count() < maxWidgetCount) );
         }
 
         if ( removeButton ) {
-            removeButton->setEnabled( q->isEnabled() && !dynamicWidgets.isEmpty()
-                                    && dynamicWidgets.count() > minWidgetCount );
+            // Only enable the remove button if the minimum widget count is not reached
+            removeButton->setEnabled( q->isEnabled() &&
+                    !dynamicWidgets.isEmpty() && dynamicWidgets.count() > minWidgetCount );
         } else if ( showRemoveButtons ) {
             // Remove buttons are shown beside the content widgets
             bool enable = q->isEnabled() && dynamicWidgets.count() > minWidgetCount;
@@ -344,13 +365,30 @@ public:
         }
     };
 
+    // The main widget, which contains widgets of type DynamicWidget
     QWidget *contentWidget;
+
+    // A list of all DynamicWidget's currently shown
     QList< DynamicWidget* > dynamicWidgets;
-    QToolButton *addButton, *removeButton;
-    int minWidgetCount, maxWidgetCount, buttonSpacing;
+
+    // The add button, used to add new widgets. May be shown below contentWidget, besides a widget,
+    // it may be external or it may also be not shown and all
+    QToolButton *addButton;
+
+    // The remove button, used to remove existing widgets. This value is 0 if there is more than
+    // one remove button. If there is only one remove button, it always removes the last widget.
+    QToolButton *removeButton;
+
+    // Stores the widget count range
+    int minWidgetCount, maxWidgetCount;
+
+    // Names of the icons for the add/remove buttons
+    QString removeButtonIcon, addButtonIcon;
+
+    // Other options
     bool showRemoveButtons, showAddButton, showSeparators;
     bool autoRaiseButtons;
-    QString removeButtonIcon, addButtonIcon;
+    int buttonSpacing;
     Qt::Alignment buttonAlignment;
     AbstractDynamicWidgetContainer::NewWidgetPosition newWidgetPosition;
 
@@ -404,6 +442,7 @@ void AbstractDynamicWidgetContainer::changeEvent( QEvent* event )
 {
     Q_D( AbstractDynamicWidgetContainer );
     if ( event->type() == QEvent::EnabledChange ) {
+        // Update enabled states of the possibly external buttons
         d->updateButtonStates();
     }
     QWidget::changeEvent( event );
@@ -502,12 +541,12 @@ DynamicWidget* AbstractDynamicWidgetContainer::createDynamicWidget( QWidget *wid
 DynamicWidget *AbstractDynamicWidgetContainer::addWidget( QWidget* widget )
 {
     Q_D( AbstractDynamicWidgetContainer );
-    
+
     // Check if maximum widget count is reached
     if ( d->dynamicWidgets.count() == d->maxWidgetCount ) {
         kDebug() << "Can't add the given widget because the maximum "
                 "widget count of" << d->maxWidgetCount << "is reached";
-        return NULL;
+        return 0;
     }
 
     // Add a separator if needed
@@ -518,7 +557,7 @@ DynamicWidget *AbstractDynamicWidgetContainer::addWidget( QWidget* widget )
             d->contentWidget->layout()->addWidget( createSeparator() );
         }
     }
-    
+
     // Create and add the dynamic widget that wraps the widget and add/remove buttons
     DynamicWidget *dynWidget = createDynamicWidget( widget );
     if ( d->newWidgetPosition == AddWidgetsAtTop ) {
@@ -526,10 +565,10 @@ DynamicWidget *AbstractDynamicWidgetContainer::addWidget( QWidget* widget )
     } else {
         d->contentWidget->layout()->addWidget( dynWidget );
     }
-    
+
     // Set focus to the newly added widget
     widget->setFocus();
-    
+
     // Inform connected objects about the new widget
     emit added( widget );
     return dynWidget;
@@ -539,7 +578,7 @@ DynamicWidget* AbstractDynamicWidgetContainer::dynamicWidgetForWidget( QWidget* 
 {
     Q_D( const AbstractDynamicWidgetContainer );
     int index = indexOf( widget );
-    return index == -1 ? NULL : d->dynamicWidgets[ index ];
+    return index == -1 ? 0 : d->dynamicWidgets[ index ];
 }
 
 int AbstractDynamicWidgetContainer::indexOf( QWidget* widget ) const
@@ -596,15 +635,20 @@ int AbstractDynamicWidgetContainer::removeWidget( QWidget *contentWidget )
     Q_ASSERT_X( vBoxLayout, "AbstractDynamicWidgetContainer::removeWidget",
                 "No QVBoxLayout found" );
 
+    // Get the index in the widget list of the widget to be removed
     int widgetIndex = indexOf( contentWidget );
     DynamicWidget *dynamicWidget = d->dynamicWidgets[ widgetIndex ];
     Q_ASSERT_X( dynamicWidget, "AbstractDynamicWidgetContainer::removeWidget",
                 "Dynamic widget for the given widget not found" );
 
+    // Get the index in the content layout of the wrapping DynamicWidget
     int index = d->contentWidget->layout()->indexOf( dynamicWidget );
     if ( index > 0 ) {
+        // The widget to be removed is not the first one, remove the preceding separator
         removeSeparator( d->contentWidget->layout()->itemAt(index - 1) );
     } else if ( d->dynamicWidgets.count() > 1 ) {
+        // The widget to be removed is the first one and there is at least one more widget,
+        // ie. there is a separator, remove the following separator
         removeSeparator( d->contentWidget->layout()->itemAt(index + 1) );
     }
 
@@ -615,7 +659,7 @@ int AbstractDynamicWidgetContainer::removeWidget( QWidget *contentWidget )
             connect( d->addButton, SIGNAL(clicked()), this, SLOT(createAndAddWidget()) );
             delete d->dynamicWidgets[ 1 ]->takeRemoveButton();
         } else {
-            d->addButton = NULL;
+            d->addButton = 0;
         }
     }
 
@@ -626,6 +670,7 @@ int AbstractDynamicWidgetContainer::removeWidget( QWidget *contentWidget )
     emit removed( dynamicWidget->contentWidget(), widgetIndex );
     delete dynamicWidget;
 
+    // Update button states to changed widget count
     d->updateButtonStates();
     return widgetIndex;
 }
@@ -641,12 +686,14 @@ void AbstractDynamicWidgetContainer::removeAllWidgets()
 QWidget* AbstractDynamicWidgetContainer::createSeparator( const QString& separatorText )
 {
     if ( separatorText.isEmpty() ) {
+        // Do not show any text in the separator, simply create a separator line
         QFrame *separator = new QFrame( this );
         separator->setObjectName( "separator" );
         separator->setFrameShape( QFrame::HLine );
         separator->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
         return separator;
     } else {
+        // Create an annotated separator
         QWidget *separator = new QWidget( this );
         separator->setObjectName( "separator" );
         QFrame *separatorL = new QFrame( separator );
@@ -656,10 +703,13 @@ QWidget* AbstractDynamicWidgetContainer::createSeparator( const QString& separat
         separatorL->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
         separatorR->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
 
+        // Create a label for the text to be shown in the separator
         QLabel *separatorLabel = new QLabel( separatorText, separator );
         separatorLabel->setForegroundRole( QPalette::Mid );
         separatorLabel->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Maximum );
 
+        // Create a layout for the annotated separator, the label gets placed in the middle
+        // and the normal separator lines are placed left and right of the label
         QHBoxLayout *separatorLayout = new QHBoxLayout( separator );
         separatorLayout->setContentsMargins( 0, 0, 0, 0 );
         separatorLayout->addWidget( separatorL );
@@ -678,6 +728,8 @@ void AbstractDynamicWidgetContainer::removeSeparator( QLayoutItem *separator )
     Q_D( AbstractDynamicWidgetContainer );
     if ( separator && !qobject_cast<DynamicWidget*>(separator->widget()) ) {
         QWidget *widget = separator->widget();
+        // Check for the object name set when creating the separator to be sure not to
+        // remove another widget
         if ( widget && widget->objectName() == "separator" ) {
             d->contentWidget->layout()->removeWidget( widget );
             delete widget;
@@ -727,11 +779,14 @@ QToolButton* AbstractDynamicWidgetContainer::addButton() const
 {
     Q_D( const AbstractDynamicWidgetContainer );
     if ( d->addButton ) {
+        // Return the global add button
         return d->addButton;
     } else if ( d->showAddButton && !d->dynamicWidgets.isEmpty() ) {
+        // The add button is shown besides the first widget
         return d->dynamicWidgets.first()->addButton();
     } else {
-        return NULL;
+        // No add button
+        return 0;
     }
 }
 
@@ -762,19 +817,27 @@ int AbstractDynamicWidgetContainer::setWidgetCountRange(
 
     int added = 0;
     if ( putIntoRange ) {
+        // Add/remove widgets to put the widget count into the given range
         while ( d->dynamicWidgets.count() < minWidgetCount ) {
+            // Less widgets than allowed, create and add a new one
             createAndAddWidget();
             ++added;
         }
+
+        // Check if the maximum widget count is limited
         if ( maxWidgetCount != -1 ) {
             while ( d->dynamicWidgets.count() > maxWidgetCount ) {
+                // More widgets than allowed, remove the last one
                 removeLastWidget();
                 --added;
             }
         }
+
+        // Update button states to new widget count
+        d->updateButtonStates();
     }
 
-    d->updateButtonStates();
+    // Return the number of widgets added (positive number) or removed (negative number)
     return added;
 }
 
@@ -795,6 +858,8 @@ public:
         widgetNumberOffset = 1;
     };
 
+    // Create a QFormLayout to be used as main content layout
+    // A QFormLayout makes it easy to add the labels aligned to the widgets
     virtual QLayout* createContentLayout( QWidget *parent ) {
         QFormLayout *formLayout = new QFormLayout( parent );
         formLayout->setRowWrapPolicy( QFormLayout::WrapLongRows );
@@ -803,6 +868,7 @@ public:
         return formLayout;
     };
 
+    // Gets the label to be used for the widget with the given index
     QString labelTextFor( int widgetIndex ) {
         if ( widgetIndex >= specialLabelTexts.count() ) {
             return QString( labelText ).arg( widgetIndex + widgetNumberOffset );
@@ -835,7 +901,7 @@ AbstractDynamicLabeledWidgetContainer::AbstractDynamicLabeledWidgetContainer( QW
     RemoveButtonOptions removeButtonOptions, AddButtonOptions addButtonOptions,
     NewWidgetPosition newWidgetPosition,
     const QString &labelText )
-        : AbstractDynamicWidgetContainer( parent, dd, removeButtonOptions, addButtonOptions, 
+        : AbstractDynamicWidgetContainer( parent, dd, removeButtonOptions, addButtonOptions,
                                           newWidgetPosition )
 {
     Q_D( AbstractDynamicLabeledWidgetContainer );
@@ -888,13 +954,18 @@ DynamicWidget *AbstractDynamicLabeledWidgetContainer::addWidget(
     if ( d->dynamicWidgets.count() == d->maxWidgetCount ) {
         kDebug() << "Can't add the given widget because the maximum "
         "widget count of" << d->maxWidgetCount << "is reached";
-        return NULL;
+        return 0;
     }
+
+    // Check if a separator should be added before the new widget
     if ( d->showSeparators && !d->dynamicWidgets.isEmpty() ) {
         QFormLayout *l = dynamic_cast<QFormLayout*>( d->contentWidget->layout() );
         if ( l ) {
+            // The content widget layout is of type QFormLayout,
+            // use addRow() to add the separator to have it stretched across the row
             l->addRow( createSeparator() );
         } else {
+            // The content widget layout is not of type QFormLayout
             d->contentWidget->layout()->addWidget( createSeparator() );
         }
     }
@@ -904,7 +975,11 @@ DynamicWidget *AbstractDynamicLabeledWidgetContainer::addWidget(
     QFormLayout *formLayout = dynamic_cast< QFormLayout* >( d->contentWidget->layout() );
     Q_ASSERT_X( formLayout, "AbstractDynamicLabeledWidgetContainer::addWidget",
                 "No form layout found" );
+
+    // Add the label and wrapping DynamicWidget to the layout
     formLayout->addRow( labelWidget, dynWidget );
+
+    // Notify about the new widget and set the focus to it
     emit added( widget );
     widget->setFocus();
     return dynWidget;
@@ -914,49 +989,62 @@ int AbstractDynamicLabeledWidgetContainer::removeWidget( QWidget *widget )
 {
     Q_D( AbstractDynamicLabeledWidgetContainer );
     if ( d->dynamicWidgets.count() == d->minWidgetCount ) {
-        kDebug() << "Can't remove the given widget because the minimum "
-        "widget count of" << d->minWidgetCount << "is reached";
+        kDebug() << "Can't remove the given widget because the minimum widget count of"
+                 << d->minWidgetCount << "is reached";
         return -1;
     }
 
+    // Get the DynamicWidget that wraps the given widget
     DynamicWidget *dynamicWidget = dynamicWidgetForWidget( widget );
     Q_ASSERT_X( dynamicWidget, "AbstractDynamicLabeledWidgetContainer::removeWidget",
                 "Dynamic widget for the given widget not found" );
     int index = d->dynamicWidgets.indexOf( dynamicWidget );
 
+    // Get the layout for the dynamic widgets
     QFormLayout *formLayout = dynamic_cast< QFormLayout* >( d->contentWidget->layout() );
     Q_ASSERT_X( formLayout, "AbstractDynamicLabeledWidgetContainer::removeWidget",
                 "No form layout found" );
+
+    // Get the position of the widget in the layout
+    // to remove separators not needed any longer when the widget gets removed
     int row;
     QFormLayout::ItemRole role;
     formLayout->getWidgetPosition( dynamicWidget, &row, &role );
     if ( row > 0 ) {
+        // The widget to be removed is not the first one, remove the preceding separator
         removeSeparator( formLayout->itemAt( row - 1, QFormLayout::SpanningRole ) );
     } else if ( d->dynamicWidgets.count() > 1 ) {
+        // The widget to be removed is the first one and there is at least one more widget,
+        // ie. there is a separator, remove the following separator
         removeSeparator( formLayout->itemAt( row + 1, QFormLayout::SpanningRole ) );
     }
 
     // When the first widget gets removed move it's add button to the next widget
     if ( index == 0 && dynamicWidget->addButton() ) {
         if ( d->dynamicWidgets.count() >= 2 ) {
-            d->addButton = d->dynamicWidgets[ 1 ]->addButton(
-                               this, DynamicWidget::AddButton );
+            d->addButton = d->dynamicWidgets[ 1 ]->addButton( this, DynamicWidget::AddButton );
             connect( d->addButton, SIGNAL( clicked() ), this, SLOT( createAndAddWidget() ) );
             delete d->dynamicWidgets[ 1 ]->takeRemoveButton();
         } else {
-            d->addButton = NULL;
+            d->addButton = 0;
         }
     }
 
+    // Get the label associated with the wigget to be removed
     QWidget *label = d->labelWidgets[ index ];
+
+    // Remove label and widget from the layout and emit removed() before they are deleted
     formLayout->removeWidget( label );
     formLayout->removeWidget( dynamicWidget );
     emit removed( dynamicWidget->contentWidget(), index );
+
+    // Delete label and widget after removing them from the widget lists
     d->labelWidgets.removeAt( index );
     d->dynamicWidgets.removeAt( index );
     delete label;
     delete dynamicWidget;
 
+    // Update button states to new widget count
     d->updateButtonStates();
 
     // Update labels after the removed one
@@ -972,12 +1060,14 @@ QWidget* AbstractDynamicLabeledWidgetContainer::createNewLabelWidget( int widget
     return new QLabel( d->labelTextFor( widgetIndex ), this );
 }
 
-void AbstractDynamicLabeledWidgetContainer::updateLabelWidget( QWidget* labelWidget, int widgetIndex )
+void AbstractDynamicLabeledWidgetContainer::updateLabelWidget( QWidget* labelWidget,
+                                                               int widgetIndex )
 {
     Q_D( AbstractDynamicLabeledWidgetContainer );
     QLabel *label = qobject_cast< QLabel* >( labelWidget );
     if ( label ) {
-        label->setText( d->labelTextFor( widgetIndex ) );
+        // The given labelWidget is a QLabel, update it's text
+        label->setText( d->labelTextFor(widgetIndex) );
     } else {
         kDebug() << "If you override createNewLabelWidget() you should also override "
                 "updateLabelWidget() to not use the default implementation that "
@@ -988,6 +1078,9 @@ void AbstractDynamicLabeledWidgetContainer::updateLabelWidget( QWidget* labelWid
 QWidget* AbstractDynamicLabeledWidgetContainer::labelWidgetFor( QWidget* widget ) const
 {
     Q_D( const AbstractDynamicLabeledWidgetContainer );
+
+    // Get the index of the given widget and return the label associated with that widget,
+    // ie. the label with the same index
     int index = indexOf( widget );
     return d->labelWidgets[ index ];
 }
@@ -999,12 +1092,12 @@ class DynamicLabeledLineEditListPrivate : public AbstractDynamicLabeledWidgetCon
 
 public:
     DynamicLabeledLineEditListPrivate( DynamicLabeledLineEditList *q )
-            : AbstractDynamicLabeledWidgetContainerPrivate( q ) 
+            : AbstractDynamicLabeledWidgetContainerPrivate( q )
     {
         clearButtonsShown = true;
     };
 
-//     KLineEdit *createLineEdit() 
+//     KLineEdit *createLineEdit()
 //     {
 //         Q_Q( DynamicLabeledLineEditList );
 //         KLineEdit *lineEdit = new KLineEdit( q );
