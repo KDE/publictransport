@@ -38,6 +38,7 @@ TitleWidget::TitleWidget(TitleType titleType, Settings *settings, QGraphicsItem*
     m_type = titleType;
     m_layout->setContentsMargins( 1, 1, 0, 0 );
 
+    // Initialize icon widget
     int iconExtend = 26 * settings->sizeFactor;
     Plasma::IconWidget *icon = new Plasma::IconWidget;
     icon->setIcon( "public-transport-stop" );
@@ -46,12 +47,14 @@ TitleWidget::TitleWidget(TitleType titleType, Settings *settings, QGraphicsItem*
     icon->setMaximumSize( iconExtend, iconExtend );
     setIcon( icon );
 
+    // Add a title label
     Plasma::Label *title = new Plasma::Label( this );
     title->setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
     QLabel *_title = title->nativeWidget();
     _title->setTextInteractionFlags( Qt::LinksAccessibleByMouse );
     addWidget( title, WidgetTitle );
 
+    // Add a filter widget
     createAndAddWidget( WidgetFilter );
 }
 
@@ -71,8 +74,8 @@ Plasma::Label* TitleWidget::titleWidget() const
     return m_title;
 }
 
-void TitleWidget::setTitleType(TitleType titleType,
-                               bool validDepartureData, bool validJourneyData)
+void TitleWidget::setTitleType( TitleType titleType,
+                                bool validDepartureData, bool validJourneyData )
 {
     // Remove old additional widgets
     clearWidgets();
@@ -81,32 +84,38 @@ void TitleWidget::setTitleType(TitleType titleType,
     m_type = titleType;
     switch ( titleType ) {
         case ShowDepartureArrivalListTitle:
+            // Default state, a departure/arrival board is shown
             setIcon( validDepartureData ? DepartureListOkIcon : DepartureListErrorIcon );
             m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
             setTitle( titleText() );
 
+            // Show a title (with the stop name) and the filter widget
             addWidget( m_title, WidgetTitle );
-            m_icon->show(); // TEST is this needed?
             addWidget( m_filterWidget, WidgetFilter );
             break;
 
         case ShowIntermediateDepartureListTitle:
+            // An intermediate deparure list is shown
             setIcon( GoBackIcon );
             m_icon->setToolTip( i18nc("@info:tooltip", "Go back to original stop") );
             setTitle( titleText() );
 
+            // Same as for normal departure/arrival boards
             addWidget( m_title, WidgetTitle );
             addWidget( m_filterWidget, WidgetFilter );
             break;
 
         case ShowSearchJourneyLineEdit: {
+            // The journey search UI is shown
             setIcon( AbortJourneySearchIcon );
             m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys "
-                                                    "to or from the home stop" ) );
+                                                       "to or from the home stop" ) );
 
-            removeWidget( WidgetTitle, HideAndRemoveWidget ); // TEST
-            removeWidget( WidgetFilter, HideAndRemoveWidget ); // TEST
+            // Do not show the title and the filter widget
+            removeWidget( WidgetTitle, HideAndRemoveWidget );
+            removeWidget( WidgetFilter, HideAndRemoveWidget );
 
+            // Add widgets
             addJourneySearchWidgets();
             Plasma::LineEdit *journeySearchLine = castedWidget<Plasma::LineEdit>(WidgetJourneySearchLine);
             journeySearchLine->setEnabled( true );
@@ -117,27 +126,36 @@ void TitleWidget::setTitleType(TitleType titleType,
             break;
         }
         case ShowSearchJourneyLineEditDisabled:
+            // The journey search UI is shown,
+            // but the currently used service provider does not support journeys
             setIcon( AbortJourneySearchIcon );
             m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys "
-                                                    "to or from the home stop") );
+                                                       "to or from the home stop") );
 
-            removeWidget( WidgetTitle, HideAndRemoveWidget ); // TEST
-            removeWidget( WidgetFilter, HideAndRemoveWidget ); // TEST
+            // Do not show the title and the filter widget
+            removeWidget( WidgetTitle, HideAndRemoveWidget );
+            removeWidget( WidgetFilter, HideAndRemoveWidget );
 
+            // Add widgets
             addJourneySearchWidgets();
 
+            // Disable all widgets, because journeys are not supported by the currently used
+            // service provider
             castedWidget<Plasma::LineEdit>(WidgetJourneySearchLine)->setEnabled( false );
             castedWidget<Plasma::LineEdit>(WidgetRecentJourneysButton)->setEnabled( false );
             castedWidget<Plasma::LineEdit>(WidgetJourneySearchButton)->setEnabled( false );
             break;
 
         case ShowJourneyListTitle: {
+            // A list of journeys is shown
             setIcon( validJourneyData ? JourneyListOkIcon : JourneyListErrorIcon );
             m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
 
-            removeWidget( WidgetTitle, HideAndRemoveWidget ); // TEST
-            removeWidget( WidgetFilter, HideAndRemoveWidget ); // TEST
+            // Do not show the title and the filter widget
+            removeWidget( WidgetTitle, HideAndRemoveWidget );
+            removeWidget( WidgetFilter, HideAndRemoveWidget );
 
+            // Add a close icon to close the journey view
             int iconExtend = 26 * m_settings->sizeFactor;
             Plasma::IconWidget *closeIcon = new Plasma::IconWidget;
             closeIcon->setIcon( "window-close" );
@@ -148,7 +166,8 @@ void TitleWidget::setTitleType(TitleType titleType,
             connect( closeIcon, SIGNAL(clicked()), this, SIGNAL(closeIconClicked()) );
             addWidget( closeIcon, WidgetCloseIcon );
 
-            addWidget(m_title, WidgetTitle);
+            // Add a title label
+            addWidget( m_title, WidgetTitle );
             break;
         }
     }
@@ -158,7 +177,8 @@ QString TitleWidget::titleText() const
 {
     QString sStops = m_settings->currentStopSettings().stops().join( ", " );
     if ( !m_settings->currentStopSettings().get<QString>(CitySetting).isEmpty() ) {
-        return QString( "%1, %2" ).arg( sStops ).arg( m_settings->currentStopSettings().get<QString>(CitySetting) );
+        return QString( "%1, %2" ).arg( sStops )
+                .arg( m_settings->currentStopSettings().get<QString>(CitySetting) );
     } else {
         return QString( "%1" ).arg( sStops );
     }
@@ -234,13 +254,13 @@ void TitleWidget::removeJourneySearchWidgets()
     removeWidget( WidgetRecentJourneysButton );
 }
 
-void TitleWidget::setTitle(const QString& title)
+void TitleWidget::setTitle( const QString &title )
 {
     m_titleText = title;
     updateTitle();
 }
 
-void TitleWidget::setIcon(Plasma::IconWidget* icon)
+void TitleWidget::setIcon( Plasma::IconWidget *icon )
 {
     if ( m_icon ) {
         m_layout->removeItem(m_icon);
@@ -252,7 +272,7 @@ void TitleWidget::setIcon(Plasma::IconWidget* icon)
     m_layout->insertItem( 0, m_icon );
 }
 
-void TitleWidget::setIcon(MainIconDisplay iconType)
+void TitleWidget::setIcon( MainIconDisplay iconType )
 {
     Q_ASSERT( m_icon );
 
@@ -261,60 +281,71 @@ void TitleWidget::setIcon(MainIconDisplay iconType)
     QPixmap pixmap;
     int iconExtend = m_icon->size().width();
 
-    // Make disabled icon
+    // Create an icon of the given type.
     switch ( iconType ) {
-        case DepartureListErrorIcon:
-            if ( m_settings->departureArrivalListType == DepartureList ) {
-                icon = GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"),
-                        QList<KIcon>() << KIcon("go-home") << KIcon("go-next"),
-                        QSize(iconExtend / 2, iconExtend / 2), iconExtend );
-            } else {
-                icon = GlobalApplet::makeOverlayIcon( KIcon( "public-transport-stop" ),
-                        QList<KIcon>() << KIcon("go-next") << KIcon("go-home"),
-                        QSize(iconExtend / 2, iconExtend / 2), iconExtend );
-            }
-            pixmap = icon.pixmap( iconExtend );
-            pixmap = iconEffect.apply( pixmap, KIconLoader::Small, KIconLoader::DisabledState );
-            icon = KIcon();
-            icon.addPixmap( pixmap, QIcon::Normal );
-            break;
-
-        case DepartureListOkIcon: {
-            QList<KIcon> overlays;
-            if ( m_settings->departureArrivalListType == DepartureList ) {
-                overlays << KIcon("go-home") << KIcon("go-next");
-            } else {
-                overlays << KIcon("go-next") << KIcon("go-home");
-            }
-            icon = GlobalApplet::makeOverlayIcon( KIcon( "public-transport-stop" ), overlays,
-                    QSize( iconExtend / 2, iconExtend / 2 ), iconExtend );
-            break;
+    case DepartureListErrorIcon: {
+        // Create an icon to be shown on errors with a departure/arrival board
+        QList<KIcon> overlays;
+        if ( m_settings->departureArrivalListType == DepartureList ) {
+            // Use a public transport stop icon with a house and an arrow away from it
+            // to indicate that a departure list is shown
+            overlays << KIcon("go-home") << KIcon("go-next");
+        } else {
+            // Use a public transport stop icon with a house and an arrow towards it
+            // to indicate that an arrival list is shown
+            overlays << KIcon("go-next") << KIcon("go-home");
         }
-        case JourneyListOkIcon:
-            icon = GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"),
-                    QList<KIcon>() << KIcon("go-home")
-                        << KIcon("go-next-view") << KIcon("public-transport-stop"),
-                    QSize(iconExtend / 3, iconExtend / 3), iconExtend );
-            break;
+        icon = GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"),
+                overlays, QSize(iconExtend / 2, iconExtend / 2), iconExtend );
+        pixmap = icon.pixmap( iconExtend );
+        pixmap = iconEffect.apply( pixmap, KIconLoader::Small, KIconLoader::DisabledState );
+        icon = KIcon();
+        icon.addPixmap( pixmap, QIcon::Normal );
+        break;
+    }
+    case DepartureListOkIcon: {
+        // Create an icon to be shown for departure/arrival boards without errors.
+        // This icon is the same as the departure error icon, but without the icon effect
+        QList<KIcon> overlays;
+        if ( m_settings->departureArrivalListType == DepartureList ) {
+            overlays << KIcon("go-home") << KIcon("go-next");
+        } else {
+            overlays << KIcon("go-next") << KIcon("go-home");
+        }
+        icon = GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"), overlays,
+                QSize( iconExtend / 2, iconExtend / 2 ), iconExtend );
+        break;
+    }
+    case JourneyListOkIcon:
+        // Create an icon to be shown for journey lists without errors.
+        // This icon is the same as the journey error icon, but without the icon effect
+        icon = GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"),
+                QList<KIcon>() << KIcon("go-home")
+                    << KIcon("go-next-view") << KIcon("public-transport-stop"),
+                QSize(iconExtend / 3, iconExtend / 3), iconExtend );
+        break;
 
-        case JourneyListErrorIcon:
-            icon = GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"),
-                    QList<KIcon>() << KIcon("go-home")
-                        << KIcon("go-next-view") << KIcon("public-transport-stop"),
-                    QSize(iconExtend / 3, iconExtend / 3), iconExtend );
-            pixmap = icon.pixmap( iconExtend );
-            pixmap = iconEffect.apply( pixmap, KIconLoader::Small, KIconLoader::DisabledState );
-            icon = KIcon();
-            icon.addPixmap( pixmap, QIcon::Normal );
-            break;
+    case JourneyListErrorIcon:
+        // Create an icon to be shown on errors with a journey list
+        icon = GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"),
+                QList<KIcon>() << KIcon("go-home")
+                    << KIcon("go-next-view") << KIcon("public-transport-stop"),
+                QSize(iconExtend / 3, iconExtend / 3), iconExtend );
+        pixmap = icon.pixmap( iconExtend );
+        pixmap = iconEffect.apply( pixmap, KIconLoader::Small, KIconLoader::DisabledState );
+        icon = KIcon();
+        icon.addPixmap( pixmap, QIcon::Normal );
+        break;
 
-        case AbortJourneySearchIcon:
-            icon = KIcon("edit-delete");
-            break;
+    case AbortJourneySearchIcon:
+        // Create an icon to be shown for the journey search
+        icon = KIcon("edit-delete");
+        break;
 
-        case GoBackIcon:
-            icon = KIcon("arrow-left");
-            break;
+    case GoBackIcon:
+        // Create an icon to be used for "go back" functionality
+        icon = KIcon("arrow-left");
+        break;
     }
 
     m_icon->setIcon( icon );
