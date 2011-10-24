@@ -699,7 +699,10 @@ void TimetableAccessorGeneralTransitFeed::requestDepartures( const DepartureRequ
             }
         }
 
-        departures << new DepartureInfo( data );
+        // Create new departure information object and add it to the departure list.
+        // Do not use any corrections in the DepartureInfo constructor, because all values
+        // from the database are already in the correct format
+        departures << new DepartureInfo( data, PublicTransportInfo::NoCorrection );
     }
 
     // TODO Do not use a list of pointers here, maybe use data sharing for PublicTransportInfo/StopInfo?

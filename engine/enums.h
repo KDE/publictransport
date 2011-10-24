@@ -222,16 +222,6 @@ enum LineService {
 };
 // Q_DECLARE_FLAGS( LineServices, LineService ); // Gives a compiler error here.. but not in departureinfo.h
 
-/** @brief What calculation should be done to get a missing value. */
-enum CalculateMissingValue {
-    CalculateDelayFromDepartureAndPrognosis,
-    CalculateDepartureDate,
-    CalculateArrivalDateFromDepartureDate,
-    CalculateDurationFromDepartureAndArrival,
-    CalculateArrivalFromDepartureAndDuration,
-    CalculateDepartureFromArrivalAndDuration
-};
-
 /** @class Global
   * @brief Contains global static methods. */
 class Global

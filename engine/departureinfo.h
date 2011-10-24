@@ -45,8 +45,16 @@ Q_DECLARE_FLAGS( LineServices, LineService )
  */
 class PublicTransportInfo : public QHash<TimetableInformation, QVariant> {
 public:
-    /** @brief Constructs a new PublicTransportInfo object. */
-    PublicTransportInfo() : QHash<TimetableInformation, QVariant>() {};
+    enum Correction {
+        NoCorrection                    = 0x0000,
+        DeduceMissingValues             = 0x0001,
+        ConvertValuesToCorrectFormat    = 0x0002,
+        CombineToPreferredValueType     = 0x0004, /**< eg. combine DepartureHour and
+                * DepartureMinute into the preferred value type DepartureTime.
+                * TODO Update TimetableInformation enum documentation. */
+        CorrectEverything = DeduceMissingValues | ConvertValuesToCorrectFormat
+    };
+    Q_DECLARE_FLAGS( Corrections, Correction );
 
     /**
      * @brief Contructs a new PublicTransportInfo object based on the information given
@@ -54,7 +62,8 @@ public:
      *
      * @param data A hash that contains values for TimetableInformations.
      **/
-    explicit PublicTransportInfo( const QHash<TimetableInformation, QVariant> &data );
+    explicit PublicTransportInfo( const QHash<TimetableInformation, QVariant> &data,
+                                  Corrections corrections = CorrectEverything );
 
     virtual ~PublicTransportInfo() {};
 
@@ -142,7 +151,8 @@ public:
      * @param data A hash that contains values for at least the required
      *   TimetableInformations (TransportLine, Target, DepartureHour, DepartureMinute).
      **/
-    explicit JourneyInfo( const QHash<TimetableInformation, QVariant> &data );
+    explicit JourneyInfo( const QHash<TimetableInformation, QVariant> &data,
+                          Corrections corrections = CorrectEverything );
 
     /** @brief Gets news for the journey, such as "platform changed". */
     QString journeyNews() const {
@@ -345,8 +355,6 @@ public:
             return QVariantList();
         }
     };
-
-private:
 };
 
 /**
@@ -357,16 +365,14 @@ private:
  */
 class DepartureInfo : public PublicTransportInfo {
 public:
-    /** @brief Constructs an invalid DepartureInfo object. */
-    DepartureInfo();
-
     /**
      * @brief Contructs a new DepartureInfo object based on the information given with @p data.
      *
      * @param data A hash that contains values for at least the required
      *   TimetableInformations (TransportLine, Target, DepartureHour, DepartureMinute).
      **/
-    explicit DepartureInfo( const QHash<TimetableInformation, QVariant> &data );
+    explicit DepartureInfo( const QHash<TimetableInformation, QVariant> &data,
+                            Corrections corrections = CorrectEverything );
 
     /** @brief Gets the target / origin of the departing / arriving vehicle. */
     QString target() const { return contains(Target)
@@ -456,9 +462,6 @@ private:
  **/
 class StopInfo : public QHash<TimetableInformation, QVariant> {
 public:
-    /** @brief Constructs an invalid StopInfo object. */
-    StopInfo();
-
     /**
      * @brief Contructs a new StopInfo object based on the information given with @p data.
      *
