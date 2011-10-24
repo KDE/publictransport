@@ -3,12 +3,14 @@ project( plasma-applet-publictransport )
 # Find the required Libaries
 find_package( KDE4 REQUIRED )
 include( KDE4Defaults )
-
 add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
+
 include_directories(
    ${CMAKE_SOURCE_DIR}
    ${CMAKE_BINARY_DIR}
-   ${KDE4_INCLUDES} )
+   ${KDE4_INCLUDES}
+   ${PUBLICTRANSPORTHELPER_INLUDES}
+)
 
 # We add our source code here
 set( publictransport_SRCS
@@ -39,8 +41,7 @@ kde4_add_ui_files( publictransport_SRCS
 # Now make sure all files get to the right place
 kde4_add_plugin( plasma_applet_publictransport ${publictransport_SRCS} )
 
-add_dependencies( plasma_applet_publictransport
-                  publictransporthelper )
+add_dependencies( plasma_applet_publictransport publictransporthelper )
 
 target_link_libraries( plasma_applet_publictransport
     ${KDE4_PLASMA_LIBS}
@@ -59,4 +60,6 @@ install( FILES plasma-applet-publictransport.desktop
 install( FILES vehicles.svg
          DESTINATION ${DATA_INSTALL_DIR}/plasma_applet_publictransport )
 
-add_subdirectory(tests)
+if ( BUILD_TESTS )
+    add_subdirectory( tests )
+endif ( BUILD_TESTS )

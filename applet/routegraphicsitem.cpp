@@ -20,7 +20,7 @@
 #include "routegraphicsitem.h"
 #include "departuremodel.h"
 #include "timetablewidget.h"
-#include <publictransporthelper/departureinfo.h>
+#include <departureinfo.h>
 
 #include <Plasma/PaintUtils>
 #include <KColorUtils>

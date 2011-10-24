@@ -28,11 +28,11 @@
     #define UpdateGUI()
 #endif
 
-#include <publictransporthelper/stopsettingsdialog.h>
-#include <publictransporthelper/stopwidget.h>
-#include <publictransporthelper/checkcombobox.h>
-#include <publictransporthelper/filterwidget.h>
-#include <publictransporthelper/filter.h>
+#include <stopsettingsdialog.h>
+#include <stopwidget.h>
+#include <checkcombobox.h>
+#include <filterwidget.h>
+#include <filter.h>
 
 #include <QtTest/QTest>
 #include <QtTest/QtTestGui>

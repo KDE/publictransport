@@ -17,11 +17,13 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-// Project-Includes
+// Header
 #include "publictransportrunner_config.h"
-#include <publictransporthelper/stopsettingsdialog.h>
-#include <publictransporthelper/locationmodel.h>
-#include <publictransporthelper/serviceprovidermodel.h>
+
+// libpublictransporthelper includes
+#include <stopsettingsdialog.h>
+#include <locationmodel.h>
+#include <serviceprovidermodel.h>
 
 // KDE-Includes
 #include <Plasma/AbstractRunner>

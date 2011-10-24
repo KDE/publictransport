@@ -79,6 +79,8 @@
 #include <KIO/NetAccess>
 #include <KDE/KLocale>
 
+#include <unistd.h>
+
 TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpButtonHint ),
         m_mainTabBar( new KTabWidget(this) ), m_view( new TimetableMateView(this) ),
         m_backgroundParserTimer(0) {

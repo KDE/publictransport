@@ -31,8 +31,8 @@
 #include "ui_alarmConfig.h"
 
 #include "global.h"
-#include <publictransporthelper/filter.h>
-#include <publictransporthelper/stopsettings.h>
+#include <filter.h>
+#include <stopsettings.h>
 
 #include <Plasma/DataEngine>
 

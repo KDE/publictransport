@@ -2,7 +2,8 @@
 find_package( KDE4 REQUIRED )
 include( KDE4Defaults )
 
-include_directories( ${QT_INCLUDES} ${KDE4_INCLUDES} ${CMAKE_CURRENT_BINARY_DIR} )
+include_directories( ${QT_INCLUDES} ${KDE4_INCLUDES} ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../ )
 set( CMAKE_EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR} )
 
 set( LocationsTest_SRCS LocationsTest.cpp )
@@ -30,8 +31,8 @@ add_test( DeparturesTest DeparturesTest )
 target_link_libraries( DeparturesTest ${QT_QTTEST_LIBRARY} ${KDE4_PLASMA_LIBS} )
 
 set( GeneralTransitTest_SRCS GeneralTransitTest.cpp
-    ../generaltransitfeed_importer.cpp
-    ../generaltransitfeed_database.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../generaltransitfeed_importer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../generaltransitfeed_database.cpp
 )
 qt4_automoc( ${GeneralTransitTest_SRCS} )
 add_executable( GeneralTransitTest ${GeneralTransitTest_SRCS} )

@@ -6,7 +6,8 @@ include( KDE4Defaults )
 include_directories(
 	${CMAKE_SOURCE_DIR}
 	${CMAKE_BINARY_DIR}
-	${KDE4_INCLUDES} ${QT_INCLUDES} )
+	${KDE4_INCLUDES}
+    ${PUBLICTRANSPORTHELPER_INLUDES} )
 
 # add_subdirectory( doc )
 add_subdirectory( src )

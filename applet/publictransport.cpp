@@ -30,8 +30,8 @@
 #include "timetablewidget.h"
 #include "popupicon.h"
 
-// Helper library includes
-#include <publictransporthelper/global.h>
+// libpublictransporthelper includes
+#include <global.h>
 
 // KDE includes
 #include <KDebug>
@@ -3133,6 +3133,10 @@ void PublicTransport::fillModelJourney( const QList< JourneyInfo > &journeys )
             m_modelJourneys->updateItem( item, journeyInfo );
         }
     }
+
+    // Sort departures in the model.
+    // They are most probably already sorted, but sometimes they are not
+    m_modelJourneys->sort( ColumnDeparture );
 }
 
 void PublicTransport::fillModel( const QList<DepartureInfo> &departures )
@@ -3156,6 +3160,10 @@ void PublicTransport::fillModel( const QList<DepartureInfo> &departures )
             m_model->updateItem( item, departureInfo );
         }
     }
+
+    // Sort departures in the model.
+    // They are most probably already sorted, but sometimes they are not
+    m_model->sort( ColumnDeparture );
 }
 
 void GraphicsPixmapWidget::paint( QPainter* painter,

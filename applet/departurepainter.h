@@ -24,7 +24,7 @@
  * @brief This file contains the DeparturePainter class.
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#include <publictransporthelper/enums.h>
+#include <enums.h>
 #include <QPainter>
 
 class KPixmapCache;

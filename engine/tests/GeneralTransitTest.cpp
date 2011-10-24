@@ -20,7 +20,6 @@
 #include "GeneralTransitTest.h"
 
 #include <QtTest/QTest>
-#include "timetableaccessor_generaltransitfeed.h"
 #include "generaltransitfeed_importer.h"
 
 void GeneralTransitTest::init()
