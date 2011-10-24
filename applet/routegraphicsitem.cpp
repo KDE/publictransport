@@ -17,23 +17,28 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Own includes
 #include "routegraphicsitem.h"
 #include "departuremodel.h"
 #include "timetablewidget.h"
+
+// libpublictransport helper includes
 #include <departureinfo.h>
 
+// Plasma/KDE includes
 #include <Plasma/PaintUtils>
 #include <KColorUtils>
 #include <KGlobalSettings>
+#include <KMenu>
 
+// Qt includes
 #include <QPainter>
 #include <QPropertyAnimation>
-#include <qmath.h>
 #include <QGraphicsLinearLayout>
 #include <QTextDocument>
 #include <QGraphicsEffect>
 #include <QGraphicsSceneHoverEvent>
-#include <KMenu>
+#include <qmath.h>
 
 RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item,
         StopAction *copyStopToClipboardAction, StopAction *showInMapAction,
@@ -86,7 +91,13 @@ void RouteGraphicsItem::arrangeStopItems()
     } else if ( !info->routeStops().isEmpty() ) {
         int count = info->routeStops().count();
         QFont routeFont = KGlobalSettings::smallestReadableFont();
+        const qreal smallestReadableFontSize = routeFont.pointSizeF();
+        const qreal targetFontSize = smallestReadableFontSize * m_zoomFactor;
+        if ( targetFontSize >= smallestReadableFontSize ) {
+            routeFont = parentWidget()->font();
+        }
         routeFont.setPointSizeF( routeFont.pointSizeF() * m_zoomFactor );
+
         QFont boldRouteFont = routeFont;
         boldRouteFont.setBold( true );
         QFontMetrics fm( routeFont );
@@ -189,6 +200,11 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
     // Add route stops if there are at least two stops given from the data engine
     if ( info->routeStops().count() >= 2 ) {
         QFont routeFont = KGlobalSettings::smallestReadableFont();
+        const qreal smallestReadableFontSize = routeFont.pointSizeF();
+        const qreal targetFontSize = smallestReadableFontSize * m_zoomFactor;
+        if ( targetFontSize >= smallestReadableFontSize ) {
+            routeFont = parentWidget()->font();
+        }
         routeFont.setPointSizeF( routeFont.pointSizeF() * m_zoomFactor );
         QFont boldRouteFont = routeFont;
         boldRouteFont.setBold( true );
@@ -893,7 +909,7 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
     // Add route stops if there are at least two stops given from the data engine
     QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( layout() );
     if ( info->routeStops().count() >= 2 ) {
-        QFont routeFont = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
+        QFont routeFont = font();
         routeFont.setPointSizeF( routeFont.pointSizeF() * m_zoomFactor );
         QFont boldRouteFont = routeFont;
         boldRouteFont.setBold( true );
