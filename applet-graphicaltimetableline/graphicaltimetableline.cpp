@@ -262,10 +262,10 @@ void GraphicalTimetableLine::configAccepted()
 	emit configNeedsSaving();
 	configChanged();
 
-	m_stopWidget = NULL;
-	m_vehicleTypeModel = NULL;
-	m_showTimetableCheckbox = NULL;
-	m_drawTransportLineCheckbox = NULL;
+	m_stopWidget = 0;
+	m_vehicleTypeModel = 0;
+	m_showTimetableCheckbox = 0;
+	m_drawTransportLineCheckbox = 0;
 }
 
 void GraphicalTimetableLine::createTooltip( Departure *departure )
@@ -371,16 +371,6 @@ QDateTime GraphicalTimetableLine::endTime() const
 	return QDateTime::currentDateTime().addSecs( 60 * m_timelineLength );
 }
 
-// class LeavingAnimation : public QAbstractAnimation {
-// public:
-//     LeavingAnimation( QObject* parent = 0 );
-//
-//     virtual int duration() const { return 1000; };
-//     virtual void updateCurrentTime( int currentTime /* msecs */ ) {
-//
-// 	};
-// };
-
 void GraphicalTimetableLine::dataUpdated(const QString& sourceName,
 										 const Plasma::DataEngine::Data& data)
 {
@@ -397,21 +387,6 @@ void GraphicalTimetableLine::dataUpdated(const QString& sourceName,
 			m_departures.removeAt( i );
 
 			departure->setZValue( 999999 );
-
-			// First TODO for TODO seconds, then slide away while fading out
-// 			Plasma::Animation *fadeOutAnimation =
-// 					Plasma::Animator::create( Plasma::Animator::FadeAnimation, departure );
-// 			fadeOutAnimation->setTargetWidget( departure );
-// 			fadeOutAnimation->setProperty( "startOpacity", 1.0 );
-// 			fadeOutAnimation->setProperty( "targetOpacity", 0.0 );
-// 			fadeOutAnimation->setProperty( "duration", 200 );
-//
-// 			Plasma::Animation *fadeInAnimation =
-// 					Plasma::Animator::create( Plasma::Animator::FadeAnimation, departure );
-// 			fadeInAnimation->setTargetWidget( departure );
-// 			fadeInAnimation->setProperty( "startOpacity", 0.0 );
-// 			fadeInAnimation->setProperty( "targetOpacity", 1.0 );
-// 			fadeInAnimation->setProperty( "duration", 200 );
 
 			QPropertyAnimation *rotateAnimation =
 					new QPropertyAnimation( departure, "rotation", this );
@@ -430,35 +405,22 @@ void GraphicalTimetableLine::dataUpdated(const QString& sourceName,
 
 			Plasma::Animation *fadeAnimation =
 					Plasma::Animator::create( Plasma::Animator::FadeAnimation, departure );
-// 			animation->setEasingCurve( QEasingCurve(QEasingCurve::OutBounce) );
 			fadeAnimation->setTargetWidget( departure );
 			fadeAnimation->setProperty( "startOpacity", 1.0 );
 			fadeAnimation->setProperty( "targetOpacity", 0.0 );
 			fadeAnimation->setProperty( "duration", 750 );
 
-// 			Plasma::Animation *growAnimation =
-// 					Plasma::Animator::create( Plasma::Animator::GrowAnimation, departure );
-// 			growAnimation->setTargetWidget( departure );
-// 			growAnimation->setProperty( "factor", 20.0 );
-// 			growAnimation->setProperty( "duration", 750 );
-
 			QParallelAnimationGroup *parallelGroup = new QParallelAnimationGroup( departure );
 			parallelGroup->addAnimation( slideAnimation );
 			parallelGroup->addAnimation( fadeAnimation );
-// 			parallelGroup->addAnimation( growAnimation );
 
 			QSequentialAnimationGroup *sequentialGroup = new QSequentialAnimationGroup( departure );
-// 			sequentialGroup->addAnimation( fadeOutAnimation );
-// 			sequentialGroup->addAnimation( fadeInAnimation );
 			sequentialGroup->addAnimation( rotateAnimation );
 			sequentialGroup->addAnimation( parallelGroup );
 			connect( sequentialGroup, SIGNAL(finished()), departure, SLOT(deleteLater()) );
 			sequentialGroup->start( QAbstractAnimation::DeleteWhenStopped );
 		}
 	}
-
-	QRectF rect = contentsRect();
-// 	QPointF timelineEnd( rect.right() - 0.1 * rect.width(), rect.top() + 0.3 * rect.height() );
 
 	QUrl url;
 	QDateTime updated;
@@ -504,22 +466,6 @@ void GraphicalTimetableLine::dataUpdated(const QString& sourceName,
 		Departure *departure = new Departure( m_departureView, departureData );
 		departure->setPos( m_timelineEnd );
 		m_departures << departure;
-
-// 		QList< QTime > routeTimes;
-// 		if ( dataMap.contains( "routeTimes" ) ) {
-// 			QVariantList times = dataMap[ "routeTimes" ].toList();
-// 			foreach( const QVariant &time, times ) {
-// 				routeTimes << time.toTime();
-// 			}
-// 		}
-// 		DepartureInfo departureInfo( dataMap["operator"].toString(), dataMap["line"].toString(),
-// 				dataMap["target"].toString(), dataMap["departure"].toDateTime(),
-// 				static_cast<VehicleType>( dataMap["vehicleType"].toInt() ),
-// 				dataMap["nightline"].toBool(), dataMap["expressline"].toBool(),
-// 				dataMap["platform"].toString(), dataMap["delay"].toInt(),
-// 				dataMap["delayReason"].toString(), dataMap["journeyNews"].toString(),
-// 				dataMap["routeStops"].toStringList(), routeTimes,
-// 				dataMap["routeExactStops"].toInt() );
 	} // for ( int i = 0; i < count; ++i )
 
 	// Update "last update" time
@@ -772,9 +718,6 @@ void Departure::paint( QPainter* painter, const QStyleOptionGraphicsItem* option
 		// Show the number of departures if there are more than vehicle icons drawn
 		text.append( QString("%1: ").arg(m_departures.count()) );
 	}
-// 	text.append( minTime == maxTime ? KGlobal::locale()->formatTime(minTime.time())
-// 			: QString("%1 - %2").arg(KGlobal::locale()->formatTime(minTime.time()))
-// 								.arg(KGlobal::locale()->formatTime(maxTime.time())) );
 
 	QDateTime currentTime = QDateTime::currentDateTime();
 	if ( minTime == maxTime ) {
@@ -848,33 +791,6 @@ Departure* Departure::splitAt( QGraphicsItem *parent, int index )
 		m_departures.removeLast();
 	}
 
-// 	qreal factor = departureSizeFactor();
-// 	qreal departureSize = boundingRect().width() * factor; // Size of one drawn departure icon
-// 	qreal translation = departureOffset( departureSize );
-//
-// 	// Scale vehicle type icons not moved to the new Departure item
-// 	qreal newDeparturesSize = (m_departures.count() - 1 ) * translation + departureSize;
-// 	qreal oldDeparturesSize = boundingRect().width();
-// 	qreal newSize = m_size.width() * newDeparturesSize / oldDeparturesSize;
-// 	kDebug() << newDeparturesSize << oldDeparturesSize << newSize << m_size.width();
-// // 	setSize( QSizeF(newSize, newSize) );
-//
-// 	QPropertyAnimation *zoomAnimation = new QPropertyAnimation( this, "size" );
-// 	zoomAnimation->setDuration( 100 );
-// 	zoomAnimation->setStartValue( QSizeF(newSize, newSize) );
-// 	zoomAnimation->setEndValue( m_size );
-//
-// 	qreal move = (newDeparturesSize - oldDeparturesSize) / 2.0;
-// // 	moveBy( move, move );
-// 	QPropertyAnimation *moveAnimation = new QPropertyAnimation( this, "pos" );
-// 	moveAnimation->setDuration( 100 );
-// 	moveAnimation->setStartValue( pos() + QPointF(move, move) );
-// 	moveAnimation->setEndValue( pos() );
-//
-// 	zoomAnimation->start( QAbstractAnimation::DeleteWhenStopped );
-// 	moveAnimation->start( QAbstractAnimation::DeleteWhenStopped );
-// 	kDebug() << "Animate from" << QSizeF(newSize, newSize) << "to" << m_size << "| move" << move;
-
 	updateDrawData();
 	updateTooltip();
 	return departure;
@@ -892,14 +808,11 @@ void Departure::hoverEnterEvent(QGraphicsSceneHoverEvent* event)
 QPointF GraphicalTimetableLine::positionFromTime( const QDateTime& time, qreal *opacity,
 												  qreal *zoom, qreal *z ) const
 {
-	QRectF rect = contentsRect().adjusted( 20, 0, -20, 0 );
-// 	qreal timeLineLength = (rect.width() * 60) / m_pixelsPerTimelineHour; // in minutes
 	qreal minutesToDeparture = qCeil( QDateTime::currentDateTime().secsTo(time) / 60.0 );
 	if ( minutesToDeparture > m_timelineLength || minutesToDeparture < 0 ) {
 		return QPointF();
 	}
 
-// 	qreal centerY = rect.top() + rect.height() / 2;
 	qreal position = minutesToDeparture / m_timelineLength; // 0 .. 1
 
 	if ( opacity ) {
@@ -913,8 +826,6 @@ QPointF GraphicalTimetableLine::positionFromTime( const QDateTime& time, qreal *
 	}
 	return QPointF( m_timelineStart.x() + position * (m_timelineEnd.x() - m_timelineStart.x()),
 					m_timelineStart.y() + position * (m_timelineEnd.y() - m_timelineStart.y()) );
-// 	return QPointF( (qreal)rect.left() + (qreal)rect.width() * minutesToDeparture / timeLineLength,
-// 					rect.top() + rect.height() / 2 );
 }
 
 void GraphicalTimetableLine::updateItemPositions( bool animate )
@@ -931,8 +842,6 @@ void GraphicalTimetableLine::updateItemPositions( bool animate )
 		for ( int n = 1; n < departureData.count(); ++n ) {
 			QPointF subPos = positionFromTime(departureData[n].time);
 			if ( (lastSubPos - subPos).manhattanLength() > MIN_DISTANCE_BETWEEN_DEPARTURES ) {
-// 				kDebug() << m_departures.count() << "departures before splitting one" << i << lastSubPos << subPos;
-
 				// Departure isn't too close to the last departure
 				// Split them to two objects
 				Departure *splitDeparture = departure->splitAt( m_departureView, n );
@@ -946,8 +855,6 @@ void GraphicalTimetableLine::updateItemPositions( bool animate )
 		}
 
 		if ( lastDeparture && (lastPos - newPos).manhattanLength() < MIN_DISTANCE_BETWEEN_DEPARTURES ) {
-// 			kDebug() << m_departures.count() << "departures before combining two" << i << lastPos << newPos;
-
 			// Departure is very close to the last departure
 			// Combine both into one object
 			lastDeparture->combineWith( departure );
@@ -1066,8 +973,6 @@ void GraphicalTimetableLine::paintInterface( QPainter *p,
 	}
     m_svg.resize( (int)rect.width(), (int)rect.height() );
     m_svg.paint( p, rect, "background" );
-
-// 	p->drawLine( m_timelineStart, m_timelineEnd );
 
 	// Draw text markers (every full hour)
 	QFont timeMarkerFont = font();
