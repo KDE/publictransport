@@ -189,9 +189,9 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
     int removedWordsFromLeft = 0;
 
     // Remove double spaces without changing the cursor position or selection
-    int selStart = lineEdit->selectionStart();
-    int selLength = lineEdit->selectedText().length();
-    int cursorPos = lineEdit->cursorPosition();
+    int selStart = !lineEdit ? 0 : lineEdit->selectionStart();
+    int selLength = !lineEdit ? 0 :lineEdit->selectedText().length();
+    int cursorPos = !lineEdit ? 0 :lineEdit->cursorPosition();
     cursorPos -= searchLine.left( cursorPos ).count( "  " );
     if ( selStart != -1 ) {
         selStart -= searchLine.left( selStart ).count( "  " );
@@ -199,10 +199,12 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
     }
 
     searchLine = searchLine.replace( "  ", " " );
-    lineEdit->setText( searchLine );
-    lineEdit->setCursorPosition( cursorPos );
-    if ( selStart != -1 ) {
-        lineEdit->setSelection( selStart, selLength );
+    if ( lineEdit ) {
+        lineEdit->setText( searchLine );
+        lineEdit->setCursorPosition( cursorPos );
+        if ( selStart != -1 ) {
+            lineEdit->setSelection( selStart, selLength );
+        }
     }
 
     // Get word list
@@ -233,8 +235,9 @@ bool JourneySearchParser::parseJourneySearch( KLineEdit* lineEdit,
     }
 
     // Do corrections
-    if ( correctString && !isInsideQuotedString( searchLine, cursorPos )
-                && lineEdit->completionMode() != KGlobalSettings::CompletionNone ) {
+    if ( correctString && !isInsideQuotedString(searchLine, cursorPos) &&
+         lineEdit && lineEdit->completionMode() != KGlobalSettings::CompletionNone )
+    {
         doCorrections( lineEdit, &searchLine, cursorPos, words, removedWordsFromLeft );
     }
 
