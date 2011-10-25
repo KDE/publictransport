@@ -17,18 +17,24 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "titlewidget.h"
 
+// Own includes
 #include "settings.h"
 #include "journeysearchlineedit.h"
 
-#include <QGraphicsLinearLayout>
+// KDE+Plasma includes
 #include <KIconEffect>
 #include <Plasma/Label>
 #include <Plasma/IconWidget>
 #include <Plasma/LineEdit>
 #include <Plasma/ToolButton>
+
+// Qt includes
 #include <QMenu>
+#include <QToolButton>
+#include <QGraphicsLinearLayout>
 #include <qmath.h>
 
 TitleWidget::TitleWidget(TitleType titleType, Settings *settings, QGraphicsItem* parent)
@@ -184,6 +190,15 @@ QString TitleWidget::titleText() const
     }
 }
 
+void TitleWidget::slotJourneySearchInputFinished()
+{
+    Plasma::LineEdit *journeySearch =
+            castedWidget<Plasma::LineEdit>( TitleWidget::WidgetJourneySearchLine );
+    Q_ASSERT( journeySearch );
+
+    emit journeySearchInputFinished( journeySearch->text() );
+}
+
 void TitleWidget::addJourneySearchWidgets()
 {
     // Add recent journeys button
@@ -192,14 +207,14 @@ void TitleWidget::addJourneySearchWidgets()
     recentJourneysButton->setToolTip( i18nc("@info:tooltip", "Use a recent journey search") );
     recentJourneysButton->nativeWidget()->setPopupMode( QToolButton::InstantPopup );
     // This is needed, to have the popup menu drawn above other widgets
-    recentJourneysButton->setZValue( 999 );
+    recentJourneysButton->setZValue( 9999 );
 
     // Add button to start the journey search
     Plasma::ToolButton *journeySearchButton = new Plasma::ToolButton;
     journeySearchButton->setIcon( KIcon("edit-find") );
     journeySearchButton->setToolTip( i18nc("@info:tooltip", "Find journeys") );
     journeySearchButton->setEnabled( false );
-    connect( journeySearchButton, SIGNAL(clicked()), this, SIGNAL(journeySearchInputFinished()) );
+    connect( journeySearchButton, SIGNAL(clicked()), this, SLOT(slotJourneySearchInputFinished()) );
 
     // Add journey search query input field
     Plasma::LineEdit *journeySearchLineEdit = new Plasma::LineEdit;
@@ -235,7 +250,7 @@ void TitleWidget::addJourneySearchWidgets()
     completion->setIgnoreCase( true );
     journeySearchLineEdit->setFont( m_settings->sizedFont() );
     connect( journeySearchLineEdit, SIGNAL(returnPressed()),
-            this, SIGNAL(journeySearchInputFinished()) );
+            this, SLOT(slotJourneySearchInputFinished()) );
     connect( journeySearchLineEdit, SIGNAL(textEdited(QString)),
             this, SIGNAL(journeySearchInputEdited(QString)) );
     connect( journeySearchLineEdit, SIGNAL(textChanged(QString)),
@@ -472,40 +487,64 @@ void TitleWidget::updateFilterWidget()
     }
 }
 
+QMenu* TitleWidget::createRecentJourneysMenu( QWidget *parent ) const
+{
+    QMenu *menu = new QMenu( parent );
+    foreach( const QString &recent, m_settings->recentJourneySearches ) {
+        menu->addAction( recent );
+    }
+
+    // Add a clear action after a separator
+    menu->addSeparator();
+    QAction *clearAction = menu->addAction( KIcon("edit-clear-list"),
+                                            i18nc("@action:button", "&Clear list") );
+    // Make the clear action distinguishable from others
+    clearAction->setData( true );
+    connect( clearAction, SIGNAL(triggered()), this, SLOT(slotClearRecentJourneys()) );
+    return menu;
+}
+
 void TitleWidget::updateRecentJourneysMenu()
 {
+    // Needs to be in journey search state
     Plasma::ToolButton *recentJourneysButton =
             castedWidget<Plasma::ToolButton>( WidgetRecentJourneysButton );
-    Q_ASSERT( recentJourneysButton );
+    if ( !recentJourneysButton ) {
+        // No recent journeys button shown -> not in journey search state
+        return;
+    }
 
     if ( m_settings->recentJourneySearches.isEmpty() ) {
+        // No recent journey searches available
         recentJourneysButton->setEnabled( false );
     } else {
-        QMenu *menu = new QMenu( recentJourneysButton->nativeWidget() );
-        foreach( const QString &recent, m_settings->recentJourneySearches ) {
-            menu->addAction( recent );
-        }
-        menu->addSeparator();
-        menu->addAction( KIcon("edit-clear-list"),
-                        i18nc("@action:button", "&Clear list") )->setData( true );
+        // Delete old menu
+        delete recentJourneysButton->nativeWidget()->menu();
+
+        // Create and set new menu
+        QMenu *menu = createRecentJourneysMenu( recentJourneysButton->nativeWidget() );
         connect( menu, SIGNAL(triggered(QAction*)),
-                this, SLOT(slotRecentJourneyActionTriggered(QAction*)) );
+                 this, SLOT(slotRecentJourneyActionTriggered(QAction*)) );
         recentJourneysButton->nativeWidget()->setMenu( menu );
         recentJourneysButton->setEnabled( true );
     }
 }
 
-void TitleWidget::slotRecentJourneyActionTriggered(QAction* action)
+void TitleWidget::slotClearRecentJourneys()
+{
+    // First let the settings object be updated, then update the menu based on the new settings
+    emit recentJourneyActionTriggered( ActionClearRecentJourneys );
+    updateRecentJourneysMenu();
+}
+
+void TitleWidget::slotRecentJourneyActionTriggered( QAction *action )
 {
     Plasma::LineEdit* journeySearchLine = castedWidget<Plasma::LineEdit>( WidgetJourneySearchLine );
 
-    if ( action->data().isValid() && action->data().toBool() ) {
-        // First let the settings object be updated, the update the menu based on the new settings
-        emit recentJourneyActionTriggered( ActionClearRecentJourneys );
-        updateRecentJourneysMenu();
-    } else {
+    if ( !action->data().isValid() || !action->data().toBool() ) {
+        // The given action is not the clear action
         journeySearchLine->setText( action->text() );
-        emit recentJourneyActionTriggered( ActionClearRecentJourneys, action->text() );
+        emit recentJourneyActionTriggered( ActionUseRecentJourney, action->text() );
     }
 
     journeySearchLine->setFocus();

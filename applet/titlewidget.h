@@ -30,6 +30,7 @@
 
 class Settings;
 class QGraphicsLinearLayout;
+class QMenu;
 namespace Plasma {
     class IconWidget;
     class Label;
@@ -169,6 +170,8 @@ public:
 
     QGraphicsWidget *createAndAddWidget( WidgetType widgetType );
 
+    QMenu *createRecentJourneysMenu( QWidget *parent = 0 ) const;
+
 signals:
     /** @brief The icon widget was clicked. */
     void iconClicked();
@@ -179,20 +182,25 @@ signals:
     /** @brief The widget in the additional widget list with type @ref WidgetFilter was clicked. */
     void filterIconClicked();
 
-    /** @brief The widget of type @ref WidgetJourneySearchButton was clicked or enter was pressed
-    * in widget of type @ref WidgetJourneySearchLine. */
-    void journeySearchInputFinished();
+    /**
+     * @brief The widget of type WidgetJourneySearchButton was clicked or enter was pressed
+     *   in widget of type @ref WidgetJourneySearchLine.
+     *
+     * @param text The finished journey search text.
+     **/
+    void journeySearchInputFinished( const QString &text );
 
-    /** @brief The text of the widget of type @ref WidgetJourneySearchLine has changed.
-    *
-    * @param text The new text. */
+    /**
+     * @brief The text of the widget of type @ref WidgetJourneySearchLine has changed.
+     *
+     * @param text The new text.
+     **/
     void journeySearchInputEdited( const QString &text );
 
     /**
      * @brief An action of the recent journey menu has been triggered.
      *
      * @param recentJourneyAction The type of the triggered action.
-     *
      * @param recentJourney The search string of the triggered recent journey action,
      *   if @p recentJourneyAction is @ref ActionUseRecentJourney. Otherwise an empty QString.
      *
@@ -201,7 +209,7 @@ signals:
      *   is automatically executed by setting the search string to @p recentJourney.
      **/
     void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction,
-                                    const QString &recentJourney = QString() );
+                                       const QString &recentJourney = QString() );
 
 public slots:
     /** @brief Updates the filter widget based on the current applet settings. */
@@ -215,7 +223,9 @@ public slots:
 
 protected slots:
     void slotRecentJourneyActionTriggered( QAction *action );
+    void slotClearRecentJourneys();
     void slotJourneySearchInputChanged( const QString &text );
+    void slotJourneySearchInputFinished();
 
 protected:
     /**

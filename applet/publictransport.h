@@ -383,8 +383,10 @@ protected slots:
     /**
      * @brief Finished editing the journey search line (return pressed,
      *   start search button clicked or stop suggestion double clicked).
+     *
+     * @param text The finished journey search text.
      **/
-    void journeySearchInputFinished();
+    void journeySearchInputFinished( const QString &text );
 
     /**
      * @brief The journey search line has been changed and parsed.
@@ -448,8 +450,14 @@ protected slots:
      * @brief A "recent journey"-action has been triggered.
      *
      * @param recentJourneyAction The type of the executed action.
+     * @param recentJourney The search string of the triggered recent journey action,
+     *   if @p recentJourneyAction is @ref ActionUseRecentJourney. Otherwise an empty QString.
      **/
-    void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction );
+    void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction,
+                                       const QString &journeySearch );
+
+    /** @brief A recent journey @p action was triggered from the "quickJourneys" action. */
+    void slotRecentJourneyActionTriggered( QAction *action );
 
     /**
      * @brief Processes a journey search request.
@@ -474,13 +482,9 @@ protected slots:
      * @brief The worker thread has finished processing departures/arrivals.
      *
      * @param sourceName The data engine source name for the departure data.
-     *
      * @param departures A list of departures that were read by the worker thread.
-     *
      * @param requestUrl The url that was used to download the departure data.
-     *
      * @param lastUpdate The date and time of the last update of the data.
-     *
      * @param departuresToGo The number of departures to still be processed. If this isn't 0
      *   this slot gets called again after the next batch of departures has been processed.
      *
@@ -496,16 +500,13 @@ protected slots:
      * @brief The worker thread has finished filtering departures.
      *
      * @param sourceName The data engine source name for the departure data.
-     *
-     * @param departures The list of departures that were filtered. Each
-     *   departure now returns the correct value with isFilteredOut() according
-     *   to the filter settings given to the worker thread.
-     *
-     * @param newlyFiltered A list of departures that should be made visible
-     *   to match the current filter settings.
-     *
-     * @param newlyNotFiltered A list of departures that should be made
-     *   invisible to match the current filter settings.
+     * @param departures The list of departures that were filtered. Each departure now returns
+     *   the correct value with isFilteredOut() according to the filter settings given to the
+     *   worker thread.
+     * @param newlyFiltered A list of departures that should be made visible to match the current
+     *   filter settings.
+     * @param newlyNotFiltered A list of departures that should be made invisible to match the
+     *   current filter settings.
      *
      * @ingroup models
      **/
@@ -525,11 +526,8 @@ protected slots:
      * @brief The worker thread has finished processing journeys.
      *
      * @param sourceName The data engine source name for the journey data.
-     *
      * @param journeys A list of journeys that were read by the worker thread.
-     *
      * @param requestUrl The url that was used to download the journey data.
-     *
      * @param lastUpdate The date and time of the last update of the data.
      *
      * @see JourneyInfo
@@ -734,7 +732,6 @@ private:
      * @brief Gets a list of current departures/arrivals for the selected stop(s).
      *
      * @param includeFiltered Whether or not to include filtered departures in the returned list.
-     *
      * @param max -1 to use the maximum departure count from the current settings. Otherwise this
      *   gets used as the maximal number of departures for the returned list.
      **/
@@ -750,7 +747,6 @@ private:
      *   for switching between them.
      *
      * @param parent The parent of the menu action and it's sub-actions.
-     *
      * @param destroyOverlayOnTrigger True, if the overlay widget should be
      *   destroyed when triggered. Defaults to false.
      *
