@@ -262,7 +262,7 @@ bool StopSettings::operator==(const StopSettings& other) const {
 
     // Go through all settings
     for ( QHash<int, QVariant>::const_iterator it = d->settings.constBegin();
-         it != d->settings.constEnd(); ++it )
+          it != d->settings.constEnd(); ++it )
     {
         // StopNameSetting and FilterConfigurationSetting need special handling, because they
         // use a custom type (StopList, FilterSettingsList).
@@ -277,8 +277,8 @@ bool StopSettings::operator==(const StopSettings& other) const {
             {
                 return false;
             }
-        } else if ( it.key() >= UserSetting ) {
-            continue; // Can't compare custom QVariant types, addresses would get compared
+//         } else if ( it.key() >= UserSetting ) { TODO
+//             continue; // Can't compare custom QVariant types, addresses would get compared
         } else if ( it.value() != other.d->settings[it.key()] ) {
             return false;
         }

@@ -367,6 +367,9 @@ protected slots:
     /** @brief Shows the filter menu. */
     void showFilterMenu();
 
+    /** @brief Shows the journey search menu. */
+    void showJourneySearchMenu();
+
     /** @brief Updates the filter menu of the filter action. */
     KMenu *updateFilterMenu();
 
@@ -453,11 +456,13 @@ protected slots:
      * @param recentJourney The search string of the triggered recent journey action,
      *   if @p recentJourneyAction is @ref ActionUseRecentJourney. Otherwise an empty QString.
      **/
-    void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction,
+    void recentJourneyActionTriggered( TitleWidget::JourneySearchAction recentJourneyAction,
                                        const QString &journeySearch );
 
     /** @brief A recent journey @p action was triggered from the "quickJourneys" action. */
-    void slotRecentJourneyActionTriggered( QAction *action );
+    void quickJourneyActionTriggered( QAction *action );
+
+    void journeySearchListUpdated( const QList<JourneySearchItem> &newJourneySearches );
 
     /**
      * @brief Processes a journey search request.

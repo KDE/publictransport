@@ -23,6 +23,9 @@ set( publictransport_SRCS
     journeysearchsuggestionwidget.cpp
     journeysearchparser.cpp
     journeysearchlineedit.cpp
+    journeysearchitem.cpp
+    journeysearchmodel.cpp
+    journeysearchlistview.cpp
     overlaywidget.cpp
     global.cpp
     settings.cpp

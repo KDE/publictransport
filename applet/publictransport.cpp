@@ -26,6 +26,7 @@
 #include "journeysearchparser.h"
 #include "journeysearchlineedit.h"
 #include "journeysearchsuggestionwidget.h"
+#include "journeysearchitem.h"
 #include "settings.h"
 #include "timetablewidget.h"
 #include "popupicon.h"
@@ -67,7 +68,7 @@
 #include <QGraphicsLinearLayout>
 #include <QStateMachine>
 #include <QHistoryState>
-#include <QDBusConnection>
+#include <QDBusConnection> // DBus used for marble
 #include <QDBusMessage>
 #include <QTimer>
 #include <QSignalTransition>
@@ -231,6 +232,7 @@ void PublicTransport::init()
     connect( Plasma::Theme::defaultTheme(), SIGNAL(themeChanged()),
              this, SLOT(themeChanged()) );
     emit settingsChanged();
+    serviceProviderSettingsChanged();
 
     reconnectSource();
 }
@@ -588,8 +590,8 @@ void PublicTransport::setupActions()
             i18nc("@action", "Search for &Journeys..."), this );
     addAction( "searchJourneys", actionSearchJourneys );
 
-    QAction *actionQuickJourneys = new QAction( KIcon("document-open-recent"),
-            i18nc("@action", "&Recent Journeys"), this );
+    QAction *actionQuickJourneys = new QAction( KIcon("quickopen"),
+            i18nc("@action", "&Quick Journey Search"), this );
     addAction( "quickJourneys", actionQuickJourneys );
 
     int iconExtend = 32;
@@ -656,8 +658,11 @@ QList< QAction* > PublicTransport::contextualActions()
     QAction *switchDepArr = m_settings.departureArrivalListType == DepartureList
             ? action( "showArrivals" ) : action( "showDepartures" );
 
+    // Add filter action if there is at least one filter or color group
     KAction *actionFilter = 0;
-    if ( !m_settings.filterSettingsList.isEmpty() ) {
+    if ( !m_settings.filterSettingsList.isEmpty() &&
+         !m_settings.colorGroupSettingsList.isEmpty() )
+    {
         actionFilter = qobject_cast< KAction* >( action("filterConfiguration") );
         updateFilterMenu();
     }
@@ -677,12 +682,12 @@ QList< QAction* > PublicTransport::contextualActions()
     {
         actions << action( "searchJourneys" );
         actions << updatedAction( "quickJourneys" );
-    }
 
-    // Add another separator
-    QAction *separator2 = new QAction( this );
-    separator2->setSeparator( true );
-    actions.append( separator2 );
+        // Add another separator
+        QAction *separator2 = new QAction( this );
+        separator2->setSeparator( true );
+        actions.append( separator2 );
+    }
 
     // Add actions: Switch Departures/Arrivals, Switch Current Stop,
     // Switch Filter Configuration
@@ -710,17 +715,8 @@ QList< QAction* > PublicTransport::contextualActions()
 QVariantHash PublicTransport::serviceProviderData( const QString& id ) const
 {
     Plasma::DataEngine::Data serviceProviderData =
-            dataEngine( "publictransport" )->query( "ServiceProviders" );
-    for ( Plasma::DataEngine::Data::const_iterator it = serviceProviderData.constBegin();
-                it != serviceProviderData.constEnd(); ++it ) {
-        QVariantHash data = serviceProviderData.value( it.key() ).toHash();
-        if ( data["id"] == id ) {
-            return data;
-        }
-    }
-
-    kDebug() << "Service provider data for" << id << "not found";
-    return QVariantHash();
+            dataEngine( "publictransport" )->query( QString("ServiceProvider %1").arg(id) );
+    return serviceProviderData;
 }
 
 void PublicTransport::updateDataSource()
@@ -1323,12 +1319,34 @@ void PublicTransport::resized()
             m_timetable->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
         }
 
-        // Update filter widget (show icon or icon with text)
+        // Update quick journey search widget (show icon or icon with text)
+        Plasma::ToolButton *quickJourneySearchWidget =
+                m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetQuickJourneySearch );
         Plasma::ToolButton *filterWidget =
                 m_titleWidget->castedWidget<Plasma::ToolButton>( TitleWidget::WidgetFilter );
+        if ( quickJourneySearchWidget ) {
+            if ( m_titleWidget->layout()->preferredWidth() > size.width() ) {
+                // Show only an icon on the quick journey search toolbutton,
+                // if there is not enough horizontal space
+                quickJourneySearchWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonIconOnly );
+                quickJourneySearchWidget->setMaximumWidth( quickJourneySearchWidget->size().height() );
+            } else if ( quickJourneySearchWidget->nativeWidget()->toolButtonStyle() == Qt::ToolButtonIconOnly
+                && size.width() > m_titleWidget->layout()->minimumWidth() +
+                QFontMetrics(quickJourneySearchWidget->font()).width(quickJourneySearchWidget->text()) +
+                (filterWidget->nativeWidget()->toolButtonStyle() == Qt::ToolButtonIconOnly
+                    ? QFontMetrics(filterWidget->font()).width(filterWidget->text()) : 0) + 60 )
+            {
+                // Show the icon with text beside if there is enough horizontal space again
+                quickJourneySearchWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
+                quickJourneySearchWidget->setMaximumWidth( -1 );
+            }
+        }
+
+        // Update filter widget (show icon or icon with text)
         if ( filterWidget ) {
             if ( m_titleWidget->layout()->preferredWidth() > size.width() ) {
-                // Show only an icon on the filter toolbutton, if there is not enough horizontal space
+                // Show only an icon on the filter toolbutton,
+                // if there is not enough horizontal space
                 filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonIconOnly );
                 filterWidget->setMaximumWidth( filterWidget->size().height() );
             } else if ( filterWidget->nativeWidget()->toolButtonStyle() == Qt::ToolButtonIconOnly
@@ -1538,6 +1556,8 @@ void PublicTransport::serviceProviderSettingsChanged()
         m_journeySearchTransition3->setTargetState( target );
 
         action("quickJourneys")->setEnabled( journeysSupported );
+        m_titleWidget->setJourneysSupported( journeysSupported );
+        m_titleWidget->setServiceProviderName( currentServiceProviderData()["name"].toString() );
 
         // Reconnect with new settings
         reconnectSource();
@@ -1549,6 +1569,8 @@ void PublicTransport::serviceProviderSettingsChanged()
         setConfigurationRequired( true, i18nc("@info/plain", "Please check your configuration.") );
 
         action("quickJourneys")->setEnabled( false );
+        m_titleWidget->setJourneysSupported( false );
+        m_titleWidget->setServiceProviderName( QString() );
     }
 }
 
@@ -1867,12 +1889,7 @@ void PublicTransport::journeySearchInputFinished( const QString &text )
     // Add journey search line to the list of recently used journey searches
     // and cut recent journey searches if the limit is exceeded
     Settings settings = m_settings;
-    if ( !settings.recentJourneySearches.contains(text, Qt::CaseInsensitive) ) {
-        settings.recentJourneySearches.prepend( text );
-    }
-    while ( settings.recentJourneySearches.count() > MAX_RECENT_JOURNEY_SEARCHES ) {
-        settings.recentJourneySearches.takeLast();
-    }
+    settings.addRecentJourneySearch( text );
     writeSettings( settings );
 
     m_journeyTitleText.clear();
@@ -1982,6 +1999,18 @@ void PublicTransport::showFilterMenu()
 //                 m_filterIcon->boundingRect().height()))) );
 }
 
+void PublicTransport::showJourneySearchMenu()
+{
+    KMenu *menu = m_titleWidget->createJourneySearchMenu();
+
+    // Connect signal (clear signal is already handled in TitleWidget)
+    connect( menu, SIGNAL(triggered(QAction*)),
+             this, SLOT(quickJourneyActionTriggered(QAction*)) );
+
+    // Show the filters menu under the journey search icon
+    menu->exec( QCursor::pos() );
+}
+
 void PublicTransport::useCurrentPlasmaTheme()
 {
     if ( m_settings.useDefaultFont ) {
@@ -2040,11 +2069,15 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
         // Create the title widget and connect slots
         m_titleWidget = new TitleWidget( ShowDepartureArrivalListTitle,
                                          &m_settings, m_mainGraphicsWidget );
-        connect( m_titleWidget, SIGNAL(recentJourneyActionTriggered(TitleWidget::RecentJourneyAction,QString)),
-                 this, SLOT(recentJourneyActionTriggered(TitleWidget::RecentJourneyAction,QString)) );
+        connect( m_titleWidget, SIGNAL(journeySearchActionTriggered(TitleWidget::JourneySearchAction,QString)),
+                 this, SLOT(recentJourneyActionTriggered(TitleWidget::JourneySearchAction,QString)) );
         connect( m_titleWidget, SIGNAL(journeySearchInputFinished(QString)),
                  this, SLOT(journeySearchInputFinished(QString)) );
+        connect( m_titleWidget, SIGNAL(journeySearchListUpdated(QList<JourneySearchItem>)),
+                 this, SLOT(journeySearchListUpdated(QList<JourneySearchItem>)) );
         connect( m_titleWidget, SIGNAL(filterIconClicked()), this, SLOT(showFilterMenu()) );
+        connect( m_titleWidget, SIGNAL(journeySearchIconClicked()),
+                 this, SLOT(showJourneySearchMenu()) );
 
         m_labelInfo = new Plasma::Label( m_mainGraphicsWidget );
         m_labelInfo->setAlignment( Qt::AlignVCenter | Qt::AlignRight );
@@ -2194,7 +2227,9 @@ void PublicTransport::writeSettings( const Settings& settings )
         emit configNeedsSaving();
         emit settingsChanged();
 
-        if ( changed.testFlag(SettingsIO::ChangedServiceProvider) ) {
+        if ( changed.testFlag(SettingsIO::ChangedServiceProvider) ||
+             changed.testFlag(SettingsIO::ChangedCurrentStop) )
+        {
             serviceProviderSettingsChanged();
         }
         if ( changed.testFlag(SettingsIO::ChangedDepartureArrivalListType) ) {
@@ -2346,37 +2381,46 @@ void PublicTransport::processJourneyRequest( const QString& stop, bool stopIsTar
     reconnectJourneySource( stop, QDateTime(), stopIsTarget, true );
 }
 
-void PublicTransport::recentJourneyActionTriggered(
-        TitleWidget::RecentJourneyAction recentJourneyAction, const QString &journeySearch )
+void PublicTransport::journeySearchListUpdated( const QList<JourneySearchItem> &newJourneySearches )
 {
-    switch ( recentJourneyAction ) {
-    case TitleWidget::ActionClearRecentJourneys: {
-        // Clear recent journey list
-        Settings settings = m_settings;
-        settings.recentJourneySearches.clear();
-        writeSettings( settings );
-        break;
-    }
-    case TitleWidget::ActionUseRecentJourney: {
-        // Move given journey search string to the top of the recent journey list
-        Settings settings = m_settings;
-        const int oldPos = settings.recentJourneySearches.indexOf( journeySearch );
-        if ( oldPos != -1 ) {
-            settings.recentJourneySearches.move( oldPos, 0 );
-        }
-        writeSettings( settings );
-        break;
-    }
-    }
+    Settings settings = m_settings;
+    settings.setCurrentJourneySearches( newJourneySearches );
+    writeSettings( settings );
 }
 
-void PublicTransport::slotRecentJourneyActionTriggered( QAction *_action )
+void PublicTransport::recentJourneyActionTriggered(
+        TitleWidget::JourneySearchAction recentJourneyAction, const QString &journeySearch )
 {
-    if ( !_action->data().isValid() || !_action->data().toBool() ) {
-        // The given action is not the clear action
-        const QString journeySearch = KGlobal::locale()->removeAcceleratorMarker( _action->text() );
+    Settings settings = m_settings;
+    switch ( recentJourneyAction ) {
+    case TitleWidget::ActionFavorJourneySearch: {
+        settings.favorJourneySearch( journeySearch );
+        break;
+    }
+    case TitleWidget::ActionRemoveJourneySearch: {
+        settings.removeJourneySearch( journeySearch );
+        break;
+    }
+    case TitleWidget::ActionUseJourneySearch: {
+        // Move given journey search string to the top of the recent journey list
+        settings.useJourneySearch( journeySearch );
+        break;
+    }
+    }
+    writeSettings( settings );
+}
+
+void PublicTransport::quickJourneyActionTriggered( QAction *_action )
+{
+    // The configure action has no data, only quick journey search items get the
+    // journey search string as data
+    if ( _action->data().isValid() ) {
+        // The given action is not the configure action
+        const QString journeySearch = KGlobal::locale()->removeAcceleratorMarker(
+                _action->data().toString() );
+        kDebug() << journeySearch;
         journeySearchInputFinished( journeySearch );
-        recentJourneyActionTriggered( TitleWidget::ActionUseRecentJourney, journeySearch );
+        recentJourneyActionTriggered( TitleWidget::ActionUseJourneySearch, journeySearch );
     }
 }
 
@@ -2521,12 +2565,12 @@ QAction* PublicTransport::updatedAction( const QString& actionName )
         // Create and set new recent journeys menu.
         // The menu only takes a QWidget as parent, therefore it gets deleted in the slot
         // connected to it's triggered signal
-        QMenu *recentJourneysMenu = m_titleWidget->createRecentJourneysMenu();
+        QMenu *recentJourneysMenu = m_titleWidget->createJourneySearchMenu();
         a->setMenu( recentJourneysMenu );
 
         // Connect signal (clear signal is already handled in TitleWidget)
         connect( recentJourneysMenu, SIGNAL(triggered(QAction*)),
-                 this, SLOT(slotRecentJourneyActionTriggered(QAction*)) );
+                 this, SLOT(quickJourneyActionTriggered(QAction*)) );
     }
 
     return a;

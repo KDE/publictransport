@@ -24,20 +24,27 @@
 #ifndef SETTINGS_HEADER
 #define SETTINGS_HEADER
 
+// UI includes
 #include "ui_publicTransportConfig.h"
 #include "ui_publicTransportConfigAdvanced.h"
 #include "ui_publicTransportFilterConfig.h"
 #include "ui_publicTransportAppearanceConfig.h"
 #include "ui_alarmConfig.h"
 
+// Own includes
 #include "global.h"
+#include "journeysearchitem.h"
+
+// libpublictransporthelper includes
 #include <filter.h>
 #include <stopsettings.h>
 
+// Plasma includes
 #include <Plasma/DataEngine>
 
 class KConfigDialog;
 class Settings;
+class JourneySearchModel;
 
 namespace Timetable {
     class LocationModel;
@@ -361,7 +368,6 @@ private:
             *m_favIconEngine, *m_geolocationEngine;
 
     int m_currentStopSettingsIndex;
-    QStringList m_recentJourneySearches;
     bool m_showHeader;
     bool m_hideColumnTarget;
 
@@ -396,8 +402,8 @@ public:
         ChangedLinesPerRow = 0x0020, /**< The lines per row setting has been changed. */
         ChangedAlarmSettings = 0x0040, /**< Alarm settings have been changed. */
         ChangedCurrentStop = 0x0080, /**< The current stop has been changed. */
-        ChangedRecentJourneySearches = 0x0100, /**< The list of recent journey
-                * searches has been changed. */
+//         ChangedJourneySearchLists = 0x0100, /**< The list of favorite and/or recent journey
+//                 * searches has been changed. */
         ChangedColorization = 0x0200, /**< Colorization of departures has been toggled. */
         ChangedColorGroupSettings = 0x0400 /**< Color group settings have been changed. */
     };
@@ -406,6 +412,24 @@ public:
     /** @brief Read settings from @p cg and @p cgGlobal. */
     static Settings readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
                                   Plasma::DataEngine *publicTransportEngine = 0 );
+
+    /**
+     * @brief Decodes journey search items from @p data.
+     *
+     * @param data Journey search items encoded using encodeJourneySearchItems.
+     * @return The list of journey search items decoded from @p data.
+     * @see encodeJourneySearchItems
+     **/
+    static QList<JourneySearchItem> decodeJourneySearchItems( QByteArray *data );
+
+    /**
+     * @brief Encodes @p journeySearches into a QByteArray.
+     *
+     * @param journeySearches Journey search items to encode.
+     * @return @p journeySearches encoded in a QByteArray.
+     * @see decodeJourneySearchItems
+     **/
+    static QByteArray encodeJourneySearchItems( const QList<JourneySearchItem> &journeySearches );
 
     /**
      * @brief Write changed @p settings to @p cg and @p cgGlobal.
@@ -441,6 +465,9 @@ public:
 
     /** @brief Copy constructor. */
     Settings( const Settings &other );
+
+    /** @brief Destructor. */
+    virtual ~Settings();
 
     /** @brief A list of all stop settings. */
     StopSettingsList stopSettingsList;
@@ -481,9 +508,6 @@ public:
 
     /** @brief Whether or not departure times should be shown in the default timetable view. */
     bool showDepartureTime;
-
-    /** @brief A list of recently used journey searches. */
-    QStringList recentJourneySearches;
 
     /** @brief How many lines each row in the departure/arrival view should have. */
     int linesPerRow;
@@ -595,6 +619,16 @@ public:
         return currentStopSettingsIndex >= 0 && currentStopSettingsIndex < stopSettingsList.count();
     };
 
+    /** @brief Gets a list of JourneySearchItem's for the current stop settings. */
+    QList<JourneySearchItem> currentJourneySearches() const {
+        return currentStopSettings().get< QList<JourneySearchItem> >( UserSetting );
+    };
+
+    /** @brief Sets a list of JourneySearchItem's for the current stop settings. */
+    void setCurrentJourneySearches( const QList<JourneySearchItem> &journeySearches ) const {
+        currentStopSettings().set( UserSetting, QVariant::fromValue(journeySearches) );
+    };
+
     /**
      * @brief Gets a list of all currently active filter settings.
      *
@@ -625,6 +659,30 @@ public:
         } else {
             return colorGroupSettingsList[ currentStopSettingsIndex ];
         }
+    };
+
+    /** @brief Favorize the given @p journeySearch.*/
+    void favorJourneySearch( const QString &journeySearch );
+
+    /** @brief Removes the given @p journeySearch from the list of favored/recent journey searches. */
+    void removeJourneySearch( const QString &journeySearch );
+
+    /**
+     * @brief Add the given @p journeySearch to the list of recent journey searches.
+     *
+     * If @p journeySearch is a favored journey search, this function does nothing.
+     **/
+    void addRecentJourneySearch( const QString &journeySearch );
+
+    /**
+     * @brief Moves the given @p journeySearch to the front of the list it is in.
+     *
+     * If @p journeySearch is a favored journey search, this function moves it to the front of
+     * favorite journey searches. Otherwise it is a recent journey search and gets moved to the
+     * front of recent journey searches.
+     **/
+    void useJourneySearch( const QString &journeySearch ) {
+        addRecentJourneySearch( journeySearch );
     };
 
     bool checkConfig() {

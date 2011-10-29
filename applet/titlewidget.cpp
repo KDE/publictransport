@@ -23,8 +23,12 @@
 // Own includes
 #include "settings.h"
 #include "journeysearchlineedit.h"
+#include "journeysearchmodel.h"
+#include "journeysearchlistview.h"
 
 // KDE+Plasma includes
+#include <KMenu>
+#include <KAction>
 #include <KIconEffect>
 #include <Plasma/Label>
 #include <Plasma/IconWidget>
@@ -32,17 +36,21 @@
 #include <Plasma/ToolButton>
 
 // Qt includes
-#include <QMenu>
 #include <QToolButton>
 #include <QGraphicsLinearLayout>
+#include <QVBoxLayout>
 #include <qmath.h>
 
-TitleWidget::TitleWidget(TitleType titleType, Settings *settings, QGraphicsItem* parent)
-        : QGraphicsWidget(parent), m_icon(0), m_filterWidget(0),
-            m_layout(new QGraphicsLinearLayout(Qt::Horizontal, this)), m_settings(settings)
+TitleWidget::TitleWidget( TitleType titleType, Settings *settings, bool journeysSupported,
+                          QGraphicsItem *parent )
+        : QGraphicsWidget(parent), m_icon(0), m_filterWidget(0), m_quickJourneySearchWidget(0),
+            m_layout(new QGraphicsLinearLayout(Qt::Horizontal, this)), m_settings(settings),
+            m_journeysSupported(journeysSupported)
 {
     m_type = titleType;
     m_layout->setContentsMargins( 1, 1, 0, 0 );
+    m_layout->setSpacing( 1 );
+    m_layout->setItemSpacing( 0, 4 );
 
     // Initialize icon widget
     int iconExtend = 26 * settings->sizeFactor;
@@ -60,14 +68,36 @@ TitleWidget::TitleWidget(TitleType titleType, Settings *settings, QGraphicsItem*
     _title->setTextInteractionFlags( Qt::LinksAccessibleByMouse );
     addWidget( title, WidgetTitle );
 
+    if ( m_journeysSupported ) {
+        // Add a quick journey search widget
+        createAndAddWidget( WidgetQuickJourneySearch );
+    }
+
     // Add a filter widget
     createAndAddWidget( WidgetFilter );
 }
 
-template <typename T>
-T* TitleWidget::castedWidget(WidgetType widgetType) const
+void TitleWidget::setJourneysSupported( bool supported )
 {
-    return qgraphicsitem_cast<T*>( m_widgets[widgetType] );
+    kDebug() << m_journeysSupported << supported;
+    if ( m_journeysSupported == supported ) {
+        return;
+    }
+
+    m_journeysSupported = supported;
+    if ( supported ) {
+        createAndAddWidget( WidgetQuickJourneySearch );
+    } else {
+        removeWidget( WidgetQuickJourneySearch );
+        delete m_quickJourneySearchWidget;
+        m_quickJourneySearchWidget = 0;
+    }
+}
+
+template <typename T>
+T* TitleWidget::castedWidget( WidgetType widgetType ) const
+{
+    return !m_widgets.contains(widgetType) ? 0 : qgraphicsitem_cast<T*>( m_widgets[widgetType] );
 }
 
 QString TitleWidget::title() const
@@ -95,8 +125,11 @@ void TitleWidget::setTitleType( TitleType titleType,
             m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
             setTitle( titleText() );
 
-            // Show a title (with the stop name) and the filter widget
+            // Show a title (with the stop name) and the filter and quick journey search widgets
             addWidget( m_title, WidgetTitle );
+            if ( m_journeysSupported ) {
+                addWidget( m_quickJourneySearchWidget, WidgetQuickJourneySearch );
+            }
             addWidget( m_filterWidget, WidgetFilter );
             break;
 
@@ -108,6 +141,9 @@ void TitleWidget::setTitleType( TitleType titleType,
 
             // Same as for normal departure/arrival boards
             addWidget( m_title, WidgetTitle );
+            if ( m_journeysSupported ) {
+                addWidget( m_quickJourneySearchWidget, WidgetQuickJourneySearch );
+            }
             addWidget( m_filterWidget, WidgetFilter );
             break;
 
@@ -117,10 +153,6 @@ void TitleWidget::setTitleType( TitleType titleType,
             m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys "
                                                        "to or from the home stop" ) );
 
-            // Do not show the title and the filter widget
-            removeWidget( WidgetTitle, HideAndRemoveWidget );
-            removeWidget( WidgetFilter, HideAndRemoveWidget );
-
             // Add widgets
             addJourneySearchWidgets();
             Plasma::LineEdit *journeySearchLine = castedWidget<Plasma::LineEdit>(WidgetJourneySearchLine);
@@ -128,7 +160,7 @@ void TitleWidget::setTitleType( TitleType titleType,
             journeySearchLine->setFocus();
             journeySearchLine->nativeWidget()->selectAll();
 
-            updateRecentJourneysMenu();
+            updateJourneySearchesMenu();
             break;
         }
         case ShowSearchJourneyLineEditDisabled:
@@ -137,10 +169,6 @@ void TitleWidget::setTitleType( TitleType titleType,
             setIcon( AbortJourneySearchIcon );
             m_icon->setToolTip( i18nc("@info:tooltip", "Abort search for journeys "
                                                        "to or from the home stop") );
-
-            // Do not show the title and the filter widget
-            removeWidget( WidgetTitle, HideAndRemoveWidget );
-            removeWidget( WidgetFilter, HideAndRemoveWidget );
 
             // Add widgets
             addJourneySearchWidgets();
@@ -155,11 +183,7 @@ void TitleWidget::setTitleType( TitleType titleType,
         case ShowJourneyListTitle: {
             // A list of journeys is shown
             setIcon( validJourneyData ? JourneyListOkIcon : JourneyListErrorIcon );
-            m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
-
-            // Do not show the title and the filter widget
-            removeWidget( WidgetTitle, HideAndRemoveWidget );
-            removeWidget( WidgetFilter, HideAndRemoveWidget );
+            m_icon->setToolTip( i18nc("@info:tooltip", "Show available action in the applet") );
 
             // Add a close icon to close the journey view
             int iconExtend = 26 * m_settings->sizeFactor;
@@ -204,7 +228,7 @@ void TitleWidget::addJourneySearchWidgets()
     // Add recent journeys button
     Plasma::ToolButton *recentJourneysButton = new Plasma::ToolButton;
     recentJourneysButton->setIcon( KIcon("document-open-recent") );
-    recentJourneysButton->setToolTip( i18nc("@info:tooltip", "Use a recent journey search") );
+    recentJourneysButton->setToolTip( i18nc("@info:tooltip", "Use a favorite/recent journey search") );
     recentJourneysButton->nativeWidget()->setPopupMode( QToolButton::InstantPopup );
     // This is needed, to have the popup menu drawn above other widgets
     recentJourneysButton->setZValue( 9999 );
@@ -250,11 +274,11 @@ void TitleWidget::addJourneySearchWidgets()
     completion->setIgnoreCase( true );
     journeySearchLineEdit->setFont( m_settings->sizedFont() );
     connect( journeySearchLineEdit, SIGNAL(returnPressed()),
-            this, SLOT(slotJourneySearchInputFinished()) );
+             this, SLOT(slotJourneySearchInputFinished()) );
     connect( journeySearchLineEdit, SIGNAL(textEdited(QString)),
-            this, SIGNAL(journeySearchInputEdited(QString)) );
+             this, SIGNAL(journeySearchInputEdited(QString)) );
     connect( journeySearchLineEdit, SIGNAL(textChanged(QString)),
-            this, SLOT(slotJourneySearchInputChanged(QString)) );
+             this, SLOT(slotJourneySearchInputChanged(QString)) );
 
     // Add widgets
     addWidget( journeySearchLineEdit, WidgetJourneySearchLine );
@@ -374,6 +398,8 @@ QGraphicsWidget* TitleWidget::createAndAddWidget( TitleWidget::WidgetType widget
             // Create the filter widget showing the currently active filters
             m_filterWidget = new Plasma::ToolButton( this );
             m_filterWidget->setIcon( KIcon("view-filter") );
+            m_filterWidget->setToolTip( i18nc("@info:tooltip",
+                    "Shows a menu that allows to toggle filters / color groups") );
             m_filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
             connect( m_filterWidget, SIGNAL(clicked()), this, SIGNAL(filterIconClicked()) );
             addWidget( m_filterWidget, WidgetFilter );
@@ -382,15 +408,34 @@ QGraphicsWidget* TitleWidget::createAndAddWidget( TitleWidget::WidgetType widget
         updateFilterWidget();
         return m_filterWidget;
 
+    case WidgetQuickJourneySearch:
+        if ( !m_quickJourneySearchWidget ) {
+            // Create the filter widget showing the currently active filters
+            m_quickJourneySearchWidget = new Plasma::ToolButton( this );
+            m_quickJourneySearchWidget->setIcon( KIcon("quickopen") );
+            m_quickJourneySearchWidget->setText( i18nc("@action:button", "Quick Journey Search") );
+            m_quickJourneySearchWidget->setToolTip( i18nc("@info:tooltip",
+                    "Shows a menu with favorite/recent journey search items") );
+            m_quickJourneySearchWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonIconOnly );
+            m_quickJourneySearchWidget->setMaximumWidth( m_quickJourneySearchWidget->size().height() );
+            connect( m_quickJourneySearchWidget, SIGNAL(clicked()),
+                     this, SIGNAL(journeySearchIconClicked()) );
+            addWidget( m_quickJourneySearchWidget, WidgetQuickJourneySearch );
+        }
+
+        updateJourneySearchesMenu();
+        return m_quickJourneySearchWidget;
+
     default:
-        Q_ASSERT(false);
-        return NULL;
+        Q_ASSERT( false );
+        return 0;
     }
 }
 
-void TitleWidget::addWidget(QGraphicsWidget* widget, WidgetType widgetType)
+void TitleWidget::addWidget( QGraphicsWidget *widget, WidgetType widgetType )
 {
     if ( m_widgets.contains(widgetType) ) {
+        // Widget is already created and in the widget list
         widget->show();
         return;
     }
@@ -398,6 +443,9 @@ void TitleWidget::addWidget(QGraphicsWidget* widget, WidgetType widgetType)
     if ( widgetType == WidgetTitle ) {
         m_title = qgraphicsitem_cast<Plasma::Label*>( widget );
         m_layout->insertItem( 1, widget );
+    } else if ( widgetType == WidgetQuickJourneySearch && m_filterWidget ) {
+        m_layout->insertItem( 2, widget );
+        m_layout->setAlignment( widget, Qt::AlignVCenter | Qt::AlignLeft );
     } else {
         m_layout->addItem( widget );
         m_layout->setAlignment( widget, Qt::AlignVCenter | Qt::AlignLeft );
@@ -406,14 +454,17 @@ void TitleWidget::addWidget(QGraphicsWidget* widget, WidgetType widgetType)
     widget->show();
 }
 
-bool TitleWidget::removeWidget(TitleWidget::WidgetType widgetType, RemoveWidgetOptions options)
+bool TitleWidget::removeWidget( TitleWidget::WidgetType widgetType, RemoveWidgetOptions options )
 {
     if ( !m_widgets.contains(widgetType) ) {
         return false;
     }
 
-    if ( widgetType == WidgetFilter || widgetType == WidgetTitle ) {
-        // Don't delete widgets that are also stored in a member variable (m_filterWidget, m_title)
+    if ( widgetType == WidgetFilter || widgetType == WidgetQuickJourneySearch ||
+         widgetType == WidgetTitle )
+    {
+        // Don't delete widgets that are also stored in a member variable
+        // (m_filterWidget, m_journeySearchWidget, m_title)
         options ^= DeleteWidget;
         options |= HideAndRemoveWidget;
     }
@@ -425,7 +476,14 @@ bool TitleWidget::removeWidget(TitleWidget::WidgetType widgetType, RemoveWidgetO
     } else {
         widget = m_widgets[widgetType];
     }
-    Q_ASSERT( widget );
+    if ( !widget ) {
+        // A null value is stored in m_widgets, can happen if a default value gets constructed
+        kDebug() << "Null value stored for widget type" << widgetType << "This can happen if a "
+                "default value gets constructed for that widget type, ie. when a widget of that "
+                "type gets requested from TitleWidget::m_widgets without checking if it is contained.";
+        m_widgets.remove( widgetType );
+        return false;
+    }
 
     if ( options == DeleteWidget ) {
         widget->deleteLater();
@@ -487,70 +545,178 @@ void TitleWidget::updateFilterWidget()
     }
 }
 
-QMenu* TitleWidget::createRecentJourneysMenu( QWidget *parent ) const
+void TitleWidget::slotFavorJourneySearch(const QString& journeySearch)
 {
-    QMenu *menu = new QMenu( parent );
-    foreach( const QString &recent, m_settings->recentJourneySearches ) {
-        menu->addAction( recent );
+    emit journeySearchActionTriggered( ActionFavorJourneySearch, journeySearch );
+    updateJourneySearchesMenu();
+}
+
+KMenu* TitleWidget::createJourneySearchMenu( QWidget *parent ) const
+{
+    KMenu *menu = new KMenu( parent );
+
+    // Extract lists of journey search strings / names
+    QStringList favoriteJourneySearchNames;
+    QStringList favoriteJourneySearches;
+    QStringList recentJourneySearchNames;
+    QStringList recentJourneySearches;
+    foreach ( const JourneySearchItem &item, m_settings->currentJourneySearches() ) {
+        if ( item.isFavorite() ) {
+            favoriteJourneySearches << item.journeySearch();
+            favoriteJourneySearchNames << item.nameOrJourneySearch();
+        } else {
+            recentJourneySearches << item.journeySearch();
+            recentJourneySearchNames << item.nameOrJourneySearch();
+        }
     }
 
-    // Add a clear action after a separator
+    // Add favorite journey searches
+    if ( !favoriteJourneySearches.isEmpty() ) {
+        menu->addTitle( KIcon("favorites"),
+                        i18nc("@title Title item in quick journey search menu",
+                              "Favorite Journey Searches") );
+        QList< QAction* > actions;
+        KIcon icon( "edit-find", 0, QStringList() << "favorites" );
+        for ( int i = 0; i < favoriteJourneySearches.count(); ++i ) {
+            KAction *action = new KAction( icon, favoriteJourneySearchNames[i], menu );
+            action->setData( favoriteJourneySearches[i] );
+            actions << action;
+        }
+        menu->addActions( actions );
+    }
+
+    // Add recent journey searches
+    if ( !recentJourneySearches.isEmpty() ) {
+        menu->addTitle( KIcon("document-open-recent"),
+                        i18nc("@title Title item in quick journey search menu",
+                              "Recent Journey Searches") );
+        QList< QAction* > actions;
+        KIcon icon( "edit-find" );
+        for ( int i = 0; i < recentJourneySearches.count(); ++i ) {
+            KAction *action = new KAction( icon, recentJourneySearchNames[i], menu );
+            action->setData( recentJourneySearches[i] );
+            actions << action;
+        }
+        menu->addActions( actions );
+    }
+
+    // Add a separator before the configure action
     menu->addSeparator();
-    QAction *clearAction = menu->addAction( KIcon("edit-clear-list"),
-                                            i18nc("@action:button", "&Clear list") );
-    // Make the clear action distinguishable from others
-    clearAction->setData( true );
-    connect( clearAction, SIGNAL(triggered()), this, SLOT(slotClearRecentJourneys()) );
+
+    // Add the configure action, which is distinguishable from others by having no data
+    QAction *configureAction = menu->addAction( KIcon("configure"),
+                                                i18nc("@action", "&Configure Journey Searches") );
+    connect( configureAction, SIGNAL(triggered()), this, SLOT(slotConfigureJourneySearches()) );
     return menu;
 }
 
-void TitleWidget::updateRecentJourneysMenu()
+void TitleWidget::updateJourneySearchesMenu()
 {
-    // Needs to be in journey search state
     Plasma::ToolButton *recentJourneysButton =
             castedWidget<Plasma::ToolButton>( WidgetRecentJourneysButton );
-    if ( !recentJourneysButton ) {
-        // No recent journeys button shown -> not in journey search state
+    Plasma::ToolButton *quickJourneySearchButton =
+            castedWidget<Plasma::ToolButton>( WidgetQuickJourneySearch );
+    if ( !recentJourneysButton && !quickJourneySearchButton ) {
         return;
     }
 
-    if ( m_settings->recentJourneySearches.isEmpty() ) {
-        // No recent journey searches available
-        recentJourneysButton->setEnabled( false );
+    if ( m_settings->currentJourneySearches().isEmpty() ) {
+        // No journey searches available
+        if ( recentJourneysButton ) {
+            recentJourneysButton->setEnabled( false );
+        }
+        if ( quickJourneySearchButton ) {
+            quickJourneySearchButton->setEnabled( false );
+        }
     } else {
-        // Delete old menu
-        delete recentJourneysButton->nativeWidget()->menu();
+        if ( recentJourneysButton ) {
+            // Delete old menu
+            if ( recentJourneysButton->nativeWidget()->menu() ) {
+                recentJourneysButton->nativeWidget()->menu()->deleteLater();
+            }
 
-        // Create and set new menu
-        QMenu *menu = createRecentJourneysMenu( recentJourneysButton->nativeWidget() );
-        connect( menu, SIGNAL(triggered(QAction*)),
-                 this, SLOT(slotRecentJourneyActionTriggered(QAction*)) );
-        recentJourneysButton->nativeWidget()->setMenu( menu );
-        recentJourneysButton->setEnabled( true );
+            // Create and set new menu
+            QMenu *menu = createJourneySearchMenu( recentJourneysButton->nativeWidget() );
+            connect( menu, SIGNAL(triggered(QAction*)),
+                     this, SLOT(slotRecentJourneyActionTriggered(QAction*)) );
+            recentJourneysButton->nativeWidget()->setMenu( menu );
+            recentJourneysButton->setEnabled( true );
+        }
+        if ( quickJourneySearchButton ) {
+            // Delete old menu
+            if ( quickJourneySearchButton->nativeWidget()->menu() ) {
+                quickJourneySearchButton->nativeWidget()->menu()->deleteLater();
+            }
+
+            // Create and set new menu
+            QMenu *menu = createJourneySearchMenu( quickJourneySearchButton->nativeWidget() );
+            connect( menu, SIGNAL(triggered(QAction*)),
+                     this, SLOT(slotRecentJourneyActionTriggered(QAction*)) );
+            quickJourneySearchButton->nativeWidget()->setMenu( menu );
+            quickJourneySearchButton->setEnabled( true );
+        }
     }
 }
 
-void TitleWidget::slotClearRecentJourneys()
+void TitleWidget::slotConfigureJourneySearches()
 {
     // First let the settings object be updated, then update the menu based on the new settings
-    emit recentJourneyActionTriggered( ActionClearRecentJourneys );
-    updateRecentJourneysMenu();
+    QPointer<KDialog> dialog = new KDialog;
+    dialog->setWindowTitle( i18nc("@title:window", "Configure Journey Searches") );
+    dialog->setWindowIcon( KIcon("configure") );
+    QVBoxLayout *l = new QVBoxLayout( dialog->mainWidget() );
+    l->setMargin( 0 );
+
+    QStyleOption option;
+    initStyleOption( &option );
+    const KIcon icon("favorites");
+
+    // Add journey search list
+    JourneySearchListView *journeySearchList = new JourneySearchListView( dialog->mainWidget() );
+    journeySearchList->setEditTriggers( QAbstractItemView::DoubleClicked |
+                                        QAbstractItemView::SelectedClicked |
+                                        QAbstractItemView::EditKeyPressed |
+                                        QAbstractItemView::AnyKeyPressed );
+
+    // Create model for journey searches
+    JourneySearchModel *model = new JourneySearchModel( dialog );
+    QList< JourneySearchItem > journeySearches = m_settings->currentJourneySearches();
+    for ( int i = 0; i < journeySearches.count(); ++i ) {
+        JourneySearchItem item = journeySearches[i];
+        model->addJourneySearch( item.journeySearch(), item.name(), item.isFavorite() );
+    }
+    model->sort();
+    journeySearchList->setModel( model );
+
+    QLabel *label = new QLabel( i18nc("@label:listbox", "Favorite and recent journey searches "
+                                      "for '%1':", m_serviceProviderName),
+                                dialog->mainWidget() );
+    label->setBuddy( journeySearchList );
+
+    l->addWidget( label );
+    l->addWidget( journeySearchList );
+    if ( dialog->exec() == KDialog::Accepted ) {
+        emit journeySearchListUpdated( model->journeySearchItems() );
+        updateJourneySearchesMenu();
+    }
 }
 
 void TitleWidget::slotRecentJourneyActionTriggered( QAction *action )
 {
-    Plasma::LineEdit* journeySearchLine = castedWidget<Plasma::LineEdit>( WidgetJourneySearchLine );
-
-    if ( !action->data().isValid() || !action->data().toBool() ) {
+    if ( action->data().isValid() ) {
         // The given action is not the clear action
-        journeySearchLine->setText( action->text() );
-        emit recentJourneyActionTriggered( ActionUseRecentJourney, action->text() );
-    }
+        Plasma::LineEdit* journeySearchLine = castedWidget<Plasma::LineEdit>( WidgetJourneySearchLine );
+        if ( journeySearchLine ) {
+            journeySearchLine->setText( action->data().toString() );
+            journeySearchLine->setFocus();
+        }
 
-    journeySearchLine->setFocus();
+        emit journeySearchActionTriggered( ActionUseJourneySearch, action->data().toString() );
+        updateJourneySearchesMenu();
+    }
 }
 
-void TitleWidget::slotJourneySearchInputChanged(const QString& text)
+void TitleWidget::slotJourneySearchInputChanged( const QString &text )
 {
     // Disable start search button if the journey search line is empty
     castedWidget<Plasma::ToolButton>(WidgetJourneySearchButton)->setEnabled( !text.isEmpty() );
@@ -570,9 +736,12 @@ void TitleWidget::settingsChanged()
     if ( m_filterWidget ) {
         m_filterWidget->setFont( font );
     }
+    if ( m_quickJourneySearchWidget ) {
+        m_quickJourneySearchWidget->setFont( font );
+    }
 
     if ( m_type == ShowDepartureArrivalListTitle
-        || m_type == ShowIntermediateDepartureListTitle )
+         || m_type == ShowIntermediateDepartureListTitle )
     {
         setTitle( titleText() );
     }
@@ -587,8 +756,13 @@ void TitleWidget::resizeEvent( QGraphicsSceneResizeEvent *event )
 void TitleWidget::updateTitle()
 {
     QFontMetrics fm( m_title->font() );
-    qreal maxStopNameWidth = contentsRect().width() - m_icon->boundingRect().right()
-            - m_filterWidget->boundingRect().width() - 10;
+    qreal maxStopNameWidth = contentsRect().width() - m_icon->boundingRect().right() - 10;
+    if ( m_filterWidget ) {
+        maxStopNameWidth -= m_filterWidget->boundingRect().width();
+    }
+    if ( m_quickJourneySearchWidget ) {
+        maxStopNameWidth -= m_quickJourneySearchWidget->boundingRect().width();
+    }
 
     if ( !m_titleText.contains(QRegExp("<\\/?[^>]+>")) ) {
         m_title->setText( fm.elidedText(m_titleText, Qt::ElideRight, maxStopNameWidth * 2.0) );

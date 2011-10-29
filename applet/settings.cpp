@@ -67,6 +67,49 @@ Settings::Settings( const Settings& other )
     *this = other;
 }
 
+Settings::~Settings()
+{
+}
+
+void Settings::favorJourneySearch( const QString &journeySearch )
+{
+    QList< JourneySearchItem > journeySearches = currentJourneySearches();
+    for ( int i = 0; i < journeySearches.count(); ++i ) {
+        if ( journeySearches[i].journeySearch() == journeySearch ) {
+            journeySearches[i].setFavorite( true );
+            setCurrentJourneySearches( journeySearches );
+            break;
+        }
+    }
+}
+
+void Settings::removeJourneySearch( const QString &journeySearch )
+{
+    QList< JourneySearchItem > journeySearches = currentJourneySearches();
+    for ( int i = 0; i < journeySearches.count(); ++i ) {
+        if ( journeySearches[i].journeySearch() == journeySearch ) {
+            journeySearches.removeAt( i );
+            setCurrentJourneySearches( journeySearches );
+            break;
+        }
+    }
+}
+
+void Settings::addRecentJourneySearch( const QString &journeySearch )
+{
+    QList< JourneySearchItem > journeySearches = currentJourneySearches();
+    for ( int i = 0; i < journeySearches.count(); ++i ) {
+        if ( journeySearches[i].journeySearch() == journeySearch ) {
+            // Do not add already existing journey search strings
+            return;
+        }
+    }
+
+    // The given journeySearch string is not already in journeySearches, add it
+    journeySearches << JourneySearchItem( journeySearch );
+    setCurrentJourneySearches( journeySearches );
+}
+
 SettingsUiManager::SettingsUiManager( const Settings &settings,
         Plasma::DataEngine* publicTransportEngine, Plasma::DataEngine* osmEngine,
         Plasma::DataEngine* favIconEngine, Plasma::DataEngine* geolocationEngine,
@@ -79,7 +122,6 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 {
     // Store settings that have no associated widgets
     m_currentStopSettingsIndex = settings.currentStopSettingsIndex;
-    m_recentJourneySearches = settings.recentJourneySearches;
     m_showHeader = settings.showHeader;
     m_hideColumnTarget = settings.hideColumnTarget;
 
@@ -91,6 +133,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     m_lastAlarm = -1;
     m_alarmsChanged = false;
 
+    // Setup tab page widgets
     QWidget *widgetStop = new QWidget;
     QWidget *widgetAdvanced = new QWidget;
     QWidget *widgetAppearance = new QWidget;
@@ -836,7 +879,6 @@ Settings SettingsUiManager::settings()
 
     // Set stored "no-Gui" settings (without widgets in the configuration dialog)
     ret.colorGroupSettingsList = m_colorGroupSettings;
-    ret.recentJourneySearches = m_recentJourneySearches;
     ret.currentStopSettingsIndex = m_currentStopSettingsIndex;
     if ( ret.currentStopSettingsIndex >= ret.stopSettingsList.count() ) {
         ret.currentStopSettingsIndex = ret.stopSettingsList.count() - 1;
@@ -1210,6 +1252,12 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
                           cgGlobal.readEntry("firstDepartureConfigMode" + suffix,
                                              static_cast<int>(RelativeToCurrentTime)) );
         stopSettings.set( AlarmTimeSetting, cgGlobal.readEntry("alarmTime" + suffix, 5) );
+
+        // Read favorite/recent journey search items for the current stop settings
+        QByteArray journeySearchesData =
+                cgGlobal.readEntry( "journeySearches" + suffix, QByteArray() );
+        stopSettings.set( UserSetting, QVariant::fromValue(
+                SettingsIO::decodeJourneySearchItems(&journeySearchesData)) );
         settings.stopSettingsList << stopSettings;
 
         ++i;
@@ -1253,8 +1301,6 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
         kDebug() << "Current stop index in settings invalid";
         settings.currentStopSettingsIndex = settings.stopSettingsList.count() - 1;
     }
-
-    settings.recentJourneySearches = cgGlobal.readEntry( "recentJourneySearches", QStringList() );
 
     settings.maximalNumberOfDepartures = cg.readEntry( "maximalNumberOfDepartures", 20 );
     settings.linesPerRow = cg.readEntry( "linesPerRow", 2 );
@@ -1354,10 +1400,6 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
         cg.writeEntry( "currentStopIndex", settings.currentStopSettingsIndex );
         changed |= IsChanged | ChangedCurrentStop;
     }
-    if ( settings.recentJourneySearches != oldSettings.recentJourneySearches ) {
-        cgGlobal.writeEntry( "recentJourneySearches", settings.recentJourneySearches );
-        changed |= IsChanged | ChangedRecentJourneySearches;
-    }
 
     // Write stop settings
     if ( settings.stopSettingsList != oldSettings.stopSettingsList ) {
@@ -1383,6 +1425,11 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
             cgGlobal.writeEntry( "firstDepartureConfigMode" + suffix,
                     stopSettings.get<int>(FirstDepartureConfigModeSetting) );
             cgGlobal.writeEntry( "alarmTime" + suffix, stopSettings.get<int>(AlarmTimeSetting) );
+
+            // Write journey search items in encoded form
+            const QByteArray journeySearchesData = SettingsIO::encodeJourneySearchItems(
+                    stopSettings.get< QList<JourneySearchItem> >(UserSetting) );
+            cgGlobal.writeEntry( "journeySearches" + suffix, journeySearchesData );
             ++i;
         }
 
@@ -1399,6 +1446,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
             cgGlobal.deleteEntry( "timeOfFirstDepartureCustom" + suffix );
             cgGlobal.deleteEntry( "firstDepartureConfigMode" + suffix );
             cgGlobal.deleteEntry( "alarmTime" + suffix );
+            cgGlobal.deleteEntry( "journeySearches" + suffix );
             ++i;
             test = "location_" + QString::number( i );
         }
@@ -1585,6 +1633,62 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
     }
 
     return changed;
+}
+
+QList< JourneySearchItem > SettingsIO::decodeJourneySearchItems( QByteArray *data )
+{
+    QDataStream stream( data, QIODevice::ReadOnly );
+    if ( stream.atEnd() ) {
+        return QList< JourneySearchItem >();
+    }
+
+    // Test for correct data structure by the stored version
+    quint8 version;
+    stream >> version;
+    if ( version != 1 ) {
+        kDebug() << "Wrong setting version" << version;
+        return QList< JourneySearchItem >();
+    }
+
+    // Read number of items
+    quint8 count;
+    stream >> count;
+
+    // Read count items
+    QList< JourneySearchItem > journeySearches;
+    for ( int i = 0; i < count; ++i ) {
+        QString name;
+        QString journeySearch;
+        bool favorite;
+        stream >> journeySearch;
+        stream >> name;
+        stream >> favorite;
+
+        journeySearches << JourneySearchItem( journeySearch, name, favorite );
+    }
+
+    return journeySearches;
+}
+
+QByteArray SettingsIO::encodeJourneySearchItems( const QList< JourneySearchItem > &journeySearches )
+{
+    QByteArray data;
+    QDataStream stream( &data, QIODevice::WriteOnly );
+
+    // Store version of the data structure, needs to be incremented whenever it changes,
+    // max version is 256
+    stream << quint8(1);
+
+    // Store number of items
+    stream << quint8(journeySearches.count()); // Max 256 items
+
+    // Store items
+    foreach ( const JourneySearchItem &item, journeySearches ) {
+        stream << item.journeySearch();
+        stream << item.name();
+        stream << item.isFavorite();
+    }
+    return data;
 }
 
 FilterSettings SettingsIO::readFilterConfig( const KConfigGroup &cgGlobal )
