@@ -589,7 +589,7 @@ public:
      * If the current stop settings index is invalid an empty StopSettings object gets returned.
      * @see isCurrentStopSettingsIndexValid
      **/
-    StopSettings currentStopSettings() const {
+    const StopSettings currentStopSettings() const {
         if ( !isCurrentStopSettingsIndexValid() ) {
             kDebug() << "Current stop index invalid" << currentStopSettingsIndex
                      << "Stop settings count:" << stopSettingsList.count();
@@ -625,8 +625,9 @@ public:
     };
 
     /** @brief Sets a list of JourneySearchItem's for the current stop settings. */
-    void setCurrentJourneySearches( const QList<JourneySearchItem> &journeySearches ) const {
-        currentStopSettings().set( UserSetting, QVariant::fromValue(journeySearches) );
+    void setCurrentJourneySearches( const QList<JourneySearchItem> &journeySearches ) {
+        StopSettings &stopSettings = currentStopSettings();
+        stopSettings.set( UserSetting, QVariant::fromValue(journeySearches) );
     };
 
     /**
