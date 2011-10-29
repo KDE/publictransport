@@ -1406,15 +1406,37 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
         kDebug() << "Stop settings changed";
 
         changed |= IsChanged | ChangedStopSettings;
+
+        // Get current stop settings and compare journey search lists
+        const StopSettings stopSettings = settings.currentStopSettings();
+        const StopSettings oldStopSettings = oldSettings.currentStopSettings();
+        if ( stopSettings.get< QList<JourneySearchItem> >(UserSetting) !=
+             oldStopSettings.get< QList<JourneySearchItem> >(UserSetting) )
+        {
+            changed |= ChangedCurrentJourneySearchLists;
+        }
+
+        // Get QHash with the current stop settings, remove values that do not require
+        // timetable data to be requested again and compare the remaining settings
+        QHash<int, QVariant> stopSettingsRequireRequest = stopSettings.settings();
+        QHash<int, QVariant> oldStopSettingsRequireRequest = oldStopSettings.settings();
+        stopSettingsRequireRequest.remove( AlarmTimeSetting );
+        oldStopSettingsRequireRequest.remove( AlarmTimeSetting );
+        stopSettingsRequireRequest.remove( UserSetting );
+        oldStopSettingsRequireRequest.remove( UserSetting );
+        if ( stopSettingsRequireRequest == oldStopSettingsRequireRequest ) {
+            changed |= ChangedCurrentStopSettings;
+        }
+
         int i = 1;
         cgGlobal.writeEntry( "stopSettings", settings.stopSettingsList.count() ); // Not needed if deleteEntry/Group works, don't know what's wrong (sync() and Plasma::Applet::configNeedsSaving() doesn't help)
 
         foreach( const StopSettings &stopSettings, settings.stopSettingsList ) {
             QString suffix = i == 1 ? QString() : '_' + QString::number( i );
             cgGlobal.writeEntry( "location" + suffix,
-                                stopSettings.get<QString>(LocationSetting) );
+                    stopSettings.get<QString>(LocationSetting) );
             cgGlobal.writeEntry( "serviceProvider" + suffix,
-                                stopSettings.get<QString>(ServiceProviderSetting) );
+                    stopSettings.get<QString>(ServiceProviderSetting) );
             cgGlobal.writeEntry( "city" + suffix, stopSettings.get<QString>(CitySetting) );
             cgGlobal.writeEntry( "stop" + suffix, stopSettings.stops() );
             cgGlobal.writeEntry( "stopID" + suffix, stopSettings.stopIDs() );

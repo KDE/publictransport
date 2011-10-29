@@ -2228,6 +2228,7 @@ void PublicTransport::writeSettings( const Settings& settings )
         emit settingsChanged();
 
         if ( changed.testFlag(SettingsIO::ChangedServiceProvider) ||
+             changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ||
              changed.testFlag(SettingsIO::ChangedCurrentStop) )
         {
             serviceProviderSettingsChanged();
@@ -2253,7 +2254,7 @@ void PublicTransport::writeSettings( const Settings& settings )
 
         // If stop settings have changed the whole model gets cleared and refilled.
         // Therefore the other change flags can be in 'else' parts
-        if ( changed.testFlag(SettingsIO::ChangedStopSettings) ||
+        if ( changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ||
              changed.testFlag(SettingsIO::ChangedCurrentStop) ||
              changed.testFlag(SettingsIO::ChangedServiceProvider) )
         {
@@ -2276,7 +2277,7 @@ void PublicTransport::writeSettings( const Settings& settings )
 
         // Update current stop settings / current home stop in the models
         if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
-             changed.testFlag(SettingsIO::ChangedStopSettings) )
+             changed.testFlag(SettingsIO::ChangedCurrentStopSettings) )
         {
             m_model->setHomeStop( m_settings.currentStopSettings().stop(0).name );
             m_model->setCurrentStopIndex( m_settings.currentStopSettingsIndex );
@@ -2289,7 +2290,7 @@ void PublicTransport::writeSettings( const Settings& settings )
 
         // Update the filter widget
         if ( changed.testFlag(SettingsIO::ChangedCurrentStop) ||
-             changed.testFlag(SettingsIO::ChangedStopSettings) ||
+             changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ||
              changed.testFlag(SettingsIO::ChangedFilterSettings) ||
              changed.testFlag(SettingsIO::ChangedColorGroupSettings) )
         {

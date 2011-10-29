@@ -391,21 +391,36 @@ class SettingsIO {
 public:
     /** @brief These flags describe what settings have changed. */
     enum ChangedFlag {
-        NothingChanged = 0x0000, /**< Nothing has changed. */
-        IsChanged = 0x0001, /**< This flag is set if something has changed. */
-        ChangedServiceProvider = 0x0002, /**< Service provider settings have
-                * been changed (stop name, service provider, ...). */
-        ChangedDepartureArrivalListType = 0x0004, /**< Changed from showing
-                * departures to arrivals or vice versa. */
-        ChangedStopSettings = 0x0008, /**< Stop settings have been changed. */
-        ChangedFilterSettings = 0x0010, /**< Filter settings have been changed. */
-        ChangedLinesPerRow = 0x0020, /**< The lines per row setting has been changed. */
-        ChangedAlarmSettings = 0x0040, /**< Alarm settings have been changed. */
-        ChangedCurrentStop = 0x0080, /**< The current stop has been changed. */
-//         ChangedJourneySearchLists = 0x0100, /**< The list of favorite and/or recent journey
-//                 * searches has been changed. */
-        ChangedColorization = 0x0200, /**< Colorization of departures has been toggled. */
-        ChangedColorGroupSettings = 0x0400 /**< Color group settings have been changed. */
+        NothingChanged          = 0x0000, /**< Nothing has changed. */
+        IsChanged               = 0x0001, /**< This flag is set if something has changed.
+                * If another change flag is set (except for NothingChanged), this flag is also
+                * set. This flag also gets set for changes not covered by the other change flags. */
+        ChangedServiceProvider  = 0x0002, /**< Service provider settings have been changed
+                                            * (stop name, service provider, ...). */ // TODO
+        ChangedDepartureArrivalListType
+                                = 0x0004, /**< Changed from showing departures to arrivals
+                                            * or vice versa. */
+        ChangedStopSettings     = 0x0008, /**< Stop settings have been changed. This flag also gets
+                * set if only eg. the favorite/recent journey searches have been changed.
+                * Use ChangedCurrentStopSettings to check if timetable data needs to be requested
+                * from the data engine again with the changed settings. */
+        ChangedCurrentStopSettings
+                                = 0x0010, /**< Stop settings of the current stop
+                * have been changed, that require timetable data to be requested from the data
+                * engine again. If this flag is set, the current timetable data may not represent
+                * correct results any longer for the changed stop settings.
+                * Stop settings that do not require a new timetable data request are unaffected. */
+        ChangedCurrentJourneySearchLists
+                                = 0x0020, /**< The list of favorite and/or recent journey
+                                            * searches has been changed for the current stop. */
+        ChangedCurrentStop      = 0x0040, /**< The current stop has been changed. */
+        ChangedFilterSettings   = 0x0080, /**< Filter settings have been changed. */
+        ChangedLinesPerRow      = 0x0100, /**< The lines per row setting has been changed. */
+        ChangedAlarmSettings    = 0x0200, /**< Alarm settings have been changed. This does not
+                                            * include AlarmTimeSetting in stop settings. */
+        ChangedColorization     = 0x0400, /**< Colorization of departures has been toggled. */
+        ChangedColorGroupSettings
+                                = 0x0800  /**< Color group settings have been changed. */
     };
     Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag );
 
