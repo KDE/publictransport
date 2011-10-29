@@ -176,8 +176,8 @@ void TitleWidget::setTitleType( TitleType titleType,
             // Disable all widgets, because journeys are not supported by the currently used
             // service provider
             castedWidget<Plasma::LineEdit>(WidgetJourneySearchLine)->setEnabled( false );
-            castedWidget<Plasma::LineEdit>(WidgetRecentJourneysButton)->setEnabled( false );
-            castedWidget<Plasma::LineEdit>(WidgetJourneySearchButton)->setEnabled( false );
+            castedWidget<Plasma::LineEdit>(WidgetFillJourneySearchLineButton)->setEnabled( false );
+            castedWidget<Plasma::LineEdit>(WidgetStartJourneySearchButton)->setEnabled( false );
             break;
 
         case ShowJourneyListTitle: {
@@ -282,15 +282,15 @@ void TitleWidget::addJourneySearchWidgets()
 
     // Add widgets
     addWidget( journeySearchLineEdit, WidgetJourneySearchLine );
-    addWidget( recentJourneysButton, WidgetRecentJourneysButton );
-    addWidget( journeySearchButton, WidgetJourneySearchButton );
+    addWidget( recentJourneysButton, WidgetFillJourneySearchLineButton );
+    addWidget( journeySearchButton, WidgetStartJourneySearchButton );
 }
 
 void TitleWidget::removeJourneySearchWidgets()
 {
-    removeWidget( WidgetJourneySearchButton );
+    removeWidget( WidgetStartJourneySearchButton );
     removeWidget( WidgetJourneySearchLine );
-    removeWidget( WidgetRecentJourneysButton );
+    removeWidget( WidgetFillJourneySearchLineButton );
 }
 
 void TitleWidget::setTitle( const QString &title )
@@ -613,48 +613,38 @@ KMenu* TitleWidget::createJourneySearchMenu( QWidget *parent ) const
 void TitleWidget::updateJourneySearchesMenu()
 {
     Plasma::ToolButton *recentJourneysButton =
-            castedWidget<Plasma::ToolButton>( WidgetRecentJourneysButton );
+            castedWidget<Plasma::ToolButton>( WidgetFillJourneySearchLineButton );
     Plasma::ToolButton *quickJourneySearchButton =
             castedWidget<Plasma::ToolButton>( WidgetQuickJourneySearch );
     if ( !recentJourneysButton && !quickJourneySearchButton ) {
         return;
     }
 
-    if ( m_settings->currentJourneySearches().isEmpty() ) {
-        // No journey searches available
-        if ( recentJourneysButton ) {
-            recentJourneysButton->setEnabled( false );
+    if ( recentJourneysButton ) {
+        // Delete old menu
+        if ( recentJourneysButton->nativeWidget()->menu() ) {
+            recentJourneysButton->nativeWidget()->menu()->deleteLater();
         }
-        if ( quickJourneySearchButton ) {
-            quickJourneySearchButton->setEnabled( false );
-        }
-    } else {
-        if ( recentJourneysButton ) {
-            // Delete old menu
-            if ( recentJourneysButton->nativeWidget()->menu() ) {
-                recentJourneysButton->nativeWidget()->menu()->deleteLater();
-            }
 
-            // Create and set new menu
-            QMenu *menu = createJourneySearchMenu( recentJourneysButton->nativeWidget() );
-            connect( menu, SIGNAL(triggered(QAction*)),
-                     this, SLOT(slotRecentJourneyActionTriggered(QAction*)) );
-            recentJourneysButton->nativeWidget()->setMenu( menu );
-            recentJourneysButton->setEnabled( true );
+        // Create and set new menu
+        QMenu *menu = createJourneySearchMenu( recentJourneysButton->nativeWidget() );
+        connect( menu, SIGNAL(triggered(QAction*)),
+                    this, SLOT(slotRecentJourneyActionTriggered(QAction*)) );
+        recentJourneysButton->nativeWidget()->setMenu( menu );
+        recentJourneysButton->setEnabled( true );
+    }
+    if ( quickJourneySearchButton ) {
+        // Delete old menu
+        if ( quickJourneySearchButton->nativeWidget()->menu() ) {
+            quickJourneySearchButton->nativeWidget()->menu()->deleteLater();
         }
-        if ( quickJourneySearchButton ) {
-            // Delete old menu
-            if ( quickJourneySearchButton->nativeWidget()->menu() ) {
-                quickJourneySearchButton->nativeWidget()->menu()->deleteLater();
-            }
 
-            // Create and set new menu
-            QMenu *menu = createJourneySearchMenu( quickJourneySearchButton->nativeWidget() );
-            connect( menu, SIGNAL(triggered(QAction*)),
-                     this, SLOT(slotRecentJourneyActionTriggered(QAction*)) );
-            quickJourneySearchButton->nativeWidget()->setMenu( menu );
-            quickJourneySearchButton->setEnabled( true );
-        }
+        // Create and set new menu
+        QMenu *menu = createJourneySearchMenu( quickJourneySearchButton->nativeWidget() );
+        connect( menu, SIGNAL(triggered(QAction*)),
+                    this, SLOT(slotRecentJourneyActionTriggered(QAction*)) );
+        quickJourneySearchButton->nativeWidget()->setMenu( menu );
+        quickJourneySearchButton->setEnabled( true );
     }
 }
 
@@ -682,7 +672,7 @@ void TitleWidget::slotConfigureJourneySearches()
     JourneySearchModel *model = new JourneySearchModel( dialog );
     QList< JourneySearchItem > journeySearches = m_settings->currentJourneySearches();
     for ( int i = 0; i < journeySearches.count(); ++i ) {
-        JourneySearchItem item = journeySearches[i];
+        const JourneySearchItem item = journeySearches[i];
         model->addJourneySearch( item.journeySearch(), item.name(), item.isFavorite() );
     }
     model->sort();
@@ -719,7 +709,7 @@ void TitleWidget::slotRecentJourneyActionTriggered( QAction *action )
 void TitleWidget::slotJourneySearchInputChanged( const QString &text )
 {
     // Disable start search button if the journey search line is empty
-    castedWidget<Plasma::ToolButton>(WidgetJourneySearchButton)->setEnabled( !text.isEmpty() );
+    castedWidget<Plasma::ToolButton>(WidgetStartJourneySearchButton)->setEnabled( !text.isEmpty() );
 }
 
 void TitleWidget::settingsChanged()

@@ -67,11 +67,12 @@ public:
     enum WidgetType {
         WidgetTitle = 0x0001, /**< The title widget, a Plasma::Label. */
         WidgetFilter = 0x0002, /**< The filter widget, a Plasma::ToolButton. */
-        WidgetQuickJourneySearch = 0x0004, /**< The journey search button, a Plasma::ToolButton. */
+        WidgetQuickJourneySearch = 0x0004, /**< The quick journey search button,
+                * a Plasma::ToolButton. */
         WidgetJourneySearchLine = 0x0010, /**< The journey search edit box, a Plasma::LineEdit. */
-        WidgetRecentJourneysButton = 0x0020, /**< The button to show actions for recent journeys,
-                * a Plasma::ToolButton. @see RecentJourneyAction */
-        WidgetJourneySearchButton = 0x0040, /**< The button to start a journey search,
+        WidgetFillJourneySearchLineButton = 0x0020, /**< The button to fill the journey search
+                * line with a favorite/recent journey search, a Plasma::ToolButton. */
+        WidgetStartJourneySearchButton = 0x0040, /**< The button to start a journey search,
                 * a Plasma::ToolButton. */
         WidgetCloseIcon = 0x0080, /**< The icon to close the current view (eg. the journey search),
                 * a Plasma::IconWidget. */
