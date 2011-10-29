@@ -1837,6 +1837,9 @@ void PublicTransport::showJourneyList()
 
     showMainWidget( m_journeyTimetable );
     setAssociatedApplicationUrlForJourneys();
+
+    // Ensure the applet popup is shown
+    showPopup();
 }
 
 void PublicTransport::showJourneySearch()
@@ -1859,6 +1862,9 @@ void PublicTransport::showJourneySearch()
 
     showMainWidget( m_listStopSuggestions );
     setBusy( false );
+
+    // Ensure the applet popup is shown
+    showPopup();
 }
 
 void PublicTransport::showJourneysUnsupportedView()
@@ -1880,6 +1886,10 @@ void PublicTransport::showJourneysUnsupportedView()
 
     showMainWidget( m_labelJourneysNotSupported );
     setBusy( false );
+
+    // Ensure the applet popup is shown,
+    // but only for a few seconds as this just shows an error message
+    showPopup( 3000 );
 }
 
 void PublicTransport::journeySearchInputFinished( const QString &text )
