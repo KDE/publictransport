@@ -42,21 +42,26 @@
 #include <qevent.h>
 
 JourneySearchListView::JourneySearchListView( QWidget *parent )
-        : QListView(parent), m_removeJourneySearchAction(0)
+        : QListView(parent)
 {
     m_addJourneySearchAction = new KAction( KIcon("list-add"),
                                             i18nc("@action", "&Add Journey Search"), this );
     m_removeJourneySearchAction = new KAction( KIcon("list-remove"),
                                                i18nc("@action", "&Remove"), this );
+    m_editJourneySearchAction = new KAction( KIcon("document-edit"),
+                                             i18nc("@action", "&Edit"), this );
     m_toggleFavoriteAction = new KAction( this );
     connect( m_addJourneySearchAction, SIGNAL(triggered()),
              this, SLOT(addJourneySearch()) );
     connect( m_removeJourneySearchAction, SIGNAL(triggered()),
              this, SLOT(removeCurrentJourneySearch()) );
+    connect( m_editJourneySearchAction, SIGNAL(triggered()),
+             this, SLOT(editJourneySearchAction()) );
     connect( m_toggleFavoriteAction, SIGNAL(triggered()),
              this, SLOT(toggleFavorite()) );
     addAction( m_addJourneySearchAction );
     addAction( m_removeJourneySearchAction );
+    addAction( m_editJourneySearchAction );
     addAction( m_toggleFavoriteAction );
 
     setItemDelegate( new JourneySearchDelegate(this) );
@@ -74,6 +79,9 @@ void JourneySearchListView::contextMenuEvent( QContextMenuEvent *event )
     // Disable remove journey search action, if nothing is selected
     if ( m_removeJourneySearchAction ) {
         m_removeJourneySearchAction->setEnabled( index.isValid() );
+    }
+    if ( m_editJourneySearchAction ) {
+        m_editJourneySearchAction->setEnabled( index.isValid() );
     }
 
     // Update toggle favorite state action (add to/remove from favorites)
@@ -130,6 +138,17 @@ void JourneySearchListView::removeCurrentJourneySearch()
     JourneySearchModel *_model = qobject_cast<JourneySearchModel*>( model() );
     Q_ASSERT_X( _model, "JourneySearchListView::addJourneySearch()", "Needs a JourneySearchModel!" );
     _model->removeJourneySearch( index );
+}
+
+void JourneySearchListView::editJourneySearchAction()
+{
+    QModelIndex index = currentIndex();
+    if ( !index.isValid() ) {
+        return;
+    }
+
+    // Start the edit mode for the journey search item at the current index
+    edit( index );
 }
 
 void JourneySearchListView::toggleFavorite()
@@ -191,12 +210,14 @@ void JourneySearchDelegate::paint( QPainter *painter, const QStyleOptionViewItem
         // Get text/background colors
         QColor textColor;
         QColor backgroundColor;
+        QPalette::ColorGroup group = opt.state.testFlag(QStyle::State_Active)
+                ? QPalette::Active : QPalette::Inactive;
         if ( opt.state.testFlag(QStyle::State_Selected) ) {
-            textColor = option.palette.color( QPalette::HighlightedText);
-            backgroundColor = option.palette.color( QPalette::Highlight );
+            textColor = option.palette.color( group, QPalette::HighlightedText);
+            backgroundColor = option.palette.color( group, QPalette::Highlight );
         } else {
-            textColor = option.palette.color( QPalette::Text );
-            backgroundColor = option.palette.color( QPalette::Background );
+            textColor = option.palette.color( group, QPalette::Text );
+            backgroundColor = option.palette.color( group, QPalette::Background );
         }
 
         // Get strings for the text items and a lighter color for the journey search string.

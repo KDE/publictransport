@@ -55,6 +55,9 @@ public slots:
     /** @brief Removes the currently selected journey search item. */
     void removeCurrentJourneySearch();
 
+    /** @brief Starts the edit mode for the currently selected journey search item. */
+    void editJourneySearchAction();
+
     /** @brief Toggles the favorite state of the currently selected journey search item. */
     void toggleFavorite();
 
@@ -65,6 +68,7 @@ protected:
 private:
     KAction *m_addJourneySearchAction;
     KAction *m_removeJourneySearchAction;
+    KAction *m_editJourneySearchAction;
     KAction *m_toggleFavoriteAction;
 };
 
