@@ -63,9 +63,7 @@ public:
      * @brief Creates a new location item.
      *
      * @param countryCode The country code for the new item.
-     *
      * @param accessorCount The number of accessors for the location. Defaults to -1.
-     *
      * @param description A description for the location, eg. information about the accessors for
      *   the location. Defaults to QString().
      *

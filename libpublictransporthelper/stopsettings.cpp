@@ -504,9 +504,7 @@ QWidget* StopSettingsWidgetFactory::widgetForSetting( int setting, QWidget *pare
                     "The filter configuration(s) to be used with this stop(s)"));
             filterConfiguration->setWhatsThis( i18nc("@info:whatsthis",
                     "<para>Each stop can use a different set of filter configurations. "
-                    "Choose these filter configurations here.\n"
-                    "<note>To create/edit/remove filter configurations use the filter page "
-                    "in the settings dialog.</note></para>") );
+                    "Choose these filter configurations here.</para>") );
             widget = filterConfiguration;
             break;
         }

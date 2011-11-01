@@ -136,7 +136,7 @@ public:
 typedef QList<Stop> StopList;
 
 /**
- * @brief Stores settings for one stop/station.
+ * @brief Stores settings for one set of stops/stations.
  *
  * May contain multiple stops that should be combined into one, eg. for stops that have different
  * names at the service provider but are very close to another.
@@ -255,7 +255,7 @@ public:
      *   @ref StopSetting as argument type.
      **/
     template< class Type >
-    inline Type get( StopSetting setting ) {
+    inline Type get( StopSetting setting ) const {
         return get<Type>( static_cast<int>(setting) );
     };
 
@@ -325,6 +325,7 @@ protected:
     QSharedDataPointer<StopSettingsPrivate> d;
 };
 
+/** @brief A QList of StopSettings object with additional functions. */
 class PUBLICTRANSPORTHELPER_EXPORT StopSettingsList : public QList<StopSettings> {
 public:
     StopSettingsList() : QList<StopSettings>() {};
