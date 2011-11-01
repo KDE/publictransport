@@ -690,17 +690,6 @@ public:
      **/
     void addRecentJourneySearch( const QString &journeySearch );
 
-    /**
-     * @brief Moves the given @p journeySearch to the front of the list it is in.
-     *
-     * If @p journeySearch is a favored journey search, this function moves it to the front of
-     * favorite journey searches. Otherwise it is a recent journey search and gets moved to the
-     * front of recent journey searches.
-     **/
-    void useJourneySearch( const QString &journeySearch ) {
-        addRecentJourneySearch( journeySearch );
-    };
-
     bool checkConfig() {
         // TODO: Check when adding stops in StopSettingsDialog
         if ( stopSettingsList.isEmpty() ) {

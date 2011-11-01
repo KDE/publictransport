@@ -32,16 +32,15 @@
 #include <departureinfo.h>
 
 // Own includes
-#include "titlewidget.h" // For enum(s) of TitleWidget
 #include "stopaction.h" // For StopAction::Type
 #include "settings.h" // Only for ColorGroupSettingsList, remove here, move the function to GlobalApplet?
 
 class PopupIcon;
-class QParallelAnimationGroup;
-class PublicTransportSettings;
-class OverlayWidget;
-class PublicTransportGraphicsItem;
 class ItemBase;
+class PublicTransportSettings;
+class PublicTransportGraphicsItem;
+class TitleWidget;
+class OverlayWidget;
 class TimetableWidget;
 class DepartureModel;
 class DepartureItem;
@@ -59,6 +58,7 @@ class QStateMachine;
 class QState;
 class QAbstractTransition;
 class QPropertyAnimation;
+class QParallelAnimationGroup;
 class QGraphicsSceneWheelEvent;
 
 namespace Plasma {
@@ -346,6 +346,9 @@ protected slots:
      **/
     void showJourneySearch();
 
+    /** @brief Called when exiting the journey search state. */
+    void exitJourneySearch();
+
     /**
      * @brief Show a message about unsupported journeys.
      *
@@ -363,15 +366,6 @@ protected slots:
     void showActionButtons();
 
     void showMainWidget( QGraphicsWidget *mainWidget );
-
-    /** @brief Shows the filter menu. */
-    void showFilterMenu();
-
-    /** @brief Shows the journey search menu. */
-    void showJourneySearchMenu();
-
-    /** @brief Updates the filter menu of the filter action. */
-    KMenu *updateFilterMenu();
 
     void updateDepartureListIcon();
 
@@ -396,12 +390,9 @@ protected slots:
      *
      * This slot gets called by JourneySearchSuggestionWidget.
      * @param stopName The parsed stop name.
-     *
      * @param departure The parsed departure date and time.
-     *
      * @param stopIsTarget Whether or not the parsed stop should be treated as target (true)
      *   or as origin stop (false).
-     *
      * @param timeIsDeparture Whether or not the parsed time should be treated as departure (true)
      *   or as arrival time (false).
      **/
@@ -449,18 +440,8 @@ protected slots:
     /** @brief There was an error in the 'marble' process. */
     void errorMarble( QProcess::ProcessError processError );
 
-    /**
-     * @brief A "recent journey"-action has been triggered.
-     *
-     * @param recentJourneyAction The type of the executed action.
-     * @param recentJourney The search string of the triggered recent journey action,
-     *   if @p recentJourneyAction is @ref ActionUseRecentJourney. Otherwise an empty QString.
-     **/
-    void recentJourneyActionTriggered( TitleWidget::JourneySearchAction recentJourneyAction,
-                                       const QString &journeySearch );
-
     /** @brief A recent journey @p action was triggered from the "quickJourneys" action. */
-    void quickJourneyActionTriggered( QAction *action );
+    void journeyActionTriggered( QAction *action );
 
     void journeySearchListUpdated( const QList<JourneySearchItem> &newJourneySearches );
 
@@ -609,6 +590,8 @@ protected slots:
     /** @brief Updates the tooltip. */
     void updateTooltip() { createTooltip(); };
 
+    void configureJourneySearches();
+
 protected:
     /**
      * @brief Create the configuration dialog contents.
@@ -631,11 +614,16 @@ protected:
     /** @brief Creates all used QAction's. */
     void setupActions();
 
+    /** @brief Updates the KMenuAction used for the filters action. */
+    void updateFilterMenu();
+
+    /** @brief Updates the KMenuAction used for the journeys menu. */
+    void updateJourneyActionMenu();
+
     /**
      * @brief Gets an action with string and icon updated to the current settings.
      *
      * @param actionName The name of the action to return updated.
-     *
      * @return The updated action.
      **/
     QAction* updatedAction( const QString &actionName );
@@ -807,7 +795,7 @@ private:
             // for the context menu actions.
 
     QActionGroup *m_filtersGroup; // An action group to toggle filter configurations.
-    QActionGroup *m_filterByGroupColorGroup; // An action group to toggle color groups.
+    QActionGroup *m_colorFiltersGroup; // An action group to toggle color groups.
 
     DepartureProcessor *m_departureProcessor;
     DeparturePainter *m_departurePainter;

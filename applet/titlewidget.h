@@ -94,15 +94,6 @@ public:
     Q_DECLARE_FLAGS(RemoveWidgetOptions, RemoveWidgetOption)
 
     /**
-     * @brief The types of actions associated with recent journeys.
-     **/
-    enum JourneySearchAction {
-        ActionFavorJourneySearch = 0, /**< Favor a recent journey search  */
-        ActionRemoveJourneySearch = 1, /**< Remove a favored/recent journey search. */
-        ActionUseJourneySearch = 3 /**< Use a favored/recent journey search. */
-    };
-
-    /**
      * @brief Creates a new title widget.
      *
      * @param titleType The initial type of this title widget.
@@ -181,12 +172,39 @@ public:
 
     QGraphicsWidget *createAndAddWidget( WidgetType widgetType );
 
-    KMenu *createJourneySearchMenu( QWidget *parent = 0 ) const;
-
-    void setJourneysSupported( bool supported = true );
-    void setServiceProviderName( const QString &serviceProviderName ) {
-        m_serviceProviderName = serviceProviderName;
+    /**
+     * @brief Sets the filter action to use for the filter widget.
+     *
+     * It is expected that @p filterAction is of type KActionMenu, it's menu gets used.
+     **/
+    void setFiltersAction( QAction *filtersAction ) {
+        m_filtersAction = filtersAction;
     };
+
+    /**
+     * @brief Sets the journey action to use for the journey widget.
+     *
+     * It is expected that @p journeysAction is of type KActionMenu, it's menu gets used.
+     **/
+    void setJourneysAction( QAction *journeysAction ) {
+        m_journeysAction = journeysAction;
+    };
+
+    /**
+     * @brief Creates/deletes widgets for journeys.
+     *
+     * If @p supported is false, all widgets associated with journey functionality will not be used.
+     * @param supported Whether or not journeys are supported. Default is true.
+     **/
+    void setJourneysSupported( bool supported = true );
+
+    /**
+     * @brief Sets the current journey search input to @p journeySearch.
+     *
+     * This only works when in journey search mode. Otherwise this function does nothing.
+     * @param journeySearch The new journey search string.
+     **/
+    void setJourneySearch( const QString &journeySearch );
 
 signals:
     /** @brief The icon widget was clicked. */
@@ -200,6 +218,9 @@ signals:
 
     /** @brief The widget in the additional widget list with type @ref WidgetJourneySearch was clicked. */
     void journeySearchIconClicked();
+
+    /** @brief The recent journeys button in journey search view was clicked. */
+    void recentJourneysIconClicked();
 
     /**
      * @brief The widget of type WidgetJourneySearchButton was clicked or enter was pressed
@@ -216,37 +237,20 @@ signals:
      **/
     void journeySearchInputEdited( const QString &text );
 
-    /**
-     * @brief An action of the recent journey menu has been triggered.
-     *
-     * @param journeySearchAction The type of the triggered action.
-     * @param journeySearch The journey search string of the triggered journey search action.
-     *
-     * @note If @p journeySearchAction is @ref ActionClearRecentJourneys, the settings object
-     *   should be updated to execute the action. On @ref ActionUseRecentJourney the action
-     *   is automatically executed by setting the search string to @p recentJourney.
-     **/
-    void journeySearchActionTriggered( TitleWidget::JourneySearchAction journeySearchAction,
-                                       const QString &journeySearch = QString() );
-
     void journeySearchListUpdated( const QList<JourneySearchItem> &newJourneySearches );
 
 public slots:
     /** @brief Updates the filter widget based on the current applet settings. */
     void updateFilterWidget();
 
-    /** @brief Updates the recent journeys menu based on the current applet settigns. */
-    void updateJourneySearchesMenu();
-
     /** @brief Call this when the applet settings have changed. */
     void settingsChanged();
 
 protected slots:
-    void slotRecentJourneyActionTriggered( QAction *action );
-    void slotConfigureJourneySearches();
     void slotJourneySearchInputChanged( const QString &text );
     void slotJourneySearchInputFinished();
-    void slotFavorJourneySearch( const QString &journeySearch );
+    void slotFilterIconClicked();
+    void slotJourneysIconClicked();
 
 protected:
     /**
@@ -272,13 +276,14 @@ protected:
     Plasma::IconWidget *m_icon;
     Plasma::Label *m_title;
     Plasma::ToolButton *m_filterWidget;
-    Plasma::ToolButton *m_quickJourneySearchWidget;
+    Plasma::ToolButton *m_journeysWidget;
     QHash< WidgetType, QGraphicsWidget* > m_widgets;
     QGraphicsLinearLayout *m_layout;
     Settings *m_settings;
     QString m_titleText;
     bool m_journeysSupported;
-    QString m_serviceProviderName;
+    QAction *m_journeysAction;
+    QAction *m_filtersAction;
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TitleWidget::WidgetTypes)
 Q_DECLARE_OPERATORS_FOR_FLAGS(TitleWidget::RemoveWidgetOptions)

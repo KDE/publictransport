@@ -26,10 +26,13 @@
 #include "journeysearchparser.h"
 #include "journeysearchlineedit.h"
 #include "journeysearchsuggestionwidget.h"
+#include "journeysearchmodel.h"
 #include "journeysearchitem.h"
+#include "journeysearchlistview.h"
 #include "settings.h"
 #include "timetablewidget.h"
 #include "popupicon.h"
+#include "titlewidget.h"
 
 // libpublictransporthelper includes
 #include <global.h>
@@ -42,6 +45,7 @@
 #include <KColorScheme>
 #include <KSelectAction>
 #include <KToggleAction>
+#include <KActionMenu>
 #include <KLineEdit>
 #include <KPushButton>
 #include <KMenu>
@@ -72,9 +76,9 @@
 #include <QDBusMessage>
 #include <QTimer>
 #include <QSignalTransition>
+#include <QParallelAnimationGroup>
 #include <qmath.h>
 #include <qgraphicssceneevent.h>
-#include <QParallelAnimationGroup>
 
 class ToPropertyTransition : public QSignalTransition
 {
@@ -355,7 +359,7 @@ void PublicTransport::setupStateMachine()
     journeySearchState->addTransition(
             this, SIGNAL(journeySearchFinished()), journeyViewState );
 
-    // Direct transition from departure view to journey view using "quickJourneys" action
+    // Direct transition from departure view to journey view using a favorite/recent journey action
     departureViewState->addTransition(
             this, SIGNAL(journeySearchFinished()), journeyViewState );
 
@@ -430,6 +434,8 @@ void PublicTransport::setupStateMachine()
 
     connect( journeySearchState, SIGNAL(entered()),
              this, SLOT(showJourneySearch()) );
+    connect( journeySearchState, SIGNAL(exited()),
+             this, SLOT(exitJourneySearch()) );
     connect( journeysUnsupportedViewState, SIGNAL(entered()),
              this, SLOT(showJourneysUnsupportedView()) );
     connect( journeyViewState, SIGNAL(entered()),
@@ -485,8 +491,9 @@ bool PublicTransport::checkNetworkStatus()
 
 QString PublicTransport::queryNetworkStatus()
 {
-    return "unknown"; // TODO this is only for openSuse 12.1 Milestone 3, dataEngine("network") always crashes
-
+    return "unknown";
+// TODO: This crashes somewhere in Solid::Control::NetworkManager::networkInterfaces()
+//       This also crashes eg. plasmaengineexplorer when switching to the network engine..
     const QStringList interfaces = dataEngine( "network" )->sources();
     if ( interfaces.isEmpty() ) {
         return "unknown";
@@ -552,16 +559,16 @@ void PublicTransport::noItemsTextClicked()
 
 void PublicTransport::setupActions()
 {
-    QAction *actionUpdate = new QAction( KIcon("view-refresh"),
+    KAction *actionUpdate = new KAction( KIcon("view-refresh"),
                                          i18nc("@action:inmenu", "&Update timetable"), this );
     connect( actionUpdate, SIGNAL(triggered()), this, SLOT(updateDataSource()) );
     addAction( "updateTimetable", actionUpdate );
 
-    QAction *showActionButtons = new QAction( /*KIcon("system-run"),*/ // TODO: better icon
+    KAction *showActionButtons = new KAction( /*KIcon("system-run"),*/ // TODO: better icon
             i18nc("@action", "&Quick Actions"), this );
     addAction( "showActionButtons", showActionButtons );
 
-    QAction *actionCreateAlarmForDeparture = new QAction(
+    KAction *actionCreateAlarmForDeparture = new KAction(
             GlobalApplet::makeOverlayIcon( KIcon("task-reminder"), "list-add" ),
             m_settings.departureArrivalListType == DepartureList
             ? i18nc("@action:inmenu", "Set &Alarm for This Departure")
@@ -570,14 +577,14 @@ void PublicTransport::setupActions()
              this, SLOT(createAlarmForDeparture()) );
     addAction( "createAlarmForDeparture", actionCreateAlarmForDeparture );
 
-    QAction *actionCreateAlarmForDepartureCurrentWeekDay = new QAction(
+    KAction *actionCreateAlarmForDepartureCurrentWeekDay = new KAction(
             GlobalApplet::makeOverlayIcon( KIcon("task-reminder"), "list-add" ),
             i18nc("@action:inmenu", "Set &Alarm for Current Weekday"), this );
     connect( actionCreateAlarmForDepartureCurrentWeekDay, SIGNAL(triggered()),
              this, SLOT(createAlarmForDepartureCurrentWeekDay()) );
     addAction( "createAlarmForDepartureCurrentWeekDay", actionCreateAlarmForDepartureCurrentWeekDay );
 
-    QAction *actionRemoveAlarmForDeparture = new QAction(
+    KAction *actionRemoveAlarmForDeparture = new KAction(
             GlobalApplet::makeOverlayIcon( KIcon("task-reminder"), "list-remove" ),
             m_settings.departureArrivalListType == DepartureList
             ? i18nc("@action:inmenu", "Remove &Alarm for This Departure")
@@ -586,30 +593,41 @@ void PublicTransport::setupActions()
              this, SLOT(removeAlarmForDeparture()) );
     addAction( "removeAlarmForDeparture", actionRemoveAlarmForDeparture );
 
-    QAction *actionSearchJourneys = new QAction( KIcon("edit-find"),
+    KAction *actionSearchJourneys = new KAction( KIcon("edit-find"),
             i18nc("@action", "Search for &Journeys..."), this );
     addAction( "searchJourneys", actionSearchJourneys );
 
-    QAction *actionQuickJourneys = new QAction( KIcon("quickopen"),
-            i18nc("@action", "&Quick Journey Search"), this );
-    addAction( "quickJourneys", actionQuickJourneys );
+    KAction *actionConfigureJourneys = new KAction( KIcon("configure"),
+            i18nc("@action", "&Configure Journey Searches"), this );
+    connect( actionConfigureJourneys, SIGNAL(triggered()), this, SLOT(configureJourneySearches()) );
+    addAction( "configureJourneys", actionConfigureJourneys );
+
+    KActionMenu *actionJourneys = new KActionMenu( KIcon("edit-find"),
+            i18nc("@action", "&Journeys"), this );
+    connect( actionJourneys->menu(), SIGNAL(triggered(QAction*)),
+             this, SLOT(journeyActionTriggered(QAction*)) );
+    addAction( "journeys", actionJourneys );
+
+    // Fill the journey menu with actions and pass the journey action to the title widget
+    updateJourneyActionMenu();
+    m_titleWidget->setJourneysAction( actionJourneys );
 
     int iconExtend = 32;
-    QAction *actionShowDepartures = new QAction(
+    KAction *actionShowDepartures = new KAction(
             GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"),
                 QList<KIcon>() << KIcon("go-home") << KIcon("go-next"),
                 QSize(iconExtend / 2, iconExtend / 2), iconExtend ),
             i18nc("@action", "Show &Departures"), this );
     addAction( "showDepartures", actionShowDepartures );
 
-    QAction *actionShowArrivals = new QAction(
+    KAction *actionShowArrivals = new KAction(
             GlobalApplet::makeOverlayIcon( KIcon("public-transport-stop"),
                 QList<KIcon>() << KIcon("go-next") << KIcon("go-home"),
                 QSize(iconExtend / 2, iconExtend / 2), iconExtend ),
             i18nc("@action", "Show &Arrivals"), this );
     addAction( "showArrivals", actionShowArrivals );
 
-    QAction *actionBackToDepartures = new QAction( KIcon("go-previous"),
+    KAction *actionBackToDepartures = new KAction( KIcon("go-previous"),
             i18nc("@action", "Back to &Departure List"), this );
     addAction( "backToDepartures", actionBackToDepartures );
 
@@ -618,39 +636,100 @@ void PublicTransport::setupActions()
     connect( m_filtersGroup, SIGNAL(triggered(QAction*)),
              this, SLOT(switchFilterConfiguration(QAction*)) );
 
-    m_filterByGroupColorGroup = new QActionGroup( this );
-    m_filterByGroupColorGroup->setExclusive( false );
-    connect( m_filterByGroupColorGroup, SIGNAL(triggered(QAction*)),
+    m_colorFiltersGroup = new QActionGroup( this );
+    m_colorFiltersGroup->setExclusive( false );
+    connect( m_colorFiltersGroup, SIGNAL(triggered(QAction*)),
              this, SLOT(switchFilterByGroupColor(QAction*)) );
 
-    KAction *actionFilterConfiguration = new KSelectAction( KIcon("view-filter"),
+    KActionMenu *actionFilterConfiguration = new KActionMenu( KIcon("view-filter"),
             i18nc("@action", "Filter"), this );
-    KMenu *menu = new KMenu;
-    actionFilterConfiguration->setMenu( menu );
-    actionFilterConfiguration->setEnabled( true );
     addAction( "filterConfiguration", actionFilterConfiguration );
+    m_titleWidget->setFiltersAction( actionFilterConfiguration );
 
-    QAction *actionToggleExpanded = new QAction( KIcon( "arrow-down" ),
+    KAction *actionToggleExpanded = new KAction( KIcon( "arrow-down" ),
             i18nc( "@action:inmenu", "&Show Additional Information" ), this );
     connect( actionToggleExpanded, SIGNAL(triggered()), this, SLOT(toggleExpanded()) );
     addAction( "toggleExpanded", actionToggleExpanded );
 
-    QAction *actionUnhighlightStop = new QAction( KIcon("edit-select"),
+    KAction *actionUnhighlightStop = new KAction( KIcon("edit-select"),
             i18nc("@action:inmenu", "&Unhighlight All Stops"), this );
     connect( actionUnhighlightStop, SIGNAL(triggered()), m_model, SLOT(setHighlightedStop()) );
     addAction( "unhighlightStop", actionUnhighlightStop );
 
     // TODO: Combine actionHideColumnTarget and actionShowColumnTarget into one action?
-    QAction *actionHideColumnTarget = new QAction( KIcon("view-right-close"),
+    KAction *actionHideColumnTarget = new KAction( KIcon("view-right-close"),
             i18nc("@action:inmenu", "Hide &target column"), this );
     connect( actionHideColumnTarget, SIGNAL(triggered()), this, SLOT(hideColumnTarget()) );
     addAction( "hideColumnTarget", actionHideColumnTarget );
 
-    QAction *actionShowColumnTarget = new QAction( KIcon("view-right-new"),
+    KAction *actionShowColumnTarget = new KAction( KIcon("view-right-new"),
             i18nc("@action:inmenu", "Show &target column"), this );
     connect( actionShowColumnTarget, SIGNAL(triggered()),
              this, SLOT(showColumnTarget()) );
     addAction( "showColumnTarget", actionShowColumnTarget );
+}
+
+void PublicTransport::updateJourneyActionMenu()
+{
+    KActionMenu *journeysAction = qobject_cast<KActionMenu*>( action("journeys") );
+    KMenu *menu = journeysAction->menu();
+    menu->clear();
+
+    menu->addAction( action("searchJourneys") );
+
+    // Add a separator after the journey search action
+    menu->addSeparator();
+
+    // Extract lists of journey search strings / names
+    QStringList favoriteJourneySearchNames;
+    QStringList favoriteJourneySearches;
+    QStringList recentJourneySearchNames;
+    QStringList recentJourneySearches;
+    foreach ( const JourneySearchItem &item, m_settings.currentJourneySearches() ) {
+        if ( item.isFavorite() ) {
+            favoriteJourneySearches << item.journeySearch();
+            favoriteJourneySearchNames << item.nameOrJourneySearch();
+        } else {
+            recentJourneySearches << item.journeySearch();
+            recentJourneySearchNames << item.nameOrJourneySearch();
+        }
+    }
+
+    // Add favorite journey searches
+    if ( !favoriteJourneySearches.isEmpty() ) {
+        menu->addTitle( KIcon("favorites"),
+                        i18nc("@title Title item in quick journey search menu",
+                              "Favorite Journey Searches") );
+        QList< QAction* > actions;
+        KIcon icon( "edit-find", 0, QStringList() << "favorites" );
+        for ( int i = 0; i < favoriteJourneySearches.count(); ++i ) {
+            KAction *action = new KAction( icon, favoriteJourneySearchNames[i], menu );
+            action->setData( favoriteJourneySearches[i] );
+            actions << action;
+        }
+        menu->addActions( actions );
+    }
+
+    // Add recent journey searches
+    if ( !recentJourneySearches.isEmpty() ) {
+        menu->addTitle( KIcon("document-open-recent"),
+                        i18nc("@title Title item in quick journey search menu",
+                              "Recent Journey Searches") );
+        QList< QAction* > actions;
+        KIcon icon( "edit-find" );
+        for ( int i = 0; i < recentJourneySearches.count(); ++i ) {
+            KAction *action = new KAction( icon, recentJourneySearchNames[i], menu );
+            action->setData( recentJourneySearches[i] );
+            actions << action;
+        }
+        menu->addActions( actions );
+    }
+
+    // Add a separator before the configure action
+    menu->addSeparator();
+
+    // Add the configure action, which is distinguishable from others by having no data
+    menu->addAction( action("configureJourneys") );
 }
 
 QList< QAction* > PublicTransport::contextualActions()
@@ -664,7 +743,6 @@ QList< QAction* > PublicTransport::contextualActions()
          !m_settings.colorGroupSettingsList.isEmpty() )
     {
         actionFilter = qobject_cast< KAction* >( action("filterConfiguration") );
-        updateFilterMenu();
     }
 
     // Add "Update Timetable" action
@@ -676,31 +754,26 @@ QList< QAction* > PublicTransport::contextualActions()
     separator->setSeparator( true );
     actions.append( separator );
 
-    // Add journey actions if supported
-    if ( m_currentServiceProviderFeatures.contains("JourneySearch")
-         && !isStateActive("intermediateDepartureView") )
-    {
-        actions << action( "searchJourneys" );
-        actions << updatedAction( "quickJourneys" );
-
-        // Add another separator
-        QAction *separator2 = new QAction( this );
-        separator2->setSeparator( true );
-        actions.append( separator2 );
-    }
-
     // Add actions: Switch Departures/Arrivals, Switch Current Stop,
-    // Switch Filter Configuration
     if ( m_currentServiceProviderFeatures.contains("Arrivals") ) {
         actions << switchDepArr;
     }
+
+    // When in intermediate departureview add an action to go back to the original stop
+    // Otherwise add an action to switch the current stop and a journey action if supported
     if ( isStateActive("intermediateDepartureView") ) {
         QAction *goBackAction = action("backToDepartures");
-    goBackAction->setText( i18nc("@action:inmenu", "&Back To Original Stop") );
+        goBackAction->setText( i18nc("@action:inmenu", "&Back To Original Stop") );
         actions << goBackAction;
     } else if ( m_settings.stopSettingsList.count() > 1 ) {
         actions << switchStopAction( this );
+        if ( m_currentServiceProviderFeatures.contains("JourneySearch") ) {
+//             updateJourneyActionMenu();
+            actions << action("journeys");
+        }
     }
+
+    // Add an action to switch filters if filters are available
     if ( actionFilter ) {
         actions << actionFilter;
     }
@@ -1555,9 +1628,8 @@ void PublicTransport::serviceProviderSettingsChanged()
         m_journeySearchTransition2->setTargetState( target );
         m_journeySearchTransition3->setTargetState( target );
 
-        action("quickJourneys")->setEnabled( journeysSupported );
+        action("journeys")->setEnabled( journeysSupported );
         m_titleWidget->setJourneysSupported( journeysSupported );
-        m_titleWidget->setServiceProviderName( currentServiceProviderData()["name"].toString() );
 
         // Reconnect with new settings
         reconnectSource();
@@ -1568,9 +1640,8 @@ void PublicTransport::serviceProviderSettingsChanged()
         // Missing configuration, eg. no home stop
         setConfigurationRequired( true, i18nc("@info/plain", "Please check your configuration.") );
 
-        action("quickJourneys")->setEnabled( false );
+        action("journeys")->setEnabled( false );
         m_titleWidget->setJourneysSupported( false );
-        m_titleWidget->setServiceProviderName( QString() );
     }
 }
 
@@ -1632,16 +1703,16 @@ void PublicTransport::showActionButtons()
 
     // Add actions depending on active states / service provider features
     QList<QAction*> actions;
-    if ( m_currentServiceProviderFeatures.contains("JourneySearch") ) {
-        actions << action("searchJourneys");
-        actions << updatedAction("quickJourneys");
-    }
     if ( isStateActive("journeyView") ) {
         actions << action("backToDepartures");
     }
     if ( m_currentServiceProviderFeatures.contains("Arrivals") ) {
         actions << (m_settings.departureArrivalListType == DepartureList
                 ? action("showArrivals") : action("showDepartures"));
+    }
+    if ( m_currentServiceProviderFeatures.contains("JourneySearch") ) {
+//         updateJourneyActionMenu();
+        actions << action("journeys");
     }
 
     // Add stop selector if multiple stops are defined
@@ -1860,11 +1931,20 @@ void PublicTransport::showJourneySearch()
     connect( m_states["journeySearch"], SIGNAL(exited()),
              m_listStopSuggestions, SLOT(deleteLater()) );
 
+    // Hide journey search action, because it switches to the currently active state
+    action("searchJourneys")->setVisible( false );
+
     showMainWidget( m_listStopSuggestions );
     setBusy( false );
 
     // Ensure the applet popup is shown
     showPopup();
+}
+
+void PublicTransport::exitJourneySearch()
+{
+    // Show journey search action again
+    action("searchJourneys")->setVisible( true );
 }
 
 void PublicTransport::showJourneysUnsupportedView()
@@ -1922,20 +2002,21 @@ void PublicTransport::journeySearchLineChanged( const QString& stopName,
     reconnectJourneySource( stopName, departure, stopIsTarget, timeIsDeparture, true );
 }
 
-KMenu *PublicTransport::updateFilterMenu()
+void PublicTransport::updateFilterMenu()
 {
-    KAction *actionFilter = qobject_cast< KAction* >( action("filterConfiguration") );
+    KActionMenu *actionFilter = qobject_cast< KActionMenu* >( action("filterConfiguration") );
+    KMenu *menu = actionFilter->menu();
+    menu->clear();
+
     QList< QAction* > oldActions = m_filtersGroup->actions();
     foreach( QAction *oldAction, oldActions ) {
         m_filtersGroup->removeAction( oldAction );
         delete oldAction;
     }
 
-    KMenu *menu = qobject_cast<KMenu*>( actionFilter->menu() );
-    menu->clear();
     bool showColorGrous = m_settings.colorize && !m_settings.colorGroupSettingsList.isEmpty();
     if ( m_settings.filterSettingsList.isEmpty() && !showColorGrous ) {
-        return menu; // Nothing to show in the filter menu
+        return; // Nothing to show in the filter menu
     }
 
     if ( !m_settings.filterSettingsList.isEmpty() ) {
@@ -1966,7 +2047,7 @@ KMenu *PublicTransport::updateFilterMenu()
         {
             // Create action for current color group
             QAction *action = new QAction( colorGroupSettings.lastCommonStopName,
-                                           m_filterByGroupColorGroup );
+                                           m_colorFiltersGroup );
             action->setCheckable( true );
             if ( !colorGroupSettings.filterOut ) {
                 action->setChecked( true );
@@ -1993,32 +2074,6 @@ KMenu *PublicTransport::updateFilterMenu()
             menu->addAction( action );
         }
     }
-
-    return menu;
-}
-
-// TODO: Move to TitleWidget?
-void PublicTransport::showFilterMenu()
-{
-    KMenu *menu = updateFilterMenu();
-
-    // Show the filters menu under the filter icon
-    menu->exec( QCursor::pos() );
-//   view()->mapToGlobal(
-//         view()->mapFromScene(m_filterIcon->mapToScene(0,
-//                 m_filterIcon->boundingRect().height()))) );
-}
-
-void PublicTransport::showJourneySearchMenu()
-{
-    KMenu *menu = m_titleWidget->createJourneySearchMenu();
-
-    // Connect signal (clear signal is already handled in TitleWidget)
-    connect( menu, SIGNAL(triggered(QAction*)),
-             this, SLOT(quickJourneyActionTriggered(QAction*)) );
-
-    // Show the filters menu under the journey search icon
-    menu->exec( QCursor::pos() );
 }
 
 void PublicTransport::useCurrentPlasmaTheme()
@@ -2079,15 +2134,10 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
         // Create the title widget and connect slots
         m_titleWidget = new TitleWidget( ShowDepartureArrivalListTitle,
                                          &m_settings, m_mainGraphicsWidget );
-        connect( m_titleWidget, SIGNAL(journeySearchActionTriggered(TitleWidget::JourneySearchAction,QString)),
-                 this, SLOT(recentJourneyActionTriggered(TitleWidget::JourneySearchAction,QString)) );
         connect( m_titleWidget, SIGNAL(journeySearchInputFinished(QString)),
                  this, SLOT(journeySearchInputFinished(QString)) );
         connect( m_titleWidget, SIGNAL(journeySearchListUpdated(QList<JourneySearchItem>)),
                  this, SLOT(journeySearchListUpdated(QList<JourneySearchItem>)) );
-        connect( m_titleWidget, SIGNAL(filterIconClicked()), this, SLOT(showFilterMenu()) );
-        connect( m_titleWidget, SIGNAL(journeySearchIconClicked()),
-                 this, SLOT(showJourneySearchMenu()) );
 
         m_labelInfo = new Plasma::Label( m_mainGraphicsWidget );
         m_labelInfo->setAlignment( Qt::AlignVCenter | Qt::AlignRight );
@@ -2242,6 +2292,16 @@ void PublicTransport::writeSettings( const Settings& settings )
              changed.testFlag(SettingsIO::ChangedCurrentStop) )
         {
             serviceProviderSettingsChanged();
+        }
+        if ( changed.testFlag(SettingsIO::ChangedCurrentJourneySearchLists) ) {
+            // Update the journeys menu
+            updateJourneyActionMenu();
+        }
+        if ( changed.testFlag(SettingsIO::ChangedFilterSettings) ||
+             changed.testFlag(SettingsIO::ChangedColorGroupSettings) )
+        {
+            // Update the journeys menu
+            updateFilterMenu();
         }
         if ( changed.testFlag(SettingsIO::ChangedDepartureArrivalListType) ) {
             m_model->setDepartureArrivalListType( m_settings.departureArrivalListType );
@@ -2399,29 +2459,7 @@ void PublicTransport::journeySearchListUpdated( const QList<JourneySearchItem> &
     writeSettings( settings );
 }
 
-void PublicTransport::recentJourneyActionTriggered(
-        TitleWidget::JourneySearchAction recentJourneyAction, const QString &journeySearch )
-{
-    Settings settings = m_settings;
-    switch ( recentJourneyAction ) {
-    case TitleWidget::ActionFavorJourneySearch: {
-        settings.favorJourneySearch( journeySearch );
-        break;
-    }
-    case TitleWidget::ActionRemoveJourneySearch: {
-        settings.removeJourneySearch( journeySearch );
-        break;
-    }
-    case TitleWidget::ActionUseJourneySearch: {
-        // Move given journey search string to the top of the recent journey list
-        settings.useJourneySearch( journeySearch );
-        break;
-    }
-    }
-    writeSettings( settings );
-}
-
-void PublicTransport::quickJourneyActionTriggered( QAction *_action )
+void PublicTransport::journeyActionTriggered( QAction *_action )
 {
     // The configure action has no data, only quick journey search items get the
     // journey search string as data
@@ -2429,9 +2467,14 @@ void PublicTransport::quickJourneyActionTriggered( QAction *_action )
         // The given action is not the configure action
         const QString journeySearch = KGlobal::locale()->removeAcceleratorMarker(
                 _action->data().toString() );
-        kDebug() << journeySearch;
-        journeySearchInputFinished( journeySearch );
-        recentJourneyActionTriggered( TitleWidget::ActionUseJourneySearch, journeySearch );
+
+        if ( isStateActive("journeySearch") ) {
+            // If in journey search view, put the selected journey search into the input line edit
+            m_titleWidget->setJourneySearch( journeySearch );
+        } else {
+            // Go directly to the journey results view
+            journeySearchInputFinished( journeySearch );
+        }
     }
 }
 
@@ -2569,19 +2612,6 @@ QAction* PublicTransport::updatedAction( const QString& actionName )
             a->setText( i18nc("@action", "Show Additional &Information") );
             a->setIcon( KIcon("arrow-down") );
         }
-    } else if ( actionName == "quickJourneys" ) {
-        // Delete old menu
-        delete a->menu();
-
-        // Create and set new recent journeys menu.
-        // The menu only takes a QWidget as parent, therefore it gets deleted in the slot
-        // connected to it's triggered signal
-        QMenu *recentJourneysMenu = m_titleWidget->createJourneySearchMenu();
-        a->setMenu( recentJourneysMenu );
-
-        // Connect signal (clear signal is already handled in TitleWidget)
-        connect( recentJourneysMenu, SIGNAL(triggered(QAction*)),
-                 this, SLOT(quickJourneyActionTriggered(QAction*)) );
     }
 
     return a;
@@ -2816,7 +2846,6 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
 void PublicTransport::errorMarble( QProcess::ProcessError processError )
 {
     if ( processError == QProcess::FailedToStart ) {
-        // TODO correct KUIT
         int result = KMessageBox::questionYesNo( 0, i18nc("@info", "The map application "
                 "'marble' couldn't be started, error message: <message>%1</message>.<nl/>"
                 "Do you want to install 'marble' now?", m_marble->errorString()) );
@@ -3551,6 +3580,48 @@ QVariant PublicTransport::supportedJourneySearchState() const
             m_currentServiceProviderFeatures.contains("JourneySearch")
             ? m_states["journeySearch"] : m_states["journeysUnsupportedView"] );
     return qVariantFromValue( object );
+}
+
+void PublicTransport::configureJourneySearches()
+{
+    // First let the settings object be updated, then update the menu based on the new settings
+    QPointer<KDialog> dialog = new KDialog;
+    dialog->setWindowTitle( i18nc("@title:window", "Configure Journey Searches") );
+    dialog->setWindowIcon( KIcon("configure") );
+    QVBoxLayout *l = new QVBoxLayout( dialog->mainWidget() );
+    l->setMargin( 0 );
+
+    QStyleOption option;
+    initStyleOption( &option );
+    const KIcon icon("favorites");
+
+    // Add journey search list
+    JourneySearchListView *journeySearchList = new JourneySearchListView( dialog->mainWidget() );
+    journeySearchList->setEditTriggers( QAbstractItemView::DoubleClicked |
+                                        QAbstractItemView::SelectedClicked |
+                                        QAbstractItemView::EditKeyPressed |
+                                        QAbstractItemView::AnyKeyPressed );
+
+    // Create model for journey searches
+    JourneySearchModel *model = new JourneySearchModel( dialog );
+    QList< JourneySearchItem > journeySearches = m_settings.currentJourneySearches();
+    for ( int i = 0; i < journeySearches.count(); ++i ) {
+        const JourneySearchItem item = journeySearches[i];
+        model->addJourneySearch( item.journeySearch(), item.name(), item.isFavorite() );
+    }
+    model->sort();
+    journeySearchList->setModel( model );
+
+    QLabel *label = new QLabel( i18nc("@label:listbox", "Favorite and recent journey searches "
+                                      "for '%1':", currentServiceProviderData()["name"].toString()),
+                                dialog->mainWidget() );
+    label->setBuddy( journeySearchList );
+
+    l->addWidget( label );
+    l->addWidget( journeySearchList );
+    if ( dialog->exec() == KDialog::Accepted ) {
+        journeySearchListUpdated( model->journeySearchItems() );
+    }
 }
 
 #include "publictransport.moc"
