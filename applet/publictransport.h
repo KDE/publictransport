@@ -26,18 +26,21 @@
 
 // KDE includes
 #include <Plasma/PopupApplet>
+#include <Plasma/DataEngine> // For dataUpdated() slot, Plasma::DataEngine::Data
 #include <KProcess> // For QProcess::ProcessError
+
+// Qt includes
+#include <QPersistentModelIndex>
 
 // libpublictransporthelper includes
 #include <departureinfo.h>
 
 // Own includes
 #include "stopaction.h" // For StopAction::Type
-#include "settings.h" // Only for ColorGroupSettingsList, remove here, move the function to GlobalApplet?
+#include "settings.h"
 
 class PopupIcon;
 class ItemBase;
-class PublicTransportSettings;
 class PublicTransportGraphicsItem;
 class TitleWidget;
 class OverlayWidget;
@@ -50,9 +53,7 @@ class JourneyTimetableWidget;
 class JourneyModel;
 class JourneySearchSuggestionWidget;
 
-class KMenu;
 class KSelectAction;
-class KProcess;
 
 class QStateMachine;
 class QState;
@@ -133,18 +134,6 @@ public:
     /** @brief Checks if the state with the given @p stateName is currently active. */
     bool isStateActive( const QString &stateName ) const;
 
-    /**
-     * @brief Generates a list of color group settings from the given departure @p infoList.
-     *
-     * The given departure @p infoList get grouped by direction. Each group gets a color assigned.
-     **/
-    static ColorGroupSettingsList generateColorGroupSettingsFrom(
-            const QList< DepartureInfo >& infoList,
-            DepartureArrivalListType departureArrivalListType );
-
-    /** @brief Ensures that there is one color group settings list for each stop setting. */
-    void adjustColorGroupSettingsCount();
-
     /** @brief Updates the color groups to the currently shown departures. */
     void updateColorGroupSettings();
 
@@ -186,11 +175,9 @@ public slots:
     virtual void init();
 
     /**
-     * @brief Clears the current list of stop settings and adds a new one with
-     *   the given @p stopName and the given @p serviceProviderID.
+     * @brief Clears the current list of stop settings and adds a new one.
      *
      * @param serviceProviderID The ID of the service provider to use for the new stop settings.
-     *
      * @param stopName The stop name to use for the new stop settings.
      **/
     void setSettings( const QString &serviceProviderID, const QString &stopName );
@@ -274,7 +261,6 @@ protected slots:
      * Performs the given @p stopAction.
      *
      * @param stopAction The action that is requested to be performed.
-     *
      * @param stopName The stop name to perform @p stopAction on.
      **/
     void requestStopAction( StopAction::Type stopAction, const QString &stopName  );
@@ -478,7 +464,8 @@ protected slots:
      * @see beginDepartureProcessing
      * @ingroup models
      **/
-    void departuresProcessed( const QString &sourceName, const QList< DepartureInfo > &departures,
+    void departuresProcessed( const QString &sourceName,
+                              const QList< DepartureInfo > &departures,
                               const QUrl &requestUrl, const QDateTime &lastUpdate,
                               int departuresToGo );
 
@@ -496,7 +483,8 @@ protected slots:
      *
      * @ingroup models
      **/
-    void departuresFiltered( const QString &sourceName, const QList< DepartureInfo > &departures,
+    void departuresFiltered( const QString &sourceName,
+                             const QList< DepartureInfo > &departures,
                              const QList< DepartureInfo > &newlyFiltered,
                              const QList< DepartureInfo > &newlyNotFiltered );
 
@@ -520,7 +508,8 @@ protected slots:
      * @see beginJourneyProcessing
      * @ingroup models
      **/
-    void journeysProcessed( const QString &sourceName, const QList< JourneyInfo > &journeys,
+    void journeysProcessed( const QString &sourceName,
+                            const QList< JourneyInfo > &journeys,
                             const QUrl &requestUrl, const QDateTime &lastUpdate );
 
     /** @brief The animation fading out a pixmap of the old applet appearance has finished. */

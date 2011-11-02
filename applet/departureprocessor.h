@@ -98,7 +98,7 @@ public:
      *
      * @param colorGroupSettings A list of color group settings to be used.
      **/
-    void setColorGroupSettings( const ColorGroupSettingsList &colorGroupSettings );
+    void setColorGroups( const ColorGroupSettingsList &colorGroupSettings );
 
     /** @brief Sets the list of @p alarmSettings to be used. */
     void setAlarmSettings( const AlarmSettingsList &alarmSettings );

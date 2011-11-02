@@ -78,7 +78,7 @@ void DepartureProcessor::setFilterSettings( const FilterSettingsList &filterSett
     }
 }
 
-void DepartureProcessor::setColorGroupSettings( const ColorGroupSettingsList& colorGroupSettings )
+void DepartureProcessor::setColorGroups( const ColorGroupSettingsList& colorGroupSettings )
 {
     QMutexLocker locker( &m_mutex );
     m_colorGroupSettings = colorGroupSettings;

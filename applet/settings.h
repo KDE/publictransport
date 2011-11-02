@@ -24,13 +24,6 @@
 #ifndef SETTINGS_HEADER
 #define SETTINGS_HEADER
 
-// UI includes
-#include "ui_publicTransportConfig.h"
-#include "ui_publicTransportConfigAdvanced.h"
-#include "ui_publicTransportFilterConfig.h"
-#include "ui_publicTransportAppearanceConfig.h"
-#include "ui_alarmConfig.h"
-
 // Own includes
 #include "global.h"
 #include "journeysearchitem.h"
@@ -39,18 +32,9 @@
 #include <filter.h>
 #include <stopsettings.h>
 
-// Plasma includes
-#include <Plasma/DataEngine>
+// Qt includes
+#include <QFont>
 
-class KConfigDialog;
-class Settings;
-class JourneySearchModel;
-
-namespace Timetable {
-    class LocationModel;
-    class ServiceProviderModel;
-    class StopListWidget;
-};
 using namespace Timetable;
 
 /** @brief Different types of alarms. */
@@ -93,7 +77,7 @@ struct AlarmSettings {
 bool operator ==( const AlarmSettings &l, const AlarmSettings &r );
 
 /** @brief A QList of AlarmSettings with some convenience methods. */
-class PUBLICTRANSPORTHELPER_EXPORT AlarmSettingsList : public QList< AlarmSettings > {
+class AlarmSettingsList : public QList< AlarmSettings > {
 public:
     /** @brief Get a list of the names of all alarm settings in this list. */
     QStringList names() const;
@@ -153,61 +137,18 @@ bool operator ==( const ColorGroupSettings &l, const ColorGroupSettings &r );
 class ColorGroupSettingsList : public QList< ColorGroupSettings > {
 public:
     /** @brief Find a ColorGroupSettings object with the given @p color in the list. */
-    ColorGroupSettings byColor( const QColor &color ) {
-        foreach ( const ColorGroupSettings &colorSettings, *this ) {
-            if ( colorSettings.color == color ) {
-                return colorSettings;
-            }
-        }
+    ColorGroupSettings byColor( const QColor &color );
 
-        // No color group with the given color found, return an "empty" object
-        return ColorGroupSettings();
-    };
-
-    void set( const ColorGroupSettings& newColorGroupSettings ) {
-        for ( int i = 0; i < count(); ++i ) {
-            if ( operator[](i).color == newColorGroupSettings.color ) {
-                operator[]( i ) = newColorGroupSettings;
-                return;
-            }
-        }
-
-        // No color group with the given color found, add newColorGroupSettings to this list
-        *this << newColorGroupSettings;
-    }
+    void set( const ColorGroupSettings& newColorGroupSettings );
 
     /** @brief Checks if there is a color group settings object with the given @p color in this list. */
-    bool hasColor( const QColor &color ) const {
-        for ( int i = 0; i < count(); ++i ) {
-            if ( operator[](i).color == color ) {
-                return true;
-            }
-        }
-
-        return false;
-    };
+    bool hasColor( const QColor &color ) const;
 
     /** @brief Removes the color group settings object with the given @p color from this list. */
-    bool removeColor( const QColor &color ) {
-        for ( int i = 0; i < count(); ++i ) {
-            if ( operator[](i).color == color ) {
-                removeAt( i );
-                return true;
-            }
-        }
-
-        return false;
-    };
+    bool removeColor( const QColor &color );
 
     /** @brief Enables/disables the ColorGroupSettings object with the given @p color in the list. */
-    void enableColorGroup( const QColor color, bool enable = true ) {
-        for ( int i = 0; i < count(); ++i ) {
-            if ( operator[](i).color == color ) {
-                operator[](i).filterOut = !enable;
-                return;
-            }
-        }
-    };
+    void enableColorGroup( const QColor &color, bool enable = true );
 
     /**
      * @brief Applies the filters of the color group configurations in the list to @p departureInfo.
@@ -216,15 +157,7 @@ public:
      * @returns True, if the given @p departureInfo matches a filtered out color group in the list.
      *   False, otherwise.
      **/
-    bool filterOut( const DepartureInfo& departureInfo ) const {
-        foreach( const ColorGroupSettings &colorSettings, *this ) {
-            if ( colorSettings.filterOut && colorSettings.matches(departureInfo) ) {
-                return true;
-            }
-        }
-
-        return false;
-    };
+    bool filterOut( const DepartureInfo& departureInfo ) const;
 };
 
 inline uint qHash( const QStringList &key )
@@ -237,237 +170,6 @@ inline uint qHash( const QStringList &key )
 }
 
 /**
- * @brief Manages the configuration dialog and synchronizes with Settings.
- *
- * Get the current settings in the dialog using settings(), changing the settings programatically
- * is only done class intern.
- **/
-class SettingsUiManager : public QObject {
-    Q_OBJECT
-
-public:
-    enum DeletionPolicy {
-        DeleteWhenFinished,
-        KeepWhenFinished
-    };
-
-    SettingsUiManager( const Settings &settings,
-            Plasma::DataEngine *publicTransportEngine, Plasma::DataEngine *osmEngine,
-            Plasma::DataEngine *favIconEngine, Plasma::DataEngine *geolocationEngine,
-            KConfigDialog *parentDialog, DeletionPolicy deletionPolicy = DeleteWhenFinished );
-
-    /** @brief Gets a Settings object with the current settings in the dialog. */
-    Settings settings();
-
-signals:
-    void settingsAccepted( const Settings &settings );
-    void settingsFinished();
-
-public slots:
-    void removeAlarms( const AlarmSettingsList &newAlarmSettings,
-                       const QList<int> &removedAlarms );
-
-protected slots:
-    /** @brief The config dialog has been closed. */
-    void configFinished();
-
-    /** @brief Ok pressed in the config dialog. */
-    void configAccepted();
-
-    /** @brief Loads the given @p filterConfig into the dialog. */
-    void loadFilterConfiguration( const QString &filterConfig );
-
-    /** @brief Adds a new filter configuration. */
-    void addFilterConfiguration();
-
-    /** @brief Removes the current filter configuration. */
-    void removeFilterConfiguration();
-
-    /** @brief Renames the current filter configuration. */
-    void renameFilterConfiguration();
-
-    /** @brief The action of the current filter has been changed. */
-    void filterActionChanged( int index );
-
-    /** @brief The list of affected stops of a filter configuration has been changed. */
-    void affectedStopsFilterChanged();
-
-    void filtersChanged();
-    void setFilterConfigurationChanged( bool changed = true );
-
-    void exportFilterSettings();
-    void importFilterSettings();
-
-    /** @brief Another alarm has been selected. */
-    void currentAlarmChanged( int row );
-
-    /** @brief The add alarm button has been clicked. */
-    void addAlarmClicked();
-
-    /** @brief The remove alarm button has been clicked. */
-    void removeAlarmClicked();
-
-    /** @brief The rename alarm button has been clicked. */
-    void renameAlarmClicked();
-
-    /** @brief The current alarm has been changed. */
-    void alarmChanged();
-
-    /** @brief The type of the current alarm has been changed. */
-    void currentAlarmTypeChanged( int index );
-
-    /** @brief The list of affected stops of this alarm has been changed. */
-    void affectedStopsAlarmChanged();
-
-    /** @brief An alarm item has been changed, eg. it's text or checked state. */
-    void alarmChanged( int index );
-
-    /** @brief The list of stop settings has been changed. */
-    void stopSettingsChanged();
-
-    /** @brief A new stop has been added. */
-    void stopSettingsAdded();
-
-    /** @brief A stop has been removed. */
-    void stopSettingsRemoved( QWidget *widget, int widgetIndex );
-
-    /** @brief The used filter configuration has been changed in the "filter uses"
-     * tab of the filters page. */
-    void usedFilterConfigChanged( QWidget *widget );
-
-protected:
-    void setValuesOfAdvancedConfig( const Settings &settings );
-    void setValuesOfFilterConfig();
-    void setValuesOfAlarmConfig();
-    void setValuesOfAppearanceConfig( const Settings &settings );
-
-private:
-    FilterSettings currentFilterSettings() const;
-    AlarmSettings currentAlarmSettings( const QString &name = QString() ) const;
-    int filterConfigurationIndex( const QString &filterConfig );
-    void setAlarmTextColor( int index, bool hasAffectedStops = true ) const;
-    void updateStopNamesInWidgets();
-
-    DeletionPolicy m_deletionPolicy;
-//     DataSourceTester *m_dataSourceTester; // Tests data sources
-    KConfigDialog *m_configDialog; // Stored for the accessor info dialog as parent
-
-    Ui::publicTransportConfig m_ui;
-    Ui::publicTransportConfigAdvanced m_uiAdvanced;
-    Ui::publicTransportAppearanceConfig m_uiAppearance;
-    Ui::publicTransportFilterConfig m_uiFilter;
-    Ui::alarmConfig m_uiAlarms;
-
-    ServiceProviderModel *m_modelServiceProvider; // The model for the service provider combobox in the config dialog
-    LocationModel *m_modelLocations; // The model for the location combobox in the config dialog
-    Plasma::DataEngine::Data m_serviceProviderData; // Service provider information from the data engine
-    QVariantHash m_locationData; // Location information from the data engine.
-
-    StopListWidget *m_stopListWidget;
-    Plasma::DataEngine *m_publicTransportEngine, *m_osmEngine,
-            *m_favIconEngine, *m_geolocationEngine;
-
-    int m_currentStopSettingsIndex;
-    bool m_showHeader;
-    bool m_hideColumnTarget;
-
-    FilterSettingsList m_filterSettings;
-    QString m_lastFilterConfiguration; // The last set filter configuration
-    bool m_filterConfigChanged; // Whether or not the filter configuration has changed from that defined in the filter configuration with the name [m_lastFilterConfiguration]
-
-    QList<ColorGroupSettingsList> m_colorGroupSettings;
-
-    AlarmSettingsList m_alarmSettings;
-    int m_lastAlarm;
-    bool m_alarmsChanged;
-};
-
-/**
- * @brief Contains static methods to read/write settings.
- *
- * Stop and filter settings are stored globally for all PublicTransport applets.
- **/
-class SettingsIO {
-public:
-    /** @brief These flags describe what settings have changed. */
-    enum ChangedFlag {
-        NothingChanged          = 0x0000, /**< Nothing has changed. */
-        IsChanged               = 0x0001, /**< This flag is set if something has changed.
-                * If another change flag is set (except for NothingChanged), this flag is also
-                * set. This flag also gets set for changes not covered by the other change flags. */
-        ChangedServiceProvider  = 0x0002, /**< Service provider settings have been changed
-                                            * (stop name, service provider, ...). */ // TODO
-        ChangedDepartureArrivalListType
-                                = 0x0004, /**< Changed from showing departures to arrivals
-                                            * or vice versa. */
-        ChangedStopSettings     = 0x0008, /**< Stop settings have been changed. This flag also gets
-                * set if only eg. the favorite/recent journey searches have been changed.
-                * Use ChangedCurrentStopSettings to check if timetable data needs to be requested
-                * from the data engine again with the changed settings. */
-        ChangedCurrentStopSettings
-                                = 0x0010, /**< Stop settings of the current stop
-                * have been changed, that require timetable data to be requested from the data
-                * engine again. If this flag is set, the current timetable data may not represent
-                * correct results any longer for the changed stop settings.
-                * Stop settings that do not require a new timetable data request are unaffected. */
-        ChangedCurrentJourneySearchLists
-                                = 0x0020, /**< The list of favorite and/or recent journey
-                                            * searches has been changed for the current stop. */
-        ChangedCurrentStop      = 0x0040, /**< The current stop has been changed. */
-        ChangedFilterSettings   = 0x0080, /**< Filter settings have been changed. */
-        ChangedLinesPerRow      = 0x0100, /**< The lines per row setting has been changed. */
-        ChangedAlarmSettings    = 0x0200, /**< Alarm settings have been changed. This does not
-                                            * include AlarmTimeSetting in stop settings. */
-        ChangedColorization     = 0x0400, /**< Colorization of departures has been toggled. */
-        ChangedColorGroupSettings
-                                = 0x0800  /**< Color group settings have been changed. */
-    };
-    Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag );
-
-    /** @brief Read settings from @p cg and @p cgGlobal. */
-    static Settings readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
-                                  Plasma::DataEngine *publicTransportEngine = 0 );
-
-    /**
-     * @brief Decodes journey search items from @p data.
-     *
-     * @param data Journey search items encoded using encodeJourneySearchItems.
-     * @return The list of journey search items decoded from @p data.
-     * @see encodeJourneySearchItems
-     **/
-    static QList<JourneySearchItem> decodeJourneySearchItems( QByteArray *data );
-
-    /**
-     * @brief Encodes @p journeySearches into a QByteArray.
-     *
-     * @param journeySearches Journey search items to encode.
-     * @return @p journeySearches encoded in a QByteArray.
-     * @see decodeJourneySearchItems
-     **/
-    static QByteArray encodeJourneySearchItems( const QList<JourneySearchItem> &journeySearches );
-
-    /**
-     * @brief Write changed @p settings to @p cg and @p cgGlobal.
-     *
-     * @p oldSettings is used to see which settings have been changed.
-     *
-     * @returns What settings have been changed.
-     * @see ChangedFlags */
-    static ChangedFlags writeSettings( const Settings &settings, const Settings &oldSettings,
-                                    KConfigGroup cg, KConfigGroup cgGlobal );
-
-    /** @brief Read filter configuration from @p cgGlobal. */
-    static FilterSettings readFilterConfig( const KConfigGroup &cgGlobal );
-
-    static bool writeFilterConfig( const FilterSettings &filterSettings,
-            const FilterSettings &oldFilterSettings, KConfigGroup cgGlobal );
-
-    /** @brief Write filter configuration @p filterSettings to @p cgGlobal. */
-    static void writeFilterConfig( const FilterSettings &filterSettings, KConfigGroup cgGlobal );
-};
-Q_DECLARE_OPERATORS_FOR_FLAGS( SettingsIO::ChangedFlags );
-
-/**
  * @brief Contains all settings of the PublicTransport applet.
  *
  * Use SettingsIO to read/write settings from/to disk, use SettingsUiManager to synchronize and
@@ -475,6 +177,12 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( SettingsIO::ChangedFlags );
  **/
 struct Settings {
 public:
+    /** @brief Named user settings for use in Timetable::StopSettings. */
+    enum ExtendedStopSetting {
+        JourneySearchSetting = UserSetting /**< A list of journey searches,
+                                              * QList\<JourneySearchItem\> */
+    };
+
     /** @brief Creates a new Settings object. */
     Settings();
 
@@ -491,7 +199,7 @@ public:
     FilterSettingsList filterSettingsList;
 
     /** @brief A list of all alarm settings. */
-    AlarmSettingsList alarmSettings;
+    AlarmSettingsList alarmSettingsList;
 
     /**
      * @brief A list of all color group settings lists (one list for each stop).
@@ -636,13 +344,13 @@ public:
 
     /** @brief Gets a list of JourneySearchItem's for the current stop settings. */
     QList<JourneySearchItem> currentJourneySearches() const {
-        return currentStopSettings().get< QList<JourneySearchItem> >( UserSetting );
+        return currentStopSettings().get< QList<JourneySearchItem> >( JourneySearchSetting );
     };
 
     /** @brief Sets a list of JourneySearchItem's for the current stop settings. */
     void setCurrentJourneySearches( const QList<JourneySearchItem> &journeySearches ) {
         StopSettings &stopSettings = currentStopSettings();
-        stopSettings.set( UserSetting, QVariant::fromValue(journeySearches) );
+        stopSettings.set( JourneySearchSetting, QVariant::fromValue(journeySearches) );
     };
 
     /**
@@ -668,14 +376,17 @@ public:
      * Color group settings are "active", if their associated stop is currently selected.
      **/
     ColorGroupSettingsList currentColorGroupSettings() const {
-        if ( currentStopSettingsIndex < 0
-             || currentStopSettingsIndex >= colorGroupSettingsList.count() )
+        if ( currentStopSettingsIndex >= 0 &&
+             currentStopSettingsIndex < colorGroupSettingsList.count() )
         {
-            return ColorGroupSettingsList();
-        } else {
             return colorGroupSettingsList[ currentStopSettingsIndex ];
+        } else {
+            return ColorGroupSettingsList();
         }
     };
+
+    /** @brief Ensures that there is one color group settings list for each stop setting. */
+    void adjustColorGroupSettingsCount();
 
     /** @brief Favorize the given @p journeySearch.*/
     void favorJourneySearch( const QString &journeySearch );

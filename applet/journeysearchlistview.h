@@ -34,9 +34,9 @@ class KAction;
  * @brief A QListView for journey searches with a context menu.
  *
  * This view is intended to be used with JourneySearchModel.
- * It offers a context menu with actions like adding/removing journey searches or toggling their
- * favorite states. To use the context menu the used model must be of type JourneySearchModel for
- * simplicity.
+ * It offers a context menu with actions like adding/removing/editing journey searches and
+ * toggling their favorite states. To use the context menu the used model must be of type
+ * JourneySearchModel for simplicity.
  * JourneySearchDelegate is set as the item delegate automatically.
  *
  * @see JourneySearchModel
@@ -66,22 +66,23 @@ protected:
     virtual void contextMenuEvent( QContextMenuEvent *event );
 
 private:
-    KAction *m_addJourneySearchAction;
-    KAction *m_removeJourneySearchAction;
-    KAction *m_editJourneySearchAction;
+    KAction *m_addAction;
+    KAction *m_removeAction;
+    KAction *m_editAction;
     KAction *m_toggleFavoriteAction;
 };
 
 /**
- * @brief An item delegate for journey search items, ie. in a JourneySearchListView.
+ * @brief An item delegate for journey search items, eg. in a JourneySearchListView.
  *
  * This delegate implements editor functionality using a ToggleIconToolButton to configure the
- * favorite state and a KLineEdit to configure the journey search string.
+ * favorite state and KLineEdit's to configure the name and the journey search string.
  **/
 class JourneySearchDelegate : public QStyledItemDelegate {
     Q_OBJECT
 
 public:
+    /** @brief Creates a new JourneySearchDelegate with the given @p parent. */
     explicit JourneySearchDelegate( QObject *parent = 0 );
 
 protected:
@@ -97,7 +98,12 @@ protected:
                                        const QModelIndex &index ) const;
 };
 
-/** @brief A QToolButton which only displays one of two icons, depending on the checked state. */
+/**
+ * @brief A QToolButton which displays journey search favorite/recent icons.
+ *
+ * This tool button uses JourneySearchModel::favoriteIconPixmap() with isChecked() as argument
+ * to get the icon to draw. It does not draw any frame.
+ **/
 class ToggleIconToolButton : public QToolButton {
     Q_OBJECT
 

@@ -27,8 +27,9 @@
 #include "journeysearchlistview.h"
 
 // KDE+Plasma includes
-#include <KMenu>
 #include <KAction>
+#include <KActionMenu>
+#include <KMenu>
 #include <KIconEffect>
 #include <Plasma/Label>
 #include <Plasma/IconWidget>
@@ -37,10 +38,10 @@
 
 // Qt includes
 #include <QToolButton>
+#include <QLabel>
 #include <QGraphicsLinearLayout>
 #include <QVBoxLayout>
 #include <qmath.h>
-#include <KActionMenu>
 
 TitleWidget::TitleWidget( TitleType titleType, Settings *settings, bool journeysSupported,
                           QGraphicsItem *parent )

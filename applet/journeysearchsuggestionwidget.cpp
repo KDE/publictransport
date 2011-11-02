@@ -17,23 +17,30 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "journeysearchsuggestionwidget.h"
+
+// Own includes
 #include "journeysearchparser.h"
+#include "journeysearchmodel.h"
 #include "settings.h"
 #include "timetablewidget.h"
 
-#include <KDebug>
+// KDE+Plasma includes
 #include <KColorScheme>
+#include <KLineEdit>
+#include <KDebug>
 #include <Plasma/LineEdit>
 #include <Plasma/Animator>
 #include <Plasma/Animation>
 #include <Plasma/Theme>
 
+// Qt includes
 #include <QStandardItemModel>
 #include <QGraphicsLinearLayout>
 #include <QTextDocument>
 #include <QGraphicsSceneHoverEvent>
-#include "journeysearchmodel.h"
+#include <QStyleOption>
 
 JourneySearchSuggestionItem::JourneySearchSuggestionItem(
         JourneySearchSuggestionWidget *parent, const QModelIndex& modelIndex )

@@ -38,6 +38,7 @@
 #include <QTextDocument>
 #include <QGraphicsEffect>
 #include <QGraphicsSceneHoverEvent>
+#include <QStyleOption>
 #include <qmath.h>
 
 RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item,

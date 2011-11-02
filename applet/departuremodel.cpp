@@ -22,6 +22,7 @@
 
 #include <KIconEffect>
 #include <KIconLoader>
+#include <KLocale>
 #include <KDebug>
 #include <Plasma/Animator>
 #include <Plasma/Animation>
@@ -1878,10 +1879,10 @@ void DepartureModel::sort( int column, Qt::SortOrder order )
 
     // Sort the intermediate vector
     if ( order == Qt::AscendingOrder ) {
-        DepartureModelLessThan lt( static_cast<Columns>( column ) );
+        DepartureModelLessThan lt( static_cast<Columns>(column) );
         qStableSort( sortable.begin(), sortable.end(), lt );
     } else {
-        DepartureModelGreaterThan gt( static_cast<Columns>( column ) );
+        DepartureModelGreaterThan gt( static_cast<Columns>(column) );
         qStableSort( sortable.begin(), sortable.end(), gt );
     }
 

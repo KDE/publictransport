@@ -44,26 +44,32 @@
 JourneySearchListView::JourneySearchListView( QWidget *parent )
         : QListView(parent)
 {
-    m_addJourneySearchAction = new KAction( KIcon("list-add"),
+    // Create actions
+    m_addAction = new KAction( KIcon("list-add"),
                                             i18nc("@action", "&Add Journey Search"), this );
-    m_removeJourneySearchAction = new KAction( KIcon("list-remove"),
+    m_removeAction = new KAction( KIcon("list-remove"),
                                                i18nc("@action", "&Remove"), this );
-    m_editJourneySearchAction = new KAction( KIcon("document-edit"),
+    m_editAction = new KAction( KIcon("document-edit"),
                                              i18nc("@action", "&Edit"), this );
     m_toggleFavoriteAction = new KAction( this );
-    connect( m_addJourneySearchAction, SIGNAL(triggered()),
+
+    // Connect actions
+    connect( m_addAction, SIGNAL(triggered()),
              this, SLOT(addJourneySearch()) );
-    connect( m_removeJourneySearchAction, SIGNAL(triggered()),
+    connect( m_removeAction, SIGNAL(triggered()),
              this, SLOT(removeCurrentJourneySearch()) );
-    connect( m_editJourneySearchAction, SIGNAL(triggered()),
+    connect( m_editAction, SIGNAL(triggered()),
              this, SLOT(editJourneySearchAction()) );
     connect( m_toggleFavoriteAction, SIGNAL(triggered()),
              this, SLOT(toggleFavorite()) );
-    addAction( m_addJourneySearchAction );
-    addAction( m_removeJourneySearchAction );
-    addAction( m_editJourneySearchAction );
+
+    // Add the actions to this views action list
+    addAction( m_addAction );
+    addAction( m_removeAction );
+    addAction( m_editAction );
     addAction( m_toggleFavoriteAction );
 
+    // Use JourneySearchDelegate for all items
     setItemDelegate( new JourneySearchDelegate(this) );
 }
 
@@ -77,11 +83,11 @@ void JourneySearchListView::contextMenuEvent( QContextMenuEvent *event )
     QModelIndex index = indexAt( event->pos() );
 
     // Disable remove journey search action, if nothing is selected
-    if ( m_removeJourneySearchAction ) {
-        m_removeJourneySearchAction->setEnabled( index.isValid() );
+    if ( m_removeAction ) {
+        m_removeAction->setEnabled( index.isValid() );
     }
-    if ( m_editJourneySearchAction ) {
-        m_editJourneySearchAction->setEnabled( index.isValid() );
+    if ( m_editAction ) {
+        m_editAction->setEnabled( index.isValid() );
     }
 
     // Update toggle favorite state action (add to/remove from favorites)
