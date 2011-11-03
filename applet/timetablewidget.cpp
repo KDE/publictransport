@@ -48,6 +48,8 @@
 #include <QStyleOption>
 #include <qmath.h>
 
+const qreal PublicTransportGraphicsItem::ROUTE_ITEM_HEIGHT = 60.0;
+
 PublicTransportGraphicsItem::PublicTransportGraphicsItem(
         PublicTransportWidget* publicTransportWidget, QGraphicsItem* parent,
         StopAction *copyStopToClipboardAction, StopAction *showInMapAction/*, QAction *toggleAlarmAction*/ )

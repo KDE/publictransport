@@ -88,7 +88,7 @@ public:
     virtual ~PublicTransportGraphicsItem();
 
     /** @brief The height of route items. */
-    static const qreal ROUTE_ITEM_HEIGHT = 60.0;
+    static const qreal ROUTE_ITEM_HEIGHT;
 
     /** @brief A pointer to the containing PublicTransportWidget. */
     PublicTransportWidget *publicTransportWidget() const { return m_parent; };

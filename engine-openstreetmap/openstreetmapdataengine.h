@@ -50,8 +50,8 @@ public:
     OpenStreetMapEngine( QObject *parent, const QVariantList &args );
 	
 	static const int maxResults = 50;
-	static const double maxAreaSize = 0.5;
-	static const double defautAreaSize = 0.02;
+	static const double maxAreaSize;
+	static const double defautAreaSize;
 	
 protected:
 	virtual bool sourceRequestEvent( const QString& source );
