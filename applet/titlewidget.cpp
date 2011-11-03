@@ -96,12 +96,6 @@ void TitleWidget::setJourneysSupported( bool supported )
     }
 }
 
-template <typename T>
-T* TitleWidget::castedWidget( WidgetType widgetType ) const
-{
-    return !m_widgets.contains(widgetType) ? 0 : qgraphicsitem_cast<T*>( m_widgets[widgetType] );
-}
-
 QString TitleWidget::title() const
 {
     return m_title->text();

@@ -128,7 +128,9 @@ public:
      *   qgraphicsitem_cast, so it returns 0, if the widget isn't of the given type.
      **/
     template <typename T>
-    T* castedWidget( WidgetType widgetType ) const;
+    T* castedWidget( WidgetType widgetType ) const {
+        return !m_widgets.contains(widgetType) ? 0 : qgraphicsitem_cast<T*>( m_widgets[widgetType] );
+    };
 
     /**
      * @brief Sets the type of this title widget to @p titleType.
