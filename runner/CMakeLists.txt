@@ -46,6 +46,8 @@ target_link_libraries(krunner_publictransport
 	${KDE4_KDEUI_LIBS}
 )
 
+add_dependencies( krunner_publictransport kcm_krunner_publictransport )
+
 ##########################
 # Install both ###########
 ##########################
