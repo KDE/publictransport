@@ -130,7 +130,7 @@ public:
     template <typename T>
     T* castedWidget( WidgetType widgetType ) const {
         return !m_widgets.contains(widgetType) ? 0 : qgraphicsitem_cast<T*>( m_widgets[widgetType] );
-    };
+    }
 
     /**
      * @brief Sets the type of this title widget to @p titleType.

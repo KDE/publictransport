@@ -594,4 +594,4 @@ void ConstraintListWidget::checkedItemsChanged()
     emit changed();
 }
 
-}; // namespace Timetable
+} // namespace Timetable

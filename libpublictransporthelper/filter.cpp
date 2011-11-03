@@ -454,4 +454,4 @@ void FilterSettingsList::set(const FilterSettings& newFilterSettings) {
     *this << newFilterSettings;
 }
 
-}; // namespace Timetable
+} // namespace Timetable

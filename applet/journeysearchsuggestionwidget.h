@@ -33,7 +33,7 @@
 class QGraphicsSceneMouseEvent;
 namespace Plasma {
     class LineEdit;
-};
+}
 class Settings;
 class QStandardItemModel;
 class JourneySearchSuggestionItem;
@@ -70,7 +70,7 @@ public:
         AllSuggestions = StopNameSuggestion | RecentJourneySearchSuggestion |
                 KeywordSuggestion /**< All available suggestion types. */
     };
-    Q_DECLARE_FLAGS(Suggestions, Suggestion);
+    Q_DECLARE_FLAGS(Suggestions, Suggestion)
 
     /**
      * @brief Creates a new journey search suggestion widget.

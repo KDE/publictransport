@@ -204,7 +204,7 @@ enum VehicleType {
 
     Plane = 200, /**< An aeroplane. */
 
-    Spacecraft = 300, /**< A spacecraft. */ // TODO: add to applet
+    Spacecraft = 300 /**< A spacecraft. */ // TODO: add to applet
 };
 
 /** @brief The type of services for a public transport line. */
@@ -367,6 +367,6 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
     default:
         return debug << "TimetableInformation unknown" << static_cast<int>(timetableInformation);
     }
-};
+}
 
 #endif // ENUMS_HEADER

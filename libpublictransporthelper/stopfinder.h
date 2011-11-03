@@ -159,6 +159,6 @@ private:
     Q_DISABLE_COPY( StopFinder )
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // Multiple inclusion guard

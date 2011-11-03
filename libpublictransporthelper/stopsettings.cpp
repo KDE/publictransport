@@ -640,4 +640,4 @@ QDebug& operator<<( QDebug debug, StopSetting setting )
     }
 }
 
-}; // namespace Timetable
+} // namespace Timetable

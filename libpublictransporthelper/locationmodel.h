@@ -177,6 +177,6 @@ private:
     Q_DISABLE_COPY( LocationModel )
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // LOCATIONMODEL_H

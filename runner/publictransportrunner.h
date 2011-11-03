@@ -50,7 +50,7 @@ public:
         OnlyTrams        = 0x0040,
         OnlyTrains        = 0x0080
     };
-    Q_DECLARE_FLAGS( Keywords, Keyword );
+    Q_DECLARE_FLAGS( Keywords, Keyword )
 
     struct QueryData {
         Keywords keywords;
@@ -93,7 +93,7 @@ private:
 };
 // This is the command that links the runner to the .desktop file
 K_EXPORT_PLASMA_RUNNER(publictransport, PublicTransportRunner)
-Q_DECLARE_OPERATORS_FOR_FLAGS( PublicTransportRunner::Keywords );
+Q_DECLARE_OPERATORS_FOR_FLAGS( PublicTransportRunner::Keywords )
 
 
 class PublicTransportRunnerHelper : public QObject {

@@ -50,7 +50,7 @@ public:
                 * TimetableMate, a little IDE for editing public transport accessors. */
         DefaultOptions = ShowOpenInTimetableMateButton /**< Default options. */
     };
-    Q_DECLARE_FLAGS(Options, Option);
+    Q_DECLARE_FLAGS(Options, Option)
 
     /**
      * @brief Creates a dialog, that shows information about a public transport accessor.
@@ -89,8 +89,8 @@ private:
     Q_DECLARE_PRIVATE( AccessorInfoDialog )
     Q_DISABLE_COPY( AccessorInfoDialog )
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS(AccessorInfoDialog::Options);
+Q_DECLARE_OPERATORS_FOR_FLAGS(AccessorInfoDialog::Options)
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // ACCESSORINFODIALOG_H

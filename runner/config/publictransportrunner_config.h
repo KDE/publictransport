@@ -32,11 +32,11 @@
 
 namespace Plasma {
     class DataEngineManager;
-};
+}
 namespace Timetable {
     class LocationModel;
     class ServiceProviderModel;
-};
+}
 
 //Names of config-entries
 // static const char CONFIG_TRIGGERWORD[] = "triggerWord";

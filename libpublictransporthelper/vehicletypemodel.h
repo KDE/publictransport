@@ -130,6 +130,6 @@ private:
     Q_DISABLE_COPY( VehicleTypeModel )
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // VEHICLETYPEMODEL_H

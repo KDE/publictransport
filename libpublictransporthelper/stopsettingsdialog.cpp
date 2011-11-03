@@ -552,7 +552,7 @@ public:
             kDebug() << "No widget found for" << static_cast<StopSetting>(setting);
         }
         return widget;
-    };
+    }
 
     // Creates the details widget if it's not already created and returns it's layout
     QFormLayout *createDetailsWidget() {
@@ -1468,4 +1468,4 @@ QDebug& operator<<( QDebug debug, StopSettingsDialog::Option option )
     }
 }
 
-}; // namespace Timetable
+} // namespace Timetable

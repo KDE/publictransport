@@ -28,14 +28,14 @@
 class TimetableAccessor;
 
 class OsmReader : public QObject, public QXmlStreamReader {
-    Q_OBJECT;
+    Q_OBJECT
 
 public:
 	enum ResultFlag {
 	    AllResults = 0x0000,
 	    OnlyResultsWithNameAttribute = 0x0001
 	};
-	Q_DECLARE_FLAGS( ResultFlags, ResultFlag );
+	Q_DECLARE_FLAGS( ResultFlags, ResultFlag )
 
 	OsmReader( const QString &associatedSourceName, const QString &sourceUrl,
                ResultFlags resultFlags = ResultFlags(AllResults) )
@@ -82,6 +82,6 @@ private:
 	ResultFlags m_resultFlags;
     QString m_sourceUrl;
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS( OsmReader::ResultFlags );
+Q_DECLARE_OPERATORS_FOR_FLAGS( OsmReader::ResultFlags )
 
 #endif // OSMREADER_HEADER

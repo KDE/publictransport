@@ -74,7 +74,7 @@ public:
         ChangedColorGroupSettings
                                 = 0x0800  /**< Color group settings have been changed. */
     };
-    Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag );
+    Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag )
 
     /** @brief Read settings from @p cg and @p cgGlobal. */
     static Settings readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
@@ -122,6 +122,6 @@ public:
     /** @brief Write filter configuration @p filterSettings to @p cgGlobal. */
     static void writeFilterConfig( const FilterSettings &filterSettings, KConfigGroup cgGlobal );
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS( SettingsIO::ChangedFlags );
+Q_DECLARE_OPERATORS_FOR_FLAGS( SettingsIO::ChangedFlags )
 
 #endif // Multiple inclusion guard

@@ -39,7 +39,7 @@ namespace Timetable {
     class LocationModel;
     class ServiceProviderModel;
     class StopListWidget;
-};
+}
 namespace Plasma {
     class DataEngine;
 }

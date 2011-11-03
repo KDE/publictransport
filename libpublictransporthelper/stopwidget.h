@@ -319,6 +319,6 @@ private:
     Q_DISABLE_COPY( StopListWidget )
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // Multiple inclusion guard

@@ -111,6 +111,6 @@ public:
     void setCity( const QString &city );
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // STOPLINEEDIT_H
