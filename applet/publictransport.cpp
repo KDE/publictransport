@@ -3378,6 +3378,7 @@ void PublicTransport::configureJourneySearches()
     QLabel *label = new QLabel( i18nc("@label:listbox", "Favorite and recent journey searches "
                                       "for '%1':", currentServiceProviderData()["name"].toString()),
                                 dialog->mainWidget() );
+    label->setWordWrap( true );
     label->setBuddy( journeySearchList );
 
     l->addWidget( label );

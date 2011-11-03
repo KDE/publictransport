@@ -180,8 +180,13 @@ JourneySearchDelegate::JourneySearchDelegate( QObject *parent )
 QSize JourneySearchDelegate::sizeHint( const QStyleOptionViewItem &option,
                                        const QModelIndex &index ) const
 {
-    const int width = qMin( option.rect.width(), option.fontMetrics.width(index.data().toString()) );
-    const int height = 2 * qMin( option.rect.height(), option.fontMetrics.height() + 2 );
+    const QString name = index.data(JourneySearchModel::NameRole).toString();
+    const QString journeySearch = index.data(JourneySearchModel::JourneySearchRole).toString();
+
+    QStyleOptionViewItemV4 opt = option;
+    const int width = opt.decorationSize.width() + 8 +
+            qMax( option.fontMetrics.width(name), option.fontMetrics.width(journeySearch) );
+    const int height = 2 * qMin( opt.decorationSize.height() + 4, option.fontMetrics.height() + 2 );
     return QSize( width, height );
 }
 
@@ -190,13 +195,13 @@ void JourneySearchDelegate::paint( QPainter *painter, const QStyleOptionViewItem
 {
     // Initialize style options
     QStyleOptionViewItemV4 opt = option;
-    QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
     initStyleOption( &opt, index );
+    QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
     opt.icon = QIcon();
     opt.showDecorationSelected = true;
 
     // Draw background only
-    opt.text = QString();
+    opt.text.clear();
     style->drawControl( QStyle::CE_ItemViewItem, &opt, painter );
 
     // Draw text items and icon only while not in edit mode
@@ -236,11 +241,7 @@ void JourneySearchDelegate::paint( QPainter *painter, const QStyleOptionViewItem
         if ( name.isEmpty() ) {
             // No name specified for the journey search
             painter->setPen( textColor );
-            painter->drawText( nameRect, i18nc("@info/plain", "(No name specified)") );
-
-            // Draw journey search string in lighter color
-            painter->setPen( lightColor );
-            painter->drawText( journeySearchRect, journeySearch );
+            painter->drawText( nameRect, i18nc("@info/plain","(No name specified)") );
         } else {
             // A name is specified, draw it in bold font
             QFont boldFont = opt.font;
@@ -249,11 +250,13 @@ void JourneySearchDelegate::paint( QPainter *painter, const QStyleOptionViewItem
             painter->setPen( textColor );
             painter->drawText( nameRect, name );
 
-            // Draw journey search string in lighter color and with default font
+            // Set default font again for the journey string
             painter->setFont( opt.font );
-            painter->setPen( lightColor );
-            painter->drawText( journeySearchRect, journeySearch );
         }
+
+        // Draw journey search string in lighter color
+        painter->setPen( lightColor );
+        painter->drawText( journeySearchRect, journeySearch );
 
         // Draw icon
         const bool isFavorite = index.data( JourneySearchModel::FavoriteRole ).toBool();
