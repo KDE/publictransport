@@ -74,7 +74,6 @@ class PublicTransportWidget;
  **/
 class PublicTransportGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
-#include <QAction>
     Q_PROPERTY( qreal expandStep READ expandStep WRITE setExpandStep )
     Q_PROPERTY( qreal fadeOut READ fadeOut WRITE setFadeOut )
     friend class PublicTransportWidget;
@@ -83,8 +82,7 @@ public:
     explicit PublicTransportGraphicsItem( PublicTransportWidget* publicTransportWidget,
                                           QGraphicsItem* parent = 0,
                                           StopAction *copyStopToClipboardAction = 0,
-                                          StopAction *showInMapAction = 0/*,
-                                          QAction *toggleAlarmAction = 0*/ );
+                                          StopAction *showInMapAction = 0 );
     virtual ~PublicTransportGraphicsItem();
 
     /** @brief The height of route items. */
@@ -301,7 +299,6 @@ protected:
     QPixmap *m_pixmap;
     StopAction *m_copyStopToClipboardAction;
     StopAction *m_showInMapAction;
-//     QAction *m_toggleAlarmAction;
 };
 
 class TextDocumentHelper {
@@ -475,8 +472,7 @@ public:
                                   StopAction *copyStopToClipboardAction = 0,
                                   StopAction *showInMapAction = 0,
                                   StopAction *requestJourneyToStopAction = 0,
-                                  StopAction *requestJourneyFromStopAction = 0/*,
-                                  QAction *toggleAlarmAction = 0*/ );
+                                  StopAction *requestJourneyFromStopAction = 0 );
     virtual ~JourneyGraphicsItem();
 
     /**
@@ -670,7 +666,6 @@ protected:
     bool m_enableOpenStreetMap; // Enable actions using the openstreetmap data engine
     StopAction *m_copyStopToClipboardAction;
     StopAction *m_showInMapAction;
-//     QAction *m_toggleAlarmAction;
 };
 
 /**

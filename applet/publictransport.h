@@ -85,7 +85,6 @@ private:
 };
 
 /**
- * @class PublicTransport
  * @brief Shows a departure/arrival board for public transport.
  *
  * It uses the "publictransport"-data engine and stores the data using @ref DepartureModel for
@@ -112,7 +111,7 @@ public:
     /** @brief Basic create. */
     PublicTransport( QObject *parent, const QVariantList &args );
 
-    /** @brief Destructor. Saves the state of the header. */
+    /** @brief Destructor. */
     ~PublicTransport();
 
     /** @brief Gets a pointer to either the journey search state or the journeys unsupported state. */
@@ -141,12 +140,8 @@ signals:
     /** @brief Emitted when the settings have changed. */
     void settingsChanged();
 
-    /** @brief Emitted when an intermediate departure list is requested for
-     * the given @p stopName. */
+    /** @brief Emitted when an intermediate departure list gets requested for @p stopName. */
     void intermediateDepartureListRequested( const QString &stopName );
-
-    /** @brief Emitted when the departure/arrival list should be shown again. */
-    void goBackToDepartureList();
 
     /**
      * @brief Emitted when the journey search is finished.
@@ -158,16 +153,31 @@ signals:
     /** @brief Emitted when the action buttons state was cancelled. */
     void cancelActionButtons();
 
+    /** @brief Emitted when the network connection is lost to go set the corresponding states. */
     void networkConnectionLost();
+
+    /** @brief Emitted when the network is being configured to go set the corresponding states. */
     void networkIsConfiguring();
+
+    /** @brief Emitted when the network connection is activated to go set the corresponding states. */
     void networkIsActivated();
 
+    /** @brief Emitted when new departure data gets requested to go set the corresponding states. */
     void requestedNewDepartureData();
+
+    /** @brief Emitted when valid departure data gets received to go set the corresponding states. */
     void validDepartureDataReceived();
+
+    /** @brief Emitted when invalid departure data gets received to go set the corresponding states. */
     void invalidDepartureDataReceived();
 
+    /** @brief Emitted when new journey data gets requested to go set the corresponding states. */
     void requestedNewJourneyData();
+
+    /** @brief Emitted when valid journey data gets received to go set the corresponding states. */
     void validJourneyDataReceived();
+
+    /** @brief Emitted when invalid journey data gets received to go set the corresponding states. */
     void invalidJourneyDataReceived();
 
 public slots:
@@ -182,15 +192,25 @@ public slots:
      **/
     void setSettings( const QString &serviceProviderID, const QString &stopName );
 
+    /**
+     * @brief Replaces the current lists of stop and filter settings.
+     *
+     * @param stopSettingsList The new list of stop settings.
+     * @param filterSettings The new list of filter settings.
+     **/
     void setSettings( const StopSettingsList &stopSettingsList,
                       const FilterSettingsList &filterSettings );
 
     /**
-     * @brief Writes the given @p settings and updates the applet accordingly.
+     * @brief Replaces the current settings and updates the applet accordingly.
      *
-     * @param settings The settings to write.
+     * Settings are written using SettingsIO::writeSettings() which also compares them with the
+     * old settings and returns flags for changes (SettingsIO::ChangedFlags). Only parts of the
+     * applet that are affected by changed settings get updated.
+     *
+     * @param settings The new settings.
      **/
-    void writeSettings( const Settings &settings );
+    void setSettings( const Settings &settings );
 
 protected slots:
     /** @brief The geometry of the applet has changed. */
@@ -202,10 +222,15 @@ protected slots:
     /** @brief Settings that require a new data request have been changed. */
     void serviceProviderSettingsChanged();
 
+    /**
+     * @brief Overriden to update the popup icon to new sizes using updatePopupIcon().
+     *
+     * @see resized()
+     **/
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
 
     /**
-     * @brief Gets connected to the geometryChanged signal of m_graphicsWidget.
+     * @brief Gets connected to the geometryChanged signal of the main graphics widget.
      *
      * This is used, because resizeEvent doesn't get called if the applet is iconified and
      * m_graphicsWidget gets resized (only if the popup applet gets resized).
@@ -579,6 +604,7 @@ protected slots:
     /** @brief Updates the tooltip. */
     void updateTooltip() { createTooltip(); };
 
+    /** @brief Opens a configuration dialog for recent/favorite journey searches. */
     void configureJourneySearches();
 
 protected:
@@ -595,19 +621,16 @@ protected:
     /** @brief The popup gets shown or hidden. */
     virtual void popupEvent( bool show );
 
+    /** @brief Mouse wheel rotated on popup icon. */
+    virtual void wheelEvent( QGraphicsSceneWheelEvent* event );
+
     virtual bool sceneEventFilter( QGraphicsItem* watched, QEvent* event );
 
     /** @brief Watching for up/down key presses in m_journeySearch to select stop suggestions. */
     virtual bool eventFilter( QObject* watched, QEvent* event );
 
-    /** @brief Creates all used QAction's. */
+    /** @brief Creates all used actions. */
     void setupActions();
-
-    /** @brief Updates the KMenuAction used for the filters action. */
-    void updateFilterMenu();
-
-    /** @brief Updates the KMenuAction used for the journeys menu. */
-    void updateJourneyActionMenu();
 
     /**
      * @brief Gets an action with string and icon updated to the current settings.
@@ -617,14 +640,17 @@ protected:
      **/
     QAction* updatedAction( const QString &actionName );
 
+    /** @brief Updates the KMenuAction used for the filters action. */
+    void updateFilterMenu();
+
+    /** @brief Updates the KMenuAction used for the journeys menu. */
+    void updateJourneyMenu();
+
     /** @brief Call after creating a new alarm, to update the UI accordingly. */
     void alarmCreated();
 
     /** @brief Generates tooltip data and registers this applet at plasma's TooltipManager. */
     void createTooltip();
-
-    /** @brief Mouse wheel rotated on popup icon. */
-    virtual void wheelEvent( QGraphicsSceneWheelEvent* event );
 
     /**
      * @brief Gets the text to be displayed on the bottom of the timetable.
@@ -737,9 +763,10 @@ private:
     KSelectAction *switchStopAction( QObject *parent,
                                      bool destroyOverlayOnTrigger = false ) const;
 
-    QVariantHash currentServiceProviderData() const {
-        return serviceProviderData( m_settings.currentStopSettings().get<QString>(ServiceProviderSetting) ); };
-    QVariantHash serviceProviderData( const QString &id ) const;
+    QVariantHash currentServiceProviderData() const;;
+    QVariantHash serviceProviderData( const QString &id ) const {
+        return dataEngine( "publictransport" )->query( QString("ServiceProvider %1").arg(id) );
+    };
 
     void setupStateMachine();
     Plasma::Animation *fadeOutOldAppearance();

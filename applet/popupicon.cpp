@@ -165,9 +165,13 @@ DepartureGroup PopupIcon::currentDepartureGroup() const
     if ( m_departureGroups.isEmpty() ) {
         return DepartureGroup();
     } else {
-        int groupIndex = currentDepartureGroupIndex();
-        return groupIndex < 0 ? (DepartureGroup() << m_model->nextAlarmDeparture())
-                : m_departureGroups[ qMin(groupIndex, m_departureGroups.count() - 1) ];
+        const int groupIndex = currentDepartureGroupIndex();
+        if ( groupIndex < 0 ) {
+            return m_model->hasAlarms() ? DepartureGroup() << m_model->nextAlarmDeparture()
+                                        : DepartureGroup();
+        } else {
+            return m_departureGroups[ qMin(groupIndex, m_departureGroups.count() - 1) ];
+        }
     }
 }
 

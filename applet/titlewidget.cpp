@@ -151,12 +151,11 @@ void TitleWidget::setTitleType( TitleType titleType,
 
             // Add widgets
             addJourneySearchWidgets();
-            Plasma::LineEdit *journeySearchLine = castedWidget<Plasma::LineEdit>(WidgetJourneySearchLine);
+            Plasma::LineEdit *journeySearchLine =
+                    castedWidget<Plasma::LineEdit>(WidgetJourneySearchLine);
             journeySearchLine->setEnabled( true );
             journeySearchLine->setFocus();
             journeySearchLine->nativeWidget()->selectAll();
-
-//             updateJourneySearchesMenu();
             break;
         }
         case ShowSearchJourneyLineEditDisabled:
