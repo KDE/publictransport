@@ -137,4 +137,4 @@ void AccessorInfoDialog::openInTimetableMate()
     }
 }
 
-}; // namespace Timetable
+} // namespace Timetable

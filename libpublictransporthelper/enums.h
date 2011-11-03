@@ -265,7 +265,7 @@ inline QDebug& operator<<( QDebug debug, FilterType filterType )
         default:
             return debug << "Unknown filter type: " << filterType;
     }
-};
+}
 
 inline QDebug& operator<<( QDebug debug, FilterVariant filterVariant )
 {
@@ -295,8 +295,8 @@ inline QDebug& operator<<( QDebug debug, FilterVariant filterVariant )
         default:
             return debug << "Unknown filter variant: " << filterVariant;
     }
-};
+}
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // Multiple inclusion guard

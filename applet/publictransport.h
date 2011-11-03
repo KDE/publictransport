@@ -64,7 +64,7 @@ class QGraphicsSceneWheelEvent;
 
 namespace Plasma {
     class Label;
-};
+}
 
 /** @brief Simple pixmap graphics widgets (QGraphicsPixmapItem isn't a QGraphicsWidget). */
 class GraphicsPixmapWidget : public QGraphicsWidget {

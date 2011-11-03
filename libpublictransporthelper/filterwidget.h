@@ -540,6 +540,6 @@ protected:
     virtual QWidget *createSeparator( const QString &separatorText = QString() );
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // Multiple inclusion guard

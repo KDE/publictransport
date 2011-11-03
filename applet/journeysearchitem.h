@@ -110,9 +110,9 @@ private:
 };
 
 /** @brief Enable usage of JourneySearchItem's in QVariant's. */
-Q_DECLARE_METATYPE( JourneySearchItem );
+Q_DECLARE_METATYPE( JourneySearchItem )
 
 /** @brief Enable usage of QList's of JourneySearchItem's in QVariant's. */
-Q_DECLARE_METATYPE( QList<JourneySearchItem> );
+Q_DECLARE_METATYPE( QList<JourneySearchItem> )
 
 #endif // Multiple inclusion guard

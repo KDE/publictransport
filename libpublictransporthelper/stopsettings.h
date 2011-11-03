@@ -248,7 +248,7 @@ public:
     template< class Type >
     inline Type get( int setting ) const {
         return operator[]( setting ).value<Type>();
-    };
+    }
 
     /**
      * @brief Overloaded version of @ref get(int) to also accept
@@ -257,7 +257,7 @@ public:
     template< class Type >
     inline Type get( StopSetting setting ) const {
         return get<Type>( static_cast<int>(setting) );
-    };
+    }
 
     /**
      * @brief Sets the value of the given @p setting to @p value.
@@ -541,11 +541,11 @@ QDebug &operator <<(QDebug debug, Stop stop);
 QDebug &operator <<(QDebug debug, StopList stopList);
 QDebug &operator <<(QDebug debug, StopSetting setting);
 
-}; // namespace Timetable
+} // namespace Timetable
 
-Q_DECLARE_METATYPE( Timetable::Stop );
-Q_DECLARE_METATYPE( Timetable::StopList );
-Q_DECLARE_METATYPE( Timetable::StopSettings );
-Q_DECLARE_METATYPE( Timetable::StopSettingsList );
+Q_DECLARE_METATYPE( Timetable::Stop )
+Q_DECLARE_METATYPE( Timetable::StopList )
+Q_DECLARE_METATYPE( Timetable::StopSettings )
+Q_DECLARE_METATYPE( Timetable::StopSettingsList )
 
 #endif // Multiple inclusion guard

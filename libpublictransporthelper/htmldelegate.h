@@ -56,7 +56,7 @@ public:
         DontDrawBackground = 0x0002, /**< Don't draw a background, just leave it transparent. */
         AlignTextToDecoration = 0x0004 /**< Aligns text always as if a decoration would be drawn. */
     };
-    Q_DECLARE_FLAGS( Options, Option );
+    Q_DECLARE_FLAGS( Options, Option )
 
     /**
      * @brief Creates a new HTML delgate with the given @p options.
@@ -112,7 +112,7 @@ private:
     Q_DECLARE_PRIVATE( HtmlDelegate )
     Q_DISABLE_COPY( HtmlDelegate )
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS( HtmlDelegate::Options );
+Q_DECLARE_OPERATORS_FOR_FLAGS( HtmlDelegate::Options )
 
 
 /**

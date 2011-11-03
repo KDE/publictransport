@@ -71,7 +71,7 @@ public:
     template< class WidgetType >
     WidgetType contentWidget() const {
         return qobject_cast< WidgetType >( contentWidget() );
-    };
+    }
 
     /**
      * @brief Replaces the current content widget with @p contentWidget.
@@ -523,7 +523,7 @@ protected:
     template< class WidgetType >
     inline WidgetType *widget( int index ) const {
         return dynamicWidget( index )->contentWidget< WidgetType >();
-    };
+    }
 
     /** @brief Gets the content widgets of all dynamic widgets casted to WidgetType. */
     template< class WidgetType >
@@ -533,7 +533,7 @@ protected:
             widgetList << dynamicWidget->contentWidget< WidgetType >();
         }
         return widgetList;
-    };
+    }
 
     /** @brief Gets the content widget that currently has focus, or NULL if none has focus. */
     template< class WidgetType >
@@ -544,7 +544,7 @@ protected:
             }
         }
         return NULL; // No content widget currently has focus
-    };
+    }
 
 private:
     Q_DECLARE_PRIVATE( AbstractDynamicWidgetContainer )

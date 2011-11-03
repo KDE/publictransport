@@ -222,4 +222,4 @@ void StopLineEditList::setServiceProvider(const QString& serviceProvider)
     }
 }
 
-}; // namespace Timetable
+} // namespace Timetable

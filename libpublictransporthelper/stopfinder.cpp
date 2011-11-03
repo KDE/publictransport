@@ -326,4 +326,4 @@ StopFinder::Mode StopFinder::mode() const {
     return d->mode;
 }
 
-}; // namespace Timetable
+} // namespace Timetable

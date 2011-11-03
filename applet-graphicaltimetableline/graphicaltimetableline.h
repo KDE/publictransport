@@ -40,11 +40,11 @@ class CheckCombobox;
 namespace Plasma {
     class ToolButton;
     class Label;
-};
+}
 namespace Timetable {
     class StopWidget;
     class VehicleTypeModel;
-};
+}
 using namespace Timetable;
 
 /**

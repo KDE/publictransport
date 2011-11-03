@@ -67,7 +67,7 @@ public:
             /**< All jobs, can be used with @ref abortJobs to abort all
             * jobs at once. */
     };
-    Q_DECLARE_FLAGS( JobTypes, JobType );
+    Q_DECLARE_FLAGS( JobTypes, JobType )
 
     DepartureProcessor( QObject *parent = 0 );
     ~DepartureProcessor();
@@ -310,7 +310,7 @@ private:
     QMutex m_mutex;
     QWaitCondition m_cond;
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS( DepartureProcessor::JobTypes );
+Q_DECLARE_OPERATORS_FOR_FLAGS( DepartureProcessor::JobTypes )
 
 QDebug &operator <<( QDebug debug, DepartureProcessor::JobType jobType );
 

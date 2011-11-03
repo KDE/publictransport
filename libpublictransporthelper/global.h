@@ -63,7 +63,7 @@ public:
     static QColor textColorDelayed();
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 /** @mainpage
  *

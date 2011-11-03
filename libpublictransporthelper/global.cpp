@@ -301,4 +301,4 @@ QColor Global::textColorDelayed()
     return KColorUtils::tint( color, Qt::red, 0.5 );
 }
 
-}; // namespace Timetable
+} // namespace Timetable

@@ -165,6 +165,6 @@ private:
     Q_DISABLE_COPY( ServiceProviderModel )
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // SERVICEPROVIDERMODEL_H

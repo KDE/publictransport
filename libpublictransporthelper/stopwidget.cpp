@@ -510,4 +510,4 @@ int StopListWidget::currentStopSettingIndex() const {
     return d->currentStopIndex;
 }
 
-}; // namespace Timetable
+} // namespace Timetable

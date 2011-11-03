@@ -68,7 +68,7 @@ enum TitleType {
     ShowSearchJourneyLineEdit = 1, /**< Shows a line edit for journey search requests */
     ShowSearchJourneyLineEditDisabled = 2, /**< Shows a disabled line edit for journey search requests */
     ShowJourneyListTitle = 3, /**< Shows an icon, a title and additional information */
-    ShowIntermediateDepartureListTitle = 4, /**< Shows a back icon, the stop name and additional information */
+    ShowIntermediateDepartureListTitle = 4 /**< Shows a back icon, the stop name and additional information */
 };
 
 /** @brief A set of flags for route stops in the DepartureModel/JourneyModel. */
@@ -77,8 +77,8 @@ enum RouteItemFlag {
     RouteItemHighlighted    = 0x0001, /**< The stop item is currently highlighted. */
     RouteItemHomeStop       = 0x0002  /**< The stop item is the currently selected home stop. */
 };
-Q_DECLARE_FLAGS( RouteItemFlags, RouteItemFlag );
-Q_DECLARE_OPERATORS_FOR_FLAGS( RouteItemFlags );
+Q_DECLARE_FLAGS( RouteItemFlags, RouteItemFlag )
+Q_DECLARE_OPERATORS_FOR_FLAGS( RouteItemFlags )
 
 /** @brief A set of flags for stops in a route. */
 enum RouteStopFlag {
@@ -93,8 +93,8 @@ enum RouteStopFlag {
     RouteStopIsHomeStop     = 0x0008, /**< The route stop is the currently selected home stop. */
     RouteStopIsHighlighted  = 0x0010  /**< The route stop is the currently highlighted stop. */
 };
-Q_DECLARE_FLAGS( RouteStopFlags, RouteStopFlag );
-Q_DECLARE_OPERATORS_FOR_FLAGS( RouteStopFlags );
+Q_DECLARE_FLAGS( RouteStopFlags, RouteStopFlag )
+Q_DECLARE_OPERATORS_FOR_FLAGS( RouteStopFlags )
 
 /** @brief Different states of alarm. */
 enum AlarmState {

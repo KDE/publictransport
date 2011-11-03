@@ -288,4 +288,4 @@ QModelIndex LocationModel::indexOfLocation( const QString& countryCode )
     return QModelIndex();
 }
 
-}; // namespace Timetable
+} // namespace Timetable
