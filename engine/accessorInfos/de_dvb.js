@@ -8,18 +8,19 @@ function usedTimetableInformations() {
 function parseTimetable( json ) {
     // Initialize regular expressions (compile them only once)
     var departureRegExp = /\["([^"]*)","([^"]*)","([^"]*)"\]/ig;
-	
+
     // Go through all departures
 	var now = new Date();
     while ( (departure = departureRegExp.exec(json)) ) {
 		var minutes = parseInt( departure[3] );
-		var timeString = helper.addMinsToTime( now.getHours() + ":" + now.getMinutes(), minutes );
+		var timeString = helper.addMinsToTime( now.getHours() + ":" + now.getMinutes(), minutes,
+                                               "h:mm" );
 		var time = helper.matchTime( timeString, "hh:mm" );
 		if ( time.length != 2 ) {
 			helper.error("Unexpected string in time column!", departure[3]);
-			continue; // Unexpected string in time column
+			continue;
 		}
-		
+
 		var vehicleType = "Unknown";
 		var line = departure[1];
 		if ( line[0] == "S" ) {
@@ -46,7 +47,7 @@ function parsePossibleStops( json ) {
     // Initialize regular expressions (compile them only once)
 	var stopRangeRegExp = /\[\[\["[^"]*"\]\],\[(.*)\]\]$/i;
     var stopRegExp = /\["([^"]*)","[^"]*","([^"]*)"\]/ig;
-	
+
 	// Get range of all stops
 	var range = stopRangeRegExp.exec( json );
 	if ( range == null ) {
@@ -54,7 +55,7 @@ function parsePossibleStops( json ) {
 		return false;
 	}
 	range = range[1];
-	
+
     // Go through all stops
     while ( (stop = stopRegExp.exec(range)) ) {
 		var stopName = stop[1];
