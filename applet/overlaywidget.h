@@ -24,7 +24,7 @@
  * @brief This file contains the OverlayWidget class.
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#include <QGraphicsWidget>
+#include <QGraphicsWidget> // Base class
 
 #if QT_VERSION >= 0x040600
 class QGraphicsBlurEffect;

@@ -263,4 +263,4 @@ void ServiceProviderModel::dataUpdated( const QString& sourceName, const Plasma:
     }
 }
 
-}; // namespace Timetable
+} // namespace Timetable

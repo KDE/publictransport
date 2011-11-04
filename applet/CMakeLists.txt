@@ -23,13 +23,19 @@ set( publictransport_SRCS
     journeysearchsuggestionwidget.cpp
     journeysearchparser.cpp
     journeysearchlineedit.cpp
+    journeysearchitem.cpp
+    journeysearchmodel.cpp
+    journeysearchlistview.cpp
     overlaywidget.cpp
     global.cpp
     settings.cpp
+    settingsio.cpp
+    settingsui.cpp
     datasourcetester.cpp
     timetablewidget.cpp
     routegraphicsitem.cpp
-    stopaction.cpp )
+    stopaction.cpp
+    colorgroups.cpp )
 
 kde4_add_ui_files( publictransport_SRCS
     publicTransportConfig.ui

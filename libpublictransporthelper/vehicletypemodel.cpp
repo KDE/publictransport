@@ -25,7 +25,7 @@ using namespace Timetable;
 struct VehicleTypeItem {
     VehicleType vehicleType;
     bool checked;
-    
+
     VehicleTypeItem( VehicleType vehicleType, bool checked = false ) {
         this->vehicleType = vehicleType;
         this->checked = checked;
@@ -37,11 +37,11 @@ class VehicleTypeModelPrivate
 public:
     VehicleTypeModelPrivate() {
     };
-    
+
     ~VehicleTypeModelPrivate() {
         qDeleteAll( items );
     };
-    
+
     void addItems() {
         items << new VehicleTypeItem( Unknown );
         items << new VehicleTypeItem( Tram );
@@ -59,13 +59,13 @@ public:
         items << new VehicleTypeItem( Plane );
         items << new VehicleTypeItem( Feet );
     };
-    
+
     void checkAll( bool check = true ) {
         foreach ( VehicleTypeItem *item, items ) {
             item->checked = check;
         }
     };
-    
+
     void checkVehicleTypes( GeneralVehicleType generalVehicleType, bool check = true ) {
         foreach ( VehicleTypeItem *item, items ) {
             if ( Global::generalVehicleType(item->vehicleType) == generalVehicleType ) {
@@ -73,7 +73,7 @@ public:
             }
         }
     };
-    
+
     void checkVehicleTypes( const QList< VehicleType > &vehicleTypes, bool check ) {
         foreach ( VehicleTypeItem *item, items ) {
             if ( vehicleTypes.contains(item->vehicleType) ) {
@@ -81,7 +81,7 @@ public:
             }
         }
     };
-    
+
     QList< VehicleType > checkedVehicleTypes() const {
         QList< VehicleType > vehicleTypes;
         foreach ( VehicleTypeItem *item, items ) {
@@ -95,10 +95,10 @@ public:
     QList<VehicleTypeItem*> items;
 };
 
-VehicleTypeModel::VehicleTypeModel( QObject* parent ) 
+VehicleTypeModel::VehicleTypeModel( QObject* parent )
         : QAbstractListModel( parent ), d_ptr(new VehicleTypeModelPrivate())
 {
-    beginInsertRows( QModelIndex(), 0, 14 ); // 
+    beginInsertRows( QModelIndex(), 0, 14 );
     d_ptr->addItems();
     endInsertRows();
 }
@@ -111,7 +111,7 @@ VehicleTypeModel::~VehicleTypeModel()
 QModelIndex VehicleTypeModel::index( int row, int column, const QModelIndex& parent ) const
 {
     Q_D( const VehicleTypeModel );
-    
+
     if ( parent.isValid() || !hasIndex(row, column, QModelIndex()) ) {
         return QModelIndex();
     } else {

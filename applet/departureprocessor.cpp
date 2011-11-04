@@ -78,7 +78,7 @@ void DepartureProcessor::setFilterSettings( const FilterSettingsList &filterSett
     }
 }
 
-void DepartureProcessor::setColorGroupSettings( const ColorGroupSettingsList& colorGroupSettings )
+void DepartureProcessor::setColorGroups( const ColorGroupSettingsList& colorGroupSettings )
 {
     QMutexLocker locker( &m_mutex );
     m_colorGroupSettings = colorGroupSettings;
@@ -227,7 +227,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     m_mutex.unlock();
 
     emit beginDepartureProcessing( sourceName );
-    
+
     QUrl url;
     QDateTime updated;
     QList< DepartureInfo > departureInfos/*, alarmDepartures*/;
@@ -280,9 +280,9 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
              || colorGroupSettings.filterOut(departureInfo) )
         {
             departureInfo.setFilteredOut( true );
-//          kDebug() << "Filter out" << filterSettings.filterOut(departureInfo)
-//              << Global::vehicleTypeToString(departureInfo.vehicleType()) << departureInfo.lineString()
-//              << departureInfo.target();
+//             kDebug() << "Filter out" << filterSettings.filterOut(departureInfo)
+//                 << Global::vehicleTypeToString(departureInfo.vehicleType()) << departureInfo.lineString()
+//                 << departureInfo.target();
         }
         departureInfos << departureInfo;
 

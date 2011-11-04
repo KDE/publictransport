@@ -64,6 +64,9 @@ public:
      **/
     explicit TimetableAccessorOnline( TimetableAccessorInfo *info, QObject *parent = 0 );
 
+    /** @brief Destructor. */
+    virtual ~TimetableAccessorOnline();
+
     /**
      * @brief Requests a list of departures/arrivals.
      *

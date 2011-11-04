@@ -318,9 +318,7 @@ protected:
      * @brief Sets session key data.
      *
      * @param sessionKeyUrl An url to a document containing the session key.
-     *
      * @param sessionKeyPlace The place where to put the session key in requests.
-     *
      * @param data Data to POST with requests.
      **/
     inline void setSessionKeyData( const QString &sessionKeyUrl, SessionKeyPlace sessionKeyPlace,
@@ -342,9 +340,7 @@ protected:
      * @brief Sets the author of this accessor. You can also set the email of the author.
      *
      * @param author The author of this accessor.
-     *
      * @param shortAuthor An abbreviation of the authors name.
-     *
      * @param email The email address of the author.
      **/
     void setAuthor( const QString &author, const QString &shortAuthor, const QString &email = QString() );

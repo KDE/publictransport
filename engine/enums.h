@@ -61,7 +61,7 @@ struct GlobalTimetableInfo {
  * @brief Error codes.
  **/
 enum ErrorCode {
-    NoError = 0, /**< There were no error. */
+    NoError = 0, /**< There was no error. */
 
     ErrorDownloadFailed = 1, /**< Download error occurred. */
     ErrorParsingFailed = 2, /**< Parsing downloaded data failed. */
@@ -210,7 +210,7 @@ enum VehicleType {
 
     Plane = 200, /**< An aeroplane. */
 
-    Spacecraft = 300, /**< A spacecraft. */ // TODO: add to applet
+    Spacecraft = 300 /**< A spacecraft. */ // TODO: add to applet
 };
 
 /** @brief The type of services for a public transport line. */
@@ -220,7 +220,7 @@ enum LineService {
     NightLine = 0x01, /**< The public transport line is a night line. */
     ExpressLine = 0x02 /**< The public transport line is an express line. */
 };
-// Q_DECLARE_FLAGS( LineServices, LineService ); // Gives a compiler error here.. but not in departureinfo.h
+// Q_DECLARE_FLAGS( LineServices, LineService ); // Gives a compiler error here.. but not in departureinfo.h TODO #include <QMetaType>
 
 /** @class Global
   * @brief Contains global static methods. */
@@ -367,6 +367,6 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
     default:
         return debug << "TimetableInformation unknown" << static_cast<int>(timetableInformation);
     }
-};
+}
 
 #endif // ENUMS_HEADER

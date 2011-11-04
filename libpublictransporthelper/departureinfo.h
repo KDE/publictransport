@@ -424,9 +424,9 @@ inline QDebug& operator<<( QDebug debug, const JourneyInfo& journeyInfo )
             .arg( journeyInfo.departure().toString() );
 }
 
-}; // namespace Timetable
+} // namespace Timetable
 
-Q_DECLARE_METATYPE( Timetable::DepartureInfo );
-Q_DECLARE_METATYPE( Timetable::JourneyInfo );
+Q_DECLARE_METATYPE( Timetable::DepartureInfo )
+Q_DECLARE_METATYPE( Timetable::JourneyInfo )
 
 #endif // DEPARTUREINFO_HEADER

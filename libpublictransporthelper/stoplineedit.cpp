@@ -844,4 +844,4 @@ void StopLineEditList::updateToDataEngineState()
     }
 }
 
-}; // namespace Timetable
+} // namespace Timetable

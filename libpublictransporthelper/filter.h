@@ -188,7 +188,7 @@ struct PUBLICTRANSPORTHELPER_EXPORT FilterSettings {
 bool PUBLICTRANSPORTHELPER_EXPORT operator ==( const FilterSettings &l, const FilterSettings &r );
 inline bool PUBLICTRANSPORTHELPER_EXPORT operator !=( const FilterSettings &l, const FilterSettings &r ) {
     return !(l == r);
-};
+}
 
 /**
  * @brief A QList of FilterSettings with some convenience methods.
@@ -228,7 +228,7 @@ inline QDebug& operator<<(QDebug debug, const Constraint& constraint)
 {
     return debug << "Constraint, type " << constraint.type << ", variant " << constraint.variant;
 //                  << ", value " << constraint.value;
-};
+}
 
 inline QDebug& operator<<(QDebug debug, const Filter& filter)
 {
@@ -237,7 +237,7 @@ inline QDebug& operator<<(QDebug debug, const Filter& filter)
         debug << ' ' << filter[i];
     }
     return debug << ' ' << filter.last();
-};
+}
 
 inline QDebug& operator<<(QDebug debug, const FilterSettings& filterSettings)
 {
@@ -249,7 +249,7 @@ inline QDebug& operator<<(QDebug debug, const FilterSettings& filterSettings)
         debug << ' ' << filterSettings.filters[i] << ", ";
     }
     return debug << ' ' << filterSettings.filters.count() << filterSettings.filters.last();
-};
+}
 
 inline QDebug& operator<<(QDebug debug, const FilterSettingsList& filterSettingsList)
 {
@@ -258,13 +258,13 @@ inline QDebug& operator<<(QDebug debug, const FilterSettingsList& filterSettings
         debug << ' ' << filterSettingsList[i];
     }
     return debug << ' ' << filterSettingsList.last();
-};
+}
 
-}; // namespace Timetable
+} // namespace Timetable
 
-Q_DECLARE_METATYPE( Timetable::Constraint );
-Q_DECLARE_METATYPE( Timetable::Filter );
-Q_DECLARE_METATYPE( Timetable::FilterSettings );
-Q_DECLARE_METATYPE( Timetable::FilterSettingsList );
+Q_DECLARE_METATYPE( Timetable::Constraint )
+Q_DECLARE_METATYPE( Timetable::Filter )
+Q_DECLARE_METATYPE( Timetable::FilterSettings )
+Q_DECLARE_METATYPE( Timetable::FilterSettingsList )
 
 #endif // Multiple inclusion guard

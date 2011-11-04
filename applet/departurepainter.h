@@ -25,23 +25,18 @@
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include <enums.h>
-#include <QPainter>
-
-class KPixmapCache;
-template<class QDateTime, class QList>
-class QMap;
-
-template<class DepartureItem>
-class QList;
-
-namespace Plasma {
-    class Svg;
-}
 
 class DepartureModel;
 class DepartureItem;
 class PopupIcon;
+class KPixmapCache;
+namespace Plasma {
+    class Svg;
+}
 class QPixmap;
+class QPainter;
+class QSize;
+class QRectF;
 
 using namespace Timetable;
 
@@ -63,7 +58,7 @@ public:
                 * Useful to draw custom constent like the transport line string, eg. "N1". */
         MonochromeIcon   = 0x2 /**< Use monochrome version of the icon. */
     };
-    Q_DECLARE_FLAGS( VehicleIconFlags, VehicleIconFlag );
+    Q_DECLARE_FLAGS( VehicleIconFlags, VehicleIconFlag )
 
     /**
      * @brief Flags for drawing vehicle icons.
@@ -78,7 +73,7 @@ public:
 
         DefaultVehicleIconDrawFlags = DrawMonochromeIcon | DrawTransportLine | DrawTimeGraphics
     };
-    Q_DECLARE_FLAGS( VehicleIconDrawFlags, VehicleIconDrawFlag );
+    Q_DECLARE_FLAGS( VehicleIconDrawFlags, VehicleIconDrawFlag )
 
     DeparturePainter( QObject *parent = 0 );
     virtual ~DeparturePainter();
@@ -134,7 +129,7 @@ private:
     KPixmapCache *m_pixmapCache;
     Plasma::Svg *m_svg;
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS( DeparturePainter::VehicleIconFlags );
-Q_DECLARE_OPERATORS_FOR_FLAGS( DeparturePainter::VehicleIconDrawFlags );
+Q_DECLARE_OPERATORS_FOR_FLAGS( DeparturePainter::VehicleIconFlags )
+Q_DECLARE_OPERATORS_FOR_FLAGS( DeparturePainter::VehicleIconDrawFlags )
 
 #endif // DEPARTUREPAINTER_HEADER

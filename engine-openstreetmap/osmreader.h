@@ -82,6 +82,6 @@ private:
     ResultFlags m_resultFlags;
     QString m_sourceUrl;
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS( OsmReader::ResultFlags );
+Q_DECLARE_OPERATORS_FOR_FLAGS( OsmReader::ResultFlags )
 
 #endif // OSMREADER_HEADER

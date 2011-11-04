@@ -329,9 +329,7 @@ public:
             }
             stopList->setWhatsThis( i18nc("@info:whatsthis",
                     "<para>All departures/arrivals for these stops get <emphasis strong='1'>"
-                    "displayed combined</emphasis> in the applet.</para>"
-                    "<para>To add a stop that doesn't get combined with others use the "
-                    "<interface>Add Stop</interface> button of the main settings dialog.</para>") );
+                    "displayed combined</emphasis>.</para>") );
 
             QVBoxLayout *l = new QVBoxLayout( uiStop.stops );
             l->setContentsMargins( 0, 0, 0, 0 );
@@ -554,7 +552,7 @@ public:
             kDebug() << "No widget found for" << static_cast<StopSetting>(setting);
         }
         return widget;
-    };
+    }
 
     // Creates the details widget if it's not already created and returns it's layout
     QFormLayout *createDetailsWidget() {
@@ -1059,10 +1057,10 @@ void StopSettingsDialog::stopFinderGeolocationData( const QString& countryCode,
     d->nearStopsDialog = new NearStopsDialog( accuracy > 10000
             ? i18nc("@info", "These stops <emphasis strong='1'>may</emphasis> be near you, "
                              "but your position couldn't be determined exactly (city: %1, "
-                             "country: %2). Choose one of them or cancel.",
+                             "country: %2).",
                              city, KGlobal::locale()->countryCodeToName(countryCode))
             : i18nc("@info", "These stops have been found to be near you (city: %1, "
-                             "country: %2). Choose one of them or cancel.",
+                             "country: %2).",
                              city, KGlobal::locale()->countryCodeToName(countryCode)),
             this );
     d->nearStopsDialog->setModal( true );
@@ -1372,19 +1370,21 @@ void StopSettingsDialog::installServiceProviderClicked()
         reader.setContentHandler( handler );
         bool ok = reader.parse( source );
         if ( !ok || handler->scriptFile().isEmpty() ) {
-            int result = KMessageBox::warningContinueCancel( this, i18nc("@info",
-                    "The XML file couldn't be read to look for an associated script file "
-                    "or the script-tag is empty (wrong XML file). "
-                    "If the accessor uses a script file for parsing it may not work.") );
+            int result = KMessageBox::warningContinueCancel( this,
+                    i18nc("@info This is a warning message, shown after the user has chosen an "
+                    "XML file for installation",
+                    "Failed to read the filename of the associated script file from the XML file "
+                    "or the script-tag is empty (wrong XML file).") );
             if ( result == KMessageBox::Cancel ) {
                 delete handler;
                 return;
             }
         } else if ( !QFile::exists(sourceDir + handler->scriptFile()) ) {
-            int result = KMessageBox::warningContinueCancel( this, i18nc("@info",
+            int result = KMessageBox::warningContinueCancel( this,
+                    i18nc("@info This is a warning message, shown after the user has chosen an "
+                    "XML file for installation",
                     "The script file referenced in the XML file couldn't be found: "
-                    "<filename>%1</filename>. "
-                    "If the accessor uses a script file for parsing it may not work.",
+                    "<filename>%1</filename>.",
                     sourceDir + handler->scriptFile()) );
             if ( result == KMessageBox::Cancel ) {
                 delete handler;
@@ -1470,4 +1470,4 @@ QDebug& operator<<( QDebug debug, StopSettingsDialog::Option option )
     }
 }
 
-}; // namespace Timetable
+} // namespace Timetable

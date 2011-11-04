@@ -68,9 +68,9 @@ private:
 };
 
 /**
- * @brief Finds stops near the users current position using three data engines 
+ * @brief Finds stops near the users current position using three data engines
  *   (geolocation, openstreetmap and publictransport).
- * 
+ *
  * Use @ref start to start searching.
  **/
 class PUBLICTRANSPORTHELPER_EXPORT StopFinder : public QObject {
@@ -107,14 +107,14 @@ public:
 
     /**
      * @brief Start to determine a list of stops near the users current position.
-     * 
+     *
      * It first queries the <em>geolocation</em> data engine for the users current position.
      * That position is then send to the <em>openstreetmap</em> data engine to get a list of
      * stop names near that position. Once new stop names arrive from the <em>openstreetmap</em>
-     * data engine, they are validated/corrected by the <em>publictransport</em> data engine, 
+     * data engine, they are validated/corrected by the <em>publictransport</em> data engine,
      * ie. the first suggested stop name for the stop name from openstreetmap gets reported
      * using @ref stopsFound.
-     * 
+     *
      * If there is an error in this process, @ref error is emitted.
      **/
     void start();
@@ -126,7 +126,6 @@ Q_SIGNALS:
      * @brief An @p error occurred.
      *
      * @param error The type of the error.
-     * 
      * @param errorMessage An error message.
      **/
     void error( StopFinder::Error error, const QString &errorMessage );
@@ -135,10 +134,8 @@ Q_SIGNALS:
      * @brief A list of @p stops has been found.
      *
      * @param stops A list of stop names.
-     * 
      * @param stopIDs A list of stop IDs for the found @p stops. May be empty, if stop IDs aren't
      *   available for the used service provider.
-     * 
      * @param serviceProviderID The ID of the used service provider.
      **/
     void stopsFound( const QStringList &stops, const QStringList &stopIDs,
@@ -159,6 +156,6 @@ private:
     Q_DISABLE_COPY( StopFinder )
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // Multiple inclusion guard

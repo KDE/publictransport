@@ -1,0 +1,54 @@
+Public Transport
+----------------
+
+You need KDE 4.6
+
+-- Build instructions --
+
+(you are in the main directory, ie. where this INSTALL file is)
+> mkdir build
+> cd build
+> cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` ..
+> make
+> make install
+
+You might need to run kbuildsycoca4
+in order to get the .desktop file recognized.
+
+
+-- Options for CMake --
+
+The commands shown above compile and install default components. To build everything use
+> cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` -DINSTALL_ALL=ON ..
+
+Components can be individually enabled/disabled, eg.
+> cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` -DINSTALL_TIMETABLEMATE=ON ..
+to build with TimetableMate.
+
+Note: Add "-D" before the option name to the command line, like above.
+    INSTALL_ENGINE_OPENSTREETMAP (default: ON)
+            Only useful if you have GPS hardware.
+            It can then be used to get stops near your current position
+    INSTALL_APPLET (default: ON)
+            A plasma applet showing a departure/arrival board or journeys.
+            Departures can be filtered and alarms can be set.
+    INSTALL_APPLET_FLIGHTS (default: OFF)
+            A simple applet that shows flight departures. It uses a single service provider,
+            that's also available for the other applets/runner.
+    INSTALL_APPLET_GRAPHICALTIMETABLELINE (default: ON)
+            Shows a street with vehicles moving on it, representing the timetable.
+    INSTALL_RUNNER (default: ON)
+            Can be used to quickly get departures/arrivals or journeys.
+    INSTALL_TIMETABLEMATE (default: OFF)
+            A tool/little IDE to add support for new service providers.
+            Offers code completion for scripts and helps
+            when checking the correct behaviour of the script.
+    INSTALL_ICONS (default: ON)
+            Vehicle type icons and other icons used by PublicTransport components.
+    INSTALL_ALL (default: OFF)
+            Install everything (except for unit tests). This overrides other options.
+    BUILD_TESTS (default: OFF)
+            Turn this option on to build unit tests.
+
+CMake options can also be toggled using a CMake GUI program
+or by running cmake in interactive mode (cmake -i ..).

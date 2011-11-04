@@ -194,7 +194,7 @@ public:
 
         DefaultOptions = SimpleStopSelection /**< Default options. */
     };
-    Q_DECLARE_FLAGS(Options, Option);
+    Q_DECLARE_FLAGS(Options, Option)
 
     /**
      * @brief Creates a new stop settings dialog.
@@ -530,10 +530,10 @@ private:
     Q_DECLARE_PRIVATE( StopSettingsDialog )
     Q_DISABLE_COPY( StopSettingsDialog )
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS(StopSettingsDialog::Options);
+Q_DECLARE_OPERATORS_FOR_FLAGS(StopSettingsDialog::Options)
 
 QDebug &operator <<( QDebug debug, StopSettingsDialog::Option option );
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // Multiple inclusion guard

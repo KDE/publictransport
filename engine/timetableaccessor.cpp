@@ -17,8 +17,10 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-// Own includes
+// Header
 #include "timetableaccessor.h"
+
+// Own includes
 #include "timetableaccessor_info.h"
 #include "timetableaccessor_generaltransitfeed.h"
 #include "timetableaccessor_script.h"
@@ -32,6 +34,7 @@
 #include <KStandardDirs>
 #include <KLocale>
 #include <KDebug>
+#include <kio/job.h>
 
 // Qt includes
 #include <QTextCodec>
@@ -383,7 +386,7 @@ QStringList TimetableAccessor::features() const
 {
     QStringList list;
 
-    if ( m_info->departureRawUrl().contains( "{dataType}" ) ) {
+    if ( m_info->departureRawUrl().contains(QLatin1String("{dataType}")) ) {
         list << "Arrivals";
     }
 

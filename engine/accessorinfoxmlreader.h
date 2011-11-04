@@ -24,9 +24,11 @@
 #ifndef ACCESSORINFOXMLREADER_HEADER
 #define ACCESSORINFOXMLREADER_HEADER
 
+// Own includes
 #include "enums.h"
 
-#include <QXmlStreamReader>
+// Qt includes
+#include <QXmlStreamReader> // Base class
 #include <QHash>
 
 class TimetableAccessor;
@@ -50,7 +52,7 @@ struct ChangelogEntry {
  **/
 class AccessorInfoXmlReader : public QXmlStreamReader {
     friend class TimetableAccessorInfo; // Because AccessorInfoXmlReader needs to set values
-    // in TimetableAccessorInfo when reading xml files
+            // in TimetableAccessorInfo when reading xml files
 
 public:
     /** @brief Creates a new accessor info xml reader. */

@@ -17,19 +17,22 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "stopwidget.h"
 
+// Own includes
 #include "stopsettings.h"
 #include "stopsettingsdialog.h"
 #include "locationmodel.h"
 #include "serviceprovidermodel.h"
 #include "filter.h"
 
+// KDE+Plasma includes
 #include <Plasma/DataEngineManager>
 #include <KLineEdit>
 #include <KPushButton>
-#include <KDebug>
 
+// Qt includes
 #include <QHBoxLayout>
 #include <QSpacerItem>
 #include <QFormLayout>
@@ -284,11 +287,6 @@ public:
         newStopSettingsBehaviour = StopListWidget::OpenDialogIfNoStopsGiven;
     };
 
-    ~StopListWidgetPrivate() {
-        Plasma::DataEngineManager::self()->unloadEngine("publictransport");
-        Plasma::DataEngineManager::self()->unloadEngine("favicons");
-    };
-
     FilterSettingsList *filterConfigurations;
     int currentStopIndex;
     StopSettingsDialog::Options stopSettingsDialogOptions;
@@ -510,4 +508,4 @@ int StopListWidget::currentStopSettingIndex() const {
     return d->currentStopIndex;
 }
 
-}; // namespace Timetable
+} // namespace Timetable

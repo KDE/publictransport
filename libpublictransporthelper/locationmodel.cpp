@@ -43,13 +43,13 @@ public:
                         + i18ncp("@info/plain", "%1 accessor", "%1 accessors", accessorCount) );
             itemType = LocationItem::Total;
             return;
-        } else if ( countryCode.compare("errornous", Qt::CaseInsensitive) == 0 ) {
+        } else if ( countryCode.compare("erroneous", Qt::CaseInsensitive) == 0 ) {
             icon = KIcon( "edit-delete" );
             formattedText = QString( "<span><b>%1</b></span><br-wrap><small>%2</small>" )
                     .arg( i18ncp("@info/plain", "%1 accessor is erroneous:",
                                 "%1 accessors are erroneous:", accessorCount) )
                     .arg( description );
-            itemType = LocationItem::Errornous;
+            itemType = LocationItem::Erroneous;
             return;
         } else if ( countryCode.compare("international", Qt::CaseInsensitive) == 0 ) {
             text = i18nc("@item:inlistbox Name of the category for international "
@@ -70,7 +70,7 @@ public:
 
             // Get a flag icon for the country
             QString flag( KStandardDirs::locate("locale", QString::fromLatin1("l10n/%1/flag.png")
-                    .arg(countryCode)) ); 
+                    .arg(countryCode)) );
             icon.addFile( flag );
 //             icon = Global::putIconIntoBiggerSizeIcon( icon, QSize(32, 23) );
             itemType = LocationItem::Country;
@@ -89,7 +89,7 @@ public:
     LocationItem::ItemType itemType;
 };
 
-LocationItem::LocationItem( const QString& countryCode, int accessorCount, 
+LocationItem::LocationItem( const QString& countryCode, int accessorCount,
                             const QString &description )
         : d_ptr(new LocationItemPrivate())
 {
@@ -101,31 +101,31 @@ LocationItem::~LocationItem()
     delete d_ptr;
 }
 
-QString LocationItem::countryCode() const 
+QString LocationItem::countryCode() const
 {
     Q_D( const LocationItem );
     return d->countryCode;
 }
 
-QString LocationItem::text() const 
+QString LocationItem::text() const
 {
     Q_D( const LocationItem );
     return d->text;
 }
 
-QString LocationItem::formattedText() const 
+QString LocationItem::formattedText() const
 {
     Q_D( const LocationItem );
     return d->formattedText;
 }
 
-KIcon LocationItem::icon() const 
+KIcon LocationItem::icon() const
 {
     Q_D( const LocationItem );
     return d->icon;
 }
 
-LocationItem::ItemType LocationItem::itemType() const 
+LocationItem::ItemType LocationItem::itemType() const
 {
     Q_D( const LocationItem );
     return d->itemType;
@@ -152,7 +152,7 @@ public:
     QList<LocationItem*> items;
 };
 
-LocationModel::LocationModel( QObject* parent ) 
+LocationModel::LocationModel( QObject* parent )
         : QAbstractListModel( parent ), d_ptr(new LocationModelPrivate())
 {
 }
@@ -165,7 +165,7 @@ LocationModel::~LocationModel()
 void LocationModel::syncWithDataEngine( Plasma::DataEngine* publicTransportEngine )
 {
     Q_D( LocationModel );
-    
+
     // Get locations
     Plasma::DataEngine::Data locationData = publicTransportEngine->query( "Locations" );
     QStringList uniqueCountries = locationData.keys();
@@ -189,17 +189,17 @@ void LocationModel::syncWithDataEngine( Plasma::DataEngine* publicTransportEngin
     // Append item to show all service providers
     d->items << new LocationItem( "showAll", countries.count() );
 
-    // Get errornous service providers (TODO: Get error messages)
-    QStringList errornousAccessorNames = publicTransportEngine
-                                         ->query( "ErrornousServiceProviders" )["names"].toStringList();
-    if ( !errornousAccessorNames.isEmpty() ) {
+    // Get erroneous service providers (TODO: Get error messages)
+    QStringList erroneousAccessorNames = publicTransportEngine
+                                         ->query( "ErroneousServiceProviders" )["names"].toStringList();
+    if ( !erroneousAccessorNames.isEmpty() ) {
         QStringList errorLines;
-        for ( int i = 0; i < errornousAccessorNames.count(); ++i ) {
-            errorLines << QString( "<b>%1</b>" ).arg( errornousAccessorNames[i] );//.arg( errorMessages[i] );
+        for ( int i = 0; i < erroneousAccessorNames.count(); ++i ) {
+            errorLines << QString( "<b>%1</b>" ).arg( erroneousAccessorNames[i] );//.arg( errorMessages[i] );
         }
 
-        d->items << new LocationItem( "errornous", errornousAccessorNames.count(),
-                                     errorLines.join( ",<br-wrap>" ) );
+        d->items << new LocationItem( "erroneous", erroneousAccessorNames.count(),
+                                      errorLines.join( ",<br-wrap>" ) );
     }
 
     qSort( d->items.begin(), d->items.end(), locationGreaterThan );
@@ -227,7 +227,7 @@ QVariant LocationModel::data( const QModelIndex& index, int role ) const
         case LocationItem::Unknown:
             return 4;
         case LocationItem::Total:
-        case LocationItem::Errornous:
+        case LocationItem::Erroneous:
         default:
             return 3;
         }
@@ -246,8 +246,8 @@ Qt::ItemFlags LocationModel::flags( const QModelIndex& index ) const
         return Qt::NoItemFlags;
     }
 
-    if ( item->itemType() == LocationItem::Errornous ) {
-        // The item showing information about errornous service providers isn't selectable
+    if ( item->itemType() == LocationItem::Erroneous ) {
+        // The item showing information about erroneous service providers isn't selectable
         return Qt::ItemIsEnabled;
     } else {
         return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
@@ -288,4 +288,4 @@ QModelIndex LocationModel::indexOfLocation( const QString& countryCode )
     return QModelIndex();
 }
 
-}; // namespace Timetable
+} // namespace Timetable

@@ -25,23 +25,25 @@
 #define PUBLICTRANSPORT_HEADER
 
 // KDE includes
-#include <Plasma/PopupApplet>
+#include <Plasma/PopupApplet> // Base class
+#include <Plasma/DataEngine> // For dataUpdated() slot, Plasma::DataEngine::Data
 #include <KProcess> // For QProcess::ProcessError
+
+// Qt includes
+#include <QPersistentModelIndex> // Member variable
 
 // libpublictransporthelper includes
 #include <departureinfo.h>
 
 // Own includes
-#include "titlewidget.h" // For enum(s) of TitleWidget
 #include "stopaction.h" // For StopAction::Type
-#include "settings.h" // Only for ColorGroupSettingsList, remove here, move the function to GlobalApplet?
+#include "settings.h" // Member variable
 
 class PopupIcon;
-class QParallelAnimationGroup;
-class PublicTransportSettings;
-class OverlayWidget;
-class PublicTransportGraphicsItem;
 class ItemBase;
+class PublicTransportGraphicsItem;
+class TitleWidget;
+class OverlayWidget;
 class TimetableWidget;
 class DepartureModel;
 class DepartureItem;
@@ -51,19 +53,18 @@ class JourneyTimetableWidget;
 class JourneyModel;
 class JourneySearchSuggestionWidget;
 
-class KMenu;
 class KSelectAction;
-class KProcess;
 
 class QStateMachine;
 class QState;
 class QAbstractTransition;
 class QPropertyAnimation;
+class QParallelAnimationGroup;
 class QGraphicsSceneWheelEvent;
 
 namespace Plasma {
     class Label;
-};
+}
 
 /** @brief Simple pixmap graphics widgets (QGraphicsPixmapItem isn't a QGraphicsWidget). */
 class GraphicsPixmapWidget : public QGraphicsWidget {
@@ -84,7 +85,6 @@ private:
 };
 
 /**
- * @class PublicTransport
  * @brief Shows a departure/arrival board for public transport.
  *
  * It uses the "publictransport"-data engine and stores the data using @ref DepartureModel for
@@ -111,7 +111,7 @@ public:
     /** @brief Basic create. */
     PublicTransport( QObject *parent, const QVariantList &args );
 
-    /** @brief Destructor. Saves the state of the header. */
+    /** @brief Destructor. */
     ~PublicTransport();
 
     /** @brief Gets a pointer to either the journey search state or the journeys unsupported state. */
@@ -133,18 +133,6 @@ public:
     /** @brief Checks if the state with the given @p stateName is currently active. */
     bool isStateActive( const QString &stateName ) const;
 
-    /**
-     * @brief Generates a list of color group settings from the given departure @p infoList.
-     *
-     * The given departure @p infoList get grouped by direction. Each group gets a color assigned.
-     **/
-    static ColorGroupSettingsList generateColorGroupSettingsFrom(
-            const QList< DepartureInfo >& infoList,
-            DepartureArrivalListType departureArrivalListType );
-
-    /** @brief Ensures that there is one color group settings list for each stop setting. */
-    void adjustColorGroupSettingsCount();
-
     /** @brief Updates the color groups to the currently shown departures. */
     void updateColorGroupSettings();
 
@@ -152,12 +140,8 @@ signals:
     /** @brief Emitted when the settings have changed. */
     void settingsChanged();
 
-    /** @brief Emitted when an intermediate departure list is requested for
-     * the given @p stopName. */
+    /** @brief Emitted when an intermediate departure list gets requested for @p stopName. */
     void intermediateDepartureListRequested( const QString &stopName );
-
-    /** @brief Emitted when the departure/arrival list should be shown again. */
-    void goBackToDepartureList();
 
     /**
      * @brief Emitted when the journey search is finished.
@@ -169,16 +153,31 @@ signals:
     /** @brief Emitted when the action buttons state was cancelled. */
     void cancelActionButtons();
 
+    /** @brief Emitted when the network connection is lost to go set the corresponding states. */
     void networkConnectionLost();
+
+    /** @brief Emitted when the network is being configured to go set the corresponding states. */
     void networkIsConfiguring();
+
+    /** @brief Emitted when the network connection is activated to go set the corresponding states. */
     void networkIsActivated();
 
+    /** @brief Emitted when new departure data gets requested to go set the corresponding states. */
     void requestedNewDepartureData();
+
+    /** @brief Emitted when valid departure data gets received to go set the corresponding states. */
     void validDepartureDataReceived();
+
+    /** @brief Emitted when invalid departure data gets received to go set the corresponding states. */
     void invalidDepartureDataReceived();
 
+    /** @brief Emitted when new journey data gets requested to go set the corresponding states. */
     void requestedNewJourneyData();
+
+    /** @brief Emitted when valid journey data gets received to go set the corresponding states. */
     void validJourneyDataReceived();
+
+    /** @brief Emitted when invalid journey data gets received to go set the corresponding states. */
     void invalidJourneyDataReceived();
 
 public slots:
@@ -186,24 +185,32 @@ public slots:
     virtual void init();
 
     /**
-     * @brief Clears the current list of stop settings and adds a new one with
-     *   the given @p stopName and the given @p serviceProviderID.
+     * @brief Clears the current list of stop settings and adds a new one.
      *
      * @param serviceProviderID The ID of the service provider to use for the new stop settings.
-     *
      * @param stopName The stop name to use for the new stop settings.
      **/
     void setSettings( const QString &serviceProviderID, const QString &stopName );
 
+    /**
+     * @brief Replaces the current lists of stop and filter settings.
+     *
+     * @param stopSettingsList The new list of stop settings.
+     * @param filterSettings The new list of filter settings.
+     **/
     void setSettings( const StopSettingsList &stopSettingsList,
                       const FilterSettingsList &filterSettings );
 
     /**
-     * @brief Writes the given @p settings and updates the applet accordingly.
+     * @brief Replaces the current settings and updates the applet accordingly.
      *
-     * @param settings The settings to write.
+     * Settings are written using SettingsIO::writeSettings() which also compares them with the
+     * old settings and returns flags for changes (SettingsIO::ChangedFlags). Only parts of the
+     * applet that are affected by changed settings get updated.
+     *
+     * @param settings The new settings.
      **/
-    void writeSettings( const Settings &settings );
+    void setSettings( const Settings &settings );
 
 protected slots:
     /** @brief The geometry of the applet has changed. */
@@ -215,10 +222,15 @@ protected slots:
     /** @brief Settings that require a new data request have been changed. */
     void serviceProviderSettingsChanged();
 
+    /**
+     * @brief Overriden to update the popup icon to new sizes using updatePopupIcon().
+     *
+     * @see resized()
+     **/
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
 
     /**
-     * @brief Gets connected to the geometryChanged signal of m_graphicsWidget.
+     * @brief Gets connected to the geometryChanged signal of the main graphics widget.
      *
      * This is used, because resizeEvent doesn't get called if the applet is iconified and
      * m_graphicsWidget gets resized (only if the popup applet gets resized).
@@ -282,7 +294,6 @@ protected slots:
      * Performs the given @p stopAction.
      *
      * @param stopAction The action that is requested to be performed.
-     *
      * @param stopName The stop name to perform @p stopAction on.
      **/
     void requestStopAction( StopAction::Type stopAction, const QString &stopName  );
@@ -354,6 +365,9 @@ protected slots:
      **/
     void showJourneySearch();
 
+    /** @brief Called when exiting the journey search state. */
+    void exitJourneySearch();
+
     /**
      * @brief Show a message about unsupported journeys.
      *
@@ -372,12 +386,6 @@ protected slots:
 
     void showMainWidget( QGraphicsWidget *mainWidget );
 
-    /** @brief Shows the filter menu. */
-    void showFilterMenu();
-
-    /** @brief Updates the filter menu of the filter action. */
-    KMenu *updateFilterMenu();
-
     void updateDepartureListIcon();
 
     /** @brief Removes stop settings, that were inserted for an intermediate
@@ -391,20 +399,19 @@ protected slots:
     /**
      * @brief Finished editing the journey search line (return pressed,
      *   start search button clicked or stop suggestion double clicked).
+     *
+     * @param text The finished journey search text.
      **/
-    void journeySearchInputFinished();
+    void journeySearchInputFinished( const QString &text );
 
     /**
      * @brief The journey search line has been changed and parsed.
      *
      * This slot gets called by JourneySearchSuggestionWidget.
      * @param stopName The parsed stop name.
-     *
      * @param departure The parsed departure date and time.
-     *
      * @param stopIsTarget Whether or not the parsed stop should be treated as target (true)
      *   or as origin stop (false).
-     *
      * @param timeIsDeparture Whether or not the parsed time should be treated as departure (true)
      *   or as arrival time (false).
      **/
@@ -452,12 +459,10 @@ protected slots:
     /** @brief There was an error in the 'marble' process. */
     void errorMarble( QProcess::ProcessError processError );
 
-    /**
-     * @brief A "recent journey"-action has been triggered.
-     *
-     * @param recentJourneyAction The type of the executed action.
-     **/
-    void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction );
+    /** @brief A recent journey @p action was triggered from the "quickJourneys" action. */
+    void journeyActionTriggered( QAction *action );
+
+    void journeySearchListUpdated( const QList<JourneySearchItem> &newJourneySearches );
 
     /**
      * @brief Processes a journey search request.
@@ -482,13 +487,9 @@ protected slots:
      * @brief The worker thread has finished processing departures/arrivals.
      *
      * @param sourceName The data engine source name for the departure data.
-     *
      * @param departures A list of departures that were read by the worker thread.
-     *
      * @param requestUrl The url that was used to download the departure data.
-     *
      * @param lastUpdate The date and time of the last update of the data.
-     *
      * @param departuresToGo The number of departures to still be processed. If this isn't 0
      *   this slot gets called again after the next batch of departures has been processed.
      *
@@ -496,7 +497,8 @@ protected slots:
      * @see beginDepartureProcessing
      * @ingroup models
      **/
-    void departuresProcessed( const QString &sourceName, const QList< DepartureInfo > &departures,
+    void departuresProcessed( const QString &sourceName,
+                              const QList< DepartureInfo > &departures,
                               const QUrl &requestUrl, const QDateTime &lastUpdate,
                               int departuresToGo );
 
@@ -504,20 +506,18 @@ protected slots:
      * @brief The worker thread has finished filtering departures.
      *
      * @param sourceName The data engine source name for the departure data.
-     *
-     * @param departures The list of departures that were filtered. Each
-     *   departure now returns the correct value with isFilteredOut() according
-     *   to the filter settings given to the worker thread.
-     *
-     * @param newlyFiltered A list of departures that should be made visible
-     *   to match the current filter settings.
-     *
-     * @param newlyNotFiltered A list of departures that should be made
-     *   invisible to match the current filter settings.
+     * @param departures The list of departures that were filtered. Each departure now returns
+     *   the correct value with isFilteredOut() according to the filter settings given to the
+     *   worker thread.
+     * @param newlyFiltered A list of departures that should be made visible to match the current
+     *   filter settings.
+     * @param newlyNotFiltered A list of departures that should be made invisible to match the
+     *   current filter settings.
      *
      * @ingroup models
      **/
-    void departuresFiltered( const QString &sourceName, const QList< DepartureInfo > &departures,
+    void departuresFiltered( const QString &sourceName,
+                             const QList< DepartureInfo > &departures,
                              const QList< DepartureInfo > &newlyFiltered,
                              const QList< DepartureInfo > &newlyNotFiltered );
 
@@ -533,18 +533,16 @@ protected slots:
      * @brief The worker thread has finished processing journeys.
      *
      * @param sourceName The data engine source name for the journey data.
-     *
      * @param journeys A list of journeys that were read by the worker thread.
-     *
      * @param requestUrl The url that was used to download the journey data.
-     *
      * @param lastUpdate The date and time of the last update of the data.
      *
      * @see JourneyInfo
      * @see beginJourneyProcessing
      * @ingroup models
      **/
-    void journeysProcessed( const QString &sourceName, const QList< JourneyInfo > &journeys,
+    void journeysProcessed( const QString &sourceName,
+                            const QList< JourneyInfo > &journeys,
                             const QUrl &requestUrl, const QDateTime &lastUpdate );
 
     /** @brief The animation fading out a pixmap of the old applet appearance has finished. */
@@ -614,6 +612,9 @@ protected slots:
     /** @brief Updates the tooltip. */
     void updateTooltip() { createTooltip(); };
 
+    /** @brief Opens a configuration dialog for recent/favorite journey searches. */
+    void configureJourneySearches();
+
 protected:
     /**
      * @brief Create the configuration dialog contents.
@@ -628,31 +629,36 @@ protected:
     /** @brief The popup gets shown or hidden. */
     virtual void popupEvent( bool show );
 
+    /** @brief Mouse wheel rotated on popup icon. */
+    virtual void wheelEvent( QGraphicsSceneWheelEvent* event );
+
     virtual bool sceneEventFilter( QGraphicsItem* watched, QEvent* event );
 
     /** @brief Watching for up/down key presses in m_journeySearch to select stop suggestions. */
     virtual bool eventFilter( QObject* watched, QEvent* event );
 
-    /** @brief Creates all used QAction's. */
+    /** @brief Creates all used actions. */
     void setupActions();
 
     /**
      * @brief Gets an action with string and icon updated to the current settings.
      *
      * @param actionName The name of the action to return updated.
-     *
      * @return The updated action.
      **/
     QAction* updatedAction( const QString &actionName );
+
+    /** @brief Updates the KMenuAction used for the filters action. */
+    void updateFilterMenu();
+
+    /** @brief Updates the KMenuAction used for the journeys menu. */
+    void updateJourneyMenu();
 
     /** @brief Call after creating a new alarm, to update the UI accordingly. */
     void alarmCreated();
 
     /** @brief Generates tooltip data and registers this applet at plasma's TooltipManager. */
     void createTooltip();
-
-    /** @brief Mouse wheel rotated on popup icon. */
-    virtual void wheelEvent( QGraphicsSceneWheelEvent* event );
 
     /**
      * @brief Gets the text to be displayed on the bottom of the timetable.
@@ -742,7 +748,6 @@ private:
      * @brief Gets a list of current departures/arrivals for the selected stop(s).
      *
      * @param includeFiltered Whether or not to include filtered departures in the returned list.
-     *
      * @param max -1 to use the maximum departure count from the current settings. Otherwise this
      *   gets used as the maximal number of departures for the returned list.
      **/
@@ -758,7 +763,6 @@ private:
      *   for switching between them.
      *
      * @param parent The parent of the menu action and it's sub-actions.
-     *
      * @param destroyOverlayOnTrigger True, if the overlay widget should be
      *   destroyed when triggered. Defaults to false.
      *
@@ -767,8 +771,7 @@ private:
     KSelectAction *switchStopAction( QObject *parent,
                                      bool destroyOverlayOnTrigger = false ) const;
 
-    QVariantHash currentServiceProviderData() const {
-        return serviceProviderData( m_settings.currentStopSettings().get<QString>(ServiceProviderSetting) ); };
+    QVariantHash currentServiceProviderData() const;
     QVariantHash serviceProviderData( const QString &id ) const;
 
     void setupStateMachine();
@@ -814,7 +817,7 @@ private:
             // for the context menu actions.
 
     QActionGroup *m_filtersGroup; // An action group to toggle filter configurations.
-    QActionGroup *m_filterByGroupColorGroup; // An action group to toggle color groups.
+    QActionGroup *m_colorFiltersGroup; // An action group to toggle color groups.
 
     DepartureProcessor *m_departureProcessor;
     DeparturePainter *m_departurePainter;

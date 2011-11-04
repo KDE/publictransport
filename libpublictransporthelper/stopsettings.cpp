@@ -91,16 +91,15 @@ public:
     StopSettingsPrivate() {
         settings[ LocationSetting ] = KGlobal::locale()->country();
     };
-    
+
     StopSettingsPrivate( const QHash<int, QVariant>& data ) : settings(data) {
     };
-    
+
     StopSettingsPrivate( const StopSettingsPrivate &other )
-        : QSharedData(other), settings(other.settings) 
-    { 
+        : QSharedData(other), settings(other.settings)
+    {
     };
 
-    
     QHash< int, QVariant > settings;
 };
 
@@ -108,7 +107,7 @@ StopSettings::StopSettings() : d(new StopSettingsPrivate())
 {
 }
 
-StopSettings::StopSettings(const QHash<int, QVariant>& data) 
+StopSettings::StopSettings(const QHash<int, QVariant>& data)
         : d(new StopSettingsPrivate(data))
 {
 }
@@ -250,21 +249,21 @@ StopSettings& StopSettings::operator=(const StopSettings& rhs)
     if ( this == &rhs ) {
         return *this; // Protect against self-assignment
     }
-    
+
     d = rhs.d;
     return *this;
 }
 
-bool StopSettings::operator==(const StopSettings& other) const {
+bool StopSettings::operator==( const StopSettings& other ) const {
     if ( d->settings.count() != other.d->settings.count() ) {
         return false;
     }
 
     // Go through all settings
-    for ( QHash<int, QVariant>::const_iterator it = d->settings.constBegin(); 
-         it != d->settings.constEnd(); ++it )
+    for ( QHash<int, QVariant>::const_iterator it = d->settings.constBegin();
+          it != d->settings.constEnd(); ++it )
     {
-        // StopNameSetting and FilterConfigurationSetting need special handling, because they 
+        // StopNameSetting and FilterConfigurationSetting need special handling, because they
         // use a custom type (StopList, FilterSettingsList).
         // QVariant doesn't compare values of custom types, but addresses instead.
         if ( it.key() == StopNameSetting ) {
@@ -277,13 +276,11 @@ bool StopSettings::operator==(const StopSettings& other) const {
             {
                 return false;
             }
-        } else if ( it.key() >= UserSetting ) {
-            continue; // Can't compare custom QVariant types, addresses would get compared
         } else if ( it.value() != other.d->settings[it.key()] ) {
             return false;
         }
     }
-    
+
     // No differences found
     return true;
 }
@@ -328,7 +325,7 @@ QString StopSettingsWidgetFactory::textForSetting( int setting ) const
             return i18nc("@label:spinbox", "&Relative to Current Time:");
         case TimeOfFirstDepartureSetting:
             return i18nc("@label", "At &Custom Time:");
-            
+
         default:
             if ( setting >= UserSetting ) {
                 kDebug() << "No text defined for custom setting" << static_cast<StopSetting>(setting);
@@ -352,11 +349,11 @@ QString StopSettingsWidgetFactory::nameForSetting( int setting ) const
             return "timeOffsetOfFirstDeparture";
         case TimeOfFirstDepartureSetting:
             return "timeOfFirstDeparture";
-            
+
         default:
             if ( setting >= UserSetting ) {
                 kDebug() << "No name defined for custom setting" << static_cast<StopSetting>(setting)
-                         << " - Using" << (QLatin1String("UserSetting_") + QString::number(setting)) 
+                         << " - Using" << (QLatin1String("UserSetting_") + QString::number(setting))
                          << "instead";
                 return QLatin1String("UserSetting_") + QString::number(setting);
             } else {
@@ -375,7 +372,7 @@ bool StopSettingsWidgetFactory::isDetailsSetting( int setting ) const
         case StopNameSetting:
             return false;
             break;
-    
+
         case FilterConfigurationSetting:
         case AlarmTimeSetting:
         case FirstDepartureConfigModeSetting:
@@ -419,10 +416,10 @@ QVariant StopSettingsWidgetFactory::valueOfSetting( const QWidget* widget, int s
         }
         case FirstDepartureConfigModeSetting: {
             QRadioButton *timeOffsetRadio = widget->parentWidget()->findChild<QRadioButton*>(
-                    QLatin1String("radio_") + 
+                    QLatin1String("radio_") +
                     nameForSetting(TimeOffsetOfFirstDepartureSetting) );
-            return timeOffsetRadio 
-                    ? (timeOffsetRadio->isChecked() ? RelativeToCurrentTime : AtCustomTime) 
+            return timeOffsetRadio
+                    ? (timeOffsetRadio->isChecked() ? RelativeToCurrentTime : AtCustomTime)
                     : QVariant();
         }
         case TimeOfFirstDepartureSetting: {
@@ -430,7 +427,7 @@ QVariant StopSettingsWidgetFactory::valueOfSetting( const QWidget* widget, int s
         }
         default:
             if ( setting >= UserSetting ) {
-                kDebug() << "Getting the value of the widget defined for custom setting" 
+                kDebug() << "Getting the value of the widget defined for custom setting"
                          << static_cast<StopSetting>(setting) << "not implemented";
             } else {
                 kDebug() << "Intern error: No code to get the value of the widget defined for "
@@ -440,7 +437,7 @@ QVariant StopSettingsWidgetFactory::valueOfSetting( const QWidget* widget, int s
     }
 }
 
-void StopSettingsWidgetFactory::setValueOfSetting(QWidget* widget, int setting, 
+void StopSettingsWidgetFactory::setValueOfSetting(QWidget* widget, int setting,
                                                   const QVariant& value) const
 {
     switch ( setting ) {
@@ -464,9 +461,9 @@ void StopSettingsWidgetFactory::setValueOfSetting(QWidget* widget, int setting,
         case TimeOffsetOfFirstDepartureSetting:
             qobject_cast< QSpinBox* >( widget )->setValue( value.toInt() );
             break;
-            
+
         case FirstDepartureConfigModeSetting: {
-            FirstDepartureConfigMode configMode = 
+            FirstDepartureConfigMode configMode =
                     static_cast<FirstDepartureConfigMode>(value.toInt());
             StopSetting setting = configMode == RelativeToCurrentTime
                     ? TimeOffsetOfFirstDepartureSetting
@@ -480,10 +477,10 @@ void StopSettingsWidgetFactory::setValueOfSetting(QWidget* widget, int setting,
         }
         case TimeOfFirstDepartureSetting:
             return qobject_cast< QTimeEdit* >( widget )->setTime( value.toTime() );
-            
+
         default:
             if ( setting >= UserSetting ) {
-                kDebug() << "Setting the value of the widget defined for custom setting" 
+                kDebug() << "Setting the value of the widget defined for custom setting"
                          << static_cast<StopSetting>(setting) << "not implemented";
             } else {
                 kDebug() << "Intern error: No code to set the value of the widget defined for "
@@ -500,9 +497,9 @@ QWidget* StopSettingsWidgetFactory::widgetForSetting( int setting, QWidget *pare
         case FilterConfigurationSetting: {
             CheckCombobox *filterConfiguration = new CheckCombobox( parent );
             filterConfiguration->setMultipleSelectionOptions( CheckCombobox::ShowStringList );
-            filterConfiguration->setToolTip( i18nc("@info:tooltip", 
+            filterConfiguration->setToolTip( i18nc("@info:tooltip",
                     "The filter configuration(s) to be used with this stop(s)"));
-            filterConfiguration->setWhatsThis( i18nc("@info:whatsthis", 
+            filterConfiguration->setWhatsThis( i18nc("@info:whatsthis",
                     "<para>Each stop can use a different set of filter configurations. "
                     "Choose these filter configurations here.\n"
                     "<note>To create/edit/remove filter configurations use the filter page "
@@ -524,7 +521,7 @@ QWidget* StopSettingsWidgetFactory::widgetForSetting( int setting, QWidget *pare
         case FirstDepartureConfigModeSetting: {
             QWidget *firstDeparture = new QWidget( parent );
             QVBoxLayout *layout = new QVBoxLayout( firstDeparture );
-            
+
             QFormLayout *timeOffsetLayout = new QFormLayout();
             timeOffsetLayout->setContentsMargins( 0, 0, 0, 0 );
             QRadioButton *timeOffsetRadio = new QRadioButton(
@@ -533,22 +530,22 @@ QWidget* StopSettingsWidgetFactory::widgetForSetting( int setting, QWidget *pare
                     nameForSetting(TimeOffsetOfFirstDepartureSetting) );
             QWidget *timeOffsetWidget = widgetWithNameForSetting(
                     TimeOffsetOfFirstDepartureSetting, firstDeparture );
-            QObject::connect( timeOffsetRadio, SIGNAL(toggled(bool)), 
+            QObject::connect( timeOffsetRadio, SIGNAL(toggled(bool)),
                               timeOffsetWidget, SLOT(setEnabled(bool)) );
             timeOffsetLayout->addRow( timeOffsetRadio, timeOffsetWidget );
-            
+
             QFormLayout *timeCustomLayout = new QFormLayout();
             timeCustomLayout->setContentsMargins( 0, 0, 0, 0 );
             QRadioButton *timeCustomRadio = new QRadioButton(
                     textForSetting(TimeOfFirstDepartureSetting), parent );
-            timeCustomRadio->setObjectName( QLatin1String("radio_") + 
+            timeCustomRadio->setObjectName( QLatin1String("radio_") +
                     nameForSetting(TimeOfFirstDepartureSetting) );
             QWidget *timeCustomWidget = widgetWithNameForSetting(
                     TimeOfFirstDepartureSetting, firstDeparture );
-            QObject::connect( timeCustomRadio, SIGNAL(toggled(bool)), 
+            QObject::connect( timeCustomRadio, SIGNAL(toggled(bool)),
                               timeCustomWidget, SLOT(setEnabled(bool)) );
             timeCustomLayout->addRow( timeCustomRadio, timeCustomWidget );
-            
+
             layout->addLayout( timeOffsetLayout );
             layout->addLayout( timeCustomLayout );
             widget = firstDeparture;
@@ -557,7 +554,7 @@ QWidget* StopSettingsWidgetFactory::widgetForSetting( int setting, QWidget *pare
         case TimeOffsetOfFirstDepartureSetting: {
             QSpinBox *timeOffset;
             timeOffset = new QSpinBox( parent );
-            timeOffset->setWhatsThis( i18nc("@info:whatsthis", 
+            timeOffset->setWhatsThis( i18nc("@info:whatsthis",
                     "Here you can set the starting time of the departure list. "
                     "No earlier departures will be shown.") );
             timeOffset->setSpecialValueText( i18nc("@info/plain", "Now") );
@@ -620,7 +617,7 @@ QDebug& operator<<( QDebug debug, StopSetting setting )
             return debug << "CitySetting";
         case StopNameSetting:
             return debug << "StopNameSetting";
-        case FilterConfigurationSetting:    
+        case FilterConfigurationSetting:
             return debug << "FilterConfigurationSetting";
         case AlarmTimeSetting:
             return debug << "AlarmTimeSetting";
@@ -632,7 +629,7 @@ QDebug& operator<<( QDebug debug, StopSetting setting )
             return debug << "TimeOfFirstDepartureSetting";
         case UserSetting:
             return debug << "UserSetting";
-        
+
         default:
             if ( setting > UserSetting ) {
                 return debug << "UserSetting +" << (setting - static_cast<int>(UserSetting));
@@ -642,4 +639,4 @@ QDebug& operator<<( QDebug debug, StopSetting setting )
     }
 }
 
-}; // namespace Timetable
+} // namespace Timetable

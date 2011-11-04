@@ -25,7 +25,7 @@ namespace Timetable {
 class StopSuggesterPrivate
 {
 public:
-    StopSuggesterPrivate( Plasma::DataEngine* _publicTransportEngine ) 
+    StopSuggesterPrivate( Plasma::DataEngine* _publicTransportEngine )
             : publicTransportEngine(_publicTransportEngine) {};
 
     Plasma::DataEngine *publicTransportEngine;
@@ -33,7 +33,7 @@ public:
 };
 
 StopSuggester::StopSuggester( Plasma::DataEngine* publicTransportEngine,
-                              QObject* parent ) 
+                              QObject* parent )
         : QObject(parent), d_ptr(new StopSuggesterPrivate(publicTransportEngine))
 {
 }
@@ -107,15 +107,15 @@ bool StopSuggester::isRunning() const {
 class StopFinderPrivate
 {
     Q_DECLARE_PUBLIC( StopFinder )
-    
+
 public:
     StopFinderPrivate( StopFinder::Mode _mode,
             Plasma::DataEngine* _publicTransportEngine, Plasma::DataEngine* _osmEngine,
-            Plasma::DataEngine* _geolocationEngine, int _resultLimit, 
-            StopFinder::DeletionPolicy _deletionPolicy, StopFinder *q ) 
+            Plasma::DataEngine* _geolocationEngine, int _resultLimit,
+            StopFinder::DeletionPolicy _deletionPolicy, StopFinder *q )
             : mode(_mode), deletionPolicy(_deletionPolicy),
             publicTransportEngine(_publicTransportEngine),
-            osmEngine(_osmEngine), geolocationEngine(_geolocationEngine), q_ptr(q) 
+            osmEngine(_osmEngine), geolocationEngine(_geolocationEngine), q_ptr(q)
     {
         osmFinished = false;
         resultLimit = _resultLimit;
@@ -142,10 +142,10 @@ public:
 
         return true;
     };
-    
+
     void processGeolocationData( const Plasma::DataEngine::Data &data ) {
         Q_Q( StopFinder );
-        
+
         countryCode = data["country code"].toString().toLower();
         city = data["city"].toString();
         qreal latitude = data["latitude"].toDouble();
@@ -188,10 +188,10 @@ public:
             }
         }
     };
-    
+
     bool processOpenStreetMapData( const Plasma::DataEngine::Data &data ) {
         Q_Q( StopFinder );
-        
+
         QStringList stops;
         Plasma::DataEngine::Data::const_iterator it = data.constBegin();
     //     it += m_nearStopsDialog->listView()->model()->rowCount(); // Don't readd already added stops
@@ -218,7 +218,7 @@ public:
             if ( mode == StopFinder::StopNamesFromOSM ) {
                 if ( stops.isEmpty() ) {
                     kDebug() << "No stops found by OSM for the given position";
-                    emit q->error( StopFinder::NoStopsFound, 
+                    emit q->error( StopFinder::NoStopsFound,
                             i18nc("@info", "No stops found by OpenStreetMap for the given position") );
                 }
                 emit q->finished();
@@ -230,10 +230,10 @@ public:
 
         return osmFinished;
     };
-    
+
     void processPublicTransportData( const Plasma::DataEngine::Data &data ) {
         Q_Q( StopFinder );
-        
+
         QString stop, stopID;
         int count = data["count"].toInt();
         for ( int i = 0; i < count; ++i ) {
@@ -278,7 +278,7 @@ public:
     QString city;
     QString serviceProviderID;
     int accuracy;
-    
+
 protected:
     StopFinder* const q_ptr;
 };
@@ -306,7 +306,7 @@ void StopFinder::start()
 void StopFinder::dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data )
 {
     Q_D( StopFinder );
-    
+
     if ( sourceName.startsWith(QLatin1String("Stops"), Qt::CaseInsensitive) ) {
         d->publicTransportEngine->disconnectSource( sourceName, this );
         d->processPublicTransportData( data );
@@ -326,4 +326,4 @@ StopFinder::Mode StopFinder::mode() const {
     return d->mode;
 }
 
-}; // namespace Timetable
+} // namespace Timetable

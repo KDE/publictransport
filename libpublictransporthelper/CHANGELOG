@@ -1,6 +1,9 @@
 
 Changelog of libpublictransporthelper
 
+0.10 - Final
+- StopListWidget called Plasma::DataEngineManager::unloadEngine(), but it's child StopWidget's already call unloadEngine() (and loadEngine()), this fixes departures not showing up after first configuration when using the StopListWidget
+
 0.10 - RC 2
 - Fix a crash with the GraphicalTimetableLine applet
 

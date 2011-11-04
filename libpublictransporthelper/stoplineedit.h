@@ -206,6 +206,6 @@ public Q_SLOTS:
     void updateToDataEngineState();
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // STOPLINEEDIT_H

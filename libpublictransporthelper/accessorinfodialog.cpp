@@ -237,4 +237,4 @@ void AccessorInfoDialog::deletionFinished( KJob *job )
     enableButton( KDialog::User2, false );
 }
 
-}; // namespace Timetable
+} // namespace Timetable

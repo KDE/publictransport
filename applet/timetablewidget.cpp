@@ -17,20 +17,25 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// Own includes
 #include "timetablewidget.h"
 #include "routegraphicsitem.h"
 #include "departuremodel.h"
 
+// Plasma includes
 #include <Plasma/PaintUtils>
 #include <Plasma/Svg>
 #include <Plasma/Animator>
 #include <Plasma/Animation>
 #include <Plasma/DataEngineManager>
 
+// KDE includes
 #include <KColorScheme>
 #include <KColorUtils>
 #include <KMenu>
+#include <KPixmapCache>
 
+// Qt includes
 #include <QGraphicsLinearLayout>
 #include <QModelIndex>
 #include <QPainter>
@@ -40,9 +45,10 @@
 #include <QGraphicsSceneHoverEvent>
 #include <QGraphicsScene>
 #include <QPropertyAnimation>
-#include <qmath.h>
 #include <QStyleOption>
-#include <KPixmapCache>
+#include <qmath.h>
+
+const qreal PublicTransportGraphicsItem::ROUTE_ITEM_HEIGHT = 60.0;
 
 PublicTransportGraphicsItem::PublicTransportGraphicsItem(
         PublicTransportWidget* publicTransportWidget, QGraphicsItem* parent,
@@ -157,16 +163,19 @@ void PublicTransportGraphicsItem::paint( QPainter* painter, const QStyleOptionGr
 
 void PublicTransportGraphicsItem::capturePixmap()
 {
+    // Delete previous pixmap if any
     delete m_pixmap;
-    m_pixmap = NULL;
+    m_pixmap = 0;
 
-    QPixmap *pixmap = new QPixmap( size().toSize() );
-    pixmap->fill( Qt::transparent );
-    QPainter p( pixmap );
+    // Create new pixmap
+    m_pixmap = new QPixmap( size().toSize() );
+    m_pixmap->fill( Qt::transparent );
+
+    // Draw this item into the new pixmap
+    QPainter p( m_pixmap );
     QStyleOptionGraphicsItem option;
     option.rect = rect().toRect();
     paint( &p, &option );
-    m_pixmap = pixmap;
 }
 
 qreal PublicTransportGraphicsItem::padding() const
@@ -177,7 +186,7 @@ qreal PublicTransportGraphicsItem::padding() const
 qreal PublicTransportGraphicsItem::unexpandedHeight() const
 {
     return qMax( m_parent->iconSize() * 1.1,
-                 (qreal)QFontMetrics(font()).ascent() * m_parent->maxLineCount() + padding() );
+                 (qreal)QFontMetrics(font()).lineSpacing() * m_parent->maxLineCount() + padding() );
 }
 
 bool PublicTransportGraphicsItem::hasExtraIcon( Columns column ) const
@@ -240,15 +249,18 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
     }
     int textHeight = lineCount * ( fm.lineSpacing() + 1 );
 
+    // Draw text and calculate halo/fade rects
     for ( int b = 0; b < blockCount; ++b ) {
         QTextLayout *textLayout = document->findBlockByNumber( b ).layout();
-        int lines = textLayout->lineCount();
-        QPointF position( 0, (textRect.height() - textHeight) / 2.0f );
+        const int lines = textLayout->lineCount();
+        const QPointF position( 0, (textRect.height() - textHeight) / 2.0f );
         for ( int l = 0; l < lines; ++l ) {
+            // Draw a text line
             QTextLine textLine = textLayout->lineAt( l );
             textLine.draw( &p, position );
 
             if ( drawHalos ) {
+                // Calculate halo rect
                 QSize textSize = textLine.naturalTextRect().size().toSize();
                 if ( textSize.width() > textRect.width() ) {
                     textSize.setWidth( textRect.width() );
@@ -358,9 +370,9 @@ void JourneyGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event )
 
     if ( m_routeItem ) {
         QRectF _infoRect = infoRect( rect() );
-        m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
-        m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
-                            m_routeItem->size().height() );
+        m_routeItem->setGeometry( _infoRect.left(), rect().top() + unexpandedHeight() + padding(),
+                                  rect().width() - padding() - _infoRect.left(),
+                                  m_routeItem->size().height() );
     }
 }
 
@@ -695,6 +707,7 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
     QRect pixmapRect( 0, 0, rect.width(), rect.height() );
     QPixmap pixmap( pixmapRect.size());
     QColor backgroundColor = Qt::transparent;
+    pixmap.fill( backgroundColor );
 
     // Use journey rating background:
     //   green for relatively short duration, less changes;
@@ -703,8 +716,8 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
     if ( vr.isValid() ) {
         qreal rating = vr.toReal();
         QColor ratingColor = KColorUtils::mix(
-                KColorScheme(QPalette::Active).background( KColorScheme::PositiveBackground ).color(),
-                KColorScheme(QPalette::Active).background( KColorScheme::NegativeBackground ).color(),
+                KColorScheme(QPalette::Active).background(KColorScheme::PositiveBackground).color(),
+                KColorScheme(QPalette::Active).background(KColorScheme::NegativeBackground).color(),
                 rating );
         bool drawRatingBackground = true;
         if ( rating >= 0 && rating <= 0.5 ) {
@@ -1031,9 +1044,6 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
             painter->drawText( QRectF(shadowWidth, shadowWidth, iconSize.width(), iconSize.height()),
                             "?", QTextOption(Qt::AlignCenter) );
     }
-//     if ( drawTransportLine ) {
-//         vehicleKey.append( "_empty" );
-//     }
 
     const QString vehicleCacheKey
             = vehicleKey + QString("%1%2").arg( iconSize.width() ).arg( iconSize.height() );
@@ -1183,8 +1193,6 @@ void JourneyGraphicsItem::paintExpanded( QPainter* painter, const QStyleOptionGr
         painter->setPen( _textColor );
         TextDocumentHelper::drawTextDocument( painter, option, &additionalInformationTextDocument,
                                               htmlRect.toRect(), drawHalos );
-
-//         y += htmlRect.height() + padding;
     }
 }
 
@@ -1242,8 +1250,6 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
         painter->setPen( _textColor );
         TextDocumentHelper::drawTextDocument( painter, option, &additionalInformationTextDocument,
                                               htmlRect.toRect(), drawHalos );
-
-//         y += htmlRect.height() + padding;
     }
 }
 

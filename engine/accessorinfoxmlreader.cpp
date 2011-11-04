@@ -112,8 +112,6 @@ TimetableAccessorInfo* AccessorInfoXmlReader::readAccessorInfo(
                 attributes().value("type").toString()) );
         if ( accessorInfo->accessorType() == NoAccessor ) {
             delete accessorInfo;
-//             kDebug() << "The type" << attributes().value("type").toString()
-//                      << "is invalid. Currently there are two values allowed: HTML and XML.";
             raiseError( QString("The accessor type %1 is invalid. Currently there are three "
                                 "values allowed: \"Scripted\", \"XML\" and \"GTFS\". Deprecated "
                                 "but still usable is \"HTML\", interpreted as \"Scripted\".")

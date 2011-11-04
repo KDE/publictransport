@@ -17,13 +17,18 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "timetableaccessor_xml.h"
+
+// Own includes
 #include "timetableaccessor_info.h"
 #include "departureinfo.h"
 
+// KDE includes
 #include <KLocalizedString>
 #include <KDebug>
 
+// Qt includes
 #include <QRegExp>
 #include <QDomDocument>
 

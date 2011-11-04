@@ -26,7 +26,7 @@
 #ifndef TIMETABLEACCESSOR_SCRIPT_HEADER
 #define TIMETABLEACCESSOR_SCRIPT_HEADER
 
-#include "timetableaccessor_online.h"
+#include "timetableaccessor_online.h" // Base class
 
 namespace Kross {
     class Action;
@@ -66,7 +66,8 @@ public:
      * @param parent The parent QObject.
      *
      * @note Can be used if you have a custom TimetableAccessorInfo object.
-     *   TimetableAccessorXml uses this to create an HTML accessor for parsing of stop lists. */
+     *   TimetableAccessorXml uses this to create an HTML accessor for parsing of stop lists.
+     **/
     TimetableAccessorScript( TimetableAccessorInfo *info, QObject *parent = 0 );
 
     /** @brief Destructor. */

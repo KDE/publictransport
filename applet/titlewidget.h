@@ -24,12 +24,18 @@
 #ifndef TITLEWIDGET_H
 #define TITLEWIDGET_H
 
+// Own includes
 #include "global.h"
+#include "journeysearchitem.h"
 
+// Qt includes
 #include <QGraphicsWidget>
 
+class JourneySearchModel;
+class KMenu;
 class Settings;
 class QGraphicsLinearLayout;
+class QMenu;
 namespace Plasma {
     class IconWidget;
     class Label;
@@ -60,11 +66,13 @@ public:
      **/
     enum WidgetType {
         WidgetTitle = 0x0001, /**< The title widget, a Plasma::Label. */
-        WidgetFilter = 0x0002, /**< The filter widget, a QGraphicsWidget, a Plasma::ToolButton. */
+        WidgetFilter = 0x0002, /**< The filter widget, a Plasma::ToolButton. */
+        WidgetQuickJourneySearch = 0x0004, /**< The quick journey search button,
+                * a Plasma::ToolButton. */
         WidgetJourneySearchLine = 0x0010, /**< The journey search edit box, a Plasma::LineEdit. */
-        WidgetRecentJourneysButton = 0x0020, /**< The button to show actions for recent journeys,
-                * a Plasma::ToolButton. @see RecentJourneyAction */
-        WidgetJourneySearchButton = 0x0040, /**< The button to start a journey search,
+        WidgetFillJourneySearchLineButton = 0x0020, /**< The button to fill the journey search
+                * line with a favorite/recent journey search, a Plasma::ToolButton. */
+        WidgetStartJourneySearchButton = 0x0040, /**< The button to start a journey search,
                 * a Plasma::ToolButton. */
         WidgetCloseIcon = 0x0080, /**< The icon to close the current view (eg. the journey search),
                 * a Plasma::IconWidget. */
@@ -86,21 +94,16 @@ public:
     Q_DECLARE_FLAGS(RemoveWidgetOptions, RemoveWidgetOption)
 
     /**
-     * @brief The types of actions associated with recent journeys.
-     **/
-    enum RecentJourneyAction {
-        ActionClearRecentJourneys = 0, /**< The action to clear the list of recent journeys. */
-        ActionUseRecentJourney = 1 /**< An action to use a specific recent journey. */
-    };
-
-    /**
      * @brief Creates a new title widget.
      *
      * @param titleType The initial type of this title widget.
      * @param settings A pointer to the settings object of the applet.
+     * @param journeysSupported Whether or not journeys are supported by the current
+     *   service provider.
      * @param parent The parent QGraphicsItem. Defaults to 0.
      **/
-    TitleWidget(TitleType titleType, Settings *settings, QGraphicsItem* parent = 0);
+    TitleWidget( TitleType titleType, Settings *settings, bool journeysSupported = false,
+                 QGraphicsItem* parent = 0 );
 
     /** @brief Gets the current type of this title widget. */
     TitleType titleType() const { return m_type; };
@@ -125,7 +128,9 @@ public:
      *   qgraphicsitem_cast, so it returns 0, if the widget isn't of the given type.
      **/
     template <typename T>
-    T* castedWidget( WidgetType widgetType ) const;
+    T* castedWidget( WidgetType widgetType ) const {
+        return !m_widgets.contains(widgetType) ? 0 : qgraphicsitem_cast<T*>( m_widgets[widgetType] );
+    }
 
     /**
      * @brief Sets the type of this title widget to @p titleType.
@@ -169,6 +174,40 @@ public:
 
     QGraphicsWidget *createAndAddWidget( WidgetType widgetType );
 
+    /**
+     * @brief Sets the filter action to use for the filter widget.
+     *
+     * It is expected that @p filterAction is of type KActionMenu, it's menu gets used.
+     **/
+    void setFiltersAction( QAction *filtersAction ) {
+        m_filtersAction = filtersAction;
+    };
+
+    /**
+     * @brief Sets the journey action to use for the journey widget.
+     *
+     * It is expected that @p journeysAction is of type KActionMenu, it's menu gets used.
+     **/
+    void setJourneysAction( QAction *journeysAction ) {
+        m_journeysAction = journeysAction;
+    };
+
+    /**
+     * @brief Creates/deletes widgets for journeys.
+     *
+     * If @p supported is false, all widgets associated with journey functionality will not be used.
+     * @param supported Whether or not journeys are supported. Default is true.
+     **/
+    void setJourneysSupported( bool supported = true );
+
+    /**
+     * @brief Sets the current journey search input to @p journeySearch.
+     *
+     * This only works when in journey search mode. Otherwise this function does nothing.
+     * @param journeySearch The new journey search string.
+     **/
+    void setJourneySearch( const QString &journeySearch );
+
 signals:
     /** @brief The icon widget was clicked. */
     void iconClicked();
@@ -179,43 +218,41 @@ signals:
     /** @brief The widget in the additional widget list with type @ref WidgetFilter was clicked. */
     void filterIconClicked();
 
-    /** @brief The widget of type @ref WidgetJourneySearchButton was clicked or enter was pressed
-    * in widget of type @ref WidgetJourneySearchLine. */
-    void journeySearchInputFinished();
+    /** @brief The widget in the additional widget list with type @ref WidgetJourneySearch was clicked. */
+    void journeySearchIconClicked();
 
-    /** @brief The text of the widget of type @ref WidgetJourneySearchLine has changed.
-    *
-    * @param text The new text. */
-    void journeySearchInputEdited( const QString &text );
+    /** @brief The recent journeys button in journey search view was clicked. */
+    void recentJourneysIconClicked();
 
     /**
-     * @brief An action of the recent journey menu has been triggered.
+     * @brief The widget of type WidgetJourneySearchButton was clicked or enter was pressed
+     *   in widget of type @ref WidgetJourneySearchLine.
      *
-     * @param recentJourneyAction The type of the triggered action.
-     *
-     * @param recentJourney The search string of the triggered recent journey action,
-     *   if @p recentJourneyAction is @ref ActionUseRecentJourney. Otherwise an empty QString.
-     *
-     * @note If @p recentJourneyAction is @ref ActionClearRecentJourneys, the settings object
-     *   should be updated to execute the action. On @ref ActionUseRecentJourney the action
-     *   is automatically executed by setting the search string to @p recentJourney.
+     * @param text The finished journey search text.
      **/
-    void recentJourneyActionTriggered( TitleWidget::RecentJourneyAction recentJourneyAction,
-                                    const QString &recentJourney = QString() );
+    void journeySearchInputFinished( const QString &text );
+
+    /**
+     * @brief The text of the widget of type @ref WidgetJourneySearchLine has changed.
+     *
+     * @param text The new text.
+     **/
+    void journeySearchInputEdited( const QString &text );
+
+    void journeySearchListUpdated( const QList<JourneySearchItem> &newJourneySearches );
 
 public slots:
     /** @brief Updates the filter widget based on the current applet settings. */
     void updateFilterWidget();
 
-    /** @brief Updates the recent journeys menu based on the current applet settigns. */
-    void updateRecentJourneysMenu();
-
     /** @brief Call this when the applet settings have changed. */
     void settingsChanged();
 
 protected slots:
-    void slotRecentJourneyActionTriggered( QAction *action );
     void slotJourneySearchInputChanged( const QString &text );
+    void slotJourneySearchInputFinished();
+    void slotFilterIconClicked();
+    void slotJourneysIconClicked();
 
 protected:
     /**
@@ -241,10 +278,14 @@ protected:
     Plasma::IconWidget *m_icon;
     Plasma::Label *m_title;
     Plasma::ToolButton *m_filterWidget;
+    Plasma::ToolButton *m_journeysWidget;
     QHash< WidgetType, QGraphicsWidget* > m_widgets;
     QGraphicsLinearLayout *m_layout;
     Settings *m_settings;
     QString m_titleText;
+    bool m_journeysSupported;
+    QAction *m_journeysAction;
+    QAction *m_filtersAction;
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TitleWidget::WidgetTypes)
 Q_DECLARE_OPERATORS_FOR_FLAGS(TitleWidget::RemoveWidgetOptions)

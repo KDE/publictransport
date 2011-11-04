@@ -22,6 +22,7 @@
 
 #include <KIconEffect>
 #include <KIconLoader>
+#include <KLocale>
 #include <KDebug>
 #include <Plasma/Animator>
 #include <Plasma/Animation>
@@ -683,7 +684,7 @@ ChildItem* JourneyItem::createRouteItem()
 {
     ChildItem *routeItem = new ChildItem( RouteItem, childItemText( RouteItem ), m_info );
 
-    // Add route stops as child rows                TODO: -1 ?
+    // Add route stops as child rows
     for ( int row = 0; row < m_journeyInfo.routeStops().count() - 1; ++row ) {
         // Add a separator item, when the exact route ends
         if ( row == m_journeyInfo.routeExactStops() && row > 0 ) {
@@ -1880,10 +1881,10 @@ void DepartureModel::sort( int column, Qt::SortOrder order )
 
     // Sort the intermediate vector
     if ( order == Qt::AscendingOrder ) {
-        DepartureModelLessThan lt( static_cast<Columns>( column ) );
+        DepartureModelLessThan lt( static_cast<Columns>(column) );
         qStableSort( sortable.begin(), sortable.end(), lt );
     } else {
-        DepartureModelGreaterThan gt( static_cast<Columns>( column ) );
+        DepartureModelGreaterThan gt( static_cast<Columns>(column) );
         qStableSort( sortable.begin(), sortable.end(), gt );
     }
 

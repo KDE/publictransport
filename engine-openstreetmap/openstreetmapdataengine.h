@@ -33,7 +33,7 @@ class QBuffer;
 
 /**
  * @brief This engine searches for information from OpenStreetMap.
- * 
+ *
  * The source name is:
  *   "[longitude],[latitude] ([mapArea]) ([element] [filter]|[short-filter])".
  * For example: "53.069,8.8 theatre"
@@ -48,11 +48,11 @@ class OpenStreetMapEngine : public Plasma::DataEngine {
 public:
     // Basic Create/Destroy
     OpenStreetMapEngine( QObject *parent, const QVariantList &args );
-    
+
     static const int maxResults = 50;
-    static const double maxAreaSize = 0.5;
-    static const double defautAreaSize = 0.02;
-    
+    static const double maxAreaSize;
+    static const double defautAreaSize;
+
 protected:
     virtual bool sourceRequestEvent( const QString& source );
     virtual bool updateSourceEvent( const QString& source );
@@ -64,25 +64,25 @@ protected:
 public slots:
     /** @brief Download has finished. */
     void finished( KJob *job );
-    
+
     /** @brief More downloaded data is available. */
     void data( KIO::Job *job, const QByteArray &ba );
 
     /**
      * @brief Reading an XML document has finished (reached the end of the document).
-     * 
+     *
      * @Note @p data only contains the last chunk of data.
      **/
     void osmFinishedReading( QPointer<OsmReader> osmReader, const Plasma::DataEngine::Data &data );
-    
+
     /** @brief A new chunk of the XML document has been read. */
     void osmChunkRead( QPointer<OsmReader> osmReader, const Plasma::DataEngine::Data &data );
-    
+
 private:
     enum Element {
         Node, Relation, Way
     };
-    
+
     struct Filter {
         Element element;
         QString filter;

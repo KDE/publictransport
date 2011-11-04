@@ -117,7 +117,7 @@ public:
     HtmlDelegatePrivate( HtmlDelegate::Options _options ) {
         options = _options;
     };
-    
+
     HtmlDelegate::Options options;
 };
 
@@ -130,7 +130,7 @@ void HtmlDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option,
                           const QModelIndex& index ) const
 {
     Q_D( const HtmlDelegate );
-    
+
     painter->setRenderHints( QPainter::SmoothPixmapTransform | QPainter::Antialiasing );
 
     if ( !d->options.testFlag( DontDrawBackground ) ) {

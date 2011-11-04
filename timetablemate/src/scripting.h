@@ -129,9 +129,7 @@ public Q_SLOTS:
      *   which is in the given @p format.
      *
      * @param str The string containing the time to be parsed, eg. "08:15".
-     *
      * @param format The format of the time string in @p str. Default is "hh:mm".
-     *
      * @return A list of two integers: The hour and minute values parsed from @p str.
      *
      * @see formatTime
@@ -170,9 +168,7 @@ public Q_SLOTS:
      *   which is in the given @p format.
      *
      * @param str The string containing the date to be parsed, eg. "2010-12-01".
-     *
      * @param format The format of the time string in @p str. Default is "YY-MM-dd".
-     *
      * @return A list of two integers: The day, month and year values parsed from @p str.
      *
      * @see formatDate TODO

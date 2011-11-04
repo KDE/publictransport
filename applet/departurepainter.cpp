@@ -17,16 +17,26 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "departurepainter.h"
+
+// Own includes
 #include "departuremodel.h"
 #include "popupicon.h"
+
+// libpublictransporthelper includes
 #include <departureinfo.h>
 #include <global.h>
 
+// KDE+Plasma includes
 #include <Plasma/Theme>
 #include <Plasma/Svg>
 #include <Plasma/PaintUtils>
 #include <KPixmapCache>
+#include <KGlobalSettings>
+
+// Qt includes
+#include <QPainter>
 #include <qmath.h>
 
 DeparturePainter::DeparturePainter( QObject *parent )

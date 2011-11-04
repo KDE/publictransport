@@ -22,7 +22,7 @@
 
 /** @file
  * @brief Contains the HtmlDelegate.
- * 
+ *
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include <QItemDelegate>
@@ -34,14 +34,14 @@ class PublicTransportDelegatePrivate;
 
 /** @class HtmlDelegate
  * @brief A delegate than can display html formatted text.
- * 
- * It uses html data in @ref FormattedTextRole (from the enumeration @ref ModelDataRoles 
+ *
+ * It uses html data in @ref FormattedTextRole (from the enumeration @ref ModelDataRoles
  * in global.h).
- * @ref LocationModel and @ref ServiceProviderModel both use HtmlDelegate and 
+ * @ref LocationModel and @ref ServiceProviderModel both use HtmlDelegate and
  * @ref FormattedTextRole.
- * 
+ *
  * There are some options to control what/how the delegate draws items. It can draw a halo/shadow
- * for text and decoration using @ref DrawShadows. A background is drawn by default, but can be 
+ * for text and decoration using @ref DrawShadows. A background is drawn by default, but can be
  * turned off using @ref DontDrawBackground.
  * The options can be set in the constructor or later using @ref setOption and @ref setOptions.
  **/
@@ -56,13 +56,12 @@ public:
         DontDrawBackground = 0x0002, /**< Don't draw a background, just leave it transparent. */
         AlignTextToDecoration = 0x0004 /**< Aligns text always as if a decoration would be drawn. */
     };
-    Q_DECLARE_FLAGS( Options, Option );
+    Q_DECLARE_FLAGS( Options, Option )
 
     /**
      * @brief Creates a new HTML delgate with the given @p options.
      *
      * @param options Options for the delegate. Default is NoOption.
-     * 
      * @param parent The parent for this delegate. Default is 0.
      **/
     explicit HtmlDelegate( Options options = NoOption, QObject *parent = 0 );
@@ -72,7 +71,7 @@ public:
 
     /**
      * @brief Gets the options of the delegate.
-     * 
+     *
      * @return The current options of the delegate.
      **/
     Options options() const;
@@ -81,7 +80,6 @@ public:
      * @brief Enables/disables the given @p option.
      *
      * @param option The option too enable/disable.
-     * 
      * @param enable True, to enable @p option. False, to disable it.
      **/
     void setOption( Option option, bool enable );
@@ -103,27 +101,27 @@ protected:
                                  const QRect& rect, const QPixmap& pixmap ) const;
 
     /** @brief Reimplemented from QItemDelegate. */
-    virtual void drawDisplay( QPainter* painter, const QStyleOptionViewItem& option, 
+    virtual void drawDisplay( QPainter* painter, const QStyleOptionViewItem& option,
                               const QRect& rect, const QString& text ) const;
-    
+
     HtmlDelegatePrivate* const d_ptr;
 
 private:
     Q_DECLARE_PRIVATE( HtmlDelegate )
     Q_DISABLE_COPY( HtmlDelegate )
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS( HtmlDelegate::Options );
+Q_DECLARE_OPERATORS_FOR_FLAGS( HtmlDelegate::Options )
 
 
 /**
- * @brief This delegate is used by the publictransport applet to draw 
+ * @brief This delegate is used by the publictransport applet to draw
  *   departures/arrivals/journeys.
  **/
 class PublicTransportDelegate : public HtmlDelegate {
 public:
     /**
      * @brief Creates a new public transport delgate.
-     * 
+     *
      * @param parent The parent for this delegate. Default is 0.
      **/
     PublicTransportDelegate( QObject *parent = 0 );

@@ -17,19 +17,25 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "timetableaccessor_script.h"
+
+// Own includes
 #include "timetableaccessor_info.h"
 #include "departureinfo.h"
 #include "scripting.h"
 
-#include <KStandardDirs>
+// KDE includes
 #include <KLocalizedString>
+#include <KConfig>
+#include <KConfigGroup>
+#include <KStandardDirs>
 #include <KDebug>
 #include <kross/core/action.h>
 #include <kross/core/manager.h>
-#include <kconfig.h>
-#include <kconfiggroup.h>
 
+// Qt includes
+#include <QTextCodec>
 #include <QFile>
 #include <QScriptValueIterator>
 
@@ -88,7 +94,7 @@ QStringList TimetableAccessorScript::readScriptFeatures()
         QDateTime scriptModifiedTime = grp.readEntry("scriptModifiedTime", QDateTime());
         if ( QFileInfo(m_info->scriptFileName()).lastModified() == scriptModifiedTime ) {
             // Return feature list stored in the cache
-            return grp.readEntry("features", QStringList());
+            return grp.readEntry("scriptFeatures", QStringList());
         }
     }
 
@@ -149,7 +155,7 @@ QStringList TimetableAccessorScript::readScriptFeatures()
     // Store script features in a cache file
     grp.writeEntry( "scriptModifiedTime", QFileInfo(m_info->scriptFileName()).lastModified() );
     grp.writeEntry( "hasErrors", !ok );
-    grp.writeEntry( "features", features );
+    grp.writeEntry( "scriptFeatures", features );
 
     return features;
 }
@@ -265,13 +271,16 @@ bool TimetableAccessorScript::parseDocument( const QByteArray &document,
 
         // Set default vehicle type if none is set
         if ( !timetableData.values().contains(TypeOfVehicle) ||
-            timetableData.value(TypeOfVehicle).toString().isEmpty() )
+             timetableData.value(TypeOfVehicle).toString().isEmpty() )
         {
             timetableData.set(TypeOfVehicle, static_cast<int>(m_info->defaultVehicleType()));
         }
 
         QDate date = timetableData.value( DepartureDate ).toDate();
-        QTime departureTime = timetableData.value( DepartureTime ).toTime();
+        QTime departureTime = timetableData.contains(DepartureTime)
+                ? timetableData.value( DepartureTime ).toTime()
+                : QTime(timetableData.value(DepartureHour).toInt(),
+                        timetableData.value(DepartureMinute).toInt());
         if ( !date.isValid() ) {
             if ( curDate.isNull() ) {
                 // First departure
@@ -293,7 +302,6 @@ bool TimetableAccessorScript::parseDocument( const QByteArray &document,
         if ( dayAdjustment != 0 ) {
             date = date.addDays( dayAdjustment );
         }
-
         timetableData.set( DepartureDate, date );
 
         curDate = date;

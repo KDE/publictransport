@@ -112,6 +112,8 @@ void PopupIcon::stopDepartureFadeAnimation()
         m_fadeAnimation->stop();
         fadeAnimationFinished();
     }
+
+    startFadeTimerIfMultipleDepartures();
 }
 
 void PopupIcon::departuresAboutToBeRemoved( QList< ItemBase* > departures )
@@ -163,9 +165,13 @@ DepartureGroup PopupIcon::currentDepartureGroup() const
     if ( m_departureGroups.isEmpty() ) {
         return DepartureGroup();
     } else {
-        int groupIndex = currentDepartureGroupIndex();
-        return groupIndex < 0 ? (DepartureGroup() << m_model->nextAlarmDeparture())
-                : m_departureGroups[ qMin(groupIndex, m_departureGroups.count() - 1) ];
+        const int groupIndex = currentDepartureGroupIndex();
+        if ( groupIndex < 0 ) {
+            return m_model->hasAlarms() ? DepartureGroup() << m_model->nextAlarmDeparture()
+                                        : DepartureGroup();
+        } else {
+            return m_departureGroups[ qMin(groupIndex, m_departureGroups.count() - 1) ];
+        }
     }
 }
 
@@ -185,13 +191,15 @@ void PopupIcon::startFadeTimerIfMultipleDepartures()
 {
     if ( currentDepartureGroup().count() > 1 ) {
         if ( !m_fadeBetweenDeparturesInGroupTimer->isActive() ) {
-            // There are more than one departures in the current group 
+            // There are more than one departures in the current group
             // and the fade animation timer is not running
             m_fadeBetweenDeparturesInGroupTimer->start();
+        kDebug() << "Start";
         }
     } else if ( m_fadeBetweenDeparturesInGroupTimer->isActive() ) {
         // There is only one departure in the current group
         // and the fade animation timer is running
+        kDebug() << "Stop";
         m_fadeBetweenDeparturesInGroupTimer->stop();
     }
 }
@@ -201,6 +209,7 @@ void PopupIcon::fadeToNextDepartureInGroup()
     if ( currentDepartureGroup().count() <= 1 ) {
         kDebug() << "Need at least two departures in the current group to fade between";
         stopDepartureFadeAnimation();
+        startFadeTimerIfMultipleDepartures();
         return;
     }
 
@@ -213,7 +222,7 @@ void PopupIcon::fadeToNextDepartureInGroup()
     }
 
     // Set start/end values to animate to the next departure.
-    // If the current departure is the last one of the current group, animate to the 
+    // If the current departure is the last one of the current group, animate to the
     // first departure again (modulo).
     m_fadeAnimation->setStartValue( m_currentDepartureIndexStep );
     m_fadeAnimation->setEndValue( (qCeil(m_currentDepartureIndexStep) + 1) );
@@ -292,9 +301,9 @@ void PopupIcon::animate( int delta )
         const qreal animationPartDone = qAbs(m_currentDepartureGroupIndexStep - oldStartGroupIndex)
                                         / oldGroupSpan;
         if ( animationPartDone > 0.5 ) {
-            // Running animation visually almost finished (actually 50%, but the easing curve 
+            // Running animation visually almost finished (actually 50%, but the easing curve
             // slows the animation down at the end)
-            // With this check, the possibility gets lowered, that the animation is spanned over 
+            // With this check, the possibility gets lowered, that the animation is spanned over
             // more than one group
             m_startGroupIndex = oldEndGroupIndex;
             m_transitionAnimation->stop();
@@ -336,7 +345,7 @@ void PopupIcon::departureGroupRemoved( int index )
                     --m_startGroupIndex;
                     --m_endGroupIndex;
                 } else {
-                    // Stop running group transition animation, 
+                    // Stop running group transition animation,
                     // the start or end group has been removed
                     m_transitionAnimation->stop();
                     transitionAnimationFinished();

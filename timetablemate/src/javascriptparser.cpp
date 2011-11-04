@@ -245,7 +245,6 @@ StringNode* JavaScriptParser::parseString()
     }
     Token *beginToken = currentToken();
     m_lastToken = beginToken;
-    bool isRegExp = false; // TODO match /.../ig.. at the end of the reg exp
     if ( !beginToken->isChar('\"') && !beginToken->isChar('\'') ) {
         if ( !beginToken->isChar('/') ) {
             return NULL; // Not a reg exp and not a string
@@ -257,10 +256,9 @@ StringNode* JavaScriptParser::parseString()
             Token *prevToken = currentToken();
             ++m_it;
 
-            QString allowed("=(:?"); // If one of these comes before '/', it's the start of a reg exp
-            if ( prevToken->text.length() == 1 && allowed.contains(prevToken->text) ) {
-                isRegExp = true;
-            } else {
+            // If one of these comes before '/', it's the start of a regular expression
+            QString allowed("=(:?");
+            if ( prevToken->text.length() != 1 || !allowed.contains(prevToken->text) ) {
                 // Not a reg exp and not a string
                 return NULL;
             }

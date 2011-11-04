@@ -26,55 +26,55 @@
 #include <Plasma/DataEngine>
 
 namespace Plasma {
-	class DataEngine;
+    class DataEngine;
 }
 
-class TestVisualization : public QObject 
+class TestVisualization : public QObject
 {
-	Q_OBJECT
-	
+    Q_OBJECT
+
 public slots:
-	void dataUpdated( const QString &, const Plasma::DataEngine::Data &_data ) {
-		data = _data;
-		emit completed();
-	};
-	
+    void dataUpdated( const QString &, const Plasma::DataEngine::Data &_data ) {
+        data = _data;
+        emit completed();
+    };
+
 signals:
-	void completed();
-	
+    void completed();
+
 public:
-	Plasma::DataEngine::Data data;
+    Plasma::DataEngine::Data data;
 };
 
 class DeparturesTest : public QObject
 {
-	Q_OBJECT
-	
+    Q_OBJECT
+
 private slots:
-	void initTestCase();
-	void init();
-	void cleanup();
-	void cleanupTestCase();
-	
-	
-	// Tests "Departures <serviceProvider>|stop=<stopName>" data source
-	void departuresTest_data();
-	void departuresTest();
-	
-	// Tests "Departures <serviceProvider>|stop=<stopName>|time=<hh:mm>" data source
-	void departuresTimeTest_data();
-	void departuresTimeTest();
-	
-	// Tests "Departures <serviceProvider>|stop=<stopName>|timeOffset=<offset>" data source
-	void departuresTimeOffsetTest_data();
-	void departuresTimeOffsetTest();
-	
-	// Tests "Departures <serviceProvider>|stop=<stopName>|dateTime=<date-and-time>" data source
-	void departuresDateTimeTest_data();
-	void departuresDateTimeTest();
-	
+    void initTestCase();
+    void init();
+    void cleanup();
+    void cleanupTestCase();
+
+
+    // Tests "Departures <serviceProvider>|stop=<stopName>" data source
+    void departuresTest_data();
+    void departuresTest();
+
+    // Tests "Departures <serviceProvider>|stop=<stopName>|time=<hh:mm>" data source
+    void departuresTimeTest_data();
+    void departuresTimeTest();
+
+    // Tests "Departures <serviceProvider>|stop=<stopName>|timeOffset=<offset>" data source
+    void departuresTimeOffsetTest_data();
+    void departuresTimeOffsetTest();
+
+    // Tests "Departures <serviceProvider>|stop=<stopName>|dateTime=<date-and-time>" data source
+    void departuresDateTimeTest_data();
+    void departuresDateTimeTest();
+
 private:
-	Plasma::DataEngine *m_publicTransportEngine;
+    Plasma::DataEngine *m_publicTransportEngine;
 };
 
 #endif // DeparturesTest_H

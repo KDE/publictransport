@@ -24,6 +24,9 @@
 #include <kio/job.h>
 #include <QBuffer>
 
+const double OpenStreetMapEngine::maxAreaSize = 0.5;
+const double OpenStreetMapEngine::defautAreaSize = 0.02;
+
 OpenStreetMapEngine::OpenStreetMapEngine( QObject *parent, const QVariantList &args )
         : Plasma::DataEngine(parent, args) {
     // Update maximally every 5 mins, openstreetmap data doesn't change too much

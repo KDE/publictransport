@@ -19,7 +19,7 @@
 
 /** @file
  * @brief Contains a model for service providers, to be filled by the public transport data engine.
- * 
+ *
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef SERVICEPROVIDERMODEL_H
@@ -29,7 +29,7 @@
 
 #include <QModelIndex>
 #include <KIcon>
-#include <Plasma/DataEngine>
+#include <Plasma/DataEngine> // For dataUpdated slot (Plasma::DataEngine::Data)
 
 class QStringList;
 
@@ -51,14 +51,13 @@ public:
      * @brief Creates a new service provider item.
      *
      * @param name The name of the service provider.
-     * 
      * @param serviceProviderData A QVariantHash with data from the "publictransport" data engine.
      *
      * @note There's no need to call this yourself, just use
      *   @ref ServiceProviderModel::syncWithDataEngine to fill the model with items.
      **/
     ServiceProviderItem( const QString &name, const QVariantHash &serviceProviderData );
-    
+
     virtual ~ServiceProviderItem();
 
     /** @brief Gets the ID of the service provider. */
@@ -81,7 +80,7 @@ public:
 
     /**
      * @brief Sets the icon of this item.
-     * 
+     *
      * It gets automatically set asynchronously to the favicon of the service providers website,
      * if you use @ref ServiceProviderModel::syncWithDataEngine.
      *
@@ -102,7 +101,7 @@ private:
  *
  * You can just use @ref syncWithDataEngine to fill the model with data from the "publictransport"
  * data engine.
- * 
+ *
  * @note removeRow(s) doesn't work, this model should be handled read-only.
  *
  * @since 0.9
@@ -118,7 +117,7 @@ public:
      * @param parent The parent of this model. Defaults to 0.
      **/
     explicit ServiceProviderModel(QObject* parent = 0);
-    
+
     /**
      * @brief Destructor
      **/
@@ -145,11 +144,12 @@ public:
      * @brief Queries the data engine for service providers and fills itself with items.
      *
      * @param publicTransportEngine A pointer to the "publictransport" data engine.
-     * 
-     * @param favIconEngine A pointer to the "favicons" data engine. Use NULL to not use it.
+     *
+     * @param favIconEngine A pointer to the "favicons" data engine. Use 0 to not use it.
      **/
     void syncWithDataEngine( Plasma::DataEngine *publicTransportEngine,
-                             Plasma::DataEngine* favIconEngine = NULL );
+                             Plasma::DataEngine *favIconEngine = 0 );
+
     /** @brief Gets QModelIndex of the item with the given @p serviceProviderId. */
     QModelIndex indexOfServiceProvider( const QString &serviceProviderId );
 
@@ -165,6 +165,6 @@ private:
     Q_DISABLE_COPY( ServiceProviderModel )
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // SERVICEPROVIDERMODEL_H

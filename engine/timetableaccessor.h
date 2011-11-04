@@ -24,18 +24,27 @@
 #ifndef TIMETABLEACCESSOR_HEADER
 #define TIMETABLEACCESSOR_HEADER
 
+// Own includes
 #include "enums.h"
 
-#include <KUrl>
+// KDE includes
+#include <KUrl> // Member variable
+
+// Qt includes
 #include <QHash>
 #include <QStringList>
 
-class TimetableAccessorInfo;
-class PublicTransportInfo;
+class KJob;
+// class ChangelogEntry;
+// namespace KIO
+// {
+//     class StoredTransferJob;
+// }
+class StopInfo;
 class DepartureInfo;
 class JourneyInfo;
-class StopInfo;
-class KJob;
+class PublicTransportInfo;
+class TimetableAccessorInfo;
 
 /**
  * @brief Stores information about a request to the Public Transport data engine.

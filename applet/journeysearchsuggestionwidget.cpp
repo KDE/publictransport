@@ -17,22 +17,31 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "journeysearchsuggestionwidget.h"
+
+// Own includes
 #include "journeysearchparser.h"
+#include "journeysearchmodel.h"
 #include "settings.h"
 #include "timetablewidget.h"
 
-#include <KDebug>
+// KDE+Plasma includes
 #include <KColorScheme>
+#include <KLineEdit>
+#include <KDebug>
 #include <Plasma/LineEdit>
 #include <Plasma/Animator>
 #include <Plasma/Animation>
 #include <Plasma/Theme>
 
+// Qt includes
 #include <QStandardItemModel>
 #include <QGraphicsLinearLayout>
 #include <QTextDocument>
 #include <QGraphicsSceneHoverEvent>
+#include <QStyleOption>
+#include <QPainter>
 
 JourneySearchSuggestionItem::JourneySearchSuggestionItem(
         JourneySearchSuggestionWidget *parent, const QModelIndex& modelIndex )
@@ -91,8 +100,8 @@ QSizeF JourneySearchSuggestionItem::sizeHint( Qt::SizeHint which, const QSizeF& 
     }
 }
 
-void JourneySearchSuggestionItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
-                                        QWidget* widget)
+void JourneySearchSuggestionItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                                         QWidget* widget )
 {
     Q_UNUSED( widget );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
@@ -376,52 +385,56 @@ void JourneySearchSuggestionWidget::removeGeneralSuggestionItems()
 
 void JourneySearchSuggestionWidget::addJourneySearchCompletions()
 {
-//     if ( !m_lineEdit ) {
-//         kDebug() << "You need to attach a line edit before calling addJourneySearchCompletions";
-//         return;
-//     }
-
     // Insert journey search completions to the top of the list
     int row = 0;
 
     // Add recent journey searches
-    int recentCount = 0;
+    QList<QStandardItem*> favoriteItems;
+    QList<QStandardItem*> recentItems;
     if ( m_enabledSuggestions.testFlag(RecentJourneySearchSuggestion) ) {
-        if ( m_lineEdit ) {
-            foreach( const QString &recent, m_settings->recentJourneySearches ) {
+        foreach( const JourneySearchItem &journeySearchItem, m_settings->currentJourneySearches() ) {
+            if ( m_lineEdit ) {
+                // Only add favorite/recent items which name or stop name is contained in the
+                // current journey search
                 int posStart, len;
                 QString stop;
-                JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(), &posStart, &len, &stop );
-                if ( recent.contains(stop) ) {
-                    QStandardItem *item = new QStandardItem( KIcon("emblem-favorite"),
-                            i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Recent:</emphasis> %1", recent) );
-                    item->setData( "recent", Qt::UserRole + 1 );
-                    item->setData( recent, Qt::UserRole + 2 );
-                    item->setData( true, Qt::UserRole + 5 ); // Mark as suggestion item to easily remove it again
-                    m_model->insertRow( row, item );
-                    ++row;
-
-                    ++recentCount;
-                    if ( recentCount == 5 ) {
-                        break; // Only show the last five recent journey searches
-                    }
+                JourneySearchParser::stopNamePosition( m_lineEdit->nativeWidget(),
+                                                       &posStart, &len, &stop );
+                if ( !journeySearchItem.journeySearch().contains(stop) &&
+                     !journeySearchItem.name().contains(m_lineEdit->text()) )
+                {
+                    continue;
                 }
             }
-        } else {
-            foreach( const QString &recent, m_settings->recentJourneySearches ) {
-                QStandardItem *item = new QStandardItem( KIcon( "emblem-favorite" ),
-                        i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Recent:</emphasis> %1", recent) );
-                item->setData( "recent", Qt::UserRole + 1 );
-                item->setData( recent, Qt::UserRole + 2 );
-                item->setData( true, Qt::UserRole + 5 ); // Mark as suggestion item to easily remove it again
-                m_model->insertRow( row, item );
-                ++row;
 
-                ++recentCount;
-                if ( recentCount == 5 ) {
-                    break; // Only show the last five recent journey searches
+            QStandardItem *item;
+            if ( journeySearchItem.isFavorite() ) {
+                item = new QStandardItem( KIcon("favorites"),
+                    i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Favorite:</emphasis> %1",
+                            journeySearchItem.nameOrJourneySearch()) );
+                favoriteItems << item;
+            } else {
+                if ( recentItems.count() == 3 ) {
+                    continue; // Only show the last three recent journey searches
                 }
+                item = new QStandardItem( KIcon("emblem-favorite"),
+                    i18nc("@item:inlistbox/rich", "<emphasis strong='1'>Recent:</emphasis> %1",
+                            journeySearchItem.nameOrJourneySearch()) );
+                recentItems << item;
             }
+            item->setData( "recent", Qt::UserRole + 1 );
+            item->setData( journeySearchItem.journeySearch(), Qt::UserRole + 2 );
+            item->setData( true, Qt::UserRole + 5 ); // Mark as suggestion item to easily remove it again
+        }
+
+        foreach ( QStandardItem *favoriteItem, favoriteItems ) {
+            m_model->insertRow( row, favoriteItem );
+            ++row;
+        }
+
+        foreach ( QStandardItem *recentItem, recentItems ) {
+            m_model->insertRow( row, recentItem );
+            ++row;
         }
     }
 

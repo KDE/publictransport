@@ -47,21 +47,21 @@ GeneralVehicleType Global::generalVehicleType( VehicleType vehicleType )
     case Subway:
     case Metro:
         return LocalPublicTransport;
-        
+
     case RegionalTrain:
     case RegionalExpressTrain:
     case InterregionalTrain:
     case IntercityTrain:
     case HighSpeedTrain:
         return Train;
-        
+
     case Ferry:
     case Ship:
         return WaterVehicle;
-        
+
     case Plane:
         return AirVehicle;
-        
+
     case Unknown:
     default:
         return UnknownVehicle;
@@ -301,4 +301,4 @@ QColor Global::textColorDelayed()
     return KColorUtils::tint( color, Qt::red, 0.5 );
 }
 
-}; // namespace Timetable
+} // namespace Timetable

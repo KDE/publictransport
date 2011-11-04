@@ -20,16 +20,16 @@
 #ifndef TIMETABLEWIDGET_H
 #define TIMETABLEWIDGET_H
 
-#include "departuremodel.h"
+// Own includes
 #include "stopaction.h" // for StopAction::Type
+#include "departuremodel.h"
 
-#include <Plasma/ScrollWidget>
-#include <KDebug>
+// Plasma includes
+#include <Plasma/ScrollWidget> // Base class
 
-#include <QGraphicsWidget>
-#include <QModelIndex>
-#include <QPainter>
-#include <QPointer>
+// Qt includes
+#include <QGraphicsWidget> // Base class
+#include <QPointer> // Member variable
 
 /** @file
  * @brief This file contains the TimetableWidget / JourneyTimetableWidget and it's item classes.
@@ -45,6 +45,7 @@ class QPropertyAnimation;
 class QWidget;
 class QStyleOptionGraphicsItem;
 class QPainter;
+class QTextOption;
 
 class RouteGraphicsItem;
 class JourneyRouteGraphicsItem;
@@ -71,7 +72,6 @@ class PublicTransportWidget;
  **/
 class PublicTransportGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
-#include <QAction>
     Q_PROPERTY( qreal expandStep READ expandStep WRITE setExpandStep )
     Q_PROPERTY( qreal fadeOut READ fadeOut WRITE setFadeOut )
     friend class PublicTransportWidget;
@@ -80,12 +80,11 @@ public:
     explicit PublicTransportGraphicsItem( PublicTransportWidget* publicTransportWidget,
                                           QGraphicsItem* parent = 0,
                                           StopAction *copyStopToClipboardAction = 0,
-                                          StopAction *showInMapAction = 0/*,
-                                          QAction *toggleAlarmAction = 0*/ );
+                                          StopAction *showInMapAction = 0 );
     virtual ~PublicTransportGraphicsItem();
 
     /** @brief The height of route items. */
-    static const qreal ROUTE_ITEM_HEIGHT = 60.0;
+    static const qreal ROUTE_ITEM_HEIGHT;
 
     /** @brief A pointer to the containing PublicTransportWidget. */
     PublicTransportWidget *publicTransportWidget() const { return m_parent; };
@@ -298,7 +297,6 @@ protected:
     QPixmap *m_pixmap;
     StopAction *m_copyStopToClipboardAction;
     StopAction *m_showInMapAction;
-//     QAction *m_toggleAlarmAction;
 };
 
 class TextDocumentHelper {
@@ -472,8 +470,7 @@ public:
                                   StopAction *copyStopToClipboardAction = 0,
                                   StopAction *showInMapAction = 0,
                                   StopAction *requestJourneyToStopAction = 0,
-                                  StopAction *requestJourneyFromStopAction = 0/*,
-                                  QAction *toggleAlarmAction = 0*/ );
+                                  StopAction *requestJourneyFromStopAction = 0 );
     virtual ~JourneyGraphicsItem();
 
     /**
@@ -667,7 +664,6 @@ protected:
     bool m_enableOpenStreetMap; // Enable actions using the openstreetmap data engine
     StopAction *m_copyStopToClipboardAction;
     StopAction *m_showInMapAction;
-//     QAction *m_toggleAlarmAction;
 };
 
 /**

@@ -31,20 +31,21 @@ namespace Plasma {
 
 class PublicTransportPreview : public QGraphicsView {
     Q_OBJECT
-    public:
+
+public:
     PublicTransportPreview( QWidget *parent = 0 );
 
     bool isPlasmaPreviewShown() const { return m_applet; };
     void setSettings( const QString &serviceProviderID, const QString &stopName );
 
-    signals:
+signals:
     void plasmaPreviewLoaded();
 
-    public slots:
+public slots:
     bool loadPlasmaPreview();
     void closePlasmaPreview();
 
-    protected:
+protected:
     virtual void resizeEvent( QResizeEvent* event );
 
     private:

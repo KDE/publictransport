@@ -19,7 +19,7 @@
 
 /** @file
  * @brief Contains a model for locations, to be filled by the public transport data engine.
- * 
+ *
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef LOCATIONMODEL_H
@@ -56,16 +56,14 @@ public:
         Country = 2, /**< Displays a country. */
         International = 3, /**< Special type for accessors that support countries all over the world. */
         Unknown = 4, /**< For accessors with unknown country. */
-        Errornous = 5 /**< Displays errornous accessors. */
+        Erroneous = 5 /**< Displays erroneous accessors. */
     };
-    
+
     /**
      * @brief Creates a new location item.
      *
      * @param countryCode The country code for the new item.
-     * 
      * @param accessorCount The number of accessors for the location. Defaults to -1.
-     * 
      * @param description A description for the location, eg. information about the accessors for
      *   the location. Defaults to QString().
      *
@@ -74,16 +72,16 @@ public:
      **/
     explicit LocationItem( const QString &countryCode, int accessorCount = -1,
                            const QString &description = QString() );
-    
+
     /**
      * @brief Destructor.
      **/
     virtual ~LocationItem();
 
-    /** 
+    /**
      * @brief Gets the country code of the location, if the type is @ref Country.
-     * 
-     * Otherwise "unknown", "international", "showAll" or "errornous" is returned. */
+     *
+     * Otherwise "unknown", "international", "showAll" or "erroneous" is returned. */
     QString countryCode() const;
 
     /** @brief Gets the (unformatted) text to be displayed for this item. */
@@ -112,7 +110,7 @@ private:
  * There are different location types, a list of them can be seen in @ref LocationItem::ItemType.
  * You can just use @ref syncWithDataEngine to fill the model with data from the "publictransport"
  * data engine.
- * 
+ *
  * @note removeRow(s) doesn't work, this model should be handled read-only.
  *
  * @since 0.9
@@ -126,7 +124,7 @@ public:
      * @param parent The parent of this model. Defaults to 0.
      **/
     explicit LocationModel(QObject* parent = 0);
-    
+
     /**
      * @brief Destructor.
      **/
@@ -153,7 +151,8 @@ public:
 
     /**
      * @brief Gets flags for the given @p index.
-     * It's used to mark items of type Errornous as non-selectable.
+     *
+     * It's used to mark items of type Erroneous as non-selectable.
      *
      * @param index The index of the item to get flags for.
      * @return The flags of the given @p index.
@@ -179,6 +178,6 @@ private:
     Q_DISABLE_COPY( LocationModel )
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // LOCATIONMODEL_H

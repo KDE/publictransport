@@ -17,8 +17,10 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-// Own includes
+// Header
 #include "publictransportdataengine.h"
+
+// Own includes
 #include "publictransportservice.h"
 #include "timetableaccessor.h"
 #include "timetableaccessor_info.h"
@@ -109,6 +111,7 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
         const bool cacheExists = QFile::exists( fileName );
         bool dataFound = false;
         if ( cacheExists ) {
+//             TODO compare last changed value, maybe the accessor was changed to have more (or less) features
             KConfig cfg( fileName, KConfig::SimpleConfig );
             KConfigGroup grp = cfg.group( accessorInfo.serviceProvider() );
             QStringList features = grp.readEntry("features", QStringList());

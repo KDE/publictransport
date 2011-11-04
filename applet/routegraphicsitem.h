@@ -20,10 +20,17 @@
 #ifndef ROUTEGRAPHICSITEM_HEADER
 #define ROUTEGRAPHICSITEM_HEADER
 
-#include <QGraphicsWidget>
-#include <QPointer>
-#include <Plasma/Svg>
+// Own includes
 #include "global.h"
+
+// Qt includes
+#include <QGraphicsWidget> // Base class
+#include <QPointer> // Member variable
+
+namespace Plasma
+{
+    class Svg;
+}
 
 class DepartureModel;
 class JourneyItem;

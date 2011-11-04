@@ -24,10 +24,14 @@
 #ifndef DEPARTUREMODEL_HEADER
 #define DEPARTUREMODEL_HEADER
 
-#include "settings.h" // TODO Only used for AlarmSettings. Removed here?
-#include <departureinfo.h>
-#include <QSortFilterProxyModel>
-#include <QAbstractItemModel>
+// Own includes
+#include "settings.h" // AlarmSettings(List)
+
+// libpublictransporthelper includes
+#include <departureinfo.h> // Member variable
+
+// Qt includes
+#include <QAbstractItemModel> // Base class
 
 /** @brief Holds information about settings from the applet. */
 struct Info {
@@ -280,7 +284,7 @@ public:
 
     /**
      * @returns the current alarm states.
-     * 
+     *
      * @see AlarmStates
      **/
     AlarmStates alarmStates() const { return m_alarm; };
@@ -301,7 +305,7 @@ protected:
 
 /**
  * @brief An item which automatically creates/updates child items according to the information in @ref journeyInfo.
- * 
+ *
  * To update this item and it's child items call @ref setJourneyInfo.
  * To only update remaining time values, call @ref updateTimeValues.
  *
@@ -412,7 +416,7 @@ public:
     const DepartureInfo *departureInfo() const { return &m_departureInfo; };
 
     RouteStopFlags routeStopFlags( int routeStopIndex = 0, int *minsFromFirstRouteStop = 0 );
-    
+
     /** @returns a hash with child items by their type. */
     QHash< ItemType, ChildItem* > typedChildren() const;
 
@@ -514,7 +518,7 @@ public:
      * @brief Gets the QModelIndex of the given @p item.
      *
      * @param item The item to get the index for.
-     * 
+     *
      * @return The QModelIndex for the given @p item.
      **/
     virtual QModelIndex index( ItemBase *item ) const {
@@ -635,7 +639,7 @@ public:
      * @param item The item which data has changed.
      *
      * @param columnLeft The first changed column. Defaults to 0.
-     * 
+     *
      * @param columnRight The last changed column Defaults to 0.
      **/
     void itemChanged( ItemBase *item, int columnLeft = 0, int columnRight = 0 );
@@ -703,7 +707,7 @@ public:
      *
      * @param parent The parent, which column count should be returned. Defaults to QModelIndex(),
      *   ie. the toplevel column count.
-     * 
+     *
      * @return The number of columns for the given @p parent in this model.
      **/
     virtual int columnCount( const QModelIndex& parent = QModelIndex() ) const;
@@ -712,12 +716,12 @@ public:
      * @brief Removes @p count items beginning at @p row from @p parent.
      *
      * @param row The row of the first item to be removed.
-     * 
+     *
      * @param count The number of items to be removed, beginning at @p row.
-     * 
+     *
      * @param parent The QModelIndex parent which child items should be removed or an invalid
      *   model index to remove toplevel items. Defaults to QModelIndex().
-     * 
+     *
      * @return True, if the items were successfully removed from the model. False, otherwise.
      **/
     virtual bool removeRows( int row, int count, const QModelIndex& parent = QModelIndex() );
@@ -766,7 +770,7 @@ public:
 
     /** @brief Gets a structure containing some settings. */
     Info info() const { return m_info; };
-    
+
     void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
     void setCurrentStopIndex( int currentStopSettingsIndex );
     void setAlarmSettings( const AlarmSettingsList &alarmSettings );
@@ -814,7 +818,7 @@ signals:
 protected slots:
     /**
      * @brief Updates time values, checks for alarms and sorts out old departures.
-     * 
+     *
      * Called each full minute. */
     virtual void update();
 
@@ -868,7 +872,7 @@ public:
 
     /** @brief Gets a structure containing some settings. */
     Info info() const { return m_info; };
-    
+
     void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
     void setCurrentStopIndex( int currentStopSettingsIndex );
     void setAlarmSettings( const AlarmSettingsList &alarmSettings );

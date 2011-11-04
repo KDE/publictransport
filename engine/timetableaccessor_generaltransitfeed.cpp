@@ -721,8 +721,8 @@ void TimetableAccessorGeneralTransitFeed::requestStopSuggestions(
     query.setForwardOnly( true );
     QString stopValue = requestInfo.stop;
     stopValue.replace( '\'', "\'\'" );
-    if ( !query.prepare(QString("SELECT * FROM stops WHERE stop_name LIKE '%%1%' LIMIT %2")
-                        .arg(stopValue).arg(STOP_SUGGESTION_LIMIT))
+    if ( !query.prepare(QString("SELECT * FROM stops WHERE stop_name LIKE '%%2%' LIMIT %1")
+                        .arg(STOP_SUGGESTION_LIMIT).arg(stopValue))
          || !query.exec() )
     {
         // Check of the error is a "disk I/O error", ie. the database file may have been deleted

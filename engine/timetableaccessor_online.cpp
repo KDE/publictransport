@@ -40,6 +40,22 @@ TimetableAccessorOnline::TimetableAccessorOnline( TimetableAccessorInfo *info, Q
     m_stopIdRequested = false;
 }
 
+TimetableAccessorOnline::~TimetableAccessorOnline()
+{
+    if ( !m_jobInfos.isEmpty() ) {
+        // There are still pending requests, data haven't been completely received.
+        // The result is, that the data engine won't be able to fill the data source with values.
+        // A possible cause is calling Plasma::DataEngineManager::unloadEngine() more often
+        // than Plasma::DataEngineManager::loadEngine(), which deletes the whole data engine
+        // with all it's currently loaded accessors even if one other visualization is connected
+        // to the data engine. The dataUpdated() slot of this other visualization won't be called.
+        kDebug() << "Accessor with" << m_jobInfos.count() << "pending requests deleted";
+        if ( m_info ) {
+            kDebug() << m_info->serviceProvider() << m_jobInfos.count();
+        }
+    }
+}
+
 void TimetableAccessorOnline::requestDepartures( const DepartureRequestInfo &requestInfo )
 {
     // Test if a session key needs to be requested first

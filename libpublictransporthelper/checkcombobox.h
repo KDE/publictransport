@@ -19,7 +19,7 @@
 
 /** @file
  * @brief Contains a combobox in which each element can be checked.
- * 
+ *
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef CHECKCOMBOBOX_HEADER
@@ -27,14 +27,15 @@
 
 #include "publictransporthelper_export.h"
 
-#include <KComboBox>
-#include <KLocalizedString>
+// KDE includes
+#include <KComboBox> // Base class
+#include <KLocalizedString> // i18n in default argument values
 
 class CheckComboboxPrivate;
 
 /**
  * @brief A combobox to select multiple items of the list by adding check boxes.
- * 
+ *
  * If no or one item is selected KComboBox paints the combobox in the default way.
  * If more than one item is selected, the icons of all selected items are painted
  * and the text shows how many items are selected ("x/y").
@@ -68,7 +69,7 @@ public:
 
     /**
      * @brief Gets the separating text between checked item texts.
-     * 
+     *
      * Only used with @ref ShowStringList.
      **/
     QString separator() const;
@@ -102,14 +103,14 @@ public:
 
     /**
      * @brief Gets whether or not it's allowed that no item is checked.
-     * 
+     *
      * If this is false, the last checked item can't be unchecked.
      **/
     bool allowNoCheckedItem() const;
 
     /**
      * @brief Sets whether or not it's allowed that no item is checked.
-     * 
+     *
      * If set to false, the last checked item can't be unchecked (true is default)
      **/
     void setAllowNoCheckedItem( bool allow = true );

@@ -63,7 +63,7 @@ public:
                 * service providers for a given country. */
         ServiceProviders = 2, /**< The source contains information about available
                 * service providers. */
-        ErroneousServiceProviders = 3, /**< The source contains a list of errornous
+        ErroneousServiceProviders = 3, /**< The source contains a list of erroneous
                 * service provider accessors. */
         Locations = 4, /**< The source contains information about locations
                 * for which accessors to service providers exist. */
@@ -348,8 +348,8 @@ private:
 
 /** @mainpage Public Transport Data Engine
 @section intro_dataengine_sec Introduction
-PublicTransportEngine provides timetable data for public transport, trains, ships, ferries and
-planes. It can get departure/arrival lists, journey lists and stop name suggestions.
+The public transport data engine provides timetable data for public transport, trains, ships,
+ferries and planes. It can get departure/arrival lists, journey lists and stop name suggestions.
 There are different accessors used to download and parse documents from different service
 providers, all based on the abstract class TimetableAccessor. There is another abstract class
 TimetableAccessorOnline (derived from TimetableAccessor), that implements the request...()

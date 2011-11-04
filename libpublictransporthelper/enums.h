@@ -22,7 +22,7 @@
 
 /** @file
  * @brief This file contains enumerations used by the public transport helper library.
- * 
+ *
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include "publictransporthelper_export.h"
@@ -102,10 +102,10 @@ enum FilterAction {
 
 /**
  * @brief Contains keys for different stop settings.
- * 
+ *
  * Indices beginning at UserSetting may be used to store custom data.
- * 
- * For each enumerable a data type is defined, which can be used for example in 
+ *
+ * For each enumerable a data type is defined, which can be used for example in
  * @ref StopSettings::get. If you want to get the value of eg. <em>TimeOfFirstDepartureSetting</em>
  * you can write something like this:
  * @code
@@ -121,21 +121,21 @@ enum FilterAction {
  **/
 enum PUBLICTRANSPORTHELPER_EXPORT StopSetting {
     NoSetting = 0, /**< Don't use any setting. */
-    
+
     LocationSetting = 1, /**< The location of the stop, eg. a country (QString). */
     ServiceProviderSetting = 2, /**< The ID of the service provider of the stop (QString). */
     CitySetting = 3, /**< The city of the stop, if used by the service provider (QString). */
     StopNameSetting = 4, /**< The stop name (Stop). */
-    
+
     FilterConfigurationSetting = 10, /**< The filter configuration to be used for the stop (QString). */
-    AlarmTimeSetting = 11, /** The time in minutes before the departure 
+    AlarmTimeSetting = 11, /** The time in minutes before the departure
             * at which the alarm should be fired (int). */
-    FirstDepartureConfigModeSetting = 12, /**< The config mode for the time 
+    FirstDepartureConfigModeSetting = 12, /**< The config mode for the time
             * of the first departure (enum FirstDepartureConfigMode, int). */
-    TimeOffsetOfFirstDepartureSetting = 13, /**< The offset in minutes from the current time 
+    TimeOffsetOfFirstDepartureSetting = 13, /**< The offset in minutes from the current time
             * until the first departure (int). */
     TimeOfFirstDepartureSetting = 14, /**< A custom time for the first departure (QTime). */
-    
+
     UserSetting = 100 /**< The first index to be used for custom data (QVariant). Widgets
             * to edit custom settings can be created for the @ref StopSettingsDialog
             * using a @ref StopSettingsWidgetFactory. */
@@ -182,8 +182,8 @@ enum PUBLICTRANSPORTHELPER_EXPORT DecorationPosition {
 
 /**
  * @brief A more general vehicle type than @ref VehicleType.
- * 
- * For example @ref VehicleType has special enumerables for different types of trains, 
+ *
+ * For example @ref VehicleType has special enumerables for different types of trains,
  * where @ref GerenalVehicleType combines them into one enumerable.
  */
 enum PUBLICTRANSPORTHELPER_EXPORT GeneralVehicleType {
@@ -265,7 +265,7 @@ inline QDebug& operator<<( QDebug debug, FilterType filterType )
         default:
             return debug << "Unknown filter type: " << filterType;
     }
-};
+}
 
 inline QDebug& operator<<( QDebug debug, FilterVariant filterVariant )
 {
@@ -295,8 +295,8 @@ inline QDebug& operator<<( QDebug debug, FilterVariant filterVariant )
         default:
             return debug << "Unknown filter variant: " << filterVariant;
     }
-};
+}
 
-}; // namespace Timetable
+} // namespace Timetable
 
 #endif // Multiple inclusion guard

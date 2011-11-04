@@ -25,12 +25,13 @@
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include <QObject> // Base class
-#include <KIcon> // For PopupIcon::createPopupIcon, ie. it's return value
 
 class DeparturePainter;
 class DepartureModel;
 class DepartureItem;
 class ItemBase;
+class KIcon;
+class QSize;
 class QTimer;
 class QPropertyAnimation;
 

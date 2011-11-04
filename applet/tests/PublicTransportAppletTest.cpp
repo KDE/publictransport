@@ -71,18 +71,18 @@ void PublicTransportAppletTest::initTestCase()
     m_removeFilterConfiguration = NULL;
 
     // Init settings
-	m_stopSettings.setStop( Stop(QLatin1String("Custom Stop"), QLatin1String("123456")) );
-	QCOMPARE( m_stopSettings.stops().count(), 1 );
-	QCOMPARE( m_stopSettings.stopList().count(), 1 );
-	QCOMPARE( m_stopSettings.stop(0).name, QLatin1String("Custom Stop") );
-	QCOMPARE( m_stopSettings.stop(0).id, QLatin1String("123456") );
-	QCOMPARE( m_stopSettings.stop(0).nameOrId(), QLatin1String("123456") );
-	
-	m_stopSettings.set( ServiceProviderSetting, QLatin1String("de_db") );
-	QCOMPARE( m_stopSettings[ServiceProviderSetting].toString(), QLatin1String("de_db") );
-	
-	m_stopSettings.set( LocationSetting, QLatin1String("de") );
-	QCOMPARE( m_stopSettings[LocationSetting].toString(), QLatin1String("de") );
+    m_stopSettings.setStop( Stop(QLatin1String("Custom Stop"), QLatin1String("123456")) );
+    QCOMPARE( m_stopSettings.stops().count(), 1 );
+    QCOMPARE( m_stopSettings.stopList().count(), 1 );
+    QCOMPARE( m_stopSettings.stop(0).name, QLatin1String("Custom Stop") );
+    QCOMPARE( m_stopSettings.stop(0).id, QLatin1String("123456") );
+    QCOMPARE( m_stopSettings.stop(0).nameOrId(), QLatin1String("123456") );
+
+    m_stopSettings.set( ServiceProviderSetting, QLatin1String("de_db") );
+    QCOMPARE( m_stopSettings[ServiceProviderSetting].toString(), QLatin1String("de_db") );
+
+    m_stopSettings.set( LocationSetting, QLatin1String("de") );
+    QCOMPARE( m_stopSettings[LocationSetting].toString(), QLatin1String("de") );
 
     FilterSettings filterSettings1, filterSettings2;
     filterSettings1.name = "Filter configuration 1";
@@ -94,7 +94,7 @@ void PublicTransportAppletTest::initTestCase()
     Filter filter2 = Filter() << Constraint( FilterByTarget, FilterContains, "TestTarget2" );
     filterSettings2.filters << filter2;
 
-	m_filterConfigurations << filterSettings1 << filterSettings2;
+    m_filterConfigurations << filterSettings1 << filterSettings2;
 
     // Add the desktop containment
     m_corona = new Plasma::Corona( this );

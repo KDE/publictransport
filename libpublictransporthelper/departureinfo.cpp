@@ -449,4 +449,4 @@ bool operator <( const DepartureInfo &di1, const DepartureInfo &di2 )
     return di1.predictedDeparture() < di2.predictedDeparture();
 }
 
-}; // namespace Timetable
+} // namespace Timetable

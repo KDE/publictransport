@@ -17,15 +17,23 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "filterwidget.h"
 
-#include "filter.h"
-#include "departureinfo.h"
+// Own includes
 #include "checkcombobox.h"
 
-#include <QLabel>
+// KDE includes
 #include <KGlobal>
 #include <KLocale>
+#include <KLineEdit>
+#include <KNumInput>
+
+// Qt includes
+#include <QStandardItemModel>
+#include <QFormLayout>
+#include <QTimeEdit>
+#include <QToolButton>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace Timetable {
@@ -48,6 +56,7 @@ FilterWidget::FilterWidget( const QList<FilterType> &allowedFilterTypes, QWidget
         AddButtonBesideFirstWidget, seperatorOptions, AddWidgetsAtBottom, QString() )
 {
     if ( allowedFilterTypes.isEmpty() ) {
+        // Add default allowed filter types
         m_allowedFilterTypes << FilterByVehicleType << FilterByTarget << FilterByVia
                 << FilterByNextStop << FilterByTransportLine << FilterByTransportLineNumber
                 << FilterByDelay;
@@ -66,13 +75,16 @@ void FilterWidget::setAllowedFilterTypes( const QList< FilterType >& allowedFilt
 
 FilterType FilterWidget::firstUnusedFilterType() const
 {
+    // Collect used filter types
     QList< FilterType > filterTypes;
     foreach( ConstraintWidget* constraint, constraintWidgets() ) {
         filterTypes << constraint->type();
     }
 
+    // Go through all allowed filter types and return the first which is not used
     foreach( FilterType filterType, m_allowedFilterTypes ) {
         if ( !filterTypes.contains(filterType) ) {
+            // filterType is allowed but not used, return it
             return filterType;
         }
     }
@@ -105,8 +117,11 @@ void FilterWidget::setFilter( const Filter& filter )
 
 void FilterWidget::addConstraint( ConstraintWidget* filter )
 {
+    // Add a combobox as label for the given filter
     KComboBox *cmbFilterType = qobject_cast< KComboBox* >( createNewLabelWidget(0) );
     Q_ASSERT( cmbFilterType );
+
+    // Add the given filter in a DynamicWidget
     DynamicWidget *dynamicWidget = addWidget( cmbFilterType, filter );
     if ( !dynamicWidget ) {
         kDebug() << "Couldn't add constraint widget" << filter;
@@ -272,10 +287,13 @@ void FilterWidget::filterTypeChanged( int index )
     Q_ASSERT( cmbFilterType );
     int filterIndex = m_filterTypes.indexOf( cmbFilterType );
 
+    // Get the new filter type
     FilterType type = static_cast< FilterType >( cmbFilterType->itemData( index ).toInt() );
+
+    // Create a ConstraintWidget for the new filter type and replace the old ConstraintWidget
     ConstraintWidget *newConstraint = createConstraint( type );
     dynamicWidgets().at( filterIndex )->replaceContentWidget( newConstraint );
-    connect( newConstraint, SIGNAL( changed() ), this, SLOT( changed() ) );
+    connect( newConstraint, SIGNAL(changed()), this, SLOT(changed()) );
     emit changed();
 }
 
@@ -474,6 +492,7 @@ void ConstraintWidget::variantChanged( int index )
 
 QWidget* FilterWidget::createNewLabelWidget( int )
 {
+    // Create a new combobox which contains all allowed filter types as label widget
     KComboBox *cmbFilterType = new KComboBox( this );
     foreach( FilterType filterType, m_allowedFilterTypes ) {
         cmbFilterType->addItem( filterName(filterType) + ':', static_cast<int>(filterType) );
@@ -495,17 +514,20 @@ DynamicWidget* FilterWidget::addWidget( QWidget* labelWidget, QWidget* widget )
     DynamicWidget *dynamicWidget =
             AbstractDynamicLabeledWidgetContainer::addWidget( labelWidget, widget );
     if ( dynamicWidget ) {
+        // Add combobox to the list of filter type widgets
         m_filterTypes << cmbFilterType;
 
-        ConstraintWidget *constraintWidget =
-            dynamicWidget->contentWidget< ConstraintWidget* >();
+        // Set correct filter type in the combobox
+        ConstraintWidget *constraintWidget = dynamicWidget->contentWidget< ConstraintWidget* >();
         cmbFilterType->setCurrentIndex( cmbFilterType->findData(
-                                            static_cast<int>( constraintWidget->type() ) ) );
+                                            static_cast<int>(constraintWidget->type())) );
 
+        // Connect changed signals
         connect( cmbFilterType, SIGNAL(currentIndexChanged(int)),
                 this, SLOT(filterTypeChanged(int)) );
         connect( constraintWidget, SIGNAL(changed()), this, SIGNAL(changed()) );
 
+        // Set tooltip for add/remove buttons, if any
         if ( dynamicWidget->removeButton() ) {
             dynamicWidget->removeButton()->setToolTip(
                     i18nc( "@info:tooltip", "Remove this criterion from the filter" ) );
@@ -558,6 +580,7 @@ QList< FilterWidget* > FilterListWidget::filterWidgets() const
 
 FilterList FilterListWidget::filters() const
 {
+    // Get the filter of each FilterWidget
     FilterList list;
     foreach( DynamicWidget *dynamicWidget, dynamicWidgets() ) {
         list << qobject_cast< FilterWidget* >( dynamicWidget->contentWidget() )->filter();
@@ -567,6 +590,7 @@ FilterList FilterListWidget::filters() const
 
 void ConstraintListWidget::checkedItemsChanged()
 {
+    // Update list of values of checked items
     m_values.clear();
     foreach( const QModelIndex &index, m_list->checkedItems() ) {
         m_values << index.data( Qt::UserRole );
@@ -575,4 +599,77 @@ void ConstraintListWidget::checkedItemsChanged()
     emit changed();
 }
 
-}; // namespace Timetable
+void ConstraintWidget::addWidget( QWidget* w ) {
+    QFormLayout *l = dynamic_cast< QFormLayout* >( layout() );
+    QLayoutItem *item = l->itemAt( 0 );
+    if ( item ) {
+        l->removeItem( item );
+        l->addRow( item->widget(), w );
+    }
+}
+
+Filter FilterWidget::filter() const
+{
+    Filter f;
+    foreach( ConstraintWidget *constraint, constraintWidgets() ) {
+        f << constraint->constraint();
+    }
+    return f;
+}
+
+FilterWidget* FilterWidget::create( const Timetable::Filter& filter, QWidget* parent )
+{
+    FilterWidget *filterWidget = new FilterWidget( QList<FilterType>()
+            << FilterByVehicleType << FilterByTarget << FilterByVia << FilterByNextStop
+            << FilterByTransportLine << FilterByTransportLineNumber << FilterByDelay, parent );
+    filterWidget->setFilter( filter );
+    return filterWidget;
+}
+
+void FilterListWidget::addFilter()
+{
+    Filter filter;
+    filter << Constraint();
+    addFilter( filter );
+}
+
+FilterListWidget* FilterListWidget::create( const Timetable::FilterList& filterList, QWidget* parent )
+{
+    FilterListWidget *filterListWidget = new FilterListWidget( parent );
+    foreach( Filter filter, filterList ) {
+        filterListWidget->addFilter( filter );
+    }
+    return filterListWidget;
+}
+
+QVariant ConstraintTimeWidget::value() const
+{
+    return m_time->time();
+}
+
+void ConstraintTimeWidget::setValue( const QVariant& value )
+{
+    m_time->setTime( value.toTime() );
+}
+
+QVariant ConstraintIntWidget::value() const
+{
+    return m_num->value();
+}
+
+void ConstraintIntWidget::setValue( const QVariant& value )
+{
+    m_num->setValue( value.toInt() );
+}
+
+QVariant ConstraintStringWidget::value() const
+{
+    return m_string->text();
+}
+
+void ConstraintStringWidget::setValue( const QVariant& value )
+{
+    m_string->setText( value.toString() );
+}
+
+} // namespace Timetable

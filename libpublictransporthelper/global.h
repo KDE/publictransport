@@ -22,7 +22,7 @@
 
 /** @file
  * @brief This file contains enumerations and Global used by the public transport helper library.
- * 
+ *
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include "publictransporthelper_export.h"
@@ -42,7 +42,7 @@ namespace Timetable {
 class PUBLICTRANSPORTHELPER_EXPORT Global {
 public:
     static GeneralVehicleType generalVehicleType( VehicleType vehicleType );
-    
+
     /** @brief Create an "international" icon with some flag icons */
     static KIcon internationalIcon();
 
@@ -63,34 +63,34 @@ public:
     static QColor textColorDelayed();
 };
 
-}; // namespace Timetable
+} // namespace Timetable
 
 /** @mainpage
- * 
- * The <em>publictransporthelper</em> library can be used by Plasma applets / runners for 
+ *
+ * The <em>publictransporthelper</em> library can be used by Plasma applets / runners for
  * configuration of stops to be used with the <em>publictransport</em> data engine.
  * To simply show a dialog to let the user edit @ref StopSettings the @ref StopSettingsDialog
  * can be used. That dialog can also be used to only select a service provider.
- * 
+ *
  * The @ref StopWidget shows an overview of a @ref StopSettings object and a button to change the
- * settings using a @ref StopSettingsDialog. @ref StopListWidget can be used to let the user 
+ * settings using a @ref StopSettingsDialog. @ref StopListWidget can be used to let the user
  * edit more than one stop. It shows a button to add new stops and buttons beside the stops
  * to remove them.
- * 
+ *
  * If you only want to use a location-/service provider-combobox like the one used inside
  * @ref StopSettingsDialog, you can use @ref LocationModel / @ref ServiceProviderModel for your
  * comboboxes.
- * 
+ *
  * The library also offers a @ref VehicleType enumeration exactly like the one used inside the
  * publictransport data engine. This can be used to know what the vehicle type numbers returned
  * by the data engine are used for.
- * 
+ *
  * To use the library in your applet/runner/application you need to tell the linker about it.
  * Using CMake this can look like this:
  * @code
  * target_link_libraries( YourApp publictransporthelper )
  * @endcode
- * 
+ *
  * You can then include the headers, eg. for the @ref StopSettingsDialog
  * @code
  * #include <publictransporthelper/stopsettingsdialog.h>

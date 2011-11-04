@@ -27,7 +27,6 @@
 #include "timetableaccessor_online.h"
 #include "timetableaccessor_script.h"
 
-
 /** @class TimetableAccessorXml
  * @brief This is the base class for all XML based accessors.
  **/

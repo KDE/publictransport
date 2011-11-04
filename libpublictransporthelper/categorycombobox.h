@@ -22,12 +22,13 @@
 
 /** @file
 * @brief Contains a KComboBox with adjustments to show a KCategorizedView in it.
-* 
+*
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include "publictransporthelper_export.h"
 
-#include <KComboBox>
+// KDE includes
+#include <KComboBox> // Base class
 
 /**
  * @brief a KComboBox with adjustments to show a KCategorizedView in it.
