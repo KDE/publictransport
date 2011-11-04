@@ -1,5 +1,10 @@
 
-Changelog of plasma-engine-publictransport 
+Changelog of plasma-engine-publictransport
+
+0.10 - Final
+- Allow accessor type "Script" in XML files (type "HTML" renamed to "Script")
+- Generate "Locations" data source based on available accessors
+- ch_sbb: Fix journey feature for changed HTML layout
 
 0.10 - RC1
 - de_rmv: Fix stop suggestions for changed HTML layout
