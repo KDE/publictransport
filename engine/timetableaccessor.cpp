@@ -578,16 +578,7 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString
             sData.replace( QLatin1String("{city}"), city );
             sData.replace( QLatin1String("{stop}"), stop );
             sData.replace( "{timestamp}", QString::number(dateTime.toTime_t()) );
-
-            job =  KIO::storedHttpPost( QByteArray(), url, KIO::HideProgressInfo );
-            if ( m_info->attributesForStopSuggestions().contains(QLatin1String("contenttype")) ) {
-                job->addMetaData( "content-type", QString("Content-Type: %1")
-                        .arg(m_info->attributesForStopSuggestions()[QLatin1String("contenttype")]) );
-            }
-            if ( m_info->attributesForStopSuggestions().contains(QLatin1String("acceptcharset")) ) {
-                QString sCodec = m_info->attributesForStopSuggestions()[QLatin1String("acceptcharset")];
-                job->addMetaData( "Charsets", sCodec );
-            }
+            QByteArray data;
             if ( m_info->attributesForStopSuggestions().contains(QLatin1String("charset")) ) {
                 QString sCodec = m_info->attributesForStopSuggestions()[QLatin1String("charset")];
 //                 job->addMetaData( "Charsets", sCodec );
@@ -596,15 +587,25 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString
                 if ( !codec ) {
                     kDebug() << "Codec:" << sCodec << "couldn't be found to encode the data "
                             "to post, now using UTF-8";
-                    job->setData( sData.toUtf8() );
+                    data = sData.toUtf8();
                 } else {
-                    job->setData( codec->fromUnicode(sData) );
+                    data = codec->fromUnicode( sData );
                 }
 
-                kDebug() << "Post this data" << sData;
+                kDebug() << "Post this data" << data;
             } else {
                 // No codec specified, use UTF8
-                job->setData( sData.toUtf8() );
+                data = sData.toUtf8();
+            }
+
+            job =  KIO::storedHttpPost( data, url, KIO::HideProgressInfo );
+            if ( m_info->attributesForStopSuggestions().contains(QLatin1String("contenttype")) ) {
+                job->addMetaData( "content-type", QString("Content-Type: %1")
+                        .arg(m_info->attributesForStopSuggestions()[QLatin1String("contenttype")]) );
+            }
+            if ( m_info->attributesForStopSuggestions().contains(QLatin1String("acceptcharset")) ) {
+                QString sCodec = m_info->attributesForStopSuggestions()[QLatin1String("acceptcharset")];
+                job->addMetaData( "Charsets", sCodec );
             }
             if ( m_info->attributesForStopSuggestions().contains(QLatin1String("accept")) ) {
                 job->addMetaData( "accept", m_info->attributesForStopSuggestions()[QLatin1String("accept")] );
@@ -635,7 +636,6 @@ KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString
         }
 
         connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
-
         return job;
     } else {
         return requestDepartures( sourceName, city, stop, -1, QDateTime::currentDateTime() );
