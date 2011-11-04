@@ -2291,12 +2291,29 @@ void PublicTransport::setSettings( const Settings& settings )
         emit configNeedsSaving();
         emit settingsChanged();
 
+        // If stop settings have changed the whole model gets cleared and refilled.
+        // Therefore the other change flags can be in 'else' parts
         if ( changed.testFlag(SettingsIO::ChangedServiceProvider) ||
              changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ||
              changed.testFlag(SettingsIO::ChangedCurrentStop) )
         {
+            m_settings.adjustColorGroupSettingsCount();
+            clearDepartures();
             serviceProviderSettingsChanged();
+        } else if ( changed.testFlag(SettingsIO::ChangedFilterSettings)
+                 || changed.testFlag(SettingsIO::ChangedColorGroupSettings) )
+        {
+            for ( int n = 0; n < m_stopIndexToSourceName.count(); ++n ) {
+                QString sourceName = stripDateAndTimeValues( m_stopIndexToSourceName[n] );
+                m_departureProcessor->filterDepartures( sourceName,
+                        m_departureInfos[sourceName], m_model->itemHashes() );
+            }
+        } else if ( changed.testFlag(SettingsIO::ChangedLinesPerRow) ) {
+            // Refill model to recompute item sizehints
+            m_model->clear();
+            fillModel( departureInfos() );
         }
+
         if ( changed.testFlag(SettingsIO::ChangedCurrentJourneySearchLists) ) {
             // Update the journeys menu
             updateJourneyMenu();
@@ -2324,29 +2341,6 @@ void PublicTransport::setSettings( const Settings& settings )
                     m_settings.departureArrivalListType == DepartureList
                     ? i18nc("@action", "Back to &Departure List")
                     : i18nc("@action", "Back to &Arrival List") );
-        }
-
-        // If stop settings have changed the whole model gets cleared and refilled.
-        // Therefore the other change flags can be in 'else' parts
-        if ( changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ||
-             changed.testFlag(SettingsIO::ChangedCurrentStop) ||
-             changed.testFlag(SettingsIO::ChangedServiceProvider) )
-        {
-            m_settings.adjustColorGroupSettingsCount();
-            clearDepartures();
-            reconnectSource();
-        } else if ( changed.testFlag(SettingsIO::ChangedFilterSettings)
-                 || changed.testFlag(SettingsIO::ChangedColorGroupSettings) )
-        {
-            for ( int n = 0; n < m_stopIndexToSourceName.count(); ++n ) {
-                QString sourceName = stripDateAndTimeValues( m_stopIndexToSourceName[n] );
-                m_departureProcessor->filterDepartures( sourceName,
-                        m_departureInfos[sourceName], m_model->itemHashes() );
-            }
-        } else if ( changed.testFlag(SettingsIO::ChangedLinesPerRow) ) {
-            // Refill model to recompute item sizehints
-            m_model->clear();
-            fillModel( departureInfos() );
         }
 
         // Update current stop settings / current home stop in the models
