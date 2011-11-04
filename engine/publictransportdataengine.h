@@ -37,7 +37,7 @@ class DepartureInfo;
 class JourneyInfo;
 class StopInfo;
 
-/** @class PublicTransportEngine
+/**
  * @brief This engine provides departure/arrival times and journeys for public transport.
  *
  * @see @ref pageUsage (how to use this data engine in an applet?)
@@ -46,10 +46,13 @@ class PublicTransportEngine : public Plasma::DataEngine {
     Q_OBJECT
 
 public:
-    /** @brief The available types of sources of this data engine. They all have
-     * an associated keyword with that data source names start.
+    /**
+     * @brief The available types of sources of this data engine.
+     *
+     * They all have an associated keyword with that data source names start.
      * @see sourceTypeKeyword
-     * @see sourceTypeFromName */
+     * @see sourceTypeFromName
+     **/
     enum SourceType {
         InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName, if
                 * the source name is invalid. */
@@ -75,39 +78,54 @@ public:
 
     /** @brief Every data engine needs a constructor with these arguments. */
     PublicTransportEngine( QObject* parent, const QVariantList& args );
+
+    /** @brief Destructor. */
     ~PublicTransportEngine();
 
     /** @returns the keyword of the given @p sourceType used in source names. */
     static const QString sourceTypeKeyword( SourceType sourceType );
+
     /** @returns the type of the given @p sourceName. */
     SourceType sourceTypeFromName( const QString &sourceName ) const;
-    /** @returns true, if a data source of the given @p sourceType requests
-     * data from a web server. */
+
+    /**
+     * @returns true, if a data source of the given @p sourceType requests
+     * data from a web server.
+     **/
     bool isDataRequestingSourceType( SourceType sourceType ) const {
         return static_cast< int >( sourceType ) >= 10; };
 
-    /** @brief Minimum timeout in seconds to request new data. Before the timeout
+    /**
+     * @brief Minimum timeout in seconds to request new data. Before the timeout
      * is over, old stored data from previous requests is used. */
     static const int MIN_UPDATE_TIMEOUT;
 
-    /** @brief Maximum timeout in seconds to request new data, if delays are avaiable.
-     * Before the timeout is over, old stored data from previous requests is used. */
+    /**
+     * @brief Maximum timeout in seconds to request new data, if delays are avaiable.
+     * Before the timeout is over, old stored data from previous requests is used.
+     **/
     static const int MAX_UPDATE_TIMEOUT_DELAY;
 
-    /** @brief The default time offset from now for the first departure/arrival/journey
-     * in the list. This is used if it wasn't specified in the source name. */
+    /**
+     * @brief The default time offset from now for the first departure/arrival/journey
+     * in the list. This is used if it wasn't specified in the source name.
+     **/
     static const int DEFAULT_TIME_OFFSET;
 
 protected:
-    /** @brief This virtual function is called when a new source is requested.
+    /**
+     * @brief This virtual function is called when a new source is requested.
      *
-     * @param name The name of the requested data source. */
+     * @param name The name of the requested data source.
+     **/
     bool sourceRequestEvent( const QString& name );
 
-    /** @brief This virtual function is called when an automatic update is triggered for an
+    /**
+     * @brief This virtual function is called when an automatic update is triggered for an
      * existing source (ie: when a valid update interval is set when requesting a source).
      *
-     * @param name The name of the data source to be updated. */
+     * @param name The name of the data source to be updated.
+     **/
     bool updateSourceEvent( const QString& name );
 
     bool updateServiceProviderForCountrySource( const QString &name );
@@ -116,38 +134,33 @@ protected:
     bool updateLocationSource();
     bool updateDepartureOrJourneySource( const QString &name );
 
-    /** @brief Returns wheather or not the given source is up to date.
+    /**
+     * @brief Returns wheather or not the given source is up to date.
      *
-     * @param name The name of the source to be checked. */
+     * @param name The name of the source to be checked.
+     **/
     bool isSourceUpToDate( const QString& name );
 
 public slots:
-    /** @brief A list of departures / arrivals was received.
+    /**
+     * @brief A list of departures / arrivals was received.
      *
      * @param accessor The accessor that was used to download and parse the
      *   departures/arrivals.
-     *
      * @param requestUrl The url used to request the information.
-     *
      * @param departures A list of departures/arrivals that were received.
-     *
      * @param globalInfo Global information that affects all departures/arrivals.
-     *
      * @param serviceProvider The service provider the data came from.
-     *
      * @param sourceName The name of the data source for which the departures /
      *   arrivals have been downloaded and parsed.
-     *
      * @param city The city the stop is in. May be empty if the service provider
      *   doesn't need a separate city value.
-     *
      * @param stop The stop name for which the departures / arrivals have been received.
-     *
      * @param dataType "departures" or "arrivals".
-     *
      * @param parseDocumentMode What has been parsed from the document.
      *
-     * @see TimetableAccessor::useSeparateCityValue() */
+     * @see TimetableAccessor::useSeparateCityValue()
+     **/
     void departureListReceived( TimetableAccessor *accessor,
             const QUrl &requestUrl, const QList<DepartureInfo*> &departures,
             const GlobalTimetableInfo &globalInfo,
@@ -155,31 +168,24 @@ public slots:
             const QString &city, const QString &stop,
             const QString &dataType, ParseDocumentMode parseDocumentMode );
 
-    /** @brief A list of journey was received.
+    /**
+     * @brief A list of journey was received.
      *
      * @param accessor The accessor that was used to download and parse the journeys.
-     *
      * @param requestUrl The url used to request the information.
-     *
      * @param journeys A list of journeys that were received.
-     *
      * @param globalInfo Global information that affects all journeys.
-     *
      * @param serviceProvider The service provider the data came from.
-     *
      * @param sourceName The name of the data source for which the journeys have
      *   been downloaded and parsed.
-     *
      * @param city The city the stop is in. May be empty if the service provider
      *   doesn't need a separate city value.
-     *
      * @param stop The stop name for which the departures / arrivals have been received.
-     *
      * @param dataType "journeys".
-     *
      * @param parseDocumentMode What has been parsed from the document.
      *
-     * @see TimetableAccessor::useSeparateCityValue() */
+     * @see TimetableAccessor::useSeparateCityValue()
+     **/
     void journeyListReceived( TimetableAccessor *accessor,
             const QUrl &requestUrl, const QList<JourneyInfo*> &journeys,
             const GlobalTimetableInfo &globalInfo,
@@ -187,61 +193,48 @@ public slots:
             const QString &city, const QString &stop,
             const QString &dataType, ParseDocumentMode parseDocumentMode );
 
-    /** @brief A list of stops was received.
+    /**
+     * @brief A list of stops was received.
      *
      * @param accessor The accessor that was used to download and parse the stops.
-     *
      * @param requestUrl The url used to request the information.
-     *
      * @param stops A pointer to a list of @ref StopInfo objects.
-     *
      * @param serviceProvider The service provider the data came from.
-     *
      * @param sourceName The name of the data source for which the stops have been
      *   downloaded and parsed.
-     *
      * @param city The city the (ambiguous) stop is in. May be empty if the service provider
      *   doesn't need a separate city value.
-     *
      * @param stop The (ambiguous) stop name for which the stop list has been received.
-     *
      * @param dataType "stopList".
-     *
      * @param parseDocumentMode What has been parsed from the document.
      *
-     * @see TimetableAccessor::useSeparateCityValue() */
+     * @see TimetableAccessor::useSeparateCityValue()
+     **/
     void stopListReceived( TimetableAccessor *accessor,
             const QUrl &requestUrl, const QList<StopInfo*> &stops,
             const QString &serviceProvider,
             const QString &sourceName, const QString &city, const QString &stop,
             const QString &dataType, ParseDocumentMode parseDocumentMode );
 
-    /** @brief An error was received.
+    /**
+     * @brief An error was received.
      *
      * @param accessor The accessor that was used to download and parse information
      *   from the service provider.
-     *
      * @param errorType The type of error or NoError if there was no error.
-     *
      * @param errorString If @p errorType isn't NoError this contains a
      *   description of the error.
-     *
      * @param requestUrl The url used to request the information.
-     *
      * @param serviceProvider The service provider the data came from.
-     *
      * @param sourceName The name of the data source.
-     *
      * @param city The city the stop is in. May be empty if the service provider
      *   doesn't need a separate city value.
-     *
      * @param stop The stop name for which the error occurred.
-     *
      * @param dataType "nothing".
-     *
      * @param parseDocumentMode What has been parsed from the document.
      *
-     * @see TimetableAccessor::useSeparateCityValue() */
+     * @see TimetableAccessor::useSeparateCityValue()
+     **/
     void errorParsing( TimetableAccessor *accessor, ErrorType errorType, const QString &errorString,
             const QUrl &requestUrl, const QString &serviceProvider,
             const QString &sourceName, const QString &city, const QString &stop,

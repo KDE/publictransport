@@ -346,6 +346,7 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
             parseDocumentMode = ParseForJourneys;
             dataType = "journeysDep";
         } else {
+            kDebug() << "Unknown source type" << sourceType;
             return false;
         }
 
@@ -415,7 +416,7 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
             accessor = m_accessors.value( serviceProvider );
         }
 
-        if ( accessor == NULL ) {
+        if ( !accessor ) {
             kDebug() << QString( "Accessor %1 couldn't be created" ).arg( serviceProvider );
             return false; // accessor couldn't be created
         } else if ( accessor->useSeparateCityValue() && city.isEmpty() ) {
@@ -424,22 +425,20 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
                                  "name." ).arg( serviceProvider );
             return false; // accessor needs a separate city value
         } else if ( parseDocumentMode == ParseForJourneys
-                    && !accessor->features().contains( "JourneySearch" ) ) {
+                    && !accessor->features().contains("JourneySearch") )
+        {
             kDebug() << QString( "Accessor %1 doesn't support journey searches." )
                         .arg( serviceProvider );
             return false; // accessor doesn't support journey searches
         }
 
         if ( newlyCreated ) {
-            //         if ( parseDocumentMode == ParseForDeparturesArrivals ) {
             connect( accessor,
                      SIGNAL(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)),
                      this, SLOT(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)) );
-            //         } else { // if ( parseDocumentMode == ParseForJourneys )
             connect( accessor,
                      SIGNAL(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)),
                      this, SLOT(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)) );
-            //         }
             connect( accessor,
                      SIGNAL(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,QString,QString,QString,QString,QString,ParseDocumentMode)),
                      this, SLOT(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,QString,QString,QString,QString,QString,ParseDocumentMode)) );

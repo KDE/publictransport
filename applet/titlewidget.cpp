@@ -81,7 +81,6 @@ TitleWidget::TitleWidget( TitleType titleType, Settings *settings, bool journeys
 
 void TitleWidget::setJourneysSupported( bool supported )
 {
-    kDebug() << m_journeysSupported << supported;
     if ( m_journeysSupported == supported ) {
         return;
     }
