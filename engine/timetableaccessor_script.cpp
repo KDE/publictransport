@@ -95,7 +95,7 @@ QStringList TimetableAccessorScript::readScriptFeatures()
         QDateTime scriptModifiedTime = grp.readEntry("scriptModifiedTime", QDateTime());
         if ( QFileInfo(m_info->scriptFileName()).lastModified() == scriptModifiedTime ) {
             // Return feature list stored in the cache
-            return grp.readEntry("features", QStringList());
+            return grp.readEntry("scriptFeatures", QStringList());
         }
     }
 
@@ -156,7 +156,7 @@ QStringList TimetableAccessorScript::readScriptFeatures()
     // Store script features in a cache file
     grp.writeEntry( "scriptModifiedTime", QFileInfo(m_info->scriptFileName()).lastModified() );
     grp.writeEntry( "hasErrors", !ok );
-    grp.writeEntry( "features", features );
+    grp.writeEntry( "scriptFeatures", features );
 
     return features;
 }
