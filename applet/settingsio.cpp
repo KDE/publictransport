@@ -227,7 +227,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
         oldStopSettingsRequireRequest.remove( AlarmTimeSetting );
         stopSettingsRequireRequest.remove( Settings::JourneySearchSetting );
         oldStopSettingsRequireRequest.remove( Settings::JourneySearchSetting );
-        if ( stopSettingsRequireRequest == oldStopSettingsRequireRequest ) {
+        if ( stopSettingsRequireRequest != oldStopSettingsRequireRequest ) {
             changed |= ChangedCurrentStopSettings;
         }
 

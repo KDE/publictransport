@@ -287,11 +287,6 @@ public:
         newStopSettingsBehaviour = StopListWidget::OpenDialogIfNoStopsGiven;
     };
 
-    ~StopListWidgetPrivate() {
-        Plasma::DataEngineManager::self()->unloadEngine("publictransport");
-        Plasma::DataEngineManager::self()->unloadEngine("favicons");
-    };
-
     FilterSettingsList *filterConfigurations;
     int currentStopIndex;
     StopSettingsDialog::Options stopSettingsDialogOptions;
