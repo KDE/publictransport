@@ -17,26 +17,33 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "timetableaccessor_script.h"
-#include "scripting.h"
 
+// Own includes
+#include "scripting.h"
+#include "timetableaccessor_info.h"
+#include "departureinfo.h"
+
+// KDE includes
+#include <KLocalizedString>
+#include <KConfig>
+#include <KConfigGroup>
+#include <KStandardDirs>
 #include <KDebug>
-#include <QFile>
-#include <QScriptValueIterator>
 #include <kross/core/action.h>
 #include <kross/core/manager.h>
-#include <KLocalizedString>
-#include <kconfig.h>
-#include <kconfiggroup.h>
-#include <KStandardDirs>
+
+// Qt includes
+#include <QTextCodec>
+#include <QFile>
+#include <QScriptValueIterator>
 
 TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info )
-        : TimetableAccessor(), m_script(0), m_resultObject(0)
+        : TimetableAccessor(info), m_script(0), m_resultObject(0)
 {
-    m_info = info;
     m_scriptState = WaitingForScriptUsage;
     m_scriptFeatures = readScriptFeatures();
-//     kDebug() << "Script accessor created witout initializing script for" << m_info->serviceProvider();
 }
 
 TimetableAccessorScript::~TimetableAccessorScript()

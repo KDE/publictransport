@@ -20,10 +20,12 @@
 #ifndef JOURNEYSEARCHLINEEDIT_HEADER
 #define JOURNEYSEARCHLINEEDIT_HEADER
 
-#include <KLineEdit>
+// KDE includes
+#include <KLineEdit> // Base class
 
-#include <QSyntaxHighlighter>
-#include <QTextDocument>
+// Qt includes
+#include <QSyntaxHighlighter> // Base class
+#include <QTextDocument> // Member variable
 
 /** @brief Highlights journey search keywords, values and the stop name if it is double quoted. */
 class JourneySearchHighlighter : public QSyntaxHighlighter {

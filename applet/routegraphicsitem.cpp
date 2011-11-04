@@ -27,6 +27,7 @@
 
 // Plasma/KDE includes
 #include <Plasma/PaintUtils>
+#include <Plasma/Svg>
 #include <KColorUtils>
 #include <KGlobalSettings>
 #include <KMenu>

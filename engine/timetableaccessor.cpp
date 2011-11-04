@@ -17,21 +17,28 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-// Own includes
+// Header
 #include "timetableaccessor.h"
-#include "accessorinfoxmlreader.h"
 
-// Qt includes
-#include <QTextCodec>
-#include <QFile>
+// Own includes
+#include "timetableaccessor_info.h"
+#include "accessorinfoxmlreader.h"
+#include "departureinfo.h"
 
 // KDE includes
 #include <KIO/NetAccess>
 #include <KStandardDirs>
 #include <KLocale>
 #include <KDebug>
+#include <kio/job.h>
 
-TimetableAccessor::TimetableAccessor() : m_info(0)
+// Qt includes
+#include <QTextCodec>
+#include <QFile>
+#include <QTimer>
+
+TimetableAccessor::TimetableAccessor( TimetableAccessorInfo *info )
+        : m_info(info ? info : new TimetableAccessorInfo())
 {
     m_idAlreadyRequested = false;
 }
@@ -1003,3 +1010,53 @@ QByteArray TimetableAccessor::charsetForUrlEncoding() const
 {
     return m_info->charsetForUrlEncoding();
 }
+QString TimetableAccessor::serviceProvider() const
+{
+    return m_info->serviceProvider();
+}
+int TimetableAccessor::minFetchWait() const
+{
+    return m_info->minFetchWait();
+}
+QString TimetableAccessor::country() const
+{
+    return m_info->country();
+}
+QStringList TimetableAccessor::cities() const
+{
+    return m_info->cities();
+}
+QString TimetableAccessor::credit() const
+{
+    return m_info->credit();
+}
+bool TimetableAccessor::useSeparateCityValue() const
+{
+    return m_info->useSeparateCityValue();
+}
+bool TimetableAccessor::onlyUseCitiesInList() const
+{
+    return m_info->onlyUseCitiesInList();
+}
+bool TimetableAccessor::hasSpecialUrlForStopSuggestions() const
+{
+    return !m_info->stopSuggestionsRawUrl().isEmpty();
+}
+QList< ChangelogEntry > TimetableAccessor::changelog() const
+{
+    return m_info->changelog();
+}
+void TimetableAccessor::setChangelog( const QList< ChangelogEntry >& changelog )
+{
+    m_info->setChangelog( changelog );
+}
+
+
+
+
+
+
+
+
+
+

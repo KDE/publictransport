@@ -25,29 +25,19 @@
 #define FILTERWIDGET_HEADER
 
 // Own includes
-#include "global.h"
-#include "filter.h"
-#include "dynamicwidget.h"
-
-// KDE includes
-#include <KLineEdit>
-#include <KNumInput>
-#include <KDebug>
+#include "global.h" // Enums
+#include "dynamicwidget.h" // Base class of ...List widgets
+#include "filter.h" // Member variable of ConstraintWidget
 
 // Qt includes
-#include <QWidget>
-#include <QCheckBox>
-#include <QToolButton>
-#include <QListView>
-#include <QTimeEdit>
-#include <QHBoxLayout>
-#include <QFormLayout>
-#include <QApplication>
-#include <QStandardItemModel>
-
+#include <QWidget> // Base class
+#include <QModelIndex> // Return value
 
 class CheckCombobox;
 class KComboBox;
+class KIntSpinBox;
+class KLineEdit;
+class QTimeEdit;
 
 /** @brief Namespace for the publictransport helper library. */
 namespace Timetable {
@@ -100,20 +90,13 @@ public:
         return m_constraint;
     };
 
-    void addWidget( QWidget *w ) {
-        QFormLayout *l = dynamic_cast< QFormLayout* >( layout() );
-        QLayoutItem *item = l->itemAt( 0 );
-        if ( item ) {
-            l->removeItem( item );
-            l->addRow( item->widget(), w );
-        }
-    };
+    void addWidget( QWidget *w );
 
     inline static ConstraintWidget *create( Constraint constraint, QWidget *parent = 0 ) {
         return create( constraint.type, constraint.variant, constraint.value, parent );
     };
     static ConstraintWidget *create( FilterType type, FilterVariant variant = FilterNoVariant,
-                                    const QVariant &value = QVariant(), QWidget *parent = 0 );
+                                     const QVariant &value = QVariant(), QWidget *parent = 0 );
 
 signals:
     /** @brief Emitted when the value of this constraint has changed. */
@@ -218,16 +201,14 @@ public:
                             const QString &filterText = QString(), QWidget* parent = 0 );
 
     /** @returns a @ref QString with the current value of this constraint. */
-    virtual QVariant value() const { return m_string->text(); };
+    virtual QVariant value() const;
 
     /**
      * @brief Sets the string value of this constraint.
      *
      * @param value A @ref QString with the string to be set for this constraint.
      **/
-    virtual void setValue( const QVariant &value ) {
-        m_string->setText(value.toString());
-    };
+    virtual void setValue( const QVariant &value );
 
 protected slots:
     void stringChanged( const QString &newString ) {
@@ -262,14 +243,14 @@ public:
                          int value = 0, int min = 0, int max = 10000, QWidget* parent = 0 );
 
     /** @returns an integer with the current value of this constraint. */
-    virtual QVariant value() const { return m_num->value(); };
+    virtual QVariant value() const;
 
     /**
      * @brief Sets the integer value of this constraint.
      *
      * @param value An integer with the value to be set for this constraint.
      **/
-    virtual void setValue( const QVariant &value ) { m_num->setValue(value.toInt()); };
+    virtual void setValue( const QVariant &value );
 
 protected slots:
     void intChanged( int newInt ) {
@@ -299,17 +280,17 @@ public:
      * @param parent The parent object. Defaults to 0.
      **/
     ConstraintTimeWidget( FilterType type, FilterVariant initialVariant,
-                        QTime value = QTime::currentTime(), QWidget* parent = 0 );
+                          QTime value = QTime::currentTime(), QWidget* parent = 0 );
 
     /** @returns a @ref QTime with the current time value of this constraint. */
-    virtual QVariant value() const { return m_time->time(); };
+    virtual QVariant value() const;
 
     /**
      * @brief Sets the time value of this constraint.
      *
      * @param value A @ref QTime with the time value to be set for this constraint.
      **/
-    virtual void setValue( const QVariant &value ) { m_time->setTime(value.toTime()); };
+    virtual void setValue( const QVariant &value );
 
 protected slots:
     void timeChanged( const QTime &newTime ) {
@@ -360,13 +341,7 @@ public:
     QString separatorText() const { return m_separatorText; };
 
     /** @brief Returns a Filter object with all constraints of this FilterWidget. */
-    Filter filter() const {
-        Filter f;
-        foreach ( ConstraintWidget *constraint, constraintWidgets() ) {
-            f << constraint->constraint();
-        }
-        return f;
-    };
+    Filter filter() const;
 
     /** @brief Sets all constraints in @p filter to this FilterWidget. */
     void setFilter( const Filter &filter );
@@ -385,13 +360,7 @@ public:
 
     virtual int removeWidget( QWidget* widget );
 
-    static FilterWidget *create( const Filter &filter, QWidget *parent = 0 ) {
-        FilterWidget *filterWidget = new FilterWidget( QList<FilterType>()
-                << FilterByVehicleType << FilterByTarget << FilterByVia << FilterByNextStop
-                << FilterByTransportLine << FilterByTransportLineNumber << FilterByDelay, parent );
-        filterWidget->setFilter( filter );
-        return filterWidget;
-    };
+    static FilterWidget *create( const Filter &filter, QWidget *parent = 0 );
 
 signals:
     /** @brief Emitted, when this FilterWidget has changed, ie. a constraint value has changed
@@ -479,11 +448,7 @@ public:
     FilterList filters() const;
 
     /** @brief Adds a new empty FilterWidget object. */
-    void addFilter() {
-        Filter filter;
-        filter << Constraint();
-        addFilter( filter );
-    };
+    void addFilter();
 
     /**
      * @brief Adds a new FilterWidget configured by @p filter.
@@ -510,13 +475,7 @@ public:
      * @param filterList A list of filters to add widget for.
      * @param parent The parent of the FilterListWidget to create.
      **/
-    static FilterListWidget *create( const FilterList &filterList, QWidget *parent = 0 ) {
-        FilterListWidget *filterListWidget = new FilterListWidget( parent );
-        foreach ( Filter filter, filterList ) {
-            filterListWidget->addFilter( filter );
-        }
-        return filterListWidget;
-    };
+    static FilterListWidget *create( const FilterList &filterList, QWidget *parent = 0 );
 
 signals:
     /** @brief Emitted when the value of a constraint of a filter changes. */

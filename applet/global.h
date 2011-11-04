@@ -24,8 +24,12 @@
  * @brief This file contains enumerations and the GlobalApplet class.
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#include <KIcon>
+#include <QSize> // Default argument
 #include "kdeversion.h"
+
+template< class T >
+class QList;
+class KIcon;
 
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
 namespace Plasma {

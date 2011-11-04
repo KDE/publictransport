@@ -17,9 +17,13 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-// Own includes
+// Header
 #include "publictransportdataengine.h"
+
+// Own includes
 #include "timetableaccessor.h"
+#include "timetableaccessor_info.h"
+#include "departureinfo.h"
 
 // Qt includes
 #include <QFileSystemWatcher>

@@ -17,14 +17,20 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "global.h"
 
+// KDE includes
 #include <KDebug>
+#include <KIcon>
 #include <KIconEffect>
 #include <KIconLoader>
+
+// Qt includes
 #include <QPainter>
 #include <qmath.h>
 
+// Plasma includes
 #if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
     #include <Plasma/Animator>
     #include <Plasma/Animation>

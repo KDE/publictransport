@@ -24,18 +24,19 @@
 #ifndef JOURNEYSEARCHSUGGESTIONWIDGET_H
 #define JOURNEYSEARCHSUGGESTIONWIDGET_H
 
-// #include <Plasma/TreeView>
-#include <Plasma/ScrollWidget>
+// Plasma includes
+#include <Plasma/ScrollWidget> // Base class
 
-#include <QGraphicsWidget>
-#include <QModelIndex>
+// Qt includes
+#include <QGraphicsWidget> // Base class
+#include <QModelIndex> // Default argument
 
+class QStandardItemModel;
 class QGraphicsSceneMouseEvent;
 namespace Plasma {
     class LineEdit;
 }
 class Settings;
-class QStandardItemModel;
 class JourneySearchSuggestionItem;
 
 /**
@@ -200,7 +201,8 @@ protected:
                                         const QStringList &extraRegExps = QStringList() );
 
     void journeySearchItemCompleted( const QString &newJourneySearch,
-                                    const QModelIndex &index = QModelIndex(), int newCursorPos = -1 );
+                                     const QModelIndex &index = QModelIndex(),
+                                     int newCursorPos = -1 );
 
 private:
     QStandardItemModel *m_model;
@@ -229,7 +231,7 @@ class JourneySearchSuggestionItem : public QGraphicsWidget
 
 public:
     JourneySearchSuggestionItem( JourneySearchSuggestionWidget *parent,
-                                const QModelIndex& index );
+                                 const QModelIndex& index );
     ~JourneySearchSuggestionItem();
 
     void updateTextLayout();

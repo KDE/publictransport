@@ -27,8 +27,9 @@
 
 #include "publictransporthelper_export.h"
 
-#include <KComboBox>
-#include <KLocalizedString>
+// KDE includes
+#include <KComboBox> // Base class
+#include <KLocalizedString> // i18n in default argument values
 
 class CheckComboboxPrivate;
 

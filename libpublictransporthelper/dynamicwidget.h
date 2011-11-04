@@ -27,7 +27,8 @@
 
 #include "publictransporthelper_export.h"
 
-#include <QWidget>
+// Qt includes
+#include <QWidget> // Base class
 
 class QLayoutItem;
 class QToolButton;
@@ -278,11 +279,11 @@ public:
             AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
             SeparatorOptions separatorOptions = NoSeparator,
             NewWidgetPosition newWidgetPosition = AddWidgetsAtBottom );
+
+    /** @brief Destructor. */
     ~AbstractDynamicWidgetContainer();
 
-    /**
-     * @brief Gets the DynamicWidget at the given @p index.
-     **/
+    /** @brief Gets the DynamicWidget at the given @p index. */
     DynamicWidget *dynamicWidget( int index ) const;
 
     /**
@@ -592,6 +593,17 @@ public:
                 * for the first label without a special label text. */
     };
 
+    /**
+     * @brief Creates a new AbstractDynamicLabeledWidgetContainer instance.
+     *
+     * @param parent The parent widget. Default is 0.
+     * @param removeButtonOptions Options for remove button(s). Default is RemoveButtonsBesideWidgets.
+     * @param addButtonOptions Options for the add button. Default is AddButtonBesideFirstWidget.
+     * @param separatorOptions Options for separators. Default is NoSeparator.
+     * @param newWidgetPosition The position of newly added widgets. Default is AddWidgetsAtBottom.
+     * @param labelText The text to use as label for the widgets, it should include a '%1', which
+     *   gets replaced with the widgets number. The default string ("Item %1:") is untranslated.
+     **/
     explicit AbstractDynamicLabeledWidgetContainer( QWidget* parent = 0,
         RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
         AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
@@ -697,7 +709,7 @@ class KLineEdit;
 class QLabel;
 class DynamicLabeledLineEditListPrivate;
 
-/** @brief A widget containing a dynamic list of KLineEdits. */
+/** @brief A widget containing a dynamic list of KLineEdit's with labels. */
 class PUBLICTRANSPORTHELPER_EXPORT DynamicLabeledLineEditList
     : public AbstractDynamicLabeledWidgetContainer
 {
@@ -705,6 +717,17 @@ class PUBLICTRANSPORTHELPER_EXPORT DynamicLabeledLineEditList
     Q_PROPERTY( bool clearButtonsShown READ clearButtonsShown WRITE setClearButtonsShown )
 
 public:
+    /**
+     * @brief Creates a new DynamicLabeledLineEditList instance.
+     *
+     * @param parent The parent widget. Default is 0.
+     * @param removeButtonOptions Options for remove button(s). Default is RemoveButtonsBesideWidgets.
+     * @param addButtonOptions Options for the add button. Default is AddButtonBesideFirstWidget.
+     * @param separatorOptions Options for separators. Default is NoSeparator.
+     * @param newWidgetPosition The position of newly added widgets. Default is AddWidgetsAtBottom.
+     * @param labelText The text to use as label for the widgets, it should include a '%1', which
+     *   gets replaced with the widgets number. The default string ("Item %1:") is untranslated.
+     **/
     explicit DynamicLabeledLineEditList( QWidget* parent = 0,
             RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
             AddButtonOptions addButtonOptions = AddButtonBesideFirstWidget,
@@ -779,12 +802,22 @@ Q_SIGNALS:
     void textChanged( const QString &text, int lineEditIndex );
 
 protected Q_SLOTS:
+    /** @brief Gets called by the child KLineEdit's to emit textEdited with the correct index. */
     void textEdited( const QString &text );
+
+    /** @brief Gets called by the child KLineEdit's to emit textChanged with the correct index. */
     void textChanged( const QString &text );
 
 protected:
+    /**
+     * @brief Creates, initializes and connects a new KLineEdit instance.
+     *
+     * Uses createLineEdit() to create the KLineEdit. Options like whether or not to show clear
+     * buttons in the line edits are applied in this function.
+     **/
     virtual QWidget* createNewWidget();
 
+    /** @brief Create a new KLineEdit instance. Can be overriden to use a derived class. */
     virtual KLineEdit* createLineEdit();
 
     /**

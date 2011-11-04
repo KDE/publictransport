@@ -24,9 +24,9 @@
 #define JOURNEYSEARCHLISTVIEW_H
 
 // Base class includes
-#include <QListView>
-#include <QStyledItemDelegate>
-#include <QToolButton>
+#include <QListView> // Base class
+#include <QStyledItemDelegate> // Base class
+#include <QToolButton> // Base class
 
 class KAction;
 

@@ -24,14 +24,18 @@
 #ifndef DEPARTUREPROCESSOR_HEADER
 #define DEPARTUREPROCESSOR_HEADER
 
-#include <QThread>
-#include <QMutex>
-#include <QWaitCondition>
-#include <QQueue>
-
-#include <departureinfo.h>
-#include <filter.h>
+// Own includes
 #include "settings.h"
+
+// libpublictransporthelper includes
+#include <departureinfo.h> // Member variable
+#include <filter.h> // Member variable
+
+// Qt includes
+#include <QThread> // Base class
+#include <QMutex> // Member variable
+#include <QWaitCondition> // Member variable
+#include <QQueue> // Member variable
 
 /**
  * @brief Worker thread for PublicTransport
@@ -69,7 +73,10 @@ public:
     };
     Q_DECLARE_FLAGS( JobTypes, JobType )
 
+    /** @brief Creates a new DepartureProcessor instance. */
     DepartureProcessor( QObject *parent = 0 );
+
+    /** @brief Destructor. */
     ~DepartureProcessor();
 
     /**
@@ -108,12 +115,9 @@ public:
      *
      * @param firstDepartureConfigMode The first departure time can be relative to the current
      *   time (@ref RelativeToCurrentTime) or a custom time (@ref AtCustomTime).
-     *
      * @param timeOfFirstDepartureCustom A custom, fixed first departure time.
      *   Only used if @p firstDepartureConfigMode is set to @ref AtCustomTime.
-     *
      * @param timeOffsetOfFirstDeparture The offset in minutes of the first result departure/arrival.
-     *
      * @param arrival The departures to be processed are actually arrivals.
      *
      * @see FirstDepartureConfigMode
@@ -200,13 +204,9 @@ signals:
      * @brief A departure/arrival processing job is finished (or a batch of departures/arrivals).
      *
      * @param sourceName The data engine source name for the departure data.
-     *
      * @param departures A list of departures that were read.
-     *
      * @param requestUrl The url that was used to download the departure data.
-     *
      * @param lastUpdate The date and time of the last update of the data.
-     *
      * @param departuresToGo The number of departures to still be processed. If this isn't 0
      *   this signal gets emitted again after the next batch of departures has been processed.
      **/
@@ -224,11 +224,8 @@ signals:
      * @brief A journey processing job is finished (or a batch of journeys).
      *
      * @param sourceName The data engine source name for the journey data.
-     *
      * @param journeys A list of journeys that were read.
-     *
      * @param requestUrl The url that was used to download the journey data.
-     *
      * @param lastUpdate The date and time of the last update of the data.
      **/
     void journeysProcessed( const QString &sourceName, const QList< JourneyInfo > &journeys,
@@ -245,14 +242,11 @@ signals:
      * @brief A filter departures job is finished.
      *
      * @param sourceName The data engine source name for the departure data.
-     *
      * @param departures The list of departures that were filtered. Each
      *   departure now returns the correct value with isFilteredOut() according
      *   to the filter settings given to the worker thread.
-     *
      * @param newlyFiltered A list of departures that should be made visible
      *   to match the current filter settings.
-     *
      * @param newlyNotFiltered A list of departures that should be made
      *   invisible to match the current filter settings.
      **/

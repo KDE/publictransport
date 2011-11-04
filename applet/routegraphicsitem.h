@@ -23,12 +23,14 @@
 // Own includes
 #include "global.h"
 
-// Plasma includes
-#include <Plasma/Svg>
-
 // Qt includes
-#include <QGraphicsWidget>
-#include <QPointer>
+#include <QGraphicsWidget> // Base class
+#include <QPointer> // Member variable
+
+namespace Plasma
+{
+    class Svg;
+}
 
 class DepartureModel;
 class JourneyItem;

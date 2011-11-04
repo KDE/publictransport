@@ -208,8 +208,6 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 
     // Write stop settings
     if ( settings.stopSettingsList != oldSettings.stopSettingsList ) {
-        kDebug() << "Stop settings changed";
-
         changed |= IsChanged | ChangedStopSettings;
 
         // Get current stop settings and compare journey search lists

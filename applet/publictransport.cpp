@@ -38,6 +38,7 @@
 
 // libpublictransporthelper includes
 #include <global.h>
+#include <departureinfo.h>
 
 // KDE includes
 #include <KDebug>
@@ -2261,7 +2262,7 @@ void PublicTransport::createConfigurationInterface( KConfigDialog* parent )
     // Go back from intermediate departure list (which may be requested by a
     // context menu action) before showing the configuration dialog,
     // because stop settings may be changed and the intermediate stop
-    // shouldn't be shown there.
+    // shouldn't be shown in the configuration dialog.
     if ( isStateActive("intermediateDepartureView") ) {
         showDepartureList();
     }
@@ -2271,14 +2272,12 @@ void PublicTransport::createConfigurationInterface( KConfigDialog* parent )
             dataEngine("openstreetmap"), dataEngine("favicons"),
             dataEngine("geolocation"), parent );
     connect( settingsUiManager, SIGNAL(settingsAccepted(Settings)),
-             this, SLOT(setSettings
-(Settings)) );
+             this, SLOT(setSettings(Settings)) );
     connect( m_model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
              settingsUiManager, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
 }
 
-void PublicTransport::setSettings
-( const Settings& settings )
+void PublicTransport::setSettings( const Settings& settings )
 {
     SettingsIO::ChangedFlags changed =
             SettingsIO::writeSettings( settings, m_settings, config(), globalConfig() );
@@ -3413,7 +3412,5 @@ QVariantHash PublicTransport::serviceProviderData( const QString& id ) const
 {
     return dataEngine( "publictransport" )->query( QString("ServiceProvider %1").arg(id) );
 }
-
-
 
 #include "publictransport.moc"

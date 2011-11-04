@@ -24,8 +24,9 @@
 #define JOURNEYSEARCHITEM_H
 
 // Qt includes
-#include <QIcon>
-#include <QMetaType>
+#include <QMetaType> // For Q_DECLARE_METATYPE
+
+class QIcon;
 
 /**
  * @brief An item containing information about journey searches.

@@ -24,12 +24,12 @@
 #define JOURNEYSEARCHMODEL_H
 
 // Own includes
-#include "journeysearchitem.h"
+#include "journeysearchitem.h" // Base class
 
 // Qt includes
-#include <QAbstractItemModel>
-#include <QIcon>
+#include <QAbstractItemModel> // Base class
 
+class QIcon;
 class JourneySearchModel;
 
 /**

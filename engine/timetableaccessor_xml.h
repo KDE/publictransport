@@ -27,7 +27,6 @@
 #include "timetableaccessor.h"
 #include "timetableaccessor_script.h"
 
-
 /** @class TimetableAccessorXml
 * @brief This is the base class for all XML based accessors.
 */
@@ -44,7 +43,7 @@ public:
      *   service provider.
      *
      * @note Can be used if you have a custom TimetableAccessorInfo object. TODO */
-    TimetableAccessorXml( TimetableAccessorInfo *info = new TimetableAccessorInfo() );
+    TimetableAccessorXml( TimetableAccessorInfo *info = 0 );
 
     /**
      * @brief Destructor, destroys the used "sub-" @ref TimetableAccessorScript, which is used

@@ -25,14 +25,14 @@
 #ifndef SCRIPTING_HEADER
 #define SCRIPTING_HEADER
 
-#include <QObject>
-#include <QHash>
-#include <QTextCodec>
-
-#include <KDebug>
-
+// Own includes
 #include "enums.h"
-#include "timetableaccessor.h"
+
+// Qt includes
+#include <QObject> // Base class
+#include <QHash> // Return value
+#include <QVariant> // Return value
+#include <QStringList> // Return value
 
 /**
  * @brief A helper class to be used from inside a script.
@@ -88,10 +88,7 @@ public Q_SLOTS:
      * @param str The string to be trimmed.
      * @return @p str without spaces at the beginning or end.
      **/
-    QString trim( const QString &str ) {
-        QString s = str;
-        return s.trimmed().replace( QRegExp("^(&nbsp;)+|(&nbsp;)+$", Qt::CaseInsensitive), "" ).trimmed();
-    };
+    QString trim( const QString &str );
 
     /**
      * @brief Removes all HTML tags from str.
@@ -99,11 +96,7 @@ public Q_SLOTS:
      * @param str The string from which the HTML tags should be removed.
      * @return @p str without HTML tags.
      **/
-    QString stripTags( const QString &str ) {
-        QRegExp rx( "<\\/?[^>]+>" );
-        rx.setMinimal( true );
-        return QString( str ).replace( rx, "" );
-    };
+    QString stripTags( const QString &str );
 
     /**
      * @brief Makes the first letter of each word upper case, all others lower case.
@@ -111,19 +104,7 @@ public Q_SLOTS:
      * @param str The input string.
      * @return @p str in camel case.
      **/
-    QString camelCase( const QString &str ) {
-        QString ret = str.toLower();
-        QRegExp rx( "(^\\w)|\\W(\\w)" );
-        int pos = 0;
-        while ( (pos = rx.indexIn(ret, pos)) != -1 ) {
-            if ( rx.pos(2) < 0 || rx.pos(2) >= ret.length() ) { // TODO
-                break;
-            }
-            ret[ rx.pos(2) ] = ret[ rx.pos(2) ].toUpper();
-            pos += rx.matchedLength();
-        }
-        return ret;
-    };
+    QString camelCase( const QString &str );
 
     /**
      * @brief Extracts a block from @p str, which begins at the first occurance of @p beginString
@@ -135,15 +116,7 @@ public Q_SLOTS:
      * @return The text block in @p str between @p beginString and @p endString.
      **/
     QString extractBlock( const QString &str,
-                          const QString &beginString, const QString &endString ) {
-        int pos = str.indexOf( beginString );
-        if ( pos == -1 ) {
-            return "";
-        }
-
-        int end = str.indexOf( endString, pos + 1 );
-        return str.mid( pos, end - pos );
-    };
+                          const QString &beginString, const QString &endString );
 
     /**
      * @brief Gets a list with the hour and minute values parsed from @p str,
@@ -154,34 +127,7 @@ public Q_SLOTS:
      * @return A list of two integers: The hour and minute values parsed from @p str.
      * @see formatTime
      **/
-    QVariantList matchTime( const QString &str, const QString &format = "hh:mm") {
-        QString pattern = QRegExp::escape( format );
-        pattern = pattern.replace( "hh", "\\d{2}" )
-                         .replace( "h", "\\d{1,2}" )
-                         .replace( "mm", "\\d{2}" )
-                         .replace( "m", "\\d{1,2}" )
-                         .replace( "AP", "(AM|PM)" )
-                         .replace( "ap", "(am|pm)" );
-
-        QVariantList ret;
-        QRegExp rx( pattern );
-        if ( rx.indexIn(str) != -1 ) {
-            QTime time = QTime::fromString( rx.cap(), format );
-            ret << time.hour() << time.minute();
-        } else if ( format != "hh:mm" ) {
-            // Try default format if the one specified doesn't work
-            QRegExp rx2( "\\d{1,2}:\\d{2}" );
-            if ( rx2.indexIn(str) != -1 ) {
-                QTime time = QTime::fromString( rx2.cap(), "hh:mm" );
-                ret << time.hour() << time.minute();
-            } else {
-                kDebug() << "Couldn't match time in" << str << pattern;
-            }
-        } else {
-            kDebug() << "Couldn't match time in" << str << pattern;
-        }
-        return ret;
-    };
+    QVariantList matchTime( const QString &str, const QString &format = "hh:mm" );
 
     /**
      * @brief Gets a list with the day, month and year values parsed from @p str,
@@ -192,34 +138,7 @@ public Q_SLOTS:
      * @return A list of two integers: The day, month and year values parsed from @p str.
      * @see formatDate TODO
      **/
-    QVariantList matchDate( const QString &str, const QString &format = "yyyy-MM-dd") {
-        QString pattern = QRegExp::escape( format ).replace("d", "D");
-        pattern = pattern.replace( "DD", "\\d{2}" )
-                         .replace( "D", "\\d{1,2}" )
-                         .replace( "MM", "\\d{2}" )
-                         .replace( "M", "\\d{1,2}" )
-                         .replace( "yyyy", "\\d{4}" )
-                         .replace( "yy", "\\d{2}" );
-
-        QVariantList ret;
-        QRegExp rx( pattern );
-        if ( rx.indexIn(str) != -1 ) {
-            QDate date = QDate::fromString( rx.cap(), format );
-            ret << date.year() << date.month() << date.day();
-        } else if ( format != "yyyy-MM-dd" ) {
-            // Try default format if the one specified doesn't work
-            QRegExp rx2( "\\d{2,4}-\\d{2}-\\d{2}" );
-            if ( rx2.indexIn(str) != -1 ) {
-                QDate date = QDate::fromString( rx2.cap(), "yyyy-MM-dd" );
-                ret << date.year() << date.month() << date.day();
-            } else {
-                kDebug() << "Couldn't match time in" << str << pattern;
-            }
-        } else {
-            kDebug() << "Couldn't match time in" << str << pattern;
-        }
-        return ret;
-    };
+    QVariantList matchDate( const QString &str, const QString &format = "yyyy-MM-dd" );
 
     /**
      * @brief Formats the time given by the values @p hour and @p minute
@@ -231,9 +150,7 @@ public Q_SLOTS:
      * @return The formatted time string.
      * @see matchTime
      **/
-    QString formatTime( int hour, int minute, const QString &format = "hh:mm") {
-        return QTime( hour, minute ).toString( format );
-    };
+    QString formatTime( int hour, int minute, const QString &format = "hh:mm" );
 
     /**
      * @brief Formats the time given by the values @p hour and @p minute
@@ -246,9 +163,7 @@ public Q_SLOTS:
      * @return The formatted date string.
      * @see matchTime
      **/
-    QString formatDate( int year, int month, int day, const QString &format = "yyyy-MM-dd") {
-        return QDate( year, month, day ).toString( format );
-    };
+    QString formatDate( int year, int month, int day, const QString &format = "yyyy-MM-dd" );
 
     /**
      * @brief Calculates the duration in minutes from the time in @p sTime1 until @p sTime2.
@@ -259,14 +174,7 @@ public Q_SLOTS:
      * @return The number of minutes from @p sTime1 until @p sTime2.
      **/
     int duration( const QString &sTime1, const QString &sTime2,
-                  const QString &format = "hh:mm" ) {
-        QTime time1 = QTime::fromString( sTime1, format );
-        QTime time2 = QTime::fromString( sTime2, format );
-        if ( !time1.isValid() || !time2.isValid() ) {
-            return -1;
-        }
-        return time1.secsTo( time2 ) / 60;
-    };
+                  const QString &format = "hh:mm" );
 
     /**
      * @brief Adds @p minsToAdd minutes to the time in @p sTime.
@@ -277,35 +185,12 @@ public Q_SLOTS:
      * @return A time string formatted in @p format with the calculated time.
      **/
     QString addMinsToTime( const QString &sTime, int minsToAdd,
-                           const QString &format = "hh:mm" ) {
-        QTime time = QTime::fromString( sTime, format );
-        if ( !time.isValid() ) {
-            kDebug() << "Couldn't parse the given time" << sTime << format;
-            return "";
-        }
-        return time.addSecs( minsToAdd * 60 ).toString( format );
-    };
+                           const QString &format = "hh:mm" );
 
     QString addDaysToDate( const QString &sDate, int daysToAdd,
-                           const QString &format = "yyyy-MM-dd" ) {
-        QDate date = QDate::fromString(sDate, format).addDays( daysToAdd );
-        if ( !date.isValid() ) {
-            kDebug() << "Couldn't parse the given date" << sDate << format;
-            return sDate;
-        }
-        return date.toString( format );
-    };
+                           const QString &format = "yyyy-MM-dd" );
 
-    QVariantList addDaysToDateArray( const QVariantList &values, int daysToAdd ) {
-        if ( values.count() != 3 ) {
-            kDebug() << "The first argument needs to be a list with three values (year, month, day)";
-            return values;
-        }
-
-        QDate date( values[0].toInt(), values[1].toInt(), values[2].toInt() );
-        date = date.addDays( daysToAdd );
-        return QVariantList() << date.year() << date.month() << date.day();
-    };
+    QVariantList addDaysToDateArray( const QVariantList &values, int daysToAdd );
 
     /**
      * @brief Splits @p str at @p sep, but skips empty parts.
@@ -314,9 +199,7 @@ public Q_SLOTS:
      * @param sep The separator.
      * @return A list of string parts.
      **/
-    QStringList splitSkipEmptyParts( const QString &str, const QString &sep ) {
-        return str.split( sep, QString::SkipEmptyParts );
-    };
+    QStringList splitSkipEmptyParts( const QString &str, const QString &sep );
 
 private:
     QString m_serviceProviderId;
@@ -368,16 +251,14 @@ public Q_SLOTS:
      * for @ref set(TimetableInformation,QVariant).
      *
      * @param timetableInformation The type of the information in the given @p value.
-     *
      * @param value A value to be stored.
      **/
-    inline void set( const QString &sTimetableInformation, const QVariant &value ) {
-        set( TimetableAccessor::timetableInformationFromString(sTimetableInformation), value ); };
+    void set( const QString &sTimetableInformation, const QVariant &value );
+
     /**
      * @brief Stores @p value under the key @p timetableInformation.
      *
      * @param timetableInformation The type of the information in the given @p value.
-     *
      * @param value A value to be stored.
      **/
     void set( TimetableInformation timetableInformation, const QVariant &value );
@@ -389,11 +270,11 @@ public Q_SLOTS:
      *   as given in @p set.
      **/
     QHash<TimetableInformation, QVariant> values() const { return m_values; };
+
     /**
      * @brief Gets the value for the given @p info.
      *
      * @param info The timetable information key, like in @ref TimetableInformation.
-     *
      * @return The value stored for @p info
      **/
     QVariant value( TimetableInformation info ) const { return m_values[info]; };
@@ -424,6 +305,7 @@ public:
 public Q_SLOTS:
     /** @brief Clears the list of stored TimetableData objects. */
     void clear() { m_timetableData.clear(); };
+
     /**
      * @brief Checks whether or not the list of TimetableData objects is empty.
      *

@@ -25,19 +25,19 @@
 #define PUBLICTRANSPORT_HEADER
 
 // KDE includes
-#include <Plasma/PopupApplet>
+#include <Plasma/PopupApplet> // Base class
 #include <Plasma/DataEngine> // For dataUpdated() slot, Plasma::DataEngine::Data
 #include <KProcess> // For QProcess::ProcessError
 
 // Qt includes
-#include <QPersistentModelIndex>
+#include <QPersistentModelIndex> // Member variable
 
 // libpublictransporthelper includes
 #include <departureinfo.h>
 
 // Own includes
 #include "stopaction.h" // For StopAction::Type
-#include "settings.h"
+#include "settings.h" // Member variable
 
 class PopupIcon;
 class ItemBase;
@@ -763,10 +763,8 @@ private:
     KSelectAction *switchStopAction( QObject *parent,
                                      bool destroyOverlayOnTrigger = false ) const;
 
-    QVariantHash currentServiceProviderData() const;;
-    QVariantHash serviceProviderData( const QString &id ) const {
-        return dataEngine( "publictransport" )->query( QString("ServiceProvider %1").arg(id) );
-    };
+    QVariantHash currentServiceProviderData() const;
+    QVariantHash serviceProviderData( const QString &id ) const;
 
     void setupStateMachine();
     Plasma::Animation *fadeOutOldAppearance();

@@ -24,7 +24,7 @@
  * Contains the StopAction class for actions with associated route stops.
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#include <QAction>
+#include <QAction> // Base class
 
 class StopAction : public QAction
 {

@@ -24,11 +24,15 @@
 #ifndef ACCESSORINFOXMLREADER_HEADER
 #define ACCESSORINFOXMLREADER_HEADER
 
-#include <QXmlStreamReader>
-#include <QHash>
+// Own includes
 #include "enums.h"
 
+// Qt includes
+#include <QXmlStreamReader> // Base class
+#include <QHash>
+
 class TimetableAccessor;
+class TimetableAccessorInfo;
 
 /**
  * @brief Stores information about a single changelog entry.
@@ -48,7 +52,7 @@ struct ChangelogEntry {
  **/
 class AccessorInfoXmlReader : public QXmlStreamReader {
     friend class TimetableAccessorInfo; // Because AccessorInfoXmlReader needs to set values
-    // in TimetableAccessorInfo when reading xml files
+            // in TimetableAccessorInfo when reading xml files
 
 public:
     /** @brief Creates a new accessor info xml reader. */
@@ -58,11 +62,8 @@ public:
      * @brief Reads an accessor info xml from @p device.
      *
      * @param device The QIODevice to read the xml data from.
-     *
      * @param serviceProvider The service provider ID for the accessor to read.
-     *
      * @param fileName The filename of the xml file.
-     *
      * @param country The country the accessor is designed for.
      *
      * @return A TimetableAccessor object or NULL on error.

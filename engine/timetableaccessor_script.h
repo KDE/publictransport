@@ -26,16 +26,16 @@
 #ifndef TIMETABLEACCESSOR_SCRIPT_HEADER
 #define TIMETABLEACCESSOR_SCRIPT_HEADER
 
-#include "timetableaccessor.h"
+#include "timetableaccessor.h" // Base class
 
 namespace Kross {
     class Action;
 }
 class ResultObject;
 
-/** @class TimetableAccessorScript
-* @brief The base class for all scripted accessors.
-*/
+/**
+ * @brief The base class for all scripted accessors.
+ */
 class TimetableAccessorScript : public TimetableAccessor {
     Q_OBJECT
 
@@ -54,10 +54,12 @@ public:
      * @brief Creates a new TimetableAccessorScript object with the given information.
      *
      * @param info Information about how to download and parse the documents of a service provider.
+     *   If this is 0 a default TimetableAccessorInfo instance gets created.
      *
      * @note Can be used if you have a custom TimetableAccessorInfo object.
-     *   TimetableAccessorXml uses this to create an HTML accessor for parsing of stop lists. */
-    TimetableAccessorScript( TimetableAccessorInfo *info = new TimetableAccessorInfo() );
+     *   TimetableAccessorXml uses this to create an HTML accessor for parsing of stop lists.
+     **/
+    TimetableAccessorScript( TimetableAccessorInfo *info = 0 );
 
     /** @brief Destructor. */
     virtual ~TimetableAccessorScript();
@@ -77,7 +79,8 @@ public:
      * @brief Decodes the given HTML document.
      *
      * First it tries QTextCodec::codecForHtml().
-     * If that doesn't work, it parses the document for the charset in a meta-tag. */
+     * If that doesn't work, it parses the document for the charset in a meta-tag.
+     **/
     static QString decodeHtml( const QByteArray &document,
                                const QByteArray &fallbackCharset = QByteArray() );
 
@@ -96,7 +99,8 @@ protected:
      * @param parseDocumentMode The mode of parsing, e.g. parse for
      *   departures/arrivals or journeys.
      * @return true, if there were no errors and the data in @p journeys is valid.
-     * @return false, if there were an error parsing the document. */
+     * @return false, if there were an error parsing the document.
+     **/
     virtual bool parseDocument( const QByteArray &document,
             QList<PublicTransportInfo*> *journeys, GlobalTimetableInfo *globalInfo,
             ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
@@ -106,7 +110,8 @@ protected:
      *   parse the contents of a received document for an url to a document
      *   containing later journeys.
      *
-     * @return The parsed url. */
+     * @return The parsed url.
+     **/
     virtual QString parseDocumentForLaterJourneysUrl( const QByteArray &document );
 
     /**
@@ -114,14 +119,16 @@ protected:
      *   parse the contents of a received document for an url to a document
      *   containing detailed journey information.
      *
-     * @return The parsed url. */
+     * @return The parsed url.
+     **/
     virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document );
 
     /**
      * @brief Calls the 'parseSessionKey' function in the script to
      *   parse the contents of a received document for the session key.
      *
-     * @return The parsed session key or QString() if none was found. */
+     * @return The parsed session key or QString() if none was found.
+     **/
     virtual QString parseDocumentForSessionKey( const QByteArray &document );
 
     /**
@@ -137,7 +144,8 @@ protected:
      *   TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
      *   document for stops.
      *
-     * @see parseDocumentPossibleStops(QHash<QString,QString>*) */
+     * @see parseDocumentPossibleStops(QHash<QString,QString>*)
+     **/
     virtual bool parseDocumentPossibleStops( const QByteArray &document, QList<StopInfo*> *stops );
 
 private:

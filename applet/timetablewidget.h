@@ -21,18 +21,15 @@
 #define TIMETABLEWIDGET_H
 
 // Own includes
-#include "departuremodel.h"
 #include "stopaction.h" // for StopAction::Type
+#include "departuremodel.h"
 
-// Plasma+KDE includes
-#include <Plasma/ScrollWidget>
-#include <KDebug>
+// Plasma includes
+#include <Plasma/ScrollWidget> // Base class
 
 // Qt includes
-#include <QGraphicsWidget>
-#include <QModelIndex>
-#include <QPainter>
-#include <QPointer>
+#include <QGraphicsWidget> // Base class
+#include <QPointer> // Member variable
 
 /** @file
  * @brief This file contains the TimetableWidget / JourneyTimetableWidget and it's item classes.
@@ -48,6 +45,7 @@ class QPropertyAnimation;
 class QWidget;
 class QStyleOptionGraphicsItem;
 class QPainter;
+class QTextOption;
 
 class RouteGraphicsItem;
 class JourneyRouteGraphicsItem;

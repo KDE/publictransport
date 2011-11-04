@@ -41,6 +41,7 @@
 #include <QTextDocument>
 #include <QGraphicsSceneHoverEvent>
 #include <QStyleOption>
+#include <QPainter>
 
 JourneySearchSuggestionItem::JourneySearchSuggestionItem(
         JourneySearchSuggestionWidget *parent, const QModelIndex& modelIndex )
@@ -99,8 +100,8 @@ QSizeF JourneySearchSuggestionItem::sizeHint( Qt::SizeHint which, const QSizeF& 
     }
 }
 
-void JourneySearchSuggestionItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
-                                        QWidget* widget)
+void JourneySearchSuggestionItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
+                                         QWidget* widget )
 {
     Q_UNUSED( widget );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );

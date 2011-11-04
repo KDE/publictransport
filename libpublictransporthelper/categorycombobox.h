@@ -27,7 +27,8 @@
 
 #include "publictransporthelper_export.h"
 
-#include <KComboBox>
+// KDE includes
+#include <KComboBox> // Base class
 
 /**
  * @brief a KComboBox with adjustments to show a KCategorizedView in it.

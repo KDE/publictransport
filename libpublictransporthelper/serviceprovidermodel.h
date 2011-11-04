@@ -29,7 +29,7 @@
 
 #include <QModelIndex>
 #include <KIcon>
-#include <Plasma/DataEngine>
+#include <Plasma/DataEngine> // For dataUpdated slot (Plasma::DataEngine::Data)
 
 class QStringList;
 
@@ -146,10 +146,10 @@ public:
      *
      * @param publicTransportEngine A pointer to the "publictransport" data engine.
      *
-     * @param favIconEngine A pointer to the "favicons" data engine. Use NULL to not use it.
+     * @param favIconEngine A pointer to the "favicons" data engine. Use 0 to not use it.
      **/
     void syncWithDataEngine( Plasma::DataEngine *publicTransportEngine,
-                             Plasma::DataEngine* favIconEngine = NULL );
+                             Plasma::DataEngine *favIconEngine = 0 );
     /** @brief Gets QModelIndex of the item with the given @p serviceProviderId. */
     QModelIndex indexOfServiceProvider( const QString &serviceProviderId );
 

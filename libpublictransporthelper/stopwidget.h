@@ -27,12 +27,9 @@
 
 #include "publictransporthelper_export.h"
 
-#include "stopsettings.h"
-#include "dynamicwidget.h"
-#include "stopsettingsdialog.h"
-#include "filter.h"
-
-#include <QStringList>
+#include "stopsettings.h" // Return value
+#include "dynamicwidget.h" // Base class
+#include "stopsettingsdialog.h" // For enums
 
 class DynamicWidget;
 namespace Plasma {
@@ -61,21 +58,15 @@ public:
      * @brief Creates a new stop widget.
      *
      * @param parent The parent widget of the stop widget. Default is 0.
-     *
      * @param stopSettings The stop settings to initialize the stop widget with.
-     *
      * @param stopSettingsDialogOptions Options for used StopSettingsDialogs. The user can open
      *   a stop settings dialog to change the stop settings.
      *   Default is StopSettingsDialog::DefaultOptions.
-     *
      * @param accessorInfoDialogOptions Options for used AccessorInfoDialogs. The user can open
      *   an accessor info dialog from an opened stop settings dialog.
      *   Default is AccessorInfoDialog::DefaultOptions.
-     *
      * @param filterConfigurations A list of configured filter configurations.
-     *
      * @param settings A list of @ref StopSetting to create widgets for in StopSettingsDialogs.
-     *
      * @param factory A pointer to an object derived from @ref StopSettingsWidgetFactory,
      *   which can create the given @p setting by calling
      *   @ref StopSettingsWidgetFactory::widgetForSetting.
@@ -95,6 +86,7 @@ public:
 
     /** @brief Gets the stop settings of this StopWidget. */
     StopSettings stopSettings() const;
+
     /** @brief Sets the stop settings of this StopWidget to @p stopSettings. */
     void setStopSettings( const StopSettings &stopSettings );
 
@@ -106,11 +98,13 @@ public:
 
     /** @brief Adds the given @p button. */
     void addButton( QToolButton *button );
+
     /** @brief Removes the given @p button. */
     void removeButton( QToolButton *button );
 
     /** @brief Whether or not this stop is highlighted, ie. currently used in the applet. */
     bool isHighlighted() const;
+
     /** @brief Sets whether or not this stop is highlighted, ie. currently used in the applet. */
     void setHighlighted( bool highlighted );
 
@@ -127,6 +121,7 @@ public:
 Q_SIGNALS:
     /** @brief The settings of this StopWidget have been changed (StopSettingsDialog accepted). */
     void changed( const StopSettings &stopSettings );
+
     void remove();
 
 public Q_SLOTS:
@@ -157,21 +152,15 @@ public:
      * @brief Creates a new stop list widget.
      *
      * @param parent The parent widget of the dialog. Default is 0.
-     *
      * @param stopSettingsList A list of stop settings to initialize the stop list widget with.
-     *
      * @param stopSettingsDialogOptions Options for used StopSettingsDialog. The user can open
      *   a stop settings dialog to change stop settings.
      *   Default is StopSettingsDialog::DefaultOptions.
-     *
      * @param accessorInfoDialogOptions Options for used AccessorInfoDialog. The user can open
      *   an accessor info dialog from an opened stop settings dialog.
      *   Default is AccessorInfoDialog::DefaultOptions.
-     *
      * @param filterConfigurations A list of configured filter configurations.
-     *
      * @param settings A list of @ref StopSetting to create widgets for in StopSettingsDialogs.
-     *
      * @param factory A pointer to an object derived from @ref StopSettingsWidgetFactory,
      *   which can create the given @p setting by calling
      *   @ref StopSettingsWidgetFactory::widgetForSetting.
@@ -262,7 +251,6 @@ Q_SIGNALS:
      * @brief The stop settings of the @ref StopWidget at @p index has changed to @p stopSettings.
      *
      * @param index The index of the @ref StopWidget that has changed in the list of stop widgets.
-     *
      * @param stopSettings The new stop settings.
      **/
     void changed( int index, const StopSettings &stopSettings );
@@ -274,7 +262,6 @@ public Q_SLOTS:
      * @note If the maximum widget count is already reached, no widgets get added.
      *
      * @param stopSettings The StopSettings for the new StopWidget. Default is StopSettings().
-     *
      * @see AbstractDynamicWidgetContainer::setWidgetCountRange
      **/
     void addStopWidget( const StopSettings &stopSettings = StopSettings() );
@@ -283,7 +270,6 @@ public Q_SLOTS:
      * @brief Removes the last StopWidget from this list.
      *
      * @note If the minimum widget count is already reached, no widgets get removed.
-     *
      * @see AbstractDynamicWidgetContainer::setWidgetCountRange
      **/
     void removeLastStopWidget();

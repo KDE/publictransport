@@ -22,6 +22,9 @@
 // Own includes
 #include "journeysearchmodel.h"
 
+// Qt includes
+#include <QIcon>
+
 JourneySearchItem::JourneySearchItem( const QString &journeySearch, const QString &name,
                                       bool favorite )
     : m_journeySearch(journeySearch), m_name(name), m_favorite(favorite)

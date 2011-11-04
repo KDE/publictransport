@@ -592,3 +592,193 @@ QString PublicTransportInfo::operatorFromVehicleTypeString( const QString& sLine
         return QString();
     }
 }
+
+QDateTime PublicTransportInfo::departure() const
+{
+    if ( contains( DepartureDate ) ) {
+        return QDateTime( value( DepartureDate ).toDate(),
+                          QTime( value( DepartureHour ).toInt(),
+                                 value( DepartureMinute ).toInt() ) );
+    } else {
+        return QDateTime( QDate::currentDate(),
+                          QTime( value( DepartureHour ).toInt(),
+                                 value( DepartureMinute ).toInt() ) );
+    }
+}
+
+QString PublicTransportInfo::operatorName() const
+{
+    return contains( Operator ) ? value( Operator ).toString() : QString();
+}
+
+QStringList PublicTransportInfo::routeStops() const
+{
+    return contains( RouteStops ) ? value( RouteStops ).toStringList() : QStringList();
+}
+
+int PublicTransportInfo::routeExactStops() const
+{
+    return contains( RouteExactStops ) ? value( RouteExactStops ).toInt() : 0;
+}
+
+QDateTime JourneyInfo::arrival() const
+{
+    if ( contains( ArrivalDate ) ) {
+        return QDateTime( value( ArrivalDate ).toDate(),
+                          QTime( value( ArrivalHour ).toInt(),
+                                 value( ArrivalMinute ).toInt() ) );
+    } else if ( contains( ArrivalHour ) && contains( ArrivalMinute ) ) {
+        return QDateTime( QDate::currentDate(),
+                          QTime( value( ArrivalHour ).toInt(),
+                                 value( ArrivalMinute ).toInt() ) );
+    } else {
+        return QDateTime();
+    }
+}
+
+QList< VehicleType > JourneyInfo::vehicleTypes() const
+{
+    if ( contains( TypesOfVehicleInJourney ) ) {
+        QVariantList listVariant = value( TypesOfVehicleInJourney ).toList();
+        QList<VehicleType> listRet;
+        foreach( QVariant vehicleType, listVariant ) {
+            listRet.append( static_cast<VehicleType>( vehicleType.toInt() ) );
+        }
+        return listRet;
+    } else {
+        return QList<VehicleType>();
+    }
+}
+
+QStringList JourneyInfo::vehicleIconNames() const
+{
+    if ( !contains( TypesOfVehicleInJourney ) ) {
+        return QStringList();
+    }
+    QVariantList vehicles = value( TypesOfVehicleInJourney ).toList();
+    QStringList iconNames;
+    foreach( QVariant vehicle, vehicles ) {
+        iconNames << Global::vehicleTypeToIcon( static_cast<VehicleType>( vehicle.toInt() ) );
+    }
+    return iconNames;
+}
+
+QStringList JourneyInfo::vehicleNames( bool plural ) const
+{
+    if ( !contains( TypesOfVehicleInJourney ) ) {
+        return QStringList();
+    }
+    QVariantList vehicles = value( TypesOfVehicleInJourney ).toList();
+    QStringList names;
+    foreach( QVariant vehicle, vehicles ) {
+        names << Global::vehicleTypeToString( static_cast<VehicleType>( vehicle.toInt() ), plural );
+    }
+    return names;
+}
+
+QVariantList JourneyInfo::vehicleTypesVariant() const
+{
+    return contains( TypesOfVehicleInJourney )
+           ? value( TypesOfVehicleInJourney ).toList() : QVariantList();
+}
+
+QVariantList JourneyInfo::routeVehicleTypesVariant() const
+{
+    return contains( RouteTypesOfVehicles )
+           ? value( RouteTypesOfVehicles ).toList() : QVariantList();
+}
+
+QStringList JourneyInfo::routeTransportLines() const
+{
+    return contains( RouteTransportLines )
+           ? value( RouteTransportLines ).toStringList() : QStringList();
+}
+
+QStringList JourneyInfo::routePlatformsDeparture() const
+{
+    return contains( RoutePlatformsDeparture )
+           ? value( RoutePlatformsDeparture ).toStringList() : QStringList();
+}
+
+QStringList JourneyInfo::routePlatformsArrival() const
+{
+    return contains( RoutePlatformsArrival )
+           ? value( RoutePlatformsArrival ).toStringList() : QStringList();
+}
+
+int JourneyInfo::changes() const
+{
+    return contains( Changes ) ? value( Changes ).toInt() : -1;
+}
+
+QVariantList JourneyInfo::routeTimesDepartureVariant() const
+{
+    return contains( RouteTimesDeparture )
+           ? value( RouteTimesDeparture ).toList() : QVariantList();
+}
+
+QList< QTime > JourneyInfo::routeTimesDeparture() const
+{
+    if ( contains( RouteTimesDeparture ) ) {
+        QList<QTime> ret;
+        QVariantList times = value( RouteTimesDeparture ).toList();
+        foreach( QVariant time, times ) {
+            ret << time.toTime();
+        }
+        return ret;
+    } else {
+        return QList<QTime>();
+    }
+}
+
+QVariantList JourneyInfo::routeTimesArrivalVariant() const
+{
+    return contains( RouteTimesArrival )
+           ? value( RouteTimesArrival ).toList() : QVariantList();
+}
+
+QList< QTime > JourneyInfo::routeTimesArrival() const
+{
+    if ( contains( RouteTimesArrival ) ) {
+        QList<QTime> ret;
+        QVariantList times = value( RouteTimesArrival ).toList();
+        foreach( QVariant time, times ) {
+            ret << time.toTime();
+        }
+        return ret;
+    } else {
+        return QList<QTime>();
+    }
+}
+
+QVariantList JourneyInfo::routeTimesDepartureDelay() const
+{
+    if ( contains( RouteTimesDepartureDelay ) ) {
+        return value( RouteTimesDepartureDelay ).toList();
+    } else {
+        return QVariantList();
+    }
+}
+
+QVariantList JourneyInfo::routeTimesArrivalDelay() const
+{
+    if ( contains( RouteTimesArrivalDelay ) ) {
+        return value( RouteTimesArrivalDelay ).toList();
+    } else {
+        return QVariantList();
+    }
+}
+
+QList< QTime > DepartureInfo::routeTimes() const
+{
+    if ( contains( RouteTimes ) ) {
+        QList<QTime> ret;
+        QVariantList times = value( RouteTimes ).toList();
+        foreach( QVariant time, times ) {
+            ret << time.toTime();
+        }
+        return ret;
+    } else {
+        return QList<QTime>();
+    }
+}

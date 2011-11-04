@@ -21,14 +21,19 @@
 #include "filterwidget.h"
 
 // Own includes
-#include "filter.h"
-#include "departureinfo.h"
 #include "checkcombobox.h"
 
-// KDE + Qt includes
+// KDE includes
 #include <KGlobal>
 #include <KLocale>
-#include <QLabel>
+#include <KLineEdit>
+#include <KNumInput>
+
+// Qt includes
+#include <QStandardItemModel>
+#include <QFormLayout>
+#include <QTimeEdit>
+#include <QToolButton>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace Timetable {
@@ -592,6 +597,79 @@ void ConstraintListWidget::checkedItemsChanged()
     }
 
     emit changed();
+}
+
+void ConstraintWidget::addWidget( QWidget* w ) {
+    QFormLayout *l = dynamic_cast< QFormLayout* >( layout() );
+    QLayoutItem *item = l->itemAt( 0 );
+    if ( item ) {
+        l->removeItem( item );
+        l->addRow( item->widget(), w );
+    }
+}
+
+Filter FilterWidget::filter() const
+{
+    Filter f;
+    foreach( ConstraintWidget *constraint, constraintWidgets() ) {
+        f << constraint->constraint();
+    }
+    return f;
+}
+
+FilterWidget* FilterWidget::create( const Timetable::Filter& filter, QWidget* parent )
+{
+    FilterWidget *filterWidget = new FilterWidget( QList<FilterType>()
+            << FilterByVehicleType << FilterByTarget << FilterByVia << FilterByNextStop
+            << FilterByTransportLine << FilterByTransportLineNumber << FilterByDelay, parent );
+    filterWidget->setFilter( filter );
+    return filterWidget;
+}
+
+void FilterListWidget::addFilter()
+{
+    Filter filter;
+    filter << Constraint();
+    addFilter( filter );
+}
+
+FilterListWidget* FilterListWidget::create( const Timetable::FilterList& filterList, QWidget* parent )
+{
+    FilterListWidget *filterListWidget = new FilterListWidget( parent );
+    foreach( Filter filter, filterList ) {
+        filterListWidget->addFilter( filter );
+    }
+    return filterListWidget;
+}
+
+QVariant ConstraintTimeWidget::value() const
+{
+    return m_time->time();
+}
+
+void ConstraintTimeWidget::setValue( const QVariant& value )
+{
+    m_time->setTime( value.toTime() );
+}
+
+QVariant ConstraintIntWidget::value() const
+{
+    return m_num->value();
+}
+
+void ConstraintIntWidget::setValue( const QVariant& value )
+{
+    m_num->setValue( value.toInt() );
+}
+
+QVariant ConstraintStringWidget::value() const
+{
+    return m_string->text();
+}
+
+void ConstraintStringWidget::setValue( const QVariant& value )
+{
+    m_string->setText( value.toString() );
 }
 
 } // namespace Timetable

@@ -17,19 +17,22 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "stopwidget.h"
 
+// Own includes
 #include "stopsettings.h"
 #include "stopsettingsdialog.h"
 #include "locationmodel.h"
 #include "serviceprovidermodel.h"
 #include "filter.h"
 
+// KDE+Plasma includes
 #include <Plasma/DataEngineManager>
 #include <KLineEdit>
 #include <KPushButton>
-#include <KDebug>
 
+// Qt includes
 #include <QHBoxLayout>
 #include <QSpacerItem>
 #include <QFormLayout>

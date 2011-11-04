@@ -17,15 +17,22 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// Header
 #include "accessorinfoxmlreader.h"
 
+// Own includes
 #include "timetableaccessor.h"
+#include "timetableaccessor_info.h"
 #include "timetableaccessor_script.h"
 #include "timetableaccessor_xml.h"
 
+// KDE includes
 #include <KLocalizedString>
+#include <KGlobal>
 #include <KLocale>
 #include <KDebug>
+
+// Qt includes
 #include <QFile>
 #include <QFileInfo>
 
@@ -37,11 +44,11 @@ TimetableAccessor* AccessorInfoXmlReader::read( QIODevice* device,
     bool closeAfterRead; // Only close after reading if it wasn't open before
     if ( (closeAfterRead = !device->isOpen()) && !device->open(QIODevice::ReadOnly) ) {
         raiseError( "Couldn't read the file \"" + fileName + "\"." );
-        return NULL;
+        return 0;
     }
     setDevice( device );
 
-    TimetableAccessor *ret = NULL;
+    TimetableAccessor *ret = 0;
     while ( !atEnd() ) {
         readNext();
 
@@ -62,7 +69,7 @@ TimetableAccessor* AccessorInfoXmlReader::read( QIODevice* device,
         device->close();
     }
 
-    return error() ? NULL : ret;
+    return error() ? 0 : ret;
 }
 
 void AccessorInfoXmlReader::readUnknownElement()
@@ -110,7 +117,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
             raiseError( QString("The accessor type %1 is invalid. Currently there are two "
                                 "values allowed: HTML and XML.")
                         .arg(attributes().value("type").toString()) );
-            return NULL;
+            return 0;
         }
     } else {
         // Type not specified, use default
@@ -196,7 +203,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
                                         "information XML named %2 wasn't found")
                                 .arg(scriptFile).arg(nameEn) );
                     delete accessorInfo;
-                    return NULL;
+                    return 0;
                 }
                 accessorInfo->setScriptFile( scriptFile );
             } else if ( name().compare("credit", Qt::CaseInsensitive) == 0 ) {
@@ -210,12 +217,12 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
     if ( accessorInfo->url().isEmpty() ) {
         delete accessorInfo;
         raiseError( "No <url> tag in accessor info XML" );
-        return NULL;
+        return 0;
     }
     if ( accessorInfo->accessorType() == HTML && accessorInfo->departureRawUrl().isEmpty() ) {
         delete accessorInfo;
         raiseError( "No raw url for departures in accessor info XML, mandatory for HTML types" );
-        return NULL;
+        return 0;
     }
 
     accessorInfo->setName( nameLocal.isEmpty() ? nameEn : nameLocal );
@@ -228,7 +235,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
         if ( accessorInfo->scriptFileName().isEmpty() ) {
             delete accessorInfo;
             raiseError( "HTML accessors need a script for parsing" );
-            return NULL;
+            return 0;
         }
 
         // Create the accessor and check for script errors
@@ -238,7 +245,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
         } else {
             delete scriptAccessor;
             raiseError( "Couldn't correctly load the script (bad script)" );
-            return NULL;
+            return 0;
         }
     } else if ( accessorInfo->accessorType() == XML ) {
         // Warn if no script is specified
@@ -254,7 +261,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
         {
             delete xmlAccessor;
             raiseError( "Couldn't correctly load the script (bad script)" );
-            return NULL;
+            return 0;
         } else {
             return xmlAccessor;
         }
@@ -262,7 +269,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
 
     delete accessorInfo;
     raiseError( QString("Accessor type %1 not supported").arg(accessorInfo->accessorType()) );
-    return NULL;
+    return 0;
 }
 
 QString AccessorInfoXmlReader::readLocalizedTextElement( QString *lang )

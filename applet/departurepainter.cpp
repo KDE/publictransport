@@ -36,6 +36,7 @@
 #include <KGlobalSettings>
 
 // Qt includes
+#include <QPainter>
 #include <qmath.h>
 
 DeparturePainter::DeparturePainter( QObject *parent )

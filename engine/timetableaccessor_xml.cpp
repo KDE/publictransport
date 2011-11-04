@@ -17,24 +17,30 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "timetableaccessor_xml.h"
 
-#include <QRegExp>
-#include <QDomDocument>
+// Own includes
+#include "timetableaccessor_info.h"
+#include "departureinfo.h"
 
+// KDE includes
 #include <KLocalizedString>
 #include <KDebug>
 
+// Qt includes
+#include <QRegExp>
+#include <QDomDocument>
+
 
 TimetableAccessorXml::TimetableAccessorXml( TimetableAccessorInfo *info )
+        : TimetableAccessor( info )
 {
-    m_info = info;
-
     // Create a script accessor object to parse stop suggestions if a script filename is given
     if ( !m_info->scriptFileName().isEmpty() ) {
         m_accessorScript = new TimetableAccessorScript( info );
     } else {
-        m_accessorScript = NULL;
+        m_accessorScript = 0;
     }
 }
 

@@ -25,23 +25,18 @@
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #include <enums.h>
-#include <QPainter>
-
-class KPixmapCache;
-template<class QDateTime, class QList>
-class QMap;
-
-template<class DepartureItem>
-class QList;
-
-namespace Plasma {
-    class Svg;
-}
 
 class DepartureModel;
 class DepartureItem;
 class PopupIcon;
+class KPixmapCache;
+namespace Plasma {
+    class Svg;
+}
 class QPixmap;
+class QPainter;
+class QSize;
+class QRectF;
 
 using namespace Timetable;
 

@@ -22,6 +22,7 @@
 
 #include <KStandardDirs>
 #include <QFile>
+#include <KDebug>
 
 void Helper::error( const QString& message, const QString &failedParseText )
 {
@@ -112,3 +113,178 @@ void TimetableData::set( TimetableInformation info, const QVariant& value )
         }
     }
 }
+
+QString Helper::trim( const QString& str )
+{
+    QString s = str;
+    return s.trimmed().replace( QRegExp( "^(&nbsp;)+|(&nbsp;)+$", Qt::CaseInsensitive ), "" ).trimmed();
+}
+
+QString Helper::stripTags( const QString& str )
+{
+    QRegExp rx( "<\\/?[^>]+>" );
+    rx.setMinimal( true );
+    return QString( str ).replace( rx, "" );
+}
+
+QString Helper::camelCase( const QString& str )
+{
+    QString ret = str.toLower();
+    QRegExp rx( "(^\\w)|\\W(\\w)" );
+    int pos = 0;
+    while (( pos = rx.indexIn( ret, pos ) ) != -1 ) {
+        if ( rx.pos( 2 ) < 0 || rx.pos( 2 ) >= ret.length() ) { // TODO
+            break;
+        }
+        ret[ rx.pos( 2 )] = ret[ rx.pos( 2 )].toUpper();
+        pos += rx.matchedLength();
+    }
+    return ret;
+}
+
+QString Helper::extractBlock( const QString& str, const QString& beginString, const QString& endString )
+{
+    int pos = str.indexOf( beginString );
+    if ( pos == -1 ) {
+        return "";
+    }
+
+    int end = str.indexOf( endString, pos + 1 );
+    return str.mid( pos, end - pos );
+}
+
+QVariantList Helper::matchTime( const QString& str, const QString& format )
+{
+    QString pattern = QRegExp::escape( format );
+    pattern = pattern.replace( "hh", "\\d{2}" )
+              .replace( "h", "\\d{1,2}" )
+              .replace( "mm", "\\d{2}" )
+              .replace( "m", "\\d{1,2}" )
+              .replace( "AP", "(AM|PM)" )
+              .replace( "ap", "(am|pm)" );
+
+    QVariantList ret;
+    QRegExp rx( pattern );
+    if ( rx.indexIn( str ) != -1 ) {
+        QTime time = QTime::fromString( rx.cap(), format );
+        ret << time.hour() << time.minute();
+    } else if ( format != "hh:mm" ) {
+        // Try default format if the one specified doesn't work
+        QRegExp rx2( "\\d{1,2}:\\d{2}" );
+        if ( rx2.indexIn( str ) != -1 ) {
+            QTime time = QTime::fromString( rx2.cap(), "hh:mm" );
+            ret << time.hour() << time.minute();
+        } else {
+            kDebug() << "Couldn't match time in" << str << pattern;
+        }
+    } else {
+        kDebug() << "Couldn't match time in" << str << pattern;
+    }
+    return ret;
+}
+
+QVariantList Helper::matchDate( const QString& str, const QString& format )
+{
+    QString pattern = QRegExp::escape( format ).replace( "d", "D" );
+    pattern = pattern.replace( "DD", "\\d{2}" )
+              .replace( "D", "\\d{1,2}" )
+              .replace( "MM", "\\d{2}" )
+              .replace( "M", "\\d{1,2}" )
+              .replace( "yyyy", "\\d{4}" )
+              .replace( "yy", "\\d{2}" );
+
+    QVariantList ret;
+    QRegExp rx( pattern );
+    if ( rx.indexIn( str ) != -1 ) {
+        QDate date = QDate::fromString( rx.cap(), format );
+        ret << date.year() << date.month() << date.day();
+    } else if ( format != "yyyy-MM-dd" ) {
+        // Try default format if the one specified doesn't work
+        QRegExp rx2( "\\d{2,4}-\\d{2}-\\d{2}" );
+        if ( rx2.indexIn( str ) != -1 ) {
+            QDate date = QDate::fromString( rx2.cap(), "yyyy-MM-dd" );
+            ret << date.year() << date.month() << date.day();
+        } else {
+            kDebug() << "Couldn't match time in" << str << pattern;
+        }
+    } else {
+        kDebug() << "Couldn't match time in" << str << pattern;
+    }
+    return ret;
+}
+
+QString Helper::formatTime( int hour, int minute, const QString& format )
+{
+    return QTime( hour, minute ).toString( format );
+}
+
+QString Helper::formatDate( int year, int month, int day, const QString& format )
+{
+    return QDate( year, month, day ).toString( format );
+}
+
+int Helper::duration( const QString& sTime1, const QString& sTime2, const QString& format )
+{
+    QTime time1 = QTime::fromString( sTime1, format );
+    QTime time2 = QTime::fromString( sTime2, format );
+    if ( !time1.isValid() || !time2.isValid() ) {
+        return -1;
+    }
+    return time1.secsTo( time2 ) / 60;
+}
+
+QString Helper::addMinsToTime( const QString& sTime, int minsToAdd, const QString& format )
+{
+    QTime time = QTime::fromString( sTime, format );
+    if ( !time.isValid() ) {
+        kDebug() << "Couldn't parse the given time" << sTime << format;
+        return "";
+    }
+    return time.addSecs( minsToAdd * 60 ).toString( format );
+}
+
+QString Helper::addDaysToDate( const QString& sDate, int daysToAdd, const QString& format )
+{
+    QDate date = QDate::fromString( sDate, format ).addDays( daysToAdd );
+    if ( !date.isValid() ) {
+        kDebug() << "Couldn't parse the given date" << sDate << format;
+        return sDate;
+    }
+    return date.toString( format );
+}
+
+QVariantList Helper::addDaysToDateArray( const QVariantList& values, int daysToAdd )
+{
+    if ( values.count() != 3 ) {
+        kDebug() << "The first argument needs to be a list with three values (year, month, day)";
+        return values;
+    }
+
+    QDate date( values[0].toInt(), values[1].toInt(), values[2].toInt() );
+    date = date.addDays( daysToAdd );
+    return QVariantList() << date.year() << date.month() << date.day();
+}
+
+QStringList Helper::splitSkipEmptyParts( const QString& str, const QString& sep )
+{
+    return str.split( sep, QString::SkipEmptyParts );
+}
+
+void TimetableData::set( const QString& sTimetableInformation, const QVariant& value )
+{
+    set( TimetableAccessor::timetableInformationFromString( sTimetableInformation ), value );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

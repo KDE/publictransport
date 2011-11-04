@@ -27,7 +27,9 @@
  **/
 
 #include "publictransporthelper_export.h"
-#include <KDialog>
+
+// KDE includes
+#include <KDialog> // Base class
 
 /** @brief Namespace for the publictransport helper library. */
 namespace Timetable {
