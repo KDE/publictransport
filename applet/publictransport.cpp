@@ -1454,6 +1454,10 @@ void PublicTransport::createTooltip()
         data.setSubText( i18nc("@info", "View departure times for public transport") );
     } else if ( !m_popupIcon->departureGroups()->isEmpty() ) {
         const DepartureGroup currentGroup = m_popupIcon->currentDepartureGroup();
+        if ( currentGroup.isEmpty() ) {
+            kDebug() << "Empty group for popup icon!";
+            return;
+        }
         const bool isAlarmGroup = m_popupIcon->currentGroupIsAlarmGroup();
         const QString groupDurationString = currentGroup.first()->departureInfo()->durationString();
         QStringList infoStrings;
