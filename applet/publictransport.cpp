@@ -530,8 +530,7 @@ void PublicTransport::setSettings( const QString& serviceProviderID, const QStri
     stopSettings.set( ServiceProviderSetting, serviceProviderID );
     stopSettings.setStop( stopName );
     settings.stopSettingsList << stopSettings;
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 void PublicTransport::setSettings( const StopSettingsList& stopSettingsList,
@@ -542,8 +541,7 @@ void PublicTransport::setSettings( const StopSettingsList& stopSettingsList,
     Settings settings = m_settings;
     settings.stopSettingsList = stopSettingsList;
     settings.filterSettingsList = filterSettings;
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 bool PublicTransport::isStateActive( const QString& stateName ) const
@@ -1771,8 +1769,7 @@ void PublicTransport::setCurrentStopIndex( QAction* action )
 
     Settings settings = m_settings;
     settings.currentStopSettingsIndex = stopIndex;
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 void PublicTransport::showDepartures()
@@ -1781,8 +1778,7 @@ void PublicTransport::showDepartures()
     // Then write the new settings.
     Settings settings = m_settings;
     settings.departureArrivalListType = DepartureList;
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 void PublicTransport::showArrivals()
@@ -1791,8 +1787,7 @@ void PublicTransport::showArrivals()
     // Then write the new settings.
     Settings settings = m_settings;
     settings.departureArrivalListType = ArrivalList;
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 void PublicTransport::switchFilterConfiguration( QAction* action )
@@ -1813,8 +1808,7 @@ void PublicTransport::switchFilterConfiguration( QAction* action )
             }
         }
     }
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 void PublicTransport::switchFilterByGroupColor( QAction* action )
@@ -1826,8 +1820,7 @@ void PublicTransport::switchFilterByGroupColor( QAction* action )
     // Then write the new settings.
     Settings settings = m_settings;
     settings.colorGroupSettingsList[settings.currentStopSettingsIndex].enableColorGroup( color, enable );
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 void PublicTransport::enableFilterConfiguration( const QString& filterConfiguration, bool enable )
@@ -1847,8 +1840,7 @@ void PublicTransport::enableFilterConfiguration( const QString& filterConfigurat
         filterSettings.affectedStops.remove( settings.currentStopSettingsIndex );
     }
     settings.filterSettingsList.set( filterSettings );
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 void PublicTransport::showDepartureList()
@@ -1896,8 +1888,8 @@ void PublicTransport::showJourneyList()
     m_journeyTimetable->setModel( m_modelJourneys );
     m_journeyTimetable->setFont( m_settings.sizedFont() );
     m_journeyTimetable->setSvg( &m_vehiclesSvg );
-    connect( m_journeyTimetable, SIGNAL(requestStopAction(StopAction::Type,QString)),
-             this, SLOT(requestStopAction(StopAction::Type,QString)) );
+    connect( m_journeyTimetable, SIGNAL(requestStopAction(StopAction::Type,QString,QString)),
+             this, SLOT(requestStopAction(StopAction::Type,QString,QString)) );
     connect( m_journeyTimetable, SIGNAL(requestAlarmCreation(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)),
              this, SLOT(processAlarmCreationRequest(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)) );
     connect( m_journeyTimetable, SIGNAL(requestAlarmDeletion(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)),
@@ -1987,8 +1979,7 @@ void PublicTransport::journeySearchInputFinished( const QString &text )
     // and cut recent journey searches if the limit is exceeded
     Settings settings = m_settings;
     settings.addRecentJourneySearch( text );
-    setSettings
-( settings );
+    setSettings( settings );
 
     m_journeyTitleText.clear();
     QString stop;
@@ -2054,7 +2045,7 @@ void PublicTransport::updateFilterMenu()
                  m_settings.currentColorGroupSettings() )
         {
             // Create action for current color group
-            QAction *action = new QAction( colorGroupSettings.lastCommonStopName,
+            QAction *action = new QAction( colorGroupSettings.displayText,
                                            m_colorFiltersGroup );
             action->setCheckable( true );
             if ( !colorGroupSettings.filterOut ) {
@@ -2162,8 +2153,8 @@ QGraphicsWidget* PublicTransport::graphicsWidget()
         m_timetable->setSvg( &m_vehiclesSvg );
         connect( m_timetable, SIGNAL(contextMenuRequested(PublicTransportGraphicsItem*,QPointF)),
                  this, SLOT(departureContextMenuRequested(PublicTransportGraphicsItem*,QPointF)) );
-        connect( m_timetable, SIGNAL(requestStopAction(StopAction::Type,QString)),
-                 this, SLOT(requestStopAction(StopAction::Type,QString)) );
+        connect( m_timetable, SIGNAL(requestStopAction(StopAction::Type,QString,QString)),
+                 this, SLOT(requestStopAction(StopAction::Type,QString,QString)) );
 
         QGraphicsLinearLayout *layout = new QGraphicsLinearLayout( Qt::Vertical );
         layout->setContentsMargins( 0, 0, 0, 0 );
@@ -2323,9 +2314,13 @@ void PublicTransport::setSettings( const Settings& settings )
             updateJourneyMenu();
         }
         if ( changed.testFlag(SettingsIO::ChangedFilterSettings) ||
-             changed.testFlag(SettingsIO::ChangedColorGroupSettings) )
+             changed.testFlag(SettingsIO::ChangedColorGroupSettings) ||
+             changed.testFlag(SettingsIO::ChangedCurrentStop) ||
+             changed.testFlag(SettingsIO::ChangedCurrentStopSettings) )
         {
-            // Update the journeys menu
+            // Update the filter menu, if filter or color group settings have changed.
+            // If the current stop or it's settings have changed, the active filters
+            // and color groups may also have changed, requiring an update of the filter menu
             updateFilterMenu();
         }
         if ( changed.testFlag(SettingsIO::ChangedDepartureArrivalListType) ) {
@@ -2458,8 +2453,7 @@ void PublicTransport::journeySearchListUpdated( const QList<JourneySearchItem> &
 {
     Settings settings = m_settings;
     settings.setCurrentJourneySearches( newJourneySearches );
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 void PublicTransport::journeyActionTriggered( QAction *_action )
@@ -2556,8 +2550,7 @@ void PublicTransport::removeIntermediateStopSettings()
     }
     m_originalStopIndex = -1;
 
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 void PublicTransport::updateDepartureListIcon()
@@ -2576,8 +2569,7 @@ void PublicTransport::hideColumnTarget()
     // Then write the new settings.
     Settings settings = m_settings;
     settings.hideColumnTarget = true;
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 void PublicTransport::showColumnTarget()
@@ -2586,8 +2578,7 @@ void PublicTransport::showColumnTarget()
     // Then write the new settings.
     Settings settings = m_settings;
     settings.hideColumnTarget = false;
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 void PublicTransport::toggleExpanded()
@@ -2686,7 +2677,8 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
             const DepartureInfo *info = item->departureInfo();
             int count = info->routeStops().count();
             for ( int index = 0; index < count; ++index ) {
-                QString stopName = info->routeStops()[index];
+                const QString stopName = info->routeStops()[index];
+                const QString stopNameShortened = info->routeStopsShortened()[index];
 
                 // Get time information and route flags
                 QTime time;
@@ -2699,9 +2691,9 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
                 KMenu *stopMenu = new KMenu( menu );
                 QString stopText;
                 if ( minsFromFirstRouteStop == 0 || !time.isValid() ) {
-                    stopText = stopName;
+                    stopText = stopNameShortened;
                 } else {
-                    stopText = QString("%1 (%2)").arg(stopName)
+                    stopText = QString("%1 (%2)").arg(stopNameShortened)
                         .arg(KGlobal::locale()->prettyFormatDuration(minsFromFirstRouteStop * 60000));
                 }
                 QAction *routeStopsAction = new QAction( GlobalApplet::stopIcon(routeStopFlags),
@@ -2710,45 +2702,45 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
                 if ( !routeStopFlags.testFlag(RouteStopIsHomeStop) ) {
                     StopAction *showDeparturesAction =
                             new StopAction( StopAction::ShowDeparturesForStop, stopMenu );
-                    showDeparturesAction->setStopName( stopName );
-                    connect( showDeparturesAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-                            this, SLOT(requestStopAction(StopAction::Type,QString)) );
+                    showDeparturesAction->setStopName( stopName, stopNameShortened );
+                    connect( showDeparturesAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+                            this, SLOT(requestStopAction(StopAction::Type,QString,QString)) );
                     stopMenu->addAction( showDeparturesAction );
                 }
 
                 if ( dataEngine("openstreetmap")->isValid() ) {
                     StopAction *showInMapAction =
                             new StopAction( StopAction::ShowStopInMap, stopMenu );
-                    showInMapAction->setStopName( stopName );
-                    connect( showInMapAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-                             this, SLOT(requestStopAction(StopAction::Type,QString)) );
+                    showInMapAction->setStopName( stopName, stopNameShortened );
+                    connect( showInMapAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+                             this, SLOT(requestStopAction(StopAction::Type,QString,QString)) );
                     stopMenu->addAction( showInMapAction );
                 }
 
                 if ( !routeStopFlags.testFlag(RouteStopIsHomeStop) ) {
                     StopAction *highlightAction =
                             new StopAction( StopAction::HighlightStop, stopMenu );
-                    highlightAction->setStopName( stopName );
+                    highlightAction->setStopName( stopName, stopNameShortened );
                     if ( m_model->info().highlightedStop == stopName ) {
                         highlightAction->setText( i18nc("@action:inmenu", "&Unhighlight This Stop") );
                     }
-                    connect( highlightAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-                            this, SLOT(requestStopAction(StopAction::Type,QString)) );
+                    connect( highlightAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+                            this, SLOT(requestStopAction(StopAction::Type,QString,QString)) );
                     stopMenu->addAction( highlightAction );
 
                     StopAction *createFilterAction =
                             new StopAction( StopAction::CreateFilterForStop, stopMenu );
-                    createFilterAction->setStopName( stopName );
-                    connect( createFilterAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-                            this, SLOT(requestStopAction(StopAction::Type,QString)) );
+                    createFilterAction->setStopName( stopName, stopNameShortened );
+                    connect( createFilterAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+                            this, SLOT(requestStopAction(StopAction::Type,QString,QString)) );
                     stopMenu->addAction( createFilterAction );
                 }
 
                 StopAction *copyToClipboardAction =
                         new StopAction( StopAction::CopyStopNameToClipboard, stopMenu );
-                copyToClipboardAction->setStopName( stopName );
-                connect( copyToClipboardAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-                         this, SLOT(requestStopAction(StopAction::Type,QString)) );
+                copyToClipboardAction->setStopName( stopName, stopNameShortened );
+                connect( copyToClipboardAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+                         this, SLOT(requestStopAction(StopAction::Type,QString,QString)) );
                 stopMenu->addAction( copyToClipboardAction );
 
                 menu->addAction( routeStopsAction );
@@ -2766,7 +2758,8 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
     qDeleteAll( objectsToBeDeleted );
 }
 
-void PublicTransport::requestStopAction( StopAction::Type stopAction, const QString& stopName )
+void PublicTransport::requestStopAction( StopAction::Type stopAction,
+                                         const QString& stopName, const QString &stopNameShortened )
 {
     // Create and enable new filter
     Settings settings = m_settings;
@@ -2782,7 +2775,7 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
             break;
         case StopAction::CreateFilterForStop: {
             QString filterName = i18nc("@info/plain Default name for a new filter via a given stop",
-                                       "Via %1", stopName);
+                                       "Via %1", stopNameShortened);
             Filter viaFilter;
             viaFilter << Constraint( FilterByVia, FilterContains, stopName );
             FilterSettings filterSettings;
@@ -2791,8 +2784,7 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
             filterSettings.affectedStops << settings.currentStopSettingsIndex;
 
             settings.filterSettingsList << filterSettings;
-            setSettings
-( settings );
+            setSettings( settings );
             break;
         } case StopAction::ShowStopInMap: {
             // Request coordinates from openstreetmap data engine
@@ -2834,8 +2826,7 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
                 stopSettingsIndex = settings.stopSettingsList.count() - 1;
             }
             settings.currentStopSettingsIndex = stopSettingsIndex;
-            setSettings
-( settings );
+            setSettings( settings );
 
             emit intermediateDepartureListRequested( stopName );
             break;
@@ -2845,7 +2836,7 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction, const QStr
                     ? QString() : stopName );
             break;
         } case StopAction::CopyStopNameToClipboard: {
-            QApplication::clipboard()->setText( stopName );
+            QApplication::clipboard()->setText( stopNameShortened );
             break;
         }
     }
@@ -3010,8 +3001,7 @@ void PublicTransport::processAlarmCreationRequest( const QDateTime& departure,
     // Append new alarm in a copy of the settings. Then write the new settings.
     Settings settings = m_settings;
     settings.alarmSettingsList << alarm;
-    setSettings
-( settings );
+    setSettings( settings );
 
     alarmCreated();
 }
@@ -3047,8 +3037,7 @@ void PublicTransport::processAlarmDeletionRequest( const QDateTime& departure,
             break;
         }
     }
-    setSettings
-( settings );
+    setSettings( settings );
 
     updatePopupIcon();
 }
@@ -3090,8 +3079,7 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
     // Append new alarm in a copy of the settings. Then write the new settings.
     Settings settings = m_settings;
     settings.alarmSettingsList << alarm;
-    setSettings
-( settings );
+    setSettings( settings );
 
     // Add the new alarm to the list of alarms that match the given departure
     int index = settings.alarmSettingsList.count() - 1;
@@ -3195,8 +3183,7 @@ void PublicTransport::removeAlarms( const AlarmSettingsList &newAlarmSettings,
     // Change alarm settings in a copy of the settings. Then write the new settings.
     Settings settings = m_settings;
     settings.alarmSettingsList = newAlarmSettings;
-    setSettings
-( settings );
+    setSettings( settings );
 }
 
 QString PublicTransport::infoText()
@@ -3339,8 +3326,7 @@ void PublicTransport::updateColorGroupSettings()
         // Then write the changed settings
         Settings settings = m_settings;
         settings.colorGroupSettingsList[ settings.currentStopSettingsIndex ] = newColorGroups;
-        setSettings
-( settings );
+        setSettings( settings );
     } else {
         // Remove color groups if colorization was toggled off
         // or if stop/filter settings were changed (update color groups after data arrived)

@@ -1450,7 +1450,7 @@ void JourneyModel::updateItemAlarm( JourneyItem* journeyItem )
             ? QString() : journeyInfo.routeTransportLines().first();
     VehicleType vehicleType = journeyInfo.routeVehicleTypes().isEmpty()
             ? Unknown : journeyInfo.routeVehicleTypes().first();
-    DepartureInfo departureInfo( QString(), lineString, QString(),
+    DepartureInfo departureInfo( QString(), lineString, QString(), QString(),
                                  journeyInfo.departure(), vehicleType );
     AlarmStates alarmStates = NoAlarm;
     for ( int a = 0; a < m_info.alarmSettings.count(); ++a ) {

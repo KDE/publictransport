@@ -52,13 +52,17 @@ public:
     };
 
     StopAction( Type type, QObject* parent, TitleType titleType = ShowActionNameOnly,
-                const QString &stopName = QString() );
+                const QString &stopName = QString(), const QString &stopNameShortened = QString() );
 
     Type type() const { return m_type; };
     TitleType titleType() const { return m_titleType; };
 
     QString stopName() const { return m_stopName; };
-    void setStopName( const QString &stopName ) { m_stopName = stopName; };
+    QString stopNameShortened() const { return m_stopNameShortened; };
+    void setStopName( const QString &stopName, const QString &stopNameShortened = QString() ) {
+        m_stopName = stopName;
+        m_stopNameShortened = stopNameShortened.isEmpty() ? stopName : stopNameShortened;
+    };
 
 signals:
     /**
@@ -66,8 +70,10 @@ signals:
      *
      * @param type The type of the triggered stop action.
      * @param stopName The name of the stop associated with the action.
+     * @param stopNameShortened The shortened name of the stop associated with the action.
      **/
-    void stopActionTriggered( StopAction::Type type, const QString &stopName );
+    void stopActionTriggered( StopAction::Type type,
+                              const QString &stopName, const QString &stopNameShortened );
 
 protected slots:
     void slotTriggered();
@@ -78,6 +84,7 @@ private:
     const Type m_type;
     const TitleType m_titleType;
     QString m_stopName;
+    QString m_stopNameShortened;
 };
 
 #endif // STOPACTION_HEADER

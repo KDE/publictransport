@@ -119,6 +119,7 @@ struct ColorGroupSettings {
     bool filterOut;
 
     QString lastCommonStopName;
+    QString displayText;
 
     ColorGroupSettings( const QColor &color = Qt::transparent ) {
         this->color = color;

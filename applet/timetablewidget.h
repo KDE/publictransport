@@ -630,7 +630,8 @@ signals:
      * @param stopAction The action to execute.
      * @param stopName The stop name for which the action should be executed.
      **/
-    void requestStopAction( StopAction::Type stopAction, const QString &stopName );
+    void requestStopAction( StopAction::Type stopAction, const QString &stopName,
+                            const QString &stopNameShortened );
 
     void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
                                VehicleType vehicleType, const QString &target,

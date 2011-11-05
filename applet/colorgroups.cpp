@@ -25,6 +25,7 @@
 
 struct RoutePartCount {
     QString lastCommonStop;
+    QString displayText;
     int usedCount; // used by [usedCount] transport lines (each line and target counts as one)
 };
 
@@ -35,6 +36,23 @@ public:
 
     inline bool operator()( const RoutePartCount &l, const RoutePartCount &r ) const {
         return l.usedCount > r.usedCount;
+    };
+};
+
+struct RoutePartInfo {
+    int usedCount;
+    QString displayText;
+
+    RoutePartInfo() {};
+
+    RoutePartInfo( int occurenceCount, const QString &displayText ) {
+        this->usedCount = occurenceCount;
+        this->displayText = displayText;
+    };
+
+    RoutePartInfo &operator ++() {
+        ++usedCount;
+        return *this;
     };
 };
 
@@ -180,17 +198,20 @@ ColorGroupSettingsList ColorGroups::generateColorGroupSettingsFrom(
 
     // Map route parts to lists of concatenated strings,
     // ie. transport line and target
-    QHash< QStringList, int > routePartsToLines;
+    QHash< QStringList, RoutePartInfo > routePartsToLines;
     for ( int stopCount = 1; stopCount <= maxTestRouteLength; ++stopCount ) {
         foreach ( const DepartureInfo &info, infoList ) {
-            int startIndex = departureArrivalListType == ArrivalList
+            const int startIndex = departureArrivalListType == ArrivalList
                     ? info.routeStops().count() - stopCount - 1 : 1;
             if ( startIndex < 0 ) {
                 kDebug() << "Start index is invalid" << startIndex;
                 continue; // Invalid start index, too less route stops
             }
-            QStringList routePart = info.routeStops().isEmpty()
-                    ? (QStringList() << info.target()) : info.routeStops().mid( startIndex, stopCount );
+            const QStringList routePart = info.routeStops().isEmpty()
+                    ? (QStringList() << info.target())
+                    : info.routeStops().mid( startIndex, stopCount );
+            const QString displayText = info.routeStops().isEmpty()
+                    ? info.targetShortened() : info.routeStopsShortened().at( startIndex );
             if ( routePart.isEmpty() ) {
                 kDebug() << "Route part is empty";
                 continue;
@@ -202,22 +223,23 @@ ColorGroupSettingsList ColorGroups::generateColorGroupSettingsFrom(
                 ++routePartsToLines[routePart];
             } else {
                 // Add new route part with count 1
-                routePartsToLines.insert( routePart, 1 );
+                routePartsToLines.insert( routePart, RoutePartInfo(1, displayText) );
             }
         }
     }
 
     // Create list with the last stop of each route part and it's count (wrapped in RoutePartCount)
     QList< RoutePartCount > routePartCount;
-    for ( QHash< QStringList, int >::const_iterator it = routePartsToLines.constBegin();
+    for ( QHash< QStringList, RoutePartInfo >::const_iterator it = routePartsToLines.constBegin();
           it != routePartsToLines.constEnd(); ++it )
     {
         // it.value() contains the number of departures with the same route part (in it.key())
-        int count = it.value();
-        if ( count > 0 ) {
+        RoutePartInfo info = it.value();
+        if ( info.usedCount > 0 ) {
             RoutePartCount routeCount;
             routeCount.lastCommonStop = it.key().last();
-            routeCount.usedCount = count;
+            routeCount.displayText = info.displayText;
+            routeCount.usedCount = info.usedCount;
             routePartCount << routeCount;
         }
     }
@@ -233,7 +255,7 @@ ColorGroupSettingsList ColorGroups::generateColorGroupSettingsFrom(
         while ( hashString.length() < 3 ) {
             hashString += 'z';
         }
-        int color = qHash(hashString) % colors;
+        const int color = qHash(hashString) % colors;
 
         // Create filter for the new color group
         Filter groupFilter;
@@ -244,6 +266,7 @@ ColorGroupSettingsList ColorGroups::generateColorGroupSettingsFrom(
         group.filters << groupFilter;
         group.color = oxygenColors[color];
         group.lastCommonStopName = routeCount.lastCommonStop;
+        group.displayText = routeCount.displayText;
 
         colorGroups << group;
     }

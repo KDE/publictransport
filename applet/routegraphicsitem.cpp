@@ -134,11 +134,11 @@ void RouteGraphicsItem::arrangeStopItems()
         m_maxTextWidth = height / qSin(angle) - fm.height() / qTan(angle);
 
         for ( int i = 0; i < count; ++i ) {
-            QPointF stopMarkerPos( startStopPos.x() + i * step, startStopPos.y() );
-            QPointF stopTextPos( stopMarkerPos.x() - 4 * m_zoomFactor,
+            const QPointF stopMarkerPos( startStopPos.x() + i * step, startStopPos.y() );
+            const QPointF stopTextPos( stopMarkerPos.x() - 4 * m_zoomFactor,
                                  stopMarkerPos.y() + 6.0 * m_zoomFactor );
-            QString stopName = info->routeStops()[i];
-            QString stopText = stopName;
+            const QString stopName = info->routeStops()[i];
+            const QString stopNameShortened = info->routeStopsShortened()[i];
             QFontMetrics *fontMetrics;
             QFont *font;
             if ( i == 0 || i == count - 1 ) {
@@ -174,7 +174,7 @@ void RouteGraphicsItem::arrangeStopItems()
             // and automatically elides it and stretches it on hover to show hidden text
             RouteStopTextGraphicsItem *textItem = m_textItems[ i ];
             textItem->resetTransform();
-            textItem->setStop( time, stopName, minsFromFirstRouteStop );
+            textItem->setStop( time, stopName, stopNameShortened, minsFromFirstRouteStop );
             textItem->setFont( *font );
             textItem->setPos( stopTextPos );
             textItem->setBaseSize( baseSize );
@@ -279,7 +279,7 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                 for ( int omittedIndex = omitIndex;
                       omittedIndex <= omitIndex + omitCount; ++omittedIndex )
                 {
-                    QString stopText = info->routeStops()[omittedIndex];
+                    QString stopText = info->routeStopsShortened()[omittedIndex];
 
                     // Prepend departure time at the current stop, if a time is given
                     if ( info->routeTimes()[omittedIndex].isValid() ) {
@@ -313,7 +313,8 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             const QPointF stopTextPos( stopMarkerPos.x() - 4 * m_zoomFactor,
                                        stopMarkerPos.y() + 6.0 * m_zoomFactor );
             QString stopName = info->routeStops()[index];
-            QString stopText = stopName;
+            QString stopNameShortened = info->routeStopsShortened()[index];
+            QString stopText = stopNameShortened;
             QFontMetrics *fontMetrics;
             QFont *font;
 
@@ -358,8 +359,8 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             // Create text item, that displays a single stop name
             // and automatically elides and stretches it on hover to show hidden text
             RouteStopTextGraphicsItem *textItem = new RouteStopTextGraphicsItem(
-                    this, model, *font, baseSize, time, stopName, minsFromFirstRouteStop,
-                    routeStopFlags );
+                    this, model, *font, baseSize, time, stopName, stopNameShortened,
+                    minsFromFirstRouteStop, routeStopFlags );
             textItem->setPos( stopTextPos );
             textItem->resize( baseSize + 10, fontMetrics->height() );
             textItem->rotate( m_textAngle );
@@ -615,7 +616,8 @@ RouteStopFlags JourneyRouteStopGraphicsItem::routeStopFlags() const
 }
 
 RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, DepartureModel *model,
-        const QFont &font, qreal baseSize, const QTime &time, const QString &stopName,
+        const QFont &font, qreal baseSize, const QTime &time,
+        const QString &stopName, const QString &stopNameShortened,
         int minsFromFirstRouteStop, RouteStopFlags routeStopFlags )
         : QGraphicsWidget(parent), m_model(model)
 {
@@ -623,24 +625,26 @@ RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, Dep
     m_baseSize = baseSize;
     m_stopFlags = routeStopFlags;
     setFont( font );
-    setStop( time, stopName, minsFromFirstRouteStop );
+    setStop( time, stopName, stopNameShortened, minsFromFirstRouteStop );
     setAcceptHoverEvents( true );
 }
 
 void RouteStopTextGraphicsItem::setStop( const QTime &time, const QString &stopName,
+                                         const QString &stopNameShortened,
                                          int minsFromFirstRouteStop )
 {
     m_stopName = stopName;
+    m_stopNameShortened = stopNameShortened;
     m_stopText = minsFromFirstRouteStop == 999999 || !time.isValid()
-            ? stopName : QString("%1: %2").arg(minsFromFirstRouteStop).arg(stopName);
+            ? stopName : QString("%1: %2").arg(minsFromFirstRouteStop).arg(stopNameShortened);
 
     qreal maxSize = QFontMetrics( font() ).width( m_stopText ) + 5;
     if ( maxSize > m_baseSize ) {
         if ( time.isValid() ) {
             setToolTip( QString("%1: %2").arg(KGlobal::locale()->formatTime(time))
-                                         .arg(stopName) );
+                                         .arg(stopNameShortened) );
         } else {
-            setToolTip( stopName );
+            setToolTip( stopNameShortened );
         }
     } else {
         setToolTip( QString() );
@@ -690,7 +694,7 @@ void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent*
 
     for ( int i = 0; i < actionList.count(); ++i ) {
         StopAction *action = qobject_cast<StopAction*>( actionList[i] );
-        action->setStopName( m_stopName );
+        action->setStopName( m_stopName, m_stopNameShortened );
 
         if ( action->type() == StopAction::HighlightStop ) {
             // Update text of the highlight stop action
@@ -706,7 +710,7 @@ void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent*
     }
 
     KMenu contextMenu;
-    contextMenu.addTitle( GlobalApplet::stopIcon(routeStopFlags()), m_stopName );
+    contextMenu.addTitle( GlobalApplet::stopIcon(routeStopFlags()), m_stopNameShortened );
     contextMenu.addActions( actionList );
     contextMenu.exec( event->screenPos() );
 }
@@ -781,13 +785,15 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter,
 }
 
 JourneyRouteStopGraphicsItem::JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent,
-    const QPixmap &vehiclePixmap, const QString &text, RouteStopFlags routeStopFlags, const QString &stopName )
+    const QPixmap &vehiclePixmap, const QString &text, RouteStopFlags routeStopFlags,
+    const QString &stopName, const QString &stopNameShortened )
     : QGraphicsWidget(parent), m_parent(parent), m_infoTextDocument(0)
 {
     m_zoomFactor = 1.0;
     m_vehiclePixmap = vehiclePixmap;
     m_stopFlags = routeStopFlags;
     m_stopName = stopName;
+    m_stopNameShortened = stopNameShortened;
     setText( text );
     setAcceptHoverEvents( true );
 }
@@ -818,11 +824,11 @@ void JourneyRouteStopGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEve
     }
     for ( int i = 0; i < actionList.count(); ++i ) {
         StopAction *action = qobject_cast<StopAction*>( actionList[i] );
-        action->setStopName( m_stopName );
+        action->setStopName( m_stopName, m_stopNameShortened );
     }
 
     KMenu contextMenu;
-    contextMenu.addTitle( GlobalApplet::stopIcon(routeStopFlags()), m_stopName );
+    contextMenu.addTitle( GlobalApplet::stopIcon(routeStopFlags()), m_stopNameShortened );
     contextMenu.addActions( actionList );
     contextMenu.exec( event->screenPos() );
 }
@@ -922,7 +928,7 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
         for ( int i = 0; i < info->routeStops().count(); ++i ) {
             QFont *font = i == 0 || i == info->routeStops().count() - 1
                     ? &boldRouteFont : &routeFont;
-            const QString stopName = info->routeStops()[i];
+            const QString stopName = info->routeStopsShortened()[i];
             QString text = QString( "<b>%1</b>" ).arg( stopName );
 
             // Prepend departure time at the current stop, if a time is given
@@ -997,7 +1003,8 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
 
             RouteStopFlags routeStopFlags = item->departureRouteStopFlags( i );
             JourneyRouteStopGraphicsItem *routeItem = new JourneyRouteStopGraphicsItem(
-                    this, QPixmap(32, 32), text, routeStopFlags, info->routeStops()[i] );
+                    this, QPixmap(32, 32), text, routeStopFlags,
+                    info->routeStops()[i], info->routeStopsShortened()[i] );
             routeItem->setZoomFactor( m_zoomFactor );
             routeItem->setFont( *font );
 

@@ -48,6 +48,12 @@ Q_DECLARE_FLAGS( LineServices, LineService )
  **/
 class PublicTransportInfo : public QHash<TimetableInformation, QVariant> {
 public:
+    /** @brief Options for stop names, eg. use a shortened form or not. */
+    enum StopNameOptions {
+        UseFullStopNames, /**< Use the full stop names, as received from the service provider. */
+        UseShortenedStopNames /**< Use a shortened form of the stop names. */
+    };
+
     /** @brief Constructs a new PublicTransportInfo object. */
     PublicTransportInfo() : QHash<TimetableInformation, QVariant>() {};
 
@@ -89,7 +95,7 @@ public:
      * @see routeTimes
      * @see routeTimesVariant
      **/
-    QStringList routeStops() const;
+    QStringList routeStops( StopNameOptions stopNameOptions = UseFullStopNames ) const;
 
     /**
      * @brief The number of exact route stops. The route stop list isn't complete
@@ -264,8 +270,7 @@ public:
     explicit DepartureInfo( const QHash<TimetableInformation, QVariant> &data );
 
     /** @brief Gets the target / origin of the departing / arriving vehicle. */
-    QString target() const { return contains(Target)
-        ? value(Target).toString() : QString(); };
+    QString target( StopNameOptions stopNameOptions = UseFullStopNames ) const;
 
     /** @brief Gets the line name of the departing / arriving vehicle. */
     QString line() const { return contains(TransportLine)

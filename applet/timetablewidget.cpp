@@ -539,10 +539,10 @@ void DepartureGraphicsItem::updateTextLayouts()
             html = i18nc("@info", "<emphasis strong='1'>%1</emphasis>", info->lineString());
         } else if ( departureItem()->model()->info().departureArrivalListType == ArrivalList ) {
             html = i18nc("@info", "<emphasis strong='1'>%1</emphasis> from %2",
-                         info->lineString(), info->target());
+                         info->lineString(), info->targetShortened());
         } else { // if ( departureItem()->model()->info().departureArrivalListType == DepartureList ) {
             html = i18nc("@info", "<emphasis strong='1'>%1</emphasis> to %2",
-                         info->lineString(), info->target());
+                         info->lineString(), info->targetShortened());
         }
         m_infoTextDocument = TextDocumentHelper::createTextDocument( html, _infoRect.size(),
                                                                      textOption, font() );
@@ -605,7 +605,7 @@ void JourneyGraphicsItem::updateData( JourneyItem* item, bool updateLayouts )
     }
     updateTextLayouts();
 
-    if ( !item->journeyInfo()->routeStops().isEmpty() ) {
+    if ( !item->journeyInfo()->routeStopsShortened().isEmpty() ) {
         if ( m_routeItem ) {
             m_routeItem->updateData( item );
         } else {
@@ -640,7 +640,7 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
     }
     updateTextLayouts();
 
-    if ( !item->departureInfo()->routeStops().isEmpty() ) {
+    if ( !item->departureInfo()->routeStopsShortened().isEmpty() ) {
         if ( m_routeItem ) {
             m_routeItem->updateData( item );
         } else {
@@ -1096,13 +1096,11 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
     }
 
     if ( m_highlighted != manuallyHighlighted ) {
-        kDebug() << "Highlighting changed from" << m_highlighted << "to" << manuallyHighlighted;
         QFont _font = font();
-        if ( manuallyHighlighted ) {
-            _font.setItalic( true );
-        }
+        _font.setItalic( manuallyHighlighted );
         m_infoTextDocument->setDefaultFont( _font );
         m_timeTextDocument->setDefaultFont( _font );
+        setFont( _font );
         m_highlighted = manuallyHighlighted;
     }
 
@@ -1392,13 +1390,13 @@ PublicTransportWidget::PublicTransportWidget( QGraphicsItem* parent )
 void PublicTransportWidget::setupActions()
 {
     m_copyStopToClipboardAction = new StopAction( StopAction::CopyStopNameToClipboard, this );
-    connect( m_copyStopToClipboardAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
+    connect( m_copyStopToClipboardAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
 
     if ( Plasma::DataEngineManager::listAllEngines().contains("openstreetmap") ) {
         m_showInMapAction = new StopAction( StopAction::ShowStopInMap, this );
-        connect( m_showInMapAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-                 this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
+        connect( m_showInMapAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+                 this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
     } else {
         kDebug() << "Not using 'Show Stop in Map' action, because the 'openstreetmap' "
                     "data engine isn't installed!";
@@ -1428,12 +1426,12 @@ void TimetableWidget::setupActions()
     m_newFilterViaStopAction = new StopAction( StopAction::CreateFilterForStop, this );
 //     m_toggleAlarmAction = new QAction( KIcon("task-reminder"),
 //             i18n("Toggle &Alarm For This D"), this );
-    connect( m_showDeparturesAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
-    connect( m_highlightStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
-    connect( m_newFilterViaStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
+    connect( m_showDeparturesAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
+    connect( m_highlightStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
+    connect( m_newFilterViaStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
 }
 
 void JourneyTimetableWidget::setupActions()
@@ -1442,10 +1440,10 @@ void JourneyTimetableWidget::setupActions()
 
     m_requestJourneyToStopAction = new StopAction( StopAction::RequestJourneysToStop, this );
     m_requestJourneyFromStopAction = new StopAction( StopAction::RequestJourneysFromStop, this );
-    connect( m_requestJourneyToStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
-    connect( m_requestJourneyFromStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString)),
-             this, SIGNAL(requestStopAction(StopAction::Type,QString)) );
+    connect( m_requestJourneyToStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
+    connect( m_requestJourneyFromStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
 }
 
 void PublicTransportWidget::setModel( PublicTransportModel* model )

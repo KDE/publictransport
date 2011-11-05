@@ -23,8 +23,9 @@
 #include <KLocalizedString>
 
 StopAction::StopAction( StopAction::Type type, QObject* parent, StopAction::TitleType titleType,
-                        const QString &stopName )
-        : QAction(parent), m_type(type), m_titleType(titleType), m_stopName(stopName)
+                        const QString &stopName, const QString &stopNameShortened )
+        : QAction(parent), m_type(type), m_titleType(titleType),
+          m_stopName(stopName), m_stopNameShortened(stopNameShortened)
 {
     switch ( type ) {
     case ShowDeparturesForStop:
@@ -34,10 +35,10 @@ StopAction::StopAction( StopAction::Type type, QObject* parent, StopAction::Titl
             setText( i18nc("@action:inmenu", "Show &Departures From This Stop") );
             break;
         case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "Show &Departures From '%1'", m_stopName) );
+            setText( i18nc("@action:inmenu", "Show &Departures From '%1'", m_stopNameShortened) );
             break;
         case ShowActionNameAndStopName:
-            setText( m_stopName );
+            setText( m_stopNameShortened );
             break;
         }
         break;
@@ -48,10 +49,10 @@ StopAction::StopAction( StopAction::Type type, QObject* parent, StopAction::Titl
             setText( i18nc("@action:inmenu", "Show This Stop in a Map") );
             break;
         case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "Show '%1' in a Map", m_stopName) );
+            setText( i18nc("@action:inmenu", "Show '%1' in a Map", m_stopNameShortened) );
             break;
         case ShowActionNameAndStopName:
-            setText( m_stopName );
+            setText( m_stopNameShortened );
             break;
         }
         break;
@@ -62,10 +63,10 @@ StopAction::StopAction( StopAction::Type type, QObject* parent, StopAction::Titl
             setText( i18nc("@action:inmenu", "&Highlight This Stop") );
             break;
         case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "&Highlight '%1'", m_stopName) );
+            setText( i18nc("@action:inmenu", "&Highlight '%1'", m_stopNameShortened) );
             break;
         case ShowActionNameAndStopName:
-            setText( m_stopName );
+            setText( m_stopNameShortened );
             break;
         }
         break;
@@ -76,10 +77,10 @@ StopAction::StopAction( StopAction::Type type, QObject* parent, StopAction::Titl
             setText( i18nc("@action:inmenu", "&Create Filter 'Via This Stop'") );
             break;
         case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "&Create Filter 'Via %1'", m_stopName) );
+            setText( i18nc("@action:inmenu", "&Create Filter 'Via %1'", m_stopNameShortened) );
             break;
         case ShowActionNameAndStopName:
-            setText( m_stopName );
+            setText( m_stopNameShortened );
             break;
         }
         break;
@@ -90,10 +91,10 @@ StopAction::StopAction( StopAction::Type type, QObject* parent, StopAction::Titl
             setText( i18nc("@action:inmenu", "&Copy Stop Name") );
             break;
         case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "&Copy '%1'", m_stopName) );
+            setText( i18nc("@action:inmenu", "&Copy '%1'", m_stopNameShortened) );
             break;
         case ShowActionNameAndStopName:
-            setText( m_stopName );
+            setText( m_stopNameShortened );
             break;
         }
         break;
@@ -104,10 +105,10 @@ StopAction::StopAction( StopAction::Type type, QObject* parent, StopAction::Titl
             setText( i18nc("@action:inmenu", "&Search Journeys From This Stop") );
             break;
         case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "&Search Journeys From '%1'", m_stopName) );
+            setText( i18nc("@action:inmenu", "&Search Journeys From '%1'", m_stopNameShortened) );
             break;
         case ShowActionNameAndStopName:
-            setText( m_stopName );
+            setText( m_stopNameShortened );
             break;
         }
         break;
@@ -118,10 +119,10 @@ StopAction::StopAction( StopAction::Type type, QObject* parent, StopAction::Titl
             setText( i18nc("@action:inmenu", "&Search Journeys to This Stop") );
             break;
         case ShowStopNameOnly:
-            setText( i18nc("@action:inmenu", "&Search Journeys to '%1'", m_stopName) );
+            setText( i18nc("@action:inmenu", "&Search Journeys to '%1'", m_stopNameShortened) );
             break;
         case ShowActionNameAndStopName:
-            setText( m_stopName );
+            setText( m_stopNameShortened );
             break;
         }
         break;
@@ -132,5 +133,5 @@ StopAction::StopAction( StopAction::Type type, QObject* parent, StopAction::Titl
 
 void StopAction::slotTriggered()
 {
-    emit stopActionTriggered( m_type, m_stopName );
+    emit stopActionTriggered( m_type, m_stopName, m_stopNameShortened );
 }

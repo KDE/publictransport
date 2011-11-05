@@ -227,7 +227,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     m_mutex.unlock();
 
     emit beginDepartureProcessing( sourceName );
-    
+
     QUrl url;
     QDateTime updated;
     QList< DepartureInfo > departureInfos/*, alarmDepartures*/;
@@ -253,13 +253,15 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
             }
         }
         DepartureInfo departureInfo( dataMap["operator"].toString(), dataMap["line"].toString(),
-                dataMap["target"].toString(), dataMap["departure"].toDateTime(),
+                dataMap["target"].toString(), dataMap["targetShortened"].toString(),
+                dataMap["departure"].toDateTime(),
                 static_cast<VehicleType>( dataMap["vehicleType"].toInt() ),
                 dataMap["nightline"].toBool(), dataMap["expressline"].toBool(),
                 dataMap["platform"].toString(), dataMap["delay"].toInt(),
                 dataMap["delayReason"].toString(), dataMap["journeyNews"].toString(),
-                dataMap["routeStops"].toStringList(), routeTimes,
-                dataMap["routeExactStops"].toInt(), isArrival );
+                dataMap["routeStops"].toStringList(),
+                dataMap["routeStopsShortened"].toStringList(),
+                routeTimes, dataMap["routeExactStops"].toInt(), isArrival );
 
         // Update the list of alarms that match the current departure
         departureInfo.matchedAlarms().clear();
@@ -348,11 +350,8 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
             foreach( const QVariant &time, times )
             routeTimesArrival << time.toTime();
         }
-        QStringList routeStops, routeTransportLines,
+        QStringList routeTransportLines,
         routePlatformsDeparture, routePlatformsArrival;
-        if ( dataMap.contains( "routeStops" ) ) {
-            routeStops = dataMap[ "routeStops" ].toStringList();
-        }
         if ( dataMap.contains( "routeTransportLines" ) ) {
             routeTransportLines = dataMap[ "routeTransportLines" ].toStringList();
         }
@@ -382,7 +381,8 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
                 dataMap["pricing"].toString(), dataMap["startStopName"].toString(),
                 dataMap["targetStopName"].toString(), dataMap["duration"].toInt(),
                 dataMap["changes"].toInt(), dataMap["journeyNews"].toString(),
-                routeStops, routeTransportLines, routePlatformsDeparture, routePlatformsArrival,
+                dataMap["routeStops"].toStringList(), dataMap["routeStopsShortened"].toStringList(),
+                routeTransportLines, routePlatformsDeparture, routePlatformsArrival,
                 dataMap["routeVehicleTypes"].toList(), routeTimesDeparture, routeTimesArrival,
                 routeTimesDepartureDelay, routeTimesArrivalDelay );
 

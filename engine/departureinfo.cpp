@@ -134,139 +134,6 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
         }
         insert( DepartureYear, value(DepartureDate).toDate().year() );
     }
-
-    if ( contains(RouteStops) ) {
-        // Find words at the beginning/end of target and route stop names that have many
-        // occurrences. These words are most likely the city names where the stops are in.
-        // But the timetable becomes easier to read and looks nicer, if not each stop name
-        // includes the same city name.
-        QStringList stops = value( RouteStops ).toStringList();
-        QString target = value( Target ).toString();
-        QHash< QString, int > firstWordCounts; // Counts occurrences of words at the beginning
-        QHash< QString, int > lastWordCounts; // Counts occurrences of words at the end
-
-        // This regular expression gets used to search for word at the end, possibly including
-        // a colon before the last word
-        QRegExp rxLastWord( ",?\\s*\\S+$" );
-
-        // First count the first/last word of the target stop name
-        int pos = target.indexOf(' ');
-        if ( pos > 0 ) {
-            firstWordCounts.insert( target.left(pos), 1 );
-        }
-        int lastPos = rxLastWord.indexIn( target );
-        if ( lastPos != -1 ) {
-            lastWordCounts.insert( rxLastWord.cap(), 1 );
-        }
-
-        // Then count the first/last words of all route stop stop names
-        QString removeFirstWord;
-        QString removeLastWord;
-
-        // Break if 70% or at least three of the stop names begin/end with the same word
-        int minCount = qMax( 3, int(stops.count() * 0.7) );
-        foreach ( const QString &stop, stops ) {
-            // Get first word
-            pos = stop.indexOf(' ');
-            if ( pos > 0 ) {
-                // Count first word of the current stop name
-                const QString word = stop.left( pos );
-                if ( firstWordCounts.contains(word) ) {
-                    ++firstWordCounts[word];
-                    if ( firstWordCounts[word] > minCount ) {
-                        // Enough occurrences found
-                        removeFirstWord = word;
-                        break;
-                    }
-                } else {
-                    // First occurrences of word at the beginning found
-                    firstWordCounts.insert( word, 1 );
-                }
-            }
-
-            // Get last word
-            lastPos = rxLastWord.indexIn( stop );
-            if ( lastPos != -1 ) {
-                // Count last word of the current stop name
-                const QString word = rxLastWord.cap();
-                if ( lastWordCounts.contains(word) ) {
-                    ++lastWordCounts[word];
-                    if ( lastWordCounts[word] > minCount ) {
-                        removeLastWord = word;
-                        // Enough occurrences found
-                        break;
-                    }
-                } else {
-                    // First occurrences of word at the end found
-                    lastWordCounts.insert( word, 1 );
-                }
-            }
-        }
-
-        // If no first/last word with at least minCount occurrences was found,
-        // find the word with the most occurrences
-        if ( removeFirstWord.isEmpty() && removeLastWord.isEmpty() ) {
-            int max = 0;
-
-            // Find word at the beginning with most occurrences
-            for ( QHash< QString, int >::ConstIterator it = firstWordCounts.constBegin();
-                  it != firstWordCounts.constEnd(); ++it )
-            {
-                if ( it.value() > max ) {
-                    max = it.value();
-                    removeFirstWord = it.key();
-                }
-            }
-
-            // Find word at the end with more occurrences
-            for ( QHash< QString, int >::ConstIterator it = lastWordCounts.constBegin();
-                  it != lastWordCounts.constEnd(); ++it )
-            {
-                if ( it.value() > max ) {
-                    max = it.value();
-                    removeLastWord = it.key();
-                }
-            }
-
-            if ( max < 3 ) {
-                // The first/last word with the most occurrences has less than three occurrences
-                // Do not remove any word
-                removeFirstWord.clear();
-                removeLastWord.clear();
-            } else if ( !removeLastWord.isEmpty() ) {
-                // removeLastWord has more occurrences than removeFirstWord
-                removeFirstWord.clear();
-            }
-        }
-
-        if ( !removeFirstWord.isEmpty() ) {
-            // Remove removeFirstWord from all stop names
-            if ( target.startsWith(removeFirstWord) ) {
-                target = target.mid( removeFirstWord.length() + 1 );
-                insert( Target, target );
-            }
-
-            for ( int i = 0; i < stops.count(); ++i ) {
-                if ( stops[i].startsWith(removeFirstWord) ) {
-                    stops[i] = stops[i].mid( removeFirstWord.length() + 1 );
-                }
-            }
-            insert( RouteStops, stops );
-        } else if ( !removeLastWord.isEmpty() ) {
-            // Remove removeLastWord from all stop names
-            if ( target.endsWith(removeLastWord) ) {
-                target = target.left( target.length() - removeLastWord.length() );
-                insert( Target, target );
-            }
-
-            for ( int i = 0; i < stops.count(); ++i ) {
-                if ( stops[i].endsWith(removeLastWord) ) {
-                    stops[i] = stops[i].left( stops[i].length() - removeLastWord.length() );
-                }
-            }
-            insert( RouteStops, stops );
-        }
-    }
 }
 
 JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
@@ -745,14 +612,33 @@ QString PublicTransportInfo::operatorName() const
     return contains( Operator ) ? value( Operator ).toString() : QString();
 }
 
-QStringList PublicTransportInfo::routeStops() const
+QStringList PublicTransportInfo::routeStops( PublicTransportInfo::StopNameOptions stopNameOptions ) const
 {
-    return contains( RouteStops ) ? value( RouteStops ).toStringList() : QStringList();
+    switch ( stopNameOptions ) {
+    case UseShortenedStopNames:
+        return contains(RouteStopsShortened) ? value(RouteStopsShortened).toStringList()
+                                             : routeStops(UseFullStopNames);
+    case UseFullStopNames:
+    default:
+        return contains( RouteStops ) ? value( RouteStops ).toStringList() : QStringList();
+    }
 }
 
 int PublicTransportInfo::routeExactStops() const
 {
     return contains( RouteExactStops ) ? value( RouteExactStops ).toInt() : 0;
+}
+
+QString DepartureInfo::target( PublicTransportInfo::StopNameOptions stopNameOptions ) const
+{
+    switch ( stopNameOptions ) {
+    case UseShortenedStopNames:
+        return contains(TargetShortened) ? value(TargetShortened).toString()
+                                         : target(UseFullStopNames);
+    case UseFullStopNames:
+    default:
+        return contains( Target ) ? value( Target ).toString() : QString();
+    }
 }
 
 QDateTime JourneyInfo::arrival() const

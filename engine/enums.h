@@ -97,14 +97,15 @@ enum TimetableInformation {
     TransportLine = 5, /**< The name of the public transport line, e.g. "4", "6S", "S 5", "RB 24122". */
     FlightNumber = TransportLine, /**< Same as TransportLine, used for flights. */
     Target = 6, /**< The target of a journey / of a public transport line. */
-    Platform = 7, /**< The platform at which the vehicle departs / arrives. */
-    Delay = 8, /**< The delay of a public transport vehicle. */
-    DelayReason = 9, /**< The reason of a delay. */
-    JourneyNews = 10,  /**< Can contain delay / delay reason / other news */
-    JourneyNewsOther = 11,  /**< Other news (not delay / delay reason) */
-    JourneyNewsLink = 12,  /**< Contains a link to an html page with journey news. The url of the accessor is prepended, if a relative path has been matched (starting with "/"). */
-    DepartureHourPrognosis = 13, /**< The prognosis for the departure hour, which is the departure hour plus the delay. */
-    DepartureMinutePrognosis = 14, /**< The prognosis for the departure minute, which is the departure minute plus the delay. */
+    TargetShortened = 7, /**< Like Target, but in a shortened form. A word at the beginning/end of the stop name may be removed, if it has many occurrences in stop names. When requesting data from the data engine, the stop name in Target should be used, when showing stop names to the user, TargetShortened should be used. */
+    Platform = 8, /**< The platform at which the vehicle departs / arrives. */
+    Delay = 9, /**< The delay of a public transport vehicle. */
+    DelayReason = 10, /**< The reason of a delay. */
+    JourneyNews = 11,  /**< Can contain delay / delay reason / other news */
+    JourneyNewsOther = 12,  /**< Other news (not delay / delay reason) */
+    JourneyNewsLink = 13,  /**< Contains a link to an html page with journey news. The url of the accessor is prepended, if a relative path has been matched (starting with "/"). */
+    DepartureHourPrognosis = 14, /**< The prognosis for the departure hour, which is the departure hour plus the delay. */
+    DepartureMinutePrognosis = 15, /**< The prognosis for the departure minute, which is the departure minute plus the delay. */
     Operator = 16, /**< The company that is responsible for the journey. */
     DepartureAMorPM = 17, /**< Used to match the string "am" or "pm" for the departure time. */
     DepartureAMorPMPrognosis = 18, /**< Used to match the string "am" or "pm" for the prognosis departure time. */
@@ -112,16 +113,17 @@ enum TimetableInformation {
     Status = 20, /**< The current status of the departure / arrival. Currently only used for planes. */
     DepartureYear = 21, /**< The year of the departure, to be used when the year is separated from the date. */
     RouteStops = 22, /**< A list of stops of the departure / arrival to it's destination stop or a list of stops of the journey from it's start to it's destination stop. If @ref RouteStops and @ref RouteTimes are both set, they should contain the same number of elements. And elements with equal indices should be associated (the times at which the vehicle is at the stops). For journeys @ref RouteTimesDeparture and @ref RouteTimesArrival should be used instead of @ref RouteTimes. */
-    RouteTimes = 23, /**< A list of times of the departure / arrival to it's destination stop. If @ref RouteStops and @ref RouteTimes are both set, they should contain the same number of elements. And elements with equal indices should be associated (the times at which the vehicle is at the stops). */
-    RouteTimesDeparture = 24, /**< A list of departure times of the journey. If @ref RouteStops and @ref RouteTimesDeparture are both set, the latter should contain one elements less (because the last stop has no departure, only an arrival time). Elements with equal indices should be associated (the times at which the vehicle departs from the stops). */
-    RouteTimesArrival = 25, /**< A list of arrival times of the journey. If @ref RouteStops and @ref RouteTimesArrival are both set, the latter should contain one elements less (because the first stop has no arrival, only a departure time). Elements with equal indices should be associated (the times at which the vehicle arrives at the stops). */
-    RouteExactStops = 26, /**< The number of exact route stops. The route stop list isn't complete from the last exact route stop. */
-    RouteTypesOfVehicles = 27, /**< The types of vehicles used for each "sub-journey" of a journey. */
-    RouteTransportLines = 28, /**< The transport lines used for each "sub-journey" of a journey. */
-    RoutePlatformsDeparture = 29, /**< The platforms of departures used for each "sub-journey" of a journey. */
-    RoutePlatformsArrival = 30, /**< The platforms of arrivals used for each "sub-journey" of a journey. */
-    RouteTimesDepartureDelay = 31, /**< A list of delays in minutes for each departure time of a route (RouteTimesDeparture). */
-    RouteTimesArrivalDelay = 32, /**< A list of delays in minutes for each arrival time of a route (RouteTimesArrival). */
+    RouteStopsShortened = 23, /**< Like RouteStops, but in a shortened form. Words at the beginning/end of stop names may be removed, if they have many occurrences in stop names. When requesting data from the data engine, the stop names in RouteStops should be used, when showing stop names to the user, RouteStopsShortened should be used. */
+    RouteTimes = 24, /**< A list of times of the departure / arrival to it's destination stop. If @ref RouteStops and @ref RouteTimes are both set, they should contain the same number of elements. And elements with equal indices should be associated (the times at which the vehicle is at the stops). */
+    RouteTimesDeparture = 25, /**< A list of departure times of the journey. If @ref RouteStops and @ref RouteTimesDeparture are both set, the latter should contain one elements less (because the last stop has no departure, only an arrival time). Elements with equal indices should be associated (the times at which the vehicle departs from the stops). */
+    RouteTimesArrival = 26, /**< A list of arrival times of the journey. If @ref RouteStops and @ref RouteTimesArrival are both set, the latter should contain one elements less (because the first stop has no arrival, only a departure time). Elements with equal indices should be associated (the times at which the vehicle arrives at the stops). */
+    RouteExactStops = 27, /**< The number of exact route stops. The route stop list isn't complete from the last exact route stop. */
+    RouteTypesOfVehicles = 28, /**< The types of vehicles used for each "sub-journey" of a journey. */
+    RouteTransportLines = 29, /**< The transport lines used for each "sub-journey" of a journey. */
+    RoutePlatformsDeparture = 30, /**< The platforms of departures used for each "sub-journey" of a journey. */
+    RoutePlatformsArrival = 31, /**< The platforms of arrivals used for each "sub-journey" of a journey. */
+    RouteTimesDepartureDelay = 32, /**< A list of delays in minutes for each departure time of a route (RouteTimesDeparture). */
+    RouteTimesArrivalDelay = 33, /**< A list of delays in minutes for each arrival time of a route (RouteTimesArrival). */
 
     // Journey information
     Duration = 50, /**< The duration of a journey. */
@@ -277,6 +279,8 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
         return debug << "TransportLine";
     case Target:
         return debug << "Target";
+    case TargetShortened:
+        return debug << "TargetShortened";
     case Platform:
         return debug << "Platform";
     case Delay:
@@ -343,6 +347,8 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
         return debug << "StopID";
     case RouteStops:
         return debug << "RouteStops";
+    case RouteStopsShortened:
+        return debug << "RouteStopsShortened";
     case RouteTimes:
         return debug << "RouteTimes";
     case RouteTimesDeparture:

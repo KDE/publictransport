@@ -287,8 +287,10 @@ protected slots:
      *
      * @param stopAction The action that is requested to be performed.
      * @param stopName The stop name to perform @p stopAction on.
+     * @param stopNameShortened The shortened stop name to show to the user.
      **/
-    void requestStopAction( StopAction::Type stopAction, const QString &stopName  );
+    void requestStopAction( StopAction::Type stopAction,
+                            const QString &stopName, const QString &stopNameShortened );
 
     void noItemsTextClicked();
 

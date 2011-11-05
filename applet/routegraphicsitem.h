@@ -146,7 +146,8 @@ public:
      * @param stopFlags Flags of this route stop, eg. whether or not this is the current home stop.
      **/
     RouteStopTextGraphicsItem( QGraphicsItem* parent, DepartureModel *model, const QFont &font,
-                               qreal baseSize, const QTime &time, const QString &stopName,
+                               qreal baseSize, const QTime &time,
+                               const QString &stopName, const QString &stopNameShortened,
                                int minsFromFirstRouteStop,
                                RouteStopFlags stopFlags = RouteStopIsIntermediate );
 
@@ -155,6 +156,9 @@ public:
 
     /** @brief Gets the name of the associated stop. */
     QString stopName() const { return m_stopName; };
+
+    /** @brief Gets the shortened name of the associated stop. */
+    QString stopNameShortened() const { return m_stopNameShortened; };
 
     /**
      * @brief Gets flags for the associated stop.
@@ -168,14 +172,13 @@ public:
      * @brief Sets information about the new associated stop.
      *
      * @param time The time when the vehicle is at the associated stop.
-     *
      * @param stopName The name of the associated stop.
-     *
+     * @param stopNameShortened The shortened name of the associated stop.
      * @param minsFromFirstRouteStop The time when the vehicle is at the associated stop,
      *   relative to the first stop. At the first stop this is 0. Use the default value
      *   (999999) if the times isn't known.
      **/
-    void setStop( const QTime &time, const QString &stopName,
+    void setStop( const QTime &time, const QString &stopName, const QString &stopNameShortened,
                   int minsFromFirstRouteStop = 999999 );
 
     qreal expandStep() const { return m_expandStep; };
@@ -204,6 +207,7 @@ protected:
 private:
     QString m_stopText;
     QString m_stopName;
+    QString m_stopNameShortened;
     qreal m_expandStep;
     qreal m_baseSize;
     RouteStopFlags m_stopFlags;
@@ -266,7 +270,7 @@ class JourneyRouteStopGraphicsItem : public QGraphicsWidget {
 public:
     JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent, const QPixmap &vehiclePixmap,
                                   const QString &text, RouteStopFlags routeStopFlags,
-                                  const QString &stopName );
+                                  const QString &stopName, const QString &stopNameShortened );
     virtual ~JourneyRouteStopGraphicsItem();
 
     void setText( const QString &text );
@@ -282,6 +286,7 @@ public:
     RouteStopFlags routeStopFlags() const;
 
     QString stopName() const { return m_stopName; };
+    QString stopNameShortened() const { return m_stopNameShortened; };
 
     void setZoomFactor( qreal zoomFactor = 1.0 );
     qreal zoomFactor() const { return m_zoomFactor; };
@@ -301,6 +306,7 @@ private:
 
     RouteStopFlags m_stopFlags;
     QString m_stopName;
+    QString m_stopNameShortened;
     qreal m_zoomFactor;
 };
 

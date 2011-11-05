@@ -631,6 +631,8 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
         QVariantHash data;
         data.insert( "line", departureInfo->line() );
         data.insert( "target", departureInfo->target() );
+        data.insert( "targetShortened",
+                     departureInfo->target(PublicTransportInfo::UseShortenedStopNames) );
         data.insert( "departure", departureInfo->departure() );
         data.insert( "vehicleType", static_cast<int>( departureInfo->vehicleType() ) );
         data.insert( "vehicleIconName", Global::vehicleTypeToIcon( departureInfo->vehicleType() ) );
@@ -647,6 +649,8 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
         data.insert( "journeyNews", departureInfo->journeyNews() );
         data.insert( "operator", departureInfo->operatorName() );
         data.insert( "routeStops", departureInfo->routeStops() );
+        data.insert( "routeStopsShortened",
+                     departureInfo->routeStops(PublicTransportInfo::UseShortenedStopNames) );
         data.insert( "routeTimes", departureInfo->routeTimesVariant() );
         data.insert( "routeExactStops", departureInfo->routeExactStops() );
 
@@ -745,6 +749,8 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
         data.insert( "targetStopName", journeyInfo->targetStopName() );
         data.insert( "Operator", journeyInfo->operatorName() );
         data.insert( "routeStops", journeyInfo->routeStops() );
+        data.insert( "routeStopsShortened",
+                     journeyInfo->routeStops(PublicTransportInfo::UseShortenedStopNames) );
         data.insert( "routeTimesDeparture", journeyInfo->routeTimesDepartureVariant() );
         data.insert( "routeTimesArrival", journeyInfo->routeTimesArrivalVariant() );
         data.insert( "routeExactStops", journeyInfo->routeExactStops() );
