@@ -189,7 +189,8 @@ ColorGroupSettingsList ColorGroups::generateColorGroupSettingsFrom(
                 kDebug() << "Start index is invalid" << startIndex;
                 continue; // Invalid start index, too less route stops
             }
-            QStringList routePart = info.routeStops().mid( startIndex, stopCount );
+            QStringList routePart = info.routeStops().isEmpty()
+                    ? (QStringList() << info.target()) : info.routeStops().mid( startIndex, stopCount );
             if ( routePart.isEmpty() ) {
                 kDebug() << "Route part is empty";
                 continue;

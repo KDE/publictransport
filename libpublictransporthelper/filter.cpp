@@ -66,13 +66,20 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
                     break;
                 }
             }
-            if ( !viaMatched )
+
+            // If no route stop matches or no route items are available, try to match the target
+            if ( !viaMatched && !matchString(constraint.variant, constraint.value.toString(),
+                                             departureInfo.target()) )
+            {
                 return false;
+            }
             break;
         }
         case FilterByNextStop: {
             if ( departureInfo.routeStops().count() < 2 || departureInfo.routeExactStops() == 1 ) {
-                return false;
+                // If too less or no route stops are available use the target as next stop
+                return matchString( constraint.variant, constraint.value.toString(),
+                                    departureInfo.target() );
             }
 
             QString nextStop = !departureInfo.isArrival() ? departureInfo.routeStops()[ 1 ]
