@@ -441,7 +441,7 @@ protected:
 private:
     QTextDocument *m_infoTextDocument;
     QTextDocument *m_timeTextDocument;
-    RouteGraphicsItem *m_routeItem;
+    RouteGraphicsItem *m_routeItem; // Pointer to the route item or 0 if no route data is available
     bool m_highlighted;
 
     QPropertyAnimation *m_leavingAnimation;
@@ -565,7 +565,7 @@ protected:
 
 private:
     QTextDocument *m_infoTextDocument;
-    JourneyRouteGraphicsItem *m_routeItem;
+    JourneyRouteGraphicsItem *m_routeItem; // Pointer to the route item or 0 if no route data is available
     StopAction *m_requestJourneyToStopAction;
     StopAction *m_requestJourneyFromStopAction;
 };
