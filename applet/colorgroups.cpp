@@ -203,15 +203,12 @@ ColorGroupSettingsList ColorGroups::generateColorGroupSettingsFrom(
         foreach ( const DepartureInfo &info, infoList ) {
             const int startIndex = departureArrivalListType == ArrivalList
                     ? info.routeStops().count() - stopCount - 1 : 1;
-            if ( startIndex < 0 ) {
-                kDebug() << "Start index is invalid" << startIndex;
-                continue; // Invalid start index, too less route stops
-            }
-            const QStringList routePart = info.routeStops().isEmpty()
-                    ? (QStringList() << info.target())
-                    : info.routeStops().mid( startIndex, stopCount );
-            const QString displayText = info.routeStops().isEmpty()
-                    ? info.targetShortened() : info.routeStopsShortened().at( startIndex );
+            const bool useRouteStops = info.routeStops().count() > startIndex && startIndex >= 0;
+            const QStringList routePart = useRouteStops
+                    ? info.routeStops().mid(startIndex, stopCount)
+                    : (QStringList() << info.target());
+            const QString displayText = useRouteStops
+                    ? info.routeStopsShortened().at(startIndex) : info.targetShortened();
             if ( routePart.isEmpty() ) {
                 kDebug() << "Route part is empty";
                 continue;
