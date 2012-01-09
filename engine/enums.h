@@ -32,7 +32,6 @@
 struct GlobalTimetableInfo {
     GlobalTimetableInfo() {
         delayInfoAvailable = true;
-        datesNeedAdjustment = false;
         requestDate = QDate::currentDate();
     };
 
@@ -45,27 +44,19 @@ struct GlobalTimetableInfo {
     bool delayInfoAvailable;
 
     /**
-     * @brief Whether or not dates are set from today instead of the requested date.
-     *
-     * If this is true, all dates need to be adjusted by X days, where X is the difference in days
-     * between today and the requested date.
-     **/
-    bool datesNeedAdjustment;
-
-    /**
      * @brief The requested date of the first departure/arrival/journey.
      **/
     QDate requestDate;
 };
 
 /**
- * @brief Error types.
+ * @brief Error codes.
  **/
-enum ErrorType {
+enum ErrorCode {
     NoError = 0, /**< There were no error. */
 
-    ErrorDownloadFailed, /**< Download error occurred. */
-    ErrorParsingFailed /**< Parsing downloaded data failed. */
+    ErrorDownloadFailed = 1, /**< Download error occurred. */
+    ErrorParsingFailed = 2 /**< Parsing downloaded data failed. */
 };
 
 /**
@@ -80,19 +71,23 @@ enum SessionKeyPlace {
 /**
  * @brief Different types of timetable information.
  *
- * In scripts the enumerable names can be used as strings, eg.:
+ * In scripts the enumerable names can be used as property names of a result object, eg.:
  * @code
- * timetableData.set("TypeOfVehicle", "Bus"); // Set the type of vehicle
- * timetableData.set("Delay", 5); // Set a delay of 5 minutes
+ * result.addData({ DepartureDateTime: new Date(), VehicleType: "Bus", Target: "SomeTarget" });
  * @endcode
  */
 enum TimetableInformation {
     Nothing = 0, /**< No usable information. */
 
     // Departures / arrival / journey information
-    DepartureDate = 1, /**< The date of the departure. */
-    DepartureHour = 2, /**< The hour of the departure. */
-    DepartureMinute = 3, /**< The minute of the departure. */
+    DepartureDateTime = 1, /**< The date and time of the departure. This information is the
+            * peferred information for storing the date and time. DepartureDate and DepartureTime
+            * get combined to DepartureDateTime if needed. */
+    DepartureDate = 2, /**< The date of the departure. */
+    DepartureTime = 3, /**< The time of the departure. */
+//     DepartureHour = 2, /**< The hour of the departure. */
+//     DepartureMinute = 3, /**< The minute of the departure. */
+
     TypeOfVehicle = 4, /**< The type of vehicle. */
     TransportLine = 5, /**< The name of the public transport line, e.g. "4", "6S", "S 5", "RB 24122". */
     FlightNumber = TransportLine, /**< Same as TransportLine, used for flights. */
@@ -104,14 +99,8 @@ enum TimetableInformation {
     JourneyNews = 11,  /**< Can contain delay / delay reason / other news */
     JourneyNewsOther = 12,  /**< Other news (not delay / delay reason) */
     JourneyNewsLink = 13,  /**< Contains a link to an html page with journey news. The url of the accessor is prepended, if a relative path has been matched (starting with "/"). */
-    DepartureHourPrognosis = 14, /**< The prognosis for the departure hour, which is the departure hour plus the delay. */
-    DepartureMinutePrognosis = 15, /**< The prognosis for the departure minute, which is the departure minute plus the delay. */
     Operator = 16, /**< The company that is responsible for the journey. */
-    DepartureAMorPM = 17, /**< Used to match the string "am" or "pm" for the departure time. */
-    DepartureAMorPMPrognosis = 18, /**< Used to match the string "am" or "pm" for the prognosis departure time. */
-    ArrivalAMorPM = 19, /**< Used to match the string "am" or "pm" for the arrival time. */
     Status = 20, /**< The current status of the departure / arrival. Currently only used for planes. */
-    DepartureYear = 21, /**< The year of the departure, to be used when the year is separated from the date. */
     RouteStops = 22, /**< A list of stops of the departure / arrival to it's destination stop or a list of stops of the journey from it's start to it's destination stop. If @ref RouteStops and @ref RouteTimes are both set, they should contain the same number of elements. And elements with equal indices should be associated (the times at which the vehicle is at the stops). For journeys @ref RouteTimesDeparture and @ref RouteTimesArrival should be used instead of @ref RouteTimes. */
     RouteStopsShortened = 23, /**< Like RouteStops, but in a shortened form. Words at the beginning/end of stop names may be removed, if they have many occurrences in stop names. When requesting data from the data engine, the stop names in RouteStops should be used, when showing stop names to the user, RouteStopsShortened should be used. */
     RouteTimes = 24, /**< A list of times of the departure / arrival to it's destination stop. If @ref RouteStops and @ref RouteTimes are both set, they should contain the same number of elements. And elements with equal indices should be associated (the times at which the vehicle is at the stops). */
@@ -131,18 +120,21 @@ enum TimetableInformation {
     StartStopID = 52, /**< The ID of the starting stop of a journey. */
     TargetStopName = 53, /**< The name of the target stop of a journey. */
     TargetStopID = 54, /**< The ID of the target stop of a journey. */
-    ArrivalDate = 55, /**< The date of the arrival. */
-    ArrivalHour = 56, /**<The hour of the arrival. */
-    ArrivalMinute = 57, /**< The minute of the arrival. */
+    ArrivalDateTime = 55, /**< The date and time of the arrival. This information is the
+            * peferred information for storing the date and time. ArrivalDate and ArrivalTime
+            * get combined to DepartureDateTime if needed. */
+    ArrivalDate = 56, /**< The date of the arrival. */
+    ArrivalTime = 57, /**< The time of the arrival. */
+//     ArrivalHour = 56, /**<The hour of the arrival. */
+//     ArrivalMinute = 57, /**< The minute of the arrival. */
     Changes = 58, /**< The number of changes between different vehicles in a journey. */
     TypesOfVehicleInJourney = 59, /**< A list of vehicle types used in a journey. */
     Pricing = 60, /**< Information about the pricing of a journey. */
 
     // Special information
-    NoMatchOnSchedule = 100, /**< Vehicle is expected to depart on schedule, no regexp-matched string is needed for this info */
     IsNightLine = 101, /**< The transport line is a nightline. TODO Use this info in the data engine */
 
-    // Possible stop information
+    // Stop suggestion information
     StopName = 200, /**< The name of a stop/station. */
     StopID = 201, /**< The ID of a stop/station. */
     StopWeight = 202, /**< The weight of a stop suggestion. */
@@ -267,12 +259,12 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
     switch ( timetableInformation ) {
     case Nothing:
         return debug << "Nothing";
+    case DepartureDateTime:
+        return debug << "DepartureDateTime";
     case DepartureDate:
         return debug << "DepartureDate";
-    case DepartureHour:
-        return debug << "DepartureHour";
-    case DepartureMinute:
-        return debug << "DepartureMinute";
+    case DepartureTime:
+        return debug << "DepartureTime";
     case TypeOfVehicle:
         return debug << "TypeOfVehicle";
     case TransportLine:
@@ -293,22 +285,10 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
         return debug << "JourneyNewsOther";
     case JourneyNewsLink:
         return debug << "JourneyNewsLink";
-    case DepartureHourPrognosis:
-        return debug << "DepartureHourPrognosis";
-    case DepartureMinutePrognosis:
-        return debug << "DepartureMinutePrognosis";
     case Operator:
         return debug << "Operator";
-    case DepartureAMorPM:
-        return debug << "DepartureAMorPM";
-    case DepartureAMorPMPrognosis:
-        return debug << "DepartureAMorPMPrognosis";
-    case ArrivalAMorPM:
-        return debug << "ArrivalAMorPM";
     case Status:
         return debug << "Status";
-    case DepartureYear:
-        return debug << "DepartureYear";
     case Duration:
         return debug << "Duration";
     case StartStopName:
@@ -325,20 +305,18 @@ inline QDebug &operator <<( QDebug debug, TimetableInformation timetableInformat
         return debug << "TargetStopName";
     case TargetStopID:
         return debug << "TargetStopID";
+    case ArrivalDateTime:
+        return debug << "ArrivalDateTime";
     case ArrivalDate:
         return debug << "ArrivalDate";
-    case ArrivalHour:
-        return debug << "ArrivalHour";
-    case ArrivalMinute:
-        return debug << "ArrivalMinute";
+    case ArrivalTime:
+        return debug << "ArrivalTime";
     case Changes:
         return debug << "Changes";
     case TypesOfVehicleInJourney:
         return debug << "TypesOfVehicleInJourney";
     case Pricing:
         return debug << "Pricing";
-    case NoMatchOnSchedule:
-        return debug << "NoMatchOnSchedule";
     case IsNightLine:
         return debug << "IsNightline";
     case StopName:

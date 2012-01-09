@@ -282,9 +282,12 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                     QString stopText = info->routeStopsShortened()[omittedIndex];
 
                     // Prepend departure time at the current stop, if a time is given
-                    if ( info->routeTimes()[omittedIndex].isValid() ) {
-                        stopText = stopText.prepend( QString("%1: ")
-                                .arg(KGlobal::locale()->formatTime(info->routeTimes()[omittedIndex])) );
+                    const QTime time = omittedIndex < info->routeTimes().count()
+                            ? info->routeTimes()[omittedIndex] : QTime();
+                    if ( time.isValid() ) {
+                        stopText.prepend( KGlobal::locale()->formatTime(time) + ": " );
+                    } else {
+                        kDebug() << "Invalid QTime in RouteTimes at index" << index;
                     }
 
                     bool manuallyHighlighted =
@@ -318,7 +321,8 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             QFontMetrics *fontMetrics;
             QFont *font;
 
-            bool manuallyHighlighted = model->routeItemFlags(stopName).testFlag(RouteItemHighlighted);
+            const bool manuallyHighlighted =
+                    model->routeItemFlags(stopName).testFlag(RouteItemHighlighted);
             if ( index == 0 || index == info->routeStops().count() - 1 // first and last item
                  || manuallyHighlighted )
             {
@@ -330,9 +334,12 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             }
 
             // Prepend departure time at the current stop, if a time is given
-            if ( index < info->routeTimes().count() && info->routeTimes()[index].isValid() ) {
-                stopText = stopText.prepend( QString("%1: ")
-                        .arg(KGlobal::locale()->formatTime(info->routeTimes()[index])) );
+            const QTime time = index < info->routeTimes().count()
+                    ? info->routeTimes()[index] : QTime();
+            if ( time.isValid() ) {
+                stopText.prepend( KGlobal::locale()->formatTime(time) + ": " );
+            } else {
+                kDebug() << "Invalid QTime in RouteTimes at index" << index;
             }
 
             // Get max text width
@@ -349,12 +356,6 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             // Get route flags
             int minsFromFirstRouteStop = -1;
             RouteStopFlags routeStopFlags = item->routeStopFlags( index, &minsFromFirstRouteStop );
-
-            // Get time information
-            QTime time;
-            if ( index < info->routeTimes().count() && info->routeTimes()[index].isValid() ) {
-                time = info->routeTimes()[index];
-            }
 
             // Create text item, that displays a single stop name
             // and automatically elides and stretches it on hover to show hidden text

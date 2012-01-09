@@ -84,7 +84,7 @@ function parseTimetable( html ) {
 }
 
 // This function parses a given HTML document for stop suggestions.
-function parsePossibleStops( html ) {
+function parseStopSuggestions( html ) {
     // Find block of stops
     var stopRangeRegExp = /<select [^>]*class="ivuSelectBox"[^>]*>\s*([\s\S]*?)\s*<\/select>/i;
 	var range = stopRangeRegExp.exec( html );

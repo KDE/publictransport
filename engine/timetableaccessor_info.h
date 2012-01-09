@@ -34,11 +34,12 @@
 #include <QStringList>
 #include <QHash>
 
-/** @class TimetableAccessorInfo
+/**
  * @brief Provides information about how to download and parse documents from service providers.
  *
  * This is the base class of all service provider information classes. It is used
- * by TimetableAccessor to downlaod and parse documents from different service providers. */
+ * by TimetableAccessor to downlaod and parse documents from different service providers.
+ **/
 class TimetableAccessorInfo {
     friend class AccessorInfoXmlReader; // Because AccessorInfoXmlReader needs to set values when reading xml files
 
@@ -50,24 +51,18 @@ public:
      *   need to be called anyway.
      *
      * @param name The name of the accessor.
-     *
      * @param shortUrl A short version of the url to the service provider
      *   home page. This can be used by the visualization as displayed text of links.
-     *
      * @param author The author of the accessor.
-     *
      * @param shortAuthor An abbreviation of the authors name.
-     *
      * @param email The email address of the author given in @p author.
-     *
      * @param version The version of the accessor information.
-     *
      * @param serviceProviderID The service provider for which this accessor
      *   is designed for.
-     *
      * @param accessorType The type of the accessor.
      *
-     * @see AccessorType */
+     * @see AccessorType
+     **/
     explicit TimetableAccessorInfo( const QString& name = QString(),
             const QString& shortUrl = QString(),
             const QString& author = QString(), const QString &shortAuthor = QString(),
@@ -118,22 +113,27 @@ public:
 
     QString credit() const { return m_credit; };
     VehicleType defaultVehicleType() const { return m_defaultVehicleType; };
-    /** @brief If empty, use unicode (QUrl::toPercentEncoding()), otherwise use
-     *   own toPercentEncoding() with this charset. */
+    /**
+     * @brief If empty, use unicode (QUrl::toPercentEncoding()), otherwise use
+     *   own toPercentEncoding() with this charset.
+     **/
     QByteArray charsetForUrlEncoding() const { return m_charsetForUrlEncoding; };
     QByteArray fallbackCharset() const { return m_fallbackCharset; };
 
     /** @brief Gets the URL to get a session key. */
     QString sessionKeyUrl() const { return m_sessionKeyUrl; };
-    /** @brief Gets the place, where to put the session key in a request.
+    /**
+     * @brief Gets the place, where to put the session key in a request.
      *
-     * @see SessionKeyPlace */
+     * @see SessionKeyPlace
+     **/
     SessionKeyPlace sessionKeyPlace() const { return m_sessionKeyPlace; };
     /** @brief Gets the data to POST with requests. */
     QString sessionKeyData() const { return m_sessionKeyData; };
 
     /**
-     * @brief Gets the minimum seconds to wait between two data-fetches from the service provider. */
+     * @brief Gets the minimum seconds to wait between two data-fetches from the service provider.
+     **/
     int minFetchWait() const { return m_minFetchWait; };
     /** @brief Wheather or not the service provider needs a separate city value. */
     bool useSeparateCityValue() const { return m_useSeparateCityValue; };
@@ -141,17 +141,22 @@ public:
      * @brief Wheather or not cities may be chosen freely.
      *
      * @return true if only cities in the list returned by cities()  are valid.
-     * @return false (default) if cities may be chosen freely, but may be invalid. */
+     * @return false (default) if cities may be chosen freely, but may be invalid.
+     **/
     bool onlyUseCitiesInList() const { return m_onlyUseCitiesInList; };
     /**
      * @brief Gets a value for the given city that is used by the service provider.
      *
-     * @returns Either the value for the given city if it exists, or @p city itself. */
+     * @returns Either the value for the given city if it exists, or @p city itself.
+     **/
     QString mapCityNameToValue( const QString &city ) const;
     /** @brief The name of the XML file that was parsed to get this accessor information object. */
     QString fileName() const { return m_fileName; };
-    /** @brief The file name of the script file to parse html pages. */
+
+    /** @brief The file name of the script file to parse downloaded documents. */
     QString scriptFileName() const { return m_scriptFileName; };
+    /** @brief A list of QScript extensions to import when executing the script. */
+    QStringList scriptExtensions() const { return m_scriptExtensions; };
 
     QList<ChangelogEntry> changelog() const { return m_changelog; };
     void setChangelog( const QList<ChangelogEntry> &changelog ) {
@@ -162,7 +167,8 @@ public:
      * @brief Wheather or not this accessor supports stop name autocompletion.
      *
      * @warning At least one regExp must have been set to initialize the RegExps
-     * object, eg. with @ref setRegExpDepartures. Otherwise this crashes. */
+     * object, eg. with @ref setRegExpDepartures. Otherwise this crashes.
+     **/
     virtual bool supportsStopAutocompletion() const {
         return false; };
     /** @brief Wheather or not this accessor supports the given TimetableInformation. */
@@ -188,8 +194,8 @@ protected:
      *   into a raw url it is checked if there are replacements for the city name.
      *
      * @param city The name of a city to be replaced by @p value.
-     *
-     * @param value The replacement value for @p city. */
+     * @param value The replacement value for @p city.
+     **/
     void addCityNameToValueReplacement( const QString &city, const QString &value ) {
         m_hashCityNameToValue.insert( city, value ); };
 
@@ -197,26 +203,36 @@ protected:
      * @brief Sets the hash, that replaces city names that are keys in the hash with it's
      *   values, before the city name is inserted into a raw url.
      *
-     * @param hash The new replacement hash. */
+     * @param hash The new replacement hash.
+     **/
     void setCityNameToValueReplacementHash( const QHash<QString, QString> &hash ) {
         m_hashCityNameToValue = hash; };
 
-    /** @brief Sets the name of the XML file that was parsed to get this accessor information object.
+    /**
+     * @brief Sets the name of the XML file that was parsed to get this accessor information object.
      *
      * If @p fileName is a symlink the real file name gets retrieved (using
      * KStandardDirs::realFilePath, eg. for the default service providers ending with "_default.xml").
      **/
     void setFileName( const QString &fileName );
 
-    /** @brief Sets the file name of the script file to parse html pages. */
-    void setScriptFile( const QString &scriptFileName ) {
-        m_scriptFileName = scriptFileName; };
+    /**
+     * @brief Sets the file name of the script file to parse downloaded documents.
+     *
+     * @param scriptFileName The file name of the script.
+     * @param extensions A list of QScript extensions to import when executing the script.
+     **/
+    void setScriptFile( const QString &scriptFileName, const QStringList &extensions ) {
+        m_scriptFileName = scriptFileName;
+        m_scriptExtensions = extensions;
+    };
 
     /**
      * @brief Sets the name of this accessor. The name is displayed in the config dialog's
      *   service provider combobox.
      *
-     * @param name The new name of this accessor. */
+     * @param name The new name of this accessor.
+     **/
     void setName( const QString &name ) { m_name = name; };
 
     /**
@@ -237,7 +253,8 @@ protected:
     /**
      * @brief Sets the charset used to encode documents from the service provider.
      *
-     * @param charsetForUrlEncoding The charset used for encoding. */
+     * @param charsetForUrlEncoding The charset used for encoding.
+     **/
     void setCharsetForUrlEncoding( const QByteArray &charsetForUrlEncoding ) {
         m_charsetForUrlEncoding = charsetForUrlEncoding; };
 
@@ -245,7 +262,8 @@ protected:
      * @brief Sets the charset used to encode documents where it couldn't be determined
      *   automatically.
      *
-     * @param fallbackCharset The charset used if it couldn't be determined. */
+     * @param fallbackCharset The charset used if it couldn't be determined.
+     **/
     void setFallbackCharset( const QByteArray &fallbackCharset ) {
         m_fallbackCharset = fallbackCharset; };
 
@@ -253,9 +271,7 @@ protected:
      * @brief Sets session key data.
      *
      * @param sessionKeyUrl An url to a document containing the session key.
-     *
      * @param sessionKeyPlace The place where to put the session key in requests.
-     *
      * @param data Data to POST with requests.
      **/
     void setSessionKeyData( const QString &sessionKeyUrl, SessionKeyPlace sessionKeyPlace,
@@ -276,23 +292,24 @@ protected:
      * @brief Sets the author of this accessor. You can also set the email of the author.
      *
      * @param author The author of this accessor.
-     *
      * @param shortAuthor An abbreviation of the authors name.
-     *
-     * @param email The email address of the author. */
+     * @param email The email address of the author.
+     **/
     void setAuthor( const QString &author, const QString &shortAuthor, const QString &email = QString() );
 
     /**
      * @brief Sets the version of this accessor.
      *
-     * @param version The version of this accessor. */
+     * @param version The version of this accessor.
+     **/
     void setVersion( const QString &version ) {
         m_version = version; };
 
     /**
      * @brief Sets the url to the home page of this service provider.
      *
-     * @param url The url to the home page of the service provider. */
+     * @param url The url to the home page of the service provider.
+     **/
     void setUrl( const QString &url ) {
         m_url = url; };
 
@@ -303,7 +320,8 @@ protected:
      *
      * @param shortUrl The short url to be set.
      *
-     * @see url() @see setUrl() */
+     * @see url() @see setUrl()
+     **/
     void setShortUrl( const QString &shortUrl ) {
         m_shortUrl = shortUrl; };
 
@@ -315,18 +333,19 @@ protected:
     /**
      * @brief Sets the raw url for xml files to an xml file containing departure/arrival lists.
      *
-     * @param stopSuggestionsRawUrl The url to an xml file containing departure/arrival lists. */
+     * @param stopSuggestionsRawUrl The url to an xml file containing departure/arrival lists.
+     **/
     void setStopSuggestionsRawUrl( const QString &stopSuggestionsRawUrl ) {
         m_stopSuggestionsRawUrl = stopSuggestionsRawUrl; };
 
     /**
      * @brief Sets the raw url for departure / arrival lists to an html file containing
-     *   departure/arrival lists. */
+     *   departure/arrival lists.
+     **/
     void setDepartureRawUrl( const QString &departureRawUrl ) {
         m_departureRawUrl = departureRawUrl; };
 
-    /**
-     * @brief Sets the raw url for journey lists to an html file containing journey lists. */
+    /** @brief Sets the raw url for journey lists to an html file containing journey lists. */
     void setJourneyRawUrl( const QString &journeyRawUrl ) {
         m_journeyRawUrl = journeyRawUrl; };
 
@@ -340,22 +359,22 @@ protected:
     /**
      * @brief Sets the country for which the service provider has data.
      *
-     * @param country The country to be set. */
+     * @param country The country to be set.
+     **/
     void setCountry( const QString &country ) { m_country = country; };
 
     /**
      * @brief Sets the cities for which the service provider has data.
      *
      * @param cities A list of cities for which the service provider has data.
-     *
-     * @see setOnlyUseCitiesInList() */
+     * @see setOnlyUseCitiesInList()
+     **/
     void setCities( const QStringList &cities ) {
         m_cities = cities; };
 
     void setCredit( const QString &credit ) { m_credit = credit; };
 
-    /**
-     * @brief Sets wheather or not the service provider needs a separate city value. */
+    /** @brief Sets wheather or not the service provider needs a separate city value. */
     void setUseSeparateCityValue( bool useSeparateCityValue ) {
         m_useSeparateCityValue = useSeparateCityValue; };
 
@@ -363,7 +382,8 @@ protected:
      * @brief Sets wheather or not cities may be freely chosen.
      *
      * @param onlyUseCitiesInList true if only cities in the list returned by cities()  are valid.
-     *   false (default) if cities may be freely chosen, but may be invalid. */
+     *   false (default) if cities may be freely chosen, but may be invalid.
+     **/
     void setOnlyUseCitiesInList( bool onlyUseCitiesInList ) {
         m_onlyUseCitiesInList = onlyUseCitiesInList; };
 
@@ -374,8 +394,10 @@ protected:
 
     // The name of the XML file that was parsed to get this accessor information object
     QString m_fileName;
-    // The file name of the script file to parse html pages
+    // The file name of the script file to parse downloaded documents
     QString m_scriptFileName;
+    // A list of QScript extensions to import when executing the script
+    QStringList m_scriptExtensions;
     // The name of this accessor, which can be displayed by the visualization
     QString m_name;
     // A short version of the url without protocol or "www"  to be displayed in links

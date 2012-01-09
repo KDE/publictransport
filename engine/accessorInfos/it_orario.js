@@ -142,7 +142,7 @@ function parseTimetable( html ) {
     return returnValue;
 }
 
-function parsePossibleStops( html ) {
+function parseStopSuggestions( html ) {
     // Find block of stops
     var pos = html.search( /<select class="error".*?name="input"[^>]*?>/i );
     if ( pos == -1 ) {

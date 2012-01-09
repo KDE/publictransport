@@ -90,7 +90,7 @@ function parseTimetable( html ) {
     }
 }
 
-function parsePossibleStops( html ) {
+function parseStopSuggestions( html ) {
     // Find block of stops
     var pos = html.search( /<div id="liste_gare"[^>]*>/i );
     if ( pos == -1 ) {

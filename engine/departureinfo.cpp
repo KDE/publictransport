@@ -20,8 +20,17 @@
 #include "departureinfo.h"
 #include <KDebug>
 
-PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVariant >& data )
-    : QHash<TimetableInformation, QVariant>(data)
+PublicTransportInfo::PublicTransportInfo(QObject* parent): QObject(parent)
+{
+}
+
+PublicTransportInfo::~PublicTransportInfo()
+{
+}
+
+PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVariant >& data,
+                                          QObject *parent )
+    : QObject(parent), m_data(data)
 {
     m_isValid = false;
 
@@ -99,45 +108,66 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
     }
 
     // Convert date value from string if not given as date
-    if ( contains(DepartureDate) && (!value(DepartureDate).canConvert(QVariant::Date)
-                || !value(DepartureDate).toDate().isValid()) ) {
-        if ( value(DepartureDate).canConvert(QVariant::String) ) {
-            QString sDate = value(DepartureDate).toString();
-            insert( DepartureDate, QDate::fromString(sDate, "dd.MM.yyyy") );
-
-            if ( !value(DepartureDate).toDate().isValid() ) {
-                int currentYear = QDate::currentDate().year();
-                QDate date = QDate::fromString( sDate, "dd.MM.yy" );
-                if ( date.year() <= currentYear - 99 ) {
-                    date.setDate( currentYear, date.month(), date.day() );
-                }
-
-                insert( DepartureDate, date );
+    if ( !contains(DepartureDateTime) ) {
+        if ( contains(DepartureTime) ) {
+            const QTime time = value( DepartureTime ).toTime();
+            QDate date;
+            if ( contains(DepartureDate) ) {
+                date = value( DepartureDate ).toDate();
+            } else if ( time < QTime::currentTime().addSecs(-5 * 60) ) {
+                kDebug() << "Guessed DepartureDate as tomorrow";
+                date = QDate::currentDate().addDays( 1 );
+            } else {
+                kDebug() << "Guessed DepartureDate as today";
+                date = QDate::currentDate();
             }
-        } else {
-            kDebug() << "Departure date is in wrong format:" << value( DepartureDate );
+            insert( DepartureDateTime, QDateTime(date, time) );
             remove( DepartureDate );
-        }
-    }
-
-    // Guess date value if none is given,
-    // this could produce wrong dates (better give DepartureDate in scripts)
-    if ( contains(DepartureHour) && contains(DepartureMinute) && !contains(DepartureDate) ) {
-        QTime departureTime = QTime( value(DepartureHour).toInt(),
-                                     value(DepartureMinute).toInt() );
-        if ( departureTime < QTime::currentTime().addSecs(-5 * 60) ) {
-            kDebug() << "Guessed DepartureDate as tomorrow";
-            insert( DepartureDate, QDate::currentDate().addDays(1) );
+            remove( DepartureTime );
         } else {
-            kDebug() << "Guessed DepartureDate as today";
-            insert( DepartureDate, QDate::currentDate() );
+            kDebug() << "No DepartureDateTime or DepartureTime information given";
         }
-        insert( DepartureYear, value(DepartureDate).toDate().year() );
     }
+//     if ( contains(DepartureDate) && (!value(DepartureDate).canConvert(QVariant::Date)
+//                 || !value(DepartureDate).toDate().isValid()) )
+//     {
+//         if ( value(DepartureDate).canConvert(QVariant::String) ) {
+//             QString sDate = value(DepartureDate).toString();
+//             insert( DepartureDate, QDate::fromString(sDate, "dd.MM.yyyy") );
+//
+//             if ( !value(DepartureDate).toDate().isValid() ) {
+//                 int currentYear = QDate::currentDate().year();
+//                 QDate date = QDate::fromString( sDate, "dd.MM.yy" );
+//                 if ( date.year() <= currentYear - 99 ) {
+//                     date.setDate( currentYear, date.month(), date.day() );
+//                 }
+//
+//                 insert( DepartureDate, date );
+//             }
+//         } else {
+//             kDebug() << "Departure date is in wrong format:" << value( DepartureDate );
+//             remove( DepartureDate );
+//         }
+//     }
+
+//     // Guess date value if none is given,
+//     // this could produce wrong dates (better give DepartureDate in scripts)
+//     if ( contains(DepartureTime) && !contains(DepartureDate) ) {
+//         QTime departureTime = QTime( value(DepartureHour).toInt(),
+//                                      value(DepartureMinute).toInt() );
+//         if ( departureTime < QTime::currentTime().addSecs(-5 * 60) ) {
+//             kDebug() << "Guessed DepartureDate as tomorrow";
+//             insert( DepartureDate, QDate::currentDate().addDays(1) );
+//         } else {
+//             kDebug() << "Guessed DepartureDate as today";
+//             insert( DepartureDate, QDate::currentDate() );
+//         }
+//         insert( DepartureYear, value(DepartureDate).toDate().year() );
+//     }
 }
 
-JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
-        : PublicTransportInfo( data )
+JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data, QObject *parent )
+        : PublicTransportInfo( data, parent )
 {
     if ( contains(TypesOfVehicleInJourney) ) {
         QVariantList vehicleTypes;
@@ -217,16 +247,6 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
         }
     }
 
-    if ( contains(ArrivalHour) && contains(ArrivalMinute) && !contains(ArrivalDate) ) {
-        QTime arrivalTime = QTime( value(ArrivalHour).toInt(),
-                                   value(ArrivalMinute).toInt() );
-        if ( arrivalTime < QTime::currentTime().addSecs(-5 * 60) ) {
-            insert( ArrivalDate, QDate::currentDate().addDays(1) );
-        } else {
-            insert( ArrivalDate, QDate::currentDate() );
-        }
-    }
-
     if ( contains(Duration) && value(Duration).toInt() <= 0
          && value(Duration).canConvert(QVariant::String) )
     {
@@ -237,18 +257,29 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
             insert( Duration, minsDuration );
         }
     }
-    if ( value(Duration).toInt() <= 0
-            && contains(DepartureDate)
-            && contains(DepartureHour) && contains(DepartureMinute)
-            && contains(ArrivalDate)
-            && contains(ArrivalHour) && contains(ArrivalMinute) )
-    {
-        QDateTime departure( value(DepartureDate).toDate(),
-                             QTime( value(DepartureHour).toInt(),
-                                    value(DepartureMinute).toInt() ) );
-        QDateTime arrival( value(ArrivalDate).toDate(),
-                           QTime( value(ArrivalHour).toInt(),
-                                  value(ArrivalMinute).toInt() ) );
+    if ( !contains(ArrivalDateTime) ) {
+        if ( contains(ArrivalTime) ) {
+            const QTime time = value( ArrivalTime ).toTime();
+            QDate date;
+            if ( contains(ArrivalDate) ) {
+                date = value( ArrivalDate ).toDate();
+            } else if ( time < QTime::currentTime().addSecs(-5 * 60) ) {
+                kDebug() << "Guessed ArrivalDate as tomorrow";
+                date = QDate::currentDate().addDays( 1 );
+            } else {
+                kDebug() << "Guessed ArrivalDate as today";
+                date = QDate::currentDate();
+            }
+            insert( ArrivalDateTime, QDateTime(date, time) );
+            remove( ArrivalDate );
+            remove( ArrivalTime );
+        } else {
+            kDebug() << "No ArrivalDateTime or ArrivalTime information given";
+        }
+    }
+    if ( value(Duration).toInt() <= 0 && contains(DepartureDateTime) && contains(ArrivalDateTime) ) {
+        QDateTime departure = value( DepartureDateTime ).toDateTime();
+        QDateTime arrival = value( ArrivalDateTime ).toDateTime();
         int minsDuration = departure.secsTo( arrival ) / 60;
         if ( minsDuration < 0 ) {
             kDebug() << "Calculated duration is negative" << minsDuration
@@ -293,24 +324,24 @@ JourneyInfo::JourneyInfo( const QHash< TimetableInformation, QVariant >& data )
         insert( RouteTimesArrival, times );
     }
 
-    m_isValid = contains( DepartureHour ) && contains( DepartureMinute )
-            && contains( StartStopName ) && contains( TargetStopName )
-            && contains( ArrivalHour ) && contains( ArrivalMinute );
+    m_isValid = contains( DepartureDateTime ) && contains( ArrivalDateTime )
+            && contains( StartStopName ) && contains( TargetStopName );
 }
 
-StopInfo::StopInfo()
+StopInfo::StopInfo( QObject *parent ) : PublicTransportInfo(parent)
 {
     m_isValid = false;
 }
 
-StopInfo::StopInfo(const QHash< TimetableInformation, QVariant >& data)
-    : QHash<TimetableInformation, QVariant>(data)
+StopInfo::StopInfo( const QHash< TimetableInformation, QVariant >& data, QObject *parent )
+    : PublicTransportInfo(parent)
 {
+    m_data.unite( data );
     m_isValid = contains( StopName );
 }
 
-StopInfo::StopInfo(const QString& name, const QString& id, int weight, const QString& city,
-                   const QString& countryCode)
+StopInfo::StopInfo( const QString& name, const QString& id, int weight, const QString& city,
+                    const QString& countryCode,  QObject *parent  ) : PublicTransportInfo(parent)
 {
     insert( StopName, name );
     if ( !id.isNull() ) {
@@ -329,16 +360,41 @@ StopInfo::StopInfo(const QString& name, const QString& id, int weight, const QSt
     m_isValid = !name.isEmpty();
 }
 
-DepartureInfo::DepartureInfo() : PublicTransportInfo()
+DepartureInfo::DepartureInfo( QObject *parent ) : PublicTransportInfo(parent)
 {
     m_isValid = false;
 }
 
-DepartureInfo::DepartureInfo( const QHash<TimetableInformation, QVariant> &data )
-        : PublicTransportInfo( data )
+DepartureInfo::DepartureInfo( const TimetableData &data,  QObject *parent )
+        : PublicTransportInfo( data, parent )
 {
-    m_isValid = contains( TransportLine ) && contains( Target )
-            && contains( DepartureHour ) && contains( DepartureMinute );
+    if ( (contains(RouteStops) || contains(RouteTimes)) &&
+         value(RouteTimes).toList().count() != value(RouteStops).toStringList().count() )
+    {
+        int difference = value(RouteStops).toList().count() -
+                         value(RouteTimes).toStringList().count();
+        if ( difference > 0 ) {
+            // More route stops than times, add invalid times
+            kDebug() << "The script stored" << difference << "more route stops than route times "
+                        "for a departure, invalid route times will be added";
+            QVariantList routeTimes = value( RouteTimes ).toList();
+            while ( difference > 0 ) {
+                routeTimes << QTime();
+                --difference;
+            }
+        } else {
+            // More route times than stops, add empty stops
+            kDebug() << "The script stored" << -difference << "more route times than route "
+                        "stops for a departure, empty route stops will be added";
+            QStringList routeStops = value( RouteStops ).toStringList();
+            while ( difference < 0 ) {
+                routeStops << QString();
+                ++difference;
+            }
+        }
+    }
+
+    m_isValid = contains( TransportLine ) && contains( Target ) && contains( DepartureDateTime );
 }
 
 VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineType )
@@ -596,15 +652,7 @@ QString PublicTransportInfo::operatorFromVehicleTypeString( const QString& sLine
 
 QDateTime PublicTransportInfo::departure() const
 {
-    if ( contains( DepartureDate ) ) {
-        return QDateTime( value( DepartureDate ).toDate(),
-                          QTime( value( DepartureHour ).toInt(),
-                                 value( DepartureMinute ).toInt() ) );
-    } else {
-        return QDateTime( QDate::currentDate(),
-                          QTime( value( DepartureHour ).toInt(),
-                                 value( DepartureMinute ).toInt() ) );
-    }
+    return value( DepartureDateTime ).toDateTime();
 }
 
 QString PublicTransportInfo::operatorName() const
@@ -643,17 +691,7 @@ QString DepartureInfo::target( PublicTransportInfo::StopNameOptions stopNameOpti
 
 QDateTime JourneyInfo::arrival() const
 {
-    if ( contains( ArrivalDate ) ) {
-        return QDateTime( value( ArrivalDate ).toDate(),
-                          QTime( value( ArrivalHour ).toInt(),
-                                 value( ArrivalMinute ).toInt() ) );
-    } else if ( contains( ArrivalHour ) && contains( ArrivalMinute ) ) {
-        return QDateTime( QDate::currentDate(),
-                          QTime( value( ArrivalHour ).toInt(),
-                                 value( ArrivalMinute ).toInt() ) );
-    } else {
-        return QDateTime();
-    }
+    return value( ArrivalDateTime ).toDateTime();
 }
 
 QList< VehicleType > JourneyInfo::vehicleTypes() const

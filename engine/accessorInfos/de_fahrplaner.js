@@ -128,7 +128,7 @@ function parseTimetable( html ) {
 }
 
 // This function parses a given HTML document for stop suggestions.
-function parsePossibleStops( html ) {
+function parseStopSuggestions( html ) {
     // Initialize regular expressions (compile them only once)
     var stopRegExp = /{"value":"([^"]*?)","id":"[^"]*?@L=([0-9]+)@[^"]*?"[^}]*?"weight":"(\d+)"[^}]*?}/ig;
 

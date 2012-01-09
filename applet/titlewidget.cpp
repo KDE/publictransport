@@ -569,7 +569,11 @@ void TitleWidget::updateFilterWidget()
 void TitleWidget::slotJourneySearchInputChanged( const QString &text )
 {
     // Disable start search button if the journey search line is empty
-    castedWidget<Plasma::ToolButton>(WidgetStartJourneySearchButton)->setEnabled( !text.isEmpty() );
+    Plasma::ToolButton *startJourneySearchButton =
+            castedWidget<Plasma::ToolButton>( WidgetStartJourneySearchButton );
+    if ( startJourneySearchButton ) {
+        startJourneySearchButton->setEnabled( !text.isEmpty() );
+    }
 }
 
 void TitleWidget::settingsChanged()

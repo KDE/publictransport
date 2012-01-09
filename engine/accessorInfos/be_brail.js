@@ -139,14 +139,14 @@ function parseTimetable( html ) {
     return true;
 }
 
-function parsePossibleStops( html ) {
-    if ( parsePossibleStops(html) )
+function parseStopSuggestions( html ) {
+    if ( parseStopSuggestions(html) )
 	return true;
     else
 	return false;
 }
 
-function parsePossibleStops( html ) {
+function parseStopSuggestions( html ) {
     // Find block of stops
     var str = helper.extractBlock( html, '<select name="input">', '</select>' );
 

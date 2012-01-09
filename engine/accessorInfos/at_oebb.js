@@ -191,7 +191,7 @@ function parseTimetable( html ) {
 // <regExpRange><![CDATA[(?:SLs.sls=\{"suggestions":\s*\[)(.*)(?:\]\};\s*SLs.showSuggestion\(\);)]]></regExpRange>
 // <regExp><![CDATA[(?:\{"value":")([^"]*)(?:","id":"[^"]*@L=)([^@]*)(?:@[^"]*",.*"weight":")([0-9]+)(?:"\})]]></regExp>
 // <infos><info>StopName</info> <info>StopID</info> <info>StopWeight</info></infos>
-function parsePossibleStops( json ) {
+function parseStopSuggestions( json ) {
     // Initialize regular expressions (compile them only once) TODO
     var stopRegExp = /\{"value":"([^"]*)","id":"[^"]*@L=([^@]*)@[^"]*",.*"weight":"([0-9]+)"\}/ig;
 // 	var stopNameRegExp = /"sName":"([^"]+)"/i;

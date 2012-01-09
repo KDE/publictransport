@@ -29,13 +29,20 @@
 
 // Plasma includes
 #include <Plasma/DataEngine>
+#include "departureinfo.h"
 
-class QTimer;
-class QFileSystemWatcher;
+struct RequestInfo;
+struct JourneyRequestInfo;
+typedef RequestInfo DepartureRequestInfo;
+typedef RequestInfo StopSuggestionRequestInfo;
+
 class TimetableAccessor;
 class DepartureInfo;
 class JourneyInfo;
 class StopInfo;
+
+class QTimer;
+class QFileSystemWatcher;
 
 /**
  * @brief This engine provides departure/arrival times and journeys for public transport.
@@ -142,6 +149,10 @@ protected:
     bool isSourceUpToDate( const QString& name );
 
 public slots:
+    void slotSourceRemoved( const QString &name );
+
+    void forceUpdate();
+
     /**
      * @brief A list of departures / arrivals was received.
      *
@@ -150,23 +161,15 @@ public slots:
      * @param requestUrl The url used to request the information.
      * @param departures A list of departures/arrivals that were received.
      * @param globalInfo Global information that affects all departures/arrivals.
-     * @param serviceProvider The service provider the data came from.
-     * @param sourceName The name of the data source for which the departures /
-     *   arrivals have been downloaded and parsed.
-     * @param city The city the stop is in. May be empty if the service provider
-     *   doesn't need a separate city value.
-     * @param stop The stop name for which the departures / arrivals have been received.
-     * @param dataType "departures" or "arrivals".
-     * @param parseDocumentMode What has been parsed from the document.
+     * @param requestInfo Information about the request for the here received @p departures.
      *
      * @see TimetableAccessor::useSeparateCityValue()
      **/
     void departureListReceived( TimetableAccessor *accessor,
-            const QUrl &requestUrl, const QList<DepartureInfo*> &departures,
+            const QUrl &requestUrl, const DepartureInfoList &departures,
             const GlobalTimetableInfo &globalInfo,
-            const QString &serviceProvider, const QString &sourceName,
-            const QString &city, const QString &stop,
-            const QString &dataType, ParseDocumentMode parseDocumentMode );
+            const DepartureRequestInfo &requestInfo,
+            bool deleteDepartureInfos = true );
 
     /**
      * @brief A list of journey was received.
@@ -175,23 +178,15 @@ public slots:
      * @param requestUrl The url used to request the information.
      * @param journeys A list of journeys that were received.
      * @param globalInfo Global information that affects all journeys.
-     * @param serviceProvider The service provider the data came from.
-     * @param sourceName The name of the data source for which the journeys have
-     *   been downloaded and parsed.
-     * @param city The city the stop is in. May be empty if the service provider
-     *   doesn't need a separate city value.
-     * @param stop The stop name for which the departures / arrivals have been received.
-     * @param dataType "journeys".
-     * @param parseDocumentMode What has been parsed from the document.
+     * @param requestInfo Information about the request for the here received @p journeys.
      *
      * @see TimetableAccessor::useSeparateCityValue()
      **/
     void journeyListReceived( TimetableAccessor *accessor,
-            const QUrl &requestUrl, const QList<JourneyInfo*> &journeys,
+            const QUrl &requestUrl, const JourneyInfoList &journeys,
             const GlobalTimetableInfo &globalInfo,
-            const QString &serviceProvider, const QString &sourceName,
-            const QString &city, const QString &stop,
-            const QString &dataType, ParseDocumentMode parseDocumentMode );
+            const JourneyRequestInfo &requestInfo,
+            bool deleteJourneyInfos = true );
 
     /**
      * @brief A list of stops was received.
@@ -199,22 +194,14 @@ public slots:
      * @param accessor The accessor that was used to download and parse the stops.
      * @param requestUrl The url used to request the information.
      * @param stops A pointer to a list of @ref StopInfo objects.
-     * @param serviceProvider The service provider the data came from.
-     * @param sourceName The name of the data source for which the stops have been
-     *   downloaded and parsed.
-     * @param city The city the (ambiguous) stop is in. May be empty if the service provider
-     *   doesn't need a separate city value.
-     * @param stop The (ambiguous) stop name for which the stop list has been received.
-     * @param dataType "stopList".
-     * @param parseDocumentMode What has been parsed from the document.
+     * @param requestInfo Information about the request for the here received @p stops.
      *
      * @see TimetableAccessor::useSeparateCityValue()
      **/
     void stopListReceived( TimetableAccessor *accessor,
-            const QUrl &requestUrl, const QList<StopInfo*> &stops,
-            const QString &serviceProvider,
-            const QString &sourceName, const QString &city, const QString &stop,
-            const QString &dataType, ParseDocumentMode parseDocumentMode );
+            const QUrl &requestUrl, const StopInfoList &stops,
+            const StopSuggestionRequestInfo &requestInfo,
+            bool deleteStopInfos = true );
 
     /**
      * @brief An error was received.
@@ -222,34 +209,56 @@ public slots:
      * @param accessor The accessor that was used to download and parse information
      *   from the service provider.
      * @param errorType The type of error or NoError if there was no error.
-     * @param errorString If @p errorType isn't NoError this contains a
-     *   description of the error.
+     * @param errorString If @p errorType isn't NoError this contains a description of the error.
      * @param requestUrl The url used to request the information.
-     * @param serviceProvider The service provider the data came from.
-     * @param sourceName The name of the data source.
-     * @param city The city the stop is in. May be empty if the service provider
-     *   doesn't need a separate city value.
-     * @param stop The stop name for which the error occurred.
-     * @param dataType "nothing".
-     * @param parseDocumentMode What has been parsed from the document.
+     * @param requestInfo Information about the request that failed with @p errorType.
      *
      * @see TimetableAccessor::useSeparateCityValue()
      **/
-    void errorParsing( TimetableAccessor *accessor, ErrorType errorType, const QString &errorString,
-            const QUrl &requestUrl, const QString &serviceProvider,
-            const QString &sourceName, const QString &city, const QString &stop,
-            const QString &dataType, ParseDocumentMode parseDocumentMode );
+    void errorParsing( TimetableAccessor *accessor, ErrorCode errorType, const QString &errorString,
+            const QUrl &requestUrl, const RequestInfo *requestInfo );
 
-    /** @brief A directory with accessor info xmls was changed. */
+    /**
+     * @brief A global or local directory with accessor info XMLs was changed.
+     *
+     * This slot uses reloadAllAccessors() to actually update the loaded accessors. Because a
+     * change in multiple files in one or more directories causes a call to this slot for each
+     * file, this would cause all accessors to be reloaded for each changed file. Especially when
+     * installing a new version, while running an old one, this can take some time.
+     * Therefore this slot uses a short timeout. If a new call to this slot happens within that
+     * timeout, the timeout gets simply restarted. Otherwise after the timeout reloadAllAccessors()
+     * gets called.
+     *
+     * @param path The changed directory.
+     * @see reloadAllAccessors()
+     */
     void accessorInfoDirChanged( const QString &path );
 
+    /**
+     * @brief Deletes all currently created accessors and associated data and recreates them.
+     *
+     * Deleted data only gets filled by new requests again.
+     * This slot gets called by accessorInfoDirChanged() if a global or local directory
+     * containing accessor XML files has changed. It does not call this function on every directory
+     * change, but only if there are no further changes in a short timespan.
+     *
+     * @see accessorInfoDirChanged()
+     **/
     void reloadAllAccessors();
 
 private:
-    /** @brief Gets a map with information about an accessor.
+    /**
+     * @brief Gets a hash with information about an accessor.
      *
-    * @param accessor The accessor to get information about. */
+     * @param accessor The accessor to get information about.
+     **/
     QHash< QString, QVariant > serviceProviderInfo( const TimetableAccessor *&accessor );
+
+    /**
+     * @brief Gets a hash with information about available locations.
+     *
+     * Locations are here countries plus some special locations like "international".
+     **/
     QHash< QString, QVariant > locations();
 
     QString stripDateAndTimeValues( const QString &sourceName );
@@ -271,7 +280,9 @@ private:
     // for each data source name.
     QHash< QString, QDateTime > m_nextDownloadTimeProposals;
 
-    QTimer *m_timer;
+    QTimer *m_accessorUpdateDelayTimer;
+    QTimer *m_sourceUpdateTimer;
+    QStringList m_runningSources; // Sources which are currently being processed
 //     QHash< QString, AccessorCheck > m_checkedAccessors;
 };
 
@@ -747,25 +758,29 @@ The email address of the author of this accessor info xml.</td></tr>
 <td>\<accessorInfo\></td> <td>Required</td>
 <td>A short version of the url, used as link text.</td></tr>
 
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td style="color:#bb0000;"><b>\<rawUrls\></b></td>
+<tr style="background-color: #ffbbbb;"><td><b>\<fallbackCharset\></b></td>
+<td>\<accessorInfo\></td> <td>Optional</td>
+<td>The charset of documents to be downloaded (TODO do this from the script). Important if NetworkRequest::readyRead() gets used, because the correct codec can only be determined for completely downloaded HTML pages.</td></tr>
+
+<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td style="color:#bb0000;"><b>\<rawUrls\> DEPRECATED</b></td>
 <td>\<accessorInfo\></td> <td>Required</td>
 <td>Contains the used "raw urls". A raw url is a string with placeholders that are replaced with values to get a real url.</td></tr>
 
 <tr><td style="color:#770000;"><b>\<departures\></b></td>
-<td style="color:#bb0000;">\<rawUrls\></td> <td>Required</td>
+<td style="color:#bb0000;">\<rawUrls\> DEPRECATED</td> <td>Required</td>
 <td>A raw url (in a CDATA tag) to a page containing a departure / arrival list. The following substrings are replaced by current values: <b>{stop}</b> (the stop name), <b>{type}</b> (arr or dep for arrivals or departures), <b>{time}</b> (the time of the first departure / arrival), <b>{maxCount}</b> (maximal number of departures / arrivals).</td></tr>
 
 <tr><td style="color:#770000;"><b>\<journeys\></b></td>
-<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional)</td>
+<td style="color:#bb0000;">\<rawUrls\> DEPRECATED</td> <td>(Optional)</td>
 <td>A raw url (in a CDATA tag) to a page containing a journey list. The following substrings are replaced by current values: <b>{startStop}</b> (the name of the stop where the journey starts), <b>{targetStop}</b> (the name of the stop where the journey ends), <b>{time}</b> (the time of the first journey), <b>{maxCount}</b> (maximal number of journeys).</td></tr>
 
 <tr><td style="color:#770000;"><b>\<stopSuggestions\></b></td>
-<td style="color:#bb0000;">\<rawUrls\></td> <td>(Optional)</td>
+<td style="color:#bb0000;">\<rawUrls\> DEPRECATED</td> <td>(Optional)</td>
 <td>A raw url (in a CDATA tag) to a page containing a list of stop suggestions. Normally this tag isn't needed, because the url is the same as the url to the departure list. When the stop name is ambiguous the service provider can show a page containing a list of stop suggestions. You may want to use this tag if you want to parse XML files for departure lists and get the stop suggestions from an HTML page or if there is a special url only for stop suggestions.</td></tr>
 
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<script></b></td>
+<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<script\></b></td>
 <td>\<accessorInfo\></td> <td>Required, if no regExps are set</td>
-<td>Contains the filename of the script to be used to parse timetable documents. The script must be in the same directory as the XML file. Always use HTML as type when using a script, you can also parse XML files in the script.</td></tr>
+<td>Contains the filename of the script to be used to parse timetable documents. The script must be in the same directory as the XML file. Always use "Script" as type when using a script.</td></tr>
 
 <tr style="border-top: 3px double black;"><td style="color:#00bb00;"><b>\<changelog\></b></td>
 <td>\<accessorInfo\></td> <td>(Optional)</td>
@@ -934,3 +949,5 @@ digraph publicTransportDataEngine {
 */
 
 #endif
+
+struct JourneyRequestInfo;

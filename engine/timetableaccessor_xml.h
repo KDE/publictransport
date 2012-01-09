@@ -65,16 +65,12 @@ protected:
      *   and puts the results into @p journeys.
      *
      * @param document A QByteArray containing the document to be parsed.
-     *
      * @param[out] journeys A pointer to a list of departure/arrival or journey information.
      *   The results of parsing the document is stored in @p journeys.
-     *
      * @param[out] globalInfo A pointer to a GlobalTimetableInfo object containing information
      *   for all departures/arrivals or journeys.
-     *
      * @param parseDocumentMode The mode of parsing, e.g. parse for
      *   departures/arrivals or journeys.
-     *
      * @return true, if there were no errors and the data in @p journeys is valid.
      *
      * @return false, if there were an error parsing the document. */
@@ -87,7 +83,6 @@ protected:
      *   and puts the results into @p stops.
      *
      * @param document A QByteArray containing the document to be parsed.
-     *
      * @param[out] stops A pointer to a list of @ref StopInfo objects.
      *
      * @return true, if there were no errors.

@@ -1543,47 +1543,48 @@ void TimetableMate::scriptRunParseTimetable() {
     QTime lastTime;
     for ( int i = 0; i < data.count(); ++ i ) {
         TimetableData timetableData = data.at( i );
-        QDate date = timetableData.value( "departuredate" ).toDate();
-        QTime departureTime;
-        if ( timetableData.values().contains("departuretime") ) {
-            QVariant timeValue = timetableData.value("departuretime");
-            if ( timeValue.canConvert(QVariant::Time) ) {
-                departureTime = timeValue.toTime();
-            } else {
-                departureTime = QTime::fromString( timeValue.toString(), "hh:mm:ss" );
-                if ( !departureTime.isValid() ) {
-                    departureTime = QTime::fromString( timeValue.toString(), "hh:mm" );
+        QDateTime departureDateTime = timetableData.value( "departuredatetime" ).toDateTime();
+        if ( !departureDateTime.isValid() ) {
+            QDate date = timetableData.value( "departuredate" ).toDate();
+            QTime departureTime;
+            if ( timetableData.values().contains("departuretime") ) {
+                QVariant timeValue = timetableData.value("departuretime");
+                if ( timeValue.canConvert(QVariant::Time) ) {
+                    departureTime = timeValue.toTime();
+                } else {
+                    departureTime = QTime::fromString( timeValue.toString(), "hh:mm:ss" );
+                    if ( !departureTime.isValid() ) {
+                        departureTime = QTime::fromString( timeValue.toString(), "hh:mm" );
+                    }
                 }
             }
-        } else {
-            departureTime = QTime( timetableData.value("departurehour").toInt(),
-                                   timetableData.value("departureminute").toInt() );
-        }
-        if ( !date.isValid() ) {
-            if ( curDate.isNull() ) {
-                // First departure
-                if ( QTime::currentTime().hour() < 3 && departureTime.hour() > 21 )
-                    date = QDate::currentDate().addDays( -1 );
-                else if ( QTime::currentTime().hour() > 21 && departureTime.hour() < 3 )
-                    date = QDate::currentDate().addDays( 1 );
-                else
-                    date = QDate::currentDate();
-            } else if ( lastTime.secsTo(departureTime) < -5 * 60 ) {
-                // Time too much ealier than last time, estimate it's tomorrow
-                date = curDate.addDays( 1 );
-            } else {
-                date = curDate;
+            if ( !date.isValid() ) {
+                if ( curDate.isNull() ) {
+                    // First departure
+                    if ( QTime::currentTime().hour() < 3 && departureTime.hour() > 21 )
+                        date = QDate::currentDate().addDays( -1 );
+                    else if ( QTime::currentTime().hour() > 21 && departureTime.hour() < 3 )
+                        date = QDate::currentDate().addDays( 1 );
+                    else
+                        date = QDate::currentDate();
+                } else if ( lastTime.secsTo(departureTime) < -5 * 60 ) {
+                    // Time too much ealier than last time, estimate it's tomorrow
+                    date = curDate.addDays( 1 );
+                } else {
+                    date = curDate;
+                }
             }
 
-            timetableData.set( "departuredate", date );
+            departureDateTime = QDateTime( date, departureTime );
+            timetableData.set( "departuredatetime", departureDateTime );
         }
 
-        curDate = date;
-        lastTime = departureTime;
+        curDate = departureDateTime.date();
+        lastTime = departureDateTime.time();
 
         QVariantHash values = timetableData.values();
         bool isValid =  values.contains("transportline") && values.contains("target")
-                        && values.contains("departurehour") && values.contains("departureminute");
+                        && values.contains("departuredatetime");
         if ( isValid )
             ++count;
         else
@@ -1594,10 +1595,10 @@ void TimetableMate::scriptRunParseTimetable() {
     for ( int i = 0; i < data.count(); ++i ) {
         QVariantHash values = data[i].values();
         QString departure;
-        departure = QString("\"%1\" to \"%2\" at %3:%4").arg( values["transportline"].toString(),
-                    values["target"].toString() )
-                    .arg( values["departurehour"].toInt(), 2, 10, QChar('0') )
-                    .arg( values["departureminute"].toInt(), 2, 10, QChar('0') );
+        departure = QString("\"%1\" to \"%2\" at %3")
+                    .arg( values["transportline"].toString(),
+                          values["target"].toString(),
+                          values["departuredatetime"].toDateTime().toString() );
         if ( values.contains("departuredate") && !values["departuredate"].toList().isEmpty() ) {
 			QList<QVariant> date = values["departuredate"].toList();
 			if ( date.count() >= 3 ) {
@@ -1814,35 +1815,74 @@ void TimetableMate::scriptRunParseJourneys() {
     QTime lastTime;
     for ( int i = 0; i < data.count(); ++ i ) {
         TimetableData timetableData = data.at( i );
-        QDate date = timetableData.value( "departuredate" ).toDate();
-        QTime departureTime = QTime( timetableData.value("departurehour").toInt(),
-                                     timetableData.value("departureminute").toInt() );
-        if ( !date.isValid() ) {
-            if ( curDate.isNull() ) {
-                // First departure
-                if ( QTime::currentTime().hour() < 3 && departureTime.hour() > 21 )
-                    date = QDate::currentDate().addDays( -1 );
-                else if ( QTime::currentTime().hour() > 21 && departureTime.hour() < 3 )
-                    date = QDate::currentDate().addDays( 1 );
-                else
-                    date = QDate::currentDate();
-            } else if ( lastTime.secsTo(departureTime) < -5 * 60 ) {
-                // Time too much ealier than last time, estimate it's tomorrow
-                date = curDate.addDays( 1 );
-            } else {
-                date = curDate;
+        QDateTime departureDateTime = timetableData.value( "departuredatetime" ).toDateTime();
+        if ( !departureDateTime.isValid() ) {
+            QDate date = timetableData.value( "departuredate" ).toDate();
+            QTime departureTime;
+            if ( timetableData.values().contains("departuretime") ) {
+                QVariant timeValue = timetableData.value("departuretime");
+                if ( timeValue.canConvert(QVariant::Time) ) {
+                    departureTime = timeValue.toTime();
+                } else {
+                    departureTime = QTime::fromString( timeValue.toString(), "hh:mm:ss" );
+                    if ( !departureTime.isValid() ) {
+                        departureTime = QTime::fromString( timeValue.toString(), "hh:mm" );
+                    }
+                }
+            }
+            if ( !date.isValid() ) {
+                if ( curDate.isNull() ) {
+                    // First departure
+                    if ( QTime::currentTime().hour() < 3 && departureTime.hour() > 21 )
+                        date = QDate::currentDate().addDays( -1 );
+                    else if ( QTime::currentTime().hour() > 21 && departureTime.hour() < 3 )
+                        date = QDate::currentDate().addDays( 1 );
+                    else
+                        date = QDate::currentDate();
+                } else if ( lastTime.secsTo(departureTime) < -5 * 60 ) {
+                    // Time too much ealier than last time, estimate it's tomorrow
+                    date = curDate.addDays( 1 );
+                } else {
+                    date = curDate;
+                }
             }
 
-            timetableData.set( "departuredate", date );
+            departureDateTime = QDateTime( date, departureTime );
+            timetableData.set( "departuredatetime", departureDateTime );
         }
 
-        curDate = date;
-        lastTime = departureTime;
+        QDateTime arrivalDateTime = timetableData.value( "arrivaldatetime" ).toDateTime();
+        if ( !departureDateTime.isValid() ) {
+            QDate date = timetableData.value( "arrivaldate" ).toDate();
+            QTime arrivalTime;
+            if ( timetableData.values().contains("arrivaltime") ) {
+                QVariant timeValue = timetableData.value("arrivaltime");
+                if ( timeValue.canConvert(QVariant::Time) ) {
+                    arrivalTime = timeValue.toTime();
+                } else {
+                    arrivalTime = QTime::fromString( timeValue.toString(), "hh:mm:ss" );
+                    if ( !arrivalTime.isValid() ) {
+                        arrivalTime = QTime::fromString( timeValue.toString(), "hh:mm" );
+                    }
+                }
+            }
+            if ( !date.isValid() ) {
+                date = departureDateTime.date();
+            }
+
+            arrivalDateTime = QDateTime( date, arrivalTime );
+            if ( arrivalDateTime < departureDateTime ) {
+                arrivalDateTime = arrivalDateTime.addDays( 1 );
+            }
+            timetableData.set( "arrivaldatetime", arrivalDateTime );
+        }
+
+        curDate = departureDateTime.date();
+        lastTime = departureDateTime.time();
 
         QVariantHash values = timetableData.values();
         bool isValid = values.contains("startstopname") && values.contains("targetstopname")
-                       && values.contains("departurehour") && values.contains("departureminute")
-                       && values.contains("arrivalhour") && values.contains("arrivalminute");
+                && values.contains("departuredatetime") && values.contains("arrivaldatetime");
         if ( isValid )
             ++count;
         else
@@ -1853,12 +1893,11 @@ void TimetableMate::scriptRunParseJourneys() {
     for ( int i = 0; i < data.count(); ++i ) {
         QVariantHash values = data[i].values();
         QString journey;
-        journey = QString("From \"%1\" (%3:%4) to \"%2\" (%5:%6)")
-                  .arg( values["startstopname"].toString(), values["targetstopname"].toString() )
-                  .arg( values["departurehour"].toInt(), 2, 10, QChar('0') )
-                  .arg( values["departureminute"].toInt(), 2, 10, QChar('0') )
-                  .arg( values["arrivalhour"].toInt(), 2, 10, QChar('0') )
-                  .arg( values["arrivalminute"].toInt(), 2, 10, QChar('0') );
+        journey = QString("From \"%1\" (%3) to \"%2\" (%4)")
+                  .arg( values["startstopname"].toString(),
+                        values["targetstopname"].toString(),
+                        values["departuredatetime"].toDateTime().toString(),
+                        values["arrivaldatetime"].toDateTime().toString() );
         if ( values.contains("changes") && !values["changes"].toString().isEmpty() ) {
             journey += QString(",<br> changes: %1").arg( values["changes"].toString() );
         }

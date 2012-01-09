@@ -107,7 +107,7 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
         settings.currentStopSettingsIndex = settings.stopSettingsList.count() - 1;
     }
 
-    settings.maximalNumberOfDepartures = cg.readEntry( "maximalNumberOfDepartures", 20 );
+    settings.maximalNumberOfDepartures = cg.readEntry( "maximalNumberOfDepartures", 50 );
     settings.linesPerRow = cg.readEntry( "linesPerRow", 2 );
     settings.sizeFactor = Settings::sizeFactorFromSize( cg.readEntry("size", 2) );
     settings.departureArrivalListType = static_cast<DepartureArrivalListType>(
@@ -156,7 +156,6 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
         int filterCount = cgGlobal.readEntry( "filterCount", 0 );
         test = "filterConfig_1";
         i = 1;
-        kDebug() << "Filter count is" << filterCount;
         while ( i <= filterCount && cgGlobal.hasGroup(test) ) {
             FilterSettings filterSettings = readFilterConfig( cgGlobal.group(test) );
             if ( filterSettings.name.isEmpty() ) {
@@ -174,7 +173,6 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
     int alarmCount = cgGlobal.readEntry( "alarmCount", 0 );
     test = "alarmType";
     i = 1;
-    kDebug() << "Alarm count is" << alarmCount;
     while ( i <= alarmCount && cgGlobal.hasKey(test) ) {
         AlarmSettings alarmSettings;
         QString suffix = i == 1 ? QString() : '_' + QString::number( i );

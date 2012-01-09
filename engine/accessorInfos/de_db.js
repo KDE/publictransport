@@ -3,8 +3,8 @@
 
 Array.prototype.contains = function( element ) {
     for ( var i = 0; i < this.length; i++ ) {
-	if ( this[i] == element )
-	    return true;
+    if ( this[i] == element )
+        return true;
     }
     return false;
 }
@@ -23,38 +23,129 @@ function detailsResultsObject() {
 }
 
 function usedTimetableInformations() {
-    return [ 'Delay', 'DelayReason', 'Platform', 'JourneyNews', 'TypeOfVehicle',
-	     'StopID', 'Pricing', 'Changes', 'RouteStops', 'RouteTimes', 
-		 'RoutePlatformsDeparture', 'RoutePlatformsArrival', 
-		 'RouteTimesDeparture', 'RoutePlatformsArrival',
-	     'RouteTransportLines' ];
+    return [ 'Arrivals', 'Delay', 'DelayReason', 'Platform', 'JourneyNews',
+            'StopID', 'Pricing', 'Changes', 'RouteStops', 'RouteTimes',
+            'RoutePlatformsDeparture', 'RoutePlatformsArrival',
+            'RouteTimesDeparture', 'RouteTimesArrival',
+            'RouteTypesOfVehicles', 'RouteTransportLines' ];
 }
 
-function getUrlForLaterJourneyResults( html ) {
-    var urlRegExp = /<a href="([^"]*?)" class="arrowlink arrowlinkbottom" >Sp&#228;ter<\/a>/i;
-    var urlLater = urlRegExp.exec( html );
-    if ( urlLater != null )
-		return 'http://reiseauskunft.bahn.de' + urlLater[1];
-    else
-		return null;
+var requestDateTime;
+function getTimetable( stop, dateTime, maxCount, dataType, city ) {
+//     for ( var i = 0; i < 100; ++i ) {
+//         result.addData({ DepartureDateTime: new Date(), Target: "Fieti" + i, TypeOfVehicle: "Bus", TransportLine: "666" });
+//         for ( var n = 0; n < 100000000; ++n ) {
+//             var v = 666;
+//         }
+//         result.publish();
+//     }
+//     return;
+    // Store request date and time to know it in parseTimetable
+    requestDateTime = dateTime;
+    print( "write requestDateTime: " + requestDateTime );
+
+//     var qDateTime = new QDateTime( dateTime );
+    var url = "http://reiseauskunft.bahn.de/bin/bhftafel.exe/dn?rt=1" +
+            "&input=" + stop + "!" +
+            "&boardType=" + (dataType == "arrivals" ? "arr" : "dep") +
+            "&date=" + helper.formatDateTime(dateTime, "dd.MM.yy") +
+            "&time=" + helper.formatDateTime(dateTime, "hh:mm") +
+//             "&date=" + qDateTime.toString("dd.MM.yy") +
+//             "&time=" + qDateTime.toString("hh:mm") +
+            "&maxJourneys=" + maxCount +
+            "&disableEquivs=no&start=yes&productsFilter=111111111";
+
+    var request = network.createRequest( url );
+//     request.readyRead.connect( parseTimetableIterative );
+    request.finished.connect( parseTimetable );
+    network.get( request );
+}
+
+function getJourneys( originStop, targetStop, dateTime, maxCount, dataType, city ) {
+//     for ( var i = 0; i < 100; ++i ) {
+//         result.addData({ DepartureDateTime: new Date(), ArrivalDateTime: new Date(), StartStopName: "Fieti" + i, TargetStopName: "Annika" });
+//         for ( var n = 0; n < 100000000; ++n ) {
+//             var v = 666;
+//         }
+//         result.publish();
+//     }
+//     return;
+
+//     var qDateTime = new QDateTime( dateTime );
+    var url = "http://reiseauskunft.bahn.de/bin/query.exe/dn" +
+            "?S=" + originStop + "!" +
+            "&Z=" + targetStop + "!" +
+            "&date=" + helper.formatDateTime(dateTime, "dd.MM.yy") +
+            "&time=" + helper.formatDateTime(dateTime, "hh:mm") +
+//             "&date=" + qDateTime.toString("dd.MM.yy") +
+//             "&time=" + qDateTime.toString("hh:mm") +
+            "&maxJourneys=" + maxCount +
+            "&REQ0HafasSearchForw=" + (dataType == "arrivals" ? "0" : "1") +
+            "&start=yes&sortConnections=minDeparture&HWAI=JS!ajax=yes!&HWAI=CONNECTION$C0-0!id=C0-0!HwaiDetailStatus=details!;CONNECTION$C0-1!id=C0-1!HwaiDetailStatus=details!;CONNECTION$C0-2!id=C0-2!HwaiDetailStatus=details!;CONNECTION$C0-3!id=C0-3!HwaiDetailStatus=details!;CONNECTION$C0-4!id=C0-4!HwaiDetailStatus=details!;CONNECTION$C1-0!id=C1-0!HwaiDetailStatus=details!;CONNECTION$C1-1!id=C1-1!HwaiDetailStatus=details!;CONNECTION$C1-2!id=C1-2!HwaiDetailStatus=details!;CONNECTION$C1-3!id=C1-3!HwaiDetailStatus=details!;CONNECTION$C1-4!id=C1-4!HwaiDetailStatus=details!;CONNECTION$C2-0!id=C2-0!HwaiDetailStatus=details!;CONNECTION$C2-1!id=C2-1!HwaiDetailStatus=details!;CONNECTION$C2-2!id=C2-2!HwaiDetailStatus=details!;CONNECTION$C2-3!id=C2-3!HwaiDetailStatus=details!;CONNECTION$C2-4!id=C2-4!HwaiDetailStatus=details!;";
+
+    // Get three journey documents
+    for ( i = 0; i < 3; ++i ) {
+        // Download and parse journey document
+        var html = network.getSynchronous( url );
+        if ( network.lastDownloadAborted() ) {
+            break;
+        }
+        parseJourneys( html );
+
+        // Directly publish journeys parsed from the current document
+        result.publish();
+
+        // Search for another URL to a document with later journeys
+        var urlRegExp = /<a href="([^"]*?)" class="arrowlink arrowlinkbottom"[^>]*>Sp&#228;ter<\/a>/i;
+        var urlLater = urlRegExp.exec( html );
+        if ( urlLater ) {
+            // Set next download URL, need to decode "&amp;" to "&"
+            url = 'http://reiseauskunft.bahn.de' + urlLater[1].replace( /&amp;/gi, "&" );
+        } else {
+            // No URL to later journeys found
+            break;
+        }
+    }
+}
+
+function getStopSuggestions( stop, maxCount, city  ) {
+    var url = "http://reiseauskunft.bahn.de/bin/ajax-getstop.exe/dn?REQ0JourneyStopsS0A=1" +
+            "&REQ0JourneyStopsS0G=" + stop;
+    var json = network.getSynchronous( url );
+
+    if ( !network.lastDownloadAborted() ) {
+        // Find all stop suggestions
+        var stopRegExp = /{"value":"([^"]*?)","id":"[^"]*?@L=([0-9]+)@[^"]*?"[^}]*?"weight":"(\d+)"[^}]*?}/ig;
+        while ( (stop = stopRegExp.exec(json)) ) {
+            result.addData({ StopName: stop[1], StopID: stop[2], StopWeight: stop[3] });
+        }
+        return result.hasData();
+    } else {
+        return false;
+    }
 }
 
 function parseTimetable( html ) {
+    print( "read in parseTimetable -> requestDateTime: " + requestDateTime );
     var returnValue = new Array;
     if ( html.indexOf('<p class="red">F&#252;r diese Haltestelle sind keine aktuellen Informationen verf&#252;gbar.</p>') != -1
-		|| html.indexOf('<p>Aktuelle Informationen zu Ihrer Reise sind nur 120 Minuten im Voraus m&#246;glich.</p>') != -1 ) 
-	{
-		returnValue.push( 'no delays' ); // No delay information available
-	}
-	
-	// Dates are set from today, not the requested date. They need to be adjusted by X days,
-	// where X is the difference in days between today and the requested date.
-	returnValue.push( 'dates need adjustment' );
+        || html.indexOf('<p>Aktuelle Informationen zu Ihrer Reise sind nur 120 Minuten im Voraus m&#246;glich.</p>') != -1 )
+    {
+        returnValue.push( 'no delays' ); // No delay information available
+    }
+
+    // Dates are set from today, not the requested date. They need to be adjusted by X days,
+    // where X is the difference in days between today and the requested date.
+    returnValue.push( 'dates need adjustment' );
 
     // Find block of departures
     var str = helper.extractBlock( html, '<table class="result stboard dep">', '</table>' );
     if ( str.length == 0 ) {
-		str = helper.extractBlock( html, '<table class="result stboard arr">', '</table>' );
+        str = helper.extractBlock( html, '<table class="result stboard arr">', '</table>' );
+        if ( str.length == 0 ) {
+            helper.error("Result table not found", html);
+            return;
+        }
     }
 
     // Initialize regular expressions (compile them only once)
@@ -69,666 +160,469 @@ function parseTimetable( html ) {
     var delayWithReasonRegExp = /<span><span style="[^"]*?">ca.&nbsp;(\d*)&nbsp;Minuten&nbsp;sp&#228;ter<\/span><\/span>,<br\/><span class="[^"]*?">Grund:\s*?([^<]*)<\/span>/i;
     var delayOnTimeRegExp = /<span style="[^"]*?">p&#252;nktlich<\/span>/i;
     var trainCanceledRegExp = /<span class="[^"]*?">Zug f&#228;llt aus<\/span>/i;
-    
-// println("DE_DB: Go through all departure blocks");
-	
-	// Store values to get the correct date of departures
-	var now = new Date();
-	var currentDate = [ now.getFullYear(), now.getMonth() + 1, now.getDate() ];
-	var lastHour = 0;
-	
+
+    // Store values to get the correct date of departures
+    var now = new Date();
+//     var currentDate = [ now.getFullYear(), now.getMonth() + 1, now.getDate() ];
+    var dateTime = now;
+    var lastHour = 0;
+
     // Go through all departure blocks
-	var departureNumber = 0;
     while ( (departureRow = departuresRegExp.exec(str)) ) {
-		departureRow = departureRow[1];
-// println("DE_DB: Next departure Row " + departureNumber);
+        departureRow = departureRow[1];
 
-		// Get column contents
-		var columns = new Array;
-		var columnMeanings = new Array;
-		var iTrain = 1;
-		while ( (col = columnsRegExp.exec(departureRow)) ) {
-			var meaning = col[1];
-			
-			if ( meaning == "train" ) {
-				meaning += iTrain;
-				++iTrain;
-			}
-			columns[ meaning ] = col[2];
-			columnMeanings.push( meaning );
-		}
-		
-		if ( !columnMeanings.contains("time") || !columnMeanings.contains("route")
-			|| !columnMeanings.contains("train1") || !columnMeanings.contains("train2") ) 
-		{
-			if ( departureRow.indexOf("<th") == -1 ) {
-				// There's only an error, if this isn't the header row of the table
-				helper.error("Didn't find all columns in a row of the result table!", departureRow == null ? "" : departureRow);
-			}
-			continue; // Not all columns where not found
-		}
-		
-		++departureNumber;
-			
-		// Initialize result variables with defaults
-		var time = 0, typeOfVehicle = "", transportLine = "", targetString = "", platformString = "",
-			delay = -1, delayReason = "", journeyNews = "",
-			routeStops = new Array, routeTimes = new Array, exactRouteStops = 0;
-			
-		// Parse time column
-		time = helper.matchTime( columns["time"], "hh:mm" );
-		if ( time.length != 2 ) {
-			helper.error("Unexpected string in time column", columns["time"] == null ? "" : columns["time"]);
-			continue;
-		}
-		
-		// TODO
-		// If 0 o'clock is passed between the last departure time and the current one, increase the date by one day.
-// 		println( "Time: " + time[0] + ":" + time[1] + ", departureNumber: " + departureNumber + ", now: " + now.getHours() );
-		if ( time[0] < lastHour - 3 || (departureNumber == 1 && time[0] < now.getHours() - 3) ) {
-			println( "Add one day to currentDate: " + currentDate[0] + "-" + currentDate[1] + "-" + currentDate[2] );
-			currentDate = helper.addDaysToDateArray( currentDate, 1 );
-			println( "+1 => " + currentDate[0] + "-" + currentDate[1] + "-" + currentDate[2]
-				+ ", because of A: " + (time[0] < (lastHour - 3 + 24) % 24)
-				+ ", B: " + (departureNumber == 1 && time[0] < now.getHours() - 3)
-				+ ", time is: " + time[0] + ":" + time[1]);
-		}
-		lastHour = time[0];
-		
-		// Parse type of vehicle column
-		if ( (typeOfVehicle = typeOfVehicleRegExp.exec(columns["train1"])) == null ) {
-			helper.error("Unexpected string in type of vehicle column", columns["train1"] == null ? "" : columns["train1"]);
-			continue; // Unexcepted string in type of vehicle column
-		}
-		typeOfVehicle = typeOfVehicle[1];
-		
-		// Parse transport line column
-		transportLine = helper.trim( helper.stripTags(columns["train2"]) );
+        // Get column contents
+        var columns = new Array;
+        var columnMeanings = new Array;
+        var iTrain = 1;
+        while ( (col = columnsRegExp.exec(departureRow)) ) {
+            var meaning = col[1];
 
-		// Parse route column ..
-		//  .. target
-		if ( (targetString = targetRegExp.exec(columns["route"])) == null ) {
-			helper.error("Unexpected string in target column", columns["route"] == null ? "" : columns["route"]);
-			continue; // Unexcepted string in target column
-		}
-		targetString = helper.trim( targetString[1] );
-		
-		// .. route
-		var route = columns["route"];
-		var posRoute = route.indexOf( "<br />" );
-		if ( posRoute != -1 ) {
-			route = route.substr( posRoute + 6 );
-			var routeBlocks = route.split( routeBlocksRegExp );
+            if ( meaning == "train" ) {
+                meaning += iTrain;
+                ++iTrain;
+            }
+            columns[ meaning ] = col[2];
+            columnMeanings.push( meaning );
+        }
 
-			if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) ) {
-				exactRouteStops = routeBlocks.length;
-			} else {
-				while ( (splitter = routeBlocksRegExp.exec(route)) ) {
-					++exactRouteStops;
-					if ( routeBlockEndOfExactRouteMarkerRegExp.test(splitter) )
-						break;
-				}
-			}
-			
-			for ( var n = 0; n < routeBlocks.length; ++n ) {
-				var lines = helper.splitSkipEmptyParts( routeBlocks[n], "\n" );
-				if ( lines.count < 2 )
-					continue;
+        if ( !columnMeanings.contains("time") || !columnMeanings.contains("route") ||
+             !columnMeanings.contains("train1") || !columnMeanings.contains("train2") )
+        {
+            if ( departureRow.indexOf("<th") == -1 ) {
+                // There's only an error, if this isn't the header row of the table
+                helper.error("Didn't find all columns in a row of the result table!", departureRow);
+            }
+            continue; // Not all columns where not found
+        }
 
-				routeStops.push( lines[0] );
-				routeTimes.push( lines[1] );
-			}
-		}
-		
-		// Parse platform column if any
-		if ( columnMeanings.contains("platform") ) {
-			var platformArr = platformRegExp.exec( columns["platform"] );
-			if ( platformArr != null )
-				platformString = helper.trim( platformArr[0] );
-		}
-		
-		// Parse delay column if any
-		if ( columnMeanings.contains("ris") ) {
-			if ( delayOnTimeRegExp.test(columns["ris"]) ) {
-				delay = 0;
-			} else if ( (delayArr = delayWithReasonRegExp.exec(columns["ris"])) ) {
-				delay = delayArr[1];
-				delayReason = delayArr[2];
-			} else if ( (delayArr = delayRegExp.exec(columns["ris"])) ) {
-				delay = delayArr[1];
-			} else if ( trainCanceledRegExp.test(columns["ris"]) ) {
-				var infoText = "Zug f&auml;llt aus.";
-				if ( journeyNews == "" )
-					journeyNews = infoText;
-				else
-					journeyNews += " " + infoText;
-			}
-		}
-		
-// println("DE_DB: Add departure");
-		// Add departure
-		timetableData.clear();
-// println("  DATA: " + transportLine);
-		timetableData.set( 'TransportLine', transportLine );
-// println("  DATA: " + typeOfVehicle);
-		timetableData.set( 'TypeOfVehicle', typeOfVehicle );
-// println("  DATA: " + targetString);
-		timetableData.set( 'Target', targetString );
-// println("  DATA: " + currentDate);
-		if ( currentDate == null ) {
-			helper.error("Error: currentDate is null!");
-		} else {
-			timetableData.set( 'DepartureDate', currentDate );
-		}
-// println("  DATA: " + time[0]);
-		timetableData.set( 'DepartureHour', time[0] );
-// println("  DATA: " + time[1]);
-		timetableData.set( 'DepartureMinute', time[1] );
-// println("  DATA: " + platformString);
-		timetableData.set( 'Platform', platformString );
-// println("  DATA: " + delay);
-		timetableData.set( 'Delay', delay );
-// println("  DATA: " + delayReason);
-		timetableData.set( 'DelayReason', delayReason );
-// println("  DATA: " + journeyNews);
-		timetableData.set( 'JourneyNews', journeyNews );
-// println("  DATA: " + routeStops);
-		timetableData.set( 'RouteStops', routeStops );
-// println("  DATA: " + routeTimes);
-		timetableData.set( 'RouteTimes', routeTimes );
-// println("  DATA: " + exactRouteStops);
-		timetableData.set( 'RouteExactStops', exactRouteStops );
-// println("___________________________________");
-		result.addData( timetableData );
+        // Initialize result variables with defaults
+        var departure = { RouteStops: new Array, RouteTimes: new Array, RouteExactStops: 0 };
+
+        // Parse time column
+        var time = QTime.fromString( columns["time"], "hh:mm" );
+        if ( !time.isValid() ) {
+            helper.error("Unexpected string in time column", columns["time"]);
+            continue;
+        }
+        // Update time of the dateTime object
+        dateTime.setHours( time.hour(), time.minute(), 0 );
+
+        // TODO
+        // If 0 o'clock is passed between the last departure time and the current one, increase the date by one day.
+// 		print( "Time: " + time[0] + ":" + time[1] + ", !result.hasData(): " + !result.hasData() + ", now: " + now.getHours() );
+        if ( dateTime.getHours() < lastHour - 3 ||
+            (!result.hasData() && dateTime.getHours() < now.getHours() - 3) )
+        {
+            print( "Add one day to departure date: " + dateTime.toDateString() );
+            dateTime = helper.addDaysToDate( dateTime, 1 );
+//             dateTime = new QDateTime( dateTime ).addDays( 1 );
+            print( "+1 => " + dateTime.toDateString()
+                + ", because of A: " + (dateTime.getHours() < (lastHour - 3 + 24) % 24)
+                + ", B: " + (!result.hasData() && dateTime.getHours() < now.getHours() - 3)
+                + ", time is: " + dateTime.toTimeString());
+        }
+        lastHour = dateTime.getHours();
+        departure.DepartureDateTime = dateTime;
+
+        // Parse type of vehicle column
+        if ( !(typeOfVehicle = typeOfVehicleRegExp.exec(columns["train1"])) ) {
+            helper.error("Unexpected string in type of vehicle column", columns["train1"]);
+            continue; // Unexcepted string in type of vehicle column
+        }
+        departure.TypeOfVehicle = typeOfVehicle[1];
+
+        // Parse transport line column
+        departure.TransportLine = helper.trim( helper.stripTags(columns["train2"]) );
+
+        // Parse route column:
+        // > Target information
+        if ( !(targetString = targetRegExp.exec(columns["route"])) ) {
+            helper.error("Unexpected string in target column", columns["route"]);
+            continue; // Unexcepted string in target column
+        }
+        departure.Target = helper.trim( targetString[1] );
+
+        // > Route information
+        var route = columns["route"];
+        var posRoute = route.indexOf( "<br />" );
+        if ( posRoute != -1 ) {
+            route = route.substr( posRoute + 6 );
+            var routeBlocks = route.split( routeBlocksRegExp );
+
+            if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) ) {
+                exactRouteStops = routeBlocks.length;
+            } else {
+                while ( (splitter = routeBlocksRegExp.exec(route)) ) {
+                    ++exactRouteStops;
+                    if ( routeBlockEndOfExactRouteMarkerRegExp.test(splitter) )
+                        break;
+                }
+            }
+
+            for ( var n = 0; n < routeBlocks.length; ++n ) {
+                if ( helper.trim(routeBlocks[n]).length <= 1 )
+                    continue; // Current routeBlock is the matched split part
+
+                var lines = helper.splitSkipEmptyParts( routeBlocks[n], "\n" );
+                if ( lines.count < 2 )
+                    continue;
+
+                departure.RouteStops.push( lines[0] );
+                departure.RouteTimes.push( lines[1] );
+            }
+        }
+
+        // Parse platform column if any
+        if ( columnMeanings.contains("platform") ) {
+            if ( (platformArr = platformRegExp.exec(columns["platform"])) )
+                departure.Platform = helper.trim( platformArr[0] );
+        }
+
+        // Parse delay column if any
+        if ( columnMeanings.contains("ris") ) {
+            if ( delayOnTimeRegExp.test(columns["ris"]) ) {
+                departure.Delay = 0;
+            } else if ( (delayArr = delayWithReasonRegExp.exec(columns["ris"])) ) {
+                departure.Delay = delayArr[1];
+                departure.DelayReason = delayArr[2];
+            } else if ( (delayArr = delayRegExp.exec(columns["ris"])) ) {
+                departure.Delay = delayArr[1];
+            } else if ( trainCanceledRegExp.test(columns["ris"]) ) {
+                var infoText = "Zug f&auml;llt aus.";
+                if ( departure.JourneyNews.length == 0 ) {
+                    departure.JourneyNews = infoText;
+                } else {
+                    departure.JourneyNews += " " + infoText;
+                }
+            }
+        } else {
+            departure.Delay = -1; // Unknown delay
+        }
+
+        // Add departure
+        result.addData( departure );
+
+//         if ( result.count() % 10 == 0 ) {
+//             result.publish( result );
+//         }
     }
 
     return returnValue;
 }
 
-function parseJourneys( code ) {
-    var useNewParsingCode = false;
-    if ( useNewParsingCode ) {
-		println( "--------- PARSE CODE FROM DB AFTER THEIR HALF-CLOSED SPECIFICATION ---------" );
-		println( "Received code: " + code );
-		
-		// Should always start with "BAHN_MNB.fm = {"
-		if ( code.indexOf("BAHN_MNB.fm = {") != 0 ) {
-			helper.error( "The received code doesn't start with \"BAHN_MNB.fm = {\"", code == null ? "" : code );
-		} else {
-			code = code.substr( 15 );
-			
-			var infoRegExp = /"(S|Z|E|fl)":\s*("[^"]*"|\[[^\]]*\])/ig;
-			var journeyListRegExp = /\{([^\}]*)\}/ig
-			var journeyRegExp = /"([^"]*)":\s*("[^"]*"|\d*)/ig;
-			
-			println( "SEARCH..." );
-			var startName = "", targetName = "", errorText = "", journeys = "";
-			while ( (info = infoRegExp.exec(code)) ) {
-				if ( info.length < 3 )
-					continue;
-				
-				var infoType = info[1];
-				var infoText = info[2];
-				
-				println( "FOUND: ''" + infoType + "'' : ''" + infoText.substr(0,100).replace(/\n/g, "\n     ") + "...''" );
-				
-				if ( infoType == "S" ) {
-					startName = infoText;
-				} else if ( infoType == "Z" ) {
-					targetName = infoText;
-				} else if ( infoType == "E" ) {
-					errorText = infoText;
-				} else if ( infoType == "fl" ) {
-					// Parse journey list
-					while ( (journeyList = journeyListRegExp.exec(infoText)) ) {
-						var journeyInfos = journeyList[1];
-						println( "FOUND JOURNEY INFOS: ''" + journeyInfos.replace(/\n/g, "\n     ") + "''" );
-						
-						var departureTime = "", departureDelay = -1, departureDelayReason = "";
-						var arrivalTime = "", arrivalDelay = -1, arrivalDelayReason = "";
-						var changes = -1, duration = "", platform = "", vehiclesShort = "", vehiclesLong = "";
-						// Parse journey
-						while ( (journey = journeyRegExp.exec(journeyInfos)) ) {
-							if ( info.journey < 3 )
-								continue;
-							
-							var journeyInfo = journey[1];
-							var journeyText = journey[2];
-							var journeyNumber = parseInt( journeyText );
-							
-							if ( journeyInfo == "ab" )
-								departureTime = journeyText;
-							else if ( journeyInfo == "abps" )
-								departureDelay = journeyNumber;
-							else if ( journeyInfo == "abpm" )
-								departureDelayReason = journeyText;
-							else if ( journeyInfo == "an" )
-								arrivalTime = journeyText;
-							else if ( journeyInfo == "anps" )
-								arrivalDelay = journeyNumber;
-							else if ( journeyInfo == "anpm" )
-								arrivalDelayReason = journeyText;
-							else if ( journeyInfo == "u" )
-								changes = journeyNumber;
-							else if ( journeyInfo == "d" )
-								duration = journeyText;
-							else if ( journeyInfo == "g" )
-								platform = journeyText;
-							else if ( journeyInfo == "ps" )
-								vehiclesShort = journeyText;
-							else if ( journeyInfo == "pl" )
-								vehiclesLong = journeyText;
-						}
-						journeyRegExp.lastIndex = 0; // Reset regexp
-						// All journey infos parsed here.
-
-						// Parse duration (in "hh:mm" format with double quotes) to number of minutes
-						if ( duration.length < 6 || duration.length > 7 ) {
-							helper.error( "Duration has wrong format, ie. not \"hh:mm\" or \"h:mm\" with double quotes.", duration );
-							continue;
-						}
-						
-						var pos = duration.indexOf( ':', 0 );
-						println( "DUR Hours: " + duration.substr(1, pos-1) + ", DUR Mins: " + duration.substr(pos+1, 2) );
-						var durationMinutes = parseInt(duration.substr(1, pos-1)) * 60 + parseInt(duration.substr(pos+1, 2));
-						
-						// Parse times
-						println( "PARSE DEP TIME " + departureTime );
-						var departureTimeInfos = helper.matchTime( departureTime, "hh:mm" );
-						if ( departureTimeInfos.length != 2 )
-							continue;
-						
-						println( "PARSE ARR TIME " + arrivalTime );
-						var arrivalTimeInfos = helper.matchTime( arrivalTime, "hh:mm" );
-						if ( arrivalTimeInfos.length != 2 )
-							continue;
-
-						// Add journey
-						timetableData.clear();
-						var typesOfVehicleInJourney = vehiclesLong.split(/,\s*/);
-						println( "TypesOfVehicleInJourney: " + typesOfVehicleInJourney );
-						println( "StartStopName: " + startName );
-						println( "TargetStopName: " + targetName );
-						println( "Departure Time: " + departureTimeInfos[0] + ":" + departureTimeInfos[1] );
-						println( "Arrival Time: " + arrivalTimeInfos[0] + ":" + arrivalTimeInfos[1] );
-						println( "Duration: " + durationMinutes + " Minutes" );
-						println( "Changes: " + changes );
-						timetableData.set( 'TypesOfVehicleInJourney', typesOfVehicleInJourney ); //vehiclesLong );
-				// 	    timetableData.set( 'RouteTypesOfVehicles', detailsResults.routeVehicleTypes );
-						timetableData.set( 'StartStopName', startName );
-						timetableData.set( 'TargetStopName', targetName );
-					// 	  timetableData.set( 'DepartureDate', departureDate );
-						timetableData.set( 'DepartureHour', departureTimeInfos[0] );
-						timetableData.set( 'DepartureMinute', departureTimeInfos[1] );
-					// 	  timetableData.set( 'ArrivalDate', arrivalDate );
-						timetableData.set( 'ArrivalHour', arrivalTimeInfos[0] );
-						timetableData.set( 'ArrivalMinute', arrivalTimeInfos[1] );
-						timetableData.set( 'Duration', durationMinutes );
-						timetableData.set( 'Changes', changes );
-				// 	    timetableData.set( 'Pricing', pricing );
-				// 	    timetableData.set( 'JourneyNews', detailsResults.journeyNews );
-				// 	    timetableData.set( 'RouteStops', detailsResults.routeStops );
-				// 	    timetableData.set( 'RoutePlatformsDeparture', detailsResults.routePlatformsDeparture );
-				// 	    timetableData.set( 'RoutePlatformsArrival', detailsResults.routePlatformsArrival );
-				// 	    timetableData.set( 'RouteTimesDeparture', detailsResults.routeTimesDeparture );
-				// 	    timetableData.set( 'RouteTimesArrival', detailsResults.routeTimesArrival );
-				// 	    timetableData.set( 'RouteTimesDepartureDelay', detailsResults.routeTimesDepartureDelay );
-				// 	    timetableData.set( 'RouteTimesArrivalDelay', detailsResults.routeTimesArrivalDelay );
-				// 	    timetableData.set( 'RouteTypesOfVehicles', detailsResults.routeVehicleTypes );
-				// 	    timetableData.set( 'RouteTransportLines', detailsResults.routeTransportLines );
-						result.addData( timetableData );
-						
-						println( "JOURNEY ADDED.\n\n\n" );
-					}
-				}
-			}
-      }
-      println("END");
-      return;
-    }
-
-
-    if ( code.indexOf("BAHN_MNB.fm = {") != -1 ) {
-		println("Warning: Using old html parsing code, but got data in new format");
-    }
-
-    //    OLD HTML PARSING CODE
-    var html = code;
-
+function parseJourneys( html ) {
     // Find block of journeys
     var str = helper.extractBlock( html, '<table class="result" cellspacing="0">',
-			    '<div id="hafasContentEnd">' );
+                '<div id="hafasContentEnd">' );
+    if ( str.length < 10 ) {
+        helper.error("Did not find the result table", html);
+    }
 
     // Initialize regular expressions (compile them only once)
     var journeysRegExp = /<tr class="\s*?firstrow">([\s\S]*?)<\/tr>[\s\S]*?<tr class="\s*?last">([\s\S]*?)<\/tr>/ig
     var nextJourneyBeginRegExp = /<tr class="\s*?firstrow">/i;
     var columnsRegExp = /<td class="([^"]*?)"[^>]*?>([\s\S]*?)<\/td>/ig;
     var startStopNameRegExp = /<div class="resultDep">\s*([^<]*?)\s*<\/div>/i;
-    var dateRegExp = /([0-9]{2}\.[0-9]{2}\.[0-9]{2})/i;
-    var durationRegExp = /(\d{1,2}:\d{2})/i;
+    var timeRegExp = /(\d{1,2}):(\d{2})/i;
+    var dateRegExp = /(\d{2}).(\d{2}).(\d{2,4})/;
     var vehicleTypesRegExp = /<span[^>]*?><a[^>]*?>(?:[^<]*?<img src="[^"]*?"[^>]*?>)?([^<]*?)<\/a><\/span>/i;
     var journeyDetailsRegExp = /<div id="[^"]*?" class="detailContainer[^"]*?">\s*?<table class="result">([\s\S]*?)<\/table>/ig;
 
     // Go through all journey blocks
-    while ( (journey = journeysRegExp.exec(str)) ) {
-	journeyRow1 = journey[1];
-	journeyRow2 = journey[2];
+    while ( (journeyRow = journeysRegExp.exec(str)) ) {
+        journeyRow1 = journeyRow[1];
+        journeyRow2 = journeyRow[2];
 
-	// Get column contents
-	var columns = new Array;
-	var columnMeanings = new Array;
-	while ( (col = columnsRegExp.exec(journeyRow1)) ) {
-	    var meaning = helper.trim(col[1].replace(/(lastrow|button-inside|tablebutton)/gi, '')) + 'Row1';
-	    columns[ meaning ] = col[2];
-	    columnMeanings.push( meaning );
-	}
-	columnsRegExp.lastIndex = 0;
+        // Get column contents
+        var columns = new Array;
+        var columnMeanings = new Array;
+        while ( (col = columnsRegExp.exec(journeyRow1)) ) {
+            var meaning = helper.trim(col[1].replace(/(lastrow|button-inside|tablebutton)/gi, '')) + 'Row1';
+            columns[ meaning ] = col[2];
+            columnMeanings.push( meaning );
+        }
+        columnsRegExp.lastIndex = 0;
 
-	while ( (col = columnsRegExp.exec(journeyRow2)) ) {
-	    var meaning = helper.trim(col[1]) + 'Row2';
-	    columns[ meaning ] = col[2];
-	    columnMeanings.push( meaning );
-	}
+        while ( (col = columnsRegExp.exec(journeyRow2)) ) {
+            var meaning = helper.trim(col[1]) + 'Row2';
+            columns[ meaning ] = col[2];
+            columnMeanings.push( meaning );
+        }
 
-	if ( !columnMeanings.contains("timeRow1")
-		|| !columnMeanings.contains("durationRow1")
-		|| !columnMeanings.contains("station firstRow1")
-		|| !columnMeanings.contains("station stationDestRow2") )
-	    continue; // Not all columns where not found
+        if ( !columnMeanings.contains("timeRow1") ||
+             !columnMeanings.contains("durationRow1") ||
+             !columnMeanings.contains("station firstRow1") ||
+             !columnMeanings.contains("station stationDestRow2") )
+        {
+            helper.error("Did not find all required columns",
+                         journeyRow1 + "  -  " + journeyRow2);
+            continue;
+        }
 
-	// Initialize result variables with defaults
-	var startStopName, targetStopName, departureDate, departureTime,
-	    arrivalDate, arrivalTime, typesOfVehicleInJourney = new Array,
-	    duration = "", pricing = "", changes;
-	    
-	// Parse start stop column
-	startStopName = startStopNameRegExp.exec( columns["station firstRow1"] );
-	if ( startStopName == null )
-	    continue; // Unexcepted string in start stop column
-	startStopName = startStopName[1];
+        // Initialize result variables with defaults
+        var journey = { TypesOfVehicleInJourney: new Array };
 
-	// Parse target stop column
-	targetStopName = helper.trim( columns["station stationDestRow2"] );
+        // Parse start/target stop column
+        if ( !(startStopName = startStopNameRegExp.exec(columns["station firstRow1"])) ) {
+            helper.error("Unexcepted string in start stop column", columns["station firstRow1"]);
+            continue;
+        }
+        journey.StartStopName = startStopName[1];
+        journey.TargetStopName = helper.trim( columns["station stationDestRow2"] );
 
-	// Parse departure date column
-	if ( (departureDate = dateRegExp.exec(columns["dateRow1"])) == null )
-	    continue; // Unexcepted string in departure date column
-	departureDate = departureDate[1];
+        // Parse departure/arrival date column TODO
+//         journey.DepartureDateTime = helper.matchDate( columns["dateRow1"], "dd.MM.yy" );
+//         journey.ArrivalDateTime = helper.matchDate( columns["dateRow2"], "dd.MM.yy" );
+        if ( !(departureDate = dateRegExp.exec(columns["dateRow1"])) ) {
+            helper.error("Unexcepted string in departure date column", columns["dateRow1"]);
+            continue;
+        }
+        var departureYear = parseInt( departureDate[3] );
+        journey.DepartureDate = new Date( departureYear < 100 ? departureYear + 2000 : departureYear,
+                                          parseInt(departureDate[2]) - 1, // month is zero based
+                                          parseInt(departureDate[1]) );
 
-	// Parse departure time column
-	departureTime = helper.matchTime( columns["timeRow1"], "hh:mm" );
-	if ( departureTime.length != 2 )
-	    continue;
+        if ( !(arrivalDate = dateRegExp.exec(columns["dateRow2"])) ) {
+            helper.error("Unexcepted string in arrival date column", columns["dateRow2"]);
+            continue;
+        }
+        var arrivalYear = parseInt( arrivalDate[3] );
+        journey.ArrivalDate = new Date( arrivalYear < 100 ? arrivalYear + 2000 : arrivalYear,
+                                        parseInt(arrivalDate[2]) - 1, // month is zero based
+                                        parseInt(arrivalDate[1]) );
 
-	// Parse arrival date column
-	if ( (arrivalDate = dateRegExp.exec(columns["dateRow2"])) == null )
-	    continue; // Unexcepted string in arrival date column
-	arrivalDate = arrivalDate[1];
+        // Parse departure time column // TODO parse delay
+//         var departureTime = columns["timeRow1"];
+//         var pos = departureTime.indexOf("\n");
+//         if ( pos > 0 ) {
+//             // Cut until line break
+//             departureTime = departureTime.substr( 0, pos );
+//         }
+//         journey.DepartureTime = QTime.fromString( helper.trim(departureTime), "hh:mm" );
+        if ( !(departureTime = timeRegExp.exec(columns["timeRow1"])) ) {
+//         if ( !journey.DepartureTime.isValid() ) {
+            helper.error("Unexcepted string in departure time column", columns["timeRow1"]);
+            continue;
+        }
+        journey.DepartureTime = new QTime( departureTime[1], departureTime[2] );
 
-	// Parse arrival time column
-	arrivalTime = helper.matchTime( columns["timeRow2"], "hh:mm" );
-	if ( arrivalTime.length != 2 )
-	    continue;
+        if ( !(arrivalTime = timeRegExp.exec(columns["timeRow2"])) ) {
+//         if ( !journey.DepartureTime.isValid() ) {
+            helper.error("Unexcepted string in arrival time column", columns["timeRow2"]);
+            continue;
+        }
+        journey.ArrivalTime = new QTime( arrivalTime[1], arrivalTime[2] );
 
-	// Parse duration column
-	if ( columnMeanings.contains("durationRow1") ) {
-	    duration = durationRegExp.exec( columns["durationRow1"] );
-	    if ( duration != null )
-		duration = duration[1];
-	}
+//         // Parse arrival time column // TODO parse delay
+//         var arrivalTime = columns["timeRow2"];
+//         var pos = arrivalTime.indexOf("\n");
+//         if ( pos > 0 ) {
+//             // Cut until line break
+//             arrivalTime = arrivalTime.substr( 0, pos );
+//         }
+//         journey.ArrivalTime = QTime.fromString( helper.trim(arrivalTime), "hh:mm" );
+//         if ( !journey.ArrivalTime.isValid() ) {
+//             helper.error("Unexcepted string in arrival time column", columns["timeRow2"]);
+//             continue;
+//         }
 
-	// Parse types of vehicles (products) column
-	if ( columnMeanings.contains("productsRow1") ) {
-	    var types = vehicleTypesRegExp.exec( columns["productsRow1"] );
-	    if ( types != null ) {
-		types = types[1];
-		types = types.split( /,/i );
-		for ( var n = 0; n < types.length; ++n )
-		    typesOfVehicleInJourney.push( helper.trim(types[n]) );
-	    } else {
-		// This is changed, test it TODO
-		types = helper.stripTags( columns["productsRow1"] ).split( /,/i );
-		for ( var n = 0; n < types.length; ++n )
-		    typesOfVehicleInJourney.push( helper.trim(types[n]) );
-	    }
-	}
+        // Parse duration column
+        if ( columnMeanings.contains("durationRow1") ) {
+            if ( (duration = timeRegExp.exec(columns["durationRow1"])) ) {
+                // Duration is a string in format "hh:mm"
+                journey.Duration = duration[1] * 60 + duration[2];
+            }
+        }
 
-	// Parse changes column
-	changes = helper.trim( columns["changesRow1"] );
+        // Parse types of vehicles (products) column
+        if ( columnMeanings.contains("productsRow1") ) {
+            var types = vehicleTypesRegExp.exec( columns["productsRow1"] );
+            if ( types ) {
+                types = types[1];
+                types = types.split( /,/i );
+                for ( var n = 0; n < types.length; ++n ) {
+                    journey.TypesOfVehicleInJourney.push( helper.trim(types[n]) );
+                }
+            } else {
+                // This is changed, test it TODO
+                types = helper.stripTags( columns["productsRow1"] ).split( /,/i );
+                for ( var n = 0; n < types.length; ++n ) {
+                    journey.TypesOfVehicleInJourney.push( helper.trim(types[n]) );
+                }
+            }
+        }
 
-	// Parse pricing column
-	if ( columnMeanings.contains("fareStdRow1") ) {
-	    pricing = helper.trim( helper.stripTags(columns["fareStdRow1"]) );
-	    pricing = pricing.replace( /(Zur&nbsp;Buchung|Zur&nbsp;Reservierung|\(Res. Info\)|Preisauskunft nicht m&#246;glich)/ig, '' );
-	}
+        // Parse changes column
+        journey.Changes = parseInt( helper.trim(columns["changesRow1"]) );
 
-	// Parse details if available
-	var detailsResults = new detailsResultsObject();
-	var str2 = str.substr( journeysRegExp.lastIndex );
-	var details = journeyDetailsRegExp.exec( str2 );
-	// Make sure that the details block belongs to the just parsed journey
-	var beginOfNextJourney = str2.search( nextJourneyBeginRegExp );
-	if ( details != null && (beginOfNextJourney < 0
-		|| journeyDetailsRegExp.lastIndex <= beginOfNextJourney) ) {
-	    details = details[1];
-	    parseJourneyDetails( details, detailsResults );
-	}
-	journeyDetailsRegExp.lastIndex = 0; // start from beginning next time
+        // Parse pricing column
+        if ( columnMeanings.contains("fareStdRow1") ) {
+            journey.Pricing = helper.trim( helper.stripTags(columns["fareStdRow1"]) );
+            journey.Pricing = journey.Pricing.replace( /(Zur&nbsp;Buchung|Zur&nbsp;Reservierung|\(Res. Info\)|Preisauskunft nicht m&#246;glich)/ig, '' );
+        }
 
-	// Add journey
-	timetableData.clear();
-	timetableData.set( 'TypesOfVehicleInJourney', typesOfVehicleInJourney );
-	timetableData.set( 'StartStopName', startStopName );
-	timetableData.set( 'TargetStopName', targetStopName );
-	timetableData.set( 'DepartureDate', departureDate );
-	timetableData.set( 'DepartureHour', departureTime[0] );
-	timetableData.set( 'DepartureMinute', departureTime[1] );
-	timetableData.set( 'ArrivalDate', arrivalDate );
-	timetableData.set( 'ArrivalHour', arrivalTime[0] );
-	timetableData.set( 'ArrivalMinute', arrivalTime[1] );
-	timetableData.set( 'Duration', duration );
-	timetableData.set( 'Changes', changes );
-	timetableData.set( 'Pricing', pricing );
-	timetableData.set( 'JourneyNews', detailsResults.journeyNews );
-	timetableData.set( 'RouteStops', detailsResults.routeStops );
-	timetableData.set( 'RoutePlatformsDeparture', detailsResults.routePlatformsDeparture );
-	timetableData.set( 'RoutePlatformsArrival', detailsResults.routePlatformsArrival );
-	timetableData.set( 'RouteTimesDeparture', detailsResults.routeTimesDeparture );
-	timetableData.set( 'RouteTimesArrival', detailsResults.routeTimesArrival );
-	timetableData.set( 'RouteTimesDepartureDelay', detailsResults.routeTimesDepartureDelay );
-	timetableData.set( 'RouteTimesArrivalDelay', detailsResults.routeTimesArrivalDelay );
-	timetableData.set( 'RouteTypesOfVehicles', detailsResults.routeVehicleTypes );
-	timetableData.set( 'RouteTransportLines', detailsResults.routeTransportLines );
-	result.addData( timetableData );
+        // Parse details if available
+        var detailsResults = new detailsResultsObject();
+        var str2 = str.substr( journeysRegExp.lastIndex );
+        var details = journeyDetailsRegExp.exec( str2 );
+        // Make sure that the details block belongs to the just parsed journey
+        var beginOfNextJourney = str2.search( nextJourneyBeginRegExp );
+        if ( details &&
+             (beginOfNextJourney < 0 || journeyDetailsRegExp.lastIndex <= beginOfNextJourney) )
+        {
+            parseJourneyDetails( details[1], detailsResults );
+        }
+        journeyDetailsRegExp.lastIndex = 0; // start from beginning next time
+
+        // Add journey
+        journey.JourneyNews = detailsResults.journeyNews;
+        journey.RouteStops = detailsResults.routeStops;
+        journey.RoutePlatformsDeparture = detailsResults.routePlatformsDeparture;
+        journey.RoutePlatformsArrival = detailsResults.routePlatformsArrival;
+        journey.RouteTimesDeparture = detailsResults.routeTimesDeparture;
+        journey.RouteTimesArrival = detailsResults.routeTimesArrival;
+        journey.RouteTimesDepartureDelay = detailsResults.routeTimesDepartureDelay;
+        journey.RouteTimesArrivalDelay = detailsResults.routeTimesArrivalDelay;
+        journey.RouteTypesOfVehicles = detailsResults.routeVehicleTypes;
+        journey.RouteTransportLines = detailsResults.routeTransportLines;
+        result.addData( journey );
     }
 }
 
 function parseJourneyDetails( details, resultObject ) {
-    // 	    var exactRouteStops = 0;
     var journeyNews = null;
     var journeyNewsRegExp = /<tr>\s*?<td colspan="8" class="red bold"[^>]*?>([\s\S]*?)<\/td>\s*?<\/tr>/i;
     if ( (journeyNews = journeyNewsRegExp.exec(details)) != null ) {
-		journeyNews = helper.trim( journeyNews[1] );
-		if ( journeyNews != '' )
-			resultObject.journeyNews = journeyNews;
+        journeyNews = helper.trim( journeyNews[1] );
+        if ( journeyNews != '' ) {
+            resultObject.journeyNews = journeyNews;
+        }
     }
 
     var headerEndRegExp = /<tr>\s*?<th>[\s\S]*?<\/tr>/ig;
-    if ( headerEndRegExp.exec(details) == null )
-		return;
+    if ( !headerEndRegExp.exec(details) ) {
+        return;
+    }
     var str = details.substr( headerEndRegExp.lastIndex );
 
     var lastStop = null, lastArrivalTime = '';
     var detailsBlockRegExp = /<tr>([\s\S]*?)<\/tr>\s*?<tr class="last">([\s\S]*?)<\/tr>/ig;
     var columnsContentsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
-//     var timeRegExp = /(\d{2}):(\d{2})/i;
     var timeCompleteRegExp = /(\d{2}:\d{2})/i;
     var delayRegExp = /<span[^>]*?>ca.&nbsp;\+(\d+?)&nbsp;Min.&nbsp;<\/span>/i;
     var delayOnScheduleRegExp = /<span[^>]*?>p&#252;nktlich<\/span>/i;
     var trainCanceledRegExp = /<span[^>]*?>Zug f&#228;llt aus<\/span>/i;
 
     while ( (detailsBlock = detailsBlockRegExp.exec(str)) ) {
-	detailsBlockRow1 = detailsBlock[1];
-	detailsBlockRow2 = detailsBlock[2];
+        detailsBlockRow1 = detailsBlock[1];
+        detailsBlockRow2 = detailsBlock[2];
 
-	var columnsRow1 = new Array;
-	var columnsRow2 = new Array;
-	while ( (col = columnsContentsRegExp.exec(detailsBlockRow1)) )
-	    columnsRow1.push( col[1] );
-	while ( (col = columnsContentsRegExp.exec(detailsBlockRow2)) )
-	    columnsRow2.push( col[1] );
+        var columnsRow1 = new Array;
+        var columnsRow2 = new Array;
+        while ( (col = columnsContentsRegExp.exec(detailsBlockRow1)) )
+            columnsRow1.push( col[1] );
+        while ( (col = columnsContentsRegExp.exec(detailsBlockRow2)) )
+            columnsRow2.push( col[1] );
 
-	if ( columnsRow1.count < 4 )
-	    break;
+        if ( columnsRow1.count < 4 )
+            break;
 
-	var routeStop = helper.trim( columnsRow1[0] );
+        var routeStop = helper.trim( columnsRow1[0] );
 
-	// Search for the vehicle type in the transport line column
-	// (including html entities, ie. '&#0245;' or '&uuml;')
-	var routeVehicleType = /(([abcdefghijklmnopqrstuvwxyz]|&#\d{2,5};|&\w{2,5};)+)/i.exec(
-		helper.stripTags(columnsRow1[5]) );
-	if ( routeVehicleType != null )
-	    routeVehicleType = helper.trim( routeVehicleType[1] );
+        // Search for the vehicle type in the transport line column
+        // (including html entities, ie. '&#0245;' or '&uuml;')
+        var routeVehicleType = /(([abcdefghijklmnopqrstuvwxyz]|&#\d{2,5};|&\w{2,5};)+)/i.exec(
+            helper.stripTags(columnsRow1[5]) );
+        if ( routeVehicleType != null )
+            routeVehicleType = helper.trim( routeVehicleType[1] );
 
-	var routePlatformDeparture = helper.trim( helper.stripTags(columnsRow1[4]) );
-	var routePlatformArrival = helper.trim( helper.stripTags(columnsRow2[4]) );
+        var routePlatformDeparture = helper.trim( helper.stripTags(columnsRow1[4]) );
+        var routePlatformArrival = helper.trim( helper.stripTags(columnsRow2[4]) );
 
-	var routeTransportLine;
-	var separatorPos = columnsRow1[5].search( /<br \/>/i );
-	if ( separatorPos <= 0 )
-	    routeTransportLine = helper.trim( helper.stripTags(columnsRow1[5]) );
-	else {
-	    // When the line of the vehicle changes during the journey,
-	    // both lines are written into the column, separated by <br />
-	    var line1 = columnsRow1[5].substr( 0, separatorPos );
-	    var line2 = columnsRow1[5].substr( separatorPos );
-	    routeTransportLine = helper.trim( helper.stripTags(line1) ) + ", "
-		    + helper.trim( helper.stripTags(line2) );
-	}
+        var routeTransportLine;
+        var separatorPos = columnsRow1[5].search( /<br \/>/i );
+        if ( separatorPos <= 0 )
+            routeTransportLine = helper.trim( helper.stripTags(columnsRow1[5]) );
+        else {
+            // When the line of the vehicle changes during the journey,
+            // both lines are written into the column, separated by <br />
+            var line1 = columnsRow1[5].substr( 0, separatorPos );
+            var line2 = columnsRow1[5].substr( separatorPos );
+            routeTransportLine = helper.trim( helper.stripTags(line1) ) + ", "
+                + helper.trim( helper.stripTags(line2) );
+        }
 
-	// Infos about canceled trains are given in the
-	// departure times column for some reason...
-	if ( trainCanceledRegExp.test(columnsRow1[3]) ) {
-	    var infoText = "Zug '" + routeTransportLine + "' f&auml;llt aus.";
-	    if ( resultObject.journeyNews == null )
-		resultObject.journeyNews = infoText;
-	    else
-		resultObject.journeyNews += " " + infoText;
+        // Infos about canceled trains are given in the
+        // departure times column for some reason...
+        if ( trainCanceledRegExp.test(columnsRow1[3]) ) {
+            var infoText = "Zug '" + routeTransportLine + "' f&auml;llt aus.";
+            if ( resultObject.journeyNews == null )
+            resultObject.journeyNews = infoText;
+            else
+            resultObject.journeyNews += " " + infoText;
 
-	    routeTransportLine += " <span style='color:red;'>Zug f&auml;llt aus</span>";
-	}
+            routeTransportLine += " <span style='color:red;'>Zug f&auml;llt aus</span>";
+        }
 
-	// If there's no departure time given, use the last arrival
-	// as departure (eg. when vehicle type is Feet).
-	var timeDeparture = timeCompleteRegExp.exec( columnsRow1[3] );
-	if ( timeDeparture != null )
-	    timeDeparture = timeDeparture[1];
-	else
-	    timeDeparture = lastArrivalTime;
+        // If there's no departure time given, use the last arrival
+        // as departure (eg. when vehicle type is Feet).
+        var timeDeparture = timeCompleteRegExp.exec( columnsRow1[3] );
+        if ( timeDeparture != null )
+            timeDeparture = timeDeparture[1];
+        else
+            timeDeparture = lastArrivalTime;
 
-	var delayDeparture = delayRegExp.exec( columnsRow1[3] );
-	if ( delayDeparture != null )
-	    delayDeparture = delayDeparture[1];
-	else if ( delayOnScheduleRegExp.test(columnsRow1[3]) )
-	    delayDeparture = 0;
-	else
-	    delayDeparture = -1;
+        var delayDeparture = delayRegExp.exec( columnsRow1[3] );
+        if ( delayDeparture != null )
+            delayDeparture = delayDeparture[1];
+        else if ( delayOnScheduleRegExp.test(columnsRow1[3]) )
+            delayDeparture = 0;
+        else
+            delayDeparture = -1;
 
-	var delayArrival = delayRegExp.exec( columnsRow2[3] );
-	if ( delayArrival != null )
-	    delayArrival = delayArrival[1];
-	else if ( delayOnScheduleRegExp.test(columnsRow2[3]) )
-	    delayArrival = 0;
-	else
-	    delayArrival = -1;
+        var delayArrival = delayRegExp.exec( columnsRow2[3] );
+        if ( delayArrival != null )
+            delayArrival = delayArrival[1];
+        else if ( delayOnScheduleRegExp.test(columnsRow2[3]) )
+            delayArrival = 0;
+        else
+            delayArrival = -1;
 
-	// If there's no arrival time given try to find the duration
-	// in the notes column and add it to the departure time (used for footways)
-	var timeArrival = timeCompleteRegExp.exec( columnsRow2[3] );
-	if ( timeArrival != null )
-	    timeArrival = timeArrival[1];
-	else {
-	    var timeArrivalParts = helper.matchTime( columnsRow2[3], "hh:mm" );
-	    var timeDepartureParts = helper.matchTime( timeDeparture, "hh:mm" );
-	    
-	    if ( timeArrivalParts.length < 2 && timeDepartureParts.length >= 2 ) {
-		var durationPart = /(\d*?) Min./i.exec( columnsRow1[6] );
-		if ( durationPart != null && parseInt(durationPart[1]) > 0 )
-		    timeArrival = helper.addMinsToTime( timeDeparture,
-				    parseInt(durationPart[1]), "hh:mm" );
-	    }
-	}
+        // If there's no arrival time given try to find the duration
+        // in the notes column and add it to the departure time (used for footways)
+        var timeArrival = timeCompleteRegExp.exec( columnsRow2[3] );
+        if ( timeArrival )
+            timeArrival = timeArrival[1];
+        else {
+            var timeArrivalParts = helper.matchTime( columnsRow2[3], "hh:mm" );
+            var timeDepartureParts = helper.matchTime( timeDeparture, "hh:mm" );
 
-	resultObject.routeStops.push( routeStop );
-	resultObject.routePlatformsDeparture.push( routePlatformDeparture );
-	resultObject.routePlatformsArrival.push( routePlatformArrival );
-	resultObject.routeVehicleTypes.push( routeVehicleType );
-	resultObject.routeTransportLines.push( routeTransportLine );
-	resultObject.routeTimesDeparture.push( timeDeparture );
-	resultObject.routeTimesDepartureDelay.push( delayDeparture );
-	resultObject.routeTimesArrival.push( timeArrival );
-	resultObject.routeTimesArrivalDelay.push( delayArrival );
+            if ( !timeArrivalParts.error && !timeDepartureParts.error ) {
+                var durationPart = /(\d*?) Min./i.exec( columnsRow1[6] );
+                if ( durationPart && parseInt(durationPart[1]) > 0 ) {
+                    timeArrival = helper.addMinsToTime( timeDeparture,
+                            parseInt(durationPart[1]), "hh:mm" );
+                }
+            }
+        }
 
-	lastStop = columnsRow2[0];
-	lastArrivalTime = timeArrival;
+        resultObject.routeStops.push( routeStop );
+        resultObject.routePlatformsDeparture.push( routePlatformDeparture );
+        resultObject.routePlatformsArrival.push( routePlatformArrival );
+        resultObject.routeVehicleTypes.push( routeVehicleType );
+        resultObject.routeTransportLines.push( routeTransportLine );
+        resultObject.routeTimesDeparture.push( timeDeparture );
+        resultObject.routeTimesDepartureDelay.push( delayDeparture );
+        resultObject.routeTimesArrival.push( timeArrival );
+        resultObject.routeTimesArrivalDelay.push( delayArrival );
+
+        lastStop = columnsRow2[0];
+        lastArrivalTime = timeArrival;
     }
 
-    if ( lastStop != null )
-		resultObject.routeStops.push( helper.trim(lastStop) );
-
+    if ( lastStop != null ) {
+        resultObject.routeStops.push( helper.trim(lastStop) );
+    }
     return true;
-}
-
-function parsePossibleStops( html ) {
-    if ( parsePossibleStops_1(html) )
-		return true;
-    else if ( parsePossibleStops_2(html) )
-		return true;
-    else
-		return false;
-}
-    
-function parsePossibleStops_1( html ) {
-    // Initialize regular expressions (compile them only once)
-    var stopRegExp = /{"value":"([^"]*?)","id":"[^"]*?@L=([0-9]+)@[^"]*?"[^}]*?"weight":"(\d+)"[^}]*?}/ig;
-
-    // Go through all stop options
-    while ( (stop = stopRegExp.exec(html)) ) {
-		var stopName = stop[1];
-		var stopID = stop[2];
-		var stopWeight = stop[3];
-		
-		// Add stop
-		timetableData.clear();
-		timetableData.set( 'StopName', stopName );
-		timetableData.set( 'StopID', stopID );
-		timetableData.set( 'StopWeight', stopWeight );
-		result.addData( timetableData );
-    }
-
-    return result.hasData();
-}
-
-function parsePossibleStops_2( html ) {
-    // Find block of stops
-    var pos = html.search( /<select class="locInput[^"]*?" name="REQ0JourneyStopsZ0K" id="REQ0JourneyStopsZ0K"[^>]*?>/i );
-    if ( pos == -1 )
-		return;
-    var end = html.indexOf( '</select>', pos + 1 );
-    var str = html.substr( pos, end - pos );
-
-    // Initialize regular expressions (compile them only once)
-    var stopRegExp = /<option value="[^"]*?">([^<]*?)<\/option>/ig;
-
-    // Go through all stop options
-    while ( (stop = stopRegExp.exec(str)) ) {
-	var stopName = stop[1];
-
-	// Add stop
-	timetableData.clear();
-	timetableData.set( 'StopName', stopName );
-	result.addData( timetableData );
-    }
-    
-    return result.hasData();
 }

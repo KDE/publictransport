@@ -209,7 +209,7 @@ function parseTimetable( html ) {
 }
 
 // This function parses a given HTML document for stop suggestions.
-function parsePossibleStops( html ) {
+function parseStopSuggestions( html ) {
     // Find block of stops
     var stopRangeRegExp = /<select class="error" name="input"[^>]*>([\s\S]*?)<\/select>/i;
 	var range = stopRangeRegExp.exec( html );

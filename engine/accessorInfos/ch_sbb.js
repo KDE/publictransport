@@ -685,17 +685,17 @@ function parseJourneys( html ) {
 	}
 }
 
-function parsePossibleStops( html ) {
-	if ( parsePossibleStops_1(html) ) {
+function parseStopSuggestions( html ) {
+	if ( parseStopSuggestions_1(html) ) {
 		return true;
-	} else if ( parsePossibleStops_2(html) ) {
+	} else if ( parseStopSuggestions_2(html) ) {
 		return true;
 	} else {
 		return false;
 	}
 }
 
-function parsePossibleStops_1( html ) {
+function parseStopSuggestions_1( html ) {
 	// Find block of stops
     var pos = html.search( /<select [^>]*name="input"[^>]*?>/i );
     if ( pos == -1 ) {
@@ -722,7 +722,7 @@ function parsePossibleStops_1( html ) {
 	return result.hasData();
 }
 
-function parsePossibleStops_2( html ) {
+function parseStopSuggestions_2( html ) {
 	// Find block of stops
 	var pos = html.search( /<select [^>]*name="REQ0JourneyStopsZ0K"[^>]*?>/i );
 	if ( pos == -1 ) {

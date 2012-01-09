@@ -190,12 +190,12 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
     QString sInfo = sTimetableInformation.toLower();
     if ( sInfo == "nothing" ) {
         return Nothing;
+    } else if ( sInfo == "departuredatetime" ) {
+        return DepartureDateTime;
     } else if ( sInfo == "departuredate" ) {
         return DepartureDate;
-    } else if ( sInfo == "departurehour" ) {
-        return DepartureHour;
-    } else if ( sInfo == "departureminute" ) {
-        return DepartureMinute;
+    } else if ( sInfo == "departuretime" ) {
+        return DepartureTime;
     } else if ( sInfo == "typeofvehicle" ) {
         return TypeOfVehicle;
     } else if ( sInfo == "transportline" ) {
@@ -216,14 +216,8 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
         return JourneyNewsOther;
     } else if ( sInfo == "journeynewslink" ) {
         return JourneyNewsLink;
-    } else if ( sInfo == "departurehourprognosis" ) {
-        return DepartureHourPrognosis;
-    } else if ( sInfo == "departureminuteprognosis" ) {
-        return DepartureMinutePrognosis;
     } else if ( sInfo == "status" ) {
         return Status;
-    } else if ( sInfo == "departureyear" ) {
-        return DepartureYear;
     } else if ( sInfo == "routestops" ) {
         return RouteStops;
     } else if ( sInfo == "routetimes" ) {
@@ -248,12 +242,6 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
         return RouteTimesArrivalDelay;
     } else if ( sInfo == "operator" ) {
         return Operator;
-    } else if ( sInfo == "departureamorpm" ) {
-        return DepartureAMorPM;
-    } else if ( sInfo == "departureamorpmprognosis" ) {
-        return DepartureAMorPMPrognosis;
-    } else if ( sInfo == "arrivalamorpm" ) {
-        return ArrivalAMorPM;
     } else if ( sInfo == "duration" ) {
         return Duration;
     } else if ( sInfo == "startstopname" ) {
@@ -264,12 +252,12 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
         return TargetStopName;
     } else if ( sInfo == "targetstopid" ) {
         return TargetStopID;
+    } else if ( sInfo == "arrivaldatetime" ) {
+        return ArrivalDateTime;
     } else if ( sInfo == "arrivaldate" ) {
         return ArrivalDate;
-    } else if ( sInfo == "arrivalhour" ) {
-        return ArrivalHour;
-    } else if ( sInfo == "arrivalminute" ) {
-        return ArrivalMinute;
+    } else if ( sInfo == "arrivaltime" ) {
+        return ArrivalTime;
     } else if ( sInfo == "changes" ) {
         return Changes;
     } else if ( sInfo == "typesofvehicleinjourney" ) {
@@ -278,8 +266,6 @@ TimetableInformation TimetableAccessor::timetableInformationFromString(
         return Pricing;
     } else if ( sInfo == "isnightline" ) {
         return IsNightLine;
-    } else if ( sInfo == "nomatchonschedule" ) {
-        return NoMatchOnSchedule;
     } else if ( sInfo == "stopname" ) {
         return StopName;
     } else if ( sInfo == "stopid" ) {
@@ -301,7 +287,7 @@ QStringList TimetableAccessor::features() const
 {
     QStringList list;
 
-    if ( m_info->departureRawUrl().contains( "{dataType}" ) ) {
+    if ( m_info->departureRawUrl().contains("{dataType}") ) {
         list << "Arrivals";
     }
 
@@ -413,138 +399,23 @@ QStringList TimetableAccessor::featuresLocalized() const
     return featuresl10n;
 }
 
-KIO::StoredTransferJob *TimetableAccessor::requestDepartures( const QString &sourceName,
-        const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime,
-        const QString &dataType, bool usedDifferentUrl )
+void TimetableAccessor::requestDepartures(
+        const DepartureRequestInfo &requestInfo )
 {
-    if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty()
-        && m_sessionKeyGetTime.elapsed() > 500 )
-    {
-        kDebug() << "Request a session key";
-        requestSessionKey( ParseForSessionKeyThenDepartures, m_info->sessionKeyUrl(), sourceName,
-                           city, stop, maxCount, dateTime, dataType, usedDifferentUrl );
-        return NULL;
-    }
-
-    if ( !m_idAlreadyRequested &&
-        m_info->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) &&
-        m_info->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "true" )
-    {
-        kDebug() << "Request a stop ID";
-        m_idAlreadyRequested = true;
-        requestStopSuggestions( sourceName, city, stop, ParseForStopIdThenDepartures, maxCount,
-                                dateTime, dataType, usedDifferentUrl );
-        return NULL;
-    }
-    m_idAlreadyRequested = false;
-
-    KUrl url = getUrl( city, stop, maxCount, dateTime, dataType, usedDifferentUrl );
-    KIO::StoredTransferJob *job; // = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-    if ( m_info->attributesForDepatures()[QLatin1String("method")]
-            .compare(QLatin1String("post"), Qt::CaseInsensitive) != 0 )
-    {
-        job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-    } else if ( m_info->attributesForDepatures().contains(QLatin1String("data")) ) {
-        QString sData = m_info->attributesForDepatures()[QLatin1String("data")];
-        sData.replace( QLatin1String("{city}"), city );
-        sData.replace( QLatin1String("{stop}"), stop );
-
-        QString sDataType;
-        if ( dataType == "arrivals" ) {
-            sDataType = "arr";
-        } else if ( dataType == "departures" || dataType == "journeys" ) {
-            sDataType = "dep";
-        }
-
-        QString sCity = m_info->mapCityNameToValue( city );
-        QString sStop = stop;
-
-        // Encode city and stop
-        if ( charsetForUrlEncoding().isEmpty() ) {
-            sCity = QString::fromAscii( QUrl::toPercentEncoding(sCity) );
-            sStop = QString::fromAscii( QUrl::toPercentEncoding(sStop) );
-        } else {
-            sCity = toPercentEncoding( sCity, charsetForUrlEncoding() );
-            sStop = toPercentEncoding( sStop, charsetForUrlEncoding() );
-        }
-
-        // Construct the data
-        QByteArray data;
-        if ( useSeparateCityValue() ) {
-            sData = sData.replace( "{city}", sCity );
-        }
-        sData = sData.replace( "{time}", dateTime.time().toString("hh:mm") )
-                .replace( "{timestamp}", QString::number(dateTime.toTime_t()) )
-                .replace( "{maxCount}", QString::number(maxCount).toLatin1() )
-                .replace( "{stop}", sStop.toLatin1() )
-                .replace( "{dataType}", sDataType.toLatin1() );
-
-        QRegExp rx = QRegExp( "\\{date:([^\\}]*)\\}", Qt::CaseInsensitive );
-        if ( rx.indexIn(sData) != -1 ) {
-            sData.replace( rx, dateTime.date().toString(rx.cap(1)) );
-        }
-
-        job = KIO::storedHttpPost( QByteArray(), url, KIO::HideProgressInfo );
-        if ( m_info->attributesForDepatures().contains(QLatin1String("contenttype")) ) {
-            job->addMetaData( "content-type", QString("Content-Type: %1")
-                    .arg(m_info->attributesForDepatures()[QLatin1String("contenttype")]) );
-        }
-        if ( m_info->attributesForDepatures().contains(QLatin1String("charset")) ) {
-            QString sCodec = m_info->attributesForDepatures()[QLatin1String("charset")];
-            job->addMetaData( "Charsets", sCodec );
-            QTextCodec *codec = QTextCodec::codecForName( sCodec.toUtf8() );
-            if ( !codec ) {
-                job->setData( sData.toUtf8() );
-            } else {
-                kDebug() << "Codec:" << sCodec << "couldn't be found to encode the data "
-                        "to post, now using UTF-8";
-                job->setData( codec->fromUnicode(sData) );
-            }
-        } else {
-            // No charset specified, use UTF8
-            job->setData( sData.toUtf8() );
-        }
-
-        if ( m_info->attributesForDepatures().contains(QLatin1String("accept")) ) {
-            job->addMetaData( "accept", m_info->attributesForDepatures()[QLatin1String("accept")] );
-        }
-    } else {
-        kDebug() << "No \"data\" attribute given in the <departures>-tag in"
-                 << m_info->fileName() << "but method is \"post\".";
-        return NULL;
-    }
-
-    // Add the session key
-    switch ( m_info->sessionKeyPlace() ) {
-    case PutIntoCustomHeader:
-        kDebug() << "Using custom HTTP header" << QString("%1: %2").arg(m_info->sessionKeyData()).arg(m_sessionKey);
-        job->addMetaData( "customHTTPHeader", QString("%1: %2").arg(m_info->sessionKeyData()).arg(m_sessionKey) );
-        break;
-
-    case PutNowhere:
-    default:
-        // Don't use a session key
-        break;
-    }
-
-    ParseDocumentMode parseMode = maxCount == -1
-            ? ParseForStopSuggestions : ParseForDeparturesArrivals;
-    m_jobInfos.insert( job, JobInfos(parseMode, sourceName, city, stop, url,
-                                     dataType, maxCount, dateTime, usedDifferentUrl) );
-
-    connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
-    return job;
+    kDebug() << "Not implemented";
+    return;
 }
 
-KIO::StoredTransferJob* TimetableAccessor::requestSessionKey( ParseDocumentMode parseMode,
-        const KUrl &url, const QString &sourceName, const QString &city, const QString &stop,
-        int maxCount, const QDateTime &dateTime, const QString &dataType, bool usedDifferentUrl )
+void TimetableAccessor::requestSessionKey( ParseDocumentMode parseMode, const KUrl &url,
+                                           const RequestInfo *requestInfo )
 {
-    KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-    m_jobInfos.insert( job, JobInfos(parseMode, sourceName, city, stop,
-                                     url, dataType, maxCount, dateTime, usedDifferentUrl) );
-    connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
-    return job;
+//     KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
+//     m_jobInfos.insert( job, JobInfos(parseMode, sourceName, city, stop,
+//                                      url, dataType, maxCount, dateTime, usedDifferentUrl) );
+//     connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
+//     return job;
+    kDebug() << "Not implemented";
+    return;
 }
 
 void TimetableAccessor::clearSessionKey()
@@ -552,300 +423,217 @@ void TimetableAccessor::clearSessionKey()
     m_sessionKey.clear();
 }
 
-KIO::StoredTransferJob* TimetableAccessor::requestStopSuggestions( const QString &sourceName,
-    const QString &city, const QString &stop, ParseDocumentMode parseMode, int maxCount,
-    const QDateTime &dateTime, const QString &dataType, bool usedDifferentUrl )
+void TimetableAccessor::requestStopSuggestions(
+        const StopSuggestionRequestInfo &requestInfo )
 {
-    if ( !m_info->sessionKeyUrl().isEmpty() && m_sessionKey.isEmpty()
-        && m_sessionKeyGetTime.elapsed() > 500 )
-    {
-        kDebug() << "Request a session key";
-        requestSessionKey( ParseForSessionKeyThenStopSuggestions, m_info->sessionKeyUrl(),
-                           sourceName, city, stop );
-        return NULL;
-    }
-
-    if ( hasSpecialUrlForStopSuggestions() ) {
-        KUrl url = getStopSuggestionsUrl( city, stop );
-        // TODO Use post-stuff also for (departures.. done) / journeys
-        KIO::StoredTransferJob *job;
-        if ( m_info->attributesForStopSuggestions()[QLatin1String("method")]
-                .compare(QLatin1String("post"), Qt::CaseInsensitive) != 0 )
-        {
-            job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-        } else if ( m_info->attributesForStopSuggestions().contains(QLatin1String("data")) ) {
-            QString sData = m_info->attributesForStopSuggestions()[QLatin1String("data")];
-            sData.replace( QLatin1String("{city}"), city );
-            sData.replace( QLatin1String("{stop}"), stop );
-            sData.replace( "{timestamp}", QString::number(dateTime.toTime_t()) );
-            QByteArray data;
-            if ( m_info->attributesForStopSuggestions().contains(QLatin1String("charset")) ) {
-                QString sCodec = m_info->attributesForStopSuggestions()[QLatin1String("charset")];
-//                 job->addMetaData( "Charsets", sCodec );
-//                 job->addMetaData( "Charsets", "ISO-8859-1,utf-8" );
-                QTextCodec *codec = QTextCodec::codecForName( sCodec.toUtf8() );
-                if ( !codec ) {
-                    kDebug() << "Codec:" << sCodec << "couldn't be found to encode the data "
-                            "to post, now using UTF-8";
-                    data = sData.toUtf8();
-                } else {
-                    data = codec->fromUnicode( sData );
-                }
-
-                kDebug() << "Post this data" << data;
-            } else {
-                // No codec specified, use UTF8
-                data = sData.toUtf8();
-            }
-
-            job =  KIO::storedHttpPost( data, url, KIO::HideProgressInfo );
-            if ( m_info->attributesForStopSuggestions().contains(QLatin1String("contenttype")) ) {
-                job->addMetaData( "content-type", QString("Content-Type: %1")
-                        .arg(m_info->attributesForStopSuggestions()[QLatin1String("contenttype")]) );
-            }
-            if ( m_info->attributesForStopSuggestions().contains(QLatin1String("acceptcharset")) ) {
-                QString sCodec = m_info->attributesForStopSuggestions()[QLatin1String("acceptcharset")];
-                job->addMetaData( "Charsets", sCodec );
-            }
-            if ( m_info->attributesForStopSuggestions().contains(QLatin1String("accept")) ) {
-                job->addMetaData( "accept", m_info->attributesForStopSuggestions()[QLatin1String("accept")] );
-            }
-        } else {
-            kDebug() << "No \"data\" attribute given in the <stopSuggestions>-tag in"
-                     << m_info->fileName() << "but method is \"post\".";
-            return NULL;
-        }
-        if ( parseMode == ParseForStopIdThenDepartures ) {
-            m_jobInfos.insert( job, JobInfos(parseMode, sourceName, city, stop, url,
-                                             dataType, maxCount, dateTime, usedDifferentUrl ) );
-        } else {
-            m_jobInfos.insert( job, JobInfos(ParseForStopSuggestions, sourceName, city, stop, url) );
-        }
-
-        // Add the session key
-        switch ( m_info->sessionKeyPlace() ) {
-        case PutIntoCustomHeader:
-            kDebug() << "Using custom HTTP header" << QString("%1: %2").arg(m_info->sessionKeyData()).arg(m_sessionKey);
-            job->addMetaData( "customHTTPHeader", QString("%1: %2").arg(m_info->sessionKeyData()).arg(m_sessionKey) );
-            break;
-
-        case PutNowhere:
-        default:
-            // Don't use a session key
-            break;
-        }
-
-        connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
-        return job;
-    } else {
-        return requestDepartures( sourceName, city, stop, -1, QDateTime::currentDateTime() );
-    }
+    kDebug() << "Not implemented";
+    return;
 }
 
-KIO::StoredTransferJob *TimetableAccessor::requestJourneys( const QString &sourceName,
-        const QString &city, const QString &startStopName,
-        const QString &targetStopName, int maxCount,
-        const QDateTime &dateTime, const QString &dataType,
-        bool usedDifferentUrl )
+void TimetableAccessor::requestJourneys( const JourneyRequestInfo &requestInfo )
 {
-    // Creating a kioslave
-    KUrl url = getJourneyUrl( city, startStopName, targetStopName, maxCount,
-                              dateTime, dataType, usedDifferentUrl );
-    KIO::StoredTransferJob *job = requestJourneys( url );
-    m_jobInfos.insert( job, JobInfos(ParseForJourneys, sourceName, city, startStopName, url,
-                                     dataType, maxCount, dateTime, usedDifferentUrl, targetStopName) );
-
-    return job;
+//     // Creating a kioslave
+//     KUrl url = getJourneyUrl( city, startStopName, targetStopName, maxCount,
+//                               dateTime, dataType, usedDifferentUrl );
+//     KIO::StoredTransferJob *job = requestJourneys( url );
+//     m_jobInfos.insert( job, JobInfos(ParseForJourneys, sourceName, city, startStopName, url,
+//                                      dataType, maxCount, dateTime, usedDifferentUrl, targetStopName) );
+//
+//     return job;
+    kDebug() << "Not implemented";
+    return;
 }
 
-KIO::StoredTransferJob* TimetableAccessor::requestJourneys( const KUrl& url )
-{
-//     kDebug() << url;
+// void TimetableAccessor::requestJourneys( const KUrl& url )
+// {
+// //     kDebug() << url;
+// /*
+//     KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
+//     connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
+//
+//     return job;*/
+//     kDebug() << "Not implemented";
+//     return 0;
+// }
 
-    KIO::StoredTransferJob *job = KIO::storedGet( url, KIO::NoReload, KIO::HideProgressInfo );
-    connect( job, SIGNAL(result(KJob*)), this, SLOT(result(KJob*)) );
-
-    return job;
-}
-
-void TimetableAccessor::result( KJob* job )
-{
-    JobInfos jobInfo = m_jobInfos.value( job );
-    m_jobInfos.remove( job );
-    KIO::StoredTransferJob *storedJob = static_cast< KIO::StoredTransferJob* >( job );
-    QByteArray document = storedJob->data();
-
-    QList< PublicTransportInfo* > dataList;
-    QList< StopInfo* > stopList;
-    ParseDocumentMode parseDocumentMode = jobInfo.parseDocumentMode;
-    GlobalTimetableInfo globalInfo;
-    globalInfo.requestDate = jobInfo.dateTime.date();
-    kDebug() << "Finished:" << parseDocumentMode << jobInfo.sourceName << jobInfo.url;
-
-    if ( storedJob->error() != 0 ) {
-        kDebug() << "Error in job:" << storedJob->error() << storedJob->errorString();
-        emit errorParsing( this, ErrorDownloadFailed, storedJob->errorString(),
-                           jobInfo.url, serviceProvider(), jobInfo.sourceName,
-                           jobInfo.city, jobInfo.stop, jobInfo.dataType,
-                           parseDocumentMode );
-    }
-
-    if ( parseDocumentMode == ParseForStopSuggestions ) {
-        // A stop suggestion request has finished
-        if ( parseDocumentPossibleStops(document, &stopList) ) {
-            emit stopListReceived( this, jobInfo.url, stopList,
-                                   serviceProvider(), jobInfo.sourceName, jobInfo.city,
-                                   jobInfo.stop, QString(), parseDocumentMode );
-        } else {
-            kDebug() << "Error parsing for stop suggestions" << jobInfo.sourceName;
-            emit errorParsing( this, ErrorParsingFailed,
-                               i18n("Error while parsing the timetable document."),
-                               jobInfo.url, serviceProvider(), jobInfo.sourceName,
-                               jobInfo.city, jobInfo.stop, QString(), parseDocumentMode );
-        }
-
-        return;
-    } else if ( parseDocumentMode == ParseForStopIdThenDepartures ) {
-        kDebug() << "MODE IS CURRENTLY" << parseDocumentMode;
-        if ( parseDocumentPossibleStops(document, &stopList) ) {
-            if ( stopList.isEmpty() ) {
-                kDebug() << "No stop suggestions got to get an ID to use to get departures";
-            } else {
-                // Use the ID of the first suggested stop to get departures
-                if ( !stopList.first()->contains(StopID) ) {
-                    kDebug() << "No stop ID found for the given stop name, now requesting departures using the stop name";
-                    requestDepartures( jobInfo.sourceName, jobInfo.city, jobInfo.stop,
-                                    jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,
-                                    jobInfo.usedDifferentUrl );
-                } else {
-                    requestDepartures( jobInfo.sourceName, jobInfo.city, stopList.first()->id(),
-                                    jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,
-                                    jobInfo.usedDifferentUrl );
-                }
-                return;
-            }
-        } else {
-            kDebug() << "Error parsing for stop suggestions to get an ID to use to get departure" << jobInfo.sourceName;
-            emit errorParsing( this, ErrorParsingFailed,
-                               i18n("Error while parsing the timetable document."),
-                               jobInfo.url, serviceProvider(), jobInfo.sourceName,
-                               jobInfo.city, jobInfo.stop, QString(), parseDocumentMode );
-        }
-    } else if ( parseDocumentMode == ParseForSessionKeyThenStopSuggestions ||
-                parseDocumentMode == ParseForSessionKeyThenDepartures )
-    {
-        if ( !(m_sessionKey = parseDocumentForSessionKey(document)).isEmpty() ) {
-            emit sessionKeyReceived( this, m_sessionKey );
-
-            if ( !m_sessionKey.isEmpty() ) {
-                // Now request stop suggestions using the session key
-                if ( parseDocumentMode == ParseForSessionKeyThenStopSuggestions ) {
-                    requestStopSuggestions( jobInfo.sourceName, jobInfo.city, jobInfo.stop );
-                } else if ( parseDocumentMode == ParseForSessionKeyThenDepartures ) {
-                    requestDepartures( jobInfo.sourceName, jobInfo.city, jobInfo.stop,
-                                       jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,
-                                       jobInfo.usedDifferentUrl );
-                }
-                m_sessionKeyGetTime.start();
-
-                // Clear the session key after a timeout
-                QTimer::singleShot( 5 * 60000, this, SLOT(clearSessionKey()) );
-            }
-        } else {
-            kDebug() << "Error getting a session key" << jobInfo.sourceName;
-        }
-        return;
-    }
-
-    m_curCity = jobInfo.city;
-//     kDebug() << "usedDifferentUrl" << jobInfo.usedDifferentUrl;
-    if ( !jobInfo.usedDifferentUrl ) {
-        QString sNextUrl;
-        if ( parseDocumentMode == ParseForJourneys ) {
-            if ( jobInfo.roundTrips < 2 ) {
-                sNextUrl = parseDocumentForLaterJourneysUrl( document );
-            } else if ( jobInfo.roundTrips == 2 ) {
-                sNextUrl = parseDocumentForDetailedJourneysUrl( document );
-            }
-        }
-//         kDebug() << "Parse results" << parseDocumentMode;
-
-        // Try to parse the document
-        if ( parseDocument(document, &dataList, &globalInfo, parseDocumentMode) ) {
-            if ( parseDocumentMode == ParseForDeparturesArrivals ) {
-                QList<DepartureInfo*> departures;
-                foreach( PublicTransportInfo *info, dataList )
-                departures << dynamic_cast< DepartureInfo* >( info );
-                emit departureListReceived( this, jobInfo.url, departures, globalInfo,
-                                            serviceProvider(), jobInfo.sourceName,
-                                            jobInfo.city, jobInfo.stop, jobInfo.dataType,
-                                            parseDocumentMode );
-            } else if ( parseDocumentMode == ParseForJourneys ) {
-                QList<JourneyInfo*> journeys;
-                foreach( PublicTransportInfo *info, dataList )
-                journeys << dynamic_cast< JourneyInfo* >( info );
-                emit journeyListReceived( this, jobInfo.url, journeys, globalInfo,
-                                          serviceProvider(), jobInfo.sourceName,
-                                          jobInfo.city, jobInfo.stop, jobInfo.dataType,
-                                          parseDocumentMode );
-            }
-            // Parsing has failed, try to parse stop suggestions.
-            // First request departures using a different url if that is a special
-            // url for stop suggestions.
-        } else if ( hasSpecialUrlForStopSuggestions() ) {
-            requestDepartures( jobInfo.sourceName, m_curCity, jobInfo.stop,
-                               jobInfo.maxCount, jobInfo.dateTime,
-                               jobInfo.dataType, true );
-            // Parse for stop suggestions
-        } else if ( parseDocumentPossibleStops(document, &stopList) ) {
-            kDebug() << "Stop suggestion list received" << parseDocumentMode;
-            emit stopListReceived( this, jobInfo.url, stopList,
-                                   serviceProvider(), jobInfo.sourceName,
-                                   jobInfo.city, jobInfo.stop, jobInfo.dataType,
-                                   parseDocumentMode );
-        } else { // All parsing has failed
-            emit errorParsing( this, ErrorParsingFailed, i18n( "Error while parsing." ),
-                               jobInfo.url, serviceProvider(), jobInfo.sourceName,
-                               jobInfo.city, jobInfo.stop, jobInfo.dataType,
-                               parseDocumentMode );
-        }
-
-        if ( parseDocumentMode == ParseForJourneys ) {
-            if ( !sNextUrl.isNull() && !sNextUrl.isEmpty() ) {
-                kDebug() << "Request parsed url:" << sNextUrl;
-                ++jobInfo.roundTrips;
-                KIO::StoredTransferJob *job = requestJourneys( KUrl( sNextUrl ) );
-                m_jobInfos.insert( job, JobInfos(ParseForJourneys, jobInfo.sourceName,
-                                jobInfo.city, jobInfo.stop, jobInfo.url, jobInfo.dataType,
-                                jobInfo.maxCount, jobInfo.dateTime, jobInfo.usedDifferentUrl,
-                                jobInfo.targetStop, jobInfo.roundTrips) );
+// void TimetableAccessor::result( KJob* job )
+// {
+//     JobInfos jobInfo = m_jobInfos.value( job );
+//     m_jobInfos.remove( job );
+//     KIO::StoredTransferJob *storedJob = static_cast< KIO::StoredTransferJob* >( job );
+//     QByteArray document = storedJob->data();
+//
+//     QList< PublicTransportInfo* > dataList;
+//     QList< StopInfo* > stopList;
+//     ParseDocumentMode parseDocumentMode = jobInfo.parseDocumentMode;
+//     GlobalTimetableInfo globalInfo;
+//     globalInfo.requestDate = jobInfo.dateTime.date();
+//     kDebug() << "Finished:" << parseDocumentMode << jobInfo.sourceName << jobInfo.url;
+//
+//     if ( storedJob->error() != 0 ) {
+//         kDebug() << "Error in job:" << storedJob->error() << storedJob->errorString();
+//         emit errorParsing( this, ErrorDownloadFailed, storedJob->errorString(),
+//                            jobInfo.url, serviceProvider(), jobInfo.sourceName,
+//                            jobInfo.city, jobInfo.stop, jobInfo.dataType,
+//                            parseDocumentMode );
+//     }
+//
+//     if ( parseDocumentMode == ParseForStopSuggestions ) {
+//         // A stop suggestion request has finished
+//         if ( parseDocumentPossibleStops(document, &stopList) ) {
+//             emit stopListReceived( this, jobInfo.url, stopList,
+//                                    serviceProvider(), jobInfo.sourceName, jobInfo.city,
+//                                    jobInfo.stop, QString(), parseDocumentMode );
+//         } else {
+//             kDebug() << "Error parsing for stop suggestions" << jobInfo.sourceName;
+//             emit errorParsing( this, ErrorParsingFailed,
+//                                i18n("Error while parsing the timetable document."),
+//                                jobInfo.url, serviceProvider(), jobInfo.sourceName,
+//                                jobInfo.city, jobInfo.stop, QString(), parseDocumentMode );
+//         }
+//
 //         return;
-            }
-        }
-        // Used a different url for requesting data, the data contains stop suggestions
-    } else if ( parseDocumentPossibleStops(document, &stopList) ) {
-        emit stopListReceived( this, jobInfo.url, stopList,
-                               serviceProvider(), jobInfo.sourceName, jobInfo.city,
-                               jobInfo.stop, jobInfo.dataType, parseDocumentMode );
-    } else {
-        kDebug() << "Error parsing for stop suggestions from different url" << jobInfo.sourceName;
-        emit errorParsing( this, ErrorParsingFailed,
-                           i18n("Error while parsing the stop suggestions document."),
-                           jobInfo.url, serviceProvider(), jobInfo.sourceName,
-                           jobInfo.city, jobInfo.stop, jobInfo.dataType, parseDocumentMode );
-    }
-}
+//     } else if ( parseDocumentMode == ParseForStopIdThenDepartures ) {
+//         kDebug() << "MODE IS CURRENTLY" << parseDocumentMode;
+//         if ( parseDocumentPossibleStops(document, &stopList) ) {
+//             if ( stopList.isEmpty() ) {
+//                 kDebug() << "No stop suggestions got to get an ID to use to get departures";
+//             } else {
+//                 // Use the ID of the first suggested stop to get departures
+//                 if ( !stopList.first()->contains(StopID) ) {
+//                     kDebug() << "No stop ID found for the given stop name, now requesting departures using the stop name";
+//                     requestDepartures( jobInfo.sourceName, jobInfo.city, jobInfo.stop,
+//                                     jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,
+//                                     jobInfo.usedDifferentUrl );
+//                 } else {
+//                     requestDepartures( jobInfo.sourceName, jobInfo.city, stopList.first()->id(),
+//                                     jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,
+//                                     jobInfo.usedDifferentUrl );
+//                 }
+//                 return;
+//             }
+//         } else {
+//             kDebug() << "Error parsing for stop suggestions to get an ID to use to get departure" << jobInfo.sourceName;
+//             emit errorParsing( this, ErrorParsingFailed,
+//                                i18n("Error while parsing the timetable document."),
+//                                jobInfo.url, serviceProvider(), jobInfo.sourceName,
+//                                jobInfo.city, jobInfo.stop, QString(), parseDocumentMode );
+//         }
+//     } else if ( parseDocumentMode == ParseForSessionKeyThenStopSuggestions ||
+//                 parseDocumentMode == ParseForSessionKeyThenDepartures )
+//     {
+//         if ( !(m_sessionKey = parseDocumentForSessionKey(document)).isEmpty() ) {
+//             emit sessionKeyReceived( this, m_sessionKey );
+//
+//             if ( !m_sessionKey.isEmpty() ) {
+//                 // Now request stop suggestions using the session key
+//                 if ( parseDocumentMode == ParseForSessionKeyThenStopSuggestions ) {
+//                     requestStopSuggestions( jobInfo.sourceName, jobInfo.city, jobInfo.stop );
+//                 } else if ( parseDocumentMode == ParseForSessionKeyThenDepartures ) {
+//                     requestDepartures( jobInfo.sourceName, jobInfo.city, jobInfo.stop,
+//                                        jobInfo.maxCount, jobInfo.dateTime, jobInfo.dataType,
+//                                        jobInfo.usedDifferentUrl );
+//                 }
+//                 m_sessionKeyGetTime.start();
+//
+//                 // Clear the session key after a timeout
+//                 QTimer::singleShot( 5 * 60000, this, SLOT(clearSessionKey()) );
+//             }
+//         } else {
+//             kDebug() << "Error getting a session key" << jobInfo.sourceName;
+//         }
+//         return;
+//     }
+//
+//     m_curCity = jobInfo.city;
+// //     kDebug() << "usedDifferentUrl" << jobInfo.usedDifferentUrl;
+//     if ( !jobInfo.usedDifferentUrl ) {
+//         QString sNextUrl;
+//         if ( parseDocumentMode == ParseForJourneys ) {
+//             if ( jobInfo.roundTrips < 2 ) {
+//                 sNextUrl = parseDocumentForLaterJourneysUrl( document );
+//             } else if ( jobInfo.roundTrips == 2 ) {
+//                 sNextUrl = parseDocumentForDetailedJourneysUrl( document );
+//             }
+//         }
+// //         kDebug() << "Parse results" << parseDocumentMode;
+//
+//         // Try to parse the document
+//         if ( parseDocument(document, &dataList, &globalInfo, parseDocumentMode) ) {
+//             if ( parseDocumentMode == ParseForDeparturesArrivals ) {
+//                 QList<DepartureInfo*> departures;
+//                 foreach( PublicTransportInfo *info, dataList ) {
+//                     departures << dynamic_cast< DepartureInfo* >( info );
+//                 }
+//                 emit departureListReceived( this, jobInfo.url, departures, globalInfo,
+//                                             serviceProvider(), jobInfo.sourceName,
+//                                             jobInfo.city, jobInfo.stop, jobInfo.dataType,
+//                                             parseDocumentMode );
+//             } else if ( parseDocumentMode == ParseForJourneys ) {
+//                 QList<JourneyInfo*> journeys;
+//                 foreach( PublicTransportInfo *info, dataList ) {
+//                     journeys << dynamic_cast< JourneyInfo* >( info );
+//                 }
+//                 emit journeyListReceived( this, jobInfo.url, journeys, globalInfo,
+//                                           serviceProvider(), jobInfo.sourceName,
+//                                           jobInfo.city, jobInfo.stop, jobInfo.dataType,
+//                                           parseDocumentMode );
+//             }
+//             // Parsing has failed, try to parse stop suggestions.
+//             // First request departures using a different url if that is a special
+//             // url for stop suggestions.
+//         } else if ( hasSpecialUrlForStopSuggestions() ) {
+//             requestDepartures( jobInfo.sourceName, m_curCity, jobInfo.stop,
+//                                jobInfo.maxCount, jobInfo.dateTime,
+//                                jobInfo.dataType, true );
+//             // Parse for stop suggestions
+//         } else if ( parseDocumentPossibleStops(document, &stopList) ) {
+//             kDebug() << "Stop suggestion list received" << parseDocumentMode;
+//             emit stopListReceived( this, jobInfo.url, stopList,
+//                                    serviceProvider(), jobInfo.sourceName,
+//                                    jobInfo.city, jobInfo.stop, jobInfo.dataType,
+//                                    parseDocumentMode );
+//         } else { // All parsing has failed
+//             emit errorParsing( this, ErrorParsingFailed, i18n( "Error while parsing." ),
+//                                jobInfo.url, serviceProvider(), jobInfo.sourceName,
+//                                jobInfo.city, jobInfo.stop, jobInfo.dataType,
+//                                parseDocumentMode );
+//         }
+//
+//         if ( parseDocumentMode == ParseForJourneys ) {
+//             if ( !sNextUrl.isNull() && !sNextUrl.isEmpty() ) {
+//                 kDebug() << "Request parsed url:" << sNextUrl;
+//                 ++jobInfo.roundTrips;
+//                 KIO::StoredTransferJob *job = requestJourneys( KUrl( sNextUrl ) );
+//                 m_jobInfos.insert( job, JobInfos(ParseForJourneys, jobInfo.sourceName,
+//                                 jobInfo.city, jobInfo.stop, jobInfo.url, jobInfo.dataType,
+//                                 jobInfo.maxCount, jobInfo.dateTime, jobInfo.usedDifferentUrl,
+//                                 jobInfo.targetStop, jobInfo.roundTrips) );
+// //         return;
+//             }
+//         }
+//         // Used a different url for requesting data, the data contains stop suggestions
+//     } else if ( parseDocumentPossibleStops(document, &stopList) ) {
+//         emit stopListReceived( this, jobInfo.url, stopList,
+//                                serviceProvider(), jobInfo.sourceName, jobInfo.city,
+//                                jobInfo.stop, jobInfo.dataType, parseDocumentMode );
+//     } else {
+//         kDebug() << "Error parsing for stop suggestions from different url" << jobInfo.sourceName;
+//         emit errorParsing( this, ErrorParsingFailed,
+//                            i18n("Error while parsing the stop suggestions document."),
+//                            jobInfo.url, serviceProvider(), jobInfo.sourceName,
+//                            jobInfo.city, jobInfo.stop, jobInfo.dataType, parseDocumentMode );
+//     }
+// }
 
-KUrl TimetableAccessor::getUrl( const QString &city, const QString &stop,
-                                int maxCount, const QDateTime &dateTime,
-                                const QString &dataType, bool useDifferentUrl ) const
+KUrl TimetableAccessor::getUrl( const DepartureRequestInfo &requestInfo ) const
 {
-    QString sRawUrl = useDifferentUrl ? stopSuggestionsRawUrl() : departuresRawUrl();
+    QString sRawUrl = requestInfo.useDifferentUrl ? stopSuggestionsRawUrl() : departuresRawUrl();
     QString sDataType;
-    QString sCity = city.toLower(), sStop = stop.toLower();
-    if ( dataType == "arrivals" ) {
+    QString sCity = requestInfo.city.toLower(), sStop = requestInfo.stop.toLower();
+    if ( requestInfo.dataType == "arrivals" ) {
         sDataType = "arr";
-    } else if ( dataType == "departures" || dataType == "journeys" ) {
+    } else if ( requestInfo.dataType == "departures" || requestInfo.dataType == "journeys" ) {
         sDataType = "dep";
     }
 
@@ -864,25 +652,25 @@ KUrl TimetableAccessor::getUrl( const QString &city, const QString &stop,
     if ( useSeparateCityValue() ) {
         sRawUrl = sRawUrl.replace( "{city}", sCity );
     }
-    sRawUrl = sRawUrl.replace( "{time}", dateTime.time().toString("hh:mm") )
-              .replace( "{timestamp}", QString::number(dateTime.toTime_t()) )
-              .replace( "{maxCount}", QString( "%1" ).arg( maxCount ) )
+    sRawUrl = sRawUrl.replace( "{time}", requestInfo.dateTime.time().toString("hh:mm") )
+              .replace( "{timestamp}", QString::number(requestInfo.dateTime.toTime_t()) )
+              .replace( "{maxCount}", QString( "%1" ).arg( requestInfo.maxCount ) )
               .replace( "{stop}", sStop )
               .replace( "{dataType}", sDataType )
               .replace( "{sessionKey}", m_sessionKey );
 
     QRegExp rx = QRegExp( "\\{date:([^\\}]*)\\}", Qt::CaseInsensitive );
     if ( rx.indexIn( sRawUrl ) != -1 ) {
-        sRawUrl.replace( rx, dateTime.date().toString(rx.cap(1)) );
+        sRawUrl.replace( rx, requestInfo.dateTime.date().toString(rx.cap(1)) );
     }
 
     return KUrl( sRawUrl );
 }
 
-KUrl TimetableAccessor::getStopSuggestionsUrl( const QString &city, const QString& stop )
+KUrl TimetableAccessor::getStopSuggestionsUrl( const StopSuggestionRequestInfo &requestInfo )
 {
     QString sRawUrl = stopSuggestionsRawUrl();
-    QString sCity = city.toLower(), sStop = stop.toLower();
+    QString sCity = requestInfo.city.toLower(), sStop = requestInfo.stop.toLower();
 
     // Encode stop
     if ( charsetForUrlEncoding().isEmpty() ) {
@@ -901,23 +689,16 @@ KUrl TimetableAccessor::getStopSuggestionsUrl( const QString &city, const QStrin
     return KUrl( sRawUrl );
 }
 
-KUrl TimetableAccessor::getJourneyUrl( const QString& city,
-                                       const QString& startStopName,
-                                       const QString& targetStopName,
-                                       int maxCount, const QDateTime &dateTime,
-                                       const QString& dataType,
-                                       bool useDifferentUrl ) const
+KUrl TimetableAccessor::getJourneyUrl( const JourneyRequestInfo &requestInfo ) const
 {
-    Q_UNUSED( useDifferentUrl );
-
     QString sRawUrl = m_info->journeyRawUrl();
-    QString sTime = dateTime.time().toString( "hh:mm" );
+    QString sTime = requestInfo.dateTime.time().toString( "hh:mm" );
     QString sDataType;
-    QString sCity = city.toLower(), sStartStopName = startStopName.toLower(),
-                    sTargetStopName = targetStopName.toLower();
-    if ( dataType == "arrivals" || dataType == "journeysArr" ) {
+    QString sCity = requestInfo.city.toLower(), sStartStopName = requestInfo.stop.toLower(),
+                    sTargetStopName = requestInfo.targetStop.toLower();
+    if ( requestInfo.dataType == "arrivals" || requestInfo.dataType == "journeysArr" ) {
         sDataType = "arr";
-    } else if ( dataType == "departures" || dataType == "journeysDep" ) {
+    } else if ( requestInfo.dataType == "departures" || requestInfo.dataType == "journeysDep" ) {
         sDataType = "dep";
     }
 
@@ -940,22 +721,22 @@ KUrl TimetableAccessor::getJourneyUrl( const QString& city,
     }
 
     sRawUrl = sRawUrl.replace( "{time}", sTime )
-                     .replace( "{maxCount}", QString( "%1" ).arg( maxCount ) )
+                     .replace( "{maxCount}", QString("%1").arg(requestInfo.maxCount) )
                      .replace( "{startStop}", sStartStopName )
                      .replace( "{targetStop}", sTargetStopName )
                      .replace( "{dataType}", sDataType );
 
     QRegExp rx = QRegExp( "\\{date:([^\\}]*)\\}", Qt::CaseInsensitive );
     if ( rx.indexIn( sRawUrl ) != -1 ) {
-        sRawUrl.replace( rx, dateTime.date().toString( rx.cap( 1 ) ) );
+        sRawUrl.replace( rx, requestInfo.dateTime.date().toString( rx.cap( 1 ) ) );
     }
 
     rx = QRegExp( "\\{dep=([^\\|]*)\\|arr=([^\\}]*)\\}", Qt::CaseInsensitive );
-    if ( rx.indexIn( sRawUrl ) != -1 ) {
+    if ( rx.indexIn(sRawUrl) != -1 ) {
         if ( sDataType == "arr" ) {
-            sRawUrl.replace( rx, rx.cap( 2 ) );
+            sRawUrl.replace( rx, rx.cap(2) );
         } else {
-            sRawUrl.replace( rx, rx.cap( 1 ) );
+            sRawUrl.replace( rx, rx.cap(1) );
         }
     }
 

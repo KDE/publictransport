@@ -327,20 +327,17 @@ void JavaScriptParser::checkFunctionCall( const QString &object, const QString &
                             "must be a string."), line, column );
                 } else {
                     QStringList timetableInfoStrings;
-                    timetableInfoStrings << "DepartureDate" << "DepartureTime"
-                            << "DepartureHour" << "DepartureMinute"
+                    timetableInfoStrings << "DepartureDateTime" << "DepartureDate" << "DepartureTime"
                             << "TypeOfVehicle" << "TransportLine" << "FlightNumber" << "Target"
                             << "Platform" << "Delay" << "DelayReason" << "JourneyNews"
-                            << "JourneyNewsOther" << "JourneyNewsLink" << "DepartureHourPrognosis"
-                            << "DepartureMinutePrognosis" << "Operator" << "DepartureAMorPM"
-                            << "DepartureAMorPMPrognosis" << "ArrivalAMorPM" << "Status"
-                            << "DepartureYear" << "RouteStops" << "RouteTimes" << "RouteTimesDeparture"
+                            << "JourneyNewsOther" << "JourneyNewsLink" << "Operator" << "Status"
+                            << "RouteStops" << "RouteTimes" << "RouteTimesDeparture"
                             << "RouteTimesArrival" << "RouteExactStops" << "RouteTypesOfVehicles"
                             << "RouteTransportLines" << "RoutePlatformsDeparture" << "IsNightLine"
                             << "RoutePlatformsArrival" << "RouteTimesDepartureDelay"
                             << "RouteTimesArrivalDelay" << "Duration" << "StartStopName"
-                            << "StartStopID" << "TargetStopName" << "TargetStopID" << "ArrivalDate"
-                            << "ArrivalHour" << "ArrivalMinute" << "Changes"
+                            << "StartStopID" << "TargetStopName" << "TargetStopID"
+                            << "ArrivalDateTime" << "ArrivalDate" << "ArrivalTime" << "Changes"
                             << "TypesOfVehicleInJourney" << "Pricing" << "StopName" << "StopID"
                             << "StopWeight";
 

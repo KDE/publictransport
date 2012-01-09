@@ -124,7 +124,7 @@ function parseTimetable( html ) {
     }
 }
     
-function parsePossibleStops( html ) {
+function parseStopSuggestions( html ) {
     // Find block of stops
     var stopBlockRegExp = /<select name="k"[^>]*?><option value="[^"]*?">[^<]*?<\/option>([\s\S]*?)<\/select>/i;
 

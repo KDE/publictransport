@@ -240,8 +240,6 @@ void PublicTransport::init()
              this, SLOT(themeChanged()) );
     emit settingsChanged();
     serviceProviderSettingsChanged();
-
-    reconnectSource();
 }
 
 void PublicTransport::setupStateMachine()
@@ -390,6 +388,8 @@ void PublicTransport::setupStateMachine()
             m_titleWidget, SIGNAL(iconClicked()), actionButtonsState );
     journeyViewState->addTransition(
             m_titleWidget, SIGNAL(closeIconClicked()), lastDepartureListState );
+    journeyViewState->addTransition(
+            action("backToDepartures"), SIGNAL(triggered()), lastDepartureListState );
 
     departureDataWaitingState->addTransition(
             this, SIGNAL(validDepartureDataReceived()), departureDataValidState );
@@ -920,7 +920,7 @@ void PublicTransport::reconnectSource()
         if ( m_settings.autoUpdate ) {
             // Update once a minute
             dataEngine( "publictransport" )->connectSource( currentSource, this,
-                    60000, Plasma::AlignToMinute );
+                                                            60000, Plasma::AlignToMinute );
         } else {
             dataEngine( "publictransport" )->connectSource( currentSource, this );
         }
@@ -1758,14 +1758,16 @@ void PublicTransport::showActionButtons()
     GlobalApplet::fadeAnimation( m_overlay, 1 )->start( QAbstractAnimation::DeleteWhenStopped );
 }
 
-void PublicTransport::setCurrentStopIndex( QAction* action )
+void PublicTransport::setCurrentStopIndex( QAction* stopAction )
 {
     bool ok;
-    int stopIndex = action->data().toInt( &ok );
+    int stopIndex = stopAction->data().toInt( &ok );
     if ( !ok ) {
         kDebug() << "Couldn't find stop index";
         return;
     }
+
+    action("backToDepartures")->trigger();
 
     Settings settings = m_settings;
     settings.currentStopSettingsIndex = stopIndex;

@@ -1069,9 +1069,10 @@ ChildItem* DepartureItem::createRouteItem()
         }
 
         // Add the current route stop ("departure - stop name")
-        QString text = QString( "%1 - %2" )
-                        .arg( m_departureInfo.routeTimes()[row].toString("hh:mm") )
-                        .arg( m_departureInfo.routeStops()[row] );
+        QString text = m_departureInfo.routeStops()[row];
+        if ( row < m_departureInfo.routeTimes().count() ) {
+            text.prepend( m_departureInfo.routeTimes()[row].toString("hh:mm") + " - " );
+        }
         ChildItem *routeStopItem = new ChildItem(
                 OtherItem, text, KIcon( "public-transport-stop" ), m_info );
         routeItem->appendChild( routeStopItem );

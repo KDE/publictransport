@@ -3,7 +3,6 @@ project( plasma-publictransport )
 # Find the required Libaries
 find_package( KDE4 REQUIRED )
 include( KDE4Defaults )
-
 add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
 include_directories(
    ${CMAKE_SOURCE_DIR}
@@ -11,7 +10,7 @@ include_directories(
    ${KDE4_INCLUDES} )
 
 # Include directory of publictransporthelper, to be used by other components using the library
-set( PUBLICTRANSPORTHELPER_INLUDES ${CMAKE_SOURCE_DIR}/libpublictransporthelper/ )
+set( PUBLICTRANSPORTHELPER_INCLUDES ${CMAKE_SOURCE_DIR}/libpublictransporthelper/ )
 
 # Can be used from the command line, eg. "cmake -DINSTALL_TIMETABLEMATE=ON .."
 # to configure with timetablemate (or use "cmake -i .." for interactive options)

@@ -96,7 +96,7 @@ function parseTimetable( html ) {
     }
 }
 
-function parsePossibleStops( html ) {
+function parseStopSuggestions( html ) {
     // Initialize regular expressions (compile them only once)
     var stopRegExp = /<airport\s+code="([^"]*)"\s+name="([^"]*)"\s+city="([^"]*)"\s+countryCode="([^"]*)"[^>]*\/>/ig;
 	

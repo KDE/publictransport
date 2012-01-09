@@ -43,7 +43,7 @@ function parseTimetable( json ) {
     }
 }
 
-function parsePossibleStops( json ) {
+function parseStopSuggestions( json ) {
     // Initialize regular expressions (compile them only once)
 	var stopRangeRegExp = /\[\[\["[^"]*"\]\],\[(.*)\]\]$/i;
     var stopRegExp = /\["([^"]*)","[^"]*","([^"]*)"\]/ig;

@@ -149,16 +149,16 @@ function parseTimetable( html ) {
 }
 
 
-function parsePossibleStops( html ) {
-    if ( parsePossibleStops_1(html) )
+function parseStopSuggestions( html ) {
+    if ( parseStopSuggestions_1(html) )
 		return true;
-//     else if ( parsePossibleStops_2(html) )
+//     else if ( parseStopSuggestions_2(html) )
 // 	return true;
     else
 		return false;
 }
 
-function parsePossibleStops_1( html ) {
+function parseStopSuggestions_1( html ) {
     // Initialize regular expressions (compile them only once)
     var stopRegExp = /{"value":"([^"]*?)","id":"[^"]*?@L=([0-9]+)@[^"]*?"[^}]*?"weight":"(\d+)"[^}]*?}/ig;
 

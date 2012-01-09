@@ -4,13 +4,14 @@ project(plasma-flights)
 # Find the required Libaries
 find_package(KDE4 REQUIRED)
 include(KDE4Defaults)
-
+include( ../PublicTransportDefaults )
 add_definitions (${QT_DEFINITIONS} ${KDE4_DEFINITIONS})
+
 include_directories(
    ${CMAKE_SOURCE_DIR}
    ${CMAKE_BINARY_DIR}
    ${KDE4_INCLUDES}
-   ${PUBLICTRANSPORTHELPER_INLUDES}
+   ${PUBLICTRANSPORTHELPER_INCLUDES}
    )
 
 # We add our source code here

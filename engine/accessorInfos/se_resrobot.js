@@ -3,7 +3,7 @@
 
 function usedTimetableInformations() {
     return [ /*'Delay',*/ /*'DelayReason',*/ 'JourneyNews', 'TypeOfVehicle',
-	     /*'StopID' "Stop ID"'s parsed in parsePossibleStops are only valid for a session, 
+	     /*'StopID' "Stop ID"'s parsed in parseStopSuggestions are only valid for a session, 
 		  * until a new stop suggestion request was made. But these "ID's" are required to get departures. */ ];
 }
 
@@ -174,16 +174,16 @@ function parseTimetable( html ) {
 }
 
 
-function parsePossibleStops( html ) {
-    if ( parsePossibleStops_1(html) )
+function parseStopSuggestions( html ) {
+    if ( parseStopSuggestions_1(html) )
 		return true;
-//     else if ( parsePossibleStops_2(html) )
+//     else if ( parseStopSuggestions_2(html) )
 // 	return true;
     else
 		return false;
 }
 
-function parsePossibleStops_1( html ) {
+function parseStopSuggestions_1( html ) {
     // Find block of stops
     var str = helper.extractBlock( html, '<select name="searchData/fromIndex" id="from" class="selectfield">', '</select>' );
 

@@ -23,7 +23,7 @@
 #include <QUrl>
 
 const int DepartureProcessor::DEPARTURE_BATCH_SIZE = 10;
-const int DepartureProcessor::JOURNEY_BATCH_SIZE = 3;
+const int DepartureProcessor::JOURNEY_BATCH_SIZE = 10;
 
 DepartureProcessor::DepartureProcessor( QObject* parent ) : QThread( parent )
 {
@@ -169,14 +169,26 @@ void DepartureProcessor::filterDepartures( const QString &sourceName,
 
 void DepartureProcessor::run()
 {
-    while ( !m_quit ) {
+    forever {
         m_mutex.lock();
+        while ( m_jobQueue.isEmpty() ) {
+            if ( m_quit ) {
+                break;
+            }
+            kDebug() << "Waiting for new jobs...";
+            m_currentJob = NoJob;
+            m_cond.wait( &m_mutex );
+        }
+        if ( m_quit ) {
+            break;
+        }
+
         JobInfo *job = m_jobQueue.dequeue();
         m_currentJob = job->type;
         m_mutex.unlock();
 
-        kDebug() << "Start job" << job->type;
-        QTime start = QTime::currentTime();
+        QTime time;
+        time.start();
         if ( job->type == ProcessDepartures ) {
             doDepartureJob( static_cast<DepartureJobInfo*>( job ) );
         } else if ( job->type == FilterDepartures ) {
@@ -184,22 +196,22 @@ void DepartureProcessor::run()
         } else if ( job->type == ProcessJourneys ) {
             doJourneyJob( static_cast<JourneyJobInfo*>( job ) );
         }
-        int time = start.msecsTo( QTime::currentTime() );
-        kDebug() << "  - Took" << ( time / 1000.0 ) << "seconds";
+        kDebug() << " > Job" << job->type << "finished after"
+                 << (time.elapsed() / 1000.0) << "seconds";
 
         m_mutex.lock();
         if ( !m_requeueCurrentJob ) {
-            kDebug() << "  Completed job" << job->type;
             delete job;
         } else {
             kDebug() << "  .. requeue job ..";
         }
-
         m_abortCurrentJob = false;
         m_requeueCurrentJob = false;
-        // Wait if there are no more jobs in the queue
-        if ( m_jobQueue.isEmpty() ) {
-            kDebug() << "Waiting for new jobs...";
+
+        if ( m_quit ) {
+            break;
+        } else if ( m_jobQueue.isEmpty() ) {
+            // Wait if there are no more jobs in the queue
             m_currentJob = NoJob;
             m_cond.wait( &m_mutex );
         }

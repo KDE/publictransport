@@ -74,7 +74,7 @@ function parseTimetable( html ) {
     }
 }
 
-function parsePossibleStops( json ) {
+function parseStopSuggestions( json ) {
     // Initialize regular expressions (compile them only once) TODO
     var stopRegExp = /\{"__type":"CHAPS.IDOS3.TTWS.TimetableObjectInfo",(?:"[^"]*":[^,]*,)*?"oItem":\{([^\}]+)\}[^\}]*\}/ig;
 	var stopNameRegExp = /"sName":"([^"]+)"/i;

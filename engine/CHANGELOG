@@ -4,7 +4,11 @@ Changelog of plasma-engine-publictransport
 0.10 - Final
 - Allow accessor type "Script" in XML files (type "HTML" renamed to "Script")
 - Generate "Locations" data source based on available accessors
+- Fix POST requests (fixes stop suggestions for cz_idnes and sk_atlas)
+- Automatically remove city names from stop names (from scripts), which may be prepended or appended to most stop names. If more than 70% or at least three of the stop names in a route begin/end with the same word, it is assumed that the word is the city name and gets removed from all stop names beginnings/ends.
 - ch_sbb: Fix journey feature for changed HTML layout
+- de_fahrplaner: Fix for HTML layout with delays/cancelled departures, parse delays, cancelled info as journey news
+- de_vvs: Dropped, because it never had stop suggestions
 
 0.10 - RC1
 - de_rmv: Fix stop suggestions for changed HTML layout

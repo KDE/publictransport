@@ -32,6 +32,7 @@
 #include <Plasma/DataContainer>
 #include <KStandardDirs>
 #include <QFileInfo>
+#include <Distribution/publictransport-runner-0.1/plasma-dataengine-publictransport-0.9/publictransportdataengine.h>
 
 const int PublicTransportEngine::MIN_UPDATE_TIMEOUT = 120; // in seconds
 const int PublicTransportEngine::MAX_UPDATE_TIMEOUT_DELAY = 5 * 60; // if delays are available
@@ -39,7 +40,7 @@ const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
 
 PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantList& args )
         : Plasma::DataEngine( parent, args ),
-        m_fileSystemWatcher(0), m_timer(0)
+        m_fileSystemWatcher(0), m_accessorUpdateDelayTimer(0), m_sourceUpdateTimer(0)
 {
     // We ignore any arguments - data engines do not have much use for them
     Q_UNUSED( args )
@@ -57,12 +58,27 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
 //     setData( sourceTypeKeyword(ServiceProviders), DataEngine::Data() );
 //     setData( sourceTypeKeyword(ErroneousServiceProviders), DataEngine::Data() );
 //     setData( sourceTypeKeyword(Locations), DataEngine::Data() );
+//     TODO return these source names in the virtual method ...
+
+    connect( this, SIGNAL(sourceRemoved(QString)), this, SLOT(slotSourceRemoved(QString)) );
 }
 
 PublicTransportEngine::~PublicTransportEngine()
 {
     qDeleteAll( m_accessors.values() );
     delete m_fileSystemWatcher;
+}
+
+void PublicTransportEngine::slotSourceRemoved( const QString& name )
+{
+    kDebug() << "____________________________________________________________________________";
+    kDebug() << "Source" << name << "removed";
+
+    const QString nonAmbiguousName = name.toLower();
+    kDebug() << "Running" << m_runningSources.removeOne( nonAmbiguousName );
+    kDebug() << "Cached" << m_dataSources.remove( nonAmbiguousName );
+    kDebug() << "Still cached data sources" << m_dataSources.count();
+
 }
 
 QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
@@ -163,6 +179,9 @@ bool PublicTransportEngine::sourceRequestEvent( const QString &name )
     if ( isDataRequestingSourceType(sourceTypeFromName(name)) ) {
         setData( name, DataEngine::Data() ); // Create source, TODO: check if [name] is valid
     }
+
+//     m_sourceUpdateTimer
+//     TODO call forceImmediateUpdateOfAllVisualizations() after the data is available
     return updateSourceEvent( name );
 }
 
@@ -199,7 +218,7 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
         accessorId = defaultAccessor;
     }
 
-    kDebug() << "Check accessor" << accessorId;
+//     kDebug() << "Check accessor" << accessorId; // TODO
     const TimetableAccessor *accessor = TimetableAccessor::getSpecificAccessor( accessorId );
     if ( accessor ) {
         setData( name, serviceProviderInfo(accessor) );
@@ -218,7 +237,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
 {
     const QString name = sourceTypeKeyword( ServiceProviders );
     QVariantHash dataSource;
-    if ( m_dataSources.contains( name ) ) {
+    if ( m_dataSources.contains(name) ) {
         // kDebug() << "Data source" << name << "is up to date";
         dataSource = m_dataSources[ name ].toHash();
     } else {
@@ -298,17 +317,21 @@ bool PublicTransportEngine::updateLocationSource()
 
 bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name )
 {
-    bool containsDataSource = m_dataSources.contains( name );
-    if ( containsDataSource && isSourceUpToDate(name) ) { // Data is stored in the map and up to date
+    const QString nonAmbiguousName = name.toLower();
+    bool containsDataSource = m_dataSources.contains( nonAmbiguousName );
+    if ( containsDataSource && isSourceUpToDate(nonAmbiguousName) ) { // Data is stored in the map and up to date
         kDebug() << "Data source" << name << "is up to date";
-        QVariantHash dataSource = m_dataSources[name].toHash();
+        QVariantHash dataSource = m_dataSources[nonAmbiguousName].toHash();
         for ( QVariantHash::const_iterator it = dataSource.constBegin();
                 it != dataSource.constEnd(); ++it ) {
             setData( name, it.key(), it.value() );
         }
+    } else if ( m_runningSources.contains(nonAmbiguousName) ) {
+        // Source gets already processed
+        kDebug() << "Source already gets processed, please wait" << name;
     } else { // Request new data
         if ( containsDataSource ) {
-            m_dataSources.remove( name ); // Clear old data
+            m_dataSources.remove( nonAmbiguousName ); // Clear old data
         }
 
         QStringList input;
@@ -432,32 +455,40 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
             return false; // accessor doesn't support journey searches
         }
 
+        // Store source name as currently being processed, to not start another
+        // request if there is already a running one
+        m_runningSources << nonAmbiguousName;
+
         if ( newlyCreated ) {
-            connect( accessor,
-                     SIGNAL(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)),
-                     this, SLOT(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)) );
-            connect( accessor,
-                     SIGNAL(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)),
-                     this, SLOT(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,QString,QString,QString,QString,QString,ParseDocumentMode)) );
-            connect( accessor,
-                     SIGNAL(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,QString,QString,QString,QString,QString,ParseDocumentMode)),
-                     this, SLOT(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,QString,QString,QString,QString,QString,ParseDocumentMode)) );
-            connect( accessor,
-                     SIGNAL(errorParsing(TimetableAccessor*,ErrorType,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)),
-                     this, SLOT(errorParsing(TimetableAccessor*,ErrorType,QString,QUrl,QString,QString,QString,QString,QString,ParseDocumentMode)) );
+            connect( accessor, SIGNAL(departureListReceived(TimetableAccessor*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequestInfo)),
+                     this, SLOT(departureListReceived(TimetableAccessor*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequestInfo)) );
+            connect( accessor, SIGNAL(journeyListReceived(TimetableAccessor*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequestInfo)),
+                     this, SLOT(journeyListReceived(TimetableAccessor*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequestInfo)) );
+            connect( accessor, SIGNAL(stopListReceived(TimetableAccessor*,QUrl,StopInfoList,StopSuggestionRequestInfo)),
+                     this, SLOT(stopListReceived(TimetableAccessor*,QUrl,StopInfoList,StopSuggestionRequestInfo)) );
+            connect( accessor, SIGNAL(errorParsing(TimetableAccessor*,ErrorCode,QString,QUrl,const RequestInfo*)),
+                     this, SLOT(errorParsing(TimetableAccessor*,ErrorCode,QString,QUrl,const RequestInfo*)) );
         }
 
         if ( parseDocumentMode == ParseForDeparturesArrivals ) {
-            accessor->requestDepartures( name, city, stop, maxCount, dateTime, dataType );
+            accessor->requestDepartures( DepartureRequestInfo(name, stop, dateTime, maxCount,
+                                         dataType, false, city, parseDocumentMode) );
         } else if ( parseDocumentMode == ParseForStopSuggestions ) {
-            accessor->requestStopSuggestions( name, city, stop );
+            accessor->requestStopSuggestions( StopSuggestionRequestInfo(name, stop, dateTime,
+                                              maxCount, dataType, false, city, parseDocumentMode) );
         } else { // if ( parseDocumentMode == ParseForJourneys )
-            accessor->requestJourneys( name, city, originStop, targetStop,
-                                       maxCount, dateTime, dataType );
+            accessor->requestJourneys( JourneyRequestInfo(name, originStop, targetStop,
+                                       dateTime, maxCount, QString(), dataType) );
         }
     }
 
     return true;
+}
+
+void PublicTransportEngine::forceUpdate()
+{
+    kDebug() << "FORCE UPDATE -------------------------------------------------------------------";
+    forceImmediateUpdateOfAllVisualizations();
 }
 
 QString PublicTransportEngine::stripDateAndTimeValues( const QString& sourceName )
@@ -476,26 +507,27 @@ void PublicTransportEngine::accessorInfoDirChanged( const QString &path )
     // Use a timer to prevent loading all accessors again and again, for every changed file in a
     // possibly big list of files. It reloads the accessors maximally every 250ms.
     // Otherwise it can freeze plasma for a while if eg. all accessor files are changed at once.
-    if ( !m_timer ) {
-        m_timer = new QTimer( this );
-        connect( m_timer, SIGNAL(timeout()), this, SLOT(reloadAllAccessors()) );
+    if ( !m_accessorUpdateDelayTimer ) {
+        m_accessorUpdateDelayTimer = new QTimer( this );
+        connect( m_accessorUpdateDelayTimer, SIGNAL(timeout()), this, SLOT(reloadAllAccessors()) );
     }
 
-    m_timer->start( 250 );
+    m_accessorUpdateDelayTimer->start( 250 );
 }
 
 void PublicTransportEngine::reloadAllAccessors()
 {
     kDebug() << "Reload accessors (the accessor dir changed)";
 
-    delete m_timer;
-    m_timer = NULL;
+    delete m_accessorUpdateDelayTimer;
+    m_accessorUpdateDelayTimer = NULL;
 
     // Remove all accessors (could have been changed)
     qDeleteAll( m_accessors );
     m_accessors.clear();
 
     // Clear all cached data (use the new accessor to parse the data again)
+    // TODO: Only clear data for changed accessors (change modified time of a script or the XML)
     QStringList cachedSources = m_dataSources.keys();
     foreach( const QString &cachedSource, cachedSources ) {
         SourceType sourceType = sourceTypeFromName( cachedSource );
@@ -606,24 +638,21 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name )
 }
 
 void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
-        const QUrl &requestUrl, const QList<DepartureInfo*> &departures,
+        const QUrl &requestUrl, const DepartureInfoList &departures,
         const GlobalTimetableInfo &globalInfo,
-        const QString &serviceProvider, const QString &sourceName,
-        const QString &city, const QString &stop,
-        const QString &dataType, ParseDocumentMode parseDocumentMode )
+        const DepartureRequestInfo &requestInfo,
+        bool deleteDepartureInfos )
 {
     Q_UNUSED( accessor );
-    Q_UNUSED( serviceProvider );
-    Q_UNUSED( city );
-    Q_UNUSED( stop );
-    Q_UNUSED( dataType );
-    Q_UNUSED( parseDocumentMode );
+    const QString sourceName = requestInfo.sourceName;
     kDebug() << departures.count() << "departures / arrivals received" << sourceName;
 
     int i = 0;
-    m_dataSources.remove( sourceName );
+    const QString nonAmbiguousName = sourceName.toLower();
+    m_dataSources.remove( nonAmbiguousName );
+    m_runningSources.removeOne( nonAmbiguousName );
     QVariantHash dataSource;
-    foreach( DepartureInfo *departureInfo, departures ) {
+    foreach( const DepartureInfoPtr &departureInfo, departures ) {
 //     if ( !departureInfo->isValid() ) {
 //         kDebug() << "Departure isn't valid" << departureInfo->line();
 //         continue;
@@ -635,9 +664,9 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
                      departureInfo->target(PublicTransportInfo::UseShortenedStopNames) );
         data.insert( "departure", departureInfo->departure() );
         data.insert( "vehicleType", static_cast<int>( departureInfo->vehicleType() ) );
-        data.insert( "vehicleIconName", Global::vehicleTypeToIcon( departureInfo->vehicleType() ) );
-        data.insert( "vehicleName", Global::vehicleTypeToString( departureInfo->vehicleType() ) );
-        data.insert( "vehicleNamePlural", Global::vehicleTypeToString( departureInfo->vehicleType(), true ) );
+        data.insert( "vehicleIconName", Global::vehicleTypeToIcon(departureInfo->vehicleType()) );
+        data.insert( "vehicleName", Global::vehicleTypeToString(departureInfo->vehicleType()) );
+        data.insert( "vehicleNamePlural", Global::vehicleTypeToString(departureInfo->vehicleType(), true) );
         data.insert( "nightline", departureInfo->isNightLine() );
         data.insert( "expressline", departureInfo->isExpressLine() );
         data.insert( "platform", departureInfo->platform() );
@@ -667,7 +696,10 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
     } else {
         first = last = QDateTime::currentDateTime();
     }
-    qDeleteAll( departures );
+    if ( deleteDepartureInfos ) {
+        kDebug() << "Delete" << departures.count() << "departures";
+//         qDeleteAll( departures );
+    }
 
     // Remove old jouneys
     for ( ; i < m_lastJourneyCount; ++i ) {
@@ -687,7 +719,7 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
     m_nextDownloadTimeProposals[ stripDateAndTimeValues( sourceName )] = downloadTime;
 //     kDebug() << "Set next download time proposal:" << downloadTime;
 
-    setData( sourceName, "serviceProvider", serviceProvider );
+//     setData( sourceName, "serviceProvider", serviceProvider );TODO
     setData( sourceName, "count", departureCount );
     setData( sourceName, "delayInfoAvailable", globalInfo.delayInfoAvailable );
     setData( sourceName, "requestUrl", requestUrl );
@@ -698,7 +730,7 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 
     // Store received data in the data source map
-    dataSource.insert( "serviceProvider", serviceProvider );
+//     dataSource.insert( "serviceProvider", serviceProvider );
     dataSource.insert( "count", departureCount );
     dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
     dataSource.insert( "requestUrl", requestUrl );
@@ -707,29 +739,26 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
     dataSource.insert( "receivedPossibleStopList", false );
     dataSource.insert( "error", false );
     dataSource.insert( "updated", QDateTime::currentDateTime() );
-    m_dataSources.insert( sourceName, dataSource );
+    m_dataSources.insert( sourceName.toLower(), dataSource );
 }
 
 
 void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
-        const QUrl &requestUrl, const QList<JourneyInfo*> &journeys,
+        const QUrl &requestUrl, const JourneyInfoList &journeys,
         const GlobalTimetableInfo &globalInfo,
-        const QString &serviceProvider, const QString& sourceName,
-        const QString& city, const QString& stop,
-        const QString& dataType, ParseDocumentMode parseDocumentMode )
+        const JourneyRequestInfo &requestInfo,
+        bool deleteJourneyInfos )
 {
     Q_UNUSED( accessor );
-    Q_UNUSED( serviceProvider );
-    Q_UNUSED( city );
-    Q_UNUSED( stop );
-    Q_UNUSED( dataType );
-    Q_UNUSED( parseDocumentMode );
+    const QString sourceName = requestInfo.sourceName;
     kDebug() << journeys.count() << "journeys received" << sourceName;
 
     int i = 0;
-    m_dataSources.remove( sourceName );
+    const QString nonAmbiguousName = sourceName.toLower();
+    m_dataSources.remove( nonAmbiguousName );
+    m_runningSources.removeOne( nonAmbiguousName );
     QVariantHash dataSource;
-    foreach( JourneyInfo *journeyInfo, journeys ) {
+    foreach( const JourneyInfoPtr &journeyInfo, journeys ) {
         if ( !journeyInfo->isValid() ) {
             continue;
         }
@@ -774,7 +803,9 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     } else {
         first = last = QDateTime::currentDateTime();
     }
-    qDeleteAll( journeys );
+    if ( deleteJourneyInfos ) {
+//         qDeleteAll( journeys ); TODO
+    }
 
     // Remove old journeys
     for ( ; i < m_lastJourneyCount; ++i ) {
@@ -793,7 +824,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     QDateTime downloadTime = QDateTime::currentDateTime().addSecs( secs );
     m_nextDownloadTimeProposals[ stripDateAndTimeValues( sourceName )] = downloadTime;
 
-    setData( sourceName, "serviceProvider", serviceProvider );
+//     setData( sourceName, "serviceProvider", serviceProvider );TODO
     setData( sourceName, "count", journeyCount );
     setData( sourceName, "delayInfoAvailable", globalInfo.delayInfoAvailable );
     setData( sourceName, "requestUrl", requestUrl );
@@ -804,7 +835,7 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 
     // Store received data in the data source map
-    dataSource.insert( "serviceProvider", serviceProvider );
+//     dataSource.insert( "serviceProvider", serviceProvider );
     dataSource.insert( "count", journeyCount );
     dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
     dataSource.insert( "requestUrl", requestUrl );
@@ -813,26 +844,21 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
     dataSource.insert( "receivedPossibleStopList", false );
     dataSource.insert( "error", false );
     dataSource.insert( "updated", QDateTime::currentDateTime() );
-    m_dataSources.insert( sourceName, dataSource );
+    m_dataSources.insert( sourceName.toLower(), dataSource );
 }
 
 void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
-        const QUrl &requestUrl, const QList<StopInfo*> &stops,
-        const QString &serviceProvider, const QString &sourceName,
-        const QString &city, const QString &stop,
-        const QString &dataType, ParseDocumentMode parseDocumentMode )
+        const QUrl &requestUrl, const StopInfoList &stops,
+        const StopSuggestionRequestInfo &requestInfo, bool deleteStopInfos )
 {
-    Q_UNUSED( accessor );
-    Q_UNUSED( serviceProvider );
-    Q_UNUSED( city );
-    Q_UNUSED( stop );
-    Q_UNUSED( dataType );
 //     QString sStop = stopToStopId.value( stop, stop );
 //     if ( sStop.isEmpty() )
 //     sStop = stop;
+    const QString sourceName = requestInfo.sourceName;
+    m_runningSources.removeOne( sourceName );
 
     int i = 0;
-    foreach( const StopInfo *stopInfo, stops ) {
+    foreach( const StopInfoPtr &stopInfo, stops ) {
         QVariantHash data;
         data.insert( "stopName", stopInfo->name() );
 
@@ -867,14 +893,14 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
     }
     m_lastStopNameCount = stops.count();
 
-    setData( sourceName, "serviceProvider", serviceProvider );
+//     setData( sourceName, "serviceProvider", serviceProvider );TODO
     setData( sourceName, "count", stops.count() );
     setData( sourceName, "requestUrl", requestUrl );
-    if ( parseDocumentMode == ParseForDeparturesArrivals ) {
+    if ( requestInfo.parseMode == ParseForDeparturesArrivals ) {
         setData( sourceName, "parseMode", "departures" );
-    } else if ( parseDocumentMode == ParseForJourneys ) {
+    } else if ( requestInfo.parseMode == ParseForJourneys ) {
         setData( sourceName, "parseMode", "journeys" );
-    } else if ( parseDocumentMode == ParseForStopSuggestions ) {
+    } else if ( requestInfo.parseMode == ParseForStopSuggestions ) {
         setData( sourceName, "parseMode", "stopSuggestions" );
     }
     setData( sourceName, "receivedData", "stopList" );
@@ -882,32 +908,38 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
     setData( sourceName, "error", false );
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 
+    if ( deleteStopInfos ) {
+//         qDeleteAll( stops ); TODO
+    }
+
+    kDebug() << "DONE" << requestInfo.sourceName;
+    kDebug() << m_runningSources.count() << "running sources" << m_runningSources;
+    kDebug() << m_dataSources.count() << "data sources" << m_dataSources;
+
     // TODO: add to m_dataSources?
 }
 
 void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
-        ErrorType errorType, const QString &errorString,
-        const QUrl &requestUrl, const QString &serviceProvider,
-        const QString &sourceName, const QString &city, const QString &stop,
-        const QString &dataType, ParseDocumentMode parseDocumentMode )
+        ErrorCode errorType, const QString &errorString,
+        const QUrl &requestUrl, const RequestInfo *requestInfo )
 {
     Q_UNUSED( accessor );
-    Q_UNUSED( serviceProvider );
-    Q_UNUSED( city );
-    Q_UNUSED( stop );
-    Q_UNUSED( dataType );
-    kDebug() << "Error while parsing" << requestUrl << serviceProvider
-             << "\n  sourceName =" << sourceName << dataType << parseDocumentMode;
+    kDebug() << "Error while parsing" << requestUrl //<< requestInfo->serviceProvider
+             << "\n  sourceName =" << requestInfo->sourceName << requestInfo->dataType << requestInfo->parseMode;
     kDebug() << errorType << errorString;
 
-    setData( sourceName, "serviceProvider", serviceProvider );
+    // Remove erroneous source from running sources list
+    m_runningSources.removeOne( requestInfo->sourceName );
+
+    const QString sourceName = requestInfo->sourceName;
+//     setData( sourceName, "serviceProvider", requestInfo->serviceProvider );
     setData( sourceName, "count", 0 );
     setData( sourceName, "requestUrl", requestUrl );
-    if ( parseDocumentMode == ParseForDeparturesArrivals ) {
+    if ( requestInfo->parseMode == ParseForDeparturesArrivals ) {
         setData( sourceName, "parseMode", "departures" );
-    } else if ( parseDocumentMode == ParseForJourneys ) {
+    } else if ( requestInfo->parseMode == ParseForJourneys ) {
         setData( sourceName, "parseMode", "journeys" );
-    } else if ( parseDocumentMode == ParseForStopSuggestions ) {
+    } else if ( requestInfo->parseMode == ParseForStopSuggestions ) {
         setData( sourceName, "parseMode", "stopSuggestions" );
     }
     setData( sourceName, "receivedData", "nothing" );
@@ -919,12 +951,13 @@ void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
 
 bool PublicTransportEngine::isSourceUpToDate( const QString& name )
 {
-    if ( !m_dataSources.contains(name) ) {
+    const QString nonAmbiguousName = name.toLower();
+    if ( !m_dataSources.contains(nonAmbiguousName.toLower()) ) {
         return false;
     }
 
     // Data source stays up to date for max(UPDATE_TIMEOUT, minFetchWait) seconds
-    QVariantHash dataSource = m_dataSources[ name ].toHash();
+    QVariantHash dataSource = m_dataSources[ nonAmbiguousName ].toHash();
 
     TimetableAccessor *accessor;
     QString serviceProvider = dataSource[ "serviceProvider" ].toString();
@@ -935,7 +968,7 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
         accessor = m_accessors.value( serviceProvider );
     }
 
-    QDateTime downloadTime = m_nextDownloadTimeProposals[ stripDateAndTimeValues( name )];
+    QDateTime downloadTime = m_nextDownloadTimeProposals[ stripDateAndTimeValues(nonAmbiguousName) ];
     int minForSufficientChanges = downloadTime.isValid()
             ? QDateTime::currentDateTime().secsTo( downloadTime ) : 0;
     int minFetchWait;

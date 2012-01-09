@@ -248,8 +248,7 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
                   "<icode>  timetableData.set( 'TransportLine', '603' );</icode><nl/>"
                   "<icode>  timetableData.set( 'TypeOfVehicle', 'bus' );</icode><nl/>"
                   "<icode>  timetableData.set( 'Target', 'Samplestreet' );</icode><nl/>"
-                  "<icode>  timetableData.set( 'DepartureHour', 10 );</icode><nl/>"
-                  "<icode>  timetableData.set( 'DepartureMinute', 23 );</icode><nl/>"
+                  "<icode>  timetableData.set( 'DepartureDateTime', new Date() );</icode><nl/>"
                   "<icode>  timetableData.set( 'Delay', 4 );</icode><nl/>"
                   "<icode>  // Add timetable data to the result set</icode><nl/>"
                   "<icode>  result.addData( timetableData );</icode><nl/><nl/>"
@@ -285,8 +284,7 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
             "\t\ttimetableData.set( 'TransportLine', 'Sample line 4' );\n"
             "\t\ttimetableData.set( 'TypeOfVehicle', 'bus' );\n"
             "\t\ttimetableData.set( 'Target', 'Sample target' );\n"
-            "\t\ttimetableData.set( 'DepartureHour', 10 );\n"
-            "\t\ttimetableData.set( 'DepartureMinute', 15 );\n"
+            "\t\ttimetableData.set( 'DepartureDateTime', new Date() );\n"
             "\t\tresult.addData( timetableData );\n"
             "\t}\n"
             "}\n",
@@ -306,10 +304,8 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
                   "<icode>  // Then set all read values</icode><nl/>"
                   "<icode>  timetableData.set( 'StartStopName', 'A' );</icode><nl/>"
                   "<icode>  timetableData.set( 'TargetStopName', 'B' );</icode><nl/>"
-                  "<icode>  timetableData.set( 'DepartureHour', 10 );</icode><nl/>"
-                  "<icode>  timetableData.set( 'DepartureMinute', 23 );</icode><nl/>"
-                  "<icode>  timetableData.set( 'ArrivalHour', 11 );</icode><nl/>"
-                  "<icode>  timetableData.set( 'ArrivalMinute', 05 );</icode><nl/>"
+                  "<icode>  timetableData.set( 'DepartureDateTime', new Date() );</icode><nl/>"
+                  "<icode>  timetableData.set( 'ArrivalDateTime', new Date() );</icode><nl/>"
                   "<icode>  timetableData.set( 'Changes', 3 );</icode><nl/>"
                   "<icode>  timetableData.set( 'Pricing', '2,30 €' );</icode><nl/>"
                   "<icode>  // Add timetable data to the result set</icode><nl/>"
@@ -399,10 +395,10 @@ void JavaScriptCompletionModel::initHelperCompletion() {
 	    "matchTime( string time, string format = 'hh:mm' )",
 	    i18nc("@info The description for the 'matchTime' function",
 		    "Searches for a time with the given <emphasis>format</emphasis> in the "
-		    "given <emphasis>time</emphasis> string. Returns an integer array with "
-		    "two integers: The first one is the hour part, the second one the "
-		    "minute part."),
-	    "matchTime( ${timeString} );", true, "int array" ));
+		    "given <emphasis>time</emphasis> string. Returns an object with two properties "
+		    "on success: 'hour' and 'minute'. On error the returned object has an 'error' "
+            "property with the value true."),
+	    "matchTime( ${timeString} );", true, "object" ));
     m_completionsHelper.insert( "call:matchDate()", CompletionItem( Function,
 	    "matchDate( string date, string format = 'yyyy-MM-dd' )",
 	    i18nc("@info The description for the 'matchDate' function",
@@ -452,16 +448,17 @@ void JavaScriptCompletionModel::initHelperCompletion() {
 	    "error( ${message}, ${data} );", true, "void" ));
 }
 
+//  TODO EASY MACRO?
+/* #define ADD_COMPLETION_TIMETABLE_INFO( name, description, postfix ) \
+    m_completionsTimetableInfo.insert( "str:##name", \
+            CompletionItem(Const, #name, description, #name, false, QString(), postfix) ); \ */
+
 void JavaScriptCompletionModel::initTimetableInfoCompletion() {
-    m_completionsTimetableInfo.insert( "str:DepartureHour", CompletionItem( Const, "DepartureHour",
-            i18nc("@info The description for the 'DepartureHour' info",
-                  "The hour of the departure time."),
-            "DepartureHour",
-            false, QString(), i18nc("@info/plain", "Needed for Departures/Journeys") ));
-    m_completionsTimetableInfo.insert( "str:DepartureMinute", CompletionItem( Const, "DepartureMinute",
-            i18nc("@info The description for the 'DepartureMinute' info",
-                  "The minute of the departure time."),
-            "DepartureMinute",
+    m_completionsTimetableInfo.insert( "str:DepartureDateTime", CompletionItem( Const, "DepartureDateTime",
+            i18nc("@info The description for the 'DepartureDateTime' info",
+                  "The date and time of the departure. Can be a ECMAScript Date object. Use this "
+                  "information instead of DepartureDate and DepartureTime if possible."),
+            "DepartureDateTime",
             false, QString(), i18nc("@info/plain", "Needed for Departures/Journeys") ));
     m_completionsTimetableInfo.insert( "str:DepartureDate", CompletionItem( Const, "DepartureDate",
             i18nc("@info The description for the 'DepartureDate' info",
@@ -469,8 +466,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
             "DepartureDate" ));
     m_completionsTimetableInfo.insert( "str:DepartureTime", CompletionItem( Const, "DepartureTime",
             i18nc("@info The description for the 'DepartureTime' info",
-                  "The time of the departure. Can be used instead of DepartureHour and "
-                  "DepartureMinute, can include seconds for more precision."),
+                  "The time of the departure."),
             "DepartureTime" ));
     m_completionsTimetableInfo.insert( "str:TypeOfVehicle", CompletionItem( Const, "TypeOfVehicle",
             i18nc("@info The description for the 'TypeOfVehicle' info", "The type of vehicle."),
@@ -515,46 +511,14 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "<note>The url of the accessor is prepended, if a relative path has been "
                   "matched (starting with '/').</note>"),
             "JourneyNewsLink" ));
-    m_completionsTimetableInfo.insert( "str:DepartureHourPrognosis",
-	    CompletionItem( Const, "DepartureHourPrognosis",
-            i18nc("@info The description for the 'DepartureHourPrognosis' info",
-                  "The prognosis for the departure hour, which is the departure hour "
-                  "plus the delay."),
-            "DepartureHourPrognosis" ));
-    m_completionsTimetableInfo.insert( "str:DepartureMinutePrognosis",
-	    CompletionItem( Const, "DepartureMinutePrognosis",
-            i18nc("@info The description for the 'DepartureMinutePrognosis' info",
-                  "The prognosis for the departure minute, which is the departure minute "
-                  "plus the delay."),
-            "DepartureMinutePrognosis" ));
     m_completionsTimetableInfo.insert( "str:Operator", CompletionItem( Const, "Operator",
             i18nc("@info The description for the 'Operator' info",
                   "The company that is responsible for the journey."),
             "Operator" ));
-    m_completionsTimetableInfo.insert( "str:DepartureAMorPM", CompletionItem( Const, "DepartureAMorPM",
-            i18nc("@info The description for the 'DepartureAMorPM' info", "'am' or 'pm' "
-                  "for the departure time.<nl/>"
-                  "<note>If not set, 24 hour format is assumed.</note>"),
-            "DepartureAMorPM" ));
-    m_completionsTimetableInfo.insert( "str:DepartureAMorPMPrognosis",
-	    CompletionItem( Const, "DepartureAMorPMPrognosis",
-            i18nc("@info The description for the 'DepartureAMorPMPrognosis' info",
-                  "'am' or 'pm' for the prognosis departure time.<nl/>"
-                  "<note>If not set, 24 hour format is assumed.</note>"),
-            "DepartureAMorPMPrognosis" ));
-    m_completionsTimetableInfo.insert( "str:ArrivalAMorPM", CompletionItem( Const, "ArrivalAMorPM",
-            i18nc("@info The description for the 'ArrivalAMorPM' info",
-                  "'am' or 'pm' for the arrival time.<nl/>"
-                  "<note>If not set, 24 hour format is assumed.</note>"),
-            "ArrivalAMorPM" ));
     m_completionsTimetableInfo.insert( "str:Status", CompletionItem( Const, "Status",
             i18nc("@info The description for the 'Status' info", "The current status of "
                   "the departure / arrival. Currently only used for planes."),
             "Status" ));
-    m_completionsTimetableInfo.insert( "str:DepartureYear", CompletionItem( Const, "DepartureYear",
-            i18nc("@info The description for the 'DepartureYear' info", "The year of the "
-                  "departure, to be used when the year is separated from the date."),
-            "DepartureYear" ));
     m_completionsTimetableInfo.insert( "str:IsNightLine", CompletionItem( Const, "IsNightLine",
             i18nc("@info The description for the 'IsNightLine' info", "A boolean indicating if "
 				  "the transport line is a nightline or not."),
@@ -669,18 +633,20 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
             i18nc("@info The description for the 'TargetStopID' info",
                   "The ID of the target stop of a journey."),
             "TargetStopID" ));
+    m_completionsTimetableInfo.insert( "str:ArrivalDateTime", CompletionItem( Const, "ArrivalDateTime",
+            i18nc("@info The description for the 'ArrivalDateTime' info",
+                  "The date and time of the arrival. Can be a ECMAScript Date object. Use this "
+                  "information instead of ArrivalDate and ArrivalTime if possible."),
+            "ArrivalDateTime" ));
     m_completionsTimetableInfo.insert( "str:ArrivalDate", CompletionItem( Const, "ArrivalDate",
             i18nc("@info The description for the 'ArrivalDate' info",
                   "The date of the arrival."),
             "ArrivalDate" ));
-    m_completionsTimetableInfo.insert( "str:ArrivalHour", CompletionItem( Const, "ArrivalHour",
-            i18nc("@info The description for the 'ArrivalHour' info",
-                  "The hour of the arrival time."),
-            "ArrivalHour", false, QString(), i18nc("@info/plain", "Needed for Journeys") ));
-    m_completionsTimetableInfo.insert( "str:ArrivalMinute", CompletionItem( Const, "ArrivalMinute",
-            i18nc("@info The description for the 'ArrivalMinute' info",
-                  "The minute of the arrival time."),
-            "ArrivalMinute", false, QString(), i18nc("@info/plain", "Needed for Journeys") ));
+    m_completionsTimetableInfo.insert( "str:ArrivalTime", CompletionItem( Const, "ArrivalTime",
+            i18nc("@info The description for the 'ArrivalTime' info",
+                  "The time of the arrival time."),
+            "ArrivalTime", false, QString(),
+            i18nc("@info/plain", "This or ArrivalDateTime is needed for journeys") ));
     m_completionsTimetableInfo.insert( "str:Changes", CompletionItem( Const, "Changes",
             i18nc("@info The description for the 'Changes' info",
                   "The number of changes between different vehicles in a journey."),

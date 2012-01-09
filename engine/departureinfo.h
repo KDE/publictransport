@@ -24,13 +24,17 @@
 #ifndef DEPARTUREINFO_HEADER
 #define DEPARTUREINFO_HEADER
 
+// Own includes
+#include "enums.h"
+
 // Qt includes
 #include <QVariant>
 #include <QTime>
 #include <QStringList>
+#include <QPointer>
 
-// Own includes
-#include "enums.h"
+/** @brief Stores information about a departure/arrival/journey/stop suggestion. */
+typedef QHash<TimetableInformation, QVariant> TimetableData;
 
 /**
  * @brief LineService-Flags.
@@ -46,7 +50,7 @@ Q_DECLARE_FLAGS( LineServices, LineService )
  * @see JourneyInfo
  * @see DepartureInfo
  **/
-class PublicTransportInfo : public QHash<TimetableInformation, QVariant> {
+class PublicTransportInfo : public QObject {
 public:
     /** @brief Options for stop names, eg. use a shortened form or not. */
     enum StopNameOptions {
@@ -55,7 +59,7 @@ public:
     };
 
     /** @brief Constructs a new PublicTransportInfo object. */
-    PublicTransportInfo() : QHash<TimetableInformation, QVariant>() {};
+    PublicTransportInfo( QObject *parent = 0 );
 
     /**
      * @brief Contructs a new PublicTransportInfo object based on the information given
@@ -63,9 +67,16 @@ public:
      *
      * @param data A hash that contains values for TimetableInformations.
      **/
-    explicit PublicTransportInfo( const QHash<TimetableInformation, QVariant> &data );
+    explicit PublicTransportInfo( const TimetableData &data, QObject *parent = 0 );
 
-    virtual ~PublicTransportInfo() {};
+    virtual ~PublicTransportInfo();
+
+    bool contains( TimetableInformation info ) const { return m_data.contains(info); };
+    QVariant value( TimetableInformation info ) const { return m_data[info]; };
+    void insert( TimetableInformation info, const QVariant &data ) {
+        m_data.insert( info, data );
+    };
+    void remove( TimetableInformation info ) { m_data.remove(info); };
 
     /**
      * @brief Wheather or not this PublicTransportInfo object is valid.
@@ -122,6 +133,7 @@ public:
 
 protected:
     bool m_isValid;
+    TimetableData m_data;
 };
 
 /**
@@ -136,8 +148,11 @@ public:
      * @brief Contructs a new JourneyInfo object based on the information given with @p data.
      *
      * @param data A hash that contains values for at least the required
-     *   TimetableInformations (TransportLine, Target, DepartureHour, DepartureMinute). */
-    explicit JourneyInfo( const QHash<TimetableInformation, QVariant> &data );
+     *   TimetableInformations: DepartureDateTime, ArrivalDateTime, StartStopName and
+     *   TargetStopName. Instead of DepartureDateTime, DepartureDate and DepartureTime can be used.
+     *   If only DepartureTime gets used, the date is guessed. The same is true for ArrivalDateTime.
+     **/
+    explicit JourneyInfo( const TimetableData &data, QObject *parent = 0 );
 
     /** @brief Gets information about the pricing of the journey. */
     QString pricing() const {
@@ -246,8 +261,6 @@ public:
     QVariantList routeTimesDepartureDelay() const;
 
     QVariantList routeTimesArrivalDelay() const;
-
-private:
 };
 
 /**
@@ -259,15 +272,18 @@ private:
 class DepartureInfo : public PublicTransportInfo {
 public:
     /** @brief Constructs an invalid DepartureInfo object. */
-    DepartureInfo();
+    DepartureInfo( QObject *parent = 0 );
 
     /**
      * @brief Contructs a new DepartureInfo object based on the information given with @p data.
      *
      * @param data A hash that contains values for at least the required
-     *   TimetableInformations (TransportLine, Target, DepartureHour, DepartureMinute).
+     *   TimetableInformations: TransportLine, Target, DepartureDateTime. Instead of
+     *   DepartureDateTime, DepartureDate and DepartureTime can be used. If only DepartureTime
+     *   gets used, the date is guessed.
      **/
-    explicit DepartureInfo( const QHash<TimetableInformation, QVariant> &data );
+    explicit DepartureInfo( const TimetableData &data,
+                            QObject *parent = 0 );
 
     /** @brief Gets the target / origin of the departing / arriving vehicle. */
     QString target( StopNameOptions stopNameOptions = UseFullStopNames ) const;
@@ -343,17 +359,17 @@ private:
  * @see DepartureInfo
  * @see JourneyInfo
  **/
-class StopInfo : public QHash<TimetableInformation, QVariant> {
+class StopInfo : public PublicTransportInfo {
 public:
     /** @brief Constructs an invalid StopInfo object. */
-    StopInfo();
+    StopInfo( QObject *parent = 0 );
 
     /**
      * @brief Contructs a new StopInfo object based on the information given with @p data.
      *
      * @param data A hash that contains values for at least the required TimetableInformations
      *   (StopName). */
-    StopInfo( const QHash<TimetableInformation, QVariant> &data );
+    StopInfo( const QHash<TimetableInformation, QVariant> &data, QObject *parent = 0 );
 
     /**
      * @brief Constructs a new StopInfo object.
@@ -366,7 +382,8 @@ public:
      * @param countryCode The code of the country in which the stop is, if available.
      */
     StopInfo( const QString &name, const QString &id = QString(), int weight = -1,
-              const QString &city = QString(), const QString &countryCode = QString() );
+              const QString &city = QString(), const QString &countryCode = QString(),
+              QObject *parent = 0 );
 
     /** @brief Gets the name of the stop. */
     QString name() const { return value(StopName).toString(); };
@@ -382,9 +399,15 @@ public:
 
     /** @brief Gets the code of the country in which the stop is. */
     QString countryCode() const { return value(StopCountryCode).toString(); };
-
-private:
-    bool m_isValid;
 };
+
+typedef QSharedPointer< PublicTransportInfo > PublicTransportInfoPtr;
+typedef QSharedPointer< DepartureInfo > DepartureInfoPtr;
+typedef QSharedPointer< JourneyInfo > JourneyInfoPtr;
+typedef QSharedPointer< StopInfo > StopInfoPtr;
+typedef QList< PublicTransportInfoPtr > PublicTransportInfoList;
+typedef QList< DepartureInfoPtr > DepartureInfoList;
+typedef QList< JourneyInfoPtr > JourneyInfoList;
+typedef QList< StopInfoPtr > StopInfoList;
 
 #endif // DEPARTUREINFO_HEADER

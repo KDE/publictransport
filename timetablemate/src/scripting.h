@@ -125,18 +125,11 @@ public Q_SLOTS:
 	};
 
 	/**
-	 * @brief Gets a list with the hour and minute values parsed from @p str,
-	 *   which is in the given @p format.
-	 *
-	 * @param str The string containing the time to be parsed, eg. "08:15".
-	 *
-	 * @param format The format of the time string in @p str. Default is "hh:mm".
-	 *
-	 * @return A list of two integers: The hour and minute values parsed from @p str.
-	 *
+	 * @brief Gets a QVariantMap with the 'hour' and 'minute' values parsed from @p str
+     *   using @p format.
 	 * @see formatTime
 	 **/
-	QVariantList matchTime( const QString &str, const QString &format = "hh:mm") {
+	QVariantMap matchTime( const QString &str, const QString &format = "hh:mm") {
 	    QString pattern = QRegExp::escape( format );
 	    pattern = pattern.replace( "hh", "\\d{2}" )
 						 .replace( "h", "\\d{1,2}" )
@@ -145,24 +138,28 @@ public Q_SLOTS:
 						 .replace( "AP", "(AM|PM)" )
 						 .replace( "ap", "(am|pm)" );
 
-	    QVariantList ret;
-	    QRegExp rx( pattern );
-	    if ( rx.indexIn(str) != -1 ) {
-			QTime time = QTime::fromString( rx.cap(), format );
-			ret << time.hour() << time.minute();
-	    } else if ( format != "hh:mm" ) {
-			// Try default format if the one specified doesn't work
-			QRegExp rx2( "\\d{1,2}:\\d{2}" );
-			if ( rx2.indexIn(str) != -1 ) {
-				QTime time = QTime::fromString( rx2.cap(), "hh:mm" );
-				ret << time.hour() << time.minute();
-			} else {
-				kDebug() << "Couldn't match time in" << str << pattern;
-			}
-	    } else {
-			kDebug() << "Couldn't match time in" << str << pattern;
-		}
-	    return ret;
+        QVariantMap ret;
+        QRegExp rx( pattern );
+        if ( rx.indexIn( str ) != -1 ) {
+            QTime time = QTime::fromString( rx.cap(), format );
+            ret.insert( "hour", time.hour() );
+            ret.insert( "minute", time.minute() );
+        } else if ( format != "hh:mm" ) {
+            // Try default format if the one specified doesn't work
+            QRegExp rx2( "\\d{1,2}:\\d{2}" );
+            if ( rx2.indexIn( str ) != -1 ) {
+                QTime time = QTime::fromString( rx2.cap(), "hh:mm" );
+                ret.insert( "hour", time.hour() );
+                ret.insert( "minute", time.minute() );
+            } else {
+                ret.insert( "error", true );
+                kDebug() << "Couldn't match time in" << str << pattern;
+            }
+        } else {
+            ret.insert( "error", true );
+            kDebug() << "Couldn't match time in" << str << pattern;
+        }
+        return ret;
 	};
 
 	/**
@@ -170,11 +167,9 @@ public Q_SLOTS:
 	 *   which is in the given @p format.
 	 *
 	 * @param str The string containing the date to be parsed, eg. "2010-12-01".
-	 *
 	 * @param format The format of the time string in @p str. Default is "YY-MM-dd".
 	 *
 	 * @return A list of two integers: The day, month and year values parsed from @p str.
-	 *
 	 * @see formatDate TODO
 	 **/
 	QVariantList matchDate( const QString &str, const QString &format = "yyyy-MM-dd") {

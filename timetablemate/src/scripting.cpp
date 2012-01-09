@@ -21,25 +21,23 @@
 
 void TimetableData::set( const QString &info, const QVariant& value ) {
     static QStringList validDepartureStrings = QStringList()
-		<< "departuredate" << "departuretime" << "departurehour" << "departureminute" << "typeofvehicle"
+		<< "departuredatetime" << "departuredate" << "departuretime" << "typeofvehicle"
 		<< "transportline" << "flightnumber" << "target" << "platform" << "delay" << "delayreason"
-		<< "journeynews" << "journeynewsother" << "journeynewslink" << "departurehourprognosis"
-		<< "departureminuteprognosis" << "operator" << "departureamorpm"
-		<< "departureamorpmprognosis" << "status" << "departureyear" << "routestops"
+		<< "journeynews" << "journeynewsother" << "journeynewslink"
+		<< "operator" << "status" << "routestops"
 		<< "routetimes" << "routeexactstops" << "isnightline";
     static QStringList validJourneyStrings = QStringList()
-		<< "departuredate" << "departuretime" << "departurehour" << "departureminute" 
+		<< "departuredatetime" << "departuredate" << "departuretime"
 		<< "duration" << "startstopname" << "startstopid" << "targetstopname" << "targetstopid"
-		<< "arrivaldate" << "arrivalhour" << "arrivalminute" << "changes"
+		<< "arrivaldatetime" << "arrivaldate" << "arrivaltime" << "changes"
 		<< "typesofvehicleinjourney" << "pricing" << "routetransportlines" << "routetypesofvehicles"
 		<< "routeplatformsdeparture" << "routeplatformsarrival" << "routetimesdeparturedelay"
 		<< "routetimesarrivaldelay" << "routetimesdeparture" << "routetimesarrival"
 		<< "routestops" << "journeynews" << "journeynewsother" << "journeynewslink"
-		<< "departurehourprognosis" << "departureminuteprognosis" << "operator" << "departureamorpm"
-		<< "departureamorpmprognosis" << "arrivalamorpm";
+		<< "operator";
     static QStringList validStopSuggestionStrings = QStringList()
 		<< "stopname" << "stopid" << "stopweight" << "stopcity" << "stopcountrycode";
-    
+
     QString s = info.toLower();
     if ( (m_mode == "departures" && !validDepartureStrings.contains(s))
       || (m_mode == "journeys" && !validJourneyStrings.contains(s))
@@ -57,7 +55,7 @@ void TimetableData::set( const QString &info, const QVariant& value ) {
 			|| s == "startStopName" || s == "targetstopname"
 			|| s == "operator" || s == "transportline"
 			|| s == "platform" || s == "delayreason"
-			|| s == "status" || s == "pricing") ) 
+			|| s == "status" || s == "pricing") )
 		{
 			m_values[ s ] = /*TimetableAccessorScript::decodeHtmlEntities(*/ value.toString() /*)*/; // TODO
 		} else if ( value.isValid() && value.canConvert(QVariant::List) && s == "departuredate" ) {

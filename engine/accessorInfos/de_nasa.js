@@ -133,7 +133,7 @@ function parseTimetable( html ) {
 	}
 }
 
-function parsePossibleStops( html ) {
+function parseStopSuggestions( html ) {
 	// Find stop range
 	var range = /<select class="error" name="input">\s*([\s\S]*)\s*<\/select>/i.exec( html );
 	if ( range == null ) {

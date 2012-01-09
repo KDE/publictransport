@@ -194,7 +194,9 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
             } else if ( name().compare(QLatin1String("changelog"), Qt::CaseInsensitive) == 0 ) {
                 accessorInfo->setChangelog( readChangelog() );
             } else if ( name().compare(QLatin1String("script"), Qt::CaseInsensitive) == 0 ) {
-                QString scriptFile = QFileInfo( fileName ).path() + '/' + readElementText();
+                const QStringList extensions = attributes().value( QLatin1String("extensions") )
+                        .toString().split( ',', QString::SkipEmptyParts );
+                const QString scriptFile = QFileInfo( fileName ).path() + '/' + readElementText();
                 if ( !QFile::exists(scriptFile) ) {
                     raiseError( QString("The script file %1 referenced by the service provider "
                                         "information XML named %2 wasn't found")
@@ -202,7 +204,7 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
                     delete accessorInfo;
                     return 0;
                 }
-                accessorInfo->setScriptFile( scriptFile );
+                accessorInfo->setScriptFile( scriptFile, extensions );
             } else if ( name().compare(QLatin1String("credit"), Qt::CaseInsensitive) == 0 ) {
                 accessorInfo->setCredit( readElementText() );
             } else {
@@ -216,11 +218,16 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
         raiseError( "No <url> tag in accessor info XML" );
         return 0;
     }
-    if ( accessorInfo->accessorType() == HTML && accessorInfo->departureRawUrl().isEmpty() ) {
-        delete accessorInfo;
-        raiseError( "No raw url for departures in accessor info XML, mandatory for HTML types" );
-        return 0;
-    }
+//     if ( accessorInfo->accessorType() == HTML && accessorInfo->departureRawUrl().isEmpty() ) {
+//         delete accessorInfo;
+//         raiseError( "No raw url for departures in accessor info XML, mandatory for HTML types" );
+//         return 0;
+
+// TODO
+//         kDebug() << "No raw url for deaprtures in accessor info XML, will use 'getTimetable' "
+//                     "function to request timetable document from within the script using "
+//                     "netAccess.download(url).";
+//     }
 
     accessorInfo->setName( nameLocal.isEmpty() ? nameEn : nameLocal );
     accessorInfo->setDescription( descriptionLocal.isEmpty() ? descriptionEn : descriptionLocal );

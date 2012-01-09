@@ -5,7 +5,7 @@
 //     return [ 'StopID' ];
 // }
 
-function parsePossibleStops( html ) {
+function parseStopSuggestions( html ) {
     var range = /<select [^>]*id="HFS_input"[^>]*>\s*([\s\S]*?)\s*<\/select>/i.exec( html );
     if ( range == null ) {
 		helper.error( "Stop range not found!", html );

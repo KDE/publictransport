@@ -26,15 +26,36 @@
 #ifndef TIMETABLEACCESSOR_SCRIPT_HEADER
 #define TIMETABLEACCESSOR_SCRIPT_HEADER
 
+// Own includes
 #include "timetableaccessor.h" // Base class
+#include "scripting.h"
 
-namespace Kross {
-    class Action;
+namespace ThreadWeaver {
+    class Job;
 }
-class ResultObject;
+
+class Storage;
+class QScriptProgram;
+class ScriptThread;
+
+/** @brief Stores information about a departure/arrival/journey/stop suggestion. */
+typedef QHash<TimetableInformation, QVariant> TimetableData;
 
 /**
  * @brief The base class for all scripted accessors.
+ *
+ * Scripts are executed in a separate thread and do network requests synchronously
+ * from withing the script. Scripts are written in ECMAScript (QScript), but the "kross" extension
+ * gets loaded automatically, so that you can also use other languages supported by Kross.
+ *
+ * To use eg. Python code in the script, the following code can be used:
+ * @code
+ *  var action = Kross.action( "MyPythonScript" ); // Create Kross action
+ *  action.addQObject( action, "MyAction" ); // Propagate action to itself
+ *  action.setInterpreter( "python" ); // Set the interpreter to use, eg. "python", "ruby"
+ *  action.setCode("import MyAction ; print 'This is Python. name=>',MyAction.interpreter()");
+ *  action.trigger(); // Run the script
+ * @endcode
  */
 class TimetableAccessorScript : public TimetableAccessor {
     Q_OBJECT
@@ -49,6 +70,44 @@ public:
         ScriptLoaded = 0x01,
         ScriptHasErrors = 0x02
     };
+
+private:
+    QMutex mutex; // TODO
+public:
+    void import( const QString &import, QScriptEngine *engine ) {
+        mutex.lock();
+        qDebug() << "START"<<thread();
+        engine->importExtension(import);
+        qDebug() << "END"<<thread();
+        mutex.unlock();
+    };
+
+    /** @brief The name of the script function to get a list of used TimetableInformation's. */
+    static const char *SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS;
+
+    /** @brief The name of the script function to download and parse departures/arrivals. */
+    static const char *SCRIPT_FUNCTION_GETTIMETABLE;
+
+    /** @brief The name of the script function to download and parse journeys. */
+    static const char *SCRIPT_FUNCTION_GETJOURNEYS;
+
+    /** @brief The name of the script function to download and parse stop suggestions. */
+    static const char *SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
+
+    /** @brief The name of the script function to parse a downloaded timetable document. */
+    static const char *SCRIPT_FUNCTION_PARSETIMETABLE;
+
+    /** @brief The name of the script function to parse a downloaded journey timetable document. */
+    static const char *SCRIPT_FUNCTION_PARSEJOURNEYS;
+
+    /** @brief The name of the script function to parse a downloaded stop suggestions document. */
+    static const char *SCRIPT_FUNCTION_PARSESTOPSUGGESTIONS;
+
+    /** @brief The name of the script function to parse a downloaded session key document. */
+    static const char *SCRIPT_FUNCTION_PARSESESSIONKEYS;
+
+    /** @brief Gets a list of extensions that are allowed to be imported by scripts. */
+    static QStringList allowedExtensions();
 
     /**
      * @brief Creates a new TimetableAccessorScript object with the given information.
@@ -67,6 +126,7 @@ public:
     /** @brief Whether or not the script has been successfully loaded. */
     bool isScriptLoaded() const { return m_scriptState == ScriptLoaded; };
 
+    /** @brief Whether or not the script has errors. */
     bool hasScriptErrors() const { return m_scriptState == ScriptHasErrors; };
 
     /** @brief Gets a list of features that this accessor supports through a script. */
@@ -84,76 +144,49 @@ public:
     static QString decodeHtml( const QByteArray &document,
                                const QByteArray &fallbackCharset = QByteArray() );
 
+    /**
+     * @brief Requests a list of departures/arrivals. When the departure/arrival list
+     *   is completely received @ref departureListReceived is emitted.
+     **/
+    virtual void requestDepartures( const DepartureRequestInfo &requestInfo );
+
+    virtual void requestJourneys( const JourneyRequestInfo &requestInfo );
+
+    virtual void requestStopSuggestions(
+            const StopSuggestionRequestInfo &requestInfo );
+
+protected slots:
+    void departuresReady( const QList<TimetableData> &data,
+                          ResultObject::Features features, ResultObject::Hints hints,
+                          const QString &url, const GlobalTimetableInfo &globalInfo,
+                          const DepartureRequestInfo &requestInfo, bool couldNeedForcedUpdate = false );
+
+    void journeysReady( const QList<TimetableData> &data, ResultObject::Features features,
+                        ResultObject::Hints hints, const QString &url,
+                        const GlobalTimetableInfo &globalInfo,
+                        const JourneyRequestInfo &requestInfo, bool couldNeedForcedUpdate = false );
+
+    void stopSuggestionsReady( const QList<TimetableData> &data, ResultObject::Features features,
+                               ResultObject::Hints hints, const QString &url,
+                               const GlobalTimetableInfo &globalInfo,
+                               const StopSuggestionRequestInfo &requestInfo,
+                               bool couldNeedForcedUpdate = false );
+
+    void jobStarted( ThreadWeaver::Job *job );
+    void jobDone( ThreadWeaver::Job *job );
+    void jobFailed( ThreadWeaver::Job *job );
+
 protected:
     bool lazyLoadScript();
     QStringList readScriptFeatures();
 
-    /**
-     * @brief Calls the 'parseTimetable'/'parseJourneys' function in the script to
-     *   parse the contents of a received document for a list of departures/arrivals
-     *   or journeys (depending on @p parseDocumentMode) and puts the results
-     *   into @p journeys.
-     *
-     * @param journeys A pointer to a list of departure/arrival or journey
-     *   information. The results of parsing the document is stored in @p journeys.
-     * @param parseDocumentMode The mode of parsing, e.g. parse for
-     *   departures/arrivals or journeys.
-     * @return true, if there were no errors and the data in @p journeys is valid.
-     * @return false, if there were an error parsing the document.
-     **/
-    virtual bool parseDocument( const QByteArray &document,
-            QList<PublicTransportInfo*> *journeys, GlobalTimetableInfo *globalInfo,
-            ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
-
-    /**
-     * @brief Calls the 'getUrlForLaterJourneyResults' function in the script to
-     *   parse the contents of a received document for an url to a document
-     *   containing later journeys.
-     *
-     * @return The parsed url.
-     **/
-    virtual QString parseDocumentForLaterJourneysUrl( const QByteArray &document );
-
-    /**
-     * @brief Calls the 'getUrlForDetailedJourneyResults' function in the script to
-     *   parse the contents of a received document for an url to a document
-     *   containing detailed journey information.
-     *
-     * @return The parsed url.
-     **/
-    virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document );
-
-    /**
-     * @brief Calls the 'parseSessionKey' function in the script to
-     *   parse the contents of a received document for the session key.
-     *
-     * @return The parsed session key or QString() if none was found.
-     **/
-    virtual QString parseDocumentForSessionKey( const QByteArray &document );
-
-    /**
-     * @brief Calls the 'parsePossibleStops' function in the script to parse the contents of the
-     *   given document for a list of possible stop names and puts the results into @p stops.
-     *
-     * @param document A document to be parsed.
-     * @param stops A pointer to a list of @ref StopInfo objects.
-     * @return true, if there were no errors.
-     * @return false, if there were an error parsing the document.
-     *
-     * @note Can be used if you have an html document containing a stop list.
-     *   TimetableAccessorXml uses this to let the HTML accessor parse a downloaded
-     *   document for stops.
-     *
-     * @see parseDocumentPossibleStops(QHash<QString,QString>*)
-     **/
-    virtual bool parseDocumentPossibleStops( const QByteArray &document, QList<StopInfo*> *stops );
-
 private:
     ScriptState m_scriptState; // The state of the script
     QStringList m_scriptFeatures; // Caches the features the script provides
-
-    Kross::Action *m_script; // The script object
-    ResultObject *m_resultObject; // An object used by the script to store results in
+    ScriptThread *m_thread;
+    QHash< QString, PublicTransportInfoList > m_publishedData;
+    QScriptProgram *m_script;
+    Storage *m_scriptStorage;
 };
 
 #endif // TIMETABLEACCESSOR_SCRIPT_HEADER

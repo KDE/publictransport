@@ -150,8 +150,7 @@ bool TimetableAccessorXml::parseDocument( const QByteArray &document,
 
         // <Time> tag contains the departure time
         QTime time = QTime::fromString( stop.firstChildElement("Time").text(), "hh:mm" );
-        departureInfo.insert( DepartureHour, time.hour() );
-        departureInfo.insert( DepartureMinute, time.minute() );
+        departureInfo.insert( DepartureTime, time );
 
         // <Delay> tag contains delay
         QString sDelay = stop.firstChildElement("Delay").text();

@@ -26,6 +26,7 @@
 
 // Own includes
 #include "enums.h"
+#include "departureinfo.h"
 
 // KDE includes
 #include <KUrl> // Member variable
@@ -47,6 +48,131 @@ class DepartureInfo;
 class JourneyInfo;
 class PublicTransportInfo;
 class TimetableAccessorInfo;
+
+/**
+ * @brief Stores information about a request to the publictransport data engine.
+ *
+ * All values other than @p sourceName are derived (parsed) from it or represent the current state
+ * of the request.
+ **/
+struct RequestInfo {
+    /**
+     * @brief The requesting source name.
+     *
+     * Other values in RequestInfo are derived from this string.
+     **/
+    QString sourceName;
+
+    /** @brief The date and time to get results for. */
+    QDateTime dateTime;
+
+    /** @brief The stop name of the request. */
+    QString stop;
+
+    /** @brief The maximum number of result items, eg. departures or stop suggestions. */
+    int maxCount;
+
+    /** @brief Like parseMode, but distinguishes between "arrivals" and "departures". */
+    QString dataType;
+
+    /** @brief True, if another source URL than the default one was used. TODO */
+    bool useDifferentUrl;
+
+    /**
+     * @brief The city to get stop suggestions for (only needed if
+     *   @ref TimetableAccessor::useSeparateCityValue returns true).
+     **/
+    QString city;
+
+    /** @brief Describes what should be retrieved with the request, eg. departures or a a stop ID. */
+    ParseDocumentMode parseMode;
+
+    RequestInfo()
+    {
+        this->parseMode = ParseInvalid;
+        this->maxCount = -1;
+        this->useDifferentUrl = false;
+    };
+
+    RequestInfo( const QString &sourceName, const QString &stop, const QDateTime &dateTime,
+            int maxCount, const QString &dataType = "departures", bool useDifferentUrl = false,
+            const QString &city = QString(),
+            ParseDocumentMode parseMode = ParseForDeparturesArrivals )
+            : sourceName(sourceName), dateTime(dateTime), stop(stop), maxCount(maxCount),
+              dataType(dataType), useDifferentUrl(useDifferentUrl), city(city), parseMode(parseMode)
+    {
+    };
+
+    RequestInfo( const RequestInfo &info )
+    {
+        sourceName = info.sourceName;
+        dateTime = info.dateTime;
+        stop = info.stop;
+        maxCount = info.maxCount;
+        dataType = info.dataType;
+        useDifferentUrl = info.useDifferentUrl;
+        city = info.city;
+        parseMode = info.parseMode;
+    };
+
+    virtual ~RequestInfo() {};
+
+    virtual RequestInfo *clone() const
+    {
+        return new RequestInfo( sourceName, stop, dateTime, maxCount, dataType, useDifferentUrl,
+                                city, parseMode );
+    };
+};
+
+typedef RequestInfo StopSuggestionRequestInfo;
+typedef RequestInfo DepartureRequestInfo;
+
+/**
+ * @brief Stores information about a request for journeys to the publictransport data engine.
+ *
+ * All values other than @p sourceName are derived (parsed) from it or represent the current state
+ * of the request, eg. @p roundTrips stores the number of requests sent to a server to get
+ * enough data (each round trip adds some data).
+ **/
+struct JourneyRequestInfo : public RequestInfo {
+    /** @brief The target stop name of the request. */
+    QString targetStop;
+
+    /** @brief Specifies the URL to use to download the journey source document. */
+    QString urlToUse;
+
+    /** @brief Current number of round trips used to fulfil the journey request. */
+    int roundTrips;
+
+    JourneyRequestInfo() : RequestInfo()
+    {
+        this->roundTrips = 0;
+    };
+
+    JourneyRequestInfo( const QString &sourceName, const QString &startStop,
+            const QString &targetStop, const QDateTime &dateTime, int maxCount,
+            const QString &urlToUse, const QString &dataType = "journeys",
+            bool useDifferentUrl = false, const QString &city = QString(),
+            ParseDocumentMode parseMode = ParseForJourneys )
+        : RequestInfo(sourceName, startStop, dateTime, maxCount, dataType,
+                      useDifferentUrl, city, parseMode),
+          targetStop(targetStop), urlToUse(urlToUse), roundTrips(0)
+    {
+    };
+
+    JourneyRequestInfo( const JourneyRequestInfo &info ) : RequestInfo(info)
+    {
+        targetStop = info.targetStop;
+        urlToUse = info.urlToUse;
+        roundTrips = info.roundTrips;
+    };
+
+    virtual JourneyRequestInfo *clone() const
+    {
+        return new JourneyRequestInfo( sourceName, stop, targetStop, dateTime, maxCount, urlToUse,
+                                       dataType, useDifferentUrl, city, parseMode );
+    };
+};
 
 /**
  * @brief Gets timetable information for public transport from different service providers.
@@ -124,88 +250,44 @@ public:
     const TimetableAccessorInfo *info() const { return m_info; };
 
     /**
-     * @brief Requests a list of departures/arrivals. When the departure/arrival list
-     *   is completely received @ref departureListReceived is emitted.
+     * @brief Requests a list of departures/arrivals.
+     *
+     * When the departure/arrival list is completely received @ref departureListReceived gets
+     * emitted.
+     *
+     * @param requestInfo Information about the departure/arrival request.
      **/
-    KIO::StoredTransferJob *requestDepartures( const QString &sourceName,
-            const QString &city, const QString &stop,
-            int maxCount, const QDateTime &dateTime, const QString &dataType = "departures",
-            bool useDifferentUrl = false );
+    virtual void requestDepartures( const DepartureRequestInfo &requestInfo );
+
+    /**
+     * @brief Requests a list of journeys.
+     *
+     * When the journey list is completely received @ref journeyListReceived() gets emitted.
+     *
+     * @param requestInfo Information about the journey request.
+     **/
+    virtual void requestJourneys( const JourneyRequestInfo &requestInfo );
+
+    /**
+     * @brief Requests a list of stop suggestions.
+     *
+     * When the stop list is completely received @ref stopListReceived gets emitted.
+     *
+     * @param requestInfo Information about the stop suggestion request.
+     **/
+    virtual void requestStopSuggestions( const StopSuggestionRequestInfo &requestInfo );
 
     /**
      * @brief Requests a session key. May be needed for some service providers to work properly.
      *
      * When the session key has been received @ref sessionKeyReceived is emitted.
      *
-     * @param parseMode Can be ParseForSessionKeyThenStopSuggestions (calls
-     *   @ref requestStopSuggestions after the session key has been retrieved) or
-     *   ParseForSessionKeyThenDepartures (calls @ref requestDepartures after the session key has
-     *   been retrieved).
-     * @param url The url to a document which contains the session key.
-     * @param sourceName The source name in the data engine.
-     * @param city After the session key has been parsed, @ref requestDepartures is called
-     *   with @p city.
-     * @param stop After the session key has been parsed, @ref requestDepartures is called
-     *   with @p stop.
-     * @param maxCount After the session key has been parsed, @ref requestDepartures is called
-     *   with @p maxCount. Default is 99.
-     * @param dateTime After the session key has been parsed, @ref requestDepartures is called
-     *   with @p dateTime. Default is QDateTime::currentDateTime().
-     * @param dataType After the session key has been parsed, @ref requestDepartures is called
-     *   with @p dataType. Default is QString().
-     * @param usedDifferentUrl After the session key has been parsed, @ref requestDepartures is
-     *   called with @p usedDifferentUrl. Default is false.
-     *
-     * @return The KIO-job that handles the download of the session key document. Can be 0.
+     * @param requestInfo Information about a request, that gets executed when the session key
+     *   is known. If for example requestInfo has information about a departure request, after
+     *   getting the session key, @p requestDepartures gets called with this requestInfo object.
      **/
-    KIO::StoredTransferJob *requestSessionKey( ParseDocumentMode parseMode, const KUrl &url,
-            const QString &sourceName, const QString &city, const QString &stop, int maxCount = 99,
-            const QDateTime &dateTime = QDateTime::currentDateTime(),
-            const QString &dataType = QString(), bool usedDifferentUrl = false );
-
-    /**
-     * @brief Requests a list of stop suggestions. When the stop list is completely received
-     *   @ref stopListReceived is emitted.
-     *
-     * @param sourceName The source name in the data engine.
-     * @param city The city to get stop suggestions for (only needed if @ref useSeparateCityValue
-     *   returns true).
-     * @param stop The stop name (or a part of it) to get suggestions for.
-     * @param parseMode Can be ParseForStopSuggestions or ParseForStopIdThenDepartures (then the
-     *   arguments @p maxCount, @p dateTime, @p dataType, @p usedDifferentUrl are also needed and
-     *   used for the departure request once a stop suggestion has arrived).
-     *   Default is ParseForStopSuggestions.
-     * @param maxCount Only used if @p parseMode is ParseForStopIdThenDepartures. After stop
-     *   suggestions are retrieved, @ref requestDepartures is called with @p maxCount. Default is 1,
-     *   because only the best suggestion is used.
-     * @param dateTime Only used if @p parseMode is ParseForStopIdThenDepartures. After stop
-     *   suggestions are retrieved, @ref requestDepartures is called with @p dateTime. Default is
-     *   QDateTime::currentDateTime().
-     * @param dataType Only used if @p parseMode is ParseForStopIdThenDepartures. After stop
-     *   suggestions are retrieved, @ref requestDepartures is called with @p dataType. Default is
-     *   QString().
-     * @param usedDifferentUrl Only used if @p parseMode is ParseForStopIdThenDepartures. After stop
-     *   suggestions are retrieved, @ref requestDepartures is called with @p usedDifferentUrl.
-     *   Default is false.
-     *
-     * @return The KIO-job that handles the download of the stop suggestion document. Can be 0
-     *   if eg. a session key document has to be downloaded first.
-     **/
-    KIO::StoredTransferJob *requestStopSuggestions( const QString &sourceName,
-            const QString &city, const QString &stop,
-            ParseDocumentMode parseMode = ParseForStopSuggestions, int maxCount = 1,
-            const QDateTime &dateTime = QDateTime::currentDateTime(),
-            const QString &dataType = QString(), bool usedDifferentUrl = false );
-
-    /**
-     * @brief Requests a list of journeys. When the journey list is completely received
-     * journeyListReceived() is emitted. */
-    KIO::StoredTransferJob *requestJourneys( const QString &sourceName,
-            const QString &city, const QString &startStopName, const QString &targetStopName,
-            int maxCount, const QDateTime &dateTime,
-            const QString &dataType = "journeys", bool useDifferentUrl = false );
-
-    KIO::StoredTransferJob *requestJourneys( const KUrl &url );
+    virtual void requestSessionKey( ParseDocumentMode parseMode, const KUrl &url,
+                                    const RequestInfo *requestInfo );
 
     /** @brief Gets the information object used by this accessor. */
     const TimetableAccessorInfo &timetableAccessorInfo() const { return *m_info; };
@@ -335,22 +417,19 @@ protected:
      * @brief Constructs an url to the departure / arrival list by combining the "raw"
      *   url with the needed information.
      **/
-    KUrl getUrl( const QString &city, const QString &stop, int maxCount, const QDateTime &dateTime,
-            const QString &dataType = "departures", bool useDifferentUrl = false ) const;
+    KUrl getUrl( const DepartureRequestInfo &requestInfo ) const;
 
     /**
      * @brief Constructs an url to a page containing stop suggestions by combining
      *   the "raw" url with the needed information.
      **/
-    KUrl getStopSuggestionsUrl( const QString &city, const QString &stop );
+    KUrl getStopSuggestionsUrl( const StopSuggestionRequestInfo &requestInfo );
 
     /**
      * @brief Constructs an url to the journey list by combining the "raw" url with the
      *   needed information.
      **/
-    KUrl getJourneyUrl( const QString &city, const QString &startStopName,
-            const QString &targetStopName, int maxCount, const QDateTime &dateTime,
-            const QString &dataType = "departures", bool useDifferentUrl = false ) const;
+    KUrl getJourneyUrl( const JourneyRequestInfo &requestInfo ) const;
 
 
     QString m_curCity; /**< @brief Stores the currently used city. */
@@ -364,20 +443,12 @@ signals:
      * @param accessor The accessor that was used to download and parse the departures/arrivals.
      * @param requestUrl The url used to request the information.
      * @param journeys A list of departures / arrivals that were received.
-     * @param serviceProvider The service provider the data came from.
-     * @param sourceName The name of the data source for which the departures/arrivals
-     *   have been downloaded and parsed.
-     * @param city The city the stop is in. May be empty if the service provider
-     *   doesn't need a separate city value.
-     * @param stop The stop name for which the departures / arrivals have been received.
-     * @param dataType "departures" or "arrivals".
-     * @param parseDocumentMode What has been parsed from the document.
+     * @param requestInfo Information about the request for the just received departure/arrival list.
      * @see TimetableAccessor::useSeperateCityValue()
      **/
     void departureListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
-            const QList<DepartureInfo*> &journeys, const GlobalTimetableInfo &globalInfo,
-            const QString &serviceProvider, const QString &sourceName, const QString &city,
-            const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
+            const DepartureInfoList &journeys, const GlobalTimetableInfo &globalInfo,
+            const DepartureRequestInfo &requestInfo );
 
     /**
      * @brief Emitted when a new journey list has been received and parsed.
@@ -385,21 +456,12 @@ signals:
      * @param accessor The accessor that was used to download and parse the journeys.
      * @param requestUrl The url used to request the information.
      * @param journeys A list of journeys that were received.
-     * @param serviceProvider The service provider the data came from.
-     * @param sourceName The name of the data source for which the journeys have
-     *   been downloaded and parsed.
-     * @param city The city the stop is in. May be empty if the service provider
-     *   doesn't need a separate city value.
-     * @param stop The stop name for which the departures / arrivals have been received.
-     * @param dataType "journeys".
-     * @param parseDocumentMode What has been parsed from the document.
+     * @param requestInfo Information about the request for the just received journey list.
      * @see TimetableAccessor::useSeperateCityValue()
      **/
     void journeyListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
-            const QList<JourneyInfo*> &journeys, const GlobalTimetableInfo &globalInfo,
-            const QString &serviceProvider, const QString &sourceName,
-            const QString &city, const QString &stop,
-            const QString &dataType, ParseDocumentMode parseDocumentMode );
+            const JourneyInfoList &journeys, const GlobalTimetableInfo &globalInfo,
+            const JourneyRequestInfo &requestInfo );
 
     /**
      * @brief Emitted when a list of stop names has been received and parsed.
@@ -407,20 +469,11 @@ signals:
      * @param accessor The accessor that was used to download and parse the stops.
      * @param requestUrl The url used to request the information.
      * @param stops A pointer to a list of @ref StopInfo objects.
-     * @param serviceProvider The service provider the data came from.
-     * @param sourceName The name of the data source for which the stops have been
-     *   downloaded and parsed.
-     * @param city The city the (ambiguous) stop is in. May be empty if the service provider
-     *   doesn't need a separate city value.
-     * @param stop The (ambiguous) stop name for which the stop list has been received.
-     * @param dataType "stopList".
-     * @param parseDocumentMode What has been parsed from the document.
+     * @param requestInfo Information about the request for the just received stop list.
      * @see TimetableAccessor::useSeperateCityValue()
      **/
     void stopListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
-            const QList<StopInfo*> &stops,
-            const QString &serviceProvider, const QString &sourceName, const QString &city,
-            const QString &stop, const QString &dataType, ParseDocumentMode parseDocumentMode );
+            const StopInfoList &stops, const StopSuggestionRequestInfo &requestInfo );
 
     /**
      * @brief Emitted when a session key has been received and parsed.
@@ -435,27 +488,21 @@ signals:
      *
      * @param accessor The accessor that was used to download and parse information
      *   from the service provider.
-     * @param errorType The type of error or NoError if there was no error.
-     * @param errorString If @p errorType isn't NoError this contains a
+     * @param errorCode The error code or NoError if there was no error.
+     * @param errorString If @p errorCode isn't NoError this contains a
      *   description of the error.
      * @param requestUrl The url used to request the information.
-     * @param serviceProvider The service provider the data came from.
-     * @param sourceName The name of the data source.
-     * @param city The city the stop is in. May be empty if the service provider
-     *   doesn't need a separate city value.
-     * @param stop The stop name for which the error occurred.
-     * @param dataType "nothing".
-     * @param parseDocumentMode What has been parsed from the document.
+     * @param requestInfo Information about the request that resulted in the error.
      * @see TimetableAccessor::useSeperateCityValue()
      **/
-    void errorParsing( TimetableAccessor *accessor, ErrorType errorType, const QString &errorString,
-            const QUrl &requestUrl, const QString &serviceProvider,
-            const QString &sourceName, const QString &city, const QString &stop,
-            const QString &dataType, ParseDocumentMode parseDocumentMode );
+    void errorParsing( TimetableAccessor *accessor, ErrorCode errorCode, const QString &errorString,
+            const QUrl &requestUrl, const RequestInfo *requestInfo );
+
+    void forceUpdate();
 
 protected slots:
-    /** @brief All data of a journey list has been received. */
-    void result( KJob* job );
+//     /** @brief All data of a journey list has been received. */
+//     void result( KJob* job );
 
     /**
      * @brief Clears the session key. This gets called from time to time by a timer, to enforce
@@ -469,48 +516,26 @@ protected:
     QString m_sessionKey;
     QTime m_sessionKeyGetTime;
 
-private:
-    static QString gethex( ushort decimal );
-
     struct JobInfos {
         // Mainly for QHash
-        JobInfos() {
-            this->parseDocumentMode = ParseInvalid;
-            this->maxCount = -1;
-            this->usedDifferentUrl = false;
-            this->roundTrips = 0;
+        JobInfos() : requestInfo(0) {
         };
 
-        JobInfos( ParseDocumentMode parseDocumentMode, const QString &sourceName,
-                  const QString &city, const QString &stop, const QUrl &url,
-                  const QString &dataType = QString(), int maxCount = -1,
-                  const QDateTime &dateTime = QDateTime(), bool useDifferentUrl = false,
-                  const QString &targetStop = QString(), int roundTrips = 0 ) {
-            this->parseDocumentMode = parseDocumentMode;
-            this->sourceName = sourceName;
-            this->city = city;
-            this->stop = stop;
+        JobInfos( const KUrl &url, RequestInfo *requestInfo ) : requestInfo(requestInfo) {
             this->url = url;
-            this->dataType = dataType;
-            this->maxCount = maxCount;
-            this->dateTime = dateTime;
-            this->usedDifferentUrl = useDifferentUrl;
-            this->targetStop = targetStop;
-            this->roundTrips = roundTrips;
         };
 
-        ParseDocumentMode parseDocumentMode;
-        QString sourceName;
-        QString city;
-        QString stop;
-        QString dataType;
-        QUrl url;
-        int maxCount;
-        QDateTime dateTime;
-        bool usedDifferentUrl;
-        QString targetStop;
-        int roundTrips;
+        ~JobInfos()
+        {
+            delete requestInfo;
+        };
+
+        KUrl url;
+        RequestInfo *requestInfo;
     };
+
+private:
+    static QString gethex( ushort decimal );
 
     // Stores information about currently running download jobs
     QHash< KJob*, JobInfos > m_jobInfos;
