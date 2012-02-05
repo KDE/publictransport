@@ -28,6 +28,7 @@
 #include <KLocale>
 #include <KLineEdit>
 #include <KNumInput>
+#include <KDateComboBox>
 
 // Qt includes
 #include <QStandardItemModel>
@@ -181,8 +182,10 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
     case FilterByDelay:
         return new ConstraintIntWidget( type, variant, value.toInt(), 0, 10000, parent );
 
-    case FilterByDeparture:
+    case FilterByDepartureTime:
         return new ConstraintTimeWidget( type, variant, value.toTime(), parent );
+    case FilterByDepartureDate:
+        return new ConstraintDateWidget( type, variant, value.toDate(), parent );
 
     case FilterByDayOfWeek: {
         QList< int > filterDaysOfWeek;
@@ -232,8 +235,10 @@ ConstraintWidget* FilterWidget::createConstraint( FilterType type )
     case FilterByDelay:
         return ConstraintWidget::create( type, FilterEquals, 0, this );
 
-    case FilterByDeparture:
+    case FilterByDepartureTime:
         return ConstraintWidget::create( type, FilterEquals, QTime::currentTime(), this );
+    case FilterByDepartureDate:
+        return ConstraintWidget::create( type, FilterEquals, QDate::currentDate(), this );
     case FilterByDayOfWeek:
         return ConstraintWidget::create( type, FilterIsOneOf,
                                          QVariantList() << 1 << 2 << 3 << 4 << 5 << 6 << 7, this );
@@ -262,8 +267,10 @@ QString FilterWidget::filterName( FilterType filter ) const
         return i18nc( "@item:inlistbox Name of the filter for the first intermediate stop", "Next Stop" );
     case FilterByDelay:
         return i18nc( "@item:inlistbox Name of the filter for delays", "Delay" );
-    case FilterByDeparture:
-        return i18nc( "@item:inlistbox Name of the filter for departure times", "Departure" );
+    case FilterByDepartureTime:
+        return i18nc( "@item:inlistbox Name of the filter for departure times", "Departure Time" );
+    case FilterByDepartureDate:
+        return i18nc( "@item:inlistbox Name of the filter for departure dates", "Departure Date" );
     case FilterByDayOfWeek:
         return i18nc( "@item:inlistbox Name of the filter for departure weekdays", "Day of Week" );
 
@@ -293,7 +300,7 @@ void FilterWidget::filterTypeChanged( int index )
     // Create a ConstraintWidget for the new filter type and replace the old ConstraintWidget
     ConstraintWidget *newConstraint = createConstraint( type );
     dynamicWidgets().at( filterIndex )->replaceContentWidget( newConstraint );
-    connect( newConstraint, SIGNAL(changed()), this, SLOT(changed()) );
+    connect( newConstraint, SIGNAL(changed()), this, SIGNAL(changed()) );
     emit changed();
 }
 
@@ -436,12 +443,24 @@ ConstraintTimeWidget::ConstraintTimeWidget( FilterType type,
             << FilterEquals << FilterDoesntEqual << FilterGreaterThan << FilterLessThan,
             initialVariant, parent )
 {
-    m_time = new QTimeEdit( this );
     value.setHMS( value.hour(), value.minute(), 0 );
-    m_time->setTime( value );
+    m_time = new QTimeEdit( value, this );
     addWidget( m_time );
 
     connect( m_time, SIGNAL(timeChanged(QTime)), this, SLOT(timeChanged(QTime)) );
+}
+
+ConstraintDateWidget::ConstraintDateWidget( FilterType type, FilterVariant initialVariant,
+        QDate value, QWidget* parent )
+        : ConstraintWidget( type, QList< FilterVariant >()
+            << FilterEquals << FilterDoesntEqual << FilterGreaterThan << FilterLessThan,
+            initialVariant, parent )
+{
+    m_date = new KDateComboBox( this );
+    m_date->setDate( value );
+    addWidget( m_date );
+
+    connect( m_date, SIGNAL(dateChanged(QDate)), this, SLOT(dateChanged(QDate)) );
 }
 
 void ConstraintListWidget::setValue( const QVariant& value )
@@ -650,6 +669,16 @@ QVariant ConstraintTimeWidget::value() const
 void ConstraintTimeWidget::setValue( const QVariant& value )
 {
     m_time->setTime( value.toTime() );
+}
+
+QVariant ConstraintDateWidget::value() const
+{
+    return m_date->date();
+}
+
+void ConstraintDateWidget::setValue( const QVariant& value )
+{
+    m_date->setDate( value.toDate() );
 }
 
 QVariant ConstraintIntWidget::value() const

@@ -37,6 +37,7 @@ class CheckCombobox;
 class KComboBox;
 class KIntSpinBox;
 class KLineEdit;
+class KDateComboBox;
 class QTimeEdit;
 
 /** @brief Namespace for the publictransport helper library. */
@@ -300,6 +301,46 @@ protected slots:
 
 private:
     QTimeEdit *m_time;
+};
+
+/**
+ * @brief A widget allowing to edit a single constraint where the user can enter a date value.
+ *
+ * @ingroup filterSystem
+ **/
+class PUBLICTRANSPORTHELPER_EXPORT ConstraintDateWidget : public ConstraintWidget {
+    Q_OBJECT
+
+public:
+    /**
+     * @brief Creates a new constraint widget where the user can enter a date value.
+     *
+     * @param type The type of this constraint, ie. what to filter.
+     * @param initialVariant The initial variant of this constraint, eg. equals/doesn't equals.
+     * @param value The value of this constraint. Defaults to QDate::currentDate().
+     * @param parent The parent object. Defaults to 0.
+     **/
+    ConstraintDateWidget( FilterType type, FilterVariant initialVariant,
+                          QDate value = QDate::currentDate(), QWidget* parent = 0 );
+
+    /** @returns a @ref QDate with the current date value of this constraint. */
+    virtual QVariant value() const;
+
+    /**
+     * @brief Sets the date value of this constraint.
+     *
+     * @param value A @ref QDate with the date value to be set for this constraint.
+     **/
+    virtual void setValue( const QVariant &value );
+
+protected slots:
+    void dateChanged( const QDate &newDate ) {
+        Q_UNUSED( newDate );
+        emit changed();
+    };
+
+private:
+    KDateComboBox *m_date;
 };
 
 /**

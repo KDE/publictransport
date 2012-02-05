@@ -155,7 +155,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     m_uiAlarms.alarmFilter->setWidgetCountRange();
     m_uiAlarms.alarmFilter->removeAllWidgets();
     m_uiAlarms.alarmFilter->setAllowedFilterTypes( QList<FilterType>()
-            << FilterByDeparture << FilterByDayOfWeek << FilterByVehicleType
+            << FilterByDepartureTime << FilterByDepartureDate << FilterByDayOfWeek << FilterByVehicleType
             << FilterByTarget << FilterByVia << FilterByNextStop << FilterByTransportLine
             << FilterByTransportLineNumber << FilterByDelay );
     m_uiAlarms.alarmFilter->setWidgetCountRange( 1 );

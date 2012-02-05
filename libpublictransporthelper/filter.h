@@ -34,10 +34,10 @@ namespace Timetable {
 
 /**
  * @brief A single constraint.
- * 
+ *
  * @note You can create a widget to show/edit this constraint with
  * @ref ConstraintWidget::create.
- * 
+ *
  * @ingroup filterSystem
  **/
 struct PUBLICTRANSPORTHELPER_EXPORT Constraint {
@@ -56,9 +56,9 @@ struct PUBLICTRANSPORTHELPER_EXPORT Constraint {
     * @brief Creates a new constraint with the given values.
     *
     * @param type The type of the new constraint, ie. what to filter.
-    * 
+    *
     * @param variant The variant of the new constraint, eg. equals/doesn't equal.
-    * 
+    *
     * @param value The value of the new constraint. Defaults to QVariant().
     **/
     Constraint( FilterType type, FilterVariant variant, const QVariant &value = QVariant() ) {
@@ -76,9 +76,9 @@ class DepartureInfo;
  * @brief A filter, which is a list of constraints.
  *
  * The constraints are logically combined using AND.
- * 
+ *
  * @note You can create a widget to show/edit this filter with @ref FilterWidget::create.
- * 
+ *
  * @ingroup filterSystem
  **/
 class PUBLICTRANSPORTHELPER_EXPORT Filter : public QList< Constraint > {
@@ -89,16 +89,22 @@ public:
     /** @brief Returns true, if all constraints of this filter match. */
     bool match( const DepartureInfo &departureInfo ) const;
 
+    /** @brief Returns true, if this filter matches only at one specific date and time. */
+    bool isOneTimeFilter() const;
+
+    /** @brief Returns true, if this is a one time filter for a date and time in the past. */
+    bool isExpired() const;
+
     /**
      * @brief Serializes this filter to a @ref QByteArray
-     * 
+     *
      * @returns the serialized filter as a @ref QByteArray
      **/
     QByteArray toData() const;
 
     /**
      * @brief Reads the data for this filter from the given @ref QByteArray
-     * 
+     *
      * @param ba The @ref QByteArray to read the data for this filter from.
      **/
     void fromData( const QByteArray &ba );
@@ -111,6 +117,8 @@ private:
                     const QVariant &testValue ) const;
     bool matchTime( FilterVariant variant, const QTime &filterTime,
                     const QTime &testTime ) const;
+    bool matchDate( FilterVariant variant, const QDate &filterDate,
+                    const QDate &testDate ) const;
 };
 QDataStream& operator<<( QDataStream &out, const Filter &filter );
 QDataStream& operator>>( QDataStream &in, Filter &filter );
@@ -120,10 +128,10 @@ QDataStream& operator>>( QDataStream &in, Filter &filter );
  *
  * The filters are logically combined using OR, while the filters are logical
  * combinations of constraints using AND.
- * 
+ *
  * @Note You can create a widget to show/edit this filter list with
  * @ref FilterListWidget::create.
- * 
+ *
  * @ingroup filterSystem
  **/
 class PUBLICTRANSPORTHELPER_EXPORT FilterList : public QList< Filter > {
@@ -133,20 +141,20 @@ public:
 
     /**
      * @brief Returns true, if one of the filters in this FilterList matches.
-     * 
+     *
      * This uses @ref Filter::match. */
     bool match( const DepartureInfo &departureInfo ) const;
 
     /**
      * @brief Serializes this list of filters to a @ref QByteArray
-     * 
+     *
      * @returns the serialized filter as a @ref QByteArray
      **/
     QByteArray toData() const;
-    
+
     /**
      * @brief Reads the data for this list of filters from the given @ref QByteArray
-     * 
+     *
      * @param ba The @ref QByteArray to read the data for this filter list from.
      **/
     void fromData( const QByteArray &ba );
@@ -156,7 +164,7 @@ QDataStream& operator>>( QDataStream &in, FilterList &filterList );
 
 /**
  * @brief Contains information about a filter configuration, ie. the settings of a filter.
- * 
+ *
  * @ingroup filterSystem
  **/
 struct PUBLICTRANSPORTHELPER_EXPORT FilterSettings {
