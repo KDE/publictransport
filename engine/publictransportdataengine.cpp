@@ -50,7 +50,7 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
 
     // This prevents applets from setting an unnecessarily high update interval
     // and using too much CPU.
-    // 60 seconds should be enough, departure / arrival times have minute precision.
+    // 60 seconds should be enough, departure / arrival times have minute precision (except for GTFS).
     setMinimumPollingInterval( 60000 );
 
     // Add service provider source, so when using

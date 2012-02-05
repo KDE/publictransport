@@ -54,7 +54,7 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
         switch ( constraint.type ) {
         case FilterByTarget:
             if ( !matchString(constraint.variant, constraint.value.toString(),
-                            departureInfo.target()) ) {
+                              departureInfo.target()) ) {
                 return false;
             }
             break;
@@ -121,9 +121,15 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
             }
             break;
 
-        case FilterByDeparture:
+        case FilterByDepartureTime:
             if ( !matchTime(constraint.variant, constraint.value.toTime(),
                             departureInfo.departure().time()) ) {
+                return false;
+            }
+            break;
+        case FilterByDepartureDate:
+            if ( !matchDate(constraint.variant, constraint.value.toDate(),
+                            departureInfo.departure().date()) ) {
                 return false;
             }
             break;
@@ -136,10 +142,81 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
 
         default:
             kDebug() << "Filter unknown or invalid" << constraint.type;
+            break;
         }
     }
 
     return true;
+}
+
+bool Filter::isOneTimeFilter() const
+{
+    bool hasDateEqualsConstraint = false, hasTimeEqualsConstraint = false;
+    foreach( const Constraint &constraint, *this ) {
+        switch ( constraint.type ) {
+        case FilterByTarget:
+        case FilterByVia:
+        case FilterByNextStop:
+        case FilterByTransportLine:
+        case FilterByTransportLineNumber:
+        case FilterByDelay:
+        case FilterByVehicleType:
+            break;
+
+        case FilterByDepartureTime:
+            hasTimeEqualsConstraint = constraint.variant == FilterEquals;
+            break;
+        case FilterByDepartureDate:
+            hasDateEqualsConstraint = constraint.variant == FilterEquals;
+            break;
+
+        default:
+            kDebug() << "Filter unknown or invalid" << constraint.type;
+            break;
+        }
+    }
+
+    return hasTimeEqualsConstraint && hasDateEqualsConstraint;
+}
+
+bool Filter::isExpired() const
+{
+    QDate date;
+    QTime time;
+    foreach( const Constraint &constraint, *this ) {
+        switch ( constraint.type ) {
+        case FilterByTarget:
+        case FilterByVia:
+        case FilterByNextStop:
+        case FilterByTransportLine:
+        case FilterByTransportLineNumber:
+        case FilterByDelay:
+        case FilterByVehicleType:
+            break;
+
+        case FilterByDepartureTime:
+            if ( constraint.variant == FilterEquals ) {
+                time = constraint.value.toTime();
+            }
+            break;
+        case FilterByDepartureDate:
+            if ( constraint.variant == FilterEquals ) {
+                date = constraint.value.toDate();
+            }
+            break;
+
+        default:
+            kDebug() << "Filter unknown or invalid" << constraint.type;
+            break;
+        }
+    }
+
+    if ( !time.isValid() || !date.isValid() ) {
+        kDebug() << "No one-time filter settings found, use Filter::isOneTimeFilter() to check";
+        return false;
+    }
+
+    return QDateTime::currentDateTime() > QDateTime( date, time );
 }
 
 bool Filter::matchList( FilterVariant variant, const QVariantList& filterValues,
@@ -218,6 +295,25 @@ bool Filter::matchTime( FilterVariant variant, const QTime& filterTime,
 
     default:
         kDebug() << "Invalid filter variant for time matching:" << variant;
+        return false;
+    }
+}
+
+bool Filter::matchDate( FilterVariant variant, const QDate& filterDate, const QDate& testDate ) const
+{
+    switch ( variant ) {
+    case FilterEquals:
+        return testDate == filterDate;
+    case FilterDoesntEqual:
+        return testDate != filterDate;
+
+    case FilterGreaterThan:
+        return testDate > filterDate;
+    case FilterLessThan:
+        return testDate < filterDate;
+
+    default:
+        kDebug() << "Invalid filter variant for date matching:" << variant;
         return false;
     }
 }
@@ -304,8 +400,11 @@ QDataStream& operator<<( QDataStream& out, const Filter &filter )
             out << constraint.value.toInt();
             break;
 
-        case FilterByDeparture:
+        case FilterByDepartureTime:
             out << constraint.value.toTime();
+            break;
+        case FilterByDepartureDate:
+            out << constraint.value.toDate();
             break;
 
         default:
@@ -329,14 +428,11 @@ QDataStream& operator>>( QDataStream& in, Filter &filter )
         constraint.type = static_cast< FilterType >( type );
         constraint.variant = static_cast< FilterVariant >( variant );
 
-        QVariantList list;
-        QVariant v;
-        QString s;
-        int i, count;
-        QTime time;
         switch ( constraint.type ) {
         case FilterByVehicleType:
-        case FilterByDayOfWeek:
+        case FilterByDayOfWeek: {
+            int i, count;
+            QVariantList list;
             in >> count;
             for ( int m = 0; m < count; ++m ) {
                 in >> i;
@@ -344,25 +440,37 @@ QDataStream& operator>>( QDataStream& in, Filter &filter )
             }
             constraint.value = list;
             break;
+        }
 
         case FilterByTarget:
         case FilterByVia:
         case FilterByNextStop:
-        case FilterByTransportLine:
+        case FilterByTransportLine: {
+            QString s;
             in >> s;
             constraint.value = s;
             break;
+        }
 
         case FilterByTransportLineNumber:
-        case FilterByDelay:
+        case FilterByDelay: {
+            int i;
             in >> i;
             constraint.value = i;
             break;
+        }
 
-        case FilterByDeparture:
+        case FilterByDepartureTime: {
+            QTime time;
             in >> time;
             constraint.value = time;
             break;
+        } case FilterByDepartureDate: {
+            QDate date;
+            in >> date;
+            constraint.value = date;
+            break;
+        }
 
         default:
             kDebug() << "Unknown filter type" << constraint.type << type;

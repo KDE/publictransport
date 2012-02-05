@@ -62,7 +62,8 @@ enum FilterType {
     FilterByNextStop, /**< Filter by next intermediate stop after the home stop (previous before
             * the home stop for arrivals). Like FilterByVia, but only for the second (last)
             * intermediate stop. */
-    FilterByDeparture, /**< Filter by departure/arrival time. */
+    FilterByDepartureTime, /**< Filter by departure/arrival time. */
+    FilterByDepartureDate, /**< Filter by departure/arrival date. */
     FilterByDayOfWeek /**< Filter by the day of week of the departure date.
             * Values are expected to be of type QVariantList with integers like the ones returned
             * by QDate::dayOfWeek(). Can be used with FilterIsOneOf and FilterIsNotOneOf. */
@@ -258,8 +259,10 @@ inline QDebug& operator<<( QDebug debug, FilterType filterType )
             return debug << "FilterByVia";
         case FilterByNextStop:
             return debug << "FilterByNextStop";
-        case FilterByDeparture:
-            return debug << "FilterByDeparture";
+        case FilterByDepartureTime:
+            return debug << "FilterByDepartureTime";
+        case FilterByDepartureDate:
+            return debug << "FilterByDepartureDate";
         case FilterByDayOfWeek:
             return debug << "FilterByDayOfWeek";
         default:
