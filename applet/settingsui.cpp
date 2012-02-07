@@ -180,6 +180,30 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     setValuesOfFilterConfig();
     currentAlarmChanged( m_uiAlarms.alarms->currentIndex() );
 
+    // Connect all widgets with the changed() slot, that enables the apply button
+    connect( m_stopListWidget, SIGNAL(changed(int,StopSettings)), this, SLOT(changed()) );
+    connect( m_stopListWidget, SIGNAL(added(QWidget*)), this, SLOT(changed()) );
+    connect( m_stopListWidget, SIGNAL(removed(QWidget*,int)), this, SLOT(changed()) );
+    connect( m_uiAdvanced.maximalNumberOfDepartures, SIGNAL(valueChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAdvanced.showArrivals, SIGNAL(toggled(bool)), this, SLOT(changed()) );
+    connect( m_uiAdvanced.showDepartures, SIGNAL(toggled(bool)), this, SLOT(changed()) );
+    connect( m_uiAdvanced.updateAutomatically, SIGNAL(stateChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()), this, SLOT(changed()) );
+    connect( m_uiAlarms.alarmFilter, SIGNAL(changed()), this, SLOT(changed()) );
+    connect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)), this, SLOT(changed()) );
+    connect( m_uiFilter.affectedStops, SIGNAL(checkedItemsChanged()), this, SLOT(changed()) );
+    connect( m_uiFilter.filterAction, SIGNAL(currentIndexChanged(int)), this, SLOT(changed()) );
+    connect( m_uiFilter.filters, SIGNAL(changed()), this, SLOT(changed()) );
+    connect( m_uiAppearance.shadow, SIGNAL(stateChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.cmbDepartureColumnInfos, SIGNAL(currentIndexChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.colorize, SIGNAL(stateChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.displayTimeBold, SIGNAL(stateChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.font, SIGNAL(currentFontChanged(QFont)), this, SLOT(changed()) );
+    connect( m_uiAppearance.linesPerRow, SIGNAL(valueChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.size, SIGNAL(valueChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.radioUseDefaultFont, SIGNAL(toggled(bool)), this, SLOT(changed()) );
+    connect( m_uiAppearance.radioUseOtherFont, SIGNAL(toggled(bool)), this, SLOT(changed()) );
+
     m_uiAlarms.addAlarm->setIcon( KIcon("list-add") );
     m_uiAlarms.removeAlarm->setIcon( KIcon("list-remove") );
     m_uiAlarms.renameAlarm->setIcon( KIcon("edit-rename") );
@@ -190,6 +214,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 
     connect( m_configDialog, SIGNAL(finished()), this, SLOT(configFinished()) );
     connect( m_configDialog, SIGNAL(okClicked()), this, SLOT(configAccepted()) );
+    connect( m_configDialog, SIGNAL(applyClicked()), this, SLOT(configAccepted()) );
 
     connect( m_uiFilter.filterAction, SIGNAL(currentIndexChanged(int)),
              this, SLOT(filterActionChanged(int)) );
@@ -202,6 +227,11 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
              this, SLOT(removeFilterConfiguration()) );
     connect( m_uiFilter.renameFilterConfiguration, SIGNAL(clicked()),
              this, SLOT(renameFilterConfiguration()) );
+}
+
+void SettingsUiManager::changed()
+{
+    m_configDialog->enableButtonApply( true );
 }
 
 void SettingsUiManager::configFinished()
@@ -321,6 +351,7 @@ void SettingsUiManager::addAlarmClicked()
     m_uiAlarms.alarms->setCurrentIndex( row );
 
     setValuesOfAlarmConfig();
+    changed();
 }
 
 void SettingsUiManager::removeAlarmClicked()
@@ -339,6 +370,7 @@ void SettingsUiManager::removeAlarmClicked()
     currentAlarmChanged( m_lastAlarm );
 
     alarmChanged();
+    changed();
 }
 
 void SettingsUiManager::renameAlarmClicked()
@@ -390,6 +422,7 @@ void SettingsUiManager::renameAlarmClicked()
     // Update name in the combobox
     m_uiAlarms.alarms->model()->setData( m_uiAlarms.alarms->model()->index(currentIndex, 0),
                                          newAlarmName, Qt::DisplayRole );
+    changed();
 }
 
 void SettingsUiManager::alarmChanged()
@@ -950,6 +983,7 @@ void SettingsUiManager::addFilterConfiguration()
 
     m_uiFilter.filterConfigurations->setCurrentItem( newFilterConfig, true );
     setFilterConfigurationChanged();
+    changed();
 }
 
 void SettingsUiManager::removeFilterConfiguration()
@@ -1001,6 +1035,7 @@ void SettingsUiManager::removeFilterConfiguration()
         setValuesOfFilterConfig();
     }
 
+    changed();
 //     setFilterConfigurationChanged();
 }
 
@@ -1069,6 +1104,7 @@ void SettingsUiManager::renameFilterConfiguration()
         }
     }
     m_stopListWidget->setStopSettingsList( stopSettingsList );
+    changed();
 
     // Update widgets containing a list of filter configuration names
     // NOTE not needed any longer (because of pointers to m_filterSettings

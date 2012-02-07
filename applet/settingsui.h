@@ -76,6 +76,8 @@ public slots:
                        const QList<int> &removedAlarms );
 
 protected slots:
+    void changed();
+
     /** @brief The config dialog has been closed. */
     void configFinished();
 
