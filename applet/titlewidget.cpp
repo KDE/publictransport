@@ -535,10 +535,13 @@ void TitleWidget::updateFilterWidget()
         m_filterWidget->setOpacity( 0.6 );
         m_filterWidget->setText( i18nc("@info/plain Shown in the applet to indicate that no "
                 "filters are currently active", "(No active filter)") );
+        // Do not show any text, if no filter is active
+        m_filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonIconOnly );
         m_filterWidget->setIcon( KIcon("view-filter") );
     } else {
         QFontMetrics fm( m_filterWidget->font() );
         QString text;
+        m_filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
         if ( filterSettings.count() == 1 && disabledColorGroups.isEmpty() ) {
             text = fm.elidedText( filterSettings.first().name,
                                   Qt::ElideRight, boundingRect().width() * 0.45 );
@@ -595,7 +598,7 @@ void TitleWidget::settingsChanged()
     }
 
     if ( m_type == ShowDepartureArrivalListTitle
-         || m_type == ShowIntermediateDepartureListTitle )
+      || m_type == ShowIntermediateDepartureListTitle )
     {
         setTitle( titleText() );
     }
