@@ -64,7 +64,9 @@ public:
                 * Stop settings that do not require a new timetable data request are unaffected. */
         ChangedCurrentJourneySearchLists
                                 = 0x0020, /**< The list of favorite and/or recent journey
-                                            * searches has been changed for the current stop. */
+                                            * searches has been changed for the current stop.
+                                            * This does not cover changes in the current journey
+                                            * list caused by changing the current stop settings. */
         ChangedCurrentStop      = 0x0040, /**< The current stop has been changed. */
         ChangedFilterSettings   = 0x0080, /**< Filter settings have been changed. */
         ChangedLinesPerRow      = 0x0100, /**< The lines per row setting has been changed. */
@@ -72,7 +74,14 @@ public:
                                             * include AlarmTimeSetting in stop settings. */
         ChangedColorization     = 0x0400, /**< Colorization of departures has been toggled. */
         ChangedColorGroupSettings
-                                = 0x0800  /**< Color group settings have been changed. */
+                                = 0x0800,  /**< Color group settings have been changed. */
+
+        ChangedCurrentFilterSettings = ChangedCurrentStop || ChangedCurrentStopSettings ||
+                ChangedFilterSettings
+                /**< The currently active filter settings may have changed. If ChangedFilterSettings
+                 * is set this flag is always also set, meaning that the filter settings for the
+                 * current stop have been changed. The currently active filter settings may also
+                 * change when the current stop settings change. */
     };
     Q_DECLARE_FLAGS( ChangedFlags, ChangedFlag )
 

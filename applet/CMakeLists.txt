@@ -16,6 +16,7 @@ include_directories(
 # We add our source code here
 set( publictransport_SRCS
     publictransport.cpp
+    publictransport_p.cpp
     titlewidget.cpp
     popupicon.cpp
     departureprocessor.cpp

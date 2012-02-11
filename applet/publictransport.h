@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -39,27 +39,12 @@
 #include "stopaction.h" // For StopAction::Type
 #include "settings.h" // Member variable
 
-class PopupIcon;
+class PublicTransportPrivate;
 class ItemBase;
 class PublicTransportGraphicsItem;
-class TitleWidget;
-class OverlayWidget;
-class TimetableWidget;
-class DepartureModel;
 class DepartureItem;
-class DeparturePainter;
-class DepartureProcessor;
-class JourneyTimetableWidget;
-class JourneyModel;
-class JourneySearchSuggestionWidget;
 
 class KSelectAction;
-
-class QStateMachine;
-class QState;
-class QAbstractTransition;
-class QPropertyAnimation;
-class QParallelAnimationGroup;
 class QGraphicsSceneWheelEvent;
 
 namespace Plasma {
@@ -114,9 +99,6 @@ public:
     /** @brief Destructor. */
     ~PublicTransport();
 
-    /** @brief Gets a pointer to either the journey search state or the journeys unsupported state. */
-    QVariant supportedJourneySearchState() const;
-
     /**
      * @brief Maximum number of recent journey searches.
      *
@@ -128,13 +110,10 @@ public:
     virtual QGraphicsWidget* graphicsWidget();
 
     /** @returns the number of currently shown departures/arrivals. */
-    int departureCount() const { return m_departureInfos.count(); };
+    int departureCount() const;
 
-    /** @brief Checks if the state with the given @p stateName is currently active. */
-    bool isStateActive( const QString &stateName ) const;
-
-    /** @brief Updates the color groups to the currently shown departures. */
-    void updateColorGroupSettings();
+    /** @brief Gets a pointer to either the journey search state or the journeys unsupported state. */
+    QVariant supportedJourneySearchState() const;
 
 signals:
     /** @brief Emitted when the settings have changed. */
@@ -219,9 +198,6 @@ protected slots:
     /** @brief Settings have changed. */
     void configChanged();
 
-    /** @brief Settings that require a new data request have been changed. */
-    void serviceProviderSettingsChanged();
-
     /**
      * @brief Overriden to update the popup icon to new sizes using updatePopupIcon().
      *
@@ -230,54 +206,22 @@ protected slots:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
 
     /**
-     * @brief Gets connected to the geometryChanged signal of the main graphics widget.
-     *
-     * This is used, because resizeEvent doesn't get called if the applet is iconified and
-     * m_graphicsWidget gets resized (only if the popup applet gets resized).
-     **/
-    void resized();
-
-    /**
      * @brief New @p data arrived from the data engine for the source with the name @p sourceName.
      *
      * @ingroup models
      **/
     void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
-    void setAssociatedApplicationUrlForDepartures() {
-        setAssociatedApplicationUrls( KUrl::List() << m_urlDeparturesArrivals );
-    };
-    void setAssociatedApplicationUrlForJourneys() {
-        setAssociatedApplicationUrls( KUrl::List() << m_urlJourneys );
-    };
+    void setAssociatedApplicationUrlForDepartures();
+    void setAssociatedApplicationUrlForJourneys();
 
-    void departureDataWaitingStateEntered();
-    void departureDataInvalidStateEntered();
-    void departureDataValidStateEntered();
+    /** @brief The state of the departure data from the data engine has changed (waiting, invalid/valid). */
+    void departureDataStateChanged();
 
-    void journeyDataWaitingStateEntered();
-    void journeyDataInvalidStateEntered();
-    void journeyDataValidStateEntered();
+    /** @brief The state of the journey data from the data engine has changed (waiting, invalid/valid). */
+    void journeyDataStateChanged();
 
-    /**
-     * @brief Fills the departure data model with the given departure list.
-     *
-     * This will stop if the maximum departure count is reached or if all @p departures
-     * have been added.
-     *
-     * @ingroup models
-     **/
-    void fillModel( const QList<DepartureInfo> &departures );
-
-    /**
-     * @brief Fills the journey data model with the given journey list.
-     *
-     * This will stop if all @p journeys have been added.
-     *
-     * @ingroup models
-     **/
-    void fillModelJourney( const QList<JourneyInfo> &journeys );
-
+    /** @brief The context menu for a departure @p item was requested. */
     void departureContextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
 
     /**
@@ -293,8 +237,6 @@ protected slots:
                             const QString &stopName, const QString &stopNameShortened );
 
     void noItemsTextClicked();
-
-    void updateInfoText();
 
     /**
      * @brief Shows the departure list.
@@ -380,15 +322,9 @@ protected slots:
 
     void showMainWidget( QGraphicsWidget *mainWidget );
 
-    void updateDepartureListIcon();
-
     /** @brief Removes stop settings, that were inserted for an intermediate
      * departure list. */
     void removeIntermediateStopSettings();
-
-    /** @brief Disconnects a currently connected journey data source.
-     * @ingroup models */
-    void disconnectJourneySource();
 
     /**
      * @brief Finished editing the journey search line (return pressed,
@@ -412,12 +348,6 @@ protected slots:
     void journeySearchLineChanged( const QString &stopName, const QDateTime &departure,
                                    bool stopIsTarget, bool timeIsDeparture );
 
-    /**
-     * @brief Called from PublicTransportSettings to indicate the need to clear
-     *   the departure list.
-     **/
-    void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
-
     /** @brief The action to update the data source has been triggered. */
     void updateDataSource();
 
@@ -440,7 +370,7 @@ protected slots:
     void showColumnTarget();
 
     /** @brief The plasma theme has been changed. */
-    void themeChanged() { useCurrentPlasmaTheme(); };
+    void themeChanged();
 
     void showStopInMarble( qreal lon = -1.0, qreal lat = -1.0 );
 
@@ -604,7 +534,7 @@ protected slots:
     void updatePopupIcon();
 
     /** @brief Updates the tooltip. */
-    void updateTooltip() { createTooltip(); };
+    void updateTooltip();
 
     /** @brief Opens a configuration dialog for recent/favorite journey searches. */
     void configureJourneySearches();
@@ -615,7 +545,7 @@ protected:
      *
      * @param parent The config dialog in which the config interface should be created.
      **/
-    void createConfigurationInterface( KConfigDialog *parent );
+    virtual void createConfigurationInterface( KConfigDialog *parent );
 
     /** @brief Gets a list of actions for the context menu. */
     virtual QList<QAction*> contextualActions();
@@ -642,53 +572,8 @@ protected:
      **/
     QAction* updatedAction( const QString &actionName );
 
-    /** @brief Updates the KMenuAction used for the filters action. */
-    void updateFilterMenu();
-
-    /** @brief Updates the KMenuAction used for the journeys menu. */
-    void updateJourneyMenu();
-
     /** @brief Call after creating a new alarm, to update the UI accordingly. */
     void alarmCreated();
-
-    /** @brief Generates tooltip data and registers this applet at plasma's TooltipManager. */
-    void createTooltip();
-
-    /**
-     * @brief Gets the text to be displayed on the bottom of the timetable.
-     *
-     * Contains courtesy information and is HTML formatted.
-     **/
-    QString infoText();
-
-    /** @brief Gets the text to be displayed as tooltip for the info label. */
-    QString courtesyToolTip() const;
-
-    /**
-     * @brief Disconnects a currently connected departure/arrival data source and
-     *   connects a new source using the current configuration.
-     *
-     * @ingroup models
-     **/
-    void reconnectSource();
-
-    /**
-     * @brief Disconnects a currently connected departure/arrival data source.
-     *
-     * @ingroup models
-     **/
-    void disconnectSources();
-
-    /**
-     * @brief Disconnects a currently connected journey data source and connects
-     *   a new source using the current configuration.
-     *
-     * @ingroup models
-     **/
-    void reconnectJourneySource( const QString &targetStopName = QString(),
-                                 const QDateTime &dateTime = QDateTime::currentDateTime(),
-                                 bool stopIsTarget = true, bool timeIsDeparture = true,
-                                 bool requestStopSuggestions = false );
 
     /**
      * @brief Handles errors from the publictransport data engine for @p data from source @p sourceName.
@@ -707,20 +592,6 @@ protected:
     /** @brief Read stop suggestions from the data engine. */
     void processOsmData( const QString &sourceName, const Plasma::DataEngine::Data& data );
 
-    /**
-     * @brief Clears the departure list received from the data engine and displayed by the applet.
-     *
-     * @ingroup models
-     **/
-    void clearDepartures();
-
-    /**
-     * @brief Clears the journey list received from the data engine and displayed by the applet.
-     *
-     * @ingroup models
-     **/
-    void clearJourneys();
-
     /** @brief Sets an autogenerated alarm for the given departure/arrival. */
     void createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex,
                                           bool onlyForCurrentWeekday = false );
@@ -728,7 +599,6 @@ protected:
     /** @brief Removes an autogenerated alarm from this departure/arrival if any. */
     void removeAlarmForDeparture( int row );
 
-private:
     QString queryNetworkStatus();
 
     /**
@@ -738,96 +608,12 @@ private:
      **/
     bool checkNetworkStatus();
 
-    /**
-     * @brief Gets a list of current departures/arrivals for the selected stop(s).
-     *
-     * @param includeFiltered Whether or not to include filtered departures in the returned list.
-     * @param max -1 to use the maximum departure count from the current settings. Otherwise this
-     *   gets used as the maximal number of departures for the returned list.
-     **/
-    QList<DepartureInfo> departureInfos( bool includeFiltered = false, int max = -1 ) const;
-
-    QString stripDateAndTimeValues( const QString &sourceName ) const;
-
-    /** @brief Sets values of the current plasma theme. */
-    void useCurrentPlasmaTheme();
-
-    /**
-     * @brief Creates a menu action, which lists all stops in the settings
-     *   for switching between them.
-     *
-     * @param parent The parent of the menu action and it's sub-actions.
-     * @param destroyOverlayOnTrigger True, if the overlay widget should be
-     *   destroyed when triggered. Defaults to false.
-     *
-     * @return KSelectAction* The created menu action.
-     **/
-    KSelectAction *switchStopAction( QObject *parent,
-                                     bool destroyOverlayOnTrigger = false ) const;
-
-    QVariantHash currentServiceProviderData() const;
-    QVariantHash serviceProviderData( const QString &id ) const;
-
-    void setupStateMachine();
-    Plasma::Animation *fadeOutOldAppearance();
-
-    QGraphicsWidget *m_graphicsWidget, *m_mainGraphicsWidget;
-    GraphicsPixmapWidget *m_oldItem;
-    TitleWidget *m_titleWidget; // A widget used as the title of the applet.
-    Plasma::Label *m_labelInfo; // A label used to display additional information.
-
-    TimetableWidget *m_timetable; // The graphics widget showing the departure/arrival board.
-    JourneyTimetableWidget *m_journeyTimetable; // The graphics widget showing journeys.
-
-    Plasma::Label *m_labelJourneysNotSupported; // A label used to display an info about unsupported journey search.
-    JourneySearchSuggestionWidget *m_listStopSuggestions; // A list of stop suggestions for the current input.
-    OverlayWidget *m_overlay;
-    Plasma::Svg m_vehiclesSvg; // An SVG containing SVG elements for vehicle types.
-
-    DepartureModel *m_model; // The model containing the departures/arrivals.
-    QHash< QString, QList<DepartureInfo> > m_departureInfos; // List of current departures/arrivals for each stop.
-    PopupIcon *m_popupIcon;
-    QParallelAnimationGroup *m_titleToggleAnimation; // Hiding/Showing the title on resizing
-    QHash< int, QString > m_stopIndexToSourceName; // A hash from the stop index to the source name.
-    QStringList m_currentSources; // Current source names at the publictransport data engine.
-
-    JourneyModel *m_modelJourneys; // The model for journeys from or to the "home stop".
-    QList<JourneyInfo> m_journeyInfos; // List of current journeys.
-    QString m_currentJourneySource; // Current source name for journeys at the publictransport data engine.
-    QString m_journeyTitleText;
-
-    QString m_lastSecondStopName; // The last used second stop name for journey search.
-    QDateTime m_lastJourneyDateTime; // The last used date and time for journey search.
-
-    QDateTime m_lastSourceUpdate; // The last update of the data source inside the data engine.
-    QUrl m_urlDeparturesArrivals, m_urlJourneys; // Urls to set as associated application urls,
-            // when switching from/to journey mode.
-
-    Settings m_settings; // Current applet settings.
-    int m_originalStopIndex; // Index of the stop before showing an intermediate list via context menu.
-    QStringList m_currentServiceProviderFeatures;
-
-    QPersistentModelIndex m_clickedItemIndex; // Index of the clicked item in departure view
-            // for the context menu actions.
-
-    QActionGroup *m_filtersGroup; // An action group to toggle filter configurations.
-    QActionGroup *m_colorFiltersGroup; // An action group to toggle color groups.
-
-    DepartureProcessor *m_departureProcessor;
-    DeparturePainter *m_departurePainter;
-
-    // State machine, states and dynamic transitions
-    QStateMachine *m_stateMachine;
-    QHash< QString, QState* > m_states;
-    QAbstractTransition *m_journeySearchTransition1;
-    QAbstractTransition *m_journeySearchTransition2;
-    QAbstractTransition *m_journeySearchTransition3;
-
-    KProcess *m_marble;
-    qreal m_longitude, m_latitude; // Coordinates from openstreetmap for a given stop
+private:
+    PublicTransportPrivate* const d_ptr;
+    Q_DECLARE_PRIVATE( PublicTransport )
 };
 
-#ifndef NO_EXPORT_PLASMA_APPLET // Needed for settings.cpp to include publictransport.h
+#ifndef NO_EXPORT_PLASMA_APPLET // Needed for publictransport_p.h to include publictransport.h
 // This is the command that links the applet to the .desktop file
 K_EXPORT_PLASMA_APPLET( publictransport, PublicTransport )
 #endif
