@@ -439,6 +439,12 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
             QDateTime dateTime = timetableData[ DepartureDateTime ].toDateTime();
             QDate departureDate = timetableData[ DepartureDate ].toDate();
             QTime departureTime = timetableData[ DepartureTime ].toTime();
+
+            if ( !dateTime.isValid() && !departureTime.isValid() ) {
+                kDebug() << "No departure time given!" << timetableData[DepartureTime];
+                kDebug() << "Use eg. helper.matchTime() to convert a string to a time object";
+            }
+
             if ( !dateTime.isValid() ) {
                 if ( departureDate.isValid() ) {
                     dateTime = QDateTime( departureDate, departureTime );
@@ -666,7 +672,7 @@ void ResultObject::addData( const QVariantMap& map )
             continue;
         }
         if ( !value.isValid() || value.isNull() ) {
-            kDebug() << "Value for" << info << "is invalid";
+            kDebug() << "Value for" << info << "is invalid or null" << value;
             continue;
         }
 
@@ -791,18 +797,24 @@ QDate Helper::matchDate( const QString& str, const QString& format )
 
     QRegExp rx( pattern );
     QDate date;
-    if ( rx.indexIn( str ) != -1 ) {
+    if ( rx.indexIn(str) != -1 ) {
         date = QDate::fromString( rx.cap(), format );
     } else if ( format != "yyyy-MM-dd" ) {
         // Try default format if the one specified doesn't work
         QRegExp rx2( "\\d{2,4}-\\d{2}-\\d{2}" );
-        if ( rx2.indexIn( str ) != -1 ) {
+        if ( rx2.indexIn(str) != -1 ) {
             date = QDate::fromString( rx2.cap(), "yyyy-MM-dd" );
         } else {
-            kDebug() << "Couldn't match time in" << str << pattern;
+            kDebug() << "Couldn't match date in" << str << pattern;
         }
     } else {
-        kDebug() << "Couldn't match time in" << str << pattern;
+        kDebug() << "Couldn't match date in" << str << pattern;
+    }
+
+    // Adjust date, needed for formats with only two "yy" for year matching
+    // A year 12 means 2012, not 1912
+    if ( date.year() < 1970 ) {
+        date.setDate( date.year() + 100, date.month(), date.day() );
     }
     return date;
 }

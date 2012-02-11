@@ -121,8 +121,8 @@ void PublicTransportGraphicsItem::updateGeometry()
     QGraphicsWidget::updateGeometry();
 }
 
-void PublicTransportGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                                         QWidget* widget )
+void PublicTransportGraphicsItem::paint( QPainter* painter,
+        const QStyleOptionGraphicsItem* option, QWidget* widget )
 {
     Q_UNUSED( widget );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
