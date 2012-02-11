@@ -873,12 +873,12 @@ void PublicTransport::showActionButtons()
     GlobalApplet::fadeAnimation( d->overlay, 1 )->start( QAbstractAnimation::DeleteWhenStopped );
 }
 
-void PublicTransport::setCurrentStopIndex( QAction* action )
+void PublicTransport::setCurrentStopIndex( QAction* _action )
 {
     Q_D( const PublicTransport );
 
     bool ok;
-    int stopIndex = action->data().toInt( &ok );
+    int stopIndex = _action->data().toInt( &ok );
     if ( !ok ) {
         kDebug() << "Couldn't find stop index";
         return;

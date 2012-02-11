@@ -832,6 +832,7 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 //     sStop = stop;
 
     int i = 0;
+    kDebug() << "Received stops:" << stops;
     foreach( const StopInfo *stopInfo, stops ) {
         QVariantHash data;
         data.insert( "stopName", stopInfo->name() );
@@ -858,12 +859,12 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
         }
 
 //     kDebug() << "setData" << i << data;
-        setData( sourceName, QString( "stopName %1" ).arg( i++ ), data );
+        setData( sourceName, QString("stopName %1").arg(i++), data );
     }
 
     // Remove values from an old possible stop list
     for ( i = stops.count(); i < m_lastStopNameCount; ++i ) {
-        removeData( sourceName, QString( "stopName %1" ).arg( i ) );
+        removeData( sourceName, QString("stopName %1").arg(i) );
     }
     m_lastStopNameCount = stops.count();
 

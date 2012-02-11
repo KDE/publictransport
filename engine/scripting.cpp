@@ -17,12 +17,23 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// Own includes
 #include "scripting.h"
 #include "timetableaccessor_script.h"
 
+// KDE includes
 #include <KStandardDirs>
-#include <QFile>
 #include <KDebug>
+
+// Qt includes
+#include <QFile>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QEventLoop>
+#include <QTimer>
+#include <QTextCodec>
+#include <QWaitCondition>
 
 void Helper::error( const QString& message, const QString &failedParseText )
 {
@@ -195,20 +206,25 @@ QVariantList Helper::matchDate( const QString& str, const QString& format )
 
     QVariantList ret;
     QRegExp rx( pattern );
-    if ( rx.indexIn( str ) != -1 ) {
-        QDate date = QDate::fromString( rx.cap(), format );
-        ret << date.year() << date.month() << date.day();
+    QDate date;
+    if ( rx.indexIn(str) != -1 ) {
+        date = QDate::fromString( rx.cap(), format );
     } else if ( format != "yyyy-MM-dd" ) {
         // Try default format if the one specified doesn't work
         QRegExp rx2( "\\d{2,4}-\\d{2}-\\d{2}" );
-        if ( rx2.indexIn( str ) != -1 ) {
-            QDate date = QDate::fromString( rx2.cap(), "yyyy-MM-dd" );
-            ret << date.year() << date.month() << date.day();
+        if ( rx2.indexIn(str) != -1 ) {
+            date = QDate::fromString( rx2.cap(), "yyyy-MM-dd" );
         } else {
-            kDebug() << "Couldn't match time in" << str << pattern;
+            kDebug() << "Couldn't match date in" << str << pattern;
         }
     } else {
-        kDebug() << "Couldn't match time in" << str << pattern;
+        kDebug() << "Couldn't match date in" << str << pattern;
+    }
+
+    // Adjust date, needed for formats with only two "yy" for year matching
+    // A year 12 means 2012, not 1912
+    if ( date.year() < 1970 ) {
+        date.setDate( date.year() + 100, date.month(), date.day() );
     }
     return ret;
 }
