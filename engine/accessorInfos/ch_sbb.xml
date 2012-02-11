@@ -1,40 +1,26 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-
-<accessorInfo fileVersion="1.0" version="1.4" type="Script">
-
-<name>Schweizerische Bundesbahnen SBB</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<!-- <cities><city></city></cities> -->
-<useSeperateCityValue>false</useSeperateCityValue>
-<description>This service provider works for cities in Switzerland and also for many cities in Europe. Cities in Switzerland include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>
-
-<url>http://www.sbb.ch</url>
-<shortUrl>www.sbb.ch</shortUrl>
-<!-- <credit>Schweizerische Bundesbahnen SBB</credit> -->
-
-<rawUrls>
-    <departures><![CDATA[http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?input={stop}!&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxCount}&start=yes]]></departures>
-
-    <stopSuggestions><![CDATA[http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?input={stop}?]]></stopSuggestions>
-
-	<journeys><![CDATA[http://fahrplan.sbb.ch/bin/query.exe/dn?S={startStop}!&Z={targetStop}!&time={time}&maxJourneys={maxCount}&start=yes&jumpToDetails=yes&HWAI=JS!ajax=yes!&HWAI=CONNECTION$C0-0!id=C0-0!HwaiConId=C0-0!HwaiDetailStatus=details!HwaiConnectionNumber=!;CONNECTION$C0-1!id=C0-1!HwaiConId=C0-1!HwaiDetailStatus=details!HwaiConnectionNumber=!;CONNECTION$C0-2!id=C0-2!HwaiConId=C0-2!HwaiDetailStatus=details!HwaiConnectionNumber=!;CONNECTION$C0-3!id=C0-3!HwaiConId=C0-3!HwaiDetailStatus=details!HwaiConnectionNumber=!;CONNECTION$C0-0!id=C0-0!HwaiConId=C0-0!HwaiDetailStatus=details!HwaiConnectionNumber=1!;CONNECTION$C0-1!id=C0-1!HwaiConId=C0-1!HwaiDetailStatus=details!HwaiConnectionNumber=2!;CONNECTION$C0-2!id=C0-2!HwaiConId=C0-2!HwaiDetailStatus=details!HwaiConnectionNumber=3!;CONNECTION$C0-3!id=C0-3!HwaiConId=C0-3!HwaiDetailStatus=details!HwaiConnectionNumber=4!;CONNECTION$C1-0!id=C1-0!HwaiConId=C1-0!HwaiDetailStatus=details!HwaiConnectionNumber=5!;CONNECTION$C1-1!id=C1-1!HwaiConId=C1-1!HwaiDetailStatus=details!HwaiConnectionNumber=6!;CONNECTION$C1-2!id=C1-2!HwaiConId=C1-2!HwaiDetailStatus=details!HwaiConnectionNumber=7!;CONNECTION$C2-0!id=C2-0!HwaiConId=C2-0!HwaiDetailStatus=details!HwaiConnectionNumber=8!;CONNECTION$C2-1!id=C2-1!HwaiConId=C2-1!HwaiDetailStatus=details!HwaiConnectionNumber=9!;CONNECTION$C2-2!id=C2-2!HwaiConId=C2-2!HwaiDetailStatus=details!HwaiConnectionNumber=10!;]]></journeys>
-</rawUrls>
-
-<script>ch_sbb.js</script>
-
-<changelog>
-    <entry since="1.4" releasedWith="0.10">Updated to new website layout for journeys.</entry>
-    <entry since="1.3" releasedWith="0.10">Updated to new website layout for departures and stop suggestions.</entry>
-    <entry since="1.3" releasedWith="0.10">Better/more journey news parsing.</entry>
-    <entry since="1.2" releasedWith="0.10">Updated to work for journeys again. The problem was changed HTML code from the SBB service provider.</entry>
-	<entry since="1.2" releasedWith="0.10">Added new functions. Parsing of routes of journeys with departure/arrival times, types of the used vehicles, line string and platforms). Parse capacity information and add it to the journey news.</entry>
-	<entry since="1.1.5" releasedWith="0.10">Fixed to show all departures, not only every second.. This was a one character fix ;)</entry>
-	<entry since="1.1.4" releasedWith="0.7">Corrected url for favicons.</entry>
-	<entry since="1.1.3" releasedWith="0.6.2">Now also scripted (incl. stop suggestions).</entry>
-	<entry since="1.1.2" releasedWith="0.5.2">New features: Route info for journeys and departures/arrivals, delay parsing (untested, no more delays found...).</entry>
-	<entry since="1.1.1" releasedWith="0.5.3"><![CDATA[Removed unnecessary "&showResultPopup=popup" from the raw url for ch_sbb.]]></entry>
-	<entry since="1.1" releasedWith="0.4.8">Added journey parsing. Parses departures/arrivals times and stop names/platforms, used types of vehicles, needed changes and pricing.</entry>
-	<entry since="1.0" releasedWith="0.4.1">Added stop suggestions.</entry>
-</changelog>
-
+<?xml version="1.0" encoding="UTF-8" ?>
+<accessorInfo fileVersion="1.0" version="1.5" type="Script">
+    <name>Schweizerische Bundesbahnen SBB</name>
+    <author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+    <useSeperateCityValue>false</useSeperateCityValue>
+    <description>This service provider works for cities in Switzerland and also for many cities in Europe. Cities in Switzerland include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>
+    <url>http://www.sbb.ch</url>
+    <shortUrl>www.sbb.ch</shortUrl>
+    <!-- <credit>Schweizerische Bundesbahnen SBB</credit> -->
+    <script>ch_sbb.js</script>
+    <changelog>
+        <entry since="1.5" releasedWith="0.10">Update to new script API, construct URLs in the script itself.</entry>
+        <entry since="1.4" releasedWith="0.10">Updated to new website layout for journeys.</entry>
+        <entry since="1.3" releasedWith="0.10">Updated to new website layout for departures and stop suggestions.</entry>
+        <entry since="1.3" releasedWith="0.10">Better/more journey news parsing.</entry>
+        <entry since="1.2" releasedWith="0.10">Updated to work for journeys again. The problem was changed HTML code from the SBB service provider.</entry>
+        <entry since="1.2" releasedWith="0.10">Added new functions. Parsing of routes of journeys with departure/arrival times, types of the used vehicles, line string and platforms). Parse capacity information and add it to the journey news.</entry>
+        <entry since="1.1.5" releasedWith="0.10">Fixed to show all departures, not only every second.. This was a one character fix ;)</entry>
+        <entry since="1.1.4" releasedWith="0.7">Corrected url for favicons.</entry>
+        <entry since="1.1.3" releasedWith="0.6.2">Now also scripted (incl. stop suggestions).</entry>
+        <entry since="1.1.2" releasedWith="0.5.2">New features: Route info for journeys and departures/arrivals, delay parsing (untested, no more delays found...).</entry>
+        <entry since="1.1.1" releasedWith="0.5.3"><![CDATA[Removed unnecessary "&showResultPopup=popup" from the raw url for ch_sbb.]]></entry>
+        <entry since="1.1" releasedWith="0.4.8">Added journey parsing. Parses departures/arrivals times and stop names/platforms, used types of vehicles, needed changes and pricing.</entry>
+        <entry since="1.0" releasedWith="0.4.1">Added stop suggestions.</entry>
+    </changelog>
 </accessorInfo>

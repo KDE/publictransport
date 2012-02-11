@@ -3,24 +3,14 @@
     <name lang="en">Berliner Verkehrsbetriebe (BVG)</name>
     <description lang="en">Provides departure information for Berlin in Germany.</description>
 <!-- 	<credit>Berliner Verkehrsbetriebe (BVG)</credit> -->
-    <author>
-        <fullname>Friedrich Pülz</fullname>
-        <email>fpuelz@gmx.de</email>
-    </author>
+    <author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
     <url>http://www.bvg.de</url>
     <shortUrl>www.bvg.de</shortUrl>
     <script>de_bvg.js</script>
-    <cities>
-        <city>Berlin</city>
-    </cities>
-    <rawUrls>
-        <departures><![CDATA[http://www.fahrinfo-berlin.de/IstAbfahrtzeiten/index;ref=3?input={stop}&submit=Anzeigen]]></departures>
-        <stopSuggestions><![CDATA[http://www.fahrinfo-berlin.de/IstAbfahrtzeiten/index;ref=3?input={stop}&submit=Anzeigen]]></stopSuggestions>
-    </rawUrls>
-	
-	<changelog>
-		<entry since="1.1" releasedWith="0.10">Ported to a script.</entry>
-		<entry since="1.0.1" releasedWith="0.7">Corrected the url for favicons.</entry>
-		<entry since="1.0" releasedWith="0.3">Initial version.</entry>
-	</changelog>
+    <cities><city>Berlin</city></cities>
+    <changelog>
+        <entry since="1.1" releasedWith="0.10">Ported to a script.</entry>
+        <entry since="1.0.1" releasedWith="0.7">Corrected the url for favicons.</entry>
+        <entry since="1.0" releasedWith="0.3">Initial version.</entry>
+    </changelog>
 </accessorInfo>

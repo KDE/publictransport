@@ -1,5 +1,5 @@
 /** Accessor for www.db.de (Deutsche Bahn, germany).
-  * © 2011, Friedrich Pülz */
+  * © 2012, Friedrich Pülz */
 
 Array.prototype.contains = function( element ) {
     for ( var i = 0; i < this.length; i++ ) {
@@ -251,10 +251,10 @@ function parseTimetable( html ) {
             var routeBlocks = route.split( routeBlocksRegExp );
 
             if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) ) {
-                exactRouteStops = routeBlocks.length;
+                departure.RouteExactStops = routeBlocks.length;
             } else {
                 while ( (splitter = routeBlocksRegExp.exec(route)) ) {
-                    ++exactRouteStops;
+                    ++departure.RouteExactStops;
                     if ( routeBlockEndOfExactRouteMarkerRegExp.test(splitter) )
                         break;
                 }
