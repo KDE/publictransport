@@ -160,6 +160,9 @@ QStringList TimetableAccessorScript::readScriptFeatures()
                         usedTimetableInformations << value.toString();
                     }
 
+                    if ( usedTimetableInformations.contains(QLatin1String("Arrivals"), Qt::CaseInsensitive) ) {
+                        features << "Arrivals";
+                    }
                     if ( usedTimetableInformations.contains(QLatin1String("Delay"), Qt::CaseInsensitive) ) {
                         features << "Delay";
                     }
