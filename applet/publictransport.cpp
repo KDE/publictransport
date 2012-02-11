@@ -1333,6 +1333,12 @@ void PublicTransport::journeyDataStateChanged()
     d->journeyDataStateChanged();
 }
 
+void PublicTransport::disconnectJourneySource()
+{
+    Q_D( PublicTransport );
+    d->disconnectJourneySource();
+}
+
 void PublicTransport::removeIntermediateStopSettings()
 {
     Q_D( PublicTransport );

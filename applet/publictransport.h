@@ -221,6 +221,8 @@ protected slots:
     /** @brief The state of the journey data from the data engine has changed (waiting, invalid/valid). */
     void journeyDataStateChanged();
 
+    void disconnectJourneySource();
+
     /** @brief The context menu for a departure @p item was requested. */
     void departureContextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
 

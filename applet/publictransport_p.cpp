@@ -67,7 +67,7 @@ void PublicTransportPrivate::onSettingsChanged( const Settings &_settings, Setti
 
     QVariantHash serviceProviderData = currentServiceProviderData();
     currentServiceProviderFeatures = serviceProviderData.isEmpty()
-                                     ? QStringList() : serviceProviderData["features"].toStringList();
+            ? QStringList() : serviceProviderData["features"].toStringList();
     emit q->configNeedsSaving();
     emit q->settingsChanged();
 

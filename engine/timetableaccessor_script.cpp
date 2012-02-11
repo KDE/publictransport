@@ -33,8 +33,6 @@
 #include <KStandardDirs>
 #include <ThreadWeaver/Weaver>
 #include <KDebug>
-#include <kross/core/action.h> // TODO REMOVE
-#include <kross/core/manager.h> // TODO REMOVE
 
 // Qt includes
 #include <QTextCodec>
@@ -67,11 +65,6 @@ TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info )
     // in different threads, ie. at the same time...
     // Maybe it helps to protect the importExtension() function
 //     ThreadWeaver::Weaver::instance()->setMaximumNumberOfThreads( 1 );
-
-//     QScriptEngine *e1 = new QScriptEngine( this );
-//     QScriptEngine *e2 = new QScriptEngine( this );
-//     e1->importExtension("qt.core");
-//     e2->importExtension("qt.core");
 }
 
 TimetableAccessorScript::~TimetableAccessorScript()
@@ -86,7 +79,7 @@ QStringList TimetableAccessorScript::allowedExtensions()
 
 bool TimetableAccessorScript::lazyLoadScript()
 {
-    if ( m_script ) { // m_scriptState == ScriptLoaded ) {
+    if ( m_script ) {
         return true;
     }
 
@@ -106,45 +99,6 @@ bool TimetableAccessorScript::lazyLoadScript()
     m_scriptStorage = new Storage( m_info->serviceProvider(), this );
 
     return true;
-
-//     // Create the Kross::Action instance
-//     m_script = new Kross::Action( 0, "TimetableParser" );
-//     m_helper = new Helper( m_info->serviceProvider()/*, m_script*/ );
-//     m_timetableData = new TimetableData( /*m_script*/ );
-//     m_resultObject = new ResultObject( /*m_script*/ );
-//
-//     m_script->addQObject( m_helper, "helper" );
-//     m_script->addQObject( m_timetableData, "timetableData" );
-//     m_script->addQObject( m_resultObject, "result" );
-//
-//     bool ok = m_script->setFile( m_info->scriptFileName() );
-//     if ( ok ) {
-//         m_script->trigger();
-//         m_scriptState = m_script->hadError() ? ScriptHasErrors : ScriptLoaded;
-//     } else {
-//         m_scriptState = ScriptHasErrors;
-//     }
-//
-//     if ( m_scriptState == ScriptHasErrors ) {
-//         kDebug() << "Error in the script" << m_script->errorLineNo() << m_script->errorMessage();
-//     } else {
-//         // Script loaded without errors
-//         // Add the "netAccess" object for synchronous downloads from within scripts
-//         // only if the script is running inside ScriptThread to not block the data engine
-//         // while waiting for network replies
-//         m_netAccess = new NetAccess( m_info, m_script );
-//         m_script->addQObject( m_netAccess, "netAccess" );
-//
-//         kDebug() << "FUNCTIONS BEFORE?" << m_script->functionNames();
-//         if ( m_script->interpreter() == "javascript" ) {
-//             kDebug() << "No JavaScript => QtScript! :)";
-//             m_script->setInterpreter( "qtscript" );
-//         }
-//         kDebug() << "ERROR?" << m_script->hadError();
-//         kDebug() << "FUNCTIONS?" << m_script->functionNames();
-//     }
-//
-//     return m_scriptState == ScriptLoaded;
 }
 
 QStringList TimetableAccessorScript::readScriptFeatures()
@@ -185,6 +139,7 @@ QStringList TimetableAccessorScript::readScriptFeatures()
                 kDebug() << "Backtrace:" << engine.uncaughtExceptionBacktrace().join("\n");
                 ok = false;
             } else {
+                // Test if specific functions exist in the script
                 if ( engine.globalObject().property(SCRIPT_FUNCTION_PARSESTOPSUGGESTIONS).isValid() ) {
                     features << "Autocompletion";
                 }
@@ -192,9 +147,12 @@ QStringList TimetableAccessorScript::readScriptFeatures()
                     features << "JourneySearch";
                 }
 
+                // Test if usedTimetableInformations() script function is available
                 if ( !engine.globalObject().property(SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS).isValid() ) {
                     kDebug() << "The script has no" << SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS << "function";
                 } else {
+                    // Use values returned by usedTimetableInformations() script functions
+                    // to get additional features of the accessor
                     QVariantList result = engine.globalObject().property(
                             SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS ).call().toVariant().toList();
                     QStringList usedTimetableInformations;
@@ -205,28 +163,28 @@ QStringList TimetableAccessorScript::readScriptFeatures()
                     if ( usedTimetableInformations.contains(QLatin1String("Delay"), Qt::CaseInsensitive) ) {
                         features << "Delay";
                     }
-                    if ( usedTimetableInformations.contains("DelayReason", Qt::CaseInsensitive) ) {
+                    if ( usedTimetableInformations.contains(QLatin1String("DelayReason"), Qt::CaseInsensitive) ) {
                         features << "DelayReason";
                     }
-                    if ( usedTimetableInformations.contains("Platform", Qt::CaseInsensitive) ) {
+                    if ( usedTimetableInformations.contains(QLatin1String("Platform"), Qt::CaseInsensitive) ) {
                         features << "Platform";
                     }
-                    if ( usedTimetableInformations.contains("JourneyNews", Qt::CaseInsensitive)
-                        || usedTimetableInformations.contains("JourneyNewsOther", Qt::CaseInsensitive)
-                        || usedTimetableInformations.contains("JourneyNewsLink", Qt::CaseInsensitive) )
+                    if ( usedTimetableInformations.contains(QLatin1String("JourneyNews"), Qt::CaseInsensitive)
+                      || usedTimetableInformations.contains(QLatin1String("JourneyNewsOther"), Qt::CaseInsensitive)
+                      || usedTimetableInformations.contains(QLatin1String("JourneyNewsLink"), Qt::CaseInsensitive) )
                     {
                         features << "JourneyNews";
                     }
-                    if ( usedTimetableInformations.contains("TypeOfVehicle", Qt::CaseInsensitive) ) {
+                    if ( usedTimetableInformations.contains(QLatin1String("TypeOfVehicle"), Qt::CaseInsensitive) ) {
                         features << "TypeOfVehicle";
                     }
-                    if ( usedTimetableInformations.contains("Status", Qt::CaseInsensitive) ) {
+                    if ( usedTimetableInformations.contains(QLatin1String("Status"), Qt::CaseInsensitive) ) {
                         features << "Status";
                     }
-                    if ( usedTimetableInformations.contains("Operator", Qt::CaseInsensitive) ) {
+                    if ( usedTimetableInformations.contains(QLatin1String("Operator"), Qt::CaseInsensitive) ) {
                         features << "Operator";
                     }
-                    if ( usedTimetableInformations.contains("StopID", Qt::CaseInsensitive) ) {
+                    if ( usedTimetableInformations.contains(QLatin1String("StopID"), Qt::CaseInsensitive) ) {
                         features << "StopID";
                     }
                 }
