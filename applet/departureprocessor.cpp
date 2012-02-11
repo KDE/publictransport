@@ -329,7 +329,9 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
     QUrl url = data["requestUrl"].toUrl();
     QDateTime updated = data["updated"].toDateTime();
     int count = data["count"].toInt();
-    Q_ASSERT( journeyJob->alreadyProcessed < count );
+    if ( journeyJob->alreadyProcessed > count ) {
+        kDebug() << "There was an error with the journey data source (journeyJob->alreadyProcessed > count)";
+    }
     kDebug() << "  - " << count << "journeys to be processed";
     for ( int i = journeyJob->alreadyProcessed; i < count; ++i ) {
         QVariant journeyData = data.value( QString::number( i ) );
