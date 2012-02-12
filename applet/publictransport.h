@@ -198,11 +198,7 @@ protected slots:
     /** @brief Settings have changed. */
     void configChanged();
 
-    /**
-     * @brief Overriden to update the popup icon to new sizes using updatePopupIcon().
-     *
-     * @see resized()
-     **/
+    /** @brief Overriden to update the popup icon to new sizes using updatePopupIcon(). */
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
 
     /**

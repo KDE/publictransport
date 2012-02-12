@@ -1324,13 +1324,13 @@ void PublicTransport::journeyActionTriggered( QAction *_action )
 void PublicTransport::departureDataStateChanged()
 {
     Q_D( PublicTransport );
-    d->departureDataStateChanged();
+    d->onDepartureDataStateChanged();
 }
 
 void PublicTransport::journeyDataStateChanged()
 {
     Q_D( PublicTransport );
-    d->journeyDataStateChanged();
+    d->onJourneyDataStateChanged();
 }
 
 void PublicTransport::disconnectJourneySource()

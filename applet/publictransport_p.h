@@ -121,6 +121,7 @@ public:
     {
     };
 
+public: // Event handlers
     /** @brief Update GUI and logic to new @p _settings, changes are indicated using @p changed. */
     void onSettingsChanged( const Settings& _settings, SettingsIO::ChangedFlags changed );
 
@@ -145,6 +146,13 @@ public:
     /** @brief The animation that fades out a pixmap widget with an old shapshot has finished. */
     void onOldItemAnimationFinished();
 
+    /** @brief The state of the departure data changed between valid/invalid/waiting. */
+    void onDepartureDataStateChanged();
+
+    /** @brief The state of the journey data changed between valid/invalid/waiting. */
+    void onJourneyDataStateChanged();
+
+public: // Other functions
     /** @brief Update the text and tooltip of the label shown in the applet. */
     void updateInfoText();
 
@@ -159,10 +167,6 @@ public:
 
     /** @brief Update the main icon widget shown in the applets title. */
     void updateDepartureListIcon();
-
-    void departureDataStateChanged();
-
-    void journeyDataStateChanged();
 
     /** @brief Applies theme properties (colors, fonts, etc.) after a change of the used theme. */
     void applyTheme();
@@ -205,9 +209,6 @@ public:
     /** @brief Disconnects a currently connected journey data source. */
     void disconnectJourneySource();
 
-    /** @brief Remove any time and datetime parameters from @p sourceName and return the result. */
-    QString stripDateAndTimeValues( const QString& sourceName ) const;
-
     /** @brief Requests information about the currently used service provider. */
     QVariantHash currentServiceProviderData() const {
         const StopSettings currentStopSettings = settings.currentStopSettings();
@@ -245,6 +246,10 @@ public:
     KSelectAction *createSwitchStopAction( QObject *parent,
                                            bool destroyOverlayOnTrigger = false ) const;
 
+    /** @brief Remove any time and datetime parameters from @p sourceName and return the result. */
+    QString stripDateAndTimeValues( const QString& sourceName ) const;
+
+public: // Inline functions, mostly used only once (therefore inline) or very short and used rarely
     /** @brief Create, initialize and connect objects. */
     inline void init() {
         Q_Q( PublicTransport );

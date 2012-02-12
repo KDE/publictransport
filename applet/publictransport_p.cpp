@@ -1076,16 +1076,16 @@ KSelectAction *PublicTransportPrivate::createSwitchStopAction( QObject *parent, 
     return switchStopAction;
 }
 
-void PublicTransportPrivate::departureDataStateChanged()
+void PublicTransportPrivate::onDepartureDataStateChanged()
 {
     Q_Q( PublicTransport );
     QString noItemsText;
     bool busy = false;
 
-    if ( isStateActive("journeyDataWaiting") ) {
+    if ( isStateActive("departureDataWaiting") ) {
         noItemsText = i18nc("@info/plain", "Waiting for depatures...");
         busy = modelJourneys->isEmpty();
-    } else if ( isStateActive("journeyDataInvalid") ) {
+    } else if ( isStateActive("departureDataInvalid") ) {
         noItemsText = settings.departureArrivalListType == ArrivalList
                 ? i18nc("@info/plain", "No arrivals due to an error.")
                 : i18nc("@info/plain", "No departures due to an error.");
@@ -1107,7 +1107,7 @@ void PublicTransportPrivate::departureDataStateChanged()
     q->setBusy( busy );
 }
 
-void PublicTransportPrivate::journeyDataStateChanged()
+void PublicTransportPrivate::onJourneyDataStateChanged()
 {
     Q_Q( PublicTransport );
     if ( isStateActive("journeyView") ) {
