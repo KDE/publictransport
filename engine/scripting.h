@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -31,6 +31,7 @@
 
 // Qt includes
 #include <QScriptEngine>
+#include <QScriptable> // Base class
 #include <QObject> // Base class
 #include <QHash> // Return value
 #include <QVariant> // Return value
@@ -599,7 +600,7 @@ private:
  *
  * @ingroup scripting
  **/
-class Helper : public QObject {
+class Helper : public QObject, protected QScriptable {
     Q_OBJECT
 
 public:
@@ -784,7 +785,121 @@ public:
      **/
     Q_INVOKABLE static QStringList splitSkipEmptyParts( const QString &str, const QString &sep );
 
+    /**
+     * @brief TODO
+     *
+     * Table header names are currently only found as "class" attributes of "th" tags.
+     *
+     * @param str The string is in which to search for positions of table headers.
+     * @param options A map (javascript object) with these optional properties:
+     *   @b required: A list of strings, ie. the names of the required table headers.
+     *   @b optional: A list of strings, ie. the names of the optional table headers.
+     *   @b debug: A boolean, false by default. If true, more debug output gets generated.
+     *   @b headerContainerOptions: A map of options that gets passed to findFirstHtmlTag()
+     *     to find the HTML tag (eg. "tr") containing the header HTML tags (eg. "th"). For example
+     *     this can be used to specify required attributes for the header container tag.
+     *     Additionaly this map can contain a value "tagName", by default this is "tr".
+     *   @b headerOptions: A map of options that gets passed to findFirstHtmlTag()
+     *     to find the header HTML tags (eg. "th"). For example this can be used to specify
+     *     required attributes for the header tags.
+     *     Additionaly this map can contain a value "tagName", by default this is "th".
+     *     Another additional value is @em "namePosition", which indicates the position of the name
+     *     of headers. This value is again a map, with these properties: @em "type": Can be
+     *     @em "contents" (ie. use tag contents as name, the default) or @em "attribute" (ie. use
+     *     a tag attribute value as name). If @em "attribute" is used for @em "type", the name of
+     *     the attribute can be set as @em "name" property. Additionaly a @em "regexp" property
+     *     can be used to extract a string from the string that would otherwise be used as name
+     *     as is.
+     **/
+    Q_INVOKABLE static QVariantMap findTableHeaderPositions( const QString &str,
+                                                             const QVariantMap &options );
+
+    /**
+     * @brief Gets information about the first HTML tag with @p tagName and @p attributes.
+     *
+     * @param options A map (javascript object) with these properties:
+     *   @b attributes: A map containing all required attributes and it's values.
+     *   @b position: An integer, where to start the search for tags. This is 0 by default.
+     *   @b debug: A boolean, false by default. If true, more debug output gets generated.
+     *
+     * @return A map with these properties:
+     *   @b found: A boolean, true if the tag was found, false otherwise.
+     *   @b contents: A string, the contents of the found tag (if found is true).
+     *   @b position: An integer, the position in @p str of the found tag (if found is true).
+     *   @b attributes: A map containing all attributes of the found tag (if found is true).
+     *     The attribute names are the keys of the map, while the attribute values are the values
+     *     of the map.
+    }
+     **/
+    Q_INVOKABLE static QVariantMap findFirstHtmlTag( const QString &str, const QString &tagName,
+                                                     const QVariantMap &options = QVariantMap() );
+
+    /**
+     * @brief This is an overloaded function which expects a value for "tagName" in @p options.
+     * @overload QVariantMap findFirstHtmlTag(const QString&,const QString&,const QVariantMap&)
+     **/
+    Q_INVOKABLE static inline QVariantMap findFirstHtmlTag(
+            const QString &str, const QVariantMap &options = QVariantMap() )
+    {
+        return findFirstHtmlTag( str, options["tagName"].toString(), options );
+    };
+
+    /**
+     * @brief TODO.
+     *
+     * @param options A map (javascript object) with these properties:
+     *   @b attributes: A map containing all required attributes and it's values.
+     *   @b contentsRegExp: A regular expression pattern which the contents of found HTML tags
+     *     must match. If it does not match, that tag does not get returned as found.
+     *     If no parenthesized subexpressions are present in this regular expression, the whole
+     *     matching string gets used as contents. If more than one parenthesized subexpressions
+     *     are found, only the first one gets used. By default all content of the HTML tag
+     *     gets matched.
+     *   @b position: An integer, where to start the search for tags. This is 0 by default.
+     *   @b maxCount: The maximum number of HTML tags to match or 0 to match any number of HTML tags.
+     *   @b debug: A boolean, false by default. If true, more debug output gets generated.
+     *
+     * @return A list of maps with these properties:
+     *   @b contents: A string, the contents of the found tag (if found is true).
+     *   @b position: An integer, the position in @p str of the found tag (if found is true).
+     *   @b endPosition: An integer, the position in @p str of the last character of tags contents.
+     *   @b attributes: A map containing all attributes of the found tag (if found is true).
+     *     The attribute names are the keys of the map, while the attribute values are the values
+     *     of the map.
+     **/
+    Q_INVOKABLE static QVariantList findHtmlTags( const QString &str, const QString &tagName,
+                                                  const QVariantMap &options = QVariantMap() );
+
+    /**
+     * @brief This is an overloaded function which expects a value for "tagName" in @p options.
+     * @overload QVariantMap findHtmlTags(const QString&,const QString&,const QVariantMap&)
+     **/
+    Q_INVOKABLE static inline QVariantList findHtmlTags(
+            const QString &str, const QVariantMap &options = QVariantMap() )
+    {
+        return findHtmlTags( str, options["tagName"].toString(), options );
+    };
+
+    /**
+     *     Another additional value is @em "namePosition", which indicates the position of the name
+     *     of tags. This value is again a map, with these properties: @em "type": Can be
+     *     @em "contents" (ie. use tag contents as name, the default) or @em "attribute" (ie. use
+     *     a tag attribute value as name). If @em "attribute" is used for @em "type", the name of
+     *     the attribute can be set as @em "name" property. Additionaly a @em "regexp" property
+     *     can be used to extract a string from the string that would otherwise be used as name
+     *     as is.
+     *     @em "ambiguousNameResolution" can be used to tell what should be done if the same name
+     *       was found multiple times. This can currently be one of: "addNumber" (adds a number to
+     *       the name, ie. "..1", "..2")., "replace" (a later match with an already matched name
+     *       overwrites the old match, the default).
+     **/
+    Q_INVOKABLE static QVariantMap findNamedHtmlTags( const QString &str, const QString &tagName,
+                                                      const QVariantMap &options = QVariantMap() );
+
 private:
+    static QString getTagName( const QVariantMap &searchResult, const QString &type = "contents",
+            const QString &regExp = QString(), const QString attributeName = QString() );
+
     QString m_serviceProviderId;
 };
 
@@ -1013,7 +1128,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( ResultObject::Hints );
  * The data in the storage is therefore shared between calls to a script, but not between
  * scripts for different service providers.
  *
- * This class distinguishes between memory storage and persistent storage, ie. on disk. *
+ * This class distinguishes between memory storage and persistent storage, ie. on disk.
  * Both storage types are protected by separate QReadWriteLock's, because scripts may run in
  * parallel.
  *

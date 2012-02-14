@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -29,12 +29,11 @@
 #include <KStandardDirs>
 #include <KConfig>
 #include <KConfigGroup>
-#include <QReadLocker>
-#include <QWriteLocker>
 #include <KDebug>
 
 // Qt includes
 #include <QFile>
+#include <QScriptContextInfo>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -42,6 +41,8 @@
 #include <QTimer>
 #include <QTextCodec>
 #include <QWaitCondition>
+#include <QReadLocker>
+#include <QWriteLocker>
 
 NetworkRequest::NetworkRequest( QObject* parent )
         : QObject(parent), m_network(0), m_request(0), m_reply(0)
@@ -328,7 +329,6 @@ QString Network::getSynchronous( const QString &url, int timeout )
         QTimer::singleShot( timeout, &eventLoop, SLOT(quit()) );
     }
     eventLoop.exec();
-kDebug() << "Event loop exited" << thread();
 
     m_mutex.lock();
     const bool quit = reply->isRunning() || m_quit || m_lastDownloadAborted;
@@ -418,7 +418,7 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
 
     // This regular expression gets used to search for word at the end, possibly including
     // a colon before the last word
-    QRegExp rxLastWord( ",?\\s*\\S+$" );
+    QRegExp rxLastWord( ",?\\s+\\S+$" );
 
     // These strings store the words with the most occurrences in stop names at the beginning/end
     QString removeFirstWord;
@@ -516,8 +516,9 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
                 foreach ( const QString &stop, stops ) {
                     // Test first word
                     pos = stop.indexOf( ' ' );
-                    if ( pos > 0 && ++firstWordCounts[stop.left(pos)] >= maxWordOccurrence ) {
-                        removeFirstWord = target.left(pos);
+                    const QString newFirstWord = stop.left( pos );
+                    if ( pos > 0 && ++firstWordCounts[newFirstWord] >= maxWordOccurrence ) {
+                        removeFirstWord = newFirstWord;
                         break;
                     }
 
@@ -626,8 +627,10 @@ void Helper::error( const QString& message, const QString &failedParseText )
     }
     shortParseText = shortParseText.replace('\n', "\n    "); // Indent
 
-    kDebug() << QString("Error in %1 (maybe the website layout changed): \"%2\"")
-                .arg(m_serviceProviderId).arg(message);
+    QScriptContextInfo info( context()->parentContext() );
+    kDebug() << QString("Error in %1-script, function %2(), line %3")
+            .arg(m_serviceProviderId).arg(info.functionName()).arg(info.lineNumber());
+    kDebug() << message;
     if ( !shortParseText.isEmpty() ) {
         kDebug() << QString("The text of the document where parsing failed is: \"%1\"")
                     .arg(shortParseText);
@@ -652,8 +655,9 @@ void Helper::error( const QString& message, const QString &failedParseText )
             return;
         }
 
-        logFile.write( QString("%1 (%2): \"%3\"\n   Failed while reading this text: \"%4\"\n")
+        logFile.write( QString("%1 (%2, in function %3(), line %4):\n   \"%5\"\n   Failed while reading this text: \"%6\"\n-------------------------------------\n\n")
                 .arg(m_serviceProviderId).arg(QDateTime::currentDateTime().toString())
+                .arg(info.functionName()).arg(info.lineNumber())
                 .arg(message).arg(failedParseText.trimmed()).toUtf8() );
         logFile.close();
     }
@@ -683,7 +687,7 @@ void ResultObject::addData( const QVariantMap& map )
                   info == Platform || info == DelayReason || info == Status || info == Pricing) )
             {
                 // Decode HTML entities in string values
-                data[ info ] = TimetableAccessorScript::decodeHtmlEntities( value.toString() );
+                data[ info ] = TimetableAccessorScript::decodeHtmlEntities( value.toString() ).trimmed();
             } else if ( value.canConvert(QVariant::StringList) &&
                  (info == RouteStops || info == RoutePlatformsDeparture ||
                   info == RoutePlatformsArrival) )
@@ -884,6 +888,281 @@ QVariantList Helper::addDaysToDateArray( const QVariantList& values, int daysToA
 QStringList Helper::splitSkipEmptyParts( const QString& str, const QString& sep )
 {
     return str.split( sep, QString::SkipEmptyParts );
+}
+
+QVariantMap Helper::findTableHeaderPositions( const QString &str, const QVariantMap &options )
+{
+    QVariantMap headerContainerOptions =
+            options.value( "headerContainerOptions", QVariantMap() ).toMap();
+    QVariantMap headerOptions =
+            options.value( "headerOptions", QVariantMap() ).toMap();
+    const bool debug = options.value( "debug", false ).toBool();
+
+    // Ensure some options are present
+    if ( !headerContainerOptions.contains("tagName") ) {
+        headerContainerOptions[ "tagName" ] = "tr";
+    }
+    if ( !headerOptions.contains("tagName") ) {
+        headerOptions[ "tagName" ] = "th";
+    }
+    QVariantMap namePosition;
+    if ( !headerOptions.contains("namePosition") ) {
+        namePosition[ "type" ] = "contents"; // Can be "attribute", "contents"
+        headerOptions[ "namePosition" ] = namePosition;
+    } else {
+        namePosition = headerOptions[ "namePosition" ].toMap();
+    }
+    const bool namePositionIsAttribute = namePosition["type"].toString().toLower().compare(
+            QLatin1String("attribute"), Qt::CaseInsensitive ) == 0;
+    const QString namePositionRegExpPattern = namePosition.contains("regexp")
+            ? namePosition["regexp"].toString() : QString();
+
+    const QVariantMap headerContainer = findFirstHtmlTag( str, headerContainerOptions );
+    if ( !headerContainer["found"].toBool() ) {
+        kDebug() << "Did not find a header container row"
+                 << QString("<%1..>..<%2..>..</%2>..</%1>")
+                    .arg( headerContainerOptions["tagName"].toString() )
+                    .arg( headerOptions["tagName"].toString() )
+                 << "in" << str;
+        return QVariantMap();
+    }
+
+    QVariantMap headerPositions;
+    int i = 0;
+    int position = -1;
+    QStringList requiredHeaders = options[ "required" ].toStringList();
+    QStringList optionalHeaders = options[ "optional" ].toStringList();
+    const QString headerContainerContents = headerContainer["contents"].toString();
+    QVariantMap headerTag;
+    while ( (headerTag = findFirstHtmlTag(headerContainerContents, headerOptions))["found"].toBool() )
+    {
+        headerOptions["position"] = headerTag["position"].toInt() + 1;
+        const QString headerName = getTagName( headerTag, namePosition["type"].toString(),
+                namePositionRegExpPattern,
+                namePositionIsAttribute ? namePosition["name"].toString() : QString() );
+        if ( headerName.isEmpty() ) {
+            kDebug() << "Empty header name" << str;
+            ++i;
+            continue;
+        }
+        const bool foundRequiredHeader = requiredHeaders.contains( headerName, Qt::CaseInsensitive );
+        const bool foundOptionalHeader = optionalHeaders.contains( headerName, Qt::CaseInsensitive );
+        if ( !foundRequiredHeader && !foundOptionalHeader ) {
+            kDebug() << "Unused timetable header found" << headerName;
+            ++i;
+            continue;
+        }
+
+        // Store found column position
+        if ( debug ) {
+            kDebug() << "Found header" << headerName << "at position" << i;
+        }
+        headerPositions[ headerName.toLower() ] = i;
+
+        // Remove column from required/optional header list
+        if ( foundRequiredHeader ) {
+            requiredHeaders.removeOne( headerName );
+        }
+
+        ++i;
+    }
+
+    if ( !requiredHeaders.isEmpty() ) {
+        kDebug() << "Did not find all required headers" << requiredHeaders;
+        headerPositions[ "error" ] = true;
+    }
+
+    return headerPositions;
+}
+
+QVariantMap Helper::findFirstHtmlTag( const QString &str, const QString &tagName,
+                                      const QVariantMap &options )
+{
+    // Set/overwrite maxCount option to match only the first tag using findHtmlTags()
+    QVariantMap _options = options;
+    _options[ "maxCount" ] = 1;
+    QVariantList tags = findHtmlTags( str, tagName, _options );
+
+    // Copy values of first matched tag (if any) to the result object
+    QVariantMap result;
+    result.insert( "found", !tags.isEmpty() );
+    if ( !tags.isEmpty() ) {
+        const QVariantMap firstTag = tags.first().toMap();
+        result.insert( "contents", firstTag["contents"] );
+        result.insert( "position", firstTag["position"] );
+        result.insert( "endPosition", firstTag["endPosition"] );
+        result.insert( "attributes", firstTag["attributes"] );
+        result.insert( "name", firstTag["name"] );
+    }
+    return result;
+}
+
+QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
+                                   const QVariantMap &options )
+{
+    const QVariantMap &attributes = options[ "attributes" ].toMap();
+    const int maxCount = options.value( "maxCount", 0 ).toInt();
+    const bool debug = options.value( "debug", false ).toBool();
+    const QString contentsRegExpPattern = options.value( "contentsRegExp", "\\s*(.*)\\s*" ).toString();
+    const QVariantMap namePosition = options[ "namePosition" ].toMap();
+    int position = options.value( "position", 0 ).toInt();
+
+    const bool namePositionIsAttribute = namePosition["type"].toString().toLower().compare(
+            QLatin1String("attribute"), Qt::CaseInsensitive ) == 0;
+    const QString namePositionRegExpPattern = namePosition.contains("regexp")
+            ? namePosition["regexp"].toString() : QString();
+
+    QRegExp htmlTagRegExp( QString("<%1(?:\\s+([^>]+))?>%2</%1>")
+                           .arg(tagName).arg(contentsRegExpPattern), Qt::CaseInsensitive );
+    QRegExp attributeRegExp( "(\\w+)(?:\\s*=\\s*\"?([^\"]*|[\\w\\d]+)\"?)?", Qt::CaseInsensitive );
+    htmlTagRegExp.setMinimal( true );
+    QVariantList foundTags;
+    while ( (foundTags.count() < maxCount || maxCount <= 0) &&
+            (position = htmlTagRegExp.indexIn(str, position)) != -1 )
+    {
+        if ( debug ) {
+            kDebug() << "Test match at" << position << htmlTagRegExp.cap().left(500);
+        }
+        const QString attributeString = htmlTagRegExp.cap( 1 );
+        const QString tagContents = htmlTagRegExp.cap( 2 );
+
+        QVariantMap foundAttributes;
+        int attributePos = 0;
+        while ( (attributePos = attributeRegExp.indexIn(attributeString, attributePos)) != -1 ) {
+            foundAttributes.insert( attributeRegExp.cap(1), attributeRegExp.cap(2) );
+            attributePos = attributeRegExp.pos() + attributeRegExp.matchedLength();
+        }
+        if ( debug ) {
+            kDebug() << "Found attributes" << foundAttributes << "in" << attributeString;
+        }
+
+        // Test if the attributes match
+        bool attributesMatch = true;
+        for ( QVariantMap::ConstIterator it = attributes.constBegin();
+              it != attributes.constEnd(); ++it )
+        {
+            if ( !foundAttributes.contains(it.key()) ) {
+                attributesMatch = false;
+                if ( debug ) {
+                    kDebug() << "Did not find attribute" << it.key();
+                }
+                break;
+            }
+
+            // Attribute exists, test it's value
+            const QString value = foundAttributes[ it.key() ].toString();
+            const QString valueRegExpPattern = it.value().toString();
+            if ( !(value.isEmpty() && valueRegExpPattern.isEmpty()) ) {
+                QRegExp valueRegExp( valueRegExpPattern, Qt::CaseInsensitive );
+                if ( valueRegExp.indexIn(value) == -1 ) {
+                    attributesMatch = false;
+                    if ( debug ) {
+                        kDebug() << "Value" << value << "did not match pattern" << valueRegExpPattern;
+                    }
+                    break;
+                }
+            }
+        }
+        if ( !attributesMatch ) {
+            position = htmlTagRegExp.pos() + htmlTagRegExp.matchedLength();
+            continue;
+        }
+
+        QVariantMap result;
+        result.insert( "contents", tagContents );
+        result.insert( "position", position );
+        result.insert( "endPosition", position + htmlTagRegExp.matchedLength() );
+        result.insert( "attributes", foundAttributes );
+
+        // Find name if a "namePosition" option is given
+        if ( !namePosition.isEmpty() ) {
+            const QString name = getTagName( result, namePosition["type"].toString(),
+                    namePositionRegExpPattern,
+                    namePositionIsAttribute ? namePosition["name"].toString() : QString() );
+            result.insert( "name", name );
+        }
+
+        if ( debug ) {
+            kDebug() << "Found HTML tag" << tagName << "at" << position << foundAttributes;
+        }
+        foundTags << result;
+
+        position = htmlTagRegExp.pos() + htmlTagRegExp.matchedLength();
+    }
+
+    if ( debug ) {
+        kDebug() << "Found" << foundTags.count() << tagName << "HTML tags";
+    }
+    return foundTags;
+}
+
+QString Helper::getTagName( const QVariantMap &searchResult, const QString &type,
+                            const QString &regExp, const QString attributeName )
+{
+    const bool namePositionIsAttribute = type.toLower().compare(
+            QLatin1String("attribute"), Qt::CaseInsensitive ) == 0;
+    QString name = trim( namePositionIsAttribute
+            ? searchResult["attributes"].toMap()[ attributeName ].toString()
+            : searchResult["contents"].toString() );
+    if ( !regExp.isEmpty() ) {
+        // Use "regexp" property of namePosition to match the header name
+        QRegExp namePositionRegExp( regExp, Qt::CaseInsensitive );
+        if ( namePositionRegExp.indexIn(name) != -1 ) {
+            name = namePositionRegExp.cap( qMin(1, namePositionRegExp.captureCount()) );
+        }
+    }
+    return name;
+}
+
+QVariantMap Helper::findNamedHtmlTags( const QString &str, const QString &tagName,
+                                       const QVariantMap &options )
+{
+    QVariantMap namePosition;
+    if ( !options.contains("namePosition") ) {
+        namePosition[ "type" ] = "contents"; // Can be "attribute", "contents"
+    } else {
+        namePosition = options[ "namePosition" ].toMap();
+    }
+    const bool namePositionIsAttribute = namePosition["type"].toString().toLower().compare(
+            QLatin1String("attribute"), Qt::CaseInsensitive ) == 0;
+    const QString namePositionRegExpPattern = namePosition.contains("regexp")
+            ? namePosition["regexp"].toString() : QString();
+    const QString ambiguousNameResolution = options.contains("ambiguousNameResolution")
+            ? options["ambiguousNameResolution"].toString().toLower() : "replace";
+
+    const QVariantList foundTags = findHtmlTags( str, tagName, options );
+    QVariantMap foundTagsMap;
+    foreach ( const QVariant &foundTag, foundTags ) {
+        QString name = getTagName( foundTag.toMap(), namePosition["type"].toString(),
+                namePositionRegExpPattern,
+                namePositionIsAttribute ? namePosition["name"].toString() : QString() );
+        if ( name.isEmpty() ) {
+            kDebug() << "Empty name in" << str;
+            continue;
+        }
+
+        // Check if the newly found name was already found
+        // and decide what to do based on the "ambiguousNameResolution" option
+        if ( ambiguousNameResolution == QLatin1String("addnumber") && foundTagsMap.contains(name) ) {
+            QRegExp rx( "(\\d+)$" );
+            if ( rx.indexIn(name) != -1 ) {
+                name += QString::number( rx.cap(1).toInt() + 1 );
+            } else {
+                name += "2";
+            }
+        }
+        foundTagsMap[ name ] = foundTag; // TODO Use lists here? The same name could be found multiply times
+    }
+
+    // Store list of names in the "names" property, therefore "names" should not be a found tag name
+    if ( foundTagsMap.contains("names") ) {
+        kDebug() << "A tag with the name 'names' was found. Normally a property 'names' gets "
+                    "added to the object returned by this functionm, which lists all found "
+                    "names in a list.";
+    } else {
+        foundTagsMap[ "names" ] = QVariant::fromValue<QStringList>( foundTagsMap.keys() );
+    }
+    return foundTagsMap;
 }
 
 const char* Storage::LIFETIME_ENTRYNAME_SUFFIX = "__expires__";
