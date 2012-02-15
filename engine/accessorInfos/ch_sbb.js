@@ -1,5 +1,5 @@
 /** Accessor for www.sbb.ch (switzerland).
- * © 2011, Friedrich Pülz */
+ * © 2012, Friedrich Pülz */
 
 Array.prototype.contains = function( element ) {
     for ( var i = 0; i < this.length; i++ ) {
@@ -24,7 +24,7 @@ function detailsResultsObject() {
 }
 
 function usedTimetableInformations() {
-    return [ 'Delay', 'DelayReason', 'Platform', 'JourneyNews', 'TypeOfVehicle',
+    return [ 'Arrivals', 'Delay', 'DelayReason', 'Platform', 'JourneyNews', 'TypeOfVehicle',
         'StopID', 'Changes', 'RouteStops',
         'RoutePlatformsDeparture', 'RoutePlatformsArrival',
         'RouteTimesDeparture', 'RouteTimesArrival',

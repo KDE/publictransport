@@ -13,6 +13,8 @@ Changelog of plasma-engine-publictransport
 - Use QtScript instead of Kross, more possibilities, eg. more powerful scripts
 - No more <rawUrls>-tags are needed in accessor xml files, instead the URLs get generated in the script itself, which now also starts the request for the generated URL
 - New/enhanced API for accessor scripts. Eg. the script function "getTimetable" (with some arguments, eg. stop name, date/time, ...) now gets called instead of "parseTimetable" with the contents of the downloaded documents. The "network" script object can now be used to request URLs, download them synchronously or asynchronously. There is now also a "storage" script object that can be used to store some script values. Adding departures to the result set is easier and can now be done with JS objects, eg. "result.addData({ TypeOfVehicle: 'tram', Target: 'Test' })". The "timetableData" object is no longer available/needed.
+- Add higher level matching functions to scripts, eg. 'findHtmlTags("<td>Hello</td>", "td")[0].contents' gives "Hello". The functions accept an options object as third argument. Other new functions are findFirstHtmlTag, findNamedHtmlTags and findTableHeaderPositions (useful to find the positions of eg. the time and target column in a table in the departures website).
+- More information in script function helper.error(). It now prints out the current function in the script from where helper.error() was called and it's line number. This information now also gets written to the log file. Should make debugging scripts easier, no need to search the script for a specific error message.
 
 0.10 - RC1
 - de_rmv: Fix stop suggestions for changed HTML layout

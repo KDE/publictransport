@@ -2,7 +2,7 @@
 * © 2012, Friedrich Pülz */
 
 function usedTimetableInformations() {
-    return [ 'TypeOfVehicle', 'JourneyNews', 'Platform', 'Delay', 'StopID', 'StopWeight' ];
+    return [ 'Arrivals', 'TypeOfVehicle', 'JourneyNews', 'Platform', 'Delay', 'StopID', 'StopWeight' ];
 }
 
 function getTimetable( stop, dateTime, maxCount, dataType, city ) {
@@ -20,123 +20,115 @@ function getTimetable( stop, dateTime, maxCount, dataType, city ) {
 
 function parseTimetable( html ) {
     // Find block of departures
-    var str = /<table [^>]*class="resultTable"[^>]*>([\s\S]*?)<\/table>/i.exec(html);
-    if ( str == null ) {
+    var str = helper.findFirstHtmlTag( html, "table", {attributes: {"class": "resultTable"}} );
+    if ( !str.found ) {
         helper.error( "The table containing departures wasn't found!", html );
         return;
     }
-    str = str[1];
+    str = str.contents;
 
-    // Initialize regular expressions (only used once)
-    var meaningsRegExp = /<tr>[\s\S]*?(<th[\s\S]*?)<\/tr>/i;
-    var columnMeaningsRegExp = /<th class="([^"]*)"[^>]*>[^<]*<\/th>/ig;
-    if ( (meanings = meaningsRegExp.exec(str)) == null ) {
-        helper.error( "Couldn't find result table header!", str );
-        return;
-    }
-    meanings = meanings[1];
-
-    var timeCol = -1, delayCol = -1, typeOfVehicleCol = -1, targetCol = -1, platformCol = -1;
-    var i = 0;
-    while ( (colMeaning = columnMeaningsRegExp.exec(meanings)) ) {
-        colMeaning = helper.trim( colMeaning[1] );
-
-        if ( colMeaning == "time" ) {
-            timeCol = i;
-        } else if ( colMeaning == "prognosis" ) {
-            delayCol = i;
-        } else if ( colMeaning == "product" ) {
-            typeOfVehicleCol = i;
-        } else if ( colMeaning == "timetable" ) {
-            targetCol = i;
-        } else if ( colMeaning == "platform" ) {
-            platformCol = i;
-        } else {
-            println( "Unknown column found: " + colMeaning );
+    if ( headers.error /*|| timestamp > headers.timestamp*/ ) {
+        // Find column positions of specific headers using a helper function
+        headers = helper.findTableHeaderPositions( str,
+            { required: ["time", "product", "timetable"], // Names of required headers
+              optional: ["prognosis", "platform"], // Names of optional headers
+              headerOptions: { // Options of header tags (by default "th" tags inside "tr")
+                attributes: {"class": ""}, // Header tags require a class attribute
+                // Use first word in "class" attribute of the header tag as header name
+                namePosition: {type: "attribute", name: "class", regexp: "([^\\s]*)(?:\\s+\\w+)?"}
+            }
+            });
+        if ( headers.error ) {
+            helper.error( "Did not find all required columns", str );
+            return;
         }
-
-        ++i;
-    }
-
-    if ( timeCol == -1 || typeOfVehicleCol == -1 || targetCol == -1 ) {
-        helper.error( "Didn't find all required columns in the header!", meanings );
-        return;
     }
 
     // Initialize regular expressions (compile them only once)
-    var departuresRegExp = /<tr class="[^"]*?">([\s\S]*?)<\/tr>/ig;
-    var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
     // Matches transport line [1] and type of vehicle [2]
     var typeOfVehicleAndTransportLineRegExp = /<img [^>]*src="\/img\/vs_oebb\/([^_]*)_pic[^"]*" [^>]*alt="([^"]*)"[^>]*>/i;
-    var targetRegExp = /<strong>[\s\S]*?<a[^>]*>([^<]*)<\/a>[\s\S]*?<\/strong>/i;
-    var journeyNewsRegExp = /<div class="journeyMessageHIM"[^>]*>([\s\S]*?)<\/div>/i;
+    var targetRegExp = /<strong>[\s\S]*?<a[^>]*?>([^<]*)<\/a>[\s\S]*?<\/strong>/i;
     var delayRegExp = /<span[^>]*?>ca.&nbsp;\+(\d+?)&nbsp;Min.&nbsp;<\/span>/i;
     var delayOnScheduleRegExp = /<span[^>]*?>p&#252;nktlich<\/span>/i;
-
     var routeBlocksRegExp = /\r?\n\s*(-|&#8226;)\s*\r?\n/gi;
     var routeBlockEndOfExactRouteMarkerRegExp = /&#8226;/i;
 
-    // Go through all departure blocks
-    var dateTime = new Date();
-    while ( (departure = departuresRegExp.exec(str)) ) {
-        departure = departure[1];
+    // This map gets used to replace matched vehicle type strings with strings the
+    // PublicTransport data engine understands
+    var vehicleTypeMap = { "nmg": "bus", "hog": "bus", "str": "tram", "ntr": "tram",
+                           "s": "interurban", "r": "regional", "u": "subway",
+                           "oec": "intercity", "oic": "intercity",
+                           "rj": "highspeed train", // RailJet
+                           "rex": "regional express", // local train stopping at few stations, semi fast
+                           "ez": "regional express" // "ErlebnisZug", local train stopping at few stations, semi fast
+                         };
 
-        // Get column contents
-        var columns = new Array;
-        while ( (column = columnsRegExp.exec(departure)) ) {
-            column = column[1];
-            columns.push( column );
+    // Go through all departure rows, ie. <tr> tags
+    var dateTime = new Date();
+    var departureRow = { position: -1 };
+    while ( (departureRow = helper.findFirstHtmlTag(str, "tr",
+            { attributes: {"class": ".*"}, position: departureRow.position + 1 })).found )
+    {
+        // Find columns, ie. <td> tags in the current departure row
+        var columns = helper.findHtmlTags( departureRow.contents, "td" );
+        for ( var key in headers ) {
+            if ( headers[key] >= columns.length ) {
+                helper.error( "Column for header '" + key + "' at " + headers[key] +
+                              " not found in current row with " + columns.length + " columns!",
+                              departureRow.contents );
+                columns = false;
+                break;
+            }
+        }
+        if ( !columns ) {
+            continue;
         }
 
         // Initialize
         var departure = { RouteStops: new Array, RouteTimes: new Array, RouteExactStops: 0 };
 
         // Parse time column
-        var time = helper.matchTime( columns[timeCol], "hh:mm" );
+        var time = helper.matchTime( columns[headers.time].contents, "hh:mm" );
         if ( time.error ) {
-            helper.error( "Unexpected string in time column!", columns[timeCol] );
+            helper.error( "Unexpected string in time column!", columns[headers.time].contents );
             continue;
         }
         dateTime.setHours( time.hour, time.minute, 0 );
         departure.DepartureDateTime = dateTime;
 
         // Parse type of vehicle column
-        var info = typeOfVehicleAndTransportLineRegExp.exec( columns[typeOfVehicleCol] );
+        var info = typeOfVehicleAndTransportLineRegExp.exec( columns[headers.product].contents );
         if ( info == null ) {
-            helper.error( "Unexpected string in type of vehicle column!", columns[typeOfVehicleCol] );
+            helper.error( "Unexpected string in type of vehicle column!", columns[headers.product].contents );
             continue;
         }
         departure.TransportLine = helper.trim( info[2] );
 
-        var vehicle = info[1].toLowerCase();
-        if ( vehicle == "rj" ) { // RailJet
-            departure.TypeOfVehicle = "highspeed train";
-        } else if ( vehicle == "oec" || vehicle == "oic" ) {
-            departure.TypeOfVehicle = "intercity";
-        } else if ( vehicle == "rex"   // local train stopping at few stations, semi fast
-                  || vehicle == "ez" )  // "ErlebnisZug", local train stopping at few stations, semi fast
-        {
-            departure.TypeOfVehicle = "regional express";
-        } else {
+        // Use vehicle type match to lookup a correct vehicle type string in vehicleTypeMap
+        var vehicle = helper.trim( info[1].toLowerCase() );
+        departure.TypeOfVehicle = vehicleTypeMap[ vehicle ];
+        if ( typeof(departure.TypeOfVehicle) == 'string' && departure.TypeOfVehicle.length == 0 ) {
+            print( "Matched vehicle type string not handled in map: " + vehicle );
             departure.TypeOfVehicle = vehicle;
         }
-        departure.TypeOfVehicle = typeOfVehicle;
 
         // Parse target column
-        var target = targetRegExp.exec( columns[targetCol] );
+        var target = targetRegExp.exec( columns[headers.timetable].contents );
         if ( target == null ) {
-            helper.error( "Unexpected string in target column!", columns[targetCol] );
+            helper.error( "Unexpected string in target column!", columns[headers.timetable].contents );
             continue;
         }
-        departure.Target = helper.trim( target[1] );
+        departure.Target = helper.stripTags( target[1] );
 
         // Parse route from target column
-        var route = columns[targetCol];
+        var route = columns[headers.timetable].contents;
         var posRoute = route.indexOf( "<br />" );
         if ( posRoute != -1 ) {
             route = route.substr( posRoute + 6 );
             var routeBlocks = route.split( routeBlocksRegExp );
 
+            // Get the number of exact route stops by searching for the position of the
+            // "end-of-route-marker"
             if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) ) {
                 departure.RouteExactStops = routeBlocks.length;
             } else {
@@ -147,10 +139,11 @@ function parseTimetable( html ) {
                 }
             }
 
+            // Go through all route blocks
             for ( var n = 0; n < routeBlocks.length; ++n ) {
                 var lines = helper.splitSkipEmptyParts( routeBlocks[n], "\n" );
                 if ( lines.count < 4 ) {
-                    helper.error( "Too less lines (" + lines.count + ") in route string!", routeBlocks[n] );
+                    helper.error( "Too few lines (" + lines.count + ") in route string!", routeBlocks[n] );
                     continue;
                 }
 
@@ -163,22 +156,23 @@ function parseTimetable( html ) {
         }
 
         // Parse journey news from target column
-        var journeyNewsMatches = journeyNewsRegExp.exec( columns[targetCol] );
-        if ( journeyNewsMatches != null ) {
-            departure.JourneyNews = helper.stripTags( journeyNewsMatches[1] );
+        var journeyNews = helper.findFirstHtmlTag( columns[headers.timetable].contents, "div",
+                {attributes: {"class": "journeyMessageHIM"}} );
+        if ( journeyNews.found ) {
+            departure.JourneyNews = helper.stripTags( journeyNews.contents );
         }
 
         // Parse platform from platform column
-        if ( platformCol != -1 ) {
-            departure.Platform = helper.trim( columns[platformCol] );
+        if ( headers.platform != -1 ) {
+            departure.Platform = helper.trim( columns[headers.platform].contents );
         }
 
         // Parse delay information from delay column
-        if ( delayCol != -1 ) {
-            var delayDeparture = delayRegExp.exec( columns[delayCol] );
+        if ( headers.prognosis != -1 ) {
+            var delayDeparture = delayRegExp.exec( columns[headers.prognosis].contents );
             if ( delayDeparture != null ) {
                 departure.Delay = parseInt( delayDeparture[1] );
-            } else if ( delayOnScheduleRegExp.test(columns[delayCol]) ) {
+            } else if ( delayOnScheduleRegExp.test(columns[headers.prognosis].contents) ) {
                 departure.Delay = 0;
             } else {
                 departure.Delay = -1;
@@ -191,19 +185,18 @@ function parseTimetable( html ) {
 }
 
 function getStopSuggestions( stop, maxCount, city  ) {
-    var url = "http://fahrplan.oebb.at/bin/ajax-getstop.exe/dn?REQ0JourneyStopsS0A=1&"
-            + "REQ0JourneyStopsS0G=" + stop + "?";
-
     // Download suggestions and parse them using a regular expression
-    var json = network.getSynchronous( url );
-    if ( !network.lastDownloadAborted() ) {
-        // Find all stop suggestions
-        var stopRegExp = /\{"value":"([^"]*)","id":"[^"]*?@L=([^@]*)@[^"]*",.*?"weight":"([0-9]+)"[^\}]*\}/ig;
-        while ( (stop = stopRegExp.exec(json)) ) {
-            result.addData({ StopName: stop[1], StopID: stop[2], StopWeight: stop[3] });
-        }
-        return result.hasData();
-    } else {
+    var json = network.getSynchronous( "http://fahrplan.oebb.at/bin/ajax-getstop.exe/dn?" +
+                                       "REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G=" + stop + "?" );
+    if ( network.lastDownloadAborted() ) {
         return false;
     }
+
+    // Find all stop suggestions in the JSON list of stops
+    // Each element in the list is an object as matched by stopRegExp
+    var stopRegExp = /\{"value":"([^"]*)","id":"[^"]*?@L=([^@]*)@[^"]*",.*?"weight":"([0-9]+)"[^\}]*\}/ig;
+    while ( (stop = stopRegExp.exec(json)) ) {
+        result.addData({ StopName: stop[1], StopID: stop[2], StopWeight: stop[3] });
+    }
+    return result.hasData();
 }

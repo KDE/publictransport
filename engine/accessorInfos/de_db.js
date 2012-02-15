@@ -3,23 +3,10 @@
 
 Array.prototype.contains = function( element ) {
     for ( var i = 0; i < this.length; i++ ) {
-    if ( this[i] == element )
-        return true;
+        if ( this[i] == element )
+            return true;
     }
     return false;
-}
-
-function detailsResultsObject() {
-    this.journeyNews = '';
-    this.routeStops = new Array;
-    this.routePlatformsDeparture = new Array;
-    this.routePlatformsArrival = new Array;
-    this.routeVehicleTypes = new Array;
-    this.routeTransportLines = new Array;
-    this.routeTimesDeparture = new Array;
-    this.routeTimesArrival = new Array;
-    this.routeTimesDepartureDelay = new Array;
-    this.routeTimesArrivalDelay = new Array;
 }
 
 function usedTimetableInformations() {
@@ -32,19 +19,10 @@ function usedTimetableInformations() {
 
 var requestDateTime;
 function getTimetable( stop, dateTime, maxCount, dataType, city ) {
-//     for ( var i = 0; i < 100; ++i ) {
-//         result.addData({ DepartureDateTime: new Date(), Target: "Fieti" + i, TypeOfVehicle: "Bus", TransportLine: "666" });
-//         for ( var n = 0; n < 100000000; ++n ) {
-//             var v = 666;
-//         }
-//         result.publish();
-//     }
-//     return;
     // Store request date and time to know it in parseTimetable
     requestDateTime = dateTime;
     print( "write requestDateTime: " + requestDateTime );
 
-//     var qDateTime = new QDateTime( dateTime );
     var url = "http://reiseauskunft.bahn.de/bin/bhftafel.exe/dn?rt=1" +
             "&input=" + stop + "!" +
             "&boardType=" + (dataType == "arrivals" ? "arr" : "dep") +
@@ -139,23 +117,19 @@ function parseTimetable( html ) {
     returnValue.push( 'dates need adjustment' );
 
     // Find block of departures
-    var str = helper.extractBlock( html, '<table class="result stboard dep">', '</table>' );
-    if ( str.length == 0 ) {
-        str = helper.extractBlock( html, '<table class="result stboard arr">', '</table>' );
-        if ( str.length == 0 ) {
-            helper.error("Result table not found", html);
-            return;
-        }
+    var departureBlock = helper.findFirstHtmlTag( html, "table",
+            {attributes: {"class": "result\\s+stboard\\s+(dep|arr)"}} );
+    if ( !departureBlock.found ) {
+        helper.error("Result table not found", html);
+        return;
     }
 
     // Initialize regular expressions (compile them only once)
-    var departuresRegExp = /<tr>([\s\S]*?)<\/tr>/ig;
-    var columnsRegExp = /<td class="([^"]*?)">([\s\S]*?)<\/td>/ig;
     var typeOfVehicleRegExp = /<img src="[^"]*?\/img\/([^_]*?)_/i;
     var targetRegExp = /<span class="bold">[^<]*?<a[^>]*?>([\s\S]*?)<\/a>/i;
     var routeBlocksRegExp = /\r?\n\s*(-|<img[^>]*?>)\s*\r?\n/gi;
     var routeBlockEndOfExactRouteMarkerRegExp = /<img[^>]*?>/i;
-    var platformRegExp = /<strong>([^<]*?)<\/strong>/i; //<br \/>\s*[^<]*
+    var platformRegExp = /<strong>([^<]*?)<\/strong>/i;
     var delayRegExp = /<span style="[^"]*?">ca.&nbsp;(\d*)&nbsp;Minuten&nbsp;sp&#228;ter<\/span>/i;
     var delayWithReasonRegExp = /<span><span style="[^"]*?">ca.&nbsp;(\d*)&nbsp;Minuten&nbsp;sp&#228;ter<\/span><\/span>,<br\/><span class="[^"]*?">Grund:\s*?([^<]*)<\/span>/i;
     var delayOnTimeRegExp = /<span style="[^"]*?">p&#252;nktlich<\/span>/i;
@@ -163,35 +137,27 @@ function parseTimetable( html ) {
 
     // Store values to get the correct date of departures
     var now = new Date();
-//     var currentDate = [ now.getFullYear(), now.getMonth() + 1, now.getDate() ];
     var dateTime = now;
     var lastHour = 0;
 
     // Go through all departure blocks
-    while ( (departureRow = departuresRegExp.exec(str)) ) {
-        departureRow = departureRow[1];
+    var departureRow = { position: -1 };
+    while ( (departureRow = helper.findFirstHtmlTag(departureBlock.contents, "tr",
+                            {position: departureRow.position + 1})).found )
+    {
+        // Find columns, ie. <td> tags in the current departure row
+        var columns = helper.findNamedHtmlTags( departureRow.contents, "td",
+                {attributes: {"class": ""}, ambiguousNameResolution: "addNumber",
+                 namePosition: {type: "attribute", name: "class", regexp: "([^\\s]*)(?:\\s+\\w+)?"}} );
 
-        // Get column contents
-        var columns = new Array;
-        var columnMeanings = new Array;
-        var iTrain = 1;
-        while ( (col = columnsRegExp.exec(departureRow)) ) {
-            var meaning = col[1];
-
-            if ( meaning == "train" ) {
-                meaning += iTrain;
-                ++iTrain;
-            }
-            columns[ meaning ] = col[2];
-            columnMeanings.push( meaning );
-        }
-
-        if ( !columnMeanings.contains("time") || !columnMeanings.contains("route") ||
-             !columnMeanings.contains("train1") || !columnMeanings.contains("train2") )
+        // Check that all needed columns are found
+        if ( !columns.names.contains("time") || !columns.names.contains("route") ||
+             !columns.names.contains("train") || !columns.names.contains("train2") )
         {
-            if ( departureRow.indexOf("<th") == -1 ) {
+            if ( departureRow.contents.indexOf("<th") == -1 ) {
                 // There's only an error, if this isn't the header row of the table
-                helper.error("Didn't find all columns in a row of the result table!", departureRow);
+                helper.error("Didn't find all columns in a row of the result table! " +
+                             "Found: " + columns.names, departureRow.contents);
             }
             continue; // Not all columns where not found
         }
@@ -200,9 +166,9 @@ function parseTimetable( html ) {
         var departure = { RouteStops: new Array, RouteTimes: new Array, RouteExactStops: 0 };
 
         // Parse time column
-        var time = QTime.fromString( columns["time"], "hh:mm" );
+        var time = QTime.fromString( columns["time"].contents, "hh:mm" );
         if ( !time.isValid() ) {
-            helper.error("Unexpected string in time column", columns["time"]);
+            helper.error("Unexpected string in time column", columns["time"].contents);
             continue;
         }
         // Update time of the dateTime object
@@ -226,25 +192,25 @@ function parseTimetable( html ) {
         departure.DepartureDateTime = dateTime;
 
         // Parse type of vehicle column
-        if ( !(typeOfVehicle = typeOfVehicleRegExp.exec(columns["train1"])) ) {
-            helper.error("Unexpected string in type of vehicle column", columns["train1"]);
+        if ( !(typeOfVehicle = typeOfVehicleRegExp.exec(columns["train"].contents)) ) {
+            helper.error("Unexpected string in type of vehicle column", columns["train"].contents);
             continue; // Unexcepted string in type of vehicle column
         }
         departure.TypeOfVehicle = typeOfVehicle[1];
 
         // Parse transport line column
-        departure.TransportLine = helper.trim( helper.stripTags(columns["train2"]) );
+        departure.TransportLine = helper.trim( helper.stripTags(columns["train2"].contents) );
 
         // Parse route column:
         // > Target information
-        if ( !(targetString = targetRegExp.exec(columns["route"])) ) {
-            helper.error("Unexpected string in target column", columns["route"]);
+        if ( !(targetString = targetRegExp.exec(columns["route"].contents)) ) {
+            helper.error("Unexpected string in target column", columns["route"].contents);
             continue; // Unexcepted string in target column
         }
         departure.Target = helper.trim( targetString[1] );
 
         // > Route information
-        var route = columns["route"];
+        var route = columns["route"].contents;
         var posRoute = route.indexOf( "<br />" );
         if ( posRoute != -1 ) {
             route = route.substr( posRoute + 6 );
@@ -274,21 +240,21 @@ function parseTimetable( html ) {
         }
 
         // Parse platform column if any
-        if ( columnMeanings.contains("platform") ) {
-            if ( (platformArr = platformRegExp.exec(columns["platform"])) )
+        if ( columns.names.contains("platform") ) {
+            if ( (platformArr = platformRegExp.exec(columns["platform"].contents)) )
                 departure.Platform = helper.trim( platformArr[0] );
         }
 
         // Parse delay column if any
-        if ( columnMeanings.contains("ris") ) {
-            if ( delayOnTimeRegExp.test(columns["ris"]) ) {
+        if ( columns.names.contains("ris") ) {
+            if ( delayOnTimeRegExp.test(columns["ris"].contents) ) {
                 departure.Delay = 0;
-            } else if ( (delayArr = delayWithReasonRegExp.exec(columns["ris"])) ) {
+            } else if ( (delayArr = delayWithReasonRegExp.exec(columns["ris"].contents)) ) {
                 departure.Delay = delayArr[1];
                 departure.DelayReason = delayArr[2];
-            } else if ( (delayArr = delayRegExp.exec(columns["ris"])) ) {
+            } else if ( (delayArr = delayRegExp.exec(columns["ris"].contents)) ) {
                 departure.Delay = delayArr[1];
-            } else if ( trainCanceledRegExp.test(columns["ris"]) ) {
+            } else if ( trainCanceledRegExp.test(columns["ris"].contents) ) {
                 var infoText = "Zug f&auml;llt aus.";
                 if ( departure.JourneyNews.length == 0 ) {
                     departure.JourneyNews = infoText;
@@ -313,69 +279,63 @@ function parseTimetable( html ) {
 
 function parseJourneys( html ) {
     // Find block of journeys
-    var str = helper.extractBlock( html, '<table class="result" cellspacing="0">',
+    var journeyBlockContents = helper.extractBlock( html, '<table class="result" cellspacing="0">',
                 '<div id="hafasContentEnd">' );
-    if ( str.length < 10 ) {
+    if ( journeyBlockContents.length < 10 ) {
         helper.error("Did not find the result table", html);
     }
 
     // Initialize regular expressions (compile them only once)
-    var journeysRegExp = /<tr class="\s*?firstrow">([\s\S]*?)<\/tr>[\s\S]*?<tr class="\s*?last">([\s\S]*?)<\/tr>/ig
     var nextJourneyBeginRegExp = /<tr class="\s*?firstrow">/i;
-    var columnsRegExp = /<td class="([^"]*?)"[^>]*?>([\s\S]*?)<\/td>/ig;
     var startStopNameRegExp = /<div class="resultDep">\s*([^<]*?)\s*<\/div>/i;
     var timeRegExp = /(\d{1,2}):(\d{2})/i;
     var dateRegExp = /(\d{2}).(\d{2}).(\d{2,4})/;
     var vehicleTypesRegExp = /<span[^>]*?><a[^>]*?>(?:[^<]*?<img src="[^"]*?"[^>]*?>)?([^<]*?)<\/a><\/span>/i;
     var journeyDetailsRegExp = /<div id="[^"]*?" class="detailContainer[^"]*?">\s*?<table class="result">([\s\S]*?)<\/table>/ig;
 
-    // Go through all journey blocks
-    while ( (journeyRow = journeysRegExp.exec(str)) ) {
-        journeyRow1 = journeyRow[1];
-        journeyRow2 = journeyRow[2];
+    // Go through all journey blocks (each block consists of two table rows (<tr> elements)
+    var journeyRow1, journeyRow2 = { endPosition: -1 };
+    while ( (journeyRow1 = helper.findFirstHtmlTag(journeyBlockContents, "tr",
+                {attributes: {"class": "firstrow"}, position: journeyRow2.endPosition + 1})).found &&
+            (journeyRow2 = helper.findFirstHtmlTag(journeyBlockContents, "tr",
+                {attributes: {"class": "last"}, position: journeyRow1.endPosition + 1})).found )
+    {
+        // Find columns, ie. <td> tags in the current journey rows
+        var columnsRow1 = helper.findNamedHtmlTags( journeyRow1.contents, "td",
+                {attributes: {"class": ""}, ambiguousNameResolution: "addNumber",
+                 namePosition: {type: "attribute", name: "class", regexp: "([^\\s]*)(?:\\s+\\w+)?"}} );
+        var columnsRow2 = helper.findNamedHtmlTags( journeyRow2.contents, "td",
+                {attributes: {"class": ""}, ambiguousNameResolution: "addNumber",
+                 namePosition: {type: "attribute", name: "class", regexp: "([^\\s]*)(?:\\s+\\w+)?"}} );
 
-        // Get column contents
-        var columns = new Array;
-        var columnMeanings = new Array;
-        while ( (col = columnsRegExp.exec(journeyRow1)) ) {
-            var meaning = helper.trim(col[1].replace(/(lastrow|button-inside|tablebutton)/gi, '')) + 'Row1';
-            columns[ meaning ] = col[2];
-            columnMeanings.push( meaning );
-        }
-        columnsRegExp.lastIndex = 0;
-
-        while ( (col = columnsRegExp.exec(journeyRow2)) ) {
-            var meaning = helper.trim(col[1]) + 'Row2';
-            columns[ meaning ] = col[2];
-            columnMeanings.push( meaning );
-        }
-
-        if ( !columnMeanings.contains("timeRow1") ||
-             !columnMeanings.contains("durationRow1") ||
-             !columnMeanings.contains("station firstRow1") ||
-             !columnMeanings.contains("station stationDestRow2") )
+        if ( !columnsRow1.names.contains("time") || !columnsRow1.names.contains("duration") ||
+             !columnsRow1.names.contains("station") || !columnsRow2.names.contains("station") )
         {
             helper.error("Did not find all required columns",
-                         journeyRow1 + "  -  " + journeyRow2);
+                         journeyRow1.contents + "  -  " + journeyRow2.contents);
             continue;
         }
 
         // Initialize result variables with defaults
-        var journey = { TypesOfVehicleInJourney: new Array };
+        var journey = { TypesOfVehicleInJourney: new Array, JourneyNews: '', RouteStops: new Array,
+                        RoutePlatformsDeparture: new Array, RoutePlatformsArrival: new Array,
+                        RouteTypesOfVehicles: new Array, RouteTransportLines: new Array,
+                        RouteTimesDeparture: new Array, RouteTimesArrival: new Array,
+                        RouteTimesDepartureDelay: new Array, RouteTimesArrivalDelay: new Array };
 
         // Parse start/target stop column
-        if ( !(startStopName = startStopNameRegExp.exec(columns["station firstRow1"])) ) {
-            helper.error("Unexcepted string in start stop column", columns["station firstRow1"]);
+        if ( !(startStopName = startStopNameRegExp.exec(columnsRow1["station"].contents)) ) {
+            helper.error("Unexcepted string in start stop column", columnsRow1["station"].contents);
             continue;
         }
         journey.StartStopName = startStopName[1];
-        journey.TargetStopName = helper.trim( columns["station stationDestRow2"] );
+        journey.TargetStopName = helper.trim( columnsRow2["station"] );
 
         // Parse departure/arrival date column TODO
 //         journey.DepartureDateTime = helper.matchDate( columns["dateRow1"], "dd.MM.yy" );
 //         journey.ArrivalDateTime = helper.matchDate( columns["dateRow2"], "dd.MM.yy" );
-        if ( !(departureDate = dateRegExp.exec(columns["dateRow1"])) ) {
-            helper.error("Unexcepted string in departure date column", columns["dateRow1"]);
+        if ( !(departureDate = dateRegExp.exec(columnsRow1["date"].contents)) ) {
+            helper.error("Unexcepted string in departure date column", columnsRow1["date"].contents);
             continue;
         }
         var departureYear = parseInt( departureDate[3] );
@@ -383,8 +343,8 @@ function parseJourneys( html ) {
                                           parseInt(departureDate[2]) - 1, // month is zero based
                                           parseInt(departureDate[1]) );
 
-        if ( !(arrivalDate = dateRegExp.exec(columns["dateRow2"])) ) {
-            helper.error("Unexcepted string in arrival date column", columns["dateRow2"]);
+        if ( !(arrivalDate = dateRegExp.exec(columnsRow2["date"].contents)) ) {
+            helper.error("Unexcepted string in arrival date column", columnsRow2["date"].contents);
             continue;
         }
         var arrivalYear = parseInt( arrivalDate[3] );
@@ -400,16 +360,16 @@ function parseJourneys( html ) {
 //             departureTime = departureTime.substr( 0, pos );
 //         }
 //         journey.DepartureTime = QTime.fromString( helper.trim(departureTime), "hh:mm" );
-        if ( !(departureTime = timeRegExp.exec(columns["timeRow1"])) ) {
+        if ( !(departureTime = timeRegExp.exec(columnsRow1["time"].contents)) ) {
 //         if ( !journey.DepartureTime.isValid() ) {
-            helper.error("Unexcepted string in departure time column", columns["timeRow1"]);
+            helper.error("Unexcepted string in departure time column", columnsRow1["time"].contents);
             continue;
         }
         journey.DepartureTime = new QTime( departureTime[1], departureTime[2] );
 
-        if ( !(arrivalTime = timeRegExp.exec(columns["timeRow2"])) ) {
+        if ( !(arrivalTime = timeRegExp.exec(columnsRow2["time"].contents)) ) {
 //         if ( !journey.DepartureTime.isValid() ) {
-            helper.error("Unexcepted string in arrival time column", columns["timeRow2"]);
+            helper.error("Unexcepted string in arrival time column", columnsRow2["time"].contents);
             continue;
         }
         journey.ArrivalTime = new QTime( arrivalTime[1], arrivalTime[2] );
@@ -428,16 +388,16 @@ function parseJourneys( html ) {
 //         }
 
         // Parse duration column
-        if ( columnMeanings.contains("durationRow1") ) {
-            if ( (duration = timeRegExp.exec(columns["durationRow1"])) ) {
+        if ( columnsRow1.names.contains("duration") ) {
+            if ( (duration = timeRegExp.exec(columnsRow1["duration"].contents)) ) {
                 // Duration is a string in format "hh:mm"
                 journey.Duration = duration[1] * 60 + duration[2];
             }
         }
 
         // Parse types of vehicles (products) column
-        if ( columnMeanings.contains("productsRow1") ) {
-            var types = vehicleTypesRegExp.exec( columns["productsRow1"] );
+        if ( columnsRow1.names.contains("products") ) {
+            var types = vehicleTypesRegExp.exec( columnsRow1["products"].contents );
             if ( types ) {
                 types = types[1];
                 types = types.split( /,/i );
@@ -446,7 +406,7 @@ function parseJourneys( html ) {
                 }
             } else {
                 // This is changed, test it TODO
-                types = helper.stripTags( columns["productsRow1"] ).split( /,/i );
+                types = helper.stripTags( columnsRow1["products"].contents ).split( /,/i );
                 for ( var n = 0; n < types.length; ++n ) {
                     journey.TypesOfVehicleInJourney.push( helper.trim(types[n]) );
                 }
@@ -454,38 +414,27 @@ function parseJourneys( html ) {
         }
 
         // Parse changes column
-        journey.Changes = parseInt( helper.trim(columns["changesRow1"]) );
+        journey.Changes = parseInt( helper.trim(columnsRow1["changes"].contents) );
 
         // Parse pricing column
-        if ( columnMeanings.contains("fareStdRow1") ) {
-            journey.Pricing = helper.trim( helper.stripTags(columns["fareStdRow1"]) );
+        if ( columnsRow1.names.contains("fareStd") ) {
+            journey.Pricing = helper.trim( helper.stripTags(columnsRow1["fareStd"].contents) );
             journey.Pricing = journey.Pricing.replace( /(Zur&nbsp;Buchung|Zur&nbsp;Reservierung|\(Res. Info\)|Preisauskunft nicht m&#246;glich)/ig, '' );
         }
 
         // Parse details if available
-        var detailsResults = new detailsResultsObject();
-        var str2 = str.substr( journeysRegExp.lastIndex );
-        var details = journeyDetailsRegExp.exec( str2 );
+        var str = journeyBlockContents.substr( journeyRow2.endPosition );
+        var details = journeyDetailsRegExp.exec( str );
         // Make sure that the details block belongs to the just parsed journey
-        var beginOfNextJourney = str2.search( nextJourneyBeginRegExp );
+        var beginOfNextJourney = str.search( nextJourneyBeginRegExp );
         if ( details &&
              (beginOfNextJourney < 0 || journeyDetailsRegExp.lastIndex <= beginOfNextJourney) )
         {
-            parseJourneyDetails( details[1], detailsResults );
+            parseJourneyDetails( details[1], journey );
         }
         journeyDetailsRegExp.lastIndex = 0; // start from beginning next time
 
         // Add journey
-        journey.JourneyNews = detailsResults.journeyNews;
-        journey.RouteStops = detailsResults.routeStops;
-        journey.RoutePlatformsDeparture = detailsResults.routePlatformsDeparture;
-        journey.RoutePlatformsArrival = detailsResults.routePlatformsArrival;
-        journey.RouteTimesDeparture = detailsResults.routeTimesDeparture;
-        journey.RouteTimesArrival = detailsResults.routeTimesArrival;
-        journey.RouteTimesDepartureDelay = detailsResults.routeTimesDepartureDelay;
-        journey.RouteTimesArrivalDelay = detailsResults.routeTimesArrivalDelay;
-        journey.RouteTypesOfVehicles = detailsResults.routeVehicleTypes;
-        journey.RouteTransportLines = detailsResults.routeTransportLines;
         result.addData( journey );
     }
 }
@@ -496,7 +445,7 @@ function parseJourneyDetails( details, resultObject ) {
     if ( (journeyNews = journeyNewsRegExp.exec(details)) != null ) {
         journeyNews = helper.trim( journeyNews[1] );
         if ( journeyNews != '' ) {
-            resultObject.journeyNews = journeyNews;
+            resultObject.JourneyNews = journeyNews;
         }
     }
 
@@ -557,10 +506,10 @@ function parseJourneyDetails( details, resultObject ) {
         // departure times column for some reason...
         if ( trainCanceledRegExp.test(columnsRow1[3]) ) {
             var infoText = "Zug '" + routeTransportLine + "' f&auml;llt aus.";
-            if ( resultObject.journeyNews == null )
-            resultObject.journeyNews = infoText;
+            if ( resultObject.JourneyNews == null )
+                resultObject.JourneyNews = infoText;
             else
-            resultObject.journeyNews += " " + infoText;
+                resultObject.JourneyNews += " " + infoText;
 
             routeTransportLine += " <span style='color:red;'>Zug f&auml;llt aus</span>";
         }
@@ -607,22 +556,22 @@ function parseJourneyDetails( details, resultObject ) {
             }
         }
 
-        resultObject.routeStops.push( routeStop );
-        resultObject.routePlatformsDeparture.push( routePlatformDeparture );
-        resultObject.routePlatformsArrival.push( routePlatformArrival );
-        resultObject.routeVehicleTypes.push( routeVehicleType );
-        resultObject.routeTransportLines.push( routeTransportLine );
-        resultObject.routeTimesDeparture.push( timeDeparture );
-        resultObject.routeTimesDepartureDelay.push( delayDeparture );
-        resultObject.routeTimesArrival.push( timeArrival );
-        resultObject.routeTimesArrivalDelay.push( delayArrival );
+        resultObject.RouteStops.push( routeStop );
+        resultObject.RoutePlatformsDeparture.push( routePlatformDeparture );
+        resultObject.RoutePlatformsArrival.push( routePlatformArrival );
+        resultObject.RouteTypesOfVehicles.push( routeVehicleType );
+        resultObject.RouteTransportLines.push( routeTransportLine );
+        resultObject.RouteTimesDeparture.push( timeDeparture );
+        resultObject.RouteTimesDepartureDelay.push( delayDeparture );
+        resultObject.RouteTimesArrival.push( timeArrival );
+        resultObject.RouteTimesArrivalDelay.push( delayArrival );
 
         lastStop = columnsRow2[0];
         lastArrivalTime = timeArrival;
     }
 
     if ( lastStop != null ) {
-        resultObject.routeStops.push( helper.trim(lastStop) );
+        resultObject.RouteStops.push( helper.trim(lastStop) );
     }
     return true;
 }
