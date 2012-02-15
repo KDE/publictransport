@@ -1020,7 +1020,8 @@ void PublicTransport::showJourneyList()
                                   d->isStateActive("journeyDataValid") );
 
     // Create timetable widget for journeys
-    d->journeyTimetable = new JourneyTimetableWidget( this );
+    d->journeyTimetable = new JourneyTimetableWidget( d->settings.drawShadows
+            ? PublicTransportWidget::DrawShadowsOrHalos : PublicTransportWidget::NoOption, this );
     d->journeyTimetable->setModel( d->modelJourneys );
     d->journeyTimetable->setFont( d->settings.sizedFont() );
     d->journeyTimetable->setSvg( &d->vehiclesSvg );

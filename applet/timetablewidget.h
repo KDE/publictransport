@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -90,7 +90,7 @@ public:
     PublicTransportWidget *publicTransportWidget() const { return m_parent; };
 
     /** @brief The QModelIndex to the data for this item. */
-    QModelIndex index() const { return m_item->index(); };
+    QModelIndex index() const { return m_item ? m_item->index() : QModelIndex(); };
 
     /**
      * @brief Notifies this item about changed settings in the parent PublicTransportWidget.
@@ -301,10 +301,14 @@ protected:
 
 class TextDocumentHelper {
 public:
+    enum Option {
+        DoNotDrawShadowOrHalos, DrawShadows, DrawHalos, DefaultOption = DrawShadows
+    };
+
     static QTextDocument *createTextDocument( const QString &html, const QSizeF &size,
             const QTextOption &textOption, const QFont &font );
     static void drawTextDocument( QPainter *painter, const QStyleOptionGraphicsItem* option,
-            QTextDocument *document, const QRect &textRect, bool drawHalos );
+            QTextDocument *document, const QRect &textRect, Option options = DefaultOption );
     static qreal textDocumentWidth( QTextDocument *document );
 };
 
@@ -581,7 +585,15 @@ class PublicTransportWidget : public Plasma::ScrollWidget
     friend class DepartureItem;
 
 public:
-    PublicTransportWidget( QGraphicsItem* parent = 0 );
+    enum Option {
+        NoOption                = 0x0000, /**< No special option. */
+        DrawShadowsOrHalos      = 0x0001, /**< Draw shadows/halos behind text, dependend on color. */
+
+        DefaultOptions = DrawShadowsOrHalos /**< Options used by default */
+    };
+    Q_DECLARE_FLAGS( Options, Option )
+
+    PublicTransportWidget( Options options = DefaultOptions, QGraphicsItem* parent = 0 );
 
     /** @brief Gets the model containing the data for this widget. */
     PublicTransportModel *model() const { return m_model; };
@@ -604,6 +616,11 @@ public:
 
     void setZoomFactor( qreal zoomFactor = 1.0 );
     qreal zoomFactor() const { return m_zoomFactor; };
+
+    Options options() const { return m_options; };
+    inline bool isOptionEnabled( Option option ) const { return m_options.testFlag(option); };
+    void setOptions( Options options );
+    void setOption( Option option, bool enable = true );
 
     /** @brief Sets the text shown when this item contains no item (ie. is empty) to @p noItemsText. */
     void setNoItemsText( const QString &noItemsText ) {
@@ -655,6 +672,7 @@ protected:
     void updateItemGeometries();
     virtual void setupActions();
 
+    Options m_options;
     PublicTransportModel *m_model;
     QList<PublicTransportGraphicsItem*> m_items;
     Plasma::Svg *m_svg;
@@ -677,7 +695,7 @@ class TimetableWidget : public PublicTransportWidget
     friend class DepartureGraphicsItem;
 
 public:
-    TimetableWidget( QGraphicsItem* parent = 0 );
+    TimetableWidget( Options options = DefaultOptions, QGraphicsItem* parent = 0 );
 
     void setTargetHidden( bool targetHidden ) { m_targetHidden = targetHidden; updateItemLayouts(); };
     bool isTargetHidden() const { return m_targetHidden; };
@@ -721,7 +739,7 @@ class JourneyTimetableWidget : public PublicTransportWidget
     friend class PublicTransportGraphicsItem;
 
 public:
-    JourneyTimetableWidget( QGraphicsItem* parent = 0 );
+    JourneyTimetableWidget( Options options = DefaultOptions, QGraphicsItem* parent = 0 );
 
     /** @brief Gets the journey item at the given @p row. */
     inline JourneyGraphicsItem *journeyItem( int row ) {

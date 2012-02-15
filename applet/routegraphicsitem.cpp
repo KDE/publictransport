@@ -72,6 +72,7 @@ void RouteGraphicsItem::setZoomFactor( qreal zoomFactor )
 {
     m_zoomFactor = zoomFactor;
     arrangeStopItems();
+    updateGeometry();
     update();
 }
 
@@ -746,8 +747,16 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter,
         const QStyleOptionGraphicsItem* option, QWidget* widget )
 {
     Q_UNUSED( widget );
-    QColor textColor = palette().color( QPalette::Active, QPalette::Text );
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 192;
+
+    // Get the departure graphics item (parent of this is RouteGraphicsItem,
+    // parent of RouteGraphicsItem is DepartureGraphicsItem)
+    // to get access to the textColor() function
+    DepartureGraphicsItem *departureItem =
+            qgraphicsitem_cast<DepartureGraphicsItem*>( parentWidget()->parentWidget() );
+    QColor textColor = departureItem->textColor();
+    const bool drawShadowsOrHalos = departureItem->publicTransportWidget()->isOptionEnabled(
+            PublicTransportWidget::DrawShadowsOrHalos );
+    const bool drawHalos = drawShadowsOrHalos && qGray(textColor.rgb()) < 192;
 
     QFontMetrics fm( font() );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
@@ -757,12 +766,14 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter,
     rect.setTop( 0 );
     QString stopText = fm.elidedText( m_stopText, Qt::ElideRight, rect.width() );
 
+    // Prepare a pixmap and a painter drawing to that pixmap
     QPixmap pixmap( rect.size() );
     pixmap.fill( Qt::transparent );
     QPainter p( &pixmap );
     p.setRenderHints( QPainter::Antialiasing );
     p.setBrush( textColor ); // Set text color as brush, because it's filled using a QPainterPath
     p.setPen( Qt::NoPen ); // No text outline
+
     if ( drawHalos ) {
         Plasma::PaintUtils::drawHalo( &p, QRectF(rect.left(), rect.top(),//-fm.ascent(), TODO Move f.ascent to setPos()?
                                       fm.width(stopText), fm.height()) );
@@ -774,7 +785,7 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter,
     p.drawPath( path );
     p.end();
 
-    if ( !drawHalos ) {
+    if ( !drawHalos && drawShadowsOrHalos ) {
         // Create and draw a shadow
         QImage shadow = pixmap.toImage();
         Plasma::PaintUtils::shadowBlur( shadow, 3, Qt::black );
@@ -874,15 +885,26 @@ void JourneyRouteStopGraphicsItem::paint( QPainter* painter, const QStyleOptionG
         painter->fillRect( option->rect, QBrush(bgGradient) );
     }
 
+    // Draw text
+    const JourneyGraphicsItem *journeyItem = qgraphicsitem_cast<JourneyGraphicsItem*>(
+            qgraphicsitem_cast<JourneyRouteGraphicsItem*>(parentWidget())->parentWidget() );
+
 #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
-    QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+    QColor textColor = journeyItem ? journeyItem->textColor
+            : Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
 #else
-    QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewTextColor );
+    QColor textColor = journeyItem ? journeyItem->textColor()
+            : Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewTextColor );
 #endif
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(textColor.rgb()) < 192;
+    const bool drawShadowsOrHalos = journeyItem->publicTransportWidget()->isOptionEnabled(
+            PublicTransportWidget::DrawShadowsOrHalos );
+    const bool drawHalos = drawShadowsOrHalos && qGray(textColor.rgb()) < 192;
     QRectF textRect = infoTextRect();
-    TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
-                                          textRect.toRect(), drawHalos );
+    painter->setPen( textColor );
+    TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument, textRect.toRect(),
+            drawShadowsOrHalos
+            ? (drawHalos ? TextDocumentHelper::DrawHalos : TextDocumentHelper::DrawShadows)
+            : TextDocumentHelper::DoNotDrawShadowOrHalos);
 }
 
 JourneyRouteGraphicsItem::JourneyRouteGraphicsItem( QGraphicsItem* parent, JourneyItem* item,
@@ -898,6 +920,13 @@ JourneyRouteGraphicsItem::JourneyRouteGraphicsItem( QGraphicsItem* parent, Journ
     m_zoomFactor = 1.0;
     new QGraphicsLinearLayout( Qt::Vertical, this );
     updateData( item );
+}
+
+void JourneyRouteGraphicsItem::setZoomFactor( qreal zoomFactor )
+{
+    m_zoomFactor = zoomFactor;
+    updateData( m_item );
+    updateGeometry();
 }
 
 void JourneyRouteGraphicsItem::updateData( JourneyItem* item )

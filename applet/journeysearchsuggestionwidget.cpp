@@ -160,7 +160,7 @@ void JourneySearchSuggestionItem::paint( QPainter* painter, const QStyleOptionGr
     }
 
     TextDocumentHelper::drawTextDocument( painter, option, m_textDocument,
-                                        textRect.toRect(), drawHalos );
+            textRect.toRect(), TextDocumentHelper::DrawHalos /*TODO*/ );
 }
 
 QModelIndex JourneySearchSuggestionWidget::indexFromItem( JourneySearchSuggestionItem *item )

@@ -93,7 +93,8 @@ void PublicTransportPrivate::onSettingsChanged( const Settings &_settings, Setti
     }
 
     if( changed.testFlag( SettingsIO::ChangedCurrentJourneySearchLists ) ||
-            changed.testFlag( SettingsIO::ChangedCurrentStop ) ) {
+        changed.testFlag( SettingsIO::ChangedCurrentStop ) )
+    {
         // Update the journeys menu
         updateJourneyMenu();
     }
@@ -103,13 +104,15 @@ void PublicTransportPrivate::onSettingsChanged( const Settings &_settings, Setti
 
     // Update current stop settings / current home stop in the models
     if( changed.testFlag( SettingsIO::ChangedCurrentStop ) ||
-            changed.testFlag( SettingsIO::ChangedCurrentStopSettings ) ) {
+        changed.testFlag( SettingsIO::ChangedCurrentStopSettings ) )
+    {
         onCurrentStopSettingsChanged();
     }
 
     // Update the filter widget
     if( changed.testFlag( SettingsIO::ChangedCurrentFilterSettings ) ||
-            changed.testFlag( SettingsIO::ChangedColorGroupSettings ) ) {
+        changed.testFlag( SettingsIO::ChangedColorGroupSettings ) )
+    {
         // Update the filter menu, if filter or color group settings have changed.
         // If the current stop or it's settings have changed, the active filters
         // and color groups may also have changed, requiring an update of the filter menu
@@ -143,15 +146,17 @@ void PublicTransportPrivate::onUnknownSettingsChanged()
     QFont smallFont = font/*, boldFont = font*/;
     smallFont.setPointSize( smallPointSize > 0 ? smallPointSize : 1 );
 
-    // Apply fonts
-    timetable->setFont( font );
-    if( journeyTimetable && isStateActive( "journeyView" ) ) {
-        journeyTimetable->setFont( font );
-    }
+    // Apply fonts, update indentation and icon sizes to size factor, update options
     labelInfo->setFont( smallFont );
-
-    // Update indentation and icon sizes to size factor
+    timetable->setFont( font );
     timetable->setZoomFactor( settings.sizeFactor );
+    timetable->setOption( PublicTransportWidget::DrawShadowsOrHalos, settings.drawShadows );
+    if( journeyTimetable && isStateActive("journeyView") ) {
+        journeyTimetable->setFont( font );
+        journeyTimetable->setZoomFactor( settings.sizeFactor );
+        journeyTimetable->setOption( PublicTransportWidget::DrawShadowsOrHalos,
+                                     settings.drawShadows );
+    }
 
     // Update title widget to settings
     titleWidget->settingsChanged();

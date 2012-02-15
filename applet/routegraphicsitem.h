@@ -325,7 +325,7 @@ public:
 
     void updateData( JourneyItem *item );
 
-    void setZoomFactor( qreal zoomFactor = 1.0 ) { m_zoomFactor = zoomFactor; };
+    void setZoomFactor( qreal zoomFactor = 1.0 );
     qreal zoomFactor() const { return m_zoomFactor; };
     inline qreal padding() const { return 5.0; };
     Plasma::Svg *svg() const { return m_svg; };

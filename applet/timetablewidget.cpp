@@ -1,5 +1,5 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -74,16 +74,18 @@ void DepartureGraphicsItem::updateSettings()
 {
     if ( m_routeItem ) {
         m_routeItem->setZoomFactor( m_parent->zoomFactor() );
+        updateGeometry();
+        update();
     }
-    update();
 }
 
 void JourneyGraphicsItem::updateSettings()
 {
     if ( m_routeItem ) {
         m_routeItem->setZoomFactor( m_parent->zoomFactor() );
+        updateGeometry();
+        update();
     }
-    update();
 }
 
 void PublicTransportGraphicsItem::setExpanded( bool expand )
@@ -217,7 +219,7 @@ QTextDocument* TextDocumentHelper::createTextDocument(const QString& html, const
 
 void TextDocumentHelper::drawTextDocument( QPainter *painter,
         const QStyleOptionGraphicsItem* option, QTextDocument *document,
-        const QRect &textRect, bool drawHalos )
+        const QRect &textRect, Option options )
 {
     if ( textRect.isEmpty() ) {
         kDebug() << "Empty text rect given!";
@@ -255,7 +257,7 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
             QTextLine textLine = textLayout->lineAt( l );
             textLine.draw( &p, position );
 
-            if ( drawHalos ) {
+            if ( options == DrawHalos ) {
                 // Calculate halo rect
                 QSize textSize = textLine.naturalTextRect().size().toSize();
                 if ( textSize.width() > textRect.width() ) {
@@ -308,11 +310,11 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
     p.end();
 
     // Draw halo/shadow
-    if ( drawHalos ) {
+    if ( options == DrawHalos ) {
         foreach( const QRect &haloRect, haloRects ) {
             Plasma::PaintUtils::drawHalo( painter, haloRect );
         }
-    } else {
+    } else if ( options == DrawShadows ) {
         QImage shadow = pixmap.toImage();
         Plasma::PaintUtils::shadowBlur( shadow, 3, Qt::black );
         painter->drawImage( textRect.topLeft() + QPoint(1, 2), shadow );
@@ -708,28 +710,52 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
     // Use journey rating background:
     //   green for relatively short duration, less changes;
     //   red for relatively long duration, more changes (controlled by the model).
+    const QColor neutralBackground = KColorScheme( QPalette::Active )
+            .background( KColorScheme::NeutralBackground ).color();
     QVariant vr = index().data( JourneyRatingRole );
     if ( vr.isValid() ) {
         qreal rating = vr.toReal();
-        QColor ratingColor = KColorUtils::mix(
-                KColorScheme(QPalette::Active).background(KColorScheme::PositiveBackground).color(),
-                KColorScheme(QPalette::Active).background(KColorScheme::NegativeBackground).color(),
-                rating );
-        bool drawRatingBackground = true;
-        if ( rating >= 0 && rating <= 0.5 ) {
-            ratingColor.setAlphaF(( 0.5 - rating ) * 2 );
-        } else if ( rating >= 0.5 && rating <= 1.0 ) {
-            ratingColor.setAlphaF(( rating - 0.5 ) * 2 );
-        } else {
-            drawRatingBackground = false;
-        }
-
-        if ( drawRatingBackground ) {
-            backgroundColor = ratingColor;
-        }
+        const QColor positiveBackground = KColorScheme( QPalette::Active )
+                .background( KColorScheme::PositiveBackground ).color();
+        const QColor negativeBackground = KColorScheme( QPalette::Active )
+                .background( KColorScheme::NegativeBackground ).color();
+        backgroundColor = rating > 0.5
+                ? KColorUtils::mix( neutralBackground, negativeBackground, qMin(1.0, (rating - 0.5) * 2.5) )
+                : KColorUtils::mix( positiveBackground, neutralBackground, rating * 2.0 );
     } else if ( index().row() % 2 == 1 ) {
         // Use alternate background (if journey ratings aren't available)
         backgroundColor = alternateBackgroundColor;
+    } else {
+        backgroundColor = neutralBackground;
+    }
+
+    const int textGray = qGray( borderColor.rgb() );
+    int backgroundGray = qGray( backgroundColor.rgb() );
+    const int minDifference = 128;
+    int difference = textGray - backgroundGray;
+    if ( textGray >= 128 && difference < minDifference ) {
+        if ( difference <= 15 ) {
+            difference = 15; // Prevent division by zero
+        }
+        // Text is light, but background not dark enough
+        const float darkenFactor = qBound( 100,
+                18 * qAbs(minDifference / difference) * backgroundGray / 164, 300 ) / 100.0f;
+        int h, s, v;
+        backgroundColor.getHsv( &h, &s, &v );
+        backgroundColor.setHsv( h, s * darkenFactor, v / darkenFactor );
+    } else if ( textGray < 128 && difference > -minDifference ) {
+        if ( difference >= -15 ) {
+            difference = -15; // Prevent division by zero
+        }
+        if ( backgroundGray == 0 ) {
+            backgroundGray = 1;
+        }
+        // Text is dark, but background not light enough
+        const float lightenFactor = qMax( 100,
+                18 * qAbs(minDifference / -difference) * 164 / backgroundGray ) / 100.0f;
+        int h, s, v;
+        backgroundColor.getHsv( &h, &s, &v );
+        backgroundColor.setHsv( h, s, v * lightenFactor );
     }
 
     // Fill the pixmap with the mixed background color
@@ -854,10 +880,13 @@ void JourneyGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphi
 
     // Draw text
     QColor _textColor = textColor();
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 128;
+    const bool drawShadowsOrHalos = m_parent->isOptionEnabled( PublicTransportWidget::DrawShadowsOrHalos );
+    const bool drawHalos = drawShadowsOrHalos && qGray(_textColor.rgb()) < 192;
     painter->setPen( _textColor );
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
-                                          _infoRect.toRect(), drawHalos );
+            _infoRect.toRect(), drawShadowsOrHalos
+            ? (drawHalos ? TextDocumentHelper::DrawHalos : TextDocumentHelper::DrawShadows)
+            : TextDocumentHelper::DoNotDrawShadowOrHalos );
 
     // Draw extra icon(s)
     QRectF _extraIconRect;
@@ -883,8 +912,8 @@ void JourneyGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphi
 
 QColor PublicTransportGraphicsItem::textColor() const
 {
-    DepartureModel *model = qobject_cast<DepartureModel*>( m_item->model() );
     bool manuallyHighlighted = false;
+    DepartureModel *model = !m_item ? 0 : qobject_cast<DepartureModel*>( m_item->model() );
     if ( model ) {
         // Only proceed with highlighted stops, if the model is a DepartureModel (not a JourneyModel)
         DepartureItem *item = qobject_cast<DepartureItem*>( m_item.data() );
@@ -905,9 +934,11 @@ QColor PublicTransportGraphicsItem::textColor() const
         #endif
 
         // Mix with group color if not highlighted
-        QColor groupColor = index().data(Qt::BackgroundColorRole).value<QColor>();
-        if ( groupColor != Qt::transparent ) {
-            color = KColorUtils::mix( color, groupColor, 0.2 );
+        if ( m_item ) {
+            QColor groupColor = index().data(Qt::BackgroundColorRole).value<QColor>();
+            if ( groupColor != Qt::transparent ) {
+                color = KColorUtils::mix( color, groupColor, 0.1 );
+            }
         }
 
         return color;
@@ -1083,7 +1114,8 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
     }
 
     // Draw text
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 128;
+    const bool drawShadowsOrHalos = m_parent->isOptionEnabled( PublicTransportWidget::DrawShadowsOrHalos );
+    const bool drawHalos = drawShadowsOrHalos && qGray(_textColor.rgb()) < 192;
     painter->setPen( _textColor );
 
     DepartureModel *model = qobject_cast<DepartureModel*>( m_item->model() );
@@ -1104,10 +1136,13 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
         m_highlighted = manuallyHighlighted;
     }
 
+    TextDocumentHelper::Option options = drawShadowsOrHalos
+            ? (drawHalos ? TextDocumentHelper::DrawHalos : TextDocumentHelper::DrawShadows)
+            : TextDocumentHelper::DoNotDrawShadowOrHalos;
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
-            _infoRect.toRect(), drawHalos );
+            _infoRect.toRect(), options );
     TextDocumentHelper::drawTextDocument( painter, option, m_timeTextDocument,
-            _timeRect.toRect(), drawHalos );
+            _timeRect.toRect(), options );
 
     // Draw extra icon(s), eg. an alarm icon or an indicator for additional news for a journey
     QRectF _extraIconRect;
@@ -1136,7 +1171,8 @@ void JourneyGraphicsItem::paintExpanded( QPainter* painter, const QStyleOptionGr
 {
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
     QColor _textColor = textColor();
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 128;
+    const bool drawShadowsOrHalos = m_parent->isOptionEnabled( PublicTransportWidget::DrawShadowsOrHalos );
+    const bool drawHalos = drawShadowsOrHalos && qGray(_textColor.rgb()) < 192;
 
     qreal y = rect.top() - padding();
     if ( m_routeItem ) {
@@ -1186,7 +1222,9 @@ void JourneyGraphicsItem::paintExpanded( QPainter* painter, const QStyleOptionGr
 
         painter->setPen( _textColor );
         TextDocumentHelper::drawTextDocument( painter, option, &additionalInformationTextDocument,
-                                              htmlRect.toRect(), drawHalos );
+                htmlRect.toRect(), drawShadowsOrHalos
+                ? (drawHalos ? TextDocumentHelper::DrawHalos : TextDocumentHelper::DrawShadows)
+                : TextDocumentHelper::DoNotDrawShadowOrHalos );
     }
 }
 
@@ -1195,7 +1233,8 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
 {
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
     QColor _textColor = textColor();
-    bool drawHalos = /*m_options.testFlag(DrawShadows) &&*/ qGray(_textColor.rgb()) < 128;
+    const bool drawShadowsOrHalos = m_parent->isOptionEnabled( PublicTransportWidget::DrawShadowsOrHalos );
+    const bool drawHalos = drawShadowsOrHalos && qGray(_textColor.rgb()) < 192;
 
     qreal y = rect.top() - padding();
     if ( m_routeItem ) {
@@ -1250,7 +1289,9 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
 
         painter->setPen( _textColor );
         TextDocumentHelper::drawTextDocument( painter, option, &additionalInformationTextDocument,
-                                              htmlRect.toRect(), drawHalos );
+                htmlRect.toRect(), drawShadowsOrHalos
+                ? (drawHalos ? TextDocumentHelper::DrawHalos : TextDocumentHelper::DrawShadows)
+                : TextDocumentHelper::DoNotDrawShadowOrHalos);
     }
 }
 
@@ -1368,10 +1409,9 @@ QSizeF PublicTransportWidget::sizeHint(Qt::SizeHint which, const QSizeF& constra
     }
 }
 
-PublicTransportWidget::PublicTransportWidget( QGraphicsItem* parent )
-    : Plasma::ScrollWidget( parent ), m_model(0), m_svg(0), m_copyStopToClipboardAction(0),
-      m_showInMapAction(0)/*,
-      m_toggleAlarmAction(0)*/
+PublicTransportWidget::PublicTransportWidget( Options options, QGraphicsItem* parent )
+    : Plasma::ScrollWidget( parent ), m_options(options), m_model(0), m_svg(0),
+      m_copyStopToClipboardAction(0), m_showInMapAction(0)/*, m_toggleAlarmAction(0)*/
 {
     setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
     setupActions();
@@ -1403,14 +1443,26 @@ void PublicTransportWidget::setupActions()
     }
 }
 
-JourneyTimetableWidget::JourneyTimetableWidget( QGraphicsItem* parent )
-    : PublicTransportWidget(parent), m_requestJourneyToStopAction(0), m_requestJourneyFromStopAction(0)
+void PublicTransportWidget::setOption( PublicTransportWidget::Option option, bool enable )
+{
+    m_options = enable ? m_options | option : m_options & ~option;
+    update();
+}
+
+void PublicTransportWidget::setOptions( PublicTransportWidget::Options options )
+{
+    m_options = options;
+    update();
+}
+
+JourneyTimetableWidget::JourneyTimetableWidget( Options options, QGraphicsItem* parent )
+    : PublicTransportWidget(options, parent), m_requestJourneyToStopAction(0), m_requestJourneyFromStopAction(0)
 {
     setupActions();
 }
 
-TimetableWidget::TimetableWidget( QGraphicsItem* parent )
-    : PublicTransportWidget(parent), m_showDeparturesAction(0), m_highlightStopAction(0),
+TimetableWidget::TimetableWidget( Options options, QGraphicsItem* parent )
+    : PublicTransportWidget(options, parent), m_showDeparturesAction(0), m_highlightStopAction(0),
       m_newFilterViaStopAction(0), m_pixmapCache(new KPixmapCache("PublicTransportVehicleIcons"))
 {
     m_targetHidden = false;
@@ -1481,6 +1533,8 @@ void PublicTransportWidget::setZoomFactor( qreal zoomFactor )
         // Notify children about changed settings
         m_items[i]->updateSettings();
     }
+    updateGeometry();
+    updateItemGeometries();
     update();
 }
 
