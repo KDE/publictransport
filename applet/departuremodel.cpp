@@ -697,8 +697,9 @@ ChildItem* JourneyItem::createRouteItem()
 
         KIcon icon;
         QString sTransportLine;
-        if ( row < m_journeyInfo.routeVehicleTypes().count()
-                    && m_journeyInfo.routeVehicleTypes()[row] != Unknown ) {
+        if ( row < m_journeyInfo.routeVehicleTypes().count() &&
+             m_journeyInfo.routeVehicleTypes()[row] != Unknown )
+        {
             icon = Global::vehicleTypeToIcon( m_journeyInfo.routeVehicleTypes()[row] );
         }
         if ( m_journeyInfo.routeVehicleTypes()[row] == Feet ) {

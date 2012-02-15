@@ -19,7 +19,12 @@ Changelog of plasma-applet-publictransport
 - Make use of apply button in the configuration dialog
 - Fix crash with empty journey data sources
 - Fix journey search menu updates when changing the current stop settings
+- Fix text color of journey route items
+- Fix drawing of route stop items on mouse hover: It could draw light text on a light halo
+- Fix unreadable background/text color combinations in journey view. The positive/negative background colors of the current color scheme are darkened/lightened to provide enough contrast to the text color. If the background color gets darkened it's saturation gets raised to still be able to identify the journey rating easily. For neutral rating the neutral background color form the current color scheme gets now used instead of transparent.
+- Fix zoom factor update of journey route items, they now properly update their geometries to zoom factor changes
 - Cleanup
+- Fix enable/disable drawing of shadows/halos
 
 0.10 - RC 2
 - Fix link errors
