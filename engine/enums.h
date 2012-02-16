@@ -156,8 +156,7 @@ enum ParseDocumentMode {
 /** @brief The type of an accessor. */
 enum AccessorType {
     NoAccessor, /**< @internal Invalid value */
-    HTML, /**< The accessor is used to parse HTML documents. */
-    XML /**< The accessor is used to parse XML documents. */
+    HTML /**< The accessor is used to parse HTML documents. */ // TODO => ScriptedAccessor
 };
 
 /** @brief The type of the vehicle used for a public transport line. */

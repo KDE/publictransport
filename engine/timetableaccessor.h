@@ -277,18 +277,6 @@ public:
      **/
     virtual void requestStopSuggestions( const StopSuggestionRequestInfo &requestInfo );
 
-    /**
-     * @brief Requests a session key. May be needed for some service providers to work properly.
-     *
-     * When the session key has been received @ref sessionKeyReceived is emitted.
-     *
-     * @param requestInfo Information about a request, that gets executed when the session key
-     *   is known. If for example requestInfo has information about a departure request, after
-     *   getting the session key, @p requestDepartures gets called with this requestInfo object.
-     **/
-    virtual void requestSessionKey( ParseDocumentMode parseMode, const KUrl &url,
-                                    const RequestInfo *requestInfo );
-
     /** @brief Gets the information object used by this accessor. */
     const TimetableAccessorInfo &timetableAccessorInfo() const { return *m_info; };
 
@@ -304,29 +292,6 @@ public:
     virtual bool onlyUseCitiesInList() const;
 
     /**
-     * @brief Whether or not to use the url returned by differentRawUrl() instead of the
-     *   one returned by rawUrl().
-     * @see differentRawUrl()
-     **/
-    bool hasSpecialUrlForStopSuggestions() const;
-
-    /**
-     * @brief Returns a list of changelog entries.
-     *
-     * @see ChangelogEntry
-     **/
-    QList<ChangelogEntry> changelog() const;
-
-    /**
-     * @brief Sets the list of changelog entries.
-     *
-     * @param changelog The new list of changelog entries.
-     *
-     * @see ChangelogEntry
-     **/
-    void setChangelog( const QList<ChangelogEntry> &changelog );
-
-    /**
      * @brief Encodes the url in @p str using the charset in @p charset. Then it is percent encoded.
      *
      * @see charsetForUrlEncoding()
@@ -335,76 +300,6 @@ public:
 
 protected:
     /**
-     * @brief Parses the contents of a document that was requested using requestJourneys()
-     *   and puts the results into @p journeys..
-     *
-     * @param journeys A pointer to a list of departure/arrival or journey information.
-     *   The results of parsing the document is stored in @p journeys.
-     * @param parseDocumentMode The mode of parsing, e.g. parse for
-     *   departures/arrivals or journeys.
-     * @return true, if there were no errors and the data in @p journeys is valid.
-     * @return false, if there were an error parsing the document.
-     * @see parseDocumentPossibleStops()
-     **/
-    virtual bool parseDocument( const QByteArray &document,
-            QList<PublicTransportInfo*> *journeys, GlobalTimetableInfo *globalInfo,
-            ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals );
-
-    /**
-     * @brief Override this method to parse the contents of a received document for
-     *   an url to a document containing later journeys. The default implementation
-     *   returns a null string.
-     * @return The parsed url.
-     **/
-    virtual QString parseDocumentForLaterJourneysUrl( const QByteArray &document ) {
-        Q_UNUSED( document );
-        return QString();
-    };
-
-    /**
-     * @brief Override this method to parse the contents of a received document for
-     *   an url to a document containing detailed journey information. The default
-     *   implementation returns a null string.
-     * @return The parsed url.
-     **/
-    virtual QString parseDocumentForDetailedJourneysUrl( const QByteArray &document ) {
-        Q_UNUSED( document );
-        return QString();
-    };
-
-    /**
-     * @brief Override this method to parse the contents of a received document for
-     *   a session key. The default implementation returns a null string.
-     * @return The parsed session key.
-     **/
-    virtual QString parseDocumentForSessionKey( const QByteArray &document ) {
-        Q_UNUSED( document );
-        return QString();
-    };
-
-    /**
-     * @brief Parses the contents of a received document for a list of possible stop names
-     *   and puts the results into @p stops.
-     *
-     * @param stops A pointer to a list of @ref StopInfo objects.
-     * @return true, if there were no errors.
-     * @return false, if there were an error parsing the document.
-     * @see parseDocument()
-     **/
-    virtual bool parseDocumentPossibleStops( const QByteArray &document, QList<StopInfo*> *stops );
-
-    /**
-     * @brief Gets the "raw" url with placeholders for the city ("%1") and the stop ("%2")
-     *   or only for the stop ("%1") if putCityIntoUrl() returns false. */
-    virtual QString departuresRawUrl() const;
-
-    /**
-     * @brief Gets a second "raw" url with placeholders for the city ("%1") and the stop ("%2")
-     *   or only for the stop ("%1") if putCityIntoUrl() returns false.
-     **/
-    virtual QString stopSuggestionsRawUrl() const;
-
-    /**
      * @brief Gets the charset used to encode urls before percent-encoding them. Normally
      *   this charset is UTF-8. But that doesn't work for sites that require parameters
      *   in the url (..&param=x) to be encoded in that specific charset.
@@ -412,24 +307,6 @@ protected:
      * @see TimetableAccessor::toPercentEncoding()
      **/
     virtual QByteArray charsetForUrlEncoding() const;
-
-    /**
-     * @brief Constructs an url to the departure / arrival list by combining the "raw"
-     *   url with the needed information.
-     **/
-    KUrl getUrl( const DepartureRequestInfo &requestInfo ) const;
-
-    /**
-     * @brief Constructs an url to a page containing stop suggestions by combining
-     *   the "raw" url with the needed information.
-     **/
-    KUrl getStopSuggestionsUrl( const StopSuggestionRequestInfo &requestInfo );
-
-    /**
-     * @brief Constructs an url to the journey list by combining the "raw" url with the
-     *   needed information.
-     **/
-    KUrl getJourneyUrl( const JourneyRequestInfo &requestInfo ) const;
 
 
     QString m_curCity; /**< @brief Stores the currently used city. */
@@ -500,22 +377,7 @@ signals:
 
     void forceUpdate();
 
-protected slots:
-//     /** @brief All data of a journey list has been received. */
-//     void result( KJob* job );
-
-    /**
-     * @brief Clears the session key. This gets called from time to time by a timer, to enforce
-     * the download of a new session key the next it's needed. This is done to prevent usage of
-     * expired session keys.
-     **/
-    void clearSessionKey();
-
 protected:
-    // Stores a session key, if it's needed by the accessor
-    QString m_sessionKey;
-    QTime m_sessionKeyGetTime;
-
     struct JobInfos {
         // Mainly for QHash
         JobInfos() : requestInfo(0) {

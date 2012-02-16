@@ -23,7 +23,6 @@ set( publictransport_engine_SRCS
     accessorinfoxmlreader.cpp
     timetableaccessor.cpp
     timetableaccessor_info.cpp
-    timetableaccessor_xml.cpp
     timetableaccessor_script.cpp
     script_thread.cpp
     scripting.cpp
@@ -33,7 +32,7 @@ set( publictransport_engine_SRCS
 kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} )
 
 target_link_libraries( plasma_engine_publictransport
-    ${KDE4_PLASMA_LIBS} ${KDE4_KROSSCORE_LIBS} ${KDE4_KIO_LIBS} ${KDE4_THREADWEAVER_LIBS} QtXml )
+    ${KDE4_PLASMA_LIBS} ${KDE4_KROSSCORE_LIBS} ${KDE4_KIO_LIBS} ${KDE4_THREADWEAVER_LIBS} )
 
 install( TARGETS plasma_engine_publictransport
          DESTINATION ${PLUGIN_INSTALL_DIR} )

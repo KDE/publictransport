@@ -95,17 +95,6 @@ public:
     /** @brief A short version of the url without protocol or "www" to be displayed in links. */
     QString shortUrl() const { return m_shortUrl; };
 
-    /** @brief A raw url that is used to get departures. */
-    QString departureRawUrl() const { return m_departureRawUrl; };
-    /** @brief A raw url that is used to get journeys. */
-    QString journeyRawUrl() const { return m_journeyRawUrl; };
-    /** @brief Raw url to an xml file for xml accessors */
-    QString stopSuggestionsRawUrl() const { return m_stopSuggestionsRawUrl; };
-
-    QHash<QString, QString> attributesForStopSuggestions() const { return m_attributesForStopSuggestions; };
-    QHash<QString, QString> attributesForDepatures() const { return m_attributesForDepatures; };
-    QHash<QString, QString> attributesForJourneys() const { return m_attributesForJourneys; };
-
     /** @brief The country for which the service provider has data. */
     QString country() const { return m_country; };
     /** @brief A list of cities for which the service provider has data. */
@@ -119,17 +108,6 @@ public:
      **/
     QByteArray charsetForUrlEncoding() const { return m_charsetForUrlEncoding; };
     QByteArray fallbackCharset() const { return m_fallbackCharset; };
-
-    /** @brief Gets the URL to get a session key. */
-    QString sessionKeyUrl() const { return m_sessionKeyUrl; };
-    /**
-     * @brief Gets the place, where to put the session key in a request.
-     *
-     * @see SessionKeyPlace
-     **/
-    SessionKeyPlace sessionKeyPlace() const { return m_sessionKeyPlace; };
-    /** @brief Gets the data to POST with requests. */
-    QString sessionKeyData() const { return m_sessionKeyData; };
 
     /**
      * @brief Gets the minimum seconds to wait between two data-fetches from the service provider.
@@ -162,19 +140,6 @@ public:
     void setChangelog( const QList<ChangelogEntry> &changelog ) {
         m_changelog = changelog;
     };
-
-    /**
-     * @brief Wheather or not this accessor supports stop name autocompletion.
-     *
-     * @warning At least one regExp must have been set to initialize the RegExps
-     * object, eg. with @ref setRegExpDepartures. Otherwise this crashes.
-     **/
-    virtual bool supportsStopAutocompletion() const {
-        return false; };
-    /** @brief Wheather or not this accessor supports the given TimetableInformation. */
-    virtual bool supportsTimetableAccessorInfo( const TimetableInformation &info ) const {
-        Q_UNUSED(info)
-        return false; };
 
     const QHash<QString, QString> &cityNameToValueReplacementHash() const {
         return m_hashCityNameToValue; };
@@ -268,20 +233,6 @@ protected:
         m_fallbackCharset = fallbackCharset; };
 
     /**
-     * @brief Sets session key data.
-     *
-     * @param sessionKeyUrl An url to a document containing the session key.
-     * @param sessionKeyPlace The place where to put the session key in requests.
-     * @param data Data to POST with requests.
-     **/
-    void setSessionKeyData( const QString &sessionKeyUrl, SessionKeyPlace sessionKeyPlace,
-                            const QString &data ) {
-        m_sessionKeyUrl = sessionKeyUrl;
-        m_sessionKeyPlace = sessionKeyPlace;
-        m_sessionKeyData = data;
-    };
-
-    /**
      * @brief Sets the description of this accessor.
      *
      * @param description A description of this accessor. */
@@ -329,32 +280,6 @@ protected:
 
     void setDefaultVehicleType( VehicleType vehicleType ) {
         m_defaultVehicleType = vehicleType; };
-
-    /**
-     * @brief Sets the raw url for xml files to an xml file containing departure/arrival lists.
-     *
-     * @param stopSuggestionsRawUrl The url to an xml file containing departure/arrival lists.
-     **/
-    void setStopSuggestionsRawUrl( const QString &stopSuggestionsRawUrl ) {
-        m_stopSuggestionsRawUrl = stopSuggestionsRawUrl; };
-
-    /**
-     * @brief Sets the raw url for departure / arrival lists to an html file containing
-     *   departure/arrival lists.
-     **/
-    void setDepartureRawUrl( const QString &departureRawUrl ) {
-        m_departureRawUrl = departureRawUrl; };
-
-    /** @brief Sets the raw url for journey lists to an html file containing journey lists. */
-    void setJourneyRawUrl( const QString &journeyRawUrl ) {
-        m_journeyRawUrl = journeyRawUrl; };
-
-    void setAttributesForStopSuggestions( const QHash<QString, QString> &attributesForStopSuggestions ) {
-        m_attributesForStopSuggestions = attributesForStopSuggestions; };
-    void setAttributesForDepatures( const QHash<QString, QString> &attributesForDepartures ) {
-        m_attributesForDepatures = attributesForDepartures; };
-    void setAttributesForJourneys( const QHash<QString, QString> &attributesForJourneys ) {
-        m_attributesForJourneys = attributesForJourneys; };
 
     /**
      * @brief Sets the country for which the service provider has data.
@@ -418,26 +343,10 @@ protected:
     // toPercentEncoding() with this charset
     QByteArray m_charsetForUrlEncoding, m_fallbackCharset;
 
-    // Session key data
-    QString m_sessionKeyUrl;
-    SessionKeyPlace m_sessionKeyPlace;
-    QString m_sessionKeyData;
-
-    // Raw url to a site containing a list of stop name suggestions
-    QString m_stopSuggestionsRawUrl;
-    // A raw url that is used to get departures/arrivals
-    QString m_departureRawUrl;
-    // A raw url that is used to get journeys
-    QString m_journeyRawUrl;
-
     // Keys are versions, where the change entries occurred (values)
     QList<ChangelogEntry> m_changelog;
 
-    QHash<QString, QString> m_attributesForStopSuggestions;
-    QHash<QString, QString> m_attributesForDepatures;
-    QHash<QString, QString> m_attributesForJourneys;
-
-    // Type of the accessor (HTML, XML)
+    // Type of the accessor (currently only HTML, GTFS is available in separate GIT branch)
     AccessorType m_accessorType;
     VehicleType m_defaultVehicleType;
     int m_minFetchWait;

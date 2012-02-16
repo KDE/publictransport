@@ -76,9 +76,7 @@ private:
 public:
     void import( const QString &import, QScriptEngine *engine ) {
         mutex.lock();
-        qDebug() << "START"<<thread();
         engine->importExtension(import);
-        qDebug() << "END"<<thread();
         mutex.unlock();
     };
 
@@ -93,18 +91,6 @@ public:
 
     /** @brief The name of the script function to download and parse stop suggestions. */
     static const char *SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
-
-    /** @brief The name of the script function to parse a downloaded timetable document. */
-    static const char *SCRIPT_FUNCTION_PARSETIMETABLE;
-
-    /** @brief The name of the script function to parse a downloaded journey timetable document. */
-    static const char *SCRIPT_FUNCTION_PARSEJOURNEYS;
-
-    /** @brief The name of the script function to parse a downloaded stop suggestions document. */
-    static const char *SCRIPT_FUNCTION_PARSESTOPSUGGESTIONS;
-
-    /** @brief The name of the script function to parse a downloaded session key document. */
-    static const char *SCRIPT_FUNCTION_PARSESESSIONKEYS;
 
     /** @brief Gets a list of extensions that are allowed to be imported by scripts. */
     static QStringList allowedExtensions();

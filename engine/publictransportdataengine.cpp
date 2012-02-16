@@ -851,24 +851,14 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
         const QUrl &requestUrl, const StopInfoList &stops,
         const StopSuggestionRequestInfo &requestInfo, bool deleteStopInfos )
 {
-//     QString sStop = stopToStopId.value( stop, stop );
-//     if ( sStop.isEmpty() )
-//     sStop = stop;
     const QString sourceName = requestInfo.sourceName;
     m_runningSources.removeOne( sourceName );
 
     int i = 0;
-    kDebug() << "Received stops:" << stops;
     foreach( const StopInfoPtr &stopInfo, stops ) {
         QVariantHash data;
         data.insert( "stopName", stopInfo->name() );
-
-//         kDebug() << stopInfo->name() << stopInfo->id() << stopInfo->city() << stopInfo->countryCode();
-
-        if ( stopInfo->contains(StopID) &&
-            (!accessor->info()->attributesForDepatures().contains(QLatin1String("requestStopIdFirst")) ||
-            accessor->info()->attributesForDepatures()[QLatin1String("requestStopIdFirst")] == "false") )
-        {
+        if ( stopInfo->contains(StopID) ) {
             data.insert( "stopID", stopInfo->id() );
         }
 
@@ -884,7 +874,6 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
             data.insert( "stopCountryCode", stopInfo->countryCode() );
         }
 
-//     kDebug() << "setData" << i << data;
         setData( sourceName, QString("stopName %1").arg(i++), data );
     }
 
@@ -909,9 +898,9 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
     setData( sourceName, "error", false );
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 
-    if ( deleteStopInfos ) {
+//     if ( deleteStopInfos ) {
 //         qDeleteAll( stops ); TODO
-    }
+//     }
 
     kDebug() << "DONE" << requestInfo.sourceName;
 //     kDebug() << m_runningSources.count() << "running sources" << m_runningSources;

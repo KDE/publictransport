@@ -44,10 +44,6 @@ const char *TimetableAccessorScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS =
 const char *TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE = "getTimetable";
 const char *TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS = "getJourneys";
 const char *TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS = "getStopSuggestions";
-const char *TimetableAccessorScript::SCRIPT_FUNCTION_PARSETIMETABLE = "parseTimetable";
-const char *TimetableAccessorScript::SCRIPT_FUNCTION_PARSEJOURNEYS = "parseJourneys";
-const char *TimetableAccessorScript::SCRIPT_FUNCTION_PARSESESSIONKEYS = "parseSessionKey";
-const char *TimetableAccessorScript::SCRIPT_FUNCTION_PARSESTOPSUGGESTIONS = "parseStopSuggestions";
 
 TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info )
         : TimetableAccessor(info), m_thread(0), m_script(0), m_scriptStorage(0)
@@ -74,7 +70,7 @@ TimetableAccessorScript::~TimetableAccessorScript()
 
 QStringList TimetableAccessorScript::allowedExtensions()
 {
-    return QStringList() << "kross" << "qt" << "qt.core";
+    return QStringList() << "kross" << "qt" << "qt.core" << "qt.xml";
 }
 
 bool TimetableAccessorScript::lazyLoadScript()
@@ -140,10 +136,10 @@ QStringList TimetableAccessorScript::readScriptFeatures()
                 ok = false;
             } else {
                 // Test if specific functions exist in the script
-                if ( engine.globalObject().property(SCRIPT_FUNCTION_PARSESTOPSUGGESTIONS).isValid() ) {
+                if ( engine.globalObject().property(SCRIPT_FUNCTION_GETSTOPSUGGESTIONS).isValid() ) {
                     features << "Autocompletion";
                 }
-                if ( engine.globalObject().property(SCRIPT_FUNCTION_PARSEJOURNEYS).isValid() ) {
+                if ( engine.globalObject().property(SCRIPT_FUNCTION_GETJOURNEYS).isValid() ) {
                     features << "JourneySearch";
                 }
 
@@ -456,152 +452,3 @@ void TimetableAccessorScript::requestStopSuggestions( const StopSuggestionReques
 
     return;
 }
-
-// QString TimetableAccessorScript::parseDocumentForLaterJourneysUrl( const QByteArray &document )
-// {
-//     kDebug() << "Called for" << m_info->serviceProvider();
-//         return QString();
-
-// TODO
-//     if ( !lazyLoadScript() ) {
-//         kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
-//         return QString();
-//     }
-//     if ( !m_script->functionNames().contains("getUrlForLaterJourneyResults") ) {
-//         kDebug() << "The script has no 'getUrlForLaterJourneyResults' function";
-//         kDebug() << "Functions in the script:" << m_script->functionNames();
-//         return QString();
-//     }
-//
-//     QString doc = TimetableAccessorScript::decodeHtml( document );
-//     // Performance(?): Cut everything before "<body>" from the document
-//     doc = doc.mid( doc.indexOf( "<body>", 0, Qt::CaseInsensitive ) );
-//
-//     // Call script
-//     QString result = m_script->callFunction( "getUrlForLaterJourneyResults",
-//                      QVariantList() << doc ).toString();
-//     if ( result.isEmpty() || result == "null" ) {
-//         return QString();
-//     } else {
-//         return TimetableAccessorScript::decodeHtmlEntities( result );
-//     }
-// }
-
-// QString TimetableAccessorScript::parseDocumentForDetailedJourneysUrl(
-//         const QByteArray &document )
-// {
-//     kDebug() << "Called for" << m_info->serviceProvider();
-//         return QString();
-
-// TODO
-//     if ( !lazyLoadScript() ) {
-//         kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
-//         return QString();
-//     }
-//     if ( !m_script->functionNames().contains("getUrlForDetailedJourneyResults") ) {
-//         kDebug() << "The script has no 'getUrlForDetailedJourneyResults' function";
-//         kDebug() << "Functions in the script:" << m_script->functionNames();
-//         return QString();
-//     }
-//
-//     QString doc = TimetableAccessorScript::decodeHtml( document );
-//     // Performance(?): Cut everything before "<body>" from the document
-//     doc = doc.mid( doc.indexOf( "<body>", 0, Qt::CaseInsensitive ) );
-//
-//     QString result = m_script->callFunction( "getUrlForDetailedJourneyResults",
-//                         QVariantList() << doc ).toString();
-//     if ( result.isEmpty() || result == "null" ) {
-//         return QString();
-//     } else {
-//         return TimetableAccessorScript::decodeHtmlEntities( result );
-//     }
-// }
-
-// QString TimetableAccessorScript::parseDocumentForSessionKey(const QByteArray& document)
-// {
-//     kDebug() << "Called for" << m_info->serviceProvider();
-//         return QString();
-
-// TODO
-//     if ( !lazyLoadScript() ) {
-//         kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
-//         return QString();
-//     }
-//     if ( !m_script->functionNames().contains(SCRIPT_FUNCTION_PARSESESSIONKEYS) ) {
-//         kDebug() << "The script has no" << SCRIPT_FUNCTION_PARSESESSIONKEYS << "function";
-//         kDebug() << "Functions in the script:" << m_script->functionNames();
-//         return QString();
-//     }
-//
-//     QString doc = TimetableAccessorScript::decodeHtml( document );
-//     // Performance(?): Cut everything before "<body>" from the document
-// //     doc = doc.mid( doc.indexOf( "<body>", 0, Qt::CaseInsensitive ) );
-//
-//     QString result = m_script->callFunction( "parseSessionKey", QVariantList() << doc ).toString();
-//     if ( result.isEmpty() || result == "null" ) {
-//         return QString();
-//     } else {
-//         return result;
-//     }
-// }
-
-// bool TimetableAccessorScript::parseDocumentPossibleStops( const QByteArray &document,
-//         QList<StopInfo*> *stops )
-// {
-//     kDebug() << "Called for" << m_info->serviceProvider();
-// return false;
-//     if ( !lazyLoadScript() ) {
-//         kDebug() << "Script couldn't be loaded" << m_info->scriptFileName();
-//         return false;
-//     }
-//     if ( !m_script->functionNames().contains(SCRIPT_FUNCTION_PARSESTOPSUGGESTIONS) ) {
-//         kDebug() << "The script has no" << SCRIPT_FUNCTION_PARSESTOPSUGGESTIONS << "function"
-//                  << m_script->file();
-//         kDebug() << "Functions in the script:" << m_script->functionNames();
-//         kDebug() << m_script->errorMessage();
-//         return false;
-//     }
-//
-//     QString doc = TimetableAccessorScript::decodeHtml( document, m_info->fallbackCharset() );
-//
-//     // Call script
-//     m_resultObject->clear();
-//     QVariant result = m_script->callFunction( "parsePossibleStops", QVariantList() << doc );
-//     if ( m_script->hadError() ) {
-//         kDebug() << "Error while running the 'parsePossibleStops' script function"
-//                  << m_script->errorMessage() << "at" << m_script->errorLineNo() << m_script->errorTrace();
-//     }
-//
-//     QList<TimetableData> data = m_resultObject->data();
-//     int count = 0;
-//     foreach( const TimetableData &timetableData, data ) {
-//         QString stopName = timetableData.value( StopName ).toString();
-//         QString stopID, stopCity, stopCountryCode;
-//         int stopWeight = -1;
-//
-//         if ( stopName.isEmpty() ) {
-//             continue;
-//         }
-//
-//         if ( timetableData.values().contains(StopID) ) {
-//             stopID = timetableData.value( StopID ).toString();
-//         }
-//         if ( timetableData.values().contains(StopWeight) ) {
-//             stopWeight = timetableData.value( StopWeight ).toInt();
-//         }
-//         if ( timetableData.values().contains(StopCity) ) {
-//             stopCity = timetableData.value( StopCity ).toString();
-//         }
-//         if ( timetableData.values().contains(StopCountryCode) ) {
-//             stopCountryCode = timetableData.value( StopCountryCode ).toString();
-//         }
-//
-//         stops->append( new StopInfo(stopName, stopID, stopWeight, stopCity, stopCountryCode) );
-//         ++count;
-//     }
-//
-//     if ( count == 0 ) {
-//         kDebug() << "No stops found";
-//     }
-//     return count > 0;
-// }

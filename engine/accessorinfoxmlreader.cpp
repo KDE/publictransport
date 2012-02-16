@@ -24,7 +24,6 @@
 #include "timetableaccessor.h"
 #include "timetableaccessor_info.h"
 #include "timetableaccessor_script.h"
-#include "timetableaccessor_xml.h"
 
 // KDE includes
 #include <KLocalizedString>
@@ -95,8 +94,20 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
     QString lang = KGlobal::locale()->country();
     QString langRead;
     QString nameLocal, nameEn, descriptionLocal, descriptionEn;
-    TimetableAccessorInfo *accessorInfo = new TimetableAccessorInfo();
+    AccessorType accessorType = HTML;
+    if ( attributes().hasAttribute(QLatin1String("type")) ) {
+        accessorType = TimetableAccessor::accessorTypeFromString(
+                attributes().value(QLatin1String("type")).toString() );
+        if ( accessorType == NoAccessor ) {
+            raiseError( QString("The accessor type %1 is invalid. Currently there are two "
+                                "values allowed: HTML and XML.")
+                        .arg(attributes().value("type").toString()) );
+            return 0;
+        }
+    }
 
+    TimetableAccessorInfo *accessorInfo = new TimetableAccessorInfo();
+    accessorInfo->setType( accessorType );
     accessorInfo->setServiceProvider( serviceProvider );
     accessorInfo->setFileName( fileName );
     accessorInfo->setCountry( country );
@@ -105,23 +116,6 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
         accessorInfo->setVersion( attributes().value(QLatin1String("version")).toString() );
     } else {
         accessorInfo->setVersion( "1.0" );
-    }
-
-    if ( attributes().hasAttribute(QLatin1String("type")) ) {
-        accessorInfo->setType( TimetableAccessor::accessorTypeFromString(
-                attributes().value(QLatin1String("type")).toString()) );
-        if ( accessorInfo->accessorType() == NoAccessor ) {
-            delete accessorInfo;
-//             kDebug() << "The type" << attributes().value("type").toString()
-//                      << "is invalid. Currently there are two values allowed: HTML and XML.";
-            raiseError( QString("The accessor type %1 is invalid. Currently there are two "
-                                "values allowed: HTML and XML.")
-                        .arg(attributes().value("type").toString()) );
-            return 0;
-        }
-    } else {
-        // Type not specified, use default
-        accessorInfo->setType( HTML );
     }
 
     while ( !atEnd() ) {
@@ -173,27 +167,13 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
                 accessorInfo->setCharsetForUrlEncoding( readElementText().toAscii() );
             } else if ( name().compare(QLatin1String("fallbackCharset"), Qt::CaseInsensitive) == 0 ) {
                 accessorInfo->setFallbackCharset( readElementText().toAscii() ); // TODO Implement as attributes in the url tags?
-            } else if ( name().compare(QLatin1String("rawUrls"), Qt::CaseInsensitive) == 0 ) {
-                QString rawUrlDepartures, rawUrlStopSuggestions, rawUrlJourneys;
-                QHash<QString, QString> attributesForDepartures, attributesForStopSuggestions,
-                        attributesForJourneys;
-                readRawUrls( &rawUrlDepartures, &rawUrlStopSuggestions, &rawUrlJourneys,
-                             &attributesForDepartures, &attributesForStopSuggestions,
-                             &attributesForJourneys );
-                accessorInfo->setDepartureRawUrl( rawUrlDepartures );
-                accessorInfo->setAttributesForDepatures( attributesForDepartures );
-                accessorInfo->setStopSuggestionsRawUrl( rawUrlStopSuggestions );
-                accessorInfo->setAttributesForStopSuggestions( attributesForStopSuggestions );
-                accessorInfo->setJourneyRawUrl( rawUrlJourneys );
-                accessorInfo->setAttributesForJourneys( attributesForJourneys );
-            } else if ( name().compare(QLatin1String("sessionKey"), Qt::CaseInsensitive) == 0 ) {
-                QString sessionKeyUrl, sessionKeyData;
-                SessionKeyPlace sessionKeyPlace;
-                readSessionKey( &sessionKeyUrl, &sessionKeyPlace, &sessionKeyData );
-                accessorInfo->setSessionKeyData( sessionKeyUrl, sessionKeyPlace, sessionKeyData );
             } else if ( name().compare(QLatin1String("changelog"), Qt::CaseInsensitive) == 0 ) {
                 accessorInfo->setChangelog( readChangelog() );
-            } else if ( name().compare(QLatin1String("script"), Qt::CaseInsensitive) == 0 ) {
+            } else if ( name().compare(QLatin1String("credit"), Qt::CaseInsensitive) == 0 ) {
+                accessorInfo->setCredit( readElementText() );
+            } else if ( accessorType == HTML &&
+                        name().compare(QLatin1String("script"), Qt::CaseInsensitive) == 0 )
+            {
                 const QStringList extensions = attributes().value( QLatin1String("extensions") )
                         .toString().split( ',', QString::SkipEmptyParts );
                 const QString scriptFile = QFileInfo( fileName ).path() + '/' + readElementText();
@@ -205,8 +185,6 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
                     return 0;
                 }
                 accessorInfo->setScriptFile( scriptFile, extensions );
-            } else if ( name().compare(QLatin1String("credit"), Qt::CaseInsensitive) == 0 ) {
-                accessorInfo->setCredit( readElementText() );
             } else {
                 readUnknownElement();
             }
@@ -250,24 +228,6 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
             delete scriptAccessor;
             raiseError( "Couldn't correctly load the script (bad script)" );
             return 0;
-        }
-    } else if ( accessorInfo->accessorType() == XML ) {
-        // Warn if no script is specified
-        if ( accessorInfo->scriptFileName().isEmpty() ) {
-            kDebug() << "XML accessors currently use a script to parse stop suggestions, "
-                    "but no script file was specified";
-        }
-
-        // Create the accessor and check for script errors
-        TimetableAccessorXml *xmlAccessor = new TimetableAccessorXml( accessorInfo );
-        if ( xmlAccessor->stopSuggestionAccessor() &&
-            xmlAccessor->stopSuggestionAccessor()->hasScriptErrors() )
-        {
-            delete xmlAccessor;
-            raiseError( "Couldn't correctly load the script (bad script)" );
-            return 0;
-        } else {
-            return xmlAccessor;
         }
     }
 
