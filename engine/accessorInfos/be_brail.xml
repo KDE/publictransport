@@ -1,33 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-
-<accessorInfo fileVersion="1.0" version="1.1" type="Script">
-
-<name>NMBS/SNCB</name>
-
-<description lang="en">This service provider works for cities in Belgium and some other cities in europe.</description>
-<description lang="de">Dieser Service-Provider liefert Ergebnisse für Städte in Belgien und auch für einige andere Städte in Europa. </description>
-
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<!-- <cities><city></city></cities> -->
-<useSeperateCityValue>false</useSeperateCityValue>
-
-<url>http://www.b-rail.be</url>
-<shortUrl>www.b-rail.be</shortUrl>
-<!-- <credit>SNCB</credit> -->
-<!-- <minFetchWait>300</minFetchWait> -->
-<script>be_brail.js</script>
-
-<rawUrls>
-    <departures><![CDATA[http://hafas.bene-system.com//bin/stboard.exe/dn?rt=1&L=b-rail&input={stop}!&boardType={dataType}&date={date:dd.MM.yy}&time={time}&disableEquivs=no&maxJourneys={maxCount}&start=yes&productsFilter=111111111]]></departures>
-    
-    <stopSuggestions><![CDATA[http://hafas.bene-system.com//bin/stboard.exe/dn?rt=1&L=b-rail&input={stop}?&boardType={dataType}&date={date:dd.MM.yy}&time={time}&disableEquivs=no&maxJourneys={maxCount}&start=yes&productsFilter=111111111]]></stopSuggestions>
-
-<!--     <journeys><![CDATA[http://hafas.bene-system.com/bin/query.exe/dn?...]]></journeys> -->
-</rawUrls>
-
-<changelog>
-	<entry since="1.1" releasedWith="0.7">Corrected the url for favicons.</entry>
-	<entry since="1.0" releasedWith="0.6.3">Initial version.</entry>
-</changelog>
-
+<accessorInfo fileVersion="1.0" version="1.2" type="Script">
+    <name>NMBS/SNCB</name>
+    <description lang="en">This service provider works for cities in Belgium and some other cities in europe.</description>
+    <description lang="de">Dieser Service-Provider liefert Ergebnisse für Städte in Belgien und auch für einige andere Städte in Europa. </description>
+    <author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+    <useSeperateCityValue>false</useSeperateCityValue>
+    <url>http://www.b-rail.be</url>
+    <shortUrl>www.b-rail.be</shortUrl>
+    <!-- <credit>SNCB</credit> -->
+    <script>be_brail.js</script>
+    <changelog>
+        <entry since="1.2" releasedWith="0.10">Update to new script API, construct URLs in the script itself.</entry>
+        <entry since="1.1" releasedWith="0.7">Corrected the url for favicons.</entry>
+        <entry since="1.0" releasedWith="0.6.3">Initial version.</entry>
+    </changelog>
 </accessorInfo>

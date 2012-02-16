@@ -107,7 +107,9 @@ function parseTimetable( html ) {
         // Use vehicle type match to lookup a correct vehicle type string in vehicleTypeMap
         var vehicle = helper.trim( info[1].toLowerCase() );
         departure.TypeOfVehicle = vehicleTypeMap[ vehicle ];
-        if ( typeof(departure.TypeOfVehicle) == 'string' && departure.TypeOfVehicle.length == 0 ) {
+        if ( departure.TypeOfVehicle == undefined ||
+             (typeof(departure.TypeOfVehicle) == 'string' && departure.TypeOfVehicle.length == 0) )
+        {
             print( "Matched vehicle type string not handled in map: " + vehicle );
             departure.TypeOfVehicle = vehicle;
         }
