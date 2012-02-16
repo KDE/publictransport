@@ -477,11 +477,11 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
         // Create info object for the timetable data
         PublicTransportInfoPtr info;
         if ( parseMode == ParseForJourneys ) {
-            info = QSharedPointer<JourneyInfo>( new JourneyInfo( timetableData ) );
+            info = QSharedPointer<JourneyInfo>( new JourneyInfo(timetableData) );
         } else if ( parseMode == ParseForDeparturesArrivals ) {
-            info = QSharedPointer<DepartureInfo>( new DepartureInfo( timetableData ) );
+            info = QSharedPointer<DepartureInfo>( new DepartureInfo(timetableData) );
         } else if ( parseMode == ParseForStopSuggestions ) {
-            info = QSharedPointer<StopInfo>( new StopInfo( timetableData ) );
+            info = QSharedPointer<StopInfo>( new StopInfo(timetableData) );
         }
 
         if ( !info->isValid() ) {
@@ -929,7 +929,6 @@ QVariantMap Helper::findTableHeaderPositions( const QString &str, const QVariant
 
     QVariantMap headerPositions;
     int i = 0;
-    int position = -1;
     QStringList requiredHeaders = options[ "required" ].toStringList();
     QStringList optionalHeaders = options[ "optional" ].toStringList();
     const QString headerContainerContents = headerContainer["contents"].toString();
@@ -1002,6 +1001,8 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
 {
     const QVariantMap &attributes = options[ "attributes" ].toMap();
     const int maxCount = options.value( "maxCount", 0 ).toInt();
+    const bool noContent = options.value( "noContent", false ).toBool();
+    const bool noNesting = options.value( "noNesting", false ).toBool();
     const bool debug = options.value( "debug", false ).toBool();
     const QString contentsRegExpPattern = options.value( "contentsRegExp", "\\s*(.*)\\s*" ).toString();
     const QVariantMap namePosition = options[ "namePosition" ].toMap();
@@ -1012,10 +1013,27 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
     const QString namePositionRegExpPattern = namePosition.contains("regexp")
             ? namePosition["regexp"].toString() : QString();
 
-    QRegExp htmlTagRegExp( QString("<%1(?:\\s+([^>]+))?>%2</%1>")
-                           .arg(tagName).arg(contentsRegExpPattern), Qt::CaseInsensitive );
-    QRegExp attributeRegExp( "(\\w+)(?:\\s*=\\s*\"?([^\"]*|[\\w\\d]+)\"?)?", Qt::CaseInsensitive );
+    // Create regular expression that matches HTML elements with or without attributes.
+    // Since QRegExp offers no way to retreive multiple matches of the same capture group
+    // the whole attribute string gets matched here and then analyzed in another loop
+    // using attributeRegExp.
+    // Matching the attributes with all details here is required to prevent eg. having a match
+    // end after a ">" character in a string in an attribute.
+    const QString attributePattern = "\\w+(?:\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\"'>\\s]+))?";
+    QRegExp htmlTagRegExp( noContent
+            ? QString("<%1((?:\\s+%2)*)(?:\\s*/)?>").arg(tagName).arg(attributePattern)
+            : QString("<%1((?:\\s+%2)*)>").arg(tagName).arg(attributePattern),
+//             : QString("<%1((?:\\s+%2)*)>%3</%1\\s*>").arg(tagName).arg(attributePattern)
+//                     .arg(contentsRegExpPattern),
+            Qt::CaseInsensitive );
+    QRegExp htmlCloseTagRegExp( QString("</%1\\s*>").arg(tagName), Qt::CaseInsensitive );
+    QRegExp contentsRegExp( contentsRegExpPattern, Qt::CaseInsensitive );
     htmlTagRegExp.setMinimal( true );
+
+    // Match attributes with or without value, with single/double/not quoted value
+    QRegExp attributeRegExp( "(\\w+)(?:\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\"'>\\s]+)))?",
+                             Qt::CaseInsensitive );
+
     QVariantList foundTags;
     while ( (foundTags.count() < maxCount || maxCount <= 0) &&
             (position = htmlTagRegExp.indexIn(str, position)) != -1 )
@@ -1024,13 +1042,13 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
             kDebug() << "Test match at" << position << htmlTagRegExp.cap().left(500);
         }
         const QString attributeString = htmlTagRegExp.cap( 1 );
-        const QString tagContents = htmlTagRegExp.cap( 2 );
+        QString tagContents; // = noContent ? QString() : htmlTagRegExp.cap( 2 );
 
         QVariantMap foundAttributes;
         int attributePos = 0;
         while ( (attributePos = attributeRegExp.indexIn(attributeString, attributePos)) != -1 ) {
             foundAttributes.insert( attributeRegExp.cap(1), attributeRegExp.cap(2) );
-            attributePos = attributeRegExp.pos() + attributeRegExp.matchedLength();
+            attributePos += attributeRegExp.matchedLength();
         }
         if ( debug ) {
             kDebug() << "Found attributes" << foundAttributes << "in" << attributeString;
@@ -1042,11 +1060,23 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
               it != attributes.constEnd(); ++it )
         {
             if ( !foundAttributes.contains(it.key()) ) {
+                // Did not find exact attribute name, try to use it as regular expression pattern
                 attributesMatch = false;
-                if ( debug ) {
-                    kDebug() << "Did not find attribute" << it.key();
+                QRegExp attributeNameRegExp( it.key(), Qt::CaseInsensitive );
+                foreach ( const QString &attributeName, foundAttributes.keys() ) {
+                    if ( attributeNameRegExp.indexIn(attributeName) != -1 ) {
+                        // Matched the attribute name
+                        attributesMatch = true;
+                        break;
+                    }
                 }
-                break;
+
+                if ( !attributesMatch ) {
+                    if ( debug ) {
+                        kDebug() << "Did not find attribute" << it.key();
+                    }
+                    break;
+                }
             }
 
             // Attribute exists, test it's value
@@ -1055,11 +1085,15 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
             if ( !(value.isEmpty() && valueRegExpPattern.isEmpty()) ) {
                 QRegExp valueRegExp( valueRegExpPattern, Qt::CaseInsensitive );
                 if ( valueRegExp.indexIn(value) == -1 ) {
+                    // Attribute value regexp did not matched
                     attributesMatch = false;
                     if ( debug ) {
                         kDebug() << "Value" << value << "did not match pattern" << valueRegExpPattern;
                     }
                     break;
+                } else if ( valueRegExp.captureCount() > 0 ) {
+                    // Attribute value regexp matched, store captures
+                    foundAttributes[ it.key() ] = valueRegExp.capturedTexts();
                 }
             }
         }
@@ -1068,10 +1102,72 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
             continue;
         }
 
+        // Search for new opening HTML tags (with same tag name) before the closing HTML tag
+        int endPosition = htmlTagRegExp.pos() + htmlTagRegExp.matchedLength();
+        if ( !noContent ) {
+            if ( noNesting ) {
+                // "noNesting" option set, simply search for next closing tag, no matter if it is
+                // a nested tag or not
+                const int posClosing = htmlCloseTagRegExp.indexIn( str, endPosition );
+                const int contentsBegin = htmlTagRegExp.pos() + htmlTagRegExp.matchedLength();
+                tagContents = str.mid( contentsBegin, posClosing - contentsBegin );
+                endPosition = htmlCloseTagRegExp.pos() + htmlCloseTagRegExp.matchedLength();
+            } else {
+                // Find next closing tag, skipping nested tags.
+                // Get string after the opening HTML tag
+                const QString rest = str.mid( htmlTagRegExp.pos() + htmlTagRegExp.matchedLength() );
+
+                int posClosing = htmlCloseTagRegExp.indexIn( rest );
+                if ( posClosing == -1 ) {
+                    position = htmlTagRegExp.pos() + htmlTagRegExp.matchedLength();
+                    if ( debug ) {
+                        kDebug() << "Closing tag" << tagName << "could not be found";
+                    }
+                    continue;
+                }
+
+                // Search for nested opening tags in between the main opening tag and the
+                // next closing tag
+                int posOpening = htmlTagRegExp.indexIn( rest.left(posClosing) );
+                while ( posOpening != -1 ) {
+                    // Found a nested tag, find the next closing tag
+                    posClosing = htmlCloseTagRegExp.indexIn( rest,
+                            posClosing + htmlCloseTagRegExp.matchedLength() );
+                    if ( posClosing == -1 ) {
+                        position = htmlTagRegExp.pos() + htmlTagRegExp.matchedLength();
+                        if ( debug ) {
+                            kDebug() << "Closing tag" << tagName << "could not be found";
+                        }
+                        break;
+                    }
+
+                    // Search for more nested opening tags
+                    posOpening = htmlTagRegExp.indexIn( rest.left(posClosing),
+                            posOpening + htmlTagRegExp.matchedLength() );
+                }
+
+                tagContents = rest.left( posClosing );
+                endPosition += htmlCloseTagRegExp.pos() + htmlCloseTagRegExp.matchedLength();
+            }
+        }
+
+        // Match contents
+        if ( contentsRegExp.indexIn(tagContents) == -1 ) {
+            if ( debug ) {
+                kDebug() << "Did not match tag contents" << tagContents.left(500);
+            }
+            continue;
+        } else {
+            // Use first matched group as contents string, if any. Otherwise use the whole match
+            // as contents string.
+            tagContents = contentsRegExp.cap( contentsRegExp.captureCount() <= 1 ? 0 : 1 );
+        }
+
+        // Construct a result object
         QVariantMap result;
         result.insert( "contents", tagContents );
         result.insert( "position", position );
-        result.insert( "endPosition", position + htmlTagRegExp.matchedLength() );
+        result.insert( "endPosition", endPosition );
         result.insert( "attributes", foundAttributes );
 
         // Find name if a "namePosition" option is given
@@ -1086,8 +1182,7 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
             kDebug() << "Found HTML tag" << tagName << "at" << position << foundAttributes;
         }
         foundTags << result;
-
-        position = htmlTagRegExp.pos() + htmlTagRegExp.matchedLength();
+        position = endPosition;
     }
 
     if ( debug ) {

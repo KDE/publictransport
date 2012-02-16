@@ -786,7 +786,7 @@ public:
     Q_INVOKABLE static QStringList splitSkipEmptyParts( const QString &str, const QString &sep );
 
     /**
-     * @brief TODO
+     * @brief Finds positions of columns in an HTML table.
      *
      * Table header names are currently only found as "class" attributes of "th" tags.
      *
@@ -798,16 +798,16 @@ public:
      *   @b headerContainerOptions: A map of options that gets passed to findFirstHtmlTag()
      *     to find the HTML tag (eg. "tr") containing the header HTML tags (eg. "th"). For example
      *     this can be used to specify required attributes for the header container tag.
-     *     Additionaly this map can contain a value "tagName", by default this is "tr".
+     *     Additionally this map can contain a value "tagName", by default this is "tr".
      *   @b headerOptions: A map of options that gets passed to findFirstHtmlTag()
      *     to find the header HTML tags (eg. "th"). For example this can be used to specify
      *     required attributes for the header tags.
-     *     Additionaly this map can contain a value "tagName", by default this is "th".
+     *     Additionally this map can contain a value "tagName", by default this is "th".
      *     Another additional value is @em "namePosition", which indicates the position of the name
      *     of headers. This value is again a map, with these properties: @em "type": Can be
      *     @em "contents" (ie. use tag contents as name, the default) or @em "attribute" (ie. use
      *     a tag attribute value as name). If @em "attribute" is used for @em "type", the name of
-     *     the attribute can be set as @em "name" property. Additionaly a @em "regexp" property
+     *     the attribute can be set as @em "name" property. Additionally a @em "regexp" property
      *     can be used to extract a string from the string that would otherwise be used as name
      *     as is.
      **/
@@ -815,21 +815,16 @@ public:
                                                              const QVariantMap &options );
 
     /**
-     * @brief Gets information about the first HTML tag with @p tagName and @p attributes.
+     * @brief Finds the first occurrence of an HTML tag with @p tagName in @p str.
      *
-     * @param options A map (javascript object) with these properties:
-     *   @b attributes: A map containing all required attributes and it's values.
-     *   @b position: An integer, where to start the search for tags. This is 0 by default.
-     *   @b debug: A boolean, false by default. If true, more debug output gets generated.
+     * @param str The string containing the HTML tag to be found.
+     * @param tagName The name of the HTML tag to be found.
+     * @param options The same as in findHtmlTags(), "maxCount" will be set to 1.
      *
-     * @return A map with these properties:
+     * @return A map with properties like in findHtmlTags(). Additionally these properties are
+     *   returned:
      *   @b found: A boolean, true if the tag was found, false otherwise.
-     *   @b contents: A string, the contents of the found tag (if found is true).
-     *   @b position: An integer, the position in @p str of the found tag (if found is true).
-     *   @b attributes: A map containing all attributes of the found tag (if found is true).
-     *     The attribute names are the keys of the map, while the attribute values are the values
-     *     of the map.
-    }
+     * @see findHtmlTags
      **/
     Q_INVOKABLE static QVariantMap findFirstHtmlTag( const QString &str, const QString &tagName,
                                                      const QVariantMap &options = QVariantMap() );
@@ -845,10 +840,27 @@ public:
     };
 
     /**
-     * @brief TODO.
+     * @brief Finds all occurrences of HTML tags with @p tagName in @p str.
      *
-     * @param options A map (javascript object) with these properties:
-     *   @b attributes: A map containing all required attributes and it's values.
+     * Using this function avoids having to deal with various problems when matching HTML elements:
+     * @li Nested HTML elements with the same @p tagName. When simply searching for the first
+     *     closing tag after the found opening tag, a nested closing tag gets matched. If you are
+     *     sure that there are no nested tags or if you want to only match until the first nested
+     *     closing tag set the option "noNesting" in @p options to true.
+     * @li Matching tags with specific attributes. This function extracts all attributes of a
+     *     matched tag. They can have values, which can be put in single/double/no quotation marks.
+     *     To only match tags with specific attributes, add them to the "attributes" option in
+     *     @p options. Regular expressions can be used to match the attribute name and value
+     *     independently. Attribute order does not matter.
+     * @li Matching HTML tags correctly. For example a ">" inside an attributes value could cause
+     *     problems and have the tag cut off there.
+     *
+     * @param str The string containing the HTML tags to be found.
+     * @param tagName The name of the HTML tags to be found.
+     * @param options A map with these properties:
+     *   @b attributes: A map containing all required attributes and it's values. The keys of that
+     *     map are the names of required attributes and can be regular expressions. The values
+     *     are the values of the required attributes and are also handled as regular expressions.
      *   @b contentsRegExp: A regular expression pattern which the contents of found HTML tags
      *     must match. If it does not match, that tag does not get returned as found.
      *     If no parenthesized subexpressions are present in this regular expression, the whole
@@ -856,16 +868,24 @@ public:
      *     are found, only the first one gets used. By default all content of the HTML tag
      *     gets matched.
      *   @b position: An integer, where to start the search for tags. This is 0 by default.
+     *   @b noContent: A boolean, false by default. If true, HTML tags without any content are
+     *     matched, eg. "br" or "img" tags. Otherwise tags need to be closed to get matched.
+     *   @b noNesting: A boolean, false by default. If true, no checks will be made to ensure
+     *     that the first found closing tag belongs to the opening tag. In this case the found
+     *     contents always end after the first closing tag after the opening tag, no matter
+     *     if the closing tag belongs to a nested tag or not. By setting this to true you can
+     *     enhance performance.
      *   @b maxCount: The maximum number of HTML tags to match or 0 to match any number of HTML tags.
      *   @b debug: A boolean, false by default. If true, more debug output gets generated.
      *
-     * @return A list of maps with these properties:
+     * @return A list of maps, each map represents one found tag and has these properties:
      *   @b contents: A string, the contents of the found tag (if found is true).
-     *   @b position: An integer, the position in @p str of the found tag (if found is true).
-     *   @b endPosition: An integer, the position in @p str of the last character of tags contents.
-     *   @b attributes: A map containing all attributes of the found tag (if found is true).
-     *     The attribute names are the keys of the map, while the attribute values are the values
-     *     of the map.
+     *   @b position: An integer, the position of the found tag in @p str (if found is true).
+     *   @b endPosition: An integer, the ending position of the found tag in @p str
+     *     (if found is true).
+     *   @b attributes: A map containing all found attributes of the tag and it's values (if
+     *     found is true). The attribute names are the keys of the map, while the attribute
+     *     values are the values of the map.
      **/
     Q_INVOKABLE static QVariantList findHtmlTags( const QString &str, const QString &tagName,
                                                   const QVariantMap &options = QVariantMap() );
@@ -881,17 +901,31 @@ public:
     };
 
     /**
-     *     Another additional value is @em "namePosition", which indicates the position of the name
-     *     of tags. This value is again a map, with these properties: @em "type": Can be
-     *     @em "contents" (ie. use tag contents as name, the default) or @em "attribute" (ie. use
-     *     a tag attribute value as name). If @em "attribute" is used for @em "type", the name of
-     *     the attribute can be set as @em "name" property. Additionaly a @em "regexp" property
-     *     can be used to extract a string from the string that would otherwise be used as name
-     *     as is.
-     *     @em "ambiguousNameResolution" can be used to tell what should be done if the same name
-     *       was found multiple times. This can currently be one of: "addNumber" (adds a number to
-     *       the name, ie. "..1", "..2")., "replace" (a later match with an already matched name
-     *       overwrites the old match, the default).
+     * @brief Finds all occurrences of HTML tags with @p tagName in @p str.
+     *
+     * This function uses findHtmlTags() to find the HTML tags and then extracts a name for each
+     * found tag from @p str.
+     * Instead of returning a list of all matched tags, a map is returned, with the found names as
+     * keys and the tag objects (as returned in a list by findHtmlTags()) as values.
+     *
+     * @param str The string containing the HTML tag to be found.
+     * @param tagName The name of the HTML tag to be found.
+     * @param options The same as in findHtmlTags(), but additionally these options can be used:
+     *     @b namePosition: A map with more options, indicating the position of the name of tags:
+     *       @em type: Can be @em "contents" (ie. use tag contents as name, the default) or
+     *         @em "attribute" (ie. use a tag attribute value as name). If @em "attribute" is used
+     *         for @em "type", the name of the attribute can be set as @em "name" property.
+     *         Additionally a @em "regexp" property can be used to extract a string from the string
+     *         that would otherwise be used as name as is.
+     *       @em ambiguousNameResolution: Can be used to tell what should be done if the same name
+     *         was found multiple times. This can currently be one of: @em "addNumber" (adds a
+     *         number to the name, ie. "..1", "..2")., @em "replace" (a later match with an already
+     *         matched name overwrites the old match, the default).
+     *
+     * @return A map with the found names as keys and the tag objects as values. Additionally
+     *   these properties are returned:
+     *   @b names: A list of all found tag names.
+     * @see findHtmlTags
      **/
     Q_INVOKABLE static QVariantMap findNamedHtmlTags( const QString &str, const QString &tagName,
                                                       const QVariantMap &options = QVariantMap() );
