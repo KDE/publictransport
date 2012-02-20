@@ -279,7 +279,7 @@ void writeMethodList( QIODevice *dev, const QMetaObject &obj,
     }
 
     QString str;
-    QString line = QString("    methods[\"%1\"] = QStringList()").arg(className);
+    QString line = QString("    methods->operator[](\"%1\") = QStringList()").arg(className);
     foreach ( const QString &method, foundMethods ) {
         if ( line.length() + method.length() + 16 > 100 ) {
             if ( !str.isEmpty() ) {
@@ -327,6 +327,11 @@ int main( int argc, char **argv )
             "     * @brief Adds automatically generated completions.\n"
             "     **/\n"
             "    static void addCompletions( QHash< QString, QHash<QString, CompletionItem> > *completions );\n"
+            "\n"
+            "    /**\n"
+            "     * @brief Adds names of available methods per script object.\n"
+            "     **/\n"
+            "    static void addAvailableMethods( QHash< QString, QStringList > *methods );\n"
             "};" );
     outputHeader.close();
 
@@ -352,14 +357,14 @@ int main( int argc, char **argv )
                                       "result" );
     parseDescriptionsAndWriteMethods( &output, Storage::staticMetaObject, pre + "scripting.h" );
 
-    output.write( "    // Methods supported per object:\n" );
-    output.write( "    QHash< QString, QStringList > methods;\n" );
+    output.write( "}\n\nvoid JavaScriptCompletionGeneric::addAvailableMethods( "
+            "QHash< QString, QStringList > *methods ) {\n" );
     writeMethodList( &output, Helper::staticMetaObject );
     writeMethodList( &output, Network::staticMetaObject );
     writeMethodList( &output, ResultObject::staticMetaObject, "result" );
     writeMethodList( &output, Storage::staticMetaObject );
 
-    output.write ( "\n}" );
+    output.write ( "}\n" );
 
     output.close();
     return 0;

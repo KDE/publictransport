@@ -34,14 +34,20 @@ add_dependencies( timetablemate publictransporthelper )
 
 target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS} ${KDE4_KPARTS_LIBS}
     ${KDE4_PLASMA_LIBS} ${KDE4_KTEXTEDITOR_LIBS} ${KDE4_KROSSCORE_LIBS}
-    ${QT_QTWEBKIT_LIBRARY} ${KDE4_KDEWEBKIT_LIBS} ${KDE4_THREADWEAVER_LIBS}
+    ${KDE4_KDEWEBKIT_LIBS} ${KDE4_THREADWEAVER_LIBS} ${QT_QTSCRIPT_LIBRARY}
     publictransporthelper
 )
 
 install( TARGETS timetablemate ${INSTALL_TARGETS_DEFAULT_ARGS} )
 
-add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
-    COMMAND ${CMAKE_BINARY_DIR}/timetablemate/timetablematecompletiongenerator/timetablematecompletiongenerator ${CMAKE_CURRENT_BINARY_DIR} )
+# Generate completion data class from scripting.h using TimetableMateCompletionGenerator.
+# Rerun when the source file (scripting.h) or the tool (TimetableMateCompletionGenerator) changes.
+# Put the generated class into the binary directory.
+add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h
+                           ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
+    COMMAND ${CMAKE_BINARY_DIR}/timetablemate/timetablematecompletiongenerator/timetablematecompletiongenerator ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../engine/scripting.h
+            ${CMAKE_BINARY_DIR}/timetablemate/timetablematecompletiongenerator/timetablematecompletiongenerator )
 
 ########### install files ###############
 install( PROGRAMS timetablemate.desktop  DESTINATION ${XDG_APPS_INSTALL_DIR} )
