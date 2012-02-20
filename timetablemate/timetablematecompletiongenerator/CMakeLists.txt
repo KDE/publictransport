@@ -1,0 +1,27 @@
+
+project(timetablematecompletiongenerator)
+
+# Find the required Libaries
+find_package( KDE4 REQUIRED )
+include( KDE4Defaults )
+add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
+include_directories(
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_BINARY_DIR}
+   ${KDE4_INCLUDES} ../../engine )
+
+set( timetablematecompletiongenerator_SRCS
+   main.cpp
+
+   # Use files directly from the data engine
+   ../../engine/global.cpp
+   ../../engine/scripting.cpp
+   ../../engine/departureinfo.cpp
+)
+
+kde4_add_executable( timetablematecompletiongenerator
+                     ${timetablematecompletiongenerator_SRCS} )
+
+target_link_libraries( timetablematecompletiongenerator ${KDE4_KDECORE_LIBS}
+        ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARY} ${QT_QTCORE_LIBRARY}
+        ${QT_QTSCRIPT_LIBRARY} ${KDE4_THREADWEAVER_LIBS} )
