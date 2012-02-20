@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -20,18 +20,31 @@
 #ifndef TIMETABLEMATE_H
 #define TIMETABLEMATE_H
 
+// Own includes
 #include "ui_prefs_base.h"
-#include "enums.h"
 
+// PublicTransport engine includes
+#include <engine/departureinfo.h>
+#include <engine/scripting.h>
+#include <engine/timetableaccessor.h>
+
+// KDE includes
 #include <KParts/MainWindow>
 #include <KDebug>
 
+class Storage;
+class Helper;
+class Network;
+class QScriptProgram;
+class TimetableAccessorInfo;
+struct RequestInfo;
+class QScriptProgram;
+class QScriptEngine;
 class QSortFilterProxyModel;
 class JavaScriptModel;
 class KComboBox;
 class PublicTransportPreview;
 class TimetableMateView;
-class TimetableData;
 class ResultObject;
 struct TimetableAccessor;
 
@@ -50,9 +63,6 @@ namespace KParts {
     class PartManager;
 };
 class QPrinter;
-
-class DebugMessage;
-typedef QList<DebugMessage> DebugMessageList;
 
 /**
  * This class serves as the main window for TimetableMate. It handles the
@@ -73,11 +83,53 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 	    WebTab
 	};
 
+        enum ScriptError {
+            NoScriptError = 0,
+            ScriptLoadFailed,
+            ScriptParseError,
+            ScriptRunError
+        };
+
+        /** @brief The name of the script function to get a list of used TimetableInformation's. */
+        static const char *SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS;
+
+        /** @brief The name of the script function to download and parse departures/arrivals. */
+        static const char *SCRIPT_FUNCTION_GETTIMETABLE;
+
+        /** @brief The name of the script function to download and parse journeys. */
+        static const char *SCRIPT_FUNCTION_GETJOURNEYS;
+
+        /** @brief The name of the script function to download and parse stop suggestions. */
+        static const char *SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
+
+        /** @brief Gets a list of extensions that are allowed to be imported by scripts. */
+        static QStringList allowedExtensions();
+
 	/** Default Constructor */
 	TimetableMate();
 
 	/** Default Destructor */
 	virtual ~TimetableMate();
+
+    signals:
+        /** @brief Signals ready TimetableData items. */
+        void departuresReady( const QList<TimetableData> &departures,
+                ResultObject::Features features, ResultObject::Hints hints,
+                const QString &url, const GlobalTimetableInfo &globalInfo,
+                const DepartureRequestInfo &info, bool couldNeedForcedUpdate = false );
+
+        /** @brief Signals ready TimetableData items. */
+        void journeysReady( const QList<TimetableData> &departures,
+                ResultObject::Features features, ResultObject::Hints hints,
+                const QString &url, const GlobalTimetableInfo &globalInfo,
+                const JourneyRequestInfo &info, bool couldNeedForcedUpdate = false );
+
+        /** @brief Signals ready TimetableData items. */
+        void stopSuggestionsReady( const QList<TimetableData> &departures,
+                ResultObject::Features features, ResultObject::Hints hints,
+                const QString &url, const GlobalTimetableInfo &globalInfo,
+                const StopSuggestionRequestInfo &info,
+                bool couldNeedForcedUpdate = false );
 
     public slots:
 	void fileNew();
@@ -90,11 +142,22 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 	void install();
 	void installGlobal();
 
-    private slots:
+        void publish() {}; // TODO
+
+        /**
+         * @brief An error was received from the script.
+         *
+         * @param message The error message.
+         * @param failedParseText The text in the source document where parsing failed.
+         **/
+        void scriptErrorReceived( const QString &message,
+                                  const QString &failedParseText = QString() );
+
+    protected slots:
 	void optionsPreferences();
 
 	void showScriptTab( bool loadTemplateIfEmpty = true );
-	void showWebTab( const QString &url, RawUrl rawUrl = NormalUrl );
+	void showWebTab( const QString &url );
 	void currentTabChanged( int index );
 	void activePartChanged( KParts::Part *part );
 	void informationMessage( KTextEditor::View*, const QString &message );
@@ -147,14 +210,11 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 	void setChanged( bool changed = true );
 	void syncAccessor();
 
-	bool scriptRun( const QString &functionToRun, TimetableData *timetableData,
-			ResultObject *resultObject, QVariant *result,
-			DebugMessageList *debugMessageList = 0 );
+	bool scriptRun( const QString &functionToRun, const RequestInfo *requestInfo,
+                        const TimetableAccessorInfo *info,
+			ResultObject *resultObject, QVariant *result );
 
-	bool hasHomePageURL( const TimetableAccessor &accessor );
-	bool hasRawDepartureURL( const TimetableAccessor &accessor );
-	bool hasRawStopSuggestionURL( const TimetableAccessor &accessor );
-	bool hasRawJourneyURL( const TimetableAccessor &accessor );
+	bool hasHomePageURL( const TimetableAccessorInfo *info );
 
 	/** Decodes the given HTML document. First it tries QTextCodec::codecForHtml().
         * If that doesn't work, it parses the document for the charset in a meta-tag. */
@@ -181,6 +241,9 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 	static QString toPercentEncoding( const QString &str, const QByteArray &charset );
 
 	static QString gethex( ushort decimal );
+
+        bool loadScript( QScriptProgram *script, const TimetableAccessorInfo *info );
+        bool lazyLoadScript( const TimetableAccessorInfo *info );
 
     private:
 	Ui::prefs_base ui_prefs_base;
@@ -210,6 +273,18 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 	bool m_changed;
 	bool m_accessorDocumentChanged;
 	bool m_accessorWidgetsChanged;
+
+        QScriptEngine *m_engine;
+        QScriptProgram *m_script;
+        Network *m_scriptNetwork;
+        Helper *m_scriptHelper;
+        ResultObject *m_scriptResult;
+        Storage *m_scriptStorage;
+        QString m_lastError;
+        ScriptError m_lastScriptError;
+        QStringList m_scriptErrors;
 };
 
 #endif // _TIMETABLEMATE_H_
+
+struct GlobalTimetableInfo;

@@ -8,11 +8,21 @@ set( timetablemate_SRCS
    changelogwidget.cpp
    timetablemateview.cpp
    publictransportpreview.cpp
-   accessorinfoxmlreader.cpp
+   accessorinfoxmlwriter.cpp
+#    accessorinfoxmlreader.cpp
    javascriptcompletionmodel.cpp
    javascriptmodel.cpp
    javascriptparser.cpp
-   scripting.cpp
+
+   # Use files directly from the data engine
+   ../../engine/global.cpp
+   ../../engine/scripting.cpp
+   ../../engine/script_thread.cpp
+   ../../engine/departureinfo.cpp
+   ../../engine/timetableaccessor.cpp
+   ../../engine/timetableaccessor_info.cpp
+   ../../engine/timetableaccessor_script.cpp
+   ../../engine/accessorinfoxmlreader.cpp
 )
 
 kde4_add_ui_files( timetablemate_SRCS
@@ -27,7 +37,7 @@ add_dependencies( timetablemate publictransporthelper )
 
 target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS} ${KDE4_KPARTS_LIBS}
     ${KDE4_PLASMA_LIBS} ${KDE4_KTEXTEDITOR_LIBS} ${KDE4_KROSSCORE_LIBS}
-    ${QT_QTWEBKIT_LIBRARY} ${KDE4_KDEWEBKIT_LIBS}
+    ${QT_QTWEBKIT_LIBRARY} ${KDE4_KDEWEBKIT_LIBS} ${KDE4_THREADWEAVER_LIBS}
     publictransporthelper
 )
 

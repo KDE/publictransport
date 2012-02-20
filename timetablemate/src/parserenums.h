@@ -36,10 +36,10 @@ enum NodeType {
     FunctionCall    = 0x0040, /**< A function call. */
     Bracketed       = 0x0080, /**< A node containing a list of child nodes that have been read
                                  * inside a pair of brackets ('(' or '[').. */
-    Unknown         = 0x0100, /**< An unknown node. */
+    UnknownNodeType = 0x0100, /**< An unknown node. */
 
     AllNodeTypes    = Block | Function | Argument | Statement | Comment | String |
-                      FunctionCall | Bracketed | Unknown
+                      FunctionCall | Bracketed | UnknownNodeType
 };
 Q_DECLARE_FLAGS( NodeTypes, NodeType );
 Q_DECLARE_OPERATORS_FOR_FLAGS( NodeTypes );

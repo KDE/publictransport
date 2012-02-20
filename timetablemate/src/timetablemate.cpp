@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -17,6 +17,7 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// Own includes
 #include "timetablemate.h"
 #include "timetablemateview.h"
 #include "settings.h"
@@ -24,8 +25,15 @@
 #include "javascriptcompletionmodel.h"
 #include "javascriptmodel.h"
 #include "javascriptparser.h"
-#include "scripting.h"
 
+// PublicTransport engine includes
+#include <engine/scripting.h>
+#include <engine/timetableaccessor.h>
+#include <engine/timetableaccessor_info.h>
+#include <engine/timetableaccessor_script.h>
+#include <engine/script_thread.h>
+
+// Qt includes
 #include <QtGui/QDropEvent>
 #include <QtGui/QPainter>
 #include <QtGui/QPrinter>
@@ -38,22 +46,20 @@
 #include <QtCore/QTextCodec>
 #include <QtCore/QTimer>
 
+// KDE includes
 #include <KGlobalSettings>
 #include <KStandardDirs>
 #include <KDateTimeWidget>
 #include <KTabWidget>
 #include <KUrlComboBox>
-
 #include <KMenu>
 #include <KMenuBar>
 #include <KToolBar>
 #include <KStatusBar>
-
 #include <KConfigDialog>
 #include <KFileDialog>
 #include <KInputDialog>
 #include <KMessageBox>
-
 #include <KParts/PartManager>
 #include <KParts/MainWindow>
 #include <KWebView>
@@ -66,13 +72,11 @@
 #include <KTextEditor/MarkInterface>
 #include <KLibFactory>
 #include <KLibLoader>
-
 #include <KAction>
 #include <KActionCollection>
 #include <KActionMenu>
 #include <KStandardAction>
 #include <KRecentFilesAction>
-
 #include <Kross/Action>
 #include <KAuth/Action>
 #include <KAuth/ActionReply>
@@ -81,13 +85,64 @@
 
 #include <unistd.h>
 
+const char *TimetableMate::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS = "usedTimetableInformations";
+const char *TimetableMate::SCRIPT_FUNCTION_GETTIMETABLE = "getTimetable";
+const char *TimetableMate::SCRIPT_FUNCTION_GETJOURNEYS = "getJourneys";
+const char *TimetableMate::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS = "getStopSuggestions";
+
+// TODO Move class ScriptAgent to own file(s)
+// #include <QScriptEngineAgent>
+// /**
+//  * @brief A QScriptEngineAgent that signals when a script finishes.
+//  *
+//  * After a function exit the agent waits a little bit and checks if the script is still executing
+//  * using QScriptEngineAgent::isEvaluating().
+//  **/
+// class ScriptAgent : public QObject, public QScriptEngineAgent {
+//     Q_OBJECT
+//
+// public:
+//     /** @brief Creates a new ScriptAgent instance. */
+//     ScriptAgent( QScriptEngine* engine = 0 );
+//
+//     /** Overwritten to get noticed when a script might have finished. */
+//     virtual void functionExit( qint64 scriptId, const QScriptValue& returnValue );
+//
+// signals:
+//     /** @brief Emitted, when the script is no longer running */
+//     void scriptFinished();
+//
+// protected slots:
+//     void checkExecution();
+// };
+//
+// ScriptAgent::ScriptAgent(QScriptEngine* engine)
+//         : QObject(engine), QScriptEngineAgent::QScriptEngineAgent(engine)
+// {
+// }
+//
+// void ScriptAgent::functionExit( qint64 scriptId, const QScriptValue& returnValue )
+// {
+//     QTimer::singleShot( 250, this, SLOT(checkExecution()) );
+// }
+//
+// void ScriptAgent::checkExecution()
+// {
+//     if ( !engine()->isEvaluating() ) {
+//         emit scriptFinished();
+//     }
+// }
+
 TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpButtonHint ),
         m_mainTabBar( new KTabWidget(this) ), m_view( new TimetableMateView(this) ),
-        m_backgroundParserTimer(0) {
+        m_backgroundParserTimer(0), m_engine(0), m_script(0), m_scriptNetwork(0),
+        m_scriptHelper(0), m_scriptResult(0), m_scriptStorage(0)
+{
     m_partManager = new KParts::PartManager( this );
     m_accessorDocumentChanged = false;
     m_accessorWidgetsChanged = false;
     m_changed = false;
+    m_lastScriptError = NoScriptError;
     m_currentTab = AccessorTab;
     m_mainTabBar->setDocumentMode( true );
 
@@ -152,8 +207,8 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     setupGUI();
 
     connect( m_view, SIGNAL(scriptAdded(QString)), this, SLOT(showScriptTab()) );
-    connect( m_view, SIGNAL(urlShouldBeOpened(QString,RawUrl)),
-             this, SLOT(showWebTab(QString,RawUrl)) );
+    connect( m_view, SIGNAL(urlShouldBeOpened(QString)),
+             this, SLOT(showWebTab(QString)) );
     connect( m_view, SIGNAL(changed()), this, SLOT(accessorWidgetsChanged()) );
     connect( m_view, SIGNAL(scriptFileChanged(QString)),
              this, SLOT(scriptFileChanged(QString)) );
@@ -319,6 +374,42 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
 
 TimetableMate::~TimetableMate() {
     m_recentFilesAction->saveEntries( Settings::self()->config()->group(0) );
+    delete m_script;
+
+    if ( !m_engine ) {
+        return;
+    }
+    m_scriptNetwork->abortAllRequests();
+    m_engine->abortEvaluation();
+    m_engine->deleteLater();
+}
+
+QStringList TimetableMate::allowedExtensions()
+{
+    return QStringList() << "kross" << "qt" << "qt.core" << "qt.xml";
+}
+
+bool TimetableMate::lazyLoadScript( const TimetableAccessorInfo *info )
+{
+    if ( m_script ) {
+        return true;
+    }
+
+    // Read script
+    QFile scriptFile( info->scriptFileName() );
+    if ( !scriptFile.open(QIODevice::ReadOnly) ) {
+        kDebug() << "Script could not be opened for reading"
+                 << info->scriptFileName() << scriptFile.errorString();
+        return false;
+    }
+    QTextStream stream( &scriptFile );
+    QString scriptContents = stream.readAll();
+    scriptFile.close();
+
+    // Initialize the script
+    m_script = new QScriptProgram( scriptContents, info->scriptFileName() );
+
+    return true;
 }
 
 void TimetableMate::closeEvent( QCloseEvent *event ) {
@@ -442,21 +533,21 @@ void TimetableMate::accessorWidgetsChanged() {
     m_accessorWidgetsChanged = true;
     setChanged( true );
 
-    TimetableAccessor accessor = m_view->accessorInfo();
+    TimetableAccessor *accessor = m_view->accessorInfo();
 
     // Enable/disable actions to open web pages
-    action( "web_load_homepage" )->setEnabled( !accessor.url.isEmpty() );
-    action( "web_load_departures" )->setEnabled( !accessor.rawDepartureUrl.isEmpty() );
-    action( "web_load_stopsuggestions" )->setEnabled( !accessor.rawStopSuggestionsUrl.isEmpty() );
-    action( "web_load_journeys" )->setEnabled( !accessor.rawJourneyUrl.isEmpty() );
+    action( "web_load_homepage" )->setEnabled( !accessor->info()->url().isEmpty() );
+//     action( "web_load_departures" )->setEnabled( !accessor.rawDepartureUrl.isEmpty() ); // TODO
+//     action( "web_load_stopsuggestions" )->setEnabled( !accessor.rawStopSuggestionsUrl.isEmpty() );
+//     action( "web_load_journeys" )->setEnabled( !accessor.rawJourneyUrl.isEmpty() );
 
     QStringList functions = m_javaScriptModel->functionNames();
     action( "script_runParseTimetable" )->setEnabled(
-        !accessor.rawDepartureUrl.isEmpty() && functions.contains("parseTimetable") );
+            functions.contains(SCRIPT_FUNCTION_GETTIMETABLE) );
     action( "script_runParseStopSuggestions" )->setEnabled(
-        !accessor.rawStopSuggestionsUrl.isEmpty() && functions.contains("parsePossibleStops") );
+            functions.contains(SCRIPT_FUNCTION_GETSTOPSUGGESTIONS) );
     action( "script_runParseJourneys" )->setEnabled(
-        !accessor.rawJourneyUrl.isEmpty() && functions.contains("parseJourneys") );
+            functions.contains(SCRIPT_FUNCTION_GETJOURNEYS) );
 }
 
 void TimetableMate::accessorDocumentChanged( KTextEditor::Document */*document*/ ) {
@@ -524,14 +615,13 @@ void TimetableMate::beginScriptParsing() {
     updateNextPreviousFunctionActions();
 
     // Update script_run* action enabled state
-    TimetableAccessor accessor = m_view->accessorInfo();
     QStringList functions = m_javaScriptModel->functionNames();
     action( "script_runParseTimetable" )->setEnabled(
-        !accessor.rawDepartureUrl.isEmpty() && functions.contains("parseTimetable") );
+            functions.contains(SCRIPT_FUNCTION_GETTIMETABLE) );
     action( "script_runParseStopSuggestions" )->setEnabled(
-        !accessor.rawStopSuggestionsUrl.isEmpty() && functions.contains("parsePossibleStops") );
+            functions.contains(SCRIPT_FUNCTION_GETSTOPSUGGESTIONS) );
     action( "script_runParseJourneys" )->setEnabled(
-        !accessor.rawJourneyUrl.isEmpty() && functions.contains("parseJourneys") );
+            functions.contains(SCRIPT_FUNCTION_GETJOURNEYS) );
 }
 
 void TimetableMate::scriptDocumentChanged( KTextEditor::Document */*document*/ ) {
@@ -575,23 +665,9 @@ void TimetableMate::showScriptTab( bool loadTemplateIfEmpty ) {
         writeScriptTemplate();
 }
 
-void TimetableMate::showWebTab( const QString &url, RawUrl rawUrl ) {
+void TimetableMate::showWebTab( const QString &url ) {
     if ( !url.isEmpty() ) {
-        KUrl kurl;
-        switch ( rawUrl ) {
-        case NormalUrl:
-            kurl = KUrl( url );
-            break;
-        case RawDepartureUrl:
-            kurl = getDepartureUrl();
-            break;
-        case RawStopSuggestionsUrl:
-            kurl = getStopSuggestionUrl();
-            break;
-        case RawJourneyUrl:
-            kurl = getJourneyUrl();
-            break;
-        }
+        KUrl kurl( url );
         if ( kurl.isEmpty() )
             return;
 
@@ -936,7 +1012,7 @@ void TimetableMate::fileSave() {
 }
 
 void TimetableMate::fileSaveAs() {
-    TimetableAccessor accessor = m_view->accessorInfo();
+    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
     QString fileName = KFileDialog::getSaveFileName(
                            m_openedPath.isEmpty() ? KGlobalSettings::documentPath() : m_openedPath,
                            "??*_*.xml", this, i18nc("@title:window", "Save Accessor") );
@@ -950,7 +1026,7 @@ void TimetableMate::fileSaveAs() {
     syncAccessor();
     m_view->writeAccessorInfoXml( fileName );
 
-    QString scriptFile = accessor.scriptFile;
+    QString scriptFile = info->scriptFileName();
     if ( !scriptFile.isEmpty() ) {
         QString scriptFilePath = m_openedPath + '/' + scriptFile;
         if ( !m_scriptDocument->saveAs(scriptFilePath) ) {
@@ -963,11 +1039,11 @@ void TimetableMate::fileSaveAs() {
 }
 
 void TimetableMate::install() {
-    TimetableAccessor accessor = m_view->accessorInfo();
+    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
     QString saveDir = KGlobal::dirs()->saveLocation( "data",
                       "plasma_engine_publictransport/accessorInfos/" );
     KUrl urlXml = KUrl( saveDir + m_currentServiceProviderID + ".xml" );
-    KUrl urlScript = KUrl( saveDir + accessor.scriptFile ); // TODO .py, .rb
+    KUrl urlScript = KUrl( saveDir + info->scriptFileName() ); // TODO .py, .rb
 
     syncAccessor();
     bool ok = false;
@@ -994,14 +1070,14 @@ void TimetableMate::installGlobal() {
     }
     QString saveDir = saveDirs.last(); // Use the most global one
     syncAccessor();
-    TimetableAccessor accessor = m_view->accessorInfo();
+    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
 
     KAuth::Action action( "org.kde.timetablemate.install" );
     action.setHelperID( "org.kde.timetablemate" );
     QVariantMap args;
     args["path"] = saveDir;
     args["filenameAccessor"] = m_currentServiceProviderID + ".xml";
-    args["filenameScript"] = accessor.scriptFile;
+    args["filenameScript"] = info->scriptFileName();
     args["contentsAccessor"] = m_accessorDocument->text();
     args["contentsScript"] = m_scriptDocument->text();
     action.setArguments( args );
@@ -1160,6 +1236,7 @@ bool TimetableMate::loadAccessor( const QString &fileName ) {
 
     // Load script file referenced by the XML
     if ( !loadScriptForCurrentAccessor(url.directory()) ) {
+        // Could not load, eg. script file not found
         syncAccessor();
         m_view->setScriptFile( QString() );
         syncAccessor();
@@ -1184,18 +1261,19 @@ bool TimetableMate::loadScriptForCurrentAccessor( const QString &path, bool open
     m_scriptDocument->setModified( false );
     if ( path.isEmpty() ) {
         kDebug() << "Cannot open script files when the path isn't given. "
-        "Save the accessor XML file first.";
+                    "Save the accessor XML file first.";
         m_mainTabBar->setTabEnabled( ScriptTab, false ); // Disable script tab
         return false;
     }
 
     QString text = m_accessorDocument->text();
-    QString scriptFile = m_view->accessorInfo().scriptFile;
+    QString scriptFile = m_view->accessorInfo()->info()->scriptFileName();
     if ( scriptFile.isEmpty() ) {
         m_mainTabBar->setTabEnabled( ScriptTab, false ); // Disable script tab
         return false;
     } else {
-        scriptFile = path + '/' + scriptFile;
+//         scriptFile = path + '/' + scriptFile;
+        Q_ASSERT( scriptFile.startsWith(path) );
 
         if ( openFile ) {
             if ( !QFile::exists(scriptFile) ) {
@@ -1249,21 +1327,18 @@ void TimetableMate::optionsPreferences() {
 }
 
 void TimetableMate::toolsCheck() {
-    TimetableAccessor accessor = m_view->accessorInfo();
-    QStringList errors, inelegants;
+    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
+    QStringList errors, inelegants, working;
 
-    bool nameOk = !accessor.name.isEmpty();
-    bool descriptionOk = !accessor.description.isEmpty();
-    bool versionOk = !accessor.version.isEmpty(); // Correct format is validated
-    bool fileVersionOk = accessor.fileVersion == "1.0"; // Correct format is validated
-    bool authorOk = !accessor.author.isEmpty();
-    bool emailOk = !accessor.email.isEmpty(); // Correct format is validated
-    bool urlOk = !accessor.url.isEmpty();
-    bool shortUrlOk = !accessor.shortUrl.isEmpty();
-    bool departuresUrlOk = !accessor.rawDepartureUrl.isEmpty();
-    bool stopSuggestionsUrlOk = !accessor.rawStopSuggestionsUrl.isEmpty();
-    bool journeysUrlOk = !accessor.rawJourneyUrl.isEmpty();
-    bool scriptOk = !accessor.scriptFile.isEmpty();
+    const bool nameOk = !info->name().isEmpty();
+    const bool descriptionOk = !info->description().isEmpty();
+    const bool versionOk = !info->version().isEmpty(); // Correct format is validated
+    const bool fileVersionOk = info->fileVersion() == "1.0"; // Correct format is validated
+    const bool authorOk = !info->author().isEmpty();
+    const bool emailOk = !info->email().isEmpty(); // Correct format is validated
+    const bool urlOk = !info->url().isEmpty();
+    const bool shortUrlOk = !info->shortUrl().isEmpty();
+    bool scriptOk = !info->scriptFileName().isEmpty();
     QStringList scriptFunctions;
 
     if ( !nameOk ) {
@@ -1317,8 +1392,9 @@ void TimetableMate::toolsCheck() {
             // Go to error line
             m_scriptDocument->activeView()->setCursorPosition(
                 KTextEditor::Cursor(parser.errorLine() - 1, parser.errorColumn()) );
-            errors << i18nc("@info", "<emphasis>Error in script (line %2):</emphasis> "
-                            "<message>%1</message>", parser.errorMessage(), parser.errorLine());
+            errors << i18nc("@info", "<emphasis>Error in script (line %2, column %3):</emphasis> "
+                            "<message>%1</message>", parser.errorMessage(), parser.errorLine(),
+                            parser.errorColumn());
             scriptOk = false;
         }
 
@@ -1326,12 +1402,11 @@ void TimetableMate::toolsCheck() {
         Kross::Action script( this, "TimetableParser" );
 
         // Set script code and type
-        TimetableAccessor accessor = m_view->accessorInfo();
-        if ( accessor.scriptFile.endsWith(QLatin1String(".py")) )
+        if ( info->scriptFileName().endsWith(QLatin1String(".py")) )
             script.setInterpreter( "python" );
-        else if ( accessor.scriptFile.endsWith(QLatin1String(".rb")) )
+        else if ( info->scriptFileName().endsWith(QLatin1String(".rb")) )
             script.setInterpreter( "ruby" );
-        else if ( accessor.scriptFile.endsWith(QLatin1String(".js")) )
+        else if ( info->scriptFileName().endsWith(QLatin1String(".js")) )
             script.setInterpreter( "javascript" );
         else {
             const QString scriptType = KInputDialog::getItem(
@@ -1361,33 +1436,28 @@ void TimetableMate::toolsCheck() {
                         "<interface>Accessor</interface> tab.</emphasis>");
     }
 
-    if ( !scriptFunctions.contains("usedTimetableInformations") ) {
+    if ( !scriptFunctions.contains(SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS) ) {
         inelegants << i18nc("@info", "<emphasis>You should implement the "
                             "'usedTimetableInformations' script function.</emphasis> This is used "
                             "to get the features supported by the accessor.");
     }
-    if ( !scriptFunctions.contains("parseTimetable") || !departuresUrlOk ) {
-        errors << i18nc("@info", "<emphasis>You need to specify both a raw departure URL and a "
-                        "'parseTimetable' script function.</emphasis> <note>Accessors that only support "
-                        "journeys are currently not accepted by the data engine, but that may "
-                        "change</note>.");
+    if ( !scriptFunctions.contains(SCRIPT_FUNCTION_GETTIMETABLE) ) {
+        errors << i18nc("@info", "<emphasis>You need to specify a 'getTimetable' script function."
+                        "</emphasis> <note>Accessors that only support journeys are currently not "
+                        "accepted by the data engine, but that may change</note>.");
     }
-    if ( scriptFunctions.contains("parsePossibleStops") && !stopSuggestionsUrlOk ) {
-        inelegants << i18nc("@info", "<emphasis>The script has a 'parsePossibleStops' function, "
-                            "but there's no raw URL for stop suggestions.</emphasis>");
-    }
-    if ( scriptFunctions.contains("parseJourneys") && !journeysUrlOk ) {
-        inelegants << i18nc("@info", "<emphasis>The script has a 'parseJourney' function, "
-                            "but there's no raw URL for journeys.</emphasis>");
-    }
-
-    bool stopSuggestionsShouldWork = scriptFunctions.contains("parsePossibleStops") && stopSuggestionsUrlOk;
-    bool journeysShouldWork = scriptFunctions.contains("parseJourneys") && journeysUrlOk;
-    QStringList working;
-    if ( stopSuggestionsShouldWork )
+    if ( !scriptFunctions.contains(SCRIPT_FUNCTION_GETSTOPSUGGESTIONS) ) {
+        inelegants << i18nc("@info", "<emphasis>The script has no 'getStopSuggestions' function, "
+                            "that can make it hard to find a correct stop name.</emphasis>");
+    } else {
         working << i18nc("@info", "Stop suggestions should work.");
-    if ( journeysShouldWork )
+    }
+    if ( !scriptFunctions.contains(SCRIPT_FUNCTION_GETJOURNEYS) ) {
+        inelegants << i18nc("@info", "<emphasis>The script has no 'getJourneys' function, "
+                            "journey functions will not work.</emphasis>");
+    } else {
         working << i18nc("@info", "Journeys should work.");
+    }
 
     QString msg;
     if ( errors.isEmpty() && inelegants.isEmpty() ) {
@@ -1471,62 +1541,67 @@ void TimetableMate::webUrlChanged( const QUrl& url ) {
 }
 
 void TimetableMate::webLoadHomePage() {
-    TimetableAccessor accessor = m_view->accessorInfo();
-    if ( !hasHomePageURL(accessor) )
+    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
+    if ( !hasHomePageURL(info) )
         return;
 
     // Open URL
-    m_webview->setUrl( accessor.url );
+    m_webview->setUrl( info->url() );
 
     // Go to web tab
     m_mainTabBar->setCurrentIndex( WebTab );
 }
 
 void TimetableMate::webLoadDepartures() {
-    TimetableAccessor accessor = m_view->accessorInfo();
-    if ( !hasRawDepartureURL(accessor) )
-        return;
-
-    // Open URL
-    KUrl url = getDepartureUrl();
-    m_webview->setUrl( url );
-
-    // Go to web tab
-    m_mainTabBar->setCurrentIndex( WebTab );
+//     TODO
+//     TimetableAccessor accessor = m_view->accessorInfo();
+//     if ( !hasRawDepartureURL(accessor) )
+//         return;
+//
+//     // Open URL
+//     KUrl url = getDepartureUrl();
+//     m_webview->setUrl( url );
+//
+//     // Go to web tab
+//     m_mainTabBar->setCurrentIndex( WebTab );
 }
 
 void TimetableMate::webLoadStopSuggestions() {
-    TimetableAccessor accessor = m_view->accessorInfo();
-    if ( !hasRawStopSuggestionURL(accessor) )
-        return;
-
-    // Open URL
-    KUrl url = getStopSuggestionUrl();
-    m_webview->setUrl( url );
-
-    // Go to web tab
-    m_mainTabBar->setCurrentIndex( WebTab );
+//     TODO
+//     TimetableAccessor accessor = m_view->accessorInfo();
+//     if ( !hasRawStopSuggestionURL(accessor) )
+//         return;
+//
+//     // Open URL
+//     KUrl url = getStopSuggestionUrl();
+//     m_webview->setUrl( url );
+//
+//     // Go to web tab
+//     m_mainTabBar->setCurrentIndex( WebTab );
 }
 
 void TimetableMate::webLoadJourneys() {
-    TimetableAccessor accessor = m_view->accessorInfo();
-    if ( !hasRawJourneyURL(accessor) )
-        return;
-
-    // Open URL
-    KUrl url = getJourneyUrl();
-    m_webview->setUrl( url );
-
-    // Go to web tab
-    m_mainTabBar->setCurrentIndex( WebTab );
+//     TODO
+//     TimetableAccessor accessor = m_view->accessorInfo();
+//     if ( !hasRawJourneyURL(accessor) )
+//         return;
+//
+//     // Open URL
+//     KUrl url = getJourneyUrl();
+//     m_webview->setUrl( url );
+//
+//     // Go to web tab
+//     m_mainTabBar->setCurrentIndex( WebTab );
 }
 
 void TimetableMate::scriptRunParseTimetable() {
-    TimetableData timetableData;
     ResultObject resultObject;
     QVariant result;
-    DebugMessageList debugMessages;
-    if ( !scriptRun("parseTimetable", &timetableData, &resultObject, &result, &debugMessages) ) {
+    RequestInfo requestInfo; // TODO: Fill values
+    TimetableAccessor *accessor = m_view->accessorInfo();
+    if ( !scriptRun(TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE,
+                    &requestInfo, accessor->info(), &resultObject, &result) )
+    {
         return;
     }
 
@@ -1543,12 +1618,12 @@ void TimetableMate::scriptRunParseTimetable() {
     QTime lastTime;
     for ( int i = 0; i < data.count(); ++ i ) {
         TimetableData timetableData = data.at( i );
-        QDateTime departureDateTime = timetableData.value( "departuredatetime" ).toDateTime();
+        QDateTime departureDateTime = timetableData.value( DepartureDateTime ).toDateTime();
         if ( !departureDateTime.isValid() ) {
-            QDate date = timetableData.value( "departuredate" ).toDate();
+            QDate date = timetableData.value( DepartureDate ).toDate();
             QTime departureTime;
-            if ( timetableData.values().contains("departuretime") ) {
-                QVariant timeValue = timetableData.value("departuretime");
+            if ( timetableData.values().contains(departureTime) ) {
+                QVariant timeValue = timetableData.value( DepartureTime );
                 if ( timeValue.canConvert(QVariant::Time) ) {
                     departureTime = timeValue.toTime();
                 } else {
@@ -1576,15 +1651,14 @@ void TimetableMate::scriptRunParseTimetable() {
             }
 
             departureDateTime = QDateTime( date, departureTime );
-            timetableData.set( "departuredatetime", departureDateTime );
+            timetableData.insert( DepartureDateTime, departureDateTime );
         }
 
         curDate = departureDateTime.date();
         lastTime = departureDateTime.time();
 
-        QVariantHash values = timetableData.values();
-        bool isValid =  values.contains("transportline") && values.contains("target")
-                        && values.contains("departuredatetime");
+        bool isValid = timetableData.contains(TransportLine) && timetableData.contains(Target) &&
+                       timetableData.contains(DepartureDateTime);
         if ( isValid )
             ++count;
         else
@@ -1593,35 +1667,35 @@ void TimetableMate::scriptRunParseTimetable() {
 
     QStringList departures;
     for ( int i = 0; i < data.count(); ++i ) {
-        QVariantHash values = data[i].values();
+        TimetableData values = data[i];
         QString departure;
         departure = QString("\"%1\" to \"%2\" at %3")
-                    .arg( values["transportline"].toString(),
-                          values["target"].toString(),
-                          values["departuredatetime"].toDateTime().toString() );
-        if ( values.contains("departuredate") && !values["departuredate"].toList().isEmpty() ) {
-			QList<QVariant> date = values["departuredate"].toList();
-			if ( date.count() >= 3 ) {
-				departure += QString(", %1").arg( QDate(date[0].toInt(), date[1].toInt(), date[2].toInt()).toString() );
-			}
-		}
-        if ( values.contains("typeofvehicle") && !values["typeofvehicle"].toString().isEmpty() )
-            departure += QString(", %1").arg( values["typeofvehicle"].toString() );
-        if ( values.contains("delay") && values["delay"].toInt() != -1 )
-            departure += QString(", delay: %1").arg( values["delay"].toInt() );
-        if ( values.contains("delayreason") && !values["delayreason"].toString().isEmpty() )
-            departure += QString(", delay reason: %1").arg( values["delayreason"].toString() );
-        if ( values.contains("platform") && !values["platform"].toString().isEmpty() )
-            departure += QString(", platform: %1").arg( values["platform"].toString() );
-        if ( values.contains("operator") && !values["operator"].toString().isEmpty() )
-            departure += QString(", operator: %1").arg( values["operator"].toString() );
-        if ( values.contains("routestops") && !values["routestops"].toStringList().isEmpty() ) {
-            QStringList routeStops = values["routestops"].toStringList();
+                .arg( values[TransportLine].toString(),
+                      values[Target].toString(),
+                      values[DepartureDateTime].toDateTime().toString() );
+        if ( values.contains(DepartureDate) && !values[DepartureDate].toList().isEmpty() ) {
+            QList<QVariant> date = values[DepartureDate].toList();
+            if ( date.count() >= 3 ) {
+                departure += QString(", %1").arg( QDate(date[0].toInt(), date[1].toInt(), date[2].toInt()).toString() );
+            }
+        }
+        if ( values.contains(TypeOfVehicle) && !values[TypeOfVehicle].toString().isEmpty() )
+            departure += QString(", %1").arg( values[TypeOfVehicle].toString() );
+        if ( values.contains(Delay) && values[Delay].toInt() != -1 )
+            departure += QString(", delay: %1").arg( values[Delay].toInt() );
+        if ( values.contains(DelayReason) && !values[DelayReason].toString().isEmpty() )
+            departure += QString(", delay reason: %1").arg( values[DelayReason].toString() );
+        if ( values.contains(Platform) && !values[Platform].toString().isEmpty() )
+            departure += QString(", platform: %1").arg( values[Platform].toString() );
+        if ( values.contains(Operator) && !values[Operator].toString().isEmpty() )
+            departure += QString(", operator: %1").arg( values[Operator].toString() );
+        if ( values.contains(RouteStops) && !values[RouteStops].toStringList().isEmpty() ) {
+            QStringList routeStops = values[RouteStops].toStringList();
             departure += QString(", %1 route stops").arg( routeStops.count() );
 
             // Check if RouteTimes has the same number of elements as RouteStops (if set)
-            if ( values.contains("routetimes") && !values["routetimes"].toStringList().isEmpty() ) {
-                QStringList routeTimes = values["routetimes"].toStringList();
+            if ( values.contains(RouteTimes) && !values[RouteTimes].toStringList().isEmpty() ) {
+                QStringList routeTimes = values[RouteTimes].toStringList();
                 departure += QString(", %1 route times").arg( routeTimes.count() );
 
                 if ( routeTimes.count() != routeStops.count() ) {
@@ -1635,15 +1709,15 @@ void TimetableMate::scriptRunParseTimetable() {
 			.arg( i + 1 ).arg( departure );
     }
 
-    QStringList unknownTimetableInformations;
-    QMultiHash<QString, QVariant> unknown = timetableData.unknownTimetableInformationStrings();
-    kDebug() << unknown;
-    for ( QMultiHash<QString, QVariant>::const_iterator it = unknown.constBegin();
-            it != unknown.constEnd(); ++it )
-    {
-        unknownTimetableInformations << "<item>" +
-	    i18nc("@info", "'%1' with value '%2'", it.key(), it.value().toString()) + "</item>";
-    }
+    QStringList unknownTimetableInformations; // TODO
+//     QMultiHash<QString, QVariant> unknown = timetableData.unknownTimetableInformationStrings();
+//     kDebug() << unknown;
+//     for ( QMultiHash<QString, QVariant>::const_iterator it = unknown.constBegin();
+//             it != unknown.constEnd(); ++it )
+//     {
+//         unknownTimetableInformations << "<item>" +
+// 	    i18nc("@info", "'%1' with value '%2'", it.key(), it.value().toString()) + "</item>";
+//     }
 
     // Show results
     QString resultItems = i18nc("@info", "Got %1 departures/arrivals.", data.count());
@@ -1666,14 +1740,14 @@ void TimetableMate::scriptRunParseTimetable() {
 	}
 
     // Add debug messages
-	if ( debugMessages.isEmpty() ) {
+//     m_scriptHelper->
+	if ( m_scriptErrors.isEmpty() ) {
 		resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
 	} else {
 		QString debugMessagesString;
-		foreach ( const DebugMessage &debugMessage, debugMessages ) {
-			QString message = debugMessage.message;
+		foreach ( const QString &message, m_scriptErrors ) {
 			debugMessagesString.append( QString("<item>%1</item>")
-					.arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
+					.arg(QString(message).replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
 		}
 		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
 							debugMessagesString);
@@ -1690,12 +1764,15 @@ void TimetableMate::scriptRunParseTimetable() {
 }
 
 void TimetableMate::scriptRunParseStopSuggestions() {
-    TimetableData timetableData;
     ResultObject resultObject;
     QVariant result;
-    DebugMessageList debugMessages;
-    if ( !scriptRun("parsePossibleStops", &timetableData, &resultObject, &result, &debugMessages) )
+    RequestInfo requestInfo; // TODO: Fill values
+    TimetableAccessor *accessor = m_view->accessorInfo();
+    if ( !scriptRun(TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS,
+                    &requestInfo, accessor->info(), &resultObject, &result) )
+    {
         return;
+    }
 
     // Get global information
     QStringList globalInfos;
@@ -1711,7 +1788,7 @@ void TimetableMate::scriptRunParseStopSuggestions() {
     QList<TimetableData> data = resultObject.data();
     int count = 0, countInvalid = 0;
     foreach ( const TimetableData &timetableData, data ) {
-        QString stopName = timetableData.value( "stopname" ).toString();
+        QString stopName = timetableData[ StopName ].toString();
         QString stopID;
         int stopWeight = -1;
 
@@ -1722,13 +1799,13 @@ void TimetableMate::scriptRunParseStopSuggestions() {
 
         stops << stopName;
 
-        if ( timetableData.values().contains("stopid") ) {
-            stopID = timetableData.value( "stopid" ).toString();
+        if ( timetableData.contains(StopID) ) {
+            stopID = timetableData[ StopID ].toString();
             stopToStopId.insert( stopName, stopID );
         }
 
-        if ( timetableData.values().contains("stopweight") )
-            stopWeight = timetableData.value( "stopweight" ).toInt();
+        if ( timetableData.contains(StopWeight) )
+            stopWeight = timetableData[ StopWeight ].toInt();
 
         if ( stopWeight != -1 )
             stopToStopWeight.insert( stopName, stopWeight );
@@ -1746,18 +1823,18 @@ void TimetableMate::scriptRunParseStopSuggestions() {
             stopItem += QString(", weight: %1").arg( stopToStopWeight[stop] );
 
         stopInfo << QString("<item><emphasis strong='1'>%1.</emphasis> %2</item>")
-        .arg( i + 1 ).arg( stopItem );
+                .arg( i + 1 ).arg( stopItem );
     }
 
     QStringList unknownTimetableInformations;
-    QMultiHash<QString, QVariant> unknown = timetableData.unknownTimetableInformationStrings();
-    kDebug() << unknown;
-    for ( QMultiHash<QString, QVariant>::const_iterator it = unknown.constBegin();
-            it != unknown.constEnd(); ++it )
-    {
-        unknownTimetableInformations << "<item>" +
-        i18nc("@info", "'%1' with value '%2'", it.key(), it.value().toString()) + "</item>";
-    }
+//     QMultiHash<QString, QVariant> unknown = timetableData.unknownTimetableInformationStrings();
+//     kDebug() << unknown;
+//     for ( QMultiHash<QString, QVariant>::const_iterator it = unknown.constBegin();
+//             it != unknown.constEnd(); ++it )
+//     {
+//         unknownTimetableInformations << "<item>" +
+//         i18nc("@info", "'%1' with value '%2'", it.key(), it.value().toString()) + "</item>";
+//     }
 
     // Show results
     QString resultItems = i18nc("@info", "Got %1 stop suggestions.", data.count());
@@ -1771,14 +1848,13 @@ void TimetableMate::scriptRunParseStopSuggestions() {
                         stopInfo.join(QString()));
 
     // Add debug messages
-	if ( debugMessages.isEmpty() ) {
+	if ( m_scriptErrors.isEmpty() ) {
 		resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
 	} else {
 		QString debugMessagesString;
-		foreach ( const DebugMessage &debugMessage, debugMessages ) {
-			QString message = debugMessage.message;
+		foreach ( const QString &message, m_scriptErrors ) {
 			debugMessagesString.append( QString("<item>%1</item>")
-					.arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
+					.arg(QString(message).replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
 		}
 		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
 							debugMessagesString);
@@ -1795,12 +1871,15 @@ void TimetableMate::scriptRunParseStopSuggestions() {
 }
 
 void TimetableMate::scriptRunParseJourneys() {
-    TimetableData timetableData;
     ResultObject resultObject;
     QVariant result;
-    DebugMessageList debugMessages;
-    if ( !scriptRun("parseJourneys", &timetableData, &resultObject, &result, &debugMessages) )
+    JourneyRequestInfo requestInfo; // TODO: Fill values
+    TimetableAccessor *accessor = m_view->accessorInfo();
+    if ( !scriptRun(TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS,
+                    &requestInfo, accessor->info(), &resultObject, &result) )
+    {
         return;
+    }
 
     // Get global information
     QStringList globalInfos;
@@ -1815,12 +1894,12 @@ void TimetableMate::scriptRunParseJourneys() {
     QTime lastTime;
     for ( int i = 0; i < data.count(); ++ i ) {
         TimetableData timetableData = data.at( i );
-        QDateTime departureDateTime = timetableData.value( "departuredatetime" ).toDateTime();
+        QDateTime departureDateTime = timetableData.value( DepartureDateTime ).toDateTime();
         if ( !departureDateTime.isValid() ) {
-            QDate date = timetableData.value( "departuredate" ).toDate();
+            QDate date = timetableData.value( DepartureDate ).toDate();
             QTime departureTime;
-            if ( timetableData.values().contains("departuretime") ) {
-                QVariant timeValue = timetableData.value("departuretime");
+            if ( timetableData.values().contains(DepartureTime) ) {
+                QVariant timeValue = timetableData[ DepartureTime ];
                 if ( timeValue.canConvert(QVariant::Time) ) {
                     departureTime = timeValue.toTime();
                 } else {
@@ -1848,15 +1927,15 @@ void TimetableMate::scriptRunParseJourneys() {
             }
 
             departureDateTime = QDateTime( date, departureTime );
-            timetableData.set( "departuredatetime", departureDateTime );
+            timetableData.insert( DepartureDateTime, departureDateTime );
         }
 
-        QDateTime arrivalDateTime = timetableData.value( "arrivaldatetime" ).toDateTime();
+        QDateTime arrivalDateTime = timetableData[ ArrivalDateTime ].toDateTime();
         if ( !departureDateTime.isValid() ) {
-            QDate date = timetableData.value( "arrivaldate" ).toDate();
+            QDate date = timetableData[ ArrivalDate ].toDate();
             QTime arrivalTime;
-            if ( timetableData.values().contains("arrivaltime") ) {
-                QVariant timeValue = timetableData.value("arrivaltime");
+            if ( timetableData.contains(ArrivalTime) ) {
+                QVariant timeValue = timetableData[ ArrivalTime ];
                 if ( timeValue.canConvert(QVariant::Time) ) {
                     arrivalTime = timeValue.toTime();
                 } else {
@@ -1874,15 +1953,16 @@ void TimetableMate::scriptRunParseJourneys() {
             if ( arrivalDateTime < departureDateTime ) {
                 arrivalDateTime = arrivalDateTime.addDays( 1 );
             }
-            timetableData.set( "arrivaldatetime", arrivalDateTime );
+            timetableData.insert( ArrivalDateTime, arrivalDateTime );
         }
 
         curDate = departureDateTime.date();
         lastTime = departureDateTime.time();
 
-        QVariantHash values = timetableData.values();
-        bool isValid = values.contains("startstopname") && values.contains("targetstopname")
-                && values.contains("departuredatetime") && values.contains("arrivaldatetime");
+        bool isValid = timetableData.contains(StartStopName) &&
+                       timetableData.contains(TargetStopName) &&
+                       timetableData.contains(DepartureDateTime) &&
+                       timetableData.contains(ArrivalDateTime);
         if ( isValid )
             ++count;
         else
@@ -1891,33 +1971,33 @@ void TimetableMate::scriptRunParseJourneys() {
 
     QStringList journeys;
     for ( int i = 0; i < data.count(); ++i ) {
-        QVariantHash values = data[i].values();
+        TimetableData values = data[i];
         QString journey;
         journey = QString("From \"%1\" (%3) to \"%2\" (%4)")
-                  .arg( values["startstopname"].toString(),
-                        values["targetstopname"].toString(),
-                        values["departuredatetime"].toDateTime().toString(),
-                        values["arrivaldatetime"].toDateTime().toString() );
-        if ( values.contains("changes") && !values["changes"].toString().isEmpty() ) {
-            journey += QString(",<br> changes: %1").arg( values["changes"].toString() );
+                  .arg( values[StartStopName].toString(),
+                        values[TargetStopName].toString(),
+                        values[DepartureDateTime].toDateTime().toString(),
+                        values[ArrivalDateTime].toDateTime().toString() );
+        if ( values.contains(Changes) && !values[Changes].toString().isEmpty() ) {
+            journey += QString(",<br> changes: %1").arg( values[Changes].toString() );
         }
-        if ( values.contains("typeofvehicle") && !values["typeofvehicle"].toString().isEmpty() ) {
-            journey += QString(",<br> %1").arg( values["typeofvehicle"].toString() );
+        if ( values.contains(TypeOfVehicle) && !values[TypeOfVehicle].toString().isEmpty() ) {
+            journey += QString(",<br> %1").arg( values[TypeOfVehicle].toString() );
         }
-        if ( values.contains("operator") && !values["operator"].toString().isEmpty() ) {
-            journey += QString(",<br> operator: %1").arg( values["operator"].toString() );
+        if ( values.contains(Operator) && !values[Operator].toString().isEmpty() ) {
+            journey += QString(",<br> operator: %1").arg( values[Operator].toString() );
         }
-        if ( values.contains("routestops") && !values["routestops"].toStringList().isEmpty() ) {
-            QStringList routeStops = values["routestops"].toStringList();
+        if ( values.contains(RouteStops) && !values[RouteStops].toStringList().isEmpty() ) {
+            QStringList routeStops = values[RouteStops].toStringList();
             journey += QString(",<br> %1 route stops: %2")
                        .arg( routeStops.count() ).arg( routeStops.join(", ") );
 
             // Check if RouteTimesDeparture has one element less than RouteStops
             // and if RouteTimesDepartureDelay has the same number of elements as RouteStops (if set)
-            if ( values.contains("routetimesdeparture")
-                    && !values["routetimesdeparture"].toStringList().isEmpty() )
+            if ( values.contains(RouteTimesDeparture)
+                    && !values[RouteTimesDeparture].toStringList().isEmpty() )
             {
-                QStringList routeTimesDeparture = values["routetimesdeparture"].toStringList();
+                QStringList routeTimesDeparture = values[RouteTimesDeparture].toStringList();
                 journey += QString(",<br> %1 route departure times: %2")
                            .arg( routeTimesDeparture.count() ).arg( routeTimesDeparture.join(", ") );
 
@@ -1927,11 +2007,11 @@ void TimetableMate::scriptRunParseJourneys() {
                                        "has no departure, only an arrival time</emphasis>");
                 }
 
-                if ( values.contains("routetimesdeparturedelay")
-                        && !values["routetimesdeparturedelay"].toStringList().isEmpty() )
+                if ( values.contains(RouteTimesDepartureDelay)
+                        && !values[RouteTimesDepartureDelay].toStringList().isEmpty() )
                 {
                     QStringList routeTimesDepartureDelay =
-                        values["routetimesdeparturedelay"].toStringList();
+                        values[RouteTimesDepartureDelay].toStringList();
                     journey += QString(",<br> %1 route departure delays: %2")
                                .arg( routeTimesDepartureDelay.count() ).arg( routeTimesDepartureDelay.join(", ") );
 
@@ -1944,10 +2024,10 @@ void TimetableMate::scriptRunParseJourneys() {
             }
 
             // Check if RoutePlatformsDeparture has one element less than RouteStops
-            if ( values.contains("routeplatformsdeparture")
-                    && !values["routeplatformsdeparture"].toStringList().isEmpty() )
+            if ( values.contains(RoutePlatformsDeparture)
+                    && !values[RoutePlatformsDeparture].toStringList().isEmpty() )
             {
-                QStringList routePlatformsArrival = values["routeplatformsdeparture"].toStringList();
+                QStringList routePlatformsArrival = values[RoutePlatformsDeparture].toStringList();
                 journey += QString(",<br> %1 route departure platforms: %2")
                            .arg( routePlatformsArrival.count() ).arg( routePlatformsArrival.join(", ") );
 
@@ -1960,10 +2040,10 @@ void TimetableMate::scriptRunParseJourneys() {
 
             // Check if RouteTimesArrival has one element less than RouteStops
             // and if RouteTimesArrivalDelay has the same number of elements as RouteStops (if set)
-            if ( values.contains("routetimesarrival")
-                    && !values["routetimesarrival"].toStringList().isEmpty() )
+            if ( values.contains(RouteTimesArrival)
+                    && !values[RouteTimesArrival].toStringList().isEmpty() )
             {
-                QStringList routeTimesArrival = values["routetimesarrival"].toStringList();
+                QStringList routeTimesArrival = values[RouteTimesArrival].toStringList();
                 journey += QString(",<br> %1 route arrival times: %2")
                            .arg( routeTimesArrival.count() ).arg( routeTimesArrival.join(", ") );
 
@@ -1973,11 +2053,11 @@ void TimetableMate::scriptRunParseJourneys() {
                                        "has no arrival, only a departure time</emphasis>");
                 }
 
-                if ( values.contains("routetimesarrivaldelay")
-                        && !values["routetimesarrivaldelay"].toStringList().isEmpty() )
+                if ( values.contains(RouteTimesArrivalDelay)
+                        && !values[RouteTimesArrivalDelay].toStringList().isEmpty() )
                 {
                     QStringList routeTimesArrivalDelay =
-                        values["routetimesarrivaldelay"].toStringList();
+                        values[RouteTimesArrivalDelay].toStringList();
                     journey += QString(",<br> %1 route arrival delays: %2")
                                .arg( routeTimesArrivalDelay.count() ).arg( routeTimesArrivalDelay.join(", ") );
 
@@ -1990,10 +2070,10 @@ void TimetableMate::scriptRunParseJourneys() {
             }
 
             // Check if RoutePlatformsArrival has one element less than RouteStops
-            if ( values.contains("routeplatformssarrival")
-                    && !values["routeplatformssarrival"].toStringList().isEmpty() )
+            if ( values.contains(RoutePlatformsArrival)
+                    && !values[RoutePlatformsArrival].toStringList().isEmpty() )
             {
-                QStringList routePlatformsArrival = values["routeplatformssarrival"].toStringList();
+                QStringList routePlatformsArrival = values[RoutePlatformsArrival].toStringList();
                 journey += QString(",<br> %1 route arrival platforms: %2")
                            .arg( routePlatformsArrival.count() ).arg( routePlatformsArrival.join(", ") );
 
@@ -2010,14 +2090,14 @@ void TimetableMate::scriptRunParseJourneys() {
     }
 
     QStringList unknownTimetableInformations;
-    QMultiHash<QString, QVariant> unknown = timetableData.unknownTimetableInformationStrings();
-    kDebug() << unknown;
-    for ( QMultiHash<QString, QVariant>::const_iterator it = unknown.constBegin();
-            it != unknown.constEnd(); ++it )
-    {
-        unknownTimetableInformations << "<item>" +
-        i18nc("@info", "'%1' with value '%2'", it.key(), it.value().toString()) + "</item>";
-    }
+//     QMultiHash<QString, QVariant> unknown = timetableData.unknownTimetableInformationStrings();
+//     kDebug() << unknown;
+//     for ( QMultiHash<QString, QVariant>::const_iterator it = unknown.constBegin();
+//             it != unknown.constEnd(); ++it )
+//     {
+//         unknownTimetableInformations << "<item>" +
+//         i18nc("@info", "'%1' with value '%2'", it.key(), it.value().toString()) + "</item>";
+//     }
 
     // Show results
     QString resultItems = i18nc("@info", "Got %1 journeys.", data.count());
@@ -2030,14 +2110,13 @@ void TimetableMate::scriptRunParseJourneys() {
                         journeys.join(QString()));
 
     // Add debug messages
-	if ( debugMessages.isEmpty() ) {
+	if ( m_scriptErrors.isEmpty() ) {
 		resultText += i18nc("@info", "<para>No messages from the script (helper.error)</para>");
 	} else {
 		QString debugMessagesString;
-		foreach ( const DebugMessage &debugMessage, debugMessages ) {
-			QString message = debugMessage.message;
+		foreach ( const QString &message, m_scriptErrors ) {
 			debugMessagesString.append( QString("<item>%1</item>")
-					.arg(message.replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
+					.arg(QString(message).replace('<', "&lt;").replace('>', "&gt;")) ); //.arg(debugMessage.context.left(200)) );
 		}
 		resultText += i18nc("@info", "<para>Messages from the script (helper.error):<list>%1</list></para>",
 							debugMessagesString);
@@ -2053,168 +2132,349 @@ void TimetableMate::scriptRunParseJourneys() {
     KMessageBox::information( this, resultText, i18nc("@title:window", "Result") );
 }
 
-bool TimetableMate::hasHomePageURL( const TimetableAccessor &accessor ) {
-    if ( accessor.url.isEmpty() ) {
+bool TimetableMate::hasHomePageURL( const TimetableAccessorInfo *info ) {
+    if ( info->url().isEmpty() ) {
         KMessageBox::information( this, i18nc("@info",
-                                              "The <interface>Home Page URL</interface> is empty.<nl/>"
-                                              "Please set it in the <interface>Accessor</interface> tab first.") );
+                "The <interface>Home Page URL</interface> is empty.<nl/>"
+                "Please set it in the <interface>Accessor</interface> tab first.") );
         return false;
     } else
         return true;
 }
 
-bool TimetableMate::hasRawDepartureURL( const TimetableAccessor &accessor ) {
-    if ( accessor.rawDepartureUrl.isEmpty() ) {
-        KMessageBox::information( this, i18nc("@info",
-                                              "The <interface>Raw Departure URL</interface> is empty.<nl/>"
-                                              "Please set it in the <interface>Accessor</interface> tab first.") );
+bool TimetableMate::loadScript( QScriptProgram *script, const TimetableAccessorInfo *info )
+{
+    // Create script engine
+    kDebug() << "Create QScriptEngine";
+    m_engine = new QScriptEngine( this );
+//     m_scriptStorage->mutex.lock();
+//     kDebug() << "LOAD qt.core" << thread() << m_parseMode;
+//     m_engine->importExtension("qt.core");
+
+//     TODO Load script
+//     foreach ( const QString &extension, m_scriptExtensions ) {
+//         if ( !importExtension(m_engine, extension) ) {
+//             m_lastError = i18nc("@info/plain", "Could not load script extension "
+//                                 "<resource>%1</resource>.", extension);
+//             m_lastScriptError = ScriptLoadFailed;
+//             m_engine->deleteLater();
+//             m_engine = 0;
+//             return false;
+//         }
+//     }
+
+    m_engine->globalObject().setProperty( "accessor", m_engine->newQObject(parent()) );
+
+    // Add "importExtension()" function to import extensions
+    // Importing Kross not from the GUI thread causes some warnings about pixmaps being used
+    // outside the GUI thread...
+//     m_engine->globalObject().setProperty( "importExtension",
+//                                           m_engine->newFunction(importExtension, 1) );
+
+    // Process events every 100ms
+//     m_engine->setProcessEventsInterval( 100 );
+
+    // Register NetworkRequest class for use in the script
+    qScriptRegisterMetaType< NetworkRequestPtr >( m_engine,
+            networkRequestToScript, networkRequestFromScript );
+
+    // Create objects for the script
+    m_scriptHelper = new Helper( info->serviceProvider(), m_engine );
+    m_scriptNetwork = new Network( info->fallbackCharset(), this );
+    m_scriptResult = new ResultObject( this );
+    m_scriptStorage = new Storage( info->serviceProvider(), this );
+    connect( m_scriptResult, SIGNAL(publish()), this, SLOT(publish()) );
+    connect( m_scriptHelper, SIGNAL(errorReceived(QString,QString)),
+             this, SLOT(scriptErrorReceived(QString,QString)) );
+
+    // Make the objects available to the script
+    m_engine->globalObject().setProperty( "helper", m_engine->newQObject(m_scriptHelper) );
+    m_engine->globalObject().setProperty( "network", m_engine->newQObject(m_scriptNetwork) );
+    m_engine->globalObject().setProperty( "storage", m_engine->newQObject(m_scriptStorage) );
+    m_engine->globalObject().setProperty( "result", m_engine->newQObject(m_scriptResult) );
+    m_engine->globalObject().setProperty( "enum",
+            m_engine->newQMetaObject(&ResultObject::staticMetaObject) );
+
+    // Load the script program
+    m_engine->evaluate( *script );
+    if ( m_engine->hasUncaughtException() ) {
+        kDebug() << "Error in the script" << m_engine->uncaughtExceptionLineNumber()
+                 << m_engine->uncaughtException().toString();
+        kDebug() << "Backtrace:" << m_engine->uncaughtExceptionBacktrace().join("\n");
+        m_lastError = i18nc("@info/plain", "Error in the script: "
+                "<message>%1</message>.", m_engine->uncaughtException().toString());
+        m_engine->deleteLater();
+        m_engine = 0;
+        m_scriptNetwork->clear();
+//         m_scriptNetwork->deleteLater();
+//         m_scriptNetwork = 0;
+//         m_scriptResult->deleteLater();
+//         m_scriptResult = 0;
+        m_lastScriptError = ScriptLoadFailed;
         return false;
-    } else
+    } else {
+        m_lastScriptError = NoScriptError;
         return true;
+    }
 }
 
-bool TimetableMate::hasRawStopSuggestionURL( const TimetableAccessor &accessor ) {
-    if ( accessor.rawStopSuggestionsUrl.isEmpty() ) {
-        KMessageBox::information( this, i18nc("@info",
-                                              "The <interface>Raw StopSuggestions URL</interface> is empty.<nl/>"
-                                              "Please set it in the <interface>Accessor</interface> tab first.") );
-        return false;
-    } else
-        return true;
+void TimetableMate::scriptErrorReceived( const QString &message, const QString &failedParseText )
+{
+    m_scriptErrors << message;
 }
 
-bool TimetableMate::hasRawJourneyURL( const TimetableAccessor &accessor ) {
-    if ( accessor.rawJourneyUrl.isEmpty() ) {
-        KMessageBox::information( this, i18nc("@info",
-                                              "The <interface>Raw Journey URL</interface> is empty.<nl/>"
-                                              "Please set it in the <interface>Accessor</interface> tab first.") );
-        return false;
-    } else
-        return true;
-}
-
-bool TimetableMate::scriptRun( const QString &functionToRun, TimetableData *timetableData,
-                               ResultObject *resultObject, QVariant *result,
-			       DebugMessageList *debugMessageList ) {
+bool TimetableMate::scriptRun( const QString &functionToRun, const RequestInfo *requestInfo,
+                               const TimetableAccessorInfo *info,
+                               ResultObject *resultObject, QVariant *result ) {
     // Create the Kross::Action instance
-    Kross::Action script( this, "TimetableParser" );
+//     Kross::Action script( this, "TimetableParser" );
 
-    // Add global script objects
-    if ( functionToRun == "parseTimetable" ) {
-        timetableData->setMode( "departures" );
-    } else if ( functionToRun == "parsePossibleStops" ) {
-        timetableData->setMode( "stopsuggestions" );
-    } else if ( functionToRun == "parseJourneys" ) {
-        timetableData->setMode( "journeys" );
-    } else  {
-        kDebug() << "Unknown function to run:" << functionToRun;
+//     // Add global script objects
+//     if ( functionToRun == SCRIPT_FUNCTION_GETTIMETABLE ) {
+//         timetableData->setMode( "departures" );
+//     } else if ( functionToRun == SCRIPT_FUNCTION_GETSTOPSUGGESTIONS ) {
+//         timetableData->setMode( "stopsuggestions" );
+//     } else if ( functionToRun == SCRIPT_FUNCTION_GETJOURNEYS ) {
+//         timetableData->setMode( "journeys" );
+//     } else  {
+//         kDebug() << "Unknown function to run:" << functionToRun;
+//     }
+
+//     // NOTE Update documentation in scripting.h if the names change here,
+//     // eg. update the name in the documentation of the Helper class if the name "helper" changes.
+//     Helper *helper = new Helper(&script);
+//     script.addQObject( helper, "helper" );
+//     script.addQObject( resultObject, "result" );
+//
+//     // Set script code and type
+//     const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
+//     if ( info->scriptFileName().endsWith(QLatin1String(".py")) ) {
+//         script.setInterpreter( "python" );
+//     } else if ( info->scriptFileName().endsWith(QLatin1String(".rb")) ) {
+//         script.setInterpreter( "ruby" );
+//     } else if ( info->scriptFileName().endsWith(QLatin1String(".js")) ) {
+//         script.setInterpreter( "javascript" );
+//     } else {
+//         const QString scriptType = KInputDialog::getItem(
+// 				i18nc("@title:window", "Choose Script Type"),
+// 				i18nc("@info", "Script type unknown, please choose one of these:"),
+// 				QStringList() << "JavaScript" << "Ruby" << "Python", 0, false, 0, this );
+//         script.setInterpreter( scriptType.toLower() );
+//     }
+//     script.setCode( m_scriptDocument->text().toUtf8() );
+//
+//     // Run the script
+//     script.trigger();
+//     if ( script.hadError() ) {
+//         if ( script.errorLineNo() != -1 ) {
+//             // Go to error line
+//             m_scriptDocument->activeView()->setCursorPosition(
+//                 KTextEditor::Cursor(script.errorLineNo(), 0) );
+//         }
+//         KMessageBox::information( this, i18nc("@info",
+//                 "Error in script:<nl/><message>%1</message>", script.errorMessage()) );
+//         return false;
+//     }
+//
+//     // Check if the function is implemented by the script
+//     if ( !script.functionNames().contains(functionToRun) ) {
+//         KMessageBox::information( this, i18nc("@info/plain",
+//                 "The script does not implement <emphasis>%1</emphasis>.", functionToRun) );
+//         return false;
+//     }
+//
+//     // Call script using Kross
+//     *result = script.callFunction( functionToRun, QVariantList() << doc );
+//
+//     if ( script.hadError() || script.isFinalized() ) {
+//         if ( script.errorLineNo() != -1 ) {
+//             // Go to error line
+//             m_scriptDocument->activeView()->setCursorPosition(
+//                 KTextEditor::Cursor(script.errorLineNo(), 0) );
+//         }
+//
+//         KMessageBox::information( this, i18nc("@info",
+// 				"An error occurred in the script:<nl/><message>%1</message>", script.errorMessage()) );
+//         return false;
+//     }
+//
+//     if ( debugMessageList ) {
+// 		debugMessageList->append( helper->debugMessages );
+//     }
+// NEW ***********************************************************************
+    if ( !lazyLoadScript(info) || !loadScript(m_script, info) ) {
+        kDebug() << "Script could not be loaded correctly";
+        return false;
+    }
+    kDebug() << "Run script job";
+    kDebug() << "JOB:" << requestInfo->stop << requestInfo->dateTime << m_scriptNetwork;
+//     emit begin( m_sourceName );
+
+    // Store start time of the script
+    QTime time;
+    time.start();
+
+    // Add call to the appropriate function
+    QString functionName;
+    QScriptValueList arguments;
+    switch ( requestInfo->parseMode ) {
+    case ParseForDeparturesArrivals:
+        functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
+        arguments << requestInfo->stop << m_engine->newDate(requestInfo->dateTime)
+                  << requestInfo->maxCount << requestInfo->dataType << requestInfo->city;
+        break;
+    case ParseForJourneys:
+        functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS;
+        arguments << requestInfo->stop
+                  << dynamic_cast<const JourneyRequestInfo*>(requestInfo)->targetStop
+                  << m_engine->newDate(requestInfo->dateTime)
+                  << requestInfo->maxCount << requestInfo->dataType << requestInfo->city;
+        break;
+    case ParseForStopSuggestions:
+        functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
+        arguments << requestInfo->stop << requestInfo->maxCount << requestInfo->city;
+        break;
+
+    default:
+        kDebug() << "Parse mode unsupported:" << requestInfo->parseMode;
+        // TODO
+        break;
     }
 
-    // NOTE Update documentation in scripting.h if the names change here,
-    // eg. update the name in the documentation of the Helper class if the name "helper" changes.
-    Helper *helper = new Helper(&script);
-    script.addQObject( helper, "helper" );
-    script.addQObject( timetableData, "timetableData" );
-    script.addQObject( resultObject, "result" );
-
-    // Set script code and type
-    TimetableAccessor accessor = m_view->accessorInfo();
-    if ( accessor.scriptFile.endsWith(QLatin1String(".py")) ) {
-        script.setInterpreter( "python" );
-    } else if ( accessor.scriptFile.endsWith(QLatin1String(".rb")) ) {
-        script.setInterpreter( "ruby" );
-    } else if ( accessor.scriptFile.endsWith(QLatin1String(".js")) ) {
-        script.setInterpreter( "javascript" );
+    if ( functionName.isEmpty() ) {
+        // This should never happen, therefore no i18n
+        m_lastError = "Unknown parse mode";
+        m_lastScriptError = ScriptRunError;
     } else {
-        const QString scriptType = KInputDialog::getItem(
-				i18nc("@title:window", "Choose Script Type"),
-				i18nc("@info", "Script type unknown, please choose one of these:"),
-				QStringList() << "JavaScript" << "Ruby" << "Python", 0, false, 0, this );
-        script.setInterpreter( scriptType.toLower() );
-    }
-    script.setCode( m_scriptDocument->text().toUtf8() );
-
-    // Run the script
-    script.trigger();
-    if ( script.hadError() ) {
-        if ( script.errorLineNo() != -1 ) {
-            // Go to error line
-            m_scriptDocument->activeView()->setCursorPosition(
-                KTextEditor::Cursor(script.errorLineNo(), 0) );
-        }
-        KMessageBox::information( this, i18nc("@info",
-				"Error in script:<nl/><message>%1</message>", script.errorMessage()) );
-        return false;
-    }
-
-    // Check if the function is implemented by the script
-    if ( !script.functionNames().contains(functionToRun) ) {
-        KMessageBox::information( this, i18nc("@info/plain",
-				"The script does not implement <emphasis>%1</emphasis>.", functionToRun) );
-        return false;
-    }
-
-    // Get the HTML document
-    KUrl url;
-    if ( functionToRun == "parseTimetable" ) {
-        if ( !hasRawDepartureURL(accessor) ) {
+        kDebug() << "Call script function" << m_scriptNetwork;
+        if ( !m_scriptNetwork ) {
+            kDebug() << "Deleted ------------------------------------------------";
+            m_engine->deleteLater();
+            m_engine = 0;
+            m_scriptNetwork->clear();
+//             m_scriptResult.clear();
+            m_lastScriptError = ScriptRunError;
             return false;
         }
-        url = getDepartureUrl();
-    } else if ( functionToRun == "parsePossibleStops" ) {
-        if ( !hasRawStopSuggestionURL(accessor) ) {
+
+        // Call script function
+        m_scriptErrors.clear();
+        QScriptValue function = m_engine->globalObject().property( functionName );
+        QScriptValue result = function.call( QScriptValue(), arguments );
+        if ( m_engine->hasUncaughtException() ) {
+            kDebug() << "Error in the script when calling function" << functionName
+                        << m_engine->uncaughtExceptionLineNumber()
+                        << m_engine->uncaughtException().toString();
+            kDebug() << "Backtrace:" << m_engine->uncaughtExceptionBacktrace().join("\n");
+            m_lastError = i18nc("@info/plain", "Error in the script when calling function '%1': "
+                    "<message>%2</message>.", functionName, m_engine->uncaughtException().toString());
+            m_engine->deleteLater();
+            m_engine = 0;
+            m_scriptNetwork->clear();
+//             m_scriptResult.clear();
+//             m_scriptNetwork->deleteLater();
+//             m_scriptNetwork = 0;
+//             m_scriptResult->deleteLater();
+//             m_scriptResult = 0;
+            m_lastScriptError = ScriptRunError;
             return false;
         }
-        url = getStopSuggestionUrl();
-    } else if ( functionToRun == "parseJourneys" ) {
-        if ( !hasRawJourneyURL(accessor) ) {
+        m_lastScriptError = NoScriptError;
+
+        GlobalTimetableInfo globalInfo;
+        globalInfo.requestDate = QDate::currentDate();
+        globalInfo.delayInfoAvailable =
+                !m_scriptResult->isHintGiven( ResultObject::NoDelaysForStop );
+//         if ( result.isValid() && result.isArray() ) {
+//             QStringList results = m_engine->fromScriptValue<QStringList>( result );
+//             if ( results.contains(QLatin1String("no delays"), Qt::CaseInsensitive) ) {
+//                 // No delay information available for the given stop
+//                 globalInfo.delayInfoAvailable = false;
+//             }
+//             if ( results.contains(QLatin1String("dates need adjustment"), Qt::CaseInsensitive) ) {
+//                 globalInfo.datesNeedAdjustment = true;
+//             } TODO REMOVE TODO REMOVE TODO REMOVE TODO REMOVE TODO REMOVE TODO REMOVE TODO
+//         }
+
+        while ( m_scriptNetwork->hasRunningRequests() || m_engine->isEvaluating() ) {
+            // Wait for running requests to finish
+            // TODO: Blocking the GUI?x
+            QEventLoop eventLoop;
+            ScriptAgent agent( m_engine );
+            QTimer::singleShot( 30000, &eventLoop, SLOT(quit()) );
+            connect( this, SIGNAL(destroyed(QObject*)), &eventLoop, SLOT(quit()) );
+            connect( &agent, SIGNAL(scriptFinished()), &eventLoop, SLOT(quit()) );
+            connect( m_scriptNetwork, SIGNAL(requestFinished()), &eventLoop, SLOT(quit()) );
+
+            kDebug() << "Waiting for script to finish..." << thread();
+            eventLoop.exec();
+        }
+
+        // Inform about script run time
+        kDebug() << " > Script finished after" << (time.elapsed() / 1000.0)
+                    << "seconds: " << /*m_scriptFileName <<*/ requestInfo->parseMode;
+
+        // If data for the current job has already been published, do not emit
+        // completed with an empty resultset
+//         if ( m_published == 0 || m_scriptResult->count() > m_published ) {
+//             const bool couldNeedForcedUpdate = m_published > 0;
+//             emitReady(
+            switch ( requestInfo->parseMode ) {
+            case ParseForDeparturesArrivals:
+                emit departuresReady( m_scriptResult->data(),//.mid(m_published),
+                        m_scriptResult->features(), m_scriptResult->hints(),
+                        m_scriptNetwork->lastUrl(), globalInfo,
+                        *dynamic_cast<const DepartureRequestInfo*>(requestInfo) );//,
+//                         couldNeedForcedUpdate );
+                break;
+            case ParseForJourneys:
+                emit journeysReady( m_scriptResult->data(),//.mid(m_published),
+                        m_scriptResult->features(), m_scriptResult->hints(),
+                        m_scriptNetwork->lastUrl(), globalInfo,
+                        *dynamic_cast<const JourneyRequestInfo*>(requestInfo) );//,
+//                         couldNeedForcedUpdate );
+                break;
+            case ParseForStopSuggestions:
+                emit stopSuggestionsReady( m_scriptResult->data(),//.mid(m_published),
+                        m_scriptResult->features(), m_scriptResult->hints(),
+                        m_scriptNetwork->lastUrl(), globalInfo,
+                        *dynamic_cast<const StopSuggestionRequestInfo*>(requestInfo) );//,
+//                         couldNeedForcedUpdate );
+                break;
+
+            default:
+                kDebug() << "Parse mode unsupported:" << requestInfo->parseMode;
+                // TODO
+                break;
+            }
+//             emit dataReady( m_scriptResult->data().mid(m_published),
+//                             m_scriptResult->features(), m_scriptResult->hints(),
+//                             m_scriptNetwork->lastUrl(), globalInfo,
+//                             requestInfo, couldNeedForcedUpdate );
+//         }
+//         emit end( m_sourceName );
+
+        // Cleanup
+        m_scriptResult->clear();
+        m_scriptStorage->checkLifetime();
+
+        if ( m_engine->hasUncaughtException() ) {
+            kDebug() << "Error in the script when calling function" << functionName
+                        << m_engine->uncaughtExceptionLineNumber()
+                        << m_engine->uncaughtException().toString();
+            kDebug() << "Backtrace:" << m_engine->uncaughtExceptionBacktrace().join("\n");
+            m_lastError = i18nc("@info/plain", "Error in the script when calling function '%1': "
+                    "<message>%2</message>.", functionName, m_engine->uncaughtException().toString());
+            m_engine->deleteLater();
+            m_engine = 0;
+            m_scriptNetwork->clear();
+//             m_scriptNetwork->deleteLater();
+//             m_scriptNetwork = 0;
+//             m_scriptResult->deleteLater();
+//             m_scriptResult = 0;
+            m_lastScriptError = ScriptRunError;
             return false;
         }
-        url = getJourneyUrl();
-    } else {
-        kDebug() << "Unknown function to run:" << functionToRun; // Shouldn't happen
-    }
-    if ( !url.isValid() ) {
-        return false; // The url placeholder dialog was cancelled
-    }
-
-    QString tempFileName;
-    if ( !KIO::NetAccess::download(url, tempFileName,  this) ) {
-        KMessageBox::information( this, i18nc("@info/plain",
-				"Could not download from URL <emphasis>%1</emphasis>.", url.prettyUrl()) );
-        return false;
-    }
-
-    QFile file( tempFileName );
-    if ( !file.open(QIODevice::ReadOnly) ) {
-        kDebug() << "Temporary file couldn't be opened" << tempFileName;
-        return false;
-    }
-    QString doc = decodeHtml( file.readAll() );
-    file.close();
-
-    int pos = doc.indexOf( "<body>", 0, Qt::CaseInsensitive );
-    if ( pos != -1 ) {
-        doc = doc.mid( pos );
-    }
-
-    // Call script using Kross
-    *result = script.callFunction( functionToRun, QVariantList() << doc );
-
-    if ( script.hadError() || script.isFinalized() ) {
-        if ( script.errorLineNo() != -1 ) {
-            // Go to error line
-            m_scriptDocument->activeView()->setCursorPosition(
-                KTextEditor::Cursor(script.errorLineNo(), 0) );
-        }
-
-        KMessageBox::information( this, i18nc("@info",
-				"An error occurred in the script:<nl/><message>%1</message>", script.errorMessage()) );
-        return false;
-    }
-
-    if ( debugMessageList ) {
-		debugMessageList->append( helper->debugMessages );
     }
 
     return true;
@@ -2266,7 +2526,7 @@ QString TimetableMate::toPercentEncoding( const QString &str, const QByteArray &
 }
 
 KUrl TimetableMate::getDepartureUrl() {
-    TimetableAccessor accessor = m_view->accessorInfo();
+    TimetableAccessor *accessor = m_view->accessorInfo();
 
     QPointer<KDialog> dialog = new KDialog( this );
     QWidget *w = new QWidget( dialog );
@@ -2277,7 +2537,7 @@ KUrl TimetableMate::getDepartureUrl() {
     KDateTimeWidget *dateTime = new KDateTimeWidget( QDateTime::currentDateTime(), w );
     dataType->addItem( i18nc("@info/plain", "Departures"), "departures" );
     dataType->addItem( i18nc("@info/plain", "Arrivals"), "arrivals" );
-    if ( accessor.useCityValue ) {
+    if ( accessor->info()->useSeparateCityValue() ) {
         city = new KLineEdit( w );
         l->addRow( i18nc("@info", "City:"), city );
     }
@@ -2289,8 +2549,8 @@ KUrl TimetableMate::getDepartureUrl() {
 
     KUrl url;
     if ( dialog->exec() == KDialog::Accepted ) {
-        url = getDepartureUrl( accessor, city ? city->text() : QString(), stop->text(),
-                               dateTime->dateTime(), dataType->itemData(dataType->currentIndex()).toString() );
+        url = getDepartureUrl(/* accessor, city ? city->text() : QString(), stop->text(),
+                               dateTime->dateTime(), dataType->itemData(dataType->currentIndex()).toString()*/ );
     }
     delete dialog;
 
@@ -2298,14 +2558,14 @@ KUrl TimetableMate::getDepartureUrl() {
 }
 
 KUrl TimetableMate::getStopSuggestionUrl() {
-    TimetableAccessor accessor = m_view->accessorInfo();
+    TimetableAccessor *accessor = m_view->accessorInfo();
 
     QPointer<KDialog> dialog = new KDialog( this );
     QWidget *w = new QWidget( dialog );
     QFormLayout *l = new QFormLayout( w );
     KLineEdit *city = NULL;
     KLineEdit *stop = new KLineEdit( w );
-    if ( accessor.useCityValue ) {
+    if ( accessor->info()->useSeparateCityValue() ) {
         city = new KLineEdit( w );
         l->addRow( i18nc("@info", "City:"), city );
     }
@@ -2315,7 +2575,7 @@ KUrl TimetableMate::getStopSuggestionUrl() {
 
     KUrl url;
     if ( dialog->exec() == KDialog::Accepted ) {
-        url = getStopSuggestionUrl( accessor, city ? city->text() : QString(), stop->text() );
+        url = getStopSuggestionUrl( /*accessor, city ? city->text() : QString(), stop->text()*/ );
     }
     delete dialog;
 
@@ -2323,7 +2583,7 @@ KUrl TimetableMate::getStopSuggestionUrl() {
 }
 
 KUrl TimetableMate::getJourneyUrl() {
-    TimetableAccessor accessor = m_view->accessorInfo();
+    TimetableAccessor *accessor = m_view->accessorInfo();
 
     QPointer<KDialog> dialog = new KDialog( this );
     QWidget *w = new QWidget( dialog );
@@ -2335,7 +2595,7 @@ KUrl TimetableMate::getJourneyUrl() {
     KDateTimeWidget *dateTime = new KDateTimeWidget( QDateTime::currentDateTime(), w );
     dataType->addItem( i18nc("@info/plain", "Departing at Given Time"), "dep" );
     dataType->addItem( i18nc("@info/plain", "Arriving at Given Time"), "arr" );
-    if ( accessor.useCityValue ) {
+    if ( accessor->info()->useSeparateCityValue() ) {
         city = new KLineEdit( w );
         l->addRow( i18nc("@info", "City:"), city );
     }
@@ -2348,9 +2608,9 @@ KUrl TimetableMate::getJourneyUrl() {
 
     KUrl url;
     if ( dialog->exec() == KDialog::Accepted ) {
-        url = getJourneyUrl( accessor, city ? city->text() : QString(),
+        url = getJourneyUrl( /*accessor, city ? city->text() : QString(),
                              startStop->text(), targetStop->text(), dateTime->dateTime(),
-                             dataType->itemData(dataType->currentIndex()).toString() );
+                             dataType->itemData(dataType->currentIndex()).toString()*/ );
     }
     delete dialog;
 
@@ -2360,47 +2620,49 @@ KUrl TimetableMate::getJourneyUrl() {
 KUrl TimetableMate::getDepartureUrl( const TimetableAccessor &accessor, const QString& city,
                                      const QString& stop, const QDateTime& dateTime,
                                      const QString& dataType, bool useDifferentUrl ) const {
-    int maxCount = 20;
-    QString sRawUrl = useDifferentUrl ? accessor.rawStopSuggestionsUrl : accessor.rawDepartureUrl;
-    QString sTime = dateTime.time().toString("hh:mm");
-    QString sDataType;
-    QString sCity = city.toLower(), sStop = stop.toLower();
-    if ( dataType == "arrivals" ) {
-        sDataType = "arr";
-    } else if ( dataType == "departures" ) {
-        sDataType = "dep";
-    }
-
-//     sCity = accessor.mapCityNameToValue( sCity ); // TODO
-
-    // Encode city and stop
-    if ( accessor.charsetForUrlEncoding.isEmpty() ) {
-        sCity = QString::fromAscii(KUrl::toPercentEncoding(sCity));
-        sStop = QString::fromAscii(KUrl::toPercentEncoding(sStop));
-    } else {
-        sCity = toPercentEncoding( sCity, accessor.charsetForUrlEncoding.toUtf8() );
-        sStop = toPercentEncoding( sStop, accessor.charsetForUrlEncoding.toUtf8() );
-    }
-
-    // Construct the url from the "raw" url by replacing values
-    if ( accessor.useCityValue )
-        sRawUrl = sRawUrl.replace( "{city}", sCity );
-    sRawUrl = sRawUrl.replace( "{time}", sTime )
-              .replace( "{maxCount}", QString("%1").arg(maxCount) )
-              .replace( "{stop}", sStop )
-              .replace( "{dataType}", sDataType );
-
-    QRegExp rx = QRegExp("\\{date:([^\\}]*)\\}", Qt::CaseInsensitive);
-    if ( rx.indexIn(sRawUrl) != -1 ) {
-        sRawUrl.replace( rx, dateTime.date().toString(rx.cap(1)) );
-    }
-
-    return KUrl( sRawUrl );
+    return KUrl(); // TODO
+//     int maxCount = 20;
+// //     QString sRawUrl = useDifferentUrl ? accessor.rawStopSuggestionsUrl : accessor.rawDepartureUrl;
+//     QString sTime = dateTime.time().toString("hh:mm");
+//     QString sDataType;
+//     QString sCity = city.toLower(), sStop = stop.toLower();
+//     if ( dataType == "arrivals" ) {
+//         sDataType = "arr";
+//     } else if ( dataType == "departures" ) {
+//         sDataType = "dep";
+//     }
+//
+// //     sCity = accessor.mapCityNameToValue( sCity ); // TODO
+//
+//     // Encode city and stop
+//     if ( accessor.charsetForUrlEncoding.isEmpty() ) {
+//         sCity = QString::fromAscii(KUrl::toPercentEncoding(sCity));
+//         sStop = QString::fromAscii(KUrl::toPercentEncoding(sStop));
+//     } else {
+//         sCity = toPercentEncoding( sCity, accessor.charsetForUrlEncoding.toUtf8() );
+//         sStop = toPercentEncoding( sStop, accessor.charsetForUrlEncoding.toUtf8() );
+//     }
+//
+//     // Construct the url from the "raw" url by replacing values
+//     if ( accessor.useCityValue )
+//         sRawUrl = sRawUrl.replace( "{city}", sCity );
+//     sRawUrl = sRawUrl.replace( "{time}", sTime )
+//               .replace( "{maxCount}", QString("%1").arg(maxCount) )
+//               .replace( "{stop}", sStop )
+//               .replace( "{dataType}", sDataType );
+//
+//     QRegExp rx = QRegExp("\\{date:([^\\}]*)\\}", Qt::CaseInsensitive);
+//     if ( rx.indexIn(sRawUrl) != -1 ) {
+//         sRawUrl.replace( rx, dateTime.date().toString(rx.cap(1)) );
+//     }
+//
+//     return KUrl( sRawUrl );
 }
 
 KUrl TimetableMate::getStopSuggestionUrl( const TimetableAccessor &accessor,
         const QString &city, const QString& stop ) {
-    QString sRawUrl = accessor.rawStopSuggestionsUrl;
+    return KUrl(); // TODO
+/*    QString sRawUrl = accessor.rawStopSuggestionsUrl;
     QString sCity = city.toLower(), sStop = stop.toLower();
 
     // Encode stop
@@ -2417,62 +2679,63 @@ KUrl TimetableMate::getStopSuggestionUrl( const TimetableAccessor &accessor,
     }
     sRawUrl = sRawUrl.replace( "{stop}", sStop );
 
-    return KUrl( sRawUrl );
+    return KUrl( sRawUrl )*/;
 }
 
 KUrl TimetableMate::getJourneyUrl( const TimetableAccessor &accessor, const QString& city,
                                    const QString& startStopName, const QString& targetStopName,
                                    const QDateTime &dateTime, const QString& dataType ) const {
-    int maxCount = 20;
-    QString sRawUrl = accessor.rawJourneyUrl;
-    QString sTime = dateTime.time().toString("hh:mm");
-    QString sDataType;
-    QString sCity = city.toLower(), sStartStopName = startStopName.toLower(),
-                    sTargetStopName = targetStopName.toLower();
-    if ( dataType == "arrivals" || dataType == "journeysArr" )
-        sDataType = "arr";
-    else if ( dataType == "departures" || dataType == "journeysDep" )
-        sDataType = "dep";
-
-//     sCity = accessor.mapCityNameToValue(sCity); TODO
-
-    // Encode city and stop
-    if ( accessor.charsetForUrlEncoding.isEmpty() ) {
-        sCity = QString::fromAscii(KUrl::toPercentEncoding(sCity));
-        sStartStopName = QString::fromAscii( KUrl::toPercentEncoding(sStartStopName) );
-        sTargetStopName = QString::fromAscii( KUrl::toPercentEncoding(sTargetStopName) );
-    } else {
-        sCity = toPercentEncoding( sCity, accessor.charsetForUrlEncoding.toUtf8() );
-        sStartStopName = toPercentEncoding( sStartStopName, accessor.charsetForUrlEncoding.toUtf8() );
-        sTargetStopName = toPercentEncoding( sTargetStopName, accessor.charsetForUrlEncoding.toUtf8() );
-    }
-
-    // Construct the url from the "raw" url by replacing values
-    if ( accessor.useCityValue ) {
-        sRawUrl = sRawUrl.replace( "{city}", sCity );
-    }
-    sRawUrl = sRawUrl.replace( "{time}", sTime )
-              .replace( "{maxCount}", QString("%1").arg(maxCount) )
-              .replace( "{startStop}", sStartStopName )
-              .replace( "{targetStop}", sTargetStopName )
-              .replace( "{dataType}", sDataType );
-
-    // Fill in date with the given format
-    QRegExp rx = QRegExp( "\\{date:([^\\}]*)\\}", Qt::CaseInsensitive );
-    if ( rx.indexIn(sRawUrl) != -1 ) {
-        sRawUrl.replace( rx, dateTime.date().toString(rx.cap(1)) );
-    }
-
-    rx = QRegExp( "\\{dep=([^\\|]*)\\|arr=([^\\}]*)\\}", Qt::CaseInsensitive );
-    if ( rx.indexIn(sRawUrl) != -1 ) {
-        if ( sDataType == "arr" ) {
-            sRawUrl.replace( rx, rx.cap(2) );
-        } else {
-            sRawUrl.replace( rx, rx.cap(1) );
-        }
-    }
-
-    return KUrl( sRawUrl );
+    return KUrl(); // TODO
+//     int maxCount = 20;
+//     QString sRawUrl = accessor.rawJourneyUrl;
+//     QString sTime = dateTime.time().toString("hh:mm");
+//     QString sDataType;
+//     QString sCity = city.toLower(), sStartStopName = startStopName.toLower(),
+//                     sTargetStopName = targetStopName.toLower();
+//     if ( dataType == "arrivals" || dataType == "journeysArr" )
+//         sDataType = "arr";
+//     else if ( dataType == "departures" || dataType == "journeysDep" )
+//         sDataType = "dep";
+//
+// //     sCity = accessor.mapCityNameToValue(sCity); TODO
+//
+//     // Encode city and stop
+//     if ( accessor.charsetForUrlEncoding.isEmpty() ) {
+//         sCity = QString::fromAscii(KUrl::toPercentEncoding(sCity));
+//         sStartStopName = QString::fromAscii( KUrl::toPercentEncoding(sStartStopName) );
+//         sTargetStopName = QString::fromAscii( KUrl::toPercentEncoding(sTargetStopName) );
+//     } else {
+//         sCity = toPercentEncoding( sCity, accessor.charsetForUrlEncoding.toUtf8() );
+//         sStartStopName = toPercentEncoding( sStartStopName, accessor.charsetForUrlEncoding.toUtf8() );
+//         sTargetStopName = toPercentEncoding( sTargetStopName, accessor.charsetForUrlEncoding.toUtf8() );
+//     }
+//
+//     // Construct the url from the "raw" url by replacing values
+//     if ( accessor.useCityValue ) {
+//         sRawUrl = sRawUrl.replace( "{city}", sCity );
+//     }
+//     sRawUrl = sRawUrl.replace( "{time}", sTime )
+//               .replace( "{maxCount}", QString("%1").arg(maxCount) )
+//               .replace( "{startStop}", sStartStopName )
+//               .replace( "{targetStop}", sTargetStopName )
+//               .replace( "{dataType}", sDataType );
+//
+//     // Fill in date with the given format
+//     QRegExp rx = QRegExp( "\\{date:([^\\}]*)\\}", Qt::CaseInsensitive );
+//     if ( rx.indexIn(sRawUrl) != -1 ) {
+//         sRawUrl.replace( rx, dateTime.date().toString(rx.cap(1)) );
+//     }
+//
+//     rx = QRegExp( "\\{dep=([^\\|]*)\\|arr=([^\\}]*)\\}", Qt::CaseInsensitive );
+//     if ( rx.indexIn(sRawUrl) != -1 ) {
+//         if ( sDataType == "arr" ) {
+//             sRawUrl.replace( rx, rx.cap(2) );
+//         } else {
+//             sRawUrl.replace( rx, rx.cap(1) );
+//         }
+//     }
+//
+//     return KUrl( sRawUrl );
 }
 
 #include "timetablemate.moc"

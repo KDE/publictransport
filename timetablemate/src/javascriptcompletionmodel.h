@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fieti1983@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fieti1983@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -59,9 +59,8 @@ public:
 	JavaScriptCompletionModel( const QString &completionShortcut, QObject *parent );
 
 	void initGlobalFunctionCompletion();
-	void initHelperCompletion();
+	void initObjectMethodCompletion();
 	void initTimetableInfoCompletion();
-	void initFunctionCallCompletion();
 
 	virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
 	virtual void executeCompletionItem( KTextEditor::Document* document,
@@ -80,8 +79,8 @@ private:
 	// These only store completions
 	QHash< QString, CompletionItem > m_completionsGlobalFunctions;
 	QHash< QString, CompletionItem > m_completionsTimetableInfo;
-	QHash< QString, CompletionItem > m_completionsHelper;
-	QHash< QString, CompletionItem > m_completionsCalls;
+	QHash< QString, QHash<QString, CompletionItem> > m_completionObjects; // Stored by object class name
+// 	QHash< QString, CompletionItem > m_completionsCalls;
 };
 
 #endif // Multiple inclusion guard

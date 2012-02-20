@@ -20,9 +20,14 @@
 #ifndef CHANGELOGENTRYWIDGET_HEADER
 #define CHANGELOGENTRYWIDGET_HEADER
 
-#include <QWidget>
+// PublicTransport engine includes
+#include <../../engine/accessorinfoxmlreader.h>
+
+// libpublictransporthelper includes
 #include <dynamicwidget.h>
-#include "accessorinfoxmlreader.h"
+
+// Qt includes
+#include <QWidget>
 
 class KTextBrowser;
 class KLineEdit;
@@ -35,77 +40,88 @@ class KLineEdit;
 /**
  * @brief Shows a changelog entry in editable widgets.
  **/
-class ChangelogEntryWidget : public QWidget {
-	Q_OBJECT
+class ChangelogEntryWidget : public QWidget
+{
+    Q_OBJECT
 
 public:
-	/**
-	 * @brief Creates a new changelog entry widget.
-	 *
-	 * @param parent The parent widget of the changelog entry widget. Default is 0.
-	 **/
-	explicit ChangelogEntryWidget( QWidget* parent = 0,
-								   const ChangelogEntry &changelogEntry = ChangelogEntry(),
-								   const QString &shortAuthor = QString() );
+    /**
+     * @brief Creates a new changelog entry widget.
+     *
+     * @param parent The parent widget of the changelog entry widget. Default is 0.
+     **/
+    explicit ChangelogEntryWidget( QWidget *parent = 0,
+                                   const ChangelogEntry &changelogEntry = ChangelogEntry(),
+                                   const QString &shortAuthor = QString() );
 
-	QString author() const;
-	QString version() const;
-	QString releasedWith() const;
-	QString description() const;
-	ChangelogEntry changelogEntry() const;
+    QString author() const;
+    QString version() const;
+    QString releasedWith() const;
+    QString description() const;
+    ChangelogEntry changelogEntry() const;
 
-	void setAuthor( const QString &author );
-	void setVersion( const QString &version );
-	void setReleasedWith( const QString &releasedWith );
-	void setDescription( const QString &description );
-	void setChangelogEntry( const ChangelogEntry &changelogEntry, const QString &shortAuthor );
+    void setAuthor( const QString &author );
+    void setVersion( const QString &version );
+    void setReleasedWith( const QString &releasedWith );
+    void setDescription( const QString &description );
+    void setChangelogEntry( const ChangelogEntry &changelogEntry, const QString &shortAuthor );
 
-	KLineEdit *authorLineEdit() const { return m_author; };
-	KLineEdit *versionLineEdit() const { return m_version; };
-	KLineEdit *releasedWithLineEdit() const { return m_releasedWith; };
-	KLineEdit *descriptionLineEdit() const { return m_description; };
+    KLineEdit *authorLineEdit() const {
+        return m_author;
+    };
+    KLineEdit *versionLineEdit() const {
+        return m_version;
+    };
+    KLineEdit *releasedWithLineEdit() const {
+        return m_releasedWith;
+    };
+    KLineEdit *descriptionLineEdit() const {
+        return m_description;
+    };
 
 signals:
-	void changed();
+    void changed();
 
 private:
-	KLineEdit *m_author;
-	KLineEdit *m_version;
-	KLineEdit *m_releasedWith;
-	KLineEdit *m_description;
+    KLineEdit *m_author;
+    KLineEdit *m_version;
+    KLineEdit *m_releasedWith;
+    KLineEdit *m_description;
 };
 
 /** @brief Manages a list of @ref ChangelogEntryWidget in a widget, with buttons to dynamically
  *  add/remove ChangelogEntryWidgets. */
-class ChangelogWidget : public AbstractDynamicWidgetContainer {
-	Q_OBJECT
+class ChangelogWidget : public AbstractDynamicWidgetContainer
+{
+    Q_OBJECT
 
 public:
-	explicit ChangelogWidget( QWidget* parent = 0,
-            RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
-            AddButtonOptions addButtonOptions = AddButtonAfterLastWidget,
-            SeparatorOptions separatorOptions = ShowSeparators );
+    explicit ChangelogWidget( QWidget *parent = 0,
+                              RemoveButtonOptions removeButtonOptions = RemoveButtonsBesideWidgets,
+                              AddButtonOptions addButtonOptions = AddButtonAfterLastWidget,
+                              SeparatorOptions separatorOptions = ShowSeparators );
 
-	void addChangelogEntry( const ChangelogEntry &changelogEntry, const QString &shortAuthor );
-	void addChangelog( const QList<ChangelogEntry> &changelog, const QString &shortAuthor );
-	void clear();
+    void addChangelogEntry( const ChangelogEntry &changelogEntry, const QString &shortAuthor );
+    void addChangelog( const QList<ChangelogEntry> &changelog, const QString &shortAuthor );
+    void clear();
 
-	QList<ChangelogEntry> changelog() const;
-	QList<ChangelogEntryWidget*> entryWidgets() const {
-		return AbstractDynamicWidgetContainer::widgets<ChangelogEntryWidget*>();
-	};
+    QList<ChangelogEntry> changelog() const;
+    QList<ChangelogEntryWidget *> entryWidgets() const {
+        return AbstractDynamicWidgetContainer::widgets<ChangelogEntryWidget *>();
+    };
 
 signals:
-	void changed();
+    void changed();
 
 public slots:
-	void createAndAddWidgetSameVersion();
-	void createAndAddWidgetNewMinorVersion();
-	void createAndAddWidgetNewMajorVersion();
+    void createAndAddWidgetSameVersion();
+    void createAndAddWidgetNewMinorVersion();
+    void createAndAddWidgetNewMajorVersion();
 
 protected:
-	virtual QWidget* createNewWidget();
-	virtual DynamicWidget* addWidget( QWidget* widget );
+    virtual QWidget *createNewWidget();
+    virtual DynamicWidget *addWidget( QWidget *widget );
 };
 
 #endif // CHANGELOGENTRYWIDGET_HEADER
+// kate: indent-mode cstyle; indent-width 4; replace-tabs on;

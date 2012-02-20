@@ -17,63 +17,69 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// Header
 #include "changelogwidget.h"
-#include "accessorinfoxmlreader.h"
 
-#include <QFormLayout>
-#include <QValidator>
-#include <QToolButton>
+// PublicTransport engine includes
+#include <../../engine/accessorinfoxmlreader.h>
+
+// KDE includes
 #include <KLineEdit>
 #include <KLocalizedString>
 #include <KDebug>
-#include <QMenu>
 #include <KIcon>
+
+// Qt includes
+#include <QFormLayout>
+#include <QValidator>
+#include <QToolButton>
+#include <QMenu>
 
 ChangelogEntryWidget::ChangelogEntryWidget(QWidget* parent, const ChangelogEntry &entry,
 	const QString &shortAuthor ) : QWidget(parent)
 {
 	// Create layout
 	QFormLayout *layout = new QFormLayout( this );
-	
+
 	QWidget *authorVersionWidget = new QWidget( this );
 	QHBoxLayout *authorVersionLayout = new QHBoxLayout( authorVersionWidget );
 	authorVersionLayout->setContentsMargins( 0, 0, 0, 0 );
-	
+
 	m_author = new KLineEdit( entry.author, authorVersionWidget );
 	m_author->setClickMessage( shortAuthor );
 	m_author->setFixedWidth( 125 );
-	
-	m_version = new KLineEdit( entry.version, authorVersionWidget );
+
+	m_version = new KLineEdit( entry.since_version, authorVersionWidget );
 	m_version->setFixedWidth( 75 );
-	
+
 	authorVersionLayout->addWidget( m_author );
 	authorVersionLayout->addWidget( m_version );
 	authorVersionLayout->addStretch();
-	
-	m_releasedWith = new KLineEdit( entry.releasedWith, this );
+
+	m_releasedWith = new KLineEdit( entry.released_with_version, this );
 	m_releasedWith->setFixedWidth( 75 );
-	
+
 	m_description = new KLineEdit( entry.description, this );
 	m_description->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
-	
+
 	connect( m_author, SIGNAL(textChanged(QString)), this, SIGNAL(changed()) );
 	connect( m_version, SIGNAL(textChanged(QString)), this, SIGNAL(changed()) );
 	connect( m_releasedWith, SIGNAL(textChanged(QString)), this, SIGNAL(changed()) );
 	connect( m_description, SIGNAL(textChanged(QString)), this, SIGNAL(changed()) );
-	
+
     // Set a validator for version line edits
     QRegExpValidator *versionValidator = new QRegExpValidator( QRegExp("\\d+(\\.\\d+)*"), this );
     m_version->setValidator( versionValidator );
     m_releasedWith->setValidator( versionValidator );
-	
-	layout->addRow( i18nc("@info Label for the author of a changelog entry (short author name)", 
+
+	layout->addRow( i18nc("@info Label for the author of a changelog entry (short author name)",
 						  "Author, Version:"), authorVersionWidget );
-// 	layout->addRow( i18nc("@info Label for the version of a changelog entry", 
+// 	layout->addRow( i18nc("@info Label for the version of a changelog entry",
 // 						  "Version:"), m_version );
 	m_releasedWith->hide(); // Not used, but read and save it
-// 	layout->addRow( i18nc("@info Label for the publictransport version the changelog entry was released with", 
+// 	layout->addRow( i18nc("@info Label for the publictransport version the changelog entry was released with",
 // 						  "Released With:"), m_releasedWith );
-	layout->addRow( i18nc("@info Label for the description of a changelog entry", 
+	layout->addRow( i18nc("@info Label for the description of a changelog entry",
 						  "Description:"), m_description );
 }
 
@@ -81,8 +87,8 @@ ChangelogEntry ChangelogEntryWidget::changelogEntry() const
 {
 	ChangelogEntry entry;
 	entry.author = m_author->text();
-	entry.version = m_version->text();
-	entry.releasedWith = m_releasedWith->text();
+	entry.since_version = m_version->text();
+	entry.released_with_version = m_releasedWith->text();
 	entry.description = m_description->text();
 	return entry;
 }
@@ -134,8 +140,8 @@ void ChangelogEntryWidget::setChangelogEntry( const ChangelogEntry& changelogEnt
 	if ( changelogEntry.author.isEmpty() ) {
 		m_author->setClickMessage( shortAuthor );
 	}
-	setVersion( changelogEntry.version );
-	setReleasedWith( changelogEntry.releasedWith );
+	setVersion( changelogEntry.since_version );
+	setReleasedWith( changelogEntry.released_with_version );
 	setDescription( changelogEntry.description );
 }
 
@@ -143,23 +149,23 @@ ChangelogWidget::ChangelogWidget( QWidget* parent,
 		AbstractDynamicWidgetContainer::RemoveButtonOptions removeButtonOptions,
 		AbstractDynamicWidgetContainer::AddButtonOptions addButtonOptions,
 		AbstractDynamicWidgetContainer::SeparatorOptions separatorOptions )
-		: AbstractDynamicWidgetContainer( parent, removeButtonOptions, addButtonOptions, 
+		: AbstractDynamicWidgetContainer( parent, removeButtonOptions, addButtonOptions,
 										  separatorOptions, AddWidgetsAtTop )
 {
 	QToolButton *btnAdd = addButton();
 	btnAdd->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
 	btnAdd->setText( i18nc("@action:button", "&Add Changelog Entry") );
-	
+
 	QMenu *addMenu = new QMenu( this );
-	addMenu->addAction( KIcon("list-add"), i18nc("@action:inmenu", "Add &Empty Changelog Entry"), 
+	addMenu->addAction( KIcon("list-add"), i18nc("@action:inmenu", "Add &Empty Changelog Entry"),
 						this, SLOT(createAndAddWidget()) );
-	addMenu->addAction( KIcon("list-add"), i18nc("@action:inmenu", "Add &Same Version Changelog Entry"), 
+	addMenu->addAction( KIcon("list-add"), i18nc("@action:inmenu", "Add &Same Version Changelog Entry"),
 						this, SLOT(createAndAddWidgetSameVersion()) );
-	addMenu->addAction( KIcon("list-add"), i18nc("@action:inmenu", "Add &New Minor Version Changelog Entry"), 
+	addMenu->addAction( KIcon("list-add"), i18nc("@action:inmenu", "Add &New Minor Version Changelog Entry"),
 						this, SLOT(createAndAddWidgetNewMinorVersion()) );
-	addMenu->addAction( KIcon("list-add"), i18nc("@action:inmenu", "Add New &Major Version Changelog Entry"), 
+	addMenu->addAction( KIcon("list-add"), i18nc("@action:inmenu", "Add New &Major Version Changelog Entry"),
 						this, SLOT(createAndAddWidgetNewMajorVersion()) );
-	
+
 	btnAdd->setPopupMode( QToolButton::MenuButtonPopup );
 	btnAdd->setMenu( addMenu );
 }
@@ -170,7 +176,7 @@ void ChangelogWidget::createAndAddWidgetSameVersion()
 		createAndAddWidget();
 		return;
 	}
-	
+
 	ChangelogEntryWidget *lastEntry = dynamicWidgets().last()->contentWidget<ChangelogEntryWidget*>();
 	ChangelogEntryWidget *newEntry = qobject_cast< ChangelogEntryWidget* >( createNewWidget() );
 	newEntry->setVersion( lastEntry->version() );
@@ -183,7 +189,7 @@ void ChangelogWidget::createAndAddWidgetNewMinorVersion()
 		createAndAddWidget();
 		return;
 	}
-	
+
 	ChangelogEntryWidget *lastEntry = dynamicWidgets().last()->contentWidget<ChangelogEntryWidget*>();
 	ChangelogEntryWidget *newEntry = qobject_cast< ChangelogEntryWidget* >( createNewWidget() );
 	QRegExp version( "(\\d+)\\.(\\d+)(\\.\\d+)*" );
@@ -204,7 +210,7 @@ void ChangelogWidget::createAndAddWidgetNewMajorVersion()
 		createAndAddWidget();
 		return;
 	}
-	
+
 	ChangelogEntryWidget *lastEntry = dynamicWidgets().last()->contentWidget<ChangelogEntryWidget*>();
 	ChangelogEntryWidget *newEntry = qobject_cast< ChangelogEntryWidget* >( createNewWidget() );
 	QRegExp version( "(\\d+)\\.(\\d+)(\\.\\d+)*" );
@@ -243,7 +249,7 @@ void ChangelogWidget::clear()
 	removeAllWidgets();
 }
 
-void ChangelogWidget::addChangelog( const QList< ChangelogEntry >& changelog, 
+void ChangelogWidget::addChangelog( const QList< ChangelogEntry >& changelog,
 									const QString &shortAuthor )
 {
 	for ( int i = changelog.count() - 1; i >= 0; --i ) {

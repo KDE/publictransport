@@ -22,6 +22,8 @@
 
 #include <QString>
 #include <QList>
+#include <QHash>
+#include <QStringList>
 #include "parserenums.h"
 
 class ChildListNode;
@@ -43,7 +45,7 @@ public:
      *
      * May be used for @ref JavaScriptCompletionModel::completionItemFromId.
      **/
-    virtual QString id() const { return m_text; };
+    virtual QString id() const { return m_id; };
 
     /**
      * @returns a list of all child nodes. The default implementation returns an empty list.
@@ -102,6 +104,7 @@ public:
     int columnEnd() const { return m_colEnd; };
 
 protected:
+    QString m_id;
     QString m_text;
     int m_line;
     int m_col;
@@ -155,7 +158,7 @@ public:
     UnknownNode( const QString &text, int line, int colStart = 0, int colEnd = 0 )
         : CodeNode( text, line, colStart, colEnd ) {
     };
-    virtual NodeType type() const { return Unknown; };
+    virtual NodeType type() const { return UnknownNodeType; };
 };
 
 /**
@@ -310,13 +313,7 @@ public:
     /** @brief Creates a new parser object and parses the given @p code.
      * @see nodes
      * @see hasError */
-    JavaScriptParser( const QString &code ) {
-        m_code = code;
-        m_hasError = false;
-        m_errorLine = -1;
-        m_errorColumn = 0;
-        m_nodes = parse();
-    };
+    JavaScriptParser( const QString &code );
 
     /** @returns the code given in the constructor. */
     QString code() const { return m_code; };
@@ -374,7 +371,7 @@ private:
     CommentNode *parseComment();
     StringNode *parseString();
     BracketedNode *parseBracketed();
-    FunctionNode *parseFunction();
+    FunctionNode *parseFunction(); // Parse a function declaration (not a function call)
     BlockNode *parseBlock();
     StatementNode *parseStatement();
 

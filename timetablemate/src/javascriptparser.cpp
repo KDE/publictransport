@@ -29,6 +29,8 @@ CodeNode::CodeNode( const QString& text, int line, int colStart, int colEnd ) : 
     m_line = line;
     m_col = colStart;
     m_colEnd = colEnd;
+
+    m_id = text;
 }
 
 CodeNode::~CodeNode()
@@ -78,6 +80,15 @@ CodeNode* CodeNode::childFromPosition( int lineNumber, int column ) const
     } else {
         return NULL;
     }
+}
+
+JavaScriptParser::JavaScriptParser( const QString &code )
+{
+    m_code = code;
+    m_hasError = false;
+    m_errorLine = -1;
+    m_errorColumn = 0;
+    m_nodes = parse();
 }
 
 QString JavaScriptParser::Token::whitespacesBetween( const JavaScriptParser::Token* token1,
@@ -303,77 +314,73 @@ StringNode* JavaScriptParser::parseString()
 void JavaScriptParser::checkFunctionCall( const QString &object, const QString &function,
                                           BracketedNode *bracketedNode, int line, int column )
 {
-    if ( object == "timetableData" ) {
-        if ( function != "clear" && function != "set" ) {
-            setErrorState( i18nc("@info/plain", "The object '%1' has no function '%2'.",
-                                 object, function), line, column );
-        } else if ( function == "clear" ) {
-            if ( !bracketedNode->content().isEmpty() ) {
-                setErrorState( i18nc("@info/plain", "The function '%1.%2()' accepts no arguments.",
-                                     object, function),
-                               bracketedNode->line(), bracketedNode->column() );
-            }
-        } else if ( function == "set" ) {
-            if ( bracketedNode->commaSeparatedCount() != 2 ) {
-                setErrorState( i18nc("@info/plain", "The function timetableData.set() expects "
-                                     "two arguments."),
-                               bracketedNode->line(), bracketedNode->column() );
-            } else {
-                StringNode *string = dynamic_cast<StringNode*>(
-                bracketedNode->commaSeparated(0).first() );
-                if ( !string ) {
-                    // TODO the first child node isn't always the first argument, unknown text gets no node
-                    setErrorState( i18nc("@info/plain", "The first argument of timetableData.set() "
-                            "must be a string."), line, column );
-                } else {
-                    QStringList timetableInfoStrings;
-                    timetableInfoStrings << "DepartureDateTime" << "DepartureDate" << "DepartureTime"
-                            << "TypeOfVehicle" << "TransportLine" << "FlightNumber" << "Target"
-                            << "Platform" << "Delay" << "DelayReason" << "JourneyNews"
-                            << "JourneyNewsOther" << "JourneyNewsLink" << "Operator" << "Status"
-                            << "RouteStops" << "RouteTimes" << "RouteTimesDeparture"
-                            << "RouteTimesArrival" << "RouteExactStops" << "RouteTypesOfVehicles"
-                            << "RouteTransportLines" << "RoutePlatformsDeparture" << "IsNightLine"
-                            << "RoutePlatformsArrival" << "RouteTimesDepartureDelay"
-                            << "RouteTimesArrivalDelay" << "Duration" << "StartStopName"
-                            << "StartStopID" << "TargetStopName" << "TargetStopID"
-                            << "ArrivalDateTime" << "ArrivalDate" << "ArrivalTime" << "Changes"
-                            << "TypesOfVehicleInJourney" << "Pricing" << "StopName" << "StopID"
-                            << "StopWeight";
+//     QStringList timetableInfoStrings;
+//     timetableInfoStrings << "DepartureDateTime" << "DepartureDate" << "DepartureTime"
+//             << "TypeOfVehicle" << "TransportLine" << "FlightNumber" << "Target"
+//             << "Platform" << "Delay" << "DelayReason" << "JourneyNews"
+//             << "JourneyNewsOther" << "JourneyNewsLink" << "Operator" << "Status"
+//             << "RouteStops" << "RouteTimes" << "RouteTimesDeparture"
+//             << "RouteTimesArrival" << "RouteExactStops" << "RouteTypesOfVehicles"
+//             << "RouteTransportLines" << "RoutePlatformsDeparture" << "IsNightLine"
+//             << "RoutePlatformsArrival" << "RouteTimesDepartureDelay"
+//             << "RouteTimesArrivalDelay" << "Duration" << "StartStopName"
+//             << "StartStopID" << "TargetStopName" << "TargetStopID"
+//             << "ArrivalDateTime" << "ArrivalDate" << "ArrivalTime" << "Changes"
+//             << "TypesOfVehicleInJourney" << "Pricing" << "StopName" << "StopID"
+//             << "StopWeight";
+//
+//     if ( !timetableInfoStrings.contains(string->content()) ) {
+//         setErrorState( i18nc("@info/plain", "'%1' is not a valid info name.",
+//                                 string->content()), string->line(), string->column() );
+//     }
 
-                    if ( !timetableInfoStrings.contains(string->content()) ) {
-                        setErrorState( i18nc("@info/plain", "'%1' is not a valid info name.",
-                                             string->content()), string->line(), string->column() );
-                    }
-                }
-            }
-        }
-    } else if ( object == "result" ) {
-        if ( function != "addData" ) {
-            setErrorState( i18nc("@info/plain", "The object '%1' has no function '%2'.",
-                                 object, function), line, column );
-        } else if ( bracketedNode->commaSeparatedCount() != 1 ) {
-            setErrorState( i18nc("@info/plain", "The function %1.%2() expects one argument.",
-                                 object, function),
-                  bracketedNode->line(), bracketedNode->column() );
-        } else {
-            CodeNode *node = bracketedNode->commaSeparated(0).first();
-            if ( node->text() != "timetableData" ) {
-                setErrorState( i18nc("@info/plain", "The argument of the function %1.%2() "
-                                     "must be 'timetableData'.", object, function),
-                               node->line(), node->column() );
-            }
-        }
-    } else if ( object == "helper" ) {
-        if ( function != "addMinsToTime" && function != "addDaysToDate" && function != "duration"
-            && function != "extractBlock" && function != "formatTime" && function != "matchTime"
-            && function != "matchDate" && function != "splitSkipEmptyParts"
-            && function != "stripTags" && function != "trim" && function != "error" )
-        {
-            setErrorState( i18nc("@info/plain", "The object '%1' has no function '%2'.",
-                                 object, function), line, column );
-        }
+
+    // Generated by TimetableMateCompletionGenerator
+    QHash< QString, QStringList > methods;
+    methods["helper"] = QStringList() << "errorReceived" << "error"
+            << "decodeHtmlEntities" << "trim" << "stripTags" << "camelCase" << "extractBlock"
+            << "matchTime" << "matchDate" << "formatTime" << "formatDate" << "formatDateTime"
+            << "duration" << "addMinsToTime" << "addDaysToDate" << "addDaysToDateArray"
+            << "splitSkipEmptyParts" << "findTableHeaderPositions" << "findFirstHtmlTag"
+            << "findHtmlTags" << "findNamedHtmlTags";
+    methods["network"] = QStringList() << "aborted" << "requestFinished" << "abort"
+            << "slotRequestFinished" << "lastDownloadAborted" << "getSynchronous"
+            << "downloadSynchronous" << "createRequest" << "get" << "post" << "head" << "download";
+    methods["result"] = QStringList() << "publish" << "clear" << "addData" << "hasData"
+            << "count" << "isFeatureEnabled" << "enableFeature" << "isHintGiven" << "giveHint";
+    methods["storage"] = QStringList() << "write" << "remove" << "clear"
+            << "writePersistent" << "removePersistent" << "clearPersistent" << "read" << "lifetime"
+            << "readPersistent";
+    if ( methods.contains(object) && !methods[object].contains(function) ) {
+        setErrorState( i18nc("@info/plain", "The object '%1' has no function '%2' (%3).",
+                       object, function, methods[object].join(", ")), line, column );
     }
+//     if ( object == "result" ) {
+//         if ( function != "addData" ) {
+//             setErrorState( i18nc("@info/plain", "The object '%1' has no function '%2'.",
+//                                  object, function), line, column );
+//         } else if ( bracketedNode->commaSeparatedCount() != 1 ) {
+//             setErrorState( i18nc("@info/plain", "The function %1.%2() expects one argument.",
+//                                  object, function),
+//                   bracketedNode->line(), bracketedNode->column() );
+//         } else {
+//             CodeNode *node = bracketedNode->commaSeparated(0).first();
+//             if ( node->text() != "timetableData" ) {
+//                 setErrorState( i18nc("@info/plain", "The argument of the function %1.%2() "
+//                                      "must be 'timetableData'.", object, function),
+//                                node->line(), node->column() );
+//             }
+//         }
+//     } else if ( object == "helper" ) {
+//         if ( function != "addMinsToTime" && function != "addDaysToDate" && function != "duration"
+//             && function != "extractBlock" && function != "formatTime" && function != "matchTime"
+//             && function != "matchDate" && function != "splitSkipEmptyParts"
+//             && function != "stripTags" && function != "trim" && function != "error" )
+//         {
+//             setErrorState( i18nc("@info/plain", "The object '%1' has no function '%2'.",
+//                                  object, function), line, column );
+//         }
+//     }
 }
 
 StatementNode* JavaScriptParser::parseStatement()
@@ -388,6 +395,9 @@ StatementNode* JavaScriptParser::parseStatement()
     QList<Token*> lastTokenList;
     QList<CodeNode*> children;
     while ( !atEnd() ) {
+        if ( currentToken()->line == 98 ) {
+            int test = 0;
+        }
         if ( currentToken()->isChar(';') ) {
             // End of statement found
             if ( !lastTokenList.isEmpty() ) {
@@ -399,14 +409,22 @@ StatementNode* JavaScriptParser::parseStatement()
                         m_lastToken->line, m_lastToken->posEnd, children );
         } else if ( currentToken()->isChar('}') ) {
             // '}' without previous '{' found in statement => ';' is missing
-            Token *errorToken = lastTokenList.isEmpty() ? currentToken() : lastTokenList.last();
-            setErrorState( i18nc("@info/plain", "Missing ';' at the end of the statement."),
-                errorToken->line, errorToken->posEnd );
-            m_lastToken = errorToken;
-            if ( m_it != m_token.constBegin() ) {
-                --m_it; // Go before the '}'
+//             Token *errorToken = lastTokenList.isEmpty() ? currentToken() : lastTokenList.last();
+//             setErrorState( i18nc("@info/plain", "Missing ';' at the end of the statement."),
+//                 errorToken->line, errorToken->posEnd );
+//             m_lastToken = errorToken;
+//             if ( m_it != m_token.constBegin() ) {
+//                 --m_it; // Go before the '}'
+//             }
+            // Found a closing '}', should be part of a block, parsed in parseBlock(),
+            // which called this function to parse the block contents
+            if ( !lastTokenList.isEmpty() ) {
+                text += Token::whitespacesBetween( lastTokenList.last(), currentToken() );
             }
-            return NULL;
+            // Do not go to next token, because the current '}'-token should be read by a
+            // calling function
+            return new StatementNode( text, firstToken->line, firstToken->posStart,
+                        m_lastToken->line, m_lastToken->posEnd, children );
         }
 
         CodeNode *node = NULL;
@@ -516,7 +534,7 @@ FunctionNode* JavaScriptParser::parseFunction()
                 }
 
                 arguments << new ArgumentNode( currentToken()->text, currentToken()->line,
-                                currentToken()->posStart, currentToken()->posEnd );
+                        currentToken()->posStart, currentToken()->posEnd );
             } else if ( !isComma ) {
                 setErrorState( i18nc("@info/plain", "Expected ',' or ')'."),
                             currentToken()->line, currentToken()->posStart );
@@ -761,7 +779,7 @@ int BracketedNode::commaSeparatedCount() const
 {
     int count = 1;
     foreach ( CodeNode *child, m_children ) {
-        if ( child->type() == Unknown && child->text() == "," ) {
+        if ( child->type() == UnknownNodeType && child->text() == "," ) {
             ++count;
         }
     }
@@ -774,7 +792,7 @@ QList< CodeNode* > BracketedNode::commaSeparated( int pos ) const
 
     int curPos = 0;
     foreach ( CodeNode *child, m_children ) {
-    if ( child->type() == Unknown && child->text() == "," ) {
+    if ( child->type() == UnknownNodeType && child->text() == "," ) {
         ++curPos;
         if ( curPos > pos ) {
             return separated;
@@ -852,7 +870,7 @@ QString FunctionNode::id() const
         }
     }
 
-    return QString("func:%1(%2)").arg( m_text, arguments.join(",") );
+    return QString("func:%1()").arg( m_text ); //, arguments.join(",") );
 }
 
 QString FunctionNode::toStringSignature() const

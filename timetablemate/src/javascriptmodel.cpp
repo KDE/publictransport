@@ -39,6 +39,7 @@ JavaScriptModel::~JavaScriptModel()
 void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString &text )
 {
     if ( !m_javaScriptCompletionModel ) {
+        kDebug() << "No completion model created";
         return;
     }
 
@@ -49,6 +50,7 @@ void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString
 
     CompletionItem item = m_javaScriptCompletionModel->completionItemFromId( node->id() );
     if ( !item.isValid() || item.description.isEmpty() ) {
+        kDebug() << "No completion item found for" << node->id();
         return;
     }
 
@@ -254,7 +256,7 @@ QStringList JavaScriptModel::functionNames() const
 
 void JavaScriptModel::updateFirstEmptyNodeName()
 {
-    if ( m_nodes.isEmpty() ) { 
+    if ( m_nodes.isEmpty() ) {
         return;
     }
 
