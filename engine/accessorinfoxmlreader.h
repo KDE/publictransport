@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -39,7 +39,9 @@ class TimetableAccessorInfo;
  **/
 struct ChangelogEntry {
     QString author; /**< The author who implemented the change. */
-    QString since_version; /**< The version where this change was applied. */
+    QString since_version; /**< The version of the accessor where this change was applied. */
+    QString released_with_version; /**< The version of the PublicTransport engine where this
+            * change was applied. */
     QString description; /**< A description of the change. */
 };
 
@@ -79,11 +81,6 @@ private:
     bool readBooleanElement();
     void readAuthor( QString *fullname, QString *shortName, QString *email );
     void readCities( QStringList *cities, QHash<QString, QString> *cityNameReplacements );
-    void readRawUrls( QString *rawUrlDepartures, QString *rawUrlStopSuggestions,
-                      QString *rawUrlJourneys, QHash<QString, QString> *attributesForDepartures,
-                      QHash<QString, QString> *attributesForStopSuggestions,
-                      QHash<QString, QString> *attributesForJourneys );
-    void readSessionKey( QString *sessionKeyUrl, SessionKeyPlace *sessionKeyPlace, QString *data );
     QList<ChangelogEntry> readChangelog();
 };
 

@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -24,15 +24,15 @@
 #include "timetableaccessor.h"
 #include "timetableaccessor_info.h"
 #include "departureinfo.h"
+#include "global.h"
+
+// KDE/Plasma includes
+#include <Plasma/DataContainer>
+#include <KStandardDirs>
 
 // Qt includes
 #include <QFileSystemWatcher>
-
-// KDE includes
-#include <Plasma/DataContainer>
-#include <KStandardDirs>
 #include <QFileInfo>
-#include <Distribution/publictransport-runner-0.1/plasma-dataengine-publictransport-0.9/publictransportdataengine.h>
 
 const int PublicTransportEngine::MIN_UPDATE_TIMEOUT = 120; // in seconds
 const int PublicTransportEngine::MAX_UPDATE_TIMEOUT_DELAY = 5 * 60; // if delays are available

@@ -3,7 +3,6 @@ project(plasma-engine-publictransport)
 # Find the required Libaries
 find_package(KDE4 REQUIRED)
 include(KDE4Defaults)
-
 add_definitions (${QT_DEFINITIONS} ${KDE4_DEFINITIONS})
 include_directories(
    ${CMAKE_SOURCE_DIR}
@@ -26,13 +25,15 @@ set( publictransport_engine_SRCS
     timetableaccessor_script.cpp
     script_thread.cpp
     scripting.cpp
-    enums.cpp )
+    global.cpp
+)
 
 # Now make sure all files get to the right place
 kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} )
 
 target_link_libraries( plasma_engine_publictransport
-    ${KDE4_PLASMA_LIBS} ${KDE4_KROSSCORE_LIBS} ${KDE4_KIO_LIBS} ${KDE4_THREADWEAVER_LIBS} )
+    ${KDE4_PLASMA_LIBS} ${KDE4_KIO_LIBS} ${KDE4_THREADWEAVER_LIBS} ${QT_QTSCRIPT_LIBRARY}
+)
 
 install( TARGETS plasma_engine_publictransport
          DESTINATION ${PLUGIN_INSTALL_DIR} )

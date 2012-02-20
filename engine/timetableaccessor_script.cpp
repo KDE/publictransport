@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -204,69 +204,6 @@ QStringList TimetableAccessorScript::scriptFeatures() const
     return m_scriptFeatures;
 }
 
-QString TimetableAccessorScript::decodeHtmlEntities( const QString& html )
-{
-    if ( html.isEmpty() ) {
-        return html;
-    }
-
-    QString ret = html;
-    QRegExp rx( "(?:&#)([0-9]+)(?:;)" );
-    rx.setMinimal( true );
-    int pos = 0;
-    while ( (pos = rx.indexIn(ret, pos)) != -1 ) {
-        const int charCode = rx.cap( 1 ).toInt();
-        ret = ret.replace( QString("&#%1;").arg(charCode), QChar(charCode) );
-    }
-
-    ret = ret.replace( "&nbsp;", " " );
-    ret = ret.replace( "&amp;", "&" );
-    ret = ret.replace( "&lt;", "<" );
-    ret = ret.replace( "&gt;", ">" );
-    ret = ret.replace( "&szlig;", "ß" );
-    ret = ret.replace( "&auml;", "ä" );
-    ret = ret.replace( "&Auml;", "Ä" );
-    ret = ret.replace( "&ouml;", "ö" );
-    ret = ret.replace( "&Ouml;", "Ö" );
-    ret = ret.replace( "&uuml;", "ü" );
-    ret = ret.replace( "&Uuml;", "Ü" );
-
-    return ret;
-}
-
-QString TimetableAccessorScript::decodeHtml( const QByteArray& document,
-                                             const QByteArray& fallbackCharset )
-{
-    // Get charset of the received document and convert it to a unicode QString
-    // First parse the charset with a regexp to get a fallback charset
-    // if QTextCodec::codecForHtml doesn't find the charset
-    QTextCodec *textCodec = QTextCodec::codecForHtml( document, 0 );
-    if ( textCodec ) {
-        return textCodec->toUnicode( document );
-    } else {
-        if ( !fallbackCharset.isEmpty() ) {
-            textCodec = QTextCodec::codecForName( fallbackCharset );
-            if ( !textCodec ) {
-                kDebug() << "Fallback charset" << fallbackCharset << "not found! Using utf8 now.";
-                textCodec = QTextCodec::codecForName( "UTF-8" );
-            }
-        } else {
-            kDebug() << "No fallback charset, searching codec manually in the HTML";
-            QString sDocument = QString( document );
-            QRegExp rxCharset( "(?:<head>.*<meta http-equiv=\"Content-Type\" "
-                    "content=\"text/html; charset=)([^\"]*)(?:\"[^>]*>)", Qt::CaseInsensitive );
-            rxCharset.setMinimal( true );
-            if ( rxCharset.indexIn(sDocument) != -1 ) {
-                textCodec = QTextCodec::codecForName( rxCharset.cap(1).trimmed().toUtf8() );
-            } else {
-                kDebug() << "Manual codec search failed, using utf8";
-                textCodec = QTextCodec::codecForName( "UTF-8" );
-            }
-        }
-        return textCodec ? textCodec->toUnicode(document) : QString::fromUtf8(document);
-    }
-}
-
 void TimetableAccessorScript::departuresReady( const QList<TimetableData> &data,
         ResultObject::Features features, ResultObject::Hints hints, const QString &url,
         const GlobalTimetableInfo &globalInfo, const DepartureRequestInfo &requestInfo,
@@ -411,6 +348,7 @@ void TimetableAccessorScript::requestDepartures( const DepartureRequestInfo &req
         kDebug() << "Failed to load script!";
         return;
     }
+
     DepartureJob *job = new DepartureJob( m_script, m_info, m_scriptStorage, requestInfo, this );
     connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
@@ -427,6 +365,7 @@ void TimetableAccessorScript::requestJourneys( const JourneyRequestInfo &request
         kDebug() << "Failed to load script!";
         return;
     }
+
     JourneyJob *job = new JourneyJob( m_script, m_info, m_scriptStorage, requestInfo, this );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequestInfo,bool)),
@@ -441,14 +380,12 @@ void TimetableAccessorScript::requestStopSuggestions( const StopSuggestionReques
         kDebug() << "Failed to load script!";
         return;
     }
+
     StopSuggestionsJob *job = new StopSuggestionsJob( m_script, m_info, m_scriptStorage,
                                                       requestInfo, this );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequestInfo,bool)),
              this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequestInfo,bool)) );
     ThreadWeaver::Weaver::instance()->enqueue( job );
-
-    kDebug() << "Thread count:" << ThreadWeaver::Weaver::instance()->currentNumberOfThreads();
-
     return;
 }

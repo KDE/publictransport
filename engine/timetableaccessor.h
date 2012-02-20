@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -37,12 +37,8 @@
 
 class KUrl;
 class KJob;
-class ChangelogEntry;
-namespace KIO
-{
-    class StoredTransferJob;
-}
 
+class ChangelogEntry;
 class StopInfo;
 class DepartureInfo;
 class JourneyInfo;
@@ -210,12 +206,6 @@ public:
 
     /** @brief Gets the AccessorType enumerable for the given string. */
     static AccessorType accessorTypeFromString( const QString &sAccessorType );
-
-    /** @brief Gets the TimetableInformation enumerable for the given string. */
-    static TimetableInformation timetableInformationFromString( const QString &sTimetableInformation );
-
-    /** @brief Gets the VehicleType enumerable for the given string. */
-    static VehicleType vehicleTypeFromString( QString sVehicleType );
 
     /** @brief Gets the service provider ID for the given accessor XML file name. */
     static QString serviceProviderIdFromFileName( const QString &accessorXmlFileName );

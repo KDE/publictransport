@@ -17,7 +17,13 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "departureinfo.h"
+
+// Own includes
+#include "global.h"
+
+// KDE includes
 #include <KDebug>
 
 PublicTransportInfo::PublicTransportInfo(QObject* parent): QObject(parent)
@@ -59,12 +65,15 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
     // Convert vehicle types given as string to the associated enumerable value
     if ( contains(TypeOfVehicle) && value(TypeOfVehicle).canConvert(QVariant::String) ) {
         QString vehicleType = value(TypeOfVehicle).toString();
+        if ( vehicleType.startsWith('0') ) {
+            kDebug() << "ERROR";
+        }
         insert( TypeOfVehicle, getVehicleTypeFromString(vehicleType) );
 
         // Try to get operator from vehicle type string if no operator is given
-        if ( !contains(Operator)
-                || (value(Operator).canConvert(QVariant::String)
-                     && value(Operator).toString().isEmpty()) ) {
+        if ( !contains(Operator) || (value(Operator).canConvert(QVariant::String)
+                                     && value(Operator).toString().isEmpty()) )
+        {
             QString sOperator = operatorFromVehicleTypeString( vehicleType );
             if ( !sOperator.isNull() ) {
                 insert( Operator, sOperator );

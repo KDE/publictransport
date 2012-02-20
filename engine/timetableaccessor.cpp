@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -136,148 +136,9 @@ AccessorType TimetableAccessor::accessorTypeFromString( const QString &sAccessor
 {
     QString s = sAccessorType.toLower();
     if ( s == "script" ||  s == "html" ) {
-        return HTML;
+        return ScriptedAccessor;
     } else {
         return NoAccessor;
-    }
-}
-
-VehicleType TimetableAccessor::vehicleTypeFromString( QString sVehicleType )
-{
-    QString sLower = sVehicleType.toLower();
-    if ( sLower == "unknown" ) {
-        return Unknown;
-    } else if ( sLower == "tram" ) {
-        return Tram;
-    } else if ( sLower == "bus" ) {
-        return Bus;
-    } else if ( sLower == "subway" ) {
-        return Subway;
-    } else if ( sLower == "traininterurban" || sLower == "interurbantrain" ) {
-        return InterurbanTrain;
-    } else if ( sLower == "metro" ) {
-        return Metro;
-    } else if ( sLower == "trolleybus" ) {
-        return TrolleyBus;
-    } else if ( sLower == "trainregional" || sLower == "regionaltrain" ) {
-        return RegionalTrain;
-    } else if ( sLower == "trainregionalexpress" || sLower == "regionalexpresstrain" ) {
-        return RegionalExpressTrain;
-    } else if ( sLower == "traininterregio" || sLower == "interregionaltrain" ) {
-        return InterregionalTrain;
-    } else if ( sLower == "trainintercityeurocity" || sLower == "intercitytrain" ) {
-        return IntercityTrain;
-    } else if ( sLower == "trainintercityexpress" || sLower == "highspeedtrain" ) {
-        return HighSpeedTrain;
-    } else if ( sLower == "feet" ) {
-        return Feet;
-    } else if ( sLower == "ferry" ) {
-        return Ferry;
-    } else if ( sLower == "ship" ) {
-        return Ship;
-    } else if ( sLower == "plane" ) {
-        return Plane;
-    } else {
-        return Unknown;
-    }
-}
-
-TimetableInformation TimetableAccessor::timetableInformationFromString(
-    const QString& sTimetableInformation )
-{
-    QString sInfo = sTimetableInformation.toLower();
-    if ( sInfo == "nothing" ) {
-        return Nothing;
-    } else if ( sInfo == "departuredatetime" ) {
-        return DepartureDateTime;
-    } else if ( sInfo == "departuredate" ) {
-        return DepartureDate;
-    } else if ( sInfo == "departuretime" ) {
-        return DepartureTime;
-    } else if ( sInfo == "typeofvehicle" ) {
-        return TypeOfVehicle;
-    } else if ( sInfo == "transportline" ) {
-        return TransportLine;
-    } else if ( sInfo == "flightnumber" ) {
-        return FlightNumber;
-    } else if ( sInfo == "target" ) {
-        return Target;
-    } else if ( sInfo == "platform" ) {
-        return Platform;
-    } else if ( sInfo == "delay" ) {
-        return Delay;
-    } else if ( sInfo == "delayreason" ) {
-        return DelayReason;
-    } else if ( sInfo == "journeynews" ) {
-        return JourneyNews;
-    } else if ( sInfo == "journeynewsother" ) {
-        return JourneyNewsOther;
-    } else if ( sInfo == "journeynewslink" ) {
-        return JourneyNewsLink;
-    } else if ( sInfo == "status" ) {
-        return Status;
-    } else if ( sInfo == "routestops" ) {
-        return RouteStops;
-    } else if ( sInfo == "routetimes" ) {
-        return RouteTimes;
-    } else if ( sInfo == "routetimesdeparture" ) {
-        return RouteTimesDeparture;
-    } else if ( sInfo == "routetimesarrival" ) {
-        return RouteTimesArrival;
-    } else if ( sInfo == "routeexactstops" ) {
-        return RouteExactStops;
-    } else if ( sInfo == "routetypesofvehicles" ) {
-        return RouteTypesOfVehicles;
-    } else if ( sInfo == "routetransportlines" ) {
-        return RouteTransportLines;
-    } else if ( sInfo == "routeplatformsdeparture" ) {
-        return RoutePlatformsDeparture;
-    } else if ( sInfo == "routeplatformsarrival" ) {
-        return RoutePlatformsArrival;
-    } else if ( sInfo == "routetimesdeparturedelay" ) {
-        return RouteTimesDepartureDelay;
-    } else if ( sInfo == "routetimesarrivaldelay" ) {
-        return RouteTimesArrivalDelay;
-    } else if ( sInfo == "operator" ) {
-        return Operator;
-    } else if ( sInfo == "duration" ) {
-        return Duration;
-    } else if ( sInfo == "startstopname" ) {
-        return StartStopName;
-    } else if ( sInfo == "startstopid" ) {
-        return StartStopID;
-    } else if ( sInfo == "targetstopname" ) {
-        return TargetStopName;
-    } else if ( sInfo == "targetstopid" ) {
-        return TargetStopID;
-    } else if ( sInfo == "arrivaldatetime" ) {
-        return ArrivalDateTime;
-    } else if ( sInfo == "arrivaldate" ) {
-        return ArrivalDate;
-    } else if ( sInfo == "arrivaltime" ) {
-        return ArrivalTime;
-    } else if ( sInfo == "changes" ) {
-        return Changes;
-    } else if ( sInfo == "typesofvehicleinjourney" ) {
-        return TypesOfVehicleInJourney;
-    } else if ( sInfo == "pricing" ) {
-        return Pricing;
-    } else if ( sInfo == "isnightline" ) {
-        return IsNightLine;
-    } else if ( sInfo == "stopname" ) {
-        return StopName;
-    } else if ( sInfo == "stopid" ) {
-        return StopID;
-    } else if ( sInfo == "stopweight" ) {
-        return StopWeight;
-    } else if ( sInfo == "stopcity" ) {
-        return StopCity;
-    } else if ( sInfo == "stopcountrycode" ) {
-        return StopCountryCode;
-    } else {
-        kDebug() << sTimetableInformation
-        << "is an unknown timetable information value! Assuming value Nothing.";
-        return Nothing;
     }
 }
 

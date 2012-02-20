@@ -155,8 +155,11 @@ enum ParseDocumentMode {
 
 /** @brief The type of an accessor. */
 enum AccessorType {
-    NoAccessor, /**< @internal Invalid value */
-    HTML /**< The accessor is used to parse HTML documents. */ // TODO => ScriptedAccessor
+    NoAccessor, /**< @internal Invalid value. */
+    ScriptedAccessor /**< Uses a script to request and parse documents. Scripts can make use of
+            * several helper objects to download documents (GET or POST), store found departures/
+            * journeys/stop suggestions, cache values, parse HTML, notify about errors, etc.
+            * QtScript extensions can be used, eg. qt.xml to parse XML documents. */
 };
 
 /** @brief The type of the vehicle used for a public transport line. */
@@ -217,18 +220,6 @@ enum CalculateMissingValue {
     CalculateDurationFromDepartureAndArrival,
     CalculateArrivalFromDepartureAndDuration,
     CalculateDepartureFromArrivalAndDuration
-};
-
-/** @class Global
-  * @brief Contains global static methods. */
-class Global
-{
-public:
-    /** Gets an icon for the given type of vehicle. */
-    static QString vehicleTypeToIcon( const VehicleType &vehicleType );
-
-    /** Gets the name of the given type of vehicle. */
-    static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );
 };
 
 /* Functions for nicer debug output */

@@ -1,5 +1,5 @@
 /*
- *   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -47,39 +47,40 @@ public:
     /**
      * @brief Creates a new TimetableAccessorInfo object.
      *
-     * @todo Don't use so many parameters in the constructor. The setters
-     *   need to be called anyway.
-     *
-     * @param name The name of the accessor.
-     * @param shortUrl A short version of the url to the service provider
-     *   home page. This can be used by the visualization as displayed text of links.
-     * @param author The author of the accessor.
-     * @param shortAuthor An abbreviation of the authors name.
-     * @param email The email address of the author given in @p author.
-     * @param version The version of the accessor information.
+     * @param accessorType The type of the accessor.
      * @param serviceProviderID The service provider for which this accessor
      *   is designed for.
-     * @param accessorType The type of the accessor.
      *
      * @see AccessorType
      **/
-    explicit TimetableAccessorInfo( const QString& name = QString(),
-            const QString& shortUrl = QString(),
-            const QString& author = QString(), const QString &shortAuthor = QString(),
-            const QString& email = QString(), const QString& version = QString(),
-            const QString& serviceProviderID = QString(),
-            const AccessorType& accessorType = NoAccessor );
+    explicit TimetableAccessorInfo( const AccessorType& accessorType = NoAccessor,
+                                    const QString& serviceProviderID = QString() );
+
+    TimetableAccessorInfo( const AccessorType &accessorType, const QString &serviceProviderID,
+            const QHash<QString, QString> &names, const QHash<QString, QString> &descriptions,
+            const QString &version, const QString &fileVersion, bool useSeparateCityValue,
+            bool onlyUseCitiesInList, const QString &url, const QString &shortUrl,
+            int minFetchWait, const QString &author, const QString &email,
+            VehicleType defaultVehicleType, const QList<ChangelogEntry> &changelog,
+            const QStringList &cities,
+            const QHash<QString, QString> &cityNameToValueReplacementHash );
 
     virtual ~TimetableAccessorInfo();
 
-    /** @brief Gets the name of this accessor, which can be displayed by the visualization. */
-    QString name() const { return m_name; };
-    /** @brief A description of the service provider. */
-    QString description() const { return m_description; };
+    /** @brief Gets the name of this accessor in the local language if available. */
+    QString name() const;
+    /** @brief The description in the local language if available of the service provider. */
+    QString description() const;
+    /** @brief Gets the names of this accessor, sorted by language. */
+    QHash<QString, QString> names() const { return m_name; };
+    /** @brief Description of the service provider, sorted by language. */
+    QHash<QString, QString> descriptions() const { return m_description; };
     /** @brief Type of the accessor (HTML, XML) */
     AccessorType accessorType() const { return m_accessorType; };
     /** @brief The version of the accessor information. */
     QString version() const { return m_version; };
+    /** @brief The file version of the accessor information. */
+    QString fileVersion() const { return m_fileVersion; };
     /** @brief The ID of the service provider this accessor is designed for. */
     QString serviceProvider() const { return m_serviceProviderID; };
 
@@ -196,9 +197,9 @@ protected:
      * @brief Sets the name of this accessor. The name is displayed in the config dialog's
      *   service provider combobox.
      *
-     * @param name The new name of this accessor.
+     * @param names The new name of this accessor.
      **/
-    void setName( const QString &name ) { m_name = name; };
+    void setNames( const QHash<QString, QString> &names ) { m_name = names; };
 
     /**
      * @brief Sets the ID of the service provider this accessor is designed for.
@@ -235,9 +236,9 @@ protected:
     /**
      * @brief Sets the description of this accessor.
      *
-     * @param description A description of this accessor. */
-    void setDescription( const QString &description ) {
-        m_description = description; };
+     * @param descriptions A description of this accessor. */
+    void setDescriptions( const QHash<QString, QString> &descriptions ) {
+        m_description = descriptions; };
 
     /**
      * @brief Sets the author of this accessor. You can also set the email of the author.
@@ -251,18 +252,35 @@ protected:
     /**
      * @brief Sets the version of this accessor.
      *
+     * The version of the accessor should be updated whenever its values or parsing implementations
+     * gets changed.
+     *
      * @param version The version of this accessor.
      **/
-    void setVersion( const QString &version ) {
-        m_version = version; };
+    void setVersion( const QString &version ) { m_version = version; };
+
+    /**
+     * @brief Sets the file version of this accessor.
+     *
+     * The "file version" names the used version of the PublicTransport engine plugin interface.
+     * Currently only version 1.1 is supported.
+     * Accessors written for version 1.0 need to be
+     * updated. But that mostly means adding a 'getTimetable()' function to download a timetable
+     * document and calling the old 'parseTimetable()' function if the download is finished. The
+     * same can be done with 'getStopsuggestions()' and 'getJourneys()'. The return values now need
+     * to be JavaScript objects containing properties named after the enumerables in
+     * TimetableInformation.
+     *
+     * @param fileVersion The file version of this accessor.
+     **/
+    void setFileVersion( const QString &fileVersion ) { m_fileVersion = fileVersion; };
 
     /**
      * @brief Sets the url to the home page of this service provider.
      *
      * @param url The url to the home page of the service provider.
      **/
-    void setUrl( const QString &url ) {
-        m_url = url; };
+    void setUrl( const QString &url ) { m_url = url; };
 
     /**
      * @brief Sets the short version of the url to the service provider. The short url
@@ -323,12 +341,12 @@ protected:
     QString m_scriptFileName;
     // A list of QScript extensions to import when executing the script
     QStringList m_scriptExtensions;
-    // The name of this accessor, which can be displayed by the visualization
-    QString m_name;
+    // The names of this accessor, sorted by language, which can be displayed by the visualization
+    QHash<QString, QString> m_name;
     // A short version of the url without protocol or "www"  to be displayed in links
     QString m_shortUrl;
-    // A description of the service provider
-    QString m_description;
+    // A description of the service provider, sorted by language
+    QHash<QString, QString> m_description;
     // The author of the accessor information to be used by the accessor
     QString m_author;
     // An abbreviation of the authors name
@@ -337,6 +355,8 @@ protected:
     QString m_email;
     // The version of the accessor information
     QString m_version;
+    // The version of the PublicTransport engine plugin interface
+    QString m_fileVersion;
     // The main/home url of the service provider
     QString m_url;
     // If empty, use unicode (QUrl::toPercentEncoding()), otherwise use own

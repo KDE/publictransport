@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -117,18 +117,6 @@ public:
 
     /** @brief Gets a list of features that this accessor supports through a script. */
     virtual QStringList scriptFeatures() const;
-
-    /** @brief Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
-    static QString decodeHtmlEntities( const QString &html );
-
-    /**
-     * @brief Decodes the given HTML document.
-     *
-     * First it tries QTextCodec::codecForHtml().
-     * If that doesn't work, it parses the document for the charset in a meta-tag.
-     **/
-    static QString decodeHtml( const QByteArray &document,
-                               const QByteArray &fallbackCharset = QByteArray() );
 
     /**
      * @brief Requests a list of departures/arrivals. When the departure/arrival list

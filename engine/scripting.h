@@ -348,11 +348,14 @@ public:
      * charset. If you want to use another value for the "ContentType" header than the
      * data is actually encoded in, you can change the header using setHeader() after calling
      * this function.
+     * @note If the request is already started, no more POST data can be set and this function
+     *   will do nothing.
      *
      * @param postData The data to be POSTed.
      * @param charset The charset to encode @p postData with. If charset is an empty string (the
      *   default) the "ContentType" header gets used if it was set using setHeader(). Otherwise
      *   utf8 gets used.
+     * @see isRunning()
      * @ingroup scripting
      **/
     Q_INVOKABLE void setPostData( const QString &postData, const QString &charset = QString() );
@@ -360,17 +363,35 @@ public:
     /**
      * @brief Sets the @p header of this request to @p value.
      *
+     * @note If the request is already started, no more headers can be set and this function
+     *   will do nothing.
+     *
      * @param header The name of the header to change.
      * @param value The new value for the @p header.
      * @param charset The charset to encode @p header and @p value with. If charset is an empty
      *   string (the default) the "ContentType" header gets used if it was set using setHeader().
      *   Otherwise utf8 gets used.
+     * @see isRunning()
      * @ingroup scripting
      **/
     Q_INVOKABLE void setHeader( const QString &header, const QString &value,
                                 const QString &charset = QString() );
 
+    /**
+     * @brief Aborts this (running) request.
+     *
+     * @note If the request has not already been started, it cannot be aborted, of course,
+     *   and this function will do nothing.
+     **/
+    Q_INVOKABLE void abort();
+
 Q_SIGNALS:
+    /**
+     * @brief Emitted when this request was started.
+     * @ingroup scripting
+     **/
+    void started();
+
     /**
      * @brief Emitted when this request got aborted.
      * @ingroup scripting
@@ -378,7 +399,7 @@ Q_SIGNALS:
     void aborted();
 
     /**
-     * @brief Emitted when this request finishes.
+     * @brief Emitted when this request has finished.
      *
      * @param data The complete data downloaded for this request.
      * @ingroup scripting
@@ -395,11 +416,6 @@ Q_SIGNALS:
 
 // TODO Do the decoding manually in the script, if needed
     void finishedNoDecoding();
-
-public Q_SLOTS:
-//    /** @brief Aborts running downloads.
-//     * @ingroup scripting */
-//     void abort();
 
 protected Q_SLOTS:
     void slotFinished();
@@ -478,13 +494,31 @@ public:
     /** @brief The default timeout in milliseconds for network requests. */
     static const int DEFAULT_TIMEOUT = 30000;
 
+    /** @brief Constructor. */
     explicit Network( const QByteArray &fallbackCharset, QObject* parent = 0 );
 
+    /** @brief Destructor. */
     virtual ~Network();
 
+    /**
+     * @brief Gets the last requested URL.
+     *
+     * The last URL gets updated every time a request gets started, eg. using get(), post(),
+     * getSynchronous(), download(), downloadSynchronous(), etc.
+     **/
     QString lastUrl() const { return m_lastUrl; };
+
+    /**
+     * @brief Clears the last requested URL.
+     **/
     void clear() { m_lastUrl.clear(); };
 
+    /**
+     * @brief Returns true, if the last download was aborted before it was ready.
+     *
+     * Use lastUrl() to get the URL of the aborted download. Downloads may be aborted eg. by
+     * closing plasma.
+     **/
     Q_INVOKABLE bool lastDownloadAborted() const { return m_lastDownloadAborted; };
 
     /**
@@ -494,7 +528,7 @@ public:
      * If the @p timeout expires or the abort() slot gets called, the download gets stopped.
      *
      * @param url The URL to download.
-     * @p timeout Maximum time in milliseconds to wait for the reply to finish. If smaller than 0,
+     * @param timeout Maximum time in milliseconds to wait for the reply to finish. If smaller than 0,
      *   no timeout gets used.
      * @ingroup scripting
      **/
@@ -514,13 +548,27 @@ public:
     Q_INVOKABLE NetworkRequest *createRequest( const QString &url );
 
     /**
-     * @brief Download the document at @p url asynchronously.
+     * @brief Perform the network @p request asynchronously.
      *
      * @param url The URL to download.
      * @ingroup scripting
      **/
     Q_INVOKABLE void get( NetworkRequest *request );
+
+    /**
+     * @brief Perform the network @p request asynchronously using POST method.
+     *
+     * @param url The URL to download.
+     * @ingroup scripting
+     **/
     Q_INVOKABLE void post( NetworkRequest *request );
+
+    /**
+     * @brief Perform the network @p request asynchronously, but only get headers.
+     *
+     * @param url The URL to download.
+     * @ingroup scripting
+     **/
     Q_INVOKABLE void head( NetworkRequest *request );
 
     /**
@@ -529,29 +577,71 @@ public:
      **/
     Q_INVOKABLE inline void download( NetworkRequest *request ) { get(request); };
 
+    /**
+     * @brief Returns whether or not there are asynchronous requests running in the background.
+     * @see runningRequests()
+     * @ingroup scripting
+     */
     bool hasRunningRequests() const { return !m_runningRequests.isEmpty(); };
+
+    /**
+     * @brief Returns a list of all NetworkRequest objects, representing all running requests.
+     *
+     * If hasRunningRequests() returns false, this will return an empty list.
+     * @see hasRunningRequests()
+     * @ingroup scripting
+     */
     QList< NetworkRequest* > runningRequests() const { return m_runningRequests; };
 
+    /**
+     * @brief Returns the charset to use for decoding documents, if it cannot be detected.
+     *
+     * The fallback charset can be selected in the XML file, as \<fallbackCharset\>-tag.
+     */
     QByteArray fallbackCharset() const { return m_fallbackCharset; };
 
 Q_SIGNALS:
     /**
-     * @brief Emitted when a download got aborted.
+     * @brief Emitted when an asynchronous request has been started.
+     * @param request The request that has been started.
      * @ingroup scripting
      **/
-    void aborted();
+    void requestStarted( NetworkRequest *request );
 
-    void requestFinished( NetworkRequest *request = 0 );
+    /**
+     * @brief Emitted when an asynchronous request has finished.
+     * @param request The request that has finished.
+     * @ingroup scripting
+     **/
+    void requestFinished( NetworkRequest *request );
+
+    /**
+     * @brief Emitted when all requests are finished.
+     *
+     * This signal gets emitted just after emitting requestFinished(), if there are no more running
+     * requests.
+     * @ingroup scripting
+     **/
+    void allRequestsFinished();
+
+    /**
+     * @brief Emitted when an asynchronous request got aborted.
+     * @param request The request that was aborted.
+     * @ingroup scripting
+     **/
+    void requestAborted( NetworkRequest *request );
 
 public Q_SLOTS:
     /**
-     * @brief Aborts running downloads.
+     * @brief Aborts all running (asynchronous) downloads.
      * @ingroup scripting
      **/
-    void abort(); // TODO Dont expose to scripts if Network is shared between scripts
+    void abortAllRequests(); // TODO Dont expose to scripts if Network is shared between scripts
 
 protected Q_SLOTS:
+    void slotRequestStarted();
     void slotRequestFinished();
+    void slotRequestAborted();
 
 protected:
     bool checkRequest( NetworkRequest *request );
@@ -567,9 +657,8 @@ private:
 };
 
 
-// TODO Replace most functions with QtCore functionality, eg. QDateTime()
+// TODO Replace most functions with QtCore functionality, eg. QDateTime()?
 // But add WARNING that QDateTime() gets converted to Date() all the time...
-// WARNING 2: QDateTime isn't provided in QtScript bindings for openSuse 12.1, but Kubuntu 11.10
 //
 // importExtension("qt.core") ) {
 //     print( QTime.fromString("15--11", "hh--mm")
@@ -616,6 +705,10 @@ public:
 
     /**
      * @brief Prints @p message on stdout and logs it in a file.
+     *
+     * Logs the error message with the given data string, eg. the HTML code where parsing failed.
+     * The message gets also send to stdout with a short version of the data
+     * The log file is normally located at "~/.kde4/share/apps/plasma_engine_publictransport/accessors.log".
      *
      * @param message The error message.
      * @param failedParseText The text in the source document where parsing failed.
@@ -792,14 +885,14 @@ public:
      *
      * @param str The string is in which to search for positions of table headers.
      * @param options A map (javascript object) with these optional properties:
-     *   @b required: A list of strings, ie. the names of the required table headers.
-     *   @b optional: A list of strings, ie. the names of the optional table headers.
-     *   @b debug: A boolean, false by default. If true, more debug output gets generated.
-     *   @b headerContainerOptions: A map of options that gets passed to findFirstHtmlTag()
+     *   @li @b required: A list of strings, ie. the names of the required table headers.
+     *   @li @b optional: A list of strings, ie. the names of the optional table headers.
+     *   @li @b debug: A boolean, false by default. If true, more debug output gets generated.
+     *   @li @b headerContainerOptions: A map of options that gets passed to findFirstHtmlTag()
      *     to find the HTML tag (eg. "tr") containing the header HTML tags (eg. "th"). For example
      *     this can be used to specify required attributes for the header container tag.
      *     Additionally this map can contain a value "tagName", by default this is "tr".
-     *   @b headerOptions: A map of options that gets passed to findFirstHtmlTag()
+     *   @li @b headerOptions: A map of options that gets passed to findFirstHtmlTag()
      *     to find the header HTML tags (eg. "th"). For example this can be used to specify
      *     required attributes for the header tags.
      *     Additionally this map can contain a value "tagName", by default this is "th".
@@ -823,7 +916,7 @@ public:
      *
      * @return A map with properties like in findHtmlTags(). Additionally these properties are
      *   returned:
-     *   @b found: A boolean, true if the tag was found, false otherwise.
+     *   @li @b found: A boolean, true if the tag was found, false otherwise.
      * @see findHtmlTags
      **/
     Q_INVOKABLE static QVariantMap findFirstHtmlTag( const QString &str, const QString &tagName,
@@ -858,32 +951,32 @@ public:
      * @param str The string containing the HTML tags to be found.
      * @param tagName The name of the HTML tags to be found.
      * @param options A map with these properties:
-     *   @b attributes: A map containing all required attributes and it's values. The keys of that
+     *   @li @b attributes: A map containing all required attributes and it's values. The keys of that
      *     map are the names of required attributes and can be regular expressions. The values
      *     are the values of the required attributes and are also handled as regular expressions.
-     *   @b contentsRegExp: A regular expression pattern which the contents of found HTML tags
+     *   @li @b contentsRegExp: A regular expression pattern which the contents of found HTML tags
      *     must match. If it does not match, that tag does not get returned as found.
      *     If no parenthesized subexpressions are present in this regular expression, the whole
      *     matching string gets used as contents. If more than one parenthesized subexpressions
      *     are found, only the first one gets used. By default all content of the HTML tag
      *     gets matched.
-     *   @b position: An integer, where to start the search for tags. This is 0 by default.
-     *   @b noContent: A boolean, false by default. If true, HTML tags without any content are
+     *   @li @b position: An integer, where to start the search for tags. This is 0 by default.
+     *   @li @b noContent: A boolean, false by default. If true, HTML tags without any content are
      *     matched, eg. "br" or "img" tags. Otherwise tags need to be closed to get matched.
-     *   @b noNesting: A boolean, false by default. If true, no checks will be made to ensure
+     *   @li @b noNesting: A boolean, false by default. If true, no checks will be made to ensure
      *     that the first found closing tag belongs to the opening tag. In this case the found
      *     contents always end after the first closing tag after the opening tag, no matter
      *     if the closing tag belongs to a nested tag or not. By setting this to true you can
      *     enhance performance.
-     *   @b maxCount: The maximum number of HTML tags to match or 0 to match any number of HTML tags.
-     *   @b debug: A boolean, false by default. If true, more debug output gets generated.
+     *   @li @b maxCount: The maximum number of HTML tags to match or 0 to match any number of HTML tags.
+     *   @li @b debug: A boolean, false by default. If true, more debug output gets generated.
      *
      * @return A list of maps, each map represents one found tag and has these properties:
-     *   @b contents: A string, the contents of the found tag (if found is true).
-     *   @b position: An integer, the position of the found tag in @p str (if found is true).
-     *   @b endPosition: An integer, the ending position of the found tag in @p str
+     *   @li @b contents: A string, the contents of the found tag (if found is true).
+     *   @li @b position: An integer, the position of the found tag in @p str (if found is true).
+     *   @li @b endPosition: An integer, the ending position of the found tag in @p str
      *     (if found is true).
-     *   @b attributes: A map containing all found attributes of the tag and it's values (if
+     *   @li @b attributes: A map containing all found attributes of the tag and it's values (if
      *     found is true). The attribute names are the keys of the map, while the attribute
      *     values are the values of the map.
      **/
@@ -910,25 +1003,34 @@ public:
      *
      * @param str The string containing the HTML tag to be found.
      * @param tagName The name of the HTML tag to be found.
-     * @param options The same as in findHtmlTags(), but additionally these options can be used:
-     *     @b namePosition: A map with more options, indicating the position of the name of tags:
-     *       @em type: Can be @em "contents" (ie. use tag contents as name, the default) or
+     * @param options The same as in findHtmlTags(), but @em additionally these options can be used:
+     *     @li @b namePosition: A map with more options, indicating the position of the name of tags:
+     *       @li @em type: Can be @em "contents" (ie. use tag contents as name, the default) or
      *         @em "attribute" (ie. use a tag attribute value as name). If @em "attribute" is used
      *         for @em "type", the name of the attribute can be set as @em "name" property.
      *         Additionally a @em "regexp" property can be used to extract a string from the string
      *         that would otherwise be used as name as is.
-     *       @em ambiguousNameResolution: Can be used to tell what should be done if the same name
+     *       @li @em ambiguousNameResolution: Can be used to tell what should be done if the same name
      *         was found multiple times. This can currently be one of: @em "addNumber" (adds a
      *         number to the name, ie. "..1", "..2")., @em "replace" (a later match with an already
      *         matched name overwrites the old match, the default).
      *
-     * @return A map with the found names as keys and the tag objects as values. Additionally
+     * @return A map with the found names as keys and the tag objects as values. @em Additionally
      *   these properties are returned:
-     *   @b names: A list of all found tag names.
+     *   @li @b names: A list of all found tag names.
      * @see findHtmlTags
      **/
     Q_INVOKABLE static QVariantMap findNamedHtmlTags( const QString &str, const QString &tagName,
                                                       const QVariantMap &options = QVariantMap() );
+
+signals:
+    /**
+     * @brief An error was received from the script.
+     *
+     * @param message The error message.
+     * @param failedParseText The text in the source document where parsing failed.
+     **/
+    void errorReceived( const QString &message, const QString &failedParseText = QString() );
 
 private:
     static QString getTagName( const QVariantMap &searchResult, const QString &type = "contents",

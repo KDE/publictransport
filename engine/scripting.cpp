@@ -21,9 +21,7 @@
 #include "scripting.h"
 
 // Own includes
-#include "timetableaccessor_script.h"
-#include "timetableaccessor_info.h"
-#include "departureinfo.h"
+#include "global.h"
 
 // KDE includes
 #include <KStandardDirs>
@@ -59,11 +57,26 @@ NetworkRequest::NetworkRequest( const QString& url, Network *network, QObject* p
 
 NetworkRequest::~NetworkRequest()
 {
-    kDebug() << "Delete reuqest for" << m_url;
+    abort();
+
+    kDebug() << "Delete request for" << m_url;
     delete m_request;
+}
+
+void NetworkRequest::abort()
+{
+    if ( !isRunning() ) {
+        kDebug() << "Cannot abort a request that is not running!";
+        return;
+    }
+
+    m_reply->abort();
     if ( m_reply ) {
         m_reply->deleteLater();
     }
+    m_reply = 0;
+
+    emit aborted();
 }
 
 void NetworkRequest::slotReadyRead()
@@ -76,7 +89,7 @@ void NetworkRequest::slotReadyRead()
     if ( data.isEmpty() ) {
         kDebug() << "Error downloading" << m_url << m_reply->errorString();
     } else {
-        string = TimetableAccessorScript::decodeHtml( data, m_network->fallbackCharset() );
+        string = Global::decodeHtml( data, m_network->fallbackCharset() );
     }
 
     emit readyRead( string );
@@ -92,7 +105,7 @@ void NetworkRequest::slotFinished()
     if ( m_data.isEmpty() ) {
         kDebug() << "Error downloading" << m_url << m_reply->errorString();
     } else {
-        string = TimetableAccessorScript::decodeHtml( m_data, m_network->fallbackCharset() );
+        string = Global::decodeHtml( m_data, m_network->fallbackCharset() );
     }
     m_reply->deleteLater();
     m_reply = 0;
@@ -120,6 +133,7 @@ void NetworkRequest::started( QNetworkReply* reply )
     }
 
     connect( m_reply, SIGNAL(finished()), this, SIGNAL(finishedNoDecoding()) );
+    emit started();
 }
 
 bool NetworkRequest::isValid() const
@@ -160,6 +174,10 @@ void NetworkRequest::setPostData( const QString& postData, const QString& charse
     if ( !isValid() ) {
         return;
     }
+    if ( isRunning() ) {
+        kDebug() << "Cannot set POST data for an already running request!";
+        return;
+    }
 
     QByteArray baCharset = getCharset( charset );
 //     if ( charset.compare(QLatin1String("utf8"), Qt::CaseInsensitive) == 0 ) {
@@ -185,6 +203,10 @@ void NetworkRequest::setHeader( const QString& header, const QString& value,
     if ( !isValid() ) {
         return;
     }
+    if ( isRunning() ) {
+        kDebug() << "Cannot set headers for an already running request!";
+        return;
+    }
 
     QByteArray baCharset = getCharset( charset );
     QTextCodec *codec = QTextCodec::codecForName( baCharset );
@@ -202,7 +224,7 @@ QNetworkRequest* NetworkRequest::request() const
     return m_request;
 }
 
-    static int networkObjects = 0;
+static int networkObjects = 0; // TODO Remove
 Network::Network( const QByteArray &fallbackCharset, QObject* parent )
         : QObject(parent), m_fallbackCharset(fallbackCharset),
           m_manager(new QNetworkAccessManager(this)), m_quit(false), m_lastDownloadAborted(false)
@@ -218,7 +240,7 @@ Network::~Network()
     m_quit = true;
     m_mutex.unlock();
 
-    emit aborted();
+//     emit aborted();
 
     --networkObjects;
     kDebug() << "DELETE Network object" << thread() << networkObjects;
@@ -231,7 +253,23 @@ Network::~Network()
 
 NetworkRequest* Network::createRequest( const QString& url )
 {
-    return new NetworkRequest( url, this );
+    NetworkRequest *request = new NetworkRequest( url, this );
+    connect( request, SIGNAL(started()), this, SLOT(slotRequestStarted()) );
+    connect( request, SIGNAL(finished()), this, SLOT(slotRequestFinished()) );
+    connect( request, SIGNAL(aborted()), this, SLOT(slotRequestAborted()) );
+    return request;
+}
+
+void Network::slotRequestStarted()
+{
+    NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
+    Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
+
+    kDebug() << "Started" << request->url();
+
+    m_lastDownloadAborted = false;
+    m_runningRequests << request;
+    emit requestStarted( request );
 }
 
 void Network::slotRequestFinished()
@@ -239,9 +277,25 @@ void Network::slotRequestFinished()
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
     Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
 
-    kDebug() << "Request finished" << request->url();
+    kDebug() << "Finished" << request->url();
+
     m_runningRequests.removeOne( request );
     emit requestFinished( request );
+    if ( m_runningRequests.isEmpty() ) {
+        emit allRequestsFinished();
+    }
+}
+
+void Network::slotRequestAborted()
+{
+    NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
+    Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
+
+    kDebug() << "Aborted" << request->url();
+
+    m_lastDownloadAborted = true;
+    m_runningRequests.removeOne( request );
+    emit requestAborted( request );
 }
 
 bool Network::checkRequest( NetworkRequest* request )
@@ -249,7 +303,7 @@ bool Network::checkRequest( NetworkRequest* request )
     // Wrong argument type from script or no argument
     if ( !request ) {
         kDebug() << "Need a NetworkRequest object as argument, create it with "
-                    "'network.createRequest(url)' or use network.getSynchronous(url, timeout)";
+                    "'network.createRequest(url)'";
         return false;
     }
 
@@ -270,13 +324,9 @@ void Network::get( NetworkRequest* request )
 
     // Create a get request
     QNetworkReply *reply = m_manager->get( *request->request() );
-    request->started( reply );
     m_lastUrl = request->url();
-    m_lastDownloadAborted = false; // TODO store in NetworkRequest
-
-    m_runningRequests << request;
-    kDebug() << "GET DOCUMENT, now" << m_runningRequests.count() << "running requests" << request->url();
-    connect( request, SIGNAL(finishedNoDecoding()), this, SLOT(slotRequestFinished()) );
+    request->started( reply );
+//     kDebug() << "GET DOCUMENT, now" << m_runningRequests.count() << "running requests" << request->url();
 }
 
 void Network::head( NetworkRequest* request )
@@ -287,9 +337,8 @@ void Network::head( NetworkRequest* request )
 
     // Create a head request
     QNetworkReply *reply = m_manager->head( *request->request() );
+    m_lastUrl = request->url();
     request->started( reply );
-    m_runningRequests << request;
-    connect( request, SIGNAL(finishedNoDecoding()), this, SLOT(slotRequestFinished()) );
 }
 
 void Network::post( NetworkRequest* request )
@@ -300,15 +349,16 @@ void Network::post( NetworkRequest* request )
 
     // Create a head request
     QNetworkReply *reply = m_manager->post( *request->request(), request->postData() );
+    m_lastUrl = request->url();
     request->started( reply );
-    m_runningRequests << request;
-    connect( request, SIGNAL(finishedNoDecoding()), this, SLOT(slotRequestFinished()) );
 }
 
-void Network::abort()
+void Network::abortAllRequests()
 {
-    m_lastDownloadAborted = true;
-    emit aborted();
+    for ( int i = m_runningRequests.count() - 1; i >= 0; --i ) {
+        // Calling abort automatically removes the aborted request from m_runningRequests
+        m_runningRequests[i]->abort();
+    }
 }
 
 QString Network::getSynchronous( const QString &url, int timeout )
@@ -352,7 +402,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
         kDebug() << "Error downloading" << url << reply->errorString();
         return QString();
     } else {
-        return TimetableAccessorScript::decodeHtml( data, m_fallbackCharset );
+        return Global::decodeHtml( data, m_fallbackCharset );
     }
 }
 
@@ -614,11 +664,13 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
 
 QString Helper::decodeHtmlEntities( const QString& html )
 {
-    return TimetableAccessorScript::decodeHtmlEntities( html );
+    return Global::decodeHtmlEntities( html );
 }
 
 void Helper::error( const QString& message, const QString &failedParseText )
 {
+    emit errorReceived( message, failedParseText );
+
     // Output debug message and a maximum count of 200 characters of the text where the parsing failed
     QString shortParseText = failedParseText.trimmed().left(350);
     int diff = failedParseText.length() - shortParseText.length();
@@ -668,8 +720,7 @@ void ResultObject::addData( const QVariantMap& map )
     QMutexLocker locker( &m_mutex );
     TimetableData data;
     for ( QVariantMap::ConstIterator it = map.constBegin(); it != map.constEnd(); ++it ) {
-        const TimetableInformation info =
-                TimetableAccessor::timetableInformationFromString( it.key() );
+        const TimetableInformation info = Global::timetableInformationFromString( it.key() );
         const QVariant value = it.value();
         if ( info == Nothing ) {
             kDebug() << "Unknown timetable information" << it.key() << "with value" << value;
@@ -687,7 +738,7 @@ void ResultObject::addData( const QVariantMap& map )
                   info == Platform || info == DelayReason || info == Status || info == Pricing) )
             {
                 // Decode HTML entities in string values
-                data[ info ] = TimetableAccessorScript::decodeHtmlEntities( value.toString() ).trimmed();
+                data[ info ] = Global::decodeHtmlEntities( value.toString() ).trimmed();
             } else if ( value.canConvert(QVariant::StringList) &&
                  (info == RouteStops || info == RoutePlatformsDeparture ||
                   info == RoutePlatformsArrival) )
@@ -695,7 +746,7 @@ void ResultObject::addData( const QVariantMap& map )
                 // Decode HTML entities in string list values
                 QStringList stops = value.toStringList();
                 for ( QStringList::Iterator it = stops.begin(); it != stops.end(); ++it ) {
-                    *it = Helper::trim( TimetableAccessorScript::decodeHtmlEntities(*it) );
+                    *it = Helper::trim( Global::decodeHtmlEntities(*it) );
                 }
                 data[ info ] = stops;
             } else {
