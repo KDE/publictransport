@@ -1,6 +1,3 @@
-# find_package( ${KDE4_WEBKIT_LIBS} )
-# include_directories(${LibXML++_INCLUDE_DIRS})
-# set(LIBS ${LIBS} ${LibXML++_LIBRARIES})
 
 set( timetablemate_SRCS
    timetablemate.cpp
@@ -9,10 +6,10 @@ set( timetablemate_SRCS
    timetablemateview.cpp
    publictransportpreview.cpp
    accessorinfoxmlwriter.cpp
-#    accessorinfoxmlreader.cpp
    javascriptcompletionmodel.cpp
    javascriptmodel.cpp
    javascriptparser.cpp
+   ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
 
    # Use files directly from the data engine
    ../../engine/global.cpp
@@ -43,6 +40,8 @@ target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS} ${KDE4_KPARTS_LIBS}
 
 install( TARGETS timetablemate ${INSTALL_TARGETS_DEFAULT_ARGS} )
 
+add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
+    COMMAND ${CMAKE_BINARY_DIR}/timetablemate/timetablematecompletiongenerator/timetablematecompletiongenerator ${CMAKE_CURRENT_BINARY_DIR} )
 
 ########### install files ###############
 install( PROGRAMS timetablemate.desktop  DESTINATION ${XDG_APPS_INSTALL_DIR} )

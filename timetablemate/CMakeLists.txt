@@ -10,6 +10,7 @@ include_directories(
         ${PUBLICTRANSPORTHELPER_INCLUDES} )
 
 # add_subdirectory( doc )
+add_subdirectory( timetablematecompletiongenerator )
 add_subdirectory( src )
 add_subdirectory( icons )
 add_subdirectory( templates )
