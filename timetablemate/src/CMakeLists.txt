@@ -23,8 +23,7 @@ set( timetablemate_SRCS
 )
 
 kde4_add_ui_files( timetablemate_SRCS
-    timetablemateview_base.ui
-    prefs_base.ui )
+    timetablemateview_base.ui )
 
 kde4_add_kcfg_files( timetablemate_SRCS settings.kcfgc )
 
@@ -32,9 +31,13 @@ kde4_add_executable( timetablemate ${timetablemate_SRCS} )
 
 add_dependencies( timetablemate publictransporthelper )
 
-target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS} ${KDE4_KPARTS_LIBS}
-    ${KDE4_PLASMA_LIBS} ${KDE4_KTEXTEDITOR_LIBS} ${KDE4_KROSSCORE_LIBS}
-    ${KDE4_KDEWEBKIT_LIBS} ${KDE4_THREADWEAVER_LIBS} ${QT_QTSCRIPT_LIBRARY}
+target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS}
+    ${KDE4_KPARTS_LIBS} # For the different main view tabs
+    ${KDE4_KTEXTEDITOR_LIBS} # For the text editor main view tabs (for XML and script files)
+    ${KDE4_KDEWEBKIT_LIBS} # For the web main view tab
+    ${KDE4_PLASMA_LIBS} # For the Plasma preview main view tab
+    ${KDE4_THREADWEAVER_LIBS} # For includes from the engine
+    ${QT_QTSCRIPT_LIBRARY}
     publictransporthelper
 )
 
