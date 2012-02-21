@@ -125,13 +125,13 @@ void TimetableAccessorInfo::finish()
 QString TimetableAccessorInfo::name() const
 {
     const QString lang = KGlobal::locale()->country();
-    return m_name.contains(lang) ? m_name[lang] : QString();
+    return m_name.contains(lang) ? m_name[lang] : m_name["en"];
 }
 
 QString TimetableAccessorInfo::description() const
 {
     const QString lang = KGlobal::locale()->country();
-    return m_description.contains(lang) ? m_description[lang] : QString();
+    return m_description.contains(lang) ? m_description[lang] : m_description["en"];
 }
 
 void TimetableAccessorInfo::setAuthor( const QString& author, const QString &shortAuthor,
