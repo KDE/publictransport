@@ -12,14 +12,14 @@ set( timetablemate_SRCS
    ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
 
    # Use files directly from the data engine
-   ../../engine/global.cpp
-   ../../engine/scripting.cpp
-   ../../engine/script_thread.cpp
-   ../../engine/departureinfo.cpp
-   ../../engine/timetableaccessor.cpp
-   ../../engine/timetableaccessor_info.cpp
-   ../../engine/timetableaccessor_script.cpp
-   ../../engine/accessorinfoxmlreader.cpp
+   ../../global.cpp
+   ../../scripting.cpp
+   ../../script_thread.cpp
+   ../../departureinfo.cpp
+   ../../timetableaccessor.cpp
+   ../../timetableaccessor_info.cpp
+   ../../timetableaccessor_script.cpp
+   ../../accessorinfoxmlreader.cpp
 )
 
 kde4_add_ui_files( timetablemate_SRCS
@@ -43,14 +43,14 @@ target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS}
 
 install( TARGETS timetablemate ${INSTALL_TARGETS_DEFAULT_ARGS} )
 
-# Generate completion data class from scripting.h using TimetableMateCompletionGenerator.
-# Rerun when the source file (scripting.h) or the tool (TimetableMateCompletionGenerator) changes.
+# Generate completion data class from scripting.h using CompletionGenerator.
+# Rerun when the source file (scripting.h) or the tool (CompletionGenerator) changes.
 # Put the generated class into the binary directory.
 add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h
                            ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
-    COMMAND ${CMAKE_BINARY_DIR}/timetablemate/timetablematecompletiongenerator/timetablematecompletiongenerator ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../engine/scripting.h
-            ${CMAKE_BINARY_DIR}/timetablemate/timetablematecompletiongenerator/timetablematecompletiongenerator )
+    COMMAND ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../scripting.h
+            ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator )
 
 ########### install files ###############
 install( PROGRAMS timetablemate.desktop  DESTINATION ${XDG_APPS_INSTALL_DIR} )

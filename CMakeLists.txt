@@ -43,9 +43,10 @@ message( "**** to enable TimetableMate, see CMakeLists.txt ****" )
 
 # The library and the engine are used by all applets, the runner and TimetableMate
 message( " - PublicTransport Helper Library" )
-message( " - PublicTransport Data Engine" )
 add_subdirectory( libpublictransporthelper )
+message( " - PublicTransport Data Engine" )
 add_subdirectory( engine )
+# TimetableMate gets added as a tool (subdirectory) of the engine
 
 if ( INSTALL_ENGINE_OPENSTREETMAP )
     message( " - OpenStreetMap Data Engine" )
@@ -77,10 +78,5 @@ if ( INSTALL_RUNNER )
     message( " - PublicTransport Runner" )
     add_subdirectory( runner )
 endif ( INSTALL_RUNNER )
-
-if ( INSTALL_TIMETABLEMATE )
-    message( " - TimetableMate" )
-    add_subdirectory( timetablemate )
-endif ( INSTALL_TIMETABLEMATE )
 
 message( "*****************************************************" )

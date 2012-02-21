@@ -20,9 +20,6 @@
 #ifndef TIMETABLEMATE_H
 #define TIMETABLEMATE_H
 
-// Own includes
-#include "ui_prefs_base.h"
-
 // PublicTransport engine includes
 #include <engine/departureinfo.h>
 #include <engine/scripting.h>
@@ -246,8 +243,6 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
         bool lazyLoadScript();
 
     private:
-	Ui::prefs_base ui_prefs_base;
-
 	KTabWidget *m_mainTabBar;
 	KParts::PartManager *m_partManager;
 	TimetableMateView *m_view;

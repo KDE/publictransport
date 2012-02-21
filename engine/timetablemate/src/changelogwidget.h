@@ -21,7 +21,7 @@
 #define CHANGELOGENTRYWIDGET_HEADER
 
 // PublicTransport engine includes
-#include <../../engine/accessorinfoxmlreader.h>
+#include "engine/accessorinfoxmlreader.h"
 
 // libpublictransporthelper includes
 #include <dynamicwidget.h>

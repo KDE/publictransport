@@ -22,7 +22,7 @@
 #include <QFile>
 #include <KDebug>
 
-#include "../../engine/scripting.h"
+#include "engine/scripting.h"
 
 QString cToQtScriptTypeName( const QString &cTypeName ) {
     if ( cTypeName == "QString" ) {
@@ -349,7 +349,9 @@ int main( int argc, char **argv )
             "void JavaScriptCompletionGeneric::addCompletions( "
             "QHash< QString, QHash<QString, CompletionItem> > *completions ) {\n" );
 
-    const QString pre = "../../../engine/";
+    // Go from publictransport/build/engine/timetablemate/completiongenerator
+    // to publictransport/engine/
+    const QString pre = "../../../../engine/";
     parseDescriptionsAndWriteMethods( &output, Helper::staticMetaObject, pre + "scripting.h" );
     parseDescriptionsAndWriteMethods( &output, Network::staticMetaObject, pre + "scripting.h" );
 //     parseDescriptionsAndWriteMethods( &output, NetworkRequest::staticMetaObject, pre + "scripting.h" ); // no static name, gets dynamically generated in the script by using the 'network' object

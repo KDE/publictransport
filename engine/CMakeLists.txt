@@ -15,6 +15,11 @@ if ( BUILD_TESTS )
     add_subdirectory( tests )
 endif ( BUILD_TESTS )
 
+if ( INSTALL_TIMETABLEMATE )
+    message( " - TimetableMate" )
+    add_subdirectory( timetablemate )
+endif ( INSTALL_TIMETABLEMATE )
+
 # Source files
 set( publictransport_engine_SRCS
     publictransportdataengine.cpp
