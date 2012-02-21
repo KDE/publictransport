@@ -205,7 +205,7 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 	bool loadAccessor( const QString &fileName );
 	bool setAccessorValues( QByteArray *text, QString *error = 0,
 				const QString &fileName = QString() );
-	bool loadScriptForCurrentAccessor( const QString &path, bool openFile = true );
+	bool loadScriptForCurrentAccessor( bool openFile = true );
 
 	void setChanged( bool changed = true );
 	void syncAccessor();
@@ -242,8 +242,8 @@ class TimetableMate : public KParts::MainWindow { //KXmlGuiWindow {
 
 	static QString gethex( ushort decimal );
 
-        bool loadScript( QScriptProgram *script, const TimetableAccessorInfo *info );
-        bool lazyLoadScript( const TimetableAccessorInfo *info );
+        bool loadScript();
+        bool lazyLoadScript();
 
     private:
 	Ui::prefs_base ui_prefs_base;

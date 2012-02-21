@@ -389,29 +389,6 @@ QStringList TimetableMate::allowedExtensions()
     return QStringList() << "kross" << "qt" << "qt.core" << "qt.xml";
 }
 
-bool TimetableMate::lazyLoadScript( const TimetableAccessorInfo *info )
-{
-    if ( m_script ) {
-        return true;
-    }
-
-    // Read script
-    QFile scriptFile( info->scriptFileName() );
-    if ( !scriptFile.open(QIODevice::ReadOnly) ) {
-        kDebug() << "Script could not be opened for reading"
-                 << info->scriptFileName() << scriptFile.errorString();
-        return false;
-    }
-    QTextStream stream( &scriptFile );
-    QString scriptContents = stream.readAll();
-    scriptFile.close();
-
-    // Initialize the script
-    m_script = new QScriptProgram( scriptContents, info->scriptFileName() );
-
-    return true;
-}
-
 void TimetableMate::closeEvent( QCloseEvent *event ) {
     if ( m_changed ) {
         int result;
@@ -1167,7 +1144,12 @@ bool TimetableMate::loadTemplate( const QString &fileName ) {
     m_openedPath.clear();
 
     // Load script file referenced by the XML
-    if ( !loadScriptForCurrentAccessor(QFileInfo(_fileName).path(), false) ) {
+    const QString filePath = QFileInfo( _fileName ).path();
+    if ( filePath.isEmpty() ) {
+        kDebug() << "Cannot open script files when the path isn't given. "
+                    "Save the accessor XML file first.";
+        m_mainTabBar->setTabEnabled( ScriptTab, false ); // Disable script tab
+    } else if ( !loadScriptForCurrentAccessor(false) ) {
         syncAccessor();
         m_view->setScriptFile( QString() );
         syncAccessor();
@@ -1235,7 +1217,7 @@ bool TimetableMate::loadAccessor( const QString &fileName ) {
     m_recentFilesAction->addUrl( url );
 
     // Load script file referenced by the XML
-    if ( !loadScriptForCurrentAccessor(url.directory()) ) {
+    if ( !loadScriptForCurrentAccessor() ) {
         // Could not load, eg. script file not found
         syncAccessor();
         m_view->setScriptFile( QString() );
@@ -1248,23 +1230,23 @@ bool TimetableMate::loadAccessor( const QString &fileName ) {
     return true;
 }
 
-void TimetableMate::scriptFileChanged( const QString &/*scriptFile*/ ) {
-    loadScriptForCurrentAccessor( m_openedPath );
+void TimetableMate::scriptFileChanged( const QString &scriptFile ) {
+    if ( scriptFile.isEmpty() ) {
+        kDebug() << "Cannot open script files when the path isn't given. "
+                    "Save the accessor XML file first.";
+        m_mainTabBar->setTabEnabled( ScriptTab, false ); // Disable script tab
+    } else {
+        loadScriptForCurrentAccessor();
+    }
 }
 
 void TimetableMate::plasmaPreviewLoaded() {
     m_preview->setSettings( m_currentServiceProviderID, QString() );
 }
 
-bool TimetableMate::loadScriptForCurrentAccessor( const QString &path, bool openFile ) {
+bool TimetableMate::loadScriptForCurrentAccessor( bool openFile ) {
     m_scriptDocument->closeUrl( false );
     m_scriptDocument->setModified( false );
-    if ( path.isEmpty() ) {
-        kDebug() << "Cannot open script files when the path isn't given. "
-                    "Save the accessor XML file first.";
-        m_mainTabBar->setTabEnabled( ScriptTab, false ); // Disable script tab
-        return false;
-    }
 
     QString text = m_accessorDocument->text();
     QString scriptFile = m_view->accessorInfo()->info()->scriptFileName();
@@ -1272,9 +1254,6 @@ bool TimetableMate::loadScriptForCurrentAccessor( const QString &path, bool open
         m_mainTabBar->setTabEnabled( ScriptTab, false ); // Disable script tab
         return false;
     } else {
-//         scriptFile = path + '/' + scriptFile;
-        Q_ASSERT( scriptFile.startsWith(path) );
-
         if ( openFile ) {
             if ( !QFile::exists(scriptFile) ) {
                 KMessageBox::information( this, i18nc("@info", "The script file <filename>"
@@ -1385,6 +1364,7 @@ void TimetableMate::toolsCheck() {
                             "page link, to save space. The result would be that nothing is shown.");
     }
 
+    kDebug() << "Check script" << scriptOk;
     if ( scriptOk ) {
         // First check the script using the own JavaScriptParser
         JavaScriptParser parser( m_scriptDocument->text() );
@@ -1398,37 +1378,43 @@ void TimetableMate::toolsCheck() {
             scriptOk = false;
         }
 
-        // Create a Kross::Action instance
-        Kross::Action script( this, "TimetableParser" );
-
-        // Set script code and type
-        if ( info->scriptFileName().endsWith(QLatin1String(".py")) )
-            script.setInterpreter( "python" );
-        else if ( info->scriptFileName().endsWith(QLatin1String(".rb")) )
-            script.setInterpreter( "ruby" );
-        else if ( info->scriptFileName().endsWith(QLatin1String(".js")) )
-            script.setInterpreter( "javascript" );
-        else {
-            const QString scriptType = KInputDialog::getItem(
-                                           i18nc("@title:window", "Choose Script Type"),
-                                           i18nc("@info", "Script type unknown, please choose one of these:"),
-                                           QStringList() << "JavaScript" << "Ruby" << "Python", 0, false, 0, this );
-            script.setInterpreter( scriptType.toLower() );
-        }
-        script.setCode( m_scriptDocument->text().toUtf8() );
-
-        // Test the script
-        script.trigger();
-        if ( !script.hadError() ) {
-            scriptFunctions = script.functionNames();
-        } else {
-            if ( script.errorLineNo() != -1 ) {
-                // Go to error line
-                m_scriptDocument->activeView()->setCursorPosition(
-                    KTextEditor::Cursor(script.errorLineNo(), 0) );
+        // TODO: Use QScriptEngine::checkSyntax()?
+        QScriptSyntaxCheckResult syntax = QScriptEngine::checkSyntax( m_scriptDocument->text() );
+        kDebug() << "SYNTAX:" << syntax.state() << syntax.errorLineNumber() << syntax.errorMessage();
+        if ( syntax.state() == QScriptSyntaxCheckResult::Intermediate ||
+             syntax.state() == QScriptSyntaxCheckResult::Error )
+        {
+            // Go to error line
+            m_scriptDocument->activeView()->setCursorPosition(
+                    KTextEditor::Cursor(syntax.errorLineNumber(), syntax.errorColumnNumber()) );
+            const QString errorString = i18nc("@info", "<emphasis>Error in script:</emphasis> "
+                            "<message>%1</message>", syntax.errorMessage());
+            if ( syntax.state() == QScriptSyntaxCheckResult::Intermediate ) {
+                inelegants << errorString;
+            } else if ( syntax.state() == QScriptSyntaxCheckResult::Error ) {
+                errors << errorString;
             }
+            scriptOk = false;
+        } else if ( loadScript() ) {
+            // Use function names found by own JavaScript parser
+            scriptFunctions = m_javaScriptModel->functionNames();
+            kDebug() << "Successfully loaded the script";
+//          TODO: This is a Qt version of the above, but it finds many other properties of course
+//                Need to somehow filter out global properties parsed from the script file
+//             QScriptValueIterator it( m_engine->globalObject() );
+//             while ( it.hasNext() ) {
+//                 it.next();
+//                 scriptFunctions << it.name();
+//             } // TODO
+        } else if ( m_engine->hasUncaughtException() ) {
+            // Go to error line
+            m_scriptDocument->activeView()->setCursorPosition(
+                    KTextEditor::Cursor(m_engine->uncaughtExceptionLineNumber(), 0) );
             errors << i18nc("@info", "<emphasis>Error in script:</emphasis> "
-                            "<message>%1</message>", script.errorMessage());
+                            "<message>%1</message>", m_engine->uncaughtException().toString());
+            scriptOk = false;
+        } else {
+            errors << i18nc("@info", "<emphasis>Error loading the script</emphasis>");
             scriptOk = false;
         }
     } else {
@@ -2142,28 +2128,56 @@ bool TimetableMate::hasHomePageURL( const TimetableAccessorInfo *info ) {
         return true;
 }
 
-bool TimetableMate::loadScript( QScriptProgram *script, const TimetableAccessorInfo *info )
+bool TimetableMate::lazyLoadScript()
 {
+    // Do not load the script again if it was already loaded and was not changed since then
+    if ( m_script && !m_scriptDocument->isModified() ) {
+        return true;
+    }
+
+    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
+
+    // Read script
+//     QFile scriptFile( info->scriptFileName() );
+//     if ( !scriptFile.open(QIODevice::ReadOnly) ) {
+//         kDebug() << "Script could not be opened for reading"
+//                  << info->scriptFileName() << scriptFile.errorString();
+//         return false;
+//     }
+//     QTextStream stream( &scriptFile );
+//     QString scriptContents = stream.readAll();
+//     scriptFile.close();
+
+    // Initialize the script
+    kDebug() << "Reload script text";
+    m_script = new QScriptProgram( m_scriptDocument->text(), info->scriptFileName() );
+
+    return true;
+}
+
+bool TimetableMate::loadScript()
+{
+    if ( !m_script && !lazyLoadScript() ) {
+        return false;
+    }
+
+    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
+
     // Create script engine
     kDebug() << "Create QScriptEngine";
     m_engine = new QScriptEngine( this );
-//     m_scriptStorage->mutex.lock();
-//     kDebug() << "LOAD qt.core" << thread() << m_parseMode;
-//     m_engine->importExtension("qt.core");
+    foreach ( const QString &extension, info->scriptExtensions() ) {
+        if ( !importExtension(m_engine, extension) ) {
+//             m_errorString = i18nc("@info/plain", "Could not load script extension "
+//                                   "<resource>%1</resource>.", extension);
+//             m_success = false;
+            m_engine->deleteLater();
+            m_engine = 0;
+            return false;
+        }
+    }
 
-//     TODO Load script
-//     foreach ( const QString &extension, m_scriptExtensions ) {
-//         if ( !importExtension(m_engine, extension) ) {
-//             m_lastError = i18nc("@info/plain", "Could not load script extension "
-//                                 "<resource>%1</resource>.", extension);
-//             m_lastScriptError = ScriptLoadFailed;
-//             m_engine->deleteLater();
-//             m_engine = 0;
-//             return false;
-//         }
-//     }
-
-    m_engine->globalObject().setProperty( "accessor", m_engine->newQObject(parent()) );
+    m_engine->globalObject().setProperty( "accessor", m_engine->newQObject(m_view->accessorInfo()) );
 
     // Add "importExtension()" function to import extensions
     // Importing Kross not from the GUI thread causes some warnings about pixmaps being used
@@ -2180,9 +2194,11 @@ bool TimetableMate::loadScript( QScriptProgram *script, const TimetableAccessorI
 
     // Create objects for the script
     m_scriptHelper = new Helper( info->serviceProvider(), m_engine );
-    m_scriptNetwork = new Network( info->fallbackCharset(), this );
-    m_scriptResult = new ResultObject( this );
-    m_scriptStorage = new Storage( info->serviceProvider(), this );
+    m_scriptNetwork = new Network( info->fallbackCharset(), m_engine );
+    m_scriptResult = new ResultObject( m_engine );
+    if ( !m_scriptStorage ) {
+        m_scriptStorage = new Storage( info->serviceProvider(), this );
+    }
     connect( m_scriptResult, SIGNAL(publish()), this, SLOT(publish()) );
     connect( m_scriptHelper, SIGNAL(errorReceived(QString,QString)),
              this, SLOT(scriptErrorReceived(QString,QString)) );
@@ -2196,7 +2212,7 @@ bool TimetableMate::loadScript( QScriptProgram *script, const TimetableAccessorI
             m_engine->newQMetaObject(&ResultObject::staticMetaObject) );
 
     // Load the script program
-    m_engine->evaluate( *script );
+    m_engine->evaluate( *m_script );
     if ( m_engine->hasUncaughtException() ) {
         kDebug() << "Error in the script" << m_engine->uncaughtExceptionLineNumber()
                  << m_engine->uncaughtException().toString();
@@ -2205,11 +2221,8 @@ bool TimetableMate::loadScript( QScriptProgram *script, const TimetableAccessorI
                 "<message>%1</message>.", m_engine->uncaughtException().toString());
         m_engine->deleteLater();
         m_engine = 0;
-        m_scriptNetwork->clear();
-//         m_scriptNetwork->deleteLater();
-//         m_scriptNetwork = 0;
-//         m_scriptResult->deleteLater();
-//         m_scriptResult = 0;
+        m_scriptNetwork = 0;
+        m_scriptResult = 0;
         m_lastScriptError = ScriptLoadFailed;
         return false;
     } else {
@@ -2302,7 +2315,7 @@ bool TimetableMate::scriptRun( const QString &functionToRun, const RequestInfo *
 // 		debugMessageList->append( helper->debugMessages );
 //     }
 // NEW ***********************************************************************
-    if ( !lazyLoadScript(info) || !loadScript(m_script, info) ) {
+    if ( !lazyLoadScript() || !loadScript() ) {
         kDebug() << "Script could not be loaded correctly";
         return false;
     }
