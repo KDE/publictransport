@@ -2329,28 +2329,19 @@ bool TimetableMate::scriptRun( const QString &functionToRun, const RequestInfo *
 
     // Add call to the appropriate function
     QString functionName;
-    QScriptValueList arguments;
+    QScriptValueList arguments = QScriptValueList() << requestInfo->toScriptValue( m_engine );
     switch ( requestInfo->parseMode ) {
     case ParseForDeparturesArrivals:
         functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
-        arguments << requestInfo->stop << m_engine->newDate(requestInfo->dateTime)
-                  << requestInfo->maxCount << requestInfo->dataType << requestInfo->city;
         break;
     case ParseForJourneys:
         functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS;
-        arguments << requestInfo->stop
-                  << dynamic_cast<const JourneyRequestInfo*>(requestInfo)->targetStop
-                  << m_engine->newDate(requestInfo->dateTime)
-                  << requestInfo->maxCount << requestInfo->dataType << requestInfo->city;
         break;
     case ParseForStopSuggestions:
         functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
-        arguments << requestInfo->stop << requestInfo->maxCount << requestInfo->city;
         break;
-
     default:
         kDebug() << "Parse mode unsupported:" << requestInfo->parseMode;
-        // TODO
         break;
     }
 

@@ -18,19 +18,17 @@ function usedTimetableInformations() {
 }
 
 var requestDateTime;
-function getTimetable( stop, dateTime, maxCount, dataType, city ) {
+function getTimetable( values ) {
     // Store request date and time to know it in parseTimetable
-    requestDateTime = dateTime;
+    requestDateTime = values.dateTime;
     print( "write requestDateTime: " + requestDateTime );
 
     var url = "http://reiseauskunft.bahn.de/bin/bhftafel.exe/dn?rt=1" +
-            "&input=" + stop + "!" +
-            "&boardType=" + (dataType == "arrivals" ? "arr" : "dep") +
-            "&date=" + helper.formatDateTime(dateTime, "dd.MM.yy") +
-            "&time=" + helper.formatDateTime(dateTime, "hh:mm") +
-//             "&date=" + qDateTime.toString("dd.MM.yy") +
-//             "&time=" + qDateTime.toString("hh:mm") +
-            "&maxJourneys=" + maxCount +
+            "&input=" + values.stop + "!" +
+            "&boardType=" + (values.dataType == "arrivals" ? "arr" : "dep") +
+            "&date=" + helper.formatDateTime(values.dateTime, "dd.MM.yy") +
+            "&time=" + helper.formatDateTime(values.dateTime, "hh:mm") +
+            "&maxJourneys=" + values.maxCount +
             "&disableEquivs=no&start=yes&productsFilter=111111111";
 
     var request = network.createRequest( url );
@@ -39,7 +37,7 @@ function getTimetable( stop, dateTime, maxCount, dataType, city ) {
     network.get( request );
 }
 
-function getJourneys( originStop, targetStop, dateTime, maxCount, dataType, city ) {
+function getJourneys( values ) {
 //     for ( var i = 0; i < 100; ++i ) {
 //         result.addData({ DepartureDateTime: new Date(), ArrivalDateTime: new Date(), StartStopName: "Fieti" + i, TargetStopName: "Annika" });
 //         for ( var n = 0; n < 100000000; ++n ) {
@@ -51,14 +49,14 @@ function getJourneys( originStop, targetStop, dateTime, maxCount, dataType, city
 
 //     var qDateTime = new QDateTime( dateTime );
     var url = "http://reiseauskunft.bahn.de/bin/query.exe/dn" +
-            "?S=" + originStop + "!" +
-            "&Z=" + targetStop + "!" +
-            "&date=" + helper.formatDateTime(dateTime, "dd.MM.yy") +
-            "&time=" + helper.formatDateTime(dateTime, "hh:mm") +
+            "?S=" + values.originStop + "!" +
+            "&Z=" + values.targetStop + "!" +
+            "&date=" + helper.formatDateTime(values.dateTime, "dd.MM.yy") +
+            "&time=" + helper.formatDateTime(values.dateTime, "hh:mm") +
 //             "&date=" + qDateTime.toString("dd.MM.yy") +
 //             "&time=" + qDateTime.toString("hh:mm") +
-            "&maxJourneys=" + maxCount +
-            "&REQ0HafasSearchForw=" + (dataType == "arrivals" ? "0" : "1") +
+            "&maxJourneys=" + values.maxCount +
+            "&REQ0HafasSearchForw=" + (values.dataType == "arrivals" ? "0" : "1") +
             "&start=yes&sortConnections=minDeparture&HWAI=JS!ajax=yes!&HWAI=CONNECTION$C0-0!id=C0-0!HwaiDetailStatus=details!;CONNECTION$C0-1!id=C0-1!HwaiDetailStatus=details!;CONNECTION$C0-2!id=C0-2!HwaiDetailStatus=details!;CONNECTION$C0-3!id=C0-3!HwaiDetailStatus=details!;CONNECTION$C0-4!id=C0-4!HwaiDetailStatus=details!;CONNECTION$C1-0!id=C1-0!HwaiDetailStatus=details!;CONNECTION$C1-1!id=C1-1!HwaiDetailStatus=details!;CONNECTION$C1-2!id=C1-2!HwaiDetailStatus=details!;CONNECTION$C1-3!id=C1-3!HwaiDetailStatus=details!;CONNECTION$C1-4!id=C1-4!HwaiDetailStatus=details!;CONNECTION$C2-0!id=C2-0!HwaiDetailStatus=details!;CONNECTION$C2-1!id=C2-1!HwaiDetailStatus=details!;CONNECTION$C2-2!id=C2-2!HwaiDetailStatus=details!;CONNECTION$C2-3!id=C2-3!HwaiDetailStatus=details!;CONNECTION$C2-4!id=C2-4!HwaiDetailStatus=details!;";
 
     // Get three journey documents
@@ -86,9 +84,9 @@ function getJourneys( originStop, targetStop, dateTime, maxCount, dataType, city
     }
 }
 
-function getStopSuggestions( stop, maxCount, city  ) {
+function getStopSuggestions( values  ) {
     var url = "http://reiseauskunft.bahn.de/bin/ajax-getstop.exe/dn?REQ0JourneyStopsS0A=1" +
-            "&REQ0JourneyStopsS0G=" + stop;
+            "&REQ0JourneyStopsS0G=" + values.stop;
     var json = network.getSynchronous( url );
 
     if ( !network.lastDownloadAborted() ) {

@@ -53,12 +53,12 @@ function getUrlForDetailedJourneyResults( html ) {
     }
 }
 
-function getTimetable( stop, dateTime, maxCount, dataType, city ) {
+function getTimetable( values ) {
     var url = "http://fahrplan.sbb.ch/bin/bhftafel.exe/dn?" +
-            "input=" + stop + "!" +
-            "&boardType=" + (dataType == "arrivals" ? "arr" : "dep") +
-            "&time=" + dateTime.getHours() + ":" + dateTime.getMinutes() +
-            "&disableEquivs=no&maxJourneys=" + maxCount + "&start=yes";
+            "input=" + values.stop + "!" +
+            "&boardType=" + (values.dataType == "arrivals" ? "arr" : "dep") +
+            "&time=" + values.dateTime.getHours() + ":" + values.dateTime.getMinutes() +
+            "&disableEquivs=no&maxJourneys=" + values.maxCount + "&start=yes";
 
     var request = network.createRequest( url );
 //     request.readyRead.connect( parseTimetableIterative );
@@ -66,14 +66,14 @@ function getTimetable( stop, dateTime, maxCount, dataType, city ) {
     network.get( request );
 }
 
-function getJourneys( originStop, targetStop, dateTime, maxCount, dataType, city ) {
+function getJourneys( values ) {
     var url = "http://fahrplan.sbb.ch/bin/query.exe/dn" +
-            "?S=" + originStop + "!" +
-            "&Z=" + targetStop + "!" +
-            "&date=" + helper.formatDateTime(dateTime, "dd.MM.yy") +
-            "&time=" + helper.formatDateTime(dateTime, "hh:mm") +
-            "&maxJourneys=" + maxCount +
-            "&REQ0HafasSearchForw=" + (dataType == "arrivals" ? "0" : "1") +
+            "?S=" + values.originStop + "!" +
+            "&Z=" + values.targetStop + "!" +
+            "&date=" + helper.formatDateTime(values.dateTime, "dd.MM.yy") +
+            "&time=" + helper.formatDateTime(values.dateTime, "hh:mm") +
+            "&maxJourneys=" + values.maxCount +
+            "&REQ0HafasSearchForw=" + (values.dataType == "arrivals" ? "0" : "1") +
             "&start=yes&sortConnections=minDeparture&jumpToDetails=yes&HWAI=JS!ajax=yes!&" +
             "HWAI=CONNECTION$C0-0!id=C0-0!HwaiConId=C0-0!HwaiDetailStatus=details!HwaiConnectionNumber=!;" +
             "CONNECTION$C0-1!id=C0-1!HwaiConId=C0-1!HwaiDetailStatus=details!HwaiConnectionNumber=!;" +
@@ -755,9 +755,9 @@ function parseJourneys( html ) {
     }
 }
 
-function getStopSuggestions( stop, maxCount, city  ) {
+function getStopSuggestions( values  ) {
     var url = "http://fahrplan.sbb.ch/bin/ajax-getstop.exe/dn?" +
-            "REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G=" + stop;
+            "REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G=" + values.stop;
     var json = network.getSynchronous( url );
 
     if ( !network.lastDownloadAborted() ) {

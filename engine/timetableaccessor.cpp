@@ -36,6 +36,7 @@
 #include <QTextCodec>
 #include <QFile>
 #include <QTimer>
+#include <QScriptEngine>
 
 TimetableAccessor::TimetableAccessor( TimetableAccessorInfo *info )
         : m_info(info ? info : new TimetableAccessorInfo())
@@ -298,4 +299,31 @@ bool TimetableAccessor::useSeparateCityValue() const
 bool TimetableAccessor::onlyUseCitiesInList() const
 {
     return m_info->onlyUseCitiesInList();
+}
+
+QScriptValue RequestInfo::toScriptValue( QScriptEngine *engine ) const
+{
+    QScriptValue argument = engine->newObject();
+    argument.setProperty( QLatin1String("stop"), stop );
+    argument.setProperty( QLatin1String("city"), city );
+    argument.setProperty( QLatin1String("maxCount"), maxCount );
+    return argument;
+}
+
+QScriptValue DepartureRequestInfo::toScriptValue( QScriptEngine *engine ) const
+{
+    QScriptValue argument = RequestInfo::toScriptValue( engine );
+    argument.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
+    argument.setProperty( QLatin1String("dataType"), dataType );
+    return argument;
+}
+
+QScriptValue JourneyRequestInfo::toScriptValue( QScriptEngine *engine ) const
+{
+    QScriptValue argument = RequestInfo::toScriptValue( engine );
+    argument.setProperty( QLatin1String("originStop"), stop ); // Already in argument as "stop"
+    argument.setProperty( QLatin1String("targetStop"), targetStop );
+    argument.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
+    argument.setProperty( QLatin1String("dataType"), dataType );
+    return argument;
 }

@@ -5,13 +5,13 @@ function usedTimetableInformations() {
     return [ 'Arrivals', 'TypeOfVehicle', 'JourneyNews', 'Platform', 'Delay', 'StopID', 'StopWeight' ];
 }
 
-function getTimetable( stop, dateTime, maxCount, dataType, city ) {
+function getTimetable( values ) {
     var url = "http://fahrplan.oebb.at/bin/stboard.exe/dn?ld=oebb&sqView=2&start=Abfahrtstafel&" +
-            "boardType=" + (dataType == "arrivals" ? "arr" : "dep") +
-            "&time=" + dateTime.getHours() + ":" + dateTime.getMinutes() +
-            "&maxJourneys=" + maxCount +
+            "boardType=" + (values.dataType == "arrivals" ? "arr" : "dep") +
+            "&time=" + values.dateTime.getHours() + ":" + values.dateTime.getMinutes() +
+            "&maxJourneys=" + values.maxCount +
             "&dateBegin=&dateEnd=&selectDate=&productsFilter=0&editStation=yes&dirInput=&input=" +
-            stop;
+            values.stop;
 
     var request = network.createRequest( url );
     request.finished.connect( parseTimetable );
@@ -36,7 +36,7 @@ function parseTimetable( html ) {
                 attributes: {"class": ""}, // Header tags require a class attribute
                 // Use first word in "class" attribute of the header tag as header name
                 namePosition: {type: "attribute", name: "class", regexp: "([^\\s]*)(?:\\s+\\w+)?"}
-            }
+              }
             });
         if ( headers.error ) {
             helper.error( "Did not find all required columns", str );
@@ -51,7 +51,7 @@ function parseTimetable( html ) {
     var delayRegExp = /<span[^>]*?>ca.&nbsp;\+(\d+?)&nbsp;Min.&nbsp;<\/span>/i;
     var delayOnScheduleRegExp = /<span[^>]*?>p&#252;nktlich<\/span>/i;
     var routeBlocksRegExp = /\r?\n\s*(-|&#8226;)\s*\r?\n/gi;
-    var routeBlockEndOfExactRouteMarkerRegExp = /&#8226;/i;
+    var routeBlockEndOfExactRouteMarker = "&#8226;";
 
     // This map gets used to replace matched vehicle type strings with strings the
     // PublicTransport data engine understands
@@ -131,12 +131,12 @@ function parseTimetable( html ) {
 
             // Get the number of exact route stops by searching for the position of the
             // "end-of-route-marker"
-            if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) ) {
+            if ( route.indexOf(routeBlockEndOfExactRouteMarker) == -1 ) {
                 departure.RouteExactStops = routeBlocks.length;
             } else {
                 while ( (splitter = routeBlocksRegExp.exec(route)) ) {
                     ++departure.RouteExactStops;
-                    if ( routeBlockEndOfExactRouteMarkerRegExp.test(splitter) )
+                    if ( splitter.indexOf(routeBlockEndOfExactRouteMarker) != -1 )
                         break;
                 }
             }
@@ -186,10 +186,10 @@ function parseTimetable( html ) {
     }
 }
 
-function getStopSuggestions( stop, maxCount, city  ) {
+function getStopSuggestions( values  ) {
     // Download suggestions and parse them using a regular expression
     var json = network.getSynchronous( "http://fahrplan.oebb.at/bin/ajax-getstop.exe/dn?" +
-                                       "REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G=" + stop + "?" );
+            "REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G=" + values.stop + "?" );
     if ( network.lastDownloadAborted() ) {
         return false;
     }

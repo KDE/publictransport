@@ -34,7 +34,9 @@
 // Qt includes
 #include <QHash>
 #include <QStringList>
+#include <QScriptValue>
 
+class QScriptEngine;
 class KUrl;
 class KJob;
 
@@ -118,10 +120,25 @@ struct RequestInfo {
         return new RequestInfo( sourceName, stop, dateTime, maxCount, dataType, useDifferentUrl,
                                 city, parseMode );
     };
+
+    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
 };
 
 typedef RequestInfo StopSuggestionRequestInfo;
-typedef RequestInfo DepartureRequestInfo;
+
+struct DepartureRequestInfo : public RequestInfo {
+    DepartureRequestInfo() : RequestInfo() {};
+    DepartureRequestInfo( const QString &sourceName, const QString &stop,
+                          const QDateTime &dateTime, int maxCount,
+                          const QString &dataType = "departures",
+                          bool useDifferentUrl = false, const QString &city = QString(),
+                          ParseDocumentMode parseMode = ParseForDeparturesArrivals )
+        : RequestInfo(sourceName, stop, dateTime, maxCount, dataType,
+                      useDifferentUrl, city, parseMode) {};
+    DepartureRequestInfo( const DepartureRequestInfo &info ) : RequestInfo(info) {};
+
+    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
+};
 
 /**
  * @brief Stores information about a request for journeys to the publictransport data engine.
@@ -168,6 +185,8 @@ struct JourneyRequestInfo : public RequestInfo {
         return new JourneyRequestInfo( sourceName, stop, targetStop, dateTime, maxCount, urlToUse,
                                        dataType, useDifferentUrl, city, parseMode );
     };
+
+    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
 };
 
 /**

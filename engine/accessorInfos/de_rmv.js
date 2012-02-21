@@ -5,17 +5,17 @@ function usedTimetableInformations() {
     return [ 'StopID', 'Delay', 'Platform', 'JourneyNews', 'Operator', 'RouteStops', 'RouteTimes' ];
 }
 
-function getTimetable( stop, dateTime, maxCount, dataType, city ) {
+function getTimetable( values ) {
     // Store request date and time to know it in parseTimetable
-    requestDateTime = dateTime;
+    requestDateTime = values.dateTime;
     print( "write requestDateTime: " + requestDateTime );
 
     var url = "http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq" +
             "&selectDate=today" +
-            "&time=" + helper.formatDateTime(dateTime, "hh:mm") +
-            "&input=" + stop + "!" +
-            "&maxJourneys=" + maxCount +
-            "&boardType=" + (dataType == "arrivals" ? "arr" : "dep") +
+            "&time=" + helper.formatDateTime(values.dateTime, "hh:mm") +
+            "&input=" + values.stop + "!" +
+            "&maxJourneys=" + values.maxCount +
+            "&boardType=" + (values.dataType == "arrivals" ? "arr" : "dep") +
             "&productsFilter=1111111111100000&maxStops=1&output=xml&start=yes";
 
     var request = network.createRequest( url );
@@ -23,9 +23,9 @@ function getTimetable( stop, dateTime, maxCount, dataType, city ) {
     network.get( request );
 }
 
-function getStopSuggestions( stop, maxCount, city  ) {
+function getStopSuggestions( values  ) {
     var url = "http://www.rmv.de/auskunft/bin/jp/stboard.exe/dn?L=vs_rmv.vs_sq" +
-            "&input=" + stop + "&output=html&start=yes";
+            "&input=" + values.stop + "&output=html&start=yes";
     var html = network.getSynchronous( url );
 
     if ( !network.lastDownloadAborted() ) {

@@ -105,12 +105,11 @@ typedef QHash<TimetableInformation, QVariant> TimetableData;
  * There should be specially named functions in the script, that get called by the data engine.
  * Only the @em getTimetable function @em must be implemented.
  *
- * @subsection script_functions_gettimetable getTimetable( stop, dateTime, maxCount, dataType, city )
+ * @subsection script_functions_gettimetable getTimetable( values )
  *   This function @em must be implemented. It is responsible for downloading and parsing of a
  *   document containing information about departures or arrivals. Departures for all transport
- *   lines and vehicle types should be collected. The arguments to this function tell the script
- *   what data it should get. The order of the arguments is important, but not all arguments must
- *   be used:
+ *   lines and vehicle types should be collected. The argument to this function tells the script
+ *   what data it should get. It has the following properties:
  *   @li @em stop: The name/ID of the stop to get departures/arrivals for.
  *   @li @em dateTime: A Date object with the date and time of the earliest departure/arrival to
  *     get.
@@ -119,23 +118,24 @@ typedef QHash<TimetableInformation, QVariant> TimetableData;
  *   @li @em city: If used, this contains the city name to get departures/arrivals for. Only some
  *     service providers need a separate city value, most are happy with a stop name/stop ID.
  *
- * @subsection script_functions_getstopsuggestions getStopSuggestions( stop, maxCount, city )
+ * @subsection script_functions_getstopsuggestions getStopSuggestions( values )
  *   This function can be implemented to provide stop suggestions. It is responsible for
- *   downloading and parsing of a document containing the stop suggestions. The arguments to this
- *   function tell the script what data it should get (similar to the @em getTimetable function):
+ *   downloading and parsing of a document containing the stop suggestions. The argument to this
+ *   function tells the script what data it should get (similar to the @em getTimetable function)
+ *   and has the following properties:
  *   @li @em stop: A string to get stop suggestions for. This is what users can type in, eg. the
  *     beginning of the complete stop name.
  *   @li @em maxCount: The maximal number of stop suggestions to get.
  *   @li @em city: If used, this contains the city name to get stop suggestions for. Only some
  *     service providers need a separate city value, most are happy with a part of the stop name.
  *
- * @subsection script_functions_getjourneys getJourneys( city, originStop, targetStop, dateTime, dataType, maxCount )
+ * @subsection script_functions_getjourneys getJourneys( values )
  *   This function can be implemented to provide journey information. A journey is here a trip from
  *   an origin stop to a target stop. It is responsible for downloading and parsing of a
  *   document containing information about journeys. Journeys for all transport lines and vehicle
- *   types should be collected. The arguments to this function tell the script what data it should
- *   get:
- *   @li @em originStop: The name/ID of the start/origin stop.
+ *   types should be collected. The argument to this function tells the script what data it should
+ *   get and has the following properties:
+ *   @li @em originStop: The name/ID of the start/origin stop, also available as 'stop' property.
  *   @li @em targetStop: The name/ID of the target/destination stop.
  *   @li @em dateTime: A Date object with the date and time of the earliest journey to get.
  *   @li @em maxCount: The maximal number of journeys to get.

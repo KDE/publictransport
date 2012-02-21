@@ -5,11 +5,11 @@ function usedTimetableInformations() {
     return [ 'TypeOfVehicle', 'StopName' ];
 }
 
-function getTimetable( stop, dateTime, maxCount, dataType, city ) {
-    var url = "http://jizdnirady.idnes.cz/" + city + "/odjezdy/?" +
-            "f=" + stop +
-            "&Date=" + helper.formatDateTime(dateTime, "dd.M.yyyy") +
-            "&Time=" + helper.formatDateTime(dateTime, "h:mm") +
+function getTimetable( values ) {
+    var url = "http://jizdnirady.idnes.cz/" + values.city + "/odjezdy/?" +
+            "f=" + values.stop +
+            "&Date=" + helper.formatDateTime(values.dateTime, "dd.M.yyyy") +
+            "&Time=" + helper.formatDateTime(values.dateTime, "h:mm") +
             "&submit=true&lng=E&isDepTime=true";
 
     var request = network.createRequest( url );
@@ -83,7 +83,7 @@ function parseTimetable( html ) {
     }
 }
 
-function getStopSuggestions( stop, maxCount, city  ) {
+function getStopSuggestions( values  ) {
     // Try to read session key from cache
     // TODO: Maybe also store the time of the session key request and update the session key from time to time?
     var sessionKey = storage.read( "session-key" );
@@ -109,7 +109,7 @@ function getStopSuggestions( stop, maxCount, city  ) {
     var request = network.createRequest( url );
     request.finished.connect( parseStopSuggestions );
     request.setPostData( "{\"timestamp\":\"" + (new Date).getTime() + "\"," +
-            "\"prefixText\":\"" + stop + "\",\"count\":\"20\"," +
+            "\"prefixText\":\"" + values.stop + "\",\"count\":\"20\"," +
             "\"selectedTT\":\"BMCz\",\"bindElementValue\":\"\",\"iLang\":\"ENGLISH\"," +
             "\"bCoor\":\"false\"}", "utf-8" );
     request.setHeader( "Accept", "application/json, text/javascript, */*", "utf-8" );

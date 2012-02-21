@@ -33,7 +33,7 @@
 
 struct RequestInfo;
 struct JourneyRequestInfo;
-typedef RequestInfo DepartureRequestInfo;
+struct DepartureRequestInfo;
 typedef RequestInfo StopSuggestionRequestInfo;
 
 class TimetableAccessor;

@@ -257,9 +257,11 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
 
     m_completionsGlobalFunctions.insert( "func:getTimetable()",
 	    CompletionItem( Function | GlobalScope,
-            "getTimetable( stop, dateTime, maxCount, dataType, city )",
+            "getTimetable( values )",
             i18nc("@info The description for the 'getTimetable' function",
-                  "Requests and parses departure/arrival documents.<nl/>"
+                  "Requests and parses departure/arrival documents. The argument has the "
+                  "following properties: stop, dateTime (Date object), maxCount, dataType "
+                  "('departures' or 'arrivals'), city.<nl/>"
                   "This function is called by the data engine. Found departures/arrivals can be "
                   "handed over to the data engine like this:<nl/>" //<bcode>"
                   "<icode>  // Add timetable data to the result set</icode><nl/>"
@@ -278,12 +280,11 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
 // 				      "</bcode>"),
             "\n// This function normally requests a document (eg. HTML or XML) and then parses "
             "it for departure/arrival data.\n"
-            "function getTimetable( stop, dateTime, maxCount, dataType, city ) {\n"
+            "function getTimetable( values ) {\n" // TODO Template code fore requesting a document
             "\t// Find block of departures\n"
             "\t// TODO: Adjust so that you get the block that contains\n"
             "\t// the departures in the document\n"
-            "\tvar str = helper.extractBlock( html, "
-            "'<table ${departure_table}>', '</table>' );\n\n"
+            "\tvar str = helper.extractBlock( html, '<table ${departure_table}>', '</table>' );\n\n"
             "\t// Initialize regular expressions\n"
             "\t// TODO: Adjust the reg exp\n"
             "\tvar departuresRegExp = /<tr>([\\s\\S]*?)<\\/tr>/ig;\n\n"
@@ -309,9 +310,11 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
 
     m_completionsGlobalFunctions.insert( "func:getJourneys()",
 	    CompletionItem( Function | GlobalScope,
-            "getJourneys( originStop, targetStop, dateTime, maxCount, dataType, city )",
+            "getJourneys( values )",
             i18nc("@info The description for the 'getJourneys' function",
-                  "Requests and parses journey documents.<nl/>"
+                  "Requests and parses journey documents. The argument has the "
+                  "following properties: originStop, targetStop, dateTime (Date object), "
+                  "maxCount, dataType, city.<nl/>"
                   "This function is called by the data engine. Found journeys can "
                   "be handed over to the data engine like this:<nl/>" //<bcode>"
                   "<icode>  // Add timetable data to the result set</icode><nl/>"
@@ -325,7 +328,7 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
 // 				      "</bcode>"),
             "\n// This function normally requests a document (eg. HTML or XML) and then parses it "
             "for journey data.\n"
-	    "function getJourneys( originStop, targetStop, dateTime, maxCount, dataType, city ) {\n"
+	    "function getJourneys( values ) {\n"
 	    "\t${cursor}\n"
 	    "}\n",
             true, "Implement void", "                   " )); // The spaces make the completion
@@ -333,9 +336,10 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
 
     m_completionsGlobalFunctions.insert( "func:getStopSuggestions()",
 	    CompletionItem( Function | GlobalScope,
-            "getStopSuggestions( stop, maxCount, city )",
+            "getStopSuggestions( values )",
             i18nc("@info The description for the 'getStopSuggestions' function",
-                  "Requests and parses stop suggestion documents.<nl/>"
+                  "Requests and parses stop suggestion documents The argument has the "
+                  "following properties: stop, maxCount, city.<nl/>"
                   "This function is called by the data engine. The parameter "
                   "contains the contents of the document body. Found stop data "
                   "can be handed over to the data engine like this:<nl/>" //<bcode>"
@@ -344,7 +348,7 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
 // 				      "</bcode>"),
             "\n// This function normally requests a document (eg. HTML or XML) and then parses it "
             "for stop suggestions.\n"
-	    "function getStopSuggestions( stop, maxCount, city ) {\n"
+	    "function getStopSuggestions( values ) {\n"
 	    "\t${cursor}\n"
 	    "}\n",
             true, "Implement void", "                   " )); // The spaces make the completion

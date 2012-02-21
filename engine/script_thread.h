@@ -36,9 +36,9 @@
 #include <QScriptEngineAgent> // Base class
 #include <QPointer>
 
-class RequestInfo;
+struct RequestInfo;
 struct JourneyRequestInfo;
-typedef RequestInfo DepartureRequestInfo;
+struct DepartureRequestInfo;
 typedef RequestInfo StopSuggestionRequestInfo;
 
 class TimetableAccessorInfo;
