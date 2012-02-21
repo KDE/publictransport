@@ -1,0 +1,7 @@
+
+# Include directory of publictransporthelper, if cmake is not started from the root directory
+if ( NOT PUBLICTRANSPORTHELPER_INCLUDES )
+    set( PUBLICTRANSPORTHELPER_INCLUDES ${INCLUDE_INSTALL_DIR}/publictransporthelper )
+    message ( "You are not building from the Public Transport root sources directory" )
+    message ( "Please make sure 'libpublictransporthelper' is already installed otherwise the build will fail" )
+endif ( NOT PUBLICTRANSPORTHELPER_INCLUDES )
