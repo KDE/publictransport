@@ -148,10 +148,10 @@ MethodComments parseMethodDescriptions( const QString &className, const QString 
                 QString commentLine = line.remove( commentStarCleanerRegExp );
                 if ( commentLine.startsWith("@code") ) {
                     preserveLineBreaks = true;
-                    comment << "<br><b>Code example:</b><br>";
+                    comment << "<br><b>Code example:</b><pre>";
                 } else if ( commentLine.startsWith("@endcode") ) {
                     preserveLineBreaks = false;
-                    comment << "<br>";
+                    comment << "</pre>";
                 } else if ( !commentLine.startsWith("@ingroup") &&
                             !commentLine.startsWith("@overload") )
                 {
