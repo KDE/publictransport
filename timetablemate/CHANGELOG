@@ -1,6 +1,12 @@
 
 Changelog of timetablemate
 
+0.3 (NEXT VERSION)
+- New script API, using QtScript
+- Add a small tool, that automatically generates code that adds code completion data for TimetableMate. Information about Methods is retrieved using QMetaObject, while comments are retrieved by parsing the source file (including some formatting conversions, eg. "@verbatimTest@endverbatim" gets converted to "<pre>Test</pre>").
+- Update code completion to new API (mostly using the new tool)
+- Fix JavaScript parser, it failed when reading a statement that includes a pair of '{' and '}'
+
 0.2.3
 - Cleanup, update to new version of libpublictransporthelper (namespace Timetable)
 - Fix for missing KWebKitPart include file, it now uses KWebView directly
