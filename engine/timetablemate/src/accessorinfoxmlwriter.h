@@ -32,20 +32,22 @@
 #include <QHash>
 #include <QStringList>
 
-class AccessorInfoXmlWriter : public QXmlStreamWriter {
-    public:
-	AccessorInfoXmlWriter() : QXmlStreamWriter() {};
+class AccessorInfoXmlWriter : public QXmlStreamWriter
+{
+public:
+    AccessorInfoXmlWriter() : QXmlStreamWriter() {};
 
-	bool write( QIODevice *device, const TimetableAccessor *accessor );
+    bool write( QIODevice *device, const TimetableAccessor *accessor );
 
-    private:
-	TimetableAccessor writeAccessorInfo();
-	void writeAuthor( QString *fullname, QString *email );
-	void writeCities( QStringList *cities,
-			  QHash<QString, QString> *cityNameReplacements );
-	void writeRawUrls( QString *rawUrlDepartures,
-			   QString *rawUrlStopSuggestions, QString *rawUrlJourneys );
-	void writeChangelog( const QList<ChangelogEntry> &changelog );
+private:
+    TimetableAccessor writeAccessorInfo();
+    void writeAuthor( QString *fullname, QString *email );
+    void writeCities( QStringList *cities,
+                      QHash<QString, QString> *cityNameReplacements );
+    void writeRawUrls( QString *rawUrlDepartures,
+                       QString *rawUrlStopSuggestions, QString *rawUrlJourneys );
+    void writeChangelog( const QList<ChangelogEntry> &changelog );
 };
 
 #endif // ACCESSORINFOXMLREADER_HEADER
+// kate: indent-mode cstyle; indent-width 4; replace-tabs on;

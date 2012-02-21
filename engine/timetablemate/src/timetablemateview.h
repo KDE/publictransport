@@ -44,76 +44,79 @@ class KUrl;
  * @author Friedrich Pülz fpuelz@gmx.de
  * @version 0.2
  */
-class TimetableMateView : public QWidget, public Ui::timetablemateview_base {
+class TimetableMateView : public QWidget, public Ui::timetablemateview_base
+{
     Q_OBJECT
-    public:
-	/** Default constructor */
-	TimetableMateView( QWidget *parent );
+public:
+    /** Default constructor */
+    TimetableMateView( QWidget *parent );
 
-	/** Destructor */
-	virtual ~TimetableMateView();
+    /** Destructor */
+    virtual ~TimetableMateView();
 
-	bool readAccessorInfoXml( const QString &fileName, QString *error = 0 );
-	bool readAccessorInfoXml( QIODevice *device, QString *error/* = 0*/,
-				  const QString& fileName/* = QString()*/ );
+    bool readAccessorInfoXml( const QString &fileName, QString *error = 0 );
+    bool readAccessorInfoXml( QIODevice *device, QString *error/* = 0*/,
+                              const QString &fileName/* = QString()*/ );
 
-	bool writeAccessorInfoXml( const QString &fileName );
-	QString writeAccessorInfoXml();
+    bool writeAccessorInfoXml( const QString &fileName );
+    QString writeAccessorInfoXml();
 
-	TimetableAccessor *accessorInfo() const;
-	void setScriptFile( const QString &scriptFile );
+    TimetableAccessor *accessorInfo() const;
+    void setScriptFile( const QString &scriptFile );
 
-	void setCurrentServiceProviderID( const QString &currentServiceProviderID ) {
-		m_currentServiceProviderID = currentServiceProviderID; };
+    void setCurrentServiceProviderID( const QString &currentServiceProviderID ) {
+        m_currentServiceProviderID = currentServiceProviderID;
+    };
 
-    signals:
-	/** Some widgets value has been changed. */
-	void changed();
-	void fileVersionchanged();
+signals:
+    /** Some widgets value has been changed. */
+    void changed();
+    void fileVersionchanged();
 
-	/** A new script file has been created. */
-	void scriptAdded( const QString &scriptFile );
-	/** The used script file has changed. */
-	void scriptFileChanged( const QString &scriptFile );
+    /** A new script file has been created. */
+    void scriptAdded( const QString &scriptFile );
+    /** The used script file has changed. */
+    void scriptFileChanged( const QString &scriptFile );
 
-	void urlShouldBeOpened( const QString &url );
+    void urlShouldBeOpened( const QString &url );
 
-	/** Use this signal to change the content of the statusbar */
-	void signalChangeStatusbar( const QString& text );
+    /** Use this signal to change the content of the statusbar */
+    void signalChangeStatusbar( const QString &text );
 
-	/** Use this signal to change the content of the caption */
-	void signalChangeCaption( const QString& text );
+    /** Use this signal to change the content of the caption */
+    void signalChangeCaption( const QString &text );
 
-    private slots:
-	void settingsChanged();
+private slots:
+    void settingsChanged();
 
-	void browseForScriptFile();
-	void createScriptFile();
-	void detachScriptFile();
+    void browseForScriptFile();
+    void createScriptFile();
+    void detachScriptFile();
 
-	void slotChanged( QWidget *changedWidget );
-	void languageActivated( const QString &languageCode );
+    void slotChanged( QWidget *changedWidget );
+    void languageActivated( const QString &languageCode );
 
-	void openUrlClicked();
+    void openUrlClicked();
 
-	void predefinedCityNameChanged( const QString &newCityName );
-	void predefinedCityReplacementChanged( const QString &newReplacement );
-	void currentPredefinedCityChanged( const QString &currentCityText );
+    void predefinedCityNameChanged( const QString &newCityName );
+    void predefinedCityReplacementChanged( const QString &newReplacement );
+    void currentPredefinedCityChanged( const QString &currentCityText );
 
-    private:
-	void fillValuesFromWidgets();
+private:
+    void fillValuesFromWidgets();
 
-	Ui::timetablemateview_base ui_accessor;
-	QString m_openedPath;
-	QString m_currentServiceProviderID;
-	TimetableAccessor *m_accessor;
+    Ui::timetablemateview_base ui_accessor;
+    QString m_openedPath;
+    QString m_currentServiceProviderID;
+    TimetableAccessor *m_accessor;
 
-	KEditListBox::CustomEditor m_predefinedCitiesCustomEditor;
-	KLineEdit *m_cityName;
-	KLineEdit *m_cityReplacement;
-	ChangelogWidget *m_changelog;
+    KEditListBox::CustomEditor m_predefinedCitiesCustomEditor;
+    KLineEdit *m_cityName;
+    KLineEdit *m_cityReplacement;
+    ChangelogWidget *m_changelog;
 
-	QSignalMapper *m_mapper;
+    QSignalMapper *m_mapper;
 };
 
 #endif // TimetableMateVIEW_H
+// kate: indent-mode cstyle; indent-width 4; replace-tabs on;

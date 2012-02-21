@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -24,35 +24,40 @@
 #include <Plasma/Corona>
 
 class KPushButton;
-namespace Plasma {
+namespace Plasma
+{
     class Applet;
     class Containment;
 };
 
-class PublicTransportPreview : public QGraphicsView {
+class PublicTransportPreview : public QGraphicsView
+{
     Q_OBJECT
-    public:
-	PublicTransportPreview( QWidget *parent = 0 );
+public:
+    PublicTransportPreview( QWidget *parent = 0 );
 
-	bool isPlasmaPreviewShown() const { return m_applet; };
-	void setSettings( const QString &serviceProviderID, const QString &stopName );
+    bool isPlasmaPreviewShown() const {
+        return m_applet;
+    };
+    void setSettings( const QString &serviceProviderID, const QString &stopName );
 
-    signals:
-	void plasmaPreviewLoaded();
+signals:
+    void plasmaPreviewLoaded();
 
-    public slots:
-	bool loadPlasmaPreview();
-	void closePlasmaPreview();
+public slots:
+    bool loadPlasmaPreview();
+    void closePlasmaPreview();
 
-    protected:
-	virtual void resizeEvent( QResizeEvent* event );
+protected:
+    virtual void resizeEvent( QResizeEvent *event );
 
-    private:
-	void loadNoPlasmaScene();
+private:
+    void loadNoPlasmaScene();
 
-	Plasma::Corona m_corona;
-	Plasma::Containment *m_containment;
-	Plasma::Applet *m_applet;
+    Plasma::Corona m_corona;
+    Plasma::Containment *m_containment;
+    Plasma::Applet *m_applet;
 };
 
 #endif // Multiple inclusion guard
+// kate: indent-mode cstyle; indent-width 4; replace-tabs on;

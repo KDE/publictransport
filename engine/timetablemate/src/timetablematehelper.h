@@ -1,5 +1,5 @@
 /*
-*   Copyright 2010 Friedrich Pülz <fieti1983@gmx.de>
+*   Copyright 2012 Friedrich Pülz <fieti1983@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -24,10 +24,12 @@
 
 using namespace KAuth;
 
-class TimetableMateHelper : public QObject {
+class TimetableMateHelper : public QObject
+{
     Q_OBJECT
-    public slots:
-	ActionReply install( const QVariantMap &map );
+public slots:
+    ActionReply install( const QVariantMap &map );
 };
 
 #endif // Multiple inclusion guard
+// kate: indent-mode cstyle; indent-width 4; replace-tabs on;

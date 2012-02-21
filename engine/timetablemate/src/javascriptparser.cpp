@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fieti1983@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fieti1983@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

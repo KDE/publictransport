@@ -25,7 +25,7 @@
 
 static const char description[] =
     I18N_NOOP("A helper application to add support for new service providers to "
-	      "the plasma data engine 'PublicTransport'");
+              "the plasma data engine 'PublicTransport'");
 
 static const char version[] = "0.3";
 
@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 {
     KAboutData about("timetablemate", 0, ki18n("TimetableMate"), version, ki18n(description),
                      KAboutData::License_GPL_V2, ki18n("(C) 2010 Friedrich Pülz"),
-		     KLocalizedString(), 0, "fpuelz@gmx.de");
+                     KLocalizedString(), 0, "fpuelz@gmx.de");
     about.addAuthor( ki18n("Friedrich Pülz"), KLocalizedString(), "fpuelz@gmx.de" );
     KCmdLineArgs::init(argc, argv, &about);
 
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
         } else {
             for ( int i = 0; i < args->count(); i++ ) {
                 TimetableMate *widget = new TimetableMate;
-		widget->open( args->url(i) );
+                widget->open( args->url(i) );
                 widget->show();
             }
         }

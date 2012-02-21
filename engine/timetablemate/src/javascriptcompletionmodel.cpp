@@ -238,32 +238,32 @@ CompletionItem JavaScriptCompletionModel::completionItemFromId( const QString id
 
 void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
     m_completionsGlobalFunctions.insert( "func:usedTimetableInformations()",
-	    CompletionItem( Function | GlobalScope,
+            CompletionItem( Function | GlobalScope,
             "usedTimetableInformations()",
             i18nc("@info The description for the 'usedTimetableInformations' function",
                   "Should be implemented to tell which features the script supports.<nl/>"
                   "This function is called by the data engine."),
             "\n// This function returns a list of all features supported by this script.\n"
-	    "function usedTimetableInformations() {\n"
-	    "\t// These strings are currently recognized as features:\n"
-	    "\t//   'Delay', 'DelayReason', 'Platform', 'JourneyNews', 'TypeOfVehicle',\n"
-	    "\t//   'StopID', 'Pricing', 'Changes', 'RouteStops', 'RoutePlatformsDeparture',\n"
-	    "\t//   'RoutePlatformsArrival', 'RouteTimesDeparture', 'RoutePlatformsArrival',\n"
-	    "\t//   'RouteTransportLines'.\n"
-	    "\treturn [ '${cursor}' ];\n"
-	    "}\n",
+            "function usedTimetableInformations() {\n"
+            "\t// These strings are currently recognized as features:\n"
+            "\t//   'Delay', 'DelayReason', 'Platform', 'JourneyNews', 'TypeOfVehicle',\n"
+            "\t//   'StopID', 'Pricing', 'Changes', 'RouteStops', 'RoutePlatformsDeparture',\n"
+            "\t//   'RoutePlatformsArrival', 'RouteTimesDeparture', 'RoutePlatformsArrival',\n"
+            "\t//   'RouteTransportLines'.\n"
+            "\treturn [ '${cursor}' ];\n"
+            "}\n",
             true, "Implement string array", "                   ") ); // The spaces make the completion
-		    // box wider, so that the code snipped can be read
+                    // box wider, so that the code snipped can be read
 
     m_completionsGlobalFunctions.insert( "func:getTimetable()",
-	    CompletionItem( Function | GlobalScope,
+            CompletionItem( Function | GlobalScope,
             "getTimetable( values )",
             i18nc("@info The description for the 'getTimetable' function",
                   "Requests and parses departure/arrival documents. The argument has the "
                   "following properties: stop, dateTime (Date object), maxCount, dataType "
                   "('departures' or 'arrivals'), city.<nl/>"
                   "This function is called by the data engine. Found departures/arrivals can be "
-                  "handed over to the data engine like this:<nl/>" //<bcode>"
+                  "handed over to the data engine like this:<nl/>"
                   "<icode>  // Add timetable data to the result set</icode><nl/>"
                   "<icode>  result.addData( {TransportLine: '603',</icode><nl/>"
                   "<icode>                   TypeOfVehicle: 'bus',</icode><nl/>"
@@ -277,7 +277,6 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
                   "then use a higher timeout for the next data update. When delay "
                   "information is available updates are done more often, because delays "
                   "may change.</note>"),
-// 				      "</bcode>"),
             "\n// This function normally requests a document (eg. HTML or XML) and then parses "
             "it for departure/arrival data.\n"
             "function getTimetable( values ) {\n" // TODO Template code fore requesting a document
@@ -309,14 +308,14 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
     // box wider, so that the code snipped can be read
 
     m_completionsGlobalFunctions.insert( "func:getJourneys()",
-	    CompletionItem( Function | GlobalScope,
+            CompletionItem( Function | GlobalScope,
             "getJourneys( values )",
             i18nc("@info The description for the 'getJourneys' function",
                   "Requests and parses journey documents. The argument has the "
                   "following properties: originStop, targetStop, dateTime (Date object), "
                   "maxCount, dataType, city.<nl/>"
                   "This function is called by the data engine. Found journeys can "
-                  "be handed over to the data engine like this:<nl/>" //<bcode>"
+                  "be handed over to the data engine like this:<nl/>"
                   "<icode>  // Add timetable data to the result set</icode><nl/>"
                   "<icode>  result.addData( {StartStopName: 'A',</icode><nl/>"
                   "<icode>                   TargetStopName: 'B',</icode><nl/>"
@@ -325,32 +324,30 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
                   "<icode>                   ArrivalDateTime: new Date(),</icode><nl/>"
                   "<icode>                   Changes: 3,</icode><nl/>"
                   "<icode>                   Pricing: '2,30 €'} );</icode><nl/><nl/>"),
-// 				      "</bcode>"),
             "\n// This function normally requests a document (eg. HTML or XML) and then parses it "
             "for journey data.\n"
-	    "function getJourneys( values ) {\n"
-	    "\t${cursor}\n"
-	    "}\n",
+            "function getJourneys( values ) {\n"
+            "\t${cursor}\n"
+            "}\n",
             true, "Implement void", "                   " )); // The spaces make the completion
     // box wider, so that the code snipped can be read
 
     m_completionsGlobalFunctions.insert( "func:getStopSuggestions()",
-	    CompletionItem( Function | GlobalScope,
+            CompletionItem( Function | GlobalScope,
             "getStopSuggestions( values )",
             i18nc("@info The description for the 'getStopSuggestions' function",
                   "Requests and parses stop suggestion documents The argument has the "
                   "following properties: stop, maxCount, city.<nl/>"
                   "This function is called by the data engine. The parameter "
                   "contains the contents of the document body. Found stop data "
-                  "can be handed over to the data engine like this:<nl/>" //<bcode>"
+                  "can be handed over to the data engine like this:<nl/>"
                   "<icode>  // Add timetable data to the result set</icode><nl/>"
                   "<icode>  result.addData( {StopName: 'TestName', StopID: 100} );</icode>"),
-// 				      "</bcode>"),
             "\n// This function normally requests a document (eg. HTML or XML) and then parses it "
             "for stop suggestions.\n"
-	    "function getStopSuggestions( values ) {\n"
-	    "\t${cursor}\n"
-	    "}\n",
+            "function getStopSuggestions( values ) {\n"
+            "\t${cursor}\n"
+            "}\n",
             true, "Implement void", "                   " )); // The spaces make the completion
     // box wider, so that the code snipped can be read
 
@@ -483,7 +480,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
 
     // Journey information
     m_completionsTimetableInfo.insert( "str:RouteTimesDeparture",
-	    CompletionItem( Const, "RouteTimesDeparture",
+            CompletionItem( Const, "RouteTimesDeparture",
             i18nc("@info The description for the 'RouteTimesDeparture' info",
                   "A list of departure times of the journey.<nl/>If <emphasis>RouteStops"
                   "</emphasis> and <emphasis>RouteTimesDeparture</emphasis> are both set, "
@@ -492,7 +489,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "be associated (the times at which the vehicle departs from the stops)."),
             "RouteTimesDeparture" ));
     m_completionsTimetableInfo.insert( "str:RouteTimesArrival",
-	    CompletionItem( Const, "RouteTimesArrival",
+            CompletionItem( Const, "RouteTimesArrival",
             i18nc("@info The description for the 'RouteTimesArrival' info",
                   "A list of arrival times of the journey.<nl/>If <emphasis>RouteStops"
                   "</emphasis> and <emphasis>RouteTimesArrival</emphasis> are both set, "
@@ -506,17 +503,17 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "RouteStops</emphasis> is not complete from the last exact route stop."),
             "RouteExactStops" ));
     m_completionsTimetableInfo.insert( "str:RouteTypesOfVehicles",
-	    CompletionItem( Const, "RouteTypesOfVehicles",
+            CompletionItem( Const, "RouteTypesOfVehicles",
             i18nc("@info The description for the 'RouteTypesOfVehicles' info",
                   "The types of vehicles used for each 'sub-journey' of a journey."),
             "RouteTypesOfVehicles" ));
     m_completionsTimetableInfo.insert( "str:RouteTransportLines",
-	    CompletionItem( Const, "RouteTransportLines",
+            CompletionItem( Const, "RouteTransportLines",
             i18nc("@info The description for the 'RouteTransportLines' info",
                   "The transport lines used for each 'sub-journey' of a journey."),
             "RouteTransportLines" ));
     m_completionsTimetableInfo.insert( "str:RoutePlatformsDeparture",
-	    CompletionItem( Const, "RoutePlatformsDeparture",
+            CompletionItem( Const, "RoutePlatformsDeparture",
             i18nc("@info The description for the 'RoutePlatformsDeparture' info",
                   "The platforms of departures used for each 'sub-journey' of a journey.<nl/>"
                   "If <emphasis>RouteStops</emphasis> and <emphasis>RoutePlatformsDeparture"
@@ -526,7 +523,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "departs from the stops)."),
             "RoutePlatformsDeparture" ));
     m_completionsTimetableInfo.insert( "str:RoutePlatformsArrival",
-	    CompletionItem( Const, "RoutePlatformsArrival",
+            CompletionItem( Const, "RoutePlatformsArrival",
             i18nc("@info The description for the 'RoutePlatformsArrival' info",
                   "The platforms of arrivals used for each 'sub-journey' of a journey.<nl/>"
                   "If <emphasis>RouteStops</emphasis> and <emphasis>RoutePlatformsArrival"
@@ -536,14 +533,14 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "the vehicle arrives at the stops)"),
             "RoutePlatformsArrival" ));
     m_completionsTimetableInfo.insert( "str:RouteTimesDepartureDelay",
-	    CompletionItem( Const, "RouteTimesDepartureDelay",
+            CompletionItem( Const, "RouteTimesDepartureDelay",
             i18nc("@info The description for the 'RouteTimesDepartureDelay' info",
                   "A list of delays in minutes for each departure time of a route "
                   "(see <emphasis>RouteTimesDeparture</emphasis>).<nl/>If set it should contain "
                   "the same number of elements as 'RouteTimesDeparture'."),
             "RouteTimesDepartureDelay" ));
     m_completionsTimetableInfo.insert( "str:RouteTimesArrivalDelay",
-	    CompletionItem( Const, "RouteTimesArrivalDelay",
+            CompletionItem( Const, "RouteTimesArrivalDelay",
             i18nc("@info The description for the 'RouteTimesArrivalDelay' info",
                   "A list of delays in minutes for each arrival time of a route "
                   "(see <emphasis>RouteTimesArrival</emphasis>).<nl/>If set it should contain "
@@ -589,7 +586,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
                   "The number of changes between different vehicles in a journey."),
             "Changes" ));
     m_completionsTimetableInfo.insert( "str:TypesOfVehicleInJourney",
-	    CompletionItem( Const, "TypesOfVehicleInJourney",
+            CompletionItem( Const, "TypesOfVehicleInJourney",
             i18nc("@info The description for the 'TypesOfVehicleInJourney' info",
                   "A list of vehicle types used in a journey."),
             "TypesOfVehicleInJourney" ));
