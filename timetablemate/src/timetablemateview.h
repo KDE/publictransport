@@ -94,14 +94,7 @@ class TimetableMateView : public QWidget, public Ui::timetablemateview_base {
 	void slotChanged( QWidget *changedWidget );
 	void languageActivated( const QString &languageCode );
 
-	void departurePlaceHolder( QAction *action );
-	void journeyPlaceHolder( QAction *action );
-	void stopSuggestionsPlaceHolder( QAction *action );
-
 	void openUrlClicked();
-	void openDepartureUrlClicked();
-	void openStopUrlClicked();
-	void openJourneyUrlClicked();
 
 	void predefinedCityNameChanged( const QString &newCityName );
 	void predefinedCityReplacementChanged( const QString &newReplacement );

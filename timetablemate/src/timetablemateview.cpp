@@ -115,75 +115,8 @@ TimetableMateView::TimetableMateView( QWidget *parent )
 
     // Set icons and connections for the "open url buttons"
     ui_accessor.btnUrlOpen->setIcon( KIcon("document-open-remote") );
-    ui_accessor.btnDepartureUrlOpen->setIcon( KIcon("document-open-remote") );
-    ui_accessor.btnStopUrlOpen->setIcon( KIcon("document-open-remote") );
-    ui_accessor.btnJourneyUrlOpen->setIcon( KIcon("document-open-remote") );
     connect( ui_accessor.btnUrlOpen, SIGNAL(clicked(bool)),
              this, SLOT(openUrlClicked()) );
-    connect( ui_accessor.btnDepartureUrlOpen, SIGNAL(clicked(bool)),
-             this, SLOT(openDepartureUrlClicked()) );
-    connect( ui_accessor.btnStopUrlOpen, SIGNAL(clicked(bool)),
-             this, SLOT(openStopUrlClicked()) );
-    connect( ui_accessor.btnJourneyUrlOpen, SIGNAL(clicked(bool)),
-             this, SLOT(openJourneyUrlClicked()) );
-
-    // Set icons for "insert placeholder buttons"
-    ui_accessor.btnDepartureUrlInsertPlaceHolder->setIcon( KIcon("tools-wizard") );
-    ui_accessor.btnJourneyUrlInsertPlaceHolder->setIcon( KIcon("tools-wizard") );
-    ui_accessor.btnStopUrlInsertPlaceHolder->setIcon( KIcon("tools-wizard") );
-
-    // Create "Add ... Placeholder" actions for the departure raw url
-    QMenu *departureMenu = new QMenu( this );
-    QAction *action;
-    action = new QAction( KIcon("public-transport-stop"),
-                          i18n("Add &Stop Name Placeholder"), this );
-    action->setData( "{stop}" );
-    departureMenu->addAction( action );
-
-    action = new QAction( i18n("Add &City Name Placeholder"), this );
-    action->setData( "{city}" );
-    departureMenu->addAction( action );
-
-    action = new QAction( i18n("Add &Departure Date Placeholder"), this );
-    action->setData( "{date:dd.MM.yy}" );
-    departureMenu->addAction( action );
-
-    action = new QAction( KIcon("chronometer"), i18n("Add &Departure Time Placeholder"), this );
-    action->setData( "{time}" );
-    departureMenu->addAction( action );
-
-    action = new QAction( i18n("Add Departure/&Arrival Placeholder"), this );
-    action->setData( "{dataType}" );
-    departureMenu->addAction( action );
-    connect( departureMenu, SIGNAL(triggered(QAction*)),
-             this, SLOT(departurePlaceHolder(QAction*)) );
-    ui_accessor.btnDepartureUrlInsertPlaceHolder->setMenu( departureMenu );
-
-    // Create "Add ... Placeholder" actions for the journey raw url
-    QMenu *journeyMenu = new QMenu( this );
-    action = new QAction( KIcon("flag-green"), i18n("Add &Start Stop Name Placeholder"), this );
-    action->setData( "{startStop}" );
-    journeyMenu->addAction( action );
-
-    action = new QAction( KIcon("flag-red"), i18n("Add &Target Stop Name Placeholder"), this );
-    action->setData( "{targetStop}" );
-    journeyMenu->addAction( action );
-
-    action = new QAction( KIcon("chronometer"), i18n("Add &Departure Time Placeholder"), this );
-    action->setData( "{time}" );
-    journeyMenu->addAction( action );
-    connect( journeyMenu, SIGNAL(triggered(QAction*)), this, SLOT(journeyPlaceHolder(QAction*)) );
-    ui_accessor.btnJourneyUrlInsertPlaceHolder->setMenu( journeyMenu );
-
-    // Create "Add ... Placeholder" actions for the stop suggestions raw url
-    QMenu *stopMenu = new QMenu( this );
-    action = new QAction( KIcon( "public-transport-stop" ),
-                          i18n( "Add &Stop Name Placeholder" ), this );
-    action->setData( "{stop}" );
-    stopMenu->addAction( action );
-    connect( stopMenu, SIGNAL(triggered(QAction*)),
-             this, SLOT(stopSuggestionsPlaceHolder(QAction*)) );
-    ui_accessor.btnStopUrlInsertPlaceHolder->setMenu( stopMenu );
 
     // Add changelog widget into a scroll area
     QVBoxLayout *changelogAreaLayout = new QVBoxLayout( ui_accessor.tabChangelog );
@@ -250,9 +183,6 @@ TimetableMateView::TimetableMateView( QWidget *parent )
     connect( ui_accessor.onlyAllowPredefinedCities, SIGNAL(stateChanged(int )), m_mapper, SLOT(map()) );
     connect( ui_accessor.url, SIGNAL(textChanged(QString )), m_mapper, SLOT(map()) );
     connect( ui_accessor.shortUrl, SIGNAL(textChanged(QString )), m_mapper, SLOT(map()) );
-    connect( ui_accessor.rawDepartureUrl, SIGNAL(textChanged(QString )), m_mapper, SLOT(map()) );
-    connect( ui_accessor.rawJourneyUrl, SIGNAL(textChanged(QString )), m_mapper, SLOT(map()) );
-    connect( ui_accessor.rawStopSuggestionsUrl, SIGNAL(textChanged(QString )), m_mapper, SLOT(map()) );
     connect( ui_accessor.minFetchWait, SIGNAL(valueChanged(int )), m_mapper, SLOT(map()) );
     connect( ui_accessor.scriptFile, SIGNAL(textChanged(QString )), m_mapper, SLOT(map()) );
     connect( ui_accessor.author, SIGNAL(textChanged(QString )), m_mapper, SLOT(map()) );
@@ -273,9 +203,6 @@ TimetableMateView::TimetableMateView( QWidget *parent )
     m_mapper->setMapping( ui_accessor.onlyAllowPredefinedCities, ui_accessor.onlyAllowPredefinedCities );
     m_mapper->setMapping( ui_accessor.url, ui_accessor.url );
     m_mapper->setMapping( ui_accessor.shortUrl, ui_accessor.shortUrl );
-    m_mapper->setMapping( ui_accessor.rawDepartureUrl, ui_accessor.rawDepartureUrl );
-    m_mapper->setMapping( ui_accessor.rawJourneyUrl, ui_accessor.rawJourneyUrl );
-    m_mapper->setMapping( ui_accessor.rawStopSuggestionsUrl, ui_accessor.rawStopSuggestionsUrl );
     m_mapper->setMapping( ui_accessor.minFetchWait, ui_accessor.minFetchWait );
     m_mapper->setMapping( ui_accessor.scriptFile, ui_accessor.scriptFile );
     m_mapper->setMapping( ui_accessor.author, ui_accessor.author );
@@ -292,7 +219,6 @@ TimetableMateView::TimetableMateView( QWidget *parent )
 
 TimetableMateView::~TimetableMateView()
 {
-
 }
 
 void TimetableMateView::slotChanged( QWidget *changedWidget )
@@ -315,27 +241,6 @@ void TimetableMateView::slotChanged( QWidget *changedWidget )
     } else if( changedWidget == ui_accessor.url ) {
         // Home page URL changed
         ui_accessor.btnUrlOpen->setDisabled( ui_accessor.url->text().isEmpty() );
-    } else if( changedWidget == ui_accessor.rawDepartureUrl ) {
-        // Raw departure URL changed
-        QString newUrl = ui_accessor.rawDepartureUrl->text();
-        ui_accessor.btnDepartureUrlOpen->setDisabled( newUrl.isEmpty() );
-
-        bool hasCityPlaceholder = newUrl.contains( "{city}" )
-                                  || ui_accessor.rawJourneyUrl->text().contains( "{city}" );
-        ui_accessor.useCityValue->setChecked( hasCityPlaceholder );
-        ui_accessor.predefinedCities->setEnabled( hasCityPlaceholder );
-    } else if( changedWidget == ui_accessor.rawStopSuggestionsUrl ) {
-        // Raw stop suggestions URL changed
-        ui_accessor.btnStopUrlOpen->setDisabled( ui_accessor.rawStopSuggestionsUrl->text().isEmpty() );
-    } else if( changedWidget == ui_accessor.rawJourneyUrl ) {
-        // Raw journey URL changed
-        QString newUrl = ui_accessor.rawJourneyUrl->text();
-        ui_accessor.btnJourneyUrlOpen->setDisabled( newUrl.isEmpty() );
-
-        bool hasCityPlaceholder = newUrl.contains( "{city}" )
-                                  || ui_accessor.rawDepartureUrl->text().contains( "{city}" );
-        ui_accessor.useCityValue->setChecked( hasCityPlaceholder );
-        ui_accessor.predefinedCities->setEnabled( hasCityPlaceholder );
     } else if( changedWidget == ui_accessor.shortAuthor ) {
         // Short author name changed, update changed log click messages
         QList<ChangelogEntryWidget *> entryWidgets = m_changelog->entryWidgets();
@@ -459,21 +364,6 @@ void TimetableMateView::openUrlClicked()
     emit urlShouldBeOpened( ui_accessor.url->text() );
 }
 
-void TimetableMateView::openDepartureUrlClicked()
-{
-    emit urlShouldBeOpened( ui_accessor.rawDepartureUrl->text() );
-}
-
-void TimetableMateView::openStopUrlClicked()
-{
-    emit urlShouldBeOpened( ui_accessor.rawStopSuggestionsUrl->text() );
-}
-
-void TimetableMateView::openJourneyUrlClicked()
-{
-    emit urlShouldBeOpened( ui_accessor.rawJourneyUrl->text() );
-}
-
 void TimetableMateView::createScriptFile()
 {
     if( m_openedPath.isEmpty() ) {
@@ -567,24 +457,6 @@ void TimetableMateView::browseForScriptFile()
     if( ok ) {
         ui_accessor.scriptFile->setText( selectedFile );
     }
-}
-
-void TimetableMateView::departurePlaceHolder( QAction *action )
-{
-    QString placeholder = action->data().toString();
-    ui_accessor.rawDepartureUrl->insert( placeholder );
-}
-
-void TimetableMateView::journeyPlaceHolder( QAction *action )
-{
-    QString placeholder = action->data().toString();
-    ui_accessor.rawJourneyUrl->insert( placeholder );
-}
-
-void TimetableMateView::stopSuggestionsPlaceHolder( QAction *action )
-{
-    QString placeholder = action->data().toString();
-    ui_accessor.rawStopSuggestionsUrl->insert( placeholder );
 }
 
 TimetableAccessor *TimetableMateView::accessorInfo() const
