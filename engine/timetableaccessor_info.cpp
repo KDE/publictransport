@@ -112,11 +112,19 @@ TimetableAccessorInfo::TimetableAccessorInfo( const TimetableAccessorInfo &info 
     m_shortUrl = info.m_shortUrl;
     m_minFetchWait = info.m_minFetchWait;
     m_author = info.m_author;
+    m_shortAuthor = info.m_shortAuthor;
     m_email = info.m_email;
     m_defaultVehicleType = info.m_defaultVehicleType;
     m_changelog = info.m_changelog;
+    m_country = info.m_country;
     m_cities = info.m_cities;
+    m_credit = info.m_credit;
     m_hashCityNameToValue = info.m_hashCityNameToValue;
+    m_fileName = info.m_fileName;
+    m_scriptFileName = info.m_scriptFileName;
+    m_scriptExtensions = info.m_scriptExtensions;
+    m_charsetForUrlEncoding = info.m_charsetForUrlEncoding;
+    m_fallbackCharset = info.m_fallbackCharset;
 }
 
 TimetableAccessorInfo::~TimetableAccessorInfo()
