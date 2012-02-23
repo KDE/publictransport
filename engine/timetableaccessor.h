@@ -96,11 +96,10 @@ struct RequestInfo {
     RequestInfo( const QString &sourceName, const QString &stop, const QDateTime &dateTime,
             int maxCount, const QString &dataType = "departures", bool useDifferentUrl = false,
             const QString &city = QString(),
-            ParseDocumentMode parseMode = ParseForDeparturesArrivals )
+            ParseDocumentMode parseMode = ParseForStopSuggestions )
             : sourceName(sourceName), dateTime(dateTime), stop(stop), maxCount(maxCount),
               dataType(dataType), useDifferentUrl(useDifferentUrl), city(city), parseMode(parseMode)
     {
-        this->parseMode = ParseForStopSuggestions;
     };
 
     RequestInfo( const RequestInfo &info )
