@@ -25,6 +25,7 @@
 #include "javascriptcompletionmodel.h"
 #include "javascriptmodel.h"
 #include "javascriptparser.h"
+#include "debugger.h"
 
 // PublicTransport engine includes
 #include <engine/scripting.h>
@@ -32,6 +33,7 @@
 #include <engine/timetableaccessor_info.h>
 #include <engine/timetableaccessor_script.h>
 #include <engine/script_thread.h>
+#include <engine/global.h>
 
 // Qt includes
 #include <QtGui/QDropEvent>
@@ -40,11 +42,18 @@
 #include <QtGui/QSplitter>
 #include <QtGui/QToolTip>
 #include <QtGui/QSortFilterProxyModel>
+#include <QtGui/QPlainTextEdit>
+#include <QtGui/QFormLayout>
+#include <QtGui/QApplication>
+#include <QtGui/QDockWidget>
+#include <QtGui/QTreeView>
+#include <QtGui/QStandardItemModel>
 #include <QtWebKit/QWebFrame>
 #include <QtWebKit/QWebInspector>
 #include <QtCore/QBuffer>
 #include <QtCore/QTextCodec>
 #include <QtCore/QTimer>
+#include <QtScript/QScriptValueIterator>
 
 // KDE includes
 #include <KGlobalSettings>
@@ -70,6 +79,7 @@
 #include <KTextEditor/TemplateInterface>
 #include <KTextEditor/TextHintInterface>
 #include <KTextEditor/MarkInterface>
+#include <KTextEditor/ConfigInterface>
 #include <KLibFactory>
 #include <KLibLoader>
 #include <KAction>
@@ -82,6 +92,7 @@
 #include <KAuth/ActionReply>
 #include <KIO/NetAccess>
 #include <KDE/KLocale>
+#include <KLineEdit>
 
 #include <unistd.h>
 
@@ -90,53 +101,52 @@ const char *TimetableMate::SCRIPT_FUNCTION_GETTIMETABLE = "getTimetable";
 const char *TimetableMate::SCRIPT_FUNCTION_GETJOURNEYS = "getJourneys";
 const char *TimetableMate::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS = "getStopSuggestions";
 
-// TODO Move class ScriptAgent to own file(s)
-// #include <QScriptEngineAgent>
-// /**
-//  * @brief A QScriptEngineAgent that signals when a script finishes.
-//  *
-//  * After a function exit the agent waits a little bit and checks if the script is still executing
-//  * using QScriptEngineAgent::isEvaluating().
-//  **/
-// class ScriptAgent : public QObject, public QScriptEngineAgent {
-//     Q_OBJECT
-//
-// public:
-//     /** @brief Creates a new ScriptAgent instance. */
-//     ScriptAgent( QScriptEngine* engine = 0 );
-//
-//     /** Overwritten to get noticed when a script might have finished. */
-//     virtual void functionExit( qint64 scriptId, const QScriptValue& returnValue );
-//
-// signals:
-//     /** @brief Emitted, when the script is no longer running */
-//     void scriptFinished();
-//
-// protected slots:
-//     void checkExecution();
-// };
-//
-// ScriptAgent::ScriptAgent(QScriptEngine* engine)
-//         : QObject(engine), QScriptEngineAgent::QScriptEngineAgent(engine)
+// QWidget *CheckboxDelegate::createEditor( QWidget *parent, const QStyleOptionViewItem &option,
+//                                          const QModelIndex &index ) const
 // {
+//     return QAbstractItemDelegate::createEditor( parent, option, index );
 // }
-//
-// void ScriptAgent::functionExit( qint64 scriptId, const QScriptValue& returnValue )
-// {
-//     QTimer::singleShot( 250, this, SLOT(checkExecution()) );
-// }
-//
-// void ScriptAgent::checkExecution()
-// {
-//     if ( !engine()->isEvaluating() ) {
-//         emit scriptFinished();
-//     }
-// }
+
+void CheckboxDelegate::paint( QPainter *painter, const QStyleOptionViewItem &option,
+                              const QModelIndex &index ) const
+{
+    bool checked = index.model()->data( index, Qt::EditRole ).toBool();
+
+    if( option.state & QStyle::State_Selected ) {
+        painter->setPen( QPen( Qt::NoPen ) );
+        if( option.state & QStyle::State_Active ) {
+            painter->setBrush( QBrush( QPalette().highlight() ) );
+        } else {
+            painter->setBrush( QBrush( QPalette().color( QPalette::Inactive,
+                                       QPalette::Highlight ) ) );
+        }
+        painter->drawRect( option.rect );
+    }
+
+    QStyleOptionButton checkBoxStyleOption;
+    checkBoxStyleOption.state |= QStyle::State_Enabled;
+    if( checked ) {
+        checkBoxStyleOption.state |= QStyle::State_On;
+    } else {
+        checkBoxStyleOption.state |= QStyle::State_Off;
+    }
+    checkBoxStyleOption.rect = option.rect;
+
+    QApplication::style()->drawControl( QStyle::CE_CheckBox, &checkBoxStyleOption, painter);
+}
+
+QSize CheckboxDelegate::sizeHint( const QStyleOptionViewItem &option,
+                                  const QModelIndex &index ) const
+{
+    return QApplication::style()->subElementRect( QStyle::SE_CheckBoxLayoutItem, &option ).size();
+}
 
 TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpButtonHint ),
         m_mainTabBar( new KTabWidget(this) ), m_view( new TimetableMateView(this) ),
+        m_backtraceDock(0), m_outputDock(0), m_breakpointDock(0),
+        m_backtraceModel(0), m_breakpointModel(0),
         m_backgroundParserTimer(0), m_engine(0), m_script(0), m_scriptNetwork(0),
-        m_scriptHelper(0), m_scriptResult(0), m_scriptStorage(0)
+        m_scriptHelper(0), m_scriptResult(0), m_scriptStorage(0), m_debugger(0)
 {
     m_partManager = new KParts::PartManager( this );
     m_accessorDocumentChanged = false;
@@ -184,6 +194,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     webSplitter->addWidget( m_webview );
     webSplitter->addWidget( inspector );
 
+    // Create URL bar
     m_urlBar = new KUrlComboBox( KUrlComboBox::Both, true, this );
     connect( m_webview, SIGNAL(statusBarMessage(QString)), this, SLOT(slotSetStatusBarText(QString)) );
     connect( m_webview, SIGNAL(urlChanged(QUrl)), this, SLOT(webUrlChanged(QUrl)) );
@@ -229,9 +240,9 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
                                  service->createInstance<KParts::ReadWritePart>(m_mainTabBar) );
         m_scriptDocument = static_cast<KTextEditor::Document*>(
                                service->createInstance<KParts::ReadWritePart>(m_mainTabBar) );
-
-        if ( !m_accessorDocument || !m_scriptDocument )
+        if ( !m_accessorDocument || !m_scriptDocument ) {
             return;
+        }
         connect( m_accessorDocument, SIGNAL(setStatusBarText(QString)),
                  this, SLOT(slotSetStatusBarText(QString)) );
         connect( m_scriptDocument, SIGNAL(setStatusBarText(QString)),
@@ -285,12 +296,39 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
             iface->registerCompletionModel( completionModel );
         }
 
+        KTextEditor::MarkInterface *markInterface =
+                qobject_cast<KTextEditor::MarkInterface*>( m_scriptDocument );
+        if ( markInterface ) {
+            markInterface->setEditableMarks( KTextEditor::MarkInterface::Bookmark |
+                                             KTextEditor::MarkInterface::BreakpointActive );
+            markInterface->setMarkDescription( KTextEditor::MarkInterface::BreakpointActive,
+                    i18nc("@info/plain", "Breakpoint") );
+            markInterface->setMarkPixmap( KTextEditor::MarkInterface::BreakpointActive,
+                    KIcon("tools-report-bug").pixmap(16, 16) );
+            markInterface->setMarkDescription( KTextEditor::MarkInterface::Execution,
+                    i18nc("@info/plain", "Execution Line") );
+            markInterface->setMarkPixmap( KTextEditor::MarkInterface::Execution,
+                    KIcon ("go-next").pixmap(16, 16) );
+            connect( m_scriptDocument, SIGNAL(markChanged(KTextEditor::Document*,KTextEditor::Mark,KTextEditor::MarkInterface::MarkChangeAction)),
+                     this, SLOT(markChanged(KTextEditor::Document*,KTextEditor::Mark,KTextEditor::MarkInterface::MarkChangeAction)) );
+        }
+
         KTextEditor::View *accessorView = m_accessorDocument->views().first();
         KTextEditor::View *scriptView = m_scriptDocument->views().first();
         connect( accessorView, SIGNAL(informationMessage(KTextEditor::View*,QString)),
                  this, SLOT(informationMessage(KTextEditor::View*,QString)) );
         connect( scriptView, SIGNAL(informationMessage(KTextEditor::View*,QString)),
                  this, SLOT(informationMessage(KTextEditor::View*,QString)) );
+
+        KTextEditor::ConfigInterface *configInterface =
+                qobject_cast<KTextEditor::ConfigInterface*>( scriptView );
+        if ( configInterface ) {
+            configInterface->setConfigValue( "line-numbers", true );
+            configInterface->setConfigValue( "icon-bar", true );
+            configInterface->setConfigValue( "dynamic-word-wrap", true );
+        } else {
+            kDebug() << "No KTextEditor::ConfigInterface";
+        }
     } else {
         // if we couldn't find our Part, we exit since the Shell by
         // itself can't do anything useful
@@ -359,6 +397,78 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
 
     m_mainTabBar->setTabEnabled( ScriptTab, false ); // Disable script tab
 
+    // Add backtrace dock
+    m_backtraceDock = new QDockWidget( i18nc("@window:title Dock title", "Backtrace"), this );
+    m_backtraceDock->setObjectName( "backtrace" );
+    m_backtraceDock->setFeatures( m_backtraceDock->features() |
+                                  QDockWidget::DockWidgetVerticalTitleBar );
+    m_backtraceModel = new QStandardItemModel( this );
+    m_backtraceModel->setColumnCount( 3 );
+    m_backtraceModel->setHeaderData( 0, Qt::Horizontal, i18nc("@title:column", "Depth"), Qt::DisplayRole );
+    m_backtraceModel->setHeaderData( 1, Qt::Horizontal, i18nc("@title:column", "Function"), Qt::DisplayRole );
+    m_backtraceModel->setHeaderData( 2, Qt::Horizontal, i18nc("@title:column", "Source"), Qt::DisplayRole );
+    QTreeView *backtraceWidget = new QTreeView( this );
+    backtraceWidget->setModel( m_backtraceModel );
+    backtraceWidget->setAllColumnsShowFocus( true );
+    backtraceWidget->setRootIsDecorated( false );
+    backtraceWidget->setEditTriggers( QAbstractItemView::NoEditTriggers );
+    m_backtraceDock->setWidget( backtraceWidget );
+    m_backtraceDock->hide();
+    addDockWidget( Qt::BottomDockWidgetArea, m_backtraceDock );
+    connect( backtraceWidget, SIGNAL(clicked(QModelIndex)),
+             this, SLOT(clickedBacktraceItem(QModelIndex)) );
+
+    // Add breakpoint dock
+    m_breakpointDock = new QDockWidget( i18nc("@window:title Dock title", "Breakpoints"), this );
+    m_breakpointDock->setObjectName( "breakpoints" );
+    m_breakpointDock->setFeatures( m_backtraceDock->features() |
+                                   QDockWidget::DockWidgetVerticalTitleBar );
+    m_breakpointModel = new QStandardItemModel( this );
+    m_breakpointModel->setColumnCount( 5 );
+    m_breakpointModel->setHeaderData( 0, Qt::Horizontal, i18nc("@title:column", "Enabled"), Qt::DisplayRole );
+    m_breakpointModel->setHeaderData( 1, Qt::Horizontal, i18nc("@title:column", "Address"), Qt::DisplayRole );
+    m_breakpointModel->setHeaderData( 2, Qt::Horizontal, i18nc("@title:column", "Condition"), Qt::DisplayRole );
+    m_breakpointModel->setHeaderData( 3, Qt::Horizontal, i18nc("@title:column", "Hits"), Qt::DisplayRole );
+    m_breakpointModel->setHeaderData( 4, Qt::Horizontal, i18nc("@title:column", "Last Condition Result"), Qt::DisplayRole );
+    QTreeView *breakpointWidget = new QTreeView( this );
+    breakpointWidget->setModel( m_breakpointModel );
+    breakpointWidget->setAllColumnsShowFocus( true );
+    breakpointWidget->setRootIsDecorated( false );
+    breakpointWidget->setItemDelegateForColumn( 0, new CheckboxDelegate(this) );
+    m_breakpointDock->setWidget( breakpointWidget );
+    m_breakpointDock->hide();
+    addDockWidget( Qt::BottomDockWidgetArea, m_breakpointDock );
+    connect( m_breakpointModel, SIGNAL(itemChanged(QStandardItem*)),
+             this, SLOT(breakpointChangedInModel(QStandardItem*)) );
+    connect( breakpointWidget, SIGNAL(clicked(QModelIndex)),
+             this, SLOT(clickedBreakpointItem(QModelIndex)) );
+
+    // Add output dock
+    m_outputDock = new QDockWidget( i18nc("@window:title Dock title", "Output"), this );
+    m_outputDock->setObjectName( "output" );
+    m_outputDock->setFeatures( m_backtraceDock->features() |
+                               QDockWidget::DockWidgetVerticalTitleBar );
+    m_outputWidget = new QPlainTextEdit( this );
+    m_outputWidget->setReadOnly( true );
+    m_outputDock->setWidget( m_outputWidget );
+    m_outputDock->hide();
+    addDockWidget( Qt::BottomDockWidgetArea, m_outputDock );
+
+    // Add variables dock
+    m_variablesDock = new QDockWidget( i18nc("@window:title Dock title", "Variables"), this );
+    m_variablesDock->setObjectName( "variables" );
+    m_variablesModel = new QStandardItemModel( this );
+    m_variablesModel->setColumnCount( 2 );
+    m_variablesModel->setSortRole( Qt::UserRole + 1 );
+    m_variablesModel->setHeaderData( 0, Qt::Horizontal, i18nc("@title:column", "Name"), Qt::DisplayRole );
+    m_variablesModel->setHeaderData( 1, Qt::Horizontal, i18nc("@title:column", "Value"), Qt::DisplayRole );
+    QTreeView *variablesWidget = new QTreeView( this );
+    variablesWidget->setAllColumnsShowFocus( true );
+    variablesWidget->setModel( m_variablesModel );
+    m_variablesDock->setWidget( variablesWidget );
+    m_variablesDock->hide();
+    addDockWidget( Qt::LeftDockWidgetArea, m_variablesDock );
+
 //     loadTemplate();
     writeScriptTemplate();
 
@@ -382,6 +492,154 @@ TimetableMate::~TimetableMate() {
     m_scriptNetwork->abortAllRequests();
     m_engine->abortEvaluation();
     m_engine->deleteLater();
+}
+
+void TimetableMate::clickedBreakpointItem( const QModelIndex &breakpointItem )
+{
+    if ( !breakpointItem.isValid() ) {
+        return;
+    }
+
+    const int lineNumber =
+            m_breakpointModel->index(breakpointItem.row(), 0).data( Qt::UserRole + 1 ).toInt();
+    const Breakpoint breakpoint = m_debugger->breakpointAt( lineNumber );
+    if ( !breakpoint.isValid() ) {
+        // Breakpoint does not exist, remove it from the model
+        kDebug() << "No breakpoint found at" << lineNumber;
+        m_breakpointModel->removeRow( breakpointItem.row() );
+        return;
+    }
+
+    // Set cursor to breakpoint position
+    KTextEditor::View *view = m_scriptDocument->activeView();
+    view->blockSignals( true );
+    view->setCursorPosition( KTextEditor::Cursor(lineNumber - 1, 0) );
+    view->blockSignals( false );
+}
+
+void TimetableMate::clickedBacktraceItem( const QModelIndex &backtraceItem )
+{
+    if ( !backtraceItem.isValid() ) {
+        return;
+    }
+
+    QScriptContext *context = m_engine->currentContext();
+    int index = 0;
+    while ( context ) {
+        if ( backtraceItem.row() == index ) {
+            break;
+        }
+        context = context->parentContext();
+        ++index;
+    }
+
+    QScriptContextInfo info( context );
+    KTextEditor::View *view = m_scriptDocument->activeView();
+    view->blockSignals( true );
+    if ( backtraceItem.row() == 0 ) {
+        // Go to first line of current function if it is the current function
+        view->setCursorPosition( KTextEditor::Cursor(info.functionStartLineNumber() - 1, 0) );
+    } else {
+        view->setCursorPosition( KTextEditor::Cursor(info.lineNumber() - 1, info.columnNumber()) );
+    }
+    view->blockSignals( false );
+    updateVariableModel();
+}
+
+void TimetableMate::updateVariableModel()
+{
+    QScriptContext *context = m_engine->currentContext();
+    m_variablesModel->removeRows( 0, m_variablesModel->rowCount() );
+    addVariableChilds( context->activationObject() );
+
+    QScriptContext *topContext = context;
+    while ( topContext->parentContext() ) {
+        topContext = topContext->parentContext();
+    }
+    if ( topContext != context ) {
+        addVariableChilds( topContext->activationObject(), QModelIndex(), true );
+    }
+    m_variablesModel->sort( 0 );
+}
+
+void TimetableMate::markChanged( KTextEditor::Document *document, const KTextEditor::Mark &mark,
+                                 KTextEditor::MarkInterface::MarkChangeAction action )
+{
+    if ( mark.type == KTextEditor::MarkInterface::BreakpointActive ) {
+        if ( !m_debugger ) {
+            loadScript();
+        }
+
+        kDebug() << (mark.line + 1);
+
+        if ( action == KTextEditor::MarkInterface::MarkAdded ) {
+            const int lineNumber = m_debugger->getNextBreakableLineNumber( mark.line + 1 );
+            if ( mark.line + 1 != lineNumber ) {
+                KTextEditor::MarkInterface *markInterface =
+                        qobject_cast<KTextEditor::MarkInterface*>( m_scriptDocument );
+                markInterface->removeMark( mark.line, mark.type );
+            }
+
+            if ( m_debugger->breakpointState(lineNumber) == Debugger::NoBreakpoint ) {
+                toggleBreakpoint( lineNumber );
+            }
+        } else { // Mark removed
+            if ( m_debugger->breakpointState(mark.line + 1) != Debugger::NoBreakpoint ) {
+                toggleBreakpoint( mark.line + 1 );
+            }
+        }
+    }
+}
+
+void TimetableMate::backtraceChanged( const BacktraceQueue &backtrace,
+                                      Debugger::BacktraceChange change )
+{
+    Q_UNUSED( backtrace );
+    Q_UNUSED( change );
+
+    QScriptContext *context = m_engine->currentContext();
+    int depth = 0;
+    while ( context ) {
+        ++depth;
+        context = context->parentContext();
+    }
+
+    int index = -1;
+    context = m_engine->currentContext();
+    m_backtraceModel->removeRows( 0, m_backtraceModel->rowCount() );
+    while ( context ) {
+        ++index;
+//         QString line = context->toString();
+        QScriptContextInfo info( context );
+        QString contextString;
+        if ( !info.functionName().isEmpty() ) {
+            contextString = info.functionName();
+        } else {
+            if ( context->thisObject().equals(m_engine->globalObject()) ) {
+                contextString = "<global>";
+            } else {
+                contextString = "<anonymous>";
+            }
+        }
+
+        QList< QStandardItem* > columns;
+        columns << new QStandardItem( QString::number(depth--) ); // Depth
+        columns << new QStandardItem( contextString ); // Function
+        if ( info.lineNumber() == -1 ) {
+            columns << new QStandardItem( "??" ); // Source
+        } else {
+            columns << new QStandardItem( QString("%0:%1").arg(info.fileName()).arg(info.lineNumber()) ); // Source
+        }
+        m_backtraceModel->appendRow( columns );
+//         str << QString::fromLatin1("#%0 %1() @ %2:%3")
+//                 .arg(index + 1)
+//                 .arg(contextString)
+//                 .arg(info.fileName())
+//                 .arg(info.lineNumber());
+//         str << QString::fromLatin1("#%0  %1").arg(index).arg(line);
+        context = context->parentContext();
+    }
+//     m_backtraceModel->setStringList( str );
 }
 
 QStringList TimetableMate::allowedExtensions()
@@ -438,12 +696,21 @@ void TimetableMate::showTextHint( const KTextEditor::Cursor &position, QString &
 }
 
 void TimetableMate::updateWindowTitle() {
-    QString currentTab = KGlobal::locale()->removeAcceleratorMarker(
+    const QString currentTab = KGlobal::locale()->removeAcceleratorMarker(
                              m_mainTabBar->tabText(m_mainTabBar->currentIndex()) );
-    if ( m_currentServiceProviderID.isEmpty() )
-        setCaption( currentTab, m_changed );
-    else
-        setCaption( currentTab + " - " + m_currentServiceProviderID, m_changed );
+    QString caption = currentTab;
+    if ( !m_currentServiceProviderID.isEmpty() ) {
+        caption += " - " + m_currentServiceProviderID;
+    }
+    if ( m_debugger ) {
+        if ( m_engine->hasUncaughtException() ) {
+            caption += " - " + i18nc("@info/plain", "Debugging (exception in line %1)",
+                                     m_engine->uncaughtExceptionLineNumber());
+        } else if ( m_debugger->isInterrupted() ) {
+            caption += " - " + i18nc("@info/plain", "Debugging (line %1)", m_debugger->lineNumber());
+        }
+    }
+    setCaption( caption, m_changed );
 
     // Set preview tab disabled when the accessor isn't saved
     m_mainTabBar->setTabEnabled( PlasmaPreviewTab, !m_openedPath.isEmpty() );
@@ -510,20 +777,17 @@ void TimetableMate::accessorWidgetsChanged() {
     m_accessorWidgetsChanged = true;
     setChanged( true );
 
-    TimetableAccessor *accessor = m_view->accessorInfo();
+    TimetableAccessor *accessor = m_view->accessor();
 
     // Enable/disable actions to open web pages
     action( "web_load_homepage" )->setEnabled( !accessor->info()->url().isEmpty() );
-//     action( "web_load_departures" )->setEnabled( !accessor.rawDepartureUrl.isEmpty() ); // TODO
-//     action( "web_load_stopsuggestions" )->setEnabled( !accessor.rawStopSuggestionsUrl.isEmpty() );
-//     action( "web_load_journeys" )->setEnabled( !accessor.rawJourneyUrl.isEmpty() );
 
     QStringList functions = m_javaScriptModel->functionNames();
-    action( "script_runParseTimetable" )->setEnabled(
+    action( "script_run_departures" )->setEnabled(
             functions.contains(SCRIPT_FUNCTION_GETTIMETABLE) );
-    action( "script_runParseStopSuggestions" )->setEnabled(
+    action( "script_run_stop_suggestions" )->setEnabled(
             functions.contains(SCRIPT_FUNCTION_GETSTOPSUGGESTIONS) );
-    action( "script_runParseJourneys" )->setEnabled(
+    action( "script_run_journeys" )->setEnabled(
             functions.contains(SCRIPT_FUNCTION_GETJOURNEYS) );
 }
 
@@ -536,7 +800,7 @@ void TimetableMate::updateNextPreviousFunctionActions() {
     int count = m_functionsModel->rowCount();
     int functionIndex = m_functions->currentIndex();
     if ( functionIndex == -1 ) {
-        int currentLine = m_scriptDocument->activeView()->cursorPosition().line();
+        int currentLine = m_scriptDocument->activeView()->cursorPosition().line() + 1;
         FunctionNode *previousNode = dynamic_cast<FunctionNode*>(
                                          m_javaScriptModel->nodeBeforeLineNumber(currentLine, Function) );
         FunctionNode *nextNode = dynamic_cast<FunctionNode*>(
@@ -571,7 +835,7 @@ void TimetableMate::beginScriptParsing() {
             }
         }
 
-// 	m_scriptDocument->views().first()->setCursorPosition( parser.errorCursor() );
+// 	m_scriptDocument->views().first()->setCursorPosition( parser.errorCursor() - 1);
         statusBar()->showMessage( i18nc("@info:status", "Syntax error in line %1, column %2: "
                                         "<message>%3</message>",
                                         parser.errorLine(), parser.errorColumn(),
@@ -593,11 +857,11 @@ void TimetableMate::beginScriptParsing() {
 
     // Update script_run* action enabled state
     QStringList functions = m_javaScriptModel->functionNames();
-    action( "script_runParseTimetable" )->setEnabled(
+    action( "script_run_departures" )->setEnabled(
             functions.contains(SCRIPT_FUNCTION_GETTIMETABLE) );
-    action( "script_runParseStopSuggestions" )->setEnabled(
+    action( "script_run_stop_suggestions" )->setEnabled(
             functions.contains(SCRIPT_FUNCTION_GETSTOPSUGGESTIONS) );
-    action( "script_runParseJourneys" )->setEnabled(
+    action( "script_run_journeys" )->setEnabled(
             functions.contains(SCRIPT_FUNCTION_GETJOURNEYS) );
 }
 
@@ -702,9 +966,16 @@ void TimetableMate::currentTabChanged( int index ) {
     if ( m_currentTab == ScriptTab ) { // left script tab
         action("script_next_function")->setVisible( false );
         action("script_previous_function")->setVisible( false );
+        action("debug_toggle_breakpoint")->setEnabled( false );
+        action("debug_remove_all_breakpoints")->setEnabled( false );
+//         m_backtraceDock->hide();
+        m_breakpointDock->hide();
     } else if ( index == ScriptTab ) { // go to script tab
         action("script_next_function")->setVisible( true );
         action("script_previous_function")->setVisible( true );
+        action("debug_toggle_breakpoint")->setEnabled( true );
+        action("debug_remove_all_breakpoints")->setEnabled( true );
+        m_breakpointDock->show();
     }
 
     if ( m_currentTab == WebTab ) { // left web tab
@@ -814,42 +1085,114 @@ void TimetableMate::setupActions() {
     webLoadPage->addAction( webLoadJourneys );
     actionCollection()->addAction( QLatin1String("web_load_page"), webLoadPage );
 
-    QAction *runScriptTimetable = new KAction( KIcon("system-run"),
-            i18nc("@action", "Run 'parse&Timetable'"), this );
-    runScriptTimetable->setToolTip( i18nc("@info:tooltip",
-                                          "Runs the <emphasis>parseTimetable()</emphasis> function of the script.") );
-    actionCollection()->addAction( QLatin1String("script_runParseTimetable"), runScriptTimetable );
-    connect( runScriptTimetable, SIGNAL(triggered(bool)), this, SLOT(scriptRunParseTimetable()) );
+    QAction *runDepartures = new KAction( KIcon("system-run"),
+            i18nc("@action", "Run get&Timetable()"), this );
+    runDepartures->setToolTip( i18nc("@info:tooltip",
+                                          "Runs the <emphasis>getTimetable()</emphasis> function of the script.") );
+    actionCollection()->addAction( QLatin1String("script_run_departures"), runDepartures );
+    connect( runDepartures, SIGNAL(triggered(bool)), this, SLOT(scriptRunParseTimetable()) );
 
-    QAction *runScriptStopSuggestions = new KAction( KIcon("system-run"),
-            i18nc("@action", "Run 'parse&StopSuggestions'"), this );
-    runScriptStopSuggestions->setToolTip( i18nc("@info:tooltip",
-                                          "Runs the <emphasis>parseStopSuggestions()</emphasis> function of the script.") );
-    actionCollection()->addAction( QLatin1String("script_runParseStopSuggestions"),
-                                   runScriptStopSuggestions );
-    connect( runScriptStopSuggestions, SIGNAL(triggered(bool)),
+    QAction *runStopSuggestions = new KAction( KIcon("system-run"),
+            i18nc("@action", "Run get&StopSuggestions()"), this );
+    runStopSuggestions->setToolTip( i18nc("@info:tooltip",
+                                          "Runs the <emphasis>getStopSuggestions()</emphasis> function of the script.") );
+    actionCollection()->addAction( QLatin1String("script_run_stop_suggestions"),
+                                   runStopSuggestions );
+    connect( runStopSuggestions, SIGNAL(triggered(bool)),
              this, SLOT(scriptRunParseStopSuggestions()) );
 
-    QAction *runScriptJourneys = new KAction( KIcon("system-run"),
-            i18nc("@action", "Run 'parse&Journeys'"), this );
-    runScriptJourneys->setToolTip( i18nc("@info:tooltip",
-                                         "Runs the <emphasis>parseJourneys()</emphasis> function of the script.") );
-    actionCollection()->addAction( QLatin1String("script_runParseJourneys"), runScriptJourneys );
-    connect( runScriptJourneys, SIGNAL(triggered(bool)), this, SLOT(scriptRunParseJourneys()) );
+    QAction *runJourneys = new KAction( KIcon("system-run"),
+            i18nc("@action", "Run get&Journeys()"), this );
+    runJourneys->setToolTip( i18nc("@info:tooltip",
+                                         "Runs the <emphasis>getJourneys()</emphasis> function of the script.") );
+    actionCollection()->addAction( QLatin1String("script_run_journeys"), runJourneys );
+    connect( runJourneys, SIGNAL(triggered(bool)), this, SLOT(scriptRunParseJourneys()) );
 
     KActionMenu *runScript = new KActionMenu( KIcon("system-run"),
             i18nc("@action", "&Run Script"), this );
     runScript->setToolTip( i18nc("@info:tooltip", "Runs a function of the script.") );
     runScript->setDelayed( false );
-    runScript->addAction( runScriptTimetable );
-    runScript->addAction( runScriptStopSuggestions );
-    runScript->addAction( runScriptJourneys );
+    runScript->addAction( runDepartures );
+    runScript->addAction( runStopSuggestions );
+    runScript->addAction( runJourneys );
     actionCollection()->addAction( QLatin1String("script_run"), runScript );
 
     QAction *toolsCheck = new KAction( KIcon("dialog-ok-apply"), i18nc("@action", "&Check"), this );
     toolsCheck->setToolTip( i18nc("@info:tooltip", "Checks the accessor for error/features.") );
     actionCollection()->addAction( QLatin1String("tools_check"), toolsCheck );
     connect( toolsCheck, SIGNAL(triggered(bool)), this, SLOT(toolsCheck()) );
+
+    QAction *debugDepartures = new KAction( KIcon("debug-run"), i18nc("@action", "&Debug getTimetable()"), this );
+    debugDepartures->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getTimetable()' in a debugger") );
+    actionCollection()->addAction( QLatin1String("debug_departures"), debugDepartures );
+    connect( debugDepartures, SIGNAL(triggered(bool)), this, SLOT(debugScriptDepartures()) );
+
+    QAction *debugJourneys = new KAction( KIcon("debug-run"), i18nc("@action", "&Debug getJourneys()"), this );
+    debugJourneys->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getJourneys()' in a debugger") );
+    actionCollection()->addAction( QLatin1String("debug_journeys"), debugJourneys );
+    connect( debugJourneys, SIGNAL(triggered(bool)), this, SLOT(debugScriptJourneys()) );
+
+    QAction *debugStopSuggestions = new KAction( KIcon("debug-run"), i18nc("@action", "&Debug getStopSuggestions()"), this );
+    debugStopSuggestions->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()' in a debugger") );
+    actionCollection()->addAction( QLatin1String("debug_stop_suggestions"), debugStopSuggestions );
+    connect( debugStopSuggestions, SIGNAL(triggered(bool)), this, SLOT(debugScriptStopSuggestions()) );
+
+    KActionMenu *debugScript = new KActionMenu( KIcon("debug-run"),
+            i18nc("@action", "&Debug Script"), this );
+    debugScript->setToolTip( i18nc("@info:tooltip", "Runs a function of the script in a debugger.") );
+    debugScript->setDelayed( false );
+    debugScript->addAction( debugDepartures );
+    debugScript->addAction( debugStopSuggestions );
+    debugScript->addAction( debugJourneys );
+    actionCollection()->addAction( QLatin1String("debug_run"), debugScript );
+
+    QAction *debugStepInto = new KAction( KIcon("debug-step-into"), i18nc("@action", "Step &Into"), this );
+    debugStepInto->setToolTip( i18nc("@info:tooltip", "Continue script execution until the next statement") );
+    debugStepInto->setEnabled( false );
+    actionCollection()->addAction( QLatin1String("debug_step_into"), debugStepInto );
+
+    QAction *debugStepOver = new KAction( KIcon("debug-step-over"), i18nc("@action", "Step &Over"), this );
+    debugStepOver->setToolTip( i18nc("@info:tooltip", "Continue script execution until the next statement in the same context.") );
+    debugStepOver->setEnabled( false );
+    actionCollection()->addAction( QLatin1String("debug_step_over"), debugStepOver );
+
+    QAction *debugStepOut = new KAction( KIcon("debug-step-out"), i18nc("@action", "Step Ou&t"), this );
+    debugStepOut->setToolTip( i18nc("@info:tooltip", "Continue script execution until the current function gets left.") );
+    debugStepOut->setEnabled( false );
+    actionCollection()->addAction( QLatin1String("debug_step_out"), debugStepOut );
+
+    QAction *debugRunToCursor = new KAction( KIcon("debug-execute-to-cursor"),
+                                             i18nc("@action", "Run to &Cursor"), this );
+    debugRunToCursor->setToolTip( i18nc("@info:tooltip", "Continue script execution until the current cursor position is reached") );
+    debugRunToCursor->setEnabled( false );
+    actionCollection()->addAction( QLatin1String("debug_run_to_cursor"), debugRunToCursor );
+    connect( debugRunToCursor, SIGNAL(triggered()), this, SLOT(runToCursor()) );
+
+    QAction *debugInterrupt = new KAction( KIcon("media-playback-pause"), i18nc("@action", "&Interrupt"), this );
+    debugInterrupt->setToolTip( i18nc("@info:tooltip", "Interrupt script execution.") );
+    debugInterrupt->setEnabled( false );
+    actionCollection()->addAction( QLatin1String("debug_interrupt"), debugInterrupt );
+
+    QAction *debugContinue = new KAction( KIcon("media-playback-start"), i18nc("@action", "&Continue"), this );
+    debugContinue->setToolTip( i18nc("@info:tooltip", "Continue script execution, only interrupt on breakpoints or uncaught exceptions.") );
+    debugContinue->setEnabled( false );
+    actionCollection()->addAction( QLatin1String("debug_continue"), debugContinue );
+
+    QAction *abortDebugger = new KAction( KIcon("process-stop"), i18nc("@action", "&Abort"), this );
+    abortDebugger->setToolTip( i18nc("@info:tooltip", "Abort script execution") );
+    abortDebugger->setEnabled( false );
+    actionCollection()->addAction( QLatin1String("debug_abort"), abortDebugger );
+
+    QAction *toggleBreakpoint = new KAction( KIcon("tools-report-bug"), i18nc("@action", "Toggle &Breakpoint"), this );
+    toggleBreakpoint->setToolTip( i18nc("@info:tooltip", "Toggle breakpoint for the current line") );
+    toggleBreakpoint->setEnabled( false );
+    actionCollection()->addAction( QLatin1String("debug_toggle_breakpoint"), toggleBreakpoint );
+    connect( toggleBreakpoint, SIGNAL(triggered()), this, SLOT(toggleBreakpoint()) );
+
+    QAction *removeAllBreakpoints = new KAction( KIcon("tools-report-bug"), i18nc("@action", "&Remove all Breakpoints"), this );
+    removeAllBreakpoints->setToolTip( i18nc("@info:tooltip", "Removes all breakpoints") );
+    removeAllBreakpoints->setEnabled( false );
+    actionCollection()->addAction( QLatin1String("debug_remove_all_breakpoints"), removeAllBreakpoints );
 
     KAction *scriptPreviousFunction = new KAction( KIcon("go-previous"), // no icon for this so far
             i18nc("@action", "&Previous Function"), this );
@@ -868,6 +1211,563 @@ void TimetableMate::setupActions() {
     scriptNextFunction->setShortcut( KShortcut("Ctrl+Alt+PgDown") ); // Same as in KDevelop
     actionCollection()->addAction( QLatin1String("script_next_function"), scriptNextFunction );
     connect( scriptNextFunction, SIGNAL(triggered(bool)), this, SLOT(scriptNextFunction()) );
+
+    stateChanged( "debug_not_running" );
+}
+
+void TimetableMate::breakpointAdded( const Breakpoint &breakpoint )
+{
+    KTextEditor::MarkInterface *markInterface =
+            qobject_cast<KTextEditor::MarkInterface*>( m_scriptDocument );
+    if ( !markInterface ) {
+        kDebug() << "Cannot mark breakpoint, no KTextEditor::MarkInterface";
+        return;
+    }
+
+    disconnect( m_scriptDocument, SIGNAL(markChanged(KTextEditor::Document*,KTextEditor::Mark,KTextEditor::MarkInterface::MarkChangeAction)),
+                this, SLOT(markChanged(KTextEditor::Document*,KTextEditor::Mark,KTextEditor::MarkInterface::MarkChangeAction)) );
+    markInterface->setMark( breakpoint.lineNumber() - 1,
+                            KTextEditor::MarkInterface::BreakpointActive );
+    connect( m_scriptDocument, SIGNAL(markChanged(KTextEditor::Document*,KTextEditor::Mark,KTextEditor::MarkInterface::MarkChangeAction)),
+             this, SLOT(markChanged(KTextEditor::Document*,KTextEditor::Mark,KTextEditor::MarkInterface::MarkChangeAction)) );
+
+    statusBar()->showMessage( i18nc("@info:status", "Breakpoint in line %1 enabled",
+                                    breakpoint.lineNumber()), 5000 );
+
+    QStandardItem *enabledItem = new QStandardItem();
+    enabledItem->setData( breakpoint.lineNumber(), Qt::UserRole + 1 );
+    enabledItem->setData( breakpoint.isEnabled(), Qt::EditRole );
+    enabledItem->setEditable( true );
+
+    QStandardItem *addressItem = new QStandardItem( i18nc("@info/plain", "Line %1",
+                                                          breakpoint.lineNumber()) );
+    addressItem->setEditable( false );
+
+    QStandardItem *conditionItem = new QStandardItem( breakpoint.condition() );
+    conditionItem->setEditable( true );
+
+    QStandardItem *hitsItem = new QStandardItem( QString::number(breakpoint.hitCount()) );
+    hitsItem->setEditable( false );
+
+    QStandardItem *lastResultItem = new QStandardItem( breakpoint.lastConditionResult().toString() );
+    lastResultItem->setEditable( false );
+
+    QList< QStandardItem* > columns;
+    columns << enabledItem; // Enabled
+    columns << addressItem; // Address
+    columns << conditionItem; // Condition
+    columns << hitsItem; // Hits
+    columns << lastResultItem; // Last Condition Result
+
+//     disconnect( m_breakpointModel, SIGNAL(itemChanged(QStandardItem*)),
+//                 this, SLOT(breakpointChangedInModel(QStandardItem*)) );
+    m_breakpointModel->appendRow( columns );
+//     connect( m_breakpointModel, SIGNAL(itemChanged(QStandardItem*)),
+//              this, SLOT(breakpointChangedInModel(QStandardItem*)) );
+}
+
+void TimetableMate::breakpointRemoved( const Breakpoint &breakpoint )
+{
+    KTextEditor::MarkInterface *markInterface =
+            qobject_cast<KTextEditor::MarkInterface*>( m_scriptDocument );
+    if ( !markInterface ) {
+        kDebug() << "Cannot mark breakpoint, no KTextEditor::MarkInterface";
+        return;
+    }
+
+    disconnect( m_scriptDocument, SIGNAL(markChanged(KTextEditor::Document*,KTextEditor::Mark,KTextEditor::MarkInterface::MarkChangeAction)),
+                this, SLOT(markChanged(KTextEditor::Document*,KTextEditor::Mark,KTextEditor::MarkInterface::MarkChangeAction)) );
+    markInterface->removeMark( breakpoint.lineNumber() - 1,
+                               KTextEditor::MarkInterface::BreakpointActive );
+    connect( m_scriptDocument, SIGNAL(markChanged(KTextEditor::Document*,KTextEditor::Mark,KTextEditor::MarkInterface::MarkChangeAction)),
+             this, SLOT(markChanged(KTextEditor::Document*,KTextEditor::Mark,KTextEditor::MarkInterface::MarkChangeAction)) );
+
+    statusBar()->showMessage( i18nc("@info:status", "Removed breakpoint in line %1",
+                                    breakpoint.lineNumber()), 5000 );
+
+    for ( int row = 0; row < m_breakpointModel->rowCount(); ++row ) {
+        const QModelIndex index = m_breakpointModel->index( row, 0 );
+        if ( index.data(Qt::UserRole + 1).toInt() == breakpoint.lineNumber() ) {
+//             disconnect( m_breakpointModel, SIGNAL(itemChanged(QStandardItem*)),
+//                         this, SLOT(breakpointChangedInModel(QStandardItem*)) );
+            m_breakpointModel->removeRow( row );
+//             connect( m_breakpointModel, SIGNAL(itemChanged(QStandardItem*)),
+//                      this, SLOT(breakpointChangedInModel(QStandardItem*)) );
+            break;
+        }
+    }
+}
+
+void TimetableMate::breakpointChangedInModel( QStandardItem *item )
+{
+    if ( item->column() != 1 ) {
+        return; // Not an item in the condition column
+    }
+
+    const QString newCondition = item->text();
+    const QModelIndex index = m_breakpointModel->index( item->row(), 0 );
+    const int lineNumber = index.data( Qt::UserRole + 1 ).toInt();
+    Breakpoint breakpoint = m_debugger->breakpointAt( lineNumber );
+    if ( !breakpoint.isValid() ) {
+        kDebug() << "Breakpoint changed in model, but is no longer existent" << lineNumber << m_debugger->breakpoints();
+        return;
+    }
+
+    const bool enabled = index.data( Qt::UserRole + 1 ).toBool();
+    breakpoint.setEnabled( enabled );
+
+    if ( !m_engine->canEvaluate(newCondition) ) {
+        // TODO Update item?
+        kDebug() << "Cannot evaluate" << newCondition;
+        item->setText( breakpoint.condition() );
+    } else {
+        breakpoint.setCondition( newCondition );
+        m_debugger->addBreakpoint( breakpoint ); // Overwrite the old breakpoint
+    }
+}
+
+void TimetableMate::toggleBreakpoint( int lineNumber ) {
+    if ( !m_debugger ) {
+        loadScript();
+//     } else if ( m_scriptDocument->isModified() ) {
+//
+    }
+
+    if ( lineNumber <= 0 ) {
+        lineNumber = m_scriptDocument->views().first()->cursorPosition().line() + 1;
+    }
+    m_debugger->toggleBreakpoint( lineNumber );
+}
+
+void TimetableMate::breakpointReached( const Breakpoint &breakpoint )
+{
+    statusBar()->showMessage( i18nc("@info/plain", "Reached breakpoint at %1",
+                                    breakpoint.lineNumber()) );
+
+    for ( int row = 0; row < m_breakpointModel->rowCount(); ++row ) {
+        const QModelIndex index = m_breakpointModel->index( row, 0 );
+        if ( index.data(Qt::UserRole + 1).toInt() == breakpoint.lineNumber() ) {
+            disconnect( m_breakpointModel, SIGNAL(itemChanged(QStandardItem*)),
+                        this, SLOT(breakpointChangedInModel(QStandardItem*)) );
+            m_breakpointModel->setData( m_breakpointModel->index(row, 3), // 3 => Hit count column
+                                        QString::number(breakpoint.hitCount()) );
+            connect( m_breakpointModel, SIGNAL(itemChanged(QStandardItem*)),
+                     this, SLOT(breakpointChangedInModel(QStandardItem*)) );
+            break;
+        }
+    }
+}
+
+void TimetableMate::abortDebugger()
+{
+    m_debugger->engine()->abortEvaluation();
+}
+
+void TimetableMate::scriptPositionAboutToChange( int oldLineNumber, int oldColumnNumber,
+                                                 int lineNumber, int columnNumber )
+{
+    if ( m_debugger->isInterrupted() && lineNumber != -1 ) {
+        KTextEditor::View *view = m_scriptDocument->activeView();
+        view->blockSignals( true );
+        view->setCursorPosition( KTextEditor::Cursor(lineNumber - 1, columnNumber) );
+        view->blockSignals( false );
+    }
+
+    KTextEditor::MarkInterface *iface =
+            qobject_cast<KTextEditor::MarkInterface*>( m_scriptDocument );
+    if ( !iface ) {
+        kDebug() << "Cannot mark breakpoint, no KTextEditor::MarkInterface";
+    } else {
+        iface->removeMark( oldLineNumber - 1, KTextEditor::MarkInterface::Execution );
+        if ( lineNumber != -1 ) {
+            iface->addMark( lineNumber - 1, KTextEditor::MarkInterface::Execution );
+        }
+    }
+}
+
+void TimetableMate::setupDebugger( /* TODO Move that Enum to Debugger class ==> */ DebugType debug )
+{
+#ifndef QT_NO_SCRIPTTOOLS
+    if ( debug == NoDebugging ) {
+        m_debugger->debugContinue();
+    } else {
+        // Create debugger if it is not already created
+        if ( !m_debugger ) {
+            if ( !m_engine ) {
+                // Create script engine, the function then calls setupDebugger and creates m_debugger
+                createScriptEngine();
+            } else {
+                kDebug() << "Create debugger";
+                m_debugger = new Debugger( m_engine );
+                connect( m_debugger, SIGNAL(positionAboutToChanged(int,int,int,int)),
+                        this, SLOT(scriptPositionAboutToChange(int,int,int,int)) );
+                connect( action("debug_step_into"), SIGNAL(triggered()),
+                         m_debugger, SLOT(debugStepInto()) );
+                connect( action("debug_step_over"), SIGNAL(triggered()),
+                         m_debugger, SLOT(debugStepOver()) );
+                connect( action("debug_step_out"), SIGNAL(triggered()),
+                         m_debugger, SLOT(debugStepOut()) );
+                connect( action("debug_interrupt"), SIGNAL(triggered()),
+                         m_debugger, SLOT(debugInterrupt()) );
+                connect( action("debug_continue"), SIGNAL(triggered()),
+                         m_debugger, SLOT(debugContinue()) );
+                connect( action("debug_abort"), SIGNAL(triggered()),
+                         m_debugger, SLOT(abortDebugger()) );
+                connect( action("debug_remove_all_breakpoints"), SIGNAL(triggered()),
+                         m_debugger, SLOT(removeAllBreakpoints()) );
+                connect( m_debugger, SIGNAL(interrupted()), this, SLOT(debugInterrupted()) );
+                connect( m_debugger, SIGNAL(continued()), this, SLOT(debugContinued()) );
+                connect( m_debugger, SIGNAL(scriptStarted()), this, SLOT(debugStarted()) );
+                connect( m_debugger, SIGNAL(scriptFinished()), this, SLOT(debugStopped()) );
+                connect( m_debugger, SIGNAL(exception(int,QString)),
+                         this, SLOT(uncaughtException(int,QString)) );
+                connect( m_debugger, SIGNAL(backtraceChanged(BacktraceQueue,Debugger::BacktraceChange)),
+                        this, SLOT(backtraceChanged(BacktraceQueue,Debugger::BacktraceChange)) );
+                connect( m_debugger, SIGNAL(breakpointReached(Breakpoint)),
+                        this, SLOT(breakpointReached(Breakpoint)) );
+                connect( m_debugger, SIGNAL(breakpointAdded(Breakpoint)),
+                        this, SLOT(breakpointAdded(Breakpoint)) );
+                connect( m_debugger, SIGNAL(breakpointRemoved(Breakpoint)),
+                        this, SLOT(breakpointRemoved(Breakpoint)) );
+                connect( m_debugger, SIGNAL(output(QString,QScriptContext*)),
+                         this, SLOT(scriptOutput(QString,QScriptContext*)) );
+            }
+        }
+        kDebug() << "Attach debugger";
+        m_engine->setAgent( m_debugger );
+        Q_ASSERT( m_engine == m_debugger->engine() );
+
+        if ( debug == InterruptAtStart ) {
+            m_debugger->debugInterrupt();
+        } else if ( debug == InterruptOnExceptions ) {
+            m_debugger->debugContinue();
+        }
+    }
+#else
+    Q_UNUSED( debug );
+#endif
+}
+
+void TimetableMate::runToCursor()
+{
+    const KTextEditor::View *view = m_scriptDocument->activeView();
+    m_debugger->debugRunUntilLineNumber( view->cursorPosition().line() + 1 );
+}
+
+void TimetableMate::debugInterrupted()
+{
+    KTextEditor::View *view = m_scriptDocument->activeView();
+    view->blockSignals( true );
+    view->setCursorPosition( KTextEditor::Cursor(m_debugger->lineNumber() - 1, 0) );
+    view->blockSignals( false );
+
+    stateChanged( "debug_interrupted" );
+    statusBar()->showMessage( i18nc("@info:status", "Script interrupted"), 5000 );
+    updateWindowTitle();
+    updateVariableModel();
+}
+
+void TimetableMate::debugContinued()
+{
+    stateChanged( "debug_running" );
+    statusBar()->showMessage( i18nc("@info:status", "Script continued"), 5000 );
+    setWindowTitle( i18nc("@window:title", "TimetableMate - %1 [*]",
+                          m_view->accessor()->serviceProvider()) );
+    updateWindowTitle();
+}
+
+void TimetableMate::debugStarted()
+{
+    stateChanged( "debug_running" );
+    m_scriptResult->clear();
+    m_scriptErrors.clear();
+    m_scriptNetwork->clear();
+    debugContinued();
+
+    m_backtraceDock->show();
+    m_outputDock->show();
+    m_variablesDock->show();
+    statusBar()->showMessage( i18nc("@info:status", "Script started"), 5000 );
+    m_outputWidget->appendHtml( i18nc("@info", "<emphasis strong='1'>Execution started at %1</emphasis>",
+                                      QTime::currentTime().toString()) );
+    updateWindowTitle();
+}
+
+void TimetableMate::debugStopped()
+{
+    stateChanged( "debug_not_running" );
+
+    m_backtraceDock->hide();
+    m_variablesDock->hide();
+    statusBar()->showMessage( i18nc("@info:status", "Script finished"), 5000 );
+    m_outputWidget->appendHtml( i18nc("@info", "<emphasis strong='1'>Execution ended at %1</emphasis>",
+                                      QTime::currentTime().toString()) + "<br />---------------------<br />" );
+    updateWindowTitle();
+}
+
+void TimetableMate::uncaughtException( int lineNumber, const QString &errorMessage )
+{
+    statusBar()->showMessage(
+            i18nc("@info:status", "Uncaught exception at %1: <message>%2</message>",
+                  lineNumber, errorMessage) );
+    m_outputWidget->appendHtml(
+            i18nc("@info", "<emphasis strong='1'>Uncaught exception at %1:</emphasis> "
+                  "<message>%2</message>", lineNumber, errorMessage) );
+}
+
+QStandardItem *addRow( QStandardItem *item, const QString &name, const QString &value,
+             const KIcon &icon = KIcon() )
+{
+    QStandardItem *newNameItem = new QStandardItem( icon, name );
+    QStandardItem *newValueItem = new QStandardItem( value );
+    newNameItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
+    newValueItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
+    item->appendRow( QList<QStandardItem*>() << newNameItem << newValueItem );
+    return newNameItem;
+}
+
+void TimetableMate::addVariableChilds( const QScriptValue &value, const QModelIndex &parent,
+                                       bool onlyImportantObjects ) {
+    QScriptValueIterator it( value );
+    while ( it.hasNext() ) {
+        it.next();
+        if ( (onlyImportantObjects && !it.value().isQObject()) ||
+             it.value().isError() || it.flags().testFlag(QScriptValue::SkipInEnumeration) ||
+             it.name() == "NaN" || it.name() == "undefined" || it.name() == "Infinity" )
+        {
+            continue;
+        }
+
+        const bool isHelperObject = it.name() == "helper" || it.name() == "network" ||
+                it.name() == "storage" || it.name() == "result" || it.name() == "accessor";
+        if ( onlyImportantObjects && !isHelperObject ) {
+            continue;
+        }
+
+        QString valueString;
+        bool encodeValue = false;
+        if ( it.value().isArray() ) {
+            valueString = QString("[%0]").arg( it.value().toVariant().toStringList().join(", ") );
+        } else if ( it.value().isString() ) {
+            valueString = QString("\"%1\"").arg( it.value().toString() );
+            encodeValue = true;
+        } else if ( it.value().isRegExp() ) {
+            valueString = QString("/%1/%2").arg( it.value().toRegExp().pattern() )
+                    .arg( it.value().toRegExp().caseSensitivity() == Qt::CaseSensitive ? "" : "i" );
+            encodeValue = true;
+        } else if ( it.value().isFunction() ) {
+            valueString = QString("function %1()").arg( it.name() ); // it.value() is the function definition
+        } else {
+            valueString = it.value().toString();
+        }
+
+        const QString completeValueString = valueString;
+        const int cutPos = valueString.indexOf( '\n' );
+        if ( cutPos != -1 ) {
+            valueString = valueString.left( cutPos ) + " ...";
+        }
+
+        QStandardItem *newParentItem = new QStandardItem( it.name() );
+        QStandardItem *newValueItem = new QStandardItem( valueString );
+        newParentItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
+        newValueItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
+        QString tooltip = completeValueString.left( 1000 );
+        if ( encodeValue ) {
+            if ( it.value().isString() ) {
+                tooltip += '\"'; // Add quotation mark, which got cut off
+            }
+            tooltip = Global::encodeHtmlEntities( tooltip );
+        }
+        if ( tooltip.length() < completeValueString.length() ) {
+            tooltip.prepend( i18nc("@info Always plural",
+                             "<emphasis strong='1'>First %1 characters:</emphasis><nl />", 1000) )
+                   .append( QLatin1String("...") );
+        }
+        newValueItem->setToolTip( tooltip.prepend(QLatin1String("<p>")).append(QLatin1String("</p>")) );
+
+        QList< QStandardItem* > columns;
+        columns << newParentItem;
+        columns << newValueItem;
+
+        if ( it.value().isRegExp() ) {
+            newParentItem->setIcon( KIcon("code-variable") );
+        } else if ( it.value().isFunction() ) {
+            newParentItem->setIcon( KIcon("code-function") );
+        } else if ( it.value().isArray() || it.value().isBool() || it.value().isBoolean() ||
+                    it.value().isDate() || it.value().isNull() || it.value().isNumber() ||
+                    it.value().isDate() || it.value().isString() || it.value().isUndefined() )
+        {
+            newParentItem->setIcon( KIcon("code-variable") );
+        } else if ( it.value().isObject() || it.value().isQObject() || it.value().isQMetaObject() ) {
+            newParentItem->setIcon( KIcon("code-class") );
+        } else {
+            newParentItem->setIcon( KIcon("code-context") );
+        }
+        if ( isHelperObject ) {
+            QFont font = newParentItem->font();
+            font.setBold( true );
+            newParentItem->setFont( font );
+        }
+
+        const int row = m_variablesModel->rowCount( parent );
+        int sortValue = 9999;
+        if ( !it.value().isQObject() && !it.value().isQMetaObject() ) {
+            // Sort to the end
+            sortValue = 10000;
+        } else if ( it.name() == TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE ||
+                    it.name() == TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS ||
+                    it.name() == TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS ||
+                    it.name() == TimetableAccessorScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS )
+        {
+            // Sort to the beginning
+            sortValue = 0;
+        } else if ( isHelperObject ) {
+            sortValue = 1;
+        }
+        newParentItem->setData( sortValue, Qt::UserRole + 1 );
+
+        if ( parent.isValid() ) {
+            m_variablesModel->itemFromIndex( parent )->insertRow( row, columns );
+        } else {
+            m_variablesModel->insertRow( row, columns );
+        }
+        m_variablesModel->setData( m_variablesModel->index(row, 0, parent),
+                                   it.name(), Qt::DisplayRole );
+        m_variablesModel->setData( m_variablesModel->index(row, 1, parent),
+                                   valueString, Qt::DisplayRole );
+
+        if ( it.name() == "result" ) {
+            ResultObject *result = qobject_cast< ResultObject* >( it.value().toQObject() );
+            Q_ASSERT( result );
+            const QString valueString = i18ncp("@info/plain", "%1 result", "%1 results",
+                                               result->count());
+            newValueItem->setText( valueString );
+            newValueItem->setToolTip( valueString );
+
+            QStandardItem *resultsItem = addRow( newParentItem, i18nc("@info/plain", "Data"),
+                    valueString, KIcon("documentinfo") );
+            int i = 1;
+            QList<TimetableInformation> shortInfoTypes = QList<TimetableInformation>()
+                    << Target << TargetStopName << DepartureDateTime << DepartureTime << StopName;
+            foreach ( const TimetableData &data, result->data() ) {
+                QString shortInfo;
+                foreach ( TimetableInformation infoType, shortInfoTypes) {
+                    if ( data.contains(infoType) ) {
+                        shortInfo = data[ infoType ].toString();
+                        break;
+                    }
+                }
+                QStandardItem *resultItem = addRow( resultsItem,
+                        i18nc("@info/plain", "Result %1", i),
+                        QString("<%1>").arg(shortInfo), KIcon("code-class") );
+                resultItem->setData( i, Qt::UserRole + 1 );
+                for ( TimetableData::ConstIterator it = data.constBegin();
+                      it != data.constEnd(); ++it )
+                {
+                    QStandardItem *item = addRow(
+                            resultItem, Global::timetableInformationToString(it.key()),
+                            it.value().toString().left(100), KIcon("code-variable") );
+                }
+                ++i;
+            }
+        } else if ( it.name() == "network" ) {
+            Network *network = qobject_cast< Network* >( it.value().toQObject() );
+            Q_ASSERT( network );
+            const QString valueString = i18ncp("@info/plain", "%1 request", "%1 requests",
+                                               network->runningRequests().count());
+            newValueItem->setText( valueString );
+            newValueItem->setToolTip( valueString );
+
+            QStandardItem *requestsItem = addRow( newParentItem,
+                    i18nc("@info/plain", "Running Requests"), valueString, KIcon("documentinfo") );
+            int i = 1;
+            foreach ( NetworkRequest *networkRequest, network->runningRequests() ) {
+                QStandardItem *resultItem = addRow( requestsItem,
+                        i18nc("@info/plain", "Request %1", i),
+                        networkRequest->url(), KIcon("code-class") );
+                resultItem->setData( i, Qt::UserRole + 1 );
+                ++i;
+            }
+        } else if ( it.name() == "storage" ) {
+            Storage *storage = qobject_cast< Storage* >( it.value().toQObject() );
+            Q_ASSERT( storage );
+            const QVariantMap memory = storage->read();
+            const QString valueString = i18ncp("@info/plain", "%1 value", "%1 values",
+                                               memory.count());
+            newValueItem->setText( valueString );
+            newValueItem->setToolTip( valueString );
+
+            QStandardItem *storageItem = addRow( newParentItem,
+                    i18nc("@info/plain", "Memory"), valueString, KIcon("documentinfo") );
+            int i = 1;
+            for ( QVariantMap::ConstIterator it = memory.constBegin();
+                  it != memory.constEnd(); ++it )
+            {
+                QStandardItem *valueItem = addRow( storageItem,
+                        it.key(), it.value().toString().left(100), KIcon("code-variable") );
+                valueItem->setData( i, Qt::UserRole + 1 );
+                ++i;
+            }
+        } else if ( it.name() == "helper" ) {
+            const QString valueString = i18nc("@info/plain", "Offers helper functions to scripts");
+            newValueItem->setText( valueString );
+            newValueItem->setToolTip( valueString );
+        } else if ( it.name() == "accessor" ) {
+            const QString valueString = i18nc("@info/plain", "Exposes accessor information to "
+                                              "scripts, which got read from the XML file");
+            newValueItem->setText( valueString );
+            newValueItem->setToolTip( valueString );
+        }
+
+        if ( m_variablesModel->rowCount(parent) < 1000 && !it.value().isFunction() /*&&
+             (it.value().isObject() || it.value().isQObject())*/ )
+        {
+            addVariableChilds( it.value(), newParentItem->index() );
+        }
+    }
+}
+
+void TimetableMate::scriptOutput( const QString &outputString, QScriptContext *context )
+{
+    const QScriptContextInfo info( context );
+    m_outputWidget->appendHtml( i18nc("@info", "<emphasis strong='1'>Line %1:</emphasis> <message>%2</message>",
+                                      info.lineNumber(), outputString) );
+}
+
+void TimetableMate::debugScriptDepartures()
+{
+    // Go to script tab
+    m_mainTabBar->setCurrentIndex( ScriptTab );
+
+    setupDebugger( InterruptOnExceptions );
+    evaluateScript();
+
+    setupDebugger( InterruptAtStart );
+    scriptRunParseTimetable();
+}
+
+void TimetableMate::debugScriptJourneys()
+{
+    // Go to script tab
+    m_mainTabBar->setCurrentIndex( ScriptTab );
+
+    setupDebugger( InterruptOnExceptions );
+    evaluateScript();
+
+    setupDebugger( InterruptAtStart );
+    scriptRunParseJourneys();
+}
+
+void TimetableMate::debugScriptStopSuggestions()
+{
+    // Go to script tab
+    m_mainTabBar->setCurrentIndex( ScriptTab );
+
+    setupDebugger( InterruptOnExceptions );
+    evaluateScript();
+
+    setupDebugger( InterruptAtStart );
+    scriptRunParseStopSuggestions();
 }
 
 void TimetableMate::currentFunctionChanged( int index ) {
@@ -989,7 +1889,12 @@ void TimetableMate::fileSave() {
 }
 
 void TimetableMate::fileSaveAs() {
-    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
+    if ( !m_view->accessor() ) {
+        kDebug() << "No accessor loaded";
+        return;
+    }
+
+    const TimetableAccessorInfo *info = m_view->accessor()->info();
     QString fileName = KFileDialog::getSaveFileName(
                            m_openedPath.isEmpty() ? KGlobalSettings::documentPath() : m_openedPath,
                            "??*_*.xml", this, i18nc("@title:window", "Save Accessor") );
@@ -1016,7 +1921,7 @@ void TimetableMate::fileSaveAs() {
 }
 
 void TimetableMate::install() {
-    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
+    const TimetableAccessorInfo *info = m_view->accessor()->info();
     QString saveDir = KGlobal::dirs()->saveLocation( "data",
                       "plasma_engine_publictransport/accessorInfos/" );
     KUrl urlXml = KUrl( saveDir + m_currentServiceProviderID + ".xml" );
@@ -1047,7 +1952,7 @@ void TimetableMate::installGlobal() {
     }
     QString saveDir = saveDirs.last(); // Use the most global one
     syncAccessor();
-    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
+    const TimetableAccessorInfo *info = m_view->accessor()->info();
 
     KAuth::Action action( "org.kde.timetablemate.install" );
     action.setHelperID( "org.kde.timetablemate" );
@@ -1249,7 +2154,7 @@ bool TimetableMate::loadScriptForCurrentAccessor( bool openFile ) {
     m_scriptDocument->setModified( false );
 
     QString text = m_accessorDocument->text();
-    QString scriptFile = m_view->accessorInfo()->info()->scriptFileName();
+    QString scriptFile = m_view->accessor()->info()->scriptFileName();
     if ( scriptFile.isEmpty() ) {
         m_mainTabBar->setTabEnabled( ScriptTab, false ); // Disable script tab
         return false;
@@ -1305,8 +2210,17 @@ void TimetableMate::optionsPreferences() {
 //     dialog->show();
 }
 
+// void TimetableMate::toggleBreakpoint()
+// {
+//     setupDebugger();
+//     m_debugger->action( QScriptEngineDebugger::GoToLineAction )->setData(
+//             m_scriptDocument->
+//     );
+//     m_debugger->action( QScriptEngineDebugger::ToggleBreakpointAction )->trigger();
+// }
+
 void TimetableMate::toolsCheck() {
-    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
+    const TimetableAccessorInfo *info = m_view->accessor()->info();
     QStringList errors, inelegants, working;
 
     const bool nameOk = !info->name().isEmpty();
@@ -1371,14 +2285,13 @@ void TimetableMate::toolsCheck() {
         if ( parser.hasError() ) {
             // Go to error line
             m_scriptDocument->activeView()->setCursorPosition(
-                KTextEditor::Cursor(parser.errorLine() - 1, parser.errorColumn()) );
+                    KTextEditor::Cursor(parser.errorLine() - 1, parser.errorColumn()) );
             errors << i18nc("@info", "<emphasis>Error in script (line %2, column %3):</emphasis> "
                             "<message>%1</message>", parser.errorMessage(), parser.errorLine(),
                             parser.errorColumn());
             scriptOk = false;
         }
 
-        // TODO: Use QScriptEngine::checkSyntax()?
         QScriptSyntaxCheckResult syntax = QScriptEngine::checkSyntax( m_scriptDocument->text() );
         kDebug() << "SYNTAX:" << syntax.state() << syntax.errorLineNumber() << syntax.errorMessage();
         if ( syntax.state() == QScriptSyntaxCheckResult::Intermediate ||
@@ -1386,7 +2299,7 @@ void TimetableMate::toolsCheck() {
         {
             // Go to error line
             m_scriptDocument->activeView()->setCursorPosition(
-                    KTextEditor::Cursor(syntax.errorLineNumber(), syntax.errorColumnNumber()) );
+                    KTextEditor::Cursor(syntax.errorLineNumber() - 1, syntax.errorColumnNumber()) );
             const QString errorString = i18nc("@info", "<emphasis>Error in script:</emphasis> "
                             "<message>%1</message>", syntax.errorMessage());
             if ( syntax.state() == QScriptSyntaxCheckResult::Intermediate ) {
@@ -1395,21 +2308,30 @@ void TimetableMate::toolsCheck() {
                 errors << errorString;
             }
             scriptOk = false;
-        } else if ( loadScript() ) {
+        }
+
+        evaluateScript();
+        if ( m_lastScriptError == NoScriptError ) {
             // Use function names found by own JavaScript parser
-            scriptFunctions = m_javaScriptModel->functionNames();
-            kDebug() << "Successfully loaded the script";
-//          TODO: This is a Qt version of the above, but it finds many other properties of course
-//                Need to somehow filter out global properties parsed from the script file
-//             QScriptValueIterator it( m_engine->globalObject() );
-//             while ( it.hasNext() ) {
-//                 it.next();
-//                 scriptFunctions << it.name();
-//             } // TODO
+//             if ( m_context ) {
+//                 QScriptValueIterator it( m_context->popScope() );
+//                 while ( it.hasNext() ) {
+//                     it.next();
+//                     scriptFunctions << it.name();
+//                 } // TODO
+//             } else {
+                scriptFunctions = m_javaScriptModel->functionNames();
+//             }
+            kDebug() << "Successfully loaded the script" << scriptFunctions;
+        } else if ( m_debugger && m_debugger->engine()->isEvaluating() ) { // TODO state() == QScriptEngineDebugger::RunningState ) {
+//             inelegants << i18nc("@info", "Script is running the debugger, there may be an error",
+//                                 m_engine->uncaughtException().toString());
+//             scriptOk = false;
+            return;
         } else if ( m_engine->hasUncaughtException() ) {
             // Go to error line
             m_scriptDocument->activeView()->setCursorPosition(
-                    KTextEditor::Cursor(m_engine->uncaughtExceptionLineNumber(), 0) );
+                    KTextEditor::Cursor(m_engine->uncaughtExceptionLineNumber() - 1, 0) );
             errors << i18nc("@info", "<emphasis>Error in script:</emphasis> "
                             "<message>%1</message>", m_engine->uncaughtException().toString());
             scriptOk = false;
@@ -1490,7 +2412,7 @@ void TimetableMate::scriptNextFunction() {
     if ( m_functions->currentIndex() == -1 ) {
         FunctionNode *node = dynamic_cast<FunctionNode*>(
                                  m_javaScriptModel->nodeAfterLineNumber(
-                                     m_scriptDocument->activeView()->cursorPosition().line(), Function) );
+                                     m_scriptDocument->activeView()->cursorPosition().line() + 1, Function) );
         if ( node ) {
             QModelIndex index = m_javaScriptModel->indexFromNode( node );
             m_functions->setCurrentIndex( m_functionsModel->mapFromSource(index).row() );
@@ -1505,7 +2427,7 @@ void TimetableMate::scriptPreviousFunction() {
     if ( m_functions->currentIndex() == -1 ) {
         FunctionNode *node = dynamic_cast<FunctionNode*>(
                                  m_javaScriptModel->nodeBeforeLineNumber(
-                                     m_scriptDocument->activeView()->cursorPosition().line(), Function) );
+                                     m_scriptDocument->activeView()->cursorPosition().line() + 1, Function) );
         if ( node ) {
             QModelIndex index = m_javaScriptModel->indexFromNode( node );
             m_functions->setCurrentIndex( m_functionsModel->mapFromSource(index).row() );
@@ -1527,7 +2449,7 @@ void TimetableMate::webUrlChanged( const QUrl& url ) {
 }
 
 void TimetableMate::webLoadHomePage() {
-    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
+    const TimetableAccessorInfo *info = m_view->accessor()->info();
     if ( !hasHomePageURL(info) )
         return;
 
@@ -1583,8 +2505,8 @@ void TimetableMate::webLoadJourneys() {
 void TimetableMate::scriptRunParseTimetable() {
     ResultObject resultObject;
     QVariant result;
-    RequestInfo requestInfo; // TODO: Fill values
-    TimetableAccessor *accessor = m_view->accessorInfo();
+    DepartureRequestInfo requestInfo = getDepartureRequestInfo();
+    TimetableAccessor *accessor = m_view->accessor();
     if ( !scriptRun(TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE,
                     &requestInfo, accessor->info(), &resultObject, &result) )
     {
@@ -1752,8 +2674,8 @@ void TimetableMate::scriptRunParseTimetable() {
 void TimetableMate::scriptRunParseStopSuggestions() {
     ResultObject resultObject;
     QVariant result;
-    RequestInfo requestInfo; // TODO: Fill values
-    TimetableAccessor *accessor = m_view->accessorInfo();
+    StopSuggestionRequestInfo requestInfo = getStopSuggestionRequestInfo();
+    TimetableAccessor *accessor = m_view->accessor();
     if ( !scriptRun(TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS,
                     &requestInfo, accessor->info(), &resultObject, &result) )
     {
@@ -1859,8 +2781,8 @@ void TimetableMate::scriptRunParseStopSuggestions() {
 void TimetableMate::scriptRunParseJourneys() {
     ResultObject resultObject;
     QVariant result;
-    JourneyRequestInfo requestInfo; // TODO: Fill values
-    TimetableAccessor *accessor = m_view->accessorInfo();
+    JourneyRequestInfo requestInfo = getJourneyRequestInfo();
+    TimetableAccessor *accessor = m_view->accessor();
     if ( !scriptRun(TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS,
                     &requestInfo, accessor->info(), &resultObject, &result) )
     {
@@ -2128,62 +3050,23 @@ bool TimetableMate::hasHomePageURL( const TimetableAccessorInfo *info ) {
         return true;
 }
 
-bool TimetableMate::lazyLoadScript()
-{
-    // Do not load the script again if it was already loaded and was not changed since then
-    if ( m_script && !m_scriptDocument->isModified() ) {
-        return true;
-    }
-
-    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
-
-    // Read script
-//     QFile scriptFile( info->scriptFileName() );
-//     if ( !scriptFile.open(QIODevice::ReadOnly) ) {
-//         kDebug() << "Script could not be opened for reading"
-//                  << info->scriptFileName() << scriptFile.errorString();
-//         return false;
-//     }
-//     QTextStream stream( &scriptFile );
-//     QString scriptContents = stream.readAll();
-//     scriptFile.close();
-
-    // Initialize the script
-    kDebug() << "Reload script text";
-    m_script = new QScriptProgram( m_scriptDocument->text(), info->scriptFileName() );
-
-    return true;
-}
-
 bool TimetableMate::loadScript()
 {
-    if ( !m_script && !lazyLoadScript() ) {
-        return false;
+    // Do not load the script again if it was already loaded and was not changed since then
+    if ( m_lastScriptError == NoScriptError && m_script && m_engine &&
+         !m_scriptDocument->isModified() )
+    {
+        kDebug() << "Script was not modified";
+        return true;
     }
+    m_lastScriptError = NoScriptError;
 
-    const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
+    // Initialize the script
+    const TimetableAccessorInfo *info = m_view->accessor()->info();
+    kDebug() << "Reload script text" << info->scriptFileName();
+    m_script = new QScriptProgram( m_scriptDocument->text(), info->scriptFileName() );
 
-    // Create script engine
-    kDebug() << "Create QScriptEngine";
-    m_engine = new QScriptEngine( this );
-    foreach ( const QString &extension, info->scriptExtensions() ) {
-        if ( !importExtension(m_engine, extension) ) {
-//             m_errorString = i18nc("@info/plain", "Could not load script extension "
-//                                   "<resource>%1</resource>.", extension);
-//             m_success = false;
-            m_engine->deleteLater();
-            m_engine = 0;
-            return false;
-        }
-    }
-
-    m_engine->globalObject().setProperty( "accessor", m_engine->newQObject(m_view->accessorInfo()) );
-
-    // Add "importExtension()" function to import extensions
-    // Importing Kross not from the GUI thread causes some warnings about pixmaps being used
-    // outside the GUI thread...
-//     m_engine->globalObject().setProperty( "importExtension",
-//                                           m_engine->newFunction(importExtension, 1) );
+    createScriptEngine();
 
     // Process events every 100ms
 //     m_engine->setProcessEventsInterval( 100 );
@@ -2193,42 +3076,112 @@ bool TimetableMate::loadScript()
             networkRequestToScript, networkRequestFromScript );
 
     // Create objects for the script
-    m_scriptHelper = new Helper( info->serviceProvider(), m_engine );
-    m_scriptNetwork = new Network( info->fallbackCharset(), m_engine );
-    m_scriptResult = new ResultObject( m_engine );
+    if ( !m_scriptHelper ) {
+        m_scriptHelper = new Helper( info->serviceProvider(), m_engine );
+        connect( m_scriptHelper, SIGNAL(errorReceived(QString,QString)),
+                 this, SLOT(scriptErrorReceived(QString,QString)) );
+    }
+
+    if ( !m_scriptResult ) {
+        m_scriptResult = new ResultObject( m_engine );
+        connect( m_scriptResult, SIGNAL(publish()), this, SLOT(publish()) );
+    } else {
+        m_scriptResult->clear();
+    }
+
+    if ( !m_scriptNetwork ) {
+        m_scriptNetwork = new Network( info->fallbackCharset(), m_engine );
+    } else {
+        m_scriptNetwork->clear();
+    }
+
     if ( !m_scriptStorage ) {
         m_scriptStorage = new Storage( info->serviceProvider(), this );
     }
-    connect( m_scriptResult, SIGNAL(publish()), this, SLOT(publish()) );
-    connect( m_scriptHelper, SIGNAL(errorReceived(QString,QString)),
-             this, SLOT(scriptErrorReceived(QString,QString)) );
 
-    // Make the objects available to the script
-    m_engine->globalObject().setProperty( "helper", m_engine->newQObject(m_scriptHelper) );
-    m_engine->globalObject().setProperty( "network", m_engine->newQObject(m_scriptNetwork) );
-    m_engine->globalObject().setProperty( "storage", m_engine->newQObject(m_scriptStorage) );
-    m_engine->globalObject().setProperty( "result", m_engine->newQObject(m_scriptResult) );
-    m_engine->globalObject().setProperty( "enum",
-            m_engine->newQMetaObject(&ResultObject::staticMetaObject) );
+    // Expose objects to the script engine
+    if ( !m_engine->globalObject().property("accessor").isValid() ) {
+        m_engine->globalObject().setProperty( "accessor", m_engine->newQObject(
+                const_cast<TimetableAccessorInfo*>(m_view->accessor()->info())) );
+    }
+    if ( !m_engine->globalObject().property("helper").isValid() ) {
+        m_engine->globalObject().setProperty( "helper", m_engine->newQObject(m_scriptHelper) );
+    }
+    if ( !m_engine->globalObject().property("network").isValid() ) {
+        m_engine->globalObject().setProperty( "network", m_engine->newQObject(m_scriptNetwork) );
+    }
+    if ( !m_engine->globalObject().property("storage").isValid() ) {
+        m_engine->globalObject().setProperty( "storage", m_engine->newQObject(m_scriptStorage) );
+    }
+    if ( !m_engine->globalObject().property("result").isValid() ) {
+        m_engine->globalObject().setProperty( "result", m_engine->newQObject(m_scriptResult) );
+    }
+    if ( !m_engine->globalObject().property("enum").isValid() ) {
+        m_engine->globalObject().setProperty( "enum",
+                m_engine->newQMetaObject(&ResultObject::staticMetaObject) );
+    }
 
-    // Load the script program
-    m_engine->evaluate( *m_script );
+    // Import extensions (from XML file, <script extensions="...">)
+    foreach ( const QString &extension, info->scriptExtensions() ) {
+        if ( !importExtension(m_engine, extension) ) {
+            m_lastScriptError = ScriptLoadFailed;
+            return false;
+        }
+    }
+
+    // Load the script program in another context
+//     m_context = m_engine->pushContext();
+    m_engine->clearExceptions();
+    m_engine->evaluate( m_script->sourceCode(), info->fileName() );
+
+        const QString functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
+//         QScriptValue function = m_context->popScope().property( functionName );
+        QScriptValue function = m_engine->globalObject().property( functionName );
+        if ( !function.isFunction() ) {
+            kDebug() << "Did not find" << functionName << "function in the script!";
+        } else {
+            kDebug() << functionName << "found!";
+        }
+
     if ( m_engine->hasUncaughtException() ) {
         kDebug() << "Error in the script" << m_engine->uncaughtExceptionLineNumber()
                  << m_engine->uncaughtException().toString();
         kDebug() << "Backtrace:" << m_engine->uncaughtExceptionBacktrace().join("\n");
         m_lastError = i18nc("@info/plain", "Error in the script: "
                 "<message>%1</message>.", m_engine->uncaughtException().toString());
-        m_engine->deleteLater();
-        m_engine = 0;
-        m_scriptNetwork = 0;
-        m_scriptResult = 0;
         m_lastScriptError = ScriptLoadFailed;
         return false;
     } else {
         m_lastScriptError = NoScriptError;
         return true;
     }
+}
+
+void TimetableMate::createScriptEngine()
+{
+    if ( m_engine ) {
+//         if ( m_debugger ) {
+//             m_debugger->detach();
+//             m_debugger->standardWindow()->close();
+//             delete m_debugger;
+//             m_debugger = 0;
+//         }
+
+//         m_engine->abortEvaluation();
+//         delete m_engine;
+        kDebug() << "Use existing QScriptEngine";
+    } else {
+        kDebug() << "Create QScriptEngine";
+        m_engine = new QScriptEngine( this );
+
+        // Setup debugger
+        setupDebugger();
+    }
+}
+
+void TimetableMate::evaluateScript()
+{
+    loadScript();
 }
 
 void TimetableMate::scriptErrorReceived( const QString &message, const QString &failedParseText )
@@ -2239,88 +3192,15 @@ void TimetableMate::scriptErrorReceived( const QString &message, const QString &
 bool TimetableMate::scriptRun( const QString &functionToRun, const RequestInfo *requestInfo,
                                const TimetableAccessorInfo *info,
                                ResultObject *resultObject, QVariant *result ) {
-    // Create the Kross::Action instance
-//     Kross::Action script( this, "TimetableParser" );
-
-//     // Add global script objects
-//     if ( functionToRun == SCRIPT_FUNCTION_GETTIMETABLE ) {
-//         timetableData->setMode( "departures" );
-//     } else if ( functionToRun == SCRIPT_FUNCTION_GETSTOPSUGGESTIONS ) {
-//         timetableData->setMode( "stopsuggestions" );
-//     } else if ( functionToRun == SCRIPT_FUNCTION_GETJOURNEYS ) {
-//         timetableData->setMode( "journeys" );
-//     } else  {
-//         kDebug() << "Unknown function to run:" << functionToRun;
+//     if ( !m_engine ) {
+        evaluateScript();
 //     }
-
-//     // NOTE Update documentation in scripting.h if the names change here,
-//     // eg. update the name in the documentation of the Helper class if the name "helper" changes.
-//     Helper *helper = new Helper(&script);
-//     script.addQObject( helper, "helper" );
-//     script.addQObject( resultObject, "result" );
-//
-//     // Set script code and type
-//     const TimetableAccessorInfo *info = m_view->accessorInfo()->info();
-//     if ( info->scriptFileName().endsWith(QLatin1String(".py")) ) {
-//         script.setInterpreter( "python" );
-//     } else if ( info->scriptFileName().endsWith(QLatin1String(".rb")) ) {
-//         script.setInterpreter( "ruby" );
-//     } else if ( info->scriptFileName().endsWith(QLatin1String(".js")) ) {
-//         script.setInterpreter( "javascript" );
-//     } else {
-//         const QString scriptType = KInputDialog::getItem(
-// 				i18nc("@title:window", "Choose Script Type"),
-// 				i18nc("@info", "Script type unknown, please choose one of these:"),
-// 				QStringList() << "JavaScript" << "Ruby" << "Python", 0, false, 0, this );
-//         script.setInterpreter( scriptType.toLower() );
-//     }
-//     script.setCode( m_scriptDocument->text().toUtf8() );
-//
-//     // Run the script
-//     script.trigger();
-//     if ( script.hadError() ) {
-//         if ( script.errorLineNo() != -1 ) {
-//             // Go to error line
-//             m_scriptDocument->activeView()->setCursorPosition(
-//                 KTextEditor::Cursor(script.errorLineNo(), 0) );
-//         }
-//         KMessageBox::information( this, i18nc("@info",
-//                 "Error in script:<nl/><message>%1</message>", script.errorMessage()) );
-//         return false;
-//     }
-//
-//     // Check if the function is implemented by the script
-//     if ( !script.functionNames().contains(functionToRun) ) {
-//         KMessageBox::information( this, i18nc("@info/plain",
-//                 "The script does not implement <emphasis>%1</emphasis>.", functionToRun) );
-//         return false;
-//     }
-//
-//     // Call script using Kross
-//     *result = script.callFunction( functionToRun, QVariantList() << doc );
-//
-//     if ( script.hadError() || script.isFinalized() ) {
-//         if ( script.errorLineNo() != -1 ) {
-//             // Go to error line
-//             m_scriptDocument->activeView()->setCursorPosition(
-//                 KTextEditor::Cursor(script.errorLineNo(), 0) );
-//         }
-//
-//         KMessageBox::information( this, i18nc("@info",
-// 				"An error occurred in the script:<nl/><message>%1</message>", script.errorMessage()) );
-//         return false;
-//     }
-//
-//     if ( debugMessageList ) {
-// 		debugMessageList->append( helper->debugMessages );
-//     }
-// NEW ***********************************************************************
-    if ( !lazyLoadScript() || !loadScript() ) {
+    if ( m_lastScriptError != NoScriptError ) {
         kDebug() << "Script could not be loaded correctly";
         return false;
     }
     kDebug() << "Run script job";
-    kDebug() << "JOB:" << requestInfo->stop << requestInfo->dateTime << m_scriptNetwork;
+    kDebug() << "Values:" << requestInfo->stop << requestInfo->dateTime << m_scriptNetwork;
 //     emit begin( m_sourceName );
 
     // Store start time of the script
@@ -2350,21 +3230,24 @@ bool TimetableMate::scriptRun( const QString &functionToRun, const RequestInfo *
         m_lastError = "Unknown parse mode";
         m_lastScriptError = ScriptRunError;
     } else {
-        kDebug() << "Call script function" << m_scriptNetwork;
-        if ( !m_scriptNetwork ) {
-            kDebug() << "Deleted ------------------------------------------------";
-            m_engine->deleteLater();
-            m_engine = 0;
-            m_scriptNetwork->clear();
-//             m_scriptResult.clear();
-            m_lastScriptError = ScriptRunError;
-            return false;
+        m_scriptErrors.clear();
+
+//         setupDebugger( InterruptOnExceptions );
+
+        m_engine->evaluate( *m_script );
+//         kDebug() << "TEST" << functionName << m_engine->globalObject().property( functionName ).toString();
+        QScriptValue function = m_engine->globalObject().property( functionName );
+        if ( !function.isFunction() ) {
+            kDebug() << "Did not find" << functionName << "function in the script!";
+//             return false;
         }
+//         m_debugger->action( QScriptEngineDebugger::InterruptAction )->trigger(); // TODO
 
         // Call script function
-        m_scriptErrors.clear();
-        QScriptValue function = m_engine->globalObject().property( functionName );
+//         setupDebugger( InterruptAtStart );
+        kDebug() << "Call script function";
         QScriptValue result = function.call( QScriptValue(), arguments );
+        kDebug() << "calling done..";
         if ( m_engine->hasUncaughtException() ) {
             kDebug() << "Error in the script when calling function" << functionName
                         << m_engine->uncaughtExceptionLineNumber()
@@ -2372,14 +3255,7 @@ bool TimetableMate::scriptRun( const QString &functionToRun, const RequestInfo *
             kDebug() << "Backtrace:" << m_engine->uncaughtExceptionBacktrace().join("\n");
             m_lastError = i18nc("@info/plain", "Error in the script when calling function '%1': "
                     "<message>%2</message>.", functionName, m_engine->uncaughtException().toString());
-            m_engine->deleteLater();
-            m_engine = 0;
-            m_scriptNetwork->clear();
-//             m_scriptResult.clear();
-//             m_scriptNetwork->deleteLater();
-//             m_scriptNetwork = 0;
-//             m_scriptResult->deleteLater();
-//             m_scriptResult = 0;
+            m_scriptResult->clear();
             m_lastScriptError = ScriptRunError;
             return false;
         }
@@ -2397,69 +3273,73 @@ bool TimetableMate::scriptRun( const QString &functionToRun, const RequestInfo *
 //             }
 //             if ( results.contains(QLatin1String("dates need adjustment"), Qt::CaseInsensitive) ) {
 //                 globalInfo.datesNeedAdjustment = true;
-//             } TODO REMOVE TODO REMOVE TODO REMOVE TODO REMOVE TODO REMOVE TODO REMOVE TODO
+//             } TODO REMOVE
 //         }
 
-        while ( m_scriptNetwork->hasRunningRequests() || m_engine->isEvaluating() ) {
-            // Wait for running requests to finish
-            // TODO: Blocking the GUI?x
-            QEventLoop eventLoop;
-            ScriptAgent agent( m_engine );
-            QTimer::singleShot( 30000, &eventLoop, SLOT(quit()) );
-            connect( this, SIGNAL(destroyed(QObject*)), &eventLoop, SLOT(quit()) );
-            connect( &agent, SIGNAL(scriptFinished()), &eventLoop, SLOT(quit()) );
-            connect( m_scriptNetwork, SIGNAL(requestFinished()), &eventLoop, SLOT(quit()) );
-
-            kDebug() << "Waiting for script to finish..." << thread();
-            eventLoop.exec();
-        }
+//        TODO Only if no debugger is attached
+//         while ( m_scriptNetwork->hasRunningRequests() || m_engine->isEvaluating() ) {
+//             // Wait for running requests to finish
+//             // TODO Blocking the GUI?x
+//             QEventLoop eventLoop;
+// //             ScriptAgent agent( m_engine ); Cannot because of the debugger
+//             QTimer::singleShot( 5000, &eventLoop, SLOT(quit()) );
+//             connect( this, SIGNAL(destroyed(QObject*)), &eventLoop, SLOT(quit()) );
+// //             connect( &agent, SIGNAL(scriptFinished()), &eventLoop, SLOT(quit()) );
+//             kDebug() << "m_scriptNetwork:" << m_scriptNetwork;
+//             connect( m_scriptNetwork, SIGNAL(requestFinished()), &eventLoop, SLOT(quit()) );
+//
+//             kDebug() << "Waiting for script to finish..." << thread();
+//             eventLoop.exec();
+//         }
+        kDebug() << " > Script evaluated after" << (time.elapsed() / 1000.0)
+                    << "seconds: " << /*m_scriptFileName <<*/ requestInfo->parseMode;
+        QApplication::processEvents();
+        kDebug() << " > Processed events";
 
         // Inform about script run time
-        kDebug() << " > Script finished after" << (time.elapsed() / 1000.0)
-                    << "seconds: " << /*m_scriptFileName <<*/ requestInfo->parseMode;
 
-        // If data for the current job has already been published, do not emit
-        // completed with an empty resultset
-//         if ( m_published == 0 || m_scriptResult->count() > m_published ) {
-//             const bool couldNeedForcedUpdate = m_published > 0;
-//             emitReady(
-            switch ( requestInfo->parseMode ) {
-            case ParseForDeparturesArrivals:
-                emit departuresReady( m_scriptResult->data(),//.mid(m_published),
-                        m_scriptResult->features(), m_scriptResult->hints(),
-                        m_scriptNetwork->lastUrl(), globalInfo,
-                        *dynamic_cast<const DepartureRequestInfo*>(requestInfo) );//,
-//                         couldNeedForcedUpdate );
-                break;
-            case ParseForJourneys:
-                emit journeysReady( m_scriptResult->data(),//.mid(m_published),
-                        m_scriptResult->features(), m_scriptResult->hints(),
-                        m_scriptNetwork->lastUrl(), globalInfo,
-                        *dynamic_cast<const JourneyRequestInfo*>(requestInfo) );//,
-//                         couldNeedForcedUpdate );
-                break;
-            case ParseForStopSuggestions:
-                emit stopSuggestionsReady( m_scriptResult->data(),//.mid(m_published),
-                        m_scriptResult->features(), m_scriptResult->hints(),
-                        m_scriptNetwork->lastUrl(), globalInfo,
-                        *dynamic_cast<const StopSuggestionRequestInfo*>(requestInfo) );//,
-//                         couldNeedForcedUpdate );
-                break;
-
-            default:
-                kDebug() << "Parse mode unsupported:" << requestInfo->parseMode;
-                // TODO
-                break;
-            }
-//             emit dataReady( m_scriptResult->data().mid(m_published),
-//                             m_scriptResult->features(), m_scriptResult->hints(),
-//                             m_scriptNetwork->lastUrl(), globalInfo,
-//                             requestInfo, couldNeedForcedUpdate );
-//         }
-//         emit end( m_sourceName );
+//         // If data for the current job has already been published, do not emit
+//         // completed with an empty resultset
+// //         if ( m_published == 0 || m_scriptResult->count() > m_published ) {
+// //             const bool couldNeedForcedUpdate = m_published > 0;
+// //             emitReady(
+//             switch ( requestInfo->parseMode ) {
+//             case ParseForDeparturesArrivals:
+//                 emit departuresReady( m_scriptResult->data(),//.mid(m_published),
+//                         m_scriptResult->features(), m_scriptResult->hints(),
+//                         m_scriptNetwork->lastUrl(), globalInfo,
+//                         *dynamic_cast<const DepartureRequestInfo*>(requestInfo) );//,
+// //                         couldNeedForcedUpdate );
+//                 break;
+//             case ParseForJourneys:
+//                 emit journeysReady( m_scriptResult->data(),//.mid(m_published),
+//                         m_scriptResult->features(), m_scriptResult->hints(),
+//                         m_scriptNetwork->lastUrl(), globalInfo,
+//                         *dynamic_cast<const JourneyRequestInfo*>(requestInfo) );//,
+// //                         couldNeedForcedUpdate );
+//                 break;
+//             case ParseForStopSuggestions:
+//                 emit stopSuggestionsReady( m_scriptResult->data(),//.mid(m_published),
+//                         m_scriptResult->features(), m_scriptResult->hints(),
+//                         m_scriptNetwork->lastUrl(), globalInfo,
+//                         *dynamic_cast<const StopSuggestionRequestInfo*>(requestInfo) );//,
+// //                         couldNeedForcedUpdate );
+//                 break;
+//
+//             default:
+//                 kDebug() << "Parse mode unsupported:" << requestInfo->parseMode;
+//                 // TODO
+//                 break;
+//             }
+// //             emit dataReady( m_scriptResult->data().mid(m_published),
+// //                             m_scriptResult->features(), m_scriptResult->hints(),
+// //                             m_scriptNetwork->lastUrl(), globalInfo,
+// //                             requestInfo, couldNeedForcedUpdate );
+// //         }
+// //         emit end( m_sourceName );
 
         // Cleanup
-        m_scriptResult->clear();
+//         m_scriptResult->clear();
         m_scriptStorage->checkLifetime();
 
         if ( m_engine->hasUncaughtException() ) {
@@ -2469,13 +3349,6 @@ bool TimetableMate::scriptRun( const QString &functionToRun, const RequestInfo *
             kDebug() << "Backtrace:" << m_engine->uncaughtExceptionBacktrace().join("\n");
             m_lastError = i18nc("@info/plain", "Error in the script when calling function '%1': "
                     "<message>%2</message>.", functionName, m_engine->uncaughtException().toString());
-            m_engine->deleteLater();
-            m_engine = 0;
-            m_scriptNetwork->clear();
-//             m_scriptNetwork->deleteLater();
-//             m_scriptNetwork = 0;
-//             m_scriptResult->deleteLater();
-//             m_scriptResult = 0;
             m_lastScriptError = ScriptRunError;
             return false;
         }
@@ -2529,9 +3402,8 @@ QString TimetableMate::toPercentEncoding( const QString &str, const QByteArray &
     return encoded;
 }
 
-KUrl TimetableMate::getDepartureUrl() {
-    TimetableAccessor *accessor = m_view->accessorInfo();
-
+DepartureRequestInfo TimetableMate::getDepartureRequestInfo() {
+    TimetableAccessor *accessor = m_view->accessor();
     QPointer<KDialog> dialog = new KDialog( this );
     QWidget *w = new QWidget( dialog );
     QFormLayout *l = new QFormLayout( w );
@@ -2551,19 +3423,57 @@ KUrl TimetableMate::getDepartureUrl() {
     dialog->setMainWidget( w );
     stop->setFocus();
 
-    KUrl url;
+    DepartureRequestInfo info;
     if ( dialog->exec() == KDialog::Accepted ) {
-        url = getDepartureUrl(/* accessor, city ? city->text() : QString(), stop->text(),
-                               dateTime->dateTime(), dataType->itemData(dataType->currentIndex()).toString()*/ );
+        info.city = city ? city->text() : QString();
+        info.stop = stop->text();
+        info.dateTime = dateTime->dateTime();
+        info.dataType = dataType->itemData( dataType->currentIndex() ).toString();
+    }
+    delete dialog;
+    return info;
+}
+
+JourneyRequestInfo TimetableMate::getJourneyRequestInfo()
+{
+    TimetableAccessor *accessor = m_view->accessor();
+    QPointer<KDialog> dialog = new KDialog( this );
+    QWidget *w = new QWidget( dialog );
+    QFormLayout *l = new QFormLayout( w );
+    KLineEdit *city = NULL;
+    KLineEdit *originStop = new KLineEdit( w );
+    KLineEdit *targetStop = new KLineEdit( w );
+    KComboBox *dataType = new KComboBox( w );
+    KDateTimeWidget *dateTime = new KDateTimeWidget( QDateTime::currentDateTime(), w );
+    dataType->addItem( i18nc("@info/plain", "Departing at Given Time"), "dep" );
+    dataType->addItem( i18nc("@info/plain", "Arriving at Given Time"), "arr" );
+    if ( accessor->info()->useSeparateCityValue() ) {
+        city = new KLineEdit( w );
+        l->addRow( i18nc("@info", "City:"), city );
+    }
+    l->addRow( i18nc("@info", "Start Stop Name:"), originStop );
+    l->addRow( i18nc("@info", "Target Stop Name:"), targetStop );
+    l->addRow( i18nc("@info", "Time:"), dateTime );
+    l->addRow( i18nc("@info", "Meaning of Time:"), dataType );
+    dialog->setMainWidget( w );
+    originStop->setFocus();
+
+    JourneyRequestInfo info;
+    if ( dialog->exec() == KDialog::Accepted ) {
+        info.city = city ? city->text() : QString();
+        info.stop = originStop->text();
+        info.targetStop = targetStop->text();
+        info.dateTime = dateTime->dateTime();
+        info.dataType = dataType->itemData( dataType->currentIndex() ).toString();
     }
     delete dialog;
 
-    return url;
+    return info;
 }
 
-KUrl TimetableMate::getStopSuggestionUrl() {
-    TimetableAccessor *accessor = m_view->accessorInfo();
-
+StopSuggestionRequestInfo TimetableMate::getStopSuggestionRequestInfo()
+{
+    TimetableAccessor *accessor = m_view->accessor();
     QPointer<KDialog> dialog = new KDialog( this );
     QWidget *w = new QWidget( dialog );
     QFormLayout *l = new QFormLayout( w );
@@ -2577,169 +3487,14 @@ KUrl TimetableMate::getStopSuggestionUrl() {
     dialog->setMainWidget( w );
     stop->setFocus();
 
-    KUrl url;
+    StopSuggestionRequestInfo info;
     if ( dialog->exec() == KDialog::Accepted ) {
-        url = getStopSuggestionUrl( /*accessor, city ? city->text() : QString(), stop->text()*/ );
+        info.city = city ? city->text() : QString();
+        info.stop = stop->text();
     }
     delete dialog;
 
-    return url;
-}
-
-KUrl TimetableMate::getJourneyUrl() {
-    TimetableAccessor *accessor = m_view->accessorInfo();
-
-    QPointer<KDialog> dialog = new KDialog( this );
-    QWidget *w = new QWidget( dialog );
-    QFormLayout *l = new QFormLayout( w );
-    KLineEdit *city = NULL;
-    KLineEdit *startStop = new KLineEdit( w );
-    KLineEdit *targetStop = new KLineEdit( w );
-    KComboBox *dataType = new KComboBox( w );
-    KDateTimeWidget *dateTime = new KDateTimeWidget( QDateTime::currentDateTime(), w );
-    dataType->addItem( i18nc("@info/plain", "Departing at Given Time"), "dep" );
-    dataType->addItem( i18nc("@info/plain", "Arriving at Given Time"), "arr" );
-    if ( accessor->info()->useSeparateCityValue() ) {
-        city = new KLineEdit( w );
-        l->addRow( i18nc("@info", "City:"), city );
-    }
-    l->addRow( i18nc("@info", "Start Stop Name:"), startStop );
-    l->addRow( i18nc("@info", "Target Stop Name:"), targetStop );
-    l->addRow( i18nc("@info", "Time:"), dateTime );
-    l->addRow( i18nc("@info", "Meaning of Time:"), dataType );
-    dialog->setMainWidget( w );
-    startStop->setFocus();
-
-    KUrl url;
-    if ( dialog->exec() == KDialog::Accepted ) {
-        url = getJourneyUrl( /*accessor, city ? city->text() : QString(),
-                             startStop->text(), targetStop->text(), dateTime->dateTime(),
-                             dataType->itemData(dataType->currentIndex()).toString()*/ );
-    }
-    delete dialog;
-
-    return url;
-}
-
-KUrl TimetableMate::getDepartureUrl( const TimetableAccessor &accessor, const QString& city,
-                                     const QString& stop, const QDateTime& dateTime,
-                                     const QString& dataType, bool useDifferentUrl ) const {
-    return KUrl(); // TODO
-//     int maxCount = 20;
-// //     QString sRawUrl = useDifferentUrl ? accessor.rawStopSuggestionsUrl : accessor.rawDepartureUrl;
-//     QString sTime = dateTime.time().toString("hh:mm");
-//     QString sDataType;
-//     QString sCity = city.toLower(), sStop = stop.toLower();
-//     if ( dataType == "arrivals" ) {
-//         sDataType = "arr";
-//     } else if ( dataType == "departures" ) {
-//         sDataType = "dep";
-//     }
-//
-// //     sCity = accessor.mapCityNameToValue( sCity ); // TODO
-//
-//     // Encode city and stop
-//     if ( accessor.charsetForUrlEncoding.isEmpty() ) {
-//         sCity = QString::fromAscii(KUrl::toPercentEncoding(sCity));
-//         sStop = QString::fromAscii(KUrl::toPercentEncoding(sStop));
-//     } else {
-//         sCity = toPercentEncoding( sCity, accessor.charsetForUrlEncoding.toUtf8() );
-//         sStop = toPercentEncoding( sStop, accessor.charsetForUrlEncoding.toUtf8() );
-//     }
-//
-//     // Construct the url from the "raw" url by replacing values
-//     if ( accessor.useCityValue )
-//         sRawUrl = sRawUrl.replace( "{city}", sCity );
-//     sRawUrl = sRawUrl.replace( "{time}", sTime )
-//               .replace( "{maxCount}", QString("%1").arg(maxCount) )
-//               .replace( "{stop}", sStop )
-//               .replace( "{dataType}", sDataType );
-//
-//     QRegExp rx = QRegExp("\\{date:([^\\}]*)\\}", Qt::CaseInsensitive);
-//     if ( rx.indexIn(sRawUrl) != -1 ) {
-//         sRawUrl.replace( rx, dateTime.date().toString(rx.cap(1)) );
-//     }
-//
-//     return KUrl( sRawUrl );
-}
-
-KUrl TimetableMate::getStopSuggestionUrl( const TimetableAccessor &accessor,
-        const QString &city, const QString& stop ) {
-    return KUrl(); // TODO
-/*    QString sRawUrl = accessor.rawStopSuggestionsUrl;
-    QString sCity = city.toLower(), sStop = stop.toLower();
-
-    // Encode stop
-    if ( accessor.charsetForUrlEncoding.isEmpty() ) {
-        sCity = QString::fromAscii(KUrl::toPercentEncoding(sCity));
-        sStop = QString::fromAscii(KUrl::toPercentEncoding(sStop));
-    } else {
-        sCity = toPercentEncoding( sCity, accessor.charsetForUrlEncoding.toUtf8() );
-        sStop = toPercentEncoding( sStop, accessor.charsetForUrlEncoding.toUtf8() );
-    }
-
-    if ( accessor.useCityValue ) {
-        sRawUrl = sRawUrl.replace( "{city}", sCity );
-    }
-    sRawUrl = sRawUrl.replace( "{stop}", sStop );
-
-    return KUrl( sRawUrl )*/;
-}
-
-KUrl TimetableMate::getJourneyUrl( const TimetableAccessor &accessor, const QString& city,
-                                   const QString& startStopName, const QString& targetStopName,
-                                   const QDateTime &dateTime, const QString& dataType ) const {
-    return KUrl(); // TODO
-//     int maxCount = 20;
-//     QString sRawUrl = accessor.rawJourneyUrl;
-//     QString sTime = dateTime.time().toString("hh:mm");
-//     QString sDataType;
-//     QString sCity = city.toLower(), sStartStopName = startStopName.toLower(),
-//                     sTargetStopName = targetStopName.toLower();
-//     if ( dataType == "arrivals" || dataType == "journeysArr" )
-//         sDataType = "arr";
-//     else if ( dataType == "departures" || dataType == "journeysDep" )
-//         sDataType = "dep";
-//
-// //     sCity = accessor.mapCityNameToValue(sCity); TODO
-//
-//     // Encode city and stop
-//     if ( accessor.charsetForUrlEncoding.isEmpty() ) {
-//         sCity = QString::fromAscii(KUrl::toPercentEncoding(sCity));
-//         sStartStopName = QString::fromAscii( KUrl::toPercentEncoding(sStartStopName) );
-//         sTargetStopName = QString::fromAscii( KUrl::toPercentEncoding(sTargetStopName) );
-//     } else {
-//         sCity = toPercentEncoding( sCity, accessor.charsetForUrlEncoding.toUtf8() );
-//         sStartStopName = toPercentEncoding( sStartStopName, accessor.charsetForUrlEncoding.toUtf8() );
-//         sTargetStopName = toPercentEncoding( sTargetStopName, accessor.charsetForUrlEncoding.toUtf8() );
-//     }
-//
-//     // Construct the url from the "raw" url by replacing values
-//     if ( accessor.useCityValue ) {
-//         sRawUrl = sRawUrl.replace( "{city}", sCity );
-//     }
-//     sRawUrl = sRawUrl.replace( "{time}", sTime )
-//               .replace( "{maxCount}", QString("%1").arg(maxCount) )
-//               .replace( "{startStop}", sStartStopName )
-//               .replace( "{targetStop}", sTargetStopName )
-//               .replace( "{dataType}", sDataType );
-//
-//     // Fill in date with the given format
-//     QRegExp rx = QRegExp( "\\{date:([^\\}]*)\\}", Qt::CaseInsensitive );
-//     if ( rx.indexIn(sRawUrl) != -1 ) {
-//         sRawUrl.replace( rx, dateTime.date().toString(rx.cap(1)) );
-//     }
-//
-//     rx = QRegExp( "\\{dep=([^\\|]*)\\|arr=([^\\}]*)\\}", Qt::CaseInsensitive );
-//     if ( rx.indexIn(sRawUrl) != -1 ) {
-//         if ( sDataType == "arr" ) {
-//             sRawUrl.replace( rx, rx.cap(2) );
-//         } else {
-//             sRawUrl.replace( rx, rx.cap(1) );
-//         }
-//     }
-//
-//     return KUrl( sRawUrl );
+    return info;
 }
 
 #include "timetablemate.moc"

@@ -459,7 +459,7 @@ void TimetableMateView::browseForScriptFile()
     }
 }
 
-TimetableAccessor *TimetableMateView::accessorInfo() const
+TimetableAccessor *TimetableMateView::accessor() const
 {
     return m_accessor;
 }

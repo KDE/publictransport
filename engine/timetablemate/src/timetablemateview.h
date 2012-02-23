@@ -61,7 +61,7 @@ public:
     bool writeAccessorInfoXml( const QString &fileName );
     QString writeAccessorInfoXml();
 
-    TimetableAccessor *accessorInfo() const;
+    TimetableAccessor *accessor() const;
     void setScriptFile( const QString &scriptFile );
 
     void setCurrentServiceProviderID( const QString &currentServiceProviderID ) {

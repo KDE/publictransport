@@ -63,7 +63,7 @@ function getJourneys( values ) {
     for ( i = 0; i < 3; ++i ) {
         // Download and parse journey document
         var html = network.getSynchronous( url );
-        if ( network.lastDownloadAborted() ) {
+        if ( network.lastDownloadAborted ) {
             break;
         }
         parseJourneys( html );
@@ -89,7 +89,7 @@ function getStopSuggestions( values  ) {
             "&REQ0JourneyStopsS0G=" + values.stop;
     var json = network.getSynchronous( url );
 
-    if ( !network.lastDownloadAborted() ) {
+    if ( !network.lastDownloadAborted ) {
         // Find all stop suggestions
         var stopRegExp = /{"value":"([^"]*?)","id":"[^"]*?@L=([0-9]+)@[^"]*?"[^}]*?"weight":"(\d+)"[^}]*?}/ig;
         while ( (stop = stopRegExp.exec(json)) ) {
@@ -240,7 +240,7 @@ function parseTimetable( html ) {
         // Parse platform column if any
         if ( columns.names.contains("platform") ) {
             if ( (platformArr = platformRegExp.exec(columns["platform"].contents)) )
-                departure.Platform = helper.trim( platformArr[0] );
+                departure.Platform = helper.trim( helper.stripTags(platformArr[0]) );
         }
 
         // Parse delay column if any
@@ -267,7 +267,7 @@ function parseTimetable( html ) {
         // Add departure
         result.addData( departure );
 
-//         if ( result.count() % 10 == 0 ) {
+//         if ( result.count % 10 == 0 ) {
 //             result.publish( result );
 //         }
     }
@@ -327,7 +327,7 @@ function parseJourneys( html ) {
             continue;
         }
         journey.StartStopName = startStopName[1];
-        journey.TargetStopName = helper.trim( columnsRow2["station"] );
+        journey.TargetStopName = helper.trim( columnsRow2["station"].contents );
 
         // Parse departure/arrival date column TODO
 //         journey.DepartureDateTime = helper.matchDate( columns["dateRow1"], "dd.MM.yy" );

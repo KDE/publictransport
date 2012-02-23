@@ -20,6 +20,9 @@
 #ifndef TIMETABLEMATE_H
 #define TIMETABLEMATE_H
 
+// Own includes
+#include "debugger.h"
+
 // PublicTransport engine includes
 #include <engine/departureinfo.h>
 #include <engine/scripting.h>
@@ -28,7 +31,19 @@
 // KDE includes
 #include <KParts/MainWindow>
 #include <KDebug>
+#include <KTextEditor/MarkInterface>
 
+// Qt includes
+#include <QScriptContextInfo>
+#include <QModelIndex>
+#include <QAbstractItemDelegate>
+
+class QStandardItem;
+class QStandardItemModel;
+class QPlainTextEdit;
+class QModelIndex;
+class QDockWidget;
+class Debugger;
 class Storage;
 class Helper;
 class Network;
@@ -45,6 +60,7 @@ namespace KTextEditor
     class Document;
     class View;
     class Cursor;
+    class Mark;
 };
 namespace KParts
 {
@@ -60,9 +76,18 @@ class KComboBox;
 
 class QPrinter;
 class QScriptProgram;
-class QScriptProgram;
-class QScriptEngine;
 class QSortFilterProxyModel;
+class QScriptEngine;
+
+// TODO
+class CheckboxDelegate : public QAbstractItemDelegate {
+public:
+    explicit CheckboxDelegate( QObject *parent = 0 ) : QAbstractItemDelegate(parent) {};
+
+    virtual void paint( QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const;
+    virtual QSize sizeHint( const QStyleOptionViewItem &option, const QModelIndex &index ) const;
+
+};
 
 /**
  * This class serves as the main window for TimetableMate. It handles the
@@ -89,6 +114,12 @@ public:
         ScriptLoadFailed,
         ScriptParseError,
         ScriptRunError
+    };
+
+    enum DebugType {
+        NoDebugging = 0,
+        InterruptOnExceptions,
+        InterruptAtStart
     };
 
     /** @brief The name of the script function to get a list of used TimetableInformation's. */
@@ -153,6 +184,10 @@ public slots:
      **/
     void scriptErrorReceived( const QString &message,
                               const QString &failedParseText = QString() );
+    void scriptPositionAboutToChange( int oldLineNumber, int oldColumnNumber,
+                                      int lineNumber, int columnNumber );
+    void markChanged( KTextEditor::Document *document, const KTextEditor::Mark &mark,
+                      KTextEditor::MarkInterface::MarkChangeAction action );
 
 protected slots:
     void optionsPreferences();
@@ -185,6 +220,62 @@ protected slots:
     void webLoadJourneys();
 
     void toolsCheck();
+    void toggleBreakpoint( int lineNumber = -1 );
+    void evaluateScript();
+
+    /** @brief Start debugger and call 'getTimetable' script function. */
+    void debugScriptDepartures();
+
+    /** @brief Start debugger and call 'getJourneys' script function. */
+    void debugScriptJourneys();
+
+    /** @brief Start debugger and call 'getStopSUggestions' script function. */
+    void debugScriptStopSuggestions();
+
+    /** @brief Abort debugging. */
+    void abortDebugger();
+
+    /** @brief Script execution started. */
+    void debugStarted();
+
+    /** @brief Script execution stopped. */
+    void debugStopped();
+
+    /** @brief Script execution was interrupted. */
+    void debugInterrupted();
+
+    /** @brief Script execution was continued after an interrupt. */
+    void debugContinued();
+
+    /** @brief Execute script until the line number at the cursor gets hit. */
+    void runToCursor();
+
+    /** @brief There was an uncaught execution in the script. */
+    void uncaughtException( int lineNumber, const QString &errorMessage );
+
+    /** @brief The current script backtrace changed. */
+    void backtraceChanged( const BacktraceQueue &backtrace, Debugger::BacktraceChange change );
+
+    /** @brief A @p breakpoint was added. */
+    void breakpointAdded( const Breakpoint &breakpoint );
+
+    /** @brief A @p breakpoint was removed. */
+    void breakpointRemoved( const Breakpoint &breakpoint );
+
+    /** @brief A @p breakpoint was reached. */
+    void breakpointReached( const Breakpoint &breakpoint );
+
+    /** @brief The breakpoint represented by @p item was changed. */
+    void breakpointChangedInModel( QStandardItem *item );
+
+    /** @brief The script produced output at @p context. */
+    void scriptOutput( const QString &outputString, QScriptContext *context );
+
+    /** @brief An item in the backtrace widget was clicked. */
+    void clickedBacktraceItem( const QModelIndex &backtraceItem );
+
+    /** @brief An item in the breakpoint widget was clicked. */
+    void clickedBreakpointItem( const QModelIndex &breakpointItem );
 
     void scriptNextFunction();
     void scriptPreviousFunction();
@@ -211,6 +302,8 @@ private:
     void setChanged( bool changed = true );
     void syncAccessor();
 
+    void createScriptEngine();
+    void setupDebugger( DebugType debug = InterruptOnExceptions );
     bool scriptRun( const QString &functionToRun, const RequestInfo *requestInfo,
                     const TimetableAccessorInfo *info,
                     ResultObject *resultObject, QVariant *result );
@@ -222,19 +315,9 @@ private:
     static QString decodeHtml( const QByteArray &document,
                                const QByteArray &fallbackCharset = QByteArray() );
 
-    KUrl getDepartureUrl();
-    KUrl getDepartureUrl( const TimetableAccessor &accessor, const QString &city,
-                          const QString &stop, const QDateTime &dateTime,
-                          const QString &dataType, bool useDifferentUrl = false ) const;
-
-    KUrl getStopSuggestionUrl();
-    KUrl getStopSuggestionUrl( const TimetableAccessor &accessor,
-                               const QString &city, const QString &stop );
-
-    KUrl getJourneyUrl();
-    KUrl getJourneyUrl( const TimetableAccessor &accessor, const QString &city,
-                        const QString &startStopName, const QString &targetStopName,
-                        const QDateTime &dateTime, const QString &dataType ) const;
+    DepartureRequestInfo getDepartureRequestInfo();
+    JourneyRequestInfo getJourneyRequestInfo();
+    StopSuggestionRequestInfo getStopSuggestionRequestInfo();
 
     /** Encodes the url in @p str using the charset in @p charset. Then it is
     * percent encoded.
@@ -244,9 +327,12 @@ private:
     static QString gethex( ushort decimal );
 
     bool loadScript();
-    bool lazyLoadScript();
 
 private:
+    void updateVariableModel();
+    void addVariableChilds( const QScriptValue &value, const QModelIndex &parent = QModelIndex(),
+                            bool onlyImportantObjects = false );
+
     KTabWidget *m_mainTabBar;
     KParts::PartManager *m_partManager;
     TimetableMateView *m_view;
@@ -254,6 +340,14 @@ private:
     KTextEditor::Document *m_scriptDocument;
     PublicTransportPreview *m_preview;
     KWebView *m_webview;
+    QDockWidget *m_backtraceDock;
+    QDockWidget *m_outputDock;
+    QDockWidget *m_breakpointDock;
+    QDockWidget *m_variablesDock;
+    QPlainTextEdit *m_outputWidget;
+    QStandardItemModel *m_backtraceModel;
+    QStandardItemModel *m_breakpointModel;
+    QStandardItemModel *m_variablesModel;
 
     KUrlComboBox *m_urlBar;
     KComboBox *m_functions;
@@ -282,6 +376,7 @@ private:
     QString m_lastError;
     ScriptError m_lastScriptError;
     QStringList m_scriptErrors;
+    Debugger *m_debugger;
 };
 
 #endif // _TIMETABLEMATE_H_

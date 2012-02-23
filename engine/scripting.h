@@ -311,10 +311,13 @@ typedef QHash<TimetableInformation, QVariant> TimetableData;
  * To get notified about new data, connect to either the finished() or the readyRead() signal.
  *
  * @ingroup scripting
- * @since 0.10
+ * @since 0.10QString
  **/
 class NetworkRequest : public QObject {
     Q_OBJECT
+    Q_PROPERTY( QString url READ url )
+    Q_PROPERTY( bool isRunning READ isRunning )
+    Q_PROPERTY( QString postData READ postData )
     friend class Network;
 
 public:
@@ -333,13 +336,13 @@ public:
      * @note The URL can not be changed, a request object is only used for @em one request.
      * @ingroup scripting
      **/
-    Q_INVOKABLE QString url() const { return m_url; };
+    QString url() const { return m_url; };
 
     /**
      * @brief Whether or not the request is currently running.
      * @ingroup scripting
      **/
-    Q_INVOKABLE bool isRunning() const { return m_reply; };
+    bool isRunning() const { return m_reply; };
 
     /**
      * @brief Sets the data to sent to the server when using Network::post().
@@ -359,6 +362,10 @@ public:
      * @ingroup scripting
      **/
     Q_INVOKABLE void setPostData( const QString &postData, const QString &charset = QString() );
+
+//     TODO documentation
+    QString postData() const { return m_postData; };
+    Q_INVOKABLE QString header( const QString &header, const QString& charset ) const;
 
     /**
      * @brief Sets the @p header of this request to @p value.
@@ -423,7 +430,7 @@ protected Q_SLOTS:
 
 protected:
     void started( QNetworkReply* reply );
-    QByteArray postData() const;
+    QByteArray postDataByteArray() const;
     QNetworkRequest *request() const;
     QByteArray getCharset( const QString &charset = QString() ) const;
     bool isValid() const;
@@ -488,6 +495,10 @@ Q_SCRIPT_DECLARE_QMETAOBJECT(NetworkRequest, QObject*)
  **/
 class Network : public QObject {
     Q_OBJECT
+    Q_PROPERTY( QString lastUrl READ lastUrl )
+    Q_PROPERTY( bool lastDownloadAborted READ lastDownloadAborted )
+    Q_PROPERTY( QString fallbackCharset READ fallbackCharset )
+    Q_PROPERTY( int runningRequestCount READ runningRequestCount )
     friend class NetworkRequest;
 
 public:
@@ -519,7 +530,7 @@ public:
      * Use lastUrl() to get the URL of the aborted download. Downloads may be aborted eg. by
      * closing plasma.
      **/
-    Q_INVOKABLE bool lastDownloadAborted() const { return m_lastDownloadAborted; };
+    bool lastDownloadAborted() const { return m_lastDownloadAborted; };
 
     /**
      * @brief Download the document at @p url synchronously.
@@ -592,6 +603,11 @@ public:
      * @ingroup scripting
      */
     QList< NetworkRequest* > runningRequests() const { return m_runningRequests; };
+
+    /**
+     * @brief Returns the number of currently running requests.
+     **/
+    int runningRequestCount() const { return m_runningRequests.count(); };
 
     /**
      * @brief Returns the charset to use for decoding documents, if it cannot be detected.
@@ -1055,6 +1071,7 @@ class ResultObject : public QObject {
     Q_OBJECT
     Q_ENUMS( Feature Hint )
     Q_FLAGS( Features Hints )
+    Q_PROPERTY( int count READ count )
 
 public:
     /**
@@ -1128,7 +1145,7 @@ public:
     /**
      * @brief Returns the number of timetable elements currently in the resultset.
      **/
-    Q_INVOKABLE int count() const { return m_timetableData.count(); };
+    int count() const { return m_timetableData.count(); };
 
     /**
      * @brief Whether or not @p feature is enabled.

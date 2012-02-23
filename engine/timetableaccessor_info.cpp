@@ -53,7 +53,9 @@ public:
 };
 
 TimetableAccessorInfo::TimetableAccessorInfo( const AccessorType& accessorType,
-                                              const QString& serviceProviderID )
+                                              const QString& serviceProviderID,
+                                              QObject *parent )
+        : QObject(parent)
 {
     m_accessorType = accessorType;
     m_serviceProviderID = serviceProviderID;
@@ -72,7 +74,9 @@ TimetableAccessorInfo::TimetableAccessorInfo( const AccessorType &accessorType,
         const QString &url, const QString &shortUrl, int minFetchWait, const QString &author,
         const QString &email, VehicleType defaultVehicleType,
         const QList< ChangelogEntry >& changelog, const QStringList &cities,
-        const QHash< QString, QString >& cityNameToValueReplacementHash )
+        const QHash< QString, QString >& cityNameToValueReplacementHash,
+        QObject *parent )
+        : QObject(parent)
 {
     m_accessorType = accessorType;
     m_serviceProviderID = serviceProviderID;
@@ -91,6 +95,28 @@ TimetableAccessorInfo::TimetableAccessorInfo( const AccessorType &accessorType,
     m_changelog = changelog;
     m_cities = cities;
     m_hashCityNameToValue = cityNameToValueReplacementHash;
+}
+
+TimetableAccessorInfo::TimetableAccessorInfo( const TimetableAccessorInfo &info )
+        : QObject()
+{
+    m_accessorType = info.m_accessorType;
+    m_serviceProviderID = info.m_serviceProviderID;
+    m_name = info.m_name;
+    m_description = info.m_description;
+    m_version = info.m_version;
+    m_fileVersion = info.m_fileVersion;
+    m_useSeparateCityValue = info.m_useSeparateCityValue;
+    m_onlyUseCitiesInList = info.m_onlyUseCitiesInList;
+    m_url = info.m_url;
+    m_shortUrl = info.m_shortUrl;
+    m_minFetchWait = info.m_minFetchWait;
+    m_author = info.m_author;
+    m_email = info.m_email;
+    m_defaultVehicleType = info.m_defaultVehicleType;
+    m_changelog = info.m_changelog;
+    m_cities = info.m_cities;
+    m_hashCityNameToValue = info.m_hashCityNameToValue;
 }
 
 TimetableAccessorInfo::~TimetableAccessorInfo()

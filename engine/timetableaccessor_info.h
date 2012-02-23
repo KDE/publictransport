@@ -40,8 +40,31 @@
  * This is the base class of all service provider information classes. It is used
  * by TimetableAccessor to downlaod and parse documents from different service providers.
  **/
-class TimetableAccessorInfo {
+class TimetableAccessorInfo : public QObject {
     friend class AccessorInfoXmlReader; // Because AccessorInfoXmlReader needs to set values when reading xml files
+    Q_OBJECT
+    Q_PROPERTY( QString name READ name )
+    Q_PROPERTY( QString description READ description )
+    Q_PROPERTY( QString version READ version )
+    Q_PROPERTY( QString fileVersion READ fileVersion )
+    Q_PROPERTY( QString serviceProvider READ serviceProvider )
+    Q_PROPERTY( QString author READ author )
+    Q_PROPERTY( QString shortAuthor READ shortAuthor )
+    Q_PROPERTY( QString email READ email )
+    Q_PROPERTY( QString url READ url )
+    Q_PROPERTY( QString shortUrl READ shortUrl )
+    Q_PROPERTY( QString country READ country )
+    Q_PROPERTY( QStringList cities READ cities )
+    Q_PROPERTY( QString credit READ credit )
+    Q_PROPERTY( QByteArray charsetForUrlEncoding READ charsetForUrlEncoding )
+    Q_PROPERTY( QByteArray fallbackCharset READ fallbackCharset )
+    Q_PROPERTY( int minFetchWait READ minFetchWait )
+    Q_PROPERTY( bool useSeparateCityValue READ useSeparateCityValue )
+    Q_PROPERTY( bool onlyUseCitiesInList READ onlyUseCitiesInList )
+    Q_PROPERTY( QString fileName READ fileName )
+    Q_PROPERTY( QString scriptFileName READ scriptFileName )
+    Q_PROPERTY( QStringList scriptExtensions READ scriptExtensions )
+    Q_PROPERTY( QString type READ typeString )
 
 public:
     /**
@@ -54,7 +77,8 @@ public:
      * @see AccessorType
      **/
     explicit TimetableAccessorInfo( const AccessorType& accessorType = NoAccessor,
-                                    const QString& serviceProviderID = QString() );
+                                    const QString& serviceProviderID = QString(),
+                                    QObject *parent = 0 );
 
     TimetableAccessorInfo( const AccessorType &accessorType, const QString &serviceProviderID,
             const QHash<QString, QString> &names, const QHash<QString, QString> &descriptions,
@@ -63,7 +87,10 @@ public:
             int minFetchWait, const QString &author, const QString &email,
             VehicleType defaultVehicleType, const QList<ChangelogEntry> &changelog,
             const QStringList &cities,
-            const QHash<QString, QString> &cityNameToValueReplacementHash );
+            const QHash<QString, QString> &cityNameToValueReplacementHash,
+            QObject *parent = 0 );
+
+    TimetableAccessorInfo( const TimetableAccessorInfo &info );
 
     virtual ~TimetableAccessorInfo();
 
@@ -84,6 +111,9 @@ public:
     /** @brief The ID of the service provider this accessor is designed for. */
     QString serviceProvider() const { return m_serviceProviderID; };
 
+    QString typeString() const { return m_accessorType == ScriptedAccessor
+            ? "ScriptedAccessor" : "Unknown"; };
+
     /** @brief The author of the accessor information to be used by the accessor. */
     QString author() const { return m_author; };
     /** @brief An abbreviation of the authors name. */
@@ -103,6 +133,7 @@ public:
 
     QString credit() const { return m_credit; };
     VehicleType defaultVehicleType() const { return m_defaultVehicleType; };
+
     /**
      * @brief If empty, use unicode (QUrl::toPercentEncoding()), otherwise use
      *   own toPercentEncoding() with this charset.

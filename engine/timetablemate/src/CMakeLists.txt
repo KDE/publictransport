@@ -9,6 +9,7 @@ set( timetablemate_SRCS
    javascriptcompletionmodel.cpp
    javascriptmodel.cpp
    javascriptparser.cpp
+   debugger.cpp
    ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
 
    # Use files directly from the data engine
@@ -38,6 +39,7 @@ target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS}
     ${KDE4_PLASMA_LIBS} # For the Plasma preview main view tab
     ${KDE4_THREADWEAVER_LIBS} # For includes from the engine
     ${QT_QTSCRIPT_LIBRARY}
+    ${QT_QTSCRIPTTOOLS_LIBRARY} # For the debugger
     publictransporthelper
 )
 

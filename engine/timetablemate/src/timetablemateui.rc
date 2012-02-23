@@ -1,7 +1,7 @@
 <!DOCTYPE kpartgui SYSTEM "kpartgui.dtd">
-<kpartgui name="timetablemate" version="2">
+<kpartgui name="timetablemate" version="3">
 <MenuBar>
-    <Menu noMerge="1" name="file"><text>&amp;File</text>
+    <Menu noMerge="1" name="file"><text context="@title:menu">&amp;File</text>
 	<Action name="file_new"/>
 	<Action name="file_open"/>
 	<Action name="file_open_installed"/>
@@ -17,12 +17,12 @@
 	<Action name="file_quit"/>
     </Menu>
 
-    <Menu noMerge="1" name="edit"><text>&amp;Edit</text>
+    <Menu noMerge="1" name="edit"><text context="@title:menu">&amp;Edit</text>
 	<Separator/>
 	<Merge/>
     </Menu>
-    
-    <Menu noMerge="1" name="view"><text>&amp;View</text>
+
+    <Menu noMerge="1" name="view"><text context="@title:menu">&amp;View</text>
 	<Action name="web_load_page" />
 	<Separator/>
 	<Action name="script_previous_function" />
@@ -31,17 +31,97 @@
 	<Merge/>
     </Menu>
 
-    <Menu noMerge="1" name="tools"><text>&amp;Tools</text>
+    <Menu noMerge="1" name="tools"><text context="@title:menu">&amp;Tools</text>
 	<Action name="tools_check" />
 	<Action name="script_run" />
 	<Separator/>
 	<Merge/>
     </Menu>
-    
+
+    <Menu noMerge="1" name="debug"><text context="@title:menu">&amp;Debugger</text>
+        <Action name="debug_run" />
+        <Action name="debug_continue" />
+        <Action name="debug_interrupt" />
+        <Action name="debug_abort" />
+        <Separator/>
+        <Action name="debug_step_over" />
+        <Action name="debug_step_into" />
+        <Action name="debug_step_out" />
+        <Action name="debug_run_to_cursor" />
+        <Separator/>
+        <Action name="debug_toggle_breakpoint" />
+        <Action name="debug_remove_all_breakpoints" />
+        <Separator/>
+        <Merge/>
+    </Menu>
+
     <Merge/>
 </MenuBar>
 
+<ActionProperties scheme="Default">
+    <Action name="debug_abort" shortcut="Esc" />
+    <Action name="debug_run" shortcut="F9" />
+    <Action name="debug_step_over" shortcut="F10" />
+    <Action name="debug_step_into" shortcut="F11" />
+    <Action name="debug_step_out" shortcut="F12" />
+</ActionProperties>
+
+<State name="debug_running" >
+    <enable>
+        <Action name="debug_interrupt" />
+        <Action name="debug_abort" />
+<!--         <Action name="debug_toggle_breakpoint" /> -->
+<!--         <Action name="debug_remove_all_breakpoints" /> -->
+    </enable>
+    <disable>
+        <Action name="debug_run" />
+        <Action name="debug_departures" />
+        <Action name="debug_journeys" />
+        <Action name="debug_stop_suggestions" />
+        <Action name="debug_continue" />
+        <Action name="debug_step_over" />
+        <Action name="debug_step_into" />
+        <Action name="debug_step_out" />
+        <Action name="debug_run_to_cursor" />
+    </disable>
+</State>
+<State name="debug_not_running" >
+    <enable>
+        <Action name="debug_run" />
+        <Action name="debug_departures" />
+        <Action name="debug_journeys" />
+        <Action name="debug_stop_suggestions" />
+    </enable>
+    <disable>
+        <Action name="debug_interrupt" />
+        <Action name="debug_abort" />
+        <Action name="debug_continue" />
+        <Action name="debug_step_over" />
+        <Action name="debug_step_into" />
+        <Action name="debug_step_out" />
+        <Action name="debug_run_to_cursor" />
+    </disable>
+</State>
+<State name="debug_interrupted" >
+    <enable>
+        <Action name="debug_abort" />
+        <Action name="debug_continue" />
+        <Action name="debug_step_over" />
+        <Action name="debug_step_into" />
+        <Action name="debug_step_out" />
+        <Action name="debug_run_to_cursor" />
+    </enable>
+    <disable>
+        <Action name="debug_run" />
+        <Action name="debug_departures" />
+        <Action name="debug_journeys" />
+        <Action name="debug_stop_suggestions" />
+        <Action name="debug_interrupt" />
+    </disable>
+</State>
+
 <ToolBar name="mainToolBar">
+    <text>&amp;Main Toolbar</text>
     <Action name="file_new" />
     <Action name="file_open" />
     <Action name="file_save" />
@@ -52,10 +132,25 @@
     <Action name="web_forward" />
     <Action name="web_stop" />
     <Action name="web_reload" />
-    <Separator/>
     <Action name="web_load_page" />
-    <Action name="script_run" />
     <Separator/>
     <Action name="tools_check" />
+    <Action name="script_run" />
+</ToolBar>
+
+<ToolBar name="debuggerToolBar">
+    <text>&amp;Debugger</text>
+    <Action name="debug_run" />
+    <Action name="debug_continue" />
+    <Action name="debug_interrupt" />
+    <Action name="debug_abort" />
+    <Separator/>
+    <Action name="debug_step_over" />
+    <Action name="debug_step_into" />
+    <Action name="debug_step_out" />
+    <Separator/>
+    <Action name="debug_toggle_breakpoint" />
+    <Separator/>
+    <Merge/>
 </ToolBar>
 </kpartgui>

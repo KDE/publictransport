@@ -164,7 +164,7 @@ QByteArray NetworkRequest::getCharset( const QString& charset ) const
     return baCharset;
 }
 
-QByteArray NetworkRequest::postData() const
+QByteArray NetworkRequest::postDataByteArray() const
 {
     return m_postData;
 }
@@ -195,6 +195,16 @@ void NetworkRequest::setPostData( const QString& postData, const QString& charse
             m_postData = postData.toUtf8();
         }
 //     }
+}
+
+QString NetworkRequest::header( const QString &header, const QString& charset ) const
+{
+    if ( !isValid() ) {
+        return QString();
+    }
+    QByteArray baCharset = getCharset( charset );
+    QTextCodec *codec = QTextCodec::codecForName( baCharset );
+    return m_request->rawHeader( codec ? codec->fromUnicode(header) : header.toUtf8() );
 }
 
 void NetworkRequest::setHeader( const QString& header, const QString& value,
@@ -281,6 +291,7 @@ void Network::slotRequestFinished()
 
     m_runningRequests.removeOne( request );
     emit requestFinished( request );
+
     if ( m_runningRequests.isEmpty() ) {
         emit allRequestsFinished();
     }
@@ -296,6 +307,10 @@ void Network::slotRequestAborted()
     m_lastDownloadAborted = true;
     m_runningRequests.removeOne( request );
     emit requestAborted( request );
+
+    if ( m_runningRequests.isEmpty() ) {
+        emit allRequestsFinished();
+    }
 }
 
 bool Network::checkRequest( NetworkRequest* request )
@@ -348,7 +363,7 @@ void Network::post( NetworkRequest* request )
     }
 
     // Create a head request
-    QNetworkReply *reply = m_manager->post( *request->request(), request->postData() );
+    QNetworkReply *reply = m_manager->post( *request->request(), request->postDataByteArray() );
     m_lastUrl = request->url();
     request->started( reply );
 }
@@ -374,7 +389,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
     // ie. make netAccess.download() synchronous for scripts
     QEventLoop eventLoop;
     connect( reply, SIGNAL(finished()), &eventLoop, SLOT(quit()) );
-    connect( this, SIGNAL(aborted()), &eventLoop, SLOT(quit()) );
+    connect( this, SIGNAL(allRequestsFinished()), &eventLoop, SLOT(quit()) );
     if ( timeout > 0 ) {
         QTimer::singleShot( timeout, &eventLoop, SLOT(quit()) );
     }

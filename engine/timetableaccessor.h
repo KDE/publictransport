@@ -90,6 +90,7 @@ struct RequestInfo {
         this->parseMode = ParseInvalid;
         this->maxCount = -1;
         this->useDifferentUrl = false;
+        this->parseMode = ParseForStopSuggestions;
     };
 
     RequestInfo( const QString &sourceName, const QString &stop, const QDateTime &dateTime,
@@ -99,6 +100,7 @@ struct RequestInfo {
             : sourceName(sourceName), dateTime(dateTime), stop(stop), maxCount(maxCount),
               dataType(dataType), useDifferentUrl(useDifferentUrl), city(city), parseMode(parseMode)
     {
+        this->parseMode = ParseForStopSuggestions;
     };
 
     RequestInfo( const RequestInfo &info )
@@ -127,7 +129,7 @@ struct RequestInfo {
 typedef RequestInfo StopSuggestionRequestInfo;
 
 struct DepartureRequestInfo : public RequestInfo {
-    DepartureRequestInfo() : RequestInfo() {};
+    DepartureRequestInfo() : RequestInfo() { parseMode = ParseForDeparturesArrivals; };
     DepartureRequestInfo( const QString &sourceName, const QString &stop,
                           const QDateTime &dateTime, int maxCount,
                           const QString &dataType = "departures",
@@ -160,6 +162,7 @@ struct JourneyRequestInfo : public RequestInfo {
     JourneyRequestInfo() : RequestInfo()
     {
         this->roundTrips = 0;
+        this->parseMode = ParseForJourneys;
     };
 
     JourneyRequestInfo( const QString &sourceName, const QString &startStop,
@@ -202,6 +205,15 @@ struct JourneyRequestInfo : public RequestInfo {
  **/
 class TimetableAccessor : public QObject {
     Q_OBJECT
+    Q_PROPERTY( QString serviceProvider READ serviceProvider )
+    Q_PROPERTY( QStringList features READ features )
+    Q_PROPERTY( QStringList featuresLocalized READ featuresLocalized )
+    Q_PROPERTY( QString country READ country )
+    Q_PROPERTY( QStringList cities READ cities )
+    Q_PROPERTY( QString credit READ credit )
+    Q_PROPERTY( int minFetchWait READ minFetchWait )
+    Q_PROPERTY( bool useSeparateCityValue READ useSeparateCityValue )
+    Q_PROPERTY( bool onlyUseCitiesInList READ onlyUseCitiesInList )
 
 public:
     /**
