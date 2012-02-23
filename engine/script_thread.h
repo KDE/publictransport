@@ -28,6 +28,7 @@
 // Own includes
 #include "enums.h"
 #include "scripting.h"
+#include "timetableaccessor_info.h"
 
 // KDE includes
 #include <ThreadWeaver/Job> // Base class
@@ -162,11 +163,7 @@ protected:
     bool m_success;
     QString m_errorString;
 
-    const QString m_serviceProvider;
-    const VehicleType m_defaultVehicleType;
-    const QString m_scriptFileName;
-    const QStringList m_scriptExtensions;
-    const QByteArray m_fallbackCharset;
+    TimetableAccessorInfo m_info;
 };
 
 class DepartureJobPrivate;

@@ -46,11 +46,7 @@ ScriptJob::ScriptJob( QScriptProgram *script, const TimetableAccessorInfo* info,
       m_engine(0), m_script(script),
       m_scriptStorage(scriptStorage), m_scriptNetwork(0), m_scriptResult(0),
       m_published(0), m_success(true),
-      m_serviceProvider( info->serviceProvider() ),
-      m_defaultVehicleType( info->defaultVehicleType() ),
-      m_scriptFileName( info->scriptFileName() ),
-      m_scriptExtensions( info->scriptExtensions() ),
-      m_fallbackCharset( info->fallbackCharset() )
+      m_info( *info )
 {
     ++thread_count; kDebug() << "Thread count:" << thread_count;
     qRegisterMetaType<DepartureRequestInfo>( "DepartureRequestInfo" );
@@ -215,7 +211,7 @@ void ScriptJob::run()
 
         // Inform about script run time
         kDebug() << " > Script finished after" << (time.elapsed() / 1000.0)
-                    << "seconds: " << m_scriptFileName << thread() << requestInfo()->parseMode;
+                    << "seconds: " << m_info.scriptFileName() << thread() << requestInfo()->parseMode;
 
         // If data for the current job has already been published, do not emit
         // completed with an empty resultset
@@ -330,7 +326,7 @@ bool ScriptJob::loadScript( QScriptProgram *script )
 //     m_scriptStorage->mutex.lock();
 //     kDebug() << "LOAD qt.core" << thread() << m_parseMode;
 //     m_engine->importExtension("qt.core");
-    foreach ( const QString &extension, m_scriptExtensions ) {
+    foreach ( const QString &extension, m_info.scriptExtensions() ) {
         if ( !importExtension(m_engine, extension) ) {
             m_errorString = i18nc("@info/plain", "Could not load script extension "
                                   "<resource>%1</resource>.", extension);
@@ -342,7 +338,7 @@ bool ScriptJob::loadScript( QScriptProgram *script )
     }
 //     m_scriptStorage->mutex.unlock();
 
-    m_engine->globalObject().setProperty( "accessor", m_engine->newQObject(parent()) );
+    m_engine->globalObject().setProperty( "accessor", m_engine->newQObject(&m_info) ); //parent()) );
 
     // Add "importExtension()" function to import extensions
     // Importing Kross not from the GUI thread causes some warnings about pixmaps being used
@@ -358,9 +354,9 @@ bool ScriptJob::loadScript( QScriptProgram *script )
             networkRequestToScript, networkRequestFromScript );
 
     // Create objects for the script
-    Helper *scriptHelper = new Helper( m_serviceProvider, m_engine );
-    m_scriptNetwork = QSharedPointer<Network>( new Network( m_fallbackCharset, thread() ) );
-    m_scriptResult = QSharedPointer<ResultObject>( new ResultObject( thread() ) );
+    Helper *scriptHelper = new Helper( m_info.serviceProvider(), m_engine );
+    m_scriptNetwork = QSharedPointer<Network>( new Network(m_info.fallbackCharset(), thread()) );
+    m_scriptResult = QSharedPointer<ResultObject>( new ResultObject(thread()) );
     connect( m_scriptResult.data(), SIGNAL(publish()), this, SLOT(publish()) );
 
     // Make the objects available to the script
