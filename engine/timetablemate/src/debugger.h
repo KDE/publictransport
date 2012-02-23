@@ -193,6 +193,9 @@ public:
     /** @brief Creates a new Debugger instance. */
     Debugger( QScriptEngine* engine = 0 );
 
+    /** @brief Destructor. */
+    virtual ~Debugger();
+
     /** @brief Whether or not script execution is currently interrupted. */
     bool isInterrupted() const { return m_executionType != ExecuteRun; };
 

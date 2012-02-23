@@ -70,7 +70,7 @@ class ScriptAgent : public QObject, public QScriptEngineAgent {
 
 public:
     /** @brief Creates a new ScriptAgent instance. */
-    ScriptAgent( QScriptEngine* engine = 0 );
+    ScriptAgent( QScriptEngine* engine = 0, QObject *parent = 0 );
 
     /** Overwritten to get noticed when a script might have finished. */
     virtual void functionExit( qint64 scriptId, const QScriptValue& returnValue );

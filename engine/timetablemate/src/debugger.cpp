@@ -65,6 +65,11 @@ Debugger::Debugger( QScriptEngine *engine )
     engine->globalObject().setProperty( "print", printFunction );
 }
 
+Debugger::~Debugger()
+{
+    abortDebugger();
+}
+
 Debugger::NextEvaluatableLineHint Debugger::canBreakAt( int lineNumber ) const
 {
     if ( lineNumber <= 0 || lineNumber > m_scriptLines.count() ) {
@@ -419,6 +424,7 @@ void Debugger::positionChange( qint64 scriptId, int lineNumber, int columnNumber
             QApplication::processEvents( QEventLoop::AllEvents, 50 );
         }
 
+        // TODO May have been deleted here already...
         emit continued();
     }
 }

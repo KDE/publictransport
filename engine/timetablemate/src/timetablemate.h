@@ -79,6 +79,8 @@ class QScriptProgram;
 class QSortFilterProxyModel;
 class QScriptEngine;
 
+typedef QPair<QStandardItem*, QStandardItem*> ScriptVariableRow;
+
 // TODO
 class CheckboxDelegate : public QAbstractItemDelegate {
 public:
@@ -332,6 +334,13 @@ private:
     void updateVariableModel();
     void addVariableChilds( const QScriptValue &value, const QModelIndex &parent = QModelIndex(),
                             bool onlyImportantObjects = false );
+    ScriptVariableRow addVariableRow( QStandardItem *item, const QString &name,
+                                      const QString &value, const KIcon &icon = KIcon(),
+                                      bool encodeValue = false,
+                                      const QChar &endCharacter = QChar() );
+    QString variableValueTooltip( const QString &completeValueString,
+                                  bool encodeHtml = false,
+                                  const QChar &endCharacter = QChar() ) const;
 
     KTabWidget *m_mainTabBar;
     KParts::PartManager *m_partManager;

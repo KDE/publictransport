@@ -93,6 +93,7 @@
 #include <KIO/NetAccess>
 #include <KDE/KLocale>
 #include <KLineEdit>
+#include <KColorScheme>
 
 #include <unistd.h>
 
@@ -465,6 +466,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     QTreeView *variablesWidget = new QTreeView( this );
     variablesWidget->setAllColumnsShowFocus( true );
     variablesWidget->setModel( m_variablesModel );
+    variablesWidget->setAnimated( true );
     m_variablesDock->setWidget( variablesWidget );
     m_variablesDock->hide();
     addDockWidget( Qt::LeftDockWidgetArea, m_variablesDock );
@@ -490,6 +492,8 @@ TimetableMate::~TimetableMate() {
         return;
     }
     m_scriptNetwork->abortAllRequests();
+
+    m_debugger->abortDebugger();
     m_engine->abortEvaluation();
     m_engine->deleteLater();
 }
@@ -968,14 +972,23 @@ void TimetableMate::currentTabChanged( int index ) {
         action("script_previous_function")->setVisible( false );
         action("debug_toggle_breakpoint")->setEnabled( false );
         action("debug_remove_all_breakpoints")->setEnabled( false );
-//         m_backtraceDock->hide();
         m_breakpointDock->hide();
+        m_variablesDock->hide();
+        m_backtraceDock->hide();
+        m_outputDock->hide();
     } else if ( index == ScriptTab ) { // go to script tab
         action("script_next_function")->setVisible( true );
         action("script_previous_function")->setVisible( true );
         action("debug_toggle_breakpoint")->setEnabled( true );
         action("debug_remove_all_breakpoints")->setEnabled( true );
         m_breakpointDock->show();
+        if ( m_debugger ) {
+            m_variablesDock->show();
+            m_outputDock->show();
+            if ( !m_debugger->isInterrupted() ) {
+                m_backtraceDock->show();
+            }
+        }
     }
 
     if ( m_currentTab == WebTab ) { // left web tab
@@ -1498,7 +1511,6 @@ void TimetableMate::debugStopped()
     stateChanged( "debug_not_running" );
 
     m_backtraceDock->hide();
-    m_variablesDock->hide();
     statusBar()->showMessage( i18nc("@info:status", "Script finished"), 5000 );
     m_outputWidget->appendHtml( i18nc("@info", "<emphasis strong='1'>Execution ended at %1</emphasis>",
                                       QTime::currentTime().toString()) + "<br />---------------------<br />" );
@@ -1515,15 +1527,118 @@ void TimetableMate::uncaughtException( int lineNumber, const QString &errorMessa
                   "<message>%2</message>", lineNumber, errorMessage) );
 }
 
-QStandardItem *addRow( QStandardItem *item, const QString &name, const QString &value,
-             const KIcon &icon = KIcon() )
+ScriptVariableRow TimetableMate::addVariableRow( QStandardItem *item, const QString &name,
+        const QString &value, const KIcon &icon, bool encodeValue, const QChar &endCharacter )
 {
     QStandardItem *newNameItem = new QStandardItem( icon, name );
     QStandardItem *newValueItem = new QStandardItem( value );
     newNameItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
     newValueItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
+    newValueItem->setToolTip( variableValueTooltip(value, encodeValue, endCharacter) );
     item->appendRow( QList<QStandardItem*>() << newNameItem << newValueItem );
-    return newNameItem;
+    return ScriptVariableRow( newNameItem, newValueItem );
+}
+
+QString TimetableMate::variableValueTooltip( const QString &completeValueString,
+                                             bool encodeHtml, const QChar &endCharacter ) const
+{
+    if ( completeValueString.isEmpty() ) {
+        return QString();
+    }
+
+    QString tooltip = completeValueString.left( 1000 );
+    if ( encodeHtml ) {
+        if ( !endCharacter.isNull() ) {
+            tooltip += endCharacter; // Add end character (eg. a quotation mark), which got cut off
+        }
+        tooltip = Global::encodeHtmlEntities( tooltip );
+    }
+    if ( tooltip.length() < completeValueString.length() ) {
+        tooltip.prepend( i18nc("@info Always plural",
+                         "<emphasis strong='1'>First %1 characters:</emphasis><nl />", 1000) )
+               .append( QLatin1String("...") );
+    }
+    return tooltip.prepend( QLatin1String("<p>") ).append( QLatin1String("</p>") );
+}
+
+QPair<QBrush, QBrush> checkTimetableInformation( TimetableInformation info, const QVariant &value ) {
+    bool correct = value.isValid();
+    if ( correct ) {
+        switch ( info ) {
+        case DepartureDateTime:
+        case ArrivalDateTime:
+            correct = value.toDateTime().isValid();
+            break;
+        case DepartureDate:
+        case ArrivalDate:
+            correct = value.toDate().isValid();
+            break;
+        case DepartureTime:
+        case ArrivalTime:
+            correct = value.toTime().isValid();
+            break;
+        case TypeOfVehicle:
+            correct = PublicTransportInfo::getVehicleTypeFromString( value.toString() ) != Unknown;
+            break;
+        case TransportLine:
+        case Target:
+        case TargetShortened:
+        case Platform:
+        case DelayReason:
+        case JourneyNews:
+        case JourneyNewsOther:
+        case JourneyNewsLink:
+        case Operator:
+        case Status:
+        case StartStopName:
+        case StartStopID:
+        case StopCity:
+        case StopCountryCode:
+        case TargetStopName:
+        case TargetStopID:
+        case Pricing:
+        case StopName:
+        case StopID:
+            correct = !value.toString().trimmed().isEmpty();
+            break;
+        case Delay:
+            correct = value.canConvert( QVariant::Int ) && value.toInt() >= -1;
+            break;
+        case Duration:
+        case StopWeight:
+        case Changes:
+        case RouteExactStops:
+            correct = value.canConvert( QVariant::Int ) && value.toInt() >= 0;
+            break;
+        case TypesOfVehicleInJourney:
+        case RouteTimes:
+        case RouteTimesDeparture:
+        case RouteTimesArrival:
+        case RouteTypesOfVehicles:
+        case RouteTimesDepartureDelay:
+        case RouteTimesArrivalDelay:
+            correct = !value.toList().isEmpty();
+            break;
+        case IsNightLine:
+            correct = value.canConvert( QVariant::Bool );
+            break;
+        case RouteStops:
+        case RouteStopsShortened:
+        case RouteTransportLines:
+        case RoutePlatformsDeparture:
+        case RoutePlatformsArrival:
+            correct = !value.toStringList().isEmpty();
+            break;
+
+        default:
+            correct = true;;
+        }
+    }
+
+    const KColorScheme scheme( QPalette::Active );
+    return QPair<QBrush, QBrush>(
+            scheme.background(correct ? KColorScheme::PositiveBackground : KColorScheme::NegativeBackground),
+            scheme.foreground(correct ? KColorScheme::PositiveText : KColorScheme::NegativeText) );
 }
 
 void TimetableMate::addVariableChilds( const QScriptValue &value, const QModelIndex &parent,
@@ -1546,11 +1661,14 @@ void TimetableMate::addVariableChilds( const QScriptValue &value, const QModelIn
 
         QString valueString;
         bool encodeValue = false;
+        QChar endCharacter;
         if ( it.value().isArray() ) {
             valueString = QString("[%0]").arg( it.value().toVariant().toStringList().join(", ") );
+            endCharacter = ']';
         } else if ( it.value().isString() ) {
             valueString = QString("\"%1\"").arg( it.value().toString() );
             encodeValue = true;
+            endCharacter = '\"';
         } else if ( it.value().isRegExp() ) {
             valueString = QString("/%1/%2").arg( it.value().toRegExp().pattern() )
                     .arg( it.value().toRegExp().caseSensitivity() == Qt::CaseSensitive ? "" : "i" );
@@ -1571,19 +1689,8 @@ void TimetableMate::addVariableChilds( const QScriptValue &value, const QModelIn
         QStandardItem *newValueItem = new QStandardItem( valueString );
         newParentItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
         newValueItem->setFlags( Qt::ItemIsEnabled | Qt::ItemIsSelectable );
-        QString tooltip = completeValueString.left( 1000 );
-        if ( encodeValue ) {
-            if ( it.value().isString() ) {
-                tooltip += '\"'; // Add quotation mark, which got cut off
-            }
-            tooltip = Global::encodeHtmlEntities( tooltip );
-        }
-        if ( tooltip.length() < completeValueString.length() ) {
-            tooltip.prepend( i18nc("@info Always plural",
-                             "<emphasis strong='1'>First %1 characters:</emphasis><nl />", 1000) )
-                   .append( QLatin1String("...") );
-        }
-        newValueItem->setToolTip( tooltip.prepend(QLatin1String("<p>")).append(QLatin1String("</p>")) );
+        newValueItem->setToolTip(
+                variableValueTooltip(completeValueString, encodeValue, endCharacter) );
 
         QList< QStandardItem* > columns;
         columns << newParentItem;
@@ -1637,6 +1744,7 @@ void TimetableMate::addVariableChilds( const QScriptValue &value, const QModelIn
                                    valueString, Qt::DisplayRole );
 
         if ( it.name() == "result" ) {
+            // Add special items for the "result" script object, which is an exposed ResultObject object
             ResultObject *result = qobject_cast< ResultObject* >( it.value().toQObject() );
             Q_ASSERT( result );
             const QString valueString = i18ncp("@info/plain", "%1 result", "%1 results",
@@ -1644,8 +1752,8 @@ void TimetableMate::addVariableChilds( const QScriptValue &value, const QModelIn
             newValueItem->setText( valueString );
             newValueItem->setToolTip( valueString );
 
-            QStandardItem *resultsItem = addRow( newParentItem, i18nc("@info/plain", "Data"),
-                    valueString, KIcon("documentinfo") );
+            ScriptVariableRow resultsItem = addVariableRow( newParentItem,
+                    i18nc("@info/plain", "Data"), valueString, KIcon("documentinfo") );
             int i = 1;
             QList<TimetableInformation> shortInfoTypes = QList<TimetableInformation>()
                     << Target << TargetStopName << DepartureDateTime << DepartureTime << StopName;
@@ -1657,20 +1765,56 @@ void TimetableMate::addVariableChilds( const QScriptValue &value, const QModelIn
                         break;
                     }
                 }
-                QStandardItem *resultItem = addRow( resultsItem,
+                ScriptVariableRow resultItem = addVariableRow( resultsItem.first,
                         i18nc("@info/plain", "Result %1", i),
                         QString("<%1>").arg(shortInfo), KIcon("code-class") );
-                resultItem->setData( i, Qt::UserRole + 1 );
+                resultItem.first->setData( i, Qt::UserRole + 1 );
                 for ( TimetableData::ConstIterator it = data.constBegin();
                       it != data.constEnd(); ++it )
                 {
-                    QStandardItem *item = addRow(
-                            resultItem, Global::timetableInformationToString(it.key()),
-                            it.value().toString().left(100), KIcon("code-variable") );
+                    QString valueString;
+                    const bool isList = it.value().isValid() &&
+                                        it.value().canConvert( QVariant::List );
+                    if ( isList ) {
+                        const QVariantList list = it.value().toList();
+                        QStringList stringList;
+                        int count = 0;
+                        for ( int i = 0; i < list.count(); ++i ) {
+                            const QString str = list[i].toString();
+                            count += str.length();
+                            if ( count > 100 ) {
+                                stringList << "...";
+                                break;
+                            }
+                            stringList << str;
+                        }
+                        valueString = '[' + stringList.join(", ") + ']';
+                    } else {
+                        valueString = it.value().toString();
+                    }
+                    ScriptVariableRow item = addVariableRow( resultItem.first,
+                                    Global::timetableInformationToString(it.key()),
+                                    valueString, KIcon("code-variable") );
+                    QPair<QBrush, QBrush> colors = checkTimetableInformation( it.key(), it.value() );
+                    item.first->setBackground( colors.first );
+                    item.first->setForeground( colors.second );
+                    item.second->setBackground( colors.first );
+                    item.second->setForeground( colors.second );
+
+                    if ( isList ) {
+                        const QVariantList list = it.value().toList();
+                        for ( int i = 0; i < list.count(); ++i ) {
+                            ScriptVariableRow listItem = addVariableRow(
+                                    item.first, QString::number(i + 1), list[i].toString(),
+                                    KIcon("code-variable") );
+                            listItem.first->setData( i, Qt::UserRole + 1 );
+                        }
+                    }
                 }
                 ++i;
             }
         } else if ( it.name() == "network" ) {
+            // Add special items for the "network" script object, which is an exposed Network object
             Network *network = qobject_cast< Network* >( it.value().toQObject() );
             Q_ASSERT( network );
             const QString valueString = i18ncp("@info/plain", "%1 request", "%1 requests",
@@ -1678,17 +1822,18 @@ void TimetableMate::addVariableChilds( const QScriptValue &value, const QModelIn
             newValueItem->setText( valueString );
             newValueItem->setToolTip( valueString );
 
-            QStandardItem *requestsItem = addRow( newParentItem,
+            ScriptVariableRow requestsItem = addVariableRow( newParentItem,
                     i18nc("@info/plain", "Running Requests"), valueString, KIcon("documentinfo") );
             int i = 1;
             foreach ( NetworkRequest *networkRequest, network->runningRequests() ) {
-                QStandardItem *resultItem = addRow( requestsItem,
+                ScriptVariableRow resultItem = addVariableRow( requestsItem.first,
                         i18nc("@info/plain", "Request %1", i),
                         networkRequest->url(), KIcon("code-class") );
-                resultItem->setData( i, Qt::UserRole + 1 );
+                resultItem.first->setData( i, Qt::UserRole + 1 );
                 ++i;
             }
         } else if ( it.name() == "storage" ) {
+            // Add special items for the "storage" script object, which is an exposed Storage object
             Storage *storage = qobject_cast< Storage* >( it.value().toQObject() );
             Q_ASSERT( storage );
             const QVariantMap memory = storage->read();
@@ -1697,15 +1842,15 @@ void TimetableMate::addVariableChilds( const QScriptValue &value, const QModelIn
             newValueItem->setText( valueString );
             newValueItem->setToolTip( valueString );
 
-            QStandardItem *storageItem = addRow( newParentItem,
+            ScriptVariableRow storageItem = addVariableRow( newParentItem,
                     i18nc("@info/plain", "Memory"), valueString, KIcon("documentinfo") );
             int i = 1;
             for ( QVariantMap::ConstIterator it = memory.constBegin();
                   it != memory.constEnd(); ++it )
             {
-                QStandardItem *valueItem = addRow( storageItem,
-                        it.key(), it.value().toString().left(100), KIcon("code-variable") );
-                valueItem->setData( i, Qt::UserRole + 1 );
+                ScriptVariableRow valueItem = addVariableRow( storageItem.first,
+                        it.key(), it.value().toString(), KIcon("code-variable"), true );
+                valueItem.first->setData( i, Qt::UserRole + 1 );
                 ++i;
             }
         } else if ( it.name() == "helper" ) {
@@ -1719,9 +1864,8 @@ void TimetableMate::addVariableChilds( const QScriptValue &value, const QModelIn
             newValueItem->setToolTip( valueString );
         }
 
-        if ( m_variablesModel->rowCount(parent) < 1000 && !it.value().isFunction() /*&&
-             (it.value().isObject() || it.value().isQObject())*/ )
-        {
+        // Recursively add children, not for functions, max 1000 children
+        if ( m_variablesModel->rowCount(parent) < 1000 && !it.value().isFunction() ) {
             addVariableChilds( it.value(), newParentItem->index() );
         }
     }
@@ -2209,15 +2353,6 @@ void TimetableMate::optionsPreferences() {
 //     dialog->setAttribute( Qt::WA_DeleteOnClose );
 //     dialog->show();
 }
-
-// void TimetableMate::toggleBreakpoint()
-// {
-//     setupDebugger();
-//     m_debugger->action( QScriptEngineDebugger::GoToLineAction )->setData(
-//             m_scriptDocument->
-//     );
-//     m_debugger->action( QScriptEngineDebugger::ToggleBreakpointAction )->trigger();
-// }
 
 void TimetableMate::toolsCheck() {
     const TimetableAccessorInfo *info = m_view->accessor()->info();
@@ -3134,14 +3269,11 @@ bool TimetableMate::loadScript()
     m_engine->clearExceptions();
     m_engine->evaluate( m_script->sourceCode(), info->fileName() );
 
-        const QString functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
-//         QScriptValue function = m_context->popScope().property( functionName );
-        QScriptValue function = m_engine->globalObject().property( functionName );
-        if ( !function.isFunction() ) {
-            kDebug() << "Did not find" << functionName << "function in the script!";
-        } else {
-            kDebug() << functionName << "found!";
-        }
+    const QString functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
+    QScriptValue function = m_engine->globalObject().property( functionName );
+    if ( !function.isFunction() ) {
+        kDebug() << "Did not find" << functionName << "function in the script!";
+    }
 
     if ( m_engine->hasUncaughtException() ) {
         kDebug() << "Error in the script" << m_engine->uncaughtExceptionLineNumber()

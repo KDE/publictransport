@@ -72,8 +72,8 @@ ScriptJob::~ScriptJob()
 }
 
 
-ScriptAgent::ScriptAgent(QScriptEngine* engine)
-        : QObject(engine), QScriptEngineAgent::QScriptEngineAgent(engine)
+ScriptAgent::ScriptAgent( QScriptEngine* engine, QObject *parent )
+        : QObject(parent), QScriptEngineAgent(engine)
 {
 }
 
@@ -116,7 +116,7 @@ void ScriptJob::run()
         return;
     }
     kDebug() << "Run script job";
-    kDebug() << "JOB:" << requestInfo()->stop << requestInfo()->dateTime << m_scriptNetwork;
+    kDebug() << "JOB:" << requestInfo()->stop << requestInfo()->dateTime << requestInfo()->parseMode;
 //     emit begin( m_sourceName );
 
     // Store start time of the script
@@ -126,7 +126,7 @@ void ScriptJob::run()
     // Add call to the appropriate function
     QString functionName;
     QScriptValueList arguments = QScriptValueList() << requestInfo()->toScriptValue( m_engine );
-    kDebug() << "StopName" << requestInfo()->toScriptValue( m_engine ).property("StopName").toString();
+    kDebug() << "Stop" << requestInfo()->toScriptValue( m_engine ).property("stop").toString();
     switch ( requestInfo()->parseMode ) {
     case ParseForDeparturesArrivals:
         functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
@@ -147,7 +147,7 @@ void ScriptJob::run()
         m_errorString = "Unknown parse mode";
         m_success = false;
     } else {
-        kDebug() << "Call script function" << m_scriptNetwork.isNull();
+        kDebug() << "Call script function" << functionName;
         if ( m_scriptNetwork.isNull() ) {
             kDebug() << "Deleted ------------------------------------------------";
             m_engine->deleteLater();
@@ -160,6 +160,10 @@ void ScriptJob::run()
 
         // Call script function
         QScriptValue function = m_engine->globalObject().property( functionName );
+        if ( !function.isFunction() ) {
+            kDebug() << "Did not find" << functionName << "function in the script!";
+        }
+
         QScriptValue result = function.call( QScriptValue(), arguments );
         if ( m_engine->hasUncaughtException() ) {
             kDebug() << "Error in the script when calling function" << functionName
