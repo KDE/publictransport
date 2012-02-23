@@ -42,8 +42,14 @@ public:
     /** @brief Gets the TimetableInformation enumerable for the given string. */
     static TimetableInformation timetableInformationFromString( const QString& sTimetableInformation );
 
+    /** @brief Gets a string for the given @p timetableInformation. */
+    static QString timetableInformationToString( TimetableInformation timetableInformation );
+
     /** @brief Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
     static QString decodeHtmlEntities( const QString& html );
+
+    /** @brief Encodes HTML entities in @p html, e.g. "<" is replaced by "&lt;". */
+    static QString encodeHtmlEntities( const QString& html );
 
     /**
      * @brief Decodes the given HTML document.

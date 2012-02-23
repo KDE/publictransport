@@ -275,6 +275,106 @@ TimetableInformation Global::timetableInformationFromString(
     }
 }
 
+QString Global::timetableInformationToString( TimetableInformation timetableInformation )
+{
+    switch ( timetableInformation ) {
+    case Nothing:
+        return "Nothing";
+    case DepartureDateTime:
+        return "DepartureDateTime";
+    case DepartureDate:
+        return "DepartureDate";
+    case DepartureTime:
+        return "DepartureTime";
+    case TypeOfVehicle:
+        return "TypeOfVehicle";
+    case TransportLine:
+        return "TransportLine";
+    case Target:
+        return "Target";
+    case TargetShortened:
+        return "TargetShortened";
+    case Platform:
+        return "Platform";
+    case Delay:
+        return "Delay";
+    case DelayReason:
+        return "DelayReason";
+    case JourneyNews:
+        return "JourneyNews";
+    case JourneyNewsOther:
+        return "JourneyNewsOther";
+    case JourneyNewsLink:
+        return "JourneyNewsLink";
+    case Operator:
+        return "Operator";
+    case Status:
+        return "Status";
+    case Duration:
+        return "Duration";
+    case StartStopName:
+        return "StartStopName";
+    case StartStopID:
+        return "StartStopID";
+    case StopWeight:
+        return "StopWeight";
+    case StopCity:
+        return "StopCity";
+    case StopCountryCode:
+        return "StopCountryCode";
+    case TargetStopName:
+        return "TargetStopName";
+    case TargetStopID:
+        return "TargetStopID";
+    case ArrivalDateTime:
+        return "ArrivalDateTime";
+    case ArrivalDate:
+        return "ArrivalDate";
+    case ArrivalTime:
+        return "ArrivalTime";
+    case Changes:
+        return "Changes";
+    case TypesOfVehicleInJourney:
+        return "TypesOfVehicleInJourney";
+    case Pricing:
+        return "Pricing";
+    case IsNightLine:
+        return "IsNightline";
+    case StopName:
+        return "StopName";
+    case StopID:
+        return "StopID";
+    case RouteStops:
+        return "RouteStops";
+    case RouteStopsShortened:
+        return "RouteStopsShortened";
+    case RouteTimes:
+        return "RouteTimes";
+    case RouteTimesDeparture:
+        return "RouteTimesDeparture";
+    case RouteTimesArrival:
+        return "RouteTimesArrival";
+    case RouteExactStops:
+        return "RouteExactStops";
+    case RouteTypesOfVehicles:
+        return "RouteTypesOfVehicles";
+    case RouteTransportLines:
+        return "RouteTransportLines";
+    case RoutePlatformsDeparture:
+        return "RoutePlatformsDeparture";
+    case RoutePlatformsArrival:
+        return "RoutePlatformsArrival";
+    case RouteTimesDepartureDelay:
+        return "RouteTimesDepartureDelay";
+    case RouteTimesArrivalDelay:
+        return "RouteTimesArrivalDelay";
+
+    default:
+        return QString::number( static_cast<int>(timetableInformation) );
+    }
+}
+
+
 QString Global::decodeHtmlEntities( const QString& html )
 {
     if ( html.isEmpty() ) {
@@ -303,6 +403,26 @@ QString Global::decodeHtmlEntities( const QString& html )
     ret = ret.replace( "&Uuml;", "Ü" );
 
     return ret;
+}
+
+QString Global::encodeHtmlEntities( const QString &html )
+{
+    if ( html.isEmpty() ) {
+        return html;
+    }
+
+    QString ret = html;
+    return ret.replace( " ", "&nbsp;" )
+              .replace( "&", "&amp;" )
+              .replace( "<", "&lt;" )
+              .replace( ">", "&gt;" )
+              .replace( "ß", "&szlig;" )
+              .replace( "ä", "&auml;" )
+              .replace( "Ä", "&Auml;" )
+              .replace( "ö", "&ouml;" )
+              .replace( "Ö", "&Ouml;" )
+              .replace( "ü", "&uuml;" )
+              .replace( "Ü", "&Uuml;" );
 }
 
 QString Global::decodeHtml( const QByteArray& document,
