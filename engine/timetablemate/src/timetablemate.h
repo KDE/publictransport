@@ -38,6 +38,7 @@
 #include <QModelIndex>
 #include <QAbstractItemDelegate>
 
+class KLineEdit;
 class QStandardItem;
 class QStandardItemModel;
 class QPlainTextEdit;
@@ -190,6 +191,7 @@ public slots:
                                       int lineNumber, int columnNumber );
     void markChanged( KTextEditor::Document *document, const KTextEditor::Mark &mark,
                       KTextEditor::MarkInterface::MarkChangeAction action );
+    void sendCommandToConsole( const QString &command );
 
 protected slots:
     void optionsPreferences();
@@ -288,6 +290,7 @@ protected slots:
 
 protected:
     virtual void closeEvent( QCloseEvent *event );
+    virtual bool eventFilter( QObject *source, QEvent *event );
 
 private:
     void setupActions();
@@ -341,6 +344,8 @@ private:
     QString variableValueTooltip( const QString &completeValueString,
                                   bool encodeHtml = false,
                                   const QChar &endCharacter = QChar() ) const;
+    KToolBar *createDockOverviewBar( Qt::ToolBarArea area, const QString &objectName,
+                                     QWidget *parent = 0 );
 
     KTabWidget *m_mainTabBar;
     KParts::PartManager *m_partManager;
@@ -350,13 +355,17 @@ private:
     PublicTransportPreview *m_preview;
     KWebView *m_webview;
     QDockWidget *m_backtraceDock;
+    QDockWidget *m_consoleDock;
     QDockWidget *m_outputDock;
     QDockWidget *m_breakpointDock;
     QDockWidget *m_variablesDock;
     QPlainTextEdit *m_outputWidget;
+    QPlainTextEdit *m_consoleWidget;
+    KLineEdit *m_consoleEdit;
     QStandardItemModel *m_backtraceModel;
     QStandardItemModel *m_breakpointModel;
     QStandardItemModel *m_variablesModel;
+    KToolBar *m_bottomDockOverview;
 
     KUrlComboBox *m_urlBar;
     KComboBox *m_functions;
@@ -386,6 +395,8 @@ private:
     ScriptError m_lastScriptError;
     QStringList m_scriptErrors;
     Debugger *m_debugger;
+    QStringList m_consoleHistory;
+    int m_consoleHistoryIndex;
 };
 
 #endif // _TIMETABLEMATE_H_

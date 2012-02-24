@@ -119,6 +119,54 @@ private:
     QScriptValue m_lastConditionResult;
 };
 
+class DebuggerCommand {
+public:
+    enum Command {
+        InvalidCommand = 0,
+        DebugCommand,
+        HelpCommand,
+        ClearCommand,
+        LineNumberCommand,
+        DebuggerControlCommand,
+        BreakpointCommand
+    };
+
+    DebuggerCommand( Command command, const QStringList &arguments = QStringList() )
+            : m_command(command), m_arguments(arguments)
+    {
+    };
+
+    DebuggerCommand( const QString &name, const QStringList &arguments = QStringList() )
+            : m_command(commandFromName(name)), m_arguments(arguments)
+    {
+    };
+
+    static DebuggerCommand fromString( const QString &str );
+
+    bool isValid() const;
+
+    Command command() const { return m_command; };
+    QStringList arguments() const { return m_arguments; };
+    QString argument( int i = 0 ) const {
+            return i < 0 || i >= m_arguments.count() ? QString() : m_arguments[i].trimmed(); };
+    QString description() const;
+    QString syntax() const;
+
+    /** Normally true. If false, the command is NOT executed in Debugger::runCommand() */
+    bool getsExecutedAutomatically() const;
+
+    static Command commandFromName( const QString &name );
+    static QStringList availableCommands();
+    static QStringList defaultCompletions();
+    static QString commandDescription( Command command );
+    static QString commandSyntax( Command command );
+    static bool getsCommandExecutedAutomatically( Command command );
+
+private:
+    const Command m_command;
+    const QStringList m_arguments;
+};
+
 /**
  * @brief A QScriptEngineAgent that acts as a debugger.
  *
@@ -159,6 +207,17 @@ public:
         DisabledBreakpoint /**< There is a disabled breakpoint in the specific line. */
     };
 
+    enum ExecutionControl {
+        InvalidControlExecution = 0,
+        ControlExecutionContinue,
+        ControlExecutionInterrupt,
+        ControlExecutionAbort,
+        ControlExecutionStepInto,
+        ControlExecutionStepOver,
+        ControlExecutionStepOut,
+        ControlExecutionRunUntil
+    };
+
     /** @brief Execution types. */
     enum ExecutionType {
         ExecuteNotRunning = 0, /**< Script is not running. */
@@ -168,9 +227,12 @@ public:
         ExecuteStepInto, /**< Script is running, will be interrupted at the next statement. */
         ExecuteStepOver, /**< Script is running, will be interrupted at the next statement
                 * in the same context. */
-        ExecuteStepOut /**< Script is running, will be interrupted at the next statement
+        ExecuteStepOut, /**< Script is running, will be interrupted at the next statement
                 * in the parent context. */
-//         ExecuteStepOutOfContext // TODO break after leaving a context (ie. a code block)
+//         ExecuteStepOutOfContext // TODO break after leaving a context (ie. a code block)?
+        ExecuteRunInjectedProgram, /**< A program injected using evaluateInContext() gets executed. */
+        ExecuteStepIntoInjectedProgram /**< A program injected using evaluateInContext() gets
+                 * executed and will be interrupted at the next statement. */
     };
 
     /** @brief Changes between two backtrace queues, returned by compareBacktraces(). */
@@ -186,7 +248,7 @@ public:
         CannotFindNextEvaluatableLine, /**< Cannot find an evaluatable line near the tested line. */
         NextEvaluatableLineAbove, /**< The tested line is not evaluatable, the line above should
                 * be tested next. */
-        NextEvaluatableLineBelow, /**< The tested line is not evaluatable, the line below should
+        NextEvaluatableLineBelow /**< The tested line is not evaluatable, the line below should
                 * be tested next. */
     };
 
@@ -216,10 +278,10 @@ public:
     QList<int> breakpoints() const { return m_breakpoints.keys(); };
 
     /** @brief Remove the given @p breakpoint. */
-    void removeBreakpoint( const Breakpoint &breakpoint );
+    bool removeBreakpoint( const Breakpoint &breakpoint );
 
     /** @brief Remove the breakpoint at @p lineNumber. */
-    void removeBreakpoint( int lineNumber );
+    bool removeBreakpoint( int lineNumber );
 
     /** @brief Add the given @p breakpoint, existing breakpoints at the same line are overwritten. */
     bool addBreakpoint( const Breakpoint &breakpoint );
@@ -270,6 +332,18 @@ public:
     /** @brief The current column number. */
     int columnNumber() const { return m_columnNumber; };
 
+    QScriptValue evaluateInContext( const QString &program, const QString &contextName = QString(),
+                                    bool *hadUncaughtException = 0, int *errorLineNumber = 0,
+                                    QString *errorMessage = 0, QStringList *backtrace = 0,
+                                    bool interruptAtStart = false );
+
+    /** @brief Executes @p command and puts the return value into @p returnValue. */
+    bool executeCommand( const DebuggerCommand &command, QString *returnValue = 0 );
+
+    bool debugControl( ExecutionControl controlType, const QVariant &argument = QVariant(),
+                       QString *errorMessage = 0 );
+    ExecutionControl executionControlFromString( const QString &str );
+
 signals:
     /** @brief The script finished and is no longer running */
     void scriptFinished();
@@ -312,13 +386,13 @@ public slots:
     void checkExecution();
 
     /** @brief Continue script execution until the next statement. */
-    void debugStepInto();
+    void debugStepInto( int count = 1 );
 
     /** @brief Continue script execution until the next statement in the same context. */
-    void debugStepOver();
+    void debugStepOver( int count = 1 );
 
     /** @brief Continue script execution until the current function gets left. */
-    void debugStepOut();
+    void debugStepOut( int count = 1 );
 
     /** @brief Continue script execution until @p lineNumber is reached. */
     void debugRunUntilLineNumber( int lineNumber );
@@ -337,6 +411,10 @@ public slots:
 
     void slotOutput( const QString &outputString, QScriptContext *context ) {
             emit output(outputString, context); };
+
+protected slots:
+    void debugRunInjectedProgram();
+    void debugStepIntoInjectedProgram();
 
 public:
 //     virtual bool supportsExtension( Extension extension ) const { return true; };
@@ -362,6 +440,7 @@ private:
     BacktraceQueue m_lastBacktrace;
 
     ExecutionType m_executionType;
+    int m_repeatExecutionTypeCount;
     QScriptContext *m_lastContext;
     QScriptContext *m_interruptContext;
     bool m_backtraceCleanedup;

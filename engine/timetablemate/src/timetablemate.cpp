@@ -94,6 +94,7 @@
 #include <KDE/KLocale>
 #include <KLineEdit>
 #include <KColorScheme>
+#include <KToggleAction>
 
 #include <unistd.h>
 
@@ -401,8 +402,8 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     // Add backtrace dock
     m_backtraceDock = new QDockWidget( i18nc("@window:title Dock title", "Backtrace"), this );
     m_backtraceDock->setObjectName( "backtrace" );
-    m_backtraceDock->setFeatures( m_backtraceDock->features() |
-                                  QDockWidget::DockWidgetVerticalTitleBar );
+    m_backtraceDock->setFeatures( m_backtraceDock->features() | QDockWidget::DockWidgetVerticalTitleBar );
+    m_backtraceDock->setAllowedAreas( Qt::TopDockWidgetArea | Qt::BottomDockWidgetArea );
     m_backtraceModel = new QStandardItemModel( this );
     m_backtraceModel->setColumnCount( 3 );
     m_backtraceModel->setHeaderData( 0, Qt::Horizontal, i18nc("@title:column", "Depth"), Qt::DisplayRole );
@@ -422,8 +423,8 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     // Add breakpoint dock
     m_breakpointDock = new QDockWidget( i18nc("@window:title Dock title", "Breakpoints"), this );
     m_breakpointDock->setObjectName( "breakpoints" );
-    m_breakpointDock->setFeatures( m_backtraceDock->features() |
-                                   QDockWidget::DockWidgetVerticalTitleBar );
+    m_breakpointDock->setFeatures( m_backtraceDock->features() | QDockWidget::DockWidgetVerticalTitleBar );
+    m_breakpointDock->setAllowedAreas( Qt::TopDockWidgetArea | Qt::BottomDockWidgetArea );
     m_breakpointModel = new QStandardItemModel( this );
     m_breakpointModel->setColumnCount( 5 );
     m_breakpointModel->setHeaderData( 0, Qt::Horizontal, i18nc("@title:column", "Enabled"), Qt::DisplayRole );
@@ -447,17 +448,45 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     // Add output dock
     m_outputDock = new QDockWidget( i18nc("@window:title Dock title", "Output"), this );
     m_outputDock->setObjectName( "output" );
-    m_outputDock->setFeatures( m_backtraceDock->features() |
-                               QDockWidget::DockWidgetVerticalTitleBar );
+    m_outputDock->setFeatures( m_backtraceDock->features() | QDockWidget::DockWidgetVerticalTitleBar );
+    m_outputDock->setAllowedAreas( Qt::TopDockWidgetArea | Qt::BottomDockWidgetArea );
     m_outputWidget = new QPlainTextEdit( this );
     m_outputWidget->setReadOnly( true );
     m_outputDock->setWidget( m_outputWidget );
     m_outputDock->hide();
     addDockWidget( Qt::BottomDockWidgetArea, m_outputDock );
 
+    // Add coonsole dock
+    m_consoleDock = new QDockWidget( i18nc("@window:title Dock title", "Console"), this );
+    m_consoleDock->setObjectName( "console" );
+    m_consoleDock->setFeatures( m_backtraceDock->features() | QDockWidget::DockWidgetVerticalTitleBar );
+    m_consoleDock->setAllowedAreas( Qt::TopDockWidgetArea | Qt::BottomDockWidgetArea );
+    QWidget *consoleContainer = new QWidget( this );
+    m_consoleWidget = new QPlainTextEdit( consoleContainer );
+    m_consoleWidget->setReadOnly( true );
+    m_consoleWidget->setFont( KGlobalSettings::fixedFont() );
+    m_consoleEdit = new KLineEdit( consoleContainer );
+    m_consoleEdit->setClickMessage( i18nc("@info/plain", "Enter a command, eg. '.help'") );
+    m_consoleEdit->setFont( KGlobalSettings::fixedFont() );
+    QVBoxLayout *consoleLayout = new QVBoxLayout( consoleContainer );
+    consoleLayout->setSpacing( 0 );
+    consoleLayout->setContentsMargins( 0, 0, 0, 0 );
+    consoleLayout->addWidget( m_consoleWidget );
+    consoleLayout->addWidget( m_consoleEdit );
+    m_consoleDock->setWidget( consoleContainer );
+    m_consoleDock->hide();
+    addDockWidget( Qt::BottomDockWidgetArea, m_consoleDock );
+    connect( m_consoleEdit, SIGNAL(returnPressed(QString)),
+             this, SLOT(sendCommandToConsole(QString)) );
+    m_consoleHistoryIndex = -1;
+    m_consoleEdit->installEventFilter( this );
+    KCompletion *completion = m_consoleEdit->completionObject();
+    completion->setItems( DebuggerCommand::defaultCompletions() );
+
     // Add variables dock
     m_variablesDock = new QDockWidget( i18nc("@window:title Dock title", "Variables"), this );
     m_variablesDock->setObjectName( "variables" );
+    m_variablesDock->setAllowedAreas( Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea );
     m_variablesModel = new QStandardItemModel( this );
     m_variablesModel->setColumnCount( 2 );
     m_variablesModel->setSortRole( Qt::UserRole + 1 );
@@ -470,6 +499,54 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     m_variablesDock->setWidget( variablesWidget );
     m_variablesDock->hide();
     addDockWidget( Qt::LeftDockWidgetArea, m_variablesDock );
+
+    // Create fixed toolbar to toggle dock widgets (at bottom)
+    KToggleAction *toggleConsoleAction = new KToggleAction(
+            KIcon("utilities-terminal"), i18nc("@info/plain", "Console"), this );
+    KToggleAction *toggleBreakpointAction = new KToggleAction(
+            KIcon("tools-report-bug"), i18nc("@info/plain", "Breakpoints"), this );
+    KToggleAction *toggleBacktraceAction = new KToggleAction(
+            KIcon("view-list-text"), i18nc("@info/plain", "Backtrace"), this );
+    KToggleAction *toggleOutputAction = new KToggleAction(
+            KIcon("system-run"), i18nc("@info/plain", "Output"), this );
+    KToggleAction *toggleVariablesAction = new KToggleAction(
+            KIcon("debugger"), i18nc("@info/plain", "Variables"), this );
+    connect( toggleConsoleAction, SIGNAL(toggled(bool)), m_consoleDock, SLOT(setVisible(bool)) );
+    connect( toggleBreakpointAction, SIGNAL(toggled(bool)), m_breakpointDock, SLOT(setVisible(bool)) );
+    connect( toggleBacktraceAction, SIGNAL(toggled(bool)), m_backtraceDock, SLOT(setVisible(bool)) );
+    connect( toggleOutputAction, SIGNAL(toggled(bool)), m_outputDock, SLOT(setVisible(bool)) );
+    connect( toggleVariablesAction, SIGNAL(toggled(bool)), m_variablesDock, SLOT(setVisible(bool)) );
+    connect( m_consoleDock, SIGNAL(visibilityChanged(bool)), toggleConsoleAction, SLOT(setChecked(bool)) );
+    connect( m_breakpointDock, SIGNAL(visibilityChanged(bool)), toggleBreakpointAction, SLOT(setChecked(bool)) );
+    connect( m_backtraceDock, SIGNAL(visibilityChanged(bool)), toggleBacktraceAction, SLOT(setChecked(bool)) );
+    connect( m_outputDock, SIGNAL(visibilityChanged(bool)), toggleOutputAction, SLOT(setChecked(bool)) );
+    connect( m_variablesDock, SIGNAL(visibilityChanged(bool)), toggleVariablesAction, SLOT(setChecked(bool)) );
+    actionCollection()->addAction( "toggle_dock_console", toggleConsoleAction );
+    actionCollection()->addAction( "toggle_dock_breakpoint", toggleBreakpointAction );
+    actionCollection()->addAction( "toggle_dock_backtrace", toggleBacktraceAction );
+    actionCollection()->addAction( "toggle_dock_output", toggleOutputAction );
+    actionCollection()->addAction( "toggle_dock_variables", toggleVariablesAction );
+
+    QActionGroup *bottomDockOverviewGroup = new QActionGroup( this );
+    bottomDockOverviewGroup->addAction( toggleConsoleAction );
+    bottomDockOverviewGroup->addAction( toggleBreakpointAction );
+    bottomDockOverviewGroup->addAction( toggleBacktraceAction );
+    bottomDockOverviewGroup->addAction( toggleOutputAction );
+//     bottomDockOverviewGroup->addAction( toggleVariablesAction );
+    bottomDockOverviewGroup->setExclusive( true );
+
+    m_bottomDockOverview = createDockOverviewBar( Qt::BottomToolBarArea, "bottomDockOverview", this );
+    m_bottomDockOverview->addActions( bottomDockOverviewGroup->actions() );
+    m_bottomDockOverview->addAction( toggleVariablesAction );
+    addToolBar( Qt::BottomToolBarArea, m_bottomDockOverview );
+
+    KActionMenu *viewDocks = new KActionMenu( i18nc("@action", "&Shown Docks"), this );
+    viewDocks->addAction( toggleConsoleAction );
+    viewDocks->addAction( toggleBreakpointAction );
+    viewDocks->addAction( toggleBacktraceAction );
+    viewDocks->addAction( toggleOutputAction );
+    viewDocks->addAction( toggleVariablesAction );
+    actionCollection()->addAction( QLatin1String("view_docks"), viewDocks );
 
 //     loadTemplate();
     writeScriptTemplate();
@@ -484,6 +561,21 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     action("file_save")->setEnabled( true );
 }
 
+KToolBar *TimetableMate::createDockOverviewBar( Qt::ToolBarArea area, const QString &objectName,
+                                                QWidget *parent )
+{
+    KToolBar *overviewBar = new KToolBar( parent );
+    overviewBar->setObjectName( objectName );
+    overviewBar->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
+    overviewBar->setAllowedAreas( area );
+    overviewBar->setMovable( false );
+    overviewBar->setFloatable( false );
+    overviewBar->setIconDimensions( 16 );
+    overviewBar->hide();
+    addToolBar( area, overviewBar );
+    return overviewBar;
+}
+
 TimetableMate::~TimetableMate() {
     m_recentFilesAction->saveEntries( Settings::self()->config()->group(0) );
     delete m_script;
@@ -496,6 +588,110 @@ TimetableMate::~TimetableMate() {
     m_debugger->abortDebugger();
     m_engine->abortEvaluation();
     m_engine->deleteLater();
+}
+
+bool TimetableMate::eventFilter( QObject *source, QEvent *event )
+{
+    if ( source == m_consoleEdit && event->type() == QEvent::KeyPress ) {
+        QKeyEvent *keyEvent = dynamic_cast<QKeyEvent*>( event );
+        if ( keyEvent ) {
+            switch ( keyEvent->key() ) {
+            case Qt::Key_Up:
+                if ( m_consoleHistoryIndex + 1 < m_consoleHistory.count() ) {
+                    ++m_consoleHistoryIndex;
+                    m_consoleEdit->setText( m_consoleHistory[m_consoleHistoryIndex] );
+                    return true;
+                }
+                break;
+            case Qt::Key_Down:
+                if ( m_consoleHistoryIndex >= 0 ) {
+                    --m_consoleHistoryIndex;
+                    if ( m_consoleHistoryIndex == -1 ) {
+                        m_consoleEdit->clear();
+                    } else {
+                        m_consoleEdit->setText( m_consoleHistory[m_consoleHistoryIndex] );
+                    }
+                    return true;
+                }
+                break;
+            }
+        }
+    }
+
+    return QObject::eventFilter( source, event );
+}
+
+void TimetableMate::sendCommandToConsole( const QString &commandString )
+{
+    if ( commandString.isEmpty() ) {
+        kDebug() << "No command given";
+        return;
+    }
+    if ( !m_debugger ) {
+        kDebug() << "Debugger not running";
+        setupDebugger( InterruptOnExceptions );
+        evaluateScript();
+    }
+
+    // Clear command input edit box
+    m_consoleEdit->clear();
+
+    // Write executed command to console
+    m_consoleWidget->appendHtml( QString("<b> &gt; %1</b>").arg( commandString ) );
+
+    // Store executed command in history (use up/down keys)
+    if ( m_consoleHistory.isEmpty() || m_consoleHistory.first() != commandString ) {
+        m_consoleHistory.prepend( commandString );
+    }
+    m_consoleHistoryIndex = -1;
+
+    // Add executed command to completion object
+    KCompletion *completion = m_consoleEdit->completionObject();
+    if ( !completion->items().contains(commandString) ) {
+        completion->addItem( commandString );
+    }
+
+    // Check if commandString contains a command of the form ".<command> ..."
+    DebuggerCommand command = DebuggerCommand::fromString( commandString );
+    if ( command.isValid() )  {
+        QString returnValue;
+        // Execute the command
+        if ( m_debugger->executeCommand(command, &returnValue) ) {
+            // Currently only the clear command cannot be executed in Debugger
+            // (no access to the console widget)
+            if ( !command.getsExecutedAutomatically() ) {
+                switch ( command.command() ) {
+                case DebuggerCommand::ClearCommand:
+                    m_consoleWidget->clear();
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+
+        // Write return value to console
+        if ( !returnValue.isEmpty() ) {
+            m_consoleWidget->appendHtml( returnValue );
+        }
+    } else {
+        // Evaluate commandString in script context
+        bool error;
+        int errorLineNumber;
+        QString errorMessage;
+        QStringList backtrace;
+        QScriptValue result = m_debugger->evaluateInContext( commandString,
+                i18nc("@info/plain", "Console Command"), &error, &errorLineNumber,
+                &errorMessage, &backtrace );
+        if ( error ) {
+            m_consoleWidget->appendHtml( // TODO KUIT <p>
+                    i18nc("@info", "Error: <message>%1</message><nl />"
+                                   "Backtrace: <message>%2</message>",
+                        errorMessage, backtrace.join("<br />")) );
+        } else {
+            m_consoleWidget->appendHtml( result.toString() );
+        }
+    }
 }
 
 void TimetableMate::clickedBreakpointItem( const QModelIndex &breakpointItem )
@@ -630,7 +826,11 @@ void TimetableMate::backtraceChanged( const BacktraceQueue &backtrace,
         columns << new QStandardItem( QString::number(depth--) ); // Depth
         columns << new QStandardItem( contextString ); // Function
         if ( info.lineNumber() == -1 ) {
-            columns << new QStandardItem( "??" ); // Source
+            if ( info.fileName().isEmpty() ) {
+                columns << new QStandardItem( "??" ); // Source
+            } else {
+                columns << new QStandardItem( info.fileName() ); // Source
+            }
         } else {
             columns << new QStandardItem( QString("%0:%1").arg(info.fileName()).arg(info.lineNumber()) ); // Source
         }
@@ -972,19 +1172,23 @@ void TimetableMate::currentTabChanged( int index ) {
         action("script_previous_function")->setVisible( false );
         action("debug_toggle_breakpoint")->setEnabled( false );
         action("debug_remove_all_breakpoints")->setEnabled( false );
-        m_breakpointDock->hide();
+//         m_breakpointDock->hide();
         m_variablesDock->hide();
         m_backtraceDock->hide();
         m_outputDock->hide();
+        m_consoleDock->hide();
+        m_bottomDockOverview->hide();
     } else if ( index == ScriptTab ) { // go to script tab
         action("script_next_function")->setVisible( true );
         action("script_previous_function")->setVisible( true );
         action("debug_toggle_breakpoint")->setEnabled( true );
         action("debug_remove_all_breakpoints")->setEnabled( true );
+        m_bottomDockOverview->show();
         m_breakpointDock->show();
         if ( m_debugger ) {
             m_variablesDock->show();
             m_outputDock->show();
+            m_consoleDock->show();
             if ( !m_debugger->isInterrupted() ) {
                 m_backtraceDock->show();
             }
@@ -1497,9 +1701,10 @@ void TimetableMate::debugStarted()
     m_scriptNetwork->clear();
     debugContinued();
 
-    m_backtraceDock->show();
-    m_outputDock->show();
-    m_variablesDock->show();
+//     m_backtraceDock->show();
+//     m_outputDock->show();
+//     m_variablesDock->show();
+//     m_consoleDock->show();
     statusBar()->showMessage( i18nc("@info:status", "Script started"), 5000 );
     m_outputWidget->appendHtml( i18nc("@info", "<emphasis strong='1'>Execution started at %1</emphasis>",
                                       QTime::currentTime().toString()) );
@@ -1510,7 +1715,7 @@ void TimetableMate::debugStopped()
 {
     stateChanged( "debug_not_running" );
 
-    m_backtraceDock->hide();
+//     m_backtraceDock->hide();
     statusBar()->showMessage( i18nc("@info:status", "Script finished"), 5000 );
     m_outputWidget->appendHtml( i18nc("@info", "<emphasis strong='1'>Execution ended at %1</emphasis>",
                                       QTime::currentTime().toString()) + "<br />---------------------<br />" );
@@ -3267,7 +3472,7 @@ bool TimetableMate::loadScript()
     // Load the script program in another context
 //     m_context = m_engine->pushContext();
     m_engine->clearExceptions();
-    m_engine->evaluate( m_script->sourceCode(), info->fileName() );
+    m_engine->evaluate( *m_script/*->sourceCode(), info->fileName()*/ );
 
     const QString functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
     QScriptValue function = m_engine->globalObject().property( functionName );

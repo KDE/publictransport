@@ -28,6 +28,8 @@
 	<Action name="script_previous_function" />
 	<Action name="script_next_function" />
 	<Separator/>
+        <Action name="view_docks" />
+        <Separator/>
 	<Merge/>
     </Menu>
 
