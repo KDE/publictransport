@@ -28,7 +28,7 @@ function getStopSuggestions( values  ) {
             "&input=" + values.stop + "&output=html&start=yes";
     var html = network.getSynchronous( url );
 
-    if ( !network.lastDownloadAborted() ) {
+    if ( !network.lastDownloadAborted ) {
         // Find all stop suggestions
         var range = /<select [^>]*id="HFS_input"[^>]*>\s*([\s\S]*?)\s*<\/select>/i.exec( html );
         if ( range == null ) {

@@ -94,7 +94,7 @@ function getJourneys( values ) {
     for ( i = 0; i < 3; ++i ) {
         // Download and parse journey document
         var html = network.getSynchronous( url );
-        if ( network.lastDownloadAborted() ) {
+        if ( network.lastDownloadAborted ) {
             break;
         }
         parseJourneys( html );
@@ -760,7 +760,7 @@ function getStopSuggestions( values  ) {
             "REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G=" + values.stop;
     var json = network.getSynchronous( url );
 
-    if ( !network.lastDownloadAborted() ) {
+    if ( !network.lastDownloadAborted ) {
         // Find all stop suggestions
         var stopRegExp = /{"value":"([^"]*?)","id":"[^"]*?@L=([0-9]+)@[^"]*?"[^}]*?"weight":"(\d+)"[^}]*?}/ig;
         while ( (stop = stopRegExp.exec(json)) ) {
