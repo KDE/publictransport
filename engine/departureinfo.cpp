@@ -410,6 +410,9 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
 {
     QString sLineTypeLower = sLineType.trimmed().toLower();
 
+    // TODO: Remove most special string, eg. german translations like "u-bahn" and
+    //       have the scripts only use correct vehicle type strings
+
     // See http://en.wikipedia.org/wiki/Train_categories_in_Europe
     if ( sLineTypeLower == "u-bahn" ||
             sLineTypeLower == "ubahn" ||
@@ -423,6 +426,7 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == "s_bahn" ||
             sLineTypeLower == "s" ||
             sLineTypeLower == "interurban" ||
+            sLineTypeLower == "interurbantrain" ||
             sLineTypeLower == "rsb" || // "regio-s-bahn", TODO move to au_oebb
             sLineTypeLower.toInt() == static_cast<int>(InterurbanTrain) ) {
         return InterurbanTrain;
@@ -459,6 +463,7 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == "nwb" || // "NordWestBahn", germany
             sLineTypeLower == "osb" || // "Ortenau-S-Bahn GmbH" (no interurban train), germany
             sLineTypeLower == "regional" ||
+            sLineTypeLower == "regionaltrain" ||
             sLineTypeLower == "r" || // austria, switzerland
             sLineTypeLower == "os" || // czech, "Osobní vlak", basic local (stopping) trains
             sLineTypeLower.toInt() == static_cast<int>(RegionalTrain) ) {
@@ -467,7 +472,8 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == "rer" || // france, Reseau Express Regional
             sLineTypeLower == "sp" || // czech, "Spěšný vlak", semi-fast trains (Eilzug)
             sLineTypeLower == "zr" || // slovakia, "Zrýchlený vlak", train serving almost all stations en route fast
-            sLineTypeLower == "regional express" ||
+            sLineTypeLower == "regionalexpress" ||
+            sLineTypeLower == "regionalexpresstrain" ||
             sLineTypeLower == "regional express trains" || // used by gares-en-mouvement.com (france)
             sLineTypeLower.toInt() == static_cast<int>(RegionalExpressTrain) ) {
         return RegionalExpressTrain;
@@ -478,13 +484,16 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == "ex" || // czech, express trains with no supplementary fare, similar to the German Interregio or also Regional-Express
             sLineTypeLower == "express" ||
             sLineTypeLower == "interregional" ||
+            sLineTypeLower == "interregionaltrain" ||
             sLineTypeLower.toInt() == static_cast<int>(InterregionalTrain) ) {
         return InterregionalTrain;
     } else if ( sLineTypeLower == "ec_ic" || // Eurocity / Intercity
             sLineTypeLower == "ic" || // Intercity
             sLineTypeLower == "ec" || // Eurocity
             sLineTypeLower == "intercity" ||
+            sLineTypeLower == "intercitytrain" ||
             sLineTypeLower == "eurocity" ||
+            sLineTypeLower == "eurocitytrain" ||
             sLineTypeLower == "cnl" || // CityNightLine
             sLineTypeLower == "en" || // EuroNight
             sLineTypeLower == "nz" || // "Nachtzug"
@@ -497,7 +506,8 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == "hst" || // great britain
             sLineTypeLower == "est" || // eurostar
             sLineTypeLower == "es" || // eurostar, High-speed, tilting trains for long-distance services
-            sLineTypeLower == "highspeed train" ||
+            sLineTypeLower == "highspeed" ||
+            sLineTypeLower == "highspeedtrain" ||
             sLineTypeLower.toInt() == static_cast<int>(HighSpeedTrain) ) {
         return HighSpeedTrain;
     } else if ( sLineTypeLower == "feet" ||

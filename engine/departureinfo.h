@@ -33,9 +33,6 @@
 #include <QStringList>
 #include <QPointer>
 
-/** @brief Stores information about a departure/arrival/journey/stop suggestion. */
-typedef QHash<TimetableInformation, QVariant> TimetableData;
-
 /**
  * @brief LineService-Flags.
  *

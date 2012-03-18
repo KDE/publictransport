@@ -80,7 +80,7 @@ QString Global::vehicleTypeToString( const VehicleType& vehicleType, bool plural
     case Subway:
         return plural ? i18nc( "@info/plain", "subways" )
                : i18nc( "@info/plain", "subway" );
-    case TrainInterurban:
+    case InterurbanTrain:
         return plural ? i18nc( "@info/plain", "interurban trains" )
                : i18nc( "@info/plain", "interurban train" );
     case Metro:
@@ -90,23 +90,18 @@ QString Global::vehicleTypeToString( const VehicleType& vehicleType, bool plural
         return plural ? i18nc( "@info/plain", "trolley buses" )
                : i18nc( "@info/plain", "trolley bus" );
 
-//     case TrainRegional: // DEPRECATED
     case RegionalTrain:
         return plural ? i18nc( "@info/plain", "regional trains" )
                : i18nc( "@info/plain", "regional train" );
-//     case TrainRegionalExpress: // DEPRECATED
     case RegionalExpressTrain:
         return plural ? i18nc( "@info/plain", "regional express trains" )
                : i18nc( "@info/plain", "regional express train" );
-//     case TrainInterregio: // DEPRECATED
     case InterregionalTrain:
         return plural ? i18nc( "@info/plain", "interregional trains" )
                : i18nc( "@info/plain", "interregional train" );
-//     case TrainIntercityEurocity: // DEPRECATED
     case IntercityTrain:
         return plural ? i18nc( "@info/plain", "intercity / eurocity trains" )
                : i18nc( "@info/plain", "intercity / eurocity train" );
-//     case TrainIntercityExpress: // DEPRECATED
     case HighSpeedTrain:
         return plural ? i18nc( "@info/plain", "intercity express trains" )
                : i18nc( "@info/plain", "intercity express train" );
@@ -387,22 +382,20 @@ QString Global::decodeHtmlEntities( const QString& html )
     int pos = 0;
     while ( (pos = rx.indexIn(ret, pos)) != -1 ) {
         const int charCode = rx.cap( 1 ).toInt();
-        ret = ret.replace( QString("&#%1;").arg(charCode), QChar(charCode) );
+        ret.replace( QString("&#%1;").arg(charCode), QChar(charCode) );
     }
 
-    ret = ret.replace( "&nbsp;", " " );
-    ret = ret.replace( "&amp;", "&" );
-    ret = ret.replace( "&lt;", "<" );
-    ret = ret.replace( "&gt;", ">" );
-    ret = ret.replace( "&szlig;", "ß" );
-    ret = ret.replace( "&auml;", "ä" );
-    ret = ret.replace( "&Auml;", "Ä" );
-    ret = ret.replace( "&ouml;", "ö" );
-    ret = ret.replace( "&Ouml;", "Ö" );
-    ret = ret.replace( "&uuml;", "ü" );
-    ret = ret.replace( "&Uuml;", "Ü" );
-
-    return ret;
+    return ret.replace( QLatin1String("&nbsp;"), QLatin1String(" ") )
+              .replace( QLatin1String("&amp;"), QLatin1String("&") )
+              .replace( QLatin1String("&lt;"), QLatin1String("<") )
+              .replace( QLatin1String("&gt;"), QLatin1String(">") )
+              .replace( QLatin1String("&szlig;"), QLatin1String("ß") )
+              .replace( QLatin1String("&auml;"), QLatin1String("ä") )
+              .replace( QLatin1String("&Auml;"), QLatin1String("Ä") )
+              .replace( QLatin1String("&ouml;"), QLatin1String("ö") )
+              .replace( QLatin1String("&Ouml;"), QLatin1String("Ö") )
+              .replace( QLatin1String("&uuml;"), QLatin1String("ü") )
+              .replace( QLatin1String("&Uuml;"), QLatin1String("Ü") );
 }
 
 QString Global::encodeHtmlEntities( const QString &html )
@@ -412,17 +405,17 @@ QString Global::encodeHtmlEntities( const QString &html )
     }
 
     QString ret = html;
-    return ret.replace( " ", "&nbsp;" )
-              .replace( "&", "&amp;" )
-              .replace( "<", "&lt;" )
-              .replace( ">", "&gt;" )
-              .replace( "ß", "&szlig;" )
-              .replace( "ä", "&auml;" )
-              .replace( "Ä", "&Auml;" )
-              .replace( "ö", "&ouml;" )
-              .replace( "Ö", "&Ouml;" )
-              .replace( "ü", "&uuml;" )
-              .replace( "Ü", "&Uuml;" );
+    return ret.replace( QLatin1String(" "), QLatin1String("&nbsp;") )
+              .replace( QLatin1String("&"), QLatin1String("&amp;") )
+              .replace( QLatin1String("<"), QLatin1String("&lt;") )
+              .replace( QLatin1String(">"), QLatin1String("&gt;") )
+              .replace( QLatin1String("ß"), QLatin1String("&szlig;") )
+              .replace( QLatin1String("ä"), QLatin1String("&auml;") )
+              .replace( QLatin1String("Ä"), QLatin1String("&Auml;") )
+              .replace( QLatin1String("ö"), QLatin1String("&ouml;") )
+              .replace( QLatin1String("Ö"), QLatin1String("&Ouml;") )
+              .replace( QLatin1String("ü"), QLatin1String("&uuml;") )
+              .replace( QLatin1String("Ü"), QLatin1String("&Uuml;") );
 }
 
 QString Global::decodeHtml( const QByteArray& document,
