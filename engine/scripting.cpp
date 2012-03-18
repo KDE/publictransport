@@ -42,14 +42,16 @@
 #include <QReadLocker>
 #include <QWriteLocker>
 
+namespace Scripting {
+
 NetworkRequest::NetworkRequest( QObject* parent )
-        : QObject(parent), m_network(0), m_request(0), m_reply(0)
+        : QObject(parent), m_network(0), m_isFinished(false), m_request(0), m_reply(0)
 {
     kDebug() << "Create INVALID request";
 }
 
 NetworkRequest::NetworkRequest( const QString& url, Network *network, QObject* parent )
-        : QObject(parent), m_url(url), m_network(network),
+        : QObject(parent), m_url(url), m_network(network), m_isFinished(false),
           m_request(new QNetworkRequest(url)), m_reply(0)
 {
     kDebug() << "Create request" << url;
@@ -71,9 +73,7 @@ void NetworkRequest::abort()
     }
 
     m_reply->abort();
-    if ( m_reply ) {
-        m_reply->deleteLater();
-    }
+    m_reply->deleteLater();
     m_reply = 0;
 
     emit aborted();
@@ -111,6 +111,7 @@ void NetworkRequest::slotFinished()
     m_reply = 0;
     m_data.clear();
 
+    m_isFinished = true;
     emit finished( string );
 }
 
@@ -239,6 +240,7 @@ Network::Network( const QByteArray &fallbackCharset, QObject* parent )
         : QObject(parent), m_fallbackCharset(fallbackCharset),
           m_manager(new QNetworkAccessManager(this)), m_quit(false), m_lastDownloadAborted(false)
 {
+    qRegisterMetaType<NetworkRequest*>( "NetworkRequest*" );
     ++networkObjects;
     kDebug() << "Create Network object" << thread() << networkObjects;
 }
@@ -308,9 +310,10 @@ void Network::slotRequestAborted()
     m_runningRequests.removeOne( request );
     emit requestAborted( request );
 
-    if ( m_runningRequests.isEmpty() ) {
-        emit allRequestsFinished();
-    }
+    // TEST already gets emitted in slotRequestFinished()
+//     if ( m_runningRequests.isEmpty() ) {
+//         emit allRequestsFinished();
+//     }
 }
 
 bool Network::checkRequest( NetworkRequest* request )
@@ -325,6 +328,9 @@ bool Network::checkRequest( NetworkRequest* request )
     // The same request can not be executed more than once at a time
     if ( request->isRunning() ) {
         kDebug() << "Request is currently running" << request->url();
+        return false;
+    } else if ( request->isFinished() ) {
+        kDebug() << "Request is already finished" << request->url();
         return false;
     }
 
@@ -383,7 +389,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
     QNetworkReply *reply = m_manager->get( request );
     m_lastUrl = url;
     m_lastDownloadAborted = false;
-    QTime start = QTime::currentTime();
+    const QTime start = QTime::currentTime();
 
     // Use an event loop to wait for execution of the request,
     // ie. make netAccess.download() synchronous for scripts
@@ -407,7 +413,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
         return QString();
     }
 
-    int time = start.msecsTo( QTime::currentTime() );
+    const int time = start.msecsTo( QTime::currentTime() );
     kDebug() << "Waited" << ( time / 1000.0 ) << "seconds for download of" << url;
 
     // Read all data, decode it and give it to the script
@@ -435,6 +441,12 @@ void ResultObject::giveHint( ResultObject::Hint hint, bool enable )
 {
     QMutexLocker locker( &m_mutex );
     if ( enable ) {
+        // Remove incompatible flags of hint if any
+        if ( hint == CityNamesAreLeft && m_hints.testFlag(CityNamesAreRight) ) {
+            m_hints &= ~CityNamesAreRight;
+        } else if ( hint == CityNamesAreRight && m_hints.testFlag(CityNamesAreLeft) ) {
+            m_hints &= ~CityNamesAreLeft;
+        }
         m_hints |= hint;
     } else {
         m_hints &= ~hint;
@@ -789,9 +801,10 @@ QString Helper::trim( const QString& str )
 
 QString Helper::stripTags( const QString& str )
 {
-    QRegExp rx( "<\\/?[^>]+>" );
+    const QString attributePattern = "\\w+(?:\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\"'>\\s]+))?";
+    QRegExp rx( QString("<\\/?\\w+(?:\\s+%1)*(?:\\s*/)?>").arg(attributePattern) );
     rx.setMinimal( true );
-    return QString( str ).replace( rx, "" );
+    return QString( str ).remove( rx );
 }
 
 QString Helper::camelCase( const QString& str )
@@ -799,11 +812,12 @@ QString Helper::camelCase( const QString& str )
     QString ret = str.toLower();
     QRegExp rx( "(^\\w)|\\W(\\w)" );
     int pos = 0;
-    while (( pos = rx.indexIn( ret, pos ) ) != -1 ) {
-        if ( rx.pos( 2 ) < 0 || rx.pos( 2 ) >= ret.length() ) { // TODO
-            break;
+    while ( (pos = rx.indexIn(ret, pos)) != -1 ) {
+        if ( rx.pos(2) == -1 || rx.pos(2) >= ret.length() ) { // TODO
+            ret[ rx.pos(1) ] = ret[ rx.pos(1) ].toUpper();
+        } else {
+            ret[ rx.pos(2) ] = ret[ rx.pos(2) ].toUpper();
         }
-        ret[ rx.pos( 2 )] = ret[ rx.pos( 2 )].toUpper();
         pos += rx.matchedLength();
     }
     return ret;
@@ -939,18 +953,6 @@ QDateTime Helper::addDaysToDate( const QDateTime& dateTime, int daysToAdd )
     return dateTime.addDays( daysToAdd );
 }
 
-QVariantList Helper::addDaysToDateArray( const QVariantList& values, int daysToAdd )
-{
-    if ( values.count() != 3 ) {
-        kDebug() << "The first argument needs to be a list with three values (year, month, day)";
-        return values;
-    }
-
-    QDate date( values[0].toInt(), values[1].toInt(), values[2].toInt() );
-    date = date.addDays( daysToAdd );
-    return QVariantList() << date.year() << date.month() << date.day();
-}
-
 QStringList Helper::splitSkipEmptyParts( const QString& str, const QString& sep )
 {
     return str.split( sep, QString::SkipEmptyParts );
@@ -1070,7 +1072,7 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
     const bool noContent = options.value( "noContent", false ).toBool();
     const bool noNesting = options.value( "noNesting", false ).toBool();
     const bool debug = options.value( "debug", false ).toBool();
-    const QString contentsRegExpPattern = options.value( "contentsRegExp", "\\s*(.*)\\s*" ).toString();
+    const QString contentsRegExpPattern = options.value( "contentsRegExp", QString() ).toString();
     const QVariantMap namePosition = options[ "namePosition" ].toMap();
     int position = options.value( "position", 0 ).toInt();
 
@@ -1113,7 +1115,9 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
         QVariantMap foundAttributes;
         int attributePos = 0;
         while ( (attributePos = attributeRegExp.indexIn(attributeString, attributePos)) != -1 ) {
-            foundAttributes.insert( attributeRegExp.cap(1), attributeRegExp.cap(2) );
+            const int valueCap = attributeRegExp.cap(2).isEmpty() ?
+                    (attributeRegExp.cap(3).isEmpty() ? 4 : 3) : 2;
+            foundAttributes.insert( attributeRegExp.cap(1), attributeRegExp.cap(valueCap) );
             attributePos += attributeRegExp.matchedLength();
         }
         if ( debug ) {
@@ -1163,13 +1167,13 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
                 }
             }
         }
-        if ( !attributesMatch ) {
-            position = htmlTagRegExp.pos() + htmlTagRegExp.matchedLength();
-            continue;
-        }
 
         // Search for new opening HTML tags (with same tag name) before the closing HTML tag
         int endPosition = htmlTagRegExp.pos() + htmlTagRegExp.matchedLength();
+        if ( !attributesMatch ) {
+            position = endPosition;
+            continue;
+        }
         if ( !noContent ) {
             if ( noNesting ) {
                 // "noNesting" option set, simply search for next closing tag, no matter if it is
@@ -1189,6 +1193,7 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
                     if ( debug ) {
                         kDebug() << "Closing tag" << tagName << "could not be found";
                     }
+                    position = endPosition;
                     continue;
                 }
 
@@ -1217,16 +1222,22 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
             }
         }
 
-        // Match contents
-        if ( contentsRegExp.indexIn(tagContents) == -1 ) {
-            if ( debug ) {
-                kDebug() << "Did not match tag contents" << tagContents.left(500);
+        // Match contents, only use regular expression if one was given in the options argument
+        if ( !contentsRegExpPattern.isEmpty() ) {
+            if ( contentsRegExp.indexIn(tagContents) == -1 ) {
+                if ( debug ) {
+                    kDebug() << "Did not match tag contents" << tagContents.left(500);
+                }
+                position = endPosition;
+                continue;
+            } else {
+                // Use first matched group as contents string, if any
+                // Otherwise use the whole match as contents string
+                tagContents = contentsRegExp.cap( contentsRegExp.captureCount() <= 1 ? 0 : 1 );
             }
-            continue;
         } else {
-            // Use first matched group as contents string, if any. Otherwise use the whole match
-            // as contents string.
-            tagContents = contentsRegExp.cap( contentsRegExp.captureCount() <= 1 ? 0 : 1 );
+            // No regexp pattern for contents, use complete contents, but trimmed
+            tagContents = tagContents.trimmed();
         }
 
         // Construct a result object
@@ -1328,9 +1339,53 @@ QVariantMap Helper::findNamedHtmlTags( const QString &str, const QString &tagNam
 
 const char* Storage::LIFETIME_ENTRYNAME_SUFFIX = "__expires__";
 
+class StoragePrivate {
+public:
+    StoragePrivate( const QString &serviceProvider )
+            : readWriteLock(new QReadWriteLock), readWriteLockPersistent(new QReadWriteLock),
+              serviceProvider(serviceProvider), lastLifetimeCheck(0), config(0) {
+    };
+
+    ~StoragePrivate() {
+        delete readWriteLock;
+        delete readWriteLockPersistent;
+        delete config;
+    };
+
+    void readPersistentData() {
+        // TODO: Use TimetableAccessor::accessorCacheFileName() from GTFS branch
+        const QString fileName = KGlobal::dirs()->saveLocation("data",
+                "plasma_engine_publictransport/").append( QLatin1String("datacache"));
+        config = new KConfig( fileName, KConfig::SimpleConfig );
+//         lastPersistentGroup = config->group( serviceProvider ).group( QLatin1String("storage") );
+    };
+
+    KConfigGroup persistentGroup() {
+        if ( !config ) {
+            readPersistentData();
+        }
+        return config->group( serviceProvider ).group( QLatin1String("storage") );
+    };
+
+    quint16 checkLength( const QByteArray &data ) {
+        if ( data.length() > 65535 ) {
+            kDebug() << "Data is too long, only 65535 bytes are supported" << data.length();
+        }
+
+        return static_cast<quint16>( data.length() );
+    };
+
+    QReadWriteLock *readWriteLock;
+    QReadWriteLock *readWriteLockPersistent;
+    QVariantMap data;
+    const QString serviceProvider;
+    uint lastLifetimeCheck; // as time_t
+    KConfig *config;
+    KConfigGroup lastPersistentGroup;
+};
+
 Storage::Storage( const QString &serviceProvider, QObject* parent )
-        : QObject(parent), m_readWriteLock(new QReadWriteLock),
-          m_serviceProvider(serviceProvider), m_lastLifetimeCheck(0)
+        : QObject(parent), d(new StoragePrivate(serviceProvider))
 {
     // Delete persistently stored data which lifetime has expired
     checkLifetime();
@@ -1338,7 +1393,7 @@ Storage::Storage( const QString &serviceProvider, QObject* parent )
 
 Storage::~Storage()
 {
-    delete m_readWriteLock;
+    delete d;
 }
 
 void Storage::write( const QVariantMap& data )
@@ -1350,53 +1405,49 @@ void Storage::write( const QVariantMap& data )
 
 void Storage::write( const QString& name, const QVariant& data )
 {
-    QWriteLocker locker( m_readWriteLock );
-    m_data.insert( name, data );
+    QWriteLocker locker( d->readWriteLock );
+    d->data.insert( name, data );
 }
 
 QVariantMap Storage::read()
 {
-    QReadLocker locker( m_readWriteLock );
-    return m_data;
+    QReadLocker locker( d->readWriteLock );
+    return d->data;
 }
 
 QVariant Storage::read( const QString& name, const QVariant& defaultData )
 {
-    QReadLocker locker( m_readWriteLock );
-    return m_data.contains(name) ? m_data[name] : defaultData;
+    QReadLocker locker( d->readWriteLock );
+    return d->data.contains(name) ? d->data[name] : defaultData;
 }
 
 void Storage::remove( const QString& name )
 {
-    QWriteLocker locker( m_readWriteLock );
-    m_data.remove( name );
+    QWriteLocker locker( d->readWriteLock );
+    d->data.remove( name );
 }
 
 void Storage::clear()
 {
-    QWriteLocker locker( m_readWriteLock );
-    m_data.clear();
+    QWriteLocker locker( d->readWriteLock );
+    d->data.clear();
 }
 
 int Storage::lifetime( const QString& name )
 {
-    const QString fileName = KGlobal::dirs()->saveLocation("data",
-            "plasma_engine_publictransport/").append( QLatin1String("datacache"));
-    KConfig cfg( fileName, KConfig::SimpleConfig );
-    KConfigGroup group = cfg.group( m_serviceProvider ).group( QLatin1String("storage") );
-    return lifetime( name, group );
+    return lifetime( name, d->persistentGroup() );
 }
 
 int Storage::lifetime( const QString& name, const KConfigGroup& group )
 {
-    QReadLocker locker( m_readWriteLockPersistent );
+    QReadLocker locker( d->readWriteLockPersistent );
     const uint lifetimeTime_t = group.readEntry( name + LIFETIME_ENTRYNAME_SUFFIX, 0 );
     return QDateTime::currentDateTime().daysTo( QDateTime::fromTime_t(lifetimeTime_t) );
 }
 
 void Storage::checkLifetime()
 {
-    if ( QDateTime::currentDateTime().toTime_t() - m_lastLifetimeCheck <
+    if ( QDateTime::currentDateTime().toTime_t() - d->lastLifetimeCheck <
          MIN_LIFETIME_CHECK_INTERVAL * 60 )
     {
         // Last lifetime check was less than 15 minutes ago
@@ -1404,30 +1455,204 @@ void Storage::checkLifetime()
     }
 
     // Try to load script features from a cache file
-    // TODO: Use TimetableAccessor::accessorCacheFileName() from GTFS branch
-    const QString fileName = KGlobal::dirs()->saveLocation("data",
-            "plasma_engine_publictransport/").append( QLatin1String("datacache"));
-    KConfig cfg( fileName, KConfig::SimpleConfig );
-    KConfigGroup group = cfg.group( m_serviceProvider ).group( QLatin1String("storage") );
+    KConfigGroup group = d->persistentGroup();
     QMap< QString, QString > data = group.entryMap();
     for ( QMap< QString, QString >::ConstIterator it = data.constBegin();
           it != data.constEnd(); ++it )
     {
+        if ( it.key().endsWith(LIFETIME_ENTRYNAME_SUFFIX) ) {
+            // Do not check lifetime of entries which store the lifetime of the real data entries
+            continue;
+        }
         const int remainingLifetime = lifetime( it.key(), group );
         if ( remainingLifetime <= 0 ) {
             // Lifetime has expired
-            kDebug() << "Lifetime of storage data" << it.key() << "for" << m_serviceProvider
+            kDebug() << "Lifetime of storage data" << it.key() << "for" << d->serviceProvider
                      << "has expired" << remainingLifetime;
             removePersistent( it.key(), group );
         }
     }
 
-    m_lastLifetimeCheck = QDateTime::currentDateTime().toTime_t();
+    d->lastLifetimeCheck = QDateTime::currentDateTime().toTime_t();
+}
+
+bool Storage::hasData( const QString &name ) const
+{
+    QReadLocker locker( d->readWriteLock );
+    return d->data.contains( name );
+}
+
+bool Storage::hasPersistentData( const QString &name ) const
+{
+    KConfigGroup group = d->persistentGroup();
+    QReadLocker locker( d->readWriteLockPersistent );
+    return group.hasKey( name );
+}
+
+QByteArray Storage::encodeData( const QVariant &data ) const
+{
+    // Store the type of the variant, because it is needed to read the QVariant with the correct
+    // type using KConfigGroup::readEntry()
+    const uchar type = static_cast<uchar>( data.type() );
+    if ( type >= QVariant::LastCoreType ) {
+        kDebug() << "Invalid data type, only QVariant core types are supported" << data.type();
+        return QByteArray();
+    }
+
+    // Write type into the first byte
+    QByteArray encodedData;
+    encodedData[0] = type;
+
+    // Write data
+    if ( data.canConvert(QVariant::ByteArray) ) {
+        encodedData += data.toByteArray();
+    } else if ( data.canConvert(QVariant::String) ) {
+        encodedData += data.toString().toUtf8();
+    } else {
+        switch ( data.type() ) {
+        case QVariant::StringList:
+        case QVariant::List: {
+            // Lists are stored like this (one entry after the other):
+            // "<2 Bytes: Value length><Value>"
+            const QVariantList list = data.toList();
+            foreach ( const QVariant &item, list ) {
+                // Encode current list item
+                QByteArray encodedItem = encodeData( item );
+
+                // Construct a QByteArray which contains the length in two bytes (0 .. 65535)
+                const quint16 length = d->checkLength( encodedItem );
+                const QByteArray baLength( (const char*)&length, sizeof(length) );
+
+                // Use 2 bytes for the length of the data, append data
+                encodedData += baLength;
+                encodedData += encodedItem;
+            }
+            break;
+        }
+        case QVariant::Map: {
+            // Maps are stored like this (one entry after the other):
+            // "<2 Bytes: Key length><Key><2 Bytes: Value length><Value>"
+            const QVariantMap map = data.toMap();
+            for ( QVariantMap::ConstIterator it = map.constBegin(); it != map.constEnd(); ++it ) {
+                // Encode current key and value
+                QByteArray encodedKey = it.key().toUtf8();
+                QByteArray encodedValue = encodeData( it.value() );
+
+                // Construct QByteArrays which contain the lengths in two bytes each (0 .. 65535)
+                const quint16 lengthKey = d->checkLength( encodedKey );
+                const quint16 lengthValue = d->checkLength( encodedValue );
+                const QByteArray baLengthKey( (const char*)&lengthKey, sizeof(lengthKey) );
+                const QByteArray baLengthValue( (const char*)&lengthValue, sizeof(lengthValue) );
+
+                // Use 2 bytes for the length of the key, append key
+                encodedData += baLengthKey;
+                encodedData += encodedKey;
+
+                // Use 2 bytes for the length of the value, append value
+                encodedData += baLengthValue;
+                encodedData += encodedValue;
+            }
+            break;
+        }
+        default:
+            kDebug() << "Cannot convert from type" << data.type();
+            return QByteArray();
+        }
+    }
+
+    return encodedData;
+}
+
+QVariant Storage::decodeData( const QByteArray &data ) const
+{
+    const QVariant::Type type = static_cast<QVariant::Type>( data[0] );
+    if ( type >= QVariant::LastCoreType ) {
+        kDebug() << "Invalid encoding for data" << data;
+        return QVariant();
+    }
+
+    const QByteArray encodedValue = data.mid( 1 );
+    QVariant value( type );
+    value.setValue( encodedValue );
+    if ( value.canConvert( type ) ) {
+        value.convert( type );
+        return value;
+    } else {
+        switch ( type ) {
+        case QVariant::Date:
+            // QVariant::toString() uses Qt::ISODate to convert QDate to string
+            return QDate::fromString( value.toString(), Qt::ISODate );
+        case QVariant::Time:
+            return QTime::fromString( value.toString() );
+        case QVariant::DateTime:
+            // QVariant::toString() uses Qt::ISODate to convert QDateTime to string
+            return QDateTime::fromString( value.toString(), Qt::ISODate );
+        case QVariant::StringList:
+        case QVariant::List: {
+            // Lists are stored like this (one entry after the other):
+            // "<2 Bytes: Value length><Value>"
+            QVariantList decoded;
+            QByteArray encoded = value.toByteArray();
+            int pos = 0;
+            while ( pos + 2 < encoded.length() ) {
+                const quint16 length = *reinterpret_cast<quint16*>( encoded.mid(pos, 2).data() );
+                if ( pos + 2 + length > encoded.length() ) {
+                    kDebug() << "Invalid list data" << encoded;
+                    return QVariant();
+                }
+                const QByteArray encodedValue = encoded.mid( pos + 2, length );
+                const QVariant decodedValue = decodeData( encodedValue );
+                decoded << decodedValue;
+
+                pos += 2 + length;
+            }
+            return decoded;
+        }
+        case QVariant::Map: {
+            // Maps are stored like this (one entry after the other):
+            // "<2 Bytes: Key length><Key><2 Bytes: Value length><Value>"
+            QVariantMap decoded;
+            const QByteArray encoded = value.toByteArray();
+            int pos = 0;
+            while ( pos + 4 < encoded.length() ) {
+                // Decode two bytes to quint16, this is the key length
+                const quint16 keyLength = *reinterpret_cast<quint16*>( encoded.mid(pos, 2).data() );
+                if ( pos + 4 + keyLength > encoded.length() ) { // + 4 => 2 Bytes for keyLength + 2 Bytes for valueLength
+                    kDebug() << "Invalid map data" << encoded;
+                    return QVariant();
+                }
+
+                // Extract key, starting after the two bytes for the key length
+                const QString key = encoded.mid( pos + 2, keyLength );
+                pos += 2 + keyLength;
+
+                // Decode two bytes to quint16, this is the value length
+                const quint16 valueLength = *reinterpret_cast<quint16*>( encoded.mid(pos, 2).data() );
+                if ( pos + 2 + valueLength > encoded.length() ) {
+                    qDebug() << "Invalid map data" << encoded;
+                    return QVariant();
+                }
+
+                // Extract and decode value, starting after the two bytes for the value length
+                const QByteArray encodedValue = encoded.mid( pos + 2, valueLength );
+                const QVariant decodedValue = decodeData( encodedValue );
+                pos += 2 + valueLength;
+
+                // Insert decoded value into the result map
+                decoded.insert( key, decodedValue );
+            }
+            return decoded;
+        }
+        default:
+            kDebug() << "Cannot convert to type" << type;
+            return QVariant();
+        }
+    }
 }
 
 void Storage::writePersistent( const QVariantMap& data, uint lifetime )
 {
-    QWriteLocker locker( m_readWriteLockPersistent );
+    QWriteLocker locker( d->readWriteLockPersistent );
     for ( QVariantMap::ConstIterator it = data.constBegin(); it != data.constEnd(); ++it ) {
         writePersistent( it.key(), it.value(), lifetime );
     }
@@ -1440,34 +1665,29 @@ void Storage::writePersistent( const QString& name, const QVariant& data, uint l
     }
 
     // Try to load script features from a cache file
-    // TODO: Use TimetableAccessor::accessorCacheFileName() from GTFS branch
-    const QString fileName = KGlobal::dirs()->saveLocation("data",
-            "plasma_engine_publictransport/").append( QLatin1String("datacache"));
-    KConfig cfg( fileName, KConfig::SimpleConfig );
-    KConfigGroup group = cfg.group( m_serviceProvider ).group( QLatin1String("storage") );
+    KConfigGroup group = d->persistentGroup();
 
-    QWriteLocker locker( m_readWriteLockPersistent );
+    QWriteLocker locker( d->readWriteLockPersistent );
     group.writeEntry( name + LIFETIME_ENTRYNAME_SUFFIX,
                       QDateTime::currentDateTime().addDays(lifetime).toTime_t() );
-    group.writeEntry( name, data );
+    group.writeEntry( name, encodeData(data) );
 }
 
 QVariant Storage::readPersistent( const QString& name, const QVariant& defaultData )
 {
     // Try to load script features from a cache file
     // TODO: Use TimetableAccessor::accessorCacheFileName() from GTFS branch
-    const QString fileName = KGlobal::dirs()->saveLocation("data",
-            "plasma_engine_publictransport/").append( QLatin1String("datacache"));
-    KConfig cfg( fileName, KConfig::SimpleConfig );
-    KConfigGroup grp = cfg.group( m_serviceProvider ).group( QLatin1String("storage") );
-
-    QReadLocker locker( m_readWriteLockPersistent );
-    return grp.readEntry( name, defaultData );
+    QReadLocker locker( d->readWriteLockPersistent );
+    if ( defaultData.isValid() ) {
+        return d->persistentGroup().readEntry( name, defaultData );
+    } else {
+        return decodeData( d->persistentGroup().readEntry(name, QByteArray()) );
+    }
 }
 
 void Storage::removePersistent( const QString& name, KConfigGroup& group )
 {
-    QWriteLocker locker( m_readWriteLockPersistent );
+    QWriteLocker locker( d->readWriteLockPersistent );
     group.deleteEntry( name + LIFETIME_ENTRYNAME_SUFFIX );
     group.deleteEntry( name );
 }
@@ -1475,21 +1695,16 @@ void Storage::removePersistent( const QString& name, KConfigGroup& group )
 void Storage::removePersistent( const QString& name )
 {
     // Try to load script features from a cache file
-    // TODO: Use TimetableAccessor::accessorCacheFileName() from GTFS branch
-    const QString fileName = KGlobal::dirs()->saveLocation("data",
-            "plasma_engine_publictransport/").append( QLatin1String("datacache"));
-    KConfig cfg( fileName, KConfig::SimpleConfig );
-    KConfigGroup group = cfg.group( m_serviceProvider ).group( QLatin1String("storage") );
+    KConfigGroup group = d->persistentGroup();
     removePersistent( name, group );
 }
 
 void Storage::clearPersistent()
 {
     // Try to load script features from a cache file
-    // TODO: Use TimetableAccessor::accessorCacheFileName() from GTFS branch
-    const QString fileName = KGlobal::dirs()->saveLocation("data",
-            "plasma_engine_publictransport/").append( QLatin1String("datacache"));
-    KConfig cfg( fileName, KConfig::SimpleConfig );
-    KConfigGroup group = cfg.group( m_serviceProvider ).group( QLatin1String("storage") );
-    group.deleteGroup();
+    d->persistentGroup().deleteGroup();
 }
+
+#include "scripting.moc"
+
+}; // namespace Scripting

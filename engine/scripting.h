@@ -44,12 +44,16 @@ class QReadWriteLock;
 class QNetworkReply;
 class QNetworkAccessManager;
 class KConfigGroup;
-class Network;
 class PublicTransportInfo;
 class TimetableAccessorInfo;
 
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
 typedef QHash<TimetableInformation, QVariant> TimetableData;
+
+/** @brief Namespace for classes exposed to scripts. */
+namespace Scripting {
+
+class Network;
 
 /**
  * @defgroup scripting Classes Used for Scripts
@@ -66,11 +70,18 @@ typedef QHash<TimetableInformation, QVariant> TimetableData;
  *
  * To use eg. Python code in the script, the following code can then be used in a script:
  * @code
- * var action = Kross.action( "MyPythonScript" ); // Create Kross action
- * action.addQObject( action, "MyAction" ); // Propagate action to the Python script
- * action.setInterpreter( "python" ); // Set the interpreter to use, eg. "python", "ruby"
+ * // Create Kross action
+ * var action = Kross.action( "MyPythonScript" );
+ *
+ * // Propagate action to the Python script
+ * action.addQObject( action, "MyAction" );
+ *
+ * // Set the interpreter to use, eg. "python", "ruby"
+ * action.setInterpreter( "python" );
+ *
+ * // Set the code to execute and trigger execution
  * action.setCode("import MyAction ; print 'This is Python. name=>',MyAction.interpreter()");
- * action.trigger(); // Run the script
+ * action.trigger();
  * @endcode
  * @todo If needed a later version might make this simpler by examining the file type of the script
  *   file and automatically insert the contents of the script file into the setCode() function
@@ -149,29 +160,29 @@ typedef QHash<TimetableInformation, QVariant> TimetableData;
  *   This can be done by simply returning a list of strings, where each string is the name of a
  *   type of information. Only optional information that the script provides needs to be returned
  *   by this function. This list gets used for the feature list of scripted accessors.
- *   @li @em 'Arrivals' The script can parse arrivals
- *   @li @em 'Delay' The script can parse delay information
- *   @li @em 'DelayReason' The script can also parse a string describing the reason of a delay
- *   @li @em 'Platform' The platform where a departure/arrival happens can be parsed
- *   @li @em 'JourneyNews' Additional information in text form about departures/arrivals/journeys
+ *   @li @b Arrivals The script can parse arrivals
+ *   @li @b Delay The script can parse delay information
+ *   @li @b DelayReason The script can also parse a string describing the reason of a delay
+ *   @li @b Platform The platform where a departure/arrival happens can be parsed
+ *   @li @b JourneyNews Additional information in text form about departures/arrivals/journeys
  *     can be parsed
- *   @li @em 'StopID' Stop IDs can be parsed and used instead of stop names to prevent ambiguities
- *   @li @em 'Pricing' Pricing information can be parsed for journeys
- *   @li @em 'Changes' The number of changes in a journey can be parsed
- *   @li @em 'RouteStops' A list of stop names on the route can be parsed
- *   @li @em 'RouteTimes' A list of times at which the vehicle passes the stops in RouteStops can
+ *   @li @b StopID Stop IDs can be parsed and used instead of stop names to prevent ambiguities
+ *   @li @b Pricing Pricing information can be parsed for journeys
+ *   @li @b Changes The number of changes in a journey can be parsed
+ *   @li @b RouteStops A list of stop names on the route can be parsed
+ *   @li @b RouteTimes A list of times at which the vehicle passes the stops in RouteStops can
  *     be parsed
- *   @li @em 'RoutePlatformsDeparture' A list of platforms in the route where the vehicle departs
+ *   @li @b RoutePlatformsDeparture A list of platforms in the route where the vehicle departs
  *     can be parsed
- *   @li @em 'RoutePlatformsArrival' A list of platforms in the route where the vehicle arrives
+ *   @li @b RoutePlatformsArrival A list of platforms in the route where the vehicle arrives
  *     can be parsed
- *   @li @em 'RouteTimesDeparture' A list of times at which the vehicle departs from the stops
+ *   @li @b RouteTimesDeparture A list of times at which the vehicle departs from the stops
  *     in RouteStops can be parsed, eg. for journeys
- *   @li @em 'RouteTimesArrival' A list of times at which the vehicle arrives from the stops
+ *   @li @b RouteTimesArrival A list of times at which the vehicle arrives from the stops
  *     in RouteStops can be parsed, eg. for journeys
- *   @li @em 'RouteTypesOfVehicles' A list of vehicle types used for subtrips in a journey (between
+ *   @li @b RouteTypesOfVehicles A list of vehicle types used for subtrips in a journey (between
  *     stops in RouteStops)
- *   @li @em 'RouteTransportLines' A list of transport line strings of vehicles used for subtrips
+ *   @li @b RouteTransportLines A list of transport line strings of vehicles used for subtrips
  *     in a journy
  *
  *   @see TimetableInformation
@@ -184,7 +195,9 @@ typedef QHash<TimetableInformation, QVariant> TimetableData;
  * accepts an object with properties that have special names. A simple departure item can be added
  * to the result object like this:
  * @code
- * result.addData({ DepartureDateTime: new Date(), VehicleType: "Bus", Target: "SomeTarget" });
+ * result.addData({ DepartureDateTime: new Date(),
+ *                  VehicleType: "Bus",
+ *                  Target: "SomeTarget" });
  * @endcode
  *
  * Another possibility is to assign the properties when they get parsed, like this:
@@ -293,15 +306,15 @@ typedef QHash<TimetableInformation, QVariant> TimetableData;
  *
  * @n
  *
- * The ResultObject class has additional functions other than ResultsObject::addData(). For example
- * the ResultsObject::publish() function can be used to tell the data engine to publish the items
+ * The ResultObject class has additional functions other than ResultObject::addData(). For example
+ * the ResultObject::publish() function can be used to tell the data engine to publish the items
  * parsed so far to visualizations. A good use case is to call publish() when a document
  * has been read but for more results another document needs to be downloaded first.
  * @note By default data is automatically published after the first few items to provide
- *   visualizations with data as soon as possible. Use ResultsObject::enableFeature() to change
+ *   visualizations with data as soon as possible. Use ResultObject::enableFeature() to change
  *   this behaviour.
  *
- * There is also a Hint enumeration to give hints to the data engine. Use ResultsObject::giveHint()
+ * There is also a Hint enumeration to give hints to the data engine. Use ResultObject::giveHint()
  * to give a hint.
  **/
 
@@ -311,7 +324,7 @@ typedef QHash<TimetableInformation, QVariant> TimetableData;
  * To get notified about new data, connect to either the finished() or the readyRead() signal.
  *
  * @ingroup scripting
- * @since 0.10QString
+ * @since 0.10
  **/
 class NetworkRequest : public QObject {
     Q_OBJECT
@@ -345,6 +358,12 @@ public:
     bool isRunning() const { return m_reply; };
 
     /**
+     * @brief Whether or not the request is finished (successful or not), ie. was running.
+     * @ingroup scripting
+     **/
+    bool isFinished() const { return m_isFinished; };
+
+    /**
      * @brief Sets the data to sent to the server when using Network::post().
      *
      * This function automatically sets the "ContentType" header of the request to the used
@@ -365,6 +384,8 @@ public:
 
 //     TODO documentation
     QString postData() const { return m_postData; };
+
+    /** @brief Gets the @p header decoded using @p charset. */
     Q_INVOKABLE QString header( const QString &header, const QString& charset ) const;
 
     /**
@@ -384,6 +405,7 @@ public:
     Q_INVOKABLE void setHeader( const QString &header, const QString &value,
                                 const QString &charset = QString() );
 
+public Q_SLOTS:
     /**
      * @brief Aborts this (running) request.
      *
@@ -421,7 +443,7 @@ Q_SIGNALS:
      **/
     void readyRead( const QString &data );
 
-// TODO Do the decoding manually in the script, if needed
+    // TODO Do the decoding manually in the script, if needed
     void finishedNoDecoding();
 
 protected Q_SLOTS:
@@ -438,14 +460,12 @@ protected:
 private:
     const QString m_url;
     Network *m_network;
+    bool m_isFinished;
     QNetworkRequest *m_request;
     QNetworkReply *m_reply;
     QByteArray m_data;
     QByteArray m_postData;
 };
-
-Q_DECLARE_METATYPE(NetworkRequest*)
-Q_SCRIPT_DECLARE_QMETAOBJECT(NetworkRequest, QObject*)
 
 /**
  * @brief Provides network access to scripts.
@@ -506,7 +526,7 @@ public:
     static const int DEFAULT_TIMEOUT = 30000;
 
     /** @brief Constructor. */
-    explicit Network( const QByteArray &fallbackCharset, QObject* parent = 0 );
+    explicit Network( const QByteArray &fallbackCharset = QByteArray(), QObject* parent = 0 );
 
     /** @brief Destructor. */
     virtual ~Network();
@@ -517,20 +537,20 @@ public:
      * The last URL gets updated every time a request gets started, eg. using get(), post(),
      * getSynchronous(), download(), downloadSynchronous(), etc.
      **/
-    QString lastUrl() const { return m_lastUrl; };
+    Q_INVOKABLE QString lastUrl() const { return m_lastUrl; };
 
     /**
      * @brief Clears the last requested URL.
      **/
-    void clear() { m_lastUrl.clear(); };
+    Q_INVOKABLE void clear() { m_lastUrl.clear(); };
 
     /**
-     * @brief Returns true, if the last download was aborted before it was ready.
+     * @brief Returns @c true, if the last download was aborted before it was ready.
      *
      * Use lastUrl() to get the URL of the aborted download. Downloads may be aborted eg. by
      * closing plasma.
      **/
-    bool lastDownloadAborted() const { return m_lastDownloadAborted; };
+    Q_INVOKABLE bool lastDownloadAborted() const { return m_lastDownloadAborted; };
 
     /**
      * @brief Download the document at @p url synchronously.
@@ -546,14 +566,18 @@ public:
     Q_INVOKABLE QString getSynchronous( const QString &url, int timeout = DEFAULT_TIMEOUT );
 
     /**
-     * @brief This is an alias for get().
+     * @brief This is an alias for getSynchronous().
      * @ingroup scripting
      **/
-    Q_INVOKABLE inline void downloadSynchronous( const QString &url, int timeout = DEFAULT_TIMEOUT ) {
-        getSynchronous(url, timeout); };
+    Q_INVOKABLE inline QString downloadSynchronous( const QString &url, int timeout = DEFAULT_TIMEOUT ) {
+        return getSynchronous(url, timeout); };
 
     /**
      * @brief Creates a new NetworkRequest for asynchronous network access.
+     *
+     * @note Each NetworkRequest object can only be used once for one download.
+     *
+     * @see get, download, post, head
      * @ingroup scripting
      **/
     Q_INVOKABLE NetworkRequest *createRequest( const QString &url );
@@ -561,7 +585,7 @@ public:
     /**
      * @brief Perform the network @p request asynchronously.
      *
-     * @param url The URL to download.
+     * @param request The NetworkRequest object created with createRequest().
      * @ingroup scripting
      **/
     Q_INVOKABLE void get( NetworkRequest *request );
@@ -569,7 +593,7 @@ public:
     /**
      * @brief Perform the network @p request asynchronously using POST method.
      *
-     * @param url The URL to download.
+     * @param request The NetworkRequest object created with createRequest().
      * @ingroup scripting
      **/
     Q_INVOKABLE void post( NetworkRequest *request );
@@ -577,7 +601,7 @@ public:
     /**
      * @brief Perform the network @p request asynchronously, but only get headers.
      *
-     * @param url The URL to download.
+     * @param request The NetworkRequest object created with createRequest().
      * @ingroup scripting
      **/
     Q_INVOKABLE void head( NetworkRequest *request );
@@ -590,35 +614,37 @@ public:
 
     /**
      * @brief Returns whether or not there are asynchronous requests running in the background.
-     * @see runningRequests()
+     * @see runningRequests
      * @ingroup scripting
-     */
-    bool hasRunningRequests() const { return !m_runningRequests.isEmpty(); };
+     **/
+    Q_INVOKABLE bool hasRunningRequests() const { return !m_runningRequests.isEmpty(); };
 
     /**
      * @brief Returns a list of all NetworkRequest objects, representing all running requests.
      *
-     * If hasRunningRequests() returns false, this will return an empty list.
-     * @see hasRunningRequests()
+     * If hasRunningRequests() returns @c false, this will return an empty list.
+     * @see hasRunningRequests
      * @ingroup scripting
-     */
-    QList< NetworkRequest* > runningRequests() const { return m_runningRequests; };
+     **/
+    Q_INVOKABLE QList< NetworkRequest* > runningRequests() const { return m_runningRequests; };
 
     /**
      * @brief Returns the number of currently running requests.
      **/
-    int runningRequestCount() const { return m_runningRequests.count(); };
+    Q_INVOKABLE int runningRequestCount() const { return m_runningRequests.count(); };
 
     /**
      * @brief Returns the charset to use for decoding documents, if it cannot be detected.
      *
      * The fallback charset can be selected in the XML file, as \<fallbackCharset\>-tag.
-     */
-    QByteArray fallbackCharset() const { return m_fallbackCharset; };
+     **/
+    Q_INVOKABLE QByteArray fallbackCharset() const { return m_fallbackCharset; };
 
 Q_SIGNALS:
     /**
      * @brief Emitted when an asynchronous request has been started.
+     *
+     * This signal is @em not emitted if the network gets accessed synchronously.
      * @param request The request that has been started.
      * @ingroup scripting
      **/
@@ -626,6 +652,8 @@ Q_SIGNALS:
 
     /**
      * @brief Emitted when an asynchronous request has finished.
+     *
+     * This signal is @em not emitted if the network gets accessed synchronously.
      * @param request The request that has finished.
      * @ingroup scripting
      **/
@@ -642,6 +670,8 @@ Q_SIGNALS:
 
     /**
      * @brief Emitted when an asynchronous request got aborted.
+     *
+     * This signal is @em not emitted if the network gets accessed synchronously.
      * @param request The request that was aborted.
      * @ingroup scripting
      **/
@@ -680,7 +710,7 @@ private:
 //     print( QTime.fromString("15--11", "hh--mm")
 
 /**
- * @brief A helper class to be used from inside a script.
+ * @brief A helper class for scripts.
  *
  * An instance of this class gets published to scripts as <em>"helper"</em>.
  * Scripts can use it's functions, like here:
@@ -689,7 +719,7 @@ private:
  * // stripped == "Test"
  *
  * var timeValues = helper.matchTime( "15:28" );
- * // timeValues == [15, 28]
+ * // timeValues == { hour: 15, minutes: 28, error: false }
  *
  * var timeString = helper.formatTime( timeValues[0], timeValues[1] );
  * // timeString == "15:28"
@@ -768,6 +798,8 @@ public:
     /**
      * @brief Removes all HTML tags from str.
      *
+     * This function works with attributes which contain a closing tab as strings.
+     *
      * @param str The string from which the HTML tags should be removed.
      * @return @p str without HTML tags.
      **/
@@ -784,6 +816,9 @@ public:
     /**
      * @brief Extracts a block from @p str, which begins at the first occurance of @p beginString
      *   in @p str and end at the first occurance of @p endString in @p str.
+     *
+     * @deprecated Does only work with fixed strings. Use eg. findFirstHtmlTag() instead.
+     * @bug The returned string includes beginString but not endString.
      *
      * @param str The input string.
      * @param beginString A string to search for in @p str and to use as start position.
@@ -809,7 +844,7 @@ public:
      * @param str The string containing the time to be parsed, eg. "08:15".
      * @param format The format of the time string in @p str. Default is "hh:mm".
      * @return A map with two values: 'hour' and 'minute' parsed from @p str. On error it contains
-     *   an 'error' value of true.
+     *   an 'error' value of @c true.
      * @see formatTime
      **/
     Q_INVOKABLE static QVariantMap matchTime( const QString &str, const QString &format = "hh:mm" );
@@ -819,7 +854,7 @@ public:
      *
      * @param str The string containing the date to be parsed, eg. "2010-12-01".
      * @param format The format of the time string in @p str. Default is "YY-MM-dd".
-     * @see formatDate TODO
+     * @see formatDate
      **/
     Q_INVOKABLE static QDate matchDate( const QString &str, const QString &format = "yyyy-MM-dd" );
 
@@ -856,54 +891,72 @@ public:
                                                const QString &format = "yyyy-MM-dd" );
 
     /**
-     * @brief Calculates the duration in minutes from the time in @p sTime1 until @p sTime2.
+     * @brief Calculates the duration in minutes from the time in @p time1 until @p time2.
      *
-     * @param sTime1 A string with the start time, in the given @p format.
-     * @param sTime2 A string with the end time, in the given @p format.
-     * @param format The format of @p sTime1 and @p sTime2. Default is "hh:mm".
-     * @return The number of minutes from @p sTime1 until @p sTime2.
+     * @param time1 A string with the start time, in the given @p format.
+     * @param time2 A string with the end time, in the given @p format.
+     * @param format The format of @p time1 and @p time2. Default is "hh:mm".
+     * @return The number of minutes from @p time1 until @p time2. If @p time2 is earlier than
+     *   @p time1 a negative value gets returned.
      **/
-    Q_INVOKABLE static int duration( const QString &sTime1, const QString &sTime2,
+    Q_INVOKABLE static int duration( const QString &time1, const QString &time2,
                                      const QString &format = "hh:mm" );
 
     /**
-     * @brief Adds @p minsToAdd minutes to the time in @p sTime.
+     * @brief Adds @p minsToAdd minutes to the given @p time.
      *
-     * @param sTime A string with the base time.
-     * @param minsToAdd The number of minutes to add to @p sTime.
-     * @param format The format of @p sTime. Default is "hh:mm".
+     * @param time A string with the base time.
+     * @param minsToAdd The number of minutes to add to @p time.
+     * @param format The format of @p time. Default is "hh:mm".
      * @return A time string formatted in @p format with the calculated time.
      **/
-    Q_INVOKABLE static QString addMinsToTime( const QString &sTime, int minsToAdd,
-                           const QString &format = "hh:mm" );
+    Q_INVOKABLE static QString addMinsToTime( const QString &time, int minsToAdd,
+                                              const QString &format = "hh:mm" );
 
-//     TODO
+    /**
+     * @brief Adds @p daysToAdd days to the date in @p dateTime.
+     *
+     * @param dateTime A string with the base time.
+     * @param daysToAdd The number of minutes to add to @p time.
+     * @param format The format of @p time. Default is "hh:mm".
+     * @return A time string formatted in @p format with the calculated time.
+     **/
     Q_INVOKABLE static QDateTime addDaysToDate( const QDateTime &dateTime, int daysToAdd );
 
-    Q_INVOKABLE static QString addDaysToDate( const QString &sDate, int daysToAdd,
-                           const QString &format = "yyyy-MM-dd" );
-
-    Q_INVOKABLE static QVariantList addDaysToDateArray( const QVariantList &values, int daysToAdd );
+    /**
+     * @brief Adds @p daysToAdd days to @p date.
+     *
+     * @param date A string with the base date.
+     * @param daysToAdd The number of days to add to @p date.
+     * @param format The format of @p date. Default is "yyyy-MM-dd".
+     * @return A date string formatted in @p format with the calculated date.
+     **/
+    Q_INVOKABLE static QString addDaysToDate( const QString &date, int daysToAdd,
+                                              const QString &format = "yyyy-MM-dd" );
 
     /**
      * @brief Splits @p str at @p sep, but skips empty parts.
      *
-     * @param str The string to split.
-     * @param sep The separator.
+     * @param string The string to split.
+     * @param separator The separator.
      * @return A list of string parts.
      **/
-    Q_INVOKABLE static QStringList splitSkipEmptyParts( const QString &str, const QString &sep );
+    Q_INVOKABLE static QStringList splitSkipEmptyParts( const QString &string,
+                                                        const QString &separator );
 
     /**
      * @brief Finds positions of columns in an HTML table.
      *
      * Table header names are currently only found as "class" attributes of "th" tags.
      *
+     * @deprecated Will be removed. Use findNamedHtmlTags() instead.
+     * TODO Remove this function?
+     *
      * @param str The string is in which to search for positions of table headers.
      * @param options A map (javascript object) with these optional properties:
      *   @li @b required: A list of strings, ie. the names of the required table headers.
      *   @li @b optional: A list of strings, ie. the names of the optional table headers.
-     *   @li @b debug: A boolean, false by default. If true, more debug output gets generated.
+     *   @li @b debug: A boolean, @c false by default. If @c true, more debug output gets generated.
      *   @li @b headerContainerOptions: A map of options that gets passed to findFirstHtmlTag()
      *     to find the HTML tag (eg. "tr") containing the header HTML tags (eg. "th"). For example
      *     this can be used to specify required attributes for the header container tag.
@@ -927,12 +980,22 @@ public:
      * @brief Finds the first occurrence of an HTML tag with @p tagName in @p str.
      *
      * @param str The string containing the HTML tag to be found.
-     * @param tagName The name of the HTML tag to be found.
+     * @param tagName The name of the HTML tag to be found, ie. &lt;tagName&gt;.
      * @param options The same as in findHtmlTags(), "maxCount" will be set to 1.
+     *
+     * @b Example:
+     * @code
+     * // This matches the first &lt;table&gt; tag found in html
+     * // which has a class attribute with a value that matches
+     * // the regular expression pattern "test\d+",
+     * // eg. "test1", "test2", ...
+     * var result = helper.findFirstHtmlTag( html, "table",
+     *         {attributes: {"class": "test\\d+"}} );
+     * @endcode
      *
      * @return A map with properties like in findHtmlTags(). Additionally these properties are
      *   returned:
-     *   @li @b found: A boolean, true if the tag was found, false otherwise.
+     *   @li @b found: A boolean, @c true if the tag was found, @c false otherwise.
      * @see findHtmlTags
      **/
     Q_INVOKABLE static QVariantMap findFirstHtmlTag( const QString &str, const QString &tagName,
@@ -949,13 +1012,13 @@ public:
     };
 
     /**
-     * @brief Finds all occurrences of HTML tags with @p tagName in @p str.
+     * @brief Find all occurrences of (top level) HTML tags with @p tagName in @p str.
      *
      * Using this function avoids having to deal with various problems when matching HTML elements:
      * @li Nested HTML elements with the same @p tagName. When simply searching for the first
      *     closing tag after the found opening tag, a nested closing tag gets matched. If you are
      *     sure that there are no nested tags or if you want to only match until the first nested
-     *     closing tag set the option "noNesting" in @p options to true.
+     *     closing tag set the option "noNesting" in @p options to @c true.
      * @li Matching tags with specific attributes. This function extracts all attributes of a
      *     matched tag. They can have values, which can be put in single/double/no quotation marks.
      *     To only match tags with specific attributes, add them to the "attributes" option in
@@ -964,8 +1027,22 @@ public:
      * @li Matching HTML tags correctly. For example a ">" inside an attributes value could cause
      *     problems and have the tag cut off there.
      *
+     * @note This function only returns found top level tags. These found tags may contain matching
+     *   child tags. You can use this function again on the contents string of a found top level
+     *   tag to find its child tags.
+     *
+     * @b Example:
+     * @code
+     * // This matches all &lt;div&gt; tags found in html which
+     * // have a class attribute with the value "test" and only
+     * // numbers as contents, eg. "<div class='test'>42</div>".
+     * var result = helper.findHtmlTags( html, "div",
+     *         {attributes: {"class": "test"},
+     *          contentsRegExp: "\\d+"} );
+     * @endcode
+     *
      * @param str The string containing the HTML tags to be found.
-     * @param tagName The name of the HTML tags to be found.
+     * @param tagName The name of the HTML tags to be found, ie. &lt;tagName&gt;.
      * @param options A map with these properties:
      *   @li @b attributes: A map containing all required attributes and it's values. The keys of that
      *     map are the names of required attributes and can be regular expressions. The values
@@ -974,26 +1051,30 @@ public:
      *     must match. If it does not match, that tag does not get returned as found.
      *     If no parenthesized subexpressions are present in this regular expression, the whole
      *     matching string gets used as contents. If more than one parenthesized subexpressions
-     *     are found, only the first one gets used. By default all content of the HTML tag
-     *     gets matched.
-     *   @li @b position: An integer, where to start the search for tags. This is 0 by default.
-     *   @li @b noContent: A boolean, false by default. If true, HTML tags without any content are
-     *     matched, eg. "br" or "img" tags. Otherwise tags need to be closed to get matched.
-     *   @li @b noNesting: A boolean, false by default. If true, no checks will be made to ensure
-     *     that the first found closing tag belongs to the opening tag. In this case the found
-     *     contents always end after the first closing tag after the opening tag, no matter
-     *     if the closing tag belongs to a nested tag or not. By setting this to true you can
+     *     are found, only the first one gets used. The regular expression gets matched case
+     *     insensitive. By default all content of the HTML tag gets matched.
+     *   @li @b position: An integer, where to start the search for tags. If the position is inside
+     *     a top-level matching tag, its child tags will be matched and other following top-level
+     *     tags. This is 0 by default.
+     *   @li @b noContent: A boolean, @c false by default. If @c true, HTML tags without any
+     *     content are matched, eg. "br" or "img" tags. Otherwise tags need to be closed to get
+     *     matched.
+     *   @li @b noNesting: A boolean, @c false by default. If @c true, no checks will be made to
+     *     ensure that the first found closing tag belongs to the opening tag. In this case the
+     *     found contents always end after the first closing tag after the opening tag, no matter
+     *     if the closing tag belongs to a nested tag or not. By setting this to @c true you can
      *     enhance performance.
      *   @li @b maxCount: The maximum number of HTML tags to match or 0 to match any number of HTML tags.
-     *   @li @b debug: A boolean, false by default. If true, more debug output gets generated.
+     *   @li @b debug: A boolean, @c false by default. If @c true, more debug output gets generated.
      *
      * @return A list of maps, each map represents one found tag and has these properties:
-     *   @li @b contents: A string, the contents of the found tag (if found is true).
-     *   @li @b position: An integer, the position of the found tag in @p str (if found is true).
-     *   @li @b endPosition: An integer, the ending position of the found tag in @p str
-     *     (if found is true).
+     *   @li @b contents: A string, the contents of the found tag (if found is @c true).
+     *   @li @b position: An integer, the position of the first character of the found tag
+     *     (ie. '<') in @p str (if found is @c true).
+     *   @li @b endPosition: An integer, the position of the first character after the found end
+     *     tag in @p str (if found is @c true).
      *   @li @b attributes: A map containing all found attributes of the tag and it's values (if
-     *     found is true). The attribute names are the keys of the map, while the attribute
+     *     found is @c true). The attribute names are the keys of the map, while the attribute
      *     values are the values of the map.
      **/
     Q_INVOKABLE static QVariantList findHtmlTags( const QString &str, const QString &tagName,
@@ -1017,8 +1098,52 @@ public:
      * Instead of returning a list of all matched tags, a map is returned, with the found names as
      * keys and the tag objects (as returned in a list by findHtmlTags()) as values.
      *
+     * @b Example:
+     * @code
+     * // In this example the findNamedHtmlTags() function gets
+     * // used in a while loop to find columns (<td>-tags) in rows
+     * // (<tr>-tags) and assign names to the found columns. This
+     * // makes it easy to parse HTML tables.
+     *
+     * // Initialize position value
+     * var tableRow = { position: -1 };
+     *
+     * // Use findFirstHtmlTag() with the current position value to
+     * // find the next <tr> tag. The return value contains the
+     * // updated position and the boolean property "found"
+     * while ( (tableRow = helper.findFirstHtmlTag(html, "tr",
+     *                     {position: tableRow.position + 1})).found )
+     * {
+     *     // Find columns, ie. <td> tags in a table row.
+     *     // Each column gets a name assigned by findNamedHtmlTags().
+     *     // Ambiguous names are resolved by adding/increasing a
+     *     // number after the name. The names get extracted from the
+     *     // <td>-tags class attributes, by matching the given
+     *     // regular expression.
+     *     var columns = helper.findNamedHtmlTags( tableRow.contents, "td",
+     *           {ambiguousNameResolution: "addNumber",
+     *            namePosition: {type: "attribute", name: "class",
+     *                           regexp: "([\\w]+)\\d+"}} );
+     *
+     *     // Check the "names" property of the return value,
+     *     // should contain the names of all columns that are needed
+     *     if ( !columns.names.contains("time") ) {
+     *         // Notify the data engine about an error,
+     *         // if a "time" column was expected
+     *         helper.error("Didn't find all needed columns! " +
+     *                      "Found: " + columns.names, tableRow.contents);
+     *         continue;
+     *     }
+     *
+     *     // Now read the contents of the columns
+     *     var time = columns["time"].contents;
+     *
+     *     // Read more and add data to the result set using result.addData()
+     * }
+     * @endcode
+     *
      * @param str The string containing the HTML tag to be found.
-     * @param tagName The name of the HTML tag to be found.
+     * @param tagName The name of the HTML tag to be found, ie. &lt;tagName&gt;.
      * @param options The same as in findHtmlTags(), but @em additionally these options can be used:
      *     @li @b namePosition: A map with more options, indicating the position of the name of tags:
      *       @li @em type: Can be @em "contents" (ie. use tag contents as name, the default) or
@@ -1062,7 +1187,8 @@ private:
  * Scripts can use it to add items to the result set, ie. departures/arrivals/journeys/
  * stop suggestions. Items can be added from scripts using addData().
  * @code
- * result.addData({ StopName: "Name" }); // Add stop suggestion data to result set
+ * // Add stop suggestion data to result set
+ * result.addData({ StopName: "Name" });
  * @endcode
  *
  * @ingroup scripting
@@ -1092,11 +1218,12 @@ public:
                 * lists. If you are sure, that there are no HTML entities in the strings parsed
                 * from the downloaded documents, you can turn this feature off. You can also
                 * manually decode HTML entities using Helper::decodeHtmlEntities(). */
-        AutoRemoveCityFromStopNames
+        AutoRemoveCityFromStopNames // TODO
                             = 0x04, /**< Automatic removing of city names from all stop names, ie.
                 * stop names in eg. RouteStops or Target). Scripts can help the data engine with
                 * this feature with the hints CityNamesAreLeft or CityNamesAreRight. TODO more docu */
-        AllFeatures = AutoPublish | AutoDecodeHtmlEntities /**< All available features are enabled. */
+        AllFeatures = AutoPublish | AutoDecodeHtmlEntities | AutoRemoveCityFromStopNames
+                /**< All available features are enabled. */
     };
     Q_DECLARE_FLAGS( Features, Feature );
 
@@ -1138,14 +1265,14 @@ public:
     /**
      * @brief Checks whether or not the list of TimetableData objects is empty.
      *
-     * @return True, if the list of TimetableData objects isn't empty. False, otherwise.
+     * @return @c True, if the list of TimetableData objects isn't empty. @c False, otherwise.
      **/
     Q_INVOKABLE bool hasData() const { return !m_timetableData.isEmpty(); };
 
     /**
      * @brief Returns the number of timetable elements currently in the resultset.
      **/
-    int count() const { return m_timetableData.count(); };
+    Q_INVOKABLE int count() const { return m_timetableData.count(); };
 
     /**
      * @brief Whether or not @p feature is enabled.
@@ -1176,7 +1303,7 @@ public:
      *
      * @param feature The feature to enable/disable. Scripts can access the Feature enumeration
      *   as @b accessor.
-     * @param enable True to enable @p feature, false to disable it.
+     * @param enable @c True to enable @p feature, @c false to disable it.
      *
      * @see Feature
      * @since 0.10
@@ -1184,11 +1311,46 @@ public:
     Q_INVOKABLE void enableFeature( Feature feature, bool enable = true );
 
 //     TODO
+    /**
+     * @brief Test if the given @p hint is set.
+     *
+     * By default no hints are set.
+     *
+     * @since 0.10
+     */
     Q_INVOKABLE bool isHintGiven( Hint hint ) const;
-//     TODO
-    Q_INVOKABLE void giveHint( Hint hint, bool enable );
 
+//     TODO
+    /**
+     * @brief Set the given @p hint to @p enable.
+     *
+     * By default no hints are set.
+     *
+     * @param hint The hint to give.
+     * @param enable Whether the @p hint should be set or unset.
+     *
+     * @since 0.10
+     */
+    Q_INVOKABLE void giveHint( Hint hint, bool enable = true );
+
+    // TODO More docu, eg. how to use the enum in the script
+    /**
+     * @brief Get the currently enabled features.
+     *
+     * By default this equals to AllFeatures.
+     *
+     * @since 0.10
+     */
     Features features() const { return m_features; };
+
+    // TODO More docu, eg. how to use the enum in the script
+    /**
+     * @brief Get the currently set hints.
+     *
+     * By default this equals to NoHints.
+     *
+     * @since 0.10
+     */
     Hints hints() const { return m_hints; };
 
     static void dataList( const QList< TimetableData > &dataList,
@@ -1203,7 +1365,7 @@ Q_SIGNALS:
      * This does not need to be called by scripts, the data engine will publish all collected data,
      * when the script returns and all network requests are finished. After the first ten items
      * have been added, this signal is emitted automatically, if the AutoPublish feature is
-     * enabled (the default). Use @verbatimenableFeature(AutoPublish, false)@endverbatim to
+     * enabled (the default). Use @verbatimresult.enableFeature(AutoPublish, false)@endverbatim to
      * disable this feature.
      *
      * If collecting data takes too long, calling this signal causes the data collected so far
@@ -1253,7 +1415,7 @@ public Q_SLOTS:
      * @code
      *  var departure = { DepartureDateTime: new Date() };
      *  departure.Target = 'Test';
-     *  result.addData( departure);
+     *  result.addData( departure );
      * @endcode
      *
      * Keys of @p map, ie. properties of the script object are matched case insensitive.
@@ -1274,6 +1436,7 @@ private:
 Q_DECLARE_OPERATORS_FOR_FLAGS( ResultObject::Features );
 Q_DECLARE_OPERATORS_FOR_FLAGS( ResultObject::Hints );
 
+class StoragePrivate;
 /**
  * @brief Used by scripts to store data between calls.
  *
@@ -1291,14 +1454,17 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( ResultObject::Hints );
  * var name1 = storage.read( "name1" );   // name1 == 123
  *
  * // Write an object with multiple values at once and read it again
- * var object = { value1: 445, value2: "test", otherValue: new Date() };
+ * var object = { value1: 445, value2: "test",
+ *                otherValue: new Date() };
  * storage.write( object );
  * var readObject = storage.read();
- * // The object read from storage now contains both the single value and the values of the object
- * // readObject == { name1: 123, value1: 445, value2: "test", otherValue: new Date() };
+ * // The object read from storage now contains both the single
+ * // value and the values of the object
+ * // readObject == { name1: 123, value1: 445, value2: "test",
+ * //                 otherValue: new Date() };
  *
  * var value2 = storage.read( "value2" );   // value2 == "test"
- * var other = storage.read( "other", 555 );   // other == 555, the default value given to read()
+ * var other = storage.read( "other", 555 );   // other == 555, the default value
  * storage.remove( "name1" );   // Remove a value from the storage
  * storage.clear();
  * @endcode
@@ -1318,16 +1484,20 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( ResultObject::Hints );
  * var object = { value1: 445, value2: "test", otherValue: new Date() };
  * storage.writePersistent( object );
  * var readObject = storage.readPersistent();
- * // The object read from storage now contains both the single value and the values of the object
- * // readObject == { name1: 123, value1: 445, value2: "test", otherValue: new Date() };
+ * // The object read from storage now contains both the single
+ * // value and the values of the object
+ * // readObject == { name1: 123, value1: 445, value2: "test",
+ * //                 otherValue: new Date() };
  *
  * // Using custom lifetimes (in days)
- * storage.writePersistent( "longNeeded", 66, 30 ); // Store value 66 for 30 days as "longNeeded"
- * storage.writePersistent( "veryLongNeeded", 66, 300 ); // Lifetime can't be higher than 30 days
+ * // 1. Store value 66 for 30 days as "longNeeded"
+ * storage.writePersistent( "longNeeded", 66, 30 );
+ * // 2. Lifetime can't be higher than 30 days
+ * storage.writePersistent( "veryLongNeeded", 66, 300 );
  *
  * // Check the remaining lifetime of a persistently stored value
  * var lifetimeLongNeeded = storage.lifetime( "longNeeded" ); // Now 30
- * var other = storage.readPersistent( "other", 555 );   // other == 555, the default value given to read()
+ * var other = storage.readPersistent( "other", 555 );   // other == 555, default
  * storage.removePersistent( "name1" );   // Remove a value from the storage
  * storage.clearPersistent();
  * @endcode
@@ -1386,6 +1556,18 @@ public:
     static const int MIN_LIFETIME_CHECK_INTERVAL = 15;
 
     /**
+     * @brief Whether or not a data entry with @p name exists in memory.
+     * @ingroup scripting
+     **/
+    Q_INVOKABLE bool hasData( const QString &name ) const;
+
+    /**
+     * @brief Whether or not a data entry with @p name exists in persistent memory.
+     * @ingroup scripting
+     **/
+    Q_INVOKABLE bool hasPersistentData( const QString &name ) const;
+
+    /**
      * @brief Reads all data stored in memory.
      * @ingroup scripting
      **/
@@ -1406,6 +1588,10 @@ public:
     /**
      * @brief Reads data stored on disk with @p name.
      *
+     * @param name The name of the value to read.
+     * @param defaultData The value to return if no stored value was found under @p name.
+     *   If you use another default value than the default invalid QVariant, the type must match
+     *   the type of the stored value. Otherwise an invalid QVariant gets returned.
      * @see lifetime()
      * @ingroup scripting
      **/
@@ -1451,10 +1637,12 @@ public Q_SLOTS:
      * @brief Stores @p data on disk with @p name.
      *
      * @param name A name to access the written data with.
-     * @param data The data to write to disk.
-     * @param lifetime The lifetime in days of the data.
+     * @param data The data to write to disk. The type of the data can also be QVariantMap (ie.
+     *   script objects) or list types (gets encoded to QByteArray). Length of the data is limited
+     *   to 65535 bytes.
+     * @param lifetime The lifetime in days of the data. Limited to 30 days and defaults to 7 days.
      *
-     * @see lifetime()
+     * @see lifetime
      * @ingroup scripting
      **/
     void writePersistent( const QString &name, const QVariant &data,
@@ -1468,8 +1656,9 @@ public Q_SLOTS:
      *
      * @param data The data to write to disk. This can be a script object.
      * @param lifetime The lifetime in days of each entry in @p data.
+     *   Limited to 30 days and defaults to 7 days.
      *
-     * @see lifetime()
+     * @see lifetime
      * @overload
      * @ingroup scripting
      **/
@@ -1496,13 +1685,15 @@ public Q_SLOTS:
 private:
     int lifetime( const QString &name, const KConfigGroup &group );
     void removePersistent( const QString &name, KConfigGroup &group );
+    QByteArray encodeData( const QVariant &data ) const;
+    QVariant decodeData( const QByteArray &data ) const;
 
-    QReadWriteLock *m_readWriteLock;
-    QReadWriteLock *m_readWriteLockPersistent;
-    QVariantMap m_data;
-    QVariantMap m_persistentData;
-    const QString m_serviceProvider;
-    uint m_lastLifetimeCheck; // as time_t
+    StoragePrivate *d;
 };
+
+}; // namespace Scripting
+
+Q_DECLARE_METATYPE(Scripting::NetworkRequest*)
+Q_SCRIPT_DECLARE_QMETAOBJECT(Scripting::NetworkRequest, QObject*)
 
 #endif // SCRIPTING_HEADER

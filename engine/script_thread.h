@@ -38,18 +38,22 @@
 #include <QPointer>
 
 struct RequestInfo;
-struct JourneyRequestInfo;
+struct StopSuggestionRequestInfo;
 struct DepartureRequestInfo;
-typedef RequestInfo StopSuggestionRequestInfo;
+struct JourneyRequestInfo;
 
 class TimetableAccessorInfo;
-class Storage;
-class Network;
-class Helper;
-class ResultObject;
+namespace Scripting {
+    class Storage;
+    class Network;
+    class Helper;
+    class ResultObject;
+};
 
 class QScriptProgram;
 class QScriptEngine;
+
+using namespace Scripting;
 
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
 typedef QHash<TimetableInformation, QVariant> TimetableData;
@@ -109,9 +113,6 @@ public:
     /** @brief Destructor. */
     virtual ~ScriptJob();
 
-    /** @brief Performs the job. */
-    virtual void run();
-
 //     TODO TODO DOCU
     /** @brief TODO TODO TODO Returns the name of the data source for which this job is running. */
     virtual const RequestInfo* requestInfo() const = 0;
@@ -147,6 +148,9 @@ protected slots:
     void publish();
 
 protected:
+    /** @brief Performs the job. */
+    virtual void run();
+
     /** @brief Loads @p script into the engine and insert some objects/functions. */
     bool loadScript( QScriptProgram *script );
 
