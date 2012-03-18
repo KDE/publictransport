@@ -472,10 +472,10 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
 
         if ( parseDocumentMode == ParseForDeparturesArrivals ) {
             accessor->requestDepartures( DepartureRequestInfo(name, stop, dateTime, maxCount,
-                                         dataType, false, city, parseDocumentMode) );
+                                         dataType, city, parseDocumentMode) );
         } else if ( parseDocumentMode == ParseForStopSuggestions ) {
             accessor->requestStopSuggestions( StopSuggestionRequestInfo(name, stop, dateTime,
-                                              maxCount, dataType, false, city, parseDocumentMode) );
+                                              maxCount, dataType, city, parseDocumentMode) );
         } else { // if ( parseDocumentMode == ParseForJourneys )
             accessor->requestJourneys( JourneyRequestInfo(name, originStop, targetStop,
                                        dateTime, maxCount, QString(), dataType) );

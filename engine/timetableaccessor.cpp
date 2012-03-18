@@ -301,7 +301,7 @@ bool TimetableAccessor::onlyUseCitiesInList() const
     return m_info->onlyUseCitiesInList();
 }
 
-QScriptValue RequestInfo::toScriptValue( QScriptEngine *engine ) const
+QScriptValue StopSuggestionRequestInfo::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue argument = engine->newObject();
     argument.setProperty( QLatin1String("stop"), stop );
@@ -312,7 +312,10 @@ QScriptValue RequestInfo::toScriptValue( QScriptEngine *engine ) const
 
 QScriptValue DepartureRequestInfo::toScriptValue( QScriptEngine *engine ) const
 {
-    QScriptValue argument = RequestInfo::toScriptValue( engine );
+    QScriptValue argument = engine->newObject();
+    argument.setProperty( QLatin1String("stop"), stop );
+    argument.setProperty( QLatin1String("city"), city );
+    argument.setProperty( QLatin1String("maxCount"), maxCount );
     argument.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
     argument.setProperty( QLatin1String("dataType"), dataType );
     return argument;
@@ -320,7 +323,10 @@ QScriptValue DepartureRequestInfo::toScriptValue( QScriptEngine *engine ) const
 
 QScriptValue JourneyRequestInfo::toScriptValue( QScriptEngine *engine ) const
 {
-    QScriptValue argument = RequestInfo::toScriptValue( engine );
+    QScriptValue argument = engine->newObject();
+    argument.setProperty( QLatin1String("stop"), stop );
+    argument.setProperty( QLatin1String("city"), city );
+    argument.setProperty( QLatin1String("maxCount"), maxCount );
     argument.setProperty( QLatin1String("originStop"), stop ); // Already in argument as "stop"
     argument.setProperty( QLatin1String("targetStop"), targetStop );
     argument.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );

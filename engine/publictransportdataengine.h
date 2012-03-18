@@ -32,9 +32,9 @@
 #include "departureinfo.h"
 
 struct RequestInfo;
-struct JourneyRequestInfo;
+struct StopSuggestionRequestInfo;
 struct DepartureRequestInfo;
-typedef RequestInfo StopSuggestionRequestInfo;
+struct JourneyRequestInfo;
 
 class TimetableAccessor;
 class DepartureInfo;

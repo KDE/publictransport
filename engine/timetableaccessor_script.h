@@ -33,13 +33,16 @@
 namespace ThreadWeaver {
     class Job;
 }
-
-class Storage;
+namespace Scripting {
+    class Storage;
+};
 class QScriptProgram;
 class ScriptThread;
 
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
 typedef QHash<TimetableInformation, QVariant> TimetableData;
+
+using namespace Scripting;
 
 /**
  * @brief The base class for all scripted accessors.

@@ -339,7 +339,7 @@ void TimetableAccessorScript::jobFailed( ThreadWeaver::Job* job )
 //                            TODO: no new... serviceProvider(),
                        new DepartureRequestInfo(scriptJob->requestInfo()->sourceName,
                            /*stop*/QString(), /*dateTime*/QDateTime(), /*maxCount*/0,
-                            /*dataType*/QString(), false, /*city*/QString(), /*parseMode*/ParseForDeparturesArrivals) );
+                            /*dataType*/QString(), /*city*/QString(), /*parseMode*/ParseForDeparturesArrivals) );
 }
 
 void TimetableAccessorScript::requestDepartures( const DepartureRequestInfo &requestInfo )

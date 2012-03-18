@@ -73,9 +73,6 @@ struct RequestInfo {
     /** @brief Like parseMode, but distinguishes between "arrivals" and "departures". */
     QString dataType;
 
-    /** @brief True, if another source URL than the default one was used. TODO */
-    bool useDifferentUrl;
-
     /**
      * @brief The city to get stop suggestions for (only needed if
      *   @ref TimetableAccessor::useSeparateCityValue returns true).
@@ -89,54 +86,63 @@ struct RequestInfo {
     {
         this->parseMode = ParseInvalid;
         this->maxCount = -1;
-        this->useDifferentUrl = false;
         this->parseMode = ParseForStopSuggestions;
     };
 
     RequestInfo( const QString &sourceName, const QString &stop, const QDateTime &dateTime,
-            int maxCount, const QString &dataType = "departures", bool useDifferentUrl = false,
-            const QString &city = QString(),
+            int maxCount, const QString &dataType = "departures", const QString &city = QString(),
             ParseDocumentMode parseMode = ParseForStopSuggestions )
             : sourceName(sourceName), dateTime(dateTime), stop(stop), maxCount(maxCount),
-              dataType(dataType), useDifferentUrl(useDifferentUrl), city(city), parseMode(parseMode)
+              dataType(dataType), city(city), parseMode(parseMode)
     {
     };
 
     RequestInfo( const RequestInfo &info )
+            : sourceName(info.sourceName), dateTime(info.dateTime), stop(info.stop),
+              maxCount(info.maxCount), dataType(info.dataType), city(info.city),
+              parseMode(info.parseMode)
     {
-        sourceName = info.sourceName;
-        dateTime = info.dateTime;
-        stop = info.stop;
-        maxCount = info.maxCount;
-        dataType = info.dataType;
-        useDifferentUrl = info.useDifferentUrl;
-        city = info.city;
-        parseMode = info.parseMode;
     };
 
     virtual ~RequestInfo() {};
 
-    virtual RequestInfo *clone() const
-    {
-        return new RequestInfo( sourceName, stop, dateTime, maxCount, dataType, useDifferentUrl,
-                                city, parseMode );
-    };
-
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
+    virtual RequestInfo *clone() const = 0;
+    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const = 0;
 };
 
-typedef RequestInfo StopSuggestionRequestInfo;
+struct StopSuggestionRequestInfo : public RequestInfo {
+    StopSuggestionRequestInfo() : RequestInfo() { parseMode = ParseForStopSuggestions; };
+    StopSuggestionRequestInfo( const QString &sourceName, const QString &stop,
+                               const QDateTime &dateTime, int maxCount,
+                               const QString &dataType = "departures",
+                               const QString &city = QString(),
+                               ParseDocumentMode parseMode = ParseForStopSuggestions )
+        : RequestInfo(sourceName, stop, dateTime, maxCount, dataType, city, parseMode) {};
+    StopSuggestionRequestInfo( const StopSuggestionRequestInfo &info ) : RequestInfo(info) {};
+
+    virtual RequestInfo *clone() const
+    {
+        return new StopSuggestionRequestInfo( sourceName, stop, dateTime, maxCount, dataType,
+                                              city, parseMode );
+    };
+    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
+};
 
 struct DepartureRequestInfo : public RequestInfo {
     DepartureRequestInfo() : RequestInfo() { parseMode = ParseForDeparturesArrivals; };
     DepartureRequestInfo( const QString &sourceName, const QString &stop,
                           const QDateTime &dateTime, int maxCount,
                           const QString &dataType = "departures",
-                          bool useDifferentUrl = false, const QString &city = QString(),
+                          const QString &city = QString(),
                           ParseDocumentMode parseMode = ParseForDeparturesArrivals )
-        : RequestInfo(sourceName, stop, dateTime, maxCount, dataType,
-                      useDifferentUrl, city, parseMode) {};
+        : RequestInfo(sourceName, stop, dateTime, maxCount, dataType, city, parseMode) {};
     DepartureRequestInfo( const DepartureRequestInfo &info ) : RequestInfo(info) {};
+
+    virtual RequestInfo *clone() const
+    {
+        return new DepartureRequestInfo( sourceName, stop, dateTime, maxCount, dataType,
+                                         city, parseMode );
+    };
 
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
 };
@@ -167,10 +173,8 @@ struct JourneyRequestInfo : public RequestInfo {
     JourneyRequestInfo( const QString &sourceName, const QString &startStop,
             const QString &targetStop, const QDateTime &dateTime, int maxCount,
             const QString &urlToUse, const QString &dataType = "journeys",
-            bool useDifferentUrl = false, const QString &city = QString(),
-            ParseDocumentMode parseMode = ParseForJourneys )
-        : RequestInfo(sourceName, startStop, dateTime, maxCount, dataType,
-                      useDifferentUrl, city, parseMode),
+            const QString &city = QString(), ParseDocumentMode parseMode = ParseForJourneys )
+        : RequestInfo(sourceName, startStop, dateTime, maxCount, dataType, city, parseMode),
           targetStop(targetStop), urlToUse(urlToUse), roundTrips(0)
     {
     };
@@ -185,7 +189,7 @@ struct JourneyRequestInfo : public RequestInfo {
     virtual JourneyRequestInfo *clone() const
     {
         return new JourneyRequestInfo( sourceName, stop, targetStop, dateTime, maxCount, urlToUse,
-                                       dataType, useDifferentUrl, city, parseMode );
+                                       dataType, city, parseMode );
     };
 
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
