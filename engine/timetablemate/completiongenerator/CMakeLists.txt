@@ -11,6 +11,10 @@ include_directories(
 
 set( completiongenerator_SRCS
    main.cpp
+   global_generator.cpp
+   documentationparser.cpp
+   outputgenerator.cpp
+   parser_structures.cpp
 
    # Use files directly from the data engine
    ../../global.cpp
