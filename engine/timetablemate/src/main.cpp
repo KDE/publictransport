@@ -18,9 +18,9 @@
 */
 
 #include "timetablemate.h"
-#include <kapplication.h>
-#include <kaboutdata.h>
-#include <kcmdlineargs.h>
+#include <KApplication>
+#include <KAboutData>
+#include <KCmdLineArgs>
 #include <KDE/KLocale>
 
 static const char description[] =

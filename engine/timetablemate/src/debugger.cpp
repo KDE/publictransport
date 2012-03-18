@@ -20,1093 +20,352 @@
 // Header
 #include "debugger.h"
 
+// Own includes
+#include "debuggerjobs.h"
+
+// PublicTransport engine includes
+#include <engine/timetableaccessor_info.h>
+#include <engine/timetableaccessor_script.h>
+#include <engine/script_thread.h>
+
 // KDE includes
 #include <KDebug>
 #include <KLocalizedString>
+#include <ThreadWeaver/WeaverInterface>
+#include <ThreadWeaver/DependencyPolicy>
+#include <ThreadWeaver/Weaver>
+#include <ThreadWeaver/ResourceRestrictionPolicy>
+#include <ThreadWeaver/Thread>
+#include <threadweaver/JobSequence.h>
+#include <threadweaver/DebuggingAids.h>
 
 // Qt includes
-#include <QTime>
-#include <QTimer>
 #include <QScriptEngine>
 #include <QScriptContextInfo>
-#include <QApplication>
+#include <QTimer>
+#include <QWaitCondition>
 
-QScriptValue debugPrintFunction( QScriptContext *context, QScriptEngine *engine )
+namespace Debugger {
+
+Debugger::Debugger( QObject *parent )
+        : QObject( parent ), m_state(Initializing), m_weaver(new ThreadWeaver::Weaver(this)),
+          m_loadScriptJob(0), m_engineMutex(new QMutex()),
+          m_engine(0), m_script(0), m_debugger(0), m_info(0), m_scriptNetwork(0),
+          m_scriptHelper(0), m_scriptResult(0), m_scriptStorage(0)
 {
-    QString result;
-    for ( int i = 0; i < context->argumentCount(); ++i ) {
-        if ( i > 0 ) {
-            result.append(" ");
-        }
-        result.append( context->argument(i).toString() );
-    }
+    // Maximally two parallel threads, ie. one thread processing the script and may be interrupted
+    // while in another thread a console command gets executed or something gets evaluated in
+    // the current script context
+    m_weaver->setMaximumNumberOfThreads( 2 );
 
-    QScriptValue calleeData = context->callee().data();
-    Debugger *debugger = qobject_cast<Debugger*>( calleeData.toQObject() );
-    debugger->slotOutput( result, context->parentContext() );
-    return engine->undefinedValue();
-};
+    m_lastScriptError = NoScriptError;
+    qRegisterMetaType<QScriptContextInfo>( "QScriptContextInfo" );
+    qRegisterMetaType<EvaluationResult>( "EvaluationResult" );
+    qRegisterMetaType<Frame>( "Frame" );
+    qRegisterMetaType<FrameStack>( "FrameStack" );
+    qRegisterMetaType<Variable>( "Variable" );
+    qRegisterMetaType<Variables>( "Variables" );
+    qRegisterMetaType<Breakpoint>( "Breakpoint" );
+    qRegisterMetaType<ConsoleCommand>( "ConsoleCommand" );
+    qRegisterMetaType<BacktraceChange>( "BacktraceChange" );
 
-Debugger::Debugger( QScriptEngine *engine )
-        : QObject(engine), QScriptEngineAgent(engine), m_lastContext(0), m_interruptContext(0)
-{
-    m_backtraceCleanedup = false;
-    m_running = false;
-    m_lineNumber = -1;
-    m_columnNumber = -1;
-    m_executionType = ExecuteRun;
-    m_currentFunctionLineNumber = -1;
-    m_interruptFunctionLineNumber = -1;
+    // Create script engine
+    m_engine = new QScriptEngine();
+    m_engine->setProcessEventsInterval( 100 );
 
-    engine->setProcessEventsInterval( 100 );
+    // Create debugger agent and forward signals
+    m_debugger = new DebuggerAgent( m_engine, m_engineMutex );
+    connect( m_debugger, SIGNAL(positionChanged(int,int,int,int)),
+             this, SIGNAL(positionChanged(int,int,int,int)) );
+    connect( m_debugger, SIGNAL(interrupted()), this, SIGNAL(interrupted()) );
+    connect( m_debugger, SIGNAL(continued()), this, SIGNAL(continued()) );
+    connect( m_debugger, SIGNAL(started()), this, SIGNAL(started()) );
+    connect( m_debugger, SIGNAL(stopped()), this, SIGNAL(stopped()) );
+    connect( m_debugger, SIGNAL(exception(int,QString)),
+             this, SIGNAL(exception(int,QString)) );
+    connect( m_debugger, SIGNAL(backtraceChanged(FrameStack,BacktraceChange)),
+             this, SIGNAL(backtraceChanged(FrameStack,BacktraceChange)) );
+    connect( m_debugger, SIGNAL(breakpointReached(Breakpoint)),
+             this, SIGNAL(breakpointReached(Breakpoint)) );
+    connect( m_debugger, SIGNAL(breakpointAdded(Breakpoint)),
+             this, SIGNAL(breakpointAdded(Breakpoint)) );
+    connect( m_debugger, SIGNAL(breakpointRemoved(Breakpoint)),
+             this, SIGNAL(breakpointRemoved(Breakpoint)) );
+    connect( m_debugger, SIGNAL(output(QString,QScriptContextInfo)),
+             this, SIGNAL(output(QString,QScriptContextInfo)) );
 
-    // Install custom print function (overwriting the builtin print function)
-    QScriptValue printFunction = engine->newFunction( debugPrintFunction );
-    printFunction.setData( engine->newQObject(this) );
-    engine->globalObject().setProperty( "print", printFunction );
+    // Attach the debugger
+    m_engine->setAgent( m_debugger );
+
+    // Interrupt at first statement
+    m_debugger->setExecutionControlType( ExecuteInterrupt );
+
+    ThreadWeaver::setDebugLevel( true, 1 );
 }
 
 Debugger::~Debugger()
 {
-    abortDebugger();
+    m_debugger->abortDebugger();
+    m_weaver->requestAbort();
+    delete m_engineMutex;
 }
 
-Debugger::NextEvaluatableLineHint Debugger::canBreakAt( int lineNumber ) const
+void Debugger::loadScriptObjects( const TimetableAccessorInfo *info )
 {
-    if ( lineNumber <= 0 || lineNumber > m_scriptLines.count() ) {
-        return CannotFindNextEvaluatableLine;
+    QMutexLocker engineLocker( m_engineMutex );
+
+    // Register NetworkRequest class for use in the script
+    qScriptRegisterMetaType< NetworkRequestPtr >( m_engine,
+            networkRequestToScript, networkRequestFromScript );
+
+    // Create objects for the script
+    if ( !m_scriptHelper ) {
+        m_scriptHelper = new Helper( info->serviceProvider(), m_engine );
+//         connect( m_scriptHelper, SIGNAL(errorReceived(QString,QString)),
+//                  this, SLOT(scriptErrorReceived(QString,QString)) );
     }
 
-    QString line = m_scriptLines[ lineNumber - 1 ].trimmed();
-    if ( line.isEmpty() || line.startsWith("//") ) {
-        return NextEvaluatableLineBelow;
-    }
-
-    // Test if the line can be evaluated
-    // If not, try if appending more lines makes the text evaluatable (multiline statement)
-    for ( int lines = 1; lines < 25; ++lines ) {
-        QScriptSyntaxCheckResult result = engine()->checkSyntax( line );
-        if ( result.state() == QScriptSyntaxCheckResult::Valid ) {
-            return FoundEvaluatableLine;
-        }
-        line.append( '\n' + m_scriptLines[lineNumber - 1 + lines] );
-    }
-
-    return NextEvaluatableLineAbove;
-}
-
-int Debugger::getNextBreakableLineNumber( int lineNumber ) const
-{
-    // Use lastHint to ensure, that the direction isn't changed
-    NextEvaluatableLineHint lastHint = CannotFindNextEvaluatableLine;
-    int count = 0;
-    while ( lineNumber < m_scriptLines.count() && count < 25 ) {
-        NextEvaluatableLineHint hint = canBreakAt( lineNumber );
-        switch ( hint ) {
-        case NextEvaluatableLineAbove:
-            lineNumber += lastHint == NextEvaluatableLineBelow ? 1 : -1;
-            break;
-        case NextEvaluatableLineBelow:
-            lineNumber += lastHint == NextEvaluatableLineAbove ? -1 : 1;
-            break;
-        case FoundEvaluatableLine:
-            return lineNumber;
-        case CannotFindNextEvaluatableLine:
-            return -1;
-        }
-
-        lastHint = hint;
-        ++count;
-    }
-
-    return -1;
-}
-
-void Breakpoint::setCondition( const QString &condition )
-{
-    m_condition = condition;
-}
-
-bool Debugger::executeCommand( const DebuggerCommand &command, QString *returnValue )
-{
-    if ( !command.isValid() ) {
-        return false;
-    }
-
-    switch ( command.command() ) {
-    case DebuggerCommand::HelpCommand:
-        if ( returnValue ) {
-            if ( !command.arguments().isEmpty() ) {
-                // "help" command with at least one argument
-                const DebuggerCommand::Command commandType =
-                        DebuggerCommand::commandFromName( command.argument() );
-                *returnValue = i18nc("@info", "Command <emphasis>%1</emphasis>: %2<nl />"
-                                              "Syntax: %3",
-                        command.argument(), DebuggerCommand::commandDescription(commandType),
-                        DebuggerCommand::commandSyntax(commandType));
-            } else {
-                // "help" command without arguments
-                *returnValue = i18nc("@info", "Available commands: %1<nl />"
-                        "Use <emphasis>.help</emphasis> with an argument to get more information about "
-                        "individual commands<nl />"
-                        "Syntax: %2", DebuggerCommand::availableCommands().join(", "),
-                        DebuggerCommand::commandSyntax(command.command()) );
-            }
-        }
-        return true;
-    case DebuggerCommand::ClearCommand:
-        return true;
-    case DebuggerCommand::LineNumberCommand:
-        if ( returnValue ) {
-            *returnValue = QString::number( lineNumber() );
-        }
-        return true;
-    case DebuggerCommand::BreakpointCommand: {
-        bool ok, add = true, breakpointExisted = false;
-        int enable = 0;
-        int lineNumber = command.argument().toInt( &ok );
-        if ( !ok ) {
-            return false;
-        }
-
-        lineNumber = getNextBreakableLineNumber( lineNumber );
-        ok = lineNumber >= 0;
-        if ( !ok ) {
-            return false;
-        }
-
-        Breakpoint breakpoint = breakpointAt( lineNumber );
-        if ( breakpoint.isValid() ) {
-            breakpointExisted = true;
-        } else {
-            breakpoint = Breakpoint( lineNumber );
-        }
-        if ( command.arguments().count() == 1 ) {
-            return ok;
-        }
-
-        // More than one argument given, ie. more than ".break <lineNumber> ..."
-        const QString &argument = command.arguments().count() == 1
-                ? QString() : command.argument( 1 );
-        bool errorNotFound = false;
-        QRegExp maxhitRegExp( "^maxhits(?:=|:)(\\d+)$", Qt::CaseInsensitive );
-        if ( command.arguments().count() == 1 || argument.compare(QLatin1String("add")) == 0 ) {
-            ok = addBreakpoint( breakpoint );
-            *returnValue = ok ? i18nc("@info", "Breakpoint added at line %1", lineNumber)
-                              : i18nc("@info", "Cannot add breakpoint at line %1", lineNumber);
-        } else if ( argument.compare(QLatin1String("remove")) == 0 ) {
-            if ( !breakpointExisted ) {
-                errorNotFound = true;
-            } else {
-                ok = removeBreakpoint( breakpoint );
-                *returnValue = ok ? i18nc("@info", "Breakpoint at line %1 removed", lineNumber)
-                                  : i18nc("@info", "Cannot remove breakpoint at line %1", lineNumber);
-            }
-        } else if ( argument.compare(QLatin1String("toggle")) == 0 ) {
-            if ( !breakpointExisted ) {
-                errorNotFound = true;
-            } else {
-                breakpoint.setEnabled( !breakpoint.isEnabled() );
-                ok = addBreakpoint( breakpoint );
-                *returnValue = ok ? i18nc("@info", "Breakpoint toggled at line %1", lineNumber)
-                                  : i18nc("@info", "Cannot toggle breakpoint at line %1", lineNumber);
-            }
-        } else if ( argument.compare(QLatin1String("enable")) == 0 ) {
-            if ( !breakpointExisted ) {
-                errorNotFound = true;
-            } else {
-                breakpoint.setEnabled();
-                ok = addBreakpoint( breakpoint );
-                *returnValue = ok ? i18nc("@info", "Breakpoint enabled at line %1", lineNumber)
-                                  : i18nc("@info", "Cannot enable breakpoint at line %1", lineNumber);
-            }
-        } else if ( argument.compare(QLatin1String("disable")) == 0 ) {
-            if ( !breakpointExisted ) {
-                errorNotFound = true;
-            } else {
-                breakpoint.setEnabled( false );
-                ok = addBreakpoint( breakpoint );
-                *returnValue = ok ? i18nc("@info", "Breakpoint disabled at line %1", lineNumber)
-                                  : i18nc("@info", "Cannot disable breakpoint at line %1", lineNumber);
-            }
-        } else if ( argument.compare(QLatin1String("reset")) == 0 ) {
-            if ( !breakpointExisted ) {
-                errorNotFound = true;
-            } else {
-                breakpoint.reset();
-                ok = addBreakpoint( breakpoint );
-                *returnValue = ok ? i18nc("@info", "Breakpoint reset at line %1", lineNumber)
-                                  : i18nc("@info", "Cannot reset breakpoint at line %1", lineNumber);
-            }
-        } else if ( argument.compare(QLatin1String("condition")) == 0 ) {
-            if ( !breakpointExisted ) {
-                errorNotFound = true;
-            } else if ( command.arguments().count() < 3 ) {
-                // Needs at least 3 arguments: ".break <lineNumber> condition <conditionCode>"
-                ok = false;
-                *returnValue = i18nc("@info", "Condition code missing");
-            } else {
-                breakpoint.setCondition( QStringList(command.arguments().mid(2)).join(" ") );
-                ok = addBreakpoint( breakpoint );
-                *returnValue = ok ? i18nc("@info", "Breakpoint condition set to <emphasis>%1"
-                                                   "</emphasis> at line %2",
-                                          breakpoint.condition(), lineNumber)
-                                  : i18nc("@info", "Cannot set breakpoint condition to <emphasis>%1"
-                                                   "</emphasis> at line %1",
-                                          breakpoint.condition(), lineNumber);
-            }
-        } else if ( maxhitRegExp.indexIn(argument) != -1 ) {
-            if ( !breakpointExisted ) {
-                errorNotFound = true;
-            } else {
-                breakpoint.setMaximumHitCount( maxhitRegExp.cap(1).toInt() );
-                ok = addBreakpoint( breakpoint );
-                *returnValue = ok ? i18nc("@info", "Breakpoint changed at line %1", lineNumber)
-                                  : i18nc("@info", "Cannot change breakpoint at line %1", lineNumber);
-            }
-        } else {
-            kDebug() << "Unexcepted argument:" << argument;
-            ok = false;
-            if ( returnValue ) {
-                *returnValue = i18nc("@info", "Unexcepted argument: %1<nl />Excepted: "
-                                     "<emphasis>add</emphasis> (default), "
-                                     "<emphasis>remove</emphasis>, "
-                                     "<emphasis>toggle</emphasis>, "
-                                     "<emphasis>enable</emphasis>, "
-                                     "<emphasis>disable</emphasis>, "
-                                     "<emphasis>reset</emphasis>, "
-                                     "<emphasis>condition=&lt;conditionCode&gt;</emphasis>, "
-                                     "<emphasis>maxhits=&lt;number&gt;</emphasis>",
-                                     argument);
-            }
-        }
-
-        if ( errorNotFound ) {
-            ok = false;
-            if ( returnValue ) {
-                *returnValue = i18nc("@info", "No breakpoint found at line %1",
-                                        lineNumber );
-            }
-        }
-        return ok;
-    }
-    case DebuggerCommand::DebuggerControlCommand: {
-        ExecutionControl executionControl = executionControlFromString( command.argument() );
-        bool ok = executionControl != InvalidControlExecution;
-        if ( ok ) {
-            QString errorMessage;
-            ok = debugControl( executionControl, command.argument(1), &errorMessage );
-            if ( returnValue && !ok ) {
-                *returnValue = i18nc("@info", "Cannot execute command: <message>%1</message>",
-                                     errorMessage);
-            }
-        } else if ( returnValue ) {
-            *returnValue = i18nc("@info", "Unexcepted argument <emphasis>%1</emphasis><nl />"
-                                 "Expected one of these: "
-                                 "<emphasis>continue</emphasis>, "
-                                 "<emphasis>interrupt</emphasis>, "
-                                 "<emphasis>abort</emphasis>, "
-                                 "<emphasis>stepinto &lt;count = 1&gt;</emphasis>, "
-                                 "<emphasis>stepover &lt;count = 1&gt;</emphasis>, "
-                                 "<emphasis>stepout &lt;count = 1&gt;</emphasis>, "
-                                 "<emphasis>rununtil &lt;lineNumber&gt;</emphasis>",
-                                 command.argument());
-        }
-        return ok;
-    }
-    case DebuggerCommand::DebugCommand: {
-        bool error;
-        int errorLineNumber;
-        QString errorMessage;
-        QStringList backtrace;
-        QScriptValue result = evaluateInContext( command.arguments().join(" "),
-                i18nc("@info/plain", "Console Debug Command"), &error, &errorLineNumber,
-                &errorMessage, &backtrace, true );
-        if ( error ) {
-            if ( returnValue ) {
-                *returnValue = i18nc("@info", "Error: <message>%1</message><nl />"
-                                              "Backtrace: <message>%2</message>",
-                                     errorMessage, backtrace.join("<br />"));
-            }
-        } else if ( returnValue ) {
-            *returnValue = result.toString();
-        }
-        return !error;
-    }
-
-    default:
-        kDebug() << "Command execution not implemented" << command.command();
-        return false;
-    }
-}
-
-QScriptValue Debugger::evaluateInContext( const QString &program, const QString &contextName,
-        bool *hadUncaughtException, int *errorLineNumber, QString *errorMessage,
-        QStringList *backtrace, bool interruptAtStart )
-{
-    // Use new context for program evaluation
-    QScriptContext *context = engine()->pushContext();
-
-    // Store current execution type, to restore it later
-    ExecutionType executionType = m_executionType;
-
-    // Evaluating may block if script execution is currently interrupted,
-    // this makes sure it runs over the given program and returns to where it was before
-    if ( interruptAtStart ) {
-        QTimer::singleShot( 0, this, SLOT(debugStepIntoInjectedProgram()) );
+    if ( !m_scriptResult ) {
+        m_scriptResult = new ResultObject( m_engine );
+//         connect( m_scriptResult, SIGNAL(publish()), this, SLOT(publish()) ); TODO
     } else {
-        QTimer::singleShot( 0, this, SLOT(debugRunInjectedProgram()) );
+        m_scriptResult->clear();
     }
 
-    // Evaluate program
-    QScriptValue result = engine()->evaluate( program,
-            contextName.isEmpty() ? "<Injected Code>" : contextName, m_lineNumber );
-
-    // Restore previous execution type (if not interrupted)
-    if ( !interruptAtStart ) {
-        m_executionType = executionType;
-    }
-
-    kDebug() << "Evaluate-in-context result" << result.toString() << program;
-    if ( hadUncaughtException ) {
-        *hadUncaughtException = engine()->hasUncaughtException();
-    }
-    if ( errorLineNumber ) {
-        *errorLineNumber = engine()->uncaughtExceptionLineNumber();
-    }
-    if ( errorMessage ) {
-        *errorMessage = engine()->uncaughtException().toString();
-    }
-    if ( backtrace ) {
-        *backtrace = engine()->uncaughtExceptionBacktrace();
-    }
-    if ( engine()->hasUncaughtException() ) {
-        kDebug() << "Uncaught exception in program:"
-                 << engine()->uncaughtExceptionBacktrace();
-        engine()->clearExceptions();
-    }
-    engine()->popContext();
-    return result;
-}
-
-// TODO use evaluateInContext() here?
-bool Breakpoint::testCondition( QScriptEngine *engine )
-{
-    if ( m_condition.isEmpty() ) {
-        return true; // No condition, always satisfied
-    }
-
-    // Use new context for condition evaluation
-    QScriptContext *context = engine->pushContext();
-
-    // Replace '%HITS' with the current number of hits
-    const QString condition =
-            m_condition.replace( QLatin1String("%HITS"), QString::number(m_hitCount) );
-
-    // Evaluate condition in a try-catch-block
-    m_lastConditionResult =
-            engine->evaluate( QString("try{%1}catch(err){"
-                                      "print('Error in breakpoint condition: ' + err);}")
-                                      .arg(condition),
-                              QString("Breakpoint Condition at %1").arg(m_lineNumber),
-                              m_lineNumber );
-
-    // Check result value of condition evaluation
-    kDebug() << "Breakpoint condition result" << m_lastConditionResult.toString() << condition;
-    bool conditionSatisfied = false;
-    if ( engine->hasUncaughtException() ) {
-        kDebug() << "Uncaught exception in breakpoint condition:"
-                 << engine->uncaughtExceptionBacktrace();
-        engine->clearExceptions();
-    } else if ( !m_lastConditionResult.isBool() ) {
-        kDebug() << "Breakpoint conditions should return a boolean!";
+    if ( !m_scriptNetwork ) {
+        m_scriptNetwork = new Network( info->fallbackCharset(), m_engine );
     } else {
-        conditionSatisfied = m_lastConditionResult.toBool();
+        m_scriptNetwork->clear();
     }
-    engine->popContext();
-    return conditionSatisfied;
+
+    if ( !m_scriptStorage ) {
+        m_scriptStorage = new Storage( info->serviceProvider() );
+    }
+
+    // Expose objects to the script engine
+    if ( !m_engine->globalObject().property("accessor").isValid() ) {
+        m_engine->globalObject().setProperty( "accessor", m_engine->newQObject(
+                const_cast<TimetableAccessorInfo*>(info)) ); // info has only readonly properties
+    }
+    if ( !m_engine->globalObject().property("helper").isValid() ) {
+        m_engine->globalObject().setProperty( "helper", m_engine->newQObject(m_scriptHelper) );
+    }
+    if ( !m_engine->globalObject().property("network").isValid() ) {
+        m_engine->globalObject().setProperty( "network", m_engine->newQObject(m_scriptNetwork) );
+    }
+    if ( !m_engine->globalObject().property("storage").isValid() ) {
+        m_engine->globalObject().setProperty( "storage", m_engine->newQObject(m_scriptStorage) );
+    }
+    if ( !m_engine->globalObject().property("result").isValid() ) {
+        m_engine->globalObject().setProperty( "result", m_engine->newQObject(m_scriptResult) );
+    }
+    if ( !m_engine->globalObject().property("enum").isValid() ) {
+        m_engine->globalObject().setProperty( "enum",
+                m_engine->newQMetaObject(&ResultObject::staticMetaObject) );
+    }
+
+    // Import extensions (from XML file, <script extensions="...">)
+    foreach ( const QString &extension, info->scriptExtensions() ) {
+        if ( !importExtension(m_engine, extension) ) {
+            m_lastScriptError = ScriptLoadFailed;
+            return;
+        }
+    }
 }
 
-void Breakpoint::reached()
+void Debugger::executeCommand( const ConsoleCommand &command )
 {
-    if ( !m_enabled ) {
+    kDebug() << "executeCommand(...)";
+    kDebug() << "DebugCommand?" << (command.command() == ConsoleCommand::DebugCommand) << m_debugger->isInterrupted();
+    if ( command.command() == ConsoleCommand::DebugCommand ) {
+        if ( m_debugger->isInterrupted() ) {
+            emit commandExecutionResult( "Debugger is already running!", true );
+        } else {
+            kDebug() << "THREADWEAVER TODO";
+            ExecuteConsoleCommandJob *consoleCommandJob = createExecuteConsoleCommandJob( command ); // TODO QScriptProgram as argument to createLoadScriptJob()?
+            connect( consoleCommandJob, SIGNAL(done(ThreadWeaver::Job*)),
+                     this, SLOT(executeConsoleCommandJobDone(ThreadWeaver::Job*)) );
+            m_weaver->enqueue( consoleCommandJob );
+        }
+    } else {
+        kDebug() << "THREADWEAVER";
+        ExecuteConsoleCommandJob *consoleCommandJob = createExecuteConsoleCommandJob( command ); // TODO QScriptProgram as argument to createLoadScriptJob()?
+        connect( consoleCommandJob, SIGNAL(done(ThreadWeaver::Job*)),
+                 this, SLOT(executeConsoleCommandJobDone(ThreadWeaver::Job*)) );
+        m_weaver->enqueue( consoleCommandJob );
+    }
+
+//     TODO Wake from interrupt done in jobs?
+}
+
+void Debugger::evaluateInContext( const QString &program, const QString &contextName ) // TODO , bool interruptAtStart )
+{
+    kDebug() << "evaluateInContext(...)";
+    EvaluateInContextJob *evaluateInContextJob = createEvaluateInContextJob( program, contextName );
+    connect( evaluateInContextJob, SIGNAL(done(ThreadWeaver::Job*)),
+             this, SLOT(evaluateInContextJobDone(ThreadWeaver::Job*)) );
+    runAfterScriptIsLoaded( evaluateInContextJob );
+    return;
+}
+
+void Debugger::loadScript( const QString &program, const TimetableAccessorInfo *info )
+{
+    if ( m_loadScriptJob ) {
+        kDebug() << "Script already gets loaded, please wait...";
+        return;
+    }
+    if ( m_script && m_script->sourceCode() == program ) {
+        kDebug() << "Script code unchanged";
         return;
     }
 
-    // Increase hit count
-    ++m_hitCount;
-    if ( m_maxHitCount > 0 && m_hitCount >= m_maxHitCount ) {
-        // Maximum hit count reached, disable
-        m_enabled = false;
-    }
+    m_state = ScriptModified;
+    m_script = new QScriptProgram( program, info->scriptFileName() );
+    m_info = info;
+    m_lastScriptError = NoScriptError;
+    m_loadScriptJob = createLoadScriptJob(); // TODO QScriptProgram as argument to createLoadScriptJob()?
+    LoadScriptJob *loadScriptJob = m_loadScriptJob;
+
+    loadScriptObjects( info );
+
+    connect( loadScriptJob, SIGNAL(done(ThreadWeaver::Job*)),
+             this, SLOT(loadScriptJobDone(ThreadWeaver::Job*)) );
+    m_weaver->enqueue( loadScriptJob );
 }
 
-Breakpoint Debugger::setBreakpoint( int lineNumber, bool enable )
+LoadScriptJob *Debugger::createLoadScriptJob()
 {
-    Breakpoint breakpoint;
-    if ( lineNumber < 0 ) {
-        return breakpoint;
-    }
-
-    // Find a valid breakpoint line number near lineNumber (may be lineNumber itself)
-    lineNumber = getNextBreakableLineNumber( lineNumber );
-    const bool hasBreakpoint = m_breakpoints.contains( lineNumber );
-    if ( hasBreakpoint && !enable ) {
-        kDebug() << "Remove breakpoint at line" << lineNumber;
-        breakpoint = m_breakpoints[ lineNumber ];
-        m_breakpoints.remove( lineNumber );
-        emit breakpointRemoved( breakpoint );
-    } else if ( !hasBreakpoint && enable ) {
-        kDebug() << "Add breakpoint at line" << lineNumber;
-        breakpoint = Breakpoint( lineNumber, enable );
-        m_breakpoints.insert( lineNumber, breakpoint );
-        emit breakpointAdded( breakpoint );
-    }
-
-    return breakpoint;
+    return new LoadScriptJob( m_debugger, *m_info, m_engineMutex, m_script, this );
 }
 
-bool Debugger::addBreakpoint( const Breakpoint &breakpoint )
+ProcessTimetableDataRequestJob *Debugger::createProcessTimetableDataRequestJob(
+        const RequestInfo *request, DebugMode debugMode )
 {
-    if ( !breakpoint.isValid() ) {
-        kDebug() << "Breakpoint is invalid" << breakpoint.lineNumber() << breakpoint.condition();
+    return new ProcessTimetableDataRequestJob( m_debugger, *m_info, m_engineMutex, request,
+                                               debugMode, this );
+}
+
+ExecuteConsoleCommandJob *Debugger::createExecuteConsoleCommandJob( const ConsoleCommand &command )
+{
+    return new ExecuteConsoleCommandJob( m_debugger, *m_info, m_engineMutex, command, this );
+}
+
+EvaluateInContextJob *Debugger::createEvaluateInContextJob( const QString &program,
+                                                                   const QString &context )
+{
+    return new EvaluateInContextJob( m_debugger, *m_info, m_engineMutex, program, context, this );
+}
+
+bool Debugger::callFunction( const QString &functionToRun, const RequestInfo *requestInfo )
+{
+    if ( m_lastScriptError != NoScriptError ) {
+        kDebug() << "Script could not be loaded correctly";
         return false;
     }
-    if ( canBreakAt(breakpoint.lineNumber()) != FoundEvaluatableLine ) {
-        kDebug() << "Cannot add breakpoint at" << breakpoint.lineNumber() << breakpoint.condition();
+    if ( m_debugger->isRunning() ) {
+        kDebug() << "Already executing script";
         return false;
     }
 
-    if ( m_breakpoints.contains(breakpoint.lineNumber()) ) {
-        emit breakpointRemoved( m_breakpoints[breakpoint.lineNumber()] );
-    }
-
-    m_breakpoints.insert( breakpoint.lineNumber(), breakpoint );
-    emit breakpointAdded( breakpoint );
+//     TODO
+    ProcessTimetableDataRequestJob *runScriptJob = createProcessTimetableDataRequestJob(
+            requestInfo, InterruptAtStart );
+    connect( runScriptJob, SIGNAL(done(ThreadWeaver::Job*)),
+             this, SLOT(processTimetableDataRequestJobDone(ThreadWeaver::Job*)) );
+    runAfterScriptIsLoaded( runScriptJob );
     return true;
 }
 
-void Debugger::removeAllBreakpoints()
+void Debugger::runAfterScriptIsLoaded( ThreadWeaver::Job *dependendJob )
 {
-    foreach ( const Breakpoint &breakpoint, m_breakpoints ) {
-        if ( m_breakpoints.contains(breakpoint.lineNumber()) ) {
-            kDebug() << "Remove breakpoint at line" << breakpoint.lineNumber();
-            m_breakpoints.remove( breakpoint.lineNumber() );
-            emit breakpointRemoved( breakpoint );
+    if ( m_state != ScriptLoaded ) {
+        // If the script is not loaded (still in initializing mode, error or modified)
+        // create a job to load it and make the run script job dependend
+        if ( !m_loadScriptJob ) {
+            kDebug() << "XXX Script not loaded, create LoadScriptJob";
+            ThreadWeaver::debug( 0, "Script not loaded, create LoadScriptJob\n" );
+            m_loadScriptJob = createLoadScriptJob();
+            connect( m_loadScriptJob, SIGNAL(done(ThreadWeaver::Job*)),
+                     this, SLOT(loadScriptJobDone(ThreadWeaver::Job*)) );
+            m_loadScriptJob->assignQueuePolicy( &ThreadWeaver::DependencyPolicy::instance() );
+            m_weaver->enqueue( m_loadScriptJob );
         }
-    }
-}
+//         TEST
+        // Do not enqueue the dependend job, only add the LoadScriptJob as dependency
+        kDebug() << "Script not loaded, add dependency";
+//         TODO THIS DOES NOT WORK...
+        ThreadWeaver::debug( 0, "Script not loaded, run job after LoadScriptJob has finished\n" );
 
-bool Debugger::removeBreakpoint( int lineNumber )
-{
-    lineNumber = getNextBreakableLineNumber( lineNumber );
-    if ( m_breakpoints.contains(lineNumber) ) {
-        kDebug() << "Remove breakpoint at line" << lineNumber;
-        const Breakpoint breakpoint = m_breakpoints[ lineNumber ];
-        m_breakpoints.remove( lineNumber );
-        emit breakpointRemoved( breakpoint );
-        return true;
-    }
+//         m_loadScriptJob->assignQueuePolicy( &ThreadWeaver::DependencyPolicy::instance() );
+        dependendJob->assignQueuePolicy( &ThreadWeaver::DependencyPolicy::instance() );
 
-    return false;
-}
+        ThreadWeaver::DependencyPolicy::instance().addDependency( dependendJob, m_loadScriptJob );
+        kDebug() << "TEST" << ThreadWeaver::DependencyPolicy::instance().getDependencies( m_loadScriptJob ).count();
 
-bool Debugger::removeBreakpoint( const Breakpoint &breakpoint )
-{
-    return removeBreakpoint( breakpoint.lineNumber() );
-}
+        m_weaver->enqueue( dependendJob );
 
-bool Debugger::debugControl( Debugger::ExecutionControl controlType, const QVariant &argument,
-                             QString *errorMessage )
-{
-    switch ( controlType ) {
-    case ControlExecutionContinue:
-        if ( !isInterrupted() && m_executionType != ExecuteNotRunning ) {
-            if ( errorMessage ) {
-                *errorMessage = i18nc("@info", "Debugger is not interrupted!");
-            }
-            return false;
-        }
-        debugContinue();
-        break;
-    case ControlExecutionInterrupt:
-        if ( !m_running ) {
-            if ( errorMessage ) {
-                *errorMessage = i18nc("@info", "Debugger is not running! Start the debugger first.");
-            }
-            return false;
-        }
-        debugInterrupt();
-        break;
-    case ControlExecutionAbort:
-        if ( !m_running ) {
-            if ( errorMessage ) {
-                *errorMessage = i18nc("@info", "Debugger is not running! Start the debugger first.");
-            }
-            return false;
-        }
-        abortDebugger();
-        break;
-    case ControlExecutionStepInto:
-        if ( !isInterrupted() && m_executionType != ExecuteNotRunning ) {
-            if ( errorMessage ) {
-                *errorMessage = i18nc("@info", "Debugger is not interrupted!");
-            }
-            return false;
-        }
-        debugStepInto( argument.isValid() ? argument.toInt() : 1 );
-        break;
-    case ControlExecutionStepOver:
-        if ( !isInterrupted() && m_executionType != ExecuteNotRunning ) {
-            if ( errorMessage ) {
-                *errorMessage = i18nc("@info", "Debugger is not interrupted!");
-            }
-            return false;
-        }
-        debugStepOver( argument.isValid() ? argument.toInt() : 1 );
-        break;
-    case ControlExecutionStepOut:
-        if ( !isInterrupted() && m_executionType != ExecuteNotRunning ) {
-            if ( errorMessage ) {
-                *errorMessage = i18nc("@info", "Debugger is not interrupted!");
-            }
-            return false;
-        }
-        debugStepOut( argument.isValid() ? argument.toInt() : 1 );
-        break;
-    case ControlExecutionRunUntil: {
-        bool ok;
-        const int lineNumber = argument.toInt( &ok );
-        if ( !argument.isValid() || !ok ) {
-            if ( errorMessage ) {
-                *errorMessage = i18nc("@info", "Invalid argument '%1', expected line number!",
-                                      argument.toString() );
-            }
-            return false;
-        } else if ( lineNumber < 1 || lineNumber > m_scriptLines.count() ) {
-            if ( errorMessage ) {
-                *errorMessage = i18nc("@info", "Invalid line number %1! Must be between 1 and %2",
-                                      lineNumber, m_scriptLines.count());
-            }
-            return false;
-        }
-        debugRunUntilLineNumber( lineNumber );
-        break;
-    }
-    case InvalidControlExecution:
-        kDebug() << "Invalid control execution type";
-        break;
-    default:
-        kDebug() << "Unknown Debugger::ExecutionControl" << controlType;
-        if ( errorMessage ) {
-            *errorMessage = i18nc("@info", "Debugger command %1 not implemented!", controlType );
-        }
-        return false;
-    }
-
-    return true;
-}
-
-Debugger::ExecutionControl Debugger::executionControlFromString( const QString &str )
-{
-    const QString _str = str.trimmed().toLower();
-    if ( _str == "continue" ) {
-        return ControlExecutionContinue;
-    } else if ( _str == "interrupt" ) {
-        return ControlExecutionInterrupt;
-    } else if ( _str == "abort" ) {
-        return ControlExecutionAbort;
-    } else if ( _str == "stepinto" ) {
-        return ControlExecutionStepInto;
-    } else if ( _str == "stepover" ) {
-        return ControlExecutionStepOver;
-    } else if ( _str == "stepout" ) {
-        return ControlExecutionStepOut;
-    } else if ( _str == "rununtil" ) {
-        return ControlExecutionRunUntil;
+//         ThreadWeaver::JobSequence *jobSequence = new ThreadWeaver::JobSequence( this );
+//         jobSequence->addJob( m_loadScriptJob );
+//         jobSequence->addJob( dependendJob );
+//         connect( jobSequence, SIGNAL(done(ThreadWeaver::Job*)),
+//                  this, SLOT(jobSequenceDone(ThreadWeaver::Job*)));
+//         m_weaver->enqueue( jobSequence );
     } else {
-        return InvalidControlExecution;
+        // Script is already loaded, just enqueue the job
+        m_weaver->enqueue( dependendJob );
     }
 }
 
-void Debugger::abortDebugger()
+void Debugger::jobSequenceDone( ThreadWeaver::Job *jobSequence )
 {
-    engine()->abortEvaluation();
-    m_executionType = ExecuteNotRunning;
+    ThreadWeaver::debug( 0, "A job sequence is done (LoadScriptJob, X)\n" );
+    delete jobSequence;
 }
 
-void Debugger::debugInterrupt()
+void Debugger::loadScriptJobDone( ThreadWeaver::Job *job )
 {
-    m_executionType = ExecuteInterrupt;
+    Q_ASSERT( m_loadScriptJob == job );
+    m_state = job->success() ? ScriptLoaded : ScriptError;
+    kDebug() << "TEST\n\n----------------------------------------------------\n";
+    ThreadWeaver::DependencyPolicy::instance().dumpJobDependencies();
+    ThreadWeaver::DependencyPolicy::instance().free( m_loadScriptJob );
+    ThreadWeaver::DependencyPolicy::instance().dumpJobDependencies();
+    kDebug() << "TEST" << ThreadWeaver::DependencyPolicy::instance().getDependencies( m_loadScriptJob ).count();
+    m_loadScriptJob = 0;
+    kDebug() << "Scipt loaded" << job->success();
+    ThreadWeaver::debug( 0, QString("Script loaded: %1\n").arg(job->success() ? "Success" : "Failed").toUtf8() );
+//     delete job; TODO
 }
 
-void Debugger::debugContinue()
+void Debugger::processTimetableDataRequestJobDone( ThreadWeaver::Job *job )
 {
-    engine()->clearExceptions();
-    m_executionType = ExecuteRun;
+    ProcessTimetableDataRequestJob *runScriptJob = qobject_cast< ProcessTimetableDataRequestJob* >( job );
+    Q_ASSERT( runScriptJob );
+
+    emit functionCallResult( runScriptJob->timetableData(), runScriptJob->returnValue() );
+    kDebug() << "Scipt run done" << runScriptJob->returnValue().toString() << job->success();
+    delete job;
 }
 
-void Debugger::debugStepInto( int count )
+void Debugger::executeConsoleCommandJobDone( ThreadWeaver::Job *job )
 {
-    m_repeatExecutionTypeCount = count;
-    kDebug() << m_repeatExecutionTypeCount;
-    m_executionType = ExecuteStepInto;
+    ExecuteConsoleCommandJob *consoleCommandJob = qobject_cast< ExecuteConsoleCommandJob* >( job );
+    Q_ASSERT( consoleCommandJob );
+//     QString returnValue;
+//     bool error = !m_debugger->executeCommand( command, &returnValue );
+    emit commandExecutionResult( consoleCommandJob->returnValue(), !consoleCommandJob->success() );
+    kDebug() << "Console command done" << consoleCommandJob->returnValue() << job->success();
+    delete job;
 }
 
-void Debugger::debugStepOver( int count )
+void Debugger::evaluateInContextJobDone( ThreadWeaver::Job *job )
 {
-    if ( currentFunctionStartLineNumber() == -1 ) {
-        // Not currently in a function, use step into. Otherwise this would equal debugContinue()
-        debugStepInto( count );
-    } else {
-        m_repeatExecutionTypeCount = count;
-        m_interruptContext = engine()->currentContext();
-        m_interruptFunctionLineNumber = currentFunctionLineNumber();
-        m_executionType = ExecuteStepOver;
-    }
+    EvaluateInContextJob *evaluateInContextJob = qobject_cast< EvaluateInContextJob* >( job );
+    Q_ASSERT( evaluateInContextJob );
+
+    emit evaluationResult( evaluateInContextJob->result() );
+    kDebug() << "Evaluate in context done" << evaluateInContextJob->result().returnValue.toString() << job->success();
+    delete job;
 }
 
-void Debugger::debugStepOut( int count )
-{
-    m_repeatExecutionTypeCount = count;
-    m_interruptContext = engine()->currentContext();
-    m_interruptFunctionLineNumber = currentFunctionLineNumber();
-    m_executionType = ExecuteStepOut;
-}
-
-void Debugger::debugRunUntilLineNumber( int lineNumber )
-{
-    addBreakpoint( Breakpoint::oneTimeBreakpoint(lineNumber) );
-    m_executionType = ExecuteRun;
-}
-
-void Debugger::debugRunInjectedProgram()
-{
-    m_executionType = ExecuteRunInjectedProgram;
-}
-
-void Debugger::debugStepIntoInjectedProgram()
-{
-    m_executionType = ExecuteStepIntoInjectedProgram;
-}
-
-void Debugger::scriptLoad( qint64 id, const QString &program, const QString &fileName, int baseLineNumber )
-{
-    // TODO ONLY FOR THE MAIN SCRIPT FILE, eg. not for fileName == "Console Command"
-    kDebug() << id /*<< program*/ << fileName << baseLineNumber;
-    if ( id != -1 ) {
-        m_scriptLines = program.split( '\n', QString::KeepEmptyParts );
-    }
-}
-
-void Debugger::scriptUnload( qint64 id )
-{
-    // TODO
-    QScriptEngineAgent::scriptUnload( id );
-}
-
-void Debugger::contextPush()
-{
-    // TODO
-}
-
-void Debugger::contextPop()
-{
-    // TODO
-}
-
-void Debugger::positionChange( qint64 scriptId, int lineNumber, int columnNumber )
-{
-    const bool injectedProgram = m_executionType == ExecuteRunInjectedProgram /*||
-                                 m_executionType == ExecuteStepInfoInjectedProgram*/;
-    if ( !injectedProgram ) {
-        if ( !m_running ) {
-            m_running = true;
-            emit scriptStarted();
-        }
-        emit positionAboutToChanged( m_lineNumber, m_columnNumber, lineNumber, columnNumber );
-    }
-
-    kDebug() << "m_repeatExecutionTypeCount:" << m_repeatExecutionTypeCount;
-    switch ( m_executionType ) {
-        case ExecuteStepInto:
-        case ExecuteStepIntoInjectedProgram:
-            if ( m_repeatExecutionTypeCount > 0 ) { kDebug() << "-- A";
-                --m_repeatExecutionTypeCount;
-            } else if ( m_repeatExecutionTypeCount == 0 ) {
-                m_executionType = ExecuteInterrupt;
-            }
-            break;
-        case ExecuteStepOver:
-            if ( engine()->currentContext() == m_interruptContext ) {
-                kDebug() << "Interrupt after step over";
-                if ( m_repeatExecutionTypeCount > 0 ) { kDebug() << "-- B";
-                    --m_repeatExecutionTypeCount;
-                } else if ( m_repeatExecutionTypeCount == 0 ) {
-                    m_executionType = ExecuteInterrupt;
-                    m_interruptContext = 0;
-                    m_interruptFunctionLineNumber = -1;
-                }
-            } else {
-                kDebug() << "Step over" << m_lineNumber;
-            }
-            break;
-        case ExecuteStepOut: // Done below
-        case ExecuteRun:
-        case ExecuteNotRunning:
-        case ExecuteInterrupt:
-        case ExecuteRunInjectedProgram:
-        default:
-            break;
-    }
-
-    const QScriptContext *oldContext = m_lastContext;
-    m_lastContext = engine()->currentContext();
-
-    if ( !m_backtraceCleanedup ) {
-        m_backtraceCleanedup = true;
-
-        const int oldFunctionLineNumber = m_currentFunctionLineNumber;
-        m_currentFunctionLineNumber = currentFunctionLineNumber();
-
-        const BacktraceQueue oldBacktrace = m_lastBacktrace;
-        m_lastBacktrace = buildBacktrace();
-        BacktraceChange change = compareBacktraces( m_lastBacktrace, oldBacktrace );
-        emit backtraceChanged( m_lastBacktrace, change );
-
-        switch ( change ) {
-        case EnteredFunction:
-            kDebug() << "Entered function";
-            break;
-        case ExitedFunction:
-            kDebug() << "Exited function";
-            if ( m_executionType == ExecuteStepOut ) {
-                if ( oldFunctionLineNumber == m_interruptFunctionLineNumber ) {
-                    kDebug() << "Interrupt at return";
-                    m_interruptContext = 0;
-                    m_interruptFunctionLineNumber = -1;
-                    m_executionType = ExecuteInterrupt;
-                }
-            }
-            break;
-        case NoBacktraceChange:
-        default:
-            break;
-        }
-    }
-
-    // Handle breakpoints
-    const int lastLineNumber = m_lineNumber;
-    if ( !injectedProgram ) {
-        m_lineNumber = lineNumber;
-        m_columnNumber = columnNumber;
-
-        // Test for a breakpoint at the new line number
-        if ( m_breakpoints.contains(lineNumber) ) {
-            // Found a breakpoint
-            Breakpoint &breakpoint = m_breakpoints[ lineNumber ];
-            if ( breakpoint.isEnabled() ) {
-                // The found breakpoint is enabled
-                kDebug() << "Breakpoint reached:" << lineNumber;
-                breakpoint.reached(); // Increase hit count, etc.
-
-                // Test breakpoint condition if any
-                if ( breakpoint.testCondition(engine()) ) {
-                    // Condition satisfied or no condition, interrupt script
-                    m_executionType = ExecuteInterrupt;
-                    emit breakpointReached( breakpoint );
-
-                    // Remove breakpoints, if their maximum hit count is reached
-                    if ( !breakpoint.isEnabled() ) {
-                        m_breakpoints.remove( lineNumber );
-                        emit breakpointRemoved( breakpoint );
-                    }
-                } else {
-                    kDebug() << "Breakpoint at" << lineNumber << "reached but it's condition"
-                            << breakpoint.condition() << "did not match";
-                }
-            } else {
-                kDebug() << "Breakpoint at" << lineNumber << "reached but it is disabled";
-            }
-        }
-
-        emit positionChanged( lineNumber, columnNumber );
-    }
-
-    if ( m_executionType == ExecuteInterrupt ) {
-        emit interrupted();
-        while ( m_executionType == ExecuteInterrupt ) {
-            QApplication::processEvents( QEventLoop::AllEvents, 200 );
-        }
-
-        // TODO May have been deleted here already...
-        emit continued();
-    }
-}
-
-BacktraceQueue Debugger::buildBacktrace() const
-{
-    BacktraceQueue backtrace;
-    QScriptContext *context = engine()->currentContext();
-    while ( context ) {
-        backtrace << QScriptContextInfo( context );
-        context = context->parentContext();
-    }
-    return backtrace;
-}
-
-int Debugger::currentFunctionLineNumber() const
-{
-    QScriptContext *context = engine()->currentContext();
-    while ( context ) {
-        if ( context->thisObject().isFunction() ) {
-            return QScriptContextInfo( context ).lineNumber();
-        }
-        context = context->parentContext();
-    }
-    return -1;
-}
-
-void Debugger::functionEntry( qint64 scriptId )
-{
-    if ( scriptId != -1 ) {
-        m_backtraceCleanedup = false;
-    }
-}
-
-void Debugger::functionExit( qint64 scriptId, const QScriptValue& returnValue )
-{
-    if ( scriptId != -1 ) {
-        m_backtraceCleanedup = false;
-    }
-    QTimer::singleShot( 250, this, SLOT(checkExecution()) );
-}
-
-Debugger::BacktraceChange Debugger::compareBacktraces( const BacktraceQueue &backtrace,
-                                                       const BacktraceQueue &oldBacktrace ) const
-{
-    if ( backtrace.length() > oldBacktrace.length() ) {
-        return EnteredFunction;
-    } else if ( backtrace.length() < oldBacktrace.length() ) {
-        return ExitedFunction;
-    } else {
-        return NoBacktraceChange;
-    }
-}
-
-void Debugger::checkExecution()
-{
-    if ( m_running && !engine()->isEvaluating() ) {
-        const QScriptContextInfo functionInfo( engine()->currentContext() );
-//         kDebug() << "Exited" << m_lineNumber << m_columnNumber;
-        if ( !m_lastBacktrace.isEmpty() ) {
-            const BacktraceQueue oldBacktrace = m_lastBacktrace;
-            m_lastBacktrace.clear();
-            BacktraceChange change = compareBacktraces( m_lastBacktrace, oldBacktrace );
-            emit backtraceChanged( m_lastBacktrace, change );
-        }
-        m_running = false;
-        emit scriptFinished();
-        emit positionAboutToChanged( m_lineNumber, m_columnNumber, -1, -1 );
-        m_lineNumber = -1;
-        m_columnNumber = -1;
-        emit positionChanged( -1, -1 );
-    }
-}
-
-void Debugger::exceptionCatch( qint64 scriptId, const QScriptValue &exception )
-{
-    kDebug() << scriptId << exception.toString();
-}
-
-void Debugger::exceptionThrow( qint64 scriptId, const QScriptValue &exceptionValue, bool hasHandler )
-{
-    if ( !hasHandler ) {
-        kDebug() << "Uncatched exception in" << engine()->uncaughtExceptionLineNumber()
-                 << exceptionValue.toString();
-        debugInterrupt();
-        emit exception( engine()->uncaughtExceptionLineNumber(), exceptionValue.toString() );
-        engine()->clearExceptions();
-    }
-}
-
-QVariant Debugger::extension( QScriptEngineAgent::Extension extension, const QVariant &argument )
-{
-    kDebug() << extension << argument.toString();
-    return QScriptEngineAgent::extension( extension, argument );
-}
-
-DebuggerCommand DebuggerCommand::fromString( const QString &str )
-{
-    if ( str.isEmpty() ) {
-        return DebuggerCommand( InvalidCommand );
-    }
-
-    const QStringList words = str.split( ' ', QString::SkipEmptyParts );
-    QString commandName = words.first().trimmed().toLower();
-    if ( commandName.startsWith('.') ) {
-        commandName = commandName.mid( 1 ); // Cut the '.'
-        return DebuggerCommand( commandName, words.mid(1) );
-    }
-
-    return DebuggerCommand( InvalidCommand );
-}
-
-bool DebuggerCommand::isValid() const
-{
-    switch ( m_command ) {
-    case DebuggerControlCommand:
-        // Command accepts 1 - 3 arguments
-        return m_arguments.count() >= 1 && m_arguments.count() <= 3;
-    case HelpCommand:
-        // Command accepts 0 - 1 argument
-        return m_arguments.count() <= 1;
-    case DebugCommand:
-    case BreakpointCommand:
-        // Command accepts 1 - * arguments
-        return !m_arguments.isEmpty();
-    case ClearCommand:
-    case LineNumberCommand:
-        // Command does not accept arguments
-        return m_arguments.isEmpty();
-
-    case InvalidCommand:
-        return false;
-    default:
-        kDebug() << "Command unknown" << m_command;
-        return false;
-    }
-}
-
-QString DebuggerCommand::description() const
-{
-    return commandDescription( m_command );
-}
-
-QString DebuggerCommand::syntax() const
-{
-    return commandSyntax( m_command );
-}
-
-bool DebuggerCommand::getsExecutedAutomatically() const
-{
-    return getsCommandExecutedAutomatically( m_command );
-}
-
-QStringList DebuggerCommand::availableCommands()
-{
-    return QStringList() << "help" << "clear" << "debugger" << "debug" << "break" << "line"
-                         << "currentline";
-}
-
-QStringList DebuggerCommand::defaultCompletions()
-{
-    return QStringList() << ".help" << ".help debug" << ".help debugger" << ".help line"
-            << ".help currentline" << ".help clear" << ".help break"
-            << ".debugger stepInto" << ".debugger stepOver" << ".debugger stepOut"
-            << ".debugger continue" << ".debugger interrupt" << ".debugger abort"
-            << ".debugger runUntil" << ".debug" << ".line" << ".currentline" << ".clear"
-            << ".break";
-}
-
-bool DebuggerCommand::getsCommandExecutedAutomatically( Command command )
-{
-    switch ( command ) {
-    case HelpCommand:
-    case LineNumberCommand:
-    case DebuggerControlCommand:
-    case DebugCommand:
-    case BreakpointCommand:
-        return true;
-    case ClearCommand:
-        return false;
-    default:
-        kDebug() << "Command unknown" << command;
-        return false;
-    }
-}
-
-QString DebuggerCommand::commandSyntax( DebuggerCommand::Command command )
-{
-    switch ( command ) {
-    case HelpCommand:
-        return i18nc("@info", "<emphasis>.help</emphasis> or "
-                     "<emphasis>.help &lt;command&gt;</emphasis>");
-    case ClearCommand:
-        return i18nc("@info", "<emphasis>.clear</emphasis>");
-    case LineNumberCommand:
-        return i18nc("@info", "<emphasis>.line</emphasis> or "
-                     "<emphasis>.currentline</emphasis>");
-    case DebuggerControlCommand:
-        return i18nc("@info", "<emphasis>.debugger &lt;arguments&gt;</emphasis>, "
-                     "arguments can be one of "
-                     "<emphasis>stepInto &lt;count = 1&gt;?</emphasis>, "
-                     "<emphasis>stepOver &lt;count = 1&gt;?</emphasis>, "
-                     "<emphasis>stepOut &lt;count = 1&gt;?</emphasis>, "
-                     "<emphasis>continue</emphasis>, "
-                     "<emphasis>interrupt</emphasis>, "
-                     "<emphasis>abort</emphasis>, "
-                     "<emphasis>runUntilLineNumber &lt;lineNumber&gt;</emphasis>");
-    case DebugCommand:
-        return i18nc("@info", "<emphasis>.debug &lt;code-to-execute-in-script-context&gt;</emphasis>");
-    case BreakpointCommand:
-        return i18nc("@info", "<emphasis>.break &lt;lineNumber&gt; &lt;argument&gt;"
-                     "</emphasis>, argument can be one of these: "
-                     "<emphasis>remove</emphasis>, "
-                     "<emphasis>toggle</emphasis>, "
-                     "<emphasis>add</emphasis>, "
-                     "<emphasis>enable</emphasis>, "
-                     "<emphasis>disable</emphasis>, "
-                     "<emphasis>reset</emphasis>, "
-                     "<emphasis>condition &lt;conditionCode&gt;</emphasis>, "
-                     "<emphasis>maxhits=&lt;number&gt;</emphasis>");
-    default:
-        kDebug() << "Command unknown" << command;
-        return QString();
-    }
-}
-
-QString DebuggerCommand::commandDescription( Command command )
-{
-    switch ( command ) {
-    case HelpCommand:
-        return i18nc("@info", "Show help, one argument can be a command name.");
-    case ClearCommand:
-        return i18nc("@info", "Clear the current console output.");
-    case LineNumberCommand:
-        return i18nc("@info", "Returns the current execution line number or -1, if not running.");
-    case BreakpointCommand:
-        return i18nc("@info", "Add/remove/change a breakpoint at the line given.");
-    case DebuggerControlCommand:
-        return i18nc("@info", "Control the debugger, expects an argument.");
-    case DebugCommand:
-        return i18nc("@info", "Execute a command in the script context (eg. calling a script "
-                     "function) and interrupts at the first statement in the script (not the "
-                     "command). When leaving the <emphasis>.debug</emphasis> away, the command "
-                     "gets executed without interruption other than breakpoints or uncaught "
-                     "exceptions.");
-    default:
-        kDebug() << "Command unknown" << command;
-        return QString();
-    }
-}
-
-DebuggerCommand::Command DebuggerCommand::commandFromName( const QString &name )
-{
-    const QString _name = name.trimmed().toLower();
-    if ( _name == "help" ) {
-        return HelpCommand;
-    } else if ( name == "clear" ) {
-        return ClearCommand;
-    } else if ( name == "line" || name == "currentline" ) {
-        return LineNumberCommand;
-    } else if ( name == "debugger" ) {
-        return DebuggerControlCommand;
-    } else if ( name == "debug" ) {
-        return DebugCommand;
-    } else if ( name == "break" ) {
-        return BreakpointCommand;
-    } else {
-        return InvalidCommand;
-    }
-}
+}; // namespace Debugger

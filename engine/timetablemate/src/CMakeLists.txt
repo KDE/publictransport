@@ -10,6 +10,9 @@ set( timetablemate_SRCS
    javascriptmodel.cpp
    javascriptparser.cpp
    debugger.cpp
+   debuggerstructures.cpp
+   debuggeragent.cpp
+   debuggerjobs.cpp
    ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
 
    # Use files directly from the data engine
@@ -23,11 +26,8 @@ set( timetablemate_SRCS
    ../../accessorinfoxmlreader.cpp
 )
 
-kde4_add_ui_files( timetablemate_SRCS
-    timetablemateview_base.ui )
-
+kde4_add_ui_files( timetablemate_SRCS timetablemateview_base.ui )
 kde4_add_kcfg_files( timetablemate_SRCS settings.kcfgc )
-
 kde4_add_executable( timetablemate ${timetablemate_SRCS} )
 
 add_dependencies( timetablemate publictransporthelper )
@@ -50,8 +50,20 @@ install( TARGETS timetablemate ${INSTALL_TARGETS_DEFAULT_ARGS} )
 # Put the generated class into the binary directory.
 add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h
                            ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
-    COMMAND ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator ${CMAKE_CURRENT_BINARY_DIR}
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/index.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/helper.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/network.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/networkrequest.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/resultobject.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/storage.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/enums.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/default.css
+    COMMAND ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator
+            --verbose
+            --out_completion ${CMAKE_CURRENT_BINARY_DIR}
+            --out_doc ${CMAKE_CURRENT_SOURCE_DIR}/../doc
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../scripting.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h
             ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator )
 
 ########### install files ###############

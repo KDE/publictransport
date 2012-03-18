@@ -21,7 +21,7 @@
 #define TIMETABLEMATE_H
 
 // Own includes
-#include "debugger.h"
+#include "debuggeragent.h"
 
 // PublicTransport engine includes
 #include <engine/departureinfo.h>
@@ -38,24 +38,17 @@
 #include <QModelIndex>
 #include <QAbstractItemDelegate>
 
-class KLineEdit;
-class QStandardItem;
-class QStandardItemModel;
-class QPlainTextEdit;
-class QModelIndex;
-class QDockWidget;
-class Debugger;
-class Storage;
-class Helper;
-class Network;
 class TimetableAccessorInfo;
 class JavaScriptModel;
 class PublicTransportPreview;
 class TimetableMateView;
-class ResultObject;
-class TimetableAccessor;
-struct RequestInfo;
-
+namespace Scripting {
+    class ResultObject;
+};
+namespace Debugger {
+    class Debugger;
+    struct EvaluationResult;
+};
 namespace KTextEditor
 {
     class Document;
@@ -67,6 +60,8 @@ namespace KParts
 {
     class PartManager;
 };
+class KLineEdit;
+class KTextBrowser;
 class KWebView;
 class KUrlComboBox;
 class KToggleAction;
@@ -75,10 +70,18 @@ class KUrl;
 class KTabWidget;
 class KComboBox;
 
+class QPlainTextEdit;
+class QModelIndex;
+class QDockWidget;
 class QPrinter;
-class QScriptProgram;
 class QSortFilterProxyModel;
+class QStandardItem;
+class QStandardItemModel;
+class QScriptProgram;
 class QScriptEngine;
+
+using namespace Scripting;
+using namespace Debugger;
 
 typedef QPair<QStandardItem*, QStandardItem*> ScriptVariableRow;
 
@@ -187,8 +190,6 @@ public slots:
      **/
     void scriptErrorReceived( const QString &message,
                               const QString &failedParseText = QString() );
-    void scriptPositionAboutToChange( int oldLineNumber, int oldColumnNumber,
-                                      int lineNumber, int columnNumber );
     void markChanged( KTextEditor::Document *document, const KTextEditor::Mark &mark,
                       KTextEditor::MarkInterface::MarkChangeAction action );
     void sendCommandToConsole( const QString &command );
@@ -225,7 +226,6 @@ protected slots:
 
     void toolsCheck();
     void toggleBreakpoint( int lineNumber = -1 );
-    void evaluateScript();
 
     /** @brief Start debugger and call 'getTimetable' script function. */
     void debugScriptDepartures();
@@ -258,7 +258,7 @@ protected slots:
     void uncaughtException( int lineNumber, const QString &errorMessage );
 
     /** @brief The current script backtrace changed. */
-    void backtraceChanged( const BacktraceQueue &backtrace, Debugger::BacktraceChange change );
+    void backtraceChanged( const FrameStack &backtrace, BacktraceChange change );
 
     /** @brief A @p breakpoint was added. */
     void breakpointAdded( const Breakpoint &breakpoint );
@@ -273,7 +273,7 @@ protected slots:
     void breakpointChangedInModel( QStandardItem *item );
 
     /** @brief The script produced output at @p context. */
-    void scriptOutput( const QString &outputString, QScriptContext *context );
+    void scriptOutput( const QString &outputString, const QScriptContextInfo &contextInfo );
 
     /** @brief An item in the backtrace widget was clicked. */
     void clickedBacktraceItem( const QModelIndex &backtraceItem );
@@ -287,6 +287,15 @@ protected slots:
     /** Return pressed in the url bar. */
     void urlBarReturn( const QString &text );
     void webUrlChanged( const QUrl &url );
+
+    void documentationAnchorClicked( const QUrl &url );
+    void documentationUrlChanged( const QUrl &url );
+    void documentationChosen( int index );
+
+    void appendToConsole( const QString &text );
+    void consoleEvaluationResult( const EvaluationResult &result );
+    void functionCallResult( const QList< TimetableData > &timetableData,
+                             const QScriptValue &returnValue );
 
 protected:
     virtual void closeEvent( QCloseEvent *event );
@@ -306,12 +315,6 @@ private:
 
     void setChanged( bool changed = true );
     void syncAccessor();
-
-    void createScriptEngine();
-    void setupDebugger( DebugType debug = InterruptOnExceptions );
-    bool scriptRun( const QString &functionToRun, const RequestInfo *requestInfo,
-                    const TimetableAccessorInfo *info,
-                    ResultObject *resultObject, QVariant *result );
 
     bool hasHomePageURL( const TimetableAccessorInfo *info );
 
@@ -333,17 +336,9 @@ private:
 
     bool loadScript();
 
-private:
     void updateVariableModel();
-    void addVariableChilds( const QScriptValue &value, const QModelIndex &parent = QModelIndex(),
-                            bool onlyImportantObjects = false );
-    ScriptVariableRow addVariableRow( QStandardItem *item, const QString &name,
-                                      const QString &value, const KIcon &icon = KIcon(),
-                                      bool encodeValue = false,
-                                      const QChar &endCharacter = QChar() );
-    QString variableValueTooltip( const QString &completeValueString,
-                                  bool encodeHtml = false,
-                                  const QChar &endCharacter = QChar() ) const;
+    void addVariables( const Variables &variables, const QModelIndex &parent = QModelIndex(),
+                       bool onlyImportantObjects = false );
     KToolBar *createDockOverviewBar( Qt::ToolBarArea area, const QString &objectName,
                                      QWidget *parent = 0 );
 
@@ -359,8 +354,11 @@ private:
     QDockWidget *m_outputDock;
     QDockWidget *m_breakpointDock;
     QDockWidget *m_variablesDock;
+    QDockWidget *m_documentationDock;
     QPlainTextEdit *m_outputWidget;
     QPlainTextEdit *m_consoleWidget;
+    KComboBox *m_documentationChooser;
+    KWebView *m_documentationWidget;
     KLineEdit *m_consoleEdit;
     QStandardItemModel *m_backtraceModel;
     QStandardItemModel *m_breakpointModel;
@@ -394,9 +392,11 @@ private:
     QString m_lastError;
     ScriptError m_lastScriptError;
     QStringList m_scriptErrors;
-    Debugger *m_debugger;
     QStringList m_consoleHistory;
     int m_consoleHistoryIndex;
+
+    Debugger::Debugger *m_debugger;
+    int m_executionLine;
 };
 
 #endif // _TIMETABLEMATE_H_
