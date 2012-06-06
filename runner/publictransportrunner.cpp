@@ -404,10 +404,10 @@ void AsyncDataEngineUpdater::dataUpdated( const QString& sourceName, const Plasm
         kDebug() << "Got stop suggestions";
         processStopSuggestions( sourceName, data );
     } else { // List of departures / arrivals / journeys received
-        if ( data["parseMode"].toString() == "journeys" ) {
+        if ( data["parseMode"].toString() == QLatin1String("journeys") ) {
 //         // ReceivedValidJourneyData
             processJourneys( sourceName, data );
-        } else if ( data["parseMode"].toString() == "departures" ) {
+        } else if ( data["parseMode"].toString() == QLatin1String("departures") ) {
 //         m_stopNameValid = true;
 //         // ReceivedValidDepartureData
             processDepartures( sourceName, data );

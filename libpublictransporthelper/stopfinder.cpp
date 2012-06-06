@@ -310,7 +310,7 @@ void StopFinder::dataUpdated( const QString& sourceName, const Plasma::DataEngin
     if ( sourceName.startsWith(QLatin1String("Stops"), Qt::CaseInsensitive) ) {
         d->publicTransportEngine->disconnectSource( sourceName, this );
         d->processPublicTransportData( data );
-    } else if ( sourceName == "location" ) {
+    } else if ( sourceName == QLatin1String("location") ) {
         d->geolocationEngine->disconnectSource( sourceName, this );
         d->processGeolocationData( data );
     } else if ( sourceName.contains("publictransportstops") ) {

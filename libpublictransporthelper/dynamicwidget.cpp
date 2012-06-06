@@ -730,7 +730,7 @@ void AbstractDynamicWidgetContainer::removeSeparator( QLayoutItem *separator )
         QWidget *widget = separator->widget();
         // Check for the object name set when creating the separator to be sure not to
         // remove another widget
-        if ( widget && widget->objectName() == "separator" ) {
+        if ( widget && widget->objectName() == QLatin1String("separator") ) {
             d->contentWidget->layout()->removeWidget( widget );
             delete widget;
         } else {

@@ -660,7 +660,7 @@ public:
 
         // Filter service providers for the given locationText
         QString locationCode = uiStop.location->itemData( index, LocationCodeRole ).toString();
-        if ( locationCode == "showAll" ) {
+        if ( locationCode == QLatin1String("showAll") ) {
             modelLocationServiceProviders->setFilterRegExp( QString() );
         } else {
             modelLocationServiceProviders->setFilterRegExp(

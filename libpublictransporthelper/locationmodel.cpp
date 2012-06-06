@@ -240,6 +240,10 @@ QVariant LocationModel::data( const QModelIndex& index, int role ) const
 
 Qt::ItemFlags LocationModel::flags( const QModelIndex& index ) const
 {
+    if ( !index.isValid() ) {
+        return Qt::NoItemFlags;
+    }
+
     LocationItem *item = static_cast<LocationItem*>( index.internalPointer() );
     if ( !item ) {
         kDebug() << "No item found for index" << index;

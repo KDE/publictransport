@@ -48,11 +48,11 @@ ServiceProviderItem::ServiceProviderItem( const QString &name, const QVariantHas
             .arg( data["featuresLocalized"].toStringList().join( ", " ) );
 
     QString location = countryCode();
-    if ( location == "international" ) {
+    if ( location == QLatin1String("international") ) {
         d_ptr->category = i18nc("@item:inlistbox Name of the category for international "
                                 "service providers", "International");
         d_ptr->sortString = "XXXXX" + name;
-    } else if ( location == "unknown" ) {
+    } else if ( location == QLatin1String("unknown") ) {
         d_ptr->category = i18nc("@item:inlistbox Name of the category for service providers "
                                 "with unknown contries", "Unknown");
         d_ptr->sortString = "YYYYY" + name;
