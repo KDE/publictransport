@@ -31,37 +31,37 @@
 VehicleType Global::vehicleTypeFromString( QString sVehicleType )
 {
     QString sLower = sVehicleType.toLower();
-    if ( sLower == "unknown" ) {
+    if ( sLower == QLatin1String("unknown") ) {
         return Unknown;
-    } else if ( sLower == "tram" ) {
+    } else if ( sLower == QLatin1String("tram") ) {
         return Tram;
-    } else if ( sLower == "bus" ) {
+    } else if ( sLower == QLatin1String("bus") ) {
         return Bus;
-    } else if ( sLower == "subway" ) {
+    } else if ( sLower == QLatin1String("subway") ) {
         return Subway;
-    } else if ( sLower == "traininterurban" || sLower == "interurbantrain" ) {
+    } else if ( sLower == QLatin1String("interurbantrain") ) {
         return InterurbanTrain;
-    } else if ( sLower == "metro" ) {
+    } else if ( sLower == QLatin1String("metro") ) {
         return Metro;
-    } else if ( sLower == "trolleybus" ) {
+    } else if ( sLower == QLatin1String("trolleybus") ) {
         return TrolleyBus;
-    } else if ( sLower == "trainregional" || sLower == "regionaltrain" ) {
+    } else if ( sLower == QLatin1String("regionaltrain") ) {
         return RegionalTrain;
-    } else if ( sLower == "trainregionalexpress" || sLower == "regionalexpresstrain" ) {
+    } else if ( sLower == QLatin1String("regionalexpresstrain") ) {
         return RegionalExpressTrain;
-    } else if ( sLower == "traininterregio" || sLower == "interregionaltrain" ) {
+    } else if ( sLower == QLatin1String("interregionaltrain") ) {
         return InterregionalTrain;
-    } else if ( sLower == "trainintercityeurocity" || sLower == "intercitytrain" ) {
+    } else if ( sLower == QLatin1String("intercitytrain") ) {
         return IntercityTrain;
-    } else if ( sLower == "trainintercityexpress" || sLower == "highspeedtrain" ) {
+    } else if ( sLower == QLatin1String("highspeedtrain") ) {
         return HighSpeedTrain;
-    } else if ( sLower == "feet" ) {
+    } else if ( sLower == QLatin1String("feet") ) {
         return Feet;
-    } else if ( sLower == "ferry" ) {
+    } else if ( sLower == QLatin1String("ferry") ) {
         return Ferry;
-    } else if ( sLower == "ship" ) {
+    } else if ( sLower == QLatin1String("ship") ) {
         return Ship;
-    } else if ( sLower == "plane" ) {
+    } else if ( sLower == QLatin1String("plane") ) {
         return Plane;
     } else {
         return Unknown;
@@ -140,22 +140,15 @@ QString Global::vehicleTypeToIcon( const VehicleType& vehicleType )
         return "vehicle_type_trolleybus";
     case Feet:
         return "vehicle_type_feet";
-
-//     case TrainInterurban: // DEPRECATED
     case InterurbanTrain:
         return "vehicle_type_train_interurban";
-//     case TrainRegional: // DEPRECATED Icon not done yet, using this for now
-//     case TrainRegionalExpress: // DEPRECATED
-    case RegionalTrain:
+    case RegionalTrain: // aIcon not done yet, using this for now
     case RegionalExpressTrain:
         return "vehicle_type_train_regional";
-//     case TrainInterregio: // DEPRECATED
     case InterregionalTrain:
         return "vehicle_type_train_interregional";
-//     case TrainIntercityEurocity: // DEPRECATED
     case IntercityTrain:
         return "vehicle_type_train_intercity";
-//     case TrainIntercityExpress: // DEPRECATED
     case HighSpeedTrain:
         return "vehicle_type_train_highspeed";
 
@@ -175,97 +168,97 @@ TimetableInformation Global::timetableInformationFromString(
     const QString& sTimetableInformation )
 {
     QString sInfo = sTimetableInformation.toLower();
-    if ( sInfo == "nothing" ) {
+    if ( sInfo == QLatin1String("nothing") ) {
         return Nothing;
-    } else if ( sInfo == "departuredatetime" ) {
+    } else if ( sInfo == QLatin1String("departuredatetime") ) {
         return DepartureDateTime;
-    } else if ( sInfo == "departuredate" ) {
+    } else if ( sInfo == QLatin1String("departuredate") ) {
         return DepartureDate;
-    } else if ( sInfo == "departuretime" ) {
+    } else if ( sInfo == QLatin1String("departuretime") ) {
         return DepartureTime;
-    } else if ( sInfo == "typeofvehicle" ) {
+    } else if ( sInfo == QLatin1String("typeofvehicle") ) {
         return TypeOfVehicle;
-    } else if ( sInfo == "transportline" ) {
+    } else if ( sInfo == QLatin1String("transportline") ) {
         return TransportLine;
-    } else if ( sInfo == "flightnumber" ) {
+    } else if ( sInfo == QLatin1String("flightnumber") ) {
         return FlightNumber;
-    } else if ( sInfo == "target" ) {
+    } else if ( sInfo == QLatin1String("target") ) {
         return Target;
-    } else if ( sInfo == "platform" ) {
+    } else if ( sInfo == QLatin1String("platform") ) {
         return Platform;
-    } else if ( sInfo == "delay" ) {
+    } else if ( sInfo == QLatin1String("delay") ) {
         return Delay;
-    } else if ( sInfo == "delayreason" ) {
+    } else if ( sInfo == QLatin1String("delayreason") ) {
         return DelayReason;
-    } else if ( sInfo == "journeynews" ) {
+    } else if ( sInfo == QLatin1String("journeynews") ) {
         return JourneyNews;
-    } else if ( sInfo == "journeynewsother" ) {
+    } else if ( sInfo == QLatin1String("journeynewsother") ) {
         return JourneyNewsOther;
-    } else if ( sInfo == "journeynewslink" ) {
+    } else if ( sInfo == QLatin1String("journeynewslink") ) {
         return JourneyNewsLink;
-    } else if ( sInfo == "status" ) {
+    } else if ( sInfo == QLatin1String("status") ) {
         return Status;
-    } else if ( sInfo == "routestops" ) {
+    } else if ( sInfo == QLatin1String("routestops") ) {
         return RouteStops;
-    } else if ( sInfo == "routetimes" ) {
+    } else if ( sInfo == QLatin1String("routetimes") ) {
         return RouteTimes;
-    } else if ( sInfo == "routetimesdeparture" ) {
+    } else if ( sInfo == QLatin1String("routetimesdeparture") ) {
         return RouteTimesDeparture;
-    } else if ( sInfo == "routetimesarrival" ) {
+    } else if ( sInfo == QLatin1String("routetimesarrival") ) {
         return RouteTimesArrival;
-    } else if ( sInfo == "routeexactstops" ) {
+    } else if ( sInfo == QLatin1String("routeexactstops") ) {
         return RouteExactStops;
-    } else if ( sInfo == "routetypesofvehicles" ) {
+    } else if ( sInfo == QLatin1String("routetypesofvehicles") ) {
         return RouteTypesOfVehicles;
-    } else if ( sInfo == "routetransportlines" ) {
+    } else if ( sInfo == QLatin1String("routetransportlines") ) {
         return RouteTransportLines;
-    } else if ( sInfo == "routeplatformsdeparture" ) {
+    } else if ( sInfo == QLatin1String("routeplatformsdeparture") ) {
         return RoutePlatformsDeparture;
-    } else if ( sInfo == "routeplatformsarrival" ) {
+    } else if ( sInfo == QLatin1String("routeplatformsarrival") ) {
         return RoutePlatformsArrival;
-    } else if ( sInfo == "routetimesdeparturedelay" ) {
+    } else if ( sInfo == QLatin1String("routetimesdeparturedelay") ) {
         return RouteTimesDepartureDelay;
-    } else if ( sInfo == "routetimesarrivaldelay" ) {
+    } else if ( sInfo == QLatin1String("routetimesarrivaldelay") ) {
         return RouteTimesArrivalDelay;
-    } else if ( sInfo == "operator" ) {
+    } else if ( sInfo == QLatin1String("operator") ) {
         return Operator;
-    } else if ( sInfo == "duration" ) {
+    } else if ( sInfo == QLatin1String("duration") ) {
         return Duration;
-    } else if ( sInfo == "startstopname" ) {
+    } else if ( sInfo == QLatin1String("startstopname") ) {
         return StartStopName;
-    } else if ( sInfo == "startstopid" ) {
+    } else if ( sInfo == QLatin1String("startstopid") ) {
         return StartStopID;
-    } else if ( sInfo == "targetstopname" ) {
+    } else if ( sInfo == QLatin1String("targetstopname") ) {
         return TargetStopName;
-    } else if ( sInfo == "targetstopid" ) {
+    } else if ( sInfo == QLatin1String("targetstopid") ) {
         return TargetStopID;
-    } else if ( sInfo == "arrivaldatetime" ) {
+    } else if ( sInfo == QLatin1String("arrivaldatetime") ) {
         return ArrivalDateTime;
-    } else if ( sInfo == "arrivaldate" ) {
+    } else if ( sInfo == QLatin1String("arrivaldate") ) {
         return ArrivalDate;
-    } else if ( sInfo == "arrivaltime" ) {
+    } else if ( sInfo == QLatin1String("arrivaltime") ) {
         return ArrivalTime;
-    } else if ( sInfo == "changes" ) {
+    } else if ( sInfo == QLatin1String("changes") ) {
         return Changes;
-    } else if ( sInfo == "typesofvehicleinjourney" ) {
+    } else if ( sInfo == QLatin1String("typesofvehicleinjourney") ) {
         return TypesOfVehicleInJourney;
-    } else if ( sInfo == "pricing" ) {
+    } else if ( sInfo == QLatin1String("pricing") ) {
         return Pricing;
-    } else if ( sInfo == "isnightline" ) {
+    } else if ( sInfo == QLatin1String("isnightline") ) {
         return IsNightLine;
-    } else if ( sInfo == "stopname" ) {
+    } else if ( sInfo == QLatin1String("stopname") ) {
         return StopName;
-    } else if ( sInfo == "stopid" ) {
+    } else if ( sInfo == QLatin1String("stopid") ) {
         return StopID;
-    } else if ( sInfo == "stopweight" ) {
+    } else if ( sInfo == QLatin1String("stopweight") ) {
         return StopWeight;
-    } else if ( sInfo == "stopcity" ) {
+    } else if ( sInfo == QLatin1String("stopcity") ) {
         return StopCity;
-    } else if ( sInfo == "stopcountrycode" ) {
+    } else if ( sInfo == QLatin1String("stopcountrycode") ) {
         return StopCountryCode;
     } else {
         kDebug() << sTimetableInformation
-        << "is an unknown timetable information value! Assuming value Nothing.";
+                 << "is an unknown timetable information value! Assuming value Nothing.";
         return Nothing;
     }
 }
@@ -369,6 +362,72 @@ QString Global::timetableInformationToString( TimetableInformation timetableInfo
     }
 }
 
+bool Global::checkTimetableInformation( TimetableInformation info, const QVariant &value )
+{
+    if ( !value.isValid() ) {
+        return false;
+    }
+
+    switch ( info ) {
+    case DepartureDateTime:
+    case ArrivalDateTime:
+        return value.toDateTime().isValid();
+    case DepartureDate:
+    case ArrivalDate:
+        return value.toDate().isValid();
+    case DepartureTime:
+    case ArrivalTime:
+        return value.toTime().isValid();
+    case TypeOfVehicle:
+        return vehicleTypeFromString( value.toString() ) != Unknown;
+    case TransportLine:
+    case Target:
+    case TargetShortened:
+    case Platform:
+    case DelayReason:
+    case JourneyNews:
+    case JourneyNewsOther:
+    case JourneyNewsLink:
+    case Operator:
+    case Status:
+    case StartStopName:
+    case StartStopID:
+    case StopCity:
+    case StopCountryCode:
+    case TargetStopName:
+    case TargetStopID:
+    case Pricing:
+    case StopName:
+    case StopID:
+        return !value.toString().trimmed().isEmpty();
+    case Delay:
+        return value.canConvert( QVariant::Int ) && value.toInt() >= -1;
+    case Duration:
+    case StopWeight:
+    case Changes:
+    case RouteExactStops:
+        return value.canConvert( QVariant::Int ) && value.toInt() >= 0;
+    case TypesOfVehicleInJourney:
+    case RouteTimes:
+    case RouteTimesDeparture:
+    case RouteTimesArrival:
+    case RouteTypesOfVehicles:
+    case RouteTimesDepartureDelay:
+    case RouteTimesArrivalDelay:
+        return !value.toList().isEmpty();
+    case IsNightLine:
+        return value.canConvert( QVariant::Bool );
+    case RouteStops:
+    case RouteStopsShortened:
+    case RouteTransportLines:
+    case RoutePlatformsDeparture:
+    case RoutePlatformsArrival:
+        return !value.toStringList().isEmpty();
+
+    default:
+        return true;
+    }
+}
 
 QString Global::decodeHtmlEntities( const QString& html )
 {
@@ -418,8 +477,7 @@ QString Global::encodeHtmlEntities( const QString &html )
               .replace( QLatin1String("Ü"), QLatin1String("&Uuml;") );
 }
 
-QString Global::decodeHtml( const QByteArray& document,
-                                             const QByteArray& fallbackCharset )
+QString Global::decodeHtml( const QByteArray& document, const QByteArray& fallbackCharset )
 {
     // Get charset of the received document and convert it to a unicode QString
     // First parse the charset with a regexp to get a fallback charset
@@ -435,7 +493,6 @@ QString Global::decodeHtml( const QByteArray& document,
                 textCodec = QTextCodec::codecForName( "UTF-8" );
             }
         } else {
-            kDebug() << "No fallback charset, searching codec manually in the HTML";
             QString sDocument = QString( document );
             QRegExp rxCharset( "(?:<head>.*<meta http-equiv=\"Content-Type\" "
                     "content=\"text/html; charset=)([^\"]*)(?:\"[^>]*>)", Qt::CaseInsensitive );
@@ -443,7 +500,7 @@ QString Global::decodeHtml( const QByteArray& document,
             if ( rxCharset.indexIn(sDocument) != -1 ) {
                 textCodec = QTextCodec::codecForName( rxCharset.cap(1).trimmed().toUtf8() );
             } else {
-                kDebug() << "Manual codec search failed, using utf8";
+                kDebug() << "No fallback charset specified and manual codec search failed, using utf8";
                 textCodec = QTextCodec::codecForName( "UTF-8" );
             }
         }

@@ -117,6 +117,7 @@ public:
      * @return The type of vehicle that was parsed or VehicleType::Unknown if
      *   it couldn't be parsed.
      **/
+    // DEPRECATED Use Global::vehicleTypeFromString() instead
     static VehicleType getVehicleTypeFromString( const QString &sLineType );
 
     /**

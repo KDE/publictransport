@@ -65,9 +65,6 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
     // Convert vehicle types given as string to the associated enumerable value
     if ( contains(TypeOfVehicle) && value(TypeOfVehicle).canConvert(QVariant::String) ) {
         QString vehicleType = value(TypeOfVehicle).toString();
-        if ( vehicleType.startsWith('0') ) {
-            kDebug() << "ERROR";
-        }
         insert( TypeOfVehicle, getVehicleTypeFromString(vehicleType) );
 
         // Try to get operator from vehicle type string if no operator is given
@@ -414,127 +411,126 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
     //       have the scripts only use correct vehicle type strings
 
     // See http://en.wikipedia.org/wiki/Train_categories_in_Europe
-    if ( sLineTypeLower == "u-bahn" ||
-            sLineTypeLower == "ubahn" ||
-            sLineTypeLower == "u" ||
-            sLineTypeLower == "subway" ||
-            sLineTypeLower == "rt" || // regio tram TODO Which service provider uses this?
+    if ( sLineTypeLower == QLatin1String("subway") ||
+            sLineTypeLower == QLatin1String("u-bahn") ||
+            sLineTypeLower == QLatin1String("ubahn") ||
+            sLineTypeLower == QLatin1String("u") ||
+            sLineTypeLower == QLatin1String("rt") || // regio tram TODO Which service provider uses this?
             sLineTypeLower.toInt() == static_cast<int>(Subway) ) {
         return Subway;
-    } else if ( sLineTypeLower == "s-bahn" ||
-            sLineTypeLower == "sbahn" ||
-            sLineTypeLower == "s_bahn" ||
-            sLineTypeLower == "s" ||
-            sLineTypeLower == "interurban" ||
-            sLineTypeLower == "interurbantrain" ||
-            sLineTypeLower == "rsb" || // "regio-s-bahn", TODO move to au_oebb
+    } else if ( sLineTypeLower == QLatin1String("interurban") ||
+            sLineTypeLower == QLatin1String("interurbantrain") ||
+            sLineTypeLower == QLatin1String("s-bahn") ||
+            sLineTypeLower == QLatin1String("sbahn") ||
+            sLineTypeLower == QLatin1String("s") ||
+            sLineTypeLower == QLatin1String("rsb") || // "regio-s-bahn", TODO move to au_oebb
             sLineTypeLower.toInt() == static_cast<int>(InterurbanTrain) ) {
         return InterurbanTrain;
-    } else if ( sLineTypeLower == "tram" ||
-            sLineTypeLower == "straßenbahn" ||
-            sLineTypeLower == "str" ||
-            sLineTypeLower == "stb" || // "stadtbahn", germany
-            sLineTypeLower == "dm_train" ||
-            sLineTypeLower == "streetcar (tram)" || // for sk_imhd TODO move to the script
+    } else if ( sLineTypeLower == QLatin1String("tram") ||
+            sLineTypeLower == QLatin1String("straßenbahn") ||
+            sLineTypeLower == QLatin1String("str") ||
+            sLineTypeLower == QLatin1String("stb") || // "stadtbahn", germany
+            sLineTypeLower == QLatin1String("dm_train") ||
+            sLineTypeLower == QLatin1String("streetcar (tram)") || // for sk_imhd TODO move to the script
             sLineTypeLower.toInt() == static_cast<int>(Tram) ) { //
         return Tram;
-    } else if ( sLineTypeLower == "bus" ||
-            sLineTypeLower == "dm_bus" ||
-            sLineTypeLower == "express bus" || // for sk_imhd
-            sLineTypeLower == "night line - bus" || // for sk_imhd TODO move to the script
+    } else if ( sLineTypeLower == QLatin1String("bus") ||
+            sLineTypeLower == QLatin1String("dm_bus") ||
+            sLineTypeLower == QLatin1String("express bus") || // for sk_imhd
+            sLineTypeLower == QLatin1String("night line - bus") || // for sk_imhd TODO move to the script
             sLineTypeLower.toInt() == static_cast<int>(Bus) ) {
         return Bus;
-    } else if ( sLineTypeLower == "metro" ||
-            sLineTypeLower == "m" ||
+    } else if ( sLineTypeLower == QLatin1String("metro") ||
+            sLineTypeLower == QLatin1String("m") ||
             sLineTypeLower.toInt() == static_cast<int>(Metro) ) {
         return Metro;
-    } else if ( sLineTypeLower == "tro" ||
-            sLineTypeLower == "trolleybus" ||
-            sLineTypeLower == "trolley bus" ||
+    } else if ( sLineTypeLower == QLatin1String("trolleybus") ||
+            sLineTypeLower == QLatin1String("tro") ||
+            sLineTypeLower == QLatin1String("trolley bus") ||
             sLineTypeLower.startsWith(QLatin1String("trolleybus")) || // for sk_imhd
             sLineTypeLower.toInt() == static_cast<int>(TrolleyBus) ) {
         return TrolleyBus;
-    } else if ( sLineTypeLower == "rb" || // Regional, "RegionalBahn", germany
-            sLineTypeLower == "me" || // "Metronom", germany
-            sLineTypeLower == "mer" || // "Metronom", germany
-            sLineTypeLower == "mr" || // "Märkische Regiobahn", germany
-            sLineTypeLower == "erb" || // "EuroBahn", germany
-            sLineTypeLower == "wfb" || // "WestfalenBahn", germany
-            sLineTypeLower == "nwb" || // "NordWestBahn", germany
-            sLineTypeLower == "osb" || // "Ortenau-S-Bahn GmbH" (no interurban train), germany
-            sLineTypeLower == "regional" ||
-            sLineTypeLower == "regionaltrain" ||
-            sLineTypeLower == "r" || // austria, switzerland
-            sLineTypeLower == "os" || // czech, "Osobní vlak", basic local (stopping) trains
+    } else if ( sLineTypeLower == QLatin1String("regionaltrain") ||
+            sLineTypeLower == QLatin1String("regional") ||
+            sLineTypeLower == QLatin1String("rb") || // Regional, "RegionalBahn", germany
+            sLineTypeLower == QLatin1String("me") || // "Metronom", germany
+            sLineTypeLower == QLatin1String("mer") || // "Metronom", germany
+            sLineTypeLower == QLatin1String("mr") || // "Märkische Regiobahn", germany
+            sLineTypeLower == QLatin1String("erb") || // "EuroBahn", germany
+            sLineTypeLower == QLatin1String("wfb") || // "WestfalenBahn", germany
+            sLineTypeLower == QLatin1String("nwb") || // "NordWestBahn", germany
+            sLineTypeLower == QLatin1String("osb") || // "Ortenau-S-Bahn GmbH" (no interurban train), germany
+            sLineTypeLower == QLatin1String("r") || // austria, switzerland
+            sLineTypeLower == QLatin1String("os") || // czech, "Osobní vlak", basic local (stopping) trains
             sLineTypeLower.toInt() == static_cast<int>(RegionalTrain) ) {
         return RegionalTrain;
-    } else if ( sLineTypeLower == "re" || // RegionalExpress
-            sLineTypeLower == "rer" || // france, Reseau Express Regional
-            sLineTypeLower == "sp" || // czech, "Spěšný vlak", semi-fast trains (Eilzug)
-            sLineTypeLower == "zr" || // slovakia, "Zrýchlený vlak", train serving almost all stations en route fast
-            sLineTypeLower == "regionalexpress" ||
-            sLineTypeLower == "regionalexpresstrain" ||
-            sLineTypeLower == "regional express trains" || // used by gares-en-mouvement.com (france)
+    } else if ( sLineTypeLower == QLatin1String("regionalexpresstrain") ||
+            sLineTypeLower == QLatin1String("regionalexpress") ||
+            sLineTypeLower == QLatin1String("re") || // RegionalExpress
+            sLineTypeLower == QLatin1String("rer") || // france, Reseau Express Regional
+            sLineTypeLower == QLatin1String("sp") || // czech, "Spěšný vlak", semi-fast trains (Eilzug)
+            sLineTypeLower == QLatin1String("zr") || // slovakia, "Zrýchlený vlak", train serving almost all stations en route fast
+            sLineTypeLower == QLatin1String("regional express trains") || // used by gares-en-mouvement.com (france)
             sLineTypeLower.toInt() == static_cast<int>(RegionalExpressTrain) ) {
         return RegionalExpressTrain;
-    } else if ( sLineTypeLower == "ir" || // InterRegio
-            sLineTypeLower == "d" || // schnellzug, swiss
-            sLineTypeLower == "ire" ||  // almost a local train (Nahverkehrszug) stopping at few stations; semi-fast
-            sLineTypeLower == "er" ||  // border-crossing local train stopping at few stations; semi-fast
-            sLineTypeLower == "ex" || // czech, express trains with no supplementary fare, similar to the German Interregio or also Regional-Express
-            sLineTypeLower == "express" ||
-            sLineTypeLower == "interregional" ||
-            sLineTypeLower == "interregionaltrain" ||
+    } else if ( sLineTypeLower == QLatin1String("interregionaltrain") ||
+            sLineTypeLower == QLatin1String("interregional") ||
+            sLineTypeLower == QLatin1String("ir") || // InterRegio
+            sLineTypeLower == QLatin1String("d") || // schnellzug, swiss
+            sLineTypeLower == QLatin1String("ire") ||  // almost a local train (Nahverkehrszug) stopping at few stations; semi-fast
+            sLineTypeLower == QLatin1String("er") || // border-crossing local train stopping at few stations; semi-fast
+            sLineTypeLower == QLatin1String("ex") || // czech, express trains with no supplementary fare, similar to the German Interregio or also Regional-Express
+            sLineTypeLower == QLatin1String("express") ||
             sLineTypeLower.toInt() == static_cast<int>(InterregionalTrain) ) {
         return InterregionalTrain;
-    } else if ( sLineTypeLower == "ec_ic" || // Eurocity / Intercity
-            sLineTypeLower == "ic" || // Intercity
-            sLineTypeLower == "ec" || // Eurocity
-            sLineTypeLower == "intercity" ||
-            sLineTypeLower == "intercitytrain" ||
-            sLineTypeLower == "eurocity" ||
-            sLineTypeLower == "eurocitytrain" ||
-            sLineTypeLower == "cnl" || // CityNightLine
-            sLineTypeLower == "en" || // EuroNight
-            sLineTypeLower == "nz" || // "Nachtzug"
-            sLineTypeLower == "icn" || // national long-distance train with tilting technology
+    } else if ( sLineTypeLower == QLatin1String("intercitytrain") ||
+            sLineTypeLower == QLatin1String("eurocitytrain") ||
+            sLineTypeLower == QLatin1String("intercity") ||
+            sLineTypeLower == QLatin1String("eurocity") ||
+            sLineTypeLower == QLatin1String("ec_ic") || // Eurocity / Intercity
+            sLineTypeLower == QLatin1String("ic") || // Intercity
+            sLineTypeLower == QLatin1String("ec") || // Eurocity
+            sLineTypeLower == QLatin1String("cnl") || // CityNightLine
+            sLineTypeLower == QLatin1String("en") || // EuroNight
+            sLineTypeLower == QLatin1String("nz") || // "Nachtzug"
+            sLineTypeLower == QLatin1String("icn") || // national long-distance train with tilting technology
             sLineTypeLower.toInt() == static_cast<int>(IntercityTrain) ) {
         return IntercityTrain;
-    } else if ( sLineTypeLower == "ice" || // germany
-            sLineTypeLower == "tgv" ||  // france
-            sLineTypeLower == "tha" ||  // thalys
-            sLineTypeLower == "hst" || // great britain
-            sLineTypeLower == "est" || // eurostar
-            sLineTypeLower == "es" || // eurostar, High-speed, tilting trains for long-distance services
-            sLineTypeLower == "highspeed" ||
-            sLineTypeLower == "highspeedtrain" ||
+    } else if ( sLineTypeLower == QLatin1String("highspeedtrain") ||
+            sLineTypeLower == QLatin1String("highspeed") ||
+            sLineTypeLower == QLatin1String("ice") || // germany
+            sLineTypeLower == QLatin1String("tgv") ||  // france
+            sLineTypeLower == QLatin1String("tha") ||  // thalys
+            sLineTypeLower == QLatin1String("hst") || // great britain
+            sLineTypeLower == QLatin1String("est") || // eurostar
+            sLineTypeLower == QLatin1String("es") || // eurostar, High-speed, tilting trains for long-distance services
             sLineTypeLower.toInt() == static_cast<int>(HighSpeedTrain) ) {
         return HighSpeedTrain;
-    } else if ( sLineTypeLower == "feet" ||
-            sLineTypeLower == "by feet" ||
-            sLineTypeLower == "fu&#223;weg" ||
-            sLineTypeLower == "fu&szlig;weg" ||
-            sLineTypeLower == "fussweg" ||
-            sLineTypeLower == "zu fu&#223;" ||
-            sLineTypeLower == "zu fu&szlig;" ||
-            sLineTypeLower == "zu fuss" ||
-            sLineTypeLower == "&#220;bergang" ||
-            sLineTypeLower == "uebergang" ||
-            sLineTypeLower == "&uuml;bergang" ||
+    } else if ( sLineTypeLower == QLatin1String("feet") ||
+            sLineTypeLower == QLatin1String("by feet") ||
+            sLineTypeLower == QLatin1String("fu&#223;weg") ||
+            sLineTypeLower == QLatin1String("fu&szlig;weg") ||
+            sLineTypeLower == QLatin1String("fussweg") ||
+            sLineTypeLower == QLatin1String("zu fu&#223;") ||
+            sLineTypeLower == QLatin1String("zu fu&szlig;") ||
+            sLineTypeLower == QLatin1String("zu fuss") ||
+            sLineTypeLower == QLatin1String("&#220;bergang") ||
+            sLineTypeLower == QLatin1String("uebergang") ||
+            sLineTypeLower == QLatin1String("&uuml;bergang") ||
             sLineTypeLower.toInt() == static_cast<int>(Feet) ) {
         return Feet;
-    } else if ( sLineTypeLower == "ferry" ||
-            sLineTypeLower == "faehre" ||
+    } else if ( sLineTypeLower == QLatin1String("ferry") ||
+            sLineTypeLower == QLatin1String("faehre") ||
             sLineTypeLower.toInt() == static_cast<int>(Ferry) ) {
         return Ferry;
-    } else if ( sLineTypeLower == "ship" ||
-            sLineTypeLower == "boat" ||
-            sLineTypeLower == "schiff" ||
+    } else if ( sLineTypeLower == QLatin1String("ship") ||
+            sLineTypeLower == QLatin1String("boat") ||
+            sLineTypeLower == QLatin1String("schiff") ||
             sLineTypeLower.toInt() == static_cast<int>(Ship) ) {
         return Ship;
-    } else if ( sLineTypeLower == "plane" ||
-            sLineTypeLower == "air" ||
-            sLineTypeLower == "aeroplane" ||
+    } else if ( sLineTypeLower == QLatin1String("plane") ||
+            sLineTypeLower == QLatin1String("air") ||
+            sLineTypeLower == QLatin1String("aeroplane") ||
             sLineTypeLower.toInt() == static_cast<int>(Plane) ) {
         return Plane;
     } else {
@@ -546,123 +542,123 @@ QString PublicTransportInfo::operatorFromVehicleTypeString( const QString& sLine
 {
     QString sLineTypeLower = sLineType.trimmed().toLower();
 
-    if ( sLineTypeLower == "me" ) {
+    if ( sLineTypeLower == QLatin1String("me") ) {
         return "metronom Eisenbahngesellschaft mbH";
-    } else if ( sLineTypeLower == "mer" ) {
+    } else if ( sLineTypeLower == QLatin1String("mer") ) {
         return "metronom regional";
-    } else if ( sLineTypeLower == "arr" ) {
+    } else if ( sLineTypeLower == QLatin1String("arr") ) {
         return "Arriva";
-    } else if ( sLineTypeLower == "abg" ) {
+    } else if ( sLineTypeLower == QLatin1String("abg") ) {
         return "Anhaltische Bahn Gesellschaft mbH";
-    } else if ( sLineTypeLower == "abr" ) {
+    } else if ( sLineTypeLower == QLatin1String("abr") ) {
         return "ABELLIO Rail NRW GmbH";
-    } else if ( sLineTypeLower == "akn" ) {
+    } else if ( sLineTypeLower == QLatin1String("akn") ) {
         return "AKN Eisenbahn AG";
-    } else if ( sLineTypeLower == "alx" ) {
+    } else if ( sLineTypeLower == QLatin1String("alx") ) {
         return "alex (Vogtlandbahn GmbH)";
-    } else if ( sLineTypeLower == "bsb" ) {
+    } else if ( sLineTypeLower == QLatin1String("bsb") ) {
         return "Breisgau-S-Bahn GmbH";
-    } else if ( sLineTypeLower == "byb" ) {
+    } else if ( sLineTypeLower == QLatin1String("byb") ) {
         return "BayernBahn GmbH";
-    } else if ( sLineTypeLower == "cb" ) {
+    } else if ( sLineTypeLower == QLatin1String("cb") ) {
         return "City Bahn Chemnitz GmbH";
-    } else if ( sLineTypeLower == "cx" ) {
+    } else if ( sLineTypeLower == QLatin1String("cx") ) {
         return "Connex";
-    } else if ( sLineTypeLower == "dab" ) {
+    } else if ( sLineTypeLower == QLatin1String("dab") ) {
         return "Daadetalbahn, Züge der Westerwaldbahn GmbH";
-    } else if ( sLineTypeLower == "eb" ) {
+    } else if ( sLineTypeLower == QLatin1String("eb") ) {
         return "Erfurter Bahn GmbH";
-    } else if ( sLineTypeLower == "erb" ) {
+    } else if ( sLineTypeLower == QLatin1String("erb") ) {
         return "eurobahn Rhenus Keolis GmbH & Co. KG";
-    } else if ( sLineTypeLower == "evb" ) {
+    } else if ( sLineTypeLower == QLatin1String("evb") ) {
         return "Eisenbahnen und Verkehrsbetriebe Elbe-Weser GmbH";
-    } else if ( sLineTypeLower == "feg" ) {
+    } else if ( sLineTypeLower == QLatin1String("feg") ) {
         return "Freiberger Eisenbahngesellschaft mbH";
-    } else if ( sLineTypeLower == "hex" ) {
+    } else if ( sLineTypeLower == QLatin1String("hex") ) {
         return "HarzElbeExpress";
-    } else if ( sLineTypeLower == "hlb" ) {
+    } else if ( sLineTypeLower == QLatin1String("hlb") ) {
         return "Hessische Landesbahn GmbH, HLB Basis AG, HLB Hessenbahn GmbH";
-    } else if ( sLineTypeLower == "hsb" ) {
+    } else if ( sLineTypeLower == QLatin1String("hsb") ) {
         return "Harzer Schmalspurbahnen GmbH";
-    } else if ( sLineTypeLower == "htb" ) {
+    } else if ( sLineTypeLower == QLatin1String("htb") ) {
         return "HellertalBahn GmbH";
-    } else if ( sLineTypeLower == "hzl" ) {
+    } else if ( sLineTypeLower == QLatin1String("hzl") ) {
         return "Hohenzollerische Landesbahn AG";
-    } else if ( sLineTypeLower == "lb" ) {
+    } else if ( sLineTypeLower == QLatin1String("lb") ) {
         return "Lausitzbahn";
-    } else if ( sLineTypeLower == "lx" ) {
+    } else if ( sLineTypeLower == QLatin1String("lx") ) {
         return "Lausitz-Express";
-    } else if ( sLineTypeLower == "mbb" ) {
+    } else if ( sLineTypeLower == QLatin1String("mbb") ) {
         return "Mecklenburgische Bäderbahn „Molli“ GmbH";
-    } else if ( sLineTypeLower == "mel" ) {
+    } else if ( sLineTypeLower == QLatin1String("mel") ) {
         return "Museums-Eisenbahn-Club Losheim";
-    } else if ( sLineTypeLower == "mr" ) {
+    } else if ( sLineTypeLower == QLatin1String("mr") ) {
         return "Märkische Regiobahn";
-    } else if ( sLineTypeLower == "mrb" ) {
+    } else if ( sLineTypeLower == QLatin1String("mrb") ) {
         return "Mitteldeutsche Regiobahn";
-    } else if ( sLineTypeLower == "msb" ) {
+    } else if ( sLineTypeLower == QLatin1String("msb") ) {
         return "Mainschleifenbahn";
-    } else if ( sLineTypeLower == "nbe" ) {
+    } else if ( sLineTypeLower == QLatin1String("nbe") ) {
         return "nordbahn Eisenbahngesellschaft mbH & Co KG";
-    } else if ( sLineTypeLower == "neb" ) {
+    } else if ( sLineTypeLower == QLatin1String("neb") ) {
         return "NEB Betriebsgesellschaft mbH";
-    } else if ( sLineTypeLower == "neg" ) {
+    } else if ( sLineTypeLower == QLatin1String("neg") ) {
         return "Norddeutsche Eisenbahn Gesellschaft Niebüll GmbH";
-    } else if ( sLineTypeLower == "nob" ) {
+    } else if ( sLineTypeLower == QLatin1String("nob") ) {
         return "Nord-Ostsee-Bahn GmbH";
-    } else if ( sLineTypeLower == "nwb" ) {
+    } else if ( sLineTypeLower == QLatin1String("nwb") ) {
         return "NordWestBahn";
-    } else if ( sLineTypeLower == "oe" ) {
+    } else if ( sLineTypeLower == QLatin1String("oe") ) {
         return "Ostdeutsche Eisenbahn GmbH";
-    } else if ( sLineTypeLower == "ola" ) {
+    } else if ( sLineTypeLower == QLatin1String("ola") ) {
         return "Ostseeland Verkehr GmbH";
-    } else if ( sLineTypeLower == "osb" ) {
+    } else if ( sLineTypeLower == QLatin1String("osb") ) {
         return "Ortenau-S-Bahn GmbH";
-    } else if ( sLineTypeLower == "pre" ) {
+    } else if ( sLineTypeLower == QLatin1String("pre") ) {
         return "Eisenbahn-Bau- und Betriebsgesellschaft Pressnitztalbahn mbH";
-    } else if ( sLineTypeLower == "peg" ) {
+    } else if ( sLineTypeLower == QLatin1String("peg") ) {
         return "Prignitzer Eisenbahn GmbH";
-    } else if ( sLineTypeLower == "rnv" ) {
+    } else if ( sLineTypeLower == QLatin1String("rnv") ) {
         return "Rhein-Neckar-Verkehr GmbH";
-    } else if ( sLineTypeLower == "rt" ) {
+    } else if ( sLineTypeLower == QLatin1String("rt") ) {
         return "RegioTram KVG Kasseler Verkehrsgesellschaft mbH";
-    } else if ( sLineTypeLower == "rtb" ) {
+    } else if ( sLineTypeLower == QLatin1String("rtb") ) {
         return "Rurtalbahn GmbH";
-    } else if ( sLineTypeLower == "sbb" ) {
+    } else if ( sLineTypeLower == QLatin1String("sbb") ) {
         return "SBB GmbH";
-    } else if ( sLineTypeLower == "sbe" ) {
+    } else if ( sLineTypeLower == QLatin1String("sbe") ) {
         return "Sächsisch-Böhmische Eisenbahngesellschaft mbH";
-    } else if ( sLineTypeLower == "sdg" ) {
+    } else if ( sLineTypeLower == QLatin1String("sdg") ) {
         return "Sächsische Dampfeisenbahngesellschaft mbH";
-    } else if ( sLineTypeLower == "shb" ) {
+    } else if ( sLineTypeLower == QLatin1String("shb") ) {
         return "Schleswig-Holstein-Bahn GmbH";
-    } else if ( sLineTypeLower == "soe" ) {
+    } else if ( sLineTypeLower == QLatin1String("soe") ) {
         return "Sächsisch-Oberlausitzer Eisenbahngesellschaft mbH";
-    } else if ( sLineTypeLower == "ssb" ) {
+    } else if ( sLineTypeLower == QLatin1String("ssb") ) {
         return "Elektrische Bahnen der Stadt Bonn und des Rhein-Sieg-Kreises";
-    } else if ( sLineTypeLower == "swb" ) {
+    } else if ( sLineTypeLower == QLatin1String("swb") ) {
         return "Stadtwerke Bonn Verkehrs-GmbH";
-    } else if ( sLineTypeLower == "swe" ) {
+    } else if ( sLineTypeLower == QLatin1String("swe") ) {
         return "Südwestdeutsche Verkehrs-AG";
-    } else if ( sLineTypeLower == "ubb" ) {
+    } else if ( sLineTypeLower == QLatin1String("ubb") ) {
         return "Usedomer Bäderbahn GmbH";
-    } else if ( sLineTypeLower == "vbg" ) {
+    } else if ( sLineTypeLower == QLatin1String("vbg") ) {
         return "Vogtlandbahn GmbH";
-    } else if ( sLineTypeLower == "vec" ) {
+    } else if ( sLineTypeLower == QLatin1String("vec") ) {
         return "vectus Verkehrsgesellschaft mbH";
-    } else if ( sLineTypeLower == "via" ) {
+    } else if ( sLineTypeLower == QLatin1String("via") ) {
         return "VIAS GmbH, Frankfurt/Main";
-    } else if ( sLineTypeLower == "vx" ) {
+    } else if ( sLineTypeLower == QLatin1String("vx") ) {
         return "Vogtland-Express, Express-Zug der Vogtlandbahn-GmbH";
-    } else if ( sLineTypeLower == "weg" ) {
+    } else if ( sLineTypeLower == QLatin1String("weg") ) {
         return "Württembergische Eisenbahn-Gesellschaft mbH";
-    } else if ( sLineTypeLower == "wfb" ) {
+    } else if ( sLineTypeLower == QLatin1String("wfb") ) {
         return "WestfalenBahn";
-    } else if ( sLineTypeLower == "x" ) {
+    } else if ( sLineTypeLower == QLatin1String("x") ) {
         return "InterConnex";
-    } else if ( sLineTypeLower == "can" ) {
+    } else if ( sLineTypeLower == QLatin1String("can") ) {
         return "cantus Verkehrsgesellschaft mbH";
-    } else if ( sLineTypeLower == "erb" ) {
+    } else if ( sLineTypeLower == QLatin1String("erb") ) {
         return "EuroBahn";
     } else {
         return QString();

@@ -39,11 +39,16 @@ public:
     /** Gets an icon for the given type of vehicle. */
     static QString vehicleTypeToIcon( const VehicleType &vehicleType );
 
-    /** @brief Gets the TimetableInformation enumerable for the given string. */
+    /**
+     * @brief Gets the TimetableInformation enumerable for the given string.
+     * If no TimetableInformation matches @p sTimetableInformation Nothing is returned.
+     **/
     static TimetableInformation timetableInformationFromString( const QString& sTimetableInformation );
 
     /** @brief Gets a string for the given @p timetableInformation. */
     static QString timetableInformationToString( TimetableInformation timetableInformation );
+
+    static bool checkTimetableInformation( TimetableInformation info, const QVariant &value );
 
     /** @brief Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
     static QString decodeHtmlEntities( const QString& html );
@@ -57,7 +62,8 @@ public:
      * First it tries QTextCodec::codecForHtml().
      * If that doesn't work, it parses the document for the charset in a meta-tag.
      **/
-    static QString decodeHtml( const QByteArray& document, const QByteArray& fallbackCharset );
+    static QString decodeHtml( const QByteArray& document,
+                               const QByteArray& fallbackCharset = QByteArray() );
 };
 
 #endif // Multiple inclusion guard

@@ -174,7 +174,7 @@ bool OpenStreetMapEngine::updateSourceEvent( const QString& source ) {
             element = elementToString( filter.element );
             sFilter = filter.filter;
 
-            if ( maybeElement == "publictransportstops" ) {
+            if ( maybeElement == QLatin1String("publictransportstops") ) {
                 resultFlags |= OsmReader::OnlyResultsWithNameAttribute;
             }
         } else {

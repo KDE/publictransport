@@ -149,13 +149,13 @@ void PublicTransport::themeChanged()
 bool PublicTransport::checkNetworkStatus()
 {
     QString status = queryNetworkStatus();
-    if ( status == "unavailable" ) {
+    if ( status == QLatin1String("unavailable") ) {
         emit networkConnectionLost();
         return false;
-    } else if ( status == "configuring" ) {
+    } else if ( status == QLatin1String("configuring") ) {
         emit networkIsConfiguring();
         return false;
-    } else if ( status == "activated" /*&& m_currentMessage == MessageError TODO*/ ) {
+    } else if ( status == QLatin1String("activated") /*&& m_currentMessage == MessageError TODO*/ ) {
         emit networkIsActivated();
         return false;
     } else {
@@ -180,10 +180,10 @@ QString PublicTransport::queryNetworkStatus()
             return "unknown";
         }
 
-        if ( sStatus == "Activated" ) {
+        if ( sStatus == QLatin1String("Activated") ) {
             status = "activated";
             break;
-        } else if ( sStatus == "Configuring" ) {
+        } else if ( sStatus == QLatin1String("Configuring") ) {
             status = "configuring";
         }
     }
@@ -530,7 +530,7 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
 {
     Q_D( PublicTransport );
 
-    if ( data["parseMode"].toString() == "journeys" ) {
+    if ( data["parseMode"].toString() == QLatin1String("journeys") ) {
         emit invalidJourneyDataReceived();
 
         // Set associated application url
@@ -539,7 +539,7 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
         if ( d->isStateActive("journeyView") ) {
             setAssociatedApplicationUrlForJourneys();
         }
-    } else if ( data["parseMode"].toString() == "departures" ) {
+    } else if ( data["parseMode"].toString() == QLatin1String("departures") ) {
         emit invalidDepartureDataReceived();
 
         // Set associated application url
@@ -575,14 +575,14 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
 {
     Q_D( PublicTransport );
 
-    bool journeyData = data["parseMode"].toString() == "journeys";
-    if ( journeyData || data["parseMode"].toString() == "stopSuggestions" ) {
+    bool journeyData = data["parseMode"].toString() == QLatin1String("journeys");
+    if ( journeyData || data["parseMode"].toString() == QLatin1String("stopSuggestions") ) {
         if ( journeyData ) {
             emit invalidJourneyDataReceived();
         }
 
         d->listStopSuggestions->updateStopSuggestionItems( data );
-    } else if ( data["parseMode"].toString() == "departures" /*&& m_currentMessage == MessageNone TODO*/ ) {
+    } else if ( data["parseMode"].toString() == QLatin1String("departures") /*&& m_currentMessage == MessageNone TODO*/ ) {
         emit invalidDepartureDataReceived();
         d->clearDepartures();
         setConfigurationRequired( true, i18nc("@info", "The stop name is ambiguous.") );
@@ -681,7 +681,7 @@ void PublicTransport::dataUpdated( const QString& sourceName,
     } else if ( data["receivedPossibleStopList"].toBool() ) {
         // Stop suggestion list received
         processStopSuggestions( sourceName, data );
-    } else if ( data["parseMode"].toString() == "journeys" ) {
+    } else if ( data["parseMode"].toString() == QLatin1String("journeys") ) {
         // List of journeys received
         emit validJourneyDataReceived();
         if ( d->isStateActive("journeyView") ) {
@@ -689,7 +689,7 @@ void PublicTransport::dataUpdated( const QString& sourceName,
         } else {
             kDebug() << "Received journey data, but journey list is hidden.";
         }
-    } else if ( data["parseMode"].toString() == "departures" ) {
+    } else if ( data["parseMode"].toString() == QLatin1String("departures") ) {
         // List of departures / arrivals received
         emit validDepartureDataReceived();
         d->departureProcessor->processDepartures( sourceName, data );
@@ -1399,7 +1399,7 @@ QAction* PublicTransport::updatedAction( const QString& actionName )
         return 0;
     }
 
-    if ( actionName == "toggleExpanded" ) {
+    if ( actionName == QLatin1String("toggleExpanded") ) {
         if ( (d->journeyTimetable && d->isStateActive("journeyView"))
             ? d->journeyTimetable->item(d->clickedItemIndex.row())->isExpanded()
             : d->timetable->item(d->clickedItemIndex.row())->isExpanded() )

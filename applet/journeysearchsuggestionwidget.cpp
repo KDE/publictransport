@@ -147,7 +147,7 @@ void JourneySearchSuggestionItem::paint( QPainter* painter, const QStyleOptionGr
         painter->fillRect( option->rect, QBrush(bgGradient) );
     }
 
-    bool drawHalos = true; // TODO
+//     bool drawHalos = true; // TODO
     QRectF iconRect( option->rect.left(), option->rect.top() + (option->rect.height() - 16) / 2.0,
                     16, 16 );
     QRectF textRect( iconRect.right() + 5.0, option->rect.top(),
@@ -722,7 +722,7 @@ void JourneySearchSuggestionWidget::useStopSuggestion(const QModelIndex& modelIn
 {
     // Only start search if a stop suggestion or a recent item was activated
     if ( !modelIndex.data(Qt::UserRole + 1).isValid()
-        || modelIndex.data(Qt::UserRole + 1).toString() == "recent" )
+        || modelIndex.data(Qt::UserRole + 1).toString() == QLatin1String("recent") )
     {
         suggestionClicked( modelIndex );
     }
@@ -741,19 +741,19 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& modelIn
     }
 
     QString type = modelIndex.data( Qt::UserRole + 1 ).toString();
-    if ( type == "recent" ) {
+    if ( type == QLatin1String("recent") ) {
         // Set recent journey search string
         QString newText = modelIndex.data( Qt::UserRole + 2 ).toString();
         m_lineEdit->setText( newText );
         removeGeneralSuggestionItems();
         addJourneySearchCompletions();
         addAllKeywordAddRemoveItems();
-    } else if ( type == "additionalKeywordAtEnd" ) {
+    } else if ( type == QLatin1String("additionalKeywordAtEnd") ) {
         // Add keyword at the endint newCursorPos
         QString newText = m_lineEdit->text() + ' ' +
         modelIndex.data( Qt::UserRole + 2 ).toString();
         journeySearchItemCompleted( newText, modelIndex );
-    } else if ( type == "additionalKeywordAlmostAtEnd" ) {
+    } else if ( type == QLatin1String("additionalKeywordAlmostAtEnd") ) {
         // Add keyword after the stop name, if any
         int posStart, len;
         QString newText, keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
@@ -765,18 +765,18 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& modelIn
             newText = m_lineEdit->text() + ' ' + keyword;
             journeySearchItemCompleted( newText, modelIndex );
         }
-    } else if ( type == "additionalKeywordAtBegin" ) {
+    } else if ( type == QLatin1String("additionalKeywordAtBegin") ) {
         // Add keyword to the beginning
         QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
         QString newText = keyword + ' ' + m_lineEdit->text();
         journeySearchItemCompleted( newText, modelIndex, keyword.length() + 1 );
-    } else if ( type == "additionalKeywordAtEndRemove"
-        || type == "additionalKeywordAlmostAtEndRemove"
-        || type == "replaceTimeKeyword" )
+    } else if ( type == QLatin1String("additionalKeywordAtEndRemove")
+        || type == QLatin1String("additionalKeywordAlmostAtEndRemove")
+        || type == QLatin1String("replaceTimeKeyword") )
     {
         // Remove first keyword appearance after the stop name, if any
         QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
-        if ( type == "replaceTimeKeyword" )
+        if ( type == QLatin1String("replaceTimeKeyword") )
             keyword = keyword.left( keyword.indexOf( ' ' ) );
 
         QString pattern;
@@ -795,14 +795,14 @@ void JourneySearchSuggestionWidget::suggestionClicked(const QModelIndex& modelIn
         if ( pos != -1 ) {
             // Keyword (and values) found, remove
             newText = newText.remove( regExp.pos( 1 ), regExp.cap( 1 ).length() );
-            if ( type == "replaceTimeKeyword" ) { // Add new time keyword
+            if ( type == QLatin1String("replaceTimeKeyword") ) { // Add new time keyword
                 newText = newText + ' ' + modelIndex.data( Qt::UserRole + 2 ).toString();
                 journeySearchItemCompleted( newText, modelIndex );
             } else {
                 journeySearchItemCompleted( newText, modelIndex, regExp.pos(1) );
             }
         }
-    } else if ( type == "additionalKeywordAtBeginRemove" ) {
+    } else if ( type == QLatin1String("additionalKeywordAtBeginRemove") ) {
         // Remove keyword from the beginning
         QString keyword = modelIndex.data( Qt::UserRole + 2 ).toString();
         QString newText = m_lineEdit->text().trimmed().remove(
@@ -840,7 +840,7 @@ void JourneySearchSuggestionWidget::suggestionDoubleClicked(const QModelIndex& m
 
     // Only start search if a stop suggestion or a recent item was double clicked
     if ( !modelIndex.data(Qt::UserRole + 1).isValid()
-        || modelIndex.data(Qt::UserRole + 1).toString() == "recent" )
+        || modelIndex.data(Qt::UserRole + 1).toString() == QLatin1String("recent") )
     {
         emit suggestionActivated();
     }

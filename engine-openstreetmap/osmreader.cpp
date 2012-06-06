@@ -27,7 +27,7 @@ void OsmReader::read() {
         readNext();
 
         if ( isStartElement() ) {
-            if ( name().compare("osm", Qt::CaseInsensitive) == 0 ) {
+            if ( name().compare(QLatin1String("osm"), Qt::CaseInsensitive) == 0 ) {
                 readOsm();
                 break;
             }
@@ -53,7 +53,7 @@ bool OsmReader::waitOnRecoverableError() {
 
 void OsmReader::readUnknownElement() {
     Q_ASSERT( isStartElement() );
-    
+
     while ( !atEnd() || waitOnRecoverableError() ) {
         readNext();
 
@@ -71,17 +71,17 @@ void OsmReader::readOsm() {
     while ( !atEnd() || waitOnRecoverableError() ) {
         readNext();
 
-        if ( isEndElement() && name().compare("osm", Qt::CaseInsensitive) == 0 ) {
+        if ( isEndElement() && name().compare(QLatin1String("osm"), Qt::CaseInsensitive) == 0 ) {
             kDebug() << "Closing </osm> tag read";
             break;
         }
 
         if ( isStartElement() ) {
-            if ( name().compare("node", Qt::CaseInsensitive) == 0 ) {
+            if ( name().compare(QLatin1String("node"), Qt::CaseInsensitive) == 0 ) {
                 readNode();
-            } else if ( name().compare("way", Qt::CaseInsensitive) == 0 ) {
+            } else if ( name().compare(QLatin1String("way"), Qt::CaseInsensitive) == 0 ) {
                 readWay();
-            } else if ( name().compare("relation", Qt::CaseInsensitive) == 0 ) {
+            } else if ( name().compare(QLatin1String("relation"), Qt::CaseInsensitive) == 0 ) {
                 readRelation();
             } else {
                 readUnknownElement();
@@ -98,25 +98,25 @@ bool OsmReader::isResultValid( const QVariantHash& data ) const {
 }
 
 void OsmReader::readNode() {
-    QString id = attributes().value( "id" ).toString();
-    double longitude = attributes().value( "lon" ).toString().toDouble();
-    double latitude = attributes().value( "lat" ).toString().toDouble();
+    QString id = attributes().value( QLatin1String("id") ).toString();
+    double longitude = attributes().value( QLatin1String("lon") ).toString().toDouble();
+    double latitude = attributes().value( QLatin1String("lat") ).toString().toDouble();
     // Could read more information from attributes (user, uid, timestamp, version, changeset)
-    
+
     QVariantHash nodeData;
     nodeData.insert( "longitude", longitude );
     nodeData.insert( "latitude", latitude );
     nodeData.insert( "type", "node" );
-    
+
     while ( !atEnd() || waitOnRecoverableError() ) {
         readNext();
 
-        if ( isEndElement() && name().compare("node", Qt::CaseInsensitive) == 0 ) {
+        if ( isEndElement() && name().compare(QLatin1String("node"), Qt::CaseInsensitive) == 0 ) {
             break;
         }
 
         if ( isStartElement() ) {
-            if ( name().compare("tag", Qt::CaseInsensitive) == 0 ) {
+            if ( name().compare(QLatin1String("tag"), Qt::CaseInsensitive) == 0 ) {
                 readTag( &nodeData );
             } else {
                 readUnknownElement();
@@ -130,23 +130,23 @@ void OsmReader::readNode() {
 }
 
 void OsmReader::readWay() {
-    QString id = attributes().value( "id" ).toString();
+    QString id = attributes().value( QLatin1String("id") ).toString();
     // Could read more information from attributes (user, uid, timestamp, version, changeset)
     QVariantHash nodeData;
     QStringList nodes;
     nodeData.insert( "type", "way" );
-    
+
     while ( !atEnd() || waitOnRecoverableError() ) {
         readNext();
 
-        if ( isEndElement() && name().compare("way", Qt::CaseInsensitive) == 0 )
+        if ( isEndElement() && name().compare(QLatin1String("way"), Qt::CaseInsensitive) == 0 )
             break;
 
         if ( isStartElement() ) {
-            if ( name().compare("tag", Qt::CaseInsensitive) == 0 ) {
+            if ( name().compare(QLatin1String("tag"), Qt::CaseInsensitive) == 0 ) {
                 readTag( &nodeData );
-            } else if ( name().compare("nd", Qt::CaseInsensitive) == 0 ) {
-                QString node = attributes().value( "ref" ).toString();
+            } else if ( name().compare(QLatin1String("nd"), Qt::CaseInsensitive) == 0 ) {
+                QString node = attributes().value( QLatin1String("ref") ).toString();
                 if ( !node.isEmpty() ) {
                     nodes << node;
                 }
@@ -155,7 +155,7 @@ void OsmReader::readWay() {
             }
         }
     }
-    
+
     if ( isResultValid(nodeData) ) {
         if ( !nodes.isEmpty() ) {
             nodeData.insert( "nodes", nodes ); // IDs of associated nodes
@@ -165,29 +165,29 @@ void OsmReader::readWay() {
 }
 
 void OsmReader::readRelation() {
-    QString id = attributes().value( "id" ).toString();
+    QString id = attributes().value( QLatin1String("id") ).toString();
     // Could read more information from attributes (user, uid, timestamp, version, changeset)
     QVariantHash nodeData;
     QStringList nodes, ways;
     nodeData.insert( "type", "relation" );
-    
+
     while ( !atEnd() || waitOnRecoverableError() ) {
         readNext();
 
-        if ( isEndElement() && name().compare("relation", Qt::CaseInsensitive) == 0 ) {
+        if ( isEndElement() && name().compare(QLatin1String("relation"), Qt::CaseInsensitive) == 0 ) {
             break;
         }
 
         if ( isStartElement() ) {
-            if ( name().compare("tag", Qt::CaseInsensitive) == 0 ) {
+            if ( name().compare(QLatin1String("tag"), Qt::CaseInsensitive) == 0 ) {
                 readTag( &nodeData );
-            } else if ( name().compare("member", Qt::CaseInsensitive) == 0 ) {
-                QString nodeOrWay = attributes().value( "ref" ).toString();
+            } else if ( name().compare(QLatin1String("member"), Qt::CaseInsensitive) == 0 ) {
+                QString nodeOrWay = attributes().value( QLatin1String("ref") ).toString();
                 if ( !nodeOrWay.isEmpty() ) {
-                    QString type = attributes().value( "type" ).toString();
-                    if ( type == "node" ) {
+                    QString type = attributes().value( QLatin1String("type") ).toString();
+                    if ( type == QLatin1String("node") ) {
                         nodes << nodeOrWay;
-                    } else if ( type == "way" ) {
+                    } else if ( type == QLatin1String("way") ) {
                         ways << nodeOrWay;
                     } else {
                         kDebug() << "Unknown member type" << type
