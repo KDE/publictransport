@@ -45,7 +45,7 @@ bool classInformationLessThan( const ClassInformation &class1, const ClassInform
 }
 
 bool enumerationLessThan( const EnumComment &enum1, const EnumComment &enum2 ){
-    return QString::compare( enum1.name, enum1.name ) < 0; // Sort by name
+    return QString::compare( enum1.name, enum2.name ) < 0; // Sort by name
 }
 
 void DocumentationParser::parse()

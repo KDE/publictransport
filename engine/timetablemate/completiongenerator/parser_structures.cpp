@@ -176,7 +176,7 @@ bool methodLessThan( const Method &method1, const Method &method2 ) {
 bool enumerationLessThan2( const EnumComment &enum1, const EnumComment &enum2 )
 {
     // Sort by name
-    return QString::compare( enum1.name, enum1.name ) < 0;
+    return QString::compare( enum1.name, enum2.name ) < 0;
 }
 
 bool enumerableLessThan( const EnumerableComment &enumerable1,

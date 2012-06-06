@@ -189,7 +189,7 @@ public:
             const QString methodName = methodNameFromSignature( it.key() );
             if ( methodName == name ) {
                 return it.value();
-            } else if ( name == "get" ) {
+            } else if ( name == QLatin1String("get") ) {
 //                 qDebug() << methodName << it.key();
             }
         }

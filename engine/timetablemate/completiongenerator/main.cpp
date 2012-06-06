@@ -76,18 +76,20 @@ int main( int argc, char **argv )
 
     // Check arguments
     if ( !QDir(completionOutputPath).exists() ) {
-        qFatal( "The completion output path (--out_completion) does not exist: " +
-                completionOutputPath.toUtf8() );
+        qFatal( "The completion output path (--out_completion) does not exist: %s",
+                completionOutputPath.toUtf8().data() );
     }
     if ( !QDir(documentationOutputPath).exists() ) {
-        qFatal( "The documentation output path (--out_doc) does not exist: " +
-                documentationOutputPath.toUtf8() );
+        qFatal( "The documentation output path (--out_doc) does not exist: %s",
+                documentationOutputPath.toUtf8().data() );
     }
     if ( !QFile(inputScriptFilePath).exists() ) {
-        qFatal( "The input file (--input_script) does not exist: " + inputScriptFilePath.toUtf8() );
+        qFatal( "The input file (--input_script) does not exist: %s",
+                inputScriptFilePath.toUtf8().data() );
     }
     if ( !QFile(inputEnumFilePath).exists() ) {
-        qFatal( "The input file (--input_enum) does not exist: " + inputEnumFilePath.toUtf8() );
+        qFatal( "The input file (--input_enum) does not exist: %s",
+                inputEnumFilePath.toUtf8().data() );
     }
     if ( completionClassName.isEmpty() ) {
         qFatal( "The completion class name cannot be empty (--completion_class_name)" );

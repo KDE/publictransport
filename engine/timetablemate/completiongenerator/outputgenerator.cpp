@@ -1068,7 +1068,7 @@ void AbstractGenerator::buildTableOfContents( const Comments &comments )
 
     const MarkerPair markerSection = MarkerPair::fromInlineCommand( DoxygenSection );
     const MarkerPair markerSubSection = MarkerPair::fromInlineCommand( DoxygenSubSection );
-    int pos = 0, pos2;
+    int pos = 0, pos2 = 0;
     forever {
         pos = input.indexOf( markerSection.begin, pos );
         pos2 = input.indexOf( markerSubSection.begin, pos2 );
@@ -1135,7 +1135,7 @@ QString AbstractGenerator::replaceSectionMarkerPair(
     int pos = 0;
     while ( (pos = output.indexOf(marker.begin, pos)) != -1 ) {
         // Replace begin marker
-        Q_ASSERT ( output.mid(pos + beginMarkerLength, 3) == "ID=" );
+        Q_ASSERT ( output.mid(pos + beginMarkerLength, 3) == QLatin1String("ID=") );
         const int idPos = pos + beginMarkerLength + 3;
         const int idEndPos = output.indexOf( '%', idPos );
         Q_ASSERT( idEndPos != -1 );
@@ -1175,7 +1175,7 @@ QString AbstractGenerator::removeSectionMarkerPair( const QString &input,
     const int beginMarkerLength = strlen( marker.begin.latin1() );
     int pos = 0;
     while ( (pos = output.indexOf(marker.begin, pos)) != -1 ) {
-        Q_ASSERT ( output.mid(pos + beginMarkerLength, 3) == "ID=" );
+        Q_ASSERT ( output.mid(pos + beginMarkerLength, 3) == QLatin1String("ID=") );
         const int idPos = pos + beginMarkerLength + 3;
         const int idEndPos = output.indexOf( '%', idPos );
         Q_ASSERT( idEndPos != -1 );
