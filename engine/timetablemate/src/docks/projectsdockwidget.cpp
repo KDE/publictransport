@@ -56,6 +56,7 @@ ProjectsDockWidget::ProjectsDockWidget( ProjectModel *model, KActionMenu *showDo
                         "active project.</para>") );
 
     QWidget *container = new QWidget( this );
+    container->setMinimumSize( 150, 150 );
     QLabel *label = new QLabel( i18nc("@info", "Active Project:"), container );
     m_debugProjectComboBox = new KComboBox( container );
     m_debugProjectComboBox->setModel( model );
@@ -69,16 +70,17 @@ ProjectsDockWidget::ProjectsDockWidget( ProjectModel *model, KActionMenu *showDo
     m_projectsWidget = new QTreeView( container );
     m_projectsWidget->setModel( model );
     m_projectsWidget->setHeaderHidden( true );
+    m_projectsWidget->setIndentation( 10 );
     m_projectsWidget->setAnimated( true );
     m_projectsWidget->setExpandsOnDoubleClick( true );
     m_projectsWidget->setEditTriggers( QAbstractItemView::NoEditTriggers );
     m_projectsWidget->setContextMenuPolicy( Qt::CustomContextMenu );
-    m_projectsWidget->setIconSize( QSize(KIconLoader::SizeSmallMedium, KIconLoader::SizeSmallMedium) );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
     sizePolicy.setVerticalStretch( 1 );
     m_projectsWidget->setSizePolicy( sizePolicy );
 
     QFormLayout *projectsLayout = new QFormLayout( container );
+    projectsLayout->setContentsMargins( 0, 0, 0, 0 );
     projectsLayout->setVerticalSpacing( 0 );
     projectsLayout->setRowWrapPolicy( QFormLayout::WrapLongRows );
     projectsLayout->addRow( m_projectsWidget );

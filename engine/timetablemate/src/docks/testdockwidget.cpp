@@ -71,7 +71,9 @@ TestDockWidget::TestDockWidget( ProjectModel *projectModel, KActionMenu *showDoc
     }
 
     QWidget *widget = new QWidget( this );
+    widget->setMinimumSize( 200, 100 );
     QFormLayout *testLayout = new QFormLayout( widget );
+    testLayout->setContentsMargins( 0, 0, 0, 0 );
     testLayout->setVerticalSpacing( 0 );
     testLayout->setRowWrapPolicy( QFormLayout::WrapLongRows );
     testLayout->addRow( m_testWidget );

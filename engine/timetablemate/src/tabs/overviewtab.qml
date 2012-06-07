@@ -60,7 +60,7 @@ Flickable { id: flickable
     clip: true // Hide contents under the toolbar (not blurred => hard to read)
     anchors { left: root.left;
               right: verticalScrollBar.left
-              top: /*mainToolBar.state == "Shown" ?*/ mainToolBar.bottom /*: root.top*/;
+              top: mainToolBar.state == "Shown" ? mainToolBar.bottom : root.top;
               bottom: horizontalScrollBar.top
               margins: 5 }
     contentWidth: container.width

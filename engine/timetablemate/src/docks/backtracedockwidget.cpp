@@ -53,6 +53,7 @@ BacktraceDockWidget::BacktraceDockWidget( ProjectModel *projectModel, KActionMen
     m_backtraceWidget->setAllColumnsShowFocus( true );
     m_backtraceWidget->setRootIsDecorated( false );
     m_backtraceWidget->setEditTriggers( QAbstractItemView::NoEditTriggers );
+    m_backtraceWidget->setMinimumSize( 150, 100 );
     setWidget( m_backtraceWidget );
     connect( m_backtraceWidget, SIGNAL(clicked(QModelIndex)),
              this, SLOT(clickedBacktraceItem(QModelIndex)) );

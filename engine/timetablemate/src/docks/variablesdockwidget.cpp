@@ -91,7 +91,9 @@ VariablesDockWidget::VariablesDockWidget( ProjectModel *projectModel, KActionMen
              m_proxyModel, SLOT(setFilterFixedString(QString)) );
 
     QWidget *widget = new QWidget( this );
+    widget->setMinimumSize( 150, 150 );
     QFormLayout *variablesLayout = new QFormLayout( widget );
+    variablesLayout->setContentsMargins( 0, 0, 0, 0 );
     variablesLayout->setVerticalSpacing( 0 );
     variablesLayout->setRowWrapPolicy( QFormLayout::WrapLongRows );
     variablesLayout->addRow( m_searchLine );

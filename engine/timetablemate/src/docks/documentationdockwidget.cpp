@@ -46,6 +46,7 @@ DocumentationDockWidget::DocumentationDockWidget( KActionMenu *showDocksAction, 
                         "<para>Provides documentation for Public Transport engine scripts.</para>") );
 
     QWidget *container = new QWidget( this );
+    container->setMinimumSize( 150, 150 );
     m_documentationChooser = new KComboBox( container );
     KIcon classIcon( "code-class" );
     m_documentationChooser->addItem( KIcon("go-home"), "Documentation Home", "index" );

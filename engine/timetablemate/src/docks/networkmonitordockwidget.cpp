@@ -69,6 +69,7 @@ NetworkMonitorDockWidget::NetworkMonitorDockWidget( ProjectModel *projectModel,
     m_widget->setAlternatingRowColors( true );
     m_widget->setTextElideMode( Qt::ElideMiddle );
     m_widget->setContextMenuPolicy( Qt::CustomContextMenu );
+    m_widget->setMinimumSize( 150, 100 );
     connect( m_widget, SIGNAL(customContextMenuRequested(QPoint)),
              this, SLOT(contextMenu(QPoint)) );
     setWidget( m_widget );

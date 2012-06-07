@@ -79,7 +79,7 @@ WebTab::WebTab( Project *project, QWidget *parent )
     // Create a web inspector
     m_inspector = new QWebInspector( container );
     m_inspector->setPage( m_webView->page() );
-    m_inspector->setMinimumHeight( 150 );
+    m_inspector->setMinimumSize( 150, 150 );
     m_inspector->hide();
 
     // Connect network monitor model

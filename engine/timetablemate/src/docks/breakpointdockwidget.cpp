@@ -66,6 +66,7 @@ BreakpointDockWidget::BreakpointDockWidget( ProjectModel *projectModel,
     connect( m_breakpointWidget, SIGNAL(customContextMenuRequested(QPoint)),
              this, SLOT(contextMenu(QPoint)) );
 
+    m_breakpointWidget->setMinimumSize( 150, 100 );
     setWidget( m_breakpointWidget );
 
     connect( projectModel, SIGNAL(activeProjectAboutToChange(Project*,Project*)),

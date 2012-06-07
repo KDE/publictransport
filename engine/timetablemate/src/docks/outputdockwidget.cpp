@@ -46,6 +46,7 @@ OutputDockWidget::OutputDockWidget( ProjectModel *projectModel, KActionMenu *sho
 
     m_outputWidget = new QPlainTextEdit( this );
     m_outputWidget->setReadOnly( true );
+    m_outputWidget->setMinimumSize( 150, 75 );
     setWidget( m_outputWidget );
 
     connect( projectModel, SIGNAL(activeProjectAboutToChange(Project*,Project*)),

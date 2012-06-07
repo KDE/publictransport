@@ -55,6 +55,7 @@ ConsoleDockWidget::ConsoleDockWidget( ProjectModel *projectModel, KActionMenu *s
                         "by a console command they are also altered in a running script.</para>") );
 
     QWidget *container = new QWidget( this );
+    container->setMinimumSize( 150, 100 );
     m_consoleWidget = new QPlainTextEdit( container );
     m_consoleWidget->setReadOnly( true );
     m_consoleWidget->setFont( KGlobalSettings::fixedFont() );

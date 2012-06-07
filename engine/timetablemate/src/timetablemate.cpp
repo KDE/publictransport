@@ -168,6 +168,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     m_tabWidget->setTabsClosable( true );
 
     QWidget *widget = new QWidget( this );
+    widget->setMinimumSize( 220, 200 );
     QVBoxLayout *mainLayout = new QVBoxLayout( widget );
     mainLayout->setContentsMargins( 0, 0, 0, 0 );
     m_messageWidgetLayout->setContentsMargins( 0, 0, 0, 0 );
