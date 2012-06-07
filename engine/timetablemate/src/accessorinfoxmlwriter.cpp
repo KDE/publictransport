@@ -57,8 +57,8 @@ bool AccessorInfoXmlWriter::write( QIODevice *device, const TimetableAccessor *a
     for( QHash<QString, QString>::const_iterator it = info->names().constBegin();
          it != info->names().constEnd(); ++it )
     {
-        QString lang = it.key() == "en_US" ? "en" : it.key();
-        if( lang == "en" ) {
+        QString lang = it.key() == QLatin1String("en_US") ? "en" : it.key();
+        if( lang == QLatin1String("en") ) {
             if( enUsed ) {
                 continue;
             }
@@ -75,8 +75,8 @@ bool AccessorInfoXmlWriter::write( QIODevice *device, const TimetableAccessor *a
     for( QHash<QString, QString>::const_iterator it = info->descriptions().constBegin();
          it != info->descriptions().constEnd(); ++it )
     {
-        QString lang = it.key() == "en_US" ? "en" : it.key();
-        if( lang == "en" ) {
+        QString lang = it.key() == QLatin1String("en_US") ? "en" : it.key();
+        if( lang == QLatin1String("en") ) {
             if( enUsed ) {
                 continue;
             }
@@ -125,7 +125,10 @@ bool AccessorInfoXmlWriter::write( QIODevice *device, const TimetableAccessor *a
     }
     if( !info->scriptFileName().isEmpty() ) {
         // Write script file name without path (scripts are expected to be in the same path as the XML)
-        writeTextElement( "script", QFileInfo(info->scriptFileName()).fileName() );
+        writeStartElement( QLatin1String("script") );
+        writeAttribute( QLatin1String("extensions"), info->scriptExtensions().join(",") );
+        writeCharacters( QFileInfo(info->scriptFileName()).fileName() );
+        writeEndElement(); // script
     }
     if( !info->cities().isEmpty() ) {
         writeStartElement( "cities" );
@@ -144,14 +147,14 @@ bool AccessorInfoXmlWriter::write( QIODevice *device, const TimetableAccessor *a
     // Write changelog
     if( !info->changelog().isEmpty() ) {
         writeStartElement( "changelog" );
-        foreach( const ChangelogEntry & entry, info->changelog() ) {
+        foreach( const ChangelogEntry &entry, info->changelog() ) {
             writeStartElement( "entry" );
             if( !entry.author.isEmpty() && entry.author != info->shortAuthor() ) {
                 writeAttribute( "author", entry.author );
             }
-            writeAttribute( "since", entry.since_version );
-            if( !entry.released_with_version.isEmpty() ) {
-                writeAttribute( "releasedWith", entry.released_with_version );
+            writeAttribute( "since", entry.version );
+            if( !entry.engineVersion.isEmpty() ) {
+                writeAttribute( "releasedWith", entry.engineVersion );
             }
             writeCharacters( entry.description );
             writeEndElement(); // entry
@@ -159,8 +162,21 @@ bool AccessorInfoXmlWriter::write( QIODevice *device, const TimetableAccessor *a
         writeEndElement(); // changelog
     }
 
+    // Write samples
+    if ( !info->sampleStopNames().isEmpty() || !info->sampleCity().isEmpty() ) {
+        writeStartElement( "samples" );
+        foreach ( const QString &stop, info->sampleStopNames() ) {
+            writeTextElement( "stop", stop );
+        }
+        if ( !info->sampleCity().isEmpty() ) {
+            writeTextElement( "city", info->sampleCity() );
+        }
+        writeEndElement(); // samples
+    } else {
+        kDebug() << "NO SAMPLES TO WRITE";
+    }
+
     writeEndElement(); // accessorInfo
     writeEndDocument();
-
     return true;
 }

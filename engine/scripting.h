@@ -37,15 +37,16 @@
 #include <QVariant> // Return value
 #include <QStringList> // Return value
 #include <QMetaType> // For Q_DECLARE_METATYPE
-#include <QMutex>
 
+class PublicTransportInfo;
+class TimetableAccessorInfo;
+class KConfigGroup;
+class QScriptContextInfo;
 class QNetworkRequest;
 class QReadWriteLock;
 class QNetworkReply;
 class QNetworkAccessManager;
-class KConfigGroup;
-class PublicTransportInfo;
-class TimetableAccessorInfo;
+class QMutex;
 
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
 typedef QHash<TimetableInformation, QVariant> TimetableData;
@@ -364,7 +365,7 @@ public:
     bool isFinished() const { return m_isFinished; };
 
     /**
-     * @brief Sets the data to sent to the server when using Network::post().
+     * @brief Set the data to sent to the server when using Network::post().
      *
      * This function automatically sets the "ContentType" header of the request to the used
      * charset. If you want to use another value for the "ContentType" header than the
@@ -382,14 +383,14 @@ public:
      **/
     Q_INVOKABLE void setPostData( const QString &postData, const QString &charset = QString() );
 
-//     TODO documentation
+    /** @brief Get the data to sent to the server when using Network::post(). */
     QString postData() const { return m_postData; };
 
-    /** @brief Gets the @p header decoded using @p charset. */
+    /** @brief Get the @p header decoded using @p charset. */
     Q_INVOKABLE QString header( const QString &header, const QString& charset ) const;
 
     /**
-     * @brief Sets the @p header of this request to @p value.
+     * @brief Set the @p header of this request to @p value.
      *
      * @note If the request is already started, no more headers can be set and this function
      *   will do nothing.
@@ -532,17 +533,17 @@ public:
     virtual ~Network();
 
     /**
-     * @brief Gets the last requested URL.
+     * @brief Get the last requested URL.
      *
      * The last URL gets updated every time a request gets started, eg. using get(), post(),
      * getSynchronous(), download(), downloadSynchronous(), etc.
      **/
-    Q_INVOKABLE QString lastUrl() const { return m_lastUrl; };
+    Q_INVOKABLE QString lastUrl() const;
 
     /**
      * @brief Clears the last requested URL.
      **/
-    Q_INVOKABLE void clear() { m_lastUrl.clear(); };
+    Q_INVOKABLE void clear();
 
     /**
      * @brief Returns @c true, if the last download was aborted before it was ready.
@@ -550,7 +551,7 @@ public:
      * Use lastUrl() to get the URL of the aborted download. Downloads may be aborted eg. by
      * closing plasma.
      **/
-    Q_INVOKABLE bool lastDownloadAborted() const { return m_lastDownloadAborted; };
+    Q_INVOKABLE bool lastDownloadAborted() const;
 
     /**
      * @brief Download the document at @p url synchronously.
@@ -617,7 +618,7 @@ public:
      * @see runningRequests
      * @ingroup scripting
      **/
-    Q_INVOKABLE bool hasRunningRequests() const { return !m_runningRequests.isEmpty(); };
+    Q_INVOKABLE bool hasRunningRequests() const;
 
     /**
      * @brief Returns a list of all NetworkRequest objects, representing all running requests.
@@ -626,19 +627,19 @@ public:
      * @see hasRunningRequests
      * @ingroup scripting
      **/
-    Q_INVOKABLE QList< NetworkRequest* > runningRequests() const { return m_runningRequests; };
+    Q_INVOKABLE QList< NetworkRequest* > runningRequests() const;
 
     /**
      * @brief Returns the number of currently running requests.
      **/
-    Q_INVOKABLE int runningRequestCount() const { return m_runningRequests.count(); };
+    Q_INVOKABLE int runningRequestCount() const;
 
     /**
      * @brief Returns the charset to use for decoding documents, if it cannot be detected.
      *
      * The fallback charset can be selected in the XML file, as \<fallbackCharset\>-tag.
      **/
-    Q_INVOKABLE QByteArray fallbackCharset() const { return m_fallbackCharset; };
+    Q_INVOKABLE QByteArray fallbackCharset() const;
 
 Q_SIGNALS:
     /**
@@ -655,9 +656,10 @@ Q_SIGNALS:
      *
      * This signal is @em not emitted if the network gets accessed synchronously.
      * @param request The request that has finished.
+     * @param data Received data decoded to a string.
      * @ingroup scripting
      **/
-    void requestFinished( NetworkRequest *request );
+    void requestFinished( NetworkRequest *request, const QString &data = QString() );
 
     /**
      * @brief Emitted when all requests are finished.
@@ -682,32 +684,25 @@ public Q_SLOTS:
      * @brief Aborts all running (asynchronous) downloads.
      * @ingroup scripting
      **/
-    void abortAllRequests(); // TODO Dont expose to scripts if Network is shared between scripts
+    void abortAllRequests();
 
 protected Q_SLOTS:
     void slotRequestStarted();
-    void slotRequestFinished();
+    void slotRequestFinished( const QString &data = QString() );
     void slotRequestAborted();
 
 protected:
     bool checkRequest( NetworkRequest *request );
 
 private:
+    QMutex *m_mutex;
     const QByteArray m_fallbackCharset;
     QNetworkAccessManager *m_manager;
     bool m_quit;
     QString m_lastUrl;
     bool m_lastDownloadAborted;
     QList< NetworkRequest* > m_runningRequests;
-    QMutex m_mutex;
 };
-
-
-// TODO Replace most functions with QtCore functionality, eg. QDateTime()?
-// But add WARNING that QDateTime() gets converted to Date() all the time...
-//
-// importExtension("qt.core") ) {
-//     print( QTime.fromString("15--11", "hh--mm")
 
 /**
  * @brief A helper class for scripts.
@@ -829,7 +824,7 @@ public:
             const QString &beginString, const QString &endString );
 
     /**
-     * @brief Gets a map with the hour and minute values parsed from @p str using @p format.
+     * @brief Get a map with the hour and minute values parsed from @p str using @p format.
      *
      * QVariantMap gets converted to an object in scripts. The result can be used in the script
      * like this:
@@ -850,7 +845,7 @@ public:
     Q_INVOKABLE static QVariantMap matchTime( const QString &str, const QString &format = "hh:mm" );
 
     /**
-     * @brief Gets a date object parsed from @p str using @p format.
+     * @brief Get a date object parsed from @p str using @p format.
      *
      * @param str The string containing the date to be parsed, eg. "2010-12-01".
      * @param format The format of the time string in @p str. Default is "YY-MM-dd".
@@ -1171,7 +1166,8 @@ signals:
      * @param message The error message.
      * @param failedParseText The text in the source document where parsing failed.
      **/
-    void errorReceived( const QString &message, const QString &failedParseText = QString() );
+    void errorReceived( const QString &message, const QScriptContextInfo &contextInfo,
+                        const QString &failedParseText = QString() );
 
 private:
     static QString getTagName( const QVariantMap &searchResult, const QString &type = "contents",
@@ -1193,7 +1189,7 @@ private:
  *
  * @ingroup scripting
  **/
-class ResultObject : public QObject {
+class ResultObject : public QObject, protected QScriptable {
     Q_OBJECT
     Q_ENUMS( Feature Hint )
     Q_FLAGS( Features Hints )
@@ -1210,16 +1206,16 @@ public:
      * @see isFeatureEnabled()
      **/
     enum Feature {
-        NoFeature           = 0x00, /**< No feature is enabled. */
-        AutoPublish         = 0x01, /**< Automatic publishing of the first few data items. Turn
+        NoFeature   = 0x00, /**< No feature is enabled. */
+        AutoPublish = 0x01, /**< Automatic publishing of the first few data items. Turn
                 * this off if you want to call publish() manually. */
         AutoDecodeHtmlEntities
-                            = 0x02, /**< Automatic decoding of HTML entities in strings and string
+                    = 0x02, /**< Automatic decoding of HTML entities in strings and string
                 * lists. If you are sure, that there are no HTML entities in the strings parsed
                 * from the downloaded documents, you can turn this feature off. You can also
                 * manually decode HTML entities using Helper::decodeHtmlEntities(). */
-        AutoRemoveCityFromStopNames // TODO
-                            = 0x04, /**< Automatic removing of city names from all stop names, ie.
+        AutoRemoveCityFromStopNames
+                    = 0x04, /**< Automatic removing of city names from all stop names, ie.
                 * stop names in eg. RouteStops or Target). Scripts can help the data engine with
                 * this feature with the hints CityNamesAreLeft or CityNamesAreRight. TODO more docu */
         AllFeatures = AutoPublish | AutoDecodeHtmlEntities | AutoRemoveCityFromStopNames
@@ -1253,26 +1249,26 @@ public:
      **/
     ResultObject( QObject* parent = 0 );
 
-    virtual ~ResultObject() { qDebug() << "DELETE ResultObject"; };
+    virtual ~ResultObject();
 
     /**
-     * @brief Gets the list of stored TimetableData objects.
+     * @brief Get the list of stored TimetableData objects.
      *
      * @return The list of stored TimetableData objects.
      **/
-    QList< TimetableData > data() const { return m_timetableData; };
+    QList< TimetableData > data() const;
 
     /**
      * @brief Checks whether or not the list of TimetableData objects is empty.
      *
      * @return @c True, if the list of TimetableData objects isn't empty. @c False, otherwise.
      **/
-    Q_INVOKABLE bool hasData() const { return !m_timetableData.isEmpty(); };
+    Q_INVOKABLE bool hasData() const;
 
     /**
      * @brief Returns the number of timetable elements currently in the resultset.
      **/
-    Q_INVOKABLE int count() const { return m_timetableData.count(); };
+    Q_INVOKABLE int count() const;
 
     /**
      * @brief Whether or not @p feature is enabled.
@@ -1293,7 +1289,7 @@ public:
     Q_INVOKABLE bool isFeatureEnabled( Feature feature ) const;
 
     /**
-     * @brief Sets whether or not @p feature is @p enabled.
+     * @brief Set whether or not @p feature is @p enabled.
      *
      * Script examples:
      * @code
@@ -1310,17 +1306,14 @@ public:
      **/
     Q_INVOKABLE void enableFeature( Feature feature, bool enable = true );
 
-//     TODO
     /**
      * @brief Test if the given @p hint is set.
      *
      * By default no hints are set.
-     *
      * @since 0.10
      */
     Q_INVOKABLE bool isHintGiven( Hint hint ) const;
 
-//     TODO
     /**
      * @brief Set the given @p hint to @p enable.
      *
@@ -1338,20 +1331,18 @@ public:
      * @brief Get the currently enabled features.
      *
      * By default this equals to AllFeatures.
-     *
      * @since 0.10
      */
-    Features features() const { return m_features; };
+    Features features() const;
 
     // TODO More docu, eg. how to use the enum in the script
     /**
      * @brief Get the currently set hints.
      *
      * By default this equals to NoHints.
-     *
      * @since 0.10
      */
-    Hints hints() const { return m_hints; };
+    Hints hints() const;
 
     static void dataList( const QList< TimetableData > &dataList,
                           PublicTransportInfoList *infoList, ParseDocumentMode parseMode,
@@ -1393,15 +1384,27 @@ Q_SIGNALS:
      **/
     void publish();
 
+    /**
+     * @brief Emitted when invalid data gets received through the addData() method.
+     *
+     * @param info The TimetableInformation which was invalid in @p map.
+     * @param errorMessage An error message explaining why the data for @p info in @p map
+     *   is invalid.
+     * @param context The script context from which addData() was called.
+     * @param index The target index at which the data in @p map will be inserted into this result
+     *   object.
+     * @param map The argument for addData(), which contained invalid data.
+     **/
+    void invalidDataReceived( TimetableInformation info, const QString &errorMessage,
+                              const QScriptContextInfo &context,
+                              int index, const QVariantMap& map );
+
 public Q_SLOTS:
     /**
      * @brief Clears the list of stored TimetableData objects.
      * @ingroup scripting
      **/
-    void clear() {
-        QMutexLocker locker( &m_mutex );
-        m_timetableData.clear();
-    };
+    void clear();
 
     /**
      * @brief Adds the data from @p map.
@@ -1429,7 +1432,7 @@ private:
     QList< TimetableData > m_timetableData;
 
     // Protect data from concurrent access by the script in a separate thread and usage in C++
-    QMutex m_mutex;
+    QMutex *m_mutex;
     Features m_features;
     Hints m_hints;
 };
@@ -1503,11 +1506,12 @@ class StoragePrivate;
  * @endcode
  *
  * @warning Since the script can run multiple times simultanously in different threads which share
- *   the same Storage object, the stored values are also shared. If you want to store a value for
+ *   the same Storage object, the stored values are also shared . If you want to store a value for
  *   the current job of the script only (eg. getting departures and remember a value after an
  *   asynchronous request), you should store the value in a global script variable instead.
  *   Otherwise one departure request job might use the value stored by another one, which is
- *   probably not what you want.
+ *   probably not what you want. Scripts can not not access the Storage object of other scripts
+ *   (for other service providers).
  *
  * @ingroup scripting
  * @since 0.10

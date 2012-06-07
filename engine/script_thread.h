@@ -87,7 +87,7 @@ protected slots:
     void checkExecution();
 };
 
-//// TODO /** @brief Implements the script function 'importExtension()'. */
+/** @brief Implements the script function 'importExtension()'. */
 bool importExtension( QScriptEngine *engine, const QString &extension );
 
 /**
@@ -105,7 +105,6 @@ public:
      * @param script The script to executes.
      * @param info Information about the accessor.
      * @param scriptStorage The shared Storage object.
-     * TODO
      **/
     explicit ScriptJob( QScriptProgram *script, const TimetableAccessorInfo *info,
                         Storage *scriptStorage, QObject* parent = 0 );
@@ -113,14 +112,13 @@ public:
     /** @brief Destructor. */
     virtual ~ScriptJob();
 
-//     TODO TODO DOCU
-    /** @brief TODO TODO TODO Returns the name of the data source for which this job is running. */
+    /** @brief Return a pointer to the object containing inforamtion about the request of this job. */
     virtual const RequestInfo* requestInfo() const = 0;
 
-    /** @brief Returns the number of items which are already published. */
+    /** @brief Return the number of items which are already published. */
     int publishedItems() const { return m_published; };
 
-    /** @brief Returns a string describing the error, if success() returns false. */
+    /** @brief Return a string describing the error, if success() returns false. */
     QString errorString() const { return m_errorString; };
 
 signals:

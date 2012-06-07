@@ -20,13 +20,14 @@
 #ifndef JAVASCRIPTMODEL_HEADER
 #define JAVASCRIPTMODEL_HEADER
 
+#include "parserenums.h"
+#include "javascriptparser.h"
 #include <QAbstractItemModel>
 #include <QStringList>
-#include "parserenums.h"
 
 namespace KTextEditor
 {
-class Cursor;
+    class Cursor;
 };
 class EmptyNode;
 class CodeNode;
@@ -51,8 +52,8 @@ public:
     };
 
     void clear();
-    void appendNodes( const QList<CodeNode *> nodes );
-    void setNodes( const QList<CodeNode *> nodes );
+    void appendNodes( const QList< CodeNode::Ptr > nodes );
+    void setNodes( const QList< CodeNode::Ptr > nodes );
 
     QStringList functionNames() const;
 
@@ -60,23 +61,17 @@ public:
         Q_UNUSED( parent );
         return 1;
     };
-    virtual int rowCount( const QModelIndex &parent = QModelIndex() ) const {
-        Q_UNUSED( parent );
-        return m_nodes.count();
-    };
-    virtual QModelIndex parent( const QModelIndex &child ) const {
-        Q_UNUSED( child );
-        return QModelIndex();
-    };
+    virtual int rowCount( const QModelIndex &parent = QModelIndex() ) const;
+    virtual QModelIndex parent( const QModelIndex &child ) const;
     virtual QModelIndex index( int row, int column,
                                const QModelIndex &parent = QModelIndex() ) const;
     virtual QVariant data( const QModelIndex &index, int role = Qt::DisplayRole ) const;
     virtual bool removeRows( int row, int count, const QModelIndex &parent = QModelIndex() );
 
-    QModelIndex indexFromNode( CodeNode *node ) const;
+    QModelIndex indexFromNode( const CodeNode::Ptr &node ) const;
 
-    CodeNode *nodeFromIndex( const QModelIndex &index ) const;
-    CodeNode *nodeFromRow( int row ) const;
+    CodeNode::Ptr nodeFromIndex( const QModelIndex &index ) const;
+    CodeNode::Ptr nodeFromRow( int row ) const;
 
     /**
      * @returns the node at the given @p lineNumber or NULL if there is no node at that line.
@@ -86,7 +81,7 @@ public:
      *   the first and last lines. If true, such nodes are only matched if @p lineNumber is
      *   there first line, such as the signature of a function.
      **/
-    CodeNode *nodeFromLineNumber( int lineNumber, int column = -1,
+    CodeNode::Ptr nodeFromLineNumber( int lineNumber, int column = -1,
                                   MatchOptions matchOptions = NoOptions );
 
     /**
@@ -94,14 +89,14 @@ public:
      * @note This requires all nodes to be sorted by line number
      * as returned by @ref JavaScriptModel::parse.
      **/
-    CodeNode *nodeBeforeLineNumber( int lineNumber, NodeTypes nodeTypes = AllNodeTypes );
+    CodeNode::Ptr nodeBeforeLineNumber( int lineNumber, NodeTypes nodeTypes = AllNodeTypes );
 
     /**
      * @returns the first node after the given @p lineNumber.
      * @note This requires all nodes to be sorted by line number
      * as returned by @ref JavaScriptModel::parse.
      **/
-    CodeNode *nodeAfterLineNumber( int lineNumber, NodeTypes nodeTypes = AllNodeTypes );
+    CodeNode::Ptr nodeAfterLineNumber( int lineNumber, NodeTypes nodeTypes = AllNodeTypes );
 
 signals:
     void showTextHint( const KTextEditor::Cursor &position, QString &text );
@@ -110,11 +105,17 @@ public slots:
     void needTextHint( const KTextEditor::Cursor &position, QString &text );
 
 private:
+    CodeNode *nodePointerFromIndex( const QModelIndex &index ) const;
+    QModelIndex indexFromNodePointer( CodeNode *nodePointer,
+                                      const CodeNode::Ptr &parent = CodeNode::Ptr(0) ) const;
+    CodeNode::Ptr nodeFromNodePointer( CodeNode *nodePointer,
+                                       const CodeNode::Ptr &parent = CodeNode::Ptr(0) ) const;
+
     // Sets the name of the first empty node (including the number of nodes), if any.
     void updateFirstEmptyNodeName();
-    EmptyNode *createAndAddEmptyNode();
+    EmptyNode::Ptr createAndAddEmptyNode();
 
-    QList< CodeNode * > m_nodes;
+    QList< CodeNode::Ptr > m_nodes;
     JavaScriptCompletionModel *m_javaScriptCompletionModel;
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( JavaScriptModel::MatchOptions );

@@ -108,7 +108,7 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderInfo(
 
     QStringList changelog;
     foreach ( const ChangelogEntry &entry, accessor->timetableAccessorInfo().changelog() ) {
-        changelog << QString( "%2 (%1): %3" ).arg( entry.since_version ).arg( entry.author ).arg( entry.description );
+        changelog << QString( "%2 (%1): %3" ).arg( entry.version ).arg( entry.author ).arg( entry.description );
     }
     dataServiceProvider.insert( "changelog", changelog );
 
@@ -474,8 +474,8 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
             accessor->requestDepartures( DepartureRequestInfo(name, stop, dateTime, maxCount,
                                          dataType, city, parseDocumentMode) );
         } else if ( parseDocumentMode == ParseForStopSuggestions ) {
-            accessor->requestStopSuggestions( StopSuggestionRequestInfo(name, stop, dateTime,
-                                              maxCount, dataType, city, parseDocumentMode) );
+            accessor->requestStopSuggestions( StopSuggestionRequestInfo(name, stop,
+                                              maxCount, city, parseDocumentMode) );
         } else { // if ( parseDocumentMode == ParseForJourneys )
             accessor->requestJourneys( JourneyRequestInfo(name, originStop, targetStop,
                                        dateTime, maxCount, QString(), dataType) );
@@ -851,6 +851,9 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
         const QUrl &requestUrl, const StopInfoList &stops,
         const StopSuggestionRequestInfo &requestInfo, bool deleteStopInfos )
 {
+    Q_UNUSED( accessor );
+    Q_UNUSED( deleteStopInfos );
+
     const QString sourceName = requestInfo.sourceName;
     m_runningSources.removeOne( sourceName );
 

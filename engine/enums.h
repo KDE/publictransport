@@ -162,6 +162,7 @@ enum TimetableInformation {
      * A list of times of the departure / arrival to it's destination stop. If @ref RouteStops and
      * @ref RouteTimes are both set, they should contain the same number of elements. And elements
      * with equal indices should be associated (the times at which the vehicle is at the stops).
+     * Can contain list elements of type QTime (ie. QtScript Date) or QString in format "hh:mm".
      **/
     RouteTimes = 24,
 
@@ -170,6 +171,7 @@ enum TimetableInformation {
      * are both set, the latter should contain one elements less (because the last stop has no
      * departure, only an arrival time). Elements with equal indices should be associated (the
      * times at which the vehicle departs from the stops).
+     * Can contain list elements of type QTime (ie. QtScript Date) or QString in format "hh:mm".
      **/
     RouteTimesDeparture = 25,
 
@@ -178,6 +180,7 @@ enum TimetableInformation {
      * both set, the latter should contain one elements less (because the first stop has no
      * arrival, only a departure time). Elements with equal indices should be associated (the
      * times at which the vehicle arrives at the stops).
+     * Can contain list elements of type QTime (ie. QtScript Date) or QString in format "hh:mm".
      **/
     RouteTimesArrival = 26,
 
@@ -265,13 +268,11 @@ enum AccessorType {
 /**
  * @brief The type of the vehicle used for a public transport line.
  *
- * Scripts can use the names (case insensitive) or values of these enumerables as vehicle types.
+ * Scripts can use the names (case insensitive) of these enumerables as vehicle types.
  * @code
  * result.addData({ TypeOfVehicle: "Bus" });
  * result.addData({ TypeOfVehicle: "traM" });
- *
- * // 3 is the value of Subway
- * result.addData({ TypeOfVehicle: 3 });
+ * result.addData({ TypeOfVehicle: "RegionalExpressTrain" });
  * @endcode
  **/
 enum VehicleType {

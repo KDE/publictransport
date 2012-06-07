@@ -28,6 +28,7 @@
 #include <KConfig>
 #include <KConfigGroup>
 #include <KDebug>
+#include <KLocalizedString>
 
 // Qt includes
 #include <QFile>
@@ -41,6 +42,7 @@
 #include <QWaitCondition>
 #include <QReadLocker>
 #include <QWriteLocker>
+#include <QMutex>
 
 namespace Scripting {
 
@@ -121,7 +123,6 @@ void NetworkRequest::started( QNetworkReply* reply )
         kDebug() << "Can't decode, no m_network given...";
         return;
     }
-    kDebug() << "REQUEST STARTED" << reply->isRunning();
     m_data.clear();
     m_reply = reply;
 
@@ -237,7 +238,7 @@ QNetworkRequest* NetworkRequest::request() const
 
 static int networkObjects = 0; // TODO Remove
 Network::Network( const QByteArray &fallbackCharset, QObject* parent )
-        : QObject(parent), m_fallbackCharset(fallbackCharset),
+        : QObject(parent), m_mutex(new QMutex()), m_fallbackCharset(fallbackCharset),
           m_manager(new QNetworkAccessManager(this)), m_quit(false), m_lastDownloadAborted(false)
 {
     qRegisterMetaType<NetworkRequest*>( "NetworkRequest*" );
@@ -248,26 +249,29 @@ Network::Network( const QByteArray &fallbackCharset, QObject* parent )
 Network::~Network()
 {
     // Quit event loop of possibly running synchronous requests
-    m_mutex.lock();
+    m_mutex->lock();
     m_quit = true;
-    m_mutex.unlock();
 
 //     emit aborted();
 
     --networkObjects;
+
     kDebug() << "DELETE Network object" << thread() << networkObjects;
     if ( !m_runningRequests.isEmpty() ) {
         kDebug() << "Deleting Network object with" << m_runningRequests.count()
                  << "running requests";
         qDeleteAll( m_runningRequests );
     }
+    m_mutex->unlock();
+
+    delete m_mutex;
 }
 
 NetworkRequest* Network::createRequest( const QString& url )
 {
     NetworkRequest *request = new NetworkRequest( url, this );
     connect( request, SIGNAL(started()), this, SLOT(slotRequestStarted()) );
-    connect( request, SIGNAL(finished()), this, SLOT(slotRequestFinished()) );
+    connect( request, SIGNAL(finished(QString)), this, SLOT(slotRequestFinished(QString)) );
     connect( request, SIGNAL(aborted()), this, SLOT(slotRequestAborted()) );
     return request;
 }
@@ -279,22 +283,27 @@ void Network::slotRequestStarted()
 
     kDebug() << "Started" << request->url();
 
+    m_mutex->lockInline();
     m_lastDownloadAborted = false;
     m_runningRequests << request;
+    m_mutex->unlockInline();
+
     emit requestStarted( request );
 }
 
-void Network::slotRequestFinished()
+void Network::slotRequestFinished( const QString &data )
 {
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
     Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
 
     kDebug() << "Finished" << request->url();
-
+    m_mutex->lockInline();
     m_runningRequests.removeOne( request );
-    emit requestFinished( request );
+    const bool noMoreRequests = m_runningRequests.isEmpty();
+    m_mutex->unlockInline();
 
-    if ( m_runningRequests.isEmpty() ) {
+    emit requestFinished( request, data );
+    if ( noMoreRequests ) {
         emit allRequestsFinished();
     }
 }
@@ -306,8 +315,11 @@ void Network::slotRequestAborted()
 
     kDebug() << "Aborted" << request->url();
 
+    m_mutex->lockInline();
     m_lastDownloadAborted = true;
     m_runningRequests.removeOne( request );
+    m_mutex->unlockInline();
+
     emit requestAborted( request );
 
     // TEST already gets emitted in slotRequestFinished()
@@ -344,8 +356,11 @@ void Network::get( NetworkRequest* request )
     }
 
     // Create a get request
+    m_mutex->lockInline();
     QNetworkReply *reply = m_manager->get( *request->request() );
     m_lastUrl = request->url();
+    m_mutex->unlockInline();
+
     request->started( reply );
 //     kDebug() << "GET DOCUMENT, now" << m_runningRequests.count() << "running requests" << request->url();
 }
@@ -357,8 +372,11 @@ void Network::head( NetworkRequest* request )
     }
 
     // Create a head request
+    m_mutex->lockInline();
     QNetworkReply *reply = m_manager->head( *request->request() );
     m_lastUrl = request->url();
+    m_mutex->unlockInline();
+
     request->started( reply );
 }
 
@@ -369,16 +387,23 @@ void Network::post( NetworkRequest* request )
     }
 
     // Create a head request
+    m_mutex->lockInline();
     QNetworkReply *reply = m_manager->post( *request->request(), request->postDataByteArray() );
     m_lastUrl = request->url();
+    m_mutex->unlockInline();
+
     request->started( reply );
 }
 
 void Network::abortAllRequests()
 {
-    for ( int i = m_runningRequests.count() - 1; i >= 0; --i ) {
+    m_mutex->lockInline();
+    const QList< NetworkRequest* > runningRequests = m_runningRequests;
+    m_mutex->unlockInline();
+
+    for ( int i = runningRequests.count() - 1; i >= 0; --i ) {
         // Calling abort automatically removes the aborted request from m_runningRequests
-        m_runningRequests[i]->abort();
+        runningRequests[i]->abort();
     }
 }
 
@@ -386,9 +411,13 @@ QString Network::getSynchronous( const QString &url, int timeout )
 {
     // Create a get request
     QNetworkRequest request( url );
+
+    m_mutex->lockInline();
     QNetworkReply *reply = m_manager->get( request );
     m_lastUrl = url;
     m_lastDownloadAborted = false;
+    m_mutex->unlockInline();
+
     const QTime start = QTime::currentTime();
 
     // Use an event loop to wait for execution of the request,
@@ -401,9 +430,9 @@ QString Network::getSynchronous( const QString &url, int timeout )
     }
     eventLoop.exec();
 
-    m_mutex.lock();
+    m_mutex->lock();
     const bool quit = reply->isRunning() || m_quit || m_lastDownloadAborted;
-    m_mutex.unlock();
+    m_mutex->unlock();
 
     // Check if the timeout occured before the request finished
     if ( quit ) {
@@ -423,23 +452,31 @@ QString Network::getSynchronous( const QString &url, int timeout )
         kDebug() << "Error downloading" << url << reply->errorString();
         return QString();
     } else {
+        QMutexLocker locker( m_mutex );
         return Global::decodeHtml( data, m_fallbackCharset );
     }
 }
 
 ResultObject::ResultObject( QObject* parent )
-        : QObject(parent), m_features(AllFeatures), m_hints(NoHint)
+        : QObject(parent), m_mutex(new QMutex()), m_features(AllFeatures), m_hints(NoHint)
 {
+    qRegisterMetaType< TimetableInformation >( "TimetableInformation" );
+}
+
+ResultObject::~ResultObject()
+{
+    delete m_mutex;
 }
 
 bool ResultObject::isHintGiven( ResultObject::Hint hint ) const
 {
+    QMutexLocker locker( m_mutex );
     return m_hints.testFlag( hint );
 }
 
 void ResultObject::giveHint( ResultObject::Hint hint, bool enable )
 {
-    QMutexLocker locker( &m_mutex );
+    QMutexLocker locker( m_mutex );
     if ( enable ) {
         // Remove incompatible flags of hint if any
         if ( hint == CityNamesAreLeft && m_hints.testFlag(CityNamesAreRight) ) {
@@ -455,12 +492,13 @@ void ResultObject::giveHint( ResultObject::Hint hint, bool enable )
 
 bool ResultObject::isFeatureEnabled( ResultObject::Feature feature ) const
 {
+    QMutexLocker locker( m_mutex );
     return m_features.testFlag( feature );
 }
 
 void ResultObject::enableFeature( ResultObject::Feature feature, bool enable )
 {
-    QMutexLocker locker( &m_mutex );
+    QMutexLocker locker( m_mutex );
     if ( enable ) {
         m_features |= feature;
     } else {
@@ -472,7 +510,8 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
                              PublicTransportInfoList *infoList, ParseDocumentMode parseMode,
                              VehicleType defaultVehicleType, const GlobalTimetableInfo *globalInfo,
                              ResultObject::Features features, ResultObject::Hints hints )
-{                               // TODO TODO TODO TODO FEATURES TODO HINTS TODO TODO TODO TODO
+{                               // TODO Use features and hints
+    Q_UNUSED( features );
     QDate curDate;
     QTime lastTime;
     int dayAdjustment = hints.testFlag(DatesNeedAdjustment)
@@ -587,9 +626,9 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
                 QStringList stops = info->value( RouteStops ).toStringList();
                 QString target = info->value( Target ).toString();
 
-                // Break if 70% or at least three of the route stop names
+                // TODO Break if 70% or at least three of the route stop names
                 // begin/end with the same word
-                int minCount = qMax( 3, int(stops.count() * 0.7) );
+//                 int minCount = qMax( 3, int(stops.count() * 0.7) );
                 foreach ( const QString &stop, stops ) {
                     // Test first word
                     pos = stop.indexOf( ' ' );
@@ -696,7 +735,8 @@ QString Helper::decodeHtmlEntities( const QString& html )
 
 void Helper::error( const QString& message, const QString &failedParseText )
 {
-    emit errorReceived( message, failedParseText );
+    QScriptContextInfo info( context()->parentContext() );
+    emit errorReceived( message, info, failedParseText );
 
     // Output debug message and a maximum count of 200 characters of the text where the parsing failed
     QString shortParseText = failedParseText.trimmed().left(350);
@@ -706,7 +746,7 @@ void Helper::error( const QString& message, const QString &failedParseText )
     }
     shortParseText = shortParseText.replace('\n', "\n    "); // Indent
 
-    QScriptContextInfo info( context()->parentContext() );
+#ifdef QT_DEBUG
     kDebug() << QString("Error in %1-script, function %2(), line %3")
             .arg(m_serviceProviderId).arg(info.functionName()).arg(info.lineNumber());
     kDebug() << message;
@@ -714,6 +754,7 @@ void Helper::error( const QString& message, const QString &failedParseText )
         kDebug() << QString("The text of the document where parsing failed is: \"%1\"")
                     .arg(shortParseText);
     }
+#endif
 
     // Log the complete message to the log file.
     QString logFileName = KGlobal::dirs()->saveLocation( "data", "plasma_engine_publictransport" );
@@ -744,18 +785,46 @@ void Helper::error( const QString& message, const QString &failedParseText )
 
 void ResultObject::addData( const QVariantMap& map )
 {
-    QMutexLocker locker( &m_mutex );
+    QMutexLocker locker( m_mutex );
     TimetableData data;
     for ( QVariantMap::ConstIterator it = map.constBegin(); it != map.constEnd(); ++it ) {
         const TimetableInformation info = Global::timetableInformationFromString( it.key() );
         const QVariant value = it.value();
         if ( info == Nothing ) {
             kDebug() << "Unknown timetable information" << it.key() << "with value" << value;
+            const QString message = i18nc("@info/plain", "Invalid timetable information \"%1\" "
+                                          "with value \"%2\"", it.key(), value.toString());
+            emit invalidDataReceived( info, message, context()->parentContext(),
+                                      m_timetableData.count(), map );
             continue;
-        }
-        if ( !value.isValid() || value.isNull() ) {
+        } else if ( !value.isValid() || value.isNull() ) {
             kDebug() << "Value for" << info << "is invalid or null" << value;
+            const QString message = i18nc("@info/plain", "Invalid value received for \"%1\"",
+                                          it.key());
+            emit invalidDataReceived( info, message, context()->parentContext(),
+                                      m_timetableData.count(), map );
             continue;
+        } else if ( info == TypeOfVehicle &&
+                    Global::vehicleTypeFromString(value.toString()) == Unknown )
+        {
+            kDebug() << "Invalid type of vehicle value" << value;
+            const QString message = i18nc("@info/plain",
+                    "Invalid type of vehicle received: \"%1\"", value.toString());
+            emit invalidDataReceived( info, message, context()->parentContext(),
+                                      m_timetableData.count(), map );
+        } else if ( info == TypesOfVehicleInJourney || info == RouteTypesOfVehicles ) {
+            const QVariantList types = value.toList();
+            foreach ( const QVariant &type, types ) {
+                if ( Global::vehicleTypeFromString(type.toString()) == Unknown ) {
+                    kDebug() << "Invalid type of vehicle value in"
+                             << Global::timetableInformationToString(info) << value;
+                    const QString message = i18nc("@info/plain",
+                            "Invalid type of vehicle received in \"%1\": \"%2\"",
+                            Global::timetableInformationToString(info), type.toString());
+                    emit invalidDataReceived( info, message, context()->parentContext(),
+                                              m_timetableData.count(), map );
+                }
+            }
         }
 
         if ( m_features.testFlag(AutoDecodeHtmlEntities) ) {
@@ -813,7 +882,7 @@ QString Helper::camelCase( const QString& str )
     QRegExp rx( "(^\\w)|\\W(\\w)" );
     int pos = 0;
     while ( (pos = rx.indexIn(ret, pos)) != -1 ) {
-        if ( rx.pos(2) == -1 || rx.pos(2) >= ret.length() ) { // TODO
+        if ( rx.pos(2) == -1 || rx.pos(2) >= ret.length() ) {
             ret[ rx.pos(1) ] = ret[ rx.pos(1) ].toUpper();
         } else {
             ret[ rx.pos(2) ] = ret[ rx.pos(2) ].toUpper();
@@ -1703,6 +1772,84 @@ void Storage::clearPersistent()
 {
     // Try to load script features from a cache file
     d->persistentGroup().deleteGroup();
+}
+
+QString Network::lastUrl() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_lastUrl;
+}
+
+void Network::clear()
+{
+    QMutexLocker locker( m_mutex );
+    m_lastUrl.clear();
+}
+
+bool Network::lastDownloadAborted() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_lastDownloadAborted;
+}
+
+bool Network::hasRunningRequests() const
+{
+    QMutexLocker locker( m_mutex );
+    return !m_runningRequests.isEmpty();
+}
+
+QList< NetworkRequest * > Network::runningRequests() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_runningRequests;
+}
+
+int Network::runningRequestCount() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_runningRequests.count();
+}
+
+QByteArray Network::fallbackCharset() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_fallbackCharset;
+}
+
+QList< TimetableData > ResultObject::data() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_timetableData;
+}
+
+bool ResultObject::hasData() const
+{
+    QMutexLocker locker( m_mutex );
+    return !m_timetableData.isEmpty();
+}
+
+int ResultObject::count() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_timetableData.count();
+}
+
+ResultObject::Features ResultObject::features() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_features;
+}
+
+ResultObject::Hints ResultObject::hints() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_hints;
+}
+
+void ResultObject::clear()
+{
+    QMutexLocker locker( m_mutex );
+    m_timetableData.clear();
 }
 
 #include "scripting.moc"

@@ -41,12 +41,6 @@ public:
 
 private:
     TimetableAccessor writeAccessorInfo();
-    void writeAuthor( QString *fullname, QString *email );
-    void writeCities( QStringList *cities,
-                      QHash<QString, QString> *cityNameReplacements );
-    void writeRawUrls( QString *rawUrlDepartures,
-                       QString *rawUrlStopSuggestions, QString *rawUrlJourneys );
-    void writeChangelog( const QList<ChangelogEntry> &changelog );
 };
 
 #endif // ACCESSORINFOXMLREADER_HEADER

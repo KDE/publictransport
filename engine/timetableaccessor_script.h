@@ -74,14 +74,8 @@ public:
         ScriptHasErrors = 0x02
     };
 
-private:
-    QMutex mutex; // TODO
 public:
-    void import( const QString &import, QScriptEngine *engine ) {
-        mutex.lock();
-        engine->importExtension(import);
-        mutex.unlock();
-    };
+    void import( const QString &import, QScriptEngine *engine );
 
     /** @brief The name of the script function to get a list of used TimetableInformation's. */
     static const char *SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS;
@@ -107,7 +101,7 @@ public:
      * @note Can be used if you have a custom TimetableAccessorInfo object.
      *   TimetableAccessorXml uses this to create an HTML accessor for parsing of stop lists.
      **/
-    TimetableAccessorScript( TimetableAccessorInfo *info = 0 );
+    TimetableAccessorScript( TimetableAccessorInfo *info = 0, QObject *parent = 0 );
 
     /** @brief Destructor. */
     virtual ~TimetableAccessorScript();
@@ -164,6 +158,7 @@ private:
     QHash< QString, PublicTransportInfoList > m_publishedData;
     QScriptProgram *m_script;
     Storage *m_scriptStorage;
+    QMutex *m_mutex;
 };
 
 #endif // TIMETABLEACCESSOR_SCRIPT_HEADER

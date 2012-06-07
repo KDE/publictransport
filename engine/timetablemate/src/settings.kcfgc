@@ -2,5 +2,5 @@
 File=timetablemate.kcfg
 ClassName=Settings
 Singleton=true
-# Mutators=col_background,col_foreground
+Mutators=true
 # will create the necessary code for setting those variables

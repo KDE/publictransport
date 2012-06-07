@@ -17,51 +17,54 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef TIMETABLEMATEVIEW_H
-#define TIMETABLEMATEVIEW_H
+#ifndef PROJECTSETTINGSDIALOG_H
+#define PROJECTSETTINGSDIALOG_H
 
 // Own includes
-#include "ui_timetablemateview_base.h"
+#include "project.h"
 
 // PublicTransport engine includes
 #include <engine/accessorinfoxmlreader.h>
 
+// KDE includes
+#include <KDialog>
+#include <KEditListBox>
+
 // Qt includes
 #include <QtGui/QWidget>
 
+namespace Ui
+{
+    class timetablemateview_base;
+}
+
+class ChangelogEntryWidget;
 class ChangelogWidget;
 class TimetableAccessor;
 class QSignalMapper;
 class QPainter;
 class KUrl;
 
+typedef QSharedPointer< const TimetableAccessorInfo > TimetableAccessorInfoPtr;
+
 /**
- * This is the main view class for TimetableMate.  Most of the non-menu,
- * non-toolbar, and non-statusbar (e.g., non frame) GUI code should go
- * here.
- *
- * @short Main view
- * @author Friedrich Pülz fpuelz@gmx.de
- * @version 0.2
+ * @brief A dialog which allows to edit project settings.
  */
-class TimetableMateView : public QWidget, public Ui::timetablemateview_base
+class ProjectSettingsDialog : public KDialog
 {
     Q_OBJECT
 public:
     /** Default constructor */
-    TimetableMateView( QWidget *parent );
+    ProjectSettingsDialog( QWidget *parent = 0 );
 
     /** Destructor */
-    virtual ~TimetableMateView();
+    virtual ~ProjectSettingsDialog();
 
-    bool readAccessorInfoXml( const QString &fileName, QString *error = 0 );
-    bool readAccessorInfoXml( QIODevice *device, QString *error/* = 0*/,
-                              const QString &fileName/* = QString()*/ );
+    const TimetableAccessorInfo *accessorInfo( QObject *parent ) const;
+    Project::ScriptTemplateType newScriptTemplateType() const { return m_newScriptTemplateType; };
 
-    bool writeAccessorInfoXml( const QString &fileName );
-    QString writeAccessorInfoXml();
+    void setAccessorInfo( const TimetableAccessorInfo *info, const QString &fileName = QString() );
 
-    TimetableAccessor *accessor() const;
     void setScriptFile( const QString &scriptFile );
 
     void setCurrentServiceProviderID( const QString &currentServiceProviderID ) {
@@ -69,8 +72,9 @@ public:
     };
 
 signals:
-    /** Some widgets value has been changed. */
+    /** Some widgets value has been changed or setAccessorInfo() has been called. */
     void changed();
+
     void fileVersionchanged();
 
     /** A new script file has been created. */
@@ -86,7 +90,7 @@ signals:
     /** Use this signal to change the content of the caption */
     void signalChangeCaption( const QString &text );
 
-private slots:
+protected slots:
     void settingsChanged();
 
     void browseForScriptFile();
@@ -96,19 +100,40 @@ private slots:
     void slotChanged( QWidget *changedWidget );
     void languageActivated( const QString &languageCode );
 
+    void authorEdited( const QString &newAuthor );
+    void shortAuthorEdited( const QString &shortAuthor );
+    void urlEdited( const QString &newUrl );
+    void shortUrlEdited( const QString &shortUrl );
+
     void openUrlClicked();
+
+    void changelogEntryWidgetAdded( ChangelogEntryWidget *entryWidget );
 
     void predefinedCityNameChanged( const QString &newCityName );
     void predefinedCityReplacementChanged( const QString &newReplacement );
     void currentPredefinedCityChanged( const QString &currentCityText );
 
+    virtual void slotButtonClicked( int button );
+    virtual void accept();
+    bool check();
+
+protected:
+    virtual bool eventFilter( QObject *object, QEvent *event );
+
 private:
     void fillValuesFromWidgets();
+    int compareVersions( const QString &version1, const QString &version2 );
+    bool testWidget( QWidget *widget );
+    void appendMessageWidgetAfter( QWidget *after, const QString &errorMessage );
 
-    Ui::timetablemateview_base ui_accessor;
+    Ui::timetablemateview_base *ui_accessor;
+
     QString m_openedPath;
     QString m_currentServiceProviderID;
-    TimetableAccessor *m_accessor;
+    TimetableAccessorInfo *m_accessorInfo;
+    Project::ScriptTemplateType m_newScriptTemplateType;
+    bool m_shortAuthorAutoFilled;
+    bool m_shortUrlAutoFilled;
 
     KEditListBox::CustomEditor m_predefinedCitiesCustomEditor;
     KLineEdit *m_cityName;
@@ -118,5 +143,5 @@ private:
     QSignalMapper *m_mapper;
 };
 
-#endif // TimetableMateVIEW_H
+#endif // Multiple inclusion guard
 // kate: indent-mode cstyle; indent-width 4; replace-tabs on;

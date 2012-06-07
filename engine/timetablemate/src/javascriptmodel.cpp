@@ -33,7 +33,7 @@ JavaScriptModel::JavaScriptModel( QObject* parent ) : QAbstractItemModel( parent
 
 JavaScriptModel::~JavaScriptModel()
 {
-    qDeleteAll( m_nodes );
+    clear();
 }
 
 void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString &text )
@@ -43,7 +43,7 @@ void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString
         return;
     }
 
-    CodeNode *node = nodeFromLineNumber( position.line() + 1, position.column(), MatchChildren );
+    CodeNode::Ptr node = nodeFromLineNumber( position.line() + 1, position.column(), MatchChildren );
     if ( !node || node->line() != position.line() + 1 ) {
         return;
     }
@@ -63,34 +63,126 @@ void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString
     emit showTextHint( position, text );
 }
 
-QModelIndex JavaScriptModel::indexFromNode( CodeNode* node ) const
+QModelIndex JavaScriptModel::indexFromNode( const CodeNode::Ptr &node ) const
 {
     if ( !m_nodes.contains(node) ) {
         return QModelIndex();
     } else {
-        return createIndex( m_nodes.indexOf(node), 0, node );
+        return createIndex( m_nodes.indexOf(node), 0, node.data() );
     }
 }
 
-CodeNode *JavaScriptModel::nodeFromIndex( const QModelIndex& index ) const
+QModelIndex JavaScriptModel::indexFromNodePointer( CodeNode *nodePointer,
+                                                   const CodeNode::Ptr &parent ) const
 {
-    return static_cast<CodeNode*>( index.internalPointer() );
+    if ( parent ) {
+        const QList< CodeNode::Ptr > children = parent->children();
+        for ( int row = 0; row < children.count(); ++row ) {
+            const CodeNode::Ptr &node = children[ row ];
+            if ( node.data() == nodePointer ) {
+                return createIndex( row, 0, nodePointer );
+            }
+
+            const QModelIndex index = indexFromNodePointer( nodePointer, node );
+            if ( index.isValid() ) {
+                return index;
+            }
+        }
+    } else {
+        for ( int row = 0; row < m_nodes.count(); ++row ) {
+            const CodeNode::Ptr &node = m_nodes[ row ];
+            if ( node.data() == nodePointer ) {
+                return createIndex( row, 0, nodePointer );
+            }
+
+            const QModelIndex index = indexFromNodePointer( nodePointer, node );
+            if ( index.isValid() ) {
+                return index;
+            }
+        }
+    }
+
+    // Node not found
+    return QModelIndex();
 }
 
-CodeNode *JavaScriptModel::nodeFromRow( int row ) const
+CodeNode::Ptr JavaScriptModel::nodeFromNodePointer( CodeNode *nodePointer,
+                                                    const CodeNode::Ptr &parent ) const
+{
+    if ( parent ) {
+        const QList< CodeNode::Ptr > children = parent->children();
+        foreach ( const CodeNode::Ptr &node, children ) {
+            if ( node.data() == nodePointer ) {
+                return node;
+            }
+
+            const CodeNode::Ptr childNode = nodeFromNodePointer( nodePointer, node );
+            if ( childNode ) {
+                return childNode;
+            }
+        }
+    } else {
+        foreach ( const CodeNode::Ptr &node, m_nodes ) {
+            if ( node.data() == nodePointer ) {
+                return node;
+            }
+
+            const CodeNode::Ptr childNode = nodeFromNodePointer( nodePointer, node );
+            if ( childNode ) {
+                return childNode;
+            }
+        }
+    }
+
+    // Node not found
+    return CodeNode::Ptr( 0 );
+}
+
+CodeNode::Ptr JavaScriptModel::nodeFromIndex( const QModelIndex &index ) const
+{
+    if ( !index.isValid() ) {
+        return CodeNode::Ptr( 0 );
+    }
+
+    if ( index.parent().isValid() ) {
+        CodeNode *nodePointer = nodePointerFromIndex( index );
+        CodeNode *parent = nodePointerFromIndex( index.parent() );
+        const QList< CodeNode::Ptr > children = parent->children();
+        for ( int row = 0; row < children.count(); ++row ) {
+            const CodeNode::Ptr &node = children[ row ];
+            if ( node.data() == nodePointer ) {
+                return node;
+            }
+        }
+        // Invalid index
+        return CodeNode::Ptr( 0 );
+    } else if ( index.row() >= m_nodes.count() ) {
+        // Invalid index
+        return CodeNode::Ptr( 0 );
+    } else {
+        return m_nodes[ index.row() ];
+    }
+}
+
+CodeNode *JavaScriptModel::nodePointerFromIndex( const QModelIndex& index ) const
+{
+    return static_cast< CodeNode* >( index.internalPointer() );
+}
+
+CodeNode::Ptr JavaScriptModel::nodeFromRow( int row ) const
 {
     return m_nodes.at( row );
 }
 
-CodeNode *JavaScriptModel::nodeFromLineNumber( int lineNumber, int column,
+CodeNode::Ptr JavaScriptModel::nodeFromLineNumber( int lineNumber, int column,
                                                MatchOptions matchOptions )
 {
-    foreach ( CodeNode *node, m_nodes ) {
-        if ( /* !matchOptions.testFlag(MatchOnlyFirstRowOfSpanned) TODO REMOVE FLAG
+    foreach ( const CodeNode::Ptr &node, m_nodes ) {
+        if ( /* !matchOptions.testFlag(MatchOnlyFirstRowOfSpanned) TODO Remove flag
             && */ node->isInRange(lineNumber, column) )
         {
             if ( matchOptions.testFlag(MatchChildren) ) {
-                return node->childFromPosition( lineNumber, column );
+                return nodeFromNodePointer( node->childFromPosition(lineNumber, column) );
             } else {
                 return node;
             }
@@ -100,10 +192,10 @@ CodeNode *JavaScriptModel::nodeFromLineNumber( int lineNumber, int column,
     return createAndAddEmptyNode();
 }
 
-CodeNode *JavaScriptModel::nodeBeforeLineNumber( int lineNumber, NodeTypes nodeTypes )
+CodeNode::Ptr JavaScriptModel::nodeBeforeLineNumber( int lineNumber, NodeTypes nodeTypes )
 {
-    CodeNode *lastFoundNode = NULL;
-    foreach ( CodeNode *node, m_nodes ) {
+    CodeNode::Ptr lastFoundNode( 0 );
+    foreach ( const CodeNode::Ptr &node, m_nodes ) {
         if ( node->type() == NoNodeType || !nodeTypes.testFlag(node->type()) ) {
             continue;
         }
@@ -119,14 +211,14 @@ CodeNode *JavaScriptModel::nodeBeforeLineNumber( int lineNumber, NodeTypes nodeT
         }
     }
 
-    return lastFoundNode ? lastFoundNode : createAndAddEmptyNode();
+    return lastFoundNode ? lastFoundNode : createAndAddEmptyNode().dynamicCast<CodeNode>();
 }
 
-CodeNode *JavaScriptModel::nodeAfterLineNumber( int lineNumber, NodeTypes nodeTypes )
+CodeNode::Ptr JavaScriptModel::nodeAfterLineNumber( int lineNumber, NodeTypes nodeTypes )
 {
-    CodeNode *lastFoundNode = NULL;
+    CodeNode::Ptr lastFoundNode( 0 );
     for ( int i = m_nodes.count() - 1; i >= 0; --i ) {
-        CodeNode *node = m_nodes.at( i );
+        CodeNode::Ptr node = m_nodes.at( i );
         if ( node->type() == NoNodeType || !nodeTypes.testFlag(node->type()) ) {
             continue;
         }
@@ -141,19 +233,19 @@ CodeNode *JavaScriptModel::nodeAfterLineNumber( int lineNumber, NodeTypes nodeTy
             return node;
         }
     }
-    return lastFoundNode ? lastFoundNode : createAndAddEmptyNode();
+    return lastFoundNode ? lastFoundNode : createAndAddEmptyNode().dynamicCast<CodeNode>();
 }
 
-EmptyNode *JavaScriptModel::createAndAddEmptyNode()
+EmptyNode::Ptr JavaScriptModel::createAndAddEmptyNode()
 {
-    EmptyNode *node = NULL;
+    EmptyNode::Ptr node( 0 );
     if ( !m_nodes.isEmpty() ) {
-        node = dynamic_cast<EmptyNode*>( m_nodes.first() );
+        node = m_nodes.first().dynamicCast<EmptyNode>();
     }
     if ( !node ) {
-        node = new EmptyNode;
+        node = EmptyNode::Ptr( new EmptyNode );
         beginInsertRows( QModelIndex(), 0, 0 );
-        m_nodes.insert( 0, node );
+        m_nodes.prepend( node );
         updateFirstEmptyNodeName();
         endInsertRows();
     }
@@ -163,13 +255,39 @@ EmptyNode *JavaScriptModel::createAndAddEmptyNode()
 
 QModelIndex JavaScriptModel::index( int row, int column, const QModelIndex& parent ) const
 {
-    Q_UNUSED( parent );
-    if ( !hasIndex(row, column, QModelIndex()) ) {
+    if ( row < 0 || column < 0 ) {
         return QModelIndex();
     }
 
-    if ( row >= 0 && row < m_nodes.count() ) {
-        return createIndex( row, column, m_nodes[row] );
+    if ( parent.isValid() ) {
+        CodeNode *parentNode = nodePointerFromIndex( parent );
+        if ( row >= parentNode->children().count() ) {
+            return QModelIndex();
+        }
+        return createIndex( row, column, parentNode );
+    } else {
+        if ( row >= m_nodes.count() ) {
+            return QModelIndex();
+        }
+        return createIndex( row, column, m_nodes[row].data() );
+    }
+}
+
+int JavaScriptModel::rowCount( const QModelIndex &parent ) const
+{
+    if ( parent.isValid() ) {
+        CodeNode *node = nodePointerFromIndex( parent );
+        return node->children().count();
+    } else {
+        return m_nodes.count();
+    }
+}
+
+QModelIndex JavaScriptModel::parent( const QModelIndex &child ) const
+{
+    CodeNode *childNode = nodePointerFromIndex( child );
+    if ( childNode->parent() ) {
+        return indexFromNodePointer( childNode->parent() );
     } else {
         return QModelIndex();
     }
@@ -177,13 +295,13 @@ QModelIndex JavaScriptModel::index( int row, int column, const QModelIndex& pare
 
 QVariant JavaScriptModel::data( const QModelIndex& index, int role ) const
 {
-    CodeNode *item = static_cast<CodeNode*>( index.internalPointer() );
+    CodeNode *item = nodePointerFromIndex( index );
 
     if ( role == Qt::UserRole ) {
         return item->type();
     }
 
-    FunctionNode *function = dynamic_cast<FunctionNode*>( item );
+    FunctionNode *function = dynamic_cast< FunctionNode* >( item );
     if ( function ) {
         switch ( role ) {
         case Qt::DisplayRole:
@@ -192,7 +310,7 @@ QVariant JavaScriptModel::data( const QModelIndex& index, int role ) const
             return KIcon("code-function");
         }
     } else {
-        EmptyNode *empty = dynamic_cast<EmptyNode*>( item );
+        EmptyNode *empty = dynamic_cast< EmptyNode* >( item );
         if ( empty && role == Qt::DisplayRole ) {
             return empty->text();
         }
@@ -205,8 +323,7 @@ bool JavaScriptModel::removeRows( int row, int count, const QModelIndex& parent 
 {
     beginRemoveRows( parent, row, row + count - 1 );
     for ( int i = 0; i < count; ++i ) {
-        CodeNode *item = m_nodes.takeAt( row );
-        delete item;
+        delete m_nodes.takeAt( row ).data();
     }
     endRemoveRows();
 
@@ -216,13 +333,18 @@ bool JavaScriptModel::removeRows( int row, int count, const QModelIndex& parent 
 
 void JavaScriptModel::clear()
 {
-    beginRemoveRows( QModelIndex(), 0, m_nodes.count() );
-    qDeleteAll( m_nodes );
+    beginRemoveRows( QModelIndex(), 0, m_nodes.count() - 1 );
+    foreach ( const CodeNode::Ptr &node, m_nodes ) {
+        if ( node->parent() ) {
+            kDebug() << "Toplevel node had a parent set!" << node << node->parent();
+        }
+    }
+//     qDeleteAll( m_nodes );
     m_nodes.clear();
     endRemoveRows();
 }
 
-void JavaScriptModel::appendNodes( const QList< CodeNode* > nodes )
+void JavaScriptModel::appendNodes( const QList< CodeNode::Ptr > nodes )
 {
     beginInsertRows( QModelIndex(), m_nodes.count(), m_nodes.count() + nodes.count() - 1 );
     m_nodes << nodes;
@@ -231,7 +353,7 @@ void JavaScriptModel::appendNodes( const QList< CodeNode* > nodes )
     updateFirstEmptyNodeName();
 }
 
-void JavaScriptModel::setNodes( const QList< CodeNode* > nodes )
+void JavaScriptModel::setNodes( const QList< CodeNode::Ptr > nodes )
 {
     clear();
 
@@ -245,8 +367,8 @@ void JavaScriptModel::setNodes( const QList< CodeNode* > nodes )
 QStringList JavaScriptModel::functionNames() const
 {
     QStringList functions;
-    foreach ( CodeNode *node, m_nodes ) {
-        FunctionNode *function = dynamic_cast<FunctionNode*>( node );
+    foreach ( const CodeNode::Ptr &node, m_nodes ) {
+        FunctionNode::Ptr function = node.dynamicCast< FunctionNode >();
         if ( function ) {
             functions << function->text();
         }
@@ -260,7 +382,7 @@ void JavaScriptModel::updateFirstEmptyNodeName()
         return;
     }
 
-    EmptyNode *node = dynamic_cast<EmptyNode*>( m_nodes.first() );
+    EmptyNode::Ptr node = m_nodes.first().dynamicCast< EmptyNode >();
     if ( node ) {
         if ( m_nodes.count() == 1 ) {
             node->setText( i18nc("@info/plain", "(no functions)") );

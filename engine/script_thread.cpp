@@ -79,6 +79,8 @@ ScriptAgent::ScriptAgent( QScriptEngine* engine, QObject *parent )
 
 void ScriptAgent::functionExit( qint64 scriptId, const QScriptValue& returnValue )
 {
+    Q_UNUSED( scriptId );
+    Q_UNUSED( returnValue );
     QTimer::singleShot( 250, this, SLOT(checkExecution()) );
 }
 
@@ -188,16 +190,6 @@ void ScriptJob::run()
         globalInfo.requestDate = QDate::currentDate();
         globalInfo.delayInfoAvailable =
                 !m_scriptResult->isHintGiven( ResultObject::NoDelaysForStop );
-//         if ( result.isValid() && result.isArray() ) {
-//             QStringList results = m_engine->fromScriptValue<QStringList>( result );
-//             if ( results.contains(QLatin1String("no delays"), Qt::CaseInsensitive) ) {
-//                 // No delay information available for the given stop
-//                 globalInfo.delayInfoAvailable = false;
-//             }
-//             if ( results.contains(QLatin1String("dates need adjustment"), Qt::CaseInsensitive) ) {
-//                 globalInfo.datesNeedAdjustment = true;
-//             } TODO REMOVE TODO REMOVE TODO REMOVE TODO REMOVE TODO REMOVE TODO REMOVE TODO
-//         }
 
         while ( m_scriptNetwork->hasRunningRequests() || m_engine->isEvaluating() ) {
             // Wait for running requests to finish
@@ -247,7 +239,6 @@ void ScriptJob::run()
 
             default:
                 kDebug() << "Parse mode unsupported:" << requestInfo()->parseMode;
-                // TODO
                 break;
             }
 //             emit dataReady( m_scriptResult->data().mid(m_published),
@@ -431,7 +422,6 @@ void ScriptJob::publish()
 
         default:
             kDebug() << "Parse mode unsupported:" << requestInfo()->parseMode;
-            // TODO
             break;
         }
         m_published += data.count();

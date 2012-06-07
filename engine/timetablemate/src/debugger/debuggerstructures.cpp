@@ -20,6 +20,11 @@
 // Header
 #include "debuggerstructures.h"
 
+// Own includes
+#include "backtracemodel.h"
+#include "breakpointmodel.h"
+#include "debuggeragent.h"
+
 // KDE includes
 #include <KDebug>
 #include <KLocalizedString>
@@ -30,49 +35,86 @@
 
 namespace Debugger {
 
-void Breakpoint::setCondition( const QString &condition )
+void Frame::setValuesOf( const Frame &frame )
 {
-    m_condition = condition;
+    m_contextInfo = frame.contextInfo();
+    m_contextString = frame.contextString();
 }
 
-// TODO thread-safety? currently engine is expected to be locked
-// TODO use evaluateInContext() here?
-bool Breakpoint::testCondition( QScriptEngine *engine )
+void Frame::setContextInfo( const QScriptContextInfo &info, bool global )
+{
+    QString contextString = info.functionName();
+    if ( contextString.isEmpty() ) {
+        contextString = global ? "<global>" : "<anonymous>";
+    }
+
+    m_contextInfo = info;
+    m_contextString = contextString;
+    if ( m_model ) {
+        m_model->frameChanged( this );
+    }
+}
+
+QModelIndex Frame::index()
+{
+    return m_model->indexFromFrame( this );
+}
+
+void Breakpoint::setCondition( const QString &condition )
+{
+    // Clear last condition result
+    m_lastConditionResult = QScriptValue();
+
+    // Set new condition and inform the model of this breakpoint
+    m_condition = condition;
+    if ( m_model ) {
+        m_model->slotBreakpointChanged( this );
+    }
+}
+
+bool Breakpoint::testCondition( DebuggerAgent *agent, bool *error )
 {
     if ( m_condition.isEmpty() ) {
         return true; // No condition, always satisfied
     }
 
-    // Use new context for condition evaluation
-//     QMutexLocker locker( m_engineMutex ); // TODO
-    QScriptContext *context = engine->pushContext();
-
     // Replace '%HITS' with the current number of hits
     const QString condition =
             m_condition.replace( QLatin1String("%HITS"), QString::number(m_hitCount) );
 
-    // Evaluate condition in a try-catch-block
-    m_lastConditionResult =
-            engine->evaluate( QString("try{%1}catch(err){"
-                                      "print('Error in breakpoint condition: ' + err);}")
-                                      .arg(condition),
-                              QString("Breakpoint Condition at %1").arg(m_lineNumber),
-                              m_lineNumber );
+//     const QString conditionProgram =
+//             QString("try{%1}catch(err){print('Error in breakpoint condition: ' + err);}")
+//             .arg(condition);
+
+    bool uncaughtException;
+    int errorLineNumber;
+    QString errorMessage;
+    QStringList backtrace;
+    m_lastConditionResult = agent->evaluateInContext(
+            condition, QString("Breakpoint Condition at %1").arg(m_lineNumber),
+            &uncaughtException, &errorLineNumber, &errorMessage, &backtrace );
 
     // Check result value of condition evaluation
     kDebug() << "Breakpoint condition result" << m_lastConditionResult.toString() << condition;
-    bool conditionSatisfied = false;
-    if ( engine->hasUncaughtException() ) {
-        kDebug() << "Uncaught exception in breakpoint condition:"
-                 << engine->uncaughtExceptionBacktrace();
-        engine->clearExceptions();
+    if ( uncaughtException ) {
+        kDebug() << "Uncaught exception in breakpoint condition:" << errorMessage << backtrace;
+        agent->errorMessage( i18nc("@info", "Uncaught exception in breakpoint condition at line %1: "
+                                   "<message>%2</message><nl />",
+                                   agent->lineNumber(), errorMessage) );
     } else if ( !m_lastConditionResult.isBool() ) {
-        kDebug() << "Breakpoint conditions should return a boolean!";
+        kDebug() << "Breakpoint conditions should return a boolean";
+        agent->errorMessage( i18nc("@info", "The condition code of breakpoint at line %1 did "
+                                   "not return a boolean, return value was: <icode>%2</icode>",
+                                   agent->lineNumber(), m_lastConditionResult.toString()) );
     } else {
-        conditionSatisfied = m_lastConditionResult.toBool();
+        return m_lastConditionResult.toBool();
     }
-    engine->popContext();
-    return conditionSatisfied;
+
+    // There was an error (uncaught exception or wrong return type)
+    if ( error ) {
+        *error = true;
+    }
+    return false;
 }
 
 void Breakpoint::reached()
@@ -86,6 +128,12 @@ void Breakpoint::reached()
     if ( m_maxHitCount > 0 && m_hitCount >= m_maxHitCount ) {
         // Maximum hit count reached, disable
         m_enabled = false;
+    }
+
+    if ( m_model ) {
+        m_model->slotBreakpointChanged( this );
+    } else {
+        kDebug() << "No model given";
     }
 }
 
@@ -103,6 +151,22 @@ ConsoleCommand ConsoleCommand::fromString( const QString &str )
     }
 
     return ConsoleCommand( InvalidCommand );
+}
+
+QString ConsoleCommand::toString() const
+{
+    const QString commandName = commandToName( m_command );
+    QString string;
+    if ( !commandName.isEmpty() ) {
+        string = '.' + commandName;
+    }
+    foreach ( const QString &argument, m_arguments ) {
+        if ( !string.isEmpty() ) {
+            string += ' ';
+        }
+        string += argument;
+    }
+    return string;
 }
 
 bool ConsoleCommand::isValid() const
@@ -248,20 +312,79 @@ QString ConsoleCommand::commandDescription( Command command )
 ConsoleCommand::Command ConsoleCommand::commandFromName( const QString &name )
 {
     const QString _name = name.trimmed().toLower();
-    if ( _name == "help" ) {
+    if ( _name == QLatin1String("help") ) {
         return HelpCommand;
-    } else if ( name == "clear" ) {
+    } else if ( name == QLatin1String("clear") ) {
         return ClearCommand;
-    } else if ( name == "line" || name == "currentline" ) {
+    } else if ( name == QLatin1String("line") || name == QLatin1String("currentline") ) {
         return LineNumberCommand;
-    } else if ( name == "debugger" ) {
+    } else if ( name == QLatin1String("debugger") ) {
         return DebuggerControlCommand;
-    } else if ( name == "debug" ) {
+    } else if ( name == QLatin1String("debug") ) {
         return DebugCommand;
-    } else if ( name == "break" ) {
+    } else if ( name == QLatin1String("break") ) {
         return BreakpointCommand;
     } else {
         return InvalidCommand;
+    }
+}
+
+QString ConsoleCommand::commandToName( ConsoleCommand::Command command )
+{
+    switch ( command ) {
+    case HelpCommand:
+        return "help";
+    case ClearCommand:
+        return "clear";
+    case LineNumberCommand:
+        return "line";
+    case DebuggerControlCommand:
+        return "debugger";
+    case DebugCommand:
+        return "debug";
+    case BreakpointCommand:
+        return "break";
+    case InvalidCommand:
+    default:
+        return QString();
+    }
+}
+
+void Breakpoint::reset()
+{
+    m_hitCount = 0;
+    m_lastConditionResult = QScriptValue();
+    if ( m_model ) {
+        m_model->slotBreakpointChanged( this );
+    }
+}
+
+void Breakpoint::setEnabled( bool enabled )
+{
+    m_enabled = enabled;
+    if ( m_model ) {
+        m_model->slotBreakpointChanged( this );
+    }
+}
+
+void Breakpoint::setMaximumHitCount( int maximumHitCount )
+{
+    m_maxHitCount = maximumHitCount;
+    if ( m_model ) {
+        m_model->slotBreakpointChanged( this );
+    }
+}
+
+void Breakpoint::setValuesOf( const Breakpoint &breakpoint )
+{
+    m_lineNumber = breakpoint.m_lineNumber;
+    m_enabled = breakpoint.m_enabled;
+    m_hitCount = breakpoint.m_hitCount;
+    m_maxHitCount = breakpoint.m_maxHitCount;
+    m_condition = breakpoint.m_condition;
+    m_lastConditionResult = breakpoint.m_lastConditionResult;
+    if ( m_model ) {
+        m_model->slotBreakpointChanged( this );
     }
 }
 

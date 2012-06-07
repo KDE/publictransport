@@ -32,12 +32,16 @@
 
 // Qt includes
 #include <QScriptEngineAgent>
-#include <QScriptValue>
 
+class QWaitCondition;
 class QScriptContext;
 class QScriptContextInfo;
 
 namespace Debugger {
+
+struct VariableChange;
+struct BacktraceChange;
+struct BreakpointChange;
 
 /**
  * @brief A QScriptEngineAgent that acts as a debugger.
@@ -58,21 +62,19 @@ namespace Debugger {
  * The position at which a script got interrupted can be retrieved using lineNumber() and
  * columnNumber().
  *
- * Breakpoints can be added/removed using addBreakpoint(), removeBreakpoint(), toggleBreakpoint(),
- * setBreakpoint(), removeAllBreakpoints(). The signals breakpointAdded() / breakpointRemoved()
- * are then emitted. If a breakpoint is reached the breakpointReached() signal gets emitted and
- * the hit count of the breakpoint gets increased.
- * Breakpoints can have a maximum hit count, after which they will be disabled. They can also have
- * a condition written in JavaScript, which gets executed in the current script context and should
- * return a boolean. If the condition returns true, the breakpoint matches.
- * To get a list of all line numbers which have a breakpoint, use breakpointLines().
+ * Breakpoints can be added/removed using addBreakpoint(), removeBreakpoint() and
+ * updateBreakpoint(). If a breakpoint is reached the breakpointReached() signal gets emitted and
+ * the hit count of the breakpoint gets increased. These functions are used by BreakpointModel to
+ * synchronize breakpoints in this class with those in the breakpoint model. Normally
+ * BreakpointModel should be used to alter breakpoints, but if the BreakpointModel should not be
+ * notified about changes use the breakpoint function of this class.
  * @warning This class tries to check if the script can break at a given line number in the
  *   canBreakAt() function, but this does not always work. For example, if the script should be
  *   interrupted at a multiline statement, it must be set at the first line of the statement.
  *   Otherwise the breakpoint will never be hit.
  *
- * @note Line numbers are expected to begin with 1 for the first line like in QScript-classes,
- *   rather than being zero-based like line numbers in KTextEditor.
+ * @note Line numbers are expected to begin with 1 for the first line like in QScript-classes by
+ *   default, rather than being zero-based like line numbers in KTextEditor.
  *
  * This class is thread safe. There is a mutex to protect member variables and a global mutex
  * to protect the QScriptEngine.
@@ -83,6 +85,7 @@ class DebuggerAgent : public QObject, public QScriptEngineAgent {
     Q_OBJECT
     friend class Debugger;
     friend class Breakpoint;
+    friend class Frame;
 
 public:
     static const int CHECK_RUNNING_INTERVAL;
@@ -94,46 +97,19 @@ public:
     static QString stateToString( DebuggerState state );
 
     /** @brief Gets the current state of the debugger. */
-    DebuggerState state() const { return m_state; };
+    DebuggerState state() const;
 
     /** @brief Whether or not script execution is currently interrupted. */
     bool isInterrupted() const;
 
-    /** @brief Whether or not the script currently gets executed. */
+    /** @brief Whether or not the script currently gets executed or is interrupted. */
     bool isRunning() const;
 
-    /** @brief Get the state of the breakpoint at @p lineNumber or NoBreakpoint if there is none. */
-    Breakpoint::State breakpointState( int lineNumber ) const;
-
-    Variables variables( int frame = 0 ); // frame==0 current frame, frame==1 previous frame, ...
-
-    /** @brief Get the current backtrace as list of Frame objects, ie. a FrameStack. */
-    FrameStack backtrace() const;
-
-    /** @brief Compares @p backtrace with @p oldBacktrace. */
-    BacktraceChange compareBacktraces( const FrameStack &backtrace,
-                                       const FrameStack &oldBacktrace ) const;
-
-    /** @brief Get a list of line numbers with breakpoints. */
-    QList< uint > breakpointLines() const;
-
-    /** @brief Remove the given @p breakpoint. */
-    bool removeBreakpoint( const Breakpoint &breakpoint );
-
-    /** @brief Remove the breakpoint at @p lineNumber. */
-    bool removeBreakpoint( int lineNumber );
-
-    /** @brief Add the given @p breakpoint, existing breakpoints at the same line are overwritten. */
-    bool addBreakpoint( const Breakpoint &breakpoint );
-
-    /** @brief Adds/removes a breakpoint at @p lineNumber. */
-    Breakpoint setBreakpoint( int lineNumber, bool enable = true );
-
-    /** @brief Toggle breakpoint at @p lineNumber. */
-    Breakpoint toggleBreakpoint( int lineNumber );
-
-    /** @brief Get the breakpoint at @p lineNumber or an invalid breakpoint. */
-    Breakpoint breakpointAt( int lineNumber ) const;
+    /**
+     * @brief Whether or not the last started script execution was aborted.
+     * @see abortDebugger()
+     **/
+    bool isLastRunAborted() const;
 
     /**
      * @brief Checks whether script execution can be interrupted at @p lineNumber.
@@ -159,14 +135,20 @@ public:
      **/
     int getNextBreakableLineNumber( int lineNumber ) const;
 
-    /** @brief Get the start line number of the currently executed function. */
-    int currentFunctionStartLineNumber() const;
+    static NextEvaluatableLineHint canBreakAt( int lineNumber, const QStringList &programLines );
+    static int getNextBreakableLineNumber( int lineNumber, const QStringList &programLines );
+    inline static NextEvaluatableLineHint canBreakAt( int lineNumber, const QString &program ) {
+            return canBreakAt(lineNumber, program.split('\n', QString::KeepEmptyParts)); };
+    inline static int getNextBreakableLineNumber( int lineNumber, const QString &program ){
+            return getNextBreakableLineNumber(lineNumber, program.split('\n', QString::KeepEmptyParts)); };
 
     /** @brief The current line number. */
     int lineNumber() const;
 
     /** @brief The current column number. */
     int columnNumber() const;
+
+    QScriptContextInfo contextInfo();
 
     bool hasUncaughtException() const;
     int uncaughtExceptionLineNumber() const;
@@ -175,13 +157,21 @@ public:
     QScriptValue evaluateInContext( const QString &program, const QString &contextName,
                                     bool *hadUncaughtException = 0, int *errorLineNumber = 0,
                                     QString *errorMessage = 0, QStringList *backtrace = 0,
-                                    bool interruptAtStart = false );
+                                    DebugFlags debugFlags = DefaultDebugFlags );
+
+    QVariant evaluateInExternalEngine( const QString &program, const QString &contextName,
+                                       bool *hadUncaughtException = 0, int *errorLineNumber = 0,
+                                       QString *errorMessage = 0, QStringList *backtrace = 0,
+                                       DebugFlags debugFlags = DefaultDebugFlags );
 
     /** @brief Executes @p command and puts the return value into @p returnValue. */
     bool executeCommand( const ConsoleCommand &command, QString *returnValue = 0 );
 
     ExecutionControl currentExecutionControlType() const;
     void setExecutionControlType( ExecutionControl executionType );
+
+    DebugFlags debugFlags() const;
+    void setDebugFlags( DebugFlags debugFlags );
 
     bool checkHasExited();
 
@@ -195,11 +185,8 @@ signals:
     /** @see isInterrupted() */
     void positionChanged( int lineNumber, int columnNumber, int oldLineNumber, int oldColumnNumber );
 
-    /** @brief A new @p breakpoint was added. */
-    void breakpointAdded( const Breakpoint &breakpoint );
-
-    /** @brief @p breakpoint was removed. */
-    void breakpointRemoved( const Breakpoint &breakpoint );
+    /** @brief The state of the debugger has changed from @p oldState to @p newState. */
+    void stateChanged( DebuggerState newState, DebuggerState oldState );
 
     /** @brief Reached @p breakpoint and increased it's hit count. */
     void breakpointReached( const Breakpoint &breakpoint );
@@ -210,25 +197,54 @@ signals:
     /** @brief Script execution was just interrupted. */
     void interrupted();
 
-    /** @brief Script execution was just continued after begin interrupted. */
-    void continued();
+    /** @brief Script execution was just aborted. */
+    void aborted();
 
-    /** @brief There was a @p change in the @p backtrace. */
-    void backtraceChanged( const FrameStack &backtrace, BacktraceChange change );
+    /** @brief Script execution was just continued after begin interrupted. */
+    void continued( bool willInterruptAfterNextStatement = false );
 
     /** @brief The script send a @p debugString using the print() function. */
     void output( const QString &debugString, const QScriptContextInfo &contextInfo );
 
-    void evaluationInContextFinished( const QScriptValue& returnValue = QScriptValue() );
+    void informationMessage( const QString &message );
+    void errorMessage( const QString &message );
+
+    /**
+     * @brief Evaluation of script code in the context of a running script has finished.
+     * This signal gets emitted after calling evaluateInContext().
+     *
+     * @p returnValue The value that was returned from the code that was evaluated.
+     **/
+    void evaluationInContextFinished( const QScriptValue &returnValue = QScriptValue() );
+
+    void evaluationInContextAborted( const QString &errorMessage );
+
+    /** @brief Variables have changed according to @p change. */
+    void variablesChanged( const VariableChange &change );
+
+    /** @brief The backtrace has changed according to @p change. */
+    void backtraceChanged( const BacktraceChange &change );
+
+    /** @brief Breakpoints have changed according to @p change. */
+    void breakpointsChanged( const BreakpointChange &change );
 
 public slots:
-    /** @brief Continue script execution until the next statement. */
+    /**
+     * @brief Continue script execution until the next statement.
+     * @param repeat The number of repetitions for step into. 0 for only one repetition, the default.
+     **/
     void debugStepInto( int repeat = 0 );
 
-    /** @brief Continue script execution until the next statement in the same context. */
+    /**
+     * @brief Continue script execution until the next statement in the same context.
+     * @param repeat The number of repetitions for step over. 0 for only one repetition, the default.
+     **/
     void debugStepOver( int repeat = 0 );
 
-    /** @brief Continue script execution until the current function gets left. */
+    /**
+     * @brief Continue script execution until the current function gets left.
+     * @param repeat The number of repetitions for step out. 0 for only one repetition, the default.
+     **/
     void debugStepOut( int repeat = 0 );
 
     /** @brief Continue script execution until @p lineNumber is reached. */
@@ -243,8 +259,9 @@ public slots:
     /** @brief Abort script execution. */
     void abortDebugger();
 
-    /** @brief Remove all breakpoints, for each removed breakpoint breakpointRemoved() gets emitted. */
-    void removeAllBreakpoints();
+    void addBreakpoint( const Breakpoint &breakpoint );
+    void updateBreakpoint( const Breakpoint &breakpoint ) { addBreakpoint(breakpoint); };
+    void removeBreakpoint( const Breakpoint &breakpoint );
 
     void slotOutput( const QString &outputString, const QScriptContextInfo &contextInfo );
 
@@ -254,6 +271,7 @@ protected slots:
     void debugRunInjectedProgram();
     void debugStepIntoInjectedProgram();
     void cancelInjectedCodeExecution();
+    void wakeFromInterrupt();
 
 public: // QScriptAgent-Implementation
     virtual void scriptLoad( qint64 id, const QString &program, const QString &fileName, int baseLineNumber );
@@ -265,8 +283,9 @@ public: // QScriptAgent-Implementation
     virtual void exceptionThrow( qint64 scriptId, const QScriptValue &exception, bool hasHandler );
     virtual QVariant extension( Extension extension, const QVariant &argument = QVariant() );
     virtual void functionEntry( qint64 scriptId );
-    /** Overwritten to get noticed when a script might have finished. */
     virtual void functionExit( qint64 scriptId, const QScriptValue& returnValue );
+
+    void setScriptText( const QString &program );
 
 protected:
     /** @brief Creates a new Debugger instance. */
@@ -284,28 +303,24 @@ private:
         ControlExecutionRunUntil
     };
 
+    enum InjectedScriptState {
+        InjectedScriptNotRunning = 0,
+        InjectedScriptEvaluating,
+        InjectedScriptAborting,
+        InjectedScriptInitializing,
+        InjectedScriptUpdateVariablesInParentContext
+    };
+
     // Expects locked m_mutex
-    ExecutionControl applyExecutionControl( ExecutionControl executionControl );
+    ExecutionControl applyExecutionControl( ExecutionControl executionControl,
+                                            QScriptContext *currentContext );
 
     // Expects locked m_mutex, looks for breakpoints at the current execution position
     // (tests conditions, enabled/disabled)
-    Breakpoint *findActiveBreakpoint( int lineNumber );
-
-    // Expects locked m_mutex
-    FrameStack buildBacktrace() const;
-
-    // Expects locked m_mutex
-    void cleanupBacktrace();
+    bool findActiveBreakpoint( int lineNumber, Breakpoint *&foundBreakpoint, bool *conditionError );
 
     // Expects locked m_mutex
     int currentFunctionLineNumber() const;
-
-    // Does not need locked m_mutex
-    Variables buildVariables( const QScriptValue &value, bool onlyImportantObjects = false ) const;
-
-    // Does not need locked m_mutex
-    QString variableValueTooltip( const QString &completeValueString, bool encodeHtml,
-                                  const QChar &endCharacter ) const;
 
     // Excepts unlocked m_mutex
     void fireup();
@@ -316,38 +331,49 @@ private:
     // Excepts unlocked m_mutex
     void doInterrupt( bool injectedProgram = false );
 
+    // Emit changes in the backtrace and the variables in the current context
+    // Is called by doInterrupt() to have models updated
+    // Excepts unlocked m_mutex
+    void emitChanges();
+
     // Excepts unlocked m_mutex
     bool debugControl( ConsoleCommandExecutionControl controlType,
                        const QVariant &argument = QVariant(), QString *errorMessage = 0 );
 
+    void setState( DebuggerState newState );
+
     static ConsoleCommandExecutionControl consoleCommandExecutionControlFromString( const QString &str );
 
-    QMutex *m_mutex; // Protect member variables, make Debugger class thread safe
-    QWaitCondition *m_interruptWaiter; // Waits on interrupts, wake up to continue script execution based on m_executionType
-    QMutex *m_interruptMutex;
-    QMutex *m_engineMutex; // use carefully, eg. tryLock() instead of lock().. it is blocked while the script is running, until it gets interrupted or finishes
-    QTimer *m_checkRunningTimer;
+    QMutex *const m_mutex; // Protect member variables, make Debugger class thread safe
+    QWaitCondition *const m_interruptWaiter; // Waits on interrupts, wake up to continue script execution based on m_executionType
+    QMutex *const m_interruptMutex;
+    QMutex *const m_engineMutex; // use carefully, eg. tryLock() instead of lock().. it is blocked while the script is running, until it gets interrupted or finishes
+    QTimer *const m_checkRunningTimer;
 
     int m_lineNumber;
     int m_columnNumber;
+    bool m_lastRunAborted;
     bool m_hasUncaughtException;
     int m_uncaughtExceptionLineNumber;
     QScriptValue m_uncaughtException;
     QScriptValue m_globalObject;
     QHash< uint, Breakpoint > m_breakpoints;
+    int m_runUntilLineNumber; // -1 => "run until line number" not active
     FrameStack m_lastBacktrace;
 
     DebuggerState m_state;
+    DebugFlags m_debugFlags;
+    InjectedScriptState m_injectedScriptState;
     ExecutionControl m_executionControl;
+    ExecutionControl m_previousExecutionControl;
     int m_repeatExecutionTypeCount;
     QScriptContext *m_currentContext;
     QScriptContext *m_interruptContext;
     bool m_backtraceCleanedup;
-    int m_injectedCodeContextLevel;
+    qint64 m_injectedScriptId;
 
-    int m_currentFunctionLineNumber;
-    int m_interruptFunctionLineNumber;
     int m_interruptFunctionLevel;
+    int m_functionDepth;
 
     QStringList m_scriptLines;
 };

@@ -39,14 +39,16 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QPointer>
+#include <QMutex>
 
 const char *TimetableAccessorScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS = "usedTimetableInformations";
 const char *TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE = "getTimetable";
 const char *TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS = "getJourneys";
 const char *TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS = "getStopSuggestions";
 
-TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info )
-        : TimetableAccessor(info), m_thread(0), m_script(0), m_scriptStorage(0)
+TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info, QObject *parent )
+        : TimetableAccessor(info, parent), m_thread(0), m_script(0), m_scriptStorage(0),
+          m_mutex(new QMutex)
 {
     m_scriptState = WaitingForScriptUsage;
     m_scriptFeatures = readScriptFeatures();
@@ -66,6 +68,7 @@ TimetableAccessorScript::TimetableAccessorScript( TimetableAccessorInfo *info )
 TimetableAccessorScript::~TimetableAccessorScript()
 {
     delete m_script;
+    delete m_mutex;
 }
 
 QStringList TimetableAccessorScript::allowedExtensions()
@@ -240,6 +243,7 @@ void TimetableAccessorScript::journeysReady( const QList<TimetableData> &data,
         const GlobalTimetableInfo &globalInfo, const JourneyRequestInfo &requestInfo,
         bool couldNeedForcedUpdate )
 {
+    Q_UNUSED( couldNeedForcedUpdate );
 //     TODO use hints
     if ( data.isEmpty() ) {
         kDebug() << "The script didn't find anything" << requestInfo.sourceName;
@@ -269,6 +273,7 @@ void TimetableAccessorScript::stopSuggestionsReady( const QList<TimetableData> &
         const GlobalTimetableInfo &globalInfo, const StopSuggestionRequestInfo &requestInfo,
         bool couldNeedForcedUpdate )
 {
+    Q_UNUSED( couldNeedForcedUpdate );
 //     TODO use hints
     kDebug() << "***** Received" << data.count() << "items";
     if ( data.isEmpty() ) {
@@ -388,4 +393,10 @@ void TimetableAccessorScript::requestStopSuggestions( const StopSuggestionReques
              this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequestInfo,bool)) );
     ThreadWeaver::Weaver::instance()->enqueue( job );
     return;
+}
+
+void TimetableAccessorScript::import( const QString &import, QScriptEngine *engine )
+{
+    QMutexLocker locker( m_mutex );
+    engine->importExtension( import );
 }

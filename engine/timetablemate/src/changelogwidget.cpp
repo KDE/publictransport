@@ -49,14 +49,14 @@ ChangelogEntryWidget::ChangelogEntryWidget( QWidget *parent, const ChangelogEntr
     m_author->setClickMessage( shortAuthor );
     m_author->setFixedWidth( 125 );
 
-    m_version = new KLineEdit( entry.since_version, authorVersionWidget );
+    m_version = new KLineEdit( entry.version, authorVersionWidget );
     m_version->setFixedWidth( 75 );
 
     authorVersionLayout->addWidget( m_author );
     authorVersionLayout->addWidget( m_version );
     authorVersionLayout->addStretch();
 
-    m_releasedWith = new KLineEdit( entry.released_with_version, this );
+    m_releasedWith = new KLineEdit( entry.engineVersion, this );
     m_releasedWith->setFixedWidth( 75 );
 
     m_description = new KLineEdit( entry.description, this );
@@ -87,8 +87,8 @@ ChangelogEntry ChangelogEntryWidget::changelogEntry() const
 {
     ChangelogEntry entry;
     entry.author = m_author->text();
-    entry.since_version = m_version->text();
-    entry.released_with_version = m_releasedWith->text();
+    entry.version = m_version->text();
+    entry.engineVersion = m_releasedWith->text();
     entry.description = m_description->text();
     return entry;
 }
@@ -140,8 +140,8 @@ void ChangelogEntryWidget::setChangelogEntry( const ChangelogEntry &changelogEnt
     if( changelogEntry.author.isEmpty() ) {
         m_author->setClickMessage( shortAuthor );
     }
-    setVersion( changelogEntry.since_version );
-    setReleasedWith( changelogEntry.released_with_version );
+    setVersion( changelogEntry.version );
+    setReleasedWith( changelogEntry.engineVersion );
     setDescription( changelogEntry.description );
 }
 
@@ -238,9 +238,17 @@ DynamicWidget *ChangelogWidget::addWidget( QWidget *widget )
                        ->authorLineEdit()->clickMessage();
     }
     DynamicWidget *dynamicWidget = AbstractDynamicWidgetContainer::addWidget( widget );
-    KLineEdit *authorLineEdit = qobject_cast<ChangelogEntryWidget *>( widget )->authorLineEdit();
+    if ( !dynamicWidget ) {
+        return 0;
+    }
+
+    ChangelogEntryWidget *entryWidget = qobject_cast<ChangelogEntryWidget *>( widget );
+    Q_ASSERT( entryWidget );
+    KLineEdit *authorLineEdit = entryWidget->authorLineEdit();
     authorLineEdit->setClickMessage( clickMessage );
     authorLineEdit->setFocus();
+
+    emit changelogEntryWidgetAdded( entryWidget );
     return dynamicWidget;
 }
 

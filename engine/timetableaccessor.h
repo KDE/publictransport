@@ -47,6 +47,7 @@ class JourneyInfo;
 class PublicTransportInfo;
 class TimetableAccessorInfo;
 
+// TODO Move RequestInfo classes to own files "requestinfo.h/.cpp"
 /**
  * @brief Stores information about a request to the publictransport data engine.
  *
@@ -108,24 +109,27 @@ struct RequestInfo {
 
     virtual RequestInfo *clone() const = 0;
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const = 0;
+
+    /** @brief Get the name of the script function that is associated with this request. */
+    virtual QString functionName() const = 0;
 };
 
 struct StopSuggestionRequestInfo : public RequestInfo {
     StopSuggestionRequestInfo() : RequestInfo() { parseMode = ParseForStopSuggestions; };
     StopSuggestionRequestInfo( const QString &sourceName, const QString &stop,
-                               const QDateTime &dateTime, int maxCount,
-                               const QString &dataType = "departures",
-                               const QString &city = QString(),
+                               int maxCount, const QString &city = QString(),
                                ParseDocumentMode parseMode = ParseForStopSuggestions )
-        : RequestInfo(sourceName, stop, dateTime, maxCount, dataType, city, parseMode) {};
+        : RequestInfo(sourceName, stop, QDateTime(), maxCount, "departures", city, parseMode) {};
     StopSuggestionRequestInfo( const StopSuggestionRequestInfo &info ) : RequestInfo(info) {};
 
     virtual RequestInfo *clone() const
     {
-        return new StopSuggestionRequestInfo( sourceName, stop, dateTime, maxCount, dataType,
-                                              city, parseMode );
+        return new StopSuggestionRequestInfo( sourceName, stop, maxCount, city, parseMode );
     };
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
+
+    /** @brief Get the name of the script function that is associated with this request. */
+    virtual QString functionName() const;
 };
 
 struct DepartureRequestInfo : public RequestInfo {
@@ -145,6 +149,9 @@ struct DepartureRequestInfo : public RequestInfo {
     };
 
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
+
+    /** @brief Get the name of the script function that is associated with this request. */
+    virtual QString functionName() const;
 };
 
 /**
@@ -193,6 +200,9 @@ struct JourneyRequestInfo : public RequestInfo {
     };
 
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
+
+    /** @brief Get the name of the script function that is associated with this request. */
+    virtual QString functionName() const;
 };
 
 /**
@@ -223,7 +233,7 @@ public:
      * @brief Constructs a new TimetableAccessor object. You should use getSpecificAccessor()
      *   to get an accessor that can download and parse documents from the given service provider.
      **/
-    explicit TimetableAccessor( TimetableAccessorInfo *info = 0 );
+    explicit TimetableAccessor( const TimetableAccessorInfo *info = 0, QObject *parent = 0 );
 
     /** @brief Destructor. */
     virtual ~TimetableAccessor();
@@ -236,7 +246,8 @@ public:
      *   If it's empty, the default service provider for the users country will
      *   be used, if there is any.
      **/
-    static TimetableAccessor *getSpecificAccessor( const QString &serviceProvider = QString() );
+    static TimetableAccessor *getSpecificAccessor( const QString &serviceProvider = QString(),
+                                                   QObject *parent = 0 );
 
     /** @brief Gets the AccessorType enumerable for the given string. */
     static AccessorType accessorTypeFromString( const QString &sAccessorType );
@@ -334,8 +345,11 @@ protected:
 
 
     QString m_curCity; /**< @brief Stores the currently used city. */
-    TimetableAccessorInfo *m_info; /**< @brief Stores service provider specific information that is
-                                     * used to parse the documents from the service provider. */
+    const TimetableAccessorInfo *const m_info; /**< @brief Stores service provider information.
+            * This TimetableAccessorInfo object contains all static information needed by
+            * TimetableAccessor. TimetableAccessor uses this object to request/receive
+            * the correct data and execute the correct script for a specific service provider.
+            * To get a non-const copy of this object, use TimetableAccessorInfo::clone(). */
 
 signals:
     /**

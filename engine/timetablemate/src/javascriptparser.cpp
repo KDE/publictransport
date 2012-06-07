@@ -34,11 +34,6 @@ CodeNode::CodeNode( const QString& text, int line, int colStart, int colEnd ) : 
     m_id = text;
 }
 
-CodeNode::~CodeNode()
-{
-    qDeleteAll( children() );
-}
-
 CodeNode* CodeNode::topLevelParent() const
 {
     CodeNode *node = const_cast<CodeNode*>( this );
@@ -67,19 +62,19 @@ bool CodeNode::isInRange( int lineNumber, int column ) const
     }
 }
 
-CodeNode* CodeNode::childFromPosition( int lineNumber, int column ) const
+CodeNode *CodeNode::childFromPosition( int lineNumber, int column ) const
 {
-    QList<CodeNode*> childList = children();
-    foreach ( CodeNode *child, childList ) {
+    QList< CodeNode::Ptr > childList = children();
+    foreach ( const CodeNode::Ptr &child, childList ) {
         if ( child->isInRange(lineNumber, column) ) {
             return child->childFromPosition( lineNumber, column );
         }
     }
 
     if ( isInRange(lineNumber, column) ) {
-        return const_cast<CodeNode*>( this );
+        return const_cast< CodeNode* >( this );
     } else {
-        return NULL;
+        return 0;
     }
 }
 
@@ -90,6 +85,11 @@ JavaScriptParser::JavaScriptParser( const QString &code )
     m_errorLine = -1;
     m_errorColumn = 0;
     m_nodes = parse();
+}
+
+JavaScriptParser::~JavaScriptParser()
+{
+    qDeleteAll( m_token );
 }
 
 QString JavaScriptParser::Token::whitespacesBetween( const JavaScriptParser::Token* token1,
@@ -129,14 +129,14 @@ void JavaScriptParser::moveToNextToken()
     ++m_it;
 }
 
-CommentNode* JavaScriptParser::parseComment()
+CodeNode::Ptr JavaScriptParser::parseComment()
 {
     if ( atEnd() ) {
-        return NULL;
+        return CommentNode::Ptr( 0 );
     }
     Token *curToken = currentToken();
     if ( !curToken->isChar('/') || !tryMoveToNextToken() ) {
-        return NULL;
+        return CommentNode::Ptr( 0 );
     }
 
     QString text;
@@ -148,8 +148,9 @@ CommentNode* JavaScriptParser::parseComment()
                 text += whitespaceSinceLastToken();
                 text += currentToken()->text;
             }
-            return new CommentNode( text.trimmed(), curToken->line, curToken->posStart,
-                        m_lastToken->line, m_lastToken->posEnd );
+            return CommentNode::Ptr(
+                    new CommentNode(text.trimmed(), curToken->line, curToken->posStart,
+                                    m_lastToken->line, m_lastToken->posEnd) );
         } else if ( currentToken()->isChar('*') ) {
             // TODO: Remove '*' from the beginning of comment lines for [text]
             moveToNextToken();
@@ -165,8 +166,9 @@ CommentNode* JavaScriptParser::parseComment()
                         break;
                     } else if ( currentToken()->isChar('/') ) {
                         moveToNextToken();
-                        return new CommentNode( text.trimmed(), curToken->line, curToken->posStart,
-                                                m_lastToken->line, m_lastToken->posEnd );
+                        return CommentNode::Ptr(
+                                new CommentNode(text.trimmed(), curToken->line, curToken->posStart,
+                                                m_lastToken->line, m_lastToken->posEnd) );
                     } else {
                         text += Token::whitespacesBetween( m_lastToken, nextCommentToken );
                         text += '*';
@@ -185,19 +187,19 @@ CommentNode* JavaScriptParser::parseComment()
     }
 
     // No comment found
-    return NULL;
+    return CommentNode::Ptr( 0 );
 }
 
-BracketedNode* JavaScriptParser::parseBracketed()
+CodeNode::Ptr JavaScriptParser::parseBracketed()
 {
     if ( atEnd() ) {
-        return NULL;
+        return CodeNode::Ptr( 0 );
     }
     Token *beginToken = currentToken();
     m_lastToken = beginToken;
     // '{' is matched by parseBlock
     if ( !beginToken->isChar('(') && !beginToken->isChar('[') ) {
-        return NULL;
+        return CodeNode::Ptr( 0 );
     }
 
     // Get the end character (closing bracket)
@@ -205,25 +207,28 @@ BracketedNode* JavaScriptParser::parseBracketed()
 
     Token *lastCommaToken = beginToken;
     moveToNextToken();
-    QList<CodeNode*> children;
+    QList< CodeNode::Ptr > children;
     QString text, textSinceLastComma;
     while ( !atEnd() ) {
-        CodeNode *node = NULL;
+        CodeNode::Ptr node( 0 );
         text += Token::whitespacesBetween( m_lastToken, currentToken() );
         // Check for end character
         if ( currentToken()->isChar(endChar) ) {
             if ( !textSinceLastComma.isEmpty() ) {
-                children << new UnknownNode( textSinceLastComma, lastCommaToken->line,
-                                             lastCommaToken->posStart, m_lastToken->posEnd );
+                children << CodeNode::Ptr(
+                        new UnknownNode(textSinceLastComma, lastCommaToken->line,
+                                        lastCommaToken->posStart, m_lastToken->posEnd) );
             }
             moveToNextToken();
-            return new BracketedNode( beginToken->text.at(0), text,
-                        beginToken->line, beginToken->posStart,
-                        m_lastToken->line, m_lastToken->posEnd, children );
+            return BracketedNode::Ptr(
+                    new BracketedNode(beginToken->text.at(0), text, beginToken->line,
+                                      beginToken->posStart, m_lastToken->line, m_lastToken->posEnd,
+                                      children) );
         } else if ( currentToken()->isChar('}') ) {
+//             qDeleteAll( children );
             setErrorState( i18nc("@info/plain", "Unclosed bracket, expected '%1'.", endChar),
                 beginToken->line, beginToken->posEnd );
-            return NULL;
+            return CodeNode::Ptr( 0 );
         } else if ( (node = parseComment()) || (node = parseString()) || (node = parseBracketed())
             || (node = parseBlock()) || (node = parseFunction()) )
         {
@@ -234,32 +239,33 @@ BracketedNode* JavaScriptParser::parseBracketed()
             if ( currentToken()->isChar(',') ) {
                 lastCommaToken = currentToken();
                 textSinceLastComma.clear();
-                children << new UnknownNode( ",", currentToken()->line,
-                                currentToken()->posStart, currentToken()->posEnd );
+                children << CodeNode::Ptr( new UnknownNode(",", currentToken()->line,
+                            currentToken()->posStart, currentToken()->posEnd) );
             } else {
                 textSinceLastComma += currentToken()->text;
-                children << new UnknownNode( textSinceLastComma, lastCommaToken->line,
-                                lastCommaToken->posStart, currentToken()->posEnd );
+                children << CodeNode::Ptr( new UnknownNode(textSinceLastComma, lastCommaToken->line,
+                                lastCommaToken->posStart, currentToken()->posEnd) );
             }
             moveToNextToken();
         }
     }
 
+//     qDeleteAll( children );
     setErrorState( i18nc("@info/plain", "Unclosed bracket, expected '%1'.", endChar),
            beginToken->line, beginToken->posEnd );
-    return NULL;
+    return CodeNode::Ptr( 0 );
 }
 
-StringNode* JavaScriptParser::parseString()
+CodeNode::Ptr JavaScriptParser::parseString()
 {
     if ( atEnd() ) {
-        return NULL;
+        return CodeNode::Ptr( 0 );
     }
     Token *beginToken = currentToken();
     m_lastToken = beginToken;
     if ( !beginToken->isChar('\"') && !beginToken->isChar('\'') ) {
         if ( !beginToken->isChar('/') ) {
-            return NULL; // Not a reg exp and not a string
+            return CodeNode::Ptr( 0 ); // Not a reg exp and not a string
         }
 
         // Get the previous token
@@ -272,10 +278,10 @@ StringNode* JavaScriptParser::parseString()
             QString allowed("=(:?");
             if ( prevToken->text.length() != 1 || !allowed.contains(prevToken->text) ) {
                 // Not a reg exp and not a string
-                return NULL;
+                return CodeNode::Ptr( 0 );
             }
         } else {
-            return NULL;
+            return CodeNode::Ptr( 0 );
         }
     }
     // The end character is the same as the beginning character (", ' or / for reg exps)
@@ -289,7 +295,8 @@ StringNode* JavaScriptParser::parseString()
         if ( currentToken()->isChar(endChar) && !m_lastToken->isChar('\\') ) {
             int columnEnd = currentToken()->posEnd;
             moveToNextToken();
-            return new StringNode( text, beginToken->line, beginToken->posStart, columnEnd );
+            return CodeNode::Ptr( new StringNode(text, beginToken->line,
+                                                 beginToken->posStart, columnEnd) );
         } else if ( (*m_it)->line != beginToken->line ) {
             if ( endChar == '/' ) {
                 setErrorState( i18nc("@info/plain", "Unclosed regular expression, "
@@ -300,7 +307,7 @@ StringNode* JavaScriptParser::parseString()
                                      "missing %1 at end.", endChar),
                                m_lastToken->line, m_lastToken->posEnd );
             }
-            return NULL;
+            return CodeNode::Ptr( 0 );
         } else {
             text += currentToken()->text;
             moveToNextToken();
@@ -309,12 +316,13 @@ StringNode* JavaScriptParser::parseString()
 
     setErrorState( i18nc("@info/plain", "Unexpected end of file."),
                    m_lastToken->line, m_lastToken->posEnd );
-    return NULL;
+    return CodeNode::Ptr( 0 );
 }
 
 void JavaScriptParser::checkFunctionCall( const QString &object, const QString &function,
-                                          BracketedNode *bracketedNode, int line, int column )
+        const BracketedNode::Ptr &bracketedNode, int line, int column )
 {
+    Q_UNUSED( bracketedNode );
 //     QStringList timetableInfoStrings;
 //     timetableInfoStrings << "DepartureDateTime" << "DepartureDate" << "DepartureTime"
 //             << "TypeOfVehicle" << "TransportLine" << "FlightNumber" << "Target"
@@ -344,21 +352,22 @@ void JavaScriptParser::checkFunctionCall( const QString &object, const QString &
     }
 }
 
-StatementNode* JavaScriptParser::parseStatement()
+CodeNode::Ptr JavaScriptParser::parseStatement()
 {
     if ( atEnd() ) {
-        return NULL;
+        return CodeNode::Ptr( 0 );
     }
     Token *firstToken = currentToken();
+    if ( m_lastToken == firstToken ) {
+        moveToNextToken();
+        firstToken = currentToken();
+    }
     m_lastToken = firstToken;
 
     QString text;
     QList<Token*> lastTokenList;
-    QList<CodeNode*> children;
+    QList< CodeNode::Ptr > children;
     while ( !atEnd() ) {
-        if ( currentToken()->line == 98 ) {
-            int test = 0;
-        }
         if ( currentToken()->isChar(';') ) {
             // End of statement found
             if ( !lastTokenList.isEmpty() ) {
@@ -366,8 +375,9 @@ StatementNode* JavaScriptParser::parseStatement()
             }
             text += currentToken()->text;
             moveToNextToken();
-            return new StatementNode( text, firstToken->line, firstToken->posStart,
-                        m_lastToken->line, m_lastToken->posEnd, children );
+            return CodeNode::Ptr(
+                    new StatementNode(text, firstToken->line, firstToken->posStart,
+                                      m_lastToken->line, m_lastToken->posEnd, children) );
         } else if ( currentToken()->isChar('}') ) {
             // '}' without previous '{' found in statement => ';' is missing
 //             Token *errorToken = lastTokenList.isEmpty() ? currentToken() : lastTokenList.last();
@@ -382,20 +392,22 @@ StatementNode* JavaScriptParser::parseStatement()
             if ( !lastTokenList.isEmpty() ) {
                 text += Token::whitespacesBetween( lastTokenList.last(), currentToken() );
             }
-            // Do not go to next token, because the current '}'-token should be read by a
+            // TODO Do not go to next token, because the current '}'-token should be read by a
             // calling function
-            return new StatementNode( text, firstToken->line, firstToken->posStart,
-                        m_lastToken->line, m_lastToken->posEnd, children );
+//             moveToNextToken();
+            return CodeNode::Ptr(
+                    new StatementNode(text, firstToken->line, firstToken->posStart,
+                                      m_lastToken->line, m_lastToken->posEnd, children) );
         }
 
-        CodeNode *node = NULL;
+        CodeNode::Ptr node( 0 );
         if ( (node = parseComment()) || (node = parseString()) ) {
             text += node->toString();
             children << node;
             lastTokenList << m_lastToken;
         } else if ( (node = parseBracketed()) ) {
             text += node->toString();
-            BracketedNode *bracketedNode = static_cast<BracketedNode*>( node );
+            BracketedNode::Ptr bracketedNode = node.dynamicCast<BracketedNode>();
             if ( bracketedNode->openingBracketChar() != '('
                 || lastTokenList.count() != 3 || !lastTokenList.at(0)->isName
                 || !lastTokenList.at(1)->isChar('.') || !lastTokenList.at(2)->isName )
@@ -412,11 +424,11 @@ StatementNode* JavaScriptParser::parseStatement()
                 checkFunctionCall( object, function, bracketedNode,
                         objectToken->line, objectToken->posStart );
                 // TODO This UnknownNode could get an ObjectNode or VariableNode
-                CodeNode *objectNode = new UnknownNode( object + ".",
-                    objectToken->line, objectToken->posStart, pointToken->posEnd );
+                CodeNode::Ptr objectNode( new UnknownNode(object + ".",
+                    objectToken->line, objectToken->posStart, pointToken->posEnd) );
                 children << objectNode;
-                node = new FunctionCallNode( object, function, functionToken->line,
-                        functionToken->posStart, currentToken()->posStart, bracketedNode );
+                node = CodeNode::Ptr( new FunctionCallNode(object, function, functionToken->line,
+                        functionToken->posStart, currentToken()->posStart, bracketedNode) );
                 children << node;
             }
             lastTokenList << m_lastToken;
@@ -431,8 +443,8 @@ StatementNode* JavaScriptParser::parseStatement()
                 moveToNextToken();
             }
 
-            return new StatementNode( text, firstToken->line, firstToken->posStart,
-                    lastTokenList.last()->line, lastTokenList.last()->posEnd, children );
+            return CodeNode::Ptr( new StatementNode(text, firstToken->line, firstToken->posStart,
+                    lastTokenList.last()->line, lastTokenList.last()->posEnd, children) );
         } else if ( atEnd() ) {
             setErrorState( i18nc("@info/plain", "Unexpected end of file.") );
         } else {
@@ -448,22 +460,22 @@ StatementNode* JavaScriptParser::parseStatement()
     m_lastToken = lastTokenList.last();
     setErrorState( i18nc("@info/plain", "Unexpected end of file."),
                    lastTokenList.last()->line, lastTokenList.last()->posEnd );
-    return NULL;
+    return CodeNode::Ptr( 0 );
 }
 
-FunctionNode* JavaScriptParser::parseFunction()
+CodeNode::Ptr JavaScriptParser::parseFunction()
 {
     if ( atEnd() ) {
-        return NULL;
+        return CodeNode::Ptr( 0 );
     }
     m_lastToken = currentToken();
     if ( atEnd() ) {
-        return NULL;
+        return CodeNode::Ptr( 0 );
     }
 
     Token *firstToken = currentToken();
     if ( firstToken->text != "function" || !tryMoveToNextToken() ) {
-        return NULL;
+        return CodeNode::Ptr( 0 );
     }
 
     // Parse function name if any
@@ -471,17 +483,17 @@ FunctionNode* JavaScriptParser::parseFunction()
     if ( !currentToken()->isChar('(') ) {
         name = currentToken()->text;
         if ( !tryMoveToNextToken() ) {
-            return NULL;
+            return CodeNode::Ptr( 0 );
         }
     }
 
     // Parse arguments
     if ( currentToken()->isChar('(') ) {
-        QList< ArgumentNode* > arguments;
+        QList< ArgumentNode::Ptr > arguments;
         bool argumentNameExpected = true;
         bool isComma = false;
         if ( !tryMoveToNextToken() ) {
-            return NULL;
+            return CodeNode::Ptr( 0 );
         }
 
         // Parse until a ')' is read or EOF
@@ -494,8 +506,9 @@ FunctionNode* JavaScriptParser::parseFunction()
                     break;
                 }
 
-                arguments << new ArgumentNode( currentToken()->text, currentToken()->line,
-                        currentToken()->posStart, currentToken()->posEnd );
+                arguments << ArgumentNode::Ptr(
+                        new ArgumentNode(currentToken()->text, currentToken()->line,
+                                         currentToken()->posStart, currentToken()->posEnd) );
             } else if ( !isComma ) {
                 setErrorState( i18nc("@info/plain", "Expected ',' or ')'."),
                             currentToken()->line, currentToken()->posStart );
@@ -504,7 +517,7 @@ FunctionNode* JavaScriptParser::parseFunction()
 
             argumentNameExpected = !argumentNameExpected;
             if ( !tryMoveToNextToken() ) {
-                return NULL;
+                return CodeNode::Ptr( 0 );
             }
         }
 
@@ -514,41 +527,41 @@ FunctionNode* JavaScriptParser::parseFunction()
         }
 
         // Read definition block
-        BlockNode *definition = NULL;
+        BlockNode::Ptr definition( 0 );
         if ( !tryMoveToNextToken() ) {
-            return NULL;
+            return CodeNode::Ptr( 0 );
         }
         if ( /*tryMoveToNextToken() &&*/ !(definition = parseBlock()) ) {
             setErrorState( i18nc("@info/plain", "Function definition is missing."),
-                m_lastToken->line, m_lastToken->posStart );
+                    m_lastToken->line, m_lastToken->posStart );
         }
 
-        return new FunctionNode( name, firstToken->line, firstToken->posStart, m_lastToken->posEnd,
-                    arguments, definition );
+        return FunctionNode::Ptr( new FunctionNode(name, firstToken->line, firstToken->posStart,
+                                               m_lastToken->posEnd, arguments, definition) );
     } else {
         setErrorState( i18nc("@info/plain", "Expected '('."),
                 currentToken()->line, currentToken()->posStart );
         moveToNextToken();
 
-        return NULL;
+        return CodeNode::Ptr( 0 );
     }
 }
 
-BlockNode* JavaScriptParser::parseBlock()
+BlockNode::Ptr JavaScriptParser::parseBlock()
 {
     if ( atEnd() ) {
-        return NULL;
+        return BlockNode::Ptr( 0 );
     }
 
     if ( currentToken()->isChar('{') ) {
         Token *firstToken = currentToken();
-        QList<CodeNode*> children;
+        QList< CodeNode::Ptr > children;
     //     moveToNextToken();
         if ( !tryMoveToNextToken() ) {
-            return NULL;
+            return BlockNode::Ptr( 0 );
         }
         while ( !atEnd() ) {
-            CodeNode *node = NULL;
+            CodeNode::Ptr node( 0 );
             if ( (node = parseComment())
                 || (!m_hasError && (node = parseString()))
                 || (!m_hasError && (node = parseBracketed()))
@@ -558,8 +571,8 @@ BlockNode* JavaScriptParser::parseBlock()
                 children << node;
             } else if ( !atEnd() && currentToken()->isChar('}') ) {
                 moveToNextToken(); // Move to next token, ie. first token after the function definition (or EOF)
-                return new BlockNode( firstToken->line, firstToken->posEnd,
-                                      m_lastToken->line, m_lastToken->posEnd, children );
+                return BlockNode::Ptr( new BlockNode(firstToken->line, firstToken->posEnd,
+                        m_lastToken->line, m_lastToken->posEnd, children) );
             } else if ( (node = parseStatement()) ) {
                 children << node;
             } else if ( !atEnd() ) {
@@ -572,10 +585,10 @@ BlockNode* JavaScriptParser::parseBlock()
                        m_lastToken->line, m_lastToken->posEnd );
     }
 
-    return NULL;
+    return BlockNode::Ptr( 0 );
 }
 
-QList< CodeNode* > JavaScriptParser::parse()
+QList< CodeNode::Ptr > JavaScriptParser::parse()
 {
     clearError();
 
@@ -617,10 +630,10 @@ QList< CodeNode* > JavaScriptParser::parse()
     }
 
     // Get nodes from the token
-    QList< CodeNode* > nodes;
+    QList< CodeNode::Ptr > nodes;
     m_it = m_token.constBegin();
     while ( !atEnd() ) {
-        CodeNode *node = NULL;
+        CodeNode::Ptr node( 0 );
         if ( (node = parseComment())
             || (!m_hasError && (node = parseString()))
             || (!m_hasError && (node = parseBracketed()))
@@ -628,7 +641,7 @@ QList< CodeNode* > JavaScriptParser::parse()
             || (!m_hasError && (node = parseBlock()))
             || (!m_hasError && (node = parseStatement())) )
         {
-            nodes << node;
+            nodes << CodeNode::Ptr(node);
 
             if ( m_hasError ) {
                 break;
@@ -643,13 +656,13 @@ QList< CodeNode* > JavaScriptParser::parse()
     m_token.clear();
 
     // Check for multiple definitions
-    QHash<QString, FunctionNode*> functions;
-    foreach ( CodeNode *node, nodes ) {
-    FunctionNode *function = dynamic_cast<FunctionNode*>( node );
+    QHash< QString, FunctionNode::Ptr > functions;
+    foreach ( const CodeNode::Ptr &node, nodes ) {
+        FunctionNode::Ptr function = node.dynamicCast<FunctionNode>();
         if ( function ) {
             QString newFunctionName = function->toString( true );
             if ( functions.contains(newFunctionName) ) {
-                FunctionNode *previousImpl = functions.value( newFunctionName );
+                FunctionNode::Ptr previousImpl = functions.value( newFunctionName );
                 setErrorState( i18nc("@info/plain", "Multiple definitions of function '%1', "
                                      "previously defined at line %2",
                                      function->text(), previousImpl->line()),
@@ -698,11 +711,10 @@ MultilineNode::MultilineNode( const QString& text, int line, int colStart, int l
 }
 
 ChildListNode::ChildListNode( const QString& text, int line, int colStart,
-                              int lineEnd, int colEnd, const QList< CodeNode* > &children )
-        : MultilineNode( text, line, colStart, lineEnd, colEnd )
+                              int lineEnd, int colEnd, const QList< CodeNode::Ptr > &children )
+        : MultilineNode( text, line, colStart, lineEnd, colEnd ), m_children(children)
 {
-    m_children = children;
-    foreach ( CodeNode *child, children ) {
+    foreach ( const CodeNode::Ptr &child, children ) {
         child->m_parent = this;
     }
 }
@@ -712,14 +724,14 @@ EmptyNode::EmptyNode() : CodeNode( QString(), -1, 0, 0 )
 }
 
 StatementNode::StatementNode( const QString &text, int line, int colStart, int lineEnd, int colEnd,
-                              const QList<CodeNode*> &children )
+                              const QList< CodeNode::Ptr > &children )
         : ChildListNode( text, line, colStart, lineEnd, colEnd, children )
 {
 }
 
 BracketedNode::BracketedNode( const QChar &openingBracketChar, const QString &text,
                               int line, int colStart, int lineEnd, int colEnd,
-                              const QList<CodeNode*> &children )
+                              const QList< CodeNode::Ptr > &children )
         : ChildListNode( text, line, colStart, lineEnd, colEnd, children )
 {
     m_bracketChar = openingBracketChar;
@@ -739,21 +751,21 @@ QChar BracketedNode::closingBracketChar() const
 int BracketedNode::commaSeparatedCount() const
 {
     int count = 1;
-    foreach ( CodeNode *child, m_children ) {
-        if ( child->type() == UnknownNodeType && child->text() == "," ) {
+    foreach ( const CodeNode::Ptr &child, m_children ) {
+        if ( child->type() == UnknownNodeType && child->text() == QLatin1String(",") ) {
             ++count;
         }
     }
     return count;
 }
 
-QList< CodeNode* > BracketedNode::commaSeparated( int pos ) const
+QList< CodeNode::Ptr > BracketedNode::commaSeparated( int pos ) const
 {
-    QList<CodeNode*> separated;
+    QList< CodeNode::Ptr > separated;
 
     int curPos = 0;
-    foreach ( CodeNode *child, m_children ) {
-    if ( child->type() == UnknownNodeType && child->text() == "," ) {
+    foreach ( const CodeNode::Ptr &child, m_children ) {
+    if ( child->type() == UnknownNodeType && child->text() == QLatin1String(",") ) {
         ++curPos;
         if ( curPos > pos ) {
             return separated;
@@ -768,7 +780,7 @@ QList< CodeNode* > BracketedNode::commaSeparated( int pos ) const
 }
 
 FunctionCallNode::FunctionCallNode( const QString &object, const QString &function, int line,
-                                    int colStart, int colEnd, BracketedNode *arguments )
+                                    int colStart, int colEnd, const BracketedNode::Ptr &arguments )
         : CodeNode( object + '.' + function, line, colStart, colEnd )
 {
     m_object = object;
@@ -777,16 +789,16 @@ FunctionCallNode::FunctionCallNode( const QString &object, const QString &functi
 }
 
 FunctionNode::FunctionNode( const QString& text, int line, int colStart, int colEnd,
-                            const QList< ArgumentNode* > &arguments, BlockNode *definition )
-        : MultilineNode( text, line, colStart, definition ? definition->endLine() : line, colEnd )
+                            const QList< ArgumentNode::Ptr > &arguments,
+                            const BlockNode::Ptr &definition )
+        : MultilineNode( text, line, colStart, definition ? definition->endLine() : line, colEnd ),
+        m_arguments(arguments), m_definition(definition)
 {
     if ( m_text.isEmpty() ) {
         m_text = i18nc("@info/plain Display name for anonymous JavaScript functions", "[anonymous]");
     }
-    m_arguments = arguments;
-    m_definition = definition;
 
-    foreach ( CodeNode *child, arguments ) {
+    foreach ( const CodeNode::Ptr &child, arguments ) {
         child->m_parent = this;
     }
     if ( definition ) {
@@ -794,20 +806,22 @@ FunctionNode::FunctionNode( const QString& text, int line, int colStart, int col
     }
 }
 
-QList< CodeNode* > FunctionNode::children() const
+QList< CodeNode::Ptr > FunctionNode::children() const
 {
-    QList<CodeNode*> ret;
-    for ( QList<ArgumentNode*>::const_iterator it = m_arguments.constBegin();
+    QList< CodeNode::Ptr > ret;
+    for ( QList<ArgumentNode::Ptr>::const_iterator it = m_arguments.constBegin();
           it != m_arguments.constEnd(); ++it )
     {
-        ret << *it;
+        ret << it->dynamicCast< CodeNode >();
     }
-    ret << m_definition;
+    if ( m_definition ) {
+        ret << m_definition.dynamicCast< CodeNode >();
+    }
     return ret;
 }
 
 BlockNode::BlockNode( int line, int colStart, int lineEnd, int colEnd,
-                      const QList<CodeNode*> &children )
+                      const QList< CodeNode::Ptr > &children )
         : ChildListNode( QString(), line, colStart, lineEnd, colEnd, children )
 {
 }
@@ -815,7 +829,7 @@ BlockNode::BlockNode( int line, int colStart, int lineEnd, int colEnd,
 QString BlockNode::toString( bool shortString ) const
 {
     QString s( '{' );
-    foreach ( CodeNode *child, m_children ) {
+    foreach ( const CodeNode::Ptr &child, m_children ) {
         s += child->toString(shortString) + '\n';
     }
     return s + '}';
@@ -824,8 +838,8 @@ QString BlockNode::toString( bool shortString ) const
 QString FunctionNode::id() const
 {
     QStringList arguments;
-    foreach ( CodeNode *node, m_arguments ) {
-        ArgumentNode *argument = dynamic_cast<ArgumentNode*>( node );
+    foreach ( const CodeNode::Ptr &node, m_arguments ) {
+        ArgumentNode::Ptr argument = node.dynamicCast< ArgumentNode >();
         if ( argument ) {
             arguments << argument->text();
         }
@@ -837,8 +851,8 @@ QString FunctionNode::id() const
 QString FunctionNode::toStringSignature() const
 {
     QStringList arguments;
-    foreach ( CodeNode *node, m_arguments ) {
-        ArgumentNode *argument = dynamic_cast<ArgumentNode*>( node );
+    foreach ( const CodeNode::Ptr &node, m_arguments ) {
+        ArgumentNode::Ptr argument = node.dynamicCast< ArgumentNode >();
         if ( argument ) {
             arguments << argument->text();
         }

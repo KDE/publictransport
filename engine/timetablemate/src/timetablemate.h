@@ -20,386 +20,326 @@
 #ifndef TIMETABLEMATE_H
 #define TIMETABLEMATE_H
 
-// Own includes
-#include "debuggeragent.h"
-
 // PublicTransport engine includes
-#include <engine/departureinfo.h>
-#include <engine/scripting.h>
-#include <engine/timetableaccessor.h>
+#include <engine/enums.h> // For TimetableData
 
 // KDE includes
 #include <KParts/MainWindow>
-#include <KDebug>
-#include <KTextEditor/MarkInterface>
+#include <KMessageWidget> // For KMessageWidget::MessageType
 
 // Qt includes
-#include <QScriptContextInfo>
-#include <QModelIndex>
-#include <QAbstractItemDelegate>
+#include <QQueue>
+
+class Project;
+class ProjectModel;
+
+class AbstractTab;
+class OverviewTab;
+class ProjectSourceTab;
+class PlasmaPreviewTab;
+class WebTab;
+class ScriptTab;
+
+class FixedToolBar;
+class DockToolBar;
+
+class BacktraceDockWidget;
+class BreakpointDockWidget;
+class OutputDockWidget;
+class VariablesDockWidget;
+class ConsoleDockWidget;
+class DocumentationDockWidget;
+class ProjectsDockWidget;
+class TestDockWidget;
+class WebInspectorDockWidget;
+class NetworkMonitorDockWidget;
 
 class TimetableAccessorInfo;
-class JavaScriptModel;
-class PublicTransportPreview;
-class TimetableMateView;
+struct StopSuggestionRequestInfo;
+struct JourneyRequestInfo;
+struct DepartureRequestInfo;
+
+namespace Ui {
+    class preferences;
+}
 namespace Scripting {
     class ResultObject;
 };
 namespace Debugger {
-    class Debugger;
-    struct EvaluationResult;
-};
-namespace KTextEditor
-{
-    class Document;
-    class View;
-    class Cursor;
-    class Mark;
-};
-namespace KParts
-{
+    class Breakpoint;
+    class ScriptRunData;
+}
+
+namespace KParts {
     class PartManager;
 };
-class KLineEdit;
-class KTextBrowser;
-class KWebView;
-class KUrlComboBox;
+class KActionMenu;
 class KToggleAction;
 class KRecentFilesAction;
 class KUrl;
 class KTabWidget;
-class KComboBox;
+class KMessageWidget;
 
-class QPlainTextEdit;
 class QModelIndex;
-class QDockWidget;
-class QPrinter;
-class QSortFilterProxyModel;
-class QStandardItem;
-class QStandardItemModel;
-class QScriptProgram;
-class QScriptEngine;
+class QVBoxLayout;
+class QScriptValue;
 
 using namespace Scripting;
-using namespace Debugger;
-
-typedef QPair<QStandardItem*, QStandardItem*> ScriptVariableRow;
-
-// TODO
-class CheckboxDelegate : public QAbstractItemDelegate {
-public:
-    explicit CheckboxDelegate( QObject *parent = 0 ) : QAbstractItemDelegate(parent) {};
-
-    virtual void paint( QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const;
-    virtual QSize sizeHint( const QStyleOptionViewItem &option, const QModelIndex &index ) const;
-
-};
+using namespace Debugger; // Needed for slots to match signals, eg. using Breakpoint instead of Debugger::Breakpoint
 
 /**
- * This class serves as the main window for TimetableMate. It handles the
- * menus, toolbars, and status bars.
+ * @brief Main window for TimetableMate.
  *
- * @short Main window class
- * @author Friedrich Pülz <fpuelz@gmx.de>
- * @version 0.3
- */
-class TimetableMate : public KParts::MainWindow   //KXmlGuiWindow {
+ * TimetableMate is a little IDE for creating scripts for the PublicTransport data engine.
+ *
+ * Uses QDockWidget's at the left, right and bottom dock areas. DockToolBar's are added to these
+ * three areas to toggle the dock widgets at that area. Dock widgets can be freely moved between
+ * the three areas, the associated toggle action gets moved to the DockToolBar at the new area.
+ * At each area only one QDockWidget can be shown at a time.
+ * This behaviour is similiar to what KDevelop does with it's tool views.
+ *
+ * Multiple projects can be opened in one TimetableMate window and are managed by a ProjectModel.
+ * For each project a set of tabs can be opened: Edit the source project/accessor XML document
+ * (AccessorTab), edit the script file (ScriptTab), preview the project in Plasma
+ * (PlasmaPreviewTab) or show the service providers home page (WebTab). Instead of editing the XML
+ * document of a project, it's settings can be edited using a ProjectSettingsDialog.
+ * One project always is the "active project", if at least one project is opened. The active
+ * project gets connected to the main TimetableMate actions and to the dock widgets. For example
+ * the breakpoint dock widget shows the breakpoints of the active project.
+ **/
+class TimetableMate : public KParts::MainWindow
 {
     Q_OBJECT
+
 public:
-    enum Tabs {
-        AccessorTab = 0,
-        AccessorSourceTab,
-        ScriptTab,
-        PlasmaPreviewTab,
-        WebTab
-    };
-
-    enum ScriptError {
-        NoScriptError = 0,
-        ScriptLoadFailed,
-        ScriptParseError,
-        ScriptRunError
-    };
-
-    enum DebugType {
-        NoDebugging = 0,
-        InterruptOnExceptions,
-        InterruptAtStart
-    };
-
-    /** @brief The name of the script function to get a list of used TimetableInformation's. */
-    static const char *SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS;
-
-    /** @brief The name of the script function to download and parse departures/arrivals. */
-    static const char *SCRIPT_FUNCTION_GETTIMETABLE;
-
-    /** @brief The name of the script function to download and parse journeys. */
-    static const char *SCRIPT_FUNCTION_GETJOURNEYS;
-
-    /** @brief The name of the script function to download and parse stop suggestions. */
-    static const char *SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
-
-    /** @brief Gets a list of extensions that are allowed to be imported by scripts. */
-    static QStringList allowedExtensions();
-
-    /** Default Constructor */
+    /** @brief Constructor */
     TimetableMate();
 
-    /** Default Destructor */
+    /** @brief Destructor */
     virtual ~TimetableMate();
 
-signals:
-    /** @brief Signals ready TimetableData items. */
-    void departuresReady( const QList<TimetableData> &departures,
-                          ResultObject::Features features, ResultObject::Hints hints,
-                          const QString &url, const GlobalTimetableInfo &globalInfo,
-                          const DepartureRequestInfo &info, bool couldNeedForcedUpdate = false );
-
-    /** @brief Signals ready TimetableData items. */
-    void journeysReady( const QList<TimetableData> &departures,
-                        ResultObject::Features features, ResultObject::Hints hints,
-                        const QString &url, const GlobalTimetableInfo &globalInfo,
-                        const JourneyRequestInfo &info, bool couldNeedForcedUpdate = false );
-
-    /** @brief Signals ready TimetableData items. */
-    void stopSuggestionsReady( const QList<TimetableData> &departures,
-                               ResultObject::Features features, ResultObject::Hints hints,
-                               const QString &url, const GlobalTimetableInfo &globalInfo,
-                               const StopSuggestionRequestInfo &info,
-                               bool couldNeedForcedUpdate = false );
-
 public slots:
+    /** @brief Create a new project. */
     void fileNew();
-    void open( const KUrl &url );
-    void fileOpen();
-    void fileOpenInstalled();
-    void fileSave();
-    void fileSaveAs();
 
-    void install();
-    void installGlobal();
+    /** @brief Open project from @p url. */
+    void open( const KUrl &url );
+
+    /** @brief Open a file dialog to select a project to open. */
+    void fileOpen();
+
+    /** @brief Open a dialog to select an installed project to open. */
+    void fileOpenInstalled();
+
+    /** @brief Save all projects. */
+    void fileSaveAll();
+
+    /** @brief Close the currently active project if any. */
+    void closeProject();
 
     void publish() {}; // TODO
 
     /**
-     * @brief An error was received from the script.
-     *
-     * @param message The error message.
-     * @param failedParseText The text in the source document where parsing failed.
+     * @brief Close @p tab.
+     * If @p tab contains unsaved content the user gets asked if it should be saved.
      **/
-    void scriptErrorReceived( const QString &message,
-                              const QString &failedParseText = QString() );
-    void markChanged( KTextEditor::Document *document, const KTextEditor::Mark &mark,
-                      KTextEditor::MarkInterface::MarkChangeAction action );
-    void sendCommandToConsole( const QString &command );
+    void closeTab( AbstractTab *tab );
+
+    /**
+     * @brief Close the current tab.
+     * If the current tab contains unsaved content the user gets asked if it should be saved.
+     **/
+    void closeCurrentTab();
+
+    /**
+     * @brief Close all tabs except for @p tab.
+     *
+     * If tabs with unsaved content are closed the user gets asked if they should be saved.
+     * @returns True if all tabs could be closed, false otherwise (eg. cancelled by the user).
+     **/
+    bool closeAllTabsExcept( AbstractTab *tab, bool ask = true );
+
+    /**
+     * @brief Close all tabs. If a @p project is given only tabs of that project get closed.
+     *
+     * If tabs with unsaved content are closed the user gets asked if they should be saved.
+     * @returns True if all tabs could be closed, false otherwise (eg. cancelled by the user).
+     **/
+    bool closeAllTabs( Project *project = 0, bool ask = true );
+
+    /**
+     * @brief Close @p project.
+     * If @p project is modified the user gets asked if it should be saved.
+     **/
+    bool closeProject( Project *project );
+
+    /**
+     * @brief Close all projects.
+     * If projects with modifications are closed the user gets asked if they should be saved.
+     **/
+    bool closeAllProjects();
 
 protected slots:
+    /** @brief Initialize after the TimetableMate instance is created. */
+    void initialize();
+
     void optionsPreferences();
+    void preferencesDialogFinished();
 
-    void showScriptTab( bool loadTemplateIfEmpty = true );
-    void showWebTab( const QString &url );
+    void projectAdded( Project *project );
+    void projectAboutToBeRemoved( Project *project );
+    void projectCloseRequest();
+    void activeProjectAboutToChange( Project *project, Project *previousProject );
+    void infoMessage( const QString &message,
+                      KMessageWidget::MessageType type = KMessageWidget::Information,
+                      int timeout = 4000, QList<QAction*> actions = QList<QAction*>() );
+    void removeAllMessageWidgets();
+    void testActionTriggered();
+    void testCaseActionTriggered();
+
+    void tabTitleChanged( QWidget *tabWidget, const QString &title, const QIcon &icon );
+    void dockLocationChanged( Qt::DockWidgetArea area );
+
     void currentTabChanged( int index );
+    void tabCloseRequested( int index ) { closeTab(projectTabAt(index)); };
+    void tabOpenRequest( AbstractTab *tab ) { showProjectTab(true, tab); };
+    void tabGoToRequest( AbstractTab *tab ) { showProjectTab(false, tab); };
+    void tabContextMenu( QWidget *widget, const QPoint &pos );
     void activePartChanged( KParts::Part *part );
-    void informationMessage( KTextEditor::View *, const QString &message );
 
-    void accessorDocumentChanged( KTextEditor::Document *document );
-    void scriptDocumentChanged( KTextEditor::Document *document );
-    void accessorWidgetsChanged();
-    void scriptFileChanged( const QString &scriptFile );
-    void plasmaPreviewLoaded();
+    void scriptPreviousFunction();
+    void scriptNextFunction();
 
-    void beginScriptParsing();
-    void currentFunctionChanged( int index );
-    void scriptCursorPositionChanged( KTextEditor::View *view,
-                                      const KTextEditor::Cursor &cursor );
-    void showTextHint( const KTextEditor::Cursor &position, QString &text );
+    /** @brief A test has started in the currently active project. */
+    void testStarted();
 
-    void scriptRunParseTimetable();
-    void scriptRunParseStopSuggestions();
-    void scriptRunParseJourneys();
+    /** @brief A test has finished in the currently active project. */
+    void testFinished( bool success );
 
-    void webLoadHomePage();
-    void webLoadDepartures();
-    void webLoadStopSuggestions();
-    void webLoadJourneys();
-
-    void toolsCheck();
-    void toggleBreakpoint( int lineNumber = -1 );
-
-    /** @brief Start debugger and call 'getTimetable' script function. */
-    void debugScriptDepartures();
-
-    /** @brief Start debugger and call 'getJourneys' script function. */
-    void debugScriptJourneys();
-
-    /** @brief Start debugger and call 'getStopSUggestions' script function. */
-    void debugScriptStopSuggestions();
-
-    /** @brief Abort debugging. */
-    void abortDebugger();
-
-    /** @brief Script execution started. */
+    /** @brief Script execution started in the currently active project. */
     void debugStarted();
 
-    /** @brief Script execution stopped. */
-    void debugStopped();
+    /** @brief Script execution stopped in the currently active project. */
+    void debugStopped( const ScriptRunData &scriptRunData );
 
-    /** @brief Script execution was interrupted. */
+    void waitingForSignal();
+    void wokeUpFromSignal( int time );
+
+    /** @brief Script execution was aborted in the currently active project. */
+    void debugAborted();
+
+    /** @brief Script execution was interrupted in the currently active project. */
     void debugInterrupted();
 
-    /** @brief Script execution was continued after an interrupt. */
+    /** @brief Script execution was continued after an interrupt in the currently active project. */
     void debugContinued();
 
-    /** @brief Execute script until the line number at the cursor gets hit. */
-    void runToCursor();
-
-    /** @brief There was an uncaught execution in the script. */
+    /** @brief There was an uncaught execution in the script of the currently active project. */
     void uncaughtException( int lineNumber, const QString &errorMessage );
 
-    /** @brief The current script backtrace changed. */
-    void backtraceChanged( const FrameStack &backtrace, BacktraceChange change );
-
-    /** @brief A @p breakpoint was added. */
-    void breakpointAdded( const Breakpoint &breakpoint );
-
-    /** @brief A @p breakpoint was removed. */
-    void breakpointRemoved( const Breakpoint &breakpoint );
-
-    /** @brief A @p breakpoint was reached. */
+    /** @brief A @p breakpoint was reached in the currently active project. */
     void breakpointReached( const Breakpoint &breakpoint );
 
-    /** @brief The breakpoint represented by @p item was changed. */
-    void breakpointChangedInModel( QStandardItem *item );
+    /** @brief Toggle breakpoint at the current line in the script tab of the current project, if any. */
+    void toggleBreakpoint();
 
-    /** @brief The script produced output at @p context. */
-    void scriptOutput( const QString &outputString, const QScriptContextInfo &contextInfo );
-
-    /** @brief An item in the backtrace widget was clicked. */
-    void clickedBacktraceItem( const QModelIndex &backtraceItem );
-
-    /** @brief An item in the breakpoint widget was clicked. */
-    void clickedBreakpointItem( const QModelIndex &breakpointItem );
-
-    void scriptNextFunction();
-    void scriptPreviousFunction();
-
-    /** Return pressed in the url bar. */
-    void urlBarReturn( const QString &text );
-    void webUrlChanged( const QUrl &url );
-
-    void documentationAnchorClicked( const QUrl &url );
-    void documentationUrlChanged( const QUrl &url );
-    void documentationChosen( int index );
-
-    void appendToConsole( const QString &text );
-    void consoleEvaluationResult( const EvaluationResult &result );
     void functionCallResult( const QList< TimetableData > &timetableData,
                              const QScriptValue &returnValue );
 
+    void removeTopMessageWidget();
+    void tabNextActionTriggered();
+    void tabPreviousActionTriggered();
+
+    void projectSaveLocationChanged( const QString &newXmlFilePath, const QString &oldXmlFilePath );
+
 protected:
-    virtual void closeEvent( QCloseEvent *event );
-    virtual bool eventFilter( QObject *source, QEvent *event );
+    virtual bool queryClose();
+
+    /** @brief Overridden to delete KMessageWidgets when they get hidden. */
+    virtual bool eventFilter( QObject *object, QEvent *event );
+
+    virtual void saveProperties( KConfigGroup &config );
+    virtual void readProperties( const KConfigGroup &config );
+
+    /** @brief Overridden to create custom menubar separator items. */
+    virtual QAction *createCustomElement( QWidget *parent, int index, const QDomElement &element );
+
+    /** @brief Overridden to change the context menu in empty menu bar space and main window splitters. */
+    virtual void contextMenuEvent( QContextMenuEvent *event );
 
 private:
+    enum TabAction {
+        MoveToTab,
+        LeaveTab,
+        CloseTab
+    };
+
     void setupActions();
+    void setupDockWidgets();
     void updateWindowTitle();
-    void updateNextPreviousFunctionActions();
+    void updateShownDocksAction();
 
-    void writeScriptTemplate();
-    bool loadTemplate( const QString &fileName = QString() );
-    bool loadAccessor( const QString &fileName );
-    bool setAccessorValues( QByteArray *text, QString *error = 0,
-                            const QString &fileName = QString() );
-    bool loadScriptForCurrentAccessor( bool openFile = true );
+    bool fixMenus();
+    void populateTestMenu();
+    void connectTestMenuWithProject( Project *project, bool doConnect = true );
 
-    void setChanged( bool changed = true );
-    void syncAccessor();
+    /** @brief Open project from @p fileName. */
+    Project *openProject( const QString &fileName );
+
+    /** @brief Get the current project, if any, ie. the project of the currently shown tab. */
+    Project *currentProject();
+
+    /** @brief Get the tab object at the given @p index */
+    AbstractTab *projectTabAt( int index );
+
+    AbstractTab *showProjectTab( bool addTab, AbstractTab *tab );
+
+    bool closeAllTabsExcept( Project *project, AbstractTab *except = 0, bool ask = true );
+
+    void overviewTabAction( OverviewTab *overviewTab, TabAction tabAction );
+    void accessorTabAction( ProjectSourceTab *accessorTab, TabAction tabAction );
+    void scriptTabAction( ScriptTab *scriptTab, TabAction tabAction );
+    void plasmaPreviewTabAction( PlasmaPreviewTab *plasmaPreviewTab, TabAction tabAction );
+    void webTabAction( WebTab *webTab, TabAction tabAction );
 
     bool hasHomePageURL( const TimetableAccessorInfo *info );
 
-    /** Decodes the given HTML document. First it tries QTextCodec::codecForHtml().
-        * If that doesn't work, it parses the document for the charset in a meta-tag. */
-    static QString decodeHtml( const QByteArray &document,
-                               const QByteArray &fallbackCharset = QByteArray() );
+    Ui::preferences *ui_preferences;
 
-    DepartureRequestInfo getDepartureRequestInfo();
-    JourneyRequestInfo getJourneyRequestInfo();
-    StopSuggestionRequestInfo getStopSuggestionRequestInfo();
-
-    /** Encodes the url in @p str using the charset in @p charset. Then it is
-    * percent encoded.
-    * @see charsetForUrlEncoding() */
-    static QString toPercentEncoding( const QString &str, const QByteArray &charset );
-
-    static QString gethex( ushort decimal );
-
-    bool loadScript();
-
-    void updateVariableModel();
-    void addVariables( const Variables &variables, const QModelIndex &parent = QModelIndex(),
-                       bool onlyImportantObjects = false );
-    KToolBar *createDockOverviewBar( Qt::ToolBarArea area, const QString &objectName,
-                                     QWidget *parent = 0 );
-
-    KTabWidget *m_mainTabBar;
+    ProjectModel *m_projectModel; // Contains all opened projects
     KParts::PartManager *m_partManager;
-    TimetableMateView *m_view;
-    KTextEditor::Document *m_accessorDocument;
-    KTextEditor::Document *m_scriptDocument;
-    PublicTransportPreview *m_preview;
-    KWebView *m_webview;
-    QDockWidget *m_backtraceDock;
-    QDockWidget *m_consoleDock;
-    QDockWidget *m_outputDock;
-    QDockWidget *m_breakpointDock;
-    QDockWidget *m_variablesDock;
-    QDockWidget *m_documentationDock;
-    QPlainTextEdit *m_outputWidget;
-    QPlainTextEdit *m_consoleWidget;
-    KComboBox *m_documentationChooser;
-    KWebView *m_documentationWidget;
-    KLineEdit *m_consoleEdit;
-    QStandardItemModel *m_backtraceModel;
-    QStandardItemModel *m_breakpointModel;
-    QStandardItemModel *m_variablesModel;
-    KToolBar *m_bottomDockOverview;
+    KTabWidget *m_tabWidget;
 
-    KUrlComboBox *m_urlBar;
-    KComboBox *m_functions;
-    JavaScriptModel *m_javaScriptModel;
-    QSortFilterProxyModel *m_functionsModel;
-    QTimer *m_backgroundParserTimer;
+    // Fixed tool bars showing docks on the left/right/bottom dock area
+    DockToolBar *m_leftDockBar;
+    DockToolBar *m_rightDockBar;
+    DockToolBar *m_bottomDockBar;
 
+    // Dock widgets
+    BacktraceDockWidget *m_backtraceDock;
+    ConsoleDockWidget *m_consoleDock;
+    OutputDockWidget *m_outputDock;
+    BreakpointDockWidget *m_breakpointDock;
+    VariablesDockWidget *m_variablesDock;
+    DocumentationDockWidget *m_documentationDock;
+    ProjectsDockWidget *m_projectsDock;
+    TestDockWidget *m_testDock;
+    WebInspectorDockWidget *m_webInspectorDock;
+    NetworkMonitorDockWidget *m_networkMonitorDock;
+
+    // Pointers to specific actions
+    KActionMenu *m_showDocksAction;
     KToggleAction *m_toolbarAction;
     KToggleAction *m_statusbarAction;
     KRecentFilesAction *m_recentFilesAction;
+    QList< QAction* > m_testCaseActions;
 
-    QString m_currentServiceProviderID;
-    QString m_openedPath;
-
-    int m_currentTab;
-    bool m_changed;
-    bool m_accessorDocumentChanged;
-    bool m_accessorWidgetsChanged;
-
-    QScriptEngine *m_engine;
-    QScriptProgram *m_script;
-    Network *m_scriptNetwork;
-    Helper *m_scriptHelper;
-    ResultObject *m_scriptResult;
-    Storage *m_scriptStorage;
-    QString m_lastError;
-    ScriptError m_lastScriptError;
-    QStringList m_scriptErrors;
-    QStringList m_consoleHistory;
-    int m_consoleHistoryIndex;
-
-    Debugger::Debugger *m_debugger;
-    int m_executionLine;
+    AbstractTab *m_currentTab; // Stores a pointer to the current tab, if any
+    QQueue< QPointer<KMessageWidget> > m_messageWidgets;
+    QQueue< QPointer<KMessageWidget> > m_autoRemoveMessageWidgets;
+    QVBoxLayout *m_messageWidgetLayout;
 };
 
 #endif // _TIMETABLEMATE_H_
 
-struct GlobalTimetableInfo;
 // kate: indent-mode cstyle; indent-width 4; replace-tabs on;

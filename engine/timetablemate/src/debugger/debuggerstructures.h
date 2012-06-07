@@ -27,7 +27,7 @@
 #ifndef DEBUGGERSTRUCTURES_H
 #define DEBUGGERSTRUCTURES_H
 
-#define DEBUGGER_DEBUG(x) //kDebug() << x
+#define DEBUGGER_DEBUG(x) // kDebug() << x
 
 // KDE includes
 #include <KIcon>
@@ -36,16 +36,21 @@
 // Qt includes
 #include <QStringList>
 #include <QScriptValue>
+#include <QScriptContextInfo>
 #include <QStack>
 #include <QDebug>
+#include <QMutex>
 
-class QMutex;
-class QWaitCondition;
+class QModelIndex;
+class QScriptContextInfo;
 class QScriptEngine;
 
 namespace Debugger {
 
+class BreakpointModel;
+
 class DebuggerAgent;
+class BacktraceModel;
 
 /** @brief States of the debugger. */
 enum DebuggerState {
@@ -55,19 +60,26 @@ enum DebuggerState {
 };
 
 /** @brief Debug mode used for function arguments. */
-enum DebugMode {
-    InterruptOnExceptions,
-    InterruptAtStart
+enum DebugFlag {
+    NoDebugFlags            = 0x0000,
+
+    InterruptAtStart        = 0x0001,
+    InterruptOnExceptions   = 0x0002,
+    InterruptOnBreakpoints  = 0x0004,
+
+    DefaultDebugFlags = InterruptOnExceptions | InterruptOnBreakpoints
 };
+Q_DECLARE_FLAGS( DebugFlags, DebugFlag );
 
 /** @brief Execution control types. */
 enum ExecutionControl {
-    ExecuteRun = 0, /**< Run execution, will be interrupted on breakpoints
+    ExecuteRun = 0, /**< Run script, will be interrupted on breakpoints
             * or uncaught exceptions. */
     ExecuteContinue = ExecuteRun, /**< Continue execution, will be interrupted on breakpoints
             * or uncaught exceptions. */
     ExecuteInterrupt, /**< Interrupt execution at the next statement. */
-    ExecuteAbort, /**< Abort debugging at the next statement. */
+    ExecuteAbort, /**< Abort debugging. */
+    ExecuteAbortInjectedProgram, /**< Abort execution of injected code, but not of the main script. */
 
     ExecuteStepInto, /**< Interrupted execution at the next statement. */
     ExecuteStepOver, /**< Interrupted execution at the next statement in the same context. */
@@ -78,11 +90,12 @@ enum ExecutionControl {
             * and interrupted it at the next statement. */
 };
 
-/** @brief Changes between two backtrace queues, returned by Debugger::compareBacktraces(). */
-enum BacktraceChange {
-    NoBacktraceChange = 0, /**< No change between the two backtrace queues found. */
-    EnteredFunction, /**< A function was entered after the first backtrace. */
-    ExitedFunction /**< A function was exited after the first backtrace. */
+/** @brief Types of script errors. */
+enum ScriptErrorType {
+    NoScriptError = 0,
+    ScriptLoadFailed,
+    ScriptParseError,
+    ScriptRunError
 };
 
 /** @brief Hints returned Debugger::canBreakAt(). */
@@ -98,81 +111,66 @@ enum NextEvaluatableLineHint {
 /** @brief Contains information about the result of an evaluation. */
 struct EvaluationResult {
     /** @brief Creates a new EvaluationResult object. */
-    EvaluationResult( const QScriptValue &returnValue = QScriptValue() )
+    EvaluationResult( const QVariant &returnValue = QVariant() )
             : error(false), errorLineNumber(-1), returnValue(returnValue) {};
 
     bool error; /**< Whether or not there was an error. */
     int errorLineNumber; /**< The line number, where the error happened, if error is true. */
     QString errorMessage; /**< An error message, if error is true. */
     QStringList backtrace; /**< A backtrace from where the error happened, if error is true. */
-    QScriptValue returnValue; /**< The return value of the evaluation, if error is false. */
+    QVariant returnValue; /**< The return value of the evaluation, if error is false. */
 };
 
 /** @brief Represents one frame of a backtrace. */
-struct Frame {
-    /** @brief Creates a new Frame object. */
-    Frame( const QString &fileName, const QString &function, int lineNumber, int depth )
-            : fileName(fileName), function(function), lineNumber(lineNumber),
-              functionStartLineNumber(-1), depth(depth)
-    {
-    };
+class Frame {
+    friend class BacktraceModel;
+    friend class DebuggerAgent;
 
+public:
     /** @brief Creates an invalid Frame object. */
-    Frame() : lineNumber(-1), functionStartLineNumber(-1), depth(0) {};
+    Frame() : m_model(0) {};
 
-    QString fileName; /**< The file/context name of the frames current context. */
-    QString function; /**< The name of the currently executed function, if any. */
-    int lineNumber; /**< The line number of the current execution. */
-    int functionStartLineNumber; /**< The line number, where the currently executed function
-            * starts, if any. */
-    int depth; /**< The depth of this frame in the backtrace. */
+    void setValuesOf( const Frame &frame );
+
+    /**
+     * @brief The BacktraceModel this Frame belongs to or 0 if this Frame was not added to a model.
+     * @note BacktraceModel will delete Frame object when they get removed from the model.
+     **/
+    inline BacktraceModel *model() const { return m_model; };
+
+    QModelIndex index();
+
+    /** @brief A context string, eg. QScriptContextInfo::function(), if available. */
+    inline QString contextString() const { return m_contextString; };
+
+    /** @brief The QScriptContextInfo object of this frame. */
+    inline QScriptContextInfo contextInfo() const { return m_contextInfo; };
+
+    /** @see QScriptContextInfo::lineNumber() */
+    inline int lineNumber() const { return m_contextInfo.lineNumber(); };
+
+    /** @see QScriptContextInfo::fileName() */
+    inline QString fileName() const { return m_contextInfo.fileName(); };
+
+protected:
+    /** @brief Creates a new Frame object. */
+    Frame( const QScriptContextInfo &contextInfo, bool global = false, BacktraceModel *model = 0 )
+            : m_model(model)
+    {
+        setContextInfo( contextInfo, global );
+    };
+
+    void setContextInfo( const QScriptContextInfo &contextInfo, bool global = false );
+    inline void setModel( BacktraceModel *model ) { m_model = model; };
+
+private:
+    QString m_contextString;
+    QScriptContextInfo m_contextInfo;
+    BacktraceModel *m_model;
 };
+
 /** @brief A stack of frames, ie. a backtrace. */
-typedef QStack< Frame > FrameStack;
-
-/** @brief Represents a variable in a script. */
-struct Variable {
-    /** @brief Variable types. */
-    enum Type {
-        Null, /**< Null/undefined. */
-        Error, /**< An error. */
-        Function, /**< A function. */
-        Array, /**< An array / list. */
-        Object, /**< An object. */
-        Boolean, /**< A boolean. */
-        Number, /**< A number. */
-        String, /**< A string. */
-        RegExp, /**< A regular expression. */
-        Date, /**< A date. */
-        Special /**< Used for special information objects,
-                * generated for some default script objects. */
-    };
-
-    /** @brief Creates a new Variable object. */
-    Variable( Type type, const QString &name, const QVariant &value, const KIcon &icon = KIcon() )
-            : type(type), name(name), value(value), icon(icon) {};
-
-    /** @brief Creates a new Variable object. */
-    Variable() {
-        backgroundRole = KColorScheme::NormalBackground;
-        foregroundRole = KColorScheme::NormalText;
-    };
-
-    Type type; /**< The type of the variable. */
-    QString name; /**< The name of the variable. */
-    QVariant value; /**< The current value of the variable. */
-    KIcon icon; /**< An icon for the variable. */
-    QString description; /**< A description for the variable, eg. for tooltips. */
-    bool isHelperObject; /**< True, if this variable is a helper script object, eg. the 'result',
-            * 'network', 'storage' (etc.) script objects. */
-    int sorting; /**< Sort value. */
-    KColorScheme::BackgroundRole backgroundRole; /**< A background color role, used to highlight
-            * wrong values. */
-    KColorScheme::ForegroundRole foregroundRole; /**< A foreground color role, used to highlight
-            * wrong values. */
-    QList< Variable > children; /**< Children of this variable. */
-};
-typedef QList< Variable > Variables;
+typedef QStack< Frame* > FrameStack;
 
 /**
  * @brief Represents a breakpoint.
@@ -181,9 +179,12 @@ typedef QList< Variable > Variables;
  * be written in JavaScript and gets executed in the current engines context if the breakpoint
  * gets reached. Breakpoints can be enabled/disabled manually. If a maximum hit count is reached
  * the breakpoint gets disabled.
+ *
+ * This class is thread safe.
  **/
 class Breakpoint {
     friend class DebuggerAgent;
+    friend class BreakpointModel;
 public:
     /** @brief States of a breakpoint in a specific line, returned by breakpointState().. */
     enum State {
@@ -200,16 +201,21 @@ public:
      * @param maxHitCount The maximum number of hits for this breakpoint or -1 for infinite hits.
      *   If the maximum hit count gets reached, the breakpoint gets disabled.
      **/
-    Breakpoint( int lineNumber = -1, bool enabled = true, int maxHitCount = -1 ) {
-        m_lineNumber = lineNumber;
-        m_enabled = enabled;
-        m_hitCount = 0;
-        m_maxHitCount = maxHitCount;
+    Breakpoint( int lineNumber = -1, bool enabled = true, int maxHitCount = -1 )
+        : m_model(0), m_lineNumber(lineNumber), m_enabled(enabled), m_hitCount(0),
+          m_maxHitCount(maxHitCount)
+    {
     };
 
+    Breakpoint( const Breakpoint &breakpoint ) : m_model(0)
+    { setValuesOf(breakpoint); };
+
+    /** @brief Destructor. */
+    virtual ~Breakpoint() {};
+
     /** @brief Create a one-time breakpoint at @p lineNumber. */
-    static Breakpoint oneTimeBreakpoint( int lineNumber ) {
-        return Breakpoint( lineNumber, true, 1 );
+    static Breakpoint *createOneTimeBreakpoint( int lineNumber ) {
+        return new Breakpoint( lineNumber, true, 1 );
     };
 
     /** @brief Whether or not this breakpoint is valid. */
@@ -245,23 +251,37 @@ public:
     /** @brief Get the result of the last condition evaluation. */
     QScriptValue lastConditionResult() const { return m_lastConditionResult; };
 
+    BreakpointModel *model() const { return m_model; };
+
     /** @brief Reset the hit count. */
-    void reset() { m_hitCount = 0; };
+    void reset();
 
     /** @brief Enable/disable this breakpoint. */
-    void setEnabled( bool enabled = true ) { m_enabled = enabled; };
+    void setEnabled( bool enabled = true );
 
     /** @brief Set the maximum number of hits to @p maximumHitCount. */
-    void setMaximumHitCount( int maximumHitCount ) { m_maxHitCount = maximumHitCount; };
+    void setMaximumHitCount( int maximumHitCount );
+
+    void setValuesOf( const Breakpoint &breakpoint );
 
 protected:
     /** @brief Gets called by Debugger if this breakpoint was reached. */
     void reached();
 
-    /** @brief Gets called by Debugger to test if the condition is satisfied. */
-    bool testCondition( QScriptEngine *engine );
+    /**
+     * @brief Gets called by Debugger to test if the condition is satisfied.
+     *
+     * If no condition is set, this always returns true.
+     * @param agent The debugger agent to use for evaluating the condition.
+     * @param error If not 0, this gets set to true, if there was an error with the condition
+     *   that needs to be fixed by the user. Should be initialized with false.
+     **/
+    bool testCondition( DebuggerAgent *agent, bool *error = 0 );
+
+    void setModel( BreakpointModel *model ) { m_model = model; };
 
 private:
+    BreakpointModel *m_model;
     int m_lineNumber;
     bool m_enabled;
     int m_hitCount;
@@ -270,16 +290,21 @@ private:
     QScriptValue m_lastConditionResult;
 };
 
+/** @brief Contains information about a console command. */
 class ConsoleCommand {
 public:
+    /** @brief Types of console command types. */
     enum Command {
-        InvalidCommand = 0,
-        DebugCommand,
-        HelpCommand,
-        ClearCommand,
-        LineNumberCommand,
-        DebuggerControlCommand,
-        BreakpointCommand
+        InvalidCommand = 0, /**< Invalid command. */
+        DebugCommand, /**< Debug command, steps into execution of script code in the current
+                * context and interrupts in the new command context. */
+        HelpCommand, /**< Provides information about the console or about a specific command,
+                * if the command is given as argument. */
+        ClearCommand, /**< Clears the console history. */
+        LineNumberCommand, /**< Retrieves the current line number of script execution. */
+        DebuggerControlCommand, /**< Controls the debugger, eg. interrupt it. */
+        BreakpointCommand /**< Add/remove/change breakpoints or get information about
+                * existing breakpoints. */
     };
 
     ConsoleCommand() : m_command(InvalidCommand) {};
@@ -293,6 +318,7 @@ public:
     static ConsoleCommand fromString( const QString &str );
 
     bool isValid() const;
+    bool commandExecutesScriptCode() const { return m_command == DebugCommand; };
 
     Command command() const { return m_command; };
     QStringList arguments() const { return m_arguments; };
@@ -300,11 +326,13 @@ public:
             return i < 0 || i >= m_arguments.count() ? QString() : m_arguments[i].trimmed(); };
     QString description() const;
     QString syntax() const;
+    QString toString() const;
 
     /** Normally true. If false, the command is NOT executed in Debugger::runCommand() */
     bool getsExecutedAutomatically() const;
 
     static Command commandFromName( const QString &name );
+    static QString commandToName( Command command );
     static QStringList availableCommands();
     static QStringList defaultCompletions();
     static QString commandDescription( Command command );
@@ -317,45 +345,19 @@ private:
 };
 
 /* Functions for nicer debug output */
-inline QDebug &operator <<( QDebug debug, DebugMode debugMode )
+inline QDebug &operator <<( QDebug debug, DebugFlag debugMode )
 {
     switch ( debugMode ) {
-    case InterruptOnExceptions:
-        return debug << "InterruptOnExceptions";
+    case NoDebugFlags:
+        return debug << "NoDebugFlags";
     case InterruptAtStart:
         return debug << "InterruptAtStart";
+    case InterruptOnExceptions:
+        return debug << "InterruptOnExceptions";
+    case InterruptOnBreakpoints:
+        return debug << "InterruptOnBreakpoints";
     default:
         return debug << "DebugMode unknown" << static_cast<int>(debugMode);
-    }
-}
-
-inline QDebug &operator <<( QDebug debug, Variable::Type type )
-{
-    switch ( type ) {
-    case Variable::Null:
-        return debug << "Null";
-    case Variable::Error:
-        return debug << "Error";
-    case Variable::Function:
-        return debug << "Function";
-    case Variable::Array:
-        return debug << "Array";
-    case Variable::Object:
-        return debug << "Object";
-    case Variable::Boolean:
-        return debug << "Boolean";
-    case Variable::Number:
-        return debug << "Number";
-    case Variable::String:
-        return debug << "String";
-    case Variable::RegExp:
-        return debug << "RegExp";
-    case Variable::Date:
-        return debug << "Date";
-    case Variable::Special:
-        return debug << "Special";
-    default:
-        return debug << "Variable type unknown" << static_cast<int>(type);
     }
 }
 
@@ -434,5 +436,9 @@ inline QDebug &operator <<( QDebug debug, ExecutionControl executeControlType )
 }
 
 }; // namespace Debugger
+
+// Make Frame and FrameStack known to the meta object system
+Q_DECLARE_METATYPE( Debugger::Frame );
+Q_DECLARE_METATYPE( Debugger::FrameStack );
 
 #endif // Multiple inclusion guard

@@ -20,25 +20,30 @@
 #ifndef JAVASCRIPTPARSER_HEADER
 #define JAVASCRIPTPARSER_HEADER
 
-#include <QString>
-#include <QList>
-#include <QHash>
-#include <QStringList>
+// Own includes
 #include "parserenums.h"
+
+// Qt includes
+#include <QList>
+#include <QSharedPointer>
 
 class ChildListNode;
 class FunctionNode;
 namespace KTextEditor {
     class Cursor;
 };
+class QString;
+class QStringList;
 
 /** @brief Base class of all code nodes. */
 class CodeNode {
     friend class ChildListNode; // Friends, to set m_parent
     friend class FunctionNode; // Friends, to set m_parent
 public:
+    typedef QSharedPointer<CodeNode> Ptr;
+
     CodeNode( const QString &text, int line, int colStart, int colEnd );
-    virtual ~CodeNode();
+    virtual ~CodeNode() {};
 
     /**
      * @returns the ID of this code node.
@@ -50,9 +55,9 @@ public:
     /**
      * @returns a list of all child nodes. The default implementation returns an empty list.
      *
-     * All children get deleted automatically on destruction.
+     * @note All children that get returned by this function on destruction get deleted automatically.
      **/
-    virtual QList<CodeNode*> children() const { return QList<CodeNode*>(); };
+    virtual QList< CodeNode::Ptr > children() const { return QList< CodeNode::Ptr >(); };
 
     /**
      * @brief Finds the child node at the given @p lineNumber and @p column.
@@ -115,6 +120,8 @@ protected:
 /** @brief Base class for all nodes that may span multiple lines. */
 class MultilineNode : public CodeNode {
 public:
+    typedef QSharedPointer<MultilineNode> Ptr;
+
     MultilineNode( const QString &text, int line, int colStart, int lineEnd, int colEnd );
 
     /** @brief The last line of this node. */
@@ -128,14 +135,16 @@ protected:
 class ChildListNode : public MultilineNode {
     friend class CodeNode; // Friends, to set m_parent
 public:
+    typedef QSharedPointer<ChildListNode> Ptr;
+
     ChildListNode( const QString &text, int line, int colStart,
-               int lineEnd, int colEnd, const QList<CodeNode*> &children );
+                   int lineEnd, int colEnd, const QList< CodeNode::Ptr > &children );
 
     /** @returns a list of all child nodes. */
-    virtual QList<CodeNode*> children() const { return m_children; };
+    virtual QList< CodeNode::Ptr > children() const { return m_children; };
 
 protected:
-    QList<CodeNode*> m_children;
+    QList< CodeNode::Ptr > m_children;
 };
 
 /**
@@ -143,6 +152,8 @@ protected:
  **/
 class EmptyNode : public CodeNode {
 public:
+    typedef QSharedPointer<EmptyNode> Ptr;
+
     EmptyNode();
 
     virtual NodeType type() const { return NoNodeType; };
@@ -155,6 +166,8 @@ public:
  **/
 class UnknownNode : public CodeNode {
 public:
+    typedef QSharedPointer<UnknownNode> Ptr;
+
     UnknownNode( const QString &text, int line, int colStart = 0, int colEnd = 0 )
         : CodeNode( text, line, colStart, colEnd ) {
     };
@@ -169,6 +182,8 @@ public:
  **/
 class CommentNode : public MultilineNode {
 public:
+    typedef QSharedPointer<CommentNode> Ptr;
+
     CommentNode( const QString &text, int line, int colStart, int lineEnd, int colEnd )
         : MultilineNode( text, line, colStart, lineEnd, colEnd ) {
     };
@@ -186,6 +201,8 @@ public:
 /** @brief A string or regular expression. */
 class StringNode : public CodeNode {
 public:
+    typedef QSharedPointer<StringNode> Ptr;
+
     StringNode( const QString &text, int line, int colStart, int colEnd )
         : CodeNode( text, line, colStart, colEnd ) {
     };
@@ -203,8 +220,10 @@ public:
 /** @brief An unknown statement. */
 class StatementNode : public ChildListNode {
 public:
+    typedef QSharedPointer<StatementNode> Ptr;
+
     StatementNode( const QString &text, int line, int colStart, int lineEnd, int colEnd,
-                   const QList<CodeNode*> &children );
+                   const QList< CodeNode::Ptr > &children );
 
     virtual NodeType type() const { return Statement; };
     virtual QString toString( bool shortString = false ) const {
@@ -217,8 +236,10 @@ public:
  * ('(' or '['). */
 class BracketedNode : public ChildListNode {
 public:
+    typedef QSharedPointer<BracketedNode> Ptr;
+
     BracketedNode( const QChar &openingBracketChar, const QString &text, int line, int colStart,
-                   int lineEnd, int colEnd, const QList<CodeNode*> &children );
+                   int lineEnd, int colEnd, const QList< CodeNode::Ptr > &children );
 
     QString content() const { return m_text; };
 
@@ -227,7 +248,7 @@ public:
         Q_UNUSED( shortString );
         return m_bracketChar + m_text + closingBracketChar();
     };
-    QList<CodeNode*> commaSeparated( int pos ) const;
+    QList< CodeNode::Ptr > commaSeparated( int pos ) const;
     int commaSeparatedCount() const;
 
     /** @returns the opening bracket character. */
@@ -244,7 +265,7 @@ private:
 class FunctionCallNode : public CodeNode {
 public:
     FunctionCallNode( const QString &object, const QString &function,
-                      int line, int colStart, int colEnd, BracketedNode *arguments );
+                      int line, int colStart, int colEnd, const BracketedNode::Ptr &arguments );
 
     virtual NodeType type() const { return FunctionCall; };
     virtual QString id() const { return "call:" + m_text; };
@@ -252,13 +273,14 @@ public:
         return QString( "%1(%2)" ).arg( m_text, m_arguments->toString(shortString) );
     };
 
-    virtual QList<CodeNode*> children() const { return QList<CodeNode*>() << m_arguments; };
-    BracketedNode *arguments() const { return m_arguments; };
+    virtual QList< CodeNode::Ptr > children() const {
+            return QList< CodeNode::Ptr >() << m_arguments.dynamicCast<CodeNode>(); };
+    BracketedNode::Ptr arguments() const { return m_arguments; };
     QString object() const { return m_object; };
     QString function() const { return m_function; };
 
 private:
-    BracketedNode *m_arguments;
+    BracketedNode::Ptr m_arguments;
     QString m_object;
     QString m_function;
 };
@@ -266,8 +288,10 @@ private:
 /** @brief A code block, enclosed by '{' and '}'. */
 class BlockNode : public ChildListNode {
 public:
+    typedef QSharedPointer<BlockNode> Ptr;
+
     BlockNode( int line, int colStart, int lineEnd, int colEnd,
-           const QList<CodeNode*> &children );
+               const QList< CodeNode::Ptr > &children );
 
     virtual NodeType type() const { return Block; };
     virtual QString toString( bool shortString = false ) const;
@@ -276,6 +300,8 @@ public:
 /** @brief An argument of a function definition. */
 class ArgumentNode : public CodeNode {
 public:
+    typedef QSharedPointer<ArgumentNode> Ptr;
+
     ArgumentNode( const QString &text, int line, int colStart, int colEnd )
             : CodeNode( text, line, colStart, colEnd ) {};
 
@@ -287,24 +313,27 @@ public:
     };
 };
 
+// TODO allow argument definitions like "var argument" and "var argument = 3"
 /** @brief A function definition. */
 class FunctionNode : public MultilineNode {
     friend class CodeNode; // Friends, to set m_parent
 public:
+    typedef QSharedPointer<FunctionNode> Ptr;
+
     FunctionNode( const QString &text, int line, int colStart, int colEnd,
-              const QList<ArgumentNode*> &arguments, BlockNode *definition );
+                  const QList< ArgumentNode::Ptr > &arguments, const BlockNode::Ptr &definition );
 
     virtual NodeType type() const { return Function; };
     virtual QString id() const;
     virtual QString toString( bool shortString = false ) const;
     QString toStringSignature() const;
-    virtual QList<CodeNode*> children() const;
-    virtual QList<ArgumentNode*> arguments() const { return m_arguments; };
-    virtual BlockNode* definition() const { return m_definition; };
+    virtual QList< CodeNode::Ptr > children() const;
+    virtual QList< ArgumentNode::Ptr > arguments() const { return m_arguments; };
+    virtual BlockNode::Ptr definition() const { return m_definition; };
 
 private:
-    QList<ArgumentNode*> m_arguments;
-    BlockNode *m_definition;
+    QList< ArgumentNode::Ptr > m_arguments;
+    BlockNode::Ptr m_definition;
 };
 
 /** @brief Parses java script code. */
@@ -315,11 +344,13 @@ public:
      * @see hasError */
     JavaScriptParser( const QString &code );
 
+    virtual ~JavaScriptParser();
+
     /** @returns the code given in the constructor. */
     QString code() const { return m_code; };
 
     /** @returns the parsed list of nodes. */
-    QList<CodeNode*> nodes() const { return m_nodes; };
+    QList< CodeNode::Ptr > nodes() const { return m_nodes; };
 
     /** Wheather or not there was an error while parsing. */
     bool hasError() const { return m_hasError; };
@@ -367,13 +398,13 @@ private:
         int posStart, posEnd;
     };
 
-    QList<CodeNode*> parse();
-    CommentNode *parseComment();
-    StringNode *parseString();
-    BracketedNode *parseBracketed();
-    FunctionNode *parseFunction(); // Parse a function declaration (not a function call)
-    BlockNode *parseBlock();
-    StatementNode *parseStatement();
+    QList< CodeNode::Ptr > parse();
+    CodeNode::Ptr parseComment();
+    CodeNode::Ptr parseString();
+    CodeNode::Ptr parseBracketed();
+    CodeNode::Ptr parseFunction(); // Parse a function declaration (not a function call)
+    BlockNode::Ptr parseBlock();
+    CodeNode::Ptr parseStatement();
 
     inline bool atEnd() const { return m_it == m_token.constEnd(); };
     inline Token *currentToken() const {
@@ -390,11 +421,11 @@ private:
     void setErrorState( const QString &errorMessage, int errorLine = -1, int m_errorColumn = 0,
                 int affectedLine = -1 );
     void checkFunctionCall( const QString &object, const QString &function,
-                BracketedNode *bracketedNode, int line, int column );
+                const BracketedNode::Ptr &bracketedNode, int line, int column );
 
 private:
     QString m_code;
-    QList<CodeNode*> m_nodes;
+    QList< CodeNode::Ptr > m_nodes;
 
     QList<Token*> m_token;
     QList<Token*>::const_iterator m_it;

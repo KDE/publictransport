@@ -1,47 +1,39 @@
 <!DOCTYPE kpartgui SYSTEM "kpartgui.dtd">
-<kpartgui name="timetablemate" version="3">
+<kpartgui name="timetablemate" version="8">
+<!-- The menu bar shows non-standard menus at first: "Project", "Run" and "Test".
+     After these menus a separator is inserted, followed by menus from the active part
+     and another separator. After the part menus, the "Settings" and "Help" menus are appended.
+     Custom menu items are created for menu bar separators with a style attribute "visible".
+     This is much like KDevelop does it. -->
 <MenuBar>
-    <Menu noMerge="1" name="file"><text context="@title:menu">&amp;File</text>
-	<Action name="file_new"/>
-	<Action name="file_open"/>
-	<Action name="file_open_installed"/>
-	<Action name="file_open_recent"/>
-	<Action name="file_save"/>
-	<Action name="file_save_as"/>
-	<Separator/>
-	<Action name="file_install"/>
-	<Action name="file_install_global"/>
-	<Separator/>
-	<Merge/>
-	<Separator/>
-	<Action name="file_quit"/>
-    </Menu>
-
-    <Menu noMerge="1" name="edit"><text context="@title:menu">&amp;Edit</text>
-	<Separator/>
-	<Merge/>
-    </Menu>
-
-    <Menu noMerge="1" name="view"><text context="@title:menu">&amp;View</text>
-	<Action name="web_load_page" />
-	<Separator/>
-	<Action name="script_previous_function" />
-	<Action name="script_next_function" />
-	<Separator/>
-        <Action name="view_docks" />
+    <!-- Use "Project" menu as first menu, by appending it to the "first_menu" merge area -->
+    <Menu name="project" append="first_menu">
+        <text context="@title:menu">&amp;Project</text>
+        <Action name="project_new"/>
+        <Action name="project_open"/>
+        <Action name="project_open_installed"/>
+        <Action name="project_open_recent"/>
         <Separator/>
-	<Merge/>
+        <Action name="project_save_all"/>
+        <Action name="project_save"/>
+        <Action name="project_save_as"/>
+        <Separator/>
+        <Action name="project_install"/>
+        <Action name="project_install_global"/>
+        <Separator/>
+        <Action name="project_choose_active"/>
+        <Action name="project_settings"/>
+        <Action name="project_close"/>
+        <Separator/>
+        <!-- Add the quit action here, not to the file menu, because this is the first menu -->
+        <Action name="file_quit"/>
     </Menu>
 
-    <Menu noMerge="1" name="tools"><text context="@title:menu">&amp;Tools</text>
-	<Action name="tools_check" />
-	<Action name="script_run" />
-	<Separator/>
-	<Merge/>
-    </Menu>
-
-    <Menu noMerge="1" name="debug"><text context="@title:menu">&amp;Debugger</text>
-        <Action name="debug_run" />
+    <!-- Append "Run" menu to the "first_menu" merge area -->
+    <Menu name="run" append="first_menu">
+        <text context="@title:menu">&amp;Run</text>
+        <Action name="run_menu_action" />
+        <Action name="debug_menu_action" />
         <Action name="debug_continue" />
         <Action name="debug_interrupt" />
         <Action name="debug_abort" />
@@ -57,92 +49,71 @@
         <Merge/>
     </Menu>
 
+    <!-- Append "Test" menu to the "first_menu" merge area -->
+    <Menu name="test" append="first_menu">
+        <text context="@title:menu">&amp;Test</text>
+        <Action name="test_all" />
+        <Action name="test_abort" />
+        <Action name="test_clear" />
+        <Separator/>
+        <!-- Actions to run specific tests are inserted here -->
+        <ActionList name="test_list" />
+    </Menu>
+
+    <!-- Add a separator to separate part menus -->
+    <Separator style="visible" append="first_menu" name="separator_part_menus_begin" />
+
+    <!-- Add the file menu here, use noMerge, because the "Quit" action should not be merged here,
+         they are added to the "Project" menu -->
+    <Menu noMerge="1" name="file" append="first_menu">
+        <text context="@title:menu">&amp;File</text>
+        <Merge/>
+    </Menu>
+
+    <!-- Merge other menus, eg. edit, view, bookmarks, tools from KatePart -->
     <Merge/>
+
+    <!-- Add another separator after merged part menus -->
+    <Separator style="visible" name="separator_part_menus_end" />
+
+    <!-- Add all actions manually, otherwise the order gets messed up
+         eg. when the toolbar gets modified, for some reason -->
+    <Menu noMerge="1" name="settings">
+        <text context="@title:menu">&amp;Settings</text>
+        <Action name="options_show_menubar"/>
+        <Action name="options_show_toolbar"/>
+        <Action name="options_show_docks" />
+        <Merge name="StandardToolBarMenuHandler" />
+        <Action name="options_show_statusbar"/>
+        <DefineGroup name="show_merge" append="show_merge"/>
+        <Separator/>
+        <Action name="options_configure_keybinding"/>
+        <Action name="options_configure_toolbars"/>
+        <!-- The KatePart inserts the "Configure Editor" action here -->
+        <DefineGroup name="configure_merge" append="configure_merge"/>
+        <Action name="options_configure"/>
+    </Menu>
 </MenuBar>
 
-<ActionProperties scheme="Default">
-    <Action name="debug_abort" shortcut="Esc" />
-    <Action name="debug_run" shortcut="F9" />
-    <Action name="debug_step_over" shortcut="F10" />
-    <Action name="debug_step_into" shortcut="F11" />
-    <Action name="debug_step_out" shortcut="F12" />
-</ActionProperties>
-
-<State name="debug_running" >
-    <enable>
-        <Action name="debug_interrupt" />
-        <Action name="debug_abort" />
-<!--         <Action name="debug_toggle_breakpoint" /> -->
-<!--         <Action name="debug_remove_all_breakpoints" /> -->
-    </enable>
-    <disable>
-        <Action name="debug_run" />
-        <Action name="debug_departures" />
-        <Action name="debug_journeys" />
-        <Action name="debug_stop_suggestions" />
-        <Action name="debug_continue" />
-        <Action name="debug_step_over" />
-        <Action name="debug_step_into" />
-        <Action name="debug_step_out" />
-        <Action name="debug_run_to_cursor" />
-    </disable>
-</State>
-<State name="debug_not_running" >
-    <enable>
-        <Action name="debug_run" />
-        <Action name="debug_departures" />
-        <Action name="debug_journeys" />
-        <Action name="debug_stop_suggestions" />
-    </enable>
-    <disable>
-        <Action name="debug_interrupt" />
-        <Action name="debug_abort" />
-        <Action name="debug_continue" />
-        <Action name="debug_step_over" />
-        <Action name="debug_step_into" />
-        <Action name="debug_step_out" />
-        <Action name="debug_run_to_cursor" />
-    </disable>
-</State>
-<State name="debug_interrupted" >
-    <enable>
-        <Action name="debug_abort" />
-        <Action name="debug_continue" />
-        <Action name="debug_step_over" />
-        <Action name="debug_step_into" />
-        <Action name="debug_step_out" />
-        <Action name="debug_run_to_cursor" />
-    </enable>
-    <disable>
-        <Action name="debug_run" />
-        <Action name="debug_departures" />
-        <Action name="debug_journeys" />
-        <Action name="debug_stop_suggestions" />
-        <Action name="debug_interrupt" />
-    </disable>
-</State>
-
-<ToolBar name="mainToolBar">
-    <text>&amp;Main Toolbar</text>
-    <Action name="file_new" />
-    <Action name="file_open" />
-    <Action name="file_save" />
+<ToolBar noMerge="1" name="mainToolBar">
+    <text>Main Toolbar</text>
+    <Action name="project_new" />
+    <Action name="project_open" />
+    <Action name="project_save" />
     <Separator/>
-    <Merge/>
+    <!-- Add file operations from eg. the Kate part -->
+    <DefineGroup name="file_operations" />
+    <Merge/> <!-- Merge other actions -->
     <Separator/>
-    <Action name="web_back" />
-    <Action name="web_forward" />
-    <Action name="web_stop" />
-    <Action name="web_reload" />
-    <Action name="web_load_page" />
-    <Separator/>
-    <Action name="tools_check" />
-    <Action name="script_run" />
+    <Action name="test_all" />
 </ToolBar>
 
-<ToolBar name="debuggerToolBar">
-    <text>&amp;Debugger</text>
-    <Action name="debug_run" />
+<!-- A toolbar to control the debugger -->
+<ToolBar name="runToolBar">
+    <text>Debugger</text>
+    <Action name="run_menu_action" />
+    <Action name="debug_menu_action" />
+    <Separator/>
     <Action name="debug_continue" />
     <Action name="debug_interrupt" />
     <Action name="debug_abort" />
@@ -155,4 +126,41 @@
     <Separator/>
     <Merge/>
 </ToolBar>
+
+<ActionProperties scheme="Default">
+    <Action name="project_open" shortcut="Ctrl+O" />
+<!--     <Action name="project_save" shortcut="Ctrl+S" /> Use Ctrl+S to save the currently active document -->
+
+    <Action name="debug_abort" shortcut="Esc" />
+    <Action name="debug_departures" shortcut="F9" />
+    <Action name="debug_step_over" shortcut="F10" />
+    <Action name="debug_step_into" shortcut="F11" />
+    <Action name="debug_step_out" shortcut="F12" />
+</ActionProperties>
+
+<!-- This gets activated, when changing between "no project opened" and "at least one project opened" -->
+<State name="project_opened" >
+    <enable>
+        <Action name="project_settings" />
+        <Action name="project_close" />
+        <Action name="test_all" />
+        <Action name="project_show_homepage" /> <!-- TODO -->
+    </enable>
+</State>
+
+<!-- This is only activated, when all projects get closed -->
+<State name="no_project_opened" >
+    <disable>
+        <Action name="script_next_function" />
+        <Action name="script_previous_function" />
+    </disable>
+</State>
+
+<State name="script_tab_is_active" >
+    <enable>
+        <Action name="script_next_function" />
+        <Action name="script_previous_function" />
+    </enable>
+</State>
+
 </kpartgui>

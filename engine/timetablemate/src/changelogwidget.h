@@ -112,6 +112,7 @@ public:
 
 signals:
     void changed();
+    void changelogEntryWidgetAdded( ChangelogEntryWidget *entryWidget );
 
 public slots:
     void createAndAddWidgetSameVersion();

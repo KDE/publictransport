@@ -17,53 +17,98 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// Header
 #include "timetablematehelper.h"
 
-#include <KAuth/HelperSupport>
+// Qt includes
 #include <QFile>
+
+// KDE includes
+#include <KAuth/HelperSupport>
 #include <KDebug>
+#include <KLocalizedString>
 
 KAuth::ActionReply TimetableMateHelper::install( const QVariantMap &map )
 {
     kDebug() << "BEGIN" << map;
     KAuth::ActionReply reply;
     const QString saveDir = map["path"].toString();
+    const QString operation = map["operation"].toString();
     const QString accessorFileName = map["filenameAccessor"].toString();
     const QString accessorDocument = map["contentsAccessor"].toString();
     const QString scriptFileName = map["filenameScript"].toString();
     const QString scriptDocument = map["contentsScript"].toString();
+    const bool uninstall = operation == QLatin1String("uninstall");
 
-    QFile accessorFile( accessorFileName );
-    if( !accessorFile.open( QIODevice::WriteOnly ) ) {
-        reply = ActionReply::HelperErrorReply;
-        reply.setErrorCode( accessorFile.error() );
-        reply.setErrorDescription( accessorFile.errorString() );
-        return reply;
-    }
-    if( accessorFile.write( accessorDocument.toUtf8() ) == -1 ) {
-        reply = ActionReply::HelperErrorReply;
-        reply.setErrorCode( accessorFile.error() );
-        reply.setErrorDescription( accessorFile.errorString() );
-        return reply;
-    }
-    accessorFile.close();
+    if ( uninstall ) {
+        // Uninstall
+        if ( !QFile::exists(accessorFileName) ) {
+            reply = ActionReply::HelperErrorReply;
+            reply.setErrorCode( 10 );
+            reply.setErrorDescription( i18nc("@info/plain", "Not installed") );
+            return false;
+        }
 
-    QFile scriptFile( scriptFileName );
-    if( !scriptFile.open( QIODevice::WriteOnly ) ) {
-        reply = ActionReply::HelperErrorReply;
-        reply.setErrorCode( scriptFile.error() );
-        reply.setErrorDescription( scriptFile.errorString() );
-        return reply;
+        QFile accessorFile( accessorFileName );
+        if ( !accessorFile.remove() ) {
+            reply = ActionReply::HelperErrorReply;
+            reply.setErrorCode( 1 );
+            reply.setErrorDescription( accessorFile.errorString() );
+            return reply;
+        }
+    } else {
+        // Install
+        QFile accessorFile( accessorFileName );
+        if( !accessorFile.open(QIODevice::WriteOnly) ) {
+            reply = ActionReply::HelperErrorReply;
+            reply.setErrorCode( 2 );
+            reply.setErrorDescription( accessorFile.errorString() );
+            return reply;
+        }
+        if( accessorFile.write(accessorDocument.toUtf8()) == -1 ) {
+            reply = ActionReply::HelperErrorReply;
+            reply.setErrorCode( 1 );
+            reply.setErrorDescription( accessorFile.errorString() );
+            return reply;
+        }
+        accessorFile.close();
     }
-    if( scriptFile.write( scriptDocument.toUtf8() ) == -1 ) {
-        reply = ActionReply::HelperErrorReply;
-        reply.setErrorCode( scriptFile.error() );
-        reply.setErrorDescription( scriptFile.errorString() );
-        return reply;
-    }
-    scriptFile.close();
 
-    kDebug() << "END";
+    if ( uninstall ) {
+        // Uninstall
+        if ( !QFile::exists(scriptFileName) ) {
+            reply = ActionReply::HelperErrorReply;
+            reply.setErrorCode( 10 );
+            reply.setErrorDescription( i18nc("@info/plain", "Script not installed") );
+            return false;
+        }
+
+        QFile scriptFile( scriptFileName );
+        if( !scriptFile.remove() ) {
+            reply = ActionReply::HelperErrorReply;
+            reply.setErrorCode( scriptFile.error() );
+            reply.setErrorDescription( scriptFile.errorString() );
+            return reply;
+        }
+    } else {
+        // Install
+        QFile scriptFile( scriptFileName );
+        if( !scriptFile.open(QIODevice::WriteOnly) ) {
+            reply = ActionReply::HelperErrorReply;
+            reply.setErrorCode( scriptFile.error() );
+            reply.setErrorDescription( scriptFile.errorString() );
+            return reply;
+        }
+
+        if( scriptFile.write(scriptDocument.toUtf8()) == -1 ) {
+            reply = ActionReply::HelperErrorReply;
+            reply.setErrorCode( scriptFile.error() );
+            reply.setErrorDescription( scriptFile.errorString() );
+            return reply;
+        }
+        scriptFile.close();
+    }
+
     return reply;
 }
 

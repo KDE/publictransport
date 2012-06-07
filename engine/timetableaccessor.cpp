@@ -24,6 +24,7 @@
 #include "timetableaccessor_info.h"
 #include "accessorinfoxmlreader.h"
 #include "departureinfo.h"
+#include "timetableaccessor_script.h"
 
 // KDE includes
 #include <KIO/NetAccess>
@@ -36,10 +37,12 @@
 #include <QTextCodec>
 #include <QFile>
 #include <QTimer>
+#include <QFileInfo>
 #include <QScriptEngine>
 
-TimetableAccessor::TimetableAccessor( TimetableAccessorInfo *info )
-        : m_info(info ? info : new TimetableAccessorInfo())
+TimetableAccessor::TimetableAccessor( const TimetableAccessorInfo *info, QObject *parent )
+        : QObject(parent),
+          m_info(info ? info : new TimetableAccessorInfo(NoAccessor, QString(), this))
 {
     m_idAlreadyRequested = false;
 }
@@ -58,10 +61,10 @@ TimetableAccessor::~TimetableAccessor()
             kDebug() << m_info->serviceProvider() << m_jobInfos.count();
         }
     }
-    delete m_info;
 }
 
-TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &serviceProvider )
+TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &serviceProvider,
+                                                           QObject *parent )
 {
     QString filePath;
     QString country = "international";
@@ -97,7 +100,8 @@ TimetableAccessor* TimetableAccessor::getSpecificAccessor( const QString &servic
 
     QFile file( filePath );
     AccessorInfoXmlReader reader;
-    TimetableAccessor *ret = reader.read( &file, sp, filePath, country );
+    TimetableAccessor *ret = reader.read( &file, sp, filePath, country,
+                                          AccessorInfoXmlReader::OnlyReadCorrectFiles, parent );
     if ( !ret ) {
         kDebug() << "Error while reading accessor info xml" << filePath << reader.lineNumber() << reader.errorString();
     }
@@ -128,15 +132,14 @@ QString TimetableAccessor::defaultServiceProviderForLocation( const QString &loc
 
 QString TimetableAccessor::serviceProviderIdFromFileName( const QString &accessorXmlFileName )
 {
-    // Cut the service provider substring from the XML filename, ie. "/path/to/xml/<id>.xml"
-    const int pos = accessorXmlFileName.lastIndexOf( '/' );
-    return accessorXmlFileName.mid( pos + 1, accessorXmlFileName.length() - pos - 5 );
+    // Get the service provider substring from the XML filename, ie. "/path/to/xml/<id>.xml"
+    return QFileInfo( accessorXmlFileName ).baseName();
 }
 
 AccessorType TimetableAccessor::accessorTypeFromString( const QString &sAccessorType )
 {
     QString s = sAccessorType.toLower();
-    if ( s == "script" ||  s == "html" ) {
+    if ( s == QLatin1String("script") || s == QLatin1String("html") ) {
         return ScriptedAccessor;
     } else {
         return NoAccessor;
@@ -215,22 +218,23 @@ QStringList TimetableAccessor::featuresLocalized() const
     return featuresl10n;
 }
 
-void TimetableAccessor::requestDepartures(
-        const DepartureRequestInfo &requestInfo )
+void TimetableAccessor::requestDepartures( const DepartureRequestInfo &requestInfo )
 {
+    Q_UNUSED( requestInfo );
     kDebug() << "Not implemented";
     return;
 }
 
-void TimetableAccessor::requestStopSuggestions(
-        const StopSuggestionRequestInfo &requestInfo )
+void TimetableAccessor::requestStopSuggestions( const StopSuggestionRequestInfo &requestInfo )
 {
+    Q_UNUSED( requestInfo );
     kDebug() << "Not implemented";
     return;
 }
 
 void TimetableAccessor::requestJourneys( const JourneyRequestInfo &requestInfo )
 {
+    Q_UNUSED( requestInfo );
     kDebug() << "Not implemented";
     return;
 }
@@ -299,6 +303,21 @@ bool TimetableAccessor::useSeparateCityValue() const
 bool TimetableAccessor::onlyUseCitiesInList() const
 {
     return m_info->onlyUseCitiesInList();
+}
+
+QString StopSuggestionRequestInfo::functionName() const
+{
+    return TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
+}
+
+QString DepartureRequestInfo::functionName() const
+{
+    return TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
+}
+
+QString JourneyRequestInfo::functionName() const
+{
+    return TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS;
 }
 
 QScriptValue StopSuggestionRequestInfo::toScriptValue( QScriptEngine *engine ) const

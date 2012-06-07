@@ -18,48 +18,47 @@
 */
 
 #include "timetablemate.h"
+
 #include <KApplication>
 #include <KAboutData>
 #include <KCmdLineArgs>
 #include <KDE/KLocale>
+#include <KMainWindow>
 
 static const char description[] =
-    I18N_NOOP("A helper application to add support for new service providers to "
-              "the plasma data engine 'PublicTransport'");
+    I18N_NOOP("A little IDE for adding support for new service providers to "
+              "the plasma data engine 'PublicTransport'.");
 
 static const char version[] = "0.3";
 
 int main(int argc, char **argv)
 {
-    KAboutData about("timetablemate", 0, ki18n("TimetableMate"), version, ki18n(description),
-                     KAboutData::License_GPL_V2, ki18n("(C) 2010 Friedrich Pülz"),
-                     KLocalizedString(), 0, "fpuelz@gmx.de");
-    about.addAuthor( ki18n("Friedrich Pülz"), KLocalizedString(), "fpuelz@gmx.de" );
-    KCmdLineArgs::init(argc, argv, &about);
+    KAboutData about( "timetablemate", 0, ki18n("TimetableMate"), version, ki18n(description),
+                      KAboutData::License_GPL_V2, ki18n("© 2010-2012 Friedrich Pülz"),
+                      KLocalizedString(), 0, "fpuelz@gmx.de" );
+    about.addAuthor( ki18n("Friedrich Pülz"), ki18n("Main Developer"), "fpuelz@gmx.de",
+                     QByteArray(), "fpuelz" );
+    about.setTranslator( ki18nc("Names of translators, separated by ','", ""),
+                         ki18nc("Emails of translators, separated by ','", "") );
+    KCmdLineArgs::init( argc, argv, &about );
 
     KCmdLineOptions options;
-    options.add("+[URL]", ki18n( "Document to open" ));
-    KCmdLineArgs::addCmdLineOptions(options);
+    options.add( "+[URL]", ki18n("Project to open") );
+    KCmdLineArgs::addCmdLineOptions( options );
     KApplication app;
 
-//     TimetableMate *widget = new TimetableMate;
-
-    // see if we are starting with session management
-    if (app.isSessionRestored()) {
-        RESTORE(TimetableMate);
+    // See if we are starting with session management
+    if ( app.isSessionRestored() ) {
+        kRestoreMainWindows< TimetableMate >();
     } else {
-        // no session.. just start up normally
+        // No session, just start up normally
         KCmdLineArgs *args = KCmdLineArgs::parsedArgs();
-        if (args->count() == 0) {
-            TimetableMate *widget = new TimetableMate;
-            widget->show();
-        } else {
-            for ( int i = 0; i < args->count(); i++ ) {
-                TimetableMate *widget = new TimetableMate;
-                widget->open( args->url(i) );
-                widget->show();
-            }
+        TimetableMate *window = new TimetableMate;
+        window->setObjectName("TimetableMate#");
+        for ( int i = 0; i < args->count(); i++ ) {
+            window->open( args->url(i) );
         }
+        window->show();
         args->clear();
     }
 

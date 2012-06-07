@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-publictransport-serviceprovider">
+    <sub-class-of type="application/xml"/>
+    <comment>Service provider plugin for the PublicTransport engine</comment>
+    <acronym>PublicTransport Provider</acronym>
+    <expanded-acronym>Service provider plugin for the PublicTransport engine</expanded-acronym>
+    <glob pattern="*_*.pts"/>
+    <glob pattern="??*_?*.xml" weight="30"/>
+  </mime-type>
+</mime-info>

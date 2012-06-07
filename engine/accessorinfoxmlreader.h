@@ -39,9 +39,9 @@ class TimetableAccessorInfo;
  **/
 struct ChangelogEntry {
     QString author; /**< The author who implemented the change. */
-    QString since_version; /**< The version of the accessor where this change was applied. */
-    QString released_with_version; /**< The version of the PublicTransport engine where this
-            * change was applied. */
+    QString version; /**< The version of the accessor where this change was applied. */
+    QString engineVersion; /**< The version of the PublicTransport engine where this
+            * change was integrated. */
     QString description; /**< A description of the change. */
 };
 
@@ -57,6 +57,11 @@ class AccessorInfoXmlReader : public QXmlStreamReader {
             // in TimetableAccessorInfo when reading xml files
 
 public:
+    enum ErrorAcceptance {
+        OnlyReadCorrectFiles,
+        ReadErrorneousFiles
+    };
+
     /** @brief Creates a new accessor info xml reader. */
     AccessorInfoXmlReader() : QXmlStreamReader() {};
 
@@ -71,16 +76,21 @@ public:
      * @return A TimetableAccessor object or NULL on error.
      **/
     TimetableAccessor* read( QIODevice *device, const QString &serviceProvider,
-                             const QString &fileName, const QString &country  );
+                             const QString &fileName, const QString &country,
+                             ErrorAcceptance errorAcceptance, QObject *parent );
+    TimetableAccessor* read( QIODevice *device, const QString &fileName,
+                             ErrorAcceptance errorAcceptance, QObject *parent );
 
 private:
     void readUnknownElement();
     TimetableAccessor* readAccessorInfo( const QString &serviceProvider,
-                                         const QString &fileName, const QString &country  );
+                                         const QString &fileName, const QString &country,
+                                         ErrorAcceptance errorAcceptance, QObject *parent );
     QString readLocalizedTextElement( QString *lang );
     bool readBooleanElement();
     void readAuthor( QString *fullname, QString *shortName, QString *email );
     void readCities( QStringList *cities, QHash<QString, QString> *cityNameReplacements );
+    void readSamples( QStringList *stops, QString *city );
     QList<ChangelogEntry> readChangelog();
 };
 

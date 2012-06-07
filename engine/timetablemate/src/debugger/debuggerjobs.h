@@ -27,15 +27,25 @@
 #ifndef DEBUGGERJOBS_H
 #define DEBUGGERJOBS_H
 
-// KDE includes
-#include <ThreadWeaver/Job>
-
 // Own includes
-#include "debuggeragent.h"
+#include "debuggerstructures.h"
 
 // PublicTransport engine includes
 #include <engine/timetableaccessor_info.h>
-#include <engine/timetableaccessor.h>
+
+// KDE includes
+#include <ThreadWeaver/Job>
+
+// If this is defined debug output gets generated when a job starts or ends
+#define DEBUG_JOB_START_END
+
+namespace Scripting
+{
+class Storage;
+class Network;
+class ResultObject;
+class Helper;
+}
 
 class QScriptProgram;
 class QScriptEngine;
@@ -53,27 +63,72 @@ class DebuggerJob : public ThreadWeaver::Job {
     Q_OBJECT
 
 public:
+    /** @brief Job types. */
+    enum Type {
+        LoadScript, /**< A job of type LoadScriptJob. */
+        EvaluateInContext, /**< A job of type EvaluateInContextJob. */
+        ExecuteConsoleCommand, /**< A job of type ExecuteConsoleCommandJob. */
+        CallScriptFunction, /**< A job of type CallScriptFunctionJob. */
+        TestUsedTimetableInformations, /**< A job of type TestUsedTimetableInformationsJob. */
+        TimetableDataRequest /**< A job of type TimetableDataRequestJob. */
+    };
+
+    /** @brief Constructor. */
     explicit DebuggerJob( DebuggerAgent *debugger, const TimetableAccessorInfo &info,
                           QMutex *engineMutex, QObject* parent = 0 );
+
+    /** @brief Destructor. */
     virtual ~DebuggerJob();
-    virtual void run() = 0;
+
+    /** @brief Get the type of this debugger job. */
+    virtual Type type() const = 0;
+
+    static QString typeToString( Type type );
+
+    /** @brief Get a string with information about this job. */
+    virtual QString toString() const { return typeToString(type()); };
+
     virtual void requestAbort();
+
+    DebuggerAgent *debugger() const { return m_debugger; };
 
     /** @brief Overwritten from ThreadWeaver::Job to return whether or not the job was successful. */
     virtual bool success() const;
+
+    /**
+     * @brief Get information about the result of the job as QString.
+     * If success() returns false, this contains an error message.
+     **/
+    inline QString explanation() const { return m_explanation; };
+
+    /** @brief Get the TimetableAccessorInfo object used by the job. */
+    inline const TimetableAccessorInfo accessorInfo() const { return m_info; };
+
+    /**
+     * @brief Only for debugging, prints to output that the job has ended (and how).
+     * @note This method gets called automatically, when debuggerRun() returns. Only call this
+     *   manually, when the thread will be killed before returning from debuggerRun().
+     **/
+    void debugJobEnd() const;
 
 protected:
     // Expects m_engineMutex and m_mutex to be unlocked
     void handleError( QScriptEngine *engine, const QString &message = QString(),
                       EvaluationResult *result = 0 );
 
-    DebuggerAgent *m_debugger;
+    /** @brief Override this method instead of run(). */
+    virtual void debuggerRun() = 0;
+
+    /** @brief Sends output to the debugger when a job starts/ends. */
+    void run();
+
+    DebuggerAgent *const m_debugger;
 //     Storage *m_scriptStorage;
 //     QSharedPointer<Network> m_scriptNetwork;
 //     QSharedPointer<ResultObject> m_scriptResult;
     const TimetableAccessorInfo m_info;
     bool m_success;
-    QString m_errorString;
+    QString m_explanation;
     QMutex *m_mutex;
     QMutex *m_engineMutex;
 };
@@ -84,6 +139,10 @@ protected:
 class LoadScriptJob : public DebuggerJob {
     Q_OBJECT
     friend class Debugger;
+
+public:
+    /** @brief Get the type of this debugger job. */
+    virtual Type type() const { return LoadScript; };
 
 protected:
     /**
@@ -98,62 +157,24 @@ protected:
      * @param parent The parent QObject. Default is 0.
      **/
     explicit LoadScriptJob( DebuggerAgent *debugger, const TimetableAccessorInfo &info,
-                            QMutex *engineMutex, QScriptProgram *script, QObject* parent = 0 )
-            : DebuggerJob(debugger, info, engineMutex, parent), m_script(script) {};
+                            QMutex *engineMutex, QScriptProgram *script,
+                            Scripting::Helper *scriptHelper, Scripting::ResultObject *scriptResult,
+                            Scripting::Network *scriptNetwork, Scripting::Storage *scriptStorage,
+                            const QMetaObject &enums, QObject* parent = 0 )
+            : DebuggerJob(debugger, info, engineMutex, parent),
+              m_script(script), m_scriptHelper(scriptHelper), m_scriptResult(scriptResult),
+              m_scriptNetwork(scriptNetwork), m_scriptStorage(scriptStorage), m_enums(enums) {};
 
-    virtual void run();
+    virtual void debuggerRun();
+    bool loadScriptObjects();
 
 private:
     QScriptProgram *m_script;
-};
-
-/**
- * @brief Runs a function in the script according to the used RequestInfo.
- **/
-class ProcessTimetableDataRequestJob : public DebuggerJob {
-    Q_OBJECT
-    friend class Debugger;
-
-public:
-    virtual ~ProcessTimetableDataRequestJob();
-
-    /** @brief Gets the result value of the evaluation, when the job has finished. */
-    QScriptValue returnValue() const;
-
-    /** @brief Gets the resulting list of timetable data objects, when the job has finished. */
-    QList< TimetableData > timetableData() const;
-
-protected:
-    /**
-     * @brief Creates a new job that calls a script function to get timetable data.
-     *
-     * Which script function gets called depends on the parseMode in @p request, ie. to get
-     * departure/arrival data, journey data or stop suggestion data.
-     *
-     * @internal Used by Debugger.
-     *
-     * @param debugger A pointer to the DebuggerAgent used for debugging.
-     * @param info The TimetableAccessorInfo object containing information about the current accessor.
-     * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
-     * @param request A RequestInfo object containing information about the request. This object
-     *   gets cloned and the original object can be deleted. Should be of type DepartureRequestInfo,
-     *   JourneyRequestInfo or StopSuggestionRequestInfo.
-     * @param debugMode Whether or not execution should be interrupted at start.
-     * @param parent The parent QObject. Default is 0.
-     **/
-    explicit ProcessTimetableDataRequestJob( DebuggerAgent *debugger, const TimetableAccessorInfo &info,
-            QMutex *engineMutex, const RequestInfo *request,
-            DebugMode debugMode = InterruptOnExceptions, QObject* parent = 0 )
-            : DebuggerJob(debugger, info, engineMutex, parent),
-              m_request(request->clone()), m_debugMode(debugMode) {};
-
-    virtual void run();
-
-private:
-    const RequestInfo *m_request;
-    const DebugMode m_debugMode;
-    QScriptValue m_returnValue;
-    QList< TimetableData > m_timetableData;
+    Scripting::Helper *const m_scriptHelper;
+    Scripting::ResultObject *const m_scriptResult;
+    Scripting::Network *const m_scriptNetwork;
+    Scripting::Storage *const m_scriptStorage;
+    const QMetaObject m_enums;
 };
 
 /**
@@ -164,11 +185,16 @@ class EvaluateInContextJob : public DebuggerJob {
     friend class Debugger;
 
 public:
+    /** @brief Get the type of this debugger job. */
+    virtual Type type() const { return EvaluateInContext; };
+
     /** @brief Gets the result of the evaluation, when the job has finished. */
     EvaluationResult result() const;
 
-    /** @brief Overwritten to only be executed, when the debugger is not running. */
-    virtual bool canBeExecuted();
+    virtual QString toString() const;
+
+protected slots:
+    void evaluationAborted( const QString &errorMessage );
 
 protected:
     /**
@@ -187,14 +213,13 @@ protected:
                                    QMutex *engineMutex, const QString &program,
                                    const QString &context, QObject* parent = 0 )
             : DebuggerJob(debugger, info, engineMutex, parent),
-              m_program(program), m_context(context) {};
+              m_program(program), m_context(QString(context).replace( '\n', ' ' )) {};
 
-    virtual void run();
+    virtual void debuggerRun();
 
 private:
     const QString m_program;
     const QString m_context;
-//     const bool m_interrupt; TODO
     EvaluationResult m_result;
 };
 
@@ -206,8 +231,11 @@ class ExecuteConsoleCommandJob : public DebuggerJob {
     friend class Debugger;
 
 public:
+    /** @brief Get the type of this debugger job. */
+    virtual Type type() const { return ExecuteConsoleCommand; };
+
     /** @brief Gets the ConsoleCommand that gets run in this job. */
-    ConsoleCommand command() const;
+    const ConsoleCommand command() const;
 
     /**
      * @brief Gets the "answer string" of the console command, when the job has finished.
@@ -215,6 +243,8 @@ public:
      * The "answer string" or return value can contain HTML and may be empty.
      **/
     QString returnValue() const;
+
+    virtual QString toString() const;
 
 protected:
     /**
@@ -233,10 +263,10 @@ protected:
                                        QObject* parent = 0 )
             : DebuggerJob(debugger, info, engineMutex, parent), m_command(command) {};
 
-    virtual void run();
+    virtual void debuggerRun();
 
 private:
-    ConsoleCommand m_command;
+    const ConsoleCommand m_command;
     QString m_returnValue;
 };
 

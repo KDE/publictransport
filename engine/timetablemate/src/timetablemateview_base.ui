@@ -6,27 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>505</width>
-    <height>608</height>
+    <width>453</width>
+    <height>571</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>kapp4_base</string>
+   <string notr="true">Project Settings</string>
   </property>
-  <property name="autoFillBackground">
-   <bool>true</bool>
-  </property>
-  <layout class="QFormLayout" name="formLayout">
-   <property name="fieldGrowthPolicy">
-    <enum>QFormLayout::ExpandingFieldsGrow</enum>
-   </property>
-   <property name="rowWrapPolicy">
-    <enum>QFormLayout::WrapLongRows</enum>
-   </property>
-   <property name="formAlignment">
-    <set>Qt::AlignHCenter|Qt::AlignTop</set>
-   </property>
-   <item row="0" column="0" colspan="2">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
       <number>0</number>
@@ -36,7 +24,7 @@
        <string comment="@title:tab">&amp;General</string>
       </attribute>
       <layout class="QFormLayout" name="formLayout_2">
-       <item row="0" column="0">
+       <item row="1" column="0">
         <widget class="QLabel" name="lblName">
          <property name="text">
           <string>&amp;Name:</string>
@@ -46,7 +34,7 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="1">
+       <item row="1" column="1">
         <layout class="QHBoxLayout" name="nameLayout">
          <property name="leftMargin">
           <number>0</number>
@@ -79,7 +67,7 @@
          </item>
         </layout>
        </item>
-       <item row="2" column="0">
+       <item row="3" column="0">
         <widget class="QLabel" name="lblDescription">
          <property name="text">
           <string>&amp;Description:</string>
@@ -89,14 +77,14 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
+       <item row="3" column="1">
         <widget class="KRichTextWidget" name="description">
          <property name="clickMessage">
           <string>Description of the accessor. Should contain the supported cities / countries, things that may not work with this accessor, etc.</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="5" column="0">
         <widget class="QLabel" name="lblVersion">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -112,7 +100,7 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
+       <item row="5" column="1">
         <widget class="KLineEdit" name="version">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -134,7 +122,7 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="0">
+       <item row="7" column="0">
         <widget class="QLabel" name="lblScriptFile">
          <property name="text">
           <string>&amp;Script File:</string>
@@ -144,7 +132,7 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
+       <item row="7" column="1">
         <layout class="QHBoxLayout" name="scriptFileLayout">
          <property name="leftMargin">
           <number>0</number>
@@ -217,7 +205,7 @@
          </item>
         </layout>
        </item>
-       <item row="8" column="0">
+       <item row="9" column="0">
         <widget class="QLabel" name="lblAuthor">
          <property name="text">
           <string>&amp;Author:</string>
@@ -227,7 +215,7 @@
          </property>
         </widget>
        </item>
-       <item row="8" column="1">
+       <item row="9" column="1">
         <widget class="KLineEdit" name="author">
          <property name="inputMask">
           <string/>
@@ -240,7 +228,7 @@
          </property>
         </widget>
        </item>
-       <item row="10" column="0">
+       <item row="11" column="0">
         <widget class="QLabel" name="lblShortAuthor">
          <property name="text">
           <string>Short Author &amp;Name:</string>
@@ -250,7 +238,7 @@
          </property>
         </widget>
        </item>
-       <item row="10" column="1">
+       <item row="11" column="1">
         <widget class="KLineEdit" name="shortAuthor">
          <property name="inputMask">
           <string/>
@@ -263,7 +251,7 @@
          </property>
         </widget>
        </item>
-       <item row="12" column="0">
+       <item row="13" column="0">
         <widget class="QLabel" name="lblEmail">
          <property name="text">
           <string>&amp;E-Mail:</string>
@@ -273,7 +261,7 @@
          </property>
         </widget>
        </item>
-       <item row="12" column="1">
+       <item row="13" column="1">
         <widget class="KLineEdit" name="email">
          <property name="inputMask">
           <string/>
@@ -286,7 +274,7 @@
          </property>
         </widget>
        </item>
-       <item row="14" column="0">
+       <item row="15" column="0">
         <widget class="QLabel" name="lblUrl">
          <property name="text">
           <string>Home Page &amp;URL:</string>
@@ -296,7 +284,7 @@
          </property>
         </widget>
        </item>
-       <item row="14" column="1">
+       <item row="15" column="1">
         <layout class="QHBoxLayout" name="horizontalLayout_5">
          <property name="leftMargin">
           <number>0</number>
@@ -341,7 +329,7 @@
          </item>
         </layout>
        </item>
-       <item row="15" column="0">
+       <item row="16" column="0">
         <widget class="QLabel" name="lblShortUrl">
          <property name="text">
           <string>Short U&amp;RL:</string>
@@ -351,7 +339,7 @@
          </property>
         </widget>
        </item>
-       <item row="15" column="1">
+       <item row="16" column="1">
         <widget class="KLineEdit" name="shortUrl">
          <property name="toolTip">
           <string comment="@info:tooltip">Short version of the home page URL, i.e. do not include &quot;www.&quot; here.&lt;nl/&gt;This is only used as display string for links.</string>
@@ -364,6 +352,35 @@
          </property>
          <property name="showClearButton" stdset="0">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="lblInfo">
+         <property name="text">
+          <string>Save Path:</string>
+         </property>
+         <property name="buddy">
+          <cstring>savePath</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="KLineEdit" name="savePath">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="frame">
+          <bool>true</bool>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+         <property name="squeezedTextEnabled">
+          <bool>true</bool>
+         </property>
+         <property name="showClearButton" stdset="0">
+          <bool>false</bool>
          </property>
         </widget>
        </item>
@@ -387,49 +404,7 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="1">
-        <layout class="QHBoxLayout" name="fileTypeVersionLayout">
-         <property name="leftMargin">
-          <number>0</number>
-         </property>
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <item>
-          <widget class="KLineEdit" name="fileVersion">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="toolTip">
-            <string comment="@info:tooltip">The version of the XML accessor file type.&lt;nl/&gt;The PublicTransport data engine currently only accepts 1.0 as version</string>
-           </property>
-           <property name="inputMask">
-            <string/>
-           </property>
-           <property name="maxLength">
-            <number>64</number>
-           </property>
-           <property name="showClearButton" stdset="0">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="lblFileVersionWarning">
-           <property name="text">
-            <string notr="true">&lt;warning if not the only supported &quot;1.1&quot;&gt;</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="1" column="0">
+       <item row="2" column="0">
         <widget class="QLabel" name="lblType">
          <property name="enabled">
           <bool>false</bool>
@@ -442,7 +417,7 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
+       <item row="2" column="1">
         <widget class="KComboBox" name="type">
          <property name="enabled">
           <bool>false</bool>
@@ -452,20 +427,15 @@
          </property>
          <item>
           <property name="text">
-           <string>HTML</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>XML</string>
+           <string>Scripted</string>
           </property>
          </item>
         </widget>
        </item>
-       <item row="2" column="0" colspan="2">
+       <item row="3" column="0" colspan="2">
         <widget class="KSeparator" name="kseparator_2"/>
        </item>
-       <item row="3" column="0">
+       <item row="4" column="0">
         <widget class="QLabel" name="lblDefaultVehicleType">
          <property name="text">
           <string>Default &amp;Vehicle Type:</string>
@@ -475,14 +445,14 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="1">
+       <item row="4" column="1">
         <widget class="KComboBox" name="defaultVehicleType">
          <property name="toolTip">
           <string comment="@info:tooltip">The vehicle type to be used if it could not be determined from the parsed document.</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="5" column="0">
         <widget class="QLabel" name="lblRawStopSuggestionsUrl_2">
          <property name="text">
           <string>Min. Fetch &amp;Wait:</string>
@@ -492,7 +462,7 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
+       <item row="5" column="1">
         <widget class="QSpinBox" name="minFetchWait">
          <property name="toolTip">
           <string comment="@info:tooltip">The minimum time in minutes to wait between fetches of the same URL.
@@ -518,14 +488,11 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="0" colspan="2">
+       <item row="6" column="0" colspan="2">
         <widget class="KSeparator" name="kseparator"/>
        </item>
-       <item row="6" column="0">
+       <item row="7" column="0">
         <widget class="QLabel" name="lblUseCityValue">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
          <property name="text">
           <string>&amp;Use City Value:</string>
          </property>
@@ -534,20 +501,14 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
+       <item row="7" column="1">
         <widget class="QCheckBox" name="useCityValue">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="toolTip">
-          <string comment="@info:tooltip">Automatically checked, if the raw departure URL contains a placeholder for the city.</string>
-         </property>
          <property name="text">
           <string/>
          </property>
         </widget>
        </item>
-       <item row="7" column="0" colspan="2">
+       <item row="8" column="0" colspan="2">
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
           <string>Predefined &amp;Cities</string>
@@ -587,6 +548,67 @@
           </item>
          </layout>
         </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="KLineEdit" name="fileVersion">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string comment="@info:tooltip">The version of the XML accessor file type.&lt;nl/&gt;The PublicTransport data engine currently only accepts 1.0 as version</string>
+         </property>
+         <property name="inputMask">
+          <string/>
+         </property>
+         <property name="maxLength">
+          <number>64</number>
+         </property>
+         <property name="showClearButton" stdset="0">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabSamples">
+      <attribute name="title">
+       <string>Sample Data</string>
+      </attribute>
+      <layout class="QFormLayout" name="formLayout">
+       <property name="fieldGrowthPolicy">
+        <enum>QFormLayout::ExpandingFieldsGrow</enum>
+       </property>
+       <item row="1" column="0" colspan="2">
+        <widget class="KEditListBox" name="sampleStopNames">
+         <property name="title">
+          <string>Sample &amp;Stop Names</string>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+         <property name="buttons">
+          <set>KEditListBox::Add|KEditListBox::Remove</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="lblSampleCity">
+         <property name="text">
+          <string>Sampe &amp;City:</string>
+         </property>
+         <property name="buddy">
+          <cstring>sampleCity</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="KLineEdit" name="sampleCity"/>
        </item>
       </layout>
      </widget>
@@ -642,7 +664,7 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>tabWidget</tabstop>
+  <tabstop>savePath</tabstop>
   <tabstop>name</tabstop>
   <tabstop>currentLanguage</tabstop>
   <tabstop>description</tabstop>
@@ -652,12 +674,16 @@
   <tabstop>btnDetachScriptFile</tabstop>
   <tabstop>btnBrowseForScriptFile</tabstop>
   <tabstop>author</tabstop>
+  <tabstop>shortAuthor</tabstop>
   <tabstop>email</tabstop>
-  <tabstop>fileVersion</tabstop>
+  <tabstop>url</tabstop>
+  <tabstop>btnUrlOpen</tabstop>
+  <tabstop>shortUrl</tabstop>
   <tabstop>type</tabstop>
   <tabstop>defaultVehicleType</tabstop>
   <tabstop>minFetchWait</tabstop>
   <tabstop>useCityValue</tabstop>
+  <tabstop>onlyAllowPredefinedCities</tabstop>
  </tabstops>
  <resources/>
  <connections/>
