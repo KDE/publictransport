@@ -754,7 +754,10 @@ void TimetableMate::updateWindowTitle() {
 }
 
 void TimetableMate::activePartChanged( KParts::Part *part ) {
+    // Merge the GUI of the part, do not update while merging to avoid flicker
+    setUpdatesEnabled( false );
     createGUI( part );
+    setUpdatesEnabled( true );
 
     if ( part ) {
         // Manually hide actions of the part
@@ -1039,16 +1042,14 @@ void TimetableMate::currentTabChanged( int index ) {
     // Clear status bar messages
     statusBar()->showMessage( QString() );
 
-    // Don't flicker while changing the active part
-    setUpdatesEnabled( false );
-
     AbstractTab *tab = index == -1 ? 0 : qobject_cast<AbstractTab*>(m_tabWidget->widget(index));
     if ( tab && (tab->isAccessorDocumentTab() || tab->isScriptTab()) ) { // go to accessor or script tab
         AbstractDocumentTab *documentTab = qobject_cast< AbstractDocumentTab* >( tab );
         Q_ASSERT( documentTab );
         if ( documentTab ) {
-            m_partManager->addPart( documentTab->document() );
-            m_partManager->setActivePart( documentTab->document(), m_tabWidget );
+            if ( !m_partManager->parts().contains(documentTab->document()) ) {
+                m_partManager->addPart( documentTab->document() );
+            }
             documentTab->document()->activeView()->setFocus();
         }
     } else {
@@ -1114,9 +1115,6 @@ void TimetableMate::currentTabChanged( int index ) {
             m_webInspectorDock->setWebTab( 0 );
         }
     }
-
-    // Reset updates
-    setUpdatesEnabled( true );
 
     // Store new tab and update window title
     m_currentTab = tab;
@@ -1598,21 +1596,13 @@ AbstractTab *TimetableMate::showProjectTab( bool addTab, AbstractTab *tab )
         return 0;
     }
 
-    // Create/switch to accessor document tab
-    AbstractDocumentTab *documentTab = qobject_cast< AbstractDocumentTab* >( tab );
-    m_tabWidget->setUpdatesEnabled( false );
     if ( addTab ) {
+        // Add the tab
         m_tabWidget->addTab( tab, tab->icon(), tab->title() );
-
-        if ( documentTab ) {
-            m_partManager->addPart( documentTab->document() );
-        }
-    } else if ( documentTab ) {
-        m_partManager->setActivePart( documentTab->document(), documentTab->widget() );
     }
 
+    // Switch to the tab
     m_tabWidget->setCurrentWidget( tab );
-    m_tabWidget->setUpdatesEnabled( true );
     return tab;
 }
 
