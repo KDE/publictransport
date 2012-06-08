@@ -25,6 +25,7 @@
 #include "accessorinfoxmlreader.h"
 #include "departureinfo.h"
 #include "timetableaccessor_script.h"
+#include "request.h"
 
 // KDE includes
 #include <KIO/NetAccess>
@@ -218,23 +219,30 @@ QStringList TimetableAccessor::featuresLocalized() const
     return featuresl10n;
 }
 
-void TimetableAccessor::requestDepartures( const DepartureRequestInfo &requestInfo )
+void TimetableAccessor::requestDepartures( const DepartureRequest &request )
 {
-    Q_UNUSED( requestInfo );
+    Q_UNUSED( request );
     kDebug() << "Not implemented";
     return;
 }
 
-void TimetableAccessor::requestStopSuggestions( const StopSuggestionRequestInfo &requestInfo )
+void TimetableAccessor::requestArrivals( const ArrivalRequest &request )
 {
-    Q_UNUSED( requestInfo );
+    Q_UNUSED( request );
     kDebug() << "Not implemented";
     return;
 }
 
-void TimetableAccessor::requestJourneys( const JourneyRequestInfo &requestInfo )
+void TimetableAccessor::requestStopSuggestions( const StopSuggestionRequest &request )
 {
-    Q_UNUSED( requestInfo );
+    Q_UNUSED( request );
+    kDebug() << "Not implemented";
+    return;
+}
+
+void TimetableAccessor::requestJourneys( const JourneyRequest &request )
+{
+    Q_UNUSED( request );
     kDebug() << "Not implemented";
     return;
 }
@@ -305,50 +313,7 @@ bool TimetableAccessor::onlyUseCitiesInList() const
     return m_info->onlyUseCitiesInList();
 }
 
-QString StopSuggestionRequestInfo::functionName() const
+TimetableAccessor::JobInfos::~JobInfos()
 {
-    return TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
-}
-
-QString DepartureRequestInfo::functionName() const
-{
-    return TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
-}
-
-QString JourneyRequestInfo::functionName() const
-{
-    return TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS;
-}
-
-QScriptValue StopSuggestionRequestInfo::toScriptValue( QScriptEngine *engine ) const
-{
-    QScriptValue argument = engine->newObject();
-    argument.setProperty( QLatin1String("stop"), stop );
-    argument.setProperty( QLatin1String("city"), city );
-    argument.setProperty( QLatin1String("maxCount"), maxCount );
-    return argument;
-}
-
-QScriptValue DepartureRequestInfo::toScriptValue( QScriptEngine *engine ) const
-{
-    QScriptValue argument = engine->newObject();
-    argument.setProperty( QLatin1String("stop"), stop );
-    argument.setProperty( QLatin1String("city"), city );
-    argument.setProperty( QLatin1String("maxCount"), maxCount );
-    argument.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
-    argument.setProperty( QLatin1String("dataType"), dataType );
-    return argument;
-}
-
-QScriptValue JourneyRequestInfo::toScriptValue( QScriptEngine *engine ) const
-{
-    QScriptValue argument = engine->newObject();
-    argument.setProperty( QLatin1String("stop"), stop );
-    argument.setProperty( QLatin1String("city"), city );
-    argument.setProperty( QLatin1String("maxCount"), maxCount );
-    argument.setProperty( QLatin1String("originStop"), stop ); // Already in argument as "stop"
-    argument.setProperty( QLatin1String("targetStop"), targetStop );
-    argument.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
-    argument.setProperty( QLatin1String("dataType"), dataType );
-    return argument;
+    delete request;
 }

@@ -46,6 +46,7 @@
 #include <engine/timetableaccessor.h>
 #include <engine/timetableaccessor_info.h>
 #include <engine/timetableaccessor_script.h>
+#include <engine/request.h>
 
 // KDE includes
 #include <KUrlComboBox>
@@ -239,8 +240,8 @@ public:
         q->connect( debugger, SIGNAL(errorMessage(QString)), q, SLOT(emitErrorMessage(QString)) );
         q->connect( debugger, SIGNAL(loadScriptResult(ScriptErrorType,QString)),
                     q, SLOT(loadScriptResult(ScriptErrorType,QString)) );
-        q->connect( debugger, SIGNAL(requestTimetableDataResult(QSharedPointer<RequestInfo>,bool,QString,QList<TimetableData>,QScriptValue)),
-                    q, SLOT(functionCallResult(QSharedPointer<RequestInfo>,bool,QString,QList<TimetableData>,QScriptValue)) );
+        q->connect( debugger, SIGNAL(requestTimetableDataResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QScriptValue)),
+                    q, SLOT(functionCallResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QScriptValue)) );
 
         state = Project::NoProjectLoaded;
         return true;
@@ -916,8 +917,8 @@ public:
         return true;
     };
 
-    // Call script function @p functionName using @p requestInfo in the given @p debugMode
-    void callScriptFunction( RequestInfo *requestInfo,
+    // Call script function @p functionName using @p request in the given @p debugMode
+    void callScriptFunction( AbstractRequest *request,
                              Debugger::DebugFlag debugMode = Debugger::InterruptOnExceptions )
     {
         Q_Q( Project );
@@ -929,7 +930,7 @@ public:
 
         const QString &text = q->scriptText();
         debugger->loadScript( text, accessor->info() );
-        debugger->requestTimetableData( requestInfo, debugMode );
+        debugger->requestTimetableData( request, debugMode );
     };
 
     // Call script function getTimetable() in the given @p debugMode
@@ -937,10 +938,9 @@ public:
     {
         Q_Q( Project );
         bool cancelled = false;
-        DepartureRequestInfo requestInfo =
-                q->getDepartureRequestInfo( parentWidget(), &cancelled );
+        DepartureRequest request = q->getDepartureRequest( parentWidget(), &cancelled );
         if ( !cancelled ) {
-            callScriptFunction( &requestInfo, debugMode );
+            callScriptFunction( &request, debugMode );
         }
     };
 
@@ -949,10 +949,9 @@ public:
     {
         Q_Q( Project );
         bool cancelled = false;
-        StopSuggestionRequestInfo requestInfo =
-                q->getStopSuggestionRequestInfo( parentWidget(), &cancelled );
+        StopSuggestionRequest request = q->getStopSuggestionRequest( parentWidget(), &cancelled );
         if ( !cancelled ) {
-            callScriptFunction( &requestInfo, debugMode );
+            callScriptFunction( &request, debugMode );
         }
     };
 
@@ -961,10 +960,9 @@ public:
     {
         Q_Q( Project );
         bool cancelled = false;
-        JourneyRequestInfo requestInfo =
-                q->getJourneyRequestInfo( parentWidget(), &cancelled );
+        JourneyRequest request = q->getJourneyRequest( parentWidget(), &cancelled );
         if ( !cancelled ) {
-            callScriptFunction( &requestInfo, debugMode );
+            callScriptFunction( &request, debugMode );
         }
     };
 
@@ -1159,27 +1157,27 @@ public:
                 // higher values can mean better test results, eg. showing rare errors
                 const int testItemCount = 30;
 
-                // Create RequestInfo object
-                RequestInfo *requestInfo = 0;
+                // Create request object
+                AbstractRequest *request = 0;
                 switch ( test ) {
                 case TestModel::DepartureTest:
-                    requestInfo = new DepartureRequestInfo( "TEST_DEPARTURES",
+                    request = new DepartureRequest( "TEST_DEPARTURES",
                             info->sampleStopNames().first(), QDateTime::currentDateTime(),
-                            testItemCount, "departures", info->sampleCity() );
+                            testItemCount, info->sampleCity() );
                     break;
                 case TestModel::ArrivalTest:
-                    requestInfo = new DepartureRequestInfo( "TEST_ARRIVALS",
+                    request = new ArrivalRequest( "TEST_ARRIVALS",
                             info->sampleStopNames().first(), QDateTime::currentDateTime(),
-                            testItemCount, "arrivals", info->sampleCity() );
+                            testItemCount, info->sampleCity() );
                     break;
                 case TestModel::StopSuggestionTest:
-                    requestInfo = new StopSuggestionRequestInfo( "TEST_STOP_SUGGESTIONS",
+                    request = new StopSuggestionRequest( "TEST_STOP_SUGGESTIONS",
                             info->sampleStopNames().first(), testItemCount, info->sampleCity() );
                     break;
                 case TestModel::JourneyTest:
-                    requestInfo = new JourneyRequestInfo( "TEST_JOURNEYS",
+                    request = new JourneyRequest( "TEST_JOURNEYS",
                             info->sampleStopNames().first(), info->sampleStopNames()[1],
-                            QDateTime::currentDateTime(), testItemCount, QString(), "journeys",
+                            QDateTime::currentDateTime(), testItemCount, QString(),
                             info->sampleCity() );
                     break;
                 default:
@@ -1188,9 +1186,9 @@ public:
                 }
 
                 // Create job
-                job = debugger->createTimetableDataRequestJob( requestInfo, InterruptOnExceptions );
-                testName = requestInfo->sourceName;
-                delete requestInfo;
+                job = debugger->createTimetableDataRequestJob( request, InterruptOnExceptions );
+                testName = request->sourceName;
+                delete request;
             }
 
             // Connect job and try to enqueue it
@@ -2681,12 +2679,12 @@ void Project::testJobDone( ThreadWeaver::Job *job )
     delete job;
 }
 
-void Project::functionCallResult( const QSharedPointer< RequestInfo > &requestInfo,
+void Project::functionCallResult( const QSharedPointer< AbstractRequest > &request,
                                   bool success, const QString &explanation,
                                   const QList< TimetableData >& timetableData,
                                   const QScriptValue &returnValue )
 {
-    Q_UNUSED( requestInfo );
+    Q_UNUSED( request );
     Q_UNUSED( timetableData );
     Q_UNUSED( returnValue );
     if ( !success ) {
@@ -2740,7 +2738,7 @@ void Project::debugGetJourneys()
     d->callGetJourneys( Debugger::InterruptAtStart );
 }
 
-DepartureRequestInfo Project::getDepartureRequestInfo( QWidget *parent, bool* cancelled ) const
+DepartureRequest Project::getDepartureRequest( QWidget *parent, bool* cancelled ) const
 {
     Q_D( const Project );
     parent = d->parentWidget( parent );
@@ -2773,22 +2771,22 @@ DepartureRequestInfo Project::getDepartureRequestInfo( QWidget *parent, bool* ca
 
     // Show the dialog
     int result = dialog->exec();
-    DepartureRequestInfo info;
+    DepartureRequest request;
     if ( result == KDialog::Accepted ) {
-        info.city = city ? city->text() : QString();
-        info.stop = stop->text();
-        info.dateTime = dateTime->dateTime();
-        info.dataType = dataType->itemData( dataType->currentIndex() ).toString();
+        request.city = city ? city->text() : QString();
+        request.stop = stop->text();
+        request.dateTime = dateTime->dateTime();
+        request.dataType = dataType->itemData( dataType->currentIndex() ).toString();
     }
     if ( cancelled ) {
         *cancelled = result != KDialog::Accepted;
     }
 
     delete dialog;
-    return info;
+    return request;
 }
 
-StopSuggestionRequestInfo Project::getStopSuggestionRequestInfo( QWidget *parent,
+StopSuggestionRequest Project::getStopSuggestionRequest( QWidget *parent,
                                                                  bool* cancelled ) const
 {
     Q_D( const Project );
@@ -2807,7 +2805,7 @@ StopSuggestionRequestInfo Project::getStopSuggestionRequestInfo( QWidget *parent
     dialog->setMainWidget( w );
     stop->setFocus();
 
-    StopSuggestionRequestInfo info;
+    StopSuggestionRequest info;
     int result = dialog->exec();
     if ( result == KDialog::Accepted ) {
         info.city = city ? city->text() : QString();
@@ -2821,7 +2819,7 @@ StopSuggestionRequestInfo Project::getStopSuggestionRequestInfo( QWidget *parent
     return info;
 }
 
-JourneyRequestInfo Project::getJourneyRequestInfo( QWidget *parent, bool* cancelled ) const
+JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) const
 {
     Q_D( const Project );
     parent = d->parentWidget( parent );
@@ -2856,7 +2854,7 @@ JourneyRequestInfo Project::getJourneyRequestInfo( QWidget *parent, bool* cancel
     }
     originStop->setFocus();
 
-    JourneyRequestInfo info;
+    JourneyRequest info;
     int result = dialog->exec();
     if ( result == KDialog::Accepted ) {
         info.city = city ? city->text() : QString();

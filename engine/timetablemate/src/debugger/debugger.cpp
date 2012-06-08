@@ -31,6 +31,7 @@
 #include <engine/timetableaccessor_info.h>
 #include <engine/timetableaccessor_script.h>
 #include <engine/script_thread.h>
+#include <engine/request.h>
 
 // KDE includes
 #include <KDebug>
@@ -295,7 +296,7 @@ LoadScriptJob *Debugger::enqueueNewLoadScriptJob()
 }
 
 TimetableDataRequestJob *Debugger::createTimetableDataRequestJob(
-        const RequestInfo *request, DebugFlags debugFlags )
+        const AbstractRequest *request, DebugFlags debugFlags )
 {
     Q_ASSERT( m_info );
     return new TimetableDataRequestJob( m_debugger, *m_info, m_engineMutex,
@@ -337,16 +338,16 @@ bool Debugger::canEvaluate( const QString &program ) const
     return m_engine->canEvaluate( program );
 }
 
-bool Debugger::requestTimetableData( const RequestInfo *requestInfo, DebugFlags debugFlags )
+bool Debugger::requestTimetableData( const AbstractRequest *request, DebugFlags debugFlags )
 {
     if ( m_lastScriptError != NoScriptError ) {
         kDebug() << "Script could not be loaded correctly";
-        emit requestTimetableDataResult( QSharedPointer< RequestInfo >(requestInfo->clone()),
+        emit requestTimetableDataResult( QSharedPointer< AbstractRequest >(request->clone()),
                 false, i18nc("@info", "Script could not be loaded correctly") );
         return false;
     }
 
-    TimetableDataRequestJob *runScriptJob = createTimetableDataRequestJob( requestInfo, debugFlags );
+    TimetableDataRequestJob *runScriptJob = createTimetableDataRequestJob( request, debugFlags );
     enqueueJob( runScriptJob );
     return true;
 }

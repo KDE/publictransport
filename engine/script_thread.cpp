@@ -24,6 +24,7 @@
 #include "scripting.h"
 #include "timetableaccessor_script.h"
 #include "timetableaccessor_info.h"
+#include "request.h"
 
 // KDE includes
 #include <ThreadWeaver/Thread>
@@ -49,9 +50,9 @@ ScriptJob::ScriptJob( QScriptProgram *script, const TimetableAccessorInfo* info,
       m_info( *info )
 {
     ++thread_count; kDebug() << "Thread count:" << thread_count;
-    qRegisterMetaType<DepartureRequestInfo>( "DepartureRequestInfo" );
-    qRegisterMetaType<JourneyRequestInfo>( "JourneyRequestInfo" );
-    qRegisterMetaType<StopSuggestionRequestInfo>( "StopSuggestionRequestInfo" );
+    qRegisterMetaType<DepartureRequest>( "DepartureRequest" );
+    qRegisterMetaType<JourneyRequest>( "JourneyRequest" );
+    qRegisterMetaType<StopSuggestionRequest>( "StopSuggestionRequest" );
 }
 
 ScriptJob::~ScriptJob()
@@ -107,7 +108,7 @@ void ScriptJob::run()
 //                 emit stopSuggestionsReady( m_scriptResult->data(),
 //                         m_scriptResult->features(), m_scriptResult->hints(),
 //                         QString(), globalInfo,
-//                         *dynamic_cast<const StopSuggestionRequestInfo*>(requestInfo()),
+//                         *dynamic_cast<const StopSuggestionRequest*>(request()),
 //                         true );
 //                 m_scriptResult.clear();
 //                 delete m_scriptResult.data();
@@ -118,7 +119,7 @@ void ScriptJob::run()
         return;
     }
     kDebug() << "Run script job";
-    kDebug() << "JOB:" << requestInfo()->stop << requestInfo()->dateTime << requestInfo()->parseMode;
+    kDebug() << "JOB:" << request()->stop << request()->dateTime << request()->parseMode;
 //     emit begin( m_sourceName );
 
     // Store start time of the script
@@ -127,9 +128,9 @@ void ScriptJob::run()
 
     // Add call to the appropriate function
     QString functionName;
-    QScriptValueList arguments = QScriptValueList() << requestInfo()->toScriptValue( m_engine );
-    kDebug() << "Stop" << requestInfo()->toScriptValue( m_engine ).property("stop").toString();
-    switch ( requestInfo()->parseMode ) {
+    QScriptValueList arguments = QScriptValueList() << request()->toScriptValue( m_engine );
+    kDebug() << "Stop" << request()->toScriptValue( m_engine ).property("stop").toString();
+    switch ( request()->parseMode ) {
     case ParseForDeparturesArrivals:
         functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
         break;
@@ -140,7 +141,7 @@ void ScriptJob::run()
         functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
         break;
     default:
-        kDebug() << "Parse mode unsupported:" << requestInfo()->parseMode;
+        kDebug() << "Parse mode unsupported:" << request()->parseMode;
         break;
     }
 
@@ -207,44 +208,54 @@ void ScriptJob::run()
 
         // Inform about script run time
         kDebug() << " > Script finished after" << (time.elapsed() / 1000.0)
-                    << "seconds: " << m_info.scriptFileName() << thread() << requestInfo()->parseMode;
+                    << "seconds: " << m_info.scriptFileName() << thread() << request()->parseMode;
 
         // If data for the current job has already been published, do not emit
         // completed with an empty resultset
         if ( m_published == 0 || m_scriptResult->count() > m_published ) {
             const bool couldNeedForcedUpdate = m_published > 0;
 //             emitReady(
-            switch ( requestInfo()->parseMode ) {
-            case ParseForDeparturesArrivals:
-                emit departuresReady( m_scriptResult->data().mid(m_published),
-                        m_scriptResult->features(), m_scriptResult->hints(),
-                        m_scriptNetwork->lastUrl(), globalInfo,
-                        *dynamic_cast<const DepartureRequestInfo*>(requestInfo()),
-                        couldNeedForcedUpdate );
+            switch ( request()->parseMode ) {
+            case ParseForDeparturesArrivals: {
+                const DepartureRequest *departureRequest =
+                        dynamic_cast< const DepartureRequest* >( request() );
+                if ( departureRequest ) {
+                    emit departuresReady( m_scriptResult->data().mid(m_published),
+                            m_scriptResult->features(), m_scriptResult->hints(),
+                            m_scriptNetwork->lastUrl(), globalInfo,
+                            *departureRequest, couldNeedForcedUpdate );
+                } else {
+                    emit arrivalsReady( m_scriptResult->data().mid(m_published),
+                            m_scriptResult->features(), m_scriptResult->hints(),
+                            m_scriptNetwork->lastUrl(), globalInfo,
+                            *dynamic_cast<const ArrivalRequest*>(request()),
+                            couldNeedForcedUpdate );
+                }
                 break;
+            }
             case ParseForJourneys:
                 emit journeysReady( m_scriptResult->data().mid(m_published),
                         m_scriptResult->features(), m_scriptResult->hints(),
                         m_scriptNetwork->lastUrl(), globalInfo,
-                        *dynamic_cast<const JourneyRequestInfo*>(requestInfo()),
+                        *dynamic_cast<const JourneyRequest*>(request()),
                         couldNeedForcedUpdate );
                 break;
             case ParseForStopSuggestions:
                 emit stopSuggestionsReady( m_scriptResult->data().mid(m_published),
                         m_scriptResult->features(), m_scriptResult->hints(),
                         m_scriptNetwork->lastUrl(), globalInfo,
-                        *dynamic_cast<const StopSuggestionRequestInfo*>(requestInfo()),
+                        *dynamic_cast<const StopSuggestionRequest*>(request()),
                         couldNeedForcedUpdate );
                 break;
 
             default:
-                kDebug() << "Parse mode unsupported:" << requestInfo()->parseMode;
+                kDebug() << "Parse mode unsupported:" << request()->parseMode;
                 break;
             }
 //             emit dataReady( m_scriptResult->data().mid(m_published),
 //                             m_scriptResult->features(), m_scriptResult->hints(),
 //                             m_scriptNetwork->lastUrl(), globalInfo,
-//                             requestInfo(), couldNeedForcedUpdate );
+//                             request(), couldNeedForcedUpdate );
         }
 //         emit end( m_sourceName );
 
@@ -387,41 +398,51 @@ bool ScriptJob::loadScript( QScriptProgram *script )
 
 void ScriptJob::publish()
 {
-    qDebug() << "PUBLISH" << requestInfo()->parseMode << m_scriptResult->count() << "'ED" << m_published << m_scriptResult << m_scriptNetwork << thread();
+    qDebug() << "PUBLISH" << request()->parseMode << m_scriptResult->count() << "'ED" << m_published << m_scriptResult << m_scriptNetwork << thread();
     // Only publish, if there is data which is not already published
     if ( m_scriptResult->count() > m_published ) {
         GlobalTimetableInfo globalInfo;
         QList< TimetableData > data = m_scriptResult->data().mid( m_published );
-        kDebug() << "Publish" << data.count() << "items" << requestInfo()->sourceName;
+        kDebug() << "Publish" << data.count() << "items" << request()->sourceName;
         const bool couldNeedForcedUpdate = m_published > 0;
 //         emit dataReady( data, m_scriptResult->features(), m_scriptResult->hints(),
-//                         m_scriptNetwork->lastUrl(), globalInfo, requestInfo(),
+//                         m_scriptNetwork->lastUrl(), globalInfo, request(),
 //                         couldNeedForcedUpdate );
-        switch ( requestInfo()->parseMode ) {
-        case ParseForDeparturesArrivals:
-            emit departuresReady( m_scriptResult->data().mid(m_published),
-                    m_scriptResult->features(), m_scriptResult->hints(),
-                    m_scriptNetwork->lastUrl(), globalInfo,
-                    *dynamic_cast<const DepartureRequestInfo*>(requestInfo()),
-                    couldNeedForcedUpdate );
+        switch ( request()->parseMode ) {
+        case ParseForDeparturesArrivals: {
+            const DepartureRequest *departureRequest =
+                    dynamic_cast< const DepartureRequest* >( request() );
+            if ( departureRequest ) {
+                emit departuresReady( m_scriptResult->data().mid(m_published),
+                        m_scriptResult->features(), m_scriptResult->hints(),
+                        m_scriptNetwork->lastUrl(), globalInfo,
+                        *departureRequest, couldNeedForcedUpdate );
+            } else {
+                emit arrivalsReady( m_scriptResult->data().mid(m_published),
+                        m_scriptResult->features(), m_scriptResult->hints(),
+                        m_scriptNetwork->lastUrl(), globalInfo,
+                        *dynamic_cast<const ArrivalRequest*>(request()),
+                        couldNeedForcedUpdate );
+            }
             break;
+        }
         case ParseForJourneys:
             emit journeysReady( m_scriptResult->data().mid(m_published),
                     m_scriptResult->features(), m_scriptResult->hints(),
                     m_scriptNetwork->lastUrl(), globalInfo,
-                    *dynamic_cast<const JourneyRequestInfo*>(requestInfo()),
+                    *dynamic_cast<const JourneyRequest*>(request()),
                     couldNeedForcedUpdate );
             break;
         case ParseForStopSuggestions:
             emit stopSuggestionsReady( m_scriptResult->data().mid(m_published),
                     m_scriptResult->features(), m_scriptResult->hints(),
                     m_scriptNetwork->lastUrl(), globalInfo,
-                    *dynamic_cast<const StopSuggestionRequestInfo*>(requestInfo()),
+                    *dynamic_cast<const StopSuggestionRequest*>(request()),
                     couldNeedForcedUpdate );
             break;
 
         default:
-            kDebug() << "Parse mode unsupported:" << requestInfo()->parseMode;
+            kDebug() << "Parse mode unsupported:" << request()->parseMode;
             break;
         }
         m_published += data.count();
@@ -430,12 +451,12 @@ void ScriptJob::publish()
 
 class DepartureJobPrivate {
 public:
-    DepartureJobPrivate( const DepartureRequestInfo &request ) : request(request) {};
-    DepartureRequestInfo request;
+    DepartureJobPrivate( const DepartureRequest &request ) : request(request) {};
+    DepartureRequest request;
 };
 
 DepartureJob::DepartureJob( QScriptProgram* script, const TimetableAccessorInfo* info,
-        Storage* scriptStorage, const DepartureRequestInfo& request, QObject* parent )
+        Storage* scriptStorage, const DepartureRequest& request, QObject* parent )
         : ScriptJob(script, info, scriptStorage, parent), d(new DepartureJobPrivate(request))
 {
 }
@@ -446,19 +467,19 @@ DepartureJob::~DepartureJob()
 }
 
 
-const RequestInfo *DepartureJob::requestInfo() const
+const AbstractRequest *DepartureJob::request() const
 {
     return &d->request;
 }
 
 class JourneyJobPrivate {
 public:
-    JourneyJobPrivate( const JourneyRequestInfo &request ) : request(request) {};
-    JourneyRequestInfo request;
+    JourneyJobPrivate( const JourneyRequest &request ) : request(request) {};
+    JourneyRequest request;
 };
 
 JourneyJob::JourneyJob( QScriptProgram* script, const TimetableAccessorInfo* info,
-        Storage* scriptStorage, const JourneyRequestInfo& request, QObject* parent )
+        Storage* scriptStorage, const JourneyRequest& request, QObject* parent )
         : ScriptJob(script, info, scriptStorage, parent), d(new JourneyJobPrivate(request))
 {
 }
@@ -468,19 +489,19 @@ JourneyJob::~JourneyJob()
     delete d;
 }
 
-const RequestInfo *JourneyJob::requestInfo() const
+const AbstractRequest *JourneyJob::request() const
 {
     return &d->request;
 }
 
 class StopSuggestionsJobPrivate {
 public:
-    StopSuggestionsJobPrivate( const StopSuggestionRequestInfo &request ) : request(request) {};
-    StopSuggestionRequestInfo request;
+    StopSuggestionsJobPrivate( const StopSuggestionRequest &request ) : request(request) {};
+    StopSuggestionRequest request;
 };
 
 StopSuggestionsJob::StopSuggestionsJob( QScriptProgram* script, const TimetableAccessorInfo* info,
-        Storage* scriptStorage, const StopSuggestionRequestInfo& request, QObject* parent )
+        Storage* scriptStorage, const StopSuggestionRequest& request, QObject* parent )
         : ScriptJob(script, info, scriptStorage, parent), d(new StopSuggestionsJobPrivate(request))
 {
 }
@@ -490,7 +511,7 @@ StopSuggestionsJob::~StopSuggestionsJob()
     delete d;
 }
 
-const RequestInfo *StopSuggestionsJob::requestInfo() const
+const AbstractRequest *StopSuggestionsJob::request() const
 {
     return &d->request;
 }

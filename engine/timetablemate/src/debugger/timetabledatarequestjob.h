@@ -39,10 +39,10 @@ namespace Scripting
     class NetworkRequest;
 }
 
-class RequestInfo;
-struct JourneyRequestInfo;
-struct StopSuggestionRequestInfo;
-struct DepartureRequestInfo;
+class AbstractRequest;
+struct JourneyRequest;
+struct StopSuggestionRequest;
+struct DepartureRequest;
 
 using namespace Scripting;
 
@@ -191,7 +191,7 @@ private:
 };
 
 /**
- * @brief Runs a function in the script according to the used RequestInfo.
+ * @brief Runs a function in the script according to the used request object.
  **/
 class TimetableDataRequestJob : public CallScriptFunctionJob {
     Q_OBJECT
@@ -207,8 +207,8 @@ public:
     /** @brief Gets the resulting list of timetable data objects, when the job has finished. */
     QList< TimetableData > timetableData() const;
 
-    /** @brief Get a clone of the RequestInfo object. */
-    QSharedPointer< RequestInfo > request() const;
+    /** @brief Get a clone of the request object. */
+    QSharedPointer< AbstractRequest > request() const;
 
 protected:
     /**
@@ -222,20 +222,20 @@ protected:
      * @param debugger A pointer to the DebuggerAgent used for debugging.
      * @param info The TimetableAccessorInfo object containing information about the current accessor.
      * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
-     * @param request A RequestInfo object containing information about the request. This object
-     *   gets cloned and the original object can be deleted. Should be of type DepartureRequestInfo,
-     *   JourneyRequestInfo or StopSuggestionRequestInfo.
+     * @param request A request object containing information about the request. This object
+     *   gets cloned and the original object can be deleted. Should be of type DepartureRequest,
+     *   JourneyRequest or StopSuggestionRequest.
      * @param debugFlags Flags for the debugger.
      * @param parent The parent QObject. Default is 0.
      **/
     explicit TimetableDataRequestJob( DebuggerAgent *debugger,
-            const TimetableAccessorInfo &info, QMutex *engineMutex, const RequestInfo *request,
+            const TimetableAccessorInfo &info, QMutex *engineMutex, const AbstractRequest *request,
             DebugFlags debugFlags = DefaultDebugFlags, QObject* parent = 0 );
 
     virtual void finish( Scripting::ResultObject *result );
 
     /**
-     * @brief Create a list of arguments for the function to call, using RequestInfo::toScriptValue().
+     * @brief Create a list of arguments for the function to call, using AbstractRequest::toScriptValue().
      * The engine mutex is locked when this function gets called.
      **/
     virtual QScriptValueList createArgumentScriptValues() const;
@@ -244,11 +244,11 @@ protected:
     virtual bool testResults();
 
 private:
-    bool testDepartureData( const DepartureRequestInfo *request );
-    bool testStopSuggestionData( const StopSuggestionRequestInfo *request );
-    bool testJourneyData( const JourneyRequestInfo *request );
+    bool testDepartureData( const DepartureRequest *request );
+    bool testStopSuggestionData( const StopSuggestionRequest *request );
+    bool testJourneyData( const JourneyRequest *request );
 
-    const RequestInfo *m_request;
+    const AbstractRequest *m_request;
     QList< TimetableData > m_timetableData;
 };
 

@@ -33,7 +33,7 @@
 // PublicTransport engine includes
 #include <engine/enums.h> // For TimetableData
 
-struct RequestInfo;
+struct AbstractRequest;
 class TimetableAccessorInfo;
 namespace Scripting {
     class Network;
@@ -235,18 +235,18 @@ public:
     bool canEvaluate( const QString &program ) const;
 
     /**
-     * @brief Creates a new job to call @p functionToRun with @p requestInfo.
+     * @brief Creates a new job to request timetable data.
      *
      * The return value only informs about errors while creating a TimetableDataRequestJob.
      * The return value of the script function call can be retrieved by connecting to the
      * requestTimetableDataResult() signal.
      *
-     * @param requestInfo A pointer to a RequestInfo object used to create the argument for the
+     * @param request A pointer to a request object used to create the argument for the
      *   function to call.
      * @param debugFlags Flags for the debugger.
      * @return False if the TimetableDataRequestJob could not be created.
      **/
-    bool requestTimetableData( const RequestInfo *requestInfo,
+    bool requestTimetableData( const AbstractRequest *request,
                                DebugFlags debugFlags = DefaultDebugFlags );
 
     /**
@@ -296,7 +296,7 @@ public:
 
     /** @brief Create a new TimetableDataRequestJob from @p request. */
     TimetableDataRequestJob *createTimetableDataRequestJob(
-            const RequestInfo *request, DebugFlags debugFlags = DefaultDebugFlags );
+            const AbstractRequest *request, DebugFlags debugFlags = DefaultDebugFlags );
 
     /** @brief Create a new ExecuteConsoleCommandJob from @p command. */
     ExecuteConsoleCommandJob *createExecuteConsoleCommandJob( const ConsoleCommand &command );
@@ -433,7 +433,7 @@ signals:
      *   stop suggestions.
      * @param returnValue The value, returned by the script.
      **/
-    void requestTimetableDataResult( const QSharedPointer< RequestInfo > &requestInfo,
+    void requestTimetableDataResult( const QSharedPointer< AbstractRequest > &request,
                              bool success, const QString &explanation,
                              const QList< TimetableData > &timetableData = QList< TimetableData >(),
                              const QScriptValue &returnValue = QScriptValue() );

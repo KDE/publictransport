@@ -31,10 +31,10 @@
 #include <Plasma/DataEngine>
 #include "departureinfo.h"
 
-struct RequestInfo;
-struct StopSuggestionRequestInfo;
-struct DepartureRequestInfo;
-struct JourneyRequestInfo;
+struct AbstractRequest;
+struct StopSuggestionRequest;
+struct DepartureRequest;
+struct JourneyRequest;
 
 class TimetableAccessor;
 class DepartureInfo;
@@ -161,14 +161,14 @@ public slots:
      * @param requestUrl The url used to request the information.
      * @param departures A list of departures/arrivals that were received.
      * @param globalInfo Global information that affects all departures/arrivals.
-     * @param requestInfo Information about the request for the here received @p departures.
+     * @param request Information about the request for the here received @p departures.
      *
      * @see TimetableAccessor::useSeparateCityValue()
      **/
     void departureListReceived( TimetableAccessor *accessor,
             const QUrl &requestUrl, const DepartureInfoList &departures,
             const GlobalTimetableInfo &globalInfo,
-            const DepartureRequestInfo &requestInfo,
+            const DepartureRequest &request,
             bool deleteDepartureInfos = true );
 
     /**
@@ -178,14 +178,14 @@ public slots:
      * @param requestUrl The url used to request the information.
      * @param journeys A list of journeys that were received.
      * @param globalInfo Global information that affects all journeys.
-     * @param requestInfo Information about the request for the here received @p journeys.
+     * @param request Information about the request for the here received @p journeys.
      *
      * @see TimetableAccessor::useSeparateCityValue()
      **/
     void journeyListReceived( TimetableAccessor *accessor,
             const QUrl &requestUrl, const JourneyInfoList &journeys,
             const GlobalTimetableInfo &globalInfo,
-            const JourneyRequestInfo &requestInfo,
+            const JourneyRequest &request,
             bool deleteJourneyInfos = true );
 
     /**
@@ -194,13 +194,13 @@ public slots:
      * @param accessor The accessor that was used to download and parse the stops.
      * @param requestUrl The url used to request the information.
      * @param stops A pointer to a list of @ref StopInfo objects.
-     * @param requestInfo Information about the request for the here received @p stops.
+     * @param request Information about the request for the here received @p stops.
      *
      * @see TimetableAccessor::useSeparateCityValue()
      **/
     void stopListReceived( TimetableAccessor *accessor,
             const QUrl &requestUrl, const StopInfoList &stops,
-            const StopSuggestionRequestInfo &requestInfo,
+            const StopSuggestionRequest &request,
             bool deleteStopInfos = true );
 
     /**
@@ -211,12 +211,12 @@ public slots:
      * @param errorType The type of error or NoError if there was no error.
      * @param errorString If @p errorType isn't NoError this contains a description of the error.
      * @param requestUrl The url used to request the information.
-     * @param requestInfo Information about the request that failed with @p errorType.
+     * @param request Information about the request that failed with @p errorType.
      *
      * @see TimetableAccessor::useSeparateCityValue()
      **/
     void errorParsing( TimetableAccessor *accessor, ErrorCode errorType, const QString &errorString,
-            const QUrl &requestUrl, const RequestInfo *requestInfo );
+            const QUrl &requestUrl, const AbstractRequest *request );
 
     /**
      * @brief A global or local directory with accessor info XMLs was changed.
@@ -948,4 +948,4 @@ digraph publicTransportDataEngine {
 
 #endif
 
-struct JourneyRequestInfo;
+struct JourneyRequest;

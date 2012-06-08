@@ -27,6 +27,7 @@
 #include <engine/timetableaccessor_script.h>
 #include <engine/global.h>
 #include <engine/timetableaccessor.h>
+#include <engine/request.h>
 
 // KDE includes
 #include <threadweaver/DebuggingAids.h>
@@ -66,7 +67,7 @@ TestUsedTimetableInformationsJob::TestUsedTimetableInformationsJob( DebuggerAgen
 }
 
 TimetableDataRequestJob::TimetableDataRequestJob( DebuggerAgent *debugger,
-        const TimetableAccessorInfo &info, QMutex *engineMutex, const RequestInfo *request,
+        const TimetableAccessorInfo &info, QMutex *engineMutex, const AbstractRequest *request,
         DebugFlags debugFlags, QObject *parent )
         : CallScriptFunctionJob(debugger, info, engineMutex, debugFlags, parent),
           m_request(request->clone())
@@ -154,10 +155,10 @@ QList<TimetableData> TimetableDataRequestJob::timetableData() const
     return m_timetableData;
 }
 
-QSharedPointer< RequestInfo > TimetableDataRequestJob::request() const
+QSharedPointer< AbstractRequest > TimetableDataRequestJob::request() const
 {
     QMutexLocker locker( m_mutex );
-    return QSharedPointer< RequestInfo >( m_request->clone() );
+    return QSharedPointer< AbstractRequest >( m_request->clone() );
 }
 
 QList< TimetableDataRequestMessage > CallScriptFunctionJob::additionalMessages() const
@@ -439,20 +440,20 @@ void CallScriptFunctionJob::requestFinished( NetworkRequest *request )
 
 bool TimetableDataRequestJob::testResults()
 {
-    const DepartureRequestInfo *departureRequest =
-            dynamic_cast< const DepartureRequestInfo* >( m_request );
+    const DepartureRequest *departureRequest =
+            dynamic_cast< const DepartureRequest* >( m_request );
     if ( departureRequest ) {
         return testDepartureData( departureRequest );
     }
 
-    const StopSuggestionRequestInfo *stopSuggestionRequest =
-            dynamic_cast< const StopSuggestionRequestInfo* >( m_request );
+    const StopSuggestionRequest *stopSuggestionRequest =
+            dynamic_cast< const StopSuggestionRequest* >( m_request );
     if ( stopSuggestionRequest ) {
         return testStopSuggestionData( stopSuggestionRequest );
     }
 
-    const JourneyRequestInfo *journeyRequest =
-            dynamic_cast< const JourneyRequestInfo* >( m_request );
+    const JourneyRequest *journeyRequest =
+            dynamic_cast< const JourneyRequest* >( m_request );
     if ( journeyRequest ) {
         return testJourneyData( journeyRequest );
     }
@@ -486,7 +487,7 @@ TimetableDataRequestMessage CallScriptFunctionJob::message( MessageType messageT
     return TimetableDataRequestMessage( msg, type, lineNumber );
 }
 
-bool TimetableDataRequestJob::testDepartureData( const DepartureRequestInfo *request )
+bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request )
 {
     if ( m_timetableData.isEmpty() ) {
         if ( request->dataType == QLatin1String("arrivals") ) {
@@ -678,7 +679,7 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequestInfo *req
 }
 
 bool TimetableDataRequestJob::testStopSuggestionData(
-        const StopSuggestionRequestInfo *request )
+        const StopSuggestionRequest *request )
 {
     Q_UNUSED( request );
     if ( m_timetableData.isEmpty() ) {
@@ -737,7 +738,7 @@ bool TimetableDataRequestJob::testStopSuggestionData(
     return true;
 }
 
-bool TimetableDataRequestJob::testJourneyData( const JourneyRequestInfo *request )
+bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
 {
     Q_UNUSED( request );
     if ( m_timetableData.isEmpty() ) {

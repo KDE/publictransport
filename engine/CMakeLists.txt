@@ -25,6 +25,7 @@ set( publictransport_engine_SRCS
     publictransportdataengine.cpp
     departureinfo.cpp
     accessorinfoxmlreader.cpp
+    request.cpp
     timetableaccessor.cpp
     timetableaccessor_info.cpp
     timetableaccessor_script.cpp

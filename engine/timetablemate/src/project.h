@@ -54,10 +54,10 @@ class PlasmaPreviewTab;
 class TimetableAccessor;
 class TimetableAccessorInfo;
 
-struct RequestInfo;
-struct DepartureRequestInfo;
-struct StopSuggestionRequestInfo;
-struct JourneyRequestInfo;
+struct AbstractRequest;
+struct DepartureRequest;
+struct StopSuggestionRequest;
+struct JourneyRequest;
 
 namespace Debugger {
     class Debugger;
@@ -607,10 +607,10 @@ public:
     /** @brief Get a list of all functions that are implemented in the script. */
     Q_INVOKABLE QStringList scriptFunctions() const;
 
-    DepartureRequestInfo getDepartureRequestInfo( QWidget *parent = 0, bool* cancelled = 0 ) const;
-    StopSuggestionRequestInfo getStopSuggestionRequestInfo( QWidget *parent = 0,
+    DepartureRequest getDepartureRequest( QWidget *parent = 0, bool* cancelled = 0 ) const;
+    StopSuggestionRequest getStopSuggestionRequest( QWidget *parent = 0,
                                                             bool* cancelled = 0 ) const;
-    JourneyRequestInfo getJourneyRequestInfo( QWidget *parent = 0, bool* cancelled = 0 ) const;
+    JourneyRequest getJourneyRequest( QWidget *parent = 0, bool* cancelled = 0 ) const;
 
     /** @brief Return the model for tests. */
     TestModel *testModel() const;
@@ -798,7 +798,7 @@ protected slots:
 
     void loadScriptResult( ScriptErrorType lastScriptError,
                            const QString &lastScriptErrorString );
-    void functionCallResult( const QSharedPointer< RequestInfo > &requestInfo,
+    void functionCallResult( const QSharedPointer< AbstractRequest > &request,
                              bool success, const QString &explanation,
                              const QList< TimetableData > &timetableData,
                              const QScriptValue &returnValue );

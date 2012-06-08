@@ -25,6 +25,7 @@
 #include "script_thread.h"
 #include "timetableaccessor_info.h"
 #include "departureinfo.h"
+#include "request.h"
 
 // KDE includes
 #include <KLocalizedString>
@@ -209,29 +210,29 @@ QStringList TimetableAccessorScript::scriptFeatures() const
 
 void TimetableAccessorScript::departuresReady( const QList<TimetableData> &data,
         ResultObject::Features features, ResultObject::Hints hints, const QString &url,
-        const GlobalTimetableInfo &globalInfo, const DepartureRequestInfo &requestInfo,
+        const GlobalTimetableInfo &globalInfo, const DepartureRequest &request,
         bool couldNeedForcedUpdate )
 {
 //     TODO use hints
     if ( data.isEmpty() ) {
-        kDebug() << "The script didn't find anything" << requestInfo.sourceName;
+        kDebug() << "The script didn't find anything" << request.sourceName;
         emit errorParsing( this, ErrorParsingFailed,
                            i18n("Error while parsing the stop suggestions document."),
-                           url, &requestInfo ); // TODO emit requestInfo pointer?
+                           url, &request ); // TODO emit request pointer?
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
         PublicTransportInfoList newResults;
-        ResultObject::dataList( data, &newResults, requestInfo.parseMode,
+        ResultObject::dataList( data, &newResults, request.parseMode,
                                 m_info->defaultVehicleType(), &globalInfo, features, hints );
         PublicTransportInfoList results =
-                (m_publishedData[requestInfo.sourceName] << newResults);
+                (m_publishedData[request.sourceName] << newResults);
         DepartureInfoList departures;
         foreach( const PublicTransportInfoPtr &info, results ) {
 //             departures << dynamic_cast< DepartureInfo* >( info.data() );
             departures << info.dynamicCast<DepartureInfo>();
         }
 
-        emit departureListReceived( this, url, departures, globalInfo, requestInfo );
+        emit departureListReceived( this, url, departures, globalInfo, request );
         if ( couldNeedForcedUpdate ) {
             emit forceUpdate();
         }
@@ -240,54 +241,54 @@ void TimetableAccessorScript::departuresReady( const QList<TimetableData> &data,
 
 void TimetableAccessorScript::journeysReady( const QList<TimetableData> &data,
         ResultObject::Features features, ResultObject::Hints hints, const QString &url,
-        const GlobalTimetableInfo &globalInfo, const JourneyRequestInfo &requestInfo,
+        const GlobalTimetableInfo &globalInfo, const JourneyRequest &request,
         bool couldNeedForcedUpdate )
 {
     Q_UNUSED( couldNeedForcedUpdate );
 //     TODO use hints
     if ( data.isEmpty() ) {
-        kDebug() << "The script didn't find anything" << requestInfo.sourceName;
+        kDebug() << "The script didn't find anything" << request.sourceName;
         emit errorParsing( this, ErrorParsingFailed,
                            i18n("Error while parsing the stop suggestions document."),
-                           url, &requestInfo ); // TODO requestInfo pointer?
+                           url, &request ); // TODO request pointer?
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
         PublicTransportInfoList newResults;
-        ResultObject::dataList( data, &newResults, requestInfo.parseMode,
+        ResultObject::dataList( data, &newResults, request.parseMode,
                                 m_info->defaultVehicleType(), &globalInfo, features, hints );
         PublicTransportInfoList results =
-                (m_publishedData[requestInfo.sourceName] << newResults);
-//         Q_ASSERT( requestInfo.parseMode == ParseForJourneys );
+                (m_publishedData[request.sourceName] << newResults);
+//         Q_ASSERT( request.parseMode == ParseForJourneys );
         JourneyInfoList journeys;
         foreach( const PublicTransportInfoPtr &info, results ) {
 //             journeys << dynamic_cast< JourneyInfo* >( info.data() );
             journeys << info.dynamicCast<JourneyInfo>();
         }
 
-        emit journeyListReceived( this, url, journeys, globalInfo, requestInfo );
+        emit journeyListReceived( this, url, journeys, globalInfo, request );
     }
 }
 
 void TimetableAccessorScript::stopSuggestionsReady( const QList<TimetableData> &data,
         ResultObject::Features features, ResultObject::Hints hints, const QString &url,
-        const GlobalTimetableInfo &globalInfo, const StopSuggestionRequestInfo &requestInfo,
+        const GlobalTimetableInfo &globalInfo, const StopSuggestionRequest &request,
         bool couldNeedForcedUpdate )
 {
     Q_UNUSED( couldNeedForcedUpdate );
 //     TODO use hints
     kDebug() << "***** Received" << data.count() << "items";
     if ( data.isEmpty() ) {
-        kDebug() << "The script didn't find anything" << requestInfo.sourceName;
+        kDebug() << "The script didn't find anything" << request.sourceName;
         emit errorParsing( this, ErrorParsingFailed,
                            i18n("Error while parsing the stop suggestions document."),
-                           url, &requestInfo ); // TODO requestInfo pointer?
+                           url, &request ); // TODO request pointer?
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
         PublicTransportInfoList newResults;
-        ResultObject::dataList( data, &newResults, requestInfo.parseMode,
+        ResultObject::dataList( data, &newResults, request.parseMode,
                                 m_info->defaultVehicleType(), &globalInfo, features, hints );
         PublicTransportInfoList results =
-                (m_publishedData[requestInfo.sourceName] << newResults);
+                (m_publishedData[request.sourceName] << newResults);
         kDebug() << "RESULTS:" << results;
 
         StopInfoList stops;
@@ -296,7 +297,7 @@ void TimetableAccessorScript::stopSuggestionsReady( const QList<TimetableData> &
             stops << info.dynamicCast<StopInfo>();
         }
 
-        emit stopListReceived( this, url, stops, requestInfo );
+        emit stopListReceived( this, url, stops, request );
     }
 }
 
@@ -305,7 +306,7 @@ void TimetableAccessorScript::jobStarted( ThreadWeaver::Job* job )
     ScriptJob *scriptJob = qobject_cast< ScriptJob* >( job );
     Q_ASSERT( scriptJob );
 
-    const QString sourceName = scriptJob->requestInfo()->sourceName;
+    const QString sourceName = scriptJob->request()->sourceName;
     Q_ASSERT ( !m_publishedData.contains(sourceName) ); // TODO
 //     {
 //         qDebug() << "------------------------------------------------------------------------";
@@ -322,7 +323,7 @@ void TimetableAccessorScript::jobDone( ThreadWeaver::Job* job )
     ScriptJob *scriptJob = qobject_cast< ScriptJob* >( job );
     Q_ASSERT( scriptJob );
 
-    const QString sourceName = scriptJob->requestInfo()->sourceName;
+    const QString sourceName = scriptJob->request()->sourceName;
     PublicTransportInfoList results = m_publishedData.take( sourceName );
     kDebug() << "***** (DO NOT => QSharedPointer) Delete" << results.count() << "items";
     kDebug() << "m_publishedData contains" << m_publishedData.count() << "items";
@@ -342,44 +343,61 @@ void TimetableAccessorScript::jobFailed( ThreadWeaver::Job* job )
     emit errorParsing( this, ErrorParsingFailed, scriptJob->errorString(),
                        /*TODO: failing url */ QString(),
 //                            TODO: no new... serviceProvider(),
-                       new DepartureRequestInfo(scriptJob->requestInfo()->sourceName,
+                       new DepartureRequest(scriptJob->request()->sourceName,
                            /*stop*/QString(), /*dateTime*/QDateTime(), /*maxCount*/0,
                             /*dataType*/QString(), /*city*/QString(), /*parseMode*/ParseForDeparturesArrivals) );
 }
 
-void TimetableAccessorScript::requestDepartures( const DepartureRequestInfo &requestInfo )
+void TimetableAccessorScript::requestDepartures( const DepartureRequest &request )
 {
     if ( !lazyLoadScript() ) {
         kDebug() << "Failed to load script!";
         return;
     }
 
-    DepartureJob *job = new DepartureJob( m_script, m_info, m_scriptStorage, requestInfo, this );
+    DepartureJob *job = new DepartureJob( m_script, m_info, m_scriptStorage, request, this );
     connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequestInfo,bool)),
-             this, SLOT(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequestInfo,bool)) );
+    connect( job, SIGNAL(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)),
+             this, SLOT(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)) );
     ThreadWeaver::Weaver::instance()->enqueue( job );
     return;
 }
 
-void TimetableAccessorScript::requestJourneys( const JourneyRequestInfo &requestInfo )
+void TimetableAccessorScript::requestArrivals( const ArrivalRequest &request )
 {
     if ( !lazyLoadScript() ) {
         kDebug() << "Failed to load script!";
         return;
     }
 
-    JourneyJob *job = new JourneyJob( m_script, m_info, m_scriptStorage, requestInfo, this );
+    DepartureJob *job = new DepartureJob( m_script, m_info, m_scriptStorage, request, this );
+    connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequestInfo,bool)),
-             this, SLOT(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequestInfo,bool)) );
+    connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
+    connect( job, SIGNAL(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)),
+             this, SLOT(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)) );
     ThreadWeaver::Weaver::instance()->enqueue( job );
     return;
 }
 
-void TimetableAccessorScript::requestStopSuggestions( const StopSuggestionRequestInfo &requestInfo )
+void TimetableAccessorScript::requestJourneys( const JourneyRequest &request )
+{
+    if ( !lazyLoadScript() ) {
+        kDebug() << "Failed to load script!";
+        return;
+    }
+
+    JourneyJob *job = new JourneyJob( m_script, m_info, m_scriptStorage, request, this );
+    connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
+    connect( job, SIGNAL(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)),
+             this, SLOT(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)) );
+    ThreadWeaver::Weaver::instance()->enqueue( job );
+    return;
+}
+
+void TimetableAccessorScript::requestStopSuggestions( const StopSuggestionRequest &request )
 {
     if ( !lazyLoadScript() ) {
         kDebug() << "Failed to load script!";
@@ -387,10 +405,10 @@ void TimetableAccessorScript::requestStopSuggestions( const StopSuggestionReques
     }
 
     StopSuggestionsJob *job = new StopSuggestionsJob( m_script, m_info, m_scriptStorage,
-                                                      requestInfo, this );
+                                                      request, this );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequestInfo,bool)),
-             this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequestInfo,bool)) );
+    connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
+             this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );
     ThreadWeaver::Weaver::instance()->enqueue( job );
     return;
 }

@@ -34,176 +34,20 @@
 // Qt includes
 #include <QHash>
 #include <QStringList>
-#include <QScriptValue>
 
 class QScriptEngine;
-class KUrl;
 class KJob;
 
+class AbstractRequest;
+class DepartureRequest;
+class ArrivalRequest;
+class StopSuggestionRequest;
+class JourneyRequest;
 class ChangelogEntry;
 class StopInfo;
 class DepartureInfo;
 class JourneyInfo;
-class PublicTransportInfo;
 class TimetableAccessorInfo;
-
-// TODO Move RequestInfo classes to own files "requestinfo.h/.cpp"
-/**
- * @brief Stores information about a request to the publictransport data engine.
- *
- * All values other than @p sourceName are derived (parsed) from it or represent the current state
- * of the request.
- **/
-struct RequestInfo {
-    /**
-     * @brief The requesting source name.
-     *
-     * Other values in RequestInfo are derived from this string.
-     **/
-    QString sourceName;
-
-    /** @brief The date and time to get results for. */
-    QDateTime dateTime;
-
-    /** @brief The stop name of the request. */
-    QString stop;
-
-    /** @brief The maximum number of result items, eg. departures or stop suggestions. */
-    int maxCount;
-
-    /** @brief Like parseMode, but distinguishes between "arrivals" and "departures". */
-    QString dataType;
-
-    /**
-     * @brief The city to get stop suggestions for (only needed if
-     *   @ref TimetableAccessor::useSeparateCityValue returns true).
-     **/
-    QString city;
-
-    /** @brief Describes what should be retrieved with the request, eg. departures or a a stop ID. */
-    ParseDocumentMode parseMode;
-
-    RequestInfo()
-    {
-        this->parseMode = ParseInvalid;
-        this->maxCount = -1;
-        this->parseMode = ParseForStopSuggestions;
-    };
-
-    RequestInfo( const QString &sourceName, const QString &stop, const QDateTime &dateTime,
-            int maxCount, const QString &dataType = "departures", const QString &city = QString(),
-            ParseDocumentMode parseMode = ParseForStopSuggestions )
-            : sourceName(sourceName), dateTime(dateTime), stop(stop), maxCount(maxCount),
-              dataType(dataType), city(city), parseMode(parseMode)
-    {
-    };
-
-    RequestInfo( const RequestInfo &info )
-            : sourceName(info.sourceName), dateTime(info.dateTime), stop(info.stop),
-              maxCount(info.maxCount), dataType(info.dataType), city(info.city),
-              parseMode(info.parseMode)
-    {
-    };
-
-    virtual ~RequestInfo() {};
-
-    virtual RequestInfo *clone() const = 0;
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const = 0;
-
-    /** @brief Get the name of the script function that is associated with this request. */
-    virtual QString functionName() const = 0;
-};
-
-struct StopSuggestionRequestInfo : public RequestInfo {
-    StopSuggestionRequestInfo() : RequestInfo() { parseMode = ParseForStopSuggestions; };
-    StopSuggestionRequestInfo( const QString &sourceName, const QString &stop,
-                               int maxCount, const QString &city = QString(),
-                               ParseDocumentMode parseMode = ParseForStopSuggestions )
-        : RequestInfo(sourceName, stop, QDateTime(), maxCount, "departures", city, parseMode) {};
-    StopSuggestionRequestInfo( const StopSuggestionRequestInfo &info ) : RequestInfo(info) {};
-
-    virtual RequestInfo *clone() const
-    {
-        return new StopSuggestionRequestInfo( sourceName, stop, maxCount, city, parseMode );
-    };
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
-
-    /** @brief Get the name of the script function that is associated with this request. */
-    virtual QString functionName() const;
-};
-
-struct DepartureRequestInfo : public RequestInfo {
-    DepartureRequestInfo() : RequestInfo() { parseMode = ParseForDeparturesArrivals; };
-    DepartureRequestInfo( const QString &sourceName, const QString &stop,
-                          const QDateTime &dateTime, int maxCount,
-                          const QString &dataType = "departures",
-                          const QString &city = QString(),
-                          ParseDocumentMode parseMode = ParseForDeparturesArrivals )
-        : RequestInfo(sourceName, stop, dateTime, maxCount, dataType, city, parseMode) {};
-    DepartureRequestInfo( const DepartureRequestInfo &info ) : RequestInfo(info) {};
-
-    virtual RequestInfo *clone() const
-    {
-        return new DepartureRequestInfo( sourceName, stop, dateTime, maxCount, dataType,
-                                         city, parseMode );
-    };
-
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
-
-    /** @brief Get the name of the script function that is associated with this request. */
-    virtual QString functionName() const;
-};
-
-/**
- * @brief Stores information about a request for journeys to the publictransport data engine.
- *
- * All values other than @p sourceName are derived (parsed) from it or represent the current state
- * of the request, eg. @p roundTrips stores the number of requests sent to a server to get
- * enough data (each round trip adds some data).
- **/
-struct JourneyRequestInfo : public RequestInfo {
-    /** @brief The target stop name of the request. */
-    QString targetStop;
-
-    /** @brief Specifies the URL to use to download the journey source document. */
-    QString urlToUse;
-
-    /** @brief Current number of round trips used to fulfil the journey request. */
-    int roundTrips;
-
-    JourneyRequestInfo() : RequestInfo()
-    {
-        this->roundTrips = 0;
-        this->parseMode = ParseForJourneys;
-    };
-
-    JourneyRequestInfo( const QString &sourceName, const QString &startStop,
-            const QString &targetStop, const QDateTime &dateTime, int maxCount,
-            const QString &urlToUse, const QString &dataType = "journeys",
-            const QString &city = QString(), ParseDocumentMode parseMode = ParseForJourneys )
-        : RequestInfo(sourceName, startStop, dateTime, maxCount, dataType, city, parseMode),
-          targetStop(targetStop), urlToUse(urlToUse), roundTrips(0)
-    {
-    };
-
-    JourneyRequestInfo( const JourneyRequestInfo &info ) : RequestInfo(info)
-    {
-        targetStop = info.targetStop;
-        urlToUse = info.urlToUse;
-        roundTrips = info.roundTrips;
-    };
-
-    virtual JourneyRequestInfo *clone() const
-    {
-        return new JourneyRequestInfo( sourceName, stop, targetStop, dateTime, maxCount, urlToUse,
-                                       dataType, city, parseMode );
-    };
-
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
-
-    /** @brief Get the name of the script function that is associated with this request. */
-    virtual QString functionName() const;
-};
 
 /**
  * @brief Gets timetable information for public transport from different service providers.
@@ -285,32 +129,42 @@ public:
     const TimetableAccessorInfo *info() const { return m_info; };
 
     /**
-     * @brief Requests a list of departures/arrivals.
+     * @brief Requests a list of departures.
      *
-     * When the departure/arrival list is completely received @ref departureListReceived gets
-     * emitted.
+     * When the departure list is completely received @ref departureListReceived gets emitted.
      *
-     * @param requestInfo Information about the departure/arrival request.
+     * @param request Information about the departure request.
      **/
-    virtual void requestDepartures( const DepartureRequestInfo &requestInfo );
+    virtual void requestDepartures( const DepartureRequest &request );
+
+    /**
+     * @brief Requests a list of arrivals.
+     *
+     * When the arrival list is completely received @ref departureListReceived gets emitted.
+     *
+     * @todo TODO use arrivalListReceived()
+     *
+     * @param request Information about the arrival request.
+     **/
+    virtual void requestArrivals( const ArrivalRequest &request );
 
     /**
      * @brief Requests a list of journeys.
      *
      * When the journey list is completely received @ref journeyListReceived() gets emitted.
      *
-     * @param requestInfo Information about the journey request.
+     * @param request Information about the journey request.
      **/
-    virtual void requestJourneys( const JourneyRequestInfo &requestInfo );
+    virtual void requestJourneys( const JourneyRequest &request );
 
     /**
      * @brief Requests a list of stop suggestions.
      *
      * When the stop list is completely received @ref stopListReceived gets emitted.
      *
-     * @param requestInfo Information about the stop suggestion request.
+     * @param request Information about the stop suggestion request.
      **/
-    virtual void requestStopSuggestions( const StopSuggestionRequestInfo &requestInfo );
+    virtual void requestStopSuggestions( const StopSuggestionRequest &request );
 
     /** @brief Gets the information object used by this accessor. */
     const TimetableAccessorInfo &timetableAccessorInfo() const { return *m_info; };
@@ -358,12 +212,12 @@ signals:
      * @param accessor The accessor that was used to download and parse the departures/arrivals.
      * @param requestUrl The url used to request the information.
      * @param journeys A list of departures / arrivals that were received.
-     * @param requestInfo Information about the request for the just received departure/arrival list.
+     * @param request Information about the request for the just received departure/arrival list.
      * @see TimetableAccessor::useSeperateCityValue()
      **/
     void departureListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
             const DepartureInfoList &journeys, const GlobalTimetableInfo &globalInfo,
-            const DepartureRequestInfo &requestInfo );
+            const DepartureRequest &request );
 
     /**
      * @brief Emitted when a new journey list has been received and parsed.
@@ -371,12 +225,12 @@ signals:
      * @param accessor The accessor that was used to download and parse the journeys.
      * @param requestUrl The url used to request the information.
      * @param journeys A list of journeys that were received.
-     * @param requestInfo Information about the request for the just received journey list.
+     * @param request Information about the request for the just received journey list.
      * @see TimetableAccessor::useSeperateCityValue()
      **/
     void journeyListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
             const JourneyInfoList &journeys, const GlobalTimetableInfo &globalInfo,
-            const JourneyRequestInfo &requestInfo );
+            const JourneyRequest &request );
 
     /**
      * @brief Emitted when a list of stop names has been received and parsed.
@@ -384,11 +238,11 @@ signals:
      * @param accessor The accessor that was used to download and parse the stops.
      * @param requestUrl The url used to request the information.
      * @param stops A pointer to a list of @ref StopInfo objects.
-     * @param requestInfo Information about the request for the just received stop list.
+     * @param request Information about the request for the just received stop list.
      * @see TimetableAccessor::useSeperateCityValue()
      **/
     void stopListReceived( TimetableAccessor *accessor, const QUrl &requestUrl,
-            const StopInfoList &stops, const StopSuggestionRequestInfo &requestInfo );
+            const StopInfoList &stops, const StopSuggestionRequest &request );
 
     /**
      * @brief Emitted when a session key has been received and parsed.
@@ -407,31 +261,28 @@ signals:
      * @param errorString If @p errorCode isn't NoError this contains a
      *   description of the error.
      * @param requestUrl The url used to request the information.
-     * @param requestInfo Information about the request that resulted in the error.
+     * @param request Information about the request that resulted in the error.
      * @see TimetableAccessor::useSeperateCityValue()
      **/
     void errorParsing( TimetableAccessor *accessor, ErrorCode errorCode, const QString &errorString,
-            const QUrl &requestUrl, const RequestInfo *requestInfo );
+            const QUrl &requestUrl, const AbstractRequest *request );
 
     void forceUpdate();
 
 protected:
     struct JobInfos {
         // Mainly for QHash
-        JobInfos() : requestInfo(0) {
+        JobInfos() : request(0) {
         };
 
-        JobInfos( const KUrl &url, RequestInfo *requestInfo ) : requestInfo(requestInfo) {
+        JobInfos( const KUrl &url, AbstractRequest *request ) : request(request) {
             this->url = url;
         };
 
-        ~JobInfos()
-        {
-            delete requestInfo;
-        };
+        ~JobInfos();
 
         KUrl url;
-        RequestInfo *requestInfo;
+        AbstractRequest *request;
     };
 
 private:

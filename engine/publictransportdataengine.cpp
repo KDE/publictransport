@@ -25,6 +25,7 @@
 #include "timetableaccessor_info.h"
 #include "departureinfo.h"
 #include "global.h"
+#include "request.h"
 
 // KDE/Plasma includes
 #include <Plasma/DataContainer>
@@ -460,25 +461,30 @@ bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name 
         m_runningSources << nonAmbiguousName;
 
         if ( newlyCreated ) {
-            connect( accessor, SIGNAL(departureListReceived(TimetableAccessor*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequestInfo)),
-                     this, SLOT(departureListReceived(TimetableAccessor*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequestInfo)) );
-            connect( accessor, SIGNAL(journeyListReceived(TimetableAccessor*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequestInfo)),
-                     this, SLOT(journeyListReceived(TimetableAccessor*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequestInfo)) );
-            connect( accessor, SIGNAL(stopListReceived(TimetableAccessor*,QUrl,StopInfoList,StopSuggestionRequestInfo)),
-                     this, SLOT(stopListReceived(TimetableAccessor*,QUrl,StopInfoList,StopSuggestionRequestInfo)) );
-            connect( accessor, SIGNAL(errorParsing(TimetableAccessor*,ErrorCode,QString,QUrl,const RequestInfo*)),
-                     this, SLOT(errorParsing(TimetableAccessor*,ErrorCode,QString,QUrl,const RequestInfo*)) );
+            connect( accessor, SIGNAL(departureListReceived(TimetableAccessor*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)),
+                     this, SLOT(departureListReceived(TimetableAccessor*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)) );
+            connect( accessor, SIGNAL(journeyListReceived(TimetableAccessor*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)),
+                     this, SLOT(journeyListReceived(TimetableAccessor*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)) );
+            connect( accessor, SIGNAL(stopListReceived(TimetableAccessor*,QUrl,StopInfoList,StopSuggestionRequest)),
+                     this, SLOT(stopListReceived(TimetableAccessor*,QUrl,StopInfoList,StopSuggestionRequest)) );
+            connect( accessor, SIGNAL(errorParsing(TimetableAccessor*,ErrorCode,QString,QUrl,const AbstractRequest*)),
+                     this, SLOT(errorParsing(TimetableAccessor*,ErrorCode,QString,QUrl,const AbstractRequest*)) );
         }
 
         if ( parseDocumentMode == ParseForDeparturesArrivals ) {
-            accessor->requestDepartures( DepartureRequestInfo(name, stop, dateTime, maxCount,
-                                         dataType, city, parseDocumentMode) );
+            if ( dataType == "arrivals" ) {
+                accessor->requestArrivals( ArrivalRequest(name, stop, dateTime, maxCount,
+                                           city, dataType, parseDocumentMode) );
+            } else {
+                accessor->requestDepartures( DepartureRequest(name, stop, dateTime, maxCount,
+                                             city, dataType, parseDocumentMode) );
+            }
         } else if ( parseDocumentMode == ParseForStopSuggestions ) {
-            accessor->requestStopSuggestions( StopSuggestionRequestInfo(name, stop,
+            accessor->requestStopSuggestions( StopSuggestionRequest(name, stop,
                                               maxCount, city, parseDocumentMode) );
         } else { // if ( parseDocumentMode == ParseForJourneys )
-            accessor->requestJourneys( JourneyRequestInfo(name, originStop, targetStop,
-                                       dateTime, maxCount, QString(), dataType) );
+            accessor->requestJourneys( JourneyRequest(name, originStop, targetStop,
+                                       dateTime, maxCount, QString(), QString(), dataType) );
         }
     }
 
@@ -639,12 +645,11 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name )
 
 void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
         const QUrl &requestUrl, const DepartureInfoList &departures,
-        const GlobalTimetableInfo &globalInfo,
-        const DepartureRequestInfo &requestInfo,
+        const GlobalTimetableInfo &globalInfo, const DepartureRequest &request,
         bool deleteDepartureInfos )
 {
     Q_UNUSED( accessor );
-    const QString sourceName = requestInfo.sourceName;
+    const QString sourceName = request.sourceName;
     kDebug() << departures.count() << "departures / arrivals received" << sourceName;
 
     int i = 0;
@@ -746,11 +751,11 @@ void PublicTransportEngine::departureListReceived( TimetableAccessor *accessor,
 void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
         const QUrl &requestUrl, const JourneyInfoList &journeys,
         const GlobalTimetableInfo &globalInfo,
-        const JourneyRequestInfo &requestInfo,
+        const JourneyRequest &request,
         bool deleteJourneyInfos )
 {
     Q_UNUSED( accessor );
-    const QString sourceName = requestInfo.sourceName;
+    const QString sourceName = request.sourceName;
     kDebug() << journeys.count() << "journeys received" << sourceName;
 
     int i = 0;
@@ -849,12 +854,12 @@ void PublicTransportEngine::journeyListReceived( TimetableAccessor* accessor,
 
 void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
         const QUrl &requestUrl, const StopInfoList &stops,
-        const StopSuggestionRequestInfo &requestInfo, bool deleteStopInfos )
+        const StopSuggestionRequest &request, bool deleteStopInfos )
 {
     Q_UNUSED( accessor );
     Q_UNUSED( deleteStopInfos );
 
-    const QString sourceName = requestInfo.sourceName;
+    const QString sourceName = request.sourceName;
     m_runningSources.removeOne( sourceName );
 
     int i = 0;
@@ -889,11 +894,11 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 //     setData( sourceName, "serviceProvider", serviceProvider );TODO
     setData( sourceName, "count", stops.count() );
     setData( sourceName, "requestUrl", requestUrl );
-    if ( requestInfo.parseMode == ParseForDeparturesArrivals ) {
+    if ( request.parseMode == ParseForDeparturesArrivals ) {
         setData( sourceName, "parseMode", "departures" );
-    } else if ( requestInfo.parseMode == ParseForJourneys ) {
+    } else if ( request.parseMode == ParseForJourneys ) {
         setData( sourceName, "parseMode", "journeys" );
-    } else if ( requestInfo.parseMode == ParseForStopSuggestions ) {
+    } else if ( request.parseMode == ParseForStopSuggestions ) {
         setData( sourceName, "parseMode", "stopSuggestions" );
     }
     setData( sourceName, "receivedData", "stopList" );
@@ -905,7 +910,7 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 //         qDeleteAll( stops ); TODO
 //     }
 
-    kDebug() << "DONE" << requestInfo.sourceName;
+    kDebug() << "DONE" << request.sourceName;
 //     kDebug() << m_runningSources.count() << "running sources" << m_runningSources;
 //     kDebug() << m_dataSources.count() << "data sources" << m_dataSources;
 
@@ -914,25 +919,25 @@ void PublicTransportEngine::stopListReceived( TimetableAccessor *accessor,
 
 void PublicTransportEngine::errorParsing( TimetableAccessor *accessor,
         ErrorCode errorType, const QString &errorString,
-        const QUrl &requestUrl, const RequestInfo *requestInfo )
+        const QUrl &requestUrl, const AbstractRequest *request )
 {
     Q_UNUSED( accessor );
-    kDebug() << "Error while parsing" << requestUrl //<< requestInfo->serviceProvider
-             << "\n  sourceName =" << requestInfo->sourceName << requestInfo->dataType << requestInfo->parseMode;
+    kDebug() << "Error while parsing" << requestUrl //<< request->serviceProvider
+             << "\n  sourceName =" << request->sourceName << request->dataType << request->parseMode;
     kDebug() << errorType << errorString;
 
     // Remove erroneous source from running sources list
-    m_runningSources.removeOne( requestInfo->sourceName );
+    m_runningSources.removeOne( request->sourceName );
 
-    const QString sourceName = requestInfo->sourceName;
-//     setData( sourceName, "serviceProvider", requestInfo->serviceProvider );
+    const QString sourceName = request->sourceName;
+//     setData( sourceName, "serviceProvider", request->serviceProvider );
     setData( sourceName, "count", 0 );
     setData( sourceName, "requestUrl", requestUrl );
-    if ( requestInfo->parseMode == ParseForDeparturesArrivals ) {
+    if ( request->parseMode == ParseForDeparturesArrivals ) {
         setData( sourceName, "parseMode", "departures" );
-    } else if ( requestInfo->parseMode == ParseForJourneys ) {
+    } else if ( request->parseMode == ParseForJourneys ) {
         setData( sourceName, "parseMode", "journeys" );
-    } else if ( requestInfo->parseMode == ParseForStopSuggestions ) {
+    } else if ( request->parseMode == ParseForStopSuggestions ) {
         setData( sourceName, "parseMode", "stopSuggestions" );
     }
     setData( sourceName, "receivedData", "nothing" );

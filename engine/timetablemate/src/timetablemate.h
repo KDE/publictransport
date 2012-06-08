@@ -55,9 +55,9 @@ class WebInspectorDockWidget;
 class NetworkMonitorDockWidget;
 
 class TimetableAccessorInfo;
-struct StopSuggestionRequestInfo;
-struct JourneyRequestInfo;
-struct DepartureRequestInfo;
+struct StopSuggestionRequest;
+struct JourneyRequest;
+struct DepartureRequest;
 
 namespace Ui {
     class preferences;

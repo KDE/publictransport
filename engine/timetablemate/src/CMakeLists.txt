@@ -24,6 +24,7 @@ set( timetablemate_SRCS
    ../../scripting.cpp
    ../../script_thread.cpp
    ../../departureinfo.cpp
+   ../../request.cpp
    ../../timetableaccessor.cpp
    ../../timetableaccessor_info.cpp
    ../../timetableaccessor_script.cpp

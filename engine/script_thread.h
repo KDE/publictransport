@@ -37,10 +37,11 @@
 #include <QScriptEngineAgent> // Base class
 #include <QPointer>
 
-struct RequestInfo;
-struct StopSuggestionRequestInfo;
-struct DepartureRequestInfo;
-struct JourneyRequestInfo;
+struct AbstractRequest;
+struct DepartureRequest;
+struct ArrivalRequest;
+struct StopSuggestionRequest;
+struct JourneyRequest;
 
 class TimetableAccessorInfo;
 namespace Scripting {
@@ -113,7 +114,7 @@ public:
     virtual ~ScriptJob();
 
     /** @brief Return a pointer to the object containing inforamtion about the request of this job. */
-    virtual const RequestInfo* requestInfo() const = 0;
+    virtual const AbstractRequest* request() const = 0;
 
     /** @brief Return the number of items which are already published. */
     int publishedItems() const { return m_published; };
@@ -124,21 +125,27 @@ public:
 signals:
     /** @brief Signals ready TimetableData items. */
     void departuresReady( const QList<TimetableData> &departures,
-                    ResultObject::Features features, ResultObject::Hints hints,
-                    const QString &url, const GlobalTimetableInfo &globalInfo,
-                    const DepartureRequestInfo &info, bool couldNeedForcedUpdate = false );
+                          ResultObject::Features features, ResultObject::Hints hints,
+                          const QString &url, const GlobalTimetableInfo &globalInfo,
+                          const DepartureRequest &request, bool couldNeedForcedUpdate = false );
+
+    /** @brief Signals ready TimetableData items. */
+    void arrivalsReady( const QList<TimetableData> &departures,
+                        ResultObject::Features features, ResultObject::Hints hints,
+                        const QString &url, const GlobalTimetableInfo &globalInfo,
+                        const ArrivalRequest &request, bool couldNeedForcedUpdate = false );
 
     /** @brief Signals ready TimetableData items. */
     void journeysReady( const QList<TimetableData> &departures,
                         ResultObject::Features features, ResultObject::Hints hints,
                         const QString &url, const GlobalTimetableInfo &globalInfo,
-                        const JourneyRequestInfo &info, bool couldNeedForcedUpdate = false );
+                        const JourneyRequest &request, bool couldNeedForcedUpdate = false );
 
     /** @brief Signals ready TimetableData items. */
     void stopSuggestionsReady( const QList<TimetableData> &departures,
                                ResultObject::Features features, ResultObject::Hints hints,
                                const QString &url, const GlobalTimetableInfo &globalInfo,
-                               const StopSuggestionRequestInfo &info,
+                               const StopSuggestionRequest &info,
                                bool couldNeedForcedUpdate = false );
 
 protected slots:
@@ -174,12 +181,12 @@ class DepartureJob : public ScriptJob {
 
 public:
     explicit DepartureJob( QScriptProgram* script, const TimetableAccessorInfo* info,
-                           Storage* scriptStorage, const DepartureRequestInfo& request,
+                           Storage* scriptStorage, const DepartureRequest& request,
                            QObject* parent = 0);
 
     virtual ~DepartureJob();
 
-    virtual const RequestInfo* requestInfo() const;
+    virtual const AbstractRequest* request() const;
 
 private:
     const DepartureJobPrivate *d;
@@ -191,12 +198,12 @@ class JourneyJob : public ScriptJob {
 
 public:
     explicit JourneyJob( QScriptProgram* script, const TimetableAccessorInfo* info,
-                         Storage* scriptStorage, const JourneyRequestInfo& request,
+                         Storage* scriptStorage, const JourneyRequest& request,
                          QObject* parent = 0);
 
     virtual ~JourneyJob();
 
-    virtual const RequestInfo* requestInfo() const;
+    virtual const AbstractRequest* request() const;
 
 private:
     const JourneyJobPrivate *d;
@@ -208,12 +215,12 @@ class StopSuggestionsJob : public ScriptJob {
 
 public:
     explicit StopSuggestionsJob( QScriptProgram* script, const TimetableAccessorInfo* info,
-                                 Storage* scriptStorage, const StopSuggestionRequestInfo& request,
+                                 Storage* scriptStorage, const StopSuggestionRequest& request,
                                  QObject* parent = 0);
 
     virtual ~StopSuggestionsJob();
 
-    virtual const RequestInfo* requestInfo() const;
+    virtual const AbstractRequest* request() const;
 
 private:
     const StopSuggestionsJobPrivate *d;

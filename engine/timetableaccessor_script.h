@@ -116,31 +116,36 @@ public:
     virtual QStringList scriptFeatures() const;
 
     /**
-     * @brief Requests a list of departures/arrivals. When the departure/arrival list
-     *   is completely received @ref departureListReceived is emitted.
+     * @brief Requests a list of departures.
+     * When the departure/arrival list is completely received @ref departureListReceived is emitted.
      **/
-    virtual void requestDepartures( const DepartureRequestInfo &requestInfo );
+    virtual void requestDepartures( const DepartureRequest &request );
 
-    virtual void requestJourneys( const JourneyRequestInfo &requestInfo );
+    /**
+     * @brief Requests a list of arrivals.
+     * When the arrival list is completely received @ref departureListReceived is emitted.
+     **/
+    virtual void requestArrivals( const ArrivalRequest &request );
 
-    virtual void requestStopSuggestions(
-            const StopSuggestionRequestInfo &requestInfo );
+    virtual void requestJourneys( const JourneyRequest &request );
+
+    virtual void requestStopSuggestions( const StopSuggestionRequest &request );
 
 protected slots:
     void departuresReady( const QList<TimetableData> &data,
                           ResultObject::Features features, ResultObject::Hints hints,
                           const QString &url, const GlobalTimetableInfo &globalInfo,
-                          const DepartureRequestInfo &requestInfo, bool couldNeedForcedUpdate = false );
+                          const DepartureRequest &request, bool couldNeedForcedUpdate = false );
 
     void journeysReady( const QList<TimetableData> &data, ResultObject::Features features,
                         ResultObject::Hints hints, const QString &url,
                         const GlobalTimetableInfo &globalInfo,
-                        const JourneyRequestInfo &requestInfo, bool couldNeedForcedUpdate = false );
+                        const JourneyRequest &request, bool couldNeedForcedUpdate = false );
 
     void stopSuggestionsReady( const QList<TimetableData> &data, ResultObject::Features features,
                                ResultObject::Hints hints, const QString &url,
                                const GlobalTimetableInfo &globalInfo,
-                               const StopSuggestionRequestInfo &requestInfo,
+                               const StopSuggestionRequest &request,
                                bool couldNeedForcedUpdate = false );
 
     void jobStarted( ThreadWeaver::Job *job );
