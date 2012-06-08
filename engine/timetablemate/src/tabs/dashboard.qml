@@ -76,6 +76,9 @@ Flickable { id: flickable
         y: Math.max( 0, (flickable.height - height) / 2 )
         move: Transition { NumberAnimation { properties: "x,y" } }
 
+        Behavior on x { PropertyAnimation{} }
+        Behavior on y { PropertyAnimation{} }
+
         property bool compact: false
         property int maxCompactWidth: 400
         property int minWidth: 200
