@@ -31,7 +31,7 @@
 #include "publictransportpreview.h"
 #include "testmodel.h"
 #include "tabs/abstracttab.h"
-#include "tabs/overviewtab.h"
+#include "tabs/dashboardtab.h"
 #include "tabs/projectsourcetab.h"
 #include "tabs/scripttab.h"
 #include "tabs/webtab.h"
@@ -105,7 +105,7 @@ public:
 
     ProjectPrivate( Project *project ) : state(Project::Uninitialized),
           projectModel(0), projectSourceBufferModified(false),
-          overviewTab(0), projectSourceTab(0), scriptTab(0), plasmaPreviewTab(0), webTab(0),
+          dashboardTab(0), projectSourceTab(0), scriptTab(0), plasmaPreviewTab(0), webTab(0),
           accessor(new TimetableAccessor(0, project)), debugger(new Debugger::Debugger(project)),
           executionLine(-1), testModel(new TestModel(project)), testState(NoTestRunning),
           q_ptr(project)
@@ -731,7 +731,7 @@ public:
         case Project::UninstallGlobally:
         case Project::Close:
         case Project::ShowProjectSettings:
-        case Project::ShowOverview:
+        case Project::ShowDashboard:
         case Project::ShowScript:
         case Project::ShowProjectSource:
         case Project::ShowPlasmaPreview:
@@ -1447,7 +1447,7 @@ public:
     QString filePath;
     QString serviceProviderID;
 
-    OverviewTab *overviewTab;
+    DashboardTab *dashboardTab;
     ProjectSourceTab *projectSourceTab;
     ScriptTab *scriptTab;
     PlasmaPreviewTab *plasmaPreviewTab;
@@ -1502,10 +1502,10 @@ ProjectModel *Project::projectModel() const
     return d->projectModel;
 }
 
-OverviewTab *Project::overviewTab() const
+DashboardTab *Project::dashboardTab() const
 {
     Q_D( const Project );
-    return d->overviewTab;
+    return d->dashboardTab;
 }
 
 ProjectSourceTab *Project::projectSourceTab() const
@@ -1599,8 +1599,8 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
         return "project_close";
     case ShowProjectSettings:
         return "project_settings";
-    case ShowOverview:
-        return "project_show_overview";
+    case ShowDashboard:
+        return "project_show_dashboard";
     case ShowHomepage:
         return "project_show_homepage";
     case ShowScript:
@@ -1696,7 +1696,7 @@ QList< QAction* > Project::contextMenuActions( QWidget *parent )
             << projectAction(Uninstall) << projectAction(UninstallGlobally)
             << separator1
             << projectAction(SetAsActiveProject)
-            << projectAction(ShowOverview)
+            << projectAction(ShowDashboard)
             << debuggerSubMenuAction( parent )
             << testSubMenuAction( parent )
             << separator2
@@ -1859,8 +1859,8 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
     case ShowProjectSettings:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(showSettingsDialog()) );
         break;
-    case ShowOverview:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showOverviewTab()) );
+    case ShowDashboard:
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showDashboardTab()) );
         break;
     case ShowHomepage:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(showWebTab()) );
@@ -2049,10 +2049,9 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         action->setToolTip( i18nc("@info:tooltip",
                 "Opens a dialog to modify the projects settings") );
         break;
-    case ShowOverview:
-        action = new KAction( KIcon("zoom-draw"), // TODO better icon
-                              i18nc("@action", "Show &Overview"), parent );
-        action->setToolTip( i18nc("@info:tooltip", "Shows an overview of the project in a tab.") );
+    case ShowDashboard:
+        action = new KAction( KIcon("dashboard-show"), i18nc("@action", "Show &Dashboard"), parent );
+        action->setToolTip( i18nc("@info:tooltip", "Shows the dashboard tab of the project.") );
         break;
     case ShowHomepage:
         action = new KAction( KIcon("document-open-remote"),
@@ -2283,18 +2282,18 @@ void Project::showScriptLineNumber( int lineNumber )
             KTextEditor::Cursor(lineNumber - 1, 0) );
 }
 
-OverviewTab *Project::showOverviewTab( QWidget *parent )
+DashboardTab *Project::showDashboardTab( QWidget *parent )
 {
     Q_D( Project );
-    if ( d->overviewTab ) {
-        emit tabGoToRequest( d->overviewTab );
+    if ( d->dashboardTab ) {
+        emit tabGoToRequest( d->dashboardTab );
     } else {
-        d->overviewTab = createOverviewTab( d->parentWidget(parent) );
-        if ( d->overviewTab ) {
-            emit tabOpenRequest( d->overviewTab );
+        d->dashboardTab = createDashboardTab( d->parentWidget(parent) );
+        if ( d->dashboardTab ) {
+            emit tabOpenRequest( d->dashboardTab );
         }
     }
-    return d->overviewTab;
+    return d->dashboardTab;
 }
 
 ScriptTab *Project::showScriptTab( QWidget *parent )
@@ -2365,7 +2364,7 @@ Project::ProjectActionGroup Project::actionGroupFromType( Project::ProjectAction
         return FileActionGroup;
 
     case ShowProjectSettings:
-    case ShowOverview:
+    case ShowDashboard:
     case ShowHomepage:
     case ShowScript:
     case ShowProjectSource:
@@ -2419,7 +2418,7 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
                     << InstallGlobally << UninstallGlobally;
         break;
     case UiActionGroup:
-        actionTypes << ShowProjectSettings << ShowOverview << ShowHomepage
+        actionTypes << ShowProjectSettings << ShowDashboard << ShowHomepage
                     << ShowScript << ShowProjectSource << ShowPlasmaPreview;
         break;
     case DebuggerActionGroup:
@@ -3056,8 +3055,8 @@ void Project::slotOtherTabsCloseRequest()
 AbstractTab *Project::tab( TabType type ) const
 {
     switch ( type ) {
-    case Tabs::Overview:
-        return overviewTab();
+    case Tabs::Dashboard:
+        return dashboardTab();
     case Tabs::ProjectSource:
         return projectSourceTab();
     case Tabs::Script:
@@ -3075,8 +3074,8 @@ AbstractTab *Project::tab( TabType type ) const
 AbstractTab *Project::showTab( TabType type, QWidget *parent )
 {
     switch ( type ) {
-    case Tabs::Overview:
-        return showOverviewTab( parent );
+    case Tabs::Dashboard:
+        return showDashboardTab( parent );
     case Tabs::ProjectSource:
         return showProjectSourceTab( parent );
     case Tabs::Script:
@@ -3095,8 +3094,8 @@ bool Project::isTabOpened( TabType type ) const
 {
     Q_D( const Project );
     switch ( type ) {
-    case Tabs::Overview:
-        return d->overviewTab;
+    case Tabs::Dashboard:
+        return d->dashboardTab;
     case Tabs::ProjectSource:
         return d->projectSourceTab;
     case Tabs::Script:
@@ -3115,8 +3114,8 @@ AbstractTab *Project::createTab( TabType type, QWidget *parent )
     Q_D( Project );
     parent = d->parentWidget( parent );
     switch ( type ) {
-    case Tabs::Overview:
-        return createOverviewTab( parent );
+    case Tabs::Dashboard:
+        return createDashboardTab( parent );
     case Tabs::ProjectSource:
         return createProjectSourceTab( parent );
     case Tabs::Script:
@@ -3179,22 +3178,22 @@ WebTab *Project::createWebTab( QWidget *parent )
     }
 }
 
-OverviewTab *Project::createOverviewTab( QWidget *parent )
+DashboardTab *Project::createDashboardTab( QWidget *parent )
 {
     Q_D( Project );
 
-    // Create overview widget
+    // Create dashboard widget
     parent = d->parentWidget( parent );
-    d->overviewTab = OverviewTab::create( this, parent );
-    if ( d->overviewTab ) {
+    d->dashboardTab = DashboardTab::create( this, parent );
+    if ( d->dashboardTab ) {
         // Connect default tab slots with the tab
-        connect( d->overviewTab, SIGNAL(destroyed(QObject*)),
-                 this, SLOT(overviewTabDestroyed()) );
-        d->connectTab( d->overviewTab );
+        connect( d->dashboardTab, SIGNAL(destroyed(QObject*)),
+                 this, SLOT(dashboardTabDestroyed()) );
+        d->connectTab( d->dashboardTab );
 
-        return d->overviewTab;
+        return d->dashboardTab;
     } else {
-        d->errorHappened( WebError, i18nc("@info", "Cannot create overview widget") );
+        d->errorHappened( WebError, i18nc("@info", "Cannot create dashboard widget") );
         return 0;
     }
 }
@@ -3371,10 +3370,10 @@ void Project::projectSourceDocumentChanged( KTextEditor::Document *projectSource
     }
 }
 
-void Project::overviewTabDestroyed()
+void Project::dashboardTabDestroyed()
 {
     Q_D( Project );
-    d->overviewTab = 0;
+    d->dashboardTab = 0;
 }
 
 void Project::projectSourceTabDestroyed()

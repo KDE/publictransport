@@ -191,8 +191,8 @@ QIcon AbstractTab::icon() const
         return KIcon("document-save");
     } else {
         switch ( type() ) {
-        case Tabs::Overview:
-            return KIcon("zoom-draw"); // TODO Did not find a better icon for "overview", maybe create one
+        case Tabs::Dashboard:
+            return KIcon("dashboard-show");
         case Tabs::ProjectSource:
             return KIcon("application-x-publictransport-serviceprovider");
         case Tabs::Script:
@@ -210,7 +210,7 @@ QIcon AbstractTab::icon() const
 QString AbstractTab::title() const
 {
     switch ( type() ) {
-    case Tabs::Overview: {
+    case Tabs::Dashboard: {
         const QString name = m_project->projectName();
         return name.length() > 25 ? name.left(25) + QString::fromUtf8("…") : name;
     }

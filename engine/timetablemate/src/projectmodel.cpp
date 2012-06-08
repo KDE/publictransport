@@ -129,8 +129,8 @@ QModelIndex ProjectModel::parent( const QModelIndex &child ) const
 QString ProjectModelItem::text() const
 {
     switch ( m_type ) {
-    case ProjectModelItem::OverviewItem:
-        return i18nc("@info/plain", "Overview");
+    case ProjectModelItem::DashboardItem:
+        return i18nc("@info/plain", "Dashboard");
     case ProjectModelItem::ScriptItem: {
         QString name = m_project->scriptFileName().isEmpty()
                 ? i18nc("@info/plain", "Script File")
@@ -169,8 +169,8 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             return projectItem->text();
         case Qt::DecorationRole:
             switch ( projectItem->type() ) {
-            case ProjectModelItem::OverviewItem:
-                return KIcon("zoom-draw");
+            case ProjectModelItem::DashboardItem:
+                return KIcon("dashboard-show");
             case ProjectModelItem::AccessorItem:
                 return KIcon("application-x-publictransport-serviceprovider");
             case ProjectModelItem::ScriptItem:
@@ -186,8 +186,8 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             break;
         case Qt::ToolTipRole:
             switch ( projectItem->type() ) {
-            case ProjectModelItem::OverviewItem:
-                return i18nc("@info:tooltip", "An overview of the project %1.",
+            case ProjectModelItem::DashboardItem:
+                return i18nc("@info:tooltip", "The dashboard of the project %1.",
                              project->projectName());
             case ProjectModelItem::ScriptItem:
                 return i18nc("@info:tooltip", "Create/edit the projects script.");
@@ -233,7 +233,7 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                 }
             case ProjectModelItem::PlasmaPreviewItem:
             case ProjectModelItem::WebItem:
-            case ProjectModelItem::OverviewItem:
+            case ProjectModelItem::DashboardItem:
             default:
                 return QVariant();
             }
@@ -277,7 +277,7 @@ Qt::ItemFlags ProjectModel::flags( const QModelIndex &index ) const
     if ( index.parent().isValid() ) {
         // Child item of a project item
         switch ( projectItem->type() ) {
-        case ProjectModelItem::OverviewItem:
+        case ProjectModelItem::DashboardItem:
         case ProjectModelItem::AccessorItem:
         case ProjectModelItem::PlasmaPreviewItem:
         case ProjectModelItem::ScriptItem:
@@ -349,7 +349,7 @@ void ProjectModel::appendProject( Project *project )
     // Create child items
     const QModelIndex projectIndex = indexFromProjectItem( projectItem );
     beginInsertRows( projectIndex, 0, 4 );
-    projectItem->addChild( ProjectModelItem::createOverviewtItem(project) );
+    projectItem->addChild( ProjectModelItem::createDashboardtItem(project) );
     projectItem->addChild( ProjectModelItem::createScriptItem(project) );
     projectItem->addChild( ProjectModelItem::createAccessorDocumentItem(project) );
     projectItem->addChild( ProjectModelItem::createWebItem(project) );
@@ -382,8 +382,8 @@ void ProjectModel::setAsActiveProjectRequest()
 TabType ProjectModelItem::tabTypeFromProjectItemType( ProjectModelItem::Type projectItemType )
 {
     switch ( projectItemType ) {
-    case OverviewItem:
-        return Tabs::Overview;
+    case DashboardItem:
+        return Tabs::Dashboard;
     case AccessorItem:
         return Tabs::ProjectSource;
     case ScriptItem:
@@ -401,8 +401,8 @@ TabType ProjectModelItem::tabTypeFromProjectItemType( ProjectModelItem::Type pro
 ProjectModelItem::Type ProjectModelItem::projectItemTypeFromTabType( TabType tabType )
 {
     switch ( tabType ) {
-    case Tabs::Overview:
-        return OverviewItem;
+    case Tabs::Dashboard:
+        return DashboardItem;
     case Tabs::ProjectSource:
         return AccessorItem;
     case Tabs::Script:

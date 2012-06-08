@@ -34,7 +34,7 @@ class Project;
 class ProjectModel;
 
 class AbstractTab;
-class OverviewTab;
+class DashboardTab;
 class ProjectSourceTab;
 class PlasmaPreviewTab;
 class WebTab;
@@ -296,7 +296,7 @@ private:
 
     bool closeAllTabsExcept( Project *project, AbstractTab *except = 0, bool ask = true );
 
-    void overviewTabAction( OverviewTab *overviewTab, TabAction tabAction );
+    void dashboardTabAction( DashboardTab *dashboardTab, TabAction tabAction );
     void accessorTabAction( ProjectSourceTab *accessorTab, TabAction tabAction );
     void scriptTabAction( ScriptTab *scriptTab, TabAction tabAction );
     void plasmaPreviewTabAction( PlasmaPreviewTab *plasmaPreviewTab, TabAction tabAction );

@@ -32,7 +32,7 @@
 
 // Tab widgets
 #include "tabs/abstracttab.h"
-#include "tabs/overviewtab.h"
+#include "tabs/dashboardtab.h"
 #include "tabs/projectsourcetab.h"
 #include "tabs/scripttab.h"
 #include "tabs/webtab.h"
@@ -285,7 +285,7 @@ void TimetableMate::saveProperties( KConfigGroup &config )
         if ( !filePath.isEmpty() ) {
             QStringList openedTabs;
             const QList< TabType > allTabs = QList< TabType >()
-                    << Tabs::Overview << Tabs::Script << Tabs::ProjectSource
+                    << Tabs::Dashboard << Tabs::Script << Tabs::ProjectSource
                     << Tabs::PlasmaPreview << Tabs::Web;
             foreach ( TabType tab, allTabs ) {
                 if ( project->isTabOpened(tab) ) {
@@ -917,8 +917,8 @@ void TimetableMate::closeTab( AbstractTab *tab )
     }
 
     switch ( tab->type() ) {
-    case Tabs::Overview:
-        overviewTabAction( qobject_cast<OverviewTab*>(tab), CloseTab );
+    case Tabs::Dashboard:
+        dashboardTabAction( qobject_cast<DashboardTab*>(tab), CloseTab );
         break;
     case Tabs::ProjectSource:
         accessorTabAction( qobject_cast<ProjectSourceTab*>(tab), CloseTab );
@@ -1056,13 +1056,13 @@ void TimetableMate::currentTabChanged( int index ) {
         m_partManager->setActivePart( 0 );
     }
 
-    // Adjust if an overview tab was left or newly shown
-    const bool leftOverviewTab = m_currentTab && m_currentTab->isOverviewTab();
-    const bool movedToOverviewTab = tab && tab->isOverviewTab();
-    if ( leftOverviewTab && !movedToOverviewTab ) {
-        overviewTabAction( qobject_cast<OverviewTab*>(m_currentTab), LeaveTab );
-    } else if ( movedToOverviewTab && !leftOverviewTab ) {
-        overviewTabAction( qobject_cast<OverviewTab*>(tab), MoveToTab );
+    // Adjust if a dashboard tab was left or newly shown
+    const bool leftDashboardTab = m_currentTab && m_currentTab->isDashboardTab();
+    const bool movedToDashboardTab = tab && tab->isDashboardTab();
+    if ( leftDashboardTab && !movedToDashboardTab ) {
+        dashboardTabAction( qobject_cast<DashboardTab*>(m_currentTab), LeaveTab );
+    } else if ( movedToDashboardTab && !leftDashboardTab ) {
+        dashboardTabAction( qobject_cast<DashboardTab*>(tab), MoveToTab );
     }
 
     // Adjust if an accessor tab was left or newly shown
@@ -1121,9 +1121,9 @@ void TimetableMate::currentTabChanged( int index ) {
     updateWindowTitle();
 }
 
-void TimetableMate::overviewTabAction( OverviewTab *overviewTab, TimetableMate::TabAction tabAction )
+void TimetableMate::dashboardTabAction( DashboardTab *dashboardTab, TimetableMate::TabAction tabAction )
 {
-    Q_UNUSED( overviewTab );
+    Q_UNUSED( dashboardTab );
     Q_UNUSED( tabAction );
 }
 
@@ -1617,7 +1617,7 @@ void TimetableMate::open( const KUrl &url ) {
 
     Project *project = openProject( url.path() );
     if ( project ) {
-        project->showOverviewTab( this );
+        project->showDashboardTab( this );
     }
 }
 
@@ -1691,7 +1691,7 @@ void TimetableMate::fileOpenInstalled() {
     if ( ok ) {
         QString selectedFilePath = map[ selectedPrettyName ];
         Project *project = openProject( selectedFilePath );
-        project->showOverviewTab( this );
+        project->showDashboardTab( this );
     }
 }
 

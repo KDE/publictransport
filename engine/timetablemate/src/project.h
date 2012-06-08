@@ -45,7 +45,7 @@ class ProjectModel;
 class TestModel;
 
 class AbstractTab;
-class OverviewTab;
+class DashboardTab;
 class ProjectSourceTab;
 class ScriptTab;
 class WebTab;
@@ -94,8 +94,8 @@ using namespace Debugger;
  * Each project can also have a script file, which gets used to request/parse timetable data.
  * Currently only scripted accessors are supported by this class.
  *
- * A set of tabs gets provided, ie. OverviewTab, ScriptTab, ProjectSourceTab, PlasmaPreviewTab and WebTab.
- * Project settings can be changed using the ProjectSourceTab or the ProjectSettingsDialog
+ * A set of tabs gets provided, ie. DashboardTab, ScriptTab, ProjectSourceTab, PlasmaPreviewTab and
+ * WebTab. Project settings can be changed using the ProjectSourceTab or the ProjectSettingsDialog
  * (showSettingsDialog()).
  * Each project has a projectName() and a projectIcon(). It can be saved using save() or saveAs()
  * and opened by creating a new Project instance with the file path. Check if the project was
@@ -190,7 +190,7 @@ public:
 
         // UiActionGroup
         ShowProjectSettings, /**< Show a settings dialog for the project. */
-        ShowOverview, /**< Show the overview tab. */
+        ShowDashboard, /**< Show the dashboard tab. */
         ShowHomepage, /**< Show the web tab. */
         ShowScript, /**< Show the script tab. */
         ShowProjectSource, /**< Show the project source XML document tab. */
@@ -446,11 +446,11 @@ public:
     Q_INVOKABLE void closeTab( TabType type );
 
     /**
-     * @brief Get a pointer to the overview tab, if it was created.
-     * @see createOverviewTab
-     * @see showOverviewTab
+     * @brief Get a pointer to the dashboard tab, if it was created.
+     * @see createDashboardTab
+     * @see showDashboardTab
      **/
-    OverviewTab *overviewTab() const;
+    DashboardTab *dashboardTab() const;
 
     /**
      * @brief Get a pointer to the project source document tab, if it was created.
@@ -481,10 +481,10 @@ public:
     WebTab *webTab() const;
 
     /**
-     * @brief Create an overview tab or return an already created one.
-     * @see overviewTab
+     * @brief Create a dashboard tab or return an already created one.
+     * @see dashboardTab
      **/
-    OverviewTab *createOverviewTab( QWidget *parent = 0 );
+    DashboardTab *createDashboardTab( QWidget *parent = 0 );
 
     /**
      * @brief Create a project source document tab or return an already created one.
@@ -772,8 +772,8 @@ public slots:
     /** @brief Show the project settings dialog. */
     void showSettingsDialog( QWidget *parent = 0 );
 
-    /** @brief Show the project overview tab. */
-    OverviewTab *showOverviewTab( QWidget *parent = 0 );
+    /** @brief Show the project dashboard tab. */
+    DashboardTab *showDashboardTab( QWidget *parent = 0 );
 
     /** @brief Show the script tab. */
     ScriptTab *showScriptTab( QWidget *parent = 0 );
@@ -835,7 +835,7 @@ protected slots:
     void scriptAdded( const QString &fileName );
     void scriptFileChanged( const QString &fileName );
 
-    void overviewTabDestroyed();
+    void dashboardTabDestroyed();
     void projectSourceTabDestroyed();
     void scriptTabDestroyed();
     void plasmaPreviewTabDestroyed();

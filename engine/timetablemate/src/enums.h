@@ -30,7 +30,7 @@ public:
     enum Type {
         NoTab = 0, /**< No tab. */
 
-        Overview = 1, /**< Overview tab. */
+        Dashboard = 1, /**< Dashboard tab. */
         ProjectSource = 2, /**< Project source document tab. */
         Script = 3, /**< Script document tab. */
         Web = 4, /**< Web tab. */
@@ -39,8 +39,8 @@ public:
 
     static QLatin1String nameForType( Type type ) {
         switch ( type ) {
-        case Tabs::Overview:
-            return QLatin1String("overview");
+        case Tabs::Dashboard:
+            return QLatin1String("dashboard");
         case Tabs::ProjectSource:
             return QLatin1String("source");
         case Tabs::Script:

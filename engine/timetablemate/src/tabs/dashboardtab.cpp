@@ -18,7 +18,7 @@
 */
 
 // Own includes
-#include "overviewtab.h"
+#include "dashboardtab.h"
 #include "../project.h"
 
 // PublicTransport engine includes
@@ -39,16 +39,16 @@
 #include <QAction>
 #include <QGraphicsEffect>
 
-OverviewTab::OverviewTab( Project *project, QWidget *parent )
+DashboardTab::DashboardTab( Project *project, QWidget *parent )
         : AbstractTab(project, type(), parent), m_qmlView(0)
 {
-    // Find the QML file used for the overview tab
-    const QString fileName = KGlobal::dirs()->findResource( "data", "timetablemate/overviewtab.qml" );
+    // Find the QML file used for the dashboard tab
+    const QString fileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.qml" );
     if ( fileName.isEmpty() ) {
-        kWarning() << "overviewtab.qml not found! Check installation";
+        kWarning() << "dashboard.qml not found! Check installation";
         return;
     }
-    const QString svgFileName = KGlobal::dirs()->findResource( "data", "timetablemate/overview.svg" );
+    const QString svgFileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.svg" );
 
     // Register Project and TimetableAccessorInfo in Qt's meta object system and for QML
     qRegisterMetaType< const TimetableAccessorInfo* >( "const TimetableAccessorInfo*" );
@@ -62,7 +62,7 @@ OverviewTab::OverviewTab( Project *project, QWidget *parent )
     qRegisterMetaType< QToolButton* >( "QToolButton*" );
     qmlRegisterType< QToolButton, 1 >( "TimetableMate", 1, 0, "QToolButton" );
 
-    // Create overview widget
+    // Create dashboard widget
     QWidget *container = new QWidget( parent );
     m_qmlView = new QDeclarativeView( container );
 
@@ -91,8 +91,8 @@ OverviewTab::OverviewTab( Project *project, QWidget *parent )
     setWidget( container );
 }
 
-OverviewTab *OverviewTab::create( Project *project, QWidget *parent )
+DashboardTab *DashboardTab::create( Project *project, QWidget *parent )
 {
-    OverviewTab *tab = new OverviewTab( project, parent );
+    DashboardTab *tab = new DashboardTab( project, parent );
     return tab;
 }

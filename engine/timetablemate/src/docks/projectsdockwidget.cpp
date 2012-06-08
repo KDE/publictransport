@@ -113,8 +113,8 @@ void ProjectsDockWidget::projectItemDoubleClicked( const QModelIndex &index )
     if ( index.parent().isValid() ) {
         // Is a child of the project root
         switch ( projectItem->type() ) {
-        case ProjectModelItem::OverviewItem:
-            project->showOverviewTab( this );
+        case ProjectModelItem::DashboardItem:
+            project->showDashboardTab( this );
             break;
         case ProjectModelItem::AccessorItem:
             project->showProjectSourceTab( this );

@@ -48,7 +48,7 @@ target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS}
     ${KDE4_PLASMA_LIBS} # For the Plasma preview main view tab
     ${KDE4_THREADWEAVER_LIBS} # For the debugger and for includes from the engine
     kdeclarative # For KDeclarative, no ${KDE4_KDECLARATIVE_LIBS} available..
-    ${QT_QTDECLARATIVE_LIBRARY} # For the overview main view tab
+    ${QT_QTDECLARATIVE_LIBRARY} # For the dashboard main view tab
     ${QT_QTSCRIPT_LIBRARY}
     publictransporthelper
 )

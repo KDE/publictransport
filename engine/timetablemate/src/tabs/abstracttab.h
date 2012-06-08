@@ -59,8 +59,8 @@ public:
     /** @brief Get the type of this tab. */
     virtual TabType type() const = 0;
 
-    /** @brief Whether or not this is an accessor document tab. */
-    inline bool isOverviewTab() const { return type() == Tabs::Overview; };
+    /** @brief Whether or not this is a dashboard tab. */
+    inline bool isDashboardTab() const { return type() == Tabs::Dashboard; };
 
     /** @brief Whether or not this is an accessor document tab. */
     inline bool isAccessorDocumentTab() const { return type() == Tabs::ProjectSource; };

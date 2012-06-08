@@ -17,25 +17,25 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef OVERVIEWTAB_H
-#define OVERVIEWTAB_H
+#ifndef DASHBOARDTAB_H
+#define DASHBOARDTAB_H
 
 // Own includes
 #include "abstracttab.h"
 
 class QDeclarativeView;
 
-/** @brief Represents a web tab. */
-class OverviewTab : public AbstractTab {
+/** @brief Represents a dashboard tab. */
+class DashboardTab : public AbstractTab {
     Q_OBJECT
 public:
-    static OverviewTab *create( Project *project, QWidget *parent );
-    virtual inline TabType type() const { return Tabs::Overview; };
+    static DashboardTab *create( Project *project, QWidget *parent );
+    virtual inline TabType type() const { return Tabs::Dashboard; };
 
     QDeclarativeView *qmlView() const { return m_qmlView; };
 
 private:
-    OverviewTab( Project *project, QWidget *parent = 0 );
+    DashboardTab( Project *project, QWidget *parent = 0 );
 
     QDeclarativeView *m_qmlView;
 };

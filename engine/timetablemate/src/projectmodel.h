@@ -35,7 +35,7 @@ public:
     enum Type {
         ProjectItem = 0, /**< A top level project item. */
 
-        OverviewItem, /**< A child of the project item, shows an overview of the project. */
+        DashboardItem, /**< A child of the project item, shows the dashboard of the project. */
         AccessorItem, /**< A child of the project item, represents the accessor XML document. */
         ScriptItem, /**< A child of the project item, represents the script document. */
         WebItem, /**< A child of the project item, represents the web view. */
@@ -62,8 +62,8 @@ public:
 protected:
     ProjectModelItem( Project *project, Type type = ProjectItem, ProjectModelItem *parent = 0 );
 
-    static ProjectModelItem *createOverviewtItem( Project *project ) {
-            return new ProjectModelItem( project, OverviewItem ); };
+    static ProjectModelItem *createDashboardtItem( Project *project ) {
+            return new ProjectModelItem( project, DashboardItem ); };
     static ProjectModelItem *createAccessorDocumentItem( Project *project ) {
             return new ProjectModelItem( project, AccessorItem ); };
     static ProjectModelItem *createScriptItem( Project *project ) {
