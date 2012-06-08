@@ -42,6 +42,7 @@
 #include <KLocale>
 #include <KMessageWidget>
 #include <KLineEdit>
+#include <KActionCollection>
 
 // Qt includes
 #include <QtGui/QLabel>
@@ -55,12 +56,14 @@
 #include <QValidator>
 #include <QLayout>
 #include <QFormLayout>
+#include <QToolBar>
 
 ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
         : KDialog(parent), ui_accessor(new Ui::timetablemateview_base()), m_accessorInfo(0),
           m_newScriptTemplateType(Project::NoScriptTemplate),
           m_shortAuthorAutoFilled(false), m_shortUrlAutoFilled(false),
-          m_cityName(0), m_cityReplacement(0), m_changelog(0), m_mapper(0)
+          m_cityName(0), m_cityReplacement(0), m_changelog(0),
+          m_actions(new KActionCollection(this)), m_mapper(0)
 {
     QWidget *widget = new QWidget( this );
     widget->setAutoFillBackground( false );
@@ -70,6 +73,33 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     setButtons( KDialog::Ok | KDialog::Cancel | KDialog::User1 );
     setButtonIcon( KDialog::User1, KIcon("dialog-ok-apply") );
     setButtonText( KDialog::User1, i18nc("@info/plain", "Check") );
+
+    QToolBar *notesToolBar = new QToolBar( "notesToolBar", ui_accessor->tabNotes );
+    QToolBar *notesToolBar2 = new QToolBar( "notesToolBar2", ui_accessor->tabNotes );
+    ui_accessor->notesLayout->insertWidget( 0, notesToolBar );
+    ui_accessor->notesLayout->insertWidget( 1, notesToolBar2 );
+    ui_accessor->notes->createActions( m_actions );
+    QAction *separator1 = new QAction( this ), *separator2 = new QAction( this );
+    separator1->setSeparator( true );
+    separator2->setSeparator( true );
+    notesToolBar->addActions( QList<QAction*>()
+            << m_actions->action("format_text_bold")
+            << m_actions->action("format_text_italic")
+            << m_actions->action("format_text_underline")
+            << m_actions->action("format_text_strikeout")
+            << separator1
+            << m_actions->action("format_align_left")
+            << m_actions->action("format_align_center")
+            << m_actions->action("format_align_right")
+            << m_actions->action("format_align_justify")
+            << separator2
+            << m_actions->action("insert_horizontal_rule")
+            << m_actions->action("manage_link")
+            << m_actions->action("format_painter") );
+    notesToolBar2->addActions( QList<QAction*>()
+            << m_actions->action("format_font_family")
+            << m_actions->action("format_font_size")
+            << m_actions->action("format_list_style") );
 
     settingsChanged();
 
@@ -525,6 +555,7 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     m_accessorInfo->setCityNameToValueReplacementHash( cityNameReplacements );
     m_accessorInfo->setSampleCity( ui_accessor->sampleCity->text() );
     m_accessorInfo->setSampleStops( ui_accessor->sampleStopNames->items() );
+    m_accessorInfo->setNotes( ui_accessor->notes->textOrHtml() );
 }
 
 void ProjectSettingsDialog::changelogEntryWidgetAdded( ChangelogEntryWidget *entryWidget )
@@ -796,6 +827,8 @@ void ProjectSettingsDialog::setAccessorInfo( const TimetableAccessorInfo *info,
 
     ui_accessor->sampleStopNames->setItems( info->sampleStopNames() );
     ui_accessor->sampleCity->setText( info->sampleCity() );
+
+    ui_accessor->notes->setText( info->notes() );
 
     // Enable changed signals from widgets again and emit changed signals once
     m_mapper->blockSignals( false );

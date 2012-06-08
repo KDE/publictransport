@@ -34,13 +34,15 @@ namespace Ui
 {
     class timetablemateview_base;
 }
+class TimetableAccessor;
 
 class ChangelogEntryWidget;
 class ChangelogWidget;
-class TimetableAccessor;
 class QSignalMapper;
 class QPainter;
+
 class KUrl;
+class KActionCollection;
 
 typedef QSharedPointer< const TimetableAccessorInfo > TimetableAccessorInfoPtr;
 
@@ -136,6 +138,7 @@ private:
     KLineEdit *m_cityName;
     KLineEdit *m_cityReplacement;
     ChangelogWidget *m_changelog;
+    KActionCollection *m_actions;
 
     QSignalMapper *m_mapper;
 };

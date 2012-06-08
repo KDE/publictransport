@@ -215,7 +215,7 @@ Flickable { id: flickable
             // When wrapped, align text in labels left, otherwise right
             onWrapChanged: {
                 var labels = [ lblDescription, lblVersion, lblChangelogEntry, lblUrl, lblAuthor,
-                               lblFileName, lblScriptFileName, lblScriptExtensions ]
+                               lblFileName, lblScriptFileName, lblScriptExtensions, lblNotes ]
                 var alignment = wrap ? Text.AlignLeft : Text.AlignRight;
                 for ( var i = 0; i < labels.length; ++i ) {
                     labels[i].horizontalAlignment = alignment
@@ -225,7 +225,7 @@ Flickable { id: flickable
             // Compute the maximum implicit width of all labels, ie. the label columns implicit width
             function implicitLabelWidth() {
                 var labels = [ lblDescription, lblVersion, lblChangelogEntry, lblUrl, lblAuthor,
-                               lblFileName, lblScriptFileName, lblScriptExtensions ]
+                               lblFileName, lblScriptFileName, lblScriptExtensions, lblNotes ]
                 var implicitWidth = 0
                 for ( var i = 0; i < labels.length; ++i )
                     implicitWidth = Math.max( implicitWidth, labels[i].implicitWidth );
@@ -315,6 +315,15 @@ Flickable { id: flickable
                 text: info.scriptExtensions.length == 0
                     ? i18nc("@info", "(none)") : info.scriptExtensions.join(", ")
                 width: parent.fieldWidth; elide: Text.ElideMiddle }
+
+            // Notes
+            Text { id: lblNotes; text: i18nc("@label", "Notes:");
+                width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
+            Text { id: notes;
+                text: info.notes; width: parent.fieldWidth; wrapMode: Text.WordWrap }
+//             PlasmaComponents.TextArea { id: notes;
+//                 readOnly: false // TODO
+//                 text: info.notes; width: parent.fieldWidth }
         }
     }
 } // Flickable

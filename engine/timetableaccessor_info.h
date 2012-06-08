@@ -82,6 +82,7 @@ class TimetableAccessorInfo : public QObject {
     Q_PROPERTY( QString lastChangelogAuthor READ lastChangelogAuthor CONSTANT )
     Q_PROPERTY( QString lastChangelogVersion READ lastChangelogVersion CONSTANT )
     Q_PROPERTY( QString lastChangelogDescription READ lastChangelogDescription CONSTANT )
+    Q_PROPERTY( QString notes READ notes CONSTANT )
 
 public:
     /**
@@ -219,6 +220,9 @@ public:
 
     const QHash<QString, QString> &cityNameToValueReplacementHash() const {
         return m_hashCityNameToValue; };
+
+    /** @brief Custom notes for the project, eg. a list of TODO items. */
+    QString notes() const;
 
 // Where appropriate "const TimetableAccessorInfo*" gets used, so that setters are not available
 // protected:
@@ -424,6 +428,8 @@ public:
             { m_sampleStopNames = sampleStopNames; }; // For journeys at least two stop names are required
     void setSampleCity( const QString &sampleCity ) { m_sampleCity = sampleCity; };
 
+    void setNotes( const QString &notes ) { m_notes = notes; };
+
 protected:
     virtual bool supportsByJourneyNewsParsing( const TimetableInformation &info ) const {
         Q_UNUSED(info)
@@ -477,6 +483,8 @@ protected:
     // Sample data, used to test accessors
     QStringList m_sampleStopNames; // For journeys at least two stop names are required
     QString m_sampleCity;
+
+    QString m_notes;
 };
 
 Q_DECLARE_METATYPE( TimetableAccessorInfo );

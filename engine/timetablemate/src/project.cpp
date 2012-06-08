@@ -1210,25 +1210,25 @@ public:
         }
     };
 
-    bool save( QWidget *parent, const QString &_xmlFilePath, bool useAsNewSavePath = true )
+    bool save( QWidget *parent, const QString &xmlFilePath, bool useAsNewSavePath = true )
     {
         Q_Q( Project );
         parent = parentWidget( parent );
-        const QString filePath = _xmlFilePath.isEmpty() ? filePath : _xmlFilePath;
-        if ( filePath.isEmpty() ) {
+        const QString _filePath = xmlFilePath.isEmpty() ? filePath : xmlFilePath;
+        if ( _filePath.isEmpty() ) {
             return q->saveAs( parent );
         }
 
         // Save the project
-        kDebug() << "Save to" << filePath;
-        if ( !writeAccessorInfoXml(filePath) ) {
+        kDebug() << "Save to" << _filePath;
+        if ( !writeAccessorInfoXml(_filePath) ) {
             return false;
         }
 
         QString scriptFile = accessor->info()->scriptFileName();
         if ( !scriptFile.isEmpty() ) {
             const QString scriptFilePath =
-                    QFileInfo(filePath).absolutePath() + '/' + QFileInfo(scriptFile).fileName();
+                    QFileInfo(_filePath).absolutePath() + '/' + QFileInfo(scriptFile).fileName();
             QFile file( scriptFilePath );
             if ( !file.open(QIODevice::WriteOnly) ) {
                 q->emit informationMessage( i18nc("@info", "Could not write the script file to "
@@ -1252,7 +1252,7 @@ public:
             projectSourceBufferModified = false;
             unsavedScriptContents.clear();
             updateProjectActions( QList<Project::ProjectAction>() << Project::Save );
-            setXmlFilePath( filePath );
+            setXmlFilePath( _filePath );
 
             if ( projectSourceTab ) {
                 projectSourceTab->document()->setModified( false );

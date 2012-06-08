@@ -128,6 +128,7 @@ TimetableAccessorInfo &TimetableAccessorInfo::operator=( const TimetableAccessor
     m_fallbackCharset = info.m_fallbackCharset;
     m_sampleStopNames = info.m_sampleStopNames;
     m_sampleCity = info.m_sampleCity;
+    m_notes = info.notes();
     return *this;
 }
 
@@ -246,6 +247,11 @@ QString TimetableAccessorInfo::description() const
 {
     const QString lang = KGlobal::locale()->country();
     return m_description.contains(lang) ? m_description[lang] : m_description["en"];
+}
+
+QString TimetableAccessorInfo::notes() const
+{
+    return m_notes;
 }
 
 void TimetableAccessorInfo::setUrl( const QString &url, const QString &shortUrl )

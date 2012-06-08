@@ -90,6 +90,10 @@ bool AccessorInfoXmlWriter::write( QIODevice *device, const TimetableAccessor *a
         writeEndElement();
     }
 
+    if ( !info->notes().isEmpty() ) {
+        writeTextElement( "notes", info->notes() );
+    }
+
     writeStartElement( "author" );
     writeTextElement( "fullname", info->author() );
     writeTextElement( "short", info->shortAuthor() );

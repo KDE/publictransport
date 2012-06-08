@@ -209,6 +209,8 @@ TimetableAccessor* AccessorInfoXmlReader::readAccessorInfo( const QString &servi
                 readSamples( &stops, &city );
                 accessorInfo->setSampleStops( stops );
                 accessorInfo->setSampleCity( city );
+            } else if ( name().compare(QLatin1String("notes"), Qt::CaseInsensitive) == 0 ) {
+                accessorInfo->setNotes( readElementText() );
             } else {
                 readUnknownElement();
             }
