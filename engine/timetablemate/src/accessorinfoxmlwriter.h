@@ -24,13 +24,10 @@
 #ifndef ACCESSORINFOXMLWRITER_HEADER
 #define ACCESSORINFOXMLWRITER_HEADER
 
-// Includes from the PublicTransport data engine
-#include <engine/timetableaccessor.h>
-
 // Qt includes
 #include <QXmlStreamWriter>
-#include <QHash>
-#include <QStringList>
+
+class TimetableAccessor;
 
 class AccessorInfoXmlWriter : public QXmlStreamWriter
 {

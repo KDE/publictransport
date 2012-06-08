@@ -21,6 +21,7 @@
 #include "accessorinfoxmlwriter.h"
 
 // PublicTransport engine includes
+#include <engine/timetableaccessor.h>
 #include <engine/timetableaccessor_info.h>
 #include <engine/global.h>
 

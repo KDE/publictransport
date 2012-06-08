@@ -33,6 +33,8 @@
 // Qt includes
 #include <QScriptEngineAgent>
 
+class QMutex;
+class QTimer;
 class QWaitCondition;
 class QScriptContext;
 class QScriptContextInfo;

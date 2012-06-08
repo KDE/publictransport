@@ -23,9 +23,6 @@
 // Own includes
 #include "testmodel.h"
 
-// Qt includes
-#include <QHash>
-
 class Project;
 class TimetableAccessorInfo;
 class AccessorInfoTester;

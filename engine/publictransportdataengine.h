@@ -26,10 +26,10 @@
 
 // Own includes
 #include "enums.h"
+#include "departureinfo.h"
 
 // Plasma includes
 #include <Plasma/DataEngine>
-#include "departureinfo.h"
 
 struct AbstractRequest;
 struct StopSuggestionRequest;
@@ -43,6 +43,7 @@ class StopInfo;
 
 class QTimer;
 class QFileSystemWatcher;
+
 
 /**
  * @brief This engine provides departure/arrival times and journeys for public transport.

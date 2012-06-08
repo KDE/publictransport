@@ -2,11 +2,15 @@
 #ifndef VARIABLEMODEL_H
 #define VARIABLEMODEL_H
 
-#include <QAbstractItemModel>
-#include <QSortFilterProxyModel>
-
 // Own includes
 #include "debuggerstructures.h"
+
+// KDE includes
+#include <KIcon>
+
+// Qt includes
+#include <QAbstractItemModel>
+#include <QSortFilterProxyModel>
 
 class Project;
 class QMutex;
@@ -15,23 +19,6 @@ namespace Debugger {
 
 class Debugger;
 class VariableModel;
-
-//** @brief A virtual root item. */
-// class VariableRootItem {
-//     friend class VariableModel;
-//
-// public:
-//     VariableModel *model() const { return m_model; };
-//     QList< VariableItem* > children() const { return m_children; };
-//     virtual VariableItem *parent() const { return 0; };
-// //     virtual QModelIndex index() const { return QModelIndex(); };
-//
-// protected:
-//     VariableRootItem( VariableModel *model ) : m_model(model) {};
-//
-//     VariableModel *const m_model;
-//     QList< VariableItem* > m_children;
-// };
 
 class VariableItem;
 struct VariableItemList {

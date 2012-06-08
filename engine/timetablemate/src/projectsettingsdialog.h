@@ -30,9 +30,6 @@
 #include <KDialog>
 #include <KEditListBox>
 
-// Qt includes
-#include <QtGui/QWidget>
-
 namespace Ui
 {
     class timetablemateview_base;

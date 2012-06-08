@@ -23,7 +23,6 @@
 // Own includes
 #include "timetableaccessor.h"
 #include "timetableaccessor_info.h"
-#include "departureinfo.h"
 #include "global.h"
 #include "request.h"
 

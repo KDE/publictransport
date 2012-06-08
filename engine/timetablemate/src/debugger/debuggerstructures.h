@@ -29,17 +29,13 @@
 
 #define DEBUGGER_DEBUG(x) // kDebug() << x
 
-// KDE includes
-#include <KIcon>
-#include <KColorScheme>
-
 // Qt includes
 #include <QStringList>
 #include <QScriptValue>
 #include <QScriptContextInfo>
 #include <QStack>
+#include <QVariant>
 #include <QDebug>
-#include <QMutex>
 
 class QModelIndex;
 class QScriptContextInfo;

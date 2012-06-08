@@ -29,7 +29,7 @@
 #include "departureinfo.h"
 
 // KDE includes
-#include <KUrl> // Member variable
+#include <KUrl>
 
 // Qt includes
 #include <QHash>

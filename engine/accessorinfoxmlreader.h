@@ -29,7 +29,6 @@
 
 // Qt includes
 #include <QXmlStreamReader> // Base class
-#include <QHash>
 
 class TimetableAccessor;
 class TimetableAccessorInfo;

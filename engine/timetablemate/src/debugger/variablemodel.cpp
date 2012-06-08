@@ -31,6 +31,7 @@
 // KDE includes
 #include <KDebug>
 #include <KLocalizedString>
+#include <KColorScheme>
 
 // Qt includes
 #include <QScriptValueIterator>
