@@ -52,13 +52,18 @@ class TimetableAccessorInfo;
 /**
  * @brief Gets timetable information for public transport from different service providers.
  *
+ * This class can be instantiated to create an invalid timetable accessor. To create a valid
+ * accessor instantiate one of the derivates of this class.
  * The easiest way to implement support for a new service provider is to add an XML file describing
  * the service provider and a script to parse timetable documents.
- * If that's not enough a new class can be derived from TimetableAccessor or it's derivates. These
- * functions should then be overwritten:
- *   - serviceProvider()
- *   - country(), cities()
- *   - rawUrl(), parseDocument()
+ * If that's not enough a new class can be derived from TimetableAccessor or it's derivates.
+ * These functions should then be overwritten:
+ *   @li requestDepartures()
+ *   @li requestArrivals()
+ *   @li requestStopSuggestions()
+ *   @li requestJourneys()
+ * If one of these functions isn't overridden, the associated timetable data can not be accessed
+ * from the service provider with the accessor.
  **/
 class TimetableAccessor : public QObject {
     Q_OBJECT
@@ -104,12 +109,15 @@ public:
                                                       const QStringList &dirs = QStringList() );
 
     /** @brief Gets the service provider ID the accessor is designed for. */
-    virtual QString serviceProvider() const;
+    QString serviceProvider() const;
 
     /** @brief Gets the minimum seconds to wait between two data-fetches from the service provider. */
     virtual int minFetchWait() const;
 
-    /** @brief Gets a list of features that this accessor supports. */
+    /**
+     * @brief Gets a list of features that this accessor supports.
+     * The default implementation calls scriptFeatures() and removes duplicates.
+     **/
     virtual QStringList features() const;
 
     /** @brief Gets a list of short localized strings describing the supported features. */
@@ -119,10 +127,10 @@ public:
     virtual QStringList scriptFeatures() const { return QStringList(); };
 
     /** @brief The country for which the accessor returns results. */
-    virtual QString country() const;
+    QString country() const;
 
     /** @brief A list of cities for which the accessor returns results. */
-    virtual QStringList cities() const;
+    QStringList cities() const;
 
     QString credit() const;
 
@@ -132,7 +140,7 @@ public:
      * @brief Requests a list of departures.
      *
      * When the departure list is completely received @ref departureListReceived gets emitted.
-     *
+     * The default implementation does nothing.
      * @param request Information about the departure request.
      **/
     virtual void requestDepartures( const DepartureRequest &request );
@@ -141,9 +149,8 @@ public:
      * @brief Requests a list of arrivals.
      *
      * When the arrival list is completely received @ref departureListReceived gets emitted.
-     *
+     * The default implementation does nothing.
      * @todo TODO use arrivalListReceived()
-     *
      * @param request Information about the arrival request.
      **/
     virtual void requestArrivals( const ArrivalRequest &request );
@@ -152,7 +159,7 @@ public:
      * @brief Requests a list of journeys.
      *
      * When the journey list is completely received @ref journeyListReceived() gets emitted.
-     *
+     * The default implementation does nothing.
      * @param request Information about the journey request.
      **/
     virtual void requestJourneys( const JourneyRequest &request );
@@ -161,7 +168,7 @@ public:
      * @brief Requests a list of stop suggestions.
      *
      * When the stop list is completely received @ref stopListReceived gets emitted.
-     *
+     * The default implementation does nothing.
      * @param request Information about the stop suggestion request.
      **/
     virtual void requestStopSuggestions( const StopSuggestionRequest &request );

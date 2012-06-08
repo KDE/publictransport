@@ -38,9 +38,6 @@ public:
     AccessorInfoXmlWriter() : QXmlStreamWriter() {};
 
     bool write( QIODevice *device, const TimetableAccessor *accessor );
-
-private:
-    TimetableAccessor writeAccessorInfo();
 };
 
 #endif // ACCESSORINFOXMLREADER_HEADER
