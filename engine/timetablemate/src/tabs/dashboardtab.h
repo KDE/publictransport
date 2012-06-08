@@ -33,11 +33,16 @@ public:
     virtual inline TabType type() const { return Tabs::Dashboard; };
 
     QDeclarativeView *qmlView() const { return m_qmlView; };
+    Project *project() const { return m_project; };
+
+protected:
+    virtual void contextMenuEvent( QContextMenuEvent *event );
 
 private:
     DashboardTab( Project *project, QWidget *parent = 0 );
 
     QDeclarativeView *m_qmlView;
+    Project *m_project;
 };
 
 #endif // Multiple inclusion guard

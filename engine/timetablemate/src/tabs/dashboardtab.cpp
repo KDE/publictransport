@@ -38,9 +38,10 @@
 #include <QToolButton>
 #include <QAction>
 #include <QGraphicsEffect>
+#include <QContextMenuEvent>
 
 DashboardTab::DashboardTab( Project *project, QWidget *parent )
-        : AbstractTab(project, type(), parent), m_qmlView(0)
+        : AbstractTab(project, type(), parent), m_qmlView(0), m_project(project)
 {
     // Find the QML file used for the dashboard tab
     const QString fileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.qml" );
@@ -59,8 +60,8 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
     qmlRegisterType< Tabs, 1 >( "TimetableMate", 1, 0, "Tabs" );
 //      qmlRegisterUncreatableType<
 //     TEST
-    qRegisterMetaType< QToolButton* >( "QToolButton*" );
-    qmlRegisterType< QToolButton, 1 >( "TimetableMate", 1, 0, "QToolButton" );
+//     qRegisterMetaType< QToolButton* >( "QToolButton*" );
+//     qmlRegisterType< QToolButton, 1 >( "TimetableMate", 1, 0, "QToolButton" );
 
     // Create dashboard widget
     QWidget *container = new QWidget( parent );
@@ -95,4 +96,9 @@ DashboardTab *DashboardTab::create( Project *project, QWidget *parent )
 {
     DashboardTab *tab = new DashboardTab( project, parent );
     return tab;
+}
+
+void DashboardTab::contextMenuEvent( QContextMenuEvent *event )
+{
+    m_project->showProjectContextMenu( event->globalPos() );
 }
