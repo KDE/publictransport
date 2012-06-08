@@ -230,8 +230,9 @@ public:
     virtual bool setItemData( const QModelIndex &index, const QMap< int, QVariant > &roles );
 
     /** @brief Gets flags for the items of this model. */
-    virtual Qt::ItemFlags flags( const QModelIndex& ) const {
-        return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable;
+    virtual Qt::ItemFlags flags( const QModelIndex &index ) const {
+        return !index.isValid() ? Qt::NoItemFlags
+                : Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable;
     };
 
     /**

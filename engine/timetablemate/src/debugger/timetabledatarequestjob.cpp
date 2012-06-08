@@ -367,7 +367,7 @@ void CallScriptFunctionJob::debuggerRun()
                                 "'%2': <message>%3</message>.",
                                 engine->uncaughtExceptionLineNumber(), functionName,
                                 engine->uncaughtException().toString()) );
-        m_debugger->debugInterrupt(); // TODO
+        m_debugger->debugInterrupt(); // TEST is this needed?
         return;
     }
 //     engine->clearExceptions();

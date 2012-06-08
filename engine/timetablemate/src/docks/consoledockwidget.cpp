@@ -215,10 +215,9 @@ void ConsoleDockWidget::evaluationResult( const EvaluationResult &result )
         if ( result.backtrace.isEmpty() ) {
             appendToConsole( i18nc("@info", "Error: <message>%1</message>", result.errorMessage) );
         } else {
-            appendToConsole( // TODO KUIT <p>
-                    i18nc("@info", "Error: <message>%1</message><nl />"
+            appendToConsole( i18nc("@info", "Error: <message>%1</message><nl />"
                                    "Backtrace: <message>%2</message>",
-                          result.errorMessage, result.backtrace.join("<br />")) );
+                                   result.errorMessage, result.backtrace.join("<br />")) );
         }
     } else {
         m_consoleWidget->appendHtml( result.returnValue.toString() );

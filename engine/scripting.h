@@ -945,7 +945,7 @@ public:
      * Table header names are currently only found as "class" attributes of "th" tags.
      *
      * @deprecated Will be removed. Use findNamedHtmlTags() instead.
-     * TODO Remove this function?
+     * TODO Remove this function. Still in use by at_oebb.js.
      *
      * @param str The string is in which to search for positions of table headers.
      * @param options A map (javascript object) with these optional properties:
@@ -1199,8 +1199,8 @@ public:
     /**
      * @brief Used to store enabled features.
      *
-     * The meta object of ResultObject gets published to scripts as @b enum and contains this
-     * enumeration.
+     * The meta object of ResultObject gets published to scripts under the name "enum" and contains
+     * this enumeration.
      *
      * @see enableFeature()
      * @see isFeatureEnabled()
@@ -1217,7 +1217,12 @@ public:
         AutoRemoveCityFromStopNames
                     = 0x04, /**< Automatic removing of city names from all stop names, ie.
                 * stop names in eg. RouteStops or Target). Scripts can help the data engine with
-                * this feature with the hints CityNamesAreLeft or CityNamesAreRight. TODO more docu */
+                * this feature with the hints CityNamesAreLeft or CityNamesAreRight.
+                * @code
+                * result.giveHint( enum.CityNamesAreLeft );
+                * result.giveHint( enum.CityNamesAreRight );
+                * @endcode
+                * @see Hint */
         AllFeatures = AutoPublish | AutoDecodeHtmlEntities | AutoRemoveCityFromStopNames
                 /**< All available features are enabled. */
     };
@@ -1273,15 +1278,17 @@ public:
     /**
      * @brief Whether or not @p feature is enabled.
      *
-     * Script examples:
+     * Script example:
      * @code
-     * if ( result.isFeatureEnabled(features.AutoPublish) ) {
+     * if ( result.isFeatureEnabled(enum.AutoPublish) ) {
      *    // Do something when the AutoPublish feature is enabled
      * }
      * @endcode
      *
+     * By default all features are enabled.
+     *
      * @param feature The feature to check. Scripts can access the Feature enumeration
-     *   as @b accessor.
+     *   under the name "enum".
      *
      * @see Feature
      * @since 0.10
@@ -1291,14 +1298,16 @@ public:
     /**
      * @brief Set whether or not @p feature is @p enabled.
      *
-     * Script examples:
+     * Script example:
      * @code
      * // Disable the AutoPublish feature
-     * result.enableFeature( accessor.AutoPublish, false );
+     * result.enableFeature( enum.AutoPublish, false );
      * @endcode
      *
+     * By default all features are enabled, disable unneeded features for better performance.
+     *
      * @param feature The feature to enable/disable. Scripts can access the Feature enumeration
-     *   as @b accessor.
+     *   under the name "enum".
      * @param enable @c True to enable @p feature, @c false to disable it.
      *
      * @see Feature
@@ -1309,13 +1318,30 @@ public:
     /**
      * @brief Test if the given @p hint is set.
      *
+     * Script example:
+     * @code
+     * if ( result.isHintGiven(enum.CityNamesAreLeft) ) {
+     *    // Do something when the CityNamesAreLeft hint is given
+     * }
+     * @endcode
+     *
      * By default no hints are set.
+     *
+     * @param hint The hint to check. Scripts can access the Hint enumeration
+     *   under the name "enum".
+     *
      * @since 0.10
      */
     Q_INVOKABLE bool isHintGiven( Hint hint ) const;
 
     /**
      * @brief Set the given @p hint to @p enable.
+     *
+     * Script example:
+     * @code
+     * // Remove the CityNamesAreLeft hint
+     * result.giveHint( enum.CityNamesAreLeft, false );
+     * @endcode
      *
      * By default no hints are set.
      *
@@ -1326,19 +1352,19 @@ public:
      */
     Q_INVOKABLE void giveHint( Hint hint, bool enable = true );
 
-    // TODO More docu, eg. how to use the enum in the script
     /**
      * @brief Get the currently enabled features.
      *
+     * Scripts can access the Features enumeration like @verbatimenum.AutoPublish@endverbatim.
      * By default this equals to AllFeatures.
      * @since 0.10
      */
     Features features() const;
 
-    // TODO More docu, eg. how to use the enum in the script
     /**
      * @brief Get the currently set hints.
      *
+     * Scripts can access the Hints enumeration like @verbatimenum.CityNamesAreLeft@endverbatim.
      * By default this equals to NoHints.
      * @since 0.10
      */

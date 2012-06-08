@@ -196,7 +196,7 @@ void LoadScriptJob::debuggerRun()
         m_explanation = i18nc("@info/plain", "Error in the script: "
                               "<message>%1</message>.", uncaughtException);
         m_success = false;
-        m_debugger->debugInterrupt(); // TODO
+        m_debugger->debugInterrupt(); // TEST is this needed?
     } else {
         m_engineMutex->unlockInline();
 

@@ -266,7 +266,7 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
 
         for ( int positionIndex = 0; positionIndex < count; ++positionIndex ) {
             const QPointF stopMarkerPos( startStopPos.x() + positionIndex * step, startStopPos.y() );
-            int index;
+            int index = -1;
             if ( positionIndex == omitIndex ) { // Currently at first omitted stop
                 // Create intermediate marker item
                 RouteStopMarkerGraphicsItem *markerItem = new RouteStopMarkerGraphicsItem(

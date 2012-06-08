@@ -280,7 +280,7 @@ void Debugger::loadScript( const QString &program, const TimetableAccessorInfo *
     m_script = new QScriptProgram( program, info->scriptFileName() );
     m_info = info;
     m_lastScriptError = NoScriptError;
-    enqueueNewLoadScriptJob(); // TODO QScriptProgram as argument to createLoadScriptJob()?
+    enqueueNewLoadScriptJob();
 }
 
 LoadScriptJob *Debugger::enqueueNewLoadScriptJob()
@@ -345,13 +345,6 @@ bool Debugger::requestTimetableData( const RequestInfo *requestInfo, DebugFlags 
                 false, i18nc("@info", "Script could not be loaded correctly") );
         return false;
     }
-//     TODO
-//     if ( m_debugger->isRunning() ) {
-//         kDebug() << "Already executing script";
-//         emit requestTimetableDataResult( QSharedPointer< RequestInfo >(requestInfo->clone()),
-//                 false, i18nc("@info", "Script is already being executed") );
-//         return false;
-//     }
 
     TimetableDataRequestJob *runScriptJob = createTimetableDataRequestJob( requestInfo, debugFlags );
     enqueueJob( runScriptJob );

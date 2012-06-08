@@ -424,8 +424,8 @@ public:
         connectProjectAction( actionType, action, false );
     };
 
-//     TODO Rename to actionsFromGroup
-    static QList< Project::ProjectAction > actionTypesFromGroup( ProjectActionGroup group );
+    /** @brief Get a list of all project actions in @p group. */
+    static QList< Project::ProjectAction > actionsFromGroup( ProjectActionGroup group );
 
     /** @brief Get data stored for @p projectAction. */
     ProjectActionData projectActionData( QAction *projectAction );

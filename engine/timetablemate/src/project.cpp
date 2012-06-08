@@ -853,22 +853,22 @@ public:
                                       const QList< Project::ProjectAction > &additionalActionTypes
                                             = QList< Project::ProjectAction >() )
     {
-        updateProjectActions(Project::actionTypesFromGroup(group) << additionalActionTypes);
+        updateProjectActions(Project::actionsFromGroup(group) << additionalActionTypes);
     };
 
     inline void updateProjectActions( const QList< Project::ProjectActionGroup > &groups,
                                       const QList< Project::ProjectAction > &additionalActionTypes
                                             = QList< Project::ProjectAction >() )
     {
-        updateProjectActions(actionTypesFromGroups(groups) << additionalActionTypes);
+        updateProjectActions(actionsFromGroups(groups) << additionalActionTypes);
     };
 
-    QList< Project::ProjectAction > actionTypesFromGroups(
+    QList< Project::ProjectAction > actionsFromGroups(
             const QList<Project::ProjectActionGroup> &groups )
     {
         QList< Project::ProjectAction > actionTypes;
         foreach ( Project::ProjectActionGroup group, groups ) {
-            actionTypes << Project::actionTypesFromGroup( group );
+            actionTypes << Project::actionsFromGroup( group );
         }
         return actionTypes;
     };
@@ -1468,7 +1468,6 @@ public:
 
     TestModel *testModel;
     TestState testState;
-//     QStringList pendingTests; TODO
     QList< ThreadWeaver::Job* > pendingTests;
 
 private:
@@ -2413,7 +2412,7 @@ Project::ProjectActionGroup Project::actionGroupFromType( Project::ProjectAction
     }
 }
 
-QList< Project::ProjectAction > Project::actionTypesFromGroup( Project::ProjectActionGroup group )
+QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActionGroup group )
 {
     QList< Project::ProjectAction > actionTypes;
     switch ( group ) {
@@ -2656,7 +2655,7 @@ void Project::testJobDone( ThreadWeaver::Job *job )
                     TimetableAccessorScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS )
         {
             test = TestModel::UsedTimetableInformationsTest;
-            d->pendingTests.removeOne( requestJob ); // TODO QLatin1String("TEST_USEDTIMETABLEINFORMATIONS") );
+            d->pendingTests.removeOne( requestJob );
         }
 
         if ( test == TestModel::InvalidTest ) {
@@ -3285,7 +3284,7 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
     connect( d->scriptTab, SIGNAL(destroyed(QObject*)),
              this, SLOT(scriptTabDestroyed()) );
     connect( d->scriptTab, SIGNAL(modifiedStatusChanged(bool)),
-             this, SIGNAL(scriptModifiedStateChanged(bool)) ); // TODO
+             this, SIGNAL(scriptModifiedStateChanged(bool)) );
     return d->scriptTab;
 }
 

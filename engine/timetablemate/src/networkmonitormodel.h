@@ -309,8 +309,8 @@ public:
 
     virtual QIODevice *data( const QUrl &url );
     virtual QNetworkCacheMetaData metaData( const QUrl &url );
-    virtual qint64 cacheSize() const { // TODO
-            return m_data.count() * (sizeof(QUrl) + sizeof(CacheData*)); };
+    virtual qint64 cacheSize() const {
+        return m_data.count() * (sizeof(QUrl) + sizeof(CacheData*)); };
 
     virtual QIODevice *prepare( const QNetworkCacheMetaData &metaData );
     virtual void updateMetaData( const QNetworkCacheMetaData &metaData );
