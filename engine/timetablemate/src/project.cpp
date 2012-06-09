@@ -395,6 +395,9 @@ public:
 
     bool isInstalledLocally() const
     {
+        if ( filePath.isEmpty() ) {
+            return false;
+        }
         const QString localSaveDir = KGlobal::dirs()->saveLocation( "data",
                 ServiceProvider::installationSubDirectory() );
         const QString fileName = QFileInfo( filePath ).fileName();
@@ -403,6 +406,9 @@ public:
 
     bool isInstalledGlobally() const
     {
+        if ( filePath.isEmpty() ) {
+            return false;
+        }
         const QString globalSaveDir = KGlobal::dirs()->findDirs( "data",
                     ServiceProvider::installationSubDirectory() ).last();
         const QString fileName = QFileInfo( filePath ).fileName();
