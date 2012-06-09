@@ -9,6 +9,9 @@ include_directories(
    ${CMAKE_BINARY_DIR}
    ${KDE4_INCLUDES} )
 
+set( SHARED_MIME_INFO_MINIMUM_VERSION "0.30" )
+find_package( SharedMimeInfo )
+
 add_subdirectory( serviceProviders )
 
 if ( BUILD_TESTS )
@@ -46,3 +49,10 @@ install( TARGETS plasma_engine_publictransport
 
 install( FILES plasma-engine-publictransport.desktop
          DESTINATION ${SERVICES_INSTALL_DIR} )
+
+# Install mimetype "application/x-publictransport-engine",
+# files with this mimetype are the XML-files used for service provider plugins for the
+# PublicTransport data engine.
+# In TimetableMate they are also used as project files, without additional data
+install( FILES serviceproviderplugin.xml DESTINATION ${XDG_MIME_INSTALL_DIR} )
+update_xdg_mimetypes( ${XDG_MIME_INSTALL_DIR} )

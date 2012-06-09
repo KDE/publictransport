@@ -1,7 +1,4 @@
 
-set( SHARED_MIME_INFO_MINIMUM_VERSION "0.30" )
-find_package( SharedMimeInfo )
-
 set( timetablemate_SRCS
    main.cpp
    timetablemate.cpp
@@ -81,12 +78,6 @@ add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongener
 install( PROGRAMS timetablemate.desktop DESTINATION ${XDG_APPS_INSTALL_DIR} )
 install( FILES timetablemate.kcfg DESTINATION ${KCFG_INSTALL_DIR} )
 install( FILES timetablemateui.rc katepartui.rc DESTINATION ${DATA_INSTALL_DIR}/timetablemate )
-
-# Install mimetype "application/x-publictransport-engine",
-# files with this mimetype are the XML-files used for plugins for the PublicTransport data engine.
-# In TimetableMate they are also used as project files, without additional data
-install( FILES timetablemate.xml DESTINATION ${XDG_MIME_INSTALL_DIR} )
-update_xdg_mimetypes( ${XDG_MIME_INSTALL_DIR} )
 
 ### KAuth
 kde4_install_auth_actions( org.kde.timetablemate timetablemate.actions )
