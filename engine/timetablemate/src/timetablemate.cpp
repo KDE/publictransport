@@ -1392,6 +1392,7 @@ void TimetableMate::fileNew()
 {
     Project *newProject = new Project( QString(), this );
     m_projectModel->appendProject( newProject );
+    newProject->showDashboardTab();
 }
 
 void TimetableMate::projectAdded( Project *project )
