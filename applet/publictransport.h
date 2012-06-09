@@ -675,7 +675,7 @@ the data returned by the data engine:
 @par
 @ref PublicTransport::handleDataError, if the "error" key of the data structure is true, ie. there
 was an error while running the query in the data engine (eg. server not reachable or an error in
-the accessor while trying to parse the document from the server),
+the service provider while trying to parse the document from the server),
 @par
 @ref PublicTransport::processStopSuggestions, if the "receivedPossibleStopList" key of the data
 structure is true, which can also happen if eg. "Departures" were queried for, but the stop name

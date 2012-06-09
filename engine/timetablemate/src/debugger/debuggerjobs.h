@@ -31,7 +31,7 @@
 #include "debuggerstructures.h"
 
 // PublicTransport engine includes
-#include <engine/timetableaccessor_info.h>
+#include <engine/serviceproviderdata.h>
 
 // KDE includes
 #include <ThreadWeaver/Job>
@@ -74,7 +74,7 @@ public:
     };
 
     /** @brief Constructor. */
-    explicit DebuggerJob( DebuggerAgent *debugger, const TimetableAccessorInfo &info,
+    explicit DebuggerJob( DebuggerAgent *debugger, const ServiceProviderData &info,
                           QMutex *engineMutex, QObject* parent = 0 );
 
     /** @brief Destructor. */
@@ -101,8 +101,8 @@ public:
      **/
     inline QString explanation() const { return m_explanation; };
 
-    /** @brief Get the TimetableAccessorInfo object used by the job. */
-    inline const TimetableAccessorInfo accessorInfo() const { return m_info; };
+    /** @brief Get the ServiceProviderData object used by the job. */
+    inline const ServiceProviderData providerData() const { return m_data; };
 
     /**
      * @brief Only for debugging, prints to output that the job has ended (and how).
@@ -126,7 +126,7 @@ protected:
 //     Storage *m_scriptStorage;
 //     QSharedPointer<Network> m_scriptNetwork;
 //     QSharedPointer<ResultObject> m_scriptResult;
-    const TimetableAccessorInfo m_info;
+    const ServiceProviderData m_data;
     bool m_success;
     QString m_explanation;
     QMutex *m_mutex;
@@ -151,17 +151,17 @@ protected:
      * @internal Used by Debugger.
      *
      * @param debugger A pointer to the DebuggerAgent used for debugging.
-     * @param info The TimetableAccessorInfo object containing information about the current accessor.
+     * @param data The ServiceProviderData object of the used service provider plugin.
      * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
      * @param script A QScriptProgram object containing the new script code.
      * @param parent The parent QObject. Default is 0.
      **/
-    explicit LoadScriptJob( DebuggerAgent *debugger, const TimetableAccessorInfo &info,
+    explicit LoadScriptJob( DebuggerAgent *debugger, const ServiceProviderData &data,
                             QMutex *engineMutex, QScriptProgram *script,
                             Scripting::Helper *scriptHelper, Scripting::ResultObject *scriptResult,
                             Scripting::Network *scriptNetwork, Scripting::Storage *scriptStorage,
                             const QMetaObject &enums, QObject* parent = 0 )
-            : DebuggerJob(debugger, info, engineMutex, parent),
+            : DebuggerJob(debugger, data, engineMutex, parent),
               m_script(script), m_scriptHelper(scriptHelper), m_scriptResult(scriptResult),
               m_scriptNetwork(scriptNetwork), m_scriptStorage(scriptStorage), m_enums(enums) {};
 
@@ -203,16 +203,16 @@ protected:
      * @internal Used by Debugger.
      *
      * @param debugger A pointer to the DebuggerAgent used for debugging.
-     * @param info The TimetableAccessorInfo object containing information about the current accessor.
+     * @param data The ServiceProviderData object of the used service provider plugin.
      * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
      * @param program The script code to be evaluated in this job.
      * @param context A name for the evaluation context, shown in backtraces.
      * @param parent The parent QObject. Default is 0.
      **/
-    explicit EvaluateInContextJob( DebuggerAgent *debugger, const TimetableAccessorInfo &info,
+    explicit EvaluateInContextJob( DebuggerAgent *debugger, const ServiceProviderData &data,
                                    QMutex *engineMutex, const QString &program,
                                    const QString &context, QObject* parent = 0 )
-            : DebuggerJob(debugger, info, engineMutex, parent),
+            : DebuggerJob(debugger, data, engineMutex, parent),
               m_program(program), m_context(QString(context).replace( '\n', ' ' )) {};
 
     virtual void debuggerRun();
@@ -253,15 +253,15 @@ protected:
      * @internal Used by Debugger.
      *
      * @param debugger A pointer to the DebuggerAgent used for debugging.
-     * @param info The TimetableAccessorInfo object containing information about the current accessor.
+     * @param data The ServiceProviderData object of the used service provider plugin.
      * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
      * @param command The console command to execute in this job.
      * @param parent The parent QObject. Default is 0.
      **/
-    explicit ExecuteConsoleCommandJob( DebuggerAgent *debugger, const TimetableAccessorInfo &info,
+    explicit ExecuteConsoleCommandJob( DebuggerAgent *debugger, const ServiceProviderData &data,
                                        QMutex *engineMutex, const ConsoleCommand &command,
                                        QObject* parent = 0 )
-            : DebuggerJob(debugger, info, engineMutex, parent), m_command(command) {};
+            : DebuggerJob(debugger, data, engineMutex, parent), m_command(command) {};
 
     virtual void debuggerRun();
 

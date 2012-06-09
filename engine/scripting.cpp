@@ -758,7 +758,7 @@ void Helper::error( const QString& message, const QString &failedParseText )
 
     // Log the complete message to the log file.
     QString logFileName = KGlobal::dirs()->saveLocation( "data", "plasma_engine_publictransport" );
-    logFileName.append( "accessors.log" );
+    logFileName.append( "serviceproviders.log" );
 
     if ( !logFileName.isEmpty() ) {
         QFile logFile(logFileName);
@@ -1422,7 +1422,7 @@ public:
     };
 
     void readPersistentData() {
-        // TODO: Use TimetableAccessor::accessorCacheFileName() from GTFS branch
+        // TODO: Use ServiceProvider::serviceProviderCacheFileName() from GTFS branch
         const QString fileName = KGlobal::dirs()->saveLocation("data",
                 "plasma_engine_publictransport/").append( QLatin1String("datacache"));
         config = new KConfig( fileName, KConfig::SimpleConfig );
@@ -1453,8 +1453,8 @@ public:
     KConfigGroup lastPersistentGroup;
 };
 
-Storage::Storage( const QString &serviceProvider, QObject* parent )
-        : QObject(parent), d(new StoragePrivate(serviceProvider))
+Storage::Storage( const QString &serviceProviderId, QObject *parent )
+        : QObject(parent), d(new StoragePrivate(serviceProviderId))
 {
     // Delete persistently stored data which lifetime has expired
     checkLifetime();
@@ -1745,7 +1745,7 @@ void Storage::writePersistent( const QString& name, const QVariant& data, uint l
 QVariant Storage::readPersistent( const QString& name, const QVariant& defaultData )
 {
     // Try to load script features from a cache file
-    // TODO: Use TimetableAccessor::accessorCacheFileName() from GTFS branch
+    // TODO: Use ServiceProvider::serviceProviderCacheFileName() from GTFS branch
     QReadLocker locker( d->readWriteLockPersistent );
     if ( defaultData.isValid() ) {
         return d->persistentGroup().readEntry( name, defaultData );

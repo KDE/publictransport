@@ -22,8 +22,8 @@
 
 // Own includes
 #include "scripting.h"
-#include "timetableaccessor_script.h"
-#include "timetableaccessor_info.h"
+#include "serviceproviderscript.h"
+#include "serviceproviderdata.h"
 #include "request.h"
 
 // KDE includes
@@ -41,13 +41,13 @@
 #include <QEventLoop>
 
 static int thread_count = 0;
-ScriptJob::ScriptJob( QScriptProgram *script, const TimetableAccessorInfo* info,
+ScriptJob::ScriptJob( QScriptProgram *script, const ServiceProviderData* data,
                       Storage *scriptStorage, QObject* parent )
     : ThreadWeaver::Job( parent ),
       m_engine(0), m_script(script),
       m_scriptStorage(scriptStorage), m_scriptNetwork(0), m_scriptResult(0),
       m_published(0), m_success(true),
-      m_info( *info )
+      m_data( *data )
 {
     ++thread_count; kDebug() << "Thread count:" << thread_count;
     qRegisterMetaType<DepartureRequest>( "DepartureRequest" );
@@ -132,13 +132,13 @@ void ScriptJob::run()
     kDebug() << "Stop" << request()->toScriptValue( m_engine ).property("stop").toString();
     switch ( request()->parseMode ) {
     case ParseForDeparturesArrivals:
-        functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
+        functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
         break;
     case ParseForJourneys: {
-        functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS;
+        functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
         break;
     } case ParseForStopSuggestions:
-        functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
+        functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
         break;
     default:
         kDebug() << "Parse mode unsupported:" << request()->parseMode;
@@ -208,7 +208,7 @@ void ScriptJob::run()
 
         // Inform about script run time
         kDebug() << " > Script finished after" << (time.elapsed() / 1000.0)
-                    << "seconds: " << m_info.scriptFileName() << thread() << request()->parseMode;
+                    << "seconds: " << m_data.scriptFileName() << thread() << request()->parseMode;
 
         // If data for the current job has already been published, do not emit
         // completed with an empty resultset
@@ -296,14 +296,14 @@ void networkRequestFromScript( const QScriptValue &object, NetworkRequestPtr &re
 
 bool importExtension( QScriptEngine *engine, const QString &extension )
 {
-    if ( !TimetableAccessorScript::allowedExtensions().contains(extension, Qt::CaseInsensitive) ) {
+    if ( !ServiceProviderScript::allowedExtensions().contains(extension, Qt::CaseInsensitive) ) {
         if ( engine->availableExtensions().contains(extension, Qt::CaseInsensitive) ) {
             kDebug() << "Extension" << extension << "is not allowed currently";
         } else {
             kDebug() << "Extension" << extension << "could not be found";
             kDebug() << "Available extensions:" << engine->availableExtensions();
         }
-        kDebug() << "Allowed extensions:" << TimetableAccessorScript::allowedExtensions();
+        kDebug() << "Allowed extensions:" << ServiceProviderScript::allowedExtensions();
         return false;
     } else {
         kDebug() << "Import extension" << extension << engine << engine->thread();
@@ -332,7 +332,7 @@ bool ScriptJob::loadScript( QScriptProgram *script )
 //     m_scriptStorage->mutex.lock();
 //     kDebug() << "LOAD qt.core" << thread() << m_parseMode;
 //     m_engine->importExtension("qt.core");
-    foreach ( const QString &extension, m_info.scriptExtensions() ) {
+    foreach ( const QString &extension, m_data.scriptExtensions() ) {
         if ( !importExtension(m_engine, extension) ) {
             m_errorString = i18nc("@info/plain", "Could not load script extension "
                                   "<resource>%1</resource>.", extension);
@@ -344,7 +344,7 @@ bool ScriptJob::loadScript( QScriptProgram *script )
     }
 //     m_scriptStorage->mutex.unlock();
 
-    m_engine->globalObject().setProperty( "accessor", m_engine->newQObject(&m_info) ); //parent()) );
+    m_engine->globalObject().setProperty( "provider", m_engine->newQObject(&m_data) ); //parent()) );
 
     // Add "importExtension()" function to import extensions
     // Importing Kross not from the GUI thread causes some warnings about pixmaps being used
@@ -360,8 +360,8 @@ bool ScriptJob::loadScript( QScriptProgram *script )
             networkRequestToScript, networkRequestFromScript );
 
     // Create objects for the script
-    Helper *scriptHelper = new Helper( m_info.serviceProvider(), m_engine );
-    m_scriptNetwork = QSharedPointer<Network>( new Network(m_info.fallbackCharset(), thread()) );
+    Helper *scriptHelper = new Helper( m_data.id(), m_engine );
+    m_scriptNetwork = QSharedPointer<Network>( new Network(m_data.fallbackCharset(), thread()) );
     m_scriptResult = QSharedPointer<ResultObject>( new ResultObject(thread()) );
     connect( m_scriptResult.data(), SIGNAL(publish()), this, SLOT(publish()) );
 
@@ -455,7 +455,7 @@ public:
     DepartureRequest request;
 };
 
-DepartureJob::DepartureJob( QScriptProgram* script, const TimetableAccessorInfo* info,
+DepartureJob::DepartureJob( QScriptProgram* script, const ServiceProviderData* info,
         Storage* scriptStorage, const DepartureRequest& request, QObject* parent )
         : ScriptJob(script, info, scriptStorage, parent), d(new DepartureJobPrivate(request))
 {
@@ -478,7 +478,7 @@ public:
     JourneyRequest request;
 };
 
-JourneyJob::JourneyJob( QScriptProgram* script, const TimetableAccessorInfo* info,
+JourneyJob::JourneyJob( QScriptProgram* script, const ServiceProviderData* info,
         Storage* scriptStorage, const JourneyRequest& request, QObject* parent )
         : ScriptJob(script, info, scriptStorage, parent), d(new JourneyJobPrivate(request))
 {
@@ -500,7 +500,7 @@ public:
     StopSuggestionRequest request;
 };
 
-StopSuggestionsJob::StopSuggestionsJob( QScriptProgram* script, const TimetableAccessorInfo* info,
+StopSuggestionsJob::StopSuggestionsJob( QScriptProgram* script, const ServiceProviderData* info,
         Storage* scriptStorage, const StopSuggestionRequest& request, QObject* parent )
         : ScriptJob(script, info, scriptStorage, parent), d(new StopSuggestionsJobPrivate(request))
 {

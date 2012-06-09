@@ -63,12 +63,12 @@ void LocationsTest::locationTest()
         // Ensure that these keys are in the hash
         QVERIFY( locationData.contains("name") );
         QVERIFY( locationData.contains("description") );
-        QVERIFY( locationData.contains("defaultAccessor") );
+        QVERIFY( locationData.contains("defaultProvider") );
 
         // Test data types
         QVERIFY( locationData["name"].canConvert(QVariant::String) );
         QVERIFY( locationData["description"].canConvert(QVariant::String) );
-        QVERIFY( locationData["defaultAccessor"].canConvert(QVariant::String) );
+        QVERIFY( locationData["defaultProvider"].canConvert(QVariant::String) );
 
         // Ensure that the used country code is known
         QString name = locationData["name"].toString();
@@ -77,10 +77,10 @@ void LocationsTest::locationTest()
             || name == QLatin1String("erroneous"),
             QString("Invalid country code \"%1\"").arg(name).toLatin1().data() );
 
-        // Ensure that the default accessor starts with the country code (given in "name")
-        QVERIFY2( locationData["defaultAccessor"].toString().startsWith(locationData["name"].toString()),
-            QString("Wrong defaultAccessor \"%1\" for \"%2\", should start with \"%2_\"")
-            .arg(locationData["defaultAccessor"].toString())
+        // Ensure that the default service provider starts with the country code (given in "name")
+        QVERIFY2( locationData["defaultProvider"].toString().startsWith(locationData["name"].toString()),
+            QString("Wrong defaultProvider \"%1\" for \"%2\", should start with \"%2_\"")
+            .arg(locationData["defaultProvider"].toString())
             .arg(locationData["name"].toString()).toLatin1().data() );
     }
     m_publicTransportEngine->disconnectSource( sourceName, this );

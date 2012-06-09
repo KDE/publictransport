@@ -24,9 +24,9 @@
 #include "debuggeragent.h"
 
 // Public Transport engine includes
-#include <engine/timetableaccessor_script.h>
+#include <engine/serviceproviderscript.h>
 #include <engine/global.h>
-#include <engine/timetableaccessor.h>
+#include <engine/serviceprovider.h>
 #include <engine/request.h>
 
 // KDE includes
@@ -41,48 +41,48 @@
 namespace Debugger {
 
 CallScriptFunctionJob::CallScriptFunctionJob( DebuggerAgent *debugger,
-        const TimetableAccessorInfo &info, QMutex *engineMutex, const QString &functionName,
+        const ServiceProviderData &data, QMutex *engineMutex, const QString &functionName,
         const QVariantList &arguments, DebugFlags debugFlags, QObject *parent )
-        : DebuggerJob( debugger, info, engineMutex, parent ),
+        : DebuggerJob( debugger, data, engineMutex, parent ),
           m_debugFlags(debugFlags), m_functionName(functionName), m_arguments(arguments),
           m_currentLoop(0)
 {
 }
 
 CallScriptFunctionJob::CallScriptFunctionJob( DebuggerAgent *debugger,
-        const TimetableAccessorInfo &info, QMutex *engineMutex, DebugFlags debugFlags,
+        const ServiceProviderData &data, QMutex *engineMutex, DebugFlags debugFlags,
         QObject *parent )
-        : DebuggerJob( debugger, info, engineMutex, parent ),
+        : DebuggerJob( debugger, data, engineMutex, parent ),
           m_debugFlags(debugFlags), m_currentLoop(0)
 {
 }
 
 TestUsedTimetableInformationsJob::TestUsedTimetableInformationsJob( DebuggerAgent *debugger,
-        const TimetableAccessorInfo &info, QMutex *engineMutex, DebugFlags debugFlags,
+        const ServiceProviderData &data, QMutex *engineMutex, DebugFlags debugFlags,
         QObject *parent )
-        : CallScriptFunctionJob(debugger, info, engineMutex,
-                                TimetableAccessorScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS,
+        : CallScriptFunctionJob(debugger, data, engineMutex,
+                                ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS,
                                 QVariantList(), debugFlags, parent)
 {
 }
 
 TimetableDataRequestJob::TimetableDataRequestJob( DebuggerAgent *debugger,
-        const TimetableAccessorInfo &info, QMutex *engineMutex, const AbstractRequest *request,
+        const ServiceProviderData &data, QMutex *engineMutex, const AbstractRequest *request,
         DebugFlags debugFlags, QObject *parent )
-        : CallScriptFunctionJob(debugger, info, engineMutex, debugFlags, parent),
+        : CallScriptFunctionJob(debugger, data, engineMutex, debugFlags, parent),
           m_request(request->clone())
 //         : DebuggerJob(debugger, info, engineMutex, parent),
 //           m_request(request->clone()), m_debugMode(debugMode)
 {
     switch ( request->parseMode ) {
     case ParseForDeparturesArrivals:
-        m_functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
+        m_functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
         break;
     case ParseForJourneys:
-        m_functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS;
+        m_functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
         break;
     case ParseForStopSuggestions:
-        m_functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
+        m_functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
         break;
     default:
         // This should never happen, therefore no i18n
@@ -265,7 +265,7 @@ void CallScriptFunctionJob::debuggerRun()
 
     // Create new Network object in this thread, restore old object at the end
     const QScriptValue previousScriptNetwork = engine->globalObject().property("network");
-    Network *scriptNetwork = new Network( m_info.fallbackCharset() );
+    Network *scriptNetwork = new Network( m_data.fallbackCharset() );
     connect( scriptNetwork, SIGNAL(requestFinished(NetworkRequest*)),
              this, SLOT(requestFinished(NetworkRequest*)) );
     engine->globalObject().setProperty( "network", engine->newQObject(scriptNetwork) );

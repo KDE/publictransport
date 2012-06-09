@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<serviceProvider fileVersion="1.0" version="1.2" type="Script">
+
+<name>INPROP, s. r. o. (cp.atlas.sk)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<cities>
+    <city replaceWith="bus">Autobusy</city>
+    <city replaceWith="lietadla">Lietadlá</city>
+    <city replaceWith="vlak">Vlaky</city>
+    <city replaceWith="vlakbus">Vlaky + Autobusy</city>
+    <city replaceWith="banskabystrica">Banská Bystrica</city>
+    <city replaceWith="bardejov">Bardejov</city>
+    <city replaceWith="bratislava">Bratislava</city>
+    <city replaceWith="brezno">Brezno</city>
+    <city replaceWith="donlykubin">Donlý Kubín</city>
+    <city replaceWith="humenne">Humenné</city>
+    <city replaceWith="kezmarok">Kežmarok</city>
+    <city replaceWith="kosice">Košice</city>
+    <city replaceWith="levice">Levice</city>
+    <city replaceWith="levoca">Levoča</city>
+    <city replaceWith="liptovskymikulas">Liptovský Mikuláš</city>
+    <city replaceWith="lucenec">Lučenec</city>
+    <city replaceWith="martin">Martin</city>
+    <city replaceWith="michalovce">Michalovce</city>
+    <city replaceWith="nitra">Nitra</city>
+    <city replaceWith="novemestonadvahom">Nové Mesto nad Váhom</city>
+    <city replaceWith="novezamky">Nové Zámky</city>
+    <city replaceWith="piestany">Piešťany</city>
+    <city replaceWith="poprad">Poprad</city>
+    <city replaceWith="povazskabystrica">Považská Bystrica</city>
+    <city replaceWith="presov">Prešov</city>
+    <city replaceWith="prievidza">Prievidza</city>
+    <city replaceWith="puchov">Púchov</city>
+    <city replaceWith="rimavskasobota">Rimavská Sobota</city>
+    <city replaceWith="ruzomberok">Ružomberok</city>
+    <city replaceWith="spisskanovaves">Spišská Nová Ves</city>
+    <city replaceWith="svit">Svit</city>
+    <city replaceWith="sala">Šaľa</city>
+    <city replaceWith="staralubovna">Stará Ľubovňa</city>
+    <city replaceWith="sturovo">Štúrovo</city>
+    <city replaceWith="surany">Šurany</city>
+    <city replaceWith="trebisov">Trebišov</city>
+    <city replaceWith="trencin">Trenčín</city>
+    <city replaceWith="vranovnadtoplou">Vranov nad Topľou</city>
+    <city replaceWith="zvolen">Zvolen</city>
+    <city replaceWith="ziarnadhronom">Žiar nad Hronom</city>
+    <city replaceWith="zilina">Žilina</city>
+</cities>
+<useSeperateCityValue>true</useSeperateCityValue>
+<onlyUseCitiesInList>true</onlyUseCitiesInList>
+<description>This service provider has static data. That means, that displayed departures may actually not be valid for today. Please view the journey news, to see if a departure is valid for today (e.g. 'Mo-Fr').</description>
+
+<url>http://cp.atlas.sk/vlakbus/odchody</url>
+<shortUrl>cp.atlas.sk</shortUrl>
+<!-- <credit>INPROP, s. r. o.</credit> -->
+
+<sessionKey> 
+	<url>http://cp.atlas.sk/vlakbus/odchody</url> 
+	<putInto data="idoskey">CustomHeader</putInto>
+</sessionKey>
+
+<rawUrls>
+    <departures><![CDATA[http://cp.atlas.sk/{city}/odchody/?f={stop}&time=actual&submit=true&lng=E]]></departures>
+	
+	<stopSuggestions method="post" charset="utf-8" contenttype="application/json; charset=utf-8" accept="application/json, text/javascript, */*" data='{"prefixText":"{stop}","count":"20","selectedTT":"BusSk","bindElementValue":"","iLang":"ENGLISH","bCoor":"false"}'><![CDATA[http://cp.atlas.sk/AJAXService.asmx/SearchTimetableObjects]]></stopSuggestions>
+</rawUrls>
+
+<script>sk_atlas.js</script>
+
+<changelog>
+	<entry since="1.2" releasedWith="0.10">Can now also parse stop suggestions using a ASMX web service, which needs a session key. The session key is read from the service provider home page.</entry>
+	<entry since="1.1" releasedWith="0.6.2">Now using a script.</entry>
+	<entry since="1.0" releasedWith="0.5.2">Initial version.</entry>
+</changelog>
+
+</serviceProvider>

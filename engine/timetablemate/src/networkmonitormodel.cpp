@@ -224,7 +224,7 @@ QVariant NetworkMonitorModel::data( const QModelIndex &index, int role ) const
             }
 
             QString result = data->type() == NetworkMonitorModelItem::Reply
-                    ? decodeHtml(data->data()) : data->data(); // TODO fallback charset in TimetableAccessorInfo
+                    ? decodeHtml(data->data()) : data->data(); // TODO fallback charset in ServiceProviderData
             // Remove carriage return characters, they would get drawn in views for some reason
             result = result.replace( '\r', QString() );
             return limitLineCount( result.trimmed() );
@@ -244,7 +244,7 @@ QVariant NetworkMonitorModel::data( const QModelIndex &index, int role ) const
                 // The pixmap isn't stored in memory to save space
                 return QPixmap::fromImage( QImage(data->imageData()->tempFile->fileName()) );
             } else if ( data->type() == NetworkMonitorModelItem::Reply ) {
-                return decodeHtml( data->data() ); // TODO fallback charset in TimetableAccessorInfo
+                return decodeHtml( data->data() ); // TODO fallback charset in ServiceProviderData
             } else {
                 return data->data();
             }

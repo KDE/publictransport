@@ -25,7 +25,7 @@
 #include "debugger.h"
 
 // Public Transport engine includes
-#include <engine/timetableaccessor_script.h>
+#include <engine/serviceproviderscript.h>
 #include <engine/global.h>
 
 // KDE includes
@@ -715,7 +715,7 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
     VariableTreeData data;
     if ( name == QLatin1String("helper") || name == QLatin1String("network") ||
          name == QLatin1String("storage") || name == QLatin1String("result") ||
-         name == QLatin1String("accessor") )
+         name == QLatin1String("provider") )
     {
         data.flags |= VariableIsHelperObject;
     }
@@ -904,9 +904,9 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
     } else if ( name == QLatin1String("helper") ) {
         data.description = i18nc("@info/plain", "Offers helper functions to scripts");
         data.value = data.description;
-    } else if ( name == QLatin1String("accessor") ) {
-        data.description = i18nc("@info/plain", "Exposes accessor information to scripts, which "
-                                 "got read from the XML file");
+    } else if ( name == QLatin1String("provider") ) {
+        data.description = i18nc("@info/plain", "Exposes service provider information to scripts, "
+                                 "which got read from the XML file");
         data.value = data.description;
     }
 

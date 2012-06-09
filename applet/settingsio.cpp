@@ -81,7 +81,7 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
             QString countryCode = KGlobal::locale()->country();
             Plasma::DataEngine::Data locationData = publictransportEngine->query( "Locations" );
             QString defaultServiceProviderId =
-                    locationData[countryCode].toHash()["defaultAccessor"].toString();
+                    locationData[countryCode].toHash()["defaultProvider"].toString();
 
             StopSettings stopSettings;
             if ( defaultServiceProviderId.isEmpty() ) {

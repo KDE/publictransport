@@ -50,14 +50,14 @@ public:
     StopWidgetPrivate( StopWidget *q,
         const StopSettings& _stopSettings, FilterSettingsList *_filterConfigurations,
         StopSettingsDialog::Options _stopSettingsDialogOptions,
-        AccessorInfoDialog::Options _accessorInfoDialogOptions,
+        ServiceProviderDataDialog::Options _providerDataDialogOptions,
         QList<int> _settings, int _stopIndex,
         StopSettingsWidgetFactory::Pointer _factory )
         : newlyAdded(_stopSettings.stops().isEmpty()),
         stopSettings(_stopSettings), filterConfigurations(_filterConfigurations),
         stop(0), provider(0),
         stopSettingsDialogOptions(_stopSettingsDialogOptions),
-        accessorInfoDialogOptions(_accessorInfoDialogOptions),
+        providerDataDialogOptions(_providerDataDialogOptions),
         settings(_settings), stopIndex(_stopIndex), factory(_factory), q_ptr(q)
     {
         // Load data engines
@@ -118,7 +118,7 @@ public:
     Plasma::DataEngine *geolocationEngine;
 
     StopSettingsDialog::Options stopSettingsDialogOptions;
-    AccessorInfoDialog::Options accessorInfoDialogOptions;
+    ServiceProviderDataDialog::Options providerDataDialogOptions;
     QList<int> settings;
     int stopIndex;
     StopSettingsWidgetFactory::Pointer factory;
@@ -129,11 +129,11 @@ protected:
 
 StopWidget::StopWidget( QWidget* parent, const StopSettings& stopSettings,
         StopSettingsDialog::Options stopSettingsDialogOptions,
-        AccessorInfoDialog::Options accessorInfoDialogOptions,
+        ServiceProviderDataDialog::Options providerDataDialogOptions,
         FilterSettingsList *filterConfigurations, QList<int> settings, int stopIndex,
         StopSettingsWidgetFactory::Pointer factory )
         : QWidget(parent), d_ptr(new StopWidgetPrivate(this, stopSettings, filterConfigurations,
-            stopSettingsDialogOptions, accessorInfoDialogOptions, settings, stopIndex, factory))
+            stopSettingsDialogOptions, providerDataDialogOptions, settings, stopIndex, factory))
 {
     setStopSettings( stopSettings ); // TODO move setStopSettings to private class
 }
@@ -228,7 +228,7 @@ StopSettingsDialog* StopWidget::createStopSettingsDialog()
     Q_D( StopWidget );
 
     return new StopSettingsDialog( this, d->stopSettings,
-            d->stopSettingsDialogOptions, d->accessorInfoDialogOptions,
+            d->stopSettingsDialogOptions, d->providerDataDialogOptions,
             d->filterConfigurations, stopIndex(), d->settings, d->factory );
 }
 
@@ -276,11 +276,11 @@ public:
     StopListWidgetPrivate( StopListWidget *q,
         FilterSettingsList *_filterConfigurations,
         StopSettingsDialog::Options _stopSettingsDialogOptions,
-        AccessorInfoDialog::Options _accessorInfoDialogOptions,
+        ServiceProviderDataDialog::Options _providerInfoDialogOptions,
         QList<int> _settings, StopSettingsWidgetFactory::Pointer _factory )
         : filterConfigurations(_filterConfigurations),
         stopSettingsDialogOptions(_stopSettingsDialogOptions),
-        accessorInfoDialogOptions(_accessorInfoDialogOptions),
+        providerDataDialogOptions(_providerInfoDialogOptions),
         settings(_settings), factory(_factory), q_ptr(q)
     {
         currentStopIndex = -1;
@@ -290,7 +290,7 @@ public:
     FilterSettingsList *filterConfigurations;
     int currentStopIndex;
     StopSettingsDialog::Options stopSettingsDialogOptions;
-    AccessorInfoDialog::Options accessorInfoDialogOptions;
+    ServiceProviderDataDialog::Options providerDataDialogOptions;
     QList<int> settings;
     StopSettingsWidgetFactory::Pointer factory;
     StopListWidget::NewStopSettingsBehaviour newStopSettingsBehaviour;
@@ -301,13 +301,13 @@ protected:
 
 StopListWidget::StopListWidget( QWidget* parent, const StopSettingsList& stopSettingsList,
         StopSettingsDialog::Options stopSettingsDialogOptions,
-        AccessorInfoDialog::Options accessorInfoDialogOptions,
+        ServiceProviderDataDialog::Options providerInfoDialogOptions,
         FilterSettingsList *filterConfigurations, QList<int> settings,
         StopSettingsWidgetFactory::Pointer factory )
         : AbstractDynamicWidgetContainer(parent, RemoveButtonsBesideWidgets,
                                          AddButtonAfterLastWidget, ShowSeparators),
         d_ptr(new StopListWidgetPrivate(this, filterConfigurations,
-                stopSettingsDialogOptions, accessorInfoDialogOptions, settings, factory))
+                stopSettingsDialogOptions, providerInfoDialogOptions, settings, factory))
 {
     addButton()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
     addButton()->setText( i18nc("@action:button", "&Add Stop") );
@@ -458,7 +458,7 @@ QWidget* StopListWidget::createNewWidget( const StopSettings &stopSettings )
 {
     Q_D( StopListWidget );
     StopWidget *stopWidget = new StopWidget( this, stopSettings,
-            d->stopSettingsDialogOptions, d->accessorInfoDialogOptions,
+            d->stopSettingsDialogOptions, d->providerDataDialogOptions,
             d->filterConfigurations, d->settings, -1, d->factory );
     connect( stopWidget, SIGNAL(remove()), this, SLOT(removeLastWidget()) );
     connect( stopWidget, SIGNAL(changed(StopSettings)), this, SLOT(changed(StopSettings)) );

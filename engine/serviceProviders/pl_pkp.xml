@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.0" version="1.3" type="Script">
+    <name lang="en">Polskie Koleje Państwowe</name>
+    <description lang="en">This service provider has static data. That means, that displayed departures may actually not be valid for today. Please view the journey news, to see if a departure is valid for today (e.g. 'Mo-Fr').</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpülz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://rozklad-pkp.pl/?q=en/node/143</url>
+    <shortUrl>rozklad-pkp.pl</shortUrl>
+    <script extensions="">pl_pkp.js</script>
+    <changelog>
+        <entry since="1.0">Initial version.</entry>
+        <entry since="1.2" releasedWith="0.10">Ported to a script.</entry>
+        <entry since="1.3" releasedWith="0.10">Updated to new website layout, add delay parsing.</entry>
+    </changelog>
+    <samples>
+        <stop>Warszawa Centralna</stop>
+    </samples>
+</serviceProvider>

@@ -101,7 +101,8 @@ protected:
      * @internal Used by Debugger.
      *
      * @param debugger A pointer to the DebuggerAgent used for debugging.
-     * @param info The TimetableAccessorInfo object containing information about the current accessor.
+     * @param data The ServiceProviderData object containing information about the current
+     *   service provider.
      * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
      * @param functionName The name of the script function to call.
      * @param arguments A list of arguments for the script function to call.
@@ -109,12 +110,12 @@ protected:
      * @param parent The parent QObject. Default is 0.
      **/
     explicit CallScriptFunctionJob( DebuggerAgent *debugger,
-            const TimetableAccessorInfo &info, QMutex *engineMutex, const QString &functionName,
+            const ServiceProviderData &data, QMutex *engineMutex, const QString &functionName,
             const QVariantList &arguments, DebugFlags debugFlags = DefaultDebugFlags,
             QObject* parent = 0 );
 
     explicit CallScriptFunctionJob( DebuggerAgent *debugger,
-            const TimetableAccessorInfo &info, QMutex *engineMutex,
+            const ServiceProviderData &data, QMutex *engineMutex,
             DebugFlags debugFlags = DefaultDebugFlags, QObject* parent = 0 );
 
     virtual void debuggerRun();
@@ -174,13 +175,14 @@ protected:
      * @internal Used by Debugger.
      *
      * @param debugger A pointer to the DebuggerAgent used for debugging.
-     * @param info The TimetableAccessorInfo object containing information about the current accessor.
+     * @param info The ServiceProviderData object containing information about the current
+     *   service provider.
      * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
      * @param debugFlags Flags for the debugger.
      * @param parent The parent QObject. Default is 0.
      **/
     explicit TestUsedTimetableInformationsJob( DebuggerAgent *debugger,
-            const TimetableAccessorInfo &info, QMutex *engineMutex,
+            const ServiceProviderData &info, QMutex *engineMutex,
             DebugFlags debugFlags = DefaultDebugFlags, QObject* parent = 0 );
 
     // Generate "additional messages" for invalid datasets
@@ -220,7 +222,8 @@ protected:
      * @internal Used by Debugger.
      *
      * @param debugger A pointer to the DebuggerAgent used for debugging.
-     * @param info The TimetableAccessorInfo object containing information about the current accessor.
+     * @param info The ServiceProviderData object containing information about the current
+     *   service provider.
      * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
      * @param request A request object containing information about the request. This object
      *   gets cloned and the original object can be deleted. Should be of type DepartureRequest,
@@ -229,7 +232,7 @@ protected:
      * @param parent The parent QObject. Default is 0.
      **/
     explicit TimetableDataRequestJob( DebuggerAgent *debugger,
-            const TimetableAccessorInfo &info, QMutex *engineMutex, const AbstractRequest *request,
+            const ServiceProviderData &info, QMutex *engineMutex, const AbstractRequest *request,
             DebugFlags debugFlags = DefaultDebugFlags, QObject* parent = 0 );
 
     virtual void finish( Scripting::ResultObject *result );

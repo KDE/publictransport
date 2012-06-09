@@ -90,7 +90,7 @@ public:
      * For each test case this model provides a top level item.
      **/
     enum TestCase {
-        AccessorInfoTestCase = 0,
+        ServiceProviderDataTestCase = 0,
         ScriptExecutionTestCase,
 
         TestCaseCount, /**< @internal */
@@ -102,16 +102,16 @@ public:
      * For each test this model provides a child item of the associated test case.
      **/
     enum Test {
-        AccessorInfoNameTest = 0,
-        AccessorInfoVersionTest,
-        AccessorInfoFileVersionTest,
-        AccessorInfoAuthorNameTest,
-        AccessorInfoShortAuthorNameTest,
-        AccessorInfoEmailTest,
-        AccessorInfoUrlTest,
-        AccessorInfoShortUrlTest,
-        AccessorInfoScriptFileNameTest,
-        AccessorInfoDescriptionTest,
+        ServiceProviderDataNameTest = 0,
+        ServiceProviderDataVersionTest,
+        ServiceProviderDataFileFormatVersionTest,
+        ServiceProviderDataAuthorNameTest,
+        ServiceProviderDataShortAuthorNameTest,
+        ServiceProviderDataEmailTest,
+        ServiceProviderDataUrlTest,
+        ServiceProviderDataShortUrlTest,
+        ServiceProviderDataScriptFileNameTest,
+        ServiceProviderDataDescriptionTest,
 
         DepartureTest, /**< Tests for an implemented getTimetable() function and for valid
                 * departure results. */

@@ -58,7 +58,7 @@ struct AbstractRequest {
 
     /**
      * @brief The city to get stop suggestions for (only needed if
-     *   @ref TimetableAccessor::useSeparateCityValue returns true).
+     *   @ref ServiceProvider::useSeparateCityValue returns true).
      **/
     QString city;
 

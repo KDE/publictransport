@@ -59,12 +59,12 @@ public:
      *
      * @param parent The parent widget of the stop widget. Default is 0.
      * @param stopSettings The stop settings to initialize the stop widget with.
-     * @param stopSettingsDialogOptions Options for used StopSettingsDialogs. The user can open
+     * @param stopSettingsDialogOptions Options for used StopSettingsDialog. The user can open
      *   a stop settings dialog to change the stop settings.
      *   Default is StopSettingsDialog::DefaultOptions.
-     * @param accessorInfoDialogOptions Options for used AccessorInfoDialogs. The user can open
-     *   an accessor info dialog from an opened stop settings dialog.
-     *   Default is AccessorInfoDialog::DefaultOptions.
+     * @param providerDataDialogOptions Options for used ServiceProviderDataDialog. The user can
+     *   open a provider data dialog from an opened stop settings dialog.
+     *   Default is ServiceProviderDataDialog::DefaultOptions.
      * @param filterConfigurations A list of configured filter configurations.
      * @param settings A list of @ref StopSetting to create widgets for in StopSettingsDialogs.
      * @param factory A pointer to an object derived from @ref StopSettingsWidgetFactory,
@@ -75,7 +75,7 @@ public:
     explicit StopWidget( QWidget* parent = 0,
             const StopSettings &stopSettings = StopSettings(),
             StopSettingsDialog::Options stopSettingsDialogOptions = StopSettingsDialog::DefaultOptions,
-            AccessorInfoDialog::Options accessorInfoDialogOptions = AccessorInfoDialog::DefaultOptions,
+            ServiceProviderDataDialog::Options providerDataDialogOptions = ServiceProviderDataDialog::DefaultOptions,
             FilterSettingsList *filterConfigurations = 0,
             QList<int> settings = QList<int>()
                 << FilterConfigurationSetting << AlarmTimeSetting << FirstDepartureConfigModeSetting,
@@ -156,9 +156,9 @@ public:
      * @param stopSettingsDialogOptions Options for used StopSettingsDialog. The user can open
      *   a stop settings dialog to change stop settings.
      *   Default is StopSettingsDialog::DefaultOptions.
-     * @param accessorInfoDialogOptions Options for used AccessorInfoDialog. The user can open
-     *   an accessor info dialog from an opened stop settings dialog.
-     *   Default is AccessorInfoDialog::DefaultOptions.
+     * @param providerDataDialogOptions Options for used ServiceProviderDataDialog. The user can
+     *   open a provider data dialog from an opened stop settings dialog.
+     *   Default is ServiceProviderDataDialog::DefaultOptions.
      * @param filterConfigurations A list of configured filter configurations.
      * @param settings A list of @ref StopSetting to create widgets for in StopSettingsDialogs.
      * @param factory A pointer to an object derived from @ref StopSettingsWidgetFactory,
@@ -169,7 +169,7 @@ public:
     StopListWidget( QWidget *parent = 0,
             const StopSettingsList &stopSettingsList = StopSettingsList(),
             StopSettingsDialog::Options stopSettingsDialogOptions = StopSettingsDialog::DefaultOptions,
-            AccessorInfoDialog::Options accessorInfoDialogOptions = AccessorInfoDialog::DefaultOptions,
+            ServiceProviderDataDialog::Options providerDataDialogOptions = ServiceProviderDataDialog::DefaultOptions,
             FilterSettingsList *filterConfigurations = 0,
             QList<int> settings = QList<int>()
                 << FilterConfigurationSetting << AlarmTimeSetting << FirstDepartureConfigModeSetting,

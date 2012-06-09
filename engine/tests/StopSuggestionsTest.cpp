@@ -50,7 +50,7 @@ void StopSuggestionsTest::stopSuggestionTest_data()
     QTest::addColumn<bool>("containsIDs");
     QTest::addColumn<bool>("containsWeights");
 
-    // 21 Accessors
+    // 21 service provider plugins
     QTest::newRow("at_oebb") << "at_oebb" << QString() << "Wien" << true << true;
 //     QTest::newRow("be_brail") << "be_brail" << QString() << "Brüssel" << true << false;
 //     QTest::newRow("ch_sbb") << "ch_sbb" << QString() << "Bern" << true << false;
@@ -71,7 +71,7 @@ void StopSuggestionsTest::stopSuggestionTest_data()
 //     QTest::newRow("sk_imhd") << "sk_imhd" << "bratislava" << "br" << false << false;
 //     QTest::newRow("us_septa") << "us_septa" << QString() << "Pennsyl" << true << false;
 //     QTest::newRow("international_flightstats") << "international_flightstats" << QString() << "Bremen" << true << false;
-    // 19 accessors tested, not tested:
+    // 19 service provider plugins tested, not tested:
     //   de_vvs (doesn't provide stop suggestions)
     //   de_vrn (new departure urls are only for specific lines...),
 }

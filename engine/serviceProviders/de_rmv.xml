@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.0" version="1.4" type="Script">
+    <name lang="en">Rhein-Main-Verkehrsverbund GmbH</name>
+    <description lang="en">Provides departure information for 'Rhine-Main' in Germany. It uses an XML source for departure information and HTML for stop autocompletion.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.rmv.de/</url>
+    <shortUrl>www.rmv.de</shortUrl>
+    <fallbackCharset>utf8</fallbackCharset>
+    <script extensions="qt.xml">de_rmv.js</script>
+    <cities>
+        <city>Frankfurt (Main)</city>
+        <city>Langen (Hessen)</city>
+        <city>Köln</city>
+        <city>Mainz</city>
+    </cities>
+    <changelog>
+        <entry since="1.1" releasedWith="0.7">Stop suggestions didn't work, because the HTML accessor that parses stop suggestions for XML accessors was initialized with empty accessor info.</entry>
+        <entry since="1.1" releasedWith="0.7">Corrected the feature list.</entry>
+        <entry since="1.2" releasedWith="0.10">Ported the stop suggestion part to a script.</entry>
+        <entry since="1.3" releasedWith="0.10">Fix departures/arrivals (also without stop ID, decoding).</entry>
+        <entry since="1.3" releasedWith="0.10">Fix stop suggestions (changed HTML).</entry>
+        <entry since="1.4" releasedWith="0.10">Port to a script using qt.xml extension (almost copy'n'paste).</entry>
+    </changelog>
+    <samples>
+        <stop>3000511</stop>
+    </samples>
+</serviceProvider>

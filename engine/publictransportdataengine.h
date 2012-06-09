@@ -36,7 +36,7 @@ struct StopSuggestionRequest;
 struct DepartureRequest;
 struct JourneyRequest;
 
-class TimetableAccessor;
+class ServiceProvider;
 class DepartureInfo;
 class JourneyInfo;
 class StopInfo;
@@ -65,22 +65,22 @@ public:
         InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName, if
                 * the source name is invalid. */
 
-        ServiceProvider = 1, /**< The source contains information about available
+        ServiceProviderSource = 1, /**< The source contains information about available
                 * service providers for a given country. */
-        ServiceProviders = 2, /**< The source contains information about available
+        ServiceProvidersSource = 2, /**< The source contains information about available
                 * service providers. */
-        ErroneousServiceProviders = 3, /**< The source contains a list of erroneous
-                * service provider accessors. */
-        Locations = 4, /**< The source contains information about locations
-                * for which accessors to service providers exist. */
+        ErroneousServiceProvidersSource = 3, /**< The source contains a list of erroneous
+                * service providers. */
+        LocationsSource = 4, /**< The source contains information about locations
+                * for which supported service providers exist. */
 
-        Departures = 10, /**< The source contains timetable data for departures. */
-        Arrivals, /**< The source contains timetable data for arrivals. */
-        Stops, /**< The source contains a list of stop suggestions. */
-        Journeys, /**< The source contains information about journeys. */
-        JourneysDep, /**< The source contains information about journeys,
+        DeparturesSource = 10, /**< The source contains timetable data for departures. */
+        ArrivalsSource, /**< The source contains timetable data for arrivals. */
+        StopsSource, /**< The source contains a list of stop suggestions. */
+        JourneysSource, /**< The source contains information about journeys. */
+        JourneysDepSource, /**< The source contains information about journeys,
                 * that depart at the given date and time. */
-        JourneysArr /**< The source contains information about journeys,
+        JourneysArrSource /**< The source contains information about journeys,
                 * that arrive at the given date and time. */
     };
 
@@ -157,16 +157,16 @@ public slots:
     /**
      * @brief A list of departures / arrivals was received.
      *
-     * @param accessor The accessor that was used to download and parse the
+     * @param provider The provider that was used to download and parse the
      *   departures/arrivals.
      * @param requestUrl The url used to request the information.
      * @param departures A list of departures/arrivals that were received.
      * @param globalInfo Global information that affects all departures/arrivals.
      * @param request Information about the request for the here received @p departures.
      *
-     * @see TimetableAccessor::useSeparateCityValue()
+     * @see ServiceProvider::useSeparateCityValue()
      **/
-    void departureListReceived( TimetableAccessor *accessor,
+    void departureListReceived( ServiceProvider *provider,
             const QUrl &requestUrl, const DepartureInfoList &departures,
             const GlobalTimetableInfo &globalInfo,
             const DepartureRequest &request,
@@ -175,15 +175,15 @@ public slots:
     /**
      * @brief A list of journey was received.
      *
-     * @param accessor The accessor that was used to download and parse the journeys.
+     * @param provider The provider that was used to download and parse the journeys.
      * @param requestUrl The url used to request the information.
      * @param journeys A list of journeys that were received.
      * @param globalInfo Global information that affects all journeys.
      * @param request Information about the request for the here received @p journeys.
      *
-     * @see TimetableAccessor::useSeparateCityValue()
+     * @see ServiceProvider::useSeparateCityValue()
      **/
-    void journeyListReceived( TimetableAccessor *accessor,
+    void journeyListReceived( ServiceProvider *provider,
             const QUrl &requestUrl, const JourneyInfoList &journeys,
             const GlobalTimetableInfo &globalInfo,
             const JourneyRequest &request,
@@ -192,14 +192,14 @@ public slots:
     /**
      * @brief A list of stops was received.
      *
-     * @param accessor The accessor that was used to download and parse the stops.
+     * @param provider The service provider that was used to download and parse the stops.
      * @param requestUrl The url used to request the information.
      * @param stops A pointer to a list of @ref StopInfo objects.
      * @param request Information about the request for the here received @p stops.
      *
-     * @see TimetableAccessor::useSeparateCityValue()
+     * @see ServiceProvider::useSeparateCityValue()
      **/
-    void stopListReceived( TimetableAccessor *accessor,
+    void stopListReceived( ServiceProvider *provider,
             const QUrl &requestUrl, const StopInfoList &stops,
             const StopSuggestionRequest &request,
             bool deleteStopInfos = true );
@@ -207,53 +207,53 @@ public slots:
     /**
      * @brief An error was received.
      *
-     * @param accessor The accessor that was used to download and parse information
+     * @param provider The provider that was used to download and parse information
      *   from the service provider.
      * @param errorType The type of error or NoError if there was no error.
      * @param errorString If @p errorType isn't NoError this contains a description of the error.
      * @param requestUrl The url used to request the information.
      * @param request Information about the request that failed with @p errorType.
      *
-     * @see TimetableAccessor::useSeparateCityValue()
+     * @see ServiceProvider::useSeparateCityValue()
      **/
-    void errorParsing( TimetableAccessor *accessor, ErrorCode errorType, const QString &errorString,
+    void errorParsing( ServiceProvider *provider, ErrorCode errorType, const QString &errorString,
             const QUrl &requestUrl, const AbstractRequest *request );
 
     /**
-     * @brief A global or local directory with accessor info XMLs was changed.
+     * @brief A global or local directory with service provider XML files was changed.
      *
-     * This slot uses reloadAllAccessors() to actually update the loaded accessors. Because a
-     * change in multiple files in one or more directories causes a call to this slot for each
-     * file, this would cause all accessors to be reloaded for each changed file. Especially when
+     * This slot uses reloadAllProviders() to actually update the loaded service providers. Because
+     * a change in multiple files in one or more directories causes a call to this slot for each
+     * file, this would cause all providers to be reloaded for each changed file. Especially when
      * installing a new version, while running an old one, this can take some time.
      * Therefore this slot uses a short timeout. If a new call to this slot happens within that
-     * timeout, the timeout gets simply restarted. Otherwise after the timeout reloadAllAccessors()
+     * timeout, the timeout gets simply restarted. Otherwise after the timeout reloadAllProviders()
      * gets called.
      *
      * @param path The changed directory.
-     * @see reloadAllAccessors()
+     * @see reloadAllProviders()
      */
-    void accessorInfoDirChanged( const QString &path );
+    void serviceProviderDirChanged( const QString &path );
 
     /**
-     * @brief Deletes all currently created accessors and associated data and recreates them.
+     * @brief Deletes all currently created providers and associated data and recreates them.
      *
      * Deleted data only gets filled by new requests again.
-     * This slot gets called by accessorInfoDirChanged() if a global or local directory
-     * containing accessor XML files has changed. It does not call this function on every directory
-     * change, but only if there are no further changes in a short timespan.
+     * This slot gets called by serviceProviderDirChanged() if a global or local directory
+     * containing service provider XML files has changed. It does not call this function on every
+     * directory change, but only if there are no further changes in a short timespan.
      *
-     * @see accessorInfoDirChanged()
+     * @see serviceProviderDirChanged()
      **/
-    void reloadAllAccessors();
+    void reloadAllProviders();
 
 private:
     /**
-     * @brief Gets a hash with information about an accessor.
+     * @brief Gets a hash with information about a given service @p provider.
      *
-     * @param accessor The accessor to get information about.
+     * @param provider The provider to get information about.
      **/
-    QHash< QString, QVariant > serviceProviderInfo( const TimetableAccessor *&accessor );
+    QHash< QString, QVariant > serviceProviderData( const ServiceProvider *&provider );
 
     /**
      * @brief Gets a hash with information about available locations.
@@ -264,16 +264,10 @@ private:
 
     QString stripDateAndTimeValues( const QString &sourceName );
 
-//     struct AccessorCheck {
-//         QDateTime checkTime;
-//         bool result;
-//         QString error;
-//     };
-
-    QHash< QString, TimetableAccessor* > m_accessors; // List of already loaded accessors
+    QHash< QString, ServiceProvider* > m_providers; // List of already loaded service providers
     QHash< QString, QVariant > m_dataSources; // List of already used data sources
-    QStringList m_erroneousAccessors; // List of erroneous accessors
-    QFileSystemWatcher *m_fileSystemWatcher; // watch the accessor directory
+    QStringList m_erroneousProviders; // List of erroneous service providers
+    QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory
     int m_lastStopNameCount, m_lastJourneyCount;
 
     // The next times at which new downloads will have sufficient changes
@@ -281,20 +275,19 @@ private:
     // for each data source name.
     QHash< QString, QDateTime > m_nextDownloadTimeProposals;
 
-    QTimer *m_accessorUpdateDelayTimer;
+    QTimer *m_providerUpdateDelayTimer;
     QTimer *m_sourceUpdateTimer;
     QStringList m_runningSources; // Sources which are currently being processed
-//     QHash< QString, AccessorCheck > m_checkedAccessors;
 };
 
 /** @mainpage Public Transport Data Engine
 @section intro_dataengine_sec Introduction
 The public transport data engine provides timetable data for public transport, trains, ships,
 ferries and planes. It can get departure/arrival lists or journey lists.
-There are different accessors used to download and parse documents from
-different service providers. Currently there are two classes of accessors, one
-to parse documents using scripts and one to parse xml files. All are using information
-from TimetableAccessorInfo, which reads information data from xml files to support different
+There are different service providers used to download and parse documents from
+different service providers. Currently there is only one class of service providers to parse
+documents using scripts. A GTFS class is in preparation in a GIT branch. All are using information
+from ServiceProviderData, which reads information data from xml files to support different
 service providers.
 
 <br />
@@ -321,7 +314,7 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
 @section index_sec Other Pages
 @par
     @li @ref pageUsage
-    @li @ref pageAccessorInfos
+    @li @ref pageServiceProviders
     @li @ref pageClassDiagram
 */
 
@@ -377,10 +370,10 @@ For each available service provider it contains a key with the display name of t
 These keys point to the service provider information, stored as a QHash with the following keys:
 <br />
 <table>
-<tr><td><i>id</i></td> <td>QString</td> <td>The ID of the service provider.</td></tr>
-<tr><td><i>fileName</i></td> <td>QString</td> <td>The file name of the XML file containing the accessor information.</td> </tr>
-<tr><td><i>scriptFileName</i></td> <td>QString</td> <td>The file name of the script file used by the accessor for parsing, if any.</td> </tr>
-<tr><td><i>name</i></td> <td>QString</td> <td>The name of the accessor.</td></tr>
+<tr><td><i>id</i></td> <td>QString</td> <td>The ID of the service provider plugin.</td></tr>
+<tr><td><i>fileName</i></td> <td>QString</td> <td>The file name of the XML file containing the service provider information.</td> </tr>
+<tr><td><i>scriptFileName</i></td> <td>QString</td> <td>The file name of the script used to parse documents from the service provider, if any.</td> </tr>
+<tr><td><i>name</i></td> <td>QString</td> <td>The name of the service provider.</td></tr>
 <tr><td><i>url</i></td> <td>QString</td> <td>The url to the home page of the service provider.</td></tr>
 <tr><td><i>shortUrl</i></td> <td>QString</td> <td>A short version of the url to the home page of the service provider. This can be used to display short links, while using "url" as the url of that link.</td></tr>
 <tr><td><i>country</i></td> <td>QString</td> <td>The country the service provider is (mainly) designed for.</td></tr>
@@ -388,12 +381,12 @@ These keys point to the service provider information, stored as a QHash with the
 <tr><td><i>credit</i></td> <td>QString</td> <td>The ones who run the service provider (companies).</td></tr>
 <tr><td><i>useSeparateCityValue</i></td> <td>bool</td> <td>Wheather or not the service provider needs a separate city value. If this is true, you need to specify a "city" parameter in data source names for @ref usage_departures_sec and @ref usage_journeys_sec .</td></tr>
 <tr><td><i>onlyUseCitiesInList</i></td> <td>bool</td> <td>Wheather or not the service provider only accepts cities that are in the "cities" list.</td></tr>
-<tr><td><i>features</i></td> <td>QStringList</td> <td>A list of strings, each string stands for a featureof the accessor.</td></tr>
-<tr><td><i>featuresLocalized</i></td> <td>QStringList</td> <td>A list of localized strings describing which features the accessor has.</td></tr>
-<tr><td><i>author</i></td> <td>QString</td> <td>The author of the accessor.</td></tr>
-<tr><td><i>email</i></td> <td>QString</td> <td>The email address of the author of the accessor.</td></tr>
-<tr><td><i>description</i></td> <td>QString</td> <td>A description of the accessor.</td></tr>
-<tr><td><i>version</i></td> <td>QString</td> <td>The version of the accessor.</td></tr>
+<tr><td><i>features</i></td> <td>QStringList</td> <td>A list of strings, each string stands for a feature of the service provider.</td></tr>
+<tr><td><i>featuresLocalized</i></td> <td>QStringList</td> <td>A list of localized strings describing which features the service provider offers.</td></tr>
+<tr><td><i>author</i></td> <td>QString</td> <td>The author of the service provider plugin.</td></tr>
+<tr><td><i>email</i></td> <td>QString</td> <td>The email address of the author of the service provider plugin.</td></tr>
+<tr><td><i>description</i></td> <td>QString</td> <td>A description of the service provider.</td></tr>
+<tr><td><i>version</i></td> <td>QString</td> <td>The version of the service provider plugin.</td></tr>
 </table>
 <br />
 Here is an example of how to get service provider information for all available
@@ -411,8 +404,9 @@ foreach( QString serviceProviderName, data.keys() )
 }
 @endcode
 
-There are also data source named <em>"ServiceProvider \<country-code|service-provider-id\>"</em>
-to get information about the default accessor for the given country or about the given accessor.
+There is also data source named <em>"ServiceProvider \<country-code|service-provider-id\>"</em>
+to get information about the default service provider for the given country or about the given
+provider with the given ID.
 
 <br />
 @section usage_departures_sec Receiving Departures or Arrivals
@@ -677,70 +671,76 @@ void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &dat
 @endcode
 */
 
-/** @page pageAccessorInfos Add Support for new Service Providers
+/** @page pageServiceProviders Add Support for new Service Providers
 @par Sections
-    @li @ref accessor_infos_xml
-    @li @ref accessor_infos_script
+    @li @ref provider_infos_xml
+    @li @ref provider_infos_script
     @li @ref examples
     @li @ref examples_xml_script
     @li @ref examples_script
 <br />
 
-@section accessor_infos_xml XML file structure
-To add support for a new service provider you need to create an "accessor info xml". This xml file
-describes where to download the data and how to parse it. The filename starts with the country code
-or "international" or "unknown" followed by "_" and a short name of the service provider, e.g.
-"de_db.xml", "ch_sbb.xml", "sk_atlas.xml", "international_flightstats.xml". Parsing can be done in
-a separate script.<br />
-There is also a nice tool called <em>TimetableMate</em>, which you can download from the
-kde-look.org site for publictransport. It's a little IDE for creating timetable accessors for
-the publictransport data engine. It has a GUI to edit the accessors settings and automatically
-generates an XML file from them (and vice versa). It also features script editing, syntax checking,
-code-completion (a little bit like in KDevelop but only for publictransport specific stuff),
-automatic tests, web page viewer, etc.<br />
+@section provider_infos_xml XML file structure
+To add support for a new service provider you need to create a service provider plugin for the
+PublicTransport engine, which is essentially an XML file with information about the service
+provider. This XML file contains a name, description, changelog, etc. for the service provider
+plugin.
+It can also contain a reference to a script to parse documents from the provider to process
+requests from the data engine. There are many helper functions available for scripts to parse HTML
+documents, QtXML is available to parse XML documents (as extension).
+The filename of the XML file starts with the country code or "international"/"unknown", followed
+by "_" and a short name for the service provider, e.g. "de_db.pts", "ch_sbb.pts", "sk_atlas.pts",
+"international_flightstats.pts". The base file name (without extension) is the service provider ID.
+<br />
+There is also a nice tool called <em>TimetableMate</em>. It's a little IDE to create service
+provider plugins for the PublicTransport data engine. The GUI is similiar to the GUI of KDevelop,
+it also has docks for projects, breakpoints, backtraces, variables, a console, script output and
+so on. TimetableMate also shows a nice dashboard for the service provider plugin projects. It
+features script editing, syntax checking, code-completion for the engine's script API, automatic
+tests, web page viewer, network request/reply viewer with some filters, a Plasma preview etc.<br />
 
-Here is an overview of the allowed tags in the XML file (required child tags of the accessorInfo
+Here is an overview of the allowed tags in the XML file (required child tags of the serviceProvider
 tag are <span style="background-color: #ffbbbb;">highlighted</span>):
 <table>
 <tr style="background-color: #bbbbbb; font-weight: bold;"><td>Tag</td> <td>Parent Tag</td> <td>Optional?</td> <td>Description</td></tr>
 
-<tr style="background-color: #ffbbbb;"><td><b>\<accessorInfo\></b></td>
+<tr style="background-color: #ffbbbb;"><td><b>\<serviceProvider\></b></td>
 <td>Root</td> <td>Required</td> <td>This is the root item.</td></tr>
 
 <tr><td><b>\<xml_file_version type="publictransport" version="1.0" /\></b></td>
-<td>\<accessorInfo\></td> <td>Not used</td>
+<td>\<serviceProvider\></td> <td>Not used</td>
 <td>This is currently not used by the data engine. But to be sure that the xml is parsed correctly you should add this tag. The version is the version of the xml file structure, current version is 1.0.</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<name\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
-<td>The name of the accessor. If it provides data for international stops it should begin with "International", if it's specific for a country or city it should begin with the name of that country or city. That should be followed by a short url to the service provider.</td></tr>
+<td>\<serviceProvider\></td> <td>Required</td>
+<td>The name of the service provider (plugin). If it provides data for international stops it should begin with "International", if it's specific for a country or city it should begin with the name of that country or city. That should be followed by a short url to the service provider.</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td style="color:#888800"><b>\<author\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
-<td>Contains information about the author of this accessor info xml.</td></tr>
+<td>\<serviceProvider\></td> <td>Required</td>
+<td>Contains information about the author of the service provider plugin.</td></tr>
 
 <tr><td style="color:#666600"><b>\<fullname\></b></td>
 <td style="color:#888800">\<author\></td> <td>Required</td>
-<td>The full name of the author of this accessor info xml.</td></tr>
+<td>The full name of the author of the service provider plugin.</td></tr>
 
 <tr><td style="color:#666600"><b>\<short\></b></td>
 <td style="color:#888800">\<author\></td> <td>(Optional)</td>
-<td>A short name for the author of this accessor info xml (eg. the initials).</td></tr>
+<td>A short name for the author of the service provider plugin (eg. the initials).</td></tr>
 
 <tr><td style="color:#666600"><b>\<email\></b></td>
 <td style="color:#888800">\<author\></td> <td>(Optional)</td> <td>
-The email address of the author of this accessor info xml.</td></tr>
+The email address of the author of the service provider plugin.</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<version\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
-<td>The version of this accessor info xml, should start with "1.0".</td></tr>
+<td>\<serviceProvider\></td> <td>Required</td>
+<td>The version of the service provider plugin, should start with "1.0".</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<type\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
+<td>\<serviceProvider\></td> <td>Required</td>
 <td>Can be either HTML or XML.</td></tr>
 
 <tr style="border-top: 3px double black;"><td style="color:#00bb00"><b>\<cities\></b></td>
-<td>\<accessorInfo\></td> <td>(Optional)</td>
+<td>\<serviceProvider\></td> <td>(Optional)</td>
 <td>A list of cities the service provider has data for (with surrounding \<city\>-tags).</td></tr>
 
 <tr><td style="color:#007700"><b>\<city\></b></td>
@@ -748,23 +748,23 @@ The email address of the author of this accessor info xml.</td></tr>
 <td>A city in the list of cities (\<cities\>). Can have an attribute "replaceWith", to replace city names with values used by the service provider.</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<description\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
-<td>A description of the service provider / accessor. You don't need to list the features supported by the accessor here, the feature list is generated automatically.</td></tr>
+<td>\<serviceProvider\></td> <td>Required</td>
+<td>A description of the service provider (plugin). You don't need to list the features supported by the service provider here, the feature list is generated automatically.</td></tr>
 
 <tr style="background-color: #ffbbbb;"><td><b>\<url\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
+<td>\<serviceProvider\></td> <td>Required</td>
 <td>An url to the service provider home page.</td></tr>
 
 <tr style="background-color: #ffbbbb;"><td><b>\<shortUrl\></b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
+<td>\<serviceProvider\></td> <td>Required</td>
 <td>A short version of the url, used as link text.</td></tr>
 
 <tr style="background-color: #ffbbbb;"><td><b>\<fallbackCharset\></b></td>
-<td>\<accessorInfo\></td> <td>Optional</td>
+<td>\<serviceProvider\></td> <td>Optional</td>
 <td>The charset of documents to be downloaded (TODO do this from the script). Important if NetworkRequest::readyRead() gets used, because the correct codec can only be determined for completely downloaded HTML pages.</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td style="color:#bb0000;"><b>\<rawUrls\> DEPRECATED</b></td>
-<td>\<accessorInfo\></td> <td>Required</td>
+<td>\<serviceProvider\></td> <td>Required</td>
 <td>Contains the used "raw urls". A raw url is a string with placeholders that are replaced with values to get a real url.</td></tr>
 
 <tr><td style="color:#770000;"><b>\<departures\></b></td>
@@ -780,19 +780,19 @@ The email address of the author of this accessor info xml.</td></tr>
 <td>A raw url (in a CDATA tag) to a page containing a list of stop suggestions. Normally this tag isn't needed, because the url is the same as the url to the departure list. When the stop name is ambiguous the service provider can show a page containing a list of stop suggestions. You may want to use this tag if you want to parse XML files for departure lists and get the stop suggestions from an HTML page or if there is a special url only for stop suggestions.</td></tr>
 
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<script\></b></td>
-<td>\<accessorInfo\></td> <td>Required, if no regExps are set</td>
+<td>\<serviceProvider\></td> <td>Required, if no regExps are set</td>
 <td>Contains the filename of the script to be used to parse timetable documents. The script must be in the same directory as the XML file. Always use "Script" as type when using a script.</td></tr>
 
 <tr style="border-top: 3px double black;"><td style="color:#00bb00;"><b>\<changelog\></b></td>
-<td>\<accessorInfo\></td> <td>(Optional)</td>
-<td>Contains changelog entries for this accessor.</td></tr>
+<td>\<serviceProvider\></td> <td>(Optional)</td>
+<td>Contains changelog entries for this service provider plugin.</td></tr>
 
 <tr><td style="color:#007700;"><b>\<entry\></b></td>
 <td style="color:#00bb00;">\<changelog\></td> <td>(Optional)</td>
-<td>Contains a changelog entry for this accessor. The entry description is read from the contents of the \<entry\> tag. Attributes <em>"since"</em> (the accessor version where this change was applied) and <em>"released_with"</em> (the publictransport data engine version this accessor was first released with) can be added.</td></tr>
+<td>Contains a changelog entry for this service provider plugin. The entry description is read from the contents of the \<entry\> tag. Attributes <em>"version"</em> (the plugin version where this change was applied) and <em>"engineVersion"</em> (the version of the publictransport data engine this plugin was first released with) can be added.</td></tr>
 
 <tr style="border-top: 3px double black;"><td style="color:#880088;"><b>\<sessionKey\></b></td>
-<td>\<accessorInfo\></td> <td>(Optional)</td>
+<td>\<serviceProvider\></td> <td>(Optional)</td>
 <td>Contains information about usage of session keys, if required by the service provider.</td></tr>
 
 <tr><td style="color:#660066;"><b>\<url\></b></td>
@@ -806,12 +806,12 @@ The email address of the author of this accessor info xml.</td></tr>
 </table>
 @n @n
 
-@section accessor_infos_script Script file structure
+@section provider_infos_script Script file structure
 Scripts are executed using Kross, which supports JavaScript, Python and Ruby. JavaScript is tested, the other languages may also work.
 There are functions with special names that get called by the data engine when needed:
 <ul>
     <li>
-        <b>usedTimetableInformations():</b> Should return a list of strings representing supported TimetableInformations. The following strings are currently used to determine special features of the accessor: "Delay", "DelayReason", "Platform", "JourneyNews", "JourneyNewsOther", "JourneyNewsLink", "TypeOfVehicle", "Status", "Operator", "StopID". Example: <em>return [ 'TypeOfVehicle', 'Platform', 'Delay', 'StopID' ];</em>
+        <b>usedTimetableInformations():</b> Should return a list of strings representing supported TimetableInformations. The following strings are currently used to determine special features of the service provider: "Delay", "DelayReason", "Platform", "JourneyNews", "JourneyNewsOther", "JourneyNewsLink", "TypeOfVehicle", "Status", "Operator", "StopID". Example: <em>return [ 'TypeOfVehicle', 'Platform', 'Delay', 'StopID' ];</em>
     </li>
 
     <li>
@@ -836,11 +836,11 @@ There are functions with special names that get called by the data engine when n
 </ul>
 
 @n @n
-@section examples Accessor Examples
+@section examples Service Provider Plugin Examples
 @n
-@subsection examples_xml_script A Simple Accessor
-Here is an example of a simple accessor info xml of an accessor which uses a script to parse data from the service provider:
-@verbinclude fr_gares.xml
+@subsection examples_xml_script A Simple Service Provider Plugin
+Here is an example of a simple service provider plugin which uses a script to parse data from the service provider:
+@verbinclude fr_gares.pts
 
 @n
 @subsection examples_script A Simple Parsing-Script
@@ -871,19 +871,14 @@ digraph publicTransportDataEngine {
        fillcolor="#ffdddd"
        ];
 
-    accessorScript [
-    label="{TimetableAccessorScript|Parses timetable documents, eg. HTML.\l|# parseDocument() : bool\l# parseDocumentPossibleStops() : bool\l}"
-    URL="\ref TimetableAccessorScript"
+    providerScript [
+    label="{ServiceProviderScript|Parses timetable documents, eg. HTML.\l|# requestDepartures() : bool\l# requestStopSuggestions() : bool\l}"
+    URL="\ref ServiceProviderScript"
     ];
 
-    accessor [
-    label="{TimetableAccessor|Loads and parses documents from service providers.\lIt uses TimetableAccessorInfo to get needed information.\l|+ static getSpecificAccessor( serviceProvider ) : TimetableAccessor*\l+ requestDepartures() : KIO:TransferJob\l+ requestJourneys() : KIO:TransferJob\l+ timetableAccessorInfo() : TimetableAccessorInfo\l|# parseDocument() : bool\l# parseDocumentPossibleStops() : bool\l# getUrl() : KUrl\l# getJourneyUrl() : KUrl\l}"
-    URL="\ref TimetableAccessor"
-    ];
-
-    accessorXml [
-    label="{TimetableAccessorXml|Parses XML documents.\l|# parseDocument() : bool\l# parseDocumentPossibleStops() : bool\l}"
-    URL="\ref TimetableAccessorXml"
+    provider [
+    label="{ServiceProvider|Loads and parses documents from service providers.\lIt uses ServiceProviderData to get needed information.\l|+ static getSpecificProvider( serviceProvider ) : ServiceProvider*\l+ requestDepartures() : KIO:TransferJob\l+ requestJourneys() : KIO:TransferJob\l+ data() : ServiceProviderData\l}"
+    URL="\ref ServiceProvider"
     ];
 
     subgraph cluster_subDataTypes {
@@ -908,41 +903,37 @@ digraph publicTransportDataEngine {
     ];
     }
 
-     subgraph cluster_subAccessorInfos {
-    label="Accessor Information";
+    subgraph cluster_subServiceProviderData {
+    label="Service Provider Data";
     style="rounded, filled";
     color="#ccffcc";
 
     node [ fillcolor="#dfffdf" ];
 
-    accessorInfo [
-    label="{TimetableAccessorInfo|Information about where to download the documents \land how to parse them.\l|+ name() : QString\l+ stopSuggestionsRawUrl() : QString\l+ departureRawUrl() : QString\l+ journeyRawUrl() : QString\l+ searchDepartures() : TimetableRegExpSearch\l+ searchJourneys() : TimetableRegExpSearch\l+ searchDeparturesPre() : TimetableRegExpSearch*\l+ regExpSearchPossibleStopsRanges() : QStringList\l+ searchPossibleStops() : QList\<TimetableRegExpSearch\>\l+ searchJourneyNews() : QList\<TimetableRegExpSearch\>\l+ features() : QStringList\l... }"
-    URL="\ref TimetableAccessorInfo"
+    serviceProviderData [
+    label="{ServiceProviderData|Information about where to download the documents \land how to parse them.\l|+ name() : QString\l+ stopSuggestionsRawUrl() : QString\l+ departureRawUrl() : QString\l+ journeyRawUrl() : QString\l+ searchDepartures() : TimetableRegExpSearch\l+ searchJourneys() : TimetableRegExpSearch\l+ searchDeparturesPre() : TimetableRegExpSearch*\l+ regExpSearchPossibleStopsRanges() : QStringList\l+ searchPossibleStops() : QList\<TimetableRegExpSearch\>\l+ searchJourneyNews() : QList\<TimetableRegExpSearch\>\l+ features() : QStringList\l... }"
+    URL="\ref ServiceProviderData"
     ];
      }
 
-   // { rank=same; accessor pubTransInfo accessorHtml accessorXml accessorInfo regExpSearch depInfo journeyInfo }
-   { rank=same; accessor accessorHtml accessorXml }
+   // { rank=same; provider pubTransInfo providerScript serviceProviderData regExpSearch depInfo journeyInfo }
+   { rank=same; provider providerScript }
 
     edge [ arrowhead="empty", arrowtail="none", style="solid" ];
-    accessorHtml -> accessor;
+    providerScript -> provider;
 
     edge [ dir=back, arrowhead="none", arrowtail="empty", style="solid" ];
-    accessor -> accessorXml;
     pubTransInfo -> depInfo;
     pubTransInfo -> journeyInfo;
 
-    edge [ dir=forward, arrowhead="none", arrowtail="normal", style="dashed", fontcolor="gray", taillabel="0..*" ];
-    accessorHtml -> accessorXml [ label="uses" ];
-
     edge [ dir=back, arrowhead="normal", arrowtail="none", style="dashed", fontcolor="gray", taillabel="", headlabel="0..*" ];
-    engine -> accessor [ label=""uses ];
-    accessor -> pubTransInfo [ label="uses" ];
-    accessor -> accessorInfo [ label="uses" ];
-    accessorInfo -> regExpSearch [ label="uses" ];
+    engine -> provider [ label=""uses ];
+    provider -> pubTransInfo [ label="uses" ];
+    provider -> serviceProviderData [ label="uses" ];
+    serviceProviderData -> regExpSearch [ label="uses" ];
 
     edge [ dir=both, arrowhead="normal", arrowtail="normal", color="gray", fontcolor="gray", style="dashed", headlabel="" ];
-    accessorInfo -> accessor [ label="friend" ];
+    serviceProviderData -> provider [ label="friend" ];
 }
 @enddot
 */

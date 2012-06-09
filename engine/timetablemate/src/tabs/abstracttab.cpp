@@ -30,8 +30,8 @@
 #include "../debugger/debugger.h"
 
 // Public Transport engine include
-#include <engine/timetableaccessor_info.h>
-#include <engine/timetableaccessor.h>
+#include <engine/serviceproviderdata.h>
+#include <engine/serviceprovider.h>
 
 // KDE includes
 #include <KWebView>
@@ -217,10 +217,10 @@ QString AbstractTab::title() const
     case Tabs::ProjectSource: {
         const QString xmlFileName = m_project->filePath();
         return !xmlFileName.isEmpty() ? QFileInfo(xmlFileName).fileName()
-                : i18nc("@title:tab", "Accessor Document %1", m_project->serviceProviderId());
+                : i18nc("@title:tab", "Project Source %1", m_project->serviceProviderId());
     }
     case Tabs::Script: {
-        const QString scriptFileName = m_project->accessor()->info()->scriptFileName() ;
+        const QString scriptFileName = m_project->provider()->data()->scriptFileName() ;
         QString title = !scriptFileName.isEmpty() ? QFileInfo(scriptFileName).fileName()
                 : i18nc("@title:tab", "Script %1", m_project->serviceProviderId());
 

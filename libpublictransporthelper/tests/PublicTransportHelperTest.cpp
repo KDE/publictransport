@@ -218,12 +218,12 @@ void PublicTransportHelperTest::stopSettingsTest()
     QCOMPARE( stopSettings.stop(0).nameOrId(), QLatin1String("Teststop") ); // no ID available, use stop name as ID
 }
 
-void PublicTransportHelperTest::stopSettingsDialogSimpleAccessorSelectionTest()
+void PublicTransportHelperTest::stopSettingsDialogSimpleProviderSelectionTest()
 {
     StopSettings stopSettings = m_stopSettings;
     stopSettings.set( LocationSetting, "cz" );
     stopSettings.set( ServiceProviderSetting, "cz_idnes" ); // Use a service provider with city selection
-    StopSettingsDialog *dlg = StopSettingsDialog::createSimpleAccessorSelectionDialog(
+    StopSettingsDialog *dlg = StopSettingsDialog::createSimpleProviderSelectionDialog(
             0, stopSettings );
     StopSettings stopSettings2 = dlg->stopSettings();
     QCOMPARE( stopSettings2[CitySetting].toString(), stopSettings[CitySetting].toString() );
@@ -234,7 +234,7 @@ void PublicTransportHelperTest::stopSettingsDialogSimpleAccessorSelectionTest()
     QCOMPARE( stopSettings2[LocationSetting].toString(),
               stopSettings[LocationSetting].toString() );
 
-    // The download accessor button should be visible (to the dialog, which is currently invisible)
+    // The download provider button should be visible (to the dialog, which is currently invisible)
     QToolButton *downloadServiceProviders = dlg->findChild< QToolButton* >( "downloadServiceProviders" );
     QVERIFY( downloadServiceProviders && downloadServiceProviders->isVisibleTo(dlg) );
 
@@ -250,7 +250,7 @@ void PublicTransportHelperTest::stopSettingsDialogSimpleAccessorSelectionTest()
 
     // Test stops container widget for visibility
     QWidget *stops = dlg->findChild< QWidget* >( "stops" );
-    QVERIFY( stops && !stops->isVisibleTo(dlg) ); // Stops widget should be invisible, it's an accessor selection dialog
+    QVERIFY( stops && !stops->isVisibleTo(dlg) ); // Stops widget should be invisible, it's a provider selection dialog
 
     // Test city widget for visibility
     QWidget *city = dlg->findChild< QWidget* >( "city" );
@@ -293,7 +293,7 @@ void PublicTransportHelperTest::stopSettingsDialogSimpleAccessorSelectionTest()
 void PublicTransportHelperTest::stopSettingsDialogSimpleStopTest()
 {
     StopSettingsDialog dlg( 0, m_stopSettings, StopSettingsDialog::SimpleStopSelection,
-                            AccessorInfoDialog::DefaultOptions, &m_filterConfigurations );
+                            ServiceProviderDataDialog::DefaultOptions, &m_filterConfigurations );
     StopSettings stopSettings = dlg.stopSettings();
     QCOMPARE( stopSettings[CitySetting].toString(), m_stopSettings[CitySetting].toString() );
     QCOMPARE( stopSettings.stops(), m_stopSettings.stops() );
@@ -304,7 +304,7 @@ void PublicTransportHelperTest::stopSettingsDialogSimpleStopTest()
               m_stopSettings[LocationSetting].toString() );
     m_stopSettings = dlg.stopSettings();
 
-    // The download accessor button should be visible (to the dialog, which is currently invisible)
+    // The download provider button should be visible (to the dialog, which is currently invisible)
     QToolButton *downloadServiceProviders = dlg.findChild< QToolButton* >( "downloadServiceProviders" );
     QVERIFY( downloadServiceProviders && downloadServiceProviders->isVisibleTo(&dlg) );
 
@@ -365,7 +365,7 @@ void PublicTransportHelperTest::stopSettingsDialogExtendedStopTest()
               m_stopSettings[LocationSetting].toString() );
     m_stopSettings = dlg->stopSettings();
 
-    // The download accessor button should be visible (to the dialog, which is currently invisible)
+    // The download provider button should be visible (to the dialog, which is currently invisible)
     QToolButton *downloadServiceProviders = dlg->findChild< QToolButton* >( "downloadServiceProviders" );
     QVERIFY( downloadServiceProviders && downloadServiceProviders->isVisibleTo(dlg) );
 
@@ -478,9 +478,9 @@ void PublicTransportHelperTest::stopSettingsDialogExtendedStopTest()
 void PublicTransportHelperTest::stopSettingsDialogCustomStopTest()
 {
     StopSettingsDialog dlg( 0, m_stopSettings,
-            StopSettingsDialog::ShowServiceProviderConfig |
+            StopSettingsDialog::ShowProviderConfiguration |
             StopSettingsDialog::ShowStopInputField | StopSettingsDialog::ShowAlarmTimeConfig,
-            AccessorInfoDialog::DefaultOptions, &m_filterConfigurations, -1,
+            ServiceProviderDataDialog::DefaultOptions, &m_filterConfigurations, -1,
             QList<int>() << AlarmTimeSetting );
 
     // Test stopSettings() for standard settings
@@ -493,8 +493,8 @@ void PublicTransportHelperTest::stopSettingsDialogCustomStopTest()
     QCOMPARE( stopSettings[LocationSetting].toString(), m_stopSettings[LocationSetting].toString() );
     m_stopSettings = dlg.stopSettings();
 
-    // The download accessor button should be invisible
-    // because StopSettingsDialog::ShowInstallAccessorButton isn't used in the constructor
+    // The download provider button should be invisible
+    // because StopSettingsDialog::ShowInstallProviderButton isn't used in the constructor
     QToolButton *downloadServiceProviders = dlg.findChild< QToolButton* >( "downloadServiceProviders" );
     QVERIFY( downloadServiceProviders && !downloadServiceProviders->isVisibleTo(&dlg) );
 
@@ -613,7 +613,7 @@ void PublicTransportHelperTest::stopSettingsDialogCustomFactoryTest()
     m_stopSettings.set( UserSetting, QDate(2011, 1, 4) );
     StopSettingsDialog dlg( 0, m_stopSettings,
             StopSettingsDialog::ShowStopInputField | StopSettingsDialog::ShowAlarmTimeConfig,
-            AccessorInfoDialog::DefaultOptions, &m_filterConfigurations, -1,
+            ServiceProviderDataDialog::DefaultOptions, &m_filterConfigurations, -1,
             QList<int>() << AlarmTimeSetting << UserSetting,
             CustomFactory::Pointer::create() );
 
@@ -659,7 +659,7 @@ void PublicTransportHelperTest::stopSettingsDialogAddWidgetsLaterCustomFactoryTe
     m_stopSettings.clearSetting( UserSetting );
 
     StopSettingsDialog dlg( 0, m_stopSettings,
-            StopSettingsDialog::ShowStopInputField, AccessorInfoDialog::DefaultOptions,
+            StopSettingsDialog::ShowStopInputField, ServiceProviderDataDialog::DefaultOptions,
             &m_filterConfigurations, -1, QList<int>(), CustomFactory::Pointer::create() );
     m_stopSettings = dlg.stopSettings();
 
@@ -708,7 +708,7 @@ void PublicTransportHelperTest::stopSettingsDialogAddWidgetsLaterCustomFactoryTe
 void PublicTransportHelperTest::stopWidgetTest()
 {
     StopWidget stopWidget( 0, m_stopSettings, StopSettingsDialog::DefaultOptions,
-                           AccessorInfoDialog::DefaultOptions, &m_filterConfigurations );
+                           ServiceProviderDataDialog::DefaultOptions, &m_filterConfigurations );
 
 //     QSignalSpy changedSpy( &stopWidget, SIGNAL(changed(StopSettings)) );
 //     QSignalSpy removeSpy( &stopWidget, SIGNAL(remove()) ); TODO
@@ -754,7 +754,7 @@ void PublicTransportHelperTest::stopListWidgetTest()
     StopSettingsList list;
     list << m_stopSettings;
     StopListWidget stopListWidget( 0, list, StopSettingsDialog::DefaultOptions,
-                                   AccessorInfoDialog::DefaultOptions, &m_filterConfigurations );
+                                   ServiceProviderDataDialog::DefaultOptions, &m_filterConfigurations );
 
     QSignalSpy addedSpy( &stopListWidget, SIGNAL(added(QWidget*)) );
     QSignalSpy removedSpy( &stopListWidget, SIGNAL(removed(QWidget*,int)) );

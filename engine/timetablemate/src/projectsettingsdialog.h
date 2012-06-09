@@ -24,7 +24,7 @@
 #include "project.h"
 
 // PublicTransport engine includes
-#include <engine/accessorinfoxmlreader.h>
+#include <engine/serviceproviderdatareader.h>
 
 // KDE includes
 #include <KDialog>
@@ -34,7 +34,7 @@ namespace Ui
 {
     class timetablemateview_base;
 }
-class TimetableAccessor;
+class ServiceProvider;
 
 class ChangelogEntryWidget;
 class ChangelogWidget;
@@ -44,7 +44,7 @@ class QPainter;
 class KUrl;
 class KActionCollection;
 
-typedef QSharedPointer< const TimetableAccessorInfo > TimetableAccessorInfoPtr;
+typedef QSharedPointer< const ServiceProviderData > ServiceProviderDataPtr;
 
 /**
  * @brief A dialog which allows to edit project settings.
@@ -59,10 +59,10 @@ public:
     /** Destructor */
     virtual ~ProjectSettingsDialog();
 
-    const TimetableAccessorInfo *accessorInfo( QObject *parent ) const;
+    const ServiceProviderData *providerData( QObject *parent ) const;
     Project::ScriptTemplateType newScriptTemplateType() const { return m_newScriptTemplateType; };
 
-    void setAccessorInfo( const TimetableAccessorInfo *info, const QString &fileName = QString() );
+    void setProviderData( const ServiceProviderData *info, const QString &fileName = QString() );
 
     void setScriptFile( const QString &scriptFile );
 
@@ -71,7 +71,7 @@ public:
     };
 
 signals:
-    /** Some widgets value has been changed or setAccessorInfo() has been called. */
+    /** Some widgets value has been changed or setProviderData() has been called. */
     void changed();
 
     void fileVersionchanged();
@@ -125,11 +125,11 @@ private:
     bool testWidget( QWidget *widget );
     void appendMessageWidgetAfter( QWidget *after, const QString &errorMessage );
 
-    Ui::timetablemateview_base *ui_accessor;
+    Ui::timetablemateview_base *ui_provider;
 
     QString m_openedPath;
     QString m_currentServiceProviderID;
-    TimetableAccessorInfo *m_accessorInfo;
+    ServiceProviderData *m_providerData;
     Project::ScriptTemplateType m_newScriptTemplateType;
     bool m_shortAuthorAutoFilled;
     bool m_shortUrlAutoFilled;

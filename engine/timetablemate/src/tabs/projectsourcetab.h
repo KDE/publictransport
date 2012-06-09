@@ -17,12 +17,12 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef ACCESSORDOCUMENTTAB_H
-#define ACCESSORDOCUMENTTAB_H
+#ifndef PROJECTSOURCETAB_H
+#define PROJECTSOURCETAB_H
 
 #include "abstracttab.h"
 
-/** @brief Represents an accessor document tab. */
+/** @brief Represents a project source document tab. */
 class ProjectSourceTab : public AbstractDocumentTab {
     Q_OBJECT
 public:

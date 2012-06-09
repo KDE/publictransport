@@ -27,7 +27,7 @@
 #include "../project.h"
 
 // Public Transport engine includes
-#include <engine/timetableaccessor.h>
+#include <engine/serviceprovider.h>
 #include <engine/global.h>
 
 // KDE includes
@@ -190,7 +190,7 @@ void ConsoleDockWidget::commandEntered( const QString &_commandString )
     }
 
     // Check if commandString contains a command of the form ".<command> ..."
-    project->debugger()->loadScript( project->scriptText(), project->accessor()->info() );
+    project->debugger()->loadScript( project->scriptText(), project->provider()->data() );
     Debugger::ConsoleCommand command = Debugger::ConsoleCommand::fromString( commandString );
     if ( command.isValid() )  {
         if ( command.command() == ConsoleCommand::ClearCommand ) {

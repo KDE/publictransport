@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.0" version="1.1.2" type="Script">
+    <name lang="en">iMHD.sk</name>
+    <description lang="en">Provides departure information for Bratislava in Slovakia.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <useSeperateCityValue>true</useSeperateCityValue>
+    <onlyUseCitiesInList>true</onlyUseCitiesInList>
+    <url>http://www.imhd.zoznam.sk/ba/</url>
+    <shortUrl>www.imhd.zoznam.sk</shortUrl>
+    <charsetForUrlEncoding>windows-1250</charsetForUrlEncoding>
+    <script extensions="">sk_imhd.js</script>
+    <cities>
+        <city replaceWith="ba">Bratislava</city>
+        <city replaceWith="bb">Banská Bystrica</city>
+        <city replaceWith="ke">Košice</city>
+        <city replaceWith="hc">Hlohovec</city>
+        <city replaceWith="lm">Liptovský Mikuláš</city>
+        <city replaceWith="nr">Nitra</city>
+        <city replaceWith="pn">Piešťany</city>
+        <city replaceWith="pb">Považská Bystrica</city>
+        <city replaceWith="po">Prešov</city>
+        <city replaceWith="pd">Prievidza</city>
+        <city replaceWith="se">Senica</city>
+        <city replaceWith="si">Skalica</city>
+        <city replaceWith="tn">Trenčín</city>
+        <city replaceWith="tt">Trnava</city>
+        <city replaceWith="tatry">Vysoké Tatry</city>
+        <city replaceWith="za">Žilina</city>
+    </cities>
+    <changelog>
+        <entry since="1.0" releasedWith="0.3">Initial version.</entry>
+        <entry since="1.1" releasedWith="0.4.1">Added stop suggestions.</entry>
+        <entry since="1.1.1" releasedWith="0.5.3">Fixed vehicle type parsing.</entry>
+        <entry since="1.1.2" releasedWith="0.6.9">Didn't work any longer because the web site has changed the time format from &quot;h.mm&quot; to &quot;hh:mm&quot;.</entry>
+    </changelog>
+    <samples>
+        <stop>Nobelova</stop>
+        <city>bratislava</city>
+    </samples>
+</serviceProvider>

@@ -21,7 +21,7 @@
 #define CHANGELOGENTRYWIDGET_HEADER
 
 // PublicTransport engine includes
-#include <engine/accessorinfoxmlreader.h> // For ChangelogEntry, TODO Own file(s) for it?
+#include <engine/serviceproviderdatareader.h> // For ChangelogEntry, TODO Own file(s) for it?
 
 // libpublictransporthelper includes
 #include <dynamicwidget.h>

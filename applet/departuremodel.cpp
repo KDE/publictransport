@@ -1555,29 +1555,30 @@ void JourneyModel::sort( int column, Qt::SortOrder order )
 
     emit layoutAboutToBeChanged();
 
-    QVector< QPair<JourneyItem*, int> > sortable;
+    QVector< QPair<JourneyItem*, int> > sortable/*( m_items.count() )*/;
     for ( int row = 0; row < m_items.count(); ++row )
-        sortable.append( QPair<JourneyItem*, int>(
-                            static_cast<JourneyItem*>( m_items[row] ), row ) );
+        sortable.append( QPair<JourneyItem*, int>(static_cast<JourneyItem*>(m_items[row]), row) );
 
     if ( order == Qt::AscendingOrder ) {
-        JourneyModelLessThan lt( static_cast<Columns>( column ) );
+        JourneyModelLessThan lt( static_cast<Columns>(column) );
         qStableSort( sortable.begin(), sortable.end(), lt );
     } else {
-        JourneyModelGreaterThan gt( static_cast<Columns>( column ) );
+        JourneyModelGreaterThan gt( static_cast<Columns>(column) );
         qStableSort( sortable.begin(), sortable.end(), gt );
     }
 
+    // TODO Use persistentIndexList()
     QModelIndexList changedPersistentIndexesFrom, changedPersistentIndexesTo;
     QList< ItemBase* > sorted_children;
-    for ( int i = 0; i < m_items.count(); ++i ) {
-        int r = sortable.at( i ).second;
-        ItemBase *item = m_items[r];
+    for ( int newRow = 0; newRow < sortable.count(); ++newRow ) {
+        const QPair<JourneyItem*, int> sortableItem = sortable[ newRow ];
+        ItemBase *item = sortableItem.first;
+        const int oldRow = sortableItem.second;
         sorted_children << item;
 
-        for ( int c = 0; c < columnCount(); ++c ) {
-            changedPersistentIndexesFrom.append( createIndex(r, c) );
-            changedPersistentIndexesTo.append( createIndex(i, c) );
+        for ( int column = 0; column < columnCount(); ++column ) {
+            changedPersistentIndexesFrom.append( createIndex(oldRow, column, item) );
+            changedPersistentIndexesTo.append( createIndex(newRow, column, item) );
         }
     }
 
@@ -1898,8 +1899,8 @@ void DepartureModel::sort( int column, Qt::SortOrder order )
 
         // Store changed persistent indices
         for ( int c = 0; c < columnCount(); ++c ) {
-            changedPersistentIndexesFrom.append( createIndex(r, c) );
-            changedPersistentIndexesTo.append( createIndex(i, c) );
+            changedPersistentIndexesFrom.append( createIndex(r, c, item) );
+            changedPersistentIndexesTo.append( createIndex(i, c, item) );
         }
     }
 

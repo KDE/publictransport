@@ -116,7 +116,7 @@ void ProjectsDockWidget::projectItemDoubleClicked( const QModelIndex &index )
         case ProjectModelItem::DashboardItem:
             project->showDashboardTab( this );
             break;
-        case ProjectModelItem::AccessorItem:
+        case ProjectModelItem::ProjectSourceItem:
             project->showProjectSourceTab( this );
             break;
         case ProjectModelItem::ScriptItem:
@@ -177,11 +177,11 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
         }
 
         // Add a save action for document items
-        if ( projectItem->isAccessorItem() || projectItem->isScriptItem() ) {
+        if ( projectItem->isProjectSourceItem() || projectItem->isScriptItem() ) {
             documentSaveAction = projectMenu->addAction( KIcon("document-save"),
                                                          i18nc("@item:inmenu", "Save Document") );
             documentSaveAction->setEnabled(
-                    (projectItem->isAccessorItem() && projectSourceTab && projectSourceTab->isModified()) ||
+                    (projectItem->isProjectSourceItem() && projectSourceTab && projectSourceTab->isModified()) ||
                     (projectItem->isScriptItem() && scriptTab && scriptTab->isModified()) );
         }
 
@@ -209,7 +209,7 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
             projectItem->project()->closeTab( tabType );
         } else if ( triggeredAction == documentSaveAction ) {
             // Save project item
-            if ( projectItem->isAccessorItem() && projectSourceTab ) {
+            if ( projectItem->isProjectSourceItem() && projectSourceTab ) {
                 projectSourceTab->save();
             } else if ( projectItem->isScriptItem() && scriptTab ) {
                 scriptTab->save();

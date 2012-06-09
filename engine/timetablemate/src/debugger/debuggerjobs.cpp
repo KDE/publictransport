@@ -24,7 +24,7 @@
 #include "debugger.h"
 
 // PublicTransport engine includes
-#include <engine/timetableaccessor_script.h>
+#include <engine/serviceproviderscript.h>
 #include <engine/global.h>
 #include <engine/script_thread.h>
 
@@ -42,9 +42,9 @@
 
 namespace Debugger {
 
-DebuggerJob::DebuggerJob( DebuggerAgent *debugger, const TimetableAccessorInfo &info,
+DebuggerJob::DebuggerJob( DebuggerAgent *debugger, const ServiceProviderData &info,
                           QMutex *engineMutex, QObject *parent )
-        : ThreadWeaver::Job(parent), m_debugger(debugger), m_info(info), m_success(true),
+        : ThreadWeaver::Job(parent), m_debugger(debugger), m_data(info), m_success(true),
           m_mutex(new QMutex()), m_engineMutex(engineMutex)
 {
 }
@@ -152,7 +152,7 @@ void LoadScriptJob::debuggerRun()
 
     DebuggerAgent *debugger = m_debugger;
     QScriptEngine *engine = m_debugger->engine();
-//     const TimetableAccessorInfo info = m_info;
+//     const ServiceProviderData data = m_data;
     QScriptProgram script = *m_script;
     m_mutex->unlockInline();
 
@@ -168,7 +168,7 @@ void LoadScriptJob::debuggerRun()
     m_engineMutex->lockInline();
     // Evaluate the script
     QScriptValue returnValue = engine->evaluate( script );
-    const QString functionName = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
+    const QString functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
     QScriptValue function = engine->globalObject().property( functionName );
     m_engineMutex->unlockInline();
 
@@ -210,7 +210,7 @@ bool LoadScriptJob::loadScriptObjects()
 {
     m_mutex->lockInline();
     QScriptEngine *engine = m_debugger->engine();
-    const TimetableAccessorInfo info = m_info;
+    const ServiceProviderData data = m_data;
     m_mutex->unlockInline();
 
     m_engineMutex->lockInline();
@@ -219,9 +219,9 @@ bool LoadScriptJob::loadScriptObjects()
             networkRequestToScript, networkRequestFromScript );
 
     // Expose objects to the script engine
-    if ( !engine->globalObject().property("accessor").isValid() ) {
-        engine->globalObject().setProperty( "accessor", engine->newQObject(
-                new TimetableAccessorInfo(m_info)) ); // info has only readonly properties
+    if ( !engine->globalObject().property("provider").isValid() ) {
+        engine->globalObject().setProperty( "provider", engine->newQObject(
+                new ServiceProviderData(m_data)) ); // info has only readonly properties
     }
     if ( !engine->globalObject().property("helper").isValid() ) {
         engine->globalObject().setProperty( "helper", engine->newQObject(m_scriptHelper) );
@@ -241,7 +241,7 @@ bool LoadScriptJob::loadScriptObjects()
     }
 
     // Import extensions (from XML file, <script extensions="...">)
-    foreach ( const QString &extension, info.scriptExtensions() ) {
+    foreach ( const QString &extension, data.scriptExtensions() ) {
         if ( !importExtension(engine, extension) ) {
             m_mutex->lockInline();
             m_explanation = i18nc("@info/plain", "Could not import extension %1", extension);

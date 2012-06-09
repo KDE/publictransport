@@ -9,7 +9,7 @@ include_directories(
    ${CMAKE_BINARY_DIR}
    ${KDE4_INCLUDES} )
 
-add_subdirectory( accessorInfos )
+add_subdirectory( serviceProviders )
 
 if ( BUILD_TESTS )
     add_subdirectory( tests )
@@ -24,11 +24,11 @@ endif ( INSTALL_TIMETABLEMATE )
 set( publictransport_engine_SRCS
     publictransportdataengine.cpp
     departureinfo.cpp
-    accessorinfoxmlreader.cpp
+    serviceproviderdatareader.cpp
     request.cpp
-    timetableaccessor.cpp
-    timetableaccessor_info.cpp
-    timetableaccessor_script.cpp
+    serviceprovider.cpp
+    serviceproviderdata.cpp
+    serviceproviderscript.cpp
     script_thread.cpp
     scripting.cpp
     global.cpp

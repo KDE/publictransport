@@ -21,7 +21,7 @@
 #include "changelogwidget.h"
 
 // PublicTransport engine includes
-#include "engine/accessorinfoxmlreader.h"
+#include "engine/serviceproviderdatareader.h"
 
 // KDE includes
 #include <KLineEdit>

@@ -160,7 +160,7 @@ private:
 
     DeletionPolicy m_deletionPolicy;
 //     DataSourceTester *m_dataSourceTester; // Tests data sources
-    KConfigDialog *m_configDialog; // Stored for the accessor info dialog as parent
+    KConfigDialog *m_configDialog; // Stored for the service provider info dialog as parent
 
     Ui::publicTransportConfig m_ui;
     Ui::publicTransportConfigAdvanced m_uiAdvanced;

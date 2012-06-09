@@ -27,7 +27,7 @@
 #include <QWidget>
 
 class Project;
-class TimetableAccessorInfo;
+class ServiceProviderData;
 class ProjectSettingsDialog;
 class PlasmaPreview;
 class JavaScriptCompletionModel;
@@ -62,8 +62,8 @@ public:
     /** @brief Whether or not this is a dashboard tab. */
     inline bool isDashboardTab() const { return type() == Tabs::Dashboard; };
 
-    /** @brief Whether or not this is an accessor document tab. */
-    inline bool isAccessorDocumentTab() const { return type() == Tabs::ProjectSource; };
+    /** @brief Whether or not this is a project source tab. */
+    inline bool isProjectSourceTab() const { return type() == Tabs::ProjectSource; };
 
     /** @brief Whether or not this is a script document tab. */
     inline bool isScriptTab() const { return type() == Tabs::Script; };

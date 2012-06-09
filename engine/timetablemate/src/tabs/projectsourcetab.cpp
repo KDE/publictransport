@@ -53,16 +53,10 @@ ProjectSourceTab *ProjectSourceTab::create( Project *project, QWidget *parent )
     ProjectSourceTab *tab = new ProjectSourceTab( project, document, parent );
     document->setHighlightingMode( "XML" );
 
-    KTextEditor::View *view = tab->defaultView();// document->createView( tab );
-    view->setWhatsThis( i18nc("@info:whatsthis",
-            "<subtitle>Accessor Source</subtitle>"
-            "<para>This shows the XML source of the accessor settings. Normally you will not need "
-            "this, because you can setup everything in the <interface>Accessor</interface> "
-            "settings.</para>"
-            "<para><note>Changes to <interface>Accessor</interface> and "
-            "<interface>Accessor Source</interface> are synchronized automatically. "
-            "Comments and unknown content in the source is removed when synchronizing."
-            "</note></para>") );
+    KTextEditor::View *view = tab->defaultView();
+    view->setWhatsThis( i18nc("@info:whatsthis", "<subtitle>Project Source</subtitle>"
+            "<para>This shows the XML source of the project. Normally you will not need this, "
+            "because you can setup everything in the <interface>Project Settings</interface>.</para>") );
 
     KTextEditor::ConfigInterface *configInterface =
             qobject_cast<KTextEditor::ConfigInterface*>( view );

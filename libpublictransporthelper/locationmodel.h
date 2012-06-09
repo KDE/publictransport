@@ -52,25 +52,25 @@ public:
      **/
     enum ItemType {
         Invalid = 0, /**< An invalid item, that is not completely initialized. */
-        Total = 1, /**< Displays the number of total accessors. */
+        Total = 1, /**< Displays the number of total providers. */
         Country = 2, /**< Displays a country. */
-        International = 3, /**< Special type for accessors that support countries all over the world. */
-        Unknown = 4, /**< For accessors with unknown country. */
-        Erroneous = 5 /**< Displays erroneous accessors. */
+        International = 3, /**< Special type for providers that support countries all over the world. */
+        Unknown = 4, /**< For providers with unknown country. */
+        Erroneous = 5 /**< Displays erroneous providers. */
     };
 
     /**
      * @brief Creates a new location item.
      *
      * @param countryCode The country code for the new item.
-     * @param accessorCount The number of accessors for the location. Defaults to -1.
-     * @param description A description for the location, eg. information about the accessors for
+     * @param providerCount The number of provider plugins for the location. Defaults to -1.
+     * @param description A description for the location, eg. information about the providers for
      *   the location. Defaults to QString().
      *
      * @note There's no need to call this yourself, just use
      *   @ref LocationModel::syncWithDataEngine to fill the model with items.
      **/
-    explicit LocationItem( const QString &countryCode, int accessorCount = -1,
+    explicit LocationItem( const QString &countryCode, int providerCount = -1,
                            const QString &description = QString() );
 
     /**
@@ -105,7 +105,7 @@ private:
 };
 
 /**
- * @brief A model containing locations with supported accessors in the data engine.
+ * @brief A model containing locations with supported providers in the data engine.
  *
  * There are different location types, a list of them can be seen in @ref LocationItem::ItemType.
  * You can just use @ref syncWithDataEngine to fill the model with data from the "publictransport"

@@ -442,7 +442,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
     m_completionsTimetableInfo.insert( "str:JourneyNewsLink", CompletionItem( Const, "JourneyNewsLink",
             i18nc("@info The description for the 'JourneyNewsLink' info",
                   "A link to an html page with journey news.<nl/>"
-                  "<note>The url of the accessor is prepended, if a relative path has been "
+                  "<note>The url of the service provider is prepended, if a relative path has been "
                   "matched (starting with '/').</note>"),
             "JourneyNewsLink" ));
     m_completionsTimetableInfo.insert( "str:Operator", CompletionItem( Const, "Operator",

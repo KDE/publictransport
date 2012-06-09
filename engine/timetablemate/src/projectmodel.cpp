@@ -27,8 +27,8 @@
 #include "debugger/debugger.h"
 
 // Public Transport engine includes
-#include <engine/timetableaccessor.h>
-#include <engine/timetableaccessor_info.h>
+#include <engine/serviceprovider.h>
+#include <engine/serviceproviderdata.h>
 
 // KDE includes
 #include <KLocalizedString>
@@ -139,7 +139,7 @@ QString ProjectModelItem::text() const
                 m_project->scriptTab() && m_project->scriptTab()->isModified()
                 ? KDialog::ModifiedCaption : KDialog::NoCaptionFlags );
     }
-    case ProjectModelItem::AccessorItem: {
+    case ProjectModelItem::ProjectSourceItem: {
         QString name = m_project->filePath().isEmpty()
                 ? i18nc("@info/plain", "Project Source XML File (experts)")
                 : i18nc("@info/plain", "%1 (experts)",
@@ -171,7 +171,7 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             switch ( projectItem->type() ) {
             case ProjectModelItem::DashboardItem:
                 return KIcon("dashboard-show");
-            case ProjectModelItem::AccessorItem:
+            case ProjectModelItem::ProjectSourceItem:
                 return KIcon("application-x-publictransport-serviceprovider");
             case ProjectModelItem::ScriptItem:
                 return project->scriptIcon();
@@ -191,7 +191,7 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                              project->projectName());
             case ProjectModelItem::ScriptItem:
                 return i18nc("@info:tooltip", "Create/edit the projects script.");
-            case ProjectModelItem::AccessorItem:
+            case ProjectModelItem::ProjectSourceItem:
                 return i18nc("@info:tooltip", "Edit project settings directly in the XML "
                                               "source document. Intended for experts, normally "
                                               "the settings dialog should be used instead.");
@@ -199,10 +199,10 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                 return i18nc("@info:tooltip", "Test the project in a PublicTransport applet in a "
                                               "Plasma preview");
             case ProjectModelItem::WebItem:
-                if ( project->accessor()->info()->url().isEmpty() ) {
+                if ( project->provider()->data()->url().isEmpty() ) {
                     return i18nc("@info:tooltip", "Show the service providers home page.");
                 } else {
-                    return project->accessor()->info()->url();
+                    return project->provider()->data()->url();
                 }
             default:
                 kWarning() << "Unknown project item type" << projectItem->type();
@@ -211,7 +211,7 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             break;
         case Qt::FontRole:
             switch ( projectItem->type() ) {
-            case ProjectModelItem::AccessorItem:
+            case ProjectModelItem::ProjectSourceItem:
                 if ( projectItem->project()->projectSourceTab() &&
                      projectItem->project()->projectSourceTab()->isModified() )
                 {
@@ -278,12 +278,12 @@ Qt::ItemFlags ProjectModel::flags( const QModelIndex &index ) const
         // Child item of a project item
         switch ( projectItem->type() ) {
         case ProjectModelItem::DashboardItem:
-        case ProjectModelItem::AccessorItem:
+        case ProjectModelItem::ProjectSourceItem:
         case ProjectModelItem::PlasmaPreviewItem:
         case ProjectModelItem::ScriptItem:
             return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
         case ProjectModelItem::WebItem:
-            if ( project->accessor()->info()->url().isEmpty() ) {
+            if ( project->provider()->data()->url().isEmpty() ) {
                 // Disable web item if no home page URL has been specified
                 return Qt::ItemIsSelectable;
             } else {
@@ -351,7 +351,7 @@ void ProjectModel::appendProject( Project *project )
     beginInsertRows( projectIndex, 0, 4 );
     projectItem->addChild( ProjectModelItem::createDashboardtItem(project) );
     projectItem->addChild( ProjectModelItem::createScriptItem(project) );
-    projectItem->addChild( ProjectModelItem::createAccessorDocumentItem(project) );
+    projectItem->addChild( ProjectModelItem::createProjectSourceDocumentItem(project) );
     projectItem->addChild( ProjectModelItem::createWebItem(project) );
     projectItem->addChild( ProjectModelItem::createPlasmaPreviewItem(project) );
     endInsertRows();
@@ -384,7 +384,7 @@ TabType ProjectModelItem::tabTypeFromProjectItemType( ProjectModelItem::Type pro
     switch ( projectItemType ) {
     case DashboardItem:
         return Tabs::Dashboard;
-    case AccessorItem:
+    case ProjectSourceItem:
         return Tabs::ProjectSource;
     case ScriptItem:
         return Tabs::Script;
@@ -404,7 +404,7 @@ ProjectModelItem::Type ProjectModelItem::projectItemTypeFromTabType( TabType tab
     case Tabs::Dashboard:
         return DashboardItem;
     case Tabs::ProjectSource:
-        return AccessorItem;
+        return ProjectSourceItem;
     case Tabs::Script:
         return ScriptItem;
     case Tabs::PlasmaPreview:

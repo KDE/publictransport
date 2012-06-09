@@ -34,7 +34,7 @@
 #include <engine/enums.h> // For TimetableData
 
 struct AbstractRequest;
-class TimetableAccessorInfo;
+class ServiceProviderData;
 namespace Scripting {
     class Network;
     class Storage;
@@ -448,7 +448,7 @@ signals:
 
 public slots:
     /** @brief Load script code @p program. */
-    void loadScript( const QString &program, const TimetableAccessorInfo *info );
+    void loadScript( const QString &program, const ServiceProviderData *info );
 
     /** @brief Continue script execution until the next statement. */
     inline void debugStepInto( int repeat = 0 ) { m_debugger->debugStepInto(repeat); };
@@ -505,7 +505,7 @@ protected slots:
 private:
     LoadScriptJob *enqueueNewLoadScriptJob();
     void runAfterScriptIsLoaded( ThreadWeaver::Job *dependendJob );
-    void createScriptObjects( const TimetableAccessorInfo *info );
+    void createScriptObjects( const ServiceProviderData *info );
     void assignDebuggerQueuePolicy( DebuggerJob *job );
     void assignEvaluateInContextQueuePolicy( DebuggerJob *job );
 
@@ -520,7 +520,7 @@ private:
     ScriptErrorType m_lastScriptError;
     QString m_lastScriptErrorString;
 
-    const TimetableAccessorInfo *m_info;
+    const ServiceProviderData *m_info;
     Network *m_scriptNetwork;
     Helper *m_scriptHelper;
     ResultObject *m_scriptResult;

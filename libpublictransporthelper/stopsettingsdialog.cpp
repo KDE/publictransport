@@ -27,7 +27,7 @@
 #include "stopwidget.h"
 #include "locationmodel.h"
 #include "serviceprovidermodel.h"
-#include "accessorinfodialog.h"
+#include "serviceproviderdatadialog.h"
 #include "columnresizer.h"
 #include "stoplineedit.h"
 #include "checkcombobox.h"
@@ -159,7 +159,7 @@ public:
     // Constructor with given LocationModel and ServiceProviderModel
     StopSettingsDialogPrivate( const StopSettings &_oldStopSettings,
             StopSettingsDialog::Options _options,
-            AccessorInfoDialog::Options _accessorInfoDialogOptions,
+            ServiceProviderDataDialog::Options _providerDataDialogOptions,
             QList<int> customSettings,
             StopSettingsWidgetFactory::Pointer _factory,
             int _stopIndex,
@@ -172,7 +172,7 @@ public:
         // Store options and given stop settings
         options = _options;
         settings = customSettings;
-        accessorInfoDialogOptions = _accessorInfoDialogOptions;
+        providerDataDialogOptions = _providerDataDialogOptions;
         oldStopSettings = _oldStopSettings;
         stopIndex = _stopIndex;
 
@@ -275,8 +275,8 @@ public:
             q->setButtonText( KDialog::User1, i18nc("@action:button", "Nearby Stops...") );
         }
 
-        // Show/hide accessor info button
-        if ( options.testFlag(StopSettingsDialog::ShowAccessorInfoButton) ) {
+        // Show/hide provider info button
+        if ( options.testFlag(StopSettingsDialog::ShowProviderInfoButton) ) {
             uiStop.btnServiceProviderInfo->setIcon( KIcon("help-about") );
             uiStop.btnServiceProviderInfo->setText( QString() );
             q->connect( uiStop.btnServiceProviderInfo, SIGNAL(clicked()),
@@ -285,8 +285,8 @@ public:
             uiStop.btnServiceProviderInfo->hide();
         }
 
-        // Show/hide install accessor button
-        if ( options.testFlag(StopSettingsDialog::ShowInstallAccessorButton) ) {
+        // Show/hide install provider button
+        if ( options.testFlag(StopSettingsDialog::ShowInstallProviderButton) ) {
             QMenu *menu = new QMenu( q );
             menu->addAction( KIcon("get-hot-new-stuff"),
                              i18nc("@action:inmenu", "Get new service providers..."),
@@ -349,7 +349,7 @@ public:
 
         // Show/hide location and service provider configuration widgets
         // and create models if needed
-        if ( !options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) ) {
+        if ( !options.testFlag(StopSettingsDialog::ShowProviderConfiguration) ) {
             uiStop.location->hide();
             uiStop.lblLocation->hide();
             uiStop.serviceProvider->hide();
@@ -434,22 +434,22 @@ public:
 
     inline void correctOptions() {
         if ( !options.testFlag(StopSettingsDialog::ShowStopInputField) &&
-            !options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) )
+            !options.testFlag(StopSettingsDialog::ShowProviderConfiguration) )
         {
             kDebug() << "Neither ShowStopInputField nor ShowServiceProviderConfig used for "
                     "StopSettingsDialog options. This makes the dialog useless!";
         }
 
-        // Don't show accessor info/install buttons, if the service provider combobox isn't shown
-        if ( !options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) &&
-            options.testFlag(StopSettingsDialog::ShowAccessorInfoButton) )
+        // Don't show provider info/install buttons, if the service provider combobox isn't shown
+        if ( !options.testFlag(StopSettingsDialog::ShowProviderConfiguration) &&
+            options.testFlag(StopSettingsDialog::ShowProviderInfoButton) )
         {
-            options ^= StopSettingsDialog::ShowAccessorInfoButton;
+            options ^= StopSettingsDialog::ShowProviderInfoButton;
         }
-        if ( !options.testFlag(StopSettingsDialog::ShowServiceProviderConfig) &&
-            options.testFlag(StopSettingsDialog::ShowInstallAccessorButton) )
+        if ( !options.testFlag(StopSettingsDialog::ShowProviderConfiguration) &&
+            options.testFlag(StopSettingsDialog::ShowInstallProviderButton) )
         {
-            options ^= StopSettingsDialog::ShowInstallAccessorButton;
+            options ^= StopSettingsDialog::ShowInstallProviderButton;
         }
 
         // Don't show nearby stops button, if the stop input field isn't shown
@@ -680,7 +680,7 @@ public:
     Ui::publicTransportStopConfig uiStop;
 
     StopSettingsDialog::Options options;
-    AccessorInfoDialog::Options accessorInfoDialogOptions;
+    ServiceProviderDataDialog::Options providerDataDialogOptions;
     QList<int> settings;
 
     StopSettingsWidgetFactory::Pointer factory;
@@ -713,12 +713,12 @@ protected:
 };
 
 StopSettingsDialog::StopSettingsDialog( QWidget *parent, const StopSettings &stopSettings,
-        StopSettingsDialog::Options options, AccessorInfoDialog::Options accessorInfoDialogOptions,
+        StopSettingsDialog::Options options, ServiceProviderDataDialog::Options providerDataDialogOptions,
         FilterSettingsList *filterConfigurations, int stopIndex,
         const QList<int> &customSettings, StopSettingsWidgetFactory::Pointer factory )
         : KDialog(parent),
         d_ptr(new StopSettingsDialogPrivate(stopSettings,
-            options, accessorInfoDialogOptions, customSettings, factory, stopIndex, this))
+            options, providerDataDialogOptions, customSettings, factory, stopIndex, this))
 {
     Q_D( StopSettingsDialog );
     d->init( stopSettings, filterConfigurations );
@@ -729,18 +729,18 @@ StopSettingsDialog::~StopSettingsDialog()
     delete d_ptr;
 }
 
-StopSettingsDialog *StopSettingsDialog::createSimpleAccessorSelectionDialog(
+StopSettingsDialog *StopSettingsDialog::createSimpleProviderSelectionDialog(
     QWidget* parent, const StopSettings& stopSettings, StopSettingsWidgetFactory::Pointer factory )
 {
-    return new StopSettingsDialog( parent, stopSettings, SimpleAccessorSelection,
-            AccessorInfoDialog::DefaultOptions, 0, -1, QList<int>(), factory );
+    return new StopSettingsDialog( parent, stopSettings, SimpleProviderSelection,
+            ServiceProviderDataDialog::DefaultOptions, 0, -1, QList<int>(), factory );
 }
 
 StopSettingsDialog* StopSettingsDialog::createSimpleStopSelectionDialog(
     QWidget* parent, const StopSettings& stopSettings, StopSettingsWidgetFactory::Pointer factory )
 {
     return new StopSettingsDialog( parent, stopSettings, SimpleStopSelection,
-            AccessorInfoDialog::DefaultOptions, 0, -1, QList<int>(), factory );
+            ServiceProviderDataDialog::DefaultOptions, 0, -1, QList<int>(), factory );
 }
 
 StopSettingsDialog* StopSettingsDialog::createExtendedStopSelectionDialog(
@@ -748,7 +748,7 @@ StopSettingsDialog* StopSettingsDialog::createExtendedStopSelectionDialog(
     int stopIndex, StopSettingsWidgetFactory::Pointer factory )
 {
     return new StopSettingsDialog( parent, stopSettings, ExtendedStopSelection,
-            AccessorInfoDialog::DefaultOptions, filterConfigurations, stopIndex,
+            ServiceProviderDataDialog::DefaultOptions, filterConfigurations, stopIndex,
             QList<int>(), factory );
 }
 
@@ -795,7 +795,7 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
 
     // Set location first (because it filters service providers)
     QModelIndex serviceProviderIndex;
-    if ( d->options.testFlag(ShowServiceProviderConfig) ) {
+    if ( d->options.testFlag(ShowProviderConfiguration) ) {
         QModelIndex locationIndex = d->modelLocations->indexOfLocation(
                 stopSettings[LocationSetting].toString().isEmpty()
                 ? KGlobal::locale()->country() : stopSettings[LocationSetting].toString() );
@@ -831,7 +831,7 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
             break;
         }
         case ServiceProviderSetting: {
-            if ( serviceProviderIndex.isValid() && d->options.testFlag(ShowServiceProviderConfig) ) {
+            if ( serviceProviderIndex.isValid() && d->options.testFlag(ShowProviderConfiguration) ) {
                 d->uiStop.serviceProvider->setCurrentIndex( serviceProviderIndex.row() );
             }
             break;
@@ -1150,15 +1150,14 @@ void StopSettingsDialog::locationChanged( int index )
 
     d->updateServiceProviderModel( index );
 
-    // Select default accessor of the selected location
+    // Select default provider of the selected location
     QString locationCode = d->uiStop.location->itemData( index, LocationCodeRole ).toString();
     Plasma::DataEngine::Data locationData = d->publicTransportEngine->query( "Locations" );
-    QString defaultServiceProviderId =
-        locationData[locationCode].toHash()["defaultAccessor"].toString();
-    if ( !defaultServiceProviderId.isEmpty() ) {
+    QString defaultProviderId = locationData[locationCode].toHash()["defaultProvider"].toString();
+    if ( !defaultProviderId.isEmpty() ) {
         QModelIndexList indices = d->uiStop.serviceProvider->model()->match(
                 d->uiStop.serviceProvider->model()->index(0, 0), ServiceProviderIdRole,
-                defaultServiceProviderId, 1, Qt::MatchFixedString );
+                defaultProviderId, 1, Qt::MatchFixedString );
         if ( !indices.isEmpty() ) {
             int curServiceProviderIndex = indices.first().row();
             d->uiStop.serviceProvider->setCurrentIndex( curServiceProviderIndex );
@@ -1222,9 +1221,9 @@ void StopSettingsDialog::clickedServiceProviderInfo()
     QVariantHash serviceProviderData = d->uiStop.serviceProvider->model()->index(
                                            d->uiStop.serviceProvider->currentIndex(), 0 )
                                        .data( ServiceProviderDataRole ).toHash();
-    AccessorInfoDialog *infoDialog = new AccessorInfoDialog( serviceProviderData,
+    ServiceProviderDataDialog *infoDialog = new ServiceProviderDataDialog( serviceProviderData,
             d->uiStop.serviceProvider->itemIcon(d->uiStop.serviceProvider->currentIndex()),
-            d->accessorInfoDialogOptions, this );
+            d->providerDataDialogOptions, this );
     infoDialog->show();
 }
 
@@ -1346,10 +1345,13 @@ private:
 
 void StopSettingsDialog::installServiceProviderClicked()
 {
-    QString fileName = KFileDialog::getOpenFileName( KUrl(), "*.xml", this );
+    QString fileName = KFileDialog::getOpenFileName( KUrl(),
+            "application-x-publictransport-serviceprovider", this );
     if ( !fileName.isEmpty() ) {
+        // Cannot access ServiceProvider::installationSubDirectory() in the engine here,
+        // keep it in sync
         QStringList dirs = KGlobal::dirs()->findDirs( "data",
-                           "plasma_engine_publictransport/accessorInfos/" );
+                "plasma_engine_publictransport/serviceProviders/" );
         if ( dirs.isEmpty() ) {
             return;
         }
@@ -1438,10 +1440,10 @@ QDebug& operator<<( QDebug debug, StopSettingsDialog::Option option )
             return debug << "ShowStopInputField";
         case StopSettingsDialog::ShowNearbyStopsButton:
             return debug << "ShowNearbyStopsButton";
-        case StopSettingsDialog::ShowAccessorInfoButton:
-            return debug << "ShowAccessorInfoButton";
-        case StopSettingsDialog::ShowInstallAccessorButton:
-            return debug << "ShowInstallAccessorButton";
+        case StopSettingsDialog::ShowProviderInfoButton:
+            return debug << "ShowProviderInfoButton";
+        case StopSettingsDialog::ShowInstallProviderButton:
+            return debug << "ShowInstallProviderButton";
         case StopSettingsDialog::ShowFilterConfigurationConfig:
             return debug << "ShowFilterConfigurationConfig";
         case StopSettingsDialog::ShowAlarmTimeConfig:
@@ -1456,8 +1458,8 @@ QDebug& operator<<( QDebug debug, StopSettingsDialog::Option option )
             return debug << "UseHtmlEverywhere";
         case StopSettingsDialog::ShowAllDetailsWidgets:
             return debug << "ShowAllDetailsWidgets";
-        case StopSettingsDialog::SimpleAccessorSelection:
-            return debug << "SimpleAccessorSelection";
+        case StopSettingsDialog::SimpleProviderSelection:
+            return debug << "SimpleProviderSelection";
         case StopSettingsDialog::SimpleStopSelection:
             return debug << "SimpleStopSelection";
         case StopSettingsDialog::ExtendedStopSelection:

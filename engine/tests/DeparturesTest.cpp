@@ -151,7 +151,7 @@ void DeparturesTest::departuresTest_data()
     QTest::addColumn<QString>("city");
     QTest::addColumn<QString>("stopName");
 
-    // 21 Accessors
+    // 21 service provider plugins
 //     QTest::newRow("at_oebb") << "at_oebb" << QString() << "Wien";
     QTest::newRow("be_brail") << "be_brail" << QString() << "Basel Bahnhof";
     QTest::newRow("ch_sbb") << "ch_sbb" << QString() << "Bern";
@@ -172,7 +172,7 @@ void DeparturesTest::departuresTest_data()
     QTest::newRow("sk_imhd") << "sk_imhd" << "bratislava" << "Nobelova";
     QTest::newRow("us_septa") << "us_septa" << QString() << "Pennsylvania Park Av";
     QTest::newRow("international_flightstats") << "international_flightstats" << QString() << "BRE";
-    // 19 accessors tested, not tested:
+    // 19 service provider plugins tested, not tested:
     //   at_oebb (needs a script instead of only regexps),
     //   de_vrn (new departure urls are only for specific lines...)
 }

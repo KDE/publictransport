@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.0" version="1.3" type="Script">
+    <name lang="de">ÖBB-Konzern</name>
+    <name lang="en">ÖBB-Group</name>
+    <description lang="en">This service provider works for cities in Austria and also for many cities in Europe. Cities in Austria include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.oebb.at/</url>
+    <shortUrl>www.oebb.at</shortUrl>
+    <fallbackCharset>latin1</fallbackCharset>
+    <script extensions="">at_oebb.js</script>
+    <changelog>
+        <entry since="1.0" releasedWith="0.5.2">Initial version.</entry>
+        <entry since="1.1" releasedWith="0.10">Better stop suggestion support, faster by requiring less data to be transfered, added stop weights.</entry>
+        <entry since="1.2" releasedWith="0.10">Wrote a script for at_oebb and updated URLs and parsing. It can now also parse route information, journey news, platform and delays.</entry>
+        <entry since="1.3" releasedWith="0.10">Update to new script API, construct URLs in the script itself.</entry>
+    </changelog>
+    <samples>
+        <stop>Wien</stop>
+    </samples>
+</serviceProvider>

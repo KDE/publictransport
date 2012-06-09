@@ -36,7 +36,8 @@ public:
         ProjectItem = 0, /**< A top level project item. */
 
         DashboardItem, /**< A child of the project item, shows the dashboard of the project. */
-        AccessorItem, /**< A child of the project item, represents the accessor XML document. */
+        ProjectSourceItem, /**< A child of the project item, represents the project source XML
+          document, ie the service provider plugin XML document. */
         ScriptItem, /**< A child of the project item, represents the script document. */
         WebItem, /**< A child of the project item, represents the web view. */
         PlasmaPreviewItem /**< A child of the project item, represents the plasma preview. */
@@ -54,7 +55,7 @@ public:
     static Type projectItemTypeFromTabType( TabType tabType );
 
     inline bool isProjectItem() const { return m_type == ProjectItem; };
-    inline bool isAccessorItem() const { return m_type == AccessorItem; };
+    inline bool isProjectSourceItem() const { return m_type == ProjectSourceItem; };
     inline bool isScriptItem() const { return m_type == ScriptItem; };
     inline bool isPlasmaPreviewItem() const { return m_type == PlasmaPreviewItem; };
     inline bool isWebItem() const { return m_type == WebItem; };
@@ -64,8 +65,8 @@ protected:
 
     static ProjectModelItem *createDashboardtItem( Project *project ) {
             return new ProjectModelItem( project, DashboardItem ); };
-    static ProjectModelItem *createAccessorDocumentItem( Project *project ) {
-            return new ProjectModelItem( project, AccessorItem ); };
+    static ProjectModelItem *createProjectSourceDocumentItem( Project *project ) {
+            return new ProjectModelItem( project, ProjectSourceItem ); };
     static ProjectModelItem *createScriptItem( Project *project ) {
             return new ProjectModelItem( project, ScriptItem ); };
     static ProjectModelItem *createPlasmaPreviewItem( Project *project ) {

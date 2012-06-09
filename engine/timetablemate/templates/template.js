@@ -1,8 +1,10 @@
-/** Accessor for <Service Provider>
+/** Plugin for <Service Provider>
 * © 2010, <Author>
 *
-* Use this template to create your custom accessor script. Each script also needs
+* Use this template to create your custom service provider script. Each script also needs
 * an XML-File which references the script, eg. <script>template.js</script>. */
+
+// TODO Update to new script API
 
 // This function isn't needed.
 // You can add it to parse a given HTML document (with journeys) for an url
@@ -11,7 +13,7 @@
 function getUrlForLaterJourneyResults( html ) {
     return "www.parsed.url.com";
 }
-    
+
 // This function isn't needed.
 // You can add it to parse a given HTML document (with journeys) for an url
 // that enables details for the journeys. When this function is used
@@ -39,7 +41,7 @@ function parseTimetable( html ) {
 			'RouteTimes' : routeTimes,
 			'RouteExactStops' : exactRouteStops } );
 }
-    
+
 // This function parses a given HTML document for journey infos.
 // The infos are added to the result-array as shown below.
 function parseJourneys( html ) {
@@ -71,7 +73,7 @@ function parseJourneys( html ) {
 			'RouteTypesOfVehicles' : routeVehicleTypes,
 			'RouteTransportLines' : routeTransportLines } );
 }
-    
+
 // This function parses a given HTML document for stop suggestions.
 // The infos are added to the result-array as shown below.
 // You can also see an implementation that works for stop suggestions

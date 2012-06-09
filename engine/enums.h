@@ -132,8 +132,8 @@ enum TimetableInformation {
     JourneyNewsOther = 12, /**< Other news (not delay / delay reason) */
 
     /**
-     * Contains a link to an html page with journey news. The url of the accessor is prepended, if
-     * a relative path has been matched (starting with "/").
+     * Contains a link to an html page with journey news. The url of the service provider is
+     * prepended, if a relative path has been matched (starting with "/").
      **/
     JourneyNewsLink = 13,
 
@@ -252,9 +252,9 @@ enum ParseDocumentMode {
     ParseForStopIdThenDepartures /**< Parsing for a stop ID, to be used to get departures/arrivals. */
 };
 
-/** @brief The type of an accessor. */
-enum AccessorType {
-    NoAccessor, /**< @internal Invalid value. */
+/** @brief The type of a service provider. */
+enum ServiceProviderType {
+    InvalidServiceProvider, /**< @internal Invalid value. */
 
     /**
      * Uses a script to request and parse documents. Scripts can make use of
@@ -262,7 +262,7 @@ enum AccessorType {
      * journeys/stop suggestions, cache values, parse HTML, notify about errors, etc.
      * QtScript extensions can be used, eg. qt.xml to parse XML documents.
      **/
-    ScriptedAccessor
+    ScriptedServiceProvider
 };
 
 /**

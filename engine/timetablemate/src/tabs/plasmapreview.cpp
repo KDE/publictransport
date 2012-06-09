@@ -66,8 +66,8 @@ PlasmaPreview::~PlasmaPreview()
 //     connect( btnShowPlasmaPreview, SIGNAL( clicked( bool ) ), this, SLOT( loadPlasmaPreview() ) );
 //
 //     l->addItem( newScene->addWidget( btnShowPlasmaPreview ) );
-// //     l->addItem( scene->addText(i18nc("@info", "<para><note>You need to install your accessor to "
-// //                   "show a preview of it.</note></para>")) );
+// //     l->addItem( scene->addText(i18nc("@info", "<para><note>You need to install your "
+// //                   "service provider plugin to show a preview of it.</note></para>")) );
 //     newScene->addItem( item );
 //     newScene->setSceneRect( item->boundingRect() );
 //

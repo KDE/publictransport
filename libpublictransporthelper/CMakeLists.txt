@@ -19,7 +19,7 @@ set( publictransporthelper_LIB_SRCS
 	checkcombobox.cpp
 	stopsettings.cpp
 	stopwidget.cpp
-	accessorinfodialog.cpp
+    serviceproviderdatadialog.cpp
 	stopsettingsdialog.cpp
 	stoplineedit.cpp
 	stopfinder.cpp
@@ -48,7 +48,7 @@ set( publictransporthelper_LIB_HDRS
 	filterwidget.h
 
 	# Dialogs
-	accessorinfodialog.h
+	serviceproviderdatadialog.h
 	stopsettingsdialog.h
 
 	# Others
@@ -61,7 +61,7 @@ set( publictransporthelper_LIB_HDRS
 )
 
 kde4_add_ui_files( publictransporthelper_LIB_SRCS
-    accessorInfo.ui
+    providerData.ui
     stopConfig.ui )
 
 kde4_add_library( publictransporthelper SHARED ${publictransporthelper_LIB_SRCS} )

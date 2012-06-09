@@ -25,7 +25,7 @@
 #include <QXmlStreamReader>
 #include <QEventLoop>
 
-class TimetableAccessor;
+class ServiceProvider;
 
 class OsmReader : public QObject, public QXmlStreamReader {
     Q_OBJECT

@@ -18,7 +18,7 @@
 */
 
 /** @file
- * @brief This file contains helper classes to be used from inside accessor scripts.
+ * @brief This file contains helper classes to be used from service provider plugin scripts.
  *
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
@@ -39,7 +39,7 @@
 #include <QMetaType> // For Q_DECLARE_METATYPE
 
 class PublicTransportInfo;
-class TimetableAccessorInfo;
+class ServiceProviderData;
 class KConfigGroup;
 class QScriptContextInfo;
 class QNetworkRequest;
@@ -59,7 +59,7 @@ class Network;
 /**
  * @defgroup scripting Classes Used for Scripts
  *
- * These classes get exposed to scripts or are used by the scripted timetable accessor.
+ * These classes get exposed to scripts or are used by scripted service provider plugins.
  * Each call to a script from the data engine creates a new thread using ThreadWeaver. Each thread
  * uses it's own QScriptEngine instance to execute the script.
  *
@@ -160,7 +160,7 @@ class Network;
  *   Can be implemented to provide information about what information types the script can return.
  *   This can be done by simply returning a list of strings, where each string is the name of a
  *   type of information. Only optional information that the script provides needs to be returned
- *   by this function. This list gets used for the feature list of scripted accessors.
+ *   by this function. This list gets used for the feature list of scripted service provider plugins.
  *   @li @b Arrivals The script can parse arrivals
  *   @li @b Delay The script can parse delay information
  *   @li @b DelayReason The script can also parse a string describing the reason of a delay
@@ -213,7 +213,7 @@ class Network;
  * The names of the properties are important, but upper or lower case does not matter.
  * All entries in the TimetableInformation enumerable can be used to add information, look
  * there fore more detailed information. This enumerable is a central point of the Public Transport
- * data engine and gets used by all accessor types to store information about results.
+ * data engine and gets used by all service provider plugin types to store information about results.
  *
  * @n
  * @subsection script_collecting_items_departures Information Types Used for Departures/Arrivals
@@ -749,14 +749,14 @@ public:
      *
      * Logs the error message with the given data string, eg. the HTML code where parsing failed.
      * The message gets also send to stdout with a short version of the data
-     * The log file is normally located at "~/.kde4/share/apps/plasma_engine_publictransport/accessors.log".
+     * The log file is normally located at "~/.kde4/share/apps/plasma_engine_publictransport/serviceproviders.log".
      *
      * @param message The error message.
      * @param failedParseText The text in the source document where parsing failed.
      **/
     Q_INVOKABLE void error( const QString &message, const QString &failedParseText = QString() );
 
-//     /** TODO
+//     /** TODO Implement decode() function for scripts, eg. for version 0.3.1
 //      * @brief Decodes HTML entities in @p html.
 //      *
 //      * For example "&nbsp;" gets replaced by " ".
@@ -1499,10 +1499,11 @@ class StoragePrivate;
  * @endcode
  *
  *
- * After the accessor has been reloaded (eg. after a restart), the values stored like shown above
- * are gone. To write data persistently to disk use readPersistent(), writePersistent() and
- * removePersistent(). Persistently stored data has a lifetime which can be specified as argument
- * to writePersistent() and defaults to one week. The maximum lifetime is one month.
+ * After the service provider plugin has been reloaded (eg. after a restart), the values stored
+ * like shown above are gone. To write data persistently to disk use readPersistent(),
+ * writePersistent() and removePersistent(). Persistently stored data has a lifetime which can be
+ * specified as argument to writePersistent() and defaults to one week.
+ * The maximum lifetime is one month.
  *
  * @code
  * // Write a single value persistently and read it again
@@ -1549,11 +1550,11 @@ public:
     /**
      * @brief Create a new Storage instance.
      *
-     * @param serviceProvider Used to find the right place in the accessor cache file to read/write
-     *   persistent data.
+     * @param serviceProviderId Used to find the right place in the service provider cache file
+     *   to read/write persistent data.
      * @param parent The parent QObject.
      **/
-    Storage( const QString &serviceProvider, QObject *parent = 0 );
+    Storage( const QString &serviceProviderId, QObject *parent = 0 );
 
     /** @brief Destructor. */
     virtual ~Storage();

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.0" version="1.1" type="Script">
+    <name lang="en">Verkehrs- und Tarifverbund Stuttgart GmbH</name>
+    <description lang="en">Provides departure information for Stuttgart in Germany.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <useSeperateCityValue>true</useSeperateCityValue>
+    <url>http://www.vvs.de/</url>
+    <shortUrl>www.vvs.de</shortUrl>
+    <script extensions="">de_vvs.js</script>
+    <cities>
+        <city>Stuttgart</city>
+    </cities>
+    <changelog>
+        <entry since="1.1" releasedWith="0.10">Ported to a script and updated to new website layout, making it pass the unit test.</entry>
+    </changelog>
+    <samples>
+        <stop>Herrenberg</stop>
+        <stop>Stuttgart Hbf</stop>
+        <city>Stuttgart</city>
+    </samples>
+</serviceProvider>

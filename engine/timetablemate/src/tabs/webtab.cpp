@@ -69,7 +69,7 @@ WebTab::WebTab( Project *project, QWidget *parent )
     m_webView->setMinimumHeight( 100 );
     m_webView->setWhatsThis( i18nc("@info:whatsthis", "<subtitle>Web View</subtitle>"
             "<para>This is the web view. You can use it to check the URLs you have defined "
-            "in the <interface>Accessor</interface> settings or to get information about the "
+            "in the <interface>Project Settings</interface> or to get information about the "
             "structure of the documents that get parsed by the script.</para>"
             "<para><note>You can select a web element in the <emphasis>inspector</emphasis> "
             "using the context menu.</note></para>") );

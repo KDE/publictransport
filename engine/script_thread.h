@@ -18,7 +18,7 @@
  */
 
 /** @file
-* @brief This file contains a thread which executes timetable accessor scripts.
+* @brief This file contains a thread which executes service provider plugin scripts.
 *
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
@@ -28,7 +28,7 @@
 // Own includes
 #include "enums.h"
 #include "scripting.h"
-#include "timetableaccessor_info.h"
+#include "serviceproviderdata.h"
 
 // KDE includes
 #include <ThreadWeaver/Job> // Base class
@@ -43,7 +43,7 @@ struct ArrivalRequest;
 struct StopSuggestionRequest;
 struct JourneyRequest;
 
-class TimetableAccessorInfo;
+class ServiceProviderData;
 namespace Scripting {
     class Storage;
     class Network;
@@ -104,10 +104,10 @@ public:
      * @brief Creates a new ScriptJob.
      *
      * @param script The script to executes.
-     * @param info Information about the accessor.
+     * @param data Information about the service provider.
      * @param scriptStorage The shared Storage object.
      **/
-    explicit ScriptJob( QScriptProgram *script, const TimetableAccessorInfo *info,
+    explicit ScriptJob( QScriptProgram *script, const ServiceProviderData *data,
                         Storage *scriptStorage, QObject* parent = 0 );
 
     /** @brief Destructor. */
@@ -172,7 +172,7 @@ protected:
     bool m_success;
     QString m_errorString;
 
-    TimetableAccessorInfo m_info;
+    ServiceProviderData m_data;
 };
 
 class DepartureJobPrivate;
@@ -180,7 +180,7 @@ class DepartureJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit DepartureJob( QScriptProgram* script, const TimetableAccessorInfo* info,
+    explicit DepartureJob( QScriptProgram* script, const ServiceProviderData* info,
                            Storage* scriptStorage, const DepartureRequest& request,
                            QObject* parent = 0);
 
@@ -197,7 +197,7 @@ class JourneyJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit JourneyJob( QScriptProgram* script, const TimetableAccessorInfo* info,
+    explicit JourneyJob( QScriptProgram* script, const ServiceProviderData* info,
                          Storage* scriptStorage, const JourneyRequest& request,
                          QObject* parent = 0);
 
@@ -214,7 +214,7 @@ class StopSuggestionsJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit StopSuggestionsJob( QScriptProgram* script, const TimetableAccessorInfo* info,
+    explicit StopSuggestionsJob( QScriptProgram* script, const ServiceProviderData* info,
                                  Storage* scriptStorage, const StopSuggestionRequest& request,
                                  QObject* parent = 0);
 

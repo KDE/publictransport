@@ -54,7 +54,7 @@ class TestDockWidget;
 class WebInspectorDockWidget;
 class NetworkMonitorDockWidget;
 
-class TimetableAccessorInfo;
+class ServiceProviderData;
 struct StopSuggestionRequest;
 struct JourneyRequest;
 struct DepartureRequest;
@@ -99,8 +99,8 @@ using namespace Debugger; // Needed for slots to match signals, eg. using Breakp
  * This behaviour is similiar to what KDevelop does with it's tool views.
  *
  * Multiple projects can be opened in one TimetableMate window and are managed by a ProjectModel.
- * For each project a set of tabs can be opened: Edit the source project/accessor XML document
- * (AccessorTab), edit the script file (ScriptTab), preview the project in Plasma
+ * For each project a set of tabs can be opened: Edit the source project/service provider plugin
+ * XML document (ProjectSourceTab), edit the script file (ScriptTab), preview the project in Plasma
  * (PlasmaPreviewTab) or show the service providers home page (WebTab). Instead of editing the XML
  * document of a project, it's settings can be edited using a ProjectSettingsDialog.
  * One project always is the "active project", if at least one project is opened. The active
@@ -297,12 +297,12 @@ private:
     bool closeAllTabsExcept( Project *project, AbstractTab *except = 0, bool ask = true );
 
     void dashboardTabAction( DashboardTab *dashboardTab, TabAction tabAction );
-    void accessorTabAction( ProjectSourceTab *accessorTab, TabAction tabAction );
+    void projectSourceTabAction( ProjectSourceTab *projectSourceTab, TabAction tabAction );
     void scriptTabAction( ScriptTab *scriptTab, TabAction tabAction );
     void plasmaPreviewTabAction( PlasmaPreviewTab *plasmaPreviewTab, TabAction tabAction );
     void webTabAction( WebTab *webTab, TabAction tabAction );
 
-    bool hasHomePageURL( const TimetableAccessorInfo *info );
+    bool hasHomePageURL( const ServiceProviderData *info );
 
     Ui::preferences *ui_preferences;
 

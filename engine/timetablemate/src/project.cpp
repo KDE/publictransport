@@ -26,8 +26,8 @@
 #include "javascriptmodel.h"
 #include "javascriptcompletionmodel.h"
 #include "javascriptparser.h"
-#include "accessorinfoxmlwriter.h"
-#include "accessorinfotester.h"
+#include "serviceproviderdatawriter.h"
+#include "serviceproviderdatatester.h"
 #include "publictransportpreview.h"
 #include "testmodel.h"
 #include "tabs/abstracttab.h"
@@ -43,9 +43,9 @@
 #include "debugger/timetabledatarequestjob.h"
 
 // PublicTransport engine includes
-#include <engine/timetableaccessor.h>
-#include <engine/timetableaccessor_info.h>
-#include <engine/timetableaccessor_script.h>
+#include <engine/serviceprovider.h>
+#include <engine/serviceproviderdata.h>
+#include <engine/serviceproviderscript.h>
 #include <engine/request.h>
 
 // KDE includes
@@ -106,7 +106,7 @@ public:
     ProjectPrivate( Project *project ) : state(Project::Uninitialized),
           projectModel(0), projectSourceBufferModified(false),
           dashboardTab(0), projectSourceTab(0), scriptTab(0), plasmaPreviewTab(0), webTab(0),
-          accessor(new TimetableAccessor(0, project)), debugger(new Debugger::Debugger(project)),
+          provider(new ServiceProvider(0, project)), debugger(new Debugger::Debugger(project)),
           executionLine(-1), testModel(new TestModel(project)), testState(NoTestRunning),
           q_ptr(project)
     {
@@ -120,7 +120,7 @@ public:
                                        = Project::DefaultScriptTemplate )
     {
         QString templateText = QString::fromUtf8(
-                "/** Accessor for ${Service Provider}\n"
+                "/** Service provider plugin for ${Service Provider}\n"
                 "  * © ${year}, ${Author} */\n"
                 "\n" );
 
@@ -157,7 +157,7 @@ public:
             break;
         case Project::ScriptQtScriptTemplate:
             templateText +=
-                    "\n// This function gets called to determine the features of this accessor\n"
+                    "\n// This function gets called to determine the features of the service provider\n"
                     "function usedTimetableInformations() {\n"
                     "    // Return a list of TimetableInformation values, that are used by this script.\n"
                     "    // Required values like DepartureDateTime/DepartureTime or TypeOfVehicle\n"
@@ -247,7 +247,7 @@ public:
         return true;
     };
 
-    // Load project from accessor XML document at @p xmlFilePath
+    // Load project from service provider XML document at @p xmlFilePath
     bool loadProject( const QString &xmlFilePath )
     {
         if ( projectSourceTab ) {
@@ -257,12 +257,12 @@ public:
             scriptTab->document()->closeUrl( false );
         }
 
-        // Try to open the XML in the Kate part in the "Accessor Source" tab
+        // Try to open the XML in the Kate part in the "Project Source" tab
         if ( !QFile::exists(xmlFilePath) ) {
             // Project file not found, create a new one from template
             errorHappened( Project::ProjectFileNotFound, i18nc("@info", "The project file <filename>"
                         "%1</filename> could not be found.", xmlFilePath) );
-            insertAccessorTemplate();
+            insertProjectSourceTemplate();
             return false;
         }
 
@@ -270,14 +270,14 @@ public:
         if ( projectSourceTab ) {
             if ( !projectSourceTab->document()->openUrl(url) ) {
                 errorHappened( Project::ProjectFileNotReadable,
-                               i18nc("@info", "Could not open accessor document "
+                               i18nc("@info", "Could not open project source document "
                                      "<filename>%1</filename>.", url.url()) );
             }
             projectSourceTab->document()->setModified( false );
         }
 
-        if ( !readProjectSourceDocument(xmlFilePath) ) {
-            insertAccessorTemplate();
+        if ( !readProjectSourceDocumentFromTabOrFile(xmlFilePath) ) {
+            insertProjectSourceTemplate();
             return false;
         }
 
@@ -346,10 +346,10 @@ public:
 
     QString projectName() const
     {
-        QString name = accessor->info()->names()[ KGlobal::locale()->country() ];
+        QString name = provider->data()->names()[ KGlobal::locale()->country() ];
         if ( name.isEmpty() ) {
             // No translated name
-            name = accessor->info()->name();
+            name = provider->data()->name();
         }
 
         if ( name.isEmpty()) {
@@ -363,9 +363,9 @@ public:
         return name;
     };
 
-    inline const TimetableAccessorInfo *info()
+    inline const ServiceProviderData *info()
     {
-        return accessor->info();
+        return provider->data();
     };
 
     QString iconName() const
@@ -396,7 +396,7 @@ public:
     bool isInstalledLocally() const
     {
         const QString localSaveDir = KGlobal::dirs()->saveLocation( "data",
-                "plasma_engine_publictransport/accessorInfos/" );
+                ServiceProvider::installationSubDirectory() );
         const QString fileName = QFileInfo( filePath ).fileName();
         return QFile::exists( localSaveDir + '/' + fileName );
     };
@@ -404,7 +404,7 @@ public:
     bool isInstalledGlobally() const
     {
         const QString globalSaveDir = KGlobal::dirs()->findDirs( "data",
-                    "plasma_engine_publictransport/accessorInfos/" ).last();
+                    ServiceProvider::installationSubDirectory() ).last();
         const QString fileName = QFileInfo( filePath ).fileName();
         return QFile::exists( globalSaveDir + '/' + fileName );
     };
@@ -455,29 +455,29 @@ public:
         return message;
     };
 
-    // Read accessor XML document from file or from opened accessor document tab
-    bool readProjectSourceDocument( const QString &xmlFilePath )
+    // Read service provider plugin XML document from file or from opened project source document tab
+    bool readProjectSourceDocumentFromTabOrFile( const QString &xmlFilePath )
     {
         Q_Q( Project );
         if ( xmlFilePath.isEmpty() ) {
             kDebug() << "No xml file path given, insert template";
-            insertAccessorTemplate();
+            insertProjectSourceTemplate();
             return true;
         }
 
         // Try to read the XML contents
         bool success = false;
         if ( projectSourceTab ) {
-            // Use text in already loaded accessor document
+            // Use text in already loaded project source document
             QTextCodec *codec = QTextCodec::codecForName( projectSourceTab->document()->encoding().isEmpty()
                                 ? "UTF-8" : projectSourceTab->document()->encoding().toLatin1() );
             QByteArray text = codec->fromUnicode( projectSourceTab->document()->text() );
             QBuffer buffer( &text, q );
-            success = readAccessorInfoXml( &buffer, xmlFilePath );
+            success = readProjectSourceDocument( &buffer, xmlFilePath );
         } else {
-            // Read text from file, accessor document not loaded
+            // Read text from file, service provider document not loaded
             QFile file( xmlFilePath );
-            success = readAccessorInfoXml( &file, xmlFilePath );
+            success = readProjectSourceDocument( &file, xmlFilePath );
         }
 
         if ( success ) {
@@ -490,48 +490,48 @@ public:
         }
     };
 
-    // Read accessor XML document from file
-    bool readAccessorInfoXml( const QString &fileName )
+    // Read project source XML document from file
+    bool readProjectSourceDocument( const QString &fileName )
     {
         QFile file( fileName );
-        return readAccessorInfoXml( &file, fileName );
+        return readProjectSourceDocument( &file, fileName );
     };
 
-    // Read accessor XML document from @p device, set file name to @p fileName
-    bool readAccessorInfoXml( QIODevice *device, const QString &fileName )
+    // Read service provider plugin XML document from @p device, set file name to @p fileName
+    bool readProjectSourceDocument( QIODevice *device, const QString &fileName )
     {
         Q_Q( Project );
 
-        // Recreate accessor from the contents of device
-        AccessorInfoXmlReader reader;
-        delete accessor;
-        accessor = reader.read( device, fileName, AccessorInfoXmlReader::ReadErrorneousFiles, q );
-        if( accessor ) {
+        // Recreate service provider from the contents of device
+        ServiceProviderDataReader reader;
+        delete provider;
+        provider = reader.read( device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q );
+        if( provider ) {
             q->emit nameChanged( projectName() );
             q->emit iconNameChanged( iconName() );
             q->emit iconChanged( projectIcon() );
-            q->emit infoChanged( info() );
+            q->emit dataChanged( info() );
             return true;
         } else {
-            kDebug() << "Accessor is invalid" << reader.errorString() << fileName;
+            kDebug() << "Service provider plugin is invalid" << reader.errorString() << fileName;
             errorHappened( Project::ErrorWhileLoadingProject, reader.errorString() );
 
-            insertAccessorTemplate();
+            insertProjectSourceTemplate();
             return false;
         }
     };
 
-    // Write accessor XML document to @p fileName
-    bool writeAccessorInfoXml( const QString &fileName )
+    // Write service provider plugin XML document to @p fileName
+    bool writeProjectSourceDocument( const QString &fileName )
     {
-        if ( !accessor ) {
-            kDebug() << "No accessor loaded";
+        if ( !provider ) {
+            kDebug() << "No service provider loaded";
             return false;
         }
 
-        AccessorInfoXmlWriter writer;
+        ServiceProviderDataWriter writer;
         QFile file( fileName );
-        return writer.write( &file, accessor );
+        return writer.write( &file, provider );
     };
 
     // Load the script into the script tab,
@@ -547,7 +547,7 @@ public:
         scriptTab->document()->closeUrl( false );
         scriptTab->document()->setModified( false );
 
-        const QString scriptFile = accessor->info()->scriptFileName();
+        const QString scriptFile = provider->data()->scriptFileName();
         if ( scriptFile.isEmpty() ) {
             insertScriptTemplate( templateType );
             return false;
@@ -590,11 +590,12 @@ public:
         }
     };
 
-    // Set the contents of the accessor XML document to text in the accessor document tab
+    // Set the contents of the service provider plugin XML document to @p text
+    // in the project source document tab
     bool setProjectSourceDocumentText( const QString &text )
     {
         if ( !projectSourceTab ) {
-            kDebug() << "No accessor tab opened";
+            kDebug() << "No project source tab opened";
             return true;
         }
 
@@ -602,7 +603,7 @@ public:
         projectSourceTab->document()->setModified( false );
 
         if ( text.isEmpty() ) {
-            insertAccessorTemplate();
+            insertProjectSourceTemplate();
             return false;
         } else {
             // Open file if already stored to have the correct url set in KTextEditor::Document
@@ -610,7 +611,7 @@ public:
                 !projectSourceTab->document()->openUrl(KUrl(filePath)) )
             {
                 errorHappened( Project::ProjectFileNotReadable,
-                               i18nc("@info", "Could not open accessor XML document "
+                               i18nc("@info", "Could not open project source document "
                                      "<filename>%1</filename> could not be found.", filePath) );
                 return false;
             }
@@ -655,20 +656,20 @@ public:
                 q->emit nameChanged( projectName() );
                 q->emit iconNameChanged( iconName() );
                 q->emit iconChanged( projectIcon() );
-                q->emit infoChanged( info() );
+                q->emit dataChanged( info() );
             }
         }
     };
 
-    void insertAccessorTemplate()
+    void insertProjectSourceTemplate()
     {
         Q_Q( Project );
-        delete accessor;
-        accessor = new TimetableAccessor( 0, q );
+        delete provider;
+        provider = new ServiceProvider( 0, q );
         q->emit nameChanged( projectName() );
         q->emit iconNameChanged( iconName() );
         q->emit iconChanged( projectIcon() );
-        q->emit infoChanged( info() );
+        q->emit dataChanged( info() );
     };
 
     void insertScriptTemplate( Project::ScriptTemplateType templateType
@@ -744,7 +745,7 @@ public:
 
         case Project::ShowHomepage:
             // Only enable "Open Homepage" action if an URL is available
-            return !accessor->info()->url().isEmpty();
+            return !provider->data()->url().isEmpty();
 
         case Project::SetAsActiveProject:
             // Only enable "Set as Active Project" action if the project isn't already active
@@ -929,7 +930,7 @@ public:
         q->showScriptTab();
 
         const QString &text = q->scriptText();
-        debugger->loadScript( text, accessor->info() );
+        debugger->loadScript( text, provider->data() );
         debugger->requestTimetableData( request, debugMode );
     };
 
@@ -1037,7 +1038,7 @@ public:
     bool testForSampleData()
     {
         Q_Q( Project );
-        const TimetableAccessorInfo *info = accessor->info();
+        const ServiceProviderData *info = provider->data();
         if ( info->sampleStopNames().isEmpty() ) {
             testModel->markTestCaseAsUnstartable( TestModel::ScriptExecutionTestCase,
                     i18nc("@info/plain", "Missing sample stop name"),
@@ -1062,7 +1063,7 @@ public:
     bool testForJourneySampleData()
     {
         Q_Q( Project );
-        const TimetableAccessorInfo *info = accessor->info();
+        const ServiceProviderData *info = provider->data();
         if ( info->sampleStopNames().count() < 2 ) {
             testModel->addTestResult( TestModel::JourneyTest, TestModel::TestCouldNotBeStarted,
                     i18nc("@info/plain", "To test journeys at least two sample stop names are needed"),
@@ -1089,17 +1090,18 @@ public:
             if ( !testForSampleData() ) {
                 return false;
             }
-            function = TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
+            function = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
             shortMessage = i18nc("@info/plain", "You need to implement a '%1' script function", function);
             message = i18nc("@info", "<title>You need to implement a '%1' script function</title> "
-                            "<para>Accessors that only support journeys are currently not accepted by "
-                            "the data engine, but that may change.</para>", function);
+                            "<para>Service provider plugins that only support journeys are "
+                            "currently not accepted by the data engine, but that may change."
+                            "</para>", function);
             break;
         case TestModel::StopSuggestionTest:
             if ( !testForSampleData() ) {
                 return false;
             }
-            function = TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
+            function = ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
             shortMessage = i18nc("@info/plain", "You need to implement a '%1' script function", function);
             message = i18nc("@info", "<title>You need to implement a '%1' script function</title> "
                             "<para>Without stop suggestions it can be very hard for users to find a "
@@ -1109,17 +1111,17 @@ public:
             if ( !testForJourneySampleData() ) {
                 return false;
             }
-            function = TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS;
+            function = ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
             shortMessage = i18nc("@info/plain", "For journeys, you need to implement a '%1' script function", function);
             message = i18nc("@info", "<title>For journeys, you need to implement a '%1' script function</title> "
                             "<para>If you do not implement the function, journeys will not work with "
-                            "your accessor.</para>", function);
+                            "the plugin.</para>", function);
             break;
         case TestModel::UsedTimetableInformationsTest:
-            function = TimetableAccessorScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS;
+            function = ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS;
             shortMessage = i18nc("@info/plain", "You should implement a '%1' script function", function);
             message = i18nc("@info", "<title>You should implement a '%1' script function</title> "
-                            "<para>This function is used to know what information the accessor parses "
+                            "<para>This function is used to know what information the plugin parses "
                             "from documents. Without adding the appropriate TimetableInformation names "
                             "to the return value of this function, the associated data will be unused "
                             "or associated features will be disabled.</para>"
@@ -1143,7 +1145,7 @@ public:
             return false;
         } else {
             // Function is implemented, ensure, that the current version of the script is loaded
-            const TimetableAccessorInfo *info = accessor->info();
+            const ServiceProviderData *info = provider->data();
             debugger->loadScript( q->scriptText(), info );
 
             // Create job
@@ -1221,11 +1223,11 @@ public:
 
         // Save the project
         kDebug() << "Save to" << _filePath;
-        if ( !writeAccessorInfoXml(_filePath) ) {
+        if ( !writeProjectSourceDocument(_filePath) ) {
             return false;
         }
 
-        QString scriptFile = accessor->info()->scriptFileName();
+        QString scriptFile = provider->data()->scriptFileName();
         if ( !scriptFile.isEmpty() ) {
             const QString scriptFilePath =
                     QFileInfo(_filePath).absolutePath() + '/' + QFileInfo(scriptFile).fileName();
@@ -1292,11 +1294,11 @@ public:
     bool install( QWidget *parent, bool install, Project::InstallType installType )
     {
         Q_Q( Project );
-        const QString xmlFileName = accessor->info()->serviceProvider() + ".xml";
+        const QString xmlFileName = provider->data()->id() + ".pts";
         if ( installType == Project::LocalInstallation ) {
-            // Local installation, find a writable location for Public Transport engine accessors/plugins
+            // Local installation, find a writable location for Public Transport engine plugins
             const QString saveDir = KGlobal::dirs()->saveLocation( "data",
-                    "plasma_engine_publictransport/accessorInfos/" );
+                    ServiceProvider::installationSubDirectory() );
             const QString savePath = saveDir + '/' + xmlFileName;
 
             if ( install ) {
@@ -1346,9 +1348,9 @@ public:
                                             KMessageWidget::Information );
             }
         } else if ( installType == Project::GlobalInstallation ) {
-            // Global insallation, find all directories for Public Transport engine accessors/plugins
+            // Global insallation, find all directories for Public Transport engine plugins
             const QStringList saveDirs = KGlobal::dirs()->findDirs( "data",
-                    "plasma_engine_publictransport/accessorInfos/" );
+                    ServiceProvider::installationSubDirectory() );
             if ( saveDirs.isEmpty() ) {
                 kDebug() << "No save directory found. Is the PublicTransport data engine installed?";
                 return false;
@@ -1364,10 +1366,10 @@ public:
             QVariantMap args;
             args["path"] = saveDir;
             args["operation"] = install ? "install" : "uninstall";
-            args["filenameAccessor"] = xmlFileName;
-            args["filenameScript"] = accessor->info()->scriptFileName();
+            args["filenameProvider"] = xmlFileName;
+            args["filenameScript"] = provider->data()->scriptFileName();
             if ( install ) {
-                args["contentsAccessor"] = q->accessorText();
+                args["contentsProvider"] = q->projectSourceText();
                 args["contentsScript"] = q->scriptText();
             }
             action.setArguments( args );
@@ -1379,10 +1381,10 @@ public:
                 kDebug() << reply.errorCode() << reply.errorDescription();
                 if ( reply.type() == KAuth::ActionReply::HelperError ) {
                     KMessageBox::error( parent,
-                            install ? i18nc("@info", "Accessor could not be installed globally "
+                            install ? i18nc("@info", "Service provider plugin could not be installed globally "
                                             "in <filename>%1</filename>: %2 <message>%3</message>",
                                             saveDir, reply.errorCode(), reply.errorDescription())
-                                    : i18nc("@info", "Accessor could not be uninstalled globally "
+                                    : i18nc("@info", "Service provider plugin could not be uninstalled globally "
                                             "from <filename>%1</filename>: %2 <message>%3</message>",
                                             saveDir, reply.errorCode(), reply.errorDescription()) );
                 } else {
@@ -1412,13 +1414,13 @@ public:
                 return false;
             } else if ( install ) {
                 // Installation successful
-                q->emit informationMessage( i18nc("@info", "Accessor successfully installed globally"),
+                q->emit informationMessage( i18nc("@info", "Service provider plugin successfully installed globally"),
                                             KMessageWidget::Positive );
                 q->emit savePathInfoStringChanged( savePathInfoString() );
                 q->emit globalInstallationStateChanged( true );
             } else {
                 // Uninstallation successful
-                q->emit informationMessage( i18nc("@info", "Accessor successfully uninstalled globally"),
+                q->emit informationMessage( i18nc("@info", "Service provider plugin successfully uninstalled globally"),
                                             KMessageWidget::Positive );
                 if ( xmlFileName == savePath ) {
                     // The project was opened from a global install path, which was just deleted
@@ -1439,8 +1441,8 @@ public:
     Project::State state;
     ProjectModel *projectModel;
 
-    // This is needed to know when accessor was updated with new settings using setAccessorInfo()
-    // but no ProjectSourceTab is opened
+    // This is needed to know when the project source was updated with new settings using
+    // setProviderData() but no ProjectSourceTab is opened
     bool projectSourceBufferModified;
 
     QString openedPath;
@@ -1453,7 +1455,7 @@ public:
     PlasmaPreviewTab *plasmaPreviewTab;
     WebTab *webTab;
 
-    TimetableAccessor *accessor;
+    ServiceProvider *provider;
     QString unsavedScriptContents;
     Debugger::Debugger *debugger;
     int executionLine;
@@ -2487,15 +2489,15 @@ bool Project::startTest( TestModel::Test test )
     bool success;
     const TestModel::TestCase testCase = TestModel::testCaseOfTest( test );
     switch ( testCase ) {
-    case TestModel::AccessorInfoTestCase: {
+    case TestModel::ServiceProviderDataTestCase: {
         d->testModel->markTestAsStarted( test );
 
         QString errorMessage, tooltip;
-        success = AccessorInfoTester::runAccessorInfoTest(
-                test, d->accessor->info(), &errorMessage, &tooltip );
+        success = ServiceProviderDataTester::runServiceProviderDataTest(
+                test, d->provider->data(), &errorMessage, &tooltip );
         d->testModel->addTestResult( test, success ? TestModel::TestFinishedSuccessfully
-                                                  : TestModel::TestFinishedWithErrors,
-                                    errorMessage, tooltip, projectAction(ShowProjectSettings) );
+                                                   : TestModel::TestFinishedWithErrors,
+                                     errorMessage, tooltip, projectAction(ShowProjectSettings) );
     } break;
 
     case TestModel::ScriptExecutionTestCase:
@@ -2553,16 +2555,16 @@ void Project::testProject()
         return;
     }
 
-    startTestCase( TestModel::AccessorInfoTestCase ); // This test case runs synchronously
+    startTestCase( TestModel::ServiceProviderDataTestCase ); // This test case runs synchronously
 
     // Get a list of all functions that are implemented in the script
     const QStringList functions = scriptFunctions();
-    if ( !functions.contains(TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE) ) {
+    if ( !functions.contains(ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE) ) {
         d->testModel->markTestCaseAsUnstartable( TestModel::ScriptExecutionTestCase,
                 i18nc("@info/plain", "You need to implement a 'getTimetable' script function"),
                 i18nc("@info", "<title>You need to implement a 'getTimetable' script function</title> "
-                      "<para>Accessors that only support journeys are currently not accepted by the "
-                      "data engine, but that may change.</para>"),
+                      "<para>Service provider plugin that only support journeys are currently not "
+                      "accepted by the data engine, but that may change.</para>"),
                 projectAction(ShowScript) );
         d->endTesting();
         return;
@@ -2611,7 +2613,7 @@ void Project::testJobStarted( ThreadWeaver::Job *job )
                 test = TestModel::UsedTimetableInformationsTest;
             }
         } else if ( callFunctionJob->functionName() ==
-                    TimetableAccessorScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS )
+                    ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS )
         {
             test = TestModel::UsedTimetableInformationsTest;
         }
@@ -2649,7 +2651,7 @@ void Project::testJobDone( ThreadWeaver::Job *job )
                 d->pendingTests.removeOne( requestJob );
             }
         } else if ( callFunctionJob->functionName() ==
-                    TimetableAccessorScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS )
+                    ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS )
         {
             test = TestModel::UsedTimetableInformationsTest;
             d->pendingTests.removeOne( requestJob );
@@ -2751,7 +2753,7 @@ DepartureRequest Project::getDepartureRequest( QWidget *parent, bool* cancelled 
     KDateTimeWidget *dateTime = new KDateTimeWidget( QDateTime::currentDateTime(), w );
     dataType->addItem( i18nc("@info/plain", "Departures"), "departures" );
     dataType->addItem( i18nc("@info/plain", "Arrivals"), "arrivals" );
-    if ( d->accessor->info()->useSeparateCityValue() ) {
+    if ( d->provider->data()->useSeparateCityValue() ) {
         city = new KLineEdit( w );
         l->addRow( i18nc("@info", "City:"), city );
     }
@@ -2759,11 +2761,11 @@ DepartureRequest Project::getDepartureRequest( QWidget *parent, bool* cancelled 
     l->addRow( i18nc("@info", "Data Type:"), dataType );
     l->addRow( i18nc("@info", "Time:"), dateTime );
     dialog->setMainWidget( w );
-    if ( d->accessor && !d->accessor->info()->sampleStopNames().isEmpty() ) {
+    if ( d->provider && !d->provider->data()->sampleStopNames().isEmpty() ) {
         // Use first sample stop name by default
-        stop->setText( d->accessor->info()->sampleStopNames().first() );
+        stop->setText( d->provider->data()->sampleStopNames().first() );
         if ( city ) {
-            city->setText( d->accessor->info()->sampleCity() );
+            city->setText( d->provider->data()->sampleCity() );
         }
     }
     stop->setFocus();
@@ -2796,7 +2798,7 @@ StopSuggestionRequest Project::getStopSuggestionRequest( QWidget *parent,
     QFormLayout *l = new QFormLayout( w );
     KLineEdit *city = 0;
     KLineEdit *stop = new KLineEdit( w );
-    if ( d->accessor->info()->useSeparateCityValue() ) {
+    if ( d->provider->data()->useSeparateCityValue() ) {
         city = new KLineEdit( w );
         l->addRow( i18nc("@info", "City:"), city );
     }
@@ -2832,7 +2834,7 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
     KDateTimeWidget *dateTime = new KDateTimeWidget( QDateTime::currentDateTime(), w );
     dataType->addItem( i18nc("@info/plain", "Departing at Given Time"), "dep" );
     dataType->addItem( i18nc("@info/plain", "Arriving at Given Time"), "arr" );
-    if ( d->accessor->info()->useSeparateCityValue() ) {
+    if ( d->provider->data()->useSeparateCityValue() ) {
         city = new KLineEdit( w );
         l->addRow( i18nc("@info", "City:"), city );
     }
@@ -2841,14 +2843,14 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
     l->addRow( i18nc("@info", "Time:"), dateTime );
     l->addRow( i18nc("@info", "Meaning of Time:"), dataType );
     dialog->setMainWidget( w );
-    if ( d->accessor && !d->accessor->info()->sampleStopNames().isEmpty() ) {
+    if ( d->provider && !d->provider->data()->sampleStopNames().isEmpty() ) {
         // Use sample stop names by default
-        originStop->setText( d->accessor->info()->sampleStopNames().first() );
-        if ( d->accessor->info()->sampleStopNames().count() >= 2 ) {
-            targetStop->setText( d->accessor->info()->sampleStopNames()[1] );
+        originStop->setText( d->provider->data()->sampleStopNames().first() );
+        if ( d->provider->data()->sampleStopNames().count() >= 2 ) {
+            targetStop->setText( d->provider->data()->sampleStopNames()[1] );
         }
         if ( city ) {
-            city->setText( d->accessor->info()->sampleCity() );
+            city->setText( d->provider->data()->sampleCity() );
         }
     }
     originStop->setFocus();
@@ -2994,7 +2996,7 @@ void Project::debugStopped()
 QString Project::scriptFileName() const
 {
     Q_D( const Project );
-    return d->accessor->info()->scriptFileName();
+    return d->provider->data()->scriptFileName();
 }
 
 QIcon Project::scriptIcon() const
@@ -3170,7 +3172,7 @@ WebTab *Project::createWebTab( QWidget *parent )
         d->connectTab( d->webTab );
 
         // Load the service providers home page
-        d->webTab->webView()->setUrl( d->accessor->info()->url() );
+        d->webTab->webView()->setUrl( d->provider->data()->url() );
         return d->webTab;
     } else {
         d->errorHappened( WebError, i18nc("@info", "Cannot create web widget") );
@@ -3207,8 +3209,8 @@ ProjectSourceTab *Project::createProjectSourceTab( QWidget *parent )
         return d->projectSourceTab;
     }
 
-    // Get accessor text from d->accessor
-    const QString text = accessorText( ReadProjectDocumentFromBuffer );
+    // Get project source text
+    const QString text = projectSourceText( ReadProjectDocumentFromBuffer );
 
     // Try to create an project source document tab
     parent = d->parentWidget( parent );
@@ -3226,8 +3228,8 @@ ProjectSourceTab *Project::createProjectSourceTab( QWidget *parent )
              this, SLOT(projectSourceDocumentChanged(KTextEditor::Document*)));
 
     // Connect slots with the view
-    KTextEditor::View *accessorView = document->views().first();
-    connect( accessorView, SIGNAL(informationMessage(KTextEditor::View*,QString)),
+    KTextEditor::View *projectSourceView = document->views().first();
+    connect( projectSourceView, SIGNAL(informationMessage(KTextEditor::View*,QString)),
              this, SLOT(slotInformationMessage(KTextEditor::View*,QString)) );
 
     // Connect default tab slots with the tab
@@ -3285,37 +3287,37 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
     return d->scriptTab;
 }
 
-TimetableAccessor *Project::accessor() const
+ServiceProvider *Project::provider() const
 {
     Q_D( const Project );
-    Q_ASSERT( d->accessor );
-    return d->accessor;
+    Q_ASSERT( d->provider );
+    return d->provider;
 }
 
-void Project::setAccessorInfo( const TimetableAccessorInfo *accessorInfo )
+void Project::ProviderData( const ServiceProviderData *serviceProviderInfo )
 {
     Q_D( Project );
 
-    // Recreate accessor with new info
-    delete d->accessor;
-    d->accessor = new TimetableAccessor( accessorInfo, this );
+    // Recreate service provider plugin with new info
+    delete d->provider;
+    d->provider = new ServiceProvider( serviceProviderInfo, this );
     emit nameChanged( projectName() );
     emit iconNameChanged( iconName() );
     emit iconChanged( projectIcon() );
-    emit infoChanged( info() );
+    emit dataChanged( data() );
 
     if ( d->projectSourceTab ) {
-        // Update accessor document
-        d->projectSourceTab->document()->setText( accessorText(ReadProjectDocumentFromBuffer) );
+        // Update service provider plugin document
+        d->projectSourceTab->document()->setText( projectSourceText(ReadProjectDocumentFromBuffer) );
     } else {
         const bool wasModified = isModified();
-        const bool wasAccessorModified = isProjectSourceModified();
+        const bool wasProjectSourceModified = isProjectSourceModified();
         d->projectSourceBufferModified = true;
         if ( !wasModified ) {
             d->updateProjectActions( QList<ProjectAction>() << Save );
             emit modifiedStateChanged( true );
         }
-        if ( !wasAccessorModified ) {
+        if ( !wasProjectSourceModified ) {
             emit projectSourceModifiedStateChanged( true );
         }
     }
@@ -3325,7 +3327,7 @@ void Project::showSettingsDialog( QWidget *parent )
 {
     Q_D( Project );
 
-    // Check if a modified accessor tab is opened and ask to save it before
+    // Check if a modified project source tab is opened and ask to save it before
     // editing the file in the settings dialog
     parent = d->parentWidget( parent );
     if ( d->projectSourceTab && d->projectSourceTab->isModified() ) {
@@ -3343,9 +3345,9 @@ void Project::showSettingsDialog( QWidget *parent )
 
     // Create settings dialog
     QPointer< ProjectSettingsDialog > dialog( new ProjectSettingsDialog(parent) );
-    dialog->setAccessorInfo( d->accessor->info(), d->filePath );
+    dialog->setProviderData( d->provider->data(), d->filePath );
     if ( dialog->exec() == KDialog::Accepted ) {
-        setAccessorInfo( dialog->accessorInfo(this) );
+        ProviderData( dialog->providerData(this) );
 
         if ( dialog->newScriptTemplateType() != Project::NoScriptTemplate ) {
             // A new script file was set in the dialog
@@ -3361,12 +3363,12 @@ void Project::projectSourceDocumentChanged( KTextEditor::Document *projectSource
     Q_D( Project );
     Q_UNUSED( projectSourceDocument );
 
-    // Recreate accessor with new XML content
-    d->readProjectSourceDocument( d->filePath );
+    // Recreate service provider plugin with new XML content
+    d->readProjectSourceDocumentFromTabOrFile( d->filePath );
 
     // Update other tabs
     if ( d->webTab ) {
-        d->webTab->webView()->setUrl( accessor()->info()->url() );
+        d->webTab->webView()->setUrl( provider()->data()->url() );
     }
 }
 
@@ -3401,26 +3403,26 @@ void Project::webTabDestroyed()
     d->webTab = 0;
 }
 
-QString Project::accessorText( ProjectDocumentSource source) const
+QString Project::projectSourceText( ProjectDocumentSource source) const
 {
     Q_D( const Project );
-    if ( !d->accessor ) {
-        kDebug() << "No accessor loaded";
+    if ( !d->provider ) {
+        kDebug() << "No service provider plugin loaded";
         return QString();
     }
 
     if ( d->projectSourceTab && (source == ReadProjectDocumentFromTab ||
                             source == ReadProjectDocumentFromTabIfOpened) )
     {
-        // Accessor XML file opened in a tab
+        // Service provider plugin XML file opened in a tab
         return d->projectSourceTab->document()->text();
     } else if ( source == ReadProjectDocumentFromBuffer ||
                 source == ReadProjectDocumentFromTabIfOpened )
     {
-        // No accessor tab opened, read XML text from file to buffer
-        AccessorInfoXmlWriter writer;
+        // No project source tab opened, read XML text from file to buffer
+        ServiceProviderDataWriter writer;
         QBuffer buffer;
-        if( writer.write(&buffer, d->accessor) ) {
+        if( writer.write(&buffer, d->provider) ) {
             return QString::fromUtf8( buffer.data() );
         }
     } else if ( source == ReadProjectDocumentFromFile ) {
@@ -3455,7 +3457,7 @@ QString Project::scriptText() const
         return d->unsavedScriptContents;
     } else {
         // No script tab opened, read script text from file
-        const QString fileName = d->accessor->info()->scriptFileName();
+        const QString fileName = d->provider->data()->scriptFileName();
         if ( !QFile::exists(fileName) ) {
             return QString();
         }
@@ -3605,7 +3607,7 @@ QString Project::projectName() const
     return d->projectName();
 }
 
-const TimetableAccessorInfo *Project::info()
+const ServiceProviderData *Project::data()
 {
     Q_D( Project );
     return d->info();
@@ -3619,13 +3621,13 @@ Project::InstallType Project::Project::installationTypeFromFilePath( const QStri
 
     const QString saveDir = QFileInfo( filePath ).path() + '/';
     const QString localSaveDir = KGlobal::dirs()->saveLocation( "data",
-            "plasma_engine_publictransport/accessorInfos/" );
+            ServiceProvider::installationSubDirectory() );
     if ( saveDir == localSaveDir ) {
         return LocalInstallation;
     }
 
     const QStringList allSaveDirs = KGlobal::dirs()->findDirs( "data",
-                "plasma_engine_publictransport/accessorInfos/" );
+                ServiceProvider::installationSubDirectory() );
     if ( allSaveDirs.contains(saveDir) ) {
         return GlobalInstallation;
     }

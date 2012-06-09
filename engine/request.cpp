@@ -21,21 +21,21 @@
 #include "request.h"
 
 // Own includes
-#include "timetableaccessor_script.h"
+#include "serviceproviderscript.h"
 
 QString StopSuggestionRequest::functionName() const
 {
-    return TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
+    return ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
 }
 
 QString DepartureRequest::functionName() const
 {
-    return TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE;
+    return ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
 }
 
 QString JourneyRequest::functionName() const
 {
-    return TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS;
+    return ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
 }
 
 QScriptValue StopSuggestionRequest::toScriptValue( QScriptEngine *engine ) const

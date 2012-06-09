@@ -25,8 +25,8 @@
 #include "plasmapreview.h"
 
 // Public Transport engine includes
-#include <engine/timetableaccessor.h>
-#include <engine/timetableaccessor_info.h>
+#include <engine/serviceprovider.h>
+#include <engine/serviceproviderdata.h>
 
 PlasmaPreviewTab::PlasmaPreviewTab( Project *project, QWidget *parent )
         : AbstractTab(project, type(), parent)
@@ -39,10 +39,10 @@ PlasmaPreviewTab::PlasmaPreviewTab( Project *project, QWidget *parent )
             "<subtitle>Plasma Preview</subtitle>"
             "<para>This is a preview of the PublicTransport applet in a plasma desktop. "
             "The applet's settings are changed so that it always uses the currently opened "
-            "timetable accessor.</para>"
-            "<para><note>You have to install the accessor to use it in this preview. "
-            "Use <interface>File -&gt; Install</interface> to install the accessor locally "
-            "or <interface>File -&gt; Install Globally</interface> to install the accessor "
+            "service provider plugin.</para>"
+            "<para><note>You have to install the plugin to use it in this preview. "
+            "Use <interface>File -&gt; Install</interface> to install the plugin locally "
+            "or <interface>File -&gt; Install Globally</interface> to install the plugin "
             "globally, ie. for all users.</note></para>") );
     connect( plasmaPreviewWidget, SIGNAL(plasmaPreviewLoaded()),
              this, SLOT(plasmaPreviewLoaded()) );
@@ -58,13 +58,7 @@ PlasmaPreview *PlasmaPreviewTab::plasmaPreviewWidget() const
     return qobject_cast<PlasmaPreview *>( widget() );
 }
 
-// void PlasmaPreviewTab::closePlasmaPreview() const
-// {
-//     plasmaPreviewWidget()->closePlasmaPreview();
-// }
-
 void PlasmaPreviewTab::plasmaPreviewLoaded()
 {
-    plasmaPreviewWidget()->setSettings( project()->accessor()->info()->serviceProvider(),
-                                        QString() );
+    plasmaPreviewWidget()->setSettings( project()->provider()->data()->id(), QString() );
 }

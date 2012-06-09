@@ -53,8 +53,8 @@
 #include "docks/networkmonitordockwidget.h"
 
 // PublicTransport engine includes
-#include <engine/timetableaccessor.h>
-#include <engine/timetableaccessor_info.h>
+#include <engine/serviceprovider.h>
+#include <engine/serviceproviderdata.h>
 
 // KDE includes
 #include <KGlobalSettings>
@@ -921,7 +921,7 @@ void TimetableMate::closeTab( AbstractTab *tab )
         dashboardTabAction( qobject_cast<DashboardTab*>(tab), CloseTab );
         break;
     case Tabs::ProjectSource:
-        accessorTabAction( qobject_cast<ProjectSourceTab*>(tab), CloseTab );
+        projectSourceTabAction( qobject_cast<ProjectSourceTab*>(tab), CloseTab );
         break;
     case Tabs::Script:
         scriptTabAction( qobject_cast<ScriptTab*>(tab), CloseTab );
@@ -1043,7 +1043,7 @@ void TimetableMate::currentTabChanged( int index ) {
     statusBar()->showMessage( QString() );
 
     AbstractTab *tab = index == -1 ? 0 : qobject_cast<AbstractTab*>(m_tabWidget->widget(index));
-    if ( tab && (tab->isAccessorDocumentTab() || tab->isScriptTab()) ) { // go to accessor or script tab
+    if ( tab && (tab->isProjectSourceTab() || tab->isScriptTab()) ) { // go to project source or script tab
         AbstractDocumentTab *documentTab = qobject_cast< AbstractDocumentTab* >( tab );
         Q_ASSERT( documentTab );
         if ( documentTab ) {
@@ -1065,13 +1065,13 @@ void TimetableMate::currentTabChanged( int index ) {
         dashboardTabAction( qobject_cast<DashboardTab*>(tab), MoveToTab );
     }
 
-    // Adjust if an accessor tab was left or newly shown
-    const bool leftAccessorTab = m_currentTab && m_currentTab->isAccessorDocumentTab();
-    const bool movedToAccessorTab = tab && tab->isAccessorDocumentTab();
-    if ( leftAccessorTab && !movedToAccessorTab ) {
-        accessorTabAction( qobject_cast<ProjectSourceTab*>(m_currentTab), LeaveTab );
-    } else if ( movedToAccessorTab && !leftAccessorTab ) {
-        accessorTabAction( qobject_cast<ProjectSourceTab*>(tab), MoveToTab );
+    // Adjust if a project source tab was left or newly shown
+    const bool leftProjectSourceTab = m_currentTab && m_currentTab->isProjectSourceTab();
+    const bool movedToProjectSourceTab = tab && tab->isProjectSourceTab();
+    if ( leftProjectSourceTab && !movedToProjectSourceTab ) {
+        projectSourceTabAction( qobject_cast<ProjectSourceTab*>(m_currentTab), LeaveTab );
+    } else if ( movedToProjectSourceTab && !leftProjectSourceTab ) {
+        projectSourceTabAction( qobject_cast<ProjectSourceTab*>(tab), MoveToTab );
     }
 
     // Adjust if a plasma preview tab was left or newly shown
@@ -1127,10 +1127,11 @@ void TimetableMate::dashboardTabAction( DashboardTab *dashboardTab, TimetableMat
     Q_UNUSED( tabAction );
 }
 
-void TimetableMate::accessorTabAction( ProjectSourceTab *accessorTab, TimetableMate::TabAction tabAction )
+void TimetableMate::projectSourceTabAction( ProjectSourceTab *projectSourceTab,
+                                            TimetableMate::TabAction tabAction )
 {
     if ( tabAction == CloseTab ) {
-        m_partManager->removePart( accessorTab->document() );
+        m_partManager->removePart( projectSourceTab->document() );
     }
 }
 
@@ -1303,7 +1304,7 @@ void TimetableMate::debugContinued()
 //     Project *project = m_projectModel->activeProject();
 //     Q_ASSERT( project ); // debugContinued is connected to the currently active project
 //     setWindowTitle( i18nc("@window:title", "TimetableMate - %1 [*]",
-//                           project->accessor()->serviceProvider()) );
+//                           project->provider()->serviceProvider()) );
     updateWindowTitle();
 }
 
@@ -1647,7 +1648,7 @@ Project *TimetableMate::openProject( const QString &filePath )
 void TimetableMate::fileOpen() {
     QString fileName = KFileDialog::getOpenFileName( KGlobalSettings::documentPath(),
             "application/x-publictransport-serviceprovider application/xml",
-            this, i18nc("@title:window", "Open Accessor") );
+            this, i18nc("@title:window", "Open Service Provider Plugin") );
     if ( fileName.isNull() )
         return; // Cancel clicked
 
@@ -1655,28 +1656,27 @@ void TimetableMate::fileOpen() {
 }
 
 void TimetableMate::fileOpenInstalled() {
-    // Get a list of all script files in the directory of the XML file
-    QStringList accessorFiles = KGlobal::dirs()->findAllResources( "data",
-                                "plasma_engine_publictransport/accessorInfos/*.xml" );
-    if ( accessorFiles.isEmpty() ) {
+    // Get a list of all service provider plugin files in the directory of the XML file
+    QStringList pluginFiles = ServiceProvider::installedProviders();
+    if ( pluginFiles.isEmpty() ) {
         KMessageBox::information( this, i18nc("@info/plain", "There are no installed "
-                "timetable accessors. You need to install the PublicTransport data engine.") );
+                "service provider plugins. You need to install the PublicTransport data engine.") );
         return;
     }
-    qSort( accessorFiles );
+    qSort( pluginFiles );
 
     // Make filenames more pretty and create a hash to map from the pretty names to the full paths
     QHash< QString, QString > map;
-    for ( QStringList::iterator it = accessorFiles.begin(); it != accessorFiles.end(); ++it ) {
+    for ( QStringList::iterator it = pluginFiles.begin(); it != pluginFiles.end(); ++it ) {
         QString prettyName;
         if ( KStandardDirs::checkAccess(*it, W_OK) ) {
             // File is writable, ie. locally installed
             prettyName = KUrl( *it ).fileName();
         } else {
             // File isn't writable, ie. globally installed
-            prettyName = i18nc( "@info/plain This string is displayed instead of the full path for "
-                                "globally installed timetable accessor xmls.",
-                                "Global: %1", KUrl(*it).fileName() );
+            prettyName = i18nc("@info/plain This string is displayed instead of the full path for "
+                               "globally installed service provider plugins.",
+                               "Global: %1", KUrl(*it).fileName());
         }
 
         map.insert( prettyName, *it );
@@ -1685,9 +1685,9 @@ void TimetableMate::fileOpenInstalled() {
 
     bool ok;
     QString selectedPrettyName = KInputDialog::getItem(
-            i18nc("@title:window", "Open Installed Accessor"),
-            i18nc("@info", "Installed timetable accessor"),
-            accessorFiles, 0, false, &ok, this );
+            i18nc("@title:window", "Open Installed Service Provider Plugin"),
+            i18nc("@info", "Installed service provider plugin"),
+            pluginFiles, 0, false, &ok, this );
     if ( ok ) {
         QString selectedFilePath = map[ selectedPrettyName ];
         Project *project = openProject( selectedFilePath );
@@ -1723,11 +1723,11 @@ void TimetableMate::preferencesDialogFinished()
     ui_preferences = 0;
 }
 
-bool TimetableMate::hasHomePageURL( const TimetableAccessorInfo *info ) {
+bool TimetableMate::hasHomePageURL( const ServiceProviderData *info ) {
     if ( info->url().isEmpty() ) {
         KMessageBox::information( this, i18nc("@info",
                 "The <interface>Home Page URL</interface> is empty.<nl/>"
-                "Please set it in the <interface>Accessor</interface> tab first.") );
+                "Please set it in the project settings dialog first.") );
         return false;
     } else
         return true;

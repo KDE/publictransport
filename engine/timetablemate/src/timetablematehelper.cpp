@@ -34,44 +34,44 @@ KAuth::ActionReply TimetableMateHelper::install( const QVariantMap &map )
     KAuth::ActionReply reply;
     const QString saveDir = map["path"].toString();
     const QString operation = map["operation"].toString();
-    const QString accessorFileName = map["filenameAccessor"].toString();
-    const QString accessorDocument = map["contentsAccessor"].toString();
+    const QString providerFileName = map["filenameProvider"].toString();
+    const QString providerDocument = map["contentsProvider"].toString();
     const QString scriptFileName = map["filenameScript"].toString();
     const QString scriptDocument = map["contentsScript"].toString();
     const bool uninstall = operation == QLatin1String("uninstall");
 
     if ( uninstall ) {
         // Uninstall
-        if ( !QFile::exists(accessorFileName) ) {
+        if ( !QFile::exists(providerFileName) ) {
             reply = ActionReply::HelperErrorReply;
             reply.setErrorCode( 10 );
             reply.setErrorDescription( i18nc("@info/plain", "Not installed") );
             return false;
         }
 
-        QFile accessorFile( accessorFileName );
-        if ( !accessorFile.remove() ) {
+        QFile providerFile( providerFileName );
+        if ( !providerFile.remove() ) {
             reply = ActionReply::HelperErrorReply;
             reply.setErrorCode( 1 );
-            reply.setErrorDescription( accessorFile.errorString() );
+            reply.setErrorDescription( providerFile.errorString() );
             return reply;
         }
     } else {
         // Install
-        QFile accessorFile( accessorFileName );
-        if( !accessorFile.open(QIODevice::WriteOnly) ) {
+        QFile providerFile( providerFileName );
+        if( !providerFile.open(QIODevice::WriteOnly) ) {
             reply = ActionReply::HelperErrorReply;
             reply.setErrorCode( 2 );
-            reply.setErrorDescription( accessorFile.errorString() );
+            reply.setErrorDescription( providerFile.errorString() );
             return reply;
         }
-        if( accessorFile.write(accessorDocument.toUtf8()) == -1 ) {
+        if( providerFile.write(providerDocument.toUtf8()) == -1 ) {
             reply = ActionReply::HelperErrorReply;
             reply.setErrorCode( 1 );
-            reply.setErrorDescription( accessorFile.errorString() );
+            reply.setErrorDescription( providerFile.errorString() );
             return reply;
         }
-        accessorFile.close();
+        providerFile.close();
     }
 
     if ( uninstall ) {

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<serviceProvider fileVersion="1.0" version="1.0" type="Script">
+
+<name lang="en">Resrobot</name>
+
+<description lang="en">This service provider works for all cities in Sweden.</description>
+<description lang="de">Dieser Service-Provider liefert Ergebnisse für alle Städte in Schweden.</description>
+
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<!-- <cities><city></city></cities> -->
+<useSeperateCityValue>false</useSeperateCityValue>
+
+<url>http://www.resrobot.se</url>
+<shortUrl>www.resrobot.se</shortUrl>
+<!-- <credit></credit> -->
+<!-- <minFetchWait>300</minFetchWait> -->
+<fallbackCharset>latin1</fallbackCharset>
+
+<script>se_resrobot.js</script>
+
+<rawUrls>
+    <departures requestStopIdFirst="true"><![CDATA[http://www.resrobot.se/pages/GetDepartures.action?alwaysUseResRobot=false&searchData%2FfromIndex={stop}&searchData%2Ffrom={stop}!&stopsMode=true]]></departures>
+
+	<stopSuggestions><![CDATA[http://www.resrobot.se/pages/FindLocationStops.action?alwaysUseResRobot=false&searchData%2FsearchType=F&dummy=true&searchData/from={stop}&fromSuggestedIndex=0&searchData%2Fto=&searchData%2FroundTrip=false&stopsMode=true&searchButton=++Search++&advancedMode=false&searchData%2FalternativeStations=true&transportModes%2Fx2000=true&transportModes%2Ftrain=true&transportModes%2Fbus=true&transportModes%2Fboat=true&transportModes%2FexpressBus=true&transportModes%2Fair=true]]></stopSuggestions>
+
+<!--     <journeys><![CDATA[http://hafas.bene-system.com/bin/query.exe/dn?...]]></journeys> -->
+</rawUrls>
+
+<changelog>
+	<entry since="1.0" releasedWith="0.10">Initial version.</entry>
+</changelog>
+
+</serviceProvider>

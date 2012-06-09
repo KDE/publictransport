@@ -1098,8 +1098,7 @@ void PublicTransport::showJourneysUnsupportedView()
     d->labelJourneysNotSupported->setSizePolicy( QSizePolicy::Expanding,
             QSizePolicy::Expanding, QSizePolicy::Label );
     d->labelJourneysNotSupported->setText( i18nc("@info/plain",
-            "Journey searches aren't supported by the currently used "
-            "service provider or it's accessor.") );
+            "Journey searches aren't supported by the currently used service provider.") );
     d->labelJourneysNotSupported->nativeWidget()->setWordWrap( true );
     connect( d->states["journeysUnsupportedView"], SIGNAL(exited()),
              d->labelJourneysNotSupported, SLOT(deleteLater()) );

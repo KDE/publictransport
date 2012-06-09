@@ -289,7 +289,7 @@ Flickable { id: flickable
             Text { id: fileName;
                 text: "<a href='#'>" + projectInfo.fileNameFromPath(info.fileName) + "</a>";
                 width: parent.fieldWidth; elide: Text.ElideMiddle
-                onLinkActivated: project.showAccessorTab()
+                onLinkActivated: project.showProjectSourceTab()
             }
 
             // A link to the script document, opens the document in a tab

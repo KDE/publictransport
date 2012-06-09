@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+
+<serviceProvider fileVersion="1.0" version="1.4" type="Script">
+
+<name>Weser-Ems Busverkehr GmbH</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<cities>
+    <city>Bremen</city> <city>Bremerhaven</city> <city>Hannover</city> <city>Braunschweig</city> <city>Emden</city>
+</cities>
+<useSeperateCityValue>false</useSeperateCityValue>
+<description>This service provider works for cities in 'Lower Saxony, Bremen' in Germany and also for many other cities in Germany. These other cities only include trains. Delay information is currently in a testing stage, according to the service provider (05.11.2011).</description>
+
+<url>http://www.fahrplaner.de/</url>
+<shortUrl>www.fahrplaner.de</shortUrl>
+<!-- <credit>Weser-Ems Busverkehr GmbH</credit> -->
+<fallbackCharset>latin1</fallbackCharset>
+
+<rawUrls>
+    <departures><![CDATA[http://www.fahrplaner.de/hafas/stboard.exe/dn?ld=web&L=vbn&input={stop}!&boardType={dataType}&time={time}&disableEquivs=no&maxJourneys={maxCount}&start=yes]]></departures>
+
+    <stopSuggestions><![CDATA[http://www.fahrplaner.de/hafas/ajax-getstop.exe/dn?REQ0JourneyStopsS0A=1&REQ0JourneyStopsS0G={stop}]]></stopSuggestions>
+</rawUrls>
+
+<script>de_fahrplaner.js</script>
+
+<changelog>
+    <entry since="1.4" releasedWith="0.10">Changed departure source for more details, eg. route stops and times. Add delays parsing.</entry>
+    <entry since="1.3" releasedWith="0.10">Updated to changed website layout, added platform parsing.</entry>
+    <entry since="1.2" releasedWith="0.10">Ported to a script.</entry>
+	<entry since="1.1" releasedWith="0.6.9">Stop suggestions didn't work. It's now using another url for stop suggestions, like de_db (same system), with stop weights.</entry>
+</changelog>
+
+</serviceProvider>

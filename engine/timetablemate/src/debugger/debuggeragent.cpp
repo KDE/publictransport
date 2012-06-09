@@ -27,7 +27,7 @@
 
 // PublicTransport engine includes
 #include <engine/scripting.h>
-#include <engine/timetableaccessor_script.h>
+#include <engine/serviceproviderscript.h>
 #include <engine/global.h>
 
 // KDE includes

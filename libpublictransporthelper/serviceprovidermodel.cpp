@@ -59,7 +59,7 @@ ServiceProviderItem::ServiceProviderItem( const QString &name, const QVariantHas
     } else {
         d_ptr->category = KGlobal::locale()->countryCodeToName( location );
 
-        // TODO Add a flag to the accessor XML files, maybe <countryWide />
+        // TODO Add a flag to the provider plugin XML files, maybe <countryWide />
         bool isCountryWide = name.contains( location, Qt::CaseInsensitive );
         d_ptr->sortString = isCountryWide
                 ? "WWWWW" + d_ptr->category + "11111" + name

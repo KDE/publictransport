@@ -31,7 +31,7 @@ class LocationItemPrivate
 public:
     LocationItemPrivate() { itemType = LocationItem::Invalid; };
 
-    void setFromCountryCode( const QString &countryCode, int accessorCount = -1,
+    void setFromCountryCode( const QString &countryCode, int providerCount = -1,
                              const QString &description = QString() ) {
         this->countryCode = countryCode;
         if ( countryCode.compare("showAll", Qt::CaseInsensitive) == 0 ) {
@@ -39,15 +39,15 @@ public:
             icon = KIcon( "package_network" );
             formattedText = QString( "<span><b>%1</b></span> <br-wrap><small><b>%2</b></small>" )
                     .arg( text )
-                    .arg( i18nc("@info/plain Label for the total number of accessors", "Total: ")
-                        + i18ncp("@info/plain", "%1 accessor", "%1 accessors", accessorCount) );
+                    .arg( i18nc("@info/plain Label for the total number of providers", "Total: ")
+                        + i18ncp("@info/plain", "%1 provider", "%1 providers", providerCount) );
             itemType = LocationItem::Total;
             return;
         } else if ( countryCode.compare("erroneous", Qt::CaseInsensitive) == 0 ) {
             icon = KIcon( "edit-delete" );
             formattedText = QString( "<span><b>%1</b></span><br-wrap><small>%2</small>" )
-                    .arg( i18ncp("@info/plain", "%1 accessor is erroneous:",
-                                "%1 accessors are erroneous:", accessorCount) )
+                    .arg( i18ncp("@info/plain", "%1 provider is erroneous:",
+                                "%1 providers are erroneous:", providerCount) )
                     .arg( description );
             itemType = LocationItem::Erroneous;
             return;
@@ -78,7 +78,7 @@ public:
 
         formattedText = QString( "<span><b>%1</b></span> <small>(<b>%2</b>)<br-wrap>%3</small>" )
                 .arg( text )
-                .arg( i18ncp("@info/plain", "%1 accessor", "%1 accessors", accessorCount) )
+                .arg( i18ncp("@info/plain", "%1 provider", "%1 providers", providerCount) )
                 .arg( description );
     };
 
@@ -89,11 +89,11 @@ public:
     LocationItem::ItemType itemType;
 };
 
-LocationItem::LocationItem( const QString& countryCode, int accessorCount,
+LocationItem::LocationItem( const QString& countryCode, int providerCount,
                             const QString &description )
         : d_ptr(new LocationItemPrivate())
 {
-    d_ptr->setFromCountryCode( countryCode, accessorCount, description );
+    d_ptr->setFromCountryCode( countryCode, providerCount, description );
 }
 
 LocationItem::~LocationItem()
@@ -190,16 +190,16 @@ void LocationModel::syncWithDataEngine( Plasma::DataEngine* publicTransportEngin
     d->items << new LocationItem( "showAll", countries.count() );
 
     // Get erroneous service providers (TODO: Get error messages)
-    QStringList erroneousAccessorNames = publicTransportEngine
-                                         ->query( "ErroneousServiceProviders" )["names"].toStringList();
-    if ( !erroneousAccessorNames.isEmpty() ) {
+    QStringList erroneousProviderNames =
+            publicTransportEngine->query( "ErroneousServiceProviders" )["names"].toStringList();
+    if ( !erroneousProviderNames.isEmpty() ) {
         QStringList errorLines;
-        for ( int i = 0; i < erroneousAccessorNames.count(); ++i ) {
-            errorLines << QString( "<b>%1</b>" ).arg( erroneousAccessorNames[i] );//.arg( errorMessages[i] );
+        for ( int i = 0; i < erroneousProviderNames.count(); ++i ) {
+            errorLines << QString( "<b>%1</b>" ).arg( erroneousProviderNames[i] );//.arg( errorMessages[i] );
         }
 
-        d->items << new LocationItem( "erroneous", erroneousAccessorNames.count(),
-                                     errorLines.join( ",<br-wrap>" ) );
+        d->items << new LocationItem( "erroneous", erroneousProviderNames.count(),
+                                      errorLines.join( ",<br-wrap>" ) );
     }
 
     qSort( d->items.begin(), d->items.end(), locationGreaterThan );

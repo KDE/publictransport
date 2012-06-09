@@ -27,9 +27,9 @@
 
 #include "publictransporthelper_export.h"
 
-// These three are included to use it's enums in the constructor
+// These are included to use it's enums in the constructor
 #include "stopfinder.h"
-#include "accessorinfodialog.h"
+#include "serviceproviderdatadialog.h"
 #include "stopsettings.h"
 #include "filter.h"
 
@@ -63,12 +63,12 @@ class NearStopsDialog;
  * There are some static convenience function that create a StopSettingsDialog for special purposes.
  * They all use the default constructor.
  * @par
- * @ref createSimpleAccessorSelectionDialog to create a simple accessor selection dialog. It shows
+ * @ref createSimpleProviderSelectionDialog to create a simple provider selection dialog. It shows
  * two comboboxes to select a location and a service provider. The location combobox is used to
  * filter the shown service providers.
  * @par
  * @ref createSimpleStopSelectionDialog to create a simple stop selection dialog. In addition to
- * the simple accessor selection option it shows a widget to edit the stop name(s), with
+ * the simple provider selection option it shows a widget to edit the stop name(s), with
  * autocompletion if the service provider supports that.
  * @par
  * @ref createExtendedStopSelectionDialog to create an extended stop selection dialog with extended
@@ -110,8 +110,8 @@ class NearStopsDialog;
  * @ref addSettingWidget.
  *
  * @see Option
- * @see StopSettingsDialog::StopSettingsDialog
- * @see AccessorInfoDialog
+ * @see StopSettingsDialog
+ * @see ServiceProviderDataDialog
  **/
 class PUBLICTRANSPORTHELPER_EXPORT StopSettingsDialog : public KDialog {
     Q_OBJECT
@@ -138,12 +138,12 @@ public:
         ShowNearbyStopsButton = 0x0002, /**< Show a dialog button to (try to) get a list of
                 * public transport stops near the users current position.
                 * Does nothing if @ref ShowStopInputField isn't also set. */
-        ShowAccessorInfoButton = 0x0004, /**< Show a button on the right of the service
-                * provider combobox which opens an @ref AccessorInfoDialog. */
-        ShowInstallAccessorButton = 0x0008, /**< Shows a button on the right of the service
-                * provider combobox to install new accessors (lokal files or via GHNS). */
+        ShowProviderInfoButton = 0x0004, /**< Show a button on the right of the service
+                * provider combobox which opens an @ref ServiceProviderDataDialog. */
+        ShowInstallProviderButton = 0x0008, /**< Shows a button on the right of the service
+                * provider combobox to install new provider plugins (lokal files or via GHNS). */
 
-        ShowServiceProviderConfig = 0x0010, /**< Shows comboboxes for location and service provider
+        ShowProviderConfiguration = 0x0010, /**< Shows comboboxes for location and service provider
                 * selection. The service provider combobox gets filtered by the country selected
                 * in the location combobox.
                 * If this flag isn't set, @ref ShowStopInputField should be used to show widget(s)
@@ -168,24 +168,24 @@ public:
 
         UseHtmlEverywhere = UseHtmlForLocationConfig | UseHtmlForServiceProviderConfig,
                 /** Combination of UseHtmlForLocationConfig and UseHtmlForServiceProviderConfig. */
-        ShowAllDetailsWidgets = ShowInstallAccessorButton | ShowFilterConfigurationConfig |
+        ShowAllDetailsWidgets = ShowInstallProviderButton | ShowFilterConfigurationConfig |
                 ShowAlarmTimeConfig | ShowFirstDepartureConfig,
                 /** Shows all widgets of the
-                 * details section. Combination of ShowInstallAccessorButton,
+                 * details section. Combination of ShowInstallProviderButton,
                  * ShowFilterConfigurationConfig, ShowAlarmTimeConfig and
                  * ShowFirstDepartureConfig. */
 
-        SimpleAccessorSelection = ShowServiceProviderConfig | ShowAccessorInfoButton |
-                ShowInstallAccessorButton | UseHtmlEverywhere,
-                /**< Options for a simple accessor selection dialog.
+        SimpleProviderSelection = ShowProviderConfiguration | ShowProviderInfoButton |
+                ShowInstallProviderButton | UseHtmlEverywhere,
+                /**< Options for a simple provider selection dialog.
                  * It doesn't show stop selection fields, only widgets associated to service
-                 * provider selection, including an accessor info button and a button to install
-                 * new accessors. */
-        SingleAccessorSimpleStopSelection = ShowStopInputField | ShowNearbyStopsButton,
+                 * provider selection, including a provider info button and a button to install
+                 * new provider plugins. */
+        SingleProviderSimpleStopSelection = ShowStopInputField | ShowNearbyStopsButton,
                 /** Shows a stop input field with autocompletion, but no widgets to change the
                  * service provider. This may be used if only one specific service provider should
                  * be used, eg. one for flights. */
-        SimpleStopSelection = SimpleAccessorSelection | ShowStopInputField |
+        SimpleStopSelection = SimpleProviderSelection | ShowStopInputField |
                 ShowNearbyStopsButton,
                 /**< Extends SimpleServiceProviderSelection with a stop input field and a button
                  * to search for nearby stops. */
@@ -200,7 +200,7 @@ public:
      * @brief Creates a new stop settings dialog.
      *
      * You can also create a StopSettingsDialog by using one of the static member functions
-     * @ref createSimpleAccessorSelectionDialog, @ref createSimpleStopSelectionDialog or
+     * @ref createSimpleProviderSelectionDialog, @ref createSimpleStopSelectionDialog or
      * @ref createExtendedStopSelectionDialog. These functions use this constructor to create
      * the dialog object.
      * For most configurability use this constructor with your options.
@@ -233,8 +233,8 @@ public:
      *
      * @param options Options for the stop settings dialog.
      *
-     * @param accessorInfoDialogOptions Options for the accessor info dialog, only used if
-     *   @p options has the flag @ref ShowAccessorInfoButton set.
+     * @param providerDataDialogOptions Options for the ServiceProviderDataDialog, only used if
+     *   @p options has the flag @ref ShowProviderInfoButton set.
      *
      * @param filterConfigurations A list of configured filter configurations to choose from
      *   for @ref StopSettigns::FilterConfigurationSetting.
@@ -270,7 +270,7 @@ public:
     explicit StopSettingsDialog( QWidget *parent = 0,
             const StopSettings &stopSettings = StopSettings(),
             StopSettingsDialog::Options options = DefaultOptions,
-            AccessorInfoDialog::Options accessorInfoDialogOptions = AccessorInfoDialog::DefaultOptions,
+            ServiceProviderDataDialog::Options providerDataDialogOptions = ServiceProviderDataDialog::DefaultOptions,
             FilterSettingsList *filterConfigurations = 0,
             int stopIndex = -1, const QList<int> &customSettings = QList<int>(),
             StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
@@ -281,18 +281,16 @@ public:
     virtual ~StopSettingsDialog();
 
     /**
-     * @brief Creates a new accessor selection dialog, which is a StopSettingsDialog with
-     *   the option @ref SimpleAccessorSelection.
+     * @brief Creates a new provider selection dialog.
      *
-     * It provides a button to install new accessors.
+     * The created dialog is a StopSettingsDialog with the option @ref SimpleProviderSelection.
      *
+     * It provides a button to install new service provider plugins.
      * This function is provided for convenience, it just calls the constructor of
      * StopSettingsDialog.
      *
      * @param parent The parent widget of the dialog. Default is 0.
-     *
      * @param stopSettings The stop settings to initialize the dialog with.
-     *
      * @param factory A pointer (QSharedPointer) to an object derived from
      *   @ref StopSettingsWidgetFactory, which can create widgets for (custom) settings by calling
      *   @ref StopSettingsWidgetFactory::widgetForSetting. You can use the <em>Pointer</em>
@@ -304,22 +302,21 @@ public:
      *
      * @return The newly created service provider selection dialog.
      **/
-    static StopSettingsDialog *createSimpleAccessorSelectionDialog(
+    static StopSettingsDialog *createSimpleProviderSelectionDialog(
             QWidget *parent = 0, const StopSettings &stopSettings = StopSettings(),
             StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
 
     /**
-     * @brief Creates a new stimple stop selection dialog, which is a StopSettingsDialog with
-     *   the option @ref SimpleStopSelection.
+     * @brief Creates a new stimple stop selection dialog
      *
-     * It provides a button to install new accessors and a button to find stops near the users
-     * current position.
+     * The created dialog is a StopSettingsDialog with the option @ref SimpleStopSelection.
      *
+     * It provides a button to install new service provider plugins and a button to find stops
+     * near the users current position.
      * This function is provided for convenience, it just calls the constructor of
      * StopSettingsDialog.
      *
      * @param parent The parent widget of the dialog. Default is 0.
-     *
      * @param stopSettings The stop settings to initialize the dialog with.
      *
      * @param factory A pointer (QSharedPointer) to an object derived from
@@ -338,26 +335,23 @@ public:
             StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
 
     /**
-     * @brief Creates a new extended stop selection dialog, which is a StopSettingsDialog with
-     *   the option @ref ExtendedStopSelection.
+     * @brief Creates a new extended stop selection dialog.
      *
-     * It provides a details section with additional settings, a button to install new accessors
-     * and a button to find stops near the users current position.
+     * The created dialog is a StopSettingsDialog with the option @ref ExtendedStopSelection.
+     *
+     * It provides a details section with additional settings, a button to install new provider
+     * plugins and a button to find stops near the users current position.
      *
      * This function is provided for convenience, it just calls the constructor of
      * StopSettingsDialog.
      *
      * @param parent The parent widget of the dialog. Default is 0.
-     *
      * @param stopSettings The stop settings to initialize the dialog with.
-     *
      * @param filterConfigurations A list of configured filter configurations to choose from
      *   for @ref StopSettigns::FilterConfigurationSetting.
-     *
      * @param stopIndex The index of the stop settings to be edited, if in a StopSettingsList.
      *   This is used to check the correct filter configurations, based on
      *   FilterSettings::affectedStops.
-     *
      * @param factory A pointer (QSharedPointer) to an object derived from
      *   @ref StopSettingsWidgetFactory, which can create widgets for (custom) settings by calling
      *   @ref StopSettingsWidgetFactory::widgetForSetting. You can use the <em>Pointer</em>
@@ -375,8 +369,9 @@ public:
             StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
 
     /**
-     * @brief Adds a widget for the given @p setting in the details section using the
-     *   StopSettingsWidgetFactory given in the constructor.
+     * @brief Adds a widget for the given @p setting in the details section.
+     *
+     * Uses the StopSettingsWidgetFactory given in the constructor.
      *
      * If @p setting is StopSettings::UserSetting or higher, the StopSettingsWidgetFactory
      * object given in the constructor should be a class derived from StopSettingsWidgetFactory
@@ -387,11 +382,9 @@ public:
      *   already existent widget is returned.
      *
      * @param setting The setting to create a widget for.
-     *
      * @param defaultValue The value to set for the created widget if there isn't already a value
      *   in the StopSettings object. The value is set using the
      *   @ref StopSettingsWidgetFactory::setValueOfSetting.
-     *
      * @param data Can contain data for the widget created by StopSettingsWidgetFactory, like
      *   a QStringList for a combobox.
      */
@@ -399,16 +392,15 @@ public:
                                const QVariant &data = QVariant() );
 
     /**
-     * @brief Adds a widget for the given @p setting in the details section without
-     *   using a StopSettingsWidgetFactory.
+     * @brief Adds a widget for the given @p setting in the details section.
+     *
+     * This function does @em not use a StopSettingsWidgetFactory.
      *
      * @note If there already is a widget for @p setting, the @p widget gets hidden and the
      *   already existent widget is returned.
      *
      * @param label The text for the QLabel, which gets created for the new @p widget.
-     *
      * @param widget The widget to add.
-     *
      * @param setting The setting to create a widget for.
      */
     QWidget *addSettingWidget( int setting, const QString &label, QWidget *widget );
@@ -511,7 +503,7 @@ protected Q_SLOTS:
     /** @brief The menu item to use GHNS to download new service providers was clicked. */
     void downloadServiceProvidersClicked();
 
-    /** @brief The menu item to install a local accessor info XML was clicked. */
+    /** @brief The menu item to install a local provider plugin XML was clicked. */
     void installServiceProviderClicked();
 
     void stopFinderGeolocationData( const QString &countryCode, const QString &city,

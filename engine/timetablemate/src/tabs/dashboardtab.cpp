@@ -22,7 +22,7 @@
 #include "../project.h"
 
 // PublicTransport engine includes
-#include <engine/timetableaccessor_info.h>
+#include <engine/serviceproviderdata.h>
 
 // KDE includes
 #include <KStandardDirs>
@@ -51,11 +51,11 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
     }
     const QString svgFileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.svg" );
 
-    // Register Project and TimetableAccessorInfo in Qt's meta object system and for QML
-    qRegisterMetaType< const TimetableAccessorInfo* >( "const TimetableAccessorInfo*" );
+    // Register Project and ServiceProviderData in Qt's meta object system and for QML
+    qRegisterMetaType< const ServiceProviderData* >( "const ServiceProviderData*" );
     qRegisterMetaType< Project* >( "Project*" );
     qRegisterMetaType< TestModel* >( "TestModel*" );
-    qmlRegisterType< TimetableAccessorInfo, 1 >( "TimetableMate", 1, 0, "TimetableAccessorInfo" );
+    qmlRegisterType< ServiceProviderData, 1 >( "TimetableMate", 1, 0, "ServiceProviderData" );
     qmlRegisterType< Project, 1 >( "TimetableMate", 1, 0, "Project" );
     qmlRegisterType< Tabs, 1 >( "TimetableMate", 1, 0, "Tabs" );
 //      qmlRegisterUncreatableType<
@@ -75,7 +75,7 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
 
     m_qmlView->setResizeMode( QDeclarativeView::SizeRootObjectToView );
     m_qmlView->rootContext()->setContextProperty( "project", project );
-    m_qmlView->rootContext()->setContextProperty( "info", project->info()->clone(this) );
+    m_qmlView->rootContext()->setContextProperty( "info", project->data()->clone(this) );
     m_qmlView->rootContext()->setContextProperty( "svgFileName", svgFileName );
 
     // Add Plasma QML import paths

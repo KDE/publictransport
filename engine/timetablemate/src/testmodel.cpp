@@ -21,7 +21,7 @@
 #include "testmodel.h"
 
 // Public Transport engine includes
-#include <engine/timetableaccessor_script.h>
+#include <engine/serviceproviderscript.h>
 
 // KDE includes
 #include <KDebug>
@@ -645,7 +645,7 @@ QVariant TestModel::headerData( int section, Qt::Orientation orientation, int ro
 
 bool TestModel::hasErroneousTests() const
 {
-    return testCaseState( AccessorInfoTestCase ) == TestFinishedWithErrors ||
+    return testCaseState( ServiceProviderDataTestCase ) == TestFinishedWithErrors ||
            testCaseState( ScriptExecutionTestCase ) == TestFinishedWithErrors;
 }
 
@@ -680,11 +680,11 @@ QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCas
 {
     QList< TestModel::Test > tests;
     switch ( testCase ) {
-    case AccessorInfoTestCase:
-        tests << AccessorInfoNameTest << AccessorInfoVersionTest << AccessorInfoFileVersionTest
-              << AccessorInfoAuthorNameTest << AccessorInfoShortAuthorNameTest
-              << AccessorInfoEmailTest << AccessorInfoUrlTest << AccessorInfoShortUrlTest
-              << AccessorInfoScriptFileNameTest << AccessorInfoDescriptionTest;
+    case ServiceProviderDataTestCase:
+        tests << ServiceProviderDataNameTest << ServiceProviderDataVersionTest << ServiceProviderDataFileFormatVersionTest
+              << ServiceProviderDataAuthorNameTest << ServiceProviderDataShortAuthorNameTest
+              << ServiceProviderDataEmailTest << ServiceProviderDataUrlTest << ServiceProviderDataShortUrlTest
+              << ServiceProviderDataScriptFileNameTest << ServiceProviderDataDescriptionTest;
         break;
     case ScriptExecutionTestCase:
         tests << DepartureTest << ArrivalTest << StopSuggestionTest << JourneyTest
@@ -701,17 +701,17 @@ QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCas
 TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
 {
     switch ( test ) {
-    case AccessorInfoNameTest:
-    case AccessorInfoVersionTest:
-    case AccessorInfoFileVersionTest:
-    case AccessorInfoAuthorNameTest:
-    case AccessorInfoShortAuthorNameTest:
-    case AccessorInfoEmailTest:
-    case AccessorInfoUrlTest:
-    case AccessorInfoShortUrlTest:
-    case AccessorInfoScriptFileNameTest:
-    case AccessorInfoDescriptionTest:
-        return AccessorInfoTestCase;
+    case ServiceProviderDataNameTest:
+    case ServiceProviderDataVersionTest:
+    case ServiceProviderDataFileFormatVersionTest:
+    case ServiceProviderDataAuthorNameTest:
+    case ServiceProviderDataShortAuthorNameTest:
+    case ServiceProviderDataEmailTest:
+    case ServiceProviderDataUrlTest:
+    case ServiceProviderDataShortUrlTest:
+    case ServiceProviderDataScriptFileNameTest:
+    case ServiceProviderDataDescriptionTest:
+        return ServiceProviderDataTestCase;
 
     case DepartureTest:
     case ArrivalTest:
@@ -729,7 +729,7 @@ TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
 QString TestModel::nameForTestCase( TestModel::TestCase testCase )
 {
     switch ( testCase ) {
-    case AccessorInfoTestCase:
+    case ServiceProviderDataTestCase:
         return i18nc("@info/plain", "Project Settings Test Case" );
     case ScriptExecutionTestCase:
         return i18nc("@info/plain", "Script Execution Test Case" );
@@ -742,25 +742,25 @@ QString TestModel::nameForTestCase( TestModel::TestCase testCase )
 QString TestModel::nameForTest( TestModel::Test test )
 {
     switch ( test ) {
-    case AccessorInfoNameTest:
+    case ServiceProviderDataNameTest:
         return i18nc("@info/plain", "Name Test" );
-    case AccessorInfoVersionTest:
+    case ServiceProviderDataVersionTest:
         return i18nc("@info/plain", "Version Test" );
-    case AccessorInfoFileVersionTest:
+    case ServiceProviderDataFileFormatVersionTest:
         return i18nc("@info/plain", "File Version Test" );
-    case AccessorInfoAuthorNameTest:
+    case ServiceProviderDataAuthorNameTest:
         return i18nc("@info/plain", "Author Name Test" );
-    case AccessorInfoShortAuthorNameTest:
+    case ServiceProviderDataShortAuthorNameTest:
         return i18nc("@info/plain", "Short Author Name Test" );
-    case AccessorInfoEmailTest:
+    case ServiceProviderDataEmailTest:
         return i18nc("@info/plain", "Email Test" );
-    case AccessorInfoUrlTest:
+    case ServiceProviderDataUrlTest:
         return i18nc("@info/plain", "URL Test" );
-    case AccessorInfoShortUrlTest:
+    case ServiceProviderDataShortUrlTest:
         return i18nc("@info/plain", "Short URL Test" );
-    case AccessorInfoScriptFileNameTest:
+    case ServiceProviderDataScriptFileNameTest:
         return i18nc("@info/plain", "Script File Test" );
-    case AccessorInfoDescriptionTest:
+    case ServiceProviderDataDescriptionTest:
         return i18nc("@info/plain", "Description Test" );
 
     case DepartureTest:
@@ -782,7 +782,7 @@ QString TestModel::nameForTest( TestModel::Test test )
 QString TestModel::descriptionForTestCase( TestModel::TestCase testCase )
 {
     switch ( testCase ) {
-    case AccessorInfoTestCase:
+    case ServiceProviderDataTestCase:
         return i18nc("@info/plain", "Tests project settings for validity" );
     case ScriptExecutionTestCase:
         return i18nc("@info/plain", "Runs script functions and tests collected data" );
@@ -795,43 +795,43 @@ QString TestModel::descriptionForTestCase( TestModel::TestCase testCase )
 QString TestModel::descriptionForTest( TestModel::Test test )
 {
     switch ( test ) {
-    case AccessorInfoNameTest:
+    case ServiceProviderDataNameTest:
         return i18nc("@info/plain", "Tests for a valid name");
-    case AccessorInfoVersionTest:
+    case ServiceProviderDataVersionTest:
         return i18nc("@info/plain", "Tests for a valid version string" );
-    case AccessorInfoFileVersionTest:
+    case ServiceProviderDataFileFormatVersionTest:
         return i18nc("@info/plain", "Tests for a valid engine plugin format version string" );
-    case AccessorInfoAuthorNameTest:
+    case ServiceProviderDataAuthorNameTest:
         return i18nc("@info/plain", "Tests for a valid author name" );
-    case AccessorInfoShortAuthorNameTest:
+    case ServiceProviderDataShortAuthorNameTest:
         return i18nc("@info/plain", "Tests for a valid short author name string" );
-    case AccessorInfoEmailTest:
+    case ServiceProviderDataEmailTest:
         return i18nc("@info/plain", "Tests for a valid email address" );
-    case AccessorInfoUrlTest:
+    case ServiceProviderDataUrlTest:
         return i18nc("@info/plain", "Tests for a valid URL to the homepage of the service provider" );
-    case AccessorInfoShortUrlTest:
+    case ServiceProviderDataShortUrlTest:
         return i18nc("@info/plain", "Tests for a valid short version of URL" );
-    case AccessorInfoScriptFileNameTest:
+    case ServiceProviderDataScriptFileNameTest:
         return i18nc("@info/plain", "Tests for a valid script file" );
-    case AccessorInfoDescriptionTest:
+    case ServiceProviderDataDescriptionTest:
         return i18nc("@info/plain", "Tests for a valid description" );
 
     case DepartureTest:
         return i18nc("@info/plain", "Runs the %1() script function and tests collected departure data",
-                     TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE );
+                     ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE );
     case ArrivalTest:
         return i18nc("@info/plain", "Runs the %1() script function and tests collected arrival data",
-                     TimetableAccessorScript::SCRIPT_FUNCTION_GETTIMETABLE );
+                     ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE );
     case StopSuggestionTest:
         return i18nc("@info/plain", "Runs the %1() script function and tests collected stop suggestions",
-                     TimetableAccessorScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS );
+                     ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS );
     case JourneyTest:
         return i18nc("@info/plain", "Runs the %1() script function and tests collected journey data",
-                     TimetableAccessorScript::SCRIPT_FUNCTION_GETJOURNEYS );
+                     ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS );
     case UsedTimetableInformationsTest:
         return i18nc("@info/plain", "Runs the %1() script function and tests the returned list of "
                      "strings, which should name TimetableInformation enumerables",
-                     TimetableAccessorScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS );
+                     ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS );
     default:
         kDebug() << "Unknown test" << test;
         return QString();

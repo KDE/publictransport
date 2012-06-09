@@ -28,8 +28,8 @@
 #include "timetabledatarequestjob.h"
 
 // PublicTransport engine includes
-#include <engine/timetableaccessor_info.h>
-#include <engine/timetableaccessor_script.h>
+#include <engine/serviceproviderdata.h>
+#include <engine/serviceproviderscript.h>
 #include <engine/script_thread.h>
 #include <engine/request.h>
 
@@ -216,11 +216,11 @@ void Debugger::jobDestroyed( QObject *object )
     m_runningJobs.removeOne( object );
 }
 
-void Debugger::createScriptObjects( const TimetableAccessorInfo *info )
+void Debugger::createScriptObjects( const ServiceProviderData *info )
 {
     // Create objects for the script, they get inserted into the engine in LoadScriptJob
     if ( !m_scriptHelper ) {
-        m_scriptHelper = new Helper( info->serviceProvider(), m_engine );
+        m_scriptHelper = new Helper( info->id(), m_engine );
         connect( m_scriptHelper, SIGNAL(errorReceived(QString,QScriptContextInfo,QString)),
                  this, SIGNAL(scriptErrorReceived(QString,QScriptContextInfo,QString)) );
     }
@@ -239,7 +239,7 @@ void Debugger::createScriptObjects( const TimetableAccessorInfo *info )
     }
 
     if ( !m_scriptStorage ) {
-        m_scriptStorage = new Storage( info->serviceProvider() );
+        m_scriptStorage = new Storage( info->id() );
     }
 }
 
@@ -266,7 +266,7 @@ void Debugger::evaluateInContext( const QString &program, const QString &context
     return;
 }
 
-void Debugger::loadScript( const QString &program, const TimetableAccessorInfo *info )
+void Debugger::loadScript( const QString &program, const ServiceProviderData *info )
 {
     if ( m_loadScriptJob ) {
         kDebug() << "Script already gets loaded, please wait...";

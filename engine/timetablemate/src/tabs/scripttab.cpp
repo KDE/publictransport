@@ -31,9 +31,9 @@
 #include "../debugger/breakpointmodel.h"
 
 // Public Transport engine includes
-#include <engine/timetableaccessor.h>
-#include <engine/timetableaccessor_info.h>
-#include <engine/timetableaccessor_script.h>
+#include <engine/serviceprovider.h>
+#include <engine/serviceproviderdata.h>
+#include <engine/serviceproviderscript.h>
 
 // KDE includes
 #include <KLocalizedString>
@@ -421,9 +421,9 @@ bool ScriptTab::save()
             return false;
         }
 
-        TimetableAccessorInfo *newInfo = project()->accessor()->info()->clone();
+        ServiceProviderData *newInfo = project()->provider()->data()->clone();
         newInfo->setScriptFile( fileName );
-        project()->setAccessorInfo( newInfo );
+        project()->ProviderData( newInfo );
         project()->save( this );
     } else if ( !document()->saveAs(project()->scriptFileName()) ) {
         KMessageBox::error( this, i18nc("@info",
@@ -482,7 +482,7 @@ void ScriptTab::parseScript()
     // Update next/previous function actions enabled state
     updateNextPreviousFunctionActions();
 
-//     project()->debugger()->loadScript( project()->scriptText(), project()->accessor()->info() );
+//     project()->debugger()->loadScript( project()->scriptText(), project()->provider()->data() );
 }
 
 void ScriptTab::goToPreviousFunction()

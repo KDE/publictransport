@@ -27,7 +27,7 @@
 
 // Public Transport engine includes
 #include <engine/enums.h> // For TimetableData, TimetableInformation
-#include <engine/timetableaccessor_info.h>
+#include <engine/serviceproviderdata.h>
 
 // KDE includes
 #include <KMessageWidget> // For KMessageWidget::MessageType
@@ -51,8 +51,8 @@ class ScriptTab;
 class WebTab;
 class PlasmaPreviewTab;
 
-class TimetableAccessor;
-class TimetableAccessorInfo;
+class ServiceProvider;
+class ServiceProviderData;
 
 struct AbstractRequest;
 struct DepartureRequest;
@@ -92,7 +92,7 @@ using namespace Debugger;
  * Installed projects get recognized by the PublicTransport engine. Locally installed versions are
  * preferred over globally installed ones.
  * Each project can also have a script file, which gets used to request/parse timetable data.
- * Currently only scripted accessors are supported by this class.
+ * Currently only scripted service provider plugins are supported by this class.
  *
  * A set of tabs gets provided, ie. DashboardTab, ScriptTab, ProjectSourceTab, PlasmaPreviewTab and
  * WebTab. Project settings can be changed using the ProjectSourceTab or the ProjectSettingsDialog
@@ -126,7 +126,7 @@ class Project : public QObject {
     Q_PROPERTY( bool isDebuggerRunning READ isDebuggerRunning NOTIFY debuggerRunningChanged )
     Q_PROPERTY( bool isTestRunning READ isTestRunning NOTIFY testRunningChanged )
     Q_PROPERTY( QString name READ projectName NOTIFY nameChanged )
-    Q_PROPERTY( const TimetableAccessorInfo* info READ info NOTIFY infoChanged )
+    Q_PROPERTY( const ServiceProviderData* data READ data NOTIFY dataChanged )
     Q_PROPERTY( QString iconName READ iconName NOTIFY iconNameChanged )
     Q_PROPERTY( QIcon icon READ projectIcon NOTIFY iconChanged )
     Q_PROPERTY( InstallType saveType READ saveType NOTIFY saveTypeChanged )
@@ -151,8 +151,8 @@ public:
     /** @brief Error types. */
     enum Error {
         NoError = 0, /**< No error. */
-        ProjectFileNotFound, /**< The project file (ie. the accessor XML document) was not found. */
-        ProjectFileNotReadable, /**< The project file (ie. the accessor XML document) is not readable. */
+        ProjectFileNotFound, /**< The project file (ie. the service provider plugin XML document) was not found. */
+        ProjectFileNotReadable, /**< The project file (ie. the service provider plugin XML document) is not readable. */
         ScriptFileNotFound, /**< The script file was not found. */
         ScriptSyntaxError, /**< There is a syntax error in the script. */
         ErrorWhileLoadingProject, /**< There was an error while loading the project. */
@@ -315,9 +315,9 @@ public:
     Q_INVOKABLE bool isModified() const;
 
     /**
-     * @brief Whether or not the accessor info XML document was modified.
+     * @brief Whether or not the service provider plugin XML document was modified.
      *
-     * The acccessor info XML document can be modified in an ProjectSourceTab or in a
+     * The service provider plugin XML document can be modified in an ProjectSourceTab or in a
      * ProjectSettingsDialog. It can be modified although no ProjectSourceTab is currently opened.
      **/
     Q_INVOKABLE bool isProjectSourceModified() const;
@@ -511,17 +511,17 @@ public:
     WebTab *createWebTab( QWidget *parent = 0 );
 
     /**
-     * @brief Get a pointer to the TimetableAccessor object of this project.
+     * @brief Get a pointer to the ServiceProvider object of this project.
      *
      * This function always returns a valid pointer.
      **/
-    TimetableAccessor *accessor() const;
+    ServiceProvider *provider() const;
 
     /** @brief Get the debugger used by this project. */
     Debugger::Debugger *debugger() const;
 
-    /** @brief Set accessor information values used for this project to @p accessorInfo. */
-    void setAccessorInfo( const TimetableAccessorInfo *accessorInfo );
+    /** @brief Set service provider data values used for this project to @p providerData. */
+    void ProviderData( const ServiceProviderData *providerData );
 
     /** @brief Get the path of the project source XML file. */
     Q_INVOKABLE QString filePath() const;
@@ -535,8 +535,8 @@ public:
     /** @brief Get the ID of the service provider of this project. */
     Q_INVOKABLE QString serviceProviderId() const;
 
-    /** @brief Get the contents of the accessor XML document. */
-    Q_INVOKABLE QString accessorText( ProjectDocumentSource source = ReadProjectDocumentFromTabIfOpened ) const;
+    /** @brief Get the contents of the service provider plugin XML document. */
+    Q_INVOKABLE QString projectSourceText( ProjectDocumentSource source = ReadProjectDocumentFromTabIfOpened ) const;
 
     /** @brief Get the contents of the script document. */
     Q_INVOKABLE QString scriptText() const;
@@ -553,8 +553,8 @@ public:
     /** @brief Get a name for the project. */
     Q_INVOKABLE QString projectName() const;
 
-    /** @brief Get information about the timetable accessor project. */
-    Q_INVOKABLE const TimetableAccessorInfo *info();
+    /** @brief Get data for the service provider plugin project. */
+    Q_INVOKABLE const ServiceProviderData *data();
 
     /** @brief Check if @p filePath specifies a local or global installation path. */
     Q_INVOKABLE static InstallType installationTypeFromFilePath( const QString &filePath );
@@ -617,7 +617,7 @@ public:
 
 signals:
     void nameChanged( const QString &newName );
-    void infoChanged( const TimetableAccessorInfo *newInfo );
+    void dataChanged( const ServiceProviderData *newData );
     void iconNameChanged( const QString &newIconName );
     void iconChanged( const QIcon &newIcon );
     void saveTypeChanged( InstallType newInstallType );
@@ -633,7 +633,7 @@ signals:
 
     void saveLocationChanged( const QString &newXmlFilePath, const QString &oldXmlFilePath );
 
-    /** @brief Emitted when the modified status of the source accessor document changes. */
+    /** @brief Emitted when the modified status of the project source document changes. */
     void projectSourceModifiedStateChanged( bool modified );
 
     /** @brief Emitted when the modified status of the script changes. */

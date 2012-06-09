@@ -9,8 +9,8 @@ set( timetablemate_SRCS
    projectmodel.cpp
    projectsettingsdialog.cpp
    changelogwidget.cpp
-   accessorinfoxmlwriter.cpp
-   accessorinfotester.cpp
+   serviceproviderdatawriter.cpp
+   serviceproviderdatatester.cpp
    javascriptcompletionmodel.cpp
    javascriptmodel.cpp
    javascriptparser.cpp
@@ -25,10 +25,10 @@ set( timetablemate_SRCS
    ../../script_thread.cpp
    ../../departureinfo.cpp
    ../../request.cpp
-   ../../timetableaccessor.cpp
-   ../../timetableaccessor_info.cpp
-   ../../timetableaccessor_script.cpp
-   ../../accessorinfoxmlreader.cpp
+   ../../serviceprovider.cpp
+   ../../serviceproviderdata.cpp
+   ../../serviceproviderscript.cpp
+   ../../serviceproviderdatareader.cpp
 )
 
 add_subdirectory( debugger )

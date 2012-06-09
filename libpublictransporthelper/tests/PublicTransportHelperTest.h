@@ -44,13 +44,13 @@ private slots:
     // Tests StopSettings
     void stopSettingsTest();
 
-    // Tests StopSettingsDialog with simple accessor selection option
-    void stopSettingsDialogSimpleAccessorSelectionTest();
+    // Tests StopSettingsDialog with simple provider selection option
+    void stopSettingsDialogSimpleProviderSelectionTest();
 
     // Tests StopSettingsDialog with simple stop selection option
     void stopSettingsDialogSimpleStopTest();
 
-    // Tests StopSettingsDialog with extended accessor selection option
+    // Tests StopSettingsDialog with extended provider selection option
     void stopSettingsDialogExtendedStopTest();
 
     // Tests StopSettingsDialog with custom options

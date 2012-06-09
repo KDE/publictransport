@@ -25,13 +25,13 @@
 #include "project.h"
 #include "settings.h"
 #include "changelogwidget.h"
-#include "accessorinfoxmlwriter.h"
-#include "accessorinfotester.h"
+#include "serviceproviderdatawriter.h"
+#include "serviceproviderdatatester.h"
 
 // PublicTransport engine includes
-#include <engine/accessorinfoxmlreader.h>
-#include <engine/timetableaccessor.h>
-#include <engine/timetableaccessor_info.h>
+#include <engine/serviceproviderdatareader.h>
+#include <engine/serviceprovider.h>
+#include <engine/serviceproviderdata.h>
 #include <engine/global.h>
 
 // KDE includes
@@ -59,7 +59,7 @@
 #include <QToolBar>
 
 ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
-        : KDialog(parent), ui_accessor(new Ui::timetablemateview_base()), m_accessorInfo(0),
+        : KDialog(parent), ui_provider(new Ui::timetablemateview_base()), m_providerData(0),
           m_newScriptTemplateType(Project::NoScriptTemplate),
           m_shortAuthorAutoFilled(false), m_shortUrlAutoFilled(false),
           m_cityName(0), m_cityReplacement(0), m_changelog(0),
@@ -67,18 +67,18 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
 {
     QWidget *widget = new QWidget( this );
     widget->setAutoFillBackground( false );
-    ui_accessor->setupUi( widget );
+    ui_provider->setupUi( widget );
     setMainWidget( widget );
     setCaption( i18nc("@title:window", "Project Settings") );
     setButtons( KDialog::Ok | KDialog::Cancel | KDialog::User1 );
     setButtonIcon( KDialog::User1, KIcon("dialog-ok-apply") );
     setButtonText( KDialog::User1, i18nc("@info/plain", "Check") );
 
-    QToolBar *notesToolBar = new QToolBar( "notesToolBar", ui_accessor->tabNotes );
-    QToolBar *notesToolBar2 = new QToolBar( "notesToolBar2", ui_accessor->tabNotes );
-    ui_accessor->notesLayout->insertWidget( 0, notesToolBar );
-    ui_accessor->notesLayout->insertWidget( 1, notesToolBar2 );
-    ui_accessor->notes->createActions( m_actions );
+    QToolBar *notesToolBar = new QToolBar( "notesToolBar", ui_provider->tabNotes );
+    QToolBar *notesToolBar2 = new QToolBar( "notesToolBar2", ui_provider->tabNotes );
+    ui_provider->notesLayout->insertWidget( 0, notesToolBar );
+    ui_provider->notesLayout->insertWidget( 1, notesToolBar2 );
+    ui_provider->notes->createActions( m_actions );
     QAction *separator1 = new QAction( this ), *separator2 = new QAction( this );
     separator1->setSeparator( true );
     separator2->setSeparator( true );
@@ -104,33 +104,33 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     settingsChanged();
 
     // Initialize script file buttons
-    ui_accessor->btnBrowseForScriptFile->setIcon( KIcon("document-open") );
-    ui_accessor->btnCreateScriptFile->setIcon( KIcon("document-new") );
-    ui_accessor->btnDetachScriptFile->setIcon( KIcon("list-remove") );
-    ui_accessor->btnDetachScriptFile->setVisible( false );
-    connect( ui_accessor->btnBrowseForScriptFile, SIGNAL(clicked(bool)),
+    ui_provider->btnBrowseForScriptFile->setIcon( KIcon("document-open") );
+    ui_provider->btnCreateScriptFile->setIcon( KIcon("document-new") );
+    ui_provider->btnDetachScriptFile->setIcon( KIcon("list-remove") );
+    ui_provider->btnDetachScriptFile->setVisible( false );
+    connect( ui_provider->btnBrowseForScriptFile, SIGNAL(clicked(bool)),
              this, SLOT(browseForScriptFile()) );
-    connect( ui_accessor->btnCreateScriptFile, SIGNAL(clicked(bool)),
+    connect( ui_provider->btnCreateScriptFile, SIGNAL(clicked(bool)),
              this, SLOT(createScriptFile()) );
-    connect( ui_accessor->btnDetachScriptFile, SIGNAL(clicked(bool)),
+    connect( ui_provider->btnDetachScriptFile, SIGNAL(clicked(bool)),
              this, SLOT(detachScriptFile()) );
 
     // Initialize the language button
-    ui_accessor->currentLanguage->loadAllLanguages();
-    ui_accessor->currentLanguage->insertLanguage( "en", QString(), 0 );
-    ui_accessor->currentLanguage->insertSeparator( 1 );
-    connect( ui_accessor->currentLanguage, SIGNAL(activated(QString)),
+    ui_provider->currentLanguage->loadAllLanguages();
+    ui_provider->currentLanguage->insertLanguage( "en", QString(), 0 );
+    ui_provider->currentLanguage->insertSeparator( 1 );
+    connect( ui_provider->currentLanguage, SIGNAL(activated(QString)),
              this, SLOT(languageActivated(QString)) );
 
     // Autofill short author/URL fields, if they are empty
     // while editing the full author/URL fields
-    connect( ui_accessor->author, SIGNAL(textEdited(QString)),
+    connect( ui_provider->author, SIGNAL(textEdited(QString)),
              this, SLOT(authorEdited(QString)) );
-    connect( ui_accessor->shortAuthor, SIGNAL(textEdited(QString)),
+    connect( ui_provider->shortAuthor, SIGNAL(textEdited(QString)),
              this, SLOT(shortAuthorEdited(QString)) );
-    connect( ui_accessor->url, SIGNAL(textEdited(QString)),
+    connect( ui_provider->url, SIGNAL(textEdited(QString)),
              this, SLOT(urlEdited(QString)) );
-    connect( ui_accessor->shortUrl, SIGNAL(textEdited(QString)),
+    connect( ui_provider->shortUrl, SIGNAL(textEdited(QString)),
              this, SLOT(shortUrlEdited(QString)) );
 
     // Initialize the KEditListWidget for predefined cities
@@ -148,7 +148,7 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     defaultLineEdit->hide();
 
     m_predefinedCitiesCustomEditor.setRepresentationWidget( repWidget );
-    ui_accessor->predefinedCities->setCustomEditor( m_predefinedCitiesCustomEditor );
+    ui_provider->predefinedCities->setCustomEditor( m_predefinedCitiesCustomEditor );
     connect( m_cityName, SIGNAL(textChanged(QString)),
              this, SLOT(predefinedCityNameChanged(QString)) );
     connect( m_cityReplacement, SIGNAL(textChanged(QString)),
@@ -159,36 +159,36 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     // Set a validator for version line edits, allow major, minor and path version
     QRegExpValidator *versionValidator =
             new QRegExpValidator( QRegExp("\\d+(\\.\\d+)?(\\.\\d+)?"), this );
-    ui_accessor->version->setValidator( versionValidator );
-    ui_accessor->fileVersion->setValidator( versionValidator );
+    ui_provider->version->setValidator( versionValidator );
+    ui_provider->fileVersion->setValidator( versionValidator );
 
     // Set a validator for the email line edit
     // The reg exp is "inspired" by http://www.regular-expressions.info/email.html
     QRegExp rx( "[a-z0-9!#$%&\\._-]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,4}",
                 Qt::CaseInsensitive );
     QRegExpValidator *emailValidator = new QRegExpValidator( rx, this );
-    ui_accessor->email->setValidator( emailValidator );
+    ui_provider->email->setValidator( emailValidator );
 
     // Install event filters to filter out focus out events
     // if the line edit's text cannot be validated
-    ui_accessor->version->installEventFilter( this );
-    ui_accessor->fileVersion->installEventFilter( this );
-    ui_accessor->name->installEventFilter( this );
-    ui_accessor->description->installEventFilter( this );
-    ui_accessor->author->installEventFilter( this );
-    ui_accessor->shortAuthor->installEventFilter( this );
-    ui_accessor->email->installEventFilter( this );
-    ui_accessor->url->installEventFilter( this );
-    ui_accessor->shortUrl->installEventFilter( this );
+    ui_provider->version->installEventFilter( this );
+    ui_provider->fileVersion->installEventFilter( this );
+    ui_provider->name->installEventFilter( this );
+    ui_provider->description->installEventFilter( this );
+    ui_provider->author->installEventFilter( this );
+    ui_provider->shortAuthor->installEventFilter( this );
+    ui_provider->email->installEventFilter( this );
+    ui_provider->url->installEventFilter( this );
+    ui_provider->shortUrl->installEventFilter( this );
 
     // Set icons and connections for the "open url buttons"
-    ui_accessor->btnUrlOpen->setIcon( KIcon("document-open-remote") );
-    connect( ui_accessor->btnUrlOpen, SIGNAL(clicked(bool)),
+    ui_provider->btnUrlOpen->setIcon( KIcon("document-open-remote") );
+    connect( ui_provider->btnUrlOpen, SIGNAL(clicked(bool)),
              this, SLOT(openUrlClicked()) );
 
     // Add changelog widget into a scroll area
-    QVBoxLayout *changelogAreaLayout = new QVBoxLayout( ui_accessor->tabChangelog );
-    QScrollArea *changelogArea = new QScrollArea( ui_accessor->tabChangelog );
+    QVBoxLayout *changelogAreaLayout = new QVBoxLayout( ui_provider->tabChangelog );
+    QScrollArea *changelogArea = new QScrollArea( ui_provider->tabChangelog );
     changelogArea->setFrameStyle( QFrame::NoFrame );
     changelogArea->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
     changelogArea->setWidgetResizable( true );
@@ -206,111 +206,111 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
              this, SLOT(changelogEntryWidgetAdded(ChangelogEntryWidget*)) );
 
     // Add vehicle types with icons to the default vehicle type combo box
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "status_unknown" ), i18nc( "@item:listbox", "Unknown" ), "Unknown" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_tram" ), i18nc( "@item:listbox", "Tram" ), "Tram" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_bus" ), i18nc( "@item:listbox", "Bus" ), "Bus" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_subway" ), i18nc( "@item:listbox", "Subway" ), "Subway" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_train_interurban" ),
         i18nc( "@item:listbox", "Interurban Train" ), "TrainInterurban" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_metro" ), i18nc( "@item:listbox", "Metro" ), "Metro" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_trolleybus" ),
         i18nc( "@item:listbox", "Trolley Bus" ), "TrolleyBus" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_train_regional" ), // TODO: Currently no special icon
         i18nc( "@item:listbox", "Regional Train" ), "TrainRegional" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_train_regional" ),
         i18nc( "@item:listbox", "Regional Express Train" ), "TrainRegionalExpress" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_train_interregional" ),
         i18nc( "@item:listbox", "Interregional Train" ), "TrainInterregio" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_train_intercity" ),
         i18nc( "@item:listbox", "Intercity/Eurocity Train" ), "TrainIntercityEurocity" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_train_highspeed" ),
         i18nc( "@item:listbox", "Intercity Express Train" ), "TrainIntercityExpress" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_ferry" ), i18nc( "@item:listbox", "Ferry" ), "Ferry" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_ferry" ), i18nc( "@item:listbox", "Ship" ), "Ship" );
-    ui_accessor->defaultVehicleType->addItem(
+    ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_plane" ), i18nc( "@item:listbox", "Plane" ), "Plane" );
 
     // Connect all change signals of the widgets to the changed() signal
     m_mapper = new QSignalMapper( this );
-    connect( ui_accessor->name, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->description, SIGNAL(textChanged()), m_mapper, SLOT(map()) );
-    connect( ui_accessor->version, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->type, SIGNAL(currentIndexChanged(int)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->useCityValue, SIGNAL(stateChanged(int)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->onlyAllowPredefinedCities, SIGNAL(stateChanged(int)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->url, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->shortUrl, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->minFetchWait, SIGNAL(valueChanged(int)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->scriptFile, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->author, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->shortAuthor, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->email, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->defaultVehicleType, SIGNAL(currentIndexChanged(int)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->fileVersion, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
-    connect( ui_accessor->predefinedCities, SIGNAL(changed()), m_mapper, SLOT(map()) );
-    connect( ui_accessor->sampleStopNames, SIGNAL(changed()), m_mapper, SLOT(map()) );
-    connect( ui_accessor->sampleCity, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->name, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->description, SIGNAL(textChanged()), m_mapper, SLOT(map()) );
+    connect( ui_provider->version, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->type, SIGNAL(currentIndexChanged(int)), m_mapper, SLOT(map()) );
+    connect( ui_provider->useCityValue, SIGNAL(stateChanged(int)), m_mapper, SLOT(map()) );
+    connect( ui_provider->onlyAllowPredefinedCities, SIGNAL(stateChanged(int)), m_mapper, SLOT(map()) );
+    connect( ui_provider->url, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->shortUrl, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->minFetchWait, SIGNAL(valueChanged(int)), m_mapper, SLOT(map()) );
+    connect( ui_provider->scriptFile, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->author, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->shortAuthor, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->email, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->defaultVehicleType, SIGNAL(currentIndexChanged(int)), m_mapper, SLOT(map()) );
+    connect( ui_provider->fileVersion, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->predefinedCities, SIGNAL(changed()), m_mapper, SLOT(map()) );
+    connect( ui_provider->sampleStopNames, SIGNAL(changed()), m_mapper, SLOT(map()) );
+    connect( ui_provider->sampleCity, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(added(QWidget*)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(removed(QWidget*,int)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(changed()), m_mapper, SLOT(map()) );
     // TODO Map changes in the changelog, ie. changing the version or message text
-    m_mapper->setMapping( ui_accessor->name, ui_accessor->name );
-    m_mapper->setMapping( ui_accessor->description, ui_accessor->description );
-    m_mapper->setMapping( ui_accessor->version, ui_accessor->version );
-    m_mapper->setMapping( ui_accessor->type, ui_accessor->type );
-    m_mapper->setMapping( ui_accessor->useCityValue, ui_accessor->useCityValue );
-    m_mapper->setMapping( ui_accessor->onlyAllowPredefinedCities, ui_accessor->onlyAllowPredefinedCities );
-    m_mapper->setMapping( ui_accessor->url, ui_accessor->url );
-    m_mapper->setMapping( ui_accessor->shortUrl, ui_accessor->shortUrl );
-    m_mapper->setMapping( ui_accessor->minFetchWait, ui_accessor->minFetchWait );
-    m_mapper->setMapping( ui_accessor->scriptFile, ui_accessor->scriptFile );
-    m_mapper->setMapping( ui_accessor->author, ui_accessor->author );
-    m_mapper->setMapping( ui_accessor->shortAuthor, ui_accessor->shortAuthor );
-    m_mapper->setMapping( ui_accessor->email, ui_accessor->email );
-    m_mapper->setMapping( ui_accessor->defaultVehicleType, ui_accessor->defaultVehicleType );
-    m_mapper->setMapping( ui_accessor->fileVersion, ui_accessor->fileVersion );
-    m_mapper->setMapping( ui_accessor->predefinedCities, ui_accessor->predefinedCities );
-    m_mapper->setMapping( ui_accessor->sampleStopNames, ui_accessor->sampleStopNames );
-    m_mapper->setMapping( ui_accessor->sampleCity, ui_accessor->sampleCity );
+    m_mapper->setMapping( ui_provider->name, ui_provider->name );
+    m_mapper->setMapping( ui_provider->description, ui_provider->description );
+    m_mapper->setMapping( ui_provider->version, ui_provider->version );
+    m_mapper->setMapping( ui_provider->type, ui_provider->type );
+    m_mapper->setMapping( ui_provider->useCityValue, ui_provider->useCityValue );
+    m_mapper->setMapping( ui_provider->onlyAllowPredefinedCities, ui_provider->onlyAllowPredefinedCities );
+    m_mapper->setMapping( ui_provider->url, ui_provider->url );
+    m_mapper->setMapping( ui_provider->shortUrl, ui_provider->shortUrl );
+    m_mapper->setMapping( ui_provider->minFetchWait, ui_provider->minFetchWait );
+    m_mapper->setMapping( ui_provider->scriptFile, ui_provider->scriptFile );
+    m_mapper->setMapping( ui_provider->author, ui_provider->author );
+    m_mapper->setMapping( ui_provider->shortAuthor, ui_provider->shortAuthor );
+    m_mapper->setMapping( ui_provider->email, ui_provider->email );
+    m_mapper->setMapping( ui_provider->defaultVehicleType, ui_provider->defaultVehicleType );
+    m_mapper->setMapping( ui_provider->fileVersion, ui_provider->fileVersion );
+    m_mapper->setMapping( ui_provider->predefinedCities, ui_provider->predefinedCities );
+    m_mapper->setMapping( ui_provider->sampleStopNames, ui_provider->sampleStopNames );
+    m_mapper->setMapping( ui_provider->sampleCity, ui_provider->sampleCity );
     m_mapper->setMapping( m_changelog, m_changelog );
     connect( m_mapper, SIGNAL(mapped(QWidget*)), this, SLOT(slotChanged(QWidget*)) );
 }
 
 ProjectSettingsDialog::~ProjectSettingsDialog()
 {
-    delete ui_accessor;
+    delete ui_provider;
 }
 
 void ProjectSettingsDialog::slotChanged( QWidget *changedWidget )
 {
-    if( changedWidget == ui_accessor->scriptFile ) {
+    if( changedWidget == ui_provider->scriptFile ) {
         // Script file changed
-        const QString fileName = ui_accessor->scriptFile->text();
-        ui_accessor->btnCreateScriptFile->setVisible( fileName.isEmpty() );
-        ui_accessor->btnDetachScriptFile->setVisible( !fileName.isEmpty() );
+        const QString fileName = ui_provider->scriptFile->text();
+        ui_provider->btnCreateScriptFile->setVisible( fileName.isEmpty() );
+        ui_provider->btnDetachScriptFile->setVisible( !fileName.isEmpty() );
         emit scriptFileChanged( fileName );
-    } else if( changedWidget == ui_accessor->url ) {
+    } else if( changedWidget == ui_provider->url ) {
         // Home page URL changed
-        ui_accessor->btnUrlOpen->setDisabled( ui_accessor->url->text().isEmpty() );
-    } else if( changedWidget == ui_accessor->shortAuthor ) {
+        ui_provider->btnUrlOpen->setDisabled( ui_provider->url->text().isEmpty() );
+    } else if( changedWidget == ui_provider->shortAuthor ) {
         // Short author name changed, update changed log click messages
         QList<ChangelogEntryWidget *> entryWidgets = m_changelog->entryWidgets();
         foreach( const ChangelogEntryWidget * entryWidget, entryWidgets ) {
-            entryWidget->authorLineEdit()->setClickMessage( m_accessorInfo->shortAuthor() );
+            entryWidget->authorLineEdit()->setClickMessage( m_providerData->shortAuthor() );
         }
     }
 
@@ -320,15 +320,15 @@ void ProjectSettingsDialog::slotChanged( QWidget *changedWidget )
 
 bool ProjectSettingsDialog::check()
 {
-    bool result = testWidget( ui_accessor->email );
-    result = testWidget( ui_accessor->version ) && result;
-    result = testWidget( ui_accessor->fileVersion ) && result;
-    result = testWidget( ui_accessor->name ) && result;
-    result = testWidget( ui_accessor->description ) && result;
-    result = testWidget( ui_accessor->author ) && result;
-    result = testWidget( ui_accessor->shortAuthor ) && result;
-    result = testWidget( ui_accessor->url ) && result;
-    result = testWidget( ui_accessor->shortUrl ) && result;
+    bool result = testWidget( ui_provider->email );
+    result = testWidget( ui_provider->version ) && result;
+    result = testWidget( ui_provider->fileVersion ) && result;
+    result = testWidget( ui_provider->name ) && result;
+    result = testWidget( ui_provider->description ) && result;
+    result = testWidget( ui_provider->author ) && result;
+    result = testWidget( ui_provider->shortAuthor ) && result;
+    result = testWidget( ui_provider->url ) && result;
+    result = testWidget( ui_provider->shortUrl ) && result;
     return result;
 }
 
@@ -373,19 +373,19 @@ bool ProjectSettingsDialog::eventFilter( QObject *object, QEvent *event )
 //     if ( lineEdit && lineEdit->validator() ) {
 //         if ( event->type() == QEvent::FocusOut ) {
 // //             QString errorMessage;
-// //             if ( lineEdit == ui_accessor->email ) {
+// //             if ( lineEdit == ui_provider->email ) {
 // //                 errorMessage = i18nc("@info", "Invalid e-mail address");
-// //             } else if ( lineEdit == ui_accessor->version || lineEdit == ui_accessor->fileVersion ) {
+// //             } else if ( lineEdit == ui_provider->version || lineEdit == ui_provider->fileVersion ) {
 // //                 errorMessage = i18nc("@info", "Invalid version");
 // //             }
 // //
 // //             const bool validated = errorMessage.isEmpty() ||
 // //                     testLineEditValidator( lineEdit, errorMessage );
 // //             kDebug() << "Validated?" << validated << lineEdit << lineEdit->text();
-// //             if ( validated && lineEdit == ui_accessor->fileVersion &&
+// //             if ( validated && lineEdit == ui_provider->fileVersion &&
 // //                  lineEdit->text() != QLatin1String("1.0") )
 // //             {
-// //                 // TODO Global error message class for TimetableAccessorInfo?
+// //                 // TODO Global error message class for ServiceProviderData?
 // //                 appendMessageWidgetAfter( lineEdit, i18nc("@info",
 // //                         "<title>The PublicTransport data engine currently only supports version '1.0'</title>"
 // //                         "<para>Specify version '1.0' as <interface>File Type Version</interface> "
@@ -410,25 +410,25 @@ bool ProjectSettingsDialog::eventFilter( QObject *object, QEvent *event )
 TestModel::Test testFromWidget( Ui::timetablemateview_base *ui, QWidget *widget )
 {
     if ( widget == ui->email ) {
-        return TestModel::AccessorInfoEmailTest;
+        return TestModel::ServiceProviderDataEmailTest;
     } else if ( widget == ui->name ) {
-        return TestModel::AccessorInfoNameTest;
+        return TestModel::ServiceProviderDataNameTest;
     } else if ( widget == ui->version ) {
-        return TestModel::AccessorInfoVersionTest;
+        return TestModel::ServiceProviderDataVersionTest;
     } else if ( widget == ui->fileVersion ) {
-        return TestModel::AccessorInfoFileVersionTest;
+        return TestModel::ServiceProviderDataFileFormatVersionTest;
     } else if ( widget == ui->author ) {
-        return TestModel::AccessorInfoAuthorNameTest;
+        return TestModel::ServiceProviderDataAuthorNameTest;
     } else if ( widget == ui->shortAuthor ) {
-        return TestModel::AccessorInfoShortAuthorNameTest;
+        return TestModel::ServiceProviderDataShortAuthorNameTest;
     } else if ( widget == ui->url ) {
-        return TestModel::AccessorInfoUrlTest;
+        return TestModel::ServiceProviderDataUrlTest;
     } else if ( widget == ui->shortUrl ) {
-        return TestModel::AccessorInfoShortUrlTest;
+        return TestModel::ServiceProviderDataShortUrlTest;
     } else if ( widget == ui->scriptFile ) {
-        return TestModel::AccessorInfoScriptFileNameTest;
+        return TestModel::ServiceProviderDataScriptFileNameTest;
     } else if ( widget == ui->description ) {
-        return TestModel::AccessorInfoDescriptionTest;
+        return TestModel::ServiceProviderDataDescriptionTest;
     } else {
         kWarning() << "Unknown widget";
         return TestModel::InvalidTest;
@@ -437,7 +437,7 @@ TestModel::Test testFromWidget( Ui::timetablemateview_base *ui, QWidget *widget 
 
 bool ProjectSettingsDialog::testWidget( QWidget *widget )
 {
-    TestModel::Test test = testFromWidget( ui_accessor, widget );
+    TestModel::Test test = testFromWidget( ui_provider, widget );
     if ( test == TestModel::InvalidTest ) {
         // Unknown widget
         return true;
@@ -458,7 +458,7 @@ bool ProjectSettingsDialog::testWidget( QWidget *widget )
     }
 
     QString errorMessage;
-    if ( !AccessorInfoTester::runAccessorInfoTest(test, text, &errorMessage) ) {
+    if ( !ServiceProviderDataTester::runServiceProviderDataTest(test, text, &errorMessage) ) {
         appendMessageWidgetAfter( lineEdit, errorMessage );
         return false;
     }
@@ -469,7 +469,6 @@ bool ProjectSettingsDialog::testWidget( QWidget *widget )
 void ProjectSettingsDialog::appendMessageWidgetAfter( QWidget *after, const QString &errorMessage )
 {
     QFormLayout *formLayout = qobject_cast< QFormLayout* >( after->parentWidget()->layout() );
-        // ui_accessor->tabGeneral->layout() );
     Q_ASSERT( formLayout );
 
     // Get the position of the QWidget after which the message widget should be inserted
@@ -505,28 +504,28 @@ void ProjectSettingsDialog::appendMessageWidgetAfter( QWidget *after, const QStr
 
 void ProjectSettingsDialog::fillValuesFromWidgets()
 {
-//     if ( !m_accessorInfo ) {
-//         kDebug() << "No accessor loaded to fill with values";
+//     if ( !m_providerData ) {
+//         kDebug() << "No provider loaded to fill with values";
 //         return;
 //     }
 
     // Fill struct with current values of the widgets
-    QString lang = ui_accessor->currentLanguage->current();
+    QString lang = ui_provider->currentLanguage->current();
     if( lang == QLatin1String("en_US") ) {
         lang = "en";
     }
 
-    QHash< QString, QString > names = m_accessorInfo->names();
-    QHash< QString, QString > descriptions = m_accessorInfo->descriptions();
-    names[lang] = ui_accessor->name->text();
-    descriptions[lang] = ui_accessor->description->toPlainText();
+    QHash< QString, QString > names = m_providerData->names();
+    QHash< QString, QString > descriptions = m_providerData->descriptions();
+    names[lang] = ui_provider->name->text();
+    descriptions[lang] = ui_provider->description->toPlainText();
     const VehicleType defaultVehicleType = Global::vehicleTypeFromString(
-            ui_accessor->defaultVehicleType->itemData(
-            ui_accessor->defaultVehicleType->currentIndex()).toString() );
+            ui_provider->defaultVehicleType->itemData(
+            ui_provider->defaultVehicleType->currentIndex()).toString() );
 
     QStringList cities;
     QHash< QString, QString > cityNameReplacements;
-    const QStringList cityReplacements = ui_accessor->predefinedCities->items();
+    const QStringList cityReplacements = ui_provider->predefinedCities->items();
     foreach( const QString & cityReplacement, cityReplacements ) {
         QStringList values = cityReplacement.split( "   ->   " );
         if( values.count() == 2 ) {
@@ -538,30 +537,30 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     }
 
     // Update values that can be edited in this dialog
-    m_accessorInfo->setType( static_cast<AccessorType>(ui_accessor->type->currentIndex() + 1) );
-    m_accessorInfo->setNames( names );
-    m_accessorInfo->setDescriptions( descriptions );
-    m_accessorInfo->setVersion( ui_accessor->version->text() );
-    m_accessorInfo->setFileVersion( ui_accessor->fileVersion->text() );
-    m_accessorInfo->setUseSeparateCityValue( ui_accessor->useCityValue->isChecked() );
-    m_accessorInfo->setOnlyUseCitiesInList( ui_accessor->onlyAllowPredefinedCities->isChecked() );
-    m_accessorInfo->setUrl( ui_accessor->url->text(), ui_accessor->shortUrl->text() );
-    m_accessorInfo->setMinFetchWait( ui_accessor->minFetchWait->value() );
-    m_accessorInfo->setAuthor( ui_accessor->author->text(), ui_accessor->shortAuthor->text(),
-                               ui_accessor->email->text() );
-    m_accessorInfo->setDefaultVehicleType( defaultVehicleType );
-    m_accessorInfo->setChangelog( m_changelog->changelog() );
-    m_accessorInfo->setCities( cities );
-    m_accessorInfo->setCityNameToValueReplacementHash( cityNameReplacements );
-    m_accessorInfo->setSampleCity( ui_accessor->sampleCity->text() );
-    m_accessorInfo->setSampleStops( ui_accessor->sampleStopNames->items() );
-    m_accessorInfo->setNotes( ui_accessor->notes->textOrHtml() );
+    m_providerData->setType( static_cast<ServiceProviderType>(ui_provider->type->currentIndex() + 1) );
+    m_providerData->setNames( names );
+    m_providerData->setDescriptions( descriptions );
+    m_providerData->setVersion( ui_provider->version->text() );
+    m_providerData->setFileFormatVersion( ui_provider->fileVersion->text() );
+    m_providerData->setUseSeparateCityValue( ui_provider->useCityValue->isChecked() );
+    m_providerData->setOnlyUseCitiesInList( ui_provider->onlyAllowPredefinedCities->isChecked() );
+    m_providerData->setUrl( ui_provider->url->text(), ui_provider->shortUrl->text() );
+    m_providerData->setMinFetchWait( ui_provider->minFetchWait->value() );
+    m_providerData->setAuthor( ui_provider->author->text(), ui_provider->shortAuthor->text(),
+                               ui_provider->email->text() );
+    m_providerData->setDefaultVehicleType( defaultVehicleType );
+    m_providerData->setChangelog( m_changelog->changelog() );
+    m_providerData->setCities( cities );
+    m_providerData->setCityNameToValueReplacementHash( cityNameReplacements );
+    m_providerData->setSampleCity( ui_provider->sampleCity->text() );
+    m_providerData->setSampleStops( ui_provider->sampleStopNames->items() );
+    m_providerData->setNotes( ui_provider->notes->textOrHtml() );
 }
 
 void ProjectSettingsDialog::changelogEntryWidgetAdded( ChangelogEntryWidget *entryWidget )
 {
-    const int comparison = TimetableAccessorInfo::compareVersions(
-            entryWidget->version(), ui_accessor->version->text());
+    const int comparison = ServiceProviderData::compareVersions(
+            entryWidget->version(), ui_provider->version->text());
     if ( comparison > 0 ) {
         int result = KMessageBox::questionYesNo( this,
                 i18nc("@info", "The new changelog entry references a newer version than the "
@@ -569,26 +568,26 @@ void ProjectSettingsDialog::changelogEntryWidgetAdded( ChangelogEntryWidget *ent
                       entryWidget->version()) );
         if ( result == KMessageBox::Yes ) {
             // Yes clicked, update version value
-            ui_accessor->version->setText( entryWidget->version() );
+            ui_provider->version->setText( entryWidget->version() );
         }
     }
 }
 
 void ProjectSettingsDialog::authorEdited( const QString &newAuthor )
 {
-    if ( ui_accessor->shortAuthor->text().isEmpty() || m_shortAuthorAutoFilled ) {
+    if ( ui_provider->shortAuthor->text().isEmpty() || m_shortAuthorAutoFilled ) {
         // Update short author value if it is empty
         m_shortAuthorAutoFilled = true; // Set to auto filled
-        ui_accessor->shortAuthor->setText( TimetableAccessorInfo::shortAuthorFromAuthor(newAuthor) );
+        ui_provider->shortAuthor->setText( ServiceProviderData::shortAuthorFromAuthor(newAuthor) );
     }
 }
 
 void ProjectSettingsDialog::urlEdited( const QString &newUrl )
 {
-    if ( ui_accessor->shortUrl->text().isEmpty() || m_shortUrlAutoFilled ) {
+    if ( ui_provider->shortUrl->text().isEmpty() || m_shortUrlAutoFilled ) {
         // Update short URL value if it is empty
         m_shortUrlAutoFilled = true; // Set to auto filled
-        ui_accessor->shortUrl->setText( TimetableAccessorInfo::shortUrlFromUrl(newUrl) );
+        ui_provider->shortUrl->setText( ServiceProviderData::shortUrlFromUrl(newUrl) );
     }
 }
 
@@ -652,18 +651,18 @@ void ProjectSettingsDialog::languageActivated( const QString &languageCode )
 {
     QString code = languageCode == QLatin1String("en_US") ? "en" : languageCode;
 
-    ui_accessor->name->blockSignals( true );
-    ui_accessor->name->setText( m_accessorInfo->names()[code] );
-    ui_accessor->name->blockSignals( false );
+    ui_provider->name->blockSignals( true );
+    ui_provider->name->setText( m_providerData->names()[code] );
+    ui_provider->name->blockSignals( false );
 
-    ui_accessor->description->blockSignals( true );
-    ui_accessor->description->setText( m_accessorInfo->descriptions()[code] );
-    ui_accessor->description->blockSignals( false );
+    ui_provider->description->blockSignals( true );
+    ui_provider->description->setText( m_providerData->descriptions()[code] );
+    ui_provider->description->blockSignals( false );
 }
 
 void ProjectSettingsDialog::openUrlClicked()
 {
-    emit urlShouldBeOpened( ui_accessor->url->text() );
+    emit urlShouldBeOpened( ui_provider->url->text() );
 }
 
 void ProjectSettingsDialog::createScriptFile()
@@ -690,7 +689,7 @@ void ProjectSettingsDialog::createScriptFile()
                      i18nc("@title:window", "File Already Exists"),
                      KStandardGuiItem::overwrite(), KStandardGuiItem::open() );
         if( result == KMessageBox::No ) {  // open
-            ui_accessor->scriptFile->setText( scriptFile );
+            ui_provider->scriptFile->setText( scriptFile );
             return;
         } else if( result == KMessageBox::Cancel ) {
             return;
@@ -720,13 +719,13 @@ void ProjectSettingsDialog::createScriptFile()
         return;
     }
 
-    ui_accessor->scriptFile->setText( scriptFile );
+    ui_provider->scriptFile->setText( scriptFile );
     emit scriptAdded( scriptFilePath );
 }
 
 void ProjectSettingsDialog::detachScriptFile()
 {
-    ui_accessor->scriptFile->setText( QString() );
+    ui_provider->scriptFile->setText( QString() );
     m_newScriptTemplateType = Project::NoScriptTemplate;
 }
 
@@ -753,7 +752,7 @@ void ProjectSettingsDialog::browseForScriptFile()
             mimeType->is("text/x-python") )
         {
             scriptFiles << fileName;
-            if( fileName == ui_accessor->scriptFile->text() ) {
+            if( fileName == ui_provider->scriptFile->text() ) {
                 current = i;
             }
         }
@@ -764,22 +763,22 @@ void ProjectSettingsDialog::browseForScriptFile()
                            i18nc( "@info", "Script File for Parsing Documents" ),
                            scriptFiles, current, false, &ok, this );
     if( ok ) {
-        ui_accessor->scriptFile->setText( selectedFile );
+        ui_provider->scriptFile->setText( selectedFile );
     }
 }
 
 void ProjectSettingsDialog::setScriptFile( const QString &scriptFile )
 {
-    ui_accessor->scriptFile->setText( scriptFile );
+    ui_provider->scriptFile->setText( scriptFile );
 }
 
-const TimetableAccessorInfo *ProjectSettingsDialog::accessorInfo( QObject *parent ) const
+const ServiceProviderData *ProjectSettingsDialog::providerData( QObject *parent ) const
 {
-    m_accessorInfo->setParent( parent );
-    return m_accessorInfo;
+    m_providerData->setParent( parent );
+    return m_providerData;
 }
 
-void ProjectSettingsDialog::setAccessorInfo( const TimetableAccessorInfo *info,
+void ProjectSettingsDialog::setProviderData( const ServiceProviderData *info,
                                              const QString &fileName )
 {
     // Disable changed signals from widgets while setting the read values
@@ -788,47 +787,47 @@ void ProjectSettingsDialog::setAccessorInfo( const TimetableAccessorInfo *info,
     m_shortAuthorAutoFilled = false;
     m_shortUrlAutoFilled = false;
 
-    m_accessorInfo = info->clone( info->parent() );
+    m_providerData = info->clone( info->parent() );
     m_openedPath = fileName;
-    ui_accessor->savePath->setText( fileName );
-//     ui_accessor->savePath->setToolTip( Project::savePathInfoStringFromFilePath(fileName) );
-    ui_accessor->currentLanguage->setCurrentItem( "en" );
-    ui_accessor->name->setText( info->names()["en"] );
-    ui_accessor->description->setText( info->descriptions()["en"] );
-    ui_accessor->version->setText( info->version() );
-    ui_accessor->type->setCurrentIndex( static_cast<int>(info->accessorType()) - 1 );
-    ui_accessor->useCityValue->setChecked( info->useSeparateCityValue() );
-    ui_accessor->onlyAllowPredefinedCities->setChecked( info->onlyUseCitiesInList() );
-    ui_accessor->url->setText( info->url() );
-    ui_accessor->shortUrl->setText( info->shortUrl() );
-    ui_accessor->minFetchWait->setValue( info->minFetchWait() );
-    ui_accessor->scriptFile->setText( info->scriptFileName() );
-    ui_accessor->author->setText( info->author() );
-    ui_accessor->shortAuthor->setText( info->shortAuthor() );
-    ui_accessor->email->setText( info->email() );
+    ui_provider->savePath->setText( fileName );
+//     ui_provider->savePath->setToolTip( Project::savePathInfoStringFromFilePath(fileName) );
+    ui_provider->currentLanguage->setCurrentItem( "en" );
+    ui_provider->name->setText( info->names()["en"] );
+    ui_provider->description->setText( info->descriptions()["en"] );
+    ui_provider->version->setText( info->version() );
+    ui_provider->type->setCurrentIndex( static_cast<int>(info->type()) - 1 );
+    ui_provider->useCityValue->setChecked( info->useSeparateCityValue() );
+    ui_provider->onlyAllowPredefinedCities->setChecked( info->onlyUseCitiesInList() );
+    ui_provider->url->setText( info->url() );
+    ui_provider->shortUrl->setText( info->shortUrl() );
+    ui_provider->minFetchWait->setValue( info->minFetchWait() );
+    ui_provider->scriptFile->setText( info->scriptFileName() );
+    ui_provider->author->setText( info->author() );
+    ui_provider->shortAuthor->setText( info->shortAuthor() );
+    ui_provider->email->setText( info->email() );
     int defaultVehicleTypeIndex =
-            ui_accessor->defaultVehicleType->findData( info->defaultVehicleType() );
-    ui_accessor->defaultVehicleType->setCurrentIndex(
+            ui_provider->defaultVehicleType->findData( info->defaultVehicleType() );
+    ui_provider->defaultVehicleType->setCurrentIndex(
             defaultVehicleTypeIndex > 0 ? defaultVehicleTypeIndex : 0 );
-    ui_accessor->fileVersion->setText( info->fileVersion() );
+    ui_provider->fileVersion->setText( info->fileFormatVersion() );
     m_changelog->clear();
     m_changelog->addChangelog( info->changelog(), info->shortAuthor() );
 
-    ui_accessor->predefinedCities->clear();
+    ui_provider->predefinedCities->clear();
     foreach( const QString & city, info->cities() ) {
         QString lowerCity = city.toLower();
         if( info->cityNameToValueReplacementHash().contains( lowerCity ) ) {
-            ui_accessor->predefinedCities->insertItem( city + "   ->   " +
+            ui_provider->predefinedCities->insertItem( city + "   ->   " +
                     info->cityNameToValueReplacementHash()[lowerCity] );
         } else {
-            ui_accessor->predefinedCities->insertItem( city );
+            ui_provider->predefinedCities->insertItem( city );
         }
     }
 
-    ui_accessor->sampleStopNames->setItems( info->sampleStopNames() );
-    ui_accessor->sampleCity->setText( info->sampleCity() );
+    ui_provider->sampleStopNames->setItems( info->sampleStopNames() );
+    ui_provider->sampleCity->setText( info->sampleCity() );
 
-    ui_accessor->notes->setText( info->notes() );
+    ui_provider->notes->setText( info->notes() );
 
     // Enable changed signals from widgets again and emit changed signals once
     m_mapper->blockSignals( false );
