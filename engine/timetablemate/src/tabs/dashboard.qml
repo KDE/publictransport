@@ -235,15 +235,22 @@ Flickable { id: flickable
             // Show the description for the project
             Text { id: lblDescription; text: i18nc("@label", "Description:");
                    width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
-            Text { id: description; text: info.description;
-                   width: parent.fieldWidth; wrapMode: Text.Wrap }
+            Text { id: description;
+                text: info.description.length == 0
+                    ? "<a href='#'>Add description in project settings</a>" : info.description;
+                width: parent.fieldWidth; wrapMode: Text.Wrap
+                onLinkActivated: project.showSettingsDialog()
+            }
 
             // A link to the service providers home page
             Text { id: lblUrl; text: i18nc("@label", "URL:");
                    width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
-            Text { id: url; text: "<a href='#'>" + info.url + "</a>";
-                   width: parent.fieldWidth; elide: Text.ElideMiddle
-                   onLinkActivated: project.showWebTab()
+            Text { id: url;
+                text: info.url.length == 0 ? "<a href='#'>Add URL in project settings</a>"
+                    : "<a href='#'>" + info.url + "</a>";
+                width: parent.fieldWidth; elide: Text.ElideMiddle
+                onLinkActivated: info.url.length == 0
+                    ? project.showSettingsDialog() : project.showWebTab()
             }
 
             // The version of the project
@@ -256,12 +263,15 @@ Flickable { id: flickable
                    width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: changelogEntry;
                 width: parent.fieldWidth; wrapMode: Text.Wrap
-                text: info.lastChangelogAuthor.length == 0
-                    ? i18nc("@info", "Version %1, <message>%2</message>", info.lastChangelogVersion,
-                            cutString(info.lastChangelogDescription, 100))
-                    : i18nc("@info", "Version %1, <message>%2</message> (by %3)",
-                            info.lastChangelogVersion, cutString(info.lastChangelogDescription, 100),
-                            info.lastChangelogAuthor)
+                text: info.lastChangelogVersion.length == 0 || info.lastChangelogDescription.length == 0
+                    ? ("<a href='#'>" + i18nc("@info", "Add changelog entries in project settings") + "</a>") :
+                    (info.lastChangelogAuthor.length == 0
+                     ? i18nc("@info", "Version %1, <message>%2</message>", info.lastChangelogVersion,
+                             cutString(info.lastChangelogDescription, 100))
+                     : i18nc("@info", "Version %1, <message>%2</message> (by %3)",
+                             info.lastChangelogVersion, cutString(info.lastChangelogDescription, 100),
+                             info.lastChangelogAuthor))
+                onLinkActivated: project.showSettingsDialog()
                 function cutString( string, maxChars ) {
                     return string.length > maxChars ? string.substring(0, maxChars) + "..." : string;
                 }
@@ -271,10 +281,13 @@ Flickable { id: flickable
             Text { id: lblAuthor; text: i18nc("@label", "Author:");
                 width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: author;
-                text: info.author + (info.email.length == 0
-                    ? "" : " (<a href='mailto:" + info.email + "'>" + info.email + "</a>)")
+                text: info.author.length == 0
+                    ? "<a href='#'>Add author information in project settings</a>"
+                    : (info.author + (info.email.length == 0
+                       ? "" : " (<a href='mailto:" + info.email + "'>" + info.email + "</a>)"))
                 wrapMode: Text.Wrap; width: parent.fieldWidth
-                onLinkActivated: Qt.openUrlExternally(link)
+                onLinkActivated: info.author.email.length == 0
+                    ? project.showSettingsDialog() : Qt.openUrlExternally(link)
             }
 
             // Strip the path from a file path to get the file name
@@ -287,26 +300,35 @@ Flickable { id: flickable
             Text { id: lblFileName; text: i18nc("@label", "File Name:");
                 width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: fileName;
-                text: "<a href='#'>" + projectInfo.fileNameFromPath(info.fileName) + "</a>";
+                text: "<a href='#'>" + (info.fileName.length == 0
+                        ? i18nc("@info", "Open source file")
+                        : projectInfo.fileNameFromPath(info.fileName)) + "</a>";
                 width: parent.fieldWidth; elide: Text.ElideMiddle
                 onLinkActivated: project.showProjectSourceTab()
             }
 
             // A link to the script document, opens the document in a tab
             // If no script was created for the project, a button to do so gets created
-            Component { id: scriptInfoText
-                Text { text: "<a href='#'>" + projectInfo.fileNameFromPath(info.scriptFileName) + "</a>"
-                    width: projectInfo.fieldWidth; elide: Text.ElideMiddle
-                    onLinkActivated: project.showScriptTab()
-                }
-            }
-            Component { id: createScriptButton
-                ActionButton { action: project.projectAction(Project.ShowScriptTab); }
-            }
+//             Component { id: scriptInfoText
+//                 Text { text: "<a href='#'>" + projectInfo.fileNameFromPath(info.scriptFileName) + "</a>"
+//                     width: projectInfo.fieldWidth; elide: Text.ElideMiddle
+//                     onLinkActivated: project.showScriptTab()
+//                 }
+//             }
+//             Component { id: createScriptButton
+//                 ActionButton { action: project.projectAction(Project.ShowScript); }
+//             }
             Text { id: lblScriptFileName; text: i18nc("@label", "Script File Name:");
                 width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
-            Loader { id: scriptFileName;
-                sourceComponent: info.scriptFileName.length == 0 ? createScriptButton : scriptInfoText }
+//             Loader { id: scriptFileName;
+//                 sourceComponent: info.scriptFileName.length == 0 ? createScriptButton : scriptInfoText }
+            Text { id: scriptFileName
+                text: "<a href='#'>" + (projectInfo.fileNameFromPath(info.scriptFileName).length == 0
+                        ? i18nc("@info", "Create script file")
+                        : projectInfo.fileNameFromPath(info.scriptFileName)) + "</a>"
+                width: projectInfo.fieldWidth; elide: Text.ElideMiddle
+                onLinkActivated: project.showScriptTab()
+            }
 
             // Used script extensions
             Text { id: lblScriptExtensions; text: i18nc("@label", "Script Extensions:");
@@ -320,7 +342,8 @@ Flickable { id: flickable
             Text { id: lblNotes; text: i18nc("@label", "Notes:");
                 width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: notes;
-                text: info.notes; width: parent.fieldWidth; wrapMode: Text.WordWrap }
+                text: info.notes.length == 0 ? "(none)" : info.notes;
+                width: parent.fieldWidth; wrapMode: Text.WordWrap }
 //             PlasmaComponents.TextArea { id: notes;
 //                 readOnly: false // TODO
 //                 text: info.notes; width: parent.fieldWidth }
