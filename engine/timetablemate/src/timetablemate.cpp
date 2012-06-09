@@ -338,9 +338,12 @@ void TimetableMate::readProperties( const KConfigGroup &config )
                 "couldNotOpenLastProjects" );
     }
 
-    // Add a new template project if no project was opened
     if ( m_projectModel->rowCount() == 0 ) {
+        // Add a new template project if no project was opened
         fileNew();
+    } else if ( m_tabWidget->count() == 0 ) {
+        // Show dashboard of the active project, if no tabs were restored
+        m_projectModel->activeProject()->showDashboardTab();
     }
 }
 
