@@ -53,13 +53,6 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
     // 60 seconds should be enough, departure / arrival times have minute precision (except for GTFS).
     setMinimumPollingInterval( 60000 );
 
-    // Add service provider source, so when using
-    // dataEngine("publictransport").sources() in an applet it at least returns this
-//     setData( sourceTypeKeyword(ServiceProviders), DataEngine::Data() );
-//     setData( sourceTypeKeyword(ErroneousServiceProviders), DataEngine::Data() );
-//     setData( sourceTypeKeyword(Locations), DataEngine::Data() );
-//     TODO return these source names in the virtual method ...
-
     connect( this, SIGNAL(sourceRemoved(QString)), this, SLOT(slotSourceRemoved(QString)) );
 }
 
@@ -67,6 +60,16 @@ PublicTransportEngine::~PublicTransportEngine()
 {
     qDeleteAll( m_providers.values() );
     delete m_fileSystemWatcher;
+}
+
+QStringList PublicTransportEngine::sources() const
+{
+    QStringList sources = Plasma::DataEngine::sources();
+    sources << sourceTypeKeyword(LocationsSource)
+            << sourceTypeKeyword(ServiceProvidersSource)
+            << sourceTypeKeyword(ErroneousServiceProvidersSource);
+    sources.removeDuplicates();
+    return sources;
 }
 
 void PublicTransportEngine::slotSourceRemoved( const QString& name )
@@ -213,7 +216,6 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
         providerId = defaultProvider;
     }
 
-//     kDebug() << "Check provider" << providerId; // TODO
     const ServiceProvider *provider = ServiceProvider::getSpecificProvider( providerId );
     if ( provider ) {
         setData( name, serviceProviderData(provider) );
@@ -901,8 +903,6 @@ void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
     kDebug() << "DONE" << request.sourceName;
 //     kDebug() << m_runningSources.count() << "running sources" << m_runningSources;
 //     kDebug() << m_dataSources.count() << "data sources" << m_dataSources;
-
-    // TODO: add to m_dataSources?
 }
 
 void PublicTransportEngine::errorParsing( ServiceProvider *provider,

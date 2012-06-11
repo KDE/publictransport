@@ -96,6 +96,8 @@ public:
     /** @returns the type of the given @p sourceName. */
     SourceType sourceTypeFromName( const QString &sourceName ) const;
 
+    virtual QStringList sources() const;
+
     /**
      * @returns true, if a data source of the given @p sourceType requests
      * data from a web server.
