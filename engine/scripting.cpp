@@ -74,6 +74,7 @@ void NetworkRequest::abort()
         return;
     }
 
+    // isRunning() returned true => m_reply != 0
     m_reply->abort();
     m_reply->deleteLater();
     m_reply = 0;
@@ -83,6 +84,12 @@ void NetworkRequest::abort()
 
 void NetworkRequest::slotReadyRead()
 {
+    if ( !m_reply ) {
+        // Prevent crashes on exit
+        kWarning() << "Reply object already deleted, aborted?";
+        return;
+    }
+
     // Read all data, decode it and give it to the script
     QByteArray data = m_reply->readAll();
     m_data.append( data );
@@ -99,6 +106,12 @@ void NetworkRequest::slotReadyRead()
 
 void NetworkRequest::slotFinished()
 {
+    if ( !m_reply ) {
+        // Prevent crashes on exit
+        kWarning() << "Reply object already deleted, aborted?";
+        return;
+    }
+
     // Read all data, decode it and give it to the script
     QByteArray data = m_reply->readAll();
     m_data.append( data );
@@ -109,6 +122,7 @@ void NetworkRequest::slotFinished()
     } else {
         string = Global::decodeHtml( m_data, m_network->fallbackCharset() );
     }
+
     m_reply->deleteLater();
     m_reply = 0;
     m_data.clear();
@@ -310,12 +324,18 @@ void Network::slotRequestFinished( const QString &data )
 
 void Network::slotRequestAborted()
 {
+    m_mutex->lockInline();
+    if ( m_quit ) {
+        kDebug() << "WAS ABORTED";
+        m_mutex->unlockInline();
+        return;
+    }
+
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
     Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
 
     kDebug() << "Aborted" << request->url();
 
-    m_mutex->lockInline();
     m_lastDownloadAborted = true;
     m_runningRequests.removeOne( request );
     m_mutex->unlockInline();
@@ -1422,6 +1442,11 @@ public:
     };
 
     void readPersistentData() {
+        // Delete already read config object
+        if ( config ) {
+            delete config;
+        }
+
         // TODO: Use ServiceProvider::serviceProviderCacheFileName() from GTFS branch
         const QString fileName = KGlobal::dirs()->saveLocation("data",
                 "plasma_engine_publictransport/").append( QLatin1String("datacache"));
@@ -1698,7 +1723,7 @@ QVariant Storage::decodeData( const QByteArray &data ) const
                 // Decode two bytes to quint16, this is the value length
                 const quint16 valueLength = *reinterpret_cast<quint16*>( encoded.mid(pos, 2).data() );
                 if ( pos + 2 + valueLength > encoded.length() ) {
-                    qDebug() << "Invalid map data" << encoded;
+                    kDebug() << "Invalid map data" << encoded;
                     return QVariant();
                 }
 
