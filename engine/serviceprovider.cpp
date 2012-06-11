@@ -22,6 +22,7 @@
 
 // Own includes
 #include "serviceproviderdata.h"
+#include "serviceproviderglobal.h"
 #include "serviceproviderdatareader.h"
 #include "departureinfo.h"
 #include "serviceproviderscript.h"
@@ -96,20 +97,21 @@ ServiceProvider* ServiceProvider::getSpecificProvider( const QString &_servicePr
         country = KGlobal::locale()->country();
 
         // Try to find the XML filename of the default service provider for [country]
-        filePath = defaultServiceProviderForLocation( country );
+        filePath = ServiceProviderGlobal::defaultProviderForLocation( country );
         if ( filePath.isEmpty() ) {
             // No default service provider found for [country]
             return 0;
         }
 
         // Extract service provider ID from filename
-        serviceProviderId = serviceProviderIdFromFileName( filePath );
+        serviceProviderId = ServiceProviderGlobal::idFromFileName( filePath );
         kDebug() << "No service provider ID given, using the default one for country"
                  << country << "which is" << serviceProviderId;
     } else {
-        foreach ( const QString &extension, ServiceProvider::fileExtensions() ) {
+        foreach ( const QString &extension, ServiceProviderGlobal::fileExtensions() ) {
             filePath = KGlobal::dirs()->findResource( "data",
-                    ServiceProvider::installationSubDirectory() + serviceProviderId + '.' + extension );
+                    ServiceProviderGlobal::installationSubDirectory() +
+                    serviceProviderId + '.' + extension );
             if ( !filePath.isEmpty() ) {
                 // Found a plugin XML file with the current extension
                 break;
@@ -137,83 +139,6 @@ ServiceProvider* ServiceProvider::getSpecificProvider( const QString &_servicePr
         kDebug() << filePath;
     }
     return ret;
-}
-
-QString ServiceProvider::defaultServiceProviderForLocation( const QString &location,
-                                                            const QStringList &dirs )
-{
-    // Get the filename of the default service provider plugin for the given location
-    const QStringList _dirs = !dirs.isEmpty() ? dirs
-            : KGlobal::dirs()->findDirs( "data", ServiceProvider::installationSubDirectory() );
-    QString filePath = QString( "%1_default" ).arg( location );
-    foreach( const QString &dir, _dirs ) {
-        foreach ( const QString &extension, ServiceProvider::fileExtensions() ) {
-            if ( QFile::exists(dir + filePath + '.' + extension) ) {
-                filePath = dir + filePath;
-                break;
-            }
-        }
-    }
-
-    // Get the real filename the "xx_default.pts/xml"-symlink links to
-    filePath = KGlobal::dirs()->realFilePath( filePath );
-    if ( filePath.isEmpty() ) {
-        kDebug() << "Couldn't find the default service provider for location" << location;
-    }
-    return filePath;
-}
-
-QString ServiceProvider::serviceProviderIdFromFileName( const QString &serviceProviderFileName )
-{
-    // Get the service provider substring from the XML filename, ie. "/path/to/xml/<id>.pts/xml"
-    return QFileInfo( serviceProviderFileName ).baseName();
-}
-
-ServiceProviderType ServiceProvider::serviceProviderTypeFromString(
-        const QString &serviceProviderType )
-{
-    QString s = serviceProviderType.toLower();
-    if ( s == QLatin1String("script") ||
-         s == QLatin1String("html") ) // DEPRECATED
-    {
-        return ScriptedServiceProvider;
-    } else {
-        return InvalidServiceProvider;
-    }
-}
-
-QStringList ServiceProvider::filePatterns()
-{
-    const KMimeType::Ptr mimeType =
-            KMimeType::mimeType("application/x-publictransport-serviceprovider");
-    return mimeType.isNull() ? QStringList() : mimeType->patterns();
-}
-
-QStringList ServiceProvider::fileExtensions()
-{
-    QStringList extensions = filePatterns();
-    for ( QStringList::Iterator it = extensions.begin(); it != extensions.end(); ++it ) {
-        const int pos = it->lastIndexOf( '.' );
-        if ( pos == -1 || pos == it->length() - 1 ) {
-            kWarning() << "Could not extract file extension from mime type pattern!\n"
-                          "Check the \"application/x-publictransport-serviceprovider\" mime type.";
-            continue;
-        }
-
-        // Cut away everything but the file name extension
-        *it = it->mid( pos + 1 );
-    }
-    return extensions;
-}
-
-QStringList ServiceProvider::installedProviders()
-{
-    QStringList providers;
-    const QString subDirectory = installationSubDirectory();
-    foreach ( const QString &pattern, ServiceProvider::filePatterns() ) {
-        providers << KGlobal::dirs()->findAllResources( "data", subDirectory + pattern );
-    }
-    return providers;
 }
 
 QStringList ServiceProvider::features() const

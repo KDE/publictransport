@@ -19,6 +19,7 @@ set( completiongenerator_SRCS
    # Use files directly from the data engine
    ../../global.cpp
    ../../scripting.cpp
+   ../../serviceproviderglobal.cpp
    ../../departureinfo.cpp
 )
 

@@ -31,6 +31,7 @@ set( publictransport_engine_SRCS
     request.cpp
     serviceprovider.cpp
     serviceproviderdata.cpp
+    serviceproviderglobal.cpp
     serviceproviderscript.cpp
     script_thread.cpp
     scripting.cpp

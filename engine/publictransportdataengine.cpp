@@ -23,6 +23,7 @@
 // Own includes
 #include "serviceprovider.h"
 #include "serviceproviderdata.h"
+#include "serviceproviderglobal.h"
 #include "global.h"
 #include "request.h"
 
@@ -74,9 +75,9 @@ QStringList PublicTransportEngine::sources() const
 
 void PublicTransportEngine::slotSourceRemoved( const QString& name )
 {
-//     const QString nonAmbiguousName = name.toLower();
-//     kDebug() << "Running" << m_runningSources.removeOne( nonAmbiguousName );
-//     kDebug() << "Cached" << m_dataSources.remove( nonAmbiguousName );
+    const QString nonAmbiguousName = name.toLower();
+    kDebug() << "Running" << m_runningSources.removeOne( nonAmbiguousName );
+    kDebug() << "Cached" << m_dataSources.remove( nonAmbiguousName );
     kDebug() << "Source" << name << "removed, still cached data sources" << m_dataSources.count();
 }
 
@@ -117,9 +118,9 @@ QHash< QString, QVariant > PublicTransportEngine::serviceProviderData(
 QHash< QString, QVariant > PublicTransportEngine::locations()
 {
     QVariantHash ret;
-    const QStringList providers = ServiceProvider::installedProviders();
+    const QStringList providers = ServiceProviderGlobal::installedProviders();
     const QStringList dirs = KGlobal::dirs()->findDirs( "data",
-            ServiceProvider::installationSubDirectory() );
+            ServiceProviderGlobal::installationSubDirectory() );
 
     // Update ServiceProviders source to fill m_erroneousProviders
     updateServiceProviderSource();
@@ -132,7 +133,7 @@ QHash< QString, QVariant > PublicTransportEngine::locations()
 
         const QString providerFileName = QFileInfo( provider ).fileName();
         const QString providerId =
-                ServiceProvider::serviceProviderIdFromFileName( providerFileName );
+                ServiceProviderGlobal::idFromFileName( providerFileName );
         if ( m_erroneousProviders.contains(providerId) ) {
             // Service provider is erroneous
             continue;
@@ -147,11 +148,11 @@ QHash< QString, QVariant > PublicTransportEngine::locations()
                 // Location is not already added to [ret]
                 // Get the filename of the default provider for the current location
                 const QString defaultProviderFileName =
-                        ServiceProvider::defaultServiceProviderForLocation( location, dirs );
+                        ServiceProviderGlobal::defaultProviderForLocation( location, dirs );
 
                 // Extract service provider ID from the filename
                 const QString defaultProviderId =
-                        ServiceProvider::serviceProviderIdFromFileName( defaultProviderFileName );
+                        ServiceProviderGlobal::idFromFileName( defaultProviderFileName );
 
                 // Store location values in a hash and insert it into [ret]
                 QVariantHash locationHash;
@@ -240,13 +241,13 @@ bool PublicTransportEngine::updateServiceProviderSource()
     } else {
         if ( !m_fileSystemWatcher ) {
             const QStringList dirs = KGlobal::dirs()->findDirs( "data",
-                    ServiceProvider::installationSubDirectory() );
+                    ServiceProviderGlobal::installationSubDirectory() );
             m_fileSystemWatcher = new QFileSystemWatcher( dirs );
             connect( m_fileSystemWatcher, SIGNAL(directoryChanged(QString)),
                      this, SLOT(serviceProviderDirChanged(QString)) );
         }
 
-        const QStringList providers = ServiceProvider::installedProviders();
+        const QStringList providers = ServiceProviderGlobal::installedProviders();
         if ( providers.isEmpty() ) {
             kDebug() << "Could not find any service provider plugins";
             return false;

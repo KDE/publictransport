@@ -55,6 +55,7 @@
 // PublicTransport engine includes
 #include <engine/serviceprovider.h>
 #include <engine/serviceproviderdata.h>
+#include <engine/serviceproviderglobal.h>
 
 // KDE includes
 #include <KGlobalSettings>
@@ -1661,7 +1662,7 @@ void TimetableMate::fileOpen() {
 
 void TimetableMate::fileOpenInstalled() {
     // Get a list of all service provider plugin files in the directory of the XML file
-    QStringList pluginFiles = ServiceProvider::installedProviders();
+    QStringList pluginFiles = ServiceProviderGlobal::installedProviders();
     if ( pluginFiles.isEmpty() ) {
         KMessageBox::information( this, i18nc("@info/plain", "There are no installed "
                 "service provider plugins. You need to install the PublicTransport data engine.") );

@@ -24,6 +24,7 @@ set( timetablemate_SRCS
    ../../request.cpp
    ../../serviceprovider.cpp
    ../../serviceproviderdata.cpp
+   ../../serviceproviderglobal.cpp
    ../../serviceproviderscript.cpp
    ../../serviceproviderdatareader.cpp
 )

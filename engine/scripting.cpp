@@ -22,6 +22,7 @@
 
 // Own includes
 #include "global.h"
+#include "serviceproviderglobal.h"
 
 // KDE includes
 #include <KStandardDirs>
@@ -1447,10 +1448,7 @@ public:
             delete config;
         }
 
-        // TODO: Use ServiceProvider::serviceProviderCacheFileName() from GTFS branch
-        const QString fileName = KGlobal::dirs()->saveLocation("data",
-                "plasma_engine_publictransport/").append( QLatin1String("datacache"));
-        config = new KConfig( fileName, KConfig::SimpleConfig );
+        config = new KConfig( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
 //         lastPersistentGroup = config->group( serviceProvider ).group( QLatin1String("storage") );
     };
 
@@ -1770,7 +1768,6 @@ void Storage::writePersistent( const QString& name, const QVariant& data, uint l
 QVariant Storage::readPersistent( const QString& name, const QVariant& defaultData )
 {
     // Try to load script features from a cache file
-    // TODO: Use ServiceProvider::serviceProviderCacheFileName() from GTFS branch
     QReadLocker locker( d->readWriteLockPersistent );
     if ( defaultData.isValid() ) {
         return d->persistentGroup().readEntry( name, defaultData );

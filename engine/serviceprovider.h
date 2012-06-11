@@ -99,36 +99,6 @@ public:
     static ServiceProvider *createProviderForData( const ServiceProviderData *data,
                                                    QObject *parent = 0 );
 
-    /** @brief Get the ServiceProviderType enumerable for the given string. */
-    static ServiceProviderType serviceProviderTypeFromString( const QString &serviceProviderType );
-
-    /** @brief Get the service provider ID for the given service provider plugin file name. */
-    static QString serviceProviderIdFromFileName( const QString &serviceProviderPluginFileName );
-
-    /** @brief Get the file path of the default service provider XML for the given @p location. */
-    static QString defaultServiceProviderForLocation( const QString &location,
-                                                      const QStringList &dirs = QStringList() );
-
-    /** @brief Get the sub directory for service provider plugins for the data engine. */
-    static QString installationSubDirectory() {
-            return "plasma_engine_publictransport/serviceProviders/"; };
-
-    /**
-     * @brief Get all patterns for service provider plugin files for the data engine.
-     * The patterns are retrieved from the "application-x-publictransport-serviceprovider" mime type.
-     **/
-    static QStringList filePatterns();
-
-    /**
-     * @brief Get all extensions for service provider plugin files for the data engine.
-     * The file name extensions are retrieved from the "application-x-publictransport-serviceprovider"
-     * mime type file patterns.
-     **/
-    static QStringList fileExtensions();
-
-    /** @brief Get the file names of all installed service providers. */
-    static QStringList installedProviders();
-
     /** @brief Get the ID of this service provider. */
     QString id() const;
 

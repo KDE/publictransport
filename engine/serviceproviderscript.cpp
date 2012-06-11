@@ -23,6 +23,7 @@
 // Own includes
 #include "scripting.h"
 #include "script_thread.h"
+#include "serviceproviderglobal.h"
 #include "serviceproviderdata.h"
 #include "departureinfo.h"
 #include "request.h"
@@ -107,9 +108,8 @@ bool ServiceProviderScript::lazyLoadScript()
 QStringList ServiceProviderScript::readScriptFeatures()
 {
     // Try to load script features from a cache file
-    QString fileName = KGlobal::dirs()->saveLocation("data",
-            "plasma_engine_publictransport/").append( QLatin1String("datacache"));
-    bool cacheExists = QFile::exists( fileName );
+    const QString fileName = ServiceProviderGlobal::cacheFileName();
+    const bool cacheExists = QFile::exists( fileName );
     KConfig cfg( fileName, KConfig::SimpleConfig );
     KConfigGroup grp = cfg.group( m_data->id() );
 
@@ -221,7 +221,7 @@ void ServiceProviderScript::departuresReady( const QList<TimetableData> &data,
         kDebug() << "The script didn't find anything" << request.sourceName;
         emit errorParsing( this, ErrorParsingFailed,
                            i18n("Error while parsing the stop suggestions document."),
-                           url, &request ); // TODO emit request pointer?
+                           url, &request );
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
         PublicTransportInfoList newResults;
@@ -231,7 +231,6 @@ void ServiceProviderScript::departuresReady( const QList<TimetableData> &data,
                 (m_publishedData[request.sourceName] << newResults);
         DepartureInfoList departures;
         foreach( const PublicTransportInfoPtr &info, results ) {
-//             departures << dynamic_cast< DepartureInfo* >( info.data() );
             departures << info.dynamicCast<DepartureInfo>();
         }
 

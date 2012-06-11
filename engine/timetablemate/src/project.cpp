@@ -45,6 +45,7 @@
 // PublicTransport engine includes
 #include <engine/serviceprovider.h>
 #include <engine/serviceproviderdata.h>
+#include <engine/serviceproviderglobal.h>
 #include <engine/serviceproviderscript.h>
 #include <engine/request.h>
 
@@ -399,7 +400,7 @@ public:
             return false;
         }
         const QString localSaveDir = KGlobal::dirs()->saveLocation( "data",
-                ServiceProvider::installationSubDirectory() );
+                ServiceProviderGlobal::installationSubDirectory() );
         const QString fileName = QFileInfo( filePath ).fileName();
         return QFile::exists( localSaveDir + '/' + fileName );
     };
@@ -410,7 +411,7 @@ public:
             return false;
         }
         const QString globalSaveDir = KGlobal::dirs()->findDirs( "data",
-                    ServiceProvider::installationSubDirectory() ).last();
+                ServiceProviderGlobal::installationSubDirectory() ).last();
         const QString fileName = QFileInfo( filePath ).fileName();
         return QFile::exists( globalSaveDir + '/' + fileName );
     };
@@ -1304,7 +1305,7 @@ public:
         if ( installType == Project::LocalInstallation ) {
             // Local installation, find a writable location for Public Transport engine plugins
             const QString saveDir = KGlobal::dirs()->saveLocation( "data",
-                    ServiceProvider::installationSubDirectory() );
+                    ServiceProviderGlobal::installationSubDirectory() );
             const QString savePath = saveDir + '/' + xmlFileName;
 
             if ( install ) {
@@ -1356,7 +1357,7 @@ public:
         } else if ( installType == Project::GlobalInstallation ) {
             // Global insallation, find all directories for Public Transport engine plugins
             const QStringList saveDirs = KGlobal::dirs()->findDirs( "data",
-                    ServiceProvider::installationSubDirectory() );
+                    ServiceProviderGlobal::installationSubDirectory() );
             if ( saveDirs.isEmpty() ) {
                 kDebug() << "No save directory found. Is the PublicTransport data engine installed?";
                 return false;
@@ -3627,13 +3628,13 @@ Project::InstallType Project::Project::installationTypeFromFilePath( const QStri
 
     const QString saveDir = QFileInfo( filePath ).path() + '/';
     const QString localSaveDir = KGlobal::dirs()->saveLocation( "data",
-            ServiceProvider::installationSubDirectory() );
+            ServiceProviderGlobal::installationSubDirectory() );
     if ( saveDir == localSaveDir ) {
         return LocalInstallation;
     }
 
     const QStringList allSaveDirs = KGlobal::dirs()->findDirs( "data",
-                ServiceProvider::installationSubDirectory() );
+            ServiceProviderGlobal::installationSubDirectory() );
     if ( allSaveDirs.contains(saveDir) ) {
         return GlobalInstallation;
     }

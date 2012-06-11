@@ -23,6 +23,7 @@
 // Own includes
 #include "serviceprovider.h"
 #include "serviceproviderdata.h"
+#include "serviceproviderglobal.h"
 #include "serviceproviderscript.h"
 #include "global.h"
 
@@ -37,9 +38,9 @@
 #include <QFileInfo>
 
 ServiceProvider *ServiceProviderDataReader::read( QIODevice *device, const QString &fileName,
-                                                ErrorAcceptance errorAcceptance, QObject *parent )
+                                                  ErrorAcceptance errorAcceptance, QObject *parent )
 {
-    const QString serviceProvider = ServiceProvider::serviceProviderIdFromFileName( fileName );
+    const QString serviceProvider = ServiceProviderGlobal::idFromFileName( fileName );
 
     // Get country code from filename
     QString country;
@@ -123,7 +124,7 @@ ServiceProvider* ServiceProviderDataReader::readServiceProvider( const QString &
     const QString fileVersion = attributes().value("fileVersion").toString();
 
     if ( attributes().hasAttribute(QLatin1String("type")) ) {
-        serviceProviderType = ServiceProvider::serviceProviderTypeFromString(
+        serviceProviderType = ServiceProviderGlobal::typeFromString(
                 attributes().value(QLatin1String("type")).toString() );
         if ( serviceProviderType == InvalidServiceProvider && errorAcceptance == OnlyReadCorrectFiles ) {
             raiseError( QString("The service provider type %1 is invalid. Currently there is only "
