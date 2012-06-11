@@ -354,10 +354,6 @@ void CallScriptFunctionJob::debuggerRun()
     disconnect( scriptResult, SIGNAL(invalidDataReceived(TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)),
                 this, SLOT(invalidDataReceived(TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)) );
 
-    // Use the previous Network object in the engine again and delete the one for this thread
-    engine->globalObject().setProperty( "network", previousScriptNetwork );
-    delete scriptNetwork;
-
     // Check for exceptions
     if ( !debugger->isLastRunAborted() && finishedSuccessfully && engine->hasUncaughtException() ) {
         m_engineMutex->unlockInline();
@@ -380,6 +376,12 @@ void CallScriptFunctionJob::debuggerRun()
 
     // Mark job as done for Debugger to know that the script is not waiting for a signal
     setFinished( true );
+
+    // Use the previous Network object in the engine again and delete the one for this thread
+    // This needs to be called after setFinished(true), otherwise the Debugger thinks there are
+    // still running jobs, ie. waiting for a signal
+    engine->globalObject().setProperty( "network", previousScriptNetwork );
+    delete scriptNetwork;
 
     if ( allNetworkRequestsFinished && finishedSuccessfully ) {
         // No uncaught exceptions, all network requests finished
