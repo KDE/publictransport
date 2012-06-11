@@ -91,12 +91,12 @@ public:
     /**
      * @brief Creates a new ServiceProviderScript object with the given information.
      *
-     * @param info Information about how to download and parse the documents of a service provider.
+     * @param data Information about how to download and parse the documents of a service provider.
      *   If this is 0 a default ServiceProviderData instance gets created.
      *
      * @note Can be used if you have a custom ServiceProviderData object.
      **/
-    ServiceProviderScript( ServiceProviderData *info = 0, QObject *parent = 0 );
+    ServiceProviderScript( const ServiceProviderData *data = 0, QObject *parent = 0 );
 
     /** @brief Destructor. */
     virtual ~ServiceProviderScript();

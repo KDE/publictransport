@@ -47,8 +47,8 @@ const char *ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE = "getTimetable"
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS = "getJourneys";
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS = "getStopSuggestions";
 
-ServiceProviderScript::ServiceProviderScript( ServiceProviderData *info, QObject *parent )
-        : ServiceProvider(info, parent), m_thread(0), m_script(0), m_scriptStorage(0),
+ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, QObject *parent )
+        : ServiceProvider(data, parent), m_thread(0), m_script(0), m_scriptStorage(0),
           m_mutex(new QMutex)
 {
     m_scriptState = WaitingForScriptUsage;
@@ -68,6 +68,9 @@ ServiceProviderScript::ServiceProviderScript( ServiceProviderData *info, QObject
 
 ServiceProviderScript::~ServiceProviderScript()
 {
+    // Wait for running jobs to finish for proper cleanup
+    ThreadWeaver::Weaver::instance()->requestAbort();
+    ThreadWeaver::Weaver::instance()->finish(); // This prevents crashes on exit of the engine
     delete m_script;
     delete m_mutex;
 }
@@ -332,7 +335,7 @@ void ServiceProviderScript::jobDone( ThreadWeaver::Job* job )
 //         ptr.clear();
 //         kDebug() << "DELETED?" << ptr.isNull();
 //     }
-    delete scriptJob;
+    scriptJob->deleteLater();
 }
 
 void ServiceProviderScript::jobFailed( ThreadWeaver::Job* job )
