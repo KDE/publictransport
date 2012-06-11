@@ -521,7 +521,7 @@ public:
     Debugger::Debugger *debugger() const;
 
     /** @brief Set service provider data values used for this project to @p providerData. */
-    void ProviderData( const ServiceProviderData *providerData );
+    void setProviderData( const ServiceProviderData *providerData );
 
     /** @brief Get the path of the project source XML file. */
     Q_INVOKABLE QString filePath() const;

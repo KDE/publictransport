@@ -423,7 +423,7 @@ bool ScriptTab::save()
 
         ServiceProviderData *newInfo = project()->provider()->data()->clone();
         newInfo->setScriptFile( fileName );
-        project()->ProviderData( newInfo );
+        project()->setProviderData( newInfo );
         project()->save( this );
     } else if ( !document()->saveAs(project()->scriptFileName()) ) {
         KMessageBox::error( this, i18nc("@info",

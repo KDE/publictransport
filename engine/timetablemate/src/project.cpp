@@ -106,9 +106,9 @@ public:
     ProjectPrivate( Project *project ) : state(Project::Uninitialized),
           projectModel(0), projectSourceBufferModified(false),
           dashboardTab(0), projectSourceTab(0), scriptTab(0), plasmaPreviewTab(0), webTab(0),
-          provider(new ServiceProvider(0, project)), debugger(new Debugger::Debugger(project)),
-          executionLine(-1), testModel(new TestModel(project)), testState(NoTestRunning),
-          q_ptr(project)
+          provider(ServiceProvider::createInvalidProvider(project)),
+          debugger(new Debugger::Debugger(project)), executionLine(-1),
+          testModel(new TestModel(project)), testState(NoTestRunning), q_ptr(project)
     {
     };
 
@@ -671,7 +671,7 @@ public:
     {
         Q_Q( Project );
         delete provider;
-        provider = new ServiceProvider( 0, q );
+        provider = ServiceProvider::createInvalidProvider( q );
         q->emit nameChanged( projectName() );
         q->emit iconNameChanged( iconName() );
         q->emit iconChanged( projectIcon() );
@@ -3300,13 +3300,13 @@ ServiceProvider *Project::provider() const
     return d->provider;
 }
 
-void Project::ProviderData( const ServiceProviderData *serviceProviderInfo )
+void Project::setProviderData( const ServiceProviderData *serviceProviderInfo )
 {
     Q_D( Project );
 
     // Recreate service provider plugin with new info
     delete d->provider;
-    d->provider = new ServiceProvider( serviceProviderInfo, this );
+    d->provider = ServiceProvider::createProviderForData( serviceProviderInfo, this );
     emit nameChanged( projectName() );
     emit iconNameChanged( iconName() );
     emit iconChanged( projectIcon() );
@@ -3353,7 +3353,7 @@ void Project::showSettingsDialog( QWidget *parent )
     QPointer< ProjectSettingsDialog > dialog( new ProjectSettingsDialog(parent) );
     dialog->setProviderData( d->provider->data(), d->filePath );
     if ( dialog->exec() == KDialog::Accepted ) {
-        ProviderData( dialog->providerData(this) );
+        setProviderData( dialog->providerData(this) );
 
         if ( dialog->newScriptTemplateType() != Project::NoScriptTemplate ) {
             // A new script file was set in the dialog

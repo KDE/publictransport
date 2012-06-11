@@ -65,6 +65,7 @@ ScriptJob::~ScriptJob()
     m_scriptNetwork->abortAllRequests();
     m_engine->abortEvaluation();
     m_engine->deleteLater();
+    m_engine = 0;
 
     m_scriptNetwork.clear();
     m_scriptResult.clear();
