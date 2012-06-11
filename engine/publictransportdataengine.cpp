@@ -71,14 +71,10 @@ PublicTransportEngine::~PublicTransportEngine()
 
 void PublicTransportEngine::slotSourceRemoved( const QString& name )
 {
-    kDebug() << "____________________________________________________________________________";
-    kDebug() << "Source" << name << "removed";
-
-    const QString nonAmbiguousName = name.toLower();
-    kDebug() << "Running" << m_runningSources.removeOne( nonAmbiguousName );
-    kDebug() << "Cached" << m_dataSources.remove( nonAmbiguousName );
-    kDebug() << "Still cached data sources" << m_dataSources.count();
-
+//     const QString nonAmbiguousName = name.toLower();
+//     kDebug() << "Running" << m_runningSources.removeOne( nonAmbiguousName );
+//     kDebug() << "Cached" << m_dataSources.remove( nonAmbiguousName );
+    kDebug() << "Source" << name << "removed, still cached data sources" << m_dataSources.count();
 }
 
 QHash< QString, QVariant > PublicTransportEngine::serviceProviderData(
@@ -611,36 +607,29 @@ PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
 
 bool PublicTransportEngine::updateSourceEvent( const QString &name )
 {
-    bool ret = true;
     SourceType sourceType = sourceTypeFromName( name );
     switch ( sourceType ) {
     case ServiceProviderSource:
-        ret = updateServiceProviderForCountrySource( name );
-        break;
+        return updateServiceProviderForCountrySource( name );
     case ServiceProvidersSource:
-        ret = updateServiceProviderSource();
-        break;
+        return updateServiceProviderSource();
     case ErroneousServiceProvidersSource:
         updateErroneousServiceProviderSource( name );
-        break;
+        return true;
     case LocationsSource:
-        ret = updateLocationSource();
-        break;
+        return updateLocationSource();
     case DeparturesSource:
     case ArrivalsSource:
     case StopsSource:
     case JourneysSource:
     case JourneysArrSource:
     case JourneysDepSource:
-        ret = updateDepartureOrJourneySource( name );
-        break;
+        return updateDepartureOrJourneySource( name );
+    case InvalidSourceName:
     default:
         kDebug() << "Source name incorrect" << name;
-        ret = false;
-        break;
+        return false;
     }
-
-    return ret;
 }
 
 void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
@@ -648,7 +637,6 @@ void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
         const GlobalTimetableInfo &globalInfo, const DepartureRequest &request,
         bool deleteDepartureInfos )
 {
-    Q_UNUSED( provider );
     const QString sourceName = request.sourceName;
     kDebug() << departures.count() << "departures / arrivals received" << sourceName;
 
@@ -724,7 +712,7 @@ void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
     m_nextDownloadTimeProposals[ stripDateAndTimeValues( sourceName )] = downloadTime;
 //     kDebug() << "Set next download time proposal:" << downloadTime;
 
-//     setData( sourceName, "serviceProvider", serviceProvider );TODO
+    setData( sourceName, "serviceProvider", provider->id() );
     setData( sourceName, "count", departureCount );
     setData( sourceName, "delayInfoAvailable", globalInfo.delayInfoAvailable );
     setData( sourceName, "requestUrl", requestUrl );
@@ -735,7 +723,7 @@ void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 
     // Store received data in the data source map
-//     dataSource.insert( "serviceProvider", serviceProvider );
+    dataSource.insert( "serviceProvider", provider->id() );
     dataSource.insert( "count", departureCount );
     dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
     dataSource.insert( "requestUrl", requestUrl );
@@ -829,7 +817,7 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
     QDateTime downloadTime = QDateTime::currentDateTime().addSecs( secs );
     m_nextDownloadTimeProposals[ stripDateAndTimeValues( sourceName )] = downloadTime;
 
-//     setData( sourceName, "serviceProvider", serviceProvider );TODO
+    setData( sourceName, "serviceProvider", provider->id() );
     setData( sourceName, "count", journeyCount );
     setData( sourceName, "delayInfoAvailable", globalInfo.delayInfoAvailable );
     setData( sourceName, "requestUrl", requestUrl );
@@ -840,7 +828,7 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 
     // Store received data in the data source map
-//     dataSource.insert( "serviceProvider", serviceProvider );
+    dataSource.insert( "serviceProvider", provider->id() );
     dataSource.insert( "count", journeyCount );
     dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
     dataSource.insert( "requestUrl", requestUrl );
@@ -891,7 +879,7 @@ void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
     }
     m_lastStopNameCount = stops.count();
 
-//     setData( sourceName, "serviceProvider", serviceProvider );TODO
+    setData( sourceName, "serviceProvider", provider->id() );
     setData( sourceName, "count", stops.count() );
     setData( sourceName, "requestUrl", requestUrl );
     if ( request.parseMode == ParseForDeparturesArrivals ) {
@@ -930,7 +918,7 @@ void PublicTransportEngine::errorParsing( ServiceProvider *provider,
     m_runningSources.removeOne( request->sourceName );
 
     const QString sourceName = request->sourceName;
-//     setData( sourceName, "serviceProvider", request->serviceProvider );
+    setData( sourceName, "serviceProvider", provider->id() );
     setData( sourceName, "count", 0 );
     setData( sourceName, "requestUrl", requestUrl );
     if ( request->parseMode == ParseForDeparturesArrivals ) {
@@ -959,12 +947,17 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
 
     ServiceProvider *provider;
     QString providerId = dataSource[ "serviceProvider" ].toString();
-    if ( !m_providers.contains(providerId) ) {
+    if ( providerId.isEmpty() ) {
+        kWarning() << "Internal error: Service provider unknown"; // Could get provider id from <name>
+        return false;
+    }
+    if ( m_providers.contains(providerId) ) {
+        provider = m_providers.value( providerId );
+    } else {
         provider = ServiceProvider::getSpecificProvider( providerId );
         m_providers.insert( providerId, provider );
-    } else {
-        provider = m_providers.value( providerId );
     }
+    Q_ASSERT( provider );
 
     QDateTime downloadTime = m_nextDownloadTimeProposals[ stripDateAndTimeValues(nonAmbiguousName) ];
     int minForSufficientChanges = downloadTime.isValid()
