@@ -33,8 +33,9 @@
 #include <KConfig>
 #include <KConfigGroup>
 #include <KStandardDirs>
-#include <ThreadWeaver/Weaver>
 #include <KDebug>
+#include <ThreadWeaver/Weaver>
+#include <ThreadWeaver/Job>
 
 // Qt includes
 #include <QTextCodec>
@@ -42,6 +43,8 @@
 #include <QFileInfo>
 #include <QPointer>
 #include <QMutex>
+#include <QScriptProgram>
+#include <QScriptEngine>
 
 const char *ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS = "usedTimetableInformations";
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE = "getTimetable";
@@ -55,6 +58,7 @@ ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, Q
     m_scriptState = WaitingForScriptUsage;
     m_scriptFeatures = readScriptFeatures();
 
+    qRegisterMetaType< QList<ChangelogEntry> >( "QList<ChangelogEntry>" );
     qRegisterMetaType< QList<TimetableData> >( "QList<TimetableData>" );
     qRegisterMetaType< GlobalTimetableInfo >( "GlobalTimetableInfo" );
     qRegisterMetaType< ParseDocumentMode >( "ParseDocumentMode" );

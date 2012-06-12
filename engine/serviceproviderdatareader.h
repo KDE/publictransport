@@ -37,12 +37,16 @@ class ServiceProviderData;
  * @brief Store information about a single changelog entry.
  **/
 struct ChangelogEntry {
+    explicit ChangelogEntry( const QString &version = "1.0" ) : version(version) {};
+
     QString author; /**< The author who implemented the change. */
     QString version; /**< The version of the service provider data file where this change was applied. */
     QString engineVersion; /**< The version of the PublicTransport engine where this
             * change was integrated. */
     QString description; /**< A description of the change. */
 };
+Q_DECLARE_METATYPE(ChangelogEntry);
+Q_DECLARE_METATYPE(QList<ChangelogEntry>);
 
 /**
  * @brief Read service provider data XML files.
