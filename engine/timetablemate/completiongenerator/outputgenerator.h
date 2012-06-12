@@ -286,6 +286,8 @@ private:
      **/
     bool openGenerationFile( const QString &fileName, QFile *file );
 
+    QStringList splitLongTextToMultipleLines( const QString &string, int maxColumns = 80 );
+
     AbstractGenerator *m_generator;
     QStringList m_generatedFiles; ///< The list of generated files
 };

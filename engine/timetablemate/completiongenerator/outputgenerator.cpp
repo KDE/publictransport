@@ -550,6 +550,34 @@ bool OutputGenerator::writeHtmlOutput( const QString &outputDirectory,
     return true;
 }
 
+QStringList OutputGenerator::splitLongTextToMultipleLines( const QString &string, int maxColumns )
+{
+    // Split string at new lines, but try to avoid splitting at new lines in quotes,
+    // currently it only works with a single "\n" in quotes
+    QString s = string;
+    QStringList oldLines = s.replace("\"\n\"", "%NEWLINE_STRING%")
+                            .split( "\n" );
+    QStringList lines;
+    foreach ( const QString &oldLine, oldLines ) {
+        int lastPos = 0;
+        int lineNr = 1;
+        QString realOldLine = oldLine;
+        realOldLine.replace("%NEWLINE_STRING%", "\"\n\"");
+        while ( realOldLine.length() > maxColumns ) {
+            int pos = realOldLine.lastIndexOf( ' ', lineNr * maxColumns );
+            if ( pos < lastPos ) {
+                break;
+            } else {
+                lines << realOldLine.mid( lastPos, pos - lastPos + 1 );
+                ++lineNr;
+                lastPos = pos + 1;
+            }
+        }
+        lines << realOldLine.mid( lastPos );
+    }
+    return lines;
+}
+
 void OutputGenerator::writeAddCompletionsImplementation(
         QIODevice *dev, const ClassInformation &classInformation )
 {
@@ -557,6 +585,7 @@ void OutputGenerator::writeAddCompletionsImplementation(
         // Output for completion
         QString description = QString( "<b>Brief:</b> %1" )
                 .arg( transform(method.comment.brief) );
+        const QString newLine = "<br />\"\n            \"";
 
         // Add other comment blocks
         foreach ( const DoxygenComment *comment, method.comment.otherComments ) {
@@ -589,30 +618,38 @@ void OutputGenerator::writeAddCompletionsImplementation(
                 break;
             }
 
+            QString commentText = transform( comment->comment(), transformations );
+            commentText = splitLongTextToMultipleLines( commentText ).join( "\"\n            \"" );
             if ( title.isEmpty() ) {
-                description += "<br />" + transform( comment->comment() );
+                description += newLine + commentText;
             } else {
-                description += QString("<p class='doxygen_titled_paragraph'><b>%1:</b>&nbsp;%2</p>")
-                        .arg( title )
-                        .arg( transform(comment->comment(), transformations) );
+                description += newLine +
+                        QString("<p class='doxygen_titled_paragraph'><b>%1:</b>&nbsp;%2</p>")
+                        .arg( title ).arg( commentText );
             }
         }
 
         // Add parameter description block
         if ( !method.comment.parameters.isEmpty() ) {
-            description += "<br /><b>Parameters:</b><ul>\"\n            \"";
+            description += newLine + "<b>Parameters:</b><ul>\"\n            \"";
             foreach ( const DoxygenParameter *parameter, method.comment.parameters ) {
+                QString parameterCommentText = transform( parameter->comment() );
+                parameterCommentText = splitLongTextToMultipleLines( parameterCommentText )
+                        .join( "\"\n            \"" );
                 description += QString("<li><b>%1</b> %2</li>\"\n            \"")
                         .arg( parameter->arguments.first() )
-                        .arg( transform(parameter->comment()) );
+                        .arg( parameterCommentText );
             }
             description += "</ul></div>";
         }
 
         // Add return value description block
         if ( !method.comment.returns.isEmpty() ) {
-            description += QString( "<br />\"\n            \"<b>Return Value:</b> %1")
-                    .arg( transform(method.comment.returns) );
+            QString returnCommentText = transform( method.comment.returns );
+            returnCommentText = splitLongTextToMultipleLines( returnCommentText )
+                    .join( "\"\n            \"" );
+            description += QString( newLine + "<b>Return Value:</b> %1")
+                    .arg( returnCommentText );
         }
 
         const QString newOutput = QString(
