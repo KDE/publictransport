@@ -936,38 +936,6 @@ public:
                                                         const QString &separator );
 
     /**
-     * @brief Finds positions of columns in an HTML table.
-     *
-     * Table header names are currently only found as "class" attributes of "th" tags.
-     *
-     * @deprecated Will be removed. Use findNamedHtmlTags() instead.
-     * TODO Remove this function. Still in use by at_oebb.js.
-     *
-     * @param str The string is in which to search for positions of table headers.
-     * @param options A map (javascript object) with these optional properties:
-     *   @li @b required: A list of strings, ie. the names of the required table headers.
-     *   @li @b optional: A list of strings, ie. the names of the optional table headers.
-     *   @li @b debug: A boolean, @c false by default. If @c true, more debug output gets generated.
-     *   @li @b headerContainerOptions: A map of options that gets passed to findFirstHtmlTag()
-     *     to find the HTML tag (eg. "tr") containing the header HTML tags (eg. "th"). For example
-     *     this can be used to specify required attributes for the header container tag.
-     *     Additionally this map can contain a value "tagName", by default this is "tr".
-     *   @li @b headerOptions: A map of options that gets passed to findFirstHtmlTag()
-     *     to find the header HTML tags (eg. "th"). For example this can be used to specify
-     *     required attributes for the header tags.
-     *     Additionally this map can contain a value "tagName", by default this is "th".
-     *     Another additional value is @em "namePosition", which indicates the position of the name
-     *     of headers. This value is again a map, with these properties: @em "type": Can be
-     *     @em "contents" (ie. use tag contents as name, the default) or @em "attribute" (ie. use
-     *     a tag attribute value as name). If @em "attribute" is used for @em "type", the name of
-     *     the attribute can be set as @em "name" property. Additionally a @em "regexp" property
-     *     can be used to extract a string from the string that would otherwise be used as name
-     *     as is.
-     **/
-    Q_INVOKABLE static QVariantMap findTableHeaderPositions( const QString &str,
-                                                             const QVariantMap &options );
-
-    /**
      * @brief Finds the first occurrence of an HTML tag with @p tagName in @p str.
      *
      * @param str The string containing the HTML tag to be found.
