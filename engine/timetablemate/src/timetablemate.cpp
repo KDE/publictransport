@@ -1651,7 +1651,7 @@ Project *TimetableMate::openProject( const QString &filePath )
 }
 
 void TimetableMate::fileOpen() {
-    QString fileName = KFileDialog::getOpenFileName( KGlobalSettings::documentPath(),
+    QString fileName = KFileDialog::getOpenFileName( KUrl("kfiledialog:///serviceprovider"),
             "application/x-publictransport-serviceprovider application/xml",
             this, i18nc("@title:window", "Open Service Provider Plugin") );
     if ( fileName.isNull() )
