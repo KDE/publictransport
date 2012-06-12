@@ -131,6 +131,7 @@ class Project : public QObject {
     Q_PROPERTY( QIcon icon READ projectIcon NOTIFY iconChanged )
     Q_PROPERTY( InstallType saveType READ saveType NOTIFY saveTypeChanged )
     Q_PROPERTY( QString savePathInfoString READ savePathInfoString NOTIFY savePathInfoStringChanged )
+    Q_PROPERTY( QString output READ output NOTIFY outputChanged )
     Q_ENUMS( State Error ScriptTemplateType ProjectAction ProjectActionGroup
              ProjectDocumentSource InstallType )
     friend class ProjectSourceTab;
@@ -310,6 +311,21 @@ public:
 
     /** @brief Get the model which contains this project, if any. */
     ProjectModel *projectModel() const;
+
+    /**
+     * @brief Get all collected output for this project.
+     * @see clearOutput
+     **/
+    QString output() const;
+
+    /** @brief Add an output line. */
+    void appendOutput( const QString &output );
+
+    /**
+     * @brief Clear collected output.
+     * @see output
+     **/
+    void clearOutput();
 
     /** @brief Whether or not the project is modified. */
     Q_INVOKABLE bool isModified() const;
@@ -624,6 +640,7 @@ signals:
     void savePathInfoStringChanged( const QString &newSavePathInfoString );
     void debuggerRunningChanged( bool debuggerRunning );
     void testRunningChanged( bool testRunning );
+    void outputChanged( const QString &output );
 
     /** @brief Emitted when the @p title and/or @p icon for @p tabWidget has changed. */
     void tabTitleChanged( QWidget *tabWidget, const QString &title, const QIcon &icon );
@@ -845,6 +862,9 @@ protected slots:
     void debugContinued();
     void debugStarted();
     void debugStopped();
+    void scriptOutput( const QString &message, const QScriptContextInfo &context );
+    void scriptErrorReceived( const QString &errorMessage, const QScriptContextInfo &context,
+                              const QString &failedParseText );
 
     void testJobStarted( ThreadWeaver::Job *job );
     void testJobDone( ThreadWeaver::Job *job );

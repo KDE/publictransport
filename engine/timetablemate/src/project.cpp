@@ -243,6 +243,10 @@ public:
                     q, SLOT(loadScriptResult(ScriptErrorType,QString)) );
         q->connect( debugger, SIGNAL(requestTimetableDataResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QScriptValue)),
                     q, SLOT(functionCallResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QScriptValue)) );
+        q->connect( debugger, SIGNAL(output(QString,QScriptContextInfo)),
+                    q, SLOT(scriptOutput(QString,QScriptContextInfo)) );
+        q->connect( debugger, SIGNAL(scriptErrorReceived(QString,QScriptContextInfo,QString)),
+                    q, SLOT(scriptErrorReceived(QString,QScriptContextInfo,QString)) );
 
         state = Project::NoProjectLoaded;
         return true;
@@ -1477,6 +1481,9 @@ public:
     TestState testState;
     QList< ThreadWeaver::Job* > pendingTests;
 
+    // Collects output for the project
+    QString output;
+
 private:
     Project *q_ptr;
     Q_DECLARE_PUBLIC( Project )
@@ -1497,6 +1504,42 @@ Project::~Project()
     }
 
     delete d_ptr;
+}
+
+QString Project::output() const
+{
+    Q_D( const Project );
+    return d->output;
+}
+
+void Project::clearOutput()
+{
+    Q_D( Project );
+    kDebug() << "CLEAR OUTPUT";
+    d->output.clear();
+    emit outputChanged( QString() );
+}
+
+void Project::appendOutput( const QString &output )
+{
+    Q_D( Project );
+    d->output.append( "<br />" + output );
+    emit outputChanged( d->output );
+}
+
+void Project::scriptOutput( const QString &message, const QScriptContextInfo &context )
+{
+    appendOutput( i18nc("@info", "<emphasis strong='1'>Line %1:</emphasis> <message>%2</message>",
+                        context.lineNumber(), message) );
+}
+
+void Project::scriptErrorReceived( const QString &errorMessage,
+                                   const QScriptContextInfo &context,
+                                   const QString &failedParseText )
+{
+    Q_UNUSED( failedParseText );
+    appendOutput( i18nc("@info", "<emphasis strong='1'>Error in line %1:</emphasis> <message>%2</message>",
+                        context.lineNumber(), errorMessage) );
 }
 
 Project::State Project::state() const

@@ -40,15 +40,9 @@ public:
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::BottomDockWidgetArea; };
     QPlainTextEdit *outputWidget() const { return m_outputWidget; };
 
-public slots:
-    void appendHtml( const QString &html );
-
 protected slots:
-    /** @brief The script produced output at @p context. */
-    void scriptOutput( const QString &outputString, const QScriptContextInfo &contextInfo );
-
-    void scriptErrorReceived( const QString &errorMessage, const QScriptContextInfo &contextInfo,
-                              const QString &failedParseText );
+    void setOutput( const QString &html );
+    void showContextMenu( const QPoint &pos );
 
     void activeProjectAboutToChange( Project *project, Project *previousProject );
 

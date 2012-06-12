@@ -30,6 +30,7 @@
 
 // Qt includes
 #include <QPlainTextEdit>
+#include <QMenu>
 #include <QScriptContextInfo>
 
 OutputDockWidget::OutputDockWidget( ProjectModel *projectModel, KActionMenu *showDocksAction,
@@ -47,53 +48,45 @@ OutputDockWidget::OutputDockWidget( ProjectModel *projectModel, KActionMenu *sho
     m_outputWidget = new QPlainTextEdit( this );
     m_outputWidget->setReadOnly( true );
     m_outputWidget->setMinimumSize( 150, 75 );
+    m_outputWidget->setContextMenuPolicy( Qt::CustomContextMenu );
+    connect( m_outputWidget, SIGNAL(customContextMenuRequested(QPoint)),
+             this, SLOT(showContextMenu(QPoint)) );
     setWidget( m_outputWidget );
 
     connect( projectModel, SIGNAL(activeProjectAboutToChange(Project*,Project*)),
              this, SLOT(activeProjectAboutToChange(Project*,Project*)) );
     if ( projectModel->activeProject() ) {
-        Debugger::Debugger *debugger = projectModel->activeProject()->debugger();
-        connect( debugger, SIGNAL(output(QString,QScriptContextInfo)),
-                 this, SLOT(scriptOutput(QString,QScriptContextInfo)) );
-        connect( debugger, SIGNAL(scriptErrorReceived(QString,QScriptContextInfo,QString)),
-                 this, SLOT(scriptErrorReceived(QString,QScriptContextInfo,QString)) );
+        connect( projectModel->activeProject(), SIGNAL(outputChanged(QString)),
+                 this, SLOT(setOutput(QString)) );
     }
+}
+
+void OutputDockWidget::showContextMenu( const QPoint &pos )
+{
+    QMenu *menu = m_outputWidget->createStandardContextMenu();
+    QAction *clearAction = menu->addAction( KIcon("edit-clear-list"), i18nc("@action", "&Clear"),
+                                            m_outputWidget, SLOT(clear()) );
+    clearAction->setEnabled( !m_outputWidget->document()->isEmpty() );
+    menu->exec( m_outputWidget->mapToGlobal(pos) );
+    delete menu;
 }
 
 void OutputDockWidget::activeProjectAboutToChange( Project *project, Project *previousProject )
 {
     if ( previousProject ) {
-        disconnect( previousProject->debugger(), SIGNAL(output(QString,QScriptContextInfo)),
-                    this, SLOT(scriptOutput(QString,QScriptContextInfo)) );
-        disconnect( previousProject->debugger(), SIGNAL(scriptErrorReceived(QString,QScriptContextInfo,QString)),
-                    this, SLOT(scriptErrorReceived(QString,QScriptContextInfo,QString)) );
+        disconnect( previousProject, SIGNAL(outputChanged(QString)),
+                    this, SLOT(setOutput(QString)) );
     }
 
     if ( project ) {
-        connect( project->debugger(), SIGNAL(output(QString,QScriptContextInfo)),
-                 this, SLOT(scriptOutput(QString,QScriptContextInfo)) );
-        connect( project->debugger(), SIGNAL(scriptErrorReceived(QString,QScriptContextInfo,QString)),
-                 this, SLOT(scriptErrorReceived(QString,QScriptContextInfo,QString)) );
+        setOutput( project->output() );
+        connect( project, SIGNAL(outputChanged(QString)), this, SLOT(setOutput(QString)) );
+    } else {
+        m_outputWidget->clear();
     }
 }
 
-void OutputDockWidget::appendHtml( const QString &html )
+void OutputDockWidget::setOutput( const QString &html )
 {
-    m_outputWidget->appendHtml( html );
-}
-
-void OutputDockWidget::scriptOutput( const QString &outputString,
-                                     const QScriptContextInfo &contextInfo )
-{
-    appendHtml( i18nc("@info", "<emphasis strong='1'>Line %1:</emphasis> <message>%2</message>",
-                      contextInfo.lineNumber(), outputString) );
-}
-
-void OutputDockWidget::scriptErrorReceived( const QString &errorMessage,
-                                            const QScriptContextInfo &contextInfo,
-                                            const QString &failedParseText )
-{
-    Q_UNUSED( failedParseText );
-    appendHtml( i18nc("@info", "<emphasis strong='1'>Error in line %1:</emphasis> <message>%2</message>",
-                      contextInfo.lineNumber(), errorMessage) );
+    m_outputWidget->document()->setHtml( html );
 }
