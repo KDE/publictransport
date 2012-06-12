@@ -266,18 +266,17 @@ Network::~Network()
     // Quit event loop of possibly running synchronous requests
     m_mutex->lock();
     m_quit = true;
-
-//     emit aborted();
+    QList< NetworkRequest* > runningRequests = m_runningRequests;
+    m_mutex->unlock();
 
     --networkObjects;
 
     kDebug() << "DELETE Network object" << thread() << networkObjects;
-    if ( !m_runningRequests.isEmpty() ) {
-        kDebug() << "Deleting Network object with" << m_runningRequests.count()
+    if ( !runningRequests.isEmpty() ) {
+        kDebug() << "Deleting Network object with" << runningRequests.count()
                  << "running requests";
-        qDeleteAll( m_runningRequests );
+        qDeleteAll( runningRequests );
     }
-    m_mutex->unlock();
 
     delete m_mutex;
 }
