@@ -220,6 +220,8 @@ QVariant VariableModel::data( const QModelIndex &index, int role ) const
                     role = KColorScheme::AlternateBackground;
                 } else if ( item->hasErroneousValue() ) {
                     role = KColorScheme::NegativeBackground;
+                } else if ( item->isChanged() ) {
+                    role = KColorScheme::ActiveBackground;
                 } else {
                     role = KColorScheme::NormalBackground;
                 }
@@ -244,8 +246,13 @@ QVariant VariableModel::data( const QModelIndex &index, int role ) const
                 role = KColorScheme::NegativeText;
                 break;
             default:
-                role = item->hasErroneousValue() ? KColorScheme::NegativeText
-                                                 : KColorScheme::NormalText;
+                if ( item->hasErroneousValue() ) {
+                    role = KColorScheme::NegativeText;
+                } else if ( item->isChanged() ) {
+                    role = KColorScheme::ActiveText;
+                } else {
+                    role = KColorScheme::NormalText;
+                }
                 break;
             }
             return KColorScheme( QPalette::Active ).foreground( role );
@@ -391,12 +398,9 @@ typedef QPair<VariableItem*, VariableTreeData> VariableItemPair;
 void VariableModel::updateVariableStack( const QStack< QList<VariableTreeData> > &newVariableStack,
                                          VariableItem *parent )
 {
-//     for ( int currentDepthIndex = m_depthIndex; currentDepthIndex >= 0; --currentDepthIndex ) {
-    for ( int currentIndex = 0; currentIndex < newVariableStack.count(); ++currentIndex ) {
-//         if ( currentIndex != m_depthIndex ) {
-//             continue;
-//         }
 
+    for ( int currentIndex = 0; currentIndex < newVariableStack.count(); ++currentIndex ) {
+        // Update variables
         kDebug() << "Update variables at" << currentIndex << "current depth:" << m_depthIndex;
         updateVariables( newVariableStack.at(currentIndex), parent,
                          newVariableStack.count() - 1 - currentIndex != m_depthIndex );
@@ -404,6 +408,26 @@ void VariableModel::updateVariableStack( const QStack< QList<VariableTreeData> >
 
     // Sort by variable names
     sort( 0 );
+}
+
+void VariableItem::setChanged( bool changed )
+{
+    if ( changed ) {
+        m_data.flags | VariableIsChanged;
+    } else {
+        m_data.flags &= ~VariableIsChanged;
+    }
+
+    foreach ( VariableItem *child, m_children.variables ) {
+        child->setChanged( changed );
+    }
+}
+
+bool VariableData::operator==( const VariableData &other ) const
+{
+    return type == other.type && name == other.name && value == other.value &&
+           completeValueString == other.completeValueString &&
+           description == other.description;
 }
 
 void VariableModel::updateVariables( const QList<VariableTreeData> &variables,
@@ -460,10 +484,15 @@ void VariableModel::updateVariables( const QList<VariableTreeData> &variables,
 
         if ( currentVariables && currentVariables->nameToVariable.contains(it.key()) ) {
             VariableItem *variable = currentVariables->nameToVariable[ it.key() ];
+            if ( variable->data() == data ) {
+                data.flags &= ~VariableIsChanged;
+            } else {
+                data.flags |= VariableIsChanged;
+            }
             changedItems << qMakePair( variable, data ); // Change values of variable to values of it.value()
         } else {
             VariableItem *variable = new VariableItem( this, data, parent );
-            newItems << qMakePair( variable, it.value() );
+            newItems << qMakePair( variable, data );
         }
         removedNames.removeOne( it.key() );
     }

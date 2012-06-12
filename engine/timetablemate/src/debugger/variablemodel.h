@@ -88,7 +88,8 @@ enum VariableFlag {
                                              * (etc.) script objects. */
     VariableHasErroneousValue   = 0x0002, /**< The value of the variable is erroneous. */
     VariableIsDefinedInParentContext
-                                = 0x0004  /**< The variable was defined in a parent context. */
+                                = 0x0004, /**< The variable was defined in a parent context. */
+    VariableIsChanged           = 0x0008  /**< The variable was just changed. */
 };
 Q_DECLARE_FLAGS( VariableFlags, VariableFlag );
 
@@ -112,10 +113,13 @@ struct VariableData {
     KIcon icon; /**< An icon for the variable. */
     QString description; /**< A description for the variable, eg. for tooltips. */
 
+    inline bool isChanged() const { return flags.testFlag(VariableIsChanged); };
     inline bool isHelperObject() const { return flags.testFlag(VariableIsHelperObject); };
     inline bool hasErroneousValue() const { return flags.testFlag(VariableHasErroneousValue); };
     inline bool isDefinedInParentContext() const {
             return flags.testFlag(VariableIsDefinedInParentContext); };
+
+    bool operator ==( const VariableData &other ) const;
 };
 
 /**
@@ -197,6 +201,9 @@ public:
     /** @brief A description for the variable, eg. for tooltips. */
     inline QString description() const { return m_data.description; };
 
+    inline bool isChanged() const { return m_data.isChanged(); };
+    void setChanged( bool changed = true );
+
     /**
      * @brief True, if this variable is a helper script object.
      * Eg. the 'result', 'network', 'storage' (etc.) script objects.
@@ -207,7 +214,8 @@ public:
     inline bool isDefinedInParentContext() const { return m_data.isDefinedInParentContext(); };
 
     /** @brief The VariableData object which contains all data for the variable. */
-    inline VariableData data() const { return m_data; };
+    inline const VariableData &data() const { return m_data; };
+    inline VariableData &data() { return m_data; };
 
     ~VariableItem();
 
