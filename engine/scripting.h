@@ -32,11 +32,7 @@
 // Qt includes
 #include <QScriptEngine>
 #include <QScriptable> // Base class
-#include <QObject> // Base class
-#include <QHash> // Return value
-#include <QVariant> // Return value
-#include <QStringList> // Return value
-#include <QMetaType> // For Q_DECLARE_METATYPE
+// #include <QMetaType> // For Q_DECLARE_METATYPE
 
 class PublicTransportInfo;
 class ServiceProviderData;
@@ -982,7 +978,7 @@ public:
      * @code
      * // This matches the first &lt;table&gt; tag found in html
      * // which has a class attribute with a value that matches
-     * // the regular expression pattern "test\d+",
+     * // the regular expression pattern "test\\d+",
      * // eg. "test1", "test2", ...
      * var result = helper.findFirstHtmlTag( html, "table",
      *         {attributes: {"class": "test\\d+"}} );

@@ -96,7 +96,6 @@ enum FilterVariant {
 /** @brief The action to be executed for filters, ie. show or hide matching items.
  * @ingroup filterSystem */
 enum FilterAction {
-    // ShowAll = 0, /**< Show all targets / origins */ TODO Remove this, filters are globally enabled/disabled
     ShowMatching = 0, /**< Show only targets / origins that are in the list of filter targets / origins */
     HideMatching = 1 /**< Hide targets / origins that are in the list of filter targets / origins */
 };

@@ -26,9 +26,11 @@
 #ifndef SERVICEPROVIDERDATA_HEADER
 #define SERVICEPROVIDERDATA_HEADER
 
+// Own includes
 #include "serviceproviderdatareader.h"
 #include "enums.h"
 
+// Qt includes
 #include <QList>
 #include <QString>
 #include <QStringList>

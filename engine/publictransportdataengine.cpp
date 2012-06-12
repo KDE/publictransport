@@ -84,7 +84,7 @@ void PublicTransportEngine::slotSourceRemoved( const QString& name )
 QHash< QString, QVariant > PublicTransportEngine::serviceProviderData(
         const ServiceProvider *&provider )
 {
-    Q_ASSERT( provider != NULL );
+    Q_ASSERT( provider );
 
     QVariantHash dataServiceProvider;
     dataServiceProvider.insert( "id", provider->id() );
@@ -314,7 +314,7 @@ bool PublicTransportEngine::updateLocationSource()
     return true;
 }
 
-bool PublicTransportEngine::updateDepartureOrJourneySource( const QString &name )
+bool PublicTransportEngine::updateTimetableDataSource( const QString &name )
 {
     const QString nonAmbiguousName = name.toLower();
     bool containsDataSource = m_dataSources.contains( nonAmbiguousName );
@@ -525,7 +525,7 @@ void PublicTransportEngine::reloadAllProviders()
     kDebug() << "Reload service providers (the service provider dir changed)";
 
     delete m_providerUpdateDelayTimer;
-    m_providerUpdateDelayTimer = NULL;
+    m_providerUpdateDelayTimer = 0;
 
     // Remove all providers (could have been changed)
     qDeleteAll( m_providers );
@@ -627,7 +627,7 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name )
     case JourneysSource:
     case JourneysArrSource:
     case JourneysDepSource:
-        return updateDepartureOrJourneySource( name );
+        return updateTimetableDataSource( name );
     case InvalidSourceName:
     default:
         kDebug() << "Source name incorrect" << name;
@@ -699,13 +699,13 @@ void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
 
     // Remove old jouneys
     for ( ; i < m_lastJourneyCount; ++i ) {
-        removeData( sourceName, QString( "%1" ).arg( i ) );
+        removeData( sourceName, QString("%1").arg(i) );
     }
     m_lastJourneyCount = departures.count();
 
     // Remove old stop suggestions
     for ( i = 0 ; i < m_lastStopNameCount; ++i ) {
-        removeData( sourceName, QString( "stopName %1" ).arg( i ) );
+        removeData( sourceName, QString("stopName %1").arg(i) );
     }
     m_lastStopNameCount = 0;
 

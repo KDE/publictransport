@@ -23,6 +23,9 @@
 // Own includes
 #include "serviceproviderscript.h"
 
+// Qt includes
+#include <QScriptEngine>
+
 QString StopSuggestionRequest::functionName() const
 {
     return ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;

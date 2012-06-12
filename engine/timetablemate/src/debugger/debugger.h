@@ -95,9 +95,9 @@ protected:
     void waitingForSignal() { m_waitForSignalTimer.start(); };
 
     /**
-        * @brief Call this method when script execution gets continued after waiting for a signal.
-        * @returns The time in milliseconds spent waiting for the last signal.
-        **/
+     * @brief Call this method when script execution gets continued after waiting for a signal.
+     * @returns The time in milliseconds spent waiting for the last signal.
+     **/
     int wokeUpFromSignal() {
         const int waitingTime = m_waitForSignalTimer.elapsed();
         m_signalWaitingTime += waitingTime;

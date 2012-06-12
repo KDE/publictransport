@@ -31,10 +31,11 @@
 
 namespace ThreadWeaver {
     class Job;
-}
+};
 namespace Scripting {
     class Storage;
 };
+class QScriptEngine;
 class QScriptProgram;
 class ScriptThread;
 

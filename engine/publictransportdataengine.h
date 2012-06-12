@@ -96,6 +96,7 @@ public:
     /** @returns the type of the given @p sourceName. */
     SourceType sourceTypeFromName( const QString &sourceName ) const;
 
+    /** @brief Reimplemented to add some always visible default sources. */
     virtual QStringList sources() const;
 
     /**
@@ -142,7 +143,7 @@ protected:
     bool updateServiceProviderSource();
     void updateErroneousServiceProviderSource( const QString &name );
     bool updateLocationSource();
-    bool updateDepartureOrJourneySource( const QString &name );
+    bool updateTimetableDataSource( const QString &name );
 
     /**
      * @brief Returns wheather or not the given source is up to date.
