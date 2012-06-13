@@ -122,6 +122,9 @@ public:
     /** @brief Return a string describing the error, if success() returns false. */
     QString errorString() const { return m_errorString; };
 
+    /** @brief TODO. */
+    QString lastDownloadUrl() const { return m_lastUrl; };
+
 signals:
     /** @brief Signals ready TimetableData items. */
     void departuresReady( const QList<TimetableData> &departures,
@@ -149,14 +152,14 @@ signals:
                                bool couldNeedForcedUpdate = false );
 
 protected slots:
-    /** @brief Handles the ResultObject::publish() signal by emitting dataReady(). */
+    /** @brief Handle the ResultObject::publish() signal by emitting dataReady(). */
     void publish();
 
 protected:
-    /** @brief Performs the job. */
+    /** @brief Perform the job. */
     virtual void run();
 
-    /** @brief Loads @p script into the engine and insert some objects/functions. */
+    /** @brief Load @p script into the engine and insert some objects/functions. */
     bool loadScript( QScriptProgram *script );
 
     /** @brief Overwritten from ThreadWeaver::Job to return whether or not the job was successful. */
@@ -173,6 +176,7 @@ protected:
     QString m_errorString;
 
     ServiceProviderData m_data;
+    QString m_lastUrl;
 };
 
 class DepartureJobPrivate;

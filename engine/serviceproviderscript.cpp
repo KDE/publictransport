@@ -256,7 +256,7 @@ void ServiceProviderScript::journeysReady( const QList<TimetableData> &data,
         kDebug() << "The script didn't find anything" << request.sourceName;
         emit errorParsing( this, ErrorParsingFailed,
                            i18n("Error while parsing the stop suggestions document."),
-                           url, &request ); // TODO request pointer?
+                           url, &request );
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
         PublicTransportInfoList newResults;
@@ -287,7 +287,7 @@ void ServiceProviderScript::stopSuggestionsReady( const QList<TimetableData> &da
         kDebug() << "The script didn't find anything" << request.sourceName;
         emit errorParsing( this, ErrorParsingFailed,
                            i18n("Error while parsing the stop suggestions document."),
-                           url, &request ); // TODO request pointer?
+                           url, &request );
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
         PublicTransportInfoList newResults;
@@ -347,11 +347,7 @@ void ServiceProviderScript::jobFailed( ThreadWeaver::Job* job )
     Q_ASSERT( scriptJob );
 
     emit errorParsing( this, ErrorParsingFailed, scriptJob->errorString(),
-                       /*TODO: failing url */ QString(),
-//                            TODO: no new... serviceProvider(),
-                       new DepartureRequest(scriptJob->request()->sourceName,
-                           /*stop*/QString(), /*dateTime*/QDateTime(), /*maxCount*/0,
-                            /*dataType*/QString(), /*city*/QString(), /*parseMode*/ParseForDeparturesArrivals) );
+                       scriptJob->lastDownloadUrl(), scriptJob->request() );
 }
 
 void ServiceProviderScript::requestDepartures( const DepartureRequest &request )

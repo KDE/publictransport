@@ -193,6 +193,10 @@ void ScriptJob::run()
         globalInfo.delayInfoAvailable =
                 !m_scriptResult->isHintGiven( ResultObject::NoDelaysForStop );
 
+        // Update last download URL
+        // TODO Store all URLs
+        m_lastUrl = m_scriptNetwork->lastUrl();
+
         while ( m_scriptNetwork->hasRunningRequests() || m_engine->isEvaluating() ) {
             // Wait for running requests to finish
             QEventLoop eventLoop;
