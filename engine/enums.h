@@ -60,15 +60,6 @@ enum ErrorCode {
 };
 
 /**
- * @brief Places where the session key should be put in requests.
- **/
-enum SessionKeyPlace {
-    PutNowhere = 0, /**< Don't place the session key anywhere. */
-    PutIntoCustomHeader /**< Place the session key in a custom header, which name should be given
-            * as session key <em>data</em>. */
-};
-
-/**
  * @brief Different types of timetable information.
  *
  * In scripts the enumerable names can be used as property names of a result object, eg.:
@@ -247,8 +238,6 @@ enum ParseDocumentMode {
     ParseForDeparturesArrivals = 1, /**< Parsing for departures or arrivals. */
     ParseForJourneys, /**< Parsing for journeys. */
     ParseForStopSuggestions, /**< Parsing for stop suggestions. */
-    ParseForSessionKeyThenStopSuggestions, /**< Parsing for a session key, to be used to get stop suggestions. */
-    ParseForSessionKeyThenDepartures, /**< Parsing for a session key, to be used to get departures/arrivals. */
     ParseForStopIdThenDepartures /**< Parsing for a stop ID, to be used to get departures/arrivals. */
 };
 
@@ -376,10 +365,6 @@ inline QDebug &operator <<( QDebug debug, ParseDocumentMode parseDocumentMode )
         return debug << "ParseForJourneys";
     case ParseForStopSuggestions:
         return debug << "ParseForStopSuggestions";
-    case ParseForSessionKeyThenDepartures:
-        return debug << "ParseForSessionKeyThenDepartures";
-    case ParseForSessionKeyThenStopSuggestions:
-        return debug << "ParseForSessionKeyThenStopSuggestions";
     case ParseForStopIdThenDepartures:
         return debug << "ParseForStopIdThenDepartures";
 

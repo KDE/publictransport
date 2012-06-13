@@ -253,14 +253,6 @@ signals:
             const StopInfoList &stops, const StopSuggestionRequest &request );
 
     /**
-     * @brief Emitted when a session key has been received and parsed.
-     *
-     * @param provider The provider that was used to download and parse the session key.
-     * @param sessionKey The parsed session key.
-     **/
-    void sessionKeyReceived( ServiceProvider *provider, const QString &sessionKey );
-
-    /**
      * @brief Emitted when an error occurred while parsing.
      *
      * @param provider The provider that was used to download and parse information
