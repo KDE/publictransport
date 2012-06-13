@@ -63,7 +63,7 @@ Debugger::Debugger( QObject *parent )
           m_backtraceModel(new BacktraceModel(this)),
           m_breakpointModel(new BreakpointModel(this)),
           m_jobSequence(0), m_debuggerRestrictionPolicy(0), m_evaluateInContextRestrictionPolicy(0),
-          m_running(false), m_runData(0)
+          m_running(false), m_runData(0), m_timeout(0)
 {
     qRegisterMetaType<QScriptContextInfo>( "QScriptContextInfo" );
     qRegisterMetaType<EvaluationResult>( "EvaluationResult" );
@@ -78,7 +78,7 @@ Debugger::Debugger( QObject *parent )
              this, SIGNAL(positionChanged(int,int,int,int)) );
     connect( m_debugger, SIGNAL(stateChanged(DebuggerState,DebuggerState)),
              this, SIGNAL(stateChanged(DebuggerState,DebuggerState)) );
-    connect( m_debugger, SIGNAL(aborted()), this, SIGNAL(aborted()) );
+    connect( m_debugger, SIGNAL(aborted()), this, SLOT(slotAborted()) );
     connect( m_debugger, SIGNAL(interrupted()), this, SLOT(slotInterrupted()) );
     connect( m_debugger, SIGNAL(continued(bool)), this, SLOT(slotContinued(bool)) );
     connect( m_debugger, SIGNAL(started()), this, SLOT(slotStarted()), Qt::QueuedConnection );
@@ -150,6 +150,7 @@ Debugger::~Debugger()
 
 void Debugger::slotStarted()
 {
+    stopTimeout();
     if ( !m_running ) {
         // Script execution gets started
         m_running = true;
@@ -165,31 +166,45 @@ void Debugger::slotStarted()
 
 void Debugger::slotStopped()
 {
-    if ( m_running ) {
-        if ( m_runningJobs.isEmpty() ) {
-            // No more running jobs
-            m_running = false;
-        } else if ( m_runningJobs.count() == 1 ) {
-            // Only one job still in the list, check if it is finished
-            // (slotStopped() was called before the job was destroyed)
-            ThreadWeaver::Job *job = qobject_cast< ThreadWeaver::Job* >( m_runningJobs.first() );
-            if ( job && job->isFinished() ) {
-                m_running = false;
-            }
-        }
+    if ( !m_running ) {
+        return;
+    }
 
-        Q_ASSERT( m_runData );
-        if ( m_running ) {
-            // Script execution gets suspended, waiting for a signal
-            m_runData->waitingForSignal();
-            emit waitingForSignal();
-        } else {
-            // Script execution has finished
-            emit stopped( *m_runData );
-            delete m_runData;
-            m_runData = 0;
+    if ( m_runningJobs.isEmpty() ) {
+        // No more running jobs
+        m_running = false;
+    } else if ( m_runningJobs.count() == 1 ) {
+        // Only one job still in the list, check if it is finished
+        // (slotStopped() was called before the job was destroyed)
+        ThreadWeaver::Job *job = qobject_cast< ThreadWeaver::Job* >( m_runningJobs.first() );
+        if ( job && job->isFinished() ) {
+            m_running = false;
         }
     }
+
+    Q_ASSERT( m_runData );
+    if ( m_running ) {
+        // Script execution gets suspended, waiting for a signal
+        startTimeout();
+        m_runData->waitingForSignal();
+        emit waitingForSignal();
+    } else {
+        // Script execution has finished
+        stopTimeout();
+        emit stopped( *m_runData );
+        delete m_runData;
+        m_runData = 0;
+    }
+}
+
+void Debugger::slotAborted()
+{
+    foreach ( QObject *object, m_runningJobs ) {
+        ThreadWeaver::Job *job = qobject_cast< ThreadWeaver::Job* >( object );
+        job->requestAbort();
+    }
+    stopTimeout();
+    emit aborted();
 }
 
 void Debugger::slotInterrupted()
@@ -214,6 +229,28 @@ void Debugger::jobStarted( ThreadWeaver::Job *job )
 void Debugger::jobDestroyed( QObject *object )
 {
     m_runningJobs.removeOne( object );
+}
+
+void Debugger::startTimeout( int milliseconds )
+{
+    if ( !m_timeout ) {
+        m_timeout = new QTimer( this );
+        connect( m_timeout, SIGNAL(timeout()), this, SLOT(timeout()) );
+    }
+    m_timeout->start( milliseconds );
+}
+
+void Debugger::stopTimeout()
+{
+    m_timeout->deleteLater();
+    m_timeout = 0;
+}
+
+void Debugger::timeout()
+{
+    m_timeout->deleteLater();
+    m_timeout = 0;
+    abortDebugger();
 }
 
 void Debugger::createScriptObjects( const ServiceProviderData *info )

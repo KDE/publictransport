@@ -800,6 +800,10 @@ void DebuggerAgent::setExecutionControlType( ExecutionControl executionType )
 void DebuggerAgent::abortDebugger()
 {
     m_mutex->lockInline();
+    if ( m_state == Aborting ) {
+        kDebug() << "Is already aborting";
+        return;
+    }
     if ( m_state == NotRunning ) {
         if ( m_injectedScriptState == InjectedScriptEvaluating ) {
             m_mutex->unlockInline();
@@ -814,7 +818,8 @@ void DebuggerAgent::abortDebugger()
         m_lastRunAborted = true;
         m_executionControl = ExecuteAbort;
         m_mutex->unlockInline();
-        emit aborted();
+
+        setState( Aborting );
     }
 
     m_interruptWaiter->wakeAll();
@@ -826,7 +831,11 @@ void DebuggerAgent::debugInterrupt()
     if ( m_state == Interrupted ) {
         kDebug() << "Already interrupted";
         return;
-    }/* else if ( m_state == NotRunning ) {
+    } else if ( m_state == Aborting ) {
+        kDebug() << "Aborting";
+        return;
+    }
+        /* else if ( m_state == NotRunning ) {
         kDebug() << "Not running";
         return;
     }*/
@@ -839,6 +848,9 @@ void DebuggerAgent::debugContinue()
     if ( m_state == NotRunning ) {
         m_mutex->unlockInline();
         kDebug() << "Debugger is not running";
+        return;
+    } else if ( m_state == Aborting ) {
+        kDebug() << "Aborting";
         return;
     }
     m_executionControl = ExecuteRun;
@@ -1141,13 +1153,12 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
 {
     Q_UNUSED( scriptId );
 
-//     kDebug() << scriptId << lineNumber << columnNumber;
-
     // Lock the engine if not already locked (should normally be locked before script execution,
     // but it may get unlocked before the script is really done, eg. waiting idle for network
     // requests to finish)
-    m_engineMutex->tryLockInline();
+    m_engineMutex->tryLockInline(); // Try to have the engine locked here
     QScriptContext *currentContext = engine()->currentContext();
+    // Unlock now, maybe trying to lock above was successful or the engine was already locked
     m_engineMutex->unlockInline();
     DEBUGGER_DEBUG("Engine unlocked --------------------------------");
 
@@ -1522,12 +1533,17 @@ void DebuggerAgent::shutdown()
 
     m_functionDepth = 0;
     const bool isPositionChanged = m_lineNumber != -1 || m_columnNumber != -1;
-    setState( NotRunning );
 
     // Context will be invalid
     m_currentContext = 0;
+
+    DebuggerState oldState = m_state;
     m_mutex->unlockInline();
 
+    if ( oldState == Aborting ) {
+        emit aborted();
+    }
+    setState( NotRunning );
     emit stopped();
 
     if ( isPositionChanged ) {

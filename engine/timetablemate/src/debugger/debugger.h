@@ -501,6 +501,9 @@ protected slots:
     void slotStopped();
     void slotInterrupted();
     void slotContinued( bool willInterruptAfterNextStatement = false );
+    void slotAborted();
+
+    void timeout();
 
 private:
     LoadScriptJob *enqueueNewLoadScriptJob();
@@ -508,6 +511,9 @@ private:
     void createScriptObjects( const ServiceProviderData *info );
     void assignDebuggerQueuePolicy( DebuggerJob *job );
     void assignEvaluateInContextQueuePolicy( DebuggerJob *job );
+
+    void startTimeout( int milliseconds = 5000 );
+    void stopTimeout();
 
     ScriptState m_state;
     ThreadWeaver::WeaverInterface *const m_weaver;
@@ -545,10 +551,7 @@ private:
     QList< QObject* > m_runningJobs;
     bool m_running;
     ScriptRunData *m_runData;
-//     QTime m_executionTimer;
-//     QTime m_waitForSignalTimer;
-//     QTime m_waitForContinueTimer;
-//     int m_waitingTime;
+    QTimer *m_timeout;
 };
 
 }; // namespace Debugger

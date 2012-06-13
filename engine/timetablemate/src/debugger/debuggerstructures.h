@@ -52,7 +52,8 @@ class BacktraceModel;
 enum DebuggerState {
     NotRunning = 0, /**< Script is not running. */
     Running, /**< Script is running. */
-    Interrupted /**< Script is interrupted. */
+    Interrupted, /**< Script is interrupted. */
+    Aborting /**< Scirpt is currently being aborted. */
 };
 
 /** @brief Debug mode used for function arguments. */
