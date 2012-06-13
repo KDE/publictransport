@@ -126,8 +126,8 @@ struct DepartureRequest : public AbstractRequest {
 
     virtual AbstractRequest *clone() const
     {
-        return new DepartureRequest( sourceName, stop, dateTime, maxCount, dataType,
-                                         city, parseMode );
+        return new DepartureRequest( sourceName, stop, dateTime, maxCount, city,
+                                     dataType, parseMode );
     };
 
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
