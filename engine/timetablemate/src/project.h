@@ -63,6 +63,7 @@ namespace Debugger {
     class Debugger;
     class BreakpointModel;
     class Breakpoint;
+    class ScriptRunData;
 }
 
 class KActionMenu;
@@ -132,6 +133,7 @@ class Project : public QObject {
     Q_PROPERTY( InstallType saveType READ saveType NOTIFY saveTypeChanged )
     Q_PROPERTY( QString savePathInfoString READ savePathInfoString NOTIFY savePathInfoStringChanged )
     Q_PROPERTY( QString output READ output NOTIFY outputChanged )
+    Q_PROPERTY( QString consoleText READ consoleText NOTIFY consoleTextChanged )
     Q_ENUMS( State Error ScriptTemplateType ProjectAction ProjectActionGroup
              ProjectDocumentSource InstallType )
     friend class ProjectSourceTab;
@@ -318,7 +320,10 @@ public:
      **/
     QString output() const;
 
-    /** @brief Add an output line. */
+    /**
+     * @brief Add @p output to the projects output.
+     * @see output
+     **/
     void appendOutput( const QString &output );
 
     /**
@@ -326,6 +331,21 @@ public:
      * @see output
      **/
     void clearOutput();
+
+    /**
+     * @brief Get all collected console text for this project.
+     * @see clearConsoleText
+     **/
+    QString consoleText() const;
+
+    /** @brief Appends @p text to the console. */
+    void appendToConsole( const QString &text );
+
+    /**
+     * @brief Clear collected console text.
+     * @see consoleText
+     **/
+    void clearConsoleText();
 
     /** @brief Whether or not the project is modified. */
     Q_INVOKABLE bool isModified() const;
@@ -641,6 +661,7 @@ signals:
     void debuggerRunningChanged( bool debuggerRunning );
     void testRunningChanged( bool testRunning );
     void outputChanged( const QString &output );
+    void consoleTextChanged( const QString &consoleText );
 
     /** @brief Emitted when the @p title and/or @p icon for @p tabWidget has changed. */
     void tabTitleChanged( QWidget *tabWidget, const QString &title, const QIcon &icon );
@@ -861,10 +882,19 @@ protected slots:
     void debugInterrupted();
     void debugContinued();
     void debugStarted();
-    void debugStopped();
+    void debugStopped( const ScriptRunData &scriptRunData );
+    void debugAborted();
     void scriptOutput( const QString &message, const QScriptContextInfo &context );
     void scriptErrorReceived( const QString &errorMessage, const QScriptContextInfo &context,
                               const QString &failedParseText );
+    void waitingForSignal();
+    void wokeUpFromSignal( int time );
+
+    /** @brief An uncaught exception occured in the script at @p lineNumber. */
+    void scriptException( int lineNumber, const QString &errorMessage );
+
+    void commandExecutionResult( const QString &returnValue, bool error = false );
+    void evaluationResult( const EvaluationResult &result );
 
     void testJobStarted( ThreadWeaver::Job *job );
     void testJobDone( ThreadWeaver::Job *job );

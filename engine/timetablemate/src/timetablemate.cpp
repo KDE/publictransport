@@ -630,9 +630,7 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
         disconnect( debugger, SIGNAL(interrupted()), this, SLOT(debugInterrupted()) );
         disconnect( debugger, SIGNAL(continued()), this, SLOT(debugContinued()) );
         disconnect( debugger, SIGNAL(started()), this, SLOT(debugStarted()) );
-        disconnect( debugger, SIGNAL(stopped(ScriptRunData)), this, SLOT(debugStopped(ScriptRunData)) );
-        disconnect( debugger, SIGNAL(waitingForSignal()), this, SLOT(waitingForSignal()) );
-        disconnect( debugger, SIGNAL(wokeUpFromSignal(int)), this, SLOT(wokeUpFromSignal(int)) );
+        disconnect( debugger, SIGNAL(stopped()), this, SLOT(debugStopped()) );
         disconnect( debugger, SIGNAL(exception(int,QString)),
                     this, SLOT(uncaughtException(int,QString)) );
         disconnect( debugger, SIGNAL(breakpointReached(Breakpoint)),
@@ -664,9 +662,7 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
         connect( debugger, SIGNAL(interrupted()), this, SLOT(debugInterrupted()) );
         connect( debugger, SIGNAL(continued(bool)), this, SLOT(debugContinued()) );
         connect( debugger, SIGNAL(started()), this, SLOT(debugStarted()) );
-        connect( debugger, SIGNAL(stopped(ScriptRunData)), this, SLOT(debugStopped(ScriptRunData)) );
-        connect( debugger, SIGNAL(waitingForSignal()), this, SLOT(waitingForSignal()) );
-        connect( debugger, SIGNAL(wokeUpFromSignal(int)), this, SLOT(wokeUpFromSignal(int)) );
+        connect( debugger, SIGNAL(stopped()), this, SLOT(debugStopped()) );
         connect( debugger, SIGNAL(exception(int,QString)),
                  this, SLOT(uncaughtException(int,QString)) );
         connect( debugger, SIGNAL(breakpointReached(Breakpoint)),
@@ -684,23 +680,6 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
     } else {
         stateChanged( "no_project_opened" );
         stateChanged( "project_opened", StateReverse );
-    }
-}
-
-void TimetableMate::functionCallResult( const QList< TimetableData > &timetableData,
-                                        const QScriptValue &returnValue )
-{
-    if ( m_projectModel->activeProject() ) {
-        if ( timetableData.isEmpty() ) {
-            m_projectModel->activeProject()->appendOutput( i18nc("@info",
-                    "Script execution has finished without results and returned <icode>%2</icode>.",
-                    returnValue.toString()) );
-        } else {
-            m_projectModel->activeProject()->appendOutput( i18ncp("@info",
-                    "Script execution has finished with %1 result and returned <icode>%2</icode>.",
-                    "Script execution has finished with %1 results and returned <icode>%2</icode>.",
-                    timetableData.count(), returnValue.toString()) );
-        }
     }
 }
 
@@ -1315,57 +1294,17 @@ void TimetableMate::debugContinued()
 
 void TimetableMate::debugAborted()
 {
-    if ( m_projectModel->activeProject() ) {
-        m_projectModel->activeProject()->appendOutput(
-                i18nc("@info", "<emphasis strong='1'>Execution aborted</emphasis> (%1)",
-                      QTime::currentTime().toString()) );
-    }
     updateWindowTitle();
 }
 
 void TimetableMate::debugStarted()
 {
-    if ( m_projectModel->activeProject() ) {
-        m_projectModel->activeProject()->appendOutput(
-                i18nc("@info", "<emphasis strong='1'>Execution started</emphasis> (%1)",
-                      QTime::currentTime().toString()) );
-    }
     updateWindowTitle();
 }
 
-void TimetableMate::debugStopped( const ScriptRunData &scriptRunData )
+void TimetableMate::debugStopped()
 {
-    if ( m_projectModel->activeProject() ) {
-        m_projectModel->activeProject()->appendOutput(
-                i18nc("@info", "<emphasis strong='1'>Execution finished</emphasis> (%1)<nl />"
-                      "- %2 spent for script execution,<nl />"
-                      "- %3 spent waiting for signals (eg. asynchronous network requests),<nl />"
-                      "- %4 interrupted",
-                      QTime::currentTime().toString(),
-                      KGlobal::locale()->formatDuration(scriptRunData.executionTime()),
-                      KGlobal::locale()->formatDuration(scriptRunData.signalWaitingTime()),
-                      KGlobal::locale()->formatDuration(scriptRunData.interruptTime()))
-                + "<br />" );
-    }
     updateWindowTitle();
-}
-
-void TimetableMate::waitingForSignal()
-{
-    if ( m_projectModel->activeProject() ) {
-        m_projectModel->activeProject()->appendOutput(
-                i18nc("@info", "<emphasis strong='1'>Waiting for a signal</emphasis> (%1)",
-                      QTime::currentTime().toString()) );
-    }
-}
-
-void TimetableMate::wokeUpFromSignal( int time )
-{
-    if ( m_projectModel->activeProject() ) {
-        m_projectModel->activeProject()->appendOutput(
-                i18nc("@info", "<emphasis strong='1'>Signal received, waiting time: %1</emphasis> (%2)",
-                      KGlobal::locale()->formatDuration(time), QTime::currentTime().toString()) );
-    }
 }
 
 void TimetableMate::testStarted()
@@ -1386,12 +1325,6 @@ void TimetableMate::uncaughtException( int lineNumber, const QString &errorMessa
 {
     infoMessage( i18nc("@info", "Uncaught exception at %1: <message>%2</message>",
                        lineNumber, errorMessage), KMessageWidget::Error, -1 );
-    if ( m_projectModel->activeProject() ) {
-        m_projectModel->activeProject()->appendOutput(
-                i18nc("@info For the script output dock",
-                      "<emphasis strong='1'>Uncaught exception at %1:</emphasis><message>%2</message>",
-                      lineNumber, errorMessage) );
-    }
 }
 
 void TimetableMate::fileNew()

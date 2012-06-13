@@ -236,7 +236,8 @@ public:
         q->connect( debugger, SIGNAL(interrupted()), q, SLOT(debugInterrupted()) );
         q->connect( debugger, SIGNAL(continued(bool)), q, SLOT(debugContinued()) );
         q->connect( debugger, SIGNAL(started()), q, SLOT(debugStarted()) );
-        q->connect( debugger, SIGNAL(stopped()), q, SLOT(debugStopped()) );
+        q->connect( debugger, SIGNAL(stopped(ScriptRunData)), q, SLOT(debugStopped(ScriptRunData)) );
+        q->connect( debugger, SIGNAL(aborted()), q, SLOT(debugAborted()) );
         q->connect( debugger, SIGNAL(informationMessage(QString)), q, SIGNAL(informationMessage(QString)) );
         q->connect( debugger, SIGNAL(errorMessage(QString)), q, SLOT(emitErrorMessage(QString)) );
         q->connect( debugger, SIGNAL(loadScriptResult(ScriptErrorType,QString)),
@@ -247,6 +248,14 @@ public:
                     q, SLOT(scriptOutput(QString,QScriptContextInfo)) );
         q->connect( debugger, SIGNAL(scriptErrorReceived(QString,QScriptContextInfo,QString)),
                     q, SLOT(scriptErrorReceived(QString,QScriptContextInfo,QString)) );
+        q->connect( debugger, SIGNAL(exception(int,QString)),
+                    q, SLOT(scriptException(int,QString)) );
+        q->connect( debugger, SIGNAL(evaluationResult(EvaluationResult)),
+                    q, SLOT(evaluationResult(EvaluationResult)) );
+        q->connect( debugger, SIGNAL(commandExecutionResult(QString)),
+                    q, SLOT(commandExecutionResult(QString)) );
+        q->connect( debugger, SIGNAL(waitingForSignal()), q, SLOT(waitingForSignal()) );
+        q->connect( debugger, SIGNAL(wokeUpFromSignal(int)), q, SLOT(wokeUpFromSignal(int)) );
 
         state = Project::NoProjectLoaded;
         return true;
@@ -909,7 +918,9 @@ public:
         case ActivateProjectForDebugging:
             message = i18nc("@info", "Docks like <interface>Variables</interface>, "
                             "<interface>Backtrace</interface> or <interface>Output</interface> "
-                            "only show data for the active project.<nl />"
+                            "only show data for the active project. Toolbar/menu actions only "
+                            "control the active project, but the project context menu can be used "
+                            "to eg. control the debugger of an inactive project.<nl />"
                             "Do you want to make this project active now?");
             dontAskAgainName = "make_project_active_for_debugging";
             break;
@@ -937,8 +948,6 @@ public:
         if ( !askForProjectActivation(ActivateProjectForDebugging) ) {
             return;
         }
-
-        q->showScriptTab();
 
         const QString &text = q->scriptText();
         debugger->loadScript( text, provider->data() );
@@ -1481,8 +1490,9 @@ public:
     TestState testState;
     QList< ThreadWeaver::Job* > pendingTests;
 
-    // Collects output for the project
+    // Collects output/console text for the project
     QString output;
+    QString consoleText;
 
 private:
     Project *q_ptr;
@@ -1515,7 +1525,6 @@ QString Project::output() const
 void Project::clearOutput()
 {
     Q_D( Project );
-    kDebug() << "CLEAR OUTPUT";
     d->output.clear();
     emit outputChanged( QString() );
 }
@@ -1523,7 +1532,13 @@ void Project::clearOutput()
 void Project::appendOutput( const QString &output )
 {
     Q_D( Project );
-    d->output.append( "<br />" + output );
+    if ( output.isEmpty() ) {
+        return;
+    }
+    if ( !d->output.isEmpty() ) {
+        d->output.append( "<br />" );
+    }
+    d->output.append( output );
     emit outputChanged( d->output );
 }
 
@@ -1540,6 +1555,53 @@ void Project::scriptErrorReceived( const QString &errorMessage,
     Q_UNUSED( failedParseText );
     appendOutput( i18nc("@info", "<emphasis strong='1'>Error in line %1:</emphasis> <message>%2</message>",
                         context.lineNumber(), errorMessage) );
+}
+
+QString Project::consoleText() const
+{
+    Q_D( const Project );
+    return d->consoleText;
+}
+
+void Project::clearConsoleText()
+{
+    Q_D( Project );
+    d->consoleText.clear();
+    emit consoleTextChanged( QString() );
+}
+
+void Project::appendToConsole( const QString &text )
+{
+    Q_D( Project );
+    if ( text.isEmpty() ) {
+        return;
+    }
+    if ( !d->consoleText.isEmpty() ) {
+        d->consoleText.append( "<br />" );
+    }
+    d->consoleText.append( text );
+    emit consoleTextChanged( d->consoleText );
+}
+
+void Project::commandExecutionResult( const QString &returnValue, bool error )
+{
+    Q_UNUSED( error );
+    appendToConsole( returnValue );
+}
+
+void Project::evaluationResult( const EvaluationResult &result )
+{
+    if ( result.error ) {
+        if ( result.backtrace.isEmpty() ) {
+            appendToConsole( i18nc("@info", "Error: <message>%1</message>", result.errorMessage) );
+        } else {
+            appendToConsole( i18nc("@info", "Error: <message>%1</message><nl />"
+                                   "Backtrace: <message>%2</message>",
+                                   result.errorMessage, result.backtrace.join("<br />")) );
+        }
+    } else {
+        appendToConsole( result.returnValue.toString() );
+    }
 }
 
 Project::State Project::state() const
@@ -2327,9 +2389,7 @@ void Project::showScriptLineNumber( int lineNumber )
         return;
     }
 
-    if ( !d->scriptTab ) {
-        showScriptTab();
-    }
+    showScriptTab();
     d->scriptTab->document()->views().first()->setCursorPosition(
             KTextEditor::Cursor(lineNumber - 1, 0) );
 }
@@ -2736,8 +2796,17 @@ void Project::functionCallResult( const QSharedPointer< AbstractRequest > &reque
                                   const QScriptValue &returnValue )
 {
     Q_UNUSED( request );
-    Q_UNUSED( timetableData );
-    Q_UNUSED( returnValue );
+    if ( timetableData.isEmpty() ) {
+        appendOutput( i18nc("@info",
+                "Script execution has finished without results and returned <icode>%1</icode>.",
+                returnValue.toString()) );
+    } else {
+        appendOutput( i18ncp("@info",
+                "Script execution has finished with %1 result and returned <icode>%2</icode>.",
+                "Script execution has finished with %1 results and returned <icode>%2</icode>.",
+                timetableData.count(), returnValue.toString()) );
+    }
+
     if ( !success ) {
         // Emit an information message about the error (no syntax errors here)
         emit informationMessage( explanation, KMessageWidget::Error, 10000 );
@@ -2950,29 +3019,29 @@ void Project::debugInterrupted()
     Q_D( Project );
     kDebug() << "Interrupted";
 
-    // Move cursor position
-    ScriptTab *tab = scriptTab();
+    // Show script tab and ask to activate the project if it's not already active
+    ScriptTab *tab = showScriptTab();
+    d->askForProjectActivation( ProjectPrivate::ActivateProjectForDebugging );
 
-    if ( tab ) {
-        KTextEditor::View *view = tab->document()->activeView();
-        view->blockSignals( true );
-        view->setCursorPosition( KTextEditor::Cursor(d->debugger->lineNumber() - 1,
-                                                     d->debugger->columnNumber()) );
-        view->blockSignals( false );
+    // Move cursor position to interrupt line
+    KTextEditor::View *view = tab->document()->activeView();
+    view->blockSignals( true );
+    view->setCursorPosition( KTextEditor::Cursor(d->debugger->lineNumber() - 1,
+                                                    d->debugger->columnNumber()) );
+    view->blockSignals( false );
 
-        // Move execution mark
-        KTextEditor::MarkInterface *markInterface =
-                qobject_cast<KTextEditor::MarkInterface*>( tab->document() );
-        if ( !markInterface ) {
-            kDebug() << "Cannot mark current execution line, no KTextEditor::MarkInterface";
-        } else if ( d->executionLine != d->debugger->lineNumber() - 1 ) {
-            if ( d->executionLine != -1 ) {
-                markInterface->removeMark( d->executionLine, KTextEditor::MarkInterface::Execution );
-            }
-            if ( d->debugger->lineNumber() != -1 ) {
-                d->executionLine = d->debugger->lineNumber() - 1;
-                markInterface->addMark( d->executionLine, KTextEditor::MarkInterface::Execution );
-            }
+    // Move execution mark
+    KTextEditor::MarkInterface *markInterface =
+            qobject_cast<KTextEditor::MarkInterface*>( tab->document() );
+    if ( !markInterface ) {
+        kDebug() << "Cannot mark current execution line, no KTextEditor::MarkInterface";
+    } else if ( d->executionLine != d->debugger->lineNumber() - 1 ) {
+        if ( d->executionLine != -1 ) {
+            markInterface->removeMark( d->executionLine, KTextEditor::MarkInterface::Execution );
+        }
+        if ( d->debugger->lineNumber() != -1 ) {
+            d->executionLine = d->debugger->lineNumber() - 1;
+            markInterface->addMark( d->executionLine, KTextEditor::MarkInterface::Execution );
         }
     }
 
@@ -3014,18 +3083,30 @@ void Project::debugStarted()
     d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
                                                       << DebuggerActionGroup );
 
+    appendOutput( i18nc("@info", "<emphasis strong='1'>Execution started</emphasis> (%1)",
+                        QTime::currentTime().toString()) );
     if ( d->scriptTab ) {
         d->scriptTab->slotTitleChanged();
     }
     emit debuggerRunningChanged( true );
 }
 
-void Project::debugStopped()
+void Project::debugStopped( const ScriptRunData &scriptRunData )
 {
     Q_D( Project );
     d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
                                                          << DebuggerActionGroup );
+    kDebug() << "STOPPED" << isDebuggerRunning();
 
+    appendOutput( i18nc("@info", "<emphasis strong='1'>Execution finished</emphasis> (%1)<nl />"
+                        "- %2 spent for script execution,<nl />"
+                        "- %3 spent waiting for signals (eg. asynchronous network requests),<nl />"
+                        "- %4 interrupted",
+                        QTime::currentTime().toString(),
+                        KGlobal::locale()->formatDuration(scriptRunData.executionTime()),
+                        KGlobal::locale()->formatDuration(scriptRunData.signalWaitingTime()),
+                        KGlobal::locale()->formatDuration(scriptRunData.interruptTime()))
+                  + "<br />" );
     if ( d->scriptTab ) {
         d->scriptTab->slotTitleChanged();
     }
@@ -3041,6 +3122,32 @@ void Project::debugStopped()
         }
     }
     emit debuggerRunningChanged( false );
+}
+
+void Project::debugAborted()
+{
+    appendOutput( i18nc("@info", "(Debugger aborted)") );
+}
+
+void Project::waitingForSignal()
+{
+    appendOutput( i18nc("@info", "<emphasis strong='1'>Waiting for a signal</emphasis> (%1)",
+                        QTime::currentTime().toString()) );
+}
+
+void Project::wokeUpFromSignal( int time )
+{
+    appendOutput( i18nc("@info", "<emphasis strong='1'>Signal received, waiting time: %1</emphasis> (%2)",
+                        KGlobal::locale()->formatDuration(time), QTime::currentTime().toString()) );
+
+}
+
+void Project::scriptException( int lineNumber, const QString &errorMessage )
+{
+    appendOutput( i18nc("@info For the script output dock",
+                        "<emphasis strong='1'>Uncaught exception at %1:</emphasis><message>%2</message>",
+                        lineNumber, errorMessage) );
+    showScriptTab();
 }
 
 QString Project::scriptFileName() const

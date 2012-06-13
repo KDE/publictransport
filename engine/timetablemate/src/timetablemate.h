@@ -67,7 +67,6 @@ namespace Scripting {
 };
 namespace Debugger {
     class Breakpoint;
-    class ScriptRunData;
 }
 
 namespace KParts {
@@ -220,10 +219,7 @@ protected slots:
     void debugStarted();
 
     /** @brief Script execution stopped in the currently active project. */
-    void debugStopped( const ScriptRunData &scriptRunData );
-
-    void waitingForSignal();
-    void wokeUpFromSignal( int time );
+    void debugStopped();
 
     /** @brief Script execution was aborted in the currently active project. */
     void debugAborted();
@@ -242,9 +238,6 @@ protected slots:
 
     /** @brief Toggle breakpoint at the current line in the script tab of the current project, if any. */
     void toggleBreakpoint();
-
-    void functionCallResult( const QList< TimetableData > &timetableData,
-                             const QScriptValue &returnValue );
 
     void removeTopMessageWidget();
     void tabNextActionTriggered();

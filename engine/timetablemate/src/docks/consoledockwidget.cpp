@@ -101,13 +101,20 @@ void ConsoleDockWidget::activeProjectAboutToChange( Project *project, Project *p
                     this, SLOT(evaluationResult(EvaluationResult)) );
         disconnect( previousProject->debugger(), SIGNAL(commandExecutionResult(QString)),
                     this, SLOT(commandExecutionResult(QString)) );
+        disconnect( previousProject, SIGNAL(consoleTextChanged(QString)),
+                    this, SLOT(consoleTextChanged(QString)) );
     }
 
     if ( project ) {
+        m_consoleWidget->document()->setHtml( project->consoleText() );
         connect( project->debugger(), SIGNAL(evaluationResult(EvaluationResult)),
                  this, SLOT(evaluationResult(EvaluationResult)) );
         connect( project->debugger(), SIGNAL(commandExecutionResult(QString)),
                  this, SLOT(commandExecutionResult(QString)) );
+        connect( project, SIGNAL(consoleTextChanged(QString)),
+                 this, SLOT(consoleTextChanged(QString)) );
+    } else {
+        m_consoleWidget->clear();
     }
 }
 
@@ -211,24 +218,13 @@ void ConsoleDockWidget::commandEntered( const QString &_commandString )
 
 void ConsoleDockWidget::evaluationResult( const EvaluationResult &result )
 {
-    if ( result.error ) {
-        if ( result.backtrace.isEmpty() ) {
-            appendToConsole( i18nc("@info", "Error: <message>%1</message>", result.errorMessage) );
-        } else {
-            appendToConsole( i18nc("@info", "Error: <message>%1</message><nl />"
-                                   "Backtrace: <message>%2</message>",
-                                   result.errorMessage, result.backtrace.join("<br />")) );
-        }
-    } else {
-        m_consoleWidget->appendHtml( result.returnValue.toString() );
-    }
-
+    Q_UNUSED( result );
     setState( WaitingForInput );
 }
 
 void ConsoleDockWidget::commandExecutionResult( const QString &text )
 {
-    appendToConsole( text );
+    Q_UNUSED( text );
     setState( WaitingForInput );
 }
 
@@ -236,14 +232,18 @@ void ConsoleDockWidget::cancelEvaluation()
 {
     if ( m_projectModel->activeProject() ) {
         m_projectModel->activeProject()->debugger()->abortDebugger();
-        appendToConsole( i18nc("@info", "(Debugger aborted)") );
     }
+}
+
+void ConsoleDockWidget::consoleTextChanged( const QString &consoleText )
+{
+    m_consoleWidget->document()->setHtml( consoleText );
 }
 
 void ConsoleDockWidget::appendToConsole( const QString &text )
 {
-    if ( !text.isEmpty() ) {
-        m_consoleWidget->appendHtml( text );
+    if ( m_projectModel->activeProject() ) {
+        m_projectModel->activeProject()->appendToConsole( text );
     }
 }
 
