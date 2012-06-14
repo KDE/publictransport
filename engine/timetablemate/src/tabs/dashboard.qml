@@ -17,7 +17,8 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-import QtQuick 1.0
+import QtQuick 1.1
+
 import org.kde.plasma.core 0.1 as PlasmaCore
 import org.kde.plasma.graphicswidgets 0.1 as PlasmaWidgets
 import org.kde.plasma.components 0.1 as PlasmaComponents
@@ -26,10 +27,57 @@ import TimetableMate 1.0
 // Root element, size set to viewport size (in C++, QDeclarativeView)
 Item { id: root
 
+property int maxCompactWidth: 400
+property int maxNoFrameWidth: 600
+property int padding: 0
+
+state: "Default"
+states: [
+    // No jumps allowed between "Default" state and "Compact" state
+    State { id: defaultState; name: "Default"
+        PropertyChanges { target: root; padding: background.offset }
+        PropertyChanges { target: background; opacity: 1.0 }
+    },
+    State { id: noFrameState; name: "NoFrame"
+        PropertyChanges { target: root; padding: background.offset / 2 }
+        PropertyChanges { target: projectInfo; wrap: false }
+        PropertyChanges { target: background; opacity: 0.0 }
+        PropertyChanges { target: icon; opacity: 1.0 }
+    },
+    State { id: compactState; name: "Compact"
+        PropertyChanges { target: root; padding: 3 }
+        PropertyChanges { target: projectInfo; wrap: true }
+        PropertyChanges { target: icon; opacity: 0.0 }
+    }
+]
+
+Component.onCompleted: state = width > maxNoFrameWidth ? "Default"
+        : (width > maxCompactWidth ? "NoFrame" : "Compact")
+
+// Switch to different layout states for different widths
+onWidthChanged: {
+    switch ( state ) {
+    case "Compact":
+        if ( width > maxCompactWidth + 10 )
+            state = "NoFrame"
+        break;
+    case "NoFrame":
+        if ( width > maxNoFrameWidth )
+            state = "Default"
+        else if ( width < maxCompactWidth )
+            state = "Compact"
+        break;
+    case "Default":
+    default:
+        if ( width < maxNoFrameWidth )
+            state = "NoFrame"
+        break;
+    }
+}
+
 // A toolbar with some project actions
 PlasmaComponents.ToolBar { id: mainToolBar
     anchors { left: root.left; right: root.right; top: root.top }
-    height: mainToolBarLayout.implicitHeight
     tools: Flow { id: mainToolBarLayout
         Component.onCompleted: {
             // Turn on text for all child ToolButtons
@@ -49,8 +97,14 @@ PlasmaComponents.ToolBar { id: mainToolBar
 
     state: "Shown"
     states: [
-        State { name: "Shown"; PropertyChanges { target: mainToolBar; opacity: 1 } },
-        State { name: "Hidden"; PropertyChanges { target: mainToolBar; opacity: 0 } }
+        State { name: "Shown";
+            PropertyChanges { target: mainToolBar; opacity: 1 }
+            PropertyChanges { target: flickable; anchors.top: mainToolBar.bottom }
+        },
+        State { name: "Hidden";
+            PropertyChanges { target: mainToolBar; opacity: 0 }
+            PropertyChanges { target: flickable; anchors.top: root.top }
+        }
     ]
 }
 
@@ -58,39 +112,45 @@ Flickable { id: flickable
     boundsBehavior: Flickable.StopAtBounds // More desktop-like behavior
     z: 100
     clip: true // Hide contents under the toolbar (not blurred => hard to read)
-    anchors { left: root.left;
+    anchors { left: root.left
               right: verticalScrollBar.left
-              top: mainToolBar.state == "Shown" ? mainToolBar.bottom : root.top;
+              top: mainToolBar.bottom // FIXME anchor loop, if mainToolBar changes it's height
               bottom: horizontalScrollBar.top
-              margins: 5 }
-    contentWidth: container.width
-    contentHeight: container.height
+              margins: 3 }
+    contentWidth: container.width + 2 * root.padding
+    contentHeight: container.height + 2 * root.padding
 
+    Item { id: content
+    PlasmaCore.FrameSvgItem { id: background
+        imagePath: "widgets/translucentbackground"
+        x: container.x - (visible ? offset : 0)
+        y: container.y - (visible ? offset : 0)
+        z: 0 // Put to the background
+        width: container.width + (visible ? 2 * offset : 0)
+        height: container.height + (visible ? 2 * offset : 0)
+
+        property int offset: 25
+        Behavior on opacity { PropertyAnimation{} }
+    }
     // The main element, containing a title with an icon, a set of buttons connected to
     // project actions and a set of informations about the projects
     Column { id: container
         spacing: 5
-        anchors.margins: 5
-        width: allowedWidth( flickable.width, 0 ) // Math.max( minWidth, Math.min(maxWidth, root.width - 20) )
-        x: Math.max( 0, (flickable.width - width) / 2 ) // anchors.centerIn does not work in Flickable
-        y: Math.max( 0, (flickable.height - height) / 2 )
+        z: 50
+        clip: true // clips eg. long links (links don't break)
         move: Transition { NumberAnimation { properties: "x,y" } }
+        width: container.allowedWidth( flickable.width - 2 * root.padding )
+        x: Math.max( root.padding, (flickable.width - container.width) / 2 )
+        y: Math.max( root.padding, (flickable.height - container.height) / 2 )
 
         Behavior on x { PropertyAnimation{} }
         Behavior on y { PropertyAnimation{} }
 
-        property bool compact: false
-        property int maxCompactWidth: 400
         property int minWidth: 200
         property int maxWidth: 600
 
-        // Switch to compact layout, when width gets too small
-        onWidthChanged: compact = width <= maxCompactWidth
-
-        // Toggle icon display when compact mode changed
-        onCompactChanged: icon.opacity = compact ? 0.0 : 1.0
-
         function allowedWidth( width, offset ) {
+            if ( offset === undefined ) offset = 0 // Default value for offset argument
             return Math.max( minWidth - offset, Math.min(maxWidth - offset, width) );
         }
 
@@ -210,7 +270,7 @@ Flickable { id: flickable
                     : container.allowedWidth( parent.width - spacing - labelWidth, 50 )
 
             // Whether or not fields get wrapped to the next row after their labels
-            property bool wrap: parent.compact
+            property bool wrap: false // parent.compact
 
             // When wrapped, align text in labels left, otherwise right
             onWrapChanged: {
@@ -348,21 +408,36 @@ Flickable { id: flickable
 //                 readOnly: false // TODO
 //                 text: info.notes; width: parent.fieldWidth }
         }
-    }
-} // Flickable
 
-// Horizontal/vertical scroll bars
-PlasmaComponents.ScrollBar { id: horizontalScrollBar
-    flickableItem: flickable; orientation: Qt.Horizontal
-    height: visible ? implicitHeight : 0
-    anchors { left: flickable.left; right: flickable.right
-              bottom: root.bottom; topMargin: 5 }
+    } // container
+    }
+} // flickable
+
+// Background gradient
+Rectangle { id: gradient
+    anchors.centerIn: flickable
+    width: Math.max(flickable.width, flickable.height) * 1.5; height: width
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: "white"; }
+        GradientStop { position: 1.0; color: "#d8e8c2"; } // Oxygen "forest green1"
+    }
+    rotation: -45.0
 }
+
+// Vertical scroll bar
 PlasmaComponents.ScrollBar { id: verticalScrollBar
     flickableItem: flickable; orientation: Qt.Vertical
     width: visible ? implicitWidth : 0
     anchors { top: flickable.top; bottom: flickable.bottom
               right: root.right; leftMargin: 5 }
+}
+
+// Horizontal scroll bar (only visible on very small width in compact mode)
+PlasmaComponents.ScrollBar { id: horizontalScrollBar
+    flickableItem: flickable; orientation: Qt.Horizontal
+    height: visible ? implicitHeight : 0
+    anchors { left: flickable.left; right: flickable.right
+              bottom: root.bottom; topMargin: 5 }
 }
 
 } // root Item
