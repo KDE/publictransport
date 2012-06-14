@@ -182,52 +182,52 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     currentAlarmChanged( m_uiAlarms.alarms->currentIndex() );
 
     // Connect all widgets with the changed() slot, that enables the apply button
-    connect( m_stopListWidget, SIGNAL( changed( int, StopSettings ) ), this, SLOT( changed() ) );
-    connect( m_stopListWidget, SIGNAL( added( QWidget * ) ), this, SLOT( changed() ) );
-    connect( m_stopListWidget, SIGNAL( removed( QWidget *, int ) ), this, SLOT( changed() ) );
-    connect( m_uiAdvanced.maximalNumberOfDepartures, SIGNAL( valueChanged( int ) ), this, SLOT( changed() ) );
-    connect( m_uiAdvanced.showArrivals, SIGNAL( toggled( bool ) ), this, SLOT( changed() ) );
-    connect( m_uiAdvanced.showDepartures, SIGNAL( toggled( bool ) ), this, SLOT( changed() ) );
-    connect( m_uiAdvanced.updateAutomatically, SIGNAL( stateChanged( int ) ), this, SLOT( changed() ) );
-    connect( m_uiAlarms.affectedStops, SIGNAL( checkedItemsChanged() ), this, SLOT( changed() ) );
-    connect( m_uiAlarms.alarmFilter, SIGNAL( changed() ), this, SLOT( changed() ) );
-    connect( m_uiAlarms.alarmType, SIGNAL( currentIndexChanged( int ) ), this, SLOT( changed() ) );
-    connect( m_uiFilter.affectedStops, SIGNAL( checkedItemsChanged() ), this, SLOT( changed() ) );
-    connect( m_uiFilter.filterAction, SIGNAL( currentIndexChanged( int ) ), this, SLOT( changed() ) );
-    connect( m_uiFilter.filters, SIGNAL( changed() ), this, SLOT( changed() ) );
-    connect( m_uiAppearance.shadow, SIGNAL( stateChanged( int ) ), this, SLOT( changed() ) );
-    connect( m_uiAppearance.cmbDepartureColumnInfos, SIGNAL( currentIndexChanged( int ) ), this, SLOT( changed() ) );
-    connect( m_uiAppearance.colorize, SIGNAL( stateChanged( int ) ), this, SLOT( changed() ) );
-    connect( m_uiAppearance.displayTimeBold, SIGNAL( stateChanged( int ) ), this, SLOT( changed() ) );
-    connect( m_uiAppearance.font, SIGNAL( currentFontChanged( QFont ) ), this, SLOT( changed() ) );
-    connect( m_uiAppearance.linesPerRow, SIGNAL( valueChanged( int ) ), this, SLOT( changed() ) );
-    connect( m_uiAppearance.size, SIGNAL( valueChanged( int ) ), this, SLOT( changed() ) );
-    connect( m_uiAppearance.radioUseDefaultFont, SIGNAL( toggled( bool ) ), this, SLOT( changed() ) );
-    connect( m_uiAppearance.radioUseOtherFont, SIGNAL( toggled( bool ) ), this, SLOT( changed() ) );
+    connect( m_stopListWidget, SIGNAL(changed(int,StopSettings)), this, SLOT(changed()) );
+    connect( m_stopListWidget, SIGNAL(added(QWidget*)), this, SLOT(changed()) );
+    connect( m_stopListWidget, SIGNAL(removed(QWidget*,int)), this, SLOT(changed()) );
+    connect( m_uiAdvanced.maximalNumberOfDepartures, SIGNAL(valueChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAdvanced.showArrivals, SIGNAL(toggled(bool)), this, SLOT(changed()) );
+    connect( m_uiAdvanced.showDepartures, SIGNAL(toggled(bool)), this, SLOT(changed()) );
+    connect( m_uiAdvanced.updateAutomatically, SIGNAL(stateChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()), this, SLOT(changed()) );
+    connect( m_uiAlarms.alarmFilter, SIGNAL(changed()), this, SLOT(changed()) );
+    connect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)), this, SLOT(changed()) );
+    connect( m_uiFilter.affectedStops, SIGNAL(checkedItemsChanged()), this, SLOT(changed()) );
+    connect( m_uiFilter.filterAction, SIGNAL(currentIndexChanged(int)), this, SLOT(changed()) );
+    connect( m_uiFilter.filters, SIGNAL(changed()), this, SLOT(changed()) );
+    connect( m_uiAppearance.shadow, SIGNAL(stateChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.cmbDepartureColumnInfos, SIGNAL(currentIndexChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.colorize, SIGNAL(stateChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.displayTimeBold, SIGNAL(stateChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.font, SIGNAL(currentFontChanged(QFont)), this, SLOT(changed()) );
+    connect( m_uiAppearance.linesPerRow, SIGNAL(valueChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.size, SIGNAL(valueChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAppearance.radioUseDefaultFont, SIGNAL(toggled(bool)), this, SLOT(changed()) );
+    connect( m_uiAppearance.radioUseOtherFont, SIGNAL(toggled(bool)), this, SLOT(changed()) );
 
-    m_uiAlarms.addAlarm->setIcon( KIcon( "list-add" ) );
-    m_uiAlarms.removeAlarm->setIcon( KIcon( "list-remove" ) );
-    m_uiAlarms.renameAlarm->setIcon( KIcon( "edit-rename" ) );
+    m_uiAlarms.addAlarm->setIcon( KIcon("list-add") );
+    m_uiAlarms.removeAlarm->setIcon( KIcon("list-remove") );
+    m_uiAlarms.renameAlarm->setIcon( KIcon("edit-rename") );
 
-    m_uiFilter.addFilterConfiguration->setIcon( KIcon( "list-add" ) );
-    m_uiFilter.removeFilterConfiguration->setIcon( KIcon( "list-remove" ) );
-    m_uiFilter.renameFilterConfiguration->setIcon( KIcon( "edit-rename" ) );
+    m_uiFilter.addFilterConfiguration->setIcon( KIcon("list-add") );
+    m_uiFilter.removeFilterConfiguration->setIcon( KIcon("list-remove") );
+    m_uiFilter.renameFilterConfiguration->setIcon( KIcon("edit-rename") );
 
-    connect( m_configDialog, SIGNAL( finished() ), this, SLOT( configFinished() ) );
-    connect( m_configDialog, SIGNAL( okClicked() ), this, SLOT( configAccepted() ) );
-    connect( m_configDialog, SIGNAL( applyClicked() ), this, SLOT( configAccepted() ) );
+    connect( m_configDialog, SIGNAL(finished()), this, SLOT(configFinished()) );
+    connect( m_configDialog, SIGNAL(okClicked()), this, SLOT(configAccepted()) );
+    connect( m_configDialog, SIGNAL(applyClicked()), this, SLOT(configAccepted()) );
 
-    connect( m_uiFilter.filterAction, SIGNAL( currentIndexChanged( int ) ),
-             this, SLOT( filterActionChanged( int ) ) );
+    connect( m_uiFilter.filterAction, SIGNAL(currentIndexChanged(int)),
+             this, SLOT( filterActionChanged(int) ) );
 
-    connect( m_uiFilter.filterConfigurations, SIGNAL( currentIndexChanged( QString ) ),
-             this, SLOT( loadFilterConfiguration( QString ) ) );
-    connect( m_uiFilter.addFilterConfiguration, SIGNAL( clicked() ),
-             this, SLOT( addFilterConfiguration() ) );
-    connect( m_uiFilter.removeFilterConfiguration, SIGNAL( clicked() ),
-             this, SLOT( removeFilterConfiguration() ) );
-    connect( m_uiFilter.renameFilterConfiguration, SIGNAL( clicked() ),
-             this, SLOT( renameFilterConfiguration() ) );
+    connect( m_uiFilter.filterConfigurations, SIGNAL(currentIndexChanged(QString)),
+             this, SLOT(loadFilterConfiguration(QString)) );
+    connect( m_uiFilter.addFilterConfiguration, SIGNAL(clicked()),
+             this, SLOT(addFilterConfiguration() ) );
+    connect( m_uiFilter.removeFilterConfiguration, SIGNAL(clicked()),
+             this, SLOT(removeFilterConfiguration() ) );
+    connect( m_uiFilter.renameFilterConfiguration, SIGNAL(clicked()),
+             this, SLOT(renameFilterConfiguration() ) );
 }
 
 void SettingsUiManager::changed()
