@@ -10,7 +10,7 @@
     <url>http://www.dvb.de/</url>
     <shortUrl>www.dvb.de</shortUrl>
     <fallbackCharset>latin1</fallbackCharset>
-    <script extensions="">de_dvb.js</script>
+    <script>de_dvb.js</script>
     <cities>
         <city>Dresden</city>
     </cities>

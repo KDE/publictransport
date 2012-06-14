@@ -9,7 +9,7 @@
     </author>
     <url>http://www.sbb.ch</url>
     <shortUrl>www.sbb.ch</shortUrl>
-    <script extensions="">ch_sbb.js</script>
+    <script>ch_sbb.js</script>
     <changelog>
         <entry since="1.5" releasedWith="0.10">Update to new script API, construct URLs in the script itself.</entry>
         <entry since="1.4" releasedWith="0.10">Updated to new website layout for journeys.</entry>

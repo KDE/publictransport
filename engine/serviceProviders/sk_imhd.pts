@@ -12,7 +12,7 @@
     <url>http://www.imhd.zoznam.sk/ba/</url>
     <shortUrl>www.imhd.zoznam.sk</shortUrl>
     <charsetForUrlEncoding>windows-1250</charsetForUrlEncoding>
-    <script extensions="">sk_imhd.js</script>
+    <script>sk_imhd.js</script>
     <cities>
         <city replaceWith="ba">Bratislava</city>
         <city replaceWith="bb">Banská Bystrica</city>

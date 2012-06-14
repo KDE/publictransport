@@ -11,7 +11,7 @@
     <url>http://www.rejseplanen.dk</url>
     <shortUrl>www.rejseplanen.dk</shortUrl>
     <fallbackCharset>latin1</fallbackCharset>
-    <script extensions="">dk_rejseplanen.js</script>
+    <script>dk_rejseplanen.js</script>
     <changelog>
         <entry since="1.0" releasedWith="0.6.3">Initial version.</entry>
         <entry since="1.1" releasedWith="0.10">Updated to new website layout, making it pass the unit test.</entry>

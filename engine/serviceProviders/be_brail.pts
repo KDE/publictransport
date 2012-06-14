@@ -10,7 +10,7 @@
     </author>
     <url>http://www.b-rail.be</url>
     <shortUrl>www.b-rail.be</shortUrl>
-    <script extensions="">be_brail.js</script>
+    <script>be_brail.js</script>
     <changelog>
         <entry since="1.0" releasedWith="0.6.3">Initial version.</entry>
         <entry since="1.1" releasedWith="0.7">Corrected the url for favicons.</entry>

@@ -11,7 +11,7 @@
     <onlyUseCitiesInList>true</onlyUseCitiesInList>
     <url>http://jizdnirady.idnes.cz/vlakyautobusy/spojeni</url>
     <shortUrl>jizdnirady.idnes.cz</shortUrl>
-    <script extensions="">cz_idnes.js</script>
+    <script>cz_idnes.js</script>
     <cities>
         <city replaceWith="autobusy">Autobusy</city>
         <city replaceWith="letadla">Letadla</city>

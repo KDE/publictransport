@@ -9,7 +9,7 @@
     </author>
     <url>http://www.nasa.de/</url>
     <shortUrl>www.nasa.de</shortUrl>
-    <script extensions="">de_nasa.js</script>
+    <script>de_nasa.js</script>
     <cities>
         <city>Leipzig</city>
         <city>Halle</city>

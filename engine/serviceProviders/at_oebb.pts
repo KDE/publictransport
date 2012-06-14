@@ -11,7 +11,7 @@
     <url>http://www.oebb.at/</url>
     <shortUrl>www.oebb.at</shortUrl>
     <fallbackCharset>latin1</fallbackCharset>
-    <script extensions="">at_oebb.js</script>
+    <script>at_oebb.js</script>
     <changelog>
         <entry version="1.0" engineVersion="0.5.2">Initial version.</entry>
         <entry version="1.1" engineVersion="0.10">Better stop suggestion support, faster by requiring less data to be transfered, added stop weights.</entry>

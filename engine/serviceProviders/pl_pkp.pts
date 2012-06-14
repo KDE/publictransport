@@ -9,7 +9,7 @@
     </author>
     <url>http://rozklad-pkp.pl/?q=en/node/143</url>
     <shortUrl>rozklad-pkp.pl</shortUrl>
-    <script extensions="">pl_pkp.js</script>
+    <script>pl_pkp.js</script>
     <changelog>
         <entry since="1.0">Initial version.</entry>
         <entry since="1.2" releasedWith="0.10">Ported to a script.</entry>
