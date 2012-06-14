@@ -131,7 +131,9 @@ bool ServiceProviderDataWriter::write( QIODevice *device, const ServiceProvider 
     if( !data->scriptFileName().isEmpty() ) {
         // Write script file name without path (scripts are expected to be in the same path as the XML)
         writeStartElement( QLatin1String("script") );
-        writeAttribute( QLatin1String("extensions"), data->scriptExtensions().join(",") );
+        if ( !data->scriptExtensions().isEmpty() ) {
+            writeAttribute( QLatin1String("extensions"), data->scriptExtensions().join(",") );
+        }
         writeCharacters( QFileInfo(data->scriptFileName()).fileName() );
         writeEndElement(); // script
     }
