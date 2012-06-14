@@ -233,9 +233,10 @@ bool DebuggerAgent::executeCommand( const ConsoleCommand &command, QString *retu
                         ConsoleCommand::commandSyntax(commandType));
             } else {
                 // "help" command without arguments
-                *returnValue = i18nc("@info", "Available commands: %1<nl />"
-                        "Use <emphasis>.help</emphasis> with an argument to get more information about "
-                        "individual commands<nl />"
+                *returnValue = i18nc("@info", "Type a command beginning with a point ('.') or "
+                        "JavaScript code. Available commands: %1<nl />"
+                        "Use <emphasis>.help</emphasis> with an argument to get more information "
+                        "about individual commands<nl />"
                         "Syntax: %2", ConsoleCommand::availableCommands().join(", "),
                         ConsoleCommand::commandSyntax(command.command()) );
             }

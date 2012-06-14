@@ -212,8 +212,8 @@ bool ConsoleCommand::getsExecutedAutomatically() const
 
 QStringList ConsoleCommand::availableCommands()
 {
-    return QStringList() << "help" << "clear" << "debugger" << "debug" << "break" << "line"
-                         << "currentline";
+    return QStringList() << ".help" << ".clear" << ".debugger" << ".debug" << ".break" << ".line"
+                         << ".currentline";
 }
 
 QStringList ConsoleCommand::defaultCompletions()
