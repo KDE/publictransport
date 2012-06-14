@@ -25,6 +25,9 @@
 #include <KCmdLineArgs>
 #include <KAboutData>
 
+// Qt includes
+#include <QBuffer>
+
 static const char description[] =
     I18N_NOOP("A helper application to parse documentation from source files with classes exposed "
               "to scripts and generate HTML documentation and source files for code completion "
@@ -55,6 +58,8 @@ int main( int argc, char **argv )
                  "JavaScriptCompletionGeneric" );
     options.add( "input_script <argument>", ki18n("Scripting input file path."),
                  "../../../../engine/scripting.h" );
+    options.add( "input_engine <argument>", ki18n("Engine input file path."),
+                 "../../../../engine/publictransportdataengine.h" );
     options.add( "input_enum <argument>", ki18n("Engine enum file path."),
                  "../../../../engine/enums.h" );
     options.add( "silent", ki18n("Print out no warnings/debug messages.") );
@@ -68,6 +73,7 @@ int main( int argc, char **argv )
     const QString documentationOutputPath = args->isSet("out_doc")
             ? args->getOption("out_doc") : QDir::currentPath();
     const QString inputScriptFilePath = args->getOption("input_script");
+    const QString inputEngineFilePath = args->getOption("input_engine");
     const QString inputEnumFilePath = args->getOption("input_enum");
     const QString completionClassName = args->getOption("completion_class_name");
     const bool silent = args->isSet("silent");
@@ -86,6 +92,10 @@ int main( int argc, char **argv )
     if ( !QFile(inputScriptFilePath).exists() ) {
         qFatal( "The input file (--input_script) does not exist: %s",
                 inputScriptFilePath.toUtf8().data() );
+    }
+    if ( !QFile(inputEngineFilePath).exists() ) {
+        qFatal( "The input file (--input_engine) does not exist: %s",
+                inputEngineFilePath.toUtf8().data() );
     }
     if ( !QFile(inputEnumFilePath).exists() ) {
         qFatal( "The input file (--input_enum) does not exist: %s",
@@ -114,12 +124,34 @@ int main( int argc, char **argv )
     parser.addClass( Storage::staticMetaObject, "storage" );
     parser.parse();
 
+    // Extract "provider_infos_xml" section from the global documentation
+    QFile engineFile( inputEngineFilePath );
+    Comments engineComments;
+    if ( !engineFile.open(QIODevice::ReadOnly) ) {
+        qWarning() << "Could not open engine source file" << engineFile.errorString();
+    } else {
+        QByteArray data = engineFile.readAll();
+        engineFile.close();
+
+        const int startPos = data.indexOf( "@section provider_infos_xml" );
+        int endPos = data.indexOf( "@section", startPos + 27 );
+        if ( startPos == -1 ) {
+            qWarning() << "Did not find the section with the ID 'provider_infos_xml'";
+        } else {
+            if ( endPos == -1 ) {
+                endPos = data.length();
+            }
+
+            data = "/**\n" + data.mid( startPos, endPos - startPos - 1 ) + "\n*/\n";
+            QBuffer buffer( &data );
+            engineComments << DocumentationParser::parseGlobalDocumentation( &buffer );
+        }
+    }
+
     DocumentationParser parserEnum( inputEnumFilePath );
     parserEnum.addEnum( "TimetableInformation" );
     parserEnum.addEnum( "VehicleType" );
     parserEnum.parse();
-
-//     QList<EnumComment> enums = parserEnum.globalEnumComments();
 
     // Initialize generator
     qDebug() << "Initialize generators";
@@ -133,7 +165,8 @@ int main( int argc, char **argv )
 
     // Write HTML documentation files
     qDebug() << "Write HTML documentation files";
-    documentationGenerator.writeDocumentation( parser.classInformations(), parser.globalComments(),
+    documentationGenerator.writeDocumentation( parser.classInformations(),
+                                               parser.globalComments() << engineComments,
                                                parserEnum.globalEnumComments(),
                                                documentationOutputPath );
     return 0;

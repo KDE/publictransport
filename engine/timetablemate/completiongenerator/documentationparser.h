@@ -52,6 +52,8 @@ class DocumentationParser {
 public:
     DocumentationParser( const QString &sourceFilePath );
 
+    static Comments parseGlobalDocumentation( QIODevice *dev );
+
     /**
      * @brief Add class to be parsed.
      *
@@ -113,8 +115,9 @@ private:
     ParseResults parseDocumentation();
 
     // Returns the context, ie. name of the class/enum if currently in such such a declaration
-    ParseContext parseDocumentationBlock( QIODevice *dev, int *lineNumber,
-                                          const ParseContext &context, ParseResults *parseResults );
+    static ParseContext parseDocumentationBlock( QIODevice *dev, int *lineNumber,
+                                                 const ParseContext &context,
+                                                 ParseResults *parseResults );
 
     Methods getMethods( const QMetaObject &obj, const MethodComments &comments );
 

@@ -172,7 +172,7 @@ DocumentationParser::ParseResults DocumentationParser::parseDocumentation()
 
     // Open the source file
     QFile sourceFile( m_sourceFilePath );
-    if ( !sourceFile.open(QIODevice::ReadOnly) ) {
+    if ( !sourceFile.open(QIODevice::ReadOnly | QIODevice::Text) ) {
         qCritical() << "Could not open source file " << m_sourceFilePath;
         return result;
     }
@@ -188,9 +188,33 @@ DocumentationParser::ParseResults DocumentationParser::parseDocumentation()
     return result;
 }
 
+Comments DocumentationParser::parseGlobalDocumentation( QIODevice *dev )
+{
+    const bool closeAfterReading = !dev->isOpen();
+    if ( !dev->isOpen() && !dev->open(QIODevice::ReadOnly | QIODevice::Text) ) {
+        qCritical() << "Could not open source file:" << dev->errorString();
+        return Comments();
+    }
+
+    // Read source file line by line
+    int lineNumber = 0;
+    ParseContext context;
+    ParseResults results;
+    while ( !dev->atEnd() ) {
+        // Parse one block of documentation
+        context = parseDocumentationBlock( dev, &lineNumber, context, &results );
+    }
+
+    if ( closeAfterReading ) {
+        dev->close();
+    }
+    return results.globalComments;
+}
+
 void ParseInfo::startNewLine( const QString &line )
 {
     this->line = line;
+    this->line.replace( "\\<", "&lt;" ).replace( "\\>", "&gt;" );
     newComment = 0;
     lastCommentClosed = false;
     ++lineNumber;
