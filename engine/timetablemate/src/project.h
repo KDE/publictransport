@@ -316,36 +316,17 @@ public:
 
     /**
      * @brief Get all collected output for this project.
+     * @see appendOutput
      * @see clearOutput
      **/
     QString output() const;
 
     /**
-     * @brief Add @p output to the projects output.
-     * @see output
-     **/
-    void appendOutput( const QString &output );
-
-    /**
-     * @brief Clear collected output.
-     * @see output
-     **/
-    void clearOutput();
-
-    /**
      * @brief Get all collected console text for this project.
+     * @see appendOutput
      * @see clearConsoleText
      **/
     QString consoleText() const;
-
-    /** @brief Appends @p text to the console. */
-    void appendToConsole( const QString &text );
-
-    /**
-     * @brief Clear collected console text.
-     * @see consoleText
-     **/
-    void clearConsoleText();
 
     /** @brief Whether or not the project is modified. */
     Q_INVOKABLE bool isModified() const;
@@ -827,6 +808,30 @@ public slots:
 
     /** @brief Show the tab of the given @p tabType. */
     AbstractTab *showTab( TabType tabType, QWidget *parent = 0 );
+
+    /**
+     * @brief Add @p output to the projects output.
+     * @see output
+     **/
+    void appendOutput( const QString &output );
+
+    /**
+     * @brief Clear collected output.
+     * @see output
+     **/
+    void clearOutput();
+
+    /**
+     * @brief Appends @p text to the console.
+     * @see consoleText
+     **/
+    void appendToConsole( const QString &text );
+
+    /**
+     * @brief Clear collected console text.
+     * @see consoleText
+     **/
+    void clearConsoleText();
 
 protected slots:
     void slotTabTitleChanged( const QString &title );

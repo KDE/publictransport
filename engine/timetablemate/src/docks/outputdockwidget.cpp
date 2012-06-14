@@ -63,9 +63,13 @@ OutputDockWidget::OutputDockWidget( ProjectModel *projectModel, KActionMenu *sho
 
 void OutputDockWidget::showContextMenu( const QPoint &pos )
 {
+    if ( !m_projectModel->activeProject() ) {
+        return;
+    }
+
     QMenu *menu = m_outputWidget->createStandardContextMenu();
     QAction *clearAction = menu->addAction( KIcon("edit-clear-list"), i18nc("@action", "&Clear"),
-                                            m_outputWidget, SLOT(clear()) );
+                                            m_projectModel->activeProject(), SLOT(clearOutput()) );
     clearAction->setEnabled( !m_outputWidget->document()->isEmpty() );
     menu->exec( m_outputWidget->mapToGlobal(pos) );
     delete menu;

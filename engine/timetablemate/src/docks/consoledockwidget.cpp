@@ -100,9 +100,13 @@ ConsoleDockWidget::ConsoleDockWidget( ProjectModel *projectModel, KActionMenu *s
 
 void ConsoleDockWidget::contextMenu( const QPoint &pos )
 {
+    if ( !m_projectModel->activeProject() ) {
+        return;
+    }
+
     QMenu *menu = m_consoleWidget->createStandardContextMenu();
     QAction *clearAction = menu->addAction( KIcon("edit-clear-list"), i18nc("@action", "&Clear"),
-                                            m_consoleWidget, SLOT(clear()) );
+                                            m_projectModel->activeProject(), SLOT(clearConsoleText()) );
     QAction *helpAction = menu->addAction( KIcon("help-about"), i18nc("@action", "&Show Help"),
                                            this, SLOT(showHelp()) );
     clearAction->setEnabled( !m_consoleWidget->document()->isEmpty() );
