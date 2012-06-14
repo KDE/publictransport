@@ -132,8 +132,10 @@ function typeOfVehicleFromString( string ) {
         return "tram";
     } else if ( string == "ice" || string == "rj" ) { // RailJet
         return "highspeedtrain";
-    } else if ( string == "oic" || string == "en" ||  // EuroNight
-		 string == "ec" || string == "ic" ) { // EuroCity
+    } else if ( string == "oic" || string == "ic" ||
+		 string == "en" ||  // EuroNight
+		 string == "ec" || // EuroCity
+		 string == "cnl" ) { // City Night Line
         return "intercitytrain";
     } else if ( string == "r" ) {
         return "regionaltrain";
@@ -703,7 +705,7 @@ function parseJourneys( html ) {
                     if ( details == null ) {
                         helper.error( "Details for journey item " + journeyNr + " not found!",
                                         detailsHtml );
-                        return;
+                        continue;
                     }
                     details = details[1];
 
