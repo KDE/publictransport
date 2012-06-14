@@ -73,6 +73,7 @@ add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongener
             --out_doc ${CMAKE_CURRENT_SOURCE_DIR}/../doc
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../scripting.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../publictransportdataengine.h
             ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator )
 
 # Install configuration files

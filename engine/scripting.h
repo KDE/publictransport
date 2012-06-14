@@ -84,10 +84,6 @@ class Network;
  *   file and automatically insert the contents of the script file into the setCode() function
  *   like above.
  *
- * @warning Bindings are not the same between distributions. At least I noticed that QDateTime
- *   is provided in Kubuntu 11.10 when "qt.core" gets imported, but not in openSuse 12.1.
- *   QDateTime values are also always converted to script Date objects.
- *
  * @n
  *
  * @section script_exposed Classes Exposed to Scripts
@@ -114,40 +110,34 @@ class Network;
  * Only the @em getTimetable function @em must be implemented.
  *
  * @subsection script_functions_gettimetable getTimetable( values )
- *   This function @em must be implemented. It is responsible for downloading and parsing of a
- *   document containing information about departures or arrivals. Departures for all transport
- *   lines and vehicle types should be collected. The argument to this function tells the script
- *   what data it should get. It has the following properties:
+ *   This function @em must be implemented (but that may change). Gets called to request
+ *   departures/arrivals. The only argument contains information about the request with these
+ *   properties:
  *   @li @em stop: The name/ID of the stop to get departures/arrivals for.
- *   @li @em dateTime: A Date object with the date and time of the earliest departure/arrival to
- *     get.
+ *   @li @em dateTime: A Date object with the date and time of the earliest departure/arrival to get.
  *   @li @em maxCount: The maximal number of departures/arrivals to get.
  *   @li @em dataType: This can be "arrivals" or "departures".
  *   @li @em city: If used, this contains the city name to get departures/arrivals for. Only some
  *     service providers need a separate city value, most are happy with a stop name/stop ID.
  *
  * @subsection script_functions_getstopsuggestions getStopSuggestions( values )
- *   This function can be implemented to provide stop suggestions. It is responsible for
- *   downloading and parsing of a document containing the stop suggestions. The argument to this
- *   function tells the script what data it should get (similar to the @em getTimetable function)
- *   and has the following properties:
- *   @li @em stop: A string to get stop suggestions for. This is what users can type in, eg. the
- *     beginning of the complete stop name.
+ *   Gets called to request stop suggestions. Since it may be called very often it should be fast,
+ *   ie. the downloaded data should be as small as possible. The only argument contains information
+ *   about the request with these properties:
+ *   @li @em stop: A part of a stop name to get suggestions for. This is what users can type in, eg.
+ *     the beginning of the complete stop name.
  *   @li @em maxCount: The maximal number of stop suggestions to get.
  *   @li @em city: If used, this contains the city name to get stop suggestions for. Only some
  *     service providers need a separate city value, most are happy with a part of the stop name.
  *
  * @subsection script_functions_getjourneys getJourneys( values )
- *   This function can be implemented to provide journey information. A journey is here a trip from
- *   an origin stop to a target stop. It is responsible for downloading and parsing of a
- *   document containing information about journeys. Journeys for all transport lines and vehicle
- *   types should be collected. The argument to this function tells the script what data it should
- *   get and has the following properties:
+ *   Gets called to request journeys (trips from stop A to stop B). The only argument contains
+ *   information about the request with these properties:
  *   @li @em originStop: The name/ID of the start/origin stop, also available as 'stop' property.
  *   @li @em targetStop: The name/ID of the target/destination stop.
  *   @li @em dateTime: A Date object with the date and time of the earliest journey to get.
  *   @li @em maxCount: The maximal number of journeys to get.
- *   @li @em dataType: This can be "journeysDep" (journeys departing at the given @em dateTime)
+ *   @li @em dataType: This can be "journeys"/"journeysDep" (journeys departing at the given @em dateTime)
  *     or "journeysArr" (journeys arriving at the given @em dateTime).
  *   @li @em city: If used, this contains the city name to get journeys for. Only some
  *     service providers need a separate city value, most are happy with a stop name/stop ID.

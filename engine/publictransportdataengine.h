@@ -44,7 +44,6 @@ class StopInfo;
 class QTimer;
 class QFileSystemWatcher;
 
-
 /**
  * @brief This engine provides departure/arrival times and journeys for public transport.
  *
@@ -461,28 +460,28 @@ Once you have the data source name, you can connect your applet to that data sou
 engine. Here is an example of how to do this:
 @code
 class Applet : public Plasma::Applet {
-    public:
+public:
     Applet(QObject *parent, const QVariantList &args) : AppletWithState(parent, args) {
-        dataEngine("publictransport")->connectSource( "Departures de_db|stop=Pappelstraße, Bremen", this, 60 * 1000 );
+        dataEngine("publictransport")->connectSource( "Departures de_db|stop=Köln, Hauptbahnhof", this, 60 * 1000 );
     };
 
-    public slots:
+public slots:
     void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data ) {
         if ( data.value("error").toBool() ) {
-        // Handle errors
+            // Handle errors
         } else if ( data.value("receivedPossibleStopList").toBool() ) {
-        // Possible stop list received, because the given stop name is ambiguous
-        // See section "Receiving Stop Lists"
+            // Possible stop list received, because the given stop name is ambiguous
+            // See section "Receiving Stop Lists"
         } else {
-        // Departures / arrivals received.
-        int count = data["count"].toInt(); // The number of received departures / arrivals
-        for (int i = 0; i < count; ++i) {
-        QHash<QString, QVariant> departureData = data.value( QString("%1").arg(i) ).toHash();
-        QString line = departureData["line"].toString();
-        QString target = departureData["target"].toString(); // For arrival lists this is the origin
-        QDateTime departure = departureData["departure"].toDateTime();
+            // Departures / arrivals received.
+            int count = data["count"].toInt(); // The number of received departures / arrivals
+            for (int i = 0; i < count; ++i) {
+                QHash<QString, QVariant> departureData = data.value( QString("%1").arg(i) ).toHash();
+                QString line = departureData["line"].toString();
+                QString target = departureData["target"].toString(); // For arrival lists this is the origin
+                QDateTime departure = departureData["departure"].toDateTime();
+            }
         }
-    }
     };
 };
 @endcode
@@ -497,6 +496,8 @@ an error.</td></tr>
 <tr><td><i>receivedData</i></td> <td>QString</td> <td>"departures", "journeys", "stopList" or "nothing" if
 there was an error.</td></tr>
 <tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was last updated.</td></tr>
+<tr><td><i>[NUMBER]</i></td> <td>QVariantHash</td> <td>The key names are numbers from 0 to count - 1
+as strings (eg. "3"), each contains information about one departure/arrival.</td></tr>
 </table>
 <br />
 Each departure/arrival in the data received from the data engine (departureData in the code
@@ -565,35 +566,35 @@ Once you have the data source name, you can connect your applet to that
 data source from the data engine. Here is an example of how to do this:
 @code
 class Applet : public Plasma::Applet {
-    public:
+public:
     Applet(QObject *parent, const QVariantList &args) : AppletWithState(parent, args) {
         dataEngine("publictransport")->connectSource(
         "Journeys de_db|originStop=Pappelstraße, Bremen|targetStop=Kirchweg, Bremen", this, 60 * 1000 );
     };
 
-    public slots:
+public slots:
     void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data ) {
         if ( data.value("error").toBool() ) {
-        // Handle errors
+            // Handle errors
         } else if ( data.value("receivedPossibleStopList").toBool() ) {
-        // Possible stop list received, because the given stop name is ambiguous
-        // See section "Receiving Stop Lists"
+            // Possible stop list received, because the given stop name is ambiguous
+            // See section "Receiving Stop Lists"
         } else {
-        // Journeys received.
-        int count = data["count"].toInt(); // The number of received journeys
-        for (int i = 0; i < count; ++i) {
-            QHash<QString, QVariant> journeyData = data.value( QString("%1").arg(i) ).toHash();
+            // Journeys received.
+            int count = data["count"].toInt(); // The number of received journeys
+            for (int i = 0; i < count; ++i) {
+                QHash<QString, QVariant> journeyData = data.value( QString("%1").arg(i) ).toHash();
 
-            // Get vehicle type list
-            QVariantList = journeyData["vehicleTypes"].toList();
-            QList<VehicleType> vehicleTypes;
-            foreach( QVariant vehicleType, vehicleTypesVariant )
-            vehicleTypes.append( static_cast<VehicleType>(vehicleType.toInt()) );
+                // Get vehicle type list
+                QVariantList = journeyData["vehicleTypes"].toList();
+                QList<VehicleType> vehicleTypes;
+                foreach( QVariant vehicleType, vehicleTypesVariant )
+                vehicleTypes.append( static_cast<VehicleType>(vehicleType.toInt()) );
 
-            QString target = journeyData["startStopName"].toString();
-            QDateTime departure = journeyData["departure"].toDateTime();
-            int duration = journeyData["duration"].toInt(); // Duration in minutes
-        }
+                QString target = journeyData["startStopName"].toString();
+                QDateTime departure = journeyData["departure"].toDateTime();
+                int duration = journeyData["duration"].toInt(); // Duration in minutes
+            }
         }
     };
 };
@@ -609,6 +610,8 @@ an error.</td></tr>
 <tr><td><i>receivedData</i></td> <td>QString</td> <td>"departures", "journeys", "stopList" or "nothing" if
 there was an error.</td></tr>
 <tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was last updated.</td></tr>
+<tr><td><i>[NUMBER]</i></td> <td>QVariantHash</td> <td>The key names are numbers from 0 to count - 1,
+each contains information about one journey.</td></tr>
 </table>
 <br />
 Each journey in the data received from the data engine (journeyData in the code
@@ -738,7 +741,7 @@ The email address of the author of the service provider plugin.</td></tr>
 <td>\<serviceProvider\></td> <td>Required</td>
 <td>The version of the service provider plugin, should start with "1.0".</td></tr>
 
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<type\></b></td>
+<tr style="background-color: #ffbbbb;"><td><b>\<type\></b></td>
 <td>\<serviceProvider\></td> <td>Required</td>
 <td>Can be either HTML or XML.</td></tr>
 
@@ -754,6 +757,10 @@ The email address of the author of the service provider plugin.</td></tr>
 <td>\<serviceProvider\></td> <td>Required</td>
 <td>A description of the service provider (plugin). You don't need to list the features supported by the service provider here, the feature list is generated automatically.</td></tr>
 
+<tr><td><b>\<notes></b></td>
+<td>\<serviceProvider\></td> <td>(Optional)</td>
+<td>Custom notes for the service provider plugin. Can be a to do list.</td></tr>
+
 <tr style="background-color: #ffbbbb;"><td><b>\<url\></b></td>
 <td>\<serviceProvider\></td> <td>Required</td>
 <td>An url to the service provider home page.</td></tr>
@@ -766,25 +773,9 @@ The email address of the author of the service provider plugin.</td></tr>
 <td>\<serviceProvider\></td> <td>Optional</td>
 <td>The charset of documents to be downloaded (TODO do this from the script). Important if NetworkRequest::readyRead() gets used, because the correct codec can only be determined for completely downloaded HTML pages.</td></tr>
 
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td style="color:#bb0000;"><b>\<rawUrls\> DEPRECATED</b></td>
-<td>\<serviceProvider\></td> <td>Required</td>
-<td>Contains the used "raw urls". A raw url is a string with placeholders that are replaced with values to get a real url.</td></tr>
-
-<tr><td style="color:#770000;"><b>\<departures\></b></td>
-<td style="color:#bb0000;">\<rawUrls\> DEPRECATED</td> <td>Required</td>
-<td>A raw url (in a CDATA tag) to a page containing a departure / arrival list. The following substrings are replaced by current values: <b>{stop}</b> (the stop name), <b>{type}</b> (arr or dep for arrivals or departures), <b>{time}</b> (the time of the first departure / arrival), <b>{maxCount}</b> (maximal number of departures / arrivals).</td></tr>
-
-<tr><td style="color:#770000;"><b>\<journeys\></b></td>
-<td style="color:#bb0000;">\<rawUrls\> DEPRECATED</td> <td>(Optional)</td>
-<td>A raw url (in a CDATA tag) to a page containing a journey list. The following substrings are replaced by current values: <b>{startStop}</b> (the name of the stop where the journey starts), <b>{targetStop}</b> (the name of the stop where the journey ends), <b>{time}</b> (the time of the first journey), <b>{maxCount}</b> (maximal number of journeys).</td></tr>
-
-<tr><td style="color:#770000;"><b>\<stopSuggestions\></b></td>
-<td style="color:#bb0000;">\<rawUrls\> DEPRECATED</td> <td>(Optional)</td>
-<td>A raw url (in a CDATA tag) to a page containing a list of stop suggestions. Normally this tag isn't needed, because the url is the same as the url to the departure list. When the stop name is ambiguous the service provider can show a page containing a list of stop suggestions. You may want to use this tag if you want to parse XML files for departure lists and get the stop suggestions from an HTML page or if there is a special url only for stop suggestions.</td></tr>
-
 <tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<script\></b></td>
-<td>\<serviceProvider\></td> <td>Required, if no regExps are set</td>
-<td>Contains the filename of the script to be used to parse timetable documents. The script must be in the same directory as the XML file. Always use "Script" as type when using a script.</td></tr>
+<td>\<serviceProvider\></td> <td>Required for script provider plugins</td>
+<td>Contains the filename of the script to be used to parse timetable documents. The script must be in the same directory as the XML file. Always use "Script" as type when using a script. Can have an "extensions" attribute with a comma separated list of QtScript extensions to load when executing the script.</td></tr>
 
 <tr style="border-top: 3px double black;"><td style="color:#00bb00;"><b>\<changelog\></b></td>
 <td>\<serviceProvider\></td> <td>(Optional)</td>
@@ -794,49 +785,29 @@ The email address of the author of the service provider plugin.</td></tr>
 <td style="color:#00bb00;">\<changelog\></td> <td>(Optional)</td>
 <td>Contains a changelog entry for this service provider plugin. The entry description is read from the contents of the \<entry\> tag. Attributes <em>"version"</em> (the plugin version where this change was applied) and <em>"engineVersion"</em> (the version of the publictransport data engine this plugin was first released with) can be added.</td></tr>
 
-<tr style="border-top: 3px double black;"><td style="color:#880088;"><b>\<sessionKey\></b></td>
+<tr style="border-top: 3px double black;"><td style="color:#880088;"><b>\<samples\></b></td>
 <td>\<serviceProvider\></td> <td>(Optional)</td>
-<td>Contains information about usage of session keys, if required by the service provider.</td></tr>
+<td>Contains child tags \<stop\> and \<city\> with sample stop/city names. These samples are used eg. in TimetableMate for automatic tests.</td></tr>
 
-<tr><td style="color:#660066;"><b>\<url\></b></td>
-<td style="color:#880088;">\<sessionKey\></td> <td>Required</td>
-<td>Contains the URL to a document containing a session key.</td></tr>
+<tr><td style="color:#660066;"><b>\<stop\></b></td>
+<td style="color:#880088;">\<samples\></td> <td>(Optional)</td>
+<td>A sample stop name.</td></tr>
 
-<tr><td style="color:#660066;"><b>\<putInto\></b></td>
-<td style="color:#880088;">\<sessionKey\></td> <td>(Optional)</td>
-<td>The name of a place where to put the session key in requests (currently only "CustomHeader" is supported). May contain a <em>"data"</em> attribute, which is used for "CustomHeader" as name of the custom HTTP header.</td></tr>
+<tr><td style="color:#660066;"><b>\<city\></b></td>
+<td style="color:#880088;">\<samples\></td> <td>(Optional)</td>
+<td>A sample city name.</td></tr>
 
 </table>
 @n @n
 
 @section provider_infos_script Script file structure
-Scripts are executed using Kross, which supports JavaScript, Python and Ruby. JavaScript is tested, the other languages may also work.
+Scripts are executed using QtScript (JavaScript), which can make use of Kross if other script languages
+should be used, eg. Python or Ruby. JavaScript is tested, the other languages may also work.
 There are functions with special names that get called by the data engine when needed:
-<ul>
-    <li>
-        <b>usedTimetableInformations():</b> Should return a list of strings representing supported TimetableInformations. The following strings are currently used to determine special features of the service provider: "Delay", "DelayReason", "Platform", "JourneyNews", "JourneyNewsOther", "JourneyNewsLink", "TypeOfVehicle", "Status", "Operator", "StopID". Example: <em>return [ 'TypeOfVehicle', 'Platform', 'Delay', 'StopID' ];</em>
-    </li>
-
-    <li>
-        <b>parseTimetable( document ):</b> Used to parse departure/arrival documents. The content of the document is given as argument. Use the <em>timetableData</em> object to set values of departures/arrivals, eg. <em>timetableData.set( 'Target', targetString )</em>. Add a departure to the result set using <em>result.addData( timetableData )</em> (after setting all values). Before setting the values of the next departure/arrival you should call <em>timetableData.clear()</em>, otherwise the new departure will contain values of previous departures, that weren't overwritten with new values.
-    </li>
-
-    <li>
-        <b>parsePossibleStops( document ):</b> Used to parse stop suggestion documents. The content of the document is given as argument. This works similiar to <em>parseTimetable</em>. You can set these values for stop suggestions: "StopName" (required), "StopID", "StopWeight", "StopCity" and "StopCountryCode". Example: <em>timetableData.set( 'StopName', 'Testname' );</em>
-        </li>
-
-    <li>
-        <b>parseJourneys( document ):</b> Used to parse journey documents. The content of the document is given as argument. Use the <em>timetableData</em> object to set values of journeys, just like with <em>parseTimetable</em>. Add a journey to the result set using <em>result.addData( timetableData )</em> (after setting all values).
-    </li>
-
-    <li>
-        <b>getUrlForLaterJourneyResults( document ):</b> Used to parse the URL to get later journeys from a given journey document. The returned URL is used to download another journey document and send it to <em>parseJourneys</em>.
-    </li>
-
-    <li>
-        <b>parseSessionKey( document ):</b> Used to parse a session key from the given document, if the service provider requires it. Just return the session key string.
-    </li>
-</ul>
+@n
+getTimetable(), getStopSuggestions(), getJourneys() and usedTimetableInformations()
+@n
+For more information see @ref script_functions.
 
 @n @n
 @section examples Service Provider Plugin Examples
@@ -875,7 +846,7 @@ digraph publicTransportDataEngine {
        ];
 
     providerScript [
-    label="{ServiceProviderScript|Parses timetable documents, eg. HTML.\l|# requestDepartures() : bool\l# requestStopSuggestions() : bool\l}"
+    label="{ServiceProviderScript|Parses timetable documents (eg. HTML) using scripts.\l|# requestDepartures() : bool\l# requestStopSuggestions() : bool\l}"
     URL="\ref ServiceProviderScript"
     ];
 
@@ -914,12 +885,12 @@ digraph publicTransportDataEngine {
     node [ fillcolor="#dfffdf" ];
 
     serviceProviderData [
-    label="{ServiceProviderData|Information about where to download the documents \land how to parse them.\l|+ name() : QString\l+ stopSuggestionsRawUrl() : QString\l+ departureRawUrl() : QString\l+ journeyRawUrl() : QString\l+ searchDepartures() : TimetableRegExpSearch\l+ searchJourneys() : TimetableRegExpSearch\l+ searchDeparturesPre() : TimetableRegExpSearch*\l+ regExpSearchPossibleStopsRanges() : QStringList\l+ searchPossibleStops() : QList\<TimetableRegExpSearch\>\l+ searchJourneyNews() : QList\<TimetableRegExpSearch\>\l+ features() : QStringList\l... }"
+    label="{ServiceProviderData|Information about where to download the documents \land how to parse them.\l|+ name() : QString\l+ features() : QStringList\l... }"
     URL="\ref ServiceProviderData"
     ];
      }
 
-   // { rank=same; provider pubTransInfo providerScript serviceProviderData regExpSearch depInfo journeyInfo }
+   // { rank=same; provider pubTransInfo providerScript serviceProviderData depInfo journeyInfo }
    { rank=same; provider providerScript }
 
     edge [ arrowhead="empty", arrowtail="none", style="solid" ];
@@ -933,7 +904,6 @@ digraph publicTransportDataEngine {
     engine -> provider [ label=""uses ];
     provider -> pubTransInfo [ label="uses" ];
     provider -> serviceProviderData [ label="uses" ];
-    serviceProviderData -> regExpSearch [ label="uses" ];
 
     edge [ dir=both, arrowhead="normal", arrowtail="normal", color="gray", fontcolor="gray", style="dashed", headlabel="" ];
     serviceProviderData -> provider [ label="friend" ];
