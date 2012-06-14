@@ -62,13 +62,19 @@ public:
     ProjectModel *projectModel() const { return m_projectModel; };
     State state() const { return m_state; };
 
+public slots:
+    void executeCommand( const QString &command );
+
+    /** @brief Executes the help command, which shows a help text. */
+    void showHelp() { executeCommand(".help"); };
+
 protected slots:
-    void commandEntered( const QString &commandString );
     void evaluationResult( const EvaluationResult &evaluationResult );
     void cancelEvaluation();
     void appendToConsole( const QString &text );
     void commandExecutionResult( const QString &text );
     void consoleTextChanged( const QString &consoleText );
+    void contextMenu( const QPoint &pos );
 
     void activeProjectAboutToChange( Project *project, Project *previousProject );
 

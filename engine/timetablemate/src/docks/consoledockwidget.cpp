@@ -40,6 +40,7 @@
 #include <QPlainTextEdit>
 #include <QBoxLayout>
 #include <QToolButton>
+#include <QMenu>
 
 ConsoleDockWidget::ConsoleDockWidget( ProjectModel *projectModel, KActionMenu *showDocksAction,
                                       QWidget *parent )
@@ -59,6 +60,7 @@ ConsoleDockWidget::ConsoleDockWidget( ProjectModel *projectModel, KActionMenu *s
     m_consoleWidget = new QPlainTextEdit( container );
     m_consoleWidget->setReadOnly( true );
     m_consoleWidget->setFont( KGlobalSettings::fixedFont() );
+    m_consoleWidget->setContextMenuPolicy( Qt::CustomContextMenu );
     m_commandLineEdit = new KLineEdit( container );
     m_commandLineEdit->setFont( KGlobalSettings::fixedFont() );
     m_commandLineEdit->setClickMessage( i18nc("@info/plain", "Enter a command, eg. '.help'") );
@@ -79,8 +81,10 @@ ConsoleDockWidget::ConsoleDockWidget( ProjectModel *projectModel, KActionMenu *s
     consoleLayout->addWidget( m_consoleWidget );
     consoleLayout->addLayout( inputBarLayout );
     setWidget( container );
+    connect( m_consoleWidget, SIGNAL(customContextMenuRequested(QPoint)),
+             this, SLOT(contextMenu(QPoint)) );
     connect( m_commandLineEdit, SIGNAL(returnPressed(QString)),
-             this, SLOT(commandEntered(QString)) );
+             this, SLOT(executeCommand(QString)) );
     connect( m_cancelButton, SIGNAL(clicked(bool)), this, SLOT(cancelEvaluation()) );
 
     m_consoleHistoryIndex = -1;
@@ -92,6 +96,18 @@ ConsoleDockWidget::ConsoleDockWidget( ProjectModel *projectModel, KActionMenu *s
              this, SLOT(activeProjectAboutToChange(Project*,Project*)) );
 
     setState( WaitingForInput );
+}
+
+void ConsoleDockWidget::contextMenu( const QPoint &pos )
+{
+    QMenu *menu = m_consoleWidget->createStandardContextMenu();
+    QAction *clearAction = menu->addAction( KIcon("edit-clear-list"), i18nc("@action", "&Clear"),
+                                            m_consoleWidget, SLOT(clear()) );
+    QAction *helpAction = menu->addAction( KIcon("help-about"), i18nc("@action", "&Show Help"),
+                                           this, SLOT(showHelp()) );
+    clearAction->setEnabled( !m_consoleWidget->document()->isEmpty() );
+    menu->exec( m_consoleWidget->mapToGlobal(pos) );
+    delete menu;
 }
 
 void ConsoleDockWidget::activeProjectAboutToChange( Project *project, Project *previousProject )
@@ -141,7 +157,7 @@ QString ConsoleDockWidget::encodeInput( const QString &input ) const
                          .replace( QLatin1String(">"), QLatin1String("&gt;") );
 }
 
-void ConsoleDockWidget::commandEntered( const QString &_commandString )
+void ConsoleDockWidget::executeCommand( const QString &_commandString )
 {
     if ( _commandString.isEmpty() ) {
         kDebug() << "No command given";
