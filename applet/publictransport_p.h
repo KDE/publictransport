@@ -20,8 +20,9 @@
 #ifndef PUBLICTRANSPORT_PRIVATE_HEADER
 #define PUBLICTRANSPORT_PRIVATE_HEADER
 
-// Own includes
 #define NO_EXPORT_PLASMA_APPLET
+
+// Own includes
 #include "publictransport.h"
 #include "departureprocessor.h"
 #include "settingsio.h"

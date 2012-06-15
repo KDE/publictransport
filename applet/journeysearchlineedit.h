@@ -25,7 +25,8 @@
 
 // Qt includes
 #include <QSyntaxHighlighter> // Base class
-#include <QTextDocument> // Member variable
+
+class QTextDocument;
 
 /** @brief Highlights journey search keywords, values and the stop name if it is double quoted. */
 class JourneySearchHighlighter : public QSyntaxHighlighter {
@@ -108,7 +109,7 @@ private:
     void init();
 
     int m_hScroll, m_cursor; // contains values that are normally stored in QLineEditPrivate
-    QTextDocument m_doc; // Used to draw the highlighted text
+    QTextDocument *const m_doc; // Used to draw the highlighted text
     JourneySearchHighlighter *m_highlighter; // The used QSyntaxHighlighter
 };
 

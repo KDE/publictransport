@@ -20,62 +20,34 @@
 // Own includes
 #include "publictransport.h"
 #include "publictransport_p.h"
-#include "departureprocessor.h"
-#include "departuremodel.h"
-#include "departurepainter.h"
 #include "overlaywidget.h"
 #include "journeysearchparser.h"
-#include "journeysearchlineedit.h"
 #include "journeysearchsuggestionwidget.h"
 #include "journeysearchmodel.h"
-#include "journeysearchitem.h"
 #include "journeysearchlistview.h"
 #include "settingsui.h"
-#include "settingsio.h"
-#include "timetablewidget.h"
-#include "popupicon.h"
-#include "titlewidget.h"
-#include "colorgroups.h"
-
-// libpublictransporthelper includes
-#include <global.h>
-#include <departureinfo.h>
 
 // KDE includes
-#include <KDebug>
-#include <KLocale>
 #include <KNotification>
-#include <KToolInvocation>
-#include <KColorScheme>
 #include <KSelectAction>
 #include <KActionMenu>
 #include <KPushButton>
 #include <KMenu>
 #include <KMimeTypeTrader>
-#include <KStandardDirs>
-#include <KProcess>
 #include <KMessageBox> // Currently only used to ask if marble should be installed (TODO should be done using Plasma::Applet::showMessage())
 
 // Plasma includes
-#include <Plasma/Label>
-#include <Plasma/ToolButton>
 #include <Plasma/LineEdit>
 #include <Plasma/PushButton>
-#include <Plasma/PaintUtils>
 #include <Plasma/Theme>
-#include <Plasma/ToolTipManager>
-#include <Plasma/ToolTipContent>
 #include <Plasma/Animation>
 
 // Qt includes
 #include <QPainter>
 #include <QClipboard>
-#include <QGraphicsScene>
-#include <QGraphicsLinearLayout>
 #include <QDBusConnection> // DBus used for marble
 #include <QDBusMessage>
 #include <QTimer>
-#include <QLabel>
 #include <QStandardItemModel>
 #include <QParallelAnimationGroup>
 #include <QGraphicsSceneEvent>

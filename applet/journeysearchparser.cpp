@@ -126,7 +126,7 @@ void JourneySearchParser::doCorrections( KLineEdit *lineEdit, QString *searchLin
             selLength = formattedTime.length();
         } else if ( timeKeywordsIn().contains( lastWordBeforeCursor, Qt::CaseInsensitive ) ) {
             // Automatically add '5 minutes' after 'in'
-            searchLine->insert( posEnd, ' ' + relativeTimeString() );
+            searchLine->insert( posEnd, ' ' + relativeTimeString(5) );
             selStart = posEnd + 1; // +1 for the added space
             selLength = 1; // only select the number (5)
         } else {

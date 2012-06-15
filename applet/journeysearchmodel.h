@@ -29,8 +29,8 @@
 // Qt includes
 #include <QAbstractItemModel> // Base class
 
-class QIcon;
 class JourneySearchModel;
+class QIcon;
 
 /**
  * @brief An item containing information about journey searches, used by JourneySearchModel.

@@ -630,7 +630,7 @@ void JourneySearchSuggestionWidget::addAllKeywordAddRemoveItems()
                                 "\"%1 12:00, 20.04.2010\"", timeKeywordAt)
                         << i18nc("@info Description for the 'in' keyword",
                                 "Specify the departure/arrival time, eg. \"%1 %2\"",
-                                timeKeywordIn, JourneySearchParser::relativeTimeString()),
+                                timeKeywordIn, JourneySearchParser::relativeTimeString(5)),
             QStringList() << "(\\d{2}:\\d{2}|\\d{2}\\.\\d{2}(\\.\\d{2,4}))"
                         << JourneySearchParser::relativeTimeString("\\d{1,}") );
 }

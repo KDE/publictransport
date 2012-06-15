@@ -29,15 +29,13 @@
 #include <Plasma/DataEngine> // For dataUpdated() slot, Plasma::DataEngine::Data
 #include <KProcess> // For QProcess::ProcessError
 
-// Qt includes
-#include <QPersistentModelIndex> // Member variable
-
-// libpublictransporthelper includes
-#include <departureinfo.h>
-
 // Own includes
 #include "stopaction.h" // For StopAction::Type
 #include "settings.h" // Member variable
+
+namespace Timetable {
+    class JourneyInfo;
+}
 
 class PublicTransportPrivate;
 class ItemBase;
@@ -46,6 +44,7 @@ class DepartureItem;
 
 class KSelectAction;
 class QGraphicsSceneWheelEvent;
+class QPersistentModelIndex;
 
 namespace Plasma {
     class Label;

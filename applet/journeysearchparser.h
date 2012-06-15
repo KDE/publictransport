@@ -20,8 +20,9 @@
 #ifndef JOURNEYSEARCHPARSER_HEADER
 #define JOURNEYSEARCHPARSER_HEADER
 
-#include <QVariant>
-
+template<class Key, class T >
+class QHash;
+class QVariant;
 class QString;
 class QStringList;
 class QDate;
@@ -31,7 +32,7 @@ class KLineEdit;
 
 /**
  * @brief Provides static methods to parse journey search strings.
- * 
+ *
  * @todo Could need some improvement, eg. parseJourneySearch() with a QString, not KLineEdit, new
  *   methods for getting a list of keywords inside a given QString, removing/adding keywords.
  **/
@@ -108,7 +109,7 @@ public:
     /** @brief A list of keywords to be used instead of writing the date string for tomorrow. */
     static const QStringList timeKeywordsTomorrow();
 
-    static const QString relativeTimeString( const QVariant &value = 5 );
+    static const QString relativeTimeString( const QVariant &value );
     static const QString relativeTimeStringPattern();
 
 private:

@@ -33,7 +33,6 @@
 
 // Qt includes
 #include <QThread> // Base class
-#include <QMutex> // Member variable
 #include <QWaitCondition> // Member variable
 #include <QQueue> // Member variable
 
@@ -301,7 +300,7 @@ private:
     bool m_isArrival;
 
     bool m_quit, m_abortCurrentJob, m_requeueCurrentJob;
-    QMutex m_mutex;
+    QMutex *const m_mutex;
     QWaitCondition m_cond;
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( DepartureProcessor::JobTypes )

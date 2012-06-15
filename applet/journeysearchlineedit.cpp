@@ -122,13 +122,14 @@ void JourneySearchHighlighter::highlightBlock( const QString& text )
     }
 }
 
-JourneySearchLineEdit::JourneySearchLineEdit( QWidget* parent ) : KLineEdit( parent )
+JourneySearchLineEdit::JourneySearchLineEdit( QWidget* parent )
+        : KLineEdit( parent ), m_doc(new QTextDocument(this))
 {
     init();
 }
 
 JourneySearchLineEdit::JourneySearchLineEdit( const QString& string, QWidget* parent )
-        : KLineEdit( string, parent )
+        : KLineEdit( string, parent ), m_doc(new QTextDocument(this))
 {
     init();
 }
@@ -137,11 +138,11 @@ void JourneySearchLineEdit::init()
 {
     m_hScroll = m_cursor = 0;
 
-    m_doc.setDocumentMargin( 0 );
-    m_doc.setDefaultFont( font() );
+    m_doc->setDocumentMargin( 0 );
+    m_doc->setDefaultFont( font() );
 
     // Set the QSyntaxHighlighter to be used
-    m_highlighter = new JourneySearchHighlighter( &m_doc );
+    m_highlighter = new JourneySearchHighlighter( m_doc );
     m_highlighter->formatStopName().setForeground(
             KColorScheme(QPalette::Active).foreground(KColorScheme::NeutralText) );
     m_highlighter->formatKeyword().setForeground(
@@ -156,8 +157,8 @@ void JourneySearchLineEdit::init()
 
 void JourneySearchLineEdit::slotTextChanged( const QString& )
 {
-    m_doc.setHtml( text() );
-    m_doc.documentLayout();
+    m_doc->setHtml( text() );
+    m_doc->documentLayout();
 }
 
 void JourneySearchLineEdit::mouseDoubleClickEvent( QMouseEvent* ev )
@@ -165,10 +166,10 @@ void JourneySearchLineEdit::mouseDoubleClickEvent( QMouseEvent* ev )
     if ( ev->button() == Qt::LeftButton ) {
         deselect();
         QRect cr = lineEditContents();
-        m_cursor = m_doc.documentLayout()->hitTest(
+        m_cursor = m_doc->documentLayout()->hitTest(
                 ev->posF() - cr.topLeft() + QPoint( m_hScroll, 0 ), Qt::FuzzyHit );
 
-        QTextBlock block = m_doc.findBlockByNumber( 0 );
+        QTextBlock block = m_doc->findBlockByNumber( 0 );
         if ( block.isValid() ) {
             m_cursor = block.layout()->previousCursorPosition( m_cursor, QTextLayout::SkipWords );
             int end = block.layout()->nextCursorPosition( m_cursor, QTextLayout::SkipWords );
@@ -199,7 +200,7 @@ void JourneySearchLineEdit::mousePressEvent( QMouseEvent* ev )
 
         bool mark = ev->modifiers() & Qt::ShiftModifier;
         QRect cr = lineEditContents();
-        m_cursor = m_doc.documentLayout()->hitTest(
+        m_cursor = m_doc->documentLayout()->hitTest(
                 ev->posF() - cr.topLeft() + QPoint( m_hScroll, 0 ), Qt::FuzzyHit );
         moveCursor( m_cursor, mark );
     } else {
@@ -212,7 +213,7 @@ void JourneySearchLineEdit::mouseMoveEvent( QMouseEvent* ev )
     if ( ev->buttons().testFlag( Qt::LeftButton ) ) {
         int cursor = 0;
         QRect cr = lineEditContents();
-        cursor = m_doc.documentLayout()->hitTest(
+        cursor = m_doc->documentLayout()->hitTest(
                 ev->posF() - cr.topLeft() + QPoint( m_hScroll, 0 ), Qt::FuzzyHit );
 
         moveCursor( cursor, true );
@@ -245,7 +246,7 @@ void JourneySearchLineEdit::paintEvent( QPaintEvent* )
 
     // Draw text, cursor and selection
     int cursorPos = cursorPosition();
-    QTextBlock block = m_doc.findBlockByNumber( 0 );
+    QTextBlock block = m_doc->findBlockByNumber( 0 );
     if ( block.isValid() ) {
         int width = cr.width();
         if ( isClearButtonShown() ) { // Add space for the clear button
@@ -301,7 +302,7 @@ void JourneySearchLineEdit::paintEvent( QPaintEvent* )
         p.setClipRect( cr );
         // Get text width
         int textWidth = 0;
-        QTextBlock block = m_doc.findBlockByNumber( 0 );
+        QTextBlock block = m_doc->findBlockByNumber( 0 );
         if ( block.isValid() ) {
             textWidth = block.layout()->boundingRect().width();
         }

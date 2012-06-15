@@ -17,15 +17,21 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "departureprocessor.h"
 
+// KDE includes
 #include <KDebug>
+
+// Qt includes
+#include <QMutex> // Member variable
 #include <QUrl>
 
 const int DepartureProcessor::DEPARTURE_BATCH_SIZE = 10;
 const int DepartureProcessor::JOURNEY_BATCH_SIZE = 10;
 
-DepartureProcessor::DepartureProcessor( QObject* parent ) : QThread( parent )
+DepartureProcessor::DepartureProcessor( QObject* parent )
+        : QThread( parent ), m_mutex(new QMutex())
 {
     m_currentJob = NoJob;
     m_quit = false;
@@ -39,17 +45,18 @@ DepartureProcessor::DepartureProcessor( QObject* parent ) : QThread( parent )
 
 DepartureProcessor::~DepartureProcessor()
 {
-    m_mutex.lock();
+    m_mutex->lock();
     m_quit = true;
     m_abortCurrentJob = true;
     m_cond.wakeOne();
-    m_mutex.unlock();
+    m_mutex->unlock();
     wait();
+    delete m_mutex;
 }
 
 void DepartureProcessor::abortJobs( DepartureProcessor::JobTypes jobTypes )
 {
-    QMutexLocker locker( &m_mutex );
+    QMutexLocker locker( m_mutex );
 
     if ( jobTypes.testFlag( m_currentJob ) ) {
         m_abortCurrentJob = true;
@@ -70,7 +77,7 @@ void DepartureProcessor::abortJobs( DepartureProcessor::JobTypes jobTypes )
 
 void DepartureProcessor::setFilterSettings( const FilterSettingsList &filterSettings )
 {
-    QMutexLocker locker( &m_mutex );
+    QMutexLocker locker( m_mutex );
     m_filterSettings = filterSettings;
 
     if ( m_currentJob == ProcessDepartures && !m_jobQueue.isEmpty() ) {
@@ -80,7 +87,7 @@ void DepartureProcessor::setFilterSettings( const FilterSettingsList &filterSett
 
 void DepartureProcessor::setColorGroups( const ColorGroupSettingsList& colorGroupSettings )
 {
-    QMutexLocker locker( &m_mutex );
+    QMutexLocker locker( m_mutex );
     m_colorGroupSettings = colorGroupSettings;
 
     if ( m_currentJob == ProcessDepartures && !m_jobQueue.isEmpty() ) {
@@ -92,7 +99,7 @@ void DepartureProcessor::setFirstDepartureSettings(
         FirstDepartureConfigMode firstDepartureConfigMode, const QTime& timeOfFirstDepartureCustom,
         int timeOffsetOfFirstDeparture, bool arrival )
 {
-    QMutexLocker locker( &m_mutex );
+    QMutexLocker locker( m_mutex );
     m_firstDepartureConfigMode = firstDepartureConfigMode;
     m_timeOfFirstDepartureCustom = timeOfFirstDepartureCustom;
     m_timeOffsetOfFirstDeparture = timeOffsetOfFirstDeparture;
@@ -101,7 +108,7 @@ void DepartureProcessor::setFirstDepartureSettings(
 
 void DepartureProcessor::setAlarmSettings( const AlarmSettingsList& alarmSettings )
 {
-    QMutexLocker locker( &m_mutex );
+    QMutexLocker locker( m_mutex );
     m_alarmSettings = alarmSettings;
 
     if ( m_currentJob == ProcessDepartures && !m_jobQueue.isEmpty() ) {
@@ -140,7 +147,7 @@ void DepartureProcessor::startOrEnqueueJob( DepartureProcessor::JobInfo *job )
 
 void DepartureProcessor::processDepartures( const QString &sourceName, const QVariantHash& data )
 {
-    QMutexLocker locker( &m_mutex );
+    QMutexLocker locker( m_mutex );
     DepartureJobInfo *job = new DepartureJobInfo();
     job->sourceName = sourceName;
     job->data = data;
@@ -149,7 +156,7 @@ void DepartureProcessor::processDepartures( const QString &sourceName, const QVa
 
 void DepartureProcessor::processJourneys( const QString& sourceName, const QVariantHash& data )
 {
-    QMutexLocker locker( &m_mutex );
+    QMutexLocker locker( m_mutex );
     JourneyJobInfo *job = new JourneyJobInfo();
     job->sourceName = sourceName;
     job->data = data;
@@ -159,7 +166,7 @@ void DepartureProcessor::processJourneys( const QString& sourceName, const QVari
 void DepartureProcessor::filterDepartures( const QString &sourceName,
         const QList< DepartureInfo > &departures, const QList< uint > &shownDepartures )
 {
-    QMutexLocker locker( &m_mutex );
+    QMutexLocker locker( m_mutex );
     FilterJobInfo *job = new FilterJobInfo();
     job->sourceName = sourceName;
     job->departures = departures;
@@ -170,14 +177,14 @@ void DepartureProcessor::filterDepartures( const QString &sourceName,
 void DepartureProcessor::run()
 {
     forever {
-        m_mutex.lock();
+        m_mutex->lock();
         while ( m_jobQueue.isEmpty() ) {
             if ( m_quit ) {
                 break;
             }
             kDebug() << "Waiting for new jobs...";
             m_currentJob = NoJob;
-            m_cond.wait( &m_mutex );
+            m_cond.wait( m_mutex );
         }
         if ( m_quit ) {
             break;
@@ -185,7 +192,7 @@ void DepartureProcessor::run()
 
         JobInfo *job = m_jobQueue.dequeue();
         m_currentJob = job->type;
-        m_mutex.unlock();
+        m_mutex->unlock();
 
         QTime time;
         time.start();
@@ -199,7 +206,7 @@ void DepartureProcessor::run()
         kDebug() << " > Job" << job->type << "finished after"
                  << (time.elapsed() / 1000.0) << "seconds";
 
-        m_mutex.lock();
+        m_mutex->lock();
         if ( !m_requeueCurrentJob ) {
             delete job;
         } else {
@@ -213,9 +220,9 @@ void DepartureProcessor::run()
         } else if ( m_jobQueue.isEmpty() ) {
             // Wait if there are no more jobs in the queue
             m_currentJob = NoJob;
-            m_cond.wait( &m_mutex );
+            m_cond.wait( m_mutex );
         }
-        m_mutex.unlock();
+        m_mutex->unlock();
     }
 
     qDeleteAll( m_jobQueue );
@@ -227,7 +234,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     const QString sourceName = departureJob->sourceName;
     QVariantHash data = departureJob->data;
 
-    m_mutex.lock();
+    m_mutex->lock();
     FilterSettingsList filterSettings = m_filterSettings;
     ColorGroupSettingsList colorGroupSettings = m_colorGroupSettings;
     AlarmSettingsList alarmSettingsList = m_alarmSettings;
@@ -236,7 +243,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     const QTime &timeOfFirstDepartureCustom = m_timeOfFirstDepartureCustom;
     int timeOffsetOfFirstDeparture = m_timeOffsetOfFirstDeparture;
     bool isArrival = m_isArrival;
-    m_mutex.unlock();
+    m_mutex->unlock();
 
     emit beginDepartureProcessing( sourceName );
 
@@ -301,7 +308,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
         departureInfos << departureInfo;
 
         if ( departureInfos.count() == DEPARTURE_BATCH_SIZE ) {
-            QMutexLocker locker( &m_mutex );
+            QMutexLocker locker( m_mutex );
             if ( m_abortCurrentJob ) {
                 break;
             } else {
@@ -319,11 +326,11 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     } // for ( int i = 0; i < count; ++i )
 
     // Emit remaining departures
-    m_mutex.lock();
+    m_mutex->lock();
     if ( !m_abortCurrentJob && !departureInfos.isEmpty() ) {
         emit departuresProcessed( sourceName, departureInfos, url, updated, 0 );
     }
-    m_mutex.unlock();
+    m_mutex->unlock();
 }
 
 void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journeyJob )
@@ -331,9 +338,9 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
     const QString sourceName = journeyJob->sourceName;
     QVariantHash data = journeyJob->data;
 
-    m_mutex.lock();
+    m_mutex->lock();
     AlarmSettingsList alarmSettingsList = m_alarmSettings;
-    m_mutex.unlock();
+    m_mutex->unlock();
 
     emit beginJourneyProcessing( sourceName );
 
@@ -419,7 +426,7 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
 
         journeyInfos << journeyInfo;
         if ( journeyInfos.count() == JOURNEY_BATCH_SIZE ) {
-            QMutexLocker locker( &m_mutex );
+            QMutexLocker locker( m_mutex );
             if ( m_abortCurrentJob ) {
                 break;
             } else {
@@ -436,11 +443,11 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
     } // for ( int i = 0; i < count; ++i )
 
     // Emit remaining journeys
-    m_mutex.lock();
+    m_mutex->lock();
     if ( !m_abortCurrentJob && !journeyInfos.isEmpty() ) {
         emit journeysProcessed( sourceName, journeyInfos, url, updated );
     }
-    m_mutex.unlock();
+    m_mutex->unlock();
 }
 
 void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJob )
@@ -448,14 +455,14 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
     QList< DepartureInfo > departures = filterJob->departures;
     QList< DepartureInfo > newlyFiltered, newlyNotFiltered;
 
-    m_mutex.lock();
+    m_mutex->lock();
     FilterSettingsList filterSettings = m_filterSettings;
     ColorGroupSettingsList colorGroupSettings = m_colorGroupSettings;
 
     FirstDepartureConfigMode firstDepartureConfigMode = m_firstDepartureConfigMode;
     const QTime &timeOfFirstDepartureCustom = m_timeOfFirstDepartureCustom;
     int timeOffsetOfFirstDeparture = m_timeOffsetOfFirstDeparture;
-    m_mutex.unlock();
+    m_mutex->unlock();
 
     emit beginFiltering( filterJob->sourceName );
     kDebug() << "  - " << departures.count() << "departures to be filtered";
@@ -487,11 +494,11 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
         departureInfo.setFilteredOut( filterOut );
     }
 
-    m_mutex.lock();
+    m_mutex->lock();
     if ( !m_abortCurrentJob ) {
         emit departuresFiltered( filterJob->sourceName, departures, newlyFiltered, newlyNotFiltered );
     }
-    m_mutex.unlock();
+    m_mutex->unlock();
 }
 
 QDebug& operator <<( QDebug debug, DepartureProcessor::JobType jobType )
