@@ -40,9 +40,10 @@ target_link_libraries( DeparturesTest ${QT_QTTEST_LIBRARY} ${KDE4_PLASMA_LIBS} )
 SET( ScriptApiTest_HEADERS
    ../scripting.h )
 set( ScriptApiTest_SRCS
-    ScriptApiTest.cpp #../scripting.cpp ../global.cpp ../departureinfo.cpp
+    ScriptApiTest.cpp
    # Use files directly from the data engine
    ../global.cpp
+   ../serviceproviderglobal.cpp
    ../scripting.cpp
    ../departureinfo.cpp )
 qt4_automoc( ${ScriptApiTest_SRCS} ${ScriptApiTest_HEADERS} )
