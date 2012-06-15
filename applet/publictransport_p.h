@@ -260,16 +260,16 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
 
         // Create and connect the worker thread
         departureProcessor = new DepartureProcessor( q );
-        q->connect( departureProcessor, SIGNAL(beginDepartureProcessing( QString ) ),
-                    q, SLOT(beginDepartureProcessing( QString ) ) );
-        q->connect( departureProcessor, SIGNAL(departuresProcessed( QString, QList<DepartureInfo>, QUrl, QDateTime, int ) ),
-                    q, SLOT(departuresProcessed( QString, QList<DepartureInfo>, QUrl, QDateTime, int ) ) );
-        q->connect( departureProcessor, SIGNAL(beginJourneyProcessing( QString ) ),
-                    q, SLOT(beginJourneyProcessing( QString ) ) );
-        q->connect( departureProcessor, SIGNAL(journeysProcessed( QString, QList<JourneyInfo>, QUrl, QDateTime ) ),
-                    q, SLOT(journeysProcessed( QString, QList<JourneyInfo>, QUrl, QDateTime ) ) );
-        q->connect( departureProcessor, SIGNAL(departuresFiltered( QString, QList<DepartureInfo>, QList<DepartureInfo>, QList<DepartureInfo> ) ),
-                    q, SLOT(departuresFiltered( QString, QList<DepartureInfo>, QList<DepartureInfo>, QList<DepartureInfo> ) ) );
+        q->connect( departureProcessor, SIGNAL(beginDepartureProcessing(QString)),
+                    q, SLOT(beginDepartureProcessing(QString)) );
+        q->connect( departureProcessor, SIGNAL(departuresProcessed(QString,QList<DepartureInfo>,QUrl,QDateTime,int)),
+                    q, SLOT(departuresProcessed(QString,QList<DepartureInfo>,QUrl,QDateTime,int)) );
+        q->connect( departureProcessor, SIGNAL(beginJourneyProcessing(QString)),
+                    q, SLOT(beginJourneyProcessing(QString)) );
+        q->connect( departureProcessor, SIGNAL(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)),
+                    q, SLOT(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)) );
+        q->connect( departureProcessor, SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)),
+                    q, SLOT(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)) );
 
         // Create departure painter and load the vehicle type SVG
         departurePainter = new DeparturePainter( q );
@@ -280,12 +280,12 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
 
         // Create popup icon manager
         popupIcon = new PopupIcon( departurePainter, q );
-        q->connect( popupIcon, SIGNAL(currentDepartureGroupChanged( int ) ),
-                    q, SLOT(updateTooltip() ) );
-        q->connect( popupIcon, SIGNAL(currentDepartureGroupIndexChanged( qreal ) ),
-                    q, SLOT(updatePopupIcon() ) );
-        q->connect( popupIcon, SIGNAL(currentDepartureIndexChanged( qreal ) ),
-                    q, SLOT(updatePopupIcon() ) );
+        q->connect( popupIcon, SIGNAL(currentDepartureGroupChanged(int)),
+                    q, SLOT(updateTooltip()) );
+        q->connect( popupIcon, SIGNAL(currentDepartureGroupIndexChanged(qreal)),
+                    q, SLOT(updatePopupIcon()) );
+        q->connect( popupIcon, SIGNAL(currentDepartureIndexChanged(qreal)),
+                    q, SLOT(updatePopupIcon()) );
 
         // Get list of features of the currently used service provider, if any
         if( !settings.stopSettingsList.isEmpty() ) {
@@ -315,14 +315,14 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         model->setDepartureArrivalListType( settings.departureArrivalListType );
         model->setHomeStop( stopSettings.stopList().isEmpty() ? QString() : stopSettings.stop( 0 ).name );
         model->setCurrentStopIndex( settings.currentStopSettingsIndex );
-        q->connect( model, SIGNAL(alarmFired( DepartureItem *, AlarmSettings ) ),
-                    q, SLOT(alarmFired( DepartureItem *, AlarmSettings ) ) );
-        q->connect( model, SIGNAL(updateAlarms( AlarmSettingsList, QList<int> ) ),
-                    q, SLOT(removeAlarms( AlarmSettingsList, QList<int> ) ) );
-        q->connect( model, SIGNAL(itemsAboutToBeRemoved( QList<ItemBase *> ) ),
-                    q, SLOT(departuresAboutToBeRemoved( QList<ItemBase *> ) ) );
-        q->connect( model, SIGNAL(departuresLeft( QList<DepartureInfo> ) ),
-                    q, SLOT(departuresLeft( QList<DepartureInfo> ) ) );
+        q->connect( model, SIGNAL(alarmFired(DepartureItem*,AlarmSettings)),
+                    q, SLOT(alarmFired(DepartureItem*,AlarmSettings)) );
+        q->connect( model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
+                    q, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
+        q->connect( model, SIGNAL(itemsAboutToBeRemoved(QList<ItemBase*>)),
+                    q, SLOT(departuresAboutToBeRemoved(QList<ItemBase*>)) );
+        q->connect( model, SIGNAL(departuresLeft(QList<DepartureInfo>)),
+                    q, SLOT(departuresLeft(QList<DepartureInfo>)) );
         modelJourneys = new JourneyModel( q );
         modelJourneys->setHomeStop( stopSettings.stopList().isEmpty()
                                     ? QString() : stopSettings.stop( 0 ).name );
@@ -585,16 +585,16 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
 
         // Create the title widget and connect slots
         titleWidget = new TitleWidget( ShowDepartureArrivalListTitle,
-                                    &settings, mainGraphicsWidget );
-        q->connect( titleWidget, SIGNAL(journeySearchInputFinished( QString ) ),
-                    q, SLOT(journeySearchInputFinished( QString ) ) );
-        q->connect( titleWidget, SIGNAL(journeySearchListUpdated( QList<JourneySearchItem> ) ),
-                    q, SLOT(journeySearchListUpdated( QList<JourneySearchItem> ) ) );
+                                       &settings, mainGraphicsWidget );
+        q->connect( titleWidget, SIGNAL(journeySearchInputFinished(QString)),
+                    q, SLOT(journeySearchInputFinished(QString)) );
+        q->connect( titleWidget, SIGNAL(journeySearchListUpdated(QList<JourneySearchItem>)),
+                    q, SLOT(journeySearchListUpdated(QList<JourneySearchItem>)) ); // TODO Unused, remove?
 
         labelInfo = new Plasma::Label( mainGraphicsWidget );
         labelInfo->setAlignment( Qt::AlignVCenter | Qt::AlignRight );
-        q->connect( labelInfo, SIGNAL(linkActivated( QString ) ),
-                    KToolInvocation::self(), SLOT(invokeBrowser( QString ) ) );
+        q->connect( labelInfo, SIGNAL(linkActivated(QString)),
+                    KToolInvocation::self(), SLOT(invokeBrowser(QString)) );
         QLabel *_labelInfo = labelInfo->nativeWidget();
         _labelInfo->setOpenExternalLinks( true );
         _labelInfo->setWordWrap( true );
@@ -606,10 +606,10 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
                 mainGraphicsWidget );
         timetable->setModel( model );
         timetable->setSvg( &vehiclesSvg );
-        q->connect( timetable, SIGNAL(contextMenuRequested( PublicTransportGraphicsItem *, QPointF ) ),
-                    q, SLOT(departureContextMenuRequested( PublicTransportGraphicsItem *, QPointF ) ) );
-        q->connect( timetable, SIGNAL(requestStopAction( StopAction::Type, QString, QString ) ),
-                    q, SLOT(requestStopAction( StopAction::Type, QString, QString ) ) );
+        q->connect( timetable, SIGNAL(contextMenuRequested(PublicTransportGraphicsItem*,QPointF)),
+                    q, SLOT(departureContextMenuRequested(PublicTransportGraphicsItem*,QPointF)) );
+        q->connect( timetable, SIGNAL(requestStopAction(StopAction::Type,QString,QString)),
+                    q, SLOT(requestStopAction(StopAction::Type,QString,QString)) );
 
         QGraphicsLinearLayout *layout = new QGraphicsLinearLayout( Qt::Vertical );
         layout->setContentsMargins( 0, 0, 0, 0 );
