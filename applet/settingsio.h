@@ -44,6 +44,7 @@ public:
     /** @brief These flags describe what settings have changed. */
     enum ChangedFlag {
         NothingChanged          = 0x0000, /**< Nothing has changed. */
+
         IsChanged               = 0x0001, /**< This flag is set if something has changed.
                 * If another change flag is set (except for NothingChanged), this flag is also
                 * set. This flag also gets set for changes not covered by the other change flags. */

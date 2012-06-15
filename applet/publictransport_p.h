@@ -82,23 +82,14 @@ class ToPropertyTransition : public QSignalTransition
 {
 public:
     ToPropertyTransition( QObject *sender, const char *signal, QState *source,
-                          QObject *propertyObject, const char *targetStateProperty )
-        : QSignalTransition(sender, signal, source),
-          m_propertyObject(propertyObject),
-          m_property(targetStateProperty)
-    {
-        qRegisterMetaType<QState*>("QState*");
-    };
+                          QObject *propertyObject, const char *targetStateProperty );
 
     const QObject *propertyObject() const { return m_propertyObject; };
     const char *targetStateProperty() const { return m_property; };
     QState *currentTargetState() const {
         return qobject_cast<QState*>( qvariant_cast<QObject*>(m_propertyObject->property(m_property)) );
     };
-    void setTargetStateProperty( const QObject *propertyObject, const char *property ) {
-        m_propertyObject = propertyObject;
-        m_property = property;
-    };
+    void setTargetStateProperty( const QObject *propertyObject, const char *property );
 
 protected:
     virtual bool eventTest( QEvent *event );
@@ -111,16 +102,7 @@ private:
 /** @brief Private class for the PublicTransport applet class. */
 class PublicTransportPrivate {
 public:
-    PublicTransportPrivate( PublicTransport *q )
-        : graphicsWidget(0), mainGraphicsWidget(0),
-          oldItem(0), titleWidget(0), labelInfo(0), timetable(0), journeyTimetable(0),
-          labelJourneysNotSupported(0), listStopSuggestions(0), overlay(0), model(0),
-          popupIcon(0), titleToggleAnimation(0), modelJourneys(0),
-          filtersGroup(0), colorFiltersGroup(0), departureProcessor(0), departurePainter(0),
-          stateMachine(0), journeySearchTransition1(0), journeySearchTransition2(0),
-          journeySearchTransition3(0), marble(0), q_ptr(q)
-    {
-    };
+    PublicTransportPrivate( PublicTransport *q );
 
 public: // Event handlers
     /** @brief Update GUI and logic to new @p _settings, changes are indicated using @p changed. */
