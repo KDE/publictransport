@@ -118,6 +118,7 @@ void BacktraceDockWidget::debuggerStateChanged( DebuggerState newState, Debugger
 {
     switch ( newState ) {
     case Debugger::NotRunning:
+    case Debugger::Aborting:
         disable();
         break;
     case Debugger::Running:

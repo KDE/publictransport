@@ -107,9 +107,8 @@ void ConsoleDockWidget::contextMenu( const QPoint &pos )
     QMenu *menu = m_consoleWidget->createStandardContextMenu();
     QAction *clearAction = menu->addAction( KIcon("edit-clear-list"), i18nc("@action", "&Clear"),
                                             m_projectModel->activeProject(), SLOT(clearConsoleText()) );
-    QAction *helpAction = menu->addAction( KIcon("help-about"), i18nc("@action", "&Show Help"),
-                                           this, SLOT(showHelp()) );
     clearAction->setEnabled( !m_consoleWidget->document()->isEmpty() );
+    menu->addAction( KIcon("help-about"), i18nc("@action", "&Show Help"), this, SLOT(showHelp()) );
     menu->exec( m_consoleWidget->mapToGlobal(pos) );
     delete menu;
 }
