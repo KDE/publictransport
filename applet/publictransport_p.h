@@ -252,6 +252,9 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
                     q, SLOT(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)) );
         q->connect( departureProcessor, SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)),
                     q, SLOT(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)) );
+        departureProcessor->setAlarmSettings( settings.alarmSettingsList );
+        departureProcessor->setFilterSettings( settings.currentFilterSettings() );
+        departureProcessor->setColorGroups( settings.currentColorGroupSettings() );
 
         // Create departure painter and load the vehicle type SVG
         departurePainter = new DeparturePainter( q );
