@@ -105,13 +105,13 @@ public:
      **/
     static const int MAX_RECENT_JOURNEY_SEARCHES = 10;
 
-    /** @brief Returns the widget with the contents of the applet. */
+    /** @brief Return the widget with the contents of the applet. */
     virtual QGraphicsWidget* graphicsWidget();
 
     /** @returns the number of currently shown departures/arrivals. */
     int departureCount() const;
 
-    /** @brief Gets a pointer to either the journey search state or the journeys unsupported state. */
+    /** @brief Get a pointer to either the journey search state or the journeys unsupported state. */
     QVariant supportedJourneySearchState() const;
 
 signals:
@@ -163,7 +163,7 @@ public slots:
     virtual void init();
 
     /**
-     * @brief Clears the current list of stop settings and adds a new one.
+     * @brief Clear the current list of stop settings and adds a new one.
      *
      * @param serviceProviderID The ID of the service provider to use for the new stop settings.
      * @param stopName The stop name to use for the new stop settings.
@@ -171,7 +171,7 @@ public slots:
     void setSettings( const QString &serviceProviderID, const QString &stopName );
 
     /**
-     * @brief Replaces the current lists of stop and filter settings.
+     * @brief Replace the current lists of stop and filter settings.
      *
      * @param stopSettingsList The new list of stop settings.
      * @param filterSettings The new list of filter settings.
@@ -180,7 +180,7 @@ public slots:
                       const FilterSettingsList &filterSettings );
 
     /**
-     * @brief Replaces the current settings and updates the applet accordingly.
+     * @brief Replace the current settings and updates the applet accordingly.
      *
      * Settings are written using SettingsIO::writeSettings() which also compares them with the
      * old settings and returns flags for changes (SettingsIO::ChangedFlags). Only parts of the
@@ -222,7 +222,7 @@ protected slots:
     void departureContextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
 
     /**
-     * @brief Gets called by the context menu of route stops.
+     * @brief Get called by the context menu of route stops.
      *
      * Performs the given @p stopAction.
      *
@@ -236,7 +236,7 @@ protected slots:
     void noItemsTextClicked();
 
     /**
-     * @brief Shows the departure list.
+     * @brief Show the departure list.
      *
      * Can be used eg. if the journey view is currently shown to go back
      * to the departure view.
@@ -246,7 +246,7 @@ protected slots:
     void showDepartureList();
 
     /**
-     * @brief Shows the journey list.
+     * @brief Show the journey list.
      *
      * This gets called when the journey view state is entered, eg. because
      * a journey search was finished.
@@ -254,7 +254,7 @@ protected slots:
     void showJourneyList();
 
     /**
-     * @brief Shows an intermediate departure list.
+     * @brief Show an intermediate departure list.
      *
      * Shows a departure list for another stop, with the option to go back to
      * the original stop again.
@@ -268,7 +268,7 @@ protected slots:
     void showIntermediateDepartureList();
 
     /**
-     * @brief Shows departures in the departure list (not arrivals).
+     * @brief Show departures in the departure list (not arrivals).
      *
      * Writes new settings with @ref Settings::departureArrivalListType set
      * to @p DepartureList. This also updates the departure view on @ref configChanged.
@@ -279,7 +279,7 @@ protected slots:
     void showDepartures();
 
     /**
-     * @brief Shows arrivals in the departure list.
+     * @brief Show arrivals in the departure list.
      *
      * Writes new settings with @ref Settings::departureArrivalListType set
      * to @p ArrivalList. This also updates the departure view on @ref configChanged.
@@ -290,7 +290,7 @@ protected slots:
     void showArrivals();
 
     /**
-     * @brief Shows the journey search view.
+     * @brief Show the journey search view.
      *
      * Switches to journey search mode. To go back to the departure list use
      * @ref showDepartureList. If a journey search string is set the user can
@@ -317,9 +317,16 @@ protected slots:
      **/
     void showActionButtons();
 
+    /**
+     * @brief Show @p mainWidget in the applet.
+     *
+     * This gets used to switch eg. to the departure/arrival view (showDepartureList())
+     * or to the journey view (showJourneyList()).
+     * Can also be used to show other widgets, eg. showing messages.
+     **/
     void showMainWidget( QGraphicsWidget *mainWidget );
 
-    /** @brief Removes stop settings, that were inserted for an intermediate
+    /** @brief Remove stop settings, that were inserted for an intermediate
      * departure list. */
     void removeIntermediateStopSettings();
 
@@ -369,6 +376,7 @@ protected slots:
     /** @brief The plasma theme has been changed. */
     void themeChanged();
 
+    /** @brief Shows the stop at the given coordinates in a running Marble process. */
     void showStopInMarble( qreal lon = -1.0, qreal lat = -1.0 );
 
     /** @brief The 'marble' process has been started. */
@@ -383,6 +391,10 @@ protected slots:
     /** @brief A recent journey @p action was triggered from the "quickJourneys" action. */
     void journeyActionTriggered( QAction *action );
 
+    /**
+     * @brief Updates the settings and change the current list of journey searches.
+     * Uses Settings::setCurrentJourneySearches().
+     **/
     void journeySearchListUpdated( const QList<JourneySearchItem> &newJourneySearches );
 
     /**
@@ -472,13 +484,13 @@ protected slots:
     /** @brief The animation to toggle the display of the title has finished. */
     void titleToggleAnimationFinished();
 
-    /** @brief Deletes the overlay item used when showing action buttons over the plasmoid. */
+    /** @brief Delete the overlay item used when showing action buttons over the plasmoid. */
     void destroyOverlay();
 
     /** @brief An action to change the currently shown stop has been triggered. */
     void setCurrentStopIndex( QAction *action );
 
-    /** @brief Enables @p filterConfiguration for the currently active stop settings. */
+    /** @brief Enable @p filterConfiguration for the currently active stop settings. */
     void enableFilterConfiguration( const QString &filterConfiguration, bool enable = true );
 
     /**
@@ -544,7 +556,7 @@ protected:
      **/
     virtual void createConfigurationInterface( KConfigDialog *parent );
 
-    /** @brief Gets a list of actions for the context menu. */
+    /** @brief Get a list of actions for the context menu. */
     virtual QList<QAction*> contextualActions();
 
     /** @brief The popup gets shown or hidden. */
@@ -553,16 +565,17 @@ protected:
     /** @brief Mouse wheel rotated on popup icon. */
     virtual void wheelEvent( QGraphicsSceneWheelEvent* event );
 
+    /** @brief Overridden to make links clickable in the bottom info label. */
     virtual bool sceneEventFilter( QGraphicsItem* watched, QEvent* event );
 
-    /** @brief Watching for up/down key presses in m_journeySearch to select stop suggestions. */
+    /** @brief Watch for up/down key presses in m_journeySearch to select stop suggestions. */
     virtual bool eventFilter( QObject* watched, QEvent* event );
 
-    /** @brief Creates all used actions. */
+    /** @brief Create all used actions. */
     void setupActions();
 
     /**
-     * @brief Gets an action with string and icon updated to the current settings.
+     * @brief Get an action with string and icon updated to the current settings.
      *
      * @param actionName The name of the action to return updated.
      * @return The updated action.
@@ -573,7 +586,7 @@ protected:
     void alarmCreated();
 
     /**
-     * @brief Handles errors from the publictransport data engine for @p data from source @p sourceName.
+     * @brief Handle errors from the publictransport data engine for @p data from source @p sourceName.
      *
      * @ingroup models
      **/
@@ -589,17 +602,17 @@ protected:
     /** @brief Read stop suggestions from the data engine. */
     void processOsmData( const QString &sourceName, const Plasma::DataEngine::Data& data );
 
-    /** @brief Sets an autogenerated alarm for the given departure/arrival. */
+    /** @brief Set an autogenerated alarm for the given departure/arrival. */
     void createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex,
                                           bool onlyForCurrentWeekday = false );
 
-    /** @brief Removes an autogenerated alarm from this departure/arrival if any. */
+    /** @brief Remove an autogenerated alarm from this departure/arrival if any. */
     void removeAlarmForDeparture( int row );
 
     QString queryNetworkStatus();
 
     /**
-     * @brief Shows an error message when no interface is activated.
+     * @brief Show an error message when no interface is activated.
      *
      * @return True, if no message is shown. False, otherwise.
      **/

@@ -75,7 +75,13 @@ public:
                                             * include AlarmTimeSetting in stop settings. */
         ChangedColorization     = 0x0400, /**< Colorization of departures has been toggled. */
         ChangedColorGroupSettings
-                                = 0x0800,  /**< Color group settings have been changed. */
+                                = 0x0800, /**< Color group settings have been changed. */
+
+        ChangedFont             = 0x1000, /**< The font was changed. */
+        ChangedSizeFactor       = 0x2000, /**< The size factor was changed.
+                                            * This also affects the font size. */
+        ChangedShadows          = 0x4000, /**< Shadow visibility has been toggled. */
+        ChangedTargetColumn     = 0x8000, /**< Target column visibility has been toggled. */
 
         ChangedCurrentFilterSettings = ChangedCurrentStop || ChangedCurrentStopSettings ||
                 ChangedFilterSettings

@@ -117,13 +117,16 @@ public:
      * @param timeOfFirstDepartureCustom A custom, fixed first departure time.
      *   Only used if @p firstDepartureConfigMode is set to @ref AtCustomTime.
      * @param timeOffsetOfFirstDeparture The offset in minutes of the first result departure/arrival.
-     * @param arrival The departures to be processed are actually arrivals.
      *
      * @see FirstDepartureConfigMode
      **/
     void setFirstDepartureSettings( FirstDepartureConfigMode firstDepartureConfigMode,
-            const QTime &timeOfFirstDepartureCustom, int timeOffsetOfFirstDeparture,
-            bool arrival );
+            const QTime &timeOfFirstDepartureCustom, int timeOffsetOfFirstDeparture );
+
+    /**
+     * @brief Toggle between departures and arrivals.
+     **/
+    void setDepartureArrivalListType( DepartureArrivalListType type );
 
     /**
      * @brief Enqueues a job of type @ref ProcessDepartures to the job queue.

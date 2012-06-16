@@ -304,7 +304,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 
     if ( settings.drawShadows != oldSettings.drawShadows ) {
         cg.writeEntry( "drawShadows", settings.drawShadows );
-        changed |= IsChanged;
+        changed |= IsChanged | ChangedShadows;
     }
 
     if ( settings.showHeader != oldSettings.showHeader ) {
@@ -314,7 +314,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 
     if ( settings.hideColumnTarget != oldSettings.hideColumnTarget ) {
         cg.writeEntry( "hideColumnTarget", settings.hideColumnTarget );
-        changed |= IsChanged;
+        changed |= IsChanged | ChangedTargetColumn;
     }
 
     if ( settings.maximalNumberOfDepartures != oldSettings.maximalNumberOfDepartures ) {
@@ -329,14 +329,14 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 
     if ( settings.sizeFactor != oldSettings.sizeFactor ) {
         cg.writeEntry( "size", Settings::sizeFromSizeFactor(settings.sizeFactor) );
-        changed |= IsChanged;
+        changed |= IsChanged | ChangedSizeFactor;
     }
 
     if ( settings.useDefaultFont != oldSettings.useDefaultFont
             || (!settings.useDefaultFont && settings.font != oldSettings.font) ) {
         cg.writeEntry( "fontFamily", settings.useDefaultFont
                     ? QString() : settings.font.family() );
-        changed |= IsChanged;
+        changed |= IsChanged | ChangedFont;
     }
 
     if ( settings.colorize != oldSettings.colorize ) {

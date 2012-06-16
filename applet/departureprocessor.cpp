@@ -97,13 +97,17 @@ void DepartureProcessor::setColorGroups( const ColorGroupSettingsList& colorGrou
 
 void DepartureProcessor::setFirstDepartureSettings(
         FirstDepartureConfigMode firstDepartureConfigMode, const QTime& timeOfFirstDepartureCustom,
-        int timeOffsetOfFirstDeparture, bool arrival )
+        int timeOffsetOfFirstDeparture )
 {
     QMutexLocker locker( m_mutex );
     m_firstDepartureConfigMode = firstDepartureConfigMode;
     m_timeOfFirstDepartureCustom = timeOfFirstDepartureCustom;
     m_timeOffsetOfFirstDeparture = timeOffsetOfFirstDeparture;
-    m_isArrival = arrival;
+}
+
+void DepartureProcessor::setDepartureArrivalListType( DepartureArrivalListType type )
+{
+    m_isArrival = type == ArrivalList;
 }
 
 void DepartureProcessor::setAlarmSettings( const AlarmSettingsList& alarmSettings )

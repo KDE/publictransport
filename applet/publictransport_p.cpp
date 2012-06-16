@@ -96,12 +96,36 @@ void PublicTransportPrivate::onSettingsChanged( const Settings &_settings, Setti
     emit q->configNeedsSaving();
     emit q->settingsChanged();
 
+    // First update the departure processor
+    if ( changed.testFlag(SettingsIO::ChangedDepartureArrivalListType) ) {
+        departureProcessor->setDepartureArrivalListType( settings.departureArrivalListType );
+    }
+    if ( changed.testFlag(SettingsIO::ChangedFilterSettings) ) {
+        departureProcessor->setFilterSettings( settings.currentFilterSettings() );
+    }
+    if ( changed.testFlag(SettingsIO::ChangedColorGroupSettings) ) {
+        departureProcessor->setColorGroups( settings.currentColorGroupSettings() );
+    }
+
     // If stop settings have changed the whole model gets cleared and refilled.
     // Therefore the other change flags can be in 'else' parts
     if ( changed.testFlag(SettingsIO::ChangedServiceProvider) ||
          changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ||
          changed.testFlag(SettingsIO::ChangedCurrentStop) )
     {
+        if ( changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ) {
+            // Apply first departure settings to the worker thread
+            const StopSettings stopSettings = settings.currentStopSettings();
+            departureProcessor->setFirstDepartureSettings(
+                    static_cast<FirstDepartureConfigMode>(stopSettings.get<int>(
+                                FirstDepartureConfigModeSetting)),
+                    stopSettings.get<QTime>(TimeOfFirstDepartureSetting),
+                    stopSettings.get<int>(TimeOffsetOfFirstDepartureSetting) );
+        }
+
+        labelInfo->setToolTip( courtesyToolTip() );
+        labelInfo->setText( infoText() );
+
         settings.adjustColorGroupSettingsCount();
         clearDepartures();
         onServiceProviderSettingsChanged();
@@ -153,73 +177,70 @@ void PublicTransportPrivate::onSettingsChanged( const Settings &_settings, Setti
         if ( modelJourneys ) {
             modelJourneys->setAlarmSettings( settings.alarmSettingsList );
         }
+        departureProcessor->setAlarmSettings( settings.alarmSettingsList );
+    }
+
+    // Apply show departures/arrivals setting
+    if ( changed.testFlag(SettingsIO::ChangedDepartureArrivalListType) ) {
+        model->setDepartureArrivalListType( settings.departureArrivalListType );
+
+        // Update text in the departure/arrival view that gets shown when the model is empty
+        onDepartureDataStateChanged();
+    }
+
+    // Apply font / size factor
+    if ( changed.testFlag(SettingsIO::ChangedFont) ||
+         changed.testFlag(SettingsIO::ChangedSizeFactor) )
+    {
+        // Get fonts
+        QFont font = settings.sizedFont();
+        int smallPointSize = KGlobalSettings::smallestReadableFont().pointSize() * settings.sizeFactor;
+        QFont smallFont = font;
+        smallFont.setPointSize( smallPointSize > 0 ? smallPointSize : 1 );
+
+        // Apply fonts, update indentation and icon sizes to size factor, update options
+        labelInfo->setFont( smallFont );
+        timetable->setFont( font );
+
+        if ( changed.testFlag(SettingsIO::ChangedSizeFactor) ) {
+            timetable->setZoomFactor( settings.sizeFactor );
+        }
+        if ( journeyTimetable && isStateActive("journeyView") ) {
+            journeyTimetable->setFont( font );
+            if ( changed.testFlag(SettingsIO::ChangedSizeFactor) ) {
+                journeyTimetable->setZoomFactor( settings.sizeFactor );
+            }
+        }
+    }
+
+    // Apply shadow settings
+    if ( changed.testFlag(SettingsIO::ChangedShadows) ) {
+        timetable->setOption( PublicTransportWidget::DrawShadowsOrHalos, settings.drawShadows );
+        if ( journeyTimetable && isStateActive("journeyView") ) {
+            journeyTimetable->setOption( PublicTransportWidget::DrawShadowsOrHalos,
+                                         settings.drawShadows );
+        }
+    }
+
+    // Update title widget to settings
+    if ( changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ||
+         changed.testFlag(SettingsIO::ChangedFont) ||
+         changed.testFlag(SettingsIO::ChangedSizeFactor) )
+    {
+        titleWidget->settingsChanged();
+    }
+
+    // Apply target column settings
+    if ( changed.testFlag(SettingsIO::ChangedTargetColumn) &&
+         stateMachine && isStateActive("departureView") )
+    {
+        timetable->setTargetHidden( settings.hideColumnTarget );
+        timetable->updateItemLayouts();
     }
 }
 
 void PublicTransportPrivate::onUnknownSettingsChanged()
 {
-    // Apply show departures/arrivals setting
-    model->setDepartureArrivalListType( settings.departureArrivalListType );
-
-    // Apply header settings
-    if ( stateMachine && isStateActive("departureView") ) {
-        timetable->setTargetHidden( settings.hideColumnTarget );
-        timetable->updateItemLayouts();
-    }
-
-    // Get fonts
-    QFont font = settings.sizedFont();
-    int smallPointSize = KGlobalSettings::smallestReadableFont().pointSize() * settings.sizeFactor;
-    QFont smallFont = font/*, boldFont = font*/;
-    smallFont.setPointSize( smallPointSize > 0 ? smallPointSize : 1 );
-
-    // Apply fonts, update indentation and icon sizes to size factor, update options
-    labelInfo->setFont( smallFont );
-    timetable->setFont( font );
-    timetable->setZoomFactor( settings.sizeFactor );
-    timetable->setOption( PublicTransportWidget::DrawShadowsOrHalos, settings.drawShadows );
-    if ( journeyTimetable && isStateActive("journeyView") ) {
-        journeyTimetable->setFont( font );
-        journeyTimetable->setZoomFactor( settings.sizeFactor );
-        journeyTimetable->setOption( PublicTransportWidget::DrawShadowsOrHalos,
-                                     settings.drawShadows );
-    }
-
-    // Update title widget to settings
-    titleWidget->settingsChanged();
-
-    // Update info label
-    labelInfo->setToolTip( courtesyToolTip() );
-    labelInfo->setText( infoText() );
-
-    // Update text in the departure/arrival view, if no items are in the model
-    // TODO this is a copy of code in line ~2311
-    if ( !stateMachine || isStateActive("departureDataWaiting") ) {
-        timetable->setNoItemsText(
-            i18nc( "@info/plain", "Waiting for data..." ) );
-    } else if ( settings.departureArrivalListType == ArrivalList ) {
-        timetable->setNoItemsText( !settings.currentFilterSettings().isEmpty()
-                                   ? i18nc( "@info/plain", "No unfiltered arrivals.<nl/>You can "
-                                            "disable filters to see all arrivals." )
-                                   : i18nc( "@info/plain", "No arrivals." ) );
-    } else {
-        timetable->setNoItemsText( !settings.currentFilterSettings().isEmpty()
-                                   ? i18nc( "@info/plain", "No unfiltered departures.<nl/>You can "
-                                            "disable filters to see all departures." )
-                                   : i18nc( "@info/plain", "No departures." ) );
-    }
-
-    // Apply filter, first departure and alarm settings to the worker thread
-    departureProcessor->setFilterSettings( settings.currentFilterSettings() );
-    departureProcessor->setColorGroups( settings.currentColorGroupSettings() );
-    StopSettings stopSettings = settings.currentStopSettings();
-    departureProcessor->setFirstDepartureSettings(
-        static_cast<FirstDepartureConfigMode>( stopSettings.get<int>(
-                    FirstDepartureConfigModeSetting ) ),
-        stopSettings.get<QTime>( TimeOfFirstDepartureSetting ),
-        stopSettings.get<int>( TimeOffsetOfFirstDepartureSetting ),
-        settings.departureArrivalListType == ArrivalList );
-    departureProcessor->setAlarmSettings( settings.alarmSettingsList );
 
     // Apply other settings to the model
     timetable->setMaxLineCount( settings.linesPerRow );
@@ -948,23 +969,24 @@ void PublicTransportPrivate::updateColorGroupSettings()
         ColorGroupSettingsList colorGroups = settings.currentColorGroupSettings();
         ColorGroupSettingsList newColorGroups = ColorGroups::generateColorGroupSettingsFrom(
                 mergedDepartureList(true, 40), settings.departureArrivalListType );
-
-        // Copy filterOut values from old color group settings
-        for( int i = 0; i < newColorGroups.count(); ++i ) {
-            ColorGroupSettings &newColorGroup = newColorGroups[i];
-            if ( colorGroups.hasColor( newColorGroup.color ) ) {
-                ColorGroupSettings colorGroup = colorGroups.byColor( newColorGroup.color );
-                newColorGroup.filterOut = colorGroup.filterOut;
+        if ( colorGroups != newColorGroups ) {
+            // Copy filterOut values from old color group settings
+            for( int i = 0; i < newColorGroups.count(); ++i ) {
+                ColorGroupSettings &newColorGroup = newColorGroups[i];
+                if ( colorGroups.hasColor(newColorGroup.color) ) {
+                    ColorGroupSettings colorGroup = colorGroups.byColor( newColorGroup.color );
+                    newColorGroup.filterOut = colorGroup.filterOut;
+                }
             }
-        }
-        model->setColorGroups( newColorGroups );
-        departureProcessor->setColorGroups( newColorGroups );
+            model->setColorGroups( newColorGroups );
+            departureProcessor->setColorGroups( newColorGroups );
 
-        // Change color group settings in a copy of the Settings object
-        // Then write the changed settings
-        Settings newSettings = settings;
-        newSettings.colorGroupSettingsList[ newSettings.currentStopSettingsIndex ] = newColorGroups;
-        q->setSettings( newSettings );
+            // Change color group settings in a copy of the Settings object
+            // Then write the changed settings
+            Settings newSettings = settings;
+            newSettings.colorGroupSettingsList[ newSettings.currentStopSettingsIndex ] = newColorGroups;
+            q->setSettings( newSettings );
+        }
     } else {
         // Remove color groups if colorization was toggled off
         // or if stop/filter settings were changed (update color groups after data arrived)
@@ -1118,8 +1140,12 @@ void PublicTransportPrivate::onDepartureDataStateChanged()
     bool busy = false;
 
     if ( isStateActive("departureDataWaiting") ) {
-        noItemsText = i18nc("@info/plain", "Waiting for depatures...");
-        busy = modelJourneys->isEmpty();
+        if ( settings.departureArrivalListType == ArrivalList ) {
+            noItemsText = i18nc("@info/plain", "Waiting for arrivals...");
+        } else {
+            noItemsText = i18nc("@info/plain", "Waiting for depatures...");
+        }
+        busy = model->isEmpty();
     } else if ( isStateActive("departureDataInvalid") ) {
         noItemsText = settings.departureArrivalListType == ArrivalList
                 ? i18nc("@info/plain", "No arrivals due to an error.")
