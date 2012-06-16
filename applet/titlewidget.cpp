@@ -77,6 +77,9 @@ TitleWidget::TitleWidget( TitleType titleType, Settings *settings, bool journeys
 
     // Add a filter widget
     createAndAddWidget( WidgetFilter );
+
+    // Adjust to settings
+    settingsChanged();
 }
 
 void TitleWidget::setJourneysSupported( bool supported )
