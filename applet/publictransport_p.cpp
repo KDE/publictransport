@@ -62,7 +62,7 @@ PublicTransportPrivate::PublicTransportPrivate( PublicTransport *q )
         : graphicsWidget(0), mainGraphicsWidget(0),
         oldItem(0), titleWidget(0), labelInfo(0), timetable(0), journeyTimetable(0),
         labelJourneysNotSupported(0), listStopSuggestions(0), overlay(0), model(0),
-        popupIcon(0), titleToggleAnimation(0), modelJourneys(0),
+        popupIcon(0), titleToggleAnimation(0), modelJourneys(0), originalStopIndex(-1),
         filtersGroup(0), colorFiltersGroup(0), departureProcessor(0), departurePainter(0),
         stateMachine(0), journeySearchTransition1(0), journeySearchTransition2(0),
         journeySearchTransition3(0), marble(0), q_ptr( q )
@@ -78,7 +78,8 @@ bool ToPropertyTransition::eventTest( QEvent* event )
     return true;
 }
 
-void PublicTransportPrivate::onSettingsChanged( const Settings &_settings, SettingsIO::ChangedFlags changed )
+void PublicTransportPrivate::onSettingsChanged( const Settings &_settings,
+                                                SettingsIO::ChangedFlags changed )
 {
     Q_Q( PublicTransport );
 
@@ -98,13 +99,18 @@ void PublicTransportPrivate::onSettingsChanged( const Settings &_settings, Setti
 
     // First update the departure processor
     if ( changed.testFlag(SettingsIO::ChangedDepartureArrivalListType) ) {
-        departureProcessor->setDepartureArrivalListType( settings.departureArrivalListType );
+        departureProcessor->setDepartureArrivalListType( settings.departureArrivalListType() );
     }
     if ( changed.testFlag(SettingsIO::ChangedFilterSettings) ) {
-        departureProcessor->setFilterSettings( settings.currentFilterSettings() );
+        departureProcessor->setFilters( settings.currentFilters() );
     }
     if ( changed.testFlag(SettingsIO::ChangedColorGroupSettings) ) {
-        departureProcessor->setColorGroups( settings.currentColorGroupSettings() );
+        departureProcessor->setColorGroups( settings.currentColorGroups() );
+    }
+    if ( changed.testFlag(SettingsIO::ChangedLinesPerRow) ) {
+        timetable->setMaxLineCount( settings.linesPerRow() );
+//         journeyTimetable->setMaxLineCount( settings.linesPerRow ); // TEST
+        model->setLinesPerRow( settings.linesPerRow() );
     }
 
     // If stop settings have changed the whole model gets cleared and refilled.
@@ -115,12 +121,16 @@ void PublicTransportPrivate::onSettingsChanged( const Settings &_settings, Setti
     {
         if ( changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ) {
             // Apply first departure settings to the worker thread
-            const StopSettings stopSettings = settings.currentStopSettings();
+            const StopSettings stop = settings.currentStop();
             departureProcessor->setFirstDepartureSettings(
-                    static_cast<FirstDepartureConfigMode>(stopSettings.get<int>(
+                    static_cast<FirstDepartureConfigMode>(stop.get<int>(
                                 FirstDepartureConfigModeSetting)),
-                    stopSettings.get<QTime>(TimeOfFirstDepartureSetting),
-                    stopSettings.get<int>(TimeOffsetOfFirstDepartureSetting) );
+                    stop.get<QTime>(TimeOfFirstDepartureSetting),
+                    stop.get<int>(TimeOffsetOfFirstDepartureSetting) );
+
+            int alarmMinsBeforeDeparture = stop.get<int>( AlarmTimeSetting );
+            model->setAlarmMinsBeforeDeparture( alarmMinsBeforeDeparture );
+            modelJourneys->setAlarmMinsBeforeDeparture( alarmMinsBeforeDeparture );
         }
 
         labelInfo->setToolTip( courtesyToolTip() );
@@ -173,16 +183,16 @@ void PublicTransportPrivate::onSettingsChanged( const Settings &_settings, Setti
 
     // Update alarm settings
     if ( changed.testFlag(SettingsIO::ChangedAlarmSettings) ) {
-        model->setAlarmSettings( settings.alarmSettingsList );
+        model->setAlarmSettings( settings.alarms() );
         if ( modelJourneys ) {
-            modelJourneys->setAlarmSettings( settings.alarmSettingsList );
+            modelJourneys->setAlarmSettings( settings.alarms() );
         }
-        departureProcessor->setAlarmSettings( settings.alarmSettingsList );
+        departureProcessor->setAlarms( settings.alarms() );
     }
 
     // Apply show departures/arrivals setting
     if ( changed.testFlag(SettingsIO::ChangedDepartureArrivalListType) ) {
-        model->setDepartureArrivalListType( settings.departureArrivalListType );
+        model->setDepartureArrivalListType( settings.departureArrivalListType() );
 
         // Update text in the departure/arrival view that gets shown when the model is empty
         onDepartureDataStateChanged();
@@ -194,31 +204,33 @@ void PublicTransportPrivate::onSettingsChanged( const Settings &_settings, Setti
     {
         // Get fonts
         QFont font = settings.sizedFont();
-        int smallPointSize = KGlobalSettings::smallestReadableFont().pointSize() * settings.sizeFactor;
+        int smallPointSize = KGlobalSettings::smallestReadableFont().pointSize() * settings.sizeFactor();
         QFont smallFont = font;
         smallFont.setPointSize( smallPointSize > 0 ? smallPointSize : 1 );
 
-        // Apply fonts, update indentation and icon sizes to size factor, update options
+        // Apply fonts
         labelInfo->setFont( smallFont );
         timetable->setFont( font );
-
-        if ( changed.testFlag(SettingsIO::ChangedSizeFactor) ) {
-            timetable->setZoomFactor( settings.sizeFactor );
-        }
         if ( journeyTimetable && isStateActive("journeyView") ) {
             journeyTimetable->setFont( font );
-            if ( changed.testFlag(SettingsIO::ChangedSizeFactor) ) {
-                journeyTimetable->setZoomFactor( settings.sizeFactor );
-            }
+        }
+    }
+
+    // Apply size factor settings
+    if ( changed.testFlag(SettingsIO::ChangedSizeFactor) ) {
+        model->setSizeFactor( settings.sizeFactor() ); // Used for sizes of icons returned by the model
+        timetable->setZoomFactor( settings.sizeFactor() );
+        if ( journeyTimetable && isStateActive("journeyView") ) {
+            journeyTimetable->setZoomFactor( settings.sizeFactor() );
         }
     }
 
     // Apply shadow settings
     if ( changed.testFlag(SettingsIO::ChangedShadows) ) {
-        timetable->setOption( PublicTransportWidget::DrawShadowsOrHalos, settings.drawShadows );
+        timetable->setOption( PublicTransportWidget::DrawShadowsOrHalos, settings.drawShadows() );
         if ( journeyTimetable && isStateActive("journeyView") ) {
             journeyTimetable->setOption( PublicTransportWidget::DrawShadowsOrHalos,
-                                         settings.drawShadows );
+                                         settings.drawShadows() );
         }
     }
 
@@ -234,31 +246,18 @@ void PublicTransportPrivate::onSettingsChanged( const Settings &_settings, Setti
     if ( changed.testFlag(SettingsIO::ChangedTargetColumn) &&
          stateMachine && isStateActive("departureView") )
     {
-        timetable->setTargetHidden( settings.hideColumnTarget );
+        timetable->setTargetHidden( settings.hideTargetColumn() );
         timetable->updateItemLayouts();
     }
-}
-
-void PublicTransportPrivate::onUnknownSettingsChanged()
-{
-
-    // Apply other settings to the model
-    timetable->setMaxLineCount( settings.linesPerRow );
-    model->setLinesPerRow( settings.linesPerRow );
-    model->setSizeFactor( settings.sizeFactor );
-    model->setDepartureColumnSettings( settings.displayTimeBold,
-                                       settings.showRemainingMinutes, settings.showDepartureTime );
-
-    int alarmMinsBeforeDeparture = settings.currentStopSettings().get<int>( AlarmTimeSetting );
-    model->setAlarmMinsBeforeDeparture( alarmMinsBeforeDeparture );
-    modelJourneys->setAlarmMinsBeforeDeparture( alarmMinsBeforeDeparture );
-
-    //     modelJourneys->setHomeStop( settings.currentStopSettings().stop(0).name ); DONE IN WRITESETTINGS
 
     // Limit model item count to the maximal number of departures setting
-    if ( model->rowCount() > settings.maximalNumberOfDepartures ) {
-        model->removeRows( settings.maximalNumberOfDepartures,
-                           model->rowCount() - settings.maximalNumberOfDepartures );
+    if ( model->rowCount() > settings.maximalNumberOfDepartures() ) {
+        model->removeRows( settings.maximalNumberOfDepartures(),
+                           model->rowCount() - settings.maximalNumberOfDepartures() );
+    }
+
+    if ( changed.testFlag(SettingsIO::ChangedDepartureTimeSettings) ) {
+        model->setDepartureColumnSettings( settings.departureTimeFlags() );
     }
 }
 
@@ -266,32 +265,32 @@ void PublicTransportPrivate::onDepartureArrivalListTypeChanged()
 {
     Q_Q( PublicTransport );
 
-    model->setDepartureArrivalListType( settings.departureArrivalListType );
+    model->setDepartureArrivalListType( settings.departureArrivalListType() );
     timetable->updateItemLayouts();
 
     // Adjust action texts to departure / arrival list
     q->action( "removeAlarmForDeparture" )->setText(
-        settings.departureArrivalListType == DepartureList
+        settings.departureArrivalListType() == DepartureList
         ? i18nc( "@action", "Remove &Alarm for This Departure" )
         : i18nc( "@action", "Remove &Alarm for This Arrival" ) );
     q->action( "createAlarmForDeparture" )->setText(
-        settings.departureArrivalListType == DepartureList
+        settings.departureArrivalListType() == DepartureList
         ? i18nc( "@action", "Set &Alarm for This Departure" )
         : i18nc( "@action", "Set &Alarm for This Arrival" ) );
     q->action( "backToDepartures" )->setText(
-        settings.departureArrivalListType == DepartureList
+        settings.departureArrivalListType() == DepartureList
         ? i18nc( "@action", "Back to &Departure List" )
         : i18nc( "@action", "Back to &Arrival List" ) );
 }
 
 void PublicTransportPrivate::onCurrentStopSettingsChanged()
 {
-    model->setHomeStop( settings.currentStopSettings().stop(0).name );
-    model->setCurrentStopIndex( settings.currentStopSettingsIndex );
+    model->setHomeStop( settings.currentStop().stop(0).name );
+    model->setCurrentStopIndex( settings.currentStopIndex() );
 
     if ( modelJourneys ) {
-        modelJourneys->setHomeStop( settings.currentStopSettings().stop(0).name );
-        modelJourneys->setCurrentStopIndex( settings.currentStopSettingsIndex );
+        modelJourneys->setHomeStop( settings.currentStop().stop(0).name );
+        modelJourneys->setCurrentStopIndex( settings.currentStopIndex() );
     }
 }
 
@@ -483,10 +482,6 @@ void PublicTransportPrivate::updateInfoText()
 void PublicTransportPrivate::applyTheme()
 {
     Q_Q( PublicTransport );
-    if ( settings.useDefaultFont ) {
-        q->configChanged();
-    }
-
     // Get theme colors
     QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
 
@@ -514,7 +509,7 @@ void PublicTransportPrivate::applyTheme()
     timetable->setPalette( p );
 
     // To set new text color of the header items
-    model->setDepartureArrivalListType( settings.departureArrivalListType );
+    model->setDepartureArrivalListType( settings.departureArrivalListType() );
     timetable->updateItemLayouts();
 }
 
@@ -542,7 +537,7 @@ void PublicTransportPrivate::createTooltip()
         const QString groupDurationString = currentGroup.first()->departureInfo()->durationString();
         QStringList infoStrings;
 
-        if ( settings.departureArrivalListType ==  DepartureList ) {
+        if ( settings.departureArrivalListType() == DepartureList ) {
             // Showing a departure list
             foreach( const DepartureItem * item, currentGroup ) {
                 infoStrings << i18nc( "@info Text for one departure for the tooltip (%1: line string, "
@@ -558,7 +553,7 @@ void PublicTransportPrivate::createTooltip()
                                          "Alarm (%2) for a departure from '%3':<nl/>%4",
                                          "%1 Alarms (%2) for departures from '%3':<nl/>%4",
                                          currentGroup.count(),
-                                         groupDurationString, settings.currentStopSettings().stops().join( ", " ),
+                                         groupDurationString, settings.currentStop().stops().join( ", " ),
                                          infoStrings.join( ",<nl/>" ) ) );
             } else {
                 data.setSubText( i18ncp( "@info %2 is the translated duration text (e.g. in 3 minutes), "
@@ -566,7 +561,7 @@ void PublicTransportPrivate::createTooltip()
                                          "Departure (%2) from '%3':<nl/>%4",
                                          "%1 Departures (%2) from '%3':<nl/>%4",
                                          currentGroup.count(),
-                                         groupDurationString, settings.currentStopSettings().stops().join( ", " ),
+                                         groupDurationString, settings.currentStop().stops().join( ", " ),
                                          infoStrings.join( ",<nl/>" ) ) );
             }
         } else {
@@ -585,7 +580,7 @@ void PublicTransportPrivate::createTooltip()
                                          "Alarm (%2) for an arrival at '%3':<nl/>%4",
                                          "%1 Alarms (%2) for arrivals at '%3':<nl/>%4",
                                          currentGroup.count(),
-                                         groupDurationString, settings.currentStopSettings().stops().join( ", " ),
+                                         groupDurationString, settings.currentStop().stops().join( ", " ),
                                          infoStrings.join( ",<nl/>" ) ) );
             } else {
                 data.setSubText( i18ncp( "@info %2 is the translated duration text (e.g. in 3 minutes), "
@@ -593,7 +588,7 @@ void PublicTransportPrivate::createTooltip()
                                          "Arrival (%2) at '%3':<nl/>%4",
                                          "%1 Arrivals (%2) at '%3':<nl/>%4",
                                          currentGroup.count(),
-                                         groupDurationString, settings.currentStopSettings().stops().join( ", " ),
+                                         groupDurationString, settings.currentStop().stops().join( ", " ),
                                          infoStrings.join( ",<nl/>" ) ) );
             }
         }
@@ -614,7 +609,7 @@ QString PublicTransportPrivate::stripDateAndTimeValues( const QString &sourceNam
 
 void PublicTransportPrivate::fillModel( const QList<DepartureInfo> &departures )
 {
-    bool modelFilled = model->rowCount() >= settings.maximalNumberOfDepartures;
+    bool modelFilled = model->rowCount() >= settings.maximalNumberOfDepartures();
     foreach( const DepartureInfo & departureInfo, departures ) {
         QModelIndex index = model->indexFromInfo( departureInfo );
         if ( !index.isValid() ) {
@@ -622,7 +617,7 @@ void PublicTransportPrivate::fillModel( const QList<DepartureInfo> &departures )
             if ( !modelFilled && !departureInfo.isFilteredOut() ) {
                 // Departure doesn't get filtered out and the model isn't full => Add departure
                 model->addItem( departureInfo );
-                modelFilled = model->rowCount() >= settings.maximalNumberOfDepartures;
+                modelFilled = model->rowCount() >= settings.maximalNumberOfDepartures();
             }
         } else if ( departureInfo.isFilteredOut() ) {
             // Departure has been marked as "filtered out" in the DepartureProcessor => Remove departure
@@ -672,18 +667,18 @@ void PublicTransportPrivate::updateFilterMenu()
         delete oldAction;
     }
 
-    bool showColorGrous = settings.colorize && !settings.colorGroupSettingsList.isEmpty();
-    if ( settings.filterSettingsList.isEmpty() && !showColorGrous ) {
+    bool showColorGrous = settings.colorize() && !settings.colorGroups().isEmpty();
+    if ( settings.filters().isEmpty() && !showColorGrous ) {
         return; // Nothing to show in the filter menu
     }
 
-    if ( !settings.filterSettingsList.isEmpty() ) {
+    if ( !settings.filters().isEmpty() ) {
         menu->addTitle( KIcon( "view-filter" ), i18nc( "@title This is a menu title",
                         "Filters (reducing)" ) );
-        foreach( const FilterSettings & filterSettings, settings.filterSettingsList ) {
-            QAction *action = new QAction( filterSettings.name, filtersGroup );
+        foreach( const FilterSettings &filters, settings.filters() ) {
+            QAction *action = new QAction( filters.name, filtersGroup );
             action->setCheckable( true );
-            if ( filterSettings.affectedStops.contains( settings.currentStopSettingsIndex ) ) {
+            if ( filters.affectedStops.contains( settings.currentStopIndex() ) ) {
                 action->setChecked( true );
             }
 
@@ -693,29 +688,29 @@ void PublicTransportPrivate::updateFilterMenu()
 
     if ( showColorGrous ) {
         // Add checkbox entries to toggle color groups
-        if ( settings.departureArrivalListType == ArrivalList ) {
+        if ( settings.departureArrivalListType() == ArrivalList ) {
             menu->addTitle( KIcon( "object-group" ), i18nc( "@title This is a menu title",
                             "Arrival Groups (extending)" ) );
         } else {
             menu->addTitle( KIcon( "object-group" ), i18nc( "@title This is a menu title",
                             "Departure Groups (extending)" ) );
         }
-        foreach( const ColorGroupSettings & colorGroupSettings,
-                 settings.currentColorGroupSettings() ) {
+        foreach( const ColorGroupSettings & colorGroup,
+                 settings.currentColorGroups() ) {
             // Create action for current color group
-            QAction *action = new QAction( colorGroupSettings.displayText, colorFiltersGroup );
+            QAction *action = new QAction( colorGroup.displayText, colorFiltersGroup );
             action->setCheckable( true );
-            if ( !colorGroupSettings.filterOut ) {
+            if ( !colorGroup.filterOut ) {
                 action->setChecked( true );
             }
-            action->setData( QVariant::fromValue( colorGroupSettings.color ) );
+            action->setData( QVariant::fromValue( colorGroup.color ) );
 
             // Draw a color patch with the color of the color group
             QPixmap pixmap( QSize( 16, 16 ) );
             pixmap.fill( Qt::transparent );
             QPainter p( &pixmap );
             p.setRenderHints( QPainter::Antialiasing );
-            p.setBrush( colorGroupSettings.color );
+            p.setBrush( colorGroup.color );
             QColor borderColor = KColorScheme( QPalette::Active ).foreground().color();
             borderColor.setAlphaF( 0.75 );
             p.setPen( borderColor );
@@ -814,7 +809,7 @@ QList<DepartureInfo> PublicTransportPrivate::mergedDepartureList( bool includeFi
     }
 
     qSort( ret.begin(), ret.end() );
-    return max == -1 ? ret.mid( 0, settings.maximalNumberOfDepartures ) : ret.mid( 0, max );
+    return max == -1 ? ret.mid( 0, settings.maximalNumberOfDepartures() ) : ret.mid( 0, max );
 }
 
 void PublicTransportPrivate::reconnectSource()
@@ -823,7 +818,7 @@ void PublicTransportPrivate::reconnectSource()
     disconnectSources();
 
     // Get a list of stops (or stop IDs if available) which results are currently shown
-    StopSettings curStopSettings = settings.currentStopSettings();
+    StopSettings curStopSettings = settings.currentStop();
     QStringList stops = curStopSettings.stops();
     QStringList stopIDs = curStopSettings.stopIDs();
     if ( stopIDs.isEmpty() ) {
@@ -835,15 +830,15 @@ void PublicTransportPrivate::reconnectSource()
     }
 
     // Build source names for each (combined) stop for the publictransport data engine
-    kDebug() << "Connect" << settings.currentStopSettingsIndex << stops;
+    kDebug() << "Connect" << settings.currentStopIndex() << stops;
     QStringList sources;
     stopIndexToSourceName.clear();
     for( int i = 0; i < stops.count(); ++i ) {
         QString stopValue = stopIDs[i].isEmpty() ? stops[i] : stopIDs[i];
         QString currentSource = QString( "%4 %1|stop=%2" )
-                                .arg( settings.currentStopSettings().get<QString>( ServiceProviderSetting ) )
+                                .arg( settings.currentStop().get<QString>( ServiceProviderSetting ) )
                                 .arg( stopValue )
-                                .arg( settings.departureArrivalListType == ArrivalList
+                                .arg( settings.departureArrivalListType() == ArrivalList
                                       ? "Arrivals" : "Departures" );
         if ( static_cast<FirstDepartureConfigMode>( curStopSettings.get<int>(
                     FirstDepartureConfigModeSetting ) ) == RelativeToCurrentTime ) {
@@ -865,9 +860,9 @@ void PublicTransportPrivate::reconnectSource()
 
     foreach( const QString & currentSource, sources ) {
         kDebug() << "Connect data source" << currentSource
-                 << "Autoupdate" << settings.autoUpdate;
+                 << "Autoupdate" << settings.autoUpdate();
         currentSources << currentSource;
-        if ( settings.autoUpdate ) {
+        if ( settings.autoUpdate() ) {
             // Update once a minute
             q->dataEngine( "publictransport" )->connectSource( currentSource, q,
                     60000, Plasma::AlignToMinute );
@@ -927,19 +922,19 @@ void PublicTransportPrivate::reconnectJourneySource( const QString &targetStopNa
     // Build a source name for the publictransport data engine
     if ( requestStopSuggestions ) {
         currentJourneySource = QString( "Stops %1|stop=%2" )
-                               .arg( settings.currentStopSettings().get<QString>(ServiceProviderSetting) )
+                               .arg( settings.currentStop().get<QString>(ServiceProviderSetting) )
                                .arg( _targetStopName );
     } else {
         currentJourneySource = QString( stopIsTarget
                                         ? "%6 %1|originStop=%2|targetStop=%3|maxCount=%4|datetime=%5"
                                         : "%6 %1|originStop=%3|targetStop=%2|maxCount=%4|datetime=%5" )
-                               .arg( settings.currentStopSettings().get<QString>(ServiceProviderSetting) )
-                               .arg( settings.currentStopSettings().stop(0).nameOrId() )
+                               .arg( settings.currentStop().get<QString>(ServiceProviderSetting) )
+                               .arg( settings.currentStop().stop(0).nameOrId() )
                                .arg( _targetStopName )
-                               .arg( settings.maximalNumberOfDepartures )
+                               .arg( settings.maximalNumberOfDepartures() )
                                .arg( _dateTime.toString() )
                                .arg( timeIsDeparture ? "Journeys" : "JourneysArr" );
-        QString currentStop = settings.currentStopSettings().stops().first();
+        QString currentStop = settings.currentStop().stops().first();
         journeyTitleText = stopIsTarget
                            ? i18nc( "@info", "From %1<nl/>to <emphasis strong='1'>%2</emphasis>",
                                     currentStop, _targetStopName )
@@ -950,9 +945,9 @@ void PublicTransportPrivate::reconnectJourneySource( const QString &targetStopNa
         }
     }
 
-    if ( !settings.currentStopSettings().get<QString>(CitySetting).isEmpty() ) {
+    if ( !settings.currentStop().get<QString>(CitySetting).isEmpty() ) {
         currentJourneySource += QString( "|city=%1" ).arg(
-                                    settings.currentStopSettings().get<QString>(CitySetting) );
+                                    settings.currentStop().get<QString>(CitySetting) );
     }
 
     lastSecondStopName = _targetStopName;
@@ -963,12 +958,12 @@ void PublicTransportPrivate::reconnectJourneySource( const QString &targetStopNa
 void PublicTransportPrivate::updateColorGroupSettings()
 {
     Q_Q( PublicTransport );
-    if ( settings.colorize ) {
+    if ( settings.colorize() ) {
         // Generate color groups from existing departure data
         settings.adjustColorGroupSettingsCount();
-        ColorGroupSettingsList colorGroups = settings.currentColorGroupSettings();
+        ColorGroupSettingsList colorGroups = settings.currentColorGroups();
         ColorGroupSettingsList newColorGroups = ColorGroups::generateColorGroupSettingsFrom(
-                mergedDepartureList(true, 40), settings.departureArrivalListType );
+                mergedDepartureList(true, 40), settings.departureArrivalListType() );
         if ( colorGroups != newColorGroups ) {
             // Copy filterOut values from old color group settings
             for( int i = 0; i < newColorGroups.count(); ++i ) {
@@ -984,7 +979,9 @@ void PublicTransportPrivate::updateColorGroupSettings()
             // Change color group settings in a copy of the Settings object
             // Then write the changed settings
             Settings newSettings = settings;
-            newSettings.colorGroupSettingsList[ newSettings.currentStopSettingsIndex ] = newColorGroups;
+            QList< ColorGroupSettingsList > colorGroups = newSettings.colorGroups();
+            colorGroups[ newSettings.currentStopIndex() ] = newColorGroups;
+            newSettings.setColorGroups( colorGroups );
             q->setSettings( newSettings );
         }
     } else {
@@ -1102,18 +1099,18 @@ KSelectAction *PublicTransportPrivate::createSwitchStopAction( QObject *parent, 
 
     KSelectAction *switchStopAction = new KSelectAction(
         KIcon( "public-transport-stop" ), i18nc( "@action", "Switch Current Stop" ), parent );
-    for( int i = 0; i < settings.stopSettingsList.count(); ++i ) {
-        QString stopList = settings.stopSettingsList[ i ].stops().join( ",\n" );
-        QString stopListShort = settings.stopSettingsList[ i ].stops().join( ", " );
+    for( int i = 0; i < settings.stops().count(); ++i ) {
+        QString stopList = settings.stop( i ).stops().join( ",\n" );
+        QString stopListShort = settings.stop( i ).stops().join( ", " );
         if ( stopListShort.length() > 30 ) {
             stopListShort = stopListShort.left( 30 ).trimmed() + "...";
         }
 
         // Use a shortened stop name list as display text
         // and the complete version as tooltip (if it is different)
-        QAction *stopAction = settings.departureArrivalListType == DepartureList
-                              ? new QAction( i18nc( "@action", "Show Departures For '%1'", stopListShort ), parent )
-                              : new QAction( i18nc( "@action", "Show Arrivals For '%1'", stopListShort ), parent );
+        QAction *stopAction = settings.departureArrivalListType() == DepartureList
+                ? new QAction( i18nc( "@action", "Show Departures For '%1'", stopListShort ), parent )
+                : new QAction( i18nc( "@action", "Show Arrivals For '%1'", stopListShort ), parent );
         if ( stopList != stopListShort ) {
             stopAction->setToolTip( stopList );
         }
@@ -1124,7 +1121,7 @@ KSelectAction *PublicTransportPrivate::createSwitchStopAction( QObject *parent, 
         }
 
         stopAction->setCheckable( true );
-        stopAction->setChecked( i == settings.currentStopSettingsIndex );
+        stopAction->setChecked( i == settings.currentStopIndex() );
         switchStopAction->addAction( stopAction );
     }
 
@@ -1140,24 +1137,24 @@ void PublicTransportPrivate::onDepartureDataStateChanged()
     bool busy = false;
 
     if ( isStateActive("departureDataWaiting") ) {
-        if ( settings.departureArrivalListType == ArrivalList ) {
+        if ( settings.departureArrivalListType() == ArrivalList ) {
             noItemsText = i18nc("@info/plain", "Waiting for arrivals...");
         } else {
             noItemsText = i18nc("@info/plain", "Waiting for depatures...");
         }
         busy = model->isEmpty();
     } else if ( isStateActive("departureDataInvalid") ) {
-        noItemsText = settings.departureArrivalListType == ArrivalList
+        noItemsText = settings.departureArrivalListType() == ArrivalList
                 ? i18nc("@info/plain", "No arrivals due to an error.")
                 : i18nc("@info/plain", "No departures due to an error.");
-    } else if ( settings.departureArrivalListType == ArrivalList ) {
+    } else if ( settings.departureArrivalListType() == ArrivalList ) {
         // Valid arrivals
-        noItemsText = !settings.currentFilterSettings().isEmpty()
+        noItemsText = !settings.currentFilters().isEmpty()
                 ? i18nc("@info/plain", "No unfiltered arrivals.<nl/>"
                         "You can disable filters to see all arrivals.")
                 : i18nc("@info/plain", "No arrivals.");
     } else { // Valid departures
-        noItemsText = !settings.currentFilterSettings().isEmpty()
+        noItemsText = !settings.currentFilters().isEmpty()
                 ? i18nc("@info/plain", "No unfiltered departures.<nl/>"
                         "You can disable filters to see all departures.")
                 : i18nc("@info/plain", "No departures.");

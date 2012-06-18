@@ -56,9 +56,6 @@
 PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
         : Plasma::PopupApplet( parent, args ), d_ptr(new PublicTransportPrivate(this))
 {
-    Q_D( PublicTransport );
-    d->originalStopIndex = -1;
-
     setBackgroundHints( StandardBackground );
     setAspectRatioMode( Plasma::IgnoreAspectRatio );
     setHasConfigurationInterface( true );
@@ -105,7 +102,7 @@ void PublicTransport::init()
     }
 
     connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
-    connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
+//     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
     connect( Plasma::Theme::defaultTheme(), SIGNAL(themeChanged()),
              this, SLOT(themeChanged()) );
     emit settingsChanged();
@@ -170,24 +167,25 @@ void PublicTransport::setSettings( const QString& serviceProviderID, const QStri
     // Set stop settings in a copy of the current settings.
     // Then write the new settings.
     Settings settings = d->settings;
-    settings.stopSettingsList.clear();
-    StopSettings stopSettings;
-    stopSettings.set( ServiceProviderSetting, serviceProviderID );
-    stopSettings.setStop( stopName );
-    settings.stopSettingsList << stopSettings;
+    StopSettings stop;
+    stop.set( ServiceProviderSetting, serviceProviderID );
+    stop.setStop( stopName );
+    StopSettingsList stopList;
+    stopList << stop;
+    settings.setStops( stopList );
     setSettings( settings );
 }
 
-void PublicTransport::setSettings( const StopSettingsList& stopSettingsList,
-                                   const FilterSettingsList& filterSettings )
+void PublicTransport::setSettings( const StopSettingsList& stops,
+                                   const FilterSettingsList& filters )
 {
     Q_D( const PublicTransport );
 
     // Set settings in a copy of the current settings.
     // Then write the new settings.
     Settings settings = d->settings;
-    settings.stopSettingsList = stopSettingsList;
-    settings.filterSettingsList = filterSettings;
+    settings.setStops( stops );
+    settings.setFilters( filters );
     setSettings( settings );
 }
 
@@ -216,7 +214,7 @@ void PublicTransport::setupActions()
 
     KAction *actionCreateAlarmForDeparture = new KAction(
             GlobalApplet::makeOverlayIcon( KIcon("task-reminder"), "list-add" ),
-            d->settings.departureArrivalListType == DepartureList
+            d->settings.departureArrivalListType() == DepartureList
             ? i18nc("@action:inmenu", "Set &Alarm for This Departure")
             : i18nc("@action:inmenu", "Set &Alarm for This Arrival"), this );
     connect( actionCreateAlarmForDeparture, SIGNAL(triggered()),
@@ -232,7 +230,7 @@ void PublicTransport::setupActions()
 
     KAction *actionRemoveAlarmForDeparture = new KAction(
             GlobalApplet::makeOverlayIcon( KIcon("task-reminder"), "list-remove" ),
-            d->settings.departureArrivalListType == DepartureList
+            d->settings.departureArrivalListType() == DepartureList
             ? i18nc("@action:inmenu", "Remove &Alarm for This Departure")
             : i18nc("@action:inmenu", "Remove &Alarm for This Arrival"), this );
     connect( actionRemoveAlarmForDeparture, SIGNAL(triggered()),
@@ -319,13 +317,13 @@ QList< QAction* > PublicTransport::contextualActions()
 {
     Q_D( const PublicTransport );
 
-    QAction *switchDepArr = d->settings.departureArrivalListType == DepartureList
+    QAction *switchDepArr = d->settings.departureArrivalListType() == DepartureList
             ? action( "showArrivals" ) : action( "showDepartures" );
 
     // Add filter action if there is at least one filter or color group
     KAction *actionFilter = 0;
-    if ( !d->settings.filterSettingsList.isEmpty() &&
-         !d->settings.colorGroupSettingsList.isEmpty() )
+    if ( !d->settings.filters().isEmpty() &&
+         !d->settings.colorGroups().isEmpty() )
     {
         actionFilter = qobject_cast< KAction* >( action("filterConfiguration") );
     }
@@ -350,7 +348,7 @@ QList< QAction* > PublicTransport::contextualActions()
         QAction *goBackAction = action("backToDepartures");
         goBackAction->setText( i18nc("@action:inmenu", "&Back To Original Stop") );
         actions << goBackAction;
-    } else if ( d->settings.stopSettingsList.count() > 1 ) {
+    } else if ( d->settings.stops().count() > 1 ) {
         actions << d->createSwitchStopAction( this );
         if ( d->currentServiceProviderFeatures.contains("JourneySearch") ) {
 //             updateJourneyActionMenu();
@@ -412,9 +410,9 @@ void PublicTransport::departuresFiltered( const QString& sourceName,
     }
 
     // Limit item count to the maximal number of departure setting
-    int delta = d->model->rowCount() - d->settings.maximalNumberOfDepartures;
+    int delta = d->model->rowCount() - d->settings.maximalNumberOfDepartures();
     if ( delta > 0 ) {
-        d->model->removeRows( d->settings.maximalNumberOfDepartures, delta );
+        d->model->removeRows( d->settings.maximalNumberOfDepartures(), delta );
     }
 
     d->popupIcon->createDepartureGroups();
@@ -526,7 +524,7 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
         QString error = data["errorString"].toString();
         if ( error.isEmpty() ) {
             if ( d->isStateActive("networkActivated") ) {
-                if ( d->settings.departureArrivalListType == DepartureList ) {
+                if ( d->settings.departureArrivalListType() == DepartureList ) {
                     setConfigurationRequired( true, i18nc("@info", "Error parsing "
                             "departure information or currently no departures") );
                 } else {
@@ -751,14 +749,14 @@ void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
     updatePopupIcon();
 }
 
-void PublicTransport::configChanged()
-{
-    Q_D( PublicTransport );
-
-    disconnect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
-    d->onUnknownSettingsChanged();
-    connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
-}
+// void PublicTransport::configChanged()
+// {
+//     Q_D( PublicTransport );
+//
+//     disconnect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
+//     d->onUnknownSettingsChanged();
+//     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
+// }
 
 void PublicTransport::destroyOverlay()
 {
@@ -793,7 +791,7 @@ void PublicTransport::showActionButtons()
         actions << action("backToDepartures");
     }
     if ( d->currentServiceProviderFeatures.contains("Arrivals") ) {
-        actions << (d->settings.departureArrivalListType == DepartureList
+        actions << (d->settings.departureArrivalListType() == DepartureList
                 ? action("showArrivals") : action("showDepartures"));
     }
     if ( d->currentServiceProviderFeatures.contains("JourneySearch") ) {
@@ -802,7 +800,7 @@ void PublicTransport::showActionButtons()
     }
 
     // Add stop selector if multiple stops are defined
-    if ( d->settings.stopSettingsList.count() > 1 ) {
+    if ( d->settings.stops().count() > 1 ) {
         actions << d->createSwitchStopAction( 0, true ); // Parent gets set below
     }
 
@@ -859,7 +857,7 @@ void PublicTransport::setCurrentStopIndex( QAction* stopAction )
     action("backToDepartures")->trigger();
 
     Settings settings = d->settings;
-    settings.currentStopSettingsIndex = stopIndex;
+    settings.setCurrentStop( stopIndex );
     setSettings( settings );
 }
 
@@ -870,7 +868,7 @@ void PublicTransport::showDepartures()
     // Change departure arrival list type in a copy of the settings.
     // Then write the new settings.
     Settings settings = d->settings;
-    settings.departureArrivalListType = DepartureList;
+    settings.setDepartureArrivalListType( DepartureList );
     setSettings( settings );
 }
 
@@ -881,7 +879,7 @@ void PublicTransport::showArrivals()
     // Change departure arrival list type in a copy of the settings.
     // Then write the new settings.
     Settings settings = d->settings;
-    settings.departureArrivalListType = ArrivalList;
+    settings.setDepartureArrivalListType( ArrivalList );
     setSettings( settings );
 }
 
@@ -894,17 +892,19 @@ void PublicTransport::switchFilterConfiguration( QAction* action )
     // Change filter configuration of the current stop in a copy of the settings.
     // Then write the new settings.
     Settings settings = d->settings;
-    for ( int i = 0; i < settings.filterSettingsList.count(); ++i ) {
-        const FilterSettings filterSettings = settings.filterSettingsList[i];
-        if ( filterSettings.name == filterConfig ) {
+    FilterSettingsList filters = settings.filters();
+    for ( int i = 0; i < filters.count(); ++i ) {
+        const FilterSettings filter = filters[i];
+        if ( filter.name == filterConfig ) {
             // Switch filter configuration for current stop settings
-            if ( filterSettings.affectedStops.contains(settings.currentStopSettingsIndex) ) {
-                settings.filterSettingsList[i].affectedStops.remove( settings.currentStopSettingsIndex );
-            } else if ( !filterSettings.affectedStops.contains(settings.currentStopSettingsIndex) ) {
-                settings.filterSettingsList[i].affectedStops << settings.currentStopSettingsIndex;
+            if ( filter.affectedStops.contains(settings.currentStopIndex()) ) {
+                filters[i].affectedStops.remove( settings.currentStopIndex() );
+            } else if ( !filter.affectedStops.contains(settings.currentStopIndex()) ) {
+                filters[i].affectedStops << settings.currentStopIndex();
             }
         }
     }
+    settings.setFilters( filters );
     setSettings( settings );
 }
 
@@ -918,7 +918,9 @@ void PublicTransport::switchFilterByGroupColor( QAction* action )
     // Change filter configuration of the current stop in a copy of the settings.
     // Then write the new settings.
     Settings settings = d->settings;
-    settings.colorGroupSettingsList[settings.currentStopSettingsIndex].enableColorGroup( color, enable );
+    QList<ColorGroupSettingsList> colorGroups = settings.colorGroups();
+    colorGroups[ settings.currentStopIndex() ].enableColorGroup( color, enable );
+    settings.setColorGroups( colorGroups );
     setSettings( settings );
 }
 
@@ -927,20 +929,22 @@ void PublicTransport::enableFilterConfiguration( const QString& filterConfigurat
     Q_D( const PublicTransport );
 
     const QString filterConfig = filterConfiguration;
-    Q_ASSERT_X( d->settings.filterSettingsList.hasName(filterConfig),
+    Q_ASSERT_X( d->settings.filters().hasName(filterConfig),
                 "PublicTransport::switchFilterConfiguration",
                 QString("Filter '%1' not found!").arg(filterConfig).toLatin1().data() );
 
     // Change filter configuration of the current stop in a copy of the settings.
     // Then write the new settings.
     Settings settings = d->settings;
-    FilterSettings filterSettings = settings.filterSettingsList.byName( filterConfig );
-    if ( enable && !filterSettings.affectedStops.contains(settings.currentStopSettingsIndex) ) {
-        filterSettings.affectedStops << settings.currentStopSettingsIndex;
-    } else if ( !enable && filterSettings.affectedStops.contains(settings.currentStopSettingsIndex) ) {
-        filterSettings.affectedStops.remove( settings.currentStopSettingsIndex );
+    FilterSettingsList filters = settings.filters();
+    FilterSettings filter = filters.byName( filterConfig );
+    if ( enable && !filter.affectedStops.contains(settings.currentStopIndex()) ) {
+        filter.affectedStops << settings.currentStopIndex();
+    } else if ( !enable && filter.affectedStops.contains(settings.currentStopIndex()) ) {
+        filter.affectedStops.remove( settings.currentStopIndex() );
     }
-    settings.filterSettingsList.set( filterSettings );
+    filters.set( filter );
+    settings.setFilters( filters );
     setSettings( settings );
 }
 
@@ -992,7 +996,7 @@ void PublicTransport::showJourneyList()
                                   d->isStateActive("journeyDataValid") );
 
     // Create timetable widget for journeys
-    d->journeyTimetable = new JourneyTimetableWidget( d->settings.drawShadows
+    d->journeyTimetable = new JourneyTimetableWidget( d->settings.drawShadows()
             ? PublicTransportWidget::DrawShadowsOrHalos : PublicTransportWidget::NoOption, this );
     d->journeyTimetable->setModel( d->modelJourneys );
     d->journeyTimetable->setFont( d->settings.sizedFont() );
@@ -1005,7 +1009,7 @@ void PublicTransport::showJourneyList()
              this, SLOT(processAlarmDeletionRequest(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)) );
     connect( d->states["journeyView"], SIGNAL(exited()),
              d->journeyTimetable, SLOT(deleteLater()) );
-    d->journeyTimetable->setZoomFactor( d->settings.sizeFactor );
+    d->journeyTimetable->setZoomFactor( d->settings.sizeFactor() );
     d->journeyTimetable->update();
 
     d->titleWidget->setTitle( d->journeyTitleText.isEmpty()
@@ -1317,11 +1321,10 @@ void PublicTransport::removeIntermediateStopSettings()
 
     // Remove intermediate stop settings
     Settings settings = d->settings;
-    settings.stopSettingsList.removeIntermediateSettings();
+    settings.removeIntermediateStops();
 
     if ( d->originalStopIndex != -1 ) {
-        settings.currentStopSettingsIndex = qBound( 0, d->originalStopIndex,
-                settings.stopSettingsList.count() - 1 );
+        settings.setCurrentStop( qBound(0, d->originalStopIndex, settings.stops().count() - 1) );
     }
     d->originalStopIndex = -1;
 
@@ -1335,7 +1338,7 @@ void PublicTransport::hideColumnTarget()
     // Change hide column target setting in a copy of the settings.
     // Then write the new settings.
     Settings settings = d->settings;
-    settings.hideColumnTarget = true;
+    settings.setHideTargetColumn( true );
     setSettings( settings );
 }
 
@@ -1346,7 +1349,7 @@ void PublicTransport::showColumnTarget()
     // Change hide column target setting in a copy of the settings.
     // Then write the new settings.
     Settings settings = d->settings;
-    settings.hideColumnTarget = false;
+    settings.setHideTargetColumn( false );
     setSettings( settings );
 }
 
@@ -1553,12 +1556,12 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction,
                                        "Via %1", stopNameShortened);
             Filter viaFilter;
             viaFilter << Constraint( FilterByVia, FilterContains, stopName );
-            FilterSettings filterSettings;
-            filterSettings.filters << viaFilter;
-            filterSettings.name = filterName;
-            filterSettings.affectedStops << settings.currentStopSettingsIndex;
+            FilterSettings filter;
+            filter.filters << viaFilter;
+            filter.name = filterName;
+            filter.affectedStops << settings.currentStopIndex();
 
-            settings.filterSettingsList << filterSettings;
+            settings.appendFilter( filter );
             setSettings( settings );
             break;
         } case StopAction::ShowStopInMap: {
@@ -1576,31 +1579,31 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction,
             break;
         } case StopAction::ShowDeparturesForStop: {
             // Remove intermediate stop settings
-            settings.stopSettingsList.removeIntermediateSettings();
+            settings.removeIntermediateStops();
 
             if ( d->originalStopIndex != -1 ) {
                 kDebug() << "Set current stop index to" << d->originalStopIndex;
-                settings.currentStopSettingsIndex = qBound( 0, d->originalStopIndex,
-                        settings.stopSettingsList.count() - 1 );
+                settings.setCurrentStop( qBound(0, d->originalStopIndex,
+                        settings.stops().count() - 1) );
             }
 
             // Save original stop index from where sub requests were made
             // (using the context menu). Only if the departure list wasn't requested
             // already from a sub departure list.
-            d->originalStopIndex = settings.currentStopSettingsIndex;
+            d->originalStopIndex = settings.currentStopIndex();
 
             // Search for a stop setting with the given stop name in it.
             // Create an intermediate stop item if there is no such stop setting
             // in the configuration (automatically deleted).
-            int stopSettingsIndex = settings.stopSettingsList.findStopSettings( stopName );
-            if ( stopSettingsIndex == -1 ) {
-                StopSettings stopSettings( settings.currentStopSettings() );
-                stopSettings.setStop( stopName );
-                stopSettings.set( UserSetting + 100, "-- Intermediate Stop --" );
-                settings.stopSettingsList << stopSettings;
-                stopSettingsIndex = settings.stopSettingsList.count() - 1;
+            int stopIndex = settings.stops().findStopSettings( stopName );
+            if ( stopIndex == -1 ) {
+                StopSettings stop( settings.currentStop() );
+                stop.setStop( stopName );
+                stop.set( UserSetting + 100, "-- Intermediate Stop --" );
+                settings.appendStop( stop );
+                stopIndex = settings.stops().count() - 1;
             }
-            settings.currentStopSettingsIndex = stopSettingsIndex;
+            settings.setCurrentStop( stopIndex );
             setSettings( settings );
 
             emit intermediateDepartureListRequested( stopName );
@@ -1726,10 +1729,11 @@ void PublicTransport::removeAlarmForDeparture( int row )
 
     // Find a matching autogenerated alarm
     int matchingAlarmSettings = -1;
-    for ( int i = 0; i < d->settings.alarmSettingsList.count(); ++i ) {
-        AlarmSettings alarmSettings = d->settings.alarmSettingsList[ i ];
-        if ( alarmSettings.autoGenerated && alarmSettings.enabled
-                    && alarmSettings.filter.match(*item->departureInfo()) ) {
+    for ( int i = 0; i < d->settings.alarms().count(); ++i ) {
+        const AlarmSettings alarm = d->settings.alarm( i );
+        if ( alarm.autoGenerated && alarm.enabled &&
+             alarm.filter.match(*item->departureInfo()) )
+        {
             matchingAlarmSettings = i;
             break;
         }
@@ -1741,7 +1745,7 @@ void PublicTransport::removeAlarmForDeparture( int row )
 
     // Remove the found alarm
     item->removeAlarm();
-    AlarmSettingsList newAlarmSettings = d->settings.alarmSettingsList;
+    AlarmSettingsList newAlarmSettings = d->settings.alarms();
     newAlarmSettings.removeAt( matchingAlarmSettings );
     removeAlarms( newAlarmSettings, QList<int>() << matchingAlarmSettings );
 
@@ -1766,7 +1770,7 @@ void PublicTransport::processAlarmCreationRequest( const QDateTime& departure,
     // Autogenerate an alarm that only matches the given departure
     AlarmSettings alarm;
     alarm.autoGenerated = true;
-    alarm.affectedStops << d->settings.currentStopSettingsIndex;
+    alarm.affectedStops << d->settings.currentStopIndex();
     alarm.name = i18nc( "@info/plain Name for a new alarm, eg. requested using the context menu. "
                         "%1 is the departure time or the name of the used vehicle.",
                         "One-Time Alarm (%1)", departure.isValid() ? departure.toString()
@@ -1787,7 +1791,7 @@ void PublicTransport::processAlarmCreationRequest( const QDateTime& departure,
 
     // Append new alarm in a copy of the settings. Then write the new settings.
     Settings settings = d->settings;
-    settings.alarmSettingsList << alarm;
+    settings.appendAlarm( alarm );
     setSettings( settings );
 
     alarmCreated();
@@ -1803,7 +1807,7 @@ void PublicTransport::processAlarmDeletionRequest( const QDateTime& departure,
     // Autogenerate an alarm that only matches the given departure
     AlarmSettings alarm;
     alarm.autoGenerated = true;
-    alarm.affectedStops << d->settings.currentStopSettingsIndex;
+    alarm.affectedStops << d->settings.currentStopIndex();
     if ( !departure.isNull() ) {
         alarm.filter << Constraint(FilterByDepartureTime, FilterEquals, departure.time());
         alarm.filter << Constraint(FilterByDepartureDate, FilterEquals, departure.date());
@@ -1816,16 +1820,9 @@ void PublicTransport::processAlarmDeletionRequest( const QDateTime& departure,
         alarm.filter << Constraint(FilterByTarget, FilterEquals, target);
     }
 
-    // Append new alarm in a copy of the settings. Then write the new settings.
+    // Remove autogenerated alarms that equal [alarm] in a copy of the settings. Then write the new settings.
     Settings settings = d->settings;
-    for ( AlarmSettingsList::iterator it = settings.alarmSettingsList.begin();
-          it != settings.alarmSettingsList.end(); ++it )
-    {
-        if ( it->equalsAutogeneratedAlarm(alarm) ) {
-            settings.alarmSettingsList.erase( it );
-            break;
-        }
-    }
+    settings.removeAlarm( alarm );
     setSettings( settings );
 
     updatePopupIcon();
@@ -1848,7 +1845,7 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
     // Autogenerate an alarm that only matches the given departure
     AlarmSettings alarm;
     alarm.autoGenerated = true;
-    alarm.affectedStops << d->settings.currentStopSettingsIndex;
+    alarm.affectedStops << d->settings.currentStopIndex();
     alarm.filter.append( Constraint(FilterByDepartureTime, FilterEquals, info.departure().time()) );
     alarm.filter.append( Constraint(FilterByDepartureDate, FilterEquals, info.departure().date()) );
     alarm.filter.append( Constraint(FilterByTransportLine, FilterEquals, info.lineString()) );
@@ -1870,11 +1867,11 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
 
     // Append new alarm in a copy of the settings. Then write the new settings.
     Settings settings = d->settings;
-    settings.alarmSettingsList << alarm;
+    settings.appendAlarm( alarm );
     setSettings( settings );
 
     // Add the new alarm to the list of alarms that match the given departure
-    int index = settings.alarmSettingsList.count() - 1;
+    const int index = settings.alarms().count() - 1;
     info.matchedAlarms() << index;
     item->setDepartureInfo( info );
 }
@@ -1903,7 +1900,7 @@ void PublicTransport::alarmCreated()
     d->popupIcon->animateToAlarm();
 }
 
-void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alarmSettings )
+void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alarm )
 {
     const DepartureInfo *departureInfo = item->departureInfo();
     QString sLine = departureInfo->lineString();
@@ -1920,7 +1917,7 @@ void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alar
                               "%5: Line %2 to '%3' departs in %1 minute at %4",
                               "%5: Line %2 to '%3' departs in %1 minutes at %4",
                               minsToDeparture, sLine, sTarget,
-                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
+                              predictedDeparture.toString("hh:mm"), alarm.name );
         } else {
             // Vehicle type is known
             message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle type name "
@@ -1929,7 +1926,7 @@ void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alar
                               "%6: The %4 %2 to '%3' departs in %1 minutes at %5",
                               minsToDeparture, sLine, sTarget,
                               Global::vehicleTypeToString(departureInfo->vehicleType()),
-                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
+                              predictedDeparture.toString("hh:mm"), alarm.name );
         }
     } else if ( minsToDeparture < 0 ) {
         // Has already departed
@@ -1939,7 +1936,7 @@ void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alar
                               "%5: Line %2 to '%3' has departed %1 minute ago at %4",
                               "%5: Line %2 to '%3' has departed %1 minutes ago at %4",
                               -minsToDeparture, sLine, sTarget,
-                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
+                              predictedDeparture.toString("hh:mm"), alarm.name );
         } else {
             // Vehicle type is known
             message = i18ncp( "@info/plain %2: Line string (e.g. 'U3'), %4: Vehicle type name "
@@ -1948,7 +1945,7 @@ void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alar
                               "%6: The %4 %2 to %3 has departed %1 minutes ago at %5",
                               -minsToDeparture, sLine, sTarget,
                               Global::vehicleTypeToString(departureInfo->vehicleType()),
-                              predictedDeparture.toString("hh:mm"), alarmSettings.name );
+                              predictedDeparture.toString("hh:mm"), alarm.name );
         }
     } else {
         // Departs now
@@ -1957,14 +1954,14 @@ void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alar
             message = i18nc( "@info/plain %4: Name of the Alarm",
                              "%4: Line %1 to '%2' departs now at %3",
                              sLine, sTarget, predictedDeparture.toString("hh:mm"),
-                             alarmSettings.name );
+                             alarm.name );
         } else {
             // Vehicle type is known
             message = i18nc( "@info/plain %1: Line string (e.g. 'U3'), %3: Vehicle type name "
                              "(e.g. tram, subway), %5: Name of the Alarm",
                              "%5: The %3 %1 to '%2' departs now at %4", sLine, sTarget,
                              Global::vehicleTypeToString(departureInfo->vehicleType()),
-                             predictedDeparture.toString("hh:mm"), alarmSettings.name );
+                             predictedDeparture.toString("hh:mm"), alarm.name );
         }
     }
 
@@ -1980,7 +1977,7 @@ void PublicTransport::removeAlarms( const AlarmSettingsList &newAlarmSettings,
 
     // Change alarm settings in a copy of the settings. Then write the new settings.
     Settings settings = d->settings;
-    settings.alarmSettingsList = newAlarmSettings;
+    settings.setAlarms( newAlarmSettings );
     setSettings( settings );
 }
 

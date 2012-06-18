@@ -43,45 +43,49 @@ class SettingsIO {
 public:
     /** @brief These flags describe what settings have changed. */
     enum ChangedFlag {
-        NothingChanged          = 0x0000, /**< Nothing has changed. */
+        NothingChanged          = 0x000000, /**< Nothing has changed. */
 
-        IsChanged               = 0x0001, /**< This flag is set if something has changed.
+        IsChanged               = 0x000001, /**< This flag is set if something has changed.
                 * If another change flag is set (except for NothingChanged), this flag is also
                 * set. This flag also gets set for changes not covered by the other change flags. */
         ChangedServiceProvider  = 0x0002, /**< Service provider settings have been changed
                                             * (stop name, service provider, ...). */ // TODO
         ChangedDepartureArrivalListType
-                                = 0x0004, /**< Changed from showing departures to arrivals
+                                = 0x000004, /**< Changed from showing departures to arrivals
                                             * or vice versa. */
-        ChangedStopSettings     = 0x0008, /**< Stop settings have been changed. This flag also gets
+        ChangedStopSettings     = 0x000008, /**< Stop settings have been changed. This flag also gets
                 * set if only eg. the favorite/recent journey searches have been changed.
                 * Use ChangedCurrentStopSettings to check if timetable data needs to be requested
                 * from the data engine again with the changed settings. */
         ChangedCurrentStopSettings
-                                = 0x0010, /**< Stop settings of the current stop
+                                = 0x000010, /**< Stop settings of the current stop
                 * have been changed, that require timetable data to be requested from the data
                 * engine again. If this flag is set, the current timetable data may not represent
                 * correct results any longer for the changed stop settings.
                 * Stop settings that do not require a new timetable data request are unaffected. */
         ChangedCurrentJourneySearchLists
-                                = 0x0020, /**< The list of favorite and/or recent journey
+                                = 0x000020, /**< The list of favorite and/or recent journey
                                             * searches has been changed for the current stop.
                                             * This does not cover changes in the current journey
                                             * list caused by changing the current stop settings. */
-        ChangedCurrentStop      = 0x0040, /**< The current stop has been changed. */
-        ChangedFilterSettings   = 0x0080, /**< Filter settings have been changed. */
-        ChangedLinesPerRow      = 0x0100, /**< The lines per row setting has been changed. */
-        ChangedAlarmSettings    = 0x0200, /**< Alarm settings have been changed. This does not
+        ChangedCurrentStop      = 0x000040, /**< The current stop has been changed. */
+        ChangedFilterSettings   = 0x000080, /**< Filter settings have been changed. */
+        ChangedLinesPerRow      = 0x000100, /**< The lines per row setting has been changed. */
+        ChangedAlarmSettings    = 0x000200, /**< Alarm settings have been changed. This does not
                                             * include AlarmTimeSetting in stop settings. */
-        ChangedColorization     = 0x0400, /**< Colorization of departures has been toggled. */
+        ChangedColorization     = 0x000400, /**< Colorization of departures has been toggled. */
         ChangedColorGroupSettings
-                                = 0x0800, /**< Color group settings have been changed. */
+                                = 0x000800, /**< Color group settings have been changed. */
 
-        ChangedFont             = 0x1000, /**< The font was changed. */
-        ChangedSizeFactor       = 0x2000, /**< The size factor was changed.
+        ChangedFont             = 0x001000, /**< The font was changed. */
+        ChangedSizeFactor       = 0x002000, /**< The size factor was changed.
                                             * This also affects the font size. */
-        ChangedShadows          = 0x4000, /**< Shadow visibility has been toggled. */
-        ChangedTargetColumn     = 0x8000, /**< Target column visibility has been toggled. */
+        ChangedShadows          = 0x004000, /**< Shadow visibility has been toggled. */
+        ChangedTargetColumn     = 0x008000, /**< Target column visibility has been toggled. */
+        ChangedDepartureTimeSettings
+                                = 0x010000, /**< Settings for how to display the departure time
+                * have been changed, eg. whether or not to show the departure time, whether or not
+                * to display it bold or whether or not remaining minutes should be displayed. */
 
         ChangedCurrentFilterSettings = ChangedCurrentStop || ChangedCurrentStopSettings ||
                 ChangedFilterSettings
@@ -128,15 +132,15 @@ public:
     static FilterSettings readFilterConfig( const KConfigGroup &cgGlobal );
 
     /**
-     * @brief Write filter configuration @p filterSettings to @p cgGlobal.
+     * @brief Write filter configuration @p filters to @p cgGlobal.
      *
      * This function only writes settings that have changed compared to @p oldFilterSettings.
      **/
-    static bool writeFilterConfig( const FilterSettings &filterSettings,
+    static bool writeFilterConfig( const FilterSettings &filters,
                                    const FilterSettings &oldFilterSettings, KConfigGroup cgGlobal );
 
-    /** @brief Write filter configuration @p filterSettings to @p cgGlobal. */
-    static void writeFilterConfig( const FilterSettings &filterSettings, KConfigGroup cgGlobal );
+    /** @brief Write filter configuration @p filters to @p cgGlobal. */
+    static void writeFilterConfig( const FilterSettings &filters, KConfigGroup cgGlobal );
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( SettingsIO::ChangedFlags )
 

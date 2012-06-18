@@ -594,14 +594,14 @@ public:
 
         // Use the data argument
         if ( setting == FilterConfigurationSetting ) {
-            FilterSettingsList filterSettings = data.value<FilterSettingsList>();
+            FilterSettingsList filters = data.value<FilterSettingsList>();
 //             TODO TEST
 //             Same as in StopSettingsDialog::setStopSettings
             CheckCombobox *filterConfiguration = qobject_cast<CheckCombobox*>( widget );
             filterConfiguration->clear();
             QAbstractItemModel *model = filterConfiguration->model();
             int row = 0;
-            foreach ( const FilterSettings &filter, filterSettings ) {
+            foreach ( const FilterSettings &filter, filters ) {
                 model->insertRow( row );
                 QModelIndex index = model->index( row, 0 );
                 model->setData( index, filter.name, Qt::DisplayRole );
@@ -868,15 +868,15 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
         case FilterConfigurationSetting: {
             CheckCombobox *filterConfiguration = d->settingWidget<CheckCombobox>(
                     FilterConfigurationSetting );
-            FilterSettingsList filterSettings = stopSettings[FilterConfigurationSetting]
+            FilterSettingsList filters = stopSettings[FilterConfigurationSetting]
                     .value<FilterSettingsList>();
-            kDebug() << "Got a filterSettingsList:" << filterSettings.count() << "stopIndex:" << d->stopIndex;
+            kDebug() << "Got a filtersList:" << filters.count() << "stopIndex:" << d->stopIndex;
 //             TODO TEST
 //             Same as in StopSettingsDialogPrivate::addSettingWidget
             filterConfiguration->clear();
             QAbstractItemModel *model = filterConfiguration->model();
             int row = 0;
-            foreach ( const FilterSettings &filter, filterSettings ) {
+            foreach ( const FilterSettings &filter, filters ) {
                 model->insertRow( row );
                 QModelIndex index = model->index( row, 0 );
                 model->setData( index, filter.name, Qt::DisplayRole );

@@ -330,10 +330,9 @@ class PUBLICTRANSPORTHELPER_EXPORT StopSettingsList : public QList<StopSettings>
 public:
     StopSettingsList() : QList<StopSettings>() {};
 
-    int findStopSettings( const QString &stopName, int startIndex = 0 );
-    void removeIntermediateSettings( int startIndex = 0,
-                                     const QString &id = "-- Intermediate Stop --",
-                                     int stopSetting = UserSetting + 100 );
+    int findStopSettings( const QString &stopName, int startIndex = 0 ) const;
+    void removeIntermediateStops( int startIndex = 0, const QString &id = "-- Intermediate Stop --",
+                                  int stopSetting = UserSetting + 100 );
 };
 
 /**

@@ -255,7 +255,7 @@ bool Filter::matchInt( FilterVariant variant, int filterInt, int testInt ) const
 }
 
 bool Filter::matchString( FilterVariant variant, const QString& filterString,
-                        const QString& testString ) const
+                          const QString& testString ) const
 {
     switch ( variant ) {
     case FilterContains:
@@ -511,8 +511,8 @@ bool operator==(const FilterSettingsList& l, const FilterSettingsList& r)
 }
 
 bool FilterSettingsList::filterOut(const DepartureInfo& departureInfo) const {
-    foreach ( const FilterSettings &filterSettings, *this ) {
-        if ( filterSettings.filterOut(departureInfo) ) {
+    foreach ( const FilterSettings &filter, *this ) {
+        if ( filter.filterOut(departureInfo) ) {
             return true;
         }
     }
@@ -521,15 +521,15 @@ bool FilterSettingsList::filterOut(const DepartureInfo& departureInfo) const {
 
 QStringList FilterSettingsList::names() const {
     QStringList ret;
-    foreach ( const FilterSettings &filterSettings, *this ) {
-        ret << filterSettings.name;
+    foreach ( const FilterSettings &filter, *this ) {
+        ret << filter.name;
     }
     return ret;
 }
 
 bool FilterSettingsList::hasName(const QString& name) const {
-    foreach ( const FilterSettings &filterSettings, *this ) {
-        if ( filterSettings.name == name ) {
+    foreach ( const FilterSettings &filter, *this ) {
+        if ( filter.name == name ) {
             return true;
         }
     }
@@ -537,9 +537,9 @@ bool FilterSettingsList::hasName(const QString& name) const {
 }
 
 FilterSettings FilterSettingsList::byName(const QString& name) const {
-    foreach ( const FilterSettings &filterSettings, *this ) {
-        if ( filterSettings.name == name ) {
-            return filterSettings;
+    foreach ( const FilterSettings &filter, *this ) {
+        if ( filter.name == name ) {
+            return filter;
         }
     }
     return FilterSettings(); // No filter with the given name found

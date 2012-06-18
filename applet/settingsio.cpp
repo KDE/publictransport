@@ -29,13 +29,28 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
                                    Plasma::DataEngine *publictransportEngine )
 {
     Settings settings;
-    settings.autoUpdate = cg.readEntry( "autoUpdate", true );
-    settings.showRemainingMinutes = cg.readEntry( "showRemainingMinutes", true );
-    settings.showDepartureTime = cg.readEntry( "showDepartureTime", true );
-    settings.displayTimeBold = cg.readEntry( "displayTimeBold", true );
+    if ( !cg.hasKey("departureTimeFlags") && (cg.hasKey("showRemainingMinutes") ||
+         cg.hasKey("showDepartureTime") || cg.hasKey("displayTimeBold")) )
+    {
+        // DEPRECATED This reads settings stored in old format (version < 0.11)
+        kDebug() << "Reading settings in old format, will be converted to new format";
+//         settings.m_departureTimeFlags = Settings::DoNotShowDepartureTime;
+        settings.setShowRemainingTime( cg.readEntry("showRemainingMinutes", true) );
+        cg.deleteEntry( "showRemainingMinutes" );
+
+
+        settings.setDisplayDepartureTimeBold( cg.readEntry("displayTimeBold", true) );
+        cg.deleteEntry( "displayTimeBold" );
+
+        cg.writeEntry( "departureTimeFlags", static_cast<int>(settings.departureTimeFlags()) );
+        cg.sync();
+    } else {
+        settings.setDepartureTimeFlags( static_cast< Settings::DepartureTimeFlags >(
+                cg.readEntry("departureTimeFlags", static_cast<int>(Settings::DefaultDepartureTimeFlags))) );
+    }
 
     // Read stop settings TODO: Store in config groups like filters
-    settings.stopSettingsList.clear();
+    StopSettingsList stopSettingsList;
     int stopSettingCount = cgGlobal.readEntry( "stopSettings", 1 );
     QString test = "location";
     int i = 1;
@@ -63,7 +78,7 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
                 cgGlobal.readEntry( "journeySearches" + suffix, QByteArray() );
         stopSettings.set( Settings::JourneySearchSetting, QVariant::fromValue(
                 SettingsIO::decodeJourneySearchItems(&journeySearchesData)) );
-        settings.stopSettingsList << stopSettings;
+        stopSettingsList << stopSettings;
 
         ++i;
         test = "location_" + QString::number( i );
@@ -72,10 +87,10 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
         }
     }
 
-    settings.currentStopSettingsIndex = cg.readEntry( "currentStopIndex", 0 );
+    settings.setCurrentStop( cg.readEntry("currentStopIndex", 0) );
 
     // Add initial stop settings when no settings are available
-    if ( settings.stopSettingsList.isEmpty() ) {
+    if ( stopSettingsList.isEmpty() ) {
         kDebug() << "Stop settings list in settings is empty";
         if ( publictransportEngine ) {
             QString countryCode = KGlobal::locale()->country();
@@ -93,41 +108,43 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
             stopSettings.setStop( QString() );
             // TODO: Get initial stop names using StopFinder
 
-            settings.stopSettingsList << stopSettings;
+            stopSettingsList << stopSettings;
         } else {
-            settings.stopSettingsList << StopSettings();
+            stopSettingsList << StopSettings();
         }
 
     }
+    settings.setStops( stopSettingsList );
 
-    if ( settings.currentStopSettingsIndex < 0 ) {
-        settings.currentStopSettingsIndex = 0; // For compatibility with versions < 0.7
-    } else if ( settings.currentStopSettingsIndex >= settings.stopSettingsList.count() ) {
+    if ( settings.currentStopIndex() < 0 ) {
+        settings.setCurrentStop( 0 ); // For compatibility with versions < 0.7
+    } else if ( settings.currentStopIndex() >= settings.stops().count() ) {
         kDebug() << "Current stop index in settings invalid";
-        settings.currentStopSettingsIndex = settings.stopSettingsList.count() - 1;
+        settings.setCurrentStop( settings.stops().count() - 1 );
     }
 
-    settings.maximalNumberOfDepartures = cg.readEntry( "maximalNumberOfDepartures", 50 );
-    settings.linesPerRow = cg.readEntry( "linesPerRow", 2 );
-    settings.sizeFactor = Settings::sizeFactorFromSize( cg.readEntry("size", 2) );
-    settings.departureArrivalListType = static_cast<DepartureArrivalListType>(
-            cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList)) );
-    settings.drawShadows = cg.readEntry( "drawShadows", true );
-    settings.showHeader = cg.readEntry( "showHeader", true );
-    settings.hideColumnTarget = cg.readEntry( "hideColumnTarget", false );
+    settings.setMaximalNumberOfDepartures( cg.readEntry("maximalNumberOfDepartures", 50) );
+    settings.setLinesPerRow( cg.readEntry("linesPerRow", 2) );
+    settings.setSizeFactor( Settings::sizeFactorFromSize(cg.readEntry("size", 2)) );
+    settings.setDepartureArrivalListType( static_cast<DepartureArrivalListType>(
+            cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList))) );
+
+    settings.setAutoUpdate( cg.readEntry("autoUpdate", true) );
+    settings.setDrawShadows( cg.readEntry("drawShadows", true) );
+    settings.setHideTargetColumn( cg.readEntry("hideColumnTarget", false) );
+    settings.setColorize( cg.readEntry("colorize", true) );
 
     QString fontFamily = cg.readEntry( "fontFamily", QString() );
-    settings.useDefaultFont = fontFamily.isEmpty();
-    if ( !settings.useDefaultFont ) {
-        settings.font = QFont( fontFamily );
+    settings.setUseThemeFont( fontFamily.isEmpty() );
+    if ( !settings.useThemeFont() ) {
+        settings.setFont( QFont(fontFamily) );
     } else {
-        settings.font = Plasma::Theme::defaultTheme()->font( Plasma::Theme::DefaultFont );
+        settings.setFont( Plasma::Theme::defaultTheme()->font(Plasma::Theme::DefaultFont) );
     }
-
-    settings.colorize = cg.readEntry( "colorize", true );
 
     // ***************** DEPRECATED BEGIN *****************************************************
     // *** Used for migration of filter settings from versions prior to version 0.10 RC1 ******
+    FilterSettingsList filtersList;
     if ( cgGlobal.hasKey("filterConfigurationList") ) {
         kDebug() << "DEPRECATED Filter settings will be restructured for new version";
         QStringList filterConfigurationList =
@@ -143,12 +160,11 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
         kDebug() << "Filter config list:" << filterConfigurationList;
 
         // Read old filter settings
-        settings.filterSettingsList.clear();
         foreach( const QString &filterConfiguration, filterConfigurationList ) {
-            FilterSettings filterSettings =
+            FilterSettings filters =
                     readFilterConfig( cgGlobal.group("filterConfig_" + filterConfiguration) );
-            filterSettings.name = filterConfiguration;
-            settings.filterSettingsList << filterSettings;
+            filters.name = filterConfiguration;
+            filtersList << filters;
         }
     // ***************** DEPRECATED END *******************************************************
     } else {
@@ -157,46 +173,49 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
         test = "filterConfig_1";
         i = 1;
         while ( i <= filterCount && cgGlobal.hasGroup(test) ) {
-            FilterSettings filterSettings = readFilterConfig( cgGlobal.group(test) );
-            if ( filterSettings.name.isEmpty() ) {
+            FilterSettings filters = readFilterConfig( cgGlobal.group(test) );
+            if ( filters.name.isEmpty() ) {
                 kDebug() << "Filter settings without a name found!";
-                filterSettings.name = "Unnamed" + QString::number( i );
+                filters.name = "Unnamed" + QString::number( i );
             }
-            settings.filterSettingsList << filterSettings;
+            filtersList << filters;
 
             ++i;
             test = "filterConfig_" + QString::number( i );
         }
     }
+    settings.setFilters( filtersList );
 
     // Read alarm settings
     //   TODO Store in config groups like filters
+    AlarmSettingsList alarms;
     int alarmCount = cgGlobal.readEntry( "alarmCount", 0 );
     test = "alarmType";
     i = 1;
     while ( i <= alarmCount && cgGlobal.hasKey(test) ) {
-        AlarmSettings alarmSettings;
+        AlarmSettings alarm;
         QString suffix = i == 1 ? QString() : '_' + QString::number( i );
-        alarmSettings.type = static_cast<AlarmType>(
+        alarm.type = static_cast<AlarmType>(
                 cgGlobal.readEntry("alarmType" + suffix, static_cast<int>(AlarmRemoveAfterFirstMatch)) );
-        alarmSettings.affectedStops = cgGlobal.readEntry( "alarmStops" + suffix, QList<int>() );
-        alarmSettings.enabled = cgGlobal.readEntry( "alarmEnabled" + suffix, true );
-        alarmSettings.name = cgGlobal.readEntry( "alarmName" + suffix, "Unnamed" );
-        alarmSettings.lastFired = cgGlobal.readEntry( "alarmLastFired" + suffix, QDateTime() );
-        alarmSettings.autoGenerated = cgGlobal.readEntry( "alarmAutogenerated" + suffix, false );
+        alarm.affectedStops = cgGlobal.readEntry( "alarmStops" + suffix, QList<int>() );
+        alarm.enabled = cgGlobal.readEntry( "alarmEnabled" + suffix, true );
+        alarm.name = cgGlobal.readEntry( "alarmName" + suffix, "Unnamed" );
+        alarm.lastFired = cgGlobal.readEntry( "alarmLastFired" + suffix, QDateTime() );
+        alarm.autoGenerated = cgGlobal.readEntry( "alarmAutogenerated" + suffix, false );
         QByteArray baAlarmFilter = cgGlobal.readEntry( "alarmFilter" + suffix, QByteArray() );
-        alarmSettings.filter.fromData( baAlarmFilter );
+        alarm.filter.fromData( baAlarmFilter );
 
         // Use date and time of one-time alarms to check if they are expired
-        if ( alarmSettings.isOneTimeAlarm() && alarmSettings.isExpired() ) {
+        if ( alarm.isOneTimeAlarm() && alarm.isExpired() ) {
             kDebug() << "Removing one expired one-time alarm";
         } else {
-            settings.alarmSettingsList << alarmSettings;
+            alarms << alarm;
         }
 
         ++i;
         test = "alarmType_" + QString::number( i );
     }
+    settings.setAlarms( alarms );
 
     return settings;
 }
@@ -206,18 +225,18 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 {
     ChangedFlags changed = NothingChanged;
 
-    if ( settings.currentStopSettingsIndex != oldSettings.currentStopSettingsIndex ) {
-        cg.writeEntry( "currentStopIndex", settings.currentStopSettingsIndex );
+    if ( settings.currentStopIndex() != oldSettings.currentStopIndex() ) {
+        cg.writeEntry( "currentStopIndex", settings.currentStopIndex() );
         changed |= IsChanged | ChangedCurrentStop;
     }
 
     // Write stop settings
-    if ( settings.stopSettingsList != oldSettings.stopSettingsList ) {
+    if ( settings.stops() != oldSettings.stops() ) {
         changed |= IsChanged | ChangedStopSettings;
 
         // Get current stop settings and compare journey search lists
-        const StopSettings stopSettings = settings.currentStopSettings();
-        const StopSettings oldStopSettings = oldSettings.currentStopSettings();
+        const StopSettings stopSettings = settings.currentStop();
+        const StopSettings oldStopSettings = oldSettings.currentStop();
         if ( stopSettings.get< QList<JourneySearchItem> >(Settings::JourneySearchSetting) !=
              oldStopSettings.get< QList<JourneySearchItem> >(Settings::JourneySearchSetting) )
         {
@@ -237,9 +256,9 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
         }
 
         int i = 1;
-        cgGlobal.writeEntry( "stopSettings", settings.stopSettingsList.count() ); // Not needed if deleteEntry/Group works, don't know what's wrong (sync() and Plasma::Applet::configNeedsSaving() doesn't help)
+        cgGlobal.writeEntry( "stopSettings", settings.stops().count() ); // Not needed if deleteEntry/Group works, don't know what's wrong (sync() and Plasma::Applet::configNeedsSaving() doesn't help)
 
-        foreach( const StopSettings &stopSettings, settings.stopSettingsList ) {
+        foreach( const StopSettings &stopSettings, settings.stops() ) {
             QString suffix = i == 1 ? QString() : '_' + QString::number( i );
             cgGlobal.writeEntry( "location" + suffix,
                     stopSettings.get<QString>(LocationSetting) );
@@ -282,72 +301,56 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
         }
     }
 
-    if ( settings.autoUpdate != oldSettings.autoUpdate ) {
-        cg.writeEntry( "autoUpdate", settings.autoUpdate );
-        changed |= IsChanged;
+    if ( settings.settingsFlags() != oldSettings.settingsFlags() ) {
+        if ( settings.autoUpdate() != oldSettings.autoUpdate() ) {
+            cg.writeEntry( "autoUpdate", settings.autoUpdate() );
+            changed |= IsChanged;
+        }
+        if ( settings.drawShadows() != oldSettings.drawShadows() ) {
+            cg.writeEntry( "drawShadows", settings.drawShadows() );
+            changed |= IsChanged | ChangedShadows;
+        }
+        if ( settings.hideTargetColumn() != oldSettings.hideTargetColumn() ) {
+            cg.writeEntry( "hideColumnTarget", settings.hideTargetColumn() );
+            changed |= IsChanged | ChangedTargetColumn;
+        }
+        if ( settings.useThemeFont() != oldSettings.useThemeFont() ||
+            (!settings.useThemeFont() && settings.font() != oldSettings.font()) )
+        {
+            cg.writeEntry( "fontFamily", settings.useThemeFont()
+                           ? QString() : settings.font().family() );
+            changed |= IsChanged | ChangedFont;
+        }
+        if ( settings.colorize() != oldSettings.colorize() ) {
+            cg.writeEntry( "colorize", settings.colorize() );
+            changed |= IsChanged | ChangedColorization;
+        }
     }
 
-    if ( settings.showRemainingMinutes != oldSettings.showRemainingMinutes ) {
-        cg.writeEntry( "showRemainingMinutes", settings.showRemainingMinutes );
-        changed |= IsChanged;
+    if ( settings.departureArrivalListType() != oldSettings.departureArrivalListType() ) {
+        cg.writeEntry( "departureArrivalListType",
+                        static_cast<int>(settings.departureArrivalListType()) );
+        changed |= IsChanged | ChangedServiceProvider | ChangedDepartureArrivalListType;
     }
 
-    if ( settings.showDepartureTime != oldSettings.showDepartureTime ) {
-        cg.writeEntry( "showDepartureTime", settings.showDepartureTime );
-        changed |= IsChanged;
+    if ( settings.departureTimeFlags() != oldSettings.departureTimeFlags() ) {
+        cg.writeEntry( "departureTimeFlags", static_cast<int>(settings.departureTimeFlags()) );
+        changed |= IsChanged | ChangedDepartureTimeSettings;
     }
 
-    if ( settings.displayTimeBold != oldSettings.displayTimeBold ) {
-        cg.writeEntry( "displayTimeBold", settings.displayTimeBold );
-        changed |= IsChanged;
-    }
-
-    if ( settings.drawShadows != oldSettings.drawShadows ) {
-        cg.writeEntry( "drawShadows", settings.drawShadows );
-        changed |= IsChanged | ChangedShadows;
-    }
-
-    if ( settings.showHeader != oldSettings.showHeader ) {
-        cg.writeEntry( "showHeader", settings.showHeader );
-        changed |= IsChanged;
-    }
-
-    if ( settings.hideColumnTarget != oldSettings.hideColumnTarget ) {
-        cg.writeEntry( "hideColumnTarget", settings.hideColumnTarget );
-        changed |= IsChanged | ChangedTargetColumn;
-    }
-
-    if ( settings.maximalNumberOfDepartures != oldSettings.maximalNumberOfDepartures ) {
-        cg.writeEntry( "maximalNumberOfDepartures", settings.maximalNumberOfDepartures );
+    if ( settings.maximalNumberOfDepartures() != oldSettings.maximalNumberOfDepartures() ) {
+        cg.writeEntry( "maximalNumberOfDepartures", settings.maximalNumberOfDepartures() );
         changed |= IsChanged | ChangedServiceProvider;
     }
 
-    if ( settings.linesPerRow != oldSettings.linesPerRow ) {
-        cg.writeEntry( "linesPerRow", settings.linesPerRow );
+    if ( settings.linesPerRow() != oldSettings.linesPerRow() ) {
+        cg.writeEntry( "linesPerRow", settings.linesPerRow() );
         changed |= IsChanged | ChangedLinesPerRow;
     }
 
-    if ( settings.sizeFactor != oldSettings.sizeFactor ) {
-        cg.writeEntry( "size", Settings::sizeFromSizeFactor(settings.sizeFactor) );
+    if ( settings.sizeFactor() != oldSettings.sizeFactor() ) {
+        cg.writeEntry( "size", Settings::sizeFromSizeFactor(settings.sizeFactor()) );
         changed |= IsChanged | ChangedSizeFactor;
-    }
-
-    if ( settings.useDefaultFont != oldSettings.useDefaultFont
-            || (!settings.useDefaultFont && settings.font != oldSettings.font) ) {
-        cg.writeEntry( "fontFamily", settings.useDefaultFont
-                    ? QString() : settings.font.family() );
-        changed |= IsChanged | ChangedFont;
-    }
-
-    if ( settings.colorize != oldSettings.colorize ) {
-        cg.writeEntry( "colorize", settings.colorize );
-        changed |= IsChanged | ChangedColorization;
-    }
-
-    if ( settings.departureArrivalListType != oldSettings.departureArrivalListType ) {
-        cg.writeEntry( "departureArrivalListType",
-                    static_cast<int>( settings.departureArrivalListType ) );
-        changed |= IsChanged | ChangedServiceProvider | ChangedDepartureArrivalListType;
     }
 
     // ***************** DEPRECATED BEGIN *****************************************************
@@ -394,28 +397,28 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
     // ***************** DEPRECATED END *******************************************************
 
     // Write filter settings
-    if ( settings.filterSettingsList != oldSettings.filterSettingsList ) {
-        cgGlobal.writeEntry( "filterCount", settings.filterSettingsList.count() );
+    if ( settings.filters() != oldSettings.filters() ) {
+        cgGlobal.writeEntry( "filterCount", settings.filters().count() );
         int i = 1;
-        foreach ( const FilterSettings &filterSettings, settings.filterSettingsList ) {
-            if ( filterSettings.name.isEmpty() ) {
+        foreach ( const FilterSettings &filters, settings.filters() ) {
+            if ( filters.name.isEmpty() ) {
                 kDebug() << "Empty filter config name, can't write settings";
                 continue;
             }
 
-            if ( oldSettings.filterSettingsList.hasName(filterSettings.name) ) {
-                SettingsIO::writeFilterConfig( filterSettings,
-                        oldSettings.filterSettingsList.byName(filterSettings.name),
+            if ( oldSettings.filters().hasName(filters.name) ) {
+                SettingsIO::writeFilterConfig( filters,
+                        oldSettings.filters().byName(filters.name),
                         cgGlobal.group("filterConfig_" + QString::number(i)) );
             } else {
-                SettingsIO::writeFilterConfig( filterSettings,
+                SettingsIO::writeFilterConfig( filters,
                         cgGlobal.group("filterConfig_" + QString::number(i)) );
             }
             ++i;
         }
 
         // Delete old filter settings groups
-        while ( i <= oldSettings.filterSettingsList.count() ) {
+        while ( i <= oldSettings.filters().count() ) {
             cgGlobal.deleteGroup( "filterConfig_" + QString::number(i) );
             cgGlobal.sync();
             ++i;
@@ -425,24 +428,24 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
     }
 
     // Compare (don't write) color group settings
-    if ( settings.colorGroupSettingsList != oldSettings.colorGroupSettingsList ) {
+    if ( settings.colorGroups() != oldSettings.colorGroups() ) {
         changed |= IsChanged | ChangedColorGroupSettings;
     }
 
     // Write alarm settings
-    if ( settings.alarmSettingsList != oldSettings.alarmSettingsList ) {
+    if ( settings.alarms() != oldSettings.alarms() ) {
         changed |= IsChanged | ChangedAlarmSettings;
         int i = 1;
-        cgGlobal.writeEntry( "alarmCount", settings.alarmSettingsList.count() );
-        foreach( const AlarmSettings &alarmSettings, settings.alarmSettingsList ) {
+        cgGlobal.writeEntry( "alarmCount", settings.alarms().count() );
+        foreach( const AlarmSettings &alarm, settings.alarms() ) {
             QString suffix = i == 1 ? QString() : '_' + QString::number( i );
-            cgGlobal.writeEntry( "alarmType" + suffix, static_cast<int>( alarmSettings.type ) );
-            cgGlobal.writeEntry( "alarmStops" + suffix, alarmSettings.affectedStops );
-            cgGlobal.writeEntry( "alarmFilter" + suffix, alarmSettings.filter.toData() );
-            cgGlobal.writeEntry( "alarmEnabled" + suffix, alarmSettings.enabled );
-            cgGlobal.writeEntry( "alarmName" + suffix, alarmSettings.name );
-            cgGlobal.writeEntry( "alarmLastFired" + suffix, alarmSettings.lastFired );
-            cgGlobal.writeEntry( "alarmAutogenerated" + suffix, alarmSettings.autoGenerated );
+            cgGlobal.writeEntry( "alarmType" + suffix, static_cast<int>( alarm.type ) );
+            cgGlobal.writeEntry( "alarmStops" + suffix, alarm.affectedStops );
+            cgGlobal.writeEntry( "alarmFilter" + suffix, alarm.filter.toData() );
+            cgGlobal.writeEntry( "alarmEnabled" + suffix, alarm.enabled );
+            cgGlobal.writeEntry( "alarmName" + suffix, alarm.name );
+            cgGlobal.writeEntry( "alarmLastFired" + suffix, alarm.lastFired );
+            cgGlobal.writeEntry( "alarmAutogenerated" + suffix, alarm.autoGenerated );
             ++i;
         }
 
@@ -523,50 +526,50 @@ QByteArray SettingsIO::encodeJourneySearchItems( const QList< JourneySearchItem 
 
 FilterSettings SettingsIO::readFilterConfig( const KConfigGroup &cgGlobal )
 {
-    FilterSettings filterSettings;
-    filterSettings.name = cgGlobal.readEntry( "Name", QString() );
-    filterSettings.filterAction = static_cast< FilterAction >(
+    FilterSettings filters;
+    filters.name = cgGlobal.readEntry( "Name", QString() );
+    filters.filterAction = static_cast< FilterAction >(
             cgGlobal.readEntry("FilterAction", static_cast<int>(ShowMatching)) );
-    filterSettings.affectedStops = cgGlobal.readEntry( "AffectedStops", QList<int>() ).toSet();
+    filters.affectedStops = cgGlobal.readEntry( "AffectedStops", QList<int>() ).toSet();
 
     QByteArray baFilters = cgGlobal.readEntry( "Filters", QByteArray() );
-    filterSettings.filters.fromData( baFilters );
-    return filterSettings;
+    filters.filters.fromData( baFilters );
+    return filters;
 }
 
-bool SettingsIO::writeFilterConfig( const FilterSettings &filterSettings,
+bool SettingsIO::writeFilterConfig( const FilterSettings &filters,
         const FilterSettings &oldFilterSettings, KConfigGroup cgGlobal )
 {
     bool changed = false;
 
-    if ( filterSettings.name != oldFilterSettings.name ) {
-        cgGlobal.writeEntry( "Name", filterSettings.name );
+    if ( filters.name != oldFilterSettings.name ) {
+        cgGlobal.writeEntry( "Name", filters.name );
         changed = true;
     }
 
-    if ( filterSettings.filters != oldFilterSettings.filters ) {
-        cgGlobal.writeEntry( "Filters", filterSettings.filters.toData() );
+    if ( filters.filters != oldFilterSettings.filters ) {
+        cgGlobal.writeEntry( "Filters", filters.filters.toData() );
         changed = true;
     }
 
-    if ( filterSettings.filterAction != oldFilterSettings.filterAction ) {
-        cgGlobal.writeEntry( "FilterAction", static_cast<int>(filterSettings.filterAction) );
+    if ( filters.filterAction != oldFilterSettings.filterAction ) {
+        cgGlobal.writeEntry( "FilterAction", static_cast<int>(filters.filterAction) );
         changed = true;
     }
 
-    if ( filterSettings.affectedStops != oldFilterSettings.affectedStops ) {
-        cgGlobal.writeEntry( "AffectedStops", filterSettings.affectedStops.toList() );
+    if ( filters.affectedStops != oldFilterSettings.affectedStops ) {
+        cgGlobal.writeEntry( "AffectedStops", filters.affectedStops.toList() );
         changed = true;
     }
 
     return changed;
 }
 
-void SettingsIO::writeFilterConfig( const FilterSettings& filterSettings,
+void SettingsIO::writeFilterConfig( const FilterSettings& filters,
                                     KConfigGroup cgGlobal )
 {
-    cgGlobal.writeEntry( "Name", filterSettings.name );
-    cgGlobal.writeEntry( "Filters", filterSettings.filters.toData() );
-    cgGlobal.writeEntry( "FilterAction", static_cast<int>( filterSettings.filterAction ) );
-    cgGlobal.writeEntry( "AffectedStops", filterSettings.affectedStops.toList() );
+    cgGlobal.writeEntry( "Name", filters.name );
+    cgGlobal.writeEntry( "Filters", filters.filters.toData() );
+    cgGlobal.writeEntry( "FilterAction", static_cast<int>( filters.filterAction ) );
+    cgGlobal.writeEntry( "AffectedStops", filters.affectedStops.toList() );
 }

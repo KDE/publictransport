@@ -163,8 +163,10 @@ QDataStream& operator<<( QDataStream &out, const FilterList &filterList );
 QDataStream& operator>>( QDataStream &in, FilterList &filterList );
 
 /**
- * @brief Contains information about a filter configuration, ie. the settings of a filter.
+ * @brief Provides information about a filter configuration.
  *
+ * Contains a list of filters (OR comined with AND combined constraints), a list of indices of
+ * affected stops and a name.
  * @ingroup filterSystem
  **/
 struct PUBLICTRANSPORTHELPER_EXPORT FilterSettings {
@@ -247,25 +249,25 @@ inline QDebug& operator<<(QDebug debug, const Filter& filter)
     return debug << ' ' << filter.last();
 }
 
-inline QDebug& operator<<(QDebug debug, const FilterSettings& filterSettings)
+inline QDebug& operator<<(QDebug debug, const FilterSettings& filter)
 {
-    debug << "FilterSettings " << filterSettings.name
-          << " affectedStops: " << filterSettings.affectedStops
-          << " filterAction: " << filterSettings.filterAction
-          << ' ' << filterSettings.filters.count() << " filters:\n";
-    for ( int i = 0; i < filterSettings.filters.count() - 1; ++i ) {
-        debug << ' ' << filterSettings.filters[i] << ", ";
+    debug << "FilterSettings " << filter.name
+          << " affectedStops: " << filter.affectedStops
+          << " filterAction: " << filter.filterAction
+          << ' ' << filter.filters.count() << " filters:\n";
+    for ( int i = 0; i < filter.filters.count() - 1; ++i ) {
+        debug << ' ' << filter.filters[i] << ", ";
     }
-    return debug << ' ' << filterSettings.filters.count() << filterSettings.filters.last();
+    return debug << ' ' << filter.filters.count() << filter.filters.last();
 }
 
-inline QDebug& operator<<(QDebug debug, const FilterSettingsList& filterSettingsList)
+inline QDebug& operator<<(QDebug debug, const FilterSettingsList& filters)
 {
-    debug << "FilterSettingsList, " << filterSettingsList.count() << "filter settings:\n";
-    for ( int i = 0; i < filterSettingsList.count() - 1; ++i ) {
-        debug << ' ' << filterSettingsList[i];
+    debug << "FilterSettingsList, " << filters.count() << "filter settings:\n";
+    for ( int i = 0; i < filters.count() - 1; ++i ) {
+        debug << ' ' << filters[i];
     }
-    return debug << ' ' << filterSettingsList.last();
+    return debug << ' ' << filters.last();
 }
 
 } // namespace Timetable

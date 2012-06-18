@@ -108,12 +108,6 @@ public: // Event handlers
     /** @brief Update GUI and logic to new @p _settings, changes are indicated using @p changed. */
     void onSettingsChanged( const Settings& _settings, SettingsIO::ChangedFlags changed );
 
-    /** @brief Other settings not handled in onSettingsChanged() have changed.
-     *
-     * TODO Add SettingsIO::ChangedX flags and move code from this function to onSettingsChanged().
-     **/
-    void onUnknownSettingsChanged();
-
     /** @brief Update GUI and action names to new departure arrival list type in current settings. */
     void onDepartureArrivalListTypeChanged();
 
@@ -194,7 +188,7 @@ public: // Other functions
 
     /** @brief Requests information about the currently used service provider. */
     QVariantHash currentServiceProviderData() const {
-        const StopSettings currentStopSettings = settings.currentStopSettings();
+        const StopSettings currentStopSettings = settings.currentStop();
         return serviceProviderData( currentStopSettings.get<QString>( ServiceProviderSetting ) );
     };
 
@@ -252,9 +246,9 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
                     q, SLOT(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)) );
         q->connect( departureProcessor, SIGNAL(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)),
                     q, SLOT(departuresFiltered(QString,QList<DepartureInfo>,QList<DepartureInfo>,QList<DepartureInfo>)) );
-        departureProcessor->setAlarmSettings( settings.alarmSettingsList );
-        departureProcessor->setFilterSettings( settings.currentFilterSettings() );
-        departureProcessor->setColorGroups( settings.currentColorGroupSettings() );
+        departureProcessor->setAlarms( settings.alarms() );
+        departureProcessor->setFilters( settings.currentFilters() );
+        departureProcessor->setColorGroups( settings.currentColorGroups() );
 
         // Create departure painter and load the vehicle type SVG
         departurePainter = new DeparturePainter( q );
@@ -273,7 +267,7 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
                     q, SLOT(updatePopupIcon()) );
 
         // Get list of features of the currently used service provider, if any
-        if( !settings.stopSettingsList.isEmpty() ) {
+        if( !settings.stops().isEmpty() ) {
             const QVariantHash serviceProviderData = currentServiceProviderData();
             currentServiceProviderFeatures = serviceProviderData.isEmpty()
                                             ? QStringList() : serviceProviderData["features"].toStringList();
@@ -295,11 +289,12 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
     inline void setupModels() {
         Q_Q( PublicTransport );
 
-        StopSettings stopSettings = settings.currentStopSettings();
+        StopSettings stop = settings.currentStop();
         model = new DepartureModel( q );
-        model->setDepartureArrivalListType( settings.departureArrivalListType );
-        model->setHomeStop( stopSettings.stopList().isEmpty() ? QString() : stopSettings.stop( 0 ).name );
-        model->setCurrentStopIndex( settings.currentStopSettingsIndex );
+        model->setDepartureArrivalListType( settings.departureArrivalListType() );
+        model->setHomeStop( stop.stopList().isEmpty() ? QString() : stop.stop(0).name );
+        model->setCurrentStopIndex( settings.currentStopIndex() );
+        model->setDepartureColumnSettings( settings.departureTimeFlags() );
         q->connect( model, SIGNAL(alarmFired(DepartureItem*,AlarmSettings)),
                     q, SLOT(alarmFired(DepartureItem*,AlarmSettings)) );
         q->connect( model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
@@ -308,11 +303,12 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
                     q, SLOT(departuresAboutToBeRemoved(QList<ItemBase*>)) );
         q->connect( model, SIGNAL(departuresLeft(QList<DepartureInfo>)),
                     q, SLOT(departuresLeft(QList<DepartureInfo>)) );
+
         modelJourneys = new JourneyModel( q );
-        modelJourneys->setHomeStop( stopSettings.stopList().isEmpty()
-                                    ? QString() : stopSettings.stop( 0 ).name );
-        modelJourneys->setCurrentStopIndex( settings.currentStopSettingsIndex );
-        modelJourneys->setAlarmSettings( settings.alarmSettingsList );
+        modelJourneys->setHomeStop( stop.stopList().isEmpty()
+                                    ? QString() : stop.stop(0).name );
+        modelJourneys->setCurrentStopIndex( settings.currentStopIndex() );
+        modelJourneys->setAlarmSettings( settings.alarms() );
         popupIcon->setModel( model );
     }
 
@@ -358,9 +354,8 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         // Create sub states of the departure list state for arrivals/departures
         QState *departureState = new QState( departureViewState );
         QState *arrivalState = new QState( departureViewState );
-        departureViewState->setInitialState(
-            settings.departureArrivalListType == DepartureList
-            ? departureState : arrivalState );
+        departureViewState->setInitialState( settings.departureArrivalListType() == DepartureList
+                                             ? departureState : arrivalState );
         QHistoryState *lastDepartureListState = new QHistoryState( departureViewState );
         lastDepartureListState->setDefaultState( departureState );
 
@@ -586,7 +581,7 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         _labelInfo->setText( infoText() );
 
         // Create timetable item for departures/arrivals
-        timetable = new TimetableWidget( settings.drawShadows
+        timetable = new TimetableWidget( settings.drawShadows()
                 ? PublicTransportWidget::DrawShadowsOrHalos : PublicTransportWidget::NoOption,
                 mainGraphicsWidget );
         timetable->setModel( model );

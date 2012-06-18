@@ -179,15 +179,15 @@ private:
 
     int m_currentStopSettingsIndex;
     bool m_showHeader;
-    bool m_hideColumnTarget;
+    bool m_hideTargetColumn;
 
-    FilterSettingsList m_filterSettings;
+    FilterSettingsList m_filters;
     QString m_lastFilterConfiguration; // The last set filter configuration
     bool m_filterConfigChanged; // Whether or not the filter configuration has changed from that defined in the filter configuration with the name [m_lastFilterConfiguration]
 
-    QList<ColorGroupSettingsList> m_colorGroupSettings;
+    QList<ColorGroupSettingsList> m_colorGroup;
 
-    AlarmSettingsList m_alarmSettings;
+    AlarmSettingsList m_alarm;
     int m_lastAlarm;
     bool m_alarmsChanged;
 };

@@ -84,17 +84,17 @@ void PublicTransportAppletTest::initTestCase()
     m_stopSettings.set( LocationSetting, QLatin1String("de") );
     QCOMPARE( m_stopSettings[LocationSetting].toString(), QLatin1String("de") );
 
-    FilterSettings filterSettings1, filterSettings2;
-    filterSettings1.name = "Filter configuration 1";
+    FilterSettings filters1, filters2;
+    filters1.name = "Filter configuration 1";
     Filter filter1 = Filter() << Constraint( FilterByTarget, FilterContains, "TestTarget" );
-    filterSettings1.filters << filter1;
-    filterSettings1.affectedStops << 0;
+    filters1.filters << filter1;
+    filters1.affectedStops << 0;
 
-    filterSettings2.name = "Filter configuration 2";
+    filters2.name = "Filter configuration 2";
     Filter filter2 = Filter() << Constraint( FilterByTarget, FilterContains, "TestTarget2" );
-    filterSettings2.filters << filter2;
+    filters2.filters << filter2;
 
-    m_filterConfigurations << filterSettings1 << filterSettings2;
+    m_filterConfigurations << filters1 << filters2;
 
     // Add the desktop containment
     m_corona = new Plasma::Corona( this );

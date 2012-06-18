@@ -38,17 +38,16 @@ struct Info {
     Info() {
         departureArrivalListType = DepartureList;
         linesPerRow = 2;
-        displayTimeBold = showRemainingMinutes = true;
-        showDepartureTime = false;
+        departureTimeFlags = Settings::DefaultDepartureTimeFlags;
         sizeFactor = 1.0f;
         alarmMinsBeforeDeparture = 5;
         currentStopSettingsIndex = -1;
     };
 
-    AlarmSettingsList alarmSettings;
+    AlarmSettingsList alarm;
     DepartureArrivalListType departureArrivalListType;
     int linesPerRow, alarmMinsBeforeDeparture, currentStopSettingsIndex;
-    bool displayTimeBold, showRemainingMinutes, showDepartureTime;
+    Settings::DepartureTimeFlags departureTimeFlags;
     float sizeFactor;
     QString homeStop;
     QString highlightedStop;
@@ -609,8 +608,7 @@ public:
 
     void setSizeFactor( float sizeFactor );
 
-    void setDepartureColumnSettings( bool displayTimeBold = true,
-        bool showRemainingMinutes = true, bool showDepartureTime = true );
+    void setDepartureColumnSettings( Settings::DepartureTimeFlags flags = Settings::DefaultDepartureTimeFlags );
 
     void setHomeStop( const QString &homeStop ) {
         m_info.homeStop = homeStop;
@@ -773,7 +771,7 @@ public:
 
     void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
     void setCurrentStopIndex( int currentStopSettingsIndex );
-    void setAlarmSettings( const AlarmSettingsList &alarmSettings );
+    void setAlarmSettings( const AlarmSettingsList &alarm );
 
     /** @brief Whether or not there are pending alarms. */
     bool hasAlarms() const { return !m_alarms.isEmpty(); };
@@ -804,7 +802,7 @@ public:
 
 signals:
     /** @brief The alarm for @p item has been fired. */
-    void alarmFired( DepartureItem *item, const AlarmSettings &alarmSettings );
+    void alarmFired( DepartureItem *item, const AlarmSettings &alarm );
 
     void updateAlarms( const AlarmSettingsList &newAlarmSettings, const QList<int> &removedAlarms );
 
@@ -875,7 +873,7 @@ public:
 
     void setDepartureArrivalListType( DepartureArrivalListType departureArrivalListType );
     void setCurrentStopIndex( int currentStopSettingsIndex );
-    void setAlarmSettings( const AlarmSettingsList &alarmSettings );
+    void setAlarmSettings( const AlarmSettingsList &alarm );
 
     /**
      * @brief Gets the smallest duration in minutes of a journey in this model.

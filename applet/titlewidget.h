@@ -239,6 +239,7 @@ signals:
      **/
     void journeySearchInputEdited( const QString &text );
 
+    // TODO Unused, remove?
     void journeySearchListUpdated( const QList<JourneySearchItem> &newJourneySearches );
 
 public slots:

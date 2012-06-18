@@ -554,26 +554,27 @@ ChildItem* JourneyItem::appendNewChild( ItemType itemType )
 void JourneyItem::updateTimeValues()
 {
     // Update departure string if it has changed
-    QString depTextFormatted = m_journeyInfo.departureText( true,
-            m_info->displayTimeBold, true, true, m_info->linesPerRow );
+    const bool timeBold = m_info->departureTimeFlags.testFlag( Settings::DisplayDepartureTimeBold );
+    QString depTextFormatted = m_journeyInfo.departureText( true, timeBold, true, true,
+                                                            m_info->linesPerRow );
     QString oldTextFormatted = formattedText( ColumnDeparture );
     if ( oldTextFormatted != depTextFormatted ) {
         setFormattedText( ColumnDeparture, depTextFormatted );
 
-        QString depText = m_journeyInfo.departureText( false,
-                m_info->displayTimeBold, true, true, m_info->linesPerRow );
+        QString depText = m_journeyInfo.departureText( false, timeBold, true, true,
+                                                       m_info->linesPerRow );
         setText( ColumnDeparture, depText );
     }
 
     // Update arrival string if it has changed
-    QString arrTextFormatted = m_journeyInfo.arrivalText( true,
-                            m_info->displayTimeBold, true, true, m_info->linesPerRow );
+    QString arrTextFormatted = m_journeyInfo.arrivalText( true, timeBold, true, true,
+                                                          m_info->linesPerRow );
     oldTextFormatted = formattedText( ColumnArrival );
     if ( oldTextFormatted != arrTextFormatted ) {
         setFormattedText( ColumnArrival, arrTextFormatted );
 
-        QString arrText = m_journeyInfo.departureText( false,
-                m_info->displayTimeBold, true, true, m_info->linesPerRow );
+        QString arrText = m_journeyInfo.departureText( false, timeBold, true, true,
+                                                       m_info->linesPerRow );
         setText( ColumnDeparture, arrText );
     }
 
@@ -921,16 +922,19 @@ ChildItem* DepartureItem::appendNewChild( ItemType itemType )
 
 void DepartureItem::updateTimeValues()
 {
+    Settings::DepartureTimeFlags timeFlags = m_info->departureTimeFlags;
     QString depTextFormatted = m_departureInfo.departureText( true,
-                            m_info->displayTimeBold, m_info->showRemainingMinutes,
-                            m_info->showDepartureTime, m_info->linesPerRow );
+            timeFlags.testFlag(Settings::DisplayDepartureTimeBold),
+            timeFlags.testFlag(Settings::ShowRemainingTime),
+            timeFlags.testFlag(Settings::ShowDepartureTime), m_info->linesPerRow );
     QString oldTextFormatted = formattedText( ColumnDeparture );
     if ( oldTextFormatted != depTextFormatted ) {
         setFormattedText( ColumnDeparture, depTextFormatted );
 
         QString depText = m_departureInfo.departureText( false,
-                m_info->displayTimeBold, m_info->showRemainingMinutes,
-                m_info->showDepartureTime, m_info->linesPerRow );
+            timeFlags.testFlag(Settings::DisplayDepartureTimeBold),
+            timeFlags.testFlag(Settings::ShowRemainingTime),
+            timeFlags.testFlag(Settings::ShowDepartureTime), m_info->linesPerRow );
         setText( ColumnDeparture, depText );
     }
 
@@ -1252,12 +1256,9 @@ void PublicTransportModel::setSizeFactor( float sizeFactor )
     //     TODO: Update items?
 }
 
-void PublicTransportModel::setDepartureColumnSettings( bool displayTimeBold,
-        bool showRemainingMinutes, bool showDepartureTime )
+void PublicTransportModel::setDepartureColumnSettings( Settings::DepartureTimeFlags flags )
 {
-    m_info.displayTimeBold = displayTimeBold;
-    m_info.showRemainingMinutes = showRemainingMinutes;
-    m_info.showDepartureTime = showDepartureTime;
+    m_info.departureTimeFlags = flags;
     foreach( ItemBase *item, m_items ) {
         item->updateTimeValues();
     }
@@ -1431,9 +1432,9 @@ void JourneyModel::setCurrentStopIndex( int currentStopSettingsIndex )
     m_info.currentStopSettingsIndex = currentStopSettingsIndex;
 }
 
-void JourneyModel::setAlarmSettings( const AlarmSettingsList& alarmSettings )
+void JourneyModel::setAlarmSettings( const AlarmSettingsList& alarm )
 {
-    m_info.alarmSettings = alarmSettings;
+    m_info.alarm = alarm;
 
     for ( int row = 0; row < m_items.count(); ++row ) {
         JourneyItem *journeyItem = static_cast<JourneyItem*>( m_items[row] );
@@ -1455,11 +1456,11 @@ void JourneyModel::updateItemAlarm( JourneyItem* journeyItem )
     DepartureInfo departureInfo( QString(), lineString, QString(), QString(),
                                  journeyInfo.departure(), vehicleType );
     AlarmStates alarmStates = NoAlarm;
-    for ( int a = 0; a < m_info.alarmSettings.count(); ++a ) {
-        AlarmSettings alarmSettings = m_info.alarmSettings[ a ];
+    for ( int a = 0; a < m_info.alarm.count(); ++a ) {
+        AlarmSettings alarm = m_info.alarm[ a ];
 
         // Remove target constraints from the alarm filter (because the target is unknown)
-        Filter alarmFilter = alarmSettings.filter;
+        Filter alarmFilter = alarm.filter;
         for ( int i = 0; i < alarmFilter.count(); ++i ) {
             if ( alarmFilter[i].type == Timetable::FilterByTarget ) {
                 alarmFilter.removeAt( i );
@@ -1467,8 +1468,8 @@ void JourneyModel::updateItemAlarm( JourneyItem* journeyItem )
             }
         }
 
-        if ( alarmSettings.affectedStops.contains(m_info.currentStopSettingsIndex)
-                && alarmSettings.enabled && !alarmFilter.isEmpty()
+        if ( alarm.affectedStops.contains(m_info.currentStopSettingsIndex)
+                && alarm.enabled && !alarmFilter.isEmpty()
                 && alarmFilter.match(departureInfo) )
         {
             const QDateTime alarmTime = journeyItem->alarmTime();
@@ -1477,10 +1478,10 @@ void JourneyModel::updateItemAlarm( JourneyItem* journeyItem )
             } else {
                 alarmStates |= AlarmPending;
             }
-            if ( alarmSettings.autoGenerated ) {
+            if ( alarm.autoGenerated ) {
                 alarmStates |= AlarmIsAutoGenerated;
             }
-            if ( alarmSettings.type == AlarmApplyToNewDepartures ) {
+            if ( alarm.type == AlarmApplyToNewDepartures ) {
                 alarmStates |= AlarmIsRecurring;
             }
             break;
@@ -1723,7 +1724,7 @@ void DepartureModel::update()
     QTimer::singleShot( 10000, this, SLOT(removeLeavingDepartures()) );
 
     // Update departure column if necessary (remaining minutes)
-    if ( m_info.showRemainingMinutes ) {
+    if ( m_info.departureTimeFlags.testFlag(Settings::ShowRemainingTime) ) {
         foreach( ItemBase *item, m_items ) {
             item->updateTimeValues();
         }
@@ -1757,9 +1758,9 @@ int DepartureModel::columnCount( const QModelIndex& parent ) const
     return parent.isValid() ? 1 : 3;
 }
 
-void DepartureModel::setAlarmSettings( const AlarmSettingsList& alarmSettings )
+void DepartureModel::setAlarmSettings( const AlarmSettingsList& alarm )
 {
-    m_info.alarmSettings = alarmSettings;
+    m_info.alarm = alarm;
 
     // Remove old alarms
     QMultiMap< QDateTime, DepartureItem* >::iterator it;
@@ -1772,10 +1773,10 @@ void DepartureModel::setAlarmSettings( const AlarmSettingsList& alarmSettings )
 
     // Set new alarms (go through all alarm settings for all departures)
     for ( int row = 0; row < m_items.count(); ++row ) {
-        for ( int a = 0; a < m_info.alarmSettings.count(); ++a ) {
-            AlarmSettings alarmSettings = m_info.alarmSettings.at( a );
-            if ( alarmSettings.enabled
-                    && alarmSettings.filter.match(
+        for ( int a = 0; a < m_info.alarm.count(); ++a ) {
+            AlarmSettings alarm = m_info.alarm.at( a );
+            if ( alarm.enabled
+                    && alarm.filter.match(
                         *static_cast<DepartureItem*>(m_items[row])->departureInfo() ) )
             {
                 // Current alarm is enabled and matches the current departure
@@ -1787,10 +1788,10 @@ void DepartureModel::setAlarmSettings( const AlarmSettingsList& alarmSettings )
                 if ( !depItem->departureInfo()->matchedAlarms().contains(a) ) {
                     depItem->departureInfo()->matchedAlarms() << a;
                 }
-                if ( alarmSettings.autoGenerated ) {
+                if ( alarm.autoGenerated ) {
                     depItem->setAlarmStates( depItem->alarmStates() | AlarmIsAutoGenerated );
                 }
-                if ( alarmSettings.type != AlarmRemoveAfterFirstMatch ) {
+                if ( alarm.type != AlarmRemoveAfterFirstMatch ) {
                     depItem->setAlarmStates( depItem->alarmStates() | AlarmIsRecurring );
                 }
             }
@@ -1992,25 +1993,25 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
         // and/or at least one recurring alarm
         if ( departureInfo.matchedAlarms().count() == 1 ) {
             int matchedAlarm = departureInfo.matchedAlarms().first();
-            if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarmSettings.count() ) {
+            if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarm.count() ) {
                 kDebug() << "Matched alarm is out of range of current alarm settings" << matchedAlarm;
             } else {
-                AlarmSettings alarmSettings = m_info.alarmSettings.at( matchedAlarm );
-                if ( alarmSettings.autoGenerated ) {
+                AlarmSettings alarm = m_info.alarm.at( matchedAlarm );
+                if ( alarm.autoGenerated ) {
                     newItem->setAlarmStates( newItem->alarmStates() | AlarmIsAutoGenerated );
                 }
-                if ( alarmSettings.type != AlarmRemoveAfterFirstMatch ) {
+                if ( alarm.type != AlarmRemoveAfterFirstMatch ) {
                     newItem->setAlarmStates( newItem->alarmStates() | AlarmIsRecurring );
                 }
             }
         } else {
             for ( int a = 0; a < departureInfo.matchedAlarms().count(); ++a ) {
                 int matchedAlarm = departureInfo.matchedAlarms().at( a );
-                if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarmSettings.count() ) {
+                if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarm.count() ) {
                     kDebug() << "Matched alarm is out of range of current alarm settings" << matchedAlarm;
                     continue;
                 }
-                if ( m_info.alarmSettings.at( matchedAlarm ).type != AlarmRemoveAfterFirstMatch ) {
+                if ( m_info.alarm.at( matchedAlarm ).type != AlarmRemoveAfterFirstMatch ) {
                     newItem->setAlarmStates( newItem->alarmStates() | AlarmIsRecurring );
                     break;
                 }
@@ -2102,12 +2103,12 @@ void DepartureModel::fireAlarm( const QDateTime& dateTime, DepartureItem* item )
     AlarmSettings matchingAlarmSettings;
     for ( int i = item->departureInfo()->matchedAlarms().count() - 1; i >= 0; --i ) {
         int matchedAlarm = item->departureInfo()->matchedAlarms().at( i );
-        if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarmSettings.count() ) {
+        if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarm.count() ) {
             kDebug() << "Matched alarm is out of range of current alarm settings";
             continue;
         }
 
-        matchingAlarmSettings = m_info.alarmSettings[ matchedAlarm ];
+        matchingAlarmSettings = m_info.alarm[ matchedAlarm ];
         if ( matchingAlarmSettings.lastFired.isValid() ) {
             int secs = matchingAlarmSettings.lastFired.secsTo( dateTime );
             kDebug() << "Alarm already fired?" << secs << "seconds from last fired to alarm time.";
@@ -2131,14 +2132,14 @@ void DepartureModel::fireAlarm( const QDateTime& dateTime, DepartureItem* item )
     QList< int > alarmsToRemove;
     for ( int i = item->departureInfo()->matchedAlarms().count() - 1; i >= 0; --i ) {
         int matchedAlarm = item->departureInfo()->matchedAlarms().at( i );
-        if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarmSettings.count() ) {
+        if ( matchedAlarm < 0 || matchedAlarm >= m_info.alarm.count() ) {
             kDebug() << "Matched alarm is out of range of current alarm settings";
             continue;
         }
-        if ( m_info.alarmSettings[matchedAlarm].type == AlarmRemoveAfterFirstMatch ) {
+        if ( m_info.alarm[matchedAlarm].type == AlarmRemoveAfterFirstMatch ) {
             alarmsToRemove << matchedAlarm;
         }
-        m_info.alarmSettings[ matchedAlarm ].lastFired = QDateTime::currentDateTime();
+        m_info.alarm[ matchedAlarm ].lastFired = QDateTime::currentDateTime();
 
 #if QT_VERSION >= 0x040600
         QPropertyAnimation *anim = new QPropertyAnimation( item, "alarmColorIntensity", this );
@@ -2154,8 +2155,8 @@ void DepartureModel::fireAlarm( const QDateTime& dateTime, DepartureItem* item )
              << item->departureInfo()->target() << item->departureInfo()->departure();
     if ( !alarmsToRemove.isEmpty() ) {
         foreach( int i, alarmsToRemove )  // stored in descending order...
-        m_info.alarmSettings.removeAt( i ); // ...so removing is ok
-        emit updateAlarms( m_info.alarmSettings, alarmsToRemove );
+        m_info.alarm.removeAt( i ); // ...so removing is ok
+        emit updateAlarms( m_info.alarm, alarmsToRemove );
     }
 }
 

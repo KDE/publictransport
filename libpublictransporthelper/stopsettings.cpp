@@ -288,7 +288,7 @@ bool StopSettings::operator==(const StopSettings& other) const {
     return true;
 }
 
-void StopSettingsList::removeIntermediateSettings( int startIndex,
+void StopSettingsList::removeIntermediateStops( int startIndex,
         const QString& id, int stopSetting )
 {
     for ( int i = startIndex; i < count(); ++i ) {
@@ -300,7 +300,7 @@ void StopSettingsList::removeIntermediateSettings( int startIndex,
     }
 }
 
-int StopSettingsList::findStopSettings( const QString& stopName, int startIndex )
+int StopSettingsList::findStopSettings( const QString& stopName, int startIndex ) const
 {
     for ( int i = startIndex; i < count(); ++i ) {
         if ( operator[](i).stops().contains(stopName, Qt::CaseInsensitive) ) {
@@ -392,7 +392,7 @@ QVariant StopSettingsWidgetFactory::valueOfSetting( const QWidget* widget, int s
     switch ( setting ) {
         case FilterConfigurationSetting: {
             // Get filter configuration list and adjust affectedStops list
-            FilterSettingsList filterSettings;
+            FilterSettingsList filters;
             const CheckCombobox *filterConfiguration = qobject_cast< const CheckCombobox* >( widget );
             QAbstractItemModel *model = filterConfiguration->model();
             QList<int> checkedFilterConfigurations = filterConfiguration->checkedRows();
@@ -408,10 +408,10 @@ QVariant StopSettingsWidgetFactory::valueOfSetting( const QWidget* widget, int s
                     }
                 }
 
-                filterSettings << filter;
+                filters << filter;
             }
 
-            return QVariant::fromValue( filterSettings );
+            return QVariant::fromValue( filters );
         }
         case AlarmTimeSetting:
         case TimeOffsetOfFirstDepartureSetting: {
@@ -446,11 +446,11 @@ void StopSettingsWidgetFactory::setValueOfSetting(QWidget* widget, int setting,
     switch ( setting ) {
         case FilterConfigurationSetting: {
 //             TODO: Not used currently?
-            FilterSettingsList filterSettings = value.value<FilterSettingsList>();
+            FilterSettingsList filters = value.value<FilterSettingsList>();
             const CheckCombobox *filterConfiguration = qobject_cast<CheckCombobox*>( widget );
             QAbstractItemModel *model = filterConfiguration->model();
             int row = 0;
-            foreach ( const FilterSettings &filter, filterSettings ) {
+            foreach ( const FilterSettings &filter, filters ) {
                 model->insertRow( row );
                 QModelIndex index = model->index( row, 0 );
                 model->setData( index, filter.name, Qt::DisplayRole );

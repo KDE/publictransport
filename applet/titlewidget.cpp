@@ -55,7 +55,7 @@ TitleWidget::TitleWidget( TitleType titleType, Settings *settings, bool journeys
     m_layout->setItemSpacing( 0, 4 );
 
     // Initialize icon widget
-    int iconExtend = 26 * settings->sizeFactor;
+    int iconExtend = 26 * settings->sizeFactor();
     Plasma::IconWidget *icon = new Plasma::IconWidget;
     icon->setIcon( "public-transport-stop" );
     icon->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
@@ -183,7 +183,7 @@ void TitleWidget::setTitleType( TitleType titleType,
             m_icon->setToolTip( i18nc("@info:tooltip", "Show available action in the applet") );
 
             // Add a close icon to close the journey view
-            int iconExtend = 26 * m_settings->sizeFactor;
+            int iconExtend = 26 * m_settings->sizeFactor();
             Plasma::IconWidget *closeIcon = new Plasma::IconWidget;
             closeIcon->setIcon( "window-close" );
             closeIcon->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
@@ -202,10 +202,10 @@ void TitleWidget::setTitleType( TitleType titleType,
 
 QString TitleWidget::titleText() const
 {
-    QString sStops = m_settings->currentStopSettings().stops().join( ", " );
-    if ( !m_settings->currentStopSettings().get<QString>(CitySetting).isEmpty() ) {
+    QString sStops = m_settings->currentStop().stops().join( ", " );
+    if ( !m_settings->currentStop().get<QString>(CitySetting).isEmpty() ) {
         return QString( "%1, %2" ).arg( sStops )
-                .arg( m_settings->currentStopSettings().get<QString>(CitySetting) );
+                .arg( m_settings->currentStop().get<QString>(CitySetting) );
     } else {
         return QString( "%1" ).arg( sStops );
     }
@@ -350,7 +350,7 @@ void TitleWidget::setIcon( MainIconDisplay iconType )
     case DepartureListErrorIcon: {
         // Create an icon to be shown on errors with a departure/arrival board
         QList<KIcon> overlays;
-        if ( m_settings->departureArrivalListType == DepartureList ) {
+        if ( m_settings->departureArrivalListType() == DepartureList ) {
             // Use a public transport stop icon with a house and an arrow away from it
             // to indicate that a departure list is shown
             overlays << KIcon("go-home") << KIcon("go-next");
@@ -371,7 +371,7 @@ void TitleWidget::setIcon( MainIconDisplay iconType )
         // Create an icon to be shown for departure/arrival boards without errors.
         // This icon is the same as the departure error icon, but without the icon effect
         QList<KIcon> overlays;
-        if ( m_settings->departureArrivalListType == DepartureList ) {
+        if ( m_settings->departureArrivalListType() == DepartureList ) {
             overlays << KIcon("go-home") << KIcon("go-next");
         } else {
             overlays << KIcon("go-next") << KIcon("go-home");
@@ -526,15 +526,15 @@ void TitleWidget::clearWidgets()
 
 void TitleWidget::updateFilterWidget()
 {
-    FilterSettingsList filterSettings = m_settings->currentFilterSettings();
-    ColorGroupSettingsList colorGroups = m_settings->currentColorGroupSettings();
+    FilterSettingsList filters = m_settings->currentFilters();
+    ColorGroupSettingsList colorGroups = m_settings->currentColorGroups();
     ColorGroupSettingsList disabledColorGroups;
     foreach ( const ColorGroupSettings &colorGroup, colorGroups ) {
         if ( colorGroup.filterOut ) {
             disabledColorGroups << colorGroup;
         }
     }
-    if ( filterSettings.isEmpty() && disabledColorGroups.isEmpty() ) {
+    if ( filters.isEmpty() && disabledColorGroups.isEmpty() ) {
         m_filterWidget->setOpacity( 0.6 );
         m_filterWidget->setText( i18nc("@info/plain Shown in the applet to indicate that no "
                 "filters are currently active", "(No active filter)") );
@@ -545,16 +545,16 @@ void TitleWidget::updateFilterWidget()
         QFontMetrics fm( m_filterWidget->font() );
         QString text;
         m_filterWidget->nativeWidget()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-        if ( filterSettings.count() == 1 && disabledColorGroups.isEmpty() ) {
-            text = fm.elidedText( filterSettings.first().name,
+        if ( filters.count() == 1 && disabledColorGroups.isEmpty() ) {
+            text = fm.elidedText( filters.first().name,
                                   Qt::ElideRight, boundingRect().width() * 0.45 );
             m_filterWidget->setIcon( KIcon("view-filter") );
-        } else if ( filterSettings.count() > 1 && disabledColorGroups.isEmpty() ) {
+        } else if ( filters.count() > 1 && disabledColorGroups.isEmpty() ) {
             text = fm.elidedText( i18ncp("@info/plain", "%1 active filter", "%1 active filters",
-                                         filterSettings.count()),
+                                         filters.count()),
                                   Qt::ElideRight, boundingRect().width() * 0.45 );
             m_filterWidget->setIcon( KIcon("object-group") );
-        } else if ( filterSettings.isEmpty() && disabledColorGroups.count() >= 1 ) {
+        } else if ( filters.isEmpty() && disabledColorGroups.count() >= 1 ) {
             text = fm.elidedText( i18ncp("@info/plain", "%1 disabled color group",
                                          "%1 disabled color groups", disabledColorGroups.count()),
                                   Qt::ElideRight, boundingRect().width() * 0.45 );
@@ -562,7 +562,7 @@ void TitleWidget::updateFilterWidget()
         } else {
             text = fm.elidedText( i18ncp("@info/plain", "%1 active (color) filter",
                                          "%1 active (color) filters",
-                                         filterSettings.count() + disabledColorGroups.count()),
+                                         filters.count() + disabledColorGroups.count()),
                                   Qt::ElideRight, boundingRect().width() * 0.45 );
             m_filterWidget->setIcon( KIcon("view-filter") );
         }
@@ -584,7 +584,7 @@ void TitleWidget::slotJourneySearchInputChanged( const QString &text )
 
 void TitleWidget::settingsChanged()
 {
-    int mainIconExtend = qCeil(26 * m_settings->sizeFactor);
+    int mainIconExtend = qCeil(26 * m_settings->sizeFactor());
     m_icon->setMinimumSize( mainIconExtend, mainIconExtend );
     m_icon->setMaximumSize( mainIconExtend, mainIconExtend );
 

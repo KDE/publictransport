@@ -93,24 +93,22 @@ public:
     static const int JOURNEY_BATCH_SIZE;
 
     /**
-     * @brief Sets the filter settings to be used.
-     *
-     * @param filterSettings A list of filter settings to be used.
+     * @brief Set the filter settings to be used.
+     * @param filters A list of filter settings to be used.
      **/
-    void setFilterSettings( const FilterSettingsList &filterSettings );
+    void setFilters( const FilterSettingsList &filters );
 
     /**
-     * @brief Sets the color group settings to be used.
-     *
-     * @param colorGroupSettings A list of color group settings to be used.
+     * @brief Set the color group settings to be used.
+     * @param colorGroup A list of color group settings to be used.
      **/
-    void setColorGroups( const ColorGroupSettingsList &colorGroupSettings );
+    void setColorGroups( const ColorGroupSettingsList &colorGroups );
 
-    /** @brief Sets the list of @p alarmSettings to be used. */
-    void setAlarmSettings( const AlarmSettingsList &alarmSettings );
+    /** @brief Set the list of @p alarm to be used. */
+    void setAlarms( const AlarmSettingsList &alarms );
 
     /**
-     * @brief Sets the first departure settings to be used.
+     * @brief Set the first departure settings to be used.
      *
      * @param firstDepartureConfigMode The first departure time can be relative to the current
      *   time (@ref RelativeToCurrentTime) or a custom time (@ref AtCustomTime).
@@ -294,9 +292,9 @@ private:
     QQueue< JobInfo* > m_jobQueue;
     JobType m_currentJob;
 
-    FilterSettingsList m_filterSettings;
-    ColorGroupSettingsList m_colorGroupSettings;
-    AlarmSettingsList m_alarmSettings;
+    FilterSettingsList m_filters;
+    ColorGroupSettingsList m_colorGroups;
+    AlarmSettingsList m_alarms;
     FirstDepartureConfigMode m_firstDepartureConfigMode;
     QTime m_timeOfFirstDepartureCustom;
     int m_timeOffsetOfFirstDeparture;

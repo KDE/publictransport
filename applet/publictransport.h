@@ -173,11 +173,11 @@ public slots:
     /**
      * @brief Replace the current lists of stop and filter settings.
      *
-     * @param stopSettingsList The new list of stop settings.
-     * @param filterSettings The new list of filter settings.
+     * @param stops The new list of stops.
+     * @param filters The new list of filters.
      **/
-    void setSettings( const StopSettingsList &stopSettingsList,
-                      const FilterSettingsList &filterSettings );
+    void setSettings( const StopSettingsList &stops,
+                      const FilterSettingsList &filters );
 
     /**
      * @brief Replace the current settings and updates the applet accordingly.
@@ -194,8 +194,8 @@ protected slots:
     /** @brief The geometry of the applet has changed. */
     void geometryChanged();
 
-    /** @brief Settings have changed. */
-    void configChanged();
+//     /** @brief Settings have changed. */
+//     void configChanged();
 
     /** @brief Overriden to update the popup icon to new sizes using updatePopupIcon(). */
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
@@ -508,7 +508,7 @@ protected slots:
     void switchFilterByGroupColor( QAction *action );
 
     /** @brief An alarm has been fired for the given @p item. */
-    void alarmFired( DepartureItem *item, const AlarmSettings &alarmSettings );
+    void alarmFired( DepartureItem *item, const AlarmSettings &alarm );
 
     void removeAlarms( const AlarmSettingsList &newAlarmSettings,
                        const QList<int> &removedAlarms );
