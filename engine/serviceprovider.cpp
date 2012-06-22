@@ -50,6 +50,8 @@ ServiceProvider::ServiceProvider( const ServiceProviderData *data, QObject *pare
 {
     const_cast<ServiceProviderData*>(m_data)->setParent( this );
     m_idAlreadyRequested = false;
+
+    kDebug() << data->id() << "CREATED";
 }
 
 ServiceProvider::~ServiceProvider()
@@ -67,6 +69,7 @@ ServiceProvider::~ServiceProvider()
             kDebug() << m_data->id() << m_jobInfos.count();
         }
     }
+    kDebug() << m_data->id() << "DELETED";
 }
 
 QString ServiceProvider::typeName( ServiceProviderType type )
@@ -153,7 +156,7 @@ ServiceProviderData *ServiceProvider::readProviderData( const QString &servicePr
     return data;
 }
 
-ServiceProvider* ServiceProvider::getSpecificProvider( const QString &_serviceProviderId,
+ServiceProvider* ServiceProvider::createProvider( const QString &_serviceProviderId,
                                                        QObject *parent )
 {
     QString filePath;

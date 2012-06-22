@@ -79,10 +79,22 @@ class ServiceProvider : public QObject {
     Q_PROPERTY( bool onlyUseCitiesInList READ onlyUseCitiesInList )
 
 public:
+    /**
+     * @brief Constructs a new ServiceProvider object.
+     *
+     * You should use getSpecificProvider() to get an service provider that can download and
+     * parse documents from the given service provider ID.
+     *
+     * @param data The data eg. read from a service provider plugin XML file, to construct a
+     *   ServiceProvider for. If this is 0 an invalid ServiceProvider gets created.
+     *   ServiceProvider takes ownership for @p data.
+     * @param parent The parent QObject.
+     **/
+    explicit ServiceProvider( const ServiceProviderData *data = 0, QObject *parent = 0 );
+
     /** @brief Destructor. */
     virtual ~ServiceProvider();
 
-    // TODO Rename to createProvider()
     /**
      * @brief Get the service provider with the given @p serviceProviderId, if any.
      *
@@ -91,8 +103,8 @@ public:
      *   If it's empty, the default service provider for the users country will
      *   be used, if there is any.
      **/
-    static ServiceProvider *getSpecificProvider( const QString &serviceProviderId = QString(),
-                                                 QObject *parent = 0 );
+    static ServiceProvider *createProvider( const QString &serviceProviderId = QString(),
+                                            QObject *parent = 0 );
 
     /** @brief Create an invalid provider. */
     static ServiceProvider *createInvalidProvider( QObject *parent = 0 );
@@ -201,19 +213,6 @@ public:
     static QString toPercentEncoding( const QString &str, const QByteArray &charset );
 
 protected:
-    /**
-     * @brief Constructs a new ServiceProvider object.
-     *
-     * You should use getSpecificProvider() to get an service provider that can download and
-     * parse documents from the given service provider ID.
-     *
-     * @param data The data eg. read from a service provider plugin XML file, to construct a
-     *   ServiceProvider for. If this is 0 an invalid ServiceProvider gets created.
-     *   ServiceProvider takes ownership for @p data.
-     * @param parent The parent QObject.
-     **/
-    explicit ServiceProvider( const ServiceProviderData *data = 0, QObject *parent = 0 );
-
     /**
      * @brief Get the charset used to encode urls before percent-encoding them. Normally
      *   this charset is UTF-8. But that doesn't work for sites that require parameters

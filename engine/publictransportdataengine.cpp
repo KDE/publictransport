@@ -69,7 +69,6 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
 
 PublicTransportEngine::~PublicTransportEngine()
 {
-    qDeleteAll( m_providers.values() );
     delete m_fileSystemWatcher;
 }
 
@@ -83,12 +82,42 @@ QStringList PublicTransportEngine::sources() const
     return sources;
 }
 
+bool PublicTransportEngine::isProviderUsed( const QString &serviceProviderId )
+{
+    for ( QVariantHash::ConstIterator it = m_dataSources.constBegin();
+          it != m_dataSources.constEnd(); ++it )
+    {
+        const QVariantHash otherDataHash = it->toHash();
+        if ( otherDataHash.contains("serviceProvider") ) {
+            const QString otherProviderId = otherDataHash["serviceProvider"].toString().toLower();
+            if ( otherProviderId == serviceProviderId ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 void PublicTransportEngine::slotSourceRemoved( const QString& name )
 {
     const QString nonAmbiguousName = name.toLower();
     kDebug() << "Running" << m_runningSources.removeOne( nonAmbiguousName );
-    kDebug() << "Cached" << m_dataSources.remove( nonAmbiguousName );
+
+    const QVariant data = m_dataSources.take( nonAmbiguousName );
+    kDebug() << "Cached" << data.isValid();
     kDebug() << "Source" << name << "removed, still cached data sources" << m_dataSources.count();
+
+    // If a provider was used by the source, remove the provider if it is not used in another source
+    const QVariantHash dataHash = data.toHash();
+    if ( dataHash.contains("serviceProvider") ) {
+        const QString providerId = dataHash["serviceProvider"].toString().toLower();
+        if ( !providerId.isEmpty() && !isProviderUsed(providerId) ) {
+            if ( m_providers.remove(providerId) > 0 ) {
+                kDebug() << "Removed unused provider" << providerId;
+            }
+        }
+    }
 }
 
 QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProvider *provider )
@@ -162,7 +191,7 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
         if ( !dataFound ) {
             // No cached feature data was found for the accessor, create the accessor to get the
             // feature list. Caching the feature data is up to the accessor.
-            ServiceProvider *_provider = providerFromId( data.id() );
+            ProviderPointer _provider = providerFromId( data.id() );
             dataServiceProvider.insert( "features", _provider->features() );
             dataServiceProvider.insert( "featuresLocalized", _provider->featuresLocalized() );
         }
@@ -188,8 +217,7 @@ QVariantHash PublicTransportEngine::locations()
         }
 
         const QString providerFileName = QFileInfo( provider ).fileName();
-        const QString providerId =
-                ServiceProviderGlobal::idFromFileName( providerFileName );
+        const QString providerId = ServiceProviderGlobal::idFromFileName( providerFileName );
         if ( m_erroneousProviders.contains(providerId) ) {
             // Service provider is erroneous
             continue;
@@ -240,16 +268,16 @@ bool PublicTransportEngine::sourceRequestEvent( const QString &name )
     return updateSourceEvent( name );
 }
 
-ServiceProvider *PublicTransportEngine::providerFromId( const QString &id )
+PublicTransportEngine::ProviderPointer PublicTransportEngine::providerFromId( const QString &id )
 {
     if ( m_providers.contains(id) ) {
         kDebug() << "Provider" << id << "already created";
         return m_providers[ id ];
     } else {
         kDebug() << "Create provider" << id;
-        ServiceProvider *provider = ServiceProvider::getSpecificProvider( id );
+        ServiceProvider *provider = ServiceProvider::createProvider( id );
         if ( !provider ) {
-            return 0;
+            return ProviderPointer::create();
         }
 
         connect( provider, SIGNAL(departureListReceived(ServiceProvider*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)),
@@ -260,8 +288,10 @@ ServiceProvider *PublicTransportEngine::providerFromId( const QString &id )
                  this, SLOT(stopListReceived(ServiceProvider*,QUrl,StopInfoList,StopSuggestionRequest)) );
         connect( provider, SIGNAL(errorParsing(ServiceProvider*,ErrorCode,QString,QUrl,const AbstractRequest*)),
                  this, SLOT(errorParsing(ServiceProvider*,ErrorCode,QString,QUrl,const AbstractRequest*)) );
-        m_providers.insert( id, provider );
-        return provider;
+
+        const ProviderPointer pointer( provider );
+        m_providers.insert( id, pointer );
+        return pointer;
     }
 }
 
@@ -301,10 +331,13 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
         providerId = defaultProvider;
     }
 
-    const ServiceProvider *provider = providerFromId( providerId );
-    if ( provider ) {
-        setData( name, serviceProviderData(provider) );
-//         delete provider; TODO Use QSharedPointer< ServiceProvider >
+    // TODO Do not create provider here
+    ServiceProviderData *data = ServiceProvider::readProviderData( providerId );
+//     const ProviderPointer provider = providerFromId( providerId );
+//     if ( !provider.isNull() ) {
+    if ( data ) {
+        setData( name, serviceProviderData(*data) );
+        delete data;
     } else {
         if ( !m_erroneousProviders.contains(providerId) ) {
             m_erroneousProviders << providerId;
@@ -350,9 +383,9 @@ bool PublicTransportEngine::updateServiceProviderSource()
                     KUrl( provider ).fileName().remove( QRegExp( "\\..*$" ) ); // Remove file extension
             // Try to get information about the current service provider
             if ( m_providers.contains(serviceProviderId) ) {
-                // The accessor is already created, use it's TimetableAccessorInfo object
-                ServiceProvider *provider = m_providers[ serviceProviderId ];
-                dataSource.insert( provider->data()->name(), serviceProviderData(provider) );
+                // The accessor is already created, use it's ServiceProviderData object
+                const ProviderPointer provider = m_providers[ serviceProviderId ];
+                dataSource.insert( provider->data()->name(), serviceProviderData(provider.data()) );
                 loadedProviders << serviceProviderId;
             } else {
                 // Check the provider cache file for errors with the current service provider
@@ -542,8 +575,8 @@ bool PublicTransportEngine::updateTimetableDataSource( const QString &name )
         }
 
         // Try to get the specific provider from m_providers (if it's not in there it is created)
-        ServiceProvider *provider = providerFromId( serviceProviderId );
-        if ( !provider ) {
+        const ProviderPointer provider = providerFromId( serviceProviderId );
+        if ( provider.isNull() ) {
             return false; // Service provider couldn't be created
         } else if ( provider->useSeparateCityValue() && city.isEmpty() ) {
             kDebug() << QString( "Service provider %1 needs a separate city value. Add to "
@@ -657,7 +690,7 @@ void PublicTransportEngine::reloadAllProviders()
 //     m_timer = 0;
 
     // Remove all providers (could have been changed)
-    qDeleteAll( m_providers );
+//     qDeleteAll( m_providers ); // TODO Remove
     m_providers.clear();
 
     // Clear all cached data (use the new provider to parse the data again)
@@ -1140,8 +1173,8 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
         kWarning() << "Internal error: Service provider unknown"; // Could get provider id from <name>
         return false;
     }
-    ServiceProvider *provider = providerFromId( providerId );
-    if ( !provider ) {
+    const ProviderPointer provider = providerFromId( providerId );
+    if ( provider.isNull() ) {
         return false;
     }
 
@@ -1156,8 +1189,8 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
     if ( provider->type() == GtfsProvider ) {
         // Update GTFS accessors once a week
         // TODO: Check for an updated GTFS feed every X seconds, eg. once an hour
-        ServiceProviderGtfs *gtfsAccessor =
-                qobject_cast<ServiceProviderGtfs*>( provider );
+        const QSharedPointer<ServiceProviderGtfs> gtfsAccessor =
+                provider.objectCast<ServiceProviderGtfs>();
         kDebug() << "Wait time until next update from GTFS provider:"
                  << KGlobal::locale()->prettyFormatDuration(1000 *
                     (gtfsAccessor->isRealtimeDataAvailable()

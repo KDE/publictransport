@@ -56,6 +56,8 @@ class PublicTransportEngine : public Plasma::DataEngine {
     Q_OBJECT
 
 public:
+    typedef QSharedPointer< ServiceProvider > ProviderPointer;
+
     /**
      * @brief The available types of sources of this data engine.
      *
@@ -355,11 +357,14 @@ private:
      **/
     QVariantHash locations();
 
-    ServiceProvider *providerFromId( const QString &serviceProviderId );
+    ProviderPointer providerFromId( const QString &serviceProviderId );
+
+    /** @brief Checks if the provider with the given ID is used by a connected source. */
+    bool isProviderUsed( const QString &serviceProviderId );
 
     QString stripDateAndTimeValues( const QString &sourceName );
 
-    QHash< QString, ServiceProvider* > m_providers; // List of already loaded service providers
+    QHash< QString, ProviderPointer > m_providers; // List of already loaded service providers
     QVariantHash m_dataSources; // List of already used data sources
     QStringList m_erroneousProviders; // List of erroneous service providers
     QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory
@@ -996,7 +1001,7 @@ digraph publicTransportDataEngine {
     ];
 
     provider [
-    label="{ServiceProvider|Loads and parses documents from service providers.\lIt uses ServiceProviderData to get needed information.\l|+ static getSpecificProvider( serviceProvider ) : ServiceProvider*\l+ requestDepartures() : KIO:TransferJob\l+ requestJourneys() : KIO:TransferJob\l+ data() : ServiceProviderData\l}"
+    label="{ServiceProvider|Loads and parses documents from service providers.\lIt uses ServiceProviderData to get needed information.\l|+ static createProvider( serviceProvider ) : ServiceProvider*\l+ requestDepartures() : KIO:TransferJob\l+ requestJourneys() : KIO:TransferJob\l+ data() : ServiceProviderData\l}"
     URL="\ref ServiceProvider"
     ];
 
