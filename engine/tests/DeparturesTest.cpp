@@ -60,15 +60,14 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
     int count = testVisualization.data["count"].toInt();
     QVERIFY( count > 0 );
 
-    for ( int i = 0; i < count; ++i )
-    {
+    for ( int i = 0; i < count; ++i ) {
         // Ensure that the key exists
         QString key = QString::number(i);
         QVERIFY2( testVisualization.data.contains(key),
-                  QString("The key \"%1\" is missing from the data structure returned "
-                  "for source \"Departures ...\", there should be \"count\" (ie. %2) "
-                  "departures beginning at 0")
-                  .arg(i).arg(count).toLatin1().data() );
+                    QString("The key \"%1\" is missing from the data structure returned "
+                    "for source \"Departures ...\", there should be \"count\" (ie. %2) "
+                    "departures beginning at 0")
+                    .arg(i).arg(count).toLatin1().data() );
 
         QVariantHash departureData = testVisualization.data[key].toHash();
 
@@ -83,13 +82,13 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
         QVERIFY( departureData.contains("vehicleName") );
         QVERIFY( departureData.contains("vehicleNamePlural") );
         QVERIFY( departureData.contains("vehicleIconName") );
-        QVERIFY( departureData.contains("journeyNews") );
-        QVERIFY( departureData.contains("platform") );
-        QVERIFY( departureData.contains("operator") );
+    // 		QVERIFY( departureData.contains("journeyNews") ); // NOTE These values are only given if they are not empty
+    // 		QVERIFY( departureData.contains("platform") );
+    // 		QVERIFY( departureData.contains("operator") );
         QVERIFY( departureData.contains("delay") );
-        QVERIFY( departureData.contains("delayReason") );
-        QVERIFY( departureData.contains("routeStops") );
-        QVERIFY( departureData.contains("routeTimes") );
+    // 		QVERIFY( departureData.contains("delayReason") );
+    // 		QVERIFY( departureData.contains("routeStops") );
+    // 		QVERIFY( departureData.contains("routeTimes") );
         QVERIFY( departureData.contains("routeExactStops") );
 
         // Test data types
@@ -100,14 +99,26 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
         QVERIFY( departureData["vehicleName"].canConvert(QVariant::String) );
         QVERIFY( departureData["vehicleNamePlural"].canConvert(QVariant::String) );
         QVERIFY( departureData["vehicleIconName"].canConvert(QVariant::String) );
-        QVERIFY( departureData["journeyNews"].canConvert(QVariant::String) );
-        QVERIFY( departureData["platform"].canConvert(QVariant::String) );
-        QVERIFY( departureData["operator"].canConvert(QVariant::String) );
         QVERIFY( departureData["delay"].canConvert(QVariant::Int) );
-        QVERIFY( departureData["delayReason"].canConvert(QVariant::String) );
-        QVERIFY( departureData["routeStops"].canConvert(QVariant::StringList) );
-        QVERIFY( departureData["routeTimes"].canConvert(QVariant::List) );
         QVERIFY( departureData["routeExactStops"].canConvert(QVariant::Int) );
+        if ( departureData.contains("journeyNews") ) {
+            QVERIFY( departureData["journeyNews"].canConvert(QVariant::String) );
+        }
+        if ( departureData.contains("platform") ) {
+            QVERIFY( departureData["platform"].canConvert(QVariant::String) );
+        }
+        if ( departureData.contains("operator") ) {
+            QVERIFY( departureData["operator"].canConvert(QVariant::String) );
+        }
+        if ( departureData.contains("delayReason") ) {
+            QVERIFY( departureData["delayReason"].canConvert(QVariant::String) );
+        }
+        if ( departureData.contains("routeStops") ) {
+            QVERIFY( departureData["routeStops"].canConvert(QVariant::StringList) );
+        }
+        if ( departureData.contains("routeTimes") ) {
+            QVERIFY( departureData["routeTimes"].canConvert(QVariant::List) );
+        }
 
         // Check routeTimes list for data types
         QVariantList times = departureData[ "routeTimes" ].toList();
@@ -116,8 +127,8 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
         }
 
         // The first stop of the route stop list should be the departure stop
-//         QVERIFY( departureData["routeStops"].toStringList().first().indexOf(
-//                 stopName.isNull() ? QLatin1String("Bremen") : stopName, 0, Qt::CaseInsensitive) != -1 );
+    //         QVERIFY( departureData["routeStops"].toStringList().first().indexOf(
+    //                  stopName.isNull() ? QLatin1String("Bremen") : stopName, 0, Qt::CaseInsensitive) != -1 );
     }
 }
 
@@ -138,10 +149,10 @@ void testDepartureTimes( const TestVisualization &testVisualization, const QDate
         // Get seconds from actual departure time until the testTime
         int difference = dateTimeValue.secsTo( testDateTime );
         QVERIFY2( difference <= maxDifference * 60, QString("A departure was returned which is %1 "
-                "before the given time (departure at %2, requested time was %3. "
-                "Maybe the maxDifference value should be increased in the test?")
-                .arg(KGlobal::locale()->formatDuration(difference * 1000))
-                .arg(dateTimeValue.toString()).arg(testDateTime.toString()).toLatin1().data() );
+                  "before the given time (departure at %2, requested time was %3. "
+                  "Maybe the maxDifference value should be increased in the test?")
+                  .arg(KGlobal::locale()->formatDuration(difference * 1000))
+                  .arg(dateTimeValue.toString()).arg(testDateTime.toString()).toLatin1().data() );
     }
 }
 
@@ -280,7 +291,7 @@ void DeparturesTest::departuresTimeOffsetTest()
 
     // Test time values
     testDepartureTimes( testVisualization, QDateTime(QDate::currentDate(),
-                                                     QTime::currentTime().addSecs(timeOffset * 60)) );
+                                                    QTime::currentTime().addSecs(timeOffset * 60)) );
 
     m_publicTransportEngine->disconnectSource( sourceName, &testVisualization );
     QVERIFY2( !testVisualization.data.isEmpty(),

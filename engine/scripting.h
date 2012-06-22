@@ -795,8 +795,8 @@ public:
     Q_INVOKABLE static QString camelCase( const QString &str );
 
     /**
-     * @brief Extracts a block from @p str, which begins at the first occurance of @p beginString
-     *   in @p str and end at the first occurance of @p endString in @p str.
+     * @brief Extracts a block from @p str, which begins at the first occurrence of @p beginString
+     *   in @p str and end at the first occurrence of @p endString in @p str.
      *
      * @deprecated Does only work with fixed strings. Use eg. findFirstHtmlTag() instead.
      * @bug The returned string includes beginString but not endString.
@@ -1407,6 +1407,10 @@ public Q_SLOTS:
      *   their values.
      **/
     void addData( const QVariantMap &map );
+
+//     TODO
+//     /** @brief Whether or not @p info is contained in this TimetableData object. */
+//     bool contains( TimetableInformation info ) const { return m_timetableData.contains(info); };
 
 private:
     QList< TimetableData > m_timetableData;

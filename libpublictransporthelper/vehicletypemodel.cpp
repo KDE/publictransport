@@ -98,7 +98,7 @@ public:
 VehicleTypeModel::VehicleTypeModel( QObject* parent )
         : QAbstractListModel( parent ), d_ptr(new VehicleTypeModelPrivate())
 {
-    beginInsertRows( QModelIndex(), 0, 14 ); //
+    beginInsertRows( QModelIndex(), 0, 14 );
     d_ptr->addItems();
     endInsertRows();
 }

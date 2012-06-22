@@ -24,8 +24,9 @@
 #include "serviceproviderdata.h"
 #include "serviceproviderglobal.h"
 #include "serviceproviderdatareader.h"
-#include "departureinfo.h"
 #include "serviceproviderscript.h"
+#include "serviceprovidergtfs.h"
+#include "departureinfo.h"
 #include "request.h"
 
 // KDE includes
@@ -45,7 +46,7 @@
 
 ServiceProvider::ServiceProvider( const ServiceProviderData *data, QObject *parent )
         : QObject(parent),
-          m_data(data ? data : new ServiceProviderData(InvalidServiceProvider, QString(), this))
+          m_data(data ? data : new ServiceProviderData(InvalidProvider, QString(), this))
 {
     const_cast<ServiceProviderData*>(m_data)->setParent( this );
     m_idAlreadyRequested = false;
@@ -68,6 +69,20 @@ ServiceProvider::~ServiceProvider()
     }
 }
 
+QString ServiceProvider::typeName( ServiceProviderType type )
+{
+    switch ( type ) {
+    case ScriptedProvider:
+        return i18nc("@info/plain Name of an accessor type", "Scripted");
+    case GtfsProvider:
+        return i18nc("@info/plain Name of an accessor type", "GTFS");
+    case InvalidProvider:
+    default:
+        kWarning() << "Invalid provider type" << type;
+        return i18nc("@info/plain Name of an accessor type", "Invalid");
+    }
+}
+
 ServiceProvider *ServiceProvider::createInvalidProvider( QObject *parent )
 {
     return new ServiceProvider( 0, parent );
@@ -77,13 +92,65 @@ ServiceProvider *ServiceProvider::createProviderForData( const ServiceProviderDa
                                                          QObject *parent )
 {
     switch ( data->type() ) {
-    case ScriptedServiceProvider:
+    case ScriptedProvider:
         return new ServiceProviderScript( data, parent );
-    case InvalidServiceProvider:
+    case GtfsProvider:
+        return new ServiceProviderGtfs( data, parent );
+    case InvalidProvider:
     default:
         kWarning() << "Invalid/unknown provider type" << data->type();
         return 0;
     }
+}
+
+ServiceProviderData *ServiceProvider::readProviderData( const QString &serviceProviderId )
+{
+    QString filePath;
+    QString country = "international";
+    QString sp = serviceProviderId;
+    if ( sp.isEmpty() ) {
+        // No service provider ID given, use the default one for the users country
+        country = KGlobal::locale()->country();
+
+        // Try to find the XML filename of the default accessor for [country]
+        filePath = ServiceProviderGlobal::defaultProviderForLocation( country );
+        if ( filePath.isEmpty() ) {
+            return 0;
+        }
+
+        // Extract service provider ID from filename
+        sp = ServiceProviderGlobal::idFromFileName( filePath );
+        kDebug() << "No service provider ID given, using the default one for country"
+                 << country << "which is" << sp;
+    } else {
+        foreach ( const QString &extension, ServiceProviderGlobal::fileExtensions() ) {
+            filePath = KGlobal::dirs()->findResource( "data",
+                    ServiceProviderGlobal::installationSubDirectory() + sp + '.' + extension );
+            if ( !filePath.isEmpty() ) {
+                break;
+            }
+        }
+        if ( filePath.isEmpty() ) {
+            kDebug() << "Couldn't find a service provider information XML named" << sp;
+            return 0;
+        }
+
+        // Get country code from filename
+        QRegExp rx( "^([^_]+)" );
+        if ( rx.indexIn(sp) != -1 && KGlobal::locale()->allCountriesList().contains(rx.cap()) ) {
+            country = rx.cap();
+        }
+    }
+
+    QFile file( filePath );
+    ServiceProviderDataReader reader;
+    ServiceProviderData *data = reader.read( &file, sp, filePath, country );
+
+    if ( !data ) {
+        kDebug() << "Error while reading accessor info xml" << filePath
+                 << reader.lineNumber() << reader.errorString();
+    }
+    return data;
 }
 
 ServiceProvider* ServiceProvider::getSpecificProvider( const QString &_serviceProviderId,
@@ -131,14 +198,16 @@ ServiceProvider* ServiceProvider::getSpecificProvider( const QString &_servicePr
 
     QFile file( filePath );
     ServiceProviderDataReader reader;
-    ServiceProvider *ret = reader.read( &file, serviceProviderId, filePath, country,
-                                        ServiceProviderDataReader::OnlyReadCorrectFiles, parent );
-    if ( !ret ) {
+    ServiceProviderData *data = reader.read( &file, serviceProviderId, filePath, country,
+                                             ServiceProviderDataReader::OnlyReadCorrectFiles, parent );
+    if ( !data ) {
         kDebug() << "Error while reading service provider plugin XML:"
                  << reader.lineNumber() << reader.errorString();
         kDebug() << filePath;
+        return 0;
+    } else {
+        return createProviderForData( data, parent );
     }
-    return ret;
 }
 
 QStringList ServiceProvider::features() const
@@ -151,61 +220,64 @@ QStringList ServiceProvider::features() const
 
 QStringList ServiceProvider::featuresLocalized() const
 {
-    const QStringList featureList = features();
-    QStringList featuresl10n;
+    return localizeFeatures( features() );
+}
 
-    if ( featureList.contains( "Arrivals" ) ) {
+QStringList ServiceProvider::localizeFeatures( const QStringList &features )
+{
+    QStringList featuresl10n;
+    if ( features.contains("Arrivals") ) {
         featuresl10n << i18nc( "Support for getting arrivals for a stop of public "
                                "transport. This string is used in a feature list, "
                                "should be short.", "Arrivals" );
     }
-    if ( featureList.contains( "Autocompletion" ) ) {
+    if ( features.contains("Autocompletion") ) {
         featuresl10n << i18nc( "Autocompletion for names of public transport stops",
                                "Autocompletion" );
     }
-    if ( featureList.contains( "JourneySearch" ) ) {
+    if ( features.contains("JourneySearch") ) {
         featuresl10n << i18nc( "Support for getting journeys from one stop to another. "
                                "This string is used in a feature list, should be short.",
                                "Journey search" );
     }
-    if ( featureList.contains( "Delay" ) ) {
+    if ( features.contains("Delay") ) {
         featuresl10n << i18nc( "Support for getting delay information. This string is "
                                "used in a feature list, should be short.", "Delay" );
     }
-    if ( featureList.contains( "DelayReason" ) ) {
+    if ( features.contains("DelayReason") ) {
         featuresl10n << i18nc( "Support for getting the reason of a delay. This string "
                                "is used in a feature list, should be short.",
                                "Delay reason" );
     }
-    if ( featureList.contains( "Platform" ) ) {
+    if ( features.contains("Platform") ) {
         featuresl10n << i18nc( "Support for getting the information from which platform "
                                "a public transport vehicle departs / at which it "
                                "arrives. This string is used in a feature list, "
                                "should be short.", "Platform" );
     }
-    if ( featureList.contains( "JourneyNews" ) ) {
+    if ( features.contains("JourneyNews") ) {
         featuresl10n << i18nc( "Support for getting the news about a journey with public "
                                "transport, such as a platform change. This string is "
                                "used in a feature list, should be short.", "Journey news" );
     }
-    if ( featureList.contains( "TypeOfVehicle" ) ) {
+    if ( features.contains("TypeOfVehicle") ) {
         featuresl10n << i18nc( "Support for getting information about the type of "
                                "vehicle of a journey with public transport. This string "
                                "is used in a feature list, should be short.",
                                "Type of vehicle" );
     }
-    if ( featureList.contains( "Status" ) ) {
+    if ( features.contains("Status") ) {
         featuresl10n << i18nc( "Support for getting information about the status of a "
                                "journey with public transport or an aeroplane. This "
                                "string is used in a feature list, should be short.",
                                "Status" );
     }
-    if ( featureList.contains( "Operator" ) ) {
+    if ( features.contains("Operator") ) {
         featuresl10n << i18nc( "Support for getting the operator of a journey with public "
                                "transport or an aeroplane. This string is used in a "
                                "feature list, should be short.", "Operator" );
     }
-    if ( featureList.contains( "StopID" ) ) {
+    if ( features.contains("StopID") ) {
         featuresl10n << i18nc( "Support for getting the id of a stop of public transport. "
                                "This string is used in a feature list, should be short.",
                                "Stop ID" );
@@ -275,6 +347,11 @@ QByteArray ServiceProvider::charsetForUrlEncoding() const
 QString ServiceProvider::id() const
 {
     return m_data->id();
+}
+
+ServiceProviderType ServiceProvider::type() const
+{
+    return m_data->type();
 }
 
 int ServiceProvider::minFetchWait() const

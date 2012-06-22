@@ -73,9 +73,24 @@ ServiceProviderType ServiceProviderGlobal::typeFromString(
     if ( s == QLatin1String("script") ||
          s == QLatin1String("html") ) // DEPRECATED
     {
-        return ScriptedServiceProvider;
+        return ScriptedProvider;
+    } else if ( s == QLatin1String("gtfs") ) {
+        return GtfsProvider;
     } else {
-        return InvalidServiceProvider;
+        return InvalidProvider;
+    }
+}
+
+QString ServiceProviderGlobal::typeToString( ServiceProviderType type )
+{
+    switch ( type ) {
+    case ScriptedProvider:
+        return "script";
+    case GtfsProvider:
+        return "gtfs";
+    case InvalidProvider:
+    default:
+        return "invalid";
     }
 }
 

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">Southern California (Metrolink)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<description>Accessor for Southern California, using the GTFS feed of Metrolink. No GTFS-realtime data available.</description>
+<credit>Timetable data provided by permission of Metrolink</credit>
+<url>http://www.metrolinktrains.com</url>
+<feedUrl>http://www.ridemetrolink.com/GoogleTransit/google_transit.zip</feedUrl>
+
+</serviceProvider>

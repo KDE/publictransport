@@ -31,6 +31,11 @@
 // KDE includes
 #include <KDialog> // Base class
 
+namespace Plasma {
+class DataEngine;
+}
+
+class KJob;
 /** @brief Namespace for the publictransport helper library. */
 namespace Timetable {
 
@@ -62,7 +67,6 @@ public:
      * @param serviceProviderData The data object for the service provider from the
      *   publictransport data engine. You can get it by querying for eg.
      *   "ServiceProvider <em>id</em>" (id replaced by the service provider ID).
-     *
      * @param icon The icon to show for the service provider. You can use the favicon of the
      *   service providers home page from the <em>favicons</em> data engine. The <em>"url"</em>
      *   key of the data object for the service provider from the publictransport data engine
@@ -70,7 +74,6 @@ public:
      *   provider.
      *
      * @param options Options for the provider data dialog.
-     *
      * @param parent The parent widget of the dialog.
      **/
     ServiceProviderDataDialog( const QVariantHash& serviceProviderData, const QIcon& icon,
@@ -79,12 +82,35 @@ public:
 
     virtual ~ServiceProviderDataDialog();
 
+Q_SIGNALS:
+    /**
+     * @brief The GTFS database for the service provider was deleted manually.
+     *
+     * A warning message box was shown, the user clicked "Continue" and the deletion job has
+     * finished.
+     **/
+    void gtfsDatabaseDeleted();
+
 protected Q_SLOTS:
     /**
-     * @brief The button to open the service provider in TimetableMate was clicked
-     * in the service provider info dialog.
+     * @brief The button to open the service provider in TimetableMate was clicked.
      **/
     void openInTimetableMate();
+
+    /**
+     * @brief The button to delete the GTFS database has been clicked.
+     **/
+    void deleteGtfsDatabase();
+
+    /**
+     * @brief Deletion of the GTFS database has finished.
+     **/
+    void deletionFinished( KJob *job );
+
+    /**
+     * @brief The @p button of this dialog was clicked.
+     **/
+    virtual void slotButtonClicked( int button );
 
 protected:
     ServiceProviderDataDialogPrivate* const d_ptr;

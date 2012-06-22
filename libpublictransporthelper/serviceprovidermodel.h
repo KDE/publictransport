@@ -51,7 +51,6 @@ public:
      * @brief Creates a new service provider item.
      *
      * @param name The name of the service provider.
-     *
      * @param serviceProviderData A QVariantHash with data from the "publictransport" data engine.
      *
      * @note There's no need to call this yourself, just use
@@ -150,6 +149,7 @@ public:
      **/
     void syncWithDataEngine( Plasma::DataEngine *publicTransportEngine,
                              Plasma::DataEngine *favIconEngine = 0 );
+
     /** @brief Gets QModelIndex of the item with the given @p serviceProviderId. */
     QModelIndex indexOfServiceProvider( const QString &serviceProviderId );
 

@@ -32,6 +32,8 @@ public:
     /** @brief Get the ServiceProviderType enumerable for the given string. */
     static ServiceProviderType typeFromString( const QString &serviceProviderType );
 
+    static QString typeToString( ServiceProviderType type );
+
     /** @brief Get the service provider ID for the given service provider plugin file name. */
     static QString idFromFileName( const QString &serviceProviderPluginFileName );
 

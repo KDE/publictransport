@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">Hawaii, Honolulu (Oahu Transit Services)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<description>Accessor for Hawaii, Honolulu, using the GTFS feed of Oahu Transit Services, Inc. No GTFS-realtime data available.</description>
+<credit>Timetable data provided by permission of Oahu Transit Services, Inc</credit>
+<url>http://www.thebus.org</url>
+<feedUrl>http://webapps.thebus.org/transitdata/Production/google_transit.zip</feedUrl>
+
+</serviceProvider>

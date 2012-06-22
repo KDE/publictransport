@@ -26,6 +26,11 @@
 // KDE includes
 #include <KToolInvocation>
 #include <KMessageBox>
+#include <KDebug>
+
+#include <Plasma/Service>
+#include <Plasma/ServiceJob>
+#include <Plasma/DataEngine>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace Timetable {
@@ -54,8 +59,52 @@ ServiceProviderDataDialog::ServiceProviderDataDialog( const QVariantHash &servic
     setModal( true );
     setButtons( KDialog::Ok );
     setMainWidget( widget );
-    setWindowTitle( i18nc( "@title:window", "Service Provider Information" ) );
-    setWindowIcon( KIcon( "help-about" ) );
+    setWindowTitle( i18nc("@title:window", "Service Provider Information") );
+    setWindowIcon( KIcon("help-about") );
+
+    KDialog::ButtonCodes buttonCodes = KDialog::Ok;
+    if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
+        buttonCodes |= KDialog::User1; // Add "Open in TimetableMate..." button
+    }
+    QString feedUrl = serviceProviderData["feedUrl"].toString();
+    qint64 feedSizeInBytes = 0;
+    if ( feedUrl.isEmpty() ) {
+        d_ptr->uiProviderData.lblGtfsFeed->hide();
+        d_ptr->uiProviderData.gtfsFeed->hide();
+    } else {
+        // Is a GTFS provider
+        feedSizeInBytes = serviceProviderData["gtfsDatabaseSize"].toInt();
+        d_ptr->uiProviderData.lblGtfsFeed->show();
+        d_ptr->uiProviderData.gtfsFeed->show();
+        if ( feedSizeInBytes <= 0 ) {
+            d_ptr->uiProviderData.gtfsFeed->setText( i18nc("@info:label",
+                    "<a href='%1'>%1</a>,<nl/>not imported", feedUrl) );
+        } else {
+            d_ptr->uiProviderData.gtfsFeed->setText( i18nc("@info:label",
+                    "<a href='%1'>%1</a>,<nl/>%2 disk space used",
+                    feedUrl, KGlobal::locale()->formatByteSize(feedSizeInBytes)) );
+            buttonCodes |= KDialog::User2; // Add "Delete GTFS database" button
+        }
+    }
+
+    setButtons( buttonCodes );
+
+    if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
+        setButtonIcon( KDialog::User1, KIcon("document-open") );
+        setButtonText( KDialog::User1, i18nc("@action:button", "Open in TimetableMate...") );
+    }
+
+    if ( feedSizeInBytes > 0 ) {
+        setButtonIcon( KDialog::User2, KIcon("edit-delete") );
+        setButtonText( KDialog::User2, i18nc("@action:button", "Delete GTFS Database") );
+        setButtonToolTip( KDialog::User2, i18nc("@info:tooltip",
+                "<title>Delete GTFS Database</title>"
+                "<para>The GTFS database contains all data imported from the GTFS feed. "
+                "If you delete the database now the GTFS feed needs to be imported again to make "
+                "this service provider usable again.</para>"
+                "<para>By deleting the database %1 disk space get freed.</para>",
+                KGlobal::locale()->formatByteSize(feedSizeInBytes) ) );
+    }
 
     d_ptr->uiProviderData.icon->setPixmap( icon.pixmap( 32 ) );
     d_ptr->uiProviderData.serviceProviderName->setText(serviceProviderData["name"].toString() );
@@ -116,18 +165,26 @@ ServiceProviderDataDialog::ServiceProviderDataDialog( const QVariantHash &servic
         changelog.append( QLatin1String("</ul>") );
         d_ptr->uiProviderData.changelog->setHtml( changelog );
     }
-
-    if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
-        connect( d_ptr->uiProviderData.btnOpenInTimetableMate, SIGNAL(clicked()),
-                this, SLOT(openInTimetableMate()) );
-    } else {
-        d_ptr->uiProviderData.btnOpenInTimetableMate->hide();
-    }
 }
 
 ServiceProviderDataDialog::~ServiceProviderDataDialog()
 {
     delete d_ptr;
+}
+
+void ServiceProviderDataDialog::slotButtonClicked( int button )
+{
+    switch ( button ) {
+    case KDialog::User1:
+        openInTimetableMate();
+        break;
+    case KDialog::User2:
+        deleteGtfsDatabase();
+        break;
+    default:
+        KDialog::slotButtonClicked( button );
+        break;
+    }
 }
 
 void ServiceProviderDataDialog::openInTimetableMate()
@@ -140,6 +197,43 @@ void ServiceProviderDataDialog::openInTimetableMate()
         KMessageBox::error( this, i18nc("@info",
                 "TimetableMate couldn't be started, error message was: '%1'", error) );
     }
+}
+
+void ServiceProviderDataDialog::deleteGtfsDatabase()
+{
+    Q_D( ServiceProviderDataDialog );
+
+    qint64 feedSizeInBytes = d->serviceProviderData["gtfsDatabaseSize"].toInt();
+    if ( KMessageBox::warningContinueCancel(this, i18nc("@info",
+            "<title>Delete GTFS database</title>"
+            "<para>Do you really want to delete the GTFS database? You will need to import the "
+            "GTFS feed again to use this service provider again.</para>"
+            "<para>By deleting the database %1 disk space get freed.</para>",
+            KGlobal::locale()->formatByteSize(feedSizeInBytes))) == KMessageBox::Continue )
+    {
+//         TODO TODO TODO
+//         if ( !d->service ) {
+//             d->service = d->publicTransportEngine->serviceForSource( QString() );
+//             d->service->setParent( this );
+//         }
+//         KConfigGroup op = d->service->operationDescription("deleteGtfsDatabase");
+//         op.writeEntry( "serviceProviderId", d->serviceProviderData["id"] );
+//         Plasma::ServiceJob *deleteJob = d->service->startOperationCall( op );
+//         connect( deleteJob, SIGNAL(result(KJob*)), this, SLOT(deletionFinished(KJob*)) );
+    }
+}
+
+void ServiceProviderDataDialog::deletionFinished( KJob *job )
+{
+    if ( job->error() != 0 ) {
+        KMessageBox::information( this, i18nc("@info", "Deleting the GTFS database failed") );
+    } else {
+        // Finished successfully
+        emit gtfsDatabaseDeleted();
+    }
+
+    // Disable "Delete GTFS database" button
+    enableButton( KDialog::User2, false );
 }
 
 } // namespace Timetable

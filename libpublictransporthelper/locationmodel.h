@@ -151,6 +151,7 @@ public:
 
     /**
      * @brief Gets flags for the given @p index.
+     *
      * It's used to mark items of type Erroneous as non-selectable.
      *
      * @param index The index of the item to get flags for.

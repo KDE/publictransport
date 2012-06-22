@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">Oregon, Portland (TriMet)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<description>Accessor for the Oregon, Portland, using the GTFS feed of the Tri-County Metropolitan Transportation District of Oregon (TriMet).</description>
+<url>http://www.trimet.org</url>
+<feedUrl>http://developer.trimet.org/schedule/gtfs.zip</feedUrl>
+
+<!-- AF54F96674FEDBD00D1814CF is the Application ID registered for PublicTransport -->
+<!-- See http://developer.trimet.org/GTFS.shtml -->
+<realtimeTripUpdateUrl>http://developer.trimet.org/ws/V1/TripUpdate/appID=AF54F96674FEDBD00D1814CF</realtimeTripUpdateUrl>
+<realtimeAlertsUrl>http://developer.trimet.org/ws/V1/FeedSpecAlerts/appID=AF54F96674FEDBD00D1814CF</realtimeAlertsUrl>
+
+<!-- This string needs to be shown, see: -->
+<!-- http://developer.trimet.org/terms_of_use.shtml, "5. WEB SERVICES API" -->
+<credit>Route and arrival data provided by permission of TriMet</credit>
+
+</serviceProvider>

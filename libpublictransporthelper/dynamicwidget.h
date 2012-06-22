@@ -634,9 +634,7 @@ public:
      *   if any, the others get @p labelText with "%1" replaced by the widget number.
      *
      * @param labelText The default text, used for labels without a special text.
-     *
      * @param specialLabelTexts A list of special label texts.
-     *
      * @param labelNumberOptions Whether or not widgets with special labels
      *   should be included in the numbering of widgets without special labels.
      **/

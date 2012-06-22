@@ -19,6 +19,7 @@
 
 // Header
 #include "serviceproviderdata.h"
+#include "serviceproviderglobal.h"
 
 // KDE includes
 #include <KLocalizedString>
@@ -152,6 +153,10 @@ void ServiceProviderData::finish()
     qStableSort( m_changelog.begin(), m_changelog.end(), ChangelogEntryGreaterThan() );
 }
 
+QString ServiceProviderData::typeString() const
+{
+    return ServiceProviderGlobal::typeToString( m_serviceProviderType );
+}
 
 int ServiceProviderData::versionNumberFromString( const QString &version, int *startPos ) {
     bool ok;

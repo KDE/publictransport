@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">Texas, Dallas (DART)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<description>Accessor for Texas, Dallas, using the GTFS feed of Dallas Area Rapid Transit (DART). No GTFS-realtime data available.</description>
+<credit>Route and arrival data provided by permission of DART</credit>
+<url>http://www.dart.org</url>
+<feedUrl>http://www.dart.org/transitdata/latest/google_transit.zip</feedUrl>
+
+</serviceProvider>

@@ -100,7 +100,6 @@ public:
     {
     };
 
-
     QHash< int, QVariant > settings;
 };
 
@@ -255,7 +254,7 @@ StopSettings& StopSettings::operator=(const StopSettings& rhs)
     return *this;
 }
 
-bool StopSettings::operator==(const StopSettings& other) const {
+bool StopSettings::operator==( const StopSettings& other ) const {
     if ( d->settings.count() != other.d->settings.count() ) {
         return false;
     }
@@ -277,8 +276,6 @@ bool StopSettings::operator==(const StopSettings& other) const {
             {
                 return false;
             }
-//         } else if ( it.key() >= UserSetting ) { TODO
-//             continue; // Can't compare custom QVariant types, addresses would get compared
         } else if ( it.value() != other.d->settings[it.key()] ) {
             return false;
         }
@@ -504,7 +501,9 @@ QWidget* StopSettingsWidgetFactory::widgetForSetting( int setting, QWidget *pare
                     "The filter configuration(s) to be used with this stop(s)"));
             filterConfiguration->setWhatsThis( i18nc("@info:whatsthis",
                     "<para>Each stop can use a different set of filter configurations. "
-                    "Choose these filter configurations here.</para>") );
+                    "Choose these filter configurations here.\n"
+                    "<note>To create/edit/remove filter configurations use the filter page "
+                    "in the settings dialog.</note></para>") );
             widget = filterConfiguration;
             break;
         }

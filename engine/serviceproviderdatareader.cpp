@@ -37,8 +37,8 @@
 #include <QFile>
 #include <QFileInfo>
 
-ServiceProvider *ServiceProviderDataReader::read( QIODevice *device, const QString &fileName,
-                                                  ErrorAcceptance errorAcceptance, QObject *parent )
+ServiceProviderData *ServiceProviderDataReader::read( QIODevice *device, const QString &fileName,
+                                                      ErrorAcceptance errorAcceptance, QObject *parent )
 {
     const QString serviceProvider = ServiceProviderGlobal::idFromFileName( fileName );
 
@@ -56,7 +56,7 @@ ServiceProvider *ServiceProviderDataReader::read( QIODevice *device, const QStri
     return read( device, serviceProvider, fileName, country, errorAcceptance, parent );
 }
 
-ServiceProvider* ServiceProviderDataReader::read( QIODevice* device,
+ServiceProviderData* ServiceProviderDataReader::read( QIODevice* device,
         const QString &serviceProvider, const QString &fileName, const QString &country,
         ErrorAcceptance errorAcceptance, QObject *parent )
 {
@@ -69,19 +69,20 @@ ServiceProvider* ServiceProviderDataReader::read( QIODevice* device,
     }
     setDevice( device );
 
-    ServiceProvider *ret = 0;
+    ServiceProviderData *data = 0;
     while ( !atEnd() ) {
         readNext();
 
         if ( isStartElement() ) {
-            if ( name().compare("serviceProvider", Qt::CaseInsensitive) == 0 &&
-                 attributes().value("fileVersion") == QLatin1String("1.0") )
-            {
-                ret = readServiceProvider( serviceProvider, fileName, country, errorAcceptance, parent );
-                break;
-            } else {
+            if ( name().compare("serviceProvider", Qt::CaseInsensitive) != 0 ) {
+                raiseError( QString("Wrong root element, should be <serviceProvider>, is <%1>.")
+                            .arg(name().toString()) );
+            } else if ( attributes().value("fileVersion") != QLatin1String("1.0") ) {
                 raiseError( "The file is not a public transport service provider plugin "
                             "version 1.0 file." );
+            } else {
+                data = readProviderData( serviceProvider, fileName, country, errorAcceptance, parent );
+                break;
             }
         }
     }
@@ -93,7 +94,7 @@ ServiceProvider* ServiceProviderDataReader::read( QIODevice* device,
     if ( error() != NoError ) {
         kDebug() << "     ERROR   " << errorString();
     }
-    return error() == NoError ? ret : 0;
+    return error() == NoError && data ? data : 0;
 }
 
 void ServiceProviderDataReader::readUnknownElement()
@@ -113,20 +114,20 @@ void ServiceProviderDataReader::readUnknownElement()
     }
 }
 
-ServiceProvider* ServiceProviderDataReader::readServiceProvider( const QString &serviceProviderId,
+ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString &serviceProviderId,
         const QString &fileName, const QString &country, ErrorAcceptance errorAcceptance,
         QObject *parent )
 {
     const QString lang = KGlobal::locale()->country();
     QString langRead, url, shortUrl;
     QHash<QString, QString> names, descriptions;
-    ServiceProviderType serviceProviderType = ScriptedServiceProvider;
+    ServiceProviderType serviceProviderType = ScriptedProvider;
     const QString fileVersion = attributes().value("fileVersion").toString();
 
     if ( attributes().hasAttribute(QLatin1String("type")) ) {
         serviceProviderType = ServiceProviderGlobal::typeFromString(
                 attributes().value(QLatin1String("type")).toString() );
-        if ( serviceProviderType == InvalidServiceProvider && errorAcceptance == OnlyReadCorrectFiles ) {
+        if ( serviceProviderType == InvalidProvider && errorAcceptance == OnlyReadCorrectFiles ) {
             raiseError( QString("The service provider type %1 is invalid. Currently there is only "
                                 "one value allowed: Script. You can use qt.xml to read XML.")
                         .arg(attributes().value("type").toString()) );
@@ -185,11 +186,19 @@ ServiceProvider* ServiceProviderDataReader::readServiceProvider( const QString &
                 serviceProviderData->setCharsetForUrlEncoding( readElementText().toAscii() );
             } else if ( name().compare(QLatin1String("fallbackCharset"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setFallbackCharset( readElementText().toAscii() ); // TODO Implement as attributes in the url tags?
+            } else if ( name().compare("feedUrl", Qt::CaseInsensitive) == 0 ) {
+                serviceProviderData->setFeedUrl( readElementText() );
+            } else if ( name().compare("realtimeTripUpdateUrl", Qt::CaseInsensitive) == 0 ) {
+                serviceProviderData->setRealtimeTripUpdateUrl( readElementText() );
+            } else if ( name().compare("realtimeAlertsUrl", Qt::CaseInsensitive) == 0 ) {
+                serviceProviderData->setRealtimeAlertsUrl( readElementText() );
+            } else if ( name().compare("timeZone", Qt::CaseInsensitive) == 0 ) {
+                serviceProviderData->setTimeZone( readElementText() );
             } else if ( name().compare(QLatin1String("changelog"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setChangelog( readChangelog() );
             } else if ( name().compare(QLatin1String("credit"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setCredit( readElementText() );
-            } else if ( serviceProviderType == ScriptedServiceProvider &&
+            } else if ( serviceProviderType == ScriptedProvider &&
                         name().compare(QLatin1String("script"), Qt::CaseInsensitive) == 0 )
             {
                 const QStringList extensions = attributes().value( QLatin1String("extensions") )
@@ -200,7 +209,7 @@ ServiceProvider* ServiceProviderDataReader::readServiceProvider( const QString &
                                         "information XML named %2 wasn't found")
                                 .arg(scriptFile).arg(names["en"]) );
                     delete serviceProviderData;
-                    return 0;
+                    return 0; // TODO
                 }
                 serviceProviderData->setScriptFile( scriptFile, extensions );
             } else if ( name().compare(QLatin1String("samples"), Qt::CaseInsensitive) == 0 ) {
@@ -219,9 +228,6 @@ ServiceProvider* ServiceProviderDataReader::readServiceProvider( const QString &
 
     if ( url.isEmpty() ) {
         kWarning() << "No <url> tag in service provider plugin XML";
-//         delete serviceProviderData;
-//         raiseError( "No <url> tag in service provider plugin XML" );
-//         return 0;
     }
 
     serviceProviderData->setNames( names );
@@ -229,30 +235,7 @@ ServiceProvider* ServiceProviderDataReader::readServiceProvider( const QString &
     serviceProviderData->setUrl( url, shortUrl );
     serviceProviderData->finish();
 
-    // Create the service provider
-    if ( serviceProviderData->type() == ScriptedServiceProvider ) {
-        // Ensure a script is specified
-        if ( serviceProviderData->scriptFileName().isEmpty() && errorAcceptance == OnlyReadCorrectFiles ) {
-            delete serviceProviderData;
-            raiseError( "Scripted service provider plugins need a script for parsing" );
-            return 0;
-        }
-
-        // Create the service provider and check for script errors
-        ServiceProviderScript *scriptServiceProvider =
-                new ServiceProviderScript( serviceProviderData, parent );
-        if ( scriptServiceProvider->hasScriptErrors() && errorAcceptance == OnlyReadCorrectFiles ) {
-            delete scriptServiceProvider;
-            raiseError( "Couldn't correctly load the script (bad script)" );
-            return 0;
-        } else {
-            return scriptServiceProvider;
-        }
-    }
-
-    delete serviceProviderData;
-    raiseError( QString("Service provider type %1 not supported").arg(serviceProviderData->type()) );
-    return 0;
+    return serviceProviderData;
 }
 
 QString ServiceProviderDataReader::readLocalizedTextElement( QString *lang )

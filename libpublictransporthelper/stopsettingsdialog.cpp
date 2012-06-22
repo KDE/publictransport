@@ -392,7 +392,7 @@ public:
 
             // Set html delegate
             if ( options.testFlag(StopSettingsDialog::UseHtmlForLocationConfig) ||
-                options.testFlag(StopSettingsDialog::UseHtmlForServiceProviderConfig) )
+                 options.testFlag(StopSettingsDialog::UseHtmlForServiceProviderConfig) )
             {
                 htmlDelegate = new HtmlDelegate( HtmlDelegate::AlignTextToDecoration, q );
                 if ( options.testFlag(StopSettingsDialog::UseHtmlForLocationConfig) ) {
@@ -1224,6 +1224,8 @@ void StopSettingsDialog::clickedServiceProviderInfo()
     ServiceProviderDataDialog *infoDialog = new ServiceProviderDataDialog( serviceProviderData,
             d->uiStop.serviceProvider->itemIcon(d->uiStop.serviceProvider->currentIndex()),
             d->providerDataDialogOptions, this );
+    connect( infoDialog, SIGNAL(gtfsDatabaseDeleted()),
+             d->stopList, SLOT(updateToDataEngineState()) );
     infoDialog->show();
 }
 

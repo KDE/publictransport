@@ -590,7 +590,6 @@ void SettingsUiManager::updateStopNamesInWidgets()
 //         }
 //     }
 
-    kDebug() << "Start";
     // Get a string for each stop setting
     QStringList stopLabels;
     foreach( const StopSettings & stopSettings, stopSettingsList ) {
@@ -638,7 +637,6 @@ void SettingsUiManager::updateStopNamesInWidgets()
     }
     connect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()),
              this, SLOT(affectedStopsAlarmChanged()) );
-    kDebug() << "End";
 }
 
 void SettingsUiManager::usedFilterConfigChanged( QWidget *widget )

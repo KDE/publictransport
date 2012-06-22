@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">Vitoria-Gasteiz</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<description>Accessor for Vitoria-Gasteiz, using the GTFS feed of Red de Transporte urbano de Vitoria-Gasteiz. No GTFS-realtime data available.</description>
+<credit>Route and arrival data provided by permission of Vitoria-Gasteiz</credit>
+<url>http://www.vitoria-gasteiz.org</url>
+<feedUrl>http://www.vitoria-gasteiz.org/we001/http/vgTransit/google_transit.zip</feedUrl>
+
+</serviceProvider>

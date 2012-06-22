@@ -29,8 +29,8 @@
 #include <KLocale>
 
 JavaScriptCompletionModel::JavaScriptCompletionModel( const QString& completionShortcut,
-						      QObject* parent )
-					: KTextEditor::CodeCompletionModel( parent ) {
+                              QObject* parent )
+                    : KTextEditor::CodeCompletionModel( parent ) {
     m_completionShortcut = completionShortcut;
     initGlobalFunctionCompletion();
     initTimetableInfoCompletion();
@@ -82,27 +82,28 @@ QVariant JavaScriptCompletionModel::data( const QModelIndex& index, int role ) c
 }
 
 void JavaScriptCompletionModel::executeCompletionItem( KTextEditor::Document* document,
-					    const KTextEditor::Range& word, int row ) const {
+                        const KTextEditor::Range& word, int row ) const {
     kDebug() << "Completion" << word << row;
     CompletionItem completion = m_completions.at( row );
     if ( completion.isTemplate ) {
         KTextEditor::TemplateInterface *templateInterface =
-            qobject_cast<KTextEditor::TemplateInterface*>( document->activeView() );
+                qobject_cast<KTextEditor::TemplateInterface*>( document->activeView() );
         if ( templateInterface ) {
-	    KTextEditor::Cursor cursor = word.start();
+            KTextEditor::Cursor cursor = word.start();
             document->removeText( word );
             templateInterface->insertTemplateText( cursor, completion.completion,
                                                    QMap<QString, QString>() );
-        } else
+        } else {
             kDebug() << "No template interface";
+        }
     } else {
         document->replaceText( word, completion.completion );
     }
 }
 
 void JavaScriptCompletionModel::completionInvoked( KTextEditor::View* view,
-			    const KTextEditor::Range& range,
-			    KTextEditor::CodeCompletionModel::InvocationType /*invocationType*/ ) {
+                const KTextEditor::Range& range,
+                KTextEditor::CodeCompletionModel::InvocationType /*invocationType*/ ) {
     m_completions.clear();
     setRowCount( 0 );
 
@@ -110,8 +111,7 @@ void JavaScriptCompletionModel::completionInvoked( KTextEditor::View* view,
     QString leftText = stripComments( view->document()->text(leftRange) );
     int blockLevel = leftText.count( '{' ) - leftText.count( '}' );
     if ( blockLevel < 0 ) {
-        kDebug() << "More closing '}' found than opening '{' at line"
-		 << range.start().line();
+        kDebug() << "More closing '}' found than opening '{' at line" << range.start().line();
         return;
     } else { // at root level or inside function
         QString word = view->document()->text( range );
@@ -455,7 +455,7 @@ void JavaScriptCompletionModel::initTimetableInfoCompletion() {
             "Status" ));
     m_completionsTimetableInfo.insert( "str:IsNightLine", CompletionItem( Const, "IsNightLine",
             i18nc("@info The description for the 'IsNightLine' info", "A boolean indicating if "
-				  "the transport line is a nightline or not."),
+                  "the transport line is a nightline or not."),
             "IsNightLine" ));
     m_completionsTimetableInfo.insert( "str:RouteStops", CompletionItem( Const, "RouteStops",
             i18nc("@info The description for the 'RouteStops' info",

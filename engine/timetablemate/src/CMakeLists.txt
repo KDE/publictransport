@@ -26,6 +26,12 @@ set( timetablemate_SRCS
    ../../serviceproviderdata.cpp
    ../../serviceproviderglobal.cpp
    ../../serviceproviderscript.cpp
+   ../../serviceprovidergtfs.cpp
+   ../../generaltransitfeed_database.cpp
+   ../../generaltransitfeed_importer.cpp
+   ../../generaltransitfeed_realtime.cpp
+   ../../gtfs-realtime.pb.cc
+   ../../publictransportservice.cpp
    ../../serviceproviderdatareader.cpp
 )
 
@@ -47,7 +53,9 @@ target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS}
     ${KDE4_THREADWEAVER_LIBS} # For the debugger and for includes from the engine
     kdeclarative # For KDeclarative, no ${KDE4_KDECLARATIVE_LIBS} available..
     ${QT_QTDECLARATIVE_LIBRARY} # For the dashboard main view tab
-    ${QT_QTSCRIPT_LIBRARY}
+    ${QT_QTSCRIPT_LIBRARY} # For scripted providers
+    ${QT_QTSQL_LIBRARY} # For GTFS providers
+    pthread protobuf # pthread is needed for protobuf
     publictransporthelper
 )
 

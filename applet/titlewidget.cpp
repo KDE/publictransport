@@ -120,7 +120,7 @@ void TitleWidget::setTitleType( TitleType titleType,
         case ShowDepartureArrivalListTitle:
             // Default state, a departure/arrival board is shown
             setIcon( validDepartureData ? DepartureListOkIcon : DepartureListErrorIcon );
-            m_icon->setToolTip( i18nc("@info:tooltip", "Search journeys to or from the home stop") );
+            m_icon->setToolTip( i18nc("@info:tooltip", "Show available actions in the applet") );
             setTitle( titleText() );
 
             // Show a title (with the stop name) and the filter and quick journey search widgets
@@ -180,7 +180,7 @@ void TitleWidget::setTitleType( TitleType titleType,
         case ShowJourneyListTitle: {
             // A list of journeys is shown
             setIcon( validJourneyData ? JourneyListOkIcon : JourneyListErrorIcon );
-            m_icon->setToolTip( i18nc("@info:tooltip", "Show available action in the applet") );
+            m_icon->setToolTip( i18nc("@info:tooltip", "Show available actions in the applet") );
 
             // Add a close icon to close the journey view
             int iconExtend = 26 * m_settings->sizeFactor();

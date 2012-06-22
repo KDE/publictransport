@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">Torino (GTT)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<description>Accessor for Torino, using the GTFS feed of Gruppo Torinese Trasporti (GTT). No GTFS-realtime data available.</description>
+<credit>Route and arrival data provided by permission of GTT</credit>
+<url>http://www.gtt.to.it/</url>
+<feedUrl>http://opendata.5t.torino.it/gtfs/torino_it.zip</feedUrl>
+
+</serviceProvider>

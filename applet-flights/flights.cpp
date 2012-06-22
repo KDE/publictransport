@@ -160,7 +160,6 @@ void Flights::dataUpdated( const QString& sourceName, const Plasma::DataEngine::
 {
     Q_UNUSED( sourceName );
     m_flightDepartureList->setTimetableData( data );
-//  kDebug() << "Got data" << sourceName << data;
 }
 
 #include "flights.moc"

@@ -685,7 +685,7 @@ ChildItem* JourneyItem::createRouteItem()
 {
     ChildItem *routeItem = new ChildItem( RouteItem, childItemText( RouteItem ), m_info );
 
-    // Add route stops as child rows TODO: -1 ?
+    // Add route stops as child rows
     for ( int row = 0; row < m_journeyInfo.routeStops().count() - 1; ++row ) {
         // Add a separator item, when the exact route ends
         if ( row == m_journeyInfo.routeExactStops() && row > 0 ) {
@@ -1076,6 +1076,7 @@ ChildItem* DepartureItem::createRouteItem()
         // Add the current route stop ("departure - stop name")
         QString text = m_departureInfo.routeStops()[row];
         if ( row < m_departureInfo.routeTimes().count() ) {
+            // A time is available for the current route stop, prepend it before the stop name
             text.prepend( m_departureInfo.routeTimes()[row].toString("hh:mm") + " - " );
         }
         ChildItem *routeStopItem = new ChildItem(

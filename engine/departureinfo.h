@@ -35,11 +35,9 @@
 
 /**
  * @brief LineService-Flags.
- *
  * @see LineService
  **/
 Q_DECLARE_FLAGS( LineServices, LineService )
-
 
 /**
  * @brief This is the abstract base class of all other timetable information classes.
@@ -58,13 +56,27 @@ public:
     /** @brief Constructs a new PublicTransportInfo object. */
     PublicTransportInfo( QObject *parent = 0 );
 
+    enum Correction {
+        NoCorrection                    = 0x0000,
+        DeduceMissingValues             = 0x0001,
+        ConvertValuesToCorrectFormat    = 0x0002,
+        CombineToPreferredValueType     = 0x0004, /**< eg. combine DepartureHour and
+                * DepartureMinute into the preferred value type DepartureTime.
+                * TODO Update TimetableInformation enum documentation. */
+        CorrectEverything = DeduceMissingValues | ConvertValuesToCorrectFormat |
+                CombineToPreferredValueType
+    };
+    Q_DECLARE_FLAGS( Corrections, Correction );
+
     /**
      * @brief Contructs a new PublicTransportInfo object based on the information given
      *   with @p data.
      *
      * @param data A hash that contains values for TimetableInformations.
      **/
-    explicit PublicTransportInfo( const TimetableData &data, QObject *parent = 0 );
+    explicit PublicTransportInfo( const TimetableData &data,
+                                  Corrections corrections = CorrectEverything,
+                                  QObject *parent = 0 );
 
     virtual ~PublicTransportInfo();
 
@@ -79,13 +91,11 @@ public:
      * @brief Wheather or not this PublicTransportInfo object is valid.
      *
      * @return true if the PublicTransportInfo object is valid.
-     *
      * @return false if the PublicTransportInfo object is invalid.
      **/
     virtual bool isValid() const { return m_isValid; };
 
-    /**
-     * @brief Gets the date and time of the departure or arrival. */
+    /** @brief Gets the date and time of the departure or arrival. */
     QDateTime departure() const;
 
     /** @brief Get the company that is responsible for this departure / arrival. */
@@ -96,7 +106,7 @@ public:
      *   stop or a list of stops of the journey from it's start to it's
      *   destination stop.
      *
-     * @note: If data for both @ref RouteStops and @ref RouteTimes is set,
+     * @note If data for both @ref RouteStops and @ref RouteTimes is set,
      *   they contain the same number of elements. And elements with equal
      *   indices are associated (the times at which the vehicle is at the stops).
      *
@@ -108,7 +118,11 @@ public:
     /**
      * @brief The number of exact route stops. The route stop list isn't complete
      *   from the last exact route stop. */
-    int routeExactStops() const;;
+    int routeExactStops() const;
+
+    /** @brief Gets information about the pricing of the departure/arrival/journey. */
+    QString pricing() const {
+            return contains(Pricing) ? value(Pricing).toString() : QString(); };
 
     /**
      * @brief Parses the given string for a vehicle type.
@@ -150,7 +164,8 @@ public:
      *   TargetStopName. Instead of DepartureDateTime, DepartureDate and DepartureTime can be used.
      *   If only DepartureTime gets used, the date is guessed. The same is true for ArrivalDateTime.
      **/
-    explicit JourneyInfo( const TimetableData &data, QObject *parent = 0 );
+    explicit JourneyInfo( const TimetableData &data, Corrections corrections = CorrectEverything,
+                          QObject *parent = 0 );
 
     /** @brief Gets information about the pricing of the journey. */
     QString pricing() const {
@@ -280,7 +295,7 @@ public:
      *   DepartureDateTime, DepartureDate and DepartureTime can be used. If only DepartureTime
      *   gets used, the date is guessed.
      **/
-    explicit DepartureInfo( const TimetableData &data,
+    explicit DepartureInfo( const TimetableData &data, Corrections corrections = CorrectEverything,
                             QObject *parent = 0 );
 
     /** @brief Gets the target / origin of the departing / arriving vehicle. */

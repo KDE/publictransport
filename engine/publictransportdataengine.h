@@ -37,9 +37,12 @@ struct DepartureRequest;
 struct JourneyRequest;
 
 class ServiceProvider;
+class ServiceProviderData;
 class DepartureInfo;
 class JourneyInfo;
 class StopInfo;
+class QTimer;
+class QFileSystemWatcher;
 
 class QTimer;
 class QFileSystemWatcher;
@@ -47,7 +50,7 @@ class QFileSystemWatcher;
 /**
  * @brief This engine provides departure/arrival times and journeys for public transport.
  *
- * @see @ref pageUsage (how to use this data engine in an applet?)
+ * See @ref pageUsage.
  */
 class PublicTransportEngine : public Plasma::DataEngine {
     Q_OBJECT
@@ -56,7 +59,7 @@ public:
     /**
      * @brief The available types of sources of this data engine.
      *
-     * They all have an associated keyword with that data source names start.
+     * Source names can be associated with these types by the first word using souceTypeFromName.
      * @see sourceTypeKeyword
      * @see sourceTypeFromName
      **/
@@ -89,67 +92,143 @@ public:
     /** @brief Destructor. */
     ~PublicTransportEngine();
 
-    /** @returns the keyword of the given @p sourceType used in source names. */
-    static const QString sourceTypeKeyword( SourceType sourceType );
+    /** @brief Gets the keyword used in source names associated with the given @p sourceType. */
+    static const QLatin1String sourceTypeKeyword( SourceType sourceType );
 
-    /** @returns the type of the given @p sourceName. */
+    /** @brief Gets the source type associated with the given @p sourceName. */
     SourceType sourceTypeFromName( const QString &sourceName ) const;
 
     /** @brief Reimplemented to add some always visible default sources. */
     virtual QStringList sources() const;
 
-    /**
-     * @returns true, if a data source of the given @p sourceType requests
-     * data from a web server.
-     **/
+    /** @brief Whether or not a data source of the given @p sourceType may request data from a server. */
     bool isDataRequestingSourceType( SourceType sourceType ) const {
         return static_cast< int >( sourceType ) >= 10; };
 
     /**
-     * @brief Minimum timeout in seconds to request new data. Before the timeout
-     * is over, old stored data from previous requests is used. */
+     * @brief Minimum timeout in seconds to request new data.
+     *
+     * Before the timeout is over, old stored data from previous requests is used.
+     **/
     static const int MIN_UPDATE_TIMEOUT;
 
     /**
      * @brief Maximum timeout in seconds to request new data, if delays are avaiable.
+     *
+     * This timeout gets used instead of MIN_UPDATE_TIMEOUT, if delays are available for the
+     * used service provider.
      * Before the timeout is over, old stored data from previous requests is used.
-     **/
+     */
     static const int MAX_UPDATE_TIMEOUT_DELAY;
 
     /**
-     * @brief The default time offset from now for the first departure/arrival/journey
-     * in the list. This is used if it wasn't specified in the source name.
+     * @brief The default time offset from now for the first departure/arrival/journey in results.
+     *
+     * This is used if it wasn't specified in the source name.
      **/
     static const int DEFAULT_TIME_OFFSET;
 
 protected:
     /**
-     * @brief This virtual function is called when a new source is requested.
+     * @brief This function gets called when a new data source gets requested.
      *
      * @param name The name of the requested data source.
+     * @return True, if the data source could be updated successfully. False, otherwise.
      **/
-    bool sourceRequestEvent( const QString& name );
+    bool sourceRequestEvent( const QString &name );
 
     /**
-     * @brief This virtual function is called when an automatic update is triggered for an
-     * existing source (ie: when a valid update interval is set when requesting a source).
+     * @brief This function gets called when a data source gets requested or needs an update.
+     *
+     * It checks the source type of the data source with the given @p name using sourceTypeFromName
+     * and then calls the corresponding update...() function for the source type.
+     * All departure/arrival/journey/stop suggestion data sources are updated using
+     * updateTimetableSource(). Other data sources are updated using updateServiceProviderSource(),
+     * updateServiceProviderForCountrySource(), updateErroneousServiceProviderSource(),
+     * updateLocationSource().
      *
      * @param name The name of the data source to be updated.
+     * @return True, if the data source could be updated successfully. False, otherwise.
      **/
-    bool updateSourceEvent( const QString& name );
+    bool updateSourceEvent( const QString &name );
 
-    bool updateServiceProviderForCountrySource( const QString &name );
+    /**
+     * @brief Updates the ServiceProviders data source.
+     *
+     * The data source contains information about all available service providers.
+     *
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
     bool updateServiceProviderSource();
-    void updateErroneousServiceProviderSource( const QString &name );
+
+    /**
+     * @brief Updates the data source for the service provider mentioned in @p name.
+     *
+     * If a service provider ID is given in @p name, information about that service provider is
+     * returned. If a location is given (ie. "international" or a two letter country code)
+     * information about the default service provider for that location is returned.
+     *
+     * @param name The name of the data source. It starts with the ServiceProvider keyword and is
+     *   followed by a service provider ID or a location, ie "ServiceProvider de" or
+     *   "ServiceProvider de_db".
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
+    bool updateServiceProviderForCountrySource( const QString &name );
+
+    /**
+     * @brief Updates the ErrornousServiceProviders data source.
+     *
+     * The data source contains information about all erroneous service providers.
+     *
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
+    bool updateErroneousServiceProviderSource();
+
+    /**
+     * @brief Updates the "Locations" data source.
+     *
+     * Locations with available service providers are determined by checking the list of valid
+     * accessors for the countries they support.
+     *
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
     bool updateLocationSource();
+
     bool updateTimetableDataSource( const QString &name );
 
     /**
-     * @brief Returns wheather or not the given source is up to date.
+     * @brief Updates the timetable data source with the given @p name.
+     *
+     * Timetable data may be one of these here: Departure, arrivals, journeys (to or from the home
+     * stop) or stop suggestions.
+     * First it checks if the data source is up to date using isSourceUpToDate. If it's not, new
+     * data gets requested using the associated accessor. The accessor gets retrieved using
+     * getSpecificAccessor, which creates a new accessor if there is no cached value.
+     *
+     * Data may arrive asynchronously depending on the used accessor.
+     *
+     * @return True, if the data source could be updated successfully. False, otherwise.
+     **/
+    bool updateTimetableSource( const QString &name );
+
+    /**
+     * @brief Wheather or not the data source with the given @p name is up to date.
      *
      * @param name The name of the source to be checked.
+     * @return True, if the data source is up to date. False, otherwise.
      **/
-    bool isSourceUpToDate( const QString& name );
+    bool isSourceUpToDate( const QString &name );
+
+    /**
+     * @brief Gets the service for the data source with the given @p name.
+     *
+     * The returned service can be used to start operations on the timetable data source.
+     * For example it has an operation to import GTFS feeds into a local database or to update
+     * or delete that database.
+     *
+     * @see PublicTransportService
+     **/
+    virtual Plasma::Service* serviceForSource( const QString &name );
 
 public slots:
     void slotSourceRemoved( const QString &name );
@@ -175,7 +254,7 @@ public slots:
             bool deleteDepartureInfos = true );
 
     /**
-     * @brief A list of journey was received.
+     * @brief A list of journeys was received.
      *
      * @param provider The provider that was used to download and parse the journeys.
      * @param requestUrl The url used to request the information.
@@ -192,7 +271,7 @@ public slots:
             bool deleteJourneyInfos = true );
 
     /**
-     * @brief A list of stops was received.
+     * @brief A list of stop suggestions was received.
      *
      * @param provider The service provider that was used to download and parse the stops.
      * @param requestUrl The url used to request the information.
@@ -211,14 +290,17 @@ public slots:
      *
      * @param provider The provider that was used to download and parse information
      *   from the service provider.
-     * @param errorType The type of error or NoError if there was no error.
-     * @param errorString If @p errorType isn't NoError this contains a description of the error.
+     * @param errorCode The error code or NoError if there was no error.
+     * @param errorString If @p errorCode isn't NoError this contains a description of the error.
      * @param requestUrl The url used to request the information.
      * @param request Information about the request that failed with @p errorType.
      *
      * @see ServiceProvider::useSeparateCityValue()
      **/
-    void errorParsing( ServiceProvider *provider, ErrorCode errorType, const QString &errorString,
+    void errorParsing( ServiceProvider *provider, ErrorCode errorCode, const QString &errorString,
+            const QUrl &requestUrl, const AbstractRequest *request );
+
+    void progress( ServiceProvider *provider, qreal progress, const QString &jobDescription,
             const QUrl &requestUrl, const AbstractRequest *request );
 
     /**
@@ -251,23 +333,34 @@ public slots:
 
 private:
     /**
-     * @brief Gets a hash with information about a given service @p provider.
+     * @brief Gets information about @p provider for a service provider data source.
      *
-     * @param provider The provider to get information about.
+     * If @p provider is 0, the provider cache file ServiceProvider::cacheFileName() gets checked.
+     * If it contains all needed information which is not available in @p data no ServiceProvider
+     * object needs to be created to fill the QHash with the service provider information. If there
+     * are no cached values for the provider it gets created to get and cache those values.
+     *
+     * @param provider The accessor to get information about. May be 0, see above.
+     * @return A QHash with values keyed with strings.
      **/
-    QHash< QString, QVariant > serviceProviderData( const ServiceProvider *&provider );
+    QVariantHash serviceProviderData( const ServiceProviderData &data,
+                                      const ServiceProvider *provider = 0 );
+
+    QVariantHash serviceProviderData( const ServiceProvider *provider );
 
     /**
      * @brief Gets a hash with information about available locations.
      *
      * Locations are here countries plus some special locations like "international".
      **/
-    QHash< QString, QVariant > locations();
+    QVariantHash locations();
+
+    ServiceProvider *providerFromId( const QString &serviceProviderId );
 
     QString stripDateAndTimeValues( const QString &sourceName );
 
     QHash< QString, ServiceProvider* > m_providers; // List of already loaded service providers
-    QHash< QString, QVariant > m_dataSources; // List of already used data sources
+    QVariantHash m_dataSources; // List of already used data sources
     QStringList m_erroneousProviders; // List of erroneous service providers
     QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory
     int m_lastStopNameCount, m_lastJourneyCount;
@@ -287,10 +380,10 @@ private:
 The public transport data engine provides timetable data for public transport, trains, ships,
 ferries and planes. It can get departure/arrival lists or journey lists.
 There are different service providers used to download and parse documents from
-different service providers. Currently there is only one class of service providers to parse
-documents using scripts. A GTFS class is in preparation in a GIT branch. All are using information
-from ServiceProviderData, which reads information data from xml files to support different
-service providers.
+different service providers. Currently there are rwo classes of service providers to parse
+documents using scripts: One uses scripts to do the work, the other one uses GTFS. All are
+using information from ServiceProviderData, which reads information data from xml files to support
+different service providers.
 
 <br />
 @section install_sec Installation
@@ -331,15 +424,16 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
 <br />
 
 @section usage_introduction_sec Introduction
-To use this data engine in an applet you need to connect it to a data source
-of the public transport data engine. There are data sources which provide information about the
-available service providers (@ref usage_serviceproviders_sec) or supported countries. Another data
-source contains departures or arrivals (@ref usage_departures_sec) and one contains journeys
-(@ref usage_journeys_sec).<br />
+To use this data engine in an applet you need to connect it to a data source of the public
+transport data engine. There are data sources which provide information about the available
+service providers (@ref usage_serviceproviders_sec) or supported countries. Other data sources
+contain departures/arrivals (@ref usage_departures_sec), journeys (@ref usage_journeys_sec) or
+stop suggestions (@ref usage_stopList_sec).<br />
 <br />
-This enumeration can be used in your applet to ease the usage of the data engine.
-Don't change the numbers, as they need to match the ones in the data engine,
-which uses a similar enumeration.
+The following enumeration can be used in your applet if you don't want to use
+libpublictransporthelper which exports this enumaration as @ref Timetable::VehicleType.
+Don't change the numbers, as they need to match the ones in the data engine, which uses a similar
+enumeration.
 @code
 // The type of the vehicle used for a public transport line.
 // The numbers here must match the ones in the data engine!
@@ -351,7 +445,10 @@ enum VehicleType {
     Subway = 3, // The vehicle is a subway
     InterurbanTrain = 4, // The vehicle is an interurban train
     Metro = 5, // The vehicle is a metro
-    TrolleyBus = 6, // The vehicle is an electric bus
+    TrolleyBus = 6, // A trolleybus (also known as trolley bus, trolley coach, trackless trolley,
+            // trackless tram or trolley) is an electric bus that draws its electricity from
+            // overhead wires (generally suspended from roadside posts) using spring-loaded
+            // trolley poles
 
     RegionalTrain = 10, // The vehicle is a regional train
     RegionalExpressTrain = 11, // The vehicle is a region express
@@ -360,6 +457,7 @@ enum VehicleType {
     HighspeedTrain = 14, // The vehicle is an intercity express (ICE, TGV?, ...?)
 
     Ferry = 100, // The vehicle is a ferry
+    Ship = 101, // The vehicle is a ship
 
     Plane = 200 // The vehicle is an aeroplane
 };
@@ -367,15 +465,21 @@ enum VehicleType {
 
 <br />
 @section usage_serviceproviders_sec Receiving a List of Available Service Providers
-You can view this data source in the plasmaengineexplorer, it's name is <em>"ServiceProviders"</em>.
-For each available service provider it contains a key with the display name of the service provider.
-These keys point to the service provider information, stored as a QHash with the following keys:
+You can view this data source in <em>plasmaengineexplorer</em>, it's name is <em>"ServiceProviders"</em>,
+but you can also use <em>"ServiceProvider ID"</em> with the ID of a service provider to get
+information only for that service provider.
+For each available service provider the data source contains a key with the display name of the
+service provider. These keys point to the service provider information, stored as a QHash with
+the following keys:
 <br />
 <table>
 <tr><td><i>id</i></td> <td>QString</td> <td>The ID of the service provider plugin.</td></tr>
 <tr><td><i>fileName</i></td> <td>QString</td> <td>The file name of the XML file containing the service provider information.</td> </tr>
-<tr><td><i>scriptFileName</i></td> <td>QString</td> <td>The file name of the script used to parse documents from the service provider, if any.</td> </tr>
 <tr><td><i>name</i></td> <td>QString</td> <td>The name of the service provider.</td></tr>
+<tr><td><i>type</i></td> <td>QString</td> <td>The type of the provider plugin, may currently be "GTFS", "Scripted" or "Invalid".</td></tr>
+<tr><td><i>feedUrl</i></td> <td>QString</td> <td><em>(only for type "GTFS")</em> The url to the (latest) GTFS feed.</td></tr>
+<tr><td><i>gtfsDatabaseSize</i></td> <td>qint64</td> <td><em>(only for type "GTFS")</em> The size in bytes of the GTFS database.</td></tr>
+<tr><td><i>scriptFileName</i></td> <td>QString</td> <td><em>(only for type "Scripted")</em> The file name of the script used to parse documents from the service provider, if any.</td></tr>
 <tr><td><i>url</i></td> <td>QString</td> <td>The url to the home page of the service provider.</td></tr>
 <tr><td><i>shortUrl</i></td> <td>QString</td> <td>A short version of the url to the home page of the service provider. This can be used to display short links, while using "url" as the url of that link.</td></tr>
 <tr><td><i>country</i></td> <td>QString</td> <td>The country the service provider is (mainly) designed for.</td></tr>
@@ -489,6 +593,12 @@ public slots:
 The data received from the data engine always contains these keys:<br />
 <table>
 <tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
+<tr><td><i>errorString</i></td> <td>QString</td> <td>(only if <em>error</em> is true), an error message string.</td></tr>
+<tr><td><i>errorCode</i></td> <td>int</td> <td>(only if <em>error</em> is true), an error code.
+    Error code 1 means, that there was a problem downloading a source file.
+    Error code 2 means, that parsing a source file failed.
+    Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
+    Use the @ref PublicTransportService to start and monitor the import.</td></tr>
 <tr><td><i>receivedPossibleStopList</i></td> <td>bool</td> <td>True, if the given stop name is ambiguous and
 a list of possible stops was received, see @ref usage_stopList_sec .</td></tr>
 <tr><td><i>count</i></td> <td>int</td> <td>The number of received departures / arrivals / stops or 0 if there was
@@ -500,6 +610,7 @@ there was an error.</td></tr>
 as strings (eg. "3"), each contains information about one departure/arrival.</td></tr>
 </table>
 <br />
+
 Each departure/arrival in the data received from the data engine (departureData in the code
 example) has the following keys:<br />
 <table>
@@ -525,7 +636,6 @@ departure/arrival. Can be used as argument to the KIcon constructor.</td></tr>
 <tr><td><i>routeStops</i></td> <td>QStringList</td> <td>A list of stops of the departure/arrival to it's destination stop or a list of stops of the journey from it's start to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
 <tr><td><i>routeTimes</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of times of the departure/arrival to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
 <tr><td><i>routeExactStops</i></td> <td>int</td> <td>The number of exact route stops. The route stop list isn't complete from the last exact route stop.</td></tr>
-
 </table>
 
 <br />
@@ -603,6 +713,12 @@ public slots:
 The data received from the data engine always contains these keys:<br />
 <table>
 <tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
+<tr><td><i>errorString</i></td> <td>QString</td> <td>(only if <em>error</em> is true), an error message string.</td></tr>
+<tr><td><i>errorCode</i></td> <td>int</td> <td>(only if <em>error</em> is true), an error code.
+    Error code 1 means, that there was a problem downloading a source file.
+    Error code 2 means, that parsing a source file failed.
+    Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
+    Use the @ref PublicTransportService to start and monitor the import.</td></tr>
 <tr><td><i>receivedPossibleStopList</i></td> <td>bool</td> <td>True, if the given stop name is ambiguous and
 a list of possible stops was received, see @ref usage_stopList_sec .</td></tr>
 <tr><td><i>count</i></td> <td>int</td> <td>The number of received journeys / stops or 0 if there was
@@ -682,6 +798,7 @@ void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &dat
     @li @ref provider_infos_xml
     @li @ref provider_infos_script
     @li @ref examples
+    @li @ref examples_xml_gtfs
     @li @ref examples_xml_script
     @li @ref examples_script
 <br />
@@ -777,6 +894,22 @@ The email address of the author of the service provider plugin.</td></tr>
 <td>\<serviceProvider\></td> <td>Required for script provider plugins</td>
 <td>Contains the filename of the script to be used to parse timetable documents. The script must be in the same directory as the XML file. Always use "Script" as type when using a script. Can have an "extensions" attribute with a comma separated list of QtScript extensions to load when executing the script.</td></tr>
 
+<tr><td><b>\<credit\></b></td>
+<td>\<accessorInfo\></td> <td>(Optional)</td>
+<td>A courtesy string that is required to be shown to the user when showing the timetable data of the GTFS feed. If this tag is not given, a short default string is used, eg. "data by: www.provider.com" or only the link (depending on available space). Please check the license agreement for using the GTFS feed for such a string and include it here.</td></tr>
+
+<tr style="background-color: #ffdddd; border-top: 3px double black;"><td style="color:#0000bb;"><b>\<feedUrl\></b></td>
+<td>\<accessorInfo\></td> <td>(Required only with "GTFS" type)</td>
+<td>An URL to the GTFS feed to use. Use an URL to the latest available feed.</td></tr>
+
+<tr><td style="color:#0000bb;"><b>\<realtimeTripUpdateUrl\></b></td>
+<td>\<accessorInfo\></td> <td>(Optional, only used with "GTFS" type)</td>
+<td>An URL to a GTFS-realtime data source with trip updates. If this tag is not present delay information will not be available.</td></tr>
+
+<tr><td style="color:#0000bb;"><b>\<realtimeAlertsUrl\></b></td>
+<td>\<accessorInfo\></td> <td>(Optional, only used with "GTFS" type)</td>
+<td>An URL to a GTFS-realtime data source with alerts. If this tag is not present journey news will not be available.</td></tr>
+
 <tr style="border-top: 3px double black;"><td style="color:#00bb00;"><b>\<changelog\></b></td>
 <td>\<serviceProvider\></td> <td>(Optional)</td>
 <td>Contains changelog entries for this service provider plugin.</td></tr>
@@ -796,8 +929,16 @@ The email address of the author of the service provider plugin.</td></tr>
 <tr><td style="color:#660066;"><b>\<city\></b></td>
 <td style="color:#880088;">\<samples\></td> <td>(Optional)</td>
 <td>A sample city name.</td></tr>
-
 </table>
+
+@subsection accessor_infos_xml_post Request Data Using POST Method
+If the service provider requires the POST method to be used to send data in requests (instead of GET), some additional attributes are needed for the raw URL tags. You can also use eg. POST for departures and GET for stop suggestions.
+
+To use POST for departures, add the following attributes to the \<departures\> tag (for journeys/stop suggestions use the associated rawUrls tags):@n
+  @li <em>method="post"</em> If this attribute is not found, method is "get".
+  @li <em>data='{"stopName":"{stop}"}'</em> Template for data to be POSTed to the server in requests. Can contain the same placeholders like the raw URL used for the GET method (see above). If you are unsure what data is expected by the server, you can use eg. <em>Wireshark</em> to see what data gets sent to the server when using the web site.
+  @li <em>charset="utf-8"</em> Optional, sets the "Charsets" meta data of the request, eg. "utf-8".
+  @li <em>contenttype="application/json; charset=utf-8"</em> Optional, sets the "Content-Type" meta data of the request, can also contain charset information. The value of the <em>data</em> attribute should be of the given content type, eg. "application/json".
 @n @n
 
 @section provider_infos_script Script file structure
@@ -812,14 +953,18 @@ For more information see @ref script_functions.
 @n @n
 @section examples Service Provider Plugin Examples
 @n
-@subsection examples_xml_script A Simple Service Provider Plugin
+@subsection examples_xml_script A Simple Script Provider Plugin
 Here is an example of a simple service provider plugin which uses a script to parse data from the service provider:
 @verbinclude fr_gares.pts
+
+@subsection examples_xml_gtfs A Simple GTFS Provider Plugin
+The simplest provider XML can be written when using a GTFS feed. This example also contains tags for GTFS-realtime support, which is optional.
+@include us_bart.xml
 
 @n
 @subsection examples_script A Simple Parsing-Script
 This is an example of a script used to parse data from the service provider (actually the one used by the XML from the last section).
-@verbinclude fr_gares.js
+@include fr_gares.js
 */
 
 /** @page pageClassDiagram Class Diagram

@@ -533,9 +533,15 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
                 }
             }
         } else if ( checkNetworkStatus() ) {
-            d->timetable->setNoItemsText( i18nc("@info/plain",
-                    "There was an error:<nl/><message>%1</message><nl/><nl/>"
-                    "The server may be temporarily unavailable.", error) );
+            if ( d->currentServiceProviderData()["type"] == QLatin1String("GTFS") ) {
+                d->timetable->setNoItemsText( i18nc("@info/plain",
+                        "There was an error:<nl/><message>%1</message><nl/><nl/>"
+                        "The GTFS feed database may need to be updated. Please wait.", error) );
+            } else {
+                d->timetable->setNoItemsText( i18nc("@info/plain",
+                        "There was an error:<nl/><message>%1</message><nl/><nl/>"
+                        "The server may be temporarily unavailable.", error) );
+            }
         }
     }
 }

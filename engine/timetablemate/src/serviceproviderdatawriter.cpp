@@ -52,7 +52,7 @@ bool ServiceProviderDataWriter::write( QIODevice *device, const ServiceProvider 
     writeStartElement( "serviceProvider" );
     writeAttribute( "fileVersion", data->fileFormatVersion() );
     writeAttribute( "version", data->version() );
-    writeAttribute( "type", data->type() == ScriptedServiceProvider ? "Script" : "Unknown" );
+    writeAttribute( "type", data->typeString() );
 
     bool enUsed = false;
     for( QHash<QString, QString>::const_iterator it = data->names().constBegin();

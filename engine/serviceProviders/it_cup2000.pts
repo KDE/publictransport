@@ -12,7 +12,6 @@
 <useSeperateCityValue>false</useSeperateCityValue>
 
 <url>http://travelplanner.cup2000.it</url>
-<shortUrl>travelplanner.cup2000.it</shortUrl>
 <!-- <credit>Regione Emilia-Romagna, Cup 2000 SpA, IVU Traffic Technologies AG</credit> -->
 <!-- <minFetchWait>300</minFetchWait> -->
 <!-- <fallbackCharset>latin1</fallbackCharset> -->

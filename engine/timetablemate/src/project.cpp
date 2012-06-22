@@ -28,7 +28,6 @@
 #include "javascriptparser.h"
 #include "serviceproviderdatawriter.h"
 #include "serviceproviderdatatester.h"
-#include "publictransportpreview.h"
 #include "testmodel.h"
 #include "tabs/abstracttab.h"
 #include "tabs/dashboardtab.h"
@@ -523,9 +522,16 @@ public:
         Q_Q( Project );
 
         // Recreate service provider from the contents of device
-        ServiceProviderDataReader reader;
         delete provider;
-        provider = reader.read( device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q );
+        provider = 0;
+
+        ServiceProviderDataReader reader;
+        ServiceProviderData *data =
+                reader.read( device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q );
+        if ( data ) {
+            provider = ServiceProvider::createProviderForData( data, q );
+        }
+
         if( provider ) {
             q->emit nameChanged( projectName() );
             q->emit iconNameChanged( iconName() );

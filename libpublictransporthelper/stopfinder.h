@@ -126,7 +126,6 @@ Q_SIGNALS:
      * @brief An @p error occurred.
      *
      * @param error The type of the error.
-     *
      * @param errorMessage An error message.
      **/
     void error( StopFinder::Error error, const QString &errorMessage );
@@ -135,10 +134,8 @@ Q_SIGNALS:
      * @brief A list of @p stops has been found.
      *
      * @param stops A list of stop names.
-     *
      * @param stopIDs A list of stop IDs for the found @p stops. May be empty, if stop IDs aren't
      *   available for the used service provider.
-     *
      * @param serviceProviderID The ID of the used service provider.
      **/
     void stopsFound( const QStringList &stops, const QStringList &stopIDs,

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">California, Davis (Unitrans)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<description>Accessor for California, Davis, using the GTFS feed of Unitrans. No GTFS-realtime data available.</description>
+<credit>Route and arrival data provided by permission of Unitrans</credit>
+<url>http://www.unitrans.com</url>
+<feedUrl>http://iportal.sacrt.com/GTFS/Unitrans/google_transit.zip</feedUrl>
+
+</serviceProvider>

@@ -240,6 +240,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
         if ( stopSettings.get< QList<JourneySearchItem> >(Settings::JourneySearchSetting) !=
              oldStopSettings.get< QList<JourneySearchItem> >(Settings::JourneySearchSetting) )
         {
+            kDebug() << "Changed journey search list";
             changed |= ChangedCurrentJourneySearchLists;
         }
 

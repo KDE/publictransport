@@ -7,7 +7,9 @@ include_directories(
         ${CMAKE_SOURCE_DIR}
         ${CMAKE_BINARY_DIR}
         ${KDE4_INCLUDES}
-        ${PUBLICTRANSPORTHELPER_INCLUDES} )
+        ${PUBLICTRANSPORTHELPER_INCLUDES}
+        ${CMAKE_CURRENT_BINARY_DIR}/../
+         )
 
 add_subdirectory( completiongenerator )
 add_subdirectory( src )

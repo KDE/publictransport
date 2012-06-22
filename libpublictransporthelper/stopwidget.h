@@ -82,6 +82,7 @@ public:
             int stopIndex = -1,
             StopSettingsWidgetFactory::Pointer factory = StopSettingsWidgetFactory::Pointer::create() );
 
+    /** @brief Destructor. */
     virtual ~StopWidget();
 
     /** @brief Gets the stop settings of this StopWidget. */
@@ -125,8 +126,10 @@ Q_SIGNALS:
     void remove();
 
 public Q_SLOTS:
-    /** @brief The change button has been clicked. This opens a @ref StopSettingsDialog
-     *   to change the settings of this StopWidget. */
+    /**
+     * @brief The change button has been clicked. This opens a @ref StopSettingsDialog
+     *   to change the settings of this StopWidget.
+     **/
     void editSettings();
 
 protected:
@@ -137,8 +140,10 @@ private:
     Q_DISABLE_COPY( StopWidget )
 };
 
-/** @brief Manages a list of @ref StopWidget in a widget, with buttons to dynamically
- *  add/remove StopWidgets. */
+/**
+ * @brief Manages a list of @ref StopWidget in a widget, with buttons to dynamically
+ *  add/remove StopWidgets.
+ **/
 class PUBLICTRANSPORTHELPER_EXPORT StopListWidget : public AbstractDynamicWidgetContainer {
     Q_OBJECT
 

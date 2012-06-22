@@ -22,7 +22,6 @@
 
 // Own includes
 #include "project.h"
-#include "publictransportpreview.h"
 #include "parserenums.h"
 #include "javascriptmodel.h"
 #include "javascriptparser.h"

@@ -12,8 +12,6 @@
 <useSeperateCityValue>false</useSeperateCityValue>
 
 <url>http://www.resrobot.se</url>
-<shortUrl>www.resrobot.se</shortUrl>
-<!-- <credit></credit> -->
 <!-- <minFetchWait>300</minFetchWait> -->
 <fallbackCharset>latin1</fallbackCharset>
 

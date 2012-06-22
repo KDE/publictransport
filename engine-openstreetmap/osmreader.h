@@ -28,58 +28,58 @@
 class ServiceProvider;
 
 class OsmReader : public QObject, public QXmlStreamReader {
-    Q_OBJECT
+    Q_OBJECT;
 
 public:
-	enum ResultFlag {
-	    AllResults = 0x0000,
-	    OnlyResultsWithNameAttribute = 0x0001
-	};
-	Q_DECLARE_FLAGS( ResultFlags, ResultFlag )
+    enum ResultFlag {
+        AllResults = 0x0000,
+        OnlyResultsWithNameAttribute = 0x0001
+    };
+    Q_DECLARE_FLAGS( ResultFlags, ResultFlag );
 
-	OsmReader( const QString &associatedSourceName, const QString &sourceUrl,
+    OsmReader( const QString &associatedSourceName, const QString &sourceUrl,
                ResultFlags resultFlags = ResultFlags(AllResults) )
             : QXmlStreamReader()
     {
-	    m_associatedSourceName = associatedSourceName;
+        m_associatedSourceName = associatedSourceName;
         m_sourceUrl = sourceUrl;
-	    m_resultFlags = resultFlags;
+        m_resultFlags = resultFlags;
     };
 
-	void read();
-	Plasma::DataEngine::Data data() const { return m_data; };
+    void read();
+    Plasma::DataEngine::Data data() const { return m_data; };
 
-	void resumeReading() { m_loop.quit(); };
+    void resumeReading() { m_loop.quit(); };
     QString associatedSourceName() const { return m_associatedSourceName; };
     QString sourceUrl() const { return m_sourceUrl; };
 
 signals:
-	/**
+    /**
      * @brief Reading an XML document has finished (reached the end of the document).
      *
-	 * @Note @p lastDataChunk only contains the last chunk of data.
+     * @Note @p lastDataChunk only contains the last chunk of data.
      **/
-	void finishedReading( QPointer<OsmReader> reader, const Plasma::DataEngine::Data &lastDataChunk );
+    void finishedReading( QPointer<OsmReader> reader, const Plasma::DataEngine::Data &lastDataChunk );
 
-	/** @brief A new chunk of the XML document has been read. */
-	void chunkRead( QPointer<OsmReader> reader, const Plasma::DataEngine::Data &dataChunk );
+    /** @brief A new chunk of the XML document has been read. */
+    void chunkRead( QPointer<OsmReader> reader, const Plasma::DataEngine::Data &dataChunk );
 
 private:
-	bool isResultValid( const QVariantHash &data ) const;
+    bool isResultValid( const QVariantHash &data ) const;
 
-	void readUnknownElement();
-	void readOsm();
-	void readNode();
-	void readWay();
-	void readRelation();
-	void readTag( QHash< QString, QVariant > *nodeData );
+    void readUnknownElement();
+    void readOsm();
+    void readNode();
+    void readWay();
+    void readRelation();
+    void readTag( QHash< QString, QVariant > *nodeData );
 
-	bool waitOnRecoverableError();
+    bool waitOnRecoverableError();
 
-	Plasma::DataEngine::Data m_data;
-	QEventLoop m_loop;
-	QString m_associatedSourceName;
-	ResultFlags m_resultFlags;
+    Plasma::DataEngine::Data m_data;
+    QEventLoop m_loop;
+    QString m_associatedSourceName;
+    ResultFlags m_resultFlags;
     QString m_sourceUrl;
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( OsmReader::ResultFlags )

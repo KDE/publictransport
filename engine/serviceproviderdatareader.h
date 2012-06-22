@@ -76,19 +76,22 @@ public:
      * @param fileName The filename of the xml file.
      * @param country The country the service provider operates in.
      *
-     * @return A ServiceProvider object or NULL on error.
+     * @return A ServiceProviderData object or NULL on error.
      **/
-    ServiceProvider* read( QIODevice *device, const QString &serviceProvider,
-                             const QString &fileName, const QString &country,
-                             ErrorAcceptance errorAcceptance, QObject *parent );
-    ServiceProvider* read( QIODevice *device, const QString &fileName,
-                             ErrorAcceptance errorAcceptance, QObject *parent );
+    ServiceProviderData* read( QIODevice *device, const QString &serviceProvider,
+                               const QString &fileName, const QString &country,
+                               ErrorAcceptance errorAcceptance = OnlyReadCorrectFiles,
+                               QObject *parent = 0 );
+
+    ServiceProviderData* read( QIODevice *device, const QString &fileName,
+                               ErrorAcceptance errorAcceptance = OnlyReadCorrectFiles,
+                               QObject *parent = 0 );
 
 private:
     void readUnknownElement();
-    ServiceProvider* readServiceProvider( const QString &serviceProvider,
-                                            const QString &fileName, const QString &country,
-                                            ErrorAcceptance errorAcceptance, QObject *parent );
+    ServiceProviderData *readProviderData( const QString &serviceProvider,
+                                           const QString &fileName, const QString &country,
+                                           ErrorAcceptance errorAcceptance, QObject *parent );
     QString readLocalizedTextElement( QString *lang );
     bool readBooleanElement();
     void readAuthor( QString *fullname, QString *shortName, QString *email );

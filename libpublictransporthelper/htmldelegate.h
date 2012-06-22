@@ -62,7 +62,6 @@ public:
      * @brief Creates a new HTML delgate with the given @p options.
      *
      * @param options Options for the delegate. Default is NoOption.
-     *
      * @param parent The parent for this delegate. Default is 0.
      **/
     explicit HtmlDelegate( Options options = NoOption, QObject *parent = 0 );
@@ -81,7 +80,6 @@ public:
      * @brief Enables/disables the given @p option.
      *
      * @param option The option too enable/disable.
-     *
      * @param enable True, to enable @p option. False, to disable it.
      **/
     void setOption( Option option, bool enable );

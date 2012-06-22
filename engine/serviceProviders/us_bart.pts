@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
+
+<name lang="en">California, San Fransisco Bay Area (BART)</name>
+<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
+<description>Accessor for California, San Fransisco Bay Area, using the GTFS feed of Bay Area Rapid Transit (BART).</description>
+<credit>Route and arrival data provided by permission of BART</credit>
+<timeZone>PST</timeZone>
+<url>http://www.bart.gov</url>
+<feedUrl>http://bart.gov/dev/schedules/google_transit.zip</feedUrl>
+<realtimeTripUpdateUrl>http://www.bart.gov/dev/gtrtfs/tripupdate.aspx</realtimeTripUpdateUrl>
+<realtimeAlertsUrl>http://www.bart.gov/dev/gtrtfs/alerts.aspx</realtimeAlertsUrl>
+
+</serviceProvider>

@@ -133,7 +133,7 @@ StopWidget::StopWidget( QWidget* parent, const StopSettings& stopSettings,
         FilterSettingsList *filterConfigurations, QList<int> settings, int stopIndex,
         StopSettingsWidgetFactory::Pointer factory )
         : QWidget(parent), d_ptr(new StopWidgetPrivate(this, stopSettings, filterConfigurations,
-            stopSettingsDialogOptions, providerDataDialogOptions, settings, stopIndex, factory))
+          stopSettingsDialogOptions, providerDataDialogOptions, settings, stopIndex, factory))
 {
     setStopSettings( stopSettings ); // TODO move setStopSettings to private class
 }
@@ -307,7 +307,7 @@ StopListWidget::StopListWidget( QWidget* parent, const StopSettingsList& stopSet
         : AbstractDynamicWidgetContainer(parent, RemoveButtonsBesideWidgets,
                                          AddButtonAfterLastWidget, ShowSeparators),
         d_ptr(new StopListWidgetPrivate(this, filterConfigurations,
-                stopSettingsDialogOptions, providerInfoDialogOptions, settings, factory))
+              stopSettingsDialogOptions, providerInfoDialogOptions, settings, factory))
 {
     addButton()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
     addButton()->setText( i18nc("@action:button", "&Add Stop") );
@@ -486,7 +486,7 @@ DynamicWidget* StopListWidget::addWidget( QWidget* widget )
 
     // Open the configuration dialog when a StopWidget without settings gets added
     if ( stopWidget->stopSettings().stops().isEmpty() &&
-        d->newStopSettingsBehaviour == OpenDialogIfNoStopsGiven )
+         d->newStopSettingsBehaviour == OpenDialogIfNoStopsGiven )
     {
         stopWidget->editSettings();
     }

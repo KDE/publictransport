@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE kcfg SYSTEM
+    "http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+<kcfg>
+    <group name="updateGtfsFeed">
+        <entry name="serviceProviderId" type="String">
+            <label>The ID of the service provider, which GTFS feed should be updated, eg. "us_trimet".</label>
+        </entry>
+    </group>
+    <group name="importGtfsFeed">
+        <entry name="serviceProviderId" type="String">
+            <label>The ID of the service provider, which GTFS feed should be imported, eg. "us_trimet".</label>
+        </entry>
+    </group>
+    <group name="deleteGtfsDatabase">
+        <entry name="serviceProviderId" type="String">
+            <label>The ID of the service provider, which GTFS database should be deleted, eg. "us_trimet".</label>
+        </entry>
+    </group>
+</kcfg>

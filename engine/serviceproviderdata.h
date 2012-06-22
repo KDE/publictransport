@@ -95,7 +95,7 @@ public:
      *
      * @see ServiceProviderType
      **/
-    explicit ServiceProviderData( const ServiceProviderType& type = InvalidServiceProvider,
+    explicit ServiceProviderData( const ServiceProviderType& type = InvalidProvider,
                                   const QString& id = QString(), QObject *parent = 0 );
 
     ServiceProviderData( const ServiceProviderType &type, const QString &id,
@@ -145,6 +145,9 @@ public:
     /** @brief The type of the service provider (scripted, GTFS, ...) */
     ServiceProviderType type() const { return m_serviceProviderType; };
 
+    /** @brief Convenience function that uses ServiceProviderGlobal::typeToString(). */
+    QString typeString() const;
+
     /** @brief The version of the service provider plugin. */
     QString version() const { return m_version; };
 
@@ -153,9 +156,6 @@ public:
 
     /** @brief The ID of the service provider plugin. */
     QString id() const { return m_id; };
-
-    QString typeString() const { return m_serviceProviderType == ScriptedServiceProvider
-            ? "ScriptedServiceProvider" : "Unknown"; };
 
     /** @brief The author of the service provider plugin. */
     QString author() const { return m_author; };
@@ -226,6 +226,18 @@ public:
 
     /** @brief A list of QScript extensions to import when executing the script. */
     QStringList scriptExtensions() const { return m_scriptExtensions; };
+
+    /** @brief An URL that is used to download a (GTFS) feed. */
+    QString feedUrl() const { return m_feedUrl; };
+
+    /** @brief An URL where realtime GTFS trip update data gets downloaded (for delays). */
+    QString realtimeTripUpdateUrl() const { return m_tripUpdatedUrl; };
+
+    /** @brief An URL where realtime GTFS alerts data gets downloaded (for journey news). */
+    QString realtimeAlertsUrl() const { return m_alertsUrl; };
+
+    /** @brief The timezone of the area in which the service provider operates or an empty string. */
+    QString timeZone() const { return m_timeZone; };
 
     QList<ChangelogEntry> changelog() const { return m_changelog; };
     QString lastChangelogAuthor() const {
@@ -447,6 +459,11 @@ public:
 
     void setNotes( const QString &notes ) { m_notes = notes; };
 
+    void setFeedUrl( const QString &feedUrl ) { m_feedUrl = feedUrl; };
+    void setRealtimeTripUpdateUrl( const QString &tripUpdatedUrl ) { m_tripUpdatedUrl = tripUpdatedUrl; };
+    void setRealtimeAlertsUrl( const QString &alertsUrl ) { m_alertsUrl = alertsUrl; };
+    void setTimeZone( const QString &timeZone ) { m_timeZone = timeZone; };
+
 protected:
     virtual bool supportsByJourneyNewsParsing( const TimetableInformation &info ) const {
         Q_UNUSED(info)
@@ -481,6 +498,11 @@ protected:
     // If empty, use unicode (QUrl::toPercentEncoding()), otherwise use own
     // toPercentEncoding() with this charset
     QByteArray m_charsetForUrlEncoding, m_fallbackCharset;
+
+    QString m_feedUrl;
+    QString m_tripUpdatedUrl;
+    QString m_alertsUrl;
+    QString m_timeZone;
 
     // Keys are versions, where the change entries occurred (values)
     QList<ChangelogEntry> m_changelog;

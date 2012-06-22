@@ -52,3 +52,13 @@ add_test( ScriptApiTest ScriptApiTest )
 target_link_libraries( ScriptApiTest ${QT_QTTEST_LIBRARY} ${KDE4_PLASMA_LIBS}
         ${QT_QTNETWORK_LIBRARY} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTSCRIPT_LIBRARY}
         ${KDE4_THREADWEAVER_LIBS} ${KDE4_PLASMA_LIBS} ${KDE4_KIO_LIBS}  )
+
+set( GeneralTransitTest_SRCS GeneralTransitTest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../generaltransitfeed_importer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../generaltransitfeed_database.cpp
+)
+qt4_automoc( ${GeneralTransitTest_SRCS} )
+add_executable( GeneralTransitTest ${GeneralTransitTest_SRCS} )
+add_test( GeneralTransitTest GeneralTransitTest )
+target_link_libraries( GeneralTransitTest ${QT_QTTEST_LIBRARY} ${KDE4_CORE_LIBS} ${KDE4_KUTILS_LIBS}
+                       ${QT_QTCORE_LIBRARY} ${QT_QTSQL_LIBRARY} )

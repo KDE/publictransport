@@ -12,14 +12,13 @@
 <useSeperateCityValue>false</useSeperateCityValue>
 
 <url>http://www.gares-en-mouvement.com/</url>
-<shortUrl>www.gares-en-mouvement.com</shortUrl>
 <!-- <credit>Société Nationale des Chemins de fer Français (SNCF)</credit> -->
 
 <rawUrls>
 <!--     <departures><![CDATA[http://www.gares-en-mouvement.com/infostempsreel-depart-en-1-{stop}-0.html]]></departures> -->
 <!--     <departures><![CDATA[http://www.gares-en-mouvement.com/infos_temps_reel.php?gare={stop}&tab=dep&langue=en]]></departures> -->
     <departures><![CDATA[http://www.gares-en-mouvement.com/en/{stop}/horaires-temps-reel/dep/]]></departures>
-    
+
 <!--     <stopSuggestions><![CDATA[http://www.gares-en-mouvement.com/include/completion.php?q={stop}&limit=10]]></stopSuggestions> -->
 <!--     <stopSuggestions><![CDATA[http://www.gares-en-mouvement.com/accueil-en-1.html]]></stopSuggestions> -->
     <stopSuggestions><![CDATA[http://www.gares-en-mouvement.com/index.php]]></stopSuggestions>

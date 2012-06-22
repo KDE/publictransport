@@ -43,9 +43,10 @@ ServiceProviderItem::ServiceProviderItem( const QString &name, const QVariantHas
 {
     d_ptr->name = name;
     d_ptr->data = data;
-    d_ptr->formattedText = QString( "<b>%1</b><br-wrap><small><b>Features:</b> %2</small>" )
-            .arg( name )
-            .arg( data["featuresLocalized"].toStringList().join( ", " ) );
+    d_ptr->formattedText = QString( "<b>%1</b><br-wrap>"
+                                    "<small><b>Type:</b> %2</b></small>" )
+            .arg( name ).arg( data["type"].toString() );
+//             .arg( data["featuresLocalized"].toStringList().join( ", " ) );
 
     QString location = countryCode();
     if ( location == QLatin1String("international") ) {
@@ -59,13 +60,13 @@ ServiceProviderItem::ServiceProviderItem( const QString &name, const QVariantHas
     } else {
         d_ptr->category = KGlobal::locale()->countryCodeToName( location );
 
-        // TODO Add a flag to the provider plugin XML files, maybe <countryWide />
-        bool isCountryWide = name.contains( location, Qt::CaseInsensitive );
+        // TODO Add a flag to the accessor XML files, maybe <countryWide />
+        bool isCountryWide = data["type"] == "GTFS" ? false
+                : name.contains( location, Qt::CaseInsensitive );
         d_ptr->sortString = isCountryWide
                 ? "WWWWW" + d_ptr->category + "11111" + name
                 : "WWWWW" + d_ptr->category + name;
     }
-
 }
 
 ServiceProviderItem::~ServiceProviderItem()

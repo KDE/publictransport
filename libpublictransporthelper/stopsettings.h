@@ -187,11 +187,8 @@ public:
     /** @brief Gets a QStringList of the selected stop names. IDs are used where available. */
     QStringList stops( StopIdUsage stopIdUsage = UseStopName ) const;
 
-    /**
-     * @brief The IDs of the currently selected stops.
-     *
-     * Can contain empty strings if an ID isn't available.
-     **/
+    /** @brief The IDs of the currently selected stops, can contain empty strings
+     * if the ID isn't available. */
     QStringList stopIDs() const;
 
     /**
@@ -201,6 +198,7 @@ public:
      *   settings (LocationSetting, ServcieProviderSetting, CitySetting or StopNameSetting).
      *
      * @return True, if @p setting is set. False, otherwise.
+     *
      * @see setting
      **/
     bool hasSetting( int setting ) const;
@@ -248,22 +246,21 @@ public:
     template< class Type >
     inline Type get( int setting ) const {
         return operator[]( setting ).value<Type>();
-    }
+    };
 
     /**
      * @brief Overloaded version of @ref get(int) to also accept
      *   @ref StopSetting as argument type.
      **/
     template< class Type >
-    inline Type get( StopSetting setting ) const {
+    inline Type get( StopSetting setting ) {
         return get<Type>( static_cast<int>(setting) );
-    }
+    };
 
     /**
      * @brief Sets the value of the given @p setting to @p value.
      *
      * @param setting The @ref StopSetting, which value should be set/changed.
-     *
      * @param value The value for @p setting.
      *
      * @see clearSetting
@@ -293,7 +290,6 @@ public:
      * @brief Sets the ID of the @p stop to @p id.
      *
      * @param stop The name of the stop, which ID should be changed.
-     *
      * @param id The new ID for the stop.
      **/
     void setIdOfStop( const QString &stop, const QString &id );
@@ -435,8 +431,8 @@ public:
      *   where X is an integer (the setting value, ie. @ref StopSetting::UserSetting).
      *
      * @param setting The @ref StopSetting to get the object name for.
-     *
      * @return The object name for the widget associated with the given @p setting.
+     *
      * @see StopSetting
      **/
     virtual QString nameForSetting( int setting ) const;
@@ -457,27 +453,27 @@ public:
      *   the default implementation, which returns false for these settings.
      *
      * @param setting The @ref StopSetting to check.
-     *
      * @return True, if @p setting is less important (eg. should be shown in a dialogs details
      *   section). False, otherwise.
+     *
      * @see StopSetting
      **/
     virtual bool isDetailsSetting( int setting ) const;
 
     /**
-     * @brief Gets the text to use as label for the widget that gets created with widgetForSetting.
+     * @brief Gets the text to use as label for the widget that gets created with
+     *   @ref widgetForSetting.
      *
      * @param setting The @ref StopSetting to get the label text for.
-     *
      * @return The label text for the widget associated with the given @p setting.
+     *
      * @see StopSetting
      **/
     virtual QString textForSetting( int setting ) const;
 
     /**
-     * @brief Calls widgetForSetting and sets the object name of the returned widget.
-     *
-     * The object name of the returned widget gets set to the one returned by nameForSetting.
+     * @brief Calls @ref widgetForSetting and sets the object name of the returned widget
+     *   to the one returned by @ref nameForSetting.
      *
      * @param setting The setting to get the widget for.
      * @param parent The parent for the new widget. Default is 0.
@@ -496,6 +492,7 @@ public:
      *   filter configurations for the stop from a list of affected stops per filter configuration.
      *
      * @return The value for the given @p setting.
+     *
      * @see StopSetting
      **/
     virtual QVariant valueOfSetting( const QWidget *widget, int setting, int stopIndex = -1 ) const;
@@ -529,8 +526,8 @@ protected:
      * @brief Creates and returns the widget associated with the given @p setting.
      *
      * @param setting The @ref StopSetting to create a widget for.
-     *
      * @return A new instance of the widget associated with the given @p setting.
+     *
      * @see StopSetting
      **/
     virtual QWidget *widgetForSetting( int setting, QWidget *parent = 0 ) const;

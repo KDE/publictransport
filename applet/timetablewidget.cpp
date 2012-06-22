@@ -91,8 +91,11 @@ void JourneyGraphicsItem::updateSettings()
 void PublicTransportGraphicsItem::setExpanded( bool expand )
 {
     m_expanded = expand;
-    if ( expand && routeItem() ) {
-        routeItem()->setVisible( true );
+    if ( expand ) {
+        QGraphicsWidget *route = routeItem();
+        if ( route ) {
+            route->setVisible( true );
+        }
     }
 
     if ( m_resizeAnimation ) {
@@ -111,8 +114,9 @@ void PublicTransportGraphicsItem::setExpanded( bool expand )
 
 void PublicTransportGraphicsItem::resizeAnimationFinished()
 {
-    if ( routeItem() ) {
-        routeItem()->setVisible( m_expanded );
+    QGraphicsWidget *route = routeItem();
+    if ( route ) {
+        route->setVisible( m_expanded );
     }
     delete m_resizeAnimation;
     m_resizeAnimation = 0;

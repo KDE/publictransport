@@ -24,6 +24,8 @@
 #include "serviceprovider.h"
 #include "serviceproviderdata.h"
 #include "serviceproviderglobal.h"
+#include "serviceprovidergtfs.h"
+#include "publictransportservice.h"
 #include "global.h"
 #include "request.h"
 
@@ -34,10 +36,18 @@
 // Qt includes
 #include <QFileSystemWatcher>
 #include <QFileInfo>
+#include <QTimer>
 
 const int PublicTransportEngine::MIN_UPDATE_TIMEOUT = 120; // in seconds
 const int PublicTransportEngine::MAX_UPDATE_TIMEOUT_DELAY = 5 * 60; // if delays are available
 const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
+
+Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
+{
+    PublicTransportService *service = new PublicTransportService( name, this );
+    service->setDestination( name );
+    return service;
+}
 
 PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantList& args )
         : Plasma::DataEngine( parent, args ),
@@ -81,41 +91,87 @@ void PublicTransportEngine::slotSourceRemoved( const QString& name )
     kDebug() << "Source" << name << "removed, still cached data sources" << m_dataSources.count();
 }
 
-QHash< QString, QVariant > PublicTransportEngine::serviceProviderData(
-        const ServiceProvider *&provider )
+QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProvider *provider )
 {
     Q_ASSERT( provider );
+    return serviceProviderData( *(provider->data()), provider );
+}
 
+QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderData &data,
+                                                         const ServiceProvider *provider )
+{
     QVariantHash dataServiceProvider;
-    dataServiceProvider.insert( "id", provider->id() );
-    dataServiceProvider.insert( "fileName", provider->data()->fileName() );
-    dataServiceProvider.insert( "scriptFileName", provider->data()->scriptFileName() );
-    dataServiceProvider.insert( "name", provider->data()->name() );
-    dataServiceProvider.insert( "url", provider->data()->url() );
-    dataServiceProvider.insert( "shortUrl", provider->data()->shortUrl() );
-    dataServiceProvider.insert( "country", provider->country() );
-    dataServiceProvider.insert( "cities", provider->cities() );
-    dataServiceProvider.insert( "credit", provider->credit() );
-    dataServiceProvider.insert( "useSeparateCityValue", provider->useSeparateCityValue() );
-    dataServiceProvider.insert( "onlyUseCitiesInList", provider->onlyUseCitiesInList() );
-    dataServiceProvider.insert( "features", provider->features() );
-    dataServiceProvider.insert( "featuresLocalized", provider->featuresLocalized() );
-    dataServiceProvider.insert( "author", provider->data()->author() );
-    dataServiceProvider.insert( "shortAuthor", provider->data()->shortAuthor() );
-    dataServiceProvider.insert( "email", provider->data()->email() );
-    dataServiceProvider.insert( "description", provider->data()->description() );
-    dataServiceProvider.insert( "version", provider->data()->version() );
+    dataServiceProvider.insert( "id", data.id() );
+    dataServiceProvider.insert( "fileName", data.fileName() );
+    dataServiceProvider.insert( "type", ServiceProvider::typeName(data.type()) );
+    if ( data.type() == GtfsProvider ) {
+        dataServiceProvider.insert( "feedUrl", data.feedUrl() );
+
+        const QString databasePath = GeneralTransitFeedDatabase::databasePath( data.id() );
+        dataServiceProvider.insert( "gtfsDatabasePath", databasePath );
+        dataServiceProvider.insert( "gtfsDatabaseSize", QFileInfo(databasePath).size() );
+    } else {
+        dataServiceProvider.insert( "scriptFileName", data.scriptFileName() );
+    }
+    dataServiceProvider.insert( "name", data.name() );
+    dataServiceProvider.insert( "url", data.url() );
+    dataServiceProvider.insert( "shortUrl", data.shortUrl() );
+    dataServiceProvider.insert( "country", data.country() );
+    dataServiceProvider.insert( "cities", data.cities() );
+    dataServiceProvider.insert( "credit", data.credit() );
+    dataServiceProvider.insert( "useSeparateCityValue", data.useSeparateCityValue() );
+    dataServiceProvider.insert( "onlyUseCitiesInList", data.onlyUseCitiesInList() );
+//     dataServiceProvider.insert( "features", data.features() );
+//     dataServiceProvider.insert( "featuresLocalized", data.featuresLocalized() );
+    dataServiceProvider.insert( "author", data.author() );
+    dataServiceProvider.insert( "shortAuthor", data.shortAuthor() );
+    dataServiceProvider.insert( "email", data.email() );
+    dataServiceProvider.insert( "description", data.description() );
+    dataServiceProvider.insert( "version", data.version() );
 
     QStringList changelog;
-    foreach ( const ChangelogEntry &entry, provider->data()->changelog() ) {
+    foreach ( const ChangelogEntry &entry, data.changelog() ) {
         changelog << QString( "%2 (%1): %3" ).arg( entry.version ).arg( entry.author ).arg( entry.description );
     }
     dataServiceProvider.insert( "changelog", changelog );
 
+    // To get the list of features, ServiceProviderData is not enough
+    // A given ServiceProvider or cached data gets used if available. Otherwise the ServiceProvider
+    // gets created just to get the list of features
+    if ( provider ) {
+        kDebug() << "Use given accessor to get feature info";
+        dataServiceProvider.insert( "features", provider->features() );
+        dataServiceProvider.insert( "featuresLocalized", provider->featuresLocalized() );
+    } else {
+        const QString fileName = ServiceProviderGlobal::cacheFileName();
+        const bool cacheExists = QFile::exists( fileName );
+        bool dataFound = false;
+        if ( cacheExists ) {
+//             TODO compare last changed value, maybe the accessor was changed to have more (or less) features
+            KConfig cfg( fileName, KConfig::SimpleConfig );
+            KConfigGroup grp = cfg.group( data.id() );
+            QStringList features = grp.readEntry("features", QStringList());
+            if ( !features.isEmpty() ) {
+                dataServiceProvider.insert( "features", features );
+                dataServiceProvider.insert( "featuresLocalized",
+                                            ServiceProvider::localizeFeatures(features) );
+                dataFound = true;
+            }
+        }
+
+        if ( !dataFound ) {
+            // No cached feature data was found for the accessor, create the accessor to get the
+            // feature list. Caching the feature data is up to the accessor.
+            ServiceProvider *_provider = providerFromId( data.id() );
+            dataServiceProvider.insert( "features", _provider->features() );
+            dataServiceProvider.insert( "featuresLocalized", _provider->featuresLocalized() );
+        }
+    }
+
     return dataServiceProvider;
 }
 
-QHash< QString, QVariant > PublicTransportEngine::locations()
+QVariantHash PublicTransportEngine::locations()
 {
     QVariantHash ret;
     const QStringList providers = ServiceProviderGlobal::installedProviders();
@@ -184,6 +240,31 @@ bool PublicTransportEngine::sourceRequestEvent( const QString &name )
     return updateSourceEvent( name );
 }
 
+ServiceProvider *PublicTransportEngine::providerFromId( const QString &id )
+{
+    if ( m_providers.contains(id) ) {
+        kDebug() << "Provider" << id << "already created";
+        return m_providers[ id ];
+    } else {
+        kDebug() << "Create provider" << id;
+        ServiceProvider *provider = ServiceProvider::getSpecificProvider( id );
+        if ( !provider ) {
+            return 0;
+        }
+
+        connect( provider, SIGNAL(departureListReceived(ServiceProvider*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)),
+                 this, SLOT(departureListReceived(ServiceProvider*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)) );
+        connect( provider, SIGNAL(journeyListReceived(ServiceProvider*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)),
+                 this, SLOT(journeyListReceived(ServiceProvider*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)) );
+        connect( provider, SIGNAL(stopListReceived(ServiceProvider*,QUrl,StopInfoList,StopSuggestionRequest)),
+                 this, SLOT(stopListReceived(ServiceProvider*,QUrl,StopInfoList,StopSuggestionRequest)) );
+        connect( provider, SIGNAL(errorParsing(ServiceProvider*,ErrorCode,QString,QUrl,const AbstractRequest*)),
+                 this, SLOT(errorParsing(ServiceProvider*,ErrorCode,QString,QUrl,const AbstractRequest*)) );
+        m_providers.insert( id, provider );
+        return provider;
+    }
+}
+
 bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString& name )
 {
     QString providerId;
@@ -201,8 +282,11 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
             return false;
         }
 
+        // name is expected to contain two words, the first is the ServiceProvider keyword, the
+        // second is the location (ie. "international" or a two letter country code).
         QStringList s = name.split( ' ', QString::SkipEmptyParts );
         if ( s.count() < 2 ) {
+            // No location found in name
             return false;
         }
 
@@ -217,15 +301,15 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
         providerId = defaultProvider;
     }
 
-    const ServiceProvider *provider = ServiceProvider::getSpecificProvider( providerId );
+    const ServiceProvider *provider = providerFromId( providerId );
     if ( provider ) {
         setData( name, serviceProviderData(provider) );
-        delete provider;
+//         delete provider; TODO Use QSharedPointer< ServiceProvider >
     } else {
         if ( !m_erroneousProviders.contains(providerId) ) {
             m_erroneousProviders << providerId;
+            return false;
         }
-        return false;
     }
 
     return true;
@@ -264,13 +348,35 @@ bool PublicTransportEngine::updateServiceProviderSource()
 
             QString serviceProviderId =
                     KUrl( provider ).fileName().remove( QRegExp( "\\..*$" ) ); // Remove file extension
-            const ServiceProvider *provider = ServiceProvider::getSpecificProvider( serviceProviderId );
-            if ( provider ) {
+            // Try to get information about the current service provider
+            if ( m_providers.contains(serviceProviderId) ) {
+                // The accessor is already created, use it's TimetableAccessorInfo object
+                ServiceProvider *provider = m_providers[ serviceProviderId ];
                 dataSource.insert( provider->data()->name(), serviceProviderData(provider) );
                 loadedProviders << serviceProviderId;
-                delete provider;
             } else {
-                m_erroneousProviders << serviceProviderId;
+                // Check the provider cache file for errors with the current service provider
+                const QString fileName = ServiceProviderGlobal::cacheFileName();
+                if ( QFile::exists(fileName) ) {
+                    KConfig cfg( fileName, KConfig::SimpleConfig );
+                    KConfigGroup grp = cfg.group( serviceProviderId );
+                    if ( grp.readEntry("hasErrors", false) ) {
+                        m_erroneousProviders << serviceProviderId;
+                        continue;
+                    }
+                }
+
+                // The provider is not created already, read it's XML file
+                const ServiceProviderData *data = ServiceProvider::readProviderData( serviceProviderId );
+                if ( data ) {
+                    dataSource.insert( data->name(), serviceProviderData(*data) );
+                    loadedProviders << serviceProviderId;
+                    delete data;
+                } else {
+                    // The providers XML file could not be read
+                    m_erroneousProviders << serviceProviderId;
+                    continue;
+                }
             }
         }
 
@@ -290,14 +396,16 @@ bool PublicTransportEngine::updateServiceProviderSource()
     return true;
 }
 
-void PublicTransportEngine::updateErroneousServiceProviderSource( const QString &name )
+bool PublicTransportEngine::updateErroneousServiceProviderSource()
 {
+    const QLatin1String name = sourceTypeKeyword( ErroneousServiceProvidersSource );
     setData( name, "names", m_erroneousProviders );
+    return true;
 }
 
 bool PublicTransportEngine::updateLocationSource()
 {
-    const QString name = sourceTypeKeyword( LocationsSource );
+    const QLatin1String name = sourceTypeKeyword( LocationsSource );
     QVariantHash dataSource;
     if ( m_dataSources.keys().contains(name) ) {
         dataSource = m_dataSources[name].toHash(); // locations already loaded
@@ -307,7 +415,8 @@ bool PublicTransportEngine::updateLocationSource()
     m_dataSources.insert( name, dataSource );
 
     for ( QVariantHash::const_iterator it = dataSource.constBegin();
-            it != dataSource.constEnd(); ++it ) {
+          it != dataSource.constEnd(); ++it )
+    {
         setData( name, it.key(), it.value() );
     }
 
@@ -333,50 +442,52 @@ bool PublicTransportEngine::updateTimetableDataSource( const QString &name )
             m_dataSources.remove( nonAmbiguousName ); // Clear old data
         }
 
-        QStringList input;
         ParseDocumentMode parseDocumentMode = ParseForDeparturesArrivals;
-        QString city, stop, targetStop, originStop, dataType;
+        QString serviceProviderId, city, stop, targetStop, originStop, dataType;
         QDateTime dateTime;
         // Get 100 items by default to limit server requests (data is cached).
         // For fast results that are only needed once small numbers should be used.
         int maxCount = 100;
 
-        QString parameters;
         SourceType sourceType = sourceTypeFromName( name );
-        if ( sourceType == DeparturesSource ) {
-            parameters = name.mid( sourceTypeKeyword(DeparturesSource).length() );
+        switch ( sourceType ) {
+        case DeparturesSource:
             parseDocumentMode = ParseForDeparturesArrivals;
             dataType = "departures";
-        } else if ( sourceType == ArrivalsSource ) {
-            parameters = name.mid( sourceTypeKeyword(ArrivalsSource).length() );
+            break;
+        case ArrivalsSource:
             parseDocumentMode = ParseForDeparturesArrivals;
             dataType = "arrivals";
-        } else if ( sourceType == StopsSource ) {
-            parameters = name.mid( sourceTypeKeyword(StopsSource).length() );
+            break;
+        case StopsSource:
             parseDocumentMode = ParseForStopSuggestions;
             dataType = "stopSuggestions";
-        } else if ( sourceType == JourneysDepSource ) {
-            parameters = name.mid( sourceTypeKeyword(JourneysDepSource).length() );
+            break;
+        case JourneysDepSource:
             parseDocumentMode = ParseForJourneys;
             dataType = "journeysDep";
-        } else if ( sourceType == JourneysArrSource ) {
-            parameters = name.mid( sourceTypeKeyword(JourneysArrSource).length() );
+            break;
+        case JourneysArrSource:
             parseDocumentMode = ParseForJourneys;
             dataType = "journeysArr";
-        } else if ( sourceType == JourneysSource ) {
-            parameters = name.mid( sourceTypeKeyword(JourneysSource).length() );
+            break;
+        case JourneysSource:
             parseDocumentMode = ParseForJourneys;
             dataType = "journeysDep";
-        } else {
+            break;
+        default:
             kDebug() << "Unknown source type" << sourceType;
             return false;
         }
 
-        input = parameters.trimmed().split( '|', QString::SkipEmptyParts );
-        QString serviceProvider;
+        // Extract parameters, which follow after the source type keyword in name
+        // and are delimited with '|'
+        QStringList parameters = name.mid( QString(sourceTypeKeyword(sourceType)).length() )
+                .trimmed().split( '|', QString::SkipEmptyParts );
 
-        for ( int i = 0; i < input.length(); ++i ) {
-            QString s = input.at( i );
+        // Read parameters
+        for ( int i = 0; i < parameters.length(); ++i ) {
+            QString s = parameters.at( i );
             if ( s.startsWith(QLatin1String("city="), Qt::CaseInsensitive) ) {
                 city = s.mid( QString("city=").length() ).trimmed();
             } else if ( s.startsWith(QLatin1String("stop="), Qt::CaseInsensitive) ) {
@@ -403,24 +514,26 @@ bool PublicTransportEngine::updateTimetableDataSource( const QString &name )
                 }
             } else if ( !s.isEmpty() && s.indexOf( '=' ) == -1 ) {
                 // No parameter name given, assume the service provider ID
-                serviceProvider = s.trimmed();
+                serviceProviderId = s.trimmed();
             } else {
                 kDebug() << "Unknown argument" << s;
             }
         }
 
         if ( dateTime.isNull() ) {
+            // No date/time value given, use default offset from now
             dateTime = QDateTime::currentDateTime().addSecs( DEFAULT_TIME_OFFSET * 60 );
         }
 
         if ( parseDocumentMode == ParseForDeparturesArrivals ||
              parseDocumentMode == ParseForStopSuggestions )
         {
+            // Check if the stop name is missing
             if ( stop.isEmpty() ) {
                 kDebug() << "Stop name is missing in data source name" << name;
-                return false; // wrong input
+                return false;
             }
-        } else {
+        } else { // if ( parseDocumentMode == ParseForJourneys )
             if ( originStop.isEmpty() && !targetStop.isEmpty() ) {
                 originStop = stop;
             } else if ( targetStop.isEmpty() && !originStop.isEmpty() ) {
@@ -429,46 +542,25 @@ bool PublicTransportEngine::updateTimetableDataSource( const QString &name )
         }
 
         // Try to get the specific provider from m_providers (if it's not in there it is created)
-        bool newlyCreated = false;
-        ServiceProvider *provider;
-        if ( !m_providers.contains(serviceProvider) ) {
-            provider = ServiceProvider::getSpecificProvider( serviceProvider );
-            m_providers.insert( serviceProvider, provider );
-            newlyCreated = true;
-        } else {
-            provider = m_providers.value( serviceProvider );
-        }
-
+        ServiceProvider *provider = providerFromId( serviceProviderId );
         if ( !provider ) {
-            kDebug() << QString( "Service provider %1 couldn't be created" ).arg( serviceProvider );
             return false; // Service provider couldn't be created
         } else if ( provider->useSeparateCityValue() && city.isEmpty() ) {
             kDebug() << QString( "Service provider %1 needs a separate city value. Add to "
                                  "source name '|city=X', where X stands for the city "
-                                 "name." ).arg( serviceProvider );
+                                 "name." ).arg( serviceProviderId );
             return false; // Service provider needs a separate city value
         } else if ( parseDocumentMode == ParseForJourneys
                     && !provider->features().contains("JourneySearch") )
         {
             kDebug() << QString( "Service provider %1 doesn't support journey searches." )
-                        .arg( serviceProvider );
+                        .arg( serviceProviderId );
             return false; // Service provider doesn't support journey searches
         }
 
         // Store source name as currently being processed, to not start another
         // request if there is already a running one
         m_runningSources << nonAmbiguousName;
-
-        if ( newlyCreated ) {
-            connect( provider, SIGNAL(departureListReceived(ServiceProvider*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)),
-                     this, SLOT(departureListReceived(ServiceProvider*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)) );
-            connect( provider, SIGNAL(journeyListReceived(ServiceProvider*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)),
-                     this, SLOT(journeyListReceived(ServiceProvider*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)) );
-            connect( provider, SIGNAL(stopListReceived(ServiceProvider*,QUrl,StopInfoList,StopSuggestionRequest)),
-                     this, SLOT(stopListReceived(ServiceProvider*,QUrl,StopInfoList,StopSuggestionRequest)) );
-            connect( provider, SIGNAL(errorParsing(ServiceProvider*,ErrorCode,QString,QUrl,const AbstractRequest*)),
-                     this, SLOT(errorParsing(ServiceProvider*,ErrorCode,QString,QUrl,const AbstractRequest*)) );
-        }
 
         if ( parseDocumentMode == ParseForDeparturesArrivals ) {
             if ( dataType == "arrivals" ) {
@@ -495,6 +587,40 @@ void PublicTransportEngine::forceUpdate()
     kDebug() << "FORCE UPDATE -------------------------------------------------------------------";
     forceImmediateUpdateOfAllVisualizations();
 }
+
+// TODO
+// TimetableAccessor* PublicTransportEngine::getSpecificAccessor( const QString &serviceProvider )
+// {
+//     // Try to get the specific accessor from m_accessors
+//     if ( !m_accessors.contains(serviceProvider) ) {
+//         // Accessor not already created, do it now
+//         TimetableAccessor *accessor = TimetableAccessor::createAccessor( serviceProvider, this );
+//         if ( !accessor ) {
+//             // Accessor could not be created
+//             kDebug() << QString( "Accessor %1 couldn't be created" ).arg( serviceProvider );
+//             return 0;
+//         }
+//
+//         // Connect accessor signals
+//         connect( accessor, SIGNAL(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,const RequestInfo*)),
+//                  this, SLOT(departureListReceived(TimetableAccessor*,QUrl,QList<DepartureInfo*>,GlobalTimetableInfo,const RequestInfo*)) );
+//         connect( accessor, SIGNAL(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,const RequestInfo*)),
+//                  this, SLOT(journeyListReceived(TimetableAccessor*,QUrl,QList<JourneyInfo*>,GlobalTimetableInfo,const RequestInfo*)) );
+//         connect( accessor, SIGNAL(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,const RequestInfo*)),
+//                  this, SLOT(stopListReceived(TimetableAccessor*,QUrl,QList<StopInfo*>,const RequestInfo*)) );
+//         connect( accessor, SIGNAL(errorParsing(TimetableAccessor*,ErrorCode,QString,QUrl,const RequestInfo*)),
+//                  this, SLOT(errorParsing(TimetableAccessor*,ErrorCode,QString,QUrl,const RequestInfo*)) );
+//         connect( accessor, SIGNAL(progress(TimetableAccessor*,qreal,QString,QUrl,const RequestInfo*)),
+//                  this, SLOT(progress(TimetableAccessor*,qreal,QString,QUrl,const RequestInfo*)) );
+//
+//         // Cache the accessor object and return it
+//         m_accessors.insert( serviceProvider, accessor );
+//         return accessor;
+//     } else {
+//         // Use already created accessor
+//         return m_accessors.value( serviceProvider );
+//     }
+// }
 
 QString PublicTransportEngine::stripDateAndTimeValues( const QString& sourceName )
 {
@@ -527,6 +653,9 @@ void PublicTransportEngine::reloadAllProviders()
     delete m_providerUpdateDelayTimer;
     m_providerUpdateDelayTimer = 0;
 
+//     delete m_timer; TODO
+//     m_timer = 0;
+
     // Remove all providers (could have been changed)
     qDeleteAll( m_providers );
     m_providers.clear();
@@ -550,32 +679,32 @@ void PublicTransportEngine::reloadAllProviders()
     updateServiceProviderSource();
 }
 
-const QString PublicTransportEngine::sourceTypeKeyword( SourceType sourceType )
+const QLatin1String PublicTransportEngine::sourceTypeKeyword( SourceType sourceType )
 {
     switch ( sourceType ) {
     case ServiceProviderSource:
-        return "ServiceProvider";
+        return QLatin1String("ServiceProvider");
     case ServiceProvidersSource:
-        return "ServiceProviders";
+        return QLatin1String("ServiceProviders");
     case ErroneousServiceProvidersSource:
-        return "ErroneousServiceProviders";
+        return QLatin1String("ErroneousServiceProviders");
     case LocationsSource:
-        return "Locations";
+        return QLatin1String("Locations");
     case DeparturesSource:
-        return "Departures";
+        return QLatin1String("Departures");
     case ArrivalsSource:
-        return "Arrivals";
+        return QLatin1String("Arrivals");
     case StopsSource:
-        return "Stops";
+        return QLatin1String("Stops");
     case JourneysSource:
-        return "Journeys";
+        return QLatin1String("Journeys");
     case JourneysDepSource:
-        return "JourneysDep";
+        return QLatin1String("JourneysDep");
     case JourneysArrSource:
-        return "JourneysArr";
+        return QLatin1String("JourneysArr");
 
     default:
-        return "";
+        return QLatin1String("");
     }
 }
 
@@ -617,8 +746,7 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name )
     case ServiceProvidersSource:
         return updateServiceProviderSource();
     case ErroneousServiceProvidersSource:
-        updateErroneousServiceProviderSource( name );
-        return true;
+        return updateErroneousServiceProviderSource();
     case LocationsSource:
         return updateLocationSource();
     case DeparturesSource:
@@ -659,15 +787,35 @@ void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
         data.insert( "targetShortened",
                      departureInfo->target(PublicTransportInfo::UseShortenedStopNames) );
         data.insert( "departure", departureInfo->departure() );
-        data.insert( "vehicleType", static_cast<int>( departureInfo->vehicleType() ) );
+        data.insert( "vehicleType", static_cast<int>(departureInfo->vehicleType()) );
         data.insert( "vehicleIconName", Global::vehicleTypeToIcon(departureInfo->vehicleType()) );
         data.insert( "vehicleName", Global::vehicleTypeToString(departureInfo->vehicleType()) );
         data.insert( "vehicleNamePlural", Global::vehicleTypeToString(departureInfo->vehicleType(), true) );
         data.insert( "nightline", departureInfo->isNightLine() );
         data.insert( "expressline", departureInfo->isExpressLine() );
-        data.insert( "platform", departureInfo->platform() );
         data.insert( "delay", departureInfo->delay() );
-        data.insert( "delayReason", departureInfo->delayReason() );
+        data.insert( "routeExactStops", departureInfo->routeExactStops() );
+        if ( !departureInfo->platform().isEmpty() ) {
+            data.insert( "platform", departureInfo->platform() );
+        }
+        if ( !departureInfo->delayReason().isEmpty() ) {
+            data.insert( "delayReason", departureInfo->delayReason() );
+        }
+        if ( !departureInfo->journeyNews().isEmpty() ) {
+            data.insert( "journeyNews", departureInfo->journeyNews() );
+        }
+        if ( !departureInfo->operatorName().isEmpty() ) {
+            data.insert( "operator", departureInfo->operatorName() );
+        }
+        if ( !departureInfo->routeStops().isEmpty() ) {
+            data.insert( "routeStops", departureInfo->routeStops() );
+        }
+        if ( !departureInfo->routeTimesVariant().isEmpty() ) {
+            data.insert( "routeTimes", departureInfo->routeTimesVariant() );
+        }
+        if ( !departureInfo->pricing().isEmpty() ) {
+            data.insert( "pricing", departureInfo->pricing() );
+        }
         if ( !departureInfo->status().isEmpty() ) {
             data.insert( "status", departureInfo->status() );
         }
@@ -772,19 +920,40 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
         data.insert( "journeyNews", journeyInfo->journeyNews() );
         data.insert( "startStopName", journeyInfo->startStopName() );
         data.insert( "targetStopName", journeyInfo->targetStopName() );
-        data.insert( "Operator", journeyInfo->operatorName() );
+        data.insert( "operator", journeyInfo->operatorName() );
         data.insert( "routeStops", journeyInfo->routeStops() );
         data.insert( "routeStopsShortened",
                      journeyInfo->routeStops(PublicTransportInfo::UseShortenedStopNames) );
         data.insert( "routeTimesDeparture", journeyInfo->routeTimesDepartureVariant() );
         data.insert( "routeTimesArrival", journeyInfo->routeTimesArrivalVariant() );
         data.insert( "routeExactStops", journeyInfo->routeExactStops() );
-        data.insert( "routeVehicleTypes", journeyInfo->routeVehicleTypesVariant() );
-        data.insert( "routeTransportLines", journeyInfo->routeTransportLines() );
-        data.insert( "routePlatformsDeparture", journeyInfo->routePlatformsDeparture() );
-        data.insert( "routePlatformsArrival", journeyInfo->routePlatformsArrival() );
-        data.insert( "routeTimesDepartureDelay", journeyInfo->routeTimesDepartureDelay() );
-        data.insert( "routeTimesArrivalDelay", journeyInfo->routeTimesArrivalDelay() );
+        if ( !journeyInfo->routeStops().isEmpty() ) {
+            data.insert( "routeStops", journeyInfo->routeStops() );
+        }
+        if ( !journeyInfo->routeTimesDepartureVariant().isEmpty() ) {
+            data.insert( "routeTimesDeparture", journeyInfo->routeTimesDepartureVariant() );
+        }
+        if ( !journeyInfo->routeTimesArrivalVariant().isEmpty() ) {
+            data.insert( "routeTimesArrival", journeyInfo->routeTimesArrivalVariant() );
+        }
+        if ( !journeyInfo->routeVehicleTypesVariant().isEmpty() ) {
+            data.insert( "routeVehicleTypes", journeyInfo->routeVehicleTypesVariant() );
+        }
+        if ( !journeyInfo->routeTransportLines().isEmpty() ) {
+            data.insert( "routeTransportLines", journeyInfo->routeTransportLines() );
+        }
+        if ( !journeyInfo->routePlatformsDeparture().isEmpty() ) {
+            data.insert( "routePlatformsDeparture", journeyInfo->routePlatformsDeparture() );
+        }
+        if ( !journeyInfo->routePlatformsArrival().isEmpty() ) {
+            data.insert( "routePlatformsArrival", journeyInfo->routePlatformsArrival() );
+        }
+        if ( !journeyInfo->routeTimesDepartureDelay().isEmpty() ) {
+            data.insert( "routeTimesDepartureDelay", journeyInfo->routeTimesDepartureDelay() );
+        }
+        if ( !journeyInfo->routeTimesArrivalDelay().isEmpty() ) {
+            data.insert( "routeTimesArrivalDelay", journeyInfo->routeTimesArrivalDelay() );
+        }
 
         QString sKey = QString( "%1" ).arg( i++ );
         setData( sourceName, sKey, data );
@@ -805,20 +974,20 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
 
     // Remove old journeys
     for ( ; i < m_lastJourneyCount; ++i ) {
-        removeData( sourceName, QString( "%1" ).arg( i ) );
+        removeData( sourceName, QString("%1").arg(i) );
     }
     m_lastJourneyCount = journeys.count();
 
     // Remove old stop suggestions
     for ( i = 0 ; i < m_lastStopNameCount; ++i ) {
-        removeData( sourceName, QString( "stopName %1" ).arg( i ) );
+        removeData( sourceName, QString("stopName %1").arg(i) );
     }
     m_lastStopNameCount = 0;
 
     // Store a proposal for the next download time
     int secs = ( journeyCount / 3 ) * first.secsTo( last );
     QDateTime downloadTime = QDateTime::currentDateTime().addSecs( secs );
-    m_nextDownloadTimeProposals[ stripDateAndTimeValues( sourceName )] = downloadTime;
+    m_nextDownloadTimeProposals[ stripDateAndTimeValues(sourceName) ] = downloadTime;
 
     setData( sourceName, "serviceProvider", provider->id() );
     setData( sourceName, "count", journeyCount );
@@ -907,13 +1076,13 @@ void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
 }
 
 void PublicTransportEngine::errorParsing( ServiceProvider *provider,
-        ErrorCode errorType, const QString &errorString,
+        ErrorCode errorCode, const QString &errorString,
         const QUrl &requestUrl, const AbstractRequest *request )
 {
     Q_UNUSED( provider );
     kDebug() << "Error while parsing" << requestUrl //<< request->serviceProvider
              << "\n  sourceName =" << request->sourceName << request->dataType << request->parseMode;
-    kDebug() << errorType << errorString;
+    kDebug() << errorCode << errorString;
 
     // Remove erroneous source from running sources list
     m_runningSources.removeOne( request->sourceName );
@@ -931,8 +1100,28 @@ void PublicTransportEngine::errorParsing( ServiceProvider *provider,
     }
     setData( sourceName, "receivedData", "nothing" );
     setData( sourceName, "error", true );
-    setData( sourceName, "errorCode", errorType );
+    setData( sourceName, "errorCode", errorCode );
     setData( sourceName, "errorString", errorString );
+    setData( sourceName, "updated", QDateTime::currentDateTime() );
+}
+
+void PublicTransportEngine::progress( ServiceProvider *provider, qreal progress,
+        const QString &jobDescription, const QUrl &requestUrl, const AbstractRequest *request )
+{
+    const QString sourceName = request->sourceName;
+    setData( sourceName, "serviceProvider", provider->id() );
+    setData( sourceName, "count", 0 );
+    setData( sourceName, "progress", progress );
+    setData( sourceName, "jobDescription", jobDescription );
+    setData( sourceName, "requestUrl", requestUrl );
+    if ( request->parseMode == ParseForDeparturesArrivals ) {
+        setData( sourceName, "parseMode", "departures" );
+    } else if ( request->parseMode == ParseForJourneys ) {
+        setData( sourceName, "parseMode", "journeys" );
+    } else if ( request->parseMode == ParseForStopSuggestions ) {
+        setData( sourceName, "parseMode", "stopSuggestions" );
+    }
+    setData( sourceName, "receivedData", "nothing" );
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 }
 
@@ -946,19 +1135,15 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
     // Data source stays up to date for max(UPDATE_TIMEOUT, minFetchWait) seconds
     QVariantHash dataSource = m_dataSources[ nonAmbiguousName ].toHash();
 
-    ServiceProvider *provider;
     QString providerId = dataSource[ "serviceProvider" ].toString();
     if ( providerId.isEmpty() ) {
         kWarning() << "Internal error: Service provider unknown"; // Could get provider id from <name>
         return false;
     }
-    if ( m_providers.contains(providerId) ) {
-        provider = m_providers.value( providerId );
-    } else {
-        provider = ServiceProvider::getSpecificProvider( providerId );
-        m_providers.insert( providerId, provider );
+    ServiceProvider *provider = providerFromId( providerId );
+    if ( !provider ) {
+        return false;
     }
-    Q_ASSERT( provider );
 
     QDateTime downloadTime = m_nextDownloadTimeProposals[ stripDateAndTimeValues(nonAmbiguousName) ];
     int minForSufficientChanges = downloadTime.isValid()
@@ -966,7 +1151,21 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
     int minFetchWait;
 
     // If delays are available set maximum fetch wait
-    if ( provider->features().contains("Delay") && dataSource["delayInfoAvailable"].toBool() ) {
+    const int secsSinceLastUpdate = dataSource["updated"].toDateTime().secsTo(
+                                    QDateTime::currentDateTime() );
+    if ( provider->type() == GtfsProvider ) {
+        // Update GTFS accessors once a week
+        // TODO: Check for an updated GTFS feed every X seconds, eg. once an hour
+        ServiceProviderGtfs *gtfsAccessor =
+                qobject_cast<ServiceProviderGtfs*>( provider );
+        kDebug() << "Wait time until next update from GTFS provider:"
+                 << KGlobal::locale()->prettyFormatDuration(1000 *
+                    (gtfsAccessor->isRealtimeDataAvailable()
+                     ? 60 - secsSinceLastUpdate : 60 * 60 * 24 - secsSinceLastUpdate));
+        return gtfsAccessor->isRealtimeDataAvailable()
+                ? secsSinceLastUpdate < 60 // Update maximally once a minute if realtime data is available
+                : secsSinceLastUpdate < 60 * 60 * 24; // Update GTFS feed once a day without realtime data
+    } else if ( provider->features().contains("Delay") && dataSource["delayInfoAvailable"].toBool() ) {
         minFetchWait = qBound((int)MIN_UPDATE_TIMEOUT, minForSufficientChanges,
                               (int)MAX_UPDATE_TIMEOUT_DELAY );
     } else {
@@ -975,11 +1174,8 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
 
     minFetchWait = qMax( minFetchWait, provider->minFetchWait() );
     kDebug() << "Wait time until next download:"
-             << ((minFetchWait - dataSource["updated"].toDateTime().secsTo(
-                 QDateTime::currentDateTime())) / 60 ) << "min";
-
-    return dataSource["updated"].toDateTime().secsTo(
-            QDateTime::currentDateTime() ) < minFetchWait;
+             << ((minFetchWait - secsSinceLastUpdate) / 60) << "min";
+    return secsSinceLastUpdate < minFetchWait;
 }
 
 // This does the magic that allows Plasma to load

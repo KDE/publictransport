@@ -84,7 +84,6 @@ public:
      *
      * @param parent Isn't used, because this model has no subitems.
      *   If a valid parent index is given, 0 is returned. Defaults to QModelIndex().
-     *
      * @return The number of rows in this model.
      **/
     virtual int rowCount(const QModelIndex& parent = QModelIndex()) const;
@@ -103,7 +102,6 @@ public:
      * @brief Checks/unchecks all vehicle types in the given class @p generalVehicleType.
      *
      * @param generalVehicleType The class of vehicle types to be checked/unchecked.
-     *
      * @param check Whether the vehicle types should be checked or unchecked. Default is true.
      **/
     void checkVehicleTypes( GeneralVehicleType generalVehicleType, bool check = true );
@@ -112,7 +110,6 @@ public:
      * @brief Checks/unchecks all vehicle types in the given list @p vehicleTypes.
      *
      * @param vehicleTypes The vehicle types to be checked/unchecked.
-     *
      * @param check Whether the vehicle types should be checked or unchecked. Default is true.
      **/
     void checkVehicleTypes( const QList<VehicleType> &vehicleTypes, bool check = true );

@@ -27,8 +27,7 @@
 #include <QDebug>
 #include <QDate>
 
-/** @brief Contains global information about a downloaded timetable that affects
- * all departures/arrivals/journeys. */
+/** @brief Contains global information about a downloaded timetable that affects all items. */
 struct GlobalTimetableInfo {
     GlobalTimetableInfo() {
         delayInfoAvailable = true;
@@ -56,7 +55,10 @@ enum ErrorCode {
     NoError = 0, /**< There were no error. */
 
     ErrorDownloadFailed = 1, /**< Download error occurred. */
-    ErrorParsingFailed = 2 /**< Parsing downloaded data failed. */
+    ErrorParsingFailed = 2, /**< Parsing downloaded data failed. */
+    ErrorNeedsImport = 3 /**< An import step needs to be performed, before using the accessor.
+            * This is currently only used for GTFS accessors, which need to import the GTFS feed
+            * before being usable. */
 };
 
 /**
@@ -243,7 +245,7 @@ enum ParseDocumentMode {
 
 /** @brief The type of a service provider. */
 enum ServiceProviderType {
-    InvalidServiceProvider, /**< @internal Invalid value. */
+    InvalidProvider, /**< @internal Invalid value. */
 
     /**
      * Uses a script to request and parse documents. Scripts can make use of
@@ -251,7 +253,12 @@ enum ServiceProviderType {
      * journeys/stop suggestions, cache values, parse HTML, notify about errors, etc.
      * QtScript extensions can be used, eg. qt.xml to parse XML documents.
      **/
-    ScriptedServiceProvider
+    ScriptedProvider,
+
+    /**
+     * The accessor uses a DB filled with GTFS data.
+     **/
+    GtfsProvider
 };
 
 /**
@@ -343,17 +350,7 @@ enum LineService {
     NightLine = 0x01, /**< The public transport line is a night line. */
     ExpressLine = 0x02 /**< The public transport line is an express line. */
 };
-// Q_DECLARE_FLAGS( LineServices, LineService ); // Gives a compiler error here.. but not in departureinfo.h
-
-/** @brief What calculation should be done to get a missing value. */
-enum CalculateMissingValue {
-    CalculateDelayFromDepartureAndPrognosis,
-    CalculateDepartureDate,
-    CalculateArrivalDateFromDepartureDate,
-    CalculateDurationFromDepartureAndArrival,
-    CalculateArrivalFromDepartureAndDuration,
-    CalculateDepartureFromArrivalAndDuration
-};
+// Q_DECLARE_FLAGS( LineServices, LineService ); // Gives a compiler error here.. but not in departureinfo.h TODO #include <QMetaType>
 
 /* Functions for nicer debug output */
 inline QDebug &operator <<( QDebug debug, ParseDocumentMode parseDocumentMode )
