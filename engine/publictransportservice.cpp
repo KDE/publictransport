@@ -91,9 +91,10 @@ void ImportGtfsToDatabaseJob::start()
 
 void UpdateGtfsToDatabaseJob::start()
 {
-    KConfig cfg( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-    KConfigGroup grp = cfg.group( data()->id() );
-    bool importFinished = grp.readEntry( "feedImportFinished", false );
+    const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+    KConfigGroup group = config.group( data()->id() );
+    KConfigGroup gtfsGroup = group.group( "gtfs" );
+    bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
     if ( !importFinished ) {
         setError( -7 );
         setErrorText( i18nc("@info/plain", "GTFS feed not imported. Please import it explicitly first.") );
@@ -120,9 +121,10 @@ void DeleteGtfsDatabaseJob::start()
     kDebug() << "Finished deleting GTFS database";
 
     // Update the accessor cache file to indicate that the GTFS feed needs to be imported again
-    KConfig cfg( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-    KConfigGroup grp = cfg.group( m_serviceProviderId );
-    grp.writeEntry( "feedImportFinished", false );
+    const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+    KConfigGroup group = config.group( m_serviceProviderId );
+    KConfigGroup gtfsGroup = group.group( "gtfs" );
+    gtfsGroup.writeEntry( "feedImportFinished", false );
 
     emitResult();
 }
@@ -231,14 +233,16 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
 //         qDebug() << ">>>>> GTFS feed was last modified (UTC):" << newLastModified
 //                  << "and it's size is:" << (newSizeInBytes/qreal(1024*1024)) << "MB";
         // Read accessor information cache
-        KConfig cfg( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-        KConfigGroup grp = cfg.group( m_data->id() );
-        bool importFinished = grp.readEntry( "feedImportFinished", false );
-        KDateTime lastModified = KDateTime::fromString( grp.readEntry("feedLastModified", QString()) );
-        qulonglong sizeInBytes = grp.readEntry( "feedSizeInBytes", qulonglong(-1) );
+        const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+        KConfigGroup group = config.group( data()->id() );
+        KConfigGroup gtfsGroup = group.group( "gtfs" );
+        bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
+        KDateTime lastModified = KDateTime::fromString(
+                gtfsGroup.readEntry("feedLastModified", QString()) );
+        qulonglong sizeInBytes = gtfsGroup.readEntry( "feedSizeInBytes", qulonglong(-1) );
 
-        grp.writeEntry( "feedLastModified", newLastModified.toString() );
-        grp.writeEntry( "feedSizeInBytes", newSizeInBytes );
+        gtfsGroup.writeEntry( "feedLastModified", newLastModified.toString() );
+        gtfsGroup.writeEntry( "feedSizeInBytes", newSizeInBytes );
 
         if ( !importFinished ) {
             qDebug() << "Last GTFS feed import did not finish for" << m_data->id();
@@ -299,10 +303,10 @@ void ImportGtfsToDatabaseJob::downloadFeed()
 //         kDebug() << "LAST MODIFIED:" << gtfsFeed.timeString( KFileItem::ModificationTime );
 
         // Update accessor information cache
-        const QString fileName = ServiceProviderGlobal::cacheFileName();
-        KConfig cfg( fileName, KConfig::SimpleConfig );
-        KConfigGroup grp = cfg.group( m_data->id() );
-        grp.writeEntry( "feedImportFinished", false );
+        KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+        KConfigGroup group = config.group( data()->id() );
+        KConfigGroup gtfsGroup = group.group( "gtfs" );
+        gtfsGroup.writeEntry( "feedImportFinished", false );
 
         KIO::FileCopyJob *job = KIO::file_copy( m_data->feedUrl(), KUrl(tmpFile.fileName()), -1,
                                                 KIO::Overwrite | KIO::HideProgressInfo );
@@ -329,9 +333,10 @@ void ImportGtfsToDatabaseJob::mimeType( KIO::Job *job, const QString &type )
 void ImportGtfsToDatabaseJob::totalSize( KJob* job, qulonglong size )
 {
     Q_UNUSED( job );
-    KConfig cfg( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-    KConfigGroup grp = cfg.group( m_data->id() );
-    grp.writeEntry( "feedSizeInBytes", size );
+    KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+    KConfigGroup group = config.group( data()->id() );
+    KConfigGroup gtfsGroup = group.group( "gtfs" );
+    gtfsGroup.writeEntry( "feedSizeInBytes", size );
 }
 
 void ImportGtfsToDatabaseJob::downloadProgress( KJob *job, ulong percent )
@@ -420,10 +425,10 @@ void ImportGtfsToDatabaseJob::importerFinished(
 
     if ( m_state == Ready ) {
         // Update accessor information cache
-//         const bool cacheExists = QFile::exists( fileName );
-        KConfig cfg( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-        KConfigGroup grp = cfg.group( m_data->id() );
-        grp.writeEntry( "feedImportFinished", true );
+        KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+        KConfigGroup group = config.group( data()->id() );
+        KConfigGroup gtfsGroup = group.group( "gtfs" );
+        gtfsGroup.writeEntry( "feedImportFinished", true );
     } else {
         setError( -6 );
         setErrorText( errorText ); // TODO

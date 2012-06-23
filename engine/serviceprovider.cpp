@@ -35,6 +35,7 @@
 #include <KLocale>
 #include <KDebug>
 #include <KMimeType>
+#include <KConfigGroup>
 #include <kio/job.h>
 
 // Qt includes
@@ -50,8 +51,7 @@ ServiceProvider::ServiceProvider( const ServiceProviderData *data, QObject *pare
 {
     const_cast<ServiceProviderData*>(m_data)->setParent( this );
     m_idAlreadyRequested = false;
-
-    kDebug() << data->id() << "CREATED";
+    updateSourceFileValidity();
 }
 
 ServiceProvider::~ServiceProvider()
@@ -69,7 +69,6 @@ ServiceProvider::~ServiceProvider()
             kDebug() << m_data->id() << m_jobInfos.count();
         }
     }
-    kDebug() << m_data->id() << "DELETED";
 }
 
 QString ServiceProvider::typeName( ServiceProviderType type )
@@ -106,7 +105,79 @@ ServiceProvider *ServiceProvider::createProviderForData( const ServiceProviderDa
     }
 }
 
-ServiceProviderData *ServiceProvider::readProviderData( const QString &serviceProviderId )
+ServiceProvider::SourceFileValidity ServiceProvider::sourceFileValidity(
+        const QString &providerId, QString *errorMessage, const KConfig *cache )
+{
+    // Check if the source XML file was modified since the cache was last updated
+    const KConfig *config = cache ? cache
+            : new KConfig( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+    const KConfigGroup group = config->group( providerId );
+    SourceFileValidity validity = SourceFileValidityCheckPending;
+    if ( !ServiceProviderGlobal::isSourceFileModified(providerId) ) {
+        if ( errorMessage ) {
+            *errorMessage = group.readEntry("errorMessage", QString());
+        }
+        validity = static_cast<SourceFileValidity>(
+                group.readEntry("validity", static_cast<int>(SourceFileValidityCheckPending)) );
+    }
+    if ( !cache ) {
+        delete config;
+    }
+    return validity;
+}
+
+ServiceProvider::SourceFileValidity ServiceProvider::updateSourceFileValidity() const
+{
+    // Check if the source XML file was modified since the cache was last updated
+    const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+    KConfigGroup group = config.group( m_data->id() );
+    if ( !isSourceFileModified() ) {
+        SourceFileValidity lastValidity = static_cast<SourceFileValidity>(
+                group.readEntry("validity", static_cast<int>(SourceFileValidityCheckPending)) );
+        if ( lastValidity != SourceFileValidityCheckPending ) {
+            return lastValidity;
+        }
+    }
+
+    // No actual cached information about the service provider
+    kDebug() << "No up-to-date cache information for service provider" << m_data->id();
+    QString errorMessage;
+    const SourceFileValidity validity = sourceFileValidity( &errorMessage );
+    if ( errorMessage.isEmpty() ) {
+        switch ( validity ) {
+        case SourceFileIsInvalid:
+            errorMessage = i18nc("@info/plain", "Provider plugin is invalid");
+            break;
+        case SourceFileIsValid:
+            errorMessage = i18nc("@info/plain", "Provider plugin is valid");
+            break;
+        case SourceFileValidityCheckPending:
+            errorMessage = i18nc("@info/plain", "Provider validity check is pending");
+            break;
+        }
+    }
+    group.writeEntry( "modifiedTime", QFileInfo(m_data->fileName()).lastModified() );
+    group.writeEntry( "validity", static_cast<int>(validity) );
+    group.writeEntry( "errorMessage", errorMessage );
+    return validity;
+}
+
+// TODO Remove
+// void ServiceProvider::writeSourceFileValidityToCache(
+//         ServiceProvider::SourceFileValidity validity ) const
+// {
+//     // Check if the source XML file was modified since the cache was last updated
+//     KConfigGroup grp = ServiceProviderGlobal::cacheForProvider( m_data->id() );
+//     grp.writeEntry( "validity", static_cast<int>(validity) );
+// }
+
+bool ServiceProvider::isSourceFileModified() const
+{
+    return ServiceProviderGlobal::isSourceFileModified( m_data->id(), m_data->fileName() );
+}
+
+ServiceProviderData *ServiceProvider::readProviderData(
+        const QString &serviceProviderId, QString *errorMessage )
 {
     QString filePath;
     QString country = "international";
@@ -134,7 +205,11 @@ ServiceProviderData *ServiceProvider::readProviderData( const QString &servicePr
             }
         }
         if ( filePath.isEmpty() ) {
-            kDebug() << "Couldn't find a service provider information XML named" << sp;
+            kDebug() << "Could not find a service provider plugin XML named" << sp;
+            if ( errorMessage ) {
+                *errorMessage = i18nc("@info/plain", "Could not find a service provider "
+                                      "plugin with the ID %1", sp);
+            }
             return 0;
         }
 
@@ -152,12 +227,16 @@ ServiceProviderData *ServiceProvider::readProviderData( const QString &servicePr
     if ( !data ) {
         kDebug() << "Error while reading accessor info xml" << filePath
                  << reader.lineNumber() << reader.errorString();
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "Error in line %1: <message>%2</message>",
+                                  reader.lineNumber(), reader.errorString());
+        }
     }
     return data;
 }
 
 ServiceProvider* ServiceProvider::createProvider( const QString &_serviceProviderId,
-                                                       QObject *parent )
+                                                  QObject *parent )
 {
     QString filePath;
     QString country = "international";
@@ -211,14 +290,6 @@ ServiceProvider* ServiceProvider::createProvider( const QString &_serviceProvide
     } else {
         return createProviderForData( data, parent );
     }
-}
-
-QStringList ServiceProvider::features() const
-{
-    QStringList list;
-    list << scriptFeatures();
-    list.removeDuplicates();
-    return list;
 }
 
 QStringList ServiceProvider::featuresLocalized() const

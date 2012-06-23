@@ -109,21 +109,65 @@ bool ServiceProviderScript::lazyLoadScript()
     return true;
 }
 
+ServiceProvider::SourceFileValidity ServiceProviderScript::sourceFileValidity(
+        QString *errorMessage ) const
+{
+    if ( ServiceProvider::sourceFileValidity(errorMessage) == SourceFileIsInvalid ) {
+        return SourceFileIsInvalid;
+    } else if ( !QFile::exists(m_data->scriptFileName()) ) {
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "Script file not found: <filename>%1</filename>",
+                                  m_data->scriptFileName());
+        }
+        return SourceFileIsInvalid;
+    }
+
+    QFile scriptFile( m_data->scriptFileName() );
+    if ( !scriptFile.open(QIODevice::ReadOnly) ) {
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "Could not open script file: <filename>%1</filename>",
+                                  m_data->scriptFileName());
+        }
+        return SourceFileIsInvalid;
+    }
+
+    QTextStream stream( &scriptFile );
+    const QString program = stream.readAll();
+    scriptFile.close();
+
+    if ( program.isEmpty() ) {
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "Script file is empty: %1",
+                                  m_data->scriptFileName());
+        }
+        return SourceFileIsInvalid;
+    }
+
+    const QScriptSyntaxCheckResult syntax = QScriptEngine::checkSyntax( program );
+    if ( syntax.state() != QScriptSyntaxCheckResult::Valid ) {
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "Syntax error in script file: "
+                                  "<filename>%1</filename>, <message>%2</message>",
+                                  m_data->scriptFileName(), syntax.errorMessage());
+        }
+        return SourceFileIsInvalid;
+    }
+
+    // No errors found
+    return SourceFileIsValid; // TODO return SourceFileValidityCheckPending?
+
+}
+
 QStringList ServiceProviderScript::readScriptFeatures()
 {
-    // Try to load script features from a cache file
-    const QString fileName = ServiceProviderGlobal::cacheFileName();
-    const bool cacheExists = QFile::exists( fileName );
-    KConfig cfg( fileName, KConfig::SimpleConfig );
-    KConfigGroup grp = cfg.group( m_data->id() );
-
-    if ( cacheExists ) {
-        // Check if the script file was modified since the cache was last updated
-        QDateTime scriptModifiedTime = grp.readEntry("scriptModifiedTime", QDateTime());
-        if ( QFileInfo(m_data->scriptFileName()).lastModified() == scriptModifiedTime ) {
-            // Return feature list stored in the cache
-            return grp.readEntry("scriptFeatures", QStringList());
-        }
+    // Check if the script file was modified since the cache was last updated
+    const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+    KConfigGroup group = config.group( m_data->id() );
+    KConfigGroup scriptGroup = group.group( "script" );
+    QDateTime scriptModifiedTime = scriptGroup.readEntry("modifiedTime", QDateTime());
+    if ( QFileInfo(m_data->scriptFileName()).lastModified() == scriptModifiedTime ) {
+        // Return feature list stored in the cache
+        return group.readEntry("features", QStringList());
     }
 
     // No actual cached information about the service provider
@@ -203,14 +247,13 @@ QStringList ServiceProviderScript::readScriptFeatures()
     }
 
     // Store script features in a cache file
-    grp.writeEntry( "scriptModifiedTime", QFileInfo(m_data->scriptFileName()).lastModified() );
-    grp.writeEntry( "hasErrors", !ok );
-    grp.writeEntry( "scriptFeatures", features );
+    scriptGroup.writeEntry( "modifiedTime", QFileInfo(m_data->scriptFileName()).lastModified() );
+    scriptGroup.writeEntry( "errors", !ok );
 
     return features;
 }
 
-QStringList ServiceProviderScript::scriptFeatures() const
+QStringList ServiceProviderScript::features() const
 {
     return m_scriptFeatures;
 }

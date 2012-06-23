@@ -102,6 +102,9 @@ public:
     /** @brief Destructor. */
     virtual ~ServiceProviderScript();
 
+    /** @brief Whether or not the source XML file should be usable to get timetable data. */
+    virtual SourceFileValidity sourceFileValidity( QString *errorMessage = 0 ) const;
+
     /** @brief Whether or not the script has been successfully loaded. */
     bool isScriptLoaded() const { return m_scriptState == ScriptLoaded; };
 
@@ -109,7 +112,7 @@ public:
     bool hasScriptErrors() const { return m_scriptState == ScriptHasErrors; };
 
     /** @brief Gets a list of features that this service provider supports through a script. */
-    virtual QStringList scriptFeatures() const;
+    virtual QStringList features() const;
 
     /**
      * @brief Requests a list of departures.

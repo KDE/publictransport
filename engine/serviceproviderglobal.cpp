@@ -25,6 +25,7 @@
 #include <KStandardDirs>
 #include <KDebug>
 #include <KMimeType>
+#include <KConfigGroup>
 
 // Qt includes
 #include <QFile>
@@ -35,10 +36,10 @@ QString ServiceProviderGlobal::defaultProviderForLocation( const QString &locati
 {
     // Get the filename of the default service provider plugin for the given location
     const QStringList _dirs = !dirs.isEmpty() ? dirs
-            : KGlobal::dirs()->findDirs( "data", ServiceProviderGlobal::installationSubDirectory() );
+            : KGlobal::dirs()->findDirs( "data", installationSubDirectory() );
     QString filePath = QString( "%1_default" ).arg( location );
     foreach( const QString &dir, _dirs ) {
-        foreach ( const QString &extension, ServiceProviderGlobal::fileExtensions() ) {
+        foreach ( const QString &extension, fileExtensions() ) {
             if ( QFile::exists(dir + filePath + '.' + extension) ) {
                 filePath = dir + filePath;
                 break;
@@ -64,6 +65,21 @@ QString ServiceProviderGlobal::idFromFileName( const QString &serviceProviderFil
 {
     // Get the service provider substring from the XML filename, ie. "/path/to/xml/<id>.pts/xml"
     return QFileInfo( serviceProviderFileName ).baseName();
+}
+
+QString ServiceProviderGlobal::fileNameFromId( const QString &serviceProviderId )
+{
+    const QString subDirectory = installationSubDirectory();
+    foreach ( const QString &extension, fileExtensions() ) {
+        const QString fileName = KGlobal::dirs()->findResource(
+                "data", subDirectory + serviceProviderId + '.' + extension );
+        if ( !fileName.isEmpty() ) {
+            return fileName;
+        }
+    }
+
+    // File not found
+    return QString();
 }
 
 ServiceProviderType ServiceProviderGlobal::typeFromString(
@@ -122,8 +138,23 @@ QStringList ServiceProviderGlobal::installedProviders()
 {
     QStringList providers;
     const QString subDirectory = installationSubDirectory();
-    foreach ( const QString &pattern, ServiceProviderGlobal::filePatterns() ) {
+    foreach ( const QString &pattern, filePatterns() ) {
         providers << KGlobal::dirs()->findAllResources( "data", subDirectory + pattern );
     }
     return providers;
+}
+
+bool ServiceProviderGlobal::isSourceFileModified( const QString &providerId, const QString &fileName )
+{
+    // Check if the script file was modified since the cache was last updated
+    const KConfig config ( cacheFileName(), KConfig::SimpleConfig );
+    const KConfigGroup group = config.group( providerId );
+    const QDateTime modifiedTime = group.readEntry ( "modifiedTime", QDateTime() );
+    const QString _fileName = !fileName.isEmpty() ? fileName : fileNameFromId(providerId);
+    if ( _fileName.isEmpty() ) {
+        // Source XML file for the provider not found
+        return true;
+    } else {
+        return QFileInfo ( _fileName ).lastModified() != modifiedTime;
+    }
 }

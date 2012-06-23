@@ -190,15 +190,17 @@ void LocationModel::syncWithDataEngine( Plasma::DataEngine* publicTransportEngin
     d->items << new LocationItem( "showAll", countries.count() );
 
     // Get erroneous service providers (TODO: Get error messages)
-    QStringList erroneousProviderNames =
-            publicTransportEngine->query( "ErroneousServiceProviders" )["names"].toStringList();
-    if ( !erroneousProviderNames.isEmpty() ) {
+    QVariantHash erroneousProviders =
+            publicTransportEngine->query( "ErroneousServiceProviders" )["names"].toHash();
+    if ( !erroneousProviders.isEmpty() ) {
         QStringList errorLines;
-        for ( int i = 0; i < erroneousProviderNames.count(); ++i ) {
-            errorLines << QString( "<b>%1</b>" ).arg( erroneousProviderNames[i] );//.arg( errorMessages[i] );
+        for ( QVariantHash::ConstIterator it = erroneousProviders.constBegin();
+              it != erroneousProviders.constEnd(); ++it )
+        {
+            errorLines << QString( "<b>%1</b>: %2" ).arg( it.key() ).arg( it.value().toString() );
         }
 
-        d->items << new LocationItem( "erroneous", erroneousProviderNames.count(),
+        d->items << new LocationItem( "erroneous", erroneousProviders.count(),
                                       errorLines.join( ",<br-wrap>" ) );
     }
 

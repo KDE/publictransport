@@ -94,11 +94,14 @@ public:
     /** @brief Destructor. */
     virtual ~ServiceProviderGtfs();
 
+    /** @brief Whether or not the source XML file should be usable to get timetable data. */
+    virtual SourceFileValidity sourceFileValidity( QString *errorMessage = 0 ) const;
+
     /** @brief Returns the type of this provider, ie. GtfsProvider. */
     virtual ServiceProviderType type() const { return GtfsProvider; };
 
     /** @brief Checks if there was an error. */
-    bool hasErrors() const { return m_state >= 10; }
+    bool hasErrors( QString *errorMessage = 0 ) const;
 
     /** @brief Gets a list of features that this provider supports. */
     virtual QStringList features() const;
@@ -183,6 +186,9 @@ private:
     VehicleType vehicleTypeFromGtfsRouteType( int gtfsRouteType ) const;
 
     QTime timeFromSecondsSinceMidnight( int secondsSinceMidnight, QDate *date = 0 ) const;
+
+    // errorState >= 10
+    QString errorMessageForErrorState( State errorState ) const;
 
     void loadAgencyInformation();
 

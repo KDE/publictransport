@@ -37,6 +37,7 @@
 #include <QStringList>
 
 class QScriptEngine;
+class KConfig;
 class KJob;
 
 class AbstractRequest;
@@ -80,6 +81,17 @@ class ServiceProvider : public QObject {
 
 public:
     /**
+     * @brief Types of validity of service provider plugins.
+     * The values of the enumerables get stored in the cache file
+     * (ServiceProviderGlobal::cacheFileName()).
+     **/
+    enum SourceFileValidity {
+        SourceFileIsInvalid = 0,
+        SourceFileIsValid = 1,
+        SourceFileValidityCheckPending = 2
+    };
+
+    /**
      * @brief Constructs a new ServiceProvider object.
      *
      * You should use getSpecificProvider() to get an service provider that can download and
@@ -119,8 +131,11 @@ public:
      *   The ID starts with a country code, followed by an underscore and it's name.
      *   If it's empty, the default service provider for the users country will
      *   be used, if there is any.
+     * @param errorMessage A pointer to a QString to fill with an error message if 0 gets returned.
+     *   Can be 0.
      **/
-    static ServiceProviderData *readProviderData( const QString &serviceProviderId );
+    static ServiceProviderData *readProviderData( const QString &serviceProviderId,
+                                                  QString *errorMessage = 0 );
 
     static QString typeName( ServiceProviderType type );
 
@@ -132,20 +147,57 @@ public:
 
     ServiceProviderType type() const;
 
+    static SourceFileValidity sourceFileValidity( const QString &providerId,
+                                                  QString *errorMessage = 0,
+                                                  const KConfig *cache = 0 );
+
+    /** @brief Whether or not the source XML file was modified since the cache was last updated. */
+    bool isSourceFileModified() const;
+
+    /**
+     * @brief Whether or not the source XML file should be usable to get timetable data.
+     *
+     * Overwrite to check the validity of fields in the ServiceProviderData object (data()), that
+     * are special for the derived service provider class. For example the GTFS provider
+     * (ServiceProviderGtfs) checks if the GTFS feed URL is valid and accessible.
+     *
+     * This function only gets called if the source XML file was modified since it was last
+     * modified. It the source file was not modified the cached result of the last call of this
+     * function gets used instead (ServiceProviderGlobal::cacheForProvider(), in field "validity").
+     *
+     * @note Only do simple checks here, eg. do not download files here, only check if all used
+     *   URLs are valid. If more complex stuff is needed to check for the existance of
+     *   links, these checks should not be done here. Also do not do checks that depend on other
+     *   files than the source XML file. For example the script provider (ServiceProviderScript)
+     *   does not execute script code here, because this check also depends on the used script file,
+     *   ie. departure URLs generated in the script are not checked here. Instead the existance
+     *   of the script file and it's syntax gets checked.
+     *
+     * The default implementation returns SourceFileIsValid, except for InvalidProvider types
+     * SourceFileIsInvalid gets returned.
+     *
+     * @param errorMessage A message explaining the error, if SourceFileIsInvalid gets returned.
+     *   Can be 0.
+     **/
+    virtual SourceFileValidity sourceFileValidity( QString *errorMessage = 0 ) const {
+        Q_UNUSED( errorMessage );
+        return type() == InvalidProvider ? SourceFileIsInvalid : SourceFileIsValid;
+    };
+
+    /** @brief Update the cached validity data for this provider. */
+    SourceFileValidity updateSourceFileValidity() const;
+
     /** @brief Get the minimum seconds to wait between two data-fetches from the service provider. */
     virtual int minFetchWait() const;
 
     /**
      * @brief Get a list of features that this provider supports.
-     * The default implementation calls scriptFeatures() and removes duplicates.
+     * The default implementation returns an empty list.
      **/
-    virtual QStringList features() const;
+    virtual QStringList features() const { return QStringList(); };
 
     /** @brief Get a list of short localized strings describing the supported features. */
     QStringList featuresLocalized() const;
-
-    /** @brief Get a list of features that this provider supports through a script. */
-    virtual QStringList scriptFeatures() const { return QStringList(); };
 
     /** @brief The country for which the provider returns results. */
     QString country() const;

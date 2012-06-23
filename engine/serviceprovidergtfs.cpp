@@ -61,10 +61,10 @@ ServiceProviderGtfs::ServiceProviderGtfs(
     }
 
     // Read provider information cache
-    const QString fileName = ServiceProviderGlobal::cacheFileName();
-    KConfig cfg( fileName, KConfig::SimpleConfig );
-    KConfigGroup grp = cfg.group( data->id() );
-    bool importFinished = grp.readEntry( "feedImportFinished", false );
+    KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+    KConfigGroup group = config.group( data->id() );
+    KConfigGroup gtfsGroup = group.group( "gtfs" );
+    bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
 
     QFileInfo fi( GeneralTransitFeedDatabase::databasePath(data->id()) );
     if ( importFinished ) {
@@ -76,7 +76,7 @@ ServiceProviderGtfs::ServiceProviderGtfs(
         } else {
             // Provider cache says the import has been finished, but the database file does not
             // exist or is empty
-            grp.writeEntry( "feedImportFinished", false );
+            gtfsGroup.writeEntry( "feedImportFinished", false );
         }
     }
 
@@ -101,6 +101,46 @@ ServiceProviderGtfs::~ServiceProviderGtfs()
     delete m_alerts;
 }
 
+ServiceProvider::SourceFileValidity ServiceProviderGtfs::sourceFileValidity(
+        QString *errorMessage ) const
+{
+    if ( m_state == Ready ) {
+        // The GTFS feed was successfully imported
+        return SourceFileIsValid;
+    }
+
+    if ( ServiceProvider::sourceFileValidity(errorMessage) == SourceFileIsInvalid ||
+         hasErrors(errorMessage) )
+    {
+        return SourceFileIsInvalid;
+    }
+
+    const KUrl feedUrl( m_data->feedUrl() );
+    if ( feedUrl.isEmpty() || !feedUrl.isValid() ) {
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "Invalid GTFS feed URL: %1", m_data->feedUrl());
+        }
+        return SourceFileIsInvalid;
+    }
+
+    // Check validity when the provider gets created
+    return SourceFileValidityCheckPending;
+}
+
+bool ServiceProviderGtfs::hasErrors( QString *errorMessage ) const
+{
+    // ErrorNeedsFeedImport is an error that can easily be solved by downloading the feed,
+    // therefore it should not make the provider invalid
+    if ( m_state >= 10 && m_state != ErrorNeedsFeedImport ) {
+        if ( errorMessage ) {
+            *errorMessage = errorMessageForErrorState( m_state );
+        }
+        return true;
+    } else {
+        return false;
+    }
+}
+
 void ServiceProviderGtfs::updateGtfsData()
 {
     if ( m_service ) {
@@ -108,14 +148,20 @@ void ServiceProviderGtfs::updateGtfsData()
         return;
     }
 
-    // Set state to UpdateGtfsFeed, if state was Ready, ie. if the database was already imported
-    // and only gets updated now
-    if ( m_state != Ready ) {
+    if ( m_state == Initializing ) {
+        // Called from constructor without imported GTFS feed,
+        // do not update, let the user first import the feed explicitly
+        m_state = ErrorNeedsFeedImport;
+        return;
+    } else if ( m_state != Ready ) {
+        // Set state to UpdateGtfsFeed, if state was Ready,
+        // ie. if the database was already imported and only gets updated now
         m_state = UpdatingGtfsFeed;
         kDebug() << "Updating GTFS database for" << m_data->id() << " please wait";
     } else {
         kDebug() << "Stays ready, updates GTFS database in background";
     }
+
     m_progress = 0.0;
     m_service = new PublicTransportService( QString(), this );
     KConfigGroup op = m_service->operationDescription("updateGtfsFeed");
@@ -149,17 +195,17 @@ void ServiceProviderGtfs::importFinished( KJob *job )
         for ( QHash<QString,AbstractRequest*>::ConstIterator it = m_waitingRequests.constBegin();
               it != m_waitingRequests.constEnd(); ++it )
         {
-            // TODO Less arguments to errorParsing and similiar functions...
-            emit errorParsing( this, errorCode, /*i18nc("@info/plain TODO",
-                    "Failed to import GTFS feed from <resource>%1</resource>: <message>%2</message>",
-                    m_data->feedUrl(), */job->errorString()/*)*/,
-                    m_data->feedUrl(), *it );
+            emit errorParsing( this, errorCode, job->errorString(), m_data->feedUrl(), *it );
             delete *it;
         }
+
+        updateSourceFileValidity();
     } else {
         // Succesfully updated GTFS database
         kDebug() << "GTFS feed updated successfully" << m_data->id();
         m_state = Ready;
+        updateSourceFileValidity();
+
         for ( QHash<QString,AbstractRequest*>::ConstIterator it = m_waitingRequests.constBegin();
               it != m_waitingRequests.constEnd(); ++it )
         {
@@ -167,16 +213,10 @@ void ServiceProviderGtfs::importFinished( KJob *job )
                 DepartureRequest *request = static_cast<DepartureRequest*>( *it );
                 Q_ASSERT( request );
                 requestDepartures( *request );
-//                             DepartureRequest(it.key(), (*it)->stop, (*it)->maxCount,
-//                                    request->dateTime, (*it)->dataType, (*it)->useDifferentUrl,
-//                                    (*it)->city) );
             } else if ( (*it)->parseMode == ParseForStopSuggestions ) {
                 StopSuggestionRequest *request = static_cast<StopSuggestionRequest*>( *it );
                 Q_ASSERT( request );
                 requestStopSuggestions( *request );
-//                 requestStopSuggestions( it.key(), (*it)->city, (*it)->stop, ParseForStopSuggestions,
-//                                         (*it)->maxCount, QDateTime()/* TODO (*it)->dateTime*/, (*it)->dataType,
-//                                         (*it)->useDifferentUrl );
             } else {
                 kDebug() << "Finished updating GTFS database, but unknown parse mode in a "
                             "waiting source" << (*it)->parseMode;
@@ -358,13 +398,11 @@ QTime ServiceProviderGtfs::timeFromSecondsSinceMidnight(
 bool ServiceProviderGtfs::isGtfsFeedImportFinished()
 {
     // Try to load provider information from a cache file
-    const QString fileName = ServiceProviderGlobal::cacheFileName();
-    const bool cacheExists = QFile::exists( fileName );
-    KConfig cfg( fileName, KConfig::SimpleConfig );
-    KConfigGroup grp = cfg.group( m_data->id() );
+//     KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+//     KConfigGroup group = config.group( m_data->id() );
+//     KConfigGroup gtfsGroup = group.group( "gtfs" );
 // TODO
     kDebug() << "NOT YET IMPLEMENTED";
-    if ( cacheExists ) {
         // Check if the GTFS feed file was modified since the cache was last updated
 //         KDateTime gtfsModifiedTime = KDateTime::fromString( grp.readEntry("feedLastModified", QString()) );
 // //         QDateTime gtfsModifiedTime = grp.readEntry("feedLastModified", QDateTime());
@@ -372,12 +410,31 @@ bool ServiceProviderGtfs::isGtfsFeedImportFinished()
 //             // Return feature list stored in the cache
 //             return grp.readEntry("feedImportFinished", false);
 //         }
-    }
 
     // No actual cached information about the service provider
     kDebug() << "No up-to-date cache information for service provider" << m_data->id();
 
     return false;
+}
+
+QString ServiceProviderGtfs::errorMessageForErrorState( ServiceProviderGtfs::State errorState ) const
+{
+    switch ( errorState ) {
+    case ErrorDownloadingFeed:
+        return i18nc("@info/plain", "Failed to download the GTFS feed from <resource>%1</resource>",
+                     m_data->feedUrl());
+        break;
+    case ErrorReadingFeed:
+        return i18nc("@info/plain", "Failed to read the GTFS feed from <resource>%1</resource>",
+                     m_data->feedUrl());
+        break;
+    case ErrorNeedsFeedImport:
+        return i18nc("@info/plain", "GTFS feed not imported from <resource>%1</resource>",
+                     m_data->feedUrl());
+    default:
+        kWarning() << "Not an error state" << errorState;
+        return QString();
+    }
 }
 
 bool ServiceProviderGtfs::checkState( const AbstractRequest *request )
@@ -387,23 +444,20 @@ bool ServiceProviderGtfs::checkState( const AbstractRequest *request )
     } else {
         switch ( m_state ) {
         case ErrorDownloadingFeed:
-            emit errorParsing( this, ErrorDownloadFailed, i18nc("@info/plain",
-                    "Failed to download the GTFS feed from <resource>%1</resource>",
-                    m_data->feedUrl()), m_data->feedUrl(), request );
+            emit errorParsing( this, ErrorDownloadFailed, errorMessageForErrorState(m_state),
+                               m_data->feedUrl(), request );
             break;
         case ErrorReadingFeed:
-            emit errorParsing( this, ErrorParsingFailed, i18nc("@info/plain",
-                    "Failed to read the GTFS feed from <resource>%1</resource>",
-                    m_data->feedUrl()), m_data->feedUrl(), request );
+            emit errorParsing( this, ErrorParsingFailed, errorMessageForErrorState(m_state),
+                               m_data->feedUrl(), request );
             break;
         case ErrorNeedsFeedImport: {
             // Check, if the feed is imported now
             // Read provider information cache
-            // TODO function for this (also used in constructor)
-            const QString fileName = ServiceProviderGlobal::cacheFileName();
-            KConfig cfg( fileName, KConfig::SimpleConfig );
-            KConfigGroup grp = cfg.group( m_data->id() );
-            bool importFinished = grp.readEntry( "feedImportFinished", false );
+            KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+            KConfigGroup group = config.group( m_data->id() );
+            KConfigGroup gtfsGroup = group.group( "gtfs" );
+            bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
             QFileInfo fi( GeneralTransitFeedDatabase::databasePath(m_data->id()) );
             if ( importFinished && fi.exists() && fi.size() > 30000 ) {
                 // Load agency information from database and request GTFS-realtime data
@@ -412,9 +466,8 @@ bool ServiceProviderGtfs::checkState( const AbstractRequest *request )
                 m_state = Ready;
                 return true;
             } else {
-                emit errorParsing( this, ErrorNeedsImport, i18nc("@info/plain",
-                        "GTFS feed not imported from <resource>%1</resource>",
-                        m_data->feedUrl()), m_data->feedUrl(), request );
+                emit errorParsing( this, ErrorNeedsImport, errorMessageForErrorState(m_state),
+                                   m_data->feedUrl(), request );
             }
             break;
         }
@@ -797,6 +850,7 @@ bool ServiceProviderGtfs::checkForDiskIoErrorInDatabase( const QSqlError &error,
         if ( !GeneralTransitFeedDatabase::initDatabase(m_data->id(), &errorText) ) {
             kDebug() << "Error initializing the database" << errorText;
             m_state = ErrorInDatabase;
+            updateSourceFileValidity();
             return true;
         }
 

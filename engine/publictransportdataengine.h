@@ -357,7 +357,7 @@ private:
      **/
     QVariantHash locations();
 
-    ProviderPointer providerFromId( const QString &serviceProviderId );
+    ProviderPointer providerFromId( const QString &serviceProviderId, bool *newlyCreated = 0 );
 
     /** @brief Checks if the provider with the given ID is used by a connected source. */
     bool isProviderUsed( const QString &serviceProviderId );
@@ -366,7 +366,8 @@ private:
 
     QHash< QString, ProviderPointer > m_providers; // List of already loaded service providers
     QVariantHash m_dataSources; // List of already used data sources
-    QStringList m_erroneousProviders; // List of erroneous service providers
+    QVariantHash m_erroneousProviders; // List of erroneous service providers as keys
+                                       // and error messages as values
     QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory
     int m_lastStopNameCount, m_lastJourneyCount;
 
@@ -498,6 +499,8 @@ the following keys:
 <tr><td><i>email</i></td> <td>QString</td> <td>The email address of the author of the service provider plugin.</td></tr>
 <tr><td><i>description</i></td> <td>QString</td> <td>A description of the service provider.</td></tr>
 <tr><td><i>version</i></td> <td>QString</td> <td>The version of the service provider plugin.</td></tr>
+<tr><td><i>error</i></td> <td>bool</td> <td>Whether or not the provider plugin has errors. If this is true, the other fields are not available, instead a field <em>"errorMessage"</em> is available explaining the error.</td></tr>
+<tr><td><i>errorMessage</i></td> <td>QString</td> <td>A string explaining the error, only available if <em>"error"</em> is true.</td></tr>
 </table>
 <br />
 Here is an example of how to get service provider information for all available

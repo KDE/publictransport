@@ -26,6 +26,8 @@
 // Qt includes
 #include <QStringList>
 
+class KConfigGroup;
+
 /** @brief Provides global data/functions for service providers. */
 class ServiceProviderGlobal {
 public:
@@ -37,20 +39,26 @@ public:
     /** @brief Get the service provider ID for the given service provider plugin file name. */
     static QString idFromFileName( const QString &serviceProviderPluginFileName );
 
+    /** @brief Get the service provider plugin file name for the given service provider ID. */
+    static QString fileNameFromId( const QString &serviceProviderId );
+
+    static bool isSourceFileModified( const QString &providerId,
+                                      const QString &fileName = QString() );
+
     /** @brief Get the file path of the default service provider XML for the given @p location. */
     static QString defaultProviderForLocation( const QString &location,
                                                const QStringList &dirs = QStringList() );
 
     /**
-     * @brief Gets the name of the cache file for provider plugin information.
+     * @brief Get the name of the cache file for provider plugin information.
      *
      * The cache file can be used by provider plugins to store information about themselves that
      * might take some time to get if not stored. For example a network request might be needed to
      * get the information.
-     * The cache file can also be used to store other information for the accessor, eg. the last
-     * modified time of a file that gets only downloaded again, if it's last modified time is
-     * higher.
-     * KConfig is used to read from / write to the file.
+     * KConfig gets used to read from / write to the cache file.
+     *
+     * @note Each provider should only write to it's group, the name of that group is the provider
+     *   ID. Classes derived from ServiceProvider should write their own data to a subgroup.
      **/
     static QString cacheFileName();
 
