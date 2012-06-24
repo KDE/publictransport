@@ -675,14 +675,8 @@ void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
             departureTime.addSecs( offsetSeconds );
         }
 
-        QHash<TimetableInformation, QVariant> data;
-        if ( request.dataType == "arrivals" ) {
-            data[ DepartureDate ] = arrivalTime.date();
-            data[ DepartureTime ] = arrivalTime.time();
-        } else {
-            data[ DepartureDate ] = departureTime.date();
-            data[ DepartureTime ] = departureTime.time();
-        }
+        TimetableData data;
+        data[ DepartureDateTime ] = request.dataType == "arrivals" ? arrivalTime : departureTime;
         data[ TypeOfVehicle ] = vehicleTypeFromGtfsRouteType( query.value(routeTypeColumn).toInt() );
         data[ Operator ] = agency ? agency->name : QString();
 
