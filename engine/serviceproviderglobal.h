@@ -26,6 +26,7 @@
 // Qt includes
 #include <QStringList>
 
+class KConfig;
 class KConfigGroup;
 
 /** @brief Provides global data/functions for service providers. */
@@ -42,23 +43,30 @@ public:
     /** @brief Get the service provider plugin file name for the given service provider ID. */
     static QString fileNameFromId( const QString &serviceProviderId );
 
-    static bool isSourceFileModified( const QString &providerId,
-                                      const QString &fileName = QString() );
-
     /** @brief Get the file path of the default service provider XML for the given @p location. */
     static QString defaultProviderForLocation( const QString &location,
                                                const QStringList &dirs = QStringList() );
 
+    static bool isSourceFileModified( const QString &providerId,
+                                      const QSharedPointer<KConfig> &cache );
+
     /**
-     * @brief Get the name of the cache file for provider plugin information.
+     * @brief Get a shared pointer to the cache object for provider plugin information.
      *
-     * The cache file can be used by provider plugins to store information about themselves that
+     * The cache can be used by provider plugins to store information about themselves that
      * might take some time to get if not stored. For example a network request might be needed to
      * get the information.
      * KConfig gets used to read from / write to the cache file.
      *
      * @note Each provider should only write to it's group, the name of that group is the provider
      *   ID. Classes derived from ServiceProvider should write their own data to a subgroup.
+     * @see cacheFileName()
+     **/
+    static QSharedPointer<KConfig> cache();
+
+    /**
+     * @brief Get the name of the cache file.
+     * @see cache()
      **/
     static QString cacheFileName();
 
@@ -79,7 +87,12 @@ public:
      **/
     static QStringList fileExtensions();
 
-    /** @brief Get the file names of all installed service providers. */
+    /**
+     * @brief Get the file paths of all installed service provider plugins.
+     * If invalid provider plugins are installed, they also get returned here. Symlinks to the
+     * default providers for the different supported countries won't get returned (symlinks with
+     * this pattern: "[country-code]_default.pts"), only the file being point to.
+     **/
     static QStringList installedProviders();
 };
 

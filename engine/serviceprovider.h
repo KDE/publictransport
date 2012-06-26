@@ -38,6 +38,7 @@
 
 class QScriptEngine;
 class KConfig;
+class KConfigGroup;
 class KJob;
 
 class AbstractRequest;
@@ -45,11 +46,14 @@ class DepartureRequest;
 class ArrivalRequest;
 class StopSuggestionRequest;
 class JourneyRequest;
-class ChangelogEntry;
+
 class StopInfo;
 class DepartureInfo;
 class JourneyInfo;
+
+class ServiceProviderTestData;
 class ServiceProviderData;
+class ChangelogEntry;
 
 /**
  * @brief Get timetable information for public transport from different service providers.
@@ -81,17 +85,6 @@ class ServiceProvider : public QObject {
 
 public:
     /**
-     * @brief Types of validity of service provider plugins.
-     * The values of the enumerables get stored in the cache file
-     * (ServiceProviderGlobal::cacheFileName()).
-     **/
-    enum SourceFileValidity {
-        SourceFileIsInvalid = 0,
-        SourceFileIsValid = 1,
-        SourceFileValidityCheckPending = 2
-    };
-
-    /**
      * @brief Constructs a new ServiceProvider object.
      *
      * You should use getSpecificProvider() to get an service provider that can download and
@@ -102,7 +95,8 @@ public:
      *   ServiceProvider takes ownership for @p data.
      * @param parent The parent QObject.
      **/
-    explicit ServiceProvider( const ServiceProviderData *data = 0, QObject *parent = 0 );
+    explicit ServiceProvider( const ServiceProviderData *data = 0, QObject *parent = 0,
+                              const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
 
     /** @brief Destructor. */
     virtual ~ServiceProvider();
@@ -116,26 +110,51 @@ public:
      *   be used, if there is any.
      **/
     static ServiceProvider *createProvider( const QString &serviceProviderId = QString(),
-                                            QObject *parent = 0 );
+            QObject *parent = 0, const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
 
     /** @brief Create an invalid provider. */
     static ServiceProvider *createInvalidProvider( QObject *parent = 0 );
 
     static ServiceProvider *createProviderForData( const ServiceProviderData *data,
-                                                   QObject *parent = 0 );
+            QObject *parent = 0, const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
 
     /**
      * @brief Reads the XML file for the given @p serviceProvider.
      *
-     * @param serviceProvider The ID of the service provider which XML file should be read.
+     * If the provider XML file can be found but has errors, error information gets written to the
+     * cache to prevent reading the file again as long as it does not change.
+     *
+     * @param providerId The ID of the service provider which XML file should be read.
      *   The ID starts with a country code, followed by an underscore and it's name.
      *   If it's empty, the default service provider for the users country will
      *   be used, if there is any.
-     * @param errorMessage A pointer to a QString to fill with an error message if 0 gets returned.
-     *   Can be 0.
+     * @param errorMessage A pointer to a QString to fill with an error message if there was an
+     *   error. Can be 0.
+     *
+     * @return A pointer to the read ServiceProviderData object or 0 if there was an error reading
+     *   the data.
      **/
-    static ServiceProviderData *readProviderData( const QString &serviceProviderId,
+    static ServiceProviderData *readProviderData( const QString &providerId,
                                                   QString *errorMessage = 0 );
+
+    /**
+     * @brief Whether or not a cached test result is unchanged.
+     *
+     * Derived classes should override this function to indicate when test results might have
+     * changed, eg. because an additionally needed file has been modified. If true gets returned
+     * this prevents that runTests() gets called again. If false gets returned runTests() will
+     * be called again the next time the ServiceProvider object gets created.
+     *
+     * @param cache A shared pointer to the cache.
+     * @see runTests()
+     **/
+    virtual bool isTestResultUnchanged( const QSharedPointer<KConfig> &cache ) const {
+        Q_UNUSED( cache );
+        return true;
+    };
+
+    ServiceProviderTestData runSubTypeTest( const ServiceProviderTestData &oldTestData,
+                                            const QSharedPointer< KConfig > cache ) const;
 
     static QString typeName( ServiceProviderType type );
 
@@ -147,45 +166,8 @@ public:
 
     ServiceProviderType type() const;
 
-    static SourceFileValidity sourceFileValidity( const QString &providerId,
-                                                  QString *errorMessage = 0,
-                                                  const KConfig *cache = 0 );
-
     /** @brief Whether or not the source XML file was modified since the cache was last updated. */
-    bool isSourceFileModified() const;
-
-    /**
-     * @brief Whether or not the source XML file should be usable to get timetable data.
-     *
-     * Overwrite to check the validity of fields in the ServiceProviderData object (data()), that
-     * are special for the derived service provider class. For example the GTFS provider
-     * (ServiceProviderGtfs) checks if the GTFS feed URL is valid and accessible.
-     *
-     * This function only gets called if the source XML file was modified since it was last
-     * modified. It the source file was not modified the cached result of the last call of this
-     * function gets used instead (ServiceProviderGlobal::cacheForProvider(), in field "validity").
-     *
-     * @note Only do simple checks here, eg. do not download files here, only check if all used
-     *   URLs are valid. If more complex stuff is needed to check for the existance of
-     *   links, these checks should not be done here. Also do not do checks that depend on other
-     *   files than the source XML file. For example the script provider (ServiceProviderScript)
-     *   does not execute script code here, because this check also depends on the used script file,
-     *   ie. departure URLs generated in the script are not checked here. Instead the existance
-     *   of the script file and it's syntax gets checked.
-     *
-     * The default implementation returns SourceFileIsValid, except for InvalidProvider types
-     * SourceFileIsInvalid gets returned.
-     *
-     * @param errorMessage A message explaining the error, if SourceFileIsInvalid gets returned.
-     *   Can be 0.
-     **/
-    virtual SourceFileValidity sourceFileValidity( QString *errorMessage = 0 ) const {
-        Q_UNUSED( errorMessage );
-        return type() == InvalidProvider ? SourceFileIsInvalid : SourceFileIsValid;
-    };
-
-    /** @brief Update the cached validity data for this provider. */
-    SourceFileValidity updateSourceFileValidity() const;
+    bool isSourceFileModified( const QSharedPointer<KConfig> &cache ) const;
 
     /** @brief Get the minimum seconds to wait between two data-fetches from the service provider. */
     virtual int minFetchWait() const;
@@ -252,8 +234,8 @@ public:
     /**
      * @brief Whether or not cities may be chosen freely.
      *
-     * @return true if only cities in the list returned by cities()  are valid.
-     * @return false (default) if cities may be chosen freely, but may be invalid.
+     * @return @c True if only cities in the list returned by cities() are valid.
+     * @return @c False (default) if cities may be chosen freely, but may be invalid.
      **/
     virtual bool onlyUseCitiesInList() const;
 
@@ -274,6 +256,27 @@ protected:
      **/
     virtual QByteArray charsetForUrlEncoding() const;
 
+    /**
+     * @brief Run sub-type tests in derived classes.
+     *
+     * Derived classes should override this function to do additional tests, eg. test for
+     * additionally needed files and their correctness. After this function has been called it's
+     * result gets stored in the cache. The cached value gets used until isTestResultUnchanged()
+     * returns false, the sub-type test gets marked as pending or the provider source XML file
+     * gets modified.
+     * The default implementation simply returns true.
+     *
+     * @param errorMessage If not 0, an error message gets stored in the QString being pointed to.
+     * @return @c True, if all tests completed successfully, @c false otherwise.
+     * @see isTestResultUnchanged()
+     * @see ServiceProviderTestData::SubTypeTestPassed
+     * @see ServiceProviderTestData::SubTypeTestFailed
+     **/
+    virtual bool runTests( QString *errorMessage = 0 ) const
+    {
+        Q_UNUSED( errorMessage );
+        return true;
+    };
 
     QString m_curCity; /**< @brief Stores the currently used city. */
     const ServiceProviderData *const m_data; /**< @brief Stores service provider data.

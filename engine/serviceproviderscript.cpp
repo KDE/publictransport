@@ -25,6 +25,7 @@
 #include "script_thread.h"
 #include "serviceproviderglobal.h"
 #include "serviceproviderdata.h"
+#include "serviceprovidertestdata.h"
 #include "departureinfo.h"
 #include "request.h"
 
@@ -51,12 +52,14 @@ const char *ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE = "getTimetable"
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS = "getJourneys";
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS = "getStopSuggestions";
 
-ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, QObject *parent )
+ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, QObject *parent,
+                                              const QSharedPointer<KConfig> &cache )
         : ServiceProvider(data, parent), m_thread(0), m_script(0), m_scriptStorage(0),
           m_mutex(new QMutex)
 {
+    kDebug() << "Constructor" << m_data->id();
     m_scriptState = WaitingForScriptUsage;
-    m_scriptFeatures = readScriptFeatures();
+    m_scriptFeatures = readScriptFeatures( cache.isNull() ? ServiceProviderGlobal::cache() : cache );
 
     qRegisterMetaType< QList<ChangelogEntry> >( "QList<ChangelogEntry>" );
     qRegisterMetaType< QList<TimetableData> >( "QList<TimetableData>" );
@@ -109,17 +112,14 @@ bool ServiceProviderScript::lazyLoadScript()
     return true;
 }
 
-ServiceProvider::SourceFileValidity ServiceProviderScript::sourceFileValidity(
-        QString *errorMessage ) const
+bool ServiceProviderScript::runTests( QString *errorMessage ) const
 {
-    if ( ServiceProvider::sourceFileValidity(errorMessage) == SourceFileIsInvalid ) {
-        return SourceFileIsInvalid;
-    } else if ( !QFile::exists(m_data->scriptFileName()) ) {
+    if ( !QFile::exists(m_data->scriptFileName()) ) {
         if ( errorMessage ) {
             *errorMessage = i18nc("@info/plain", "Script file not found: <filename>%1</filename>",
                                   m_data->scriptFileName());
         }
-        return SourceFileIsInvalid;
+        return false;
     }
 
     QFile scriptFile( m_data->scriptFileName() );
@@ -128,7 +128,7 @@ ServiceProvider::SourceFileValidity ServiceProviderScript::sourceFileValidity(
             *errorMessage = i18nc("@info/plain", "Could not open script file: <filename>%1</filename>",
                                   m_data->scriptFileName());
         }
-        return SourceFileIsInvalid;
+        return false;
     }
 
     QTextStream stream( &scriptFile );
@@ -137,35 +137,52 @@ ServiceProvider::SourceFileValidity ServiceProviderScript::sourceFileValidity(
 
     if ( program.isEmpty() ) {
         if ( errorMessage ) {
-            *errorMessage = i18nc("@info/plain", "Script file is empty: %1",
-                                  m_data->scriptFileName());
+            *errorMessage = i18nc("@info/plain", "Script file is empty: %1", m_data->scriptFileName());
         }
-        return SourceFileIsInvalid;
+        return false;
     }
 
     const QScriptSyntaxCheckResult syntax = QScriptEngine::checkSyntax( program );
     if ( syntax.state() != QScriptSyntaxCheckResult::Valid ) {
         if ( errorMessage ) {
-            *errorMessage = i18nc("@info/plain", "Syntax error in script file: "
-                                  "<filename>%1</filename>, <message>%2</message>",
-                                  m_data->scriptFileName(), syntax.errorMessage());
+            *errorMessage = i18nc("@info/plain",
+                                  "Syntax error in script file, line %1: <message>%2</message>",
+                                  syntax.errorLineNumber(), syntax.errorMessage().isEmpty()
+                                  ? i18nc("@info/plain", "Syntax error") : syntax.errorMessage());
         }
-        return SourceFileIsInvalid;
+        return false;
     }
 
     // No errors found
-    return SourceFileIsValid; // TODO return SourceFileValidityCheckPending?
-
+    return true;
 }
 
-QStringList ServiceProviderScript::readScriptFeatures()
+bool ServiceProviderScript::isTestResultUnchanged( const QString &providerId,
+                                                   const QSharedPointer< KConfig > &cache )
 {
     // Check if the script file was modified since the cache was last updated
-    const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-    KConfigGroup group = config.group( m_data->id() );
-    KConfigGroup scriptGroup = group.group( "script" );
-    QDateTime scriptModifiedTime = scriptGroup.readEntry("modifiedTime", QDateTime());
-    if ( QFileInfo(m_data->scriptFileName()).lastModified() == scriptModifiedTime ) {
+    const KConfigGroup group = cache->group( providerId );
+    if ( !group.hasGroup("script") ) {
+        // Not a scripted provider or modified time not stored yet
+        return true;
+    }
+
+    const KConfigGroup scriptGroup = group.group( "script" );
+    const QDateTime scriptModifiedTime = scriptGroup.readEntry("modifiedTime", QDateTime());
+    const QString scriptFilePath = scriptGroup.readEntry( "scriptFileName", QString() );
+    return QFileInfo( scriptFilePath ).lastModified() == scriptModifiedTime;
+}
+
+bool ServiceProviderScript::isTestResultUnchanged( const QSharedPointer<KConfig> &cache ) const
+{
+    return isTestResultUnchanged( id(), cache );
+}
+
+QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KConfig> &cache )
+{
+    // Check if the script file was modified since the cache was last updated
+    KConfigGroup group = cache->group( m_data->id() );
+    if ( group.hasGroup("script") && isTestResultUnchanged(cache) ) {
         // Return feature list stored in the cache
         return group.readEntry("features", QStringList());
     }
@@ -174,21 +191,31 @@ QStringList ServiceProviderScript::readScriptFeatures()
     kDebug() << "No up-to-date cache information for service provider" << m_data->id();
     QStringList features;
     bool ok = lazyLoadScript();
-    if ( ok ) {
+    QString errorMessage;
+    if ( !ok ) {
+        errorMessage = i18nc("@info/plain", "Cannot open script file <filename>%1</filename>",
+                             m_data->scriptFileName());
+    } else {
         // Create script engine
         QScriptEngine engine;
         foreach ( const QString &import, m_data->scriptExtensions() ) {
             if ( !importExtension(&engine, import) ) {
                 ok = false;
+                errorMessage = i18nc("@info/plain", "Cannot import script extension %1", import);
+                break;
             }
         }
         if ( ok ) {
             engine.evaluate( *m_script );
             if ( engine.hasUncaughtException() ) {
                 kDebug() << "Error in the script" << engine.uncaughtExceptionLineNumber()
-                        << engine.uncaughtException().toString();
+                         << engine.uncaughtException().toString();
                 kDebug() << "Backtrace:" << engine.uncaughtExceptionBacktrace().join("\n");
                 ok = false;
+                errorMessage = i18nc("@info/plain", "Uncaught exception in script line %1: "
+                                     "<message>%2</message>",
+                                     engine.uncaughtExceptionLineNumber(),
+                                     engine.uncaughtException().toString());
             } else {
                 // Test if specific functions exist in the script
                 if ( engine.globalObject().property(SCRIPT_FUNCTION_GETSTOPSUGGESTIONS).isValid() ) {
@@ -246,9 +273,17 @@ QStringList ServiceProviderScript::readScriptFeatures()
         }
     }
 
-    // Store script features in a cache file
+    // Update script modified time in cache
+    KConfigGroup scriptGroup = group.group( "script" );
+    scriptGroup.writeEntry( "scriptFileName", m_data->scriptFileName() );
     scriptGroup.writeEntry( "modifiedTime", QFileInfo(m_data->scriptFileName()).lastModified() );
-    scriptGroup.writeEntry( "errors", !ok );
+
+    // Set error in default cache group
+    if ( !ok ) {
+        ServiceProviderTestData newTestData = ServiceProviderTestData::read( id(), cache );
+        newTestData.setSubTypeTestStatus( ServiceProviderTestData::Failed, errorMessage );
+        newTestData.write( id(), cache );
+    }
 
     return features;
 }

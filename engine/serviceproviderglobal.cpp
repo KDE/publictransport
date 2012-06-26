@@ -61,6 +61,11 @@ QString ServiceProviderGlobal::cacheFileName()
             .append( QLatin1String("datacache") );
 }
 
+QSharedPointer< KConfig > ServiceProviderGlobal::cache()
+{
+    return QSharedPointer< KConfig >( new KConfig(cacheFileName(), KConfig::SimpleConfig) );
+}
+
 QString ServiceProviderGlobal::idFromFileName( const QString &serviceProviderFileName )
 {
     // Get the service provider substring from the XML filename, ie. "/path/to/xml/<id>.pts/xml"
@@ -140,21 +145,25 @@ QStringList ServiceProviderGlobal::installedProviders()
     const QString subDirectory = installationSubDirectory();
     foreach ( const QString &pattern, filePatterns() ) {
         providers << KGlobal::dirs()->findAllResources( "data", subDirectory + pattern );
+
+        // Remove symlinks to default providers from the list
+        for ( int i = providers.count() - 1; i >= 0; --i ) {
+            const QString &provider = providers[i];
+            const QFileInfo fileInfo( provider );
+            if ( fileInfo.isSymLink() && fileInfo.baseName().endsWith(QLatin1String("_default")) ) {
+                providers.removeAt( i );
+            }
+        }
     }
     return providers;
 }
 
-bool ServiceProviderGlobal::isSourceFileModified( const QString &providerId, const QString &fileName )
+bool ServiceProviderGlobal::isSourceFileModified( const QString &providerId,
+                                                  const QSharedPointer<KConfig> &cache )
 {
     // Check if the script file was modified since the cache was last updated
-    const KConfig config ( cacheFileName(), KConfig::SimpleConfig );
-    const KConfigGroup group = config.group( providerId );
-    const QDateTime modifiedTime = group.readEntry ( "modifiedTime", QDateTime() );
-    const QString _fileName = !fileName.isEmpty() ? fileName : fileNameFromId(providerId);
-    if ( _fileName.isEmpty() ) {
-        // Source XML file for the provider not found
-        return true;
-    } else {
-        return QFileInfo ( _fileName ).lastModified() != modifiedTime;
-    }
+    const KConfigGroup group = cache->group( providerId );
+    const QDateTime modifiedTime = group.readEntry( "modifiedTime", QDateTime() );
+    const QString fileName = fileNameFromId( providerId );
+    return fileName.isEmpty() ? true : QFileInfo(fileName).lastModified() != modifiedTime;
 }

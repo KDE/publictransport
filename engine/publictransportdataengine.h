@@ -107,6 +107,8 @@ public:
     bool isDataRequestingSourceType( SourceType sourceType ) const {
         return static_cast< int >( sourceType ) >= 10; };
 
+    QString providerIdFromSourceName( const QString &sourceName ) const;
+
     /**
      * @brief Minimum timeout in seconds to request new data.
      *
@@ -232,6 +234,9 @@ protected:
      **/
     virtual Plasma::Service* serviceForSource( const QString &name );
 
+    bool testServiceProvider( const QString &providerId, QVariantHash *providerData,
+                              QString *errorMessage );
+
 public slots:
     void slotSourceRemoved( const QString &name );
 
@@ -308,30 +313,33 @@ public slots:
     /**
      * @brief A global or local directory with service provider XML files was changed.
      *
-     * This slot uses reloadAllProviders() to actually update the loaded service providers. Because
+     * This slot uses reloadChangedProviders() to actually update the loaded service providers. Because
      * a change in multiple files in one or more directories causes a call to this slot for each
      * file, this would cause all providers to be reloaded for each changed file. Especially when
      * installing a new version, while running an old one, this can take some time.
      * Therefore this slot uses a short timeout. If a new call to this slot happens within that
-     * timeout, the timeout gets simply restarted. Otherwise after the timeout reloadAllProviders()
+     * timeout, the timeout gets simply restarted. Otherwise after the timeout reloadChangedProviders()
      * gets called.
      *
      * @param path The changed directory.
-     * @see reloadAllProviders()
+     * @see reloadChangedProviders()
      */
     void serviceProviderDirChanged( const QString &path );
 
     /**
      * @brief Deletes all currently created providers and associated data and recreates them.
      *
-     * Deleted data only gets filled by new requests again.
      * This slot gets called by serviceProviderDirChanged() if a global or local directory
      * containing service provider XML files has changed. It does not call this function on every
      * directory change, but only if there are no further changes in a short timespan.
+     * The provider cache (ServiceProviderGlobal::cache()) gets updated for all changed provider
+     * plugins.
+     * @note Deleted data sources only get filled again when new requests are made,
+     *   they are not updated.
      *
      * @see serviceProviderDirChanged()
      **/
-    void reloadAllProviders();
+    void reloadChangedProviders();
 
 private:
     /**
@@ -365,7 +373,7 @@ private:
     QString stripDateAndTimeValues( const QString &sourceName );
 
     QHash< QString, ProviderPointer > m_providers; // List of already loaded service providers
-    QVariantHash m_dataSources; // List of already used data sources
+    QVariantHash m_dataSources; // List of already used data sources TODO also store original data source name, to be able to update data with different capitalization
     QVariantHash m_erroneousProviders; // List of erroneous service providers as keys
                                        // and error messages as values
     QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory

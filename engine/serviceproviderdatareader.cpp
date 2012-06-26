@@ -92,7 +92,7 @@ ServiceProviderData* ServiceProviderDataReader::read( QIODevice* device,
     }
 
     if ( error() != NoError ) {
-        kDebug() << "     ERROR   " << errorString();
+        kDebug() << "Error reading provider" << serviceProvider << errorString();
     }
     return error() == NoError && data ? data : 0;
 }

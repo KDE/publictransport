@@ -97,19 +97,24 @@ public:
      *
      * @note Can be used if you have a custom ServiceProviderData object.
      **/
-    ServiceProviderScript( const ServiceProviderData *data = 0, QObject *parent = 0 );
+    ServiceProviderScript( const ServiceProviderData *data = 0, QObject *parent = 0,
+                           const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
 
     /** @brief Destructor. */
     virtual ~ServiceProviderScript();
 
-    /** @brief Whether or not the source XML file should be usable to get timetable data. */
-    virtual SourceFileValidity sourceFileValidity( QString *errorMessage = 0 ) const;
+    static bool isTestResultUnchanged( const QString &providerId,
+                                       const QSharedPointer<KConfig> &cache );
+
+    virtual bool isTestResultUnchanged( const QSharedPointer<KConfig> &cache ) const;
 
     /** @brief Whether or not the script has been successfully loaded. */
     bool isScriptLoaded() const { return m_scriptState == ScriptLoaded; };
 
     /** @brief Whether or not the script has errors. */
     bool hasScriptErrors() const { return m_scriptState == ScriptHasErrors; };
+
+    QString errorMessage() const { return m_errorMessage; };
 
     /** @brief Gets a list of features that this service provider supports through a script. */
     virtual QStringList features() const;
@@ -161,7 +166,10 @@ protected slots:
 
 protected:
     bool lazyLoadScript();
-    QStringList readScriptFeatures();
+    QStringList readScriptFeatures( const QSharedPointer<KConfig> &cache );
+
+    /** @brief Whether or not the source XML file should be usable to get timetable data. */
+    virtual bool runTests( QString *errorMessage = 0 ) const;
 
 private:
     ScriptState m_scriptState; // The state of the script
@@ -171,6 +179,7 @@ private:
     QScriptProgram *m_script;
     Storage *m_scriptStorage;
     QMutex *m_mutex;
+    QString m_errorMessage;
 };
 
 #endif // Multiple inclusion guard

@@ -23,7 +23,9 @@
 // Own includes
 #include "serviceprovider.h"
 #include "serviceproviderdata.h"
+#include "serviceprovidertestdata.h"
 #include "serviceproviderglobal.h"
+#include "serviceproviderscript.h"
 #include "serviceprovidergtfs.h"
 #include "publictransportservice.h"
 #include "global.h"
@@ -113,9 +115,7 @@ void PublicTransportEngine::slotSourceRemoved( const QString& name )
     if ( dataHash.contains("serviceProvider") ) {
         const QString providerId = dataHash["serviceProvider"].toString().toLower();
         if ( !providerId.isEmpty() && !isProviderUsed(providerId) ) {
-            if ( m_providers.remove(providerId) > 0 ) {
-                kDebug() << "Removed unused provider" << providerId;
-            }
+            m_providers.remove( providerId );
         }
     }
 }
@@ -169,32 +169,25 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
     // gets created just to get the list of features
     if ( provider ) {
         kDebug() << "Use given provider to get feature info";
+        // Write features to the return value
         dataServiceProvider.insert( "features", provider->features() );
         dataServiceProvider.insert( "featuresLocalized", provider->featuresLocalized() );
     } else {
-        const QString fileName = ServiceProviderGlobal::cacheFileName();
-        const bool cacheExists = QFile::exists( fileName );
-        bool dataFound = false;
-        if ( cacheExists ) {
-            const KConfig config( fileName, KConfig::SimpleConfig );
-            const KConfigGroup group = config.group( data.id() );
-            const bool cacheFilled = group.readEntry("cacheFilled", false);
-            if ( cacheFilled ) {
-                const QStringList features = group.readEntry("features", QStringList());
-                dataServiceProvider.insert( "features", features );
-                dataServiceProvider.insert( "featuresLocalized",
-                                            ServiceProvider::localizeFeatures(features) );
-                dataFound = true;
-            }
-        }
-
-        if ( !dataFound ) {
+        const QSharedPointer<KConfig> cache = ServiceProviderGlobal::cache();
+        KConfigGroup group = cache->group( data.id() );
+        QStringList features = group.readEntry("features", QStringList());
+        if ( !features.isEmpty() ) {
+            features.removeOne( "(none)" );
+            dataServiceProvider.insert( "features", features );
+            dataServiceProvider.insert( "featuresLocalized",
+                                        ServiceProvider::localizeFeatures(features) );
+        } else {
             kDebug() << "No cached feature data was found for provider" << data.id();
-            // No cached feature data was found for the provider, create the provider to get the
-            // feature list. Caching the feature data is up to the provider.
+            // No cached feature data was found for the provider,
+            // create the provider to get the feature list and store it in the cache
             bool newlyCreated;
             ProviderPointer _provider = providerFromId( data.id(), &newlyCreated );
-            const QStringList features = _provider->features();
+            features = _provider->features();
             const QStringList featuresLocalized = _provider->featuresLocalized();
 
             // Remove provider from the list again to delete it
@@ -202,14 +195,18 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
                 m_providers.remove( data.id() );
             }
 
+            // If no features are supported write "(none)" to the cache
+            // to indicate that features have been written to the cache
+            if ( features.isEmpty() ) {
+                features.append( "(none)" );
+            }
+
+            // Write features to the return value
             dataServiceProvider.insert( "features", features );
             dataServiceProvider.insert( "featuresLocalized", featuresLocalized );
 
             // Write features to cache
-            KConfig config( fileName, KConfig::SimpleConfig );
-            KConfigGroup group = config.group( data.id() );
             group.writeEntry( "features", features );
-            group.writeEntry( "cacheFilled", true );
         }
     }
 
@@ -354,22 +351,16 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
         providerId = defaultProvider;
     }
 
-    // Read provider data from the XML file
+    QVariantHash providerData;
     QString errorMessage;
-    ServiceProviderData *data = ServiceProvider::readProviderData( providerId, &errorMessage );
-    if ( data ) {
-        setData( name, serviceProviderData(*data) );
+    if ( testServiceProvider(providerId, &providerData, &errorMessage) ) {
+        setData( name, providerData );
         setData( name, "error", false );
-        delete data;
-        return true;
     } else {
         setData( name, "error", true );
         setData( name, "errorMessage", errorMessage );
-        if ( !m_erroneousProviders.contains(providerId) ) {
-            m_erroneousProviders.insert( providerId, errorMessage );
-        }
-        return true;
     }
+    return true;
 }
 
 bool PublicTransportEngine::updateServiceProviderSource()
@@ -390,75 +381,34 @@ bool PublicTransportEngine::updateServiceProviderSource()
 
         const QStringList providers = ServiceProviderGlobal::installedProviders();
         if ( providers.isEmpty() ) {
-            kDebug() << "Could not find any service provider plugins";
+            kWarning() << "Could not find any service provider plugins";
             return false;
         }
 
         QStringList loadedProviders;
         m_erroneousProviders.clear();
+        QSharedPointer<KConfig> cache = ServiceProviderGlobal::cache();
         foreach( const QString &provider, providers ) {
-            const QFileInfo fileInfo( provider );
-            if ( fileInfo.isSymLink() && fileInfo.baseName().endsWith(QLatin1String("_default")) ) {
-                // Don't use symlinks to default service providers
-                continue;
-            }
-
-            QString serviceProviderId =
-                    KUrl( provider ).fileName().remove( QRegExp( "\\..*$" ) ); // Remove file extension
-            // Try to get information about the current service provider
-            if ( m_providers.contains(serviceProviderId) ) {
-                // The accessor is already created, use it's ServiceProviderData object
-                const ProviderPointer provider = m_providers[ serviceProviderId ];
-                dataSource.insert( provider->data()->name(), serviceProviderData(provider.data()) );
-                loadedProviders << serviceProviderId;
-            } else {
-                // Check the provider cache file for errors with the current service provider
-                const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-                const KConfigGroup group = config.group( serviceProviderId );
-                QString errorMessage;
-                const ServiceProvider::SourceFileValidity validity =
-                        ServiceProvider::sourceFileValidity( serviceProviderId, &errorMessage,
-                                                             &config );
-//                         static_cast<ServiceProvider::SourceFileValidity>(
-//                         group.readEntry("validity", static_cast<int>(ServiceProvider::SourceFileValidityCheckPending)) );
-                if ( validity == ServiceProvider::SourceFileIsInvalid ||
-                     group.group("script").readEntry("errors", false) )
-                {
-                    if ( errorMessage.isEmpty() ) {
-                        errorMessage = group.readEntry( "errorMessage", QString() );
-                    }
-                    m_erroneousProviders.insert( serviceProviderId, errorMessage );
-                    continue;
-                }
-                errorMessage.clear();
-
-                // The provider is not created already, read it's XML file
-                const ServiceProviderData *data =
-                        ServiceProvider::readProviderData( serviceProviderId, &errorMessage );
-                if ( data ) {
-                    dataSource.insert( data->name(), serviceProviderData(*data) );
-                    loadedProviders << serviceProviderId;
-                    delete data;
-                } else {
-                    // The providers XML file could not be read
-                    if ( errorMessage.isEmpty() ) {
-                        errorMessage = group.readEntry( "errorMessage", QString() );
-                    }
-                    m_erroneousProviders.insert( serviceProviderId, errorMessage  );
-                    continue;
-                }
+            QString providerId = ServiceProviderGlobal::idFromFileName( KUrl(provider).fileName() );
+            QVariantHash providerData;
+            QString errorMessage;
+            if ( testServiceProvider(providerId, &providerData, &errorMessage) ) {
+                dataSource.insert( providerId, providerData );
+                loadedProviders << providerId;
             }
         }
 
         kDebug() << "Loaded" << loadedProviders.count() << "service providers";
         if ( !m_erroneousProviders.isEmpty() ) {
-            kDebug() << "Erroneous service provider plugins, that couldn't be loaded:"
+            kDebug() << "Erroneous service provider plugins, that could not be loaded:"
                      << m_erroneousProviders;
         }
 
         m_dataSources.insert( name, dataSource );
     }
 
+    // Remove all old data, some service providers may have been updated and are now erroneous
+    removeAllData( name );
     for ( QVariantHash::const_iterator it = dataSource.constBegin();
           it != dataSource.constEnd(); ++it )
     {
@@ -467,7 +417,97 @@ bool PublicTransportEngine::updateServiceProviderSource()
     return true;
 }
 
-bool PublicTransportEngine::updateErroneousServiceProviderSource()
+bool PublicTransportEngine::testServiceProvider( const QString &providerId,
+                                                 QVariantHash *providerData, QString *errorMessage )
+{
+    if ( m_providers.contains(providerId) ) {
+        // The provider is cached in the engine, ie. it is valid,
+        // use it's ServiceProviderData object
+        const ProviderPointer provider = m_providers[ providerId ];
+        *providerData = serviceProviderData( provider.data() );
+        errorMessage->clear();
+        return true;
+    }
+
+    // Read cached data for the provider
+    QSharedPointer<KConfig> cache = ServiceProviderGlobal::cache();
+    ServiceProviderTestData testData = ServiceProviderTestData::read( providerId, cache );
+
+    // TODO Needs to be done for each provider sub class here
+    const bool subTestResultUnchanged =
+            ServiceProviderScript::isTestResultUnchanged( providerId, cache );
+    if ( !subTestResultUnchanged ) {
+        kDebug() << "Script changed" << providerId;
+        testData.setSubTypeTestStatus( ServiceProviderTestData::Pending );
+        testData.write( providerId, cache );
+    }
+
+    if ( testData.status() == ServiceProviderTestData::Failed ) {
+        // Tests are marked as failed in the cache
+        providerData->clear();
+        *errorMessage = testData.errorMessage();
+        m_erroneousProviders.insert( providerId, testData.errorMessage() );
+        updateErroneousServiceProviderSource();
+        return false;
+    }
+
+    // Read provider data from the XML file
+    QString _errorMessage;
+    const QScopedPointer<ServiceProviderData> data(
+            ServiceProvider::readProviderData(providerId, &_errorMessage) );
+    if ( data.isNull() ) {
+        // Could not read provider data
+        if ( testData.isXmlStructureTestPending() ) {
+            // Store error message in cache and do not reread unchanged XMLs everytime
+            testData.setXmlStructureTestStatus( ServiceProviderTestData::Failed, _errorMessage );
+            testData.write( providerId, cache );
+        }
+
+        providerData->clear();
+        *errorMessage = _errorMessage;
+        m_erroneousProviders.insert( providerId, _errorMessage );
+        updateErroneousServiceProviderSource();
+        return false;
+    } else if ( testData.isXmlStructureTestPending() ) {
+        // Store error message in cache and do not reread unchanged XMLs everytime
+        testData.setXmlStructureTestStatus( ServiceProviderTestData::Passed );
+        testData.write( providerId, cache );
+    }
+
+    // XML file structure test is passed, run sub-type test if not done already
+    if ( testData.isSubTypeTestPending() ) {
+        // Need to create the provider to run tests in derived classes (in the constructor)
+        const QScopedPointer<ServiceProvider> provider(
+                ServiceProvider::createProviderForData(data.data(), 0, cache) );
+        data->setParent( 0 ); // Prevent deletion of data when the provider gets deleted
+
+        // Read test data again, because it may have been changed in the provider constructor
+        testData = ServiceProviderTestData::read( providerId, cache );
+
+        // Run the sub type test if it is still pending
+        testData = provider->runSubTypeTest( testData, cache );
+
+        // Read test data again, updated in the ServiceProvider constructor
+        if ( testData.results().testFlag(ServiceProviderTestData::SubTypeTestFailed) ) {
+            // Sub-type test failed
+            providerData->clear();
+            *errorMessage = testData.errorMessage();
+            m_erroneousProviders.insert( providerId, testData.errorMessage() );
+            updateErroneousServiceProviderSource();
+            return false;
+        }
+    }
+
+    m_erroneousProviders.remove( providerId );
+    const QString name = sourceTypeKeyword( ErroneousServiceProvidersSource );
+    removeData( name, providerId );
+
+    *providerData = serviceProviderData( *data );
+    errorMessage->clear();
+    return true;
+}
+
+void PublicTransportEngine::updateErroneousServiceProviderSource()
 {
     const QLatin1String name = sourceTypeKeyword( ErroneousServiceProvidersSource );
     setData( name, static_cast<Data>(m_erroneousProviders) );
@@ -492,6 +532,17 @@ bool PublicTransportEngine::updateLocationSource()
     }
 
     return true;
+}
+
+QString PublicTransportEngine::providerIdFromSourceName( const QString &sourceName ) const
+{
+    const int pos = sourceName.indexOf( ' ' );
+    if ( pos == -1 ) { //|| pos = sourceName.length() - 1 ) {
+        return QString();
+    }
+
+    const int endPos = sourceName.indexOf( '|', pos + 1 );
+    return sourceName.mid( pos + 1, endPos - pos - 1 ).trimmed();
 }
 
 bool PublicTransportEngine::updateTimetableDataSource( const QString &name )
@@ -711,43 +762,42 @@ void PublicTransportEngine::serviceProviderDirChanged( const QString &path )
     // Otherwise it can freeze plasma for a while if eg. all provider files are changed at once.
     if ( !m_providerUpdateDelayTimer ) {
         m_providerUpdateDelayTimer = new QTimer( this );
-        connect( m_providerUpdateDelayTimer, SIGNAL(timeout()), this, SLOT(reloadAllProviders()) );
+        connect( m_providerUpdateDelayTimer, SIGNAL(timeout()), this, SLOT(reloadChangedProviders()) );
     }
 
     m_providerUpdateDelayTimer->start( 250 );
 }
 
-void PublicTransportEngine::reloadAllProviders()
+void PublicTransportEngine::reloadChangedProviders()
 {
     kDebug() << "Reload service providers (the service provider dir changed)";
 
     delete m_providerUpdateDelayTimer;
     m_providerUpdateDelayTimer = 0;
 
-//     delete m_timer; TODO
-//     m_timer = 0;
-
-    // Remove all providers (could have been changed)
-//     qDeleteAll( m_providers ); // TODO Remove
-    m_providers.clear();
+    // Remove cached service providers / locations source
+    m_dataSources.remove( sourceTypeKeyword(ServiceProvidersSource) );
+    m_dataSources.remove( sourceTypeKeyword(LocationsSource) );
 
     // Clear all cached data (use the new provider to parse the data again)
-    // TODO: Only clear data for changed providers (change modified time of a script or the XML)
-    QStringList cachedSources = m_dataSources.keys();
+    const QStringList cachedSources = m_dataSources.keys();
+    const QSharedPointer< KConfig > cache = ServiceProviderGlobal::cache();
     foreach( const QString &cachedSource, cachedSources ) {
-        SourceType sourceType = sourceTypeFromName( cachedSource );
-        if ( isDataRequestingSourceType(sourceType) ) {
+        const QString providerId = providerIdFromSourceName( cachedSource );
+        if ( !providerId.isEmpty() &&
+             (ServiceProviderGlobal::isSourceFileModified(providerId, cache) ||
+              !ServiceProviderScript::isTestResultUnchanged(providerId, cache)) )
+        {
+            // Remove data source for the current provider
+            // and remove the provider object (deletes it)
             m_dataSources.remove( cachedSource );
+            m_providers.remove( providerId );
+            m_erroneousProviders.remove( providerId );
         }
     }
 
-    // Remove cached service provider source
-    const QString serviceProvidersKey = sourceTypeKeyword( ServiceProvidersSource );
-    if ( m_dataSources.keys().contains(serviceProvidersKey) ) {
-        m_dataSources.remove( serviceProvidersKey );
-    }
-
-    updateServiceProviderSource();
+    updateLocationSource();
+    updateErroneousServiceProviderSource();
 }
 
 const QLatin1String PublicTransportEngine::sourceTypeKeyword( SourceType sourceType )
