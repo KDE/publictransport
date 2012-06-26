@@ -459,7 +459,7 @@ bool ProjectSettingsDialog::testWidget( QWidget *widget )
 
     QString errorMessage;
     if ( !ServiceProviderDataTester::runServiceProviderDataTest(test, text, &errorMessage) ) {
-        appendMessageWidgetAfter( lineEdit, errorMessage );
+        appendMessageWidgetAfter( widget, errorMessage );
         return false;
     }
 
