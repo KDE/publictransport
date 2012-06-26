@@ -295,21 +295,31 @@ public:
     /**
      * @brief Create a new project from @p xmlFilePath.
      *
-     * @param xmlFilePath The file path to the project XML document. If empty, a template project
-     *   gets created.
      * @param parent Used as parent for dialogs created inside Project, eg. showSettingsDialog()
      *   uses this as parent for the settings dialog.
      **/
-    explicit Project( const QString &xmlFilePath = QString(), QWidget *parent = 0 );
+    explicit Project( QWidget *parent = 0 );
 
     /** @brief Destructor. */
     virtual ~Project();
+
+    /**
+     * @brief Loads the project from the given @p projectSoureFile.
+     * @warning If another project was loaded previously, all changes made in the project
+     *   get discarded. Better create a new Project object for each project to load.
+     * @param projectSourceFile The file path to the provider XML file. If this is empty a template
+     *   project gets loaded.
+     **/
+    bool loadProject( const QString &projectSoureFile = QString() );
 
     /** @brief Get the current state of this project. */
     Q_INVOKABLE static QString nameFromIcon( const QIcon &icon ) { return icon.name(); };
 
     /** @brief Get the current state of this project. */
     Q_INVOKABLE State state() const;
+
+    /** @brief Get the last error message for this project. */
+    Q_INVOKABLE QString lastError() const;
 
     /** @brief Get the model which contains this project, if any. */
     ProjectModel *projectModel() const;

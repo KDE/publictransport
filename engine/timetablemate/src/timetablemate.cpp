@@ -1329,7 +1329,8 @@ void TimetableMate::uncaughtException( int lineNumber, const QString &errorMessa
 
 void TimetableMate::fileNew()
 {
-    Project *newProject = new Project( QString(), this );
+    Project *newProject = new Project( this );
+    newProject->loadProject();
     m_projectModel->appendProject( newProject );
     newProject->showDashboardTab();
 }
@@ -1569,15 +1570,17 @@ Project *TimetableMate::openProject( const QString &filePath )
         return openedProject;
     }
 
-    Project *project = new Project( filePath, this );
+    Project *project = new Project( this );
+    project->loadProject( filePath );
     if ( project->state() == Project::ProjectSuccessfullyLoaded ) {
-        m_projectModel->appendProject( project );
         if ( !project->filePath().isEmpty() ) {
             m_recentFilesAction->addUrl( project->filePath() );
         }
+        m_projectModel->appendProject( project );
         return project;
     } else if ( project->state() == Project::ProjectError ) {
-//         infoMessage( project->errorMessage(), KMessageWidget::Error );
+        // The error message was emitted from the constructor of Project
+        infoMessage( project->lastError(), KMessageWidget::Error );
         delete project;
         return 0;
     }
@@ -1631,7 +1634,9 @@ void TimetableMate::fileOpenInstalled() {
     if ( ok ) {
         QString selectedFilePath = map[ selectedPrettyName ];
         Project *project = openProject( selectedFilePath );
-        project->showDashboardTab( this );
+        if ( project ) {
+            project->showDashboardTab( this );
+        }
     }
 }
 

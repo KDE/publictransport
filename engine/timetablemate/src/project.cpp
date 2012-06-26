@@ -260,26 +260,48 @@ public:
         return true;
     };
 
-    // Load project from service provider XML document at @p xmlFilePath
-    bool loadProject( const QString &xmlFilePath )
+    // Load project from service provider XML document at @p projectSourceFile
+    bool loadProject( const QString &projectSourceFile )
     {
+        Q_Q( Project );
+
+        // Try to open the XML in the Kate part in the "Project Source" tab
+        if ( !QFile::exists(projectSourceFile) ) {
+            // Project file not found, create a new one from template
+            errorHappened( Project::ProjectFileNotFound, i18nc("@info", "The project file <filename>"
+                        "%1</filename> could not be found.", projectSourceFile) );
+            insertProjectSourceTemplate();
+            return false;
+        }
+
+        if ( isModified() ) {
+            kWarning() << "Loading another project, discarding changes in the previously "
+                          "loaded project";
+        }
+
+        // Cleanup
         if ( projectSourceTab ) {
             projectSourceTab->document()->closeUrl( false );
         }
         if ( scriptTab ) {
             scriptTab->document()->closeUrl( false );
         }
+        lastError.clear();
+        output.clear();
+        consoleText.clear();
+        projectSourceBufferModified = false;
+        openedPath.clear();
+        filePath.clear();
+        serviceProviderID.clear();
+        unsavedScriptContents.clear();
+        executionLine = -1;
+        abortTests();
+        debugger->abortDebugger();
+        testModel->clear();
+        q->emit outputChanged( QString() );
+        q->emit consoleTextChanged( QString() );
 
-        // Try to open the XML in the Kate part in the "Project Source" tab
-        if ( !QFile::exists(xmlFilePath) ) {
-            // Project file not found, create a new one from template
-            errorHappened( Project::ProjectFileNotFound, i18nc("@info", "The project file <filename>"
-                        "%1</filename> could not be found.", xmlFilePath) );
-            insertProjectSourceTemplate();
-            return false;
-        }
-
-        KUrl url( xmlFilePath );
+        KUrl url( projectSourceFile );
         if ( projectSourceTab ) {
             if ( !projectSourceTab->document()->openUrl(url) ) {
                 errorHappened( Project::ProjectFileNotReadable,
@@ -289,7 +311,7 @@ public:
             projectSourceTab->document()->setModified( false );
         }
 
-        if ( !readProjectSourceDocumentFromTabOrFile(xmlFilePath) ) {
+        if ( !readProjectSourceDocumentFromTabOrFile(projectSourceFile) ) {
             insertProjectSourceTemplate();
             return false;
         }
@@ -319,7 +341,7 @@ public:
             return false;
         }
 
-        setXmlFilePath( xmlFilePath );
+        setXmlFilePath( projectSourceFile );
         state = Project::ProjectSuccessfullyLoaded;
         return true;
     };
@@ -485,27 +507,17 @@ public:
         }
 
         // Try to read the XML contents
-        bool success = false;
         if ( projectSourceTab ) {
             // Use text in already loaded project source document
             QTextCodec *codec = QTextCodec::codecForName( projectSourceTab->document()->encoding().isEmpty()
                                 ? "UTF-8" : projectSourceTab->document()->encoding().toLatin1() );
             QByteArray text = codec->fromUnicode( projectSourceTab->document()->text() );
             QBuffer buffer( &text, q );
-            success = readProjectSourceDocument( &buffer, xmlFilePath );
+            return readProjectSourceDocument( &buffer, xmlFilePath );
         } else {
             // Read text from file, service provider document not loaded
             QFile file( xmlFilePath );
-            success = readProjectSourceDocument( &file, xmlFilePath );
-        }
-
-        if ( success ) {
-            return true;
-        } else {
-            errorHappened( Project::ErrorWhileLoadingProject,
-                           i18nc("@info", "The XML file <filename>%1</filename> "
-                                 "could not be read.", xmlFilePath) );
-            return false;
+            return readProjectSourceDocument( &file, xmlFilePath );
         }
     };
 
@@ -530,18 +542,27 @@ public:
                 reader.read( device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q );
         if ( data ) {
             provider = ServiceProvider::createProviderForData( data, q );
+            if ( !provider ) {
+                provider = ServiceProvider::createInvalidProvider( q );
+            }
+        } else {
+            kDebug() << "Service provider plugin is invalid" << reader.errorString() << fileName;
+            errorHappened( Project::ErrorWhileLoadingProject, reader.errorString() );
+            insertProjectSourceTemplate();
+            return false;
         }
 
-        if( provider ) {
+        if ( provider /*&& provider->type() != InvalidProvider*/ ) {
             q->emit nameChanged( projectName() );
             q->emit iconNameChanged( iconName() );
             q->emit iconChanged( projectIcon() );
             q->emit dataChanged( info() );
             return true;
         } else {
-            kDebug() << "Service provider plugin is invalid" << reader.errorString() << fileName;
-            errorHappened( Project::ErrorWhileLoadingProject, reader.errorString() );
-
+            kDebug() << "Service provider plugin has invalid type" << fileName;
+            errorHappened( Project::ErrorWhileLoadingProject,
+                           i18nc("@info", "The provider plugin file <filename>%1</filename> "
+                                 "has an invalid type.", fileName) );
             insertProjectSourceTemplate();
             return false;
         }
@@ -725,6 +746,10 @@ public:
     void errorHappened( Project::Error error, const QString &errorString )
     {
         Q_Q( Project );
+        if ( !errorString.isEmpty() ) {
+            // Store last error message
+            lastError = errorString;
+        }
         if ( state == Project::ProjectError ) {
             kDebug() << "Following Error:" << error << errorString;
             return;
@@ -1500,17 +1525,17 @@ public:
     QString output;
     QString consoleText;
 
+    QString lastError;
+
 private:
     Project *q_ptr;
     Q_DECLARE_PUBLIC( Project )
 };
 
-Project::Project( const QString &xmlFilePath, QWidget *parent )
-        : QObject( parent ), d_ptr(new ProjectPrivate(this))
+Project::Project( QWidget *parent ) : QObject( parent ), d_ptr(new ProjectPrivate(this))
 {
     qRegisterMetaType< ProjectActionData >( "ProjectActionData" );
     d_ptr->initialize();
-    d_ptr->loadProject( xmlFilePath );
 }
 
 Project::~Project()
@@ -1520,6 +1545,17 @@ Project::~Project()
     }
 
     delete d_ptr;
+}
+
+bool Project::loadProject( const QString &projectSoureFile )
+{
+    Q_D( Project );
+    if ( projectSoureFile.isEmpty() ) {
+        d->insertProjectSourceTemplate();
+        return true;
+    } else {
+        return d->loadProject( projectSoureFile );
+    }
 }
 
 QString Project::output() const
@@ -1614,6 +1650,12 @@ Project::State Project::state() const
 {
     Q_D( const Project );
     return d->state;
+}
+
+QString Project::lastError() const
+{
+    Q_D( const Project );
+    return d->lastError;
 }
 
 ProjectModel *Project::projectModel() const
@@ -3464,6 +3506,9 @@ void Project::setProviderData( const ServiceProviderData *serviceProviderInfo )
     // Recreate service provider plugin with new info
     delete d->provider;
     d->provider = ServiceProvider::createProviderForData( serviceProviderInfo, this );
+    if ( !d->provider ) {
+        d->provider = ServiceProvider::createInvalidProvider( this );
+    }
     emit nameChanged( projectName() );
     emit iconNameChanged( iconName() );
     emit iconChanged( projectIcon() );
