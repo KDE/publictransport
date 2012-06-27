@@ -238,11 +238,12 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
         KConfigGroup gtfsGroup = group.group( "gtfs" );
         bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
         KDateTime lastModified = KDateTime::fromString(
-                gtfsGroup.readEntry("feedLastModified", QString()) );
+                gtfsGroup.readEntry("feedModifiedTime", QString()) );
         qulonglong sizeInBytes = gtfsGroup.readEntry( "feedSizeInBytes", qulonglong(-1) );
 
-        gtfsGroup.writeEntry( "feedLastModified", newLastModified.toString() );
+        gtfsGroup.writeEntry( "feedModifiedTime", newLastModified.toString() );
         gtfsGroup.writeEntry( "feedSizeInBytes", newSizeInBytes );
+        gtfsGroup.writeEntry( "feedUrl", m_data->feedUrl() );
 
         if ( !importFinished ) {
             qDebug() << "Last GTFS feed import did not finish for" << m_data->id();

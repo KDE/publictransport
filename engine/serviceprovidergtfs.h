@@ -89,13 +89,16 @@ public:
      * @param info An object containing information about the service provider.
      * @param parent The parent QObject.
      **/
-    explicit ServiceProviderGtfs( const ServiceProviderData *data, QObject *parent = 0 );
+    explicit ServiceProviderGtfs( const ServiceProviderData *data, QObject *parent = 0,
+                                  const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
 
     /** @brief Destructor. */
     virtual ~ServiceProviderGtfs();
 
-    /** @brief Whether or not the source XML file should be usable to get timetable data. */
-    virtual SourceFileValidity sourceFileValidity( QString *errorMessage = 0 ) const;
+    static bool isTestResultUnchanged( const QString &providerId,
+                                       const QSharedPointer<KConfig> &cache );
+
+    virtual bool isTestResultUnchanged( const QSharedPointer<KConfig> &cache ) const;
 
     /** @brief Returns the type of this provider, ie. GtfsProvider. */
     virtual ServiceProviderType type() const { return GtfsProvider; };
@@ -144,6 +147,9 @@ protected:
      * @param requestInfo Information about the stop suggestion request.
      **/
     virtual void requestStopSuggestions( const StopSuggestionRequest &requestInfo );
+
+    /** @brief Run script provider specific tests. */
+    virtual bool runTests( QString *errorMessage = 0 ) const;
 
     /** @brief Updates the GTFS feed data using @ref PublicTransportService. */
     void updateGtfsData();

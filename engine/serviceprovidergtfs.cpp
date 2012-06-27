@@ -46,10 +46,14 @@
 #include <QSqlError>
 #include <QSqlRecord>
 #include <QFileInfo>
+#include <QEventLoop>
+#include <QTimer>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 
 ServiceProviderGtfs::ServiceProviderGtfs(
-        const ServiceProviderData *data, QObject *parent )
-        : ServiceProvider(data, parent), m_tripUpdates(0), m_alerts(0), m_service(0)
+        const ServiceProviderData *data, QObject *parent, const QSharedPointer<KConfig> &cache )
+        : ServiceProvider(data, parent, cache), m_tripUpdates(0), m_alerts(0), m_service(0)
 {
     m_state = Initializing;
 
@@ -101,18 +105,68 @@ ServiceProviderGtfs::~ServiceProviderGtfs()
     delete m_alerts;
 }
 
-ServiceProvider::SourceFileValidity ServiceProviderGtfs::sourceFileValidity(
-        QString *errorMessage ) const
+bool ServiceProviderGtfs::isTestResultUnchanged( const QString &providerId,
+                                                 const QSharedPointer< KConfig > &cache )
+{
+    // Check if the GTFS feed was modified since the cache was last updated
+    const KConfigGroup group = cache->group( providerId );
+    if ( !group.hasGroup("gtfs") ) {
+        // Not a GTFS provider or modified time not stored yet
+        return true;
+    }
+
+    const KConfigGroup gtfsGroup = group.group( "gtfs" );
+    const KDateTime lastFeedModifiedTime = KDateTime::fromString(
+            gtfsGroup.readEntry("feedModifiedTime", QString()) );
+    const QString feedUrl = gtfsGroup.readEntry( "feedUrl", QString() );
+
+    QNetworkAccessManager *manager = new QNetworkAccessManager();
+    QNetworkRequest request( feedUrl );
+    QNetworkReply *reply = manager->head( request );
+    const QTime start = QTime::currentTime();
+
+    // Use an event loop to wait for execution of the request
+    const int networkTimeout = 1000;
+    QEventLoop eventLoop;
+    connect( reply, SIGNAL(finished()), &eventLoop, SLOT(quit()) );
+    QTimer::singleShot( networkTimeout, &eventLoop, SLOT(quit()) );
+    eventLoop.exec();
+
+    // Check if the timeout occured before the request finished
+    if ( reply->isRunning() ) {
+        kDebug() << "Destroyed or timeout while downloading head of" << feedUrl;
+        reply->abort();
+        reply->deleteLater();
+        manager->deleteLater();
+        return false;
+    }
+
+    const int time = start.msecsTo( QTime::currentTime() );
+    kDebug() << "Waited" << ( time / 1000.0 ) << "seconds for download of" << feedUrl;
+
+    // Read all data, decode it and give it to the script
+    const KDateTime feedModifiedTime = KDateTime::fromString(
+            reply->header(QNetworkRequest::LastModifiedHeader).toString() ).toUtc();
+    reply->deleteLater();
+    manager->deleteLater();
+
+    return feedModifiedTime == lastFeedModifiedTime;
+}
+
+bool ServiceProviderGtfs::isTestResultUnchanged( const QSharedPointer<KConfig> &cache ) const
+{
+    return isTestResultUnchanged( id(), cache );
+}
+
+bool ServiceProviderGtfs::runTests( QString *errorMessage ) const
 {
     if ( m_state == Ready ) {
         // The GTFS feed was successfully imported
-        return SourceFileIsValid;
+        return true;
     }
 
-    if ( ServiceProvider::sourceFileValidity(errorMessage) == SourceFileIsInvalid ||
-         hasErrors(errorMessage) )
-    {
-        return SourceFileIsInvalid;
+    if ( hasErrors(errorMessage) ) {
+        return false;
     }
 
     const KUrl feedUrl( m_data->feedUrl() );
@@ -120,11 +174,11 @@ ServiceProvider::SourceFileValidity ServiceProviderGtfs::sourceFileValidity(
         if ( errorMessage ) {
             *errorMessage = i18nc("@info/plain", "Invalid GTFS feed URL: %1", m_data->feedUrl());
         }
-        return SourceFileIsInvalid;
+        return false;
     }
 
-    // Check validity when the provider gets created
-    return SourceFileValidityCheckPending;
+    // No errors found
+    return true;
 }
 
 bool ServiceProviderGtfs::hasErrors( QString *errorMessage ) const
@@ -199,12 +253,12 @@ void ServiceProviderGtfs::importFinished( KJob *job )
             delete *it;
         }
 
-        updateSourceFileValidity();
+//         updateSourceFileValidity(); TODO!
     } else {
         // Succesfully updated GTFS database
         kDebug() << "GTFS feed updated successfully" << m_data->id();
         m_state = Ready;
-        updateSourceFileValidity();
+//         updateSourceFileValidity(); TODO!
 
         for ( QHash<QString,AbstractRequest*>::ConstIterator it = m_waitingRequests.constBegin();
               it != m_waitingRequests.constEnd(); ++it )
@@ -844,7 +898,7 @@ bool ServiceProviderGtfs::checkForDiskIoErrorInDatabase( const QSqlError &error,
         if ( !GeneralTransitFeedDatabase::initDatabase(m_data->id(), &errorText) ) {
             kDebug() << "Error initializing the database" << errorText;
             m_state = ErrorInDatabase;
-            updateSourceFileValidity();
+//             updateSourceFileValidity(); TODO!
             return true;
         }
 
