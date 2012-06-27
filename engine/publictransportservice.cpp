@@ -34,6 +34,8 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 
+const qreal ImportGtfsToDatabaseJob::PROGRESS_PART_FOR_FEED_DOWNLOAD = 0.1;
+
 ImportGtfsToDatabaseJob::ImportGtfsToDatabaseJob( const QString &destination,
         const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
         : ServiceJob(destination, operation, parameters, parent),
