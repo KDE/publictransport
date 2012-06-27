@@ -12,6 +12,16 @@ include_directories(
 set( SHARED_MIME_INFO_MINIMUM_VERSION "0.30" )
 find_package( SharedMimeInfo )
 
+# Generate gtfs-realtime protocol buffer sources
+add_custom_command(
+    OUTPUT gtfs-realtime.pb.h gtfs-realtime.pb.cc
+    COMMAND protoc gtfs-realtime.proto --cpp_out=${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS gtfs-realtime.proto
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+# Mark the files as generated
+set_source_files_properties( gtfs-realtime.pb.h gtfs-realtime.pb.cc
+                             PROPERTIES GENERATED TRUE )
+
 add_subdirectory( serviceProviders )
 
 if ( BUILD_TESTS )
@@ -22,16 +32,6 @@ if ( INSTALL_TIMETABLEMATE )
     message( " - TimetableMate" )
     add_subdirectory( timetablemate )
 endif ( INSTALL_TIMETABLEMATE )
-
-# Generate gtfs-realtime protocol buffer sources
-add_custom_command(
-    OUTPUT gtfs-realtime.pb.h gtfs-realtime.pb.cc
-    COMMAND protoc gtfs-realtime.proto --cpp_out=${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS gtfs-realtime.proto
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-# Mark the files as generated
-set_source_files_properties( gtfs-realtime.pb.h gtfs-realtime.pb.cc
-                             PROPERTIES GENERATED TRUE )
 
 # Source files
 set( publictransport_engine_SRCS
