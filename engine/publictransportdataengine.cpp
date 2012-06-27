@@ -507,7 +507,7 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
     return true;
 }
 
-void PublicTransportEngine::updateErroneousServiceProviderSource()
+bool PublicTransportEngine::updateErroneousServiceProviderSource()
 {
     const QLatin1String name = sourceTypeKeyword( ErroneousServiceProvidersSource );
     setData( name, static_cast<Data>(m_erroneousProviders) );

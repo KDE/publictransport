@@ -168,7 +168,7 @@ protected:
     bool lazyLoadScript();
     QStringList readScriptFeatures( const QSharedPointer<KConfig> &cache );
 
-    /** @brief Whether or not the source XML file should be usable to get timetable data. */
+    /** @brief Run script provider specific tests. */
     virtual bool runTests( QString *errorMessage = 0 ) const;
 
 private:
