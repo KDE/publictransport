@@ -290,7 +290,6 @@ public:
         output.clear();
         consoleText.clear();
         projectSourceBufferModified = false;
-        openedPath.clear();
         filePath.clear();
         serviceProviderID.clear();
         unsavedScriptContents.clear();
@@ -544,7 +543,8 @@ public:
             if ( data->type() == ScriptedProvider ) {
                 provider = new ServiceProviderScript( data, q );
             } else {
-                provider = ServiceProvider::createInvalidProvider( q );
+                // Do not create sub class instance for unknown types
+                provider = new ServiceProvider( data, q );
             }
         } else {
             kDebug() << "Service provider plugin is invalid" << reader.errorString() << fileName;
@@ -686,7 +686,6 @@ public:
             KUrl url( filePath );
             const QString oldServiceProviderId = serviceProviderID;
             serviceProviderID = serviceProviderIdFromProjectFileName( url.fileName() );
-            openedPath = url.directory();
 
             // Notify about changes
             q->emit saveLocationChanged( filePath, oldXmlFilePath );
@@ -1330,17 +1329,19 @@ public:
     bool saveAs( QWidget *parent )
     {
         parent = parentWidget( parent );
-        QString fileName = KFileDialog::getSaveFileName(
-                openedPath.isEmpty() ? KGlobalSettings::documentPath() : openedPath,
-                "application/x-publictransport-serviceprovider application/xml",
-                parent, i18nc("@title:window", "Save Project") );
-        //  "*.cpp *.cc *.C|C++ Source Files\n*.h *.H|Header files");
-        if ( fileName.isEmpty() ) {
+        KFileDialog saveDialog( filePath.isEmpty() ? KGlobalSettings::documentPath() : filePath,
+                                QString(), parent );
+        saveDialog.setOperationMode( KFileDialog::Saving );
+        saveDialog.setWindowTitle( i18nc("@title:window", "Save Project") );
+        saveDialog.setMimeFilter( QStringList() << "application/x-publictransport-serviceprovider"
+                                                << "application/xml",
+                                  "application/x-publictransport-serviceprovider" );
+        if ( saveDialog.exec() != KFileDialog::Accepted || saveDialog.selectedFile().isEmpty() ) {
             return false; // Cancel clicked
         }
 
         // Got a file name, save the project
-        return save( parent, fileName );
+        return save( parent, saveDialog.selectedFile() );
     };
 
     bool install( QWidget *parent, bool install, Project::InstallType installType )
@@ -1497,7 +1498,6 @@ public:
     // setProviderData() but no ProjectSourceTab is opened
     bool projectSourceBufferModified;
 
-    QString openedPath;
     QString filePath;
     QString serviceProviderID;
 
