@@ -25,8 +25,6 @@
 #include "serviceprovidertestdata.h"
 #include "serviceproviderglobal.h"
 #include "serviceproviderdatareader.h"
-#include "serviceproviderscript.h"
-#include "serviceprovidergtfs.h"
 #include "departureinfo.h"
 #include "request.h"
 
@@ -111,89 +109,9 @@ ServiceProvider *ServiceProvider::createInvalidProvider( QObject *parent )
     return new ServiceProvider( 0, parent );
 }
 
-ServiceProvider* ServiceProvider::createProvider( const QString &serviceProviderId,
-        QObject *parent, const QSharedPointer<KConfig> &cache )
-{
-    ServiceProviderData *data = readProviderData( serviceProviderId );
-    return data ? createProviderForData(data, parent, cache) : 0;
-}
-
-ServiceProvider *ServiceProvider::createProviderForData( const ServiceProviderData *data,
-        QObject *parent, const QSharedPointer<KConfig> &cache )
-{
-    switch ( data->type() ) {
-    case ScriptedProvider:
-        return new ServiceProviderScript( data, parent, cache );
-    case GtfsProvider:
-        return new ServiceProviderGtfs( data, parent, cache );
-    case InvalidProvider:
-    default:
-        kWarning() << "Invalid/unknown provider type" << data->type();
-        return 0;
-    }
-}
-
 bool ServiceProvider::isSourceFileModified( const QSharedPointer<KConfig> &cache ) const
 {
     return ServiceProviderGlobal::isSourceFileModified( m_data->id(), cache );
-}
-
-ServiceProviderData *ServiceProvider::readProviderData( const QString &providerId,
-                                                        QString *errorMessage )
-{
-    QString filePath;
-    QString country = "international";
-    QString _serviceProviderId = providerId;
-    if ( _serviceProviderId.isEmpty() ) {
-        // No service provider ID given, use the default one for the users country
-        country = KGlobal::locale()->country();
-
-        // Try to find the XML filename of the default accessor for [country]
-        filePath = ServiceProviderGlobal::defaultProviderForLocation( country );
-        if ( filePath.isEmpty() ) {
-            return 0;
-        }
-
-        // Extract service provider ID from filename
-        _serviceProviderId = ServiceProviderGlobal::idFromFileName( filePath );
-        kDebug() << "No service provider ID given, using the default one for country"
-                 << country << "which is" << _serviceProviderId;
-    } else {
-        foreach ( const QString &extension, ServiceProviderGlobal::fileExtensions() ) {
-            filePath = KGlobal::dirs()->findResource( "data",
-                    ServiceProviderGlobal::installationSubDirectory() +
-                    _serviceProviderId + '.' + extension );
-            if ( !filePath.isEmpty() ) {
-                break;
-            }
-        }
-        if ( filePath.isEmpty() ) {
-            kDebug() << "Could not find a service provider plugin XML named" << _serviceProviderId;
-            if ( errorMessage ) {
-                *errorMessage = i18nc("@info/plain", "Could not find a service provider "
-                                      "plugin with the ID %1", _serviceProviderId);
-            }
-            return 0;
-        }
-
-        // Get country code from filename
-        QRegExp rx( "^([^_]+)" );
-        if ( rx.indexIn(_serviceProviderId) != -1 &&
-             KGlobal::locale()->allCountriesList().contains(rx.cap()) )
-        {
-            country = rx.cap();
-        }
-    }
-
-    QFile file( filePath );
-    ServiceProviderDataReader reader;
-    ServiceProviderData *data = reader.read( &file, providerId, filePath, country,
-                                             ServiceProviderDataReader::OnlyReadCorrectFiles );
-    if ( !data && errorMessage ) {
-        *errorMessage = i18nc("@info/plain", "Error in line %1: <message>%2</message>",
-                              reader.lineNumber(), reader.errorString());
-    }
-    return data;
 }
 
 QStringList ServiceProvider::featuresLocalized() const

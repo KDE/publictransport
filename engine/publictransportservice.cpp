@@ -43,7 +43,7 @@ ImportGtfsToDatabaseJob::ImportGtfsToDatabaseJob( const QString &destination,
 {
     setCapabilities( Suspendable | Killable );
 
-    m_data = ServiceProvider::readProviderData( parameters["serviceProviderId"].toString() );
+    m_data = ServiceProviderDataReader::read( parameters["serviceProviderId"].toString() );
     if ( !m_data ) {
         setError( -1 );
         setErrorText( i18nc("@info/plain", "Error while reading Provider XML.") );

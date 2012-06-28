@@ -541,8 +541,9 @@ public:
         ServiceProviderData *data =
                 reader.read( device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q );
         if ( data ) {
-            provider = ServiceProvider::createProviderForData( data, q );
-            if ( !provider ) {
+            if ( data->type() == ScriptedProvider ) {
+                provider = new ServiceProviderScript( data, q );
+            } else {
                 provider = ServiceProvider::createInvalidProvider( q );
             }
         } else {
@@ -3499,15 +3500,16 @@ ServiceProvider *Project::provider() const
     return d->provider;
 }
 
-void Project::setProviderData( const ServiceProviderData *serviceProviderInfo )
+void Project::setProviderData( const ServiceProviderData *providerData )
 {
     Q_D( Project );
 
     // Recreate service provider plugin with new info
     delete d->provider;
-    d->provider = ServiceProvider::createProviderForData( serviceProviderInfo, this );
-    if ( !d->provider ) {
-        d->provider = ServiceProvider::createInvalidProvider( this );
+    if ( providerData->type() == ScriptedProvider ) {
+        d->provider = new ServiceProviderScript( providerData, this );
+    } else {
+        d->provider = new ServiceProvider( providerData, this );
     }
     emit nameChanged( projectName() );
     emit iconNameChanged( iconName() );
