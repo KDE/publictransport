@@ -21,7 +21,7 @@
 #include "request.h"
 
 // Own includes
-#include "serviceproviderscript.h"
+#include "script/serviceproviderscript.h"
 
 // Qt includes
 #include <QScriptEngine>

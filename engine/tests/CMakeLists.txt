@@ -40,8 +40,8 @@ set( ScriptApiTest_SRCS
    # Use files directly from the data engine
    ../global.cpp
    ../serviceproviderglobal.cpp
-   ../scripting.cpp
-   ../departureinfo.cpp )
+   ../departureinfo.cpp
+   ../script/scripting.cpp )
 qt4_automoc( ${ScriptApiTest_SRCS} )
 add_executable( ScriptApiTest ${ScriptApiTest_SRCS} )
 add_test( ScriptApiTest ScriptApiTest )
@@ -49,8 +49,8 @@ target_link_libraries( ScriptApiTest ${QT_QTTEST_LIBRARY} ${KDE4_PLASMA_LIBS}
         ${QT_QTNETWORK_LIBRARY} ${QT_QTSCRIPT_LIBRARY} )
 
 set( GeneralTransitTest_SRCS GeneralTransitTest.cpp
-    ../generaltransitfeed_importer.cpp
-    ../generaltransitfeed_database.cpp
+    ../gtfs/generaltransitfeed_importer.cpp
+    ../gtfs/generaltransitfeed_database.cpp
 )
 qt4_automoc( ${GeneralTransitTest_SRCS} )
 add_executable( GeneralTransitTest ${GeneralTransitTest_SRCS} )

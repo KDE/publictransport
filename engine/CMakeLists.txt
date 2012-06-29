@@ -8,7 +8,8 @@ add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
 include_directories(
    ${CMAKE_SOURCE_DIR}
    ${CMAKE_BINARY_DIR}
-   ${KDE4_INCLUDES} )
+   ${KDE4_INCLUDES}
+   ${CMAKE_CURRENT_SOURCE_DIR} )
 
 # Add custom CMake modules
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
@@ -20,7 +21,6 @@ find_package( SharedMimeInfo )
 # Find protocol buffers
 find_package( ProtocolBuffers REQUIRED )
 
-add_subdirectory( serviceProviders )
 
 if ( BUILD_TESTS )
     add_subdirectory( tests )
@@ -30,6 +30,8 @@ if ( INSTALL_TIMETABLEMATE )
     message( " - TimetableMate" )
     add_subdirectory( timetablemate )
 endif ( INSTALL_TIMETABLEMATE )
+
+add_subdirectory( serviceProviders )
 
 # Generate gtfs-realtime protocol buffer sources
 WRAP_PROTO( PROTO_SRC gtfs-realtime.proto )
@@ -44,16 +46,13 @@ set( publictransport_engine_SRCS
     serviceproviderdata.cpp
     serviceproviderglobal.cpp
     serviceprovidertestdata.cpp
-    serviceproviderscript.cpp
-    serviceprovidergtfs.cpp
-    script_thread.cpp
     publictransportservice.cpp
-    generaltransitfeed_importer.cpp
-    generaltransitfeed_database.cpp
-    generaltransitfeed_realtime.cpp
-    scripting.cpp
     global.cpp
 )
+
+# Add provider types (adding their sources to publictransport_engine_SRCS)
+add_subdirectory( script )
+add_subdirectory( gtfs )
 
 # Now make sure all files get to the right place
 kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} ${PROTO_SRC} )

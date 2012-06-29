@@ -57,7 +57,7 @@ int main( int argc, char **argv )
                  ki18n("Name of the generated class for code completion"),
                  "JavaScriptCompletionGeneric" );
     options.add( "input_script <argument>", ki18n("Scripting input file path."),
-                 "../../../../engine/scripting.h" );
+                 "../../../../engine/script/scripting.h" );
     options.add( "input_engine <argument>", ki18n("Engine input file path."),
                  "../../../../engine/publictransportdataengine.h" );
     options.add( "input_enum <argument>", ki18n("Engine enum file path."),

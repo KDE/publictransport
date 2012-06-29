@@ -29,8 +29,8 @@
 
 // PublicTransport engine includes
 #include <engine/serviceproviderdata.h>
-#include <engine/serviceproviderscript.h>
-#include <engine/script_thread.h>
+#include <engine/script/serviceproviderscript.h>
+#include <engine/script/script_thread.h>
 #include <engine/request.h>
 
 // KDE includes

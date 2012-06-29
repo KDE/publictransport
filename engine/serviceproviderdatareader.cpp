@@ -24,7 +24,7 @@
 #include "serviceprovider.h"
 #include "serviceproviderdata.h"
 #include "serviceproviderglobal.h"
-#include "serviceproviderscript.h"
+#include "script/serviceproviderscript.h"
 #include "global.h"
 
 // KDE includes

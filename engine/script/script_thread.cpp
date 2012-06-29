@@ -22,7 +22,7 @@
 
 // Own includes
 #include "scripting.h"
-#include "serviceproviderscript.h"
+#include "script/serviceproviderscript.h"
 #include "serviceproviderdata.h"
 #include "request.h"
 

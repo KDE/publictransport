@@ -22,16 +22,16 @@ set( timetablemate_SRCS
 
    # Use files directly from the data engine
    ../../global.cpp
-   ../../scripting.cpp
-   ../../script_thread.cpp
    ../../departureinfo.cpp
    ../../request.cpp
    ../../serviceprovider.cpp
    ../../serviceproviderdata.cpp
    ../../serviceprovidertestdata.cpp
    ../../serviceproviderglobal.cpp
-   ../../serviceproviderscript.cpp
    ../../serviceproviderdatareader.cpp
+   ../../script/serviceproviderscript.cpp
+   ../../script/scripting.cpp
+   ../../script/script_thread.cpp
 )
 
 add_subdirectory( debugger )
@@ -78,7 +78,7 @@ add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongener
             --verbose
             --out_completion ${CMAKE_CURRENT_BINARY_DIR}
             --out_doc ${CMAKE_CURRENT_SOURCE_DIR}/../doc
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../scripting.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scripting.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../publictransportdataengine.h
             ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator )

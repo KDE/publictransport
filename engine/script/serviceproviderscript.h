@@ -26,7 +26,7 @@
 #define SERVICEPROVIDERSCRIPT_HEADER
 
 // Own includes
-#include "serviceprovider.h" // Base class
+#include "../serviceprovider.h" // Base class
 #include "scripting.h"
 
 namespace ThreadWeaver {

@@ -45,7 +45,7 @@
 #include <engine/serviceprovider.h>
 #include <engine/serviceproviderdata.h>
 #include <engine/serviceproviderglobal.h>
-#include <engine/serviceproviderscript.h>
+#include <engine/script/serviceproviderscript.h>
 #include <engine/request.h>
 
 // KDE includes

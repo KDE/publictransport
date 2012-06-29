@@ -21,7 +21,7 @@
 #include "testmodel.h"
 
 // Public Transport engine includes
-#include <engine/serviceproviderscript.h>
+#include <engine/script/serviceproviderscript.h>
 
 // KDE includes
 #include <KDebug>

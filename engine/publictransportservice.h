@@ -26,7 +26,7 @@
 
 // Own includes
 // #include "enums.h"
-#include "generaltransitfeed_importer.h"
+#include "gtfs/generaltransitfeed_importer.h"
 
 // Plasma includes
 #include <Plasma/Service>
