@@ -38,8 +38,6 @@ int main(int argc, char **argv)
                       KLocalizedString(), 0, "fpuelz@gmx.de" );
     about.addAuthor( ki18n("Friedrich Pülz"), ki18n("Main Developer"), "fpuelz@gmx.de",
                      QByteArray(), "fpuelz" );
-    about.setTranslator( ki18nc("Names of translators, separated by ','", ""),
-                         ki18nc("Emails of translators, separated by ','", "") );
     KCmdLineArgs::init( argc, argv, &about );
 
     KCmdLineOptions options;

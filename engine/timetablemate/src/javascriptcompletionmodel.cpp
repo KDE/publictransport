@@ -336,7 +336,7 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
             CompletionItem( Function | GlobalScope,
             "getStopSuggestions( values )",
             i18nc("@info The description for the 'getStopSuggestions' function",
-                  "Requests and parses stop suggestion documents The argument has the "
+                  "Requests and parses stop suggestion documents. The argument has the "
                   "following properties: stop, maxCount, city.<nl/>"
                   "This function is called by the data engine. The parameter "
                   "contains the contents of the document body. Found stop data "
